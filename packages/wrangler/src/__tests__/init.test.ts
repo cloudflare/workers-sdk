@@ -529,7 +529,7 @@ describe("init", () => {
 			        }
 		      `);
 			expect((await execa("git", ["branch", "--show-current"])).stdout).toEqual(
-				"main"
+				getDefaultBranchName()
 			);
 		});
 
@@ -598,7 +598,7 @@ describe("init", () => {
 			"should not offer to initialize a git repo if git is not installed"
 		);
 
-		it("should initialize git repo with `main` default branch", async () => {
+		it("should initialize git repo with the user's default branch", async () => {
 			mockConfirm(
 				{
 					text: "Would you like to use git to manage this Worker?",
@@ -621,7 +621,7 @@ describe("init", () => {
 		      `);
 
 			expect(execaSync("git", ["symbolic-ref", "HEAD"]).stdout).toEqual(
-				"refs/heads/main"
+				`refs/heads/${getDefaultBranchName()}`
 			);
 		});
 	});
@@ -2809,6 +2809,21 @@ describe("init", () => {
 		});
 	});
 });
+
+function getDefaultBranchName() {
+	try {
+		const { stdout: defaultBranchName } = execaSync("git", [
+			"config",
+			"--get",
+			"init.defaultBranch",
+		]);
+
+		return defaultBranchName;
+	} catch {
+		// ew
+		return "master";
+	}
+}
 
 /**
  * Change the current working directory, ensuring that this exists.
