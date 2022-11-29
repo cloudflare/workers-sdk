@@ -224,8 +224,8 @@ function mockDeleteWorkerRequest(
 				expect(req.params.accountId).toEqual("some-account-id");
 				expect(req.params.scriptName).toEqual(
 					legacyEnv && env
-						? `${name || "test-name"}-${env}`
-						: `${name || "test-name"}`
+						? `${name ?? "test-name"}-${env}`
+						: `${name ?? "test-name"}`
 				);
 
 				expect(req.url.searchParams.get("force")).toEqual("true");
