@@ -122,7 +122,7 @@ describe("generateTypes()", () => {
 			R2_BUCKET_BINDING: R2Bucket;
 			D1_TESTING_SOMETHING: D1Database;
 			SERVICE_BINDING: Fetcher;
-			AE_DATASET_BINDING: Dataset;
+			AE_DATASET_BINDING: AnalyticsEngineDataset;
 			NAMESPACE_BINDING: any;
 			LOGFWDR_SCHEMA: any;
 			SOME_DATA_BLOB1: ArrayBuffer;
