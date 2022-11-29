@@ -1,5 +1,21 @@
 # wrangler
 
+## 2.5.0
+
+### Minor Changes
+
+- [#2212](https://github.com/cloudflare/wrangler2/pull/2212) [`b24c2b2d`](https://github.com/cloudflare/wrangler2/commit/b24c2b2dc639a3b3ff528591d1758753cb64fc3c) Thanks [@dalbitresb12](https://github.com/dalbitresb12)! - feat: Allow pages dev to proxy websocket requests
+
+### Patch Changes
+
+- [#2296](https://github.com/cloudflare/wrangler2/pull/2296) [`7da8f0e6`](https://github.com/cloudflare/wrangler2/commit/7da8f0e69932d2ac849ecb06ab280c1d8756619f) Thanks [@Skye-31](https://github.com/Skye-31)! - Fix: check response status of `d1 backup download` command before writing contents to file
+
+* [#2260](https://github.com/cloudflare/wrangler2/pull/2260) [`c2940160`](https://github.com/cloudflare/wrangler2/commit/c29401604640940a5382a206f7bac900a3aad7b2) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: make it possible to use a local db for d1 migrations
+
+  As of this change, wrangler's d1 migrations commands now accept `local` and `persist-to` as flags, so migrations can run against the local d1 db.
+
+- [#1883](https://github.com/cloudflare/wrangler2/pull/1883) [`60d31c01`](https://github.com/cloudflare/wrangler2/commit/60d31c010656d10e0093921259019f67f15554ec) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Fix `--port=0` option to report the actually used port.
+
 ## 2.4.4
 
 ### Patch Changes
