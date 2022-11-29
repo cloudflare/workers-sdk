@@ -14,7 +14,7 @@ import { getEntry } from "./entry";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
-import { getAccountFromCache } from "./user";
+import { getAccountFromCache, loginOrRefreshIfRequired } from "./user";
 import { collectKeyValues } from "./utils/collectKeyValues";
 import { identifyD1BindingsAsBeta } from "./worker";
 import { getHostFromRoute, getZoneForRoute, getZoneIdFromHost } from "./zones";
@@ -328,6 +328,15 @@ export function devOptions(yargs: Argv<CommonYargsOptions>): Argv<DevArgs> {
 }
 
 export async function devHandler(args: ArgumentsCamelCase<DevArgs>) {
+	if (!args.local) {
+		const isLoggedIn = await loginOrRefreshIfRequired();
+		if (!isLoggedIn) {
+			throw new Error(
+				"You must be logged in to use wrangler dev in remote mode. Try logging in, or run wrangler dev --local."
+			);
+		}
+	}
+
 	let watcher;
 	try {
 		const devInstance = await startDev(args);
