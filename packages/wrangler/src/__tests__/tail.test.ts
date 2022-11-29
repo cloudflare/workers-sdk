@@ -413,10 +413,7 @@ describe("tail", () => {
 						new Date(mockEventTimestamp).toLocaleString(),
 						"[mock event timestamp]"
 					)
-					.replace(
-						mockTailExpiration.toLocaleString(),
-						"[mock expiration date]"
-					)
+					.replace(mockTailExpiration.toISOString(), "[mock expiration date]")
 			).toMatchInlineSnapshot(`
 			        "Successfully created tail, expires at [mock expiration date]
 			        Connected to test-worker, waiting for logs...
@@ -439,10 +436,7 @@ describe("tail", () => {
 						new Date(mockEventTimestamp).toLocaleString(),
 						"[mock timestamp string]"
 					)
-					.replace(
-						mockTailExpiration.toLocaleString(),
-						"[mock expiration date]"
-					)
+					.replace(mockTailExpiration.toISOString(), "[mock expiration date]")
 			).toMatchInlineSnapshot(`
 			        "Successfully created tail, expires at [mock expiration date]
 			        Connected to test-worker, waiting for logs...
@@ -465,10 +459,7 @@ describe("tail", () => {
 						new Date(mockEventScheduledTime).toLocaleString(),
 						"[mock scheduled time]"
 					)
-					.replace(
-						mockTailExpiration.toLocaleString(),
-						"[mock expiration date]"
-					)
+					.replace(mockTailExpiration.toISOString(), "[mock expiration date]")
 			).toMatchInlineSnapshot(`
 			        "Successfully created tail, expires at [mock expiration date]
 			        Connected to test-worker, waiting for logs...
@@ -487,13 +478,10 @@ describe("tail", () => {
 			expect(
 				std.out
 					.replace(
-						mockTailExpiration.toLocaleString(),
-						"[mock expiration date]"
-					)
-					.replace(
 						new Date(mockEventTimestamp).toLocaleString(),
 						"[mock timestamp string]"
 					)
+					.replace(mockTailExpiration.toISOString(), "[mock expiration date]")
 			).toMatchInlineSnapshot(`
 			"Successfully created tail, expires at [mock expiration date]
 			Connected to test-worker, waiting for logs...
@@ -517,10 +505,7 @@ describe("tail", () => {
 						new Date(mockEventTimestamp).toLocaleString(),
 						"[mock event timestamp]"
 					)
-					.replace(
-						mockTailExpiration.toLocaleString(),
-						"[mock expiration date]"
-					)
+					.replace(mockTailExpiration.toISOString(), "[mock expiration date]")
 			).toMatchInlineSnapshot(`
 			        "Successfully created tail, expires at [mock expiration date]
 			        Connected to test-worker, waiting for logs...
@@ -543,10 +528,6 @@ describe("tail", () => {
 		});
 
 		it("logs console messages and exceptions", async () => {
-			// jest.spyOn(Date.prototype, "toLocaleString").mockImplementation(() => {
-			// 	return "3005-02-01T06:00:00.000Z";
-			// });
-			// jest.spyOn(Date.prototype, "toLocaleString").mockRestore();
 			setIsTTY(true);
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker");
@@ -577,10 +558,7 @@ describe("tail", () => {
 						new Date(mockEventTimestamp).toLocaleString(),
 						"[mock event timestamp]"
 					)
-					.replace(
-						mockTailExpiration.toLocaleString(),
-						"[mock expiration date]"
-					)
+					.replace(mockTailExpiration.toISOString(), "[mock expiration date]")
 			).toMatchInlineSnapshot(`
 			        "Successfully created tail, expires at [mock expiration date]
 			        Connected to test-worker, waiting for logs...
