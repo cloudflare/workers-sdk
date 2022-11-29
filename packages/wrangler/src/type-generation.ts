@@ -61,7 +61,9 @@ export async function generateTypes(
 
 	if (configToDTS.analytics_engine_datasets) {
 		for (const analyticsEngine of configToDTS.analytics_engine_datasets) {
-			envTypeStructure.push(`	${analyticsEngine.binding}: AnalyticsEngineDataset;`);
+			envTypeStructure.push(
+				`	${analyticsEngine.binding}: AnalyticsEngineDataset;`
+			);
 		}
 	}
 
