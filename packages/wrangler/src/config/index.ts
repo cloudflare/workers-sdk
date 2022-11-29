@@ -221,7 +221,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 			entries: analytics_engine_datasets.map(({ binding, dataset }) => {
 				return {
 					key: binding,
-					value: dataset || binding,
+					value: dataset ?? binding,
 				};
 			}),
 		});
