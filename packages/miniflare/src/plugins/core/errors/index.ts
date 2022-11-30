@@ -1,15 +1,15 @@
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
-import { SourceMapConsumer } from "source-map";
-import type { Entry } from "stacktracey";
+import type { UrlAndMap } from "source-map-support";
 import { Request, Response } from "undici";
 import { z } from "zod";
+import { Log } from "../../../shared";
 import {
 	ModuleDefinition,
 	contentsToString,
 	maybeGetStringScriptPathIndex,
-} from "./modules";
+} from "../modules";
+import { getSourceMapper } from "./sourcemap";
 
 // Subset of core worker options that define Worker source code.
 // These are the possible cases, and corresponding reported source files in
@@ -163,85 +163,30 @@ function maybeGetFile(
 	return maybeGetDiskFile(filePath);
 }
 
-// Try to find a source map for `sourceFile`, and update `sourceFile` and
-// `frame` with source mapped locations
-type SourceMapCache = Map<string, Promise<SourceMapConsumer>>;
-async function applySourceMaps(
-	/* mut */ sourceMapCache: SourceMapCache,
-	/* mut */ sourceFile: SourceFile,
-	/* mut */ frame: Entry
-) {
-	// If we don't have a file path, or full location, we can't do any source
-	// mapping, so return straight away.
-	// TODO: support data URIs for maps, in `sourceFile`s without path
-	if (
-		sourceFile.path === undefined ||
-		frame.line === undefined ||
-		frame.column === undefined
-	) {
-		return;
-	}
+function getSourceMappedStack(workerSrcOpts: SourceOptions[], error: Error) {
+	// This function needs to match the signature of the `retrieveSourceMap`
+	// option from the "source-map-support" package.
+	function retrieveSourceMap(file: string): UrlAndMap | null {
+		const sourceFile = maybeGetFile(workerSrcOpts, file);
+		if (sourceFile?.path === undefined) return null;
 
-	// Find the last source mapping URL if any
-	const sourceMapRegexp = /# sourceMappingURL=(.+)/g;
-	let sourceMapMatch: RegExpMatchArray | null = null;
-	while (true) {
-		const match = sourceMapRegexp.exec(sourceFile.contents);
-		if (match !== null) sourceMapMatch = match;
-		else break;
-	}
-	// If we couldn't find a source mapping URL, there's nothing we can do
-	if (sourceMapMatch === null) return;
+		// Find the last source mapping URL if any
+		const sourceMapRegexp = /# sourceMappingURL=(.+)/g;
+		const matches = [...sourceFile.contents.matchAll(sourceMapRegexp)];
+		// If we couldn't find a source mapping URL, there's nothing we can do
+		if (matches.length === 0) return null;
+		const sourceMapMatch = matches[matches.length - 1];
 
-	// Get the source map
-	const root = path.dirname(sourceFile.path);
-	const sourceMapPath = path.resolve(root, sourceMapMatch[1]);
-	let consumerPromise = sourceMapCache.get(sourceMapPath);
-	if (consumerPromise === undefined) {
-		// If we couldn't find the source map in cache, load it
+		// Get the source map
+		const root = path.dirname(sourceFile.path);
+		const sourceMapPath = path.resolve(root, sourceMapMatch[1]);
 		const sourceMapFile = maybeGetDiskFile(sourceMapPath);
-		if (sourceMapFile === undefined) return;
-		const rawSourceMap = JSON.parse(sourceMapFile.contents);
-		consumerPromise = new SourceMapConsumer(rawSourceMap);
-		sourceMapCache.set(sourceMapPath, consumerPromise);
-	}
-	const consumer = await consumerPromise;
+		if (sourceMapFile === undefined) return null;
 
-	// Get original position from source map
-	const original = consumer.originalPositionFor({
-		line: frame.line,
-		column: frame.column,
-	});
-	// If source mapping failed, don't make changes
-	if (
-		original.source === null ||
-		original.line === null ||
-		original.column === null
-	) {
-		return;
+		return { map: sourceMapFile.contents };
 	}
 
-	// Update source file and frame with source mapped locations
-	const newSourceFile = maybeGetDiskFile(original.source);
-	if (newSourceFile === undefined) return;
-	sourceFile.path = original.source;
-	sourceFile.contents = newSourceFile.contents;
-	frame.file = original.source;
-	frame.fileRelative = path.relative("", sourceFile.path);
-	frame.fileShort = frame.fileRelative;
-	frame.fileName = path.basename(sourceFile.path);
-	frame.line = original.line;
-	frame.column = original.column;
-}
-
-interface YouchInternalFrameSource {
-	pre: string[];
-	line: string;
-	post: string[];
-}
-interface YouchInternals {
-	options: { preLines: number; postLines: number };
-	_getFrameSource(frame: Entry): Promise<YouchInternalFrameSource | null>;
+	return getSourceMapper()(retrieveSourceMap, error);
 }
 
 // Due to a bug in `workerd`, if `Promise`s returned from native C++ APIs are
@@ -257,6 +202,7 @@ const ErrorSchema = z.object({
 	stack: z.ostring(),
 });
 export async function handlePrettyErrorRequest(
+	log: Log,
 	workerSrcOpts: SourceOptions[],
 	request: Request
 ): Promise<Response> {
@@ -271,11 +217,11 @@ export async function handlePrettyErrorRequest(
 	error.message = caught.message as string;
 	error.stack = caught.stack;
 
-	// Create a source-map cache for this pretty-error request. We only cache per
-	// request, as it's likely the user will update their code and restart/call
-	// `setOptions` again on seeing this page. This would invalidate existing
-	// source maps. Keeping the cache per request simplifies things too.
-	const sourceMapCache: SourceMapCache = new Map();
+	// Try to apply source-mapping
+	error.stack = getSourceMappedStack(workerSrcOpts, error);
+
+	// Log source-mapped error to console if logging enabled
+	log.error(error);
 
 	// Lazily import `youch` when required
 	const Youch: typeof import("youch").default = require("youch");
@@ -290,40 +236,7 @@ export async function handlePrettyErrorRequest(
 			'<a href="https://discord.gg/cloudflaredev" target="_blank" style="text-decoration:none">💬 Workers Discord</a>',
 		].join("");
 	});
-	const youchInternals = youch as unknown as YouchInternals;
-	youchInternals._getFrameSource = async (frame) => {
-		// Adapted from Youch's own implementation
-		let file = frame.file
-			.replace(/dist\/webpack:\//g, "") // Unix
-			.replace(/dist\\webpack:\\/g, ""); // Windows
-		// Ignore error as frame source is optional anyway
-		try {
-			file = file.startsWith("file:") ? fileURLToPath(file) : file;
-		} catch {}
-
-		// Try get source-mapped file contents
-		const sourceFile = await maybeGetFile(workerSrcOpts, file);
-		if (sourceFile === undefined || frame.line === undefined) return null;
-		// If source-mapping fails, this function won't do anything
-		await applySourceMaps(sourceMapCache, sourceFile, frame);
-
-		// Return lines around frame as required by Youch
-		const lines = sourceFile.contents.split(/\r?\n/);
-		const line = frame.line;
-		const pre = lines.slice(
-			Math.max(0, line - (youchInternals.options.preLines + 1)),
-			line - 1
-		);
-		const post = lines.slice(line, line + youchInternals.options.postLines);
-		return { pre, line: lines[line - 1], post };
-	};
-
-	try {
-		return new Response(await youch.toHTML(), {
-			headers: { "Content-Type": "text/html;charset=utf-8" },
-		});
-	} finally {
-		// Clean-up source-map cache
-		for (const consumer of sourceMapCache.values()) (await consumer).destroy();
-	}
+	return new Response(await youch.toHTML(), {
+		headers: { "Content-Type": "text/html;charset=utf-8" },
+	});
 }
