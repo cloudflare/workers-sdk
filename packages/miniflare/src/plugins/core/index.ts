@@ -15,6 +15,7 @@ import { getCacheServiceName } from "../cache";
 import {
 	BINDING_SERVICE_LOOPBACK,
 	CloudflareFetchSchema,
+	HEADER_CF_BLOB,
 	Plugin,
 } from "../shared";
 import { HEADER_ERROR_STACK } from "./errors";
@@ -64,6 +65,7 @@ export const CoreSharedOptionsSchema = z.object({
 	verbose: z.boolean().optional(),
 
 	log: z.instanceof(Log).optional(),
+	clock: z.function().returns(z.number()).optional(),
 	cloudflareFetch: CloudflareFetchSchema.optional(),
 
 	// TODO: add back validation of cf object
@@ -338,7 +340,10 @@ export const CORE_PLUGIN: Plugin<
 			});
 		}
 		const services: Service[] = [
-			{ name: SERVICE_LOOPBACK, external: { http: {} } },
+			{
+				name: SERVICE_LOOPBACK,
+				external: { http: { cfBlobHeader: HEADER_CF_BLOB } },
+			},
 			{
 				name: SERVICE_ENTRY,
 				worker: {

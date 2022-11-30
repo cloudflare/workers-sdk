@@ -1,3 +1,4 @@
+import type { RequestInitCfProperties } from "@cloudflare/workers-types";
 import { Headers } from "undici";
 import { Worker_Binding } from "../../runtime";
 import { Persistence, PersistenceSchema } from "./gateway";
@@ -5,6 +6,10 @@ import { Persistence, PersistenceSchema } from "./gateway";
 export const SOCKET_ENTRY = "entry";
 
 export const HEADER_PERSIST = "MF-Persist";
+// Even though we inject the `cf` blob in the entry script, we still need to
+// specify a header, so we receive things like `cf.cacheKey` in loopback
+// requests.
+export const HEADER_CF_BLOB = "MF-CF-Blob";
 
 export const BINDING_SERVICE_LOOPBACK = "MINIFLARE_LOOPBACK";
 export const BINDING_TEXT_PLUGIN = "MINIFLARE_PLUGIN";
@@ -33,6 +38,11 @@ export function decodePersist(headers: Headers): Persistence {
 	return header === null
 		? undefined
 		: PersistenceSchema.parse(JSON.parse(header));
+}
+
+export function decodeCfBlob(headers: Headers): RequestInitCfProperties {
+	const header = headers.get(HEADER_CF_BLOB);
+	return header === null ? {} : JSON.parse(header);
 }
 
 export enum CfHeader {

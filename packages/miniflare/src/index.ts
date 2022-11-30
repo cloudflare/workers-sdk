@@ -46,6 +46,7 @@ import {
 	serializeConfig,
 } from "./runtime";
 import {
+	Clock,
 	HttpError,
 	Log,
 	MiniflareCoreError,
@@ -54,6 +55,7 @@ import {
 	OptionalZodTypeOf,
 	UnionToIntersection,
 	ValueOf,
+	defaultClock,
 } from "./shared";
 import { anyAbortSignal } from "./shared/signal";
 import { waitForRequest } from "./wait";
@@ -157,6 +159,7 @@ export class Miniflare {
 	#sharedOpts: PluginSharedOptions;
 	#workerOpts: PluginWorkerOptions[];
 	#log: Log;
+	readonly #clock: Clock;
 
 	readonly #runtimeConstructor: RuntimeConstructor;
 	#runtime?: Runtime;
@@ -201,6 +204,7 @@ export class Miniflare {
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;
 		this.#log = this.#sharedOpts.core.log ?? new NoOpLog();
+		this.#clock = this.#sharedOpts.core.clock ?? defaultClock;
 		this.#initPlugins();
 
 		// Get supported shell for executing runtime binary
@@ -220,6 +224,7 @@ export class Miniflare {
 			if (plugin.gateway !== undefined && plugin.router !== undefined) {
 				const gatewayFactory = new GatewayFactory<any>(
 					this.#log,
+					this.#clock,
 					this.#sharedOpts.core.cloudflareFetch,
 					key,
 					plugin.gateway,
@@ -350,24 +355,30 @@ export class Miniflare {
 		});
 
 		let response: Response | undefined;
-		const customService = request.headers.get(HEADER_CUSTOM_SERVICE);
-		if (customService !== null) {
-			response = await this.#handleLoopbackCustomService(
-				request,
-				customService
-			);
-		} else if (url.pathname === "/core/error") {
-			const workerSrcOpts = this.#workerOpts.map<SourceOptions>(
-				({ core }) => core
-			);
-			response = await handlePrettyErrorRequest(
-				this.#log,
-				workerSrcOpts,
-				request
-			);
-		} else {
-			// TODO: check for proxying/outbound fetch header first (with plans for fetch mocking)
-			response = await this.#handleLoopbackPlugins(request, url);
+		try {
+			const customService = request.headers.get(HEADER_CUSTOM_SERVICE);
+			if (customService !== null) {
+				response = await this.#handleLoopbackCustomService(
+					request,
+					customService
+				);
+			} else if (url.pathname === "/core/error") {
+				const workerSrcOpts = this.#workerOpts.map<SourceOptions>(
+					({ core }) => core
+				);
+				response = await handlePrettyErrorRequest(
+					this.#log,
+					workerSrcOpts,
+					request
+				);
+			} else {
+				// TODO: check for proxying/outbound fetch header first (with plans for fetch mocking)
+				response = await this.#handleLoopbackPlugins(request, url);
+			}
+		} catch (e: any) {
+			this.#log.error(e);
+			res.writeHead(500);
+			return res.end(e?.stack ?? String(e));
 		}
 
 		if (response === undefined) {
