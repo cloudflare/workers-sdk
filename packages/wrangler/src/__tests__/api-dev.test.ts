@@ -5,7 +5,7 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 
 jest.unmock("undici");
 
-describe.skip("unstable_dev", () => {
+describe("unstable_dev", () => {
 	it("should return Hello World", async () => {
 		const worker = await unstable_dev(
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
