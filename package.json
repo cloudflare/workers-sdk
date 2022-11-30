@@ -21,8 +21,8 @@
 		"check:type": "npm run check:type --workspaces --if-present",
 		"fix": "npm run prettify && npm run check:lint -- --fix",
 		"prettify": "prettier . --write --ignore-unknown",
-		"test": "npx cross-env NODE_OPTIONS=--max-old-space-size=8192 npm run clean --workspace=wrangler && npm run bundle --workspace=wrangler && npm run test --workspace=packages/wrangler --workspace=packages/pages-shared --if-present && npx jest --forceExit",
-		"test:ci": "npx cross-env NODE_OPTIONS=--max-old-space-size=8192 npm run test:ci --workspace=packages/wrangler --workspace=packages/pages-shared --if-present && npx jest --forceExit"
+		"test": "npm run clean --workspace=wrangler && npm run bundle --workspace=wrangler && npm run test --workspace=packages/wrangler --workspace=packages/pages-shared --if-present && npx jest --forceExit",
+		"test:ci": "npx cross-env NODE_OPTIONS=--max-old-space-size=8192 npm run test:ci --workspace=packages/wrangler --workspace=packages/pages-shared --if-present && npx cross-env NODE_OPTIONS=--max-old-space-size=8192 npx jest --forceExit"
 	},
 	"eslintConfig": {
 		"parser": "@typescript-eslint/parser",
