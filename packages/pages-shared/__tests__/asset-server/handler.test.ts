@@ -111,6 +111,157 @@ describe("asset-server handler", () => {
 		}
 	});
 
+	test("cross-host static redirects still are executed with line number precedence", async () => {
+		const metadata = createMetadataObjectWithRedirects([
+			{ from: "https://fakehost/home", to: "https://firsthost/", status: 302 },
+			{ from: "/home", to: "https://secondhost/", status: 302 },
+		]);
+		const findAssetEntryForPath = async (path: string) => {
+			if (path === "/index.html") {
+				return "index page";
+			}
+
+			return null;
+		};
+
+		{
+			const { response } = await getTestResponse({
+				request: "https://yetanotherhost/home",
+				metadata,
+				findAssetEntryForPath,
+			});
+			expect(response.status).toBe(302);
+			expect(response.headers.get("Location")).toEqual("https://secondhost/");
+		}
+		{
+			const { response } = await getTestResponse({
+				request: "https://fakehost/home",
+				metadata,
+				findAssetEntryForPath,
+			});
+			expect(response.status).toBe(302);
+			expect(response.headers.get("Location")).toEqual("https://firsthost/");
+		}
+	});
+
+	test("it should preserve querystrings unless to rule includes them", async () => {
+		const metadata = createMetadataObjectWithRedirects([
+			{ from: "/", status: 301, to: "/home" },
+			{ from: "/recent", status: 301, to: "/home?sort=updated_at" },
+		]);
+		const findAssetEntryForPath = async (path: string) => {
+			if (path === "/home.html") {
+				return "home page";
+			}
+
+			return null;
+		};
+
+		{
+			const { response } = await getTestResponse({
+				request: "/?sort=price",
+				metadata,
+				findAssetEntryForPath,
+			});
+			expect(response.status).toBe(301);
+			expect(response.headers.get("Location")).toEqual("/home?sort=price");
+		}
+		{
+			const { response } = await getTestResponse({
+				request: "/recent",
+				metadata,
+				findAssetEntryForPath,
+			});
+			expect(response.status).toBe(301);
+			expect(response.headers.get("Location")).toEqual("/home?sort=updated_at");
+		}
+		{
+			const { response } = await getTestResponse({
+				request: "/recent?other=query",
+				metadata,
+				findAssetEntryForPath,
+			});
+			expect(response.status).toBe(301);
+			expect(response.headers.get("Location")).toEqual("/home?sort=updated_at");
+		}
+	});
+
+	{
+		const metadata = createMetadataObjectWithRedirects([
+			{ from: "/home", status: 301, to: "/" },
+			{ from: "/blog/*", status: 301, to: "https://blog.example.com/:splat" },
+			{
+				from: "/products/:code/:name/*",
+				status: 301,
+				to: "/products?junk=:splat&name=:name&code=:code",
+			},
+			{ from: "/foo", status: 301, to: "/bar" },
+		]);
+		const findAssetEntryForPath = async (path: string) => {
+			if (path === "/home.html") {
+				return "home page";
+			}
+
+			return null;
+		};
+
+		test("it should perform splat replacements", async () => {
+			const { response } = await getTestResponse({
+				request: "/blog/a-blog-posting",
+				metadata,
+				findAssetEntryForPath,
+			});
+			expect(response.status).toBe(301);
+			expect(response.headers.get("Location")).toEqual(
+				"https://blog.example.com/a-blog-posting"
+			);
+		});
+
+		test("it should perform placeholder replacements", async () => {
+			const { response } = await getTestResponse({
+				request: "/products/abba_562/tricycle/123abc@~!",
+				metadata,
+				findAssetEntryForPath,
+			});
+			expect(response.status).toBe(301);
+			expect(response.headers.get("Location")).toEqual(
+				"/products?junk=123abc@~!&name=tricycle&code=abba_562"
+			);
+		});
+
+		test("it should redirect both dynamic and static redirects", async () => {
+			{
+				const { response } = await getTestResponse({
+					request: "/home",
+					metadata,
+					findAssetEntryForPath,
+				});
+				expect(response.status).toBe(301);
+				expect(response.headers.get("Location")).toEqual("/");
+			}
+			{
+				const { response } = await getTestResponse({
+					request: "/blog/post",
+					metadata,
+					findAssetEntryForPath,
+				});
+				expect(response.status).toBe(301);
+				expect(response.headers.get("Location")).toEqual(
+					"https://blog.example.com/post"
+				);
+			}
+			{
+				const { response } = await getTestResponse({
+					request: "/foo",
+					metadata,
+					findAssetEntryForPath,
+				});
+				expect(response.status).toBe(301);
+				expect(response.headers.get("Location")).toEqual("/bar");
+			}
+		});
+	}
+
 	test("Returns a redirect without duplicating the hash component", async () => {
 		const { response, spies } = await getTestResponse({
 			request: "https://foo.com/bar",
@@ -251,7 +402,7 @@ function createMetadataObjectWithRedirects(
 	return createMetadataObject({
 		redirects: {
 			invalid: [],
-			rules: rules.map((rule, lineNumber) => ({ ...rule, lineNumber })),
+			rules: rules.map((rule, i) => ({ ...rule, lineNumber: i + 1 })),
 		},
 	}) as Metadata;
 }

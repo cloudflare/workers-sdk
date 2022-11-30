@@ -580,7 +580,10 @@ export async function generateHandler<
  * on multiple domains, the redirects won't take the client off of their current domain.
  */
 export function getResponseFromMatch(
-	{ status, to }: Pick<MetadataStaticRedirectEntry | MetadataRedirectEntry, "status" | "to">,
+	{
+		status,
+		to,
+	}: Pick<MetadataStaticRedirectEntry | MetadataRedirectEntry, "status" | "to">,
 	requestUrl: URL
 ) {
 	// Inherit origin from the request URL if not specified in _redirects
