@@ -1,9 +1,10 @@
 import MockWebSocket from "jest-websocket-mock";
+import { rest } from "msw";
 import { Headers, Request } from "undici";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
-import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
+import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type {
@@ -16,6 +17,11 @@ import type { RequestInit } from "undici";
 import type WebSocket from "ws";
 
 describe("pages deployment tail", () => {
+	runInTempDir();
+	mockAccountId();
+	mockApiToken();
+	const std = mockConsoleMethods();
+
 	beforeAll(() => {
 		// Force the CLI to be "non-interactive" in test env
 		process.env.CF_PAGES = "1";
@@ -25,16 +31,9 @@ describe("pages deployment tail", () => {
 		delete process.env.CF_PAGES;
 	});
 
-	runInTempDir();
-	mockAccountId();
-	mockApiToken();
-
-	const std = mockConsoleMethods();
-
 	afterEach(() => {
 		mockWebSockets.forEach((ws) => ws.close());
 		mockWebSockets.splice(0);
-		unsetAllMocks();
 	});
 
 	/**
@@ -473,9 +472,10 @@ describe("pages deployment tail", () => {
 			expect(std.out).toMatch(deserializeToJson(serializedMessage));
 		});
 
-		it("logs console messages and exceptions", async () => {
+		it.only("logs console messages and exceptions", async () => {
 			setIsTTY(true);
 			const api = mockTailAPIs();
+
 			await runWrangler(
 				"pages deployment tail mock-deployment-id --project-name mock-project"
 			);
@@ -500,16 +500,12 @@ describe("pages deployment tail", () => {
 			const serializedMessage = serialize(message);
 
 			api.ws.send(serializedMessage);
+
 			expect(
-				std.out
-					.replace(
-						new Date(mockEventTimestamp).toLocaleString(),
-						"[mock event timestamp]"
-					)
-					.replace(
-						mockTailExpiration.toLocaleString(),
-						"[mock expiration date]"
-					)
+				std.out.replace(
+					new Date(mockEventTimestamp).toLocaleString(),
+					"[mock event timestamp]"
+				)
 			).toMatchInlineSnapshot(`
 						"Connected to deployment mock-deployment-id, waiting for logs...
 						GET https://example.org/ - Ok @ [mock event timestamp]
@@ -607,6 +603,7 @@ type MockAPI = {
 	};
 	ws: MockWebSocket;
 	nextMessageJson(): Promise<unknown>;
+	closeHelper: () => Promise<void>;
 };
 
 /**
@@ -616,31 +613,40 @@ type MockAPI = {
  */
 function mockListDeployments(): RequestCounter {
 	const requests: RequestCounter = { count: 0 };
-	setMockResponse(
-		`/accounts/:accountId/pages/projects/:projectName/deployments`,
-		"GET",
-		([_url, _accountId, _projectName, _deploymentId], _req) => {
-			requests.count++;
-			return [
-				{
-					id: "mock-deployment-id",
-					url: "https://87bbc8fe.mock.pages.dev",
-					environment: "production",
-					created_on: "2021-11-17T14:52:26.133835Z",
-					latest_stage: {
-						ended_on: "2021-11-17T14:52:26.133835Z",
-						status: "success",
-					},
-					deployment_trigger: {
-						metadata: {
-							branch: "main",
-							commit_hash: "c7649364c4cb32ad4f65b530b9424e8be5bec9d6",
-						},
-					},
-					project_name: "mock-project",
-				},
-			];
-		}
+	msw.use(
+		rest.get(
+			`*/accounts/:accountId/pages/projects/:projectName/deployments`,
+			(_, res, ctx) => {
+				requests.count++;
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: [
+							{
+								id: "mock-deployment-id",
+								url: "https://87bbc8fe.mock.pages.dev",
+								environment: "production",
+								created_on: "2021-11-17T14:52:26.133835Z",
+								latest_stage: {
+									ended_on: "2021-11-17T14:52:26.133835Z",
+									status: "success",
+								},
+								deployment_trigger: {
+									metadata: {
+										branch: "main",
+										commit_hash: "c7649364c4cb32ad4f65b530b9424e8be5bec9d6",
+									},
+								},
+								project_name: "mock-project",
+							},
+						],
+					})
+				);
+			}
+		)
 	);
 
 	return requests;
@@ -662,17 +668,26 @@ type RequestCounter = {
  */
 function mockCreateTailRequest(): RequestInit[] {
 	const requests: RequestInit[] = [];
-	setMockResponse(
-		`/accounts/:accountId/pages/projects/:projectName/deployments/:deploymentId/tails`,
-		"POST",
-		([_url, _accountId, _projectName, _deploymentId], req) => {
-			requests.push(req);
-			return {
-				id: "tail-id",
-				url: websocketURL,
-				expires_at: mockTailExpiration,
-			};
-		}
+	msw.use(
+		rest.post(
+			`*/accounts/:accountId/pages/projects/:projectName/deployments/:deploymentId/tails`,
+			async (req, res, ctx) => {
+				requests.push(await req.json());
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						results: {
+							id: "tail-id",
+							url: websocketURL,
+							expires_at: mockTailExpiration,
+						},
+					})
+				);
+			}
+		)
 	);
 
 	return requests;
@@ -700,13 +715,17 @@ const mockEventScheduledTime = new Date(mockEventTimestamp).toISOString();
  */
 function mockDeleteTailRequest(): RequestCounter {
 	const requests = { count: 0 };
-	setMockResponse(
-		`/accounts/:accountId/pages/projects/:projectName/deployments/:deploymentId/tails/:tailId`,
-		"DELETE",
-		([_url, _accountId, _projectName, _deploymentId], _req) => {
-			requests.count++;
-			return null;
-		}
+	msw.use(
+		rest.delete(
+			`/accounts/:accountId/pages/projects/:projectName/deployments/:deploymentId/tails/:tailId`,
+			(req, res, ctx) => {
+				requests.count++;
+				return res.once(
+					ctx.status(200),
+					ctx.json({ success: true, errors: [], messages: [], result: null })
+				);
+			}
+		)
 	);
 
 	return requests;
@@ -740,10 +759,21 @@ function mockTailAPIs(): MockAPI {
 			const message = await api.ws.nextMessage;
 			return JSON.parse(message as string);
 		},
+		/**
+		 * Close the mock websocket and clean up the API.
+		 * The setTimeout forces a cycle to allow for closing and cleanup
+		 * @returns a Promise that resolves when the websocket is closed
+		 */
+		async closeHelper() {
+			api.ws.close();
+			await new Promise((resolve) => setTimeout(resolve, 0));
+		},
 	};
+
 	api.requests.creation = mockCreateTailRequest();
 	api.requests.deletion = mockDeleteTailRequest();
 	api.requests.deployments = mockListDeployments();
+
 	api.ws = new MockWebSocket(websocketURL);
 	mockWebSockets.push(api.ws);
 
