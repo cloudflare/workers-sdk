@@ -20,6 +20,7 @@ import type {
 	MetadataHeadersV1,
 	MetadataHeadersV2,
 	MetadataStaticRedirectEntry,
+	MetadataRedirectEntry,
 } from "./metadata";
 
 type BodyEncoding = "manual" | "automatic";
@@ -576,10 +577,10 @@ export async function generateHandler<
  * for the redirect. This function will convert the Location header
  * to be a root-relative path URL if the request origin and destination
  * origins are the same. This is so that if the project is served
- * on multiple domains, the redirects
+ * on multiple domains, the redirects won't take the client off of their current domain.
  */
 export function getResponseFromMatch(
-	{ status, to }: Pick<MetadataStaticRedirectEntry, "status" | "to">,
+	{ status, to }: Pick<MetadataStaticRedirectEntry | MetadataRedirectEntry, "status" | "to">,
 	requestUrl: URL
 ) {
 	// Inherit origin from the request URL if not specified in _redirects

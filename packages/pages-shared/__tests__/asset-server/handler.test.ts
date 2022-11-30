@@ -108,7 +108,6 @@ describe("asset-server handler", () => {
 			});
 			expect(response.status).toBe(200);
 			expect(spies.fetchAsset).toBe(1);
-			// expect(response.url).toBe("https://foo.com/page.html");
 		}
 	});
 
