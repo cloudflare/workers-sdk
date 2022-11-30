@@ -1115,6 +1115,16 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateServiceBinding),
 			[]
 		),
+		analytics_engine_datasets: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"analytics_engine_datasets",
+			validateBindingArray(envName, validateAnalyticsEngineBinding),
+			[]
+		),
 		dispatch_namespaces: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -1834,6 +1844,7 @@ const validateBindingsHaveUniqueNames = (
 		durable_objects,
 		kv_namespaces,
 		r2_buckets,
+		analytics_engine_datasets,
 		text_blobs,
 		unsafe,
 		vars,
@@ -1848,6 +1859,7 @@ const validateBindingsHaveUniqueNames = (
 		"Durable Object": getBindingNames(durable_objects),
 		"KV Namespace": getBindingNames(kv_namespaces),
 		"R2 Bucket": getBindingNames(r2_buckets),
+		"Analytics Engine Dataset": getBindingNames(analytics_engine_datasets),
 		"Text Blob": getBindingNames(text_blobs),
 		Unsafe: getBindingNames(unsafe),
 		"Environment Variable": getBindingNames(vars),
@@ -1948,6 +1960,43 @@ const validateServiceBinding: ValidatorFn = (diagnostics, field, value) => {
 	if (!isOptionalProperty(value, "environment", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings should have a string "environment" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	return isValid;
+};
+
+const validateAnalyticsEngineBinding: ValidatorFn = (
+	diagnostics,
+	field,
+	value
+) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"analytics_engine" bindings should be objects, but got ${JSON.stringify(
+				value
+			)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	// Service bindings must have a binding and optional dataset.
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (
+		!isOptionalProperty(value, "dataset", "string") ||
+		(value as { dataset: string }).dataset?.length === 0
+	) {
+		diagnostics.errors.push(
+			`"${field}" bindings should, optionally, have a string "dataset" field but got ${JSON.stringify(
 				value
 			)}.`
 		);

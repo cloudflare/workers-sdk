@@ -59,6 +59,14 @@ export async function generateTypes(
 		}
 	}
 
+	if (configToDTS.analytics_engine_datasets) {
+		for (const analyticsEngine of configToDTS.analytics_engine_datasets) {
+			envTypeStructure.push(
+				`${analyticsEngine.binding}: AnalyticsEngineDataset;`
+			);
+		}
+	}
+
 	if (configToDTS.dispatch_namespaces) {
 		for (const namespace of configToDTS.dispatch_namespaces) {
 			envTypeStructure.push(`${namespace.binding}: any;`);

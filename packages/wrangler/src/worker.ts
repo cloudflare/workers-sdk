@@ -144,6 +144,11 @@ interface CfService {
 	environment?: string;
 }
 
+interface CfAnalyticsEngineDataset {
+	binding: string;
+	dataset?: string;
+}
+
 interface CfDispatchNamespace {
 	binding: string;
 	namespace: string;
@@ -207,6 +212,7 @@ export interface CfWorkerInit {
 		r2_buckets: CfR2Bucket[] | undefined;
 		d1_databases: CfD1Database[] | undefined;
 		services: CfService[] | undefined;
+		analytics_engine_datasets: CfAnalyticsEngineDataset[] | undefined;
 		dispatch_namespaces: CfDispatchNamespace[] | undefined;
 		logfwdr: CfLogfwdr | undefined;
 		unsafe: CfUnsafeBinding[] | undefined;

@@ -43,6 +43,7 @@ type WorkerMetadataBinding =
 	| { type: "r2_bucket"; name: string; bucket_name: string }
 	| { type: "d1"; name: string; id: string; internalEnv?: string }
 	| { type: "service"; name: string; service: string; environment?: string }
+	| { type: "analytics_engine"; name: string; dataset?: string }
 	| { type: "namespace"; name: string; namespace: string }
 	| {
 			type: "logfwdr";
@@ -146,6 +147,14 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			type: "service",
 			service,
 			...(environment && { environment }),
+		});
+	});
+
+	bindings.analytics_engine_datasets?.forEach(({ binding, dataset }) => {
+		metadataBindings.push({
+			name: binding,
+			type: "analytics_engine",
+			dataset,
 		});
 	});
 

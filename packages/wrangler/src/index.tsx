@@ -543,6 +543,7 @@ export function createCLIParser(argv: string[]) {
 				r2_buckets: config.r2_buckets,
 				d1_databases: config.d1_databases,
 				services: config.services,
+				analytics_engine_datasets: config.analytics_engine_datasets,
 				dispatch_namespaces: config.dispatch_namespaces,
 				logfwdr: config.logfwdr,
 				unsafe: { bindings: config.unsafe?.bindings },

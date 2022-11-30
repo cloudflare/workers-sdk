@@ -440,6 +440,22 @@ interface EnvironmentNonInheritable {
 		| undefined;
 
 	/**
+	 * Specifies analytics engine datasets that are bound to this Worker environment.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default `[]`
+	 * @nonInheritable
+	 */
+	analytics_engine_datasets: {
+		/** The binding name used to refer to the dataset in the worker. */
+		binding: string;
+		/** The name of this dataset to write to. */
+		dataset?: string;
+	}[];
+
+	/**
 	 * "Unsafe" tables for features that aren't directly supported by wrangler.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,

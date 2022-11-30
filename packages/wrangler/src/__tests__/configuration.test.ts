@@ -55,6 +55,7 @@ describe("normalizeAndValidateConfig()", () => {
 			},
 			r2_buckets: [],
 			services: [],
+			analytics_engine_datasets: [],
 			route: undefined,
 			routes: undefined,
 			rules: [],
@@ -913,6 +914,15 @@ describe("normalizeAndValidateConfig()", () => {
 						binding: "SERVICE_BINDING_1",
 						service: "SERVICE_TYPE_1",
 						environment: "SERVICE_BINDING_ENVIRONMENT_1",
+					},
+				],
+				analytics_engine_datasets: [
+					{
+						binding: "AE_BINDING_1",
+						dataset: "DATASET_1",
+					},
+					{
+						binding: "AE_BINDING_2",
 					},
 				],
 				unsafe: {
@@ -2028,6 +2038,92 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
+		describe("[analytics_engine_datasets]", () => {
+			it("should error if analytics_engine_datasets is an object", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ analytics_engine_datasets: {} } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			                  "Processing wrangler configuration:
+			                    - The field \\"analytics_engine_datasets\\" should be an array but got {}."
+		              `);
+			});
+
+			it("should error if analytics_engine_datasets is a string", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ analytics_engine_datasets: "BAD" } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			                  "Processing wrangler configuration:
+			                    - The field \\"analytics_engine_datasets\\" should be an array but got \\"BAD\\"."
+		              `);
+			});
+
+			it("should error if analytics_engine_datasets is a number", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ analytics_engine_datasets: 999 } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			                  "Processing wrangler configuration:
+			                    - The field \\"analytics_engine_datasets\\" should be an array but got 999."
+		              `);
+			});
+
+			it("should error if analytics_engine_datasets is null", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ analytics_engine_datasets: null } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			                  "Processing wrangler configuration:
+			                    - The field \\"analytics_engine_datasets\\" should be an array but got null."
+		              `);
+			});
+
+			it("should error if analytics_engine_datasets.bindings are not valid", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						analytics_engine_datasets: [
+							{},
+							{ binding: 2333, dataset: 2444 },
+							{
+								binding: "AE_BINDING_2",
+								dataset: 2555,
+							},
+							{ binding: "AE_BINDING_1", dataset: "" },
+						],
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			          "Processing wrangler configuration:
+			            - \\"analytics_engine_datasets[0]\\" bindings should have a string \\"binding\\" field but got {}.
+			            - \\"analytics_engine_datasets[1]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"dataset\\":2444}.
+			            - \\"analytics_engine_datasets[1]\\" bindings should, optionally, have a string \\"dataset\\" field but got {\\"binding\\":2333,\\"dataset\\":2444}.
+			            - \\"analytics_engine_datasets[2]\\" bindings should, optionally, have a string \\"dataset\\" field but got {\\"binding\\":\\"AE_BINDING_2\\",\\"dataset\\":2555}.
+			            - \\"analytics_engine_datasets[3]\\" bindings should, optionally, have a string \\"dataset\\" field but got {\\"binding\\":\\"AE_BINDING_1\\",\\"dataset\\":\\"\\"}."
+		        `);
+			});
+		});
+
 		describe("[dispatch_namespaces]", () => {
 			it("should log an experimental warning when dispatch_namespaces is used", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
@@ -2697,6 +2793,8 @@ describe("normalizeAndValidateConfig()", () => {
 			};
 			const kv_namespaces: RawConfig["kv_namespaces"] = [];
 			const r2_buckets: RawConfig["r2_buckets"] = [];
+			const analytics_engine_datasets: RawConfig["analytics_engine_datasets"] =
+				[];
 			const unsafe: RawConfig["unsafe"] = { bindings: [] };
 			const rawConfig: RawConfig = {
 				define,
@@ -2704,6 +2802,7 @@ describe("normalizeAndValidateConfig()", () => {
 				durable_objects,
 				kv_namespaces,
 				r2_buckets,
+				analytics_engine_datasets,
 				unsafe,
 				env: {
 					ENV1: {},
@@ -2723,6 +2822,7 @@ describe("normalizeAndValidateConfig()", () => {
 					durable_objects,
 					kv_namespaces,
 					r2_buckets,
+					analytics_engine_datasets,
 					unsafe,
 				})
 			);
@@ -2746,6 +2846,9 @@ describe("normalizeAndValidateConfig()", () => {
 			    - \\"r2_buckets\\" exists at the top level, but not on \\"env.ENV1\\".
 			      This is not what you probably want, since \\"r2_buckets\\" is not inherited by environments.
 			      Please add \\"r2_buckets\\" to \\"env.ENV1\\".
+			    - \\"analytics_engine_datasets\\" exists at the top level, but not on \\"env.ENV1\\".
+			      This is not what you probably want, since \\"analytics_engine_datasets\\" is not inherited by environments.
+			      Please add \\"analytics_engine_datasets\\" to \\"env.ENV1\\".
 			    - \\"unsafe\\" exists at the top level, but not on \\"env.ENV1\\".
 			      This is not what you probably want, since \\"unsafe\\" is not inherited by environments.
 			      Please add \\"unsafe\\" to \\"env.ENV1\\"."
@@ -3443,6 +3546,114 @@ describe("normalizeAndValidateConfig()", () => {
 			              - \\"env.ENV1.r2_buckets[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
 			              - \\"env.ENV1.r2_buckets[2]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
 			              - \\"env.ENV1.r2_buckets[3]\\" bindings should, optionally, have a string \\"preview_bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_2\\",\\"bucket_name\\":\\"R2_BUCKET_2\\",\\"preview_bucket_name\\":2555}."
+		        `);
+			});
+		});
+
+		describe("[analytics_engine_datasets]", () => {
+			it("should error if analytics_engine_datasets is an object", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						env: { ENV1: { analytics_engine_datasets: {} } },
+					} as unknown as RawConfig,
+					undefined,
+					{ env: "ENV1" }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			          "Processing wrangler configuration:
+
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.analytics_engine_datasets\\" should be an array but got {}."
+		        `);
+			});
+
+			it("should error if analytics_engine_datasets is a string", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						env: { ENV1: { analytics_engine_datasets: "BAD" } },
+					} as unknown as RawConfig,
+					undefined,
+					{ env: "ENV1" }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			          "Processing wrangler configuration:
+
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.analytics_engine_datasets\\" should be an array but got \\"BAD\\"."
+		        `);
+			});
+
+			it("should error if analytics_engine_datasets is a number", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						env: { ENV1: { analytics_engine_datasets: 999 } },
+					} as unknown as RawConfig,
+					undefined,
+					{ env: "ENV1" }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			          "Processing wrangler configuration:
+
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.analytics_engine_datasets\\" should be an array but got 999."
+		        `);
+			});
+
+			it("should error if analytics_engine_datasets is null", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						env: { ENV1: { analytics_engine_datasets: null } },
+					} as unknown as RawConfig,
+					undefined,
+					{ env: "ENV1" }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			          "Processing wrangler configuration:
+
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.analytics_engine_datasets\\" should be an array but got null."
+		        `);
+			});
+
+			it("should error if analytics_engine_datasets.bindings are not valid", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						env: {
+							ENV1: {
+								analytics_engine_datasets: [
+									{},
+									{ binding: 2333, dataset: 2444 },
+									{
+										binding: "AE_BINDING_2",
+										dataset: 2555,
+									},
+									{ binding: "AE_BINDING_1", dataset: "" },
+								],
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					{ env: "ENV1" }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			          "Processing wrangler configuration:
+
+			            - \\"env.ENV1\\" environment configuration
+			              - \\"env.ENV1.analytics_engine_datasets[0]\\" bindings should have a string \\"binding\\" field but got {}.
+			              - \\"env.ENV1.analytics_engine_datasets[1]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"dataset\\":2444}.
+			              - \\"env.ENV1.analytics_engine_datasets[1]\\" bindings should, optionally, have a string \\"dataset\\" field but got {\\"binding\\":2333,\\"dataset\\":2444}.
+			              - \\"env.ENV1.analytics_engine_datasets[2]\\" bindings should, optionally, have a string \\"dataset\\" field but got {\\"binding\\":\\"AE_BINDING_2\\",\\"dataset\\":2555}.
+			              - \\"env.ENV1.analytics_engine_datasets[3]\\" bindings should, optionally, have a string \\"dataset\\" field but got {\\"binding\\":\\"AE_BINDING_1\\",\\"dataset\\":\\"\\"}."
 		        `);
 			});
 		});
