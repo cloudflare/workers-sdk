@@ -7,7 +7,6 @@ import {
 	Clock,
 	Log,
 	MiniflareCoreError,
-	defaultClock,
 	sanitisePath,
 } from "../../shared";
 import {
@@ -62,6 +61,7 @@ export class GatewayFactory<Gateway> {
 
 	constructor(
 		private readonly log: Log,
+		private readonly clock: Clock,
 		private readonly cloudflareFetch: CloudflareFetch | undefined,
 		private readonly pluginName: string,
 		private readonly gatewayClass: GatewayConstructor<Gateway>,
@@ -71,7 +71,10 @@ export class GatewayFactory<Gateway> {
 	#getMemoryStorage(namespace: string) {
 		let storage = this.#memoryStorages.get(namespace);
 		if (storage !== undefined) return storage;
-		this.#memoryStorages.set(namespace, (storage = new MemoryStorage()));
+		this.#memoryStorages.set(
+			namespace,
+			(storage = new MemoryStorage(undefined, this.clock))
+		);
 		return storage;
 	}
 
@@ -94,9 +97,9 @@ export class GatewayFactory<Gateway> {
 				const root = path.join(fileURLToPath(url), sanitisedNamespace);
 				const unsanitise =
 					url.searchParams.get(PARAM_FILE_UNSANITISE) === "true";
-				return new FileStorage(root, !unsanitise);
+				return new FileStorage(root, !unsanitise, this.clock);
 			} else if (url.protocol === "sqlite:") {
-				return new SqliteStorage(url.pathname, sanitisedNamespace);
+				return new SqliteStorage(url.pathname, sanitisedNamespace, this.clock);
 			}
 			// TODO: support Redis/SQLite storages?
 			if (url.protocol === "remote:") {
@@ -128,7 +131,7 @@ export class GatewayFactory<Gateway> {
 			persist === true
 				? path.join(DEFAULT_PERSIST_ROOT, this.pluginName, sanitisedNamespace)
 				: path.join(persist, sanitisedNamespace);
-		return new FileStorage(root);
+		return new FileStorage(root, undefined, this.clock);
 	}
 
 	get(namespace: string, persist: Persistence): Gateway {
@@ -136,7 +139,7 @@ export class GatewayFactory<Gateway> {
 		if (cached !== undefined && cached[0] === persist) return cached[1];
 
 		const storage = this.getStorage(namespace, persist);
-		const gateway = new this.gatewayClass(this.log, storage, defaultClock);
+		const gateway = new this.gatewayClass(this.log, storage, this.clock);
 		this.#gateways.set(namespace, [persist, gateway]);
 		return gateway;
 	}

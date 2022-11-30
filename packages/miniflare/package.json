@@ -37,13 +37,14 @@
 		"kleur": "^4.1.5",
 		"source-map-support": "0.5.21",
 		"stoppable": "^1.1.0",
-		"undici": "^5.12.0",
+		"undici": "^5.13.0",
 		"workerd": "^1.20221111.5",
 		"ws": "^8.11.0",
 		"youch": "^3.2.2",
 		"zod": "^3.18.0"
 	},
 	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20221111.1",
 		"@types/better-sqlite3": "^7.6.2",
 		"@types/debug": "^4.1.7",
 		"@types/estree": "^1.0.0",

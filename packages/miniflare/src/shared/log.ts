@@ -31,7 +31,7 @@ const LEVEL_COLOUR: { [key in LogLevel]: Colorize } = {
 	[LogLevel.VERBOSE]: (input) => dim(grey(input as any)) as any,
 };
 
-function prefixError(prefix: string, e: any): Error {
+export function prefixError(prefix: string, e: any): Error {
 	if (e.stack) {
 		return new Proxy(e, {
 			get(target, propertyKey, receiver) {
