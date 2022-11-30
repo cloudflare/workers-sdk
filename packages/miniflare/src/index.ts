@@ -360,7 +360,11 @@ export class Miniflare {
 			const workerSrcOpts = this.#workerOpts.map<SourceOptions>(
 				({ core }) => core
 			);
-			response = await handlePrettyErrorRequest(workerSrcOpts, request);
+			response = await handlePrettyErrorRequest(
+				this.#log,
+				workerSrcOpts,
+				request
+			);
 		} else {
 			// TODO: check for proxying/outbound fetch header first (with plans for fetch mocking)
 			response = await this.#handleLoopbackPlugins(request, url);

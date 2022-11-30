@@ -17,6 +17,7 @@ import {
 	CloudflareFetchSchema,
 	Plugin,
 } from "../shared";
+import { HEADER_ERROR_STACK } from "./errors";
 import {
 	ModuleDefinitionSchema,
 	ModuleLocator,
@@ -24,7 +25,6 @@ import {
 	buildStringScriptPath,
 	convertModuleDefinition,
 } from "./modules";
-import { HEADER_ERROR_STACK } from "./prettyerror";
 import { ServiceDesignatorSchema } from "./services";
 
 const encoder = new TextEncoder();
@@ -473,5 +473,5 @@ function getWorkerScript(
 	}
 }
 
-export * from "./prettyerror";
+export * from "./errors";
 export * from "./services";
