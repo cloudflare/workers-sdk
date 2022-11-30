@@ -1,6 +1,7 @@
+import { rest } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
-import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type {
@@ -15,10 +16,6 @@ describe("wrangler", () => {
 	mockApiToken();
 	runInTempDir();
 	const std = mockConsoleMethods();
-
-	afterEach(() => {
-		unsetAllMocks();
-	});
 
 	describe("pubsub", () => {
 		describe("help menu", () => {
@@ -83,15 +80,30 @@ describe("wrangler", () => {
 			describe("create", () => {
 				function mockCreateRequest(expectedNamespaceName: string) {
 					const requests = { count: 0 };
-					setMockResponse(
-						"/accounts/:accountId/pubsub/namespaces",
-						"POST",
-						([_url, accountId], { body }) => {
-							expect(accountId).toEqual("some-account-id");
-							const namespaceName = JSON.parse(body as string).name;
-							expect(namespaceName).toEqual(expectedNamespaceName);
-							requests.count += 1;
-						}
+					msw.use(
+						rest.post(
+							"*/accounts/:accountId/pubsub/namespaces",
+							async (req, res, ctx) => {
+								expect(req.params.accountId).toEqual("some-account-id");
+								const namespace = await req.json();
+								expect(namespace.name).toEqual(expectedNamespaceName);
+								requests.count++;
+								return res.once(
+									ctx.status(200),
+									ctx.json({
+										success: true,
+										errors: [],
+										messages: [],
+										result: {
+											id: "some-namespace-id",
+											name: namespace.name,
+											created_at: "3005-01-01T00:00:00.000000Z",
+											updated_at: "3005-01-01T00:00:00.000000Z",
+										},
+									})
+								);
+							}
+						)
 					);
 					return requests;
 				}
@@ -107,14 +119,24 @@ describe("wrangler", () => {
 			describe("list", () => {
 				function mockListRequest(namespaces: PubSubNamespace[]) {
 					const requests = { count: 0 };
-					setMockResponse(
-						"/accounts/:accountId/pubsub/namespaces",
-						([_url, accountId], init) => {
-							requests.count++;
-							expect(accountId).toEqual("some-account-id");
-							expect(init).toEqual({});
-							return { namespaces };
-						}
+					msw.use(
+						rest.get(
+							"*/accounts/:accountId/pubsub/namespaces",
+							async (req, res, ctx) => {
+								requests.count++;
+								expect(req.params.accountId).toEqual("some-account-id");
+
+								return res.once(
+									ctx.status(200),
+									ctx.json({
+										success: true,
+										errors: [],
+										messages: [],
+										result: namespaces,
+									})
+								);
+							}
+						)
 					);
 					return requests;
 				}
@@ -128,7 +150,12 @@ describe("wrangler", () => {
 					await runWrangler("pubsub namespace list");
 
 					expect(std.err).toMatchInlineSnapshot(`""`);
-					// TODO(elithrar): check returned object
+					expect(std.out).toMatchInlineSnapshot(`
+				"[
+				  { name: 'namespace-1', created_on: '01-01-2001' },
+				  { name: 'namespace-2', created_on: '01-01-2001' }
+				]"
+			`);
 					expect(requests.count).toEqual(1);
 				});
 			});
@@ -174,16 +201,29 @@ describe("wrangler", () => {
 			describe("create", () => {
 				function mockCreateRequest(expectedBrokerName: string) {
 					const requests = { count: 0 };
-					setMockResponse(
-						"/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers",
-						"POST",
-						([_url, accountId, namespaceName], { body }) => {
-							expect(accountId).toEqual("some-account-id");
-							expect(namespaceName).toEqual("some-namespace");
-							const brokerName = JSON.parse(body as string).name;
-							expect(brokerName).toEqual(expectedBrokerName);
-							requests.count += 1;
-						}
+					msw.use(
+						rest.post(
+							"*/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers",
+							async (req, res, ctx) => {
+								expect(req.params.accountId).toEqual("some-account-id");
+								expect(req.params.namespaceName).toEqual("some-namespace");
+								const broker = await req.json();
+								expect(broker.name).toEqual(expectedBrokerName);
+								requests.count++;
+								return res.once(
+									ctx.status(200),
+									ctx.json({
+										success: true,
+										errors: [],
+										messages: [],
+										result: {
+											name: expectedBrokerName,
+											created_on: "01-01-2001",
+										},
+									})
+								);
+							}
+						)
 					);
 					return requests;
 				}
@@ -194,7 +234,10 @@ describe("wrangler", () => {
 						"pubsub broker create my-broker --namespace=some-namespace"
 					);
 
-					// TODO: check returned object
+					expect(std.err).toMatchInlineSnapshot(`""`);
+					expect(std.out).toMatchInlineSnapshot(
+						`"{ name: 'my-broker', created_on: '01-01-2001' }"`
+					);
 					expect(requests.count).toEqual(1);
 				});
 
@@ -215,21 +258,34 @@ describe("wrangler", () => {
 					expectedOnPublishConfig: PubSubBrokerOnPublish
 				) {
 					const requests = { count: 0 };
-					setMockResponse(
-						"/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers/:brokerName",
-						"PATCH",
-						([_url, accountId, namespaceName, brokerName], { body }) => {
-							expect(accountId).toEqual("some-account-id");
-							expect(namespaceName).toEqual("some-namespace");
-							expect(brokerName).toEqual(expectedBrokerName);
+					msw.use(
+						rest.patch(
+							"*/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers/:brokerName",
+							async (req, res, cxt) => {
+								requests.count += 1;
+								expect(req.params.accountId).toEqual("some-account-id");
+								expect(req.params.namespaceName).toEqual("some-namespace");
+								expect(req.params.brokerName).toEqual(expectedBrokerName);
 
-							const patchBody: PubSubBrokerUpdate = JSON.parse(body as string);
-							expect(patchBody.expiration).toEqual(expectedExpiration);
-							expect(patchBody.description).toEqual(expectedDescription);
-							expect(patchBody.on_publish).toEqual(expectedOnPublishConfig);
+								const patchBody: PubSubBrokerUpdate = await req.json();
 
-							requests.count += 1;
-						}
+								expect(patchBody.expiration).toEqual(expectedExpiration);
+								expect(patchBody.description).toEqual(expectedDescription);
+								expect(patchBody.on_publish).toEqual(expectedOnPublishConfig);
+								return res.once(
+									cxt.status(200),
+									cxt.json({
+										success: true,
+										errors: [],
+										messages: [],
+										result: {
+											name: expectedBrokerName,
+											created_on: "01-01-2001",
+										},
+									})
+								);
+							}
+						)
 					);
 					return requests;
 				}
@@ -249,7 +305,10 @@ describe("wrangler", () => {
 					);
 
 					expect(std.err).toMatchInlineSnapshot(`""`);
-					// TODO(elithrar): check returned object
+					expect(std.out).toMatchInlineSnapshot(`
+				"{ name: 'my-broker', created_on: '01-01-2001' }
+				Successfully updated Pub/Sub Broker my-broker"
+			`);
 					expect(requests.count).toEqual(1);
 				});
 			});
@@ -257,15 +316,24 @@ describe("wrangler", () => {
 			describe("list", () => {
 				function mockListRequest(brokers: PubSubBroker[]) {
 					const requests = { count: 0 };
-					setMockResponse(
-						"/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers",
-						([_url, accountId, namespaceName], init) => {
-							requests.count++;
-							expect(accountId).toEqual("some-account-id");
-							expect(namespaceName).toEqual("some-namespace");
-							expect(init).toEqual({});
-							return { brokers };
-						}
+					msw.use(
+						rest.get(
+							"*/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers",
+							async (req, res, cxt) => {
+								requests.count++;
+								expect(req.params.accountId).toEqual("some-account-id");
+								expect(req.params.namespaceName).toEqual("some-namespace");
+								return res.once(
+									cxt.status(200),
+									cxt.json({
+										success: true,
+										errors: [],
+										messages: [],
+										result: brokers,
+									})
+								);
+							}
+						)
 					);
 					return requests;
 				}
@@ -279,7 +347,12 @@ describe("wrangler", () => {
 					await runWrangler("pubsub broker list --namespace=some-namespace");
 
 					expect(std.err).toMatchInlineSnapshot(`""`);
-					// TODO(elithrar): check returned object
+					expect(std.out).toMatchInlineSnapshot(`
+				"[
+				  { name: 'broker-1', created_on: '01-01-2001' },
+				  { name: 'broker-2', created_on: '01-01-2001' }
+				]"
+			`);
 					expect(requests.count).toEqual(1);
 				});
 			});
@@ -287,15 +360,25 @@ describe("wrangler", () => {
 			describe("describe", () => {
 				function mockGetRequest(broker: PubSubBroker) {
 					const requests = { count: 0 };
-					setMockResponse(
-						"/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers/:brokerName",
-						([_url, accountId, namespaceName, brokerName]) => {
-							requests.count++;
-							expect(accountId).toEqual("some-account-id");
-							expect(namespaceName).toEqual("some-namespace");
-							expect(brokerName).toEqual(broker.name);
-							return { result: broker };
-						}
+					msw.use(
+						rest.get(
+							"*/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers/:brokerName",
+							(req, res, cxt) => {
+								requests.count++;
+								expect(req.params.accountId).toEqual("some-account-id");
+								expect(req.params.namespaceName).toEqual("some-namespace");
+								expect(req.params.brokerName).toEqual(broker.name);
+								return res.once(
+									cxt.status(200),
+									cxt.json({
+										success: true,
+										errors: [],
+										messages: [],
+										result: broker,
+									})
+								);
+							}
+						)
 					);
 					return requests;
 				}
@@ -307,7 +390,9 @@ describe("wrangler", () => {
 					);
 
 					expect(std.err).toMatchInlineSnapshot(`""`);
-					// TODO(elithrar): check returned object
+					expect(std.out).toMatchInlineSnapshot(
+						`"{ id: '1234', name: 'my-broker' }"`
+					);
 					expect(requests.count).toEqual(1);
 				});
 			});
@@ -315,14 +400,28 @@ describe("wrangler", () => {
 			describe("issue", () => {
 				function mockIssueRequest(expectedBrokerName: string) {
 					const requests = { count: 0 };
-					setMockResponse(
-						"/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers/:brokerName/credentials",
-						([_url, accountId, namespaceName, brokerName]) => {
-							expect(accountId).toEqual("some-account-id");
-							expect(namespaceName).toEqual("some-namespace");
-							expect(brokerName).toEqual(expectedBrokerName);
-							requests.count += 1;
-						}
+					msw.use(
+						rest.get(
+							"*/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers/:brokerName/credentials",
+							(req, res, cxt) => {
+								requests.count++;
+								expect(req.params.accountId).toEqual("some-account-id");
+								expect(req.params.namespaceName).toEqual("some-namespace");
+								expect(req.params.brokerName).toEqual(expectedBrokerName);
+								return res.once(
+									cxt.status(200),
+									cxt.json({
+										success: true,
+										errors: [],
+										messages: [],
+										result: {
+											"MOCK-89T6DXG3SVG1WQRA": `<base-64-encoded-JWT>`,
+											"MOCK-393REE4WRRE4NHAV96": `<base-64-encoded-JWT>`,
+										},
+									})
+								);
+							}
+						)
 					);
 					return requests;
 				}
@@ -334,7 +433,13 @@ describe("wrangler", () => {
 					);
 
 					expect(std.err).toMatchInlineSnapshot(`""`);
-					// TODO(elithrar): check returned object
+					expect(std.out).toMatchInlineSnapshot(`
+				"🔑 Issuing credential(s) for my-broker.some-namespace...
+				{
+				  'MOCK-89T6DXG3SVG1WQRA': '<base-64-encoded-JWT>',
+				  'MOCK-393REE4WRRE4NHAV96': '<base-64-encoded-JWT>'
+				}"
+			`);
 					expect(requests.count).toEqual(1);
 				});
 			});
@@ -342,14 +447,27 @@ describe("wrangler", () => {
 			describe("public-keys", () => {
 				function mockIssueRequest(expectedBrokerName: string) {
 					const requests = { count: 0 };
-					setMockResponse(
-						"/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers/:brokerName/publickeys",
-						([_url, accountId, namespaceName, brokerName]) => {
-							expect(accountId).toEqual("some-account-id");
-							expect(namespaceName).toEqual("some-namespace");
-							expect(brokerName).toEqual(expectedBrokerName);
-							requests.count += 1;
-						}
+					msw.use(
+						rest.get(
+							"*/accounts/:accountId/pubsub/namespaces/:namespaceName/brokers/:brokerName/publickeys",
+							(req, res, cxt) => {
+								requests.count++;
+								expect(req.params.accountId).toEqual("some-account-id");
+								expect(req.params.namespaceName).toEqual("some-namespace");
+								expect(req.params.brokerName).toEqual(expectedBrokerName);
+								return res.once(
+									cxt.status(200),
+									cxt.json({
+										success: true,
+										errors: [],
+										messages: [],
+										result: {
+											public_keys: "Mock-Public-Key",
+										},
+									})
+								);
+							}
+						)
 					);
 					return requests;
 				}
@@ -361,7 +479,9 @@ describe("wrangler", () => {
 					);
 
 					expect(std.err).toMatchInlineSnapshot(`""`);
-					// TODO(elithrar): check returned object
+					expect(std.out).toMatchInlineSnapshot(
+						`"{ public_keys: 'Mock-Public-Key' }"`
+					);
 					expect(requests.count).toEqual(1);
 				});
 			});
