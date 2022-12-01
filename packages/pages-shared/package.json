@@ -13,7 +13,8 @@
 		"metadata-generator/**/*"
 	],
 	"scripts": {
-		"check:type": "tsc"
+		"check:type": "tsc",
+		"test": "jest"
 	},
 	"jest": {
 		"coverageReporters": [
