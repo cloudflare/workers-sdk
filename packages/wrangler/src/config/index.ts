@@ -157,7 +157,6 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 	}
 
 	if (d1_databases !== undefined && d1_databases.length > 0) {
-		logger.log("d1_databases: ", d1_databases);
 		output.push({
 			type: "D1 Databases",
 			entries: d1_databases.map(
