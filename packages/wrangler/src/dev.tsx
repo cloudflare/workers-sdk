@@ -901,10 +901,13 @@ async function getBindings(
 						`In development, you should use a separate d1 database than the one you'd use in production. Please create a new d1 database with "wrangler d1 create <name>" and add its id as preview_database_id to the d1_database "${d1Db.binding}" in your wrangler.toml`
 					);
 				}
-				return {
+				const newD1Db = {
 					...d1Db,
 					database_id: d1Db.preview_database_id,
 				};
+				console.log("old: ", d1Db);
+				console.log("new: ", newD1Db);
+				return newD1Db;
 			}),
 			...(args.d1Databases || []),
 		]),
