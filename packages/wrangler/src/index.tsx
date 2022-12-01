@@ -602,6 +602,16 @@ export function createCLIParser(argv: string[]) {
 			}
 		}
 	);
+	
+	// version
+	wrangler.command(
+		"test-pre",
+		false,
+		() => {},
+		async () => {
+			logger.log("released");
+		}
+	);
 
 	wrangler.exitProcess(false);
 
