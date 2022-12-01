@@ -160,14 +160,21 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 	if (d1_databases !== undefined && d1_databases.length > 0) {
 		output.push({
 			type: "D1 Databases",
-			entries: d1_databases.map(({ binding, database_name, database_id }) => {
-				return {
-					key: removeD1BetaPrefix(binding),
-					value: database_name
-						? `${database_name} (${database_id})`
-						: database_id,
-				};
-			}),
+			entries: d1_databases.map(
+				({ binding, database_name, database_id, preview_database_id }) => {
+					let databaseValue = `${database_id}`;
+					if (database_name) {
+						databaseValue = `${database_name} (${database_id})`;
+					}
+					if (preview_database_id) {
+						databaseValue += `, Preview: (${preview_database_id})`;
+					}
+					return {
+						key: removeD1BetaPrefix(binding),
+						value: databaseValue,
+					};
+				}
+			),
 		});
 	}
 
