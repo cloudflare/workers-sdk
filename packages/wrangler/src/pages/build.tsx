@@ -88,6 +88,11 @@ export function Options(yargs: Argv) {
 				deprecated: true,
 				hidden: true,
 			},
+			"experimental-pack": {
+				type: "boolean",
+				default: false,
+				hidden: true,
+			},
 		})
 		.epilogue(pagesBetaWarning);
 }
@@ -105,6 +110,7 @@ export const Handler = async ({
 	buildOutputDirectory,
 	nodeCompat,
 	bindings,
+	experimentalPack,
 }: PagesBuildArgs) => {
 	if (!isInPagesCI) {
 		// Beta message for `wrangler pages <commands>` usage
@@ -143,6 +149,7 @@ export const Handler = async ({
 			routesOutputPath,
 			local: false,
 			d1Databases,
+			experimentalPack,
 		});
 	} catch (e) {
 		if (e instanceof FunctionsNoRoutesError) {
@@ -176,6 +183,7 @@ export async function buildFunctions({
 	nodeCompat,
 	local,
 	d1Databases,
+	experimentalPack,
 }: Partial<
 	Pick<
 		PagesBuildArgs,
@@ -195,6 +203,7 @@ export async function buildFunctions({
 	routesOutputPath?: PagesBuildArgs["outputRoutesPath"];
 	local: boolean;
 	d1Databases?: string[];
+	experimentalPack: boolean;
 }) {
 	RUNNING_BUILDERS.forEach(
 		(runningBuilder) => runningBuilder.stop && runningBuilder.stop()
@@ -264,6 +273,7 @@ export async function buildFunctions({
 				onEnd,
 				buildOutputDirectory,
 				nodeCompat,
+				experimentalPack,
 			})
 		);
 	}

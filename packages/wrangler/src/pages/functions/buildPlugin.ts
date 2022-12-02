@@ -5,7 +5,10 @@ import { getBasePath } from "../../paths";
 import { D1_BETA_PREFIX } from "../../worker";
 import type { Options as WorkerOptions } from "./buildWorker";
 
-type Options = Omit<WorkerOptions, "fallbackService" | "buildOutputDirectory">;
+type Options = Omit<
+	WorkerOptions,
+	"fallbackService" | "buildOutputDirectory" | "experimentalPack"
+>;
 
 export function buildPlugin({
 	routesModule,
