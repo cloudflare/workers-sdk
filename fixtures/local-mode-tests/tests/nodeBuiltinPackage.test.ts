@@ -23,7 +23,8 @@ describe("worker", () => {
 	});
 
 	afterAll(async () => {
-		await worker?.stop();
+		await readyPromise;
+		await worker.stop();
 	});
 
 	it.concurrent("returns hex string", async () => {

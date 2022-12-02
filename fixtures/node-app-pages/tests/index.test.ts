@@ -29,6 +29,7 @@ describe("Pages Dev", () => {
 	});
 
 	afterAll(async () => {
+		await readyPromise;
 		await new Promise((resolve, reject) => {
 			wranglerProcess.once("exit", (code) => {
 				if (!code) {

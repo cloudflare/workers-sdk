@@ -26,7 +26,8 @@ describe.skip("worker", () => {
 	});
 
 	afterAll(async () => {
-		await worker?.stop();
+		await readyPromise;
+		await worker.stop();
 	});
 
 	it.concurrent("should return Hi by default", async () => {
