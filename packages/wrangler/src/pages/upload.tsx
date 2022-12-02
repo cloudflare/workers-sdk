@@ -283,7 +283,8 @@ export const upload = async (
 			);
 
 			try {
-				return await fetchResult(`/pages/assets/upload`, {
+				console.debug("POST /pages/assets/upload");
+				const res = await fetchResult(`/pages/assets/upload`, {
 					method: "POST",
 					headers: {
 						"Content-Type": "application/json",
@@ -291,8 +292,10 @@ export const upload = async (
 					},
 					body: JSON.stringify(payload),
 				});
+				console.debug("result:", res);
 			} catch (e) {
 				if (attempts < MAX_UPLOAD_ATTEMPTS) {
+					console.debug("failed:", e, "retrying...");
 					// Exponential backoff, 1 second first time, then 2 second, then 4 second etc.
 					await new Promise((resolvePromise) =>
 						setTimeout(resolvePromise, Math.pow(2, attempts++) * 1000)
@@ -304,6 +307,7 @@ export const upload = async (
 					}
 					return doUpload();
 				} else {
+					console.debug("failed:", e);
 					throw e;
 				}
 			}

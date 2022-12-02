@@ -25,7 +25,7 @@ const LOGGER_LEVEL_FORMAT_TYPE_MAP = {
 
 const getLogLevelFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_LOG",
-	defaultValue: "log",
+	defaultValue: "debug",
 });
 
 class Logger {
