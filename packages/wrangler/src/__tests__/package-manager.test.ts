@@ -4,7 +4,7 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
 const { getPackageManager, getPackageManagerName } =
-	jest.requireActual("../package-manager");
+	vi.requireActual("../package-manager");
 interface TestCase {
 	npm: boolean;
 	pnpm: boolean;

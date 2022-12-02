@@ -19,7 +19,7 @@ export interface ConfirmExpectation {
  * then an error is thrown.
  */
 export function mockConfirm(...expectations: ConfirmExpectation[]) {
-	(confirm as jest.Mock).mockImplementation((text: string) => {
+	(confirm as vi.Mock).mockImplementation((text: string) => {
 		for (const expectation of expectations) {
 			if (normalizeSlashes(text) === normalizeSlashes(expectation.text)) {
 				expectations = expectations.filter((e) => e !== expectation);
@@ -39,11 +39,11 @@ export function mockConfirm(...expectations: ConfirmExpectation[]) {
 }
 
 export function clearConfirmMocks() {
-	(confirm as jest.Mock).mockReset();
+	(confirm as vi.Mock).mockReset();
 	// Because confirm was originally a spy, calling mockReset will simply reset
 	// it as a function with no return value (!), so we need to accitionally reset
-	// the mock implementation to the one that throws (from jest.setup.js).
-	(confirm as jest.Mock).mockImplementation((text: string) => {
+	// the mock implementation to the one that throws (from vi.setup.js).
+	(confirm as vi.Mock).mockImplementation((text: string) => {
 		throw new Error(
 			`Unexpected call to \`confirm("${text}")\`.\nYou should use \`mockConfirm()\` to mock calls to \`confirm()\` with expectations. Search the codebase for \`mockConfirm\` to learn more.`
 		);
@@ -70,7 +70,7 @@ export interface PromptExpectation {
  * then an error is thrown.
  */
 export function mockPrompt(...expectations: PromptExpectation[]) {
-	(prompt as jest.Mock).mockImplementation(
+	(prompt as vi.Mock).mockImplementation(
 		(text: string, type: "text" | "password") => {
 			for (const expectation of expectations) {
 				if (text === expectation.text && type == expectation.type) {
@@ -92,11 +92,11 @@ export function mockPrompt(...expectations: PromptExpectation[]) {
 }
 
 export function clearPromptMocks() {
-	(prompt as jest.Mock).mockReset();
+	(prompt as vi.Mock).mockReset();
 	// Because prompt was originally a spy, calling mockReset will simply reset
 	// it as a function with no return value (!), so we need to accitionally reset
-	// the mock implementation to the one that throws (from jest.setup.js).
-	(prompt as jest.Mock).mockImplementation((text: string) => {
+	// the mock implementation to the one that throws (from vi.setup.js).
+	(prompt as vi.Mock).mockImplementation((text: string) => {
 		throw new Error(
 			`Unexpected call to \`prompt(${text}, ...)\`.\nYou should use \`mockPrompt()\` to mock calls to \`prompt()\` with expectations. Search the codebase for \`mockPrompt\` to learn more.`
 		);
@@ -121,7 +121,7 @@ export interface SelectExpectation {
  * then an error is thrown.
  */
 export function mockSelect(...expectations: SelectExpectation[]) {
-	(select as jest.Mock).mockImplementation((text: string) => {
+	(select as vi.Mock).mockImplementation((text: string) => {
 		for (const expectation of expectations) {
 			if (normalizeSlashes(text) === normalizeSlashes(expectation.text)) {
 				expectations = expectations.filter((e) => e !== expectation);
@@ -141,11 +141,11 @@ export function mockSelect(...expectations: SelectExpectation[]) {
 }
 
 export function clearSelectMocks() {
-	(select as jest.Mock).mockReset();
+	(select as vi.Mock).mockReset();
 	// Because select was originally a spy, calling mockReset will simply reset
 	// it as a function with no return value (!), so we need to additionally reset
-	// the mock implementation to the one that throws (from jest.setup.js).
-	(select as jest.Mock).mockImplementation((text: string) => {
+	// the mock implementation to the one that throws (from vi.setup.js).
+	(select as vi.Mock).mockImplementation((text: string) => {
 		throw new Error(
 			`Unexpected call to \`select("${text}")\`.\nYou should use \`mockSelect()\` to mock calls to \`select()\` with expectations. Search the codebase for \`mockSelect\` to learn more.`
 		);

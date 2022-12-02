@@ -27,7 +27,7 @@ describe("metrics", () => {
 
 	beforeEach(() => {
 		// Tell jest to use the original version of the `getMetricsConfig()` function in these tests.
-		const mockMetricsConfig = jest.requireMock("../metrics/metrics-config");
+		const mockMetricsConfig = vi.requireMock("../metrics/metrics-config");
 		mockMetricsConfig.useOriginal = true;
 		global.SPARROW_SOURCE_KEY = "MOCK_KEY";
 		logger.loggerLevel = "debug";
@@ -206,13 +206,13 @@ describe("metrics", () => {
 	});
 
 	describe("getMetricsConfig()", () => {
-		let isCISpy: jest.SpyInstance;
+		let isCISpy: vi.SpyInstance;
 
 		const { setIsTTY } = useMockIsTTY();
 		beforeEach(() => {
 			// Default the mock TTY to interactive for all these tests.
 			setIsTTY(true);
-			isCISpy = jest.spyOn(CI, "isCI").mockReturnValue(false);
+			isCISpy = vi.spyOn(CI, "isCI").mockReturnValue(false);
 		});
 
 		describe("enabled", () => {

@@ -3,9 +3,9 @@
  * and optionally assert on the values they're called with in our tests.
  */
 
-let writeSpy: jest.SpyInstance;
+let writeSpy: vi.SpyInstance;
 
-function captureLastWriteCall(spy: jest.SpyInstance): Buffer {
+function captureLastWriteCall(spy: vi.SpyInstance): Buffer {
 	const calls = spy.mock.calls;
 	if (calls.length > 1) {
 		throw new Error(
@@ -26,7 +26,7 @@ function captureLastWriteCall(spy: jest.SpyInstance): Buffer {
 
 export function mockProcess() {
 	beforeEach(() => {
-		writeSpy = jest.spyOn(process.stdout, "write").mockImplementation();
+		writeSpy = vi.spyOn(process.stdout, "write").mockImplementation();
 	});
 	afterEach(() => {
 		writeSpy.mockRestore();

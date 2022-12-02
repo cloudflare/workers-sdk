@@ -32,35 +32,35 @@ import { msw } from "./helpers/msw";
 ).__RELATIVE_PACKAGE_PATH__ = "..";
 
 // Mock out getPort since we don't actually care about what ports are open in unit tests.
-jest.mock("get-port", () => {
+vi.mock("get-port", () => {
 	return {
 		__esModule: true,
-		default: jest.fn().mockImplementation(async (options) => options.port),
+		default: vi.fn().mockImplementation(async (options) => options.port),
 	};
 });
 
-jest.mock("child_process", () => {
+vi.mock("child_process", () => {
 	return {
 		__esModule: true,
-		...jest.requireActual("child_process"),
-		spawnSync: jest.fn().mockImplementation(async (binary, ...args) => {
+		...vi.requireActual("child_process"),
+		spawnSync: vi.fn().mockImplementation(async (binary, ...args) => {
 			if (binary === "cloudflared") return { error: true };
-			return jest.requireActual("child_process").spawnSync(binary, ...args);
+			return vi.requireActual("child_process").spawnSync(binary, ...args);
 		}),
 	};
 });
 
-jest.mock("ws", () => {
+vi.mock("ws", () => {
 	return {
 		__esModule: true,
 		default: MockWebSocket,
 	};
 });
 
-jest.mock("undici", () => {
+vi.mock("undici", () => {
 	return {
-		...jest.requireActual("undici"),
-		fetch: jest.requireActual("jest-fetch-mock"),
+		...vi.requireActual("undici"),
+		fetch: vi.requireActual("jest-fetch-mock"),
 	};
 });
 
@@ -69,7 +69,7 @@ fetchMock.doMock(() => {
 	throw new Error("Unexpected fetch request");
 });
 
-jest.mock("../package-manager");
+vi.mock("../package-manager");
 
 // requests not mocked with `jest-fetch-mock` fall through
 // to `mock-service-worker`
@@ -90,36 +90,36 @@ afterEach(() => {
 });
 afterAll(() => msw.close());
 
-jest.mock("../cfetch/internal");
-(fetchInternal as jest.Mock).mockImplementation(mockFetchInternal);
-(fetchKVGetValue as jest.Mock).mockImplementation(mockFetchKVGetValue);
-(getCloudflareAPIBaseURL as jest.Mock).mockReturnValue(
+vi.mock("../cfetch/internal");
+(fetchInternal as vi.Mock).mockImplementation(mockFetchInternal);
+(fetchKVGetValue as vi.Mock).mockImplementation(mockFetchKVGetValue);
+(getCloudflareAPIBaseURL as vi.Mock).mockReturnValue(
 	"https://api.cloudflare.com/client/v4"
 );
-(fetchR2Objects as jest.Mock).mockImplementation(mockFetchR2Objects);
-(fetchDashboardScript as jest.Mock).mockImplementation(mockFetchDashScript);
-(performApiFetch as jest.Mock).mockImplementation(mockPerformApiFetch);
+(fetchR2Objects as vi.Mock).mockImplementation(mockFetchR2Objects);
+(fetchDashboardScript as vi.Mock).mockImplementation(mockFetchDashScript);
+(performApiFetch as vi.Mock).mockImplementation(mockPerformApiFetch);
 
-jest.mock("../dialogs");
+vi.mock("../dialogs");
 
 // By default (if not configured by mockConfirm()) calls to `confirm()` should throw.
-(confirm as jest.Mock).mockImplementation((text: string) => {
+(confirm as vi.Mock).mockImplementation((text: string) => {
 	throw new Error(
 		`Unexpected call to \`confirm("${text}")\`.\nYou should use \`mockConfirm()\` to mock calls to \`confirm()\` with expectations. Search the codebase for \`mockConfirm\` to learn more.`
 	);
 });
 
 // By default (if not configured by mockPrompt()) calls to `prompt()` should throw.
-(prompt as jest.Mock).mockImplementation((text: string) => {
+(prompt as vi.Mock).mockImplementation((text: string) => {
 	throw new Error(
 		`Unexpected call to \`prompt(${text}, ...)\`.\nYou should use \`mockPrompt()\` to mock calls to \`prompt()\` with expectations. Search the codebase for \`mockPrompt\` to learn more.`
 	);
 });
 
-jest.mock("../dev/dev", () => {
-	const { useApp } = jest.requireActual("ink");
-	const { useEffect } = jest.requireActual("react");
-	return jest.fn().mockImplementation(() => {
+vi.mock("../dev/dev", () => {
+	const { useApp } = vi.requireActual("ink");
+	const { useEffect } = vi.requireActual("react");
+	return vi.fn().mockImplementation(() => {
 		const { exit } = useApp();
 		useEffect(() => {
 			exit();
@@ -130,12 +130,12 @@ jest.mock("../dev/dev", () => {
 
 // Make sure that we don't accidentally try to open a browser window when running tests.
 // We will actually provide a mock implementation for `openInBrowser()` within relevant tests.
-jest.mock("../open-in-browser");
+vi.mock("../open-in-browser");
 
 // Mock the functions involved in getAuthURL so we don't take snapshots of the constantly changing URL.
-jest.mock("../user/generate-auth-url", () => {
+vi.mock("../user/generate-auth-url", () => {
 	return {
-		generateRandomState: jest.fn().mockImplementation(() => "MOCK_STATE_PARAM"),
+		generateRandomState: vi.fn().mockImplementation(() => "MOCK_STATE_PARAM"),
 		generateAuthUrl: jest
 			.fn()
 			.mockImplementation(({ authUrl, clientId, callbackUrl, scopes }) => {
@@ -156,31 +156,31 @@ jest.mock("../user/generate-auth-url", () => {
 	};
 });
 
-jest.mock("../is-ci", () => {
-	return { CI: { isCI: jest.fn().mockImplementation(() => false) } };
+vi.mock("../is-ci", () => {
+	return { CI: { isCI: vi.fn().mockImplementation(() => false) } };
 });
 
-jest.mock("../user/generate-random-state", () => {
+vi.mock("../user/generate-random-state", () => {
 	return {
-		generateRandomState: jest.fn().mockImplementation(() => "MOCK_STATE_PARAM"),
+		generateRandomState: vi.fn().mockImplementation(() => "MOCK_STATE_PARAM"),
 	};
 });
 
-jest.mock("xdg-app-paths", () => {
+vi.mock("xdg-app-paths", () => {
 	return {
 		__esModule: true,
-		default: jest.fn().mockImplementation(() => {
+		default: vi.fn().mockImplementation(() => {
 			return {
 				config() {
-					return jest.requireActual("node:path").resolve("test-xdg-config");
+					return vi.requireActual("node:path").resolve("test-xdg-config");
 				},
 			};
 		}),
 	};
 });
 
-jest.mock("../metrics/metrics-config", () => {
-	const realModule = jest.requireActual("../metrics/metrics-config");
+vi.mock("../metrics/metrics-config", () => {
+	const realModule = vi.requireActual("../metrics/metrics-config");
 	const fakeModule = {
 		...realModule,
 		// Although we mock out the getMetricsConfig() function in most tests,

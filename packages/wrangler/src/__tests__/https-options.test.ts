@@ -141,8 +141,8 @@ describe("getHttpsOptions()", () => {
 });
 
 function mockStatSync(matcher: RegExp, stats: Partial<fs.Stats>) {
-	const originalStatSync = jest.requireActual("node:fs").statSync;
-	jest.spyOn(fs, "statSync").mockImplementation((statPath, options) => {
+	const originalStatSync = vi.requireActual("node:fs").statSync;
+	vi.spyOn(fs, "statSync").mockImplementation((statPath, options) => {
 		return matcher.test(statPath.toString())
 			? (stats as fs.Stats)
 			: originalStatSync(statPath, options);
@@ -150,7 +150,7 @@ function mockStatSync(matcher: RegExp, stats: Partial<fs.Stats>) {
 }
 
 function mockWriteFileSyncThrow(matcher: RegExp) {
-	const originalWriteFileSync = jest.requireActual("node:fs").writeFileSync;
+	const originalWriteFileSync = vi.requireActual("node:fs").writeFileSync;
 	jest
 		.spyOn(fs, "writeFileSync")
 		.mockImplementation((filePath, data, options) => {

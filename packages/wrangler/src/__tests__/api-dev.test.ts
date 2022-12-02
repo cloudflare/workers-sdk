@@ -3,7 +3,7 @@ import { Request } from "undici";
 import { unstable_dev } from "../api";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
-jest.unmock("undici");
+vi.unmock("undici");
 
 describe.skip("unstable_dev", () => {
 	it("should return Hello World", async () => {

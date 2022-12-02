@@ -275,7 +275,7 @@ describe("Pages Functions", () => {
 
 		it.concurrent(
 			"allows errors to still be manually caught in middleware",
-			async () => {
+			async ({ expect }) => {
 				await readyPromise;
 				let response = await fetch(
 					`http://${ip}:${port}/passThroughOnExceptionWithCapture/nested`
@@ -289,9 +289,7 @@ describe("Pages Functions", () => {
 				);
 
 				expect(response.status).toEqual(200);
-				expect(await response.text()).toMatchInlineSnapshot(
-					`"Manually caught error: ReferenceError: x is not defined"`
-				);
+				expect(await response.text()).toMatchInlineSnapshot('"Manually caught error: ReferenceError: x is not defined"');
 			}
 		);
 	});

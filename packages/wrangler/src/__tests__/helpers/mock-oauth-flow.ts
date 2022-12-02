@@ -46,7 +46,7 @@ export const mockOAuthFlow = () => {
 		respondWith?: "timeout" | "success" | "failure" | GrantResponseOptions
 	) => {
 		(
-			openInBrowser as jest.MockedFunction<typeof openInBrowser>
+			openInBrowser as vi.MockedFunction<typeof openInBrowser>
 		).mockImplementation(async (url: string) => {
 			if (respondWith) mockGrantAuthorization({ respondWith });
 			// We don't support the grant response timing out.

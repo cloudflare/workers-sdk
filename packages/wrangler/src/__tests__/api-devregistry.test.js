@@ -1,7 +1,7 @@
 import { unstable_dev } from "../api";
 import { fetch } from "undici";
 
-// jest.unmock("undici");
+// vi.unmock("undici");
 
 /**
  * a huge caveat to how testing multi-worker scripts works:

@@ -17,18 +17,18 @@ import type { RequestInit, BodyInit, HeadersInit } from "undici";
  */
 const {
 	fetchInternal: realFetchInternal,
-}: { fetchInternal: typeof fetchInternal } = jest.requireActual(
+}: { fetchInternal: typeof fetchInternal } = vi.requireActual(
 	"../../cfetch/internal"
 );
 const {
 	fetchR2Objects: realFetchR2Objects,
-}: { fetchR2Objects: typeof fetchR2Objects } = jest.requireActual(
+}: { fetchR2Objects: typeof fetchR2Objects } = vi.requireActual(
 	"../../cfetch/internal"
 );
 
 const {
 	performApiFetch: realPerformApiFetch,
-}: { performApiFetch: typeof performApiFetch } = jest.requireActual(
+}: { performApiFetch: typeof performApiFetch } = vi.requireActual(
 	"../../cfetch/internal"
 );
 

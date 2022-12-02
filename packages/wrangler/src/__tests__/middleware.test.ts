@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import { unstable_dev } from "../api";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
-jest.unmock("undici");
+vi.unmock("undici");
 
 describe("workers change behaviour with middleware with wrangler dev", () => {
 	runInTempDir();

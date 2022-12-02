@@ -20,7 +20,7 @@ import type { Config } from "../config";
 import type { UserAuthConfig } from "../user";
 
 describe("User", () => {
-	let isCISpy: jest.SpyInstance;
+	let isCISpy: vi.SpyInstance;
 	runInTempDir();
 	const std = mockConsoleMethods();
 	// TODO: Implement these two mocks with MSW
@@ -29,7 +29,7 @@ describe("User", () => {
 
 	beforeEach(() => {
 		msw.use(...mswSuccessOauthHandlers, ...mswSuccessUserHandlers);
-		isCISpy = jest.spyOn(CI, "isCI").mockReturnValue(false);
+		isCISpy = vi.spyOn(CI, "isCI").mockReturnValue(false);
 	});
 
 	describe("login", () => {

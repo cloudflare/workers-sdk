@@ -13,7 +13,8 @@
 		// statements throughout the imported libraries which can break them.
 		"alwaysStrict": false,
 		"skipLibCheck": true,
-		"types": ["jest"]
+		"types": ["vitest/globals"],
+		"moduleResolution": "node"
 	},
 	"exclude": ["node_modules/"]
 }
