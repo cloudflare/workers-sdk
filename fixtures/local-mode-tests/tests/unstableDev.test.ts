@@ -21,11 +21,7 @@ describe("worker in local mode", () => {
 		//since the script is invoked from the directory above, need to specify index.js is in src/
 		worker = await unstable_dev(
 			path.resolve(__dirname, "..", "src", "basicModule.ts"),
-			{
-				ip: "127.0.0.1",
-				port: 1337,
-				local: true,
-			},
+			{},
 			{ disableExperimentalWarning: true }
 		);
 
@@ -75,11 +71,7 @@ describe.skip("worker in remote mode", () => {
 		//since the script is invoked from the directory above, need to specify index.js is in src/
 		worker = await unstable_dev(
 			path.resolve(__dirname, "..", "src", "basicModule.ts"),
-			{
-				ip: "127.0.0.1",
-				port: 1337,
-				local: false,
-			},
+			{},
 			{ disableExperimentalWarning: true }
 		);
 
