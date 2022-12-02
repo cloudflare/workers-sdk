@@ -30,6 +30,7 @@ describe("Pages project with `_worker.js` and `/functions` directory", () => {
 	});
 
 	afterAll(async () => {
+		await readyPromise;
 		await new Promise((resolve, reject) => {
 			wranglerProcess.once("exit", (code) => {
 				if (!code) {

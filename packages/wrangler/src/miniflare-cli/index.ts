@@ -120,6 +120,7 @@ async function main() {
 				log: config.log,
 				proxyPort: opts.proxyPort,
 				directory: opts.directory,
+				tre: false,
 			};
 
 			config.serviceBindings = {

@@ -31,9 +31,9 @@ describe("worker", () => {
 	});
 
 	afterAll(async () => {
+		await readyPromise;
+		await worker.stop();
 		process.env.NODE_ENV = originalNodeEnv;
-
-		await worker?.stop();
 	});
 
 	it.concurrent("renders", async () => {

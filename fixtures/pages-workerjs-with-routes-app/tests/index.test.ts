@@ -29,6 +29,7 @@ describe("Pages Advanced Mode with custom _routes.json", () => {
 	});
 
 	afterAll(async () => {
+		await readyPromise;
 		await new Promise((resolve, reject) => {
 			wranglerProcess.once("exit", (code) => {
 				if (!code) {

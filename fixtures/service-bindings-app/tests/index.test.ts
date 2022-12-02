@@ -51,6 +51,8 @@ describe.skip("Service Bindings", () => {
 	});
 
 	afterAll(async () => {
+		await aReadyPromise;
+		await bReadyPromise;
 		await new Promise((resolve, reject) => {
 			aProcess.once("exit", (code) => {
 				if (!code) {
