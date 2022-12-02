@@ -694,7 +694,7 @@ function mockCreateTailRequest(
 				if (!legacyEnv) {
 					expect(req.params.envName).toEqual(env);
 				}
-				return res(
+				return res.once(
 					ctx.status(200),
 					ctx.json({
 						success: true,
