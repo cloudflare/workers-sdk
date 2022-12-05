@@ -426,11 +426,7 @@ export async function startLocalServer({
 			return;
 		}
 
-		const nodeOptions = setupNodeOptions({
-			inspect,
-			ip: initialIp,
-			inspectorPort,
-		});
+		const nodeOptions = setupNodeOptions({ inspect, inspectorPort });
 		logger.log("⎔ Starting a local server...");
 
 		const child = (local = fork(miniflareCLIPath, forkOptions, {
