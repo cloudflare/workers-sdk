@@ -44,7 +44,7 @@ type WorkerMetadataBinding =
 	| { type: "d1"; name: string; id: string; internalEnv?: string }
 	| { type: "service"; name: string; service: string; environment?: string }
 	| { type: "analytics_engine"; name: string; dataset?: string }
-	| { type: "namespace"; name: string; namespace: string }
+	| { type: "dispatch_namespace"; name: string; namespace: string }
 	| {
 			type: "logfwdr";
 			name: string;
@@ -161,7 +161,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 	bindings.dispatch_namespaces?.forEach(({ binding, namespace }) => {
 		metadataBindings.push({
 			name: binding,
-			type: "namespace",
+			type: "dispatch_namespace",
 			namespace,
 		});
 	});

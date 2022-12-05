@@ -909,7 +909,6 @@ function normalizeAndValidateEnvironment(
 
 	experimental(diagnostics, rawEnv, "unsafe");
 	experimental(diagnostics, rawEnv, "services");
-	experimental(diagnostics, rawEnv, "dispatch_namespaces");
 
 	const route = normalizeAndValidateRoute(diagnostics, topLevelEnv, rawEnv);
 
