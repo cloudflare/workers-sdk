@@ -1,5 +1,16 @@
 # @cloudflare/pages-shared
 
+## 0.0.11
+
+### Patch Changes
+
+- [#2303](https://github.com/cloudflare/wrangler2/pull/2303) [`1a1f1dc7`](https://github.com/cloudflare/wrangler2/commit/1a1f1dc7fc8cad06030d3feac1258e2fb3118d8c) Thanks [@jrf0110](https://github.com/jrf0110)! - fix: Pages asset-server duplicating the hash component
+  fix: Pages metadata missing line numbers. This could have resulted in redirects precedence ordering not being respected.
+
+* [#2268](https://github.com/cloudflare/wrangler2/pull/2268) [`3be1c2cf`](https://github.com/cloudflare/wrangler2/commit/3be1c2cf99fdaef1e612937ccc487a5196c5df67) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Add support for `--experimental-local` to `wrangler pages dev` which will use the `workerd` runtime.
+
+  Add `@miniflare/tre` environment polyfill to `@cloudflare/pages-shared`.
+
 ## 0.0.10
 
 ### Patch Changes
