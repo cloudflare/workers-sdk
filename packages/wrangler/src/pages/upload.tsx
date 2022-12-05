@@ -40,6 +40,10 @@ export function Options(yargs: Argv) {
 				type: "string",
 				description: "The name of the project you want to deploy to",
 			},
+			"skip-caching": {
+				type: "boolean",
+				description: "Skip asset caching which speeds up builds",
+			},
 		})
 		.epilogue(pagesBetaWarning);
 }
@@ -47,6 +51,7 @@ export function Options(yargs: Argv) {
 export const Handler = async ({
 	directory,
 	outputManifestPath,
+	skipCaching,
 }: UploadArgs) => {
 	if (!directory) {
 		throw new FatalError("Must specify a directory.", 1);
@@ -59,6 +64,7 @@ export const Handler = async ({
 	const manifest = await upload({
 		directory,
 		jwt: process.env.CF_PAGES_UPLOAD_JWT,
+		skipCaching: skipCaching ?? false,
 	});
 
 	if (outputManifestPath) {
@@ -74,8 +80,14 @@ export const upload = async (
 		| {
 				directory: string;
 				jwt: string;
+				skipCaching: boolean;
 		  }
-		| { directory: string; accountId: string; projectName: string }
+		| {
+				directory: string;
+				accountId: string;
+				projectName: string;
+				skipCaching: boolean;
+			}
 ) => {
 	async function fetchJwt(): Promise<string> {
 		if ("jwt" in args) {
@@ -184,7 +196,11 @@ export const upload = async (
 	const start = Date.now();
 
 	let attempts = 0;
-	const getMissingHashes = async (): Promise<string[]> => {
+	const getMissingHashes = async (skipCaching: boolean): Promise<string[]> => {
+		if (skipCaching) {
+			return files.map(({ hash }) => hash);
+		}
+
 		try {
 			return await fetchResult<string[]>(`/pages/assets/check-missing`, {
 				method: "POST",
@@ -207,13 +223,15 @@ export const upload = async (
 					// Looks like the JWT expired, fetch another one
 					jwt = await fetchJwt();
 				}
-				return getMissingHashes();
+				return getMissingHashes(skipCaching);
 			} else {
 				throw e;
 			}
 		}
 	};
-	const missingHashes = await getMissingHashes();
+	const missingHashes = await getMissingHashes(args.skipCaching);
+
+	console.log('Missing hashes:', missingHashes)
 
 	const sortedFiles = files
 		.filter((file) => missingHashes.includes(file.hash))

@@ -58,6 +58,10 @@ export function Options(yargs: Argv) {
 				description:
 					"Whether or not the workspace should be considered dirty for this deployment",
 			},
+			"skip-caching": {
+				type: "boolean",
+				description: "Skip asset caching which speeds up builds",
+			},
 			config: {
 				describe: "Pages does not support wrangler.toml",
 				type: "string",
@@ -74,6 +78,7 @@ export const Handler = async ({
 	commitHash,
 	commitMessage,
 	commitDirty,
+	skipCaching,
 	config: wranglerConfig,
 }: PublishArgs) => {
 	if (wranglerConfig) {
@@ -313,7 +318,7 @@ export const Handler = async ({
 		}
 	}
 
-	const manifest = await upload({ directory, accountId, projectName });
+	const manifest = await upload({ directory, accountId, projectName, skipCaching: skipCaching ?? false });
 
 	const formData = new FormData();
 
