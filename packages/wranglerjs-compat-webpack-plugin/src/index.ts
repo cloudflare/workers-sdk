@@ -126,7 +126,7 @@ export class WranglerJsCompatWebpackPlugin {
 	) {
 		if (context === undefined || entry === undefined) {
 			const weWouldGuess =
-				"With `type = webpack`, wrangler 1 would try to guess where your worker lives.";
+				"With `type = webpack`, wrangler v1 would try to guess where your worker lives.";
 			const noLonger =
 				"Now that you're running webpack outside of wrangler, you need to specify this explicitly.";
 			const docsUrl = "https://v4.webpack.js.org/configuration/entry-context/";

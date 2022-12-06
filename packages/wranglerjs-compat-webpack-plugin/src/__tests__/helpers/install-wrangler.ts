@@ -26,7 +26,7 @@ export async function installWrangler1() {
 		data: { assets },
 	} = await octokit.request("GET /repos/{owner}/{repo}/releases/latest", {
 		owner: "cloudflare",
-		repo: "wrangler",
+		repo: "wrangler-legacy",
 	});
 
 	// rust targets (and wrangler 1 releases) are named with "target triples",
@@ -52,7 +52,7 @@ export async function installWrangler1() {
 	const assetId = assets.find(({ name }) => name.includes(targetTriple))?.id;
 
 	if (assetId === undefined) {
-		throw new Error("Unable to get wrangler 1 release from github!");
+		throw new Error("Unable to get wrangler v1 release from github!");
 	}
 
 	// since we use Accept: "application/octet-stream" `data` is an ArrayBuffer

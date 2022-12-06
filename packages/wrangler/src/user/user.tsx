@@ -374,7 +374,7 @@ function getAuthTokens(config?: UserAuthConfig): AuthTokens | undefined {
 			};
 		} else if (api_token) {
 			logger.warn(
-				"It looks like you have used Wrangler 1's `config` command to login with an API token.\n" +
+				"It looks like you have used Wrangler v1's `config` command to login with an API token.\n" +
 					"This is no longer supported in the current version of Wrangler.\n" +
 					"If you wish to authenticate via an API token then please set the `CLOUDFLARE_API_TOKEN` environment variable."
 			);
