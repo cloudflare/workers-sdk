@@ -89,13 +89,17 @@ async function generateAssetsFetch(
 	tre: boolean
 ): Promise<typeof fetch> {
 	// Defer importing miniflare until we really need it
-	if (tre) {
-		await import(
-			"@cloudflare/pages-shared/environment-polyfills/miniflare-tre"
-		);
-	} else {
-		await import("@cloudflare/pages-shared/environment-polyfills/miniflare");
-	}
+
+	const polyfill = tre
+		? (
+				await import(
+					"@cloudflare/pages-shared/environment-polyfills/miniflare-tre"
+				)
+		  ).default
+		: (await import("@cloudflare/pages-shared/environment-polyfills/miniflare"))
+				.default;
+
+	await polyfill();
 
 	const miniflare = tre
 		? await import("@miniflare/tre")
