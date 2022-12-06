@@ -26,7 +26,7 @@ describe("worker in local mode", () => {
 				port: 1337,
 				local: true,
 			},
-			{ disableExperimentalWarning: true }
+			{ disableExperimentalWarning: true, experimentalDisableDevRegistry: true }
 		);
 
 		resolveReadyPromise(undefined);
@@ -80,7 +80,7 @@ describe.skip("worker in remote mode", () => {
 				port: 1337,
 				local: false,
 			},
-			{ disableExperimentalWarning: true }
+			{ disableExperimentalWarning: true, experimentalDisableDevRegistry: true }
 		);
 
 		resolveReadyPromise(undefined);

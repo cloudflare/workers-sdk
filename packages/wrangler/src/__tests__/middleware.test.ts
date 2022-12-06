@@ -30,7 +30,10 @@ describe("workers change behaviour with middleware with wrangler dev", () => {
 			const worker = await unstable_dev(
 				"index.js",
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			);
 
 			const resp = await worker.fetch();
@@ -60,7 +63,10 @@ describe("workers change behaviour with middleware with wrangler dev", () => {
 			const worker = await unstable_dev(
 				"index.js",
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			);
 
 			const resp = await worker.fetch();
@@ -93,7 +99,10 @@ describe("workers change behaviour with middleware with wrangler dev", () => {
 			const worker = await unstable_dev(
 				"index.js",
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			);
 
 			const resp = await worker.fetch();
@@ -124,7 +133,10 @@ describe("workers change behaviour with middleware with wrangler dev", () => {
 			const worker = await unstable_dev(
 				"index.js",
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			);
 
 			const resp = await worker.fetch();
@@ -153,7 +165,10 @@ describe("workers change behaviour with middleware with wrangler dev", () => {
 			const worker = await unstable_dev(
 				"index.js",
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			);
 
 			const resp = await worker.fetch();
@@ -182,7 +197,10 @@ describe("workers change behaviour with middleware with wrangler dev", () => {
 			const worker = await unstable_dev(
 				"index.js",
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			);
 
 			const resp = await worker.fetch();
@@ -214,7 +232,10 @@ describe("workers change behaviour with middleware with wrangler dev", () => {
 			const worker = await unstable_dev(
 				"index.js",
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			);
 
 			const resp = await worker.fetch();
@@ -245,7 +266,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			const worker = await unstable_dev(
 				"index.js",
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			);
 
 			const resp = await worker.fetch();
@@ -270,7 +294,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			const worker = await unstable_dev(
 				"index.js",
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			);
 
 			const resp = await worker.fetch();
@@ -298,7 +325,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			const worker = await unstable_dev(
 				"index.js",
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			);
 
 			const resp = await worker.fetch();
@@ -331,7 +361,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			const worker = await unstable_dev(
 				"index.js",
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			);
 
 			const resp = await worker.fetch();
@@ -359,7 +392,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			const worker = await unstable_dev(
 				"index.js",
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			);
 
 			const resp = await worker.fetch();
@@ -399,7 +435,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			const worker = await unstable_dev(
 				"index.js",
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			);
 
 			const resp = await worker.fetch();
@@ -422,7 +461,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			const worker = await unstable_dev(
 				"index.js",
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			);
 
 			const resp = await worker.fetch();
@@ -446,7 +488,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			const worker = await unstable_dev(
 				"index.js",
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			);
 
 			const resp = await worker.fetch();
@@ -473,7 +518,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			const worker = await unstable_dev(
 				"index.js",
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			);
 
 			const resp = await worker.fetch();
@@ -505,7 +553,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			const worker = await unstable_dev(
 				"index.js",
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			);
 
 			const resp = await worker.fetch();
@@ -535,7 +586,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			const worker = await unstable_dev(
 				"index.js",
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			);
 
 			const resp = await worker.fetch();
@@ -566,7 +620,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			const worker = await unstable_dev(
 				"index.js",
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			);
 
 			const resp = await worker.fetch();
@@ -596,7 +653,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			const worker = await unstable_dev(
 				"index.js",
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			);
 
 			const resp = await worker.fetch();
@@ -627,7 +687,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			const worker = await unstable_dev(
 				"index.js",
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			);
 
 			const resp = await worker.fetch();
@@ -652,7 +715,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			const worker = await unstable_dev(
 				"index.js",
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			);
 
 			const resp = await worker.fetch();
@@ -683,7 +749,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			const worker = await unstable_dev(
 				"index.js",
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			);
 
 			const resp = await worker.fetch();
@@ -713,7 +782,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			const worker = await unstable_dev(
 				"index.js",
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			);
 
 			const resp = await worker.fetch();

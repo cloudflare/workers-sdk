@@ -19,42 +19,66 @@ describe("worker", () => {
 			unstable_dev(
 				path.resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			) as Worker,
 			unstable_dev(
 				path.resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			) as Worker,
 			unstable_dev(
 				path.resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			) as Worker,
 			unstable_dev(
 				path.resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			) as Worker,
 			unstable_dev(
 				path.resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			) as Worker,
 			unstable_dev(
 				path.resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			) as Worker,
 			unstable_dev(
 				path.resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			) as Worker,
 			unstable_dev(
 				path.resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			) as Worker,
 		]);
 

@@ -25,7 +25,7 @@ describe("worker", () => {
 				config: path.resolve(__dirname, "..", "src", "wrangler.module.toml"),
 				vars: { VAR4: "https://google.com" },
 			},
-			{ disableExperimentalWarning: true }
+			{ disableExperimentalWarning: true, experimentalDisableDevRegistry: true }
 		);
 
 		resolveReadyPromise(undefined);

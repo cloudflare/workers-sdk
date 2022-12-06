@@ -5,12 +5,12 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 
 jest.unmock("undici");
 
-describe.skip("unstable_dev", () => {
+describe("unstable_dev", () => {
 	it("should return Hello World", async () => {
 		const worker = await unstable_dev(
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 			{},
-			{ disableExperimentalWarning: true }
+			{ disableExperimentalWarning: true, experimentalDisableDevRegistry: true }
 		);
 		const resp = await worker.fetch();
 		if (resp) {
@@ -24,7 +24,7 @@ describe.skip("unstable_dev", () => {
 		const worker = await unstable_dev(
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 			{},
-			{ disableExperimentalWarning: true }
+			{ disableExperimentalWarning: true, experimentalDisableDevRegistry: true }
 		);
 		expect(worker.port).toBeGreaterThan(0);
 		await worker.stop();
@@ -34,7 +34,7 @@ describe.skip("unstable_dev", () => {
 		const worker = await unstable_dev(
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 			{ port: 9191 },
-			{ disableExperimentalWarning: true }
+			{ disableExperimentalWarning: true, experimentalDisableDevRegistry: true }
 		);
 		expect(worker.port).toBe(9191);
 		await worker.stop();
@@ -46,7 +46,7 @@ describe("unstable dev fetch input protocol", () => {
 		const worker = await unstable_dev(
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 			{ localProtocol: "http" },
-			{ disableExperimentalWarning: true }
+			{ disableExperimentalWarning: true, experimentalDisableDevRegistry: true }
 		);
 		const res = await worker.fetch();
 		if (res) {
@@ -60,7 +60,7 @@ describe("unstable dev fetch input protocol", () => {
 		const worker = await unstable_dev(
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 			{ localProtocol: undefined },
-			{ disableExperimentalWarning: true }
+			{ disableExperimentalWarning: true, experimentalDisableDevRegistry: true }
 		);
 		const res = await worker.fetch();
 		if (res) {
@@ -94,7 +94,7 @@ describe("unstable dev fetch input parsing", () => {
 		const worker = await unstable_dev(
 			"index.js",
 			{ port },
-			{ disableExperimentalWarning: true }
+			{ disableExperimentalWarning: true, experimentalDisableDevRegistry: true }
 		);
 		const req = new Request("http://0.0.0.0:21213/test", {
 			method: "POST",
@@ -122,7 +122,7 @@ describe("unstable dev fetch input parsing", () => {
 		const worker = await unstable_dev(
 			"index.js",
 			{},
-			{ disableExperimentalWarning: true }
+			{ disableExperimentalWarning: true, experimentalDisableDevRegistry: true }
 		);
 		const url = new URL("http://localhost:80/test");
 		const resp = await worker.fetch(url);
@@ -148,7 +148,7 @@ describe("unstable dev fetch input parsing", () => {
 		const worker = await unstable_dev(
 			"index.js",
 			{},
-			{ disableExperimentalWarning: true }
+			{ disableExperimentalWarning: true, experimentalDisableDevRegistry: true }
 		);
 		const resp = await worker.fetch("http://example.com/test");
 		let text;
@@ -173,7 +173,7 @@ describe("unstable dev fetch input parsing", () => {
 		const worker = await unstable_dev(
 			"index.js",
 			{},
-			{ disableExperimentalWarning: true }
+			{ disableExperimentalWarning: true, experimentalDisableDevRegistry: true }
 		);
 		const resp = await worker.fetch("/test");
 		let text;
@@ -198,7 +198,7 @@ describe("unstable dev fetch input parsing", () => {
 		const worker = await unstable_dev(
 			"index.js",
 			{},
-			{ disableExperimentalWarning: true }
+			{ disableExperimentalWarning: true, experimentalDisableDevRegistry: true }
 		);
 		const resp = await worker.fetch("");
 		let text;

@@ -19,7 +19,7 @@ describe.skip("worker", () => {
 		worker = await unstable_dev(
 			path.resolve(__dirname, "..", "src", "headers.ts"),
 			{},
-			{ disableExperimentalWarning: true }
+			{ disableExperimentalWarning: true, experimentalDisableDevRegistry: true }
 		);
 
 		resolveReadyPromise(undefined);

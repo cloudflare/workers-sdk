@@ -24,7 +24,7 @@ describe("worker", () => {
 			{
 				config: path.resolve(__dirname, "..", "src", "wrangler.sw.toml"),
 			},
-			{ disableExperimentalWarning: true }
+			{ disableExperimentalWarning: true, experimentalDisableDevRegistry: true }
 		);
 
 		resolveReadyPromise(undefined);

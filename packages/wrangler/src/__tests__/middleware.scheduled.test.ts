@@ -30,7 +30,10 @@ describe("run scheduled events with middleware", () => {
 			const worker = await unstable_dev(
 				"index.js",
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			);
 
 			const resp = await worker.fetch("/__scheduled");
@@ -44,7 +47,10 @@ describe("run scheduled events with middleware", () => {
 			const worker = await unstable_dev(
 				"index.js",
 				{ testScheduled: true },
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			);
 
 			const resp = await worker.fetch("/__scheduled");
@@ -58,7 +64,10 @@ describe("run scheduled events with middleware", () => {
 			const worker = await unstable_dev(
 				"index.js",
 				{ testScheduled: true },
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			);
 
 			const resp = await worker.fetch("/test");
@@ -94,7 +103,10 @@ describe("run scheduled events with middleware", () => {
 			const worker = await unstable_dev(
 				"index.js",
 				{},
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			);
 
 			const resp = await worker.fetch("/__scheduled");
@@ -108,7 +120,10 @@ describe("run scheduled events with middleware", () => {
 			const worker = await unstable_dev(
 				"index.js",
 				{ testScheduled: true },
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			);
 
 			const resp = await worker.fetch("/__scheduled");
@@ -122,7 +137,10 @@ describe("run scheduled events with middleware", () => {
 			const worker = await unstable_dev(
 				"index.js",
 				{ testScheduled: true },
-				{ disableExperimentalWarning: true }
+				{
+					disableExperimentalWarning: true,
+					experimentalDisableDevRegistry: true,
+				}
 			);
 
 			const resp = await worker.fetch("/test");
