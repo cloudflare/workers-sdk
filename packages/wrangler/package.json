@@ -24,13 +24,13 @@
 		"http",
 		"cli"
 	],
-	"homepage": "https://github.com/cloudflare/wrangler2#readme",
+	"homepage": "https://github.com/cloudflare/wrangler#readme",
 	"bugs": {
-		"url": "https://github.com/cloudflare/wrangler2/issues"
+		"url": "https://github.com/cloudflare/wrangler/issues"
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/cloudflare/wrangler2.git",
+		"url": "https://github.com/cloudflare/wrangler.git",
 		"directory": "packages/wrangler"
 	},
 	"license": "MIT OR Apache-2.0",

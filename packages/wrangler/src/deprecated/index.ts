@@ -16,7 +16,7 @@ import type {
 } from "../yargs-types";
 import type { Argv, ArgumentsCamelCase, BuilderCallback } from "yargs";
 
-// https://github.com/cloudflare/wrangler/blob/master/src/cli/mod.rs#L106-L123
+// https://github.com/cloudflare/wrangler-legacy/blob/master/src/cli/mod.rs#L106-L123
 interface GenerateArgs {
 	name?: string;
 	template?: string;

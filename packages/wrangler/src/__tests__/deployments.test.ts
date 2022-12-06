@@ -54,7 +54,7 @@ describe("deployments", () => {
 	it("should log deployments", async () => {
 		await runWrangler("deployments");
 		expect(std.out).toMatchInlineSnapshot(`
-		"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
+		"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/wrangler/issues/new/choose
 
 
 		Deployment ID: Galaxy-Class
@@ -73,7 +73,7 @@ describe("deployments", () => {
 	it("should log deployments for script with passed in name option", async () => {
 		await runWrangler("deployments --name somethingElse");
 		expect(std.out).toMatchInlineSnapshot(`
-		"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
+		"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/wrangler/issues/new/choose
 
 
 		Deployment ID: Galaxy-Class

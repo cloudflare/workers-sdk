@@ -55,7 +55,7 @@ function useDevRegistry(
 
 		const interval =
 			// TODO: enable this for remote mode as well
-			// https://github.com/cloudflare/wrangler2/issues/1182
+			// https://github.com/cloudflare/wrangler/issues/1182
 			mode === "local"
 				? setInterval(() => {
 						getBoundRegisteredWorkers({

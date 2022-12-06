@@ -45,4 +45,4 @@ export const getDatabaseByNameOrBinding = async (
 
 export const d1BetaWarning = process.env.NO_D1_WARNING
 	? ""
-	: "🚧 D1 is currently in open alpha and is not recommended for production data and traffic.\nPlease report any bugs to https://github.com/cloudflare/wrangler2/issues/new/choose.\nTo request features, visit https://community.cloudflare.com/c/developers/d1.\nTo give feedback, visit https://discord.gg/cloudflaredev";
+	: "🚧 D1 is currently in open alpha and is not recommended for production data and traffic.\nPlease report any bugs to https://github.com/cloudflare/wrangler/issues/new/choose.\nTo request features, visit https://community.cloudflare.com/c/developers/d1.\nTo give feedback, visit https://discord.gg/cloudflaredev";

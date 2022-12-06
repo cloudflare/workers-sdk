@@ -2,13 +2,13 @@
 	"name": "wranglerjs-compat-webpack-plugin",
 	"version": "0.0.6",
 	"description": "A webpack plugin to emulate the behavior of wrangler1's `type = webpack`",
-	"homepage": "https://github.com/cloudflare/wrangler2#readme",
+	"homepage": "https://github.com/cloudflare/wrangler#readme",
 	"bugs": {
-		"url": "https://github.com/cloudflare/wrangler2/issues"
+		"url": "https://github.com/cloudflare/wrangler/issues"
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/cloudflare/wrangler2.git",
+		"url": "https://github.com/cloudflare/wrangler.git",
 		"directory": "packages/wranglerjs-compat-webpack-plugin"
 	},
 	"license": "MIT OR Apache-2.0",

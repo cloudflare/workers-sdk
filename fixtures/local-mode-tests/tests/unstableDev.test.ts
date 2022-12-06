@@ -3,7 +3,7 @@ import { unstable_dev } from "wrangler";
 
 // TODO: add test for `experimentalLocal: true` once issue with dynamic
 //  `import()` and `npx-import` resolved:
-//  https://github.com/cloudflare/wrangler2/pull/1940#issuecomment-1261166695
+//  https://github.com/cloudflare/wrangler/pull/1940#issuecomment-1261166695
 describe("worker in local mode", () => {
 	let worker: {
 		fetch: (

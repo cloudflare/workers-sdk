@@ -212,7 +212,7 @@ describe("wrangler", () => {
 			  workers.api.error.unauthorized [code: 10023]
 
 			  If you think this is a bug, please open an issue at:
-			  [4mhttps://github.com/cloudflare/wrangler2/issues/new/choose[0m
+			  [4mhttps://github.com/cloudflare/wrangler/issues/new/choose[0m
 
 			"
 		`);
@@ -428,7 +428,7 @@ describe("wrangler", () => {
 				  workers.api.error.unauthorized [code: 10023]
 
 				  If you think this is a bug, please open an issue at:
-				  [4mhttps://github.com/cloudflare/wrangler2/issues/new/choose[0m
+				  [4mhttps://github.com/cloudflare/wrangler/issues/new/choose[0m
 
 				"
 			`);

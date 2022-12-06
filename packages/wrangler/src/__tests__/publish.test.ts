@@ -1421,7 +1421,7 @@ addEventListener('fetch', event => {});`
 
 			expect(std.out).toMatchInlineSnapshot(`
 			        "
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
+			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler/issues/new/choose[0m"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
@@ -1583,7 +1583,7 @@ addEventListener('fetch', event => {});`
 
 			expect(std.out).toMatchInlineSnapshot(`
 			        "
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
+			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler/issues/new/choose[0m"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler publish path/to/script\`) or the \`main\` config field.[0m
@@ -1741,7 +1741,7 @@ addEventListener('fetch', event => {});`
 
 			        ",
 			          "out": "
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m",
+			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler/issues/new/choose[0m",
 			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
 
 			        ",
@@ -1767,7 +1767,7 @@ addEventListener('fetch', event => {});`
 
 			        ",
 			          "out": "
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m",
+			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler/issues/new/choose[0m",
 			          "warn": "",
 			        }
 		      `);
@@ -1794,7 +1794,7 @@ addEventListener('fetch', event => {});`
 
 			        ",
 			          "out": "
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m",
+			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler/issues/new/choose[0m",
 			          "warn": "",
 			        }
 		      `);
@@ -1820,7 +1820,7 @@ addEventListener('fetch', event => {});`
 
 			        ",
 			          "out": "
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m",
+			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler/issues/new/choose[0m",
 			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			            - \\"assets\\" fields are experimental and may change or break at any time.
@@ -1853,7 +1853,7 @@ addEventListener('fetch', event => {});`
 
 			        ",
 			          "out": "
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m",
+			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler/issues/new/choose[0m",
 			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			            - \\"assets\\" fields are experimental and may change or break at any time.
@@ -2647,7 +2647,7 @@ addEventListener('fetch', event => {});`
 			        Uploading as large-file.0ea0637a45.txt...
 			        Reading too-large-file.txt...
 
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
+			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler/issues/new/choose[0m"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mFile too-large-file.txt is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits[0m
@@ -2788,7 +2788,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			        "Reading folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.txt...
 
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
+			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler/issues/new/choose[0m"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe asset path key \\"folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.3da0d0cd12.txt\\" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits\\",[0m
@@ -3859,7 +3859,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			        "Running custom build: node -e \\"console.log('custom build');\\"
 
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
+			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler/issues/new/choose[0m"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe expected output file at \\"index.js\\" was not found after running custom build: node -e \\"console.log('custom build');\\".[0m
@@ -3898,7 +3898,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 			        "Running custom build: node -e \\"console.log('custom build');\\"
 
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
+			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler/issues/new/choose[0m"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe expected output file at \\".\\" was not found after running custom build: node -e \\"console.log('custom build');\\".[0m
@@ -4789,7 +4789,7 @@ addEventListener('fetch', event => {});`
 					            `);
 			expect(std.out).toMatchInlineSnapshot(`
 			        "
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
+			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler/issues/new/choose[0m"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
@@ -4899,7 +4899,7 @@ addEventListener('fetch', event => {});`
 					            `);
 			expect(std.out).toMatchInlineSnapshot(`
 			        "
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
+			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler/issues/new/choose[0m"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
@@ -5053,7 +5053,7 @@ addEventListener('fetch', event => {});`
 					            `);
 			expect(std.out).toMatchInlineSnapshot(`
 			        "
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
+			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler/issues/new/choose[0m"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProcessing wrangler.toml configuration:[0m
@@ -5131,7 +5131,7 @@ addEventListener('fetch', event => {});`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 			          "
-			          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
+			          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler/issues/new/choose[0m"
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYou cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code[0m
@@ -5274,7 +5274,7 @@ addEventListener('fetch', event => {});`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 			          "
-			          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
+			          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler/issues/new/choose[0m"
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYou cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml[0m
@@ -5387,7 +5387,7 @@ addEventListener('fetch', event => {});`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 			          "
-			          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
+			          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler/issues/new/choose[0m"
 		        `);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYou cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml[0m
@@ -6315,7 +6315,7 @@ addEventListener('fetch', event => {});`
 		});
 
 		it("should not match regular module specifiers when there aren't any possible legacy module matches", async () => {
-			// see https://github.com/cloudflare/wrangler2/issues/655 for bug details
+			// see https://github.com/cloudflare/wrangler/issues/655 for bug details
 
 			fs.writeFileSync(
 				"./index.js",
@@ -6636,7 +6636,7 @@ addEventListener('fetch', event => {});`
 			          the global scope. [code: 11337]
 
 			          If you think this is a bug, please open an issue at:
-			          [4mhttps://github.com/cloudflare/wrangler2/issues/new/choose[0m
+			          [4mhttps://github.com/cloudflare/wrangler/issues/new/choose[0m
 
 			        ",
 			          "warn": "",
@@ -6685,7 +6685,7 @@ addEventListener('fetch', event => {});`
 			  workers.api.error.script_too_large [code: 10027]
 
 			  If you think this is a bug, please open an issue at:
-			  [4mhttps://github.com/cloudflare/wrangler2/issues/new/choose[0m
+			  [4mhttps://github.com/cloudflare/wrangler/issues/new/choose[0m
 
 			",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mHere are the 2 largest dependencies included in your script:[0m
@@ -6743,7 +6743,7 @@ addEventListener('fetch', event => {});`
 			  Error: Script startup exceeded CPU time limit. [code: 10021]
 
 			  If you think this is a bug, please open an issue at:
-			  [4mhttps://github.com/cloudflare/wrangler2/issues/new/choose[0m
+			  [4mhttps://github.com/cloudflare/wrangler/issues/new/choose[0m
 
 			",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mHere are the 2 largest dependencies included in your script:[0m
