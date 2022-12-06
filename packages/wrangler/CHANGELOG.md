@@ -1,5 +1,13 @@
 # wrangler
 
+## 2.6.1
+
+### Patch Changes
+
+- [#2339](https://github.com/cloudflare/wrangler2/pull/2339) [`f6821189`](https://github.com/cloudflare/wrangler2/commit/f6821189110e5b6301fe77509a6bb9a8652bbc1b) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: `wrangler dev --local` now correctly lazy-imports `@miniflare/tre`
+
+  Previously, we introduced a bug where we were incorrectly requiring `@miniflare/tre`, even when not using the `workerd`/`--experimental-local` mode.
+
 ## 2.6.0
 
 ### Minor Changes
