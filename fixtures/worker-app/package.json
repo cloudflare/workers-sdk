@@ -5,5 +5,21 @@
 	"description": "",
 	"license": "ISC",
 	"author": "",
-	"main": "src/index.js"
+	"main": "src/index.js",
+	"jest": {
+		"restoreMocks": true,
+		"testRegex": ".*.(test|spec)\\.[jt]sx?$",
+		"testTimeout": 30000,
+		"transform": {
+			"^.+\\.c?(t|j)sx?$": [
+				"esbuild-jest",
+				{
+					"sourcemap": true
+				}
+			]
+		},
+		"transformIgnorePatterns": [
+			"node_modules/(?!find-up|locate-path|p-locate|p-limit|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream)"
+		]
+	}
 }
