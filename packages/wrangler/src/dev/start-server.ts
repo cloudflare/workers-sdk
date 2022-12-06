@@ -39,6 +39,7 @@ import type { ChildProcess } from "node:child_process";
 export async function startDevServer(
 	props: DevProps & {
 		local: boolean;
+		experimentalDisableDevRegistry: boolean;
 	}
 ) {
 	try {
@@ -62,17 +63,21 @@ export async function startDevServer(
 		}
 
 		//start the worker registry
-		startWorkerRegistry().catch((err) => {
-			logger.error("failed to start worker registry", err);
-		});
-		if (props.local) {
-			const boundRegisteredWorkers = await getBoundRegisteredWorkers({
-				services: props.bindings.services,
-				durableObjects: props.bindings.durable_objects,
+		if (!props.experimentalDisableDevRegistry) {
+			startWorkerRegistry().catch((err) => {
+				logger.error("failed to start worker registry", err);
 			});
+			if (props.local) {
+				const boundRegisteredWorkers = await getBoundRegisteredWorkers({
+					services: props.bindings.services,
+					durableObjects: props.bindings.durable_objects,
+				});
 
-			if (!util.isDeepStrictEqual(boundRegisteredWorkers, workerDefinitions)) {
-				workerDefinitions = boundRegisteredWorkers || {};
+				if (
+					!util.isDeepStrictEqual(boundRegisteredWorkers, workerDefinitions)
+				) {
+					workerDefinitions = boundRegisteredWorkers || {};
+				}
 			}
 		}
 

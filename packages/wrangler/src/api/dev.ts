@@ -63,6 +63,7 @@ interface DevOptions {
 interface DevApiOptions {
 	testMode?: boolean;
 	disableExperimentalWarning?: boolean;
+	experimentalDisableDevRegistry?: boolean;
 }
 
 export interface UnstableDevWorker {
@@ -80,8 +81,11 @@ export async function unstable_dev(
 	options?: DevOptions,
 	apiOptions?: DevApiOptions
 ): Promise<UnstableDevWorker> {
-	const { testMode = true, disableExperimentalWarning = false } =
-		apiOptions || {};
+	const {
+		testMode = true,
+		disableExperimentalWarning = false,
+		experimentalDisableDevRegistry = false,
+	} = apiOptions || {};
 	if (!disableExperimentalWarning) {
 		logger.warn(
 			`unstable_dev() is experimental\nunstable_dev()'s behaviour will likely change in future releases`
@@ -106,6 +110,7 @@ export async function unstable_dev(
 					$0: "",
 					port: options?.port ?? 0,
 					local: true,
+					experimentalDisableDevRegistry,
 					...options,
 					onReady: (address, port) => {
 						readyPort = port;
