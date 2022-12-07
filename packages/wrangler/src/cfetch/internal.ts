@@ -44,8 +44,13 @@ export async function performApiFetch(
 	logger.debug(
 		`-- START CF API REQUEST: ${method} ${getCloudflareAPIBaseURL()}${resource}${queryString}`
 	);
-	logger.debug("HEADERS:", JSON.stringify(headers, null, 2));
-	logger.debug("INIT:", JSON.stringify(init, null, 2));
+	const logHeaders = cloneHeaders(headers);
+	delete logHeaders["Authorization"];
+	logger.debug("HEADERS:", JSON.stringify(logHeaders, null, 2));
+	logger.debug(
+		"INIT:",
+		JSON.stringify({ ...init, headers: logHeaders }, null, 2)
+	);
 	logger.debug("-- END CF API REQUEST");
 	return await fetch(`${getCloudflareAPIBaseURL()}${resource}${queryString}`, {
 		method,
@@ -83,7 +88,9 @@ export async function fetchInternal<ResponseType>(
 		response.statusText,
 		response.status
 	);
-	logger.debug("HEADERS:", JSON.stringify(response.headers, null, 2));
+	const logHeaders = cloneHeaders(response.headers);
+	delete logHeaders["Authorization"];
+	logger.debug("HEADERS:", JSON.stringify(logHeaders, null, 2));
 	logger.debug("RESPONSE:", jsonText);
 	logger.debug("-- END CF API RESPONSE");
 
