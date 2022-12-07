@@ -26,8 +26,8 @@ export type {
  * Get the Wrangler configuration; read it from the give `configPath` if available.
  */
 export function readConfig(
-	configPath: string | undefined,
-	args: unknown
+	configPath?: string | undefined,
+	args?: unknown
 ): Config {
 	let rawConfig: RawConfig = {};
 	if (!configPath) {

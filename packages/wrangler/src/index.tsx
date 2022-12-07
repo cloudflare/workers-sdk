@@ -286,7 +286,7 @@ export function createCLIParser(argv: string[]) {
 				"https://developers.cloudflare.com/workers/wrangler/commands/";
 			logger.log(`Opening a link in your default browser: ${urlToOpen}`);
 			await openInBrowser(urlToOpen);
-			const config = readConfig(undefined, {});
+			const config = readConfig();
 			await metrics.sendMetricsEvent("view docs", {
 				sendMetrics: config.send_metrics,
 			});
