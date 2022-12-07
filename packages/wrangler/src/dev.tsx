@@ -906,7 +906,10 @@ function getBindings(
 			...(configParam.d1_databases ?? []).map((d1Db) => {
 				//in local dev, bindings don't matter
 				if (local) {
-					return d1Db;
+					return {
+						...d1Db,
+						database_id: "local",
+					};
 				}
 				if (!d1Db.preview_database_id) {
 					throw new Error(
