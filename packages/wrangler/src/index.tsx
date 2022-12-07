@@ -275,6 +275,24 @@ export function createCLIParser(argv: string[]) {
 		generateHandler
 	);
 
+	// docs
+	wrangler.command(
+		"docs",
+		"📚 Open wrangler's docs in your browser",
+		() => {},
+		async () => {
+			await printWranglerBanner();
+			const urlToOpen =
+				"https://developers.cloudflare.com/workers/wrangler/commands/";
+			logger.log(`Opening a link in your default browser: ${urlToOpen}`);
+			await openInBrowser(urlToOpen);
+			const config = readConfig(undefined, {});
+			await metrics.sendMetricsEvent("view docs", {
+				sendMetrics: config.send_metrics,
+			});
+		}
+	);
+
 	// init
 	wrangler.command(
 		"init [name]",
@@ -553,23 +571,6 @@ export function createCLIParser(argv: string[]) {
 			};
 
 			await generateTypes(configBindings, config);
-		}
-	);
-
-	// docs
-	wrangler.command(
-		"docs",
-		"📚 Open the docs in your browser",
-		() => {},
-		async () => {
-			await printWranglerBanner();
-			const urlToOpen = "https://developers.cloudflare.com/workers/wrangler/";
-			logger.log(`Opening a link in your default browser: ${urlToOpen}`);
-			await openInBrowser(urlToOpen);
-			const config = readConfig(undefined, {});
-			await metrics.sendMetricsEvent("view docs", {
-				sendMetrics: config.send_metrics,
-			});
 		}
 	);
 
