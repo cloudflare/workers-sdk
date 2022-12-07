@@ -166,7 +166,8 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 					if (database_name) {
 						databaseValue = `${database_name} (${database_id})`;
 					}
-					if (preview_database_id) {
+					//database_id is local when running `wrangler dev --local`
+					if (preview_database_id && database_id !== "local") {
 						databaseValue += `, Preview: (${preview_database_id})`;
 					}
 					return {
