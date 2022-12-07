@@ -179,6 +179,11 @@ export interface CfDurableObjectMigrations {
 			to: string;
 		}[];
 		deleted_classes?: string[];
+		transferred_classes?: {
+			from: string;
+			from_script: string;
+			to: string;
+		}[];
 	}[];
 }
 

@@ -72,6 +72,12 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 		}[];
 		/** The Durable Objects being removed. */
 		deleted_classes?: string[];
+		/** The Durable Objects being transferred. */
+		transferred_classes?: {
+			from: string;
+			from_script: string;
+			to: string;
+		}[];
 	}[];
 
 	/**

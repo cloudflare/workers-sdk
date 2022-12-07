@@ -422,8 +422,14 @@ function normalizeAndValidateMigrations(
 		return [];
 	} else {
 		for (let i = 0; i < rawMigrations.length; i++) {
-			const { tag, new_classes, renamed_classes, deleted_classes, ...rest } =
-				rawMigrations[i];
+			const {
+				tag,
+				new_classes,
+				renamed_classes,
+				transferred_classes,
+				deleted_classes,
+				...rest
+			} = rawMigrations[i];
 
 			validateAdditionalProperties(
 				diagnostics,
@@ -473,6 +479,29 @@ function normalizeAndValidateMigrations(
 				deleted_classes,
 				"string"
 			);
+			if (transferred_classes !== undefined) {
+				if (!Array.isArray(transferred_classes)) {
+					diagnostics.errors.push(
+						`Expected "migrations[${i}].transferred_classes" to be an array of "{from: string, from_script: string, to: string}" objects but got ${JSON.stringify(
+							transferred_classes
+						)}.`
+					);
+				} else if (
+					transferred_classes.some(
+						(c) =>
+							typeof c !== "object" ||
+							!isRequiredProperty(c, "from", "string") ||
+							!isRequiredProperty(c, "from_script", "string") ||
+							!isRequiredProperty(c, "to", "string")
+					)
+				) {
+					diagnostics.errors.push(
+						`Expected "migrations[${i}].transferred_classes" to be an array of "{from: string, from_script: string, to: string}" objects but got ${JSON.stringify(
+							transferred_classes
+						)}.`
+					);
+				}
+			}
 		}
 
 		if (
