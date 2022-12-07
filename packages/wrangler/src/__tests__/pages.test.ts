@@ -335,7 +335,7 @@ describe("pages", () => {
 			      --commit-hash     The SHA to attach to this deployment  [string]
 			      --commit-message  The commit message to attach to this deployment  [string]
 			      --commit-dirty    Whether or not the workspace should be considered dirty for this deployment  [boolean]
-						--skip-caching    Skip asset caching which speeds up builds  [boolean]
+			      --skip-caching    Skip asset caching which speeds up builds  [boolean]
 
 			🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose"
 		`);
