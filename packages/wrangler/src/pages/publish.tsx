@@ -318,7 +318,12 @@ export const Handler = async ({
 		}
 	}
 
-	const manifest = await upload({ directory, accountId, projectName, skipCaching: skipCaching ?? false });
+	const manifest = await upload({
+		directory,
+		accountId,
+		projectName,
+		skipCaching: skipCaching ?? false,
+	});
 
 	const formData = new FormData();
 

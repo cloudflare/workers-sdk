@@ -87,7 +87,7 @@ export const upload = async (
 				accountId: string;
 				projectName: string;
 				skipCaching: boolean;
-			}
+		  }
 ) => {
 	async function fetchJwt(): Promise<string> {
 		if ("jwt" in args) {
@@ -198,7 +198,7 @@ export const upload = async (
 	let attempts = 0;
 	const getMissingHashes = async (skipCaching: boolean): Promise<string[]> => {
 		if (skipCaching) {
-			console.debug('Force skipping cache')
+			console.debug("Force skipping cache");
 			return files.map(({ hash }) => hash);
 		}
 
