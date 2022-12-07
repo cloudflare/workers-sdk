@@ -63,7 +63,7 @@
 		"emit-types": "tsc -p tsconfig.emit.json && node -r esbuild-register scripts/emit-types.ts",
 		"prepublishOnly": "SOURCEMAPS=false npm run build",
 		"start": "npm run bundle && cross-env NODE_OPTIONS=--enable-source-maps ./bin/wrangler.js",
-		"test": "npm run assert-git-version && jest --silent=false --verbose=true --logHeapUsage",
+		"test": "npm run assert-git-version && node --expose-gc ../../node_modules/.bin/jest --runInBand --logHeapUsage --silent=false --verbose=true",
 		"test-watch": "npm run test -- --runInBand --testTimeout=50000 --watch",
 		"test:ci": "npm run test -- --verbose=true --coverage --logHeapUsage"
 	},
