@@ -198,6 +198,7 @@ export const upload = async (
 	let attempts = 0;
 	const getMissingHashes = async (skipCaching: boolean): Promise<string[]> => {
 		if (skipCaching) {
+			console.debug('Force skipping cache')
 			return files.map(({ hash }) => hash);
 		}
 
@@ -230,8 +231,6 @@ export const upload = async (
 		}
 	};
 	const missingHashes = await getMissingHashes(args.skipCaching);
-
-	console.log('Missing hashes:', missingHashes)
 
 	const sortedFiles = files
 		.filter((file) => missingHashes.includes(file.hash))
