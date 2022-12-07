@@ -30,6 +30,7 @@ import { initHandler, initOptions } from "./init";
 import { kvNamespace, kvKey, kvBulk } from "./kv";
 import { logBuildFailure, logger } from "./logger";
 import * as metrics from "./metrics";
+import openInBrowser from "./open-in-browser";
 import { pages } from "./pages";
 import { formatMessage, ParseError } from "./parse";
 import { publishOptions, publishHandler } from "./publish";
@@ -552,6 +553,23 @@ export function createCLIParser(argv: string[]) {
 			};
 
 			await generateTypes(configBindings, config);
+		}
+	);
+
+	// docs
+	wrangler.command(
+		"docs",
+		"📚 Open the docs in your browser",
+		() => {},
+		async () => {
+			await printWranglerBanner();
+			const urlToOpen = "https://developers.cloudflare.com/workers/wrangler/";
+			logger.log(`Opening a link in your default browser: ${urlToOpen}`);
+			await openInBrowser(urlToOpen);
+			const config = readConfig(undefined, {});
+			await metrics.sendMetricsEvent("view docs", {
+				sendMetrics: config.send_metrics,
+			});
 		}
 	);
 

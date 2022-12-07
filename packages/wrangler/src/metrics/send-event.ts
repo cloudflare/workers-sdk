@@ -55,7 +55,8 @@ export type EventNames =
 	| "build pages functions"
 	| "run dev"
 	| "run dev (api)"
-	| "run pages dev";
+	| "run pages dev"
+	| "view docs";
 
 /**
  * Send a metrics event, with no extra properties, to Cloudflare, if usage tracking is enabled.
