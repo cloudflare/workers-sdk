@@ -165,6 +165,18 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 	);
 	let justCreatedWranglerToml = false;
 
+	let accountId = "";
+	let serviceMetaData: undefined | ServiceMetadataRes;
+
+	// If --from-dash, check that script actually exists
+	if (fromDashScriptName) {
+		const config = readConfig(args.config as ConfigPath, args);
+		accountId = await requireAuth(config);
+		serviceMetaData = await fetchResult<ServiceMetadataRes>(
+			`/accounts/${accountId}/workers/services/${fromDashScriptName}`
+		);
+	}
+
 	if (fs.existsSync(wranglerTomlDestination)) {
 		let shouldContinue = false;
 		logger.warn(
@@ -452,16 +464,13 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 					`After running "wrangler init --from-dash", modifying your worker via the Cloudflare dashboard is discouraged.
 					Edits made via the Dashboard will not be synchronized locally and will be overridden by your local code and config when you publish.`
 				);
-				const config = readConfig(args.config as ConfigPath, args);
-				const accountId = await requireAuth(config);
+
 				await mkdir(path.join(creationDirectory, "./src"), {
 					recursive: true,
 				});
-				const serviceMetaData = await fetchResult<ServiceMetadataRes>(
-					`/accounts/${accountId}/workers/services/${fromDashScriptName}`
-				);
+
 				const defaultEnvironment =
-					serviceMetaData.default_environment.environment;
+					serviceMetaData?.default_environment.environment;
 				// I want the default environment, assuming it's the most up to date code.
 				const dashScript = await fetchDashboardScript(
 					`/accounts/${accountId}/workers/services/${fromDashScriptName}/environments/${defaultEnvironment}/content`
@@ -479,7 +488,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 					scriptPath: "src/index.ts",
 					extraToml: (await getWorkerConfig(accountId, fromDashScriptName, {
 						defaultEnvironment,
-						environments: serviceMetaData.environments,
+						environments: serviceMetaData?.environments,
 					})) as TOML.JsonMap,
 				});
 			} else {
@@ -493,6 +502,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 					await mkdir(path.join(creationDirectory, "./src"), {
 						recursive: true,
 					});
+
 					await writeFile(
 						path.join(creationDirectory, "./src/index.ts"),
 						readFileSync(path.join(getBasePath(), `templates/${template}`))
@@ -527,17 +537,13 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 					`After running "wrangler init --from-dash", modifying your worker via the Cloudflare dashboard is discouraged.
 					Edits made via the Dashboard will not be synchronized locally and will be overridden by your local code and config when you publish.`
 				);
-				const config = readConfig(args.config as ConfigPath, args);
-				const accountId = await requireAuth(config);
+
 				await mkdir(path.join(creationDirectory, "./src"), {
 					recursive: true,
 				});
 
-				const serviceMetaData = await fetchResult<ServiceMetadataRes>(
-					`/accounts/${accountId}/workers/services/${fromDashScriptName}`
-				);
 				const defaultEnvironment =
-					serviceMetaData.default_environment.environment;
+					serviceMetaData?.default_environment.environment;
 
 				// I want the default environment, assuming it's the most up to date code.
 				const dashScript = await fetchDashboardScript(
@@ -557,7 +563,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 					//? Should we have Environment argument for `wrangler init --from-dash` - Jacob
 					extraToml: (await getWorkerConfig(accountId, fromDashScriptName, {
 						defaultEnvironment,
-						environments: serviceMetaData.environments,
+						environments: serviceMetaData?.environments,
 					})) as TOML.JsonMap,
 				});
 			} else {
@@ -770,8 +776,8 @@ async function getWorkerConfig(
 		defaultEnvironment,
 		environments,
 	}: {
-		defaultEnvironment: string;
-		environments: ServiceMetadataRes["environments"];
+		defaultEnvironment: string | undefined;
+		environments: ServiceMetadataRes["environments"] | undefined;
 	}
 ): Promise<RawConfig> {
 	const [bindings, routes, serviceEnvMetadata, cronTriggers] =
@@ -967,7 +973,7 @@ async function getWorkerConfig(
 			crons: cronTriggers.schedules.map((scheduled) => scheduled.cron),
 		},
 		env: environments
-			.filter((env) => env.environment !== "production")
+			?.filter((env) => env.environment !== "production")
 			// `env` can have multiple Environments, with different configs.
 			.reduce((envObj, { environment }) => {
 				return { ...envObj, [environment]: {} };
