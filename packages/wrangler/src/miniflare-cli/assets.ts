@@ -53,6 +53,9 @@ export default async function generateASSETSBinding(options: Options) {
 			try {
 				const url = new URL(miniflareRequest.url);
 				url.host = `localhost:${options.proxyPort}`;
+				// @ts-expect-error due to a bug in `@cloudflare/workers-types`, the
+				//  `cf` types from the `request` parameter and `RequestInit` are
+				//  incompatible. We'll get this fixed very soon. (wrangler2#2390)
 				const proxyRequest = new Request(url, miniflareRequest);
 				if (proxyRequest.headers.get("Upgrade") === "websocket") {
 					proxyRequest.headers.delete("Sec-WebSocket-Accept");
@@ -238,6 +241,9 @@ async function generateAssetsFetch(
 	};
 
 	return (async (input: TreRequestInfo, init?: TreRequestInit) => {
+		// @ts-expect-error due to a bug in `@cloudflare/workers-types`, the `cf`
+		//  types from the `request` parameter and `RequestInit` are incompatible.
+		//  We'll get this fixed very soon. (wrangler2#2390)
 		const request = new Request(input, init);
 		return await generateResponse(request as unknown as Request);
 	}) as typeof fetch;

@@ -182,5 +182,7 @@ packages/wranglerjs-compat-webpack-plugin/lib
 emitted-types/
 _routes.generated.json
 
+e2e/.e2e_tmp_dir
+
 # Vendored npm dependencies
 !vendor/*.tgz
