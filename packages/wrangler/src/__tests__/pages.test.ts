@@ -12,8 +12,7 @@ import { runWrangler } from "./helpers/run-wrangler";
 import type { Deployment, Project, UploadPayloadFile } from "../pages/types";
 import type { RestRequest } from "msw";
 import type { RequestInit } from "undici";
-
-//TODO Abstract MSW handlers that repeat to top level - JACOB
+import { FormData } from "undici";
 
 function mockGetToken(jwt: string) {
 	msw.use(
@@ -313,6 +312,7 @@ describe("pages", () => {
 		mockApiToken();
 		runInTempDir();
 
+		//TODO Abstract MSW handlers that repeat to this level - JACOB
 		beforeEach(() => {
 			actualProcessEnvCI = process.env.CI;
 			process.env.CI = "true";
@@ -322,7 +322,7 @@ describe("pages", () => {
 			process.env.CI = actualProcessEnvCI;
 		});
 
-		it("should be aliased with 'wrangler pages publish'", async () => {
+		it.only("should be aliased with 'wrangler pages publish'", async () => {
 			await runWrangler("pages publish --help");
 			await endEventLoop();
 
@@ -666,8 +666,6 @@ describe("pages", () => {
 
 			await runWrangler("pages publish . --project-name=foo");
 
-			requests.forEach((req) => console.dir(req, { depth: null }));
-
 			expect(requests[0].headers.get("Authorization")).toBe(
 				"Bearer <<funfetti-auth-jwt>>"
 			);
@@ -683,7 +681,7 @@ describe("pages", () => {
 		      `);
 		});
 
-		it("should try to use multiple buckets (up to the max concurrency)", async () => {
+		it.only("should try to use multiple buckets (up to the max concurrency)", async () => {
 			writeFileSync("logo.txt", "foobar");
 			writeFileSync("logo.png", "foobar");
 			writeFileSync("logo.html", "foobar");
@@ -691,80 +689,109 @@ describe("pages", () => {
 
 			mockGetToken("<<funfetti-auth-jwt>>");
 
-			setMockResponse(
-				"/pages/assets/check-missing",
-				"POST",
-				async (_, init) => {
-					const body = JSON.parse(init.body as string) as { hashes: string[] };
-					assertLater(() => {
-						expect(init.headers).toMatchObject({
-							Authorization: "Bearer <<funfetti-auth-jwt>>",
-						});
-						expect(body).toMatchObject({
-							hashes: expect.arrayContaining([
-								"d96fef225537c9f5e44a3cb27fd0b492",
-								"2082190357cfd3617ccfe04f340c6247",
-								"6be321bef99e758250dac034474ddbb8",
-								"1a98fb08af91aca4a7df1764a2c4ddb0",
-							]),
-						});
-					});
-					return body.hashes;
-				}
-			);
-
 			// Accumulate multiple requests then assert afterwards
-			const requests: RequestInit[] = [];
-			setMockResponse("/pages/assets/upload", "POST", async (_, init) => {
-				requests.push(init);
-			});
-
-			setMockResponse(
-				"/accounts/:accountId/pages/projects/foo/deployments",
-				async ([_url, accountId], init) => {
-					assertLater(() => {
-						expect(accountId).toEqual("some-account-id");
-						expect(init.method).toEqual("POST");
-						const body = init.body as FormData;
-						const manifest = JSON.parse(body.get("manifest") as string);
-						expect(manifest).toMatchInlineSnapshot(`
-				                          Object {
-				                            "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
-				                            "/logo.js": "6be321bef99e758250dac034474ddbb8",
-				                            "/logo.png": "2082190357cfd3617ccfe04f340c6247",
-				                            "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
-				                          }
-			                      `);
-					});
-
-					return {
-						url: "https://abcxyz.foo.pages.dev/",
+			const requests: RestRequest[] = [];
+			const bodies: UploadPayloadFile[][] = [];
+			msw.use(
+				rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
+					const body = (await req.json()) as {
+						hashes: string[];
 					};
-				}
-			);
 
-			setMockResponse(
-				"/accounts/:accountId/pages/projects/foo",
-				"GET",
-				async ([_url, accountId]) => {
-					assertLater(() => {
-						expect(accountId).toEqual("some-account-id");
+					expect(req.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					expect(body).toMatchObject({
+						hashes: expect.arrayContaining([
+							"d96fef225537c9f5e44a3cb27fd0b492",
+							"2082190357cfd3617ccfe04f340c6247",
+							"6be321bef99e758250dac034474ddbb8",
+							"1a98fb08af91aca4a7df1764a2c4ddb0",
+						]),
 					});
-					return { deployment_configs: { production: {}, preview: {} } };
-				}
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: body.hashes,
+						})
+					);
+				}),
+				rest.post("*/pages/assets/upload", async (req, res, ctx) => {
+					requests.push(req);
+
+					expect(req.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					bodies.push((await req.json()) as UploadPayloadFile[]);
+
+					return res(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: null,
+						})
+					);
+				}),
+				rest.post(
+					"*/accounts/:accountId/pages/projects/foo/deployments",
+					async (req, res, ctx) => {
+						expect(req.params.accountId).toEqual("some-account-id");
+
+						// const body = await req.text();
+
+						// expect(manifest).toMatchInlineSnapshot(`
+						//                       Object {
+						//                         "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
+						//                         "/logo.js": "6be321bef99e758250dac034474ddbb8",
+						//                         "/logo.png": "2082190357cfd3617ccfe04f340c6247",
+						//                         "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
+						//                       }
+						//                 `);
+
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									url: "https://abcxyz.foo.pages.dev/",
+								},
+							})
+						);
+					}
+				),
+				rest.get(
+					"*/accounts/:accountId/pages/projects/foo",
+					async (req, res, ctx) => {
+						expect(req.params.accountId).toEqual("some-account-id");
+
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									deployment_configs: { production: {}, preview: {} },
+								},
+							})
+						);
+					}
+				)
 			);
 
 			await runWrangler("pages publish . --project-name=foo");
 
 			// We have 3 buckets, so expect 3 uploads
 			expect(requests.length).toBe(3);
-			const bodies: UploadPayloadFile[][] = [];
-			for (const init of requests) {
-				expect(init.headers).toMatchObject({
-					Authorization: "Bearer <<funfetti-auth-jwt>>",
-				});
-				bodies.push(JSON.parse(init.body as string) as UploadPayloadFile[]);
-			}
+
 			// One bucket should end up with 2 files
 			expect(bodies.map((b) => b.length).sort()).toEqual([1, 1, 2]);
 			// But we don't know the order, so flatten and test without ordering
@@ -804,7 +831,7 @@ describe("pages", () => {
 		      `);
 		});
 
-		it("should resolve child directories correctly", async () => {
+		it.only("should resolve child directories correctly", async () => {
 			mkdirSync("public");
 			mkdirSync("public/imgs");
 			writeFileSync("public/logo.txt", "foobar");
@@ -814,82 +841,105 @@ describe("pages", () => {
 
 			mockGetToken("<<funfetti-auth-jwt>>");
 
-			setMockResponse(
-				"/pages/assets/check-missing",
-				"POST",
-				async (_, init) => {
-					const body = JSON.parse(init.body as string) as {
+			// Accumulate multiple requests then assert afterwards
+			const requests: RestRequest[] = [];
+			const bodies: UploadPayloadFile[][] = [];
+			msw.use(
+				rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
+					const body = (await req.json()) as {
 						hashes: string[];
 					};
-					assertLater(() => {
-						expect(init.headers).toMatchObject({
-							Authorization: "Bearer <<funfetti-auth-jwt>>",
-						});
-						expect(body).toMatchObject({
-							hashes: expect.arrayContaining([
-								"d96fef225537c9f5e44a3cb27fd0b492",
-								"2082190357cfd3617ccfe04f340c6247",
-								"6be321bef99e758250dac034474ddbb8",
-								"1a98fb08af91aca4a7df1764a2c4ddb0",
-							]),
-						});
-					});
-					return body.hashes;
-				}
-			);
 
-			// Accumulate multiple requests then assert afterwards
-			const requests: RequestInit[] = [];
-			setMockResponse("/pages/assets/upload", "POST", async (_, init) => {
-				requests.push(init);
-			});
-
-			setMockResponse(
-				"/accounts/:accountId/pages/projects/foo/deployments",
-				async ([_url, accountId], init) => {
-					assertLater(() => {
-						expect(accountId).toEqual("some-account-id");
-						expect(init.method).toEqual("POST");
-						const body = init.body as FormData;
-						const manifest = JSON.parse(body.get("manifest") as string);
-						expect(manifest).toMatchInlineSnapshot(`
-				                          Object {
-				                            "/imgs/logo.png": "2082190357cfd3617ccfe04f340c6247",
-				                            "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
-				                            "/logo.js": "6be321bef99e758250dac034474ddbb8",
-				                            "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
-				                          }
-			                      `);
+					expect(req.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					expect(body).toMatchObject({
+						hashes: expect.arrayContaining([
+							"d96fef225537c9f5e44a3cb27fd0b492",
+							"2082190357cfd3617ccfe04f340c6247",
+							"6be321bef99e758250dac034474ddbb8",
+							"1a98fb08af91aca4a7df1764a2c4ddb0",
+						]),
 					});
 
-					return {
-						url: "https://abcxyz.foo.pages.dev/",
-					};
-				}
-			);
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: body.hashes,
+						})
+					);
+				}),
+				rest.post("*/pages/assets/upload", async (req, res, ctx) => {
+					requests.push(req);
 
-			setMockResponse(
-				"/accounts/:accountId/pages/projects/foo",
-				"GET",
-				async ([_url, accountId]) => {
-					assertLater(() => {
-						expect(accountId).toEqual("some-account-id");
-					});
-					return { deployment_configs: { production: {}, preview: {} } };
-				}
+					expect(req.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					bodies.push((await req.json()) as UploadPayloadFile[]);
+
+					return res(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: null,
+						})
+					);
+				}),
+				rest.post(
+					"*/accounts/:accountId/pages/projects/foo/deployments",
+					async (req, res, ctx) => {
+						expect(req.params.accountId).toEqual("some-account-id");
+						// const body = init.body as FormData;
+						// const manifest = JSON.parse(body.get("manifest") as string);
+						// expect(manifest).toMatchInlineSnapshot(`
+						//                       Object {
+						//                         "/imgs/logo.png": "2082190357cfd3617ccfe04f340c6247",
+						//                         "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
+						//                         "/logo.js": "6be321bef99e758250dac034474ddbb8",
+						//                         "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
+						//                       }
+						//                 `);
+
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: { url: "https://abcxyz.foo.pages.dev/" },
+							})
+						);
+					}
+				),
+				rest.get(
+					"*/accounts/:accountId/pages/projects/foo",
+					async (req, res, ctx) => {
+						expect(req.params.accountId).toEqual("some-account-id");
+
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									deployment_configs: { production: {}, preview: {} },
+								},
+							})
+						);
+					}
+				)
 			);
 
 			await runWrangler(`pages publish public --project-name=foo`);
 
 			// We have 3 buckets, so expect 3 uploads
 			expect(requests.length).toBe(3);
-			const bodies: UploadPayloadFile[][] = [];
-			for (const init of requests) {
-				expect(init.headers).toMatchObject({
-					Authorization: "Bearer <<funfetti-auth-jwt>>",
-				});
-				bodies.push(JSON.parse(init.body as string) as UploadPayloadFile[]);
-			}
 			// One bucket should end up with 2 files
 			expect(bodies.map((b) => b.length).sort()).toEqual([1, 1, 2]);
 			// But we don't know the order, so flatten and test without ordering
@@ -929,7 +979,7 @@ describe("pages", () => {
 		        `);
 		});
 
-		it("should resolve the current directory correctly", async () => {
+		it.only("should resolve the current directory correctly", async () => {
 			mkdirSync("public");
 			mkdirSync("public/imgs");
 			writeFileSync("public/logo.txt", "foobar");
@@ -939,83 +989,105 @@ describe("pages", () => {
 
 			mockGetToken("<<funfetti-auth-jwt>>");
 
-			setMockResponse(
-				"/pages/assets/check-missing",
-				"POST",
-				async (_, init) => {
-					const body = JSON.parse(init.body as string) as {
+			// Accumulate multiple requests then assert afterwards
+			const requests: RestRequest[] = [];
+			const bodies: UploadPayloadFile[][] = [];
+			msw.use(
+				rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
+					const body = (await req.json()) as {
 						hashes: string[];
 					};
-					assertLater(() => {
-						expect(init.headers).toMatchObject({
-							Authorization: "Bearer <<funfetti-auth-jwt>>",
-						});
-						expect(body).toMatchObject({
-							hashes: expect.arrayContaining([
-								"d96fef225537c9f5e44a3cb27fd0b492",
-								"2082190357cfd3617ccfe04f340c6247",
-								"6be321bef99e758250dac034474ddbb8",
-								"1a98fb08af91aca4a7df1764a2c4ddb0",
-							]),
-						});
-					});
-					return body.hashes;
-				}
-			);
 
-			// Accumulate multiple requests then assert afterwards
-			const requests: RequestInit[] = [];
-			setMockResponse("/pages/assets/upload", "POST", async (_, init) => {
-				requests.push(init);
-			});
-
-			setMockResponse(
-				"/accounts/:accountId/pages/projects/foo/deployments",
-				async ([_url, accountId], init) => {
-					assertLater(() => {
-						expect(accountId).toEqual("some-account-id");
-						expect(init.method).toEqual("POST");
-						const body = init.body as FormData;
-						const manifest = JSON.parse(body.get("manifest") as string);
-						expect(manifest).toMatchInlineSnapshot(`
-				                          Object {
-				                            "/imgs/logo.png": "2082190357cfd3617ccfe04f340c6247",
-				                            "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
-				                            "/logo.js": "6be321bef99e758250dac034474ddbb8",
-				                            "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
-				                          }
-			                      `);
+					expect(req.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					expect(body).toMatchObject({
+						hashes: expect.arrayContaining([
+							"d96fef225537c9f5e44a3cb27fd0b492",
+							"2082190357cfd3617ccfe04f340c6247",
+							"6be321bef99e758250dac034474ddbb8",
+							"1a98fb08af91aca4a7df1764a2c4ddb0",
+						]),
 					});
 
-					return {
-						url: "https://abcxyz.foo.pages.dev/",
-					};
-				}
-			);
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: body.hashes,
+						})
+					);
+				}),
+				rest.post("*/pages/assets/upload", async (req, res, ctx) => {
+					requests.push(req);
 
-			setMockResponse(
-				"/accounts/:accountId/pages/projects/foo",
-				"GET",
-				async ([_url, accountId]) => {
-					assertLater(() => {
-						expect(accountId).toEqual("some-account-id");
-					});
-					return { deployment_configs: { production: {}, preview: {} } };
-				}
+					expect(req.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					bodies.push((await req.json()) as UploadPayloadFile[]);
+
+					return res(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: null,
+						})
+					);
+				}),
+				rest.post(
+					"*/accounts/:accountId/pages/projects/foo/deployments",
+					async (req, res, ctx) => {
+						expect(req.params.accountId).toEqual("some-account-id");
+						// const body = init.body as FormData;
+						// const manifest = JSON.parse(body.get("manifest") as string);
+						// expect(manifest).toMatchInlineSnapshot(`
+						//                       Object {
+						//                         "/imgs/logo.png": "2082190357cfd3617ccfe04f340c6247",
+						//                         "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
+						//                         "/logo.js": "6be321bef99e758250dac034474ddbb8",
+						//                         "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
+						//                       }
+						//                 `);
+
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: { url: "https://abcxyz.foo.pages.dev/" },
+							})
+						);
+					}
+				),
+				rest.get(
+					"*/accounts/:accountId/pages/projects/foo",
+					async (req, res, ctx) => {
+						expect(req.params.accountId).toEqual("some-account-id");
+
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									deployment_configs: { production: {}, preview: {} },
+								},
+							})
+						);
+					}
+				)
 			);
 
 			chdir("public");
 			await runWrangler(`pages publish . --project-name=foo`);
-
 			// We have 3 buckets, so expect 3 uploads
 			expect(requests.length).toBe(3);
-			const bodies: UploadPayloadFile[][] = [];
-			for (const init of requests) {
-				expect(init.headers).toMatchObject({
-					Authorization: "Bearer <<funfetti-auth-jwt>>",
-				});
-				bodies.push(JSON.parse(init.body as string) as UploadPayloadFile[]);
-			}
 			// One bucket should end up with 2 files
 			expect(bodies.map((b) => b.length).sort()).toEqual([1, 1, 2]);
 			// But we don't know the order, so flatten and test without ordering
@@ -1055,7 +1127,7 @@ describe("pages", () => {
 		        `);
 		});
 
-		it("should not error when directory names contain periods and houses a extensionless file", async () => {
+		it.only("should not error when directory names contain periods and houses a extensionless file", async () => {
 			mkdirSync(".well-known");
 			// Note: same content as previous test, but since it's a different extension,
 			// it hashes to a different value
@@ -1063,29 +1135,35 @@ describe("pages", () => {
 
 			mockGetToken("<<funfetti-auth-jwt>>");
 
-			setMockResponse(
-				"/pages/assets/check-missing",
-				"POST",
-				async (_, init) => {
-					const body = JSON.parse(init.body as string) as { hashes: string[] };
-					assertLater(() => {
-						expect(init.headers).toMatchObject({
-							Authorization: "Bearer <<funfetti-auth-jwt>>",
-						});
-						expect(body).toMatchObject({
-							hashes: ["7b764dacfd211bebd8077828a7ddefd7"],
-						});
-					});
-					return body.hashes;
-				}
-			);
+			msw.use(
+				rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
+					const body = (await req.json()) as {
+						hashes: string[];
+					};
 
-			setMockResponse("/pages/assets/upload", "POST", async (_, init) => {
-				assertLater(() => {
-					expect(init.headers).toMatchObject({
-						Authorization: "Bearer <<funfetti-auth-jwt>>",
+					expect(req.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					expect(body).toMatchObject({
+						hashes: ["7b764dacfd211bebd8077828a7ddefd7"],
 					});
-					const body = JSON.parse(init.body as string) as UploadPayloadFile[];
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: body.hashes,
+						})
+					);
+				}),
+
+				rest.post("*/pages/assets/upload", async (req, res, ctx) => {
+					expect(req.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					const body = (await req.json()) as UploadPayloadFile[];
 					expect(body).toMatchObject([
 						{
 							key: "7b764dacfd211bebd8077828a7ddefd7",
@@ -1096,25 +1174,50 @@ describe("pages", () => {
 							base64: true,
 						},
 					]);
-				});
-			});
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: null,
+						})
+					);
+				}),
+				rest.post(
+					"*/accounts/:accountId/pages/projects/foo/deployments",
+					async (req, res, ctx) => {
+						expect(req.params.accountId).toEqual("some-account-id");
 
-			setMockResponse(
-				"/accounts/:accountId/pages/projects/foo/deployments",
-				async () => ({
-					url: "https://abcxyz.foo.pages.dev/",
-				})
-			);
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: { url: "https://abcxyz.foo.pages.dev/" },
+							})
+						);
+					}
+				),
+				rest.get(
+					"*/accounts/:accountId/pages/projects/foo",
+					async (req, res, ctx) => {
+						expect(req.params.accountId).toEqual("some-account-id");
 
-			setMockResponse(
-				"/accounts/:accountId/pages/projects/foo",
-				"GET",
-				async ([_url, accountId]) => {
-					assertLater(() => {
-						expect(accountId).toEqual("some-account-id");
-					});
-					return { deployment_configs: { production: {}, preview: {} } };
-				}
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									deployment_configs: { production: {}, preview: {} },
+								},
+							})
+						);
+					}
+				)
 			);
 
 			await runWrangler("pages publish . --project-name=foo");
