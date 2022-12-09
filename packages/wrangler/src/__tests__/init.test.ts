@@ -2400,6 +2400,42 @@ describe("init", () => {
 			});
 		});
 
+		it("should fail on init --from-dash on non-existent worker name", async () => {
+			setMockResponse(
+				`/accounts/:accountId/workers/services/:scriptName`,
+				"GET",
+				() => mockServiceMetadata
+			);
+			setMockFetchDashScript({
+				accountId: "LCARS",
+				fromDashScriptName: "memory-crystal",
+				environment: mockServiceMetadata.default_environment.environment,
+				mockResponse: mockDashboardScript,
+			});
+			mockConfirm(
+				{
+					text: "Would you like to use git to manage this Worker?",
+					result: false,
+				},
+				{
+					text: "Would you like to use TypeScript?",
+					result: true,
+				},
+				{
+					text: "No package.json found. Would you like to create one?",
+					result: true,
+				},
+				{
+					text: "Would you like to install the type definitions for Workers into your package.json?",
+					result: true,
+				}
+			);
+
+			await expect(
+				runWrangler("init isolinear-optical-chip --from-dash i-dont-exist")
+			).rejects.toThrowError();
+		});
+
 		it("should download source script from dashboard w/ out positional <name>", async () => {
 			mockSupportingDashRequests({
 				expectedAccountId: "LCARS",
