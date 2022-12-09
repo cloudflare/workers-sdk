@@ -8,11 +8,11 @@ import getPort from "get-port";
 import { npxImport } from "npx-import";
 import { useState, useEffect, useRef } from "react";
 import onExit from "signal-exit";
+import { fetch } from "undici";
 import { performApiFetch } from "../cfetch/internal";
 import { registerWorker } from "../dev-registry";
 import useInspector from "../inspect";
 import { logger } from "../logger";
-import generateASSETSBinding from "../miniflare-cli/assets";
 import {
 	DEFAULT_MODULE_RULES,
 	ModuleTypeToRuleType,
@@ -23,7 +23,7 @@ import { requireAuth } from "../user";
 import type { Config } from "../config";
 import type { WorkerRegistry } from "../dev-registry";
 import type { LoggerLevel } from "../logger";
-import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli";
+import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { AssetPaths } from "../sites";
 import type {
 	CfWorkerInit,
@@ -256,7 +256,7 @@ function useLocalWorker({
 					experimentalLocalRef.current = mf;
 					removeExperimentalLocalSignalExitListener.current = onExit(() => {
 						logger.log("⎔ Shutting down experimental local server.");
-						mf.dispose();
+						void mf.dispose();
 						experimentalLocalRef.current = undefined;
 					});
 					await mf.ready;
@@ -313,13 +313,15 @@ function useLocalWorker({
 			});
 			logger.log("⎔ Starting a local server...");
 
+			const hasColourSupport =
+				chalk.supportsColor.hasBasic && process.env.FORCE_COLOR !== "0";
 			const child = (local.current = fork(miniflareCLIPath, forkOptions, {
 				cwd: path.dirname(scriptPath),
 				execArgv: nodeOptions,
 				stdio: "pipe",
 				env: {
 					...process.env,
-					FORCE_COLOR: chalk.supportsColor.hasBasic ? "1" : undefined,
+					FORCE_COLOR: hasColourSupport ? "1" : undefined,
 				},
 			}));
 
@@ -851,6 +853,16 @@ export async function transformMf2OptionsToMf3Options({
 	};
 
 	if (enablePagesAssetsServiceBinding !== undefined) {
+		// `../miniflare-cli/assets` dynamically imports`@cloudflare/pages-shared/environment-polyfills`.
+		// `@cloudflare/pages-shared/environment-polyfills/types.ts` defines `global`
+		// augmentations that pollute the `import`-site's typing environment.
+		//
+		// We `require` instead of `import`ing here to avoid polluting the main
+		// `wrangler` TypeScript project with the `global` augmentations. This
+		// relies on the fact that `require` is untyped.
+		//
+		// eslint-disable-next-line @typescript-eslint/no-var-requires
+		const generateASSETSBinding = require("../miniflare-cli/assets");
 		options.serviceBindings = {
 			...options.serviceBindings,
 			ASSETS: (await generateASSETSBinding({

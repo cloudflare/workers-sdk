@@ -30,7 +30,7 @@ import {
 } from "./index";
 import type { Config, Environment } from "./config";
 import type { Route } from "./config/environment";
-import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli";
+import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type { CfWorkerInit } from "./worker";
 import type { CommonYargsOptions } from "./yargs-types";
 import type { Argv, ArgumentsCamelCase } from "yargs";

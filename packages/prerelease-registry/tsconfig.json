@@ -3,5 +3,7 @@
 	"compilerOptions": {
 		"module": "CommonJS",
 		"types": ["@cloudflare/workers-types"]
-	}
+	},
+	"include": ["**/*.ts"],
+	"exclude": ["node_modules"]
 }

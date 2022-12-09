@@ -3,7 +3,7 @@ import { startApiDev, startDev } from "../dev";
 import { logger } from "../logger";
 
 import type { Environment } from "../config";
-import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli";
+import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { RequestInit, Response, RequestInfo } from "undici";
 
 interface DevOptions {

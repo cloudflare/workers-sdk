@@ -119,7 +119,7 @@ function* executeRequest(request: Request, relativePathname: string) {
 	}
 }
 
-export default function (pluginArgs) {
+export default function (pluginArgs: unknown) {
 	const onRequest: PagesPluginFunction = async (workerContext) => {
 		let { request } = workerContext;
 		const { env, next, data } = workerContext;

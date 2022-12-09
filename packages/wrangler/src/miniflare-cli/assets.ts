@@ -90,6 +90,10 @@ async function generateAssetsFetch(
 ): Promise<typeof fetch> {
 	// Defer importing miniflare until we really need it
 
+	// NOTE: These dynamic imports bring in `global` type augmentations from
+	// `@cloudflare/pages-shared/environment-polyfills/types.ts`, allowing us to
+	// use `fetch`, `Headers`, `Request` and `Response` as globals in this file
+	// and the *entire* `miniflare-cli` TypeScript project.
 	const polyfill = tre
 		? (
 				await import(

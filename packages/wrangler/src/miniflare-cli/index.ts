@@ -17,12 +17,8 @@ import generateASSETSBinding from "./assets";
 import { getRequestContextCheckOptions } from "./request-context";
 import type { LoggerLevel } from "../logger";
 import type { Options } from "./assets";
+import type { EnablePagesAssetsServiceBindingOptions } from "./types";
 import type { AddressInfo } from "net";
-
-export interface EnablePagesAssetsServiceBindingOptions {
-	proxyPort?: number;
-	directory?: string;
-}
 
 // miniflare defines this but importing it throws:
 // Dynamic require of "path" is not supported

@@ -541,7 +541,7 @@ export const Handler = async ({
 
 	CLEANUP_CALLBACKS.push(stop);
 
-	waitUntilExit().then(() => {
+	void waitUntilExit().then(() => {
 		CLEANUP();
 		process.exit(0);
 	});

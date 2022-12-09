@@ -26,8 +26,6 @@ declare global {
 	}
 
 	class HTMLRewriter extends MiniflareHTMLRewriter {
-		// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-		// @ts-ignore
 		transform(response: Response): Response;
 	}
 

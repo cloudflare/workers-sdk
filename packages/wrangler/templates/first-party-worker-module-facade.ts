@@ -1,6 +1,4 @@
-// @ts-ignore entry point will get replaced
 import worker from "__ENTRY_POINT__";
-// @ts-ignore entry point will get replaced
 export * from "__ENTRY_POINT__";
 
 type Env = {
@@ -11,8 +9,11 @@ type Env = {
  * Setup globals/vars as required
  */
 
-export default {
+export default <ExportedHandler>{
 	async fetch(request: Request, env: Env, ctx: ExecutionContext) {
+		if (worker.fetch === undefined) {
+			throw new TypeError("Entry point missing `fetch` handler");
+		}
 		return worker.fetch(request, env, ctx);
 	},
 };

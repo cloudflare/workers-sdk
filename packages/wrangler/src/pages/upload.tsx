@@ -330,7 +330,7 @@ export const upload = async (
 			}
 		};
 
-		queue.add(() =>
+		void queue.add(() =>
 			doUpload().then(
 				() => {
 					counter += bucket.files.length;
