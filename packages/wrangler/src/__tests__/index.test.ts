@@ -31,7 +31,7 @@ describe("wrangler", () => {
 			"wrangler
 
 			Commands:
-			  wrangler docs                📚 Open wrangler's docs in your browser
+			  wrangler docs [command]      📚 Open wrangler's docs in your browser
 			  wrangler init [name]         📥 Create a wrangler.toml configuration file
 			  wrangler dev [script]        👂 Start a local server for developing your worker
 			  wrangler publish [script]    🆙 Publish your Worker to Cloudflare.
@@ -78,7 +78,7 @@ describe("wrangler", () => {
 			wrangler
 
 			Commands:
-			  wrangler docs                📚 Open wrangler's docs in your browser
+			  wrangler docs [command]      📚 Open wrangler's docs in your browser
 			  wrangler init [name]         📥 Create a wrangler.toml configuration file
 			  wrangler dev [script]        👂 Start a local server for developing your worker
 			  wrangler publish [script]    🆙 Publish your Worker to Cloudflare.

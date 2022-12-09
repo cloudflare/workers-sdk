@@ -26,11 +26,11 @@ import {
 } from "./deprecated";
 import { devHandler, devOptions } from "./dev";
 import { workerNamespaceCommands } from "./dispatch-namespace";
+import { docsHandler, docsOptions } from "./docs";
 import { initHandler, initOptions } from "./init";
 import { kvNamespace, kvKey, kvBulk } from "./kv";
 import { logBuildFailure, logger } from "./logger";
 import * as metrics from "./metrics";
-import openInBrowser from "./open-in-browser";
 import { pages } from "./pages";
 import { formatMessage, ParseError } from "./parse";
 import { publishOptions, publishHandler } from "./publish";
@@ -277,20 +277,10 @@ export function createCLIParser(argv: string[]) {
 
 	// docs
 	wrangler.command(
-		"docs",
+		"docs [command]",
 		"📚 Open wrangler's docs in your browser",
-		() => {},
-		async () => {
-			await printWranglerBanner();
-			const urlToOpen =
-				"https://developers.cloudflare.com/workers/wrangler/commands/";
-			logger.log(`Opening a link in your default browser: ${urlToOpen}`);
-			await openInBrowser(urlToOpen);
-			const config = readConfig(undefined, {});
-			await metrics.sendMetricsEvent("view docs", {
-				sendMetrics: config.send_metrics,
-			});
-		}
+		docsOptions,
+		docsHandler
 	);
 
 	// init
