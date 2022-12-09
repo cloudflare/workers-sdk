@@ -6,13 +6,13 @@ jobs:
   prettier:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Use Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: '16.x'
       - name: Restore NPM cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         continue-on-error: true
         with:
           path: ~/.npm
