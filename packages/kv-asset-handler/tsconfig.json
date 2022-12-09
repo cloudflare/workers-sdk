@@ -1,13 +1,13 @@
 {
-  "compilerOptions": {
-    "outDir": "./dist",
-    "noImplicitAny": true,
-    "target": "ES2017",
-    "allowJs": false,
-    "lib": ["WebWorker", "ES5", "ScriptHost"],
-    "module": "commonjs",
-    "moduleResolution": "node"
-  },
-  "include": ["./src/*.ts", "./src/**/*.ts", "./test/**/*.ts", "./test/*.ts", "./src/types.d.ts"],
-  "exclude": ["node_modules/", "dist/"]
+	"compilerOptions": {
+		"outDir": "./dist",
+		"noImplicitAny": true,
+		"target": "ES2017",
+		"allowJs": false,
+		"lib": ["WebWorker", "ES5", "ScriptHost"],
+		"module": "commonjs",
+		"moduleResolution": "node"
+	},
+	"include": ["./src/*.ts", "./src/**/*.ts", "./test/**/*.ts", "./test/*.ts", "./src/types.d.ts"],
+	"exclude": ["node_modules/", "dist/"]
 }
