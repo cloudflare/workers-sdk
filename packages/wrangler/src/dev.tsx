@@ -673,6 +673,7 @@ async function getZoneIdHostAndRoutes(args: StartDevOptions, config: Config) {
 	let zoneId: string | undefined;
 	const routes: Route[] | undefined =
 		args.routes || (config.route && [config.route]) || config.routes;
+	const accountId = config.account_id;
 
 	if (args.forceLocal) {
 		args.local = true;
@@ -680,11 +681,11 @@ async function getZoneIdHostAndRoutes(args: StartDevOptions, config: Config) {
 
 	if (!args.local) {
 		if (host) {
-			zoneId = await getZoneIdFromHost(host);
+			zoneId = await getZoneIdFromHost(host, accountId);
 		}
 		if (!zoneId && routes) {
 			const firstRoute = routes[0];
-			const zone = await getZoneForRoute(firstRoute);
+			const zone = await getZoneForRoute(firstRoute, accountId);
 			if (zone) {
 				zoneId = zone.id;
 				host = zone.host;

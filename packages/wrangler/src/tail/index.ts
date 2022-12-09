@@ -97,11 +97,13 @@ export async function tailHandler(args: TailArgs) {
 		sendMetrics: config.send_metrics,
 	});
 
+	const accountId = await requireAuth(config);
+
 	let scriptName;
 
 	// Worker names can't contain "." (and most routes should), so use that as a discriminator
 	if (args.worker?.includes(".")) {
-		scriptName = await getWorkerForZone(args.worker);
+		scriptName = await getWorkerForZone(args.worker, accountId);
 		if (args.format === "pretty") {
 			logger.log(`Connecting to worker ${scriptName} at route ${args.worker}`);
 		}
@@ -114,8 +116,6 @@ export async function tailHandler(args: TailArgs) {
 			"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `wrangler tail <worker-name>`"
 		);
 	}
-
-	const accountId = await requireAuth(config);
 
 	const cliFilters: TailCLIFilters = {
 		status: args.status as ("ok" | "error" | "canceled")[] | undefined,

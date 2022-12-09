@@ -50,13 +50,16 @@ export function getHostFromRoute(route: Route): string | undefined {
  * - We try to extract a host from it
  * - We try to get a zone id from the host
  */
-export async function getZoneForRoute(route: Route): Promise<Zone | undefined> {
+export async function getZoneForRoute(
+	route: Route,
+	accountId: string | undefined
+): Promise<Zone | undefined> {
 	const host = getHostFromRoute(route);
 	const id =
 		typeof route === "object" && "zone_id" in route
 			? route.zone_id
 			: host
-			? await getZoneIdFromHost(host)
+			? await getZoneIdFromHost(host, accountId)
 			: undefined;
 	return id && host ? { id, host } : undefined;
 }
@@ -81,14 +84,23 @@ export function getHostFromUrl(urlLike: string): string | undefined {
  * For each domain-like part of the host (e.g. w.x.y.z) try to get a zone id for it by
  * lopping off subdomains until we get a hit from the API.
  */
-export async function getZoneIdFromHost(host: string): Promise<string> {
+export async function getZoneIdFromHost(
+	host: string,
+	accountId: string | undefined
+): Promise<string> {
 	const hostPieces = host.split(".");
 
+	const searchParams = new URLSearchParams();
+	if (accountId) {
+		searchParams.set("account.id", accountId);
+	}
+
 	while (hostPieces.length > 1) {
+		searchParams.set("name", hostPieces.join("."));
 		const zones = await fetchListResult<{ id: string }>(
 			`/zones`,
 			{},
-			new URLSearchParams({ name: hostPieces.join(".") })
+			searchParams
 		);
 		if (zones.length > 0) {
 			return zones[0].id;
@@ -162,8 +174,11 @@ export function findClosestRoute(
 /**
  * Given a route (must be assigned and within the correct zone), return the name of the worker assigned to it
  */
-export async function getWorkerForZone(worker: string) {
-	const zone = await getZoneForRoute(worker);
+export async function getWorkerForZone(
+	worker: string,
+	accountId: string | undefined
+) {
+	const zone = await getZoneForRoute(worker, accountId);
 	if (!zone) {
 		throw new Error(
 			`The route '${worker}' is not part of one of your zones. Either add this zone from the Cloudflare dashboard, or try using a route within one of your existing zones.`

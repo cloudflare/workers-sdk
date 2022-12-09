@@ -715,7 +715,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			// to bother with all the error handling tomfoolery.
 			const routesWithOtherBindings: Record<string, string[]> = {};
 			for (const route of routes) {
-				const zone = await getZoneForRoute(route);
+				const zone = await getZoneForRoute(route, accountId);
 				if (!zone) {
 					continue;
 				}
@@ -766,7 +766,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	// Update routing table for the script.
 	if (routesOnly.length > 0) {
 		deployments.push(
-			publishRoutes(routesOnly, { workerUrl, scriptName, notProd }).then(() => {
+			publishRoutes(routesOnly, accountId, {
+				workerUrl,
+				scriptName,
+				notProd,
+			}).then(() => {
 				if (routesOnly.length > 10) {
 					return routesOnly
 						.slice(0, 9)
@@ -844,6 +848,7 @@ function formatTime(duration: number) {
  */
 async function publishRoutes(
 	routes: Route[],
+	accountId: string | undefined,
 	{
 		workerUrl,
 		scriptName,
@@ -867,7 +872,10 @@ async function publishRoutes(
 		if (isAuthenticationError(e)) {
 			// An authentication error is probably due to a known issue,
 			// where the user is logged in via an API token that does not have "All Zones".
-			return await publishRoutesFallback(routes, { scriptName, notProd });
+			return await publishRoutesFallback(routes, accountId, {
+				scriptName,
+				notProd,
+			});
 		} else {
 			throw e;
 		}
@@ -881,6 +889,7 @@ async function publishRoutes(
  */
 async function publishRoutesFallback(
 	routes: Route[],
+	accountId: string | undefined,
 	{ scriptName, notProd }: { scriptName: string; notProd: boolean }
 ) {
 	if (notProd) {
@@ -902,7 +911,7 @@ async function publishRoutesFallback(
 	const activeZones = new Map<string, string>();
 	const routesToDeploy = new Map<string, string>();
 	for (const route of routes) {
-		const zone = await getZoneForRoute(route);
+		const zone = await getZoneForRoute(route, accountId);
 		if (zone) {
 			activeZones.set(zone.id, zone.host);
 			routesToDeploy.set(
