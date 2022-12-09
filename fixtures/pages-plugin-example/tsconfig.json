@@ -1,5 +1,5 @@
 {
-	"include": ["index.d.ts", "functions"],
+	"include": ["functions"],
 	"compilerOptions": {
 		"target": "ES2020",
 		"module": "CommonJS",

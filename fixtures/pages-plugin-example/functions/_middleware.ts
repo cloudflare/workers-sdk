@@ -11,7 +11,12 @@ class BodyHandler {
 	}
 }
 
-export const onRequest = async ({ next, pluginArgs }) => {
+export const onRequest: PagesPluginFunction<
+	unknown,
+	never,
+	Record<string, unknown>,
+	{ footerText: string }
+> = async ({ next, pluginArgs }) => {
 	const response = await next();
 
 	return new HTMLRewriter()

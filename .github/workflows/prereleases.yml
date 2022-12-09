@@ -35,6 +35,9 @@ jobs:
       - name: Modify package.json version
         run: node .github/version-script.js
 
+      - name: Build
+        run: npm run build
+
       - name: Check for errors
         run: npm run check
 

@@ -11,6 +11,7 @@
 		"public/"
 	],
 	"scripts": {
-		"build": "npx wrangler pages functions build --plugin --outfile=index.js"
+		"build": "npx wrangler pages functions build --plugin --outfile=index.js",
+		"check:type": "tsc"
 	}
 }

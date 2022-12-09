@@ -1,3 +1,3 @@
-export const onRequest = () => {
+export const onRequest: PagesFunction = () => {
 	return new Response("I'm a fixed response");
 };

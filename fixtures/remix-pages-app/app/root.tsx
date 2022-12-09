@@ -9,6 +9,10 @@ import {
 } from "remix";
 import type { MetaFunction } from "remix";
 
+declare global {
+	const process: { env: { NODE_ENV: string } };
+}
+
 export const meta: MetaFunction = () => {
 	return { title: "New Remix App" };
 };

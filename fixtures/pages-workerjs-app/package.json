@@ -4,6 +4,7 @@
 	"private": true,
 	"sideEffects": false,
 	"scripts": {
+		"check:type": "tsc",
 		"dev": "npx wrangler pages dev ./workerjs-test --port 8792",
 		"test": "npx jest --forceExit --verbose",
 		"test:ci": "npx jest --forceExit"

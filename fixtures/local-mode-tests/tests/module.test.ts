@@ -1,11 +1,9 @@
 import path from "path";
 import { unstable_dev } from "wrangler";
+import type { UnstableDevWorker } from "wrangler";
 
 describe("worker", () => {
-	let worker: {
-		fetch: (input?: RequestInfo, init?: RequestInit) => Promise<Response>;
-		stop: () => Promise<void>;
-	};
+	let worker: UnstableDevWorker;
 	let resolveReadyPromise: (value: unknown) => void;
 	const readyPromise = new Promise((resolve) => {
 		resolveReadyPromise = resolve;
