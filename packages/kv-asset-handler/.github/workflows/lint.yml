@@ -4,24 +4,24 @@ on: [push, pull_request]
 
 jobs:
   markdown:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v2
       - name: Use Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: '12.x'
+          node-version: '16.x'
       - run: npm install -g markdownlint-cli@0.27.1
       - run: npm run lint:markdown
 
   prettier:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v2
       - name: Use Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: '12.x'
+          node-version: '16.x'
       - name: Restore NPM cache
         uses: actions/cache@v2
         continue-on-error: true
