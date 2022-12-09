@@ -1,16 +1,17 @@
 Fixes # [insert issue number].
 
-Associated docs updates:
+What this PR solves / how to test:
 
--
+Associated docs updates: [insert associated doc update PR(s)]
 
 Author has included the following, where applicable:
 
-- [ ] tests
-- [ ] changeset
+- [ ] Tests
+- [ ] Changeset
 
-Reviewer has checked for the following, where applicable:
+Reviewer has performed the following, where applicable:
 
-- [ ] tests
-- [ ] docs updates
-- [ ] changeset
+- [ ] Checked for inclusion of relevant tests
+- [ ] Checked for inclusion of a relevant changeset
+- [ ] Checked for creation of associated docs updates
+- [ ] Manually pulled down the changes and spot-tested 
