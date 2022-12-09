@@ -1,5 +1,23 @@
 # wrangler
 
+## 2.6.2
+
+### Patch Changes
+
+- [#2355](https://github.com/cloudflare/wrangler2/pull/2355) [`df6fea02`](https://github.com/cloudflare/wrangler2/commit/df6fea02b53066e54c12770cdb439e2dbb3208ea) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: don't ask for preview_database_id in --local
+
+* [#2349](https://github.com/cloudflare/wrangler2/pull/2349) [`8173bcca`](https://github.com/cloudflare/wrangler2/commit/8173bcca09fde15ffdde72bd125fb6968f4a9272) Thanks [@jspspike](https://github.com/jspspike)! - Initially check that worker exists when using --from-dash
+
+- [#2356](https://github.com/cloudflare/wrangler2/pull/2356) [`228781ee`](https://github.com/cloudflare/wrangler2/commit/228781eeb4b2d22275312876d07191017b6d8a06) Thanks [@rozenmd](https://github.com/rozenmd)! - feat: add wrangler docs command
+
+* [#2364](https://github.com/cloudflare/wrangler2/pull/2364) [`4bdb1f6d`](https://github.com/cloudflare/wrangler2/commit/4bdb1f6d0d3fbc4603542a743d25376574e0cdfc) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: implement `wrangler docs <command>`
+
+  closes #2359
+
+- [#2341](https://github.com/cloudflare/wrangler2/pull/2341) [`5afa13ec`](https://github.com/cloudflare/wrangler2/commit/5afa13ec8026bcfe4e09f4b523733236ccec0814) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: d1 - don't backup prod db when applying migrations locally
+
+  Closes #2336
+
 ## 2.6.1
 
 ### Patch Changes
