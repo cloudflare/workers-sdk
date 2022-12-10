@@ -1,5 +1,35 @@
 # Changelog
 
+
+## 0.3.0
+
+- ### Features
+
+  - **Allow configurable downgrade of ETag validator strength - [awwong1], [pull/315]**
+
+  This allows users to override the default strong ETag validator behaviour to use weak ETag validators. This change allows the developer to use weak ETags and preserve 304 responses (e.g. on *.workers.dev domains).
+
+- ### Fixes
+
+  - **Fix length property call on ArrayBuffer instance - [philipatkinson], [pull/295**]
+  
+  Previously when edge cached was enabled, the `content-length` of the response was not being set correctly. This was due to the `length` property of the `ArrayBuffer` instance being called instead of the `byteLength` property. This PR fixes this issue.
+
+- ### Maintenance
+
+  - **chore(ci): bump node versions in actions - [KianNH], [pull/354]**
+
+    This bumps the Node versions used in the CI actions to the latest LTS versions.
+
+  - **chore: use tabs for indentation - [Cherry], [pull/355]**
+
+    This PR changes the indentation of the project to use tabs instead of spaces, falling more in line with other Cloudflare JavaScript projects like wrangler.
+  
+  - **chore: bump dependencies - [Cherry], [pull/356]**
+
+    This bumps many dependencies of the project to their latest versions.
+
+
 ## 0.2.0
 
 - ### Features
