@@ -124,7 +124,7 @@ export async function cloneIntoDirectory(
 
 	// cleanup: move the template to the target directory and delete `.git`
 	try {
-		fs.renameSync(templatePath, targetDirectory);
+		moveDirectory(templatePath, targetDirectory);
 	} catch {
 		throw new Error(`Failed to find "${subdirectory}" in ${remote}`);
 	}
@@ -132,4 +132,25 @@ export async function cloneIntoDirectory(
 		recursive: true,
 		force: true,
 	});
+}
+
+function moveDirectory(src: string, dst: string) {
+	try {
+		fs.renameSync(src, dst);
+	} catch (err) {
+		// if the rename fails, it could be because we are trying to move a directory across devices.
+		// if that is the case, then we need to copy the directory and then delete the original
+		if ((err as { code: string }).code === "EXDEV") {
+			fs.cpSync(src, dst, {
+				recursive: true,
+			});
+
+			fs.rmSync(src, {
+				recursive: true,
+				force: true,
+			});
+		} else {
+			throw err;
+		}
+	}
 }
