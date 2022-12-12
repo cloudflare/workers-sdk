@@ -17,6 +17,7 @@ export class NoDefaultValueProvided extends Error {
 		// but this is fine as a fallback.
 		super("This command cannot be run in a non-interactive context");
 		Object.setPrototypeOf(this, new.target.prototype);
+		Object.setPrototypeOf(this, new.target.prototype);
 	}
 }
 
