@@ -682,12 +682,13 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
 		logger.warn("No refresh token is present.");
 	}
 
-	const body =
-		`grant_type=refresh_token&` +
-		`refresh_token=${LocalState.refreshToken?.value}&` +
-		`client_id=${getClientIdFromEnv()}`;
+	const params = new URLSearchParams({
+		grant_type: "refresh_token",
+		refresh_token: LocalState.refreshToken?.value ?? "",
+		client_id: getClientIdFromEnv(),
+	});
 
-	const response = await fetchAuthToken(body);
+	const response = await fetchAuthToken(params);
 
 	if (response.status >= 400) {
 		let tokenExchangeResErr = undefined;
@@ -766,14 +767,15 @@ async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
 		logger.warn("No authorization grant code is being passed.");
 	}
 
-	const body =
-		`grant_type=authorization_code&` +
-		`code=${encodeURIComponent(authorizationCode || "")}&` +
-		`redirect_uri=${encodeURIComponent(CALLBACK_URL)}&` +
-		`client_id=${encodeURIComponent(getClientIdFromEnv())}&` +
-		`code_verifier=${codeVerifier}`;
+	const params = new URLSearchParams({
+		grant_type: `authorization_code`,
+		code: authorizationCode ?? "",
+		redirect_uri: CALLBACK_URL,
+		client_id: getClientIdFromEnv(),
+		code_verifier: codeVerifier,
+	});
 
-	const response = await fetchAuthToken(body);
+	const response = await fetchAuthToken(params);
 	if (!response.ok) {
 		const { error } = (await response.json()) as { error: string };
 		// .catch((_) => ({ error: "invalid_json" }));
@@ -1216,8 +1218,11 @@ export function getScopes(): Scope[] | undefined {
 
 /**
  * Make a request to the Cloudflare OAuth endpoint to get a token.
+ *
+ * Note that the `body` of the POST request is form-urlencoded so
+ * can be represented by a URLSearchParams object.
  */
-async function fetchAuthToken(body: string) {
+async function fetchAuthToken(body: URLSearchParams) {
 	const headers: Record<string, string> = {
 		"Content-Type": "application/x-www-form-urlencoded",
 	};
@@ -1227,7 +1232,7 @@ async function fetchAuthToken(body: string) {
 	}
 	return await fetch(getTokenUrlFromEnv(), {
 		method: "POST",
-		body,
+		body: body.toString(),
 		headers,
 	});
 }
