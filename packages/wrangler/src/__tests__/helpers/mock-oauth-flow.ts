@@ -145,7 +145,7 @@ export const mockOAuthFlow = () => {
 							body: JSON.stringify({
 								access_token: "access_token_success_mock",
 								expires_in: 1701,
-								refresh_token: "refresh_token_sucess_mock",
+								refresh_token: "refresh_token_success_mock",
 								scope: "scope_success_mock",
 								token_type: "bearer",
 							}),
@@ -174,7 +174,23 @@ export const mockOAuthFlow = () => {
 		);
 	};
 
+	const mockDomainUsesAccess = ({ usesAccess }: { usesAccess: boolean }) => {
+		// If the domain relies upon Cloudflare Access, then a request to the domain
+		// will result in a redirect to the `cloudflareaccess.com` domain.
+		fetchMock.mockOnceIf("https://dash.cloudflare.com/", async () => {
+			if (usesAccess) {
+				return {
+					status: 302,
+					headers: { location: "cloudflareaccess.com" },
+				};
+			} else {
+				return { status: 200 };
+			}
+		});
+	};
+
 	return {
+		mockDomainUsesAccess,
 		mockGrantAccessToken,
 		mockGrantAuthorization,
 		mockOAuthServerCallback,

@@ -223,14 +223,15 @@ import {
 	purgeConfigCaches,
 	saveToConfigCache,
 } from "../config-cache";
-import { getCloudflareApiEnvironmentFromEnv } from "../environment-variables/misc-variables";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { CI } from "../is-ci";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { parseTOML, readFileSync } from "../parse";
+import { domainUsesAccess } from "./access";
 import {
+	getAuthDomainFromEnv,
 	getAuthUrlFromEnv,
 	getClientIdFromEnv,
 	getCloudflareAccessToken,
@@ -1220,9 +1221,9 @@ async function fetchAuthToken(body: string) {
 	const headers: Record<string, string> = {
 		"Content-Type": "application/x-www-form-urlencoded",
 	};
-	if (getCloudflareApiEnvironmentFromEnv() === "staging") {
+	if (await domainUsesAccess(getAuthDomainFromEnv())) {
 		// We are trying to access the staging API so we need an "access token".
-		headers["Cookie"] = `CF_Authorization=${getCloudflareAccessToken()}`;
+		headers["Cookie"] = `CF_Authorization=${await getCloudflareAccessToken()}`;
 	}
 	return await fetch(getTokenUrlFromEnv(), {
 		method: "POST",
