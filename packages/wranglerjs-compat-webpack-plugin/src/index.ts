@@ -4,7 +4,7 @@
  *
  * It's kind of gross, and not good for _new_ projects, but it should work ok at
  * getting people using Wrangler v1 with the inbuilt webpack 4 support migrated
- * over to Wrangler 2. Combined with docs on ejecting webpack, the pain of
+ * over to Wrangler v2. Combined with docs on ejecting webpack, the pain of
  * losing 1's (tenuous at best) webpack support should be mostly mitigated.
  *
  * This plugin attempts to replicate Wrangler v1's behavior 1:1 (specifically,

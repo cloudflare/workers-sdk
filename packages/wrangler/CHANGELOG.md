@@ -1090,7 +1090,7 @@
 - [#1575](https://github.com/cloudflare/wrangler2/pull/1575) [`5b1f68ee`](https://github.com/cloudflare/wrangler2/commit/5b1f68eece2f328c65f749711cfae5105e1e9651) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - feat: legacy "kv-namespace" not supported
   In previous Wrangler v1, there was a legacy configuration that was considered a "bug" and removed.
   Before it was removed, tutorials, templates, blogs, etc... had utlized that configuration property
-  to handle this in Wrangler 2 we will throw a blocking error that tell the user to utilize "kv_namespaces"
+  to handle this in Wrangler v2 we will throw a blocking error that tell the user to utilize "kv_namespaces"
 
   resolves #1421
 
@@ -2976,7 +2976,7 @@ Fixes https://github.com/cloudflare/wrangler2/issues/1026
 - [#633](https://github.com/cloudflare/wrangler2/pull/633) [`003f3c4`](https://github.com/cloudflare/wrangler2/commit/003f3c41942ec8e299ae603fe74b3cd2e802b49d) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - refactor: create a custom CLI wrapper around Miniflare API
 
   This allows us to tightly control the options that are passed to Miniflare.
-  The current CLI is setup to be more compatible with how Wrangler v1 works, which is not optimal for Wrangler 2.
+  The current CLI is setup to be more compatible with how Wrangler v1 works, which is not optimal for Wrangler v2.
 
 * [#633](https://github.com/cloudflare/wrangler2/pull/633) [`84c857e`](https://github.com/cloudflare/wrangler2/commit/84c857eabc2c09ad1dd2f4fa3963638b8b7f3daa) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - fix: ensure asset keys are relative to the project root
 
