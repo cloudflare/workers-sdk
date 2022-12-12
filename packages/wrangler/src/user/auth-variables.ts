@@ -1,7 +1,6 @@
-import { execaSync } from "execa";
 import { getEnvironmentVariableFactory } from "../environment-variables/factory";
 import { getCloudflareApiEnvironmentFromEnv } from "../environment-variables/misc-variables";
-import { logger } from "../logger";
+import { getAccessToken } from "./access";
 
 /**
  * `CLOUDFLARE_ACCOUNT_ID` overrides the account inferred from the current user.
@@ -42,6 +41,22 @@ export const getClientIdFromEnv = getEnvironmentVariableFactory({
 });
 
 /**
+ * `WRANGLER_AUTH_DOMAIN` is the URL base domain that is used
+ * to access OAuth URLs for the Cloudflare APIs.
+ *
+ * Normally you should not need to set this explicitly.
+ * If you want to switch to the staging environment set the
+ * `WRANGLER_USE_STAGING` environment variable instead.
+ */
+export const getAuthDomainFromEnv = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_AUTH_DOMAIN",
+	defaultValue:
+		getCloudflareApiEnvironmentFromEnv() === "staging"
+			? "dash.staging.cloudflare.com"
+			: "dash.cloudflare.com",
+});
+
+/**
  * `WRANGLER_AUTH_URL` is the path that is used to access OAuth
  * for the Cloudflare APIs.
  *
@@ -51,10 +66,7 @@ export const getClientIdFromEnv = getEnvironmentVariableFactory({
  */
 export const getAuthUrlFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_AUTH_URL",
-	defaultValue:
-		getCloudflareApiEnvironmentFromEnv() === "staging"
-			? "https://dash.staging.cloudflare.com/oauth2/auth"
-			: "https://dash.cloudflare.com/oauth2/auth",
+	defaultValue: `https://${getAuthDomainFromEnv()}/oauth2/auth`,
 });
 
 /**
@@ -67,10 +79,7 @@ export const getAuthUrlFromEnv = getEnvironmentVariableFactory({
  */
 export const getTokenUrlFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_TOKEN_URL",
-	defaultValue:
-		getCloudflareApiEnvironmentFromEnv() === "staging"
-			? "https://dash.staging.cloudflare.com/oauth2/token"
-			: "https://dash.cloudflare.com/oauth2/token",
+	defaultValue: `https://${getAuthDomainFromEnv()}/oauth2/token`,
 });
 
 /**
@@ -83,17 +92,14 @@ export const getTokenUrlFromEnv = getEnvironmentVariableFactory({
  */
 export const getRevokeUrlFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_REVOKE_URL",
-	defaultValue:
-		getCloudflareApiEnvironmentFromEnv() === "staging"
-			? "https://dash.staging.cloudflare.com/oauth2/revoke"
-			: "https://dash.cloudflare.com/oauth2/revoke",
+	defaultValue: `https://${getAuthDomainFromEnv()}/oauth2/revoke`,
 });
 
 /**
  * Set the `WRANGLER_CF_AUTHORIZATION_TOKEN` to the CF_Authorization token found at https://dash.staging.cloudflare.com/bypass-limits
  * if you want to access the staging environment, triggered by `WRANGLER_API_ENVIRONMENT=staging`.
  */
-export const getCloudflareAccessToken = () => {
+export const getCloudflareAccessToken = async () => {
 	const env = getEnvironmentVariableFactory({
 		variableName: "WRANGLER_CF_AUTHORIZATION_TOKEN",
 	})();
@@ -103,49 +109,5 @@ export const getCloudflareAccessToken = () => {
 		return env;
 	}
 
-	const cloudflareAuthHost = new URL(getTokenUrlFromEnv()).host;
-
-	// Try to get the access token via cloudflared
-	try {
-		const { stdout: token } = execaSync("cloudflared", [
-			`access`,
-			`token`,
-			`--app`,
-			cloudflareAuthHost,
-		]);
-		if (
-			!token.includes(
-				"Unable to find token for provided application. Please run login command to generate token."
-			)
-		) {
-			return token;
-		}
-	} catch (e) {
-		// OK that didn't work... move on.
-		logger.debug(e);
-	}
-
-	// No luck. Let's try to get it by logging in via cloudflared.
-	try {
-		const { stdout: login } = execaSync("cloudflared", [
-			`access`,
-			`login`,
-			cloudflareAuthHost,
-		]);
-		const match = /Successfully fetched your token:\s+(.+)/.exec(login);
-		if (match) {
-			console.log(match);
-			return match[1];
-		}
-	} catch (e) {
-		// Didn't work either... moving along.
-		logger.debug(e);
-	}
-	// Still no luck give up and give the user some ideas of next steps.
-	throw Error(
-		"When trying to access staging environment we need an 'access token'.\n" +
-			"We were unable to get one automatically using cloudflared. Run with debug logging to see more detailed errors.\n" +
-			"Alternatively, you could provide your own access token by setting the WRANGLER_CF_AUTHORIZATION_TOKEN environment variable\n" +
-			"to a token that is generated at https://dash.staging.cloudflare.com/bypass-limits."
-	);
+	return getAccessToken(getAuthDomainFromEnv());
 };

@@ -47,6 +47,7 @@ describe("publish", () => {
 	const { setIsTTY } = useMockIsTTY();
 	const std = mockConsoleMethods();
 	const {
+		mockDomainUsesAccess,
 		mockOAuthServerCallback,
 		mockGrantAccessToken,
 		mockGrantAuthorization,
@@ -124,6 +125,7 @@ describe("publish", () => {
 		it("drops a user into the login flow if they're unauthenticated", async () => {
 			writeWranglerToml();
 			writeWorkerSource();
+			mockDomainUsesAccess({ usesAccess: false });
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
 			mockOAuthServerCallback();
