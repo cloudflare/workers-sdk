@@ -1,5 +1,7 @@
 // import * as fs from "fs";
 // import * as TOML from "@iarna/toml";
+import * as fs from "node:fs";
+import * as TOML from "@iarna/toml";
 import { rest } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -26,11 +28,7 @@ describe("deployments", () => {
 			...mswSuccessUserHandlers,
 			rest.get(
 				"*/accounts/:accountId/workers/services/:scriptName",
-				(request, response, context) => {
-					expect(["undefined", "somethingElse"]).toContain(
-						request.params.scriptName
-					);
-
+				(_, response, context) => {
 					return response.once(
 						context.status(200),
 						context.json({
@@ -52,6 +50,16 @@ describe("deployments", () => {
 	});
 
 	it("should log deployments", async () => {
+		fs.writeFileSync(
+			"./wrangler.toml",
+			TOML.stringify({
+				compatibility_date: "2022-01-12",
+				name: "test-script-name",
+				first_party_worker: true,
+			}),
+			"utf-8"
+		);
+
 		await runWrangler("deployments");
 		expect(std.out).toMatchInlineSnapshot(`
 		"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
@@ -71,7 +79,7 @@ describe("deployments", () => {
 	});
 
 	it("should log deployments for script with passed in name option", async () => {
-		await runWrangler("deployments --name somethingElse");
+		await runWrangler("deployments --name something-else");
 		expect(std.out).toMatchInlineSnapshot(`
 		"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
 
@@ -87,5 +95,11 @@ describe("deployments", () => {
 		Source: Wrangler
 		🟩 Active"
 	`);
+	});
+
+	it("should error on missing script name", async () => {
+		await expect(runWrangler("deployments")).rejects.toMatchInlineSnapshot(
+			`[Error: Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name\`]`
+		);
 	});
 });
