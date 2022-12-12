@@ -242,7 +242,8 @@ export type TailEventMessage = {
 	 * The event that triggered the worker. In the case of an HTTP request,
 	 * this will be a RequestEvent. If it's a cron trigger, it'll be a
 	 * ScheduledEvent. If it's a durable object alarm, it's an AlarmEvent.
-	 * If it's a email, it'a an EmailEvent
+	 * If it's a email, it'a an EmailEvent. If it's a Queue consumer event,
+	 * it's a QueueEvent.
 	 *
 	 * Until workers-types exposes individual types for export, we'll have
 	 * to just re-define these types ourselves.
@@ -254,6 +255,7 @@ export type TailEventMessage = {
 		| EmailEvent
 		| TailEvent
 		| TailInfo
+		| QueueEvent
 		| undefined
 		| null;
 };
@@ -429,4 +431,19 @@ export type TailEvent = {
 export type TailInfo = {
 	message: string;
 	type: string;
+};
+
+/*
+ * A event that was triggered by receiving a batch of messages from a Queue for consumption.
+ */
+export type QueueEvent = {
+	/**
+	 * The name of the queue that the message batch came from.
+	 */
+	queue: string;
+
+	/**
+	 * The number of messages in the batch.
+	 */
+	batchSize: number;
 };
