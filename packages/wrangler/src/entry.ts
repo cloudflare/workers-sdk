@@ -150,7 +150,7 @@ export default async function guessWorkerFormat(
 		absWorkingDir: entryWorkingDirectory,
 		metafile: true,
 		bundle: false,
-		format: "esm",
+		format: hint === 'service-worker' ? 'cjs' : "esm",
 		target: "es2020",
 		write: false,
 		loader: {
