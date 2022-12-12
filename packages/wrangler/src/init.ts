@@ -49,7 +49,8 @@ export async function initOptions(yargs: Argv<CommonYargsOptions>) {
 			alias: "y",
 		})
 		.option("from-dash", {
-			describe: "Download script from the dashboard for local development",
+			describe:
+				"The name of the Worker you wish to download from the Cloudflare dashboard for local development.",
 			type: "string",
 			requiresArg: true,
 		});
@@ -166,15 +167,24 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 	let justCreatedWranglerToml = false;
 
 	let accountId = "";
-	let serviceMetaData: undefined | ServiceMetadataRes;
+	let serviceMetadata: undefined | ServiceMetadataRes;
 
 	// If --from-dash, check that script actually exists
 	if (fromDashScriptName) {
 		const config = readConfig(args.config as ConfigPath, args);
 		accountId = await requireAuth(config);
-		serviceMetaData = await fetchResult<ServiceMetadataRes>(
-			`/accounts/${accountId}/workers/services/${fromDashScriptName}`
-		);
+		try {
+			serviceMetadata = await fetchResult<ServiceMetadataRes>(
+				`/accounts/${accountId}/workers/services/${fromDashScriptName}`
+			);
+		} catch (err) {
+			if ((err as { code?: number }).code === 10090) {
+				throw new Error(
+					"wrangler couldn't find a Worker script with that name in your account.\nRun `wrangler whoami` to confirm you're logged into the correct account."
+				);
+			}
+			throw err;
+		}
 	}
 
 	if (fs.existsSync(wranglerTomlDestination)) {
@@ -461,8 +471,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 			);
 			if (fromDashScriptName) {
 				logger.warn(
-					`After running "wrangler init --from-dash", modifying your worker via the Cloudflare dashboard is discouraged.
-					Edits made via the Dashboard will not be synchronized locally and will be overridden by your local code and config when you publish.`
+					"After running `wrangler init --from-dash`, modifying your worker via the Cloudflare dashboard is discouraged.\nEdits made via the Dashboard will not be synchronized locally and will be overridden by your local code and config when you publish."
 				);
 
 				await mkdir(path.join(creationDirectory, "./src"), {
@@ -470,7 +479,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 				});
 
 				const defaultEnvironment =
-					serviceMetaData?.default_environment.environment;
+					serviceMetadata?.default_environment.environment;
 				// I want the default environment, assuming it's the most up to date code.
 				const dashScript = await fetchDashboardScript(
 					`/accounts/${accountId}/workers/services/${fromDashScriptName}/environments/${defaultEnvironment}/content`
@@ -488,7 +497,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 					scriptPath: "src/index.ts",
 					extraToml: (await getWorkerConfig(accountId, fromDashScriptName, {
 						defaultEnvironment,
-						environments: serviceMetaData?.environments,
+						environments: serviceMetadata?.environments,
 					})) as TOML.JsonMap,
 				});
 			} else {
@@ -534,8 +543,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 
 			if (fromDashScriptName) {
 				logger.warn(
-					`After running "wrangler init --from-dash", modifying your worker via the Cloudflare dashboard is discouraged.
-					Edits made via the Dashboard will not be synchronized locally and will be overridden by your local code and config when you publish.`
+					"After running `wrangler init --from-dash`, modifying your worker via the Cloudflare dashboard is discouraged.\nEdits made via the Dashboard will not be synchronized locally and will be overridden by your local code and config when you publish."
 				);
 
 				await mkdir(path.join(creationDirectory, "./src"), {
@@ -543,7 +551,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 				});
 
 				const defaultEnvironment =
-					serviceMetaData?.default_environment.environment;
+					serviceMetadata?.default_environment.environment;
 
 				// I want the default environment, assuming it's the most up to date code.
 				const dashScript = await fetchDashboardScript(
@@ -563,7 +571,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 					//? Should we have Environment argument for `wrangler init --from-dash` - Jacob
 					extraToml: (await getWorkerConfig(accountId, fromDashScriptName, {
 						defaultEnvironment,
-						environments: serviceMetaData?.environments,
+						environments: serviceMetadata?.environments,
 					})) as TOML.JsonMap,
 				});
 			} else {
