@@ -167,14 +167,14 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 	let justCreatedWranglerToml = false;
 
 	let accountId = "";
-	let serviceMetaData: undefined | ServiceMetadataRes;
+	let serviceMetadata: undefined | ServiceMetadataRes;
 
 	// If --from-dash, check that script actually exists
 	if (fromDashScriptName) {
 		const config = readConfig(args.config as ConfigPath, args);
 		accountId = await requireAuth(config);
 		try {
-			serviceMetaData = await fetchResult<ServiceMetadataRes>(
+			serviceMetadata = await fetchResult<ServiceMetadataRes>(
 				`/accounts/${accountId}/workers/services/${fromDashScriptName}`
 			);
 		} catch (err) {
@@ -479,7 +479,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 				});
 
 				const defaultEnvironment =
-					serviceMetaData?.default_environment.environment;
+					serviceMetadata?.default_environment.environment;
 				// I want the default environment, assuming it's the most up to date code.
 				const dashScript = await fetchDashboardScript(
 					`/accounts/${accountId}/workers/services/${fromDashScriptName}/environments/${defaultEnvironment}/content`
@@ -497,7 +497,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 					scriptPath: "src/index.ts",
 					extraToml: (await getWorkerConfig(accountId, fromDashScriptName, {
 						defaultEnvironment,
-						environments: serviceMetaData?.environments,
+						environments: serviceMetadata?.environments,
 					})) as TOML.JsonMap,
 				});
 			} else {
@@ -551,7 +551,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 				});
 
 				const defaultEnvironment =
-					serviceMetaData?.default_environment.environment;
+					serviceMetadata?.default_environment.environment;
 
 				// I want the default environment, assuming it's the most up to date code.
 				const dashScript = await fetchDashboardScript(
@@ -571,7 +571,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 					//? Should we have Environment argument for `wrangler init --from-dash` - Jacob
 					extraToml: (await getWorkerConfig(accountId, fromDashScriptName, {
 						defaultEnvironment,
-						environments: serviceMetaData?.environments,
+						environments: serviceMetadata?.environments,
 					})) as TOML.JsonMap,
 				});
 			} else {
