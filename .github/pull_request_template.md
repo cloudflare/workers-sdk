@@ -2,7 +2,8 @@ Fixes # [insert issue number].
 
 What this PR solves / how to test:
 
-Associated docs updates: [insert associated doc update PR(s)]
+Associated docs issues/PR: 
+- [insert associated docs issue(s)/PR(s)]
 
 Author has included the following, where applicable:
 
