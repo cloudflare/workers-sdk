@@ -15,8 +15,6 @@ import {
 	buildOptions,
 	configHandler,
 	noOpOptions,
-	generateHandler,
-	generateOptions,
 	previewHandler,
 	previewOptions,
 	route,
@@ -27,6 +25,7 @@ import {
 import { devHandler, devOptions } from "./dev";
 import { workerNamespaceCommands } from "./dispatch-namespace";
 import { docsHandler, docsOptions } from "./docs";
+import { generateHandler, generateOptions } from "./generate";
 import { initHandler, initOptions } from "./init";
 import { kvNamespace, kvKey, kvBulk } from "./kv";
 import { logBuildFailure, logger } from "./logger";
@@ -265,16 +264,6 @@ export function createCLIParser(argv: string[]) {
 	// I wish we could enforce this pattern, but this comment will have to do for now.
 	// (It's also annoying that choices[] doesn't get inferred as an enum. 🤷‍♂.)
 
-	// [DEPRECATED] generate
-	wrangler.command(
-		// we definitely want to move away from us cloning github templates
-		// we can do something better here, let's see
-		"generate [name] [template]",
-		false,
-		generateOptions,
-		generateHandler
-	);
-
 	// docs
 	wrangler.command(
 		"docs [command]",
@@ -286,9 +275,17 @@ export function createCLIParser(argv: string[]) {
 	// init
 	wrangler.command(
 		"init [name]",
-		"📥 Create a wrangler.toml configuration file",
+		"📥 Initialize a basic Worker project, including a wrangler.toml file",
 		initOptions,
 		initHandler
+	);
+
+	// generate
+	wrangler.command(
+		"generate [name] [template]",
+		"✨ Generate a new Worker project from an existing Worker template. See https://github.com/cloudflare/templates",
+		generateOptions,
+		generateHandler
 	);
 
 	// [DEPRECATED] build
