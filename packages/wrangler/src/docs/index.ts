@@ -11,6 +11,7 @@ import type {
 import type { ArgumentsCamelCase, Argv } from "yargs";
 
 const argToUrlHash = {
+	docs: "docs",
 	init: "init",
 	generate: "generate",
 	dev: "dev",
@@ -38,6 +39,7 @@ export function docsOptions(yargs: Argv<CommonYargsOptions>) {
 		type: "string",
 		// requiresArg: true,
 		choices: [
+			"docs",
 			"init",
 			"dev",
 			"publish",
