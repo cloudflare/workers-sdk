@@ -328,7 +328,7 @@ export function devOptions(yargs: Argv<CommonYargsOptions>): Argv<DevArgs> {
 }
 
 export async function devHandler(args: ArgumentsCamelCase<DevArgs>) {
-	if (!args.local) {
+	if (!(args.local || args.experimentalLocal)) {
 		const isLoggedIn = await loginOrRefreshIfRequired();
 		if (!isLoggedIn) {
 			throw new Error(
