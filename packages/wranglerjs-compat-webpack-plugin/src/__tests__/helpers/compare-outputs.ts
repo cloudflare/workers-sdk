@@ -46,7 +46,7 @@ export async function compareOutputs({
 	const wrangler1Dir = path.join(parentDir, "wrangler-1");
 	const wrangler2Dir = path.join(parentDir, "wrangler-2");
 
-	// wrangler 1
+	// wrangler v1
 	fs.mkdirSync(wrangler1Dir);
 	process.chdir(wrangler1Dir);
 
@@ -93,7 +93,7 @@ export async function compareOutputs({
 	});
 	mockSubDomainRequest();
 
-	// wrangler 2
+	// wrangler v2
 	fs.mkdirSync(wrangler2Dir);
 	process.chdir(wrangler2Dir);
 
@@ -197,7 +197,7 @@ const isAssertionError = (e: Error) =>
  * when the `fn` arg is called. All output will be piped through to the
  * `stdout` and `stderr` args, which can be arbitrary streams.
  *
- * Useful for capturing output from webpack when called by wrangler 2.
+ * Useful for capturing output from webpack when called by wrangler v2.
  * @returns the result of calling `fn`
  */
 async function withCapturedChildProcessOutput<T>(

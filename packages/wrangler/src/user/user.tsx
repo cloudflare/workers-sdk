@@ -264,7 +264,7 @@ interface AuthTokens {
 	accessToken?: AccessToken;
 	refreshToken?: RefreshToken;
 	scopes?: Scope[];
-	/** @deprecated - this field was only provided by the deprecated `wrangler1 config` command. */
+	/** @deprecated - this field was only provided by the deprecated `wrangler v1 config` command. */
 	apiToken?: string;
 }
 
@@ -282,7 +282,7 @@ export interface UserAuthConfig {
 	refresh_token?: string;
 	expiration_time?: string;
 	scopes?: string[];
-	/** @deprecated - this field was only provided by the deprecated `wrangler1 config` command. */
+	/** @deprecated - this field was only provided by the deprecated `wrangler v1 config` command. */
 	api_token?: string;
 }
 

@@ -745,7 +745,7 @@ describe("publish", () => {
 			await runWrangler("publish ./index --env dev --legacy-env false");
 		});
 
-		it("should fallback to the Wrangler 1 zone-based API if the bulk-routes API fails", async () => {
+		it("should fallback to the Wrangler v1 zone-based API if the bulk-routes API fails", async () => {
 			writeWranglerToml({
 				routes: ["example.com/some-route/*"],
 			});

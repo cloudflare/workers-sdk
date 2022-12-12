@@ -17,7 +17,7 @@ import type { Environment, RawEnvironment } from "./environment";
  *
  * Legend for the annotations:
  *
- * - `@breaking`: the deprecation/optionality is a breaking change from wrangler 1.
+ * - `@breaking`: the deprecation/optionality is a breaking change from wrangler v1.
  * - `@todo`: there's more work to be done (with details attached).
  */
 export type Config = ConfigFields<DevConfig> & Environment;
@@ -31,7 +31,7 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 	configPath: string | undefined;
 
 	/**
-	 * A boolean to enable "legacy" style wrangler environments (from wrangler 1).
+	 * A boolean to enable "legacy" style wrangler environments (from wrangler v1).
 	 * These have been superseded by Services, but there may be projects that won't
 	 * (or can't) use them. If you're using a legacy environment, you can set this
 	 * to `true` to enable it.

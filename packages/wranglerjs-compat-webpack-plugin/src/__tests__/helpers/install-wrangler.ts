@@ -10,7 +10,7 @@ import {
 } from "./constants";
 
 /**
- * Installs wrangler 1 to node_modules/.cache by downloading
+ * Installs wrangler v1 to node_modules/.cache by downloading
  * artifacts from the latest github release
  */
 export async function installWrangler1() {
@@ -29,9 +29,9 @@ export async function installWrangler1() {
 		repo: "wrangler-legacy",
 	});
 
-	// rust targets (and wrangler 1 releases) are named with "target triples",
+	// rust targets (and wrangler v1 releases) are named with "target triples",
 	// which follow the form <architecture>-<os>-<toolchain>.
-	// M1 fans love ~nodejs~ wrangler2 for its multi-platform support
+	// M1 fans love ~nodejs~ wrangler v2 for its multi-platform support
 	let targetTriple:
 		| "x86_64-pc-windows-msvc"
 		| "x86_64-apple-darwin"
