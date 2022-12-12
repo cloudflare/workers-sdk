@@ -22,10 +22,13 @@ import type { Route, SimpleRoute } from "./config/environment";
 import type { WorkerMetadata } from "./create-worker-upload-form";
 import type { ConfigPath } from "./index";
 import type { PackageManager } from "./package-manager";
-import type { CommonYargsOptions } from "./yargs-types";
-import type { Argv, ArgumentsCamelCase } from "yargs";
+import type {
+	CommonYargsOptions,
+	YargsOptionsToInterface,
+} from "./yargs-types";
+import type { Argv } from "yargs";
 
-export async function initOptions(yargs: Argv<CommonYargsOptions>) {
+export function initOptions(yargs: Argv<CommonYargsOptions>) {
 	return yargs
 		.positional("name", {
 			describe: "The name of your worker",
@@ -56,12 +59,7 @@ export async function initOptions(yargs: Argv<CommonYargsOptions>) {
 		});
 }
 
-interface InitArgs {
-	name: string;
-	type?: string;
-	site?: boolean;
-	yes?: boolean;
-}
+type InitArgs = YargsOptionsToInterface<typeof initOptions>;
 
 export type ServiceMetadataRes = {
 	id: string;
@@ -110,7 +108,7 @@ export type CronTriggersRes = {
 	];
 };
 
-export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
+export async function initHandler(args: InitArgs) {
 	await printWranglerBanner();
 	if (args.type) {
 		let message = "The --type option is no longer supported.";
@@ -125,7 +123,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 	const devDepsToInstall: string[] = [];
 	const instructions: string[] = [];
 	let shouldRunPackageManagerInstall = false;
-	const fromDashScriptName = args["from-dash"] as string;
+	const fromDashScriptName = args.fromDash;
 	const creationDirectory = path.resolve(
 		process.cwd(),
 		(args.name ? args.name : fromDashScriptName) ?? ""

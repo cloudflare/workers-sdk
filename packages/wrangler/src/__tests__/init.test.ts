@@ -2831,7 +2831,7 @@ describe("init", () => {
 			await expect(
 				runWrangler("init  --from-dash")
 			).rejects.toMatchInlineSnapshot(
-				`[YError: Not enough arguments following: from-dash]`
+				`[Error: Not enough arguments following: from-dash]`
 			);
 			checkFiles({
 				items: {
