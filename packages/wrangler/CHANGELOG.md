@@ -1,5 +1,91 @@
 # wrangler
 
+## 2.6.2
+
+### Patch Changes
+
+- [#2355](https://github.com/cloudflare/wrangler2/pull/2355) [`df6fea02`](https://github.com/cloudflare/wrangler2/commit/df6fea02b53066e54c12770cdb439e2dbb3208ea) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: don't ask for preview_database_id in --local
+
+* [#2349](https://github.com/cloudflare/wrangler2/pull/2349) [`8173bcca`](https://github.com/cloudflare/wrangler2/commit/8173bcca09fde15ffdde72bd125fb6968f4a9272) Thanks [@jspspike](https://github.com/jspspike)! - Initially check that worker exists when using --from-dash
+
+- [#2356](https://github.com/cloudflare/wrangler2/pull/2356) [`228781ee`](https://github.com/cloudflare/wrangler2/commit/228781eeb4b2d22275312876d07191017b6d8a06) Thanks [@rozenmd](https://github.com/rozenmd)! - feat: add wrangler docs command
+
+* [#2364](https://github.com/cloudflare/wrangler2/pull/2364) [`4bdb1f6d`](https://github.com/cloudflare/wrangler2/commit/4bdb1f6d0d3fbc4603542a743d25376574e0cdfc) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: implement `wrangler docs <command>`
+
+  closes #2359
+
+- [#2341](https://github.com/cloudflare/wrangler2/pull/2341) [`5afa13ec`](https://github.com/cloudflare/wrangler2/commit/5afa13ec8026bcfe4e09f4b523733236ccec0814) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: d1 - don't backup prod db when applying migrations locally
+
+  Closes #2336
+
+## 2.6.1
+
+### Patch Changes
+
+- [#2339](https://github.com/cloudflare/wrangler2/pull/2339) [`f6821189`](https://github.com/cloudflare/wrangler2/commit/f6821189110e5b6301fe77509a6bb9a8652bbc1b) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: `wrangler dev --local` now correctly lazy-imports `@miniflare/tre`
+
+  Previously, we introduced a bug where we were incorrectly requiring `@miniflare/tre`, even when not using the `workerd`/`--experimental-local` mode.
+
+## 2.6.0
+
+### Minor Changes
+
+- [#2268](https://github.com/cloudflare/wrangler2/pull/2268) [`3be1c2cf`](https://github.com/cloudflare/wrangler2/commit/3be1c2cf99fdaef1e612937ccc487a5196c5df67) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Add support for `--experimental-local` to `wrangler pages dev` which will use the `workerd` runtime.
+
+  Add `@miniflare/tre` environment polyfill to `@cloudflare/pages-shared`.
+
+* [#2163](https://github.com/cloudflare/wrangler2/pull/2163) [`d73a34be`](https://github.com/cloudflare/wrangler2/commit/d73a34be07c0bd14dc2eabc8cb0474f0d4a64c53) Thanks [@jimhawkridge](https://github.com/jimhawkridge)! - feat: Add support for Analytics Engine bindings.
+
+  For example:
+
+  ```
+  analytics_engine_datasets = [
+      { binding = "ANALYTICS", dataset = "my_dataset" }
+  ]
+  ```
+
+### Patch Changes
+
+- [#2177](https://github.com/cloudflare/wrangler2/pull/2177) [`e98613f8`](https://github.com/cloudflare/wrangler2/commit/e98613f8e2f417f996f351a67cdff54c05f0d194) Thanks [@caass](https://github.com/caass)! - Trigger login flow if a user runs `wrangler dev` while logged out
+
+  Previously, we would just error if a user logged out and then ran `wrangler dev`.
+  Now, we kick them to the OAuth flow and suggest running `wrangler dev --local` if
+  the login fails.
+
+  Closes [#2147](https://github.com/cloudflare/wrangler2/issues/2147)
+
+* [#2298](https://github.com/cloudflare/wrangler2/pull/2298) [`bb5e4f91`](https://github.com/cloudflare/wrangler2/commit/bb5e4f91512d9e12e7a90a9db3ee426b5e535934) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: d1 not using the preview database when using `wrangler dev`
+
+  After this fix, wrangler will correctly connect to the preview database, rather than the prod database when using `wrangler dev`
+
+- [#2176](https://github.com/cloudflare/wrangler2/pull/2176) [`d48ee112`](https://github.com/cloudflare/wrangler2/commit/d48ee1124a4a7a8834e228ccdaafbc3fc71b9357) Thanks [@caass](https://github.com/caass)! - Use the user's preferred default branch name if set in .gitconfig.
+
+  Previously, we would initialize new workers with `main` as the name of the default branch.
+  Now, we see if the user has a custom setting in .gitconfig for `init.defaultBranch`, and use
+  that if it exists.
+
+  Closes #2112
+
+* [#2275](https://github.com/cloudflare/wrangler2/pull/2275) [`bbfb6a96`](https://github.com/cloudflare/wrangler2/commit/bbfb6a960e1f57a1b3214497f05f1d55b8dfb5c0) Thanks [@mrbbot](https://github.com/mrbbot)! - Fix script reloads, and allow clean exits, when using `--experimental-local` on Linux
+
+- [#2275](https://github.com/cloudflare/wrangler2/pull/2275) [`bbfb6a96`](https://github.com/cloudflare/wrangler2/commit/bbfb6a960e1f57a1b3214497f05f1d55b8dfb5c0) Thanks [@mrbbot](https://github.com/mrbbot)! - Fix DevTools inspector support when using `--(experimental-)local`
+
+## 2.5.0
+
+### Minor Changes
+
+- [#2212](https://github.com/cloudflare/wrangler2/pull/2212) [`b24c2b2d`](https://github.com/cloudflare/wrangler2/commit/b24c2b2dc639a3b3ff528591d1758753cb64fc3c) Thanks [@dalbitresb12](https://github.com/dalbitresb12)! - feat: Allow pages dev to proxy websocket requests
+
+### Patch Changes
+
+- [#2296](https://github.com/cloudflare/wrangler2/pull/2296) [`7da8f0e6`](https://github.com/cloudflare/wrangler2/commit/7da8f0e69932d2ac849ecb06ab280c1d8756619f) Thanks [@Skye-31](https://github.com/Skye-31)! - Fix: check response status of `d1 backup download` command before writing contents to file
+
+* [#2260](https://github.com/cloudflare/wrangler2/pull/2260) [`c2940160`](https://github.com/cloudflare/wrangler2/commit/c29401604640940a5382a206f7bac900a3aad7b2) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: make it possible to use a local db for d1 migrations
+
+  As of this change, wrangler's d1 migrations commands now accept `local` and `persist-to` as flags, so migrations can run against the local d1 db.
+
+- [#1883](https://github.com/cloudflare/wrangler2/pull/1883) [`60d31c01`](https://github.com/cloudflare/wrangler2/commit/60d31c010656d10e0093921259019f67f15554ec) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Fix `--port=0` option to report the actually used port.
+
 ## 2.4.4
 
 ### Patch Changes

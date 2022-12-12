@@ -95,6 +95,11 @@ describe.skip("Pages Functions", () => {
 	});
 
 	afterAll(async () => {
+		await aReadyPromise;
+		await bReadyPromise;
+		await cReadyPromise;
+		await dReadyPromise;
+
 		await new Promise((resolve, reject) => {
 			aWranglerProcess.once("exit", (code) => {
 				if (!code) {

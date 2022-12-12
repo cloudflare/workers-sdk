@@ -52,6 +52,12 @@ const bindingsConfigMock: Partial<Config> = {
 		},
 	],
 	services: [{ binding: "SERVICE_BINDING", service: "SERVICE_NAME" }],
+	analytics_engine_datasets: [
+		{
+			binding: "AE_DATASET_BINDING",
+			dataset: "AE_DATASET_TEST",
+		},
+	],
 	dispatch_namespaces: [
 		{ binding: "NAMESPACE_BINDING", namespace: "NAMESPACE_ID" },
 	],
@@ -116,6 +122,7 @@ describe("generateTypes()", () => {
 			R2_BUCKET_BINDING: R2Bucket;
 			D1_TESTING_SOMETHING: D1Database;
 			SERVICE_BINDING: Fetcher;
+			AE_DATASET_BINDING: AnalyticsEngineDataset;
 			NAMESPACE_BINDING: any;
 			LOGFWDR_SCHEMA: any;
 			SOME_DATA_BLOB1: ArrayBuffer;

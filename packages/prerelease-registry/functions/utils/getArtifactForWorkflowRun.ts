@@ -18,7 +18,7 @@ export const getArtifactForWorkflowRun = async ({
 	gitHubFetch: ReturnType<typeof generateGitHubFetch>;
 	waitUntil: (promise: Promise<unknown>) => void;
 }) => {
-	const cacheKey = `https://prerelease-registry.developers.workers.dev/runs/${runID}/${name}`;
+	const cacheKey = `https://prerelease-registry.devprod.cloudflare.dev/runs/${runID}/${name}`;
 
 	const cache = caches.default;
 

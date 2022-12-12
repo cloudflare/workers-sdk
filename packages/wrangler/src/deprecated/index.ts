@@ -14,21 +14,16 @@ import type {
 	CommonYargsOptions,
 	YargsOptionsToInterface,
 } from "../yargs-types";
-import type { Argv, ArgumentsCamelCase, BuilderCallback } from "yargs";
+import type { Argv, BuilderCallback } from "yargs";
 
 // https://github.com/cloudflare/wrangler/blob/master/src/cli/mod.rs#L106-L123
-interface GenerateArgs {
-	name?: string;
-	template?: string;
-	type?: string;
-	site?: boolean;
-}
 
 export function generateOptions(yargs: Argv<CommonYargsOptions>) {
 	return yargs
 		.positional("name", {
 			describe: "Name of the Workers project",
 			type: "string",
+			demandOption: true,
 		})
 		.positional("template", {
 			type: "string",
@@ -47,25 +42,34 @@ export function generateOptions(yargs: Argv<CommonYargsOptions>) {
 			deprecated: true,
 		});
 }
+type GenerateArgs = YargsOptionsToInterface<typeof generateOptions>;
 
-export async function generateHandler({
+//TODO: move this out of deprecated since apparently it's not deprecated anymore
+export async function generateHandler(args: GenerateArgs) {
 	// somehow, `init` marks name as required but then also runs fine
 	// with the name omitted, and then substitutes it at runtime with ""
-	name = "",
-	template,
-	type,
-	site,
-	...args
-}: ArgumentsCamelCase<GenerateArgs>) {
 	// delegate to `wrangler init` if no template is specified
-	if (template === undefined) {
-		return initHandler({ name, ...args });
+	if (args.template === undefined) {
+		return initHandler({
+			name: args.name,
+			template: undefined,
+			site: undefined,
+			yes: undefined,
+			fromDash: undefined,
+			"from-dash": undefined,
+			v: undefined,
+			config: undefined,
+			env: undefined,
+			type: undefined,
+			_: args._,
+			$0: args.$0,
+		});
 	}
 
 	// print down here cuz `init` prints it own its own
 	await printWranglerBanner();
 
-	if (type) {
+	if (args.type) {
 		let message = "The --type option is no longer supported.";
 		if (args.type === "webpack") {
 			message +=
@@ -75,13 +79,13 @@ export async function generateHandler({
 		throw new CommandLineArgsError(message);
 	}
 
-	if (isRemote(name)) {
-		[template, name] = [name, template];
+	if (args.name && isRemote(args.name)) {
+		[args.template, args.name] = [args.name, args.template];
 	}
 
-	const creationDirectory = generateWorkerDirectoryName(name);
+	const creationDirectory = generateWorkerDirectoryName(args.name);
 
-	if (site) {
+	if (args.site) {
 		const gitDirectory =
 			creationDirectory !== process.cwd()
 				? path.basename(creationDirectory)
@@ -99,10 +103,12 @@ export async function generateHandler({
 	}
 
 	logger.log(
-		`Creating a worker in ${path.basename(creationDirectory)} from ${template}`
+		`Creating a worker in ${path.basename(creationDirectory)} from ${
+			args.template
+		}`
 	);
 
-	const { remote, subdirectory } = parseTemplatePath(template);
+	const { remote, subdirectory } = parseTemplatePath(args.template);
 
 	await cloneIntoDirectory(remote, creationDirectory, subdirectory);
 	await initializeGit(creationDirectory);

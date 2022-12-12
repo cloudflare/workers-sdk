@@ -101,8 +101,11 @@ Your database may not be available to serve requests during the migration, conti
 		);
 		if (!ok) return;
 
-		render(<Text>🕒 Creating backup...</Text>);
-		await createBackup(accountId, databaseInfo.uuid);
+		// don't backup prod db when applying migrations locally
+		if (!local) {
+			render(<Text>🕒 Creating backup...</Text>);
+			await createBackup(accountId, databaseInfo.uuid);
+		}
 
 		for (const migration of unappliedMigrations) {
 			let query = fs.readFileSync(

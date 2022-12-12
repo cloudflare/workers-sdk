@@ -1,7 +1,8 @@
 import path from "path";
 import { unstable_dev } from "wrangler";
 
-describe("worker", () => {
+// Disabled because of flakiness in CI
+describe.skip("worker", () => {
 	let worker: {
 		fetch: (
 			input?: RequestInfo,
@@ -25,7 +26,8 @@ describe("worker", () => {
 	});
 
 	afterAll(async () => {
-		await worker?.stop();
+		await readyPromise;
+		await worker.stop();
 	});
 
 	it.concurrent("should return Hi by default", async () => {

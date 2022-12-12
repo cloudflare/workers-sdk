@@ -4,6 +4,7 @@ import { realpathSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import chalk from "chalk";
+import getPort from "get-port";
 import { npxImport } from "npx-import";
 import { useState, useEffect, useRef } from "react";
 import onExit from "signal-exit";
@@ -11,6 +12,7 @@ import { performApiFetch } from "../cfetch/internal";
 import { registerWorker } from "../dev-registry";
 import useInspector from "../inspect";
 import { logger } from "../logger";
+import generateASSETSBinding from "../miniflare-cli/assets";
 import {
 	DEFAULT_MODULE_RULES,
 	ModuleTypeToRuleType,
@@ -110,7 +112,6 @@ function useLocalWorker({
 	workerDefinitions,
 	assetPaths,
 	initialPort,
-	inspectorPort,
 	rules,
 	localPersistencePath,
 	liveReload,
@@ -133,6 +134,11 @@ function useLocalWorker({
 	const removeSignalExitListener = useRef<() => void>();
 	const removeExperimentalLocalSignalExitListener = useRef<() => void>();
 	const [inspectorUrl, setInspectorUrl] = useState<string | undefined>();
+
+	// Our inspector proxy server will be binding to `LocalProps`'s `inspectorPort`.
+	// If we attempted to bind Node.js/workerd to the same inspector port, we'd get a port already in use error.
+	// Therefore, generate a new random port for our runtime's to bind their inspector service to.
+	const runtimeInspectorPortRef = useRef<number>();
 
 	useEffect(() => {
 		if (bindings.services && bindings.services.length > 0) {
@@ -158,13 +164,6 @@ function useLocalWorker({
 		const abortController = new AbortController();
 		async function startLocalWorker() {
 			if (!bundle || !format) return;
-
-			// port for the worker
-			await waitForPortToBeAvailable(initialPort, {
-				retryPeriod: 200,
-				timeout: 2000,
-				abortSignal: abortController.signal,
-			});
 
 			// In local mode, we want to copy all referenced modules into
 			// the output bundle directory before starting up
@@ -196,6 +195,9 @@ function useLocalWorker({
 				format,
 				bundle,
 			});
+
+			runtimeInspectorPortRef.current ??= await getPort();
+			const runtimeInspectorPort = runtimeInspectorPortRef.current;
 
 			const { forkOptions, miniflareCLIPath, options } = setupMiniflareOptions({
 				workerName,
@@ -236,11 +238,12 @@ function useLocalWorker({
 					format,
 					bundle,
 					log,
+					enablePagesAssetsServiceBinding,
 					kvNamespaces: bindings?.kv_namespaces,
 					r2Buckets: bindings?.r2_buckets,
 					authenticatedAccountId: accountId,
 					kvRemote: experimentalLocalRemoteKv,
-					inspectorPort,
+					inspectorPort: runtimeInspectorPort,
 				});
 
 				const current = experimentalLocalRef.current;
@@ -268,7 +271,7 @@ function useLocalWorker({
 				try {
 					// fetch the inspector JSON response from the DevTools Inspector protocol
 					const inspectorJSONArr = (await (
-						await fetch(`http://127.0.0.1:${inspectorPort}/json`)
+						await fetch(`http://127.0.0.1:${runtimeInspectorPort}/json`)
 					).json()) as InspectorJSON;
 
 					const foundInspectorURL = inspectorJSONArr?.find((inspectorJSON) =>
@@ -295,10 +298,18 @@ function useLocalWorker({
 				return;
 			}
 
+			// Wait for the Worker port to be available. We don't want to do this in experimental local
+			// mode, as we only `dispose()` the Miniflare 3 instance, and shutdown the server when
+			// unmounting the component, not when props change. If we did, we'd just timeout every time.
+			await waitForPortToBeAvailable(initialPort, {
+				retryPeriod: 200,
+				timeout: 2000,
+				abortSignal: abortController.signal,
+			});
+
 			const nodeOptions = setupNodeOptions({
 				inspect,
-				ip: initialIp,
-				inspectorPort,
+				inspectorPort: runtimeInspectorPort,
 			});
 			logger.log("⎔ Starting a local server...");
 
@@ -386,7 +397,13 @@ function useLocalWorker({
 		}
 
 		startLocalWorker().catch((err) => {
-			logger.error("local worker:", err);
+			if (err.code === "ERR_RUNTIME_FAILURE") {
+				// Don't log a full verbose stack-trace when Miniflare 3's workerd instance fails to start.
+				// workerd will log its own errors, and our stack trace won't have any useful information.
+				logger.error(err.message);
+			} else {
+				logger.error("local worker:", err);
+			}
 		});
 
 		return () => {
@@ -404,7 +421,6 @@ function useLocalWorker({
 		workerName,
 		format,
 		initialPort,
-		inspectorPort,
 		initialIp,
 		queueConsumers,
 		bindings.queues,
@@ -733,11 +749,9 @@ export function setupMiniflareOptions({
 
 export function setupNodeOptions({
 	inspect,
-	ip,
 	inspectorPort,
 }: {
 	inspect: boolean;
-	ip: string;
 	inspectorPort: number;
 }) {
 	const nodeOptions = [
@@ -746,7 +760,7 @@ export function setupNodeOptions({
 		// "--log=VERBOSE", // uncomment this to Miniflare to log "everything"!
 	];
 	if (inspect) {
-		nodeOptions.push("--inspect=" + `${ip}:${inspectorPort}`); // start Miniflare listening for a debugger to attach
+		nodeOptions.push("--inspect=" + `127.0.0.1:${inspectorPort}`); // start Miniflare listening for a debugger to attach
 	}
 	return nodeOptions;
 }
@@ -760,6 +774,8 @@ export interface SetupMiniflare3Options {
 
 	// Miniflare's logger
 	log: Miniflare3LogType;
+
+	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 
 	// Miniflare 3 accepts namespace/bucket names in addition to binding names.
 	// This means multiple workers persisting to the same location can have
@@ -798,6 +814,7 @@ export async function transformMf2OptionsToMf3Options({
 	format,
 	bundle,
 	log,
+	enablePagesAssetsServiceBinding,
 	kvNamespaces,
 	r2Buckets,
 	authenticatedAccountId,
@@ -832,6 +849,19 @@ export async function transformMf2OptionsToMf3Options({
 		cloudflareFetch,
 		log,
 	};
+
+	if (enablePagesAssetsServiceBinding !== undefined) {
+		options.serviceBindings = {
+			...options.serviceBindings,
+			ASSETS: (await generateASSETSBinding({
+				log,
+				...enablePagesAssetsServiceBinding,
+				tre: true,
+				// We can get rid of this `any` easily once we do experimental-local/tre by default
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			})) as any,
+		};
+	}
 
 	if (format === "modules") {
 		// Manually specify all modules from the bundle. If we didn't do this,
@@ -886,5 +916,5 @@ export async function getMiniflare3(): Promise<
 	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 	typeof import("@miniflare/tre")
 > {
-	return (miniflare3Module ??= await npxImport("@miniflare/tre@3.0.0-next.7"));
+	return (miniflare3Module ??= await npxImport("@miniflare/tre@3.0.0-next.8"));
 }

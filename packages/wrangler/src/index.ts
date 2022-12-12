@@ -26,6 +26,7 @@ import {
 } from "./deprecated";
 import { devHandler, devOptions } from "./dev";
 import { workerNamespaceCommands } from "./dispatch-namespace";
+import { docsHandler, docsOptions } from "./docs";
 import { initHandler, initOptions } from "./init";
 import { kvNamespace, kvKey, kvBulk } from "./kv";
 import { logBuildFailure, logger } from "./logger";
@@ -272,6 +273,14 @@ export function createCLIParser(argv: string[]) {
 		false,
 		generateOptions,
 		generateHandler
+	);
+
+	// docs
+	wrangler.command(
+		"docs [command]",
+		"📚 Open wrangler's docs in your browser",
+		docsOptions,
+		docsHandler
 	);
 
 	// init
@@ -543,6 +552,7 @@ export function createCLIParser(argv: string[]) {
 				r2_buckets: config.r2_buckets,
 				d1_databases: config.d1_databases,
 				services: config.services,
+				analytics_engine_datasets: config.analytics_engine_datasets,
 				dispatch_namespaces: config.dispatch_namespaces,
 				logfwdr: config.logfwdr,
 				unsafe: { bindings: config.unsafe?.bindings },

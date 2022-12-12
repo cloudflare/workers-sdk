@@ -3,6 +3,7 @@ import getPort from "get-port";
 import patchConsole from "patch-console";
 import dedent from "ts-dedent";
 import Dev from "../dev/dev";
+import { CI } from "../is-ci";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -33,6 +34,22 @@ describe("wrangler dev", () => {
 		(Dev as jest.Mock).mockClear();
 		patchConsole(() => {});
 		unsetAllMocks();
+	});
+
+	describe("authorization", () => {
+		mockApiToken({ apiToken: null });
+		const isCISpy = jest.spyOn(CI, "isCI").mockReturnValue(true);
+
+		it("should kick you to the login flow when running wrangler dev in remote mode without authorization", async () => {
+			fs.writeFileSync("index.js", `export default {};`);
+			await expect(
+				runWrangler("dev index.js")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"You must be logged in to use wrangler dev in remote mode. Try logging in, or run wrangler dev --local."`
+			);
+		});
+
+		isCISpy.mockClear();
 	});
 
 	describe("compatibility-date", () => {

@@ -1,11 +1,9 @@
-import { fork, spawnSync } from "child_process";
+import { fork } from "child_process";
 import * as path from "path";
 import { fetch } from "undici";
 import type { ChildProcess } from "child_process";
 
-const isWindows = process.platform === "win32";
-
-describe("Remix", () => {
+describe("'wrangler dev' correctly renders pages", () => {
 	let wranglerProcess: ChildProcess;
 	let ip: string;
 	let port: number;
@@ -14,14 +12,11 @@ describe("Remix", () => {
 		resolveReadyPromise = resolve;
 	});
 
-	beforeAll(async () => {
-		spawnSync("npm", ["run", "build"], {
-			shell: isWindows,
-			cwd: path.resolve(__dirname, ".."),
-		});
+	// const std = mockConsoleMethods();
+	beforeAll(() => {
 		wranglerProcess = fork(
 			path.join("..", "..", "packages", "wrangler", "bin", "wrangler.js"),
-			["pages", "dev", "public", "--port=0"],
+			["dev", "--local", "--port=0"],
 			{
 				stdio: ["inherit", "inherit", "inherit", "ipc"],
 				cwd: path.resolve(__dirname, ".."),
@@ -48,10 +43,10 @@ describe("Remix", () => {
 		});
 	});
 
-	it.concurrent("renders", async () => {
+	it.concurrent("renders ", async () => {
 		await readyPromise;
 		const response = await fetch(`http://${ip}:${port}/`);
 		const text = await response.text();
-		expect(text).toContain("Welcome to Remix");
+		expect(text).toContain(`http://${ip}:${port}/`);
 	});
 });

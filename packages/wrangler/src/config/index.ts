@@ -93,6 +93,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		r2_buckets,
 		logfwdr,
 		services,
+		analytics_engine_datasets,
 		text_blobs,
 		unsafe,
 		vars,
@@ -159,14 +160,22 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 	if (d1_databases !== undefined && d1_databases.length > 0) {
 		output.push({
 			type: "D1 Databases",
-			entries: d1_databases.map(({ binding, database_name, database_id }) => {
-				return {
-					key: removeD1BetaPrefix(binding),
-					value: database_name
-						? `${database_name} (${database_id})`
-						: database_id,
-				};
-			}),
+			entries: d1_databases.map(
+				({ binding, database_name, database_id, preview_database_id }) => {
+					let databaseValue = `${database_id}`;
+					if (database_name) {
+						databaseValue = `${database_name} (${database_id})`;
+					}
+					//database_id is local when running `wrangler dev --local`
+					if (preview_database_id && database_id !== "local") {
+						databaseValue += `, Preview: (${preview_database_id})`;
+					}
+					return {
+						key: removeD1BetaPrefix(binding),
+						value: databaseValue,
+					};
+				}
+			),
 		});
 	}
 
@@ -206,6 +215,21 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 				return {
 					key: binding,
 					value,
+				};
+			}),
+		});
+	}
+
+	if (
+		analytics_engine_datasets !== undefined &&
+		analytics_engine_datasets.length > 0
+	) {
+		output.push({
+			type: "Analytics Engine Datasets",
+			entries: analytics_engine_datasets.map(({ binding, dataset }) => {
+				return {
+					key: binding,
+					value: dataset ?? binding,
 				};
 			}),
 		});

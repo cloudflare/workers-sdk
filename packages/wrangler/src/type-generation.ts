@@ -59,6 +59,14 @@ export async function generateTypes(
 		}
 	}
 
+	if (configToDTS.analytics_engine_datasets) {
+		for (const analyticsEngine of configToDTS.analytics_engine_datasets) {
+			envTypeStructure.push(
+				`${analyticsEngine.binding}: AnalyticsEngineDataset;`
+			);
+		}
+	}
+
 	if (configToDTS.dispatch_namespaces) {
 		for (const namespace of configToDTS.dispatch_namespaces) {
 			envTypeStructure.push(`${namespace.binding}: any;`);
@@ -156,11 +164,11 @@ function writeDTSFile({
 	if (formatType === "modules") {
 		combinedTypeStrings += `interface Env {\n${envTypeStructure
 			.map((value) => `\t${value}`)
-			.join("\n")} \n}\n${modulesTypeStructure.join("\n")}`;
+			.join("\n")}\n}\n${modulesTypeStructure.join("\n")}`;
 	} else {
 		combinedTypeStrings += `export {};\ndeclare global {\n${envTypeStructure
 			.map((value) => `\tconst ${value}`)
-			.join("\n")} \n}\n${modulesTypeStructure.join("\n")}`;
+			.join("\n")}\n}\n${modulesTypeStructure.join("\n")}`;
 	}
 
 	if (envTypeStructure.length || modulesTypeStructure.length) {

@@ -134,6 +134,11 @@ export function Options(yargs: Argv) {
 				type: "boolean",
 				hidden: true,
 			},
+			"experimental-local": {
+				describe: "Run on my machine using the Cloudflare Workers runtime",
+				type: "boolean",
+				default: false,
+			},
 			config: {
 				describe: "Pages does not support wrangler.toml",
 				type: "string",
@@ -168,6 +173,7 @@ export const Handler = async ({
 	persist,
 	persistTo,
 	"node-compat": nodeCompat,
+	"experimental-local": experimentalLocal,
 	config: config,
 	_: [_pages, _dev, ...remaining],
 	logLevel,
@@ -476,6 +482,7 @@ export const Handler = async ({
 			compatibilityDate,
 			compatibilityFlags,
 			nodeCompat,
+			experimentalLocal,
 			vars: Object.fromEntries(
 				bindings
 					.map((binding) => binding.toString().split("="))

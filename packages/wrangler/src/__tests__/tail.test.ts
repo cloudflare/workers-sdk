@@ -1,11 +1,9 @@
 import MockWebSocket from "jest-websocket-mock";
+import { rest } from "msw";
 import { Headers, Request } from "undici";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
-import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { mockGetZoneFromHostRequest } from "./helpers/mock-get-zone-from-host";
 import { useMockIsTTY } from "./helpers/mock-istty";
-import { mockCollectKnownRoutesRequest } from "./helpers/mock-known-routes";
 import { msw, mswSucessScriptHandlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
@@ -17,6 +15,7 @@ import type {
 } from "../tail/createTail";
 import type { RequestInit } from "undici";
 import type WebSocket from "ws";
+
 describe("tail", () => {
 	beforeEach(() => msw.use(...mswSucessScriptHandlers));
 	runInTempDir();
@@ -28,7 +27,6 @@ describe("tail", () => {
 	afterEach(() => {
 		mockWebSockets.forEach((ws) => ws.close());
 		mockWebSockets.splice(0);
-		unsetAllMocks();
 	});
 
 	/**
@@ -67,38 +65,101 @@ describe("tail", () => {
 			expect(api.requests.creation.length).toStrictEqual(1);
 			expect(api.requests.deletion.count).toStrictEqual(0);
 
-			api.ws.close();
+			await api.closeHelper();
 			expect(api.requests.deletion.count).toStrictEqual(1);
 		});
 		it("should connect to the worker assigned to a given route", async () => {
 			const api = mockWebsocketAPIs();
 			expect(api.requests.creation.length).toStrictEqual(0);
 
-			mockGetZoneFromHostRequest("example.com", "test-zone");
-			mockCollectKnownRoutesRequest([
-				{
-					pattern: "example.com/*",
-					script: "test-worker",
-				},
-			]);
+			msw.use(
+				rest.get(`*/zones`, (req, res, ctx) => {
+					expect(req.url.searchParams.get("name")).toBe("example.com");
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: [{ id: "test-zone" }],
+						})
+					);
+				})
+			);
+			msw.use(
+				rest.get(`*/zones/:zoneId/workers/routes`, (req, res, ctx) => {
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: [
+								{
+									pattern: "example.com/*",
+									script: "test-worker",
+								},
+							],
+						})
+					);
+				})
+			);
 			await runWrangler("tail example.com/*");
 
 			await expect(api.ws.connected).resolves.toBeTruthy();
 			expect(api.requests.creation.length).toStrictEqual(1);
 			expect(api.requests.deletion.count).toStrictEqual(0);
 
-			api.ws.close();
+			await api.closeHelper();
 			expect(api.requests.deletion.count).toStrictEqual(1);
 		});
 
 		it("should error if a given route is not assigned to the user's zone", async () => {
-			mockGetZoneFromHostRequest("example.com", "test-zone");
-			mockCollectKnownRoutesRequest([]);
+			msw.use(
+				rest.get(`*/zones`, (req, res, ctx) => {
+					expect(req.url.searchParams.get("name")).toBe("example.com");
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: [{ id: "test-zone" }],
+						})
+					);
+				})
+			);
+			msw.use(
+				rest.get(`*/zones/:zoneId/workers/routes`, (req, res, ctx) => {
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: [],
+						})
+					);
+				})
+			);
 
 			await expect(runWrangler("tail example.com/*")).rejects.toThrow();
 		});
 		it("should error if a given route is not within the user's zone", async () => {
-			mockGetZoneFromHostRequest("example.com");
+			msw.use(
+				rest.get(`*/zones`, (req, res, ctx) => {
+					expect(req.url.searchParams.get("name")).toBe("example.com");
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: [],
+						})
+					);
+				})
+			);
 
 			await expect(runWrangler("tail example.com/*")).rejects.toThrow();
 		});
@@ -113,7 +174,7 @@ describe("tail", () => {
 			expect(api.requests.creation.length).toStrictEqual(1);
 			expect(api.requests.deletion.count).toStrictEqual(0);
 
-			api.ws.close();
+			await api.closeHelper();
 			expect(api.requests.deletion.count).toStrictEqual(1);
 		});
 
@@ -127,13 +188,13 @@ describe("tail", () => {
 			expect(api.requests.creation.length).toStrictEqual(1);
 			expect(api.requests.deletion.count).toStrictEqual(0);
 
-			api.ws.close();
+			await api.closeHelper();
 			expect(api.requests.deletion.count).toStrictEqual(1);
 		});
 
 		it("errors when the websocket closes unexpectedly", async () => {
 			const api = mockWebsocketAPIs();
-			api.ws.close();
+			await api.closeHelper();
 
 			await expect(runWrangler("tail test-worker")).rejects.toThrow();
 		});
@@ -158,57 +219,72 @@ describe("tail", () => {
 			await expect(tooLow).rejects.toThrow();
 
 			await runWrangler("tail test-worker --sampling-rate 0.25");
-			expect(api.requests.creation[0].body).toEqual(
-				`{"filters":[{"sampling_rate":0.25}]}`
-			);
+
+			expect(api.requests.creation[0]).toEqual({
+				filters: [{ sampling_rate: 0.25 }],
+			});
 		});
 
 		it("sends single status filters", async () => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --status error");
-			expect(api.requests.creation[0].body).toEqual(
-				`{"filters":[{"outcome":["exception","exceededCpu","exceededMemory","unknown"]}]}`
-			);
+			expect(api.requests.creation[0]).toEqual({
+				filters: [
+					{
+						outcome: ["exception", "exceededCpu", "exceededMemory", "unknown"],
+					},
+				],
+			});
 		});
 
 		it("sends multiple status filters", async () => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --status error --status canceled");
-			expect(api.requests.creation[0].body).toEqual(
-				`{"filters":[{"outcome":["exception","exceededCpu","exceededMemory","unknown","canceled"]}]}`
-			);
+			expect(api.requests.creation[0]).toEqual({
+				filters: [
+					{
+						outcome: [
+							"exception",
+							"exceededCpu",
+							"exceededMemory",
+							"unknown",
+							"canceled",
+						],
+					},
+				],
+			});
 		});
 
 		it("sends single HTTP method filters", async () => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --method POST");
-			expect(api.requests.creation[0].body).toEqual(
-				`{"filters":[{"method":["POST"]}]}`
-			);
+			expect(api.requests.creation[0]).toEqual({
+				filters: [{ method: ["POST"] }],
+			});
 		});
 
 		it("sends multiple HTTP method filters", async () => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --method POST --method GET");
-			expect(api.requests.creation[0].body).toEqual(
-				`{"filters":[{"method":["POST","GET"]}]}`
-			);
+			expect(api.requests.creation[0]).toEqual({
+				filters: [{ method: ["POST", "GET"] }],
+			});
 		});
 
 		it("sends header filters without a query", async () => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --header X-CUSTOM-HEADER");
-			expect(api.requests.creation[0].body).toEqual(
-				`{"filters":[{"header":{"key":"X-CUSTOM-HEADER"}}]}`
-			);
+			expect(api.requests.creation[0]).toEqual({
+				filters: [{ header: { key: "X-CUSTOM-HEADER" } }],
+			});
 		});
 
 		it("sends header filters with a query", async () => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --header X-CUSTOM-HEADER:some-value");
-			expect(api.requests.creation[0].body).toEqual(
-				`{"filters":[{"header":{"key":"X-CUSTOM-HEADER","query":"some-value"}}]}`
-			);
+			expect(api.requests.creation[0]).toEqual({
+				filters: [{ header: { key: "X-CUSTOM-HEADER", query: "some-value" } }],
+			});
 		});
 
 		it("sends single IP filters", async () => {
@@ -216,9 +292,9 @@ describe("tail", () => {
 			const fakeIp = "192.0.2.1";
 
 			await runWrangler(`tail test-worker --ip ${fakeIp}`);
-			expect(api.requests.creation[0].body).toEqual(
-				`{"filters":[{"client_ip":["${fakeIp}"]}]}`
-			);
+			expect(api.requests.creation[0]).toEqual({
+				filters: [{ client_ip: [fakeIp] }],
+			});
 		});
 
 		it("sends multiple IP filters", async () => {
@@ -226,9 +302,9 @@ describe("tail", () => {
 			const fakeIp = "192.0.2.1";
 
 			await runWrangler(`tail test-worker --ip ${fakeIp} --ip self`);
-			expect(api.requests.creation[0].body).toEqual(
-				`{"filters":[{"client_ip":["${fakeIp}","self"]}]}`
-			);
+			expect(api.requests.creation[0]).toEqual({
+				filters: [{ client_ip: [fakeIp, "self"] }],
+			});
 		});
 
 		it("sends search filters", async () => {
@@ -236,9 +312,9 @@ describe("tail", () => {
 			const search = "filterMe";
 
 			await runWrangler(`tail test-worker --search ${search}`);
-			expect(api.requests.creation[0].body).toEqual(
-				`{"filters":[{"query":"${search}"}]}`
-			);
+			expect(api.requests.creation[0]).toEqual({
+				filters: [{ query: search }],
+			});
 		});
 
 		it("sends everything but the kitchen sink", async () => {
@@ -259,10 +335,27 @@ describe("tail", () => {
 				`--search ${query} ` +
 				`--debug`;
 
-			const expectedWebsocketMessage = `{"filters":[{"sampling_rate":0.69},{"outcome":["ok","exception","exceededCpu","exceededMemory","unknown"]},{"method":["GET","POST","PUT"]},{"header":{"key":"X-HELLO","query":"world"}},{"client_ip":["192.0.2.1","self"]},{"query":"onlyTheseMessagesPlease"}]}`;
+			const expectedWebsocketMessage = {
+				filters: [
+					{ sampling_rate: 0.69 },
+					{
+						outcome: [
+							"ok",
+							"exception",
+							"exceededCpu",
+							"exceededMemory",
+							"unknown",
+						],
+					},
+					{ method: ["GET", "POST", "PUT"] },
+					{ header: { key: "X-HELLO", query: "world" } },
+					{ client_ip: ["192.0.2.1", "self"] },
+					{ query: "onlyTheseMessagesPlease" },
+				],
+			};
 
 			await runWrangler(`tail test-worker ${cliFilters}`);
-			expect(api.requests.creation[0].body).toEqual(expectedWebsocketMessage);
+			expect(api.requests.creation[0]).toEqual(expectedWebsocketMessage);
 		});
 	});
 
@@ -320,10 +413,7 @@ describe("tail", () => {
 						new Date(mockEventTimestamp).toLocaleString(),
 						"[mock event timestamp]"
 					)
-					.replace(
-						mockTailExpiration.toLocaleString(),
-						"[mock expiration date]"
-					)
+					.replace(mockTailExpiration.toISOString(), "[mock expiration date]")
 			).toMatchInlineSnapshot(`
 			        "Successfully created tail, expires at [mock expiration date]
 			        Connected to test-worker, waiting for logs...
@@ -346,10 +436,7 @@ describe("tail", () => {
 						new Date(mockEventTimestamp).toLocaleString(),
 						"[mock timestamp string]"
 					)
-					.replace(
-						mockTailExpiration.toLocaleString(),
-						"[mock expiration date]"
-					)
+					.replace(mockTailExpiration.toISOString(), "[mock expiration date]")
 			).toMatchInlineSnapshot(`
 			        "Successfully created tail, expires at [mock expiration date]
 			        Connected to test-worker, waiting for logs...
@@ -372,10 +459,7 @@ describe("tail", () => {
 						new Date(mockEventScheduledTime).toLocaleString(),
 						"[mock scheduled time]"
 					)
-					.replace(
-						mockTailExpiration.toLocaleString(),
-						"[mock expiration date]"
-					)
+					.replace(mockTailExpiration.toISOString(), "[mock expiration date]")
 			).toMatchInlineSnapshot(`
 			        "Successfully created tail, expires at [mock expiration date]
 			        Connected to test-worker, waiting for logs...
@@ -394,13 +478,10 @@ describe("tail", () => {
 			expect(
 				std.out
 					.replace(
-						mockTailExpiration.toLocaleString(),
-						"[mock expiration date]"
-					)
-					.replace(
 						new Date(mockEventTimestamp).toLocaleString(),
 						"[mock timestamp string]"
 					)
+					.replace(mockTailExpiration.toISOString(), "[mock expiration date]")
 			).toMatchInlineSnapshot(`
 			"Successfully created tail, expires at [mock expiration date]
 			Connected to test-worker, waiting for logs...
@@ -424,10 +505,7 @@ describe("tail", () => {
 						new Date(mockEventTimestamp).toLocaleString(),
 						"[mock event timestamp]"
 					)
-					.replace(
-						mockTailExpiration.toLocaleString(),
-						"[mock expiration date]"
-					)
+					.replace(mockTailExpiration.toISOString(), "[mock expiration date]")
 			).toMatchInlineSnapshot(`
 			        "Successfully created tail, expires at [mock expiration date]
 			        Connected to test-worker, waiting for logs...
@@ -480,10 +558,7 @@ describe("tail", () => {
 						new Date(mockEventTimestamp).toLocaleString(),
 						"[mock event timestamp]"
 					)
-					.replace(
-						mockTailExpiration.toLocaleString(),
-						"[mock expiration date]"
-					)
+					.replace(mockTailExpiration.toISOString(), "[mock expiration date]")
 			).toMatchInlineSnapshot(`
 			        "Successfully created tail, expires at [mock expiration date]
 			        Connected to test-worker, waiting for logs...
@@ -581,6 +656,7 @@ type MockAPI = {
 	};
 	ws: MockWebSocket;
 	nextMessageJson(): Promise<unknown>;
+	closeHelper: () => Promise<void>;
 };
 
 /**
@@ -607,22 +683,32 @@ function mockCreateTailRequest(
 	const requests: RequestInit[] = [];
 	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
 	const environment = env && !legacyEnv ? "/environments/:envName" : "";
-	setMockResponse(
-		`/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/tails`,
-		"POST",
-		([_url, accountId, scriptName, envName], req) => {
-			requests.push(req);
-			expect(accountId).toEqual("some-account-id");
-			expect(scriptName).toEqual(expectedScriptName);
-			if (!legacyEnv) {
-				expect(envName).toEqual(env);
+	msw.use(
+		rest.post(
+			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/tails`,
+			async (req, res, ctx) => {
+				const request = await req.json();
+				requests.push(request);
+				expect(req.params.accountId).toEqual("some-account-id");
+				expect(req.params.scriptName).toEqual(expectedScriptName);
+				if (!legacyEnv) {
+					expect(req.params.envName).toEqual(env);
+				}
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							url: websocketURL,
+							id: "tail-id",
+							expires_at: mockTailExpiration,
+						},
+					})
+				);
 			}
-			return {
-				id: "tail-id",
-				url: websocketURL,
-				expires_at: mockTailExpiration,
-			};
-		}
+		)
 	);
 
 	return requests;
@@ -656,26 +742,30 @@ function mockDeleteTailRequest(
 	const requests = { count: 0 };
 	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
 	const environment = env && !legacyEnv ? "/environments/:envName" : "";
-	setMockResponse(
-		// "/accounts/:accountId/workers/scripts/:worker/tails",
-		`/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/tails/:tailId`,
-		"DELETE",
-		([_url, accountId, scriptName, envNameOrTailId, tailId]) => {
-			requests.count++;
-			expect(accountId).toEqual("some-account-id");
-			expect(scriptName).toEqual(expectedScriptName);
-			if (!legacyEnv) {
-				if (env) {
-					expect(envNameOrTailId).toEqual(env);
-					expect(tailId).toEqual("tail-id");
-				} else {
-					expect(envNameOrTailId).toEqual("tail-id");
+	msw.use(
+		rest.delete(
+			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/tails/:tailId`,
+			async (req, res, ctx) => {
+				requests.count++;
+				expect(req.params.accountId).toEqual("some-account-id");
+				expect(req.params.scriptName).toEqual(expectedScriptName);
+				if (!legacyEnv) {
+					if (env) {
+						expect(req.params.tailId).toEqual("tail-id");
+					}
 				}
-			} else {
-				expect(envNameOrTailId).toEqual("tail-id");
+				expect(req.params.tailId).toEqual("tail-id");
+				return res(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: null,
+					})
+				);
 			}
-			return null;
-		}
+		)
 	);
 
 	return requests;
@@ -711,6 +801,15 @@ function mockWebsocketAPIs(
 		async nextMessageJson() {
 			const message = await api.ws.nextMessage;
 			return JSON.parse(message as string);
+		},
+		/**
+		 * Close the mock websocket and clean up the API.
+		 * The setTimeout forces a cycle to allow for closing and cleanup
+		 * @returns a Promise that resolves when the websocket is closed
+		 */
+		async closeHelper() {
+			api.ws.close();
+			await new Promise((resolve) => setTimeout(resolve, 0));
 		},
 	};
 	api.requests.creation = mockCreateTailRequest(

@@ -4497,6 +4497,10 @@ addEventListener('fetch', event => {});`
 					{ binding: "R2_BUCKET_ONE", bucket_name: "r2-bucket-one-name" },
 					{ binding: "R2_BUCKET_TWO", bucket_name: "r2-bucket-two-name" },
 				],
+				analytics_engine_datasets: [
+					{ binding: "AE_DATASET_ONE", dataset: "ae-dataset-one-name" },
+					{ binding: "AE_DATASET_TWO", dataset: "ae-dataset-two-name" },
+				],
 				text_blobs: {
 					TEXT_BLOB_ONE: "./my-entire-app-depends-on-this.cfg",
 					TEXT_BLOB_TWO: "./the-entirety-of-human-knowledge.txt",
@@ -4599,6 +4603,16 @@ addEventListener('fetch', event => {});`
 						type: "r2_bucket",
 					},
 					{
+						dataset: "ae-dataset-one-name",
+						name: "AE_DATASET_ONE",
+						type: "analytics_engine",
+					},
+					{
+						dataset: "ae-dataset-two-name",
+						name: "AE_DATASET_TWO",
+						type: "analytics_engine",
+					},
+					{
 						name: "httplogs",
 						type: "logfwdr",
 						destination: "httplogs",
@@ -4656,6 +4670,9 @@ addEventListener('fetch', event => {});`
 			- logfwdr:
 			  - httplogs: httplogs
 			  - trace: trace
+			- Analytics Engine Datasets:
+			  - AE_DATASET_ONE: ae-dataset-one-name
+			  - AE_DATASET_TWO: ae-dataset-two-name
 			- Text Blobs:
 			  - TEXT_BLOB_ONE: my-entire-app-depends-on-this.cfg
 			  - TEXT_BLOB_TWO: the-entirety-of-human-knowledge.txt
@@ -4713,6 +4730,12 @@ addEventListener('fetch', event => {});`
 						bucket_name: "r2-bucket-two-name",
 					},
 				],
+				analytics_engine_datasets: [
+					{
+						binding: "CONFLICTING_NAME_FOUR",
+						dataset: "analytics-engine-dataset-name",
+					},
+				],
 				text_blobs: {
 					CONFLICTING_NAME_THREE: "./my-entire-app-depends-on-this.cfg",
 					CONFLICTING_NAME_FOUR: "./the-entirety-of-human-knowledge.txt",
@@ -4760,7 +4783,7 @@ addEventListener('fetch', event => {});`
 						                - CONFLICTING_NAME_ONE assigned to Durable Object, KV Namespace, and R2 Bucket bindings.
 						                - CONFLICTING_NAME_TWO assigned to Durable Object and KV Namespace bindings.
 						                - CONFLICTING_NAME_THREE assigned to R2 Bucket, Text Blob, Unsafe, Environment Variable, WASM Module, and Data Blob bindings.
-						                - CONFLICTING_NAME_FOUR assigned to Text Blob and Unsafe bindings.
+						                - CONFLICTING_NAME_FOUR assigned to Analytics Engine Dataset, Text Blob, and Unsafe bindings.
 						                - Bindings must have unique names, so that they can all be referenced in the worker.
 						                  Please change your bindings to have unique names.]
 					            `);
@@ -4775,7 +4798,7 @@ addEventListener('fetch', event => {});`
 			            - CONFLICTING_NAME_TWO assigned to Durable Object and KV Namespace bindings.
 			            - CONFLICTING_NAME_THREE assigned to R2 Bucket, Text Blob, Unsafe, Environment Variable, WASM
 			          Module, and Data Blob bindings.
-			            - CONFLICTING_NAME_FOUR assigned to Text Blob and Unsafe bindings.
+			            - CONFLICTING_NAME_FOUR assigned to Analytics Engine Dataset, Text Blob, and Unsafe bindings.
 			            - Bindings must have unique names, so that they can all be referenced in the worker.
 			              Please change your bindings to have unique names.
 
@@ -4820,6 +4843,16 @@ addEventListener('fetch', event => {});`
 						bucket_name: "r2-bucket-two-name",
 					},
 				],
+				analytics_engine_datasets: [
+					{
+						binding: "CONFLICTING_AE_DATASET_NAME",
+						dataset: "ae-dataset-one-name",
+					},
+					{
+						binding: "CONFLICTING_AE_DATASET_NAME",
+						dataset: "ae-dataset-two-name",
+					},
+				],
 				unsafe: {
 					bindings: [
 						{
@@ -4859,6 +4892,7 @@ addEventListener('fetch', event => {});`
 						                - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
 						                - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
 						                - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
+						                - CONFLICTING_AE_DATASET_NAME assigned to multiple Analytics Engine Dataset bindings.
 						                - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
 						                - Bindings must have unique names, so that they can all be referenced in the worker.
 						                  Please change your bindings to have unique names.]
@@ -4873,6 +4907,7 @@ addEventListener('fetch', event => {});`
 			            - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
 			            - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
 			            - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
+			            - CONFLICTING_AE_DATASET_NAME assigned to multiple Analytics Engine Dataset bindings.
 			            - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
 			            - Bindings must have unique names, so that they can all be referenced in the worker.
 			              Please change your bindings to have unique names.
@@ -4934,6 +4969,24 @@ addEventListener('fetch', event => {});`
 						bucket_name: "r2-bucket-four-name",
 					},
 				],
+				analytics_engine_datasets: [
+					{
+						binding: "CONFLICTING_AE_DATASET_NAME",
+						dataset: "ae-dataset-one-name",
+					},
+					{
+						binding: "CONFLICTING_AE_DATASET_NAME",
+						dataset: "ae-dataset-two-name",
+					},
+					{
+						binding: "CONFLICTING_NAME_THREE",
+						dataset: "ae-dataset-three-name",
+					},
+					{
+						binding: "CONFLICTING_NAME_FOUR",
+						dataset: "ae-dataset-four-name",
+					},
+				],
 				text_blobs: {
 					CONFLICTING_NAME_THREE: "./my-entire-app-depends-on-this.cfg",
 					CONFLICTING_NAME_FOUR: "./the-entirety-of-human-knowledge.txt",
@@ -4991,8 +5044,9 @@ addEventListener('fetch', event => {});`
 						                - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
 						                - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
 						                - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
-						                - CONFLICTING_NAME_THREE assigned to R2 Bucket, Text Blob, Unsafe, Environment Variable, WASM Module, and Data Blob bindings.
-						                - CONFLICTING_NAME_FOUR assigned to R2 Bucket, Text Blob, and Unsafe bindings.
+						                - CONFLICTING_NAME_THREE assigned to R2 Bucket, Analytics Engine Dataset, Text Blob, Unsafe, Environment Variable, WASM Module, and Data Blob bindings.
+						                - CONFLICTING_NAME_FOUR assigned to R2 Bucket, Analytics Engine Dataset, Text Blob, and Unsafe bindings.
+						                - CONFLICTING_AE_DATASET_NAME assigned to multiple Analytics Engine Dataset bindings.
 						                - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
 						                - Bindings must have unique names, so that they can all be referenced in the worker.
 						                  Please change your bindings to have unique names.]
@@ -5007,9 +5061,11 @@ addEventListener('fetch', event => {});`
 			            - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
 			            - CONFLICTING_KV_NAMESPACE_NAME assigned to multiple KV Namespace bindings.
 			            - CONFLICTING_R2_BUCKET_NAME assigned to multiple R2 Bucket bindings.
-			            - CONFLICTING_NAME_THREE assigned to R2 Bucket, Text Blob, Unsafe, Environment Variable, WASM
-			          Module, and Data Blob bindings.
-			            - CONFLICTING_NAME_FOUR assigned to R2 Bucket, Text Blob, and Unsafe bindings.
+			            - CONFLICTING_NAME_THREE assigned to R2 Bucket, Analytics Engine Dataset, Text Blob, Unsafe,
+			          Environment Variable, WASM Module, and Data Blob bindings.
+			            - CONFLICTING_NAME_FOUR assigned to R2 Bucket, Analytics Engine Dataset, Text Blob, and Unsafe
+			          bindings.
+			            - CONFLICTING_AE_DATASET_NAME assigned to multiple Analytics Engine Dataset bindings.
 			            - CONFLICTING_UNSAFE_NAME assigned to multiple Unsafe bindings.
 			            - Bindings must have unique names, so that they can all be referenced in the worker.
 			              Please change your bindings to have unique names.
@@ -5741,6 +5797,37 @@ addEventListener('fetch', event => {});`
 
 			          "
 		        `);
+			});
+		});
+
+		describe("[analytics_engine_datasets]", () => {
+			it("should support analytics engine bindings", async () => {
+				writeWranglerToml({
+					analytics_engine_datasets: [
+						{ binding: "FOO", dataset: "foo-dataset" },
+					],
+				});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{ dataset: "foo-dataset", name: "FOO", type: "analytics_engine" },
+					],
+				});
+
+				await runWrangler("publish index.js");
+				expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Your worker has access to the following bindings:
+			- Analytics Engine Datasets:
+			  - FOO: foo-dataset
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: undefined"
+		`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 		});
 

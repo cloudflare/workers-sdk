@@ -33,7 +33,8 @@ describe("worker in local mode", () => {
 	});
 
 	afterAll(async () => {
-		await worker?.stop();
+		await readyPromise;
+		await worker.stop();
 	});
 
 	it.concurrent("should invoke the worker and exit", async () => {
@@ -86,7 +87,8 @@ describe.skip("worker in remote mode", () => {
 	});
 
 	afterAll(async () => {
-		await worker?.stop();
+		await readyPromise;
+		await worker.stop();
 		process.env.CLOUDFLARE_API_TOKEN = undefined;
 	});
 

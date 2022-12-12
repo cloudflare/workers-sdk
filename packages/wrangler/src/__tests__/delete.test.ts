@@ -1,7 +1,8 @@
+import { rest } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
-import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
+import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
@@ -11,10 +12,6 @@ describe("delete", () => {
 	mockAccountId();
 	mockApiToken();
 	runInTempDir();
-
-	afterEach(() => {
-		unsetAllMocks();
-	});
 
 	const std = mockConsoleMethods();
 
@@ -107,14 +104,19 @@ describe("delete", () => {
 		});
 		mockListKVNamespacesRequest(...kvNamespaces);
 		// it should only try to delete the site namespace associated with this worker
-		setMockResponse(
-			"/accounts/:accountId/storage/kv/namespaces/id-for-my-script-site-ns",
-			"DELETE",
-			([_url, accountId]) => {
-				expect(accountId).toEqual("some-account-id");
-				return null;
-			}
+		msw.use(
+			rest.delete(
+				"*/accounts/:accountId/storage/kv/namespaces/id-for-my-script-site-ns",
+				(req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					return res.once(
+						ctx.status(200),
+						ctx.json({ success: true, errors: [], messages: [], result: null })
+					);
+				}
+			)
 		);
+
 		mockDeleteWorkerRequest({ name: "my-script" });
 		await runWrangler("delete --name my-script");
 		expect(std).toMatchInlineSnapshot(`
@@ -155,22 +157,40 @@ describe("delete", () => {
 		mockListKVNamespacesRequest(...kvNamespaces);
 		// it should only try to delete the site namespace associated with this worker
 
-		setMockResponse(
-			"/accounts/:accountId/storage/kv/namespaces/id-for-my-script-site-ns",
-			"DELETE",
-			([_url, accountId]) => {
-				expect(accountId).toEqual("some-account-id");
-				return null;
-			}
+		msw.use(
+			rest.delete(
+				"*/accounts/:accountId/storage/kv/namespaces/id-for-my-script-site-ns",
+				(req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {},
+						})
+					);
+				}
+			)
 		);
 
-		setMockResponse(
-			"/accounts/:accountId/storage/kv/namespaces/id-for-my-script-site-preview-ns",
-			"DELETE",
-			([_url, accountId]) => {
-				expect(accountId).toEqual("some-account-id");
-				return null;
-			}
+		msw.use(
+			rest.delete(
+				"*/accounts/:accountId/storage/kv/namespaces/id-for-my-script-site-preview-ns",
+				(req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {},
+						})
+					);
+				}
+			)
 		);
 
 		mockDeleteWorkerRequest({ name: "my-script" });
@@ -197,34 +217,47 @@ function mockDeleteWorkerRequest(
 	} = {}
 ) {
 	const { env, legacyEnv, name } = options;
-	setMockResponse(
-		// there's no special handling for environments yet
-		"/accounts/:accountId/workers/services/:scriptName",
-		"DELETE",
-		async ([_url, accountId, scriptName], { method }, queryParams) => {
-			expect(accountId).toEqual("some-account-id");
-			expect(method).toEqual("DELETE");
-			expect(scriptName).toEqual(
-				legacyEnv && env
-					? `${name || "test-name"}-${env}`
-					: `${name || "test-name"}`
-			);
+	msw.use(
+		rest.delete(
+			"*/accounts/:accountId/workers/services/:scriptName",
+			(req, res, ctx) => {
+				expect(req.params.accountId).toEqual("some-account-id");
+				expect(req.params.scriptName).toEqual(
+					legacyEnv && env
+						? `${name ?? "test-name"}-${env}`
+						: `${name ?? "test-name"}`
+				);
 
-			expect(queryParams.get("force")).toEqual("true");
+				expect(req.url.searchParams.get("force")).toEqual("true");
 
-			return null;
-		}
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: null,
+					})
+				);
+			}
+		)
 	);
 }
 
 /** Create a mock handler for the request to get a list of all KV namespaces. */
 function mockListKVNamespacesRequest(...namespaces: KVNamespaceInfo[]) {
-	setMockResponse(
-		"/accounts/:accountId/storage/kv/namespaces",
-		"GET",
-		([_url, accountId]) => {
-			expect(accountId).toEqual("some-account-id");
-			return namespaces;
-		}
+	msw.use(
+		rest.get("*/accounts/:accountId/storage/kv/namespaces", (req, res, ctx) => {
+			expect(req.params.accountId).toEqual("some-account-id");
+			return res.once(
+				ctx.status(200),
+				ctx.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: namespaces,
+				})
+			);
+		})
 	);
 }

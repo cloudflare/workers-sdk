@@ -108,6 +108,7 @@ export const secret = (secretYargs: Argv<CommonYargsOptions>) => {
 									r2_buckets: [],
 									d1_databases: [],
 									services: [],
+									analytics_engine_datasets: [],
 									wasm_modules: {},
 									text_blobs: {},
 									data_blobs: {},

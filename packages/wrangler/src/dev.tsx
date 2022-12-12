@@ -14,7 +14,7 @@ import { getEntry } from "./entry";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
-import { getAccountFromCache } from "./user";
+import { getAccountFromCache, loginOrRefreshIfRequired } from "./user";
 import { collectKeyValues } from "./utils/collectKeyValues";
 import { identifyD1BindingsAsBeta } from "./worker";
 import { getHostFromRoute, getZoneForRoute, getZoneIdFromHost } from "./zones";
@@ -328,6 +328,15 @@ export function devOptions(yargs: Argv<CommonYargsOptions>): Argv<DevArgs> {
 }
 
 export async function devHandler(args: ArgumentsCamelCase<DevArgs>) {
+	if (!(args.local || args.experimentalLocal)) {
+		const isLoggedIn = await loginOrRefreshIfRequired();
+		if (!isLoggedIn) {
+			throw new Error(
+				"You must be logged in to use wrangler dev in remote mode. Try logging in, or run wrangler dev --local."
+			);
+		}
+	}
+
 	let watcher;
 	try {
 		const devInstance = await startDev(args);
@@ -433,7 +442,7 @@ export async function startDev(args: StartDevOptions) {
 
 		// eslint-disable-next-line no-inner-declarations
 		async function getDevReactElement(configParam: Config) {
-			const { assetPaths, bindings } = await getBindingsAndAssetPaths(
+			const { assetPaths, bindings } = getBindingsAndAssetPaths(
 				args,
 				configParam
 			);
@@ -550,7 +559,7 @@ export async function startApiDev(args: StartDevOptions) {
 
 	// eslint-disable-next-line no-inner-declarations
 	async function getDevServer(configParam: Config) {
-		const { assetPaths, bindings } = await getBindingsAndAssetPaths(
+		const { assetPaths, bindings } = getBindingsAndAssetPaths(
 			args,
 			configParam
 		);
@@ -789,14 +798,11 @@ async function validateDevServerSettings(
 	};
 }
 
-async function getBindingsAndAssetPaths(
-	args: StartDevOptions,
-	configParam: Config
-) {
+function getBindingsAndAssetPaths(args: StartDevOptions, configParam: Config) {
 	const cliVars = collectKeyValues(args.var);
 
 	// now log all available bindings into the terminal
-	const bindings = await getBindings(configParam, args.env, {
+	const bindings = getBindings(configParam, args.env, args.local ?? false, {
 		kv: args.kv,
 		vars: { ...args.vars, ...cliVars },
 		durableObjects: args.durableObjects,
@@ -823,11 +829,12 @@ async function getBindingsAndAssetPaths(
 	return { assetPaths, bindings };
 }
 
-async function getBindings(
+function getBindings(
 	configParam: Config,
 	env: string | undefined,
+	local: boolean,
 	args: AdditionalDevProps
-): Promise<CfWorkerInit["bindings"]> {
+): CfWorkerInit["bindings"] {
 	const bindings = {
 		kv_namespaces: [
 			...(configParam.kv_namespaces || []).map(
@@ -892,10 +899,29 @@ async function getBindings(
 		],
 		dispatch_namespaces: configParam.dispatch_namespaces,
 		services: configParam.services,
+		analytics_engine_datasets: configParam.analytics_engine_datasets,
 		unsafe: configParam.unsafe?.bindings,
 		logfwdr: configParam.logfwdr,
 		d1_databases: identifyD1BindingsAsBeta([
-			...configParam.d1_databases,
+			...(configParam.d1_databases ?? []).map((d1Db) => {
+				//in local dev, bindings don't matter
+				if (local) {
+					return {
+						...d1Db,
+						database_id: "local",
+					};
+				}
+				if (!d1Db.preview_database_id) {
+					throw new Error(
+						`In development, you should use a separate D1 database than the one you'd use in production. Please create a new D1 database with "wrangler d1 create <name>" and add its id as preview_database_id to the d1_database "${d1Db.binding}" in your wrangler.toml`
+					);
+				}
+
+				return {
+					...d1Db,
+					database_id: d1Db.preview_database_id,
+				};
+			}),
 			...(args.d1Databases || []),
 		]),
 	};
