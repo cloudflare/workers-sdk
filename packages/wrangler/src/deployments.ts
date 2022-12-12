@@ -36,6 +36,12 @@ export async function deployments(
 	accountId: string,
 	scriptName: string | undefined
 ) {
+	if (!scriptName) {
+		throw new Error(
+			"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name`"
+		);
+	}
+
 	const scriptMetadata = await fetchResult<ServiceMetadataRes>(
 		`/accounts/${accountId}/workers/services/${scriptName}`
 	);
