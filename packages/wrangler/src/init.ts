@@ -329,7 +329,7 @@ export async function initHandler(args: InitArgs) {
 			isTypescriptProject = true;
 			await writeFile(
 				path.join(creationDirectory, "./tsconfig.json"),
-				readFileSync(path.join(getBasePath(), "templates/tsconfig.json"))
+				readFileSync(path.join(getBasePath(), "templates/tsconfig.init.json"))
 			);
 			devDepsToInstall.push("@cloudflare/workers-types");
 			devDepsToInstall.push("typescript");

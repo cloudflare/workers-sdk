@@ -32,7 +32,7 @@ describe("logout", () => {
 			rest.post("*/oauth2/revoke", (_, response, context) => {
 				// Make sure that we made the request to logout.
 				counter += 1;
-				response.once(context.status(200), context.text(""));
+				return response.once(context.status(200), context.text(""));
 			})
 		);
 

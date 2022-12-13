@@ -183,6 +183,8 @@ __facade__originalAddEventListener__("fetch", (event) => {
 			});
 
 			__FACADE_EVENT_TARGET__.dispatchEvent(facadeEvent);
+			// @ts-expect-error `waitUntil` types are currently broken, blocked on
+			// https://github.com/cloudflare/workerd/pull/191
 			event.waitUntil(Promise.all(facadeEvent[__facade_waitUntil__]));
 		}
 	};
@@ -195,6 +197,8 @@ __facade__originalAddEventListener__("fetch", (event) => {
 
 		__FACADE_EVENT_TARGET__.dispatchEvent(facadeEvent);
 		facadeEvent[__facade_dispatched__] = true;
+		// @ts-expect-error `waitUntil` types are currently broken, blocked on
+		// https://github.com/cloudflare/workerd/pull/191
 		event.waitUntil(Promise.all(facadeEvent[__facade_waitUntil__]));
 
 		const response = facadeEvent[__facade_response__];
@@ -223,5 +227,7 @@ __facade__originalAddEventListener__("scheduled", (event) => {
 	});
 
 	__FACADE_EVENT_TARGET__.dispatchEvent(facadeEvent);
+	// @ts-expect-error `waitUntil` types are currently broken, blocked on
+	// https://github.com/cloudflare/workerd/pull/191
 	event.waitUntil(Promise.all(facadeEvent[__facade_waitUntil__]));
 });

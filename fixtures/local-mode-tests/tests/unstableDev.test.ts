@@ -1,17 +1,12 @@
 import path from "path";
 import { unstable_dev } from "wrangler";
+import type { UnstableDevWorker } from "wrangler";
 
 // TODO: add test for `experimentalLocal: true` once issue with dynamic
 //  `import()` and `npx-import` resolved:
 //  https://github.com/cloudflare/wrangler2/pull/1940#issuecomment-1261166695
 describe("worker in local mode", () => {
-	let worker: {
-		fetch: (
-			input?: RequestInfo,
-			init?: RequestInit
-		) => Promise<Response | undefined>;
-		stop: () => Promise<void>;
-	};
+	let worker: UnstableDevWorker;
 	let resolveReadyPromise: (value: unknown) => void;
 	const readyPromise = new Promise((resolve) => {
 		resolveReadyPromise = resolve;
@@ -51,13 +46,7 @@ describe("worker in local mode", () => {
 
 // skipping this test for now as it breaks tests in CI when the author isn't from Cloudflare
 describe.skip("worker in remote mode", () => {
-	let worker: {
-		fetch: (
-			input?: RequestInfo,
-			init?: RequestInit
-		) => Promise<Response | undefined>;
-		stop: () => Promise<void>;
-	};
+	let worker: UnstableDevWorker;
 	let resolveReadyPromise: (value: unknown) => void;
 	const readyPromise = new Promise((resolve) => {
 		resolveReadyPromise = resolve;

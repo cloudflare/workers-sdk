@@ -8,7 +8,7 @@
 	"author": "",
 	"main": "index.js",
 	"scripts": {
-		"check:type": "tsc",
+		"check:type": "tsc && tsc -p tests/tsconfig.json",
 		"test": "cross-env NODE_ENV=local-testing NODE_OPTIONS=--experimental-vm-modules npx jest --forceExit",
 		"test:ci": "cross-env NODE_ENV=local-testing NODE_OPTIONS=--experimental-vm-modules npx jest --forceExit"
 	},
@@ -30,7 +30,7 @@
 		]
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^3.2.0",
+		"@cloudflare/workers-types": "^4.20221111.1",
 		"@types/node": "^17.0.33",
 		"buffer": "^6.0.3"
 	}

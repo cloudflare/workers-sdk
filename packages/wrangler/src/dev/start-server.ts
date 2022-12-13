@@ -419,7 +419,7 @@ export async function startLocalServer({
 			experimentalLocalRef = mf;
 			removeSignalExitListener = onExit((_code, _signal) => {
 				logger.log("⎔ Shutting down experimental local server.");
-				mf.dispose();
+				void mf.dispose();
 				experimentalLocalRef = undefined;
 			});
 			onReady?.(runtimeURL.hostname, parseInt(runtimeURL.port ?? 8787));

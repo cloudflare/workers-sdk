@@ -11,11 +11,9 @@ import {
 	__facade_register__,
 } from "./common";
 
-// @ts-expect-error We'll swap in the entry point during build
 import worker from "__ENTRY_POINT__";
 
 // We need to preserve all of the exports from the worker
-// @ts-expect-error We'll swap in the entry point during build
 export * from "__ENTRY_POINT__";
 
 class __Facade_ScheduledController__ implements ScheduledController {
