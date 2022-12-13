@@ -512,6 +512,16 @@ export async function startDev(args: StartDevOptions) {
 			);
 		}
 		const devReactElement = render(await getDevReactElement(config));
+
+		// In the bootstrapper script `bin/wrangler.js`, we open an IPC channel, so
+		// IPC messages from this process are propagated through the bootstrapper.
+		// Normally, Node's SIGINT handler would close this for us, but interactive
+		// mode enables raw mode on stdin which disables the built-in handler. The
+		// following line disconnects from the IPC channel when we press `x` or
+		// CTRL-C in interactive mode, ensuring no open handles, and allowing for a
+		// clean exit.
+		devReactElement.waitUntilExit().then(() => process.disconnect?.());
+
 		rerender = devReactElement.rerender;
 		return {
 			devReactElement,
