@@ -1,4 +1,4 @@
-import { Response } from "undici";
+import { Response } from "../../http";
 import { CfHeader } from "../shared/constants";
 import { R2Object } from "./r2Object";
 

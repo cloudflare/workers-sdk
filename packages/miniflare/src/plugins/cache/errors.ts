@@ -1,4 +1,4 @@
-import { HeadersInit, Response } from "undici";
+import { HeadersInit, Response } from "../../http";
 import { CfHeader } from "../shared/constants";
 
 enum Status {

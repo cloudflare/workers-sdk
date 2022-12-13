@@ -1,8 +1,7 @@
 import crypto from "crypto";
 import path from "path";
 import { FileStorage, HeadersInit, LogLevel } from "@miniflare/tre";
-import { miniflareTest } from "../../index";
-import { useTmp, utf8Encode } from "../../storage/helpers";
+import { miniflareTest, useTmp, utf8Encode } from "../../test-shared";
 
 const test = miniflareTest(async (global, req) => {
 	// Sort headers

@@ -1,6 +1,6 @@
 import { ReadableStream } from "stream/web";
 import { TextEncoder } from "util";
-import { Headers, Response } from "undici";
+import { Headers, Response } from "../../http";
 
 const encoder = new TextEncoder();
 

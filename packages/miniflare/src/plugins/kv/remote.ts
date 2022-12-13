@@ -1,7 +1,7 @@
 import assert from "assert";
 import { Blob } from "buffer";
-import { BodyInit, FormData, Response } from "undici";
 import { z } from "zod";
+import { BodyInit, FormData, Response } from "../../http";
 import { Clock, millisToSeconds } from "../../shared";
 import {
 	RemoteStorage,

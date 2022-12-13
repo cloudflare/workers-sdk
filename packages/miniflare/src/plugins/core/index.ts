@@ -111,7 +111,7 @@ const LIVE_RELOAD_SCRIPT_TEMPLATE = (
 ) => `<script defer type="application/javascript">
 (function () {
   // Miniflare Live Reload
-  var url = new URL("/core/reload", location.origin);
+  var url = new URL("/cdn-cgi/mf/reload", location.origin);
   url.protocol = url.protocol.replace("http", "ws");
   url.port = ${port};
   function reload() { location.reload(); }
@@ -130,8 +130,8 @@ const LIVE_RELOAD_SCRIPT_TEMPLATE = (
 // reload complete.
 export const SCRIPT_ENTRY = `async function handleEvent(event) {
   const request = new Request(event.request, {
-    cf: ${BINDING_JSON_CF_BLOB}
-  })
+    cf: event.request.cf ?? ${BINDING_JSON_CF_BLOB}
+  });
 
   const probe = event.request.headers.get("${HEADER_PROBE}");
   if (probe !== null) {
@@ -479,4 +479,5 @@ function getWorkerScript(
 }
 
 export * from "./errors";
+export * from "./modules";
 export * from "./services";

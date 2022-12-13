@@ -1,5 +1,4 @@
-import type { RequestInitCfProperties } from "@cloudflare/workers-types";
-import { Headers } from "undici";
+import { Headers } from "../../http";
 import { Worker_Binding } from "../../runtime";
 import { Persistence, PersistenceSchema } from "./gateway";
 
@@ -38,11 +37,6 @@ export function decodePersist(headers: Headers): Persistence {
 	return header === null
 		? undefined
 		: PersistenceSchema.parse(JSON.parse(header));
-}
-
-export function decodeCfBlob(headers: Headers): RequestInitCfProperties {
-	const header = headers.get(HEADER_CF_BLOB);
-	return header === null ? {} : JSON.parse(header);
 }
 
 export enum CfHeader {

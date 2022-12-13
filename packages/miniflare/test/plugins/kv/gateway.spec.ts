@@ -16,7 +16,7 @@ import {
 	TIME_NOW,
 	testClock,
 	utf8Encode,
-} from "../../storage/helpers";
+} from "../../test-shared";
 
 interface Context {
 	storage: Storage;

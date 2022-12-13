@@ -2,23 +2,30 @@ import assert from "assert";
 import http from "http";
 import net from "net";
 import { Duplex } from "stream";
+import type {
+	IncomingRequestCfProperties,
+	RequestInitCfProperties,
+} from "@cloudflare/workers-types/experimental";
 import exitHook from "exit-hook";
 import getPort from "get-port";
 import stoppable from "stoppable";
+import { WebSocketServer } from "ws";
+import { z } from "zod";
+import { setupCf } from "./cf";
 import {
+	Headers,
 	HeadersInit,
 	Request,
 	RequestInfo,
 	RequestInit,
 	Response,
+	coupleWebSocket,
 	fetch,
-} from "undici";
-import { WebSocketServer } from "ws";
-import { z } from "zod";
-import { setupCf } from "./cf";
+} from "./http";
 import {
 	GatewayConstructor,
 	GatewayFactory,
+	HEADER_CF_BLOB,
 	HEADER_PROBE,
 	PLUGIN_ENTRIES,
 	Plugins,
@@ -152,6 +159,23 @@ type PluginRouters = {
 
 type StoppableServer = http.Server & stoppable.WithStop;
 
+const restrictedWebSocketUpgradeHeaders = [
+	"upgrade",
+	"connection",
+	"sec-websocket-accept",
+];
+
+async function writeResponse(response: Response, res: http.ServerResponse) {
+	const headers = Object.fromEntries(response.headers);
+	res.writeHead(response.status, response.statusText, headers);
+	if (response.body) {
+		for await (const chunk of response.body) {
+			if (chunk) res.write(chunk);
+		}
+	}
+	res.end();
+}
+
 export class Miniflare {
 	readonly #gatewayFactories: PluginGatewayFactories;
 	readonly #routers: PluginRouters;
@@ -192,6 +216,8 @@ export class Miniflare {
 	#loopbackServer?: StoppableServer;
 	#loopbackPort?: number;
 	readonly #liveReloadServer: WebSocketServer;
+	readonly #webSocketServer: WebSocketServer;
+	readonly #webSocketExtraHeaders: WeakMap<http.IncomingMessage, Headers>;
 
 	constructor(opts: MiniflareOptions) {
 		// Initialise plugin gateway factories and routers
@@ -213,8 +239,23 @@ export class Miniflare {
 		const desc = this.#runtimeConstructor.description;
 		this.#log.debug(`Running workerd ${desc}...`);
 
-		this.#disposeController = new AbortController();
 		this.#liveReloadServer = new WebSocketServer({ noServer: true });
+		this.#webSocketServer = new WebSocketServer({ noServer: true });
+		// Add custom headers included in response to WebSocket upgrade requests
+		this.#webSocketExtraHeaders = new WeakMap();
+		this.#webSocketServer.on("headers", (headers, req) => {
+			const extra = this.#webSocketExtraHeaders.get(req);
+			this.#webSocketExtraHeaders.delete(req);
+			if (extra) {
+				for (const [key, value] of extra) {
+					if (!restrictedWebSocketUpgradeHeaders.includes(key.toLowerCase())) {
+						headers.push(`${key}: ${value}`);
+					}
+				}
+			}
+		});
+
+		this.#disposeController = new AbortController();
 		this.#runtimeMutex = new Mutex();
 		this.#initPromise = this.#runtimeMutex.runWith(() => this.#init());
 	}
@@ -244,6 +285,10 @@ export class Miniflare {
 		for (const ws of this.#liveReloadServer.clients) {
 			ws.close(1012, "Service Restart");
 		}
+		// Close all existing web sockets on reload
+		for (const ws of this.#webSocketServer.clients) {
+			ws.close(1012, "Service Restart");
+		}
 	}
 
 	async #init() {
@@ -261,9 +306,12 @@ export class Miniflare {
 		this.#loopbackPort = address.port;
 
 		// Start runtime
+		let entryPort = this.#sharedOpts.core.port;
+		if (entryPort === 0) entryPort = await getPort();
+		else if (entryPort === undefined) entryPort = await getPort({ port: 8787 });
 		const opts: RuntimeOptions = {
 			entryHost: host,
-			entryPort: this.#sharedOpts.core.port ?? (await getPort({ port: 8787 })),
+			entryPort,
 			loopbackPort: this.#loopbackPort,
 			inspectorPort: this.#sharedOpts.core.inspectorPort,
 			verbose: this.#sharedOpts.core.verbose,
@@ -274,9 +322,7 @@ export class Miniflare {
 		const accessibleHost =
 			this.#runtime.accessibleHostOverride ??
 			(host === "*" || host === "0.0.0.0" ? "127.0.0.1" : host);
-		this.#runtimeEntryURL = new URL(
-			`http://${accessibleHost}:${opts.entryPort}`
-		);
+		this.#runtimeEntryURL = new URL(`http://${accessibleHost}:${entryPort}`);
 
 		const config = await this.#assembleConfig();
 		assert(config !== undefined);
@@ -317,7 +363,7 @@ export class Miniflare {
 	}
 
 	async #handleLoopbackPlugins(
-		request: Request,
+		request: Request<RequestInitCfProperties>,
 		url: URL
 	): Promise<Response | undefined> {
 		const pathname = url.pathname;
@@ -344,14 +390,25 @@ export class Miniflare {
 		}
 	}
 
-	#handleLoopback: http.RequestListener = async (req, res) => {
+	#handleLoopback = async (
+		req: http.IncomingMessage,
+		res?: http.ServerResponse
+	): Promise<Response | undefined> => {
 		const url = new URL(req.url ?? "", "http://127.0.0.1");
-		// TODO: maybe just use native Node http objects?
+
+		// Extract cf blob (if any) from headers
+		const cfBlobHeader = HEADER_CF_BLOB.toLowerCase();
+		const cfBlob = req.headers[cfBlobHeader];
+		delete req.headers[cfBlobHeader];
+		assert(!Array.isArray(cfBlob)); // Only `Set-Cookie` headers are arrays
+		const cf = cfBlob ? JSON.parse(cfBlob) : undefined;
+
 		const request = new Request(url, {
 			method: req.method,
 			headers: req.headers as HeadersInit,
 			body: req.method === "GET" || req.method === "HEAD" ? undefined : req,
 			duplex: "half",
+			cf,
 		});
 
 		let response: Response | undefined;
@@ -377,29 +434,24 @@ export class Miniflare {
 			}
 		} catch (e: any) {
 			this.#log.error(e);
-			res.writeHead(500);
-			return res.end(e?.stack ?? String(e));
+			res?.writeHead(500);
+			res?.end(e?.stack ?? String(e));
+			return;
 		}
 
-		if (response === undefined) {
-			res.writeHead(404);
-			return res.end();
-		}
-
-		res.writeHead(
-			response.status,
-			response.statusText,
-			Object.fromEntries(response.headers)
-		);
-		if (response.body) {
-			for await (const chunk of response.body) {
-				if (chunk) res.write(chunk);
+		if (res !== undefined) {
+			if (response === undefined) {
+				res.writeHead(404);
+				res.end();
+			} else {
+				await writeResponse(response, res);
 			}
 		}
-		res.end();
+
+		return response;
 	};
 
-	#handleLoopbackUpgrade = (
+	#handleLoopbackUpgrade = async (
 		req: http.IncomingMessage,
 		socket: Duplex,
 		head: Buffer
@@ -408,21 +460,49 @@ export class Miniflare {
 		const { pathname } = new URL(req.url ?? "", "http://localhost");
 
 		// If this is the path for live-reload, handle the request
-		if (pathname === "/core/reload") {
+		if (pathname === "/cdn-cgi/mf/reload") {
 			this.#liveReloadServer.handleUpgrade(req, socket, head, (ws) => {
 				this.#liveReloadServer.emit("connection", ws, req);
 			});
 			return;
 		}
 
-		// Otherwise, return a not found HTTP response
+		// Otherwise, try handle the request in a worker
+		const response = await this.#handleLoopback(req);
+
+		// Check web socket response was returned
+		const webSocket = response?.webSocket;
+		if (response?.status === 101 && webSocket) {
+			// Accept and couple the Web Socket
+			this.#webSocketExtraHeaders.set(req, response.headers);
+			this.#webSocketServer.handleUpgrade(req, socket, head, (ws) => {
+				void coupleWebSocket(ws, webSocket);
+				this.#webSocketServer.emit("connection", ws, req);
+			});
+			return;
+		}
+
+		// Otherwise, we'll be returning a regular HTTP response
 		const res = new http.ServerResponse(req);
 		// `socket` is guaranteed to be an instance of `net.Socket`:
 		// https://nodejs.org/api/http.html#event-upgrade_1
 		assert(socket instanceof net.Socket);
 		res.assignSocket(socket);
-		res.writeHead(404);
-		res.end();
+
+		// If no response was provided, or it was an "ok" response, log an error
+		if (!response || response.ok) {
+			res.writeHead(500);
+			res.end();
+			this.#log.error(
+				new TypeError(
+					"Web Socket request did not return status 101 Switching Protocols response with Web Socket"
+				)
+			);
+			return;
+		}
+
+		// Otherwise, send the response as is (e.g. unauthorised)
+		await writeResponse(response, res);
 	};
 
 	#startLoopbackServer(
@@ -492,8 +572,10 @@ export class Miniflare {
 		const sockets: Socket[] = [
 			{
 				name: SOCKET_ENTRY,
-				http: {},
 				service: { name: SERVICE_ENTRY },
+				// Even though we inject a `cf` object in the entry worker, allow it to
+				// be customised via `dispatchFetch`
+				http: { cfBlobHeader: HEADER_CF_BLOB },
 			},
 		];
 
@@ -607,13 +689,16 @@ export class Miniflare {
 
 	async dispatchFetch(
 		input: RequestInfo,
-		init?: RequestInit
+		init?: RequestInit<Partial<IncomingRequestCfProperties>>
 	): Promise<Response> {
 		this.#checkDisposed();
 		await this.ready;
 		const forward = new Request(input, init);
 		const url = new URL(forward.url);
 		url.host = this.#runtimeEntryURL!.host;
+		if (forward.cf) {
+			forward.headers.set(HEADER_CF_BLOB, JSON.stringify(forward.cf));
+		}
 		return fetch(url, forward as RequestInit);
 	}
 
@@ -631,24 +716,8 @@ export class Miniflare {
 	}
 }
 
+export * from "./http";
 export * from "./plugins";
 export * from "./runtime";
 export * from "./shared";
 export * from "./storage";
-export { File, FormData, Headers, Request, Response, fetch } from "undici";
-export type {
-	BodyInit,
-	HeadersInit,
-	ReferrerPolicy,
-	RequestCache,
-	RequestCredentials,
-	RequestDestination,
-	RequestDuplex,
-	RequestInfo,
-	RequestInit,
-	RequestMode,
-	RequestRedirect,
-	ResponseInit,
-	ResponseRedirectStatus,
-	ResponseType,
-} from "undici";
