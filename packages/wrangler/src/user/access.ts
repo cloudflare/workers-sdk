@@ -21,7 +21,6 @@ export async function domainUsesAccess(domain: string): Promise<boolean> {
 	try {
 		const controller = new AbortController();
 		const cancel = setTimeout(() => {
-			logger.debug("Timed out");
 			controller.abort();
 		}, 1000);
 
