@@ -50,7 +50,7 @@ export function getEnvironmentVariableFactory({
 }: {
 	variableName: VariableNames;
 	deprecatedName?: DeprecatedNames;
-	defaultValue: string;
+	defaultValue: () => string;
 }): () => string;
 
 /**
@@ -66,7 +66,7 @@ export function getEnvironmentVariableFactory({
 }: {
 	variableName: VariableNames;
 	deprecatedName?: DeprecatedNames;
-	defaultValue?: string;
+	defaultValue?: () => string;
 }): () => string | undefined {
 	let hasWarned = false;
 	return () => {
@@ -82,7 +82,7 @@ export function getEnvironmentVariableFactory({
 			}
 			return process.env[deprecatedName];
 		} else {
-			return defaultValue;
+			return defaultValue?.();
 		}
 	};
 }

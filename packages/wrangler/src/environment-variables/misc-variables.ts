@@ -13,7 +13,7 @@ export const getWranglerSendMetricsFromEnv = getEnvironmentVariableFactory({
 export const getCloudflareApiEnvironmentFromEnv = getEnvironmentVariableFactory(
 	{
 		variableName: "WRANGLER_API_ENVIRONMENT",
-		defaultValue: "production",
+		defaultValue: () => "production",
 	}
 );
 
@@ -23,7 +23,7 @@ export const getCloudflareApiEnvironmentFromEnv = getEnvironmentVariableFactory(
 export const getCloudflareApiBaseUrl = getEnvironmentVariableFactory({
 	variableName: "CLOUDFLARE_API_BASE_URL",
 	deprecatedName: "CF_API_BASE_URL",
-	defaultValue:
+	defaultValue: () =>
 		getCloudflareApiEnvironmentFromEnv() === "staging"
 			? "https://api.staging.cloudflare.com/client/v4"
 			: "https://api.cloudflare.com/client/v4",

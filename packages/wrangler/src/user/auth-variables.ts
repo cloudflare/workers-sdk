@@ -34,7 +34,7 @@ export const getCloudflareGlobalAuthEmailFromEnv =
  */
 export const getClientIdFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_CLIENT_ID",
-	defaultValue:
+	defaultValue: () =>
 		getCloudflareApiEnvironmentFromEnv() === "staging"
 			? "4b2ea6cc-9421-4761-874b-ce550e0e3def"
 			: "54d11594-84e4-41aa-b438-e81b8fa78ee7",
@@ -50,7 +50,7 @@ export const getClientIdFromEnv = getEnvironmentVariableFactory({
  */
 export const getAuthDomainFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_AUTH_DOMAIN",
-	defaultValue:
+	defaultValue: () =>
 		getCloudflareApiEnvironmentFromEnv() === "staging"
 			? "dash.staging.cloudflare.com"
 			: "dash.cloudflare.com",
@@ -66,7 +66,7 @@ export const getAuthDomainFromEnv = getEnvironmentVariableFactory({
  */
 export const getAuthUrlFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_AUTH_URL",
-	defaultValue: `https://${getAuthDomainFromEnv()}/oauth2/auth`,
+	defaultValue: () => `https://${getAuthDomainFromEnv()}/oauth2/auth`,
 });
 
 /**
@@ -79,7 +79,7 @@ export const getAuthUrlFromEnv = getEnvironmentVariableFactory({
  */
 export const getTokenUrlFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_TOKEN_URL",
-	defaultValue: `https://${getAuthDomainFromEnv()}/oauth2/token`,
+	defaultValue: () => `https://${getAuthDomainFromEnv()}/oauth2/token`,
 });
 
 /**
@@ -92,7 +92,7 @@ export const getTokenUrlFromEnv = getEnvironmentVariableFactory({
  */
 export const getRevokeUrlFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_REVOKE_URL",
-	defaultValue: `https://${getAuthDomainFromEnv()}/oauth2/revoke`,
+	defaultValue: () => `https://${getAuthDomainFromEnv()}/oauth2/revoke`,
 });
 
 /**
