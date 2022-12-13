@@ -4,6 +4,7 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import openInBrowser from "../open-in-browser";
 
+import { ALGOLIA_API_KEY, ALGOLIA_APPLICATION_ID } from "./constants";
 import type {
 	CommonYargsOptions,
 	YargsOptionsToInterface,
@@ -26,16 +27,15 @@ export async function docsHandler(args: ArgumentsCamelCase<DocsArgs>) {
 
 	if (args.command) {
 		const searchResp = await fetch(
-			`https://${process.env.ALGOLIA_APPLICATION_ID}-dsn.algolia.net/1/indexes/developers-cloudflare-wrangler/query`,
+			`https://${ALGOLIA_APPLICATION_ID}-dsn.algolia.net/1/indexes/developers-cloudflare-wrangler/query`,
 			{
 				method: "POST",
 				body: JSON.stringify({
 					params: `query=${args.command}&hitsPerPage=1&getRankingInfo=0`,
 				}),
 				headers: {
-					"X-Algolia-API-Key": process.env.ALGOLIA_API_KEY as string,
-					"X-Algolia-Application-Id": process.env
-						.ALGOLIA_APPLICATION_ID as string,
+					"X-Algolia-API-Key": ALGOLIA_API_KEY,
+					"X-Algolia-Application-Id": ALGOLIA_APPLICATION_ID,
 				},
 			}
 		);
