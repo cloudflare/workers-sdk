@@ -12,6 +12,7 @@ import * as metrics from "../metrics";
 import { getAssetPaths, getSiteAssetPaths } from "../sites";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
+import { list } from "./list";
 import publish from "./publish";
 import type { ConfigPath } from "../index";
 import type {
@@ -176,6 +177,15 @@ export function publishOptions(yargs: Argv<CommonYargsOptions>) {
 				describe:
 					"Send Trace Events from this worker to Workers Logpush.\nThis will not configure a corresponding Logpush job automatically.",
 			})
+			.option("list", {
+				describe: "List all workers under current account",
+				type: "boolean",
+			})
+			.option("prefix", {
+				describe:
+					"List all workers under current account starting with provided argument",
+				type: "string",
+			})
 	);
 }
 
@@ -188,6 +198,14 @@ export async function publishHandler(args: ArgumentsCamelCase<PublishArgs>) {
 		(args.config as ConfigPath) ||
 		(args.script && findWranglerToml(path.dirname(args.script)));
 	const config = readConfig(configPath, args);
+
+	const accountId = args.dryRun ? undefined : await requireAuth(config);
+
+	if (args.list || args.prefix) {
+		await list(accountId, args.prefix);
+		return;
+	}
+
 	const entry = await getEntry(args, config, "publish");
 	await metrics.sendMetricsEvent(
 		"deploy worker script",
@@ -225,8 +243,6 @@ export async function publishHandler(args: ArgumentsCamelCase<PublishArgs>) {
 
 	const cliVars = collectKeyValues(args.var);
 	const cliDefines = collectKeyValues(args.define);
-
-	const accountId = args.dryRun ? undefined : await requireAuth(config);
 
 	const assetPaths =
 		args.assets || config.assets
