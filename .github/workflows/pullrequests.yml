@@ -72,19 +72,8 @@ jobs:
         env:
           NODE_ENV: "production"
 
-      - name: Run Wrangler Tests
-        run: |
-          npm run test:ci --workspace=packages/wrangler
-          npx jest --forceExit
-        env:
-          TMP_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          TMP_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          NODE_OPTIONS: "--max_old_space_size=8192"
-
-      - name: Run Pages Tests
-        run: |
-          npm run test:ci --workspace=packages/pages-shared
-          npx jest --forceExit
+      - name: Run tests & collect coverage
+        run: npm run test:ci
         env:
           TMP_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           TMP_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
