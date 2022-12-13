@@ -1,5 +1,5 @@
-import { Request, Response } from "undici";
 import { z } from "zod";
+import { Request, Response } from "../../http";
 import {
 	ExternalServer,
 	HttpOptions_Style,

@@ -1,45 +1,18 @@
-import {
+import type {
 	ExecutionContext,
 	ServiceWorkerGlobalScope,
 	Request as WorkerRequest,
 	Response as WorkerResponse,
-} from "@cloudflare/workers-types";
+} from "@cloudflare/workers-types/experimental";
 import {
 	Awaitable,
-	Log,
-	LogLevel,
 	Miniflare,
 	MiniflareOptions,
+	ModuleDefinition,
 } from "@miniflare/tre";
 import anyTest, { TestFn } from "ava";
-import { ModuleDefinition } from "../src/plugins/core/modules";
-
-export type LogEntry = [level: LogLevel, message: string];
-export class TestLog extends Log {
-	logs: LogEntry[] = [];
-
-	constructor() {
-		super(LogLevel.VERBOSE);
-	}
-
-	log(message: string): void {
-		this.logs.push([LogLevel.NONE, message]);
-	}
-
-	logWithLevel(level: LogLevel, message: string): void {
-		this.logs.push([level, message]);
-	}
-
-	error(message: Error): void {
-		throw message;
-	}
-
-	logsAtLevel(level: LogLevel): string[] {
-		return this.logs
-			.filter(([logLevel]) => logLevel === level)
-			.map(([, message]) => message);
-	}
-}
+import { getPort } from "./http";
+import { TestLog } from "./log";
 
 export type TestMiniflareHandler<Env> = (
 	global: ServiceWorkerGlobalScope,
@@ -96,6 +69,7 @@ export function miniflareTest<Env>(
 		];
 
 		const opts: MiniflareOptions = {
+			port: await getPort(),
 			log,
 			clock: clockFunction,
 			verbose: true,

@@ -4,11 +4,13 @@ import {
 	GatewayFactory,
 	NoOpLog,
 	POST,
+	Request,
+	Response,
 	RouteHandler,
 	Router,
+	defaultClock,
 } from "@miniflare/tre";
 import test from "ava";
-import { Request, Response } from "undici";
 
 class TestGateway {
 	constructor() {}
@@ -17,7 +19,10 @@ class TestGateway {
 class TestRouter extends Router<TestGateway> {
 	constructor() {
 		const log = new NoOpLog();
-		super(log, new GatewayFactory(log, undefined, "test", TestGateway));
+		super(
+			log,
+			new GatewayFactory(log, defaultClock, undefined, "test", TestGateway)
+		);
 	}
 
 	@GET("/params/:foo/:bar")

@@ -1,9 +1,10 @@
-import { Request, Response } from "undici";
+import type { RequestInitCfProperties } from "@cloudflare/workers-types/experimental";
+import { Request, Response } from "../../http";
 import { Awaitable, Log } from "../../shared";
 import { GatewayFactory } from "./gateway";
 
 export type RouteHandler<Params = unknown> = (
-	req: Request,
+	req: Request<RequestInitCfProperties>,
 	params: Params,
 	url: URL
 ) => Awaitable<Response>;
@@ -20,7 +21,10 @@ export abstract class Router<Gateway> {
 		this.routes = new.target.prototype.routes;
 	}
 
-	async route(req: Request, url?: URL): Promise<Response | undefined> {
+	async route(
+		req: Request<RequestInitCfProperties>,
+		url?: URL
+	): Promise<Response | undefined> {
 		url ??= new URL(req.url);
 		const methodRoutes = this.routes?.get(req.method);
 		if (methodRoutes !== undefined) {

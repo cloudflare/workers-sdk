@@ -1,4 +1,4 @@
-import { Headers, Request, RequestInit } from "undici";
+import { Headers, Request, RequestInit } from "../../http";
 import {
 	CfHeader,
 	GET,
@@ -6,7 +6,6 @@ import {
 	PUT,
 	RouteHandler,
 	Router,
-	decodeCfBlob,
 	decodePersist,
 } from "../shared";
 import { HEADER_CACHE_WARN_USAGE } from "./constants";
@@ -133,10 +132,9 @@ export class CacheRouter extends Router<CacheGateway> {
 		const uri = decodeURIComponent(params.uri);
 		const namespace = decodeNamespace(req.headers);
 		const persist = decodePersist(req.headers);
-		const cf = decodeCfBlob(req.headers);
 		const gateway = this.gatewayFactory.get(namespace, persist);
 		const key = new Request(uri, req as RequestInit);
-		return fallible(gateway.match(key, cf.cacheKey));
+		return fallible(gateway.match(key, req.cf?.cacheKey));
 	};
 
 	@PUT("/:uri")
@@ -145,12 +143,11 @@ export class CacheRouter extends Router<CacheGateway> {
 		const uri = decodeURIComponent(params.uri);
 		const namespace = decodeNamespace(req.headers);
 		const persist = decodePersist(req.headers);
-		const cf = decodeCfBlob(req.headers);
 		const gateway = this.gatewayFactory.get(namespace, persist);
 		const bodyBuffer = Buffer.from(await req.arrayBuffer());
 		const bodyArray = new Uint8Array(removeTransferEncodingChunked(bodyBuffer));
 		const key = new Request(uri, { ...(req as RequestInit), body: undefined });
-		return fallible(gateway.put(key, bodyArray, cf.cacheKey));
+		return fallible(gateway.put(key, bodyArray, req.cf?.cacheKey));
 	};
 
 	@PURGE("/:uri")
@@ -159,9 +156,8 @@ export class CacheRouter extends Router<CacheGateway> {
 		const uri = decodeURIComponent(params.uri);
 		const namespace = decodeNamespace(req.headers);
 		const persist = decodePersist(req.headers);
-		const cf = decodeCfBlob(req.headers);
 		const gateway = this.gatewayFactory.get(namespace, persist);
 		const key = new Request(uri, req as RequestInit);
-		return fallible(gateway.delete(key, cf.cacheKey));
+		return fallible(gateway.delete(key, req.cf?.cacheKey));
 	};
 }

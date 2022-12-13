@@ -1,8 +1,8 @@
 import fs from "fs";
 import path from "path";
 import type { UrlAndMap } from "source-map-support";
-import { Request, Response } from "undici";
 import { z } from "zod";
+import { Request, Response } from "../../../http";
 import { Log } from "../../../shared";
 import {
 	ModuleDefinition,

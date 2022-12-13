@@ -24,6 +24,12 @@ export { SERVICE_LOOPBACK, SERVICE_ENTRY, HEADER_PROBE } from "./core";
 
 // TODO: be more liberal on exports?
 export * from "./cache";
+export {
+	ModuleRuleTypeSchema,
+	ModuleRuleSchema,
+	ModuleDefinitionSchema,
+} from "./core";
+export type { ModuleRuleType, ModuleRule, ModuleDefinition } from "./core";
 export * from "./do";
 export * from "./kv";
 export * from "./r2";

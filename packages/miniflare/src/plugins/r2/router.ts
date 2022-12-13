@@ -1,5 +1,5 @@
 import { TextDecoder } from "util";
-import { Request, Response } from "undici";
+import { Request, Response } from "../../http";
 import {
 	CfHeader,
 	GET,

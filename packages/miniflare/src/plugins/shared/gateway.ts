@@ -1,7 +1,7 @@
 import path from "path";
 import { URLSearchParams, fileURLToPath } from "url";
-import { RequestInit, Response } from "undici";
 import { z } from "zod";
+import { RequestInit, Response } from "../../http";
 import {
 	Awaitable,
 	Clock,

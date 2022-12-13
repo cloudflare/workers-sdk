@@ -1,4 +1,4 @@
-import { Headers, Response } from "undici";
+import { Headers, Response } from "../../http";
 import {
 	DELETE,
 	GET,

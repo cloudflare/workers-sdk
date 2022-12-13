@@ -1,6 +1,6 @@
 import assert from "assert";
 import { pathToFileURL } from "url";
-import { Request } from "undici";
+import { Request } from "../../http";
 import { Service, Worker_Binding, Worker_Module } from "../../runtime";
 import {
 	MatcherRegExps,

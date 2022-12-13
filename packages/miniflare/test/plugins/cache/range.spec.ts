@@ -1,8 +1,7 @@
 import assert from "assert";
-import { _getRangeResponse, _parseRanges } from "@miniflare/tre";
+import { Headers, _getRangeResponse, _parseRanges } from "@miniflare/tre";
 import test from "ava";
-import { Headers } from "undici";
-import { utf8Encode } from "../../storage/helpers";
+import { utf8Encode } from "../../test-shared";
 
 test('_parseRanges: case-insensitive unit must be "bytes"', (t) => {
 	// Check case-insensitive and ignores whitespace
