@@ -10,6 +10,7 @@ import {
 } from "../bundle-reporter";
 import { writeAuthConfigFile } from "../user";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
+import { mockAuthDomain } from "./helpers/mock-auth-domain";
 import {
 	createFetchResult,
 	setMockRawResponse,
@@ -47,6 +48,7 @@ describe("publish", () => {
 	const { setIsTTY } = useMockIsTTY();
 	const std = mockConsoleMethods();
 	const {
+		mockDomainUsesAccess,
 		mockOAuthServerCallback,
 		mockGrantAccessToken,
 		mockGrantAuthorization,
@@ -124,6 +126,7 @@ describe("publish", () => {
 		it("drops a user into the login flow if they're unauthenticated", async () => {
 			writeWranglerToml();
 			writeWorkerSource();
+			mockDomainUsesAccess({ usesAccess: false });
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
 			mockOAuthServerCallback();
@@ -148,6 +151,46 @@ describe("publish", () => {
 		`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		describe("with an alternative auth domain", () => {
+			mockAuthDomain({ domain: "dash.staging.cloudflare.com" });
+
+			it("drops a user into the login flow if they're unauthenticated", async () => {
+				writeWranglerToml();
+				writeWorkerSource();
+				mockDomainUsesAccess({
+					usesAccess: false,
+					domain: "dash.staging.cloudflare.com",
+				});
+				mockSubDomainRequest();
+				mockUploadWorkerRequest();
+				mockOAuthServerCallback();
+				const accessTokenRequest = mockGrantAccessToken({
+					domain: "dash.staging.cloudflare.com",
+					respondWith: "ok",
+				});
+				mockGrantAuthorization({ respondWith: "success" });
+
+				await expect(runWrangler("publish index.js")).resolves.toBeUndefined();
+
+				expect(accessTokenRequest.actual.url).toEqual(
+					accessTokenRequest.expected.url
+				);
+
+				expect(std.out).toMatchInlineSnapshot(`
+			"Attempting to login via OAuth...
+			Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+			Successfully logged in.
+			Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: undefined"
+		`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+			});
 		});
 
 		it("warns a user when they're authenticated with an API token in wrangler config file", async () => {

@@ -6,8 +6,6 @@ import type { RequestInit } from "undici";
 
 // Check out https://api.cloudflare.com/ for API docs.
 
-export { getCloudflareAPIBaseURL as getCloudflareApiBaseUrl } from "./internal";
-
 export interface FetchError {
 	code: number;
 	message: string;
