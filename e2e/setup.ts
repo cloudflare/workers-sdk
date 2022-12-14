@@ -1,12 +1,13 @@
 import assert from "node:assert";
 import childProcess from "node:child_process";
-import events from "node:events";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import readline from "node:readline";
-import stream from "node:stream";
+import { TransformStream } from "node:stream/web";
 import * as pty from "node-pty"; // node-pty doesn't provide a default export
+import type { ReadableStream } from "node:stream/web";
+
+export const isWin = os.platform() === "win32";
 
 // File containing current E2E test temporary directory, shared between all
 // running E2E tests
@@ -69,14 +70,49 @@ export async function seed(root: string, files: Record<string, string>) {
 	}
 }
 
+// Splits incoming stream into non-empty, trimmed lines
+export class LineSplittingStream extends TransformStream<string, string> {
+	constructor() {
+		let buffer = "";
+		super({
+			transform(chunk, controller) {
+				buffer += chunk;
+				// Keep looking for lines in `buffer` until we can't find anymore
+				// eslint-disable-next-line no-constant-condition
+				while (true) {
+					// Try to find the next line break (either LF or CRLF)
+					const nextLineIndex = buffer.indexOf("\n");
+					// If no line break found in current `buffer`, stop looking and wait
+					// for more chunks
+					if (nextLineIndex === -1) break;
+					// Remove line from `buffer`, and enqueue if non-empty.
+					// `trim()` handles case of CRLF, by removing CR.
+					const line = buffer.substring(0, nextLineIndex).trim();
+					if (line !== "") controller.enqueue(line);
+					// `trimStart()` ensures we don't find the current line again
+					buffer = buffer.substring(nextLineIndex).trimStart();
+				}
+			},
+			flush(controller) {
+				// If we have stuff left in the buffer, and no more chunks are coming,
+				// enqueue as a line if non-empty
+				buffer = buffer.trim();
+				if (buffer !== "") controller.enqueue(buffer);
+			},
+		});
+	}
+}
+
 export interface E2EProcess {
 	// Process wrapped in pseudo-TTY, can be used to write input as a user would
 	// (e.g. pressing hotkeys)
 	process: pty.IPty;
 	// Output from `process`, stdout and stderr are merged when using a pseudo-TTY
-	stdio: readline.Interface;
+	lines: ReadableStream<string>;
 	// Promise that resolves with the exit code of `process` on termination
 	exitPromise: Promise<number>;
+	// Exit code of `process` or `undefined` if it hasn't terminated yet
+	exitCode?: number;
 	// Sends a signal to the spawned process, resolving with the exit code.
 	// `signal` defaults to `SIGINT` (CTRL-C), unlike `ChildProcess#kill()` which
 	// defaults to `SIGTERM`. NOTE: `signal` is ignored on Windows.
@@ -97,17 +133,18 @@ export async function spawn(
 	const env = {
 		...process.env,
 		PATH,
-		FORCE_COLOR: "0", // Colour codes make it tricky to match on console output
+		FORCE_COLOR: "0",
 	};
 
 	// Spawn the command in the correct working directory and with the correct
 	// environment variables
-	const isWin = os.platform() === "win32";
 	// https://nodejs.org/api/child_process.html#child_processspawncommand-args-options
 	const shell = isWin ? "cmd.exe" : "/bin/sh";
 	// https://nodejs.org/api/child_process.html#shell-requirements
 	const shellArgs = isWin ? ["/d", "/s", "/c"] : ["-c"];
-	const child = pty.spawn(shell, [...shellArgs, command.join(" ")], {
+	const commandStr = command.join(" ");
+	process.stdout.write(`\n---> Running "${commandStr}"...\n`);
+	const child = pty.spawn(shell, [...shellArgs, commandStr], {
 		name: "xterm-color",
 		cols: 100,
 		rows: 30,
@@ -115,29 +152,29 @@ export async function spawn(
 		env,
 	});
 
-	// Wrap stdout with readline for easy line-by-line processing, and write all
-	// output to the terminal for debugging. Unfortunately, `child` isn't a
-	// `NodeJS.ReadableStream`, so we have to create an intermediate, identity
-	// duplex stream to use readline.
-	const duplex = new stream.PassThrough();
-	child.on("data", (chunk) => {
+	// Construct line-by-line stream for reading output. All output is written to
+	// the terminal for debugging too.
+	const { readable, writable } = new LineSplittingStream();
+	const writer = writable.getWriter();
+	const onDataSubscription = child.onData((chunk) => {
 		process.stdout.write(chunk);
-		duplex.write(chunk);
+		void writer.write(chunk);
 	});
-	const stdio = readline.createInterface({ input: duplex });
 
 	// Construct a promise that resolves with the exit code, also close the duplex
 	// stream when the process terminates
 	const exitPromise = new Promise<number>((resolve) => {
-		child.on("exit", (code) => {
-			duplex.end();
-			resolve(code);
+		child.onExit(({ exitCode }) => {
+			onDataSubscription.dispose();
+			void writer.close();
+			result.exitCode = exitCode;
+			resolve(exitCode);
 		});
 	});
 
 	const result: E2EProcess = {
 		process: child,
-		stdio,
+		lines: readable,
 		exitPromise,
 		kill(signal: NodeJS.Signals = "SIGINT") {
 			// `child.kill()` throws when a signal is passed on Windows
@@ -150,7 +187,12 @@ export async function spawn(
 }
 // Make sure all processes started by this test are killed
 export function cleanupSpawnedProcesses() {
-	for (const proc of spawnedProcesses) proc.process.kill("SIGKILL");
+	for (const proc of spawnedProcesses) {
+		// If this process hasn't already exited, kill it.
+		// (`void`ing `Promise` as we don't care about the exit code, nor the fact
+		// that the process actually exits here, this is just best-effort cleanup)
+		if (proc.exitCode === undefined) void proc.kill("SIGKILL");
+	}
 	spawnedProcesses.clear();
 }
 
@@ -162,61 +204,30 @@ type RegExpMatchGroupsArray<Groups> = Omit<RegExpMatchArray, "groups"> & {
 export async function readUntil<
 	Groups extends Record<string, string> = Record<string, string>
 >(
-	rl: readline.Interface,
+	lines: ReadableStream<string>,
 	regExp: RegExp
 ): Promise<RegExpMatchGroupsArray<Groups>> {
-	const controller = new AbortController();
-	const closePromise = events.once(rl, "close", { signal: controller.signal });
-	// eslint-disable-next-line no-constant-condition
-	while (true) {
-		// Workaround for https://github.com/nodejs/node/pull/43373 (fixed in
-		// Node >16.17.0 and >18.4.0). Record the "abort" event listener added to
-		// the `signal`, and remove it after the `once` `Promise` resolves to avoid
-		// event listener memory leaks.
-		let abortListener;
-		const signalProxy = new Proxy(controller.signal, {
-			get(target, propertyKey, receiver) {
-				const original = Reflect.get(target, propertyKey, receiver);
-				if (propertyKey === "addEventListener") {
-					assert(typeof original === "function");
-					return (type: string, listener: unknown, options: unknown) => {
-						abortListener = listener;
-						original.call(target, type, listener, options);
-					};
-				}
-				return original;
-			},
-		});
-
-		const linePromise = events.once(rl, "line", { signal: signalProxy });
-		const [line] = await Promise.race([closePromise, linePromise]);
-		// @ts-expect-error our version of `@types/node` is missing proper
-		//  `AbortSignal` types
-		controller.signal.removeEventListener("abort", abortListener);
-
-		// `line` will be undefined if `close` was emitted first
-		if (typeof line === "string") {
-			const match = line.match(regExp);
-			if (match !== null) {
-				controller.abort(); // Remove hanging `once` event listener
-				return match as RegExpMatchGroupsArray<Groups>;
-			}
-		} else {
-			controller.abort(); // Remove hanging `once` event listener
-			throw new Error(`Exhausted lines trying to match ${regExp}`);
+	const iterator = lines[Symbol.asyncIterator]({ preventCancel: true });
+	for await (const line of iterator) {
+		const match = line.match(regExp);
+		if (match !== null) {
+			return match as unknown as RegExpMatchGroupsArray<Groups>;
 		}
 	}
+	throw new Error(`Exhausted lines trying to match ${regExp}`);
 }
 
+// Global setup function, called by Jest once before running E2E tests
 export default function (): void {
 	// Installs a copy of `wrangler` (as a user would) to a temporary directory.
 
 	// 1. Generate a temporary directory to install to
 	const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "wrangler-e2e-"));
+	fs.mkdirSync(tmp, { recursive: true });
 	fs.writeFileSync(E2E_TMP_PATH, tmp);
 
 	// 2. Package up our current version of `wrangler` into a tarball
-	console.log("---> Packaging wrangler...");
+	console.log("\n---> Packaging wrangler...");
 	const root = path.resolve(__dirname, "..");
 	const packResult = childProcess.spawnSync(
 		"npm",

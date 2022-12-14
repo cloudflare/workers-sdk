@@ -10,6 +10,7 @@
 	"license": "MIT OR Apache-2.0",
 	"author": "wrangler@cloudflare.com",
 	"workspaces": [
+		"e2e",
 		"packages/*",
 		"fixtures/*"
 	],
