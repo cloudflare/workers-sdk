@@ -442,18 +442,26 @@ describe("wrangler dev", () => {
 
 			msw.use(
 				rest.get("*/zones", (req, res, ctx) => {
+					let zone: [] | [{ id: "some-zone-id" }] = [];
+					if (
+						req.url.searchParams.get("name") === "111.222.333.some-host.com"
+					) {
+						zone = [];
+					} else if (
+						req.url.searchParams.get("name") === "222.333.some-host.com"
+					) {
+						zone = [];
+					} else if (req.url.searchParams.get("name") === "333.some-host.com") {
+						zone = [{ id: "some-zone-id" }];
+					}
+
 					return res(
 						ctx.status(200),
 						ctx.json({
 							success: true,
 							errors: [],
 							messages: [],
-							result:
-								req.url.searchParams.get("name") === "111.222.333.some-host.com"
-									? []
-									: req.url.searchParams.get("name") === "222.333.some-host.com"
-									? []
-									: [{ id: "some-zone-id" }],
+							result: zone,
 						})
 					);
 				})
