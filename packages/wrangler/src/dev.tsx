@@ -522,7 +522,7 @@ export async function startDev(args: StartDevOptions) {
 		// clean exit. Note, if we called `stop()` using the dev API, we don't want
 		// to disconnect here, as the user may still need IPC.
 		let apiStopped = false;
-		devReactElement.waitUntilExit().then(() => {
+		void devReactElement.waitUntilExit().then(() => {
 			if (!apiStopped) process.disconnect?.();
 		});
 
