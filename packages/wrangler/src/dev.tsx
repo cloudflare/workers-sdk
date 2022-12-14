@@ -519,14 +519,19 @@ export async function startDev(args: StartDevOptions) {
 		// mode enables raw mode on stdin which disables the built-in handler. The
 		// following line disconnects from the IPC channel when we press `x` or
 		// CTRL-C in interactive mode, ensuring no open handles, and allowing for a
-		// clean exit.
-		devReactElement.waitUntilExit().then(() => process.disconnect?.());
+		// clean exit. Note, if we called `stop()` using the dev API, we don't want
+		// to disconnect here, as the user may still need IPC.
+		let apiStopped = false;
+		devReactElement.waitUntilExit().then(() => {
+			if (!apiStopped) process.disconnect?.();
+		});
 
 		rerender = devReactElement.rerender;
 		return {
 			devReactElement,
 			watcher,
 			stop: async () => {
+				apiStopped = true;
 				devReactElement.unmount();
 				await watcher?.close();
 			},
