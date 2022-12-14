@@ -1,11 +1,11 @@
 import * as fs from "node:fs";
 import getPort from "get-port";
+import { rest } from "msw";
 import patchConsole from "patch-console";
 import dedent from "ts-dedent";
 import Dev from "../dev/dev";
 import { CI } from "../is-ci";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
-import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import {
 	msw,
@@ -33,7 +33,7 @@ describe("wrangler dev", () => {
 	afterEach(() => {
 		(Dev as jest.Mock).mockClear();
 		patchConsole(() => {});
-		unsetAllMocks();
+		msw.resetHandlers();
 	});
 
 	describe("authorization", () => {
@@ -439,16 +439,44 @@ describe("wrangler dev", () => {
 				main: "index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
-			mockGetZones("111.222.333.some-host.com", []);
-			mockGetZones("222.333.some-host.com", []);
-			mockGetZones("333.some-host.com", [{ id: "some-zone-id" }]);
-			await runWrangler("dev --host 111.222.333.some-host.com");
-			expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
-				expect.objectContaining({
-					host: "111.222.333.some-host.com",
-					zone: "some-zone-id",
+
+			msw.use(
+				rest.get("*/zones", (req, res, ctx) => {
+					let zone: [] | [{ id: "some-zone-id" }] = [];
+					if (
+						req.url.searchParams.get("name") === "111.222.333.some-host.com"
+					) {
+						zone = [];
+					} else if (
+						req.url.searchParams.get("name") === "222.333.some-host.com"
+					) {
+						zone = [];
+					} else if (req.url.searchParams.get("name") === "333.some-host.com") {
+						zone = [{ id: "some-zone-id" }];
+					}
+
+					return res(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: zone,
+						})
+					);
 				})
 			);
+
+			await runWrangler("dev --host 111.222.333.some-host.com");
+
+			const devMockCall = (Dev as jest.Mock).mock.calls[0][0];
+
+			expect(devMockCall).toHaveProperty("host", "111.222.333.some-host.com");
+			expect(devMockCall).toHaveProperty(
+				"localUpstream",
+				"111.222.333.some-host.com"
+			);
+			expect(devMockCall).toHaveProperty("zone", "some-zone-id");
 		});
 
 		it("should, in order, use args.host/config.dev.host/args.routes/(config.route|config.routes)", async () => {
@@ -1540,14 +1568,19 @@ describe("wrangler dev", () => {
 });
 
 function mockGetZones(domain: string, zones: { id: string }[] = []) {
-	const removeMock = setMockResponse(
-		"/zones",
-		"GET",
-		(_urlPieces, _init, queryParams) => {
-			expect([...queryParams.entries()]).toEqual([["name", domain]]);
-			// Because the API URL `/zones` is the same for each request, we can get into a situation where earlier mocks get triggered for later requests. So, we simply clear the mock on every trigger.
-			removeMock();
-			return zones;
-		}
+	msw.use(
+		rest.get("*/zones", (req, res, ctx) => {
+			expect([...req.url.searchParams.entries()]).toEqual([["name", domain]]);
+
+			return res(
+				ctx.status(200),
+				ctx.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: zones,
+				})
+			);
+		})
 	);
 }
