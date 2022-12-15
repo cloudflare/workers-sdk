@@ -238,10 +238,11 @@ import {
 	getRevokeUrlFromEnv,
 	getTokenUrlFromEnv,
 } from "./auth-variables";
-import { ChooseAccount, getAccountChoices } from "./choose-account";
+import { ChooseAccountItem, getAccountChoices } from "./choose-account";
 import { generateAuthUrl } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
 import type { ParsedUrlQuery } from "node:querystring";
+import { NoDefaultValueProvided, select } from "../dialogs";
 
 export type ApiCredentials =
 	| {
