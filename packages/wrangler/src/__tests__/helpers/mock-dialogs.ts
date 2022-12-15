@@ -60,7 +60,7 @@ export function mockConfirm(...expectations: ConfirmExpectation[]) {
 				expect(type).toStrictEqual("confirm");
 				expect(name).toStrictEqual("value");
 
-				expect(message).toBe(expectation.text);
+				expect(message).toStrictEqual(expectation.text);
 				if (expectation.options) {
 					expect(initial).toStrictEqual(expectation.options?.defaultValue);
 				}
