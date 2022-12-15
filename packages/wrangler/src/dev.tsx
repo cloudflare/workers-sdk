@@ -520,10 +520,12 @@ export async function startDev(args: StartDevOptions) {
 		// following line disconnects from the IPC channel when we press `x` or
 		// CTRL-C in interactive mode, ensuring no open handles, and allowing for a
 		// clean exit. Note, if we called `stop()` using the dev API, we don't want
-		// to disconnect here, as the user may still need IPC.
+		// to disconnect here, as the user may still need IPC. We also don't want
+		// to disconnect if this file was imported in Jest (not the case with E2E
+		// tests), as that would stop communication with the test runner.
 		let apiStopped = false;
 		void devReactElement.waitUntilExit().then(() => {
-			if (!apiStopped) process.disconnect?.();
+			if (!apiStopped && typeof jest === "undefined") process.disconnect?.();
 		});
 
 		rerender = devReactElement.rerender;
