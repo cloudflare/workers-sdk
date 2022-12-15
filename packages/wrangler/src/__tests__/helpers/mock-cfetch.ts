@@ -300,34 +300,3 @@ export function unsetSpecialMockFns() {
 	r2GetMocks.clear();
 	dashScriptMocks.clear();
 }
-
-/**
- * @mocked typeof fetchDashScript
- * multipart/form-data is the response for modules and raw text for the Script endpoint.
- */
-export async function mockFetchDashScript(resource: string): Promise<string> {
-	if (dashScriptMocks.has(resource)) {
-		return dashScriptMocks.get(resource) ?? "";
-	}
-	throw new Error(`no mock found for \`init from-dash\` - ${resource}`);
-}
-
-/**
- * Mock setter for usage within test blocks, companion helper to `mockFetchDashScript`
- */
-export function setMockFetchDashScript({
-	accountId,
-	fromDashScriptName,
-	environment,
-	mockResponse,
-}: {
-	accountId: string;
-	fromDashScriptName: string;
-	environment: string;
-	mockResponse?: string;
-}) {
-	dashScriptMocks.set(
-		`/accounts/${accountId}/workers/services/${fromDashScriptName}/environments/${environment}/content`,
-		mockResponse
-	);
-}

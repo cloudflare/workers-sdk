@@ -8,7 +8,6 @@ import {
 } from "../cfetch/internal";
 import { confirm, prompt } from "../dialogs";
 import {
-	mockFetchDashScript,
 	mockFetchInternal,
 	mockFetchKVGetValue,
 	mockFetchR2Objects,
@@ -90,10 +89,12 @@ afterEach(() => {
 afterAll(() => msw.close());
 
 jest.mock("../cfetch/internal");
+(fetchDashboardScript as jest.Mock).mockImplementation(
+	jest.requireActual("../cfetch/internal")["fetchDashboardScript"]
+);
 (fetchInternal as jest.Mock).mockImplementation(mockFetchInternal);
 (fetchKVGetValue as jest.Mock).mockImplementation(mockFetchKVGetValue);
 (fetchR2Objects as jest.Mock).mockImplementation(mockFetchR2Objects);
-(fetchDashboardScript as jest.Mock).mockImplementation(mockFetchDashScript);
 (performApiFetch as jest.Mock).mockImplementation(mockPerformApiFetch);
 
 jest.mock("../dialogs");
