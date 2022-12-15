@@ -2,7 +2,7 @@ import { Readable } from "node:stream";
 import { URL, URLSearchParams } from "node:url";
 import { pathToRegexp } from "path-to-regexp";
 import { Response } from "undici";
-import { getCloudflareApiBaseUrl } from "../../cfetch";
+import { getCloudflareApiBaseUrl } from "../../environment-variables/misc-variables";
 import type { FetchResult, FetchError } from "../../cfetch";
 import type {
 	fetchInternal,

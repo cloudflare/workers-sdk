@@ -41,6 +41,7 @@ export function docsOptions(yargs: Argv<CommonYargsOptions>) {
 		choices: [
 			"docs",
 			"init",
+			"generate",
 			"dev",
 			"publish",
 			"delete",

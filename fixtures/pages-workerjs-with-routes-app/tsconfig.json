@@ -4,7 +4,9 @@
 		"esModuleInterop": true,
 		"module": "CommonJS",
 		"lib": ["ES2020"],
-		"types": ["jest"],
-		"moduleResolution": "node"
-	}
+		"types": ["node", "jest"],
+		"moduleResolution": "node",
+		"noEmit": true
+	},
+	"include": ["tests"]
 }

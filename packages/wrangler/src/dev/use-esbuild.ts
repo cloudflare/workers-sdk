@@ -152,7 +152,7 @@ export function useEsbuild({
 				});
 
 				stopWatching = () => {
-					watcher.close();
+					void watcher.close();
 				};
 			}
 			setBundle({

@@ -1,9 +1,10 @@
 {
-	"include": ["a", "b", "c"],
+	"include": ["a", "b", "c", "b"],
 	"compilerOptions": {
 		"target": "ES2020",
 		"module": "CommonJS",
 		"lib": ["ES2020"],
-		"types": ["@cloudflare/workers-types"]
+		"types": ["@cloudflare/workers-types"],
+		"noEmit": true
 	}
 }

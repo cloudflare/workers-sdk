@@ -30,7 +30,7 @@ import {
 } from "./index";
 import type { Config, Environment } from "./config";
 import type { Route } from "./config/environment";
-import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli";
+import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type { CfWorkerInit } from "./worker";
 import type { CommonYargsOptions } from "./yargs-types";
 import type { Argv, ArgumentsCamelCase } from "yargs";
@@ -512,11 +512,28 @@ export async function startDev(args: StartDevOptions) {
 			);
 		}
 		const devReactElement = render(await getDevReactElement(config));
+
+		// In the bootstrapper script `bin/wrangler.js`, we open an IPC channel, so
+		// IPC messages from this process are propagated through the bootstrapper.
+		// Normally, Node's SIGINT handler would close this for us, but interactive
+		// mode enables raw mode on stdin which disables the built-in handler. The
+		// following line disconnects from the IPC channel when we press `x` or
+		// CTRL-C in interactive mode, ensuring no open handles, and allowing for a
+		// clean exit. Note, if we called `stop()` using the dev API, we don't want
+		// to disconnect here, as the user may still need IPC. We also don't want
+		// to disconnect if this file was imported in Jest (not the case with E2E
+		// tests), as that would stop communication with the test runner.
+		let apiStopped = false;
+		void devReactElement.waitUntilExit().then(() => {
+			if (!apiStopped && typeof jest === "undefined") process.disconnect?.();
+		});
+
 		rerender = devReactElement.rerender;
 		return {
 			devReactElement,
 			watcher,
 			stop: async () => {
+				apiStopped = true;
 				devReactElement.unmount();
 				await watcher?.close();
 			},

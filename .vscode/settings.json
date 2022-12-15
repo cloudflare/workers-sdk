@@ -3,6 +3,7 @@
 	"cSpell.words": [
 		"cfetch",
 		"clipboardy",
+		"cloudflareaccess",
 		"cloudflared",
 		"Codespaces",
 		"esbuild",
@@ -39,6 +40,7 @@
 		"TESTTEXTBLOBNAME",
 		"TESTWASMNAME",
 		"extensionless",
+		"webcontainer",
 		"yxxx"
 	],
 	"eslint.runtime": "node",

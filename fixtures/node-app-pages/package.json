@@ -5,6 +5,7 @@
 	"sideEffects": false,
 	"main": "dist/worker.js",
 	"scripts": {
+		"check:type": "tsc && tsc -p tests/tsconfig.json",
 		"dev": "npx wrangler pages dev public --port 12345 --node-compat",
 		"test": "npx jest --forceExit",
 		"test:ci": "npx jest --forceExit"
@@ -27,7 +28,7 @@
 		"stripe": "^9.1.0"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^3.10.0",
+		"@cloudflare/workers-types": "^4.20221111.1",
 		"@types/node": "^17.0.33",
 		"undici": "^5.9.1"
 	},

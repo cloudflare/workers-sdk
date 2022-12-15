@@ -1,22 +1,13 @@
 import assert from "node:assert";
 import { fetch, File, Headers } from "undici";
 import { version as wranglerVersion } from "../../package.json";
-import { getEnvironmentVariableFactory } from "../environment-variables";
+import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import { ParseError, parseJSON } from "../parse";
 import { loginOrRefreshIfRequired, requireApiToken } from "../user";
 import type { ApiCredentials } from "../user";
 import type { URLSearchParams } from "node:url";
 import type { RequestInit, HeadersInit, Response } from "undici";
-
-/**
- * Get the URL to use to access the Cloudflare API.
- */
-export const getCloudflareAPIBaseURL = getEnvironmentVariableFactory({
-	variableName: "CLOUDFLARE_API_BASE_URL",
-	deprecatedName: "CF_API_BASE_URL",
-	defaultValue: "https://api.cloudflare.com/client/v4",
-});
 
 /*
  * performApiFetch does everything required to make a CF API request,
@@ -42,7 +33,7 @@ export async function performApiFetch(
 
 	const queryString = queryParams ? `?${queryParams.toString()}` : "";
 	logger.debug(
-		`-- START CF API REQUEST: ${method} ${getCloudflareAPIBaseURL()}${resource}${queryString}`
+		`-- START CF API REQUEST: ${method} ${getCloudflareApiBaseUrl()}${resource}${queryString}`
 	);
 	const logHeaders = cloneHeaders(headers);
 	delete logHeaders["Authorization"];
@@ -52,7 +43,7 @@ export async function performApiFetch(
 		JSON.stringify({ ...init, headers: logHeaders }, null, 2)
 	);
 	logger.debug("-- END CF API REQUEST");
-	return await fetch(`${getCloudflareAPIBaseURL()}${resource}${queryString}`, {
+	return await fetch(`${getCloudflareApiBaseUrl()}${resource}${queryString}`, {
 		method,
 		...init,
 		headers,
@@ -173,7 +164,7 @@ export async function fetchKVGetValue(
 	const auth = requireApiToken();
 	const headers: Record<string, string> = {};
 	addAuthorizationHeaderIfUnspecified(headers, auth);
-	const resource = `${getCloudflareAPIBaseURL()}/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`;
+	const resource = `${getCloudflareApiBaseUrl()}/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`;
 	const response = await fetch(resource, {
 		method: "GET",
 		headers,
@@ -206,7 +197,7 @@ export async function fetchR2Objects(
 	addAuthorizationHeaderIfUnspecified(headers, auth);
 	addUserAgent(headers);
 
-	const response = await fetch(`${getCloudflareAPIBaseURL()}${resource}`, {
+	const response = await fetch(`${getCloudflareApiBaseUrl()}${resource}`, {
 		...bodyInit,
 		headers,
 	});
@@ -233,7 +224,7 @@ export async function fetchDashboardScript(
 	addAuthorizationHeaderIfUnspecified(headers, auth);
 	addUserAgent(headers);
 
-	const response = await fetch(`${getCloudflareAPIBaseURL()}${resource}`, {
+	const response = await fetch(`${getCloudflareApiBaseUrl()}${resource}`, {
 		...bodyInit,
 		headers,
 	});

@@ -11,7 +11,7 @@
 		"emitDeclarationOnly": true,
 		"declaration": true,
 		"outDir": "lib",
-		"types": ["jest"]
+		"types": ["node"]
 	},
 	"include": ["src"],
 	"exclude": ["src/__tests__"]

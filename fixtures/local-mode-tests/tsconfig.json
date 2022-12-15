@@ -9,7 +9,10 @@
 		"target": "esnext",
 		"strict": true,
 		"noEmit": true,
-		"types": ["@cloudflare/workers-types", "jest", "node"],
+		"types": ["@cloudflare/workers-types"],
+		"lib": ["esnext"],
 		"skipLibCheck": true
-	}
+	},
+	"include": ["**/*.ts"],
+	"exclude": ["tests"]
 }

@@ -93,7 +93,15 @@ function runDelegatedWrangler() {
 	} = JSON.parse(fs.readFileSync(packageJsonPath));
 	const resolvedBinaryPath = path.resolve(packageJsonPath, "..", binaryPath);
 
-	debug(`Delegating to locally-installed version of wrangler @ v${version}`);
+	// Make sure the user knows we're delegating to a different installation
+	const currentPackageJsonPath = path.resolve(__dirname, "..", "package.json");
+	const currentPackage = JSON.parse(fs.readFileSync(currentPackageJsonPath));
+	const argv = process.argv.slice(2).join(" ");
+	console.log(
+		`Delegating to locally-installed wrangler@${version} over global wrangler@${currentPackage.version}...
+Run \`npx wrangler ${argv}\` to use the local version directly.
+`
+	);
 
 	// this call to `spawn` is simpler because the delegated version will do all
 	// of the other work.

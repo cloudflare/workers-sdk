@@ -4,7 +4,6 @@ import {
 	fetchInternal,
 	fetchKVGetValue,
 	fetchR2Objects,
-	getCloudflareAPIBaseURL,
 	performApiFetch,
 } from "../cfetch/internal";
 import {
@@ -92,9 +91,6 @@ afterAll(() => msw.close());
 jest.mock("../cfetch/internal");
 (fetchInternal as jest.Mock).mockImplementation(mockFetchInternal);
 (fetchKVGetValue as jest.Mock).mockImplementation(mockFetchKVGetValue);
-(getCloudflareAPIBaseURL as jest.Mock).mockReturnValue(
-	"https://api.cloudflare.com/client/v4"
-);
 (fetchR2Objects as jest.Mock).mockImplementation(mockFetchR2Objects);
 (fetchDashboardScript as jest.Mock).mockImplementation(mockFetchDashScript);
 (performApiFetch as jest.Mock).mockImplementation(mockPerformApiFetch);

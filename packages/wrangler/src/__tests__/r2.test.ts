@@ -155,7 +155,7 @@ describe("r2", () => {
 							const { accountId } = request.params;
 							expect(accountId).toEqual("some-account-id");
 							expect(await request.json()).toEqual({ name: "testBucket" });
-							response.once(
+							return response.once(
 								context.status(200),
 								context.json({
 									success: true,
@@ -332,7 +332,7 @@ describe("r2", () => {
 					  "host": "api.cloudflare.com",
 					}
 				`);
-						response.once(
+						return response.once(
 							context.status(200),
 							context.json({
 								success: true,
