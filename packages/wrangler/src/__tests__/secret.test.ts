@@ -5,6 +5,7 @@ import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
+import { useMockIsTTY } from "./helpers/mock-istty";
 import {
 	mockGetMemberships,
 	mockGetMembershipsFail,
@@ -12,7 +13,6 @@ import {
 import { useMockStdin } from "./helpers/mock-stdin";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import { useMockIsTTY } from "./helpers/mock-istty";
 
 describe("wrangler secret", () => {
 	const std = mockConsoleMethods();

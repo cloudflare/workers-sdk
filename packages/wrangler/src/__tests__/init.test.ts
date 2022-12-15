@@ -14,10 +14,10 @@ import {
 } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm, mockSelect } from "./helpers/mock-dialogs";
+import { useMockIsTTY } from "./helpers/mock-istty";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { PackageManager } from "../package-manager";
-import { useMockIsTTY } from "./helpers/mock-istty";
 
 /**
  * An expectation matcher for the minimal generated wrangler.toml.
