@@ -15,6 +15,7 @@ import type {
 } from "../tail/createTail";
 import type { RequestInit } from "undici";
 import type WebSocket from "ws";
+import { mockConfirm } from "./helpers/mock-dialogs";
 
 describe("tail", () => {
 	beforeEach(() => msw.use(...mswSucessScriptHandlers));
@@ -44,6 +45,10 @@ describe("tail", () => {
 		});
 		it("warns about durable object restarts for tty", async () => {
 			setIsTTY(true);
+			mockConfirm({
+				text: "Would you like to continue?",
+				result: false,
+			});
 			const api = mockWebsocketAPIs();
 			expect(api.requests.creation.length).toStrictEqual(0);
 			await runWrangler("tail durable-object--websocket--response");

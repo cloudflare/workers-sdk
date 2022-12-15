@@ -1112,14 +1112,10 @@ export async function getAccountId(): Promise<string | undefined> {
 		if (e instanceof NoDefaultValueProvided) {
 			throw new Error(
 				`More than one account available but unable to select one in non-interactive mode.
-Please set the appropriate ${chalk.yellow("account_id")} in your ${chalk.yellow(
-					"wrangler.toml"
-				)} file.
-Available accounts are (${chalk.blue("<name>")}: ${chalk.yellow("<id>")}):
+Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+Available accounts are (\`<name>\`: \`<account_id>\`):
 ${accounts
-	.map(
-		(account) => `  ${chalk.blue(account.name)}: ${chalk.yellow(account.id)}`
-	)
+	.map((account) => `  \`${account.name}\`: \`${account.id}\``)
 	.join("\n")}`
 			);
 		}

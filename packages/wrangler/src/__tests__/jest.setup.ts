@@ -7,7 +7,6 @@ import {
 	getCloudflareAPIBaseURL,
 	performApiFetch,
 } from "../cfetch/internal";
-import { confirm, prompt } from "../dialogs";
 import {
 	mockFetchDashScript,
 	mockFetchInternal,
@@ -100,22 +99,6 @@ jest.mock("../cfetch/internal");
 (fetchDashboardScript as jest.Mock).mockImplementation(mockFetchDashScript);
 (performApiFetch as jest.Mock).mockImplementation(mockPerformApiFetch);
 
-jest.mock("../dialogs");
-
-// By default (if not configured by mockConfirm()) calls to `confirm()` should throw.
-(confirm as jest.Mock).mockImplementation((text: string) => {
-	throw new Error(
-		`Unexpected call to \`confirm("${text}")\`.\nYou should use \`mockConfirm()\` to mock calls to \`confirm()\` with expectations. Search the codebase for \`mockConfirm\` to learn more.`
-	);
-});
-
-// By default (if not configured by mockPrompt()) calls to `prompt()` should throw.
-(prompt as jest.Mock).mockImplementation((text: string) => {
-	throw new Error(
-		`Unexpected call to \`prompt(${text}, ...)\`.\nYou should use \`mockPrompt()\` to mock calls to \`prompt()\` with expectations. Search the codebase for \`mockPrompt\` to learn more.`
-	);
-});
-
 jest.mock("../dev/dev", () => {
 	const { useApp } = jest.requireActual("ink");
 	const { useEffect } = jest.requireActual("react");
@@ -199,4 +182,16 @@ jest.mock("../metrics/metrics-config", () => {
 				  },
 	};
 	return fakeModule;
+});
+jest.mock("prompts", () => {
+	return {
+		__esModule: true,
+		default: jest.fn((...args) => {
+			throw new Error(
+				`Unexpected call to \`prompts("${JSON.stringify(
+					args
+				)}")\`.\nYou should use \`mockConfirm()/mockSelect()/mockPrompt()\` to mock calls to \`confirm()\` with expectations.`
+			);
+		}),
+	};
 });

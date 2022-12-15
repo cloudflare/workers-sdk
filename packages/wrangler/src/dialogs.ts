@@ -1,4 +1,3 @@
-import assert from "assert";
 import chalk from "chalk";
 import prompts from "prompts";
 import { CI } from "./is-ci";
@@ -16,7 +15,6 @@ export class NoDefaultValueProvided extends Error {
 		// It _should_ always be caught and replaced with a more descriptive error
 		// but this is fine as a fallback.
 		super("This command cannot be run in a non-interactive context");
-		Object.setPrototypeOf(this, new.target.prototype);
 		Object.setPrototypeOf(this, new.target.prototype);
 	}
 }
@@ -64,7 +62,9 @@ export async function prompt(
 	options: PromptOptions = {}
 ): Promise<string> {
 	if (isNonInteractiveOrCI()) {
-		assert(options?.defaultValue !== undefined, new NoDefaultValueProvided());
+		if (options?.defaultValue === undefined) {
+			throw new NoDefaultValueProvided();
+		}
 		logger.log(`? ${text}`);
 		logger.log(
 			`🤖 ${chalk.dim(
@@ -106,7 +106,9 @@ export async function select<Values extends string>(
 	options: SelectOptions<Values>
 ): Promise<Values> {
 	if (isNonInteractiveOrCI()) {
-		assert(options?.defaultOption !== undefined, new NoDefaultValueProvided());
+		if (options?.defaultOption === undefined) {
+			throw new NoDefaultValueProvided();
+		}
 		logger.log(`? ${text}`);
 		logger.log(
 			`🤖 ${chalk.dim(

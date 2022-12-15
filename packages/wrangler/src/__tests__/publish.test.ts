@@ -61,7 +61,7 @@ describe("publish", () => {
 		setMockResponse(
 			"/accounts/:accountId/workers/services/:scriptName",
 			() => ({
-				default_environment: { script: { last_deployed_from: "dash" } },
+				default_environment: { script: { last_deployed_from: "wrangler" } },
 			})
 		);
 		setMockResponse(
@@ -99,15 +99,20 @@ describe("publish", () => {
 
 			await runWrangler("publish ./index");
 
-			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
+			expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "Total Upload: xx KiB / gzip: xx KiB
 			Worker ID:  abc12345
 			Worker ETag:  etag98765
 			Worker PipelineHash:  hash9999
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: undefined",
+			  "warn": "",
+			}
 		`);
 		});
 	});
@@ -257,12 +262,12 @@ describe("publish", () => {
 
 				await expect(runWrangler("publish index.js")).rejects
 					.toMatchInlineSnapshot(`
-						                [Error: More than one account available but unable to select one in non-interactive mode.
-						                Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
-						                Available accounts are ("<name>" - "<id>"):
-						                  "enterprise" - "1701")
-						                  "enterprise-nx" - "nx01")]
-					              `);
+			[Error: More than one account available but unable to select one in non-interactive mode.
+			Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+			Available accounts are (\`<name>\`: \`<account_id>\`):
+			  \`enterprise\`: \`1701\`
+			  \`enterprise-nx\`: \`nx01\`]
+		`);
 			});
 
 			it("should throw error in non-TTY if 'CLOUDFLARE_API_TOKEN' is missing", async () => {
@@ -329,6 +334,7 @@ describe("publish", () => {
 				env: "some-env",
 				legacyEnv: true,
 			});
+
 			await runWrangler("publish index.js --env some-env");
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -349,6 +355,7 @@ describe("publish", () => {
 				mockUploadWorkerRequest({
 					legacyEnv: true,
 				});
+
 				await runWrangler("publish index.js --legacy-env true");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -369,6 +376,7 @@ describe("publish", () => {
 					env: "some-env",
 					legacyEnv: true,
 				});
+
 				await runWrangler("publish index.js --env some-env --legacy-env true");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -389,6 +397,7 @@ describe("publish", () => {
 					env: "some-env",
 					legacyEnv: true,
 				});
+
 				await runWrangler("publish index.js --env some-env --legacy-env true");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -460,6 +469,7 @@ describe("publish", () => {
 				mockUploadWorkerRequest({
 					legacyEnv: false,
 				});
+
 				await runWrangler("publish index.js --legacy-env false");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -487,6 +497,7 @@ describe("publish", () => {
 					env: "some-env",
 					legacyEnv: false,
 				});
+
 				await runWrangler("publish index.js --env some-env --legacy-env false");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -770,22 +781,22 @@ describe("publish", () => {
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe current authentication token does not have 'All Zones' permissions.[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe current authentication token does not have 'All Zones' permissions.[0m
 
-			          Falling back to using the zone-based API endpoint to update each route individually.
-			          Note that there is no access to routes associated with zones that the API token does not have
-			          permission for.
-			          Existing routes for this Worker in such zones will not be deleted.
+			  Falling back to using the zone-based API endpoint to update each route individually.
+			  Note that there is no access to routes associated with zones that the API token does not have
+			  permission for.
+			  Existing routes for this Worker in such zones will not be deleted.
 
 
-			        [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mPreviously deployed routes:[0m
+			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mPreviously deployed routes:[0m
 
-			          The following routes were already associated with this worker, and have not been deleted:
-			           - \\"foo.example.com/other-route\\"
-			          If these routes are not wanted then you can remove them in the dashboard.
+			  The following routes were already associated with this worker, and have not been deleted:
+			   - \\"foo.example.com/other-route\\"
+			  If these routes are not wanted then you can remove them in the dashboard.
 
-			        "
-		      `);
+			"
+		`);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
@@ -1150,17 +1161,17 @@ Update them to point to this script instead?`,
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-			            - [1mDeprecation[0m: \\"build.upload.main\\":
-			              Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
-			              Then add the top level \`main\` field to your configuration file:
-			              \`\`\`
-			              main = \\"dist/index.js\\"
-			              \`\`\`
+			    - [1mDeprecation[0m: \\"build.upload.main\\":
+			      Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
+			      Then add the top level \`main\` field to your configuration file:
+			      \`\`\`
+			      main = \\"dist/index.js\\"
+			      \`\`\`
 
-			        "
-		      `);
+			"
+		`);
 		});
 
 		it("should use `build.upload.main` relative to `build.upload.dir`", async () => {
@@ -1187,20 +1198,20 @@ Update them to point to this script instead?`,
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing ../wrangler.toml configuration:[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing ../wrangler.toml configuration:[0m
 
-			            - [1mDeprecation[0m: \\"build.upload.main\\":
-			              Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
-			              Then add the top level \`main\` field to your configuration file:
-			              \`\`\`
-			              main = \\"foo/index.js\\"
-			              \`\`\`
-			            - [1mDeprecation[0m: \\"build.upload.dir\\":
-			              Use the top level \\"main\\" field or a command-line argument to specify the entry-point for the
-			          Worker.
+			    - [1mDeprecation[0m: \\"build.upload.main\\":
+			      Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
+			      Then add the top level \`main\` field to your configuration file:
+			      \`\`\`
+			      main = \\"foo/index.js\\"
+			      \`\`\`
+			    - [1mDeprecation[0m: \\"build.upload.dir\\":
+			      Use the top level \\"main\\" field or a command-line argument to specify the entry-point for the
+			  Worker.
 
-			        "
-		      `);
+			"
+		`);
 		});
 
 		it("should error when both `main` and `build.upload.main` are used", async () => {
@@ -1539,17 +1550,17 @@ addEventListener('fetch', event => {});`
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(normalizeSlashes(std.warn)).toMatchInlineSnapshot(`
-			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing my-site/wrangler.toml configuration:[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing my-site/wrangler.toml configuration:[0m
 
-			            - [1mDeprecation[0m: \\"site.entry-point\\":
-			              Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration
-			          file:
-			              \`\`\`
-			              main = \\"my-entry/index.js\\"
-			              \`\`\`
+			    - [1mDeprecation[0m: \\"site.entry-point\\":
+			      Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration
+			  file:
+			      \`\`\`
+			      main = \\"my-entry/index.js\\"
+			      \`\`\`
 
-			        "
-		      `);
+			"
+		`);
 		});
 
 		it("should error if both main and site.entry-point are specified", async () => {
@@ -4015,24 +4026,24 @@ addEventListener('fetch', event => {});`
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-			            - In wrangler.toml, you have configured [durable_objects] exported by this Worker (SomeClass),
-			          but no [migrations] for them. This may not work as expected until you add a [migrations] section
-			          to your wrangler.toml. Add this configuration to your wrangler.toml:
+			    - In wrangler.toml, you have configured [durable_objects] exported by this Worker (SomeClass),
+			  but no [migrations] for them. This may not work as expected until you add a [migrations] section
+			  to your wrangler.toml. Add this configuration to your wrangler.toml:
 
-			                \`\`\`
-			                [[migrations]]
-			                tag = \\"v1\\" # Should be unique for each entry
-			                new_classes = [\\"SomeClass\\"]
-			                \`\`\`
+			        \`\`\`
+			        [[migrations]]
+			        tag = \\"v1\\" # Should be unique for each entry
+			        new_classes = [\\"SomeClass\\"]
+			        \`\`\`
 
-			              Refer to
-			          [4mhttps://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml[0m
-			          for more details.
+			      Refer to
+			  [4mhttps://developers.cloudflare.com/workers/learning/using-durable-objects/#durable-object-migrations-in-wranglertoml[0m
+			  for more details.
 
-			        "
-		      `);
+			"
+		`);
 		});
 
 		it("does not warn if all the durable object bindings are to external classes", async () => {
@@ -4255,13 +4266,13 @@ addEventListener('fetch', event => {});`
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
-			          "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-			              - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in
-			            the future. DO NOT USE IN PRODUCTION.
+			    - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in
+			  the future. DO NOT USE IN PRODUCTION.
 
-			          "
-		        `);
+			"
+		`);
 			});
 
 			it("should publish all migrations on first publish (--env)", async () => {
@@ -4319,13 +4330,13 @@ addEventListener('fetch', event => {});`
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
-			          "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-			              - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in
-			            the future. DO NOT USE IN PRODUCTION.
+			    - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in
+			  the future. DO NOT USE IN PRODUCTION.
 
-			          "
-		        `);
+			"
+		`);
 			});
 
 			it("should use a script's current migration tag when publishing migrations", async () => {
@@ -4692,12 +4703,12 @@ addEventListener('fetch', event => {});`
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-			            - \\"unsafe\\" fields are experimental and may change or break at any time.
+			    - \\"unsafe\\" fields are experimental and may change or break at any time.
 
-			        "
-		      `);
+			"
+		`);
 		});
 
 		it("should error when bindings of different types have the same name", async () => {
@@ -5099,6 +5110,7 @@ addEventListener('fetch', event => {});`
 					],
 				});
 				mockSubDomainRequest();
+
 				await runWrangler("publish index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -5791,12 +5803,12 @@ addEventListener('fetch', event => {});`
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
-			          "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-			              - \\"services\\" fields are experimental and may change or break at any time.
+			    - \\"services\\" fields are experimental and may change or break at any time.
 
-			          "
-		        `);
+			"
+		`);
 			});
 		});
 
@@ -5912,12 +5924,12 @@ addEventListener('fetch', event => {});`
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
-			          "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-			              - \\"unsafe\\" fields are experimental and may change or break at any time.
+			    - \\"unsafe\\" fields are experimental and may change or break at any time.
 
-			          "
-		        `);
+			"
+		`);
 			});
 			it("should warn if using unsafe bindings already handled by wrangler", async () => {
 				writeWranglerToml({
@@ -5956,17 +5968,17 @@ addEventListener('fetch', event => {});`
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
-			          "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-			              - \\"unsafe\\" fields are experimental and may change or break at any time.
-			              - \\"unsafe.bindings[0]\\": {\\"name\\":\\"my-binding\\",\\"type\\":\\"plain_text\\",\\"text\\":\\"text\\"}
-			                - The binding type \\"plain_text\\" is directly supported by wrangler.
-			                  Consider migrating this unsafe binding to a format for 'plain_text' bindings that is
-			            supported by wrangler for optimal support.
-			                  For more details, see [4mhttps://developers.cloudflare.com/workers/cli-wrangler/configuration[0m
+			    - \\"unsafe\\" fields are experimental and may change or break at any time.
+			    - \\"unsafe.bindings[0]\\": {\\"name\\":\\"my-binding\\",\\"type\\":\\"plain_text\\",\\"text\\":\\"text\\"}
+			      - The binding type \\"plain_text\\" is directly supported by wrangler.
+			        Consider migrating this unsafe binding to a format for 'plain_text' bindings that is
+			  supported by wrangler for optimal support.
+			        For more details, see [4mhttps://developers.cloudflare.com/workers/cli-wrangler/configuration[0m
 
-			          "
-		        `);
+			"
+		`);
 			});
 		});
 	});
@@ -6067,20 +6079,20 @@ addEventListener('fetch', event => {});`
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-			            - Deprecation: The \`build.upload.rules\` config field is no longer used, the rules should be
-			          specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration
-			          file, and add this:
-			              \`\`\`
-			              [[rules]]
-			              type = \\"Text\\"
-			              globs = [ \\"**/*.file\\" ]
-			              fallthrough = true
-			              \`\`\`
+			    - Deprecation: The \`build.upload.rules\` config field is no longer used, the rules should be
+			  specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration
+			  file, and add this:
+			      \`\`\`
+			      [[rules]]
+			      type = \\"Text\\"
+			      globs = [ \\"**/*.file\\" ]
+			      fallthrough = true
+			      \`\`\`
 
-			        "
-		      `);
+			"
+		`);
 		});
 
 		it("should be able to use fallthrough:true for multiple rules", async () => {
@@ -6246,10 +6258,10 @@ addEventListener('fetch', event => {});`
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDeprecation: detected a legacy module import in \\"./index.js\\". This will stop working in the future. Replace references to \\"text.file\\" with \\"./text.file\\";[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDeprecation: detected a legacy module import in \\"./index.js\\". This will stop working in the future. Replace references to \\"text.file\\" with \\"./text.file\\";[0m
 
-			        "
-		      `);
+			"
+		`);
 		});
 
 		it("should work with legacy module specifiers, with a deprecation warning (2)", async () => {
@@ -6276,10 +6288,10 @@ addEventListener('fetch', event => {});`
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDeprecation: detected a legacy module import in \\"./index.js\\". This will stop working in the future. Replace references to \\"index.wasm\\" with \\"./index.wasm\\";[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDeprecation: detected a legacy module import in \\"./index.js\\". This will stop working in the future. Replace references to \\"index.wasm\\" with \\"./index.wasm\\";[0m
 
-			        "
-		      `);
+			"
+		`);
 		});
 
 		it("should work with legacy module specifiers, with a deprecation warning (3)", async () => {
@@ -6308,10 +6320,10 @@ addEventListener('fetch', event => {});`
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDeprecation: detected a legacy module import in \\"./index.js\\". This will stop working in the future. Replace references to \\"text+name.file\\" with \\"./text+name.file\\";[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDeprecation: detected a legacy module import in \\"./index.js\\". This will stop working in the future. Replace references to \\"text+name.file\\" with \\"./text+name.file\\";[0m
 
-			        "
-		      `);
+			"
+		`);
 		});
 
 		it("should not match regular module specifiers when there aren't any possible legacy module matches", async () => {

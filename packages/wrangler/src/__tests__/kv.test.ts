@@ -10,7 +10,7 @@ import {
 	createFetchResult,
 } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { clearConfirmMocks, mockConfirm } from "./helpers/mock-dialogs";
+import { mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { mockKeyListRequest } from "./helpers/mock-kv";
 import { mockGetMemberships } from "./helpers/mock-oauth-flow";
@@ -22,7 +22,6 @@ import type {
 	KVNamespaceInfo,
 	NamespaceKeyInfo,
 } from "../kv/helpers";
-
 describe("wrangler", () => {
 	mockAccountId();
 	mockApiToken();
@@ -32,9 +31,11 @@ describe("wrangler", () => {
 
 	afterEach(() => {
 		unsetAllMocks();
-		clearConfirmMocks();
 	});
-
+	const { setIsTTY } = useMockIsTTY();
+	beforeEach(() => {
+		setIsTTY(true);
+	});
 	describe("kv:namespace", () => {
 		describe("create", () => {
 			function mockCreateRequest(expectedTitle: string) {
@@ -1179,7 +1180,6 @@ describe("wrangler", () => {
 			});
 
 			describe("non-interactive", () => {
-				const { setIsTTY } = useMockIsTTY();
 				mockAccountId({ accountId: null });
 
 				it("should error if there are multiple accounts available but not interactive on stdin", async () => {
@@ -1190,12 +1190,12 @@ describe("wrangler", () => {
 					setIsTTY({ stdin: false, stdout: true });
 					await expect(runWrangler("kv:key get key --namespace-id=xxxx"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
-							                  "More than one account available but unable to select one in non-interactive mode.
-							                  Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
-							                  Available accounts are (\\"<name>\\" - \\"<id>\\"):
-							                    \\"one\\" - \\"1\\")
-							                    \\"two\\" - \\"2\\")"
-						                `);
+				"More than one account available but unable to select one in non-interactive mode.
+				Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+				Available accounts are (\`<name>\`: \`<account_id>\`):
+				  \`one\`: \`1\`
+				  \`two\`: \`2\`"
+			`);
 				});
 
 				it("should error if there are multiple accounts available but not interactive on stdout", async () => {
@@ -1206,12 +1206,12 @@ describe("wrangler", () => {
 					setIsTTY({ stdin: true, stdout: false });
 					await expect(runWrangler("kv:key get key --namespace-id=xxxx"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
-							                  "More than one account available but unable to select one in non-interactive mode.
-							                  Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
-							                  Available accounts are (\\"<name>\\" - \\"<id>\\"):
-							                    \\"one\\" - \\"1\\")
-							                    \\"two\\" - \\"2\\")"
-						                `);
+				"More than one account available but unable to select one in non-interactive mode.
+				Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+				Available accounts are (\`<name>\`: \`<account_id>\`):
+				  \`one\`: \`1\`
+				  \`two\`: \`2\`"
+			`);
 				});
 
 				it("should recommend using a configuration if unable to fetch memberships", async () => {
@@ -1238,12 +1238,12 @@ describe("wrangler", () => {
 					setIsTTY(false);
 					await expect(runWrangler("kv:key get key --namespace-id=xxxx"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
-							                  "More than one account available but unable to select one in non-interactive mode.
-							                  Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
-							                  Available accounts are (\\"<name>\\" - \\"<id>\\"):
-							                    \\"one\\" - \\"1\\")
-							                    \\"two\\" - \\"2\\")"
-						                `);
+				"More than one account available but unable to select one in non-interactive mode.
+				Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+				Available accounts are (\`<name>\`: \`<account_id>\`):
+				  \`one\`: \`1\`
+				  \`two\`: \`2\`"
+			`);
 				});
 			});
 		});
@@ -1552,12 +1552,12 @@ describe("wrangler", () => {
 				);
 				expect(requests.count).toEqual(3);
 				expect(std.out).toMatchInlineSnapshot(`
-			          "Deleted 0% (0 out of 12,000)
-			          Deleted 41% (5,000 out of 12,000)
-			          Deleted 83% (10,000 out of 12,000)
-			          Deleted 100% (12,000 out of 12,000)
-			          Success!"
-		        `);
+			"Deleted 0% (0 out of 12,000)
+			Deleted 41% (5,000 out of 12,000)
+			Deleted 83% (10,000 out of 12,000)
+			Deleted 100% (12,000 out of 12,000)
+			Success!"
+		`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -1622,9 +1622,9 @@ describe("wrangler", () => {
 						                12354"
 					              `);
 				expect(std.out).toMatchInlineSnapshot(`
-			          "
-			          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
-		        `);
+			"
+			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
+		`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
@@ -1647,9 +1647,9 @@ describe("wrangler", () => {
 						                The item at index 3 is type: \\"object\\" - null"
 					              `);
 				expect(std.out).toMatchInlineSnapshot(`
-			          "
-			          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
-		        `);
+			"
+			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose[0m"
+		`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 		});

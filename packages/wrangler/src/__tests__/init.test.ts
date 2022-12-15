@@ -13,15 +13,11 @@ import {
 	unsetSpecialMockFns,
 } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import {
-	mockConfirm,
-	clearConfirmMocks,
-	mockSelect,
-	clearSelectMocks,
-} from "./helpers/mock-dialogs";
+import { clearDialogs, mockConfirm, mockSelect } from "./helpers/mock-dialogs";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { PackageManager } from "../package-manager";
+import { useMockIsTTY } from "./helpers/mock-istty";
 
 /**
  * An expectation matcher for the minimal generated wrangler.toml.
@@ -35,8 +31,11 @@ const MINIMAL_WRANGLER_TOML = {
 describe("init", () => {
 	let mockPackageManager: PackageManager;
 	runInTempDir();
+	const { setIsTTY } = useMockIsTTY();
 
 	beforeEach(() => {
+		setIsTTY(true);
+
 		mockPackageManager = {
 			cwd: process.cwd(),
 			// @ts-expect-error we're making a fake package manager here
@@ -48,8 +47,7 @@ describe("init", () => {
 	});
 
 	afterEach(() => {
-		clearConfirmMocks();
-		clearSelectMocks();
+		clearDialogs();
 	});
 
 	const std = mockConsoleMethods();
@@ -320,15 +318,15 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "",
-			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mpath/to/worker/wrangler.toml already exists![0m
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mpath/to/worker/wrangler.toml already exists![0m
 
-			        ",
-			        }
-		      `);
+			",
+			}
+		`);
 		});
 
 		it("should not overwrite an existing wrangler.toml, after agreeing to other prompts", async () => {
@@ -341,11 +339,11 @@ describe("init", () => {
 			});
 			mockConfirm(
 				{
-					text: "Would you like to use git to manage this Worker?",
+					text: "Do you want to continue initializing this project?",
 					result: true,
 				},
 				{
-					text: "Do you want to continue initializing this project?",
+					text: "Would you like to use git to manage this Worker?",
 					result: true,
 				},
 				{
@@ -408,15 +406,15 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "",
-			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mwrangler.toml already exists![0m
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mwrangler.toml already exists![0m
 
-			        ",
-			        }
-		      `);
+			",
+			}
+		`);
 		});
 
 		it("should not add a Cron Trigger to wrangler.toml when creating a Scheduled Worker if wrangler.toml already exists", async () => {
@@ -429,13 +427,14 @@ describe("init", () => {
 			});
 			mockConfirm(
 				{
-					text: "Would you like to use git to manage this Worker?",
-					result: true,
-				},
-				{
 					text: "Do you want to continue initializing this project?",
 					result: true,
 				},
+				{
+					text: "Would you like to use git to manage this Worker?",
+					result: true,
+				},
+
 				{
 					text: "No package.json found. Would you like to create one?",
 					result: true,
@@ -611,14 +610,14 @@ describe("init", () => {
 			);
 			await runWrangler("init");
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created wrangler.toml
-			        ✨ Initialized git repository",
-			          "warn": "",
-			        }
-		      `);
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created wrangler.toml
+			✨ Initialized git repository",
+			  "warn": "",
+			}
+		`);
 
 			expect(execaSync("git", ["symbolic-ref", "HEAD"]).stdout).toEqual(
 				`refs/heads/${getDefaultBranchName()}`
@@ -755,13 +754,13 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created wrangler.toml",
-			          "warn": "",
-			        }
-		      `);
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created wrangler.toml",
+			  "warn": "",
+			}
+		`);
 		});
 
 		it("should not touch an existing package.json in an ancestor directory, when a name is passed", async () => {
@@ -773,10 +772,6 @@ describe("init", () => {
 				{
 					text: "No package.json found. Would you like to create one?",
 					result: true,
-				},
-				{
-					text: "Would you like to install wrangler into path/to/worker/my-worker/package.json?",
-					result: false,
 				},
 				{
 					text: "Would you like to use TypeScript?",
@@ -805,14 +800,14 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created path/to/worker/my-worker/wrangler.toml
-			        ✨ Created path/to/worker/my-worker/package.json",
-			          "warn": "",
-			        }
-		      `);
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created path/to/worker/my-worker/wrangler.toml
+			✨ Created path/to/worker/my-worker/package.json",
+			  "warn": "",
+			}
+		`);
 		});
 
 		it("should offer to install wrangler into an existing package.json", async () => {
@@ -958,13 +953,13 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created wrangler.toml",
-			          "warn": "",
-			        }
-		      `);
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created wrangler.toml",
+			  "warn": "",
+			}
+		`);
 		});
 	});
 
@@ -982,12 +977,15 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: false,
-				},
-				{ text: "Would you like us to write your first test?", result: false }
+				}
 			);
 			mockSelect({
 				text: "Would you like to create a Worker at src/index.js?",
 				result: "fetch",
+			});
+			mockConfirm({
+				text: "Would you like us to write your first test?",
+				result: false,
 			});
 			writeFiles({
 				items: {
@@ -1059,19 +1057,19 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created wrangler.toml
-			        ✨ Created tsconfig.json
-			        ✨ Created src/index.ts
-			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created wrangler.toml
+			✨ Created tsconfig.json
+			✨ Created src/index.ts
+			✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
-			        To start developing your Worker, run \`npx wrangler dev\`
-			        To publish your Worker to the Internet, run \`npx wrangler publish\`",
-			          "warn": "",
-			        }
-		      `);
+			To start developing your Worker, run \`npx wrangler dev\`
+			To publish your Worker to the Internet, run \`npx wrangler publish\`",
+			  "warn": "",
+			}
+		`);
 		});
 
 		it("should add scripts for a typescript project with .ts extension", async () => {
@@ -1084,10 +1082,7 @@ describe("init", () => {
 					text: "No package.json found. Would you like to create one?",
 					result: true,
 				},
-				{
-					text: "Would you like to install wrangler into package.json?",
-					result: false,
-				},
+
 				{
 					text: "Would you like to use TypeScript?",
 					result: true,
@@ -1117,15 +1112,15 @@ describe("init", () => {
 				},
 			});
 			expect(std.out).toMatchInlineSnapshot(`
-			        "✨ Created wrangler.toml
-			        ✨ Created package.json
-			        ✨ Created tsconfig.json
-			        ✨ Created src/index.ts
-			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			"✨ Created wrangler.toml
+			✨ Created package.json
+			✨ Created tsconfig.json
+			✨ Created src/index.ts
+			✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
-			        To start developing your Worker, run \`npm start\`
-			        To publish your Worker to the Internet, run \`npm run deploy\`"
-		      `);
+			To start developing your Worker, run \`npm start\`
+			To publish your Worker to the Internet, run \`npm run deploy\`"
+		`);
 		});
 
 		it("should not overwrite package.json scripts for a typescript project", async () => {
@@ -1177,14 +1172,14 @@ describe("init", () => {
 				},
 			});
 			expect(std.out).toMatchInlineSnapshot(`
-			        "✨ Created wrangler.toml
-			        ✨ Created tsconfig.json
-			        ✨ Created src/index.ts
-			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			"✨ Created wrangler.toml
+			✨ Created tsconfig.json
+			✨ Created src/index.ts
+			✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
-			        To start developing your Worker, run \`npx wrangler dev\`
-			        To publish your Worker to the Internet, run \`npx wrangler publish\`"
-		      `);
+			To start developing your Worker, run \`npx wrangler dev\`
+			To publish your Worker to the Internet, run \`npx wrangler publish\`"
+		`);
 		});
 
 		it("should not offer to create a worker in a ts project if a file already exists at the location", async () => {
@@ -1219,15 +1214,15 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created wrangler.toml
-			        ✨ Created tsconfig.json
-			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies",
-			          "warn": "",
-			        }
-		      `);
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created wrangler.toml
+			✨ Created tsconfig.json
+			✨ Installed @cloudflare/workers-types and typescript into devDependencies",
+			  "warn": "",
+			}
+		`);
 		});
 
 		it("should not offer to create a worker in a ts project for a named worker if a file already exists at the location", async () => {
@@ -1240,10 +1235,7 @@ describe("init", () => {
 					text: "No package.json found. Would you like to create one?",
 					result: true,
 				},
-				{
-					text: "Would you like to install wrangler into package.json?",
-					result: false,
-				},
+
 				{
 					text: "Would you like to use TypeScript?",
 					result: true,
@@ -1266,16 +1258,16 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created my-worker/wrangler.toml
-			        ✨ Created my-worker/package.json
-			        ✨ Created my-worker/tsconfig.json
-			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies",
-			          "warn": "",
-			        }
-		      `);
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created my-worker/wrangler.toml
+			✨ Created my-worker/package.json
+			✨ Created my-worker/tsconfig.json
+			✨ Installed @cloudflare/workers-types and typescript into devDependencies",
+			  "warn": "",
+			}
+		`);
 		});
 
 		it("should create a tsconfig.json and install `workers-types` if none is found and user confirms", async () => {
@@ -1319,16 +1311,16 @@ describe("init", () => {
 				"typescript"
 			);
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created wrangler.toml
-			        ✨ Created package.json
-			        ✨ Created tsconfig.json
-			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies",
-			          "warn": "",
-			        }
-		      `);
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created wrangler.toml
+			✨ Created package.json
+			✨ Created tsconfig.json
+			✨ Installed @cloudflare/workers-types and typescript into devDependencies",
+			  "warn": "",
+			}
+		`);
 		});
 
 		it("should not touch an existing tsconfig.json in the same directory", async () => {
@@ -1366,17 +1358,17 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created wrangler.toml
-			        ✨ Created src/index.ts
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created wrangler.toml
+			✨ Created src/index.ts
 
-			        To start developing your Worker, run \`npx wrangler dev\`
-			        To publish your Worker to the Internet, run \`npx wrangler publish\`",
-			          "warn": "",
-			        }
-		      `);
+			To start developing your Worker, run \`npx wrangler dev\`
+			To publish your Worker to the Internet, run \`npx wrangler publish\`",
+			  "warn": "",
+			}
+		`);
 		});
 
 		it("should not touch an existing tsconfig.json in the ancestor of a target directory, if a name is passed", async () => {
@@ -1424,20 +1416,20 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created path/to/worker/my-worker/wrangler.toml
-			        ✨ Created path/to/worker/my-worker/package.json
-			        ✨ Created path/to/worker/my-worker/tsconfig.json
-			        ✨ Created path/to/worker/my-worker/src/index.ts
-			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created path/to/worker/my-worker/wrangler.toml
+			✨ Created path/to/worker/my-worker/package.json
+			✨ Created path/to/worker/my-worker/tsconfig.json
+			✨ Created path/to/worker/my-worker/src/index.ts
+			✨ Installed @cloudflare/workers-types and typescript into devDependencies
 
-			        To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
-			        To publish your Worker to the Internet, run \`npm run deploy\`",
-			          "warn": "",
-			        }
-		      `);
+			To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
+			To publish your Worker to the Internet, run \`npm run deploy\`",
+			  "warn": "",
+			}
+		`);
 		});
 
 		it("should offer to install type definitions in an existing typescript project", async () => {
@@ -1531,17 +1523,17 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created wrangler.toml
-			        ✨ Created src/index.ts
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created wrangler.toml
+			✨ Created src/index.ts
 
-			        To start developing your Worker, run \`npx wrangler dev\`
-			        To publish your Worker to the Internet, run \`npx wrangler publish\`",
-			          "warn": "",
-			        }
-		      `);
+			To start developing your Worker, run \`npx wrangler dev\`
+			To publish your Worker to the Internet, run \`npx wrangler publish\`",
+			  "warn": "",
+			}
+		`);
 		});
 	});
 
@@ -1556,21 +1548,20 @@ describe("init", () => {
 					text: "No package.json found. Would you like to create one?",
 					result: true,
 				},
-				{
-					text: "Would you like to install wrangler into package.json?",
-					result: false,
-				},
+
 				{
 					text: "Would you like to use TypeScript?",
 					result: false,
-				},
-				{ text: "Would you like us to write your first test?", result: false }
+				}
 			);
 			mockSelect({
 				text: "Would you like to create a Worker at src/index.js?",
 				result: "fetch",
 			});
-
+			mockConfirm({
+				text: "Would you like us to write your first test?",
+				result: false,
+			});
 			await runWrangler("init");
 
 			checkFiles({
@@ -1609,23 +1600,22 @@ describe("init", () => {
 					result: true,
 				},
 				{
-					text: "Would you like to install wrangler into package.json?",
-					result: false,
-				},
-				{
 					text: "Would you like to use TypeScript?",
 					result: false,
-				},
-				{ text: "Would you like us to write your first test?", result: true }
+				}
 			);
-			mockSelect(
-				{
-					text: "Would you like to create a Worker at src/index.js?",
-					result: "fetch",
-				},
-				{ text: "Which test runner would you like to use?", result: "jest" }
-			);
-
+			mockSelect({
+				text: "Would you like to create a Worker at src/index.js?",
+				result: "fetch",
+			});
+			mockConfirm({
+				text: "Would you like us to write your first test?",
+				result: true,
+			});
+			mockSelect({
+				text: "Which test runner would you like to use?",
+				result: "jest",
+			});
 			await runWrangler("init");
 
 			checkFiles({
@@ -1670,23 +1660,22 @@ describe("init", () => {
 					result: true,
 				},
 				{
-					text: "Would you like to install wrangler into package.json?",
-					result: false,
-				},
-				{
 					text: "Would you like to use TypeScript?",
 					result: false,
-				},
-				{ text: "Would you like us to write your first test?", result: true }
+				}
 			);
-			mockSelect(
-				{
-					text: "Would you like to create a Worker at src/index.js?",
-					result: "fetch",
-				},
-				{ text: "Which test runner would you like to use?", result: "vitest" }
-			);
-
+			mockSelect({
+				text: "Would you like to create a Worker at src/index.js?",
+				result: "fetch",
+			});
+			mockConfirm({
+				text: "Would you like us to write your first test?",
+				result: true,
+			});
+			mockSelect({
+				text: "Which test runner would you like to use?",
+				result: "vitest",
+			});
 			await runWrangler("init");
 
 			checkFiles({
@@ -1733,12 +1722,15 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: false,
-				},
-				{ text: "Would you like us to write your first test?", result: false }
+				}
 			);
 			mockSelect({
 				text: "Would you like to create a Worker at src/index.js?",
 				result: "fetch",
+			});
+			mockConfirm({
+				text: "Would you like us to write your first test?",
+				result: false,
 			});
 			writeFiles({
 				items: {
@@ -1972,15 +1964,11 @@ describe("init", () => {
 					result: false,
 				},
 				{
-					text: "Would you like to use TypeScript?",
-					result: true,
-				},
-				{
 					text: "No package.json found. Would you like to create one?",
 					result: true,
 				},
 				{
-					text: "Would you like to install the type definitions for Workers into your package.json?",
+					text: "Would you like to use TypeScript?",
 					result: true,
 				}
 			);
@@ -2362,15 +2350,11 @@ describe("init", () => {
 					result: false,
 				},
 				{
-					text: "Would you like to use TypeScript?",
-					result: true,
-				},
-				{
 					text: "No package.json found. Would you like to create one?",
 					result: true,
 				},
 				{
-					text: "Would you like to install the type definitions for Workers into your package.json?",
+					text: "Would you like to use TypeScript?",
 					result: true,
 				}
 			);
@@ -2418,15 +2402,11 @@ describe("init", () => {
 					result: false,
 				},
 				{
-					text: "Would you like to use TypeScript?",
-					result: true,
-				},
-				{
 					text: "No package.json found. Would you like to create one?",
 					result: true,
 				},
 				{
-					text: "Would you like to install the type definitions for Workers into your package.json?",
+					text: "Would you like to use TypeScript?",
 					result: true,
 				}
 			);
@@ -2455,15 +2435,11 @@ describe("init", () => {
 					result: false,
 				},
 				{
-					text: "Would you like to use TypeScript?",
-					result: true,
-				},
-				{
 					text: "No package.json found. Would you like to create one?",
 					result: true,
 				},
 				{
-					text: "Would you like to install the type definitions for Workers into your package.json?",
+					text: "Would you like to use TypeScript?",
 					result: true,
 				}
 			);
@@ -2592,16 +2568,12 @@ describe("init", () => {
 					result: false,
 				},
 				{
-					text: "Would you like to use TypeScript?",
-					result: false,
-				},
-				{
 					text: "No package.json found. Would you like to create one?",
 					result: true,
 				},
 				{
-					text: "Would you like to install the type definitions for Workers into your package.json?",
-					result: true,
+					text: "Would you like to use TypeScript?",
+					result: false,
 				}
 			);
 
@@ -2651,15 +2623,11 @@ describe("init", () => {
 					result: false,
 				},
 				{
-					text: "Would you like to use TypeScript?",
-					result: true,
-				},
-				{
 					text: "No package.json found. Would you like to create one?",
 					result: true,
 				},
 				{
-					text: "Would you like to install the type definitions for Workers into your package.json?",
+					text: "Would you like to use TypeScript?",
 					result: true,
 				}
 			);
@@ -2712,14 +2680,6 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: false,
-				},
-				{
-					text: "No package.json found. Would you like to create one?",
-					result: true,
-				},
-				{
-					text: "Would you like to install the type definitions for Workers into your package.json?",
-					result: true,
 				}
 			);
 
@@ -2728,7 +2688,7 @@ describe("init", () => {
 			).rejects.toThrowError();
 		});
 
-		it("should not inlcude migrations in config file when none are necessary", async () => {
+		it("should not include migrations in config file when none are necessary", async () => {
 			const mockDate = "1988-08-07";
 			jest
 				.spyOn(Date.prototype, "toISOString")
@@ -2795,16 +2755,13 @@ describe("init", () => {
 					text: "Would you like to use git to manage this Worker?",
 					result: false,
 				},
-				{
-					text: "Would you like to use TypeScript?",
-					result: true,
-				},
+
 				{
 					text: "No package.json found. Would you like to create one?",
 					result: true,
 				},
 				{
-					text: "Would you like to install the type definitions for Workers into your package.json?",
+					text: "Would you like to use TypeScript?",
 					result: true,
 				}
 			);

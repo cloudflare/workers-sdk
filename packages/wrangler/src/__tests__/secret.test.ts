@@ -4,12 +4,7 @@ import * as TOML from "@iarna/toml";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import {
-	mockConfirm,
-	mockPrompt,
-	clearConfirmMocks,
-	clearPromptMocks,
-} from "./helpers/mock-dialogs";
+import { mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
 import {
 	mockGetMemberships,
 	mockGetMembershipsFail,
@@ -17,18 +12,17 @@ import {
 import { useMockStdin } from "./helpers/mock-stdin";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import { useMockIsTTY } from "./helpers/mock-istty";
 
 describe("wrangler secret", () => {
 	const std = mockConsoleMethods();
-
+	const { setIsTTY } = useMockIsTTY();
 	runInTempDir();
 	mockAccountId();
 	mockApiToken();
 
 	afterEach(() => {
 		unsetAllMocks();
-		clearConfirmMocks();
-		clearPromptMocks();
 	});
 
 	describe("put", () => {
@@ -61,12 +55,14 @@ describe("wrangler secret", () => {
 		}
 
 		describe("interactive", () => {
-			useMockStdin({ isTTY: true });
+			beforeEach(() => {
+				setIsTTY(true);
+			});
 
 			it("should trim stdin secret value", async () => {
 				mockPrompt({
 					text: "Enter a secret value:",
-					type: "password",
+					options: { isSecret: true },
 					result: `hunter2
           `,
 				});
@@ -82,7 +78,7 @@ describe("wrangler secret", () => {
 			it("should create a secret", async () => {
 				mockPrompt({
 					text: "Enter a secret value:",
-					type: "password",
+					options: { isSecret: true },
 					result: "the-secret",
 				});
 
@@ -250,7 +246,7 @@ describe("wrangler secret", () => {
 			it("should create a secret: legacy envs", async () => {
 				mockPrompt({
 					text: "Enter a secret value:",
-					type: "password",
+					options: { isSecret: true },
 					result: "the-secret",
 				});
 
@@ -273,7 +269,7 @@ describe("wrangler secret", () => {
 			it("should create a secret: service envs", async () => {
 				mockPrompt({
 					text: "Enter a secret value:",
-					type: "password",
+					options: { isSecret: true },
 					result: "the-secret",
 				});
 
@@ -316,6 +312,9 @@ describe("wrangler secret", () => {
 		});
 
 		describe("non-interactive", () => {
+			beforeEach(() => {
+				setIsTTY(false);
+			});
 			const mockStdIn = useMockStdin({ isTTY: false });
 
 			it("should trim stdin secret value, from piped input", async () => {
@@ -381,9 +380,9 @@ describe("wrangler secret", () => {
 					mockGetMemberships([]);
 					await expect(runWrangler("secret put the-key --name script-name"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
-                  "Failed to automatically retrieve account IDs for the logged in user.
-                  In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your \`wrangler.toml\` file."
-                `);
+				                  "Failed to automatically retrieve account IDs for the logged in user.
+				                  In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your \`wrangler.toml\` file."
+			                `);
 				});
 
 				it("should use the account from wrangler.toml", async () => {
@@ -423,13 +422,13 @@ describe("wrangler secret", () => {
 
 					await expect(runWrangler("secret put the-key --name script-name"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
-                  "More than one account available but unable to select one in non-interactive mode.
-                  Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
-                  Available accounts are (\\"<name>\\" - \\"<id>\\"):
-                    \\"account-name-1\\" - \\"account-id-1\\")
-                    \\"account-name-2\\" - \\"account-id-2\\")
-                    \\"account-name-3\\" - \\"account-id-3\\")"
-                `);
+				"More than one account available but unable to select one in non-interactive mode.
+				Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+				Available accounts are (\`<name>\`: \`<account_id>\`):
+				  \`account-name-1\`: \`account-id-1\`
+				  \`account-name-2\`: \`account-id-2\`
+				  \`account-name-3\`: \`account-id-3\`"
+			`);
 				});
 			});
 		});
@@ -476,7 +475,9 @@ describe("wrangler secret", () => {
 			});
 			await runWrangler("secret delete the-key --name script-name");
 			expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Deleting the secret the-key on the Worker script-name
+			"? Are you sure you want to permanently delete the secret the-key on the Worker script-name?
+			🤖 [2mUsing default value in non-interactive context:[22m [37m[1myes[22m[39m
+			🌀 Deleting the secret the-key on the Worker script-name
 			✨ Success! Deleted secret the-key"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -496,7 +497,9 @@ describe("wrangler secret", () => {
 				"secret delete the-key --name script-name --env some-env --legacy-env"
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Deleting the secret the-key on the Worker script-name-some-env
+			"? Are you sure you want to permanently delete the secret the-key on the Worker script-name-some-env?
+			🤖 [2mUsing default value in non-interactive context:[22m [37m[1myes[22m[39m
+			🌀 Deleting the secret the-key on the Worker script-name-some-env
 			✨ Success! Deleted secret the-key"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -515,7 +518,9 @@ describe("wrangler secret", () => {
 				"secret delete the-key --name script-name --env some-env --legacy-env false"
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Deleting the secret the-key on the Worker script-name (some-env)
+			"? Are you sure you want to permanently delete the secret the-key on the Worker script-name (some-env)?
+			🤖 [2mUsing default value in non-interactive context:[22m [37m[1myes[22m[39m
+			🌀 Deleting the secret the-key on the Worker script-name (some-env)
 			✨ Success! Deleted secret the-key"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
