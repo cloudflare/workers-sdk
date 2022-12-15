@@ -220,6 +220,7 @@ import {
 	purgeConfigCaches,
 	saveToConfigCache,
 } from "../config-cache";
+import { NoDefaultValueProvided, select } from "../dialogs";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { CI } from "../is-ci";
 import isInteractive from "../is-interactive";
@@ -238,11 +239,10 @@ import {
 	getRevokeUrlFromEnv,
 	getTokenUrlFromEnv,
 } from "./auth-variables";
-import { ChooseAccountItem, getAccountChoices } from "./choose-account";
+import { type ChooseAccountItem, getAccountChoices } from "./choose-account";
 import { generateAuthUrl } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
 import type { ParsedUrlQuery } from "node:querystring";
-import { NoDefaultValueProvided, select } from "../dialogs";
 
 export type ApiCredentials =
 	| {
