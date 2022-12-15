@@ -476,7 +476,7 @@ describe("wrangler secret", () => {
 			await runWrangler("secret delete the-key --name script-name");
 			expect(std.out).toMatchInlineSnapshot(`
 			"? Are you sure you want to permanently delete the secret the-key on the Worker script-name?
-			🤖 [2mUsing default value in non-interactive context:[22m [37m[1myes[22m[39m
+			🤖 Using default value in non-interactive context: yes
 			🌀 Deleting the secret the-key on the Worker script-name
 			✨ Success! Deleted secret the-key"
 		`);
@@ -498,7 +498,7 @@ describe("wrangler secret", () => {
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 			"? Are you sure you want to permanently delete the secret the-key on the Worker script-name-some-env?
-			🤖 [2mUsing default value in non-interactive context:[22m [37m[1myes[22m[39m
+			🤖 Using default value in non-interactive context: yes
 			🌀 Deleting the secret the-key on the Worker script-name-some-env
 			✨ Success! Deleted secret the-key"
 		`);
@@ -519,7 +519,7 @@ describe("wrangler secret", () => {
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 			"? Are you sure you want to permanently delete the secret the-key on the Worker script-name (some-env)?
-			🤖 [2mUsing default value in non-interactive context:[22m [37m[1myes[22m[39m
+			🤖 Using default value in non-interactive context: yes
 			🌀 Deleting the secret the-key on the Worker script-name (some-env)
 			✨ Success! Deleted secret the-key"
 		`);

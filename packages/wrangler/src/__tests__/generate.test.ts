@@ -2,12 +2,17 @@ import fs from "node:fs";
 import path from "node:path";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
+import { useMockIsTTY } from "./helpers/mock-istty";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 
 describe("generate", () => {
 	runInTempDir();
+	const { setIsTTY } = useMockIsTTY();
 	const std = mockConsoleMethods();
+	beforeEach(() => {
+		setIsTTY(true);
+	});
 
 	describe("cli functionality", () => {
 		afterEach(() => {});
@@ -24,26 +29,9 @@ describe("generate", () => {
 				}
 			);
 			await runWrangler("generate no-template");
-			expect(std.out).toMatchInlineSnapshot(`
-			"✨ Created no-template/wrangler.toml
-			? Would you like to use git to manage this Worker?
-			🤖 [2mUsing default value in non-interactive context:[22m [37m[1myes[22m[39m
-			✨ Initialized git repository at no-template
-			? No package.json found. Would you like to create one?
-			🤖 [2mUsing default value in non-interactive context:[22m [37m[1myes[22m[39m
-			✨ Created no-template/package.json
-			? Would you like to use TypeScript?
-			🤖 [2mUsing default value in non-interactive context:[22m [37m[1myes[22m[39m
-			✨ Created no-template/tsconfig.json
-			? Would you like to create a Worker at no-template/src/index.ts?
-			🤖 [2mUsing default value in non-interactive context:[22m [37m[1mFetch handler[22m[39m
-			✨ Created no-template/src/index.ts
-
-			To start developing your Worker, run \`cd no-template && npm start\`
-			To publish your Worker to the Internet, run \`npm run deploy\`
-
-			🚨 wrangler was unable to fetch your npm packages, but your project is ready to go"
-		`);
+			expect(std.out).toMatchInlineSnapshot(
+				`"✨ Created no-template/wrangler.toml"`
+			);
 		});
 
 		it("complains when given the --type argument", async () => {
