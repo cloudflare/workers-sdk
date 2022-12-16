@@ -93,7 +93,9 @@ jest.mock("../cfetch/internal");
 	jest.requireActual("../cfetch/internal")["fetchDashboardScript"]
 );
 (fetchInternal as jest.Mock).mockImplementation(mockFetchInternal);
-(fetchKVGetValue as jest.Mock).mockImplementation(mockFetchKVGetValue);
+(fetchKVGetValue as jest.Mock).mockImplementation(
+	jest.requireActual("../cfetch/internal").fetchDashboardScript
+);
 (fetchR2Objects as jest.Mock).mockImplementation(mockFetchR2Objects);
 (performApiFetch as jest.Mock).mockImplementation(mockPerformApiFetch);
 
