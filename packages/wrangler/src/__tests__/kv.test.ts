@@ -1,18 +1,12 @@
 import { writeFileSync } from "node:fs";
 import { rest } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
-import { createFetchResult } from "./helpers/mock-cfetch";
+
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearConfirmMocks, mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
-import { mockKeyListRequest } from "./helpers/mock-kv";
-import { mockGetMemberships, mockOAuthFlow } from "./helpers/mock-oauth-flow";
 import { mockProcess } from "./helpers/mock-process";
-import {
-	msw,
-	mswSuccessOauthHandlers,
-	mswSuccessUserHandlers,
-} from "./helpers/msw";
+import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type {
@@ -25,14 +19,10 @@ describe("wrangler", () => {
 	mockAccountId();
 	mockApiToken();
 	runInTempDir();
-	const { mockOAuthServerCallback } = mockOAuthFlow();
+
 	const std = mockConsoleMethods();
 	const proc = mockProcess();
 
-	beforeEach(() => {
-		mockOAuthServerCallback("success");
-		msw.use(...mswSuccessOauthHandlers, ...mswSuccessUserHandlers);
-	});
 	afterEach(() => {
 		clearConfirmMocks();
 	});
@@ -215,7 +205,7 @@ describe("wrangler", () => {
 							expect(await req.json()).toEqual({});
 							const pageSize = Number(req.url.searchParams.get("per_page"));
 							const page = Number(req.url.searchParams.get("page"));
-							return res.once(
+							return res(
 								ctx.status(200),
 								ctx.json(
 									createFetchResult(
@@ -266,10 +256,7 @@ describe("wrangler", () => {
 							requests.count++;
 							expect(req.params.accountId).toEqual("some-account-id");
 							expect(req.params.namespaceId).toEqual(expectedNamespaceId);
-							return res.once(
-								ctx.status(200),
-								ctx.json(createFetchResult(null))
-							);
+							return res(ctx.status(200), ctx.json(createFetchResult(null)));
 						}
 					)
 				);
@@ -385,10 +372,7 @@ describe("wrangler", () => {
 							} else {
 								expect(req.url.searchParams.has("expiration_ttl")).toBe(false);
 							}
-							return res.once(
-								ctx.status(200),
-								ctx.json(createFetchResult(null))
-							);
+							return res(ctx.status(200), ctx.json(createFetchResult(null)));
 						}
 					)
 				);
@@ -1291,7 +1275,6 @@ describe("wrangler", () => {
 						"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/values/:key",
 						(req, res, ctx) => {
 							requests.count++;
-							debugger;
 							expect(req.params.accountId).toEqual("some-account-id");
 							expect(req.params.namespaceId).toEqual(expectedNamespaceId);
 							expect(req.params.key).toEqual(expectedKey);
@@ -1313,7 +1296,7 @@ describe("wrangler", () => {
 				expect(requests.count).toEqual(1);
 			});
 
-			it.only("should encode the key in the api request to delete a value", async () => {
+			it("should encode the key in the api request to delete a value", async () => {
 				const requests = mockDeleteRequest("voyager", "/NCC-74656");
 				await runWrangler(`kv:key delete --namespace-id voyager /NCC-74656`);
 
@@ -1401,10 +1384,7 @@ describe("wrangler", () => {
 									requests.count * 5000
 								)
 							);
-							return res.once(
-								ctx.status(200),
-								ctx.json(createFetchResult(null))
-							);
+							return res(ctx.status(200), ctx.json(createFetchResult(null)));
 						}
 					)
 				);
@@ -1558,10 +1538,7 @@ describe("wrangler", () => {
 									requests.count * 5000
 								)
 							);
-							return res.once(
-								ctx.status(200),
-								ctx.json(createFetchResult(null))
-							);
+							return res(ctx.status(200), ctx.json(createFetchResult(null)));
 						}
 					)
 				);
@@ -1738,4 +1715,70 @@ function setMockFetchKVGetValue(
 			}
 		)
 	);
+}
+
+function createFetchResult(
+	result: unknown,
+	success = true,
+	errors: { code: number; message: string }[] = []
+) {
+	return {
+		success,
+		errors,
+		messages: [],
+		result,
+	};
+}
+
+function mockGetMemberships(
+	accounts: { id: string; account: { id: string; name: string } }[]
+) {
+	msw.use(
+		rest.get("*/memberships", (req, res, ctx) => {
+			return res.once(ctx.json(createFetchResult(accounts)));
+		})
+	);
+}
+
+function mockKeyListRequest(
+	expectedNamespaceId: string,
+	expectedKeys: NamespaceKeyInfo[],
+	keysPerRequest = 1000,
+	blankCursorValue: "" | undefined | null = undefined
+) {
+	const requests = { count: 0 };
+	// See https://api.cloudflare.com/#workers-kv-namespace-list-a-namespace-s-keys
+	msw.use(
+		rest.get(
+			"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/keys",
+			(req, res, ctx) => {
+				let result;
+				let cursor;
+				requests.count++;
+				expect(req.params.accountId).toEqual("some-account-id");
+				expect(req.params.namespaceId).toEqual(expectedNamespaceId);
+				if (expectedKeys.length <= keysPerRequest) {
+					result = expectedKeys;
+				} else {
+					const start =
+						parseInt(req.url.searchParams.get("cursor") ?? "0") || 0;
+					const end = start + keysPerRequest;
+					cursor = end < expectedKeys.length ? end : blankCursorValue;
+					result = expectedKeys.slice(start, end);
+				}
+				return res(
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result,
+						result_info: {
+							cursor,
+						},
+					})
+				);
+			}
+		)
+	);
+	return requests;
 }

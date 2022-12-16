@@ -9,7 +9,6 @@ import {
 import { confirm, prompt } from "../dialogs";
 import {
 	mockFetchInternal,
-	mockFetchKVGetValue,
 	mockFetchR2Objects,
 	mockPerformApiFetch,
 } from "./helpers/mock-cfetch";
