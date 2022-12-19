@@ -49,7 +49,7 @@ export function pubSubCommands(
 								namespace.description = args.description;
 							}
 
-							logger.log(`Creating Pub/SubNamespace ${args.name}...`);
+							logger.log(`Creating Pub/Sub Namespace ${args.name}...`);
 							await pubsub.createPubSubNamespace(accountId, namespace);
 							logger.log(`Success! Created Pub/Sub Namespace ${args.name}`);
 							await metrics.sendMetricsEvent("create pubsub namespace", {
