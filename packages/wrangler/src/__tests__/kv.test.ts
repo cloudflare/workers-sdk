@@ -1,7 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { rest } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
-
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearConfirmMocks, mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
@@ -188,7 +187,7 @@ describe("wrangler", () => {
 		});
 
 		describe("list", () => {
-			function mockListRequest(namespaces: unknown[]) {
+			function mockListRequest(namespaces: KVNamespaceInfo[]) {
 				const requests = { count: 0 };
 				msw.use(
 					rest.get(
@@ -202,11 +201,10 @@ describe("wrangler", () => {
 							expect(req.url.searchParams.get("page")).toEqual(
 								`${requests.count}`
 							);
-							expect(await req.json()).toEqual({});
+
 							const pageSize = Number(req.url.searchParams.get("per_page"));
 							const page = Number(req.url.searchParams.get("page"));
 							return res(
-								ctx.status(200),
 								ctx.json(
 									createFetchResult(
 										namespaces.slice((page - 1) * pageSize, page * pageSize)
@@ -228,8 +226,7 @@ describe("wrangler", () => {
 				await runWrangler("kv:namespace list");
 
 				expect(std.err).toMatchInlineSnapshot(`""`);
-				const namespaces = JSON.parse(std.out);
-				expect(namespaces).toEqual(kvNamespaces);
+				expect(JSON.parse(std.out)).toEqual(kvNamespaces);
 			});
 
 			it("should make multiple requests for paginated results", async () => {
@@ -240,8 +237,8 @@ describe("wrangler", () => {
 				}
 				const requests = mockListRequest(kvNamespaces);
 				await runWrangler("kv:namespace list");
-				const namespaces = JSON.parse(std.out);
-				expect(namespaces).toEqual(kvNamespaces);
+
+				expect(JSON.parse(std.out)).toEqual(kvNamespaces);
 				expect(requests.count).toEqual(6);
 			});
 		});
@@ -346,7 +343,7 @@ describe("wrangler", () => {
 							const { accountId, namespaceId, key } = req.params;
 							expect(accountId).toEqual("some-account-id");
 							expect(namespaceId).toEqual(expectedNamespaceId);
-							expect(key).toEqual(expectedKV.key);
+							expect(encodeURIComponent(key as string)).toEqual(expectedKV.key);
 							// if (expectedKV.metadata) {
 							// 	expect(body).toBeInstanceOf(FormData);
 							// 	expect((body as FormData).get("value")).toEqual(
@@ -938,7 +935,7 @@ describe("wrangler", () => {
 		});
 
 		describe("get", () => {
-			it("should get a key in a given namespace specified by namespace-id", async () => {
+			it.only("should get a key in a given namespace specified by namespace-id", async () => {
 				setMockFetchKVGetValue(
 					"some-account-id",
 					"some-namespace-id",
@@ -1059,6 +1056,7 @@ describe("wrangler", () => {
 					"%2Fmy%2Ckey",
 					"my-value"
 				);
+
 				await runWrangler(
 					"kv:key get /my,key --namespace-id some-namespace-id"
 				);
@@ -1707,9 +1705,13 @@ function setMockFetchKVGetValue(
 		rest.get(
 			"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/values/:key",
 			(req, res, ctx) => {
-				expect(req.params.accountId).toEqual(accountId);
-				expect(req.params.namespaceId).toEqual(namespaceId);
-				expect(req.params.key).toEqual(key);
+				debugger;
+				console.dir(req.params);
+				// expect(req.params.accountId).toEqual(accountId);
+				// expect(req.params.namespaceId).toEqual(namespaceId);
+				// check that the key is encoded
+				const encodedKey = encodeURIComponent(key);
+				expect(req.params.key).toEqual(encodedKey);
 
 				return res(ctx.status(200), ctx.body(value));
 			}
@@ -1752,11 +1754,13 @@ function mockKeyListRequest(
 		rest.get(
 			"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/keys",
 			(req, res, ctx) => {
+				requests.count++;
 				let result;
 				let cursor;
-				requests.count++;
+
 				expect(req.params.accountId).toEqual("some-account-id");
 				expect(req.params.namespaceId).toEqual(expectedNamespaceId);
+
 				if (expectedKeys.length <= keysPerRequest) {
 					result = expectedKeys;
 				} else {
