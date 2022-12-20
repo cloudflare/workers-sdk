@@ -163,7 +163,7 @@ describe("wrangler secret", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should handle failed secret:bulk", async () => {
+			it("should handle network failure on secret:bulk", async () => {
 				writeFileSync(
 					"secret.json",
 					JSON.stringify({
@@ -213,7 +213,7 @@ describe("wrangler secret", () => {
 		`);
 			});
 
-			it("should count success and failed secret:bulk", async () => {
+			it("should count success and network failure on secret:bulk", async () => {
 				writeFileSync(
 					"secret.json",
 					JSON.stringify({
