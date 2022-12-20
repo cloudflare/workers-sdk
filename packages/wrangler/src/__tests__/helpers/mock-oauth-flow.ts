@@ -1,11 +1,7 @@
 import fetchMock from "jest-fetch-mock";
 import { Request } from "undici";
 import openInBrowser from "../../open-in-browser";
-import {
-	createFetchResult,
-	setMockRawResponse,
-	setMockResponse,
-} from "./mock-cfetch";
+import { setMockResponse } from "./mock-cfetch";
 import { mockHttpServer } from "./mock-http-server";
 
 export function mockGetMemberships(
@@ -13,12 +9,6 @@ export function mockGetMemberships(
 ) {
 	setMockResponse("/memberships", "GET", () => {
 		return accounts;
-	});
-}
-
-export function mockGetMembershipsFail() {
-	setMockRawResponse("/memberships", () => {
-		return createFetchResult([], false);
 	});
 }
 
