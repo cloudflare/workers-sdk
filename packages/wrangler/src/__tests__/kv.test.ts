@@ -935,7 +935,7 @@ describe("wrangler", () => {
 		});
 
 		describe("get", () => {
-			it.only("should get a key in a given namespace specified by namespace-id", async () => {
+			it("should get a key in a given namespace specified by namespace-id", async () => {
 				setMockFetchKVGetValue(
 					"some-account-id",
 					"some-namespace-id",
@@ -1053,7 +1053,7 @@ describe("wrangler", () => {
 				setMockFetchKVGetValue(
 					"some-account-id",
 					"some-namespace-id",
-					"%2Fmy%2Ckey",
+					"%2Fmy%2Ckey", // expect the key /my,key to be encoded
 					"my-value"
 				);
 
@@ -1705,15 +1705,13 @@ function setMockFetchKVGetValue(
 		rest.get(
 			"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/values/:key",
 			(req, res, ctx) => {
-				debugger;
 				console.dir(req.params);
-				// expect(req.params.accountId).toEqual(accountId);
-				// expect(req.params.namespaceId).toEqual(namespaceId);
-				// check that the key is encoded
-				const encodedKey = encodeURIComponent(key);
-				expect(req.params.key).toEqual(encodedKey);
+				expect(req.params.accountId).toEqual(accountId);
+				expect(req.params.namespaceId).toEqual(namespaceId);
+				// Getting the key from params decodes it so we need to grab the encoded key from the URL
+				expect(req.url.toString().split("/").pop()).toBe(key);
 
-				return res(ctx.status(200), ctx.body(value));
+				return res.once(ctx.status(200), ctx.body(value));
 			}
 		)
 	);

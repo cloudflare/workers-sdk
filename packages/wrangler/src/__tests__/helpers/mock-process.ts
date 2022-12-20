@@ -5,22 +5,17 @@
 
 let writeSpy: jest.SpyInstance;
 
-function captureLastWriteCall(spy: jest.SpyInstance): Buffer {
+function captureLastWriteCall(spy: jest.SpyInstance): Buffer | undefined {
 	const calls = spy.mock.calls;
-	if (calls.length > 1) {
-		throw new Error(
-			"Unexpected calls to `stdout.write()`: " + JSON.stringify(calls)
-		);
-	}
-	const buffer = calls[0]?.[0] ?? Buffer.alloc(0);
+
+	// Loop through and find the buffer in calls
+	// (we don't know the index of the buffer in the calls array)
+	const buffer = calls
+		.map((call) => call[0])
+		.find((call) => call instanceof Buffer);
+
 	if (buffer instanceof Buffer) {
 		return buffer;
-	} else {
-		throw new Error(
-			`Unexpected non-Buffer passed to \`stdout.write()\`: "${JSON.stringify(
-				buffer
-			)}"`
-		);
 	}
 }
 
