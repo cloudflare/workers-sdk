@@ -3,13 +3,10 @@ import { existsSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { cwd } from "node:process";
-import { render, Text } from "ink";
-import SelectInput from "ink-select-input";
-import React from "react";
 import { File, FormData } from "undici";
 import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
-import { prompt } from "../dialogs";
+import { prompt, select } from "../dialogs";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -19,12 +16,14 @@ import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { FunctionsNoRoutesError, getFunctionsNoRoutesWarning } from "./errors";
 import { validateRoutes } from "./functions/routes-validation";
 import { listProjects } from "./projects";
-import { promptSelectProject } from "./prompt-select-project";
 import { upload } from "./upload";
 import { pagesBetaWarning } from "./utils";
 import type { YargsOptionsToInterface } from "../yargs-types";
-import type { PagesConfigCache } from "./types";
-import type { Project, Deployment } from "@cloudflare/types";
+import type { PagesConfigCache, Project } from "./types";
+import type {
+	Project as ProjectResponse,
+	Deployment as DeploymentResponse,
+} from "@cloudflare/types";
 import type { Argv } from "yargs";
 
 type PublishArgs = YargsOptionsToInterface<typeof Options>;
@@ -103,43 +102,19 @@ export const Handler = async ({
 		let existingOrNew: "existing" | "new" = "new";
 
 		if (projects.length > 0) {
-			existingOrNew = await new Promise<"new" | "existing">((resolve) => {
-				const { unmount } = render(
-					<>
-						<Text>
-							No project selected. Would you like to create one or use an
-							existing project?
-						</Text>
-						<SelectInput
-							items={[
-								{
-									key: "new",
-									label: "Create a new project",
-									value: "new",
-								},
-								{
-									key: "existing",
-									label: "Use an existing project",
-									value: "existing",
-								},
-							]}
-							onSelect={async (selected) => {
-								resolve(selected.value as "new" | "existing");
-								unmount();
-							}}
-						/>
-					</>
-				);
-			});
+			existingOrNew = await promptUseNewOrExistingProject();
 		}
 
 		switch (existingOrNew) {
 			case "existing": {
-				projectName = await promptSelectProject({ accountId });
+				projectName = await promptSelectProject(projects);
 				break;
 			}
 			case "new": {
-				projectName = await prompt("Enter the name of your new project:");
+				projectName = await prompt(
+					"Enter the name of your new project:",
+					"text"
+				);
 
 				if (!projectName) {
 					throw new FatalError("Must specify a project name.", 1);
@@ -166,13 +141,16 @@ export const Handler = async ({
 					throw new FatalError("Must specify a production branch.", 1);
 				}
 
-				await fetchResult<Project>(`/accounts/${accountId}/pages/projects`, {
-					method: "POST",
-					body: JSON.stringify({
-						name: projectName,
-						production_branch: productionBranch,
-					}),
-				});
+				await fetchResult<ProjectResponse>(
+					`/accounts/${accountId}/pages/projects`,
+					{
+						method: "POST",
+						body: JSON.stringify({
+							name: projectName,
+							production_branch: productionBranch,
+						}),
+					}
+				);
 
 				saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
 					account_id: accountId,
@@ -261,7 +239,7 @@ export const Handler = async ({
 	} catch {}
 
 	// Grab the bindings from the API, we need these for shims and other such hacky inserts
-	const project = await fetchResult<Project>(
+	const project = await fetchResult<ProjectResponse>(
 		`/accounts/${accountId}/pages/projects/${projectName}`
 	);
 	let isProduction = true;
@@ -441,7 +419,7 @@ export const Handler = async ({
 		}
 	}
 
-	const deploymentResponse = await fetchResult<Deployment>(
+	const deploymentResponse = await fetchResult<DeploymentResponse>(
 		`/accounts/${accountId}/pages/projects/${projectName}/deployments`,
 		{
 			method: "POST",
@@ -459,3 +437,31 @@ export const Handler = async ({
 	);
 	await metrics.sendMetricsEvent("create pages deployment");
 };
+
+async function promptUseNewOrExistingProject(): Promise<"new" | "existing"> {
+	return select(
+		"No project selected. Would you like to create one or use an existing project?",
+		[
+			{
+				label: "Create a new project",
+				value: "new",
+			},
+			{
+				label: "Use an existing project",
+				value: "existing",
+			},
+		],
+		0
+	) as Promise<"new" | "existing">;
+}
+
+async function promptSelectProject(projects: Project[]): Promise<string> {
+	return select(
+		"Select a project:",
+		projects.map((project) => ({
+			label: project.name,
+			value: project.name,
+		})),
+		0
+	);
+}

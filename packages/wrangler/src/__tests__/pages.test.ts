@@ -15,6 +15,13 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { Deployment, Project, UploadPayloadFile } from "../pages/types";
 import type { FormData, RequestInit } from "undici";
+import {
+	clearPromptMocks,
+	clearSelectMocks,
+	mockPrompt,
+	mockSelect,
+} from "./helpers/mock-dialogs";
+import { useMockIsTTY } from "./helpers/mock-istty";
 
 // Asserting within mock responses get swallowed, so run them out-of-band
 const outOfBandTests: (() => void)[] = [];
@@ -22,9 +29,9 @@ function assertLater(fn: () => void) {
 	outOfBandTests.push(fn);
 }
 
-function mockGetToken(jwt: string) {
+function mockGetToken(jwt: string, projectName = "foo") {
 	return setMockResponse(
-		"/accounts/:accountId/pages/projects/foo/upload-token",
+		`/accounts/:accountId/pages/projects/${projectName}/upload-token`,
 		async ([_url, accountId]) => {
 			assertLater(() => {
 				expect(accountId).toEqual("some-account-id");
@@ -41,11 +48,15 @@ describe("pages", () => {
 	function endEventLoop() {
 		return new Promise((resolve) => setImmediate(resolve));
 	}
+
 	beforeEach(() => {
 		outOfBandTests.length = 0;
 	});
+
 	afterEach(() => {
 		outOfBandTests.forEach((fn) => fn());
+		clearSelectMocks();
+		clearPromptMocks();
 	});
 
 	beforeEach(() => {
@@ -297,6 +308,7 @@ describe("pages", () => {
 
 	describe("deployment create", () => {
 		let actualProcessEnvCI: string | undefined;
+		const { setIsTTY } = useMockIsTTY();
 
 		mockAccountId();
 		mockApiToken();
@@ -339,6 +351,411 @@ describe("pages", () => {
 
 			🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose"
 		`);
+		});
+
+		it("should support publishing under a new project, if no project name is provided", async () => {
+			setIsTTY(true);
+			writeFileSync("README.md", "Hi there");
+
+			setMockResponse(
+				"/accounts/:accountId/pages/projects",
+				"GET",
+				async ([_url, accountId], init, queryParams) => {
+					assertLater(() => {
+						expect(accountId).toEqual("some-account-id");
+						expect(queryParams.get("per_page")).toEqual("10");
+						expect(queryParams.get("page")).toEqual("1");
+					});
+
+					return [
+						{
+							name: "mock-project-1",
+						},
+						{
+							name: "mock-project-2",
+						},
+					];
+				}
+			);
+
+			const checkSelects = mockSelect({
+				text: "No project selected. Would you like to create one or use an existing project?",
+				result: "new",
+			});
+
+			const checkPrompts = mockPrompt(
+				{
+					text: "Enter the name of your new project:",
+					type: "text",
+					result: "new-mock-project",
+				},
+				{
+					text: "Enter the production branch name:",
+					type: "text",
+					result: "main",
+				}
+			);
+
+			setMockResponse(
+				"/accounts/:accountId/pages/projects",
+				"POST",
+				async ([_url, accountId], init) => {
+					assertLater(() => {
+						expect(accountId).toEqual("some-account-id");
+						const body = JSON.parse(init.body as string);
+						expect(body).toEqual({
+							name: "new-mock-project",
+							production_branch: "main",
+						});
+					});
+				}
+			);
+
+			setMockResponse(
+				"/accounts/:accountId/pages/projects/new-mock-project",
+				"GET",
+				async ([_url, accountId], init) => {
+					assertLater(() => {
+						expect(accountId).toEqual("some-account-id");
+
+						return {
+							name: "new-mock-project",
+							production_branch: "main",
+						};
+					});
+				}
+			);
+
+			mockGetToken("<<funfetti-auth-jwt>>", "new-mock-project");
+
+			setMockResponse(
+				"/pages/assets/check-missing",
+				"POST",
+				async (_, init) => {
+					const body = JSON.parse(init.body as string) as { hashes: string[] };
+					assertLater(() => {
+						expect(init.headers).toMatchObject({
+							Authorization: "Bearer <<funfetti-auth-jwt>>",
+						});
+						expect(body).toMatchObject({
+							hashes: ["62697a4a4953599e130c386468689504"],
+						});
+					});
+					return body.hashes;
+				}
+			);
+
+			setMockResponse("/pages/assets/upload", "POST", async (_, init) => {
+				assertLater(() => {
+					expect(init.headers).toMatchObject({
+						Authorization: "Bearer <<funfetti-auth-jwt>>",
+					});
+					const body = JSON.parse(init.body as string) as UploadPayloadFile[];
+					expect(body).toMatchObject([
+						{
+							key: "62697a4a4953599e130c386468689504",
+							value: Buffer.from("Hi there").toString("base64"),
+							metadata: {
+								contentType: "text/markdown",
+							},
+							base64: true,
+						},
+					]);
+				});
+			});
+
+			setMockResponse(
+				"/accounts/:accountId/pages/projects/new-mock-project/deployments",
+				"POST",
+				async ([_url, accountId], init) => {
+					assertLater(() => {
+						expect(accountId).toEqual("some-account-id");
+						const body = init.body as FormData;
+						const manifest = JSON.parse(body.get("manifest") as string);
+						expect(manifest).toMatchInlineSnapshot(`
+				                          Object {
+				                            "/README.md": "62697a4a4953599e130c386468689504",
+				                          }
+			                      `);
+					});
+
+					return {
+						url: "https://abcxyz.new-mock-project.pages.dev/",
+					};
+				}
+			);
+
+			await runWrangler("pages publish .");
+
+			checkSelects();
+			checkPrompts();
+			expect(std.out).toMatchInlineSnapshot(`
+				"✨ Successfully created the 'new-mock-project' project.
+				✨ Success! Uploaded 1 files (TIMINGS)
+
+				✨ Deployment complete! Take a peek over at https://abcxyz.new-mock-project.pages.dev/"
+			`);
+		});
+
+		it("should support publishing under an existing project, if no project name is provided", async () => {
+			writeFileSync("README.md", "Hello world");
+			setIsTTY(true);
+			setMockResponse(
+				"/accounts/:accountId/pages/projects",
+				"GET",
+				async ([_url, accountId], init, queryParams) => {
+					assertLater(() => {
+						expect(accountId).toEqual("some-account-id");
+						expect(queryParams.get("per_page")).toEqual("10");
+						expect(queryParams.get("page")).toEqual("1");
+					});
+
+					return [
+						{
+							name: "mock-project-1",
+						},
+						{
+							name: "mock-project-2",
+						},
+						{
+							name: "mock-project-3",
+						},
+					];
+				}
+			);
+
+			setMockResponse(
+				"/accounts/:accountId/pages/projects/:projectName",
+				"GET",
+				async ([_url, accountId, projectName]) => {
+					assertLater(() => {
+						expect(accountId).toEqual("some-account-id");
+						expect(projectName).toEqual("mock-project-1");
+					});
+
+					return {
+						name: "mock-project-1",
+					};
+				}
+			);
+
+			const checkSelects = mockSelect(
+				{
+					text: "No project selected. Would you like to create one or use an existing project?",
+					result: "existing",
+				},
+				{
+					text: "Select a project:",
+					result: "mock-project-1",
+				}
+			);
+
+			mockGetToken("<<funfetti-auth-jwt>>", "mock-project-1");
+
+			setMockResponse(
+				"/pages/assets/check-missing",
+				"POST",
+				async (_, init) => {
+					const body = JSON.parse(init.body as string) as { hashes: string[] };
+					assertLater(() => {
+						expect(init.headers).toMatchObject({
+							Authorization: "Bearer <<funfetti-auth-jwt>>",
+						});
+						expect(body).toMatchObject({
+							hashes: ["b6c6bef6412843ffcdb731e8bdcb6c57"],
+						});
+					});
+					return body.hashes;
+				}
+			);
+
+			setMockResponse("/pages/assets/upload", "POST", async (_, init) => {
+				assertLater(() => {
+					expect(init.headers).toMatchObject({
+						Authorization: "Bearer <<funfetti-auth-jwt>>",
+					});
+					const body = JSON.parse(init.body as string) as UploadPayloadFile[];
+					expect(body).toMatchObject([
+						{
+							key: "b6c6bef6412843ffcdb731e8bdcb6c57",
+							value: Buffer.from("Hello world").toString("base64"),
+							metadata: {
+								contentType: "text/markdown",
+							},
+							base64: true,
+						},
+					]);
+				});
+			});
+
+			setMockResponse(
+				"/accounts/:accountId/pages/projects/mock-project-1/deployments",
+				"POST",
+				async ([_url, accountId], init) => {
+					assertLater(() => {
+						expect(accountId).toEqual("some-account-id");
+						const body = init.body as FormData;
+						const manifest = JSON.parse(body.get("manifest") as string);
+						expect(manifest).toMatchInlineSnapshot(`
+				                          Object {
+				                            "/README.md": "b6c6bef6412843ffcdb731e8bdcb6c57",
+				                          }
+			                      `);
+					});
+
+					return {
+						url: "https://abcxyz.mock-project-1.pages.dev/",
+					};
+				}
+			);
+
+			await runWrangler("pages publish .");
+
+			checkSelects();
+			expect(std.out).toMatchInlineSnapshot(`
+			"✨ Success! Uploaded 1 files (TIMINGS)
+
+			✨ Deployment complete! Take a peek over at https://abcxyz.mock-project-1.pages.dev/"
+		`);
+		});
+
+		it("should publish under a new project by default, if no project name was provided and no existing upload projects are available", async () => {
+			writeFileSync("README.md", "Hi there");
+			setIsTTY(true);
+			setMockResponse(
+				"/accounts/:accountId/pages/projects",
+				"GET",
+				async ([_url, accountId], init, queryParams) => {
+					assertLater(() => {
+						expect(accountId).toEqual("some-account-id");
+						expect(queryParams.get("per_page")).toEqual("10");
+						expect(queryParams.get("page")).toEqual("1");
+					});
+
+					return [
+						{
+							name: "gh-mock-project",
+							source: { type: "github" },
+						},
+						{
+							name: "gl-mock-project",
+							source: { type: "gitlab" },
+						},
+					];
+				}
+			);
+
+			const checkPrompts = mockPrompt(
+				{
+					text: "Enter the name of your new project:",
+					type: "text",
+					result: "new-mock-project",
+				},
+				{
+					text: "Enter the production branch name:",
+					type: "text",
+					result: "main",
+				}
+			);
+
+			setMockResponse(
+				"/accounts/:accountId/pages/projects",
+				"POST",
+				async ([_url, accountId], init) => {
+					assertLater(() => {
+						expect(accountId).toEqual("some-account-id");
+						const body = JSON.parse(init.body as string);
+						expect(body).toEqual({
+							name: "new-mock-project",
+							production_branch: "main",
+						});
+					});
+				}
+			);
+
+			setMockResponse(
+				"/accounts/:accountId/pages/projects/new-mock-project",
+				"GET",
+				async ([_url, accountId], init) => {
+					assertLater(() => {
+						expect(accountId).toEqual("some-account-id");
+
+						return {
+							name: "new-mock-project",
+							production_branch: "main",
+						};
+					});
+				}
+			);
+
+			mockGetToken("<<funfetti-auth-jwt>>", "new-mock-project");
+
+			setMockResponse(
+				"/pages/assets/check-missing",
+				"POST",
+				async (_, init) => {
+					const body = JSON.parse(init.body as string) as { hashes: string[] };
+					assertLater(() => {
+						expect(init.headers).toMatchObject({
+							Authorization: "Bearer <<funfetti-auth-jwt>>",
+						});
+						expect(body).toMatchObject({
+							hashes: ["62697a4a4953599e130c386468689504"],
+						});
+					});
+					return body.hashes;
+				}
+			);
+
+			setMockResponse("/pages/assets/upload", "POST", async (_, init) => {
+				assertLater(() => {
+					expect(init.headers).toMatchObject({
+						Authorization: "Bearer <<funfetti-auth-jwt>>",
+					});
+					const body = JSON.parse(init.body as string) as UploadPayloadFile[];
+					expect(body).toMatchObject([
+						{
+							key: "62697a4a4953599e130c386468689504",
+							value: Buffer.from("Hi there").toString("base64"),
+							metadata: {
+								contentType: "text/markdown",
+							},
+							base64: true,
+						},
+					]);
+				});
+			});
+
+			setMockResponse(
+				"/accounts/:accountId/pages/projects/new-mock-project/deployments",
+				"POST",
+				async ([_url, accountId], init) => {
+					assertLater(() => {
+						expect(accountId).toEqual("some-account-id");
+						const body = init.body as FormData;
+						const manifest = JSON.parse(body.get("manifest") as string);
+						expect(manifest).toMatchInlineSnapshot(`
+				                          Object {
+				                            "/README.md": "62697a4a4953599e130c386468689504",
+				                          }
+			                      `);
+					});
+
+					return {
+						url: "https://abcxyz.new-mock-project.pages.dev/",
+					};
+				}
+			);
+
+			await runWrangler("pages publish .");
+
+			checkPrompts();
+			expect(std.out).toMatchInlineSnapshot(`
+				"✨ Successfully created the 'new-mock-project' project.
+				✨ Success! Uploaded 1 files (TIMINGS)
+
+				✨ Deployment complete! Take a peek over at https://abcxyz.new-mock-project.pages.dev/"
+			`);
 		});
 
 		it("should upload a directory of files", async () => {
