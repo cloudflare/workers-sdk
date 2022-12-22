@@ -78,7 +78,7 @@ export function mockPrompt(...expectations: PromptExpectation[]) {
 					return Promise.resolve(expectation.result);
 				}
 			}
-			throw new Error(`Unexpected confirmation message: ${text}`);
+			throw new Error(`Unexpected prompt message: ${text}`);
 		}
 	);
 	return () => {
