@@ -1,12 +1,16 @@
+/* eslint-disable no-shadow */
+import { Blob } from "node:buffer";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { chdir } from "node:process";
-import { rest } from "msw";
+import { MockedRequest, rest } from "msw";
+import { FormData } from "undici";
 import { ROUTES_SPEC_VERSION } from "../pages/constants";
-// import { isRoutesJSONSpec } from "../pages/functions/routes-validation";
-// import { version } from "./../../package.json";
+import { isRoutesJSONSpec } from "../pages/functions/routes-validation";
+import { version } from "./../../package.json";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw } from "./helpers/msw";
+import { FileReaderSync } from "./helpers/msw/read-file-sync";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { Deployment, Project, UploadPayloadFile } from "../pages/types";
@@ -400,10 +404,17 @@ describe("pages", () => {
 					"*/accounts/:accountId/pages/projects/foo/deployments",
 					async (req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
-						// TODO come back to this
-						// expect(await req.text()).toMatchInlineSnapshot(
-						// 	`"[object FormData]"`
-						// );
+						expect(await (req as RestRequestWithFormData).formData())
+							.toMatchInlineSnapshot(`
+				FormData {
+				  Symbol(state): Array [
+				    Object {
+				      "name": "manifest",
+				      "value": "{\\"/logo.png\\":\\"2082190357cfd3617ccfe04f340c6247\\"}",
+				    },
+				  ],
+				}
+			`);
 						return res.once(
 							ctx.status(200),
 							ctx.json({
@@ -519,9 +530,17 @@ describe("pages", () => {
 					"*/accounts/:accountId/pages/projects/foo/deployments",
 					async (req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
-						expect(await req.text()).toMatchInlineSnapshot(
-							`"[object FormData]"`
-						);
+						expect(await (req as RestRequestWithFormData).formData())
+							.toMatchInlineSnapshot(`
+				FormData {
+				  Symbol(state): Array [
+				    Object {
+				      "name": "manifest",
+				      "value": "{\\"/logo.txt\\":\\"1a98fb08af91aca4a7df1764a2c4ddb0\\"}",
+				    },
+				  ],
+				}
+			`);
 
 						return res.once(
 							ctx.status(200),
@@ -632,9 +651,17 @@ describe("pages", () => {
 					"*/accounts/:accountId/pages/projects/foo/deployments",
 					async (req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
-						expect(await req.text()).toMatchInlineSnapshot(
-							`"[object FormData]"`
-						);
+						expect(await (req as RestRequestWithFormData).formData())
+							.toMatchInlineSnapshot(`
+				FormData {
+				  Symbol(state): Array [
+				    Object {
+				      "name": "manifest",
+				      "value": "{\\"/logo.txt\\":\\"1a98fb08af91aca4a7df1764a2c4ddb0\\"}",
+				    },
+				  ],
+				}
+			`);
 
 						return res.once(
 							ctx.status(200),
@@ -744,16 +771,17 @@ describe("pages", () => {
 					async (req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
 
-						// const body = await req.text();
+						const body = await (req as RestRequestWithFormData).formData();
+						const manifest = JSON.parse(body.get("manifest") as string);
 
-						// expect(manifest).toMatchInlineSnapshot(`
-						//                       Object {
-						//                         "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
-						//                         "/logo.js": "6be321bef99e758250dac034474ddbb8",
-						//                         "/logo.png": "2082190357cfd3617ccfe04f340c6247",
-						//                         "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
-						//                       }
-						//                 `);
+						expect(manifest).toMatchInlineSnapshot(`
+						                      Object {
+						                        "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
+						                        "/logo.js": "6be321bef99e758250dac034474ddbb8",
+						                        "/logo.png": "2082190357cfd3617ccfe04f340c6247",
+						                        "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
+						                      }
+						                `);
 
 						return res.once(
 							ctx.status(200),
@@ -895,16 +923,16 @@ describe("pages", () => {
 					"*/accounts/:accountId/pages/projects/foo/deployments",
 					async (req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
-						// const body = init.body as FormData;
-						// const manifest = JSON.parse(body.get("manifest") as string);
-						// expect(manifest).toMatchInlineSnapshot(`
-						//                       Object {
-						//                         "/imgs/logo.png": "2082190357cfd3617ccfe04f340c6247",
-						//                         "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
-						//                         "/logo.js": "6be321bef99e758250dac034474ddbb8",
-						//                         "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
-						//                       }
-						//                 `);
+						const body = await (req as RestRequestWithFormData).formData();
+						const manifest = JSON.parse(body.get("manifest") as string);
+						expect(manifest).toMatchInlineSnapshot(`
+						                      Object {
+						                        "/imgs/logo.png": "2082190357cfd3617ccfe04f340c6247",
+						                        "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
+						                        "/logo.js": "6be321bef99e758250dac034474ddbb8",
+						                        "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
+						                      }
+						                `);
 
 						return res.once(
 							ctx.status(200),
@@ -1044,17 +1072,16 @@ describe("pages", () => {
 					async (req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
 
-						// console.dir(req, { depth: null });
-
-						// const manifest = JSON.parse(body.get("manifest") as string);
-						// expect(manifest).toMatchInlineSnapshot(`
-						//                       Object {
-						//                         "/imgs/logo.png": "2082190357cfd3617ccfe04f340c6247",
-						//                         "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
-						//                         "/logo.js": "6be321bef99e758250dac034474ddbb8",
-						//                         "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
-						//                       }
-						//                 `);
+						const body = await (req as RestRequestWithFormData).formData();
+						const manifest = JSON.parse(body.get("manifest") as string);
+						expect(manifest).toMatchInlineSnapshot(`
+						                      Object {
+						                        "/imgs/logo.png": "2082190357cfd3617ccfe04f340c6247",
+						                        "/logo.html": "d96fef225537c9f5e44a3cb27fd0b492",
+						                        "/logo.js": "6be321bef99e758250dac034474ddbb8",
+						                        "/logo.txt": "1a98fb08af91aca4a7df1764a2c4ddb0",
+						                      }
+						                `);
 
 						return res.once(
 							ctx.status(200),
@@ -1331,70 +1358,70 @@ describe("pages", () => {
 					"*/accounts/:accountId/pages/projects/foo/deployments",
 					async (req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
-						// 	const body = init.body as FormData;
-						// 	const manifest = JSON.parse(body.get("manifest") as string);
+						const body = await (req as RestRequestWithFormData).formData();
+						const manifest = JSON.parse(body.get("manifest") as string);
 
-						// 	// for Functions projects, we auto-generate a `_worker.js`,
-						// 	// `functions-filepath-routing-config.json`, and `_routes.json`
-						// 	// file, based on the contents of `/functions`
-						// 	const generatedWorkerJS = body.get("_worker.js") as Blob;
-						// 	const generatedRoutesJSON = await (
-						// 		body.get("_routes.json") as Blob
-						// 	).text();
-						// 	const generatedFilepathRoutingConfig = await (
-						// 		body.get("functions-filepath-routing-config.json") as Blob
-						// 	).text();
+						// for Functions projects, we auto-generate a `_worker.js`,
+						// `functions-filepath-routing-config.json`, and `_routes.json`
+						// file, based on the contents of `/functions`
+						const generatedWorkerJS = body.get("_worker.js") as Blob;
+						const generatedRoutesJSON = await (
+							body.get("_routes.json") as Blob
+						).text();
+						const generatedFilepathRoutingConfig = await (
+							body.get("functions-filepath-routing-config.json") as Blob
+						).text();
 
-						// 	// make sure this is all we uploaded
-						// 	expect([...body.keys()]).toEqual([
-						// 		"manifest",
-						// 		"functions-filepath-routing-config.json",
-						// 		"_worker.js",
-						// 		"_routes.json",
-						// 	]);
+						// make sure this is all we uploaded
+						expect([...body.keys()]).toEqual([
+							"manifest",
+							"functions-filepath-routing-config.json",
+							"_worker.js",
+							"_routes.json",
+						]);
 
-						// 	expect(manifest).toMatchInlineSnapshot(`
-						//                         Object {
-						//                           "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-						//                         }
-						//                   `);
+						expect(manifest).toMatchInlineSnapshot(`
+						                        Object {
+						                          "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+						                        }
+						                  `);
 
-						// 	// the contents of the generated `_worker.js` file is pretty massive, so I don't
-						// 	// think snapshot testing makes much sense here. Plus, calling
-						// 	// `.toMatchInlineSnapshot()` without any arguments, in order to generate that
-						// 	// snapshot value, doesn't generate anything in this case (probably because the
-						// 	// file contents is too big). So for now, let's test that _worker.js was indeed
-						// 	// generated and that the file size is greater than zero
-						// 	expect(generatedWorkerJS).not.toBeNull();
-						// 	expect(generatedWorkerJS.size).toBeGreaterThan(0);
+						// the contents of the generated `_worker.js` file is pretty massive, so I don't
+						// think snapshot testing makes much sense here. Plus, calling
+						// `.toMatchInlineSnapshot()` without any arguments, in order to generate that
+						// snapshot value, doesn't generate anything in this case (probably because the
+						// file contents is too big). So for now, let's test that _worker.js was indeed
+						// generated and that the file size is greater than zero
+						expect(generatedWorkerJS).not.toBeNull();
+						expect(generatedWorkerJS.size).toBeGreaterThan(0);
 
-						// 	const maybeRoutesJSONSpec = JSON.parse(generatedRoutesJSON);
-						// 	expect(isRoutesJSONSpec(maybeRoutesJSONSpec)).toBe(true);
-						// 	expect(maybeRoutesJSONSpec).toMatchObject({
-						// 		version: ROUTES_SPEC_VERSION,
-						// 		description: `Generated by wrangler@${version}`,
-						// 		include: ["/hello"],
-						// 		exclude: [],
-						// 	});
+						const maybeRoutesJSONSpec = JSON.parse(generatedRoutesJSON);
+						expect(isRoutesJSONSpec(maybeRoutesJSONSpec)).toBe(true);
+						expect(maybeRoutesJSONSpec).toMatchObject({
+							version: ROUTES_SPEC_VERSION,
+							description: `Generated by wrangler@${version}`,
+							include: ["/hello"],
+							exclude: [],
+						});
 
-						// 	// Make sure the routing config is valid json
-						// 	const parsedFilepathRoutingConfig = JSON.parse(
-						// 		generatedFilepathRoutingConfig
-						// 	);
-						// 	// The actual shape doesn't matter that much since this
-						// 	// is only used for display in Dash, but it's still useful for
-						// 	// tracking unexpected changes to this config.
-						// 	expect(parsedFilepathRoutingConfig).toStrictEqual({
-						// 		routes: [
-						// 			{
-						// 				routePath: "/hello",
-						// 				mountPath: "/",
-						// 				method: "",
-						// 				module: ["hello.js:onRequest"],
-						// 			},
-						// 		],
-						// 		baseURL: "/",
-						// 	});
+						// Make sure the routing config is valid json
+						const parsedFilepathRoutingConfig = JSON.parse(
+							generatedFilepathRoutingConfig
+						);
+						// The actual shape doesn't matter that much since this
+						// is only used for display in Dash, but it's still useful for
+						// tracking unexpected changes to this config.
+						expect(parsedFilepathRoutingConfig).toStrictEqual({
+							routes: [
+								{
+									routePath: "/hello",
+									mountPath: "/",
+									method: "",
+									module: ["hello.js:onRequest"],
+								},
+							],
+							baseURL: "/",
+						});
 
 						return res.once(
 							ctx.status(200),
@@ -1513,30 +1540,32 @@ describe("pages", () => {
 					"*/accounts/:accountId/pages/projects/foo/deployments",
 					async (req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
-						// 			const body = init.body as FormData;
-						// 			const manifest = JSON.parse(body.get("manifest") as string);
-						// 			const customWorkerJS = await (
-						// 				body.get("_worker.js") as Blob
-						// 			).text();
+						const body = await (req as RestRequestWithFormData).formData();
+						const manifest = JSON.parse(body.get("manifest") as string);
+						const customWorkerJS = await (
+							body.get("_worker.js") as Blob
+						).text();
 
-						// 			// make sure this is all we uploaded
-						// 			expect([...body.keys()]).toEqual(["manifest", "_worker.js"]);
+						// make sure this is all we uploaded
+						expect([...body.keys()].sort()).toEqual(
+							["manifest", "_worker.js"].sort()
+						);
 
-						// 			expect(manifest).toMatchInlineSnapshot(`
-						// 	                          Object {
-						// 	                            "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-						// 	                          }
-						//                       `);
+						expect(manifest).toMatchInlineSnapshot(`
+							                          Object {
+							                            "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+							                          }
+						                      `);
 
-						// 			expect(customWorkerJS).toMatchInlineSnapshot(`
-						// 	"
-						// 					export default {
-						// 						async fetch(request, env) {
-						// 							const url = new URL(request.url);
-						// 							return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
-						// 					};
-						// 				"
-						// `);
+						expect(customWorkerJS).toMatchInlineSnapshot(`
+							"
+											export default {
+												async fetch(request, env) {
+													const url = new URL(request.url);
+													return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+											};
+										"
+						`);
 						return res.once(
 							ctx.status(200),
 							ctx.json({
@@ -1693,68 +1722,68 @@ describe("pages", () => {
 					"*/accounts/:accountId/pages/projects/foo/deployments",
 					async (req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
+						const body = await (req as RestRequestWithFormData).formData();
+						const manifest = JSON.parse(body.get("manifest") as string);
+						const generatedWorkerJS = body.get("_worker.js") as Blob;
+						const customRoutesJSON = await (
+							body.get("_routes.json") as Blob
+						).text();
+						const generatedFilepathRoutingConfig = await (
+							body.get("functions-filepath-routing-config.json") as Blob
+						).text();
 
-						// const body = init.body as FormData;
-						// const manifest = JSON.parse(body.get("manifest") as string);
-						// const generatedWorkerJS = body.get("_worker.js") as Blob;
-						// const customRoutesJSON = await (
-						// 	body.get("_routes.json") as Blob
-						// ).text();
-						// const generatedFilepathRoutingConfig = await (
-						// 	body.get("functions-filepath-routing-config.json") as Blob
-						// ).text();
+						// make sure this is all we uploaded
+						expect([...body.keys()].sort()).toEqual(
+							[
+								"manifest",
+								"functions-filepath-routing-config.json",
+								"_worker.js",
+								"_routes.json",
+							].sort()
+						);
 
-						// // make sure this is all we uploaded
-						// expect([...body.keys()]).toEqual([
-						// 	"manifest",
-						// 	"functions-filepath-routing-config.json",
-						// 	"_worker.js",
-						// 	"_routes.json",
-						// ]);
+						expect(manifest).toMatchInlineSnapshot(`
+						                      Object {
+						                        "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+						                      }
+						                `);
 
-						// expect(manifest).toMatchInlineSnapshot(`
-						//                       Object {
-						//                         "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-						//                       }
-						//                 `);
+						// file content of generated `_worker.js` is too massive to snapshot test
+						expect(generatedWorkerJS).not.toBeNull();
+						expect(generatedWorkerJS.size).toBeGreaterThan(0);
 
-						// // file content of generated `_worker.js` is too massive to snapshot test
-						// expect(generatedWorkerJS).not.toBeNull();
-						// expect(generatedWorkerJS.size).toBeGreaterThan(0);
+						const customRoutes = JSON.parse(customRoutesJSON);
+						expect(customRoutes).toMatchObject({
+							version: ROUTES_SPEC_VERSION,
+							description: "Custom _routes.json file",
+							include: ["/hello"],
+							exclude: [],
+						});
 
-						// const customRoutes = JSON.parse(customRoutesJSON);
-						// expect(customRoutes).toMatchObject({
-						// 	version: ROUTES_SPEC_VERSION,
-						// 	description: "Custom _routes.json file",
-						// 	include: ["/hello"],
-						// 	exclude: [],
-						// });
-
-						// // Make sure the routing config is valid json
-						// const parsedFilepathRoutingConfig = JSON.parse(
-						// 	generatedFilepathRoutingConfig
-						// );
-						// // The actual shape doesn't matter that much since this
-						// // is only used for display in Dash, but it's still useful for
-						// // tracking unexpected changes to this config.
-						// console.log(generatedFilepathRoutingConfig);
-						// expect(parsedFilepathRoutingConfig).toStrictEqual({
-						// 	routes: [
-						// 		{
-						// 			routePath: "/goodbye",
-						// 			mountPath: "/",
-						// 			method: "",
-						// 			module: ["goodbye.ts:onRequest"],
-						// 		},
-						// 		{
-						// 			routePath: "/hello",
-						// 			mountPath: "/",
-						// 			method: "",
-						// 			module: ["hello.js:onRequest"],
-						// 		},
-						// 	],
-						// 	baseURL: "/",
-						// });
+						// Make sure the routing config is valid json
+						const parsedFilepathRoutingConfig = JSON.parse(
+							generatedFilepathRoutingConfig
+						);
+						// The actual shape doesn't matter that much since this
+						// is only used for display in Dash, but it's still useful for
+						// tracking unexpected changes to this config.
+						expect(parsedFilepathRoutingConfig).toStrictEqual({
+							routes: [
+								{
+									routePath: "/goodbye",
+									mountPath: "/",
+									method: "",
+									module: ["goodbye.ts:onRequest"],
+								},
+								{
+									routePath: "/hello",
+									mountPath: "/",
+									method: "",
+									module: ["hello.js:onRequest"],
+								},
+							],
+							baseURL: "/",
+						});
 
 						return res.once(
 							ctx.status(200),
@@ -1920,7 +1949,7 @@ and that at least one include rule is provided.
 		`);
 		});
 
-		it("should upload _routes.json for Advanced Mode projects, if provided", async () => {
+		it.only("should upload _routes.json for Advanced Mode projects, if provided", async () => {
 			// set up the directory of static files to upload.
 			mkdirSync("public");
 			writeFileSync("public/README.md", "This is a readme");
@@ -2023,47 +2052,45 @@ and that at least one include rule is provided.
 				rest.post(
 					"*/accounts/:accountId/pages/projects/foo/deployments",
 					async (req, res, ctx) => {
+						const body = await (req as RestRequestWithFormData).formData();
+						const manifest = JSON.parse(body.get("manifest") as string);
+						const customWorkerJS = await (
+							body.get("_worker.js") as Blob
+						).text();
+						const customRoutesJSON = await (
+							body.get("_routes.json") as Blob
+						).text();
+
+						// make sure this is all we uploaded
+						expect([...body.keys()]).toEqual([
+							"_worker.js",
+							"_routes.json",
+							"manifest",
+						]);
 						expect(req.params.accountId).toEqual("some-account-id");
+						expect(manifest).toMatchInlineSnapshot(`
+							Object {
+							  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+							}
+						`);
 
-						// 			const body = init.body as FormData;
-						// 			const manifest = JSON.parse(body.get("manifest") as string);
-						// 			const customWorkerJS = await (
-						// 				body.get("_worker.js") as Blob
-						// 			).text();
-						// 			const customRoutesJSON = await (
-						// 				body.get("_routes.json") as Blob
-						// 			).text();
+						expect(customWorkerJS).toMatchInlineSnapshot(`
+							"
+											export default {
+												async fetch(request, env) {
+													const url = new URL(request.url);
+													return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+											};
+										"
+						`);
 
-						// 			// make sure this is all we uploaded
-						// 			expect([...body.keys()]).toEqual([
-						// 				"manifest",
-						// 				"_worker.js",
-						// 				"_routes.json",
-						// 			]);
-
-						// 			expect(manifest).toMatchInlineSnapshot(`
-						// 	Object {
-						// 	  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-						// 	}
-						// `);
-
-						// 			expect(customWorkerJS).toMatchInlineSnapshot(`
-						// 	"
-						// 					export default {
-						// 						async fetch(request, env) {
-						// 							const url = new URL(request.url);
-						// 							return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
-						// 					};
-						// 				"
-						// `);
-
-						// 			const customRoutes = JSON.parse(customRoutesJSON);
-						// 			expect(customRoutes).toMatchObject({
-						// 				version: ROUTES_SPEC_VERSION,
-						// 				description: "Custom _routes.json file",
-						// 				include: ["/api/*"],
-						// 				exclude: [],
-						// 			});
+						const customRoutes = JSON.parse(customRoutesJSON);
+						expect(customRoutes).toMatchObject({
+							version: ROUTES_SPEC_VERSION,
+							description: "Custom _routes.json file",
+							include: ["/api/*"],
+							exclude: [],
+						});
 
 						return res.once(
 							ctx.status(200),
@@ -2312,31 +2339,31 @@ and that at least one include rule is provided.
 				rest.post(
 					"*/accounts/:accountId/pages/projects/foo/deployments",
 					async (req, res, ctx) => {
+						const body = await (req as RestRequestWithFormData).formData();
+						const manifest = JSON.parse(body.get("manifest") as string);
+						const customWorkerJS = await (
+							body.get("_worker.js") as Blob
+						).text();
+
 						expect(req.params.accountId).toEqual("some-account-id");
-						// 			const body = init.body as FormData;
-						// 			const manifest = JSON.parse(body.get("manifest") as string);
-						// 			const customWorkerJS = await (
-						// 				body.get("_worker.js") as Blob
-						// 			).text();
-
-						// 			// make sure this is all we uploaded
-						// 			expect([...body.keys()]).toEqual(["manifest", "_worker.js"]);
-
-						// 			expect(manifest).toMatchInlineSnapshot(`
-						// 	                          Object {
-						// 	                            "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
-						// 	                          }
-						//                       `);
-
-						// 			expect(customWorkerJS).toMatchInlineSnapshot(`
-						// 	"
-						// 					export default {
-						// 						async fetch(request, env) {
-						// 							const url = new URL(request.url);
-						// 							return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
-						// 					};
-						// 				"
-						// `);
+						// make sure this is all we uploaded
+						expect([...body.keys()].sort()).toEqual(
+							["manifest", "_worker.js"].sort()
+						);
+						expect(manifest).toMatchInlineSnapshot(`
+							                          Object {
+							                            "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+							                          }
+						                      `);
+						expect(customWorkerJS).toMatchInlineSnapshot(`
+							"
+											export default {
+												async fetch(request, env) {
+													const url = new URL(request.url);
+													return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+											};
+										"
+						`);
 
 						return res.once(
 							ctx.status(200),
@@ -2463,7 +2490,7 @@ and that at least one include rule is provided.
 		      `);
 		});
 
-		it.only("should avoid uploading some files", async () => {
+		it("should avoid uploading some files", async () => {
 			mkdirSync("some_dir/node_modules", { recursive: true });
 			mkdirSync("some_dir/functions", { recursive: true });
 
@@ -2842,3 +2869,48 @@ and that at least one include rule is provided.
 		});
 	});
 });
+
+function mockFormDataToString(this: FormData) {
+	const entries = [];
+	for (const [key, value] of this.entries()) {
+		if (value instanceof Blob) {
+			const result = FileReaderSync(value);
+
+			debugger;
+			entries.push([key, result]);
+		} else {
+			entries.push([key, value]);
+		}
+	}
+	return JSON.stringify({
+		__formdata: entries,
+	});
+}
+
+async function mockFormDataFromString(this: MockedRequest): Promise<FormData> {
+	const { __formdata } = await this.json();
+	expect(__formdata).toBeInstanceOf(Array);
+
+	const form = new FormData();
+	for (const [key, value] of __formdata) {
+		if (value instanceof Blob) {
+			debugger;
+			form.append(key, value);
+		} else {
+			form.set(key, value);
+		}
+	}
+	return form;
+}
+
+// The following two functions workaround the fact that MSW does not yet support FormData in requests.
+// We use the fact that MSW relies upon `node-fetch` internally, which will call `toString()` on the FormData object,
+// rather than passing it through or serializing it as a proper FormData object.
+// The hack is to serialize FormData to a JSON string by overriding `FormData.toString()`.
+// And then to deserialize back to a FormData object by monkey-patching a `formData()` helper onto `MockedRequest`.
+FormData.prototype.toString = mockFormDataToString;
+export interface RestRequestWithFormData extends MockedRequest, RestRequest {
+	formData(): Promise<FormData>;
+}
+(MockedRequest.prototype as RestRequestWithFormData).formData =
+	mockFormDataFromString;
