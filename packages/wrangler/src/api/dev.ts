@@ -1,3 +1,4 @@
+import path from "node:path";
 import { fetch, Request } from "undici";
 import { startApiDev, startDev } from "../dev";
 import { logger } from "../logger";
@@ -97,8 +98,16 @@ export async function unstable_dev(
 			return new Promise<Awaited<ReturnType<typeof startApiDev>>>((ready) => {
 				// once the devServer is ready for requests, we resolve the inner promise
 				// (where we've named the resolve function "ready")
+				// in tests, we can figure out where they're calling unstable_dev from
+				// then "build" the script path from that
+				const relativePath = script;
+				const absolutePath = path.resolve(relativePath);
+				logger.log("relativePath: ", relativePath);
+				logger.log("absolutePath: ", absolutePath);
+				logger.log("process.cwd", process.cwd());
+
 				const devServer = startApiDev({
-					script: script,
+					script: absolutePath,
 					inspect: false,
 					logLevel: "none",
 					showInteractiveDevSession: false,
