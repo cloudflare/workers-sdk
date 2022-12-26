@@ -76,7 +76,9 @@ export async function unstable_dev(
 	script: string,
 	options?: DevOptions
 ): Promise<UnstableDevWorker> {
-	if (!options?.experimental?.disableExperimentalWarning) {
+	const { testMode = true, disableExperimentalWarning = false } =
+		options?.experimental ?? {};
+	if (!disableExperimentalWarning) {
 		logger.warn(
 			`unstable_dev() is experimental\nunstable_dev()'s behaviour will likely change in future releases`
 		);
@@ -84,7 +86,7 @@ export async function unstable_dev(
 	let readyPort: number;
 	let readyAddress: string;
 	//due to Pages adoption of unstable_dev, we can't *just* disable rebuilds and watching. instead, we'll have two versions of startDev, which will converge.
-	if (options?.experimental?.testMode) {
+	if (testMode) {
 		//in testMode, we can run multiple wranglers in parallel, but rebuilds might not work out of the box
 		return new Promise<UnstableDevWorker>((resolve) => {
 			//lmao
