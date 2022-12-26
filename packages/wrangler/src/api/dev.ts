@@ -52,8 +52,6 @@ interface DevOptions {
 	local?: boolean;
 	forceLocal?: boolean;
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
-	_?: (string | number)[]; //yargs wants this
-	$0?: string; //yargs wants this
 	testScheduled?: boolean;
 	experimentalLocal?: boolean;
 	accountId?: string;
@@ -78,7 +76,7 @@ export async function unstable_dev(
 	script: string,
 	options?: DevOptions
 ): Promise<UnstableDevWorker> {
-	if (!options?.experimental.disableExperimentalWarning) {
+	if (!options?.experimental?.disableExperimentalWarning) {
 		logger.warn(
 			`unstable_dev() is experimental\nunstable_dev()'s behaviour will likely change in future releases`
 		);
