@@ -58,11 +58,10 @@ interface DevOptions {
 	experimentalLocal?: boolean;
 	accountId?: string;
 	experimentalLocalRemoteKv?: boolean;
-}
-
-interface DevApiOptions {
-	testMode?: boolean;
-	disableExperimentalWarning?: boolean;
+	experimental: {
+		testMode?: boolean;
+		disableExperimentalWarning?: boolean;
+	};
 }
 
 export interface UnstableDevWorker {
@@ -77,12 +76,9 @@ export interface UnstableDevWorker {
  */
 export async function unstable_dev(
 	script: string,
-	options?: DevOptions,
-	apiOptions?: DevApiOptions
+	options?: DevOptions
 ): Promise<UnstableDevWorker> {
-	const { testMode = true, disableExperimentalWarning = false } =
-		apiOptions || {};
-	if (!disableExperimentalWarning) {
+	if (!options?.experimental.disableExperimentalWarning) {
 		logger.warn(
 			`unstable_dev() is experimental\nunstable_dev()'s behaviour will likely change in future releases`
 		);
@@ -90,7 +86,7 @@ export async function unstable_dev(
 	let readyPort: number;
 	let readyAddress: string;
 	//due to Pages adoption of unstable_dev, we can't *just* disable rebuilds and watching. instead, we'll have two versions of startDev, which will converge.
-	if (testMode) {
+	if (options?.experimental?.testMode) {
 		//in testMode, we can run multiple wranglers in parallel, but rebuilds might not work out of the box
 		return new Promise<UnstableDevWorker>((resolve) => {
 			//lmao
