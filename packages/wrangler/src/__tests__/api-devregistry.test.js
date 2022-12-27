@@ -1,13 +1,13 @@
 import { unstable_dev } from "../api";
 import { fetch } from "undici";
 
-// jest.unmock("undici");
+jest.unmock("undici");
 
 /**
  * a huge caveat to how testing multi-worker scripts works:
  * you can't shutdown the first worker you spun up, or it'll kill the devRegistry
  */
-describe.skip("multi-worker testing", () => {
+describe("multi-worker testing", () => {
 	let childWorker;
 	let parentWorker;
 

@@ -3,7 +3,7 @@ import { unstable_dev } from "wrangler";
 import type { UnstableDevWorker } from "wrangler";
 
 // Disabled because of flakiness in CI
-describe.skip("worker", () => {
+describe("worker", () => {
 	let worker: UnstableDevWorker;
 	let resolveReadyPromise: (value: unknown) => void;
 	const readyPromise = new Promise((resolve) => {
