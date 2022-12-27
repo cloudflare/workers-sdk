@@ -2,7 +2,6 @@ import path from "path";
 import { unstable_dev } from "wrangler";
 import type { UnstableDevWorker } from "wrangler";
 
-// Disabled because of flakiness in CI
 describe("worker", () => {
 	let worker: UnstableDevWorker;
 	let resolveReadyPromise: (value: unknown) => void;
