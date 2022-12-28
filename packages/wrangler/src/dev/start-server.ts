@@ -62,18 +62,22 @@ export async function startDevServer(
 		}
 
 		//start the worker registry
-		startWorkerRegistry().catch((err) => {
-			logger.error("failed to start worker registry", err);
-		});
-		if (props.local) {
-			const boundRegisteredWorkers = await getBoundRegisteredWorkers({
-				services: props.bindings.services,
-				durableObjects: props.bindings.durable_objects,
-			});
+		try {
+			await startWorkerRegistry();
+			if (props.local) {
+				const boundRegisteredWorkers = await getBoundRegisteredWorkers({
+					services: props.bindings.services,
+					durableObjects: props.bindings.durable_objects,
+				});
 
-			if (!util.isDeepStrictEqual(boundRegisteredWorkers, workerDefinitions)) {
-				workerDefinitions = boundRegisteredWorkers || {};
+				if (
+					!util.isDeepStrictEqual(boundRegisteredWorkers, workerDefinitions)
+				) {
+					workerDefinitions = boundRegisteredWorkers || {};
+				}
 			}
+		} catch (err) {
+			logger.error("failed to start worker registry", err);
 		}
 
 		const betaD1Shims = props.bindings.d1_databases?.map((db) => db.binding);
@@ -419,7 +423,7 @@ export async function startLocalServer({
 			experimentalLocalRef = mf;
 			removeSignalExitListener = onExit((_code, _signal) => {
 				logger.log("⎔ Shutting down experimental local server.");
-				mf.dispose();
+				void mf.dispose();
 				experimentalLocalRef = undefined;
 			});
 			onReady?.(runtimeURL.hostname, parseInt(runtimeURL.port ?? 8787));

@@ -1,13 +1,14 @@
-// @ts-expect-error We'll swap in the entry point during build
-import Worker from "__ENTRY_POINT__";
+import worker from "__ENTRY_POINT__";
 
-// @ts-expect-error
 export * from "__ENTRY_POINT__";
 
-export default {
-	async fetch(req: Request, env: unknown, ctx: ExecutionContext) {
+export default <ExportedHandler>{
+	async fetch(req, env, ctx) {
+		if (worker.fetch === undefined) {
+			throw new TypeError("Entry point missing `fetch` handler");
+		}
 		try {
-			return await Worker.fetch(req, env, ctx);
+			return await worker.fetch(req, env, ctx);
 		} catch (err) {
 			return new Response(
 				`<!DOCTYPE html>

@@ -2,23 +2,16 @@ import * as fs from "node:fs";
 import path from "node:path";
 import * as TOML from "@iarna/toml";
 import { execa, execaSync } from "execa";
+import { rest } from "msw";
 import { parseConfigFileTextToJson } from "typescript";
+import { FormData } from "undici";
 import { version as wranglerVersion } from "../../package.json";
+import { fetchDashboardScript } from "../cfetch/internal";
 import { getPackageManager } from "../package-manager";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
-import {
-	setMockFetchDashScript,
-	setMockResponse,
-	unsetAllMocks,
-	unsetSpecialMockFns,
-} from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import {
-	mockConfirm,
-	clearConfirmMocks,
-	mockSelect,
-	clearSelectMocks,
-} from "./helpers/mock-dialogs";
+import { mockConfirm, mockSelect } from "./helpers/mock-dialogs";
+import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { PackageManager } from "../package-manager";
@@ -48,8 +41,8 @@ describe("init", () => {
 	});
 
 	afterEach(() => {
-		clearConfirmMocks();
-		clearSelectMocks();
+		msw.resetHandlers();
+		msw.restoreHandlers();
 	});
 
 	const std = mockConsoleMethods();
@@ -2035,10 +2028,7 @@ describe("init", () => {
 	describe("from dashboard", () => {
 		mockApiToken();
 		mockAccountId({ accountId: "LCARS" });
-		afterEach(() => {
-			unsetAllMocks();
-			unsetSpecialMockFns();
-		});
+
 		const mockDashboardScript = `
 		export default {
 			async fetch(request, env, ctx) {
@@ -2276,69 +2266,108 @@ describe("init", () => {
 			expectedEnvironment: string;
 			expectedCompatDate: string | undefined;
 		}) {
-			setMockResponse(
-				`/accounts/:accountId/workers/services/:scriptName`,
-				"GET",
-				([_url, accountId, scriptName]) => {
-					expect(accountId).toEqual(expectedAccountId);
-					expect(scriptName).toEqual(expectedScriptName);
+			msw.use(
+				rest.get(
+					`*/accounts/:accountId/workers/services/:scriptName`,
+					(req, res, ctx) => {
+						expect(req.params.accountId).toEqual(expectedAccountId);
+						expect(req.params.scriptName).toEqual(expectedScriptName);
 
-					if (expectedCompatDate === undefined)
-						(mockServiceMetadata.default_environment.script
-							.compatibility_date as unknown) = expectedCompatDate;
-					return mockServiceMetadata;
-				}
-			);
-			setMockResponse(
-				`/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
-				"GET",
-				([_url, accountId, scriptName, environment]) => {
-					expect(accountId).toEqual(expectedAccountId);
-					expect(scriptName).toEqual(expectedScriptName);
-					expect(environment).toEqual(expectedEnvironment);
+						if (expectedCompatDate === undefined)
+							(mockServiceMetadata.default_environment.script
+								.compatibility_date as unknown) = expectedCompatDate;
 
-					return mockBindingsRes;
-				}
-			);
-			setMockResponse(
-				`/accounts/:accountId/workers/services/:scriptName/environments/:environment/routes`,
-				"GET",
-				([_url, accountId, scriptName, environment]) => {
-					expect(accountId).toEqual(expectedAccountId);
-					expect(scriptName).toEqual(expectedScriptName);
-					expect(environment).toEqual(expectedEnvironment);
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: mockServiceMetadata,
+							})
+						);
+					}
+				),
+				rest.get(
+					`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
+					(req, res, ctx) => {
+						expect(req.params.accountId).toEqual(expectedAccountId);
+						expect(req.params.scriptName).toEqual(expectedScriptName);
+						expect(req.params.environment).toEqual(expectedEnvironment);
 
-					return mockRoutesRes;
-				}
-			);
-			setMockResponse(
-				`/accounts/:accountId/workers/services/:scriptName/environments/:environment`,
-				"GET",
-				([_url, accountId, scriptName, environment]) => {
-					expect(accountId).toEqual(expectedAccountId);
-					expect(scriptName).toEqual(expectedScriptName);
-					expect(environment).toEqual(expectedEnvironment);
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: mockBindingsRes,
+							})
+						);
+					}
+				),
+				rest.get(
+					`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/routes`,
+					(req, res, ctx) => {
+						expect(req.params.accountId).toEqual(expectedAccountId);
+						expect(req.params.scriptName).toEqual(expectedScriptName);
+						expect(req.params.environment).toEqual(expectedEnvironment);
 
-					return mockServiceMetadata.default_environment;
-				}
-			);
-			setMockResponse(
-				`/accounts/:accountId/workers/scripts/:scriptName/schedules`,
-				"GET",
-				([_url, accountId, scriptName]) => {
-					expect(accountId).toEqual(expectedAccountId);
-					expect(scriptName).toEqual(expectedScriptName);
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: mockRoutesRes,
+							})
+						);
+					}
+				),
+				rest.get(
+					`*/accounts/:accountId/workers/services/:scriptName/environments/:environment`,
 
-					return {
-						schedules: [
-							{
-								cron: "0 0 0 * * *",
-								created_on: new Date(1987, 9, 27),
-								modified_on: new Date(1987, 9, 27),
-							},
-						],
-					};
-				}
+					(req, res, ctx) => {
+						expect(req.params.accountId).toEqual(expectedAccountId);
+						expect(req.params.scriptName).toEqual(expectedScriptName);
+						expect(req.params.environment).toEqual(expectedEnvironment);
+
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: mockServiceMetadata.default_environment,
+							})
+						);
+					}
+				),
+				rest.get(
+					`*/accounts/:accountId/workers/scripts/:scriptName/schedules`,
+					(req, res, ctx) => {
+						expect(req.params.accountId).toEqual(expectedAccountId);
+						expect(req.params.scriptName).toEqual(expectedScriptName);
+
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									schedules: [
+										{
+											cron: "0 0 0 * * *",
+											created_on: new Date(1987, 9, 27),
+											modified_on: new Date(1987, 9, 27),
+										},
+									],
+								},
+							})
+						);
+					}
+				)
 			);
 		}
 
@@ -2350,12 +2379,7 @@ describe("init", () => {
 				expectedEnvironment: "test",
 				expectedCompatDate: "1987-9-27",
 			});
-			setMockFetchDashScript({
-				accountId: "LCARS",
-				fromDashScriptName: "memory-crystal",
-				environment: mockServiceMetadata.default_environment.environment,
-				mockResponse: mockDashboardScript,
-			});
+			setMockFetchDashScript(mockDashboardScript);
 			mockConfirm(
 				{
 					text: "Would you like to use git to manage this Worker?",
@@ -2401,17 +2425,23 @@ describe("init", () => {
 		});
 
 		it("should fail on init --from-dash on non-existent worker name", async () => {
-			setMockResponse(
-				`/accounts/:accountId/workers/services/:scriptName`,
-				"GET",
-				() => mockServiceMetadata
+			msw.use(
+				rest.get(
+					`*/accounts/:accountId/workers/services/:scriptName`,
+					(req, res, ctx) => {
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: mockServiceMetadata,
+							})
+						);
+					}
+				)
 			);
-			setMockFetchDashScript({
-				accountId: "LCARS",
-				fromDashScriptName: "memory-crystal",
-				environment: mockServiceMetadata.default_environment.environment,
-				mockResponse: mockDashboardScript,
-			});
+			setMockFetchDashScript(mockDashboardScript);
 			mockConfirm(
 				{
 					text: "Would you like to use git to manage this Worker?",
@@ -2443,12 +2473,7 @@ describe("init", () => {
 				expectedEnvironment: "test",
 				expectedCompatDate: "1987-9-27",
 			});
-			setMockFetchDashScript({
-				accountId: "LCARS",
-				fromDashScriptName: "isolinear-optical-chip",
-				environment: mockServiceMetadata.default_environment.environment,
-				mockResponse: mockDashboardScript,
-			});
+			setMockFetchDashScript(mockDashboardScript);
 			mockConfirm(
 				{
 					text: "Would you like to use git to manage this Worker?",
@@ -2468,7 +2493,7 @@ describe("init", () => {
 				}
 			);
 
-			await runWrangler("init  --from-dash isolinear-optical-chip");
+			await runWrangler("init --from-dash isolinear-optical-chip");
 
 			expect(fs.readFileSync("./isolinear-optical-chip/wrangler.toml", "utf8"))
 				.toMatchInlineSnapshot(`
@@ -2580,12 +2605,7 @@ describe("init", () => {
 				expectedEnvironment: "test",
 				expectedCompatDate: "1987-9-27",
 			});
-			setMockFetchDashScript({
-				accountId: "LCARS",
-				fromDashScriptName: "isolinear-optical-chip",
-				environment: mockServiceMetadata.default_environment.environment,
-				mockResponse: mockDashboardScript,
-			});
+			setMockFetchDashScript(mockDashboardScript);
 			mockConfirm(
 				{
 					text: "Would you like to use git to manage this Worker?",
@@ -2639,12 +2659,7 @@ describe("init", () => {
 				expectedEnvironment: "test",
 				expectedCompatDate: undefined,
 			});
-			setMockFetchDashScript({
-				accountId: "LCARS",
-				fromDashScriptName: "isolinear-optical-chip",
-				environment: mockServiceMetadata.default_environment.environment,
-				mockResponse: mockDashboardScript,
-			});
+			setMockFetchDashScript(mockDashboardScript);
 			mockConfirm(
 				{
 					text: "Would you like to use git to manage this Worker?",
@@ -2687,23 +2702,32 @@ describe("init", () => {
 		});
 
 		it("should throw an error to retry if a request fails", async () => {
-			setMockResponse(
-				`/accounts/:accountId/workers/services/:scriptName`,
-				"GET",
-				() => mockServiceMetadata
-			);
-			setMockResponse(
-				`/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
-				"GET",
-				() => Promise.reject()
+			msw.use(
+				rest.get(
+					`*/accounts/:accountId/workers/services/:scriptName`,
+					(req, res, ctx) => {
+						expect(req.params.accountId).toBe("LCARS");
+						expect(req.params.scriptName).toBe("isolinear-optical-chip");
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: mockServiceMetadata,
+							})
+						);
+					}
+				),
+				rest.get(
+					`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
+					(req, res) => {
+						return res.networkError("Mock Network Error");
+					}
+				)
 			);
 
-			setMockFetchDashScript({
-				accountId: "LCARS",
-				fromDashScriptName: "isolinear-optical-chip",
-				environment: mockServiceMetadata.default_environment.environment,
-				mockResponse: mockDashboardScript,
-			});
+			setMockFetchDashScript(mockDashboardScript);
 			mockConfirm(
 				{
 					text: "Would you like to use git to manage this Worker?",
@@ -2724,7 +2748,7 @@ describe("init", () => {
 			);
 
 			await expect(
-				runWrangler("init  --from-dash isolinear-optical-chip")
+				runWrangler("init --from-dash isolinear-optical-chip")
 			).rejects.toThrowError();
 		});
 
@@ -2752,43 +2776,80 @@ describe("init", () => {
 				},
 				environments: [],
 			};
+			msw.use(
+				rest.get(
+					`*/accounts/:accountId/workers/services/:scriptName`,
+					(req, res, ctx) => {
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: mockData,
+							})
+						);
+					}
+				),
+				rest.get(
+					`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
+					(req, res, ctx) => {
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: [],
+							})
+						);
+					}
+				),
+				rest.get(
+					`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/routes`,
+					(req, res, ctx) => {
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: [],
+							})
+						);
+					}
+				),
+				rest.get(
+					`*/accounts/:accountId/workers/services/:scriptName/environments/:environment`,
+					(req, res, ctx) => {
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: mockServiceMetadata.default_environment,
+							})
+						);
+					}
+				),
+				rest.get(
+					`*/accounts/:accountId/workers/scripts/:scriptName/schedules`,
+					(req, res, ctx) => {
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: { schedules: [] },
+							})
+						);
+					}
+				)
+			);
 
-			setMockResponse(
-				`/accounts/:accountId/workers/services/:scriptName`,
-				"GET",
-				() => mockData
-			);
-			setMockResponse(
-				`/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
-				"GET",
-				() => []
-			);
-			setMockResponse(
-				`/accounts/:accountId/workers/services/:scriptName/environments/:environment/routes`,
-				"GET",
-				() => []
-			);
-			setMockResponse(
-				`/accounts/:accountId/workers/services/:scriptName/environments/:environment`,
-				"GET",
-				() => mockServiceMetadata.default_environment
-			);
-			setMockResponse(
-				`/accounts/:accountId/workers/scripts/:scriptName/schedules`,
-				"GET",
-				() => {
-					return {
-						schedules: [],
-					};
-				}
-			);
-
-			setMockFetchDashScript({
-				accountId: "LCARS",
-				fromDashScriptName: "isolinear-optical-chip",
-				environment: mockServiceMetadata.default_environment.environment,
-				mockResponse: mockDashboardScript,
-			});
+			setMockFetchDashScript(mockDashboardScript);
 
 			mockConfirm(
 				{
@@ -2831,7 +2892,7 @@ describe("init", () => {
 			await expect(
 				runWrangler("init  --from-dash")
 			).rejects.toMatchInlineSnapshot(
-				`[YError: Not enough arguments following: from-dash]`
+				`[Error: Not enough arguments following: from-dash]`
 			);
 			checkFiles({
 				items: {
@@ -2859,6 +2920,28 @@ function getDefaultBranchName() {
 		// ew
 		return "master";
 	}
+}
+
+/**
+ * Mock setter for usage within test blocks for dashboard script
+ */
+export function setMockFetchDashScript(mockResponse: string) {
+	msw.use(
+		rest.get(
+			`*/accounts/:accountId/workers/services/:fromDashScriptName/environments/:environment/content`,
+			(req, res, ctx) => {
+				// This is a fake FormData object, until we can get MSW (beta) that supports FormData
+				const mockForm = new FormData();
+				mockForm.append("name", mockResponse);
+				// Sending it as JSON will result in empty object, but cause the fetchDashboardScript to execute its code
+				return res(ctx.status(200), ctx.json(mockForm));
+			}
+		)
+	);
+	// Mock the actual return value that FormData would return
+	(fetchDashboardScript as jest.Mock).mockImplementationOnce(() => {
+		return mockResponse;
+	});
 }
 
 /**

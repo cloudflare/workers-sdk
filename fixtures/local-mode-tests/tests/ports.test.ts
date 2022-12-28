@@ -1,12 +1,9 @@
 import path from "path";
 import { unstable_dev } from "wrangler";
+import type { UnstableDevWorker } from "wrangler";
 
 describe("worker", () => {
-	type Worker = {
-		fetch: (input?: RequestInfo, init?: RequestInit) => Promise<Response>;
-		stop: () => Promise<void>;
-	};
-	let workers: Worker[];
+	let workers: UnstableDevWorker[];
 	let resolveReadyPromise: (value: unknown) => void;
 	const readyPromise = new Promise((resolve) => {
 		resolveReadyPromise = resolve;
@@ -20,42 +17,42 @@ describe("worker", () => {
 				path.resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
 				{ disableExperimentalWarning: true }
-			) as Worker,
+			),
 			unstable_dev(
 				path.resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
 				{ disableExperimentalWarning: true }
-			) as Worker,
+			),
 			unstable_dev(
 				path.resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
 				{ disableExperimentalWarning: true }
-			) as Worker,
+			),
 			unstable_dev(
 				path.resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
 				{ disableExperimentalWarning: true }
-			) as Worker,
+			),
 			unstable_dev(
 				path.resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
 				{ disableExperimentalWarning: true }
-			) as Worker,
+			),
 			unstable_dev(
 				path.resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
 				{ disableExperimentalWarning: true }
-			) as Worker,
+			),
 			unstable_dev(
 				path.resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
 				{ disableExperimentalWarning: true }
-			) as Worker,
+			),
 			unstable_dev(
 				path.resolve(__dirname, "..", "src", "basicModule.ts"),
 				{},
 				{ disableExperimentalWarning: true }
-			) as Worker,
+			),
 		]);
 
 		resolveReadyPromise(undefined);

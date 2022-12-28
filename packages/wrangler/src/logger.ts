@@ -1,6 +1,6 @@
 import { format } from "node:util";
 import { formatMessagesSync } from "esbuild";
-import { getEnvironmentVariableFactory } from "./environment-variables";
+import { getEnvironmentVariableFactory } from "./environment-variables/factory";
 import type { BuildFailure } from "esbuild";
 
 export const LOGGER_LEVELS = {
@@ -25,7 +25,7 @@ const LOGGER_LEVEL_FORMAT_TYPE_MAP = {
 
 const getLogLevelFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_LOG",
-	defaultValue: "log",
+	defaultValue: () => "log",
 });
 
 class Logger {

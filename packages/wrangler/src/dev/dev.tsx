@@ -28,7 +28,7 @@ import type { Config } from "../config";
 import type { Route } from "../config/environment";
 import type { WorkerRegistry } from "../dev-registry";
 import type { Entry } from "../entry";
-import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli";
+import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { AssetPaths } from "../sites";
 import type { CfWorkerInit } from "../worker";
 
@@ -441,7 +441,7 @@ function useCustomBuild(expectedEntry: Entry, build: Config["build"]): void {
 		}
 
 		return () => {
-			watcher?.close();
+			void watcher?.close();
 		};
 	}, [build, expectedEntry]);
 }

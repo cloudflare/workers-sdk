@@ -4,6 +4,7 @@
 	"private": true,
 	"sideEffects": false,
 	"scripts": {
+		"check:type": "tsc && tsc -p tests/tsconfig.json",
 		"dev": "npx wrangler pages dev ./public --d1 foobar --port 8777",
 		"test": "npx jest --forceExit --verbose",
 		"test:ci": "npx jest --forceExit"

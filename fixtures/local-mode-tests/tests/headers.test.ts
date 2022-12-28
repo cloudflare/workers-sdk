@@ -1,15 +1,9 @@
 import path from "path";
 import { unstable_dev } from "wrangler";
+import type { UnstableDevWorker } from "wrangler";
 
-// Disabled because of flakiness in CI
-describe.skip("worker", () => {
-	let worker: {
-		fetch: (
-			input?: RequestInfo,
-			init?: RequestInit
-		) => Promise<Response | undefined>;
-		stop: () => Promise<void>;
-	};
+describe("worker", () => {
+	let worker: UnstableDevWorker;
 	let resolveReadyPromise: (value: unknown) => void;
 	const readyPromise = new Promise((resolve) => {
 		resolveReadyPromise = resolve;

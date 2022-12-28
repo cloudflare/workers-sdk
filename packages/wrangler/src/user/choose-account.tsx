@@ -3,7 +3,7 @@ import SelectInput from "ink-select-input";
 import React from "react";
 import { fetchListResult } from "../cfetch";
 import { logger } from "../logger";
-import { getCloudflareAccountIdFromEnv } from "./env-vars";
+import { getCloudflareAccountIdFromEnv } from "./auth-variables";
 
 export type ChooseAccountItem = {
 	id: string;

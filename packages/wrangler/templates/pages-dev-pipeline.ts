@@ -7,7 +7,7 @@ import { isRoutingRuleMatch } from "./pages-dev-util";
 // @ts-ignore routes are injected
 const routes = __ROUTES__;
 
-export default {
+export default <ExportedHandler<{ ASSETS: Fetcher }>>{
 	fetch(request, env, context) {
 		const { pathname } = new URL(request.url);
 
@@ -19,6 +19,9 @@ export default {
 
 		for (const include of routes.include) {
 			if (isRoutingRuleMatch(pathname, include)) {
+				if (worker.fetch === undefined) {
+					throw new TypeError("Entry point missing `fetch` handler");
+				}
 				return worker.fetch(request, env, context);
 			}
 		}

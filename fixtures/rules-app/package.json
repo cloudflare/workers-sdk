@@ -5,5 +5,8 @@
 	"description": "",
 	"keywords": [],
 	"license": "ISC",
-	"author": ""
+	"author": "",
+	"scripts": {
+		"check:type": "tsc"
+	}
 }

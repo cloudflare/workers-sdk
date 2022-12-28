@@ -2,6 +2,8 @@
 	"compilerOptions": {
 		"target": "esnext",
 		"esModuleInterop": true,
+		"moduleResolution": "node",
+		"resolveJsonModule": true,
 		"allowJs": true,
 		"allowSyntheticDefaultImports": true,
 		"isolatedModules": true,
@@ -13,7 +15,7 @@
 		// statements throughout the imported libraries which can break them.
 		"alwaysStrict": false,
 		"skipLibCheck": true,
-		"types": ["jest"]
+		"types": []
 	},
-	"exclude": ["node_modules/"]
+	"exclude": ["node_modules", "packages"]
 }

@@ -1,31 +1,33 @@
-// @ts-expect-error
 import worker from "__ENTRY_POINT__";
 import {
 	getAssetFromKV,
 	NotFoundError,
 	MethodNotAllowedError,
-	// @ts-expect-error
+	serveSinglePageApp,
 } from "__KV_ASSET_HANDLER__";
-// @ts-expect-error
+import type { Options, CacheControl } from "__KV_ASSET_HANDLER__";
 import manifest from "__STATIC_CONTENT_MANIFEST";
 import type * as kvAssetHandler from "@cloudflare/kv-asset-handler";
 
 const ASSET_MANIFEST = JSON.parse(manifest);
 
-// @ts-expect-error
 export * from "__ENTRY_POINT__";
 
-export default {
-	async fetch(
-		request: Request,
-		env: { __STATIC_CONTENT: string },
-		ctx: ExecutionContext
-	) {
-		let options = {
+// Injected as `esbuild` `define`s
+declare global {
+	const __CACHE_CONTROL_OPTIONS__: Partial<CacheControl>;
+	const __SERVE_SINGLE_PAGE_APP__: boolean;
+}
+
+export default <ExportedHandler<{ __STATIC_CONTENT: KVNamespace }>>{
+	async fetch(request, env, ctx) {
+		let options: Partial<Options> = {
 			ASSET_MANIFEST,
 			ASSET_NAMESPACE: env.__STATIC_CONTENT,
 			cacheControl: __CACHE_CONTROL_OPTIONS__,
-			serveSinglePageApp: __SERVE_SINGLE_PAGE_APP__,
+			mapRequestToAsset: __SERVE_SINGLE_PAGE_APP__
+				? serveSinglePageApp
+				: undefined,
 		};
 
 		try {
@@ -34,7 +36,7 @@ export default {
 			)(
 				{
 					request,
-					waitUntil(promise: Promise<unknown>) {
+					waitUntil(promise) {
 						return ctx.waitUntil(promise);
 					},
 				},
@@ -54,7 +56,7 @@ export default {
 		} catch (e) {
 			if (e instanceof NotFoundError || e instanceof MethodNotAllowedError) {
 				// if a known error is thrown then serve from actual worker
-				return await worker.fetch(request, env, ctx);
+				return await worker.fetch?.(request, env, ctx);
 			}
 			// otherwise it's a real error, so throw it
 			throw e;

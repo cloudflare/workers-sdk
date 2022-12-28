@@ -1,8 +1,8 @@
 import * as fs from "node:fs";
 import { writeFileSync } from "node:fs";
 import * as TOML from "@iarna/toml";
+import { rest } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
-import { setMockResponse, unsetAllMocks } from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import {
 	mockConfirm,
@@ -10,13 +10,37 @@ import {
 	clearConfirmMocks,
 	clearPromptMocks,
 } from "./helpers/mock-dialogs";
-import {
-	mockGetMemberships,
-	mockGetMembershipsFail,
-} from "./helpers/mock-oauth-flow";
 import { useMockStdin } from "./helpers/mock-stdin";
+import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+
+function createFetchResult(result: unknown, success = true) {
+	return {
+		success,
+		errors: [],
+		messages: [],
+		result,
+	};
+}
+
+export function mockGetMembershipsFail() {
+	msw.use(
+		rest.get("*/memberships", (req, res, ctx) => {
+			return res.once(ctx.json(createFetchResult([], false)));
+		})
+	);
+}
+
+export function mockGetMemberships(
+	accounts: { id: string; account: { id: string; name: string } }[]
+) {
+	msw.use(
+		rest.get("*/memberships", (req, res, ctx) => {
+			return res.once(ctx.json(createFetchResult(accounts)));
+		})
+	);
+}
 
 describe("wrangler secret", () => {
 	const std = mockConsoleMethods();
@@ -26,7 +50,6 @@ describe("wrangler secret", () => {
 	mockApiToken();
 
 	afterEach(() => {
-		unsetAllMocks();
 		clearConfirmMocks();
 		clearPromptMocks();
 	});
@@ -39,24 +62,25 @@ describe("wrangler secret", () => {
 		) {
 			const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
 			const environment = env && !legacyEnv ? "/environments/:envName" : "";
-			setMockResponse(
-				`/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/secrets`,
-				"PUT",
-				([_url, accountId, scriptName, envName], { body }) => {
-					expect(accountId).toEqual("some-account-id");
-					expect(scriptName).toEqual(
-						legacyEnv && env ? `script-name-${env}` : "script-name"
-					);
-					if (!legacyEnv) {
-						expect(envName).toEqual(env);
-					}
-					const { name, text, type } = JSON.parse(body as string);
-					expect(type).toEqual("secret_text");
-					expect(name).toEqual(input.name);
-					expect(text).toEqual(input.text);
+			msw.use(
+				rest.put(
+					`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/secrets`,
+					async (req, res, ctx) => {
+						expect(req.params.accountId).toEqual("some-account-id");
+						expect(req.params.scriptName).toEqual(
+							legacyEnv && env ? `script-name-${env}` : "script-name"
+						);
+						if (!legacyEnv) {
+							expect(req.params.envName).toEqual(env);
+						}
+						const { name, text, type } = await req.json();
+						expect(type).toEqual("secret_text");
+						expect(name).toEqual(input.name);
+						expect(text).toEqual(input.text);
 
-					return { name, type };
-				}
+						return res.once(ctx.json(createFetchResult({ name, type })));
+					}
+				)
 			);
 		}
 
@@ -107,15 +131,23 @@ describe("wrangler secret", () => {
 
 				// User counter to pass different secrets to the request mock
 				let counter = 0;
-				setMockResponse(
-					`/accounts/:accountId/workers/scripts/:scriptName/secrets`,
-					"PUT",
-					([_url, accountId]) => {
-						expect(accountId).toEqual("some-account-id");
-						counter++;
+				msw.use(
+					rest.put(
+						`*/accounts/:accountId/workers/scripts/:scriptName/secrets`,
+						(req, res, ctx) => {
+							expect(req.params.accountId).toEqual("some-account-id");
+							counter++;
 
-						return { name: `secret-name-${counter}`, type: "secret_text" };
-					}
+							return res(
+								ctx.json(
+									createFetchResult({
+										name: `secret-name-${counter}`,
+										type: "secret_text",
+									})
+								)
+							);
+						}
+					)
 				);
 
 				await runWrangler("secret:bulk ./secret.json --name script-name");
@@ -131,7 +163,7 @@ describe("wrangler secret", () => {
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should handle failed secret:bulk", async () => {
+			it("should handle network failure on secret:bulk", async () => {
 				writeFileSync(
 					"secret.json",
 					JSON.stringify({
@@ -142,17 +174,16 @@ describe("wrangler secret", () => {
 
 				// User counter to pass different secrets to the request mock
 				let counter = 0;
-				setMockResponse(
-					`/accounts/:accountId/workers/scripts/:scriptName/secrets`,
-					"PUT",
-					([_url, accountId]) => {
-						expect(accountId).toEqual("some-account-id");
-						counter++;
+				msw.use(
+					rest.put(
+						`*/accounts/:accountId/workers/scripts/:scriptName/secrets`,
+						(req, res) => {
+							expect(req.params.accountId).toEqual("some-account-id");
+							counter++;
 
-						return Promise.reject(
-							new Error(`Failed to create secret ${counter}`)
-						);
-					}
+							return res.networkError(`Failed to create secret ${counter}`);
+						}
+					)
 				);
 
 				await runWrangler("secret:bulk ./secret.json --name script-name");
@@ -167,18 +198,22 @@ describe("wrangler secret", () => {
 				expect(std.err).toMatchInlineSnapshot(`
 			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Error uploading secret for key: secret-name-1:[0m
 
-			                  Failed to create secret 1
+			                  request to
+			  [4mhttps://api.cloudflare.com/client/v4/accounts/some-account-id/workers/scripts/script-name/secrets[0m
+			  failed, reason: Failed to create secret 1
 
 
 			[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Error uploading secret for key: secret-name-2:[0m
 
-			                  Failed to create secret 2
+			                  request to
+			  [4mhttps://api.cloudflare.com/client/v4/accounts/some-account-id/workers/scripts/script-name/secrets[0m
+			  failed, reason: Failed to create secret 2
 
 			"
 		`);
 			});
 
-			it("should count success and failed secret:bulk", async () => {
+			it("should count success and network failure on secret:bulk", async () => {
 				writeFileSync(
 					"secret.json",
 					JSON.stringify({
@@ -194,21 +229,27 @@ describe("wrangler secret", () => {
 
 				// User counter to pass different secrets to the request mock
 				let counter = 0;
-				setMockResponse(
-					`/accounts/:accountId/workers/scripts/:scriptName/secrets`,
-					"PUT",
-					([_url, accountId]) => {
-						expect(accountId).toEqual("some-account-id");
-						counter++;
+				msw.use(
+					rest.put(
+						`*/accounts/:accountId/workers/scripts/:scriptName/secrets`,
+						(req, res, ctx) => {
+							expect(req.params.accountId).toEqual("some-account-id");
+							counter++;
 
-						if (counter % 2 === 0) {
-							return { name: `secret-name-${counter}`, type: "secret_text" };
-						} else {
-							return Promise.reject(
-								new Error(`Failed to create secret ${counter}`)
-							);
+							if (counter % 2 === 0) {
+								return res(
+									ctx.json(
+										createFetchResult({
+											name: `secret-name-${counter}`,
+											type: "secret_text",
+										})
+									)
+								);
+							} else {
+								return res.networkError(`Failed to create secret ${counter}`);
+							}
 						}
-					}
+					)
 				);
 
 				await runWrangler("secret:bulk ./secret.json --name script-name");
@@ -226,22 +267,30 @@ describe("wrangler secret", () => {
 				expect(std.err).toMatchInlineSnapshot(`
 			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Error uploading secret for key: secret-name-1:[0m
 
-			                  Failed to create secret 1
+			                  request to
+			  [4mhttps://api.cloudflare.com/client/v4/accounts/some-account-id/workers/scripts/script-name/secrets[0m
+			  failed, reason: Failed to create secret 1
 
 
 			[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Error uploading secret for key: secret-name-3:[0m
 
-			                  Failed to create secret 3
+			                  request to
+			  [4mhttps://api.cloudflare.com/client/v4/accounts/some-account-id/workers/scripts/script-name/secrets[0m
+			  failed, reason: Failed to create secret 3
 
 
 			[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Error uploading secret for key: secret-name-5:[0m
 
-			                  Failed to create secret 5
+			                  request to
+			  [4mhttps://api.cloudflare.com/client/v4/accounts/some-account-id/workers/scripts/script-name/secrets[0m
+			  failed, reason: Failed to create secret 5
 
 
 			[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Error uploading secret for key: secret-name-7:[0m
 
-			                  Failed to create secret 7
+			                  request to
+			  [4mhttps://api.cloudflare.com/client/v4/accounts/some-account-id/workers/scripts/script-name/secrets[0m
+			  failed, reason: Failed to create secret 7
 
 			"
 		`);
@@ -446,26 +495,22 @@ describe("wrangler secret", () => {
 		) {
 			const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
 			const environment = env && !legacyEnv ? "/environments/:envName" : "";
-			setMockResponse(
-				`/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/secrets/:secretName`,
-				"DELETE",
-				([_url, accountId, scriptName, envOrSecretName, secretName]) => {
-					expect(accountId).toEqual("some-account-id");
-					expect(scriptName).toEqual(
-						legacyEnv && env ? `script-name-${env}` : "script-name"
-					);
-					if (!legacyEnv) {
-						if (env) {
-							expect(envOrSecretName).toEqual(env);
-							expect(secretName).toEqual(input.secretName);
-						} else {
-							expect(envOrSecretName).toEqual(input.secretName);
+			msw.use(
+				rest.delete(
+					`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/secrets/:secretName`,
+					(req, res, ctx) => {
+						expect(req.params.accountId).toEqual("some-account-id");
+						expect(req.params.scriptName).toEqual(
+							legacyEnv && env ? `script-name-${env}` : "script-name"
+						);
+						if (!legacyEnv) {
+							if (env) {
+								expect(req.params.secretName).toEqual(input.secretName);
+							}
 						}
-					} else {
-						expect(envOrSecretName).toEqual(input.secretName);
+						return res.once(ctx.json(createFetchResult(null)));
 					}
-					return null;
-				}
+				)
 			);
 		}
 		it("should delete a secret", async () => {
@@ -552,25 +597,30 @@ describe("wrangler secret", () => {
 		) {
 			const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
 			const environment = env && !legacyEnv ? "/environments/:envName" : "";
-			setMockResponse(
-				`/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/secrets`,
-				"GET",
-				([_url, accountId, scriptName, envName]) => {
-					expect(accountId).toEqual("some-account-id");
-					expect(scriptName).toEqual(
-						legacyEnv && env ? `script-name-${env}` : "script-name"
-					);
-					if (!legacyEnv) {
-						expect(envName).toEqual(env);
-					}
+			msw.use(
+				rest.get(
+					`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/secrets`,
+					(req, res, ctx) => {
+						expect(req.params.accountId).toEqual("some-account-id");
+						expect(req.params.scriptName).toEqual(
+							legacyEnv && env ? `script-name-${env}` : "script-name"
+						);
+						if (!legacyEnv) {
+							expect(req.params.envName).toEqual(env);
+						}
 
-					return [
-						{
-							name: "the-secret-name",
-							type: "secret_text",
-						},
-					];
-				}
+						return res.once(
+							ctx.json(
+								createFetchResult([
+									{
+										name: "the-secret-name",
+										type: "secret_text",
+									},
+								])
+							)
+						);
+					}
+				)
 			);
 		}
 

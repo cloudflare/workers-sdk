@@ -36,6 +36,9 @@ jobs:
       - name: Install NPM Dependencies
         run: npm ci
 
+      - name: Build
+        run: npm run build
+
       - name: Check for errors
         run: npm run check
 

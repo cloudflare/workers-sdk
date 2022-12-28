@@ -64,3 +64,7 @@ For more commands and options, refer to the [documentation](https://developers.c
 ## Documentation
 
 For the latest Wrangler documentation, [click here](https://developers.cloudflare.com/workers/wrangler/).
+
+## Contributing
+
+Refer to the [`CONTRIBUTING.md`](/CONTRIBUTING.md) guide for details.
