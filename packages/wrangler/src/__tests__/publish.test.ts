@@ -5889,7 +5889,7 @@ addEventListener('fetch', event => {});`
 				mockUploadWorkerRequest({
 					expectedBindings: [
 						{
-							type: "namespace",
+							type: "dispatch_namespace",
 							name: "foo",
 							namespace: "Foo",
 						},
@@ -5907,13 +5907,7 @@ addEventListener('fetch', event => {});`
 			Current Deployment ID: undefined"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-			    - \\"dispatch_namespaces\\" fields are experimental and may change or break at any time.
-
-			"
-		`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 		});
 

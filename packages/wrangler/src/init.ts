@@ -882,7 +882,7 @@ async function getWorkerConfig(
 						];
 					}
 					break;
-				case "namespace":
+				case "dispatch_namespace":
 					{
 						configObj.dispatch_namespaces = [
 							...(configObj.dispatch_namespaces ?? []),

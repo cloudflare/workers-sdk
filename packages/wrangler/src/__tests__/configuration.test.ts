@@ -2125,27 +2125,6 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		describe("[dispatch_namespaces]", () => {
-			it("should log an experimental warning when dispatch_namespaces is used", () => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{
-						dispatch_namespaces: [
-							{
-								binding: "BINDING_1",
-								namespace: "NAMESPACE_1",
-							},
-						],
-					} as unknown as RawConfig,
-					undefined,
-					{ env: undefined }
-				);
-				expect(diagnostics.hasWarnings()).toBe(true);
-				expect(diagnostics.hasErrors()).toBe(false);
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - \\"dispatch_namespaces\\" fields are experimental and may change or break at any time."
-		`);
-			});
-
 			it("should error if dispatch_namespaces is not an array", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{
@@ -2155,12 +2134,8 @@ describe("normalizeAndValidateConfig()", () => {
 					{ env: undefined }
 				);
 
-				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(true);
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - \\"dispatch_namespaces\\" fields are experimental and may change or break at any time."
-		        `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			"Processing wrangler configuration:
 			  - The field \\"dispatch_namespaces\\" should be an array but got \\"just a string\\"."
@@ -2199,12 +2174,8 @@ describe("normalizeAndValidateConfig()", () => {
 					undefined,
 					{ env: undefined }
 				);
-				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(true);
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - \\"dispatch_namespaces\\" fields are experimental and may change or break at any time."
-		`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			"Processing wrangler configuration:
 			  - \\"dispatch_namespaces[0]\\" binding should be objects, but got \\"a string\\"

@@ -2104,7 +2104,7 @@ describe("init", () => {
 				type: "service",
 			},
 			{
-				type: "namespace",
+				type: "dispatch_namespace",
 				name: "name-namespace-mock",
 				namespace: "namespace-mock",
 			},
