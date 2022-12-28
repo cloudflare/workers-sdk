@@ -28,7 +28,6 @@ import type {
 	YargsOptionsToInterface,
 } from "./yargs-types";
 import type { Argv } from "yargs";
-import dev from "./dev/dev";
 
 export function initOptions(yargs: Argv<CommonYargsOptions>) {
 	return yargs
