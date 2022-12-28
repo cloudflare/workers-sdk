@@ -1364,13 +1364,11 @@ describe("pages", () => {
 						// for Functions projects, we auto-generate a `_worker.js`,
 						// `functions-filepath-routing-config.json`, and `_routes.json`
 						// file, based on the contents of `/functions`
-						const generatedWorkerJS = body.get("_worker.js") as Blob;
-						const generatedRoutesJSON = await (
-							body.get("_routes.json") as Blob
-						).text();
-						const generatedFilepathRoutingConfig = await (
-							body.get("functions-filepath-routing-config.json") as Blob
-						).text();
+						const generatedWorkerJS = body.get("_worker.js") as string;
+						const generatedRoutesJSON = body.get("_routes.json") as string;
+						const generatedFilepathRoutingConfig = body.get(
+							"functions-filepath-routing-config.json"
+						) as string;
 
 						// make sure this is all we uploaded
 						expect([...body.keys()]).toEqual([
@@ -1393,7 +1391,7 @@ describe("pages", () => {
 						// file contents is too big). So for now, let's test that _worker.js was indeed
 						// generated and that the file size is greater than zero
 						expect(generatedWorkerJS).not.toBeNull();
-						expect(generatedWorkerJS.size).toBeGreaterThan(0);
+						expect(generatedWorkerJS.length).toBeGreaterThan(0);
 
 						const maybeRoutesJSONSpec = JSON.parse(generatedRoutesJSON);
 						expect(isRoutesJSONSpec(maybeRoutesJSONSpec)).toBe(true);
@@ -1542,9 +1540,7 @@ describe("pages", () => {
 						expect(req.params.accountId).toEqual("some-account-id");
 						const body = await (req as RestRequestWithFormData).formData();
 						const manifest = JSON.parse(body.get("manifest") as string);
-						const customWorkerJS = await (
-							body.get("_worker.js") as Blob
-						).text();
+						const customWorkerJS = body.get("_worker.js");
 
 						// make sure this is all we uploaded
 						expect([...body.keys()].sort()).toEqual(
@@ -1724,13 +1720,11 @@ describe("pages", () => {
 						expect(req.params.accountId).toEqual("some-account-id");
 						const body = await (req as RestRequestWithFormData).formData();
 						const manifest = JSON.parse(body.get("manifest") as string);
-						const generatedWorkerJS = body.get("_worker.js") as Blob;
-						const customRoutesJSON = await (
-							body.get("_routes.json") as Blob
-						).text();
-						const generatedFilepathRoutingConfig = await (
-							body.get("functions-filepath-routing-config.json") as Blob
-						).text();
+						const generatedWorkerJS = body.get("_worker.js") as string;
+						const customRoutesJSON = body.get("_routes.json") as string;
+						const generatedFilepathRoutingConfig = body.get(
+							"functions-filepath-routing-config.json"
+						) as string;
 
 						// make sure this is all we uploaded
 						expect([...body.keys()].sort()).toEqual(
@@ -1750,7 +1744,7 @@ describe("pages", () => {
 
 						// file content of generated `_worker.js` is too massive to snapshot test
 						expect(generatedWorkerJS).not.toBeNull();
-						expect(generatedWorkerJS.size).toBeGreaterThan(0);
+						expect(generatedWorkerJS.length).toBeGreaterThan(0);
 
 						const customRoutes = JSON.parse(customRoutesJSON);
 						expect(customRoutes).toMatchObject({
@@ -1949,7 +1943,7 @@ and that at least one include rule is provided.
 		`);
 		});
 
-		it.only("should upload _routes.json for Advanced Mode projects, if provided", async () => {
+		it("should upload _routes.json for Advanced Mode projects, if provided", async () => {
 			// set up the directory of static files to upload.
 			mkdirSync("public");
 			writeFileSync("public/README.md", "This is a readme");
@@ -2053,19 +2047,16 @@ and that at least one include rule is provided.
 					"*/accounts/:accountId/pages/projects/foo/deployments",
 					async (req, res, ctx) => {
 						const body = await (req as RestRequestWithFormData).formData();
+
 						const manifest = JSON.parse(body.get("manifest") as string);
-						const customWorkerJS = await (
-							body.get("_worker.js") as Blob
-						).text();
-						const customRoutesJSON = await (
-							body.get("_routes.json") as Blob
-						).text();
+						const customWorkerJS = body.get("_worker.js") as string;
+						const customRoutesJSON = body.get("_routes.json") as string;
 
 						// make sure this is all we uploaded
 						expect([...body.keys()]).toEqual([
+							"manifest",
 							"_worker.js",
 							"_routes.json",
-							"manifest",
 						]);
 						expect(req.params.accountId).toEqual("some-account-id");
 						expect(manifest).toMatchInlineSnapshot(`
@@ -2084,8 +2075,7 @@ and that at least one include rule is provided.
 										"
 						`);
 
-						const customRoutes = JSON.parse(customRoutesJSON);
-						expect(customRoutes).toMatchObject({
+						expect(JSON.parse(customRoutesJSON)).toMatchObject({
 							version: ROUTES_SPEC_VERSION,
 							description: "Custom _routes.json file",
 							include: ["/api/*"],
@@ -2341,9 +2331,7 @@ and that at least one include rule is provided.
 					async (req, res, ctx) => {
 						const body = await (req as RestRequestWithFormData).formData();
 						const manifest = JSON.parse(body.get("manifest") as string);
-						const customWorkerJS = await (
-							body.get("_worker.js") as Blob
-						).text();
+						const customWorkerJS = body.get("_worker.js");
 
 						expect(req.params.accountId).toEqual("some-account-id");
 						// make sure this is all we uploaded
@@ -2874,9 +2862,9 @@ function mockFormDataToString(this: FormData) {
 	const entries = [];
 	for (const [key, value] of this.entries()) {
 		if (value instanceof Blob) {
-			const result = FileReaderSync(value);
-
-			debugger;
+			const reader = new FileReaderSync();
+			reader.readAsText(value);
+			const result = reader.result;
 			entries.push([key, result]);
 		} else {
 			entries.push([key, value]);
@@ -2893,12 +2881,7 @@ async function mockFormDataFromString(this: MockedRequest): Promise<FormData> {
 
 	const form = new FormData();
 	for (const [key, value] of __formdata) {
-		if (value instanceof Blob) {
-			debugger;
-			form.append(key, value);
-		} else {
-			form.set(key, value);
-		}
+		form.set(key, value);
 	}
 	return form;
 }
