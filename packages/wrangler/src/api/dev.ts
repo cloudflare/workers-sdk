@@ -52,17 +52,14 @@ interface DevOptions {
 	local?: boolean;
 	forceLocal?: boolean;
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
-	_?: (string | number)[]; //yargs wants this
-	$0?: string; //yargs wants this
 	testScheduled?: boolean;
 	experimentalLocal?: boolean;
 	accountId?: string;
 	experimentalLocalRemoteKv?: boolean;
-}
-
-interface DevApiOptions {
-	testMode?: boolean;
-	disableExperimentalWarning?: boolean;
+	experimental: {
+		testMode?: boolean;
+		disableExperimentalWarning?: boolean;
+	};
 }
 
 export interface UnstableDevWorker {
@@ -78,10 +75,16 @@ export interface UnstableDevWorker {
 export async function unstable_dev(
 	script: string,
 	options?: DevOptions,
-	apiOptions?: DevApiOptions
+	apiOptions?: unknown
 ): Promise<UnstableDevWorker> {
 	const { testMode = true, disableExperimentalWarning = false } =
-		apiOptions || {};
+		options?.experimental ?? {};
+	if (apiOptions) {
+		logger.error(
+			"unstable_dev's third argument (apiOptions) has been deprecated in favor of an `experimental` property within the second argument (options).\nPlease update your code from:\n`await unstable_dev('...', {...}, {...});`\nto:\n`await unstable_dev('...', {..., experimental: {...}});`"
+		);
+	}
+
 	if (!disableExperimentalWarning) {
 		logger.warn(
 			`unstable_dev() is experimental\nunstable_dev()'s behaviour will likely change in future releases`
