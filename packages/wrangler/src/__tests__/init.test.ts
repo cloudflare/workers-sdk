@@ -62,16 +62,17 @@ describe("init", () => {
 			});
 
 			expect(std.out).toMatchInlineSnapshot(`
-			        "✨ Created wrangler.toml
-			        ✨ Initialized git repository
-			        ✨ Created package.json
-			        ✨ Created tsconfig.json
-			        ✨ Created src/index.ts
-			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			"✨ Created wrangler.toml
+			✨ Initialized git repository
+			✨ Created package.json
+			✨ Created tsconfig.json
+			✨ Created src/index.test.ts
+			✨ Created src/index.ts
+			✨ Installed @cloudflare/workers-types, typescript, jest, and @types/jest into devDependencies
 
-			        To start developing your Worker, run \`npm start\`
-			        To publish your Worker to the Internet, run \`npm run deploy\`"
-		      `);
+			To start developing your Worker, run \`npm start\`
+			To publish your Worker to the Internet, run \`npm run deploy\`"
+		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -93,16 +94,17 @@ describe("init", () => {
 			});
 
 			expect(std.out).toMatchInlineSnapshot(`
-			        "✨ Created my-worker/wrangler.toml
-			        ✨ Initialized git repository at my-worker
-			        ✨ Created my-worker/package.json
-			        ✨ Created my-worker/tsconfig.json
-			        ✨ Created my-worker/src/index.ts
-			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			"✨ Created my-worker/wrangler.toml
+			✨ Initialized git repository at my-worker
+			✨ Created my-worker/package.json
+			✨ Created my-worker/tsconfig.json
+			✨ Created my-worker/src/index.test.ts
+			✨ Created my-worker/src/index.ts
+			✨ Installed @cloudflare/workers-types, typescript, jest, and @types/jest into devDependencies
 
-			        To start developing your Worker, run \`cd my-worker && npm start\`
-			        To publish your Worker to the Internet, run \`npm run deploy\`"
-		      `);
+			To start developing your Worker, run \`cd my-worker && npm start\`
+			To publish your Worker to the Internet, run \`npm run deploy\`"
+		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -121,21 +123,22 @@ describe("init", () => {
 			});
 
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created wrangler.toml
-			        ✨ Initialized git repository
-			        ✨ Created package.json
-			        ✨ Created tsconfig.json
-			        ✨ Created src/index.ts
-			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created wrangler.toml
+			✨ Initialized git repository
+			✨ Created package.json
+			✨ Created tsconfig.json
+			✨ Created src/index.test.ts
+			✨ Created src/index.ts
+			✨ Installed @cloudflare/workers-types, typescript, jest, and @types/jest into devDependencies
 
-			        To start developing your Worker, run \`npm start\`
-			        To publish your Worker to the Internet, run \`npm run deploy\`",
-			          "warn": "",
-			        }
-		      `);
+			To start developing your Worker, run \`npm start\`
+			To publish your Worker to the Internet, run \`npm run deploy\`",
+			  "warn": "",
+			}
+		`);
 		});
 
 		it("should error if `--type javascript` is used", async () => {
@@ -348,13 +351,20 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: true,
+				},
+				{
+					text: "Would you like us to write your first test?",
+					result: true,
 				}
 			);
 
-			mockSelect({
-				text: "Would you like to create a Worker at src/index.ts?",
-				result: "fetch",
-			});
+			mockSelect(
+				{
+					text: "Would you like to create a Worker at src/index.ts?",
+					result: "fetch",
+				},
+				{ text: "Which test runner would you like to use?", result: "vitest" }
+			);
 
 			await runWrangler("init");
 
@@ -436,12 +446,19 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: true,
+				},
+				{
+					text: "Would you like us to write your first test?",
+					result: true,
 				}
 			);
-			mockSelect({
-				text: "Would you like to create a Worker at src/index.ts?",
-				result: "scheduled",
-			});
+			mockSelect(
+				{
+					text: "Would you like to create a Worker at src/index.ts?",
+					result: "scheduled",
+				},
+				{ text: "Which test runner would you like to use?", result: "vitest" }
+			);
 
 			await runWrangler("init");
 
@@ -467,12 +484,19 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: true,
+				},
+				{
+					text: "Would you like us to write your first test?",
+					result: true,
 				}
 			);
-			mockSelect({
-				text: "Would you like to create a Worker at src/index.ts?",
-				result: "scheduled",
-			});
+			mockSelect(
+				{
+					text: "Would you like to create a Worker at src/index.ts?",
+					result: "scheduled",
+				},
+				{ text: "Which test runner would you like to use?", result: "vitest" }
+			);
 
 			await runWrangler("init");
 
@@ -545,20 +569,21 @@ describe("init", () => {
 
 			// Note the lack of "✨ Initialized git repository" in the log
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created wrangler.toml
-			        ✨ Created package.json
-			        ✨ Created tsconfig.json
-			        ✨ Created src/index.ts
-			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created wrangler.toml
+			✨ Created package.json
+			✨ Created tsconfig.json
+			✨ Created src/index.test.ts
+			✨ Created src/index.ts
+			✨ Installed @cloudflare/workers-types, typescript, jest, and @types/jest into devDependencies
 
-			        To start developing your Worker, run \`npm start\`
-			        To publish your Worker to the Internet, run \`npm run deploy\`",
-			          "warn": "",
-			        }
-		      `);
+			To start developing your Worker, run \`npm start\`
+			To publish your Worker to the Internet, run \`npm run deploy\`",
+			  "warn": "",
+			}
+		`);
 		});
 
 		it("should not offer to initialize a git repo if it's already inside one (when using a path as name)", async () => {
@@ -570,20 +595,21 @@ describe("init", () => {
 
 			// Note the lack of "✨ Initialized git repository" in the log
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created path/to/worker/my-worker/wrangler.toml
-			        ✨ Created path/to/worker/my-worker/package.json
-			        ✨ Created path/to/worker/my-worker/tsconfig.json
-			        ✨ Created path/to/worker/my-worker/src/index.ts
-			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created path/to/worker/my-worker/wrangler.toml
+			✨ Created path/to/worker/my-worker/package.json
+			✨ Created path/to/worker/my-worker/tsconfig.json
+			✨ Created path/to/worker/my-worker/src/index.test.ts
+			✨ Created path/to/worker/my-worker/src/index.ts
+			✨ Installed @cloudflare/workers-types, typescript, jest, and @types/jest into devDependencies
 
-			        To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
-			        To publish your Worker to the Internet, run \`npm run deploy\`",
-			          "warn": "",
-			        }
-		      `);
+			To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
+			To publish your Worker to the Internet, run \`npm run deploy\`",
+			  "warn": "",
+			}
+		`);
 		});
 
 		// I... don't know how to test this lol
@@ -1029,12 +1055,19 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: true,
+				},
+				{
+					text: "Would you like us to write your first test?",
+					result: true,
 				}
 			);
-			mockSelect({
-				text: "Would you like to create a Worker at src/index.ts?",
-				result: "fetch",
-			});
+			mockSelect(
+				{
+					text: "Would you like to create a Worker at src/index.ts?",
+					result: "fetch",
+				},
+				{ text: "Which test runner would you like to use?", result: "jest" }
+			);
 			writeFiles({
 				items: {
 					"package.json": {
@@ -1052,19 +1085,20 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created wrangler.toml
-			        ✨ Created tsconfig.json
-			        ✨ Created src/index.ts
-			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created wrangler.toml
+			✨ Created tsconfig.json
+			✨ Created src/index.test.ts
+			✨ Created src/index.ts
+			✨ Installed @cloudflare/workers-types, typescript, jest, and @types/jest into devDependencies
 
-			        To start developing your Worker, run \`npx wrangler dev\`
-			        To publish your Worker to the Internet, run \`npx wrangler publish\`",
-			          "warn": "",
-			        }
-		      `);
+			To start developing your Worker, run \`npx wrangler dev\`
+			To publish your Worker to the Internet, run \`npx wrangler publish\`",
+			  "warn": "",
+			}
+		`);
 		});
 
 		it("should add scripts for a typescript project with .ts extension", async () => {
@@ -1084,12 +1118,19 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: true,
+				},
+				{
+					text: "Would you like us to write your first test?",
+					result: true,
 				}
 			);
-			mockSelect({
-				text: "Would you like to create a Worker at src/index.ts?",
-				result: "fetch",
-			});
+			mockSelect(
+				{
+					text: "Would you like to create a Worker at src/index.ts?",
+					result: "fetch",
+				},
+				{ text: "Which test runner would you like to use?", result: "jest" }
+			);
 
 			await runWrangler("init");
 
@@ -1110,15 +1151,16 @@ describe("init", () => {
 				},
 			});
 			expect(std.out).toMatchInlineSnapshot(`
-			        "✨ Created wrangler.toml
-			        ✨ Created package.json
-			        ✨ Created tsconfig.json
-			        ✨ Created src/index.ts
-			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			"✨ Created wrangler.toml
+			✨ Created package.json
+			✨ Created tsconfig.json
+			✨ Created src/index.test.ts
+			✨ Created src/index.ts
+			✨ Installed @cloudflare/workers-types, typescript, jest, and @types/jest into devDependencies
 
-			        To start developing your Worker, run \`npm start\`
-			        To publish your Worker to the Internet, run \`npm run deploy\`"
-		      `);
+			To start developing your Worker, run \`npm start\`
+			To publish your Worker to the Internet, run \`npm run deploy\`"
+		`);
 		});
 
 		it("should not overwrite package.json scripts for a typescript project", async () => {
@@ -1134,12 +1176,19 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: true,
+				},
+				{
+					text: "Would you like us to write your first test?",
+					result: true,
 				}
 			);
-			mockSelect({
-				text: "Would you like to create a Worker at src/index.ts?",
-				result: "fetch",
-			});
+			mockSelect(
+				{
+					text: "Would you like to create a Worker at src/index.ts?",
+					result: "fetch",
+				},
+				{ text: "Which test runner would you like to use?", result: "vitest" }
+			);
 			writeFiles({
 				items: {
 					"package.json": {
@@ -1170,14 +1219,15 @@ describe("init", () => {
 				},
 			});
 			expect(std.out).toMatchInlineSnapshot(`
-			        "✨ Created wrangler.toml
-			        ✨ Created tsconfig.json
-			        ✨ Created src/index.ts
-			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			"✨ Created wrangler.toml
+			✨ Created tsconfig.json
+			✨ Created src/index.test.ts
+			✨ Created src/index.ts
+			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
-			        To start developing your Worker, run \`npx wrangler dev\`
-			        To publish your Worker to the Internet, run \`npx wrangler publish\`"
-		      `);
+			To start developing your Worker, run \`npx wrangler dev\`
+			To publish your Worker to the Internet, run \`npx wrangler publish\`"
+		`);
 		});
 
 		it("should not offer to create a worker in a ts project if a file already exists at the location", async () => {
@@ -1325,14 +1375,23 @@ describe("init", () => {
 		});
 
 		it("should not touch an existing tsconfig.json in the same directory", async () => {
-			mockConfirm({
-				text: "Would you like to use git to manage this Worker?",
-				result: false,
-			});
-			mockSelect({
-				text: "Would you like to create a Worker at src/index.ts?",
-				result: "fetch",
-			});
+			mockConfirm(
+				{
+					text: "Would you like to use git to manage this Worker?",
+					result: false,
+				},
+				{
+					text: "Would you like us to write your first test?",
+					result: true,
+				}
+			);
+			mockSelect(
+				{
+					text: "Would you like to create a Worker at src/index.ts?",
+					result: "fetch",
+				},
+				{ text: "Which test runner would you like to use?", result: "vitest" }
+			);
 			writeFiles({
 				items: {
 					"package.json": {
@@ -1359,17 +1418,19 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created wrangler.toml
-			        ✨ Created src/index.ts
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created wrangler.toml
+			✨ Created src/index.test.ts
+			✨ Created src/index.ts
+			✨ Installed vitest into devDependencies
 
-			        To start developing your Worker, run \`npx wrangler dev\`
-			        To publish your Worker to the Internet, run \`npx wrangler publish\`",
-			          "warn": "",
-			        }
-		      `);
+			To start developing your Worker, run \`npx wrangler dev\`
+			To publish your Worker to the Internet, run \`npx wrangler publish\`",
+			  "warn": "",
+			}
+		`);
 		});
 
 		it("should not touch an existing tsconfig.json in the ancestor of a target directory, if a name is passed", async () => {
@@ -1385,12 +1446,19 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: true,
+				},
+				{
+					text: "Would you like us to write your first test?",
+					result: true,
 				}
 			);
-			mockSelect({
-				text: "Would you like to create a Worker at path/to/worker/my-worker/src/index.ts?",
-				result: "fetch",
-			});
+			mockSelect(
+				{
+					text: "Would you like to create a Worker at path/to/worker/my-worker/src/index.ts?",
+					result: "fetch",
+				},
+				{ text: "Which test runner would you like to use?", result: "vitest" }
+			);
 			writeFiles({
 				items: {
 					"path/to/worker/package.json": {
@@ -1417,20 +1485,21 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created path/to/worker/my-worker/wrangler.toml
-			        ✨ Created path/to/worker/my-worker/package.json
-			        ✨ Created path/to/worker/my-worker/tsconfig.json
-			        ✨ Created path/to/worker/my-worker/src/index.ts
-			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created path/to/worker/my-worker/wrangler.toml
+			✨ Created path/to/worker/my-worker/package.json
+			✨ Created path/to/worker/my-worker/tsconfig.json
+			✨ Created path/to/worker/my-worker/src/index.test.ts
+			✨ Created path/to/worker/my-worker/src/index.ts
+			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
-			        To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
-			        To publish your Worker to the Internet, run \`npm run deploy\`",
-			          "warn": "",
-			        }
-		      `);
+			To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
+			To publish your Worker to the Internet, run \`npm run deploy\`",
+			  "warn": "",
+			}
+		`);
 		});
 
 		it("should offer to install type definitions in an existing typescript project", async () => {
@@ -1488,14 +1557,23 @@ describe("init", () => {
 		});
 
 		it("should not touch an existing tsconfig.json in an ancestor directory", async () => {
-			mockConfirm({
-				text: "Would you like to use git to manage this Worker?",
-				result: false,
-			});
-			mockSelect({
-				text: "Would you like to create a Worker at src/index.ts?",
-				result: "fetch",
-			});
+			mockConfirm(
+				{
+					text: "Would you like to use git to manage this Worker?",
+					result: false,
+				},
+				{
+					text: "Would you like us to write your first test?",
+					result: true,
+				}
+			);
+			mockSelect(
+				{
+					text: "Would you like to create a Worker at src/index.ts?",
+					result: "fetch",
+				},
+				{ text: "Which test runner would you like to use?", result: "vitest" }
+			);
 			writeFiles({
 				items: {
 					"package.json": {
@@ -1524,17 +1602,19 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created wrangler.toml
-			        ✨ Created src/index.ts
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created wrangler.toml
+			✨ Created src/index.test.ts
+			✨ Created src/index.ts
+			✨ Installed vitest into devDependencies
 
-			        To start developing your Worker, run \`npx wrangler dev\`
-			        To publish your Worker to the Internet, run \`npx wrangler publish\`",
-			          "warn": "",
-			        }
-		      `);
+			To start developing your Worker, run \`npx wrangler dev\`
+			To publish your Worker to the Internet, run \`npx wrangler publish\`",
+			  "warn": "",
+			}
+		`);
 		});
 	});
 
@@ -1642,8 +1722,8 @@ describe("init", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 			"✨ Created wrangler.toml
 			✨ Created package.json
-			✨ Created src/index.js
 			✨ Created src/index.test.js
+			✨ Created src/index.js
 			✨ Installed jest into devDependencies
 
 			To start developing your Worker, run \`npm start\`
@@ -1703,8 +1783,8 @@ describe("init", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 			"✨ Created wrangler.toml
 			✨ Created package.json
-			✨ Created src/index.js
 			✨ Created src/index.test.js
+			✨ Created src/index.js
 			✨ Installed vitest into devDependencies
 
 			To start developing your Worker, run \`npm start\`
@@ -1883,21 +1963,22 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created wrangler.toml
-			        ✨ Initialized git repository
-			        ✨ Created package.json
-			        ✨ Created tsconfig.json
-			        ✨ Created src/index.ts
-			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created wrangler.toml
+			✨ Initialized git repository
+			✨ Created package.json
+			✨ Created tsconfig.json
+			✨ Created src/index.test.ts
+			✨ Created src/index.ts
+			✨ Installed @cloudflare/workers-types, typescript, jest, and @types/jest into devDependencies
 
-			        To start developing your Worker, run \`npm start\`
-			        To publish your Worker to the Internet, run \`npm run deploy\`",
-			          "warn": "",
-			        }
-		      `);
+			To start developing your Worker, run \`npm start\`
+			To publish your Worker to the Internet, run \`npm run deploy\`",
+			  "warn": "",
+			}
+		`);
 		});
 
 		it('should create a worker in a nested directory if "name" is path/to/worker', async () => {
@@ -1912,21 +1993,22 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created path/to/worker/wrangler.toml
-			        ✨ Initialized git repository at path/to/worker
-			        ✨ Created path/to/worker/package.json
-			        ✨ Created path/to/worker/tsconfig.json
-			        ✨ Created path/to/worker/src/index.ts
-			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created path/to/worker/wrangler.toml
+			✨ Initialized git repository at path/to/worker
+			✨ Created path/to/worker/package.json
+			✨ Created path/to/worker/tsconfig.json
+			✨ Created path/to/worker/src/index.test.ts
+			✨ Created path/to/worker/src/index.ts
+			✨ Installed @cloudflare/workers-types, typescript, jest, and @types/jest into devDependencies
 
-			        To start developing your Worker, run \`cd path/to/worker && npm start\`
-			        To publish your Worker to the Internet, run \`npm run deploy\`",
-			          "warn": "",
-			        }
-		      `);
+			To start developing your Worker, run \`cd path/to/worker && npm start\`
+			To publish your Worker to the Internet, run \`npm run deploy\`",
+			  "warn": "",
+			}
+		`);
 		});
 
 		it("should normalize characters that aren't lowercase alphanumeric, underscores, or dashes", async () => {
@@ -1941,21 +2023,22 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/wrangler.toml
-			        ✨ Initialized git repository at WEIRD_w0rkr_N4m3.js.tsx.tar.gz
-			        ✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/package.json
-			        ✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/tsconfig.json
-			        ✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/src/index.ts
-			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/wrangler.toml
+			✨ Initialized git repository at WEIRD_w0rkr_N4m3.js.tsx.tar.gz
+			✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/package.json
+			✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/tsconfig.json
+			✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/src/index.test.ts
+			✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/src/index.ts
+			✨ Installed @cloudflare/workers-types, typescript, jest, and @types/jest into devDependencies
 
-			        To start developing your Worker, run \`cd WEIRD_w0rkr_N4m3.js.tsx.tar.gz && npm start\`
-			        To publish your Worker to the Internet, run \`npm run deploy\`",
-			          "warn": "",
-			        }
-		      `);
+			To start developing your Worker, run \`cd WEIRD_w0rkr_N4m3.js.tsx.tar.gz && npm start\`
+			To publish your Worker to the Internet, run \`npm run deploy\`",
+			  "warn": "",
+			}
+		`);
 		});
 
 		it("should ignore ancestor files (such as wrangler.toml, package.json and tsconfig.json) if a name/path is given", async () => {
@@ -1975,12 +2058,19 @@ describe("init", () => {
 				{
 					text: "Would you like to install the type definitions for Workers into your package.json?",
 					result: true,
+				},
+				{
+					text: "Would you like us to write your first test?",
+					result: true,
 				}
 			);
-			mockSelect({
-				text: "Would you like to create a Worker at sub/folder/worker/src/index.ts?",
-				result: "fetch",
-			});
+			mockSelect(
+				{
+					text: "Would you like to create a Worker at sub/folder/worker/src/index.ts?",
+					result: "fetch",
+				},
+				{ text: "Which test runner would you like to use?", result: "vitest" }
+			);
 			writeFiles({
 				items: {
 					"package.json": { contents: { name: "top-level" } },

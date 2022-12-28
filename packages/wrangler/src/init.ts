@@ -524,7 +524,6 @@ export async function initHandler(args: InitArgs) {
 					if (shouldCreateTests) {
 						newWorkerTestType = await getNewWorkerTestType(yesFlag);
 						devDepsToInstall.push(newWorkerTestType);
-						devDepsToInstall.push(`${newWorkerTestType}@latest`);
 						newWorkerTestType === "jest" &&
 							devDepsToInstall.push(`@types/jest`);
 
@@ -626,7 +625,6 @@ export async function initHandler(args: InitArgs) {
 					if (shouldCreateTests) {
 						newWorkerTestType = await getNewWorkerTestType(yesFlag);
 						devDepsToInstall.push(newWorkerTestType);
-						devDepsToInstall.push(`${newWorkerTestType}@latest`);
 						await writeFile(
 							path.join(creationDirectory, "./src/index.test.js"),
 							readFileSync(
