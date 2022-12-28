@@ -78,8 +78,11 @@ export async function unstable_dev(
 	options?: DevOptions,
 	apiOptions?: unknown
 ): Promise<UnstableDevWorker> {
-	const { testMode = true, disableExperimentalWarning = false } =
-		options?.experimental ?? {};
+	const {
+		testMode = true,
+		disableExperimentalWarning = false,
+		disableDevRegistry = false,
+	} = options?.experimental ?? {};
 	if (apiOptions) {
 		logger.error(
 			"unstable_dev's third argument (apiOptions) has been deprecated in favor of an `experimental` property within the second argument (options).\nPlease update your code from:\n`await unstable_dev('...', {...}, {...});`\nto:\n`await unstable_dev('...', {..., experimental: {...}});`"
