@@ -14,28 +14,52 @@ describe("worker", () => {
 
 		workers = await Promise.all([
 			unstable_dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			}),
 			unstable_dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			}),
 			unstable_dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			}),
 			unstable_dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			}),
 			unstable_dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			}),
 			unstable_dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			}),
 			unstable_dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			}),
 			unstable_dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			}),
 		]);
 

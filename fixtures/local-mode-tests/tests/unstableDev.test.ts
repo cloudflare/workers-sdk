@@ -20,7 +20,10 @@ describe("worker in local mode", () => {
 				ip: "127.0.0.1",
 				port: 1337,
 				local: true,
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			}
 		);
 

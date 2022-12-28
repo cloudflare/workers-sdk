@@ -56,9 +56,10 @@ interface DevOptions {
 	experimentalLocal?: boolean;
 	accountId?: string;
 	experimentalLocalRemoteKv?: boolean;
-	experimental: {
+	experimental?: {
 		testMode?: boolean;
 		disableExperimentalWarning?: boolean;
+		disableDevRegistry?: boolean;
 	};
 }
 
@@ -109,6 +110,7 @@ export async function unstable_dev(
 					$0: "",
 					port: options?.port ?? 0,
 					local: true,
+					disableDevRegistry,
 					...options,
 					onReady: (address, port) => {
 						readyPort = port;
