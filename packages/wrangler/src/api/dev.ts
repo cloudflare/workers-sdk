@@ -56,9 +56,10 @@ interface DevOptions {
 	experimentalLocal?: boolean;
 	accountId?: string;
 	experimentalLocalRemoteKv?: boolean;
-	experimental: {
+	experimental?: {
 		testMode?: boolean;
 		disableExperimentalWarning?: boolean;
+		disableDevRegistry?: boolean;
 	};
 }
 
@@ -77,8 +78,11 @@ export async function unstable_dev(
 	options?: DevOptions,
 	apiOptions?: unknown
 ): Promise<UnstableDevWorker> {
-	const { testMode = true, disableExperimentalWarning = false } =
-		options?.experimental ?? {};
+	const {
+		testMode = true,
+		disableExperimentalWarning = false,
+		disableDevRegistry = false,
+	} = options?.experimental ?? {};
 	if (apiOptions) {
 		logger.error(
 			"unstable_dev's third argument (apiOptions) has been deprecated in favor of an `experimental` property within the second argument (options).\nPlease update your code from:\n`await unstable_dev('...', {...}, {...});`\nto:\n`await unstable_dev('...', {..., experimental: {...}});`"
@@ -109,6 +113,7 @@ export async function unstable_dev(
 					$0: "",
 					port: options?.port ?? 0,
 					local: true,
+					disableDevRegistry,
 					...options,
 					onReady: (address, port) => {
 						readyPort = port;

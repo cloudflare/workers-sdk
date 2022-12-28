@@ -376,6 +376,7 @@ type StartDevOptions = ArgumentsCamelCase<DevArgs> &
 	// They aren't exposed as CLI arguments.
 	AdditionalDevProps & {
 		forceLocal?: boolean;
+		disableDevRegistry?: boolean;
 		enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 	};
 
@@ -644,6 +645,7 @@ export async function startApiDev(args: StartDevOptions) {
 			testScheduled: args.testScheduled,
 			experimentalLocal: args.experimentalLocal,
 			experimentalLocalRemoteKv: args.experimentalLocalRemoteKv,
+			disableDevRegistry: args.disableDevRegistry ?? false,
 		});
 	}
 

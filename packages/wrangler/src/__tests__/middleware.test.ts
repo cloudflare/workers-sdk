@@ -28,7 +28,10 @@ describe("workers change behaviour with middleware with wrangler dev", () => {
 			fs.writeFileSync("index.js", scriptContent);
 
 			const worker = await unstable_dev("index.js", {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			});
 
 			const resp = await worker.fetch();
@@ -56,7 +59,10 @@ describe("workers change behaviour with middleware with wrangler dev", () => {
 			fs.writeFileSync("index.js", scriptContent);
 
 			const worker = await unstable_dev("index.js", {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			});
 
 			const resp = await worker.fetch();
@@ -87,7 +93,10 @@ describe("workers change behaviour with middleware with wrangler dev", () => {
 			fs.writeFileSync("index.js", scriptContent);
 
 			const worker = await unstable_dev("index.js", {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			});
 
 			const resp = await worker.fetch();
@@ -116,7 +125,10 @@ describe("workers change behaviour with middleware with wrangler dev", () => {
 			fs.writeFileSync("index.js", scriptContent);
 
 			const worker = await unstable_dev("index.js", {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			});
 
 			const resp = await worker.fetch();
@@ -143,7 +155,10 @@ describe("workers change behaviour with middleware with wrangler dev", () => {
 			fs.writeFileSync("index.js", scriptContent);
 
 			const worker = await unstable_dev("index.js", {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			});
 
 			const resp = await worker.fetch();
@@ -170,7 +185,10 @@ describe("workers change behaviour with middleware with wrangler dev", () => {
 			fs.writeFileSync("index.js", scriptContent);
 
 			const worker = await unstable_dev("index.js", {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			});
 
 			const resp = await worker.fetch();
@@ -200,7 +218,10 @@ describe("workers change behaviour with middleware with wrangler dev", () => {
 			fs.writeFileSync("index.js", scriptContent);
 
 			const worker = await unstable_dev("index.js", {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			});
 
 			const resp = await worker.fetch();
@@ -229,7 +250,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			fs.writeFileSync("index.js", scriptContent);
 
 			const worker = await unstable_dev("index.js", {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			});
 
 			const resp = await worker.fetch();
@@ -252,7 +276,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			fs.writeFileSync("index.js", scriptContent);
 
 			const worker = await unstable_dev("index.js", {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			});
 
 			const resp = await worker.fetch();
@@ -278,7 +305,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			fs.writeFileSync("index.js", scriptContent);
 
 			const worker = await unstable_dev("index.js", {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			});
 
 			const resp = await worker.fetch();
@@ -309,7 +339,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			fs.writeFileSync("index.js", scriptContent);
 
 			const worker = await unstable_dev("index.js", {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			});
 
 			const resp = await worker.fetch();
@@ -335,7 +368,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			fs.writeFileSync("index.js", scriptContent);
 
 			const worker = await unstable_dev("index.js", {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			});
 
 			const resp = await worker.fetch();
@@ -373,7 +409,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			fs.writeFileSync("index.js", scriptContent);
 
 			const worker = await unstable_dev("index.js", {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			});
 
 			const resp = await worker.fetch();
@@ -394,7 +433,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			fs.writeFileSync("index.js", scriptContent);
 
 			const worker = await unstable_dev("index.js", {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			});
 
 			const resp = await worker.fetch();
@@ -416,7 +458,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			fs.writeFileSync("index.js", scriptContent);
 
 			const worker = await unstable_dev("index.js", {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			});
 
 			const resp = await worker.fetch();
@@ -441,7 +486,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			fs.writeFileSync("index.js", scriptContent);
 
 			const worker = await unstable_dev("index.js", {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			});
 
 			const resp = await worker.fetch();
@@ -471,7 +519,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			fs.writeFileSync("index.js", scriptContent);
 
 			const worker = await unstable_dev("index.js", {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			});
 
 			const resp = await worker.fetch();
@@ -499,7 +550,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			fs.writeFileSync("index.js", scriptContent);
 
 			const worker = await unstable_dev("index.js", {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			});
 
 			const resp = await worker.fetch();
@@ -528,7 +582,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			fs.writeFileSync("index.js", scriptContent);
 
 			const worker = await unstable_dev("index.js", {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			});
 
 			const resp = await worker.fetch();
@@ -556,7 +613,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			fs.writeFileSync("index.js", scriptContent);
 
 			const worker = await unstable_dev("index.js", {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			});
 
 			const resp = await worker.fetch();
@@ -585,7 +645,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			fs.writeFileSync("index.js", scriptContent);
 
 			const worker = await unstable_dev("index.js", {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			});
 
 			const resp = await worker.fetch();
@@ -608,7 +671,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			fs.writeFileSync("index.js", scriptContent);
 
 			const worker = await unstable_dev("index.js", {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			});
 
 			const resp = await worker.fetch();
@@ -637,7 +703,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			fs.writeFileSync("index.js", scriptContent);
 
 			const worker = await unstable_dev("index.js", {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			});
 
 			const resp = await worker.fetch();
@@ -665,7 +734,10 @@ describe("unchanged functionality when wrapping with middleware", () => {
 			fs.writeFileSync("index.js", scriptContent);
 
 			const worker = await unstable_dev("index.js", {
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			});
 
 			const resp = await worker.fetch();

@@ -12,7 +12,12 @@ describe("worker", () => {
 	beforeAll(async () => {
 		worker = await unstable_dev(
 			path.resolve(__dirname, "..", "src", "headers.ts"),
-			{ experimental: { disableExperimentalWarning: true } }
+			{
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
+			}
 		);
 
 		resolveReadyPromise(undefined);

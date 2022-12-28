@@ -19,7 +19,10 @@ describe("worker", () => {
 		//since the script is invoked from the directory above, need to specify index.js is in src/
 		worker = await unstable_dev(path.resolve(__dirname, "..", "src", "sw.ts"), {
 			config: path.resolve(__dirname, "..", "src", "wrangler.sw.toml"),
-			experimental: { disableExperimentalWarning: true },
+			experimental: {
+				disableExperimentalWarning: true,
+				disableDevRegistry: true,
+			},
 		});
 
 		resolveReadyPromise(undefined);

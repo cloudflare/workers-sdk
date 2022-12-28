@@ -22,7 +22,10 @@ describe("worker", () => {
 			{
 				config: path.resolve(__dirname, "..", "src", "wrangler.module.toml"),
 				vars: { VAR4: "https://google.com" },
-				experimental: { disableExperimentalWarning: true },
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			}
 		);
 
