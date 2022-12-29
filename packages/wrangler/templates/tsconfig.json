@@ -4,5 +4,5 @@
 		"types": ["@cloudflare/workers-types"]
 	},
 	"include": ["**/*.ts"],
-	"exclude": ["__tests__", "templates"]
+	"exclude": ["__tests__", "./init_tests/**"]
 }

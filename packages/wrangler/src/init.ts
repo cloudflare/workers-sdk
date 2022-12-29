@@ -525,13 +525,19 @@ export async function initHandler(args: InitArgs) {
 
 					shouldCreateTests =
 						yesFlag ||
-						(await confirm("Would you like us to write your first test?"));
+						(await confirm(
+							"Would you like us to write your first test with Vitest?"
+						));
 
 					if (shouldCreateTests) {
-						newWorkerTestType = await getNewWorkerTestType(yesFlag);
+						if (yesFlag) {
+							logger.info(
+								"Currently the default TypeScript test generation is Vitest."
+							);
+						}
+
+						newWorkerTestType = "vitest";
 						devDepsToInstall.push(newWorkerTestType);
-						newWorkerTestType === "jest" &&
-							devDepsToInstall.push(`@types/jest`);
 
 						await writeFile(
 							path.join(creationDirectory, "./src/index.test.ts"),
