@@ -45,21 +45,21 @@ export interface UnstableDevOptions {
 		preview_bucket_name?: string;
 	}[];
 	d1Databases?: Environment["d1_databases"];
-	showInteractiveDevSession?: boolean;
 	logLevel?: "none" | "info" | "error" | "log" | "warn" | "debug";
 	logPrefix?: string;
 	inspect?: boolean;
 	local?: boolean;
-	forceLocal?: boolean;
-	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
-	testScheduled?: boolean;
-	experimentalLocal?: boolean;
 	accountId?: string;
-	experimentalLocalRemoteKv?: boolean;
 	experimental?: {
-		testMode?: boolean;
 		disableExperimentalWarning?: boolean;
 		disableDevRegistry?: boolean;
+		enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
+		forceLocal?: boolean;
+		experimentalLocal?: boolean;
+		experimentalLocalRemoteKv?: boolean;
+		showInteractiveDevSession?: boolean;
+		testMode?: boolean;
+		testScheduled?: boolean;
 	};
 }
 
@@ -82,6 +82,9 @@ export async function unstable_dev(
 		testMode = true,
 		disableExperimentalWarning = false,
 		disableDevRegistry = false,
+		testScheduled,
+		experimentalLocal,
+		experimentalLocalRemoteKv,
 	} = options?.experimental ?? {};
 	if (apiOptions) {
 		logger.error(
@@ -114,6 +117,9 @@ export async function unstable_dev(
 					port: options?.port ?? 0,
 					local: true,
 					disableDevRegistry,
+					testScheduled,
+					experimentalLocal,
+					experimentalLocalRemoteKv,
 					...options,
 					onReady: (address, port) => {
 						readyPort = port;
@@ -159,6 +165,9 @@ export async function unstable_dev(
 					_: [],
 					$0: "",
 					local: true,
+					testScheduled,
+					experimentalLocal,
+					experimentalLocalRemoteKv,
 					...options,
 					onReady: (address, port) => {
 						readyPort = port;

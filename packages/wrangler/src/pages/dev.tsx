@@ -480,7 +480,6 @@ export const Handler = async ({
 		compatibilityDate,
 		compatibilityFlags,
 		nodeCompat,
-		experimentalLocal,
 		vars: Object.fromEntries(
 			bindings
 				.map((binding) => binding.toString().split("="))
@@ -514,25 +513,27 @@ export const Handler = async ({
 		r2: r2s.map((binding) => {
 			return { binding: binding.toString(), bucket_name: "" };
 		}),
-
 		d1Databases: d1s.map((binding) => ({
 			binding: binding.toString(),
 			database_id: "", // Required for types, but unused by dev
 			database_name: `local-${binding}`,
 		})),
-
-		enablePagesAssetsServiceBinding: {
-			proxyPort,
-			directory,
-		},
-		forceLocal: true,
 		persist,
 		persistTo,
-		showInteractiveDevSession: undefined,
 		inspect: undefined,
 		logPrefix: "pages",
 		logLevel: logLevel ?? "warn",
-		experimental: { testMode: false, disableExperimentalWarning: true },
+		experimental: {
+			disableExperimentalWarning: true,
+			enablePagesAssetsServiceBinding: {
+				proxyPort,
+				directory,
+			},
+			experimentalLocal,
+			forceLocal: true,
+			showInteractiveDevSession: undefined,
+			testMode: false,
+		},
 	});
 	await metrics.sendMetricsEvent("run pages dev");
 
