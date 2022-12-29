@@ -516,6 +516,13 @@ export async function initHandler(args: InitArgs) {
 						readFileSync(path.join(getBasePath(), `templates/${template}`))
 					);
 
+					logger.log(
+						`✨ Created ${path.relative(
+							process.cwd(),
+							path.join(creationDirectory, "./src/index.ts")
+						)}`
+					);
+
 					shouldCreateTests =
 						yesFlag ||
 						(await confirm("Would you like us to write your first test?"));
@@ -531,7 +538,7 @@ export async function initHandler(args: InitArgs) {
 							readFileSync(
 								path.join(
 									getBasePath(),
-									`templates/init-tests/test-${newWorkerTestType}-new-worker.js`
+									`templates/init-tests/test-${newWorkerTestType}-new-worker.ts`
 								)
 							)
 						);
@@ -542,13 +549,6 @@ export async function initHandler(args: InitArgs) {
 							)}`
 						);
 					}
-
-					logger.log(
-						`✨ Created ${path.relative(
-							process.cwd(),
-							path.join(creationDirectory, "./src/index.ts")
-						)}`
-					);
 
 					await writePackageJsonScriptsAndUpdateWranglerToml({
 						isWritingScripts: shouldWritePackageJsonScripts,
@@ -617,6 +617,13 @@ export async function initHandler(args: InitArgs) {
 						readFileSync(path.join(getBasePath(), `templates/${template}`))
 					);
 
+					logger.log(
+						`✨ Created ${path.relative(
+							process.cwd(),
+							path.join(creationDirectory, "./src/index.js")
+						)}`
+					);
+
 					shouldCreateTests =
 						yesFlag ||
 						(await confirm("Would you like us to write your first test?"));
@@ -640,13 +647,6 @@ export async function initHandler(args: InitArgs) {
 							)}`
 						);
 					}
-
-					logger.log(
-						`✨ Created ${path.relative(
-							process.cwd(),
-							path.join(creationDirectory, "./src/index.js")
-						)}`
-					);
 
 					await writePackageJsonScriptsAndUpdateWranglerToml({
 						isWritingScripts: shouldWritePackageJsonScripts,
