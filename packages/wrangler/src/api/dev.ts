@@ -51,13 +51,17 @@ export interface UnstableDevOptions {
 	local?: boolean;
 	accountId?: string;
 	experimental?: {
+		// Disables wrangler's warning when unstable APIs are used.
 		disableExperimentalWarning?: boolean;
+		// Disables wrangler's support multi-worker setups. May reduce flakiness when used in tests in CI.
 		disableDevRegistry?: boolean;
 		enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 		forceLocal?: boolean;
+		// Uses Miniflare 3 instead of Miniflare 2
 		experimentalLocal?: boolean;
 		experimentalLocalRemoteKv?: boolean;
 		showInteractiveDevSession?: boolean;
+		// This option shouldn't be used - We plan on removing it eventually
 		testMode?: boolean;
 		testScheduled?: boolean;
 	};
@@ -80,13 +84,15 @@ export async function unstable_dev(
 ): Promise<UnstableDevWorker> {
 	// Note that not every experimental option is passed directly through to the underlying dev API - experimental options can be used here in unstable_dev. Otherwise we could just pass experimental down to dev blindly.
 	const {
-		testMode = true,
-		disableExperimentalWarning = false,
 		disableDevRegistry = false,
-		testScheduled,
+		disableExperimentalWarning = false,
 		experimentalLocal,
 		experimentalLocalRemoteKv,
 		enablePagesAssetsServiceBinding,
+		forceLocal,
+		showInteractiveDevSession = false,
+		testMode = true,
+		testScheduled,
 	} = options?.experimental ?? {};
 	if (apiOptions) {
 		logger.error(
@@ -113,7 +119,6 @@ export async function unstable_dev(
 					script: script,
 					inspect: false,
 					logLevel: "none",
-					showInteractiveDevSession: false,
 					_: [],
 					$0: "",
 					port: options?.port ?? 0,
@@ -123,6 +128,8 @@ export async function unstable_dev(
 					experimentalLocal,
 					experimentalLocalRemoteKv,
 					enablePagesAssetsServiceBinding,
+					showInteractiveDevSession,
+					forceLocal,
 					...options,
 					onReady: (address, port) => {
 						readyPort = port;
@@ -164,10 +171,10 @@ export async function unstable_dev(
 				const devServer = startDev({
 					script: script,
 					inspect: false,
-					showInteractiveDevSession: false,
 					_: [],
 					$0: "",
 					local: true,
+					showInteractiveDevSession,
 					disableDevRegistry,
 					testScheduled,
 					experimentalLocal,
