@@ -3,4 +3,4 @@
 "wranglerjs-compat-webpack-plugin": patch
 ---
 
-Bump esbuild to version 0.15.18
+Bump esbuild to version 0.16.12
