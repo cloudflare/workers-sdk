@@ -2,8 +2,8 @@ import assert from "node:assert";
 import * as fs from "node:fs";
 import { builtinModules } from "node:module";
 import * as path from "node:path";
-import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
-import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
+import { NodeGlobalsPolyfillPlugin } from "@esbuild-plugins/node-globals-polyfill";
+import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
 import * as esbuild from "esbuild";
 import tmp from "tmp-promise";
 import createModuleCollector from "./module-collection";
@@ -352,7 +352,10 @@ export async function bundleWorker(
 		plugins: [
 			moduleCollector.plugin,
 			...(nodeCompat
-				? [NodeGlobalsPolyfills({ buffer: true }), NodeModulesPolyfills()]
+				? [
+						NodeGlobalsPolyfillPlugin({ buffer: true }),
+						NodeModulesPolyfillPlugin(),
+				  ]
 				: []),
 			...(plugins || []),
 		],
