@@ -75,7 +75,7 @@ export interface UnstableDevWorker {
  */
 export async function unstable_dev(
 	script: string,
-	options?: DevOptions,
+	options?: UnstableDevOptions,
 	apiOptions?: unknown
 ): Promise<UnstableDevWorker> {
 	const {
