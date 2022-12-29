@@ -6,7 +6,7 @@ import type { Environment } from "../config";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { RequestInit, Response, RequestInfo } from "undici";
 
-interface DevOptions {
+export interface UnstableDevOptions {
 	config?: string;
 	env?: string;
 	ip?: string;
