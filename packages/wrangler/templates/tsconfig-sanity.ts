@@ -1,4 +1,4 @@
-// @ts-expect-error `@types/node` should NOT be included
+// @ts-nocheck `@types/node` should NOT be included
 Buffer.from("test");
 
 // @ts-expect-error `@types/jest` should NOT be included
