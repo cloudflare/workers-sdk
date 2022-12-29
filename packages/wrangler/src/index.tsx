@@ -3,11 +3,11 @@ import os from "node:os";
 import TOML from "@iarna/toml";
 import chalk from "chalk";
 import supportsColor from "supports-color";
-import { ProxyAgent, setGlobalDispatcher } from "undici";
+import { fetch, ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { isBuildFailure } from "./bundle";
-import { loadDotEnv, readConfig } from "./config";
+import { findWranglerToml, loadDotEnv, readConfig } from "./config";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
 import { deployments } from "./deployments";
@@ -623,17 +623,40 @@ export function createCLIParser(argv: string[]) {
 		},
 		async () => {
 			await printWranglerBanner();
+			let packageJsonData: undefined | PackageJSON;
 
-			// Read the contents of the package.json file
-			const packageJsonData = JSON.parse(
-				readFileSync("package.json", "utf8")
-			) as PackageJSON;
+			const pathToWorker = findWranglerToml();
+			if (pathToWorker) {
+				const newPath = pathToWorker.split("/").slice(0, -1).join("/");
+				packageJsonData = JSON.parse(
+					readFileSync(`${newPath}/package.json`, "utf8")
+				) as PackageJSON;
 
-			// Update the version of Wrangler to the latest version
-			packageData.dependencies["wrangler"] = "latest";
+				if (packageJsonData.dependencies?.wrangler) {
+					try {
+						const latestVersion = (
+							(await (
+								await fetch("https://registry.npmjs.org/wrangler")
+							).json()) as {
+								"dist-tags": { latest: string };
+							}
+						)["dist-tags"].latest;
 
-			// Write the updated package data back to the package.json file
-			writeFileSync("package.json", JSON.stringify(packageData, null, 2));
+						packageJsonData.dependencies.wrangler = latestVersion;
+						writeFileSync(
+							`${newPath}/package.json`,
+							JSON.stringify(packageJsonData, null, 2),
+							"utf8"
+						);
+					} catch (error) {
+						throw Error(`Wrangler upgrade failed: ${error}`);
+					}
+				}
+			} else {
+				logger.error(
+					"Failed to find a Wrangler configuration file, unable to determine location of Worker package.json."
+				);
+			}
 		}
 	);
 
