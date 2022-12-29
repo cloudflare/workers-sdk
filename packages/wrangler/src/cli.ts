@@ -4,7 +4,7 @@ import { unstable_dev } from "./api";
 import { FatalError } from "./errors";
 import { main } from ".";
 
-import type { UnstableDevWorker } from "./api";
+import type { UnstableDevWorker, UnstableDevOptions } from "./api";
 /**
  * The main entrypoint for the CLI.
  * main only gets called when the script is run directly, not when it's imported as a module.
@@ -25,4 +25,4 @@ if (typeof jest === "undefined" && require.main === module) {
  * and call wrangler.unstable_dev().
  */
 export { unstable_dev };
-export type { UnstableDevWorker };
+export type { UnstableDevWorker, UnstableDevOptions };
