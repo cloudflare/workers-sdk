@@ -78,6 +78,7 @@ export async function unstable_dev(
 	options?: UnstableDevOptions,
 	apiOptions?: unknown
 ): Promise<UnstableDevWorker> {
+	// Note that not every experimental option is passed directly through to the underlying dev API - experimental options can be used here in unstable_dev. Otherwise we could just pass experimental down to dev blindly.
 	const {
 		testMode = true,
 		disableExperimentalWarning = false,
@@ -85,6 +86,7 @@ export async function unstable_dev(
 		testScheduled,
 		experimentalLocal,
 		experimentalLocalRemoteKv,
+		enablePagesAssetsServiceBinding,
 	} = options?.experimental ?? {};
 	if (apiOptions) {
 		logger.error(
@@ -120,6 +122,7 @@ export async function unstable_dev(
 					testScheduled,
 					experimentalLocal,
 					experimentalLocalRemoteKv,
+					enablePagesAssetsServiceBinding,
 					...options,
 					onReady: (address, port) => {
 						readyPort = port;
@@ -165,9 +168,11 @@ export async function unstable_dev(
 					_: [],
 					$0: "",
 					local: true,
+					disableDevRegistry,
 					testScheduled,
 					experimentalLocal,
 					experimentalLocalRemoteKv,
+					enablePagesAssetsServiceBinding,
 					...options,
 					onReady: (address, port) => {
 						readyPort = port;
