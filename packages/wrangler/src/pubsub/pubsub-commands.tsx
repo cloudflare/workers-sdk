@@ -617,6 +617,139 @@ export function pubSubCommands(
 				}
 			);
 
+			brokersYargs.command(
+				"list-subscribers",
+				"List the subscribers configured against a Broker",
+				(yargs) => {
+					return yargs
+						.option("namespace", {
+							describe: "The Namespace the Brokers are associated with.",
+							type: "string",
+							alias: "ns",
+							demandOption: true,
+						})
+						.epilogue(pubsub.pubSubBetaWarning);
+				},
+				async (args) => {
+					const config = readConfig(args.config as ConfigPath, args);
+					const accountId = await requireAuth(config);
+
+					logger.log(await pubsub.listPubSubBrokerSubscribers(accountId, args.namespace, args.name));
+					await metrics.sendMetricsEvent("list pubsub broker subscribers", {
+						sendMetrics: config.send_metrics,
+					});
+				}
+			);
+
+			brokersYargs.command(
+				"add-subscriber",
+				"Add a subscriber to a Broker",
+				(yargs) => {
+					return yargs
+						.option("namespace", {
+							describe: "The Namespace the Brokers are associated with.",
+							type: "string",
+							alias: "ns",
+							demandOption: true,
+						})
+						.option("script-name", {
+							describe: "The name of an existing Worker script configured with a pubsub() handler",
+							type: "string",
+							demandOption: true,
+						})
+						.option("filter", {
+							describe: "The topic filter that defines what topic(s) should be sent to this subscriber",
+							type: "string",
+							demandOption: false,
+						})
+						.epilogue(pubsub.pubSubBetaWarning);
+				},
+				async (args) => {
+					const config = readConfig(args.config as ConfigPath, args);
+					const accountId = await requireAuth(config);
+
+					const topicFilter = args["filter"] ?? ""
+
+					logger.log(await pubsub.addPubSubBrokerSubscriber(accountId, args.namespace, args.name, args["script-name"], topicFilter));
+					await metrics.sendMetricsEvent("add pubsub broker subscriber", {
+						sendMetrics: config.send_metrics,
+					});
+				}
+			);
+
+			brokersYargs.command(
+				"remove-subscriber",
+				"Remove a subscriber from a Broker",
+				(yargs) => {
+					return yargs
+						.option("namespace", {
+							describe: "The Namespace the Brokers are associated with.",
+							type: "string",
+							alias: "ns",
+							demandOption: true,
+						})
+						.option("subscriber-id", {
+							describe: "The ID of a previously configured subscriber.",
+							type: "string",
+							alias: "id",
+							demandOption: true,
+						})
+						.epilogue(pubsub.pubSubBetaWarning);
+				},
+				async (args) => {
+					const config = readConfig(args.config as ConfigPath, args);
+					const accountId = await requireAuth(config);
+
+					logger.log(await pubsub.removePubSubBrokerSubscriber(accountId, args.namespace, args.name, args["subscriber-id"]));
+					await metrics.sendMetricsEvent("remove pubsub broker subscriber", {
+						sendMetrics: config.send_metrics,
+					});
+				}
+			);
+
+			brokersYargs.command(
+				"update-subscriber",
+				"Update an existing subscriber associated with a Broker",
+				(yargs) => {
+					return yargs
+						.option("namespace", {
+							describe: "The Namespace the Brokers are associated with.",
+							type: "string",
+							alias: "ns",
+							demandOption: true,
+						})
+						.option("subscriber-id", {
+							describe: "The ID of a previously configured subscriber.",
+							type: "string",
+							alias: "id",
+							demandOption: true,
+						})
+						.option("script-name", {
+							describe: "The name of an existing Worker script configured with a pubsub() handler",
+							type: "string",
+							demandOption: true,
+						})
+						.option("filter", {
+							describe: "The topic filter that defines what topic(s) should be sent to this subscriber",
+							type: "string",
+							demandOption: false,
+						})
+						.epilogue(pubsub.pubSubBetaWarning);
+				},
+				async (args) => {
+					const config = readConfig(args.config as ConfigPath, args);
+					const accountId = await requireAuth(config);
+
+					const topicFilter = args["filter"] ?? ""
+
+					logger.log(await pubsub.updatePubSubBrokerSubscriber(accountId, args.namespace, args.name, args["subscriber-id"], args["script-name"], topicFilter));
+					await metrics.sendMetricsEvent("update pubsub broker subscriber", {
+						sendMetrics: config.send_metrics,
+					});
+				}
+			);
+
+
 			brokersYargs.epilogue(pubsub.pubSubBetaWarning);
 			return brokersYargs;
 		})
