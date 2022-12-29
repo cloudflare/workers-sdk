@@ -1,3 +1,4 @@
+import { readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import TOML from "@iarna/toml";
 import chalk from "chalk";
@@ -50,6 +51,7 @@ import {
 import { whoami } from "./whoami";
 
 import type { Config } from "./config";
+import type { PackageJSON } from "./parse";
 import type { CommonYargsOptions } from "./yargs-types";
 import type { ArgumentsCamelCase } from "yargs";
 import type Yargs from "yargs";
@@ -606,6 +608,32 @@ export function createCLIParser(argv: string[]) {
 			} else {
 				logger.log(wranglerVersion);
 			}
+		}
+	);
+	wrangler.command(
+		"upgrade",
+		"Upgrade Wrangler installation to latest version",
+		(yargs) => {
+			yargs
+				.option("target", {
+					describe: "Specify a target version to upgrade to",
+					type: "string",
+				})
+				.epilogue(deploymentsWarning);
+		},
+		async () => {
+			await printWranglerBanner();
+
+			// Read the contents of the package.json file
+			const packageJsonData = JSON.parse(
+				readFileSync("package.json", "utf8")
+			) as PackageJSON;
+
+			// Update the version of Wrangler to the latest version
+			packageData.dependencies["wrangler"] = "latest";
+
+			// Write the updated package data back to the package.json file
+			writeFileSync("package.json", JSON.stringify(packageData, null, 2));
 		}
 	);
 
