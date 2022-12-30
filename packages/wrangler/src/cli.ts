@@ -1,10 +1,10 @@
 import process from "process";
 import { hideBin } from "yargs/helpers";
-import { unstable_dev } from "./api";
+import { dev } from "./api";
 import { FatalError } from "./errors";
 import { main } from ".";
 
-import type { UnstableDevWorker, UnstableDevOptions } from "./api";
+import type { DevWorker, DevOptions } from "./api";
 /**
  * The main entrypoint for the CLI.
  * main only gets called when the script is run directly, not when it's imported as a module.
@@ -22,7 +22,7 @@ if (typeof jest === "undefined" && require.main === module) {
 /**
  * This is how we're exporting the API.
  * It makes it possible to import wrangler from 'wrangler',
- * and call wrangler.unstable_dev().
+ * and call wrangler.dev().
  */
-export { unstable_dev };
-export type { UnstableDevWorker, UnstableDevOptions };
+export { dev };
+export type { DevWorker, DevOptions };

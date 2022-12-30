@@ -1,2 +1,2 @@
-export { unstable_dev } from "./dev";
-export type { UnstableDevWorker, UnstableDevOptions } from "./dev";
+export { dev } from "./dev";
+export type { DevWorker, DevOptions } from "./dev";

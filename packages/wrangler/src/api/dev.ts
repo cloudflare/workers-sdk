@@ -6,7 +6,7 @@ import type { Environment } from "../config";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { RequestInit, Response, RequestInfo } from "undici";
 
-export interface UnstableDevOptions {
+export interface DevOptions {
 	config?: string; // Path to .toml configuration file, relative to cwd
 	env?: string; // Environment to use for operations and .env files
 	ip?: string; // IP address to listen on
@@ -45,11 +45,10 @@ export interface UnstableDevOptions {
 	logLevel?: "none" | "info" | "error" | "log" | "warn" | "debug"; // Specify logging level  [choices: "debug", "info", "log", "warn", "error", "none"] [default: "log"]
 	logPrefix?: string;
 	inspect?: boolean;
-	local?: boolean;
+	local?: boolean; // Run on the local machine
 	accountId?: string;
 	experimental?: {
 		d1Databases?: Environment["d1_databases"];
-		disableExperimentalWarning?: boolean; // Disables wrangler's warning when unstable APIs are used.
 		disableDevRegistry?: boolean; // Disables wrangler's support multi-worker setups. May reduce flakiness when used in tests in CI.
 		enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 		experimentalLocal?: boolean; // Use Miniflare 3 instead of Miniflare 2
@@ -59,11 +58,11 @@ export interface UnstableDevOptions {
 		showInteractiveDevSession?: boolean;
 		testMode?: boolean; // This option shouldn't be used - We plan on removing it eventually
 		testScheduled?: boolean; // Test scheduled events by visiting /__scheduled in browser
-		watch?: boolean; // unstable_dev doesn't support watch-mode yet in testMode
+		watch?: boolean; // dev doesn't support watch-mode yet in testMode
 	};
 }
 
-export interface UnstableDevWorker {
+export interface DevWorker {
 	port: number;
 	address: string;
 	stop: () => Promise<void>;
@@ -71,19 +70,18 @@ export interface UnstableDevWorker {
 	waitUntilExit: () => Promise<void>;
 }
 /**
- *  unstable_dev starts a wrangler dev server, and returns a promise that resolves with utility functions to interact with it.
+ *  dev starts a wrangler dev server, and returns a promise that resolves with utility functions to interact with it.
  */
-export async function unstable_dev(
+export async function dev(
 	script: string,
-	options?: UnstableDevOptions,
+	options?: DevOptions,
 	apiOptions?: unknown
-): Promise<UnstableDevWorker> {
-	// Note that not every experimental option is passed directly through to the underlying dev API - experimental options can be used here in unstable_dev. Otherwise we could just pass experimental down to dev blindly.
+): Promise<DevWorker> {
+	// Note that not every experimental option is passed directly through to the underlying dev API - experimental options can be used here in dev. Otherwise we could just pass experimental down to dev blindly.
 	const {
 		// there are two types of "experimental" options:
-		// 1. options to unstable_dev that we're still testing or are unsure of
+		// 1. options to dev that we're still testing or are unsure of
 		disableDevRegistry = false,
-		disableExperimentalWarning = false,
 		forceLocal,
 		liveReload,
 		showInteractiveDevSession = false,
@@ -98,21 +96,16 @@ export async function unstable_dev(
 	} = options?.experimental ?? {};
 	if (apiOptions) {
 		logger.error(
-			"unstable_dev's third argument (apiOptions) has been deprecated in favor of an `experimental` property within the second argument (options).\nPlease update your code from:\n`await unstable_dev('...', {...}, {...});`\nto:\n`await unstable_dev('...', {..., experimental: {...}});`"
+			"dev's third argument (apiOptions) has been deprecated in favor of an `experimental` property within the second argument (options).\nPlease update your code from:\n`await dev('...', {...}, {...});`\nto:\n`await dev('...', {..., experimental: {...}});`"
 		);
 	}
 
-	if (!disableExperimentalWarning) {
-		logger.warn(
-			`unstable_dev() is experimental\nunstable_dev()'s behaviour will likely change in future releases`
-		);
-	}
 	let readyPort: number;
 	let readyAddress: string;
-	//due to Pages adoption of unstable_dev, we can't *just* disable rebuilds and watching. instead, we'll have two versions of startDev, which will converge.
+	//due to Pages adoption of dev, we can't *just* disable rebuilds and watching. instead, we'll have two versions of startDev, which will converge.
 	if (testMode) {
 		//in testMode, we can run multiple wranglers in parallel, but rebuilds might not work out of the box
-		return new Promise<UnstableDevWorker>((resolve) => {
+		return new Promise<DevWorker>((resolve) => {
 			//lmao
 			return new Promise<Awaited<ReturnType<typeof startApiDev>>>((ready) => {
 				// once the devServer is ready for requests, we resolve the inner promise
@@ -170,7 +163,7 @@ export async function unstable_dev(
 	} else {
 		//outside of test mode, rebuilds work fine, but only one instance of wrangler will work at a time
 
-		return new Promise<UnstableDevWorker>((resolve) => {
+		return new Promise<DevWorker>((resolve) => {
 			//lmao
 			return new Promise<Awaited<ReturnType<typeof startDev>>>((ready) => {
 				const devServer = startDev({
