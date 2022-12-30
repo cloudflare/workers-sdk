@@ -61,7 +61,7 @@ describe("Upgrade", () => {
 				}
 			).dependencies.wrangler
 		).toBe("UPDATED-1701D");
-		expect(std.out).toMatchInlineSnapshot(`""`);
+		expect(std.out).toMatchInlineSnapshot(`"✨ Wrangler upgrade complete! 🎉"`);
 		expect(execaSync).toHaveBeenCalledWith("pnpm", ["install"]);
 	});
 
@@ -69,7 +69,7 @@ describe("Upgrade", () => {
 		await runWrangler("upgrade");
 
 		expect(std.err).toMatchInlineSnapshot(`
-		"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Failed to find a Wrangler configuration file, unable to determine location of Worker package.json.[0m
+		"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Wrangler failed to find a Worker project in the current directory.[0m
 
 		"
 	`);

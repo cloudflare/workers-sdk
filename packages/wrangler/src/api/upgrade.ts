@@ -54,6 +54,7 @@ export async function upgradeWrangler() {
 						"🚨 No lockfile found, unable to determine package manager."
 					);
 				}
+				logger.log("✨ Wrangler upgrade complete! 🎉");
 			} catch (error) {
 				throw Error(`Wrangler upgrade failed: ${error}`);
 			}
@@ -62,7 +63,7 @@ export async function upgradeWrangler() {
 		}
 	} else {
 		logger.error(
-			"🚨 Failed to find a Wrangler configuration file, unable to determine location of Worker package.json."
+			"🚨 Wrangler failed to find a Worker project in the current directory."
 		);
 	}
 }
