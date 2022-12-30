@@ -80,18 +80,21 @@ export async function unstable_dev(
 ): Promise<UnstableDevWorker> {
 	// Note that not every experimental option is passed directly through to the underlying dev API - experimental options can be used here in unstable_dev. Otherwise we could just pass experimental down to dev blindly.
 	const {
-		d1Databases,
+		// there are two types of "experimental" options:
+		// 1. options to unstable_dev that we're still testing or are unsure of
 		disableDevRegistry = false,
 		disableExperimentalWarning = false,
-		experimentalLocal,
-		experimentalLocalRemoteKv,
-		enablePagesAssetsServiceBinding,
 		forceLocal,
 		liveReload,
 		showInteractiveDevSession = false,
 		testMode = true,
 		testScheduled,
 		watch,
+		// 2. options for alpha/beta products/libs
+		d1Databases,
+		experimentalLocal,
+		experimentalLocalRemoteKv,
+		enablePagesAssetsServiceBinding,
 	} = options?.experimental ?? {};
 	if (apiOptions) {
 		logger.error(
