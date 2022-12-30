@@ -23,8 +23,6 @@ export interface UnstableDevOptions {
 	compatibilityFlags?: string[];
 	persist?: boolean;
 	persistTo?: string;
-	liveReload?: boolean;
-	watch?: boolean;
 	vars?: {
 		[key: string]: unknown;
 	};
@@ -44,26 +42,24 @@ export interface UnstableDevOptions {
 		bucket_name: string;
 		preview_bucket_name?: string;
 	}[];
-	d1Databases?: Environment["d1_databases"];
 	logLevel?: "none" | "info" | "error" | "log" | "warn" | "debug";
 	logPrefix?: string;
 	inspect?: boolean;
 	local?: boolean;
 	accountId?: string;
 	experimental?: {
-		// Disables wrangler's warning when unstable APIs are used.
-		disableExperimentalWarning?: boolean;
-		// Disables wrangler's support multi-worker setups. May reduce flakiness when used in tests in CI.
-		disableDevRegistry?: boolean;
+		d1Databases?: Environment["d1_databases"];
+		disableExperimentalWarning?: boolean; // Disables wrangler's warning when unstable APIs are used.
+		disableDevRegistry?: boolean; // Disables wrangler's support multi-worker setups. May reduce flakiness when used in tests in CI.
 		enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
-		forceLocal?: boolean;
-		// Uses Miniflare 3 instead of Miniflare 2
-		experimentalLocal?: boolean;
+		experimentalLocal?: boolean; // Use Miniflare 3 instead of Miniflare 2
 		experimentalLocalRemoteKv?: boolean;
+		forceLocal?: boolean;
+		liveReload?: boolean;
 		showInteractiveDevSession?: boolean;
-		// This option shouldn't be used - We plan on removing it eventually
-		testMode?: boolean;
+		testMode?: boolean; // This option shouldn't be used - We plan on removing it eventually
 		testScheduled?: boolean;
+		watch?: boolean; // unstable_dev doesn't support watch-mode yet in testMode
 	};
 }
 
@@ -84,15 +80,18 @@ export async function unstable_dev(
 ): Promise<UnstableDevWorker> {
 	// Note that not every experimental option is passed directly through to the underlying dev API - experimental options can be used here in unstable_dev. Otherwise we could just pass experimental down to dev blindly.
 	const {
+		d1Databases,
 		disableDevRegistry = false,
 		disableExperimentalWarning = false,
 		experimentalLocal,
 		experimentalLocalRemoteKv,
 		enablePagesAssetsServiceBinding,
 		forceLocal,
+		liveReload,
 		showInteractiveDevSession = false,
 		testMode = true,
 		testScheduled,
+		watch,
 	} = options?.experimental ?? {};
 	if (apiOptions) {
 		logger.error(
@@ -123,13 +122,16 @@ export async function unstable_dev(
 					$0: "",
 					port: options?.port ?? 0,
 					local: true,
+					d1Databases,
 					disableDevRegistry,
 					testScheduled,
 					experimentalLocal,
 					experimentalLocalRemoteKv,
 					enablePagesAssetsServiceBinding,
+					liveReload,
 					showInteractiveDevSession,
 					forceLocal,
+					watch,
 					...options,
 					onReady: (address, port) => {
 						readyPort = port;
@@ -175,11 +177,14 @@ export async function unstable_dev(
 					$0: "",
 					local: true,
 					showInteractiveDevSession,
+					d1Databases,
 					disableDevRegistry,
 					testScheduled,
 					experimentalLocal,
 					experimentalLocalRemoteKv,
 					enablePagesAssetsServiceBinding,
+					liveReload,
+					watch,
 					...options,
 					onReady: (address, port) => {
 						readyPort = port;

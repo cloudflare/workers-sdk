@@ -474,9 +474,7 @@ export const Handler = async ({
 		ip,
 		port,
 		inspectorPort,
-		watch: true,
 		localProtocol,
-		liveReload,
 		compatibilityDate,
 		compatibilityFlags,
 		nodeCompat,
@@ -513,26 +511,28 @@ export const Handler = async ({
 		r2: r2s.map((binding) => {
 			return { binding: binding.toString(), bucket_name: "" };
 		}),
-		d1Databases: d1s.map((binding) => ({
-			binding: binding.toString(),
-			database_id: "", // Required for types, but unused by dev
-			database_name: `local-${binding}`,
-		})),
 		persist,
 		persistTo,
 		inspect: undefined,
 		logPrefix: "pages",
 		logLevel: logLevel ?? "warn",
 		experimental: {
+			d1Databases: d1s.map((binding) => ({
+				binding: binding.toString(),
+				database_id: "", // Required for types, but unused by dev
+				database_name: `local-${binding}`,
+			})),
 			disableExperimentalWarning: true,
 			enablePagesAssetsServiceBinding: {
 				proxyPort,
 				directory,
 			},
 			experimentalLocal,
+			liveReload,
 			forceLocal: true,
 			showInteractiveDevSession: undefined,
 			testMode: false,
+			watch: true,
 		},
 	});
 	await metrics.sendMetricsEvent("run pages dev");
