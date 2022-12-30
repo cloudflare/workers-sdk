@@ -531,9 +531,7 @@ export async function initHandler(args: InitArgs) {
 
 					if (shouldCreateTests) {
 						if (yesFlag) {
-							logger.info(
-								"Currently the default TypeScript test generation is Vitest."
-							);
+							logger.info("Your project will use Vitest to run your tests.");
 						}
 
 						newWorkerTestType = "vitest";
