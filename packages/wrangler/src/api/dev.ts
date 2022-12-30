@@ -7,22 +7,22 @@ import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/ty
 import type { RequestInit, Response, RequestInfo } from "undici";
 
 export interface UnstableDevOptions {
-	config?: string;
-	env?: string;
-	ip?: string;
-	port?: number;
-	bundle?: boolean;
-	inspectorPort?: number;
-	localProtocol?: "http" | "https";
-	assets?: string;
-	site?: string;
-	siteInclude?: string[];
-	siteExclude?: string[];
-	nodeCompat?: boolean;
-	compatibilityDate?: string;
-	compatibilityFlags?: string[];
-	persist?: boolean;
-	persistTo?: string;
+	config?: string; // Path to .toml configuration file, relative to cwd
+	env?: string; // Environment to use for operations and .env files
+	ip?: string; // IP address to listen on
+	port?: number; // Port to listen on
+	bundle?: boolean; // Set to false to skip internal build steps and directly publish script
+	inspectorPort?: number; // Port for devtools to connect to
+	localProtocol?: "http" | "https"; // Protocol to listen to requests on, defaults to http.
+	assets?: string; // Static assets to be served
+	site?: string; // Root folder of static assets for Workers Sites
+	siteInclude?: string[]; // Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.
+	siteExclude?: string[]; // Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.
+	nodeCompat?: boolean; // Enable node.js compatibility
+	compatibilityDate?: string; // Date to use for compatibility checks
+	compatibilityFlags?: string[]; // Flags to use for compatibility checks
+	persist?: boolean; // Enable persistence for local mode, using default path: .wrangler/state
+	persistTo?: string; // Specify directory to use for local persistence (implies --persist)
 	vars?: {
 		[key: string]: unknown;
 	};
@@ -42,7 +42,7 @@ export interface UnstableDevOptions {
 		bucket_name: string;
 		preview_bucket_name?: string;
 	}[];
-	logLevel?: "none" | "info" | "error" | "log" | "warn" | "debug";
+	logLevel?: "none" | "info" | "error" | "log" | "warn" | "debug"; // Specify logging level  [choices: "debug", "info", "log", "warn", "error", "none"] [default: "log"]
 	logPrefix?: string;
 	inspect?: boolean;
 	local?: boolean;
@@ -55,10 +55,10 @@ export interface UnstableDevOptions {
 		experimentalLocal?: boolean; // Use Miniflare 3 instead of Miniflare 2
 		experimentalLocalRemoteKv?: boolean;
 		forceLocal?: boolean;
-		liveReload?: boolean;
+		liveReload?: boolean; // Auto reload HTML pages when change is detected in local mode
 		showInteractiveDevSession?: boolean;
 		testMode?: boolean; // This option shouldn't be used - We plan on removing it eventually
-		testScheduled?: boolean;
+		testScheduled?: boolean; // Test scheduled events by visiting /__scheduled in browser
 		watch?: boolean; // unstable_dev doesn't support watch-mode yet in testMode
 	};
 }
