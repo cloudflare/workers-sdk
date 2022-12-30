@@ -22,6 +22,7 @@ import type { Route, SimpleRoute } from "./config/environment";
 import type { WorkerMetadata } from "./create-worker-upload-form";
 import type { ConfigPath } from "./index";
 import type { PackageManager } from "./package-manager";
+import type { PackageJSON } from "./parse";
 import type {
 	CommonYargsOptions,
 	YargsOptionsToInterface,
@@ -431,7 +432,7 @@ export async function initHandler(args: InitArgs) {
 								: `wrangler publish ${scriptPath}`,
 							...(isAddingTestScripts && { test: testRunner }),
 						},
-					},
+					} as PackageJSON,
 					null,
 					2
 				) + "\n"
@@ -522,10 +523,42 @@ export async function initHandler(args: InitArgs) {
 						)}`
 					);
 
+					shouldCreateTests =
+						yesFlag ||
+						(await confirm(
+							"Would you like us to write your first test with Vitest?"
+						));
+
+					if (shouldCreateTests) {
+						if (yesFlag) {
+							logger.info("Your project will use Vitest to run your tests.");
+						}
+
+						newWorkerTestType = "vitest";
+						devDepsToInstall.push(newWorkerTestType);
+
+						await writeFile(
+							path.join(creationDirectory, "./src/index.test.ts"),
+							readFileSync(
+								path.join(
+									getBasePath(),
+									`templates/init-tests/test-${newWorkerTestType}-new-worker.ts`
+								)
+							)
+						);
+						logger.log(
+							`✨ Created ${path.relative(
+								process.cwd(),
+								path.join(creationDirectory, "./src/index.test.ts")
+							)}`
+						);
+					}
+
 					await writePackageJsonScriptsAndUpdateWranglerToml({
 						isWritingScripts: shouldWritePackageJsonScripts,
 						isCreatingWranglerToml: justCreatedWranglerToml,
 						packagePath: pathToPackageJson,
+						testRunner: newWorkerTestType,
 						scriptPath: "src/index.ts",
 						extraToml: getNewWorkerToml(newWorkerType),
 					});
@@ -600,7 +633,7 @@ export async function initHandler(args: InitArgs) {
 						(await confirm("Would you like us to write your first test?"));
 
 					if (shouldCreateTests) {
-						newWorkerTestType = await getNewWorkerTestType();
+						newWorkerTestType = await getNewWorkerTestType(yesFlag);
 						devDepsToInstall.push(newWorkerTestType);
 						await writeFile(
 							path.join(creationDirectory, "./src/index.test.js"),
@@ -710,21 +743,23 @@ async function getNewWorkerType(newWorkerFilename: string) {
 	) as Promise<"none" | "fetch" | "scheduled">;
 }
 
-async function getNewWorkerTestType() {
-	return select(
-		`Which test runner would you like to use?`,
-		[
-			{
-				value: "vitest",
-				label: "Vitest",
-			},
-			{
-				value: "jest",
-				label: "Jest",
-			},
-		],
-		1
-	) as Promise<"jest" | "vitest">;
+async function getNewWorkerTestType(yesFlag?: boolean) {
+	return yesFlag
+		? "jest"
+		: (select(
+				`Which test runner would you like to use?`,
+				[
+					{
+						value: "vitest",
+						label: "Vitest",
+					},
+					{
+						value: "jest",
+						label: "Jest",
+					},
+				],
+				1
+		  ) as Promise<"jest" | "vitest">);
 }
 
 function getNewWorkerTemplate(
