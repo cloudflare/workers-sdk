@@ -1,4 +1,5 @@
 import { writeFileSync, existsSync } from "fs";
+import path from "path";
 import { execaSync } from "execa";
 import { fetch } from "undici";
 import { findWranglerToml } from "../config";
@@ -6,7 +7,6 @@ import { printWranglerBanner } from "../index";
 import { logger } from "../logger";
 import { readFileSync } from "../parse";
 import type { PackageJSON } from "../parse";
-import path from "path";
 
 export async function upgradeWrangler() {
 	await printWranglerBanner();
