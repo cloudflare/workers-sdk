@@ -1,4 +1,5 @@
 import { readFileSync, writeFileSync } from "fs";
+import { execaSync } from "execa";
 import { rest } from "msw";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
@@ -7,10 +8,20 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
 
+jest.mock("execa", () => {
+	return {
+		execaSync: jest.fn(),
+	};
+});
+
 describe("Upgrade", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
+
+	afterAll(() => {
+		jest.unmock("execa");
+	});
 
 	beforeEach(() => {
 		setIsTTY(false);
@@ -38,6 +49,7 @@ describe("Upgrade", () => {
 
 	it("should change the version in package.json to the latest in npm registry", async () => {
 		writeWranglerToml();
+		writeFileSync("pnpm-lock.yaml", "");
 		await runWrangler("upgrade");
 
 		expect(
@@ -49,16 +61,20 @@ describe("Upgrade", () => {
 				}
 			).dependencies.wrangler
 		).toBe("UPDATED-1701D");
+		expect(std.out).toMatchInlineSnapshot(`""`);
+		expect(execaSync).toHaveBeenCalledWith("pnpm", ["install"]);
 	});
+
 	it("should give an error message when Wrangler config can't be found", async () => {
 		await runWrangler("upgrade");
 
 		expect(std.err).toMatchInlineSnapshot(`
-		"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mFailed to find a Wrangler configuration file, unable to determine location of Worker package.json.[0m
+		"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Failed to find a Wrangler configuration file, unable to determine location of Worker package.json.[0m
 
 		"
 	`);
 	});
+
 	it("should give an error message when fetch to NPM registry fails", async () => {
 		writeWranglerToml();
 		msw.use(
@@ -69,5 +85,31 @@ describe("Upgrade", () => {
 		await expect(runWrangler("upgrade")).rejects.toMatchInlineSnapshot(
 			`[Error: Wrangler upgrade failed: FetchError: request to https://registry.npmjs.org/wrangler failed, reason: Some Network error on Fetch to NPM]`
 		);
+	});
+
+	it("should give an error message when no lockfile can be found", async () => {
+		writeWranglerToml();
+		await runWrangler("upgrade");
+		expect(std.err).toMatchInlineSnapshot(`
+		"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 No lockfile found, unable to determine package manager.[0m
+
+		"
+	`);
+	});
+	it("should give an error message when Wrangler is not present in package.json", async () => {
+		writeWranglerToml();
+		writeFileSync("package-lock.json", "");
+		writeFileSync(
+			"package.json",
+			JSON.stringify({
+				dependencies: {},
+			})
+		);
+		await runWrangler("upgrade");
+		expect(std.err).toMatchInlineSnapshot(`
+		"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Unable to locate Wrangler in project package.json[0m
+
+		"
+	`);
 	});
 });

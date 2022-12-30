@@ -54,6 +54,7 @@ describe("wrangler", () => {
 			  wrangler whoami                      🕵️  Retrieve your user info and test your auth config
 			  wrangler types                       📝 Generate types from bindings & module rules in config
 			  wrangler deployments                 🚢 Displays the 10 most recent deployments for a worker
+			  wrangler upgrade                     🆕 Upgrade Wrangler installation to latest version
 
 			Flags:
 			  -c, --config   Path to .toml configuration file  [string]
@@ -102,6 +103,7 @@ describe("wrangler", () => {
 			  wrangler whoami                      🕵️  Retrieve your user info and test your auth config
 			  wrangler types                       📝 Generate types from bindings & module rules in config
 			  wrangler deployments                 🚢 Displays the 10 most recent deployments for a worker
+			  wrangler upgrade                     🆕 Upgrade Wrangler installation to latest version
 
 			Flags:
 			  -c, --config   Path to .toml configuration file  [string]

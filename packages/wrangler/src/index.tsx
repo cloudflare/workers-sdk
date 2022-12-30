@@ -1,13 +1,13 @@
-import { readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import TOML from "@iarna/toml";
 import chalk from "chalk";
 import supportsColor from "supports-color";
-import { fetch, ProxyAgent, setGlobalDispatcher } from "undici";
+import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
+import { upgradeWrangler } from "./api";
 import { isBuildFailure } from "./bundle";
-import { findWranglerToml, loadDotEnv, readConfig } from "./config";
+import { loadDotEnv, readConfig } from "./config";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
 import { deployments } from "./deployments";
@@ -51,7 +51,6 @@ import {
 import { whoami } from "./whoami";
 
 import type { Config } from "./config";
-import type { PackageJSON } from "./parse";
 import type { CommonYargsOptions } from "./yargs-types";
 import type { ArgumentsCamelCase } from "yargs";
 import type Yargs from "yargs";
@@ -612,51 +611,12 @@ export function createCLIParser(argv: string[]) {
 	);
 	wrangler.command(
 		"upgrade",
-		"Upgrade Wrangler installation to latest version",
+		"🆕 Upgrade Wrangler installation to latest version",
 		(yargs) => {
-			yargs
-				.option("target", {
-					describe: "Specify a target version to upgrade to",
-					type: "string",
-				})
-				.epilogue(deploymentsWarning);
+			yargs.epilogue(deploymentsWarning);
 		},
 		async () => {
-			await printWranglerBanner();
-			let packageJsonData: undefined | PackageJSON;
-
-			const pathToWorker = findWranglerToml();
-			if (pathToWorker) {
-				const newPath = pathToWorker.split("/").slice(0, -1).join("/");
-				packageJsonData = JSON.parse(
-					readFileSync(`${newPath}/package.json`, "utf8")
-				) as PackageJSON;
-
-				if (packageJsonData.dependencies?.wrangler) {
-					try {
-						const latestVersion = (
-							(await (
-								await fetch("https://registry.npmjs.org/wrangler")
-							).json()) as {
-								"dist-tags": { latest: string };
-							}
-						)["dist-tags"].latest;
-
-						packageJsonData.dependencies.wrangler = latestVersion;
-						writeFileSync(
-							`${newPath}/package.json`,
-							JSON.stringify(packageJsonData, null, 2),
-							"utf8"
-						);
-					} catch (error) {
-						throw Error(`Wrangler upgrade failed: ${error}`);
-					}
-				}
-			} else {
-				logger.error(
-					"Failed to find a Wrangler configuration file, unable to determine location of Worker package.json."
-				);
-			}
+			await upgradeWrangler();
 		}
 	);
 
