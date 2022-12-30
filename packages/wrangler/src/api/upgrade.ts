@@ -6,6 +6,7 @@ import { printWranglerBanner } from "../index";
 import { logger } from "../logger";
 import { readFileSync } from "../parse";
 import type { PackageJSON } from "../parse";
+import path from "path";
 
 export async function upgradeWrangler() {
 	await printWranglerBanner();
@@ -13,7 +14,7 @@ export async function upgradeWrangler() {
 
 	const pathToWorker = findWranglerToml();
 	if (pathToWorker) {
-		const newPath = pathToWorker.split("/").slice(0, -1).join("/");
+		const newPath = pathToWorker.split(path.sep).slice(0, -1).join(path.sep);
 		packageJsonData = JSON.parse(
 			readFileSync(`${newPath}/package.json`)
 		) as PackageJSON;
