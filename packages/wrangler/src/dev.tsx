@@ -622,7 +622,7 @@ export async function startApiDev(args: StartDevOptions) {
 			isWorkersSite: Boolean(args.site || configParam.site),
 			compatibilityDate: getDevCompatibilityDate(
 				config,
-				// Only `compatibilityDate` will be set when using `unstable_dev`
+				// Only `compatibilityDate` will be set when using `dev`
 				args["compatibility-date"] ?? args.compatibilityDate
 			),
 			compatibilityFlags:

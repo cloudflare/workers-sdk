@@ -1,24 +1,20 @@
 import path from "path";
-import { unstable_dev } from "wrangler";
-import type { UnstableDevWorker } from "wrangler";
+import { dev } from "wrangler";
+import type { DevWorker } from "wrangler";
 
 describe("worker", () => {
-	let worker: UnstableDevWorker;
+	let worker: DevWorker;
 	let resolveReadyPromise: (value: unknown) => void;
 	const readyPromise = new Promise((resolve) => {
 		resolveReadyPromise = resolve;
 	});
 
 	beforeAll(async () => {
-		worker = await unstable_dev(
-			path.resolve(__dirname, "..", "src", "headers.ts"),
-			{
-				experimental: {
-					disableExperimentalWarning: true,
-					disableDevRegistry: true,
-				},
-			}
-		);
+		worker = await dev(path.resolve(__dirname, "..", "src", "headers.ts"), {
+			experimental: {
+				disableDevRegistry: true,
+			},
+		});
 
 		resolveReadyPromise(undefined);
 	});

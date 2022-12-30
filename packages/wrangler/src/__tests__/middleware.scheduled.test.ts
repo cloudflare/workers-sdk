@@ -1,5 +1,5 @@
 import * as fs from "node:fs";
-import { unstable_dev } from "../api";
+import { dev } from "../api";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
 jest.unmock("undici");
@@ -27,9 +27,8 @@ describe("run scheduled events with middleware", () => {
 		});
 
 		it("should not intercept when middleware is not enabled", async () => {
-			const worker = await unstable_dev("index.js", {
+			const worker = await dev("index.js", {
 				experimental: {
-					disableExperimentalWarning: true,
 					disableDevRegistry: true,
 				},
 			});
@@ -42,9 +41,8 @@ describe("run scheduled events with middleware", () => {
 		});
 
 		it("should intercept when middleware is enabled", async () => {
-			const worker = await unstable_dev("index.js", {
+			const worker = await dev("index.js", {
 				experimental: {
-					disableExperimentalWarning: true,
 					disableDevRegistry: true,
 					testScheduled: true,
 				},
@@ -58,9 +56,8 @@ describe("run scheduled events with middleware", () => {
 		});
 
 		it("should not trigger scheduled event on wrong route", async () => {
-			const worker = await unstable_dev("index.js", {
+			const worker = await dev("index.js", {
 				experimental: {
-					disableExperimentalWarning: true,
 					disableDevRegistry: true,
 					testScheduled: true,
 				},
@@ -96,9 +93,8 @@ describe("run scheduled events with middleware", () => {
 		});
 
 		it("should not intercept when middleware is not enabled", async () => {
-			const worker = await unstable_dev("index.js", {
+			const worker = await dev("index.js", {
 				experimental: {
-					disableExperimentalWarning: true,
 					disableDevRegistry: true,
 				},
 			});
@@ -111,9 +107,8 @@ describe("run scheduled events with middleware", () => {
 		});
 
 		it("should intercept when middleware is enabled", async () => {
-			const worker = await unstable_dev("index.js", {
+			const worker = await dev("index.js", {
 				experimental: {
-					disableExperimentalWarning: true,
 					disableDevRegistry: true,
 					testScheduled: true,
 				},
@@ -127,9 +122,8 @@ describe("run scheduled events with middleware", () => {
 		});
 
 		it("should not trigger scheduled event on wrong route", async () => {
-			const worker = await unstable_dev("index.js", {
+			const worker = await dev("index.js", {
 				experimental: {
-					disableExperimentalWarning: true,
 					disableDevRegistry: true,
 					testScheduled: true,
 				},

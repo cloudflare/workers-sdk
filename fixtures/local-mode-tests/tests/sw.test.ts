@@ -1,9 +1,9 @@
 import path from "path";
-import { unstable_dev } from "wrangler";
-import type { UnstableDevWorker } from "wrangler";
+import { dev } from "wrangler";
+import type { DevWorker } from "wrangler";
 
 describe("worker", () => {
-	let worker: UnstableDevWorker;
+	let worker: DevWorker;
 	let resolveReadyPromise: (value: unknown) => void;
 	const readyPromise = new Promise((resolve) => {
 		resolveReadyPromise = resolve;
@@ -17,10 +17,9 @@ describe("worker", () => {
 		process.env.NODE_ENV = "local-testing";
 
 		//since the script is invoked from the directory above, need to specify index.js is in src/
-		worker = await unstable_dev(path.resolve(__dirname, "..", "src", "sw.ts"), {
+		worker = await dev(path.resolve(__dirname, "..", "src", "sw.ts"), {
 			config: path.resolve(__dirname, "..", "src", "wrangler.sw.toml"),
 			experimental: {
-				disableExperimentalWarning: true,
 				disableDevRegistry: true,
 			},
 		});

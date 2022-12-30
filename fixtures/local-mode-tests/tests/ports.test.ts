@@ -1,11 +1,11 @@
 import path from "path";
-import { unstable_dev } from "wrangler";
-import type { UnstableDevWorker } from "wrangler";
+import { dev } from "wrangler";
+import type { DevWorker } from "wrangler";
 
 // Okay this test is seriously flaky, even without devRegistry enabled
 // TODO: figure out why we can't run 8 wranglers at once
 describe.skip("worker", () => {
-	let workers: UnstableDevWorker[];
+	let workers: DevWorker[];
 	let resolveReadyPromise: (value: unknown) => void;
 	const readyPromise = new Promise((resolve) => {
 		resolveReadyPromise = resolve;
@@ -15,51 +15,43 @@ describe.skip("worker", () => {
 		//since the script is invoked from the directory above, need to specify index.js is in src/
 
 		workers = await Promise.all([
-			unstable_dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
+			dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
 				experimental: {
-					disableExperimentalWarning: true,
 					disableDevRegistry: true,
 				},
 			}),
-			unstable_dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
+			dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
 				experimental: {
-					disableExperimentalWarning: true,
 					disableDevRegistry: true,
 				},
 			}),
-			unstable_dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
+			dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
 				experimental: {
-					disableExperimentalWarning: true,
 					disableDevRegistry: true,
 				},
 			}),
-			unstable_dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
+			dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
 				experimental: {
-					disableExperimentalWarning: true,
 					disableDevRegistry: true,
 				},
 			}),
-			unstable_dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
+			dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
 				experimental: {
-					disableExperimentalWarning: true,
 					disableDevRegistry: true,
 				},
 			}),
-			unstable_dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
+			dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
 				experimental: {
-					disableExperimentalWarning: true,
 					disableDevRegistry: true,
 				},
 			}),
-			unstable_dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
+			dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
 				experimental: {
-					disableExperimentalWarning: true,
 					disableDevRegistry: true,
 				},
 			}),
-			unstable_dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
+			dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
 				experimental: {
-					disableExperimentalWarning: true,
 					disableDevRegistry: true,
 				},
 			}),

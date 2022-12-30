@@ -1,14 +1,12 @@
-import { unstable_dev } from "wrangler";
-import type { UnstableDevWorker } from "wrangler";
+import { dev } from "wrangler";
+import type { DevWorker } from "wrangler";
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
 
 describe("Worker", () => {
-	let worker: UnstableDevWorker;
+	let worker: DevWorker;
 
 	beforeAll(async () => {
-		worker = await unstable_dev("src/index.js", {
-			experimental: { disableExperimentalWarning: true },
-		});
+		worker = await dev("src/index.js");
 	});
 
 	afterAll(async () => {

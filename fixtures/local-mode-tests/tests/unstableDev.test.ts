@@ -1,12 +1,12 @@
 import path from "path";
-import { unstable_dev } from "wrangler";
-import type { UnstableDevWorker } from "wrangler";
+import { dev } from "wrangler";
+import type { DevWorker } from "wrangler";
 
 // TODO: add test for `experimentalLocal: true` once issue with dynamic
 //  `import()` and `npx-import` resolved:
 //  https://github.com/cloudflare/wrangler2/pull/1940#issuecomment-1261166695
 describe("worker in local mode", () => {
-	let worker: UnstableDevWorker;
+	let worker: DevWorker;
 	let resolveReadyPromise: (value: unknown) => void;
 	const readyPromise = new Promise((resolve) => {
 		resolveReadyPromise = resolve;
@@ -14,15 +14,11 @@ describe("worker in local mode", () => {
 
 	beforeAll(async () => {
 		//since the script is invoked from the directory above, need to specify index.js is in src/
-		worker = await unstable_dev(
-			path.resolve(__dirname, "..", "src", "basicModule.ts"),
-			{
-				experimental: {
-					disableExperimentalWarning: true,
-					disableDevRegistry: true,
-				},
-			}
-		);
+		worker = await dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
+			experimental: {
+				disableDevRegistry: true,
+			},
+		});
 
 		resolveReadyPromise(undefined);
 	});

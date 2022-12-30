@@ -1,17 +1,16 @@
 import * as fs from "node:fs";
 import { Request } from "undici";
-import { unstable_dev } from "../api";
+import { dev } from "../api";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
 jest.unmock("undici");
 
-describe("unstable_dev", () => {
+describe("dev", () => {
 	it("should return Hello World", async () => {
-		const worker = await unstable_dev(
+		const worker = await dev(
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 			{
 				experimental: {
-					disableExperimentalWarning: true,
 					disableDevRegistry: true,
 				},
 			}
@@ -25,11 +24,10 @@ describe("unstable_dev", () => {
 	});
 
 	it("should return the port that the server started on (1)", async () => {
-		const worker = await unstable_dev(
+		const worker = await dev(
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 			{
 				experimental: {
-					disableExperimentalWarning: true,
 					disableDevRegistry: true,
 				},
 			}
@@ -39,12 +37,11 @@ describe("unstable_dev", () => {
 	});
 
 	it("should return the port that the server started on (2)", async () => {
-		const worker = await unstable_dev(
+		const worker = await dev(
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 			{
 				port: 9191,
 				experimental: {
-					disableExperimentalWarning: true,
 					disableDevRegistry: true,
 				},
 			}
@@ -54,14 +51,13 @@ describe("unstable_dev", () => {
 	});
 });
 
-describe("unstable dev fetch input protocol", () => {
+describe("dev fetch input protocol", () => {
 	it("should use http localProtocol", async () => {
-		const worker = await unstable_dev(
+		const worker = await dev(
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 			{
 				localProtocol: "http",
 				experimental: {
-					disableExperimentalWarning: true,
 					disableDevRegistry: true,
 				},
 			}
@@ -75,12 +71,11 @@ describe("unstable dev fetch input protocol", () => {
 	});
 
 	it("should use undefined localProtocol", async () => {
-		const worker = await unstable_dev(
+		const worker = await dev(
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 			{
 				localProtocol: undefined,
 				experimental: {
-					disableExperimentalWarning: true,
 					disableDevRegistry: true,
 				},
 			}
@@ -94,7 +89,7 @@ describe("unstable dev fetch input protocol", () => {
 	});
 });
 
-describe("unstable dev fetch input parsing", () => {
+describe("dev fetch input parsing", () => {
 	runInTempDir();
 
 	it("should pass in a request object unchanged", async () => {
@@ -114,10 +109,9 @@ describe("unstable dev fetch input parsing", () => {
 	`;
 		fs.writeFileSync("index.js", scriptContent);
 		const port = 21213;
-		const worker = await unstable_dev("index.js", {
+		const worker = await dev("index.js", {
 			port,
 			experimental: {
-				disableExperimentalWarning: true,
 				disableDevRegistry: true,
 			},
 		});
@@ -144,9 +138,8 @@ describe("unstable dev fetch input parsing", () => {
 	};
 	`;
 		fs.writeFileSync("index.js", scriptContent);
-		const worker = await unstable_dev("index.js", {
+		const worker = await dev("index.js", {
 			experimental: {
-				disableExperimentalWarning: true,
 				disableDevRegistry: true,
 			},
 		});
@@ -171,9 +164,8 @@ describe("unstable dev fetch input parsing", () => {
 	};
 	`;
 		fs.writeFileSync("index.js", scriptContent);
-		const worker = await unstable_dev("index.js", {
+		const worker = await dev("index.js", {
 			experimental: {
-				disableExperimentalWarning: true,
 				disableDevRegistry: true,
 			},
 		});
@@ -197,9 +189,8 @@ describe("unstable dev fetch input parsing", () => {
 	};
 	`;
 		fs.writeFileSync("index.js", scriptContent);
-		const worker = await unstable_dev("index.js", {
+		const worker = await dev("index.js", {
 			experimental: {
-				disableExperimentalWarning: true,
 				disableDevRegistry: true,
 			},
 		});
@@ -223,9 +214,8 @@ describe("unstable dev fetch input parsing", () => {
 	};
 	`;
 		fs.writeFileSync("index.js", scriptContent);
-		const worker = await unstable_dev("index.js", {
+		const worker = await dev("index.js", {
 			experimental: {
-				disableExperimentalWarning: true,
 				disableDevRegistry: true,
 			},
 		});

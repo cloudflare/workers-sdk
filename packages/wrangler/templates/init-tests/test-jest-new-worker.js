@@ -1,12 +1,10 @@
-const { unstable_dev } = require("wrangler");
+const { dev } = require("wrangler");
 
 describe("Worker", () => {
 	let worker;
 
 	beforeAll(async () => {
-		worker = await unstable_dev("src/index.js", {
-			experimental: { disableExperimentalWarning: true },
-		});
+		worker = await dev("src/index.js");
 	});
 
 	afterAll(async () => {

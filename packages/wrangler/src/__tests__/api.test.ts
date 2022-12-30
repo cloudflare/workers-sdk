@@ -1,7 +1,7 @@
 import { Request } from "undici";
 import { parseRequestInput } from "../api/dev";
 
-describe("parseRequestInput for fetch on unstable dev", () => {
+describe("parseRequestInput for fetch on dev", () => {
 	it("should allow no input to be passed in", () => {
 		const [input, _] = parseRequestInput("0.0.0.0", 8080);
 

@@ -4,7 +4,7 @@ import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { watch } from "chokidar";
 import * as esbuild from "esbuild";
-import { unstable_dev } from "../api";
+import { dev } from "../api";
 import { esbuildAliasExternalPlugin } from "../bundle";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
@@ -470,7 +470,7 @@ export const Handler = async ({
 		}
 	}
 
-	const { stop, waitUntilExit } = await unstable_dev(entrypoint, {
+	const { stop, waitUntilExit } = await dev(entrypoint, {
 		ip,
 		port,
 		inspectorPort,
@@ -522,7 +522,6 @@ export const Handler = async ({
 				database_id: "", // Required for types, but unused by dev
 				database_name: `local-${binding}`,
 			})),
-			disableExperimentalWarning: true,
 			enablePagesAssetsServiceBinding: {
 				proxyPort,
 				directory,

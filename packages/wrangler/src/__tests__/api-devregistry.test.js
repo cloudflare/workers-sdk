@@ -1,4 +1,4 @@
-import { unstable_dev } from "../api";
+import { dev } from "../api";
 import { fetch } from "undici";
 
 jest.unmock("undici");
@@ -12,22 +12,16 @@ describe("multi-worker testing", () => {
 	let parentWorker;
 
 	beforeAll(async () => {
-		childWorker = await unstable_dev(
+		childWorker = await dev(
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 			{
 				config: "src/__tests__/helpers/worker-scripts/child-wrangler.toml",
-				experimental: {
-					disableExperimentalWarning: true,
-				},
 			}
 		);
-		parentWorker = await unstable_dev(
+		parentWorker = await dev(
 			"src/__tests__/helpers/worker-scripts/parent-worker.js",
 			{
 				config: "src/__tests__/helpers/worker-scripts/parent-wrangler.toml",
-				experimental: {
-					disableExperimentalWarning: true,
-				},
 			}
 		);
 	});
