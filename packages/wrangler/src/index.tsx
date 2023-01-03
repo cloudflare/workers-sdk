@@ -615,7 +615,7 @@ export function createCLIParser(argv: string[]) {
 		(yargs) => {
 			yargs
 				.option("yes", {
-					describe: 'Answer "yes" to any prompts for new projects',
+					describe: 'Answer "yes" to any prompts for upgrading.',
 					type: "boolean",
 					alias: "y",
 				})
