@@ -140,6 +140,27 @@ describe("Pages Functions", () => {
 			expect(text).toContain("<footer>Set from a Plugin!</footer>");
 		});
 
+		it.concurrent("should return a status code", async () => {
+			await readyPromise;
+			const response = await fetch(
+				`http://${ip}:${port}/mounted-plugin/status`
+			);
+			const text = await response.text();
+			expect(text).toMatchInlineSnapshot(
+				`"This should return a 502 status code"`
+			);
+			expect(response.status).toBe(502);
+		});
+
+		it.concurrent("should work for nested folders", async () => {
+			await readyPromise;
+			const response = await fetch(
+				`http://${ip}:${port}/mounted-plugin/api/v1/instance`
+			);
+			const text = await response.text();
+			expect(text).toMatchInlineSnapshot(`"Response from a nested folder"`);
+		});
+
 		it.concurrent("should mount Fixed page", async () => {
 			await readyPromise;
 			const response = await fetch(`http://${ip}:${port}/mounted-plugin/fixed`);
