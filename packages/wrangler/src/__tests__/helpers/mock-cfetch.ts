@@ -175,7 +175,6 @@ export function setMockResponse<ResponseType>(
 
 /**
  * A helper to make it easier to create `FetchResult` objects in tests.
- * TODO: Hijack this for MSW response objects. - JACOB
  */
 export async function createFetchResult<ResponseType>(
 	result: ResponseType | Promise<ResponseType>,
