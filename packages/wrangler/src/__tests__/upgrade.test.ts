@@ -2,12 +2,12 @@ import { readFileSync, writeFileSync } from "fs";
 import { execaSync } from "execa";
 import { rest } from "msw";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
-import { mockConfirm } from "./helpers/mock-dialogs";
 
 jest.mock("execa", () => {
 	return {
