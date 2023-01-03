@@ -613,10 +613,17 @@ export function createCLIParser(argv: string[]) {
 		"upgrade",
 		"🆕 Upgrade Wrangler installation to latest version",
 		(yargs) => {
-			yargs.epilogue(deploymentsWarning);
+			yargs
+				.option("yes", {
+					describe: 'Answer "yes" to any prompts for new projects',
+					type: "boolean",
+					alias: "y",
+				})
+				.epilogue(deploymentsWarning);
 		},
-		async () => {
-			await upgradeWrangler();
+		async (upgradeArgs: ArgumentsCamelCase<{ yes: boolean }>) => {
+			const { yes: yesFlag } = upgradeArgs;
+			await upgradeWrangler({ yesFlag });
 		}
 	);
 

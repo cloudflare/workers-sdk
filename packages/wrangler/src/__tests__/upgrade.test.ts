@@ -7,6 +7,7 @@ import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
+import { mockConfirm } from "./helpers/mock-dialogs";
 
 jest.mock("execa", () => {
 	return {
@@ -29,7 +30,7 @@ describe("Upgrade", () => {
 			"package.json",
 			JSON.stringify({
 				devDependencies: {
-					wrangler: "NOT-UPDATED",
+					wrangler: "0.0.0",
 				},
 			})
 		);
@@ -39,7 +40,7 @@ describe("Upgrade", () => {
 					ctx.status(200),
 					ctx.json({
 						"dist-tags": {
-							latest: "UPDATED-1701D",
+							latest: "0.0.1",
 						},
 					})
 				);
@@ -60,8 +61,16 @@ describe("Upgrade", () => {
 					};
 				}
 			).devDependencies.wrangler
-		).toBe("UPDATED-1701D");
-		expect(std.out).toMatchInlineSnapshot(`"✨ Wrangler upgrade complete! 🎉"`);
+		).toBe("0.0.1");
+		expect(std).toMatchInlineSnapshot(`
+		Object {
+		  "debug": "",
+		  "err": "",
+		  "out": "Attempting to upgrade Wrangler from 0.0.0 to the latest version 0.0.1...
+		✨ Wrangler upgrade complete! 🎉",
+		  "warn": "",
+		}
+	`);
 		expect(execaSync).toHaveBeenCalledWith("pnpm", ["install"]);
 	});
 
@@ -96,6 +105,7 @@ describe("Upgrade", () => {
 		"
 	`);
 	});
+
 	it("should give an error message when Wrangler is not present in package.json", async () => {
 		writeWranglerToml();
 		writeFileSync("package-lock.json", "");
@@ -111,5 +121,87 @@ describe("Upgrade", () => {
 
 		"
 	`);
+	});
+
+	it("should bypass confirmation prompt with the --yes flag", async () => {
+		writeWranglerToml();
+		writeFileSync("package-lock.json", "");
+
+		await runWrangler("upgrade --yes");
+		expect(std.out).toMatchInlineSnapshot(`
+		"Attempting to upgrade Wrangler from 0.0.0 to the latest version 0.0.1...
+		✨ Wrangler upgrade complete! 🎉"
+	`);
+	});
+
+	it("should handle a major version change with prompting the user then continuing with a positive confirmation", async () => {
+		msw.use(
+			rest.get("https://registry.npmjs.org/wrangler", (req, res, ctx) => {
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						"dist-tags": {
+							latest: "1.0.1",
+						},
+					})
+				);
+			})
+		);
+		writeWranglerToml();
+		writeFileSync("package-lock.json", "");
+		mockConfirm({
+			text: `⚠️  A major semver change has been detected. Would you like to continue?`,
+			result: true,
+		});
+
+		await runWrangler("upgrade");
+		expect(std.out).toMatchInlineSnapshot(`
+		"Attempting to upgrade Wrangler from 0.0.0 to the latest version 1.0.1...
+		✨ Wrangler upgrade complete! 🎉"
+	`);
+		expect(
+			(
+				JSON.parse(readFileSync("./package.json", "utf8")) as {
+					devDependencies: {
+						wrangler: string;
+					};
+				}
+			).devDependencies.wrangler
+		).toBe("1.0.1");
+	});
+
+	it("should handle a major version change with prompting the user then early return with negative confirmation", async () => {
+		msw.use(
+			rest.get("https://registry.npmjs.org/wrangler", (req, res, ctx) => {
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						"dist-tags": {
+							latest: "1.0.1",
+						},
+					})
+				);
+			})
+		);
+		writeWranglerToml();
+		writeFileSync("package-lock.json", "");
+		mockConfirm({
+			text: `⚠️  A major semver change has been detected. Would you like to continue?`,
+			result: false,
+		});
+
+		await runWrangler("upgrade");
+		expect(std.out).toMatchInlineSnapshot(
+			`"Attempting to upgrade Wrangler from 0.0.0 to the latest version 1.0.1..."`
+		);
+		expect(
+			(
+				JSON.parse(readFileSync("./package.json", "utf8")) as {
+					devDependencies: {
+						wrangler: string;
+					};
+				}
+			).devDependencies.wrangler
+		).toBe("0.0.0");
 	});
 });
