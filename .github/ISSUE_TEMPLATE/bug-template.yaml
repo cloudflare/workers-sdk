@@ -24,6 +24,7 @@ body:
         - Queues
         - R2
         - Workers for Platforms
+        - Workers/Other
         - Wrangler
   - type: input
     attributes:
