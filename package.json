@@ -20,6 +20,7 @@
 		"check:lint": "eslint \"packages/**/*.[tj]s?(x)\" --cache --cache-strategy content --max-warnings=0",
 		"check:type": "npm run check:type --workspaces --if-present",
 		"fix": "npm run prettify && npm run check:lint -- --fix",
+		"postinstall": "patch-package",
 		"prettify": "prettier . --write --ignore-unknown",
 		"test": "npm run clean --workspace=wrangler && npm run bundle --workspace=wrangler && npm run test --workspace=packages/wrangler --workspace=packages/pages-shared --if-present && npx jest --forceExit",
 		"test:ci": "npm run test:ci --workspace=packages/wrangler --workspace=packages/pages-shared --if-present && npx jest --forceExit"
@@ -53,7 +54,8 @@
 		"typescript": "^4.8.4"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20221111.1"
+		"@cloudflare/workers-types": "^4.20221111.1",
+		"patch-package": "^6.5.1"
 	},
 	"engines": {
 		"node": ">=16.13.0"

@@ -181,3 +181,6 @@ packages/wranglerjs-compat-webpack-plugin/lib
 .wrangler-1-cache
 emitted-types/
 _routes.generated.json
+
+# Vendored npm dependencies
+!vendor/*.tgz
