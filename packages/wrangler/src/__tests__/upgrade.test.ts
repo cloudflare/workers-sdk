@@ -28,7 +28,7 @@ describe("Upgrade", () => {
 		writeFileSync(
 			"package.json",
 			JSON.stringify({
-				dependencies: {
+				devDependencies: {
 					wrangler: "NOT-UPDATED",
 				},
 			})
@@ -55,11 +55,11 @@ describe("Upgrade", () => {
 		expect(
 			(
 				JSON.parse(readFileSync("./package.json", "utf8")) as {
-					dependencies: {
+					devDependencies: {
 						wrangler: string;
 					};
 				}
-			).dependencies.wrangler
+			).devDependencies.wrangler
 		).toBe("UPDATED-1701D");
 		expect(std.out).toMatchInlineSnapshot(`"✨ Wrangler upgrade complete! 🎉"`);
 		expect(execaSync).toHaveBeenCalledWith("pnpm", ["install"]);
@@ -102,7 +102,7 @@ describe("Upgrade", () => {
 		writeFileSync(
 			"package.json",
 			JSON.stringify({
-				dependencies: {},
+				devDependencies: {},
 			})
 		);
 		await runWrangler("upgrade");

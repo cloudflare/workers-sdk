@@ -19,7 +19,7 @@ export async function upgradeWrangler() {
 			readFileSync(`${newPath}/package.json`)
 		) as PackageJSON;
 
-		if (packageJsonData.dependencies?.wrangler) {
+		if (packageJsonData.devDependencies?.wrangler) {
 			try {
 				const wranglerDistTags = (
 					(await (
@@ -30,7 +30,7 @@ export async function upgradeWrangler() {
 				)["dist-tags"];
 				const latestVersion = wranglerDistTags.latest;
 
-				packageJsonData.dependencies.wrangler = latestVersion;
+				packageJsonData.devDependencies.wrangler = latestVersion;
 				writeFileSync(
 					`${newPath}/package.json`,
 					JSON.stringify(packageJsonData, null, 2),
