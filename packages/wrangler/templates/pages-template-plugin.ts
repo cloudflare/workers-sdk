@@ -158,11 +158,7 @@ export default function (pluginArgs: unknown) {
 
 				const response = await handler(context);
 
-				// https://fetch.spec.whatwg.org/#null-body-status
-				return new Response(
-					[101, 204, 205, 304].includes(response.status) ? null : response.body,
-					{ ...response, headers: new Headers(response.headers) }
-				);
+				return cloneResponse(response);
 			} else {
 				return next();
 			}
@@ -173,3 +169,11 @@ export default function (pluginArgs: unknown) {
 
 	return onRequest;
 }
+
+// This makes a Response mutable
+const cloneResponse = (response: Response) =>
+	// https://fetch.spec.whatwg.org/#null-body-status
+	new Response(
+		[101, 204, 205, 304].includes(response.status) ? null : response.body,
+		response
+	);
