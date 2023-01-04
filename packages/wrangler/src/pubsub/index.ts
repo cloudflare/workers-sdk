@@ -44,6 +44,17 @@ export interface PubSubBrokerUpdate {
 }
 
 /**
+ * PubSubBrokerSubscribers is the set of values for a configured Subscriber.
+ */
+export interface PubSubBrokerSubscriber {
+	id: string;
+	filter?: string;
+	script_name: number;
+	created_on?: string;
+	modified_on?: string;
+}
+
+/**
  * Fetch a list of all the Namespaces under the given `accountId`.
  */
 export async function listPubSubNamespaces(
@@ -284,3 +295,107 @@ export async function listRevokedPubSubBrokerTokens(
 		`/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/revocations`
 	);
 }
+
+/**
+ *
+ * List configured subscribers for the given `broker`.
+ *
+ * This shows existing subscribers for a Broker.
+ */
+export async function listPubSubBrokerSubscribers(
+	accountId: string,
+	namespace: string,
+	broker: string
+): Promise<void> {
+	return await fetchResult<void>(
+		`/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/subscriptions`
+	);
+}
+
+/**
+ *
+ * Add a new subscriber to the given `broker`.
+ *
+ * This configures a Worker script as a subscriber for a given topic filter.
+ */
+export async function addPubSubBrokerSubscriber(
+	accountId: string,
+	namespace: string,
+	broker: string,
+	scriptName: string,
+	topicFilter: string
+): Promise<void> {
+	return await fetchResult<void>(
+		`/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/subscriptions`,
+		{
+			method: "POST",
+			body: JSON.stringify({
+				scriptName: scriptName,
+				topicFilter: topicFilter,
+			}),
+		}
+	);
+}
+
+/**
+ *
+ * Removes a subscriber from the given `broker`.
+ *
+ */
+export async function removePubSubBrokerSubscriber(
+	accountId: string,
+	namespace: string,
+	broker: string,
+	subscriptionId: string
+): Promise<void> {
+	return await fetchResult<void>(
+		`/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/subscriptions/${subscriptionId}`,
+		{
+			method: "DELETE",
+		}
+	);
+}
+
+/**
+ *
+ * Describes an existing subscriber configured against the given `broker`.
+ *
+ */
+export async function describePubSubBrokerSubscriber(
+	accountId: string,
+	namespace: string,
+	broker: string,
+	subscriptionId: string
+): Promise<void> {
+	return await fetchResult<void>(
+		`/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/subscriptions/${subscriptionId}`
+	);
+}
+
+/**
+ *
+ * Updates an existing subscriber configured against the given `broker`.
+ *
+ * Accepts a new script name, topic filter, or both as arguments.
+ *
+ */
+export async function updatePubSubBrokerSubscriber(
+	accountId: string,
+	namespace: string,
+	broker: string,
+	subscriptionId: string,
+	scriptName: string,
+	topicFilter: string
+): Promise<void> {
+	return await fetchResult<void>(
+		`/accounts/${accountId}/pubsub/namespaces/${namespace}/brokers/${broker}/subscriptions/${subscriptionId}`,
+		{
+			method: "PATCH",
+			body: JSON.stringify({
+				scriptName: scriptName,
+				topicFilter: topicFilter,
+			}),
+		}
+	);
+}
+
