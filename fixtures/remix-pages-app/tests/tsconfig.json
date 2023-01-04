@@ -1,7 +1,7 @@
 {
 	"extends": "../tsconfig.json",
 	"compilerOptions": {
-		"lib": ["ES2019"],
+		"lib": ["ES2019", "DOM"],
 		"types": ["node", "vitest"]
 	},
 	"include": ["**/*.ts"],

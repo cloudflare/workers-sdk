@@ -1,6 +1,7 @@
 {
 	"extends": "../tsconfig.json",
 	"compilerOptions": {
+		"lib": ["DOM"],
 		"types": ["node", "vitest"]
 	},
 	"include": ["**/*.ts"]
