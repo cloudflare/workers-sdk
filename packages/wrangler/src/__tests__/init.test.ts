@@ -2,19 +2,17 @@ import * as fs from "node:fs";
 import path from "node:path";
 import * as TOML from "@iarna/toml";
 import { execa, execaSync } from "execa";
+import { rest } from "msw";
 import { parseConfigFileTextToJson } from "typescript";
+import { FormData } from "undici";
 import { version as wranglerVersion } from "../../package.json";
+import { fetchDashboardScript } from "../cfetch/internal";
 import { getPackageManager } from "../package-manager";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
-import {
-	setMockFetchDashScript,
-	setMockResponse,
-	unsetAllMocks,
-	unsetSpecialMockFns,
-} from "./helpers/mock-cfetch";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm, mockSelect } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
+import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { PackageManager } from "../package-manager";
@@ -48,6 +46,8 @@ describe("init", () => {
 
 	afterEach(() => {
 		clearDialogs();
+		msw.resetHandlers();
+		msw.restoreHandlers();
 	});
 
 	const std = mockConsoleMethods();
@@ -67,16 +67,17 @@ describe("init", () => {
 			});
 
 			expect(std.out).toMatchInlineSnapshot(`
-			        "✨ Created wrangler.toml
-			        ✨ Initialized git repository
-			        ✨ Created package.json
-			        ✨ Created tsconfig.json
-			        ✨ Created src/index.ts
-			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			"✨ Created wrangler.toml
+			✨ Initialized git repository
+			✨ Created package.json
+			✨ Created tsconfig.json
+			✨ Created src/index.ts
+			✨ Created src/index.test.ts
+			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
-			        To start developing your Worker, run \`npm start\`
-			        To publish your Worker to the Internet, run \`npm run deploy\`"
-		      `);
+			To start developing your Worker, run \`npm start\`
+			To publish your Worker to the Internet, run \`npm run deploy\`"
+		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -98,16 +99,17 @@ describe("init", () => {
 			});
 
 			expect(std.out).toMatchInlineSnapshot(`
-			        "✨ Created my-worker/wrangler.toml
-			        ✨ Initialized git repository at my-worker
-			        ✨ Created my-worker/package.json
-			        ✨ Created my-worker/tsconfig.json
-			        ✨ Created my-worker/src/index.ts
-			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			"✨ Created my-worker/wrangler.toml
+			✨ Initialized git repository at my-worker
+			✨ Created my-worker/package.json
+			✨ Created my-worker/tsconfig.json
+			✨ Created my-worker/src/index.ts
+			✨ Created my-worker/src/index.test.ts
+			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
-			        To start developing your Worker, run \`cd my-worker && npm start\`
-			        To publish your Worker to the Internet, run \`npm run deploy\`"
-		      `);
+			To start developing your Worker, run \`cd my-worker && npm start\`
+			To publish your Worker to the Internet, run \`npm run deploy\`"
+		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -126,21 +128,22 @@ describe("init", () => {
 			});
 
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created wrangler.toml
-			        ✨ Initialized git repository
-			        ✨ Created package.json
-			        ✨ Created tsconfig.json
-			        ✨ Created src/index.ts
-			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created wrangler.toml
+			✨ Initialized git repository
+			✨ Created package.json
+			✨ Created tsconfig.json
+			✨ Created src/index.ts
+			✨ Created src/index.test.ts
+			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
-			        To start developing your Worker, run \`npm start\`
-			        To publish your Worker to the Internet, run \`npm run deploy\`",
-			          "warn": "",
-			        }
-		      `);
+			To start developing your Worker, run \`npm start\`
+			To publish your Worker to the Internet, run \`npm run deploy\`",
+			  "warn": "",
+			}
+		`);
 		});
 
 		it("should error if `--type javascript` is used", async () => {
@@ -353,6 +356,10 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: true,
+				},
+				{
+					text: "Would you like us to write your first test with Vitest?",
+					result: true,
 				}
 			);
 
@@ -442,6 +449,10 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: true,
+				},
+				{
+					text: "Would you like us to write your first test with Vitest?",
+					result: true,
 				}
 			);
 			mockSelect({
@@ -472,6 +483,10 @@ describe("init", () => {
 				},
 				{
 					text: "Would you like to use TypeScript?",
+					result: true,
+				},
+				{
+					text: "Would you like us to write your first test with Vitest?",
 					result: true,
 				}
 			);
@@ -551,20 +566,21 @@ describe("init", () => {
 
 			// Note the lack of "✨ Initialized git repository" in the log
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created wrangler.toml
-			        ✨ Created package.json
-			        ✨ Created tsconfig.json
-			        ✨ Created src/index.ts
-			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created wrangler.toml
+			✨ Created package.json
+			✨ Created tsconfig.json
+			✨ Created src/index.ts
+			✨ Created src/index.test.ts
+			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
-			        To start developing your Worker, run \`npm start\`
-			        To publish your Worker to the Internet, run \`npm run deploy\`",
-			          "warn": "",
-			        }
-		      `);
+			To start developing your Worker, run \`npm start\`
+			To publish your Worker to the Internet, run \`npm run deploy\`",
+			  "warn": "",
+			}
+		`);
 		});
 
 		it("should not offer to initialize a git repo if it's already inside one (when using a path as name)", async () => {
@@ -576,20 +592,21 @@ describe("init", () => {
 
 			// Note the lack of "✨ Initialized git repository" in the log
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created path/to/worker/my-worker/wrangler.toml
-			        ✨ Created path/to/worker/my-worker/package.json
-			        ✨ Created path/to/worker/my-worker/tsconfig.json
-			        ✨ Created path/to/worker/my-worker/src/index.ts
-			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created path/to/worker/my-worker/wrangler.toml
+			✨ Created path/to/worker/my-worker/package.json
+			✨ Created path/to/worker/my-worker/tsconfig.json
+			✨ Created path/to/worker/my-worker/src/index.ts
+			✨ Created path/to/worker/my-worker/src/index.test.ts
+			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
-			        To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
-			        To publish your Worker to the Internet, run \`npm run deploy\`",
-			          "warn": "",
-			        }
-		      `);
+			To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
+			To publish your Worker to the Internet, run \`npm run deploy\`",
+			  "warn": "",
+			}
+		`);
 		});
 
 		// I... don't know how to test this lol
@@ -1034,6 +1051,10 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: true,
+				},
+				{
+					text: "Would you like us to write your first test with Vitest?",
+					result: true,
 				}
 			);
 			mockSelect({
@@ -1063,7 +1084,8 @@ describe("init", () => {
 			  "out": "✨ Created wrangler.toml
 			✨ Created tsconfig.json
 			✨ Created src/index.ts
-			✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			✨ Created src/index.test.ts
+			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
 			To start developing your Worker, run \`npx wrangler dev\`
 			To publish your Worker to the Internet, run \`npx wrangler publish\`",
@@ -1085,6 +1107,10 @@ describe("init", () => {
 
 				{
 					text: "Would you like to use TypeScript?",
+					result: true,
+				},
+				{
+					text: "Would you like us to write your first test with Vitest?",
 					result: true,
 				}
 			);
@@ -1116,7 +1142,8 @@ describe("init", () => {
 			✨ Created package.json
 			✨ Created tsconfig.json
 			✨ Created src/index.ts
-			✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			✨ Created src/index.test.ts
+			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
 			To start developing your Worker, run \`npm start\`
 			To publish your Worker to the Internet, run \`npm run deploy\`"
@@ -1135,6 +1162,10 @@ describe("init", () => {
 				},
 				{
 					text: "Would you like to use TypeScript?",
+					result: true,
+				},
+				{
+					text: "Would you like us to write your first test with Vitest?",
 					result: true,
 				}
 			);
@@ -1175,7 +1206,8 @@ describe("init", () => {
 			"✨ Created wrangler.toml
 			✨ Created tsconfig.json
 			✨ Created src/index.ts
-			✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			✨ Created src/index.test.ts
+			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
 			To start developing your Worker, run \`npx wrangler dev\`
 			To publish your Worker to the Internet, run \`npx wrangler publish\`"
@@ -1324,10 +1356,16 @@ describe("init", () => {
 		});
 
 		it("should not touch an existing tsconfig.json in the same directory", async () => {
-			mockConfirm({
-				text: "Would you like to use git to manage this Worker?",
-				result: false,
-			});
+			mockConfirm(
+				{
+					text: "Would you like to use git to manage this Worker?",
+					result: false,
+				},
+				{
+					text: "Would you like us to write your first test with Vitest?",
+					result: true,
+				}
+			);
 			mockSelect({
 				text: "Would you like to create a Worker at src/index.ts?",
 				result: "fetch",
@@ -1363,6 +1401,8 @@ describe("init", () => {
 			  "err": "",
 			  "out": "✨ Created wrangler.toml
 			✨ Created src/index.ts
+			✨ Created src/index.test.ts
+			✨ Installed vitest into devDependencies
 
 			To start developing your Worker, run \`npx wrangler dev\`
 			To publish your Worker to the Internet, run \`npx wrangler publish\`",
@@ -1383,6 +1423,10 @@ describe("init", () => {
 				},
 				{
 					text: "Would you like to use TypeScript?",
+					result: true,
+				},
+				{
+					text: "Would you like us to write your first test with Vitest?",
 					result: true,
 				}
 			);
@@ -1423,7 +1467,8 @@ describe("init", () => {
 			✨ Created path/to/worker/my-worker/package.json
 			✨ Created path/to/worker/my-worker/tsconfig.json
 			✨ Created path/to/worker/my-worker/src/index.ts
-			✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			✨ Created path/to/worker/my-worker/src/index.test.ts
+			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
 			To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
@@ -1487,10 +1532,16 @@ describe("init", () => {
 		});
 
 		it("should not touch an existing tsconfig.json in an ancestor directory", async () => {
-			mockConfirm({
-				text: "Would you like to use git to manage this Worker?",
-				result: false,
-			});
+			mockConfirm(
+				{
+					text: "Would you like to use git to manage this Worker?",
+					result: false,
+				},
+				{
+					text: "Would you like us to write your first test with Vitest?",
+					result: true,
+				}
+			);
 			mockSelect({
 				text: "Would you like to create a Worker at src/index.ts?",
 				result: "fetch",
@@ -1528,6 +1579,8 @@ describe("init", () => {
 			  "err": "",
 			  "out": "✨ Created wrangler.toml
 			✨ Created src/index.ts
+			✨ Created src/index.test.ts
+			✨ Installed vitest into devDependencies
 
 			To start developing your Worker, run \`npx wrangler dev\`
 			To publish your Worker to the Internet, run \`npx wrangler publish\`",
@@ -1882,21 +1935,22 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created wrangler.toml
-			        ✨ Initialized git repository
-			        ✨ Created package.json
-			        ✨ Created tsconfig.json
-			        ✨ Created src/index.ts
-			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created wrangler.toml
+			✨ Initialized git repository
+			✨ Created package.json
+			✨ Created tsconfig.json
+			✨ Created src/index.ts
+			✨ Created src/index.test.ts
+			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
-			        To start developing your Worker, run \`npm start\`
-			        To publish your Worker to the Internet, run \`npm run deploy\`",
-			          "warn": "",
-			        }
-		      `);
+			To start developing your Worker, run \`npm start\`
+			To publish your Worker to the Internet, run \`npm run deploy\`",
+			  "warn": "",
+			}
+		`);
 		});
 
 		it('should create a worker in a nested directory if "name" is path/to/worker', async () => {
@@ -1911,21 +1965,22 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created path/to/worker/wrangler.toml
-			        ✨ Initialized git repository at path/to/worker
-			        ✨ Created path/to/worker/package.json
-			        ✨ Created path/to/worker/tsconfig.json
-			        ✨ Created path/to/worker/src/index.ts
-			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created path/to/worker/wrangler.toml
+			✨ Initialized git repository at path/to/worker
+			✨ Created path/to/worker/package.json
+			✨ Created path/to/worker/tsconfig.json
+			✨ Created path/to/worker/src/index.ts
+			✨ Created path/to/worker/src/index.test.ts
+			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
-			        To start developing your Worker, run \`cd path/to/worker && npm start\`
-			        To publish your Worker to the Internet, run \`npm run deploy\`",
-			          "warn": "",
-			        }
-		      `);
+			To start developing your Worker, run \`cd path/to/worker && npm start\`
+			To publish your Worker to the Internet, run \`npm run deploy\`",
+			  "warn": "",
+			}
+		`);
 		});
 
 		it("should normalize characters that aren't lowercase alphanumeric, underscores, or dashes", async () => {
@@ -1940,21 +1995,22 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/wrangler.toml
-			        ✨ Initialized git repository at WEIRD_w0rkr_N4m3.js.tsx.tar.gz
-			        ✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/package.json
-			        ✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/tsconfig.json
-			        ✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/src/index.ts
-			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/wrangler.toml
+			✨ Initialized git repository at WEIRD_w0rkr_N4m3.js.tsx.tar.gz
+			✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/package.json
+			✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/tsconfig.json
+			✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/src/index.ts
+			✨ Created WEIRD_w0rkr_N4m3.js.tsx.tar.gz/src/index.test.ts
+			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
-			        To start developing your Worker, run \`cd WEIRD_w0rkr_N4m3.js.tsx.tar.gz && npm start\`
-			        To publish your Worker to the Internet, run \`npm run deploy\`",
-			          "warn": "",
-			        }
-		      `);
+			To start developing your Worker, run \`cd WEIRD_w0rkr_N4m3.js.tsx.tar.gz && npm start\`
+			To publish your Worker to the Internet, run \`npm run deploy\`",
+			  "warn": "",
+			}
+		`);
 		});
 
 		it("should ignore ancestor files (such as wrangler.toml, package.json and tsconfig.json) if a name/path is given", async () => {
@@ -1969,6 +2025,10 @@ describe("init", () => {
 				},
 				{
 					text: "Would you like to use TypeScript?",
+					result: true,
+				},
+				{
+					text: "Would you like us to write your first test with Vitest?",
 					result: true,
 				}
 			);
@@ -2023,10 +2083,7 @@ describe("init", () => {
 	describe("from dashboard", () => {
 		mockApiToken();
 		mockAccountId({ accountId: "LCARS" });
-		afterEach(() => {
-			unsetAllMocks();
-			unsetSpecialMockFns();
-		});
+
 		const mockDashboardScript = `
 		export default {
 			async fetch(request, env, ctx) {
@@ -2102,7 +2159,7 @@ describe("init", () => {
 				type: "service",
 			},
 			{
-				type: "namespace",
+				type: "dispatch_namespace",
 				name: "name-namespace-mock",
 				namespace: "namespace-mock",
 			},
@@ -2264,69 +2321,108 @@ describe("init", () => {
 			expectedEnvironment: string;
 			expectedCompatDate: string | undefined;
 		}) {
-			setMockResponse(
-				`/accounts/:accountId/workers/services/:scriptName`,
-				"GET",
-				([_url, accountId, scriptName]) => {
-					expect(accountId).toEqual(expectedAccountId);
-					expect(scriptName).toEqual(expectedScriptName);
+			msw.use(
+				rest.get(
+					`*/accounts/:accountId/workers/services/:scriptName`,
+					(req, res, ctx) => {
+						expect(req.params.accountId).toEqual(expectedAccountId);
+						expect(req.params.scriptName).toEqual(expectedScriptName);
 
-					if (expectedCompatDate === undefined)
-						(mockServiceMetadata.default_environment.script
-							.compatibility_date as unknown) = expectedCompatDate;
-					return mockServiceMetadata;
-				}
-			);
-			setMockResponse(
-				`/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
-				"GET",
-				([_url, accountId, scriptName, environment]) => {
-					expect(accountId).toEqual(expectedAccountId);
-					expect(scriptName).toEqual(expectedScriptName);
-					expect(environment).toEqual(expectedEnvironment);
+						if (expectedCompatDate === undefined)
+							(mockServiceMetadata.default_environment.script
+								.compatibility_date as unknown) = expectedCompatDate;
 
-					return mockBindingsRes;
-				}
-			);
-			setMockResponse(
-				`/accounts/:accountId/workers/services/:scriptName/environments/:environment/routes`,
-				"GET",
-				([_url, accountId, scriptName, environment]) => {
-					expect(accountId).toEqual(expectedAccountId);
-					expect(scriptName).toEqual(expectedScriptName);
-					expect(environment).toEqual(expectedEnvironment);
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: mockServiceMetadata,
+							})
+						);
+					}
+				),
+				rest.get(
+					`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
+					(req, res, ctx) => {
+						expect(req.params.accountId).toEqual(expectedAccountId);
+						expect(req.params.scriptName).toEqual(expectedScriptName);
+						expect(req.params.environment).toEqual(expectedEnvironment);
 
-					return mockRoutesRes;
-				}
-			);
-			setMockResponse(
-				`/accounts/:accountId/workers/services/:scriptName/environments/:environment`,
-				"GET",
-				([_url, accountId, scriptName, environment]) => {
-					expect(accountId).toEqual(expectedAccountId);
-					expect(scriptName).toEqual(expectedScriptName);
-					expect(environment).toEqual(expectedEnvironment);
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: mockBindingsRes,
+							})
+						);
+					}
+				),
+				rest.get(
+					`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/routes`,
+					(req, res, ctx) => {
+						expect(req.params.accountId).toEqual(expectedAccountId);
+						expect(req.params.scriptName).toEqual(expectedScriptName);
+						expect(req.params.environment).toEqual(expectedEnvironment);
 
-					return mockServiceMetadata.default_environment;
-				}
-			);
-			setMockResponse(
-				`/accounts/:accountId/workers/scripts/:scriptName/schedules`,
-				"GET",
-				([_url, accountId, scriptName]) => {
-					expect(accountId).toEqual(expectedAccountId);
-					expect(scriptName).toEqual(expectedScriptName);
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: mockRoutesRes,
+							})
+						);
+					}
+				),
+				rest.get(
+					`*/accounts/:accountId/workers/services/:scriptName/environments/:environment`,
 
-					return {
-						schedules: [
-							{
-								cron: "0 0 0 * * *",
-								created_on: new Date(1987, 9, 27),
-								modified_on: new Date(1987, 9, 27),
-							},
-						],
-					};
-				}
+					(req, res, ctx) => {
+						expect(req.params.accountId).toEqual(expectedAccountId);
+						expect(req.params.scriptName).toEqual(expectedScriptName);
+						expect(req.params.environment).toEqual(expectedEnvironment);
+
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: mockServiceMetadata.default_environment,
+							})
+						);
+					}
+				),
+				rest.get(
+					`*/accounts/:accountId/workers/scripts/:scriptName/schedules`,
+					(req, res, ctx) => {
+						expect(req.params.accountId).toEqual(expectedAccountId);
+						expect(req.params.scriptName).toEqual(expectedScriptName);
+
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									schedules: [
+										{
+											cron: "0 0 0 * * *",
+											created_on: new Date(1987, 9, 27),
+											modified_on: new Date(1987, 9, 27),
+										},
+									],
+								},
+							})
+						);
+					}
+				)
 			);
 		}
 
@@ -2338,12 +2434,7 @@ describe("init", () => {
 				expectedEnvironment: "test",
 				expectedCompatDate: "1987-9-27",
 			});
-			setMockFetchDashScript({
-				accountId: "LCARS",
-				fromDashScriptName: "memory-crystal",
-				environment: mockServiceMetadata.default_environment.environment,
-				mockResponse: mockDashboardScript,
-			});
+			setMockFetchDashScript(mockDashboardScript);
 			mockConfirm(
 				{
 					text: "Would you like to use git to manage this Worker?",
@@ -2385,17 +2476,23 @@ describe("init", () => {
 		});
 
 		it("should fail on init --from-dash on non-existent worker name", async () => {
-			setMockResponse(
-				`/accounts/:accountId/workers/services/:scriptName`,
-				"GET",
-				() => mockServiceMetadata
+			msw.use(
+				rest.get(
+					`*/accounts/:accountId/workers/services/:scriptName`,
+					(req, res, ctx) => {
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: mockServiceMetadata,
+							})
+						);
+					}
+				)
 			);
-			setMockFetchDashScript({
-				accountId: "LCARS",
-				fromDashScriptName: "memory-crystal",
-				environment: mockServiceMetadata.default_environment.environment,
-				mockResponse: mockDashboardScript,
-			});
+			setMockFetchDashScript(mockDashboardScript);
 			mockConfirm(
 				{
 					text: "Would you like to use git to manage this Worker?",
@@ -2423,12 +2520,7 @@ describe("init", () => {
 				expectedEnvironment: "test",
 				expectedCompatDate: "1987-9-27",
 			});
-			setMockFetchDashScript({
-				accountId: "LCARS",
-				fromDashScriptName: "isolinear-optical-chip",
-				environment: mockServiceMetadata.default_environment.environment,
-				mockResponse: mockDashboardScript,
-			});
+			setMockFetchDashScript(mockDashboardScript);
 			mockConfirm(
 				{
 					text: "Would you like to use git to manage this Worker?",
@@ -2444,7 +2536,7 @@ describe("init", () => {
 				}
 			);
 
-			await runWrangler("init  --from-dash isolinear-optical-chip");
+			await runWrangler("init --from-dash isolinear-optical-chip");
 
 			expect(fs.readFileSync("./isolinear-optical-chip/wrangler.toml", "utf8"))
 				.toMatchInlineSnapshot(`
@@ -2556,12 +2648,7 @@ describe("init", () => {
 				expectedEnvironment: "test",
 				expectedCompatDate: "1987-9-27",
 			});
-			setMockFetchDashScript({
-				accountId: "LCARS",
-				fromDashScriptName: "isolinear-optical-chip",
-				environment: mockServiceMetadata.default_environment.environment,
-				mockResponse: mockDashboardScript,
-			});
+			setMockFetchDashScript(mockDashboardScript);
 			mockConfirm(
 				{
 					text: "Would you like to use git to manage this Worker?",
@@ -2611,12 +2698,7 @@ describe("init", () => {
 				expectedEnvironment: "test",
 				expectedCompatDate: undefined,
 			});
-			setMockFetchDashScript({
-				accountId: "LCARS",
-				fromDashScriptName: "isolinear-optical-chip",
-				environment: mockServiceMetadata.default_environment.environment,
-				mockResponse: mockDashboardScript,
-			});
+			setMockFetchDashScript(mockDashboardScript);
 			mockConfirm(
 				{
 					text: "Would you like to use git to manage this Worker?",
@@ -2655,23 +2737,32 @@ describe("init", () => {
 		});
 
 		it("should throw an error to retry if a request fails", async () => {
-			setMockResponse(
-				`/accounts/:accountId/workers/services/:scriptName`,
-				"GET",
-				() => mockServiceMetadata
-			);
-			setMockResponse(
-				`/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
-				"GET",
-				() => Promise.reject()
+			msw.use(
+				rest.get(
+					`*/accounts/:accountId/workers/services/:scriptName`,
+					(req, res, ctx) => {
+						expect(req.params.accountId).toBe("LCARS");
+						expect(req.params.scriptName).toBe("isolinear-optical-chip");
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: mockServiceMetadata,
+							})
+						);
+					}
+				),
+				rest.get(
+					`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
+					(req, res) => {
+						return res.networkError("Mock Network Error");
+					}
+				)
 			);
 
-			setMockFetchDashScript({
-				accountId: "LCARS",
-				fromDashScriptName: "isolinear-optical-chip",
-				environment: mockServiceMetadata.default_environment.environment,
-				mockResponse: mockDashboardScript,
-			});
+			setMockFetchDashScript(mockDashboardScript);
 			mockConfirm(
 				{
 					text: "Would you like to use git to manage this Worker?",
@@ -2684,7 +2775,7 @@ describe("init", () => {
 			);
 
 			await expect(
-				runWrangler("init  --from-dash isolinear-optical-chip")
+				runWrangler("init --from-dash isolinear-optical-chip")
 			).rejects.toThrowError();
 		});
 
@@ -2712,43 +2803,80 @@ describe("init", () => {
 				},
 				environments: [],
 			};
+			msw.use(
+				rest.get(
+					`*/accounts/:accountId/workers/services/:scriptName`,
+					(req, res, ctx) => {
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: mockData,
+							})
+						);
+					}
+				),
+				rest.get(
+					`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
+					(req, res, ctx) => {
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: [],
+							})
+						);
+					}
+				),
+				rest.get(
+					`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/routes`,
+					(req, res, ctx) => {
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: [],
+							})
+						);
+					}
+				),
+				rest.get(
+					`*/accounts/:accountId/workers/services/:scriptName/environments/:environment`,
+					(req, res, ctx) => {
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: mockServiceMetadata.default_environment,
+							})
+						);
+					}
+				),
+				rest.get(
+					`*/accounts/:accountId/workers/scripts/:scriptName/schedules`,
+					(req, res, ctx) => {
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: { schedules: [] },
+							})
+						);
+					}
+				)
+			);
 
-			setMockResponse(
-				`/accounts/:accountId/workers/services/:scriptName`,
-				"GET",
-				() => mockData
-			);
-			setMockResponse(
-				`/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
-				"GET",
-				() => []
-			);
-			setMockResponse(
-				`/accounts/:accountId/workers/services/:scriptName/environments/:environment/routes`,
-				"GET",
-				() => []
-			);
-			setMockResponse(
-				`/accounts/:accountId/workers/services/:scriptName/environments/:environment`,
-				"GET",
-				() => mockServiceMetadata.default_environment
-			);
-			setMockResponse(
-				`/accounts/:accountId/workers/scripts/:scriptName/schedules`,
-				"GET",
-				() => {
-					return {
-						schedules: [],
-					};
-				}
-			);
-
-			setMockFetchDashScript({
-				accountId: "LCARS",
-				fromDashScriptName: "isolinear-optical-chip",
-				environment: mockServiceMetadata.default_environment.environment,
-				mockResponse: mockDashboardScript,
-			});
+			setMockFetchDashScript(mockDashboardScript);
 
 			mockConfirm(
 				{
@@ -2816,6 +2944,28 @@ function getDefaultBranchName() {
 		// ew
 		return "master";
 	}
+}
+
+/**
+ * Mock setter for usage within test blocks for dashboard script
+ */
+export function setMockFetchDashScript(mockResponse: string) {
+	msw.use(
+		rest.get(
+			`*/accounts/:accountId/workers/services/:fromDashScriptName/environments/:environment/content`,
+			(req, res, ctx) => {
+				// This is a fake FormData object, until we can get MSW (beta) that supports FormData
+				const mockForm = new FormData();
+				mockForm.append("name", mockResponse);
+				// Sending it as JSON will result in empty object, but cause the fetchDashboardScript to execute its code
+				return res(ctx.status(200), ctx.json(mockForm));
+			}
+		)
+	);
+	// Mock the actual return value that FormData would return
+	(fetchDashboardScript as jest.Mock).mockImplementationOnce(() => {
+		return mockResponse;
+	});
 }
 
 /**

@@ -12,9 +12,11 @@ describe("worker", () => {
 	beforeAll(async () => {
 		worker = await unstable_dev(
 			path.resolve(__dirname, "..", "src", "nodeBuiltinPackage.ts"),
-			{},
 			{
-				disableExperimentalWarning: true,
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
 			}
 		);
 

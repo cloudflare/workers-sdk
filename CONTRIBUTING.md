@@ -225,12 +225,12 @@ fix: replace the word "deploy" with "publish" everywhere.
 We should be consistent with the word that describes how we get a worker to the edge. The command is `publish`, so let's use that everywhere.
 ```
 
-### Types of changes (and deviation from semver)
+### Types of changes
 
 We use the following guidelines to determine the kind of change for a PR:
 
-- Bugfixes and new features are considered to be 'patch' changes. If the new feature is experimental and its behaviour may functionally change, be sure to log warnings whenever they're used. (You'll note that this is where we deviate from semver, which otherwise suggests that behaviour/api changes should go into minor releases. We may revisit this in the future.)
-- New deprecation warnings for future breaking changes are considered as 'minor' changes. These changes shouldn't break existing code, but the deprecation warnings should suggest alternate solutions to not trigger the warning.
+- Bugfixes and experimental features are considered to be 'patch' changes. Be sure to log warnings when experimental features are used.
+- New stable features and new deprecation warnings for future breaking changes are considered 'minor' changes. These changes shouldn't break existing code, but the deprecation warnings should suggest alternate solutions to not trigger the warning.
 - Breaking changes are considered to be 'major' changes. These are usually when deprecations take effect, or functional breaking behaviour is added with relevant logs (either as errors or warnings.)
 
 ## Miniflare Development

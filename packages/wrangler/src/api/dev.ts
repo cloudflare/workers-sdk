@@ -6,25 +6,23 @@ import type { Environment } from "../config";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { RequestInit, Response, RequestInfo } from "undici";
 
-interface DevOptions {
-	config?: string;
-	env?: string;
-	ip?: string;
-	port?: number;
-	bundle?: boolean;
-	inspectorPort?: number;
-	localProtocol?: "http" | "https";
-	assets?: string;
-	site?: string;
-	siteInclude?: string[];
-	siteExclude?: string[];
-	nodeCompat?: boolean;
-	compatibilityDate?: string;
-	compatibilityFlags?: string[];
-	persist?: boolean;
-	persistTo?: string;
-	liveReload?: boolean;
-	watch?: boolean;
+export interface UnstableDevOptions {
+	config?: string; // Path to .toml configuration file, relative to cwd
+	env?: string; // Environment to use for operations and .env files
+	ip?: string; // IP address to listen on
+	port?: number; // Port to listen on
+	bundle?: boolean; // Set to false to skip internal build steps and directly publish script
+	inspectorPort?: number; // Port for devtools to connect to
+	localProtocol?: "http" | "https"; // Protocol to listen to requests on, defaults to http.
+	assets?: string; // Static assets to be served
+	site?: string; // Root folder of static assets for Workers Sites
+	siteInclude?: string[]; // Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.
+	siteExclude?: string[]; // Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.
+	nodeCompat?: boolean; // Enable node.js compatibility
+	compatibilityDate?: string; // Date to use for compatibility checks
+	compatibilityFlags?: string[]; // Flags to use for compatibility checks
+	persist?: boolean; // Enable persistence for local mode, using default path: .wrangler/state
+	persistTo?: string; // Specify directory to use for local persistence (implies --persist)
 	vars?: {
 		[key: string]: unknown;
 	};
@@ -44,25 +42,25 @@ interface DevOptions {
 		bucket_name: string;
 		preview_bucket_name?: string;
 	}[];
-	d1Databases?: Environment["d1_databases"];
-	showInteractiveDevSession?: boolean;
-	logLevel?: "none" | "info" | "error" | "log" | "warn" | "debug";
+	logLevel?: "none" | "info" | "error" | "log" | "warn" | "debug"; // Specify logging level  [choices: "debug", "info", "log", "warn", "error", "none"] [default: "log"]
 	logPrefix?: string;
 	inspect?: boolean;
 	local?: boolean;
-	forceLocal?: boolean;
-	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
-	_?: (string | number)[]; //yargs wants this
-	$0?: string; //yargs wants this
-	testScheduled?: boolean;
-	experimentalLocal?: boolean;
 	accountId?: string;
-	experimentalLocalRemoteKv?: boolean;
-}
-
-interface DevApiOptions {
-	testMode?: boolean;
-	disableExperimentalWarning?: boolean;
+	experimental?: {
+		d1Databases?: Environment["d1_databases"];
+		disableExperimentalWarning?: boolean; // Disables wrangler's warning when unstable APIs are used.
+		disableDevRegistry?: boolean; // Disables wrangler's support multi-worker setups. May reduce flakiness when used in tests in CI.
+		enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
+		experimentalLocal?: boolean; // Use Miniflare 3 instead of Miniflare 2
+		experimentalLocalRemoteKv?: boolean;
+		forceLocal?: boolean;
+		liveReload?: boolean; // Auto reload HTML pages when change is detected in local mode
+		showInteractiveDevSession?: boolean;
+		testMode?: boolean; // This option shouldn't be used - We plan on removing it eventually
+		testScheduled?: boolean; // Test scheduled events by visiting /__scheduled in browser
+		watch?: boolean; // unstable_dev doesn't support watch-mode yet in testMode
+	};
 }
 
 export interface UnstableDevWorker {
@@ -77,11 +75,33 @@ export interface UnstableDevWorker {
  */
 export async function unstable_dev(
 	script: string,
-	options?: DevOptions,
-	apiOptions?: DevApiOptions
+	options?: UnstableDevOptions,
+	apiOptions?: unknown
 ): Promise<UnstableDevWorker> {
-	const { testMode = true, disableExperimentalWarning = false } =
-		apiOptions || {};
+	// Note that not every experimental option is passed directly through to the underlying dev API - experimental options can be used here in unstable_dev. Otherwise we could just pass experimental down to dev blindly.
+	const {
+		// there are two types of "experimental" options:
+		// 1. options to unstable_dev that we're still testing or are unsure of
+		disableDevRegistry = false,
+		disableExperimentalWarning = false,
+		forceLocal,
+		liveReload,
+		showInteractiveDevSession = false,
+		testMode = true,
+		testScheduled,
+		watch,
+		// 2. options for alpha/beta products/libs
+		d1Databases,
+		experimentalLocal,
+		experimentalLocalRemoteKv,
+		enablePagesAssetsServiceBinding,
+	} = options?.experimental ?? {};
+	if (apiOptions) {
+		logger.error(
+			"unstable_dev's third argument (apiOptions) has been deprecated in favor of an `experimental` property within the second argument (options).\nPlease update your code from:\n`await unstable_dev('...', {...}, {...});`\nto:\n`await unstable_dev('...', {..., experimental: {...}});`"
+		);
+	}
+
 	if (!disableExperimentalWarning) {
 		logger.warn(
 			`unstable_dev() is experimental\nunstable_dev()'s behaviour will likely change in future releases`
@@ -101,11 +121,20 @@ export async function unstable_dev(
 					script: script,
 					inspect: false,
 					logLevel: "none",
-					showInteractiveDevSession: false,
 					_: [],
 					$0: "",
 					port: options?.port ?? 0,
 					local: true,
+					d1Databases,
+					disableDevRegistry,
+					testScheduled,
+					experimentalLocal,
+					experimentalLocalRemoteKv,
+					enablePagesAssetsServiceBinding,
+					liveReload,
+					showInteractiveDevSession,
+					forceLocal,
+					watch,
 					...options,
 					onReady: (address, port) => {
 						readyPort = port;
@@ -147,10 +176,18 @@ export async function unstable_dev(
 				const devServer = startDev({
 					script: script,
 					inspect: false,
-					showInteractiveDevSession: false,
 					_: [],
 					$0: "",
 					local: true,
+					showInteractiveDevSession,
+					d1Databases,
+					disableDevRegistry,
+					testScheduled,
+					experimentalLocal,
+					experimentalLocalRemoteKv,
+					enablePagesAssetsServiceBinding,
+					liveReload,
+					watch,
 					...options,
 					onReady: (address, port) => {
 						readyPort = port;

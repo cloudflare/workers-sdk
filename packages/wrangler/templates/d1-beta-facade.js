@@ -110,6 +110,42 @@ var D1PreparedStatement = class {
 		this.params = values || [];
 	}
 	bind(...values) {
+		for (var r in values) {
+			switch (typeof values[r]) {
+				case "number":
+				case "string":
+					break;
+				case "object":
+					if (values[r] == null) break;
+					if (
+						Array.isArray(values[r]) &&
+						values[r]
+							.map((b) => {
+								return typeof b == "number" && b >= 0 && b < 256 ? 1 : 0;
+							})
+							.indexOf(0) == -1
+					)
+						break;
+					if (values[r] instanceof ArrayBuffer) {
+						values[r] = Array.from(new Uint8Array(values[r]));
+						break;
+					}
+					if (ArrayBuffer.isView(values[r])) {
+						values[r] = Array.from(values[r]);
+						break;
+					}
+				default:
+					throw new Error("D1_TYPE_ERROR", {
+						cause: new Error(
+							"Type '" +
+								typeof values[r] +
+								"' not supported for value '" +
+								values[r] +
+								"'"
+						),
+					});
+			}
+		}
 		return new D1PreparedStatement(this.database, this.statement, values);
 	}
 	async first(colName) {

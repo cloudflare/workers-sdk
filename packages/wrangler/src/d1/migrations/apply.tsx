@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import fs from "node:fs";
 import path from "path";
 import { Box, render, Text } from "ink";
@@ -10,6 +11,7 @@ import isInteractive from "../../is-interactive";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { createBackup } from "../backups";
+import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";
 import { executeSql } from "../execute";
 import { d1BetaWarning, getDatabaseInfoFromConfig } from "../utils";
 import {
@@ -28,11 +30,10 @@ export function ApplyOptions(yargs: Argv): Argv<BaseSqlExecuteArgs> {
 
 export const ApplyHandler = withConfig<BaseSqlExecuteArgs>(
 	async ({ config, database, local, persistTo }): Promise<void> => {
-		const accountId = await requireAuth({});
 		logger.log(d1BetaWarning);
 
 		const databaseInfo = await getDatabaseInfoFromConfig(config, database);
-		if (!databaseInfo) {
+		if (!databaseInfo && !local) {
 			throw new Error(
 				`Can't find a DB with name/binding '${database}' in local config. Check info in wrangler.toml...`
 			);
@@ -44,11 +45,14 @@ export const ApplyHandler = withConfig<BaseSqlExecuteArgs>(
 
 		const migrationsPath = await getMigrationsPath(
 			path.dirname(config.configPath),
-			databaseInfo.migrationsFolderPath,
+			databaseInfo?.migrationsFolderPath ?? DEFAULT_MIGRATION_PATH,
 			false
 		);
+
+		const migrationTableName =
+			databaseInfo?.migrationsTableName ?? DEFAULT_MIGRATION_TABLE;
 		await initMigrationsTable(
-			databaseInfo.migrationsTableName,
+			migrationTableName,
 			local,
 			config,
 			database,
@@ -57,7 +61,7 @@ export const ApplyHandler = withConfig<BaseSqlExecuteArgs>(
 
 		const unappliedMigrations = (
 			await getUnappliedMigrations(
-				databaseInfo.migrationsTableName,
+				migrationTableName,
 				migrationsPath,
 				local,
 				config,
@@ -103,7 +107,12 @@ Your database may not be available to serve requests during the migration, conti
 
 		// don't backup prod db when applying migrations locally
 		if (!local) {
+			assert(
+				databaseInfo,
+				"In non-local mode `databaseInfo` should be defined."
+			);
 			render(<Text>🕒 Creating backup...</Text>);
+			const accountId = await requireAuth({});
 			await createBackup(accountId, databaseInfo.uuid);
 		}
 
@@ -113,7 +122,7 @@ Your database may not be available to serve requests during the migration, conti
 				"utf8"
 			);
 			query += `
-								INSERT INTO ${databaseInfo.migrationsTableName} (name)
+								INSERT INTO ${migrationTableName} (name)
 								values ('${migration.Name}');
 						`;
 

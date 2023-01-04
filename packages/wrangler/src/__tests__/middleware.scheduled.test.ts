@@ -27,11 +27,12 @@ describe("run scheduled events with middleware", () => {
 		});
 
 		it("should not intercept when middleware is not enabled", async () => {
-			const worker = await unstable_dev(
-				"index.js",
-				{},
-				{ disableExperimentalWarning: true }
-			);
+			const worker = await unstable_dev("index.js", {
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
+			});
 
 			const resp = await worker.fetch("/__scheduled");
 			let text;
@@ -41,11 +42,13 @@ describe("run scheduled events with middleware", () => {
 		});
 
 		it("should intercept when middleware is enabled", async () => {
-			const worker = await unstable_dev(
-				"index.js",
-				{ testScheduled: true },
-				{ disableExperimentalWarning: true }
-			);
+			const worker = await unstable_dev("index.js", {
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+					testScheduled: true,
+				},
+			});
 
 			const resp = await worker.fetch("/__scheduled");
 			let text;
@@ -55,11 +58,13 @@ describe("run scheduled events with middleware", () => {
 		});
 
 		it("should not trigger scheduled event on wrong route", async () => {
-			const worker = await unstable_dev(
-				"index.js",
-				{ testScheduled: true },
-				{ disableExperimentalWarning: true }
-			);
+			const worker = await unstable_dev("index.js", {
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+					testScheduled: true,
+				},
+			});
 
 			const resp = await worker.fetch("/test");
 			let text;
@@ -91,11 +96,12 @@ describe("run scheduled events with middleware", () => {
 		});
 
 		it("should not intercept when middleware is not enabled", async () => {
-			const worker = await unstable_dev(
-				"index.js",
-				{},
-				{ disableExperimentalWarning: true }
-			);
+			const worker = await unstable_dev("index.js", {
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
+			});
 
 			const resp = await worker.fetch("/__scheduled");
 			let text;
@@ -105,11 +111,13 @@ describe("run scheduled events with middleware", () => {
 		});
 
 		it("should intercept when middleware is enabled", async () => {
-			const worker = await unstable_dev(
-				"index.js",
-				{ testScheduled: true },
-				{ disableExperimentalWarning: true }
-			);
+			const worker = await unstable_dev("index.js", {
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+					testScheduled: true,
+				},
+			});
 
 			const resp = await worker.fetch("/__scheduled");
 			let text;
@@ -119,11 +127,13 @@ describe("run scheduled events with middleware", () => {
 		});
 
 		it("should not trigger scheduled event on wrong route", async () => {
-			const worker = await unstable_dev(
-				"index.js",
-				{ testScheduled: true },
-				{ disableExperimentalWarning: true }
-			);
+			const worker = await unstable_dev("index.js", {
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+					testScheduled: true,
+				},
+			});
 
 			const resp = await worker.fetch("/test");
 			let text;

@@ -909,7 +909,6 @@ function normalizeAndValidateEnvironment(
 
 	experimental(diagnostics, rawEnv, "unsafe");
 	experimental(diagnostics, rawEnv, "services");
-	experimental(diagnostics, rawEnv, "dispatch_namespaces");
 
 	const route = normalizeAndValidateRoute(diagnostics, topLevelEnv, rawEnv);
 
@@ -1824,7 +1823,7 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 	}
 	if (isValid && !process.env.NO_D1_WARNING) {
 		diagnostics.warnings.push(
-			`D1 Bindings are currently in alpha to allow the API to evolve before general availability.\nPlease report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose\nNote: set NO_D1_WARNING=true to hide this message`
+			"D1 Bindings are currently in alpha to allow the API to evolve before general availability.\nPlease report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose\nNote: Run this command with the environment variable NO_D1_WARNING=true to hide this message\n\nFor example: `export NO_D1_WARNING=true && wrangler <YOUR COMMAND HERE>`"
 		);
 	}
 	return isValid;

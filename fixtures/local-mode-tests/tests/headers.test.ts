@@ -2,8 +2,7 @@ import path from "path";
 import { unstable_dev } from "wrangler";
 import type { UnstableDevWorker } from "wrangler";
 
-// Disabled because of flakiness in CI
-describe.skip("worker", () => {
+describe("worker", () => {
 	let worker: UnstableDevWorker;
 	let resolveReadyPromise: (value: unknown) => void;
 	const readyPromise = new Promise((resolve) => {
@@ -13,8 +12,12 @@ describe.skip("worker", () => {
 	beforeAll(async () => {
 		worker = await unstable_dev(
 			path.resolve(__dirname, "..", "src", "headers.ts"),
-			{},
-			{ disableExperimentalWarning: true }
+			{
+				experimental: {
+					disableExperimentalWarning: true,
+					disableDevRegistry: true,
+				},
+			}
 		);
 
 		resolveReadyPromise(undefined);

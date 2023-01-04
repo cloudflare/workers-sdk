@@ -7,9 +7,7 @@ import {
 	performApiFetch,
 } from "../cfetch/internal";
 import {
-	mockFetchDashScript,
 	mockFetchInternal,
-	mockFetchKVGetValue,
 	mockFetchR2Objects,
 	mockPerformApiFetch,
 } from "./helpers/mock-cfetch";
@@ -28,6 +26,9 @@ import { msw } from "./helpers/msw";
 (
 	global as unknown as { __RELATIVE_PACKAGE_PATH__: string }
 ).__RELATIVE_PACKAGE_PATH__ = "..";
+
+// Set `LC_ALL` to fix the language as English for the messages thrown by Yargs.
+process.env.LC_ALL = "en";
 
 // Mock out getPort since we don't actually care about what ports are open in unit tests.
 jest.mock("get-port", () => {
@@ -89,10 +90,14 @@ afterEach(() => {
 afterAll(() => msw.close());
 
 jest.mock("../cfetch/internal");
+(fetchDashboardScript as jest.Mock).mockImplementation(
+	jest.requireActual("../cfetch/internal")["fetchDashboardScript"]
+);
 (fetchInternal as jest.Mock).mockImplementation(mockFetchInternal);
-(fetchKVGetValue as jest.Mock).mockImplementation(mockFetchKVGetValue);
+(fetchKVGetValue as jest.Mock).mockImplementation(
+	jest.requireActual("../cfetch/internal").fetchKVGetValue
+);
 (fetchR2Objects as jest.Mock).mockImplementation(mockFetchR2Objects);
-(fetchDashboardScript as jest.Mock).mockImplementation(mockFetchDashScript);
 (performApiFetch as jest.Mock).mockImplementation(mockPerformApiFetch);
 
 jest.mock("../dev/dev", () => {

@@ -470,73 +470,71 @@ export const Handler = async ({
 		}
 	}
 
-	const { stop, waitUntilExit } = await unstable_dev(
-		entrypoint,
-		{
-			ip,
-			port,
-			inspectorPort,
-			watch: true,
-			localProtocol,
-			liveReload,
-			compatibilityDate,
-			compatibilityFlags,
-			nodeCompat,
-			experimentalLocal,
-			vars: Object.fromEntries(
-				bindings
-					.map((binding) => binding.toString().split("="))
-					.map(([key, ...values]) => [key, values.join("=")])
-			),
-			kv: kvs.map((binding) => ({
-				binding: binding.toString(),
-				id: "",
-			})),
-			durableObjects: durableObjects
-				.map((durableObject) => {
-					const { binding, className, scriptName } =
-						DURABLE_OBJECTS_BINDING_REGEXP.exec(durableObject.toString())
-							?.groups || {};
+	const { stop, waitUntilExit } = await unstable_dev(entrypoint, {
+		ip,
+		port,
+		inspectorPort,
+		localProtocol,
+		compatibilityDate,
+		compatibilityFlags,
+		nodeCompat,
+		vars: Object.fromEntries(
+			bindings
+				.map((binding) => binding.toString().split("="))
+				.map(([key, ...values]) => [key, values.join("=")])
+		),
+		kv: kvs.map((binding) => ({
+			binding: binding.toString(),
+			id: "",
+		})),
+		durableObjects: durableObjects
+			.map((durableObject) => {
+				const { binding, className, scriptName } =
+					DURABLE_OBJECTS_BINDING_REGEXP.exec(durableObject.toString())
+						?.groups || {};
 
-					if (!binding || !className) {
-						logger.warn(
-							"Could not parse Durable Object binding:",
-							durableObject.toString()
-						);
-						return;
-					}
+				if (!binding || !className) {
+					logger.warn(
+						"Could not parse Durable Object binding:",
+						durableObject.toString()
+					);
+					return;
+				}
 
-					return {
-						name: binding,
-						class_name: className,
-						script_name: scriptName,
-					};
-				})
-				.filter(Boolean) as AdditionalDevProps["durableObjects"],
-			r2: r2s.map((binding) => {
-				return { binding: binding.toString(), bucket_name: "" };
-			}),
-
+				return {
+					name: binding,
+					class_name: className,
+					script_name: scriptName,
+				};
+			})
+			.filter(Boolean) as AdditionalDevProps["durableObjects"],
+		r2: r2s.map((binding) => {
+			return { binding: binding.toString(), bucket_name: "" };
+		}),
+		persist,
+		persistTo,
+		inspect: undefined,
+		logPrefix: "pages",
+		logLevel: logLevel ?? "warn",
+		experimental: {
 			d1Databases: d1s.map((binding) => ({
 				binding: binding.toString(),
 				database_id: "", // Required for types, but unused by dev
 				database_name: `local-${binding}`,
 			})),
-
+			disableExperimentalWarning: true,
 			enablePagesAssetsServiceBinding: {
 				proxyPort,
 				directory,
 			},
+			experimentalLocal,
+			liveReload,
 			forceLocal: true,
-			persist,
-			persistTo,
 			showInteractiveDevSession: undefined,
-			inspect: undefined,
-			logPrefix: "pages",
-			logLevel: logLevel ?? "warn",
+			testMode: false,
+			watch: true,
 		},
-		{ testMode: false, disableExperimentalWarning: true }
-	);
+	});
 	await metrics.sendMetricsEvent("run pages dev");
 
 	CLEANUP_CALLBACKS.push(stop);

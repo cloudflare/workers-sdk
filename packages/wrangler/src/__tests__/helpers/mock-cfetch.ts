@@ -175,6 +175,7 @@ export function setMockResponse<ResponseType>(
 
 /**
  * A helper to make it easier to create `FetchResult` objects in tests.
+ * TODO: Hijack this for MSW response objects. - JACOB
  */
 export async function createFetchResult<ResponseType>(
 	result: ResponseType | Promise<ResponseType>,
@@ -218,31 +219,6 @@ export function unsetAllMocks() {
 const kvGetMocks = new Map<string, string | Buffer>();
 const r2GetMocks = new Map<string, string | undefined>();
 const dashScriptMocks = new Map<string, string | undefined>();
-
-/**
- * @mocked typeof fetchKVGetValue
- */
-export function mockFetchKVGetValue(
-	accountId: string,
-	namespaceId: string,
-	key: string
-) {
-	const mapKey = `${accountId}/${namespaceId}/${key}`;
-	if (kvGetMocks.has(mapKey)) {
-		const value = kvGetMocks.get(mapKey);
-		if (value !== undefined) return Promise.resolve(value);
-	}
-	throw new Error(`no mock value found for \`kv:key get\` - ${mapKey}`);
-}
-
-export function setMockFetchKVGetValue(
-	accountId: string,
-	namespaceId: string,
-	key: string,
-	value: string | Buffer
-) {
-	kvGetMocks.set(`${accountId}/${namespaceId}/${key}`, value);
-}
 
 /**
  * @mocked typeof fetchR2Objects
@@ -299,35 +275,4 @@ export function unsetSpecialMockFns() {
 	kvGetMocks.clear();
 	r2GetMocks.clear();
 	dashScriptMocks.clear();
-}
-
-/**
- * @mocked typeof fetchDashScript
- * multipart/form-data is the response for modules and raw text for the Script endpoint.
- */
-export async function mockFetchDashScript(resource: string): Promise<string> {
-	if (dashScriptMocks.has(resource)) {
-		return dashScriptMocks.get(resource) ?? "";
-	}
-	throw new Error(`no mock found for \`init from-dash\` - ${resource}`);
-}
-
-/**
- * Mock setter for usage within test blocks, companion helper to `mockFetchDashScript`
- */
-export function setMockFetchDashScript({
-	accountId,
-	fromDashScriptName,
-	environment,
-	mockResponse,
-}: {
-	accountId: string;
-	fromDashScriptName: string;
-	environment: string;
-	mockResponse?: string;
-}) {
-	dashScriptMocks.set(
-		`/accounts/${accountId}/workers/services/${fromDashScriptName}/environments/${environment}/content`,
-		mockResponse
-	);
 }
