@@ -580,8 +580,8 @@ describe("init", () => {
 			  "out": "✨ Created wrangler.toml
 			✨ Created package.json
 			✨ Created tsconfig.json
-			✨ Created ${path.join("src", "index.ts")}
-			✨ Created ${path.join("src", "index.test.ts")}
+			✨ Created src/index.ts
+			✨ Created src/index.test.ts
 			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
 			To start developing your Worker, run \`npm start\`
@@ -1484,7 +1484,7 @@ describe("init", () => {
 					"my-worker",
 					"src",
 					"index.ts"
-				)} path/to/worker/my-worker/src/index.ts?`,
+				)}?`,
 				result: "fetch",
 			});
 			mockConfirm({
