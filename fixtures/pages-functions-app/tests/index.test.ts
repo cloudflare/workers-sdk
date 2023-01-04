@@ -152,6 +152,21 @@ describe("Pages Functions", () => {
 			expect(response.status).toBe(502);
 		});
 
+		it.concurrent(
+			"should mount a Plugin even if in a parameterized route",
+			async () => {
+				await readyPromise;
+				const response = await fetch(
+					`http://${ip}:${port}/mounted-with-param/p123/plugin/status`
+				);
+				const text = await response.text();
+				expect(text).toMatchInlineSnapshot(
+					`"This should return a 502 status code"`
+				);
+				expect(response.status).toBe(502);
+			}
+		);
+
 		it.concurrent("should work for nested folders", async () => {
 			await readyPromise;
 			const response = await fetch(
