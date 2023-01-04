@@ -3,6 +3,7 @@ import { readFileSync } from "fs";
 import { tmpdir } from "os";
 import * as path from "path";
 import { join } from "path";
+import { describe, expect, it, beforeAll, afterAll } from "vitest";
 
 describe("Pages Functions", () => {
 	it.concurrent("applies the d1 shim", async () => {

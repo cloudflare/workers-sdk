@@ -1,6 +1,7 @@
 import { fork } from "child_process";
 import path from "path";
 import { fetch } from "undici";
+import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import type { ChildProcess } from "child_process";
 
 describe("Pages Dev", () => {

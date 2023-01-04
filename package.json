@@ -21,12 +21,12 @@
 		"check:type": "npm run check:type --workspaces --if-present",
 		"fix": "npm run prettify && npm run check:lint -- --fix",
 		"prettify": "prettier . --write --ignore-unknown",
-		"test": "npm run clean --workspace=wrangler && npm run bundle --workspace=wrangler && npm run test --workspace=packages/wrangler --workspace=packages/pages-shared --if-present && npx jest --forceExit",
-		"test:ci": "npm run test:ci --workspace=packages/wrangler --workspace=packages/pages-shared --if-present && npx jest --forceExit"
+		"test": "npm run clean --workspace=wrangler && npm run bundle --workspace=wrangler && npm run test --workspace=packages/wrangler --workspace=packages/pages-shared --if-present && npx vitest && npx jest --forceExit",
+		"test:ci": "npm run test:ci --workspace=packages/wrangler --workspace=packages/pages-shared --if-present && npx vitest && npx jest --forceExit"
 	},
 	"jest": {
 		"projects": [
-			"<rootDir>/fixtures/**/package.json"
+			"<rootDir>/fixtures/local-mode-tests/package.json"
 		]
 	},
 	"dependencies": {
@@ -50,7 +50,9 @@
 		"prettier": "^2.6.2",
 		"prettier-plugin-packagejson": "^2.2.18",
 		"rimraf": "^3.0.2",
-		"typescript": "^4.8.4"
+		"typescript": "^4.8.4",
+		"vite": "^4.0.4",
+		"vitest": "^0.26.3"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20221111.1"
