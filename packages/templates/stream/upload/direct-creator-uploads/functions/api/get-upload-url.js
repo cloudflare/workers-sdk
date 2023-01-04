@@ -8,7 +8,7 @@ export async function onRequest(context) {
 		Authorization: `bearer ${CLOUDFLARE_API_TOKEN}`,
 	};
 
-	const response = await fetch(endpoint, { method: 'POST', headers, body });
+	const response = await fetch(endpoint, { method: "POST", headers, body });
 	if (!response.ok) {
 		throw new Error(await response.json());
 	}

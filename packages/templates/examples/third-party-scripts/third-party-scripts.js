@@ -4,44 +4,44 @@
 
 const SCRIPT_URLS = [
 	// Hosted libraries (usually CDN's for open source).
-	'/ajax.aspnetcdn.com/',
-	'/ajax.cloudflare.com/',
-	'/ajax.googleapis.com/ajax/',
-	'/cdn.jsdelivr.net/',
-	'/cdnjs.com/',
-	'/cdnjs.cloudflare.com/',
-	'/code.jquery.com/',
-	'/maxcdn.bootstrapcdn.com/',
-	'/netdna.bootstrapcdn.com/',
-	'/oss.maxcdn.com/',
-	'/stackpath.bootstrapcdn.com/',
+	"/ajax.aspnetcdn.com/",
+	"/ajax.cloudflare.com/",
+	"/ajax.googleapis.com/ajax/",
+	"/cdn.jsdelivr.net/",
+	"/cdnjs.com/",
+	"/cdnjs.cloudflare.com/",
+	"/code.jquery.com/",
+	"/maxcdn.bootstrapcdn.com/",
+	"/netdna.bootstrapcdn.com/",
+	"/oss.maxcdn.com/",
+	"/stackpath.bootstrapcdn.com/",
 
 	// Popular scripts (can be site-specific)
-	'/a.optmnstr.com/app/js/',
-	'/cdn.onesignal.com/sdks/',
-	'/cdn.optimizely.com/',
-	'/cdn.shopify.com/s/',
-	'/css3-mediaqueries-js.googlecode.com/svn/',
-	'/html5shim.googlecode.com/svn/',
-	'/html5shiv.googlecode.com/svn/',
-	'/maps.google.com/maps/api/js',
-	'/maps.googleapis.com/maps/api/js',
-	'/pagead2.googlesyndication.com/pagead/js/',
-	'/platform.twitter.com/widgets.js',
-	'/platform-api.sharethis.com/js/',
-	'/s7.addthis.com/js/',
-	'/stats.wp.com/',
-	'/ws.sharethis.com/button/',
-	'/www.google.com/recaptcha/api.js',
-	'/www.google-analytics.com/analytics.js',
-	'/www.googletagmanager.com/gtag/js',
-	'/www.googletagmanager.com/gtm.js',
-	'/www.googletagservices.com/tag/js/gpt.js',
+	"/a.optmnstr.com/app/js/",
+	"/cdn.onesignal.com/sdks/",
+	"/cdn.optimizely.com/",
+	"/cdn.shopify.com/s/",
+	"/css3-mediaqueries-js.googlecode.com/svn/",
+	"/html5shim.googlecode.com/svn/",
+	"/html5shiv.googlecode.com/svn/",
+	"/maps.google.com/maps/api/js",
+	"/maps.googleapis.com/maps/api/js",
+	"/pagead2.googlesyndication.com/pagead/js/",
+	"/platform.twitter.com/widgets.js",
+	"/platform-api.sharethis.com/js/",
+	"/s7.addthis.com/js/",
+	"/stats.wp.com/",
+	"/ws.sharethis.com/button/",
+	"/www.google.com/recaptcha/api.js",
+	"/www.google-analytics.com/analytics.js",
+	"/www.googletagmanager.com/gtag/js",
+	"/www.googletagmanager.com/gtm.js",
+	"/www.googletagservices.com/tag/js/gpt.js",
 ];
 
 // Regex patterns for matching script and link tags
-const SCRIPT_PRE = '<\\s*script[^>]+src\\s*=\\s*[\'"]\\s*((https?:)?/';
-const PATTERN_POST = '[^\'" ]+)\\s*["\'][^>]*>';
+const SCRIPT_PRE = "<\\s*script[^>]+src\\s*=\\s*['\"]\\s*((https?:)?/";
+const PATTERN_POST = "[^'\" ]+)\\s*[\"'][^>]*>";
 
 /**
  * Main worker entry point. Looks for font requests that are being proxied and
@@ -49,24 +49,25 @@ const PATTERN_POST = '[^\'" ]+)\\s*["\'][^>]*>';
  * for navigational requests and the fallback is to just pass the request through
  * unmodified (safe).
  */
-addEventListener('fetch', event => {
+addEventListener("fetch", (event) => {
 	// Fail-safe in case of an unhandled exception
 	event.passThroughOnException();
 
 	const url = new URL(event.request.url);
-	const bypass = new URL(event.request.url).searchParams.get('cf-worker') === 'bypass';
+	const bypass =
+		new URL(event.request.url).searchParams.get("cf-worker") === "bypass";
 	if (!bypass) {
-		let accept = event.request.headers.get('accept');
-		if (event.request.method === 'GET' && isProxyRequest(url)) {
+		let accept = event.request.headers.get("accept");
+		if (event.request.method === "GET" && isProxyRequest(url)) {
 			event.respondWith(proxyUrl(url, event.request));
-		} else if (accept && accept.indexOf('text/html') >= 0) {
+		} else if (accept && accept.indexOf("text/html") >= 0) {
 			event.respondWith(processHtmlRequest(event.request));
 		}
 	}
 });
 
 // Workers can only decode utf-8 so keep a list of character encodings that can be decoded.
-const VALID_CHARSETS = ['utf-8', 'utf8', 'iso-8859-1', 'us-ascii'];
+const VALID_CHARSETS = ["utf-8", "utf8", "iso-8859-1", "us-ascii"];
 
 /**
  * See if the requested resource is a proxy request to an overwritten origin
@@ -80,7 +81,7 @@ function isProxyRequest(url) {
 	let found_prefix = false;
 	const path = url.pathname + url.search;
 	for (let prefix of SCRIPT_URLS) {
-		if (path.startsWith(prefix) && path.indexOf('cf_hash=') >= 0) {
+		if (path.startsWith(prefix) && path.indexOf("cf_hash=") >= 0) {
 			found_prefix = true;
 			break;
 		}
@@ -99,8 +100,8 @@ function isProxyRequest(url) {
  * @returns {*} - fetch response
  */
 async function proxyUrl(url, request) {
-	let originUrl = 'https:/' + url.pathname + url.search;
-	let hashOffset = originUrl.indexOf('cf_hash=');
+	let originUrl = "https:/" + url.pathname + url.search;
+	let hashOffset = originUrl.indexOf("cf_hash=");
 	if (hashOffset >= 2) {
 		originUrl = originUrl.substring(0, hashOffset - 1);
 	}
@@ -110,7 +111,13 @@ async function proxyUrl(url, request) {
 		method: request.method,
 		headers: {},
 	};
-	const proxy_headers = ['Accept', 'Accept-Encoding', 'Accept-Language', 'Referer', 'User-Agent'];
+	const proxy_headers = [
+		"Accept",
+		"Accept-Encoding",
+		"Accept-Language",
+		"Referer",
+		"User-Agent",
+	];
 	for (let name of proxy_headers) {
 		let value = request.headers.get(name);
 		if (value) {
@@ -118,22 +125,22 @@ async function proxyUrl(url, request) {
 		}
 	}
 	// Add an X-Forwarded-For with the client IP
-	const clientAddr = request.headers.get('cf-connecting-ip');
+	const clientAddr = request.headers.get("cf-connecting-ip");
 	if (clientAddr) {
-		init.headers['X-Forwarded-For'] = clientAddr;
+		init.headers["X-Forwarded-For"] = clientAddr;
 	}
 
 	// Filter the response headers
 	const response = await fetch(originUrl, init);
 	if (response) {
 		const responseHeaders = [
-			'Content-Type',
-			'Cache-Control',
-			'Expires',
-			'Accept-Ranges',
-			'Date',
-			'Last-Modified',
-			'ETag',
+			"Content-Type",
+			"Cache-Control",
+			"Expires",
+			"Accept-Ranges",
+			"Date",
+			"Last-Modified",
+			"ETag",
 		];
 		let responseInit = {
 			status: response.status,
@@ -149,7 +156,7 @@ async function proxyUrl(url, request) {
 		// Extend the cache time for successful responses (since the url is
 		// specific to the hashed content).
 		if (response.status === 200) {
-			responseInit.headers['Cache-Control'] = 'private; max-age=315360000';
+			responseInit.headers["Cache-Control"] = "private; max-age=315360000";
 		}
 
 		const newResponse = new Response(response.body, responseInit);
@@ -173,8 +180,8 @@ async function proxyUrl(url, request) {
 async function processHtmlRequest(request) {
 	// Fetch from origin server.
 	const response = await fetch(request);
-	let contentType = response.headers.get('content-type');
-	if (contentType && contentType.indexOf('text/html') !== -1) {
+	let contentType = response.headers.get("content-type");
+	if (contentType && contentType.indexOf("text/html") !== -1) {
 		// Workers can only decode utf-8. If it is anything else, pass the
 		// response through unmodified
 		const charsetRegex = /charset\s*=\s*([^\s;]+)/gim;
@@ -221,7 +228,8 @@ function chunkContainsInvalidCharset(chunk) {
 		}
 	}
 	// content-type
-	const contentTypeRegex = /<\s*meta[^>]+http-equiv\s*=\s*['"]\s*content-type[^>]*>/gim;
+	const contentTypeRegex =
+		/<\s*meta[^>]+http-equiv\s*=\s*['"]\s*content-type[^>]*>/gim;
 	const contentTypeMatch = contentTypeRegex.exec(chunk);
 	if (contentTypeMatch) {
 		const metaTag = contentTypeMatch[0];
@@ -251,7 +259,7 @@ async function modifyHtmlStream(readable, writable, request) {
 	const reader = readable.getReader();
 	const writer = writable.getWriter();
 	const encoder = new TextEncoder();
-	let decoder = new TextDecoder('utf-8', { fatal: true });
+	let decoder = new TextDecoder("utf-8", { fatal: true });
 
 	let firstChunk = true;
 	let unsupportedCharset = false;
@@ -259,12 +267,12 @@ async function modifyHtmlStream(readable, writable, request) {
 	// build the list of url patterns we are going to look for.
 	let patterns = [];
 	for (let scriptUrl of SCRIPT_URLS) {
-		let regex = new RegExp(SCRIPT_PRE + scriptUrl + PATTERN_POST, 'gi');
+		let regex = new RegExp(SCRIPT_PRE + scriptUrl + PATTERN_POST, "gi");
 		patterns.push(regex);
 	}
 
-	let partial = '';
-	let content = '';
+	let partial = "";
+	let content = "";
 
 	for (;;) {
 		const { done, value } = await reader.read();
@@ -273,7 +281,7 @@ async function modifyHtmlStream(readable, writable, request) {
 				partial = await modifyHtmlChunk(partial, patterns, request);
 				await writer.write(encoder.encode(partial));
 			}
-			partial = '';
+			partial = "";
 			break;
 		}
 
@@ -290,7 +298,7 @@ async function modifyHtmlStream(readable, writable, request) {
 				unsupportedCharset = true;
 				if (partial.length) {
 					await writer.write(encoder.encode(partial));
-					partial = '';
+					partial = "";
 				}
 				await writer.write(value);
 				continue;
@@ -306,7 +314,7 @@ async function modifyHtmlStream(readable, writable, request) {
 					unsupportedCharset = true;
 					if (partial.length) {
 						await writer.write(encoder.encode(partial));
-						partial = '';
+						partial = "";
 					}
 					await writer.write(value);
 					continue;
@@ -315,15 +323,15 @@ async function modifyHtmlStream(readable, writable, request) {
 
 			// TODO: Optimize this so we aren't continuously adding strings together
 			content = partial + chunk;
-			partial = '';
+			partial = "";
 
 			// See if there is an unclosed script tag at the end (and if so, carve
 			// it out to complete when the remainder comes in).
 			// This isn't perfect (case sensitive and doesn't allow whitespace in the tag)
 			// but it is good enough for our purpose and much faster than a regex.
-			const scriptPos = content.lastIndexOf('<script');
+			const scriptPos = content.lastIndexOf("<script");
 			if (scriptPos >= 0) {
-				const scriptClose = content.indexOf('>', scriptPos);
+				const scriptClose = content.indexOf(">", scriptPos);
 				if (scriptClose === -1) {
 					partial = content.slice(scriptPos);
 					content = content.slice(0, scriptPos);
@@ -338,7 +346,7 @@ async function modifyHtmlStream(readable, writable, request) {
 		}
 		if (content.length) {
 			await writer.write(encoder.encode(content));
-			content = '';
+			content = "";
 		}
 	}
 	await writer.close();
@@ -363,7 +371,7 @@ async function modifyHtmlChunk(content, patterns, request) {
 		while (match !== null) {
 			const originalUrl = match[1];
 			let fetchUrl = originalUrl;
-			if (fetchUrl.startsWith('//')) {
+			if (fetchUrl.startsWith("//")) {
 				fetchUrl = pageUrl.protocol + fetchUrl;
 			}
 			const proxyUrl = await hashContent(originalUrl, fetchUrl, request);
@@ -390,9 +398,9 @@ async function modifyHtmlChunk(content, patterns, request) {
 async function hashContent(originalUrl, url, request) {
 	let proxyUrl = null;
 	let hash = null;
-	const userAgent = request.headers.get('user-agent');
-	const clientAddr = request.headers.get('cf-connecting-ip');
-	const hashCacheKey = new Request(url + 'cf-hash-key');
+	const userAgent = request.headers.get("user-agent");
+	const clientAddr = request.headers.get("cf-connecting-ip");
+	const hashCacheKey = new Request(url + "cf-hash-key");
 	let cache = null;
 
 	let foundInCache = false;
@@ -411,14 +419,14 @@ async function hashContent(originalUrl, url, request) {
 
 	if (!foundInCache) {
 		try {
-			let headers = { 'Referer': request.url, 'User-Agent': userAgent };
+			let headers = { Referer: request.url, "User-Agent": userAgent };
 			if (clientAddr) {
-				headers['X-Forwarded-For'] = clientAddr;
+				headers["X-Forwarded-For"] = clientAddr;
 			}
 			const response = await fetch(url, { headers: headers });
 			let content = await response.arrayBuffer();
 			if (content) {
-				const hashBuffer = await crypto.subtle.digest('SHA-1', content);
+				const hashBuffer = await crypto.subtle.digest("SHA-1", content);
 				hash = hex(hashBuffer);
 				proxyUrl = constructProxyUrl(originalUrl, hash);
 
@@ -426,7 +434,7 @@ async function hashContent(originalUrl, url, request) {
 				try {
 					if (cache) {
 						let ttl = 60;
-						const cacheControl = response.headers.get('cache-control');
+						const cacheControl = response.headers.get("cache-control");
 						const maxAgeRegex = /max-age\s*=\s*(\d+)/i;
 						const match = maxAgeRegex.exec(cacheControl);
 						if (match) {
@@ -455,15 +463,15 @@ async function hashContent(originalUrl, url, request) {
  */
 function constructProxyUrl(originalUrl, hash) {
 	let proxyUrl = null;
-	let pathStart = originalUrl.indexOf('//');
+	let pathStart = originalUrl.indexOf("//");
 	if (pathStart >= 0) {
 		proxyUrl = originalUrl.substring(pathStart + 1);
-		if (proxyUrl.indexOf('?') >= 0) {
-			proxyUrl += '&';
+		if (proxyUrl.indexOf("?") >= 0) {
+			proxyUrl += "&";
 		} else {
-			proxyUrl += '?';
+			proxyUrl += "?";
 		}
-		proxyUrl += 'cf_hash=' + hash;
+		proxyUrl += "cf_hash=" + hash;
 	}
 	return proxyUrl;
 }
@@ -480,9 +488,9 @@ function hex(buffer) {
 	for (var i = 0; i < view.byteLength; i += 4) {
 		var value = view.getUint32(i);
 		var stringValue = value.toString(16);
-		var padding = '00000000';
+		var padding = "00000000";
 		var paddedValue = (padding + stringValue).slice(-padding.length);
 		hexCodes.push(paddedValue);
 	}
-	return hexCodes.join('');
+	return hexCodes.join("");
 }

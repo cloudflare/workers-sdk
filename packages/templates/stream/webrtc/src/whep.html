@@ -15,10 +15,10 @@
 		<video id="remote-video" controls autoplay muted></video>
 
 		<script type="module">
-			import WHEPClient from './WHEPClient.js';
+			import WHEPClient from "./WHEPClient.js";
 
-			const url = '<WEBRTC_PLAYBACK_URL_FROM_YOUR_LIVE_INPUT>';
-			const videoElement = document.getElementById('remote-video');
+			const url = "<WEBRTC_PLAYBACK_URL_FROM_YOUR_LIVE_INPUT>";
+			const videoElement = document.getElementById("remote-video");
 
 			self.client = new WHEPClient(url, videoElement);
 		</script>

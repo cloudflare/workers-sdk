@@ -110,8 +110,8 @@ label {
 /* Inputs */
 .sr-input,
 .sr-select,
-input[type='text'],
-input[type='number'] {
+input[type="text"],
+input[type="number"] {
 	border: 1px solid var(--gray-border);
 	border-radius: var(--radius);
 	padding: 5px 12px;
@@ -125,7 +125,7 @@ input[type='number'] {
 	color: #32325d;
 }
 .sr-input:focus,
-input[type='text']:focus,
+input[type="text"]:focus,
 button:focus,
 .focused {
 	box-shadow: 0 0 0 1px rgba(50, 151, 211, 0.3), 0 1px 1px 0 rgba(0, 0, 0, 0.07),
@@ -134,8 +134,8 @@ button:focus,
 	z-index: 9;
 }
 .sr-input::placeholder,
-input[type='text']::placeholder,
-input[type='number']::placeholder {
+input[type="text"]::placeholder,
+input[type="number"]::placeholder {
 	color: var(--gray-light);
 }
 

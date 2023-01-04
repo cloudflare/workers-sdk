@@ -1,11 +1,11 @@
-import * as fs from 'fs';
-import { tmpdir } from 'os';
-import { promisify } from 'util';
-import { join, relative } from 'path';
-import { exec } from 'child_process';
-import semiver from 'semiver';
+import * as fs from "fs";
+import { tmpdir } from "os";
+import { promisify } from "util";
+import { join, relative } from "path";
+import { exec } from "child_process";
+import semiver from "semiver";
 
-import type { Argv } from 'create-cloudflare';
+import type { Argv } from "create-cloudflare";
 
 export const run = promisify(exec);
 export const exists = fs.existsSync;
@@ -16,13 +16,13 @@ export async function rmdir(dir: string): Promise<void> {
 	if (exists(dir)) fs.promises.rm(dir, { recursive: true });
 }
 
-export const git = (...args: string[]) => run(`git ${args.join(' ')}`);
+export const git = (...args: string[]) => run(`git ${args.join(" ")}`);
 
 export const rand = () => Math.random().toString(16).substring(2);
 
 // allows [user@]host.xz:path/to/repo.git/
 export const isRemote = (str: string) =>
-	/^(https?|ftps?|file|git|ssh):\/\//.test(str) || str.includes(':');
+	/^(https?|ftps?|file|git|ssh):\/\//.test(str) || str.includes(":");
 
 export interface Remote {
 	source: string;
@@ -30,7 +30,7 @@ export interface Remote {
 }
 
 export async function clone(remote: Remote, dest: string, argv: Argv) {
-	let args = ['clone --depth 1'];
+	let args = ["clone --depth 1"];
 	let { source, filter } = remote;
 	let target = dest,
 		sparse = false;
@@ -38,31 +38,31 @@ export async function clone(remote: Remote, dest: string, argv: Argv) {
 	function bail(msg: string, err?: unknown): never {
 		if (argv.debug && err && err instanceof Error) {
 			let x = err.stack || err.message;
-			msg += '\n' + (x.includes('\n') ? x.replace(/(\r?\n)/g, '$1    ') : x);
+			msg += "\n" + (x.includes("\n") ? x.replace(/(\r?\n)/g, "$1    ") : x);
 		}
 		throw msg;
 	}
 
 	try {
-		var { stdout } = await git('version');
+		var { stdout } = await git("version");
 	} catch (err) {
-		return bail('Missing `git` executable', err);
+		return bail("Missing `git` executable", err);
 	}
 
 	let [version] = /\d+.\d+.\d+/.exec(stdout) || [];
-	if (!version) throw 'Unknown `git` version';
+	if (!version) throw "Unknown `git` version";
 
 	if (filter) {
-		let num = semiver(version, '2.26.0');
+		let num = semiver(version, "2.26.0");
 		sparse = num !== -1; // -1~>lesser; 0~>equal; 1~>greater
 
-		target = join(tmpdir(), rand() + '-' + rand());
+		target = join(tmpdir(), rand() + "-" + rand());
 
 		// @see https://stackoverflow.com/a/52269934/3577474
-		if (sparse) args.push('--filter=blob:none --sparse');
+		if (sparse) args.push("--filter=blob:none --sparse");
 	}
 
-	let idx = source.lastIndexOf('#');
+	let idx = source.lastIndexOf("#");
 
 	if (idx === -1) {
 		args.push(source);
@@ -97,13 +97,13 @@ export async function clone(remote: Remote, dest: string, argv: Argv) {
 
 	// cleanup phase
 
-	await rmdir(join(dest, '.git'));
+	await rmdir(join(dest, ".git"));
 
 	if (argv.init) {
-		args = ['init'];
+		args = ["init"];
 		// https://git-scm.com/docs/git-init/2.28.0
-		idx = semiver(version, '2.26.0');
-		if (idx !== -1) args.push('-b main');
+		idx = semiver(version, "2.26.0");
+		if (idx !== -1) args.push("-b main");
 		try {
 			await git(...args, dest);
 		} catch (err) {

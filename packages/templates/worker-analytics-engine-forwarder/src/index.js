@@ -16,13 +16,13 @@
 // Edit this to map the fields that are present in your data.
 function processLogEntry(ANALYTICS, data) {
 	ANALYTICS.writeDataPoint({
-		indexes: [data.ClientRequestHost || ''], // Supply one index
+		indexes: [data.ClientRequestHost || ""], // Supply one index
 		blobs: [
 			// Supply a maximum of 20 blobs (max total data size 5120 bytes)
-			data.RayID || '',
-			data.ClientIP || '',
-			data.ClientRequestMethod || '',
-			data.ClientRequestURI || '',
+			data.RayID || "",
+			data.ClientIP || "",
+			data.ClientRequestMethod || "",
+			data.ClientRequestURI || "",
 		],
 		doubles: [
 			// Supply a maximum of 20 doubles
@@ -42,42 +42,45 @@ export default {
 	async fetch(request, env) {
 		// Check authz
 		if (!isAuthd(request, env)) {
-			return makeResponse('Not authorized.', 403);
+			return makeResponse("Not authorized.", 403);
 		}
 
 		// Decode the body and split it into lines
 		var lines;
 		try {
-			const compressed = request.headers.get('Content-Encoding') == 'gzip';
+			const compressed = request.headers.get("Content-Encoding") == "gzip";
 			lines = readStream(request.body, compressed);
 		} catch (e) {
-			return makeResponse('Unable to decode input.', 400);
+			return makeResponse("Unable to decode input.", 400);
 		}
 
 		// Parse each line and write the data to Analytics Engine
 		var dataPointsWritten = 0;
 		for await (const line of lines) {
 			if (dataPointsWritten >= MAX_ANALYTICS_CALLS) {
-				return makeResponse(`At most ${MAX_ANALYTICS_CALLS} log lines can be supplied.`, 400);
+				return makeResponse(
+					`At most ${MAX_ANALYTICS_CALLS} log lines can be supplied.`,
+					400
+				);
 			}
 
 			var data;
 			try {
 				data = JSON.parse(line);
 			} catch (e) {
-				return makeResponse('Unable to parse JSON.', 400);
+				return makeResponse("Unable to parse JSON.", 400);
 			}
 			processLogEntry(env.ANALYTICS, data);
 			dataPointsWritten++;
 		}
 
-		return makeResponse('Success', 200);
+		return makeResponse("Success", 200);
 	},
 };
 
 // isAuthd checks that the user has supplied an appropriate bearer token in the Authorization header.
 function isAuthd(request, env) {
-	const authz = request.headers.get('Authorization');
+	const authz = request.headers.get("Authorization");
 	const secret = env.BEARER_TOKEN;
 	if (secret === undefined || authz === null) {
 		return false;
@@ -98,7 +101,7 @@ async function* readStream(body, compressed) {
 	// Decompress the strem if needed
 	var uncompressedStream;
 	if (compressed) {
-		const ds = new DecompressionStream('gzip');
+		const ds = new DecompressionStream("gzip");
 		uncompressedStream = body.pipeThrough(ds);
 	} else {
 		uncompressedStream = body;
@@ -106,20 +109,20 @@ async function* readStream(body, compressed) {
 
 	// Split the stream into an array of lines
 	const reader = uncompressedStream.getReader();
-	var remainder = '';
+	var remainder = "";
 	while (true) {
 		const { done, value } = await reader.read();
 		if (done) {
-			if (remainder != '') {
+			if (remainder != "") {
 				yield remainder;
 			}
 			break;
 		}
 		const stringData = new TextDecoder().decode(value);
-		const chunks = stringData.split('\n');
+		const chunks = stringData.split("\n");
 		if (chunks.length > 1) {
 			chunks[0] = remainder + chunks[0];
-			remainder = '';
+			remainder = "";
 		}
 		if (chunks.length > 0) {
 			remainder = chunks.pop();
@@ -136,7 +139,7 @@ function makeResponse(text, code) {
 		}),
 		{
 			status: code,
-			headers: { 'content-type': 'application/json' },
+			headers: { "content-type": "application/json" },
 		}
 	);
 }

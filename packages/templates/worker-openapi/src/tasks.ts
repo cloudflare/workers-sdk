@@ -6,10 +6,10 @@ import {
 	Path,
 	Query,
 	Str,
-} from '@cloudflare/itty-router-openapi';
+} from "@cloudflare/itty-router-openapi";
 
 const Task = {
-	name: new Str({ example: 'lorem' }),
+	name: new Str({ example: "lorem" }),
 	slug: String,
 	description: new Str({ required: false }),
 	completed: Boolean,
@@ -18,15 +18,15 @@ const Task = {
 
 export class TaskFetch extends OpenAPIRoute {
 	static schema = {
-		tags: ['Tasks'],
-		summary: 'Get a single Task by slug',
+		tags: ["Tasks"],
+		summary: "Get a single Task by slug",
 		parameters: {
 			taskSlug: Path(Str, {
-				description: 'Task slug',
+				description: "Task slug",
 			}),
 		},
 		responses: {
-			'200': {
+			"200": {
 				schema: {
 					metaData: {},
 					task: Task,
@@ -35,18 +35,23 @@ export class TaskFetch extends OpenAPIRoute {
 		},
 	};
 
-	async handle(request: Request, env: any, context: any, data: Record<string, any>) {
+	async handle(
+		request: Request,
+		env: any,
+		context: any,
+		data: Record<string, any>
+	) {
 		// Retrieve the validated slug
 		const { taskSlug } = data;
 
 		// Actually fetch a task using the taskSlug
 
 		return {
-			metaData: { meta: 'data' },
+			metaData: { meta: "data" },
 			task: {
-				name: 'my task',
+				name: "my task",
 				slug: taskSlug,
-				description: 'this needs to be done',
+				description: "this needs to be done",
 				completed: false,
 				due_date: new Date().toISOString().slice(0, 10),
 			},
@@ -56,11 +61,11 @@ export class TaskFetch extends OpenAPIRoute {
 
 export class TaskCreate extends OpenAPIRoute {
 	static schema = {
-		tags: ['Tasks'],
-		summary: 'Create a new Task',
+		tags: ["Tasks"],
+		summary: "Create a new Task",
 		requestBody: Task,
 		responses: {
-			'200': {
+			"200": {
 				schema: {
 					task: Task,
 				},
@@ -68,7 +73,12 @@ export class TaskCreate extends OpenAPIRoute {
 		},
 	};
 
-	async handle(request: Request, env: any, context: any, data: Record<string, any>) {
+	async handle(
+		request: Request,
+		env: any,
+		context: any,
+		data: Record<string, any>
+	) {
 		// Retrieve the validated request body
 		const { body } = data;
 
@@ -76,7 +86,7 @@ export class TaskCreate extends OpenAPIRoute {
 
 		// return the new task
 		return {
-			metaData: { meta: 'data' },
+			metaData: { meta: "data" },
 			task: {
 				name: body.name,
 				slug: body.slug,
@@ -90,20 +100,20 @@ export class TaskCreate extends OpenAPIRoute {
 
 export class TaskList extends OpenAPIRoute {
 	static schema = {
-		tags: ['Tasks'],
-		summary: 'List Tasks',
+		tags: ["Tasks"],
+		summary: "List Tasks",
 		parameters: {
 			page: Query(Int, {
-				description: 'Page number',
+				description: "Page number",
 				default: 0,
 			}),
 			isCompleted: Query(Bool, {
-				description: 'Filter by completed flag',
+				description: "Filter by completed flag",
 				required: false,
 			}),
 		},
 		responses: {
-			'200': {
+			"200": {
 				schema: {
 					tasks: [Task],
 				},
@@ -111,7 +121,12 @@ export class TaskList extends OpenAPIRoute {
 		},
 	};
 
-	async handle(request: Request, env: any, context: any, data: Record<string, any>) {
+	async handle(
+		request: Request,
+		env: any,
+		context: any,
+		data: Record<string, any>
+	) {
 		// Retrieve the validated parameters
 		const { page, isCompleted } = data;
 
@@ -119,18 +134,18 @@ export class TaskList extends OpenAPIRoute {
 			metaData: { page: page, isCompleted: isCompleted },
 			tasks: [
 				{
-					name: 'Clean my room',
-					slug: 'clean-room',
+					name: "Clean my room",
+					slug: "clean-room",
 					description: null,
 					completed: false,
-					due_date: '2025-01-05',
+					due_date: "2025-01-05",
 				},
 				{
-					name: 'Build something awesome with Cloudflare Workers',
-					slug: 'cloudflare-workers',
-					description: 'Lorem Ipsum',
+					name: "Build something awesome with Cloudflare Workers",
+					slug: "cloudflare-workers",
+					description: "Lorem Ipsum",
 					completed: true,
-					due_date: '2022-12-24',
+					due_date: "2022-12-24",
 				},
 			],
 		};
@@ -139,15 +154,15 @@ export class TaskList extends OpenAPIRoute {
 
 export class TaskDelete extends OpenAPIRoute {
 	static schema = {
-		tags: ['Tasks'],
-		summary: 'Delete a Task',
+		tags: ["Tasks"],
+		summary: "Delete a Task",
 		parameters: {
 			taskSlug: Path(Str, {
-				description: 'Task slug',
+				description: "Task slug",
 			}),
 		},
 		responses: {
-			'200': {
+			"200": {
 				schema: {
 					metaData: {},
 					success: Boolean,
@@ -156,7 +171,12 @@ export class TaskDelete extends OpenAPIRoute {
 		},
 	};
 
-	async handle(request: Request, env: any, context: any, data: Record<string, any>) {
+	async handle(
+		request: Request,
+		env: any,
+		context: any,
+		data: Record<string, any>
+	) {
 		// Retrieve the validated slug
 		const { taskSlug } = data;
 

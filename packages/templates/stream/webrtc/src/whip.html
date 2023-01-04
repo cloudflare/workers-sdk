@@ -15,10 +15,10 @@
 		<video id="input-video" autoplay muted></video>
 
 		<script type="module">
-			import WHIPClient from './WHIPClient.js';
+			import WHIPClient from "./WHIPClient.js";
 
-			const url = '<WEBRTC_URL_FROM_YOUR_LIVE_INPUT>';
-			const videoElement = document.getElementById('input-video');
+			const url = "<WEBRTC_URL_FROM_YOUR_LIVE_INPUT>";
+			const videoElement = document.getElementById("input-video");
 
 			self.client = new WHIPClient(url, videoElement);
 		</script>

@@ -15,10 +15,10 @@
 		<video id="input-video" autoplay muted></video>
 
 		<script type="module">
-			import WHIPClient from './WHIPClient.js';
+			import WHIPClient from "./WHIPClient.js";
 
-			const url = '<WEBRTC_URL_FROM_YOUR_LIVE_INPUT>';
-			const videoElement = document.getElementById('input-video');
+			const url = "<WEBRTC_URL_FROM_YOUR_LIVE_INPUT>";
+			const videoElement = document.getElementById("input-video");
 
 			self.whipClient = new WHIPClient(url, videoElement);
 		</script>
@@ -28,10 +28,10 @@
 		<video id="remote-video" controls autoplay muted></video>
 
 		<script type="module">
-			import WHEPClient from './WHEPClient.js';
+			import WHEPClient from "./WHEPClient.js";
 
-			const url = '<WEBRTC_PLAYBACK_URL_FROM_YOUR_LIVE_INPUT>';
-			const videoElement = document.getElementById('remote-video');
+			const url = "<WEBRTC_PLAYBACK_URL_FROM_YOUR_LIVE_INPUT>";
+			const videoElement = document.getElementById("remote-video");
 
 			self.whepClient = new WHEPClient(url, videoElement);
 		</script>

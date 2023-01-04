@@ -5,8 +5,6 @@
 		"packages/**"
 	],
 	"scripts": {
-		"format": "prettier . --write",
-		"pretest": "prettier . --check",
 		"test": "tsc --noEmit --skipLibCheck"
 	},
 	"devDependencies": {

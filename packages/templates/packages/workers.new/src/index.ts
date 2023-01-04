@@ -5,109 +5,125 @@
 type Redirects = Record<string, [string, string, string, string?]>;
 
 // stackblitz repository source
-const source = 'github/cloudflare/templates/tree/main';
+const source = "github/cloudflare/templates/tree/main";
 
 // deploy with cloudflare source
 
-const src = 'https://github.com/cloudflare/templates/tree/main';
+const src = "https://github.com/cloudflare/templates/tree/main";
 
 const redirects: Redirects = {
-	'/pages-image-sharing': [
-		'pages-image-sharing',
-		'src/index.tsx',
-		'Image Sharing Website with Pages Functions',
+	"/pages-image-sharing": [
+		"pages-image-sharing",
+		"src/index.tsx",
+		"Image Sharing Website with Pages Functions",
 	],
-	'/stream/auth/stripe': ['stream/auth/stripe', 'src/index.html', 'Stream + Stripe Checkout'],
-	'/worker-durable-objects': [
-		'worker-durable-objects',
-		'index.js',
-		'Workers Durable Objects counter',
+	"/stream/auth/stripe": [
+		"stream/auth/stripe",
+		"src/index.html",
+		"Stream + Stripe Checkout",
 	],
-	'/d1': ['worker-d1', 'src/index.ts', 'Workers D1'],
-	'/router': ['worker-router', 'index.js', 'Workers Router'],
-	'/typescript': ['worker-typescript', 'src/index.ts', 'Workers TypeScript'],
-	'/websocket': ['worker-websocket', 'index.js', 'Workers WebSocket'],
-	'/example-wordle': ['worker-example-wordle', 'src/index.ts', 'Workers Wordle example'],
-	'/example-request-scheduler': [
-		'worker-example-request-scheduler',
-		'src/index.ts',
-		'Workers Request Scheduler',
+	"/worker-durable-objects": [
+		"worker-durable-objects",
+		"index.js",
+		"Workers Durable Objects counter",
 	],
-	'/websocket-durable-objects': [
-		'worker-websocket-durable-objects',
-		'src/index.ts',
-		'Workers WebSocket Durable Objects',
+	"/d1": ["worker-d1", "src/index.ts", "Workers D1"],
+	"/router": ["worker-router", "index.js", "Workers Router"],
+	"/typescript": ["worker-typescript", "src/index.ts", "Workers TypeScript"],
+	"/websocket": ["worker-websocket", "index.js", "Workers WebSocket"],
+	"/example-wordle": [
+		"worker-example-wordle",
+		"src/index.ts",
+		"Workers Wordle example",
 	],
-	'/worktop': ['worker-worktop', 'src/index.ts', 'Workers Worktop'],
-	'/pages-functions-cors': [
-		'pages-functions-cors',
-		'functions/api/_middleware.ts',
-		'Pages Functions CORS',
-		'dev',
+	"/example-request-scheduler": [
+		"worker-example-request-scheduler",
+		"src/index.ts",
+		"Workers Request Scheduler",
 	],
-	'/pages-plugin-static-forms': [
-		'pages-plugin-static-forms',
-		'functions/_middleware.ts',
-		'Pages Plugin static forms',
-		'dev',
+	"/websocket-durable-objects": [
+		"worker-websocket-durable-objects",
+		"src/index.ts",
+		"Workers WebSocket Durable Objects",
 	],
-	'/pages-example-forum-app': [
-		'pages-example-forum-app',
-		'functions/api/code.ts',
-		'Pages Example Forum app',
-		'dev',
+	"/worktop": ["worker-worktop", "src/index.ts", "Workers Worktop"],
+	"/pages-functions-cors": [
+		"pages-functions-cors",
+		"functions/api/_middleware.ts",
+		"Pages Functions CORS",
+		"dev",
 	],
-	'/stream/stream-player': [
-		'stream/playback/stream-player',
-		'src/index.html',
-		'Cloudflare Stream Player',
+	"/pages-plugin-static-forms": [
+		"pages-plugin-static-forms",
+		"functions/_middleware.ts",
+		"Pages Plugin static forms",
+		"dev",
 	],
-	'/stream/video-js': [
-		'stream/playback/video-js',
-		'src/index.html',
-		'Cloudflare Stream + Video.js',
+	"/pages-example-forum-app": [
+		"pages-example-forum-app",
+		"functions/api/code.ts",
+		"Pages Example Forum app",
+		"dev",
 	],
-	'/stream/vidstack': [
-		'stream/playback/vidstack',
-		'src/index.html',
-		'Cloudflare Stream + Vidstack',
+	"/stream/stream-player": [
+		"stream/playback/stream-player",
+		"src/index.html",
+		"Cloudflare Stream Player",
 	],
-	'/stream/hls-js': ['stream/playback/hls-js', 'src/index.html', 'Cloudflare Stream + hls.js'],
-	'/stream/dash-js': ['stream/playback/dash-js', 'src/index.html', 'Cloudflare Stream + dash.js'],
-	'/stream/shaka-player': [
-		'stream/playback/shaka-player',
-		'src/index.js',
-		'Cloudflare Stream + Shaka Player',
+	"/stream/video-js": [
+		"stream/playback/video-js",
+		"src/index.html",
+		"Cloudflare Stream + Video.js",
 	],
-	'/stream/direct-creator-uploads': [
-		'stream/upload/direct-creator-uploads',
-		'src/index.html',
-		'Direct Creator Uploads to Cloudflare Stream',
+	"/stream/vidstack": [
+		"stream/playback/vidstack",
+		"src/index.html",
+		"Cloudflare Stream + Vidstack",
 	],
-	'/stream/direct-creator-uploads-tus': [
-		'stream/upload/direct-creator-uploads-tus',
-		'src/index.html',
-		'Direct Creator Uploads to Cloudflare Stream, using TUS',
+	"/stream/hls-js": [
+		"stream/playback/hls-js",
+		"src/index.html",
+		"Cloudflare Stream + hls.js",
 	],
-	'/stream/webrtc': [
-		'stream/webrtc',
-		'src/index.html',
-		'Stream live video (using WHIP) and playback (using WHEP) over WebRTC with Cloudflare Stream',
+	"/stream/dash-js": [
+		"stream/playback/dash-js",
+		"src/index.html",
+		"Cloudflare Stream + dash.js",
 	],
-	'/stream/webrtc-whip': [
-		'stream/webrtc',
-		'src/index.html',
-		'Stream live video (using WHIP) over WebRTC with Cloudflare Stream',
+	"/stream/shaka-player": [
+		"stream/playback/shaka-player",
+		"src/index.js",
+		"Cloudflare Stream + Shaka Player",
 	],
-	'/stream/webrtc-whep': [
-		'stream/webrtc',
-		'src/index.html',
-		'Play live video (using WHEP) over WebRTC with Cloudflare Stream',
+	"/stream/direct-creator-uploads": [
+		"stream/upload/direct-creator-uploads",
+		"src/index.html",
+		"Direct Creator Uploads to Cloudflare Stream",
 	],
-	'/stream/signed-urls-public-content': [
-		'stream/auth/signed-urls-public-content',
-		'src/index.html',
-		'Example of using Cloudflare Stream Signed URLs with public content',
+	"/stream/direct-creator-uploads-tus": [
+		"stream/upload/direct-creator-uploads-tus",
+		"src/index.html",
+		"Direct Creator Uploads to Cloudflare Stream, using TUS",
+	],
+	"/stream/webrtc": [
+		"stream/webrtc",
+		"src/index.html",
+		"Stream live video (using WHIP) and playback (using WHEP) over WebRTC with Cloudflare Stream",
+	],
+	"/stream/webrtc-whip": [
+		"stream/webrtc",
+		"src/index.html",
+		"Stream live video (using WHIP) over WebRTC with Cloudflare Stream",
+	],
+	"/stream/webrtc-whep": [
+		"stream/webrtc",
+		"src/index.html",
+		"Play live video (using WHEP) over WebRTC with Cloudflare Stream",
+	],
+	"/stream/signed-urls-public-content": [
+		"stream/auth/signed-urls-public-content",
+		"src/index.html",
+		"Example of using Cloudflare Stream Signed URLs with public content",
 	],
 };
 
@@ -115,8 +131,10 @@ const worker: ExportedHandler = {
 	fetch(request) {
 		const { pathname } = new URL(request.url);
 
-		if (pathname === '/templates') {
-			return new Response(getListHTML(redirects), { headers: { 'content-type': 'text/html' } });
+		if (pathname === "/templates") {
+			return new Response(getListHTML(redirects), {
+				headers: { "content-type": "text/html" },
+			});
 		}
 
 		const redirectUrl = getRedirectUrlForPathname(pathname);
@@ -124,7 +142,10 @@ const worker: ExportedHandler = {
 			return Response.redirect(redirectUrl, 302);
 		}
 
-		return Response.redirect('https://dash.cloudflare.com/?to=/:account/workers/services/new', 302);
+		return Response.redirect(
+			"https://dash.cloudflare.com/?to=/:account/workers/services/new",
+			302
+		);
 	},
 };
 
@@ -133,7 +154,7 @@ function getRedirectUrlForPathname(pathname: string): string | undefined {
 	if (subdir) {
 		const focus = encodeURIComponent(file);
 		const target = `https://stackblitz.com/fork/${source}/${subdir}?file=${focus}&title=${title}&terminal=${
-			terminal || 'start-stackblitz'
+			terminal || "start-stackblitz"
 		}`;
 		return target;
 	}
@@ -249,7 +270,7 @@ function getListHTML(redirects: Redirects) {
 	<p class="subheading">Ready to use templates to start building applications on Cloudflare Workers.</p>
 	<ul>		
 		${Object.keys(redirects)
-			.map(pathname => {
+			.map((pathname) => {
 				const [subdir, file, title, terminal] = redirects[pathname] || [];
 				return `<li>
 				<p class="card-title"> ${title} </p>
@@ -258,7 +279,7 @@ function getListHTML(redirects: Redirects) {
 				<span class="link"><a target="_blank" href="https://deploy.workers.cloudflare.com/?url=${src}/${subdir}">Deploy with Workers</a></span>
 				</li>`;
 			})
-			.join('\n')}
+			.join("\n")}
 	</ul>
 	<p class="subheading">Want to contribute a template? <a class="url" href="https://github.com/cloudflare/templates"> Send a PR to the templates repository.</a></p>
 </body>

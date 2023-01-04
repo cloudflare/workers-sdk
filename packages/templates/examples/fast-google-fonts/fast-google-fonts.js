@@ -4,23 +4,30 @@
  * for navigational requests and the fallback is to just pass the request through
  * unmodified (safe).
  */
-addEventListener('fetch', event => {
+addEventListener("fetch", (event) => {
 	// Fail-safe in case of an unhandled exception
 	event.passThroughOnException();
-	if (event.request.method === 'GET') {
+	if (event.request.method === "GET") {
 		const url = new URL(event.request.url);
-		const accept = event.request.headers.get('Accept');
-		if (url.pathname.startsWith('/fonts.gstatic.com/')) {
+		const accept = event.request.headers.get("Accept");
+		if (url.pathname.startsWith("/fonts.gstatic.com/")) {
 			// Pass the font requests through to the origin font server
 			// (through the underlying request cache).
-			event.respondWith(proxyRequest('https:/' + url.pathname + url.search, event.request));
-		} else if (accept && (accept.indexOf('text/html') >= 0 || accept.indexOf('text/css') >= 0)) {
+			event.respondWith(
+				proxyRequest("https:/" + url.pathname + url.search, event.request)
+			);
+		} else if (
+			accept &&
+			(accept.indexOf("text/html") >= 0 || accept.indexOf("text/css") >= 0)
+		) {
 			// The only interesting (non-proxied) requests are for HTML and CSS.
 			// All of the major browsers advertise they are requesting HTML or CSS in the accept header.
 			// For any browsers that don't (curl, etc), they will just fall-back to non-accelerated.
-			if (url.pathname.startsWith('/fonts.googleapis.com/')) {
+			if (url.pathname.startsWith("/fonts.googleapis.com/")) {
 				// Proxy the stylesheet for pages using CSP
-				event.respondWith(proxyStylesheet('https:/' + url.pathname + url.search, event.request));
+				event.respondWith(
+					proxyStylesheet("https:/" + url.pathname + url.search, event.request)
+				);
 			} else {
 				event.respondWith(processRequest(event.request, event));
 			}
@@ -29,7 +36,7 @@ addEventListener('fetch', event => {
 });
 
 // Workers can only decode utf-8 so keep a list of character encodings that can be decoded.
-const VALID_CHARSETS = ['utf-8', 'utf8', 'iso-8859-1', 'us-ascii'];
+const VALID_CHARSETS = ["utf-8", "utf8", "iso-8859-1", "us-ascii"];
 
 /**
  * Generate a new request based on the original. Filter the request
@@ -46,7 +53,13 @@ async function proxyRequest(url, request) {
 		headers: {},
 	};
 	// Only pass through a subset of headers
-	const proxyHeaders = ['Accept', 'Accept-Encoding', 'Accept-Language', 'Referer', 'User-Agent'];
+	const proxyHeaders = [
+		"Accept",
+		"Accept-Encoding",
+		"Accept-Language",
+		"Referer",
+		"User-Agent",
+	];
 	for (let name of proxyHeaders) {
 		let value = request.headers.get(name);
 		if (value) {
@@ -54,21 +67,21 @@ async function proxyRequest(url, request) {
 		}
 	}
 	// Add an X-Forwarded-For with the client IP
-	const clientAddr = request.headers.get('cf-connecting-ip');
+	const clientAddr = request.headers.get("cf-connecting-ip");
 	if (clientAddr) {
-		init.headers['X-Forwarded-For'] = clientAddr;
+		init.headers["X-Forwarded-For"] = clientAddr;
 	}
 
 	const response = await fetch(url, init);
 	if (response) {
 		const responseHeaders = [
-			'Content-Type',
-			'Cache-Control',
-			'Expires',
-			'Accept-Ranges',
-			'Date',
-			'Last-Modified',
-			'ETag',
+			"Content-Type",
+			"Cache-Control",
+			"Expires",
+			"Accept-Ranges",
+			"Date",
+			"Last-Modified",
+			"ETag",
 		];
 		// Only include a strict subset of response headers
 		let responseInit = {
@@ -84,7 +97,7 @@ async function proxyRequest(url, request) {
 		}
 		// Add some security headers to make sure there isn't scriptable content
 		// being proxied.
-		responseInit.headers['X-Content-Type-Options'] = 'nosniff';
+		responseInit.headers["X-Content-Type-Options"] = "nosniff";
 		const newResponse = new Response(response.body, responseInit);
 		return newResponse;
 	}
@@ -103,8 +116,9 @@ async function proxyStylesheet(url, request) {
 	if (css) {
 		const responseInit = {
 			headers: {
-				'Content-Type': 'text/css; charset=utf-8',
-				'Cache-Control': 'private, max-age=86400, stale-while-revalidate=604800',
+				"Content-Type": "text/css; charset=utf-8",
+				"Cache-Control":
+					"private, max-age=86400, stale-while-revalidate=604800",
 			},
 		};
 		const newResponse = new Response(css, responseInit);
@@ -124,10 +138,10 @@ async function proxyStylesheet(url, request) {
 async function processRequest(request, event) {
 	const response = await fetch(request);
 	if (response && response.status === 200) {
-		const contentType = response.headers.get('content-type');
-		if (contentType && contentType.indexOf('text/html') !== -1) {
+		const contentType = response.headers.get("content-type");
+		if (contentType && contentType.indexOf("text/html") !== -1) {
 			return await processHtmlResponse(response, event.request, event);
-		} else if (contentType && contentType.indexOf('text/css') !== -1) {
+		} else if (contentType && contentType.indexOf("text/css") !== -1) {
 			return await processStylesheetResponse(response, event.request, event);
 		}
 	}
@@ -151,7 +165,7 @@ async function processRequest(request, event) {
 async function processHtmlResponse(response, request, event) {
 	// Workers can only decode utf-8. If it is anything else, pass the
 	// response through unmodified
-	const contentType = response.headers.get('content-type');
+	const contentType = response.headers.get("content-type");
 	const charsetRegex = /charset\s*=\s*([^\s;]+)/gim;
 	const match = charsetRegex.exec(contentType);
 	if (match !== null) {
@@ -168,7 +182,7 @@ async function processHtmlResponse(response, request, event) {
 	// are recognized. If explicit URLs are used instead then the
 	// HTML will not be modified.
 	let embedStylesheet = true;
-	let csp = response.headers.get('Content-Security-Policy');
+	let csp = response.headers.get("Content-Security-Policy");
 	if (csp) {
 		// Get the style policy that will be applied to the document
 		let ok = false;
@@ -268,7 +282,8 @@ function chunkContainsInvalidCharset(chunk) {
 		}
 	}
 	// content-type
-	const contentTypeRegex = /<\s*meta[^>]+http-equiv\s*=\s*['"]\s*content-type[^>]*>/gim;
+	const contentTypeRegex =
+		/<\s*meta[^>]+http-equiv\s*=\s*['"]\s*content-type[^>]*>/gim;
 	const contentTypeMatch = contentTypeRegex.exec(chunk);
 	if (contentTypeMatch) {
 		const metaTag = contentTypeMatch[0];
@@ -296,26 +311,37 @@ function chunkContainsInvalidCharset(chunk) {
  * @param {*} event - Worker event object
  * @param {bool} embedStylesheet - true if the stylesheet should be embedded in the HTML
  */
-async function modifyHtmlStream(readable, writable, request, event, embedStylesheet) {
+async function modifyHtmlStream(
+	readable,
+	writable,
+	request,
+	event,
+	embedStylesheet
+) {
 	const reader = readable.getReader();
 	const writer = writable.getWriter();
 	const encoder = new TextEncoder();
-	let decoder = new TextDecoder('utf-8', { fatal: true });
+	let decoder = new TextDecoder("utf-8", { fatal: true });
 
 	let firstChunk = true;
 	let unsupportedCharset = false;
 
-	let partial = '';
-	let content = '';
+	let partial = "";
+	let content = "";
 
 	try {
 		for (;;) {
 			const { done, value } = await reader.read();
 			if (done) {
 				if (partial.length) {
-					partial = await modifyHtmlChunk(partial, request, event, embedStylesheet);
+					partial = await modifyHtmlChunk(
+						partial,
+						request,
+						event,
+						embedStylesheet
+					);
 					await writer.write(encoder.encode(partial));
-					partial = '';
+					partial = "";
 				}
 				break;
 			}
@@ -333,7 +359,7 @@ async function modifyHtmlStream(readable, writable, request, event, embedStylesh
 					unsupportedCharset = true;
 					if (partial.length) {
 						await writer.write(encoder.encode(partial));
-						partial = '';
+						partial = "";
 					}
 					await writer.write(value);
 					continue;
@@ -349,7 +375,7 @@ async function modifyHtmlStream(readable, writable, request, event, embedStylesh
 						unsupportedCharset = true;
 						if (partial.length) {
 							await writer.write(encoder.encode(partial));
-							partial = '';
+							partial = "";
 						}
 						await writer.write(value);
 						continue;
@@ -358,15 +384,15 @@ async function modifyHtmlStream(readable, writable, request, event, embedStylesh
 
 				// TODO: Optimize this so we aren't continuously adding strings together
 				content = partial + chunk;
-				partial = '';
+				partial = "";
 
 				// See if there is an unclosed link tag at the end (and if so, carve it out
 				// to complete when the remainder comes in).
 				// This isn't perfect (case sensitive and doesn't allow whitespace in the tag)
 				// but it is good enough for our purpose and much faster than a regex.
-				const linkPos = content.lastIndexOf('<link');
+				const linkPos = content.lastIndexOf("<link");
 				if (linkPos >= 0) {
-					const linkClose = content.indexOf('/>', linkPos);
+					const linkClose = content.indexOf("/>", linkPos);
 					if (linkClose === -1) {
 						partial = content.slice(linkPos);
 						content = content.slice(0, linkPos);
@@ -374,14 +400,19 @@ async function modifyHtmlStream(readable, writable, request, event, embedStylesh
 				}
 
 				if (content.length) {
-					content = await modifyHtmlChunk(content, request, event, embedStylesheet);
+					content = await modifyHtmlChunk(
+						content,
+						request,
+						event,
+						embedStylesheet
+					);
 				}
 			} catch (e) {
 				// Ignore the exception
 			}
 			if (content.length) {
 				await writer.write(encoder.encode(content));
-				content = '';
+				content = "";
 			}
 		}
 	} catch (e) {
@@ -413,27 +444,27 @@ async function modifyHtmlChunk(content, request, event, embedStylesheet) {
 	let match = fontCSSRegex.exec(content);
 	while (match !== null) {
 		const matchString = match[0];
-		if (matchString.indexOf('stylesheet') >= 0) {
+		if (matchString.indexOf("stylesheet") >= 0) {
 			if (embedStylesheet) {
 				const fontCSS = await fetchCSS(match[1], request, event);
 				if (fontCSS.length) {
 					// See if there is a media type on the link tag
-					let mediaStr = '';
+					let mediaStr = "";
 					const mediaMatch = matchString.match(/media\s*=\s*['"][^'"]*['"]/gim);
 					if (mediaMatch) {
-						mediaStr = ' ' + mediaMatch[0];
+						mediaStr = " " + mediaMatch[0];
 					}
 					// Replace the actual css
-					let cssString = '<style' + mediaStr + '>\n';
+					let cssString = "<style" + mediaStr + ">\n";
 					cssString += fontCSS;
-					cssString += '\n</style>\n';
+					cssString += "\n</style>\n";
 					content = content.split(matchString).join(cssString);
 					fontCSSRegex.lastIndex -= matchString.length - cssString.length;
 				}
 			} else {
 				// Rewrite the URL to proxy it through the origin
 				let originalUrl = match[1];
-				let startPos = originalUrl.indexOf('/fonts.googleapis.com');
+				let startPos = originalUrl.indexOf("/fonts.googleapis.com");
 				let newUrl = originalUrl.substr(startPos);
 				let newString = matchString.split(originalUrl).join(newUrl);
 				content = content.split(matchString).join(newString);
@@ -460,12 +491,12 @@ var FONT_CACHE = {};
  * @param {*} event - Worker event object
  */
 async function fetchCSS(url, request) {
-	let fontCSS = '';
-	if (url.startsWith('/')) url = 'https:' + url;
-	const userAgent = request.headers.get('user-agent');
-	const clientAddr = request.headers.get('cf-connecting-ip');
+	let fontCSS = "";
+	if (url.startsWith("/")) url = "https:" + url;
+	const userAgent = request.headers.get("user-agent");
+	const clientAddr = request.headers.get("cf-connecting-ip");
 	const browser = getCacheKey(userAgent);
-	const cacheKey = browser ? url + '&' + browser : url;
+	const cacheKey = browser ? url + "&" + browser : url;
 	const cacheKeyRequest = new Request(cacheKey);
 	let cache = null;
 
@@ -491,12 +522,13 @@ async function fetchCSS(url, request) {
 	if (!foundInCache) {
 		let headers = { Referer: request.url };
 		if (browser) {
-			headers['User-Agent'] = userAgent;
+			headers["User-Agent"] = userAgent;
 		} else {
-			headers['User-Agent'] = 'Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.0; Trident/4.0)';
+			headers["User-Agent"] =
+				"Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.0; Trident/4.0)";
 		}
 		if (clientAddr) {
-			headers['X-Forwarded-For'] = clientAddr;
+			headers["X-Forwarded-For"] = clientAddr;
 		}
 
 		try {
@@ -505,7 +537,10 @@ async function fetchCSS(url, request) {
 				fontCSS = await response.text();
 
 				// Rewrite all of the font URLs to come through the worker
-				fontCSS = fontCSS.replace(/(https?:)?\/\/fonts\.gstatic\.com\//gim, '/fonts.gstatic.com/');
+				fontCSS = fontCSS.replace(
+					/(https?:)?\/\/fonts\.gstatic\.com\//gim,
+					"/fonts.gstatic.com/"
+				);
 
 				// Add the css info to the font caches
 				FONT_CACHE[cacheKey] = fontCSS;
@@ -534,44 +569,44 @@ async function fetchCSS(url, request) {
  * @returns {*} A browser-version-specific string like Chrome61
  */
 function getCacheKey(userAgent) {
-	let os = '';
+	let os = "";
 	const osRegex = /^[^(]*\(\s*(\w+)/gim;
 	let match = osRegex.exec(userAgent);
 	if (match) {
 		os = match[1];
 	}
 
-	let mobile = '';
+	let mobile = "";
 	if (userAgent.match(/Mobile/gim)) {
-		mobile = 'Mobile';
+		mobile = "Mobile";
 	}
 
 	// Detect Edge first since it includes Chrome and Safari
 	const edgeRegex = /\s+Edge\/(\d+)/gim;
 	match = edgeRegex.exec(userAgent);
 	if (match) {
-		return 'Edge' + match[1] + os + mobile;
+		return "Edge" + match[1] + os + mobile;
 	}
 
 	// Detect Chrome next (and browsers using the Chrome UA/engine)
 	const chromeRegex = /\s+Chrome\/(\d+)/gim;
 	match = chromeRegex.exec(userAgent);
 	if (match) {
-		return 'Chrome' + match[1] + os + mobile;
+		return "Chrome" + match[1] + os + mobile;
 	}
 
 	// Detect Safari and Webview next
 	const webkitRegex = /\s+AppleWebKit\/(\d+)/gim;
 	match = webkitRegex.exec(userAgent);
 	if (match) {
-		return 'WebKit' + match[1] + os + mobile;
+		return "WebKit" + match[1] + os + mobile;
 	}
 
 	// Detect Firefox
 	const firefoxRegex = /\s+Firefox\/(\d+)/gim;
 	match = firefoxRegex.exec(userAgent);
 	if (match) {
-		return 'Firefox' + match[1] + os + mobile;
+		return "Firefox" + match[1] + os + mobile;
 	}
 
 	return null;

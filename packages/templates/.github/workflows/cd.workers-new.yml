@@ -3,9 +3,9 @@ name: (CD) workers.new
 on:
   push:
     branches:
-      - 'main'
+      - "main"
     paths:
-      - 'packages/workers.new/**'
+      - "packages/workers.new/**"
   workflow_dispatch:
 
 jobs:

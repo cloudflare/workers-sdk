@@ -22,13 +22,13 @@ export default async function negotiateConnectionWithClientOffer(
 	/** Wait for ICE gathering to complete */
 	let ofr = await waitToCompleteICEGathering(peerConnection);
 	if (!ofr) {
-		throw Error('failed to gather ICE candidates for offer');
+		throw Error("failed to gather ICE candidates for offer");
 	}
 
 	/**
 	 * As long as the connection is open, attempt to...
 	 */
-	while (peerConnection.connectionState !== 'closed') {
+	while (peerConnection.connectionState !== "closed") {
 		/**
 		 * This response contains the server's SDP offer.
 		 * This specifies how the client should communicate,
@@ -38,27 +38,29 @@ export default async function negotiateConnectionWithClientOffer(
 		if (response.status === 201) {
 			let answerSDP = await response.text();
 			await peerConnection.setRemoteDescription(
-				new RTCSessionDescription({ type: 'answer', sdp: answerSDP })
+				new RTCSessionDescription({ type: "answer", sdp: answerSDP })
 			);
-			return response.headers.get('Location');
+			return response.headers.get("Location");
 		} else if (response.status === 405) {
-			console.log('Remember to update the URL passed into the WHIP or WHEP client');
+			console.log(
+				"Remember to update the URL passed into the WHIP or WHEP client"
+			);
 		} else {
 			const errorMessage = await response.text();
 			console.error(errorMessage);
 		}
 
 		/** Limit reconnection attempts to at-most once every 5 seconds */
-		await new Promise(r => setTimeout(r, 5000));
+		await new Promise((r) => setTimeout(r, 5000));
 	}
 }
 
 async function postSDPOffer(endpoint: string, data: string) {
 	return await fetch(endpoint, {
-		method: 'POST',
-		mode: 'cors',
+		method: "POST",
+		mode: "cors",
 		headers: {
-			'content-type': 'application/sdp',
+			"content-type": "application/sdp",
 		},
 		body: data,
 	});
@@ -73,12 +75,13 @@ async function postSDPOffer(endpoint: string, data: string) {
  * https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/icegatheringstatechange_event
  */
 async function waitToCompleteICEGathering(peerConnection: RTCPeerConnection) {
-	return new Promise<RTCSessionDescription | null>(resolve => {
+	return new Promise<RTCSessionDescription | null>((resolve) => {
 		/** Wait at most 1 second for ICE gathering. */
 		setTimeout(function () {
 			resolve(peerConnection.localDescription);
 		}, 1000);
-		peerConnection.onicegatheringstatechange = ev =>
-			peerConnection.iceGatheringState === 'complete' && resolve(peerConnection.localDescription);
+		peerConnection.onicegatheringstatechange = (ev) =>
+			peerConnection.iceGatheringState === "complete" &&
+			resolve(peerConnection.localDescription);
 	});
 }

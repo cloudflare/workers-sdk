@@ -6,19 +6,19 @@ export default {
 	 * @returns {Promise<Response>}
 	 */
 	async fetch(request) {
-		const name = 'experiment-0';
+		const name = "experiment-0";
 		let group; // 'control' or 'test', set below
 		let isNew = false; // is the group newly-assigned?
 
 		// Determine which group this request is in.
-		const cookie = request.headers.get('Cookie');
+		const cookie = request.headers.get("Cookie");
 		if (cookie && cookie.includes(`${name}=control`)) {
-			group = 'control';
+			group = "control";
 		} else if (cookie && cookie.includes(`${name}=test`)) {
-			group = 'test';
+			group = "test";
 		} else {
 			// 50/50 Split
-			group = Math.random() < 0.5 ? 'control' : 'test';
+			group = Math.random() < 0.5 ? "control" : "test";
 			isNew = true;
 		}
 
@@ -38,7 +38,7 @@ export default {
 			// The experiment was newly-assigned, so add
 			// a Set-Cookie header to the response.
 			const newHeaders = new Headers(response.headers);
-			newHeaders.append('Set-Cookie', `${name}=${group}`);
+			newHeaders.append("Set-Cookie", `${name}=${group}`);
 			return new Response(response.body, {
 				status: response.status,
 				statusText: response.statusText,

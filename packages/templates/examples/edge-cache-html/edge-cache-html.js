@@ -5,26 +5,26 @@
 
 // API settings if KV isn't being used
 const CLOUDFLARE_API = {
-	email: '', // From https://dash.cloudflare.com/profile
-	key: '', // Global API Key from https://dash.cloudflare.com/profile
-	zone: '', // "Zone ID" from the API section of the dashboard overview page https://dash.cloudflare.com/
+	email: "", // From https://dash.cloudflare.com/profile
+	key: "", // Global API Key from https://dash.cloudflare.com/profile
+	zone: "", // "Zone ID" from the API section of the dashboard overview page https://dash.cloudflare.com/
 };
 
 // Default cookie prefixes for bypass
-const DEFAULT_BYPASS_COOKIES = ['wp-', 'wordpress', 'comment_', 'woocommerce_'];
+const DEFAULT_BYPASS_COOKIES = ["wp-", "wordpress", "comment_", "woocommerce_"];
 
 /**
  * Main worker entry point.
  */
-addEventListener('fetch', event => {
+addEventListener("fetch", (event) => {
 	const request = event.request;
-	let upstreamCache = request.headers.get('x-HTML-Edge-Cache');
+	let upstreamCache = request.headers.get("x-HTML-Edge-Cache");
 
 	// Only process requests if KV store is set up and there is no
 	// HTML edge cache in front of this worker (only the outermost cache
 	// should handle HTML caching in case there are varying levels of support).
 	let configured = false;
-	if (typeof EDGE_CACHE !== 'undefined') {
+	if (typeof EDGE_CACHE !== "undefined") {
 		configured = true;
 	} else if (
 		CLOUDFLARE_API.email.length &&
@@ -35,9 +35,9 @@ addEventListener('fetch', event => {
 	}
 
 	// Bypass processing of image requests (for everything except Firefox which doesn't use image/*)
-	const accept = request.headers.get('Accept');
+	const accept = request.headers.get("Accept");
 	let isImage = false;
-	if (accept && accept.indexOf('image/*') !== -1) {
+	if (accept && accept.indexOf("image/*") !== -1) {
 		isImage = true;
 	}
 
@@ -56,44 +56,55 @@ addEventListener('fetch', event => {
  */
 async function processRequest(originalRequest, event) {
 	let cfCacheStatus = null;
-	const accept = originalRequest.headers.get('Accept');
-	const isHTML = accept && accept.indexOf('text/html') >= 0;
-	let { response, cacheVer, status, bypassCache } = await getCachedResponse(originalRequest);
+	const accept = originalRequest.headers.get("Accept");
+	const isHTML = accept && accept.indexOf("text/html") >= 0;
+	let { response, cacheVer, status, bypassCache } = await getCachedResponse(
+		originalRequest
+	);
 
 	if (response === null) {
 		// Clone the request, add the edge-cache header and send it through.
 		let request = new Request(originalRequest);
-		request.headers.set('x-HTML-Edge-Cache', 'supports=cache|purgeall|bypass-cookies');
+		request.headers.set(
+			"x-HTML-Edge-Cache",
+			"supports=cache|purgeall|bypass-cookies"
+		);
 		response = await fetch(request);
 
 		if (response) {
 			const options = getResponseOptions(response);
 			if (options && options.purge) {
 				await purgeCache(cacheVer, event);
-				status += ', Purged';
+				status += ", Purged";
 			}
 			bypassCache = bypassCache || shouldBypassEdgeCache(request, response);
 			if (
 				(!options || options.cache) &&
 				isHTML &&
-				originalRequest.method === 'GET' &&
+				originalRequest.method === "GET" &&
 				response.status === 200 &&
 				!bypassCache
 			) {
-				status += await cacheResponse(cacheVer, originalRequest, response, event);
+				status += await cacheResponse(
+					cacheVer,
+					originalRequest,
+					response,
+					event
+				);
 			}
 		}
 	} else {
 		// If the origin didn't send the control header we will send the cached response but update
 		// the cached copy asynchronously (stale-while-revalidate). This commonly happens with
 		// a server-side disk cache that serves the HTML directly from disk.
-		cfCacheStatus = 'HIT';
-		if (originalRequest.method === 'GET' && response.status === 200 && isHTML) {
-			bypassCache = bypassCache || shouldBypassEdgeCache(originalRequest, response);
+		cfCacheStatus = "HIT";
+		if (originalRequest.method === "GET" && response.status === 200 && isHTML) {
+			bypassCache =
+				bypassCache || shouldBypassEdgeCache(originalRequest, response);
 			if (!bypassCache) {
 				const options = getResponseOptions(response);
 				if (!options) {
-					status += ', Refreshed';
+					status += ", Refreshed";
 					event.waitUntil(updateCache(originalRequest, cacheVer, event));
 				}
 			}
@@ -103,17 +114,17 @@ async function processRequest(originalRequest, event) {
 	if (
 		response &&
 		status !== null &&
-		originalRequest.method === 'GET' &&
+		originalRequest.method === "GET" &&
 		response.status === 200 &&
 		isHTML
 	) {
 		response = new Response(response.body, response);
-		response.headers.set('x-HTML-Edge-Cache-Status', status);
+		response.headers.set("x-HTML-Edge-Cache-Status", status);
 		if (cacheVer !== null) {
-			response.headers.set('x-HTML-Edge-Cache-Version', cacheVer.toString());
+			response.headers.set("x-HTML-Edge-Cache-Version", cacheVer.toString());
 		}
 		if (cfCacheStatus) {
-			response.headers.set('CF-Cache-Status', cfCacheStatus);
+			response.headers.set("CF-Cache-Status", cfCacheStatus);
 		}
 	}
 
@@ -134,13 +145,13 @@ function shouldBypassEdgeCache(request, response) {
 
 	if (request && response) {
 		const options = getResponseOptions(response);
-		const cookieHeader = request.headers.get('cookie');
+		const cookieHeader = request.headers.get("cookie");
 		let bypassCookies = DEFAULT_BYPASS_COOKIES;
 		if (options) {
 			bypassCookies = options.bypassCookies;
 		}
 		if (cookieHeader && cookieHeader.length && bypassCookies.length) {
-			const cookies = cookieHeader.split(';');
+			const cookies = cookieHeader.split(";");
 			for (let cookie of cookies) {
 				// See if the cookie starts with any of the logged-in user prefixes
 				for (let prefix of bypassCookies) {
@@ -159,7 +170,7 @@ function shouldBypassEdgeCache(request, response) {
 	return bypassCache;
 }
 
-const CACHE_HEADERS = ['Cache-Control', 'Expires', 'Pragma'];
+const CACHE_HEADERS = ["Cache-Control", "Expires", "Pragma"];
 
 /**
  * Check for cached HTML GET requests.
@@ -170,18 +181,23 @@ async function getCachedResponse(request) {
 	let response = null;
 	let cacheVer = null;
 	let bypassCache = false;
-	let status = 'Miss';
+	let status = "Miss";
 
 	// Only check for HTML GET requests (saves on reading from KV unnecessarily)
 	// and not when there are cache-control headers on the request (refresh)
-	const accept = request.headers.get('Accept');
-	const cacheControl = request.headers.get('Cache-Control');
+	const accept = request.headers.get("Accept");
+	const cacheControl = request.headers.get("Cache-Control");
 	let noCache = false;
-	if (cacheControl && cacheControl.indexOf('no-cache') !== -1) {
+	if (cacheControl && cacheControl.indexOf("no-cache") !== -1) {
 		noCache = true;
-		status = 'Bypass for Reload';
+		status = "Bypass for Reload";
 	}
-	if (!noCache && request.method === 'GET' && accept && accept.indexOf('text/html') >= 0) {
+	if (
+		!noCache &&
+		request.method === "GET" &&
+		accept &&
+		accept.indexOf("text/html") >= 0
+	) {
 		// Build the versioned URL for checking the cache
 		cacheVer = await GetCurrentCacheVersion(cacheVer);
 		const cacheKeyRequest = GenerateCacheRequest(request, cacheVer);
@@ -199,26 +215,30 @@ async function getCachedResponse(request) {
 
 				// Copy the original cache headers back and clean up any control headers
 				if (bypassCache) {
-					status = 'Bypass Cookie';
+					status = "Bypass Cookie";
 				} else {
-					status = 'Hit';
-					cachedResponse.headers.delete('Cache-Control');
-					cachedResponse.headers.delete('x-HTML-Edge-Cache-Status');
+					status = "Hit";
+					cachedResponse.headers.delete("Cache-Control");
+					cachedResponse.headers.delete("x-HTML-Edge-Cache-Status");
 					for (header of CACHE_HEADERS) {
-						let value = cachedResponse.headers.get('x-HTML-Edge-Cache-Header-' + header);
+						let value = cachedResponse.headers.get(
+							"x-HTML-Edge-Cache-Header-" + header
+						);
 						if (value) {
-							cachedResponse.headers.delete('x-HTML-Edge-Cache-Header-' + header);
+							cachedResponse.headers.delete(
+								"x-HTML-Edge-Cache-Header-" + header
+							);
 							cachedResponse.headers.set(header, value);
 						}
 					}
 					response = cachedResponse;
 				}
 			} else {
-				status = 'Miss';
+				status = "Miss";
 			}
 		} catch (err) {
 			// Send the exception back in the response header for debugging
-			status = 'Cache Read Exception: ' + err.message;
+			status = "Cache Read Exception: " + err.message;
 		}
 	}
 
@@ -231,22 +251,24 @@ async function getCachedResponse(request) {
  * @param {Event} event - Original event
  */
 async function purgeCache(cacheVer, event) {
-	if (typeof EDGE_CACHE !== 'undefined') {
+	if (typeof EDGE_CACHE !== "undefined") {
 		// Purge the KV cache by bumping the version number
 		cacheVer = await GetCurrentCacheVersion(cacheVer);
 		cacheVer++;
-		event.waitUntil(EDGE_CACHE.put('html_cache_version', cacheVer.toString()));
+		event.waitUntil(EDGE_CACHE.put("html_cache_version", cacheVer.toString()));
 	} else {
 		// Purge everything using the API
 		const url =
-			'https://api.cloudflare.com/client/v4/zones/' + CLOUDFLARE_API.zone + '/purge_cache';
+			"https://api.cloudflare.com/client/v4/zones/" +
+			CLOUDFLARE_API.zone +
+			"/purge_cache";
 		event.waitUntil(
 			fetch(url, {
-				method: 'POST',
+				method: "POST",
 				headers: {
-					'X-Auth-Email': CLOUDFLARE_API.email,
-					'X-Auth-Key': CLOUDFLARE_API.key,
-					'Content-Type': 'application/json',
+					"X-Auth-Email": CLOUDFLARE_API.email,
+					"X-Auth-Key": CLOUDFLARE_API.key,
+					"Content-Type": "application/json",
 				},
 				body: JSON.stringify({ purge_everything: true }),
 			})
@@ -263,11 +285,14 @@ async function purgeCache(cacheVer, event) {
 async function updateCache(originalRequest, cacheVer, event) {
 	// Clone the request, add the edge-cache header and send it through.
 	let request = new Request(originalRequest);
-	request.headers.set('x-HTML-Edge-Cache', 'supports=cache|purgeall|bypass-cookies');
+	request.headers.set(
+		"x-HTML-Edge-Cache",
+		"supports=cache|purgeall|bypass-cookies"
+	);
 	response = await fetch(request);
 
 	if (response) {
-		status = ': Fetched';
+		status = ": Fetched";
 		const options = getResponseOptions(response);
 		if (options && options.purge) {
 			await purgeCache(cacheVer, event);
@@ -289,13 +314,13 @@ async function updateCache(originalRequest, cacheVer, event) {
  * @returns {bool} true if the response was cached
  */
 async function cacheResponse(cacheVer, request, originalResponse, event) {
-	let status = '';
-	const accept = request.headers.get('Accept');
+	let status = "";
+	const accept = request.headers.get("Accept");
 	if (
-		request.method === 'GET' &&
+		request.method === "GET" &&
 		originalResponse.status === 200 &&
 		accept &&
-		accept.indexOf('text/html') >= 0
+		accept.indexOf("text/html") >= 0
 	) {
 		cacheVer = await GetCurrentCacheVersion(cacheVer);
 		const cacheKeyRequest = GenerateCacheRequest(request, cacheVer);
@@ -311,13 +336,13 @@ async function cacheResponse(cacheVer, request, originalResponse, event) {
 				let value = response.headers.get(header);
 				if (value) {
 					response.headers.delete(header);
-					response.headers.set('x-HTML-Edge-Cache-Header-' + header, value);
+					response.headers.set("x-HTML-Edge-Cache-Header-" + header, value);
 				}
 			}
-			response.headers.delete('Set-Cookie');
-			response.headers.set('Cache-Control', 'public; max-age=315360000');
+			response.headers.delete("Set-Cookie");
+			response.headers.set("Cache-Control", "public; max-age=315360000");
 			event.waitUntil(cache.put(cacheKeyRequest, response));
-			status = ', Cached';
+			status = ", Cached";
 		} catch (err) {
 			// status = ", Cache Write Exception: " + err.message;
 		}
@@ -336,23 +361,23 @@ async function cacheResponse(cacheVer, request, originalResponse, event) {
  */
 function getResponseOptions(response) {
 	let options = null;
-	let header = response.headers.get('x-HTML-Edge-Cache');
+	let header = response.headers.get("x-HTML-Edge-Cache");
 	if (header) {
 		options = {
 			purge: false,
 			cache: false,
 			bypassCookies: [],
 		};
-		let commands = header.split(',');
+		let commands = header.split(",");
 		for (let command of commands) {
-			if (command.trim() === 'purgeall') {
+			if (command.trim() === "purgeall") {
 				options.purge = true;
-			} else if (command.trim() === 'cache') {
+			} else if (command.trim() === "cache") {
 				options.cache = true;
-			} else if (command.trim().startsWith('bypass-cookies')) {
-				let separator = command.indexOf('=');
+			} else if (command.trim().startsWith("bypass-cookies")) {
+				let separator = command.indexOf("=");
 				if (separator >= 0) {
-					let cookies = command.substr(separator + 1).split('|');
+					let cookies = command.substr(separator + 1).split("|");
 					for (let cookie of cookies) {
 						cookie = cookie.trim();
 						if (cookie.length) {
@@ -374,13 +399,13 @@ function getResponseOptions(response) {
  */
 async function GetCurrentCacheVersion(cacheVer) {
 	if (cacheVer === null) {
-		if (typeof EDGE_CACHE !== 'undefined') {
-			cacheVer = await EDGE_CACHE.get('html_cache_version');
+		if (typeof EDGE_CACHE !== "undefined") {
+			cacheVer = await EDGE_CACHE.get("html_cache_version");
 			if (cacheVer === null) {
 				// Uninitialized - first time through, initialize KV with a value
 				// Blocking but should only happen immediately after worker activation.
 				cacheVer = 0;
-				await EDGE_CACHE.put('html_cache_version', cacheVer.toString());
+				await EDGE_CACHE.put("html_cache_version", cacheVer.toString());
 			} else {
 				cacheVer = parseInt(cacheVer);
 			}
@@ -399,11 +424,11 @@ async function GetCurrentCacheVersion(cacheVer) {
  */
 function GenerateCacheRequest(request, cacheVer) {
 	let cacheUrl = request.url;
-	if (cacheUrl.indexOf('?') >= 0) {
-		cacheUrl += '&';
+	if (cacheUrl.indexOf("?") >= 0) {
+		cacheUrl += "&";
 	} else {
-		cacheUrl += '?';
+		cacheUrl += "?";
 	}
-	cacheUrl += 'cf_edge_cache_ver=' + cacheVer;
+	cacheUrl += "cf_edge_cache_ver=" + cacheVer;
 	return new Request(cacheUrl);
 }

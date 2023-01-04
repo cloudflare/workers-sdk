@@ -4,23 +4,23 @@ export async function onRequest(context) {
 	const endpoint = `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/stream?direct_user=true`;
 
 	const response = await fetch(endpoint, {
-		method: 'POST',
+		method: "POST",
 		headers: {
-			'Authorization': `bearer ${CLOUDFLARE_API_TOKEN}`,
-			'Tus-Resumable': '1.0.0',
-			'Upload-Length': request.headers.get('Upload-Length'),
-			'Upload-Metadata': request.headers.get('Upload-Metadata'),
+			Authorization: `bearer ${CLOUDFLARE_API_TOKEN}`,
+			"Tus-Resumable": "1.0.0",
+			"Upload-Length": request.headers.get("Upload-Length"),
+			"Upload-Metadata": request.headers.get("Upload-Metadata"),
 		},
 	});
 
-	const destination = response.headers.get('Location');
+	const destination = response.headers.get("Location");
 
 	return new Response(null, {
 		headers: {
-			'Access-Control-Expose-Headers': 'Location',
-			'Access-Control-Allow-Headers': '*',
-			'Access-Control-Allow-Origin': '*',
-			'Location': destination,
+			"Access-Control-Expose-Headers": "Location",
+			"Access-Control-Allow-Headers": "*",
+			"Access-Control-Allow-Origin": "*",
+			Location: destination,
 		},
 	});
 }

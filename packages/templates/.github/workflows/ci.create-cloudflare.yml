@@ -3,10 +3,10 @@ name: (CI) create-cloudflare
 on:
   push:
     paths:
-      - 'packages/create-cloudflare/**'
+      - "packages/create-cloudflare/**"
   pull_request:
     paths:
-      - 'packages/create-cloudflare/**'
+      - "packages/create-cloudflare/**"
 
 jobs:
   test:
