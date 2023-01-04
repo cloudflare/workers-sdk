@@ -435,6 +435,9 @@ describe("wrangler secret", () => {
 	});
 
 	describe("delete", () => {
+		beforeEach(() => {
+			setIsTTY(true);
+		});
 		function mockDeleteRequest(
 			input: {
 				scriptName: string;
@@ -467,6 +470,7 @@ describe("wrangler secret", () => {
 				}
 			);
 		}
+
 		it("should delete a secret", async () => {
 			mockDeleteRequest({ scriptName: "script-name", secretName: "the-key" });
 			mockConfirm({
@@ -475,9 +479,7 @@ describe("wrangler secret", () => {
 			});
 			await runWrangler("secret delete the-key --name script-name");
 			expect(std.out).toMatchInlineSnapshot(`
-			"? Are you sure you want to permanently delete the secret the-key on the Worker script-name?
-			🤖 Using default value in non-interactive context: yes
-			🌀 Deleting the secret the-key on the Worker script-name
+			"🌀 Deleting the secret the-key on the Worker script-name
 			✨ Success! Deleted secret the-key"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -497,9 +499,7 @@ describe("wrangler secret", () => {
 				"secret delete the-key --name script-name --env some-env --legacy-env"
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-			"? Are you sure you want to permanently delete the secret the-key on the Worker script-name-some-env?
-			🤖 Using default value in non-interactive context: yes
-			🌀 Deleting the secret the-key on the Worker script-name-some-env
+			"🌀 Deleting the secret the-key on the Worker script-name-some-env
 			✨ Success! Deleted secret the-key"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -518,9 +518,7 @@ describe("wrangler secret", () => {
 				"secret delete the-key --name script-name --env some-env --legacy-env false"
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-			"? Are you sure you want to permanently delete the secret the-key on the Worker script-name (some-env)?
-			🤖 Using default value in non-interactive context: yes
-			🌀 Deleting the secret the-key on the Worker script-name (some-env)
+			"🌀 Deleting the secret the-key on the Worker script-name (some-env)
 			✨ Success! Deleted secret the-key"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -550,6 +548,9 @@ describe("wrangler secret", () => {
 	});
 
 	describe("list", () => {
+		beforeEach(() => {
+			setIsTTY(true);
+		});
 		function mockListRequest(
 			input: { scriptName: string },
 			env?: string,
