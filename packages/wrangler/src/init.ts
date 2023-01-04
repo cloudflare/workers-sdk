@@ -745,22 +745,19 @@ async function getNewWorkerType(newWorkerFilename: string) {
 async function getNewWorkerTestType(yesFlag?: boolean) {
 	return yesFlag
 		? "jest"
-		: (select(
-				`Which test runner would you like to use?`,
-				{
-		choices: [
-			{
-				value: "vitest",
-				title: "Vitest",
-			},
-			{
-				value: "jest",
-				title: "Jest",
-			},
-		],
-		defaultOption: 1,
-	}
-		  ) );
+		: select(`Which test runner would you like to use?`, {
+				choices: [
+					{
+						value: "vitest",
+						title: "Vitest",
+					},
+					{
+						value: "jest",
+						title: "Jest",
+					},
+				],
+				defaultOption: 1,
+		  });
 }
 
 function getNewWorkerTemplate(
