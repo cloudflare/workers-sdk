@@ -1,9 +1,11 @@
-import { Buffer } from "node:buffer";
+import { Blob, Buffer } from "node:buffer";
 import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as TOML from "@iarna/toml";
 import * as esbuild from "esbuild";
+import { MockedRequest, rest } from "msw";
+import { FormData } from "undici";
 import {
 	printBundleSize,
 	printOffendingDependencies,
@@ -11,13 +13,7 @@ import {
 import { writeAuthConfigFile } from "../user";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockAuthDomain } from "./helpers/mock-auth-domain";
-import {
-	createFetchResult,
-	setMockRawResponse,
-	setMockResponse,
-	unsetAllMocks,
-	unsetSpecialMockFns,
-} from "./helpers/mock-cfetch";
+import { createFetchResult } from "./helpers/mock-cfetch";
 import {
 	mockConsoleMethods,
 	normalizeSlashes,
@@ -28,18 +24,21 @@ import { mockGetZoneFromHostRequest } from "./helpers/mock-get-zone-from-host";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { mockCollectKnownRoutesRequest } from "./helpers/mock-known-routes";
 import { mockKeyListRequest } from "./helpers/mock-kv";
-import { mockGetMemberships, mockOAuthFlow } from "./helpers/mock-oauth-flow";
+import {
+	mockExchangeRefreshTokenForAccessToken,
+	mockGetMemberships,
+	mockOAuthFlow,
+} from "./helpers/mock-oauth-flow";
+import { msw, mswSuccessDeployments } from "./helpers/msw";
+import { FileReaderSync } from "./helpers/msw/read-file-sync";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
-import type { Config } from "../config";
 import type { WorkerMetadata } from "../create-worker-upload-form";
-import type { KVNamespaceInfo } from "../kv/helpers";
-import type { CustomDomainChangeset, CustomDomain } from "../publish/publish";
-import type { PutConsumerBody } from "../queues/client";
 import type { CfWorkerInit } from "../worker";
-import type { FormData, File } from "undici";
+import type { ResponseComposition, RestContext, RestRequest } from "msw";
+import { mswSuccessLastDeployment } from "./helpers/msw/handlers/deployments";
 
 describe("publish", () => {
 	mockAccountId();
@@ -48,10 +47,10 @@ describe("publish", () => {
 	const { setIsTTY } = useMockIsTTY();
 	const std = mockConsoleMethods();
 	const {
-		mockDomainUsesAccess,
 		mockOAuthServerCallback,
 		mockGrantAccessToken,
 		mockGrantAuthorization,
+		mockDomainUsesAccess,
 	} = mockOAuthFlow();
 
 	beforeEach(() => {
@@ -60,28 +59,35 @@ describe("publish", () => {
 			setImmediate(fn);
 		});
 		setIsTTY(true);
-		setMockResponse(
-			"/accounts/:accountId/workers/services/:scriptName",
-			() => ({
-				default_environment: { script: { last_deployed_from: "wrangler" } },
-			})
+		msw.use(
+			rest.get(
+				"*/accounts/:accountId/workers/services/:scriptName",
+				(req, res, ctx) => {
+					return res(
+						ctx.json(
+							createFetchResult({
+								default_environment: { script: { last_deployed_from: "dash" } },
+							})
+						)
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/workers/deployments/by-script/:scriptTag",
+				(req, res, ctx) => {
+					return res(
+						ctx.json(
+							createFetchResult({
+								latest: { number: "2" },
+							})
+						)
+					);
+				}
+			)
 		);
-		setMockResponse(
-			"/accounts/:accountId/workers/deployments/by-script/:scriptTag",
-			() => ({
-				latest: { number: "2" },
-			})
-		);
-	});
-
-	afterEach(() => {
-		unsetAllMocks();
-		unsetSpecialMockFns();
 	});
 
 	describe("output additional script information", () => {
-		mockApiToken();
-
 		it("for first party workers, it should print worker information at log level", async () => {
 			setIsTTY(false);
 			fs.writeFileSync(
@@ -121,6 +127,7 @@ describe("publish", () => {
 
 	describe("authentication", () => {
 		mockApiToken({ apiToken: null });
+
 		beforeEach(() => {
 			// @ts-expect-error disable the mock we'd setup earlier
 			// or else our server won't bother listening for oauth requests
@@ -129,20 +136,18 @@ describe("publish", () => {
 		});
 
 		it("drops a user into the login flow if they're unauthenticated", async () => {
+			setIsTTY(true);
 			writeWranglerToml();
 			writeWorkerSource();
 			mockDomainUsesAccess({ usesAccess: false });
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			mockOAuthServerCallback();
-			const accessTokenRequest = mockGrantAccessToken({ respondWith: "ok" });
-			mockGrantAuthorization({ respondWith: "success" });
+			mockExchangeRefreshTokenForAccessToken({ respondWith: "refreshSuccess" });
+			mockOAuthServerCallback("success");
+			mockDeploymentsListRequest();
+			mockLastDeploymentRequest();
 
 			await expect(runWrangler("publish index.js")).resolves.toBeUndefined();
-
-			expect(accessTokenRequest.actual.url).toEqual(
-				accessTokenRequest.expected.url
-			);
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Attempting to login via OAuth...
@@ -4383,7 +4388,6 @@ addEventListener('fetch', event => {});`
 			});
 
 			it("should use a script's current migration tag when publishing migrations", async () => {
-				unsetAllMocks();
 				writeWranglerToml({
 					durable_objects: {
 						bindings: [
@@ -4416,12 +4420,6 @@ addEventListener('fetch', event => {});`
 						],
 					},
 				});
-				setMockResponse(
-					"/accounts/:accountId/workers/deployments/by-script/:scriptTag",
-					() => ({
-						latest: { number: "2" },
-					})
-				);
 
 				await runWrangler("publish index.js --legacy-env false");
 				expect(std).toMatchInlineSnapshot(`
@@ -6632,19 +6630,25 @@ addEventListener('fetch', event => {});`
 		});
 
 		it("should print the bundle size, with API errors", async () => {
-			setMockRawResponse(
-				"/accounts/:accountId/workers/scripts/:scriptName",
-				"PUT",
-				() => {
-					return createFetchResult({}, false, [
-						{
-							code: 11337,
-							message:
-								"Script startup timed out. This could be due to script exceeding size limits or expensive code in the global scope.",
-						},
-					]);
-				}
+			msw.use(
+				rest.put(
+					"*/accounts/:accountId/workers/scripts/:scriptName",
+					(req, res, ctx) => {
+						return res(
+							ctx.json(
+								createFetchResult({}, false, [
+									{
+										code: 11337,
+										message:
+											"Script startup timed out. This could be due to script exceeding size limits or expensive code in the global scope.",
+									},
+								])
+							)
+						);
+					}
+				)
 			);
+
 			fs.writeFileSync(
 				"./hello.html",
 				`<!DOCTYPE html>
@@ -6706,15 +6710,25 @@ addEventListener('fetch', event => {});`
           }
         }`
 			);
-			setMockRawResponse(
-				"/accounts/:accountId/workers/scripts/:scriptName",
-				"PUT",
-				() => {
-					return createFetchResult({}, false, [
-						{ code: 10027, message: "workers.api.error.script_too_large" },
-					]);
-				}
+
+			msw.use(
+				rest.put(
+					"*/accounts/:accountId/workers/scripts/:scriptName",
+					(req, res, ctx) => {
+						return res(
+							ctx.json(
+								createFetchResult({}, false, [
+									{
+										code: 10027,
+										message: "workers.api.error.script_too_large",
+									},
+								])
+							)
+						);
+					}
+				)
 			);
+
 			writeWranglerToml({
 				main: "index.js",
 			});
@@ -6761,18 +6775,25 @@ addEventListener('fetch', event => {});`
           }
         }`
 			);
-			setMockRawResponse(
-				"/accounts/:accountId/workers/scripts/:scriptName",
-				"PUT",
-				() => {
-					return createFetchResult({}, false, [
-						{
-							code: 10021,
-							message: "Error: Script startup exceeded CPU time limit.",
-						},
-					]);
-				}
+
+			msw.use(
+				rest.put(
+					"*/accounts/:accountId/workers/scripts/:scriptName",
+					(req, res, ctx) => {
+						return res(
+							ctx.json(
+								createFetchResult({}, false, [
+									{
+										code: 10021,
+										message: "Error: Script startup exceeded CPU time limit.",
+									},
+								])
+							)
+						);
+					}
+				)
 			);
+
 			writeWranglerToml({
 				main: "index.js",
 			});
@@ -6991,25 +7012,35 @@ addEventListener('fetch', event => {});`
 	});
 
 	it("should publish if the last deployed source check fails", async () => {
-		unsetAllMocks();
 		writeWorkerSource();
 		writeWranglerToml();
 		mockSubDomainRequest();
 		mockUploadWorkerRequest();
-		setMockResponse(
-			"/accounts/:accountId/workers/deployments/by-script/:scriptTag",
-			() => ({
-				latest: { number: "2" },
-			})
-		);
-		setMockRawResponse(
-			"/accounts/:accountId/workers/services/:scriptName",
-			"GET",
-			() => {
-				return createFetchResult(null, false, [
-					{ code: 10090, message: "workers.api.error.service_not_found" },
-				]);
-			}
+		msw.use(
+			rest.get(
+				"*/accounts/:accountId/workers/deployments/by-script/:scriptTag",
+				(_, res, ctx) => {
+					return res(
+						ctx.json(
+							createFetchResult({
+								latest: { number: "2" },
+							})
+						)
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/workers/services/:scriptName",
+				(_, res, ctx) => {
+					return res(
+						ctx.json(
+							createFetchResult(null, false, [
+								{ code: 10090, message: "workers.api.error.service_not_found" },
+							])
+						)
+					);
+				}
+			)
 		);
 
 		await runWrangler("publish index.js");
@@ -7028,25 +7059,36 @@ addEventListener('fetch', event => {});`
 	});
 
 	it("should not publish if there's any other kind of error when checking deployment source", async () => {
-		unsetAllMocks();
 		writeWorkerSource();
 		writeWranglerToml();
 		mockSubDomainRequest();
 		mockUploadWorkerRequest();
-		setMockRawResponse(
-			"/accounts/:accountId/workers/services/:scriptName",
-			"GET",
-			() => {
-				return createFetchResult(null, false, [
-					{ code: 10000, message: "Authentication error" },
-				]);
-			}
-		);
-		setMockResponse(
-			"/accounts/:accountId/workers/deployments/by-script/:scriptTag",
-			() => ({
-				latest: { number: "2" },
-			})
+
+		msw.use(
+			rest.get(
+				"*/accounts/:accountId/workers/services/:scriptName",
+				(_, res, ctx) => {
+					return res(
+						ctx.json(
+							createFetchResult(null, false, [
+								{ code: 10000, message: "Authentication error" },
+							])
+						)
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/workers/deployments/by-script/:scriptTag",
+				(_, res, ctx) => {
+					return res(
+						ctx.json(
+							createFetchResult({
+								latest: { number: "2" },
+							})
+						)
+					);
+				}
+			)
 		);
 
 		await runWrangler("publish index.js");
@@ -7238,6 +7280,13 @@ function writeAssets(
 		fs.writeFileSync(filePathDestination, asset.content);
 	}
 }
+function mockDeploymentsListRequest() {
+	msw.use(...mswSuccessDeployments);
+}
+
+function mockLastDeploymentRequest() {
+	msw.use(...mswSuccessLastDeployment);
+}
 
 /** Create a mock handler for the request to upload a worker script. */
 function mockUploadWorkerRequest(
@@ -7273,73 +7322,93 @@ function mockUploadWorkerRequest(
 		sendScriptIds,
 		keepVars,
 	} = options;
-	setMockResponse(
-		env && !legacyEnv
-			? "/accounts/:accountId/workers/services/:scriptName/environments/:envName"
-			: "/accounts/:accountId/workers/scripts/:scriptName",
-		"PUT",
-		async ([_url, accountId, scriptName, envName], { body }, queryParams) => {
-			expect(accountId).toEqual("some-account-id");
-			expect(scriptName).toEqual(
-				legacyEnv && env ? `test-name-${env}` : "test-name"
-			);
-			if (!legacyEnv) {
-				expect(envName).toEqual(env);
-			}
-			expect(queryParams.get("include_subdomain_availability")).toEqual("true");
-			expect(queryParams.get("excludeScript")).toEqual("true");
-			const formBody = body as FormData;
-			if (expectedEntry !== undefined) {
-				expect(await (formBody.get("index.js") as File).text()).toMatch(
-					expectedEntry
-				);
-			}
-			const metadata = JSON.parse(
-				formBody.get("metadata") as string
-			) as WorkerMetadata;
-			if (expectedType === "esm") {
-				expect(metadata.main_module).toEqual(expectedMainModule);
-			} else {
-				expect(metadata.body_part).toEqual("index.js");
-			}
+	if (env && !legacyEnv) {
+		msw.use(
+			rest.put(
+				"*/accounts/:accountId/workers/services/:scriptName/environments/:envName",
+				handleUpload
+			)
+		);
+	} else {
+		msw.use(
+			rest.put(
+				"*/accounts/:accountId/workers/scripts/:scriptName",
+				handleUpload
+			)
+		);
+	}
 
-			if (keepVars) {
-				expect(metadata.keep_bindings).toEqual(["plain_text", "json"]);
-			} else {
-				expect(metadata.keep_bindings).toBeFalsy();
-			}
-
-			if ("expectedBindings" in options) {
-				expect(metadata.bindings).toEqual(expectedBindings);
-			}
-			if ("expectedCompatibilityDate" in options) {
-				expect(metadata.compatibility_date).toEqual(expectedCompatibilityDate);
-			}
-			if ("expectedCompatibilityFlags" in options) {
-				expect(metadata.compatibility_flags).toEqual(
-					expectedCompatibilityFlags
-				);
-			}
-			if ("expectedMigrations" in options) {
-				expect(metadata.migrations).toEqual(expectedMigrations);
-			}
-			for (const [name, content] of Object.entries(expectedModules)) {
-				expect(await (formBody.get(name) as File).text()).toEqual(content);
-			}
-
-			return {
-				available_on_subdomain,
-				...(sendScriptIds
-					? {
-							id: "abc12345",
-							etag: "etag98765",
-							pipeline_hash: "hash9999",
-							tag: "sample-tag",
-					  }
-					: {}),
-			};
+	async function handleUpload(
+		req: RestRequest,
+		resp: ResponseComposition,
+		ctx: RestContext
+	) {
+		expect(req.params.accountId).toEqual("some-account-id");
+		expect(req.params.scriptName).toEqual(
+			legacyEnv && env ? `test-name-${env}` : "test-name"
+		);
+		if (!legacyEnv) {
+			expect(req.params.envName).toEqual(env);
 		}
-	);
+		expect(req.url.searchParams.get("include_subdomain_availability")).toEqual(
+			"true"
+		);
+		expect(req.url.searchParams.get("excludeScript")).toEqual("true");
+
+		const formBody = await (
+			req as MockedRequest as RestRequestWithFormData
+		).formData();
+		if (expectedEntry !== undefined) {
+			expect(formBody.get("index.js")).toMatch(expectedEntry);
+		}
+		const metadata = JSON.parse(
+			formBody.get("metadata") as string
+		) as WorkerMetadata;
+		if (expectedType === "esm") {
+			expect(metadata.main_module).toEqual(expectedMainModule);
+		} else {
+			expect(metadata.body_part).toEqual("index.js");
+		}
+
+		if (keepVars) {
+			expect(metadata.keep_bindings).toEqual(["plain_text", "json"]);
+		} else {
+			expect(metadata.keep_bindings).toBeFalsy();
+		}
+
+		if ("expectedBindings" in options) {
+			expect(metadata.bindings).toEqual(expectedBindings);
+		}
+		if ("expectedCompatibilityDate" in options) {
+			expect(metadata.compatibility_date).toEqual(expectedCompatibilityDate);
+		}
+		if ("expectedCompatibilityFlags" in options) {
+			expect(metadata.compatibility_flags).toEqual(expectedCompatibilityFlags);
+		}
+		if ("expectedMigrations" in options) {
+			expect(metadata.migrations).toEqual(expectedMigrations);
+		}
+		for (const [name, content] of Object.entries(expectedModules)) {
+			expect(formBody.get(name)).toEqual(content);
+		}
+
+		return resp(
+			ctx.json({
+				result: {
+					available_on_subdomain,
+					...(sendScriptIds && {
+						id: "abc12345",
+						etag: "etag98765",
+						pipeline_hash: "hash9999",
+						tag: "sample-tag",
+					}),
+				},
+				success: true,
+				errors: [],
+				messages: [],
+			})
+		);
+	}
 }
 
 /** Create a mock handler for the request to get the account's subdomain. */
@@ -7348,18 +7417,40 @@ function mockSubDomainRequest(
 	registeredWorkersDev = true
 ) {
 	if (registeredWorkersDev) {
-		setMockResponse("/accounts/:accountId/workers/subdomain", "GET", () => {
-			return { subdomain };
-		});
+		msw.use(
+			rest.get("*/accounts/:accountId/workers/subdomain", (req, res, ctx) => {
+				return res.once(
+					ctx.json({
+						result: { subdomain },
+						success: true,
+						errors: [],
+						messages: [],
+					})
+				);
+			})
+		);
 	} else {
-		setMockRawResponse("/accounts/:accountId/workers/subdomain", "GET", () => {
-			return createFetchResult(null, false, [
-				{ code: 10007, message: "haven't registered workers.dev" },
-			]);
-		});
+		msw.use(
+			rest.get("*/accounts/:accountId/workers/subdomain", (req, res, ctx) => {
+				return res.once(
+					ctx.json({
+						result: null,
+						success: false,
+						errors: [
+							{ code: 10007, message: "haven't registered workers.dev" },
+						],
+						messages: [],
+					})
+				);
+			})
+		);
 	}
 }
-
+//
+//
+//
+//
+//
 /** Create a mock handler to toggle a <script>.<user>.workers.dev subdomain */
 function mockUpdateWorkerRequest({
 	env,
@@ -7767,3 +7858,43 @@ function mockPutQueueConsumer(
 	);
 	return requests;
 }
+
+function mockFormDataToString(this: FormData) {
+	const entries = [];
+	for (const [key, value] of this.entries()) {
+		if (value instanceof Blob) {
+			const reader = new FileReaderSync();
+			reader.readAsText(value);
+			const result = reader.result;
+			entries.push([key, result]);
+		} else {
+			entries.push([key, value]);
+		}
+	}
+	return JSON.stringify({
+		__formdata: entries,
+	});
+}
+
+async function mockFormDataFromString(this: MockedRequest): Promise<FormData> {
+	const { __formdata } = await this.json();
+	expect(__formdata).toBeInstanceOf(Array);
+
+	const form = new FormData();
+	for (const [key, value] of __formdata) {
+		form.set(key, value);
+	}
+	return form;
+}
+
+// The following two functions workaround the fact that MSW does not yet support FormData in requests.
+// We use the fact that MSW relies upon `node-fetch` internally, which will call `toString()` on the FormData object,
+// rather than passing it through or serializing it as a proper FormData object.
+// The hack is to serialize FormData to a JSON string by overriding `FormData.toString()`.
+// And then to deserialize back to a FormData object by monkey-patching a `formData()` helper onto `MockedRequest`.
+FormData.prototype.toString = mockFormDataToString;
+export interface RestRequestWithFormData extends MockedRequest, RestRequest {
+	formData(): Promise<FormData>;
+}
+(MockedRequest.prototype as RestRequestWithFormData).formData =
+	mockFormDataFromString;
