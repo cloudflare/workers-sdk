@@ -1,0 +1,17 @@
+{
+	"private": true,
+	"workspaces": [
+		"worker*",
+		"packages/**"
+	],
+	"scripts": {
+		"format": "prettier . --write",
+		"pretest": "prettier . --check",
+		"test": "tsc --noEmit --skipLibCheck"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "3.13.0",
+		"prettier": "2.7.1",
+		"typescript": "4.6.4"
+	}
+}

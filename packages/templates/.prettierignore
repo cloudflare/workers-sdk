@@ -1,0 +1,10 @@
+*-lock.*
+*.lock
+*.log
+
+/tsconfig.json
+
+build/
+dist/
+
+/worker-rust/target/

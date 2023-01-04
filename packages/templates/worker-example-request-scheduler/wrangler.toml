@@ -1,0 +1,13 @@
+name = "durable-objects-request-scheduler"
+main = "src/index.ts"
+compatibility_date = "2022-08-02"
+ 
+# added lines after this comment
+[durable_objects]
+bindings = [
+  { name = "DO_REQUEST", class_name = "RequestDurableObject" },
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["RequestDurableObject"]

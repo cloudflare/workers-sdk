@@ -1,0 +1,25 @@
+{
+	"compilerOptions": {
+		"strict": true,
+		"lib": ["esnext"],
+		"target": "esnext",
+		"skipLibCheck": true,
+		"resolveJsonModule": true,
+		"strictBindCallApply": true,
+		"forceConsistentCasingInFileNames": true,
+		"strictFunctionTypes": true,
+		"moduleResolution": "node",
+		"strictNullChecks": true,
+		"noImplicitThis": true,
+		"noImplicitAny": true,
+		"alwaysStrict": true,
+		"module": "esnext",
+		"allowJs": false,
+		"noEmit": true,
+		"paths": {
+			"create-cloudflare": ["./src/index.d.ts"]
+		}
+	},
+	"include": ["src"],
+	"exclude": ["node_modules"]
+}

@@ -1,0 +1,32 @@
+name: (CI) create-cloudflare
+
+on:
+  push:
+    paths:
+      - 'packages/create-cloudflare/**'
+  pull_request:
+    paths:
+      - 'packages/create-cloudflare/**'
+
+jobs:
+  test:
+    name: Node.js v16
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/create-cloudflare
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 16
+
+      - name: Install
+        run: npm install
+
+      - name: TypeCheck
+        run: npm run types
+
+      - name: Compiles
+        run: npm run build

@@ -1,0 +1,13 @@
+name = "worker-aws"
+main="index.js" 
+compatibility_date = "2022-05-03"
+
+[build]
+command = "npm run build"
+
+[vars]
+AWS_REGION = "us-west-2"
+AWS_DYNAMO_TABLE = "test_table_name"
+AWS_DYNAMO_PRIMARYKEY = "test_primary_key"
+AWS_AURORA_TABLE = "demo.friends"
+AWS_AURORA_RESOURCE_ARN = "arn:aws:rds:<< FIXME >>"

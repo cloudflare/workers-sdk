@@ -1,0 +1,32 @@
+name: (CD) workers.new
+
+on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - 'packages/workers.new/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Node.js v16
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/workers.new
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 16
+
+      - name: Install
+        run: npm install
+
+      - name: Deploy
+        run: npm run deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

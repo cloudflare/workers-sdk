@@ -1,0 +1,36 @@
+{
+	"extends": "../../tsconfig.json",
+	"compilerOptions": {
+		"strict": true,
+		"allowJs": true,
+		"lib": ["es2020"],
+		"target": "es2020",
+		"removeComments": true,
+		"isolatedModules": true,
+		"moduleResolution": "node",
+		"allowSyntheticDefaultImports": true,
+		"forceConsistentCasingInFileNames": true,
+		"types": ["@cloudflare/workers-types"],
+		"strictFunctionTypes": true,
+		"resolveJsonModule": true,
+		"strictNullChecks": true,
+		"noImplicitThis": true,
+		"noImplicitAny": true,
+		"alwaysStrict": true,
+		"module": "esnext",
+		"checkJs": true,
+		"noEmit": true,
+		"paths": {
+			"create-cloudflare": ["./packages/create-cloudflare/src/index.d.ts"]
+		}
+	},
+	"include": ["packages", "worker/**/*", "worker-*/**/*"],
+	"exclude": [
+		"**/dist/**",
+		"**/build/**",
+		"worker-mysql/src",
+		"worker-postgres/src",
+		"worker-speedtest/src",
+		"worker-typescript/test"
+	]
+}
