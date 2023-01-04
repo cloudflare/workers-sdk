@@ -2,7 +2,7 @@ import fs from "node:fs";
 import dotenv from "dotenv";
 import { findUpSync } from "find-up";
 import { logger } from "../logger";
-import { parseTOML, readFileSync } from "../parse";
+import { parseJSONC, parseTOML, readFileSync } from "../parse";
 import { removeD1BetaPrefix } from "../worker";
 import { normalizeAndValidateConfig } from "./validation";
 import type { CfWorkerInit } from "../worker";
@@ -31,12 +31,16 @@ export function readConfig(
 ): Config {
 	let rawConfig: RawConfig = {};
 	if (!configPath) {
-		configPath = findWranglerToml();
+		configPath = findWranglerToml(
+			process.cwd(),
+			(args as { "json-config"?: boolean })?.["json-config"]
+		);
 	}
-
 	// Load the configuration from disk if available
-	if (configPath) {
+	if (configPath?.endsWith("toml")) {
 		rawConfig = parseTOML(readFileSync(configPath), configPath);
+	} else if (configPath?.endsWith("json")) {
+		rawConfig = parseJSONC(readFileSync(configPath), configPath);
 	}
 
 	// Process the top-level configuration.
@@ -61,10 +65,16 @@ export function readConfig(
  * from the current working directory.
  */
 export function findWranglerToml(
-	referencePath: string = process.cwd()
+	referencePath: string = process.cwd(),
+	preferJson = false
 ): string | undefined {
-	const configPath = findUpSync("wrangler.toml", { cwd: referencePath });
-	return configPath;
+	if (preferJson) {
+		return (
+			findUpSync(`wrangler.json`, { cwd: referencePath }) ??
+			findUpSync(`wrangler.toml`, { cwd: referencePath })
+		);
+	}
+	return findUpSync(`wrangler.toml`, { cwd: referencePath });
 }
 
 /**

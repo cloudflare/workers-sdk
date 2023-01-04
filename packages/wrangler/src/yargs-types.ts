@@ -7,6 +7,7 @@ export interface CommonYargsOptions {
 	v: boolean | undefined;
 	config: string | undefined;
 	env: string | undefined;
+	"json-config": boolean | undefined;
 }
 
 export type YargvToInterface<T> = T extends Argv<infer P>

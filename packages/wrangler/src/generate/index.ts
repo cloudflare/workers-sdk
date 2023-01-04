@@ -55,6 +55,8 @@ export async function generateHandler(args: GenerateArgs) {
 			type: undefined,
 			_: args._,
 			$0: args.$0,
+			jsonConfig: false,
+			"json-config": false,
 		});
 	}
 

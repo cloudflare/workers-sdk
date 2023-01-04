@@ -212,6 +212,11 @@ export function createCLIParser(argv: string[]) {
 			type: "string",
 			requiresArg: true,
 		})
+		.option("json-config", {
+			alias: "j",
+			describe: `${chalk.yellow("Experimental")} Support wrangler.json`,
+			type: "boolean",
+		})
 		.check((args) => {
 			// Grab locally specified env params from `.env` file
 			const loaded = loadDotEnv(".env", args.env);
@@ -221,7 +226,7 @@ export function createCLIParser(argv: string[]) {
 			return true;
 		});
 
-	wrangler.group(["config", "env", "help", "version"], "Flags:");
+	wrangler.group(["json-config", "config", "env", "help", "version"], "Flags:");
 	wrangler.help().alias("h", "help");
 
 	// Default help command that supports the subcommands

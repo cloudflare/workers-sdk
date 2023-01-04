@@ -46,6 +46,7 @@ async function buildMain(flags: BuildFlags = {}) {
 		external: EXTERNAL_DEPENDENCIES,
 		sourcemap: process.env.SOURCEMAPS !== "false",
 		inject: [path.join(__dirname, "../import_meta_url.js")],
+		mainFields: ["module", "main"],
 		define: {
 			__RELATIVE_PACKAGE_PATH__,
 			"import.meta.url": "import_meta_url",
