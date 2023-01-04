@@ -3,10 +3,10 @@ import { readFileSync } from "fs";
 import { tmpdir } from "os";
 import * as path from "path";
 import { join } from "path";
-import { describe, expect, it, beforeAll, afterAll } from "vitest";
+import { describe, it } from "vitest";
 
-describe("Pages Functions", () => {
-	it.concurrent("applies the d1 shim", async () => {
+describe("Pages D1 shim", () => {
+	it.concurrent("applies the D1 shim", async ({ expect }) => {
 		const dir = tmpdir();
 		const file = join(dir, "./d1-pages.js");
 

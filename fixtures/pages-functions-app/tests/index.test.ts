@@ -8,37 +8,34 @@ describe("Pages Functions", () => {
 	let wranglerProcess: ChildProcess;
 	let ip: string;
 	let port: number;
-	let resolveReadyPromise: (value: unknown) => void;
-	const readyPromise = new Promise((resolve) => {
-		resolveReadyPromise = resolve;
-	});
 
 	beforeAll(async () => {
-		wranglerProcess = fork(
-			path.join("..", "..", "packages", "wrangler", "bin", "wrangler.js"),
-			[
-				"pages",
-				"dev",
-				"public",
-				"--binding=NAME=VALUE",
-				"--binding=OTHER_NAME=THING=WITH=EQUALS",
-				"--r2=BUCKET",
-				"--port=0",
-			],
-			{
-				stdio: ["inherit", "inherit", "inherit", "ipc"],
-				cwd: path.resolve(__dirname, ".."),
-			}
-		).on("message", (message) => {
-			const parsedMessage = JSON.parse(message.toString());
-			ip = parsedMessage.ip;
-			port = parsedMessage.port;
-			resolveReadyPromise(undefined);
+		await new Promise((resolve) => {
+			wranglerProcess = fork(
+				path.join("..", "..", "packages", "wrangler", "bin", "wrangler.js"),
+				[
+					"pages",
+					"dev",
+					"public",
+					"--binding=NAME=VALUE",
+					"--binding=OTHER_NAME=THING=WITH=EQUALS",
+					"--r2=BUCKET",
+					"--port=0",
+				],
+				{
+					stdio: ["inherit", "inherit", "inherit", "ipc"],
+					cwd: path.resolve(__dirname, ".."),
+				}
+			).on("message", (message) => {
+				const parsedMessage = JSON.parse(message.toString());
+				ip = parsedMessage.ip;
+				port = parsedMessage.port;
+				resolve(null);
+			});
 		});
 	});
 
 	afterAll(async () => {
-		await readyPromise;
 		await new Promise((resolve, reject) => {
 			wranglerProcess.once("exit", (code) => {
 				if (!code) {
@@ -52,7 +49,6 @@ describe("Pages Functions", () => {
 	});
 
 	it.concurrent("renders static pages", async ({ expect }) => {
-		await readyPromise;
 		const response = await fetch(`http://${ip}:${port}/`);
 		expect(response.headers.get("x-custom")).toBe("header value");
 		const text = await response.text();
@@ -60,7 +56,6 @@ describe("Pages Functions", () => {
 	});
 
 	it.concurrent("renders pages with . characters", async ({ expect }) => {
-		await readyPromise;
 		const response = await fetch(`http://${ip}:${port}/a.b`);
 		expect(response.headers.get("x-custom")).toBe("header value");
 		const text = await response.text();
@@ -68,21 +63,18 @@ describe("Pages Functions", () => {
 	});
 
 	it.concurrent("parses URL encoded requests", async ({ expect }) => {
-		await readyPromise;
 		const response = await fetch(`http://${ip}:${port}/[id].js`);
 		const text = await response.text();
 		expect(text).toContain("// test script");
 	});
 
 	it.concurrent("parses URLs with regex chars", async ({ expect }) => {
-		await readyPromise;
 		const response = await fetch(`http://${ip}:${port}/regex_chars/my-file`);
 		const text = await response.text();
 		expect(text).toEqual("My file with regex chars");
 	});
 
 	it.concurrent("passes environment variables", async ({ expect }) => {
-		await readyPromise;
 		const response = await fetch(`http://${ip}:${port}/variables`);
 		const env = await response.json();
 		expect(env).toEqual({
@@ -102,7 +94,6 @@ describe("Pages Functions", () => {
 	it.concurrent(
 		"intercepts static requests with next()",
 		async ({ expect }) => {
-			await readyPromise;
 			const response = await fetch(`http://${ip}:${port}/intercept`);
 			const text = await response.text();
 			expect(text).toContain("Hello, world!");
@@ -111,14 +102,12 @@ describe("Pages Functions", () => {
 	);
 
 	it.concurrent("can make SSR responses", async ({ expect }) => {
-		await readyPromise;
 		const response = await fetch(`http://${ip}:${port}/date`);
 		const text = await response.text();
 		expect(text).toMatch(/\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d/);
 	});
 
 	it.concurrent("can use parameters", async ({ expect }) => {
-		await readyPromise;
 		const response = await fetch(`http://${ip}:${port}/blog/hello-world`);
 		const text = await response.text();
 		expect(text).toContain("<h1>A blog with a slug: hello-world</h1>");
@@ -127,7 +116,6 @@ describe("Pages Functions", () => {
 	it.concurrent(
 		"can override the incoming request with next() parameters",
 		async ({ expect }) => {
-			await readyPromise;
 			const response = await fetch(`http://${ip}:${port}/next`);
 			const text = await response.text();
 			expect(text).toContain("<h1>An asset</h1>");
@@ -136,7 +124,6 @@ describe("Pages Functions", () => {
 
 	describe("can mount a plugin", () => {
 		it.concurrent("should mount Middleware", async ({ expect }) => {
-			await readyPromise;
 			const response = await fetch(
 				`http://${ip}:${port}/mounted-plugin/some-page`
 			);
@@ -145,7 +132,6 @@ describe("Pages Functions", () => {
 		});
 
 		it.concurrent("should mount Fixed page", async ({ expect }) => {
-			await readyPromise;
 			const response = await fetch(`http://${ip}:${port}/mounted-plugin/fixed`);
 			const text = await response.text();
 			expect(text).toContain("I'm a fixed response");
@@ -154,14 +140,12 @@ describe("Pages Functions", () => {
 
 	describe("can import static assets", () => {
 		it.concurrent("should render a static asset", async ({ expect }) => {
-			await readyPromise;
 			const response = await fetch(`http://${ip}:${port}/static`);
 			const text = await response.text();
 			expect(text).toContain("<h1>Hello from an imported static asset!</h1>");
 		});
 
 		it.concurrent("should render from a Plugin", async ({ expect }) => {
-			await readyPromise;
 			const response = await fetch(
 				`http://${ip}:${port}/mounted-plugin/static`
 			);
@@ -172,7 +156,6 @@ describe("Pages Functions", () => {
 		});
 
 		it.concurrent("should render static/foo", async ({ expect }) => {
-			await readyPromise;
 			const response = await fetch(
 				`http://${ip}:${port}/mounted-plugin/static/foo`
 			);
@@ -181,7 +164,6 @@ describe("Pages Functions", () => {
 		});
 
 		it.concurrent("should render static/dir/bar", async ({ expect }) => {
-			await readyPromise;
 			const response = await fetch(
 				`http://${ip}:${port}/mounted-plugin/static/dir/bar`
 			);
@@ -192,7 +174,6 @@ describe("Pages Functions", () => {
 		it.concurrent(
 			"supports importing .html from a function",
 			async ({ expect }) => {
-				await readyPromise;
 				const response = await fetch(`http://${ip}:${port}/import-html`);
 				expect(response.headers.get("x-custom")).toBe("header value");
 				const text = await response.text();
@@ -203,7 +184,6 @@ describe("Pages Functions", () => {
 
 	describe("it supports R2", () => {
 		it.concurrent("should allow creates", async ({ expect }) => {
-			await readyPromise;
 			const response = await fetch(`http://${ip}:${port}/r2/create`, {
 				method: "PUT",
 			});
@@ -225,7 +205,6 @@ describe("Pages Functions", () => {
 
 	describe("redirects", () => {
 		it.concurrent("still attaches redirects correctly", async ({ expect }) => {
-			await readyPromise;
 			const response = await fetch(`http://${ip}:${port}/redirect`, {
 				redirect: "manual",
 			});
@@ -236,14 +215,12 @@ describe("Pages Functions", () => {
 
 	describe("headers", () => {
 		it.concurrent("still attaches headers correctly", async ({ expect }) => {
-			await readyPromise;
 			const response = await fetch(`http://${ip}:${port}/`);
 
 			expect(response.headers.get("A-Header")).toEqual("Some-Value");
 		});
 
 		it.concurrent("can unset and set together", async ({ expect }) => {
-			await readyPromise;
 			const response = await fetch(`http://${ip}:${port}/header-test`);
 
 			expect(response.headers.get("A-Header")).toEqual("New-Value");
@@ -252,7 +229,6 @@ describe("Pages Functions", () => {
 
 	describe("passThroughOnException", () => {
 		it.concurrent("works on a single handler", async ({ expect }) => {
-			await readyPromise;
 			const response = await fetch(
 				`http://${ip}:${port}/passThroughOnExceptionOpen`
 			);
@@ -262,7 +238,6 @@ describe("Pages Functions", () => {
 		});
 
 		it.concurrent("defaults closed", async ({ expect }) => {
-			await readyPromise;
 			const response = await fetch(
 				`http://${ip}:${port}/passThroughOnExceptionClosed`
 			);
@@ -272,7 +247,6 @@ describe("Pages Functions", () => {
 		});
 
 		it.concurrent("works for nested handlers", async ({ expect }) => {
-			await readyPromise;
 			const response = await fetch(
 				`http://${ip}:${port}/passThroughOnException/nested`
 			);
@@ -284,7 +258,6 @@ describe("Pages Functions", () => {
 		it.concurrent(
 			"allows errors to still be manually caught in middleware",
 			async ({ expect }) => {
-				await readyPromise;
 				let response = await fetch(
 					`http://${ip}:${port}/passThroughOnExceptionWithCapture/nested`
 				);
