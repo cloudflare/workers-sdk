@@ -2,41 +2,6 @@ import prompts from "prompts";
 /**
  * The expected values for a confirmation request.
  */
-// export function
-
-// // By default (if not configured by mockConfirm()) calls to `confirm()` should throw.
-// (confirm as jest.Mock).mockImplementation(
-// 	(...args: Parameters<typeof confirm>) => {
-// 		throw new Error(
-// 			`Unexpected call to \`confirm("${args.join(
-// 				","
-// 			)}")\`.\nYou should use \`mockConfirm()\` to mock calls to \`confirm()\` with expectations. Search the codebase for \`mockConfirm\` to learn more.`
-// 		);
-// 	}
-// );
-
-// // By default (if not configured by mockPrompt()) calls to `prompt()` should throw.
-// (prompt as jest.Mock).mockImplementation(
-// 	(...args: Parameters<typeof prompt>) => {
-// 		throw new Error(
-// 			`Unexpected call to \`prompt(${args.join(
-// 				","
-// 			)}, ...)\`.\nYou should use \`mockPrompt()\` to mock calls to \`prompt()\` with expectations. Search the codebase for \`mockPrompt\` to learn more.`
-// 		);
-// 	}
-// );
-
-// // By default (if not configured by mockPrompt()) calls to `prompt()` should throw.
-// (select as jest.Mock).mockImplementation(
-// 	(...args: Parameters<typeof select>) => {
-// 		throw new Error(
-// 			`Unexpected call to \`select(${args.join(
-// 				","
-// 			)}, ...)\`.\nYou should use \`mockSelect()\` to mock calls to \`select()\` with expectations. Search the codebase for \`mockSelect\` to learn more.`
-// 		);
-// 	}
-// );
-
 export interface ConfirmExpectation {
 	/** The text expected to be seen in the confirmation dialog. */
 	text: string;
