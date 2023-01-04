@@ -1,4 +1,4 @@
-import { resolve } from "path";
+import { join } from "path";
 import { configDefaults, defineConfig } from "vitest/config";
 
 export default defineConfig({
@@ -9,7 +9,7 @@ export default defineConfig({
 				: configDefaults.include,
 		exclude: [
 			...configDefaults.exclude,
-			resolve(__dirname, "fixtures/local-mode-tests/**/*"),
+			join(__dirname, "fixtures", "local-mode-tests", "**", "*"),
 		],
 		root: __dirname,
 	},
