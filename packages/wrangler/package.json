@@ -116,8 +116,6 @@
 	"devDependencies": {
 		"@cloudflare/types": "^6.18.4",
 		"@cloudflare/workers-types": "^4.20221111.1",
-		"@databases/split-sql-query": "^1.0.3",
-		"@databases/sql": "^3.2.0",
 		"@iarna/toml": "^3.0.0",
 		"@microsoft/api-extractor": "^7.28.3",
 		"@miniflare/tre": "^3.0.0-next.8",
