@@ -1951,7 +1951,10 @@ describe("init", () => {
 					result: false,
 				},
 				{
-					text: "Would you like to install wrangler into my-worker/package.json?",
+					text: `Would you like to install wrangler into ${path.join(
+						"my-worker",
+						"package.json"
+					)}?`,
 					result: false,
 				},
 				{
