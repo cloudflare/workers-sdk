@@ -125,12 +125,9 @@ export default function (pluginArgs: unknown) {
 		const { env, next, data } = workerContext;
 
 		const url = new URL(request.url);
-		// TODO: Replace this with something actually legible. Should probably rely on the length of the `functionPath` rather than this split/join chaos.
+		// TODO: Replace this with something actually legible.
 		const relativePathname = `/${
-			url.pathname
-				.split(workerContext.functionPath)
-				.slice(1)
-				.join(workerContext.functionPath) || ""
+			url.pathname.replace(workerContext.functionPath, "") || ""
 		}`.replace(/^\/\//, "/");
 
 		const handlerIterator = executeRequest(request, relativePathname);
