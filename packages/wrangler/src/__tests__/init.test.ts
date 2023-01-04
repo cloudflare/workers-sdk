@@ -493,7 +493,10 @@ describe("init", () => {
 				}
 			);
 			mockSelect({
-				text: `Would you like to create a Worker at src/index.ts?`,
+				text: `Would you like to create a Worker at ${path.join(
+					"src",
+					"index.ts"
+				)}?`,
 				result: "scheduled",
 			});
 			mockConfirm({
@@ -664,7 +667,10 @@ describe("init", () => {
 				}
 			);
 			mockSelect({
-				text: `Would you like to create a Worker at src/index.js?`,
+				text: `Would you like to create a Worker at ${path.join(
+					"src",
+					"index.js"
+				)}?`,
 				result: "none",
 			});
 
@@ -712,7 +718,11 @@ describe("init", () => {
 				}
 			);
 			mockSelect({
-				text: "Would you like to create a Worker at my-worker/src/index.js?",
+				text: `Would you like to create a Worker at ${path.join(
+					"my-worker",
+					"src",
+					"index.js"
+				)}?`,
 				result: "none",
 			});
 
@@ -759,7 +769,10 @@ describe("init", () => {
 				}
 			);
 			mockSelect({
-				text: `Would you like to create a Worker at src/index.js?`,
+				text: `Would you like to create a Worker at ${path.join(
+					"src",
+					"index.js"
+				)}?`,
 				result: "none",
 			});
 			writeFiles({
@@ -801,7 +814,14 @@ describe("init", () => {
 				}
 			);
 			mockSelect({
-				text: "Would you like to create a Worker at path/to/worker/my-worker/src/index.js?",
+				text: `Would you like to create a Worker at ${path.join(
+					"path",
+					"to",
+					"worker",
+					"my-worker",
+					"src",
+					"index.js"
+				)}?`,
 				result: "none",
 			});
 			writeFiles({
@@ -848,7 +868,10 @@ describe("init", () => {
 				}
 			);
 			mockSelect({
-				text: `Would you like to create a Worker at src/index.js?`,
+				text: `Would you like to create a Worker at ${path.join(
+					"src",
+					"index.js"
+				)}?`,
 				result: "none",
 			});
 			writeFiles({
@@ -898,7 +921,10 @@ describe("init", () => {
 				}
 			);
 			mockSelect({
-				text: `Would you like to create a Worker at src/index.js?`,
+				text: `Would you like to create a Worker at ${path.join(
+					"src",
+					"index.js"
+				)}?`,
 				result: "none",
 			});
 			writeFiles({
@@ -952,7 +978,10 @@ describe("init", () => {
 				}
 			);
 			mockSelect({
-				text: `Would you like to create a Worker at src/index.js?`,
+				text: `Would you like to create a Worker at ${path.join(
+					"src",
+					"index.js"
+				)}?`,
 				result: "none",
 			});
 			writeFiles({
@@ -1448,7 +1477,14 @@ describe("init", () => {
 				}
 			);
 			mockSelect({
-				text: "Would you like to create a Worker at path/to/worker/my-worker/src/index.ts?",
+				text: `Would you like to create a Worker at ${path.join(
+					"path",
+					"to",
+					"worker",
+					"my-worker",
+					"src",
+					"index.ts"
+				)} path/to/worker/my-worker/src/index.ts?`,
 				result: "fetch",
 			});
 			mockConfirm({
@@ -2066,7 +2102,13 @@ describe("init", () => {
 				}
 			);
 			mockSelect({
-				text: "Would you like to create a Worker at sub/folder/worker/src/index.ts?",
+				text: `Would you like to create a Worker at ${path.join(
+					"sub",
+					"folder",
+					"worker",
+					"src",
+					"index.ts"
+				)}?`,
 				result: "fetch",
 			});
 			mockConfirm({
