@@ -21,9 +21,6 @@ describe("wrangler", () => {
 	const std = mockConsoleMethods();
 	const proc = mockProcess();
 
-	afterEach(() => {
-		unsetAllMocks();
-	});
 	const { setIsTTY } = useMockIsTTY();
 	beforeEach(() => {
 		setIsTTY(true);

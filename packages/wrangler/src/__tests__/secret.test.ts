@@ -6,10 +6,7 @@ import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
-import {
-	mockGetMemberships,
-	mockGetMembershipsFail,
-} from "./helpers/mock-oauth-flow";
+
 import { useMockStdin } from "./helpers/mock-stdin";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -48,10 +45,6 @@ describe("wrangler secret", () => {
 	runInTempDir();
 	mockAccountId();
 	mockApiToken();
-
-	afterEach(() => {
-		unsetAllMocks();
-	});
 
 	describe("put", () => {
 		function mockPutRequest(

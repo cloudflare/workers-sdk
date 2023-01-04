@@ -356,16 +356,16 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: true,
-				},
-				{
-					text: "Would you like us to write your first test with Vitest?",
-					result: true,
 				}
 			);
 
 			mockSelect({
 				text: "Would you like to create a Worker at src/index.ts?",
 				result: "fetch",
+			});
+			mockConfirm({
+				text: "Would you like us to write your first test with Vitest?",
+				result: true,
 			});
 
 			await runWrangler("init");
@@ -449,10 +449,6 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: true,
-				},
-				{
-					text: "Would you like us to write your first test with Vitest?",
-					result: true,
 				}
 			);
 			mockSelect({
@@ -460,6 +456,10 @@ describe("init", () => {
 				result: "scheduled",
 			});
 
+			mockConfirm({
+				text: "Would you like us to write your first test with Vitest?",
+				result: true,
+			});
 			await runWrangler("init");
 
 			checkFiles({
@@ -484,17 +484,16 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: true,
-				},
-				{
-					text: "Would you like us to write your first test with Vitest?",
-					result: true,
 				}
 			);
 			mockSelect({
 				text: "Would you like to create a Worker at src/index.ts?",
 				result: "scheduled",
 			});
-
+			mockConfirm({
+				text: "Would you like us to write your first test with Vitest?",
+				result: true,
+			});
 			await runWrangler("init");
 
 			checkFiles({
@@ -1051,15 +1050,15 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: true,
-				},
-				{
-					text: "Would you like us to write your first test with Vitest?",
-					result: true,
 				}
 			);
 			mockSelect({
 				text: "Would you like to create a Worker at src/index.ts?",
 				result: "fetch",
+			});
+			mockConfirm({
+				text: "Would you like us to write your first test with Vitest?",
+				result: true,
 			});
 			writeFiles({
 				items: {
@@ -1108,15 +1107,15 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: true,
-				},
-				{
-					text: "Would you like us to write your first test with Vitest?",
-					result: true,
 				}
 			);
 			mockSelect({
 				text: "Would you like to create a Worker at src/index.ts?",
 				result: "fetch",
+			});
+			mockConfirm({
+				text: "Would you like us to write your first test with Vitest?",
+				result: true,
 			});
 
 			await runWrangler("init");
@@ -1163,15 +1162,15 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: true,
-				},
-				{
-					text: "Would you like us to write your first test with Vitest?",
-					result: true,
 				}
 			);
 			mockSelect({
 				text: "Would you like to create a Worker at src/index.ts?",
 				result: "fetch",
+			});
+			mockConfirm({
+				text: "Would you like us to write your first test with Vitest?",
+				result: true,
 			});
 			writeFiles({
 				items: {
@@ -1356,19 +1355,17 @@ describe("init", () => {
 		});
 
 		it("should not touch an existing tsconfig.json in the same directory", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "Would you like us to write your first test with Vitest?",
-					result: true,
-				}
-			);
+			mockConfirm({
+				text: "Would you like to use git to manage this Worker?",
+				result: false,
+			});
 			mockSelect({
 				text: "Would you like to create a Worker at src/index.ts?",
 				result: "fetch",
+			});
+			mockConfirm({
+				text: "Would you like us to write your first test with Vitest?",
+				result: true,
 			});
 			writeFiles({
 				items: {
@@ -1424,15 +1421,15 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: true,
-				},
-				{
-					text: "Would you like us to write your first test with Vitest?",
-					result: true,
 				}
 			);
 			mockSelect({
 				text: "Would you like to create a Worker at path/to/worker/my-worker/src/index.ts?",
 				result: "fetch",
+			});
+			mockConfirm({
+				text: "Would you like us to write your first test with Vitest?",
+				result: true,
 			});
 			writeFiles({
 				items: {
@@ -1532,19 +1529,17 @@ describe("init", () => {
 		});
 
 		it("should not touch an existing tsconfig.json in an ancestor directory", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "Would you like us to write your first test with Vitest?",
-					result: true,
-				}
-			);
+			mockConfirm({
+				text: "Would you like to use git to manage this Worker?",
+				result: false,
+			});
 			mockSelect({
 				text: "Would you like to create a Worker at src/index.ts?",
 				result: "fetch",
+			});
+			mockConfirm({
+				text: "Would you like us to write your first test with Vitest?",
+				result: true,
 			});
 			writeFiles({
 				items: {
@@ -2026,15 +2021,15 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: true,
-				},
-				{
-					text: "Would you like us to write your first test with Vitest?",
-					result: true,
 				}
 			);
 			mockSelect({
 				text: "Would you like to create a Worker at sub/folder/worker/src/index.ts?",
 				result: "fetch",
+			});
+			mockConfirm({
+				text: "Would you like us to write your first test with Vitest?",
+				result: true,
 			});
 			writeFiles({
 				items: {

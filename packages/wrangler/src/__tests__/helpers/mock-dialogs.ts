@@ -57,10 +57,11 @@ export function mockConfirm(...expectations: ConfirmExpectation[]) {
 	for (const expectation of expectations) {
 		(prompts as unknown as jest.Mock).mockImplementationOnce(
 			({ type, name, message, initial }) => {
-				expect(type).toStrictEqual("confirm");
-				expect(name).toStrictEqual("value");
-
-				expect(message).toStrictEqual(expectation.text);
+				expect({ type, name, message }).toStrictEqual({
+					type: "confirm",
+					name: "value",
+					message: expectation.text,
+				});
 				if (expectation.options) {
 					expect(initial).toStrictEqual(expectation.options?.defaultValue);
 				}
@@ -96,9 +97,11 @@ export function mockPrompt(...expectations: PromptExpectation[]) {
 	for (const expectation of expectations) {
 		(prompts as unknown as jest.Mock).mockImplementationOnce(
 			({ type, name, message, initial, style }) => {
-				expect(type).toStrictEqual("text");
-				expect(name).toStrictEqual("value");
-				expect(message).toBe(expectation.text);
+				expect({ type, name, message }).toStrictEqual({
+					type: "text",
+					name: "value",
+					message: expectation.text,
+				});
 				if (expectation.options) {
 					expect(initial).toStrictEqual(expectation.options?.defaultValue);
 					expect(style).toStrictEqual(
@@ -146,9 +149,11 @@ export function mockSelect<Values>(
 	for (const expectation of expectations) {
 		(prompts as unknown as jest.Mock).mockImplementationOnce(
 			({ type, name, message, choices, initial }) => {
-				expect(type).toStrictEqual("select");
-				expect(name).toStrictEqual("value");
-				expect(message).toBe(expectation.text);
+				expect({ type, name, message }).toStrictEqual({
+					type: "select",
+					name: "value",
+					message: expectation.text,
+				});
 				if (expectation.options) {
 					expect(choices).toStrictEqual(expectation.options?.choices);
 					expect(initial).toStrictEqual(expectation.options?.defaultOption);
