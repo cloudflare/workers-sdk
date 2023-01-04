@@ -912,7 +912,10 @@ describe("init", () => {
 					result: false,
 				},
 				{
-					text: "Would you like to install wrangler into ../package.json?",
+					text: `Would you like to install wrangler into ${path.join(
+						"..",
+						"package.json"
+					)}?`,
 					result: true,
 				},
 				{
@@ -969,7 +972,11 @@ describe("init", () => {
 					result: false,
 				},
 				{
-					text: "Would you like to install wrangler into ../../package.json?",
+					text: `Would you like to install wrangler into ${path.join(
+						"..",
+						"..",
+						"package.json"
+					)}?`,
 					result: false,
 				},
 				{
