@@ -1,11 +1,12 @@
 import { fork, spawnSync } from "child_process";
 import * as path from "path";
 import { upgradingFetch } from "@miniflare/web-sockets";
+import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import type { ChildProcess } from "child_process";
 
 const isWindows = process.platform === "win32";
 
-describe.skip("Pages Functions", () => {
+describe.concurrent.skip("Pages Functions", () => {
 	let wranglerProcess: ChildProcess;
 	let ip: string;
 	let port: number;
@@ -47,7 +48,7 @@ describe.skip("Pages Functions", () => {
 		});
 	});
 
-	it.concurrent("understands normal fetches", async () => {
+	it("understands normal fetches", async () => {
 		await readyPromise;
 		const response = await upgradingFetch(`http://${ip}:${port}/`);
 		expect(response.headers.get("x-proxied")).toBe("true");
@@ -55,7 +56,7 @@ describe.skip("Pages Functions", () => {
 		expect(text).toContain("Hello, world!");
 	});
 
-	it.concurrent("understands websocket fetches", async () => {
+	it("understands websocket fetches", async () => {
 		await readyPromise;
 		const response = await upgradingFetch(`http://${ip}:${port}/ws`, {
 			headers: { Upgrade: "websocket" },

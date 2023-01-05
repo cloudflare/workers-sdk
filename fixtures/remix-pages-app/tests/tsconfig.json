@@ -1,9 +1,7 @@
 {
 	"extends": "../tsconfig.json",
 	"compilerOptions": {
-		"lib": ["ES2019"],
-		"types": ["node", "jest"]
+		"types": ["node"]
 	},
-	"include": ["**/*.ts"],
-	"exclude": []
+	"include": ["**/*.ts", "../../../node-types.d.ts"]
 }

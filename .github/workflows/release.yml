@@ -37,6 +37,8 @@ jobs:
 
       - name: Check for other errors
         run: npm run check
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
 
       - name: Create Version PR or Publish to NPM
         id: changesets

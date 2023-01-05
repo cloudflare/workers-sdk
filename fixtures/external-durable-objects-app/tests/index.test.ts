@@ -1,9 +1,10 @@
 import { fork } from "child_process";
 import * as path from "path";
 import { fetch } from "undici";
+import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import type { ChildProcess } from "child_process";
 
-describe.skip("Pages Functions", () => {
+describe.concurrent.skip("Pages Functions", () => {
 	let aWranglerProcess: ChildProcess;
 	let aIP: string;
 	let aPort: number;
@@ -136,36 +137,33 @@ describe.skip("Pages Functions", () => {
 		});
 	});
 
-	it.concurrent(
-		"connects up Durable Objects and keeps state across wrangler instances",
-		async () => {
-			await aReadyPromise;
-			await bReadyPromise;
-			await cReadyPromise;
-			await dReadyPromise;
+	it("connects up Durable Objects and keeps state across wrangler instances", async () => {
+		await aReadyPromise;
+		await bReadyPromise;
+		await cReadyPromise;
+		await dReadyPromise;
 
-			// Service registry is polled every 300ms,
-			// so let's give all the Workers a little time to find each other
-			await new Promise((resolve) => setTimeout(resolve, 700));
+		// Service registry is polled every 300ms,
+		// so let's give all the Workers a little time to find each other
+		await new Promise((resolve) => setTimeout(resolve, 700));
 
-			const responseA = await fetch(`http://${aIP}:${aPort}/`);
-			const dataA = (await responseA.json()) as { count: number; id: string };
-			expect(dataA.count).toEqual(1);
-			const responseB = await fetch(`http://${bIP}:${bPort}/`);
-			const dataB = (await responseB.json()) as { count: number; id: string };
-			expect(dataB.count).toEqual(2);
-			const responseC = await fetch(`http://${cIP}:${cPort}/`);
-			const dataC = (await responseC.json()) as { count: number; id: string };
-			expect(dataC.count).toEqual(3);
-			const responseD = await fetch(`http://${dIP}:${dPort}/`);
-			const dataD = (await responseD.json()) as { count: number; id: string };
-			expect(dataD.count).toEqual(4);
-			const responseA2 = await fetch(`http://${aIP}:${aPort}/`);
-			const dataA2 = (await responseA2.json()) as { count: number; id: string };
-			expect(dataA2.count).toEqual(5);
-			expect(dataA.id).toEqual(dataB.id);
-			expect(dataA.id).toEqual(dataC.id);
-			expect(dataA.id).toEqual(dataA2.id);
-		}
-	);
+		const responseA = await fetch(`http://${aIP}:${aPort}/`);
+		const dataA = (await responseA.json()) as { count: number; id: string };
+		expect(dataA.count).toEqual(1);
+		const responseB = await fetch(`http://${bIP}:${bPort}/`);
+		const dataB = (await responseB.json()) as { count: number; id: string };
+		expect(dataB.count).toEqual(2);
+		const responseC = await fetch(`http://${cIP}:${cPort}/`);
+		const dataC = (await responseC.json()) as { count: number; id: string };
+		expect(dataC.count).toEqual(3);
+		const responseD = await fetch(`http://${dIP}:${dPort}/`);
+		const dataD = (await responseD.json()) as { count: number; id: string };
+		expect(dataD.count).toEqual(4);
+		const responseA2 = await fetch(`http://${aIP}:${aPort}/`);
+		const dataA2 = (await responseA2.json()) as { count: number; id: string };
+		expect(dataA2.count).toEqual(5);
+		expect(dataA.id).toEqual(dataB.id);
+		expect(dataA.id).toEqual(dataC.id);
+		expect(dataA.id).toEqual(dataA2.id);
+	});
 });
