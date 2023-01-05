@@ -69,7 +69,7 @@ describe("pages", () => {
 		  wrangler pages publish [directory]             🆙 Publish a directory of static assets as a Pages deployment
 
 		Flags:
-		  -j, --json-config  [33mExperimental[39m Support wrangler.json  [boolean]
+		  -j, --json-config  Experimental: Support wrangler.json  [boolean]
 		  -c, --config       Path to .toml configuration file  [string]
 		  -e, --env          Environment to use for operations and .env files  [string]
 		  -h, --help         Show help  [boolean]
@@ -341,7 +341,7 @@ describe("pages", () => {
 			  directory  The directory of static files to upload  [string]
 
 			Flags:
-			  -j, --json-config  [33mExperimental[39m Support wrangler.json  [boolean]
+			  -j, --json-config  Experimental: Support wrangler.json  [boolean]
 			  -e, --env          Environment to use for operations and .env files  [string]
 			  -h, --help         Show help  [boolean]
 			  -v, --version      Show version number  [boolean]

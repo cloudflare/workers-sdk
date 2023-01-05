@@ -28,7 +28,7 @@ describe("wrangler", () => {
 			  wrangler queues consumer       Configure Queue Consumers
 
 			Flags:
-			  -j, --json-config  [33mExperimental[39m Support wrangler.json  [boolean]
+			  -j, --json-config  Experimental: Support wrangler.json  [boolean]
 			  -c, --config       Path to .toml configuration file  [string]
 			  -e, --env          Environment to use for operations and .env files  [string]
 			  -h, --help         Show help  [boolean]
@@ -70,7 +70,7 @@ describe("wrangler", () => {
 			List Queues
 
 			Flags:
-			  -j, --json-config  [33mExperimental[39m Support wrangler.json  [boolean]
+			  -j, --json-config  Experimental: Support wrangler.json  [boolean]
 			  -c, --config       Path to .toml configuration file  [string]
 			  -e, --env          Environment to use for operations and .env files  [string]
 			  -h, --help         Show help  [boolean]
@@ -164,7 +164,7 @@ describe("wrangler", () => {
 			  name  The name of the queue  [string] [required]
 
 			Flags:
-			  -j, --json-config  [33mExperimental[39m Support wrangler.json  [boolean]
+			  -j, --json-config  Experimental: Support wrangler.json  [boolean]
 			  -c, --config       Path to .toml configuration file  [string]
 			  -e, --env          Environment to use for operations and .env files  [string]
 			  -h, --help         Show help  [boolean]
@@ -258,7 +258,7 @@ describe("wrangler", () => {
 			  name  The name of the queue  [string] [required]
 
 			Flags:
-			  -j, --json-config  [33mExperimental[39m Support wrangler.json  [boolean]
+			  -j, --json-config  Experimental: Support wrangler.json  [boolean]
 			  -c, --config       Path to .toml configuration file  [string]
 			  -e, --env          Environment to use for operations and .env files  [string]
 			  -h, --help         Show help  [boolean]
@@ -292,7 +292,7 @@ describe("wrangler", () => {
 			  wrangler queues consumer remove <queue-name> <script-name>  Remove a Queue Consumer
 
 			Flags:
-			  -j, --json-config  [33mExperimental[39m Support wrangler.json  [boolean]
+			  -j, --json-config  Experimental: Support wrangler.json  [boolean]
 			  -c, --config       Path to .toml configuration file  [string]
 			  -e, --env          Environment to use for operations and .env files  [string]
 			  -h, --help         Show help  [boolean]
@@ -341,7 +341,7 @@ describe("wrangler", () => {
 				  script-name  Name of the consumer script  [string] [required]
 
 				Flags:
-				  -j, --json-config  [33mExperimental[39m Support wrangler.json  [boolean]
+				  -j, --json-config  Experimental: Support wrangler.json  [boolean]
 				  -c, --config       Path to .toml configuration file  [string]
 				  -e, --env          Environment to use for operations and .env files  [string]
 				  -h, --help         Show help  [boolean]
@@ -488,7 +488,7 @@ describe("wrangler", () => {
 				  script-name  Name of the consumer script  [string] [required]
 
 				Flags:
-				  -j, --json-config  [33mExperimental[39m Support wrangler.json  [boolean]
+				  -j, --json-config  Experimental: Support wrangler.json  [boolean]
 				  -c, --config       Path to .toml configuration file  [string]
 				  -e, --env          Environment to use for operations and .env files  [string]
 				  -h, --help         Show help  [boolean]

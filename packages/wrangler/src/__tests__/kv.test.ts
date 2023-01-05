@@ -63,7 +63,7 @@ describe("wrangler", () => {
 			  namespace  The name of the new namespace  [string] [required]
 
 			Flags:
-			  -j, --json-config  [33mExperimental[39m Support wrangler.json  [boolean]
+			  -j, --json-config  Experimental: Support wrangler.json  [boolean]
 			  -c, --config       Path to .toml configuration file  [string]
 			  -e, --env          Environment to use for operations and .env files  [string]
 			  -h, --help         Show help  [boolean]
@@ -95,7 +95,7 @@ describe("wrangler", () => {
 			  namespace  The name of the new namespace  [string] [required]
 
 			Flags:
-			  -j, --json-config  [33mExperimental[39m Support wrangler.json  [boolean]
+			  -j, --json-config  Experimental: Support wrangler.json  [boolean]
 			  -c, --config       Path to .toml configuration file  [string]
 			  -e, --env          Environment to use for operations and .env files  [string]
 			  -h, --help         Show help  [boolean]
@@ -128,7 +128,7 @@ describe("wrangler", () => {
 			  namespace  The name of the new namespace  [string] [required]
 
 			Flags:
-			  -j, --json-config  [33mExperimental[39m Support wrangler.json  [boolean]
+			  -j, --json-config  Experimental: Support wrangler.json  [boolean]
 			  -c, --config       Path to .toml configuration file  [string]
 			  -e, --env          Environment to use for operations and .env files  [string]
 			  -h, --help         Show help  [boolean]
@@ -555,7 +555,7 @@ describe("wrangler", () => {
 			  value  The value to write  [string]
 
 			Flags:
-			  -j, --json-config  [33mExperimental[39m Support wrangler.json  [boolean]
+			  -j, --json-config  Experimental: Support wrangler.json  [boolean]
 			  -c, --config       Path to .toml configuration file  [string]
 			  -e, --env          Environment to use for operations and .env files  [string]
 			  -h, --help         Show help  [boolean]
@@ -595,7 +595,7 @@ describe("wrangler", () => {
 			  value  The value to write  [string]
 
 			Flags:
-			  -j, --json-config  [33mExperimental[39m Support wrangler.json  [boolean]
+			  -j, --json-config  Experimental: Support wrangler.json  [boolean]
 			  -c, --config       Path to .toml configuration file  [string]
 			  -e, --env          Environment to use for operations and .env files  [string]
 			  -h, --help         Show help  [boolean]
@@ -635,7 +635,7 @@ describe("wrangler", () => {
 			  value  The value to write  [string]
 
 			Flags:
-			  -j, --json-config  [33mExperimental[39m Support wrangler.json  [boolean]
+			  -j, --json-config  Experimental: Support wrangler.json  [boolean]
 			  -c, --config       Path to .toml configuration file  [string]
 			  -e, --env          Environment to use for operations and .env files  [string]
 			  -h, --help         Show help  [boolean]
@@ -675,7 +675,7 @@ describe("wrangler", () => {
 			  value  The value to write  [string]
 
 			Flags:
-			  -j, --json-config  [33mExperimental[39m Support wrangler.json  [boolean]
+			  -j, --json-config  Experimental: Support wrangler.json  [boolean]
 			  -c, --config       Path to .toml configuration file  [string]
 			  -e, --env          Environment to use for operations and .env files  [string]
 			  -h, --help         Show help  [boolean]
@@ -715,7 +715,7 @@ describe("wrangler", () => {
 			  value  The value to write  [string]
 
 			Flags:
-			  -j, --json-config  [33mExperimental[39m Support wrangler.json  [boolean]
+			  -j, --json-config  Experimental: Support wrangler.json  [boolean]
 			  -c, --config       Path to .toml configuration file  [string]
 			  -e, --env          Environment to use for operations and .env files  [string]
 			  -h, --help         Show help  [boolean]
@@ -1091,7 +1091,7 @@ describe("wrangler", () => {
 			  key  The key value to get.  [string] [required]
 
 			Flags:
-			  -j, --json-config  [33mExperimental[39m Support wrangler.json  [boolean]
+			  -j, --json-config  Experimental: Support wrangler.json  [boolean]
 			  -c, --config       Path to .toml configuration file  [string]
 			  -e, --env          Environment to use for operations and .env files  [string]
 			  -h, --help         Show help  [boolean]
@@ -1126,7 +1126,7 @@ describe("wrangler", () => {
 			  key  The key value to get.  [string] [required]
 
 			Flags:
-			  -j, --json-config  [33mExperimental[39m Support wrangler.json  [boolean]
+			  -j, --json-config  Experimental: Support wrangler.json  [boolean]
 			  -c, --config       Path to .toml configuration file  [string]
 			  -e, --env          Environment to use for operations and .env files  [string]
 			  -h, --help         Show help  [boolean]
@@ -1162,7 +1162,7 @@ describe("wrangler", () => {
 			  key  The key value to get.  [string] [required]
 
 			Flags:
-			  -j, --json-config  [33mExperimental[39m Support wrangler.json  [boolean]
+			  -j, --json-config  Experimental: Support wrangler.json  [boolean]
 			  -c, --config       Path to .toml configuration file  [string]
 			  -e, --env          Environment to use for operations and .env files  [string]
 			  -h, --help         Show help  [boolean]

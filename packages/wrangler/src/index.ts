@@ -214,7 +214,7 @@ export function createCLIParser(argv: string[]) {
 		})
 		.option("json-config", {
 			alias: "j",
-			describe: `${chalk.yellow("Experimental")} Support wrangler.json`,
+			describe: `Experimental: Support wrangler.json`,
 			type: "boolean",
 		})
 		.check((args) => {

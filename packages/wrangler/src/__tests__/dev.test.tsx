@@ -1218,7 +1218,7 @@ describe("wrangler dev", () => {
 			  script  The path to an entry point for your worker  [string]
 
 			Flags:
-			  -j, --json-config  [33mExperimental[39m Support wrangler.json  [boolean]
+			  -j, --json-config  Experimental: Support wrangler.json  [boolean]
 			  -c, --config       Path to .toml configuration file  [string]
 			  -e, --env          Environment to use for operations and .env files  [string]
 			  -h, --help         Show help  [boolean]

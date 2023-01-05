@@ -34,7 +34,7 @@ describe("wrangler", () => {
 			  wrangler pubsub broker     Interact with your Pub/Sub Brokers
 
 			Flags:
-			  -j, --json-config  [33mExperimental[39m Support wrangler.json  [boolean]
+			  -j, --json-config  Experimental: Support wrangler.json  [boolean]
 			  -c, --config       Path to .toml configuration file  [string]
 			  -e, --env          Environment to use for operations and .env files  [string]
 			  -h, --help         Show help  [boolean]
@@ -66,7 +66,7 @@ describe("wrangler", () => {
 				  wrangler pubsub namespace describe <name>  Describe a Pub/Sub Namespace
 
 				Flags:
-				  -j, --json-config  [33mExperimental[39m Support wrangler.json  [boolean]
+				  -j, --json-config  Experimental: Support wrangler.json  [boolean]
 				  -c, --config       Path to .toml configuration file  [string]
 				  -e, --env          Environment to use for operations and .env files  [string]
 				  -h, --help         Show help  [boolean]
@@ -188,7 +188,7 @@ describe("wrangler", () => {
 				  wrangler pubsub broker public-keys <name>       Show the public keys used for verifying on-publish hooks and credentials for a Broker.
 
 				Flags:
-				  -j, --json-config  [33mExperimental[39m Support wrangler.json  [boolean]
+				  -j, --json-config  Experimental: Support wrangler.json  [boolean]
 				  -c, --config       Path to .toml configuration file  [string]
 				  -e, --env          Environment to use for operations and .env files  [string]
 				  -h, --help         Show help  [boolean]

@@ -39,7 +39,7 @@ describe("r2", () => {
 			  wrangler r2 bucket delete <name>  Delete an R2 bucket
 
 			Flags:
-			  -j, --json-config  [33mExperimental[39m Support wrangler.json  [boolean]
+			  -j, --json-config  Experimental: Support wrangler.json  [boolean]
 			  -c, --config       Path to .toml configuration file  [string]
 			  -e, --env          Environment to use for operations and .env files  [string]
 			  -h, --help         Show help  [boolean]
@@ -104,7 +104,7 @@ describe("r2", () => {
 			  name  The name of the new bucket  [string] [required]
 
 			Flags:
-			  -j, --json-config  [33mExperimental[39m Support wrangler.json  [boolean]
+			  -j, --json-config  Experimental: Support wrangler.json  [boolean]
 			  -c, --config       Path to .toml configuration file  [string]
 			  -e, --env          Environment to use for operations and .env files  [string]
 			  -h, --help         Show help  [boolean]
@@ -133,7 +133,7 @@ describe("r2", () => {
 			  name  The name of the new bucket  [string] [required]
 
 			Flags:
-			  -j, --json-config  [33mExperimental[39m Support wrangler.json  [boolean]
+			  -j, --json-config  Experimental: Support wrangler.json  [boolean]
 			  -c, --config       Path to .toml configuration file  [string]
 			  -e, --env          Environment to use for operations and .env files  [string]
 			  -h, --help         Show help  [boolean]
@@ -183,7 +183,7 @@ describe("r2", () => {
 			  name  The name of the bucket to delete  [string] [required]
 
 			Flags:
-			  -j, --json-config  [33mExperimental[39m Support wrangler.json  [boolean]
+			  -j, --json-config  Experimental: Support wrangler.json  [boolean]
 			  -c, --config       Path to .toml configuration file  [string]
 			  -e, --env          Environment to use for operations and .env files  [string]
 			  -h, --help         Show help  [boolean]
@@ -212,7 +212,7 @@ describe("r2", () => {
 			  name  The name of the bucket to delete  [string] [required]
 
 			Flags:
-			  -j, --json-config  [33mExperimental[39m Support wrangler.json  [boolean]
+			  -j, --json-config  Experimental: Support wrangler.json  [boolean]
 			  -c, --config       Path to .toml configuration file  [string]
 			  -e, --env          Environment to use for operations and .env files  [string]
 			  -h, --help         Show help  [boolean]
