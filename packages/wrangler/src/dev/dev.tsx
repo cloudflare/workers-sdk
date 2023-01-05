@@ -31,6 +31,7 @@ import type { Entry } from "../entry";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { AssetPaths } from "../sites";
 import type { CfWorkerInit } from "../worker";
+import { Plugin } from "esbuild";
 
 /**
  * This hooks establishes a connection with the dev registry,
@@ -156,6 +157,7 @@ export type DevProps = {
 	testScheduled: boolean | undefined;
 	experimentalLocal: boolean | undefined;
 	experimentalLocalRemoteKv: boolean | undefined;
+	plugins: Plugin[] | undefined;
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
@@ -306,6 +308,7 @@ function DevSession(props: DevSessionProps) {
 		targetConsumer: "dev",
 		testScheduled: props.testScheduled ?? false,
 		experimentalLocal: props.experimentalLocal,
+		plugins: props.plugins,
 	});
 
 	// TODO(queues) support remote wrangler dev

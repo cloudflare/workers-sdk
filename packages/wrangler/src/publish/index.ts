@@ -19,6 +19,8 @@ import type {
 	YargsOptionsToInterface,
 } from "../yargs-types";
 import type { Argv, ArgumentsCamelCase } from "yargs";
+import { Plugin } from "esbuild";
+import { parseEsbuildPlugins } from "../utils/parseEsbuildPlugins";
 
 export function publishOptions(yargs: Argv<CommonYargsOptions>) {
 	return (
@@ -176,6 +178,13 @@ export function publishOptions(yargs: Argv<CommonYargsOptions>) {
 				describe:
 					"Send Trace Events from this worker to Workers Logpush.\nThis will not configure a corresponding Logpush job automatically.",
 			})
+			.option("esbuild-plugins", {
+				describe:
+				"Array of esbuild plugins to use when bundling with the built in bundling system. Note: if you want to pass configuration options to the plugin, it is recommended to make a file exporting a function that returns the plugin with the configuration options specified.",
+				type: "string",
+				array: true,
+				hidden: true,
+			})
 	);
 }
 
@@ -223,6 +232,8 @@ export async function publishHandler(args: ArgumentsCamelCase<PublishArgs>) {
 		);
 	}
 
+	const plugins: Plugin[] = await parseEsbuildPlugins(args, config);
+
 	const cliVars = collectKeyValues(args.var);
 	const cliDefines = collectKeyValues(args.define);
 
@@ -266,5 +277,6 @@ export async function publishHandler(args: ArgumentsCamelCase<PublishArgs>) {
 		noBundle: !(args.bundle ?? !config.no_bundle),
 		keepVars: args.keepVars,
 		logpush: args.logpush,
+		plugins,
 	});
 }

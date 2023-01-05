@@ -8,7 +8,7 @@ import type { Config } from "../config";
 import type { WorkerRegistry } from "../dev-registry";
 import type { Entry } from "../entry";
 import type { CfModule } from "../worker";
-import type { WatchMode, Metafile } from "esbuild";
+import type { WatchMode, Metafile, Plugin } from "esbuild";
 
 export type EsbuildBundle = {
 	id: number;
@@ -42,6 +42,7 @@ export function useEsbuild({
 	targetConsumer,
 	testScheduled,
 	experimentalLocal,
+	plugins,
 }: {
 	entry: Entry;
 	destination: string | undefined;
@@ -64,6 +65,7 @@ export function useEsbuild({
 	targetConsumer: "dev" | "publish";
 	testScheduled: boolean;
 	experimentalLocal: boolean | undefined;
+	plugins: Plugin[] | undefined;
 }): EsbuildBundle | undefined {
 	const [bundle, setBundle] = useState<EsbuildBundle>();
 	const { exit } = useApp();
@@ -137,6 +139,7 @@ export function useEsbuild({
 						targetConsumer,
 						testScheduled,
 						experimentalLocal,
+						plugins,
 				  });
 
 			// Capture the `stop()` method to use as the `useEffect()` destructor.

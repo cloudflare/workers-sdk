@@ -35,6 +35,7 @@ import type { EsbuildBundle } from "./use-esbuild";
 import type { Miniflare as Miniflare3Type } from "@miniflare/tre";
 
 import type { ChildProcess } from "node:child_process";
+import { Plugin } from "esbuild";
 
 export async function startDevServer(
 	props: DevProps & {
@@ -109,6 +110,7 @@ export async function startDevServer(
 			testScheduled: props.testScheduled,
 			local: props.local,
 			experimentalLocal: props.experimentalLocal,
+			plugins: props.plugins,
 		});
 
 		if (props.local) {
@@ -218,6 +220,7 @@ async function runEsbuild({
 	testScheduled,
 	local,
 	experimentalLocal,
+	plugins,
 }: {
 	entry: Entry;
 	destination: string | undefined;
@@ -238,6 +241,7 @@ async function runEsbuild({
 	testScheduled?: boolean;
 	local: boolean;
 	experimentalLocal: boolean | undefined;
+	plugins: Plugin[] | undefined;
 }): Promise<EsbuildBundle | undefined> {
 	if (!destination) return;
 
@@ -279,6 +283,7 @@ async function runEsbuild({
 				testScheduled,
 				local,
 				experimentalLocal,
+				plugins
 		  });
 
 	return {

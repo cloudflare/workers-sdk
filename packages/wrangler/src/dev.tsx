@@ -34,6 +34,8 @@ import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/typ
 import type { CfWorkerInit } from "./worker";
 import type { CommonYargsOptions } from "./yargs-types";
 import type { Argv, ArgumentsCamelCase } from "yargs";
+import { Plugin } from "esbuild";
+import { parseEsbuildPlugins } from "./utils/parseEsbuildPlugins";
 
 interface DevArgs {
 	config?: string;
@@ -80,6 +82,7 @@ interface DevArgs {
 	logPrefix?: string;
 	showInteractiveDevSession?: boolean;
 	"test-scheduled"?: boolean;
+	"esbuild-plugins": string[] | undefined;
 }
 
 export function devOptions(yargs: Argv<CommonYargsOptions>): Argv<DevArgs> {
@@ -324,6 +327,13 @@ export function devOptions(yargs: Argv<CommonYargsOptions>): Argv<DevArgs> {
 				describe: "Specify logging level",
 				default: "log",
 			})
+			.option("esbuild-plugins", {
+				describe:
+					"Array of esbuild plugins to use when bundling with the built in bundling system. Note: if you want to pass configuration options to the plugin, it is recommended to make a file exporting a function that returns the plugin with the configuration options specified.",
+				type: "string",
+				array: true,
+				hidden: false,
+			})
 	);
 }
 
@@ -419,6 +429,8 @@ export async function startDev(args: StartDevOptions) {
 			});
 		}
 
+		const plugins: Plugin[] = await parseEsbuildPlugins(args, config)
+
 		const {
 			entry,
 			nodeCompat,
@@ -509,6 +521,7 @@ export async function startDev(args: StartDevOptions) {
 					testScheduled={args["test-scheduled"]}
 					experimentalLocal={args.experimentalLocal}
 					experimentalLocalRemoteKv={args.experimentalLocalRemoteKv}
+					plugins={plugins}
 				/>
 			);
 		}
@@ -586,6 +599,9 @@ export async function startApiDev(args: StartDevOptions) {
 		//if there's no args.bundle, and configParam.no_bundle is on, disable bundling
 		//otherwise, enable bundling
 		const enableBundling = args.bundle ?? !configParam.no_bundle;
+
+		const plugins: Plugin[] = await parseEsbuildPlugins(args, config);
+
 		return await startDevServer({
 			name: getScriptName({ name: args.name, env: args.env }, configParam),
 			noBundle: !enableBundling,
@@ -646,6 +662,7 @@ export async function startApiDev(args: StartDevOptions) {
 			experimentalLocal: args.experimentalLocal,
 			experimentalLocalRemoteKv: args.experimentalLocalRemoteKv,
 			disableDevRegistry: args.disableDevRegistry ?? false,
+			plugins
 		});
 	}
 

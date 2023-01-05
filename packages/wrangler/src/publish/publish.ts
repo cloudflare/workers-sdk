@@ -35,6 +35,7 @@ import type { Entry } from "../entry";
 import type { PutConsumerBody } from "../queues/client";
 import type { AssetPaths } from "../sites";
 import type { CfWorkerInit } from "../worker";
+import { Plugin } from "esbuild";
 
 type Props = {
 	config: Config;
@@ -62,6 +63,7 @@ type Props = {
 	noBundle: boolean | undefined;
 	keepVars: boolean | undefined;
 	logpush: boolean | undefined;
+	plugins: Plugin[] | undefined;
 };
 
 type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
@@ -488,6 +490,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						targetConsumer: "publish",
 						local: false,
 						experimentalLocal: false,
+						plugins: props.plugins,
 					}
 			  );
 
