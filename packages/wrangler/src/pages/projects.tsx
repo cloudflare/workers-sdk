@@ -132,11 +132,9 @@ export async function CreateHandler({
 			} catch (err) {}
 		}
 
-		productionBranch = await prompt(
-			"Enter the production branch name:",
-			"text",
-			productionBranch ?? "production"
-		);
+		productionBranch = await prompt("Enter the production branch name:", {
+			defaultValue: productionBranch ?? "production",
+		});
 	}
 
 	if (!productionBranch) {

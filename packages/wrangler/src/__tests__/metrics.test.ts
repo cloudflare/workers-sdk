@@ -13,7 +13,7 @@ import {
 } from "../metrics/metrics-config";
 import { writeAuthConfigFile } from "../user";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { mockConfirm } from "./helpers/mock-dialogs";
+import { mockConfirm, clearDialogs } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw, mswSuccessOauthHandlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -37,6 +37,7 @@ describe("metrics", () => {
 	afterEach(() => {
 		global.SPARROW_SOURCE_KEY = ORIGINAL_SPARROW_SOURCE_KEY;
 		purgeConfigCaches();
+		clearDialogs();
 	});
 
 	describe("getMetricsDispatcher()", () => {
@@ -311,7 +312,7 @@ describe("metrics", () => {
 			});
 
 			it("should accept and store permission granting to send metrics if the user agrees", async () => {
-				const checkConfirmations = mockConfirm({
+				mockConfirm({
 					text: "Would you like to help improve Wrangler by sending usage metrics to Cloudflare?",
 					result: true,
 				});
@@ -323,14 +324,13 @@ describe("metrics", () => {
 				).toMatchObject({
 					enabled: true,
 				});
-				checkConfirmations();
 				expect((await readMetricsConfig()).permission).toMatchObject({
 					enabled: true,
 				});
 			});
 
 			it("should accept and store permission declining to send metrics if the user declines", async () => {
-				const checkConfirmations = mockConfirm({
+				mockConfirm({
 					text: "Would you like to help improve Wrangler by sending usage metrics to Cloudflare?",
 					result: false,
 				});
@@ -342,14 +342,13 @@ describe("metrics", () => {
 				).toMatchObject({
 					enabled: false,
 				});
-				checkConfirmations();
 				expect((await readMetricsConfig()).permission).toMatchObject({
 					enabled: false,
 				});
 			});
 
 			it("should ignore the config if the permission date is older than the current metrics date", async () => {
-				const checkConfirmations = mockConfirm({
+				mockConfirm({
 					text: "Would you like to help improve Wrangler by sending usage metrics to Cloudflare?",
 					result: false,
 				});
@@ -365,7 +364,6 @@ describe("metrics", () => {
 				).toMatchObject({
 					enabled: false,
 				});
-				checkConfirmations();
 				const { permission } = await readMetricsConfig();
 				expect(permission?.enabled).toBe(false);
 				// The date should be updated to today's date

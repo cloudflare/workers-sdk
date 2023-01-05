@@ -138,6 +138,7 @@
 		"@webcontainer/env": "^1.0.1",
 		"body-parser": "^1.20.0",
 		"chalk": "^2.4.2",
+		"cli-table3": "^0.6.3",
 		"clipboardy": "^3.0.0",
 		"cmd-shim": "^4.1.0",
 		"command-exists": "^1.2.9",

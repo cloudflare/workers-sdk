@@ -12,7 +12,7 @@ import {
 import { fetchListResult, fetchResult } from "../cfetch";
 import { printBindings } from "../config";
 import { createWorkerUploadForm } from "../create-worker-upload-form";
-import { confirm, fromDashMessagePrompt } from "../dialogs";
+import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
@@ -269,12 +269,14 @@ export default async function publish(props: Props): Promise<void> {
 				};
 			};
 
-			if (
-				(await fromDashMessagePrompt(
-					default_environment.script.last_deployed_from
-				)) === false
-			)
-				return;
+			if (default_environment.script.last_deployed_from === "dash") {
+				logger.warn(
+					`You are about to publish a Workers Service that was last published via the Cloudflare Dashboard.\nEdits that have been made via the dashboard will be overridden by your local code and config.`
+				);
+				if (!(await confirm("Would you like to continue?"))) {
+					return;
+				}
+			}
 		} catch (e) {
 			// code: 10090, message: workers.api.error.service_not_found
 			// is thrown from the above fetchResult on the first publish of a Worker

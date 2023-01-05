@@ -93,18 +93,17 @@ export const ApplyHandler = withConfig<BaseSqlExecuteArgs>(
 			render(<Text>✅ No migrations to apply!</Text>);
 			return;
 		}
-
-		if (isInteractive() && !CI.isCI()) {
-			const ok = await confirm(
-				`About to apply ${unappliedMigrations.length} migration(s)\n` +
-					"Your database may not be available to serve requests during the migration, continue?",
-				<Box flexDirection="column">
-					<Text>Migrations to be applied:</Text>
-					<Table data={unappliedMigrations} columns={["Name"]}></Table>
-				</Box>
-			);
-			if (!ok) return;
-		}
+		render(
+			<Box flexDirection="column">
+				<Text>Migrations to be applied:</Text>
+				<Table data={unappliedMigrations} columns={["Name"]}></Table>
+			</Box>
+		);
+		const ok = await confirm(
+			`About to apply ${unappliedMigrations.length} migration(s)
+Your database may not be available to serve requests during the migration, continue?`
+		);
+		if (!ok) return;
 
 		// don't backup prod db when applying migrations locally
 		if (!local) {
