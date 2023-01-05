@@ -39,6 +39,8 @@ jobs:
 
       - name: Run tests & collect coverage
         run: npm run test:ci -w wrangler
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
 
       - name: Report Code Coverage
         uses: codecov/codecov-action@v3

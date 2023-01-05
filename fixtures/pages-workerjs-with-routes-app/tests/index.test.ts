@@ -1,35 +1,33 @@
 import { fork } from "child_process";
 import * as path from "path";
 import { fetch } from "undici";
+import { describe, it, beforeAll, afterAll } from "vitest";
 import type { ChildProcess } from "child_process";
 
-describe("Pages Advanced Mode with custom _routes.json", () => {
+describe.concurrent("Pages Advanced Mode with custom _routes.json", () => {
 	let wranglerProcess: ChildProcess;
 	let ip: string;
 	let port: number;
-	let resolveReadyPromise: (value: unknown) => void;
-	const readyPromise = new Promise((resolve) => {
-		resolveReadyPromise = resolve;
-	});
 
-	beforeAll(() => {
-		wranglerProcess = fork(
-			path.join("..", "..", "packages", "wrangler", "bin", "wrangler.js"),
-			["pages", "dev", "public", "--port=0"],
-			{
-				stdio: ["inherit", "inherit", "inherit", "ipc"],
-				cwd: path.resolve(__dirname, ".."),
-			}
-		).on("message", (message) => {
-			const parsedMessage = JSON.parse(message.toString());
-			ip = parsedMessage.ip;
-			port = parsedMessage.port;
-			resolveReadyPromise(undefined);
+	beforeAll(async () => {
+		await new Promise((resolve) => {
+			wranglerProcess = fork(
+				path.join("..", "..", "packages", "wrangler", "bin", "wrangler.js"),
+				["pages", "dev", "public", "--port=0"],
+				{
+					stdio: ["inherit", "inherit", "inherit", "ipc"],
+					cwd: path.resolve(__dirname, ".."),
+				}
+			).on("message", (message) => {
+				const parsedMessage = JSON.parse(message.toString());
+				ip = parsedMessage.ip;
+				port = parsedMessage.port;
+				resolve(undefined);
+			});
 		});
 	});
 
 	afterAll(async () => {
-		await readyPromise;
 		await new Promise((resolve, reject) => {
 			wranglerProcess.once("exit", (code) => {
 				if (!code) {
@@ -42,8 +40,7 @@ describe("Pages Advanced Mode with custom _routes.json", () => {
 		});
 	});
 
-	it.concurrent("renders static pages", async () => {
-		await readyPromise;
+	it("renders static pages", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/`);
 		const text = await response.text();
 		expect(text).toContain(
@@ -51,9 +48,7 @@ describe("Pages Advanced Mode with custom _routes.json", () => {
 		);
 	});
 
-	it.concurrent("runs our _worker.js", async () => {
-		await readyPromise;
-
+	it("runs our _worker.js", async ({ expect }) => {
 		// matches /greeting/* include rule
 		let response = await fetch(`http://${ip}:${port}/greeting/hello`);
 		let text = await response.text();
