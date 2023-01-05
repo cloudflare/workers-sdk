@@ -261,6 +261,17 @@ interface EnvironmentInheritable {
 	logpush: boolean | undefined;
 }
 
+export type DurableObjectBindings = {
+	/** The name of the binding used to refer to the Durable Object */
+	name: string;
+	/** The exported class name of the Durable Object */
+	class_name: string;
+	/** The script where the Durable Object is defined (if it's external to this worker) */
+	script_name?: string;
+	/** The service environment of the script_name to bind to */
+	environment?: string;
+}[];
+
 /**
  * The `EnvironmentNonInheritable` interface declares all the configuration fields for an environment
  * that cannot be inherited from the top-level environment, and must be defined specifically.
@@ -303,16 +314,7 @@ interface EnvironmentNonInheritable {
 	 * @nonInheritable
 	 */
 	durable_objects: {
-		bindings: {
-			/** The name of the binding used to refer to the Durable Object */
-			name: string;
-			/** The exported class name of the Durable Object */
-			class_name: string;
-			/** The script where the Durable Object is defined (if it's external to this worker) */
-			script_name?: string;
-			/** The service environment of the script_name to bind to */
-			environment?: string;
-		}[];
+		bindings: DurableObjectBindings;
 	};
 
 	/**

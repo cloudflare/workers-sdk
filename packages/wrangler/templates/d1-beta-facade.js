@@ -238,4 +238,5 @@ var shim_default = {
 		return worker.trace(traces, getMaskedEnv(env), ctx);
 	},
 };
+__DO_REEXPORTS__;
 export { shim_default as default };

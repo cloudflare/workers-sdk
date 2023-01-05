@@ -9,6 +9,7 @@ import tmp from "tmp-promise";
 import createModuleCollector from "./module-collection";
 import { getBasePath, toUrlPath } from "./paths";
 import type { Config } from "./config";
+import type { DurableObjectBindings } from "./config/environment";
 import type { WorkerRegistry } from "./dev-registry";
 import type { Entry } from "./entry";
 import type { CfModule } from "./worker";
@@ -95,6 +96,7 @@ export async function bundleWorker(
 		serveAssetsFromWorker: boolean;
 		assets?: StaticAssetsConfig;
 		betaD1Shims?: string[];
+		doBindings: DurableObjectBindings;
 		jsxFactory?: string;
 		jsxFragment?: string;
 		rules: Config["rules"];
@@ -123,6 +125,7 @@ export async function bundleWorker(
 	const {
 		serveAssetsFromWorker,
 		betaD1Shims,
+		doBindings,
 		jsxFactory,
 		jsxFragment,
 		rules,
@@ -271,7 +274,13 @@ export async function bundleWorker(
 		Array.isArray(betaD1Shims) &&
 			betaD1Shims.length > 0 &&
 			((currentEntry: Entry) => {
-				return applyD1BetaFacade(currentEntry, tmpDir.path, betaD1Shims, local);
+				return applyD1BetaFacade(
+					currentEntry,
+					tmpDir.path,
+					betaD1Shims,
+					local,
+					doBindings
+				);
 			}),
 
 		// Middleware loader: to add middleware, we add the path to the middleware
@@ -784,7 +793,8 @@ async function applyD1BetaFacade(
 	entry: Entry,
 	tmpDirPath: string,
 	betaD1Shims: string[],
-	local: boolean
+	local: boolean,
+	doBindings: DurableObjectBindings
 ): Promise<Entry> {
 	const targetPath = path.join(tmpDirPath, "d1-beta-facade.entry.js");
 
@@ -801,6 +811,15 @@ async function applyD1BetaFacade(
 		define: {
 			__D1_IMPORTS__: JSON.stringify(betaD1Shims),
 			__LOCAL_MODE__: JSON.stringify(local),
+			__DO_REEXPORTS__: doBindings
+				// Don't shim anything not local to this worker
+				.filter((b) => !b.script_name)
+				// Reexport the DO classnames
+				.map(
+					(b) =>
+						`export const ${b.class_name} = maskDurableObjectDefinition(OTHER_EXPORTS.${b.class_name})`
+				)
+				.join(";\n"),
 		},
 		outfile: targetPath,
 	});

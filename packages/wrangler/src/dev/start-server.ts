@@ -27,6 +27,7 @@ import { startRemoteServer } from "./remote";
 import { validateDevProps } from "./validate-dev-props";
 
 import type { Config } from "../config";
+import type { DurableObjectBindings } from "../config/environment";
 import type { WorkerRegistry } from "../dev-registry";
 import type { Entry } from "../entry";
 import type { DevProps, DirectorySyncResult } from "./dev";
@@ -109,6 +110,7 @@ export async function startDevServer(
 			testScheduled: props.testScheduled,
 			local: props.local,
 			experimentalLocal: props.experimentalLocal,
+			doBindings: props.bindings.durable_objects?.bindings || [],
 		});
 
 		if (props.local) {
@@ -218,6 +220,7 @@ async function runEsbuild({
 	testScheduled,
 	local,
 	experimentalLocal,
+	doBindings,
 }: {
 	entry: Entry;
 	destination: string | undefined;
@@ -238,6 +241,7 @@ async function runEsbuild({
 	testScheduled?: boolean;
 	local: boolean;
 	experimentalLocal: boolean | undefined;
+	doBindings: DurableObjectBindings;
 }): Promise<EsbuildBundle | undefined> {
 	if (!destination) return;
 
@@ -279,6 +283,7 @@ async function runEsbuild({
 				testScheduled,
 				local,
 				experimentalLocal,
+				doBindings,
 		  });
 
 	return {
