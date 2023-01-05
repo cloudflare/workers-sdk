@@ -68,7 +68,7 @@ export const mswSuccessLastDeployment = [
 					messages: [],
 					errors: [],
 					result: {
-						default_environment: { script: { last_deployed_from: "dash" } },
+						default_environment: { script: { last_deployed_from: "wrangler" } },
 					},
 				})
 			);

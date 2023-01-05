@@ -1,8 +1,11 @@
-import { setMockResponse } from "./mock-cfetch";
+import { rest } from "msw";
+import { msw, createFetchResult } from "./msw";
 
 export function mockGetZoneFromHostRequest(host: string, zone?: string) {
-	setMockResponse("/zones", (_uri, _init, queryParams) => {
-		expect(queryParams.get("name")).toEqual(host);
-		return zone ? [{ id: zone }] : [];
-	});
+	msw.use(
+		rest.get("*/zones", (req, res, ctx) => {
+			expect(req.url.searchParams.get("name")).toEqual(host);
+			return res(ctx.json(createFetchResult(zone ? [{ id: zone }] : [])));
+		})
+	);
 }

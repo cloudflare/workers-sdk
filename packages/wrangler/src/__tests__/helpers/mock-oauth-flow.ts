@@ -8,7 +8,7 @@ export function mockGetMemberships(
 	accounts: { id: string; account: { id: string; name: string } }[]
 ) {
 	msw.use(
-		rest.get("/memberships", (req, res, ctx) => {
+		rest.get("*/memberships", (req, res, ctx) => {
 			return res.once(
 				ctx.json({
 					result: accounts,
@@ -23,7 +23,7 @@ export function mockGetMemberships(
 
 export function mockGetMembershipsFail() {
 	msw.use(
-		rest.get("/memberships", (req, res, ctx) => {
+		rest.get("*/memberships", (req, res, ctx) => {
 			return res.once(
 				ctx.json({
 					result: [],
@@ -80,7 +80,7 @@ export const mockOAuthFlow = () => {
 		});
 	};
 
-	//TODO: this can just handled in `mockOAuthServerCallback`
+	// Handled in `mockOAuthServerCallback`
 	const mockGrantAuthorization = ({
 		respondWith,
 	}: {
@@ -130,16 +130,13 @@ export const mockOAuthFlow = () => {
 		domain?: string;
 	}) => {
 		const outcome = {
-			actual: new Request("https://example.org"),
-			expected: new Request(`https://${domain}/oauth2/token`, {
-				method: "POST",
-			}),
+			actual: "https://example.org",
+			expected: `https://${domain}/oauth2/token`,
 		};
-
 		msw.use(
-			rest.post(outcome.expected.url, async (req, res, ctx) => {
+			rest.post(outcome.expected, async (req, res, ctx) => {
 				// TODO: update Miniflare typings to match full undici Request
-				outcome.actual = req as unknown as Request;
+				outcome.actual = req.url.toString();
 				return res.once(ctx.json(makeTokenResponse(respondWith)));
 			})
 		);
@@ -157,7 +154,7 @@ export const mockOAuthFlow = () => {
 		// If the domain relies upon Cloudflare Access, then a request to the domain
 		// will result in a redirect to the `cloudflareaccess.com` domain.
 		msw.use(
-			rest.get(`https://${domain}/`, (req, res, ctx) => {
+			rest.get(`https://${domain}/`, (_, res, ctx) => {
 				let status = 200;
 				let headers: Record<string, string> = {
 					"Content-Type": "application/json",
@@ -175,7 +172,6 @@ export const mockOAuthFlow = () => {
 		mockHttpServer,
 		mockDomainUsesAccess,
 		mockGrantAccessToken,
-		mockGrantAuthorization,
 		mockOAuthServerCallback,
 		mockRevokeAuthorization,
 	};
@@ -281,7 +277,7 @@ type MockTokenResponse =
 			error: ErrorType;
 	  };
 
-const makeTokenResponse = (partialResponse: MockTokenResponse): string => {
+const makeTokenResponse = (partialResponse: MockTokenResponse) => {
 	let fullResponse: MockTokenResponse;
 
 	if (partialResponse === "ok") {
@@ -299,5 +295,5 @@ const makeTokenResponse = (partialResponse: MockTokenResponse): string => {
 		fullResponse = partialResponse;
 	}
 
-	return JSON.stringify(fullResponse);
+	return fullResponse;
 };

@@ -1,7 +1,12 @@
-import { setMockResponse } from "./mock-cfetch";
+import { rest } from "msw";
+import { createFetchResult, msw } from "./msw";
 
 export function mockCollectKnownRoutesRequest(
 	routes: { pattern: string; script: string }[]
 ) {
-	setMockResponse(`/zones/:zoneId/workers/routes`, "GET", () => routes);
+	msw.use(
+		rest.get(`*/zones/:zoneId/workers/routes`, (_, res, ctx) =>
+			res.once(ctx.json(createFetchResult(routes)))
+		)
+	);
 }
