@@ -308,16 +308,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	const customDomainsOnly: Array<RouteObject> = [];
 	for (const route of routes) {
 		if (typeof route !== "string" && route.custom_domain) {
-			if (route.pattern.includes("*")) {
-				throw new Error(
-					`Cannot use "${route.pattern}" as a Custom Domain; wildcard operators (*) are not allowed`
-				);
-			}
-			if (route.pattern.includes("/")) {
-				throw new Error(
-					`Cannot use "${route.pattern}" as a Custom Domain; paths are not allowed`
-				);
-			}
+			verifyCustomDomainPattern(route.pattern);
 			customDomainsOnly.push(route);
 		} else {
 			routesOnly.push(route);
@@ -980,6 +971,22 @@ async function publishRoutesFallback(
 	}
 
 	return deployedRoutes;
+}
+
+export function verifyCustomDomainPattern(pattern: string | undefined) {
+	if (pattern === undefined) {
+		throw new Error(`Custom Domain pattern is undefined`);
+	}
+	if (pattern.includes("*")) {
+		throw new Error(
+			`Cannot use "${pattern}" as a Custom Domain; wildcard operators (*) are not allowed`
+		);
+	}
+	if (pattern.includes("/")) {
+		throw new Error(
+			`Cannot use "${pattern}" as a Custom Domain; paths are not allowed`
+		);
+	}
 }
 
 function isAuthenticationError(e: unknown): e is ParseError {

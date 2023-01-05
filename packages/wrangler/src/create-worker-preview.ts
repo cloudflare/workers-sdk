@@ -4,7 +4,9 @@ import { fetchResult } from "./cfetch";
 import { createWorkerUploadForm } from "./create-worker-upload-form";
 import { logger } from "./logger";
 import { parseJSON } from "./parse";
+import { verifyCustomDomainPattern } from "./publish/publish";
 import { getAccessToken } from "./user/access";
+import type { Route } from "./config/environment";
 import type { CfAccount, CfWorkerContext, CfWorkerInit } from "./worker";
 import type { HeadersInit } from "undici";
 
@@ -109,6 +111,15 @@ function randomId(): string {
 	});
 }
 
+// Return hostname if provided route is custom domain
+function customDomain(route: Route): string | undefined {
+	if (typeof route !== "string" && route.custom_domain) {
+		return route.pattern;
+	}
+
+	return undefined;
+}
+
 /**
  * Generates a preview session token.
  */
@@ -118,14 +129,27 @@ export async function createPreviewSession(
 	abortSignal: AbortSignal
 ): Promise<CfPreviewSession> {
 	const { accountId } = account;
-	const initUrl = ctx.zone
-		? `/zones/${ctx.zone}/workers/edge-preview`
-		: `/accounts/${accountId}/workers/subdomain/edge-preview`;
+	let initUrl;
+	const queryParams = new URLSearchParams();
+
+	if (ctx.zone) {
+		initUrl = `/zones/${ctx.zone}/workers/edge-preview`;
+		for (const route of ctx.routes ?? []) {
+			const hostName = customDomain(route);
+			verifyCustomDomainPattern(hostName);
+			if (hostName) {
+				queryParams.set("custom_domain", hostName);
+				break;
+			}
+		}
+	} else {
+		initUrl = `/accounts/${accountId}/workers/subdomain/edge-preview`;
+	}
 
 	const { exchange_url } = await fetchResult<{ exchange_url: string }>(
 		initUrl,
 		undefined,
-		undefined,
+		queryParams,
 		abortSignal
 	);
 
