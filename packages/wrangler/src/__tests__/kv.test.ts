@@ -2,7 +2,7 @@ import { writeFileSync } from "node:fs";
 import { rest } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { mockConfirm } from "./helpers/mock-dialogs";
+import { mockConfirm, clearDialogs } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { mockProcess } from "./helpers/mock-process";
 import { msw } from "./helpers/msw";
@@ -24,6 +24,9 @@ describe("wrangler", () => {
 	const { setIsTTY } = useMockIsTTY();
 	beforeEach(() => {
 		setIsTTY(true);
+	});
+	afterEach(() => {
+		clearDialogs();
 	});
 	describe("kv:namespace", () => {
 		describe("create", () => {

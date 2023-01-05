@@ -3,7 +3,7 @@ import { rest } from "msw";
 import { Headers, Request } from "undici";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { mockConfirm } from "./helpers/mock-dialogs";
+import { mockConfirm, clearDialogs } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw, mswSucessScriptHandlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -28,6 +28,7 @@ describe("tail", () => {
 	afterEach(() => {
 		mockWebSockets.forEach((ws) => ws.close());
 		mockWebSockets.splice(0);
+		clearDialogs();
 	});
 
 	/**

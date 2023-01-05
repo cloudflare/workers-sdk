@@ -3,7 +3,7 @@ import { fetchListResult, fetchResult } from "./cfetch";
 import { logger } from "./logger";
 import { getAPIToken, getAuthFromEnv, getScopes } from "./user";
 
-export async function whoami(): Promise<void> {
+export async function whoami() {
 	logger.log("Getting User settings...");
 	const user = await getUserInfo();
 	if (user === undefined) {

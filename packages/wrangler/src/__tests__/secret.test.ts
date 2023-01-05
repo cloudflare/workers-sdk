@@ -4,7 +4,7 @@ import * as TOML from "@iarna/toml";
 import { rest } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
+import { mockConfirm, mockPrompt, clearDialogs } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 
 import { useMockStdin } from "./helpers/mock-stdin";
@@ -45,6 +45,9 @@ describe("wrangler secret", () => {
 	runInTempDir();
 	mockAccountId();
 	mockApiToken();
+	afterEach(() => {
+		clearDialogs();
+	});
 
 	describe("put", () => {
 		function mockPutRequest(

@@ -13,7 +13,7 @@ import {
 } from "../metrics/metrics-config";
 import { writeAuthConfigFile } from "../user";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { mockConfirm } from "./helpers/mock-dialogs";
+import { mockConfirm, clearDialogs } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw, mswSuccessOauthHandlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -37,6 +37,7 @@ describe("metrics", () => {
 	afterEach(() => {
 		global.SPARROW_SOURCE_KEY = ORIGINAL_SPARROW_SOURCE_KEY;
 		purgeConfigCaches();
+		clearDialogs();
 	});
 
 	describe("getMetricsDispatcher()", () => {
