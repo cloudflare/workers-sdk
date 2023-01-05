@@ -207,25 +207,40 @@ function InteractiveDevSession(props: DevProps) {
 	return (
 		<>
 			<DevSession {...props} local={toggles.local} onReady={onReady} />
-			<Box borderStyle="round" paddingLeft={1} paddingRight={1}>
-				<Text bold={true}>[b]</Text>
-				<Text> open a browser, </Text>
-				{props.inspect ? (
-					<>
-						<Text bold={true}>[d]</Text>
-						<Text> open Devtools, </Text>
-					</>
-				) : null}
-				{!props.forceLocal ? (
-					<>
-						<Text bold={true}>[l]</Text>
-						<Text> {toggles.local ? "turn off" : "turn on"} local mode, </Text>
-					</>
-				) : null}
-				<Text bold={true}>[c]</Text>
-				<Text> clear console, </Text>
-				<Text bold={true}>[x]</Text>
-				<Text> to exit</Text>
+			<Box
+				borderStyle="round"
+				paddingLeft={1}
+				paddingRight={1}
+				flexDirection="column"
+			>
+				<Box>
+					<Text bold={true}>[b]</Text>
+					<Text> open a browser</Text>
+				</Box>
+				<Box>
+					{props.inspect ? (
+						<>
+							<Text bold={true}>[d]</Text>
+							<Text> open Devtools</Text>
+						</>
+					) : null}
+				</Box>
+				<Box>
+					{!props.forceLocal ? (
+						<>
+							<Text bold={true}>[l]</Text>
+							<Text> {toggles.local ? "turn off" : "turn on"} local mode</Text>
+						</>
+					) : null}
+				</Box>
+				<Box>
+					<Text bold={true}>[c]</Text>
+					<Text> clear console</Text>
+				</Box>
+				<Box>
+					<Text bold={true}>[x]</Text>
+					<Text> to exit</Text>
+				</Box>
 			</Box>
 		</>
 	);
