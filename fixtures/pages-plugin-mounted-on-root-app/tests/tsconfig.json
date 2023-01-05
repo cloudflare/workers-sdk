@@ -1,7 +1,7 @@
 {
 	"extends": "../tsconfig.json",
 	"compilerOptions": {
-		"types": ["node", "vitest"]
+		"types": ["node"]
 	},
 	"include": ["**/*.ts", "../../../node-types.d.ts"]
 }
