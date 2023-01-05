@@ -6,7 +6,7 @@ import type { ChildProcess } from "child_process";
 
 const isWindows = process.platform === "win32";
 
-describe("Remix", () => {
+describe.concurrent("Remix", () => {
 	let wranglerProcess: ChildProcess;
 	let ip: string;
 	let port: number;
@@ -46,7 +46,7 @@ describe("Remix", () => {
 		});
 	});
 
-	it.concurrent("renders", async ({ expect }) => {
+	it("renders", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/`);
 		const text = await response.text();
 		expect(text).toContain("Welcome to Remix");

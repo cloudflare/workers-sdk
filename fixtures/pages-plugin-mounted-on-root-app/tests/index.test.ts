@@ -4,7 +4,7 @@ import { fetch } from "undici";
 import { describe, it, beforeAll, afterAll } from "vitest";
 import type { ChildProcess } from "child_process";
 
-describe("Pages Functions", () => {
+describe.concurrent("Pages Functions", () => {
 	let wranglerProcess: ChildProcess;
 	let ip: string;
 	let port: number;
@@ -40,7 +40,7 @@ describe("Pages Functions", () => {
 		});
 	});
 
-	it.concurrent("mounts a plugin correctly at root", async ({ expect }) => {
+	it("mounts a plugin correctly at root", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/api/v1/instance`);
 		const text = await response.text();
 		expect(text).toMatchInlineSnapshot(`"Response from a nested folder"`);

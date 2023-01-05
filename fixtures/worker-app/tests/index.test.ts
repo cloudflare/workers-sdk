@@ -4,7 +4,7 @@ import { fetch } from "undici";
 import { describe, it, beforeAll, afterAll } from "vitest";
 import type { ChildProcess } from "child_process";
 
-describe("'wrangler dev' correctly renders pages", () => {
+describe.concurrent("'wrangler dev' correctly renders pages", () => {
 	let wranglerProcess: ChildProcess;
 	let ip: string;
 	let port: number;
@@ -41,7 +41,7 @@ describe("'wrangler dev' correctly renders pages", () => {
 		});
 	});
 
-	it.concurrent("renders ", async ({ expect }) => {
+	it("renders ", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/`);
 		const text = await response.text();
 		expect(text).toContain(`http://${ip}:${port}/`);

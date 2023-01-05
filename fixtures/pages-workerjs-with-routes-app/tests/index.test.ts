@@ -4,7 +4,7 @@ import { fetch } from "undici";
 import { describe, it, beforeAll, afterAll } from "vitest";
 import type { ChildProcess } from "child_process";
 
-describe("Pages Advanced Mode with custom _routes.json", () => {
+describe.concurrent("Pages Advanced Mode with custom _routes.json", () => {
 	let wranglerProcess: ChildProcess;
 	let ip: string;
 	let port: number;
@@ -40,7 +40,7 @@ describe("Pages Advanced Mode with custom _routes.json", () => {
 		});
 	});
 
-	it.concurrent("renders static pages", async ({ expect }) => {
+	it("renders static pages", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/`);
 		const text = await response.text();
 		expect(text).toContain(
@@ -48,7 +48,7 @@ describe("Pages Advanced Mode with custom _routes.json", () => {
 		);
 	});
 
-	it.concurrent("runs our _worker.js", async ({ expect }) => {
+	it("runs our _worker.js", async ({ expect }) => {
 		// matches /greeting/* include rule
 		let response = await fetch(`http://${ip}:${port}/greeting/hello`);
 		let text = await response.text();
