@@ -3,10 +3,10 @@
 		"target": "ES2020",
 		"esModuleInterop": true,
 		"module": "CommonJS",
-		"lib": ["ES2020", "DOM"],
+		"lib": ["ES2020"],
 		"types": ["node", "vitest"],
 		"moduleResolution": "node",
 		"noEmit": true
 	},
-	"include": ["tests"]
+	"include": ["tests", "../../node-types.d.ts"]
 }
