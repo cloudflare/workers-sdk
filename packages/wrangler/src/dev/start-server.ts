@@ -33,9 +33,9 @@ import type { DevProps, DirectorySyncResult } from "./dev";
 import type { LocalProps } from "./local";
 import type { EsbuildBundle } from "./use-esbuild";
 import type { Miniflare as Miniflare3Type } from "@miniflare/tre";
+import type { Plugin } from "esbuild";
 
 import type { ChildProcess } from "node:child_process";
-import { Plugin } from "esbuild";
 
 export async function startDevServer(
 	props: DevProps & {
@@ -283,7 +283,7 @@ async function runEsbuild({
 				testScheduled,
 				local,
 				experimentalLocal,
-				plugins
+				plugins,
 		  });
 
 	return {

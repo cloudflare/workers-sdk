@@ -31,7 +31,7 @@ import type { Entry } from "../entry";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { AssetPaths } from "../sites";
 import type { CfWorkerInit } from "../worker";
-import { Plugin } from "esbuild";
+import type { Plugin } from "esbuild";
 
 /**
  * This hooks establishes a connection with the dev registry,

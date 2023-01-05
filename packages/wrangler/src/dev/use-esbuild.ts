@@ -202,6 +202,7 @@ export function useEsbuild({
 		targetConsumer,
 		testScheduled,
 		experimentalLocal,
+		plugins,
 	]);
 	return bundle;
 }

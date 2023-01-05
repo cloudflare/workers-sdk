@@ -16,6 +16,7 @@ import * as metrics from "./metrics";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
 import { getAccountFromCache, loginOrRefreshIfRequired } from "./user";
 import { collectKeyValues } from "./utils/collectKeyValues";
+import { parseEsbuildPlugins } from "./utils/parseEsbuildPlugins";
 import { identifyD1BindingsAsBeta } from "./worker";
 import { getHostFromRoute, getZoneForRoute, getZoneIdFromHost } from "./zones";
 import {
@@ -33,9 +34,8 @@ import type { Route } from "./config/environment";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type { CfWorkerInit } from "./worker";
 import type { CommonYargsOptions } from "./yargs-types";
+import type { Plugin } from "esbuild";
 import type { Argv, ArgumentsCamelCase } from "yargs";
-import { Plugin } from "esbuild";
-import { parseEsbuildPlugins } from "./utils/parseEsbuildPlugins";
 
 interface DevArgs {
 	config?: string;
@@ -82,7 +82,7 @@ interface DevArgs {
 	logPrefix?: string;
 	showInteractiveDevSession?: boolean;
 	"test-scheduled"?: boolean;
-	"esbuild-plugins": string[] | undefined;
+	"esbuild-plugins"?: string[] | undefined;
 }
 
 export function devOptions(yargs: Argv<CommonYargsOptions>): Argv<DevArgs> {
@@ -429,7 +429,7 @@ export async function startDev(args: StartDevOptions) {
 			});
 		}
 
-		const plugins: Plugin[] = await parseEsbuildPlugins(args, config)
+		const plugins: Plugin[] = await parseEsbuildPlugins(args, config);
 
 		const {
 			entry,
@@ -662,7 +662,7 @@ export async function startApiDev(args: StartDevOptions) {
 			experimentalLocal: args.experimentalLocal,
 			experimentalLocalRemoteKv: args.experimentalLocalRemoteKv,
 			disableDevRegistry: args.disableDevRegistry ?? false,
-			plugins
+			plugins,
 		});
 	}
 

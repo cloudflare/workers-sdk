@@ -12,15 +12,15 @@ import * as metrics from "../metrics";
 import { getAssetPaths, getSiteAssetPaths } from "../sites";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
+import { parseEsbuildPlugins } from "../utils/parseEsbuildPlugins";
 import publish from "./publish";
 import type { ConfigPath } from "../index";
 import type {
 	CommonYargsOptions,
 	YargsOptionsToInterface,
 } from "../yargs-types";
+import type { Plugin } from "esbuild";
 import type { Argv, ArgumentsCamelCase } from "yargs";
-import { Plugin } from "esbuild";
-import { parseEsbuildPlugins } from "../utils/parseEsbuildPlugins";
 
 export function publishOptions(yargs: Argv<CommonYargsOptions>) {
 	return (
@@ -180,7 +180,7 @@ export function publishOptions(yargs: Argv<CommonYargsOptions>) {
 			})
 			.option("esbuild-plugins", {
 				describe:
-				"Array of esbuild plugins to use when bundling with the built in bundling system. Note: if you want to pass configuration options to the plugin, it is recommended to make a file exporting a function that returns the plugin with the configuration options specified.",
+					"Array of esbuild plugins to use when bundling with the built in bundling system. Note: if you want to pass configuration options to the plugin, it is recommended to make a file exporting a function that returns the plugin with the configuration options specified.",
 				type: "string",
 				array: true,
 				hidden: true,

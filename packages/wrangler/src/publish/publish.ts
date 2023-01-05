@@ -35,7 +35,7 @@ import type { Entry } from "../entry";
 import type { PutConsumerBody } from "../queues/client";
 import type { AssetPaths } from "../sites";
 import type { CfWorkerInit } from "../worker";
-import { Plugin } from "esbuild";
+import type { Plugin } from "esbuild";
 
 type Props = {
 	config: Config;
