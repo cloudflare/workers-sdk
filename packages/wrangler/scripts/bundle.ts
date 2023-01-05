@@ -1,3 +1,4 @@
+import fs from "node:fs/promises";
 import path from "node:path";
 import { build } from "esbuild";
 import { EXTERNAL_DEPENDENCIES } from "./deps";
@@ -55,6 +56,18 @@ async function buildMain(flags: BuildFlags = {}) {
 		},
 		watch: flags.watch ? watchLogger("./wrangler-dist") : false,
 	});
+
+	// Copy `yoga-layout` `.wasm` file
+	const yogaLayoutEntrypoint = require.resolve("yoga-layout");
+	const wasmSrc = path.resolve(
+		yogaLayoutEntrypoint,
+		"..",
+		"..",
+		"build",
+		"wasm-sync.wasm"
+	);
+	const wasmDst = path.resolve(outdir, "wasm-sync.wasm");
+	await fs.copyFile(wasmSrc, wasmDst);
 }
 
 async function buildMiniflareCLI(flags: BuildFlags = {}) {
