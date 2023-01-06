@@ -1,5 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { Text } from "ink";
+import SelectInput from "ink-select-input";
 import React, { useState, useEffect, useRef } from "react";
 import { useErrorHandler } from "react-error-boundary";
 import { printBundleSize } from "../bundle-reporter";
@@ -12,7 +14,6 @@ import { logger } from "../logger";
 import { startPreviewServer, usePreviewServer } from "../proxy";
 import { syncAssets } from "../sites";
 import {
-	ChooseAccount,
 	getAccountChoices,
 	requireApiToken,
 	saveAccountToCache,
@@ -600,4 +601,30 @@ function getWorkerAccountAndContext(props: {
 	};
 
 	return { workerAccount, workerContext };
+}
+
+/**
+ * A component that allows the user to select from a list of available accounts.
+ */
+function ChooseAccount(props: {
+	accounts: ChooseAccountItem[];
+	onSelect: (account: { name: string; id: string }) => void;
+	onError: (error: Error) => void;
+}) {
+	return (
+		<>
+			<Text bold>Select an account from below:</Text>
+			<SelectInput
+				items={props.accounts.map((item) => ({
+					key: item.id,
+					label: item.name,
+					value: item,
+				}))}
+				onSelect={(item) => {
+					logger.log(`Using account: "${item.value.name} - ${item.value.id}"`);
+					props.onSelect({ id: item.value.id, name: item.value.name });
+				}}
+			/>
+		</>
+	);
 }
