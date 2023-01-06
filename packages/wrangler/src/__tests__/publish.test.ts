@@ -4374,7 +4374,7 @@ addEventListener('fetch', event => {});`
 		`);
 			});
 
-			it.only("should use a script's current migration tag when publishing migrations", async () => {
+			it("should use a script's current migration tag when publishing migrations", async () => {
 				writeWranglerToml({
 					durable_objects: {
 						bindings: [
@@ -4393,14 +4393,16 @@ addEventListener('fetch', event => {});`
 				);
 				mockSubDomainRequest();
 				mockServiceScriptData({
-					script: { id: "test-name", migration_tag: "v1" },
+					script: { id: "test-name", migration_tag: "v2" },
 				});
 				mockUploadWorkerRequest({
 					legacyEnv: false,
 					expectedMigrations: {
-						old_tag: "v1",
 						new_tag: "v2",
 						steps: [
+							{
+								new_classes: ["SomeClass"],
+							},
 							{
 								new_classes: ["SomeOtherClass"],
 							},
@@ -4421,7 +4423,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined",
+			Current Deployment ID: Galaxy-Class",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			    - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in
@@ -6602,6 +6604,7 @@ addEventListener('fetch', event => {});`
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
 			await runWrangler("publish");
+
 			expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -6617,13 +6620,16 @@ addEventListener('fetch', event => {});`
 		});
 
 		it("should print the bundle size, with API errors", async () => {
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			// Override PUT call to error out from previous helper functions
 			msw.use(
 				rest.put(
 					"*/accounts/:accountId/workers/scripts/:scriptName",
-					(req, res, ctx) => {
+					(_, res, ctx) => {
 						return res(
 							ctx.json(
-								createFetchResult({}, false, [
+								createFetchResult(null, false, [
 									{
 										code: 11337,
 										message:
@@ -6656,11 +6662,11 @@ addEventListener('fetch', event => {});`
         },
       };`
 			);
+
 			writeWranglerToml({
 				main: "index.js",
 			});
-			mockSubDomainRequest();
-			mockUploadWorkerRequest();
+
 			await expect(runWrangler("publish")).rejects.toMatchInlineSnapshot(
 				`[ParseError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
 			);
@@ -6685,19 +6691,9 @@ addEventListener('fetch', event => {});`
 		});
 
 		test("should check biggest dependencies when upload fails with script size error", async () => {
-			fs.writeFileSync("dependency.js", `export const thing = "a string dep";`);
-
-			fs.writeFileSync(
-				"index.js",
-				`import { thing } from "./dependency";
-
-        export default {
-          async fetch() {
-            return new Response('response plus ' + thing);
-          }
-        }`
-			);
-
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			// Override PUT call to error out from previous helper functions
 			msw.use(
 				rest.put(
 					"*/accounts/:accountId/workers/scripts/:scriptName",
@@ -6716,14 +6712,27 @@ addEventListener('fetch', event => {});`
 				)
 			);
 
+			fs.writeFileSync("dependency.js", `export const thing = "a string dep";`);
+
+			fs.writeFileSync(
+				"index.js",
+				`import { thing } from "./dependency";
+
+        export default {
+          async fetch() {
+            return new Response('response plus ' + thing);
+          }
+        }`
+			);
+
 			writeWranglerToml({
 				main: "index.js",
 			});
-			mockSubDomainRequest();
-			mockUploadWorkerRequest();
+
 			await expect(runWrangler("publish")).rejects.toMatchInlineSnapshot(
 				`[ParseError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
 			);
+
 			expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -6750,19 +6759,9 @@ addEventListener('fetch', event => {});`
 		});
 
 		test("should check biggest dependencies when upload fails with script startup error", async () => {
-			fs.writeFileSync("dependency.js", `export const thing = "a string dep";`);
-
-			fs.writeFileSync(
-				"index.js",
-				`import { thing } from "./dependency";
-
-        export default {
-          async fetch() {
-            return new Response('response plus ' + thing);
-          }
-        }`
-			);
-
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			// Override PUT call to error out from previous helper functions
 			msw.use(
 				rest.put(
 					"*/accounts/:accountId/workers/scripts/:scriptName",
@@ -6780,12 +6779,23 @@ addEventListener('fetch', event => {});`
 					}
 				)
 			);
+			fs.writeFileSync("dependency.js", `export const thing = "a string dep";`);
+
+			fs.writeFileSync(
+				"index.js",
+				`import { thing } from "./dependency";
+
+        export default {
+          async fetch() {
+            return new Response('response plus ' + thing);
+          }
+        }`
+			);
 
 			writeWranglerToml({
 				main: "index.js",
 			});
-			mockSubDomainRequest();
-			mockUploadWorkerRequest();
+
 			await expect(runWrangler("publish")).rejects.toMatchInlineSnapshot(
 				`[ParseError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
 			);
@@ -7774,7 +7784,7 @@ function mockServiceScriptData(options: {
 			msw.use(
 				rest.get(
 					"*/accounts/:accountId/workers/services/:scriptName/environments/:envName",
-					(req, res, ctx) => {
+					(_, res, ctx) => {
 						return res.once(
 							ctx.json({
 								success: false,
