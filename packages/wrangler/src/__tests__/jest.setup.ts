@@ -1,5 +1,4 @@
 import fetchMock from "jest-fetch-mock";
-import { confirm, prompt } from "../dialogs";
 import { MockWebSocket } from "./helpers/mock-web-socket";
 import { msw } from "./helpers/msw";
 

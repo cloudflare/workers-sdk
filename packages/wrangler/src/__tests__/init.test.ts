@@ -4,7 +4,6 @@ import * as TOML from "@iarna/toml";
 import { execa, execaSync } from "execa";
 import { rest } from "msw";
 import { parseConfigFileTextToJson } from "typescript";
-import { FormData } from "undici";
 import { version as wranglerVersion } from "../../package.json";
 import { getPackageManager } from "../package-manager";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
