@@ -162,7 +162,9 @@ Your database may not be available to serve requests during the migration, conti
 				const err = e as ParseError;
 
 				success = false;
-				errorNotes = err.notes.map((msg) => msg.text);
+				errorNotes = err.notes?.map((msg) => msg.text) ?? [
+					err.message ?? err.toString(),
+				];
 			}
 
 			migration.Status = success ? "✅" : "❌";
