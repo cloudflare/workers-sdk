@@ -1,8 +1,9 @@
 import { format } from "node:util";
+import chalk from "chalk";
+import CLITable from "cli-table3";
 import { formatMessagesSync } from "esbuild";
 import { getEnvironmentVariableFactory } from "./environment-variables/factory";
 import type { BuildFailure } from "esbuild";
-
 export const LOGGER_LEVELS = {
 	none: -1,
 	error: 0,
@@ -28,6 +29,8 @@ const getLogLevelFromEnv = getEnvironmentVariableFactory({
 	defaultValue: () => "log",
 });
 
+export type TableRow<Keys extends string> = Record<Keys, string>;
+
 class Logger {
 	constructor() {}
 
@@ -39,6 +42,15 @@ class Logger {
 	log = (...args: unknown[]) => this.doLog("log", args);
 	warn = (...args: unknown[]) => this.doLog("warn", args);
 	error = (...args: unknown[]) => this.doLog("error", args);
+	table<Keys extends string>(data: TableRow<Keys>[]) {
+		const keys: Keys[] =
+			data.length === 0 ? [] : (Object.keys(data[0]) as Keys[]);
+		const t = new CLITable({
+			head: keys.map((k) => chalk.bold.blue(k)),
+		});
+		t.push(...data.map((row) => keys.map((k) => row[k])));
+		return this.doLog("log", [t.toString()]);
+	}
 
 	private doLog(messageLevel: Exclude<LoggerLevel, "none">, args: unknown[]) {
 		if (LOGGER_LEVELS[this.loggerLevel] >= LOGGER_LEVELS[messageLevel]) {

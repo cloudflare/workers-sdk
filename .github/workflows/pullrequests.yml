@@ -41,6 +41,8 @@ jobs:
 
       - name: Check for errors
         run: npm run check
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
 
   test:
     name: "Tests"

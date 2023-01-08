@@ -3,8 +3,6 @@ import path from "path";
 import { fetchResult } from "./cfetch";
 import { findWranglerToml, readConfig } from "./config";
 import { confirm } from "./dialogs";
-import { CI } from "./is-ci";
-import isInteractive from "./is-interactive";
 import { deleteKVNamespace, listKVNamespaces } from "./kv/helpers";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
@@ -71,12 +69,9 @@ export async function deleteHandler(args: DeleteArgs) {
 
 	assert(accountId, "Missing accountId");
 
-	let confirmed = true;
-	if (isInteractive() || !CI.isCI()) {
-		confirmed = await confirm(
-			`Are you sure you want to delete ${scriptName}? This action cannot be undone.`
-		);
-	}
+	const confirmed = await confirm(
+		`Are you sure you want to delete ${scriptName}? This action cannot be undone.`
+	);
 
 	if (confirmed) {
 		await fetchResult(

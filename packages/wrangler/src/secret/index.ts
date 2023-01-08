@@ -58,7 +58,7 @@ export const secret = (secretYargs: Argv<CommonYargsOptions>) => {
 				const isInteractive = process.stdin.isTTY;
 				const secretValue = trimTrailingWhitespace(
 					isInteractive
-						? await prompt("Enter a secret value:", "password")
+						? await prompt("Enter a secret value:", { isSecret: true })
 						: await readFromStdin()
 				);
 

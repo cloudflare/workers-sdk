@@ -1,18 +1,21 @@
 import fs from "node:fs";
 import path from "node:path";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { mockConfirm, clearConfirmMocks } from "./helpers/mock-dialogs";
+import { mockConfirm } from "./helpers/mock-dialogs";
+import { useMockIsTTY } from "./helpers/mock-istty";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 
 describe("generate", () => {
 	runInTempDir();
+	const { setIsTTY } = useMockIsTTY();
 	const std = mockConsoleMethods();
+	beforeEach(() => {
+		setIsTTY(true);
+	});
 
 	describe("cli functionality", () => {
-		afterEach(() => {
-			clearConfirmMocks();
-		});
+		afterEach(() => {});
 
 		it("defers to `wrangler init` when no template is given", async () => {
 			mockConfirm(

@@ -9,11 +9,13 @@ import React from "react";
 import { fetchResult } from "../cfetch";
 import { withConfig } from "../config";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
-import { confirm, logDim } from "../dialogs";
+import { confirm } from "../dialogs";
 import { logger } from "../logger";
+import { readFileSync } from "../parse";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
 import * as options from "./options";
+import splitSqlQuery from "./splitter";
 import {
 	d1BetaWarning,
 	getDatabaseByNameOrBinding,
@@ -21,8 +23,6 @@ import {
 } from "./utils";
 import type { Config, ConfigFields, DevConfig, Environment } from "../config";
 import type { Database } from "./types";
-import type splitSqlQuery from "@databases/split-sql-query";
-import type { SQL, SQLQuery } from "@databases/sql";
 import type { Statement as StatementType } from "@miniflare/d1";
 import type { createSQLiteDB as createSQLiteDBType } from "@miniflare/shared";
 import type { Argv } from "yargs";
@@ -103,19 +103,15 @@ export async function executeSql(
 	file?: string,
 	command?: string
 ) {
-	const { parser, splitter } = await loadSqlUtils();
-
-	const sql = file
-		? parser.file(file)
-		: command
-		? parser.__dangerous__rawValue(command)
-		: null;
+	const sql = file ? readFileSync(file) : command;
 
 	if (!sql) throw new Error(`Error: must provide --command or --file.`);
 	if (persistTo && !local)
 		throw new Error(`Error: can't use --persist-to without --local`);
 
-	const queries = splitSql(splitter, sql);
+	logger.log(`🌀 Mapping SQL input into an array of statements`);
+	const queries = splitSqlQuery(sql);
+
 	if (file && sql) {
 		if (queries[0].startsWith("SQLite format 3")) {
 			//TODO: update this error to recommend using `wrangler d1 restore` when it exists
@@ -211,7 +207,7 @@ async function executeLocally(
 	const [{ Statement }, { createSQLiteDB }] =
 		await npxImport<MiniflareNpxImportTypes>(
 			["@miniflare/d1", "@miniflare/shared"],
-			logDim
+			logger.log
 		);
 
 	if (!existsSync(dbDir) && shouldPrompt) {
@@ -309,18 +305,6 @@ function logResult(r: QueryResult | QueryResult[]) {
 	);
 }
 
-function splitSql(splitter: (query: SQLQuery) => SQLQuery[], sql: SQLQuery) {
-	// We have no interpolations, so convert everything to text
-	logger.log(`🌀 Mapping SQL input into an array of statements`);
-	return splitter(sql).map(
-		(q) =>
-			q.format({
-				escapeIdentifier: (_) => "",
-				formatValue: (_, __) => ({ placeholder: "", value: "" }),
-			}).text
-	);
-}
-
 function batchSplit(queries: string[]) {
 	logger.log(`🌀 Parsing ${queries.length} statements`);
 	const num_batches = Math.ceil(queries.length / QUERY_LIMIT);
@@ -336,17 +320,4 @@ function batchSplit(queries: string[]) {
 		);
 	}
 	return batches;
-}
-
-async function loadSqlUtils() {
-	const [
-		{ default: parser },
-		{
-			// No idea why this is doubly-nested, see https://github.com/ForbesLindesay/atdatabases/issues/255
-			default: { default: splitter },
-		},
-	] = await npxImport<
-		[{ default: SQL }, { default: { default: typeof splitSqlQuery } }]
-	>(["@databases/sql@3.2.0", "@databases/split-sql-query@1.0.3"], logDim);
-	return { parser, splitter };
 }

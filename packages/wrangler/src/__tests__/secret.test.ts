@@ -4,12 +4,9 @@ import * as TOML from "@iarna/toml";
 import { rest } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import {
-	mockConfirm,
-	mockPrompt,
-	clearConfirmMocks,
-	clearPromptMocks,
-} from "./helpers/mock-dialogs";
+import { mockConfirm, mockPrompt, clearDialogs } from "./helpers/mock-dialogs";
+import { useMockIsTTY } from "./helpers/mock-istty";
+
 import { useMockStdin } from "./helpers/mock-stdin";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -44,14 +41,12 @@ export function mockGetMemberships(
 
 describe("wrangler secret", () => {
 	const std = mockConsoleMethods();
-
+	const { setIsTTY } = useMockIsTTY();
 	runInTempDir();
 	mockAccountId();
 	mockApiToken();
-
 	afterEach(() => {
-		clearConfirmMocks();
-		clearPromptMocks();
+		clearDialogs();
 	});
 
 	describe("put", () => {
@@ -85,12 +80,14 @@ describe("wrangler secret", () => {
 		}
 
 		describe("interactive", () => {
-			useMockStdin({ isTTY: true });
+			beforeEach(() => {
+				setIsTTY(true);
+			});
 
 			it("should trim stdin secret value", async () => {
 				mockPrompt({
 					text: "Enter a secret value:",
-					type: "password",
+					options: { isSecret: true },
 					result: `hunter2
           `,
 				});
@@ -106,7 +103,7 @@ describe("wrangler secret", () => {
 			it("should create a secret", async () => {
 				mockPrompt({
 					text: "Enter a secret value:",
-					type: "password",
+					options: { isSecret: true },
 					result: "the-secret",
 				});
 
@@ -299,7 +296,7 @@ describe("wrangler secret", () => {
 			it("should create a secret: legacy envs", async () => {
 				mockPrompt({
 					text: "Enter a secret value:",
-					type: "password",
+					options: { isSecret: true },
 					result: "the-secret",
 				});
 
@@ -322,7 +319,7 @@ describe("wrangler secret", () => {
 			it("should create a secret: service envs", async () => {
 				mockPrompt({
 					text: "Enter a secret value:",
-					type: "password",
+					options: { isSecret: true },
 					result: "the-secret",
 				});
 
@@ -365,6 +362,9 @@ describe("wrangler secret", () => {
 		});
 
 		describe("non-interactive", () => {
+			beforeEach(() => {
+				setIsTTY(false);
+			});
 			const mockStdIn = useMockStdin({ isTTY: false });
 
 			it("should trim stdin secret value, from piped input", async () => {
@@ -430,9 +430,9 @@ describe("wrangler secret", () => {
 					mockGetMemberships([]);
 					await expect(runWrangler("secret put the-key --name script-name"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
-                  "Failed to automatically retrieve account IDs for the logged in user.
-                  In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your \`wrangler.toml\` file."
-                `);
+				                  "Failed to automatically retrieve account IDs for the logged in user.
+				                  In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your \`wrangler.toml\` file."
+			                `);
 				});
 
 				it("should use the account from wrangler.toml", async () => {
@@ -472,19 +472,22 @@ describe("wrangler secret", () => {
 
 					await expect(runWrangler("secret put the-key --name script-name"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
-                  "More than one account available but unable to select one in non-interactive mode.
-                  Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
-                  Available accounts are (\\"<name>\\" - \\"<id>\\"):
-                    \\"account-name-1\\" - \\"account-id-1\\")
-                    \\"account-name-2\\" - \\"account-id-2\\")
-                    \\"account-name-3\\" - \\"account-id-3\\")"
-                `);
+				"More than one account available but unable to select one in non-interactive mode.
+				Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+				Available accounts are (\`<name>\`: \`<account_id>\`):
+				  \`account-name-1\`: \`account-id-1\`
+				  \`account-name-2\`: \`account-id-2\`
+				  \`account-name-3\`: \`account-id-3\`"
+			`);
 				});
 			});
 		});
 	});
 
 	describe("delete", () => {
+		beforeEach(() => {
+			setIsTTY(true);
+		});
 		function mockDeleteRequest(
 			input: {
 				scriptName: string;
@@ -513,6 +516,7 @@ describe("wrangler secret", () => {
 				)
 			);
 		}
+
 		it("should delete a secret", async () => {
 			mockDeleteRequest({ scriptName: "script-name", secretName: "the-key" });
 			mockConfirm({
@@ -590,6 +594,9 @@ describe("wrangler secret", () => {
 	});
 
 	describe("list", () => {
+		beforeEach(() => {
+			setIsTTY(true);
+		});
 		function mockListRequest(
 			input: { scriptName: string },
 			env?: string,

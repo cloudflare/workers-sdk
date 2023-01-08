@@ -10,7 +10,8 @@ import { fetchDashboardScript } from "../cfetch/internal";
 import { getPackageManager } from "../package-manager";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { mockConfirm, mockSelect } from "./helpers/mock-dialogs";
+import { clearDialogs, mockConfirm, mockSelect } from "./helpers/mock-dialogs";
+import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
@@ -28,8 +29,11 @@ const MINIMAL_WRANGLER_TOML = {
 describe("init", () => {
 	let mockPackageManager: PackageManager;
 	runInTempDir();
+	const { setIsTTY } = useMockIsTTY();
 
 	beforeEach(() => {
+		setIsTTY(true);
+
 		mockPackageManager = {
 			cwd: process.cwd(),
 			// @ts-expect-error we're making a fake package manager here
@@ -41,6 +45,7 @@ describe("init", () => {
 	});
 
 	afterEach(() => {
+		clearDialogs();
 		msw.resetHandlers();
 		msw.restoreHandlers();
 	});
@@ -316,15 +321,15 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "",
-			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mpath/to/worker/wrangler.toml already exists![0m
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mpath/to/worker/wrangler.toml already exists![0m
 
-			        ",
-			        }
-		      `);
+			",
+			}
+		`);
 		});
 
 		it("should not overwrite an existing wrangler.toml, after agreeing to other prompts", async () => {
@@ -337,11 +342,11 @@ describe("init", () => {
 			});
 			mockConfirm(
 				{
-					text: "Would you like to use git to manage this Worker?",
+					text: "Do you want to continue initializing this project?",
 					result: true,
 				},
 				{
-					text: "Do you want to continue initializing this project?",
+					text: "Would you like to use git to manage this Worker?",
 					result: true,
 				},
 				{
@@ -351,16 +356,19 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: true,
-				},
-				{
-					text: "Would you like us to write your first test with Vitest?",
-					result: true,
 				}
 			);
 
 			mockSelect({
-				text: "Would you like to create a Worker at src/index.ts?",
+				text: `Would you like to create a Worker at ${path.join(
+					"src",
+					"index.ts"
+				)}?`,
 				result: "fetch",
+			});
+			mockConfirm({
+				text: "Would you like us to write your first test with Vitest?",
+				result: true,
 			});
 
 			await runWrangler("init");
@@ -408,15 +416,15 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "",
-			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mwrangler.toml already exists![0m
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mwrangler.toml already exists![0m
 
-			        ",
-			        }
-		      `);
+			",
+			}
+		`);
 		});
 
 		it("should not add a Cron Trigger to wrangler.toml when creating a Scheduled Worker if wrangler.toml already exists", async () => {
@@ -429,13 +437,14 @@ describe("init", () => {
 			});
 			mockConfirm(
 				{
-					text: "Would you like to use git to manage this Worker?",
-					result: true,
-				},
-				{
 					text: "Do you want to continue initializing this project?",
 					result: true,
 				},
+				{
+					text: "Would you like to use git to manage this Worker?",
+					result: true,
+				},
+
 				{
 					text: "No package.json found. Would you like to create one?",
 					result: true,
@@ -443,17 +452,20 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: true,
-				},
-				{
-					text: "Would you like us to write your first test with Vitest?",
-					result: true,
 				}
 			);
 			mockSelect({
-				text: "Would you like to create a Worker at src/index.ts?",
+				text: `Would you like to create a Worker at ${path.join(
+					"src",
+					"index.ts"
+				)}?`,
 				result: "scheduled",
 			});
 
+			mockConfirm({
+				text: "Would you like us to write your first test with Vitest?",
+				result: true,
+			});
 			await runWrangler("init");
 
 			checkFiles({
@@ -478,17 +490,19 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: true,
-				},
-				{
-					text: "Would you like us to write your first test with Vitest?",
-					result: true,
 				}
 			);
 			mockSelect({
-				text: "Would you like to create a Worker at src/index.ts?",
+				text: `Would you like to create a Worker at ${path.join(
+					"src",
+					"index.ts"
+				)}?`,
 				result: "scheduled",
 			});
-
+			mockConfirm({
+				text: "Would you like us to write your first test with Vitest?",
+				result: true,
+			});
 			await runWrangler("init");
 
 			checkFiles({
@@ -621,14 +635,14 @@ describe("init", () => {
 			);
 			await runWrangler("init");
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created wrangler.toml
-			        ✨ Initialized git repository",
-			          "warn": "",
-			        }
-		      `);
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created wrangler.toml
+			✨ Initialized git repository",
+			  "warn": "",
+			}
+		`);
 
 			expect(execaSync("git", ["symbolic-ref", "HEAD"]).stdout).toEqual(
 				`refs/heads/${getDefaultBranchName()}`
@@ -653,7 +667,10 @@ describe("init", () => {
 				}
 			);
 			mockSelect({
-				text: "Would you like to create a Worker at src/index.js?",
+				text: `Would you like to create a Worker at ${path.join(
+					"src",
+					"index.js"
+				)}?`,
 				result: "none",
 			});
 
@@ -701,7 +718,11 @@ describe("init", () => {
 				}
 			);
 			mockSelect({
-				text: "Would you like to create a Worker at my-worker/src/index.js?",
+				text: `Would you like to create a Worker at ${path.join(
+					"my-worker",
+					"src",
+					"index.js"
+				)}?`,
 				result: "none",
 			});
 
@@ -748,7 +769,10 @@ describe("init", () => {
 				}
 			);
 			mockSelect({
-				text: "Would you like to create a Worker at src/index.js?",
+				text: `Would you like to create a Worker at ${path.join(
+					"src",
+					"index.js"
+				)}?`,
 				result: "none",
 			});
 			writeFiles({
@@ -765,13 +789,13 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created wrangler.toml",
-			          "warn": "",
-			        }
-		      `);
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created wrangler.toml",
+			  "warn": "",
+			}
+		`);
 		});
 
 		it("should not touch an existing package.json in an ancestor directory, when a name is passed", async () => {
@@ -785,16 +809,19 @@ describe("init", () => {
 					result: true,
 				},
 				{
-					text: "Would you like to install wrangler into path/to/worker/my-worker/package.json?",
-					result: false,
-				},
-				{
 					text: "Would you like to use TypeScript?",
 					result: false,
 				}
 			);
 			mockSelect({
-				text: "Would you like to create a Worker at path/to/worker/my-worker/src/index.js?",
+				text: `Would you like to create a Worker at ${path.join(
+					"path",
+					"to",
+					"worker",
+					"my-worker",
+					"src",
+					"index.js"
+				)}?`,
 				result: "none",
 			});
 			writeFiles({
@@ -815,14 +842,14 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created path/to/worker/my-worker/wrangler.toml
-			        ✨ Created path/to/worker/my-worker/package.json",
-			          "warn": "",
-			        }
-		      `);
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created path/to/worker/my-worker/wrangler.toml
+			✨ Created path/to/worker/my-worker/package.json",
+			  "warn": "",
+			}
+		`);
 		});
 
 		it("should offer to install wrangler into an existing package.json", async () => {
@@ -841,7 +868,10 @@ describe("init", () => {
 				}
 			);
 			mockSelect({
-				text: "Would you like to create a Worker at src/index.js?",
+				text: `Would you like to create a Worker at ${path.join(
+					"src",
+					"index.js"
+				)}?`,
 				result: "none",
 			});
 			writeFiles({
@@ -882,7 +912,10 @@ describe("init", () => {
 					result: false,
 				},
 				{
-					text: "Would you like to install wrangler into ../package.json?",
+					text: `Would you like to install wrangler into ${path.join(
+						"..",
+						"package.json"
+					)}?`,
 					result: true,
 				},
 				{
@@ -891,7 +924,10 @@ describe("init", () => {
 				}
 			);
 			mockSelect({
-				text: "Would you like to create a Worker at src/index.js?",
+				text: `Would you like to create a Worker at ${path.join(
+					"src",
+					"index.js"
+				)}?`,
 				result: "none",
 			});
 			writeFiles({
@@ -936,7 +972,11 @@ describe("init", () => {
 					result: false,
 				},
 				{
-					text: "Would you like to install wrangler into ../../package.json?",
+					text: `Would you like to install wrangler into ${path.join(
+						"..",
+						"..",
+						"package.json"
+					)}?`,
 					result: false,
 				},
 				{
@@ -945,7 +985,10 @@ describe("init", () => {
 				}
 			);
 			mockSelect({
-				text: "Would you like to create a Worker at src/index.js?",
+				text: `Would you like to create a Worker at ${path.join(
+					"src",
+					"index.js"
+				)}?`,
 				result: "none",
 			});
 			writeFiles({
@@ -968,13 +1011,13 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created wrangler.toml",
-			          "warn": "",
-			        }
-		      `);
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created wrangler.toml",
+			  "warn": "",
+			}
+		`);
 		});
 	});
 
@@ -992,12 +1035,18 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: false,
-				},
-				{ text: "Would you like us to write your first test?", result: false }
+				}
 			);
 			mockSelect({
-				text: "Would you like to create a Worker at src/index.js?",
+				text: `Would you like to create a Worker at ${path.join(
+					"src",
+					"index.js"
+				)}?`,
 				result: "fetch",
+			});
+			mockConfirm({
+				text: "Would you like us to write your first test?",
+				result: false,
 			});
 			writeFiles({
 				items: {
@@ -1046,15 +1095,18 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: true,
-				},
-				{
-					text: "Would you like us to write your first test with Vitest?",
-					result: true,
 				}
 			);
 			mockSelect({
-				text: "Would you like to create a Worker at src/index.ts?",
+				text: `Would you like to create a Worker at ${path.join(
+					"src",
+					"index.ts"
+				)}?`,
 				result: "fetch",
+			});
+			mockConfirm({
+				text: "Would you like us to write your first test with Vitest?",
+				result: true,
 			});
 			writeFiles({
 				items: {
@@ -1099,22 +1151,22 @@ describe("init", () => {
 					text: "No package.json found. Would you like to create one?",
 					result: true,
 				},
-				{
-					text: "Would you like to install wrangler into package.json?",
-					result: false,
-				},
+
 				{
 					text: "Would you like to use TypeScript?",
-					result: true,
-				},
-				{
-					text: "Would you like us to write your first test with Vitest?",
 					result: true,
 				}
 			);
 			mockSelect({
-				text: "Would you like to create a Worker at src/index.ts?",
+				text: `Would you like to create a Worker at ${path.join(
+					"src",
+					"index.ts"
+				)}?`,
 				result: "fetch",
+			});
+			mockConfirm({
+				text: "Would you like us to write your first test with Vitest?",
+				result: true,
 			});
 
 			await runWrangler("init");
@@ -1161,15 +1213,18 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: true,
-				},
-				{
-					text: "Would you like us to write your first test with Vitest?",
-					result: true,
 				}
 			);
 			mockSelect({
-				text: "Would you like to create a Worker at src/index.ts?",
+				text: `Would you like to create a Worker at ${path.join(
+					"src",
+					"index.ts"
+				)}?`,
 				result: "fetch",
+			});
+			mockConfirm({
+				text: "Would you like us to write your first test with Vitest?",
+				result: true,
 			});
 			writeFiles({
 				items: {
@@ -1244,15 +1299,15 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created wrangler.toml
-			        ✨ Created tsconfig.json
-			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies",
-			          "warn": "",
-			        }
-		      `);
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created wrangler.toml
+			✨ Created tsconfig.json
+			✨ Installed @cloudflare/workers-types and typescript into devDependencies",
+			  "warn": "",
+			}
+		`);
 		});
 
 		it("should not offer to create a worker in a ts project for a named worker if a file already exists at the location", async () => {
@@ -1265,10 +1320,7 @@ describe("init", () => {
 					text: "No package.json found. Would you like to create one?",
 					result: true,
 				},
-				{
-					text: "Would you like to install wrangler into package.json?",
-					result: false,
-				},
+
 				{
 					text: "Would you like to use TypeScript?",
 					result: true,
@@ -1291,16 +1343,16 @@ describe("init", () => {
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created my-worker/wrangler.toml
-			        ✨ Created my-worker/package.json
-			        ✨ Created my-worker/tsconfig.json
-			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies",
-			          "warn": "",
-			        }
-		      `);
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created my-worker/wrangler.toml
+			✨ Created my-worker/package.json
+			✨ Created my-worker/tsconfig.json
+			✨ Installed @cloudflare/workers-types and typescript into devDependencies",
+			  "warn": "",
+			}
+		`);
 		});
 
 		it("should create a tsconfig.json and install `workers-types` if none is found and user confirms", async () => {
@@ -1319,7 +1371,10 @@ describe("init", () => {
 				}
 			);
 			mockSelect({
-				text: "Would you like to create a Worker at src/index.ts?",
+				text: `Would you like to create a Worker at ${path.join(
+					"src",
+					"index.ts"
+				)}?`,
 				result: "none",
 			});
 
@@ -1344,32 +1399,33 @@ describe("init", () => {
 				"typescript"
 			);
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "✨ Created wrangler.toml
-			        ✨ Created package.json
-			        ✨ Created tsconfig.json
-			        ✨ Installed @cloudflare/workers-types and typescript into devDependencies",
-			          "warn": "",
-			        }
-		      `);
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "✨ Created wrangler.toml
+			✨ Created package.json
+			✨ Created tsconfig.json
+			✨ Installed @cloudflare/workers-types and typescript into devDependencies",
+			  "warn": "",
+			}
+		`);
 		});
 
 		it("should not touch an existing tsconfig.json in the same directory", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "Would you like us to write your first test with Vitest?",
-					result: true,
-				}
-			);
+			mockConfirm({
+				text: "Would you like to use git to manage this Worker?",
+				result: false,
+			});
 			mockSelect({
-				text: "Would you like to create a Worker at src/index.ts?",
+				text: `Would you like to create a Worker at ${path.join(
+					"src",
+					"index.ts"
+				)}?`,
 				result: "fetch",
+			});
+			mockConfirm({
+				text: "Would you like us to write your first test with Vitest?",
+				result: true,
 			});
 			writeFiles({
 				items: {
@@ -1425,15 +1481,22 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: true,
-				},
-				{
-					text: "Would you like us to write your first test with Vitest?",
-					result: true,
 				}
 			);
 			mockSelect({
-				text: "Would you like to create a Worker at path/to/worker/my-worker/src/index.ts?",
+				text: `Would you like to create a Worker at ${path.join(
+					"path",
+					"to",
+					"worker",
+					"my-worker",
+					"src",
+					"index.ts"
+				)}?`,
 				result: "fetch",
+			});
+			mockConfirm({
+				text: "Would you like us to write your first test with Vitest?",
+				result: true,
 			});
 			writeFiles({
 				items: {
@@ -1494,7 +1557,10 @@ describe("init", () => {
 				}
 			);
 			mockSelect({
-				text: "Would you like to create a Worker at src/index.ts?",
+				text: `Would you like to create a Worker at ${path.join(
+					"src",
+					"index.ts"
+				)}?`,
 				result: "none",
 			});
 			writeFiles({
@@ -1533,19 +1599,20 @@ describe("init", () => {
 		});
 
 		it("should not touch an existing tsconfig.json in an ancestor directory", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "Would you like us to write your first test with Vitest?",
-					result: true,
-				}
-			);
+			mockConfirm({
+				text: "Would you like to use git to manage this Worker?",
+				result: false,
+			});
 			mockSelect({
-				text: "Would you like to create a Worker at src/index.ts?",
+				text: `Would you like to create a Worker at ${path.join(
+					"src",
+					"index.ts"
+				)}?`,
 				result: "fetch",
+			});
+			mockConfirm({
+				text: "Would you like us to write your first test with Vitest?",
+				result: true,
 			});
 			writeFiles({
 				items: {
@@ -1602,21 +1669,23 @@ describe("init", () => {
 					text: "No package.json found. Would you like to create one?",
 					result: true,
 				},
-				{
-					text: "Would you like to install wrangler into package.json?",
-					result: false,
-				},
+
 				{
 					text: "Would you like to use TypeScript?",
 					result: false,
-				},
-				{ text: "Would you like us to write your first test?", result: false }
+				}
 			);
 			mockSelect({
-				text: "Would you like to create a Worker at src/index.js?",
+				text: `Would you like to create a Worker at ${path.join(
+					"src",
+					"index.js"
+				)}?`,
 				result: "fetch",
 			});
-
+			mockConfirm({
+				text: "Would you like us to write your first test?",
+				result: false,
+			});
 			await runWrangler("init");
 
 			checkFiles({
@@ -1655,23 +1724,25 @@ describe("init", () => {
 					result: true,
 				},
 				{
-					text: "Would you like to install wrangler into package.json?",
-					result: false,
-				},
-				{
 					text: "Would you like to use TypeScript?",
 					result: false,
-				},
-				{ text: "Would you like us to write your first test?", result: true }
+				}
 			);
-			mockSelect(
-				{
-					text: "Would you like to create a Worker at src/index.js?",
-					result: "fetch",
-				},
-				{ text: "Which test runner would you like to use?", result: "jest" }
-			);
-
+			mockSelect({
+				text: `Would you like to create a Worker at ${path.join(
+					"src",
+					"index.js"
+				)}?`,
+				result: "fetch",
+			});
+			mockConfirm({
+				text: "Would you like us to write your first test?",
+				result: true,
+			});
+			mockSelect({
+				text: "Which test runner would you like to use?",
+				result: "jest",
+			});
 			await runWrangler("init");
 
 			checkFiles({
@@ -1716,23 +1787,25 @@ describe("init", () => {
 					result: true,
 				},
 				{
-					text: "Would you like to install wrangler into package.json?",
-					result: false,
-				},
-				{
 					text: "Would you like to use TypeScript?",
 					result: false,
-				},
-				{ text: "Would you like us to write your first test?", result: true }
+				}
 			);
-			mockSelect(
-				{
-					text: "Would you like to create a Worker at src/index.js?",
-					result: "fetch",
-				},
-				{ text: "Which test runner would you like to use?", result: "vitest" }
-			);
-
+			mockSelect({
+				text: `Would you like to create a Worker at ${path.join(
+					"src",
+					"index.js"
+				)}?`,
+				result: "fetch",
+			});
+			mockConfirm({
+				text: "Would you like us to write your first test?",
+				result: true,
+			});
+			mockSelect({
+				text: "Which test runner would you like to use?",
+				result: "vitest",
+			});
 			await runWrangler("init");
 
 			checkFiles({
@@ -1779,12 +1852,18 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: false,
-				},
-				{ text: "Would you like us to write your first test?", result: false }
+				}
 			);
 			mockSelect({
-				text: "Would you like to create a Worker at src/index.js?",
+				text: `Would you like to create a Worker at ${path.join(
+					"src",
+					"index.js"
+				)}?`,
 				result: "fetch",
+			});
+			mockConfirm({
+				text: "Would you like us to write your first test?",
+				result: false,
 			});
 			writeFiles({
 				items: {
@@ -1872,7 +1951,10 @@ describe("init", () => {
 					result: false,
 				},
 				{
-					text: "Would you like to install wrangler into my-worker/package.json?",
+					text: `Would you like to install wrangler into ${path.join(
+						"my-worker",
+						"package.json"
+					)}?`,
 					result: false,
 				},
 				{
@@ -2021,25 +2103,27 @@ describe("init", () => {
 					result: false,
 				},
 				{
-					text: "Would you like to use TypeScript?",
-					result: true,
-				},
-				{
 					text: "No package.json found. Would you like to create one?",
 					result: true,
 				},
 				{
-					text: "Would you like to install the type definitions for Workers into your package.json?",
-					result: true,
-				},
-				{
-					text: "Would you like us to write your first test with Vitest?",
+					text: "Would you like to use TypeScript?",
 					result: true,
 				}
 			);
 			mockSelect({
-				text: "Would you like to create a Worker at sub/folder/worker/src/index.ts?",
+				text: `Would you like to create a Worker at ${path.join(
+					"sub",
+					"folder",
+					"worker",
+					"src",
+					"index.ts"
+				)}?`,
 				result: "fetch",
+			});
+			mockConfirm({
+				text: "Would you like us to write your first test with Vitest?",
+				result: true,
 			});
 			writeFiles({
 				items: {
@@ -2446,15 +2530,11 @@ describe("init", () => {
 					result: false,
 				},
 				{
-					text: "Would you like to use TypeScript?",
-					result: true,
-				},
-				{
 					text: "No package.json found. Would you like to create one?",
 					result: true,
 				},
 				{
-					text: "Would you like to install the type definitions for Workers into your package.json?",
+					text: "Would you like to use TypeScript?",
 					result: true,
 				}
 			);
@@ -2508,15 +2588,11 @@ describe("init", () => {
 					result: false,
 				},
 				{
-					text: "Would you like to use TypeScript?",
-					result: true,
-				},
-				{
 					text: "No package.json found. Would you like to create one?",
 					result: true,
 				},
 				{
-					text: "Would you like to install the type definitions for Workers into your package.json?",
+					text: "Would you like to use TypeScript?",
 					result: true,
 				}
 			);
@@ -2540,15 +2616,11 @@ describe("init", () => {
 					result: false,
 				},
 				{
-					text: "Would you like to use TypeScript?",
-					result: true,
-				},
-				{
 					text: "No package.json found. Would you like to create one?",
 					result: true,
 				},
 				{
-					text: "Would you like to install the type definitions for Workers into your package.json?",
+					text: "Would you like to use TypeScript?",
 					result: true,
 				}
 			);
@@ -2672,16 +2744,12 @@ describe("init", () => {
 					result: false,
 				},
 				{
-					text: "Would you like to use TypeScript?",
-					result: false,
-				},
-				{
 					text: "No package.json found. Would you like to create one?",
 					result: true,
 				},
 				{
-					text: "Would you like to install the type definitions for Workers into your package.json?",
-					result: true,
+					text: "Would you like to use TypeScript?",
+					result: false,
 				}
 			);
 
@@ -2726,15 +2794,11 @@ describe("init", () => {
 					result: false,
 				},
 				{
-					text: "Would you like to use TypeScript?",
-					result: true,
-				},
-				{
 					text: "No package.json found. Would you like to create one?",
 					result: true,
 				},
 				{
-					text: "Would you like to install the type definitions for Workers into your package.json?",
+					text: "Would you like to use TypeScript?",
 					result: true,
 				}
 			);
@@ -2796,14 +2860,6 @@ describe("init", () => {
 				{
 					text: "Would you like to use TypeScript?",
 					result: false,
-				},
-				{
-					text: "No package.json found. Would you like to create one?",
-					result: true,
-				},
-				{
-					text: "Would you like to install the type definitions for Workers into your package.json?",
-					result: true,
 				}
 			);
 
@@ -2812,7 +2868,7 @@ describe("init", () => {
 			).rejects.toThrowError();
 		});
 
-		it("should not inlcude migrations in config file when none are necessary", async () => {
+		it("should not include migrations in config file when none are necessary", async () => {
 			const mockDate = "1988-08-07";
 			jest
 				.spyOn(Date.prototype, "toISOString")
@@ -2916,16 +2972,13 @@ describe("init", () => {
 					text: "Would you like to use git to manage this Worker?",
 					result: false,
 				},
-				{
-					text: "Would you like to use TypeScript?",
-					result: true,
-				},
+
 				{
 					text: "No package.json found. Would you like to create one?",
 					result: true,
 				},
 				{
-					text: "Would you like to install the type definitions for Workers into your package.json?",
+					text: "Would you like to use TypeScript?",
 					result: true,
 				}
 			);

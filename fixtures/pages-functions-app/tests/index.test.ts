@@ -1,43 +1,41 @@
 import { fork } from "child_process";
 import * as path from "path";
 import { fetch } from "undici";
+import { describe, it, beforeAll, afterAll } from "vitest";
 import type { ChildProcess } from "child_process";
 
-describe("Pages Functions", () => {
+describe.concurrent("Pages Functions", () => {
 	let wranglerProcess: ChildProcess;
 	let ip: string;
 	let port: number;
-	let resolveReadyPromise: (value: unknown) => void;
-	const readyPromise = new Promise((resolve) => {
-		resolveReadyPromise = resolve;
-	});
 
 	beforeAll(async () => {
-		wranglerProcess = fork(
-			path.join("..", "..", "packages", "wrangler", "bin", "wrangler.js"),
-			[
-				"pages",
-				"dev",
-				"public",
-				"--binding=NAME=VALUE",
-				"--binding=OTHER_NAME=THING=WITH=EQUALS",
-				"--r2=BUCKET",
-				"--port=0",
-			],
-			{
-				stdio: ["inherit", "inherit", "inherit", "ipc"],
-				cwd: path.resolve(__dirname, ".."),
-			}
-		).on("message", (message) => {
-			const parsedMessage = JSON.parse(message.toString());
-			ip = parsedMessage.ip;
-			port = parsedMessage.port;
-			resolveReadyPromise(undefined);
+		await new Promise((resolve) => {
+			wranglerProcess = fork(
+				path.join("..", "..", "packages", "wrangler", "bin", "wrangler.js"),
+				[
+					"pages",
+					"dev",
+					"public",
+					"--binding=NAME=VALUE",
+					"--binding=OTHER_NAME=THING=WITH=EQUALS",
+					"--r2=BUCKET",
+					"--port=0",
+				],
+				{
+					stdio: ["inherit", "inherit", "inherit", "ipc"],
+					cwd: path.resolve(__dirname, ".."),
+				}
+			).on("message", (message) => {
+				const parsedMessage = JSON.parse(message.toString());
+				ip = parsedMessage.ip;
+				port = parsedMessage.port;
+				resolve(null);
+			});
 		});
 	});
 
 	afterAll(async () => {
-		await readyPromise;
 		await new Promise((resolve, reject) => {
 			wranglerProcess.once("exit", (code) => {
 				if (!code) {
@@ -50,38 +48,33 @@ describe("Pages Functions", () => {
 		});
 	});
 
-	it.concurrent("renders static pages", async () => {
-		await readyPromise;
+	it("renders static pages", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/`);
 		expect(response.headers.get("x-custom")).toBe("header value");
 		const text = await response.text();
 		expect(text).toContain("Hello, world!");
 	});
 
-	it.concurrent("renders pages with . characters", async () => {
-		await readyPromise;
+	it("renders pages with . characters", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/a.b`);
 		expect(response.headers.get("x-custom")).toBe("header value");
 		const text = await response.text();
 		expect(text).toContain("Hello, a.b!");
 	});
 
-	it.concurrent("parses URL encoded requests", async () => {
-		await readyPromise;
+	it("parses URL encoded requests", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/[id].js`);
 		const text = await response.text();
 		expect(text).toContain("// test script");
 	});
 
-	it.concurrent("parses URLs with regex chars", async () => {
-		await readyPromise;
+	it("parses URLs with regex chars", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/regex_chars/my-file`);
 		const text = await response.text();
 		expect(text).toEqual("My file with regex chars");
 	});
 
-	it.concurrent("passes environment variables", async () => {
-		await readyPromise;
+	it("passes environment variables", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/variables`);
 		const env = await response.json();
 		expect(env).toEqual({
@@ -98,41 +91,35 @@ describe("Pages Functions", () => {
 		});
 	});
 
-	it.concurrent("intercepts static requests with next()", async () => {
-		await readyPromise;
+	it("intercepts static requests with next()", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/intercept`);
 		const text = await response.text();
 		expect(text).toContain("Hello, world!");
 		expect(response.headers.get("x-set-from-functions")).toBe("true");
 	});
 
-	it.concurrent("can make SSR responses", async () => {
-		await readyPromise;
+	it("can make SSR responses", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/date`);
 		const text = await response.text();
 		expect(text).toMatch(/\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d/);
 	});
 
-	it.concurrent("can use parameters", async () => {
-		await readyPromise;
+	it("can use parameters", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/blog/hello-world`);
 		const text = await response.text();
 		expect(text).toContain("<h1>A blog with a slug: hello-world</h1>");
 	});
 
-	it.concurrent(
-		"can override the incoming request with next() parameters",
-		async () => {
-			await readyPromise;
-			const response = await fetch(`http://${ip}:${port}/next`);
-			const text = await response.text();
-			expect(text).toContain("<h1>An asset</h1>");
-		}
-	);
+	it("can override the incoming request with next() parameters", async ({
+		expect,
+	}) => {
+		const response = await fetch(`http://${ip}:${port}/next`);
+		const text = await response.text();
+		expect(text).toContain("<h1>An asset</h1>");
+	});
 
-	describe("can mount a plugin", () => {
-		it.concurrent("should mount Middleware", async () => {
-			await readyPromise;
+	describe.concurrent("can mount a plugin", () => {
+		it("should mount Middleware", async ({ expect }) => {
 			const response = await fetch(
 				`http://${ip}:${port}/mounted-plugin/some-page`
 			);
@@ -140,8 +127,7 @@ describe("Pages Functions", () => {
 			expect(text).toContain("<footer>Set from a Plugin!</footer>");
 		});
 
-		it.concurrent("should return a status code", async () => {
-			await readyPromise;
+		it("should return a status code", async ({ expect }) => {
 			const response = await fetch(
 				`http://${ip}:${port}/mounted-plugin/status`
 			);
@@ -152,23 +138,20 @@ describe("Pages Functions", () => {
 			expect(response.status).toBe(502);
 		});
 
-		it.concurrent(
-			"should mount a Plugin even if in a parameterized route",
-			async () => {
-				await readyPromise;
-				const response = await fetch(
-					`http://${ip}:${port}/mounted-with-param/p123/plugin/status`
-				);
-				const text = await response.text();
-				expect(text).toMatchInlineSnapshot(
-					`"This should return a 502 status code"`
-				);
-				expect(response.status).toBe(502);
-			}
-		);
+		it("should mount a Plugin even if in a parameterized route", async ({
+			expect,
+		}) => {
+			const response = await fetch(
+				`http://${ip}:${port}/mounted-with-param/p123/plugin/status`
+			);
+			const text = await response.text();
+			expect(text).toMatchInlineSnapshot(
+				`"This should return a 502 status code"`
+			);
+			expect(response.status).toBe(502);
+		});
 
-		it.concurrent("should work for nested folders", async () => {
-			await readyPromise;
+		it("should work for nested folders", async ({ expect }) => {
 			const response = await fetch(
 				`http://${ip}:${port}/mounted-plugin/api/v1/instance`
 			);
@@ -176,24 +159,21 @@ describe("Pages Functions", () => {
 			expect(text).toMatchInlineSnapshot(`"Response from a nested folder"`);
 		});
 
-		it.concurrent("should mount Fixed page", async () => {
-			await readyPromise;
+		it("should mount Fixed page", async ({ expect }) => {
 			const response = await fetch(`http://${ip}:${port}/mounted-plugin/fixed`);
 			const text = await response.text();
 			expect(text).toContain("I'm a fixed response");
 		});
 	});
 
-	describe("can import static assets", () => {
-		it.concurrent("should render a static asset", async () => {
-			await readyPromise;
+	describe.concurrent("can import static assets", () => {
+		it("should render a static asset", async ({ expect }) => {
 			const response = await fetch(`http://${ip}:${port}/static`);
 			const text = await response.text();
 			expect(text).toContain("<h1>Hello from an imported static asset!</h1>");
 		});
 
-		it.concurrent("should render from a Plugin", async () => {
-			await readyPromise;
+		it("should render from a Plugin", async ({ expect }) => {
 			const response = await fetch(
 				`http://${ip}:${port}/mounted-plugin/static`
 			);
@@ -203,8 +183,7 @@ describe("Pages Functions", () => {
 			);
 		});
 
-		it.concurrent("should render static/foo", async () => {
-			await readyPromise;
+		it("should render static/foo", async ({ expect }) => {
 			const response = await fetch(
 				`http://${ip}:${port}/mounted-plugin/static/foo`
 			);
@@ -212,8 +191,7 @@ describe("Pages Functions", () => {
 			expect(text).toContain("<h1>foo</h1>");
 		});
 
-		it.concurrent("should render static/dir/bar", async () => {
-			await readyPromise;
+		it("should render static/dir/bar", async ({ expect }) => {
 			const response = await fetch(
 				`http://${ip}:${port}/mounted-plugin/static/dir/bar`
 			);
@@ -221,8 +199,7 @@ describe("Pages Functions", () => {
 			expect(text).toContain("<h1>bar</h1>");
 		});
 
-		it.concurrent("supports importing .html from a function", async () => {
-			await readyPromise;
+		it("supports importing .html from a function", async ({ expect }) => {
 			const response = await fetch(`http://${ip}:${port}/import-html`);
 			expect(response.headers.get("x-custom")).toBe("header value");
 			const text = await response.text();
@@ -230,9 +207,8 @@ describe("Pages Functions", () => {
 		});
 	});
 
-	describe("it supports R2", () => {
-		it.concurrent("should allow creates", async () => {
-			await readyPromise;
+	describe.concurrent("it supports R2", () => {
+		it("should allow creates", async ({ expect }) => {
 			const response = await fetch(`http://${ip}:${port}/r2/create`, {
 				method: "PUT",
 			});
@@ -252,9 +228,8 @@ describe("Pages Functions", () => {
 		});
 	});
 
-	describe("redirects", () => {
-		it.concurrent("still attaches redirects correctly", async () => {
-			await readyPromise;
+	describe.concurrent("redirects", () => {
+		it("still attaches redirects correctly", async ({ expect }) => {
 			const response = await fetch(`http://${ip}:${port}/redirect`, {
 				redirect: "manual",
 			});
@@ -263,25 +238,22 @@ describe("Pages Functions", () => {
 		});
 	});
 
-	describe("headers", () => {
-		it.concurrent("still attaches headers correctly", async () => {
-			await readyPromise;
+	describe.concurrent("headers", () => {
+		it("still attaches headers correctly", async ({ expect }) => {
 			const response = await fetch(`http://${ip}:${port}/`);
 
 			expect(response.headers.get("A-Header")).toEqual("Some-Value");
 		});
 
-		it.concurrent("can unset and set together", async () => {
-			await readyPromise;
+		it("can unset and set together", async ({ expect }) => {
 			const response = await fetch(`http://${ip}:${port}/header-test`);
 
 			expect(response.headers.get("A-Header")).toEqual("New-Value");
 		});
 	});
 
-	describe("passThroughOnException", () => {
-		it.concurrent("works on a single handler", async () => {
-			await readyPromise;
+	describe.concurrent("passThroughOnException", () => {
+		it("works on a single handler", async ({ expect }) => {
 			const response = await fetch(
 				`http://${ip}:${port}/passThroughOnExceptionOpen`
 			);
@@ -290,8 +262,7 @@ describe("Pages Functions", () => {
 			expect(await response.text()).toContain("Hello, world!");
 		});
 
-		it.concurrent("defaults closed", async () => {
-			await readyPromise;
+		it("defaults closed", async ({ expect }) => {
 			const response = await fetch(
 				`http://${ip}:${port}/passThroughOnExceptionClosed`
 			);
@@ -300,8 +271,7 @@ describe("Pages Functions", () => {
 			expect(await response.text()).not.toContain("Hello, world!");
 		});
 
-		it.concurrent("works for nested handlers", async () => {
-			await readyPromise;
+		it("works for nested handlers", async ({ expect }) => {
 			const response = await fetch(
 				`http://${ip}:${port}/passThroughOnException/nested`
 			);
@@ -310,26 +280,24 @@ describe("Pages Functions", () => {
 			expect(await response.text()).toContain("Hello, world!");
 		});
 
-		it.concurrent(
-			"allows errors to still be manually caught in middleware",
-			async () => {
-				await readyPromise;
-				let response = await fetch(
-					`http://${ip}:${port}/passThroughOnExceptionWithCapture/nested`
-				);
+		it("allows errors to still be manually caught in middleware", async ({
+			expect,
+		}) => {
+			let response = await fetch(
+				`http://${ip}:${port}/passThroughOnExceptionWithCapture/nested`
+			);
 
-				expect(response.status).toEqual(200);
-				expect(await response.text()).toContain("Hello, world!");
+			expect(response.status).toEqual(200);
+			expect(await response.text()).toContain("Hello, world!");
 
-				response = await fetch(
-					`http://${ip}:${port}/passThroughOnExceptionWithCapture/nested?catch`
-				);
+			response = await fetch(
+				`http://${ip}:${port}/passThroughOnExceptionWithCapture/nested?catch`
+			);
 
-				expect(response.status).toEqual(200);
-				expect(await response.text()).toMatchInlineSnapshot(
-					`"Manually caught error: ReferenceError: x is not defined"`
-				);
-			}
-		);
+			expect(response.status).toEqual(200);
+			expect(await response.text()).toMatchInlineSnapshot(
+				`"Manually caught error: ReferenceError: x is not defined"`
+			);
+		});
 	});
 });
