@@ -2,4 +2,4 @@
 "wrangler": minor
 ---
 
-Added a hidden --esbuild-plugins option to the publish and dev commands to allow for advanced users to use esbuild plugins
+Added an experimental esbuild_plugins config option to allow for advanced users to use esbuild plugins
