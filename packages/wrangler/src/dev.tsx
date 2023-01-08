@@ -82,7 +82,6 @@ interface DevArgs {
 	logPrefix?: string;
 	showInteractiveDevSession?: boolean;
 	"test-scheduled"?: boolean;
-	"esbuild-plugins"?: string[] | undefined;
 }
 
 export function devOptions(yargs: Argv<CommonYargsOptions>): Argv<DevArgs> {
@@ -326,13 +325,6 @@ export function devOptions(yargs: Argv<CommonYargsOptions>): Argv<DevArgs> {
 				choices: ["debug", "info", "log", "warn", "error", "none"] as const,
 				describe: "Specify logging level",
 				default: "log",
-			})
-			.option("esbuild-plugins", {
-				describe:
-					"Array of esbuild plugins to use when bundling with the built in bundling system. Note: if you want to pass configuration options to the plugin, it is recommended to make a file exporting a function that returns the plugin with the configuration options specified.",
-				type: "string",
-				array: true,
-				hidden: false,
 			})
 	);
 }

@@ -202,6 +202,16 @@ interface EnvironmentInheritable {
 	node_compat: boolean | undefined;
 
 	/**
+	 * Array of esbuild plugins to use when bundling with the built in bundling system.
+	 * This can contain packages or paths to local .js files that export a default function that returns an esbuild plugin or an array of esbuild plugins.
+	 *
+	 * Note: if you want to pass configuration options to the plugin, you must make a file exporting a default function that returns the plugin with the configuration options specified.
+	 *
+	 * @inheritable
+	 */
+	esbuild_plugins: string[] | undefined;
+
+	/**
 	 * Specifies namespace bindings that are bound to this Worker environment.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,

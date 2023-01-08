@@ -9,21 +9,20 @@ type PluginFunction = () => Plugin;
  */
 export async function parseEsbuildPlugins(
 	args: {
-		"esbuild-plugins"?: string[] | undefined;
 		bundle?: boolean | undefined;
 	},
 	config: Config
 ) {
-	if (args["esbuild-plugins"] && !(args.bundle ?? !config.no_bundle)) {
+	if (config.esbuild_plugins && !(args.bundle ?? !config.no_bundle)) {
 		throw new Error(
 			"You cannot pass esbuild plugins while not using the built in bundler!"
 		);
 	}
 
 	const plugins: (Plugin & { _wranglerImportPath: string })[] = [];
-	if (args["esbuild-plugins"]) {
+	if (config.esbuild_plugins) {
 		// Ensure all given plugins are valid and add them to the plugins array
-		for (const plugin of args["esbuild-plugins"]) {
+		for (const plugin of config.esbuild_plugins) {
 			if (plugin.endsWith(".ts"))
 				throw new Error(
 					`Error when importing esbuild plugin "${plugin}": TypeScript is not supported. Please ensure that you are providing a package or .js file.`

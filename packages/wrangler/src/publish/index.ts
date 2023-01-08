@@ -178,13 +178,6 @@ export function publishOptions(yargs: Argv<CommonYargsOptions>) {
 				describe:
 					"Send Trace Events from this worker to Workers Logpush.\nThis will not configure a corresponding Logpush job automatically.",
 			})
-			.option("esbuild-plugins", {
-				describe:
-					"Array of esbuild plugins to use when bundling with the built in bundling system. Note: if you want to pass configuration options to the plugin, it is recommended to make a file exporting a function that returns the plugin with the configuration options specified.",
-				type: "string",
-				array: true,
-				hidden: true,
-			})
 	);
 }
 

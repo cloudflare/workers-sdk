@@ -909,6 +909,7 @@ function normalizeAndValidateEnvironment(
 
 	experimental(diagnostics, rawEnv, "unsafe");
 	experimental(diagnostics, rawEnv, "services");
+	experimental(diagnostics, rawEnv, "esbuild_plugins");
 
 	const route = normalizeAndValidateRoute(diagnostics, topLevelEnv, rawEnv);
 
@@ -1180,6 +1181,14 @@ function normalizeAndValidateEnvironment(
 			rawEnv,
 			"node_compat",
 			isBoolean,
+			undefined
+		),
+		esbuild_plugins: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"esbuild_plugins",
+			isStringArray,
 			undefined
 		),
 		first_party_worker: inheritable(
