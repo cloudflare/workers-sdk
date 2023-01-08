@@ -19,7 +19,6 @@ import type {
 	CommonYargsOptions,
 	YargsOptionsToInterface,
 } from "../yargs-types";
-import type { Plugin } from "esbuild";
 import type { Argv, ArgumentsCamelCase } from "yargs";
 
 export function publishOptions(yargs: Argv<CommonYargsOptions>) {
@@ -225,7 +224,7 @@ export async function publishHandler(args: ArgumentsCamelCase<PublishArgs>) {
 		);
 	}
 
-	const plugins: Plugin[] = await parseEsbuildPlugins(args, config);
+	const plugins = await parseEsbuildPlugins(args, config);
 
 	const cliVars = collectKeyValues(args.var);
 	const cliDefines = collectKeyValues(args.define);

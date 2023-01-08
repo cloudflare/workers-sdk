@@ -34,7 +34,6 @@ import type { Route } from "./config/environment";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type { CfWorkerInit } from "./worker";
 import type { CommonYargsOptions } from "./yargs-types";
-import type { Plugin } from "esbuild";
 import type { Argv, ArgumentsCamelCase } from "yargs";
 
 interface DevArgs {
@@ -421,7 +420,7 @@ export async function startDev(args: StartDevOptions) {
 			});
 		}
 
-		const plugins: Plugin[] = await parseEsbuildPlugins(args, config);
+		const plugins = await parseEsbuildPlugins(args, config);
 
 		const {
 			entry,
@@ -592,7 +591,7 @@ export async function startApiDev(args: StartDevOptions) {
 		//otherwise, enable bundling
 		const enableBundling = args.bundle ?? !configParam.no_bundle;
 
-		const plugins: Plugin[] = await parseEsbuildPlugins(args, config);
+		const plugins = await parseEsbuildPlugins(args, config);
 
 		return await startDevServer({
 			name: getScriptName({ name: args.name, env: args.env }, configParam),

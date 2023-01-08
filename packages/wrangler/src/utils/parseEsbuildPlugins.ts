@@ -77,5 +77,5 @@ export async function parseEsbuildPlugins(
 	}
 
 	// Remove _wranglerImportPath because esbuild doesn't like it
-	return plugins.map(({ _wranglerImportPath, ...plugin }) => plugin);
+	return plugins.map(({ _wranglerImportPath, ...plugin }) => plugin) as Plugin[];
 }
