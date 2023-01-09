@@ -1,5 +1,11 @@
 # @cloudflare/pages-shared
 
+## 0.0.13
+
+### Patch Changes
+
+- [#2502](https://github.com/cloudflare/wrangler2/pull/2502) [`6b7ebc8d`](https://github.com/cloudflare/wrangler2/commit/6b7ebc8dd0dee5521bce49a6dfff997d308e900e) Thanks [@mrbbot](https://github.com/mrbbot)! - Upgrade `miniflare` to [`2.11.0`](https://github.com/cloudflare/miniflare/releases/tag/v2.11.0)
+
 ## 0.0.12
 
 ### Patch Changes
