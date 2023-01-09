@@ -216,6 +216,28 @@ describe("wrangler dev", () => {
 				})
 			);
 		});
+		it("should use custom domain", async () => {
+			fs.writeFileSync("index.js", `export default {};`);
+
+			// config.routes
+			mockGetZones("customdomain.some-host.com", [{ id: "some-zone-id-5" }]);
+			writeWranglerToml({
+				main: "index.js",
+				routes: [
+					{ pattern: "customdomain.some-host.com", custom_domain: true },
+				],
+			});
+			await runWrangler("dev");
+			expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
+				expect.objectContaining({
+					host: "customdomain.some-host.com",
+					zone: "some-zone-id-5",
+					routes: [
+						{ pattern: "customdomain.some-host.com", custom_domain: true },
+					],
+				})
+			);
+		});
 	});
 	describe("host", () => {
 		it("should resolve a host to its zone", async () => {
