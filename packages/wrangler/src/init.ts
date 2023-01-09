@@ -556,6 +556,7 @@ export async function initHandler(args: InitArgs) {
 
 					await writePackageJsonScriptsAndUpdateWranglerToml({
 						isWritingScripts: shouldWritePackageJsonScripts,
+						isAddingTests: shouldCreateTests,
 						isCreatingWranglerToml: justCreatedWranglerToml,
 						packagePath: pathToPackageJson,
 						testRunner: newWorkerTestType,
