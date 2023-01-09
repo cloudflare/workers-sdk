@@ -3,5 +3,6 @@
 	"compilerOptions": {
 		"moduleResolution": "node",
 		"types": ["node", "jest"]
-	}
+	},
+	"include": ["**/*.ts", "**/*.mjs"]
 }

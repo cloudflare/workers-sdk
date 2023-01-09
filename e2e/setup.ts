@@ -79,12 +79,10 @@ export class LineSplittingStream extends TransformStream<string, string> {
 				buffer += chunk;
 				// Keep looking for lines in `buffer` until we can't find anymore
 				// eslint-disable-next-line no-constant-condition
-				while (true) {
-					// Try to find the next line break (either LF or CRLF)
-					const nextLineIndex = buffer.indexOf("\n");
-					// If no line break found in current `buffer`, stop looking and wait
-					// for more chunks
-					if (nextLineIndex === -1) break;
+				let nextLineIndex: number;
+				// Try to find the next line break (either LF or CRLF), if no line break
+				// found in current `buffer`, stop looking and wait for more chunks
+				while ((nextLineIndex = buffer.indexOf("\n")) !== -1) {
 					// Remove line from `buffer`, and enqueue if non-empty.
 					// `trim()` handles case of CRLF, by removing CR.
 					const line = buffer.substring(0, nextLineIndex).trim();
