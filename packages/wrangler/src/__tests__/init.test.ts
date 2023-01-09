@@ -76,6 +76,7 @@ describe("init", () => {
 			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
 			To start developing your Worker, run \`npm start\`
+			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -108,6 +109,7 @@ describe("init", () => {
 			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
 			To start developing your Worker, run \`cd my-worker && npm start\`
+			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -140,6 +142,7 @@ describe("init", () => {
 			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
 			To start developing your Worker, run \`npm start\`
+			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
 			  "warn": "",
 			}
@@ -585,6 +588,7 @@ describe("init", () => {
 			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
 			To start developing your Worker, run \`npm start\`
+			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
 			  "warn": "",
 			}
@@ -611,6 +615,7 @@ describe("init", () => {
 			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
 			To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
+			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
 			  "warn": "",
 			}
@@ -1178,8 +1183,12 @@ describe("init", () => {
 							name: expect.stringContaining("wrangler-tests"),
 							version: "0.0.0",
 							scripts: {
-								start: "wrangler dev",
 								deploy: "wrangler publish",
+								start: "wrangler dev",
+								test: "vitest",
+							},
+							devDependencies: {
+								wrangler: expect.any(String),
 							},
 						}),
 					},
@@ -1196,6 +1205,7 @@ describe("init", () => {
 			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
 			To start developing your Worker, run \`npm start\`
+			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`"
 		`);
 		});
@@ -1535,6 +1545,7 @@ describe("init", () => {
 			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
 			To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
+			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
 			  "warn": "",
 			}
@@ -2015,6 +2026,20 @@ describe("init", () => {
 						...MINIMAL_WRANGLER_TOML,
 						name: workerName,
 					}),
+					"package.json": {
+						contents: expect.objectContaining({
+							name: expect.stringContaining("wrangler-tests"),
+							version: "0.0.0",
+							scripts: {
+								deploy: "wrangler publish",
+								start: "wrangler dev",
+								test: "vitest",
+							},
+							devDependencies: {
+								wrangler: expect.any(String),
+							},
+						}),
+					},
 				},
 			});
 			expect(std).toMatchInlineSnapshot(`
@@ -2030,6 +2055,7 @@ describe("init", () => {
 			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
 			To start developing your Worker, run \`npm start\`
+			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
 			  "warn": "",
 			}
@@ -2060,6 +2086,7 @@ describe("init", () => {
 			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
 			To start developing your Worker, run \`cd path/to/worker && npm start\`
+			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
 			  "warn": "",
 			}
@@ -2090,6 +2117,7 @@ describe("init", () => {
 			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
 			To start developing your Worker, run \`cd WEIRD_w0rkr_N4m3.js.tsx.tar.gz && npm start\`
+			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
 			  "warn": "",
 			}
