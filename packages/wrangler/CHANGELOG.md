@@ -1,5 +1,13 @@
 # wrangler
 
+## 2.7.1
+
+### Patch Changes
+
+- [#2523](https://github.com/cloudflare/wrangler2/pull/2523) [`a5e9958c`](https://github.com/cloudflare/wrangler2/commit/a5e9958c7e37dd38c00ac6b713a21441491777fd) Thanks [@jahands](https://github.com/jahands)! - fix: unstable_dev() experimental options incorrectly applying defaults
+
+  A subtle difference when removing object-spreading of experimental unstable_dev() options caused `wrangler pages dev` interactivity to stop working. This switches back to object-spreading the passed in options on top of the defaults, fixing the issue.
+
 ## 2.7.0
 
 ### Minor Changes
