@@ -4,9 +4,7 @@ import * as TOML from "@iarna/toml";
 import { execa, execaSync } from "execa";
 import { rest } from "msw";
 import { parseConfigFileTextToJson } from "typescript";
-import { FormData } from "undici";
 import { version as wranglerVersion } from "../../package.json";
-import { fetchDashboardScript } from "../cfetch/internal";
 import { getPackageManager } from "../package-manager";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -46,8 +44,6 @@ describe("init", () => {
 
 	afterEach(() => {
 		clearDialogs();
-		msw.resetHandlers();
-		msw.restoreHandlers();
 	});
 
 	const std = mockConsoleMethods();
@@ -3070,19 +3066,11 @@ export function setMockFetchDashScript(mockResponse: string) {
 	msw.use(
 		rest.get(
 			`*/accounts/:accountId/workers/services/:fromDashScriptName/environments/:environment/content`,
-			(req, res, ctx) => {
-				// This is a fake FormData object, until we can get MSW (beta) that supports FormData
-				const mockForm = new FormData();
-				mockForm.append("name", mockResponse);
-				// Sending it as JSON will result in empty object, but cause the fetchDashboardScript to execute its code
-				return res(ctx.status(200), ctx.json(mockForm));
+			(_, res, ctx) => {
+				return res(ctx.text(mockResponse));
 			}
 		)
 	);
-	// Mock the actual return value that FormData would return
-	(fetchDashboardScript as jest.Mock).mockImplementationOnce(() => {
-		return mockResponse;
-	});
 }
 
 /**

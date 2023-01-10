@@ -1,4 +1,5 @@
 import prompts from "prompts";
+
 /**
  * The expected values for a confirmation request.
  */
@@ -30,6 +31,7 @@ export function mockConfirm(...expectations: ConfirmExpectation[]) {
 				if (expectation.options) {
 					expect(initial).toStrictEqual(expectation.options?.defaultValue);
 				}
+
 				return Promise.resolve({ value: expectation.result });
 			}
 		);

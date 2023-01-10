@@ -57,3 +57,21 @@ export const mswSuccessDeployments = [
 			)
 	),
 ];
+
+export const mswSuccessLastDeployment = [
+	rest.get(
+		"*/accounts/:accountId/workers/services/:scriptName",
+		(req, res, ctx) => {
+			return res.once(
+				ctx.json({
+					success: true,
+					messages: [],
+					errors: [],
+					result: {
+						default_environment: { script: { last_deployed_from: "wrangler" } },
+					},
+				})
+			);
+		}
+	),
+];

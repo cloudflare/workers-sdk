@@ -1,9 +1,11 @@
-import { Buffer } from "node:buffer";
+import { Blob, Buffer } from "node:buffer";
 import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as TOML from "@iarna/toml";
 import * as esbuild from "esbuild";
+import { MockedRequest, rest } from "msw";
+import { FormData } from "undici";
 import {
 	printBundleSize,
 	printOffendingDependencies,
@@ -12,34 +14,39 @@ import { writeAuthConfigFile } from "../user";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockAuthDomain } from "./helpers/mock-auth-domain";
 import {
-	createFetchResult,
-	setMockRawResponse,
-	setMockResponse,
-	unsetAllMocks,
-	unsetSpecialMockFns,
-} from "./helpers/mock-cfetch";
-import {
 	mockConsoleMethods,
 	normalizeSlashes,
 	normalizeTempDirs,
 } from "./helpers/mock-console";
-import { mockConfirm } from "./helpers/mock-dialogs";
+import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
 import { mockGetZoneFromHostRequest } from "./helpers/mock-get-zone-from-host";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { mockCollectKnownRoutesRequest } from "./helpers/mock-known-routes";
 import { mockKeyListRequest } from "./helpers/mock-kv";
-import { mockGetMemberships, mockOAuthFlow } from "./helpers/mock-oauth-flow";
+import {
+	mockExchangeRefreshTokenForAccessToken,
+	mockGetMemberships,
+	mockOAuthFlow,
+} from "./helpers/mock-oauth-flow";
+import {
+	createFetchResult,
+	msw,
+	mswSuccessDeployments,
+	mswSuccessLastDeployment,
+} from "./helpers/msw";
+import { FileReaderSync } from "./helpers/msw/read-file-sync";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
+
 import type { Config } from "../config";
 import type { WorkerMetadata } from "../create-worker-upload-form";
 import type { KVNamespaceInfo } from "../kv/helpers";
-import type { CustomDomainChangeset, CustomDomain } from "../publish/publish";
+import type { CustomDomain, CustomDomainChangeset } from "../publish/publish";
 import type { PutConsumerBody } from "../queues/client";
 import type { CfWorkerInit } from "../worker";
-import type { FormData, File } from "undici";
+import type { ResponseComposition, RestContext, RestRequest } from "msw";
 
 describe("publish", () => {
 	mockAccountId();
@@ -48,10 +55,9 @@ describe("publish", () => {
 	const { setIsTTY } = useMockIsTTY();
 	const std = mockConsoleMethods();
 	const {
-		mockDomainUsesAccess,
 		mockOAuthServerCallback,
 		mockGrantAccessToken,
-		mockGrantAuthorization,
+		mockDomainUsesAccess,
 	} = mockOAuthFlow();
 
 	beforeEach(() => {
@@ -60,28 +66,15 @@ describe("publish", () => {
 			setImmediate(fn);
 		});
 		setIsTTY(true);
-		setMockResponse(
-			"/accounts/:accountId/workers/services/:scriptName",
-			() => ({
-				default_environment: { script: { last_deployed_from: "wrangler" } },
-			})
-		);
-		setMockResponse(
-			"/accounts/:accountId/workers/deployments/by-script/:scriptTag",
-			() => ({
-				latest: { number: "2" },
-			})
-		);
+		mockLastDeploymentRequest();
+		mockDeploymentsListRequest();
 	});
 
 	afterEach(() => {
-		unsetAllMocks();
-		unsetSpecialMockFns();
+		clearDialogs();
 	});
 
 	describe("output additional script information", () => {
-		mockApiToken();
-
 		it("for first party workers, it should print worker information at log level", async () => {
 			setIsTTY(false);
 			fs.writeFileSync(
@@ -112,7 +105,7 @@ describe("publish", () => {
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined",
+			Current Deployment ID: Galaxy-Class",
 			  "warn": "",
 			}
 		`);
@@ -121,6 +114,7 @@ describe("publish", () => {
 
 	describe("authentication", () => {
 		mockApiToken({ apiToken: null });
+
 		beforeEach(() => {
 			// @ts-expect-error disable the mock we'd setup earlier
 			// or else our server won't bother listening for oauth requests
@@ -129,20 +123,17 @@ describe("publish", () => {
 		});
 
 		it("drops a user into the login flow if they're unauthenticated", async () => {
+			setIsTTY(true);
 			writeWranglerToml();
 			writeWorkerSource();
 			mockDomainUsesAccess({ usesAccess: false });
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			mockOAuthServerCallback();
-			const accessTokenRequest = mockGrantAccessToken({ respondWith: "ok" });
-			mockGrantAuthorization({ respondWith: "success" });
+			mockExchangeRefreshTokenForAccessToken({ respondWith: "refreshSuccess" });
+			mockOAuthServerCallback("success");
+			mockDeploymentsListRequest();
 
 			await expect(runWrangler("publish index.js")).resolves.toBeUndefined();
-
-			expect(accessTokenRequest.actual.url).toEqual(
-				accessTokenRequest.expected.url
-			);
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Attempting to login via OAuth...
@@ -152,7 +143,7 @@ describe("publish", () => {
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -170,18 +161,19 @@ describe("publish", () => {
 				});
 				mockSubDomainRequest();
 				mockUploadWorkerRequest();
-				mockOAuthServerCallback();
-				const accessTokenRequest = mockGrantAccessToken({
-					domain: "dash.staging.cloudflare.com",
-					respondWith: "ok",
+				mockExchangeRefreshTokenForAccessToken({
+					respondWith: "refreshSuccess",
 				});
-				mockGrantAuthorization({ respondWith: "success" });
+				const accessTokenRequest = mockGrantAccessToken({
+					respondWith: "ok",
+					domain: "dash.staging.cloudflare.com",
+				});
+				mockOAuthServerCallback("success");
+				mockDeploymentsListRequest();
 
 				await expect(runWrangler("publish index.js")).resolves.toBeUndefined();
 
-				expect(accessTokenRequest.actual.url).toEqual(
-					accessTokenRequest.expected.url
-				);
+				expect(accessTokenRequest.actual).toEqual(accessTokenRequest.expected);
 
 				expect(std.out).toMatchInlineSnapshot(`
 			"Attempting to login via OAuth...
@@ -191,7 +183,7 @@ describe("publish", () => {
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -214,7 +206,7 @@ describe("publish", () => {
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler 1's \`config\` command to login with an API token.[0m
@@ -255,7 +247,7 @@ describe("publish", () => {
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -280,7 +272,7 @@ describe("publish", () => {
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -384,7 +376,7 @@ describe("publish", () => {
 			Uploaded test-name-some-env (TIMINGS)
 			Published test-name-some-env (TIMINGS)
 			  https://test-name-some-env.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -405,7 +397,7 @@ describe("publish", () => {
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -426,7 +418,7 @@ describe("publish", () => {
 			Uploaded test-name-some-env (TIMINGS)
 			Published test-name-some-env (TIMINGS)
 			  https://test-name-some-env.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -447,7 +439,7 @@ describe("publish", () => {
 			Uploaded test-name-some-env (TIMINGS)
 			Published test-name-some-env (TIMINGS)
 			  https://test-name-some-env.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -519,7 +511,7 @@ describe("publish", () => {
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -547,7 +539,7 @@ describe("publish", () => {
 			Uploaded test-name (some-env) (TIMINGS)
 			Published test-name (some-env) (TIMINGS)
 			  https://some-env.test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -594,7 +586,7 @@ describe("publish", () => {
 		Uploaded test-name (TIMINGS)
 		Published test-name (TIMINGS)
 		  https://test-name.test-sub-domain.workers.dev
-		Current Deployment ID: undefined"
+		Current Deployment ID: Galaxy-Class"
 	`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
@@ -629,7 +621,7 @@ describe("publish", () => {
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined",
+			Current Deployment ID: Galaxy-Class",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			    - The \\"route\\" field in your configuration is an empty string and will be ignored.
@@ -680,7 +672,7 @@ describe("publish", () => {
 			  *another-boring-website.com (zone name: some-zone.com)
 			  example.com/some-route/* (zone id: JGHFHG654gjcj)
 			  more-examples.com/*
-			Current Deployment ID: undefined",
+			Current Deployment ID: Galaxy-Class",
 			  "warn": "",
 			}
 		`);
@@ -742,7 +734,7 @@ describe("publish", () => {
 			  *another-boring-website.com (zone name: some-zone.com)
 			  example.com/some-route/* (zone id: JGHFHG654gjcj)
 			  more-examples.com/*
-			Current Deployment ID: undefined",
+			Current Deployment ID: Galaxy-Class",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			    - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in
@@ -845,7 +837,7 @@ describe("publish", () => {
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  example.com/some-route/*
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 		});
 
@@ -1126,7 +1118,7 @@ Update them to point to this script instead?`,
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1144,7 +1136,7 @@ Update them to point to this script instead?`,
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1162,7 +1154,7 @@ Update them to point to this script instead?`,
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1182,7 +1174,7 @@ Update them to point to this script instead?`,
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1200,7 +1192,7 @@ Update them to point to this script instead?`,
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -1237,7 +1229,7 @@ Update them to point to this script instead?`,
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -1288,7 +1280,7 @@ Update them to point to this script instead?`,
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1308,7 +1300,7 @@ Update them to point to this script instead?`,
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1340,7 +1332,7 @@ export default{
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1358,7 +1350,7 @@ export default{
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1453,7 +1445,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1536,7 +1528,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined",
+			Current Deployment ID: Galaxy-Class",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			    - [1mDeprecation[0m: \\"site.entry-point\\":
@@ -1589,7 +1581,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(normalizeSlashes(std.warn)).toMatchInlineSnapshot(`
@@ -1679,7 +1671,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined",
+			Current Deployment ID: Galaxy-Class",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
 
 
@@ -1728,7 +1720,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -1769,7 +1761,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined",
+			Current Deployment ID: Galaxy-Class",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
 
 			",
@@ -1954,7 +1946,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined",
+			Current Deployment ID: Galaxy-Class",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
 
 			",
@@ -2001,7 +1993,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined",
+			Current Deployment ID: Galaxy-Class",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			    - \\"assets\\" fields are experimental and may change or break at any time.
@@ -2058,7 +2050,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2116,7 +2108,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2168,7 +2160,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2218,7 +2210,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (some-env) (TIMINGS)
 			Published test-name (some-env) (TIMINGS)
 			  https://some-env.test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2269,7 +2261,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name-some-env (TIMINGS)
 			Published test-name-some-env (TIMINGS)
 			  https://test-name-some-env.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2313,7 +2305,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2354,7 +2346,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2395,7 +2387,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2437,7 +2429,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2479,7 +2471,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2521,7 +2513,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2563,7 +2555,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2607,7 +2599,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2655,7 +2647,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2805,7 +2797,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined",
+			Current Deployment ID: Galaxy-Class",
 			  "warn": "",
 			}
 		`);
@@ -2905,7 +2897,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -2960,7 +2952,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3002,7 +2994,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined",
+			Current Deployment ID: Galaxy-Class",
 			  "warn": "",
 			}
 		`);
@@ -3045,7 +3037,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined",
+			Current Deployment ID: Galaxy-Class",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
 
 			",
@@ -3068,7 +3060,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3089,7 +3081,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3109,7 +3101,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3128,7 +3120,7 @@ addEventListener('fetch', event => {});`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			No publish targets for test-name (TIMINGS)
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3149,7 +3141,7 @@ addEventListener('fetch', event => {});`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			No publish targets for test-name (TIMINGS)
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3174,7 +3166,7 @@ addEventListener('fetch', event => {});`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (dev) (TIMINGS)
 			No publish targets for test-name (dev) (TIMINGS)
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3200,7 +3192,7 @@ addEventListener('fetch', event => {});`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (dev) (TIMINGS)
 			No publish targets for test-name (dev) (TIMINGS)
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3227,7 +3219,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (dev) (TIMINGS)
 			Published test-name (dev) (TIMINGS)
 			  https://dev.test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3255,7 +3247,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (dev) (TIMINGS)
 			Published test-name (dev) (TIMINGS)
 			  https://dev.test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3284,7 +3276,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (dev) (TIMINGS)
 			Published test-name (dev) (TIMINGS)
 			  https://dev.test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3316,7 +3308,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (dev) (TIMINGS)
 			Published test-name (dev) (TIMINGS)
 			  https://dev.test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3350,7 +3342,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (dev) (TIMINGS)
 			Published test-name (dev) (TIMINGS)
 			  https://dev.test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3411,7 +3403,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3430,7 +3422,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -3444,7 +3436,7 @@ addEventListener('fetch', event => {});`
 			mockSubDomainRequest("does-not-exist", false);
 
 			mockConfirm({
-				text: `Would you like to register a workers.dev subdomain now?`,
+				text: "Would you like to register a workers.dev subdomain now?",
 				result: false,
 			});
 
@@ -3473,7 +3465,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  http://example.com/*
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -3508,7 +3500,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name-production (TIMINGS)
 			Published test-name-production (TIMINGS)
 			  http://production.example.com/*
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -3542,7 +3534,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name-production (TIMINGS)
 			Published test-name-production (TIMINGS)
 			  http://production.example.com/*
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -3570,7 +3562,7 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			  http://example.com/*
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -3606,7 +3598,7 @@ addEventListener('fetch', event => {});`
 			Published test-name-production (TIMINGS)
 			  https://test-name-production.test-sub-domain.workers.dev
 			  http://production.example.com/*
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -3642,7 +3634,7 @@ addEventListener('fetch', event => {});`
 			Published test-name-production (TIMINGS)
 			  https://test-name-production.test-sub-domain.workers.dev
 			  http://production.example.com/*
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -3677,7 +3669,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name-production (TIMINGS)
 			Published test-name-production (TIMINGS)
 			  http://production.example.com/*
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -3712,7 +3704,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name-production (TIMINGS)
 			Published test-name-production (TIMINGS)
 			  http://production.example.com/*
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -3864,7 +3856,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -3890,7 +3882,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -3997,7 +3989,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -4037,7 +4029,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (testEnv) (TIMINGS)
 			Published test-name (testEnv) (TIMINGS)
 			  https://testEnv.test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -4065,7 +4057,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -4116,7 +4108,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -4161,7 +4153,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -4213,7 +4205,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined",
+			Current Deployment ID: Galaxy-Class",
 			  "warn": "",
 			}
 		`);
@@ -4258,7 +4250,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined",
+			Current Deployment ID: Galaxy-Class",
 			  "warn": "",
 			}
 		`);
@@ -4305,7 +4297,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -4369,7 +4361,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (xyz) (TIMINGS)
 			Published test-name (xyz) (TIMINGS)
 			  https://xyz.test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -4383,7 +4375,6 @@ addEventListener('fetch', event => {});`
 			});
 
 			it("should use a script's current migration tag when publishing migrations", async () => {
-				unsetAllMocks();
 				writeWranglerToml({
 					durable_objects: {
 						bindings: [
@@ -4402,26 +4393,22 @@ addEventListener('fetch', event => {});`
 				);
 				mockSubDomainRequest();
 				mockServiceScriptData({
-					script: { id: "test-name", migration_tag: "v1" },
+					script: { id: "test-name", migration_tag: "v2" },
 				});
 				mockUploadWorkerRequest({
 					legacyEnv: false,
 					expectedMigrations: {
-						old_tag: "v1",
 						new_tag: "v2",
 						steps: [
+							{
+								new_classes: ["SomeClass"],
+							},
 							{
 								new_classes: ["SomeOtherClass"],
 							},
 						],
 					},
 				});
-				setMockResponse(
-					"/accounts/:accountId/workers/deployments/by-script/:scriptTag",
-					() => ({
-						latest: { number: "2" },
-					})
-				);
 
 				await runWrangler("publish index.js --legacy-env false");
 				expect(std).toMatchInlineSnapshot(`
@@ -4436,7 +4423,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined",
+			Current Deployment ID: Galaxy-Class",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			    - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in
@@ -4506,7 +4493,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (xyz) (TIMINGS)
 			Published test-name (xyz) (TIMINGS)
 			  https://xyz.test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined",
+			Current Deployment ID: Galaxy-Class",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 			    - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in
@@ -4742,7 +4729,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -5163,7 +5150,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5234,7 +5221,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5268,7 +5255,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5306,7 +5293,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5381,7 +5368,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5419,7 +5406,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5494,7 +5481,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5538,7 +5525,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5562,7 +5549,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined",
+			Current Deployment ID: Galaxy-Class",
 			  "warn": "",
 			}
 		`);
@@ -5591,7 +5578,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5644,7 +5631,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5691,7 +5678,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5732,7 +5719,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5778,7 +5765,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5842,7 +5829,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -5879,7 +5866,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5916,7 +5903,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -5957,7 +5944,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -6001,7 +5988,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -6048,7 +6035,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -6078,7 +6065,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -6112,7 +6099,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -6162,7 +6149,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -6260,7 +6247,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -6291,7 +6278,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -6321,7 +6308,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -6353,7 +6340,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -6383,7 +6370,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -6425,7 +6412,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined",
+			Current Deployment ID: Galaxy-Class",
 			  "warn": "",
 			}
 		`);
@@ -6456,7 +6443,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined",
+			Current Deployment ID: Galaxy-Class",
 			  "warn": "",
 			}
 		`);
@@ -6480,7 +6467,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined",
+			Current Deployment ID: Galaxy-Class",
 			  "warn": "",
 			}
 		`);
@@ -6617,6 +6604,7 @@ addEventListener('fetch', event => {});`
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
 			await runWrangler("publish");
+
 			expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -6625,26 +6613,35 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined",
+			Current Deployment ID: Galaxy-Class",
 			  "warn": "",
 			}
 		`);
 		});
 
 		it("should print the bundle size, with API errors", async () => {
-			setMockRawResponse(
-				"/accounts/:accountId/workers/scripts/:scriptName",
-				"PUT",
-				() => {
-					return createFetchResult({}, false, [
-						{
-							code: 11337,
-							message:
-								"Script startup timed out. This could be due to script exceeding size limits or expensive code in the global scope.",
-						},
-					]);
-				}
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			// Override PUT call to error out from previous helper functions
+			msw.use(
+				rest.put(
+					"*/accounts/:accountId/workers/scripts/:scriptName",
+					(_, res, ctx) => {
+						return res(
+							ctx.json(
+								createFetchResult(null, false, [
+									{
+										code: 11337,
+										message:
+											"Script startup timed out. This could be due to script exceeding size limits or expensive code in the global scope.",
+									},
+								])
+							)
+						);
+					}
+				)
 			);
+
 			fs.writeFileSync(
 				"./hello.html",
 				`<!DOCTYPE html>
@@ -6665,11 +6662,11 @@ addEventListener('fetch', event => {});`
         },
       };`
 			);
+
 			writeWranglerToml({
 				main: "index.js",
 			});
-			mockSubDomainRequest();
-			mockUploadWorkerRequest();
+
 			await expect(runWrangler("publish")).rejects.toMatchInlineSnapshot(
 				`[ParseError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
 			);
@@ -6694,6 +6691,27 @@ addEventListener('fetch', event => {});`
 		});
 
 		test("should check biggest dependencies when upload fails with script size error", async () => {
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			// Override PUT call to error out from previous helper functions
+			msw.use(
+				rest.put(
+					"*/accounts/:accountId/workers/scripts/:scriptName",
+					(req, res, ctx) => {
+						return res(
+							ctx.json(
+								createFetchResult({}, false, [
+									{
+										code: 10027,
+										message: "workers.api.error.script_too_large",
+									},
+								])
+							)
+						);
+					}
+				)
+			);
+
 			fs.writeFileSync("dependency.js", `export const thing = "a string dep";`);
 
 			fs.writeFileSync(
@@ -6706,23 +6724,15 @@ addEventListener('fetch', event => {});`
           }
         }`
 			);
-			setMockRawResponse(
-				"/accounts/:accountId/workers/scripts/:scriptName",
-				"PUT",
-				() => {
-					return createFetchResult({}, false, [
-						{ code: 10027, message: "workers.api.error.script_too_large" },
-					]);
-				}
-			);
+
 			writeWranglerToml({
 				main: "index.js",
 			});
-			mockSubDomainRequest();
-			mockUploadWorkerRequest();
+
 			await expect(runWrangler("publish")).rejects.toMatchInlineSnapshot(
 				`[ParseError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
 			);
+
 			expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -6749,6 +6759,26 @@ addEventListener('fetch', event => {});`
 		});
 
 		test("should check biggest dependencies when upload fails with script startup error", async () => {
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			// Override PUT call to error out from previous helper functions
+			msw.use(
+				rest.put(
+					"*/accounts/:accountId/workers/scripts/:scriptName",
+					(req, res, ctx) => {
+						return res(
+							ctx.json(
+								createFetchResult({}, false, [
+									{
+										code: 10021,
+										message: "Error: Script startup exceeded CPU time limit.",
+									},
+								])
+							)
+						);
+					}
+				)
+			);
 			fs.writeFileSync("dependency.js", `export const thing = "a string dep";`);
 
 			fs.writeFileSync(
@@ -6761,23 +6791,11 @@ addEventListener('fetch', event => {});`
           }
         }`
 			);
-			setMockRawResponse(
-				"/accounts/:accountId/workers/scripts/:scriptName",
-				"PUT",
-				() => {
-					return createFetchResult({}, false, [
-						{
-							code: 10021,
-							message: "Error: Script startup exceeded CPU time limit.",
-						},
-					]);
-				}
-			);
+
 			writeWranglerToml({
 				main: "index.js",
 			});
-			mockSubDomainRequest();
-			mockUploadWorkerRequest();
+
 			await expect(runWrangler("publish")).rejects.toMatchInlineSnapshot(
 				`[ParseError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
 			);
@@ -6991,25 +7009,35 @@ addEventListener('fetch', event => {});`
 	});
 
 	it("should publish if the last deployed source check fails", async () => {
-		unsetAllMocks();
 		writeWorkerSource();
 		writeWranglerToml();
 		mockSubDomainRequest();
 		mockUploadWorkerRequest();
-		setMockResponse(
-			"/accounts/:accountId/workers/deployments/by-script/:scriptTag",
-			() => ({
-				latest: { number: "2" },
-			})
-		);
-		setMockRawResponse(
-			"/accounts/:accountId/workers/services/:scriptName",
-			"GET",
-			() => {
-				return createFetchResult(null, false, [
-					{ code: 10090, message: "workers.api.error.service_not_found" },
-				]);
-			}
+		msw.use(
+			rest.get(
+				"*/accounts/:accountId/workers/deployments/by-script/:scriptTag",
+				(_, res, ctx) => {
+					return res(
+						ctx.json(
+							createFetchResult({
+								latest: { number: "2" },
+							})
+						)
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/workers/services/:scriptName",
+				(_, res, ctx) => {
+					return res(
+						ctx.json(
+							createFetchResult(null, false, [
+								{ code: 10090, message: "workers.api.error.service_not_found" },
+							])
+						)
+					);
+				}
+			)
 		);
 
 		await runWrangler("publish index.js");
@@ -7028,25 +7056,36 @@ addEventListener('fetch', event => {});`
 	});
 
 	it("should not publish if there's any other kind of error when checking deployment source", async () => {
-		unsetAllMocks();
 		writeWorkerSource();
 		writeWranglerToml();
 		mockSubDomainRequest();
 		mockUploadWorkerRequest();
-		setMockRawResponse(
-			"/accounts/:accountId/workers/services/:scriptName",
-			"GET",
-			() => {
-				return createFetchResult(null, false, [
-					{ code: 10000, message: "Authentication error" },
-				]);
-			}
-		);
-		setMockResponse(
-			"/accounts/:accountId/workers/deployments/by-script/:scriptTag",
-			() => ({
-				latest: { number: "2" },
-			})
+
+		msw.use(
+			rest.get(
+				"*/accounts/:accountId/workers/services/:scriptName",
+				(_, res, ctx) => {
+					return res(
+						ctx.json(
+							createFetchResult(null, false, [
+								{ code: 10000, message: "Authentication error" },
+							])
+						)
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/workers/deployments/by-script/:scriptTag",
+				(_, res, ctx) => {
+					return res(
+						ctx.json(
+							createFetchResult({
+								latest: { number: "2" },
+							})
+						)
+					);
+				}
+			)
 		);
 
 		await runWrangler("publish index.js");
@@ -7084,7 +7123,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 		});
 
@@ -7121,7 +7160,7 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			  Consumer for queue1
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 		});
 
@@ -7193,7 +7232,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -7218,7 +7257,7 @@ addEventListener('fetch', event => {});`
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: undefined"
+			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
@@ -7237,6 +7276,13 @@ function writeAssets(
 		});
 		fs.writeFileSync(filePathDestination, asset.content);
 	}
+}
+function mockDeploymentsListRequest() {
+	msw.use(...mswSuccessDeployments);
+}
+
+function mockLastDeploymentRequest() {
+	msw.use(...mswSuccessLastDeployment);
 }
 
 /** Create a mock handler for the request to upload a worker script. */
@@ -7273,73 +7319,90 @@ function mockUploadWorkerRequest(
 		sendScriptIds,
 		keepVars,
 	} = options;
-	setMockResponse(
-		env && !legacyEnv
-			? "/accounts/:accountId/workers/services/:scriptName/environments/:envName"
-			: "/accounts/:accountId/workers/scripts/:scriptName",
-		"PUT",
-		async ([_url, accountId, scriptName, envName], { body }, queryParams) => {
-			expect(accountId).toEqual("some-account-id");
-			expect(scriptName).toEqual(
-				legacyEnv && env ? `test-name-${env}` : "test-name"
-			);
-			if (!legacyEnv) {
-				expect(envName).toEqual(env);
-			}
-			expect(queryParams.get("include_subdomain_availability")).toEqual("true");
-			expect(queryParams.get("excludeScript")).toEqual("true");
-			const formBody = body as FormData;
-			if (expectedEntry !== undefined) {
-				expect(await (formBody.get("index.js") as File).text()).toMatch(
-					expectedEntry
-				);
-			}
-			const metadata = JSON.parse(
-				formBody.get("metadata") as string
-			) as WorkerMetadata;
-			if (expectedType === "esm") {
-				expect(metadata.main_module).toEqual(expectedMainModule);
-			} else {
-				expect(metadata.body_part).toEqual("index.js");
-			}
+	if (env && !legacyEnv) {
+		msw.use(
+			rest.put(
+				"*/accounts/:accountId/workers/services/:scriptName/environments/:envName",
+				handleUpload
+			)
+		);
+	} else {
+		msw.use(
+			rest.put(
+				"*/accounts/:accountId/workers/scripts/:scriptName",
+				handleUpload
+			)
+		);
+	}
 
-			if (keepVars) {
-				expect(metadata.keep_bindings).toEqual(["plain_text", "json"]);
-			} else {
-				expect(metadata.keep_bindings).toBeFalsy();
-			}
-
-			if ("expectedBindings" in options) {
-				expect(metadata.bindings).toEqual(expectedBindings);
-			}
-			if ("expectedCompatibilityDate" in options) {
-				expect(metadata.compatibility_date).toEqual(expectedCompatibilityDate);
-			}
-			if ("expectedCompatibilityFlags" in options) {
-				expect(metadata.compatibility_flags).toEqual(
-					expectedCompatibilityFlags
-				);
-			}
-			if ("expectedMigrations" in options) {
-				expect(metadata.migrations).toEqual(expectedMigrations);
-			}
-			for (const [name, content] of Object.entries(expectedModules)) {
-				expect(await (formBody.get(name) as File).text()).toEqual(content);
-			}
-
-			return {
-				available_on_subdomain,
-				...(sendScriptIds
-					? {
-							id: "abc12345",
-							etag: "etag98765",
-							pipeline_hash: "hash9999",
-							tag: "sample-tag",
-					  }
-					: {}),
-			};
+	async function handleUpload(
+		req: RestRequest,
+		res: ResponseComposition,
+		ctx: RestContext
+	) {
+		expect(req.params.accountId).toEqual("some-account-id");
+		expect(req.params.scriptName).toEqual(
+			legacyEnv && env ? `test-name-${env}` : "test-name"
+		);
+		if (!legacyEnv) {
+			expect(req.params.envName).toEqual(env);
 		}
-	);
+		expect(req.url.searchParams.get("include_subdomain_availability")).toEqual(
+			"true"
+		);
+		expect(req.url.searchParams.get("excludeScript")).toEqual("true");
+
+		const formBody = await (
+			req as MockedRequest as RestRequestWithFormData
+		).formData();
+		if (expectedEntry !== undefined) {
+			expect(formBody.get("index.js")).toMatch(expectedEntry);
+		}
+		const metadata = JSON.parse(
+			formBody.get("metadata") as string
+		) as WorkerMetadata;
+		if (expectedType === "esm") {
+			expect(metadata.main_module).toEqual(expectedMainModule);
+		} else {
+			expect(metadata.body_part).toEqual("index.js");
+		}
+
+		if (keepVars) {
+			expect(metadata.keep_bindings).toEqual(["plain_text", "json"]);
+		} else {
+			expect(metadata.keep_bindings).toBeFalsy();
+		}
+
+		if ("expectedBindings" in options) {
+			expect(metadata.bindings).toEqual(expectedBindings);
+		}
+		if ("expectedCompatibilityDate" in options) {
+			expect(metadata.compatibility_date).toEqual(expectedCompatibilityDate);
+		}
+		if ("expectedCompatibilityFlags" in options) {
+			expect(metadata.compatibility_flags).toEqual(expectedCompatibilityFlags);
+		}
+		if ("expectedMigrations" in options) {
+			expect(metadata.migrations).toEqual(expectedMigrations);
+		}
+		for (const [name, content] of Object.entries(expectedModules)) {
+			expect(formBody.get(name)).toEqual(content);
+		}
+
+		return res(
+			ctx.json(
+				createFetchResult({
+					available_on_subdomain,
+					...(sendScriptIds && {
+						id: "abc12345",
+						etag: "etag98765",
+						pipeline_hash: "hash9999",
+						tag: "sample-tag",
+					}),
+				})
+			)
+		);
+	}
 }
 
 /** Create a mock handler for the request to get the account's subdomain. */
@@ -7348,18 +7411,30 @@ function mockSubDomainRequest(
 	registeredWorkersDev = true
 ) {
 	if (registeredWorkersDev) {
-		setMockResponse("/accounts/:accountId/workers/subdomain", "GET", () => {
-			return { subdomain };
-		});
+		msw.use(
+			rest.get("*/accounts/:accountId/workers/subdomain", (req, res, ctx) => {
+				return res.once(ctx.json(createFetchResult({ subdomain })));
+			})
+		);
 	} else {
-		setMockRawResponse("/accounts/:accountId/workers/subdomain", "GET", () => {
-			return createFetchResult(null, false, [
-				{ code: 10007, message: "haven't registered workers.dev" },
-			]);
-		});
+		msw.use(
+			rest.get("*/accounts/:accountId/workers/subdomain", (req, res, ctx) => {
+				return res.once(
+					ctx.json(
+						createFetchResult(null, false, [
+							{ code: 10007, message: "haven't registered workers.dev" },
+						])
+					)
+				);
+			})
+		);
 	}
 }
-
+//
+//
+//
+//
+//
 /** Create a mock handler to toggle a <script>.<user>.workers.dev subdomain */
 function mockUpdateWorkerRequest({
 	env,
@@ -7373,20 +7448,22 @@ function mockUpdateWorkerRequest({
 	const requests = { count: 0 };
 	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
 	const environment = env && !legacyEnv ? "/environments/:envName" : "";
-	setMockResponse(
-		`/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/subdomain`,
-		"POST",
-		([_url, accountId, scriptName, envName], { body }) => {
-			expect(accountId).toEqual("some-account-id");
-			expect(scriptName).toEqual(
-				legacyEnv && env ? `test-name-${env}` : "test-name"
-			);
-			if (!legacyEnv) {
-				expect(envName).toEqual(env);
+	msw.use(
+		rest.post(
+			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/subdomain`,
+			async (req, res, ctx) => {
+				expect(req.params.accountId).toEqual("some-account-id");
+				expect(req.params.scriptName).toEqual(
+					legacyEnv && env ? `test-name-${env}` : "test-name"
+				);
+				if (!legacyEnv) {
+					expect(req.params.envName).toEqual(env);
+				}
+				const body = await req.json();
+				expect(body).toEqual({ enabled });
+				return res.once(ctx.json(createFetchResult(null)));
 			}
-			expect(JSON.parse(body as string)).toEqual({ enabled });
-			return null;
-		}
+		)
 	);
 	return requests;
 }
@@ -7403,25 +7480,26 @@ function mockPublishRoutesRequest({
 	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
 	const environment = env && !legacyEnv ? "/environments/:envName" : "";
 
-	setMockResponse(
-		`/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/routes`,
-		"PUT",
-		([_url, accountId, scriptName, envName], { body }) => {
-			expect(accountId).toEqual("some-account-id");
-			expect(scriptName).toEqual(
-				legacyEnv && env ? `test-name-${env}` : "test-name"
-			);
-			if (!legacyEnv) {
-				expect(envName).toEqual(env);
+	msw.use(
+		rest.put(
+			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/routes`,
+			async (req, res, ctx) => {
+				expect(req.params.accountId).toEqual("some-account-id");
+				expect(req.params.scriptName).toEqual(
+					legacyEnv && env ? `test-name-${env}` : "test-name"
+				);
+				if (!legacyEnv) {
+					expect(req.params.envName).toEqual(env);
+				}
+				const body = await req.json();
+				expect(body).toEqual(
+					routes.map((route) =>
+						typeof route !== "object" ? { pattern: route } : route
+					)
+				);
+				return res.once(ctx.json(createFetchResult(null)));
 			}
-
-			expect(JSON.parse(body as string)).toEqual(
-				routes.map((route) =>
-					typeof route !== "object" ? { pattern: route } : route
-				)
-			);
-			return null;
-		}
+		)
 	);
 }
 
@@ -7435,13 +7513,19 @@ function mockUnauthorizedPublishRoutesRequest({
 	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
 	const environment = env && !legacyEnv ? "/environments/:envName" : "";
 
-	setMockRawResponse(
-		`/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/routes`,
-		"PUT",
-		() =>
-			createFetchResult(null, false, [
-				{ message: "Authentication error", code: 10000 },
-			])
+	msw.use(
+		rest.put(
+			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/routes`,
+			(req, res, ctx) => {
+				return res.once(
+					ctx.json(
+						createFetchResult(null, false, [
+							{ message: "Authentication error", code: 10000 },
+						])
+					)
+				);
+			}
+		)
 	);
 }
 
@@ -7449,22 +7533,27 @@ function mockPublishRoutesFallbackRequest(route: {
 	pattern: string;
 	script: string;
 }) {
-	setMockResponse(`/zones/:zoneId/workers/routes`, "POST", (_url, { body }) => {
-		expect(JSON.parse(body as string)).toEqual(route);
-		return route.pattern;
-	});
+	msw.use(
+		rest.post(`*/zones/:zoneId/workers/routes`, async (req, res, ctx) => {
+			const body = await req.json();
+			expect(body).toEqual(route);
+			return res.once(ctx.json(createFetchResult(route.pattern)));
+		})
+	);
 }
 
 function mockCustomDomainLookup(origin: CustomDomain) {
-	setMockResponse(
-		`/accounts/:accountId/workers/domains/records/:domainTag`,
-		"GET",
-		([_url, accountId, domainTag]) => {
-			expect(accountId).toEqual("some-account-id");
-			expect(domainTag).toEqual(origin.id);
+	msw.use(
+		rest.get(
+			`*/accounts/:accountId/workers/domains/records/:domainTag`,
 
-			return origin;
-		}
+			(req, res, ctx) => {
+				expect(req.params.accountId).toEqual("some-account-id");
+				expect(req.params.domainTag).toEqual(origin.id);
+
+				return res.once(ctx.json(createFetchResult(origin)));
+			}
+		)
 	);
 }
 
@@ -7481,47 +7570,47 @@ function mockCustomDomainsChangesetRequest({
 }) {
 	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
 	const environment = env && !legacyEnv ? "/environments/:envName" : "";
+	msw.use(
+		rest.post(
+			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/domains/changeset`,
+			async (req, res, ctx) => {
+				expect(req.params.accountId).toEqual("some-account-id");
+				expect(req.params.scriptName).toEqual(
+					legacyEnv && env ? `test-name-${env}` : "test-name"
+				);
+				if (!legacyEnv) {
+					expect(req.params.envName).toEqual(env);
+				}
 
-	setMockResponse(
-		`/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/domains/changeset`,
-		"POST",
-		([_url, accountId, scriptName, envName], { body }) => {
-			expect(accountId).toEqual("some-account-id");
-			expect(scriptName).toEqual(
-				legacyEnv && env ? `test-name-${env}` : "test-name"
-			);
-			if (!legacyEnv) {
-				expect(envName).toEqual(env);
-			}
+				const domains: Array<
+					{ hostname: string } & ({ zone_id?: string } | { zone_name?: string })
+				> = await req.json();
 
-			const domains: Array<
-				{ hostname: string } & ({ zone_id?: string } | { zone_name?: string })
-			> = JSON.parse(body as string);
-
-			const changeset: CustomDomainChangeset = {
-				added: domains.map((domain) => {
-					return {
-						...domain,
-						id: "",
-						service: scriptName,
-						environment: envName,
-						zone_name: "",
-						zone_id: "",
-					};
-				}),
-				removed: [],
-				updated:
-					originConflicts?.map((domain) => {
+				const changeset: CustomDomainChangeset = {
+					added: domains.map((domain) => {
 						return {
 							...domain,
-							modified: true,
+							id: "",
+							service: req.params.scriptName as string,
+							environment: req.params.envName as string,
+							zone_name: "",
+							zone_id: "",
 						};
-					}) ?? [],
-				conflicting: dnsRecordConflicts,
-			};
+					}),
+					removed: [],
+					updated:
+						originConflicts?.map((domain) => {
+							return {
+								...domain,
+								modified: true,
+							};
+						}) ?? [],
+					conflicting: dnsRecordConflicts,
+				};
 
-			return changeset;
-		}
+				return res.once(ctx.json(createFetchResult(changeset)));
+			}
+		)
 	);
 }
 
@@ -7545,37 +7634,36 @@ function mockPublishCustomDomainsRequest({
 	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
 	const environment = env && !legacyEnv ? "/environments/:envName" : "";
 
-	setMockResponse(
-		`/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/domains/records`,
-		"PUT",
-		([_url, accountId, scriptName, envName], { body }) => {
-			expect(accountId).toEqual("some-account-id");
-			expect(scriptName).toEqual(
-				legacyEnv && env ? `test-name-${env}` : "test-name"
-			);
-			if (!legacyEnv) {
-				expect(envName).toEqual(env);
+	msw.use(
+		rest.put(
+			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/domains/records`,
+			async (req, res, ctx) => {
+				expect(req.params.accountId).toEqual("some-account-id");
+				expect(req.params.scriptName).toEqual(
+					legacyEnv && env ? `test-name-${env}` : "test-name"
+				);
+				if (!legacyEnv) {
+					expect(req.params.envName).toEqual(env);
+				}
+				const body = await req.json();
+				expect(body).toEqual({
+					...publishFlags,
+					origins: domains,
+				});
+
+				return res.once(ctx.json(createFetchResult(null)));
 			}
-
-			expect(JSON.parse(body as string)).toEqual({
-				...publishFlags,
-				origins: domains,
-			});
-
-			return null;
-		}
+		)
 	);
 }
 
 /** Create a mock handler for the request to get a list of all KV namespaces. */
 function mockListKVNamespacesRequest(...namespaces: KVNamespaceInfo[]) {
-	setMockResponse(
-		"/accounts/:accountId/storage/kv/namespaces",
-		"GET",
-		([_url, accountId]) => {
-			expect(accountId).toEqual("some-account-id");
-			return namespaces;
-		}
+	msw.use(
+		rest.get("*/accounts/:accountId/storage/kv/namespaces", (req, res, ctx) => {
+			expect(req.params.accountId).toEqual("some-account-id");
+			return res.once(ctx.json(createFetchResult(namespaces)));
+		})
 	);
 }
 
@@ -7594,6 +7682,7 @@ interface StaticAssetUpload {
 }
 
 /** Create a mock handler for the request that tries to do a bulk upload of assets to a KV namespace. */
+//TODO: This is getting called multiple times in the test, we need to check if that is happening in Production --Jacob 2021-03-02
 function mockUploadAssetsToKVRequest(
 	expectedNamespaceId: string,
 	assets?: ExpectedAsset[]
@@ -7601,22 +7690,24 @@ function mockUploadAssetsToKVRequest(
 	const requests: {
 		uploads: StaticAssetUpload[];
 	}[] = [];
-	setMockResponse(
-		"/accounts/:accountId/storage/kv/namespaces/:namespaceId/bulk",
-		"PUT",
-		([_url, accountId, namespaceId], { body }) => {
-			expect(accountId).toEqual("some-account-id");
-			expect(namespaceId).toEqual(expectedNamespaceId);
-			const uploads = JSON.parse(body as string);
-			if (assets) {
-				expect(assets.length).toEqual(uploads.length);
-				for (let i = 0; i < uploads.length; i++) {
-					checkAssetUpload(assets[i], uploads[i]);
+	msw.use(
+		rest.put(
+			"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/bulk",
+			async (req, res, ctx) => {
+				expect(req.params.accountId).toEqual("some-account-id");
+				expect(req.params.namespaceId).toEqual(expectedNamespaceId);
+				const uploads = await req.json();
+				if (assets) {
+					expect(assets.length).toEqual(uploads.length);
+					for (let i = 0; i < uploads.length; i++) {
+						checkAssetUpload(assets[i], uploads[i]);
+					}
 				}
-			} else {
+
 				requests.push({ uploads });
+				return res(ctx.json(createFetchResult([])));
 			}
-		}
+		)
 	);
 	return requests;
 }
@@ -7640,16 +7731,24 @@ function mockDeleteUnusedAssetsRequest(
 	expectedNamespaceId: string,
 	assets: string[]
 ) {
-	setMockResponse(
-		"/accounts/:accountId/storage/kv/namespaces/:namespaceId/bulk",
-		"DELETE",
-		([_url, accountId, namespaceId], { body }) => {
-			expect(accountId).toEqual("some-account-id");
-			expect(namespaceId).toEqual(expectedNamespaceId);
-			const deletes = JSON.parse(body as string);
-			expect(assets).toEqual(deletes);
-			return null;
-		}
+	msw.use(
+		rest.delete(
+			"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/bulk",
+			async (req, res, ctx) => {
+				expect(req.params.accountId).toEqual("some-account-id");
+				expect(req.params.namespaceId).toEqual(expectedNamespaceId);
+				const deletes = await req.json();
+				expect(assets).toEqual(deletes);
+				return res.once(
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: null,
+					})
+				);
+			}
+		)
 	);
 }
 
@@ -7657,13 +7756,18 @@ type LegacyScriptInfo = { id: string; migration_tag?: string };
 
 function mockLegacyScriptData(options: { scripts: LegacyScriptInfo[] }) {
 	const { scripts } = options;
-	setMockResponse(
-		"/accounts/:accountId/workers/scripts",
-		"GET",
-		([_url, accountId]) => {
-			expect(accountId).toEqual("some-account-id");
-			return scripts;
-		}
+	msw.use(
+		rest.get("*/accounts/:accountId/workers/scripts", (req, res, ctx) => {
+			expect(req.params.accountId).toEqual("some-account-id");
+			return res.once(
+				ctx.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: scripts,
+				})
+			);
+		})
 	);
 }
 
@@ -7677,74 +7781,140 @@ function mockServiceScriptData(options: {
 	const { script } = options;
 	if (options.env) {
 		if (!script) {
-			setMockRawResponse(
-				"/accounts/:accountId/workers/services/:scriptName/environments/:envName",
-				"GET",
-				() => {
-					return createFetchResult(null, false, [
-						{ code: 10092, message: "workers.api.error.environment_not_found" },
-					]);
-				}
+			msw.use(
+				rest.get(
+					"*/accounts/:accountId/workers/services/:scriptName/environments/:envName",
+					(_, res, ctx) => {
+						return res.once(
+							ctx.json({
+								success: false,
+								errors: [
+									{
+										code: 10092,
+										message: "workers.api.error.environment_not_found",
+									},
+								],
+								messages: [],
+								result: null,
+							})
+						);
+					}
+				)
 			);
 			return;
 		}
-		setMockResponse(
-			"/accounts/:accountId/workers/services/:scriptName/environments/:envName",
-			"GET",
-			([_url, accountId, scriptName, envName]) => {
-				expect(accountId).toEqual("some-account-id");
-				expect(scriptName).toEqual(options.scriptName || "test-name");
-				expect(envName).toEqual(options.env);
-				return { script };
-			}
+		msw.use(
+			rest.get(
+				"*/accounts/:accountId/workers/services/:scriptName/environments/:envName",
+				(req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					expect(req.params.scriptName).toEqual(
+						options.scriptName || "test-name"
+					);
+					expect(req.params.envName).toEqual(options.env);
+					return res.once(
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: { script },
+						})
+					);
+				}
+			)
 		);
 	} else {
 		if (!script) {
-			setMockRawResponse(
-				"/accounts/:accountId/workers/services/:scriptName",
-				"GET",
-				() => {
-					return createFetchResult(null, false, [
-						{ code: 10090, message: "workers.api.error.service_not_found" },
-					]);
-				}
+			msw.use(
+				rest.get(
+					"*/accounts/:accountId/workers/services/:scriptName",
+					(req, res, ctx) => {
+						return res.once(
+							ctx.json({
+								success: false,
+								errors: [
+									{
+										code: 10090,
+										message: "workers.api.error.service_not_found",
+									},
+								],
+								messages: [],
+								result: null,
+							})
+						);
+					}
+				)
 			);
 			return;
 		}
-		setMockResponse(
-			"/accounts/:accountId/workers/services/:scriptName",
-			"GET",
-			([_url, accountId, scriptName]) => {
-				expect(accountId).toEqual("some-account-id");
-				expect(scriptName).toEqual(options.scriptName || "test-name");
-				return { default_environment: { script } };
-			}
+		msw.use(
+			rest.get(
+				"*/accounts/:accountId/workers/services/:scriptName",
+				(req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					expect(req.params.scriptName).toEqual(
+						options.scriptName || "test-name"
+					);
+					return res.once(
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: { default_environment: { script } },
+						})
+					);
+				}
+			)
 		);
 	}
 }
 
 function mockGetQueue(expectedQueueName: string) {
 	const requests = { count: 0 };
-	setMockResponse(
-		`/accounts/:accountId/workers/queues/${expectedQueueName}`,
-		"GET",
-		([_url, accountId]) => {
-			expect(accountId).toEqual("some-account-id");
-			requests.count += 1;
-			return { queue: expectedQueueName };
-		}
+	msw.use(
+		rest.get(
+			`*/accounts/:accountId/workers/queues/${expectedQueueName}`,
+			(req, res, ctx) => {
+				expect(req.params.accountId).toEqual("some-account-id");
+				requests.count += 1;
+				return res(
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: { queue: expectedQueueName },
+					})
+				);
+			}
+		)
 	);
 	return requests;
 }
 
 function mockGetQueueMissing(expectedQueueName: string) {
 	const requests = { count: 0 };
-	setMockResponse(
-		`/accounts/:accountId/workers/queues/${expectedQueueName}`,
-		"GET",
-		([_url, _accountId]) => {
-			throw { code: 11000 };
-		}
+	msw.use(
+		rest.get(
+			`*/accounts/:accountId/workers/queues/${expectedQueueName}`,
+			(req, res, ctx) => {
+				requests.count += 1;
+				expect(req.params.accountId).toEqual("some-account-id");
+
+				return res(
+					ctx.json({
+						success: false,
+						errors: [
+							{
+								code: 11000,
+								message: "workers.api.error.queue_not_found",
+							},
+						],
+						messages: [],
+						result: null,
+					})
+				);
+			}
+		)
 	);
 	return requests;
 }
@@ -7755,15 +7925,65 @@ function mockPutQueueConsumer(
 	expectedBody: PutConsumerBody
 ) {
 	const requests = { count: 0 };
-	setMockResponse(
-		`/accounts/:accountId/workers/queues/${expectedQueueName}/consumers/${expectedConsumerName}`,
-		"PUT",
-		([_url, accountId], { body }) => {
-			expect(accountId).toEqual("some-account-id");
-			expect(JSON.parse(body as string)).toEqual(expectedBody);
-			requests.count += 1;
-			return { queue: expectedQueueName };
-		}
+	msw.use(
+		rest.put(
+			`*/accounts/:accountId/workers/queues/${expectedQueueName}/consumers/${expectedConsumerName}`,
+			async (req, res, ctx) => {
+				const body = await req.json();
+				expect(req.params.accountId).toEqual("some-account-id");
+				expect(body).toEqual(expectedBody);
+				requests.count += 1;
+				return res(
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: { queue: expectedQueueName },
+					})
+				);
+			}
+		)
 	);
 	return requests;
 }
+
+// MSW FormData & Blob polyfills to test FormData requests
+function mockFormDataToString(this: FormData) {
+	const entries = [];
+	for (const [key, value] of this.entries()) {
+		if (value instanceof Blob) {
+			const reader = new FileReaderSync();
+			reader.readAsText(value);
+			const result = reader.result;
+			entries.push([key, result]);
+		} else {
+			entries.push([key, value]);
+		}
+	}
+	return JSON.stringify({
+		__formdata: entries,
+	});
+}
+
+async function mockFormDataFromString(this: MockedRequest): Promise<FormData> {
+	const { __formdata } = await this.json();
+	expect(__formdata).toBeInstanceOf(Array);
+
+	const form = new FormData();
+	for (const [key, value] of __formdata) {
+		form.set(key, value);
+	}
+	return form;
+}
+
+// The following two functions workaround the fact that MSW does not yet support FormData in requests.
+// We use the fact that MSW relies upon `node-fetch` internally, which will call `toString()` on the FormData object,
+// rather than passing it through or serializing it as a proper FormData object.
+// The hack is to serialize FormData to a JSON string by overriding `FormData.toString()`.
+// And then to deserialize back to a FormData object by monkey-patching a `formData()` helper onto `MockedRequest`.
+FormData.prototype.toString = mockFormDataToString;
+export interface RestRequestWithFormData extends MockedRequest, RestRequest {
+	formData(): Promise<FormData>;
+}
+(MockedRequest.prototype as RestRequestWithFormData).formData =
+	mockFormDataFromString;

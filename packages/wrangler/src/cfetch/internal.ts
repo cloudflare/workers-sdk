@@ -252,9 +252,6 @@ export async function fetchDashboardScript(
 		}
 
 		return file ?? "";
-
-		// Follow up on issue in Undici about multipart/form-data support & replace the workaround: https://github.com/nodejs/undici/issues/974
-		// This should be using a builtin formData() parser pattern.
 	} else {
 		return response.text();
 	}
