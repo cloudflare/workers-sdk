@@ -2,36 +2,21 @@ import { rest } from "msw";
 import { Request } from "undici";
 import openInBrowser from "../../open-in-browser";
 import { mockHttpServer } from "./mock-http-server";
-import { msw } from "./msw";
+import { createFetchResult, msw } from "./msw";
 
 export function mockGetMemberships(
 	accounts: { id: string; account: { id: string; name: string } }[]
 ) {
 	msw.use(
-		rest.get("*/memberships", (req, res, ctx) => {
-			return res.once(
-				ctx.json({
-					result: accounts,
-					success: true,
-					errors: [],
-					messages: [],
-				})
-			);
+		rest.get("*/memberships", (_, res, ctx) => {
+			return res.once(ctx.json(createFetchResult(accounts)));
 		})
 	);
 }
-
 export function mockGetMembershipsFail() {
 	msw.use(
-		rest.get("*/memberships", (req, res, ctx) => {
-			return res.once(
-				ctx.json({
-					result: [],
-					success: false,
-					errors: [],
-					messages: [],
-				})
-			);
+		rest.get("*/memberships", (_, res, ctx) => {
+			return res.once(ctx.json(createFetchResult([], false)));
 		})
 	);
 }
@@ -101,27 +86,6 @@ export const mockOAuthFlow = () => {
 		}
 	};
 
-	const mockRevokeAuthorization = ({
-		domain = "dash.cloudflare.com",
-	}: { domain?: string } = {}) => {
-		const outcome = {
-			actual: new Request("https://example.org"),
-			expected: new Request(`https://${domain}/oauth2/revoke`, {
-				method: "POST",
-			}),
-		};
-
-		msw.use(
-			rest.post(outcome.expected.url, async (req, res) => {
-				// TODO: update Miniflare typings to match full undici Request
-				outcome.actual = req as unknown as Request;
-				return res.once();
-			})
-		);
-
-		return outcome;
-	};
-
 	const mockGrantAccessToken = ({
 		respondWith,
 		domain = "dash.cloudflare.com",
@@ -173,7 +137,7 @@ export const mockOAuthFlow = () => {
 		mockDomainUsesAccess,
 		mockGrantAccessToken,
 		mockOAuthServerCallback,
-		mockRevokeAuthorization,
+		mockExchangeRefreshTokenForAccessToken,
 	};
 };
 

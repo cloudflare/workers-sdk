@@ -11,6 +11,7 @@ import { useMockStdin } from "./helpers/mock-stdin";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import { mockGetMembershipsFail } from "./helpers/mock-oauth-flow";
 
 function createFetchResult(result: unknown, success = true) {
 	return {
@@ -19,14 +20,6 @@ function createFetchResult(result: unknown, success = true) {
 		messages: [],
 		result,
 	};
-}
-
-export function mockGetMembershipsFail() {
-	msw.use(
-		rest.get("*/memberships", (req, res, ctx) => {
-			return res.once(ctx.json(createFetchResult([], false)));
-		})
-	);
 }
 
 export function mockGetMemberships(
