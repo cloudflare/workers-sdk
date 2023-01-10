@@ -13,7 +13,6 @@ import { getAssetPaths, getSiteAssetPaths } from "../sites";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import publish from "./publish";
-import type { ConfigPath } from "../index";
 import type {
 	CommonYargsOptions,
 	YargsOptionsToInterface,
@@ -185,8 +184,7 @@ export async function publishHandler(args: ArgumentsCamelCase<PublishArgs>) {
 	await printWranglerBanner();
 
 	const configPath =
-		(args.config as ConfigPath) ||
-		(args.script && findWranglerToml(path.dirname(args.script)));
+		args.config || (args.script && findWranglerToml(path.dirname(args.script)));
 	const config = readConfig(configPath, args);
 	const entry = await getEntry(args, config, "publish");
 	await metrics.sendMetricsEvent(

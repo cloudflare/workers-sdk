@@ -6,8 +6,8 @@ import { parseJSONC, parseTOML, readFileSync } from "../parse";
 import { removeD1BetaPrefix } from "../worker";
 import { normalizeAndValidateConfig } from "./validation";
 import type { CfWorkerInit } from "../worker";
-import type { Config, RawConfig } from "./config";
-import type { CamelCaseKey } from "yargs";
+import type { CommonYargsOptions } from "../yargs-types";
+import type { Config, OnlyCamelCase, RawConfig } from "./config";
 
 export type {
 	Config,
@@ -25,16 +25,15 @@ export type {
 /**
  * Get the Wrangler configuration; read it from the give `configPath` if available.
  */
-export function readConfig(
+
+export function readConfig<CommandArgs>(
 	configPath: string | undefined,
-	args: unknown
+	// Include command specific args as well as the wrangler global flags
+	args: CommandArgs & OnlyCamelCase<CommonYargsOptions>
 ): Config {
 	let rawConfig: RawConfig = {};
 	if (!configPath) {
-		configPath = findWranglerToml(
-			process.cwd(),
-			(args as { "json-config"?: boolean })?.["json-config"]
-		);
+		configPath = findWranglerToml(process.cwd(), args.experimentalJsonConfig);
 	}
 	// Load the configuration from disk if available
 	if (configPath?.endsWith("toml")) {
@@ -326,18 +325,13 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 	logger.log(message);
 }
 
-type CamelCase<T> = {
-	[key in keyof T as key | CamelCaseKey<key>]: T[key];
-};
-
-export function withConfig<T extends { config?: string }>(
+export function withConfig<T>(
 	handler: (
-		t: Omit<CamelCase<T>, "config"> & { config: Config }
+		t: OnlyCamelCase<T & CommonYargsOptions> & { config: Config }
 	) => Promise<void>
 ) {
-	return (t: CamelCase<T>) => {
-		const { config: configPath, ...rest } = t;
-		return handler({ ...rest, config: readConfig(configPath, rest) });
+	return (t: OnlyCamelCase<T & CommonYargsOptions>) => {
+		return handler({ ...t, config: readConfig(t.config, t) });
 	};
 }
 

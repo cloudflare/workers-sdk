@@ -10,12 +10,15 @@ import {
 	getFunctionsNoRoutesWarning,
 } from "./errors";
 import { pagesBetaWarning } from "./utils";
-import type { YargsOptionsToInterface } from "../yargs-types";
+import type {
+	CommonYargsOptions,
+	StrictYargsOptionsToInterface,
+} from "../yargs-types";
 import type { Argv } from "yargs";
 
-export type PagesBuildArgs = YargsOptionsToInterface<typeof Options>;
+type PagesBuildArgs = StrictYargsOptionsToInterface<typeof Options>;
 
-export function Options(yargs: Argv) {
+export function Options(yargs: Argv<CommonYargsOptions>) {
 	return yargs
 		.positional("directory", {
 			type: "string",

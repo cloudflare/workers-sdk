@@ -2,13 +2,12 @@ import { type Argv } from "yargs";
 import { readConfig } from "../../../config";
 import { logger } from "../../../logger";
 import { deleteQueue } from "../../client";
+import type {
+	CommonYargsOptions,
+	StrictYargsOptionsToInterface,
+} from "../../../yargs-types";
 
-interface Args {
-	config?: string;
-	name: string;
-}
-
-export function options(yargs: Argv): Argv<Args> {
+export function options(yargs: Argv<CommonYargsOptions>) {
 	// TODO(soon) --force option
 	return yargs.positional("name", {
 		type: "string",
@@ -17,7 +16,9 @@ export function options(yargs: Argv): Argv<Args> {
 	});
 }
 
-export async function handler(args: Args) {
+export async function handler(
+	args: StrictYargsOptionsToInterface<typeof options>
+) {
 	const config = readConfig(args.config, args);
 
 	logger.log(`Deleting queue ${args.name}.`);

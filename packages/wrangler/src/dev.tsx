@@ -19,7 +19,6 @@ import { collectKeyValues } from "./utils/collectKeyValues";
 import { identifyD1BindingsAsBeta } from "./worker";
 import { getHostFromRoute, getZoneForRoute, getZoneIdFromHost } from "./zones";
 import {
-	type ConfigPath,
 	DEFAULT_INSPECTOR_PORT,
 	DEFAULT_LOCAL_PORT,
 	getDevCompatibilityDate,
@@ -30,59 +29,15 @@ import {
 } from "./index";
 import type { Config, Environment } from "./config";
 import type { Route } from "./config/environment";
+import type { LoggerLevel } from "./logger";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type { CfWorkerInit } from "./worker";
-import type { CommonYargsOptions } from "./yargs-types";
-import type { Argv, ArgumentsCamelCase } from "yargs";
+import type {
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
+} from "./yargs-types";
 
-interface DevArgs {
-	config?: string;
-	script?: string;
-	name?: string;
-	bundle?: boolean;
-	build?: boolean;
-	format?: string;
-	env?: string;
-	"compatibility-date"?: string;
-	"compatibility-flags"?: string[];
-	latest?: boolean;
-	ip?: string;
-	inspect?: boolean;
-	port?: number;
-	"inspector-port"?: number;
-	routes?: string[];
-	host?: string;
-	"local-protocol"?: "http" | "https";
-	"local-upstream"?: string | undefined;
-	"experimental-public"?: string;
-	public?: string;
-	assets?: string;
-	site?: string;
-	"site-include"?: string[];
-	"site-exclude"?: string[];
-	"upstream-protocol"?: "http" | "https";
-	"jsx-factory"?: string;
-	"jsx-fragment"?: string;
-	tsconfig?: string;
-	local?: boolean;
-	"experimental-local"?: boolean;
-	"experimental-local-remote-kv"?: boolean;
-	minify?: boolean;
-	var?: string[];
-	define?: string[];
-	"node-compat"?: boolean;
-	"experimental-enable-local-persistence"?: boolean;
-	persist?: boolean;
-	"persist-to"?: string;
-	"live-reload"?: boolean;
-	onReady?: (ip: string, port: number) => void;
-	logLevel?: "none" | "info" | "error" | "log" | "warn" | "debug";
-	logPrefix?: string;
-	showInteractiveDevSession?: boolean;
-	"test-scheduled"?: boolean;
-}
-
-export function devOptions(yargs: Argv<CommonYargsOptions>): Argv<DevArgs> {
+export function devOptions(yargs: CommonYargsArgv) {
 	return (
 		yargs
 			.positional("script", {
@@ -176,6 +131,13 @@ export function devOptions(yargs: Argv<CommonYargsOptions>): Argv<DevArgs> {
 				describe: "Static assets to be served",
 				type: "string",
 				requiresArg: true,
+			})
+			.option("public", {
+				describe: "(Deprecated) Static assets to be served",
+				type: "string",
+				requiresArg: true,
+				deprecated: true,
+				hidden: true,
 			})
 			.option("site", {
 				describe: "Root folder of static assets for Workers Sites",
@@ -322,12 +284,15 @@ export function devOptions(yargs: Argv<CommonYargsOptions>): Argv<DevArgs> {
 			.option("log-level", {
 				choices: ["debug", "info", "log", "warn", "error", "none"] as const,
 				describe: "Specify logging level",
-				default: "log",
+				// Yargs requires this to type log-level properly
+				default: "log" as LoggerLevel,
 			})
 	);
 }
 
-export async function devHandler(args: ArgumentsCamelCase<DevArgs>) {
+type DevArguments = StrictYargsOptionsToInterface<typeof devOptions>;
+
+export async function devHandler(args: DevArguments) {
 	if (!(args.local || args.experimentalLocal)) {
 		const isLoggedIn = await loginOrRefreshIfRequired();
 		if (!isLoggedIn) {
@@ -371,13 +336,16 @@ export type AdditionalDevProps = {
 	d1Databases?: Environment["d1_databases"];
 };
 
-type StartDevOptions = ArgumentsCamelCase<DevArgs> &
+type StartDevOptions = DevArguments &
 	// These options can be passed in directly when called with the `wrangler.dev()` API.
 	// They aren't exposed as CLI arguments.
 	AdditionalDevProps & {
 		forceLocal?: boolean;
 		disableDevRegistry?: boolean;
 		enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
+		onReady?: (ip: string, port: number) => void;
+		logPrefix?: string;
+		showInteractiveDevSession?: boolean;
 	};
 
 export async function startDev(args: StartDevOptions) {
@@ -400,9 +368,8 @@ export async function startDev(args: StartDevOptions) {
 		}
 
 		const configPath =
-			(args.config as ConfigPath) ||
-			((args.script &&
-				findWranglerToml(path.dirname(args.script))) as ConfigPath);
+			args.config ||
+			(args.script && findWranglerToml(path.dirname(args.script)));
 		let config = readConfig(configPath, args);
 
 		if (config.configPath) {
@@ -466,12 +433,12 @@ export async function startDev(args: StartDevOptions) {
 					initialMode={
 						args.local || args.experimentalLocal ? "local" : "remote"
 					}
-					jsxFactory={args["jsx-factory"] || configParam.jsx_factory}
-					jsxFragment={args["jsx-fragment"] || configParam.jsx_fragment}
+					jsxFactory={args.jsxFactory || configParam.jsx_factory}
+					jsxFragment={args.jsxFragment || configParam.jsx_fragment}
 					tsconfig={args.tsconfig ?? configParam.tsconfig}
 					upstreamProtocol={upstreamProtocol}
 					localProtocol={args.localProtocol || configParam.dev.local_protocol}
-					localUpstream={args["local-upstream"] || host}
+					localUpstream={args.localUpstream ?? host}
 					localPersistencePath={localPersistencePath}
 					liveReload={args.liveReload || false}
 					accountId={configParam.account_id || getAccountFromCache()?.id}
@@ -506,7 +473,7 @@ export async function startDev(args: StartDevOptions) {
 					enablePagesAssetsServiceBinding={args.enablePagesAssetsServiceBinding}
 					firstPartyWorker={configParam.first_party_worker}
 					sendMetrics={configParam.send_metrics}
-					testScheduled={args["test-scheduled"]}
+					testScheduled={args.testScheduled}
 					experimentalLocal={args.experimentalLocal}
 					experimentalLocalRemoteKv={args.experimentalLocalRemoteKv}
 				/>
@@ -551,9 +518,7 @@ export async function startApiDev(args: StartDevOptions) {
 	await printWranglerBanner();
 
 	const configPath =
-		(args.config as ConfigPath) ||
-		((args.script &&
-			findWranglerToml(path.dirname(args.script))) as ConfigPath);
+		args.config || (args.script && findWranglerToml(path.dirname(args.script)));
 	const config = readConfig(configPath, args);
 
 	const {
@@ -601,34 +566,32 @@ export async function startApiDev(args: StartDevOptions) {
 			build: configParam.build || {},
 			define: { ...config.define, ...cliDefines },
 			initialMode: args.local ? "local" : "remote",
-			jsxFactory: args["jsx-factory"] || configParam.jsx_factory,
-			jsxFragment: args["jsx-fragment"] || configParam.jsx_fragment,
+			jsxFactory: args.jsxFactory ?? configParam.jsx_factory,
+			jsxFragment: args.jsxFragment ?? configParam.jsx_fragment,
 			tsconfig: args.tsconfig ?? configParam.tsconfig,
 			upstreamProtocol: upstreamProtocol,
-			localProtocol: args.localProtocol || configParam.dev.local_protocol,
-			localUpstream: args["local-upstream"] || host,
+			localProtocol: args.localProtocol ?? configParam.dev.local_protocol,
+			localUpstream: args.localUpstream ?? host,
 			localPersistencePath,
-			liveReload: args.liveReload || false,
-			accountId: configParam.account_id || getAccountFromCache()?.id,
+			liveReload: args.liveReload ?? false,
+			accountId: configParam.account_id ?? getAccountFromCache()?.id,
 			assetPaths: assetPaths,
 			assetsConfig: configParam.assets,
 			//port can be 0, which means to use a random port
 			initialPort: args.port ?? configParam.dev.port ?? (await getLocalPort()),
-			initialIp: args.ip || configParam.dev.ip,
+			initialIp: args.ip ?? configParam.dev.ip,
 			inspectorPort:
-				args["inspector-port"] ??
+				args.inspectorPort ??
 				configParam.dev.inspector_port ??
 				(await getInspectorPort()),
 			isWorkersSite: Boolean(args.site || configParam.site),
 			compatibilityDate: getDevCompatibilityDate(
 				config,
 				// Only `compatibilityDate` will be set when using `unstable_dev`
-				args["compatibility-date"] ?? args.compatibilityDate
+				args.compatibilityDate
 			),
 			compatibilityFlags:
-				args["compatibility-flags"] ??
-				args.compatibilityFlags ??
-				configParam.compatibility_flags,
+				args.compatibilityFlags ?? configParam.compatibility_flags,
 			usageModel: configParam.usage_model,
 			bindings: bindings,
 			crons: configParam.triggers.crons,
@@ -751,8 +714,7 @@ async function validateDevServerSettings(
 			"Passing --inspect is unnecessary, now you can always connect to devtools."
 		);
 	}
-
-	if (args["experimental-public"]) {
+	if (args.experimentalPublic) {
 		throw new Error(
 			"The --experimental-public field has been renamed to --assets"
 		);
@@ -762,7 +724,7 @@ async function validateDevServerSettings(
 		throw new Error("The --public field has been renamed to --assets");
 	}
 
-	if ((args.assets || config.assets) && (args.site || config.site)) {
+	if ((args.assets ?? config.assets) && (args.site ?? config.site)) {
 		throw new Error("Cannot use Assets and Workers Sites in the same Worker.");
 	}
 
@@ -772,7 +734,7 @@ async function validateDevServerSettings(
 		);
 	}
 	const upstreamProtocol =
-		args["upstream-protocol"] || config.dev.upstream_protocol;
+		args.upstreamProtocol ?? config.dev.upstream_protocol;
 	if (upstreamProtocol === "http") {
 		logger.warn(
 			"Setting upstream-protocol to http is not currently implemented.\n" +

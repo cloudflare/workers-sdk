@@ -2,13 +2,12 @@ import { type Argv } from "yargs";
 import { readConfig } from "../../../config";
 import { logger } from "../../../logger";
 import { listQueues } from "../../client";
+import type {
+	CommonYargsOptions,
+	StrictYargsOptionsToInterface,
+} from "../../../yargs-types";
 
-interface Args {
-	config?: string;
-	page?: number;
-}
-
-export function options(yargs: Argv): Argv<Args> {
+export function options(yargs: Argv<CommonYargsOptions>) {
 	return yargs.options({
 		page: {
 			type: "number",
@@ -17,7 +16,9 @@ export function options(yargs: Argv): Argv<Args> {
 	});
 }
 
-export async function handler(args: Args) {
+export async function handler(
+	args: StrictYargsOptionsToInterface<typeof options>
+) {
 	const config = readConfig(args.config, args);
 
 	const queues = await listQueues(config, args.page);

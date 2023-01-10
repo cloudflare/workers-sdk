@@ -1,7 +1,8 @@
 import { Database } from "../options";
+import type { CommonYargsOptions } from "../../yargs-types";
 import type { Argv } from "yargs";
 
-export function DatabaseWithLocal(yargs: Argv) {
+export function DatabaseWithLocal(yargs: Argv<CommonYargsOptions>) {
 	return Database(yargs)
 		.option("local", {
 			describe:

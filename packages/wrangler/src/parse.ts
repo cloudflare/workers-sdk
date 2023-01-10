@@ -150,7 +150,6 @@ export function parseJSONC<T>(input: string, file?: string): T {
 	const errors: JsoncParseError[] = [];
 	const data = jsoncParse(input, errors);
 	if (errors.length) {
-		console.log(JSON.stringify(errors));
 		throw new ParseError({
 			text: printParseErrorCode(errors[0].error),
 			location: {

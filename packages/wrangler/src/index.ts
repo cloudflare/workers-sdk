@@ -51,10 +51,7 @@ import { whoami } from "./whoami";
 
 import type { Config } from "./config";
 import type { CommonYargsOptions } from "./yargs-types";
-import type { ArgumentsCamelCase } from "yargs";
 import type Yargs from "yargs";
-
-export type ConfigPath = string | undefined;
 
 const resetColor = "\x1b[0m";
 const fgGreenColor = "\x1b[32m";
@@ -212,7 +209,7 @@ export function createCLIParser(argv: string[]) {
 			type: "string",
 			requiresArg: true,
 		})
-		.option("json-config", {
+		.option("experimental-json-config", {
 			alias: "j",
 			describe: `Experimental: Support wrangler.json`,
 			type: "boolean",
@@ -226,7 +223,10 @@ export function createCLIParser(argv: string[]) {
 			return true;
 		});
 
-	wrangler.group(["json-config", "config", "env", "help", "version"], "Flags:");
+	wrangler.group(
+		["experimental-json-config", "config", "env", "help", "version"],
+		"Flags:"
+	);
 	wrangler.help().alias("h", "help");
 
 	// Default help command that supports the subcommands
@@ -491,7 +491,7 @@ export function createCLIParser(argv: string[]) {
 				return;
 			}
 			await login({ browser: args.browser });
-			const config = readConfig(args.config as ConfigPath, args);
+			const config = readConfig(args.config, args);
 			await metrics.sendMetricsEvent("login user", {
 				sendMetrics: config.send_metrics,
 			});
@@ -508,10 +508,10 @@ export function createCLIParser(argv: string[]) {
 		"logout",
 		"🚪 Logout from Cloudflare",
 		() => {},
-		async () => {
+		async (args) => {
 			await printWranglerBanner();
 			await logout();
-			const config = readConfig(undefined, {});
+			const config = readConfig(undefined, args);
 			await metrics.sendMetricsEvent("logout user", {
 				sendMetrics: config.send_metrics,
 			});
@@ -523,10 +523,10 @@ export function createCLIParser(argv: string[]) {
 		"whoami",
 		"🕵️  Retrieve your user info and test your auth config",
 		() => {},
-		async () => {
+		async (args) => {
 			await printWranglerBanner();
 			await whoami();
-			const config = readConfig(undefined, {});
+			const config = readConfig(undefined, args);
 			await metrics.sendMetricsEvent("view accounts", {
 				sendMetrics: config.send_metrics,
 			});
@@ -538,9 +538,9 @@ export function createCLIParser(argv: string[]) {
 		"types",
 		"📝 Generate types from bindings & module rules in config",
 		() => {},
-		async () => {
+		async (args) => {
 			await printWranglerBanner();
-			const config = readConfig(undefined, {});
+			const config = readConfig(undefined, args);
 
 			const configBindings: Partial<Config> = {
 				kv_namespaces: config.kv_namespaces ?? [],
@@ -572,20 +572,16 @@ export function createCLIParser(argv: string[]) {
 	wrangler.command(
 		"deployments",
 		"🚢 Displays the 10 most recent deployments for a worker",
-		(yargs) => {
+		(yargs) =>
 			yargs
 				.option("name", {
 					describe: "The name of your worker",
 					type: "string",
 				})
-				.epilogue(deploymentsWarning);
-		},
-		async (deploymentsYargs: ArgumentsCamelCase<{ name: string }>) => {
+				.epilogue(deploymentsWarning),
+		async (deploymentsYargs) => {
 			await printWranglerBanner();
-			const config = readConfig(
-				deploymentsYargs.config as ConfigPath,
-				deploymentsYargs
-			);
+			const config = readConfig(deploymentsYargs.config, deploymentsYargs);
 			const accountId = await requireAuth(config);
 			const scriptName = getScriptName(
 				{ name: deploymentsYargs.name, env: undefined },

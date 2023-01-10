@@ -18,15 +18,12 @@ import { requireAuth } from "../user";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { promptSelectProject } from "./prompt-select-project";
 import { isUrl } from "./utils";
-import type { ConfigPath } from "..";
-import type { YargsOptionsToInterface } from "../yargs-types";
+import type {
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
+} from "../yargs-types";
 import type { Deployment, PagesConfigCache } from "./types";
-import type { Argv } from "yargs";
 
-type Options = YargsOptionsToInterface<typeof Options> & {
-	// Global flag
-	config?: string;
-};
 const statusChoices = ["ok", "error", "canceled"] as const;
 type StatusChoice = typeof statusChoices[number];
 const isStatusChoiceList = (
@@ -35,7 +32,7 @@ const isStatusChoiceList = (
 ): data is StatusChoice[] =>
 	data?.every((d) => statusChoices.includes(d)) ?? false;
 
-export function Options(yargs: Argv) {
+export function Options(yargs: CommonYargsArgv) {
 	return (
 		yargs
 			.positional("deployment", {
@@ -122,7 +119,7 @@ export async function Handler({
 	format = "pretty",
 	debug,
 	...args
-}: Options) {
+}: StrictYargsOptionsToInterface<typeof Options>) {
 	if (status && !isStatusChoiceList(status)) {
 		throw new FatalError(
 			"Invalid value for `--status`. Valid options: " + statusChoices.join(", ")
@@ -133,7 +130,7 @@ export async function Handler({
 		await printWranglerBanner();
 	}
 
-	const config = readConfig(args.config as ConfigPath, args);
+	const config = readConfig(args.config, args);
 	const pagesConfig = getConfigCache<PagesConfigCache>(
 		PAGES_CONFIG_CACHE_FILENAME
 	);

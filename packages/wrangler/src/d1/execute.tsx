@@ -22,6 +22,10 @@ import {
 	getDatabaseInfoFromConfig,
 } from "./utils";
 import type { Config, ConfigFields, DevConfig, Environment } from "../config";
+import type {
+	CommonYargsOptions,
+	StrictYargsOptionsToInterface,
+} from "../yargs-types";
 import type { Database } from "./types";
 import type { Statement as StatementType } from "@miniflare/d1";
 import type { createSQLiteDB as createSQLiteDBType } from "@miniflare/shared";
@@ -36,19 +40,6 @@ type MiniflareNpxImportTypes = [
 	}
 ];
 
-export type BaseSqlExecuteArgs = {
-	config?: string;
-	database: string;
-	local?: boolean;
-	"persist-to"?: string;
-	yes?: boolean;
-};
-
-type ExecuteArgs = BaseSqlExecuteArgs & {
-	file?: string;
-	command?: string;
-};
-
 export type QueryResult = {
 	results: Record<string, string | number | boolean>[];
 	success: boolean;
@@ -60,7 +51,7 @@ export type QueryResult = {
 // Max number of bytes to send in a single /execute call
 const QUERY_LIMIT = 10_000;
 
-export function Options(yargs: Argv): Argv<ExecuteArgs> {
+export function Options(yargs: Argv<CommonYargsOptions>) {
 	return options
 		.Database(yargs)
 		.option("yes", {
@@ -126,7 +117,9 @@ export async function executeSql(
 		: await executeRemotely(config, name, shouldPrompt, batchSplit(queries));
 }
 
-export const Handler = withConfig<ExecuteArgs>(
+export const Handler = withConfig<
+	StrictYargsOptionsToInterface<typeof Options>
+>(
 	async ({
 		config,
 		database,

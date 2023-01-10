@@ -1,4 +1,5 @@
 import type { Environment, RawEnvironment } from "./environment";
+import type { CamelCaseKey } from "yargs";
 
 /**
  * This is the static type definition for the configuration object.
@@ -273,3 +274,9 @@ interface EnvironmentMap {
 		[envName: string]: RawEnvironment;
 	};
 }
+
+// API dev only passes in camel-cased versions of keys, so ensure
+// only camel-cased keys are used
+export type OnlyCamelCase<T = Record<string, never>> = {
+	[key in keyof T as CamelCaseKey<key>]: T[key];
+};

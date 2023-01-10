@@ -9,7 +9,8 @@ import * as Projects from "./projects";
 import * as Publish from "./publish";
 import * as Upload from "./upload";
 import { CLEANUP, pagesBetaWarning } from "./utils";
-import type { BuilderCallback } from "yargs";
+import type { CommonYargsOptions } from "../yargs-types";
+import type { Argv } from "yargs";
 
 process.on("SIGINT", () => {
 	CLEANUP();
@@ -20,7 +21,7 @@ process.on("SIGTERM", () => {
 	process.exit();
 });
 
-export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
+export function pages(yargs: Argv<CommonYargsOptions>) {
 	return (
 		yargs
 			.command(
@@ -99,4 +100,4 @@ export const pages: BuilderCallback<unknown, unknown> = (yargs) => {
 			)
 			.epilogue(pagesBetaWarning)
 	);
-};
+}

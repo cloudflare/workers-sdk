@@ -25,12 +25,11 @@ import {
 	putKVKeyValue,
 	unexpectedKVKeyValueProps,
 } from "./helpers";
-import type { ConfigPath } from "../index";
 import type { CommonYargsOptions } from "../yargs-types";
 import type { KeyValue } from "./helpers";
 import type { Argv } from "yargs";
 
-export const kvNamespace = (kvYargs: Argv<CommonYargsOptions>) => {
+export function kvNamespace(kvYargs: Argv<CommonYargsOptions>) {
 	return kvYargs
 		.command(
 			"create <namespace>",
@@ -56,7 +55,7 @@ export const kvNamespace = (kvYargs: Argv<CommonYargsOptions>) => {
 					);
 				}
 
-				const config = readConfig(args.config as ConfigPath, args);
+				const config = readConfig(args.config, args);
 				if (!config.name) {
 					logger.warn(
 						"No configured name present, using `worker` as a prefix for the title"
@@ -94,9 +93,9 @@ export const kvNamespace = (kvYargs: Argv<CommonYargsOptions>) => {
 		.command(
 			"list",
 			"Outputs a list of all KV namespaces associated with your account id.",
-			{},
+			(listArgs) => listArgs,
 			async (args) => {
-				const config = readConfig(args.config as ConfigPath, args);
+				const config = readConfig(args.config, args);
 
 				const accountId = await requireAuth(config);
 
@@ -133,7 +132,7 @@ export const kvNamespace = (kvYargs: Argv<CommonYargsOptions>) => {
 			},
 			async (args) => {
 				await printWranglerBanner();
-				const config = readConfig(args.config as ConfigPath, args);
+				const config = readConfig(args.config, args);
 
 				let id;
 				try {
@@ -172,7 +171,7 @@ export const kvNamespace = (kvYargs: Argv<CommonYargsOptions>) => {
 				// TODO: delete the preview namespace as well?
 			}
 		);
-};
+}
 
 export const kvKey = (kvYargs: Argv<CommonYargsOptions>) => {
 	return kvYargs
@@ -231,7 +230,7 @@ export const kvKey = (kvYargs: Argv<CommonYargsOptions>) => {
 			},
 			async ({ key, ttl, expiration, metadata, ...args }) => {
 				await printWranglerBanner();
-				const config = readConfig(args.config as ConfigPath, args);
+				const config = readConfig(args.config, args);
 				const namespaceId = getKVNamespaceId(args, config);
 				// One of `args.path` and `args.value` must be defined
 				const value = args.path
@@ -297,7 +296,7 @@ export const kvKey = (kvYargs: Argv<CommonYargsOptions>) => {
 			},
 			async ({ prefix, ...args }) => {
 				// TODO: support for limit+cursor (pagination)
-				const config = readConfig(args.config as ConfigPath, args);
+				const config = readConfig(args.config, args);
 				const namespaceId = getKVNamespaceId(args, config);
 
 				const accountId = await requireAuth(config);
@@ -351,7 +350,7 @@ export const kvKey = (kvYargs: Argv<CommonYargsOptions>) => {
 					});
 			},
 			async ({ key, ...args }) => {
-				const config = readConfig(args.config as ConfigPath, args);
+				const config = readConfig(args.config, args);
 				const namespaceId = getKVNamespaceId(args, config);
 
 				const accountId = await requireAuth(config);
@@ -398,7 +397,7 @@ export const kvKey = (kvYargs: Argv<CommonYargsOptions>) => {
 			},
 			async ({ key, ...args }) => {
 				await printWranglerBanner();
-				const config = readConfig(args.config as ConfigPath, args);
+				const config = readConfig(args.config, args);
 				const namespaceId = getKVNamespaceId(args, config);
 
 				logger.log(`Deleting the key "${key}" on namespace ${namespaceId}.`);
@@ -447,7 +446,7 @@ export const kvBulk = (kvYargs: Argv<CommonYargsOptions>) => {
 				// This could be made more efficient with a streaming parser/uploader
 				// but we'll do that in the future if needed.
 
-				const config = readConfig(args.config as ConfigPath, args);
+				const config = readConfig(args.config, args);
 				const namespaceId = getKVNamespaceId(args, config);
 				const content = parseJSON(readFileSync(filename), filename);
 
@@ -541,7 +540,7 @@ export const kvBulk = (kvYargs: Argv<CommonYargsOptions>) => {
 			},
 			async ({ filename, ...args }) => {
 				await printWranglerBanner();
-				const config = readConfig(args.config as ConfigPath, args);
+				const config = readConfig(args.config, args);
 				const namespaceId = getKVNamespaceId(args, config);
 
 				if (!args.force) {

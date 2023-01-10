@@ -20,7 +20,6 @@ import {
 	translateCLICommandToFilterMessage,
 } from "./createTail";
 import type { WorkerMetadata } from "../create-worker-upload-form";
-import type { ConfigPath } from "../index";
 import type {
 	CommonYargsOptions,
 	YargsOptionsToInterface,
@@ -92,7 +91,7 @@ export async function tailHandler(args: TailArgs) {
 	if (args.format === "pretty") {
 		await printWranglerBanner();
 	}
-	const config = readConfig(args.config as ConfigPath, args);
+	const config = readConfig(args.config, args);
 	await metrics.sendMetricsEvent("begin log stream", {
 		sendMetrics: config.send_metrics,
 	});

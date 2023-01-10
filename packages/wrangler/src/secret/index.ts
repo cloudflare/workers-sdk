@@ -13,7 +13,6 @@ import * as metrics from "../metrics";
 import { parseJSON, readFileSync } from "../parse";
 import { requireAuth } from "../user";
 
-import type { ConfigPath } from "../index";
 import type {
 	CommonYargsOptions,
 	YargsOptionsToInterface,
@@ -44,7 +43,7 @@ export const secret = (secretYargs: Argv<CommonYargsOptions>) => {
 			},
 			async (args) => {
 				await printWranglerBanner();
-				const config = readConfig(args.config as ConfigPath, args);
+				const config = readConfig(args.config, args);
 
 				const scriptName = getLegacyScriptName(args, config);
 				if (!scriptName) {
@@ -172,7 +171,7 @@ export const secret = (secretYargs: Argv<CommonYargsOptions>) => {
 					});
 			},
 			async (args) => {
-				const config = readConfig(args.config as ConfigPath, args);
+				const config = readConfig(args.config, args);
 
 				const scriptName = getLegacyScriptName(args, config);
 				if (!scriptName) {
@@ -222,7 +221,7 @@ export const secret = (secretYargs: Argv<CommonYargsOptions>) => {
 				});
 			},
 			async (args) => {
-				const config = readConfig(args.config as ConfigPath, args);
+				const config = readConfig(args.config, args);
 
 				const scriptName = getLegacyScriptName(args, config);
 				if (!scriptName) {
@@ -305,10 +304,7 @@ type SecretBulkArgs = YargsOptionsToInterface<typeof secretBulkOptions>;
 
 export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
 	await printWranglerBanner();
-	const config = readConfig(
-		secretBulkArgs.config as ConfigPath,
-		secretBulkArgs
-	);
+	const config = readConfig(secretBulkArgs.config, secretBulkArgs);
 
 	const scriptName = getLegacyScriptName(secretBulkArgs, config);
 	if (!scriptName) {
