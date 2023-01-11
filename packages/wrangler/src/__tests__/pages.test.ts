@@ -1823,12 +1823,7 @@ describe("pages", () => {
 			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 			`);
 
-			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m_routes.json is an experimental feature and is subject to change. Please use with care.[0m
-
-			"
-			`);
-
+			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot('""');
 		});
 
@@ -2125,11 +2120,7 @@ and that at least one include rule is provided.
 			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
 			`);
 
-			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m_routes.json is an experimental feature and is subject to change. Please use with care.[0m
-
-			"
-		`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 

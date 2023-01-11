@@ -388,9 +388,6 @@ export const Handler = async ({
 					new File([_routesCustom], "_routes.json")
 				);
 				logger.log(`✨ Uploading _routes.json`);
-				logger.warn(
-					`_routes.json is an experimental feature and is subject to change. Please use with care.`
-				);
 			} catch (err) {
 				if (err instanceof FatalError) {
 					throw err;
@@ -419,9 +416,6 @@ export const Handler = async ({
 					new File([_routesCustom], "_routes.json")
 				);
 				logger.log(`✨ Uploading _routes.json`);
-				logger.warn(
-					`_routes.json is an experimental feature and is subject to change. Please use with care.`
-				);
 			} catch (err) {
 				if (err instanceof FatalError) {
 					throw err;
