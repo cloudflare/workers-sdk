@@ -176,6 +176,12 @@ export function publishOptions(yargs: Argv<CommonYargsOptions>) {
 				describe:
 					"Send Trace Events from this worker to Workers Logpush.\nThis will not configure a corresponding Logpush job automatically.",
 			})
+			.option("experimental", {
+				type: "boolean",
+				describe:
+					"Allows publishing of experimental flags if authorized to use them.\nOnly Cloudflare internal accounts for now",
+				default: false,
+			})
 	);
 }
 
@@ -266,5 +272,6 @@ export async function publishHandler(args: ArgumentsCamelCase<PublishArgs>) {
 		noBundle: !(args.bundle ?? !config.no_bundle),
 		keepVars: args.keepVars,
 		logpush: args.logpush,
+		experimental: args.experimental,
 	});
 }

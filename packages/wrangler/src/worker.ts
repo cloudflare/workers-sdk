@@ -223,6 +223,7 @@ export interface CfWorkerInit {
 	usage_model: "bundled" | "unbound" | undefined;
 	keepVars: boolean | undefined;
 	logpush: boolean | undefined;
+	experimental: boolean | undefined;
 }
 
 export interface CfWorkerContext {

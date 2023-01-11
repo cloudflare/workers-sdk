@@ -572,6 +572,7 @@ async function createRemoteWorkerInit(props: {
 		usage_model: props.usageModel,
 		keepVars: true,
 		logpush: false,
+		experimental: false,
 	};
 
 	return init;
