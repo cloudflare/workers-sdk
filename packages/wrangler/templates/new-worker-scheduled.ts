@@ -19,6 +19,9 @@ export interface Env {
 	//
 	// Example binding to R2. Learn more at https://developers.cloudflare.com/workers/runtime-apis/r2/
 	// MY_BUCKET: R2Bucket;
+	//
+	// Example binding to a Queue. Learn more at https://developers.cloudflare.com/queues/javascript-apis/
+	// MY_QUEUE: Queue;
 }
 
 export default {
