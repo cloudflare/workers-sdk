@@ -6758,7 +6758,7 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		test("should check biggest dependencies when upload fails with script startup error", async () => {
+		test("should offer some helpful advice when upload fails with script startup error", async () => {
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
 			// Override PUT call to error out from previous helper functions
@@ -6813,11 +6813,13 @@ addEventListener('fetch', event => {});`
 			  [4mhttps://github.com/cloudflare/wrangler2/issues/new/choose[0m
 
 			",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mHere are the 2 largest dependencies included in your script:[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYour worker failed validation because it exceeded startup limits.[0m
 
-			  - index.js - xx KiB
-			  - dependency.js - xx KiB
-			  If these are unnecessary, consider removing them
+			  To ensure fast responses, we place constraints on worker startup -- like how much CPU it can use,
+			  or how long it can take.
+			  Your worker failed validation, which means it hit one of these startup limits.
+			  Try reducing the amount of work done during startup (outside the event handler), either by
+			  removing code or relocating it inside the event handler.
 
 			",
 			}
