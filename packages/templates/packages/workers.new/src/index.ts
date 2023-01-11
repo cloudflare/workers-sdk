@@ -5,11 +5,11 @@
 type Redirects = Record<string, [string, string, string, string?]>;
 
 // stackblitz repository source
-const source = "github/cloudflare/templates/tree/main";
+const source = "github/wrangler2/tree/main/packages/templates";
 
 // deploy with cloudflare source
 
-const src = "https://github.com/cloudflare/templates/tree/main";
+const src = "https://github.com/wrangler2/tree/main/packages/templates";
 
 const redirects: Redirects = {
 	"/pages-image-sharing": [
@@ -182,13 +182,13 @@ function getListHTML(redirects: Redirects) {
 		justify-content: space-between;
 		font-size: 18px;
 	}
-	
+
 	a {
 		text-decoration: none;
 	}
 
 	a {
-		color: inherit; 
+		color: inherit;
 	}
 
 	.heading {
@@ -268,7 +268,7 @@ function getListHTML(redirects: Redirects) {
 	</nav>
 	<p class="heading">Cloudflare Workers Templates</p>
 	<p class="subheading">Ready to use templates to start building applications on Cloudflare Workers.</p>
-	<ul>		
+	<ul>
 		${Object.keys(redirects)
 			.map((pathname) => {
 				const [subdir, file, title, terminal] = redirects[pathname] || [];
