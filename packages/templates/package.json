@@ -1,12 +1,11 @@
 {
+	"name": "cloudflare-templates",
+	"version": "0.0.0",
 	"private": true,
 	"workspaces": [
 		"worker*",
 		"packages/**"
 	],
-	"scripts": {
-		"test": "tsc --noEmit --skipLibCheck"
-	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "3.13.0",
 		"prettier": "2.7.1",
