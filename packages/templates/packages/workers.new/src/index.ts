@@ -5,11 +5,12 @@
 type Redirects = Record<string, [string, string, string, string?]>;
 
 // stackblitz repository source
-const source = "github/wrangler2/tree/main/packages/templates";
+const source = "github/cloudflare/wrangler2/tree/main/packages/templates";
 
 // deploy with cloudflare source
 
-const src = "https://github.com/wrangler2/tree/main/packages/templates";
+const src =
+	"https://github.com/cloudflare/wrangler2/tree/main/packages/templates";
 
 const redirects: Redirects = {
 	"/pages-image-sharing": [
