@@ -1,5 +1,4 @@
 {
-	"extends": "../../tsconfig.json",
 	"compilerOptions": {
 		"strict": true,
 		"allowJs": true,
@@ -10,7 +9,6 @@
 		"moduleResolution": "node",
 		"allowSyntheticDefaultImports": true,
 		"forceConsistentCasingInFileNames": true,
-		"types": ["@cloudflare/workers-types"],
 		"strictFunctionTypes": true,
 		"resolveJsonModule": true,
 		"strictNullChecks": true,
@@ -22,7 +20,8 @@
 		"noEmit": true,
 		"paths": {
 			"create-cloudflare": ["./packages/create-cloudflare/src/index.d.ts"]
-		}
+		},
+		"types": ["@cloudflare/workers-types"]
 	},
 	"include": ["packages", "worker/**/*", "worker-*/**/*"],
 	"exclude": [
