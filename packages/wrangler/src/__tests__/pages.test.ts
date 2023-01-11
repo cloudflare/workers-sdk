@@ -351,6 +351,7 @@ describe("pages", () => {
 			      --commit-message  The commit message to attach to this deployment  [string]
 			      --commit-dirty    Whether or not the workspace should be considered dirty for this deployment  [boolean]
 			      --skip-caching    Skip asset caching which speeds up builds  [boolean]
+			      --bundle          Whether to run bundling on a raw \`_worker.js\` script before deploying  [boolean] [default: false]
 
 			🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose"
 		`);
@@ -1457,7 +1458,7 @@ describe("pages", () => {
 			await runWrangler("pages publish public --project-name=foo");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Compiled Worker successfully.
+			"✨ Compiled Worker successfully
 			✨ Success! Uploaded 1 files (TIMINGS)
 
 			✨ Uploading Functions
@@ -1480,6 +1481,7 @@ describe("pages", () => {
 					async fetch(request, env) {
 						const url = new URL(request.url);
 						return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+					}
 				};
 			`
 			);
@@ -1559,6 +1561,7 @@ describe("pages", () => {
 												async fetch(request, env) {
 													const url = new URL(request.url);
 													return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+												}
 											};
 										"
 						`);
@@ -1600,9 +1603,10 @@ describe("pages", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 			"✨ Success! Uploaded 1 files (TIMINGS)
 
+			✨ Compiled Worker successfully
 			✨ Uploading _worker.js
 			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-			`);
+		`);
 
 			expect(std.err).toMatchInlineSnapshot('""');
 		});
@@ -1815,7 +1819,7 @@ describe("pages", () => {
 			await runWrangler("pages publish public --project-name=foo");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Compiled Worker successfully.
+			"✨ Compiled Worker successfully
 			✨ Success! Uploaded 1 files (TIMINGS)
 
 			✨ Uploading Functions
@@ -1964,6 +1968,7 @@ and that at least one include rule is provided.
 					async fetch(request, env) {
 						const url = new URL(request.url);
 						return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+					}
 				};
 			`
 			);
@@ -2066,6 +2071,7 @@ and that at least one include rule is provided.
 												async fetch(request, env) {
 													const url = new URL(request.url);
 													return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+												}
 											};
 										"
 						`);
@@ -2115,10 +2121,11 @@ and that at least one include rule is provided.
 			expect(std.out).toMatchInlineSnapshot(`
 			"✨ Success! Uploaded 1 files (TIMINGS)
 
+			✨ Compiled Worker successfully
 			✨ Uploading _worker.js
 			✨ Uploading _routes.json
 			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-			`);
+		`);
 
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -2149,6 +2156,7 @@ and that at least one include rule is provided.
 					async fetch(request, env) {
 						const url = new URL(request.url);
 						return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+					}
 				};
 			`
 			);
@@ -2261,6 +2269,7 @@ and that at least one include rule is provided.
 					async fetch(request, env) {
 						const url = new URL(request.url);
 						return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+					}
 				};
 			`
 			);
@@ -2340,6 +2349,7 @@ and that at least one include rule is provided.
 												async fetch(request, env) {
 													const url = new URL(request.url);
 													return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+												}
 											};
 										"
 						`);
@@ -2382,9 +2392,10 @@ and that at least one include rule is provided.
 			expect(std.out).toMatchInlineSnapshot(`
 			"✨ Success! Uploaded 1 files (TIMINGS)
 
+			✨ Compiled Worker successfully
 			✨ Uploading _worker.js
 			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-			`);
+		`);
 
 			expect(std.err).toMatchInlineSnapshot('""');
 		});

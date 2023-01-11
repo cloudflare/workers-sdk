@@ -1,7 +1,7 @@
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve as resolvePath } from "node:path";
 import { cwd } from "node:process";
 import { render, Text } from "ink";
 import SelectInput from "ink-select-input";
@@ -17,6 +17,7 @@ import { requireAuth } from "../user";
 import { buildFunctions } from "./build";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { FunctionsNoRoutesError, getFunctionsNoRoutesWarning } from "./errors";
+import { buildRawWorker, checkRawWorker } from "./functions/buildWorker";
 import { validateRoutes } from "./functions/routes-validation";
 import { listProjects } from "./projects";
 import { promptSelectProject } from "./prompt-select-project";
@@ -62,6 +63,12 @@ export function Options(yargs: Argv) {
 				type: "boolean",
 				description: "Skip asset caching which speeds up builds",
 			},
+			bundle: {
+				type: "boolean",
+				default: false,
+				description:
+					"Whether to run bundling on a raw `_worker.js` script before deploying",
+			},
 			config: {
 				describe: "Pages does not support wrangler.toml",
 				type: "string",
@@ -79,6 +86,7 @@ export const Handler = async ({
 	commitMessage,
 	commitDirty,
 	skipCaching,
+	bundle,
 	config: wranglerConfig,
 }: PublishArgs) => {
 	if (wranglerConfig) {
@@ -241,6 +249,8 @@ export const Handler = async ({
 		_routesCustom: string | undefined,
 		_workerJS: string | undefined;
 
+	const workerScriptPath = resolvePath(directory, "_worker.js");
+
 	try {
 		_headers = readFileSync(join(directory, "_headers"), "utf-8");
 	} catch {}
@@ -258,7 +268,7 @@ export const Handler = async ({
 	} catch {}
 
 	try {
-		_workerJS = readFileSync(join(directory, "_worker.js"), "utf-8");
+		_workerJS = readFileSync(workerScriptPath, "utf-8");
 	} catch {}
 
 	// Grab the bindings from the API, we need these for shims and other such hacky inserts
@@ -374,7 +384,24 @@ export const Handler = async ({
 	 * – this includes its routing and middleware characteristics.
 	 */
 	if (_workerJS) {
-		formData.append("_worker.js", new File([_workerJS], "_worker.js"));
+		let workerFileContents = _workerJS;
+		if (bundle) {
+			const outfile = join(tmpdir(), `./bundledWorker-${Math.random()}.mjs`);
+			await buildRawWorker({
+				workerScriptPath,
+				outfile,
+				directory: directory ?? ".",
+				local: false,
+				sourcemap: true,
+				watch: false,
+				onEnd: () => {},
+			});
+			workerFileContents = readFileSync(outfile, "utf8");
+		} else {
+			await checkRawWorker(workerScriptPath, () => {});
+		}
+
+		formData.append("_worker.js", new File([workerFileContents], "_worker.js"));
 		logger.log(`✨ Uploading _worker.js`);
 
 		if (_routesCustom) {
