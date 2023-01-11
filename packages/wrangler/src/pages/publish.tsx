@@ -66,8 +66,7 @@ export function Options(yargs: Argv) {
 			bundle: {
 				type: "boolean",
 				default: false,
-				description:
-					"Whether to run bundling on a raw `_worker.js` script before deploying",
+				description: "Whether to run bundling on `_worker.js` before deploying",
 			},
 			config: {
 				describe: "Pages does not support wrangler.toml",

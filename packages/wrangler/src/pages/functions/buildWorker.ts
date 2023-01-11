@@ -272,7 +272,7 @@ const blockWorkerJsImports: Plugin = {
 			}
 			// Otherwise, block any imports that the file is requesting
 			logger.error(
-				"The _worker.js is not being bundled by Wrangler but it is importing from another file.\n" +
+				"_worker.js is not being bundled by Wrangler but it is importing from another file.\n" +
 					"This will throw an error if deployed.\n" +
 					"You should bundle the Worker in a pre-build step, remove the import if it is unused, or ask Wrangler to bundle it by setting `--bundle`."
 			);

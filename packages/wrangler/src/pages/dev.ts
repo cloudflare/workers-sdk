@@ -82,7 +82,7 @@ export function Options(yargs: Argv) {
 			bundle: {
 				type: "boolean",
 				default: false,
-				description: "Whether to run bundling on a raw `_worker.js` script",
+				description: "Whether to run bundling on `_worker.js`",
 			},
 			binding: {
 				type: "array",
@@ -281,7 +281,7 @@ export const Handler = async ({
 						onEnd: () => scriptReadyResolve(),
 					});
 				} catch (e: unknown) {
-					logger.warn("Failed to bundle the raw _worker.js file", e);
+					logger.warn("Failed to bundle _worker.js.", e);
 				}
 			};
 		}
