@@ -11,7 +11,8 @@
 	"author": "wrangler@cloudflare.com",
 	"workspaces": [
 		"packages/*",
-		"fixtures/*"
+		"fixtures/*",
+		"packages/templates/*"
 	],
 	"scripts": {
 		"build": "npm run build --workspace=wrangler --workspace=jest-environment-wrangler --workspace=pages-plugin-example --workspace=wranglerjs-compat-webpack-plugin",
