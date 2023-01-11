@@ -7,7 +7,10 @@ describe.concurrent("Pages _worker.js", () => {
 		expect,
 	}) => {
 		expect(() =>
-			execSync("npm run dev", { cwd: path.resolve(__dirname, "..") })
+			execSync("npm run dev", {
+				cwd: path.resolve(__dirname, ".."),
+				stdio: "ignore",
+			})
 		).toThrowError();
 	});
 });

@@ -1,47 +1,22 @@
-import { fork } from "child_process";
-import * as path from "path";
+import { resolve } from "node:path";
 import { fetch } from "undici";
 import { describe, it, beforeAll, afterAll } from "vitest";
-import type { ChildProcess } from "child_process";
+import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe.concurrent(
 	"Pages project with `_worker.js` and `/functions` directory",
 	() => {
-		let wranglerProcess: ChildProcess;
-		let ip: string;
-		let port: number;
+		let ip, port, stop;
 
-		// const std = mockConsoleMethods();
 		beforeAll(async () => {
-			await new Promise((resolve) => {
-				wranglerProcess = fork(
-					path.join("..", "..", "packages", "wrangler", "bin", "wrangler.js"),
-					["pages", "dev", "public", "--port=0"],
-					{
-						stdio: ["inherit", "inherit", "inherit", "ipc"],
-						cwd: path.resolve(__dirname, ".."),
-					}
-				).on("message", (message) => {
-					const parsedMessage = JSON.parse(message.toString());
-					ip = parsedMessage.ip;
-					port = parsedMessage.port;
-					resolve(null);
-				});
-			});
+			({ ip, port, stop } = await runWranglerPagesDev(
+				resolve(__dirname, ".."),
+				"public",
+				["--port=0"]
+			));
 		});
 
-		afterAll(async () => {
-			await new Promise((resolve, reject) => {
-				wranglerProcess.once("exit", (code) => {
-					if (!code) {
-						resolve(code);
-					} else {
-						reject(code);
-					}
-				});
-				wranglerProcess.kill("SIGTERM");
-			});
-		});
+		afterAll(async () => await stop());
 
 		it("renders static pages", async ({ expect }) => {
 			const response = await fetch(`http://${ip}:${port}/`);

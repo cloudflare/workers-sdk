@@ -1,50 +1,29 @@
-import { fork, spawnSync } from "child_process";
-import * as path from "path";
+import { spawnSync } from "node:child_process";
+import { resolve } from "node:path";
 import { fetch } from "undici";
 import { describe, it, beforeAll, afterAll } from "vitest";
-import type { ChildProcess } from "child_process";
+import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 const isWindows = process.platform === "win32";
 
 describe.concurrent("Remix", () => {
-	let wranglerProcess: ChildProcess;
 	let ip: string;
 	let port: number;
+	let stop: () => void;
 
 	beforeAll(async () => {
-		await new Promise((resolve) => {
-			spawnSync("npm", ["run", "build"], {
-				shell: isWindows,
-				cwd: path.resolve(__dirname, ".."),
-			});
-			wranglerProcess = fork(
-				path.join("..", "..", "packages", "wrangler", "bin", "wrangler.js"),
-				["pages", "dev", "public", "--port=0"],
-				{
-					stdio: ["inherit", "inherit", "inherit", "ipc"],
-					cwd: path.resolve(__dirname, ".."),
-				}
-			).on("message", (message) => {
-				const parsedMessage = JSON.parse(message.toString());
-				ip = parsedMessage.ip;
-				port = parsedMessage.port;
-				resolve(undefined);
-			});
+		spawnSync("npm", ["run", "build"], {
+			shell: isWindows,
+			cwd: resolve(__dirname, ".."),
 		});
+		({ ip, port, stop } = await runWranglerPagesDev(
+			resolve(__dirname, ".."),
+			"public",
+			["--port=0"]
+		));
 	});
 
-	afterAll(async () => {
-		await new Promise((resolve, reject) => {
-			wranglerProcess.once("exit", (code) => {
-				if (!code) {
-					resolve(code);
-				} else {
-					reject(code);
-				}
-			});
-			wranglerProcess.kill("SIGTERM");
-		});
-	});
+	afterAll(async () => await stop());
 
 	it("renders", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/`);
