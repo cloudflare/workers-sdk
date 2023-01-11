@@ -79,15 +79,26 @@ export async function unstable_dev(
 	apiOptions?: unknown
 ): Promise<UnstableDevWorker> {
 	// Note that not every experimental option is passed directly through to the underlying dev API - experimental options can be used here in unstable_dev. Otherwise we could just pass experimental down to dev blindly.
+
+	const experimentalOptions = {
+		// Defaults for "experimental" options
+		disableDevRegistry: false,
+		disableExperimentalWarning: false,
+		showInteractiveDevSession: false,
+		testMode: true,
+		// Override all options, including overwriting with "undefined"
+		...options?.experimental,
+	};
+
 	const {
 		// there are two types of "experimental" options:
 		// 1. options to unstable_dev that we're still testing or are unsure of
-		disableDevRegistry = false,
-		disableExperimentalWarning = false,
+		disableDevRegistry,
+		disableExperimentalWarning,
 		forceLocal,
 		liveReload,
-		showInteractiveDevSession = false,
-		testMode = true,
+		showInteractiveDevSession,
+		testMode,
 		testScheduled,
 		watch,
 		// 2. options for alpha/beta products/libs
@@ -95,7 +106,8 @@ export async function unstable_dev(
 		experimentalLocal,
 		experimentalLocalRemoteKv,
 		enablePagesAssetsServiceBinding,
-	} = options?.experimental ?? {};
+	} = experimentalOptions;
+
 	if (apiOptions) {
 		logger.error(
 			"unstable_dev's third argument (apiOptions) has been deprecated in favor of an `experimental` property within the second argument (options).\nPlease update your code from:\n`await unstable_dev('...', {...}, {...});`\nto:\n`await unstable_dev('...', {..., experimental: {...}});`"

@@ -47,5 +47,8 @@
 	"files.trimTrailingWhitespace": true,
 	"typescript.tsdk": "node_modules/typescript/lib",
 	"editor.tabSize": 2,
-	"files.associations": { "api-extractor.json": "jsonc" }
+	"files.associations": {
+		"api-extractor.json": "jsonc"
+	},
+	"jest.jestCommandLine": "npm run -w wrangler test --"
 }

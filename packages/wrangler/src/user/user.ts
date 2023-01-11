@@ -214,15 +214,13 @@ import url from "node:url";
 import { TextEncoder } from "node:util";
 import TOML from "@iarna/toml";
 import { HostURL } from "@webcontainer/env";
-import { render } from "ink";
-import Table from "ink-table";
-import React from "react";
 import { fetch } from "undici";
 import {
 	getConfigCache,
 	purgeConfigCaches,
 	saveToConfigCache,
 } from "../config-cache";
+import { NoDefaultValueProvided, select } from "../dialogs";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { CI } from "../is-ci";
 import isInteractive from "../is-interactive";
@@ -241,9 +239,10 @@ import {
 	getRevokeUrlFromEnv,
 	getTokenUrlFromEnv,
 } from "./auth-variables";
-import { ChooseAccount, getAccountChoices } from "./choose-account";
+import { getAccountChoices } from "./choose-account";
 import { generateAuthUrl } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
+import type { ChooseAccountItem } from "./choose-account";
 import type { ParsedUrlQuery } from "node:querystring";
 
 export type ApiCredentials =
@@ -1096,8 +1095,7 @@ export function listScopes(message = "💁 Available scopes:"): void {
 		Scope: scope,
 		Description: Scopes[scope],
 	}));
-	const { unmount } = render(<Table data={data} />);
-	unmount();
+	logger.table(data);
 	// TODO: maybe a good idea to show usage here
 }
 
@@ -1116,36 +1114,32 @@ export async function getAccountId(): Promise<string | undefined> {
 		return accounts[0].id;
 	}
 
-	if (isInteractive() && !CI.isCI()) {
-		const account = await new Promise<{ id: string; name: string }>(
-			(resolve, reject) => {
-				const { unmount } = render(
-					<ChooseAccount
-						accounts={accounts}
-						onSelect={async (selected) => {
-							saveAccountToCache(selected);
-							resolve(selected);
-							unmount();
-						}}
-						onError={(err) => {
-							reject(err);
-							unmount();
-						}}
-					/>
-				);
-			}
-		);
-		return account.id;
+	try {
+		const accountID = await select("Select an account", {
+			choices: accounts.map((account) => ({
+				title: account.name,
+				value: account.id,
+			})),
+		});
+		const account = accounts.find(
+			(a) => a.id === accountID
+		) as ChooseAccountItem;
+		saveAccountToCache({ id: account.id, name: account.name });
+		return accountID;
+	} catch (e) {
+		// Did we try to select an account in CI or a non-interactive terminal?
+		if (e instanceof NoDefaultValueProvided) {
+			throw new Error(
+				`More than one account available but unable to select one in non-interactive mode.
+Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+Available accounts are (\`<name>\`: \`<account_id>\`):
+${accounts
+	.map((account) => `  \`${account.name}\`: \`${account.id}\``)
+	.join("\n")}`
+			);
+		}
+		throw e;
 	}
-
-	throw new Error(
-		"More than one account available but unable to select one in non-interactive mode.\n" +
-			`Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.\n` +
-			`Available accounts are ("<name>" - "<id>"):\n` +
-			accounts
-				.map((account) => `  "${account.name}" - "${account.id}")`)
-				.join("\n")
-	);
 }
 
 /**

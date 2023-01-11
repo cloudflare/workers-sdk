@@ -3,7 +3,7 @@ import onExit from "signal-exit";
 
 import { fetchResult, fetchScriptContent } from "../cfetch";
 import { readConfig } from "../config";
-import { tailDOLogPrompt } from "../dialogs";
+import { confirm } from "../dialogs";
 import {
 	isLegacyEnv,
 	printWranglerBanner,
@@ -144,8 +144,7 @@ export async function tailHandler(args: TailArgs) {
 			`Beginning log collection requires restarting the Durable Objects associated with ${scriptName}. Any WebSocket connections or other non-persisted state will be lost as part of this restart.`
 		);
 
-		const shouldContinue = await tailDOLogPrompt();
-		if (!shouldContinue) {
+		if (!(await confirm("Would you like to continue?"))) {
 			return;
 		}
 	}

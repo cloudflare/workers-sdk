@@ -556,6 +556,7 @@ export async function initHandler(args: InitArgs) {
 
 					await writePackageJsonScriptsAndUpdateWranglerToml({
 						isWritingScripts: shouldWritePackageJsonScripts,
+						isAddingTests: shouldCreateTests,
 						isCreatingWranglerToml: justCreatedWranglerToml,
 						packagePath: pathToPackageJson,
 						testRunner: newWorkerTestType,
@@ -723,43 +724,41 @@ async function installPackages(
 }
 
 async function getNewWorkerType(newWorkerFilename: string) {
-	return select(
-		`Would you like to create a Worker at ${newWorkerFilename}?`,
-		[
+	return select(`Would you like to create a Worker at ${newWorkerFilename}?`, {
+		choices: [
 			{
 				value: "none",
-				label: "None",
+				title: "None",
 			},
 			{
 				value: "fetch",
-				label: "Fetch handler",
+				title: "Fetch handler",
 			},
 			{
 				value: "scheduled",
-				label: "Scheduled handler",
+				title: "Scheduled handler",
 			},
 		],
-		1
-	) as Promise<"none" | "fetch" | "scheduled">;
+		defaultOption: 1,
+	});
 }
 
 async function getNewWorkerTestType(yesFlag?: boolean) {
 	return yesFlag
 		? "jest"
-		: (select(
-				`Which test runner would you like to use?`,
-				[
+		: select(`Which test runner would you like to use?`, {
+				choices: [
 					{
 						value: "vitest",
-						label: "Vitest",
+						title: "Vitest",
 					},
 					{
 						value: "jest",
-						label: "Jest",
+						title: "Jest",
 					},
 				],
-				1
-		  ) as Promise<"jest" | "vitest">);
+				defaultOption: 1,
+		  });
 }
 
 function getNewWorkerTemplate(

@@ -1,5 +1,113 @@
 # wrangler
 
+## 2.7.1
+
+### Patch Changes
+
+- [#2523](https://github.com/cloudflare/wrangler2/pull/2523) [`a5e9958c`](https://github.com/cloudflare/wrangler2/commit/a5e9958c7e37dd38c00ac6b713a21441491777fd) Thanks [@jahands](https://github.com/jahands)! - fix: unstable_dev() experimental options incorrectly applying defaults
+
+  A subtle difference when removing object-spreading of experimental unstable_dev() options caused `wrangler pages dev` interactivity to stop working. This switches back to object-spreading the passed in options on top of the defaults, fixing the issue.
+
+## 2.7.0
+
+### Minor Changes
+
+- [#2465](https://github.com/cloudflare/wrangler2/pull/2465) [`e1c2f5b9`](https://github.com/cloudflare/wrangler2/commit/e1c2f5b9653ecc183bbc8a33531babd26e10d241) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - After this PR, `wrangler init --yes` will generate a test for your new Worker project, using Vitest with TypeScript.
+  When using `wrangler init`, and choosing to create a Typescript project, you will now be asked if Wrangler should write tests for you, using Vitest.
+
+  This resolves issue #2436.
+
+* [#2333](https://github.com/cloudflare/wrangler2/pull/2333) [`71691421`](https://github.com/cloudflare/wrangler2/commit/7169142171b1c9b4ff2f19b8b46871932ef7d10a) Thanks [@markjmiller](https://github.com/markjmiller)! - Remove the experimental binding warning from Dispatch Namespace since [it is GA](https://blog.cloudflare.com/workers-for-platforms-ga/).
+
+### Patch Changes
+
+- [#2460](https://github.com/cloudflare/wrangler2/pull/2460) [`c2b2dfb8`](https://github.com/cloudflare/wrangler2/commit/c2b2dfb8e5b44ee73418a01682e65d0ca1320797) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: resolve unstable_dev flakiness in tests by awaiting the dev registry
+
+* [#2439](https://github.com/cloudflare/wrangler2/pull/2439) [`616f8739`](https://github.com/cloudflare/wrangler2/commit/616f8739253381e8d691084961159d1a0073d81f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix(wrangler): do not login or read wrangler.toml when applying D1 migrations in local mode.
+
+  When applying D1 migrations to a deployed database, it is important that we are logged in
+  and that we have the database ID from the wrangler.toml.
+  This is not needed for `--local` mode where we are just writing to a local SQLite file.
+
+- [#1869](https://github.com/cloudflare/wrangler2/pull/1869) [`917b07b0`](https://github.com/cloudflare/wrangler2/commit/917b07b0d7ee6cdfae2edfa21fe3056a4475dd44) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: enable Wrangler to target the staging API by setting WRANGLER_API_ENVIRONMENT=staging
+
+  If you are developing Wrangler, or an internal Cloudflare feature, and during testing,
+  need Wrangler to target the staging API rather than production, it is now possible by
+  setting the `WRANGLER_API_ENVIRONMENT` environment variable to `staging`.
+
+  This will update all the necessary OAuth and API URLs, update the OAuth client ID, and
+  also (if necessary) acquire an Access token for to get through the firewall to the
+  staging URLs.
+
+* [#2377](https://github.com/cloudflare/wrangler2/pull/2377) [`32686e42`](https://github.com/cloudflare/wrangler2/commit/32686e42b055c786f9821bbd66dd33960ab8f4d1) Thanks [@mrbbot](https://github.com/mrbbot)! - Fix `ReferenceError` when using `wrangler dev --experimental-local` in Node 16
+
+- [#2393](https://github.com/cloudflare/wrangler2/pull/2393) [`a6d24732`](https://github.com/cloudflare/wrangler2/commit/a6d24732e2553e220222cba7b70d9f1607602203) Thanks [@mrbbot](https://github.com/mrbbot)! - Remove login requirement from `wrangler dev --experimental-local`
+
+* [#2502](https://github.com/cloudflare/wrangler2/pull/2502) [`6b7ebc8d`](https://github.com/cloudflare/wrangler2/commit/6b7ebc8dd0dee5521bce49a6dfff997d308e900e) Thanks [@mrbbot](https://github.com/mrbbot)! - Upgrade `miniflare` to [`2.11.0`](https://github.com/cloudflare/miniflare/releases/tag/v2.11.0)
+
+- [#2485](https://github.com/cloudflare/wrangler2/pull/2485) [`4c0e2309`](https://github.com/cloudflare/wrangler2/commit/4c0e230950e9ef3dcb37d5b222b642cb0b0d8c9e) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Pages Plugin routing when mounted at the root of a project
+
+  Previously, there was a bug which meant that Plugins mounted at the root of a Pages project were not correctly matching incoming requests. This change fixes that bug so Plugins mounted at the root should now correctly work.
+
+* [#2479](https://github.com/cloudflare/wrangler2/pull/2479) [`7b479b91`](https://github.com/cloudflare/wrangler2/commit/7b479b9104266c83dda3b4e4a89ab9b919b743f0) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: bump d1js
+
+  This PR bumps d1js, adding the following functionality to the d1 alpha shim:
+
+  - validates supported types
+  - converts ArrayBuffer to array
+  - converts typedArray to array
+
+- [#2392](https://github.com/cloudflare/wrangler2/pull/2392) [`7785591c`](https://github.com/cloudflare/wrangler2/commit/7785591c95281a85ffb61eb514b850144970c4b2) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: improve `wrangler init --from-dash` help text and error handling
+
+* [#2391](https://github.com/cloudflare/wrangler2/pull/2391) [`19525a4b`](https://github.com/cloudflare/wrangler2/commit/19525a4b9ca8d26022510fef463d0169f704896e) Thanks [@mrbbot](https://github.com/mrbbot)! - Always log when delegating to local `wrangler` install.
+
+  When a global `wrangler` command is executed in a package directory with `wrangler` installed locally, the command is redirected to the local `wrangler` install.
+  We now always log a message when this happens, so you know what's going on.
+
+- [#2468](https://github.com/cloudflare/wrangler2/pull/2468) [`97282459`](https://github.com/cloudflare/wrangler2/commit/972824598438cc40c6179ea9d2d0229cbd9f3684) Thanks [@rozenmd](https://github.com/rozenmd)! - BREAKING CHANGE: move experimental options under the experimental object for unstable_dev
+
+* [#2477](https://github.com/cloudflare/wrangler2/pull/2477) [`3bd1b676`](https://github.com/cloudflare/wrangler2/commit/3bd1b6765729d39f0a5d2adef06cffeac7766b51) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: update NO_D1_WARNING to make it clear how to turn it off
+
+- [#2495](https://github.com/cloudflare/wrangler2/pull/2495) [`e93063e9`](https://github.com/cloudflare/wrangler2/commit/e93063e9854059ab4cc9a71fd22362b4ca01d3e9) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix(d1): ensure that migrations support compound statements
+
+  This fix updates the SQL statement splitting so that it does not split in the middle of compound statements.
+  Previously we were using a third party splitting library, but this needed fixing and was actually unnecessary for our purposes.
+  So a new splitter has been implemented and the library dependency removed.
+  Also the error handling in `d1 migrations apply` has been improved to handle a wider range of error types.
+
+  Fixes #2463
+
+* [#2400](https://github.com/cloudflare/wrangler2/pull/2400) [`08a0b22e`](https://github.com/cloudflare/wrangler2/commit/08a0b22e3f7e5ed536b7537ee5e93c39544bcfa0) Thanks [@mrbbot](https://github.com/mrbbot)! - Cleanly exit `wrangler dev --experimental-local` when pressing `x`/`q`/`CTRL-C`
+
+- [#2374](https://github.com/cloudflare/wrangler2/pull/2374) [`ecba1ede`](https://github.com/cloudflare/wrangler2/commit/ecba1edea298b89cdffa4b68c924d879f0f0d13b) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: make --from-dash error output clearer
+
+  This PR makes it clearer what --from-dash wants from you.
+
+  closes #2373
+  closes #2375
+
+* [#2377](https://github.com/cloudflare/wrangler2/pull/2377) [`32686e42`](https://github.com/cloudflare/wrangler2/commit/32686e42b055c786f9821bbd66dd33960ab8f4d1) Thanks [@mrbbot](https://github.com/mrbbot)! - Respect `FORCE_COLOR=0` environment variable to disable colored output when using `wrangler dev --local`
+
+- [#2455](https://github.com/cloudflare/wrangler2/pull/2455) [`d9c1d273`](https://github.com/cloudflare/wrangler2/commit/d9c1d2739c8335b0d7ba386e27a370aff1eca7b7) Thanks [@rozenmd](https://github.com/rozenmd)! - BREAKING CHANGE: refactor unstable_dev to use an experimental object, instead of a second options object
+
+  Before, if you wanted to disable the experimental warning, you would run:
+
+  ```js
+  worker = await unstable_dev(
+  	"src/index.js",
+  	{},
+  	{ disableExperimentalWarning: true }
+  );
+  ```
+
+  After this change, you'll need to do this instead:
+
+  ```js
+  worker = await unstable_dev("src/index.js", {
+  	experimental: { disableExperimentalWarning: true }
+  });
+  ```
+
 ## 2.6.2
 
 ### Patch Changes

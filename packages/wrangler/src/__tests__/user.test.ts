@@ -8,7 +8,10 @@ import {
 } from "../user";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
-import { mockOAuthFlow } from "./helpers/mock-oauth-flow";
+import {
+	mockExchangeRefreshTokenForAccessToken,
+	mockOAuthFlow,
+} from "./helpers/mock-oauth-flow";
 import {
 	msw,
 	mswSuccessOauthHandlers,
@@ -77,19 +80,7 @@ describe("User", () => {
 			oauth_token: "hunter2",
 			refresh_token: "Order 66",
 		});
-		// TODO: Use MSW to handle `/token` endpoints from different calls
-		let counter = 0;
-		msw.use(
-			rest.post("*/oauth2/token", async (request, response, context) => {
-				counter += 1;
-				return response.once(
-					context.status(400),
-					context.body(
-						`<html> <body> This shouldn't be sent, but should be handled </body> </html>`
-					)
-				);
-			})
-		);
+		mockExchangeRefreshTokenForAccessToken({ respondWith: "refreshError" });
 
 		// Handles the requireAuth error throw from failed login that is unhandled due to directly calling it here
 		await expect(
@@ -97,7 +88,6 @@ describe("User", () => {
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`"In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/api/tokens/create/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN."`
 		);
-		expect(counter).toBe(0);
 	});
 
 	it("should confirm no error message when refresh is successful", async () => {

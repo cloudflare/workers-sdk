@@ -2,17 +2,20 @@ import { rest } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
+import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
 import type { KVNamespaceInfo } from "../kv/helpers";
-
 describe("delete", () => {
 	mockAccountId();
 	mockApiToken();
 	runInTempDir();
-
+	const { setIsTTY } = useMockIsTTY();
+	beforeEach(() => {
+		setIsTTY(true);
+	});
 	const std = mockConsoleMethods();
 
 	it("should delete an entire service by name", async () => {

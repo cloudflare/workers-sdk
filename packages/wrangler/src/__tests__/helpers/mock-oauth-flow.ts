@@ -1,29 +1,33 @@
-import fetchMock from "jest-fetch-mock";
+import { rest } from "msw";
 import { Request } from "undici";
 import openInBrowser from "../../open-in-browser";
-import { setMockResponse } from "./mock-cfetch";
 import { mockHttpServer } from "./mock-http-server";
+import { createFetchResult, msw } from "./msw";
 
 export function mockGetMemberships(
 	accounts: { id: string; account: { id: string; name: string } }[]
 ) {
-	setMockResponse("/memberships", "GET", () => {
-		return accounts;
-	});
+	msw.use(
+		rest.get("*/memberships", (_, res, ctx) => {
+			return res.once(ctx.json(createFetchResult(accounts)));
+		})
+	);
 }
-
-// the response to send when wrangler wants an oauth grant
-let oauthGrantResponse: GrantResponseOptions | "timeout" = {};
+export function mockGetMembershipsFail() {
+	msw.use(
+		rest.get("*/memberships", (_, res, ctx) => {
+			return res.once(ctx.json(createFetchResult([], false)));
+		})
+	);
+}
 
 /**
  * Functions to help with mocking various parts of the OAuth Flow
  */
 export const mockOAuthFlow = () => {
+	// the response to send when wrangler wants an oauth grant
+	let oauthGrantResponse: GrantResponseOptions | "timeout" = {};
 	const fetchHttp = mockHttpServer();
-
-	afterEach(() => {
-		fetchMock.resetMocks();
-	});
 
 	/**
 	 * Mock out the callback from a browser to our HttpServer.
@@ -61,7 +65,7 @@ export const mockOAuthFlow = () => {
 		});
 	};
 
-	//TODO: this can just handled in `mockOAuthServerCallback`
+	// Handled in `mockOAuthServerCallback`
 	const mockGrantAuthorization = ({
 		respondWith,
 	}: {
@@ -82,25 +86,6 @@ export const mockOAuthFlow = () => {
 		}
 	};
 
-	const mockRevokeAuthorization = ({
-		domain = "dash.cloudflare.com",
-	}: { domain?: string } = {}) => {
-		const outcome = {
-			actual: new Request("https://example.org"),
-			expected: new Request(`https://${domain}/oauth2/revoke`, {
-				method: "POST",
-			}),
-		};
-
-		fetchMock.mockIf(outcome.expected.url, async (req) => {
-			// TODO: update Miniflare typings to match full undici Request
-			outcome.actual = req as unknown as Request;
-			return "";
-		});
-
-		return outcome;
-	};
-
 	const mockGrantAccessToken = ({
 		respondWith,
 		domain = "dash.cloudflare.com",
@@ -109,94 +94,101 @@ export const mockOAuthFlow = () => {
 		domain?: string;
 	}) => {
 		const outcome = {
-			actual: new Request("https://example.org"),
-			expected: new Request(`https://${domain}/oauth2/token`, {
-				method: "POST",
-			}),
+			actual: "https://example.org",
+			expected: `https://${domain}/oauth2/token`,
 		};
-
-		fetchMock.mockOnceIf(outcome.expected.url, async (req) => {
-			// TODO: update Miniflare typings to match full undici Request
-			outcome.actual = req as unknown as Request;
-			return makeTokenResponse(respondWith);
-		});
+		msw.use(
+			rest.post(outcome.expected, async (req, res, ctx) => {
+				// TODO: update Miniflare typings to match full undici Request
+				outcome.actual = req.url.toString();
+				return res.once(ctx.json(makeTokenResponse(respondWith)));
+			})
+		);
 
 		return outcome;
 	};
 
-	const mockExchangeRefreshTokenForAccessToken = ({
-		respondWith,
-		domain = "dash.cloudlfare.com",
-	}: {
-		respondWith: "refreshSuccess" | "refreshError" | "badResponse";
-		domain?: string;
-	}) => {
-		fetchMock.mockOnceIf(`https://${domain}/oauth2/token`, async () => {
-			switch (respondWith) {
-				case "refreshSuccess":
-					return {
-						status: 200,
-						body: JSON.stringify({
-							access_token: "access_token_success_mock",
-							expires_in: 1701,
-							refresh_token: "refresh_token_success_mock",
-							scope: "scope_success_mock",
-							token_type: "bearer",
-						}),
-					};
-				case "refreshError":
-					return {
-						status: 400,
-						body: JSON.stringify({
-							error: "invalid_request",
-							error_description: "error_description_mock",
-							error_hint: "error_hint_mock",
-							error_verbose: "error_verbose_mock",
-							status_code: 400,
-						}),
-					};
-				case "badResponse":
-					return {
-						status: 400,
-						body: `<html> <body> This shouldn't be sent, but should be handled </body> </html>`,
-					};
-
-				default:
-					return "Not a respondWith option for `mockExchangeRefreshTokenForAccessToken`";
-			}
-		});
-	};
-
-	const mockDomainUsesAccess = ({
+	function mockDomainUsesAccess({
 		usesAccess,
 		domain = "dash.cloudflare.com",
 	}: {
 		usesAccess: boolean;
 		domain?: string;
-	}) => {
+	}) {
 		// If the domain relies upon Cloudflare Access, then a request to the domain
 		// will result in a redirect to the `cloudflareaccess.com` domain.
-		fetchMock.mockOnceIf(`https://${domain}/`, async () => {
-			if (usesAccess) {
-				return {
-					status: 302,
-					headers: { location: "cloudflareaccess.com" },
+		msw.use(
+			rest.get(`https://${domain}/`, (_, res, ctx) => {
+				let status = 200;
+				let headers: Record<string, string> = {
+					"Content-Type": "application/json",
 				};
-			} else {
-				return { status: 200 };
-			}
-		});
-	};
+				if (usesAccess) {
+					status = 302;
+					headers = { location: "cloudflareaccess.com" };
+				}
+				return res.once(ctx.status(status), ctx.set(headers));
+			})
+		);
+	}
 
 	return {
+		mockHttpServer,
 		mockDomainUsesAccess,
 		mockGrantAccessToken,
-		mockGrantAuthorization,
 		mockOAuthServerCallback,
-		mockRevokeAuthorization,
 		mockExchangeRefreshTokenForAccessToken,
 	};
 };
+
+export function mockExchangeRefreshTokenForAccessToken({
+	respondWith,
+	domain = "dash.cloudflare.com",
+}: {
+	respondWith: "refreshSuccess" | "refreshError" | "badResponse";
+	domain?: string;
+}) {
+	msw.use(
+		rest.post(`https://${domain}/oauth2/token`, async (_, res, ctx) => {
+			switch (respondWith) {
+				case "refreshSuccess":
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							access_token: "access_token_success_mock",
+							expires_in: 1701,
+							refresh_token: "refresh_token_success_mock",
+							scope: "scope_success_mock",
+							token_type: "bearer",
+						})
+					);
+				case "refreshError":
+					return res.once(
+						ctx.status(400),
+						ctx.json({
+							error: "invalid_request",
+							error_description: "error_description_mock",
+							error_hint: "error_hint_mock",
+							error_verbose: "error_verbose_mock",
+							status_code: 400,
+						})
+					);
+				case "badResponse":
+					return res.once(
+						ctx.status(400),
+						ctx.text(
+							`<html> <body> This shouldn't be sent, but should be handled </body> </html>`
+						)
+					);
+
+				default:
+					throw new Error(
+						"Not a respondWith option for `mockExchangeRefreshTokenForAccessToken`"
+					);
+			}
+		})
+	);
+}
 
 type GrantResponseOptions = {
 	code?: string;
@@ -249,7 +241,7 @@ type MockTokenResponse =
 			error: ErrorType;
 	  };
 
-const makeTokenResponse = (partialResponse: MockTokenResponse): string => {
+const makeTokenResponse = (partialResponse: MockTokenResponse) => {
 	let fullResponse: MockTokenResponse;
 
 	if (partialResponse === "ok") {
@@ -267,5 +259,5 @@ const makeTokenResponse = (partialResponse: MockTokenResponse): string => {
 		fullResponse = partialResponse;
 	}
 
-	return JSON.stringify(fullResponse);
+	return fullResponse;
 };
