@@ -187,7 +187,7 @@ export function buildRawWorker({
 	return bundleWorker(
 		{
 			file: workerScriptPath,
-			directory,
+			directory: resolve(directory),
 			format: "modules",
 		},
 		resolve(outfile),
