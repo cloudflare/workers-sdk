@@ -1,9 +1,12 @@
 import { access, cp, lstat, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { build as esBuild } from "esbuild";
 import { nanoid } from "nanoid";
 import { bundleWorker } from "../../bundle";
+import { logger } from "../../logger";
 import { getBasePath } from "../../paths";
 import { D1_BETA_PREFIX } from "../../worker";
+import type { Plugin } from "esbuild";
 
 export type Options = {
 	routesModule: string;
@@ -58,26 +61,7 @@ export function buildWorker({
 				(binding) => `${D1_BETA_PREFIX}${binding}`
 			),
 			plugins: [
-				{
-					name: "wrangler notifier and monitor",
-					setup(pluginBuild) {
-						pluginBuild.onEnd((result) => {
-							if (result.errors.length > 0) {
-								console.error(
-									`${result.errors.length} error(s) and ${result.warnings.length} warning(s) when compiling Worker.`
-								);
-							} else if (result.warnings.length > 0) {
-								console.warn(
-									`${result.warnings.length} warning(s) when compiling Worker.`
-								);
-								onEnd();
-							} else {
-								console.log("Compiled Worker successfully.");
-								onEnd();
-							}
-						});
-					},
-				},
+				buildNotifierPlugin(onEnd),
 				{
 					name: "Assets",
 					setup(pluginBuild) {
@@ -164,3 +148,135 @@ export function buildWorker({
 		}
 	);
 }
+
+export type RawOptions = {
+	workerScriptPath: string;
+	outfile: string;
+	directory: string;
+	minify?: boolean;
+	sourcemap?: boolean;
+	watch?: boolean;
+	plugins?: Plugin[];
+	onEnd?: () => void;
+	buildOutputDirectory?: string;
+	nodeCompat?: boolean;
+	local: boolean;
+	betaD1Shims?: string[];
+};
+
+/**
+ * This function bundles a raw `_worker.js` Pages file
+ * before it gets deployed.
+ *
+ * This allows Wrangler to add shims and other wrappers
+ * around the handlers, which is useful to support beta features.
+ */
+export function buildRawWorker({
+	workerScriptPath,
+	outfile,
+	directory,
+	minify = false,
+	sourcemap = false,
+	watch = false,
+	plugins = [],
+	onEnd = () => {},
+	nodeCompat,
+	local,
+	betaD1Shims,
+}: RawOptions) {
+	return bundleWorker(
+		{
+			file: workerScriptPath,
+			directory: resolve(directory),
+			format: "modules",
+		},
+		resolve(outfile),
+		{
+			minify,
+			sourcemap,
+			watch,
+			nodeCompat,
+			loader: {
+				".txt": "text",
+				".html": "text",
+			},
+			define: {},
+			betaD1Shims: (betaD1Shims || []).map(
+				(binding) => `${D1_BETA_PREFIX}${binding}`
+			),
+			plugins: [...plugins, buildNotifierPlugin(onEnd)],
+			isOutfile: true,
+			serveAssetsFromWorker: false,
+			disableModuleCollection: true,
+			rules: [],
+			checkFetch: local,
+			targetConsumer: local ? "dev" : "publish",
+			local,
+			experimentalLocal: false,
+		}
+	);
+}
+
+/**
+ * Creates an esbuild plugin that can notify Wrangler (via the `onEnd()`)
+ * when the build completes.
+ */
+export function buildNotifierPlugin(onEnd: () => void): Plugin {
+	return {
+		name: "wrangler notifier and monitor",
+		setup(pluginBuild) {
+			pluginBuild.onEnd((result) => {
+				if (result.errors.length > 0) {
+					logger.error(
+						`${result.errors.length} error(s) and ${result.warnings.length} warning(s) when compiling Worker.`
+					);
+				} else if (result.warnings.length > 0) {
+					logger.warn(
+						`${result.warnings.length} warning(s) when compiling Worker.`
+					);
+					onEnd();
+				} else {
+					logger.log("✨ Compiled Worker successfully");
+					onEnd();
+				}
+			});
+		},
+	};
+}
+
+/**
+ * Runs the script through a simple esbuild bundle step to check for unwanted imports.
+ *
+ * This is useful when the user chooses not to bundle the `_worker.js` file by setting
+ * `--no-bundle` at the command line.
+ */
+export async function checkRawWorker(scriptPath: string, onEnd: () => void) {
+	await esBuild({
+		entryPoints: [scriptPath],
+		write: false,
+		// we need it to be bundled so that any imports that are used are affected by the blocker plugin
+		bundle: true,
+		plugins: [blockWorkerJsImports, buildNotifierPlugin(onEnd)],
+	});
+}
+
+const blockWorkerJsImports: Plugin = {
+	name: "block-worker-js-imports",
+	setup(build) {
+		build.onResolve({ filter: /.*/g }, (args) => {
+			// If it's the entrypoint, let it be as is
+			if (args.kind === "entry-point") {
+				return {
+					path: args.path,
+				};
+			}
+			// Otherwise, block any imports that the file is requesting
+			logger.error(
+				"_worker.js is not being bundled by Wrangler but it is importing from another file.\n" +
+					"This will throw an error if deployed.\n" +
+					"You should bundle the Worker in a pre-build step, remove the import if it is unused, or ask Wrangler to bundle it by setting `--bundle`."
+			);
+			process.exit(1);
+		});
+	},
+};

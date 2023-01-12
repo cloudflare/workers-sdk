@@ -13,6 +13,7 @@ import { getBasePath } from "../paths";
 import { buildFunctions } from "./build";
 import { ROUTES_SPEC_VERSION, SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
 import { FunctionsNoRoutesError, getFunctionsNoRoutesWarning } from "./errors";
+import { buildRawWorker, checkRawWorker } from "./functions/buildWorker";
 import { validateRoutes } from "./functions/routes-validation";
 import { CLEANUP, CLEANUP_CALLBACKS, pagesBetaWarning } from "./utils";
 import type { AdditionalDevProps } from "../dev";
@@ -77,6 +78,11 @@ export function Options(yargs: Argv) {
 				default: "_worker.js",
 				description:
 					"The location of the single Worker script if not using functions",
+			},
+			bundle: {
+				type: "boolean",
+				default: false,
+				description: "Whether to run bundling on `_worker.js`",
 			},
 			binding: {
 				type: "array",
@@ -162,6 +168,7 @@ export const Handler = async ({
 	"inspector-port": inspectorPort,
 	proxy: requestedProxyPort,
 	"script-path": singleWorkerScriptPath,
+	bundle,
 	binding: bindings = [],
 	kv: kvs = [],
 	do: durableObjects = [],
@@ -252,22 +259,32 @@ export const Handler = async ({
 	let scriptPath = "";
 
 	if (usingWorkerScript) {
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		scriptReadyResolve!();
-
 		scriptPath = workerScriptPath;
-
-		const runBuild = async () => {
-			try {
-				await esbuild.build({
-					entryPoints: [scriptPath],
-					write: false,
-					// we need it to be bundled so that any imports that are used are affected by the blocker plugin
-					bundle: true,
-					plugins: [blockWorkerJsImports],
-				});
-			} catch {}
+		let runBuild = async () => {
+			await checkRawWorker(workerScriptPath, () => scriptReadyResolve());
 		};
+
+		if (bundle) {
+			// We want to actually run the `_worker.js` script through the bundler
+			// So update the final path to the script that will be uploaded and
+			// change the `runBuild()` function to bundle the `_worker.js`.
+			scriptPath = join(tmpdir(), `./bundledWorker-${Math.random()}.mjs`);
+			runBuild = async () => {
+				try {
+					await buildRawWorker({
+						workerScriptPath,
+						outfile: scriptPath,
+						directory: directory ?? ".",
+						local: true,
+						sourcemap: true,
+						watch: true,
+						onEnd: () => scriptReadyResolve(),
+					});
+				} catch (e: unknown) {
+					logger.warn("Failed to bundle _worker.js.", e);
+				}
+			};
+		}
 
 		await runBuild();
 		watch([scriptPath], {
@@ -278,8 +295,7 @@ export const Handler = async ({
 		});
 	} else if (usingFunctions) {
 		// Try to use Functions
-		const outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.mjs`);
-		scriptPath = outfile;
+		scriptPath = join(tmpdir(), `./functionsWorker-${Math.random()}.mjs`);
 
 		if (nodeCompat) {
 			console.warn(
@@ -287,38 +303,31 @@ export const Handler = async ({
 			);
 		}
 
-		logger.log(`Compiling worker to "${outfile}"...`);
+		logger.log(`Compiling worker to "${scriptPath}"...`);
 		const onEnd = () => scriptReadyResolve();
 		try {
-			await buildFunctions({
-				outfile,
-				functionsDirectory,
-				sourcemap: true,
-				watch: true,
-				onEnd,
-				buildOutputDirectory: directory,
-				nodeCompat,
-				local: true,
-			});
-			await metrics.sendMetricsEvent("build pages functions");
+			const buildFn = async () => {
+				await buildFunctions({
+					outfile: scriptPath,
+					functionsDirectory,
+					sourcemap: true,
+					watch: true,
+					onEnd,
+					buildOutputDirectory: directory,
+					nodeCompat,
+					local: true,
+				});
+				await metrics.sendMetricsEvent("build pages functions");
+			};
 
+			await buildFn();
 			// If Functions found routes, continue using Functions
 			watch([functionsDirectory], {
 				persistent: true,
 				ignoreInitial: true,
 			}).on("all", async () => {
 				try {
-					await buildFunctions({
-						outfile,
-						functionsDirectory,
-						sourcemap: true,
-						watch: true,
-						onEnd,
-						buildOutputDirectory: directory,
-						nodeCompat,
-						local: true,
-					});
-					await metrics.sendMetricsEvent("build pages functions");
+					await buildFn();
 				} catch (e) {
 					if (e instanceof FunctionsNoRoutesError) {
 						logger.warn(
@@ -359,7 +368,7 @@ export const Handler = async ({
 
 	if (scriptPath === "") {
 		// Failed to get a script with or without Functions,
-		// something really bad must have happend.
+		// something really bad must have happened.
 		throw new FatalError(
 			"Failed to start wrangler pages dev due to an unknown error",
 			1
@@ -441,7 +450,7 @@ export const Handler = async ({
 					 * If _routes.json is invalid, don't exit but instead fallback to a sensible default
 					 * and continue to serve the assets. At the same time make sure we warn users that we
 					 * we detected an invalid file and that we'll be using a default.
-					 * This basically equivalates to serving a Functions or _worker.js project as is,
+					 * This basically equates to serving a Functions or _worker.js project as is,
 					 * without applying any additional routing rules on top.
 					 */
 					const error =
@@ -688,24 +697,3 @@ async function spawnProxyProcess({
 
 	return port;
 }
-
-// TODO: Kill this once we have https://github.com/cloudflare/wrangler2/issues/2153
-const blockWorkerJsImports: esbuild.Plugin = {
-	name: "block-worker-js-imports",
-	setup(build) {
-		build.onResolve({ filter: /.*/g }, (args) => {
-			// If it's the entrypoint, let it be as is
-			if (args.kind === "entry-point") {
-				return {
-					path: args.path,
-				};
-			}
-			// Otherwise, block any imports that the file is requesting
-			logger.error(
-				`_worker.js is importing from another file. This will throw an error if deployed.\nYou should bundle your Worker or remove the import if it is unused.`
-			);
-			// Miniflare will error with this briefly down the line -- there's no point in continuing.
-			process.exit(1);
-		});
-	},
-};
