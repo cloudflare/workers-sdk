@@ -11,6 +11,7 @@ import type {
 import type { ArgumentsCamelCase, Argv } from "yargs";
 
 const argToUrlHash = {
+	d1: "d1",
 	docs: "docs",
 	init: "init",
 	generate: "generate",
@@ -56,7 +57,7 @@ export function docsOptions(yargs: Argv<CommonYargsOptions>) {
 			"r2 object",
 			"r2 bucket",
 			// "dispatch-namespace", // TODO: Undocumented - Workers for Platforms
-			// "d1", //TODO: Undocumented
+			"d1",
 			// "pubsub", //TODO: Undocumented
 			"login",
 			"logout",
