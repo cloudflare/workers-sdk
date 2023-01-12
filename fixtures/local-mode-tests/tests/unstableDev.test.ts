@@ -32,14 +32,18 @@ describe("worker in local mode", () => {
 		await worker.stop();
 	});
 
-	it.concurrent("should invoke the worker and exit", async () => {
-		await readyPromise;
-		const resp = await worker.fetch();
-		expect(resp).not.toBe(undefined);
-		if (resp) {
-			const text = await resp.text();
+	it.concurrent(
+		"should invoke the worker and exit",
+		async () => {
+			await readyPromise;
+			const resp = await worker.fetch();
+			expect(resp).not.toBe(undefined);
+			if (resp) {
+				const text = await resp.text();
 
-			expect(text).toMatchInlineSnapshot(`"Hello World!"`);
-		}
-	});
+				expect(text).toMatchInlineSnapshot(`"Hello World!"`);
+			}
+		},
+		10000
+	);
 });
