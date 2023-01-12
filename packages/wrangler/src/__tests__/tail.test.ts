@@ -13,6 +13,7 @@ import type {
 	RequestEvent,
 	ScheduledEvent,
 	AlarmEvent,
+	EmailEvent,
 } from "../tail/createTail";
 import type { RequestInit } from "undici";
 import type WebSocket from "ws";
@@ -404,6 +405,18 @@ describe("tail", () => {
 			expect(std.out).toMatch(deserializeToJson(serializedMessage));
 		});
 
+		it("logs email messages in json format", async () => {
+			const api = mockWebsocketAPIs();
+			await runWrangler("tail test-worker --format json");
+
+			const event = generateMockEmailEvent();
+			const message = generateMockEventMessage({ event });
+			const serializedMessage = serialize(message);
+
+			api.ws.send(serializedMessage);
+			expect(std.out).toMatch(deserializeToJson(serializedMessage));
+		});
+
 		it("logs request messages in pretty format", async () => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --format pretty");
@@ -470,6 +483,29 @@ describe("tail", () => {
 			        "Successfully created tail, expires at [mock expiration date]
 			        Connected to test-worker, waiting for logs...
 			        Alarm @ [mock scheduled time] - Ok"
+		      `);
+		});
+
+		it("logs email messages in pretty format", async () => {
+			const api = mockWebsocketAPIs();
+			await runWrangler("tail test-worker --format pretty");
+
+			const event = generateMockEmailEvent();
+			const message = generateMockEventMessage({ event });
+			const serializedMessage = serialize(message);
+
+			api.ws.send(serializedMessage);
+			expect(
+				std.out
+					.replace(
+						new Date(mockEventTimestamp).toLocaleString(),
+						"[mock event timestamp]"
+					)
+					.replace(mockTailExpiration.toISOString(), "[mock expiration date]")
+			).toMatchInlineSnapshot(`
+			        "Successfully created tail, expires at [mock expiration date]
+			        Connected to test-worker, waiting for logs...
+			        Email from:${mockEmailEventFrom} to:${mockEmailEventTo} size:${mockEmailEventSize} @ [mock event timestamp] - Ok"
 		      `);
 		});
 
@@ -634,7 +670,13 @@ function serialize(message: TailEventMessage): WebSocket.RawData {
  * @returns true if `event` is a RequestEvent
  */
 function isRequest(
-	event: ScheduledEvent | RequestEvent | AlarmEvent | undefined | null
+	event:
+		| ScheduledEvent
+		| RequestEvent
+		| AlarmEvent
+		| EmailEvent
+		| undefined
+		| null
 ): event is RequestEvent {
 	return Boolean(event && "request" in event);
 }
@@ -734,6 +776,21 @@ const mockEventTimestamp = 1645454470467;
  * Default value for event time ISO strings
  */
 const mockEventScheduledTime = new Date(mockEventTimestamp).toISOString();
+
+/**
+ * Default value for email event from
+ */
+const mockEmailEventFrom = "from@example.com";
+
+/**
+ * Default value for email event to
+ */
+const mockEmailEventTo = "to@example.com";
+
+/**
+ * Default value for email event mail size
+ */
+const mockEmailEventSize = 45416;
 
 /**
  * Mock out the API hit during Tail deletion
@@ -901,5 +958,13 @@ function generateMockScheduledEvent(
 function generateMockAlarmEvent(opts?: Partial<AlarmEvent>): AlarmEvent {
 	return {
 		scheduledTime: opts?.scheduledTime || mockEventScheduledTime,
+	};
+}
+
+function generateMockEmailEvent(opts?: Partial<EmailEvent>): EmailEvent {
+	return {
+		mailFrom: opts?.mailFrom || mockEmailEventFrom,
+		rcptTo: opts?.rcptTo || mockEmailEventTo,
+		rawSize: opts?.rawSize || mockEmailEventSize,
 	};
 }
