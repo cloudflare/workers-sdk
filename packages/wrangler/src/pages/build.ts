@@ -83,7 +83,6 @@ export function Options(yargs: CommonYargsArgv) {
 				describe: "Enable Node.js compatibility",
 				default: false,
 				type: "boolean",
-				hidden: true,
 			},
 			"compatibility-date": {
 				describe: "Date to use for compatibility checks",

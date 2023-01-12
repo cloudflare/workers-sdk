@@ -179,7 +179,6 @@ export function Options(yargs: CommonYargsArgv) {
 				describe: "Enable Node.js compatibility",
 				default: false,
 				type: "boolean",
-				hidden: true,
 			},
 			"experimental-local": {
 				describe: "Run on my machine using the Cloudflare Workers runtime",
