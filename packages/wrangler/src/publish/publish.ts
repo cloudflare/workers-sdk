@@ -652,11 +652,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					printOffendingDependencies(dependencies);
 				} else if (errIsStartupErr(err)) {
 					const youFailed =
-						"Your worker failed validation because it exceeded startup limits.";
+						"Your Worker failed validation because it exceeded startup limits.";
 					const heresWhy =
-						"To ensure fast responses, we place constraints on worker startup -- like how much CPU it can use, or how long it can take.";
+						"To ensure fast responses, we place constraints on Worker startup -- like how much CPU it can use, or how long it can take.";
 					const heresTheProblem =
-						"Your worker failed validation, which means it hit one of these startup limits.";
+						"Your Worker failed validation, which means it hit one of these startup limits.";
 					const heresTheSolution =
 						"Try reducing the amount of work done during startup (outside the event handler), either by removing code or relocating it inside the event handler.";
 					logger.warn(
