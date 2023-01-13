@@ -16,13 +16,27 @@ describe.concurrent("Pages _worker.js", () => {
 		).toThrowError();
 	});
 
+	it("should not throw an error when the _worker.js file imports something if --no-bundle is false", async ({
+		expect,
+	}) => {
+		const { ip, port, stop } = await runWranglerPagesDev(
+			resolve(__dirname, ".."),
+			"./workerjs-test",
+			["--no-bundle=false", "--port=0"]
+		);
+		await expect(
+			fetch(`http://${ip}:${port}/`).then((resp) => resp.text())
+		).resolves.toContain("test");
+		await stop();
+	});
+
 	it("should not throw an error when the _worker.js file imports something if --bundle is true", async ({
 		expect,
 	}) => {
 		const { ip, port, stop } = await runWranglerPagesDev(
 			resolve(__dirname, ".."),
 			"./workerjs-test",
-			["--bundle"]
+			["--bundle", "--port=0"]
 		);
 		await expect(
 			fetch(`http://${ip}:${port}/`).then((resp) => resp.text())

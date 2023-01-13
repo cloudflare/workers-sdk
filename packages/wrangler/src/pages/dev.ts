@@ -82,6 +82,11 @@ export function Options(yargs: Argv) {
 			bundle: {
 				type: "boolean",
 				default: false,
+				hidden: true,
+			},
+			"no-bundle": {
+				type: "boolean",
+				default: true,
 				description: "Whether to run bundling on `_worker.js`",
 			},
 			binding: {
@@ -169,6 +174,7 @@ export const Handler = async ({
 	proxy: requestedProxyPort,
 	"script-path": singleWorkerScriptPath,
 	bundle,
+	noBundle,
 	binding: bindings = [],
 	kv: kvs = [],
 	do: durableObjects = [],
@@ -264,7 +270,8 @@ export const Handler = async ({
 			await checkRawWorker(workerScriptPath, () => scriptReadyResolve());
 		};
 
-		if (bundle) {
+		const enableBundling = bundle || !noBundle;
+		if (enableBundling) {
 			// We want to actually run the `_worker.js` script through the bundler
 			// So update the final path to the script that will be uploaded and
 			// change the `runBuild()` function to bundle the `_worker.js`.
