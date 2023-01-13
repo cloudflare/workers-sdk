@@ -66,6 +66,11 @@ export function Options(yargs: Argv) {
 			bundle: {
 				type: "boolean",
 				default: false,
+				hidden: true,
+			},
+			"no-bundle": {
+				type: "boolean",
+				default: true,
 				description: "Whether to run bundling on `_worker.js` before deploying",
 			},
 			config: {
@@ -86,6 +91,7 @@ export const Handler = async ({
 	commitDirty,
 	skipCaching,
 	bundle,
+	noBundle,
 	config: wranglerConfig,
 }: PublishArgs) => {
 	if (wranglerConfig) {
@@ -384,7 +390,8 @@ export const Handler = async ({
 	 */
 	if (_workerJS) {
 		let workerFileContents = _workerJS;
-		if (bundle) {
+		const enableBundling = bundle || !noBundle;
+		if (enableBundling) {
 			const outfile = join(tmpdir(), `./bundledWorker-${Math.random()}.mjs`);
 			await buildRawWorker({
 				workerScriptPath,
