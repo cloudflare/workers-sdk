@@ -6815,9 +6815,9 @@ addEventListener('fetch', event => {});`
 			",
 			  "warn": "�[33m▲ �[43;33m[�[43;30mWARNING�[43;33m]�[0m �[1mYour Worker failed validation because it exceeded startup limits.�[0m
 
-			  To ensure fast responses, we place constraints on worker startup -- like how much CPU it can use,
+			  To ensure fast responses, we place constraints on Worker startup -- like how much CPU it can use,
 			  or how long it can take.
-			  Your worker failed validation, which means it hit one of these startup limits.
+			  Your Worker failed validation, which means it hit one of these startup limits.
 			  Try reducing the amount of work done during startup (outside the event handler), either by
 			  removing code or relocating it inside the event handler.
 
