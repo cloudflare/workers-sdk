@@ -12,6 +12,7 @@ import {
 import useInspector from "../inspect";
 import { logger } from "../logger";
 import { startPreviewServer, usePreviewServer } from "../proxy";
+import { helpIfErrorIsSizeOrScriptStartup } from "../publish/publish";
 import { syncAssets } from "../sites";
 import {
 	getAccountChoices,
@@ -494,6 +495,7 @@ export async function getRemotePreviewToken(props: RemoteProps) {
 				// code 10049 happens when the preview token expires
 				logger.log("Preview token expired, restart server to fetch a new one");
 			} else {
+				helpIfErrorIsSizeOrScriptStartup(err, props.bundle?.dependencies || {});
 				logger.error("Error on remote worker:", err);
 			}
 		}
