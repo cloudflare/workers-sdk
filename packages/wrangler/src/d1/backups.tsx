@@ -191,11 +191,7 @@ export const DownloadHandler = withConfig<BackupDownloadArgs>(
 			name
 		);
 		const filename =
-			output ||
-			path.join(
-				process.env.INIT_CWD as string,
-				`${name}.${backupId.slice(0, 8)}.sqlite3`
-			);
+			output || path.resolve(`${name}.${backupId.slice(0, 8)}.sqlite3`);
 
 		logger.log(`🌀 Downloading backup ${backupId} from '${name}'`);
 		const response = await getBackupResponse(accountId, db.uuid, backupId);
