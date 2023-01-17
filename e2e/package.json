@@ -2,8 +2,8 @@
 	"name": "@cloudflare/wrangler-e2e",
 	"private": true,
 	"scripts": {
-		"test": "jest",
-		"check:type": "tsc"
+		"check:type": "tsc",
+		"test": "jest"
 	},
 	"devDependencies": {
 		"node-gyp": "^9.3.0",
