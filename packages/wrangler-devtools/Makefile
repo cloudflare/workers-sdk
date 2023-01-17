@@ -16,7 +16,7 @@ devtools-frontend/out/Default/gen/front_end: devtools-frontend
 	cd devtools-frontend && $(ROOT)/depot/autoninja -C out/Default
 
 node_modules:
-	npm i
+	npm ci
 
 publish: node_modules devtools-frontend/out/Default/gen/front_end
 	npx wrangler pages publish --project-name chrome-devtools-cloudflare devtools-frontend/out/Default/gen/front_end
