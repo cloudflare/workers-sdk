@@ -50,5 +50,8 @@
 	"files.associations": {
 		"api-extractor.json": "jsonc"
 	},
-	"jest.jestCommandLine": "npm run -w wrangler test --"
+	"jest.jestCommandLine": "npm run -w wrangler test --",
+	"[ignore]": {
+		"editor.defaultFormatter": "foxundermoon.shell-format"
+	}
 }
