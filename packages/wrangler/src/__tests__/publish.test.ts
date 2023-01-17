@@ -6813,7 +6813,7 @@ addEventListener('fetch', event => {});`
 			  [4mhttps://github.com/cloudflare/wrangler2/issues/new/choose[0m
 
 			",
-			  "warn": "�[33m▲ �[43;33m[�[43;30mWARNING�[43;33m]�[0m �[1mYour Worker failed validation because it exceeded startup limits.�[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYour Worker failed validation because it exceeded startup limits.[0m
 
 			  To ensure fast responses, we place constraints on Worker startup -- like how much CPU it can use,
 			  or how long it can take.
