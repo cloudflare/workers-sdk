@@ -4,7 +4,7 @@ import prettyBytes from "pretty-bytes";
 import { MAX_UPLOAD_SIZE } from "../r2/constants";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { msw, mswSuccessR2handlers } from "./helpers/msw";
+import { createFetchResult, msw, mswSuccessR2handlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { R2BucketInfo } from "../r2/helpers";
@@ -60,12 +60,8 @@ describe("r2", () => {
 							expect(accountId).toEqual("some-account-id");
 							expect(await request.text()).toEqual("");
 							return response.once(
-								context.status(200),
-								context.json({
-									success: true,
-									errors: [],
-									messages: [],
-									result: {
+								context.json(
+									createFetchResult({
 										buckets: [
 											{
 												name: "bucket-1-local-once",
@@ -76,8 +72,8 @@ describe("r2", () => {
 												creation_date: "01-01-2001",
 											},
 										],
-									},
-								})
+									})
+								)
 							);
 						}
 					)
@@ -155,15 +151,7 @@ describe("r2", () => {
 							const { accountId } = request.params;
 							expect(accountId).toEqual("some-account-id");
 							expect(await request.json()).toEqual({ name: "testBucket" });
-							return response.once(
-								context.status(200),
-								context.json({
-									success: true,
-									errors: [],
-									messages: [],
-									result: {},
-								})
-							);
+							return response.once(context.json(createFetchResult({})));
 						}
 					)
 				);
@@ -245,15 +233,7 @@ describe("r2", () => {
 								"Bearer some-api-token"
 							);
 
-							return response.once(
-								context.status(200),
-								context.json({
-									success: true,
-									errors: [],
-									messages: [],
-									result: null,
-								})
-							);
+							return response.once(context.json(createFetchResult(null)));
 						}
 					)
 				);
@@ -333,17 +313,13 @@ describe("r2", () => {
 					}
 				`);
 						return response.once(
-							context.status(200),
-							context.json({
-								success: true,
-								errors: [],
-								messages: [],
-								result: {
+							context.json(
+								createFetchResult({
 									accountId: "some-account-id",
 									bucketName: "bucketName-object-test",
 									objectName: "wormhole-img.png",
-								},
-							})
+								})
+							)
 						);
 					}
 				)

@@ -45,7 +45,6 @@ describe("User", () => {
 					counter += 1;
 
 					return response.once(
-						context.status(200),
 						context.json({
 							access_token: "test-access-token",
 							expires_in: 100000,

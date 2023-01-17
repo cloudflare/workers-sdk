@@ -1,4 +1,5 @@
 import { rest } from "msw";
+import { createFetchResult } from "../index";
 import type { WorkerMetadata } from "../../../../create-worker-upload-form";
 
 const bindings: Record<string, WorkerMetadata["bindings"]> = {
@@ -29,32 +30,20 @@ export default [
 	rest.get(
 		"*/accounts/:accountId/workers/services/:scriptName/environments/:env/content",
 		({ params: { scriptName } }, res, context) => {
-			return res(
-				context.status(200),
-				context.text(getScript(scriptName as string))
-			);
+			return res(context.text(getScript(scriptName as string)));
 		}
 	),
 	rest.get(
 		"*/accounts/:accountId/workers/scripts/:scriptName",
 		({ params: { scriptName } }, res, context) => {
-			return res(
-				context.status(200),
-				context.text(getScript(scriptName as string))
-			);
+			return res(context.text(getScript(scriptName as string)));
 		}
 	),
 	rest.get(
 		"*/accounts/:accountId/workers/services/:scriptName/environments/:env/bindings",
 		({ params: { scriptName } }, res, context) => {
 			return res(
-				context.status(200),
-				context.json({
-					success: true,
-					errors: [],
-					messages: [],
-					result: getBindings(scriptName as string),
-				})
+				context.json(createFetchResult(getBindings(scriptName as string)))
 			);
 		}
 	),
@@ -62,13 +51,7 @@ export default [
 		"*/accounts/:accountId/workers/scripts/:scriptName/bindings",
 		({ params: { scriptName } }, res, context) => {
 			return res(
-				context.status(200),
-				context.json({
-					success: true,
-					errors: [],
-					messages: [],
-					result: getBindings(scriptName as string),
-				})
+				context.json(createFetchResult(getBindings(scriptName as string)))
 			);
 		}
 	),
