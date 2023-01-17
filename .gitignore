@@ -184,3 +184,4 @@ _routes.generated.json
 
 # Vendored npm dependencies
 !vendor/*.tgz
+

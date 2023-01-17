@@ -23,7 +23,7 @@
 		},
 		"types": ["@cloudflare/workers-types"]
 	},
-	"include": ["packages", "worker/**/*", "worker-*/**/*"],
+	"include": ["worker/**/*", "worker-*/**/*"],
 	"exclude": [
 		"**/dist/**",
 		"**/build/**",
