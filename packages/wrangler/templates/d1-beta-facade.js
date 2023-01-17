@@ -245,4 +245,4 @@ var maskDurableObjectDefinition = (cls) =>
 		}
 	};
 __DO_REEXPORTS__;
-export { shim_default as default };
+export { shim_default as default, maskDurableObjectDefinition };
