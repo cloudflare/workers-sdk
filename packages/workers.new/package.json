@@ -3,7 +3,8 @@
 	"private": true,
 	"scripts": {
 		"deploy": "wrangler publish src/index.ts",
-		"dev": "wrangler dev src/index.ts --local"
+		"dev": "wrangler dev src/index.ts --local",
+		"test": "vitest"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^3.0.0",
