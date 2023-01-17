@@ -21,6 +21,7 @@ export type Options = {
 	functionsDirectory: string;
 	local: boolean;
 	betaD1Shims?: string[];
+	experimentalWorkerBundle?: boolean;
 };
 
 export function buildWorker({
@@ -36,6 +37,7 @@ export function buildWorker({
 	functionsDirectory,
 	local,
 	betaD1Shims,
+	experimentalWorkerBundle = false,
 }: Options) {
 	return bundleWorker(
 		{
@@ -140,7 +142,7 @@ export function buildWorker({
 			],
 			isOutfile: true,
 			serveAssetsFromWorker: false,
-			disableModuleCollection: true,
+			disableModuleCollection: experimentalWorkerBundle ? false : true,
 			rules: [],
 			checkFetch: local,
 			targetConsumer: local ? "dev" : "publish",
@@ -163,6 +165,7 @@ export type RawOptions = {
 	nodeCompat?: boolean;
 	local: boolean;
 	betaD1Shims?: string[];
+	experimentalWorkerBundle?: boolean;
 };
 
 /**
@@ -184,6 +187,7 @@ export function buildRawWorker({
 	nodeCompat,
 	local,
 	betaD1Shims,
+	experimentalWorkerBundle = false,
 }: RawOptions) {
 	return bundleWorker(
 		{
@@ -209,7 +213,7 @@ export function buildRawWorker({
 			plugins: [...plugins, buildNotifierPlugin(onEnd)],
 			isOutfile: true,
 			serveAssetsFromWorker: false,
-			disableModuleCollection: true,
+			disableModuleCollection: experimentalWorkerBundle ? false : true,
 			rules: [],
 			checkFetch: local,
 			targetConsumer: local ? "dev" : "publish",
