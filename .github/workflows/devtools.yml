@@ -20,6 +20,19 @@ jobs:
         with:
           cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
 
+      - name: Install workerd Dependencies
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt-get update
+          sudo apt-get install -y libc++1
+
+      - name: Install NPM Dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
       - name: Run Devtools release & publish
         run: cd packages/wrangler-devtools && make publish
         env:
