@@ -2,7 +2,7 @@
 	"extends": "../../tsconfig.json",
 	"compilerOptions": {
 		"strict": true,
-		"lib": ["esnext"],
+		"lib": ["esnext", "dom"],
 		"target": "esnext",
 		"skipLibCheck": true,
 		"resolveJsonModule": true,
@@ -17,6 +17,7 @@
 		"module": "esnext",
 		"allowJs": false,
 		"noEmit": true,
+		"types": ["node"],
 		"paths": {
 			"create-cloudflare": ["./src/index.d.ts"]
 		}

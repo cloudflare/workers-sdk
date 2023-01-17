@@ -1,8 +1,8 @@
+import { exec } from "child_process";
 import * as fs from "fs";
 import { tmpdir } from "os";
-import { promisify } from "util";
 import { join, relative } from "path";
-import { exec } from "child_process";
+import { promisify } from "util";
 import semiver from "semiver";
 
 import type { Argv } from "create-cloudflare";
@@ -12,8 +12,8 @@ export const exists = fs.existsSync;
 
 export { join, relative };
 
-export async function rmdir(dir: string): Promise<void> {
-	if (exists(dir)) fs.promises.rm(dir, { recursive: true });
+export function rmdir(dir: string): void {
+	if (exists(dir)) fs.rmSync(dir, { recursive: true });
 }
 
 export const git = (...args: string[]) => run(`git ${args.join(" ")}`);
@@ -31,29 +31,31 @@ export interface Remote {
 
 export async function clone(remote: Remote, dest: string, argv: Argv) {
 	let args = ["clone --depth 1"];
-	let { source, filter } = remote;
+	const { source, filter } = remote;
 	let target = dest,
 		sparse = false;
 
 	function bail(msg: string, err?: unknown): never {
 		if (argv.debug && err && err instanceof Error) {
-			let x = err.stack || err.message;
+			const x = err.stack || err.message;
 			msg += "\n" + (x.includes("\n") ? x.replace(/(\r?\n)/g, "$1    ") : x);
 		}
 		throw msg;
 	}
 
+	let gitVersionOutput: string;
 	try {
-		var { stdout } = await git("version");
+		const { stdout } = await git("version");
+		gitVersionOutput = stdout;
 	} catch (err) {
 		return bail("Missing `git` executable", err);
 	}
 
-	let [version] = /\d+.\d+.\d+/.exec(stdout) || [];
+	const [version] = /\d+.\d+.\d+/.exec(gitVersionOutput) || [];
 	if (!version) throw "Unknown `git` version";
 
 	if (filter) {
-		let num = semiver(version, "2.26.0");
+		const num = semiver(version, "2.26.0");
 		sparse = num !== -1; // -1~>lesser; 0~>equal; 1~>greater
 
 		target = join(tmpdir(), rand() + "-" + rand());

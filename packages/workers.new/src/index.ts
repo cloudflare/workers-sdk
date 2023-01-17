@@ -161,7 +161,7 @@ function getRedirectUrlForPathname(pathname: string): string | undefined {
 	}
 }
 
-function getListHTML(redirects: Redirects) {
+function getListHTML(redirectsParam: Redirects) {
 	return `
 <html>
 <head>
@@ -270,9 +270,10 @@ function getListHTML(redirects: Redirects) {
 	<p class="heading">Cloudflare Workers Templates</p>
 	<p class="subheading">Ready to use templates to start building applications on Cloudflare Workers.</p>
 	<ul>
-		${Object.keys(redirects)
+		${Object.keys(redirectsParam)
 			.map((pathname) => {
-				const [subdir, file, title, terminal] = redirects[pathname] || [];
+				const [subdir, _file, title, _terminal] =
+					redirectsParam[pathname] || [];
 				return `<li>
 				<p class="card-title"> ${title} </p>
 				<p class="title">${subdir}</p>

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-var-requires */
 
 import type { Argv } from "create-cloudflare";
 
@@ -18,7 +19,7 @@ const argv = require("mri")(process.argv.slice(2), {
 	version?: boolean;
 };
 
-function exit(msg: string, code = 1): never {
+function exit(msg: string, code = 1): void {
 	if (code) console.error("\n" + msg + "\n");
 	else console.log("\n" + msg + "\n");
 	process.exit(code);
@@ -66,13 +67,13 @@ if (argv.help) {
 }
 
 if (argv.version) {
-	let pkg = require("./package.json");
+	const pkg = require("./package.json");
 	exit(`${pkg.name}, v${pkg.version}`, 0);
 }
 
-(async function () {
+void (async function () {
 	try {
-		let [dir, source] = argv._;
+		const [dir, source] = argv._;
 		if (!dir) return exit("Missing <directory> argument", 1);
 		if (!source) return exit("Missing <source> argument", 1);
 		await require(".").setup(dir, source, argv);
