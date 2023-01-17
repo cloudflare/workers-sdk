@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - "devtools/**"
+      - "**-devtools"
 
 jobs:
   publish:
