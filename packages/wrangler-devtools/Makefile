@@ -8,6 +8,8 @@ depot:
 devtools-frontend: depot
 	$(ROOT)/depot/fetch devtools-frontend
 	git -C devtools-frontend checkout $(HEAD)
+	git -C devtools-frontend config user.email "workers-devprod@cloudflare.com"
+  git -C devtools-frontend config user.name "Workers DevProd"
 	git -C devtools-frontend am $(PATCHES)
 
 devtools-frontend/out/Default/gen/front_end: devtools-frontend
