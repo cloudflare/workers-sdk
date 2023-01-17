@@ -238,5 +238,11 @@ var shim_default = {
 		return worker.trace(traces, getMaskedEnv(env), ctx);
 	},
 };
+var maskDurableObjectDefinition = (cls) =>
+	class extends cls {
+		constructor(state, env) {
+			super(state, getMaskedEnv(env));
+		}
+	};
 __DO_REEXPORTS__;
 export { shim_default as default };
