@@ -1,5 +1,55 @@
 # wrangler
 
+## 2.8.0
+
+### Minor Changes
+
+- [#2538](https://github.com/cloudflare/wrangler2/pull/2538) [`af4f27c5`](https://github.com/cloudflare/wrangler2/commit/af4f27c5966f52e605ab7c16ff9746b7802d3479) Thanks [@edevil](https://github.com/edevil)! - feat: support EmailEvent event type in `wrangler tail`.
+
+* [#2404](https://github.com/cloudflare/wrangler2/pull/2404) [`3f824347`](https://github.com/cloudflare/wrangler2/commit/3f824347c624a2cedf4af2b6bbd781b8581b08b5) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: support bundling the raw Pages `_worker.js` before deploying
+
+  Previously, if you provided a `_worker.js` file, then Pages would simply check the
+  file for disallowed imports and then deploy the file as-is.
+
+  Not bundling the `_worker.js` file means that it cannot containing imports to other
+  JS files, but also prevents Wrangler from adding shims such as the one for the D1 alpha
+  release.
+
+  This change adds the ability to tell Wrangler to pass the `_worker.js` through the
+  normal Wrangler bundling process before deploying by setting the `--bundle`
+  command line argument to `wrangler pages dev` and `wrangler pages publish`.
+
+  This is in keeping with the same flag for `wrangler publish`.
+
+  Currently bundling is opt-in, flag defaults to `false` if not provided.
+
+### Patch Changes
+
+- [#2525](https://github.com/cloudflare/wrangler2/pull/2525) [`fe8c6917`](https://github.com/cloudflare/wrangler2/commit/fe8c69173821cfa5b0277e018df3a6207234b213) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: send `wrangler docs d1` to the right place
+
+* [#2542](https://github.com/cloudflare/wrangler2/pull/2542) [`b44e1a75`](https://github.com/cloudflare/wrangler2/commit/b44e1a7525248a4482248695742f3020347e3502) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Rename `--bundle` to `--no-bundle` in Pages commands to make similar to Workers
+
+- [#2551](https://github.com/cloudflare/wrangler2/pull/2551) [`bfffe595`](https://github.com/cloudflare/wrangler2/commit/bfffe59558675a3c943fc24bb8b4e29066ae0581) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: wrangler init --from-dash incorrectly expects index.ts while writing index.js
+
+  This PR fixes a bug where Wrangler would write a `wrangler.toml` expecting an index.ts file, while writing an index.js file.
+
+* [#2529](https://github.com/cloudflare/wrangler2/pull/2529) [`2270507c`](https://github.com/cloudflare/wrangler2/commit/2270507c7e7c7f0be4c39a9ee283147c0fe245cd) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Remove "experimental \_routes.json" warnings
+
+  `_routes.json` is no longer considered an experimental feature, so let's
+  remove all warnings we have in place for that.
+
+- [#2548](https://github.com/cloudflare/wrangler2/pull/2548) [`4db768fa`](https://github.com/cloudflare/wrangler2/commit/4db768fa5e05e4351b08113a20525c700324d502) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: path should be optional for wrangler d1 backup download
+
+  This PR fixes a bug that forces folks to provide a `--output` flag to `wrangler d1 backup download`.
+
+* [#2528](https://github.com/cloudflare/wrangler2/pull/2528) [`18208091`](https://github.com/cloudflare/wrangler2/commit/18208091335e6fa60e736cdeed46462c4be42a38) Thanks [@caass](https://github.com/caass)! - Add some guidance when folks encounter a 10021 error.
+
+  Error code 10021 can occur when your worker doesn't pass startup validation. This error message will make it a little easier to reason about what happened and what to do next.
+
+  Closes #2519
+
+- [#1769](https://github.com/cloudflare/wrangler2/pull/1769) [`6a67efe9`](https://github.com/cloudflare/wrangler2/commit/6a67efe9ae1da27fb95ffb030959465781bc74b6) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - allow `fetch()` calls locally to accept URL Objects
+
 ## 2.7.1
 
 ### Patch Changes
