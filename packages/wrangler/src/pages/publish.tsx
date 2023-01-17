@@ -248,7 +248,7 @@ export const Handler = async ({
 		commitMessage,
 		commitHash,
 		commitDirty,
-		bundle,
+		bundle: bundle ?? !noBundle,
 	});
 
 	saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
