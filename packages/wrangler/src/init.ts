@@ -599,7 +599,7 @@ export async function initHandler(args: InitArgs) {
 					isWritingScripts: shouldWritePackageJsonScripts,
 					isCreatingWranglerToml: justCreatedWranglerToml,
 					packagePath: pathToPackageJson,
-					scriptPath: "src/index.ts",
+					scriptPath: "src/index.js",
 					//? Should we have Environment argument for `wrangler init --from-dash` - Jacob
 					extraToml: (await getWorkerConfig(accountId, fromDashScriptName, {
 						defaultEnvironment,

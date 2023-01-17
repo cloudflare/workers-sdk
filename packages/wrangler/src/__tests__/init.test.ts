@@ -2794,6 +2794,7 @@ describe("init", () => {
 					"isolinear-optical-chip/wrangler.toml": wranglerToml({
 						...mockConfigExpected,
 						name: "isolinear-optical-chip",
+						main: "src/index.js",
 					}),
 				},
 			});
