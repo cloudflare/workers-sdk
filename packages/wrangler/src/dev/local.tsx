@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { fork } from "node:child_process";
 import { realpathSync } from "node:fs";
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import chalk from "chalk";
 import getPort from "get-port";
@@ -164,15 +164,6 @@ function useLocalWorker({
 		const abortController = new AbortController();
 		async function startLocalWorker() {
 			if (!bundle || !format) return;
-
-			// In local mode, we want to copy all referenced modules into
-			// the output bundle directory before starting up
-			for (const module of bundle.modules) {
-				await writeFile(
-					path.join(path.dirname(bundle.path), module.name),
-					module.content
-				);
-			}
 
 			const scriptPath = realpathSync(bundle.path);
 

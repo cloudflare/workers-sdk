@@ -395,13 +395,23 @@ export async function bundleWorker(
 		_path.includes(".map")
 	)[0];
 
+	const resolvedEntryPointPath = path.resolve(
+		entry.directory,
+		entryPointOutputs[0][0]
+	);
+
+	// copy all referenced modules into the output bundle directory
+	for (const module of moduleCollector.modules) {
+		fs.writeFileSync(
+			path.join(path.dirname(resolvedEntryPointPath), module.name),
+			module.content
+		);
+	}
+
 	return {
 		modules: moduleCollector.modules,
 		dependencies,
-		resolvedEntryPointPath: path.resolve(
-			entry.directory,
-			entryPointOutputs[0][0]
-		),
+		resolvedEntryPointPath,
 		bundleType,
 		stop: result.stop,
 		sourceMapPath,
