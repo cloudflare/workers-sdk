@@ -15,7 +15,6 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { Deployment, Project, UploadPayloadFile } from "../pages/types";
 import type { RestRequest } from "msw";
-import { UploadFileGroupPayload } from "@cloudflare/types";
 
 function mockGetToken(jwt: string) {
 	msw.use(
@@ -2544,15 +2543,16 @@ and that at least one include rule is provided.
 			);
 
 			await runWrangler("pages project upload .");
-
 			expect(requests.length).toBe(3);
 
-			const resolvedRequests = await Promise.all(
-				requests.map(async (req) => await req.json<UploadPayloadFile[]>())
-			);
+			const resolvedRequests = (
+				await Promise.all(
+					requests.map(async (req) => await req.json<UploadPayloadFile[]>())
+				)
+			).flat();
 
 			const requestMap = resolvedRequests.reduce<{
-				[key: string]: UploadFileGroupPayload;
+				[key: string]: UploadPayloadFile;
 			}>(
 				(requestMap, req) => Object.assign(requestMap, { [req.key]: req }),
 				{}
@@ -2566,38 +2566,32 @@ and that at least one include rule is provided.
 
 			expect(Object.keys(requestMap).length).toBe(3);
 
-			expect(requestMap["95dedb64e6d4940fc2e0f11f711cc2f4"]).toMatchObject([
-				{
-					base64: true,
-					key: "09a79777abda8ccc8bdd51dd3ff8e9e9",
-					metadata: {
-						contentType: "application/javascript",
-					},
-					value: "ZnVuYw==",
+			expect(requestMap["95dedb64e6d4940fc2e0f11f711cc2f4"]).toMatchObject({
+				base64: true,
+				key: "95dedb64e6d4940fc2e0f11f711cc2f4",
+				metadata: {
+					contentType: "application/octet-stream",
 				},
-			]);
+				value: "aGVhZGVyc2ZpbGU=",
+			});
 
-			expect(requestMap["2082190357cfd3617ccfe04f340c6247"]).toMatchObject([
-				{
-					base64: true,
-					key: "2082190357cfd3617ccfe04f340c6247",
-					metadata: {
-						contentType: "image/png",
-					},
-					value: "Zm9vYmFy",
+			expect(requestMap["2082190357cfd3617ccfe04f340c6247"]).toMatchObject({
+				base64: true,
+				key: "2082190357cfd3617ccfe04f340c6247",
+				metadata: {
+					contentType: "image/png",
 				},
-			]);
+				value: "Zm9vYmFy",
+			});
 
-			expect(requestMap["09a79777abda8ccc8bdd51dd3ff8e9e9"]).toMatchObject([
-				{
-					base64: true,
-					key: "95dedb64e6d4940fc2e0f11f711cc2f4",
-					metadata: {
-						contentType: "application/octet-stream",
-					},
-					value: "aGVhZGVyc2ZpbGU=",
+			expect(requestMap["09a79777abda8ccc8bdd51dd3ff8e9e9"]).toMatchObject({
+				base64: true,
+				key: "09a79777abda8ccc8bdd51dd3ff8e9e9",
+				metadata: {
+					contentType: "application/javascript",
 				},
-			]);
+				value: "ZnVuYw==",
+			});
 
 			expect(std.out).toMatchInlineSnapshot(`
 			        "✨ Success! Uploaded 3 files (TIMINGS)
