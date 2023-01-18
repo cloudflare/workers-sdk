@@ -15,6 +15,7 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { Deployment, Project, UploadPayloadFile } from "../pages/types";
 import type { RestRequest } from "msw";
+import { UploadFileGroupPayload } from "@cloudflare/types";
 
 function mockGetToken(jwt: string) {
 	msw.use(
@@ -2550,12 +2551,12 @@ and that at least one include rule is provided.
 				requests.map(async (req) => await req.json<UploadPayloadFile[]>())
 			);
 
-			const sortedRequests = resolvedRequests.sort((a, b) => {
-				const aKey = a[0].key;
-				const bKey = b[0].key;
-
-				return aKey.localeCompare(bKey);
-			});
+			const requestMap = resolvedRequests.reduce<{
+				[key: string]: UploadFileGroupPayload;
+			}>(
+				(requestMap, req) => Object.assign(requestMap, { [req.key]: req }),
+				{}
+			);
 
 			for (const req of requests) {
 				expect(req.headers.get("Authorization")).toBe(
@@ -2563,7 +2564,9 @@ and that at least one include rule is provided.
 				);
 			}
 
-			expect(sortedRequests[0]).toMatchObject([
+			expect(Object.keys(requestMap).length).toBe(3);
+
+			expect(requestMap["95dedb64e6d4940fc2e0f11f711cc2f4"]).toMatchObject([
 				{
 					base64: true,
 					key: "09a79777abda8ccc8bdd51dd3ff8e9e9",
@@ -2574,7 +2577,7 @@ and that at least one include rule is provided.
 				},
 			]);
 
-			expect(sortedRequests[1]).toMatchObject([
+			expect(requestMap["2082190357cfd3617ccfe04f340c6247"]).toMatchObject([
 				{
 					base64: true,
 					key: "2082190357cfd3617ccfe04f340c6247",
@@ -2585,7 +2588,7 @@ and that at least one include rule is provided.
 				},
 			]);
 
-			expect(sortedRequests[2]).toMatchObject([
+			expect(requestMap["09a79777abda8ccc8bdd51dd3ff8e9e9"]).toMatchObject([
 				{
 					base64: true,
 					key: "95dedb64e6d4940fc2e0f11f711cc2f4",
