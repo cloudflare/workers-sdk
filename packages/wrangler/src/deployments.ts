@@ -1,6 +1,8 @@
 import { URLSearchParams } from "url";
 import { fetchResult } from "./cfetch";
 import { logger } from "./logger";
+import * as metrics from "./metrics";
+import type { Config } from "./config";
 import type { ServiceMetadataRes } from "./init";
 
 export type DeploymentListRes = {
@@ -34,13 +36,22 @@ export type DeploymentListRes = {
 
 export async function deployments(
 	accountId: string,
-	scriptName: string | undefined
+	scriptName: string | undefined,
+	{ send_metrics: sendMetrics }: { send_metrics: Config["send_metrics"] }
 ) {
 	if (!scriptName) {
 		throw new Error(
 			"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name`"
 		);
 	}
+
+	await metrics.sendMetricsEvent(
+		"view deployments",
+		{ view: scriptName ? "single" : "all" },
+		{
+			sendMetrics,
+		}
+	);
 
 	const scriptMetadata = await fetchResult<ServiceMetadataRes>(
 		`/accounts/${accountId}/workers/services/${scriptName}`
