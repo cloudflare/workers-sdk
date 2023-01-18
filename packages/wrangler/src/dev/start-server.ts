@@ -110,7 +110,7 @@ export async function startDevServer(
 			testScheduled: props.testScheduled,
 			local: props.local,
 			experimentalLocal: props.experimentalLocal,
-			doBindings: props.bindings.durable_objects?.bindings || [],
+			doBindings: props.bindings.durable_objects?.bindings ?? [],
 		});
 
 		if (props.local) {
