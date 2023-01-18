@@ -11,7 +11,7 @@ jobs:
   publish:
     if: ${{ github.repository_owner == 'cloudflare' }}
     name: Build & Publish a branch preview of devtools to Cloudflare
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repo
