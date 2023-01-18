@@ -77,17 +77,16 @@ Source: ${sourceStr(versions.metadata.source)}\n`
 	logger.log(...versionMessages);
 }
 
-// TODO Include emoji/icon for each source
 function sourceStr(source: string): string {
 	switch (source) {
 		case "api":
-			return "API";
+			return "📡 API";
 		case "dash":
-			return "Dashboard";
+			return "🖥️ Dashboard";
 		case "wrangler":
-			return "Wrangler";
+			return "🤠 Wrangler";
 		case "terraform":
-			return "Terraform";
+			return "🏗️ Terraform";
 		default:
 			return "Other";
 	}
