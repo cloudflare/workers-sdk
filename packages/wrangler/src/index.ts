@@ -588,7 +588,7 @@ export function createCLIParser(argv: string[]) {
 			);
 
 			logger.log(`${deploymentsWarning}\n`);
-			await deployments(accountId, scriptName);
+			await deployments(accountId, scriptName, config);
 		}
 	);
 
