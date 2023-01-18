@@ -6,7 +6,6 @@ import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
 import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
 import * as esbuild from "esbuild";
 import tmp from "tmp-promise";
-import { logger } from "./logger";
 import createModuleCollector from "./module-collection";
 import { getBasePath, toUrlPath } from "./paths";
 import type { Config } from "./config";
