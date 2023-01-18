@@ -58,7 +58,7 @@ describe("generate", () => {
 				`);
 		});
 
-		it.skip("auto-increments the worker directory name", async () => {
+		it("auto-increments the worker directory name", async () => {
 			fs.mkdirSync("my-worker");
 
 			expect(fs.existsSync("my-worker-1")).toBe(false);
@@ -107,7 +107,7 @@ describe("generate", () => {
 	});
 
 	describe("cloning", () => {
-		it.skip("clones a cloudflare template with sparse checkouts", async () => {
+		it("clones a cloudflare template with sparse checkouts", async () => {
 			await expect(
 				runWrangler("generate my-worker worker-typescript")
 			).resolves.toBeUndefined();
@@ -146,7 +146,7 @@ describe("generate", () => {
 			});
 		});
 
-		it.skip("clones a user/repo/path/to/subdirectory template", async () => {
+		it("clones a user/repo/path/to/subdirectory template", async () => {
 			await expect(
 				runWrangler("generate my-worker cloudflare/templates/worker-typescript")
 			).resolves.toBeUndefined();
@@ -166,7 +166,7 @@ describe("generate", () => {
 			});
 		});
 
-		it.skip("clones a git@github.com/user/repo template", async () => {
+		it("clones a git@github.com/user/repo template", async () => {
 			await expect(
 				runWrangler(
 					"generate my-worker git@github.com:caass/wrangler-generate-test-template"
@@ -183,7 +183,7 @@ describe("generate", () => {
 			});
 		});
 
-		it.skip("clones a git@github.com/user/repo/path/to/subdirectory template", async () => {
+		it("clones a git@github.com/user/repo/path/to/subdirectory template", async () => {
 			await expect(
 				runWrangler(
 					"generate my-worker git@github.com:cloudflare/templates/worker-typescript"
