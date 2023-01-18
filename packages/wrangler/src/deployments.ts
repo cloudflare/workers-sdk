@@ -37,7 +37,7 @@ export type DeploymentListRes = {
 export async function deployments(
 	accountId: string,
 	scriptName: string | undefined,
-	{ send_metrics: sendMetrics }: { send_metrics: Config["send_metrics"] }
+	{ send_metrics: sendMetrics }: { send_metrics?: Config["send_metrics"] }
 ) {
 	if (!scriptName) {
 		throw new Error(
