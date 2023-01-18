@@ -802,9 +802,9 @@ async function applyD1BetaFacade(
 		// Reexport the DO classnames
 		.map(
 			(b) =>
-				`export const ${b.class_name} = maskDurableObjectDefinition(OTHER_EXPORTS.${b.class_name})`
+				`export const ${b.class_name} = maskDurableObjectDefinition(OTHER_EXPORTS.${b.class_name});`
 		)
-		.join(";\n");
+		.join("\n");
 
 	await esbuild.build({
 		entryPoints: [path.resolve(getBasePath(), "templates/d1-beta-facade.js")],
