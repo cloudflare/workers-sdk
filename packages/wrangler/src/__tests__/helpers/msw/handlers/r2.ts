@@ -1,44 +1,31 @@
 import { rest } from "msw";
+import { createFetchResult } from "../index";
 
 export const mswSuccessR2handlers = [
 	// List endpoint r2Buckets
 	rest.get("*/accounts/:accountId/r2/buckets", (_, response, context) =>
 		response.once(
-			context.status(200),
-			context.json({
-				success: true,
-				errors: [],
-				messages: [],
-				result: {
+			context.json(
+				createFetchResult({
 					buckets: [
 						{ name: "bucket-1", creation_date: "01-01-2001" },
 						{ name: "bucket-2", creation_date: "01-01-2001" },
 					],
-				},
-			})
+				})
+			)
 		)
 	),
 	rest.post("*/accounts/:accountId/r2/buckets", (_, response, context) =>
-		response.once(
-			context.status(200),
-			context.json({ success: true, errors: [], messages: [], result: {} })
-		)
+		response.once(context.json(createFetchResult({})))
 	),
 	rest.put(
 		"*/accounts/:accountId/r2/buckets/:bucketName",
-		(_, response, context) =>
-			response.once(
-				context.status(200),
-				context.json({ success: true, errors: [], messages: [], result: {} })
-			)
+		(_, response, context) => response.once(context.json(createFetchResult({})))
 	),
 	rest.delete(
 		"*/accounts/:accountId/r2/buckets/:bucketName",
 		(_, response, context) =>
-			response.once(
-				context.status(200),
-				context.json({ success: true, errors: [], messages: [], result: null })
-			)
+			response.once(context.json(createFetchResult(null)))
 	),
 	rest.get(
 		"*/accounts/:accountId/r2/buckets/:bucketName/objects/:objectName",
@@ -47,7 +34,7 @@ export const mswSuccessR2handlers = [
 			return response.once(
 				context.set("Content-Length", imageBuffer.byteLength.toString()),
 				context.set("Content-Type", "image/png"),
-				context.status(200),
+
 				context.body(imageBuffer)
 			);
 		}
@@ -56,25 +43,18 @@ export const mswSuccessR2handlers = [
 		"*/accounts/:accountId/r2/buckets/:bucketName/objects/:objectName",
 		(_, response, context) =>
 			response.once(
-				context.status(200),
-				context.json({
-					success: true,
-					errors: [],
-					messages: [],
-					result: {
+				context.json(
+					createFetchResult({
 						accountId: "some-account-id",
 						bucketName: "bucketName-object-test",
 						objectName: "wormhole-img.png",
-					},
-				})
+					})
+				)
 			)
 	),
 	rest.delete(
 		"*/accounts/:accountId/r2/buckets/:bucketName/objects/:objectName",
 		(_, response, context) =>
-			response.once(
-				context.status(200),
-				context.json({ success: true, errors: [], messages: [], result: null })
-			)
+			response.once(context.json(createFetchResult(null)))
 	),
 ];

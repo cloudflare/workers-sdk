@@ -5,7 +5,7 @@ import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm, clearDialogs } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
-import { msw, mswSucessScriptHandlers } from "./helpers/msw";
+import { createFetchResult, msw, mswSucessScriptHandlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type {
@@ -743,17 +743,13 @@ function mockCreateTailRequest(
 					expect(req.params.envName).toEqual(env);
 				}
 				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: {
+					ctx.json(
+						createFetchResult({
 							url: websocketURL,
 							id: "tail-id",
 							expires_at: mockTailExpiration,
-						},
-					})
+						})
+					)
 				);
 			}
 		)
@@ -818,15 +814,7 @@ function mockDeleteTailRequest(
 					}
 				}
 				expect(req.params.tailId).toEqual("tail-id");
-				return res(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: null,
-					})
-				);
+				return res(ctx.json(createFetchResult(null)));
 			}
 		)
 	);
