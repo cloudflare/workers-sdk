@@ -1,5 +1,5 @@
 // src/shim.ts
-import worker from "__ENTRY_POINT__";
+import worker, * as OTHER_EXPORTS from "__ENTRY_POINT__";
 export * from "__ENTRY_POINT__";
 
 // src/index.ts
