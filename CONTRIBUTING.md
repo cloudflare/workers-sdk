@@ -57,7 +57,8 @@ Any contributions you make will be via [Pull Requests](https://docs.github.com/e
 When working on Wrangler, you'll need to satisfy [`workerd`](https://github.com/cloudflare/workerd)'s `libc++1` runtime dependencies:
 
 - On Linux:
-  - libc++ (e.g. the package `libc++1` on Debian Bullseye)
+  - libc++ (e.g. `apt-get install libc++1` on Debian Bullseye)
+  - libunwind-dev (e.g. `apt-get install libunwind-dev`)
 - On macOS:
   - The XCode command line tools, which can be installed with xcode-select --install
 
