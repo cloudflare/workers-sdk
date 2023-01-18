@@ -13,6 +13,13 @@ import type {
 	KVNamespaceInfo,
 	NamespaceKeyInfo,
 } from "../kv/helpers";
+
+// some dummy values for namespace ids that pass validation
+const KV_NAMESPACE_ID = "1234567890abcdef1234567890abcdef";
+const KV_NAMESPACE_PREVIEW_ID = "abcdef1234567890abcdef1234567890";
+const ENV_KV_NAMESPACE_ID = "0987654321fedcba0987654321fedcba";
+const ENV_KV_NAMESPACE_PREVIEW_ID = "fedcba0987654321fedcba0987654321";
+
 describe("wrangler", () => {
 	mockAccountId();
 	mockApiToken();
@@ -264,16 +271,30 @@ describe("wrangler", () => {
 			}
 
 			it("should delete a namespace specified by id", async () => {
-				const requests = mockDeleteRequest("some-namespace-id");
+				const requests = mockDeleteRequest(KV_NAMESPACE_ID);
 				await runWrangler(
-					`kv:namespace delete --namespace-id some-namespace-id`
+					`kv:namespace delete --namespace-id ${KV_NAMESPACE_ID}`
 				);
 				expect(requests.count).toEqual(1);
 			});
 
+			it("should error when attempting to delete a namespace with an invalid ID", async () => {
+				await expect(
+					runWrangler(`kv:namespace delete --namespace-id this-is-not-a-uuid`)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`"\\"this-is-not-a-uuid\\" is not a valid KV namespace ID. Try running \`wrangler kv:namespace list\` to see a list of the KV namespaces on your account."`
+				);
+
+				await expect(
+					runWrangler(`kv:namespace delete --namespace-id [namespace-id]`)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`"\\"[namespace-id]\\" is not a valid KV namespace ID. Try running \`wrangler kv:namespace list\` to see a list of the KV namespaces on your account."`
+				);
+			});
+
 			it("should delete a namespace specified by binding name", async () => {
 				writeWranglerConfig();
-				const requests = mockDeleteRequest("bound-id");
+				const requests = mockDeleteRequest(KV_NAMESPACE_ID);
 				await runWrangler(
 					`kv:namespace delete --binding someBinding --preview false`
 				);
@@ -282,7 +303,7 @@ describe("wrangler", () => {
 
 			it("should delete a preview namespace specified by binding name", async () => {
 				writeWranglerConfig();
-				const requests = mockDeleteRequest("preview-bound-id");
+				const requests = mockDeleteRequest(KV_NAMESPACE_PREVIEW_ID);
 				await runWrangler(
 					`kv:namespace delete --binding someBinding --preview`
 				);
@@ -307,14 +328,14 @@ describe("wrangler", () => {
 
 			it("should delete a namespace specified by binding name in a given environment", async () => {
 				writeWranglerConfig();
-				const requests = mockDeleteRequest("env-bound-id");
+				const requests = mockDeleteRequest(ENV_KV_NAMESPACE_ID);
 				await runWrangler(
 					"kv:namespace delete --binding someBinding --env some-environment --preview false"
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-					"Deleting KV namespace env-bound-id.
-					Deleted KV namespace env-bound-id."
+					"Deleting KV namespace 0987654321fedcba0987654321fedcba.
+					Deleted KV namespace 0987654321fedcba0987654321fedcba."
 				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(requests.count).toEqual(1);
@@ -322,7 +343,7 @@ describe("wrangler", () => {
 
 			it("should delete a preview namespace specified by binding name in a given environment", async () => {
 				writeWranglerConfig();
-				const requests = mockDeleteRequest("preview-env-bound-id");
+				const requests = mockDeleteRequest(ENV_KV_NAMESPACE_PREVIEW_ID);
 				await runWrangler(
 					`kv:namespace delete --binding someBinding --env some-environment --preview`
 				);
@@ -413,7 +434,7 @@ describe("wrangler", () => {
 
 			it("should put a key in a given namespace specified by binding", async () => {
 				writeWranglerConfig();
-				const requests = mockKeyPutRequest("bound-id", {
+				const requests = mockKeyPutRequest(KV_NAMESPACE_ID, {
 					key: "my-key",
 					value: "my-value",
 				});
@@ -422,7 +443,7 @@ describe("wrangler", () => {
 				);
 
 				expect(std.out).toMatchInlineSnapshot(
-					`"Writing the value \\"my-value\\" to key \\"my-key\\" on namespace bound-id."`
+					`"Writing the value \\"my-value\\" to key \\"my-key\\" on namespace 1234567890abcdef1234567890abcdef."`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(requests.count).toEqual(1);
@@ -430,7 +451,7 @@ describe("wrangler", () => {
 
 			it("should put a key in a given preview namespace specified by binding", async () => {
 				writeWranglerConfig();
-				const requests = mockKeyPutRequest("preview-bound-id", {
+				const requests = mockKeyPutRequest(KV_NAMESPACE_PREVIEW_ID, {
 					key: "my-key",
 					value: "my-value",
 				});
@@ -440,7 +461,7 @@ describe("wrangler", () => {
 				);
 
 				expect(std.out).toMatchInlineSnapshot(
-					`"Writing the value \\"my-value\\" to key \\"my-key\\" on namespace preview-bound-id."`
+					`"Writing the value \\"my-value\\" to key \\"my-key\\" on namespace abcdef1234567890abcdef1234567890."`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(requests.count).toEqual(1);
@@ -465,7 +486,7 @@ describe("wrangler", () => {
 
 			it("should put a key to the specified environment in a given namespace", async () => {
 				writeWranglerConfig();
-				const requests = mockKeyPutRequest("env-bound-id", {
+				const requests = mockKeyPutRequest(ENV_KV_NAMESPACE_ID, {
 					key: "my-key",
 					value: "my-value",
 				});
@@ -473,7 +494,7 @@ describe("wrangler", () => {
 					"kv:key put my-key my-value --binding someBinding --env some-environment --preview false"
 				);
 				expect(std.out).toMatchInlineSnapshot(
-					`"Writing the value \\"my-value\\" to key \\"my-key\\" on namespace env-bound-id."`
+					`"Writing the value \\"my-value\\" to key \\"my-key\\" on namespace 0987654321fedcba0987654321fedcba."`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(requests.count).toEqual(1);
@@ -802,7 +823,7 @@ describe("wrangler", () => {
 			it("should list the keys of a namespace specified by binding", async () => {
 				writeWranglerConfig();
 				const keys = [{ name: "key-1" }, { name: "key-2" }, { name: "key-3" }];
-				mockKeyListRequest("bound-id", keys);
+				mockKeyListRequest(KV_NAMESPACE_ID, keys);
 
 				await runWrangler("kv:key list --binding someBinding");
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -824,7 +845,7 @@ describe("wrangler", () => {
 			it("should list the keys of a preview namespace specified by binding", async () => {
 				writeWranglerConfig();
 				const keys = [{ name: "key-1" }, { name: "key-2" }, { name: "key-3" }];
-				mockKeyListRequest("preview-bound-id", keys);
+				mockKeyListRequest(KV_NAMESPACE_PREVIEW_ID, keys);
 				await runWrangler("kv:key list --binding someBinding --preview");
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
@@ -845,7 +866,7 @@ describe("wrangler", () => {
 			it("should list the keys of a namespace specified by binding, in a given environment", async () => {
 				writeWranglerConfig();
 				const keys = [{ name: "key-1" }, { name: "key-2" }, { name: "key-3" }];
-				mockKeyListRequest("env-bound-id", keys);
+				mockKeyListRequest(ENV_KV_NAMESPACE_ID, keys);
 				await runWrangler(
 					"kv:key list --binding someBinding --env some-environment"
 				);
@@ -868,7 +889,7 @@ describe("wrangler", () => {
 			it("should list the keys of a preview namespace specified by binding, in a given environment", async () => {
 				writeWranglerConfig();
 				const keys = [{ name: "key-1" }, { name: "key-2" }, { name: "key-3" }];
-				mockKeyListRequest("preview-env-bound-id", keys);
+				mockKeyListRequest(ENV_KV_NAMESPACE_PREVIEW_ID, keys);
 				await runWrangler(
 					"kv:key list --binding someBinding --preview --env some-environment"
 				);
@@ -1013,7 +1034,7 @@ describe("wrangler", () => {
 				writeWranglerConfig();
 				setMockFetchKVGetValue(
 					"some-account-id",
-					"bound-id",
+					KV_NAMESPACE_ID,
 					"my-key",
 					"my-value"
 				);
@@ -1028,7 +1049,7 @@ describe("wrangler", () => {
 				writeWranglerConfig();
 				setMockFetchKVGetValue(
 					"some-account-id",
-					"preview-bound-id",
+					KV_NAMESPACE_PREVIEW_ID,
 					"my-key",
 					"my-value"
 				);
@@ -1041,7 +1062,7 @@ describe("wrangler", () => {
 				writeWranglerConfig();
 				setMockFetchKVGetValue(
 					"some-account-id",
-					"env-bound-id",
+					ENV_KV_NAMESPACE_ID,
 					"my-key",
 					"my-value"
 				);
@@ -1309,7 +1330,7 @@ describe("wrangler", () => {
 
 			it("should delete a key in a namespace specified by binding name", async () => {
 				writeWranglerConfig();
-				const requests = mockDeleteRequest("bound-id", "someKey");
+				const requests = mockDeleteRequest(KV_NAMESPACE_ID, "someKey");
 				await runWrangler(
 					`kv:key delete --binding someBinding --preview false someKey`
 				);
@@ -1318,7 +1339,7 @@ describe("wrangler", () => {
 
 			it("should delete a key in a preview namespace specified by binding name", async () => {
 				writeWranglerConfig();
-				const requests = mockDeleteRequest("preview-bound-id", "someKey");
+				const requests = mockDeleteRequest(KV_NAMESPACE_PREVIEW_ID, "someKey");
 				await runWrangler(
 					`kv:key delete --binding someBinding --preview someKey`
 				);
@@ -1342,12 +1363,12 @@ describe("wrangler", () => {
 
 			it("should delete a key in a namespace specified by binding name in a given environment", async () => {
 				writeWranglerConfig();
-				const requests = mockDeleteRequest("env-bound-id", "someKey");
+				const requests = mockDeleteRequest(ENV_KV_NAMESPACE_ID, "someKey");
 				await runWrangler(
 					`kv:key delete --binding someBinding --env some-environment --preview false someKey`
 				);
 				expect(std.out).toMatchInlineSnapshot(
-					`"Deleting the key \\"someKey\\" on namespace env-bound-id."`
+					`"Deleting the key \\"someKey\\" on namespace 0987654321fedcba0987654321fedcba."`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(requests.count).toEqual(1);
@@ -1355,7 +1376,10 @@ describe("wrangler", () => {
 
 			it("should delete a key in a preview namespace specified by binding name in a given environment", async () => {
 				writeWranglerConfig();
-				const requests = mockDeleteRequest("preview-env-bound-id", "someKey");
+				const requests = mockDeleteRequest(
+					ENV_KV_NAMESPACE_PREVIEW_ID,
+					"someKey"
+				);
 				await runWrangler(
 					`kv:key delete --binding someBinding --env some-environment --preview someKey`
 				);
@@ -1685,12 +1709,12 @@ function writeWranglerConfig() {
 		[
 			'name = "other-worker"',
 			"kv_namespaces = [",
-			'  { binding = "someBinding", id = "bound-id", preview_id = "preview-bound-id" }',
+			`  { binding = "someBinding", id = "${KV_NAMESPACE_ID}", preview_id = "${KV_NAMESPACE_PREVIEW_ID}" }`,
 			"]",
 			"",
 			"[env.some-environment]",
 			"kv_namespaces = [",
-			'  { binding = "someBinding", id = "env-bound-id", preview_id = "preview-env-bound-id" }',
+			`  { binding = "someBinding", id = "${ENV_KV_NAMESPACE_ID}", preview_id = "${ENV_KV_NAMESPACE_PREVIEW_ID}" }`,
 			"]",
 		].join("\n"),
 		"utf-8"

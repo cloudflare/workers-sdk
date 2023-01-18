@@ -24,6 +24,7 @@ import {
 	putKVBulkKeyValue,
 	putKVKeyValue,
 	unexpectedKVKeyValueProps,
+	isValidKVNamespaceID,
 } from "./helpers";
 import type { ConfigPath } from "../index";
 import type { CommonYargsOptions } from "../yargs-types";
@@ -141,6 +142,12 @@ export const kvNamespace = (kvYargs: Argv<CommonYargsOptions>) => {
 				} catch (e) {
 					throw new CommandLineArgsError(
 						"Not able to delete namespace.\n" + ((e as Error).message ?? e)
+					);
+				}
+
+				if (!isValidKVNamespaceID(id)) {
+					throw new Error(
+						`"${id}" is not a valid KV namespace ID. Try running \`wrangler kv:namespace list\` to see a list of the KV namespaces on your account.`
 					);
 				}
 

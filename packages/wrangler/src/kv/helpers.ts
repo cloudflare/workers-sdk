@@ -419,6 +419,13 @@ export function getKVNamespaceId(
 }
 
 /**
+ * KV namespace ID's must match the pattern `[0-9a-f]{32}`
+ */
+export function isValidKVNamespaceID(id: string) {
+	return /^[0-9a-f]{32}$/.test(id);
+}
+
+/**
  * KV namespace binding names must be valid JS identifiers.
  */
 export function isValidKVNamespaceBinding(
