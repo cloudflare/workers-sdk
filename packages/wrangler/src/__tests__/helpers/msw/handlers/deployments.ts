@@ -1,8 +1,6 @@
 import { rest } from "msw";
 import { createFetchResult } from "../index";
 
-import type { DeploymentListRes } from "../../../../deployments";
-
 export const mswSuccessDeployments = [
 	rest.get(
 		"*/accounts/:accountId/workers/deployments/by-script/:scriptTag",
@@ -49,7 +47,7 @@ export const mswSuccessDeployments = [
 								},
 							},
 						],
-					} as DeploymentListRes)
+					})
 				)
 			)
 	),

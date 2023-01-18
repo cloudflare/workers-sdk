@@ -15,10 +15,12 @@ const scripts: Record<string, string> = {
 	websocket: `new WebSocket("ws://dummy")`,
 	response: `return new Response("ok")`,
 };
-function getBindings(scriptName: string) {
+function getBindings(scriptName: string | readonly string[]) {
+	if (typeof scriptName !== "string") return "";
 	return scriptName.split("--").flatMap((part) => bindings[part] ?? []);
 }
-function getScript(scriptName: string) {
+function getScript(scriptName: string | readonly string[]): string {
+	if (typeof scriptName !== "string") return "";
 	return `export default {fetch(request){
     ${scriptName
 			.split("--")
@@ -30,29 +32,25 @@ export default [
 	rest.get(
 		"*/accounts/:accountId/workers/services/:scriptName/environments/:env/content",
 		({ params: { scriptName } }, res, context) => {
-			return res(context.text(getScript(scriptName as string)));
+			return res(context.text(getScript(scriptName)));
 		}
 	),
 	rest.get(
 		"*/accounts/:accountId/workers/scripts/:scriptName",
 		({ params: { scriptName } }, res, context) => {
-			return res(context.text(getScript(scriptName as string)));
+			return res(context.text(getScript(scriptName)));
 		}
 	),
 	rest.get(
 		"*/accounts/:accountId/workers/services/:scriptName/environments/:env/bindings",
 		({ params: { scriptName } }, res, context) => {
-			return res(
-				context.json(createFetchResult(getBindings(scriptName as string)))
-			);
+			return res(context.json(createFetchResult(getBindings(scriptName))));
 		}
 	),
 	rest.get(
 		"*/accounts/:accountId/workers/scripts/:scriptName/bindings",
 		({ params: { scriptName } }, res, context) => {
-			return res(
-				context.json(createFetchResult(getBindings(scriptName as string)))
-			);
+			return res(context.json(createFetchResult(getBindings(scriptName))));
 		}
 	),
 ];
