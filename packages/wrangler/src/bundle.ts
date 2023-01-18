@@ -6,6 +6,7 @@ import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
 import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
 import * as esbuild from "esbuild";
 import tmp from "tmp-promise";
+import { logger } from "./logger";
 import createModuleCollector from "./module-collection";
 import { getBasePath, toUrlPath } from "./paths";
 import type { Config } from "./config";
@@ -13,7 +14,6 @@ import type { DurableObjectBindings } from "./config/environment";
 import type { WorkerRegistry } from "./dev-registry";
 import type { Entry } from "./entry";
 import type { CfModule } from "./worker";
-
 export type BundleResult = {
 	modules: CfModule[];
 	dependencies: esbuild.Metafile["outputs"][string]["inputs"];
@@ -797,7 +797,16 @@ async function applyD1BetaFacade(
 	doBindings: DurableObjectBindings
 ): Promise<Entry> {
 	const targetPath = path.join(tmpDirPath, "d1-beta-facade.entry.js");
-
+	const doStuff = doBindings
+		// Don't shim anything not local to this worker
+		.filter((b) => !b.script_name)
+		// Reexport the DO classnames
+		.map(
+			(b) =>
+				`export const ${b.class_name} = maskDurableObjectDefinition(OTHER_EXPORTS.${b.class_name})`
+		)
+		.join(";\n");
+	logger.log("doStuff: ", doStuff);
 	await esbuild.build({
 		entryPoints: [path.resolve(getBasePath(), "templates/d1-beta-facade.js")],
 		bundle: true,
@@ -811,15 +820,7 @@ async function applyD1BetaFacade(
 		define: {
 			__D1_IMPORTS__: JSON.stringify(betaD1Shims),
 			__LOCAL_MODE__: JSON.stringify(local),
-			__DO_REEXPORTS__: doBindings
-				// Don't shim anything not local to this worker
-				.filter((b) => !b.script_name)
-				// Reexport the DO classnames
-				.map(
-					(b) =>
-						`export const ${b.class_name} = maskDurableObjectDefinition(OTHER_EXPORTS.${b.class_name})`
-				)
-				.join(";\n"),
+			__DO_REEXPORTS__: JSON.stringify(doStuff),
 		},
 		outfile: targetPath,
 	});
