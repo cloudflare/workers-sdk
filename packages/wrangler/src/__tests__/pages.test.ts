@@ -2547,14 +2547,14 @@ and that at least one include rule is provided.
 			expect(requests.length).toBe(3);
 
 			const resolvedRequests = await Promise.all(
-				requests.map(async (req) => await req.json<UploadPayloadFile>())
+				requests.map(async (req) => await req.json<UploadPayloadFile[]>())
 			);
 
 			const sortedRequests = resolvedRequests.sort((a, b) => {
-				const aKey = a.key as string;
-				const bKey = b.key as string;
+				const aKey = a[0].key;
+				const bKey = b[0].key;
 
-				return aKey?.localeCompare(bKey);
+				return aKey.localeCompare(bKey);
 			});
 
 			for (const req of requests) {
@@ -2566,11 +2566,11 @@ and that at least one include rule is provided.
 			expect(sortedRequests[0]).toMatchObject([
 				{
 					base64: true,
-					key: "95dedb64e6d4940fc2e0f11f711cc2f4",
+					key: "09a79777abda8ccc8bdd51dd3ff8e9e9",
 					metadata: {
-						contentType: "application/octet-stream",
+						contentType: "application/javascript",
 					},
-					value: "aGVhZGVyc2ZpbGU=",
+					value: "ZnVuYw==",
 				},
 			]);
 
@@ -2588,11 +2588,11 @@ and that at least one include rule is provided.
 			expect(sortedRequests[2]).toMatchObject([
 				{
 					base64: true,
-					key: "09a79777abda8ccc8bdd51dd3ff8e9e9",
+					key: "95dedb64e6d4940fc2e0f11f711cc2f4",
 					metadata: {
-						contentType: "application/javascript",
+						contentType: "application/octet-stream",
 					},
-					value: "ZnVuYw==",
+					value: "aGVhZGVyc2ZpbGU=",
 				},
 			]);
 
