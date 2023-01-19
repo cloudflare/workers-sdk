@@ -565,17 +565,26 @@ export function createCLIParser(argv: string[]) {
 	const deploymentsWarning =
 		"🚧`wrangler deployments` is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose";
 	wrangler.command(
-		"deployments",
+		"deployments [deployment-id]",
 		"🚢 Displays the 10 most recent deployments for a worker",
-		(yargs) => {
+		(yargs) =>
 			yargs
+				.positional("deployment-id", {
+					describe: "The ID of the deployment you want to inspect",
+					type: "string",
+					demandOption: false,
+				})
 				.option("name", {
 					describe: "The name of your worker",
 					type: "string",
 				})
-				.epilogue(deploymentsWarning);
-		},
-		async (deploymentsYargs: ArgumentsCamelCase<{ name: string }>) => {
+				.epilogue(deploymentsWarning),
+		async (
+			deploymentsYargs: ArgumentsCamelCase<{
+				name: string;
+				deploymentId: string;
+			}>
+		) => {
 			await printWranglerBanner();
 			const config = readConfig(
 				deploymentsYargs.config as ConfigPath,
@@ -588,7 +597,12 @@ export function createCLIParser(argv: string[]) {
 			);
 
 			logger.log(`${deploymentsWarning}\n`);
-			await deployments(accountId, scriptName, config);
+			await deployments(
+				accountId,
+				scriptName,
+				config,
+				deploymentsYargs.deploymentId
+			);
 		}
 	);
 
