@@ -272,8 +272,6 @@ export async function bundleWorker(
 
 		Array.isArray(betaD1Shims) &&
 			betaD1Shims.length > 0 &&
-			Array.isArray(doBindings) &&
-			doBindings.length > 0 &&
 			((currentEntry: Entry) => {
 				return applyD1BetaFacade(
 					currentEntry,
@@ -800,7 +798,7 @@ async function applyD1BetaFacade(
 		getBasePath(),
 		"templates/d1-beta-facade.js"
 	);
-	if (doBindings.length > 0) {
+	if (Array.isArray(doBindings) && doBindings.length > 0) {
 		//we have DO bindings, so we need to shim them
 		const maskedDoBindings = doBindings
 			// Don't shim anything not local to this worker
