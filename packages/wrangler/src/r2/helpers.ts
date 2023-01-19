@@ -31,11 +31,12 @@ export async function listR2Buckets(
  */
 export async function createR2Bucket(
 	accountId: string,
-	bucketName: string
+	bucketName: string,
+	locationHint?: string
 ): Promise<void> {
 	return await fetchResult<void>(`/accounts/${accountId}/r2/buckets`, {
 		method: "POST",
-		body: JSON.stringify({ name: bucketName }),
+		body: JSON.stringify({ name: bucketName, locationHint }),
 	});
 }
 
