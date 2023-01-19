@@ -272,6 +272,8 @@ export async function bundleWorker(
 
 		Array.isArray(betaD1Shims) &&
 			betaD1Shims.length > 0 &&
+			Array.isArray(doBindings) &&
+			doBindings.length > 0 &&
 			((currentEntry: Entry) => {
 				return applyD1BetaFacade(
 					currentEntry,
@@ -787,7 +789,6 @@ async function applyFirstPartyWorkerDevFacade(
  * This code be removed from here when the API is in Workers core,
  * but moved inside Miniflare for simulating D1.
  */
-
 async function applyD1BetaFacade(
 	entry: Entry,
 	tmpDirPath: string,
@@ -795,19 +796,44 @@ async function applyD1BetaFacade(
 	local: boolean,
 	doBindings: DurableObjectBindings
 ): Promise<Entry> {
-	const targetPath = path.join(tmpDirPath, "d1-beta-facade.entry.js");
-	const maskedDoBindings = doBindings
-		// Don't shim anything not local to this worker
-		.filter((b) => !b.script_name)
-		// Reexport the DO classnames
-		.map(
-			(b) =>
-				`export const ${b.class_name} = maskDurableObjectDefinition(OTHER_EXPORTS.${b.class_name});`
-		)
-		.join("\n");
+	let entrypointPath = path.resolve(
+		getBasePath(),
+		"templates/d1-beta-facade.js"
+	);
+	if (doBindings.length > 0) {
+		//we have DO bindings, so we need to shim them
+		const maskedDoBindings = doBindings
+			// Don't shim anything not local to this worker
+			.filter((b) => !b.script_name)
+			// Reexport the DO classnames
+			.map(
+				(b) =>
+					`export const ${b.class_name} = maskDurableObjectDefinition(OTHER_EXPORTS.${b.class_name});`
+			)
+			.join("\n");
+		const baseFile = fs.readFileSync(
+			path.resolve(getBasePath(), "templates/d1-beta-facade.js"),
+			"utf8"
+		);
+		//getMaskedEnv is already used to shim regular Workers
+		const contents = `
+		${baseFile}
 
+		var maskDurableObjectDefinition = (cls) =>
+		class extends cls {
+			constructor(state, env) {
+				super(state, getMaskedEnv(env));
+			}
+		};
+		${maskedDoBindings}`;
+		const doD1FacadePath = path.join(tmpDirPath, "d1-do-facade.js");
+		//write our shim so we can build it
+		fs.writeFileSync(doD1FacadePath, contents);
+		entrypointPath = doD1FacadePath;
+	}
+	const targetPath = path.join(tmpDirPath, "d1-beta-facade.entry.js");
 	await esbuild.build({
-		entryPoints: [path.resolve(getBasePath(), "templates/d1-beta-facade.js")],
+		entryPoints: [entrypointPath],
 		bundle: true,
 		format: "esm",
 		sourcemap: true,
@@ -819,7 +845,6 @@ async function applyD1BetaFacade(
 		define: {
 			__D1_IMPORTS__: JSON.stringify(betaD1Shims),
 			__LOCAL_MODE__: JSON.stringify(local),
-			__DO_REEXPORTS__: JSON.stringify(maskedDoBindings),
 		},
 		outfile: targetPath,
 	});
