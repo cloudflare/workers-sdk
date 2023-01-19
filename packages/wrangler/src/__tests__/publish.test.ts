@@ -6472,6 +6472,61 @@ addEventListener('fetch', event => {});`
 			}
 		`);
 		});
+
+		it("should copy any module imports related assets at --outdir if specified", async () => {
+			writeWranglerToml();
+			fs.writeFileSync(
+				"./index.js",
+				`
+import txt from './textfile.txt';
+import hello from './hello.wasm';
+export default{
+  async fetch(){
+		const module = await WebAssembly.instantiate(hello);
+    return new Response(txt + module.exports.hello);
+  }
+}
+`
+			);
+			fs.writeFileSync("./textfile.txt", "Hello, World!");
+			fs.writeFileSync("./hello.wasm", "Hello wasm World!");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedModules: {
+					"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt":
+						"Hello, World!",
+					"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm":
+						"Hello wasm World!",
+				},
+			});
+			await runWrangler("publish index.js --outdir some-dir");
+
+			expect(fs.existsSync("some-dir/index.js")).toBe(true);
+			expect(fs.existsSync("some-dir/index.js.map")).toBe(true);
+			expect(fs.existsSync("some-dir/README.md")).toBe(true);
+			expect(
+				fs.existsSync(
+					"some-dir/0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt"
+				)
+			).toBe(true);
+			expect(
+				fs.existsSync(
+					"some-dir/d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm"
+				)
+			).toBe(true);
+			expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class",
+			  "warn": "",
+			}
+		`);
+		});
 	});
 
 	describe("--dry-run", () => {

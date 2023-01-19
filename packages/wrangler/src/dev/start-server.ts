@@ -1,6 +1,5 @@
 import { fork } from "node:child_process";
 import { realpathSync } from "node:fs";
-import { writeFile } from "node:fs/promises";
 import * as path from "node:path";
 import * as util from "node:util";
 import onExit from "signal-exit";
@@ -342,15 +341,6 @@ export async function startLocalServer({
 		if (bindings.services && bindings.services.length > 0) {
 			logger.warn(
 				"⎔ Support for service bindings in local mode is experimental and may change."
-			);
-		}
-
-		// In local mode, we want to copy all referenced modules into
-		// the output bundle directory before starting up
-		for (const module of bundle.modules) {
-			await writeFile(
-				path.join(path.dirname(bundle.path), module.name),
-				module.content
 			);
 		}
 
