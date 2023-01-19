@@ -279,10 +279,11 @@ export async function generateHandler<
 		const extraHeaders = new Headers({
 			"access-control-allow-origin": "*",
 			"referrer-policy": "strict-origin-when-cross-origin",
-			...(existingHeaders.has("content-type")
-				? { "x-content-type-options": "nosniff" }
-				: {}),
 		});
+
+		if (existingHeaders.has("content-type")) {
+			extraHeaders.append("x-content-type-options", "nosniff");
+		}
 
 		const headers = new Headers({
 			// But we intentionally override existing headers
@@ -308,12 +309,14 @@ export async function generateHandler<
 
 			const clonedResponse = response.clone();
 
-			if (waitUntil) {
+			if (
+				waitUntil &&
+				response.headers.get("Content-Type")?.includes("text/html")
+			) {
 				waitUntil(
 					(async () => {
 						try {
 							const links: { href: string; rel: string; as?: string }[] = [];
-
 							const transformedResponse = new HTMLRewriter()
 								.on("link[rel~=preconnect],link[rel~=preload]", {
 									element(element) {
@@ -352,7 +355,12 @@ export async function generateHandler<
 							if (linkHeader) {
 								await earlyHintsCache.put(
 									earlyHintsCacheKey,
-									new Response(null, { headers: { Link: linkHeader } })
+									new Response(null, {
+										headers: {
+											Link: linkHeader,
+											"Cache-Control": "max-age=86400",
+										},
+									})
 								);
 							}
 						} catch (err) {
