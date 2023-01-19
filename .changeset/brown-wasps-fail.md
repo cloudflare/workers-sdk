@@ -28,5 +28,5 @@ Added a positional in the 'Deployments' command <deployment-id>.
     async fetch(request) {
       return new Response('Hello World from Deployment 1701-E');
     },
-  };"
+  };
 ```
