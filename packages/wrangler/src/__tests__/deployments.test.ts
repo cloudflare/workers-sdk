@@ -156,7 +156,11 @@ describe("deployments", () => {
 			  'Metadata.source': 'wrangler',
 			  'Metadata.created_on': '2021-01-01T00:00:00.000000Z',
 			  'Metadata.modified_on': '2021-01-01T00:00:00.000000Z',
-			  'resources.script': 'MOCK-TAG',
+			  'resources.script': {
+			    etag: 'mock-e-tag',
+			    handlers: [ 'fetch' ],
+			    last_deployed_from: 'wrangler'
+			  },
 			  'resources.bindings': []
 			}
 
