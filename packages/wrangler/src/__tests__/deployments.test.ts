@@ -65,15 +65,29 @@ describe("deployments", () => {
 		"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 
 
-		Deployment ID: Galaxy-Class
+		Deployment ID: Constitution-Class
 		Created on: 2021-01-01T00:00:00.000000Z
 		Author: Jean-Luc-Picard@federation.org
 		Source: 🤠 Wrangler
+		Annotations
+		  Triggered by: upload
+		  Rollback from: MOCK-DEPLOYMENT-ID-0000
 
 		Deployment ID: Intrepid-Class
 		Created on: 2021-02-02T00:00:00.000000Z
 		Author: Kathryn-Janeway@federation.org
 		Source: 🤠 Wrangler
+		Annotations
+		  Triggered by: SOME-OTHER-TRIGGER
+		  Rollback from: MOCK-DEPLOYMENT-ID-1111
+
+		Deployment ID: Galaxy-Class
+		Created on: 2021-01-01T00:00:00.000000Z
+		Author: Jean-Luc-Picard@federation.org
+		Source: 🤠 Wrangler
+		Annotations
+		  Triggered by: upload
+		  Rollback from: MOCK-DEPLOYMENT-ID-2222
 		🟩 Active"
 	`);
 	});
@@ -84,15 +98,29 @@ describe("deployments", () => {
 		"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 
 
-		Deployment ID: Galaxy-Class
+		Deployment ID: Constitution-Class
 		Created on: 2021-01-01T00:00:00.000000Z
 		Author: Jean-Luc-Picard@federation.org
 		Source: 🤠 Wrangler
+		Annotations
+		  Triggered by: upload
+		  Rollback from: MOCK-DEPLOYMENT-ID-0000
 
 		Deployment ID: Intrepid-Class
 		Created on: 2021-02-02T00:00:00.000000Z
 		Author: Kathryn-Janeway@federation.org
 		Source: 🤠 Wrangler
+		Annotations
+		  Triggered by: SOME-OTHER-TRIGGER
+		  Rollback from: MOCK-DEPLOYMENT-ID-1111
+
+		Deployment ID: Galaxy-Class
+		Created on: 2021-01-01T00:00:00.000000Z
+		Author: Jean-Luc-Picard@federation.org
+		Source: 🤠 Wrangler
+		Annotations
+		  Triggered by: upload
+		  Rollback from: MOCK-DEPLOYMENT-ID-2222
 		🟩 Active"
 	`);
 	});

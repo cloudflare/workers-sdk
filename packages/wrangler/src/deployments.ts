@@ -5,33 +5,26 @@ import * as metrics from "./metrics";
 import type { Config } from "./config";
 import type { ServiceMetadataRes } from "./init";
 
-export type DeploymentListRes = {
-	latest: {
-		id: string;
-		number: string;
-		metadata: {
-			author_id: string;
-			author_email: string;
-			source: "api" | "dash" | "wrangler" | "terraform" | "other";
-			created_on: string;
-			modified_on: string;
-		};
-		resources: {
-			script: string;
-			bindings: unknown[];
-		};
+type DeploymentDetails = {
+	id: string;
+	number: string;
+	annotations: { "workers/triggered_by": string; rollback_from: string };
+	metadata: {
+		author_id: string;
+		author_email: string;
+		source: "api" | "dash" | "wrangler" | "terraform" | "other";
+		created_on: string;
+		modified_on: string;
 	};
-	items: {
-		id: string;
-		number: string;
-		metadata: {
-			author_id: string;
-			author_email: string;
-			source: "api" | "dash" | "wrangler" | "terraform" | "other";
-			created_on: string;
-			modified_on: string;
-		};
-	}[];
+	resources: {
+		script: string;
+		bindings: unknown[];
+	};
+};
+
+export type DeploymentListRes = {
+	latest: DeploymentDetails;
+	items: DeploymentDetails[];
 };
 
 export async function deployments(
@@ -70,7 +63,10 @@ export async function deployments(
 			`\nDeployment ID: ${versions.id}
 Created on: ${versions.metadata.created_on}
 Author: ${versions.metadata.author_email}
-Source: ${sourceStr(versions.metadata.source)}\n`
+Source: ${sourceStr(versions.metadata.source)}
+Annotations
+  Triggered by: ${versions.annotations["workers/triggered_by"]}
+  Rollback from: ${versions.annotations.rollback_from}\n`
 	);
 
 	versionMessages[versionMessages.length - 1] += "🟩 Active";
