@@ -10,7 +10,7 @@ import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { getBasePath } from "../paths";
-import { buildFunctions } from "./build";
+import { buildFunctions } from "./buildFunctions";
 import { ROUTES_SPEC_VERSION, SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
 import { FunctionsNoRoutesError, getFunctionsNoRoutesWarning } from "./errors";
 import { buildRawWorker, checkRawWorker } from "./functions/buildWorker";
