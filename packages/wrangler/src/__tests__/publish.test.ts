@@ -5832,7 +5832,7 @@ addEventListener('fetch', event => {});`
 
 			"
 		`);
-				const output = fs.readFileSync("/tmp/d1-beta-facade.entry.js", "utf-8");
+				const output = fs.readFileSync("tmp/d1-beta-facade.entry.js", "utf-8");
 				expect(output).toContain(
 					`var ExampleDurableObject2 = maskDurableObjectDefinition(ExampleDurableObject);`
 				);
