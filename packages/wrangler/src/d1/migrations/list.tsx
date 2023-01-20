@@ -13,12 +13,11 @@ import {
 } from "./helpers";
 import { DatabaseWithLocal } from "./options";
 import type {
-	CommonYargsOptions,
+	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../../yargs-types";
-import type { Argv } from "yargs";
 
-export function ListOptions(yargs: Argv<CommonYargsOptions>) {
+export function ListOptions(yargs: CommonYargsArgv) {
 	return DatabaseWithLocal(yargs);
 }
 

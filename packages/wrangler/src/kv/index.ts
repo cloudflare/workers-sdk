@@ -25,11 +25,10 @@ import {
 	putKVKeyValue,
 	unexpectedKVKeyValueProps,
 } from "./helpers";
-import type { CommonYargsOptions } from "../yargs-types";
+import type { CommonYargsArgv } from "../yargs-types";
 import type { KeyValue } from "./helpers";
-import type { Argv } from "yargs";
 
-export function kvNamespace(kvYargs: Argv<CommonYargsOptions>) {
+export function kvNamespace(kvYargs: CommonYargsArgv) {
 	return kvYargs
 		.command(
 			"create <namespace>",
@@ -173,7 +172,7 @@ export function kvNamespace(kvYargs: Argv<CommonYargsOptions>) {
 		);
 }
 
-export const kvKey = (kvYargs: Argv<CommonYargsOptions>) => {
+export const kvKey = (kvYargs: CommonYargsArgv) => {
 	return kvYargs
 		.command(
 			"put <key> [value]",
@@ -412,7 +411,7 @@ export const kvKey = (kvYargs: Argv<CommonYargsOptions>) => {
 		);
 };
 
-export const kvBulk = (kvYargs: Argv<CommonYargsOptions>) => {
+export const kvBulk = (kvYargs: CommonYargsArgv) => {
 	return kvYargs
 		.command(
 			"put <filename>",

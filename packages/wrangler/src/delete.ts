@@ -9,12 +9,11 @@ import * as metrics from "./metrics";
 import { requireAuth } from "./user";
 import { getScriptName, printWranglerBanner } from "./index";
 import type {
-	CommonYargsOptions,
+	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "./yargs-types";
-import type { Argv } from "yargs";
 
-export function deleteOptions(yargs: Argv<CommonYargsOptions>) {
+export function deleteOptions(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("script", {
 			describe: "The path to an entry point for your worker",

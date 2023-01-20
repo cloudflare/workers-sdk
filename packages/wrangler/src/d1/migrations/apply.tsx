@@ -22,12 +22,11 @@ import {
 import { DatabaseWithLocal } from "./options";
 import type { ParseError } from "../../parse";
 import type {
-	CommonYargsOptions,
+	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../../yargs-types";
-import type { Argv } from "yargs";
 
-export function ApplyOptions(yargs: Argv<CommonYargsOptions>) {
+export function ApplyOptions(yargs: CommonYargsArgv) {
 	return DatabaseWithLocal(yargs);
 }
 

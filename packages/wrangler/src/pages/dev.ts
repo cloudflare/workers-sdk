@@ -18,17 +18,16 @@ import { validateRoutes } from "./functions/routes-validation";
 import { CLEANUP, CLEANUP_CALLBACKS, pagesBetaWarning } from "./utils";
 import type { AdditionalDevProps } from "../dev";
 import type {
-	CommonYargsOptions,
+	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type { RoutesJSONSpec } from "./functions/routes-transformation";
-import type { Argv } from "yargs";
 
 const DURABLE_OBJECTS_BINDING_REGEXP = new RegExp(
 	/^(?<binding>[^=]+)=(?<className>[^@\s]+)(@(?<scriptName>.*)$)?$/
 );
 
-export function Options(yargs: Argv<CommonYargsOptions>) {
+export function Options(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("directory", {
 			type: "string",
@@ -203,10 +202,8 @@ export const Handler = async ({
 	// Beta message for `wrangler pages <commands>` usage
 	logger.log(pagesBetaWarning);
 
-	type LogLevelArg = "debug" | "info" | "log" | "warn" | "error" | "none";
 	if (logLevel) {
-		// The YargsOptionsToInterface doesn't handle the passing in of Unions from choices in Yargs
-		logger.loggerLevel = logLevel as LogLevelArg;
+		logger.loggerLevel = logLevel;
 	}
 
 	if (!local) {

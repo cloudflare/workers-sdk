@@ -14,12 +14,11 @@ import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import publish from "./publish";
 import type {
-	CommonYargsOptions,
-	YargsOptionsToInterface,
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Argv, ArgumentsCamelCase } from "yargs";
 
-export function publishOptions(yargs: Argv<CommonYargsOptions>) {
+export function publishOptions(yargs: CommonYargsArgv) {
 	return (
 		yargs
 			.positional("script", {
@@ -75,6 +74,13 @@ export function publishOptions(yargs: Argv<CommonYargsOptions>) {
 				default: false,
 			})
 			.option("experimental-public", {
+				describe: "Static assets to be served",
+				type: "string",
+				requiresArg: true,
+				deprecated: true,
+				hidden: true,
+			})
+			.option("public", {
 				describe: "Static assets to be served",
 				type: "string",
 				requiresArg: true,
@@ -178,9 +184,9 @@ export function publishOptions(yargs: Argv<CommonYargsOptions>) {
 	);
 }
 
-type PublishArgs = YargsOptionsToInterface<typeof publishOptions>;
-
-export async function publishHandler(args: ArgumentsCamelCase<PublishArgs>) {
+export async function publishHandler(
+	args: StrictYargsOptionsToInterface<typeof publishOptions>
+) {
 	await printWranglerBanner();
 
 	const configPath =
@@ -200,7 +206,7 @@ export async function publishHandler(args: ArgumentsCamelCase<PublishArgs>) {
 	if (args.public) {
 		throw new Error("The --public field has been renamed to --assets");
 	}
-	if (args["experimental-public"]) {
+	if (args.experimentalPublic) {
 		throw new Error(
 			"The --experimental-public field has been renamed to --assets"
 		);
@@ -245,13 +251,13 @@ export async function publishHandler(args: ArgumentsCamelCase<PublishArgs>) {
 		env: args.env,
 		compatibilityDate: args.latest
 			? new Date().toISOString().substring(0, 10)
-			: args["compatibility-date"],
-		compatibilityFlags: args["compatibility-flags"],
+			: args.compatibilityDate,
+		compatibilityFlags: args.compatibilityFlags,
 		vars: cliVars,
 		defines: cliDefines,
 		triggers: args.triggers,
-		jsxFactory: args["jsx-factory"],
-		jsxFragment: args["jsx-fragment"],
+		jsxFactory: args.jsxFactory,
+		jsxFragment: args.jsxFragment,
 		tsconfig: args.tsconfig,
 		routes: args.routes,
 		assetPaths,

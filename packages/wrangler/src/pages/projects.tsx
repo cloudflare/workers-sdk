@@ -13,13 +13,12 @@ import { requireAuth } from "../user";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { pagesBetaWarning } from "./utils";
 import type {
-	CommonYargsOptions,
+	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type { PagesConfigCache, Project } from "./types";
-import type { Argv } from "yargs";
 
-export function ListOptions(yargs: Argv<CommonYargsOptions>) {
+export function ListOptions(yargs: CommonYargsArgv) {
 	return yargs.epilogue(pagesBetaWarning);
 }
 
@@ -78,7 +77,7 @@ export const listProjects = async ({
 	return results;
 };
 
-export function CreateOptions(yargs: Argv<CommonYargsOptions>) {
+export function CreateOptions(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("project-name", {
 			type: "string",

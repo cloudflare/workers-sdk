@@ -19,11 +19,10 @@ import {
 	putR2Object,
 } from "./helpers";
 
-import type { CommonYargsOptions } from "../yargs-types";
+import type { CommonYargsArgv } from "../yargs-types";
 import type { Readable } from "node:stream";
-import type { Argv } from "yargs";
 
-export function r2(r2Yargs: Argv<CommonYargsOptions>) {
+export function r2(r2Yargs: CommonYargsArgv) {
 	return r2Yargs
 		.command("object", "Manage R2 objects", (r2ObjectYargs) => {
 			return r2ObjectYargs

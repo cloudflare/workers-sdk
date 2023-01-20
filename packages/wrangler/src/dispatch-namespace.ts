@@ -4,8 +4,8 @@ import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
 import { printWranglerBanner } from ".";
-import type { CommonYargsOptions } from "./yargs-types";
-import type { Argv, CommandModule } from "yargs";
+import type { CommonYargsArgv, CommonYargsOptions } from "./yargs-types";
+import type { CommandModule } from "yargs";
 
 type Namespace = {
 	namespace_id: string;
@@ -105,7 +105,7 @@ async function renameWorkerNamespace(
 }
 
 export function workerNamespaceCommands(
-	workerNamespaceYargs: Argv<CommonYargsOptions>,
+	workerNamespaceYargs: CommonYargsArgv,
 	subHelp: CommandModule<CommonYargsOptions, CommonYargsOptions>
 ) {
 	return workerNamespaceYargs

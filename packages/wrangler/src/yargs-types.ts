@@ -17,16 +17,6 @@ export type YargvToInterface<T> = T extends Argv<infer P>
 	? ArgumentsCamelCase<P>
 	: never;
 
-/**
- * Given some Yargs Options function factory, extract the interface
- * that corresponds to the yargs arguments
- */
-export type YargsOptionsToInterface<
-	T extends (yargs: Argv<CommonYargsOptions>) => Argv
-> = T extends (yargs: Argv<CommonYargsOptions>) => Argv<infer P>
-	? ArgumentsCamelCase<P>
-	: never;
-
 // See http://stackoverflow.com/questions/51465182/how-to-remove-index-signature-using-mapped-types
 type RemoveIndex<T> = {
 	[K in keyof T as string extends K
@@ -41,7 +31,7 @@ type RemoveIndex<T> = {
  * that corresponds to the yargs arguments, remove index types, and only allow camelCase
  */
 export type StrictYargsOptionsToInterface<
-	T extends (yargs: Argv<CommonYargsOptions>) => Argv
-> = T extends (yargs: Argv<CommonYargsOptions>) => Argv<infer P>
+	T extends (yargs: CommonYargsArgv) => Argv
+> = T extends (yargs: CommonYargsArgv) => Argv<infer P>
 	? OnlyCamelCase<RemoveIndex<ArgumentsCamelCase<P>>>
 	: never;

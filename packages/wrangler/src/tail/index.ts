@@ -21,14 +21,13 @@ import {
 } from "./createTail";
 import type { WorkerMetadata } from "../create-worker-upload-form";
 import type {
-	CommonYargsOptions,
-	YargsOptionsToInterface,
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type { TailCLIFilters } from "./createTail";
 import type { RawData } from "ws";
-import type { Argv } from "yargs";
 
-export function tailOptions(yargs: Argv<CommonYargsOptions>) {
+export function tailOptions(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("worker", {
 			describe: "Name or route of the worker to tail",
@@ -85,7 +84,7 @@ export function tailOptions(yargs: Argv<CommonYargsOptions>) {
 		});
 }
 
-type TailArgs = YargsOptionsToInterface<typeof tailOptions>;
+type TailArgs = StrictYargsOptionsToInterface<typeof tailOptions>;
 
 export async function tailHandler(args: TailArgs) {
 	if (args.format === "pretty") {
@@ -120,7 +119,7 @@ export async function tailHandler(args: TailArgs) {
 		status: args.status as ("ok" | "error" | "canceled")[] | undefined,
 		header: args.header,
 		method: args.method,
-		samplingRate: args["sampling-rate"],
+		samplingRate: args.samplingRate,
 		search: args.search,
 		clientIp: args.ip,
 	};

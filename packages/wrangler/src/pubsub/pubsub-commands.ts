@@ -6,13 +6,13 @@ import * as metrics from "../metrics";
 import { parseHumanDuration } from "../parse";
 import { requireAuth } from "../user";
 import * as pubsub from ".";
-import type { CommonYargsOptions } from "../yargs-types";
-import type { Argv, CommandModule } from "yargs";
+import type { CommonYargsArgv, CommonYargsOptions } from "../yargs-types";
+import type { CommandModule } from "yargs";
 
 export function pubSubCommands(
-	pubsubYargs: Argv<CommonYargsOptions>,
+	pubsubYargs: CommonYargsArgv,
 	subHelp: CommandModule<CommonYargsOptions, CommonYargsOptions>
-): Argv {
+) {
 	return pubsubYargs
 		.command(subHelp)
 		.command(

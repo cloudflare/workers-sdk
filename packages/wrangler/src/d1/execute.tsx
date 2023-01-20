@@ -23,13 +23,12 @@ import {
 } from "./utils";
 import type { Config, ConfigFields, DevConfig, Environment } from "../config";
 import type {
-	CommonYargsOptions,
+	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type { Database } from "./types";
 import type { Statement as StatementType } from "@miniflare/d1";
 import type { createSQLiteDB as createSQLiteDBType } from "@miniflare/shared";
-import type { Argv } from "yargs";
 
 type MiniflareNpxImportTypes = [
 	{
@@ -51,7 +50,7 @@ export type QueryResult = {
 // Max number of bytes to send in a single /execute call
 const QUERY_LIMIT = 10_000;
 
-export function Options(yargs: Argv<CommonYargsOptions>) {
+export function Options(yargs: CommonYargsArgv) {
 	return options
 		.Database(yargs)
 		.option("yes", {

@@ -14,12 +14,16 @@ import { parseJSON, readFileSync } from "../parse";
 import { requireAuth } from "../user";
 
 import type {
-	CommonYargsOptions,
-	YargsOptionsToInterface,
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Argv } from "yargs";
 
-export const secret = (secretYargs: Argv<CommonYargsOptions>) => {
+type Command<Args extends CommonYargsArgv> = {
+	options: (args: CommonYargsArgv) => Args;
+	handler: (args: StrictYargsOptionsToInterface<Args>) => void;
+};
+
+export const secret = (secretYargs: CommonYargsArgv) => {
 	return secretYargs
 		.option("legacy-env", {
 			type: "boolean",
@@ -245,7 +249,7 @@ export const secret = (secretYargs: Argv<CommonYargsOptions>) => {
 		);
 };
 
-export const secretBulkOptions = (yargs: Argv<CommonYargsOptions>) => {
+export const secretBulkOptions = (yargs: CommonYargsArgv) => {
 	return yargs
 		.positional("json", {
 			describe: `The JSON file of key-value pairs to upload, in form {"key": value, ...}`,
@@ -300,7 +304,7 @@ function readFromStdin(): Promise<string> {
 	});
 }
 
-type SecretBulkArgs = YargsOptionsToInterface<typeof secretBulkOptions>;
+type SecretBulkArgs = StrictYargsOptionsToInterface<typeof secretBulkOptions>;
 
 export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
 	await printWranglerBanner();

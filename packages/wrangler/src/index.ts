@@ -50,7 +50,7 @@ import {
 import { whoami } from "./whoami";
 
 import type { Config } from "./config";
-import type { CommonYargsOptions } from "./yargs-types";
+import type { CommonYargsArgv, CommonYargsOptions } from "./yargs-types";
 import type Yargs from "yargs";
 
 const resetColor = "\x1b[0m";
@@ -173,7 +173,7 @@ export class CommandLineArgsError extends Error {}
 export function createCLIParser(argv: string[]) {
 	// Type check result against CommonYargsOptions to make sure we've included
 	// all common options
-	const wrangler: Yargs.Argv<CommonYargsOptions> = makeCLI(argv)
+	const wrangler: CommonYargsArgv = makeCLI(argv)
 		.strict()
 		// We handle errors ourselves in a try-catch around `yargs.parse`.
 		// If you want the "help info" to be displayed then throw an instance of `CommandLineArgsError`.

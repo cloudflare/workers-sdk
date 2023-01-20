@@ -11,15 +11,14 @@ import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { promptSelectProject } from "./prompt-select-project";
 import { pagesBetaWarning } from "./utils";
 import type {
-	CommonYargsOptions,
+	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type { Deployment, PagesConfigCache } from "./types";
-import type { Argv } from "yargs";
 
 type ListArgs = StrictYargsOptionsToInterface<typeof ListOptions>;
 
-export function ListOptions(yargs: Argv<CommonYargsOptions>) {
+export function ListOptions(yargs: CommonYargsArgv) {
 	return yargs
 		.options({
 			"project-name": {

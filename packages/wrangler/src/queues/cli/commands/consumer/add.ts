@@ -1,14 +1,13 @@
-import { type Argv } from "yargs";
 import { readConfig } from "../../../../config";
 import { logger } from "../../../../logger";
 import { postConsumer } from "../../../client";
 import type {
-	CommonYargsOptions,
+	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../../../../yargs-types";
 import type { PostConsumerBody } from "../../../client";
 
-export function options(yargs: Argv<CommonYargsOptions>) {
+export function options(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("queue-name", {
 			type: "string",

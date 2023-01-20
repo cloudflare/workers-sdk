@@ -5,13 +5,12 @@ import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { d1BetaWarning } from "./utils";
 import type {
-	CommonYargsOptions,
+	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type { Database } from "./types";
-import type { Argv } from "yargs";
 
-export function Options(yargs: Argv<CommonYargsOptions>) {
+export function Options(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("name", {
 			describe: "The name of the new DB",

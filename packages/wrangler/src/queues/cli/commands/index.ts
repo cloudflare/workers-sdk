@@ -4,10 +4,9 @@ import { consumers } from "./consumer";
 import { options as createOptions, handler as createHandler } from "./create";
 import { options as deleteOptions, handler as deleteHandler } from "./delete";
 import { options as listOptions, handler as listHandler } from "./list";
-import type { CommonYargsOptions } from "../../../yargs-types";
-import type { Argv } from "yargs";
+import type { CommonYargsArgv } from "../../../yargs-types";
 
-export function queues(yargs: Argv<CommonYargsOptions>) {
+export function queues(yargs: CommonYargsArgv) {
 	yargs.command("list", "List Queues", listOptions, listHandler);
 
 	yargs.command(

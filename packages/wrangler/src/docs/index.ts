@@ -5,10 +5,9 @@ import * as metrics from "../metrics";
 import openInBrowser from "../open-in-browser";
 
 import type {
-	CommonYargsOptions,
+	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Argv } from "yargs";
 
 const argToUrlHash = {
 	d1: "d1",
@@ -34,7 +33,7 @@ const argToUrlHash = {
 	deployments: "deployments",
 };
 
-export function docsOptions(yargs: Argv<CommonYargsOptions>) {
+export function docsOptions(yargs: CommonYargsArgv) {
 	return yargs.positional("command", {
 		describe: "Enter the wrangler command you want to know more about",
 		type: "string",

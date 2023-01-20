@@ -11,14 +11,13 @@ import {
 } from "./errors";
 import { pagesBetaWarning } from "./utils";
 import type {
-	CommonYargsOptions,
+	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Argv } from "yargs";
 
 type PagesBuildArgs = StrictYargsOptionsToInterface<typeof Options>;
 
-export function Options(yargs: Argv<CommonYargsOptions>) {
+export function Options(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("directory", {
 			type: "string",

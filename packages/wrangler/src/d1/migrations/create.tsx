@@ -9,12 +9,11 @@ import { Database } from "../options";
 import { d1BetaWarning, getDatabaseInfoFromConfig } from "../utils";
 import { getMigrationsPath, getNextMigrationNumber } from "./helpers";
 import type {
-	CommonYargsOptions,
+	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../../yargs-types";
-import type { Argv } from "yargs";
 
-export function CreateOptions(yargs: Argv<CommonYargsOptions>) {
+export function CreateOptions(yargs: CommonYargsArgv) {
 	return Database(yargs).positional("message", {
 		describe: "The Migration message",
 		type: "string",

@@ -6,13 +6,12 @@ import { requireAuth } from "../user";
 import { Name } from "./options";
 import { d1BetaWarning, getDatabaseByNameOrBinding } from "./utils";
 import type {
-	CommonYargsOptions,
+	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type { Database } from "./types";
-import type { Argv } from "yargs";
 
-export function Options(d1ListYargs: Argv<CommonYargsOptions>) {
+export function Options(d1ListYargs: CommonYargsArgv) {
 	return Name(d1ListYargs)
 		.option("skip-confirmation", {
 			describe: "Skip confirmation",

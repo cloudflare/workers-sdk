@@ -7,16 +7,15 @@ import { optimizeRoutesJSONSpec } from "./functions/routes-transformation";
 import { validateRoutes } from "./functions/routes-validation";
 import { pagesBetaWarning } from "./utils";
 import type {
-	CommonYargsOptions,
+	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Argv } from "yargs";
 
 type OptimizeRoutesArgs = StrictYargsOptionsToInterface<
 	typeof OptimizeRoutesOptions
 >;
 
-export function OptimizeRoutesOptions(yargs: Argv<CommonYargsOptions>) {
+export function OptimizeRoutesOptions(yargs: CommonYargsArgv) {
 	return yargs
 		.options({
 			"routes-path": {

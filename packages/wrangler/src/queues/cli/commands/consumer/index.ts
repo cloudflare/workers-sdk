@@ -1,11 +1,8 @@
-import { type BuilderCallback } from "yargs";
-import { type CommonYargsOptions } from "../../../../yargs-types";
 import { options as addOptions, handler as addHandler } from "./add";
 import { options as removeOptions, handler as removeHandler } from "./remove";
+import type { CommonYargsArgv } from "../../../../yargs-types";
 
-export const consumers: BuilderCallback<CommonYargsOptions, unknown> = (
-	yargs
-) => {
+export function consumers(yargs: CommonYargsArgv) {
 	yargs.command(
 		"add <queue-name> <script-name>",
 		"Add a Queue Consumer",
@@ -19,4 +16,4 @@ export const consumers: BuilderCallback<CommonYargsOptions, unknown> = (
 		removeOptions,
 		removeHandler
 	);
-};
+}

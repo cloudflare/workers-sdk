@@ -12,14 +12,13 @@ import { formatBytes, formatTimeAgo } from "./formatTimeAgo";
 import { Name } from "./options";
 import { d1BetaWarning, getDatabaseByNameOrBinding } from "./utils";
 import type {
-	CommonYargsOptions,
+	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type { Backup, Database } from "./types";
 import type { Response } from "undici";
-import type { Argv } from "yargs";
 
-export function ListOptions(yargs: Argv<CommonYargsOptions>) {
+export function ListOptions(yargs: CommonYargsArgv) {
 	return Name(yargs);
 }
 
@@ -79,7 +78,7 @@ export const listBackups = async (
 	return Object.values(results);
 };
 
-export function CreateOptions(yargs: Argv<CommonYargsOptions>) {
+export function CreateOptions(yargs: CommonYargsArgv) {
 	return ListOptions(yargs);
 }
 
@@ -119,7 +118,7 @@ export const createBackup = async (
 	};
 };
 
-export function RestoreOptions(yargs: Argv<CommonYargsOptions>) {
+export function RestoreOptions(yargs: CommonYargsArgv) {
 	return ListOptions(yargs).positional("backup-id", {
 		describe: "The Backup ID to restore",
 		type: "string",
@@ -159,7 +158,7 @@ export const restoreBackup = async (
 	);
 };
 
-export function DownloadOptions(yargs: Argv<CommonYargsOptions>) {
+export function DownloadOptions(yargs: CommonYargsArgv) {
 	return ListOptions(yargs)
 		.positional("backup-id", {
 			describe: "The Backup ID to download",
