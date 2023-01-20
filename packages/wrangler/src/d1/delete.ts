@@ -12,12 +12,6 @@ import type {
 import type { Database } from "./types";
 import type { Argv } from "yargs";
 
-type CreateArgs = {
-	config?: string;
-	name: string;
-	"skip-confirmation": boolean;
-};
-
 export function Options(d1ListYargs: Argv<CommonYargsOptions>) {
 	return Name(d1ListYargs)
 		.option("skip-confirmation", {

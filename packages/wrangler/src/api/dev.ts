@@ -100,7 +100,6 @@ export async function unstable_dev(
 		showInteractiveDevSession,
 		testMode,
 		testScheduled,
-		watch,
 		// 2. options for alpha/beta products/libs
 		d1Databases,
 		experimentalLocal,
