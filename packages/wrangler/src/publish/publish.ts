@@ -472,6 +472,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						betaD1Shims: identifyD1BindingsAsBeta(config.d1_databases)?.map(
 							(db) => db.binding
 						),
+						doBindings: config.durable_objects.bindings,
 						jsxFactory,
 						jsxFragment,
 						rules: props.rules,

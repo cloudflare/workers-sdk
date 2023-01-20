@@ -6,6 +6,7 @@ import { execaCommand } from "execa";
 import { logger } from "./logger";
 import { getBasePath } from "./paths";
 import type { Config } from "./config";
+import type { DurableObjectBindings } from "./config/environment";
 import type { CfScriptFormat } from "./worker";
 import type { Metafile } from "esbuild";
 
@@ -235,8 +236,6 @@ export function fileExists(filePath: string): boolean {
 	}
 	return false;
 }
-
-type DurableObjectBindings = Config["durable_objects"]["bindings"];
 
 /**
  * Groups the durable object bindings into two lists:
