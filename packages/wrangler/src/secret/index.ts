@@ -18,11 +18,6 @@ import type {
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 
-type Command<Args extends CommonYargsArgv> = {
-	options: (args: CommonYargsArgv) => Args;
-	handler: (args: StrictYargsOptionsToInterface<Args>) => void;
-};
-
 export const secret = (secretYargs: CommonYargsArgv) => {
 	return secretYargs
 		.option("legacy-env", {
