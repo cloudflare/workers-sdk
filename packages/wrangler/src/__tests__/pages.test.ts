@@ -69,11 +69,11 @@ describe("pages", () => {
 		  wrangler pages publish [directory]             🆙 Publish a directory of static assets as a Pages deployment
 
 		Flags:
-		  -j, --json-config  Experimental: Support wrangler.json  [boolean]
-		  -c, --config       Path to .toml configuration file  [string]
-		  -e, --env          Environment to use for operations and .env files  [string]
-		  -h, --help         Show help  [boolean]
-		  -v, --version      Show version number  [boolean]
+		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+		  -c, --config                    Path to .toml configuration file  [string]
+		  -e, --env                       Environment to use for operations and .env files  [string]
+		  -h, --help                      Show help  [boolean]
+		  -v, --version                   Show version number  [boolean]
 
 		🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose"
 	`);
@@ -341,10 +341,10 @@ describe("pages", () => {
 			  directory  The directory of static files to upload  [string]
 
 			Flags:
-			  -j, --json-config  Experimental: Support wrangler.json  [boolean]
-			  -e, --env          Environment to use for operations and .env files  [string]
-			  -h, --help         Show help  [boolean]
-			  -v, --version      Show version number  [boolean]
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]
 
 			Options:
 			      --project-name    The name of the project you want to deploy to  [string]
