@@ -5810,7 +5810,7 @@ addEventListener('fetch', event => {});`
 					],
 				});
 
-				await runWrangler("publish index.js --outdir /tmp --dry-run");
+				await runWrangler("publish index.js --outdir tmp --dry-run");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
