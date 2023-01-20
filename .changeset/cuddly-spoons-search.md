@@ -2,7 +2,7 @@
 "wrangler": patch
 ---
 
-fix: add d1 shim to durable objects
+fix: make it possible to query d1 databases from durable objects
 
 This PR makes it possible to access D1 from Durable Objects.
 
