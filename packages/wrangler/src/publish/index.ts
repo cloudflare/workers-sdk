@@ -176,10 +176,10 @@ export function publishOptions(yargs: Argv<CommonYargsOptions>) {
 				describe:
 					"Send Trace Events from this worker to Workers Logpush.\nThis will not configure a corresponding Logpush job automatically.",
 			})
-			.option("experimental", {
+			.option("enable-experimental-compatibility-flags", {
 				type: "boolean",
 				describe:
-					"Allows publishing of experimental flags if authorized to use them.\nOnly Cloudflare internal accounts for now",
+					"Allows publishing of experimental flags if authorized to use them.\nOnly Cloudflare internal accounts for now.",
 				default: false,
 			})
 	);
@@ -228,6 +228,9 @@ export async function publishHandler(args: ArgumentsCamelCase<PublishArgs>) {
 			"Using the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your wrangler.toml.\n"
 		);
 	}
+	if (args.enableExperimentalCompatibilityFlags) {
+		logger.warn("Only Cloudflare internal accounts for now.");
+	}
 
 	const cliVars = collectKeyValues(args.var);
 	const cliDefines = collectKeyValues(args.define);
@@ -272,6 +275,6 @@ export async function publishHandler(args: ArgumentsCamelCase<PublishArgs>) {
 		noBundle: !(args.bundle ?? !config.no_bundle),
 		keepVars: args.keepVars,
 		logpush: args.logpush,
-		experimental: args.experimental,
+		experimentalCompatibilityFlags: args.enableExperimentalCompatibilityFlags,
 	});
 }

@@ -7094,6 +7094,24 @@ addEventListener('fetch', event => {});`
 		);
 	});
 
+	describe("--enable-experimental-compatibility-flags", () => {
+		it("should warn that experimental flags are for internal use only", async () => {
+			writeWranglerToml();
+			const scriptContent = `
+			const xyz = 123; // a statement that would otherwise be compiled out
+		`;
+			fs.writeFileSync("index.js", scriptContent);
+			await runWrangler(
+				"publish index.js --enable-experimental-compatibility-flags --dry-run --outdir dist"
+			);
+			expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mOnly Cloudflare internal accounts for now.[0m
+
+			"
+		`);
+		});
+	});
+
 	describe("queues", () => {
 		it("should upload producer bindings", async () => {
 			writeWranglerToml({
@@ -7297,6 +7315,7 @@ function mockUploadWorkerRequest(
 		expectedCompatibilityDate?: string;
 		expectedCompatibilityFlags?: string[];
 		expectedMigrations?: CfWorkerInit["migrations"];
+		expectedEnableExperimentalFlags?: boolean;
 		env?: string;
 		legacyEnv?: boolean;
 		sendScriptIds?: boolean;
@@ -7313,6 +7332,7 @@ function mockUploadWorkerRequest(
 		expectedModules = {},
 		expectedCompatibilityDate,
 		expectedCompatibilityFlags,
+		expectedEnableExperimentalFlags,
 		env = undefined,
 		legacyEnv = false,
 		expectedMigrations,
@@ -7384,6 +7404,9 @@ function mockUploadWorkerRequest(
 		}
 		if ("expectedMigrations" in options) {
 			expect(metadata.migrations).toEqual(expectedMigrations);
+		}
+		if ("expectedExperimental" in options) {
+			expect(metadata.experimental).toEqual(expectedEnableExperimentalFlags);
 		}
 		for (const [name, content] of Object.entries(expectedModules)) {
 			expect(formBody.get(name)).toEqual(content);

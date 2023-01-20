@@ -62,7 +62,7 @@ type Props = {
 	noBundle: boolean | undefined;
 	keepVars: boolean | undefined;
 	logpush: boolean | undefined;
-	experimental: boolean | undefined;
+	experimentalCompatibilityFlags: boolean | undefined;
 };
 
 type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
@@ -573,7 +573,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			usage_model: config.usage_model,
 			keepVars,
 			logpush: props.logpush !== undefined ? props.logpush : config.logpush,
-			experimental: props.experimental,
+			experimental: props.experimentalCompatibilityFlags,
 		};
 
 		// As this is not deterministic for testing, we detect if in a jest environment and run asynchronously
