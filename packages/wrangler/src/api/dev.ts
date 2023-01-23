@@ -185,6 +185,7 @@ export async function unstable_dev(
 					experimentalEnableLocalPersistence: undefined,
 					legacyEnv: undefined,
 					public: undefined,
+					...options,
 				});
 			}).then((devServer) => {
 				// now that the inner promise has resolved, we can resolve the outer promise
@@ -273,6 +274,7 @@ export async function unstable_dev(
 					experimentalEnableLocalPersistence: undefined,
 					legacyEnv: undefined,
 					public: undefined,
+					...options,
 				});
 			}).then((devServer) => {
 				resolve({
