@@ -15,7 +15,7 @@ import type {
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 
-type PagesBuildArgs = StrictYargsOptionsToInterface<typeof Options>;
+export type PagesBuildArgs = StrictYargsOptionsToInterface<typeof Options>;
 
 export function Options(yargs: CommonYargsArgv) {
 	return yargs
