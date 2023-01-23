@@ -311,7 +311,7 @@ export async function generateHandler<
 
 			if (
 				waitUntil &&
-				response.headers.get("Content-Type")?.includes("text/html")
+				isHTMLContentType(response.headers.get("Content-Type"))
 			) {
 				waitUntil(
 					(async () => {
@@ -512,7 +512,7 @@ export async function generateHandler<
 			}
 
 			if (
-				asset.contentType.startsWith("text/html") &&
+				isHTMLContentType(asset.contentType) &&
 				metadata.analytics?.version === ANALYTICS_VERSION
 			) {
 				return new HTMLRewriter()
@@ -653,4 +653,12 @@ function isPreview(url: URL): boolean {
 		return url.hostname.split(".").length > 3 ? true : false;
 	}
 	return false;
+}
+
+/**
+ * Whether or not the passed in string looks like an HTML
+ * Content-Type header
+ */
+function isHTMLContentType(contentType?: string | null) {
+	return contentType?.startsWith("text/html") || false;
 }
