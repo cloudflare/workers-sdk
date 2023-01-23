@@ -500,10 +500,9 @@ async function getTestResponse({
 				}
 			);
 		},
-		waitUntil: (async (promise: Promise<unknown>) => {
+		waitUntil: async (promise: Promise<unknown>) => {
 			spies.waitUntil.push(promise);
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		}) as any,
+		},
 		caches: {
 			...spies.caches,
 			open(cacheName) {
