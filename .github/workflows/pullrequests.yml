@@ -77,7 +77,7 @@ jobs:
         run: npx typescript-json-schema packages/wrangler/tsconfig.json RawConfig > packages/json-schema-worker/wrangler-schema.json
 
       - name: Upload JSON schema
-        run: npx wrangler kv:key put '${GITHUB_REF##*/}' --path wrangler-schema.json --binding Schema
+        run: npx wrangler kv:key put '${GITHUB_REF##*/}' --path wrangler-schema.json --binding Schema --preview false
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         working-directory: packages/json-schema-worker
