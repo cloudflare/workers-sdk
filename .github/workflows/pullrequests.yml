@@ -44,6 +44,47 @@ jobs:
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
 
+  schema:
+    if: ${{ github.repository_owner == 'cloudflare' }}
+    name: "Publish JSON schema"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
+
+      - name: Install workerd Dependencies
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt-get update
+          sudo apt-get install -y libc++1
+
+      - name: Install NPM Dependencies
+        run: npm ci
+
+      - name: Generate JSON schema
+        run: npx typescript-json-schema packages/wrangler/tsconfig.json RawConfig > packages/json-schema-worker/wrangler-schema.json
+
+      - name: Upload JSON schema
+        run: npx wrangler kv:key put '${GITHUB_REF##*/}' --path wrangler-schema.json --binding Schema
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        working-directory: packages/json-schema-worker
+
+      - name: Build & Publish JSON Schema worker
+        run: npm run publish
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        working-directory: packages/json-schema-worker
+
   test:
     name: "Tests"
     strategy:

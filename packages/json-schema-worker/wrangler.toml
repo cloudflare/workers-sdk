@@ -1,0 +1,7 @@
+name = "json-schema-worker"
+main = "src/index.ts"
+compatibility_date = "2023-01-23"
+account_id = "e35fd947284363a46fd7061634477114"
+route = { pattern = "json-schema.devprod.cloudflare.dev", custom_domain = true }
+
+kv_namespaces = [{ binding = "Schema", id = "4c8cacd39db14eec98cec812f2401300", preview_id = "4c8cacd39db14eec98cec812f2401300"}]
