@@ -1,11 +1,16 @@
 import { now } from "./dep";
 export default {
-	fetch(request) {
+	async fetch(request) {
 		console.log(
 			request.method,
 			request.url,
 			new Map([...request.headers]),
 			request.cf
+		);
+
+		await fetch(new URL("https://example.com"));
+		await fetch(
+			new Request("https://example.com", { method: "POST", body: "foo" })
 		);
 
 		return new Response(`${request.url} ${now()}`);
