@@ -89,6 +89,13 @@ export function Options(yargs: Argv) {
 				default: true,
 				description: "Whether to run bundling on `_worker.js`",
 			},
+			"experimental-worker-bundle": {
+				type: "boolean",
+				default: false,
+				hidden: true,
+				description:
+					"Whether to process non-JS module imports or not, such as wasm/text/binary, when we run bundling on `functions` or `_worker.js`",
+			},
 			binding: {
 				type: "array",
 				description: "Bind variable/secret (KEY=VALUE)",
@@ -175,6 +182,7 @@ export const Handler = async ({
 	"script-path": singleWorkerScriptPath,
 	bundle,
 	noBundle,
+	experimentalWorkerBundle,
 	binding: bindings = [],
 	kv: kvs = [],
 	do: durableObjects = [],
@@ -270,7 +278,7 @@ export const Handler = async ({
 			await checkRawWorker(workerScriptPath, () => scriptReadyResolve());
 		};
 
-		const enableBundling = bundle || !noBundle;
+		const enableBundling = bundle || !noBundle || experimentalWorkerBundle;
 		if (enableBundling) {
 			// We want to actually run the `_worker.js` script through the bundler
 			// So update the final path to the script that will be uploaded and
@@ -286,6 +294,7 @@ export const Handler = async ({
 						sourcemap: true,
 						watch: true,
 						onEnd: () => scriptReadyResolve(),
+						experimentalWorkerBundle,
 					});
 				} catch (e: unknown) {
 					logger.warn("Failed to bundle _worker.js.", e);
@@ -323,6 +332,7 @@ export const Handler = async ({
 					buildOutputDirectory: directory,
 					nodeCompat,
 					local: true,
+					experimentalWorkerBundle,
 				});
 				await metrics.sendMetricsEvent("build pages functions");
 			};
