@@ -279,11 +279,10 @@ export async function generateHandler<
 		const extraHeaders = new Headers({
 			"access-control-allow-origin": "*",
 			"referrer-policy": "strict-origin-when-cross-origin",
+			...(existingHeaders.has("content-type")
+				? { "x-content-type-options": "nosniff" }
+				: {}),
 		});
-
-		if (existingHeaders.has("content-type")) {
-			extraHeaders.append("x-content-type-options", "nosniff");
-		}
 
 		const headers = new Headers({
 			// But we intentionally override existing headers
