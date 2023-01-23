@@ -55,7 +55,7 @@
 		"@types/rimraf": "^3.0.2",
 		"@types/tar": "^6.1.1",
 		"@types/webpack": "^4.41.32",
-		"esbuild": "^0.14.51",
+		"esbuild": "0.15.0",
 		"execa": "^6.1.0",
 		"jest": "^27.5.1",
 		"jest-fetch-mock": "^3.0.3",
