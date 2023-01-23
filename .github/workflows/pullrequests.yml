@@ -76,8 +76,12 @@ jobs:
       - name: Generate JSON schema
         run: npx typescript-json-schema packages/wrangler/tsconfig.json RawConfig > packages/json-schema-worker/wrangler-schema.json
 
+      - name: Get branch name
+        run: echo "branch_name=`git rev-parse --abbrev-ref HEAD`"" >> $GITHUB_OUTPUT
+        id: branch
+
       - name: Upload JSON schema
-        run: npx wrangler kv:key put ${GITHUB_REF##*/} --path wrangler-schema.json --binding Schema --preview false
+        run: npx wrangler kv:key put ${{ steps.branch.outputs.branch_name }} --path wrangler-schema.json --binding Schema --preview false
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         working-directory: packages/json-schema-worker
