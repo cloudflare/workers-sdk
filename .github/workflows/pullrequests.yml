@@ -83,7 +83,7 @@ jobs:
         working-directory: packages/json-schema-worker
 
       - name: Build & Publish JSON Schema worker
-        run: npm run publish
+        run: npm run deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         working-directory: packages/json-schema-worker
