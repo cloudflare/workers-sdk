@@ -5,10 +5,9 @@ import * as metrics from "../metrics";
 import openInBrowser from "../open-in-browser";
 
 import type {
-	CommonYargsOptions,
-	YargsOptionsToInterface,
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { ArgumentsCamelCase, Argv } from "yargs";
 
 const argToUrlHash = {
 	d1: "d1",
@@ -34,7 +33,7 @@ const argToUrlHash = {
 	deployments: "deployments",
 };
 
-export function docsOptions(yargs: Argv<CommonYargsOptions>) {
+export function docsOptions(yargs: CommonYargsArgv) {
 	return yargs.positional("command", {
 		describe: "Enter the wrangler command you want to know more about",
 		type: "string",
@@ -69,13 +68,13 @@ export function docsOptions(yargs: Argv<CommonYargsOptions>) {
 	});
 }
 
-type DocsArgs = YargsOptionsToInterface<typeof docsOptions>;
-
 function isValidParam(k: string): k is keyof typeof argToUrlHash {
 	return k in argToUrlHash;
 }
 
-export async function docsHandler(args: ArgumentsCamelCase<DocsArgs>) {
+export async function docsHandler(
+	args: StrictYargsOptionsToInterface<typeof docsOptions>
+) {
 	let urlToOpen =
 		"https://developers.cloudflare.com/workers/wrangler/commands/";
 
@@ -91,7 +90,7 @@ export async function docsHandler(args: ArgumentsCamelCase<DocsArgs>) {
 
 	logger.log(`Opening a link in your default browser: ${urlToOpen}`);
 	await openInBrowser(urlToOpen);
-	const config = readConfig(undefined, {});
+	const config = readConfig(undefined, args);
 	await metrics.sendMetricsEvent("view docs", {
 		sendMetrics: config.send_metrics,
 	});

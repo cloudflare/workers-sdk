@@ -8,23 +8,20 @@ import { requireAuth } from "../../user";
 import { Database } from "../options";
 import { d1BetaWarning, getDatabaseInfoFromConfig } from "../utils";
 import { getMigrationsPath, getNextMigrationNumber } from "./helpers";
-import type { Argv } from "yargs";
+import type {
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
+} from "../../yargs-types";
 
-type MigrationsCreateArgs = {
-	config?: string;
-	database: string;
-	message: string;
-};
-
-export function CreateOptions(yargs: Argv): Argv<MigrationsCreateArgs> {
+export function CreateOptions(yargs: CommonYargsArgv) {
 	return Database(yargs).positional("message", {
 		describe: "The Migration message",
 		type: "string",
 		demandOption: true,
 	});
 }
-
-export const CreateHandler = withConfig<MigrationsCreateArgs>(
+type CreateHandlerOptions = StrictYargsOptionsToInterface<typeof CreateOptions>;
+export const CreateHandler = withConfig<CreateHandlerOptions>(
 	async ({ config, database, message }): Promise<void> => {
 		await requireAuth({});
 		logger.log(d1BetaWarning);

@@ -32,10 +32,11 @@ describe("d1", () => {
 		  wrangler d1 migrations          Interact with D1 Migrations
 
 		Flags:
-		  -c, --config   Path to .toml configuration file  [string]
-		  -e, --env      Environment to use for operations and .env files  [string]
-		  -h, --help     Show help  [boolean]
-		  -v, --version  Show version number  [boolean]
+		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+		  -c, --config                    Path to .toml configuration file  [string]
+		  -e, --env                       Environment to use for operations and .env files  [string]
+		  -h, --help                      Show help  [boolean]
+		  -v, --version                   Show version number  [boolean]
 
 		--------------------
 		🚧 D1 is currently in open alpha and is not recommended for production data and traffic
@@ -71,10 +72,11 @@ describe("d1", () => {
 		  wrangler d1 migrations          Interact with D1 Migrations
 
 		Flags:
-		  -c, --config   Path to .toml configuration file  [string]
-		  -e, --env      Environment to use for operations and .env files  [string]
-		  -h, --help     Show help  [boolean]
-		  -v, --version  Show version number  [boolean]
+		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+		  -c, --config                    Path to .toml configuration file  [string]
+		  -e, --env                       Environment to use for operations and .env files  [string]
+		  -h, --help                      Show help  [boolean]
+		  -v, --version                   Show version number  [boolean]
 
 		--------------------
 		🚧 D1 is currently in open alpha and is not recommended for production data and traffic

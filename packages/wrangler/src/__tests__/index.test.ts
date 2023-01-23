@@ -56,10 +56,11 @@ describe("wrangler", () => {
 			  wrangler deployments                 🚢 Displays the 10 most recent deployments for a worker
 
 			Flags:
-			  -c, --config   Path to .toml configuration file  [string]
-			  -e, --env      Environment to use for operations and .env files  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
 		`);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -104,10 +105,11 @@ describe("wrangler", () => {
 			  wrangler deployments                 🚢 Displays the 10 most recent deployments for a worker
 
 			Flags:
-			  -c, --config   Path to .toml configuration file  [string]
-			  -e, --env      Environment to use for operations and .env files  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: invalid-command[0m
@@ -151,10 +153,11 @@ describe("wrangler", () => {
 			  wrangler secret list          List all secrets for a Worker
 
 			Flags:
-			  -c, --config   Path to .toml configuration file  [string]
-			  -e, --env      Environment to use for operations and .env files  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
 		`);
 		});
 
@@ -172,10 +175,11 @@ describe("wrangler", () => {
 			  wrangler kv:namespace delete              Deletes a given namespace.
 
 			Flags:
-			  -c, --config   Path to .toml configuration file  [string]
-			  -e, --env      Environment to use for operations and .env files  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
 		`);
 		});
 
@@ -194,10 +198,11 @@ describe("wrangler", () => {
 			  wrangler kv:key delete <key>       Removes a single key value pair from the given namespace.
 
 			Flags:
-			  -c, --config   Path to .toml configuration file  [string]
-			  -e, --env      Environment to use for operations and .env files  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
 		`);
 		});
 
@@ -214,10 +219,11 @@ describe("wrangler", () => {
 			  wrangler kv:bulk delete <filename>  Delete multiple key-value pairs from a namespace
 
 			Flags:
-			  -c, --config   Path to .toml configuration file  [string]
-			  -e, --env      Environment to use for operations and .env files  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
 		`);
 		});
 
@@ -234,10 +240,11 @@ describe("wrangler", () => {
 			  wrangler r2 bucket  Manage R2 buckets
 
 			Flags:
-			  -c, --config   Path to .toml configuration file  [string]
-			  -e, --env      Environment to use for operations and .env files  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
 		`);
 		});
 	});

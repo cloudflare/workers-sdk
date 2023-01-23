@@ -6,12 +6,16 @@ import { isInPagesCI } from "./constants";
 import { optimizeRoutesJSONSpec } from "./functions/routes-transformation";
 import { validateRoutes } from "./functions/routes-validation";
 import { pagesBetaWarning } from "./utils";
-import type { YargsOptionsToInterface } from "../yargs-types";
-import type { Argv } from "yargs";
+import type {
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
+} from "../yargs-types";
 
-type OptimizeRoutesArgs = YargsOptionsToInterface<typeof OptimizeRoutesOptions>;
+type OptimizeRoutesArgs = StrictYargsOptionsToInterface<
+	typeof OptimizeRoutesOptions
+>;
 
-export function OptimizeRoutesOptions(yargs: Argv) {
+export function OptimizeRoutesOptions(yargs: CommonYargsArgv) {
 	return yargs
 		.options({
 			"routes-path": {

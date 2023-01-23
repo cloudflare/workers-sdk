@@ -17,17 +17,17 @@ import { buildRawWorker, checkRawWorker } from "./functions/buildWorker";
 import { validateRoutes } from "./functions/routes-validation";
 import { CLEANUP, CLEANUP_CALLBACKS, pagesBetaWarning } from "./utils";
 import type { AdditionalDevProps } from "../dev";
-import type { YargsOptionsToInterface } from "../yargs-types";
+import type {
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
+} from "../yargs-types";
 import type { RoutesJSONSpec } from "./functions/routes-transformation";
-import type { Argv } from "yargs";
 
 const DURABLE_OBJECTS_BINDING_REGEXP = new RegExp(
 	/^(?<binding>[^=]+)=(?<className>[^@\s]+)(@(?<scriptName>.*)$)?$/
 );
 
-type PagesDevArgs = YargsOptionsToInterface<typeof Options>;
-
-export function Options(yargs: Argv) {
+export function Options(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("directory", {
 			type: "string",
@@ -173,39 +173,37 @@ export function Options(yargs: Argv) {
 export const Handler = async ({
 	local,
 	directory,
-	"compatibility-date": compatibilityDate,
-	"compatibility-flags": compatibilityFlags,
+	compatibilityDate,
+	compatibilityFlags,
 	ip,
 	port,
-	"inspector-port": inspectorPort,
+	inspectorPort,
 	proxy: requestedProxyPort,
-	"script-path": singleWorkerScriptPath,
 	bundle,
 	noBundle,
 	experimentalWorkerBundle,
+	scriptPath: singleWorkerScriptPath,
 	binding: bindings = [],
 	kv: kvs = [],
 	do: durableObjects = [],
 	d1: d1s = [],
 	r2: r2s = [],
-	"live-reload": liveReload,
-	"local-protocol": localProtocol,
+	liveReload,
+	localProtocol,
 	experimentalEnableLocalPersistence,
 	persist,
 	persistTo,
-	"node-compat": nodeCompat,
-	"experimental-local": experimentalLocal,
+	nodeCompat,
+	experimentalLocal,
 	config: config,
 	_: [_pages, _dev, ...remaining],
 	logLevel,
-}: PagesDevArgs) => {
+}: StrictYargsOptionsToInterface<typeof Options>) => {
 	// Beta message for `wrangler pages <commands>` usage
 	logger.log(pagesBetaWarning);
 
-	type LogLevelArg = "debug" | "info" | "log" | "warn" | "error" | "none";
 	if (logLevel) {
-		// The YargsOptionsToInterface doesn't handle the passing in of Unions from choices in Yargs
-		logger.loggerLevel = logLevel as LogLevelArg;
+		logger.loggerLevel = logLevel;
 	}
 
 	if (!local) {

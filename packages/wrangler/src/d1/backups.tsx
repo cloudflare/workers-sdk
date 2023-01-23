@@ -11,17 +11,18 @@ import { requireAuth } from "../user";
 import { formatBytes, formatTimeAgo } from "./formatTimeAgo";
 import { Name } from "./options";
 import { d1BetaWarning, getDatabaseByNameOrBinding } from "./utils";
+import type {
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
+} from "../yargs-types";
 import type { Backup, Database } from "./types";
 import type { Response } from "undici";
-import type { Argv } from "yargs";
 
-type BackupListArgs = { config?: string; name: string };
-
-export function ListOptions(yargs: Argv): Argv<BackupListArgs> {
+export function ListOptions(yargs: CommonYargsArgv) {
 	return Name(yargs);
 }
-
-export const ListHandler = withConfig<BackupListArgs>(
+type ListHandlerOptions = StrictYargsOptionsToInterface<typeof ListOptions>;
+export const ListHandler = withConfig<ListHandlerOptions>(
 	async ({ config, name }): Promise<void> => {
 		const accountId = await requireAuth({});
 		logger.log(d1BetaWarning);
@@ -77,13 +78,12 @@ export const listBackups = async (
 	return Object.values(results);
 };
 
-type BackupCreateArgs = BackupListArgs;
-
-export function CreateOptions(yargs: Argv): Argv<BackupCreateArgs> {
+export function CreateOptions(yargs: CommonYargsArgv) {
 	return ListOptions(yargs);
 }
+type CreateHandlerOptions = StrictYargsOptionsToInterface<typeof CreateOptions>;
 
-export const CreateHandler = withConfig<BackupCreateArgs>(
+export const CreateHandler = withConfig<CreateHandlerOptions>(
 	async ({ config, name }): Promise<void> => {
 		const accountId = await requireAuth({});
 		logger.log(d1BetaWarning);
@@ -119,19 +119,17 @@ export const createBackup = async (
 	};
 };
 
-type BackupRestoreArgs = BackupListArgs & {
-	"backup-id": string;
-};
-
-export function RestoreOptions(yargs: Argv): Argv<BackupRestoreArgs> {
+export function RestoreOptions(yargs: CommonYargsArgv) {
 	return ListOptions(yargs).positional("backup-id", {
 		describe: "The Backup ID to restore",
 		type: "string",
 		demandOption: true,
 	});
 }
-
-export const RestoreHandler = withConfig<BackupRestoreArgs>(
+type RestoreHandlerOptions = StrictYargsOptionsToInterface<
+	typeof RestoreOptions
+>;
+export const RestoreHandler = withConfig<RestoreHandlerOptions>(
 	async ({ config, name, backupId }): Promise<void> => {
 		const accountId = await requireAuth({});
 		logger.log(d1BetaWarning);
@@ -163,11 +161,7 @@ export const restoreBackup = async (
 	);
 };
 
-type BackupDownloadArgs = BackupRestoreArgs & {
-	output?: string;
-};
-
-export function DownloadOptions(yargs: Argv): Argv<BackupDownloadArgs> {
+export function DownloadOptions(yargs: CommonYargsArgv) {
 	return ListOptions(yargs)
 		.positional("backup-id", {
 			describe: "The Backup ID to download",
@@ -180,8 +174,10 @@ export function DownloadOptions(yargs: Argv): Argv<BackupDownloadArgs> {
 			type: "string",
 		});
 }
-
-export const DownloadHandler = withConfig<BackupDownloadArgs>(
+type DownloadHandlerOptions = StrictYargsOptionsToInterface<
+	typeof DownloadOptions
+>;
+export const DownloadHandler = withConfig<DownloadHandlerOptions>(
 	async ({ name, backupId, output, config }): Promise<void> => {
 		const accountId = await requireAuth({});
 		logger.log(d1BetaWarning);

@@ -22,10 +22,13 @@ import {
 	getDatabaseInfoFromConfig,
 } from "./utils";
 import type { Config, ConfigFields, DevConfig, Environment } from "../config";
+import type {
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
+} from "../yargs-types";
 import type { Database } from "./types";
 import type { Statement as StatementType } from "@miniflare/d1";
 import type { createSQLiteDB as createSQLiteDBType } from "@miniflare/shared";
-import type { Argv } from "yargs";
 
 type MiniflareNpxImportTypes = [
 	{
@@ -35,19 +38,6 @@ type MiniflareNpxImportTypes = [
 		createSQLiteDB: typeof createSQLiteDBType;
 	}
 ];
-
-export type BaseSqlExecuteArgs = {
-	config?: string;
-	database: string;
-	local?: boolean;
-	"persist-to"?: string;
-	yes?: boolean;
-};
-
-type ExecuteArgs = BaseSqlExecuteArgs & {
-	file?: string;
-	command?: string;
-};
 
 export type QueryResult = {
 	results: Record<string, string | number | boolean>[];
@@ -60,7 +50,7 @@ export type QueryResult = {
 // Max number of bytes to send in a single /execute call
 const QUERY_LIMIT = 10_000;
 
-export function Options(yargs: Argv): Argv<ExecuteArgs> {
+export function Options(yargs: CommonYargsArgv) {
 	return options
 		.Database(yargs)
 		.option("yes", {
@@ -125,8 +115,8 @@ export async function executeSql(
 		? await executeLocally(config, name, shouldPrompt, queries, persistTo)
 		: await executeRemotely(config, name, shouldPrompt, batchSplit(queries));
 }
-
-export const Handler = withConfig<ExecuteArgs>(
+type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
+export const Handler = withConfig<HandlerOptions>(
 	async ({
 		config,
 		database,

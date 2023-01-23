@@ -14,14 +14,16 @@ import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { listProjects } from "./projects";
 import { promptSelectProject } from "./prompt-select-project";
 import { pagesBetaWarning } from "./utils";
-import type { YargsOptionsToInterface } from "../yargs-types";
+import type {
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
+} from "../yargs-types";
 import type { PagesConfigCache } from "./types";
 import type { Project } from "@cloudflare/types";
-import type { Argv } from "yargs";
 
-type PublishArgs = YargsOptionsToInterface<typeof Options>;
+type PublishArgs = StrictYargsOptionsToInterface<typeof Options>;
 
-export function Options(yargs: Argv) {
+export function Options(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("directory", {
 			type: "string",

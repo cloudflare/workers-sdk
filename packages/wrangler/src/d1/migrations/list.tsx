@@ -12,14 +12,16 @@ import {
 	initMigrationsTable,
 } from "./helpers";
 import { DatabaseWithLocal } from "./options";
-import type { BaseSqlExecuteArgs } from "../execute";
-import type { Argv } from "yargs";
+import type {
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
+} from "../../yargs-types";
 
-export function ListOptions(yargs: Argv): Argv<BaseSqlExecuteArgs> {
+export function ListOptions(yargs: CommonYargsArgv) {
 	return DatabaseWithLocal(yargs);
 }
-
-export const ListHandler = withConfig<BaseSqlExecuteArgs>(
+type ListHandlerOptions = StrictYargsOptionsToInterface<typeof ListOptions>;
+export const ListHandler = withConfig<ListHandlerOptions>(
 	async ({ config, database, local, persistTo }): Promise<void> => {
 		await requireAuth({});
 		logger.log(d1BetaWarning);

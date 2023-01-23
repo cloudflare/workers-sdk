@@ -5,12 +5,11 @@ import { CommandLineArgsError, printWranglerBanner } from "../index";
 import { initHandler } from "../init";
 import { logger } from "../logger";
 import type {
-	CommonYargsOptions,
-	YargsOptionsToInterface,
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Argv } from "yargs";
 
-export function generateOptions(yargs: Argv<CommonYargsOptions>) {
+export function generateOptions(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("name", {
 			describe: "Name of the Workers project",
@@ -34,7 +33,7 @@ export function generateOptions(yargs: Argv<CommonYargsOptions>) {
 			deprecated: true,
 		});
 }
-type GenerateArgs = YargsOptionsToInterface<typeof generateOptions>;
+type GenerateArgs = StrictYargsOptionsToInterface<typeof generateOptions>;
 
 // Originally, generate was a rust function: https://github.com/cloudflare/wrangler/blob/master/src/cli/mod.rs#L106-L123
 export async function generateHandler(args: GenerateArgs) {
@@ -44,17 +43,16 @@ export async function generateHandler(args: GenerateArgs) {
 	if (args.template === undefined) {
 		return initHandler({
 			name: args.name,
-			template: undefined,
 			site: undefined,
 			yes: undefined,
 			fromDash: undefined,
-			"from-dash": undefined,
 			v: undefined,
 			config: undefined,
 			env: undefined,
 			type: undefined,
 			_: args._,
 			$0: args.$0,
+			experimentalJsonConfig: false,
 		});
 	}
 

@@ -12,13 +12,13 @@ import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { pagesBetaWarning } from "./utils";
+import type {
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
+} from "../yargs-types";
 import type { PagesConfigCache, Project } from "./types";
-import type { ArgumentsCamelCase, Argv } from "yargs";
 
-// Empty object, as per eslint
-type ListArgs = Record<string, never>;
-
-export function ListOptions(yargs: Argv): Argv<ListArgs> {
+export function ListOptions(yargs: CommonYargsArgv) {
 	return yargs.epilogue(pagesBetaWarning);
 }
 
@@ -77,12 +77,7 @@ export const listProjects = async ({
 	return results;
 };
 
-type CreateArgs = {
-	"project-name": string;
-	"production-branch"?: string;
-};
-
-export function CreateOptions(yargs: Argv): Argv<CreateArgs> {
+export function CreateOptions(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("project-name", {
 			type: "string",
@@ -101,7 +96,7 @@ export function CreateOptions(yargs: Argv): Argv<CreateArgs> {
 export async function CreateHandler({
 	productionBranch,
 	projectName,
-}: ArgumentsCamelCase<CreateArgs>) {
+}: StrictYargsOptionsToInterface<typeof CreateOptions>) {
 	const config = getConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME);
 	const accountId = await requireAuth(config);
 

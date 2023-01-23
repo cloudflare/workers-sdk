@@ -20,16 +20,14 @@ import { CommandLineArgsError, printWranglerBanner } from "./index";
 import type { RawConfig } from "./config";
 import type { Route, SimpleRoute } from "./config/environment";
 import type { WorkerMetadata } from "./create-worker-upload-form";
-import type { ConfigPath } from "./index";
 import type { PackageManager } from "./package-manager";
 import type { PackageJSON } from "./parse";
 import type {
-	CommonYargsOptions,
-	YargsOptionsToInterface,
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
 } from "./yargs-types";
-import type { Argv } from "yargs";
 
-export function initOptions(yargs: Argv<CommonYargsOptions>) {
+export function initOptions(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("name", {
 			describe: "The name of your worker",
@@ -60,7 +58,7 @@ export function initOptions(yargs: Argv<CommonYargsOptions>) {
 		});
 }
 
-type InitArgs = YargsOptionsToInterface<typeof initOptions>;
+type InitArgs = StrictYargsOptionsToInterface<typeof initOptions>;
 
 export type ServiceMetadataRes = {
 	id: string;
@@ -170,7 +168,7 @@ export async function initHandler(args: InitArgs) {
 
 	// If --from-dash, check that script actually exists
 	if (fromDashScriptName) {
-		const config = readConfig(args.config as ConfigPath, args);
+		const config = readConfig(args.config, args);
 		accountId = await requireAuth(config);
 		try {
 			serviceMetadata = await fetchResult<ServiceMetadataRes>(

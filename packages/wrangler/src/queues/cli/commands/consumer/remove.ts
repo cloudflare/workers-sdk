@@ -1,16 +1,12 @@
-import { type Argv } from "yargs";
 import { readConfig } from "../../../../config";
 import { logger } from "../../../../logger";
 import { deleteConsumer } from "../../../client";
-import type { CommonYargsOptions } from "../../../../yargs-types";
+import type {
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
+} from "../../../../yargs-types";
 
-type Args = CommonYargsOptions & {
-	config?: string;
-	["queue-name"]: string;
-	["script-name"]: string;
-};
-
-export function options(yargs: Argv<CommonYargsOptions>): Argv<Args> {
+export function options(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("queue-name", {
 			type: "string",
@@ -24,15 +20,12 @@ export function options(yargs: Argv<CommonYargsOptions>): Argv<Args> {
 		});
 }
 
-export async function handler(args: Args) {
+export async function handler(
+	args: StrictYargsOptionsToInterface<typeof options>
+) {
 	const config = readConfig(args.config, args);
 
-	logger.log(`Removing consumer from queue ${args["queue-name"]}.`);
-	await deleteConsumer(
-		config,
-		args["queue-name"],
-		args["script-name"],
-		args.env
-	);
-	logger.log(`Removed consumer from queue ${args["queue-name"]}.`);
+	logger.log(`Removing consumer from queue ${args.queueName}.`);
+	await deleteConsumer(config, args.queueName, args.scriptName, args.env);
+	logger.log(`Removed consumer from queue ${args.queueName}.`);
 }

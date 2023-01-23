@@ -21,14 +21,16 @@ import {
 } from "./helpers";
 import { DatabaseWithLocal } from "./options";
 import type { ParseError } from "../../parse";
-import type { BaseSqlExecuteArgs } from "../execute";
-import type { Argv } from "yargs";
+import type {
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
+} from "../../yargs-types";
 
-export function ApplyOptions(yargs: Argv): Argv<BaseSqlExecuteArgs> {
+export function ApplyOptions(yargs: CommonYargsArgv) {
 	return DatabaseWithLocal(yargs);
 }
-
-export const ApplyHandler = withConfig<BaseSqlExecuteArgs>(
+type ApplyHandlerOptions = StrictYargsOptionsToInterface<typeof ApplyOptions>;
+export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 	async ({ config, database, local, persistTo }): Promise<void> => {
 		logger.log(d1BetaWarning);
 
