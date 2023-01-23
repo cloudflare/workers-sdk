@@ -77,7 +77,7 @@ jobs:
         run: npx typescript-json-schema packages/wrangler/tsconfig.json RawConfig > packages/json-schema-worker/wrangler-schema.json
 
       - name: Get branch name
-        run: echo "branch_name=`git rev-parse --abbrev-ref HEAD`"" >> $GITHUB_OUTPUT
+        run: echo "branch_name=`git rev-parse --abbrev-ref HEAD`" >> $GITHUB_OUTPUT
         id: branch
 
       - name: Upload JSON schema
