@@ -21,26 +21,26 @@ import type { Response } from "undici";
 export function ListOptions(yargs: CommonYargsArgv) {
 	return Name(yargs);
 }
+type ListHandlerOptions = StrictYargsOptionsToInterface<typeof ListOptions>;
+export const ListHandler = withConfig<ListHandlerOptions>(
+	async ({ config, name }): Promise<void> => {
+		const accountId = await requireAuth({});
+		logger.log(d1BetaWarning);
+		const db: Database = await getDatabaseByNameOrBinding(
+			config,
+			accountId,
+			name
+		);
 
-export const ListHandler = withConfig<
-	StrictYargsOptionsToInterface<typeof ListOptions>
->(async ({ config, name }): Promise<void> => {
-	const accountId = await requireAuth({});
-	logger.log(d1BetaWarning);
-	const db: Database = await getDatabaseByNameOrBinding(
-		config,
-		accountId,
-		name
-	);
-
-	const backups: Backup[] = await listBackups(accountId, db.uuid);
-	render(
-		<Table
-			data={backups}
-			columns={["created_at", "id", "num_tables", "size"]}
-		></Table>
-	);
-});
+		const backups: Backup[] = await listBackups(accountId, db.uuid);
+		render(
+			<Table
+				data={backups}
+				columns={["created_at", "id", "num_tables", "size"]}
+			></Table>
+		);
+	}
+);
 
 export const listBackups = async (
 	accountId: string,
@@ -81,26 +81,27 @@ export const listBackups = async (
 export function CreateOptions(yargs: CommonYargsArgv) {
 	return ListOptions(yargs);
 }
+type CreateHandlerOptions = StrictYargsOptionsToInterface<typeof CreateOptions>;
 
-export const CreateHandler = withConfig<
-	StrictYargsOptionsToInterface<typeof CreateOptions>
->(async ({ config, name }): Promise<void> => {
-	const accountId = await requireAuth({});
-	logger.log(d1BetaWarning);
-	const db: Database = await getDatabaseByNameOrBinding(
-		config,
-		accountId,
-		name
-	);
+export const CreateHandler = withConfig<CreateHandlerOptions>(
+	async ({ config, name }): Promise<void> => {
+		const accountId = await requireAuth({});
+		logger.log(d1BetaWarning);
+		const db: Database = await getDatabaseByNameOrBinding(
+			config,
+			accountId,
+			name
+		);
 
-	const backup: Backup = await createBackup(accountId, db.uuid);
-	render(
-		<Table
-			data={[backup]}
-			columns={["created_at", "id", "num_tables", "size", "state"]}
-		></Table>
-	);
-});
+		const backup: Backup = await createBackup(accountId, db.uuid);
+		render(
+			<Table
+				data={[backup]}
+				columns={["created_at", "id", "num_tables", "size", "state"]}
+			></Table>
+		);
+	}
+);
 
 export const createBackup = async (
 	accountId: string,
@@ -125,22 +126,24 @@ export function RestoreOptions(yargs: CommonYargsArgv) {
 		demandOption: true,
 	});
 }
+type RestoreHandlerOptions = StrictYargsOptionsToInterface<
+	typeof RestoreOptions
+>;
+export const RestoreHandler = withConfig<RestoreHandlerOptions>(
+	async ({ config, name, backupId }): Promise<void> => {
+		const accountId = await requireAuth({});
+		logger.log(d1BetaWarning);
+		const db: Database = await getDatabaseByNameOrBinding(
+			config,
+			accountId,
+			name
+		);
 
-export const RestoreHandler = withConfig<
-	StrictYargsOptionsToInterface<typeof RestoreOptions>
->(async ({ config, name, backupId }): Promise<void> => {
-	const accountId = await requireAuth({});
-	logger.log(d1BetaWarning);
-	const db: Database = await getDatabaseByNameOrBinding(
-		config,
-		accountId,
-		name
-	);
-
-	logger.log(`Restoring ${name} from backup ${backupId}....`);
-	await restoreBackup(accountId, db.uuid, backupId);
-	logger.log(`Done!`);
-});
+		logger.log(`Restoring ${name} from backup ${backupId}....`);
+		await restoreBackup(accountId, db.uuid, backupId);
+		logger.log(`Done!`);
+	}
+);
 
 export const restoreBackup = async (
 	accountId: string,
@@ -171,37 +174,39 @@ export function DownloadOptions(yargs: CommonYargsArgv) {
 			type: "string",
 		});
 }
-
-export const DownloadHandler = withConfig<
-	StrictYargsOptionsToInterface<typeof DownloadOptions>
->(async ({ name, backupId, output, config }): Promise<void> => {
-	const accountId = await requireAuth({});
-	logger.log(d1BetaWarning);
-	const db: Database = await getDatabaseByNameOrBinding(
-		config,
-		accountId,
-		name
-	);
-	const filename =
-		output ||
-		path.join(
-			process.env.INIT_CWD as string,
-			`${name}.${backupId.slice(0, 8)}.sqlite3`
+type DownloadHandlerOptions = StrictYargsOptionsToInterface<
+	typeof DownloadOptions
+>;
+export const DownloadHandler = withConfig<DownloadHandlerOptions>(
+	async ({ name, backupId, output, config }): Promise<void> => {
+		const accountId = await requireAuth({});
+		logger.log(d1BetaWarning);
+		const db: Database = await getDatabaseByNameOrBinding(
+			config,
+			accountId,
+			name
 		);
+		const filename =
+			output ||
+			path.join(
+				process.env.INIT_CWD as string,
+				`${name}.${backupId.slice(0, 8)}.sqlite3`
+			);
 
-	logger.log(`🌀 Downloading backup ${backupId} from '${name}'`);
-	const response = await getBackupResponse(accountId, db.uuid, backupId);
-	if (!response.ok) {
-		throw new Error(
-			`Failed to download backup ${backupId} from '${name}' - got ${response.status} from the API`
-		);
+		logger.log(`🌀 Downloading backup ${backupId} from '${name}'`);
+		const response = await getBackupResponse(accountId, db.uuid, backupId);
+		if (!response.ok) {
+			throw new Error(
+				`Failed to download backup ${backupId} from '${name}' - got ${response.status} from the API`
+			);
+		}
+		logger.log(`🌀 Saving to ${filename}`);
+		// TODO: stream this once we upgrade to Node18 and can use Writable.fromWeb
+		const buffer = await response.arrayBuffer();
+		await fs.writeFile(filename, new Buffer(buffer));
+		logger.log(`🌀 Done!`);
 	}
-	logger.log(`🌀 Saving to ${filename}`);
-	// TODO: stream this once we upgrade to Node18 and can use Writable.fromWeb
-	const buffer = await response.arrayBuffer();
-	await fs.writeFile(filename, new Buffer(buffer));
-	logger.log(`🌀 Done!`);
-});
+);
 
 export const getBackupResponse = async (
 	accountId: string,

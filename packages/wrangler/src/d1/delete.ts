@@ -21,33 +21,33 @@ export function Options(d1ListYargs: CommonYargsArgv) {
 		})
 		.epilogue(d1BetaWarning);
 }
+type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
+export const Handler = withConfig<HandlerOptions>(
+	async ({ name, skipConfirmation, config }): Promise<void> => {
+		const accountId = await requireAuth({});
+		logger.log(d1BetaWarning);
 
-export const Handler = withConfig<
-	StrictYargsOptionsToInterface<typeof Options>
->(async ({ name, skipConfirmation, config }): Promise<void> => {
-	const accountId = await requireAuth({});
-	logger.log(d1BetaWarning);
+		const db: Database = await getDatabaseByNameOrBinding(
+			config,
+			accountId,
+			name
+		);
 
-	const db: Database = await getDatabaseByNameOrBinding(
-		config,
-		accountId,
-		name
-	);
-
-	logger.log(`About to delete DB '${name}' (${db.uuid}).`);
-	if (!skipConfirmation) {
-		const response = await confirm(`Ok to proceed?`);
-		if (!response) {
-			logger.log(`Not deleting.`);
-			return;
+		logger.log(`About to delete DB '${name}' (${db.uuid}).`);
+		if (!skipConfirmation) {
+			const response = await confirm(`Ok to proceed?`);
+			if (!response) {
+				logger.log(`Not deleting.`);
+				return;
+			}
 		}
+
+		logger.log("Deleting...");
+
+		await fetchResult(`/accounts/${accountId}/d1/database/${db.uuid}`, {
+			method: "DELETE",
+		});
+
+		logger.log(`Deleted '${name}' successfully.`);
 	}
-
-	logger.log("Deleting...");
-
-	await fetchResult(`/accounts/${accountId}/d1/database/${db.uuid}`, {
-		method: "DELETE",
-	});
-
-	logger.log(`Deleted '${name}' successfully.`);
-});
+);

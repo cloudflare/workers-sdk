@@ -20,62 +20,62 @@ import type {
 export function ListOptions(yargs: CommonYargsArgv) {
 	return DatabaseWithLocal(yargs);
 }
+type ListHandlerOptions = StrictYargsOptionsToInterface<typeof ListOptions>;
+export const ListHandler = withConfig<ListHandlerOptions>(
+	async ({ config, database, local, persistTo }): Promise<void> => {
+		await requireAuth({});
+		logger.log(d1BetaWarning);
 
-export const ListHandler = withConfig<
-	StrictYargsOptionsToInterface<typeof ListOptions>
->(async ({ config, database, local, persistTo }): Promise<void> => {
-	await requireAuth({});
-	logger.log(d1BetaWarning);
+		const databaseInfo = await getDatabaseInfoFromConfig(config, database);
+		if (!databaseInfo) {
+			throw new Error(
+				`Can't find a DB with name/binding '${database}' in local config. Check info in wrangler.toml...`
+			);
+		}
 
-	const databaseInfo = await getDatabaseInfoFromConfig(config, database);
-	if (!databaseInfo) {
-		throw new Error(
-			`Can't find a DB with name/binding '${database}' in local config. Check info in wrangler.toml...`
+		if (!config.configPath) {
+			return;
+		}
+		const { migrationsTableName, migrationsFolderPath } = databaseInfo;
+
+		const migrationsPath = await getMigrationsPath(
+			path.dirname(config.configPath),
+			migrationsFolderPath,
+			false
 		);
-	}
-
-	if (!config.configPath) {
-		return;
-	}
-	const { migrationsTableName, migrationsFolderPath } = databaseInfo;
-
-	const migrationsPath = await getMigrationsPath(
-		path.dirname(config.configPath),
-		migrationsFolderPath,
-		false
-	);
-	await initMigrationsTable(
-		migrationsTableName,
-		local,
-		config,
-		database,
-		persistTo
-	);
-
-	const unappliedMigrations = (
-		await getUnappliedMigrations(
+		await initMigrationsTable(
 			migrationsTableName,
-			migrationsPath,
 			local,
 			config,
 			database,
 			persistTo
-		)
-	).map((migration) => {
-		return {
-			Name: migration,
-		};
-	});
+		);
 
-	if (unappliedMigrations.length === 0) {
-		render(<Text>✅ No migrations to apply!</Text>);
-		return;
+		const unappliedMigrations = (
+			await getUnappliedMigrations(
+				migrationsTableName,
+				migrationsPath,
+				local,
+				config,
+				database,
+				persistTo
+			)
+		).map((migration) => {
+			return {
+				Name: migration,
+			};
+		});
+
+		if (unappliedMigrations.length === 0) {
+			render(<Text>✅ No migrations to apply!</Text>);
+			return;
+		}
+
+		render(
+			<Box flexDirection="column">
+				<Text>Migrations to be applied:</Text>
+				<Table data={unappliedMigrations} columns={["Name"]}></Table>
+			</Box>
+		);
 	}
-
-	render(
-		<Box flexDirection="column">
-			<Text>Migrations to be applied:</Text>
-			<Table data={unappliedMigrations} columns={["Name"]}></Table>
-		</Box>
-	);
-});
+);

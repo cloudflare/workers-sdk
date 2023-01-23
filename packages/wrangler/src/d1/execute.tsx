@@ -115,10 +115,8 @@ export async function executeSql(
 		? await executeLocally(config, name, shouldPrompt, queries, persistTo)
 		: await executeRemotely(config, name, shouldPrompt, batchSplit(queries));
 }
-
-export const Handler = withConfig<
-	StrictYargsOptionsToInterface<typeof Options>
->(
+type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
+export const Handler = withConfig<HandlerOptions>(
 	async ({
 		config,
 		database,
