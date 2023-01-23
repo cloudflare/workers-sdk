@@ -1,5 +1,70 @@
 # wrangler
 
+## 2.8.1
+
+### Patch Changes
+
+- [#2501](https://github.com/cloudflare/wrangler2/pull/2501) [`a0e5a491`](https://github.com/cloudflare/wrangler2/commit/a0e5a4913621cffe757b2d14b6f3f466831f3d7f) Thanks [@geelen](https://github.com/geelen)! - fix: make it possible to query d1 databases from durable objects
+
+  This PR makes it possible to access D1 from Durable Objects.
+
+  To be able to query D1 from your Durable Object, you'll need to install the latest version of wrangler, and redeploy your Worker.
+
+  For a D1 binding like:
+
+  ```toml
+  [[d1_databases]]
+  binding = "DB" # i.e. available in your Worker on env.DB
+  database_name = "my-database-name"
+  database_id = "UUID-GOES-HERE"
+  preview_database_id = "UUID-GOES-HERE"
+  ```
+
+  You'll be able to access your D1 database via `env.DB` in your Durable Object.
+
+* [#2280](https://github.com/cloudflare/wrangler2/pull/2280) [`ef110923`](https://github.com/cloudflare/wrangler2/commit/ef1109235fb81200f32b953e9d448f9684d0363c) Thanks [@penalosa](https://github.com/penalosa)! - Support `queue` and `trace` events in module middleware. This means that `queue` and `trace` events should work properly with the `--test-scheduled` flag
+
+- [#2526](https://github.com/cloudflare/wrangler2/pull/2526) [`69d379a4`](https://github.com/cloudflare/wrangler2/commit/69d379a48dd49c9c1812c89b2c7f1680e2196c0f) Thanks [@jrf0110](https://github.com/jrf0110)! - Adds unstable_pages module to JS API
+
+* [#2558](https://github.com/cloudflare/wrangler2/pull/2558) [`b910f644`](https://github.com/cloudflare/wrangler2/commit/b910f644c7440ad034ffcaab288fcbb64deaa83b) Thanks [@caass](https://github.com/caass)! - Add metrics for deployments
+
+- [#2554](https://github.com/cloudflare/wrangler2/pull/2554) [`fbeaf609`](https://github.com/cloudflare/wrangler2/commit/fbeaf6090e5eca4730358caa1838d0866d7b6006) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat: Add support for wasm module imports in `wrangler pages dev`
+
+  Currently it is not possible to import `wasm` modules in either Pages
+  Functions or Pages Advanced Mode projects.
+
+  This commit caries out work to address the aforementioned issue by
+  enabling `wasm` module imports in `wrangler pages dev`. As a result,
+  Pages users can now import their `wasm` modules withing their Functions
+  or `_worker.js` files, and `wrangler pages dev` will correctly bundle
+  everything and serve these "external" modules.
+
+  ```
+  import hello from "./hello.wasm"
+
+  export async function onRequest() {
+  	const module = await WebAssembly.instantiate(hello);
+  	return new Response(module.exports.hello);
+  }
+  ```
+
+* [#2563](https://github.com/cloudflare/wrangler2/pull/2563) [`5ba39569`](https://github.com/cloudflare/wrangler2/commit/5ba39569e7ca6e341635b9beb8edebc60ad17dcd) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: Copy module imports related files to outdir
+
+  When we bundle a Worker `esbuild` takes care of writing the
+  results to the output directory. However, if the Worker contains
+  any `external` imports, such as text/wasm/binary module imports,
+  that cannot be inlined into the same bundle file, `bundleWorker`
+  will not copy these files to the output directory. This doesn't
+  affect `wrangler publish` per se, because of how the Worker
+  upload FormData is created. It does however create some
+  inconsistencies when running `wrangler publish --outdir` or
+  `wrangler publish --outdir --dry-run`, in that, `outdir` will
+  not contain those external import files.
+
+  This commit addresses this issue by making sure the aforementioned
+  files do get copied over to `outdir` together with `esbuild`'s
+  resulting bundle files.
+
 ## 2.8.0
 
 ### Minor Changes
