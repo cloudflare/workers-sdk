@@ -70,6 +70,9 @@ jobs:
       - name: Install NPM Dependencies
         run: npm ci
 
+      - name: Build Wrangler
+        run: npm run build
+
       - name: Generate JSON schema
         run: npx typescript-json-schema packages/wrangler/tsconfig.json RawConfig > packages/json-schema-worker/wrangler-schema.json
 
