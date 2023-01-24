@@ -39,8 +39,7 @@ export type DeploymentListResult = {
 export async function deployments(
 	accountId: string,
 	scriptName: string | undefined,
-	{ send_metrics: sendMetrics }: { send_metrics?: Config["send_metrics"] } = {},
-	deploymentId: string
+	{ send_metrics: sendMetrics }: { send_metrics?: Config["send_metrics"] } = {}
 ) {
 	if (!scriptName) {
 		throw new Error(
@@ -61,43 +60,6 @@ export async function deployments(
 			`/accounts/${accountId}/workers/services/${scriptName}`
 		)
 	).default_environment.script.tag;
-
-	if (deploymentId) {
-		const scriptContent = await fetchScriptContent(
-			`/accounts/${accountId}/workers/scripts/${scriptName}?deployment=${deploymentId}`
-		);
-		const deploymentDetails = await fetchResult<DeploymentListRes["latest"]>(
-			`/accounts/${accountId}/workers/deployments/by-script/${scriptTag}/detail/${deploymentId}`
-		);
-
-		const flatObj: Record<string, unknown> = {};
-		for (const deployDetailsKey in deploymentDetails) {
-			if (
-				Object.prototype.hasOwnProperty.call(
-					deploymentDetails,
-					deployDetailsKey
-				)
-			) {
-				//@ts-expect-error flattening objects causes the index signature to error
-				const value = deploymentDetails[deployDetailsKey];
-				if (typeof value === "object" && value !== null) {
-					for (const subKey in value) {
-						if (Object.prototype.hasOwnProperty.call(value, subKey)) {
-							flatObj[`${deployDetailsKey}.${subKey}`] = value[subKey];
-						}
-					}
-				} else {
-					flatObj[deployDetailsKey] = value;
-				}
-			}
-		}
-
-		logger.log(flatObj);
-		logger.log(scriptContent);
-
-		// early return to skip the deployments listings
-		return;
-	}
 
 	const params = new URLSearchParams({ order: "asc" });
 	const { items: deploys } = await fetchResult<DeploymentListResult>(
@@ -172,17 +134,67 @@ export async function rollbackDeployment(
 			sendMetrics,
 		}
 	);
-	try {
-		const rollbackResponse = await fetchResult<DeploymentListRes["latest"]>(
-			`/account/${accountId}/workers/scripts/${scriptName}?rollback_to=${deploymentId}`,
-			{ method: "PUT" }
-		);
 
-		logger.log(`Successfully rolled back to deployment ID: ${deploymentId}`);
-		logger.log("Rollbacks metadata:", rollbackResponse.metadata);
-	} catch (e) {
-		console.log(e);
+	const rollbackResponse = await fetchResult<DeploymentListRes["latest"]>(
+		`/account/${accountId}/workers/scripts/${scriptName}?rollback_to=${deploymentId}`,
+		{ method: "PUT" }
+	);
+
+	logger.log(`Successfully rolled back to deployment ID: ${deploymentId}`);
+	logger.log("Rollbacks metadata:", rollbackResponse.metadata);
+}
+
+export async function viewDeployment(
+	accountId: string,
+	scriptName: string | undefined,
+	{ send_metrics: sendMetrics }: { send_metrics?: Config["send_metrics"] } = {},
+	deploymentId: string
+) {
+	await metrics.sendMetricsEvent(
+		"view deployments",
+		{ view: scriptName ? "single" : "all" },
+		{
+			sendMetrics,
+		}
+	);
+
+	const scriptTag = (
+		await fetchResult<ServiceMetadataRes>(
+			`/accounts/${accountId}/workers/services/${scriptName}`
+		)
+	).default_environment.script.tag;
+
+	const scriptContent = await fetchScriptContent(
+		`/accounts/${accountId}/workers/scripts/${scriptName}?deployment=${deploymentId}`
+	);
+	const deploymentDetails = await fetchResult<DeploymentListRes["latest"]>(
+		`/accounts/${accountId}/workers/deployments/by-script/${scriptTag}/detail/${deploymentId}`
+	);
+
+	const flatObj: Record<string, unknown> = {};
+	for (const deployDetailsKey in deploymentDetails) {
+		if (
+			Object.prototype.hasOwnProperty.call(deploymentDetails, deployDetailsKey)
+		) {
+			//@ts-expect-error flattening objects causes the index signature to error
+			const value = deploymentDetails[deployDetailsKey];
+			if (typeof value === "object" && value !== null) {
+				for (const subKey in value) {
+					if (Object.prototype.hasOwnProperty.call(value, subKey)) {
+						flatObj[`${deployDetailsKey}.${subKey}`] = value[subKey];
+					}
+				}
+			} else {
+				flatObj[deployDetailsKey] = value;
+			}
+		}
 	}
+
+	logger.log(flatObj);
+	logger.log(scriptContent);
+
+	// early return to skip the deployments listings
+	return;
 }
 
 export async function initializeDeployments(

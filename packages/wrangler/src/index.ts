@@ -13,6 +13,7 @@ import {
 	deployments,
 	initializeDeployments,
 	rollbackDeployment,
+	viewDeployment,
 } from "./deployments";
 import {
 	buildHandler,
@@ -578,36 +579,30 @@ export function createCLIParser(argv: string[]) {
 	const deploymentsWarning =
 		"🚧`wrangler deployments` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose";
 	wrangler.command(
-		"deployments [deployment-id]",
+		"deployments",
 		"🚢 Displays the 10 most recent deployments for a worker",
 		(yargs) =>
 			yargs
-				.positional("deployment-id", {
-					describe: "The ID of the deployment you want to inspect",
-					type: "string",
-					demandOption: false,
-				})
 				.option("name", {
 					describe: "The name of your worker",
 					type: "string",
 				})
 				.command(
-					"rollback [deployment-id]",
+					"rollback <deployment-id>",
 					"🔙 Rollback a deployment",
-					(rollbackYargs) => {
-						return rollbackYargs
+					(rollbackYargs) =>
+						rollbackYargs
 							.positional("deployment-id", {
-								describe: "The ID of the deployment you want to inspect",
+								describe: "The ID of the deployment to rollback to",
 								type: "string",
-								demandOption: false,
+								demandOption: true,
 							})
 							.option("yes", {
 								alias: "y",
 								describe: "Skip confirmation prompt",
 								type: "boolean",
 								default: false,
-							});
-					},
+							}),
 					async (
 						rollbackYargs: ArgumentsCamelCase<{
 							deploymentId: string;
@@ -625,6 +620,39 @@ export function createCLIParser(argv: string[]) {
 						);
 					}
 				)
+				.command(
+					"view <deployment-id>",
+					"🔍 View a deployment",
+					async (viewYargs) =>
+						viewYargs
+							.positional("deployment-id", {
+								describe: "The ID of the deployment you want to inspect",
+								type: "string",
+								demandOption: true,
+							})
+							.option("yes", {
+								alias: "y",
+								describe: "Skip confirmation prompt",
+								type: "boolean",
+								default: false,
+							}),
+					async (
+						viewYargs: ArgumentsCamelCase<{
+							deploymentId: string;
+							yes: boolean;
+						}>
+					) => {
+						const { accountId, scriptName, config } =
+							await initializeDeployments(viewYargs, deploymentsWarning);
+
+						await viewDeployment(
+							accountId,
+							scriptName,
+							config,
+							viewYargs.deploymentId
+						);
+					}
+				)
 				.epilogue(deploymentsWarning),
 		async (
 			deploymentsYargs: ArgumentsCamelCase<{
@@ -636,12 +664,7 @@ export function createCLIParser(argv: string[]) {
 				deploymentsYargs,
 				deploymentsWarning
 			);
-			await deployments(
-				accountId,
-				scriptName,
-				config,
-				deploymentsYargs.deploymentId
-			);
+			await deployments(accountId, scriptName, config);
 		}
 	);
 
