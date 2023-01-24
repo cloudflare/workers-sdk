@@ -3,6 +3,7 @@ import * as TOML from "@iarna/toml";
 import { rest } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { mockConfirm } from "./helpers/mock-dialogs";
 import {
 	msw,
 	mswSuccessOauthHandlers,
@@ -15,7 +16,6 @@ import { mswSuccessDeployments } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
-import { mockConfirm } from "./helpers/mock-dialogs";
 
 describe("deployments", () => {
 	const std = mockConsoleMethods();
@@ -223,7 +223,9 @@ describe("deployments", () => {
 
 				await runWrangler("deployments rollback Intrepid");
 				expect(std.out).toMatchInlineSnapshot(`
-			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
+			"? You are about to Rollback to a previous deployment on the Edge, would you like to continue
+			🤖 [2mUsing default value in non-interactive context:[22m [37m[1myes[22m[39m
+			🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
 
 			Successfully rolled back to deployment ID: Intrepid
 			Rollbacks details:
@@ -263,7 +265,34 @@ describe("deployments", () => {
 			Object {
 			  "debug": "",
 			  "err": "",
-			  "out": "",
+			  "out": "? You are about to Rollback to a previous deployment on the Edge, would you like to continue
+			🤖 [2mUsing default value in non-interactive context:[22m [37m[1myes[22m[39m
+			🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
+
+			Successfully rolled back to deployment ID: Intrepid
+			Rollbacks details:
+				{
+			  \\"created_on\\": \\"2222-11-18T16:40:48.50545Z\\",
+			  \\"modified_on\\": \\"2222-01-20T18:08:47.464024Z\\",
+			  \\"id\\": \\"space_craft_1\\",
+			  \\"tag\\": \\"alien_tech_001\\",
+			  \\"tags\\": [
+			    \\"hyperdrive\\",
+			    \\"laser_cannons\\",
+			    \\"shields\\"
+			  ],
+			  \\"deployment_id\\": \\"galactic_mission_alpha\\",
+			  \\"logpush\\": true,
+			  \\"etag\\": \\"13a3240e8fb414561b0366813b0b8f42b3e6cfa0d9e70e99835dae83d0d8a794\\",
+			  \\"handlers\\": [
+			    \\"interstellar_communication\\",
+			    \\"hyperspace_navigation\\"
+			  ],
+			  \\"last_deployed_from\\": \\"spaceport_alpha\\",
+			  \\"usage_model\\": \\"intergalactic\\",
+			  \\"script\\": \\"addEventListener('interstellar_communication', event =>/n/t/t/t/t/t/t/t{ event.respondWith(transmit(event.request)) }/n/t/t/t/t/t/t/t)\\",
+			  \\"size\\": \\"1 light-year\\"
+			}",
 			  "warn": "",
 			}
 		`);
