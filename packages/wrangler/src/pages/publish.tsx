@@ -2,6 +2,7 @@ import { execSync } from "node:child_process";
 import { render, Text } from "ink";
 import SelectInput from "ink-select-input";
 import React from "react";
+import yargs from "yargs";
 import { publish } from "../api/pages/publish";
 import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
@@ -23,8 +24,8 @@ import type { Project } from "@cloudflare/types";
 
 type PublishArgs = StrictYargsOptionsToInterface<typeof Options>;
 
-export function Options(yargs: CommonYargsArgv) {
-	return yargs
+export function Options(yargsArgv: CommonYargsArgv) {
+	return yargsArgv
 		.positional("directory", {
 			type: "string",
 			demandOption: true,
@@ -58,7 +59,7 @@ export function Options(yargs: CommonYargsArgv) {
 			},
 			bundle: {
 				type: "boolean",
-				default: false,
+				default: undefined,
 				hidden: true,
 			},
 			"no-bundle": {
@@ -93,6 +94,18 @@ export const Handler = async ({
 
 	if (!directory) {
 		throw new FatalError("Must specify a directory.", 1);
+	}
+
+	const { defaulted } = yargs.parsed as unknown as {
+		defaulted: Record<string, boolean>;
+	};
+	const bundleDefaulted = defaulted["bundle"];
+	const noBundleDefaulted = defaulted["no-bundle"];
+	if (!bundleDefaulted && !noBundleDefaulted && bundle === noBundle) {
+		throw new FatalError(
+			"The --bundle and --no-bundle options are opposite, they cannot have the same value.",
+			1
+		);
 	}
 
 	const config = getConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME);
@@ -250,7 +263,7 @@ export const Handler = async ({
 		commitMessage,
 		commitHash,
 		commitDirty,
-		bundle: bundle ?? !noBundle,
+		bundle: bundle || !noBundle,
 	});
 
 	saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
