@@ -266,13 +266,13 @@ describe("deployments", () => {
 				expect(std.out).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should skip prompt automcatically in rollback if in a non-TTY environment", async () => {
+			it("should skip prompt automatically in rollback if in a non-TTY environment", async () => {
 				setIsTTY(false);
 
 				await runWrangler("deployments rollback Intrepid");
 				expect(std.out).toMatchInlineSnapshot(`
 			"? You are about to Rollback to a previous deployment on the Edge, would you like to continue
-			🤖 [2mUsing default value in non-interactive context:[22m [37m[1myes[22m[39m
+			🤖 Using default value in non-interactive context: yes
 			🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
 
 			Successfully rolled back to deployment ID: Intrepid
