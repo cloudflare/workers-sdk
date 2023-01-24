@@ -266,7 +266,7 @@ describe("deployments", () => {
 				expect(std.out).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should early exit from rollback if in a non-TTY environment", async () => {
+			it("should skip prompt automcatically in rollback if in a non-TTY environment", async () => {
 				setIsTTY(false);
 
 				await runWrangler("deployments rollback Intrepid");
