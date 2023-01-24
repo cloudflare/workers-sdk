@@ -141,6 +141,11 @@ export async function publish({
 	// Routing configuration displayed in the Functions tab of a deployment in Dash
 	let filepathRoutingConfig: string | undefined;
 
+	const d1Databases = Object.keys(
+		project.deployment_configs[isProduction ? "production" : "preview"]
+			.d1_databases ?? {}
+	);
+
 	if (!_workerJS && existsSync(functionsDirectory)) {
 		const outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`);
 		const outputConfigPath = join(
@@ -157,10 +162,7 @@ export async function publish({
 				buildOutputDirectory: dirname(outfile),
 				routesOutputPath,
 				local: false,
-				d1Databases: Object.keys(
-					project.deployment_configs[isProduction ? "production" : "preview"]
-						.d1_databases ?? {}
-				),
+				d1Databases,
 			});
 
 			builtFunctions = readFileSync(outfile, "utf-8");
@@ -242,6 +244,7 @@ export async function publish({
 				sourcemap: true,
 				watch: false,
 				onEnd: () => {},
+				betaD1Shims: d1Databases,
 			});
 			workerFileContents = readFileSync(outfile, "utf8");
 		} else {
