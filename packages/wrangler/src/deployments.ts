@@ -7,8 +7,8 @@ import { requireAuth } from "./user";
 import { getScriptName, printWranglerBanner } from ".";
 
 import type { Config } from "./config";
-import type { ConfigPath } from "./index";
 import type { ServiceMetadataRes } from "./init";
+import type { CommonYargsOptions } from "./yargs-types";
 import type { ArgumentsCamelCase } from "yargs";
 
 type DeploymentDetails = {
@@ -141,7 +141,8 @@ export async function rollbackDeployment(
 	);
 
 	logger.log(`Successfully rolled back to deployment ID: ${deploymentId}`);
-	logger.log("Rollbacks metadata:", rollbackResponse.metadata);
+	logger.log(`Rollbacks details:
+	${JSON.stringify(rollbackResponse, null, 2)}`);
 }
 
 export async function viewDeployment(
@@ -198,11 +199,11 @@ export async function viewDeployment(
 }
 
 export async function initializeDeployments(
-	yargs: ArgumentsCamelCase,
+	yargs: ArgumentsCamelCase<CommonYargsOptions>,
 	deploymentsWarning: string
 ) {
 	await printWranglerBanner();
-	const config = readConfig(yargs.config as ConfigPath, yargs);
+	const config = readConfig(yargs.config, yargs);
 	const accountId = await requireAuth(config);
 	const scriptName = getScriptName(
 		{ name: yargs.name as string, env: undefined },
