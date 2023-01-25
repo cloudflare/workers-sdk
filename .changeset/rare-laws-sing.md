@@ -2,7 +2,7 @@
 "wrangler": patch
 ---
 
-fix: cleans up `d1 list` output for json
+fix: implement `d1 list --json` with clean output for piping into other commands
 
 Before:
 
