@@ -200,10 +200,10 @@ async function executeLocally(
 			logger.log
 		);
 
-	if (!existsSync(dbDir) && shouldPrompt) {
-		const ok = await confirm(
-			`About to create ${readableRelative(dbPath)}, ok?`
-		);
+	if (!existsSync(dbDir)) {
+		const ok =
+			!shouldPrompt ||
+			(await confirm(`About to create ${readableRelative(dbPath)}, ok?`));
 		if (!ok) return null;
 		await mkdir(dbDir, { recursive: true });
 	}
