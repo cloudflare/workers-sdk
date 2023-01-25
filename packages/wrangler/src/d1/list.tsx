@@ -16,6 +16,7 @@ export function Options(d1ListYargs: CommonYargsArgv) {
 		.option("json", {
 			describe: "return output as clean JSON",
 			type: "boolean",
+			default: false,
 		})
 		.epilogue(d1BetaWarning);
 }
