@@ -1470,6 +1470,8 @@ describe("pages", () => {
 			expect(std.err).toMatchInlineSnapshot('""');
 		});
 
+		const workerHasD1Shim = (contents: string) => contents.includes("D1_ERROR");
+
 		it("should upload an Advanced Mode project", async () => {
 			// set up the directory of static files to upload.
 			mkdirSync("public");
@@ -1482,6 +1484,7 @@ describe("pages", () => {
 				export default {
 					async fetch(request, env) {
 						const url = new URL(request.url);
+						console.log("SOMETHING FROM WITHIN THE WORKER");
 						return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
 					}
 				};
@@ -1557,16 +1560,11 @@ describe("pages", () => {
 							                          }
 						                      `);
 
-						expect(customWorkerJS).toMatchInlineSnapshot(`
-							"
-											export default {
-												async fetch(request, env) {
-													const url = new URL(request.url);
-													return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
-												}
-											};
-										"
-						`);
+						expect(workerHasD1Shim(customWorkerJS as string)).toBeTruthy();
+						expect(customWorkerJS).toContain(
+							`console.log("SOMETHING FROM WITHIN THE WORKER");`
+						);
+
 						return res.once(
 							ctx.status(200),
 							ctx.json({
@@ -1592,15 +1590,22 @@ describe("pages", () => {
 								errors: [],
 								messages: [],
 								result: {
-									deployment_configs: { production: {}, preview: {} },
-								},
+									deployment_configs: {
+										production: {
+											d1_databases: { MY_D1_DB: { id: "fake-db" } },
+										},
+										preview: {
+											d1_databases: { MY_D1_DB: { id: "fake-db" } },
+										},
+									},
+								} as Partial<Project>,
 							})
 						);
 					}
 				)
 			);
 
-			await runWrangler("pages publish public --project-name=foo");
+			await runWrangler("pages publish public --project-name=foo --bundle");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"✨ Success! Uploaded 1 files (TIMINGS)
