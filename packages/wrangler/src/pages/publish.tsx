@@ -2,7 +2,6 @@ import { execSync } from "node:child_process";
 import { render, Text } from "ink";
 import SelectInput from "ink-select-input";
 import React from "react";
-import yargs from "yargs";
 import { publish } from "../api/pages/publish";
 import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
@@ -24,8 +23,8 @@ import type { Project } from "@cloudflare/types";
 
 type PublishArgs = StrictYargsOptionsToInterface<typeof Options>;
 
-export function Options(yargsArgv: CommonYargsArgv) {
-	return yargsArgv
+export function Options(yargs: CommonYargsArgv) {
+	return yargs
 		.positional("directory", {
 			type: "string",
 			demandOption: true,
@@ -64,7 +63,7 @@ export function Options(yargsArgv: CommonYargsArgv) {
 			},
 			"no-bundle": {
 				type: "boolean",
-				default: true,
+				default: undefined,
 				description: "Whether to run bundling on `_worker.js` before deploying",
 			},
 			config: {
@@ -96,17 +95,16 @@ export const Handler = async ({
 		throw new FatalError("Must specify a directory.", 1);
 	}
 
-	const { defaulted } = yargs.parsed as unknown as {
-		defaulted: Record<string, boolean>;
-	};
-	const bundleDefaulted = defaulted["bundle"];
-	const noBundleDefaulted = defaulted["no-bundle"];
-	if (!bundleDefaulted && !noBundleDefaulted && bundle === noBundle) {
-		throw new FatalError(
-			"The --bundle and --no-bundle options are opposite, they cannot have the same value.",
-			1
-		);
+	if (bundle !== undefined && noBundle !== undefined) {
+		if (bundle === noBundle) {
+			throw new FatalError(
+				"The --bundle and --no-bundle options are opposite, they cannot have the same value.",
+				1
+			);
+		}
 	}
+
+	const enableBundling = (bundle ?? false) || !(noBundle ?? true);
 
 	const config = getConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME);
 	const accountId = await requireAuth(config);
@@ -263,7 +261,7 @@ export const Handler = async ({
 		commitMessage,
 		commitHash,
 		commitDirty,
-		bundle: bundle || !noBundle,
+		bundle: enableBundling,
 	});
 
 	saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
