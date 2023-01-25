@@ -12,18 +12,26 @@ import type {
 import type { Database } from "./types";
 
 export function Options(d1ListYargs: CommonYargsArgv) {
-	return d1ListYargs.epilogue(d1BetaWarning);
+	return d1ListYargs
+		.option("json", {
+			describe: "return output as clean JSON",
+			type: "boolean",
+		})
+		.epilogue(d1BetaWarning);
 }
 
-export async function Handler(
-	_: StrictYargsOptionsToInterface<typeof Options>
-): Promise<void> {
+export async function Handler({
+	json,
+}: StrictYargsOptionsToInterface<typeof Options>): Promise<void> {
 	const accountId = await requireAuth({});
-	logger.log(d1BetaWarning);
-
 	const dbs: Array<Database> = await listDatabases(accountId);
 
-	render(<Table data={dbs}></Table>);
+	if (json) {
+		logger.log(JSON.stringify(dbs, null, 2));
+	} else {
+		logger.log(d1BetaWarning);
+		render(<Table data={dbs}></Table>);
+	}
 }
 
 export const listDatabases = async (
