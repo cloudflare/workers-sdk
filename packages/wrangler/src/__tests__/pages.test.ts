@@ -1470,6 +1470,8 @@ describe("pages", () => {
 			expect(std.err).toMatchInlineSnapshot('""');
 		});
 
+		const workerHasD1Shim = (contents: string) => contents.includes("D1_ERROR");
+
 		it("should upload an Advanced Mode project", async () => {
 			// set up the directory of static files to upload.
 			mkdirSync("public");
@@ -1558,8 +1560,7 @@ describe("pages", () => {
 							                          }
 						                      `);
 
-						// Asserts that the D1 shim has been applied
-						expect(customWorkerJS).toContain("D1_ERROR");
+						expect(workerHasD1Shim(customWorkerJS as string)).toBeTruthy();
 						expect(customWorkerJS).toContain(
 							`console.log("SOMETHING FROM WITHIN THE WORKER");`
 						);
