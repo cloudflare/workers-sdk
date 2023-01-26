@@ -103,8 +103,10 @@ export async function executeSql(
 	if (!sql) throw new Error(`Error: must provide --command or --file.`);
 	if (persistTo && !local)
 		throw new Error(`Error: can't use --persist-to without --local`);
+	if (shouldPrompt) {
+		logger.log(`🌀 Mapping SQL input into an array of statements`);
+	}
 
-	logger.log(`🌀 Mapping SQL input into an array of statements`);
 	const queries = splitSqlQuery(sql);
 
 	if (file && sql) {
@@ -118,7 +120,12 @@ export async function executeSql(
 
 	return local
 		? await executeLocally(config, name, shouldPrompt, queries, persistTo)
-		: await executeRemotely(config, name, shouldPrompt, batchSplit(queries));
+		: await executeRemotely(
+				config,
+				name,
+				shouldPrompt,
+				batchSplit(queries, shouldPrompt)
+		  );
 }
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
 export const Handler = withConfig<HandlerOptions>(
@@ -213,8 +220,9 @@ async function executeLocally(
 		if (!ok) return null;
 		await mkdir(dbDir, { recursive: true });
 	}
-
-	logger.log(`🌀 Loading DB at ${readableRelative(dbPath)}`);
+	if (shouldPrompt) {
+		logger.log(`🌀 Loading DB at ${readableRelative(dbPath)}`);
+	}
 	const db = await createSQLiteDB(dbPath);
 
 	const results: QueryResult[] = [];
@@ -281,7 +289,10 @@ async function executeRemotely(
 				body: JSON.stringify({ sql }),
 			}
 		);
-		result.map(logResult);
+		if (shouldPrompt) {
+			result.map(logResult);
+		}
+
 		results.push(...result);
 	}
 	return results;
@@ -301,8 +312,11 @@ function logResult(r: QueryResult | QueryResult[]) {
 	);
 }
 
-function batchSplit(queries: string[]) {
-	logger.log(`🌀 Parsing ${queries.length} statements`);
+function batchSplit(queries: string[], shouldPrompt: boolean | undefined) {
+	if (shouldPrompt) {
+		logger.log(`🌀 Parsing ${queries.length} statements`);
+	}
+
 	const num_batches = Math.ceil(queries.length / QUERY_LIMIT);
 	const batches: string[] = [];
 	for (let i = 0; i < num_batches; i++) {
@@ -311,9 +325,11 @@ function batchSplit(queries: string[]) {
 		);
 	}
 	if (num_batches > 1) {
-		logger.log(
-			`🌀 We are sending ${num_batches} batch(es) to D1 (limited to ${QUERY_LIMIT} statements per batch)`
-		);
+		if (shouldPrompt) {
+			logger.log(
+				`🌀 We are sending ${num_batches} batch(es) to D1 (limited to ${QUERY_LIMIT} statements per batch)`
+			);
+		}
 	}
 	return batches;
 }
