@@ -265,12 +265,8 @@ async function executeRemotely(
 	);
 
 	if (shouldPrompt) {
+		//only log if we should prompt
 		logger.log(`🌀 Executing on ${name} (${db.uuid}):`);
-
-		// Don't output if shouldPrompt is undefined
-	} else if (shouldPrompt !== undefined) {
-		// Pipe to error so we don't break jq
-		logger.error(`Executing on ${name} (${db.uuid}):`);
 	}
 
 	const results: QueryResult[] = [];
