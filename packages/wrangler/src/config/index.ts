@@ -49,7 +49,7 @@ export function readConfig<CommandArgs>(
 		args
 	);
 
-	if (diagnostics.hasWarnings()) {
+	if (diagnostics.hasWarnings() && !args?.json) {
 		logger.warn(diagnostics.renderWarnings());
 	}
 	if (diagnostics.hasErrors()) {

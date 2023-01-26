@@ -99,7 +99,6 @@ export async function executeSql(
 	command?: string
 ) {
 	const sql = file ? readFileSync(file) : command;
-
 	if (!sql) throw new Error(`Error: must provide --command or --file.`);
 	if (persistTo && !local)
 		throw new Error(`Error: can't use --persist-to without --local`);
@@ -139,7 +138,10 @@ export const Handler = withConfig<HandlerOptions>(
 		yes,
 		json,
 	}): Promise<void> => {
-		logger.log(d1BetaWarning);
+		if (!json) {
+			logger.log(d1BetaWarning);
+		}
+
 		if (file && command)
 			return logger.error(`Error: can't provide both --command and --file.`);
 
