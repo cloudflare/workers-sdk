@@ -75,6 +75,11 @@ export function Options(yargs: CommonYargsArgv) {
 			describe: "Specify directory to use for local persistence (for --local)",
 			type: "string",
 			requiresArg: true,
+		})
+		.option("json", {
+			describe: "return output as clean JSON",
+			type: "boolean",
+			default: false,
 		});
 }
 
@@ -125,6 +130,7 @@ export const Handler = withConfig<HandlerOptions>(
 		local,
 		persistTo,
 		yes,
+		json,
 	}): Promise<void> => {
 		logger.log(d1BetaWarning);
 		if (file && command)
@@ -135,7 +141,7 @@ export const Handler = withConfig<HandlerOptions>(
 			local,
 			config,
 			database,
-			isInteractive && !yes,
+			!json && isInteractive && !yes,
 			persistTo,
 			file,
 			command
