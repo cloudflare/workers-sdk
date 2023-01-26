@@ -159,7 +159,7 @@ export const Handler = withConfig<HandlerOptions>(
 		// Early exit if prompt rejected
 		if (!response) return;
 
-		if (isInteractive) {
+		if (!json && isInteractive) {
 			// Render table if single result
 			render(
 				<Static items={response}>
