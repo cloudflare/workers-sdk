@@ -48,8 +48,7 @@ export function readConfig<CommandArgs>(
 		configPath,
 		args
 	);
-
-	if (diagnostics.hasWarnings() && !args?.json) {
+	if (diagnostics.hasWarnings() && "json" in args && !args["json"]) {
 		logger.warn(diagnostics.renderWarnings());
 	}
 	if (diagnostics.hasErrors()) {
