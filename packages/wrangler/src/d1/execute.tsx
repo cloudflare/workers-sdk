@@ -7,7 +7,7 @@ import Table from "ink-table";
 import { npxImport } from "npx-import";
 import React from "react";
 import { fetchResult } from "../cfetch";
-import { withConfig } from "../config";
+import { readConfig } from "../config";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
@@ -96,13 +96,14 @@ export async function executeSql(
 	shouldPrompt: boolean | undefined,
 	persistTo: undefined | string,
 	file?: string,
-	command?: string
+	command?: string,
+	json?: boolean
 ) {
 	const sql = file ? readFileSync(file) : command;
 	if (!sql) throw new Error(`Error: must provide --command or --file.`);
 	if (persistTo && !local)
 		throw new Error(`Error: can't use --persist-to without --local`);
-	if (shouldPrompt) {
+	if (!json) {
 		logger.log(`🌀 Mapping SQL input into an array of statements`);
 	}
 
@@ -118,81 +119,85 @@ export async function executeSql(
 	}
 
 	return local
-		? await executeLocally(config, name, shouldPrompt, queries, persistTo)
+		? await executeLocally(config, name, shouldPrompt, queries, persistTo, json)
 		: await executeRemotely(
 				config,
 				name,
 				shouldPrompt,
-				batchSplit(queries, shouldPrompt)
+				batchSplit(queries, json),
+				json
 		  );
 }
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
-export const Handler = withConfig<HandlerOptions>(
-	async ({
+
+export const Handler = async (args: HandlerOptions): Promise<void> => {
+	const { local, database, yes, persistTo, file, command, json } = args;
+	if (json) {
+		// set loggerLevel to none to avoid readConfig warnings appearing in JSON output
+		logger.loggerLevel = "none";
+	}
+	const config = readConfig(args.config, args);
+	if (json) {
+		// set loggerLevel back to log to actually output the JSON in stdout
+		logger.loggerLevel = "log";
+	}
+
+	if (!json) {
+		logger.log(d1BetaWarning);
+	}
+
+	if (file && command)
+		return logger.error(`Error: can't provide both --command and --file.`);
+
+	const isInteractive = process.stdout.isTTY;
+	const response: QueryResult[] | null = await executeSql(
+		local,
 		config,
 		database,
+		isInteractive && !yes,
+		persistTo,
 		file,
 		command,
-		local,
-		persistTo,
-		yes,
-		json,
-	}): Promise<void> => {
-		if (!json) {
-			logger.log(d1BetaWarning);
-		}
+		json
+	);
 
-		if (file && command)
-			return logger.error(`Error: can't provide both --command and --file.`);
+	// Early exit if prompt rejected
+	if (!response) return;
 
-		const isInteractive = process.stdout.isTTY;
-		const response: QueryResult[] | null = await executeSql(
-			local,
-			config,
-			database,
-			!json && isInteractive && !yes,
-			persistTo,
-			file,
-			command
-		);
+	if (!json && isInteractive) {
+		// Render table if single result
+		render(
+			<Static items={response}>
+				{(result) => {
+					// batch results
+					if (!Array.isArray(result)) {
+						const { results, query } = result;
 
-		// Early exit if prompt rejected
-		if (!response) return;
-
-		if (!json && isInteractive) {
-			// Render table if single result
-			render(
-				<Static items={response}>
-					{(result) => {
-						// batch results
-						if (!Array.isArray(result)) {
-							const { results, query } = result;
-
-							if (Array.isArray(results) && results.length > 0) {
-								const shortQuery = shorten(query, 48);
-								return (
-									<>
-										{shortQuery ? <Text dimColor>{shortQuery}</Text> : null}
-										<Table data={results}></Table>
-									</>
-								);
-							}
+						if (Array.isArray(results) && results.length > 0) {
+							const shortQuery = shorten(query, 48);
+							return (
+								<>
+									{shortQuery ? <Text dimColor>{shortQuery}</Text> : null}
+									<Table data={results}></Table>
+								</>
+							);
 						}
-					}}
-				</Static>
-			);
-		} else {
-			logger.log(JSON.stringify(response, null, 2));
-		}
+					}
+				}}
+			</Static>
+		);
+	} else {
+		logger.log(JSON.stringify(response, null, 2));
 	}
-);
+};
 
 async function executeLocally(
 	config: Config,
 	name: string,
 	shouldPrompt: boolean | undefined,
 	queries: string[],
-	persistTo: string | undefined
+	persistTo: string | undefined,
+	json?: boolean
 ) {
 	const localDB = getDatabaseInfoFromConfig(config, name);
 	if (!localDB) {
@@ -222,7 +227,7 @@ async function executeLocally(
 		if (!ok) return null;
 		await mkdir(dbDir, { recursive: true });
 	}
-	if (shouldPrompt) {
+	if (!json) {
 		logger.log(`🌀 Loading DB at ${readableRelative(dbPath)}`);
 	}
 	const db = await createSQLiteDB(dbPath);
@@ -240,10 +245,11 @@ async function executeRemotely(
 	config: Config,
 	name: string,
 	shouldPrompt: boolean | undefined,
-	batches: string[]
+	batches: string[],
+	json?: boolean
 ) {
 	const multiple_batches = batches.length > 1;
-	if (multiple_batches) {
+	if (multiple_batches && !json) {
 		const warning = `⚠️  Too much SQL to send at once, this execution will be sent as ${batches.length} batches.`;
 
 		if (shouldPrompt) {
@@ -264,17 +270,17 @@ async function executeRemotely(
 		name
 	);
 
-	if (shouldPrompt) {
-		//only log if we should prompt
+	if (!json) {
 		logger.log(`🌀 Executing on ${name} (${db.uuid}):`);
 	}
 
 	const results: QueryResult[] = [];
 	for (const sql of batches) {
-		if (multiple_batches)
+		if (multiple_batches && !json) {
 			logger.log(
 				chalk.gray(`  ${sql.slice(0, 70)}${sql.length > 70 ? "..." : ""}`)
 			);
+		}
 
 		const result = await fetchResult<QueryResult[]>(
 			`/accounts/${accountId}/d1/database/${db.uuid}/query`,
@@ -287,7 +293,7 @@ async function executeRemotely(
 				body: JSON.stringify({ sql }),
 			}
 		);
-		if (shouldPrompt) {
+		if (!json) {
 			result.map(logResult);
 		}
 
@@ -310,8 +316,8 @@ function logResult(r: QueryResult | QueryResult[]) {
 	);
 }
 
-function batchSplit(queries: string[], shouldPrompt: boolean | undefined) {
-	if (shouldPrompt) {
+function batchSplit(queries: string[], json?: boolean) {
+	if (!json) {
 		logger.log(`🌀 Parsing ${queries.length} statements`);
 	}
 
@@ -323,7 +329,7 @@ function batchSplit(queries: string[], shouldPrompt: boolean | undefined) {
 		);
 	}
 	if (num_batches > 1) {
-		if (shouldPrompt) {
+		if (!json) {
 			logger.log(
 				`🌀 We are sending ${num_batches} batch(es) to D1 (limited to ${QUERY_LIMIT} statements per batch)`
 			);
