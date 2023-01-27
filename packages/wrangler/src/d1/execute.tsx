@@ -103,9 +103,7 @@ export async function executeSql(
 	if (!sql) throw new Error(`Error: must provide --command or --file.`);
 	if (persistTo && !local)
 		throw new Error(`Error: can't use --persist-to without --local`);
-	if (!json) {
-		logger.log(`🌀 Mapping SQL input into an array of statements`);
-	}
+	logger.log(`🌀 Mapping SQL input into an array of statements`);
 
 	const queries = splitSqlQuery(sql);
 
@@ -124,7 +122,7 @@ export async function executeSql(
 				config,
 				name,
 				shouldPrompt,
-				batchSplit(queries, json),
+				batchSplit(queries),
 				json
 		  );
 }
@@ -137,14 +135,8 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 		logger.loggerLevel = "none";
 	}
 	const config = readConfig(args.config, args);
-	if (json) {
-		// set loggerLevel back to log to actually output the JSON in stdout
-		logger.loggerLevel = "log";
-	}
 
-	if (!json) {
-		logger.log(d1BetaWarning);
-	}
+	logger.log(d1BetaWarning);
 
 	if (file && command)
 		return logger.error(`Error: can't provide both --command and --file.`);
@@ -164,7 +156,7 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 	// Early exit if prompt rejected
 	if (!response) return;
 
-	if (!json && isInteractive) {
+	if (isInteractive && !json) {
 		// Render table if single result
 		render(
 			<Static items={response}>
@@ -187,6 +179,8 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 			</Static>
 		);
 	} else {
+		// set loggerLevel back to log to actually output the JSON in stdout
+		logger.loggerLevel = "log";
 		logger.log(JSON.stringify(response, null, 2));
 	}
 };
@@ -222,14 +216,15 @@ async function executeLocally(
 
 	if (!existsSync(dbDir)) {
 		const ok =
+			json ||
 			!shouldPrompt ||
 			(await confirm(`About to create ${readableRelative(dbPath)}, ok?`));
 		if (!ok) return null;
 		await mkdir(dbDir, { recursive: true });
 	}
-	if (!json) {
-		logger.log(`🌀 Loading DB at ${readableRelative(dbPath)}`);
-	}
+
+	logger.log(`🌀 Loading DB at ${readableRelative(dbPath)}`);
+
 	const db = await createSQLiteDB(dbPath);
 
 	const results: QueryResult[] = [];
@@ -249,6 +244,7 @@ async function executeRemotely(
 	json?: boolean
 ) {
 	const multiple_batches = batches.length > 1;
+	// in JSON mode, we don't want a prompt here
 	if (multiple_batches && !json) {
 		const warning = `⚠️  Too much SQL to send at once, this execution will be sent as ${batches.length} batches.`;
 
@@ -270,13 +266,11 @@ async function executeRemotely(
 		name
 	);
 
-	if (!json) {
-		logger.log(`🌀 Executing on ${name} (${db.uuid}):`);
-	}
+	logger.log(`🌀 Executing on ${name} (${db.uuid}):`);
 
 	const results: QueryResult[] = [];
 	for (const sql of batches) {
-		if (multiple_batches && !json) {
+		if (multiple_batches) {
 			logger.log(
 				chalk.gray(`  ${sql.slice(0, 70)}${sql.length > 70 ? "..." : ""}`)
 			);
@@ -293,10 +287,8 @@ async function executeRemotely(
 				body: JSON.stringify({ sql }),
 			}
 		);
-		if (!json) {
-			result.map(logResult);
-		}
 
+		result.map(logResult);
 		results.push(...result);
 	}
 	return results;
@@ -316,10 +308,8 @@ function logResult(r: QueryResult | QueryResult[]) {
 	);
 }
 
-function batchSplit(queries: string[], json?: boolean) {
-	if (!json) {
-		logger.log(`🌀 Parsing ${queries.length} statements`);
-	}
+function batchSplit(queries: string[]) {
+	logger.log(`🌀 Parsing ${queries.length} statements`);
 
 	const num_batches = Math.ceil(queries.length / QUERY_LIMIT);
 	const batches: string[] = [];
@@ -329,11 +319,9 @@ function batchSplit(queries: string[], json?: boolean) {
 		);
 	}
 	if (num_batches > 1) {
-		if (!json) {
-			logger.log(
-				`🌀 We are sending ${num_batches} batch(es) to D1 (limited to ${QUERY_LIMIT} statements per batch)`
-			);
-		}
+		logger.log(
+			`🌀 We are sending ${num_batches} batch(es) to D1 (limited to ${QUERY_LIMIT} statements per batch)`
+		);
 	}
 	return batches;
 }
