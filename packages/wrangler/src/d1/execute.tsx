@@ -7,7 +7,7 @@ import Table from "ink-table";
 import { npxImport } from "npx-import";
 import React from "react";
 import { fetchResult } from "../cfetch";
-import { withConfig } from "../config";
+import { readConfig } from "../config";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
@@ -75,6 +75,11 @@ export function Options(yargs: CommonYargsArgv) {
 			describe: "Specify directory to use for local persistence (for --local)",
 			type: "string",
 			requiresArg: true,
+		})
+		.option("json", {
+			describe: "Return output as clean JSON",
+			type: "boolean",
+			default: false,
 		});
 }
 
@@ -91,14 +96,13 @@ export async function executeSql(
 	shouldPrompt: boolean | undefined,
 	persistTo: undefined | string,
 	file?: string,
-	command?: string
+	command?: string,
+	json?: boolean
 ) {
 	const sql = file ? readFileSync(file) : command;
-
 	if (!sql) throw new Error(`Error: must provide --command or --file.`);
 	if (persistTo && !local)
 		throw new Error(`Error: can't use --persist-to without --local`);
-
 	logger.log(`🌀 Mapping SQL input into an array of statements`);
 	const queries = splitSqlQuery(sql);
 
@@ -112,72 +116,80 @@ export async function executeSql(
 	}
 
 	return local
-		? await executeLocally(config, name, shouldPrompt, queries, persistTo)
-		: await executeRemotely(config, name, shouldPrompt, batchSplit(queries));
+		? await executeLocally(config, name, shouldPrompt, queries, persistTo, json)
+		: await executeRemotely(
+				config,
+				name,
+				shouldPrompt,
+				batchSplit(queries),
+				json
+		  );
 }
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
-export const Handler = withConfig<HandlerOptions>(
-	async ({
+
+export const Handler = async (args: HandlerOptions): Promise<void> => {
+	const { local, database, yes, persistTo, file, command, json } = args;
+	const existingLogLevel = logger.loggerLevel;
+	if (json) {
+		// set loggerLevel to error to avoid readConfig warnings appearing in JSON output
+		logger.loggerLevel = "error";
+	}
+	const config = readConfig(args.config, args);
+	logger.log(d1BetaWarning);
+	if (file && command)
+		return logger.error(`Error: can't provide both --command and --file.`);
+
+	const isInteractive = process.stdout.isTTY;
+	const response: QueryResult[] | null = await executeSql(
+		local,
 		config,
 		database,
+		isInteractive && !yes,
+		persistTo,
 		file,
 		command,
-		local,
-		persistTo,
-		yes,
-	}): Promise<void> => {
-		logger.log(d1BetaWarning);
-		if (file && command)
-			return logger.error(`Error: can't provide both --command and --file.`);
+		json
+	);
 
-		const isInteractive = process.stdout.isTTY;
-		const response: QueryResult[] | null = await executeSql(
-			local,
-			config,
-			database,
-			isInteractive && !yes,
-			persistTo,
-			file,
-			command
-		);
+	// Early exit if prompt rejected
+	if (!response) return;
 
-		// Early exit if prompt rejected
-		if (!response) return;
+	if (isInteractive && !json) {
+		// Render table if single result
+		render(
+			<Static items={response}>
+				{(result) => {
+					// batch results
+					if (!Array.isArray(result)) {
+						const { results, query } = result;
 
-		if (isInteractive) {
-			// Render table if single result
-			render(
-				<Static items={response}>
-					{(result) => {
-						// batch results
-						if (!Array.isArray(result)) {
-							const { results, query } = result;
-
-							if (Array.isArray(results) && results.length > 0) {
-								const shortQuery = shorten(query, 48);
-								return (
-									<>
-										{shortQuery ? <Text dimColor>{shortQuery}</Text> : null}
-										<Table data={results}></Table>
-									</>
-								);
-							}
+						if (Array.isArray(results) && results.length > 0) {
+							const shortQuery = shorten(query, 48);
+							return (
+								<>
+									{shortQuery ? <Text dimColor>{shortQuery}</Text> : null}
+									<Table data={results}></Table>
+								</>
+							);
 						}
-					}}
-				</Static>
-			);
-		} else {
-			logger.log(JSON.stringify(response, null, 2));
-		}
+					}
+				}}
+			</Static>
+		);
+	} else {
+		// set loggerLevel back to what it was before to actually output the JSON in stdout
+		logger.loggerLevel = existingLogLevel;
+		logger.log(JSON.stringify(response, null, 2));
 	}
-);
+};
 
 async function executeLocally(
 	config: Config,
 	name: string,
 	shouldPrompt: boolean | undefined,
 	queries: string[],
-	persistTo: string | undefined
+	persistTo: string | undefined,
+	json?: boolean
 ) {
 	const localDB = getDatabaseInfoFromConfig(config, name);
 	if (!localDB) {
@@ -202,6 +214,7 @@ async function executeLocally(
 
 	if (!existsSync(dbDir)) {
 		const ok =
+			json ||
 			!shouldPrompt ||
 			(await confirm(`About to create ${readableRelative(dbPath)}, ok?`));
 		if (!ok) return null;
@@ -224,10 +237,12 @@ async function executeRemotely(
 	config: Config,
 	name: string,
 	shouldPrompt: boolean | undefined,
-	batches: string[]
+	batches: string[],
+	json?: boolean
 ) {
 	const multiple_batches = batches.length > 1;
-	if (multiple_batches) {
+	// in JSON mode, we don't want a prompt here
+	if (multiple_batches && !json) {
 		const warning = `⚠️  Too much SQL to send at once, this execution will be sent as ${batches.length} batches.`;
 
 		if (shouldPrompt) {
@@ -248,14 +263,7 @@ async function executeRemotely(
 		name
 	);
 
-	if (shouldPrompt) {
-		logger.log(`🌀 Executing on ${name} (${db.uuid}):`);
-
-		// Don't output if shouldPrompt is undefined
-	} else if (shouldPrompt !== undefined) {
-		// Pipe to error so we don't break jq
-		logger.error(`Executing on ${name} (${db.uuid}):`);
-	}
+	logger.log(`🌀 Executing on ${name} (${db.uuid}):`);
 
 	const results: QueryResult[] = [];
 	for (const sql of batches) {
