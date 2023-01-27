@@ -104,7 +104,6 @@ export async function executeSql(
 	if (persistTo && !local)
 		throw new Error(`Error: can't use --persist-to without --local`);
 	logger.log(`🌀 Mapping SQL input into an array of statements`);
-
 	const queries = splitSqlQuery(sql);
 
 	if (file && sql) {
@@ -135,9 +134,7 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 		logger.loggerLevel = "none";
 	}
 	const config = readConfig(args.config, args);
-
 	logger.log(d1BetaWarning);
-
 	if (file && command)
 		return logger.error(`Error: can't provide both --command and --file.`);
 
@@ -270,11 +267,10 @@ async function executeRemotely(
 
 	const results: QueryResult[] = [];
 	for (const sql of batches) {
-		if (multiple_batches) {
+		if (multiple_batches)
 			logger.log(
 				chalk.gray(`  ${sql.slice(0, 70)}${sql.length > 70 ? "..." : ""}`)
 			);
-		}
 
 		const result = await fetchResult<QueryResult[]>(
 			`/accounts/${accountId}/d1/database/${db.uuid}/query`,
@@ -287,7 +283,6 @@ async function executeRemotely(
 				body: JSON.stringify({ sql }),
 			}
 		);
-
 		result.map(logResult);
 		results.push(...result);
 	}
@@ -310,7 +305,6 @@ function logResult(r: QueryResult | QueryResult[]) {
 
 function batchSplit(queries: string[]) {
 	logger.log(`🌀 Parsing ${queries.length} statements`);
-
 	const num_batches = Math.ceil(queries.length / QUERY_LIMIT);
 	const batches: string[] = [];
 	for (let i = 0; i < num_batches; i++) {
