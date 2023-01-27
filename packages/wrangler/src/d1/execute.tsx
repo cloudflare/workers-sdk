@@ -77,7 +77,7 @@ export function Options(yargs: CommonYargsArgv) {
 			requiresArg: true,
 		})
 		.option("json", {
-			describe: "return output as clean JSON",
+			describe: "Return output as clean JSON",
 			type: "boolean",
 			default: false,
 		});
