@@ -221,7 +221,6 @@ async function executeLocally(
 	}
 
 	logger.log(`🌀 Loading DB at ${readableRelative(dbPath)}`);
-
 	const db = await createSQLiteDB(dbPath);
 
 	const results: QueryResult[] = [];
