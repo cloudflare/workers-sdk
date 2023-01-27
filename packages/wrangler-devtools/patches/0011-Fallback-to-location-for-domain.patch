@@ -1,0 +1,26 @@
+From 0091abac4c9631649485198cc36b49ebd4fd40dd Mon Sep 17 00:00:00 2001
+From: Samuel Macleod <smacleod@cloudflare.com>
+Date: Thu, 26 Jan 2023 15:27:04 +0000
+Subject: [PATCH 11/12] Fallback to location for domain
+
+---
+ front_end/panels/sources/NavigatorView.ts | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/front_end/panels/sources/NavigatorView.ts b/front_end/panels/sources/NavigatorView.ts
+index c7a64ab432..ca32b5202e 100644
+--- a/front_end/panels/sources/NavigatorView.ts
++++ b/front_end/panels/sources/NavigatorView.ts
+@@ -757,7 +757,8 @@ export class NavigatorView extends UI.Widget.VBox implements SDK.TargetManager.O
+     }
+ 
+     if (!projectOrigin) {
+-      return i18nString(UIStrings.noDomain);
++      const query = new URLSearchParams(location.search)
++      return query.get("domain") ?? i18nString(UIStrings.noDomain);
+     }
+ 
+     const parsedURL = new Common.ParsedURL.ParsedURL(projectOrigin);
+-- 
+2.37.1 (Apple Git-137.1)
+
