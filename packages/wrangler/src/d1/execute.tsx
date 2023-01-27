@@ -129,9 +129,10 @@ type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
 
 export const Handler = async (args: HandlerOptions): Promise<void> => {
 	const { local, database, yes, persistTo, file, command, json } = args;
+	const existingLogLevel = logger.loggerLevel;
 	if (json) {
-		// set loggerLevel to none to avoid readConfig warnings appearing in JSON output
-		logger.loggerLevel = "none";
+		// set loggerLevel to error to avoid readConfig warnings appearing in JSON output
+		logger.loggerLevel = "error";
 	}
 	const config = readConfig(args.config, args);
 	logger.log(d1BetaWarning);
@@ -176,8 +177,8 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 			</Static>
 		);
 	} else {
-		// set loggerLevel back to log to actually output the JSON in stdout
-		logger.loggerLevel = "log";
+		// set loggerLevel back to what it was before to actually output the JSON in stdout
+		logger.loggerLevel = existingLogLevel;
 		logger.log(JSON.stringify(response, null, 2));
 	}
 };
