@@ -20,4 +20,10 @@ describe.concurrent("'wrangler dev' correctly renders pages", () => {
 		const text = await response.text();
 		expect(text).toContain(`http://${ip}:${port}/`);
 	});
+
+	it("uses `workerd` condition when bundling", async ({ expect }) => {
+		const response = await fetch(`http://${ip}:${port}/random`);
+		const text = await response.text();
+		expect(text).toMatch(/[0-9a-f]{16}/); // 8 hex bytes
+	});
 });

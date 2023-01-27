@@ -340,7 +340,7 @@ export async function bundleWorker(
 		sourceRoot: destination,
 		minify,
 		metafile: true,
-		conditions: ["worker", "browser"],
+		conditions: ["workerd", "worker", "browser"],
 		...(process.env.NODE_ENV && {
 			define: {
 				// use process.env["NODE_ENV" + ""] so that esbuild doesn't replace it
