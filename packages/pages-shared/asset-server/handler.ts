@@ -308,12 +308,14 @@ export async function generateHandler<
 
 			const clonedResponse = response.clone();
 
-			if (waitUntil) {
+			if (
+				waitUntil &&
+				isHTMLContentType(response.headers.get("Content-Type"))
+			) {
 				waitUntil(
 					(async () => {
 						try {
 							const links: { href: string; rel: string; as?: string }[] = [];
-
 							const transformedResponse = new HTMLRewriter()
 								.on("link[rel~=preconnect],link[rel~=preload]", {
 									element(element) {
@@ -352,7 +354,12 @@ export async function generateHandler<
 							if (linkHeader) {
 								await earlyHintsCache.put(
 									earlyHintsCacheKey,
-									new Response(null, { headers: { Link: linkHeader } })
+									new Response(null, {
+										headers: {
+											Link: linkHeader,
+											"Cache-Control": "max-age=86400",
+										},
+									})
 								);
 							}
 						} catch (err) {
@@ -504,7 +511,7 @@ export async function generateHandler<
 			}
 
 			if (
-				asset.contentType.startsWith("text/html") &&
+				isHTMLContentType(asset.contentType) &&
 				metadata.analytics?.version === ANALYTICS_VERSION
 			) {
 				return new HTMLRewriter()
@@ -645,4 +652,12 @@ function isPreview(url: URL): boolean {
 		return url.hostname.split(".").length > 3 ? true : false;
 	}
 	return false;
+}
+
+/**
+ * Whether or not the passed in string looks like an HTML
+ * Content-Type header
+ */
+function isHTMLContentType(contentType?: string | null) {
+	return contentType?.startsWith("text/html") || false;
 }
