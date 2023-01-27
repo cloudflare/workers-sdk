@@ -609,9 +609,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		printBindings({ ...withoutStaticAssets, vars: maskedVars });
 
-		await ensureQueuesExist(config);
-
 		if (!props.dryRun) {
+			await ensureQueuesExist(config);
+
 			// Upload the script so it has time to propagate.
 			// We can also now tell whether available_on_subdomain is set
 			try {
