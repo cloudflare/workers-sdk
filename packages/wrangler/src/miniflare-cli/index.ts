@@ -200,6 +200,9 @@ async function main() {
 			);
 	} catch (e) {
 		mf?.log.error(e as Error);
+		if (!mf) {
+			console.error(e)
+		}
 		process.exitCode = 1;
 		// Unmount any mounted workers
 		await mf?.dispose();

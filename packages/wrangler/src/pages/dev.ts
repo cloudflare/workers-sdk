@@ -65,6 +65,11 @@ export function Options(yargs: CommonYargsArgv) {
 				default: 8788,
 				description: "The port to listen on (serve from)",
 			},
+			inspect: {
+				type: "boolean",
+				describe: "Enable or disable the inspector (devtools)",
+				default: true,
+			},
 			"inspector-port": {
 				type: "number",
 				describe: "Port for devtools to connect to",
@@ -177,6 +182,7 @@ export const Handler = async ({
 	compatibilityFlags,
 	ip,
 	port,
+	inspect,
 	inspectorPort,
 	proxy: requestedProxyPort,
 	bundle,
@@ -537,9 +543,9 @@ export const Handler = async ({
 		}),
 		persist,
 		persistTo,
-		inspect: undefined,
+		inspect,
 		logPrefix: "pages",
-		logLevel: logLevel ?? "warn",
+		logLevel: logLevel ?? "info",
 		experimental: {
 			d1Databases: d1s.map((binding) => ({
 				binding: binding.toString(),
