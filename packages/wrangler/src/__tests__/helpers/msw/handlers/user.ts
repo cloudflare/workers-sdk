@@ -1,14 +1,11 @@
 import { rest } from "msw";
+import { createFetchResult } from "../index";
 
 export const mswSuccessUserHandlers = [
 	rest.get("*/user", (_, response, cxt) => {
 		return response.once(
-			cxt.status(200),
-			cxt.json({
-				success: true,
-				errors: [],
-				messages: [],
-				result: {
+			cxt.json(
+				createFetchResult({
 					id: "7c5dae5552338874e5053f2534d2767a",
 					email: "user@example.com",
 					first_name: "John",
@@ -21,33 +18,25 @@ export const mswSuccessUserHandlers = [
 					modified_on: "2014-01-01T05:20:00Z",
 					two_factor_authentication_enabled: false,
 					suspended: false,
-				},
-			})
+				})
+			)
 		);
 	}),
 	rest.get("*/accounts", (_, response, cxt) => {
 		return response.once(
-			cxt.status(200),
-			cxt.json({
-				success: true,
-				errors: [],
-				messages: [],
-				result: [
+			cxt.json(
+				createFetchResult([
 					{ name: "Account One", id: "account-1" },
 					{ name: "Account Two", id: "account-2" },
 					{ name: "Account Three", id: "account-3" },
-				],
-			})
+				])
+			)
 		);
 	}),
 	rest.get("*/memberships", (_, response, context) => {
 		return response.once(
-			context.status(200),
-			context.json({
-				success: true,
-				errors: [],
-				messages: [],
-				result: [
+			context.json(
+				createFetchResult([
 					{
 						id: "membership-id-1",
 						account: { id: "account-id-1", name: "My Personal Account" },
@@ -56,8 +45,8 @@ export const mswSuccessUserHandlers = [
 						id: "membership-id-2",
 						account: { id: "account-id-2", name: "Enterprise Account" },
 					},
-				],
-			})
+				])
+			)
 		);
 	}),
 ];

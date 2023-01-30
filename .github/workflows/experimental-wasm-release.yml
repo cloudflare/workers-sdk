@@ -7,7 +7,7 @@ jobs:
   build:
     if: ${{ github.repository_owner == 'cloudflare' }}
     name: Build and release `wrangler@wasm` to NPM
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repo

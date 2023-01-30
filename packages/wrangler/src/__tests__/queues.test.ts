@@ -28,10 +28,11 @@ describe("wrangler", () => {
 			  wrangler queues consumer       Configure Queue Consumers
 
 			Flags:
-			  -c, --config   Path to .toml configuration file  [string]
-			  -e, --env      Environment to use for operations and .env files  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
 		`);
 		});
 
@@ -69,10 +70,11 @@ describe("wrangler", () => {
 			List Queues
 
 			Flags:
-			  -c, --config   Path to .toml configuration file  [string]
-			  -e, --env      Environment to use for operations and .env files  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]
 
 			Options:
 			      --page  Page number for pagination  [number]"
@@ -162,10 +164,11 @@ describe("wrangler", () => {
 			  name  The name of the queue  [string] [required]
 
 			Flags:
-			  -c, --config   Path to .toml configuration file  [string]
-			  -e, --env      Environment to use for operations and .env files  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
 		`);
 			});
 
@@ -255,10 +258,11 @@ describe("wrangler", () => {
 			  name  The name of the queue  [string] [required]
 
 			Flags:
-			  -c, --config   Path to .toml configuration file  [string]
-			  -e, --env      Environment to use for operations and .env files  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
 		`);
 			});
 
@@ -288,10 +292,11 @@ describe("wrangler", () => {
 			  wrangler queues consumer remove <queue-name> <script-name>  Remove a Queue Consumer
 
 			Flags:
-			  -c, --config   Path to .toml configuration file  [string]
-			  -e, --env      Environment to use for operations and .env files  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
 		`);
 			});
 
@@ -336,10 +341,11 @@ describe("wrangler", () => {
 				  script-name  Name of the consumer script  [string] [required]
 
 				Flags:
-				  -c, --config   Path to .toml configuration file  [string]
-				  -e, --env      Environment to use for operations and .env files  [string]
-				  -h, --help     Show help  [boolean]
-				  -v, --version  Show version number  [boolean]
+				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]
 
 				Options:
 				      --batch-size         Maximum number of messages per batch  [number]
@@ -482,10 +488,11 @@ describe("wrangler", () => {
 				  script-name  Name of the consumer script  [string] [required]
 
 				Flags:
-				  -c, --config   Path to .toml configuration file  [string]
-				  -e, --env      Environment to use for operations and .env files  [string]
-				  -h, --help     Show help  [boolean]
-				  -v, --version  Show version number  [boolean]"
+				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]"
 			`);
 				});
 

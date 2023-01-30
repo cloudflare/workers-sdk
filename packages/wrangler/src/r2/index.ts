@@ -19,22 +19,23 @@ import {
 	putR2Object,
 } from "./helpers";
 
-import type { ConfigPath } from "../index";
+import type { CommonYargsArgv } from "../yargs-types";
 import type { Readable } from "node:stream";
-import type { BuilderCallback } from "yargs";
 
-export const r2: BuilderCallback<unknown, unknown> = (r2Yargs) => {
+export function r2(r2Yargs: CommonYargsArgv) {
 	return r2Yargs
 		.command("object", "Manage R2 objects", (r2ObjectYargs) => {
 			return r2ObjectYargs
 				.command(
 					"get <objectPath>",
 					"Fetch an object from an R2 bucket",
-					(Objectyargs) => {
-						return Objectyargs.positional("objectPath", {
-							describe: "The source object path in the form of {bucket}/{key}",
-							type: "string",
-						})
+					(objectArgs) => {
+						return objectArgs
+							.positional("objectPath", {
+								describe:
+									"The source object path in the form of {bucket}/{key}",
+								type: "string",
+							})
 							.option("file", {
 								describe: "The destination file to create",
 								alias: "f",
@@ -51,10 +52,7 @@ export const r2: BuilderCallback<unknown, unknown> = (r2Yargs) => {
 							});
 					},
 					async (objectGetYargs) => {
-						const config = readConfig(
-							objectGetYargs.config as ConfigPath,
-							objectGetYargs
-						);
+						const config = readConfig(objectGetYargs.config, objectGetYargs);
 						const accountId = await requireAuth(config);
 						const { objectPath, pipe } = objectGetYargs;
 						const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
@@ -144,10 +142,7 @@ export const r2: BuilderCallback<unknown, unknown> = (r2Yargs) => {
 					async (objectPutYargs) => {
 						await printWranglerBanner();
 
-						const config = readConfig(
-							objectPutYargs.config as ConfigPath,
-							objectPutYargs
-						);
+						const config = readConfig(objectPutYargs.config, objectPutYargs);
 						const accountId = await requireAuth(config);
 						const { objectPath, file, pipe, ...options } = objectPutYargs;
 						const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
@@ -210,7 +205,7 @@ export const r2: BuilderCallback<unknown, unknown> = (r2Yargs) => {
 						const { objectPath } = args;
 						await printWranglerBanner();
 
-						const config = readConfig(args.config as ConfigPath, args);
+						const config = readConfig(args.config, args);
 						const accountId = await requireAuth(config);
 						const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
 						logger.log(`Deleting object "${key}" from bucket "${bucket}".`);
@@ -235,7 +230,7 @@ export const r2: BuilderCallback<unknown, unknown> = (r2Yargs) => {
 				async (args) => {
 					await printWranglerBanner();
 
-					const config = readConfig(args.config as ConfigPath, args);
+					const config = readConfig(args.config, args);
 
 					const accountId = await requireAuth(config);
 
@@ -248,16 +243,21 @@ export const r2: BuilderCallback<unknown, unknown> = (r2Yargs) => {
 				}
 			);
 
-			r2BucketYargs.command("list", "List R2 buckets", {}, async (args) => {
-				const config = readConfig(args.config as ConfigPath, args);
+			r2BucketYargs.command(
+				"list",
+				"List R2 buckets",
+				(listArgs) => listArgs,
+				async (args) => {
+					const config = readConfig(args.config, args);
 
-				const accountId = await requireAuth(config);
+					const accountId = await requireAuth(config);
 
-				logger.log(JSON.stringify(await listR2Buckets(accountId), null, 2));
-				await metrics.sendMetricsEvent("list r2 buckets", {
-					sendMetrics: config.send_metrics,
-				});
-			});
+					logger.log(JSON.stringify(await listR2Buckets(accountId), null, 2));
+					await metrics.sendMetricsEvent("list r2 buckets", {
+						sendMetrics: config.send_metrics,
+					});
+				}
+			);
 
 			r2BucketYargs.command(
 				"delete <name>",
@@ -272,7 +272,7 @@ export const r2: BuilderCallback<unknown, unknown> = (r2Yargs) => {
 				async (args) => {
 					await printWranglerBanner();
 
-					const config = readConfig(args.config as ConfigPath, args);
+					const config = readConfig(args.config, args);
 
 					const accountId = await requireAuth(config);
 
@@ -286,4 +286,4 @@ export const r2: BuilderCallback<unknown, unknown> = (r2Yargs) => {
 			);
 			return r2BucketYargs;
 		});
-};
+}

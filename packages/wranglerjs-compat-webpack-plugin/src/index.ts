@@ -79,6 +79,9 @@ export class WranglerJsCompatWebpackPlugin {
 		this.config = readConfig(pathToWranglerToml, {
 			env: environment,
 			"legacy-env": true,
+			experimentalJsonConfig: false,
+			v: undefined,
+			config: undefined,
 		});
 	}
 

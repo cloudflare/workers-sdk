@@ -1,21 +1,13 @@
-import { type Argv } from "yargs";
 import { readConfig } from "../../../../config";
 import { logger } from "../../../../logger";
 import { postConsumer } from "../../../client";
-import type { CommonYargsOptions } from "../../../../yargs-types";
+import type {
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
+} from "../../../../yargs-types";
 import type { PostConsumerBody } from "../../../client";
 
-type Args = CommonYargsOptions & {
-	config?: string;
-	["queue-name"]: string;
-	["script-name"]: string;
-	["batch-size"]?: number;
-	["batch-timeout"]?: number;
-	["message-retries"]?: number;
-	["dead-letter-queue"]?: string;
-};
-
-export function options(yargs: Argv<CommonYargsOptions>): Argv<Args> {
+export function options(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("queue-name", {
 			type: "string",
@@ -48,24 +40,26 @@ export function options(yargs: Argv<CommonYargsOptions>): Argv<Args> {
 		});
 }
 
-export async function handler(args: Args) {
+export async function handler(
+	args: StrictYargsOptionsToInterface<typeof options>
+) {
 	const config = readConfig(args.config, args);
 
 	const body: PostConsumerBody = {
-		script_name: args["script-name"],
+		script_name: args.scriptName,
 		// TODO(soon) is this still the correct usage of the environment?
-		environment_name: args.env || "", // API expects empty string as default
+		environment_name: args.env ?? "", // API expects empty string as default
 		settings: {
-			batch_size: args["batch-size"],
-			max_retries: args["message-retries"],
-			max_wait_time_ms: args["batch-timeout"] // API expects milliseconds
-				? 1000 * args["batch-timeout"]
+			batch_size: args.batchSize,
+			max_retries: args.messageRetries,
+			max_wait_time_ms: args.batchTimeout // API expects milliseconds
+				? 1000 * args.batchTimeout
 				: undefined,
 		},
-		dead_letter_queue: args["dead-letter-queue"],
+		dead_letter_queue: args.deadLetterQueue,
 	};
 
-	logger.log(`Adding consumer to queue ${args["queue-name"]}.`);
-	await postConsumer(config, args["queue-name"], body);
-	logger.log(`Added consumer to queue ${args["queue-name"]}.`);
+	logger.log(`Adding consumer to queue ${args.queueName}.`);
+	await postConsumer(config, args.queueName, body);
+	logger.log(`Added consumer to queue ${args.queueName}.`);
 }

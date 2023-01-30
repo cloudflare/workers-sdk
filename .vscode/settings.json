@@ -49,6 +49,5 @@
 	"editor.tabSize": 2,
 	"files.associations": {
 		"api-extractor.json": "jsonc"
-	},
-	"jest.jestCommandLine": "npm run -w wrangler test --"
+	}
 }

@@ -69,10 +69,11 @@ describe("pages", () => {
 		  wrangler pages publish [directory]             🆙 Publish a directory of static assets as a Pages deployment
 
 		Flags:
-		  -c, --config   Path to .toml configuration file  [string]
-		  -e, --env      Environment to use for operations and .env files  [string]
-		  -h, --help     Show help  [boolean]
-		  -v, --version  Show version number  [boolean]
+		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+		  -c, --config                    Path to .toml configuration file  [string]
+		  -e, --env                       Environment to use for operations and .env files  [string]
+		  -h, --help                      Show help  [boolean]
+		  -v, --version                   Show version number  [boolean]
 
 		🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose"
 	`);
@@ -340,9 +341,10 @@ describe("pages", () => {
 			  directory  The directory of static files to upload  [string]
 
 			Flags:
-			  -e, --env      Environment to use for operations and .env files  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]
 
 			Options:
 			      --project-name    The name of the project you want to deploy to  [string]
@@ -351,6 +353,7 @@ describe("pages", () => {
 			      --commit-message  The commit message to attach to this deployment  [string]
 			      --commit-dirty    Whether or not the workspace should be considered dirty for this deployment  [boolean]
 			      --skip-caching    Skip asset caching which speeds up builds  [boolean]
+			      --no-bundle       Whether to run bundling on \`_worker.js\` before deploying  [boolean] [default: true]
 
 			🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose"
 		`);
@@ -1457,7 +1460,7 @@ describe("pages", () => {
 			await runWrangler("pages publish public --project-name=foo");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Compiled Worker successfully.
+			"✨ Compiled Worker successfully
 			✨ Success! Uploaded 1 files (TIMINGS)
 
 			✨ Uploading Functions
@@ -1466,6 +1469,8 @@ describe("pages", () => {
 
 			expect(std.err).toMatchInlineSnapshot('""');
 		});
+
+		const workerHasD1Shim = (contents: string) => contents.includes("D1_ERROR");
 
 		it("should upload an Advanced Mode project", async () => {
 			// set up the directory of static files to upload.
@@ -1479,7 +1484,9 @@ describe("pages", () => {
 				export default {
 					async fetch(request, env) {
 						const url = new URL(request.url);
+						console.log("SOMETHING FROM WITHIN THE WORKER");
 						return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+					}
 				};
 			`
 			);
@@ -1553,15 +1560,11 @@ describe("pages", () => {
 							                          }
 						                      `);
 
-						expect(customWorkerJS).toMatchInlineSnapshot(`
-							"
-											export default {
-												async fetch(request, env) {
-													const url = new URL(request.url);
-													return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
-											};
-										"
-						`);
+						expect(workerHasD1Shim(customWorkerJS as string)).toBeTruthy();
+						expect(customWorkerJS).toContain(
+							`console.log("SOMETHING FROM WITHIN THE WORKER");`
+						);
+
 						return res.once(
 							ctx.status(200),
 							ctx.json({
@@ -1587,22 +1590,30 @@ describe("pages", () => {
 								errors: [],
 								messages: [],
 								result: {
-									deployment_configs: { production: {}, preview: {} },
-								},
+									deployment_configs: {
+										production: {
+											d1_databases: { MY_D1_DB: { id: "fake-db" } },
+										},
+										preview: {
+											d1_databases: { MY_D1_DB: { id: "fake-db" } },
+										},
+									},
+								} as Partial<Project>,
 							})
 						);
 					}
 				)
 			);
 
-			await runWrangler("pages publish public --project-name=foo");
+			await runWrangler("pages publish public --project-name=foo --bundle");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"✨ Success! Uploaded 1 files (TIMINGS)
 
+			✨ Compiled Worker successfully
 			✨ Uploading _worker.js
 			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-			`);
+		`);
 
 			expect(std.err).toMatchInlineSnapshot('""');
 		});
@@ -1815,7 +1826,7 @@ describe("pages", () => {
 			await runWrangler("pages publish public --project-name=foo");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Compiled Worker successfully.
+			"✨ Compiled Worker successfully
 			✨ Success! Uploaded 1 files (TIMINGS)
 
 			✨ Uploading Functions
@@ -1964,6 +1975,7 @@ and that at least one include rule is provided.
 					async fetch(request, env) {
 						const url = new URL(request.url);
 						return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+					}
 				};
 			`
 			);
@@ -2066,6 +2078,7 @@ and that at least one include rule is provided.
 												async fetch(request, env) {
 													const url = new URL(request.url);
 													return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+												}
 											};
 										"
 						`);
@@ -2115,10 +2128,11 @@ and that at least one include rule is provided.
 			expect(std.out).toMatchInlineSnapshot(`
 			"✨ Success! Uploaded 1 files (TIMINGS)
 
+			✨ Compiled Worker successfully
 			✨ Uploading _worker.js
 			✨ Uploading _routes.json
 			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-			`);
+		`);
 
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -2149,6 +2163,7 @@ and that at least one include rule is provided.
 					async fetch(request, env) {
 						const url = new URL(request.url);
 						return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+					}
 				};
 			`
 			);
@@ -2261,6 +2276,7 @@ and that at least one include rule is provided.
 					async fetch(request, env) {
 						const url = new URL(request.url);
 						return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+					}
 				};
 			`
 			);
@@ -2340,6 +2356,7 @@ and that at least one include rule is provided.
 												async fetch(request, env) {
 													const url = new URL(request.url);
 													return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
+												}
 											};
 										"
 						`);
@@ -2382,9 +2399,10 @@ and that at least one include rule is provided.
 			expect(std.out).toMatchInlineSnapshot(`
 			"✨ Success! Uploaded 1 files (TIMINGS)
 
+			✨ Compiled Worker successfully
 			✨ Uploading _worker.js
 			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-			`);
+		`);
 
 			expect(std.err).toMatchInlineSnapshot('""');
 		});
@@ -2532,19 +2550,20 @@ and that at least one include rule is provided.
 			);
 
 			await runWrangler("pages project upload .");
-
 			expect(requests.length).toBe(3);
 
-			const resolvedRequests = await Promise.all(
-				requests.map(async (req) => await req.json<UploadPayloadFile>())
+			const resolvedRequests = (
+				await Promise.all(
+					requests.map(async (req) => await req.json<UploadPayloadFile[]>())
+				)
+			).flat();
+
+			const requestMap = resolvedRequests.reduce<{
+				[key: string]: UploadPayloadFile;
+			}>(
+				(requestMap, req) => Object.assign(requestMap, { [req.key]: req }),
+				{}
 			);
-
-			const sortedRequests = resolvedRequests.sort((a, b) => {
-				const aKey = a.key as string;
-				const bKey = b.key as string;
-
-				return aKey?.localeCompare(bKey);
-			});
 
 			for (const req of requests) {
 				expect(req.headers.get("Authorization")).toBe(
@@ -2552,38 +2571,34 @@ and that at least one include rule is provided.
 				);
 			}
 
-			expect(sortedRequests[0]).toMatchObject([
-				{
-					base64: true,
-					key: "95dedb64e6d4940fc2e0f11f711cc2f4",
-					metadata: {
-						contentType: "application/octet-stream",
-					},
-					value: "aGVhZGVyc2ZpbGU=",
-				},
-			]);
+			expect(Object.keys(requestMap).length).toBe(3);
 
-			expect(sortedRequests[1]).toMatchObject([
-				{
-					base64: true,
-					key: "2082190357cfd3617ccfe04f340c6247",
-					metadata: {
-						contentType: "image/png",
-					},
-					value: "Zm9vYmFy",
+			expect(requestMap["95dedb64e6d4940fc2e0f11f711cc2f4"]).toMatchObject({
+				base64: true,
+				key: "95dedb64e6d4940fc2e0f11f711cc2f4",
+				metadata: {
+					contentType: "application/octet-stream",
 				},
-			]);
+				value: "aGVhZGVyc2ZpbGU=",
+			});
 
-			expect(sortedRequests[2]).toMatchObject([
-				{
-					base64: true,
-					key: "09a79777abda8ccc8bdd51dd3ff8e9e9",
-					metadata: {
-						contentType: "application/javascript",
-					},
-					value: "ZnVuYw==",
+			expect(requestMap["2082190357cfd3617ccfe04f340c6247"]).toMatchObject({
+				base64: true,
+				key: "2082190357cfd3617ccfe04f340c6247",
+				metadata: {
+					contentType: "image/png",
 				},
-			]);
+				value: "Zm9vYmFy",
+			});
+
+			expect(requestMap["09a79777abda8ccc8bdd51dd3ff8e9e9"]).toMatchObject({
+				base64: true,
+				key: "09a79777abda8ccc8bdd51dd3ff8e9e9",
+				metadata: {
+					contentType: "application/javascript",
+				},
+				value: "ZnVuYw==",
+			});
 
 			expect(std.out).toMatchInlineSnapshot(`
 			        "✨ Success! Uploaded 3 files (TIMINGS)

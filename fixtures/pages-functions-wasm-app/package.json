@@ -1,0 +1,19 @@
+{
+	"name": "pages-functions-wasm-app",
+	"version": "0.0.1",
+	"private": true,
+	"sideEffects": false,
+	"scripts": {
+		"check:type": "tsc",
+		"dev": "npx wrangler pages dev public --experimental-worker-bundle=true --port 8776",
+		"publish": "npx wrangler pages publish public --experimental-worker-bundle=true",
+		"test": "npx vitest",
+		"test:ci": "npx vitest"
+	},
+	"devDependencies": {
+		"undici": "^5.9.1"
+	},
+	"engines": {
+		"node": ">=16.13"
+	}
+}

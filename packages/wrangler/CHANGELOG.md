@@ -1,5 +1,271 @@
 # wrangler
 
+## 2.9.0
+
+### Minor Changes
+
+- [#2629](https://github.com/cloudflare/wrangler2/pull/2629) [`151733e5`](https://github.com/cloudflare/wrangler2/commit/151733e5d98e95f363b548f9959c2baf418eb7b5) Thanks [@mrbbot](https://github.com/mrbbot)! - Prefer the `workerd` `exports` condition when bundling.
+
+  This can be used to build isomorphic libraries that have different implementations depending on the JavaScript runtime they're running in.
+  When bundling, Wrangler will try to load the [`workerd` key](https://runtime-keys.proposal.wintercg.org/#workerd).
+  This is the [standard key](https://runtime-keys.proposal.wintercg.org/#workerd) for the Cloudflare Workers runtime.
+  Learn more about the [conditional `exports` field here](https://nodejs.org/api/packages.html#conditional-exports).
+
+### Patch Changes
+
+- [#2409](https://github.com/cloudflare/wrangler2/pull/2409) [`89d78c0a`](https://github.com/cloudflare/wrangler2/commit/89d78c0ac444885298ac052b0b3de23b69fb029b) Thanks [@penalosa](https://github.com/penalosa)! - Wrangler now supports an `--experimental-json-config` flag which will read your configuration from a `wrangler.json` file, rather than `wrangler.toml`. The format of this file is exactly the same as the `wrangler.toml` configuration file, except that the syntax is `JSONC` (JSON with comments) rather than `TOML`. This is experimental, and is not recommended for production use.
+
+* [#2623](https://github.com/cloudflare/wrangler2/pull/2623) [`04d8a312`](https://github.com/cloudflare/wrangler2/commit/04d8a3124fbcf20049b39a96654d7f3c850c032b) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix d1 directory not being created when running the `wrangler d1 execute` command with the `--yes`/`-y` flag
+
+- [#2608](https://github.com/cloudflare/wrangler2/pull/2608) [`70daffeb`](https://github.com/cloudflare/wrangler2/commit/70daffebab4788322769350ab714959e3254c3b4) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: Add support for D1 databases when bundling an `_worker.js` on `wrangler pages publish`
+
+* [#2597](https://github.com/cloudflare/wrangler2/pull/2597) [`416babf0`](https://github.com/cloudflare/wrangler2/commit/416babf050ed3608e0fd747111561a4c7207185e) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: do not crash in wrangler dev when passing a request object to fetch
+
+  This reverts and fixes the changes in https://github.com/cloudflare/wrangler2/pull/1769
+  which does not support creating requests from requests whose bodies have already been consumed.
+
+  Fixes #2562
+
+- [#2622](https://github.com/cloudflare/wrangler2/pull/2622) [`9778b33e`](https://github.com/cloudflare/wrangler2/commit/9778b33eb27f721fb743a970fb1520782ab0d573) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: implement `d1 list --json` with clean output for piping into other commands
+
+  Before:
+
+  ```bash
+  rozenmd@cflaptop test % npx wrangler d1 list
+  --------------------
+  🚧 D1 is currently in open alpha and is not recommended for production data and traffic
+  🚧 Please report any bugs to https://github.com/cloudflare/wrangler2/issues/new/choose
+  🚧 To request features, visit https://community.cloudflare.com/c/developers/d1
+  🚧 To give feedback, visit https://discord.gg/cloudflaredev
+  --------------------
+
+  ┌──────────────────────────────┬─────────────────┐
+  │ uuid                         │ name            │
+  ├──────────────────────────────┼─────────────────┤
+  │ xxxxxx-xxxx-xxxx-xxxx-xxxxxx │ test            │
+  ├──────────────────────────────┼─────────────────┤
+  │ xxxxxx-xxxx-xxxx-xxxx-xxxxxx │ test2           │
+  ├──────────────────────────────┼─────────────────┤
+  │ xxxxxx-xxxx-xxxx-xxxx-xxxxxx │ test3           │
+  └──────────────────────────────┴─────────────────┘
+  ```
+
+  After:
+
+  ```bash
+  rozenmd@cflaptop test % npx wrangler d1 list --json
+  [
+    {
+      "uuid": "xxxxxx-xxxx-xxxx-xxxx-xxxxxx",
+      "name": "test"
+    },
+    {
+      "uuid": "xxxxxx-xxxx-xxxx-xxxx-xxxxxx",
+      "name": "test2"
+    },
+    {
+      "uuid": "xxxxxx-xxxx-xxxx-xxxx-xxxxxx",
+      "name": "test3"
+    },
+  ]
+  ```
+
+* [#2631](https://github.com/cloudflare/wrangler2/pull/2631) [`6b3fe5ef`](https://github.com/cloudflare/wrangler2/commit/6b3fe5efc68c7a7afcd6666158a24d45033dd3db) Thanks [@thibmeu](https://github.com/thibmeu)! - Fix `wrangler publish --dry-run` to not require authentication when using Queues
+
+- [#2627](https://github.com/cloudflare/wrangler2/pull/2627) [`6f0f2ba6`](https://github.com/cloudflare/wrangler2/commit/6f0f2ba65731a1f6a0b1978e5fc3a5da9a50df0f) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: implement `d1 execute --json` with clean output for piping into other commands
+
+  **Before:**
+
+  ```bash
+  rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from customers"
+  ▲ [WARNING] Processing wrangler.toml configuration:
+
+      - D1 Bindings are currently in alpha to allow the API to evolve before general availability.
+        Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
+        Note: Run this command with the environment variable NO_D1_WARNING=true to hide this message
+
+        For example: `export NO_D1_WARNING=true && wrangler <YOUR COMMAND HERE>`
+
+
+  --------------------
+  🚧 D1 is currently in open alpha and is not recommended for production data and traffic
+  🚧 Please report any bugs to https://github.com/cloudflare/wrangler2/issues/new/choose
+  🚧 To request features, visit https://community.cloudflare.com/c/developers/d1
+  🚧 To give feedback, visit https://discord.gg/cloudflaredev
+  --------------------
+
+  🌀 Mapping SQL input into an array of statements
+  🌀 Parsing 1 statements
+  🌀 Executing on test (xxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx):
+  🚣 Executed 1 command in 11.846710999961942ms
+  ┌────────────┬─────────────────────┬───────────────────┐
+  │ CustomerID │ CompanyName         │ ContactName       │
+  ├────────────┼─────────────────────┼───────────────────┤
+  │ 1          │ Alfreds Futterkiste │ Maria Anders      │
+  ├────────────┼─────────────────────┼───────────────────┤
+  │ 4          │ Around the Horn     │ Thomas Hardy      │
+  ├────────────┼─────────────────────┼───────────────────┤
+  │ 11         │ Bs Beverages        │ Victoria Ashworth │
+  ├────────────┼─────────────────────┼───────────────────┤
+  │ 13         │ Bs Beverages        │ Random Name       │
+  └────────────┴─────────────────────┴───────────────────┘
+  ```
+
+  **After:**
+
+  ```bash
+  rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from customers" --json
+  [
+    {
+      "results": [
+        {
+          "CustomerID": 1,
+          "CompanyName": "Alfreds Futterkiste",
+          "ContactName": "Maria Anders"
+        },
+        {
+          "CustomerID": 4,
+          "CompanyName": "Around the Horn",
+          "ContactName": "Thomas Hardy"
+        },
+        {
+          "CustomerID": 11,
+          "CompanyName": "Bs Beverages",
+          "ContactName": "Victoria Ashworth"
+        },
+        {
+          "CustomerID": 13,
+          "CompanyName": "Bs Beverages",
+          "ContactName": "Random Name"
+        }
+      ],
+      "success": true,
+      "meta": {
+        "duration": 1.662519000004977,
+        "last_row_id": null,
+        "changes": null,
+        "served_by": "primary-xxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.db3",
+        "internal_stats": null
+      }
+    }
+  ]
+  ```
+
+## 2.8.1
+
+### Patch Changes
+
+- [#2501](https://github.com/cloudflare/wrangler2/pull/2501) [`a0e5a491`](https://github.com/cloudflare/wrangler2/commit/a0e5a4913621cffe757b2d14b6f3f466831f3d7f) Thanks [@geelen](https://github.com/geelen)! - fix: make it possible to query d1 databases from durable objects
+
+  This PR makes it possible to access D1 from Durable Objects.
+
+  To be able to query D1 from your Durable Object, you'll need to install the latest version of wrangler, and redeploy your Worker.
+
+  For a D1 binding like:
+
+  ```toml
+  [[d1_databases]]
+  binding = "DB" # i.e. available in your Worker on env.DB
+  database_name = "my-database-name"
+  database_id = "UUID-GOES-HERE"
+  preview_database_id = "UUID-GOES-HERE"
+  ```
+
+  You'll be able to access your D1 database via `env.DB` in your Durable Object.
+
+* [#2280](https://github.com/cloudflare/wrangler2/pull/2280) [`ef110923`](https://github.com/cloudflare/wrangler2/commit/ef1109235fb81200f32b953e9d448f9684d0363c) Thanks [@penalosa](https://github.com/penalosa)! - Support `queue` and `trace` events in module middleware. This means that `queue` and `trace` events should work properly with the `--test-scheduled` flag
+
+- [#2526](https://github.com/cloudflare/wrangler2/pull/2526) [`69d379a4`](https://github.com/cloudflare/wrangler2/commit/69d379a48dd49c9c1812c89b2c7f1680e2196c0f) Thanks [@jrf0110](https://github.com/jrf0110)! - Adds unstable_pages module to JS API
+
+* [#2558](https://github.com/cloudflare/wrangler2/pull/2558) [`b910f644`](https://github.com/cloudflare/wrangler2/commit/b910f644c7440ad034ffcaab288fcbb64deaa83b) Thanks [@caass](https://github.com/caass)! - Add metrics for deployments
+
+- [#2554](https://github.com/cloudflare/wrangler2/pull/2554) [`fbeaf609`](https://github.com/cloudflare/wrangler2/commit/fbeaf6090e5eca4730358caa1838d0866d7b6006) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat: Add support for wasm module imports in `wrangler pages dev`
+
+  Currently it is not possible to import `wasm` modules in either Pages
+  Functions or Pages Advanced Mode projects.
+
+  This commit caries out work to address the aforementioned issue by
+  enabling `wasm` module imports in `wrangler pages dev`. As a result,
+  Pages users can now import their `wasm` modules withing their Functions
+  or `_worker.js` files, and `wrangler pages dev` will correctly bundle
+  everything and serve these "external" modules.
+
+  ```
+  import hello from "./hello.wasm"
+
+  export async function onRequest() {
+  	const module = await WebAssembly.instantiate(hello);
+  	return new Response(module.exports.hello);
+  }
+  ```
+
+* [#2563](https://github.com/cloudflare/wrangler2/pull/2563) [`5ba39569`](https://github.com/cloudflare/wrangler2/commit/5ba39569e7ca6e341635b9beb8edebc60ad17dcd) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: Copy module imports related files to outdir
+
+  When we bundle a Worker `esbuild` takes care of writing the
+  results to the output directory. However, if the Worker contains
+  any `external` imports, such as text/wasm/binary module imports,
+  that cannot be inlined into the same bundle file, `bundleWorker`
+  will not copy these files to the output directory. This doesn't
+  affect `wrangler publish` per se, because of how the Worker
+  upload FormData is created. It does however create some
+  inconsistencies when running `wrangler publish --outdir` or
+  `wrangler publish --outdir --dry-run`, in that, `outdir` will
+  not contain those external import files.
+
+  This commit addresses this issue by making sure the aforementioned
+  files do get copied over to `outdir` together with `esbuild`'s
+  resulting bundle files.
+
+## 2.8.0
+
+### Minor Changes
+
+- [#2538](https://github.com/cloudflare/wrangler2/pull/2538) [`af4f27c5`](https://github.com/cloudflare/wrangler2/commit/af4f27c5966f52e605ab7c16ff9746b7802d3479) Thanks [@edevil](https://github.com/edevil)! - feat: support EmailEvent event type in `wrangler tail`.
+
+* [#2404](https://github.com/cloudflare/wrangler2/pull/2404) [`3f824347`](https://github.com/cloudflare/wrangler2/commit/3f824347c624a2cedf4af2b6bbd781b8581b08b5) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: support bundling the raw Pages `_worker.js` before deploying
+
+  Previously, if you provided a `_worker.js` file, then Pages would simply check the
+  file for disallowed imports and then deploy the file as-is.
+
+  Not bundling the `_worker.js` file means that it cannot containing imports to other
+  JS files, but also prevents Wrangler from adding shims such as the one for the D1 alpha
+  release.
+
+  This change adds the ability to tell Wrangler to pass the `_worker.js` through the
+  normal Wrangler bundling process before deploying by setting the `--bundle`
+  command line argument to `wrangler pages dev` and `wrangler pages publish`.
+
+  This is in keeping with the same flag for `wrangler publish`.
+
+  Currently bundling is opt-in, flag defaults to `false` if not provided.
+
+### Patch Changes
+
+- [#2525](https://github.com/cloudflare/wrangler2/pull/2525) [`fe8c6917`](https://github.com/cloudflare/wrangler2/commit/fe8c69173821cfa5b0277e018df3a6207234b213) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: send `wrangler docs d1` to the right place
+
+* [#2542](https://github.com/cloudflare/wrangler2/pull/2542) [`b44e1a75`](https://github.com/cloudflare/wrangler2/commit/b44e1a7525248a4482248695742f3020347e3502) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Rename `--bundle` to `--no-bundle` in Pages commands to make similar to Workers
+
+- [#2551](https://github.com/cloudflare/wrangler2/pull/2551) [`bfffe595`](https://github.com/cloudflare/wrangler2/commit/bfffe59558675a3c943fc24bb8b4e29066ae0581) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: wrangler init --from-dash incorrectly expects index.ts while writing index.js
+
+  This PR fixes a bug where Wrangler would write a `wrangler.toml` expecting an index.ts file, while writing an index.js file.
+
+* [#2529](https://github.com/cloudflare/wrangler2/pull/2529) [`2270507c`](https://github.com/cloudflare/wrangler2/commit/2270507c7e7c7f0be4c39a9ee283147c0fe245cd) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Remove "experimental \_routes.json" warnings
+
+  `_routes.json` is no longer considered an experimental feature, so let's
+  remove all warnings we have in place for that.
+
+- [#2548](https://github.com/cloudflare/wrangler2/pull/2548) [`4db768fa`](https://github.com/cloudflare/wrangler2/commit/4db768fa5e05e4351b08113a20525c700324d502) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: path should be optional for wrangler d1 backup download
+
+  This PR fixes a bug that forces folks to provide a `--output` flag to `wrangler d1 backup download`.
+
+* [#2528](https://github.com/cloudflare/wrangler2/pull/2528) [`18208091`](https://github.com/cloudflare/wrangler2/commit/18208091335e6fa60e736cdeed46462c4be42a38) Thanks [@caass](https://github.com/caass)! - Add some guidance when folks encounter a 10021 error.
+
+  Error code 10021 can occur when your worker doesn't pass startup validation. This error message will make it a little easier to reason about what happened and what to do next.
+
+  Closes #2519
+
+- [#1769](https://github.com/cloudflare/wrangler2/pull/1769) [`6a67efe9`](https://github.com/cloudflare/wrangler2/commit/6a67efe9ae1da27fb95ffb030959465781bc74b6) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - allow `fetch()` calls locally to accept URL Objects
+
 ## 2.7.1
 
 ### Patch Changes

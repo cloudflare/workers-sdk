@@ -100,7 +100,6 @@ export async function unstable_dev(
 		showInteractiveDevSession,
 		testMode,
 		testScheduled,
-		watch,
 		// 2. options for alpha/beta products/libs
 		d1Databases,
 		experimentalLocal,
@@ -139,20 +138,54 @@ export async function unstable_dev(
 					local: true,
 					d1Databases,
 					disableDevRegistry,
-					testScheduled,
-					experimentalLocal,
-					experimentalLocalRemoteKv,
+					testScheduled: testScheduled ?? false,
+					experimentalLocal: experimentalLocal ?? false,
+					experimentalLocalRemoteKv: experimentalLocalRemoteKv ?? false,
 					enablePagesAssetsServiceBinding,
 					liveReload,
 					showInteractiveDevSession,
 					forceLocal,
-					watch,
-					...options,
 					onReady: (address, port) => {
 						readyPort = port;
 						readyAddress = address;
 						ready(devServer);
 					},
+					config: options?.config,
+					env: options?.env,
+					bundle: options?.bundle,
+					compatibilityDate: options?.compatibilityDate,
+					compatibilityFlags: options?.compatibilityFlags,
+					ip: options?.ip,
+					inspectorPort: options?.inspectorPort,
+					v: undefined,
+					localProtocol: options?.localProtocol,
+					assets: options?.assets,
+					site: options?.site, // Root folder of static assets for Workers Sites
+					siteInclude: options?.siteInclude, // Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.
+					siteExclude: options?.siteExclude, // Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.
+					nodeCompat: options?.nodeCompat, // Enable node.js compatibility
+					persist: options?.persist, // Enable persistence for local mode, using default path: .wrangler/state
+					persistTo: options?.persistTo, // Specify directory to use for local persistence (implies --persist)
+					experimentalJsonConfig: undefined,
+					name: undefined,
+					noBundle: false,
+					format: undefined,
+					latest: false,
+					routes: undefined,
+					host: undefined,
+					localUpstream: undefined,
+					experimentalPublic: undefined,
+					upstreamProtocol: undefined,
+					var: undefined,
+					define: undefined,
+					jsxFactory: undefined,
+					jsxFragment: undefined,
+					tsconfig: undefined,
+					minify: undefined,
+					experimentalEnableLocalPersistence: undefined,
+					legacyEnv: undefined,
+					public: undefined,
+					...options,
 				});
 			}).then((devServer) => {
 				// now that the inner promise has resolved, we can resolve the outer promise
@@ -190,22 +223,58 @@ export async function unstable_dev(
 					inspect: false,
 					_: [],
 					$0: "",
+					logLevel: options?.logLevel ?? "log",
+					port: options?.port ?? 0,
 					local: true,
 					showInteractiveDevSession,
 					d1Databases,
 					disableDevRegistry,
-					testScheduled,
-					experimentalLocal,
-					experimentalLocalRemoteKv,
+					testScheduled: testScheduled ?? false,
+					experimentalLocal: experimentalLocal ?? false,
+					experimentalLocalRemoteKv: experimentalLocalRemoteKv ?? false,
 					enablePagesAssetsServiceBinding,
 					liveReload,
-					watch,
-					...options,
 					onReady: (address, port) => {
 						readyPort = port;
 						readyAddress = address;
 						ready(devServer);
 					},
+					config: options?.config,
+					env: options?.env,
+					bundle: options?.bundle,
+					compatibilityDate: options?.compatibilityDate,
+					compatibilityFlags: options?.compatibilityFlags,
+					ip: options?.ip,
+					inspectorPort: options?.inspectorPort,
+					v: undefined,
+					localProtocol: options?.localProtocol,
+					assets: options?.assets,
+					site: options?.site, // Root folder of static assets for Workers Sites
+					siteInclude: options?.siteInclude, // Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.
+					siteExclude: options?.siteExclude, // Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.
+					nodeCompat: options?.nodeCompat, // Enable node.js compatibility
+					persist: options?.persist, // Enable persistence for local mode, using default path: .wrangler/state
+					persistTo: options?.persistTo, // Specify directory to use for local persistence (implies --persist)
+					experimentalJsonConfig: undefined,
+					name: undefined,
+					noBundle: false,
+					format: undefined,
+					latest: false,
+					routes: undefined,
+					host: undefined,
+					localUpstream: undefined,
+					experimentalPublic: undefined,
+					upstreamProtocol: undefined,
+					var: undefined,
+					define: undefined,
+					jsxFactory: undefined,
+					jsxFragment: undefined,
+					tsconfig: undefined,
+					minify: undefined,
+					experimentalEnableLocalPersistence: undefined,
+					legacyEnv: undefined,
+					public: undefined,
+					...options,
 				});
 			}).then((devServer) => {
 				resolve({

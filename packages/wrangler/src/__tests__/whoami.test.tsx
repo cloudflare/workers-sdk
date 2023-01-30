@@ -4,6 +4,7 @@ import { getUserInfo } from "../whoami";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import {
+	createFetchResult,
 	msw,
 	mswSuccessOauthHandlers,
 	mswSuccessUserHandlers,
@@ -44,18 +45,14 @@ describe("getUserInfo()", () => {
 		msw.use(
 			rest.get("*/user", (_, res, ctx) => {
 				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: false,
-						errors: [
+					ctx.json(
+						createFetchResult({}, false, [
 							{
 								code: 9109,
 								message: "Uauthorized to access requested resource",
 							},
-						],
-						messages: [],
-						result: {},
-					})
+						])
+					)
 				);
 			}),
 			rest.get("*/accounts", (request, res, ctx) => {
@@ -71,15 +68,7 @@ describe("getUserInfo()", () => {
 			  "host": "api.cloudflare.com",
 			}
 		`);
-				return res.once(
-					ctx.status(200),
-					ctx.json({
-						success: true,
-						errors: [],
-						messages: [],
-						result: [],
-					})
-				);
+				return res.once(ctx.json(createFetchResult([])));
 			})
 		);
 		const userInfo = await getUserInfo();

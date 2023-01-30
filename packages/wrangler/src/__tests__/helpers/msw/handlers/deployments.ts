@@ -1,18 +1,13 @@
 import { rest } from "msw";
-
-import type { DeploymentListRes } from "../../../../deployments";
+import { createFetchResult } from "../index";
 
 export const mswSuccessDeployments = [
 	rest.get(
 		"*/accounts/:accountId/workers/deployments/by-script/:scriptTag",
 		(_, response, context) =>
 			response.once(
-				context.status(200),
-				context.json({
-					success: true,
-					errors: [],
-					messages: [],
-					result: {
+				context.json(
+					createFetchResult({
 						latest: {
 							id: "Galaxy-Class",
 							number: "1701-E",
@@ -52,8 +47,8 @@ export const mswSuccessDeployments = [
 								},
 							},
 						],
-					} as DeploymentListRes,
-				})
+					})
+				)
 			)
 	),
 ];
@@ -61,16 +56,13 @@ export const mswSuccessDeployments = [
 export const mswSuccessLastDeployment = [
 	rest.get(
 		"*/accounts/:accountId/workers/services/:scriptName",
-		(req, res, ctx) => {
+		(_, res, ctx) => {
 			return res.once(
-				ctx.json({
-					success: true,
-					messages: [],
-					errors: [],
-					result: {
+				ctx.json(
+					createFetchResult({
 						default_environment: { script: { last_deployed_from: "wrangler" } },
-					},
-				})
+					})
+				)
 			);
 		}
 	),

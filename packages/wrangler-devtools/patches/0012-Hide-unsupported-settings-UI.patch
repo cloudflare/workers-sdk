@@ -1,0 +1,66 @@
+From deeac26dadb8f2d7f5653c1994eed41f9e220af2 Mon Sep 17 00:00:00 2001
+From: bcoll <bcoll@cloudflare.com>
+Date: Thu, 26 Jan 2023 15:30:34 +0000
+Subject: [PATCH 12/12] Hide unsupported settings UI
+
+- Show CORS errors in console setting
+- Show XHR requests in console setting
+- Disable JavaScript setting
+- Devices settings tab
+- Throttling settings tab
+---
+ front_end/panels/console/ConsoleView.ts      | 4 ----
+ front_end/panels/settings/SettingsScreen.ts  | 4 ++++
+ front_end/panels/settings/settingsScreen.css | 5 +++++
+ 3 files changed, 9 insertions(+), 4 deletions(-)
+
+diff --git a/front_end/panels/console/ConsoleView.ts b/front_end/panels/console/ConsoleView.ts
+index 3e698c0eb7..77c7a1431c 100644
+--- a/front_end/panels/console/ConsoleView.ts
++++ b/front_end/panels/console/ConsoleView.ts
+@@ -458,14 +458,10 @@ export class ConsoleView extends UI.Widget.VBox implements UI.SearchableView.Sea
+         i18nString(UIStrings.onlyShowMessagesFromTheCurrentContext), i18nString(UIStrings.selectedContextOnly));
+     ConsoleView.appendSettingsCheckboxToToolbar(
+         settingsToolbarLeft, this.groupSimilarSetting, i18nString(UIStrings.groupSimilarMessagesInConsole));
+-    ConsoleView.appendSettingsCheckboxToToolbar(
+-        settingsToolbarLeft, this.showCorsErrorsSetting, i18nString(UIStrings.showCorsErrorsInConsole));
+ 
+     const settingsToolbarRight = new UI.Toolbar.Toolbar('', settingsPane.element);
+     settingsToolbarRight.makeVertical();
+ 
+-    ConsoleView.appendSettingsCheckboxToToolbar(
+-        settingsToolbarRight, monitoringXHREnabledSetting, i18nString(UIStrings.logXMLHttpRequests));
+     ConsoleView.appendSettingsCheckboxToToolbar(
+         settingsToolbarRight, 'consoleEagerEval', i18nString(UIStrings.eagerlyEvaluateTextInThePrompt));
+     ConsoleView.appendSettingsCheckboxToToolbar(
+diff --git a/front_end/panels/settings/SettingsScreen.ts b/front_end/panels/settings/SettingsScreen.ts
+index af732358ad..089ee5edc8 100644
+--- a/front_end/panels/settings/SettingsScreen.ts
++++ b/front_end/panels/settings/SettingsScreen.ts
+@@ -380,6 +380,10 @@ export class GenericSettingsTab extends SettingsTab {
+     const uiSectionName = Common.Settings.getLocalizedSettingsCategory(category);
+     const sectionElement = this.appendSection(uiSectionName);
+     for (const settingRegistration of settings) {
++      const name = settingRegistration.settingName;
++      if (name === "monitoringXHREnabled" || name === "consoleShowsCorsErrors" || name === "javaScriptDisabled") {
++        continue;
++      }
+       const setting = Common.Settings.Settings.instance().moduleSetting(settingRegistration.settingName);
+       const settingControl = UI.SettingsUI.createControlForSetting(setting);
+       if (settingControl) {
+diff --git a/front_end/panels/settings/settingsScreen.css b/front_end/panels/settings/settingsScreen.css
+index df0806e90d..0b20193865 100644
+--- a/front_end/panels/settings/settingsScreen.css
++++ b/front_end/panels/settings/settingsScreen.css
+@@ -234,3 +234,8 @@ label {
+     color: HighlightText;
+   }
+ }
++
++#tab-devices,
++#tab-throttling-conditions {
++  display: none;
++}
+-- 
+2.37.1 (Apple Git-137.1)
+

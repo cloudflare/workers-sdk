@@ -2,8 +2,12 @@ import * as fs from "node:fs";
 import { resolve } from "node:path";
 import TOML from "@iarna/toml";
 import { formatMessagesSync } from "esbuild";
+import {
+	parse as jsoncParse,
+	printParseErrorCode,
+	type ParseError as JsoncParseError,
+} from "jsonc-parser";
 import { logger } from "./logger";
-
 export type Message = {
 	text: string;
 	location?: Location;
@@ -137,6 +141,24 @@ export function parseJSON<T>(input: string, file?: string): T {
 		const location = indexLocation({ file, fileText: input }, position);
 		throw new ParseError({ text, location });
 	}
+}
+
+/**
+ * A wrapper around `JSONC.parse` that throws a `ParseError`.
+ */
+export function parseJSONC<T>(input: string, file?: string): T {
+	const errors: JsoncParseError[] = [];
+	const data = jsoncParse(input, errors);
+	if (errors.length) {
+		throw new ParseError({
+			text: printParseErrorCode(errors[0].error),
+			location: {
+				...indexLocation({ file, fileText: input }, errors[0].offset + 1),
+				length: errors[0].length,
+			},
+		});
+	}
+	return data;
 }
 
 /**

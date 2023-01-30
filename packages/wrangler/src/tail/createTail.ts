@@ -242,11 +242,18 @@ export type TailEventMessage = {
 	 * The event that triggered the worker. In the case of an HTTP request,
 	 * this will be a RequestEvent. If it's a cron trigger, it'll be a
 	 * ScheduledEvent. If it's a durable object alarm, it's an AlarmEvent.
+	 * If it's a email, it'a an EmailEvent
 	 *
 	 * Until workers-types exposes individual types for export, we'll have
 	 * to just re-define these types ourselves.
 	 */
-	event: RequestEvent | ScheduledEvent | AlarmEvent | undefined | null;
+	event:
+		| RequestEvent
+		| ScheduledEvent
+		| AlarmEvent
+		| EmailEvent
+		| undefined
+		| null;
 };
 
 /**
@@ -376,4 +383,24 @@ export type AlarmEvent = {
 	 * you should parse it later on on your own.
 	 */
 	scheduledTime: string;
+};
+
+/**
+ * An event that was triggered from an email
+ */
+export type EmailEvent = {
+	/**
+	 * Who sent the email
+	 */
+	mailFrom: string;
+
+	/**
+	 * Who was the email sent to
+	 */
+	rcptTo: string;
+
+	/**
+	 * Size of the email in bytes
+	 */
+	rawSize: number;
 };

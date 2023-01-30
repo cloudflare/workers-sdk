@@ -1,22 +1,20 @@
 import { rest } from "msw";
+import { createFetchResult } from "../index";
 
 export default [
 	rest.get("*/zones", ({ url: { searchParams } }, res, context) => {
 		return res(
-			context.status(200),
-			context.json({
-				success: true,
-				errors: [],
-				messages: [],
-				result:
+			context.json(
+				createFetchResult(
 					searchParams.get("name") === "exists.com"
 						? [
 								{
 									id: "exists-com",
 								},
 						  ]
-						: [],
-			})
+						: []
+				)
+			)
 		);
 	}),
 ];

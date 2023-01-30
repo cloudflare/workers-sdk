@@ -46,6 +46,8 @@ async function buildMain(flags: BuildFlags = {}) {
 		external: EXTERNAL_DEPENDENCIES,
 		sourcemap: process.env.SOURCEMAPS !== "false",
 		inject: [path.join(__dirname, "../import_meta_url.js")],
+		// This is required to support jsonc-parser. See https://github.com/microsoft/node-jsonc-parser/issues/57
+		mainFields: ["module", "main"],
 		define: {
 			__RELATIVE_PACKAGE_PATH__,
 			"import.meta.url": "import_meta_url",
