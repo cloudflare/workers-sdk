@@ -159,7 +159,7 @@ export async function publish({
 				outputConfigPath,
 				functionsDirectory,
 				onEnd: () => {},
-				buildOutputDirectory: dirname(outfile),
+				buildOutputDirectory: directory,
 				routesOutputPath,
 				local: false,
 				d1Databases,
