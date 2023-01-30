@@ -18,9 +18,6 @@
 		"module": "esnext",
 		"checkJs": true,
 		"noEmit": true,
-		"paths": {
-			"create-cloudflare": ["./packages/create-cloudflare/src/index.d.ts"]
-		},
 		"types": ["@cloudflare/workers-types"]
 	},
 	"include": ["worker/**/*", "worker-*/**/*"],
