@@ -53,7 +53,7 @@ describe("pages", () => {
 		msw.restoreHandlers();
 	});
 
-	it("should should display a list of available subcommands, for pages with no subcommand", async () => {
+	it("should display a list of available subcommands, for pages with no subcommand", async () => {
 		await runWrangler("pages");
 		await endEventLoop();
 
