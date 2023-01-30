@@ -1,11 +1,3 @@
-import { fetch, Headers, Request, Response } from "@miniflare/core";
-import { HTMLRewriter } from "@miniflare/html-rewriter";
-import { polyfill } from "../environment-polyfills";
+import makeServiceWorkerEnv from "service-worker-mock";
 
-polyfill({
-	fetch,
-	Headers,
-	Request,
-	Response,
-	HTMLRewriter,
-});
+Object.assign(globalThis, makeServiceWorkerEnv());

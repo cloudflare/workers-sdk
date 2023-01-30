@@ -14,7 +14,7 @@
 	],
 	"scripts": {
 		"check:type": "tsc",
-		"test": "jest --silent=false"
+		"test": "jest"
 	},
 	"jest": {
 		"coverageReporters": [
@@ -47,7 +47,9 @@
 	"devDependencies": {
 		"@miniflare/cache": "2.11.0",
 		"@miniflare/html-rewriter": "2.11.0",
+		"@types/service-worker-mock": "^2.0.1",
 		"concurrently": "^7.3.0",
-		"glob": "^8.0.3"
+		"glob": "^8.0.3",
+		"service-worker-mock": "^2.0.5"
 	}
 }
