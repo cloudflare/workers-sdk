@@ -736,6 +736,10 @@ async function getNewWorkerType(newWorkerFilename: string) {
 				value: "scheduled",
 				title: "Scheduled handler",
 			},
+			{
+				value: "email",
+				title: "Email handler",
+			},
 		],
 		defaultOption: 1,
 	});
@@ -761,19 +765,23 @@ async function getNewWorkerTestType(yesFlag?: boolean) {
 
 function getNewWorkerTemplate(
 	lang: "js" | "ts",
-	workerType: "fetch" | "scheduled"
+	workerType: "fetch" | "scheduled" | "email"
 ) {
 	const templates = {
 		"js-fetch": "new-worker.js",
 		"js-scheduled": "new-worker-scheduled.js",
+		"js-email": "new-worker-email.js",
 		"ts-fetch": "new-worker.ts",
 		"ts-scheduled": "new-worker-scheduled.ts",
+		"ts-email": "new-worker-email.ts",
 	};
 
 	return templates[`${lang}-${workerType}`];
 }
 
-function getNewWorkerToml(workerType: "fetch" | "scheduled"): TOML.JsonMap {
+function getNewWorkerToml(
+	workerType: "fetch" | "scheduled" | "email"
+): TOML.JsonMap {
 	if (workerType === "scheduled") {
 		return {
 			triggers: {
