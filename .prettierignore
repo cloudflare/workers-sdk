@@ -15,3 +15,10 @@ fixtures/remix-pages-app/build/
 fixtures/remix-pages-app/public/build/
 fixtures/worker-app/dist/
 fixtures/pages-functions-app/public/cdn-cgi/
+
+# Moved from /templates
+*-lock.*
+*.lock
+*.log
+
+/worker-rust/target/

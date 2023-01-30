@@ -1,8 +1,0 @@
-.DS_Store
-node_modules
-*-lock.*
-*.lock
-
-/bin.js
-/index.js
-/index.d.ts
