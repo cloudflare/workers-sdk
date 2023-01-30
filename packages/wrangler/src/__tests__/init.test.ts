@@ -1392,7 +1392,7 @@ describe("init", () => {
 						contents: {
 							config: {
 								compilerOptions: expect.objectContaining({
-									types: ["@cloudflare/workers-types", "jest"],
+									types: ["@cloudflare/workers-types", "vitest"],
 								}),
 							},
 							error: undefined,
