@@ -17,7 +17,7 @@ describe("dispatch-namespace", () => {
 	mockAccountId();
 	mockApiToken();
 
-	it("should should display a list of available subcommands, for dispatch-namespace with no subcommand", async () => {
+	it("should display a list of available subcommands, for dispatch-namespace with no subcommand", async () => {
 		await runWrangler("dispatch-namespace");
 
 		// wait a tick for the help menu to be printed

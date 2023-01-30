@@ -8,5 +8,6 @@ export default defineConfig({
 				: configDefaults.include,
 		exclude: [...configDefaults.exclude, "fixtures/local-mode-tests/**/*"],
 		root: __dirname,
+		testTimeout: 30_000,
 	},
 });

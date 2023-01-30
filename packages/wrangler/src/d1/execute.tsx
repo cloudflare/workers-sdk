@@ -64,7 +64,7 @@ export function Options(yargs: CommonYargsArgv) {
 			type: "boolean",
 		})
 		.option("file", {
-			describe: "A .sql file to injest",
+			describe: "A .sql file to ingest",
 			type: "string",
 		})
 		.option("command", {
