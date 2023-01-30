@@ -1,5 +1,156 @@
 # wrangler
 
+## 2.9.0
+
+### Minor Changes
+
+- [#2629](https://github.com/cloudflare/wrangler2/pull/2629) [`151733e5`](https://github.com/cloudflare/wrangler2/commit/151733e5d98e95f363b548f9959c2baf418eb7b5) Thanks [@mrbbot](https://github.com/mrbbot)! - Prefer the `workerd` `exports` condition when bundling.
+
+  This can be used to build isomorphic libraries that have different implementations depending on the JavaScript runtime they're running in.
+  When bundling, Wrangler will try to load the [`workerd` key](https://runtime-keys.proposal.wintercg.org/#workerd).
+  This is the [standard key](https://runtime-keys.proposal.wintercg.org/#workerd) for the Cloudflare Workers runtime.
+  Learn more about the [conditional `exports` field here](https://nodejs.org/api/packages.html#conditional-exports).
+
+### Patch Changes
+
+- [#2409](https://github.com/cloudflare/wrangler2/pull/2409) [`89d78c0a`](https://github.com/cloudflare/wrangler2/commit/89d78c0ac444885298ac052b0b3de23b69fb029b) Thanks [@penalosa](https://github.com/penalosa)! - Wrangler now supports an `--experimental-json-config` flag which will read your configuration from a `wrangler.json` file, rather than `wrangler.toml`. The format of this file is exactly the same as the `wrangler.toml` configuration file, except that the syntax is `JSONC` (JSON with comments) rather than `TOML`. This is experimental, and is not recommended for production use.
+
+* [#2623](https://github.com/cloudflare/wrangler2/pull/2623) [`04d8a312`](https://github.com/cloudflare/wrangler2/commit/04d8a3124fbcf20049b39a96654d7f3c850c032b) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix d1 directory not being created when running the `wrangler d1 execute` command with the `--yes`/`-y` flag
+
+- [#2608](https://github.com/cloudflare/wrangler2/pull/2608) [`70daffeb`](https://github.com/cloudflare/wrangler2/commit/70daffebab4788322769350ab714959e3254c3b4) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: Add support for D1 databases when bundling an `_worker.js` on `wrangler pages publish`
+
+* [#2597](https://github.com/cloudflare/wrangler2/pull/2597) [`416babf0`](https://github.com/cloudflare/wrangler2/commit/416babf050ed3608e0fd747111561a4c7207185e) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: do not crash in wrangler dev when passing a request object to fetch
+
+  This reverts and fixes the changes in https://github.com/cloudflare/wrangler2/pull/1769
+  which does not support creating requests from requests whose bodies have already been consumed.
+
+  Fixes #2562
+
+- [#2622](https://github.com/cloudflare/wrangler2/pull/2622) [`9778b33e`](https://github.com/cloudflare/wrangler2/commit/9778b33eb27f721fb743a970fb1520782ab0d573) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: implement `d1 list --json` with clean output for piping into other commands
+
+  Before:
+
+  ```bash
+  rozenmd@cflaptop test % npx wrangler d1 list
+  --------------------
+  🚧 D1 is currently in open alpha and is not recommended for production data and traffic
+  🚧 Please report any bugs to https://github.com/cloudflare/wrangler2/issues/new/choose
+  🚧 To request features, visit https://community.cloudflare.com/c/developers/d1
+  🚧 To give feedback, visit https://discord.gg/cloudflaredev
+  --------------------
+
+  ┌──────────────────────────────┬─────────────────┐
+  │ uuid                         │ name            │
+  ├──────────────────────────────┼─────────────────┤
+  │ xxxxxx-xxxx-xxxx-xxxx-xxxxxx │ test            │
+  ├──────────────────────────────┼─────────────────┤
+  │ xxxxxx-xxxx-xxxx-xxxx-xxxxxx │ test2           │
+  ├──────────────────────────────┼─────────────────┤
+  │ xxxxxx-xxxx-xxxx-xxxx-xxxxxx │ test3           │
+  └──────────────────────────────┴─────────────────┘
+  ```
+
+  After:
+
+  ```bash
+  rozenmd@cflaptop test % npx wrangler d1 list --json
+  [
+    {
+      "uuid": "xxxxxx-xxxx-xxxx-xxxx-xxxxxx",
+      "name": "test"
+    },
+    {
+      "uuid": "xxxxxx-xxxx-xxxx-xxxx-xxxxxx",
+      "name": "test2"
+    },
+    {
+      "uuid": "xxxxxx-xxxx-xxxx-xxxx-xxxxxx",
+      "name": "test3"
+    },
+  ]
+  ```
+
+* [#2631](https://github.com/cloudflare/wrangler2/pull/2631) [`6b3fe5ef`](https://github.com/cloudflare/wrangler2/commit/6b3fe5efc68c7a7afcd6666158a24d45033dd3db) Thanks [@thibmeu](https://github.com/thibmeu)! - Fix `wrangler publish --dry-run` to not require authentication when using Queues
+
+- [#2627](https://github.com/cloudflare/wrangler2/pull/2627) [`6f0f2ba6`](https://github.com/cloudflare/wrangler2/commit/6f0f2ba65731a1f6a0b1978e5fc3a5da9a50df0f) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: implement `d1 execute --json` with clean output for piping into other commands
+
+  **Before:**
+
+  ```bash
+  rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from customers"
+  ▲ [WARNING] Processing wrangler.toml configuration:
+
+      - D1 Bindings are currently in alpha to allow the API to evolve before general availability.
+        Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
+        Note: Run this command with the environment variable NO_D1_WARNING=true to hide this message
+
+        For example: `export NO_D1_WARNING=true && wrangler <YOUR COMMAND HERE>`
+
+
+  --------------------
+  🚧 D1 is currently in open alpha and is not recommended for production data and traffic
+  🚧 Please report any bugs to https://github.com/cloudflare/wrangler2/issues/new/choose
+  🚧 To request features, visit https://community.cloudflare.com/c/developers/d1
+  🚧 To give feedback, visit https://discord.gg/cloudflaredev
+  --------------------
+
+  🌀 Mapping SQL input into an array of statements
+  🌀 Parsing 1 statements
+  🌀 Executing on test (xxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx):
+  🚣 Executed 1 command in 11.846710999961942ms
+  ┌────────────┬─────────────────────┬───────────────────┐
+  │ CustomerID │ CompanyName         │ ContactName       │
+  ├────────────┼─────────────────────┼───────────────────┤
+  │ 1          │ Alfreds Futterkiste │ Maria Anders      │
+  ├────────────┼─────────────────────┼───────────────────┤
+  │ 4          │ Around the Horn     │ Thomas Hardy      │
+  ├────────────┼─────────────────────┼───────────────────┤
+  │ 11         │ Bs Beverages        │ Victoria Ashworth │
+  ├────────────┼─────────────────────┼───────────────────┤
+  │ 13         │ Bs Beverages        │ Random Name       │
+  └────────────┴─────────────────────┴───────────────────┘
+  ```
+
+  **After:**
+
+  ```bash
+  rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from customers" --json
+  [
+    {
+      "results": [
+        {
+          "CustomerID": 1,
+          "CompanyName": "Alfreds Futterkiste",
+          "ContactName": "Maria Anders"
+        },
+        {
+          "CustomerID": 4,
+          "CompanyName": "Around the Horn",
+          "ContactName": "Thomas Hardy"
+        },
+        {
+          "CustomerID": 11,
+          "CompanyName": "Bs Beverages",
+          "ContactName": "Victoria Ashworth"
+        },
+        {
+          "CustomerID": 13,
+          "CompanyName": "Bs Beverages",
+          "ContactName": "Random Name"
+        }
+      ],
+      "success": true,
+      "meta": {
+        "duration": 1.662519000004977,
+        "last_row_id": null,
+        "changes": null,
+        "served_by": "primary-xxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.db3",
+        "internal_stats": null
+      }
+    }
+  ]
+  ```
+
 ## 2.8.1
 
 ### Patch Changes
