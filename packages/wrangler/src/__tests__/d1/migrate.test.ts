@@ -82,6 +82,28 @@ describe("migrate", () => {
 			);
 		});
 
+		it("should use the custom migrations folder when provided", async () => {
+			setIsTTY(false);
+			writeWranglerToml({
+				d1_databases: [
+					{
+						binding: "DATABASE",
+						database_name: "db",
+						database_id: "xxxx",
+						migrations_dir: "my-migrations-go-here",
+					},
+				],
+			});
+			await expect(
+				runWrangler("d1 migrations list --local DATABASE")
+			).rejects.toThrowError(
+				`No migrations present at ${cwd().replaceAll(
+					"\\",
+					"/"
+				)}/my-migrations-go-here.`
+			);
+		});
+
 		it("should try to read D1 config from wrangler.toml when logged in", async () => {
 			// no need to clear this env var as it's implicitly cleared by mockApiToken in afterEach
 			process.env.CLOUDFLARE_API_TOKEN = "api-token";
