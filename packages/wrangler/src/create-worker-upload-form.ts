@@ -49,6 +49,14 @@ type WorkerMetadataBinding =
 			type: "logfwdr";
 			name: string;
 			destination: string;
+	  }
+	| {
+			type: "build_options";
+			custom_pipeline?: {
+				mutable: boolean;
+				stages: string;
+			};
+			stable_id?: string;
 	  };
 
 export interface WorkerMetadata {
@@ -61,6 +69,7 @@ export interface WorkerMetadata {
 	usage_model?: "bundled" | "unbound";
 	migrations?: CfDurableObjectMigrations;
 	capnp_schema?: string;
+	build_options_part?: string;
 	bindings: WorkerMetadataBinding[];
 	keep_bindings?: WorkerMetadataBinding["type"][];
 	logpush?: boolean;
@@ -290,6 +299,10 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		...(usage_model && { usage_model }),
 		...(migrations && { migrations }),
 		capnp_schema: bindings.logfwdr?.schema,
+		build_options_part:
+			bindings.build_options == undefined
+				? undefined
+				: "cf_build_options_part_name",
 		...(keepVars && { keep_bindings: ["plain_text", "json"] }),
 		...(logpush !== undefined && { logpush }),
 	};
@@ -318,6 +331,13 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			new File([readFileSync(filePath)], filePath, {
 				type: "application/octet-stream",
 			})
+		);
+	}
+
+	if (bindings.build_options && metadata.build_options_part) {
+		formData.set(
+			metadata.build_options_part,
+			JSON.stringify(bindings.build_options)
 		);
 	}
 

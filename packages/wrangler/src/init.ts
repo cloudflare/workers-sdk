@@ -934,6 +934,11 @@ async function getWorkerConfig(
 						};
 					}
 					break;
+				case "build_options":
+					{
+						configObj.build_options = binding;
+					}
+					break;
 				case "wasm_module":
 					{
 						configObj.wasm_modules = {

@@ -45,7 +45,7 @@ import type { WorkerMetadata } from "../create-worker-upload-form";
 import type { KVNamespaceInfo } from "../kv/helpers";
 import type { CustomDomain, CustomDomainChangeset } from "../publish/publish";
 import type { PutConsumerBody } from "../queues/client";
-import type { CfWorkerInit } from "../worker";
+import type { CfWorkerInit, CfBuildOptions } from "../worker";
 import type { ResponseComposition, RestContext, RestRequest } from "msw";
 
 describe("publish", () => {
@@ -5638,6 +5638,49 @@ addEventListener('fetch', event => {});`
 			});
 		});
 
+		describe("[build_options]", () => {
+			it("should support build_options", async () => {
+				writeWranglerToml({
+					build_options: {
+						custom_pipeline: {
+							mutable: false,
+							stages: "aGVsbG8gd29ybGQ=",
+						},
+						stable_id: "fake/stable_id",
+					},
+				});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					// This should be empty, build_options is not a binding
+					expectedBindings: [],
+					expectedBuildOptions: {
+						stable_id: "fake/stable_id",
+						custom_pipeline: {
+							mutable: false,
+							stages: "aGVsbG8gd29ybGQ=",
+						},
+					},
+				});
+
+				await runWrangler("publish index.js");
+				expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Your worker has access to the following bindings:
+			- build_options:
+			  - mutable: false
+			  - stages: aGVsbG8gd29ybGQ=
+			  - stable_id: fake/stable_id
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class"
+		`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+		});
+
 		describe("[durable_objects]", () => {
 			it("should support durable object bindings", async () => {
 				writeWranglerToml({
@@ -7425,6 +7468,7 @@ function mockUploadWorkerRequest(
 		expectedCompatibilityDate?: string;
 		expectedCompatibilityFlags?: string[];
 		expectedMigrations?: CfWorkerInit["migrations"];
+		expectedBuildOptions?: CfBuildOptions;
 		env?: string;
 		legacyEnv?: boolean;
 		sendScriptIds?: boolean;
@@ -7444,6 +7488,7 @@ function mockUploadWorkerRequest(
 		env = undefined,
 		legacyEnv = false,
 		expectedMigrations,
+		expectedBuildOptions,
 		sendScriptIds,
 		keepVars,
 	} = options;
@@ -7512,6 +7557,12 @@ function mockUploadWorkerRequest(
 		}
 		if ("expectedMigrations" in options) {
 			expect(metadata.migrations).toEqual(expectedMigrations);
+		}
+		if ("expectedBuildOptions" in options) {
+			expect(metadata.build_options_part).toEqual("cf_build_options_part_name");
+			expect(formBody.get("cf_build_options_part_name")).toEqual(
+				JSON.stringify(expectedBuildOptions)
+			);
 		}
 		for (const [name, content] of Object.entries(expectedModules)) {
 			expect(formBody.get(name)).toEqual(content);

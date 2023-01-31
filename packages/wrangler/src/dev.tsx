@@ -883,6 +883,7 @@ function getBindings(
 		analytics_engine_datasets: configParam.analytics_engine_datasets,
 		unsafe: configParam.unsafe?.bindings,
 		logfwdr: configParam.logfwdr,
+		build_options: configParam.build_options,
 		d1_databases: identifyD1BindingsAsBeta([
 			...(configParam.d1_databases ?? []).map((d1Db) => {
 				//in local dev, bindings don't matter

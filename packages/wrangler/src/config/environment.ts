@@ -248,6 +248,14 @@ interface EnvironmentInheritable {
 		}[];
 	};
 
+	build_options: {
+		custom_pipeline?: {
+			mutable: boolean;
+			stages: string;
+		};
+		stable_id?: string;
+	};
+
 	/**
 	 * Send Trace Events from this worker to Workers Logpush.
 	 *

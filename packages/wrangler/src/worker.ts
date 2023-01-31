@@ -159,6 +159,16 @@ interface CfLogfwdr {
 	bindings: CfLogfwdrBinding[];
 }
 
+interface CfBuildOptionsCustomPipeline {
+	mutable: boolean;
+	stages: string;
+}
+
+export interface CfBuildOptions {
+	custom_pipeline?: CfBuildOptionsCustomPipeline;
+	stable_id?: string;
+}
+
 interface CfLogfwdrBinding {
 	name: string;
 	destination: string;
@@ -215,6 +225,7 @@ export interface CfWorkerInit {
 		analytics_engine_datasets: CfAnalyticsEngineDataset[] | undefined;
 		dispatch_namespaces: CfDispatchNamespace[] | undefined;
 		logfwdr: CfLogfwdr | undefined;
+		build_options: CfBuildOptions | undefined;
 		unsafe: CfUnsafeBinding[] | undefined;
 	};
 	migrations: CfDurableObjectMigrations | undefined;

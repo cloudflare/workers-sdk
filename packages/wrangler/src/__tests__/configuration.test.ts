@@ -45,6 +45,10 @@ describe("normalizeAndValidateConfig()", () => {
 				bindings: [],
 				schema: undefined,
 			},
+			build_options: {
+				custom_pipeline: undefined,
+				stable_id: undefined,
+			},
 			send_metrics: undefined,
 			main: undefined,
 			migrations: [],

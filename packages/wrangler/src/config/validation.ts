@@ -1145,6 +1145,17 @@ function normalizeAndValidateEnvironment(
 				bindings: [],
 			}
 		),
+		build_options: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"build_options",
+			isObjectWith("custom_pipeline", "stable_id"),
+			{
+				custom_pipeline: undefined,
+				stable_id: undefined,
+			}
+		),
 		unsafe: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -1558,6 +1569,36 @@ const validateCflogfwdrBinding: ValidatorFn = (diagnostics, field, value) => {
 	return isValid;
 };
 
+const validateCfBuildOptionsBinding: ValidatorFn = (
+	diagnostics,
+	field,
+	value
+) => {
+	if (typeof value != "object" || value == null) {
+		diagnostics.errors.push(
+			`Expected "${field}" to be an object but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "mutable", "boolean")) {
+		diagnostics.errors.push(`binding should have a boolean "mutable" field.`);
+		isValid = false;
+	}
+
+	if (!isRequiredProperty(value, "stages", "string")) {
+		diagnostics.errors.push(`binding should have a string "stages" field.`);
+		isValid = false;
+	}
+
+	if (!isRequiredProperty(value, "stable_id", "string")) {
+		diagnostics.errors.push(`binding should have a string "stable_id" field.`);
+		isValid = false;
+	}
+
+	return isValid;
+};
+
 /**
  * Check that the given field is a valid "unsafe" binding object.
  *
@@ -1590,6 +1631,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"r2_bucket",
 			"service",
 			"logfwdr",
+			"build_options",
 		];
 
 		if (safeBindings.includes(value.type)) {

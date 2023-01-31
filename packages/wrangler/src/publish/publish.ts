@@ -552,6 +552,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			analytics_engine_datasets: config.analytics_engine_datasets,
 			dispatch_namespaces: config.dispatch_namespaces,
 			logfwdr: config.logfwdr,
+			build_options: config.build_options,
 			unsafe: config.unsafe?.bindings,
 		};
 

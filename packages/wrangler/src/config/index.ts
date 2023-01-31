@@ -101,6 +101,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		d1_databases,
 		r2_buckets,
 		logfwdr,
+		build_options,
 		services,
 		analytics_engine_datasets,
 		text_blobs,
@@ -209,6 +210,30 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 					value: binding.destination,
 				};
 			}),
+		});
+	}
+
+	if (
+		build_options !== undefined &&
+		build_options.custom_pipeline !== undefined &&
+		build_options.stable_id !== undefined
+	) {
+		output.push({
+			type: "build_options",
+			entries: [
+				{
+					key: "mutable",
+					value: build_options.custom_pipeline.mutable.toString(),
+				},
+				{
+					key: "stages",
+					value: build_options.custom_pipeline.stages,
+				},
+				{
+					key: "stable_id",
+					value: build_options.stable_id,
+				},
+			],
 		});
 	}
 
