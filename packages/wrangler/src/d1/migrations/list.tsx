@@ -20,10 +20,13 @@ import type {
 export function ListOptions(yargs: CommonYargsArgv) {
 	return DatabaseWithLocal(yargs);
 }
+
 type ListHandlerOptions = StrictYargsOptionsToInterface<typeof ListOptions>;
 export const ListHandler = withConfig<ListHandlerOptions>(
 	async ({ config, database, local, persistTo }): Promise<void> => {
-		await requireAuth({});
+		if (!local) {
+			await requireAuth({});
+		}
 		logger.log(d1BetaWarning);
 
 		const databaseInfo = await getDatabaseInfoFromConfig(config, database);
