@@ -51,10 +51,10 @@ export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 			false
 		);
 
-		const migrationTableName =
+		const migrationsTableName =
 			databaseInfo?.migrationsTableName ?? DEFAULT_MIGRATION_TABLE;
 		await initMigrationsTable(
-			migrationTableName,
+			migrationsTableName,
 			local,
 			config,
 			database,
@@ -63,7 +63,7 @@ export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 
 		const unappliedMigrations = (
 			await getUnappliedMigrations(
-				migrationTableName,
+				migrationsTableName,
 				migrationsPath,
 				local,
 				config,
@@ -124,7 +124,7 @@ Your database may not be available to serve requests during the migration, conti
 				"utf8"
 			);
 			query += `
-								INSERT INTO ${migrationTableName} (name)
+								INSERT INTO ${migrationsTableName} (name)
 								values ('${migration.Name}');
 						`;
 
