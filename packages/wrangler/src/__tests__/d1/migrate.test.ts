@@ -10,6 +10,21 @@ describe("migrate", () => {
 	runInTempDir();
 	const { setIsTTY } = useMockIsTTY();
 
+	describe("create", () => {
+		it("should reject the --local flag for create", async () => {
+			setIsTTY(false);
+			writeWranglerToml({
+				d1_databases: [
+					{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+				],
+			});
+
+			await expect(
+				runWrangler("d1 migrations create test some-message --local DATABASE")
+			).rejects.toThrowError(`Unknown argument: local`);
+		});
+	});
+
 	describe("apply", () => {
 		it("should not attempt to login in local mode", async () => {
 			setIsTTY(false);
