@@ -29,12 +29,14 @@ import type {
 export function ApplyOptions(yargs: CommonYargsArgv) {
 	return DatabaseWithLocal(yargs);
 }
+
 type ApplyHandlerOptions = StrictYargsOptionsToInterface<typeof ApplyOptions>;
+
 export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 	async ({ config, database, local, persistTo }): Promise<void> => {
 		logger.log(d1BetaWarning);
 
-		const databaseInfo = await getDatabaseInfoFromConfig(config, database);
+		const databaseInfo = getDatabaseInfoFromConfig(config, database);
 		if (!databaseInfo && !local) {
 			throw new Error(
 				`Can't find a DB with name/binding '${database}' in local config. Check info in wrangler.toml...`

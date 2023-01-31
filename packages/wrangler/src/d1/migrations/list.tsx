@@ -23,6 +23,7 @@ export function ListOptions(yargs: CommonYargsArgv) {
 }
 
 type ListHandlerOptions = StrictYargsOptionsToInterface<typeof ListOptions>;
+
 export const ListHandler = withConfig<ListHandlerOptions>(
 	async ({ config, database, local, persistTo }): Promise<void> => {
 		if (!local) {
@@ -30,7 +31,7 @@ export const ListHandler = withConfig<ListHandlerOptions>(
 		}
 		logger.log(d1BetaWarning);
 
-		const databaseInfo = await getDatabaseInfoFromConfig(config, database);
+		const databaseInfo = getDatabaseInfoFromConfig(config, database);
 		if (!databaseInfo && !local) {
 			throw new Error(
 				`Can't find a DB with name/binding '${database}' in local config. Check info in wrangler.toml...`
