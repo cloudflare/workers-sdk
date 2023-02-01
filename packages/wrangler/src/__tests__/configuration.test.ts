@@ -65,7 +65,8 @@ describe("normalizeAndValidateConfig()", () => {
 				crons: [],
 			},
 			unsafe: {
-				bindings: [],
+				bindings: undefined,
+				metadata: undefined,
 			},
 			dispatch_namespaces: [],
 			mtls_certificates: [],
@@ -935,6 +936,7 @@ describe("normalizeAndValidateConfig()", () => {
 							extra: "UNSAFE_EXTRA_1",
 						},
 					],
+					metadata: undefined,
 				},
 				no_bundle: true,
 				minify: true,
@@ -2329,7 +2331,7 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if unsafe.bindings is not defined", () => {
+			it("should not error if unsafe.bindings is not defined", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: {} } as unknown as RawConfig,
 					undefined,
@@ -2340,10 +2342,7 @@ describe("normalizeAndValidateConfig()", () => {
 			                  "Processing wrangler configuration:
 			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
 		              `);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			                  "Processing wrangler configuration:
-			                    - The field \\"unsafe\\" is missing the required \\"bindings\\" property."
-		              `);
+				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
 			it("should error if unsafe.bindings is an object", () => {
@@ -2836,7 +2835,10 @@ describe("normalizeAndValidateConfig()", () => {
 			const r2_buckets: RawConfig["r2_buckets"] = [];
 			const analytics_engine_datasets: RawConfig["analytics_engine_datasets"] =
 				[];
-			const unsafe: RawConfig["unsafe"] = { bindings: [] };
+			const unsafe: RawConfig["unsafe"] = {
+				bindings: undefined,
+				metadata: undefined,
+			};
 			const rawConfig: RawConfig = {
 				define,
 				vars,
@@ -3784,7 +3786,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if unsafe.bindings is not defined", () => {
+			it("should not error if unsafe.bindings is undefined", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { unsafe: {} } } } as unknown as RawConfig,
 					undefined,
@@ -3797,12 +3799,7 @@ describe("normalizeAndValidateConfig()", () => {
 			            - \\"env.ENV1\\" environment configuration
 			              - \\"unsafe\\" fields are experimental and may change or break at any time."
 		        `);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-
-			            - \\"env.ENV1\\" environment configuration
-			              - The field \\"env.ENV1.unsafe\\" is missing the required \\"bindings\\" property."
-		        `);
+				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
 			it("should error if unsafe.bindings is an object", () => {

@@ -76,6 +76,7 @@ const bindingsConfigMock: Partial<Config> = {
 	wasm_modules: { MODULE1: "module1.wasm", MODULE2: "module2.wasm" },
 	unsafe: {
 		bindings: [{ name: "testing_unsafe", type: "plain_text" }],
+		metadata: { some_key: "some_value" },
 	},
 	rules: [
 		{

@@ -896,7 +896,7 @@ function getBindings(
 		mtls_certificates: configParam.mtls_certificates,
 		services: configParam.services,
 		analytics_engine_datasets: configParam.analytics_engine_datasets,
-		unsafe: configParam.unsafe?.bindings,
+		unsafe: configParam.unsafe,
 		logfwdr: configParam.logfwdr,
 		d1_databases: identifyD1BindingsAsBeta([
 			...(configParam.d1_databases ?? []).map((d1Db) => {

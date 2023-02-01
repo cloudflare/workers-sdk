@@ -1162,9 +1162,10 @@ function normalizeAndValidateEnvironment(
 			rawEnv,
 			envName,
 			"unsafe",
-			validateBindingsProperty(envName, validateUnsafeBinding),
+			validateUnsafeSettings(envName),
 			{
-				bindings: [],
+				bindings: undefined,
+				metadata: undefined,
 			}
 		),
 		zone_id: rawEnv.zone_id,
@@ -1493,6 +1494,48 @@ const validateBindingsProperty =
 			}
 		}
 		return isValid;
+	};
+
+const validateUnsafeSettings =
+	(envName: string): ValidatorFn =>
+	(diagnostics, field, value, config) => {
+		const fieldPath =
+			config === undefined ? `${field}` : `env.${envName}.${field}`;
+
+		if (typeof value !== "object" || value === null || Array.isArray(value)) {
+			diagnostics.errors.push(
+				`The field "${fieldPath}" should be an object but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			return false;
+		}
+
+		// Within the unsafe settings there are multiple fields
+		// Each is optional, so just validate any that do appear
+
+		// unsafe.bindings
+		//diagnostics.errors.push(JSON.stringify(value));
+		if (hasProperty(value, "bindings")) {
+			if (value.bindings !== undefined) {
+				const validateBindingsFn = validateBindingsProperty(
+					envName,
+					validateUnsafeBinding
+				);
+				const valid = validateBindingsFn(diagnostics, field, value, config);
+				if (!valid) {
+					return false;
+				}
+			}
+		}
+
+		// unsafe.metadata
+		if ("metadata" in value) {
+			// This is an object with some number of properties
+			// There isn't any further useful validation we can do here
+		}
+
+		return true;
 	};
 
 /**

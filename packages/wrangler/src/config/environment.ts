@@ -474,11 +474,25 @@ interface EnvironmentNonInheritable {
 		 *
 		 * @default []
 		 */
-		bindings: {
-			name: string;
-			type: string;
-			[key: string]: unknown;
-		}[];
+		bindings:
+			| {
+					name: string;
+					type: string;
+					[key: string]: unknown;
+			  }[]
+			| undefined;
+
+		metadata:
+			| {
+					/**
+					 * Arbitary key/value pairs that will be included in the uploaded metadata.  Values specified
+					 * here will always be applied to metadata last, so can add new or override existing fields.
+					 *
+					 * @default undefined
+					 */
+					[key: string]: string;
+			  }
+			| undefined;
 	};
 
 	mtls_certificates: {
