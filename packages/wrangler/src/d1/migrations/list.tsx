@@ -12,24 +12,29 @@ import {
 	getUnappliedMigrations,
 	initMigrationsTable,
 } from "./helpers";
-import { DatabaseWithLocal } from "./options";
+import { DatabaseWithLocalAndPreview } from "./options";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../../yargs-types";
 
 export function ListOptions(yargs: CommonYargsArgv) {
-	return DatabaseWithLocal(yargs);
+	return DatabaseWithLocalAndPreview(yargs);
 }
 
 type ListHandlerOptions = StrictYargsOptionsToInterface<typeof ListOptions>;
 
 export const ListHandler = withConfig<ListHandlerOptions>(
-	async ({ config, database, local, persistTo }): Promise<void> => {
+	async ({ config, database, local, persistTo, preview }): Promise<void> => {
+		logger.log(d1BetaWarning);
+		if (local && preview) {
+			throw new Error(
+				`Can't use both --preview and --local.\n--preview runs this command against your preview D1 database, while --local runs your command against a local sqlite database.`
+			);
+		}
 		if (!local) {
 			await requireAuth({});
 		}
-		logger.log(d1BetaWarning);
 
 		const databaseInfo = getDatabaseInfoFromConfig(config, database);
 		if (!databaseInfo && !local) {

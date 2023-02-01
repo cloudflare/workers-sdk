@@ -19,7 +19,7 @@ import {
 	getUnappliedMigrations,
 	initMigrationsTable,
 } from "./helpers";
-import { DatabaseWithLocal } from "./options";
+import { DatabaseWithLocalAndPreview } from "./options";
 import type { ParseError } from "../../parse";
 import type {
 	CommonYargsArgv,
@@ -27,15 +27,19 @@ import type {
 } from "../../yargs-types";
 
 export function ApplyOptions(yargs: CommonYargsArgv) {
-	return DatabaseWithLocal(yargs);
+	return DatabaseWithLocalAndPreview(yargs);
 }
 
 type ApplyHandlerOptions = StrictYargsOptionsToInterface<typeof ApplyOptions>;
 
 export const ApplyHandler = withConfig<ApplyHandlerOptions>(
-	async ({ config, database, local, persistTo }): Promise<void> => {
+	async ({ config, database, local, persistTo, preview }): Promise<void> => {
 		logger.log(d1BetaWarning);
-
+		if (local && preview) {
+			throw new Error(
+				`Can't use both --preview and --local.\n--preview runs this command against your preview D1 database, while --local runs your command against a local sqlite database.`
+			);
+		}
 		const databaseInfo = getDatabaseInfoFromConfig(config, database);
 		if (!databaseInfo && !local) {
 			throw new Error(
