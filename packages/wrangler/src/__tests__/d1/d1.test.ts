@@ -1,10 +1,7 @@
+import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-
-function endEventLoop() {
-	return new Promise((resolve) => setImmediate(resolve));
-}
 
 describe("d1", () => {
 	const std = mockConsoleMethods();
