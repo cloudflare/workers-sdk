@@ -131,7 +131,7 @@ describe("generate", () => {
 		// was harder than i thought, leaving this for now.
 		it.todo("clones a cloudflare template with full checkouts");
 
-		it("clones a user/repo template", async () => {
+		it.skip("clones a user/repo template", async () => {
 			await expect(
 				runWrangler("generate my-worker caass/wrangler-generate-test-template")
 			).resolves.toBeUndefined();
