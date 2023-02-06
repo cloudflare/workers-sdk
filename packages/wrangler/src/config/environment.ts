@@ -78,7 +78,7 @@ interface EnvironmentInheritable {
 	 * Whether we use <name>.<subdomain>.workers.dev to
 	 * test and deploy your worker.
 	 *
-	 * @default `true` (This is a breaking change from wrangler v1)
+	 * @default `true` (This is a breaking change from Wrangler v1)
 	 * @breaking
 	 * @inheritable
 	 */
@@ -497,7 +497,7 @@ interface EnvironmentDeprecated {
 	/**
 	 * Legacy way of defining KVNamespaces that is no longer supported.
 	 *
-	 * @deprecated DO NOT USE. This was a legacy bug from wrangler v1, that we do not want to support.
+	 * @deprecated DO NOT USE. This was a legacy bug from Wrangler v1, that we do not want to support.
 	 */
 	"kv-namespaces"?: string;
 

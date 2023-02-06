@@ -10,7 +10,7 @@ import {
 } from "./constants";
 
 /**
- * Installs wrangler v1 to node_modules/.cache by downloading
+ * Installs Wrangler v1 to node_modules/.cache by downloading
  * artifacts from the latest github release
  */
 export async function installWrangler1() {
@@ -29,7 +29,7 @@ export async function installWrangler1() {
 		repo: "wrangler",
 	});
 
-	// rust targets (and wrangler v1 releases) are named with "target triples",
+	// rust targets (and Wrangler v1 releases) are named with "target triples",
 	// which follow the form <architecture>-<os>-<toolchain>.
 	// M1 fans love ~nodejs~ Wrangler for its multi-platform support
 	let targetTriple:
@@ -52,7 +52,7 @@ export async function installWrangler1() {
 	const assetId = assets.find(({ name }) => name.includes(targetTriple))?.id;
 
 	if (assetId === undefined) {
-		throw new Error("Unable to get wrangler v1 release from github!");
+		throw new Error("Unable to get Wrangler v1 release from github!");
 	}
 
 	// since we use Accept: "application/octet-stream" `data` is an ArrayBuffer

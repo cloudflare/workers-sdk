@@ -741,7 +741,7 @@ function isValidRouteValue(item: unknown): boolean {
 
 /**
  * If account_id has been passed as an empty string, normalise it to undefined.
- * This is to workaround older wrangler v1-era templates that have account_id = '',
+ * This is to workaround older Wrangler v1-era templates that have account_id = '',
  * which isn't a valid value anyway
  */
 function mutateEmptyStringAccountIDValue(

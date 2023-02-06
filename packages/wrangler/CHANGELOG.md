@@ -2048,7 +2048,7 @@
 
 - [#1287](https://github.com/cloudflare/wrangler2/pull/1287) [`2072e27`](https://github.com/cloudflare/wrangler2/commit/2072e278479bf66b255eb2858dea83bf0608530c) Thanks [@f5io](https://github.com/f5io)! - fix: kv:key put/get binary file
 
-  As raised in https://github.com/cloudflare/wrangler2/issues/1254, it was discovered that binary uploads were being mangled by wrangler 2, whereas they worked in wrangler v1. This is because they were read into a string by providing an explicit encoding of `utf-8`. This fix reads provided files into a node `Buffer` that is then passed directly to the request.
+  As raised in https://github.com/cloudflare/wrangler2/issues/1254, it was discovered that binary uploads were being mangled by Wrangler 2, whereas they worked in Wrangler v1. This is because they were read into a string by providing an explicit encoding of `utf-8`. This fix reads provided files into a node `Buffer` that is then passed directly to the request.
 
   Subsequently https://github.com/cloudflare/wrangler2/issues/1273 was raised in relation to a similar issue with gets from wrangler 2. This was happening due to the downloaded file being converted to `utf-8` encoding as it was pushed through `console.log`. By leveraging `process.stdout.write` we can push the fetched `ArrayBuffer` to std out directly without inferring any specific encoding value.
 
@@ -2765,7 +2765,7 @@ Fixes https://github.com/cloudflare/wrangler2/issues/1026
 
 * [#908](https://github.com/cloudflare/wrangler2/pull/908) [`f8dd31e`](https://github.com/cloudflare/wrangler2/commit/f8dd31e322774180b371c6af15b4bfbd92a58284) Thanks [@threepointone](https://github.com/threepointone)! - fix: fix isolate prewarm logic for `wrangler dev`
 
-  When calling `wrangler dev`, we make a request to a special URL that "prewarms" the isolate running our Worker so that we can attach devtools etc to it before actually making a request. We'd implemented it wrongly, and because we'd silenced its errors, we weren't catching it. This patch fixes the logic (based on wrangler v1.x's implementation) and enables logging errors when the prewarm request fails.
+  When calling `wrangler dev`, we make a request to a special URL that "prewarms" the isolate running our Worker so that we can attach devtools etc to it before actually making a request. We'd implemented it wrongly, and because we'd silenced its errors, we weren't catching it. This patch fixes the logic (based on Wrangler v1.x's implementation) and enables logging errors when the prewarm request fails.
 
   As a result, profiling starts working again as expected. Fixes https://github.com/cloudflare/wrangler2/issues/907
 
@@ -2795,7 +2795,7 @@ Fixes https://github.com/cloudflare/wrangler2/issues/1026
 
   Allows wrangler2 to perform preview & dev sessions with a different bucket than the published worker's binding.
 
-  This matches kv's preview_id behavior, and brings the wrangler2 implementation in sync with wrangler v1.
+  This matches kv's preview_id behavior, and brings the Wrangler v2 implementation in sync with Wrangler v1.
 
 ## 0.0.30
 
@@ -3368,7 +3368,7 @@ Fixes https://github.com/cloudflare/wrangler2/issues/1026
 - [#633](https://github.com/cloudflare/wrangler2/pull/633) [`003f3c4`](https://github.com/cloudflare/wrangler2/commit/003f3c41942ec8e299ae603fe74b3cd2e802b49d) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - refactor: create a custom CLI wrapper around Miniflare API
 
   This allows us to tightly control the options that are passed to Miniflare.
-  The current CLI is setup to be more compatible with how Wrangler v1 works, which is not optimal for Wrangler 2.
+  The current CLI is setup to be more compatible with how Wrangler v1 works, which is not optimal for Wrangler v2.
 
 * [#633](https://github.com/cloudflare/wrangler2/pull/633) [`84c857e`](https://github.com/cloudflare/wrangler2/commit/84c857eabc2c09ad1dd2f4fa3963638b8b7f3daa) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - fix: ensure asset keys are relative to the project root
 
@@ -3466,9 +3466,9 @@ Fixes https://github.com/cloudflare/wrangler2/issues/1026
 
   This change just adds a warning if a developer tries to do so and provides a link to an issue where they can add their use-case.
 
-- [#596](https://github.com/cloudflare/wrangler2/pull/596) [`187264d`](https://github.com/cloudflare/wrangler2/commit/187264d4013842df4062a1e0f5dd8cef0b30d0a8) Thanks [@threepointone](https://github.com/threepointone)! - feat: support wrangler v1.x module specifiers with a deprecation warning
+- [#596](https://github.com/cloudflare/wrangler2/pull/596) [`187264d`](https://github.com/cloudflare/wrangler2/commit/187264d4013842df4062a1e0f5dd8cef0b30d0a8) Thanks [@threepointone](https://github.com/threepointone)! - feat: support Wrangler v1.x module specifiers with a deprecation warning
 
-  This implements wrangler v1.x style module specifiers, but also logs a deprecation warning for every usage.
+  This implements Wrangler v1.x style module specifiers, but also logs a deprecation warning for every usage.
 
   Consider a project like so:
 
@@ -3613,7 +3613,7 @@ Fixes https://github.com/cloudflare/wrangler2/issues/1026
 
 * [#646](https://github.com/cloudflare/wrangler2/pull/646) [`c75cfb8`](https://github.com/cloudflare/wrangler2/commit/c75cfb83df4c98d6f678535439483948ce9fff5b) Thanks [@threepointone](https://github.com/threepointone)! - fix: default `watch_dir` to `src` of project directory
 
-  Via wrangler v1, when using custom builds in `wrangler dev`, `watch_dir` should default to `src` of the "project directory" (i.e - wherever the `wrangler.toml` is defined if it exists, else in the cwd.
+  Via Wrangler v1, when using custom builds in `wrangler dev`, `watch_dir` should default to `src` of the "project directory" (i.e - wherever the `wrangler.toml` is defined if it exists, else in the cwd.
 
   Fixes https://github.com/cloudflare/wrangler2/issues/631
 
@@ -3736,7 +3736,7 @@ Fixes https://github.com/cloudflare/wrangler2/issues/1026
   main = "src/chat.mjs"
   ```
 
-  This also makes `./dist` a default for `build.upload.dir`, to match wrangler v1's behaviour.
+  This also makes `./dist` a default for `build.upload.dir`, to match Wrangler v1's behaviour.
 
   Closes https://github.com/cloudflare/wrangler2/issues/488
 
@@ -4199,7 +4199,7 @@ Fixes https://github.com/cloudflare/wrangler2/issues/1026
 
 - [#338](https://github.com/cloudflare/wrangler2/pull/338) [`e0d2f35`](https://github.com/cloudflare/wrangler2/commit/e0d2f35542bc37636098a30469e93702dd7a0d35) Thanks [@threepointone](https://github.com/threepointone)! - feat: environments for Worker Sites
 
-  This adds environments support for Workers Sites. Very simply, it uses a separate kv namespace that's indexed by the environment name. This PR also changes the name of the kv namespace generated to match wrangler v1's implementation.
+  This adds environments support for Workers Sites. Very simply, it uses a separate kv namespace that's indexed by the environment name. This PR also changes the name of the kv namespace generated to match Wrangler v1's implementation.
 
 * [#329](https://github.com/cloudflare/wrangler2/pull/329) [`e1d2198`](https://github.com/cloudflare/wrangler2/commit/e1d2198b6454fead8a0115c2ed92a37b9def6dba) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - test: support testing in CI on Windows
 
@@ -4332,7 +4332,7 @@ Fixes https://github.com/cloudflare/wrangler2/issues/1026
 
 - [#307](https://github.com/cloudflare/wrangler2/pull/307) [`53c6318`](https://github.com/cloudflare/wrangler2/commit/53c6318739d2d3672a2e508f643857bdf5831676) Thanks [@threepointone](https://github.com/threepointone)! - feat: `wrangler secret * --local`
 
-  This PR implements `wrangler secret` for `--local` mode. The implementation is simply a no-op, since we don't want to actually write secret values to disk (I think?). I also got the messaging for remote mode right by copying from wrangler v1. Further, I added tests for all the `wrangler secret` commands.
+  This PR implements `wrangler secret` for `--local` mode. The implementation is simply a no-op, since we don't want to actually write secret values to disk (I think?). I also got the messaging for remote mode right by copying from Wrangler v1. Further, I added tests for all the `wrangler secret` commands.
 
 * [#324](https://github.com/cloudflare/wrangler2/pull/324) [`b816333`](https://github.com/cloudflare/wrangler2/commit/b8163336faaeae26b68736732938cceaaf4dfec4) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Fixes `wrangler pages dev` failing to start for just a folder of static assets (no functions)
 
@@ -4342,7 +4342,7 @@ Fixes https://github.com/cloudflare/wrangler2/issues/1026
 
   Fixes https://github.com/cloudflare/wrangler2/issues/197
 
-  (In wrangler v1, we used to restart the whole process, including uploading the worker again, making a new preview token, and so on. It looks like that they may not have been necessary.)
+  (In Wrangler v1, we used to restart the whole process, including uploading the worker again, making a new preview token, and so on. It looks like that they may not have been necessary.)
 
 * [#312](https://github.com/cloudflare/wrangler2/pull/312) [`77aa324`](https://github.com/cloudflare/wrangler2/commit/77aa3249ce07d7617582e4b0555201dac9b7578e) Thanks [@threepointone](https://github.com/threepointone)! - fix: remove `--prefer-offline` when running `npm install`
 
@@ -4521,7 +4521,7 @@ Fixes https://github.com/cloudflare/wrangler2/issues/1026
 
   - `@optional` means providing a value isn't mandatory
   - `@deprecated` means the field itself isn't necessary anymore in wrangler.toml
-  - `@breaking` means the deprecation/optionality is a breaking change from wrangler v1
+  - `@breaking` means the deprecation/optionality is a breaking change from Wrangler v1
   - `@todo` means there's more work to be done (with details attached)
   - `@inherited` means the field is copied to all environments
 
