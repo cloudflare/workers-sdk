@@ -237,6 +237,7 @@ export async function bundleWorker(
 	}
 
 	type MiddlewareFn = (currentEntry: Entry) => Promise<EntryWithInject>;
+	// NOTE: Order matters! the middlewareLoaderFacade *must* be added first, otherwise other facades won't work
 	const middleware: (false | undefined | MiddlewareFn)[] = [
 		// Middleware loader: to add middleware, we add the path to the middleware
 		// Currently for demonstration purposes we have two example middlewares
