@@ -1,6 +1,6 @@
 # Contributing
 
-Wrangler2 is an open source project and we welcome contributions from you. Thank you!
+Wrangler is an open source project and we welcome contributions from you. Thank you!
 
 Below you can find some guidance on how to be most effective when contributing to the project.
 
@@ -8,7 +8,7 @@ Below you can find some guidance on how to be most effective when contributing t
 
 ### Set up your environment
 
-Wrangler2 is built and run on the Node.js JavaScript runtime.
+Wrangler is built and run on the Node.js JavaScript runtime.
 
 - Install the latest LTS version of [Node.js](https://nodejs.dev/) - we recommend using a Node version manager like [nvm](https://github.com/nvm-sh/nvm).
 - Install a code editor - we recommend using [VS Code](https://code.visualstudio.com/).
