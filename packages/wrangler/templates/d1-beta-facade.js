@@ -226,16 +226,16 @@ function getMaskedEnv(env) {
 var shim_default = {
 	...worker,
 	async fetch(request, env, ctx) {
-		return worker.fetch(request, getMaskedEnv(env), ctx);
+		return worker?.fetch(request, getMaskedEnv(env), ctx);
 	},
 	async queue(batch, env, ctx) {
-		return worker.queue(batch, getMaskedEnv(env), ctx);
+		return worker?.queue(batch, getMaskedEnv(env), ctx);
 	},
 	async scheduled(controller, env, ctx) {
-		return worker.scheduled(controller, getMaskedEnv(env), ctx);
+		return worker?.scheduled(controller, getMaskedEnv(env), ctx);
 	},
 	async trace(traces, env, ctx) {
-		return worker.trace(traces, getMaskedEnv(env), ctx);
+		return worker?.trace(traces, getMaskedEnv(env), ctx);
 	},
 };
 export { shim_default as default };
