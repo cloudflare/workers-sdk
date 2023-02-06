@@ -2160,7 +2160,7 @@
 
 * [#1255](https://github.com/cloudflare/wrangler2/pull/1255) [`2d806dc`](https://github.com/cloudflare/wrangler2/commit/2d806dc981a7119de4c0d2c926992cc27e160cae) Thanks [@f5io](https://github.com/f5io)! - fix: kv:key put binary file upload
 
-  As raised in https://github.com/cloudflare/wrangler2/issues/1254, it was discovered that binary uploads were being mangled by wrangler 2, whereas they worked in wrangler v1. This is because they were read into a string by providing an explicit encoding of `utf-8`. This fix reads provided files into a node `Buffer` that is then passed directly to the request.
+  As raised in https://github.com/cloudflare/wrangler2/issues/1254, it was discovered that binary uploads were being mangled by Wrangler 2, whereas they worked in Wrangler v1. This is because they were read into a string by providing an explicit encoding of `utf-8`. This fix reads provided files into a node `Buffer` that is then passed directly to the request.
 
 - [#1248](https://github.com/cloudflare/wrangler2/pull/1248) [`db8a0bb`](https://github.com/cloudflare/wrangler2/commit/db8a0bba1f070bce870016a9aecc8b30725694f4) Thanks [@threepointone](https://github.com/threepointone)! - fix: instruct api to exclude script content on worker upload
 
