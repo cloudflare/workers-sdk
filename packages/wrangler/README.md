@@ -1,8 +1,8 @@
 <h1 align="center"> ⛅️ wrangler </h1>
 <section align="center" id="shieldio-badges">
 <a href="https://www.npmjs.com/package/wrangler"><img alt="npm"  src="https://img.shields.io/npm/dw/wrangler?style=flat-square"></a>
-<img alt="GitHub contributors" src="https://img.shields.io/github/contributors/cloudflare/wrangler2?style=flat-square">
-<img alt="GitHub commit activity (branch)" src="https://img.shields.io/github/commit-activity/w/cloudflare/wrangler2/main?style=flat-square">
+<img alt="GitHub contributors" src="https://img.shields.io/github/contributors/cloudflare/workers-sdk?style=flat-square">
+<img alt="GitHub commit activity (branch)" src="https://img.shields.io/github/commit-activity/w/cloudflare/workers-sdk/main?style=flat-square">
 <a href="https://discord.gg/CloudflareDev"><img alt="Discord" src="https://img.shields.io/discord/595317990191398933?color=%23F48120&style=flat-square"></a>
 </section>
 
