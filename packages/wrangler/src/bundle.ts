@@ -270,18 +270,6 @@ export async function bundleWorker(
 				return applyFirstPartyWorkerDevFacade(currentEntry, tmpDir.path);
 			}),
 
-		Array.isArray(betaD1Shims) &&
-			betaD1Shims.length > 0 &&
-			((currentEntry: Entry) => {
-				return applyD1BetaFacade(
-					currentEntry,
-					tmpDir.path,
-					betaD1Shims,
-					local,
-					doBindings
-				);
-			}),
-
 		// Middleware loader: to add middleware, we add the path to the middleware
 		// Currently for demonstration purposes we have two example middlewares
 		// Middlewares are togglable by changing the `publish` (default=false) and `dev` (default=true) options
@@ -304,6 +292,18 @@ export async function bundleWorker(
 							(targetConsumer === "dev" && m.dev !== false) ||
 							(m.publish && targetConsumer === "publish")
 					)
+				);
+			}),
+
+		Array.isArray(betaD1Shims) &&
+			betaD1Shims.length > 0 &&
+			((currentEntry: Entry) => {
+				return applyD1BetaFacade(
+					currentEntry,
+					tmpDir.path,
+					betaD1Shims,
+					local,
+					doBindings
 				);
 			}),
 	].filter(Boolean);
