@@ -9,7 +9,7 @@ export const CLEANUP = () => {
 };
 
 export const pagesBetaWarning =
-	"🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose";
+	"🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose";
 
 export function isUrl(maybeUrl?: string): maybeUrl is string {
 	if (!maybeUrl) return false;

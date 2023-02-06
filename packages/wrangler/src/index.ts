@@ -110,7 +110,7 @@ export async function printWranglerBanner() {
 
 export function isLegacyEnv(config: Config): boolean {
 	// We only read from config here, because we've already accounted for
-	// args["legacy-env"] in https://github.com/cloudflare/wrangler2/blob/b24aeb5722370c2e04bce97a84a1fa1e55725d79/packages/wrangler/src/config/validation.ts#L94-L98
+	// args["legacy-env"] in https://github.com/cloudflare/workers-sdk/blob/b24aeb5722370c2e04bce97a84a1fa1e55725d79/packages/wrangler/src/config/validation.ts#L94-L98
 	return config.legacy_env;
 }
 
@@ -568,7 +568,7 @@ export function createCLIParser(argv: string[]) {
 
 	//deployments
 	const deploymentsWarning =
-		"🚧`wrangler deployments` is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose";
+		"🚧`wrangler deployments` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose";
 	wrangler.command(
 		"deployments",
 		"🚢 Displays the 10 most recent deployments for a worker",
@@ -629,7 +629,7 @@ export async function main(argv: string[]): Promise<void> {
 			await createCLIParser([...argv, "--help"]).parse();
 		} else if (e instanceof ParseError) {
 			e.notes.push({
-				text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/wrangler2/issues/new/choose",
+				text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",
 			});
 			logger.log(formatMessage(e));
 		} else if (
@@ -665,7 +665,7 @@ export async function main(argv: string[]): Promise<void> {
 			logger.error(e instanceof Error ? e.message : e);
 			logger.log(
 				`${fgGreenColor}%s${resetColor}`,
-				"If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose"
+				"If you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose"
 			);
 		}
 		throw e;
