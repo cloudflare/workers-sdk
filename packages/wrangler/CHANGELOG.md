@@ -1456,7 +1456,7 @@
   - `wrangler generate` and `wrangler generate <name>` delegate to `wrangler init`.
   - `wrangler generate <name> <template>` delegates to `create-cloudflare`
 
-  Naming behavior is replicated from wrangler v1, and will auto-increment the
+  Naming behavior is replicated from Wrangler v1, and will auto-increment the
   worker name based on pre-existing directories.
 
 * [#1534](https://github.com/cloudflare/wrangler2/pull/1534) [`d3ae16cf`](https://github.com/cloudflare/wrangler2/commit/d3ae16cfb8e13f0e6e5f710b3cb03e46ecb7bf7a) Thanks [@cameron-robey](https://github.com/cameron-robey)! - feat: publish full url on `wrangler publish` for workers.dev workers
