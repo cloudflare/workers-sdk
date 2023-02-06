@@ -238,6 +238,30 @@ export async function bundleWorker(
 
 	type MiddlewareFn = (currentEntry: Entry) => Promise<EntryWithInject>;
 	const middleware: (false | undefined | MiddlewareFn)[] = [
+		// Middleware loader: to add middleware, we add the path to the middleware
+		// Currently for demonstration purposes we have two example middlewares
+		// Middlewares are togglable by changing the `publish` (default=false) and `dev` (default=true) options
+		// As we are not yet supporting user created middlewares yet, if no wrangler applied middleware
+		// are found, we will not load any middleware. We also need to check if there are middlewares compatible with
+		// the target consumer (dev / publish).
+		(middlewareToLoad.filter(
+			(m) =>
+				(m.publish && targetConsumer === "publish") ||
+				(m.dev !== false && targetConsumer === "dev")
+		).length > 0 ||
+			process.env.EXPERIMENTAL_MIDDLEWARE === "true") &&
+			((currentEntry: Entry) => {
+				return applyMiddlewareLoaderFacade(
+					currentEntry,
+					tmpDir.path,
+					middlewareToLoad.filter(
+						// We dynamically filter the middleware depending on where we are bundling for
+						(m) =>
+							(targetConsumer === "dev" && m.dev !== false) ||
+							(m.publish && targetConsumer === "publish")
+					)
+				);
+			}),
 		// serve static assets
 		serveAssetsFromWorker &&
 			((currentEntry: Entry) => {
@@ -268,31 +292,6 @@ export async function bundleWorker(
 		firstPartyWorkerDevFacade === true &&
 			((currentEntry: Entry) => {
 				return applyFirstPartyWorkerDevFacade(currentEntry, tmpDir.path);
-			}),
-
-		// Middleware loader: to add middleware, we add the path to the middleware
-		// Currently for demonstration purposes we have two example middlewares
-		// Middlewares are togglable by changing the `publish` (default=false) and `dev` (default=true) options
-		// As we are not yet supporting user created middlewares yet, if no wrangler applied middleware
-		// are found, we will not load any middleware. We also need to check if there are middlewares compatible with
-		// the target consumer (dev / publish).
-		(middlewareToLoad.filter(
-			(m) =>
-				(m.publish && targetConsumer === "publish") ||
-				(m.dev !== false && targetConsumer === "dev")
-		).length > 0 ||
-			process.env.EXPERIMENTAL_MIDDLEWARE === "true") &&
-			((currentEntry: Entry) => {
-				return applyMiddlewareLoaderFacade(
-					currentEntry,
-					tmpDir.path,
-					middlewareToLoad.filter(
-						// We dynamically filter the middleware depending on where we are bundling for
-						(m) =>
-							(targetConsumer === "dev" && m.dev !== false) ||
-							(m.publish && targetConsumer === "publish")
-					)
-				);
 			}),
 
 		Array.isArray(betaD1Shims) &&
