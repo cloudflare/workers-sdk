@@ -2021,7 +2021,7 @@
 
 * [#1351](https://github.com/cloudflare/wrangler2/pull/1351) [`c770167`](https://github.com/cloudflare/wrangler2/commit/c770167c8403c6c157cdad91e4f2bd2b1f571df2) Thanks [@geelen](https://github.com/geelen)! - feat: add support for CLOUDFLARE_API_KEY + CLOUDFLARE_EMAIL to authorise
 
-  This adds support for using the CLOUDFLARE_API_KEY + CLOUDFLARE_EMAIL env vars for authorising a user. This also adds support for CF_API_KEY + CF_EMAIL from wrangler v1, with a deprecation warning.
+  This adds support for using the CLOUDFLARE_API_KEY + CLOUDFLARE_EMAIL env vars for authorising a user. This also adds support for CF_API_KEY + CF_EMAIL from Wrangler v1, with a deprecation warning.
 
 - [#1352](https://github.com/cloudflare/wrangler2/pull/1352) [`4e03036`](https://github.com/cloudflare/wrangler2/commit/4e03036d72ec831036f0f6223d803be99282022f) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - bugfix: Allow route setting to be `""`
   Previously Wrangler v1 behavior had allowed for `route = ""`. To keep parity it will be possible to set `route = ""` in the config file and represent not setting a route, while providing a warning.
