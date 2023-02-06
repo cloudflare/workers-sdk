@@ -3401,7 +3401,7 @@ Fixes https://github.com/cloudflare/workers-sdk/issues/1026
 
 * [#667](https://github.com/cloudflare/workers-sdk/pull/667) [`e29a241`](https://github.com/cloudflare/workers-sdk/commit/e29a24168da2e87259b90d1a4dd0d3860bb3ba8e) Thanks [@threepointone](https://github.com/threepointone)! - fix: delete unused `[site]` assets
 
-  We discovered critical issues with the way we expire unused assets with `[site]` (see https://github.com/cloudflare/workers-sdk/issues/666, https://github.com/cloudflare/wrangler/issues/2224), that we're going back to the legacy manner of handling unused assets, i.e- deleting unused assets.
+  We discovered critical issues with the way we expire unused assets with `[site]` (see https://github.com/cloudflare/workers-sdk/issues/666, https://github.com/cloudflare/wrangler-legacy/issues/2224), that we're going back to the legacy manner of handling unused assets, i.e- deleting unused assets.
 
   Fixes https://github.com/cloudflare/workers-sdk/issues/666
 
@@ -3439,7 +3439,7 @@ Fixes https://github.com/cloudflare/workers-sdk/issues/1026
 
 * [#649](https://github.com/cloudflare/workers-sdk/pull/649) [`e0b9366`](https://github.com/cloudflare/workers-sdk/commit/e0b93661a7160e718b4fc0c58fa90149968d4317) Thanks [@threepointone](https://github.com/threepointone)! - fix: use `expiration_ttl` to expire assets with `[site]`
 
-  This switches how we expire static assets with `[site]` uploads to use `expiration_ttl` instead of `expiration`. This is because we can't trust the time that a deploy target may provide (like in https://github.com/cloudflare/wrangler/issues/2224).
+  This switches how we expire static assets with `[site]` uploads to use `expiration_ttl` instead of `expiration`. This is because we can't trust the time that a deploy target may provide (like in https://github.com/cloudflare/wrangler-legacy/issues/2224).
 
 - [#599](https://github.com/cloudflare/workers-sdk/pull/599) [`7d4ea43`](https://github.com/cloudflare/workers-sdk/commit/7d4ea4342947128eb156a58da69dd008d504103b) Thanks [@caass](https://github.com/caass)! - Force-open a chromium-based browser for devtools
 
@@ -3784,7 +3784,7 @@ Fixes https://github.com/cloudflare/workers-sdk/issues/1026
 
 * [#518](https://github.com/cloudflare/workers-sdk/pull/518) [`72f035e`](https://github.com/cloudflare/workers-sdk/commit/72f035e47a586fd02278674b1b160f5cb34d1412) Thanks [@threepointone](https://github.com/threepointone)! - feat: implement `[text_blobs]`
 
-  This implements support for `[text_blobs]` as defined by https://github.com/cloudflare/wrangler/pull/1677.
+  This implements support for `[text_blobs]` as defined by https://github.com/cloudflare/wrangler-legacy/pull/1677.
 
   Text blobs can be defined in service-worker format with configuration in `wrangler.toml` as -
 
@@ -4108,7 +4108,7 @@ Fixes https://github.com/cloudflare/workers-sdk/issues/1026
 
 * [#409](https://github.com/cloudflare/workers-sdk/pull/409) [`f8bb523`](https://github.com/cloudflare/workers-sdk/commit/f8bb523ed1a41f20391381e5d130b2685558002e) Thanks [@threepointone](https://github.com/threepointone)! - feat: support `[wasm_modules]` for service-worker format workers
 
-  This lands support for `[wasm_modules]` as defined by https://github.com/cloudflare/wrangler/pull/1677.
+  This lands support for `[wasm_modules]` as defined by https://github.com/cloudflare/wrangler-legacy/pull/1677.
 
   wasm modules can be defined in service-worker format with configuration in wrangler.toml as -
 
