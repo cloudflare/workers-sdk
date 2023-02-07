@@ -3,6 +3,7 @@ import worker from "__ENTRY_POINT__";
 export * from "__ENTRY_POINT__";
 
 export default <ExportedHandler>{
+	...worker,
 	async fetch(req, env, ctx) {
 		if (worker.fetch === undefined) {
 			throw new TypeError("Entry point missing `fetch` handler");
