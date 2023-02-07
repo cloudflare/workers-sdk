@@ -6544,7 +6544,7 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("should copy any module imports related assets at --outdir if specified", async () => {
+		it("should copy any module imports related assets to --outdir if specified", async () => {
 			writeWranglerToml();
 			fs.writeFileSync(
 				"./index.js",
