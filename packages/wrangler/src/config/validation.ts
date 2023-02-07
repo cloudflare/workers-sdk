@@ -1163,10 +1163,7 @@ function normalizeAndValidateEnvironment(
 			envName,
 			"unsafe",
 			validateUnsafeSettings(envName),
-			{
-				bindings: undefined,
-				metadata: undefined,
-			}
+			{}
 		),
 		zone_id: rawEnv.zone_id,
 		no_bundle: inheritable(
