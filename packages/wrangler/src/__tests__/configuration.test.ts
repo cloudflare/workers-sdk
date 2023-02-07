@@ -2331,9 +2331,40 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should not error if unsafe.bindings is not defined", () => {
+			it("should error if neither unsafe.bindings nor unsafe.metadata are defined", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: {} } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+			                  "Processing wrangler configuration:
+			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
+		              `);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"unsafe\\" should contain at least one of \\"bindings\\" or \\"metadata\\" properties but got {}."
+		`);
+			});
+
+			it("should not error if at least unsafe.bindings is defined", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ unsafe: { bindings: [] } } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+			                  "Processing wrangler configuration:
+			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
+		              `);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should not error if at least unsafe.metadata is defined", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ unsafe: { metadata: {} } } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
@@ -2451,6 +2482,74 @@ describe("normalizeAndValidateConfig()", () => {
 			              - binding should have a string \\"name\\" field.
 			              - binding should have a string \\"type\\" field."
 		        `);
+			});
+
+			it("should error if unsafe.metadata is an array", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ unsafe: { metadata: [] } } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+			                  "Processing wrangler configuration:
+			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
+		              `);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"unsafe.metadata\\" should be an object but got []."
+		`);
+			});
+
+			it("should error if unsafe.metadata is a string", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ unsafe: { metadata: "BAD" } } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+			                  "Processing wrangler configuration:
+			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
+		              `);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			                  "Processing wrangler configuration:
+			                    - The field \\"unsafe.metadata\\" should be an object but got \\"BAD\\"."
+		              `);
+			});
+
+			it("should error if unsafe.metadata is a number", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ unsafe: { metadata: 999 } } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+			                  "Processing wrangler configuration:
+			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
+		              `);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			                  "Processing wrangler configuration:
+			                    - The field \\"unsafe.metadata\\" should be an object but got 999."
+		              `);
+			});
+
+			it("should error if unsafe.metadata is null", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ unsafe: { metadata: null } } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+			                  "Processing wrangler configuration:
+			                    - \\"unsafe\\" fields are experimental and may change or break at any time."
+		              `);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			                  "Processing wrangler configuration:
+			                    - The field \\"unsafe.metadata\\" should be an object but got null."
+		              `);
 			});
 		});
 
@@ -3786,9 +3885,50 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should not error if unsafe.bindings is undefined", () => {
+			it("should error if neither unsafe.bindings nor unsafe.metadata are defined", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { unsafe: {} } } } as unknown as RawConfig,
+					undefined,
+					{ env: "ENV1" }
+				);
+
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+			          "Processing wrangler configuration:
+
+			            - \\"env.ENV1\\" environment configuration
+			              - \\"unsafe\\" fields are experimental and may change or break at any time."
+		        `);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+
+			  - \\"env.ENV1\\" environment configuration
+			    - The field \\"env.ENV1.unsafe\\" should contain at least one of \\"bindings\\" or \\"metadata\\" properties but got {}."
+		`);
+			});
+
+			it("should not error if at least unsafe.bindings is undefined", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						env: { ENV1: { unsafe: { bindings: [] } } },
+					} as unknown as RawConfig,
+					undefined,
+					{ env: "ENV1" }
+				);
+
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+			          "Processing wrangler configuration:
+
+			            - \\"env.ENV1\\" environment configuration
+			              - \\"unsafe\\" fields are experimental and may change or break at any time."
+		        `);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should not error if at least unsafe.metadata is undefined", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						env: { ENV1: { unsafe: { metadata: {} } } },
+					} as unknown as RawConfig,
 					undefined,
 					{ env: "ENV1" }
 				);
@@ -3940,6 +4080,98 @@ describe("normalizeAndValidateConfig()", () => {
 			                - binding should have a string \\"name\\" field.
 			                - binding should have a string \\"type\\" field."
 		        `);
+			});
+
+			it("should error if unsafe.metadata is an array", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						env: { ENV1: { unsafe: { metadata: [] } } },
+					} as unknown as RawConfig,
+					undefined,
+					{ env: "ENV1" }
+				);
+
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+			          "Processing wrangler configuration:
+
+			            - \\"env.ENV1\\" environment configuration
+			              - \\"unsafe\\" fields are experimental and may change or break at any time."
+		        `);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			          "Processing wrangler configuration:
+
+			            - \\"env.ENV1\\" environment configuration
+			              - The field \\"env.ENV1.unsafe.metadata\\" should be an object but got []."
+		        `);
+			});
+
+			it("should error if unsafe.metadata is a string", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						env: { ENV1: { unsafe: { metadata: "BAD" } } },
+					} as unknown as RawConfig,
+					undefined,
+					{ env: "ENV1" }
+				);
+
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+			          "Processing wrangler configuration:
+
+			            - \\"env.ENV1\\" environment configuration
+			              - \\"unsafe\\" fields are experimental and may change or break at any time."
+		        `);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+
+			  - \\"env.ENV1\\" environment configuration
+			    - The field \\"env.ENV1.unsafe.metadata\\" should be an object but got \\"BAD\\"."
+		`);
+			});
+
+			it("should error if unsafe.metadata is a number", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						env: { ENV1: { unsafe: { metadata: 999 } } },
+					} as unknown as RawConfig,
+					undefined,
+					{ env: "ENV1" }
+				);
+
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+			          "Processing wrangler configuration:
+
+			            - \\"env.ENV1\\" environment configuration
+			              - \\"unsafe\\" fields are experimental and may change or break at any time."
+		        `);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+
+			  - \\"env.ENV1\\" environment configuration
+			    - The field \\"env.ENV1.unsafe.metadata\\" should be an object but got 999."
+		`);
+			});
+
+			it("should error if unsafe.metadata is null", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						env: { ENV1: { unsafe: { metadata: null } } },
+					} as unknown as RawConfig,
+					undefined,
+					{ env: "ENV1" }
+				);
+
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+			          "Processing wrangler configuration:
+
+			            - \\"env.ENV1\\" environment configuration
+			              - \\"unsafe\\" fields are experimental and may change or break at any time."
+		        `);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+
+			  - \\"env.ENV1\\" environment configuration
+			    - The field \\"env.ENV1.unsafe.metadata\\" should be an object but got null."
+		`);
 			});
 		});
 

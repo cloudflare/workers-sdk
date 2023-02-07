@@ -1508,28 +1508,42 @@ const validateUnsafeSettings =
 			return false;
 		}
 
-		// Within the unsafe settings there are multiple fields
-		// Each is optional, so just validate any that do appear
+		// At least one of bindings and metadata must exist
+		if (!hasProperty(value, "bindings") && !hasProperty(value, "metadata")) {
+			diagnostics.errors.push(
+				`The field "${fieldPath}" should contain at least one of "bindings" or "metadata" properties but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			return false;
+		}
 
 		// unsafe.bindings
-		//diagnostics.errors.push(JSON.stringify(value));
-		if (hasProperty(value, "bindings")) {
-			if (value.bindings !== undefined) {
-				const validateBindingsFn = validateBindingsProperty(
-					envName,
-					validateUnsafeBinding
-				);
-				const valid = validateBindingsFn(diagnostics, field, value, config);
-				if (!valid) {
-					return false;
-				}
+		if (hasProperty(value, "bindings") && value.bindings !== undefined) {
+			const validateBindingsFn = validateBindingsProperty(
+				envName,
+				validateUnsafeBinding
+			);
+			const valid = validateBindingsFn(diagnostics, field, value, config);
+			if (!valid) {
+				return false;
 			}
 		}
 
 		// unsafe.metadata
-		if ("metadata" in value) {
-			// This is an object with some number of properties
-			// There isn't any further useful validation we can do here
+		if (
+			hasProperty(value, "metadata") &&
+			value.metadata !== undefined &&
+			(typeof value.metadata !== "object" ||
+				value.metadata === null ||
+				Array.isArray(value.metadata))
+		) {
+			diagnostics.errors.push(
+				`The field "${fieldPath}.metadata" should be an object but got ${JSON.stringify(
+					value.metadata
+				)}.`
+			);
+			return false;
 		}
 
 		return true;
