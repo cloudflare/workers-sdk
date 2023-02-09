@@ -1,5 +1,11 @@
 # wranglerjs-compat-webpack-plugin
 
+## 0.0.7
+
+### Patch Changes
+
+- [#2592](https://github.com/cloudflare/wrangler2/pull/2592) [`dd66618b`](https://github.com/cloudflare/wrangler2/commit/dd66618b2cc63a89424f471f6153be9518f1f087) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: bump esbuild to 0.16.3 (fixes a bug in esbuild's 0.15.13 release that would cause it to hang, is the latest release before a major breaking change that requires us to refactor)
+
 ## 0.0.6
 
 ### Patch Changes
