@@ -267,6 +267,8 @@ export async function coupleWebSocket(
 	pair.addEventListener("close", (e) => {
 		if (e.code === 1005 /* No Status Received */) {
 			ws.close();
+		} else if (e.code === 1006 /* Abnormal Closure */) {
+			ws.terminate();
 		} else {
 			ws.close(e.code, e.reason);
 		}

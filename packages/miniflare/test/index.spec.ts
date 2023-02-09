@@ -23,7 +23,13 @@ test("Miniflare: web socket kitchen sink", async (t) => {
 
 	// Create WebSocket origin server
 	const server = http.createServer();
-	const wss = new WebSocketServer({ server });
+	const wss = new WebSocketServer({
+		server,
+		handleProtocols(protocols) {
+			t.deepEqual(protocols, new Set(["protocol1", "protocol2"]));
+			return "protocol2";
+		},
+	});
 	wss.on("connection", (ws, req) => {
 		// Testing receiving additional headers sent from upgrade request
 		t.is(req.headers["user-agent"], "Test");
@@ -63,7 +69,11 @@ test("Miniflare: web socket kitchen sink", async (t) => {
 
 	// Testing dispatchFetch WebSocket coupling
 	const res = await mf.dispatchFetch("http://localhost", {
-		headers: { Upgrade: "websocket", "User-Agent": "Test" },
+		headers: {
+			Upgrade: "websocket",
+			"User-Agent": "Test",
+			"Sec-WebSocket-Protocol": "protocol1, protocol2",
+		},
 		cf: { country: "MF" },
 	});
 
@@ -74,6 +84,7 @@ test("Miniflare: web socket kitchen sink", async (t) => {
 	res.webSocket.close(1000, "Test Closure");
 	// Test receiving additional headers from upgrade response
 	t.is(res.headers.get("Set-Cookie"), "key=value");
+	t.is(res.headers.get("Sec-WebSocket-Protocol"), "protocol2");
 
 	// Check event results
 	const clientEvent = await clientEventPromise;

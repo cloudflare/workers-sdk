@@ -240,7 +240,13 @@ export class Miniflare {
 		this.#log.debug(`Running workerd ${desc}...`);
 
 		this.#liveReloadServer = new WebSocketServer({ noServer: true });
-		this.#webSocketServer = new WebSocketServer({ noServer: true });
+		this.#webSocketServer = new WebSocketServer({
+			noServer: true,
+			// Disable automatic handling of `Sec-WebSocket-Protocol` header,
+			// Cloudflare Workers require users to include this header themselves in
+			// `Response`s: https://github.com/cloudflare/miniflare/issues/179
+			handleProtocols: () => false,
+		});
 		// Add custom headers included in response to WebSocket upgrade requests
 		this.#webSocketExtraHeaders = new WeakMap();
 		this.#webSocketServer.on("headers", (headers, req) => {
