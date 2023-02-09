@@ -132,7 +132,6 @@ export interface CfD1Database {
 	binding: D1PrefixedBinding;
 	database_id: string;
 	database_name?: string;
-	preview_database_id?: string;
 	database_internal_env?: string;
 	migrations_table?: string;
 	migrations_dir?: string;

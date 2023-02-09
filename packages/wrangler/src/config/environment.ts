@@ -411,8 +411,6 @@ interface EnvironmentNonInheritable {
 		database_name: string;
 		/** The UUID of this D1 database (not required). */
 		database_id: string;
-		/** The UUID of this D1 database for Wrangler Dev (if specified). */
-		preview_database_id?: string;
 		/** The name of the migrations table for this D1 database (defaults to 'd1_migrations'). */
 		migrations_table?: string;
 		/** The path to the directory of migrations for this D1 database (defaults to './migrations'). */

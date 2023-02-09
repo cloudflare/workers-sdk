@@ -892,16 +892,8 @@ function getBindings(
 						database_id: "local",
 					};
 				}
-				if (!d1Db.preview_database_id) {
-					throw new Error(
-						`In development, you should use a separate D1 database than the one you'd use in production. Please create a new D1 database with "wrangler d1 create <name>" and add its id as preview_database_id to the d1_database "${d1Db.binding}" in your wrangler.toml`
-					);
-				}
 
-				return {
-					...d1Db,
-					database_id: d1Db.preview_database_id,
-				};
+				return d1Db;
 			}),
 			...(args.d1Databases || []),
 		]),

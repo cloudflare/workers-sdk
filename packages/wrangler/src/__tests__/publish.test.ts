@@ -5788,7 +5788,6 @@ addEventListener('fetch', event => {});`
 							binding: "DB",
 							database_name: "test-d1-db",
 							database_id: "UUID-1-2-3-4",
-							preview_database_id: "UUID-1-2-3-4",
 						},
 					],
 				});
