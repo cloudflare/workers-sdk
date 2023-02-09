@@ -5,15 +5,15 @@ const latestDeployment = {
 	id: "Galaxy-Class",
 	number: "1701-E",
 	annotations: {
-		"workers/triggered_by": "upload",
-		rollback_from: "MOCK-DEPLOYMENT-ID-2222",
+		"workers/triggered_by": "rollback",
+		"workers/rollback_from": "MOCK-DEPLOYMENT-ID-2222",
 	},
 	metadata: {
 		author_id: "Picard-Gamma-6-0-7-3",
 		author_email: "Jean-Luc-Picard@federation.org",
 		source: "wrangler",
-		created_on: "2021-01-01T00:00:00.000000Z",
-		modified_on: "2021-01-01T00:00:00.000000Z",
+		created_on: "2021-01-04T00:00:00.000000Z",
+		modified_on: "2021-01-04T00:00:00.000000Z",
 	},
 	resources: {
 		script: "MOCK-TAG",
@@ -34,7 +34,6 @@ export const mswSuccessDeployments = [
 								number: "1701-E",
 								annotations: {
 									"workers/triggered_by": "upload",
-									rollback_from: "MOCK-DEPLOYMENT-ID-0000",
 								},
 								metadata: {
 									author_id: "Picard-Gamma-6-0-7-3",
@@ -48,8 +47,8 @@ export const mswSuccessDeployments = [
 								id: "Intrepid-Class",
 								number: "NCC-74656",
 								annotations: {
-									"workers/triggered_by": "SOME-OTHER-TRIGGER",
-									rollback_from: "MOCK-DEPLOYMENT-ID-1111",
+									"workers/triggered_by": "rollback",
+									"workers/rollback_from": "MOCK-DEPLOYMENT-ID-1111",
 								},
 								metadata: {
 									author_id: "Kathryn-Jane-Gamma-6-0-7-3",
@@ -57,6 +56,17 @@ export const mswSuccessDeployments = [
 									source: "wrangler",
 									created_on: "2021-02-02T00:00:00.000000Z",
 									modified_on: "2021-02-02T00:00:00.000000Z",
+								},
+							},
+							{
+								id: "Intrepid-Class",
+								number: "NCC-74656",
+								metadata: {
+									author_id: "Kathryn-Jane-Gamma-6-0-7-3",
+									author_email: "Kathryn-Janeway@federation.org",
+									source: "wrangler",
+									created_on: "2021-02-03T00:00:00.000000Z",
+									modified_on: "2021-02-03T00:00:00.000000Z",
 								},
 							},
 							latestDeployment,

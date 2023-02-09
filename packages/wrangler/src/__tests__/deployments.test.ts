@@ -66,28 +66,26 @@ describe("deployments", () => {
 
 
 		Deployment ID: Constitution-Class
-		Created on: 2021-01-01T00:00:00.000000Z
-		Author: Jean-Luc-Picard@federation.org
-		Source: 🤠 Wrangler
-		Annotations
-		  Triggered by: upload
-		  Rollback from: MOCK-DEPLOYMENT-ID-0000
+		Created on:    2021-01-01T00:00:00.000000Z
+		Author:        Jean-Luc-Picard@federation.org
+		Trigger:       Upload from Wrangler 🤠
 
 		Deployment ID: Intrepid-Class
-		Created on: 2021-02-02T00:00:00.000000Z
-		Author: Kathryn-Janeway@federation.org
-		Source: 🤠 Wrangler
-		Annotations
-		  Triggered by: SOME-OTHER-TRIGGER
-		  Rollback from: MOCK-DEPLOYMENT-ID-1111
+		Created on:    2021-02-02T00:00:00.000000Z
+		Author:        Kathryn-Janeway@federation.org
+		Trigger:       Rollback from Wrangler 🤠
+		Rollback from: MOCK-DEPLOYMENT-ID-1111
+
+		Deployment ID: Intrepid-Class
+		Created on:    2021-02-03T00:00:00.000000Z
+		Author:        Kathryn-Janeway@federation.org
+		Trigger:       Wrangler 🤠
 
 		Deployment ID: Galaxy-Class
-		Created on: 2021-01-01T00:00:00.000000Z
-		Author: Jean-Luc-Picard@federation.org
-		Source: 🤠 Wrangler
-		Annotations
-		  Triggered by: upload
-		  Rollback from: MOCK-DEPLOYMENT-ID-2222
+		Created on:    2021-01-04T00:00:00.000000Z
+		Author:        Jean-Luc-Picard@federation.org
+		Trigger:       Rollback from Wrangler 🤠
+		Rollback from: MOCK-DEPLOYMENT-ID-2222
 		🟩 Active"
 	`);
 	});
@@ -99,28 +97,26 @@ describe("deployments", () => {
 
 
 		Deployment ID: Constitution-Class
-		Created on: 2021-01-01T00:00:00.000000Z
-		Author: Jean-Luc-Picard@federation.org
-		Source: 🤠 Wrangler
-		Annotations
-		  Triggered by: upload
-		  Rollback from: MOCK-DEPLOYMENT-ID-0000
+		Created on:    2021-01-01T00:00:00.000000Z
+		Author:        Jean-Luc-Picard@federation.org
+		Trigger:       Upload from Wrangler 🤠
 
 		Deployment ID: Intrepid-Class
-		Created on: 2021-02-02T00:00:00.000000Z
-		Author: Kathryn-Janeway@federation.org
-		Source: 🤠 Wrangler
-		Annotations
-		  Triggered by: SOME-OTHER-TRIGGER
-		  Rollback from: MOCK-DEPLOYMENT-ID-1111
+		Created on:    2021-02-02T00:00:00.000000Z
+		Author:        Kathryn-Janeway@federation.org
+		Trigger:       Rollback from Wrangler 🤠
+		Rollback from: MOCK-DEPLOYMENT-ID-1111
+
+		Deployment ID: Intrepid-Class
+		Created on:    2021-02-03T00:00:00.000000Z
+		Author:        Kathryn-Janeway@federation.org
+		Trigger:       Wrangler 🤠
 
 		Deployment ID: Galaxy-Class
-		Created on: 2021-01-01T00:00:00.000000Z
-		Author: Jean-Luc-Picard@federation.org
-		Source: 🤠 Wrangler
-		Annotations
-		  Triggered by: upload
-		  Rollback from: MOCK-DEPLOYMENT-ID-2222
+		Created on:    2021-01-04T00:00:00.000000Z
+		Author:        Jean-Luc-Picard@federation.org
+		Trigger:       Rollback from Wrangler 🤠
+		Rollback from: MOCK-DEPLOYMENT-ID-2222
 		🟩 Active"
 	`);
 	});
