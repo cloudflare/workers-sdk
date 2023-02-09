@@ -5816,7 +5816,7 @@ addEventListener('fetch', event => {});`
 			- Durable Objects:
 			  - EXAMPLE_DO_BINDING: ExampleDurableObject
 			- D1 Databases:
-			  - DB: test-d1-db (UUID-1-2-3-4), Preview: (UUID-1-2-3-4)
+			  - DB: test-d1-db (UUID-1-2-3-4)
 			--dry-run: exiting now."
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
