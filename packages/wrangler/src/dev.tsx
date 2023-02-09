@@ -893,7 +893,7 @@ function getBindings(
 					};
 				}
 				// if you have a preview_database_id, we'll use it, but we shouldn't force people to use it.
-				if (!d1Db.preview_database_id) {
+				if (!d1Db.preview_database_id && !process.env.NO_D1_WARNING) {
 					logger.log(
 						`--------------------\n💡 Recommendation: for development, use a preview D1 database rather than the one you'd use in production.\n💡 Create a new D1 database with "wrangler d1 create <name>" and add its id as preview_database_id to the d1_database "${d1Db.binding}" in your wrangler.toml\n--------------------\n`
 					);
