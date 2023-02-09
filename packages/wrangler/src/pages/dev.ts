@@ -81,7 +81,7 @@ export function Options(yargs: CommonYargsArgv) {
 			},
 			bundle: {
 				type: "boolean",
-				default: false,
+				default: undefined,
 				hidden: true,
 			},
 			"no-bundle": {
@@ -276,7 +276,9 @@ export const Handler = async ({
 			await checkRawWorker(workerScriptPath, () => scriptReadyResolve());
 		};
 
-		const enableBundling = bundle || !noBundle || experimentalWorkerBundle;
+		// TODO: Here lies a known bug. If you specify both `--bundle` and `--no-bundle`, this behavior is undefined and you will get unexpected results.
+		// There is no sane way to get the true value out of yargs, so here we are.
+		const enableBundling = (bundle ?? !noBundle) || experimentalWorkerBundle;
 		if (enableBundling) {
 			// We want to actually run the `_worker.js` script through the bundler
 			// So update the final path to the script that will be uploaded and

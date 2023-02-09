@@ -63,7 +63,7 @@ export function Options(yargs: CommonYargsArgv) {
 			},
 			"no-bundle": {
 				type: "boolean",
-				default: undefined,
+				default: true,
 				description: "Whether to run bundling on `_worker.js` before deploying",
 			},
 			config: {
@@ -94,17 +94,6 @@ export const Handler = async ({
 	if (!directory) {
 		throw new FatalError("Must specify a directory.", 1);
 	}
-
-	if (bundle !== undefined && noBundle !== undefined) {
-		if (bundle === noBundle) {
-			throw new FatalError(
-				"The --bundle and --no-bundle options are opposite, they cannot have the same value.",
-				1
-			);
-		}
-	}
-
-	const enableBundling = (bundle ?? false) || !(noBundle ?? true);
 
 	const config = getConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME);
 	const accountId = await requireAuth(config);
@@ -261,7 +250,9 @@ export const Handler = async ({
 		commitMessage,
 		commitHash,
 		commitDirty,
-		bundle: enableBundling,
+		// TODO: Here lies a known bug. If you specify both `--bundle` and `--no-bundle`, this behavior is undefined and you will get unexpected results.
+		// There is no sane way to get the true value out of yargs, so here we are.
+		bundle: bundle ?? !noBundle,
 	});
 
 	saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
