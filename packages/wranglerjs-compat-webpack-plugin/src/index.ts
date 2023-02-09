@@ -1,13 +1,13 @@
 /*
  * This is a webpack plugin that aims to recreate the functionality of
- * Wrangler 1's `type = wepback` setting for workers projects.
+ * Wrangler v1's `type = wepback` setting for workers projects.
  *
  * It's kind of gross, and not good for _new_ projects, but it should work ok at
- * getting people using Wrangler 1 with the inbuilt webpack 4 support migrated
+ * getting people using Wrangler v1 with the inbuilt webpack 4 support migrated
  * over to Wrangler 2. Combined with docs on ejecting webpack, the pain of
  * losing 1's (tenuous at best) webpack support should be mostly mitigated.
  *
- * This plugin attempts to replicate Wrangler 1's behavior 1:1 (specifically,
+ * This plugin attempts to replicate Wrangler v1's behavior 1:1 (specifically,
  * https://github.com/cloudflare/wrangler/blob/master/src/wranglerjs/mod.rs#L39-L58)
  * so it:
  *
@@ -110,7 +110,7 @@ export class WranglerJsCompatWebpackPlugin {
 	 * Emulates behavior from [`Target::package_dir`](https://github.com/cloudflare/wrangler/blob/master/src/settings/toml/target.rs#L40-L50).
 	 *
 	 * We encourage the user to specify the "context" and "entry" explicitly in
-	 * their webpack config, since wrangler 1 kind of inferred that stuff but
+	 * their webpack config, since Wrangler v1 kind of inferred that stuff but
 	 * wrangler 2 is very hands-off for custom builds.
 	 *
 	 * This has to be a synchronous function that only returns something
@@ -129,7 +129,7 @@ export class WranglerJsCompatWebpackPlugin {
 	) {
 		if (context === undefined || entry === undefined) {
 			const weWouldGuess =
-				"With `type = webpack`, wrangler 1 would try to guess where your worker lives.";
+				"With `type = webpack`, Wrangler v1 would try to guess where your worker lives.";
 			const noLonger =
 				"Now that you're running webpack outside of wrangler, you need to specify this explicitly.";
 			const docsUrl = "https://v4.webpack.js.org/configuration/entry-context/";
@@ -164,7 +164,7 @@ export class WranglerJsCompatWebpackPlugin {
 
 	/**
 	 * Partially equivalent to [`setup_build`](https://github.com/cloudflare/wrangler/blob/master/src/wranglerjs/mod.rs#L154-L210)
-	 * in wrangler 1, with the notable exception of preparing to run webpack
+	 * in Wrangler v1, with the notable exception of preparing to run webpack
 	 * since we now have the user do that.
 	 */
 	private async setupBuild() {
@@ -183,7 +183,7 @@ export class WranglerJsCompatWebpackPlugin {
 	/**
 	 * Generate a sites-worker if one doesn't exist already.
 	 * equivalent to [`Site::scaffold_worker`](https://github.com/cloudflare/wrangler/blob/master/src/settings/toml/site.rs#L42-L56)
-	 * in wrangler 1.
+	 * in Wrangler v1.
 	 */
 	private async scaffoldSitesWorker() {
 		if (fs.existsSync(this.packageDir)) {
