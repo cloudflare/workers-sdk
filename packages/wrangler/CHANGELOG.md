@@ -1,5 +1,15 @@
 # wrangler
 
+## 2.9.1
+
+### Patch Changes
+
+- [#2652](https://github.com/cloudflare/wrangler2/pull/2652) [`2efd4537`](https://github.com/cloudflare/wrangler2/commit/2efd4537cb141e88fe9a674c2fd093b40a3c9d63) Thanks [@mrkldshv](https://github.com/mrkldshv)! - fix: change `jest` to `vitest` types in generated TypeScript config
+
+* [#2657](https://github.com/cloudflare/wrangler2/pull/2657) [`8d21b2ea`](https://github.com/cloudflare/wrangler2/commit/8d21b2eae4ca5b3eb96c19cbb5c95b470e69942e) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: remove the need to login when running `d1 migrations list --local`
+
+- [#2592](https://github.com/cloudflare/wrangler2/pull/2592) [`dd66618b`](https://github.com/cloudflare/wrangler2/commit/dd66618b2cc63a89424f471f6153be9518f1f087) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: bump esbuild to 0.16.3 (fixes a bug in esbuild's 0.15.13 release that would cause it to hang, is the latest release before a major breaking change that requires us to refactor)
+
 ## 2.9.0
 
 ### Minor Changes
@@ -85,71 +95,74 @@
         Note: Run this command with the environment variable NO_D1_WARNING=true to hide this message
 
         For example: `export NO_D1_WARNING=true && wrangler <YOUR COMMAND HERE>`
-
-
-  --------------------
-  🚧 D1 is currently in open alpha and is not recommended for production data and traffic
-  🚧 Please report any bugs to https://github.com/cloudflare/wrangler2/issues/new/choose
-  🚧 To request features, visit https://community.cloudflare.com/c/developers/d1
-  🚧 To give feedback, visit https://discord.gg/cloudflaredev
-  --------------------
-
-  🌀 Mapping SQL input into an array of statements
-  🌀 Parsing 1 statements
-  🌀 Executing on test (xxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx):
-  🚣 Executed 1 command in 11.846710999961942ms
-  ┌────────────┬─────────────────────┬───────────────────┐
-  │ CustomerID │ CompanyName         │ ContactName       │
-  ├────────────┼─────────────────────┼───────────────────┤
-  │ 1          │ Alfreds Futterkiste │ Maria Anders      │
-  ├────────────┼─────────────────────┼───────────────────┤
-  │ 4          │ Around the Horn     │ Thomas Hardy      │
-  ├────────────┼─────────────────────┼───────────────────┤
-  │ 11         │ Bs Beverages        │ Victoria Ashworth │
-  ├────────────┼─────────────────────┼───────────────────┤
-  │ 13         │ Bs Beverages        │ Random Name       │
-  └────────────┴─────────────────────┴───────────────────┘
   ```
 
-  **After:**
+---
 
-  ```bash
-  rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from customers" --json
-  [
-    {
-      "results": [
-        {
-          "CustomerID": 1,
-          "CompanyName": "Alfreds Futterkiste",
-          "ContactName": "Maria Anders"
-        },
-        {
-          "CustomerID": 4,
-          "CompanyName": "Around the Horn",
-          "ContactName": "Thomas Hardy"
-        },
-        {
-          "CustomerID": 11,
-          "CompanyName": "Bs Beverages",
-          "ContactName": "Victoria Ashworth"
-        },
-        {
-          "CustomerID": 13,
-          "CompanyName": "Bs Beverages",
-          "ContactName": "Random Name"
-        }
-      ],
-      "success": true,
-      "meta": {
-        "duration": 1.662519000004977,
-        "last_row_id": null,
-        "changes": null,
-        "served_by": "primary-xxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.db3",
-        "internal_stats": null
+🚧 D1 is currently in open alpha and is not recommended for production data and traffic
+🚧 Please report any bugs to https://github.com/cloudflare/wrangler2/issues/new/choose
+🚧 To request features, visit https://community.cloudflare.com/c/developers/d1
+🚧 To give feedback, visit https://discord.gg/cloudflaredev
+
+---
+
+🌀 Mapping SQL input into an array of statements
+🌀 Parsing 1 statements
+🌀 Executing on test (xxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx):
+🚣 Executed 1 command in 11.846710999961942ms
+┌────────────┬─────────────────────┬───────────────────┐
+│ CustomerID │ CompanyName │ ContactName │
+├────────────┼─────────────────────┼───────────────────┤
+│ 1 │ Alfreds Futterkiste │ Maria Anders │
+├────────────┼─────────────────────┼───────────────────┤
+│ 4 │ Around the Horn │ Thomas Hardy │
+├────────────┼─────────────────────┼───────────────────┤
+│ 11 │ Bs Beverages │ Victoria Ashworth │
+├────────────┼─────────────────────┼───────────────────┤
+│ 13 │ Bs Beverages │ Random Name │
+└────────────┴─────────────────────┴───────────────────┘
+
+````
+
+**After:**
+
+```bash
+rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from customers" --json
+[
+  {
+    "results": [
+      {
+        "CustomerID": 1,
+        "CompanyName": "Alfreds Futterkiste",
+        "ContactName": "Maria Anders"
+      },
+      {
+        "CustomerID": 4,
+        "CompanyName": "Around the Horn",
+        "ContactName": "Thomas Hardy"
+      },
+      {
+        "CustomerID": 11,
+        "CompanyName": "Bs Beverages",
+        "ContactName": "Victoria Ashworth"
+      },
+      {
+        "CustomerID": 13,
+        "CompanyName": "Bs Beverages",
+        "ContactName": "Random Name"
       }
+    ],
+    "success": true,
+    "meta": {
+      "duration": 1.662519000004977,
+      "last_row_id": null,
+      "changes": null,
+      "served_by": "primary-xxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.db3",
+      "internal_stats": null
     }
-  ]
-  ```
+  }
+]
+````
 
 ## 2.8.1
 
