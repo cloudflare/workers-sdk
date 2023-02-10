@@ -29,13 +29,19 @@ const getLogLevelFromEnv = getEnvironmentVariableFactory({
 	defaultValue: () => "log",
 });
 
+const getDebugOnErrorFromEnv = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_DEBUG_ON_ERROR",
+});
+
 export type TableRow<Keys extends string> = Record<Keys, string>;
 
 class Logger {
 	constructor() {}
 
 	loggerLevel: LoggerLevel = (getLogLevelFromEnv() as LoggerLevel) ?? "log";
+	debugOnError = getDebugOnErrorFromEnv() === "true";
 	columns = process.stdout.columns;
+	debugLogs: string[] = [];
 
 	debug = (...args: unknown[]) => this.doLog("debug", args);
 	info = (...args: unknown[]) => this.doLog("info", args);
@@ -53,8 +59,15 @@ class Logger {
 	}
 
 	private doLog(messageLevel: Exclude<LoggerLevel, "none">, args: unknown[]) {
-		if (LOGGER_LEVELS[this.loggerLevel] >= LOGGER_LEVELS[messageLevel]) {
-			console[messageLevel](this.formatMessage(messageLevel, format(...args)));
+		const should_log =
+			LOGGER_LEVELS[this.loggerLevel] >= LOGGER_LEVELS[messageLevel];
+		if (should_log || this.debugOnError) {
+			const formattedMessage = this.formatMessage(
+				messageLevel,
+				format(...args)
+			);
+			if (should_log) console[messageLevel](formattedMessage);
+			if (this.debugOnError) this.debugLogs.push(formattedMessage);
 		}
 	}
 

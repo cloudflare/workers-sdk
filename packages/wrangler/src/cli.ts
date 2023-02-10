@@ -2,6 +2,7 @@ import process from "process";
 import { hideBin } from "yargs/helpers";
 import { unstable_dev, unstable_pages } from "./api";
 import { FatalError } from "./errors";
+import { logger } from "./logger";
 import { main } from ".";
 
 import type { UnstableDevWorker, UnstableDevOptions } from "./api";
@@ -11,6 +12,9 @@ import type { UnstableDevWorker, UnstableDevOptions } from "./api";
  */
 if (typeof jest === "undefined" && require.main === module) {
 	main(hideBin(process.argv)).catch((e) => {
+		// Dump debug logs on crash if WRANGLER_DEBUG_ON_ERROR is set
+		if (logger.debugOnError)
+			logger.debugLogs.forEach((line) => console.error(line));
 		// The logging of any error that was thrown from `main()` is handled in the `yargs.fail()` handler.
 		// Here we just want to ensure that the process exits with a non-zero code.
 		// We don't want to do this inside the `main()` function, since that would kill the process when running our tests.
