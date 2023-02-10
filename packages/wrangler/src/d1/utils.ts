@@ -14,6 +14,7 @@ export function getDatabaseInfoFromConfig(
 		) {
 			return {
 				uuid: d1Database.database_id,
+				previewDatabaseUuid: d1Database.preview_database_id,
 				binding: d1Database.binding,
 				name: d1Database.database_name,
 				migrationsTableName:
