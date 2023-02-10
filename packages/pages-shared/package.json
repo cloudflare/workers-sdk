@@ -14,7 +14,8 @@
 	],
 	"scripts": {
 		"check:type": "tsc",
-		"test": "jest"
+		"test": "jest",
+		"test:ci": "jest"
 	},
 	"jest": {
 		"coverageReporters": [
