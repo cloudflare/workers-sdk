@@ -73,19 +73,16 @@ const listAppliedMigrations = async (
 	name: string,
 	persistTo: undefined | string
 ): Promise<Migration[]> => {
-	const Query = `SELECT *
-									 FROM ${migrationsTableName}
-									 ORDER BY id`;
-
-	const response: QueryResult[] | null = await executeSql(
+	const response: QueryResult[] | null = await executeSql({
 		local,
 		config,
 		name,
-		isInteractive() && !CI.isCI(),
+		shouldPrompt: isInteractive() && !CI.isCI(),
 		persistTo,
-		undefined,
-		Query
-	);
+		command: `SELECT *
+		FROM ${migrationsTableName}
+		ORDER BY id`,
+	});
 
 	if (!response || response[0].results.length === 0) return [];
 
@@ -128,20 +125,19 @@ export const initMigrationsTable = async (
 	name: string,
 	persistTo: undefined | string
 ) => {
-	return executeSql(
+	return executeSql({
 		local,
 		config,
 		name,
-		isInteractive() && !CI.isCI(),
+		shouldPrompt: isInteractive() && !CI.isCI(),
 		persistTo,
-		undefined,
-		`
+		command: `
 						CREATE TABLE IF NOT EXISTS ${migrationsTableName}
 						(
 								id         INTEGER PRIMARY KEY AUTOINCREMENT,
 								name       TEXT UNIQUE,
 								applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 						);
-				`
-	);
+				`,
+	});
 };

@@ -89,16 +89,25 @@ function shorten(query: string | undefined, length: number) {
 		: query;
 }
 
-export async function executeSql(
-	local: undefined | boolean,
-	config: ConfigFields<DevConfig> & Environment,
-	name: string,
-	shouldPrompt: boolean | undefined,
-	persistTo: undefined | string,
-	file?: string,
-	command?: string,
-	json?: boolean
-) {
+export async function executeSql({
+	local,
+	config,
+	name,
+	shouldPrompt,
+	persistTo,
+	file,
+	command,
+	json,
+}: {
+	local: undefined | boolean;
+	config: ConfigFields<DevConfig> & Environment;
+	name: string;
+	shouldPrompt: boolean | undefined;
+	persistTo: undefined | string;
+	file?: string;
+	command?: string;
+	json?: boolean;
+}) {
 	const sql = file ? readFileSync(file) : command;
 	if (!sql) throw new Error(`Error: must provide --command or --file.`);
 	if (persistTo && !local)
@@ -116,14 +125,21 @@ export async function executeSql(
 	}
 
 	return local
-		? await executeLocally(config, name, shouldPrompt, queries, persistTo, json)
-		: await executeRemotely(
+		? await executeLocally({
 				config,
 				name,
 				shouldPrompt,
-				batchSplit(queries),
-				json
-		  );
+				queries,
+				persistTo,
+				json,
+		  })
+		: await executeRemotely({
+				config,
+				name,
+				shouldPrompt,
+				batches: batchSplit(queries),
+				json,
+		  });
 }
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
 
@@ -140,16 +156,16 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 		return logger.error(`Error: can't provide both --command and --file.`);
 
 	const isInteractive = process.stdout.isTTY;
-	const response: QueryResult[] | null = await executeSql(
+	const response: QueryResult[] | null = await executeSql({
 		local,
 		config,
-		database,
-		isInteractive && !yes,
+		name: database,
+		shouldPrompt: isInteractive && !yes,
 		persistTo,
 		file,
 		command,
-		json
-	);
+		json,
+	});
 
 	// Early exit if prompt rejected
 	if (!response) return;
@@ -183,14 +199,21 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 	}
 };
 
-async function executeLocally(
-	config: Config,
-	name: string,
-	shouldPrompt: boolean | undefined,
-	queries: string[],
-	persistTo: string | undefined,
-	json?: boolean
-) {
+async function executeLocally({
+	config,
+	name,
+	shouldPrompt,
+	queries,
+	persistTo,
+	json,
+}: {
+	config: Config;
+	name: string;
+	shouldPrompt: boolean | undefined;
+	queries: string[];
+	persistTo: string | undefined;
+	json?: boolean;
+}) {
 	const localDB = getDatabaseInfoFromConfig(config, name);
 	if (!localDB) {
 		throw new Error(
@@ -233,13 +256,19 @@ async function executeLocally(
 	return results;
 }
 
-async function executeRemotely(
-	config: Config,
-	name: string,
-	shouldPrompt: boolean | undefined,
-	batches: string[],
-	json?: boolean
-) {
+async function executeRemotely({
+	config,
+	name,
+	shouldPrompt,
+	batches,
+	json,
+}: {
+	config: Config;
+	name: string;
+	shouldPrompt: boolean | undefined;
+	batches: string[];
+	json?: boolean;
+}) {
 	const multiple_batches = batches.length > 1;
 	// in JSON mode, we don't want a prompt here
 	if (multiple_batches && !json) {
