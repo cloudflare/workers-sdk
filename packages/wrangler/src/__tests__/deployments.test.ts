@@ -68,12 +68,12 @@ describe("deployments", () => {
 		Deployment ID: Galaxy-Class
 		Created on: 2021-01-01T00:00:00.000000Z
 		Author: Jean-Luc-Picard@federation.org
-		Source: Wrangler
+		Source: 🤠 Wrangler
 
 		Deployment ID: Intrepid-Class
 		Created on: 2021-02-02T00:00:00.000000Z
 		Author: Kathryn-Janeway@federation.org
-		Source: Wrangler
+		Source: 🤠 Wrangler
 		🟩 Active"
 	`);
 	});
@@ -87,12 +87,12 @@ describe("deployments", () => {
 		Deployment ID: Galaxy-Class
 		Created on: 2021-01-01T00:00:00.000000Z
 		Author: Jean-Luc-Picard@federation.org
-		Source: Wrangler
+		Source: 🤠 Wrangler
 
 		Deployment ID: Intrepid-Class
 		Created on: 2021-02-02T00:00:00.000000Z
 		Author: Kathryn-Janeway@federation.org
-		Source: Wrangler
+		Source: 🤠 Wrangler
 		🟩 Active"
 	`);
 	});

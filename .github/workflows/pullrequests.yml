@@ -5,7 +5,7 @@ on: pull_request
 jobs:
   check:
     name: "Checks"
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
@@ -48,7 +48,7 @@ jobs:
     name: "Tests"
     strategy:
       matrix:
-        os: [ubuntu-22.04, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo

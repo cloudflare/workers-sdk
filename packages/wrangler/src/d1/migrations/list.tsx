@@ -5,6 +5,7 @@ import React from "react";
 import { withConfig } from "../../config";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
+import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";
 import { d1BetaWarning, getDatabaseInfoFromConfig } from "../utils";
 import {
 	getMigrationsPath,
@@ -12,20 +13,26 @@ import {
 	initMigrationsTable,
 } from "./helpers";
 import { DatabaseWithLocal } from "./options";
-import type { BaseSqlExecuteArgs } from "../execute";
-import type { Argv } from "yargs";
+import type {
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
+} from "../../yargs-types";
 
-export function ListOptions(yargs: Argv): Argv<BaseSqlExecuteArgs> {
+export function ListOptions(yargs: CommonYargsArgv) {
 	return DatabaseWithLocal(yargs);
 }
 
-export const ListHandler = withConfig<BaseSqlExecuteArgs>(
+type ListHandlerOptions = StrictYargsOptionsToInterface<typeof ListOptions>;
+
+export const ListHandler = withConfig<ListHandlerOptions>(
 	async ({ config, database, local, persistTo }): Promise<void> => {
-		await requireAuth({});
+		if (!local) {
+			await requireAuth({});
+		}
 		logger.log(d1BetaWarning);
 
-		const databaseInfo = await getDatabaseInfoFromConfig(config, database);
-		if (!databaseInfo) {
+		const databaseInfo = getDatabaseInfoFromConfig(config, database);
+		if (!databaseInfo && !local) {
 			throw new Error(
 				`Can't find a DB with name/binding '${database}' in local config. Check info in wrangler.toml...`
 			);
@@ -34,13 +41,16 @@ export const ListHandler = withConfig<BaseSqlExecuteArgs>(
 		if (!config.configPath) {
 			return;
 		}
-		const { migrationsTableName, migrationsFolderPath } = databaseInfo;
 
 		const migrationsPath = await getMigrationsPath(
 			path.dirname(config.configPath),
-			migrationsFolderPath,
+			databaseInfo?.migrationsFolderPath ?? DEFAULT_MIGRATION_PATH,
 			false
 		);
+
+		const migrationsTableName =
+			databaseInfo?.migrationsTableName ?? DEFAULT_MIGRATION_TABLE;
+
 		await initMigrationsTable(
 			migrationsTableName,
 			local,

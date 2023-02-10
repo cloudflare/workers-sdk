@@ -9,10 +9,10 @@ import tmp from "tmp-promise";
 import createModuleCollector from "./module-collection";
 import { getBasePath, toUrlPath } from "./paths";
 import type { Config } from "./config";
+import type { DurableObjectBindings } from "./config/environment";
 import type { WorkerRegistry } from "./dev-registry";
 import type { Entry } from "./entry";
 import type { CfModule } from "./worker";
-
 export type BundleResult = {
 	modules: CfModule[];
 	dependencies: esbuild.Metafile["outputs"][string]["inputs"];
@@ -95,6 +95,7 @@ export async function bundleWorker(
 		serveAssetsFromWorker: boolean;
 		assets?: StaticAssetsConfig;
 		betaD1Shims?: string[];
+		doBindings: DurableObjectBindings;
 		jsxFactory?: string;
 		jsxFragment?: string;
 		rules: Config["rules"];
@@ -123,6 +124,7 @@ export async function bundleWorker(
 	const {
 		serveAssetsFromWorker,
 		betaD1Shims,
+		doBindings,
 		jsxFactory,
 		jsxFragment,
 		rules,
@@ -271,7 +273,13 @@ export async function bundleWorker(
 		Array.isArray(betaD1Shims) &&
 			betaD1Shims.length > 0 &&
 			((currentEntry: Entry) => {
-				return applyD1BetaFacade(currentEntry, tmpDir.path, betaD1Shims, local);
+				return applyD1BetaFacade(
+					currentEntry,
+					tmpDir.path,
+					betaD1Shims,
+					local,
+					doBindings
+				);
 			}),
 
 		// Middleware loader: to add middleware, we add the path to the middleware
@@ -332,7 +340,7 @@ export async function bundleWorker(
 		sourceRoot: destination,
 		minify,
 		metafile: true,
-		conditions: ["worker", "browser"],
+		conditions: ["workerd", "worker", "browser"],
 		...(process.env.NODE_ENV && {
 			define: {
 				// use process.env["NODE_ENV" + ""] so that esbuild doesn't replace it
@@ -395,13 +403,23 @@ export async function bundleWorker(
 		_path.includes(".map")
 	)[0];
 
+	const resolvedEntryPointPath = path.resolve(
+		entry.directory,
+		entryPointOutputs[0][0]
+	);
+
+	// copy all referenced modules into the output bundle directory
+	for (const module of moduleCollector.modules) {
+		fs.writeFileSync(
+			path.join(path.dirname(resolvedEntryPointPath), module.name),
+			module.content
+		);
+	}
+
 	return {
 		modules: moduleCollector.modules,
 		dependencies,
-		resolvedEntryPointPath: path.resolve(
-			entry.directory,
-			entryPointOutputs[0][0]
-		),
+		resolvedEntryPointPath,
 		bundleType,
 		stop: result.stop,
 		sourceMapPath,
@@ -556,9 +574,10 @@ async function applyMiddlewareLoaderFacade(
 			],
 			outfile: targetPathInsertion,
 		});
-
-		let targetPathLoader = path.join(tmpDirPath, path.basename(entry.file));
-		if (path.extname(entry.file) === "") targetPathLoader += ".js";
+		const targetPathLoader = path.join(
+			tmpDirPath,
+			"middleware-loader.entry.js"
+		);
 		const loaderPath = path.resolve(
 			getBasePath(),
 			"templates/middleware/loader-modules.ts"
@@ -779,17 +798,51 @@ async function applyFirstPartyWorkerDevFacade(
  * This code be removed from here when the API is in Workers core,
  * but moved inside Miniflare for simulating D1.
  */
-
 async function applyD1BetaFacade(
 	entry: Entry,
 	tmpDirPath: string,
 	betaD1Shims: string[],
-	local: boolean
+	local: boolean,
+	doBindings: DurableObjectBindings
 ): Promise<Entry> {
-	const targetPath = path.join(tmpDirPath, "d1-beta-facade.entry.js");
+	let entrypointPath = path.resolve(
+		getBasePath(),
+		"templates/d1-beta-facade.js"
+	);
+	if (Array.isArray(doBindings) && doBindings.length > 0) {
+		//we have DO bindings, so we need to shim them
+		const maskedDoBindings = doBindings
+			// Don't shim anything not local to this worker
+			.filter((b) => !b.script_name)
+			// Reexport the DO classnames
+			.map(
+				(b) =>
+					`export const ${b.class_name} = maskDurableObjectDefinition(OTHER_EXPORTS.${b.class_name});`
+			)
+			.join("\n");
+		const baseFile = fs.readFileSync(
+			path.resolve(getBasePath(), "templates/d1-beta-facade.js"),
+			"utf8"
+		);
+		//getMaskedEnv is already used to shim regular Workers
+		const contents = `
+		${baseFile}
 
+		var maskDurableObjectDefinition = (cls) =>
+		class extends cls {
+			constructor(state, env) {
+				super(state, getMaskedEnv(env));
+			}
+		};
+		${maskedDoBindings}`;
+		const doD1FacadePath = path.join(tmpDirPath, "d1-do-facade.js");
+		//write our shim so we can build it
+		fs.writeFileSync(doD1FacadePath, contents);
+		entrypointPath = doD1FacadePath;
+	}
+	const targetPath = path.join(tmpDirPath, "d1-beta-facade.entry.js");
 	await esbuild.build({
-		entryPoints: [path.resolve(getBasePath(), "templates/d1-beta-facade.js")],
+		entryPoints: [entrypointPath],
 		bundle: true,
 		format: "esm",
 		sourcemap: true,

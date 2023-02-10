@@ -4,6 +4,7 @@ const Workers = __WORKERS__;
 export * from "__ENTRY_POINT__";
 
 export default {
+	...worker,
 	async fetch(req, env, ctx) {
 		const facadeEnv = { ...env };
 		// For every Worker definition that's available,

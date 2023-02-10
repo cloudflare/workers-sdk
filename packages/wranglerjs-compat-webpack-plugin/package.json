@@ -1,7 +1,7 @@
 {
 	"name": "wranglerjs-compat-webpack-plugin",
-	"version": "0.0.6",
-	"description": "A webpack plugin to emulate the behavior of wrangler1's `type = webpack`",
+	"version": "0.0.7",
+	"description": "A webpack plugin to emulate the behavior of Wrangler v1's `type = webpack`",
 	"homepage": "https://github.com/cloudflare/wrangler2#readme",
 	"bugs": {
 		"url": "https://github.com/cloudflare/wrangler2/issues"
@@ -55,7 +55,7 @@
 		"@types/rimraf": "^3.0.2",
 		"@types/tar": "^6.1.1",
 		"@types/webpack": "^4.41.32",
-		"esbuild": "^0.14.51",
+		"esbuild": "0.16.3",
 		"execa": "^6.1.0",
 		"jest": "^27.5.1",
 		"jest-fetch-mock": "^3.0.3",

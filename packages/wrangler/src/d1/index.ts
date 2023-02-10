@@ -5,10 +5,9 @@ import * as Execute from "./execute";
 import * as List from "./list";
 import * as Migrations from "./migrations";
 import { d1BetaWarning } from "./utils";
-import type { CommonYargsOptions } from "../yargs-types";
-import type { Argv } from "yargs";
+import type { CommonYargsArgv } from "../yargs-types";
 
-export const d1 = (yargs: Argv<CommonYargsOptions>) => {
+export function d1(yargs: CommonYargsArgv) {
 	return (
 		yargs
 			.command("list", "List D1 databases", List.Options, List.Handler)
@@ -24,8 +23,8 @@ export const d1 = (yargs: Argv<CommonYargsOptions>) => {
 				Delete.Options,
 				Delete.Handler
 			)
-			.command("backup", "Interact with D1 Backups", (yargs2) =>
-				yargs2
+			.command("backup", "Interact with D1 Backups", (backupArgs) =>
+				backupArgs
 					.demandCommand()
 					.command(
 						"list <name>",
@@ -98,4 +97,4 @@ export const d1 = (yargs: Argv<CommonYargsOptions>) => {
 			)
 			.epilogue(d1BetaWarning)
 	);
-};
+}

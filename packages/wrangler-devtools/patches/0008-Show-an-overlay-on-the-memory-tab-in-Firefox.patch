@@ -1,0 +1,75 @@
+From 70e79d4a4e1821021d0df627a23d62ede6c558ba Mon Sep 17 00:00:00 2001
+From: Samuel Macleod <smacleod@cloudflare.com>
+Date: Thu, 19 Jan 2023 18:49:47 +0000
+Subject: [PATCH 08/12] Show an overlay on the memory tab in Firefox
+
+---
+ front_end/entrypoint_template.html          | 18 ++++++++++++++++--
+ front_end/panels/profiler/profilesPanel.css | 16 ++++++++++++++++
+ 2 files changed, 32 insertions(+), 2 deletions(-)
+
+diff --git a/front_end/entrypoint_template.html b/front_end/entrypoint_template.html
+index 945aa6d816..b451da60eb 100644
+--- a/front_end/entrypoint_template.html
++++ b/front_end/entrypoint_template.html
+@@ -14,7 +14,13 @@
+     }
+   }
+ </style>
+-<meta http-equiv="Content-Security-Policy" content="object-src 'none'; script-src 'sha256-7cSoIgLSn2W/Jf+ovCaVMDQtS5K1xhtFhl5WQtvvAaQ=' 'self' 'unsafe-eval' https://chrome-devtools-frontend.appspot.com">
++<style>
++  :root {
++    --heap-profiler-tab-display: none
++  }
++</style>
++<meta http-equiv="Content-Security-Policy"
++  content="object-src 'none'; script-src 'sha256-yYUen+rS0+K2iGZTeGzgeav9eHB7hosjob+ahEOInok=' 'self' 'unsafe-eval' https://chrome-devtools-frontend.appspot.com">
+ <meta name="referrer" content="no-referrer">
+ <script>
+   var supportsCustomElements = false;
+@@ -39,5 +45,13 @@
+     script.type = "module"
+     document.head.append(script)
+   }
++
++  // Check if the current browser supports Module Workers. If it doesn't, hide the Memory tab
++  const w = new Worker(new URL("./entrypoints/heap_snapshot_worker/heap_snapshot_worker-legacy.js", location.href), { type: 'module' })
++  w.addEventListener("error", () => {
++    document.documentElement.style.setProperty("--heap-profiler-tab-display", "grid")
++  }, false);
++  setTimeout(() => w.terminate(), 1000)
+ </script>
+-<body class="undocked" id="-blink-dev-tools">
++
++<body class="undocked" id="-blink-dev-tools">
+\ No newline at end of file
+diff --git a/front_end/panels/profiler/profilesPanel.css b/front_end/panels/profiler/profilesPanel.css
+index 693621a273..9b330e7cf0 100644
+--- a/front_end/panels/profiler/profilesPanel.css
++++ b/front_end/panels/profiler/profilesPanel.css
+@@ -28,6 +28,22 @@
+  */
+ /* Profiler Style */
+ 
++
++.heap_profiler::after {
++  content: "⚠️ The 'Memory' tab is only supported in Chrome";
++  position: absolute;
++  top: 0px;
++  background: rgba(0, 0, 0, 0.8);
++  z-index: 9999;
++  width: 100%;
++  left: 0px;
++  height: 100%;
++  color: white;
++  font-size: 2em;
++  display: var(--heap-profiler-tab-display);
++  justify-content: center;
++  align-content: center;
++}
+ #profile-views {
+   flex: auto;
+   position: relative;
+-- 
+2.37.1 (Apple Git-137.1)
+

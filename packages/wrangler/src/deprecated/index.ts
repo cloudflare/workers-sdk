@@ -3,15 +3,14 @@ import { createCLIParser } from "../index";
 import { logger } from "../logger";
 import { formatMessage } from "../parse";
 import type {
-	CommonYargsOptions,
-	YargsOptionsToInterface,
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Argv, BuilderCallback } from "yargs";
 
-export function buildOptions(yargs: Argv<CommonYargsOptions>) {
+export function buildOptions(yargs: CommonYargsArgv) {
 	return yargs;
 }
-type BuildArgs = YargsOptionsToInterface<typeof buildOptions>;
+type BuildArgs = StrictYargsOptionsToInterface<typeof buildOptions>;
 export async function buildHandler(buildArgs: BuildArgs) {
 	// "[DEPRECATED] 🦀 Build your project (if applicable)",
 
@@ -47,7 +46,7 @@ export const configHandler = () => {
 	);
 };
 
-export function previewOptions(yargs: Argv<CommonYargsOptions>) {
+export function previewOptions(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("method", {
 			type: "string",
@@ -71,7 +70,7 @@ export function previewHandler() {
 	);
 }
 
-export const route: BuilderCallback<unknown, unknown> = (routeYargs: Argv) => {
+export const route = (routeYargs: CommonYargsArgv) => {
 	return routeYargs
 		.command(
 			"list",
@@ -134,7 +133,7 @@ export const routeHandler = () => {
 	throw new DeprecationError(`${deprecationNotice}\n${shouldDo}`);
 };
 
-export const subdomainOptions = (yargs: Argv<CommonYargsOptions>) => {
+export const subdomainOptions = (yargs: CommonYargsArgv) => {
 	return yargs.positional("name", { type: "string" });
 };
 

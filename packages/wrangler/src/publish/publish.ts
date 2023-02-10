@@ -93,13 +93,19 @@ function sleep(ms: number) {
 
 const scriptStartupErrorRegex = /startup/i;
 
-function errIsScriptSizeOrStartupErr(err: unknown) {
+function errIsScriptSize(err: unknown): err is { code: 10027 } {
 	if (!err) return false;
 
 	// 10027 = workers.api.error.script_too_large
 	if ((err as { code: number }).code === 10027) {
 		return true;
 	}
+
+	return false;
+}
+
+function errIsStartupErr(err: unknown): err is ParseError & { code: 10021 } {
+	if (!err) return false;
 
 	// 10021 = validation error
 	// no explicit error code for more granular errors than "invalid script"
@@ -466,6 +472,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						betaD1Shims: identifyD1BindingsAsBeta(config.d1_databases)?.map(
 							(db) => db.binding
 						),
+						doBindings: config.durable_objects.bindings,
 						jsxFactory,
 						jsxFragment,
 						rules: props.rules,
@@ -602,9 +609,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		printBindings({ ...withoutStaticAssets, vars: maskedVars });
 
-		await ensureQueuesExist(config);
-
 		if (!props.dryRun) {
+			await ensureQueuesExist(config);
+
 			// Upload the script so it has time to propagate.
 			// We can also now tell whether available_on_subdomain is set
 			try {
@@ -642,9 +649,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						logger.log("Worker PipelineHash: ", result.pipeline_hash);
 				}
 			} catch (err) {
-				if (errIsScriptSizeOrStartupErr(err)) {
-					printOffendingDependencies(dependencies);
-				}
+				helpIfErrorIsSizeOrScriptStartup(err, dependencies);
 				throw err;
 			}
 		}
@@ -834,6 +839,27 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		} else {
 			throw e;
 		}
+	}
+}
+
+export function helpIfErrorIsSizeOrScriptStartup(
+	err: unknown,
+	dependencies: { [path: string]: { bytesInOutput: number } }
+) {
+	if (errIsScriptSize(err)) {
+		printOffendingDependencies(dependencies);
+	} else if (errIsStartupErr(err)) {
+		const youFailed =
+			"Your Worker failed validation because it exceeded startup limits.";
+		const heresWhy =
+			"To ensure fast responses, we place constraints on Worker startup -- like how much CPU it can use, or how long it can take.";
+		const heresTheProblem =
+			"Your Worker failed validation, which means it hit one of these startup limits.";
+		const heresTheSolution =
+			"Try reducing the amount of work done during startup (outside the event handler), either by removing code or relocating it inside the event handler.";
+		logger.warn(
+			[youFailed, heresWhy, heresTheProblem, heresTheSolution].join("\n")
+		);
 	}
 }
 

@@ -1,5 +1,284 @@
 # wrangler
 
+## 2.9.1
+
+### Patch Changes
+
+- [#2652](https://github.com/cloudflare/wrangler2/pull/2652) [`2efd4537`](https://github.com/cloudflare/wrangler2/commit/2efd4537cb141e88fe9a674c2fd093b40a3c9d63) Thanks [@mrkldshv](https://github.com/mrkldshv)! - fix: change `jest` to `vitest` types in generated TypeScript config
+
+* [#2657](https://github.com/cloudflare/wrangler2/pull/2657) [`8d21b2ea`](https://github.com/cloudflare/wrangler2/commit/8d21b2eae4ca5b3eb96c19cbb5c95b470e69942e) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: remove the need to login when running `d1 migrations list --local`
+
+- [#2592](https://github.com/cloudflare/wrangler2/pull/2592) [`dd66618b`](https://github.com/cloudflare/wrangler2/commit/dd66618b2cc63a89424f471f6153be9518f1f087) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: bump esbuild to 0.16.3 (fixes a bug in esbuild's 0.15.13 release that would cause it to hang, is the latest release before a major breaking change that requires us to refactor)
+
+## 2.9.0
+
+### Minor Changes
+
+- [#2629](https://github.com/cloudflare/wrangler2/pull/2629) [`151733e5`](https://github.com/cloudflare/wrangler2/commit/151733e5d98e95f363b548f9959c2baf418eb7b5) Thanks [@mrbbot](https://github.com/mrbbot)! - Prefer the `workerd` `exports` condition when bundling.
+
+  This can be used to build isomorphic libraries that have different implementations depending on the JavaScript runtime they're running in.
+  When bundling, Wrangler will try to load the [`workerd` key](https://runtime-keys.proposal.wintercg.org/#workerd).
+  This is the [standard key](https://runtime-keys.proposal.wintercg.org/#workerd) for the Cloudflare Workers runtime.
+  Learn more about the [conditional `exports` field here](https://nodejs.org/api/packages.html#conditional-exports).
+
+### Patch Changes
+
+- [#2409](https://github.com/cloudflare/wrangler2/pull/2409) [`89d78c0a`](https://github.com/cloudflare/wrangler2/commit/89d78c0ac444885298ac052b0b3de23b69fb029b) Thanks [@penalosa](https://github.com/penalosa)! - Wrangler now supports an `--experimental-json-config` flag which will read your configuration from a `wrangler.json` file, rather than `wrangler.toml`. The format of this file is exactly the same as the `wrangler.toml` configuration file, except that the syntax is `JSONC` (JSON with comments) rather than `TOML`. This is experimental, and is not recommended for production use.
+
+* [#2623](https://github.com/cloudflare/wrangler2/pull/2623) [`04d8a312`](https://github.com/cloudflare/wrangler2/commit/04d8a3124fbcf20049b39a96654d7f3c850c032b) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix d1 directory not being created when running the `wrangler d1 execute` command with the `--yes`/`-y` flag
+
+- [#2608](https://github.com/cloudflare/wrangler2/pull/2608) [`70daffeb`](https://github.com/cloudflare/wrangler2/commit/70daffebab4788322769350ab714959e3254c3b4) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: Add support for D1 databases when bundling an `_worker.js` on `wrangler pages publish`
+
+* [#2597](https://github.com/cloudflare/wrangler2/pull/2597) [`416babf0`](https://github.com/cloudflare/wrangler2/commit/416babf050ed3608e0fd747111561a4c7207185e) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: do not crash in wrangler dev when passing a request object to fetch
+
+  This reverts and fixes the changes in https://github.com/cloudflare/wrangler2/pull/1769
+  which does not support creating requests from requests whose bodies have already been consumed.
+
+  Fixes #2562
+
+- [#2622](https://github.com/cloudflare/wrangler2/pull/2622) [`9778b33e`](https://github.com/cloudflare/wrangler2/commit/9778b33eb27f721fb743a970fb1520782ab0d573) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: implement `d1 list --json` with clean output for piping into other commands
+
+  Before:
+
+  ```bash
+  rozenmd@cflaptop test % npx wrangler d1 list
+  --------------------
+  🚧 D1 is currently in open alpha and is not recommended for production data and traffic
+  🚧 Please report any bugs to https://github.com/cloudflare/wrangler2/issues/new/choose
+  🚧 To request features, visit https://community.cloudflare.com/c/developers/d1
+  🚧 To give feedback, visit https://discord.gg/cloudflaredev
+  --------------------
+
+  ┌──────────────────────────────┬─────────────────┐
+  │ uuid                         │ name            │
+  ├──────────────────────────────┼─────────────────┤
+  │ xxxxxx-xxxx-xxxx-xxxx-xxxxxx │ test            │
+  ├──────────────────────────────┼─────────────────┤
+  │ xxxxxx-xxxx-xxxx-xxxx-xxxxxx │ test2           │
+  ├──────────────────────────────┼─────────────────┤
+  │ xxxxxx-xxxx-xxxx-xxxx-xxxxxx │ test3           │
+  └──────────────────────────────┴─────────────────┘
+  ```
+
+  After:
+
+  ```bash
+  rozenmd@cflaptop test % npx wrangler d1 list --json
+  [
+    {
+      "uuid": "xxxxxx-xxxx-xxxx-xxxx-xxxxxx",
+      "name": "test"
+    },
+    {
+      "uuid": "xxxxxx-xxxx-xxxx-xxxx-xxxxxx",
+      "name": "test2"
+    },
+    {
+      "uuid": "xxxxxx-xxxx-xxxx-xxxx-xxxxxx",
+      "name": "test3"
+    },
+  ]
+  ```
+
+* [#2631](https://github.com/cloudflare/wrangler2/pull/2631) [`6b3fe5ef`](https://github.com/cloudflare/wrangler2/commit/6b3fe5efc68c7a7afcd6666158a24d45033dd3db) Thanks [@thibmeu](https://github.com/thibmeu)! - Fix `wrangler publish --dry-run` to not require authentication when using Queues
+
+- [#2627](https://github.com/cloudflare/wrangler2/pull/2627) [`6f0f2ba6`](https://github.com/cloudflare/wrangler2/commit/6f0f2ba65731a1f6a0b1978e5fc3a5da9a50df0f) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: implement `d1 execute --json` with clean output for piping into other commands
+
+  **Before:**
+
+  ```bash
+  rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from customers"
+  ▲ [WARNING] Processing wrangler.toml configuration:
+
+      - D1 Bindings are currently in alpha to allow the API to evolve before general availability.
+        Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
+        Note: Run this command with the environment variable NO_D1_WARNING=true to hide this message
+
+        For example: `export NO_D1_WARNING=true && wrangler <YOUR COMMAND HERE>`
+  ```
+
+---
+
+🚧 D1 is currently in open alpha and is not recommended for production data and traffic
+🚧 Please report any bugs to https://github.com/cloudflare/wrangler2/issues/new/choose
+🚧 To request features, visit https://community.cloudflare.com/c/developers/d1
+🚧 To give feedback, visit https://discord.gg/cloudflaredev
+
+---
+
+🌀 Mapping SQL input into an array of statements
+🌀 Parsing 1 statements
+🌀 Executing on test (xxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx):
+🚣 Executed 1 command in 11.846710999961942ms
+┌────────────┬─────────────────────┬───────────────────┐
+│ CustomerID │ CompanyName │ ContactName │
+├────────────┼─────────────────────┼───────────────────┤
+│ 1 │ Alfreds Futterkiste │ Maria Anders │
+├────────────┼─────────────────────┼───────────────────┤
+│ 4 │ Around the Horn │ Thomas Hardy │
+├────────────┼─────────────────────┼───────────────────┤
+│ 11 │ Bs Beverages │ Victoria Ashworth │
+├────────────┼─────────────────────┼───────────────────┤
+│ 13 │ Bs Beverages │ Random Name │
+└────────────┴─────────────────────┴───────────────────┘
+
+````
+
+**After:**
+
+```bash
+rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from customers" --json
+[
+  {
+    "results": [
+      {
+        "CustomerID": 1,
+        "CompanyName": "Alfreds Futterkiste",
+        "ContactName": "Maria Anders"
+      },
+      {
+        "CustomerID": 4,
+        "CompanyName": "Around the Horn",
+        "ContactName": "Thomas Hardy"
+      },
+      {
+        "CustomerID": 11,
+        "CompanyName": "Bs Beverages",
+        "ContactName": "Victoria Ashworth"
+      },
+      {
+        "CustomerID": 13,
+        "CompanyName": "Bs Beverages",
+        "ContactName": "Random Name"
+      }
+    ],
+    "success": true,
+    "meta": {
+      "duration": 1.662519000004977,
+      "last_row_id": null,
+      "changes": null,
+      "served_by": "primary-xxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.db3",
+      "internal_stats": null
+    }
+  }
+]
+````
+
+## 2.8.1
+
+### Patch Changes
+
+- [#2501](https://github.com/cloudflare/wrangler2/pull/2501) [`a0e5a491`](https://github.com/cloudflare/wrangler2/commit/a0e5a4913621cffe757b2d14b6f3f466831f3d7f) Thanks [@geelen](https://github.com/geelen)! - fix: make it possible to query d1 databases from durable objects
+
+  This PR makes it possible to access D1 from Durable Objects.
+
+  To be able to query D1 from your Durable Object, you'll need to install the latest version of wrangler, and redeploy your Worker.
+
+  For a D1 binding like:
+
+  ```toml
+  [[d1_databases]]
+  binding = "DB" # i.e. available in your Worker on env.DB
+  database_name = "my-database-name"
+  database_id = "UUID-GOES-HERE"
+  preview_database_id = "UUID-GOES-HERE"
+  ```
+
+  You'll be able to access your D1 database via `env.DB` in your Durable Object.
+
+* [#2280](https://github.com/cloudflare/wrangler2/pull/2280) [`ef110923`](https://github.com/cloudflare/wrangler2/commit/ef1109235fb81200f32b953e9d448f9684d0363c) Thanks [@penalosa](https://github.com/penalosa)! - Support `queue` and `trace` events in module middleware. This means that `queue` and `trace` events should work properly with the `--test-scheduled` flag
+
+- [#2526](https://github.com/cloudflare/wrangler2/pull/2526) [`69d379a4`](https://github.com/cloudflare/wrangler2/commit/69d379a48dd49c9c1812c89b2c7f1680e2196c0f) Thanks [@jrf0110](https://github.com/jrf0110)! - Adds unstable_pages module to JS API
+
+* [#2558](https://github.com/cloudflare/wrangler2/pull/2558) [`b910f644`](https://github.com/cloudflare/wrangler2/commit/b910f644c7440ad034ffcaab288fcbb64deaa83b) Thanks [@caass](https://github.com/caass)! - Add metrics for deployments
+
+- [#2554](https://github.com/cloudflare/wrangler2/pull/2554) [`fbeaf609`](https://github.com/cloudflare/wrangler2/commit/fbeaf6090e5eca4730358caa1838d0866d7b6006) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat: Add support for wasm module imports in `wrangler pages dev`
+
+  Currently it is not possible to import `wasm` modules in either Pages
+  Functions or Pages Advanced Mode projects.
+
+  This commit caries out work to address the aforementioned issue by
+  enabling `wasm` module imports in `wrangler pages dev`. As a result,
+  Pages users can now import their `wasm` modules withing their Functions
+  or `_worker.js` files, and `wrangler pages dev` will correctly bundle
+  everything and serve these "external" modules.
+
+  ```
+  import hello from "./hello.wasm"
+
+  export async function onRequest() {
+  	const module = await WebAssembly.instantiate(hello);
+  	return new Response(module.exports.hello);
+  }
+  ```
+
+* [#2563](https://github.com/cloudflare/wrangler2/pull/2563) [`5ba39569`](https://github.com/cloudflare/wrangler2/commit/5ba39569e7ca6e341635b9beb8edebc60ad17dcd) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: Copy module imports related files to outdir
+
+  When we bundle a Worker `esbuild` takes care of writing the
+  results to the output directory. However, if the Worker contains
+  any `external` imports, such as text/wasm/binary module imports,
+  that cannot be inlined into the same bundle file, `bundleWorker`
+  will not copy these files to the output directory. This doesn't
+  affect `wrangler publish` per se, because of how the Worker
+  upload FormData is created. It does however create some
+  inconsistencies when running `wrangler publish --outdir` or
+  `wrangler publish --outdir --dry-run`, in that, `outdir` will
+  not contain those external import files.
+
+  This commit addresses this issue by making sure the aforementioned
+  files do get copied over to `outdir` together with `esbuild`'s
+  resulting bundle files.
+
+## 2.8.0
+
+### Minor Changes
+
+- [#2538](https://github.com/cloudflare/wrangler2/pull/2538) [`af4f27c5`](https://github.com/cloudflare/wrangler2/commit/af4f27c5966f52e605ab7c16ff9746b7802d3479) Thanks [@edevil](https://github.com/edevil)! - feat: support EmailEvent event type in `wrangler tail`.
+
+* [#2404](https://github.com/cloudflare/wrangler2/pull/2404) [`3f824347`](https://github.com/cloudflare/wrangler2/commit/3f824347c624a2cedf4af2b6bbd781b8581b08b5) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: support bundling the raw Pages `_worker.js` before deploying
+
+  Previously, if you provided a `_worker.js` file, then Pages would simply check the
+  file for disallowed imports and then deploy the file as-is.
+
+  Not bundling the `_worker.js` file means that it cannot containing imports to other
+  JS files, but also prevents Wrangler from adding shims such as the one for the D1 alpha
+  release.
+
+  This change adds the ability to tell Wrangler to pass the `_worker.js` through the
+  normal Wrangler bundling process before deploying by setting the `--bundle`
+  command line argument to `wrangler pages dev` and `wrangler pages publish`.
+
+  This is in keeping with the same flag for `wrangler publish`.
+
+  Currently bundling is opt-in, flag defaults to `false` if not provided.
+
+### Patch Changes
+
+- [#2525](https://github.com/cloudflare/wrangler2/pull/2525) [`fe8c6917`](https://github.com/cloudflare/wrangler2/commit/fe8c69173821cfa5b0277e018df3a6207234b213) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: send `wrangler docs d1` to the right place
+
+* [#2542](https://github.com/cloudflare/wrangler2/pull/2542) [`b44e1a75`](https://github.com/cloudflare/wrangler2/commit/b44e1a7525248a4482248695742f3020347e3502) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Rename `--bundle` to `--no-bundle` in Pages commands to make similar to Workers
+
+- [#2551](https://github.com/cloudflare/wrangler2/pull/2551) [`bfffe595`](https://github.com/cloudflare/wrangler2/commit/bfffe59558675a3c943fc24bb8b4e29066ae0581) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: wrangler init --from-dash incorrectly expects index.ts while writing index.js
+
+  This PR fixes a bug where Wrangler would write a `wrangler.toml` expecting an index.ts file, while writing an index.js file.
+
+* [#2529](https://github.com/cloudflare/wrangler2/pull/2529) [`2270507c`](https://github.com/cloudflare/wrangler2/commit/2270507c7e7c7f0be4c39a9ee283147c0fe245cd) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Remove "experimental \_routes.json" warnings
+
+  `_routes.json` is no longer considered an experimental feature, so let's
+  remove all warnings we have in place for that.
+
+- [#2548](https://github.com/cloudflare/wrangler2/pull/2548) [`4db768fa`](https://github.com/cloudflare/wrangler2/commit/4db768fa5e05e4351b08113a20525c700324d502) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: path should be optional for wrangler d1 backup download
+
+  This PR fixes a bug that forces folks to provide a `--output` flag to `wrangler d1 backup download`.
+
+* [#2528](https://github.com/cloudflare/wrangler2/pull/2528) [`18208091`](https://github.com/cloudflare/wrangler2/commit/18208091335e6fa60e736cdeed46462c4be42a38) Thanks [@caass](https://github.com/caass)! - Add some guidance when folks encounter a 10021 error.
+
+  Error code 10021 can occur when your worker doesn't pass startup validation. This error message will make it a little easier to reason about what happened and what to do next.
+
+  Closes #2519
+
+- [#1769](https://github.com/cloudflare/wrangler2/pull/1769) [`6a67efe9`](https://github.com/cloudflare/wrangler2/commit/6a67efe9ae1da27fb95ffb030959465781bc74b6) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - allow `fetch()` calls locally to accept URL Objects
+
 ## 2.7.1
 
 ### Patch Changes
@@ -1190,7 +1469,7 @@
   - `wrangler generate` and `wrangler generate <name>` delegate to `wrangler init`.
   - `wrangler generate <name> <template>` delegates to `create-cloudflare`
 
-  Naming behavior is replicated from wrangler 1, and will auto-increment the
+  Naming behavior is replicated from Wrangler v1, and will auto-increment the
   worker name based on pre-existing directories.
 
 * [#1534](https://github.com/cloudflare/wrangler2/pull/1534) [`d3ae16cf`](https://github.com/cloudflare/wrangler2/commit/d3ae16cfb8e13f0e6e5f710b3cb03e46ecb7bf7a) Thanks [@cameron-robey](https://github.com/cameron-robey)! - feat: publish full url on `wrangler publish` for workers.dev workers
@@ -1214,7 +1493,7 @@
   Resolves https://github.com/cloudflare/wrangler2/issues/1540
 
 - [#1575](https://github.com/cloudflare/wrangler2/pull/1575) [`5b1f68ee`](https://github.com/cloudflare/wrangler2/commit/5b1f68eece2f328c65f749711cfae5105e1e9651) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - feat: legacy "kv-namespace" not supported
-  In previous Wrangler 1, there was a legacy configuration that was considered a "bug" and removed.
+  In previous Wrangler v1, there was a legacy configuration that was considered a "bug" and removed.
   Before it was removed, tutorials, templates, blogs, etc... had utlized that configuration property
   to handle this in Wrangler 2 we will throw a blocking error that tell the user to utilize "kv_namespaces"
 
@@ -1715,7 +1994,7 @@
 
 - [#1365](https://github.com/cloudflare/wrangler2/pull/1365) [`b9f7200`](https://github.com/cloudflare/wrangler2/commit/b9f7200afdfd2dbfed277fbb3c29ddbdaaa969da) Thanks [@threepointone](https://github.com/threepointone)! - fix: normalise `account_id = ''` to `account_id: undefined`
 
-  In older templates, (i.e made for wrangler 1.x), `account_id =''` is considered as a valid input, but then ignored. With wrangler 2, when running wrangler dev, we log an error, but it fixes itself after we get an account id. Much like https://github.com/cloudflare/wrangler2/issues/1329, the fix here is to normalise that value when we see it, and replace it with `undefined` while logging a warning.
+  In older templates, (i.e made for Wrangler v1.x), `account_id =''` is considered as a valid input, but then ignored. With Wrangler 2, when running wrangler dev, we log an error, but it fixes itself after we get an account id. Much like https://github.com/cloudflare/wrangler2/issues/1329, the fix here is to normalise that value when we see it, and replace it with `undefined` while logging a warning.
 
   This fix also tweaks the messaging for a blank route value to suggest some user action.
 
@@ -1755,10 +2034,10 @@
 
 * [#1351](https://github.com/cloudflare/wrangler2/pull/1351) [`c770167`](https://github.com/cloudflare/wrangler2/commit/c770167c8403c6c157cdad91e4f2bd2b1f571df2) Thanks [@geelen](https://github.com/geelen)! - feat: add support for CLOUDFLARE_API_KEY + CLOUDFLARE_EMAIL to authorise
 
-  This adds support for using the CLOUDFLARE_API_KEY + CLOUDFLARE_EMAIL env vars for authorising a user. This also adds support for CF_API_KEY + CF_EMAIL from wrangler 1, with a deprecation warning.
+  This adds support for using the CLOUDFLARE_API_KEY + CLOUDFLARE_EMAIL env vars for authorising a user. This also adds support for CF_API_KEY + CF_EMAIL from Wrangler v1, with a deprecation warning.
 
 - [#1352](https://github.com/cloudflare/wrangler2/pull/1352) [`4e03036`](https://github.com/cloudflare/wrangler2/commit/4e03036d72ec831036f0f6223d803be99282022f) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - bugfix: Allow route setting to be `""`
-  Previously Wrangler1 behavior had allowed for `route = ""`. To keep parity it will be possible to set `route = ""` in the config file and represent not setting a route, while providing a warning.
+  Previously Wrangler v1 behavior had allowed for `route = ""`. To keep parity it will be possible to set `route = ""` in the config file and represent not setting a route, while providing a warning.
 
   resolves #1329
 
@@ -1782,7 +2061,7 @@
 
 - [#1287](https://github.com/cloudflare/wrangler2/pull/1287) [`2072e27`](https://github.com/cloudflare/wrangler2/commit/2072e278479bf66b255eb2858dea83bf0608530c) Thanks [@f5io](https://github.com/f5io)! - fix: kv:key put/get binary file
 
-  As raised in https://github.com/cloudflare/wrangler2/issues/1254, it was discovered that binary uploads were being mangled by wrangler 2, whereas they worked in wrangler 1. This is because they were read into a string by providing an explicit encoding of `utf-8`. This fix reads provided files into a node `Buffer` that is then passed directly to the request.
+  As raised in https://github.com/cloudflare/wrangler2/issues/1254, it was discovered that binary uploads were being mangled by Wrangler 2, whereas they worked in Wrangler v1. This is because they were read into a string by providing an explicit encoding of `utf-8`. This fix reads provided files into a node `Buffer` that is then passed directly to the request.
 
   Subsequently https://github.com/cloudflare/wrangler2/issues/1273 was raised in relation to a similar issue with gets from wrangler 2. This was happening due to the downloaded file being converted to `utf-8` encoding as it was pushed through `console.log`. By leveraging `process.stdout.write` we can push the fetched `ArrayBuffer` to std out directly without inferring any specific encoding value.
 
@@ -1894,7 +2173,7 @@
 
 * [#1255](https://github.com/cloudflare/wrangler2/pull/1255) [`2d806dc`](https://github.com/cloudflare/wrangler2/commit/2d806dc981a7119de4c0d2c926992cc27e160cae) Thanks [@f5io](https://github.com/f5io)! - fix: kv:key put binary file upload
 
-  As raised in https://github.com/cloudflare/wrangler2/issues/1254, it was discovered that binary uploads were being mangled by wrangler 2, whereas they worked in wrangler 1. This is because they were read into a string by providing an explicit encoding of `utf-8`. This fix reads provided files into a node `Buffer` that is then passed directly to the request.
+  As raised in https://github.com/cloudflare/wrangler2/issues/1254, it was discovered that binary uploads were being mangled by Wrangler 2, whereas they worked in Wrangler v1. This is because they were read into a string by providing an explicit encoding of `utf-8`. This fix reads provided files into a node `Buffer` that is then passed directly to the request.
 
 - [#1248](https://github.com/cloudflare/wrangler2/pull/1248) [`db8a0bb`](https://github.com/cloudflare/wrangler2/commit/db8a0bba1f070bce870016a9aecc8b30725694f4) Thanks [@threepointone](https://github.com/threepointone)! - fix: instruct api to exclude script content on worker upload
 
@@ -1995,7 +2274,7 @@
   "All Zone" permissions, this change provides a workaround for most scenarios.
 
   If the bulk-route request fails with an authorization error, then we fallback
-  to the Wrangler 1 approach, which sends individual route updates via a zone-based
+  to the Wrangler v1 approach, which sends individual route updates via a zone-based
   endpoint.
 
   Fixes #651
@@ -2164,7 +2443,7 @@
 - [#1099](https://github.com/cloudflare/wrangler2/pull/1099) [`175737f`](https://github.com/cloudflare/wrangler2/commit/175737fe712c2bae286df59a9a43f1817a05ebec) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: delegate `wrangler build` to `wrangler publish`
 
   Since `wrangler publish --dry-run --outdir=dist` is basically the same result
-  as what Wrangler 1 did with `wrangler build` let's run that for the user if
+  as what Wrangler v1 did with `wrangler build` let's run that for the user if
   they try to run `wrangler build`.
 
 * [#1081](https://github.com/cloudflare/wrangler2/pull/1081) [`8070763`](https://github.com/cloudflare/wrangler2/commit/807076374e7f1c4848d8a2bdfe9b28d5cbd9579a) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: friendlier error for when a subdomain hasn't been configured in dev mode
@@ -2499,7 +2778,7 @@ Fixes https://github.com/cloudflare/wrangler2/issues/1026
 
 * [#908](https://github.com/cloudflare/wrangler2/pull/908) [`f8dd31e`](https://github.com/cloudflare/wrangler2/commit/f8dd31e322774180b371c6af15b4bfbd92a58284) Thanks [@threepointone](https://github.com/threepointone)! - fix: fix isolate prewarm logic for `wrangler dev`
 
-  When calling `wrangler dev`, we make a request to a special URL that "prewarms" the isolate running our Worker so that we can attach devtools etc to it before actually making a request. We'd implemented it wrongly, and because we'd silenced its errors, we weren't catching it. This patch fixes the logic (based on wrangler 1.x's implementation) and enables logging errors when the prewarm request fails.
+  When calling `wrangler dev`, we make a request to a special URL that "prewarms" the isolate running our Worker so that we can attach devtools etc to it before actually making a request. We'd implemented it wrongly, and because we'd silenced its errors, we weren't catching it. This patch fixes the logic (based on Wrangler v1.x's implementation) and enables logging errors when the prewarm request fails.
 
   As a result, profiling starts working again as expected. Fixes https://github.com/cloudflare/wrangler2/issues/907
 
@@ -2529,7 +2808,7 @@ Fixes https://github.com/cloudflare/wrangler2/issues/1026
 
   Allows wrangler2 to perform preview & dev sessions with a different bucket than the published worker's binding.
 
-  This matches kv's preview_id behavior, and brings the wrangler2 implementation in sync with wrangler1.
+  This matches kv's preview_id behavior, and brings the Wrangler v2 implementation in sync with Wrangler v1.
 
 ## 0.0.30
 
@@ -3051,7 +3330,7 @@ Fixes https://github.com/cloudflare/wrangler2/issues/1026
 * [#680](https://github.com/cloudflare/wrangler2/pull/680) [`8e2cbaf`](https://github.com/cloudflare/wrangler2/commit/8e2cbaf718cfad279947f99107a0485f07b0f3b0) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - refactor: support backwards compatibility with environment names and related CLI flags
 
   1. When in Legacy environment mode we should not compute name field if specified in an environment.
-  2. Throw an Error when `--env` and `--name` are used together in Legacy Environment, except for Secrets & Tail which are using a special case `getLegacyScriptName` for parity with Wrangler1
+  2. Throw an Error when `--env` and `--name` are used together in Legacy Environment, except for Secrets & Tail which are using a special case `getLegacyScriptName` for parity with Wrangler v1
   3. Started the refactor for args being utilized at the Config level, currently checking for Legacy Environment only.
 
   Fixes https://github.com/cloudflare/wrangler2/issues/672
@@ -3102,7 +3381,7 @@ Fixes https://github.com/cloudflare/wrangler2/issues/1026
 - [#633](https://github.com/cloudflare/wrangler2/pull/633) [`003f3c4`](https://github.com/cloudflare/wrangler2/commit/003f3c41942ec8e299ae603fe74b3cd2e802b49d) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - refactor: create a custom CLI wrapper around Miniflare API
 
   This allows us to tightly control the options that are passed to Miniflare.
-  The current CLI is setup to be more compatible with how Wrangler 1 works, which is not optimal for Wrangler 2.
+  The current CLI is setup to be more compatible with how Wrangler v1 works, which is not optimal for Wrangler v2.
 
 * [#633](https://github.com/cloudflare/wrangler2/pull/633) [`84c857e`](https://github.com/cloudflare/wrangler2/commit/84c857eabc2c09ad1dd2f4fa3963638b8b7f3daa) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - fix: ensure asset keys are relative to the project root
 
@@ -3127,7 +3406,7 @@ Fixes https://github.com/cloudflare/wrangler2/issues/1026
 
 - [#650](https://github.com/cloudflare/wrangler2/pull/650) [`f0eed7f`](https://github.com/cloudflare/wrangler2/commit/f0eed7fe0cc5f6166b4c2b34d193e260b881e4de) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: make validation error messages more consistent
 
-* [#662](https://github.com/cloudflare/wrangler2/pull/662) [`612952b`](https://github.com/cloudflare/wrangler2/commit/612952ba11b198277be14c70d1c4090338c876bc) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - bugfix: use alias `-e` for `--env` to prevent scripts using Wrangler 1 from breaking when switching to Wrangler 2.
+* [#662](https://github.com/cloudflare/wrangler2/pull/662) [`612952b`](https://github.com/cloudflare/wrangler2/commit/612952ba11b198277be14c70d1c4090338c876bc) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - bugfix: use alias `-e` for `--env` to prevent scripts using Wrangler v1 from breaking when switching to Wrangler 2.
 
 - [#671](https://github.com/cloudflare/wrangler2/pull/671) [`ef0aaad`](https://github.com/cloudflare/wrangler2/commit/ef0aaadad180face06e13fb1de079eb040badaf2) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: don't exit on initial Pages Functions compilation failure
 
@@ -3160,7 +3439,7 @@ Fixes https://github.com/cloudflare/wrangler2/issues/1026
 
 - [#647](https://github.com/cloudflare/wrangler2/pull/647) [`f3f3907`](https://github.com/cloudflare/wrangler2/commit/f3f3907963e87de17cad9a3733be716e201a8996) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: add support for `--ip` and `config.dev.ip` in the dev command
 
-  Note that this change modifies the default listening address to `localhost`, which is different to `127.0.0.1`, which is what Wrangler 1 does.
+  Note that this change modifies the default listening address to `localhost`, which is different to `127.0.0.1`, which is what Wrangler v1 does.
   For most developers this will make no observable difference, since the default host mapping in most OSes from `localhost` to `127.0.0.1`.
 
   Resolves [#584](https://github.com/cloudflare/wrangler2/issues/584)
@@ -3200,9 +3479,9 @@ Fixes https://github.com/cloudflare/wrangler2/issues/1026
 
   This change just adds a warning if a developer tries to do so and provides a link to an issue where they can add their use-case.
 
-- [#596](https://github.com/cloudflare/wrangler2/pull/596) [`187264d`](https://github.com/cloudflare/wrangler2/commit/187264d4013842df4062a1e0f5dd8cef0b30d0a8) Thanks [@threepointone](https://github.com/threepointone)! - feat: support wrangler 1.x module specifiers with a deprecation warning
+- [#596](https://github.com/cloudflare/wrangler2/pull/596) [`187264d`](https://github.com/cloudflare/wrangler2/commit/187264d4013842df4062a1e0f5dd8cef0b30d0a8) Thanks [@threepointone](https://github.com/threepointone)! - feat: support Wrangler v1.x module specifiers with a deprecation warning
 
-  This implements wrangler 1.x style module specifiers, but also logs a deprecation warning for every usage.
+  This implements Wrangler v1.x style module specifiers, but also logs a deprecation warning for every usage.
 
   Consider a project like so:
 
@@ -3298,7 +3577,7 @@ Fixes https://github.com/cloudflare/wrangler2/issues/1026
 
 - [#645](https://github.com/cloudflare/wrangler2/pull/645) [`61aea30`](https://github.com/cloudflare/wrangler2/commit/61aea3052f90dc7a05f77dd2d60e8b32af143a83) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: improve authentication logging and warnings
 
-  - If a user has previously logged in via Wrangler 1 with an API token, we now display a helpful warning.
+  - If a user has previously logged in via Wrangler v1 with an API token, we now display a helpful warning.
   - When logging in and out, we no longer display the path to the internal user auh config file.
   - When logging in, we now display an initial message to indicate the authentication flow is starting.
 
@@ -3347,7 +3626,7 @@ Fixes https://github.com/cloudflare/wrangler2/issues/1026
 
 * [#646](https://github.com/cloudflare/wrangler2/pull/646) [`c75cfb8`](https://github.com/cloudflare/wrangler2/commit/c75cfb83df4c98d6f678535439483948ce9fff5b) Thanks [@threepointone](https://github.com/threepointone)! - fix: default `watch_dir` to `src` of project directory
 
-  Via wrangler 1, when using custom builds in `wrangler dev`, `watch_dir` should default to `src` of the "project directory" (i.e - wherever the `wrangler.toml` is defined if it exists, else in the cwd.
+  Via Wrangler v1, when using custom builds in `wrangler dev`, `watch_dir` should default to `src` of the "project directory" (i.e - wherever the `wrangler.toml` is defined if it exists, else in the cwd.
 
   Fixes https://github.com/cloudflare/wrangler2/issues/631
 
@@ -3470,7 +3749,7 @@ Fixes https://github.com/cloudflare/wrangler2/issues/1026
   main = "src/chat.mjs"
   ```
 
-  This also makes `./dist` a default for `build.upload.dir`, to match wrangler 1's behaviour.
+  This also makes `./dist` a default for `build.upload.dir`, to match Wrangler v1's behaviour.
 
   Closes https://github.com/cloudflare/wrangler2/issues/488
 
@@ -3863,7 +4142,7 @@ Fixes https://github.com/cloudflare/wrangler2/issues/1026
   - `r2 buckets create`: create a new bucket - will error if the bucket already exists.
   - `r2 buckets delete`: delete a bucket.
 
-  This brings Wrangler 2 inline with the same features in Wrangler 1.
+  This brings Wrangler 2 inline with the same features in Wrangler v1.
 
 * [#455](https://github.com/cloudflare/wrangler2/pull/455) [`80aa106`](https://github.com/cloudflare/wrangler2/commit/80aa10660ee0ef1e6e571b1312a2aa4c8562f543) Thanks [@threepointone](https://github.com/threepointone)! - fix: error when entry doesn't exist
 
@@ -3933,7 +4212,7 @@ Fixes https://github.com/cloudflare/wrangler2/issues/1026
 
 - [#338](https://github.com/cloudflare/wrangler2/pull/338) [`e0d2f35`](https://github.com/cloudflare/wrangler2/commit/e0d2f35542bc37636098a30469e93702dd7a0d35) Thanks [@threepointone](https://github.com/threepointone)! - feat: environments for Worker Sites
 
-  This adds environments support for Workers Sites. Very simply, it uses a separate kv namespace that's indexed by the environment name. This PR also changes the name of the kv namespace generated to match wrangler 1's implementation.
+  This adds environments support for Workers Sites. Very simply, it uses a separate kv namespace that's indexed by the environment name. This PR also changes the name of the kv namespace generated to match Wrangler v1's implementation.
 
 * [#329](https://github.com/cloudflare/wrangler2/pull/329) [`e1d2198`](https://github.com/cloudflare/wrangler2/commit/e1d2198b6454fead8a0115c2ed92a37b9def6dba) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - test: support testing in CI on Windows
 
@@ -4066,7 +4345,7 @@ Fixes https://github.com/cloudflare/wrangler2/issues/1026
 
 - [#307](https://github.com/cloudflare/wrangler2/pull/307) [`53c6318`](https://github.com/cloudflare/wrangler2/commit/53c6318739d2d3672a2e508f643857bdf5831676) Thanks [@threepointone](https://github.com/threepointone)! - feat: `wrangler secret * --local`
 
-  This PR implements `wrangler secret` for `--local` mode. The implementation is simply a no-op, since we don't want to actually write secret values to disk (I think?). I also got the messaging for remote mode right by copying from wrangler 1. Further, I added tests for all the `wrangler secret` commands.
+  This PR implements `wrangler secret` for `--local` mode. The implementation is simply a no-op, since we don't want to actually write secret values to disk (I think?). I also got the messaging for remote mode right by copying from Wrangler v1. Further, I added tests for all the `wrangler secret` commands.
 
 * [#324](https://github.com/cloudflare/wrangler2/pull/324) [`b816333`](https://github.com/cloudflare/wrangler2/commit/b8163336faaeae26b68736732938cceaaf4dfec4) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Fixes `wrangler pages dev` failing to start for just a folder of static assets (no functions)
 
@@ -4076,7 +4355,7 @@ Fixes https://github.com/cloudflare/wrangler2/issues/1026
 
   Fixes https://github.com/cloudflare/wrangler2/issues/197
 
-  (In wrangler1, we used to restart the whole process, including uploading the worker again, making a new preview token, and so on. It looks like that they may not have been necessary.)
+  (In Wrangler v1, we used to restart the whole process, including uploading the worker again, making a new preview token, and so on. It looks like that they may not have been necessary.)
 
 * [#312](https://github.com/cloudflare/wrangler2/pull/312) [`77aa324`](https://github.com/cloudflare/wrangler2/commit/77aa3249ce07d7617582e4b0555201dac9b7578e) Thanks [@threepointone](https://github.com/threepointone)! - fix: remove `--prefer-offline` when running `npm install`
 
@@ -4162,7 +4441,7 @@ Fixes https://github.com/cloudflare/wrangler2/issues/1026
 
 * [#270](https://github.com/cloudflare/wrangler2/pull/270) [`2453577`](https://github.com/cloudflare/wrangler2/commit/2453577c96704ca1d6934582796199a409d7b770) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: add support for include and exclude when publishing site assets
 
-- [#270](https://github.com/cloudflare/wrangler2/pull/270) [`0289882`](https://github.com/cloudflare/wrangler2/commit/0289882a15eba55d802650a591f999ef7b614fb6) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure `kv:key list` matches the output from Wrangler 1
+- [#270](https://github.com/cloudflare/wrangler2/pull/270) [`0289882`](https://github.com/cloudflare/wrangler2/commit/0289882a15eba55d802650a591f999ef7b614fb6) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure `kv:key list` matches the output from Wrangler v1
 
   The previous output was passing an array of objects to console.log, which ended up showing something like
 
@@ -4201,7 +4480,7 @@ Fixes https://github.com/cloudflare/wrangler2/issues/1026
 
   The codebase is now strict-null compliant and the CI checks will fail if a PR tries to introduce code that is not.
 
-- [#277](https://github.com/cloudflare/wrangler2/pull/277) [`6cc9dde`](https://github.com/cloudflare/wrangler2/commit/6cc9dde6665978f5d6435b7d6d56d41d718693c5) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: align publishing sites asset keys with Wrangler 1
+- [#277](https://github.com/cloudflare/wrangler2/pull/277) [`6cc9dde`](https://github.com/cloudflare/wrangler2/commit/6cc9dde6665978f5d6435b7d6d56d41d718693c5) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: align publishing sites asset keys with Wrangler v1
 
   - Use the same hashing strategy for asset keys (xxhash64)
   - Include the full path (from cwd) in the asset key
@@ -4217,7 +4496,7 @@ Fixes https://github.com/cloudflare/wrangler2/issues/1026
 
 * [#280](https://github.com/cloudflare/wrangler2/pull/280) [`f19dde1`](https://github.com/cloudflare/wrangler2/commit/f19dde1a7e71d13e9c249345b7affd1cfef79b2c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: skip unwanted files and directories when publishing site assets
 
-  In keeping with Wrangler 1, we now skip node_modules and hidden files and directories.
+  In keeping with Wrangler v1, we now skip node_modules and hidden files and directories.
 
   An exception is made for `.well-known`. See https://datatracker.ietf.org/doc/html/rfc8615.
 
@@ -4255,7 +4534,7 @@ Fixes https://github.com/cloudflare/wrangler2/issues/1026
 
   - `@optional` means providing a value isn't mandatory
   - `@deprecated` means the field itself isn't necessary anymore in wrangler.toml
-  - `@breaking` means the deprecation/optionality is a breaking change from wrangler 1
+  - `@breaking` means the deprecation/optionality is a breaking change from Wrangler v1
   - `@todo` means there's more work to be done (with details attached)
   - `@inherited` means the field is copied to all environments
 

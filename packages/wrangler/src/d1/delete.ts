@@ -5,16 +5,13 @@ import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { Name } from "./options";
 import { d1BetaWarning, getDatabaseByNameOrBinding } from "./utils";
+import type {
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
+} from "../yargs-types";
 import type { Database } from "./types";
-import type { Argv } from "yargs";
 
-type CreateArgs = {
-	config?: string;
-	name: string;
-	"skip-confirmation": boolean;
-};
-
-export function Options(d1ListYargs: Argv): Argv<CreateArgs> {
+export function Options(d1ListYargs: CommonYargsArgv) {
 	return Name(d1ListYargs)
 		.option("skip-confirmation", {
 			describe: "Skip confirmation",
@@ -24,8 +21,8 @@ export function Options(d1ListYargs: Argv): Argv<CreateArgs> {
 		})
 		.epilogue(d1BetaWarning);
 }
-
-export const Handler = withConfig<CreateArgs>(
+type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
+export const Handler = withConfig<HandlerOptions>(
 	async ({ name, skipConfirmation, config }): Promise<void> => {
 		const accountId = await requireAuth({});
 		logger.log(d1BetaWarning);

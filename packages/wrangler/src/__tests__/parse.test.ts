@@ -4,6 +4,7 @@ import {
 	indexLocation,
 	parseJSON,
 	parseTOML,
+	parseJSONC,
 } from "../parse";
 import type { Message } from "../parse";
 
@@ -257,7 +258,112 @@ describe("parseJSON", () => {
 		}
 	});
 });
+describe("parseJSONC", () => {
+	it("should parse jsonc that is empty", () => {
+		expect(parseJSONC("{}")).toStrictEqual({});
+	});
 
+	it("should parse jsonc with basic values", () => {
+		expect(
+			parseJSONC(`
+      {
+        "name" : "basic",
+        "version": 1
+      }`)
+		).toStrictEqual({
+			name: "basic",
+			version: 1,
+		});
+	});
+
+	it("should parse jsonc with complex values", () => {
+		expect(
+			parseJSONC(
+				`{
+          "name":"complex",
+          "spec":{
+            "uptime":[1,2.5,3],
+            "ok":true
+          }
+        }`
+			)
+		).toStrictEqual({
+			name: "complex",
+			spec: {
+				uptime: [1, 2.5, 3],
+				ok: true,
+			},
+		});
+	});
+
+	it("should parse jsonc with comments", () => {
+		expect(
+			parseJSONC(
+				`{
+					// Comment A
+          "name":"complex",
+          "spec":{
+						// Nested comment
+            "uptime":[1,2.5,3],
+            "ok":true
+          }
+        }`
+			)
+		).toStrictEqual({
+			name: "complex",
+			spec: {
+				uptime: [1, 2.5, 3],
+				ok: true,
+			},
+		});
+	});
+
+	it("should fail to parse jsonc with invalid string", () => {
+		try {
+			parseJSONC(`\n{\n"version" "1\n}\n`);
+			fail("parseJSONC did not throw");
+		} catch (err) {
+			expect({ ...(err as Error) }).toStrictEqual({
+				name: "ParseError",
+				text: "UnexpectedEndOfString",
+				kind: "error",
+				location: {
+					length: 2,
+					line: 3,
+					column: 10,
+					lineText: '"version" "1',
+					file: undefined,
+					fileText: `\n{\n"version" "1\n}\n`,
+				},
+				notes: [],
+			});
+		}
+	});
+
+	it("should fail to parse jsonc with invalid number", () => {
+		const file = "config.json",
+			fileText = `{\n\t"a":{\n\t\t"b":{\n\t\t\t"c":[012345]\n}\n}\n}`;
+		try {
+			parseJSONC(fileText, file);
+			fail("parseJSONC did not throw");
+		} catch (err) {
+			expect({ ...(err as Error) }).toStrictEqual({
+				name: "ParseError",
+				text: "CommaExpected",
+				kind: "error",
+				location: {
+					file,
+					fileText,
+					length: 5,
+					line: 4,
+					column: 9,
+					lineText: `\t\t\t"c":[012345]`,
+				},
+				notes: [],
+			});
+		}
+	});
+});
 describe("indexLocation", () => {
 	it("should calculate location from one-line input", () => {
 		const fileText = "";

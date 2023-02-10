@@ -1,0 +1,65 @@
+From 6c4581cd2e985e8e94aa3c9091faec45743da6e4 Mon Sep 17 00:00:00 2001
+From: bcoll <bcoll@cloudflare.com>
+Date: Mon, 16 Jan 2023 14:26:52 +0000
+Subject: [PATCH 04/12] Support previewing subrequest responses
+
+---
+ front_end/core/sdk/NetworkManager.ts   | 9 +++++++--
+ front_end/entrypoints/js_app/BUILD.gn  | 1 +
+ front_end/entrypoints/js_app/js_app.ts | 1 +
+ 3 files changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/front_end/core/sdk/NetworkManager.ts b/front_end/core/sdk/NetworkManager.ts
+index a6cc176456..d0a60dd664 100644
+--- a/front_end/core/sdk/NetworkManager.ts
++++ b/front_end/core/sdk/NetworkManager.ts
+@@ -695,8 +695,8 @@ export class NetworkDispatcher implements ProtocolProxyApi.NetworkDispatcher {
+     this.updateNetworkRequest(networkRequest);
+   }
+ 
+-  loadingFinished({requestId, timestamp: finishTime, encodedDataLength, shouldReportCorbBlocking}:
+-                      Protocol.Network.LoadingFinishedEvent): void {
++  loadingFinished({requestId, timestamp: finishTime, encodedDataLength, shouldReportCorbBlocking, cfResponse }:
++                      Protocol.Network.LoadingFinishedEvent & { cfResponse?: Omit<Protocol.Network.GetResponseBodyResponse, 'getError'> }): void {
+     let networkRequest: NetworkRequest|null|undefined = this.#requestsById.get(requestId);
+     if (!networkRequest) {
+       networkRequest = this.maybeAdoptMainResourceRequest(requestId);
+@@ -705,6 +705,11 @@ export class NetworkDispatcher implements ProtocolProxyApi.NetworkDispatcher {
+       return;
+     }
+     this.getExtraInfoBuilder(requestId).finished();
++    if (cfResponse !== undefined) {
++      networkRequest.setContentDataProvider(async () => {
++        return { error: null, content: cfResponse.body, encoded: cfResponse.base64Encoded };
++      });
++    }
+     this.finishNetworkRequest(networkRequest, finishTime, encodedDataLength, shouldReportCorbBlocking);
+     this.#manager.dispatchEventToListeners(Events.LoadingFinished, networkRequest);
+   }
+diff --git a/front_end/entrypoints/js_app/BUILD.gn b/front_end/entrypoints/js_app/BUILD.gn
+index a917511e25..f811d117b1 100644
+--- a/front_end/entrypoints/js_app/BUILD.gn
++++ b/front_end/entrypoints/js_app/BUILD.gn
+@@ -15,6 +15,7 @@ devtools_entrypoint("entrypoint") {
+     "../../generated:protocol",
+     "../../panels/js_profiler:meta",
+     "../../panels/mobile_throttling:meta",
++    "../../panels/network:meta",
+     "../../ui/legacy/components/utils:bundle",
+     "../main:bundle",
+     "../shell",
+diff --git a/front_end/entrypoints/js_app/js_app.ts b/front_end/entrypoints/js_app/js_app.ts
+index 213ca7fecd..ef5c568e96 100644
+--- a/front_end/entrypoints/js_app/js_app.ts
++++ b/front_end/entrypoints/js_app/js_app.ts
+@@ -2,6 +2,7 @@
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ import '../shell/shell.js';
++import '../../panels/network/network-meta.js';
+ import '../../panels/mobile_throttling/mobile_throttling-meta.js';
+ import '../../panels/js_profiler/js_profiler-meta.js';
+ 
+-- 
+2.37.1 (Apple Git-137.1)
+

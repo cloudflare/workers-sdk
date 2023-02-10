@@ -1,6 +1,7 @@
 import { logger } from "../logger";
 import type {
 	AlarmEvent,
+	EmailEvent,
 	RequestEvent,
 	ScheduledEvent,
 	TailEventMessage,
@@ -29,6 +30,16 @@ export function prettyPrintLogs(data: WebSocket.RawData): void {
 			url
 				? `${requestMethod} ${url} - ${outcome} @ ${datetime}`
 				: `[missing request] - ${outcome} @ ${datetime}`
+		);
+	} else if (isEmailEvent(eventMessage.event)) {
+		const outcome = prettifyOutcome(eventMessage.outcome);
+		const datetime = new Date(eventMessage.eventTimestamp).toLocaleString();
+		const mailFrom = eventMessage.event.mailFrom;
+		const rcptTo = eventMessage.event.rcptTo;
+		const rawSize = eventMessage.event.rawSize;
+
+		logger.log(
+			`Email from:${mailFrom} to:${rcptTo} size:${rawSize} @ ${datetime} - ${outcome}`
 		);
 	} else if (isAlarmEvent(eventMessage.event)) {
 		const outcome = prettifyOutcome(eventMessage.outcome);
@@ -72,6 +83,10 @@ function isScheduledEvent(
 	event: TailEventMessage["event"]
 ): event is ScheduledEvent {
 	return Boolean(event && "cron" in event);
+}
+
+function isEmailEvent(event: TailEventMessage["event"]): event is EmailEvent {
+	return Boolean(event && "mailFrom" in event);
 }
 
 /**

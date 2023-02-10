@@ -1,0 +1,39 @@
+From 7312af32a23a62acc2f5661187ef90b01381c0de Mon Sep 17 00:00:00 2001
+From: bcoll <bcoll@cloudflare.com>
+Date: Mon, 16 Jan 2023 16:32:45 +0000
+Subject: [PATCH 07/12] Remove unsupported profiler UI
+
+---
+ front_end/panels/profiler/HeapProfilerPanel.ts | 2 +-
+ front_end/panels/profiler/ProfilesPanel.ts     | 2 --
+ 2 files changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/front_end/panels/profiler/HeapProfilerPanel.ts b/front_end/panels/profiler/HeapProfilerPanel.ts
+index 27cdb23ab5..df3c3d540e 100644
+--- a/front_end/panels/profiler/HeapProfilerPanel.ts
++++ b/front_end/panels/profiler/HeapProfilerPanel.ts
+@@ -26,7 +26,7 @@ export class HeapProfilerPanel extends ProfilesPanel implements UI.ContextMenu.P
+   constructor() {
+     const registry = instance;
+     const profileTypes =
+-        [registry.heapSnapshotProfileType, registry.trackingHeapSnapshotProfileType, registry.samplingHeapProfileType];
++        [registry.heapSnapshotProfileType];
+     super('heap_profiler', profileTypes as ProfileType[], 'profiler.heap-toggle-recording');
+   }
+ 
+diff --git a/front_end/panels/profiler/ProfilesPanel.ts b/front_end/panels/profiler/ProfilesPanel.ts
+index c4680b48be..c2fe5b775f 100644
+--- a/front_end/panels/profiler/ProfilesPanel.ts
++++ b/front_end/panels/profiler/ProfilesPanel.ts
+@@ -146,8 +146,6 @@ export class ProfilesPanel extends UI.Panel.PanelWithSidebar implements DataDisp
+     this.clearResultsButton = new UI.Toolbar.ToolbarButton(i18nString(UIStrings.clearAllProfiles), 'largeicon-clear');
+     this.clearResultsButton.addEventListener(UI.Toolbar.ToolbarButton.Events.Click, this.reset, this);
+     toolbar.appendToolbarItem(this.clearResultsButton);
+-    toolbar.appendSeparator();
+-    toolbar.appendToolbarItem(UI.Toolbar.Toolbar.createActionButtonForId('components.collect-garbage'));
+ 
+     this.profileViewToolbar = new UI.Toolbar.Toolbar('', this.toolbarElement);
+     this.profileViewToolbar.makeWrappable(true);
+-- 
+2.37.1 (Apple Git-137.1)
+

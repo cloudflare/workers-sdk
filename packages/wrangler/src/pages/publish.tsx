@@ -1,12 +1,8 @@
 import { execSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
-import { cwd } from "node:process";
 import { render, Text } from "ink";
 import SelectInput from "ink-select-input";
 import React from "react";
-import { File, FormData } from "undici";
+import { publish } from "../api/pages/publish";
 import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { prompt } from "../dialogs";
@@ -14,22 +10,20 @@ import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
-import { buildFunctions } from "./build";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
-import { FunctionsNoRoutesError, getFunctionsNoRoutesWarning } from "./errors";
-import { validateRoutes } from "./functions/routes-validation";
 import { listProjects } from "./projects";
 import { promptSelectProject } from "./prompt-select-project";
-import { upload } from "./upload";
 import { pagesBetaWarning } from "./utils";
-import type { YargsOptionsToInterface } from "../yargs-types";
+import type {
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
+} from "../yargs-types";
 import type { PagesConfigCache } from "./types";
-import type { Project, Deployment } from "@cloudflare/types";
-import type { Argv } from "yargs";
+import type { Project } from "@cloudflare/types";
 
-type PublishArgs = YargsOptionsToInterface<typeof Options>;
+type PublishArgs = StrictYargsOptionsToInterface<typeof Options>;
 
-export function Options(yargs: Argv) {
+export function Options(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("directory", {
 			type: "string",
@@ -62,6 +56,16 @@ export function Options(yargs: Argv) {
 				type: "boolean",
 				description: "Skip asset caching which speeds up builds",
 			},
+			bundle: {
+				type: "boolean",
+				default: undefined,
+				hidden: true,
+			},
+			"no-bundle": {
+				type: "boolean",
+				default: true,
+				description: "Whether to run bundling on `_worker.js` before deploying",
+			},
 			config: {
 				describe: "Pages does not support wrangler.toml",
 				type: "string",
@@ -79,6 +83,8 @@ export const Handler = async ({
 	commitMessage,
 	commitDirty,
 	skipCaching,
+	bundle,
+	noBundle,
 	config: wranglerConfig,
 }: PublishArgs) => {
 	if (wranglerConfig) {
@@ -235,214 +241,19 @@ export const Handler = async ({
 		}
 	}
 
-	let _headers: string | undefined,
-		_redirects: string | undefined,
-		_routesGenerated: string | undefined,
-		_routesCustom: string | undefined,
-		_workerJS: string | undefined;
-
-	try {
-		_headers = readFileSync(join(directory, "_headers"), "utf-8");
-	} catch {}
-
-	try {
-		_redirects = readFileSync(join(directory, "_redirects"), "utf-8");
-	} catch {}
-
-	try {
-		/**
-		 * Developers can specify a custom _routes.json file, for projects with Pages
-		 * Functions or projects in Advanced Mode
-		 */
-		_routesCustom = readFileSync(join(directory, "_routes.json"), "utf-8");
-	} catch {}
-
-	try {
-		_workerJS = readFileSync(join(directory, "_worker.js"), "utf-8");
-	} catch {}
-
-	// Grab the bindings from the API, we need these for shims and other such hacky inserts
-	const project = await fetchResult<Project>(
-		`/accounts/${accountId}/pages/projects/${projectName}`
-	);
-	let isProduction = true;
-	if (branch) {
-		isProduction = project.production_branch === branch;
-	}
-
-	/**
-	 * Evaluate if this is an Advanced Mode or Pages Functions project. If Advanced Mode, we'll
-	 * go ahead and upload `_worker.js` as is, but if Pages Functions, we need to attempt to build
-	 * Functions first and exit if it failed
-	 */
-	let builtFunctions: string | undefined = undefined;
-	const functionsDirectory = join(cwd(), "functions");
-	const routesOutputPath = !existsSync(join(directory, "_routes.json"))
-		? join(tmpdir(), `_routes-${Math.random()}.json`)
-		: undefined;
-
-	// Routing configuration displayed in the Functions tab of a deployment in Dash
-	let filepathRoutingConfig: string | undefined;
-
-	if (!_workerJS && existsSync(functionsDirectory)) {
-		const outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`);
-		const outputConfigPath = join(
-			tmpdir(),
-			`functions-filepath-routing-config-${Math.random()}.json`
-		);
-
-		try {
-			await buildFunctions({
-				outfile,
-				outputConfigPath,
-				functionsDirectory,
-				onEnd: () => {},
-				buildOutputDirectory: dirname(outfile),
-				routesOutputPath,
-				local: false,
-				d1Databases: Object.keys(
-					project.deployment_configs[isProduction ? "production" : "preview"]
-						.d1_databases ?? {}
-				),
-			});
-
-			builtFunctions = readFileSync(outfile, "utf-8");
-			filepathRoutingConfig = readFileSync(outputConfigPath, "utf-8");
-		} catch (e) {
-			if (e instanceof FunctionsNoRoutesError) {
-				logger.warn(
-					getFunctionsNoRoutesWarning(functionsDirectory, "skipping")
-				);
-			} else {
-				throw e;
-			}
-		}
-	}
-
-	const manifest = await upload({
+	const deploymentResponse = await publish({
 		directory,
 		accountId,
 		projectName,
-		skipCaching: skipCaching ?? false,
+		branch,
+		skipCaching,
+		commitMessage,
+		commitHash,
+		commitDirty,
+		// TODO: Here lies a known bug. If you specify both `--bundle` and `--no-bundle`, this behavior is undefined and you will get unexpected results.
+		// There is no sane way to get the true value out of yargs, so here we are.
+		bundle: bundle ?? !noBundle,
 	});
-
-	const formData = new FormData();
-
-	formData.append("manifest", JSON.stringify(manifest));
-
-	if (branch) {
-		formData.append("branch", branch);
-	}
-
-	if (commitMessage) {
-		formData.append("commit_message", commitMessage);
-	}
-
-	if (commitHash) {
-		formData.append("commit_hash", commitHash);
-	}
-
-	if (commitDirty !== undefined) {
-		formData.append("commit_dirty", commitDirty);
-	}
-
-	if (_headers) {
-		formData.append("_headers", new File([_headers], "_headers"));
-		logger.log(`✨ Uploading _headers`);
-	}
-
-	if (_redirects) {
-		formData.append("_redirects", new File([_redirects], "_redirects"));
-		logger.log(`✨ Uploading _redirects`);
-	}
-
-	if (filepathRoutingConfig) {
-		formData.append(
-			"functions-filepath-routing-config.json",
-			new File(
-				[filepathRoutingConfig],
-				"functions-filepath-routing-config.json"
-			)
-		);
-	}
-
-	/**
-	 * Advanced Mode
-	 * https://developers.cloudflare.com/pages/platform/functions/#advanced-mode
-	 *
-	 * When using a _worker.js file, the entire /functions directory is ignored
-	 * – this includes its routing and middleware characteristics.
-	 */
-	if (_workerJS) {
-		formData.append("_worker.js", new File([_workerJS], "_worker.js"));
-		logger.log(`✨ Uploading _worker.js`);
-
-		if (_routesCustom) {
-			// user provided a custom _routes.json file
-			try {
-				const routesCustomJSON = JSON.parse(_routesCustom);
-				validateRoutes(routesCustomJSON, join(directory, "_routes.json"));
-
-				formData.append(
-					"_routes.json",
-					new File([_routesCustom], "_routes.json")
-				);
-				logger.log(`✨ Uploading _routes.json`);
-			} catch (err) {
-				if (err instanceof FatalError) {
-					throw err;
-				}
-			}
-		}
-	}
-
-	/**
-	 * Pages Functions
-	 * https://developers.cloudflare.com/pages/platform/functions/
-	 */
-	if (builtFunctions && !_workerJS) {
-		// if Functions were build successfully, proceed to uploading the build file
-		formData.append("_worker.js", new File([builtFunctions], "_worker.js"));
-		logger.log(`✨ Uploading Functions`);
-
-		if (_routesCustom) {
-			// user provided a custom _routes.json file
-			try {
-				const routesCustomJSON = JSON.parse(_routesCustom);
-				validateRoutes(routesCustomJSON, join(directory, "_routes.json"));
-
-				formData.append(
-					"_routes.json",
-					new File([_routesCustom], "_routes.json")
-				);
-				logger.log(`✨ Uploading _routes.json`);
-			} catch (err) {
-				if (err instanceof FatalError) {
-					throw err;
-				}
-			}
-		} else if (routesOutputPath) {
-			// no custom _routes.json file found, so fallback to the generated one
-			try {
-				_routesGenerated = readFileSync(routesOutputPath, "utf-8");
-
-				if (_routesGenerated) {
-					formData.append(
-						"_routes.json",
-						new File([_routesGenerated], "_routes.json")
-					);
-				}
-			} catch {}
-		}
-	}
-
-	const deploymentResponse = await fetchResult<Deployment>(
-		`/accounts/${accountId}/pages/projects/${projectName}/deployments`,
-		{
-			method: "POST",
-			body: formData,
-		}
-	);
 
 	saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
 		account_id: accountId,

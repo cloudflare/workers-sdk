@@ -3,6 +3,7 @@ import { dirname, relative, resolve } from "node:path";
 import { bundleWorker } from "../../bundle";
 import { getBasePath } from "../../paths";
 import { D1_BETA_PREFIX } from "../../worker";
+import { buildNotifierPlugin } from "./buildWorker";
 import type { Options as WorkerOptions } from "./buildWorker";
 
 type Options = Omit<WorkerOptions, "fallbackService" | "buildOutputDirectory">;
@@ -36,27 +37,9 @@ export function buildPlugin({
 			betaD1Shims: (betaD1Shims || []).map(
 				(binding) => `${D1_BETA_PREFIX}${binding}`
 			),
+			doBindings: [], // Pages functions don't support internal Durable Objects
 			plugins: [
-				{
-					name: "wrangler notifier and monitor",
-					setup(pluginBuild) {
-						pluginBuild.onEnd((result) => {
-							if (result.errors.length > 0) {
-								console.error(
-									`${result.errors.length} error(s) and ${result.warnings.length} warning(s) when compiling Worker.`
-								);
-							} else if (result.warnings.length > 0) {
-								console.warn(
-									`${result.warnings.length} warning(s) when compiling Worker.`
-								);
-								onEnd();
-							} else {
-								console.log("Compiled Worker successfully.");
-								onEnd();
-							}
-						});
-					},
-				},
+				buildNotifierPlugin(onEnd),
 				{
 					name: "Assets",
 					setup(pluginBuild) {

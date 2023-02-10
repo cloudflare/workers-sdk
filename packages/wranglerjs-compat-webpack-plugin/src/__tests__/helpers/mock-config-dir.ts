@@ -3,7 +3,7 @@ import { homedir } from "node:os";
 import path from "node:path";
 
 /**
- * Create an environment variable telling wrangler 1 where to look for
+ * Create an environment variable telling Wrangler v1 where to look for
  * ~/.wrangler/config/default.toml
  */
 export const mockConfigDir = () => {

@@ -1,0 +1,50 @@
+From 9d34de7c9010659ece1be008ee852a21e06bff55 Mon Sep 17 00:00:00 2001
+From: Samuel Macleod <smacleod@cloudflare.com>
+Date: Mon, 23 Jan 2023 15:12:38 +0000
+Subject: [PATCH 10/12] Basic support for text colour in dark mode in browsers
+ that don't implement :host-context
+
+---
+ front_end/entrypoint_template.html | 26 ++++++++++++++++++++++++++
+ 1 file changed, 26 insertions(+)
+
+diff --git a/front_end/entrypoint_template.html b/front_end/entrypoint_template.html
+index b451da60eb..8828dd8f07 100644
+--- a/front_end/entrypoint_template.html
++++ b/front_end/entrypoint_template.html
+@@ -18,6 +18,32 @@
+   :root {
+     --heap-profiler-tab-display: none
+   }
++
++  .platform-mac {
++    --monospace-font-size: 11px;
++    --monospace-font-family: menlo, monospace;
++    --source-code-font-size: 11px;
++    --source-code-font-family: menlo, monospace;
++  }
++
++  .platform-windows {
++    --monospace-font-size: 12px;
++    --monospace-font-family: consolas, lucida console, courier new, monospace;
++    --source-code-font-size: 12px;
++    --source-code-font-family: consolas, lucida console, courier new, monospace;
++  }
++
++  .platform-linux {
++    --monospace-font-size: 11px;
++    --monospace-font-family: dejavu sans mono, monospace;
++    --source-code-font-size: 11px;
++    --source-code-font-family: dejavu sans mono, monospace;
++  }
++
++  .-theme-with-dark-background .platform-linux,
++  .-theme-with-dark-background .platform-mac {
++    --override-text-color: rgb(189 198 207);
++  }
+ </style>
+ <meta http-equiv="Content-Security-Policy"
+   content="object-src 'none'; script-src 'sha256-yYUen+rS0+K2iGZTeGzgeav9eHB7hosjob+ahEOInok=' 'self' 'unsafe-eval' https://chrome-devtools-frontend.appspot.com">
+-- 
+2.37.1 (Apple Git-137.1)
+

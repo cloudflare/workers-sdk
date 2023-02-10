@@ -1,4 +1,3 @@
-import { type ConfigPath } from "..";
 import { readConfig } from "../config";
 import { confirm } from "../dialogs";
 import { CommandLineArgsError } from "../index";
@@ -7,13 +6,13 @@ import * as metrics from "../metrics";
 import { parseHumanDuration } from "../parse";
 import { requireAuth } from "../user";
 import * as pubsub from ".";
-import type { CommonYargsOptions } from "../yargs-types";
-import type { Argv, CommandModule } from "yargs";
+import type { CommonYargsArgv, CommonYargsOptions } from "../yargs-types";
+import type { CommandModule } from "yargs";
 
 export function pubSubCommands(
-	pubsubYargs: Argv<CommonYargsOptions>,
+	pubsubYargs: CommonYargsArgv,
 	subHelp: CommandModule<CommonYargsOptions, CommonYargsOptions>
-): Argv {
+) {
 	return pubsubYargs
 		.command(subHelp)
 		.command(
@@ -39,7 +38,7 @@ export function pubSubCommands(
 								.epilogue(pubsub.pubSubBetaWarning);
 						},
 						async (args) => {
-							const config = readConfig(args.config as ConfigPath, args);
+							const config = readConfig(args.config, args);
 							const accountId = await requireAuth(config);
 
 							const namespace: pubsub.PubSubNamespace = {
@@ -64,7 +63,7 @@ export function pubSubCommands(
 							return yargs.epilogue(pubsub.pubSubBetaWarning);
 						},
 						async (args) => {
-							const config = readConfig(args.config as ConfigPath, args);
+							const config = readConfig(args.config, args);
 							const accountId = await requireAuth(config);
 
 							logger.log(await pubsub.listPubSubNamespaces(accountId));
@@ -86,7 +85,7 @@ export function pubSubCommands(
 								.epilogue(pubsub.pubSubBetaWarning);
 						},
 						async (args) => {
-							const config = readConfig(args.config as ConfigPath, args);
+							const config = readConfig(args.config, args);
 							const accountId = await requireAuth(config);
 
 							if (
@@ -116,7 +115,7 @@ export function pubSubCommands(
 								.epilogue(pubsub.pubSubBetaWarning);
 						},
 						async (args) => {
-							const config = readConfig(args.config as ConfigPath, args);
+							const config = readConfig(args.config, args);
 							const accountId = await requireAuth(config);
 
 							logger.log(
@@ -165,7 +164,7 @@ export function pubSubCommands(
 						})
 						.epilogue(pubsub.pubSubBetaWarning),
 				async (args) => {
-					const config = readConfig(args.config as ConfigPath, args);
+					const config = readConfig(args.config, args);
 					const accountId = await requireAuth(config);
 
 					const broker: pubsub.PubSubBroker = {
@@ -230,7 +229,7 @@ export function pubSubCommands(
 						})
 						.epilogue(pubsub.pubSubBetaWarning),
 				async (args) => {
-					const config = readConfig(args.config as ConfigPath, args);
+					const config = readConfig(args.config, args);
 					const accountId = await requireAuth(config);
 
 					const broker: pubsub.PubSubBrokerUpdate = {};
@@ -284,7 +283,7 @@ export function pubSubCommands(
 						.epilogue(pubsub.pubSubBetaWarning);
 				},
 				async (args) => {
-					const config = readConfig(args.config as ConfigPath, args);
+					const config = readConfig(args.config, args);
 					const accountId = await requireAuth(config);
 
 					logger.log(await pubsub.listPubSubBrokers(accountId, args.namespace));
@@ -314,7 +313,7 @@ export function pubSubCommands(
 							.epilogue(pubsub.pubSubBetaWarning);
 					},
 					async (args) => {
-						const config = readConfig(args.config as ConfigPath, args);
+						const config = readConfig(args.config, args);
 						const accountId = await requireAuth(config);
 
 						if (
@@ -354,7 +353,7 @@ export function pubSubCommands(
 							.epilogue(pubsub.pubSubBetaWarning);
 					},
 					async (args) => {
-						const config = readConfig(args.config as ConfigPath, args);
+						const config = readConfig(args.config, args);
 						const accountId = await requireAuth(config);
 
 						logger.log(
@@ -413,7 +412,7 @@ export function pubSubCommands(
 						.epilogue(pubsub.pubSubBetaWarning);
 				},
 				async (args) => {
-					const config = readConfig(args.config as ConfigPath, args);
+					const config = readConfig(args.config, args);
 					const accountId = await requireAuth(config);
 
 					let parsedExpiration: number | undefined;
@@ -473,7 +472,7 @@ export function pubSubCommands(
 						.epilogue(pubsub.pubSubBetaWarning);
 				},
 				async (args) => {
-					const config = readConfig(args.config as ConfigPath, args);
+					const config = readConfig(args.config, args);
 					const accountId = await requireAuth(config);
 
 					const numTokens = args.jti.length;
@@ -521,7 +520,7 @@ export function pubSubCommands(
 						.epilogue(pubsub.pubSubBetaWarning);
 				},
 				async (args) => {
-					const config = readConfig(args.config as ConfigPath, args);
+					const config = readConfig(args.config, args);
 					const accountId = await requireAuth(config);
 
 					const numTokens = args.jti.length;
@@ -562,7 +561,7 @@ export function pubSubCommands(
 						.epilogue(pubsub.pubSubBetaWarning);
 				},
 				async (args) => {
-					const config = readConfig(args.config as ConfigPath, args);
+					const config = readConfig(args.config, args);
 					const accountId = await requireAuth(config);
 
 					logger.log(`Listing previously revoked tokens for ${args.name}...`);
@@ -601,7 +600,7 @@ export function pubSubCommands(
 						.epilogue(pubsub.pubSubBetaWarning);
 				},
 				async (args) => {
-					const config = readConfig(args.config as ConfigPath, args);
+					const config = readConfig(args.config, args);
 					const accountId = await requireAuth(config);
 
 					logger.log(

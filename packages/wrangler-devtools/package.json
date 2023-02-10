@@ -8,12 +8,9 @@
 		"url": "https://github.com/cloudflare/wrangler2/issues"
 	},
 	"license": "BSD-3-Clause",
-	"author": "wrangler@cloudflare.com",
-	"scripts": {
-		"build-devtools": "node ./build-devtools.mjs",
-		"publish": "npx wrangler publish --assets built-devtools"
-	},
+	"author": "workers-devprod@cloudflare.com",
 	"devDependencies": {
-		"execa": "^6.1.0"
+		"patch-package": "^6.5.1",
+		"wrangler": "^2.7.1"
 	}
 }

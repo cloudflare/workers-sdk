@@ -1,7 +1,7 @@
 import { d1BetaWarning } from "./utils";
-import type { Argv } from "yargs";
+import type { CommonYargsArgv } from "../yargs-types";
 
-export function Name(yargs: Argv) {
+export function Name(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("name", {
 			describe: "The name or binding of the DB",
@@ -11,7 +11,7 @@ export function Name(yargs: Argv) {
 		.epilogue(d1BetaWarning);
 }
 
-export function Database(yargs: Argv) {
+export function Database(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("database", {
 			describe: "The name or binding of the DB",

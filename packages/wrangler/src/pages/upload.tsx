@@ -22,13 +22,15 @@ import {
 } from "./constants";
 import { hashFile } from "./hash";
 import { pagesBetaWarning } from "./utils";
-import type { YargsOptionsToInterface } from "../yargs-types";
+import type {
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
+} from "../yargs-types";
 import type { UploadPayloadFile } from "./types";
-import type { Argv } from "yargs";
 
-type UploadArgs = YargsOptionsToInterface<typeof Options>;
+type UploadArgs = StrictYargsOptionsToInterface<typeof Options>;
 
-export function Options(yargs: Argv) {
+export function Options(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("directory", {
 			type: "string",

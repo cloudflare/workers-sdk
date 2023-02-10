@@ -46,7 +46,7 @@ describe("messaging", () => {
 	});
 });
 
-describe("wrangler 1 parity", () => {
+describe("wrangler v1 parity", () => {
 	beforeAll(async () => {
 		await installWrangler1();
 		await execa("npm", ["run", "build:js"]); // ensure tests use latest changes

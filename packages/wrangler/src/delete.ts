@@ -8,14 +8,12 @@ import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
 import { getScriptName, printWranglerBanner } from "./index";
-import type { ConfigPath } from "./index";
 import type {
-	CommonYargsOptions,
-	YargsOptionsToInterface,
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
 } from "./yargs-types";
-import type { Argv } from "yargs";
 
-export function deleteOptions(yargs: Argv<CommonYargsOptions>) {
+export function deleteOptions(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("script", {
 			describe: "The path to an entry point for your worker",
@@ -38,14 +36,13 @@ export function deleteOptions(yargs: Argv<CommonYargsOptions>) {
 		});
 }
 
-type DeleteArgs = YargsOptionsToInterface<typeof deleteOptions>;
+type DeleteArgs = StrictYargsOptionsToInterface<typeof deleteOptions>;
 
 export async function deleteHandler(args: DeleteArgs) {
 	await printWranglerBanner();
 
 	const configPath =
-		(args.config as ConfigPath) ||
-		(args.script && findWranglerToml(path.dirname(args.script)));
+		args.config || (args.script && findWranglerToml(path.dirname(args.script)));
 	const config = readConfig(configPath, args);
 	await metrics.sendMetricsEvent(
 		"delete worker script",

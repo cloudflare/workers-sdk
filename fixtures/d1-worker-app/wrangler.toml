@@ -1,0 +1,9 @@
+name = "worker-app"
+main = "src/index.js"
+compatibility_date = "2022-03-31"
+
+[[d1_databases]]
+binding = "DB" # i.e. available in your Worker on env.DB
+database_name = "UPDATE_THIS_FOR_REMOTE_USE"
+preview_database_id = "UPDATE_THIS_FOR_REMOTE_USE"
+database_id = "UPDATE_THIS_FOR_REMOTE_USE"

@@ -77,6 +77,8 @@ const facade: ExportedHandler<unknown> = {
 		}
 	},
 	scheduled: worker.scheduled,
+	queue: worker.queue,
+	trace: worker.trace,
 };
 
 export default facade;
