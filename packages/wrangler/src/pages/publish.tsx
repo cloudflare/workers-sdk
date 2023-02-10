@@ -58,7 +58,7 @@ export function Options(yargs: CommonYargsArgv) {
 			},
 			bundle: {
 				type: "boolean",
-				default: false,
+				default: undefined,
 				hidden: true,
 			},
 			"no-bundle": {
@@ -250,6 +250,8 @@ export const Handler = async ({
 		commitMessage,
 		commitHash,
 		commitDirty,
+		// TODO: Here lies a known bug. If you specify both `--bundle` and `--no-bundle`, this behavior is undefined and you will get unexpected results.
+		// There is no sane way to get the true value out of yargs, so here we are.
 		bundle: bundle ?? !noBundle,
 	});
 
