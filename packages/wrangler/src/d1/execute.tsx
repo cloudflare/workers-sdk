@@ -83,64 +83,6 @@ export function Options(yargs: CommonYargsArgv) {
 		});
 }
 
-function shorten(query: string | undefined, length: number) {
-	return query && query.length > length
-		? query.slice(0, length) + "..."
-		: query;
-}
-
-export async function executeSql({
-	local,
-	config,
-	name,
-	shouldPrompt,
-	persistTo,
-	file,
-	command,
-	json,
-}: {
-	local: undefined | boolean;
-	config: ConfigFields<DevConfig> & Environment;
-	name: string;
-	shouldPrompt: boolean | undefined;
-	persistTo: undefined | string;
-	file?: string;
-	command?: string;
-	json?: boolean;
-}) {
-	const sql = file ? readFileSync(file) : command;
-	if (!sql) throw new Error(`Error: must provide --command or --file.`);
-	if (persistTo && !local)
-		throw new Error(`Error: can't use --persist-to without --local`);
-	logger.log(`🌀 Mapping SQL input into an array of statements`);
-	const queries = splitSqlQuery(sql);
-
-	if (file && sql) {
-		if (queries[0].startsWith("SQLite format 3")) {
-			//TODO: update this error to recommend using `wrangler d1 restore` when it exists
-			throw new Error(
-				"Provided file is a binary SQLite database file instead of an SQL text file.\nThe execute command can only process SQL text files.\nPlease export an SQL file from your SQLite database and try again."
-			);
-		}
-	}
-
-	return local
-		? await executeLocally({
-				config,
-				name,
-				shouldPrompt,
-				queries,
-				persistTo,
-				json,
-		  })
-		: await executeRemotely({
-				config,
-				name,
-				shouldPrompt,
-				batches: batchSplit(queries),
-				json,
-		  });
-}
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
 
 export const Handler = async (args: HandlerOptions): Promise<void> => {
@@ -198,6 +140,59 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 		logger.log(JSON.stringify(response, null, 2));
 	}
 };
+
+export async function executeSql({
+	local,
+	config,
+	name,
+	shouldPrompt,
+	persistTo,
+	file,
+	command,
+	json,
+}: {
+	local: undefined | boolean;
+	config: ConfigFields<DevConfig> & Environment;
+	name: string;
+	shouldPrompt: boolean | undefined;
+	persistTo: undefined | string;
+	file?: string;
+	command?: string;
+	json?: boolean;
+}) {
+	const sql = file ? readFileSync(file) : command;
+	if (!sql) throw new Error(`Error: must provide --command or --file.`);
+	if (persistTo && !local)
+		throw new Error(`Error: can't use --persist-to without --local`);
+	logger.log(`🌀 Mapping SQL input into an array of statements`);
+	const queries = splitSqlQuery(sql);
+
+	if (file && sql) {
+		if (queries[0].startsWith("SQLite format 3")) {
+			//TODO: update this error to recommend using `wrangler d1 restore` when it exists
+			throw new Error(
+				"Provided file is a binary SQLite database file instead of an SQL text file.\nThe execute command can only process SQL text files.\nPlease export an SQL file from your SQLite database and try again."
+			);
+		}
+	}
+
+	return local
+		? await executeLocally({
+				config,
+				name,
+				shouldPrompt,
+				queries,
+				persistTo,
+				json,
+		  })
+		: await executeRemotely({
+				config,
+				name,
+				shouldPrompt,
+				batches: batchSplit(queries),
+				json,
+		  });
+}
 
 async function executeLocally({
 	config,
@@ -347,4 +342,10 @@ function batchSplit(queries: string[]) {
 		);
 	}
 	return batches;
+}
+
+function shorten(query: string | undefined, length: number) {
+	return query && query.length > length
+		? query.slice(0, length) + "..."
+		: query;
 }
