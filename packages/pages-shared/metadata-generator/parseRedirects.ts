@@ -104,7 +104,7 @@ export function parseRedirects(input: string): ParsedRedirects {
 			invalid.push({
 				line,
 				lineNumber: i + 1,
-				message: `Valid status codes are 301, 302 (default), 303, 307, or 308. Got ${str_status}.`,
+				message: `Valid status codes are 200, 301, 302 (default), 303, 307, or 308. Got ${str_status}.`,
 			});
 			continue;
 		}
@@ -118,6 +118,14 @@ export function parseRedirects(input: string): ParsedRedirects {
 			continue;
 		}
 		seen_paths.add(from);
+
+		if (status === 200 && !to.startsWith("/")) {
+			invalid.push({
+				line,
+				lineNumber: i + 1,
+				message: `Proxy (200) redirects can only point to relative paths. Got ${to}`,
+			});
+		}
 
 		rules.push({ from, to, status, lineNumber: i + 1 });
 	}
