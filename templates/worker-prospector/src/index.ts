@@ -1,10 +1,14 @@
-import { DBUrl, Env } from './types';
+import { DBUrl, Env } from "./types";
 
-import { handleQueuedUrl, scheduled } from './functions';
-import h from './api';
+import { handleQueuedUrl, scheduled } from "./functions";
+import h from "./api";
 
 export default {
-	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+	async fetch(
+		request: Request,
+		env: Env,
+		ctx: ExecutionContext
+	): Promise<Response> {
 		return h.fetch(request, env, ctx);
 	},
 

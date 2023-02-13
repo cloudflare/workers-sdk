@@ -1,5 +1,5 @@
-import { fromXML } from 'from-xml';
-import Puppeteer from '@cloudflare/puppeteer';
+import { fromXML } from "from-xml";
+import Puppeteer from "@cloudflare/puppeteer";
 
 import {
 	DBNotifier,
@@ -11,7 +11,7 @@ import {
 	SitemapXMLResponse,
 	Url,
 	XMLResponseType,
-} from './types';
+} from "./types";
 
 export async function xmlToURLs({
 	url,
@@ -21,7 +21,9 @@ export async function xmlToURLs({
 	url: string;
 	sitemapId?: number;
 	authToken: string;
-}): Promise<SitemapXMLResponse | SitemapOfSitemapsXMLResponse | ErrorXMLResponse> {
+}): Promise<
+	SitemapXMLResponse | SitemapOfSitemapsXMLResponse | ErrorXMLResponse
+> {
 	console.log(`Making request to ${url}`);
 	const resp = await fetch(url, {
 		headers: {
@@ -35,7 +37,7 @@ export async function xmlToURLs({
 	const data = fromXML(text);
 
 	if (data.sitemapindex) {
-		console.log('Found sitemap of sitemaps');
+		console.log("Found sitemap of sitemaps");
 		const sitemaps: Array<string> = data.sitemapindex.sitemap.map(
 			(site: any) => site.loc as string
 		);
@@ -44,7 +46,7 @@ export async function xmlToURLs({
 			sitemaps,
 		};
 	} else if (data.urlset) {
-		console.log('Found sitemap');
+		console.log("Found sitemap");
 
 		const urls: Array<Url> = data.urlset.url.map((url: any) => ({
 			url: url.loc,
@@ -67,15 +69,19 @@ export async function xmlToURLs({
 }
 
 export function createUrl(d1Binding: D1Database, obj: Url) {
-	console.log('Creating url', obj);
+	console.log("Creating url", obj);
 
 	const { url, lastmod, sitemapId } = obj;
-	const query = 'insert into urls (url, lastmod, sitemap_id) values (?, ?, ?)';
+	const query = "insert into urls (url, lastmod, sitemap_id) values (?, ?, ?)";
 	return d1Binding.prepare(query).bind(url, lastmod, sitemapId);
 }
 
-export async function createSitemaps(sitemapUrl: string, db: D1Database, authToken: string) {
-	console.log('Creating sitemaps for ', sitemapUrl);
+export async function createSitemaps(
+	sitemapUrl: string,
+	db: D1Database,
+	authToken: string
+) {
+	console.log("Creating sitemaps for ", sitemapUrl);
 
 	const response = (await xmlToURLs({
 		url: sitemapUrl,
@@ -84,7 +90,7 @@ export async function createSitemaps(sitemapUrl: string, db: D1Database, authTok
 
 	try {
 		await Promise.all(
-			response.sitemaps.map(sitemap => {
+			response.sitemaps.map((sitemap) => {
 				return createSitemap(db, sitemap);
 			})
 		);
@@ -94,7 +100,7 @@ export async function createSitemaps(sitemapUrl: string, db: D1Database, authTok
 }
 
 export async function createSitemap(d1Binding: D1Database, url: string) {
-	console.log('Creating sitemap in database for ', url);
+	console.log("Creating sitemap in database for ", url);
 	const query = `insert into sitemaps (url) values (?)`;
 	try {
 		return d1Binding.prepare(query).bind(url).run();
@@ -103,8 +109,10 @@ export async function createSitemap(d1Binding: D1Database, url: string) {
 	}
 }
 
-export const getNeedsChecking = async (db: D1Database): Promise<Array<DBUrl>> => {
-	console.log('Getting urls that need checking from database');
+export const getNeedsChecking = async (
+	db: D1Database
+): Promise<Array<DBUrl>> => {
+	console.log("Getting urls that need checking from database");
 
 	const newKeywords = await db
 		.prepare(
@@ -132,21 +140,25 @@ export const getNeedsChecking = async (db: D1Database): Promise<Array<DBUrl>> =>
       -- haven't tested any new changes yet
       or date(lastmod) > date('now')
     `
-				: ''
+				: ""
 		}
   `
 		)
 		.all();
 
-	console.log(`Found ${updatedByLastMod?.results?.length} urls that need checking`);
+	console.log(
+		`Found ${updatedByLastMod?.results?.length} urls that need checking`
+	);
 
 	return updatedByLastMod.results as Array<DBUrl>;
 };
 
 export const updateStoredUrls = async (db: D1Database, authToken: string) => {
-	console.log('Updating stored urls');
+	console.log("Updating stored urls");
 
-	const { results: sitemaps } = await db.prepare('select * from sitemaps').all();
+	const { results: sitemaps } = await db
+		.prepare("select * from sitemaps")
+		.all();
 	const sitemapResponses: Array<SitemapXMLResponse> = await Promise.all(
 		sitemaps!.map(async (sitemap: DBSitemap) => {
 			return (await xmlToURLs({
@@ -157,10 +169,12 @@ export const updateStoredUrls = async (db: D1Database, authToken: string) => {
 		})
 	);
 
-	console.log('Creating URLs in database');
+	console.log("Creating URLs in database");
 
 	const preparedStatements = sitemapResponses
-		.map(sitemapResponse => sitemapResponse.urls.map(url => createUrl(db, url)))
+		.map((sitemapResponse) =>
+			sitemapResponse.urls.map((url) => createUrl(db, url))
+		)
 		.flat();
 
 	return db.batch(preparedStatements);
@@ -173,7 +187,7 @@ export const addUrlsToQueue = async (urls: Array<DBUrl>, queue: Queue) => {
 
 	for (let i = 0; i < urls.length; i += chunkSize) {
 		const chunk = urls.slice(i, i + chunkSize);
-		const batch = chunk.map(value => ({
+		const batch = chunk.map((value) => ({
 			body: JSON.stringify(value),
 		}));
 		await (queue as any).sendBatch(batch);
@@ -183,10 +197,12 @@ export const addUrlsToQueue = async (urls: Array<DBUrl>, queue: Queue) => {
 export const handleQueuedUrl = async (url: DBUrl, db: D1Database) => {
 	console.log(`Checking ${url.url} for matches`);
 
-	const notifierMatchQuery = await db.prepare('select * from notifier_matches').all();
+	const notifierMatchQuery = await db
+		.prepare("select * from notifier_matches")
+		.all();
 	const notifierMatches: Array<DBNotifierMatch> = notifierMatchQuery.results;
 
-	const notifierQuery = await db.prepare('select * from notifiers').all();
+	const notifierQuery = await db.prepare("select * from notifiers").all();
 	const notifiers: Array<DBNotifier> = notifierQuery.results;
 
 	const response = await fetch(url.url);
@@ -200,17 +216,20 @@ export const handleQueuedUrl = async (url: DBUrl, db: D1Database) => {
 			console.log(`Match found for ${notifier.keyword} in ${url.url}`);
 
 			const existingNotifierMatch = notifierMatches.find(
-				notifierMatch =>
-					notifierMatch.notifier_id === notifier.id && notifierMatch.url_id === url.id
+				(notifierMatch) =>
+					notifierMatch.notifier_id === notifier.id &&
+					notifierMatch.url_id === url.id
 			);
 
 			if (existingNotifierMatch) {
-				console.log('Match email already sent');
+				console.log("Match email already sent");
 			} else {
-				console.log('Inserting notifier match into database');
+				console.log("Inserting notifier match into database");
 				let resp;
 				try {
-					console.log(`Inserting new notifier match: ${notifier.id}, ${url.id}`);
+					console.log(
+						`Inserting new notifier match: ${notifier.id}, ${url.id}`
+					);
 					resp = await db
 						.prepare(
 							`
@@ -220,29 +239,44 @@ export const handleQueuedUrl = async (url: DBUrl, db: D1Database) => {
 						.bind(notifier.id, url.id)
 						.run();
 					if (resp.error) {
-						console.log(`Error inserting notifier match into database: ${resp.error.toString()}`);
+						console.log(
+							`Error inserting notifier match into database: ${resp.error.toString()}`
+						);
 					} else {
 						await sendMatchEmail(notifier, url, snippet);
 					}
 				} catch (err) {
-					console.log(`Error inserting notifier match into database: ${JSON.stringify(err)}`);
+					console.log(
+						`Error inserting notifier match into database: ${JSON.stringify(
+							err
+						)}`
+					);
 				}
 			}
 		}
 	}
 
-	await db.prepare('update urls set last_checked = date("now") where id = ?').bind(url.id).run();
+	await db
+		.prepare('update urls set last_checked = date("now") where id = ?')
+		.bind(url.id)
+		.run();
 
 	return;
 };
 
-export const sendMatchEmail = async (notifier: DBNotifier, url: DBUrl, match: string) => {
-	console.log(`Sending match email to ${notifier.email} for ${notifier.keyword} in ${url.url}`);
+export const sendMatchEmail = async (
+	notifier: DBNotifier,
+	url: DBUrl,
+	match: string
+) => {
+	console.log(
+		`Sending match email to ${notifier.email} for ${notifier.keyword} in ${url.url}`
+	);
 
-	const send_request = new Request('https://api.mailchannels.net/tx/v1/send', {
-		method: 'POST',
+	const send_request = new Request("https://api.mailchannels.net/tx/v1/send", {
+		method: "POST",
 		headers: {
-			'content-type': 'application/json',
+			"content-type": "application/json",
 		},
 		body: JSON.stringify({
 			personalizations: [
@@ -251,13 +285,13 @@ export const sendMatchEmail = async (notifier: DBNotifier, url: DBUrl, match: st
 				},
 			],
 			from: {
-				email: 'no-reply@keyword-tracker.examples.workers.dev',
-				name: 'Prospector',
+				email: "no-reply@keyword-tracker.examples.workers.dev",
+				name: "Prospector",
 			},
 			subject: `A match was found for ${notifier.keyword}`,
 			content: [
 				{
-					type: 'text/plain',
+					type: "text/plain",
 					value: `A match was found for ${notifier.keyword} at the URL ${url.url}. We'll no longer send you notifications for this keyword on this page.\n\nHere's a snippet of the information we found:\n\n${match}`,
 				},
 			],
@@ -278,7 +312,7 @@ export const scheduled = async ({
 	queue: Queue;
 	sitemapUrl: string;
 }) => {
-	console.log('Running scheduled function');
+	console.log("Running scheduled function");
 
 	await createSitemaps(sitemapUrl, db, authToken);
 	await updateStoredUrls(db, authToken);

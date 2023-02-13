@@ -1,14 +1,14 @@
-import { Hono } from 'hono';
+import { Hono } from "hono";
 
-import { DBNotifier, DBUrl, DBSitemap } from './types';
+import { DBNotifier, DBUrl, DBSitemap } from "./types";
 
-import { scheduled } from './functions';
+import { scheduled } from "./functions";
 
-import index from './index.html';
+import index from "./index.html";
 
 const h = new Hono();
 
-h.get('/_scheduled', async c => {
+h.get("/_scheduled", async (c) => {
 	try {
 		await scheduled({
 			authToken: c.env.AUTH_TOKEN,
@@ -20,29 +20,31 @@ h.get('/_scheduled', async c => {
 		console.error(`Error in scheduled function: ${err.message}`);
 	}
 
-	return c.redirect('/');
+	return c.redirect("/");
 });
 
-h.get('/config', async c => {
+h.get("/config", async (c) => {
 	return c.json({
 		AUTH_TOKEN: c.env.AUTH_TOKEN,
 		BASE_SITEMAP: c.env.SITEMAP_URL,
 	});
 });
 
-h.get('/scheduled', async c => {
-	const notifierQuery = await c.env.DB.prepare('select * from notifiers').all();
+h.get("/scheduled", async (c) => {
+	const notifierQuery = await c.env.DB.prepare("select * from notifiers").all();
 	const notifiers: Array<DBNotifier> = notifierQuery.results;
 
 	if (!notifiers.length) {
-		return c.html(`<p class="onboarding">Add a notifier to begin using this application.</p>`);
+		return c.html(
+			`<p class="onboarding">Add a notifier to begin using this application.</p>`
+		);
 	}
 
-	const sitemapQuery = await c.env.DB.prepare('select * from sitemaps').all();
+	const sitemapQuery = await c.env.DB.prepare("select * from sitemaps").all();
 	const sitemaps: Array<DBSitemap> = sitemapQuery.results;
 
 	if (sitemaps.length) {
-		return c.html('');
+		return c.html("");
 	} else {
 		return c.html(`
       <p class="onboarding">
@@ -53,12 +55,12 @@ h.get('/scheduled', async c => {
 	}
 });
 
-h.get('/notifiers', async c => {
-	const query = await c.env.DB.prepare('select * from notifiers').all();
+h.get("/notifiers", async (c) => {
+	const query = await c.env.DB.prepare("select * from notifiers").all();
 	const notifiers: Array<DBNotifier> = query.results;
 	const html = notifiers
 		.map(
-			notifier => `
+			(notifier) => `
     <tr>
       <td>${notifier.keyword}</td>
       <td>${notifier.email}</td>
@@ -73,38 +75,40 @@ h.get('/notifiers', async c => {
     </tr>
   `
 		)
-		.join('\n');
+		.join("\n");
 
 	return c.html(html);
 });
 
-h.post('/notifiers', async c => {
+h.post("/notifiers", async (c) => {
 	try {
 		const { keyword, email } = await c.req.parseBody();
-		await c.env.DB.prepare('insert into notifiers (keyword, email) values (?, ?)')
+		await c.env.DB.prepare(
+			"insert into notifiers (keyword, email) values (?, ?)"
+		)
 			.bind(keyword, email)
 			.run();
-		return c.redirect('/');
+		return c.redirect("/");
 	} catch (err) {
 		c.status(500);
-		return c.text('Something went wrong');
+		return c.text("Something went wrong");
 	}
 });
 
-h.delete('/notifiers/:id', async c => {
+h.delete("/notifiers/:id", async (c) => {
 	try {
 		const { id } = c.req.param();
-		await c.env.DB.prepare('delete from notifiers where id = ?').bind(id).run();
+		await c.env.DB.prepare("delete from notifiers where id = ?").bind(id).run();
 		c.status(204);
-		c.header('HX-Refresh', 'true');
-		return c.text('OK');
+		c.header("HX-Refresh", "true");
+		return c.text("OK");
 	} catch (err) {
 		c.status(500);
-		return c.text('Something went wrong');
+		return c.text("Something went wrong");
 	}
 });
 
-h.get('/urls', async c => {
+h.get("/urls", async (c) => {
 	const query = await c.env.DB.prepare(`select * from urls`).all();
 	const notifiers: Array<DBUrl> = query.results;
 	const html = notifiers
@@ -112,17 +116,19 @@ h.get('/urls', async c => {
 			({ url, last_checked }) => `
     <tr>
       <td>${url}</td>
-      <td>${last_checked ? new Date(last_checked).toLocaleString() : 'never'}</td>
+      <td>${
+				last_checked ? new Date(last_checked).toLocaleString() : "never"
+			}</td>
     </tr>
   `
 		)
-		.join('\n');
+		.join("\n");
 
 	return c.html(html);
 });
 
-h.get('/sitemaps', async c => {
-	const query = await c.env.DB.prepare('select * from sitemaps').all();
+h.get("/sitemaps", async (c) => {
+	const query = await c.env.DB.prepare("select * from sitemaps").all();
 	const sitemaps: Array<DBSitemap> = query.results;
 	const html = sitemaps
 		.map(
@@ -132,11 +138,11 @@ h.get('/sitemaps', async c => {
     </tr>
   `
 		)
-		.join('\n');
+		.join("\n");
 	return c.html(html);
 });
 
-h.get('/', c => {
+h.get("/", (c) => {
 	return c.html(index);
 });
 

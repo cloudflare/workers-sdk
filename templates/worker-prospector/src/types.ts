@@ -30,9 +30,9 @@ export interface Url {
 }
 
 export enum XMLResponseType {
-	Error = 'Error',
-	Sitemap = 'Sitemap',
-	SitemapOfSitemaps = 'SitemapOfSitemaps',
+	Error = "Error",
+	Sitemap = "Sitemap",
+	SitemapOfSitemaps = "SitemapOfSitemaps",
 }
 
 export interface XMLResponse {
