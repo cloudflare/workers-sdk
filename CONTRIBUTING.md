@@ -20,7 +20,7 @@ Wrangler is built and run on the Node.js JavaScript runtime.
 Any contributions you make will be via [Pull Requests](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests) on [GitHub](https://github.com/) developed in a local git repository and pushed to your own fork of the repository.
 
 - Ensure you have [created an account](https://docs.github.com/en/get-started/onboarding/getting-started-with-your-github-account) on GitHub.
-- [Create your own fork](https://docs.github.com/en/get-started/quickstart/fork-a-repo) of [this repository](https://github.com/cloudflare/wrangler2).
+- [Create your own fork](https://docs.github.com/en/get-started/quickstart/fork-a-repo) of [this repository](https://github.com/cloudflare/workers-sdk).
 - Clone your fork to your local machine
   ```sh
   > git clone https://github.com/<your-github-username>/wrangler2
@@ -35,18 +35,18 @@ Any contributions you make will be via [Pull Requests](https://docs.github.com/e
   ```
 - Add `cloudflare/wrangler2` as the `upstream` remote repository.
   ```sh
-  > git remote add upstream https://github.com/cloudflare/wrangler2
+  > git remote add upstream https://github.com/cloudflare/workers-sdk
   > git remote -v
   origin	https://github.com/<your-github-username>/wrangler2 (fetch)
   origin	https://github.com/<your-github-username>/wrangler2 (push)
-  upstream	https://github.com/cloudflare/wrangler2 (fetch)
-  upstream	https://github.com/cloudflare/wrangler2 (push)
+  upstream	https://github.com/cloudflare/workers-sdk (fetch)
+  upstream	https://github.com/cloudflare/workers-sdk (push)
   ```
 - You should regularly pull from the `main` branch of the `upstream` repository to keep up to date with the latest changes to the project.
   ```sh
   > git switch main
   > git pull upstream main
-  From https://github.com/cloudflare/wrangler2
+  From https://github.com/cloudflare/workers-sdk
   * branch            main       -> FETCH_HEAD
   Already up to date.
   ```
@@ -63,7 +63,7 @@ When working on Wrangler, you'll need to satisfy [`workerd`](https://github.com/
 
 The Node.js dependencies of the project are managed by the [`npm`](https://www.npmjs.com/) tool.
 
-This repository is setup as a [mono-repo](https://docs.npmjs.com/cli/v7/using-npm/workspaces) of workspaces. The workspaces are stored in the [`packages`](https://github.com/cloudflare/wrangler2/tree/main/packages) directory.
+This repository is setup as a [mono-repo](https://docs.npmjs.com/cli/v7/using-npm/workspaces) of workspaces. The workspaces are stored in the [`packages`](https://github.com/cloudflare/workers-sdk/tree/main/packages) directory.
 
 While each workspace has its own dependencies, you install the dependencies using `npm` at the root of the project.
 

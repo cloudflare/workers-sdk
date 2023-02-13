@@ -3,7 +3,7 @@
 	"version": "0.0.13",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/cloudflare/wrangler2.git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/pages-shared"
 	},
 	"files": [

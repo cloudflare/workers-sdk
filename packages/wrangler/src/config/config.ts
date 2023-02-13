@@ -216,10 +216,10 @@ export interface DevConfig {
 	 * Protocol that wrangler dev forwards requests on
 	 *
 	 * Setting this to `http` is not currently implemented.
-	 * See https://github.com/cloudflare/wrangler2/issues/583
+	 * See https://github.com/cloudflare/workers-sdk/issues/583
 	 *
 	 * @default `https`
-	 * @todo this needs to be implemented https://github.com/cloudflare/wrangler2/issues/583
+	 * @todo this needs to be implemented https://github.com/cloudflare/workers-sdk/issues/583
 	 */
 	upstream_protocol: "https" | "http";
 

@@ -15,7 +15,7 @@ export const generateGitHubFetch = ({
 		);
 		gitHubRequest.headers.set(
 			"User-Agent",
-			"@cloudflare/wrangler2/packages/prerelease-registry"
+			"@cloudflare/workers-sdk/packages/prerelease-registry"
 		);
 
 		return fetch(gitHubRequest);

@@ -1,4 +1,4 @@
-// https://github.com/cloudflare/wrangler2/pull/2496#discussion_r1062516883
+// https://github.com/cloudflare/workers-sdk/pull/2496#discussion_r1062516883
 
 import {
 	Event as WorkerEvent,

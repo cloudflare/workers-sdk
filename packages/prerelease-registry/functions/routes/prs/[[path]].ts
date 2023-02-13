@@ -32,7 +32,7 @@ export const onRequestGet: PagesFunction<
 
 	try {
 		const pullRequestsResponse = await gitHubFetch(
-			`https://api.github.com/repos/cloudflare/wrangler2/pulls/${pullRequestID}`,
+			`https://api.github.com/repos/cloudflare/workers-sdk/pulls/${pullRequestID}`,
 			{
 				headers: {
 					Accept: "application/vnd.github.v3+json",
@@ -52,7 +52,7 @@ export const onRequestGet: PagesFunction<
 		} = (await pullRequestsResponse.json()) as PullRequest;
 
 		const workflowRunsResponse = await gitHubFetch(
-			`https://api.github.com/repos/cloudflare/wrangler2/actions/runs?branch=${branch}&per_page=100&event=pull_request`,
+			`https://api.github.com/repos/cloudflare/workers-sdk/actions/runs?branch=${branch}&per_page=100&event=pull_request`,
 			{
 				headers: {
 					Accept: "application/vnd.github.v3+json",

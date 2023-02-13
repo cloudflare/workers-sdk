@@ -27,7 +27,7 @@ export const getArtifactForWorkflowRun = async ({
 
 	try {
 		const artifactsResponse = await gitHubFetch(
-			`https://api.github.com/repos/cloudflare/wrangler2/actions/runs/${runID}/artifacts`,
+			`https://api.github.com/repos/cloudflare/workers-sdk/actions/runs/${runID}/artifacts`,
 			{
 				headers: {
 					Accept: "application/vnd.github.v3+json",
