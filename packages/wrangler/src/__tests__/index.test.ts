@@ -1,4 +1,5 @@
 import { getPackageManager } from "../package-manager";
+import { endEventLoop } from "./helpers/end-event-loop";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
@@ -269,7 +270,3 @@ describe("wrangler", () => {
 	`);
 	});
 });
-
-function endEventLoop() {
-	return new Promise((resolve) => setImmediate(resolve));
-}

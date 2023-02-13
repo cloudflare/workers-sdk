@@ -55,7 +55,7 @@ function useDevRegistry(
 
 		const interval =
 			// TODO: enable this for remote mode as well
-			// https://github.com/cloudflare/wrangler2/issues/1182
+			// https://github.com/cloudflare/workers-sdk/issues/1182
 			mode === "local"
 				? setInterval(() => {
 						getBoundRegisteredWorkers({
@@ -249,20 +249,6 @@ function DevSession(props: DevSessionProps) {
 		() => props.bindings.d1_databases?.map((db) => db.binding),
 		[props.bindings.d1_databases]
 	);
-	const everyD1BindingHasPreview = props.bindings.d1_databases?.every(
-		(binding) => binding.preview_database_id
-	);
-	if (
-		betaD1Shims &&
-		betaD1Shims.length > 0 &&
-		!(props.local || everyD1BindingHasPreview)
-	) {
-		handleError(
-			new Error(
-				"D1 bindings require dev --local or preview_database_id for now"
-			)
-		);
-	}
 
 	// If we are using d1 bindings, and are not bundling the worker
 	// we should error here as the d1 shim won't be added

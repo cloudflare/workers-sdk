@@ -20,13 +20,15 @@ export function CreateOptions(yargs: CommonYargsArgv) {
 		demandOption: true,
 	});
 }
+
 type CreateHandlerOptions = StrictYargsOptionsToInterface<typeof CreateOptions>;
+
 export const CreateHandler = withConfig<CreateHandlerOptions>(
 	async ({ config, database, message }): Promise<void> => {
 		await requireAuth({});
 		logger.log(d1BetaWarning);
 
-		const databaseInfo = await getDatabaseInfoFromConfig(config, database);
+		const databaseInfo = getDatabaseInfoFromConfig(config, database);
 		if (!databaseInfo) {
 			throw new Error(
 				`Can't find a DB with name/binding '${database}' in local config. Check info in wrangler.toml...`

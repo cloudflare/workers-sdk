@@ -37,10 +37,10 @@ export async function getMigrationsPath(
 export async function getUnappliedMigrations(
 	migrationsTableName: string,
 	migrationsPath: string,
-	local: undefined | boolean,
+	local: boolean | undefined,
 	config: ConfigFields<DevConfig> & Environment,
 	name: string,
-	persistTo: undefined | string
+	persistTo: string | undefined
 ): Promise<Array<string>> {
 	const appliedMigrations = (
 		await listAppliedMigrations(
@@ -68,24 +68,23 @@ export async function getUnappliedMigrations(
 
 const listAppliedMigrations = async (
 	migrationsTableName: string,
-	local: undefined | boolean,
+	local: boolean | undefined,
 	config: ConfigFields<DevConfig> & Environment,
 	name: string,
-	persistTo: undefined | string
+	persistTo: string | undefined
 ): Promise<Migration[]> => {
-	const Query = `SELECT *
-									 FROM ${migrationsTableName}
-									 ORDER BY id`;
-
-	const response: QueryResult[] | null = await executeSql(
+	const response: QueryResult[] | null = await executeSql({
 		local,
 		config,
 		name,
-		isInteractive() && !CI.isCI(),
+		shouldPrompt: isInteractive() && !CI.isCI(),
 		persistTo,
-		undefined,
-		Query
-	);
+		command: `SELECT *
+		FROM ${migrationsTableName}
+		ORDER BY id`,
+		file: undefined,
+		json: undefined,
+	});
 
 	if (!response || response[0].results.length === 0) return [];
 
@@ -123,25 +122,26 @@ export function getNextMigrationNumber(migrationsPath: string): number {
 
 export const initMigrationsTable = async (
 	migrationsTableName: string,
-	local: undefined | boolean,
+	local: boolean | undefined,
 	config: ConfigFields<DevConfig> & Environment,
 	name: string,
-	persistTo: undefined | string
+	persistTo: string | undefined
 ) => {
-	return executeSql(
+	return executeSql({
 		local,
 		config,
 		name,
-		isInteractive() && !CI.isCI(),
+		shouldPrompt: isInteractive() && !CI.isCI(),
 		persistTo,
-		undefined,
-		`
+		command: `
 						CREATE TABLE IF NOT EXISTS ${migrationsTableName}
 						(
 								id         INTEGER PRIMARY KEY AUTOINCREMENT,
 								name       TEXT UNIQUE,
 								applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 						);
-				`
-	);
+				`,
+		file: undefined,
+		json: undefined,
+	});
 };

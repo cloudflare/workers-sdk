@@ -3,9 +3,9 @@
 	"version": "0.0.0",
 	"private": "true",
 	"description": "Chrome Devtools hosted for easy use with Wrangler",
-	"homepage": "https://github.com/cloudflare/wrangler2#readme",
+	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
 	"bugs": {
-		"url": "https://github.com/cloudflare/wrangler2/issues"
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
 	},
 	"license": "BSD-3-Clause",
 	"author": "workers-devprod@cloudflare.com",

@@ -1,10 +1,7 @@
+import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-
-function endEventLoop() {
-	return new Promise((resolve) => setImmediate(resolve));
-}
 
 describe("d1", () => {
 	const std = mockConsoleMethods();
@@ -36,7 +33,7 @@ describe("d1", () => {
 
 		--------------------
 		🚧 D1 is currently in open alpha and is not recommended for production data and traffic
-		🚧 Please report any bugs to https://github.com/cloudflare/wrangler2/issues/new/choose
+		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
 		🚧 To request features, visit https://community.cloudflare.com/c/developers/d1
 		🚧 To give feedback, visit https://discord.gg/cloudflaredev
 		--------------------"
@@ -76,7 +73,7 @@ describe("d1", () => {
 
 		--------------------
 		🚧 D1 is currently in open alpha and is not recommended for production data and traffic
-		🚧 Please report any bugs to https://github.com/cloudflare/wrangler2/issues/new/choose
+		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
 		🚧 To request features, visit https://community.cloudflare.com/c/developers/d1
 		🚧 To give feedback, visit https://discord.gg/cloudflaredev
 		--------------------"

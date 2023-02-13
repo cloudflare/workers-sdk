@@ -35,7 +35,7 @@ export function generateOptions(yargs: CommonYargsArgv) {
 }
 type GenerateArgs = StrictYargsOptionsToInterface<typeof generateOptions>;
 
-// Originally, generate was a rust function: https://github.com/cloudflare/wrangler/blob/master/src/cli/mod.rs#L106-L123
+// Originally, generate was a rust function: https://github.com/cloudflare/wrangler-legacy/blob/master/src/cli/mod.rs#L106-L123
 export async function generateHandler(args: GenerateArgs) {
 	// somehow, `init` marks name as required but then also runs fine
 	// with the name omitted, and then substitutes it at runtime with ""

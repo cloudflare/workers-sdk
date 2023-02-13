@@ -46,7 +46,7 @@ export async function compareOutputs({
 	const wrangler1Dir = path.join(parentDir, "wrangler-1");
 	const wrangler2Dir = path.join(parentDir, "wrangler-2");
 
-	// wrangler 1
+	// Wrangler v1
 	fs.mkdirSync(wrangler1Dir);
 	process.chdir(wrangler1Dir);
 

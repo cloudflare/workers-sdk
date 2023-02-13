@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "2.9.0",
+	"version": "2.9.1",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -24,13 +24,13 @@
 		"http",
 		"cli"
 	],
-	"homepage": "https://github.com/cloudflare/wrangler2#readme",
+	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
 	"bugs": {
-		"url": "https://github.com/cloudflare/wrangler2/issues"
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/cloudflare/wrangler2.git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/wrangler"
 	},
 	"license": "MIT OR Apache-2.0",
@@ -105,7 +105,7 @@
 		"@miniflare/durable-objects": "2.11.0",
 		"blake3-wasm": "^2.1.5",
 		"chokidar": "^3.5.3",
-		"esbuild": "0.14.51",
+		"esbuild": "0.16.3",
 		"miniflare": "2.11.0",
 		"nanoid": "^3.3.3",
 		"path-to-regexp": "^6.2.0",
