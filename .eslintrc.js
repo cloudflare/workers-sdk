@@ -83,6 +83,9 @@ module.exports = {
 					},
 				],
 			},
+			parserOptions: {
+				project: ["./tsconfig.json"], // Specify it only for TypeScript files
+			},
 		},
 		{
 			files: "packages/wrangler/src/**/*.ts",
@@ -112,6 +115,7 @@ module.exports = {
 		"packages/jest-environment-wrangler/dist",
 		"packages/wrangler-devtools/built-devtools",
 		"packages/wranglerjs-compat-webpack-plugin/lib",
+		"/templates",
 	],
 	root: true,
 };

@@ -1,0 +1,12 @@
+name = "" # todo
+main = "src/index.ts"
+compatibility_date = "2022-05-18"
+
+[durable_objects]
+bindings = [
+  { name = "DO_WORDLE", class_name = "WordleDurableObject" },
+]
+
+[[migrations]]
+tag = "v1" # Should be unique for each entry
+new_classes = ["WordleDurableObject"] # Array of new classes

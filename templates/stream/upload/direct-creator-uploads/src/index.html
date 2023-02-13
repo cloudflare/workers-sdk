@@ -1,0 +1,31 @@
+<html>
+	<head></head>
+	<body>
+		<form id="form">
+			<input type="file" accept="video/*" id="video" />
+			<button type="submit">Upload Video</button>
+		</form>
+		<script>
+			const form = document.getElementById("form");
+			const videoInput = document.getElementById("video");
+
+			form.addEventListener("submit", async (e) => {
+				e.preventDefault();
+				const response = await fetch("/api/get-upload-url");
+				const oneTimeUploadUrl = response.headers.get("Location");
+				const video = videoInput.files[0];
+				const formData = new FormData();
+				formData.append("file", video);
+				const uploadResult = await fetch(oneTimeUploadUrl, {
+					method: "POST",
+					body: formData,
+				});
+				if (uploadResult.ok) {
+					form.innerHTML = "<h3>Upload successful!</h3>";
+				} else {
+					form.innerHTML = `<pre>${await uploadResult.json()}</pre>`;
+				}
+			});
+		</script>
+	</body>
+</html>

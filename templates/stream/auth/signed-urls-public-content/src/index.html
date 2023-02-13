@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Cloudflare Stream Signed URLs Example</title>
+	</head>
+	<body>
+		<div id="stream-player"></div>
+		<script type="module">
+			const response = await fetch("/api/video/big-buck-bunny");
+			const json = await response.json();
+			// Render the Stream Player, using the signed URL
+			// You can use Cloudflare Stream with any video player that supports HLS or DASH playback.
+			// For more, see: https://developers.cloudflare.com/stream/viewing-videos/using-own-player/
+			document.getElementById("stream-player").innerHTML = `
+				<iframe
+					src="${json.signedUrl}"
+					style="border: none; position: absolute; top: 0; left: 0; height: 100%; width: 100%"
+					allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+					allowfullscreen="true"
+				></iframe>
+			`;
+		</script>
+	</body>
+</html>
