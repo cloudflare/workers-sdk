@@ -140,6 +140,8 @@ Your database may not be available to serve requests during the migration, conti
 					shouldPrompt: isInteractive() && !CI.isCI(),
 					persistTo,
 					command: query,
+					file: undefined,
+					json: undefined,
 				});
 
 				if (response === null) {

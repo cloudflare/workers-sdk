@@ -82,6 +82,8 @@ const listAppliedMigrations = async (
 		command: `SELECT *
 		FROM ${migrationsTableName}
 		ORDER BY id`,
+		file: undefined,
+		json: undefined,
 	});
 
 	if (!response || response[0].results.length === 0) return [];
@@ -139,5 +141,7 @@ export const initMigrationsTable = async (
 								applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 						);
 				`,
+		file: undefined,
+		json: undefined,
 	});
 };

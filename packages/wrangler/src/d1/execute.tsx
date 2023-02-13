@@ -156,9 +156,9 @@ export async function executeSql({
 	name: string;
 	shouldPrompt: boolean | undefined;
 	persistTo: string | undefined;
-	file?: string;
-	command?: string;
-	json?: boolean;
+	file: string | undefined;
+	command: string | undefined;
+	json: boolean | undefined;
 }) {
 	const sql = file ? readFileSync(file) : command;
 	if (!sql) throw new Error(`Error: must provide --command or --file.`);
@@ -207,7 +207,7 @@ async function executeLocally({
 	shouldPrompt: boolean | undefined;
 	queries: string[];
 	persistTo: string | undefined;
-	json?: boolean;
+	json: boolean | undefined;
 }) {
 	const localDB = getDatabaseInfoFromConfig(config, name);
 	if (!localDB) {
@@ -262,7 +262,7 @@ async function executeRemotely({
 	name: string;
 	shouldPrompt: boolean | undefined;
 	batches: string[];
-	json?: boolean;
+	json: boolean | undefined;
 }) {
 	const multiple_batches = batches.length > 1;
 	// in JSON mode, we don't want a prompt here
