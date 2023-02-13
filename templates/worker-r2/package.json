@@ -1,0 +1,13 @@
+{
+	"private": true,
+	"version": "0.0.0",
+	"scripts": {
+		"deploy": "wrangler publish src/index.ts",
+		"dev": "wrangler dev src/index.ts --local",
+		"start-stackblitz": "WRANGLER_SEND_METRICS=false wrangler dev src/index.ts --local"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^3.0.0",
+		"wrangler": "^2.1.14"
+	}
+}
