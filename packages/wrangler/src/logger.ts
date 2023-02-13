@@ -4,6 +4,7 @@ import CLITable from "cli-table3";
 import { formatMessagesSync } from "esbuild";
 import { getEnvironmentVariableFactory } from "./environment-variables/factory";
 import type { BuildFailure } from "esbuild";
+
 export const LOGGER_LEVELS = {
 	none: -1,
 	error: 0,
@@ -36,6 +37,7 @@ class Logger {
 
 	loggerLevel: LoggerLevel = (getLogLevelFromEnv() as LoggerLevel) ?? "log";
 	columns = process.stdout.columns;
+	debugLogs: string[] = [];
 
 	debug = (...args: unknown[]) => this.doLog("debug", args);
 	info = (...args: unknown[]) => this.doLog("info", args);
@@ -53,8 +55,12 @@ class Logger {
 	}
 
 	private doLog(messageLevel: Exclude<LoggerLevel, "none">, args: unknown[]) {
+		const formattedMessage = this.formatMessage(messageLevel, format(...args));
+		this.debugLogs.push(formattedMessage);
+		// Truncate logs if they've grown too long (snip off the first 1K rows after 10K)
+		if (this.debugLogs.length > 10_000) this.debugLogs.splice(0, 1000);
 		if (LOGGER_LEVELS[this.loggerLevel] >= LOGGER_LEVELS[messageLevel]) {
-			console[messageLevel](this.formatMessage(messageLevel, format(...args)));
+			console[messageLevel](formattedMessage);
 		}
 	}
 
