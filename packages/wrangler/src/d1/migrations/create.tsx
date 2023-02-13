@@ -39,11 +39,11 @@ export const CreateHandler = withConfig<CreateHandlerOptions>(
 			return;
 		}
 
-		const migrationsPath = await getMigrationsPath(
-			path.dirname(config.configPath),
-			databaseInfo.migrationsFolderPath,
-			true
-		);
+		const migrationsPath = await getMigrationsPath({
+			projectPath: path.dirname(config.configPath),
+			migrationsFolderPath: databaseInfo.migrationsFolderPath,
+			createIfMissing: true,
+		});
 		const nextMigrationNumber = pad(getNextMigrationNumber(migrationsPath), 4);
 		const migrationName = message.replaceAll(" ", "_");
 

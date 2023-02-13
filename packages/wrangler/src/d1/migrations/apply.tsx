@@ -19,7 +19,7 @@ import {
 	getUnappliedMigrations,
 	initMigrationsTable,
 } from "./helpers";
-import { DatabaseWithLocal } from "./options";
+import { MigrationOptions } from "./options";
 import type { ParseError } from "../../parse";
 import type {
 	CommonYargsArgv,
@@ -27,13 +27,13 @@ import type {
 } from "../../yargs-types";
 
 export function ApplyOptions(yargs: CommonYargsArgv) {
-	return DatabaseWithLocal(yargs);
+	return MigrationOptions(yargs);
 }
 
 type ApplyHandlerOptions = StrictYargsOptionsToInterface<typeof ApplyOptions>;
 
 export const ApplyHandler = withConfig<ApplyHandlerOptions>(
-	async ({ config, database, local, persistTo }): Promise<void> => {
+	async ({ config, database, local, persistTo, preview }): Promise<void> => {
 		logger.log(d1BetaWarning);
 
 		const databaseInfo = getDatabaseInfoFromConfig(config, database);
@@ -47,31 +47,34 @@ export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 			return;
 		}
 
-		const migrationsPath = await getMigrationsPath(
-			path.dirname(config.configPath),
-			databaseInfo?.migrationsFolderPath ?? DEFAULT_MIGRATION_PATH,
-			false
-		);
+		const migrationsPath = await getMigrationsPath({
+			projectPath: path.dirname(config.configPath),
+			migrationsFolderPath:
+				databaseInfo?.migrationsFolderPath ?? DEFAULT_MIGRATION_PATH,
+			createIfMissing: false,
+		});
 
 		const migrationsTableName =
 			databaseInfo?.migrationsTableName ?? DEFAULT_MIGRATION_TABLE;
-		await initMigrationsTable(
+		await initMigrationsTable({
 			migrationsTableName,
 			local,
 			config,
-			database,
-			persistTo
-		);
+			name: database,
+			persistTo,
+			preview,
+		});
 
 		const unappliedMigrations = (
-			await getUnappliedMigrations(
+			await getUnappliedMigrations({
 				migrationsTableName,
 				migrationsPath,
 				local,
 				config,
-				database,
-				persistTo
-			)
+				name: database,
+				persistTo,
+				preview,
+			})
 		)
 			.map((migration) => {
 				return {
@@ -109,8 +112,8 @@ Your database may not be available to serve requests during the migration, conti
 		);
 		if (!ok) return;
 
-		// don't backup prod db when applying migrations locally
-		if (!local) {
+		// don't backup prod db when applying migrations locally or in preview
+		if (!local && !preview) {
 			assert(
 				databaseInfo,
 				"In non-local mode `databaseInfo` should be defined."
@@ -142,6 +145,7 @@ Your database may not be available to serve requests during the migration, conti
 					command: query,
 					file: undefined,
 					json: undefined,
+					preview,
 				});
 
 				if (response === null) {
