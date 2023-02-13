@@ -132,7 +132,7 @@ export function getScriptName(
 }
 
 /**
- * Alternative to the getScriptName() because special Legacy cases allowed "name", and "env" together in Wrangler1
+ * Alternative to the getScriptName() because special Legacy cases allowed "name", and "env" together in Wrangler v1
  */
 export function getLegacyScriptName(
 	args: { name: string | undefined; env: string | undefined },

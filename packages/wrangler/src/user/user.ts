@@ -297,7 +297,7 @@ interface AuthTokens {
 	accessToken?: AccessToken;
 	refreshToken?: RefreshToken;
 	scopes?: Scope[];
-	/** @deprecated - this field was only provided by the deprecated `wrangler1 config` command. */
+	/** @deprecated - this field was only provided by the deprecated v1 `wrangler config` command. */
 	apiToken?: string;
 }
 
@@ -315,7 +315,7 @@ export interface UserAuthConfig {
 	refresh_token?: string;
 	expiration_time?: string;
 	scopes?: string[];
-	/** @deprecated - this field was only provided by the deprecated `wrangler1 config` command. */
+	/** @deprecated - this field was only provided by the deprecated v1 `wrangler config` command. */
 	api_token?: string;
 }
 
@@ -402,7 +402,7 @@ function getAuthTokens(config?: UserAuthConfig): AuthTokens | undefined {
 			};
 		} else if (api_token) {
 			logger.warn(
-				"It looks like you have used Wrangler 1's `config` command to login with an API token.\n" +
+				"It looks like you have used Wrangler v1's `config` command to login with an API token.\n" +
 					"This is no longer supported in the current version of Wrangler.\n" +
 					"If you wish to authenticate via an API token then please set the `CLOUDFLARE_API_TOKEN` environment variable."
 			);

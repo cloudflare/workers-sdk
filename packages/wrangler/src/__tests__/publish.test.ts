@@ -209,7 +209,7 @@ describe("publish", () => {
 			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler 1's \`config\` command to login with an API token.[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler v1's \`config\` command to login with an API token.[0m
 
 			  This is no longer supported in the current version of Wrangler.
 			  If you wish to authenticate via an API token then please set the \`CLOUDFLARE_API_TOKEN\`
@@ -791,7 +791,7 @@ describe("publish", () => {
 			await runWrangler("publish ./index --env dev --legacy-env false");
 		});
 
-		it("should fallback to the Wrangler 1 zone-based API if the bulk-routes API fails", async () => {
+		it("should fallback to the Wrangler v1 zone-based API if the bulk-routes API fails", async () => {
 			writeWranglerToml({
 				routes: ["example.com/some-route/*"],
 			});

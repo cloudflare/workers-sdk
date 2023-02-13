@@ -574,9 +574,10 @@ async function applyMiddlewareLoaderFacade(
 			],
 			outfile: targetPathInsertion,
 		});
-
-		let targetPathLoader = path.join(tmpDirPath, path.basename(entry.file));
-		if (path.extname(entry.file) === "") targetPathLoader += ".js";
+		const targetPathLoader = path.join(
+			tmpDirPath,
+			"middleware-loader.entry.js"
+		);
 		const loaderPath = path.resolve(
 			getBasePath(),
 			"templates/middleware/loader-modules.ts"
