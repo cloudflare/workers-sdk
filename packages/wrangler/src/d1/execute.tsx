@@ -151,11 +151,11 @@ export async function executeSql({
 	command,
 	json,
 }: {
-	local: undefined | boolean;
+	local: boolean | undefined;
 	config: ConfigFields<DevConfig> & Environment;
 	name: string;
 	shouldPrompt: boolean | undefined;
-	persistTo: undefined | string;
+	persistTo: string | undefined;
 	file?: string;
 	command?: string;
 	json?: boolean;

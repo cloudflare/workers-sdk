@@ -37,10 +37,10 @@ export async function getMigrationsPath(
 export async function getUnappliedMigrations(
 	migrationsTableName: string,
 	migrationsPath: string,
-	local: undefined | boolean,
+	local: boolean | undefined,
 	config: ConfigFields<DevConfig> & Environment,
 	name: string,
-	persistTo: undefined | string
+	persistTo: string | undefined
 ): Promise<Array<string>> {
 	const appliedMigrations = (
 		await listAppliedMigrations(
@@ -68,10 +68,10 @@ export async function getUnappliedMigrations(
 
 const listAppliedMigrations = async (
 	migrationsTableName: string,
-	local: undefined | boolean,
+	local: boolean | undefined,
 	config: ConfigFields<DevConfig> & Environment,
 	name: string,
-	persistTo: undefined | string
+	persistTo: string | undefined
 ): Promise<Migration[]> => {
 	const response: QueryResult[] | null = await executeSql({
 		local,
@@ -120,10 +120,10 @@ export function getNextMigrationNumber(migrationsPath: string): number {
 
 export const initMigrationsTable = async (
 	migrationsTableName: string,
-	local: undefined | boolean,
+	local: boolean | undefined,
 	config: ConfigFields<DevConfig> & Environment,
 	name: string,
-	persistTo: undefined | string
+	persistTo: string | undefined
 ) => {
 	return executeSql({
 		local,
