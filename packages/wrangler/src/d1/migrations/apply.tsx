@@ -133,15 +133,16 @@ Your database may not be available to serve requests during the migration, conti
 			let success = true;
 			let errorNotes: Array<string> = [];
 			try {
-				const response = await executeSql(
+				const response = await executeSql({
 					local,
 					config,
-					database,
-					isInteractive() && !CI.isCI(),
+					name: database,
+					shouldPrompt: isInteractive() && !CI.isCI(),
 					persistTo,
-					undefined,
-					query
-				);
+					command: query,
+					file: undefined,
+					json: undefined,
+				});
 
 				if (response === null) {
 					// TODO:  return error
