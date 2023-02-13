@@ -116,7 +116,7 @@ export async function bundleWorker(
 		loader?: Record<string, string>;
 		sourcemap?: esbuild.CommonOptions["sourcemap"];
 		plugins?: esbuild.Plugin[];
-		// TODO: Rip these out https://github.com/cloudflare/wrangler2/issues/2153
+		// TODO: Rip these out https://github.com/cloudflare/workers-sdk/issues/2153
 		disableModuleCollection?: boolean;
 		isOutfile?: boolean;
 	}
@@ -344,7 +344,7 @@ export async function bundleWorker(
 		...(process.env.NODE_ENV && {
 			define: {
 				// use process.env["NODE_ENV" + ""] so that esbuild doesn't replace it
-				// when we do a build of wrangler. (re: https://github.com/cloudflare/wrangler2/issues/1477)
+				// when we do a build of wrangler. (re: https://github.com/cloudflare/workers-sdk/issues/1477)
 				"process.env.NODE_ENV": `"${process.env["NODE_ENV" + ""]}"`,
 				...(nodeCompat ? { global: "globalThis" } : {}),
 				...(checkFetch ? { fetch: "checkedFetch" } : {}),
@@ -574,9 +574,10 @@ async function applyMiddlewareLoaderFacade(
 			],
 			outfile: targetPathInsertion,
 		});
-
-		let targetPathLoader = path.join(tmpDirPath, path.basename(entry.file));
-		if (path.extname(entry.file) === "") targetPathLoader += ".js";
+		const targetPathLoader = path.join(
+			tmpDirPath,
+			"middleware-loader.entry.js"
+		);
 		const loaderPath = path.resolve(
 			getBasePath(),
 			"templates/middleware/loader-modules.ts"

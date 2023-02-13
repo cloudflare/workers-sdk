@@ -83,48 +83,6 @@ export function Options(yargs: CommonYargsArgv) {
 		});
 }
 
-function shorten(query: string | undefined, length: number) {
-	return query && query.length > length
-		? query.slice(0, length) + "..."
-		: query;
-}
-
-export async function executeSql(
-	local: undefined | boolean,
-	config: ConfigFields<DevConfig> & Environment,
-	name: string,
-	shouldPrompt: boolean | undefined,
-	persistTo: undefined | string,
-	file?: string,
-	command?: string,
-	json?: boolean
-) {
-	const sql = file ? readFileSync(file) : command;
-	if (!sql) throw new Error(`Error: must provide --command or --file.`);
-	if (persistTo && !local)
-		throw new Error(`Error: can't use --persist-to without --local`);
-	logger.log(`🌀 Mapping SQL input into an array of statements`);
-	const queries = splitSqlQuery(sql);
-
-	if (file && sql) {
-		if (queries[0].startsWith("SQLite format 3")) {
-			//TODO: update this error to recommend using `wrangler d1 restore` when it exists
-			throw new Error(
-				"Provided file is a binary SQLite database file instead of an SQL text file.\nThe execute command can only process SQL text files.\nPlease export an SQL file from your SQLite database and try again."
-			);
-		}
-	}
-
-	return local
-		? await executeLocally(config, name, shouldPrompt, queries, persistTo, json)
-		: await executeRemotely(
-				config,
-				name,
-				shouldPrompt,
-				batchSplit(queries),
-				json
-		  );
-}
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
 
 export const Handler = async (args: HandlerOptions): Promise<void> => {
@@ -140,16 +98,16 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 		return logger.error(`Error: can't provide both --command and --file.`);
 
 	const isInteractive = process.stdout.isTTY;
-	const response: QueryResult[] | null = await executeSql(
+	const response: QueryResult[] | null = await executeSql({
 		local,
 		config,
-		database,
-		isInteractive && !yes,
+		name: database,
+		shouldPrompt: isInteractive && !yes,
 		persistTo,
 		file,
 		command,
-		json
-	);
+		json,
+	});
 
 	// Early exit if prompt rejected
 	if (!response) return;
@@ -183,14 +141,74 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 	}
 };
 
-async function executeLocally(
-	config: Config,
-	name: string,
-	shouldPrompt: boolean | undefined,
-	queries: string[],
-	persistTo: string | undefined,
-	json?: boolean
-) {
+export async function executeSql({
+	local,
+	config,
+	name,
+	shouldPrompt,
+	persistTo,
+	file,
+	command,
+	json,
+}: {
+	local: boolean | undefined;
+	config: ConfigFields<DevConfig> & Environment;
+	name: string;
+	shouldPrompt: boolean | undefined;
+	persistTo: string | undefined;
+	file: string | undefined;
+	command: string | undefined;
+	json: boolean | undefined;
+}) {
+	const sql = file ? readFileSync(file) : command;
+	if (!sql) throw new Error(`Error: must provide --command or --file.`);
+	if (persistTo && !local)
+		throw new Error(`Error: can't use --persist-to without --local`);
+	logger.log(`🌀 Mapping SQL input into an array of statements`);
+	const queries = splitSqlQuery(sql);
+
+	if (file && sql) {
+		if (queries[0].startsWith("SQLite format 3")) {
+			//TODO: update this error to recommend using `wrangler d1 restore` when it exists
+			throw new Error(
+				"Provided file is a binary SQLite database file instead of an SQL text file.\nThe execute command can only process SQL text files.\nPlease export an SQL file from your SQLite database and try again."
+			);
+		}
+	}
+
+	return local
+		? await executeLocally({
+				config,
+				name,
+				shouldPrompt,
+				queries,
+				persistTo,
+				json,
+		  })
+		: await executeRemotely({
+				config,
+				name,
+				shouldPrompt,
+				batches: batchSplit(queries),
+				json,
+		  });
+}
+
+async function executeLocally({
+	config,
+	name,
+	shouldPrompt,
+	queries,
+	persistTo,
+	json,
+}: {
+	config: Config;
+	name: string;
+	shouldPrompt: boolean | undefined;
+	queries: string[];
+	persistTo: string | undefined;
+	json: boolean | undefined;
+}) {
 	const localDB = getDatabaseInfoFromConfig(config, name);
 	if (!localDB) {
 		throw new Error(
@@ -233,13 +251,19 @@ async function executeLocally(
 	return results;
 }
 
-async function executeRemotely(
-	config: Config,
-	name: string,
-	shouldPrompt: boolean | undefined,
-	batches: string[],
-	json?: boolean
-) {
+async function executeRemotely({
+	config,
+	name,
+	shouldPrompt,
+	batches,
+	json,
+}: {
+	config: Config;
+	name: string;
+	shouldPrompt: boolean | undefined;
+	batches: string[];
+	json: boolean | undefined;
+}) {
 	const multiple_batches = batches.length > 1;
 	// in JSON mode, we don't want a prompt here
 	if (multiple_batches && !json) {
@@ -318,4 +342,10 @@ function batchSplit(queries: string[]) {
 		);
 	}
 	return batches;
+}
+
+function shorten(query: string | undefined, length: number) {
+	return query && query.length > length
+		? query.slice(0, length) + "..."
+		: query;
 }

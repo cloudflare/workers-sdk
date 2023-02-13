@@ -56,7 +56,7 @@ function hashFileContent(hasher: XXHashAPI, content: string): string {
  * Create a hashed asset key for the given asset.
  *
  * The key will change if the file path or content of the asset changes.
- * The algorithm used here matches that of Wrangler 1.
+ * The algorithm used here matches that of Wrangler v1.
  */
 function hashAsset(
 	hasher: XXHashAPI,

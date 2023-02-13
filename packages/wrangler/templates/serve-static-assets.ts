@@ -20,6 +20,7 @@ declare global {
 }
 
 export default <ExportedHandler<{ __STATIC_CONTENT: KVNamespace }>>{
+	...worker,
 	async fetch(request, env, ctx) {
 		let options: Partial<Options> = {
 			ASSET_MANIFEST,

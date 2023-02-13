@@ -219,7 +219,7 @@ async function generateAssetsFetch(
 				const filepath = assetKeyEntryMap.get(assetKey);
 				if (!filepath) {
 					throw new Error(
-						"Could not fetch asset. Please file an issue on GitHub (https://github.com/cloudflare/wrangler2/issues/new/choose) with reproduction steps."
+						"Could not fetch asset. Please file an issue on GitHub (https://github.com/cloudflare/workers-sdk/issues/new/choose) with reproduction steps."
 					);
 				}
 				const body = readFileSync(filepath) as unknown as ReadableStream;

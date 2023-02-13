@@ -741,7 +741,7 @@ function isValidRouteValue(item: unknown): boolean {
 
 /**
  * If account_id has been passed as an empty string, normalise it to undefined.
- * This is to workaround older wrangler1-era templates that have account_id = '',
+ * This is to workaround older Wrangler v1-era templates that have account_id = '',
  * which isn't a valid value anyway
  */
 function mutateEmptyStringAccountIDValue(
@@ -760,7 +760,7 @@ function mutateEmptyStringAccountIDValue(
 
 /**
  * Normalize empty string to `undefined` by mutating rawEnv.route value.
- * As part of backward compatibility with Wrangler1 converting empty string to `undefined`
+ * As part of backward compatibility with Wrangler v1 converting empty string to `undefined`
  */
 function mutateEmptyStringRouteValue(
 	diagnostics: Diagnostics,
@@ -1823,7 +1823,7 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 	}
 	if (isValid && !process.env.NO_D1_WARNING) {
 		diagnostics.warnings.push(
-			"D1 Bindings are currently in alpha to allow the API to evolve before general availability.\nPlease report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose\nNote: Run this command with the environment variable NO_D1_WARNING=true to hide this message\n\nFor example: `export NO_D1_WARNING=true && wrangler <YOUR COMMAND HERE>`"
+			"D1 Bindings are currently in alpha to allow the API to evolve before general availability.\nPlease report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose\nNote: Run this command with the environment variable NO_D1_WARNING=true to hide this message\n\nFor example: `export NO_D1_WARNING=true && wrangler <YOUR COMMAND HERE>`"
 		);
 	}
 	return isValid;
