@@ -1,4 +1,5 @@
 {
+	"name": "template-worker-router",
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
