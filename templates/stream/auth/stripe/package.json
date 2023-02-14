@@ -1,4 +1,5 @@
 {
+	"name": "template-stripe",
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
@@ -9,6 +10,6 @@
 		"stripe": "^10.15.0"
 	},
 	"devDependencies": {
-		"wrangler": "2.0.23"
+		"wrangler": "^2.9.1"
 	}
 }
