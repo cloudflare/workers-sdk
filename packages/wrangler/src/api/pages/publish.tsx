@@ -17,6 +17,8 @@ import {
 } from "../../pages/functions/buildWorker";
 import { validateRoutes } from "../../pages/functions/routes-validation";
 import { upload } from "../../pages/upload";
+import { createUploadWorkerBundleContents } from "./create-worker-bundle-contents";
+import type { BundleResult } from "../../bundle";
 import type { Project, Deployment } from "@cloudflare/types";
 
 interface PagesPublishOptions {
@@ -67,6 +69,14 @@ interface PagesPublishOptions {
 	 */
 	bundle?: boolean;
 
+	/**
+	 * Whether to process non-JS module imports or not, such as
+	 * wasm/text/binary, when we run bundling on `functions` or
+	 * `_worker.js`
+	 * Default: false
+	 */
+	experimentalWorkerBundle?: boolean;
+
 	// TODO: Allow passing in the API key and plumb it through
 	// to the API calls so that the publish function does not
 	// rely on the `CLOUDFLARE_API_KEY` environment variable
@@ -88,6 +98,7 @@ export async function publish({
 	commitDirty,
 	functionsDirectory: customFunctionsDirectory,
 	bundle,
+	experimentalWorkerBundle,
 }: PagesPublishOptions) {
 	let _headers: string | undefined,
 		_redirects: string | undefined,
@@ -132,6 +143,8 @@ export async function publish({
 	 * Functions first and exit if it failed
 	 */
 	let builtFunctions: string | undefined = undefined;
+	let workerBundle: BundleResult | undefined = undefined;
+
 	const functionsDirectory =
 		customFunctionsDirectory || join(cwd(), "functions");
 	const routesOutputPath = !existsSync(join(directory, "_routes.json"))
@@ -154,7 +167,7 @@ export async function publish({
 		);
 
 		try {
-			await buildFunctions({
+			workerBundle = await buildFunctions({
 				outfile,
 				outputConfigPath,
 				functionsDirectory,
@@ -163,6 +176,7 @@ export async function publish({
 				routesOutputPath,
 				local: false,
 				d1Databases,
+				experimentalWorkerBundle,
 			});
 
 			builtFunctions = readFileSync(outfile, "utf-8");
@@ -234,9 +248,11 @@ export async function publish({
 	 */
 	if (_workerJS) {
 		let workerFileContents = _workerJS;
-		if (bundle) {
+		const enableBundling = bundle || experimentalWorkerBundle;
+
+		if (enableBundling) {
 			const outfile = join(tmpdir(), `./bundledWorker-${Math.random()}.mjs`);
-			await buildRawWorker({
+			workerBundle = await buildRawWorker({
 				workerScriptPath,
 				outfile,
 				directory: directory ?? ".",
@@ -245,14 +261,30 @@ export async function publish({
 				watch: false,
 				onEnd: () => {},
 				betaD1Shims: d1Databases,
+				experimentalWorkerBundle,
 			});
 			workerFileContents = readFileSync(outfile, "utf8");
 		} else {
 			await checkRawWorker(workerScriptPath, () => {});
 		}
 
-		formData.append("_worker.js", new File([workerFileContents], "_worker.js"));
-		logger.log(`✨ Uploading _worker.js`);
+		if (experimentalWorkerBundle) {
+			const workerBundleContents = await createUploadWorkerBundleContents(
+				workerBundle as BundleResult
+			);
+
+			formData.append(
+				"_worker.bundle",
+				new File([workerBundleContents], "_worker.bundle")
+			);
+			logger.log(`✨ Uploading Worker bundle`);
+		} else {
+			formData.append(
+				"_worker.js",
+				new File([workerFileContents], "_worker.js")
+			);
+			logger.log(`✨ Uploading _worker.js`);
+		}
 
 		if (_routesCustom) {
 			// user provided a custom _routes.json file
@@ -278,9 +310,21 @@ export async function publish({
 	 * https://developers.cloudflare.com/pages/platform/functions/
 	 */
 	if (builtFunctions && !_workerJS) {
-		// if Functions were build successfully, proceed to uploading the build file
-		formData.append("_worker.js", new File([builtFunctions], "_worker.js"));
-		logger.log(`✨ Uploading Functions`);
+		if (experimentalWorkerBundle) {
+			const workerBundleContents = await createUploadWorkerBundleContents(
+				workerBundle as BundleResult
+			);
+
+			formData.append(
+				"_worker.bundle",
+				new File([workerBundleContents], "_worker.bundle")
+			);
+			logger.log(`✨ Uploading Functions bundle`);
+		} else {
+			// if Functions were build successfully, proceed to uploading the build file
+			formData.append("_worker.js", new File([builtFunctions], "_worker.js"));
+			logger.log(`✨ Uploading Functions`);
+		}
 
 		if (_routesCustom) {
 			// user provided a custom _routes.json file

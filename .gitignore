@@ -76,6 +76,10 @@ build/Release
 node_modules/
 jspm_packages/
 
+# Moved from ./templates for ignoring all locks in templates
+templates/**/*-lock.*
+templates/**/*.lock
+
 # Snowpack dependency directory (https://snowpack.dev/)
 web_modules/
 

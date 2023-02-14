@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Prospector</title>
+		<link rel="stylesheet" href="https://unpkg.com/water.css/out/water.css" />
+		<link
+			rel="icon"
+			href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⛏️</text></svg>"
+		/>
+		<script
+			src="https://unpkg.com/htmx.org@1.8.4"
+			integrity="sha384-wg5Y/JwF7VxGk4zLsJEcAojRtlVp1FKKdGy1qN+OMtdq72WRvX/EdRdqg/LOhYeV"
+			crossorigin="anonymous"
+		></script>
+		<style>
+			p.onboarding {
+				background-color: #1b4d3e;
+				padding: 1rem;
+			}
+
+			pre {
+				white-space: break-spaces;
+			}
+		</style>
+	</head>
+
+	<body>
+		<h1>⛏️ Prospector</h1>
+
+		<div hx-get="/scheduled" hx-trigger="load"></div>
+
+		<h2>Notifiers</h2>
+
+		<table>
+			<thead>
+				<tr>
+					<th>Keyword</th>
+					<th>Email</th>
+					<th>Actions</th>
+				</tr>
+			</thead>
+			<tbody hx-get="/notifiers" hx-swap="innerHTML" hx-trigger="load">
+				<tr>
+					<td>Loading...</td>
+					<td></td>
+					<td></td>
+				</tr>
+			</tbody>
+		</table>
+
+		<details>
+			<summary>Expand to see all known URLs and sitemaps</summary>
+
+			<h3>Sitemaps</h3>
+
+			<table>
+				<thead>
+					<tr>
+						<th>Sitemap</th>
+					</tr>
+				</thead>
+				<tbody hx-get="/sitemaps" hx-swap="innerHTML" hx-trigger="load">
+					<tr>
+						<td>Loading...</td>
+					</tr>
+				</tbody>
+			</table>
+
+			<h3>Discovered URLs</h3>
+
+			<table>
+				<thead>
+					<tr>
+						<th>URL</th>
+						<th>Last Checked</th>
+					</tr>
+				</thead>
+				<tbody hx-get="/urls" hx-swap="innerHTML" hx-trigger="load">
+					<tr>
+						<td>Loading...</td>
+						<td></td>
+					</tr>
+				</tbody>
+			</table>
+		</details>
+
+		<h2>Add a new watched keyword</h2>
+
+		<form action="/notifiers" method="POST">
+			<label for="keyword">Keyword</label>
+			<input type="text" name="keyword" id="keyword" required />
+			<label for="email">Email</label>
+			<input type="email" name="email" id="email" required />
+			<input type="submit" value="Add Keyword" />
+		</form>
+
+		<p>
+			You'll begin receiving emails when URLs update with new keywords. To avoid
+			spam, emails will not be sent the first time a URL is checked.
+		</p>
+
+		<details>
+			<summary>View application configuration JSON</summary>
+
+			<code>
+				<pre hx-get="/config" hx-swap="innerHTML" hx-trigger="load"></pre>
+			</code>
+		</details>
+	</body>
+</html>

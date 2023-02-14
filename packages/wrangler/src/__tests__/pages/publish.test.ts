@@ -2179,6 +2179,413 @@ and that at least one include rule is provided.
 		expect(std.err).toMatchInlineSnapshot('""');
 	});
 
+	it("should bundle Functions and resolve its external module imports if the `--experimental-worker-bundle` flag is set", async () => {
+		// set up the directory of static files to upload.
+		mkdirSync("public");
+		writeFileSync("public/README.md", "This is a readme");
+
+		// set up hello.wasm
+		mkdirSync("wasm");
+		writeFileSync("wasm/hello.wasm", "HELLO WORLD");
+
+		// set up Functions
+		mkdirSync("functions");
+		writeFileSync(
+			"functions/hello.js",
+			`
+			import hello from "./../wasm/hello.wasm";
+			export async function onRequest() {
+				const helloModule = await WebAssembly.instantiate(hello);
+				const greeting = helloModule.exports.hello;
+				return new Response(greeting);
+			}
+			`
+		);
+
+		mockGetUploadTokenRequest(
+			"<<funfetti-auth-jwt>>",
+			"some-account-id",
+			"foo"
+		);
+
+		msw.use(
+			// /pages/assets/check-missing
+			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
+				const body = (await req.json()) as {
+					hashes: string[];
+				};
+
+				expect(req.headers.get("Authorization")).toBe(
+					"Bearer <<funfetti-auth-jwt>>"
+				);
+				expect(body).toMatchObject({
+					hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+				});
+
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: body.hashes,
+					})
+				);
+			}),
+
+			// /pages/assets/upload
+			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
+				expect(req.headers.get("Authorization")).toBe(
+					"Bearer <<funfetti-auth-jwt>>"
+				);
+
+				expect(await req.json()).toMatchObject([
+					{
+						key: "13a03eaf24ae98378acd36ea00f77f2f",
+						value: Buffer.from("This is a readme").toString("base64"),
+						metadata: {
+							contentType: "text/markdown",
+						},
+						base64: true,
+					},
+				]);
+
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: null,
+					})
+				);
+			}),
+
+			// /accounts/:accountId/pages/projects/<project-name>/deployments
+			rest.post(
+				"*/accounts/:accountId/pages/projects/foo/deployments",
+				async (req, res, ctx) => {
+					const body = await (req as RestRequestWithFormData).formData();
+					const manifest = JSON.parse(body.get("manifest") as string);
+					const workerBundle = body.get("_worker.bundle") as string;
+
+					expect(req.params.accountId).toEqual("some-account-id");
+					// make sure this is all we uploaded
+					expect([...body.keys()].sort()).toEqual(
+						[
+							"manifest",
+							"_worker.bundle",
+							"functions-filepath-routing-config.json",
+							"_routes.json",
+						].sort()
+					);
+					expect(manifest).toMatchInlineSnapshot(`
+				Object {
+				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+				}
+			`);
+
+					// some fields in workerBundle, such as the undici form boundary
+					// or the file hashes, are randomly generated. Let's replace these
+					// dynamic values with static ones so we can properly test the
+					// contents of `workerBundle`
+					// see https://jestjs.io/docs/snapshot-testing#property-matchers
+					let workerBundleWithConstantData = workerBundle.replace(
+						/------formdata-undici-0.[0-9]*/g,
+						"------formdata-undici-0.test"
+					);
+					workerBundleWithConstantData = workerBundleWithConstantData.replace(
+						/functionsWorker-0.[0-9]*.js/g,
+						"functionsWorker-0.test.js"
+					);
+					workerBundleWithConstantData = workerBundleWithConstantData.replace(
+						/[0-9a-z]*-hello.wasm/g,
+						"test-hello.wasm"
+					);
+
+					// check we appended the metadata
+					expect(workerBundleWithConstantData).toContain(
+						`Content-Disposition: form-data; name="metadata"`
+					);
+					expect(workerBundleWithConstantData).toContain(
+						`{"main_module":"functionsWorker-0.test.js"}`
+					);
+
+					// check we appended the compiled Worker
+					expect(workerBundleWithConstantData).toContain(
+						`Content-Disposition: form-data; name="functionsWorker-0.test.js"; filename="functionsWorker-0.test.js"`
+					);
+					expect(workerBundleWithConstantData).toContain(`
+import hello from "./test-hello.wasm";
+async function onRequest() {
+  const helloModule = await WebAssembly.instantiate(hello);
+  const greeting = helloModule.exports.hello;
+  return new Response(greeting);
+}`);
+
+					// check we appended the wasm module
+					expect(workerBundleWithConstantData).toContain(
+						`Content-Disposition: form-data; name="./test-hello.wasm"; filename="./test-hello.wasm"`
+					);
+					expect(workerBundleWithConstantData).toContain(`HELLO WORLD`);
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								url: "https://abcxyz.foo.pages.dev/",
+							},
+						})
+					);
+				}
+			),
+
+			// /accounts/:accountId/pages/projects/<project-name>
+			rest.get(
+				"*/accounts/:accountId/pages/projects/foo",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								deployment_configs: { production: {}, preview: {} },
+							},
+						})
+					);
+				}
+			)
+		);
+
+		await runWrangler(
+			"pages publish public --project-name=foo --experimental-worker-bundle=true"
+		);
+
+		expect(std.out).toMatchInlineSnapshot(`
+		"✨ Compiled Worker successfully
+		✨ Success! Uploaded 1 files (TIMINGS)
+
+		✨ Uploading Functions bundle
+		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+	`);
+
+		// make sure there were no errors
+		expect(std.err).toMatchInlineSnapshot('""');
+	});
+
+	it("should bundle _worker.js and resolve its external module imports if the `--experimental-worker-bundle` flag is set", async () => {
+		// set up the directory of static files to upload
+		mkdirSync("public");
+		writeFileSync("public/README.md", "This is a readme");
+
+		// set up hello.wasm
+		mkdirSync("wasm");
+		writeFileSync("wasm/hello.wasm", "HELLO");
+
+		// set up _worker.js
+		writeFileSync(
+			"public/_worker.js",
+			`
+			import hello from "./../wasm/hello.wasm";
+			export default {
+				async fetch(request, env) {
+					const url = new URL(request.url);
+					const helloModule = await WebAssembly.instantiate(hello);
+					const greeting = helloModule.exports.hello;
+					return url.pathname.startsWith('/hello') ? new Response(greeting) : env.ASSETS.fetch(request);
+				}
+			};
+		`
+		);
+
+		mockGetUploadTokenRequest(
+			"<<funfetti-auth-jwt>>",
+			"some-account-id",
+			"foo"
+		);
+
+		msw.use(
+			// /pages/assets/check-missing
+			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
+				const body = (await req.json()) as {
+					hashes: string[];
+				};
+
+				expect(req.headers.get("Authorization")).toBe(
+					"Bearer <<funfetti-auth-jwt>>"
+				);
+				expect(body).toMatchObject({
+					hashes: ["13a03eaf24ae98378acd36ea00f77f2f"],
+				});
+
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: body.hashes,
+					})
+				);
+			}),
+
+			// /pages/assets/upload
+			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
+				expect(req.headers.get("Authorization")).toBe(
+					"Bearer <<funfetti-auth-jwt>>"
+				);
+
+				expect(await req.json()).toMatchObject([
+					{
+						key: "13a03eaf24ae98378acd36ea00f77f2f",
+						value: Buffer.from("This is a readme").toString("base64"),
+						metadata: {
+							contentType: "text/markdown",
+						},
+						base64: true,
+					},
+				]);
+
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: null,
+					})
+				);
+			}),
+
+			// /accounts/:accountId/pages/projects/<project-name>/deployments
+			rest.post(
+				"*/accounts/:accountId/pages/projects/foo/deployments",
+				async (req, res, ctx) => {
+					const body = await (req as RestRequestWithFormData).formData();
+					const manifest = JSON.parse(body.get("manifest") as string);
+					const workerBundle = body.get("_worker.bundle") as string;
+
+					expect(req.params.accountId).toEqual("some-account-id");
+					// make sure this is all we uploaded
+					expect([...body.keys()].sort()).toEqual(
+						["manifest", "_worker.bundle"].sort()
+					);
+					expect(manifest).toMatchInlineSnapshot(`
+				Object {
+				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
+				}
+			`);
+					// some fields in workerBundle, such as the undici form boundary
+					// or the file hashes, are randomly generated. Let's replace these
+					// dynamic values with static ones so we can properly test the
+					// contents of `workerBundle`
+					// see https://jestjs.io/docs/snapshot-testing#property-matchers
+					let workerBundleWithConstantData = workerBundle.replace(
+						/------formdata-undici-0.[0-9]*/g,
+						"------formdata-undici-0.test"
+					);
+					workerBundleWithConstantData = workerBundleWithConstantData.replace(
+						/bundledWorker-0.[0-9]*.mjs/g,
+						"bundledWorker-0.test.mjs"
+					);
+					workerBundleWithConstantData = workerBundleWithConstantData.replace(
+						/[0-9a-z]*-hello.wasm/g,
+						"test-hello.wasm"
+					);
+
+					// we care about a couple of things here, like the presence of `metadata`,
+					// `bundledWorker`, the wasm import, etc., and since `workerBundle` is
+					// small enough, let's go ahead and snapshot test the whole thing
+					expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
+				"------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"metadata\\"
+
+				{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
+				------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
+				Content-Type: application/javascript+module
+
+				// _worker.js
+				import hello from \\"./test-hello.wasm\\";
+				var worker_default = {
+				  async fetch(request, env) {
+				    const url = new URL(request.url);
+				    const helloModule = await WebAssembly.instantiate(hello);
+				    const greeting = helloModule.exports.hello;
+				    return url.pathname.startsWith(\\"/hello\\") ? new Response(greeting) : env.ASSETS.fetch(request);
+				  }
+				};
+				export {
+				  worker_default as default
+				};
+				//# sourceMappingURL=bundledWorker-0.test.mjs.map
+
+				------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"./test-hello.wasm\\"; filename=\\"./test-hello.wasm\\"
+				Content-Type: application/wasm
+
+				HELLO
+				------formdata-undici-0.test--"
+			`);
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								url: "https://abcxyz.foo.pages.dev/",
+							},
+						})
+					);
+				}
+			),
+
+			// /accounts/:accountId/pages/projects/<project-name>
+			rest.get(
+				"*/accounts/:accountId/pages/projects/foo",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								deployment_configs: { production: {}, preview: {} },
+							},
+						})
+					);
+				}
+			)
+		);
+
+		await runWrangler(
+			"pages publish public --project-name=foo --experimental-worker-bundle=true"
+		);
+
+		expect(std.out).toMatchInlineSnapshot(`
+		"✨ Success! Uploaded 1 files (TIMINGS)
+
+		✨ Compiled Worker successfully
+		✨ Uploading Worker bundle
+		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+	`);
+
+		// make sure there were no errors
+		expect(std.err).toMatchInlineSnapshot('""');
+	});
+
 	describe("_worker.js bundling", () => {
 		beforeEach(() => {
 			mkdirSync("public");

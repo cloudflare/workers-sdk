@@ -9,6 +9,7 @@ import { generateConfigFromFileTree } from "./functions/filepath-routing";
 import { writeRoutesModule } from "./functions/routes";
 import { convertRoutesToRoutesJSONSpec } from "./functions/routes-transformation";
 import { RUNNING_BUILDERS } from "./utils";
+import type { BundleResult } from "../bundle";
 import type { PagesBuildArgs } from "./build";
 import type { Config } from "./functions/routes";
 
@@ -91,39 +92,39 @@ export async function buildFunctions({
 	});
 
 	const absoluteFunctionsDirectory = resolve(functionsDirectory);
+	let bundle: BundleResult;
 
 	if (plugin) {
-		RUNNING_BUILDERS.push(
-			await buildPlugin({
-				routesModule,
-				outfile,
-				minify,
-				sourcemap,
-				watch,
-				nodeCompat,
-				functionsDirectory: absoluteFunctionsDirectory,
-				local,
-				betaD1Shims: d1Databases,
-				onEnd,
-			})
-		);
+		bundle = await buildPlugin({
+			routesModule,
+			outfile,
+			minify,
+			sourcemap,
+			watch,
+			nodeCompat,
+			functionsDirectory: absoluteFunctionsDirectory,
+			local,
+			betaD1Shims: d1Databases,
+			onEnd,
+		});
 	} else {
-		RUNNING_BUILDERS.push(
-			await buildWorker({
-				routesModule,
-				outfile,
-				minify,
-				sourcemap,
-				fallbackService,
-				watch,
-				functionsDirectory: absoluteFunctionsDirectory,
-				local,
-				betaD1Shims: d1Databases,
-				onEnd,
-				buildOutputDirectory,
-				nodeCompat,
-				experimentalWorkerBundle,
-			})
-		);
+		bundle = await buildWorker({
+			routesModule,
+			outfile,
+			minify,
+			sourcemap,
+			fallbackService,
+			watch,
+			functionsDirectory: absoluteFunctionsDirectory,
+			local,
+			betaD1Shims: d1Databases,
+			onEnd,
+			buildOutputDirectory,
+			nodeCompat,
+			experimentalWorkerBundle,
+		});
 	}
+
+	RUNNING_BUILDERS.push(bundle);
+	return bundle;
 }
