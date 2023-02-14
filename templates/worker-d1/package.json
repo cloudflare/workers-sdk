@@ -1,6 +1,7 @@
 {
-	"name": "worker-d1",
+	"name": "template-worker-d1",
 	"version": "1.0.0",
+	"private": true,
 	"description": "**Note: requires D1 Beta Access**",
 	"keywords": [],
 	"license": "ISC",

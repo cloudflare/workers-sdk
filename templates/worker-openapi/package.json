@@ -1,6 +1,7 @@
 {
 	"name": "worker-openapi",
 	"version": "1.0.0",
+	"private": true,
 	"description": "Cloudflare workers template with OpenAPI 3 schema generation and validation",
 	"keywords": [],
 	"license": "MIT",

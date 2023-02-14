@@ -55,6 +55,6 @@
 		"autoprefixer": "^9.8.8",
 		"postcss": "^7.0.39",
 		"tailwindcss": "npm:@tailwindcss/postcss7-compat@^2.2.17",
-		"wrangler": "^0.0.0-602af8a"
+		"wrangler": "^2.9.1"
 	}
 }
