@@ -27,17 +27,6 @@ import type {
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type { Database } from "./types";
-import type { Statement as StatementType } from "@miniflare/d1";
-import type { createSQLiteDB as createSQLiteDBType } from "@miniflare/shared";
-
-type MiniflareNpxImportTypes = [
-	{
-		Statement: typeof StatementType;
-	},
-	{
-		createSQLiteDB: typeof createSQLiteDBType;
-	}
-];
 
 export type QueryResult = {
 	results: Record<string, string | number | boolean>[];
@@ -224,11 +213,10 @@ async function executeLocally({
 
 	const dbDir = path.join(persistencePath, "d1");
 	const dbPath = path.join(dbDir, `${localDB.binding}.sqlite3`);
-	const [{ Statement }, { createSQLiteDB }] =
-		await npxImport<MiniflareNpxImportTypes>(
-			["@miniflare/d1", "@miniflare/shared"],
-			logger.log
-		);
+	const [{ D1Database, D1DatabaseAPI }, { createSQLiteDB }] = await npxImport<
+		// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+		[typeof import("@miniflare/d1"), typeof import("@miniflare/shared")]
+	>(["@miniflare/d1", "@miniflare/shared"], logger.log);
 
 	if (!existsSync(dbDir)) {
 		const ok =
@@ -240,15 +228,11 @@ async function executeLocally({
 	}
 
 	logger.log(`🌀 Loading DB at ${readableRelative(dbPath)}`);
-	const db = await createSQLiteDB(dbPath);
 
-	const results: QueryResult[] = [];
-	for (const sql of queries) {
-		const statement = new Statement(db, sql);
-		results.push((await statement.all()) as QueryResult);
-	}
-
-	return results;
+	const sqliteDb = await createSQLiteDB(dbPath);
+	const db = new D1Database(new D1DatabaseAPI(sqliteDb));
+	const stmts = queries.map((query) => db.prepare(query));
+	return (await db.batch(stmts)) as QueryResult[];
 }
 
 async function executeRemotely({
