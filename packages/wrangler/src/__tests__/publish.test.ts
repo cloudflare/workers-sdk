@@ -6489,7 +6489,7 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it.only("should output to target es2022 even if tsconfig says otherwise", async () => {
+		it("should output to target es2022 even if tsconfig says otherwise", async () => {
 			writeWranglerToml();
 			writeWorkerSource();
 			fs.writeFileSync(
