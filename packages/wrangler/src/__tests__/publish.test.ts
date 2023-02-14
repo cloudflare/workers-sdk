@@ -6489,9 +6489,23 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("should output to target es2020 even if tsconfig says otherwise", async () => {
+		it.only("should output to target es2022 even if tsconfig says otherwise", async () => {
 			writeWranglerToml();
 			writeWorkerSource();
+			fs.writeFileSync(
+				"./index.js",
+				`
+			import { foo } from "./another";
+
+const myArray = ["apple", "banana", "cherry"];
+
+export default {
+  async fetch(request) {
+    return new Response(myArray.at(1));
+  },
+};
+`
+			);
 			fs.writeFileSync(
 				"tsconfig.json",
 				JSON.stringify({
@@ -6503,7 +6517,7 @@ addEventListener('fetch', event => {});`
 			);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
-				expectedEntry: "export {", // just check that the export is preserved
+				expectedEntry: /export {|myArray.at(1)/, // check that the export and .at() is preserved
 			});
 			await runWrangler("publish index.js"); // this would throw if we tried to compile with es5
 			expect(std).toMatchInlineSnapshot(`
@@ -7417,7 +7431,7 @@ function mockLastDeploymentRequest() {
 function mockUploadWorkerRequest(
 	options: {
 		available_on_subdomain?: boolean;
-		expectedEntry?: string;
+		expectedEntry?: string | RegExp;
 		expectedMainModule?: string;
 		expectedType?: "esm" | "sw";
 		expectedBindings?: unknown;

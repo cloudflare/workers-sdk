@@ -152,7 +152,7 @@ export default async function guessWorkerFormat(
 		metafile: true,
 		bundle: false,
 		format: "esm",
-		target: "es2020",
+		target: "es2022",
 		write: false,
 		loader: {
 			".js": "jsx",
