@@ -1,4 +1,7 @@
-import { dirname } from "node:path";
+import { existsSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { basename, dirname, join, resolve as resolvePath } from "node:path";
+import { createUploadWorkerBundleContents } from "../api/pages/create-worker-bundle-contents";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -9,7 +12,9 @@ import {
 	FunctionsNoRoutesError,
 	getFunctionsNoRoutesWarning,
 } from "./errors";
+import { buildRawWorker } from "./functions/buildWorker";
 import { pagesBetaWarning } from "./utils";
+import type { BundleResult } from "../bundle";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -82,6 +87,13 @@ export function Options(yargs: CommonYargsArgv) {
 				deprecated: true,
 				hidden: true,
 			},
+			"experimental-worker-bundle": {
+				type: "boolean",
+				default: false,
+				hidden: true,
+				description:
+					"Whether to process non-JS module imports or not, such as wasm/text/binary, when we run bundling on `functions` or `_worker.js`",
+			},
 		})
 		.epilogue(pagesBetaWarning);
 }
@@ -99,6 +111,7 @@ export const Handler = async ({
 	buildOutputDirectory,
 	nodeCompat,
 	bindings,
+	experimentalWorkerBundle,
 }: PagesBuildArgs) => {
 	if (!isInPagesCI) {
 		// Beta message for `wrangler pages <commands>` usage
@@ -122,31 +135,98 @@ export const Handler = async ({
 	}
 
 	buildOutputDirectory ??= dirname(outfile);
-	try {
-		await buildFunctions({
-			outfile,
-			outputConfigPath,
-			functionsDirectory: directory,
-			minify,
-			sourcemap,
-			fallbackService,
-			watch,
-			plugin,
-			buildOutputDirectory,
-			nodeCompat,
-			routesOutputPath,
+
+	const workerScriptPath = resolvePath(buildOutputDirectory, "_worker.js");
+	const foundWorkerScript = existsSync(workerScriptPath);
+	let bundle: BundleResult | undefined = undefined;
+
+	if (!foundWorkerScript && !existsSync(directory)) {
+		throw new FatalError(`Could not find anything to build.
+We first looked inside the build output directory (${basename(
+			resolvePath(buildOutputDirectory)
+		)}), then looked for the Functions directory (${basename(
+			directory
+		)}) but couldn't find anything to build.
+	➤ If you are trying to build _worker.js, please make sure you provide the [--build-output-directory] containing your static files.
+	➤ If you are trying to build Pages Functions, please make sure [--directory] points to the location of your Functions files.`);
+	}
+
+	/**
+	 * prioritize building `_worker.js` over Pages Functions, if both exist
+	 * and if we were able to resolve _worker.js
+	 */
+	if (experimentalWorkerBundle && foundWorkerScript) {
+		/**
+		 * `buildRawWorker` builds `_worker.js`, but doesn't give us the bundle
+		 * we want to return, which includes the external dependencies (like wasm,
+		 * binary, text). Let's output that build result to memory and only write
+		 * to disk once we have the final bundle
+		 */
+		const workerOutfile = experimentalWorkerBundle
+			? join(tmpdir(), `./bundledWorker-${Math.random()}.mjs`)
+			: outfile;
+
+		bundle = await buildRawWorker({
+			workerScriptPath,
+			outfile: workerOutfile,
+			directory: buildOutputDirectory,
 			local: false,
-			d1Databases,
+			sourcemap: true,
+			watch: false,
+			onEnd: () => {},
+			betaD1Shims: d1Databases,
+			experimentalWorkerBundle,
 		});
-	} catch (e) {
-		if (e instanceof FunctionsNoRoutesError) {
-			throw new FatalError(
-				getFunctionsNoRoutesWarning(directory),
-				EXIT_CODE_FUNCTIONS_NO_ROUTES_ERROR
-			);
-		} else {
-			throw e;
+	} else {
+		try {
+			/**
+			 * `buildFunctions` builds `/functions`, but doesn't give us the bundle
+			 * we want to return, which includes the external dependencies (like wasm,
+			 * binary, text). Let's output that build result to memory and only write
+			 * to disk once we have the final bundle
+			 */
+			const functionsOutfile = experimentalWorkerBundle
+				? join(tmpdir(), `./functionsWorker-${Math.random()}.js`)
+				: outfile;
+
+			bundle = await buildFunctions({
+				outfile: functionsOutfile,
+				outputConfigPath,
+				functionsDirectory: directory,
+				minify,
+				sourcemap,
+				fallbackService,
+				watch,
+				plugin,
+				buildOutputDirectory,
+				nodeCompat,
+				routesOutputPath,
+				local: false,
+				d1Databases,
+				experimentalWorkerBundle,
+			});
+		} catch (e) {
+			if (e instanceof FunctionsNoRoutesError) {
+				throw new FatalError(
+					getFunctionsNoRoutesWarning(directory),
+					EXIT_CODE_FUNCTIONS_NO_ROUTES_ERROR
+				);
+			} else {
+				throw e;
+			}
 		}
 	}
+
+	if (experimentalWorkerBundle) {
+		const workerBundleContents = await createUploadWorkerBundleContents(
+			bundle as BundleResult
+		);
+
+		writeFileSync(
+			outfile,
+			Buffer.from(await workerBundleContents.arrayBuffer())
+		);
+	}
+
 	await metrics.sendMetricsEvent("build pages functions");
 };

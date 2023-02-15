@@ -346,6 +346,7 @@ const Scopes = {
 	"pages:write":
 		"See and change Cloudflare Pages projects, settings and deployments.",
 	"zone:read": "Grants read level access to account zone.",
+	"ssl_certs:write": "See and manage mTLS certificates for your account",
 } as const;
 
 /**
