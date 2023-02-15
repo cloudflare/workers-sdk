@@ -1,11 +1,11 @@
-import { getArtifactForWorkflowRun } from "../../utils/getArtifactForWorkflowRun";
-import { generateGitHubFetch } from "../../utils/gitHubFetch";
+import { getArtifactForWorkflowRun } from "../../../utils/getArtifactForWorkflowRun";
+import { generateGitHubFetch } from "../../../utils/gitHubFetch";
 
 export const onRequestGet: PagesFunction<
 	{ GITHUB_API_TOKEN: string; GITHUB_USER: string },
-	"path"
+	"path" | "repo"
 > = async ({ params, env, waitUntil }) => {
-	const { path } = params;
+	const { repo, path } = params;
 
 	if (!Array.isArray(path)) {
 		return new Response(null, { status: 404 });
@@ -18,5 +18,11 @@ export const onRequestGet: PagesFunction<
 
 	const gitHubFetch = generateGitHubFetch(env);
 
-	return getArtifactForWorkflowRun({ runID, name, gitHubFetch, waitUntil });
+	return getArtifactForWorkflowRun({
+		repo: repo as string,
+		runID,
+		name,
+		gitHubFetch,
+		waitUntil,
+	});
 };
