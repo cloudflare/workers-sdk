@@ -154,6 +154,11 @@ interface CfDispatchNamespace {
 	namespace: string;
 }
 
+interface CfMTlsCertificate {
+	binding: string;
+	certificate_id: string;
+}
+
 interface CfLogfwdr {
 	schema: string | undefined;
 	bindings: CfLogfwdrBinding[];
@@ -214,6 +219,7 @@ export interface CfWorkerInit {
 		services: CfService[] | undefined;
 		analytics_engine_datasets: CfAnalyticsEngineDataset[] | undefined;
 		dispatch_namespaces: CfDispatchNamespace[] | undefined;
+		mtls_certificates: CfMTlsCertificate[] | undefined;
 		logfwdr: CfLogfwdr | undefined;
 		unsafe: CfUnsafeBinding[] | undefined;
 	};

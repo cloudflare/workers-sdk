@@ -480,6 +480,13 @@ interface EnvironmentNonInheritable {
 			[key: string]: unknown;
 		}[];
 	};
+
+	mtls_certificates: {
+		/** The binding name used to refer to the certificate in the worker */
+		binding: string;
+		/** The uuid of the uploaded mTLS certificate */
+		certificate_id: string;
+	}[];
 }
 
 /**

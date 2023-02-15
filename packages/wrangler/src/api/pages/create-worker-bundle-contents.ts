@@ -59,6 +59,7 @@ function createWorkerBundleFormData(workerBundle: BundleResult): FormData {
 			services: undefined,
 			analytics_engine_datasets: undefined,
 			dispatch_namespaces: undefined,
+			mtls_certificates: undefined,
 			logfwdr: undefined,
 			unsafe: undefined,
 		},

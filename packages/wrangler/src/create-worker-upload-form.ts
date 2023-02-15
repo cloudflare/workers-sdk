@@ -45,6 +45,7 @@ type WorkerMetadataBinding =
 	| { type: "service"; name: string; service: string; environment?: string }
 	| { type: "analytics_engine"; name: string; dataset?: string }
 	| { type: "dispatch_namespace"; name: string; namespace: string }
+	| { type: "mtls_certificate"; name: string; certificate_id: string }
 	| {
 			type: "logfwdr";
 			name: string;
@@ -163,6 +164,14 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			name: binding,
 			type: "dispatch_namespace",
 			namespace,
+		});
+	});
+
+	bindings.mtls_certificates?.forEach(({ binding, certificate_id }) => {
+		metadataBindings.push({
+			name: binding,
+			type: "mtls_certificate",
+			certificate_id,
 		});
 	});
 

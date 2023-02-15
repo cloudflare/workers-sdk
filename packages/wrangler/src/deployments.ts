@@ -5,33 +5,29 @@ import * as metrics from "./metrics";
 import type { Config } from "./config";
 import type { ServiceMetadataRes } from "./init";
 
-export type DeploymentListRes = {
-	latest: {
-		id: string;
-		number: string;
-		metadata: {
-			author_id: string;
-			author_email: string;
-			source: "api" | "dash" | "wrangler" | "terraform" | "other";
-			created_on: string;
-			modified_on: string;
-		};
-		resources: {
-			script: string;
-			bindings: unknown[];
-		};
+type DeploymentDetails = {
+	id: string;
+	number: string;
+	annotations: {
+		"workers/triggered_by": string;
+		"workers/rollback_from": string;
 	};
-	items: {
-		id: string;
-		number: string;
-		metadata: {
-			author_id: string;
-			author_email: string;
-			source: "api" | "dash" | "wrangler" | "terraform" | "other";
-			created_on: string;
-			modified_on: string;
-		};
-	}[];
+	metadata: {
+		author_id: string;
+		author_email: string;
+		source: "api" | "dash" | "wrangler" | "terraform" | "other";
+		created_on: string;
+		modified_on: string;
+	};
+	resources: {
+		script: string;
+		bindings: unknown[];
+	};
+};
+
+export type DeploymentListResult = {
+	latest: DeploymentDetails;
+	items: DeploymentDetails[];
 };
 
 export async function deployments(
@@ -59,35 +55,62 @@ export async function deployments(
 
 	const scriptTag = scriptMetadata.default_environment.script.tag;
 	const params = new URLSearchParams({ order: "asc" });
-	const { items: deploys } = await fetchResult<DeploymentListRes>(
+	const { items: deploys } = await fetchResult<DeploymentListResult>(
 		`/accounts/${accountId}/workers/deployments/by-script/${scriptTag}`,
 		undefined,
 		params
 	);
 
-	const versionMessages = deploys.map(
-		(versions) =>
-			`\nDeployment ID: ${versions.id}
-Created on: ${versions.metadata.created_on}
-Author: ${versions.metadata.author_email}
-Source: ${sourceStr(versions.metadata.source)}\n`
-	);
+	const versionMessages = deploys.map((versions) => {
+		const triggerStr = versions.annotations?.["workers/triggered_by"]
+			? `${formatTrigger(
+					versions.annotations["workers/triggered_by"]
+			  )} from ${formatSource(versions.metadata.source)}`
+			: `${formatSource(versions.metadata.source)}`;
+
+		let version = `
+Deployment ID: ${versions.id}
+Created on:    ${versions.metadata.created_on}
+Author:        ${versions.metadata.author_email}
+Trigger:       ${triggerStr}`;
+
+		if (versions.annotations?.["workers/rollback_from"]) {
+			version += `\nRollback from: ${versions.annotations["workers/rollback_from"]}`;
+		}
+
+		return version + `\n`;
+	});
 
 	versionMessages[versionMessages.length - 1] += "🟩 Active";
 	logger.log(...versionMessages);
 }
 
-function sourceStr(source: string): string {
+function formatSource(source: string): string {
 	switch (source) {
 		case "api":
-			return "📡 API";
+			return "API 📡";
 		case "dash":
-			return "🖥️ Dashboard";
+			return "Dashboard 🖥️";
 		case "wrangler":
-			return "🤠 Wrangler";
+			return "Wrangler 🤠";
 		case "terraform":
-			return "🏗️ Terraform";
+			return "Terraform 🏗️";
 		default:
 			return "Other";
+	}
+}
+
+function formatTrigger(trigger: string): string {
+	switch (trigger) {
+		case "upload":
+			return "Upload";
+		case "secret":
+			return "Secret Change";
+		case "rollback":
+			return "Rollback";
+		case "promotion":
+			return "Promotion";
+		default:
+			return "Unknown";
 	}
 }

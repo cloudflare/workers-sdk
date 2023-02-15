@@ -111,6 +111,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 									text_blobs: {},
 									data_blobs: {},
 									dispatch_namespaces: [],
+									mtls_certificates: [],
 									logfwdr: { schema: undefined, bindings: [] },
 									unsafe: [],
 								},
