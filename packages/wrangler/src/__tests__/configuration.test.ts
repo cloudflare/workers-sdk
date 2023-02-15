@@ -68,6 +68,7 @@ describe("normalizeAndValidateConfig()", () => {
 				bindings: [],
 			},
 			dispatch_namespaces: [],
+			mtls_certificates: [],
 			usage_model: undefined,
 			vars: {},
 			define: {},
@@ -2186,6 +2187,75 @@ describe("normalizeAndValidateConfig()", () => {
 			  - \\"dispatch_namespaces[5]\\" should have a string \\"binding\\" field but got {\\"binding\\":123,\\"namespace\\":\\"DISPATCH_NAMESPACE_BINDING_SERVICE_1\\"}.
 			  - \\"dispatch_namespaces[6]\\" should have a string \\"binding\\" field but got {\\"binding\\":123,\\"service\\":456}.
 			  - \\"dispatch_namespaces[6]\\" should have a string \\"namespace\\" field but got {\\"binding\\":123,\\"service\\":456}."
+		`);
+			});
+		});
+
+		describe("[mtls_certificates]", () => {
+			it("should error if mtls_certificates is not an array", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						mtls_certificates: "just a string",
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"mtls_certificates\\" should be an array but got \\"just a string\\"."
+		`);
+			});
+
+			it("should error on non valid mtls_certificates", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						mtls_certificates: [
+							"a string",
+							123,
+							false,
+							{
+								binding: 123,
+								namespace: 123,
+							},
+							{
+								binding: "CERT_ONE",
+								id: "1234",
+							},
+							{
+								binding: "CERT_TWO",
+								certificate_id: 1234,
+							},
+							// this one is valid
+							{
+								binding: "CERT_THREE",
+								certificate_id: "1234",
+							},
+							{
+								binding: true,
+								service: "1234",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - \\"mtls_certificates\\" bindings should be objects, but got \\"a string\\"
+			  - \\"mtls_certificates\\" bindings should be objects, but got 123
+			  - \\"mtls_certificates\\" bindings should be objects, but got false
+			  - \\"mtls_certificates[3]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":123,\\"namespace\\":123}.
+			  - \\"mtls_certificates[3]\\" bindings should have a string \\"certificate_id\\" field but got {\\"binding\\":123,\\"namespace\\":123}.
+			  - \\"mtls_certificates[4]\\" bindings should have a string \\"certificate_id\\" field but got {\\"binding\\":\\"CERT_ONE\\",\\"id\\":\\"1234\\"}.
+			  - \\"mtls_certificates[5]\\" bindings should have a string \\"certificate_id\\" field but got {\\"binding\\":\\"CERT_TWO\\",\\"certificate_id\\":1234}.
+			  - \\"mtls_certificates[7]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":true,\\"service\\":\\"1234\\"}.
+			  - \\"mtls_certificates[7]\\" bindings should have a string \\"certificate_id\\" field but got {\\"binding\\":true,\\"service\\":\\"1234\\"}."
 		`);
 			});
 		});
