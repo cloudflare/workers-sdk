@@ -119,12 +119,16 @@ export function parseRedirects(input: string): ParsedRedirects {
 		}
 		seen_paths.add(from);
 
-		if (status === 200 && !to.startsWith("/")) {
-			invalid.push({
-				line,
-				lineNumber: i + 1,
-				message: `Proxy (200) redirects can only point to relative paths. Got ${to}`,
-			});
+		if (status === 200) {
+			// Error can only be that it's not relative - given validateUrl is called above without onlyRelative:true,
+			// so if it's present, we can error to the user that proxying only expects relative urls
+			const [_, error] = validateUrl(to, true, true, true);
+			if (error)
+				invalid.push({
+					line,
+					lineNumber: i + 1,
+					message: `Proxy (200) redirects can only point to relative paths. Got ${to}`,
+				});
 		}
 
 		rules.push({ from, to, status, lineNumber: i + 1 });
