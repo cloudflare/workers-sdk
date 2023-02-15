@@ -30,6 +30,7 @@ import { initHandler, initOptions } from "./init";
 import { kvNamespace, kvKey, kvBulk } from "./kv";
 import { logBuildFailure, logger } from "./logger";
 import * as metrics from "./metrics";
+import { mTlsCertificateCommands } from "./mtls-certificate/cli";
 import { pages } from "./pages";
 import { formatMessage, ParseError } from "./parse";
 import { publishOptions, publishHandler } from "./publish";
@@ -437,6 +438,15 @@ export function createCLIParser(argv: string[]) {
 		"📮 Interact and manage Pub/Sub Brokers",
 		(pubsubYargs) => {
 			return pubSubCommands(pubsubYargs, subHelp);
+		}
+	);
+
+	// mtls-certificate
+	wrangler.command(
+		"mtls-certificate",
+		"🪪 Manage certificates used for mTLS connections",
+		(mtlsYargs) => {
+			return mTlsCertificateCommands(mtlsYargs.command(subHelp));
 		}
 	);
 
