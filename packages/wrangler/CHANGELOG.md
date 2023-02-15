@@ -1,5 +1,60 @@
 # wrangler
 
+## 2.10.0
+
+### Minor Changes
+
+- [#2567](https://github.com/cloudflare/workers-sdk/pull/2567) [`02ea098e`](https://github.com/cloudflare/workers-sdk/commit/02ea098ed2f0af58dc287a8f37819c96279235eb) Thanks [@matthewdavidrodgers](https://github.com/matthewdavidrodgers)! - Add mtls-certificate commands and binding support
+
+  Functionality implemented first as an api, which is used in the cli standard
+  api commands
+
+  Note that this adds a new OAuth scope, so OAuth users will need to log out and
+  log back in to use the new 'mtls-certificate' commands
+  However, publishing with mtls-certifcate bindings (bindings of type
+  'mtls_certificate') will work without the scope.
+
+* [#2717](https://github.com/cloudflare/workers-sdk/pull/2717) [`c5943c9f`](https://github.com/cloudflare/workers-sdk/commit/c5943c9fe54e8bcf9ee1bf8ca992d2f8b84360a1) Thanks [@mrbbot](https://github.com/mrbbot)! - Upgrade `miniflare` to [`2.12.0`](https://github.com/cloudflare/miniflare/releases/tag/v2.12.0), including support for R2 multipart upload bindings, the `nodejs_compat` compatibility flag, D1 fixes and more!
+
+- [#2579](https://github.com/cloudflare/workers-sdk/pull/2579) [`bf558bdc`](https://github.com/cloudflare/workers-sdk/commit/bf558bdc6133acdffbfb08f6b8bd053bf1f25113) Thanks [@Jean-Luc-Picard@federation.org](https://github.com/Jean-Luc-Picard@federation.org)! - Added additional fields to the output of `wrangler deployments` command. The additional fields are from the new value in the response `annotations` which includes `workers/triggered_by` and `rollback_from`
+
+  Example:
+
+  ```
+  Deployment ID: Galaxy-Class
+  Created on:    2021-01-04T00:00:00.000000Z
+
+  Trigger:       Upload from Wrangler 🤠
+  Rollback from: MOCK-DEPLOYMENT-ID-2222
+  ```
+
+### Patch Changes
+
+- [#2624](https://github.com/cloudflare/workers-sdk/pull/2624) [`882bf592`](https://github.com/cloudflare/workers-sdk/commit/882bf592fa3a16a8a020808f70ef936bc7f87209) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Add wasm support in `wrangler pages publish`
+
+  Currently it is not possible to import `wasm` modules in either Pages
+  Functions or Pages Advanced Mode projects.
+
+  This commit caries out work to address the aforementioned issue by
+  enabling `wasm` module imports in `wrangler pages publish`. As a result,
+  Pages users can now import their `wasm` modules withing their Functions
+  or `_worker.js` files, and `wrangler pages publish` will correctly
+  bundle everything and serve these "external" modules.
+
+* [#2683](https://github.com/cloudflare/workers-sdk/pull/2683) [`68a2a19e`](https://github.com/cloudflare/workers-sdk/commit/68a2a19ec962aeeb34059e1e98d088e021048739) Thanks [@mrbbot](https://github.com/mrbbot)! - Fix internal middleware system to allow D1 databases and `--test-scheduled` to be used together
+
+- [#2609](https://github.com/cloudflare/workers-sdk/pull/2609) [`58ac8a78`](https://github.com/cloudflare/workers-sdk/commit/58ac8a783b95c2c884781e5c8af675fe8036644b) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: make sure that the pages publish --no-bundle flag is correctly recognized
+
+* [#2696](https://github.com/cloudflare/workers-sdk/pull/2696) [`4bc78470`](https://github.com/cloudflare/workers-sdk/commit/4bc784706193e24b7a92a19c0ac76eaa7ddcb1c6) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: don't throw an error when omitting preview_database_id, warn instead
+
+- [#2715](https://github.com/cloudflare/workers-sdk/pull/2715) [`e33294b0`](https://github.com/cloudflare/workers-sdk/commit/e33294b07ced96707cad9d71feb768b4ac435f76) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: make it possible to run SQL against preview databases
+
+* [#2685](https://github.com/cloudflare/workers-sdk/pull/2685) [`2b1177ad`](https://github.com/cloudflare/workers-sdk/commit/2b1177ad524b33a4364bc6bed58c3e0b4c59775e) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - You can now import Wasm modules in Pages Functions and Pages Functions Advanced Mode (`_worker.js`).
+  This change specifically enables `wasm` module imports in `wrangler pages functions build`.
+  As a result, Pages users can now import their `wasm` modules within their Functions or
+  `_worker.js` files, and `wrangler pages functions build` will correctly bundle everything
+  and output the expected result file.
+
 ## 2.9.1
 
 ### Patch Changes
@@ -95,7 +150,7 @@
         Note: Run this command with the environment variable NO_D1_WARNING=true to hide this message
 
         For example: `export NO_D1_WARNING=true && wrangler <YOUR COMMAND HERE>`
-  
+
   --------------------
   🚧 D1 is currently in open alpha and is not recommended for production data and traffic
   🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
@@ -120,46 +175,45 @@
   └────────────┴─────────────────────┴───────────────────┘
   ```
 
+**After:**
 
-  **After:**
-
-  ```bash
-  rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from customers" --json
-  [
-    {
-      "results": [
-        {
-          "CustomerID": 1,
-          "CompanyName": "Alfreds Futterkiste",
-          "ContactName": "Maria Anders"
-        },
-        {
-          "CustomerID": 4,
-          "CompanyName": "Around the Horn",
-          "ContactName": "Thomas Hardy"
-        },
-        {
-          "CustomerID": 11,
-          "CompanyName": "Bs Beverages",
-          "ContactName": "Victoria Ashworth"
-        },
-        {
-          "CustomerID": 13,
-          "CompanyName": "Bs Beverages",
-          "ContactName": "Random Name"
-        }
-      ],
-      "success": true,
-      "meta": {
-        "duration": 1.662519000004977,
-        "last_row_id": null,
-        "changes": null,
-        "served_by": "primary-xxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.db3",
-        "internal_stats": null
+```bash
+rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from customers" --json
+[
+  {
+    "results": [
+      {
+        "CustomerID": 1,
+        "CompanyName": "Alfreds Futterkiste",
+        "ContactName": "Maria Anders"
+      },
+      {
+        "CustomerID": 4,
+        "CompanyName": "Around the Horn",
+        "ContactName": "Thomas Hardy"
+      },
+      {
+        "CustomerID": 11,
+        "CompanyName": "Bs Beverages",
+        "ContactName": "Victoria Ashworth"
+      },
+      {
+        "CustomerID": 13,
+        "CompanyName": "Bs Beverages",
+        "ContactName": "Random Name"
       }
+    ],
+    "success": true,
+    "meta": {
+      "duration": 1.662519000004977,
+      "last_row_id": null,
+      "changes": null,
+      "served_by": "primary-xxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.db3",
+      "internal_stats": null
     }
-  ]
-  ```
+  }
+]
+```
 
 ## 2.8.1
 
