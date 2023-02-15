@@ -61,6 +61,20 @@ describe("migrate", () => {
 				`No migrations present at ${cwd().replaceAll("\\", "/")}/migrations.`
 			);
 		});
+
+		it("should reject the use of --preview with --local", async () => {
+			setIsTTY(false);
+			writeWranglerToml({
+				d1_databases: [
+					{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+				],
+			});
+			await runWrangler("d1 migrations create db test");
+
+			await expect(
+				runWrangler("d1 migrations apply --local db --preview")
+			).rejects.toThrowError(`Error: can't use --preview with --local`);
+		});
 	});
 
 	describe("list", () => {
