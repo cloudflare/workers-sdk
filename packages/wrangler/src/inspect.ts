@@ -151,6 +151,12 @@ export default function useInspector(props: InspectorProps) {
 			);
 			ws.close(1013, "Too many clients; only one can be connected at a time");
 		} else {
+			remoteWebSocket?.send(
+				JSON.stringify({
+					id: 100_000,
+					method: "Debugger.disable",
+				})
+			);
 			// As promised, save the created websocket in a state hook
 			setLocalWebSocket(ws);
 
