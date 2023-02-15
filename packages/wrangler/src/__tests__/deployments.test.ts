@@ -56,7 +56,7 @@ describe("deployments", () => {
 		Options:
 		      --name  The name of your worker  [string]
 
-		🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose"
+		🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
 	`);
 	});
 
@@ -153,7 +153,7 @@ describe("deployments", () => {
 				await runWrangler("deployments view 1701-E");
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
+			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 
 			{
 			  Tag: '',
@@ -229,7 +229,7 @@ describe("deployments", () => {
 
 				await runWrangler("deployments rollback 3mEgaU1T-Intrepid-someThing");
 				expect(std.out).toMatchInlineSnapshot(`
-			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
+			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 
 			Successfully rolled back to deployment ID: 3mEgaU1T-Intrepid-someThing"
 		`);
@@ -252,7 +252,7 @@ describe("deployments", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 			"? This deployment 3mEgaU1T will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback.
 			🤖 Using default value in non-interactive context: yes
-			🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
+			🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 
 			Successfully rolled back to deployment ID: 3mEgaU1T-Intrepid-someThing"
 		`);
