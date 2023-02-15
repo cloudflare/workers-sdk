@@ -16,7 +16,7 @@
 
 * [#2717](https://github.com/cloudflare/workers-sdk/pull/2717) [`c5943c9f`](https://github.com/cloudflare/workers-sdk/commit/c5943c9fe54e8bcf9ee1bf8ca992d2f8b84360a1) Thanks [@mrbbot](https://github.com/mrbbot)! - Upgrade `miniflare` to [`2.12.0`](https://github.com/cloudflare/miniflare/releases/tag/v2.12.0), including support for R2 multipart upload bindings, the `nodejs_compat` compatibility flag, D1 fixes and more!
 
-- [#2579](https://github.com/cloudflare/workers-sdk/pull/2579) [`bf558bdc`](https://github.com/cloudflare/workers-sdk/commit/bf558bdc6133acdffbfb08f6b8bd053bf1f25113) Thanks [@Jean-Luc-Picard@federation.org](https://github.com/Jean-Luc-Picard@federation.org)! - Added additional fields to the output of `wrangler deployments` command. The additional fields are from the new value in the response `annotations` which includes `workers/triggered_by` and `rollback_from`
+- [#2579](https://github.com/cloudflare/workers-sdk/pull/2579) [`bf558bdc`](https://github.com/cloudflare/workers-sdk/commit/bf558bdc6133acdffbfb08f6b8bd053bf1f25113) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - Added additional fields to the output of `wrangler deployments` command. The additional fields are from the new value in the response `annotations` which includes `workers/triggered_by` and `rollback_from`
 
   Example:
 
