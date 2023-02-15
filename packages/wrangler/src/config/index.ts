@@ -108,6 +108,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		vars,
 		wasm_modules,
 		dispatch_namespaces,
+		mtls_certificates,
 	} = bindings;
 
 	if (data_blobs !== undefined && Object.keys(data_blobs).length > 0) {
@@ -301,6 +302,18 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 				return {
 					key: binding,
 					value: namespace,
+				};
+			}),
+		});
+	}
+
+	if (mtls_certificates !== undefined && mtls_certificates.length > 0) {
+		output.push({
+			type: "mTLS Certificates",
+			entries: mtls_certificates.map(({ binding, certificate_id }) => {
+				return {
+					key: binding,
+					value: certificate_id,
 				};
 			}),
 		});

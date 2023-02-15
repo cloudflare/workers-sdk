@@ -30,7 +30,7 @@ import type {
 	ZoneNameRoute,
 	CustomDomainRoute,
 } from "../config/environment";
-import type { DeploymentListRes } from "../deployments";
+import type { DeploymentListResult } from "../deployments";
 import type { Entry } from "../entry";
 import type { PutConsumerBody } from "../queues/client";
 import type { AssetPaths } from "../sites";
@@ -551,6 +551,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			services: config.services,
 			analytics_engine_datasets: config.analytics_engine_datasets,
 			dispatch_namespaces: config.dispatch_namespaces,
+			mtls_certificates: config.mtls_certificates,
 			logfwdr: config.logfwdr,
 			unsafe: config.unsafe?.bindings,
 		};
@@ -828,7 +829,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	}
 
 	try {
-		const deploymentsList = await fetchResult<DeploymentListRes>(
+		const deploymentsList = await fetchResult<DeploymentListResult>(
 			`/accounts/${accountId}/workers/deployments/by-script/${scriptTag}`
 		);
 

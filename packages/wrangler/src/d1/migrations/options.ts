@@ -1,12 +1,17 @@
 import { Database } from "../options";
 import type { CommonYargsArgv } from "../../yargs-types";
 
-export function DatabaseWithLocal(yargs: CommonYargsArgv) {
+export function MigrationOptions(yargs: CommonYargsArgv) {
 	return Database(yargs)
 		.option("local", {
 			describe:
 				"Execute commands/files against a local DB for use with wrangler dev --local",
 			type: "boolean",
+		})
+		.option("preview", {
+			describe: "Execute commands/files against a preview D1 DB",
+			type: "boolean",
+			default: false,
 		})
 		.option("persist-to", {
 			describe:
