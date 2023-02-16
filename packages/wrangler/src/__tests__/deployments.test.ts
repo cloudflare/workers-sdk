@@ -223,7 +223,7 @@ describe("deployments", () => {
 
 			it("should successfully rollback and output a success message", async () => {
 				mockConfirm({
-					text: "This deployment 3mEgaU1T will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback.",
+					text: "This deployment 3mEgaU1T will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback. Note: Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, R2, KV, etc.).",
 					result: true,
 				});
 
@@ -237,7 +237,7 @@ describe("deployments", () => {
 
 			it("should early exit from rollback if user denies continuing", async () => {
 				mockConfirm({
-					text: "This deployment 3mEgaU1T will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback.",
+					text: "This deployment 3mEgaU1T will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback. Note: Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, R2, KV, etc.).",
 					result: false,
 				});
 
@@ -250,11 +250,12 @@ describe("deployments", () => {
 
 				await runWrangler("deployments rollback 3mEgaU1T-Intrepid-someThing");
 				expect(std.out).toMatchInlineSnapshot(`
-			"? This deployment 3mEgaU1T will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback.
+			"? This deployment 3mEgaU1T will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback. Note: Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, R2, KV, etc.).
 			🤖 Using default value in non-interactive context: yes
 			🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 
-			Successfully rolled back to deployment ID: 3mEgaU1T-Intrepid-someThing"
+			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing
+			Current Deployment ID: galactic_mission_alpha"
 		`);
 			});
 		});
