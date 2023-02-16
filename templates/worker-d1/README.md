@@ -2,8 +2,6 @@
 
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/worker-d1)
 
-> **Note: requires D1 Beta Access**
-
 This project is based off the Default Typescript Worker starter. To create a new project like this, run the following:
 
 ```sh

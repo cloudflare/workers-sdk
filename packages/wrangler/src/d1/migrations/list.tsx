@@ -12,20 +12,20 @@ import {
 	getUnappliedMigrations,
 	initMigrationsTable,
 } from "./helpers";
-import { DatabaseWithLocal } from "./options";
+import { MigrationOptions } from "./options";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../../yargs-types";
 
 export function ListOptions(yargs: CommonYargsArgv) {
-	return DatabaseWithLocal(yargs);
+	return MigrationOptions(yargs);
 }
 
 type ListHandlerOptions = StrictYargsOptionsToInterface<typeof ListOptions>;
 
 export const ListHandler = withConfig<ListHandlerOptions>(
-	async ({ config, database, local, persistTo }): Promise<void> => {
+	async ({ config, database, local, persistTo, preview }): Promise<void> => {
 		if (!local) {
 			await requireAuth({});
 		}
@@ -42,32 +42,35 @@ export const ListHandler = withConfig<ListHandlerOptions>(
 			return;
 		}
 
-		const migrationsPath = await getMigrationsPath(
-			path.dirname(config.configPath),
-			databaseInfo?.migrationsFolderPath ?? DEFAULT_MIGRATION_PATH,
-			false
-		);
+		const migrationsPath = await getMigrationsPath({
+			projectPath: path.dirname(config.configPath),
+			migrationsFolderPath:
+				databaseInfo?.migrationsFolderPath ?? DEFAULT_MIGRATION_PATH,
+			createIfMissing: false,
+		});
 
 		const migrationsTableName =
 			databaseInfo?.migrationsTableName ?? DEFAULT_MIGRATION_TABLE;
 
-		await initMigrationsTable(
+		await initMigrationsTable({
 			migrationsTableName,
 			local,
 			config,
-			database,
-			persistTo
-		);
+			name: database,
+			persistTo,
+			preview,
+		});
 
 		const unappliedMigrations = (
-			await getUnappliedMigrations(
+			await getUnappliedMigrations({
 				migrationsTableName,
 				migrationsPath,
 				local,
 				config,
-				database,
-				persistTo
-			)
+				name: database,
+				persistTo,
+				preview,
+			})
 		).map((migration) => {
 			return {
 				Name: migration,

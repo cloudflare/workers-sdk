@@ -69,13 +69,19 @@ export function Options(yargs: CommonYargsArgv) {
 			describe: "Return output as clean JSON",
 			type: "boolean",
 			default: false,
+		})
+		.option("preview", {
+			describe: "Execute commands/files against a preview D1 DB",
+			type: "boolean",
+			default: false,
 		});
 }
 
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
 
 export const Handler = async (args: HandlerOptions): Promise<void> => {
-	const { local, database, yes, persistTo, file, command, json } = args;
+	const { local, database, yes, persistTo, file, command, json, preview } =
+		args;
 	const existingLogLevel = logger.loggerLevel;
 	if (json) {
 		// set loggerLevel to error to avoid readConfig warnings appearing in JSON output
@@ -96,6 +102,7 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 		file,
 		command,
 		json,
+		preview,
 	});
 
 	// Early exit if prompt rejected
@@ -139,6 +146,7 @@ export async function executeSql({
 	file,
 	command,
 	json,
+	preview,
 }: {
 	local: boolean | undefined;
 	config: ConfigFields<DevConfig> & Environment;
@@ -148,9 +156,12 @@ export async function executeSql({
 	file: string | undefined;
 	command: string | undefined;
 	json: boolean | undefined;
+	preview: boolean | undefined;
 }) {
 	const sql = file ? readFileSync(file) : command;
 	if (!sql) throw new Error(`Error: must provide --command or --file.`);
+	if (preview && local)
+		throw new Error(`Error: can't use --preview with --local`);
 	if (persistTo && !local)
 		throw new Error(`Error: can't use --persist-to without --local`);
 	logger.log(`🌀 Mapping SQL input into an array of statements`);
@@ -180,6 +191,7 @@ export async function executeSql({
 				shouldPrompt,
 				batches: batchSplit(queries),
 				json,
+				preview,
 		  });
 }
 
@@ -241,12 +253,14 @@ async function executeRemotely({
 	shouldPrompt,
 	batches,
 	json,
+	preview,
 }: {
 	config: Config;
 	name: string;
 	shouldPrompt: boolean | undefined;
 	batches: string[];
 	json: boolean | undefined;
+	preview: boolean | undefined;
 }) {
 	const multiple_batches = batches.length > 1;
 	// in JSON mode, we don't want a prompt here
@@ -270,8 +284,13 @@ async function executeRemotely({
 		accountId,
 		name
 	);
-
-	logger.log(`🌀 Executing on ${name} (${db.uuid}):`);
+	if (preview && !db.previewDatabaseUuid) {
+		throw logger.error(
+			"Please define a `preview_database_id` in your wrangler.toml to execute your queries against a preview database"
+		);
+	}
+	const dbUuid = preview ? db.previewDatabaseUuid : db.uuid;
+	logger.log(`🌀 Executing on ${name} (${dbUuid}):`);
 
 	const results: QueryResult[] = [];
 	for (const sql of batches) {
@@ -281,7 +300,7 @@ async function executeRemotely({
 			);
 
 		const result = await fetchResult<QueryResult[]>(
-			`/accounts/${accountId}/d1/database/${db.uuid}/query`,
+			`/accounts/${accountId}/d1/database/${dbUuid}/query`,
 			{
 				method: "POST",
 				headers: {

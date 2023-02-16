@@ -10,11 +10,15 @@ import type { ConfigFields, DevConfig, Environment } from "../../config";
 import type { QueryResult } from "../execute";
 import type { Migration } from "../types";
 
-export async function getMigrationsPath(
-	projectPath: string,
-	migrationsFolderPath: string,
-	createIfMissing: boolean
-): Promise<string> {
+export async function getMigrationsPath({
+	projectPath,
+	migrationsFolderPath,
+	createIfMissing,
+}: {
+	projectPath: string;
+	migrationsFolderPath: string;
+	createIfMissing: boolean;
+}): Promise<string> {
 	const dir = path.resolve(projectPath, migrationsFolderPath);
 	if (fs.existsSync(dir)) return dir;
 
@@ -34,21 +38,31 @@ export async function getMigrationsPath(
 	throw new Error(`No migrations present at ${dir}.`);
 }
 
-export async function getUnappliedMigrations(
-	migrationsTableName: string,
-	migrationsPath: string,
-	local: boolean | undefined,
-	config: ConfigFields<DevConfig> & Environment,
-	name: string,
-	persistTo: string | undefined
-): Promise<Array<string>> {
+export async function getUnappliedMigrations({
+	migrationsTableName,
+	migrationsPath,
+	local,
+	config,
+	name,
+	persistTo,
+	preview,
+}: {
+	migrationsTableName: string;
+	migrationsPath: string;
+	local: boolean | undefined;
+	config: ConfigFields<DevConfig> & Environment;
+	name: string;
+	persistTo: string | undefined;
+	preview: boolean | undefined;
+}): Promise<Array<string>> {
 	const appliedMigrations = (
 		await listAppliedMigrations(
 			migrationsTableName,
 			local,
 			config,
 			name,
-			persistTo
+			persistTo,
+			preview
 		)
 	).map((migration) => {
 		return migration.name;
@@ -71,7 +85,8 @@ const listAppliedMigrations = async (
 	local: boolean | undefined,
 	config: ConfigFields<DevConfig> & Environment,
 	name: string,
-	persistTo: string | undefined
+	persistTo: string | undefined,
+	preview: boolean | undefined
 ): Promise<Migration[]> => {
 	const response: QueryResult[] | null = await executeSql({
 		local,
@@ -84,6 +99,7 @@ const listAppliedMigrations = async (
 		ORDER BY id`,
 		file: undefined,
 		json: undefined,
+		preview,
 	});
 
 	if (!response || response[0].results.length === 0) return [];
@@ -120,13 +136,21 @@ export function getNextMigrationNumber(migrationsPath: string): number {
 	return highestMigrationNumber + 1;
 }
 
-export const initMigrationsTable = async (
-	migrationsTableName: string,
-	local: boolean | undefined,
-	config: ConfigFields<DevConfig> & Environment,
-	name: string,
-	persistTo: string | undefined
-) => {
+export const initMigrationsTable = async ({
+	migrationsTableName,
+	local,
+	config,
+	name,
+	persistTo,
+	preview,
+}: {
+	migrationsTableName: string;
+	local: boolean | undefined;
+	config: ConfigFields<DevConfig> & Environment;
+	name: string;
+	persistTo: string | undefined;
+	preview: boolean | undefined;
+}) => {
 	return executeSql({
 		local,
 		config,
@@ -143,5 +167,6 @@ export const initMigrationsTable = async (
 				`,
 		file: undefined,
 		json: undefined,
+		preview,
 	});
 };
