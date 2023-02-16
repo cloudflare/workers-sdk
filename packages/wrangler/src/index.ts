@@ -606,6 +606,7 @@ export function createCLIParser(argv: string[]) {
 							}),
                         async (rollbackYargs) => {
 						if (
+							!rollbackYargs.yes &&
 							!(await confirm(
 								"You are about to Rollback to a previous deployment on the Edge, would you like to continue"
 							))

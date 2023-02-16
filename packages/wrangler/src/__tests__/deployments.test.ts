@@ -268,6 +268,39 @@ describe("deployments", () => {
 			}
 		`);
 			});
+
+			it("should skip prompts when `--yes` is passed", async () => {
+				await runWrangler("deployments rollback Intrepid --yes");
+
+				expect(std.out).toMatchInlineSnapshot(`
+			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
+
+			Successfully rolled back to deployment ID: Intrepid
+			Rollbacks details:
+				{
+			  \\"created_on\\": \\"2222-11-18T16:40:48.50545Z\\",
+			  \\"modified_on\\": \\"2222-01-20T18:08:47.464024Z\\",
+			  \\"id\\": \\"space_craft_1\\",
+			  \\"tag\\": \\"alien_tech_001\\",
+			  \\"tags\\": [
+			    \\"hyperdrive\\",
+			    \\"laser_cannons\\",
+			    \\"shields\\"
+			  ],
+			  \\"deployment_id\\": \\"galactic_mission_alpha\\",
+			  \\"logpush\\": true,
+			  \\"etag\\": \\"13a3240e8fb414561b0366813b0b8f42b3e6cfa0d9e70e99835dae83d0d8a794\\",
+			  \\"handlers\\": [
+			    \\"interstellar_communication\\",
+			    \\"hyperspace_navigation\\"
+			  ],
+			  \\"last_deployed_from\\": \\"spaceport_alpha\\",
+			  \\"usage_model\\": \\"intergalactic\\",
+			  \\"script\\": \\"addEventListener('interstellar_communication', event =>/n/t/t/t/t/t/t/t{ event.respondWith(transmit(event.request)) }/n/t/t/t/t/t/t/t)\\",
+			  \\"size\\": \\"1 light-year\\"
+			}"
+		`);
+			});
 		});
 	});
 });
