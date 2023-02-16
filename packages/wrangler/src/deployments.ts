@@ -1,9 +1,15 @@
 import { URLSearchParams } from "url";
 import { fetchResult, fetchScriptContent } from "./cfetch";
+import { readConfig } from "./config";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
+import { requireAuth } from "./user";
+import { getScriptName, printWranglerBanner } from ".";
+
 import type { Config } from "./config";
+import type { ConfigPath } from "./index";
 import type { ServiceMetadataRes } from "./init";
+import type { ArgumentsCamelCase } from "yargs";
 
 type DeploymentDetails = {
 	id: string;
@@ -138,7 +144,6 @@ function formatSource(source: string): string {
 			return "Other";
 	}
 }
-
 function formatTrigger(trigger: string): string {
 	switch (trigger) {
 		case "upload":
@@ -152,4 +157,47 @@ function formatTrigger(trigger: string): string {
 		default:
 			return "Unknown";
 	}
+}
+
+export async function rollbackDeployment(
+	accountId: string,
+	scriptName: string | undefined,
+	{ send_metrics: sendMetrics }: { send_metrics?: Config["send_metrics"] } = {},
+	deploymentId: string
+) {
+	await metrics.sendMetricsEvent(
+		"rollback deployments",
+		{ view: scriptName ? "single" : "all" },
+		{
+			sendMetrics,
+		}
+	);
+	try {
+		const rollbackResponse = await fetchResult<DeploymentListRes["latest"]>(
+			`/account/${accountId}/workers/scripts/${scriptName}?rollback_to=${deploymentId}`,
+			{ method: "PUT" }
+		);
+
+		logger.log(`Successfully rolled back to deployment ID: ${deploymentId}`);
+		logger.log("Rollbacks metadata:", rollbackResponse.metadata);
+	} catch (e) {
+		console.log(e);
+	}
+}
+
+export async function initializeDeployments(
+	yargs: ArgumentsCamelCase,
+	deploymentsWarning: string
+) {
+	await printWranglerBanner();
+	const config = readConfig(yargs.config as ConfigPath, yargs);
+	const accountId = await requireAuth(config);
+	const scriptName = getScriptName(
+		{ name: yargs.name as string, env: undefined },
+		config
+	);
+
+	logger.log(`${deploymentsWarning}\n`);
+
+	return { accountId, scriptName, config };
 }

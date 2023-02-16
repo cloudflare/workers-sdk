@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as TOML from "@iarna/toml";
+import { rest } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import {
@@ -8,6 +9,7 @@ import {
 	mswSuccessUserHandlers,
 	mswSuccessDeploymentDetails,
 	mswSuccessDeploymentScriptMetadata,
+	createFetchResult,
 } from "./helpers/msw";
 import { mswSuccessDeployments } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -37,6 +39,9 @@ describe("deployments", () => {
 		"wrangler deployments [deployment-id]
 
 		🚢 Displays the 10 most recent deployments for a worker
+
+		Commands:
+		  wrangler deployments rollback [deployment-id]  🔙 Rollback a deployment
 
 		Positionals:
 		  deployment-id  The ID of the deployment you want to inspect  [string]
@@ -169,6 +174,54 @@ describe("deployments", () => {
 								return new Response('Hello World from Deployment 1701-E');
 							},
 						};"
+		`);
+		});
+	});
+	describe("rollback subcommand", () => {
+		it("should successfully rollback and output a message", async () => {
+			msw.use(
+				// query param ?rollback_to=<deployment-id>
+				rest.put(
+					"*/account/:accountID/workers/scripts/:scriptName",
+					(req, res, ctx) => {
+						return res.once(
+							ctx.json(
+								createFetchResult(
+									req.url.searchParams.get("rollback_to") === "Intrepid-Class"
+										? {
+												created_on: "2222-11-18T16:40:48.50545Z",
+												modified_on: "2222-01-20T18:08:47.464024Z",
+												id: "space_craft_1",
+												tag: "alien_tech_001",
+												tags: ["hyperdrive", "laser_cannons", "shields"],
+												deployment_id: "galactic_mission_alpha",
+												logpush: true,
+												etag: "13a3240e8fb414561b0366813b0b8f42b3e6cfa0d9e70e99835dae83d0d8a794",
+												handlers: [
+													"interstellar_communication",
+													"hyperspace_navigation",
+												],
+												last_deployed_from: "spaceport_alpha",
+												usage_model: "intergalactic",
+												script: `addEventListener('interstellar_communication', event =\u003e
+							{ event.respondWith(transmit(event.request)) }
+							)`,
+												size: "1 light-year",
+										  }
+										: {}
+								)
+							)
+						);
+					}
+				)
+			);
+
+			await runWrangler("deployments rollback Intrepid-Class");
+			expect(std.out).toMatchInlineSnapshot(`
+			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
+
+			Successfully rolled back to deployment ID: Intrepid-Class
+			Rollbacks metadata: undefined"
 		`);
 		});
 	});

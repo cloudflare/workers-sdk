@@ -9,7 +9,11 @@ import { isBuildFailure } from "./bundle";
 import { loadDotEnv, readConfig } from "./config";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
-import { deployments } from "./deployments";
+import {
+	deployments,
+	initializeDeployments,
+	rollbackDeployment,
+} from "./deployments";
 import {
 	buildHandler,
 	buildOptions,
@@ -41,13 +45,7 @@ import { secret, secretBulkHandler, secretBulkOptions } from "./secret";
 import { tailOptions, tailHandler } from "./tail";
 import { generateTypes } from "./type-generation";
 import { updateCheck } from "./update-check";
-import {
-	listScopes,
-	login,
-	logout,
-	requireAuth,
-	validateScopeKeys,
-} from "./user";
+import { listScopes, login, logout, validateScopeKeys } from "./user";
 import { whoami } from "./whoami";
 
 import type { Config } from "./config";
@@ -593,6 +591,40 @@ export function createCLIParser(argv: string[]) {
 					describe: "The name of your worker",
 					type: "string",
 				})
+				.command(
+					"rollback [deployment-id]",
+					"🔙 Rollback a deployment",
+					(rollbackYargs) => {
+						return rollbackYargs
+							.positional("deployment-id", {
+								describe: "The ID of the deployment you want to inspect",
+								type: "string",
+								demandOption: false,
+							})
+							.option("yes", {
+								alias: "y",
+								describe: "Skip confirmation prompt",
+								type: "boolean",
+								default: false,
+							});
+					},
+					async (
+						rollbackYargs: ArgumentsCamelCase<{
+							deploymentId: string;
+							yes: boolean;
+						}>
+					) => {
+						const { accountId, scriptName, config } =
+							await initializeDeployments(rollbackYargs, deploymentsWarning);
+
+						await rollbackDeployment(
+							accountId,
+							scriptName,
+							config,
+							rollbackYargs.deploymentId
+						);
+					}
+				)
 				.epilogue(deploymentsWarning),
 		async (
 			deploymentsYargs: ArgumentsCamelCase<{
@@ -600,15 +632,10 @@ export function createCLIParser(argv: string[]) {
 				deploymentId: string;
 			}>
 		) => {
-			await printWranglerBanner();
-			const config = readConfig(deploymentsYargs.config, deploymentsYargs);
-			const accountId = await requireAuth(config);
-			const scriptName = getScriptName(
-				{ name: deploymentsYargs.name, env: undefined },
-				config
+			const { accountId, scriptName, config } = await initializeDeployments(
+				deploymentsYargs,
+				deploymentsWarning
 			);
-
-			logger.log(`${deploymentsWarning}\n`);
 			await deployments(
 				accountId,
 				scriptName,
