@@ -32,7 +32,7 @@ import {
 	createFetchResult,
 	msw,
 	mswSuccessDeployments,
-	mswSuccessLastDeployment,
+	mswSuccessDeploymentScriptMetadata,
 } from "./helpers/msw";
 import { FileReaderSync } from "./helpers/msw/read-file-sync";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -7460,7 +7460,7 @@ function mockDeploymentsListRequest() {
 }
 
 function mockLastDeploymentRequest() {
-	msw.use(...mswSuccessLastDeployment);
+	msw.use(...mswSuccessDeploymentScriptMetadata);
 }
 
 /** Create a mock handler for the request to upload a worker script. */

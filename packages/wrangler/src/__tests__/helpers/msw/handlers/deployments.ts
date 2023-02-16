@@ -77,17 +77,68 @@ export const mswSuccessDeployments = [
 	),
 ];
 
-export const mswSuccessLastDeployment = [
+export const mswSuccessDeploymentScriptMetadata = [
 	rest.get(
 		"*/accounts/:accountId/workers/services/:scriptName",
 		(_, res, ctx) => {
 			return res.once(
 				ctx.json(
 					createFetchResult({
-						default_environment: { script: { last_deployed_from: "wrangler" } },
+						default_environment: {
+							script: { last_deployed_from: "wrangler", tag: "MOCK-TAG" },
+						},
 					})
 				)
 			);
+		}
+	),
+];
+
+export const mswSuccessDeploymentDetails = [
+	rest.get(
+		"*/accounts/:accountId/workers/deployments/by-script/:scriptTag/detail/:deploymentId",
+		(_, res, ctx) => {
+			return res.once(
+				ctx.json(
+					createFetchResult({
+						Tag: "",
+						Number: 0,
+						Metadata: {
+							author_id: "Picard-Gamma-6-0-7-3",
+							author_email: "Jean-Luc-Picard@federation.org",
+							source: "wrangler",
+							created_on: "2021-01-01T00:00:00.000000Z",
+							modified_on: "2021-01-01T00:00:00.000000Z",
+						},
+						resources: {
+							script: {
+								etag: "mock-e-tag",
+								handlers: ["fetch"],
+								last_deployed_from: "wrangler",
+							},
+							bindings: [],
+						},
+					})
+				)
+			);
+		}
+	),
+	// ?deployment=<deploymentid> param used to get deployment <script content> as text
+	rest.get(
+		"*/accounts/:accountId/workers/scripts/:scriptName",
+		(req, res, ctx) => {
+			let scriptContent = "";
+			if (req.url.searchParams.get("deployment") === "1701-E") {
+				scriptContent = `
+			export default {
+				async fetch(request) {
+					return new Response('Hello World from Deployment 1701-E');
+				},
+			};`;
+			} else {
+				scriptContent = "DIDN'T GET SCRIPT CONTENT";
+			}
+			return res.once(ctx.text(scriptContent));
 		}
 	),
 ];
