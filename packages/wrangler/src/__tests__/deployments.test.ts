@@ -15,6 +15,7 @@ import { mswSuccessDeployments } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
+import { mockConfirm } from "./helpers/mock-dialogs";
 
 describe("deployments", () => {
 	const std = mockConsoleMethods();
@@ -179,7 +180,7 @@ describe("deployments", () => {
 		});
 
 		describe("rollback subcommand", () => {
-			it("should successfully rollback and output a message", async () => {
+			beforeEach(() => {
 				msw.use(
 					rest.put(
 						"*/account/:accountID/workers/scripts/:scriptName",
@@ -213,6 +214,12 @@ describe("deployments", () => {
 						}
 					)
 				);
+			});
+			it("should successfully rollback and output a success message", async () => {
+				mockConfirm({
+					text: "You are about to Rollback to a previous deployment on the Edge, would you like to continue",
+					result: true,
+				});
 
 				await runWrangler("deployments rollback Intrepid");
 				expect(std.out).toMatchInlineSnapshot(`
@@ -242,6 +249,23 @@ describe("deployments", () => {
 			  \\"script\\": \\"addEventListener('interstellar_communication', event =>/n/t/t/t/t/t/t/t{ event.respondWith(transmit(event.request)) }/n/t/t/t/t/t/t/t)\\",
 			  \\"size\\": \\"1 light-year\\"
 			}"
+		`);
+			});
+
+			it("should early exit from rollback if user does not confirm", async () => {
+				mockConfirm({
+					text: "You are about to Rollback to a previous deployment on the Edge, would you like to continue",
+					result: false,
+				});
+
+				await runWrangler("deployments rollback Intrepid");
+				expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "",
+			  "warn": "",
+			}
 		`);
 			});
 		});
