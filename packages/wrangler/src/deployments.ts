@@ -135,12 +135,18 @@ export async function rollbackDeployment(
 		}
 	);
 
-	await fetchResult<DeploymentListResult["latest"]>(
+	const { deployment_id } = await fetchResult<{
+		deployment_id: string | null;
+	}>(
 		`/accounts/${accountId}/workers/scripts/${scriptName}?rollback_to=${deploymentId}`,
-		{ method: "PUT" }
+		{
+			method: "PUT",
+			headers: { "content-type": "application/javascript" },
+		}
 	);
 
-	logger.log(`Successfully rolled back to deployment ID: ${deploymentId}`);
+	logger.log(`Successfully rolled back to Deployment ID: ${deploymentId}`);
+	logger.log("Current Deployment ID:", deployment_id);
 }
 
 export async function viewDeployment(
@@ -166,7 +172,7 @@ export async function viewDeployment(
 	const scriptContent = await fetchScriptContent(
 		`/accounts/${accountId}/workers/scripts/${scriptName}?deployment=${deploymentId}`
 	);
-	const deploymentDetails = await fetchResult<DeploymentListRes["latest"]>(
+	const deploymentDetails = await fetchResult<DeploymentListResult["latest"]>(
 		`/accounts/${accountId}/workers/deployments/by-script/${scriptTag}/detail/${deploymentId}`
 	);
 

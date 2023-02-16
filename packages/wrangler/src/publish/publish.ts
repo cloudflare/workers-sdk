@@ -30,7 +30,6 @@ import type {
 	ZoneNameRoute,
 	CustomDomainRoute,
 } from "../config/environment";
-import type { DeploymentListResult } from "../deployments";
 import type { Entry } from "../entry";
 import type { PutConsumerBody } from "../queues/client";
 import type { AssetPaths } from "../sites";
@@ -401,7 +400,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		: `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
 	let available_on_subdomain: boolean | undefined = undefined; // we'll set this later
-	let scriptTag: string | null = null;
+	let deploymentId: string | null = null;
 
 	const { format } = props.entry;
 
@@ -632,7 +631,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					id: string | null;
 					etag: string | null;
 					pipeline_hash: string | null;
-					tag: string | null;
+					deployment_id: string | null;
 				}>(
 					workerUrl,
 					{
@@ -649,7 +648,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				);
 
 				available_on_subdomain = result.available_on_subdomain;
-				scriptTag = result.tag;
+				deploymentId = result.deployment_id;
 
 				if (config.first_party_worker) {
 					// Print some useful information returned after publishing
@@ -839,19 +838,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		logger.log("No publish targets for", workerName, formatTime(deployMs));
 	}
 
-	try {
-		const deploymentsList = await fetchResult<DeploymentListResult>(
-			`/accounts/${accountId}/workers/deployments/by-script/${scriptTag}`
-		);
-
-		logger.log("Current Deployment ID:", deploymentsList.latest.id);
-	} catch (e) {
-		if ((e as { code: number }).code === 10023) {
-			// TODO: remove this try/catch once deployments is completely rolled out
-		} else {
-			throw e;
-		}
-	}
+	logger.log("Current Deployment ID:", deploymentId);
 }
 
 export function helpIfErrorIsSizeOrScriptStartup(

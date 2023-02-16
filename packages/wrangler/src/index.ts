@@ -604,7 +604,7 @@ export function createCLIParser(argv: string[]) {
 								type: "boolean",
 								default: false,
 							}),
-                        async (rollbackYargs) => {
+					async (rollbackYargs) => {
 						const firstHash = rollbackYargs.deploymentId.substring(
 							0,
 							rollbackYargs.deploymentId.indexOf("-")
@@ -612,7 +612,9 @@ export function createCLIParser(argv: string[]) {
 
 						if (
 							!(await confirm(
-								`This deployment ${firstHash} will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback.`
+								`This deployment ${firstHash} will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback. ${chalk.blue.bold(
+									"Note:"
+								)} Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, R2, KV, etc.).`
 							))
 						) {
 							return;
@@ -645,12 +647,7 @@ export function createCLIParser(argv: string[]) {
 								type: "boolean",
 								default: false,
 							}),
-					async (
-						viewYargs: ArgumentsCamelCase<{
-							deploymentId: string;
-							yes: boolean;
-						}>
-					) => {
+					async (viewYargs) => {
 						const { accountId, scriptName, config } =
 							await commonDeploymentCMDSetup(viewYargs, deploymentsWarning);
 
@@ -663,13 +660,8 @@ export function createCLIParser(argv: string[]) {
 					}
 				)
 				.epilogue(deploymentsWarning),
-		async (
-			deploymentsYargs: ArgumentsCamelCase<{
-				name: string;
-				deploymentId: string;
-			}>
-		) => {	
-			const { accountId, scriptName, config } = await initializeDeployments(
+		async (deploymentsYargs) => {
+			const { accountId, scriptName, config } = await commonDeploymentCMDSetup(
 				deploymentsYargs,
 				deploymentsWarning
 			);
