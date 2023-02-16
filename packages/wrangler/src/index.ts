@@ -28,6 +28,7 @@ import {
 	subdomainOptions,
 } from "./deprecated";
 import { devHandler, devOptions } from "./dev";
+import { confirm } from "./dialogs";
 import { workerNamespaceCommands } from "./dispatch-namespace";
 import { docsHandler, docsOptions } from "./docs";
 import { generateHandler, generateOptions } from "./generate";
@@ -52,7 +53,6 @@ import { whoami } from "./whoami";
 import type { Config } from "./config";
 import type { CommonYargsArgv, CommonYargsOptions } from "./yargs-types";
 import type Yargs from "yargs";
-import { confirm } from "./dialogs";
 
 const resetColor = "\x1b[0m";
 const fgGreenColor = "\x1b[32m";
@@ -606,7 +606,6 @@ export function createCLIParser(argv: string[]) {
 							}),
                         async (rollbackYargs) => {
 						if (
-							!rollbackYargs.yes &&
 							!(await confirm(
 								"You are about to Rollback to a previous deployment on the Edge, would you like to continue"
 							))
