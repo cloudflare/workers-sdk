@@ -188,7 +188,9 @@ describe("deployments", () => {
 					rest.put(
 						"*/account/:accountID/workers/scripts/:scriptName",
 						(req, res, ctx) => {
-							expect(req.url.searchParams.get("rollback_to")).toBe("Intrepid");
+							expect(req.url.searchParams.get("rollback_to")).toBe(
+								"3mEgaU1T-Intrepid-someThing"
+							);
 
 							return res.once(
 								ctx.json(
@@ -221,84 +223,38 @@ describe("deployments", () => {
 
 			it("should successfully rollback and output a success message", async () => {
 				mockConfirm({
-					text: "You are about to Rollback to a previous deployment on the Edge, would you like to continue",
+					text: "This deployment 3mEgaU1T will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback.",
 					result: true,
 				});
 
-				await runWrangler("deployments rollback Intrepid");
+				await runWrangler("deployments rollback 3mEgaU1T-Intrepid-someThing");
 				expect(std.out).toMatchInlineSnapshot(`
 			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
 
-			Successfully rolled back to deployment ID: Intrepid
-			Rollbacks details:
-				{
-			  \\"created_on\\": \\"2222-11-18T16:40:48.50545Z\\",
-			  \\"modified_on\\": \\"2222-01-20T18:08:47.464024Z\\",
-			  \\"id\\": \\"space_craft_1\\",
-			  \\"tag\\": \\"alien_tech_001\\",
-			  \\"tags\\": [
-			    \\"hyperdrive\\",
-			    \\"laser_cannons\\",
-			    \\"shields\\"
-			  ],
-			  \\"deployment_id\\": \\"galactic_mission_alpha\\",
-			  \\"logpush\\": true,
-			  \\"etag\\": \\"13a3240e8fb414561b0366813b0b8f42b3e6cfa0d9e70e99835dae83d0d8a794\\",
-			  \\"handlers\\": [
-			    \\"interstellar_communication\\",
-			    \\"hyperspace_navigation\\"
-			  ],
-			  \\"last_deployed_from\\": \\"spaceport_alpha\\",
-			  \\"usage_model\\": \\"intergalactic\\",
-			  \\"script\\": \\"addEventListener('interstellar_communication', event =>/n/t/t/t/t/t/t/t{ event.respondWith(transmit(event.request)) }/n/t/t/t/t/t/t/t)\\",
-			  \\"size\\": \\"1 light-year\\"
-			}"
+			Successfully rolled back to deployment ID: 3mEgaU1T-Intrepid-someThing"
 		`);
 			});
 
 			it("should early exit from rollback if user denies continuing", async () => {
 				mockConfirm({
-					text: "You are about to Rollback to a previous deployment on the Edge, would you like to continue",
+					text: "This deployment 3mEgaU1T will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback.",
 					result: false,
 				});
 
-				await runWrangler("deployments rollback Intrepid");
+				await runWrangler("deployments rollback 3mEgaU1T-Intrpid-someThing");
 				expect(std.out).toMatchInlineSnapshot(`""`);
 			});
 
 			it("should skip prompt automatically in rollback if in a non-TTY environment", async () => {
 				setIsTTY(false);
 
-				await runWrangler("deployments rollback Intrepid");
+				await runWrangler("deployments rollback 3mEgaU1T-Intrepid-someThing");
 				expect(std.out).toMatchInlineSnapshot(`
-			"? You are about to Rollback to a previous deployment on the Edge, would you like to continue
+			"? This deployment 3mEgaU1T will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback.
 			🤖 Using default value in non-interactive context: yes
 			🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose
 
-			Successfully rolled back to deployment ID: Intrepid
-			Rollbacks details:
-				{
-			  \\"created_on\\": \\"2222-11-18T16:40:48.50545Z\\",
-			  \\"modified_on\\": \\"2222-01-20T18:08:47.464024Z\\",
-			  \\"id\\": \\"space_craft_1\\",
-			  \\"tag\\": \\"alien_tech_001\\",
-			  \\"tags\\": [
-			    \\"hyperdrive\\",
-			    \\"laser_cannons\\",
-			    \\"shields\\"
-			  ],
-			  \\"deployment_id\\": \\"galactic_mission_alpha\\",
-			  \\"logpush\\": true,
-			  \\"etag\\": \\"13a3240e8fb414561b0366813b0b8f42b3e6cfa0d9e70e99835dae83d0d8a794\\",
-			  \\"handlers\\": [
-			    \\"interstellar_communication\\",
-			    \\"hyperspace_navigation\\"
-			  ],
-			  \\"last_deployed_from\\": \\"spaceport_alpha\\",
-			  \\"usage_model\\": \\"intergalactic\\",
-			  \\"script\\": \\"addEventListener('interstellar_communication', event =>/n/t/t/t/t/t/t/t{ event.respondWith(transmit(event.request)) }/n/t/t/t/t/t/t/t)\\",
-			  \\"size\\": \\"1 light-year\\"
-			}"
+			Successfully rolled back to deployment ID: 3mEgaU1T-Intrepid-someThing"
 		`);
 			});
 		});

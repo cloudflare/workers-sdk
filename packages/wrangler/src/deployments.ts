@@ -135,14 +135,12 @@ export async function rollbackDeployment(
 		}
 	);
 
-	const rollbackResponse = await fetchResult<DeploymentListRes["latest"]>(
+	await fetchResult<DeploymentListRes["latest"]>(
 		`/account/${accountId}/workers/scripts/${scriptName}?rollback_to=${deploymentId}`,
 		{ method: "PUT" }
 	);
 
 	logger.log(`Successfully rolled back to deployment ID: ${deploymentId}`);
-	logger.log(`Rollbacks details:
-	${JSON.stringify(rollbackResponse, null, 2)}`);
 }
 
 export async function viewDeployment(
@@ -198,7 +196,7 @@ export async function viewDeployment(
 	return;
 }
 
-export async function initializeDeployments(
+export async function commonDeploymentCMDSetup(
 	yargs: ArgumentsCamelCase<CommonYargsOptions>,
 	deploymentsWarning: string
 ) {
