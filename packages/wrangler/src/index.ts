@@ -9,7 +9,12 @@ import { isBuildFailure } from "./bundle";
 import { loadDotEnv, readConfig } from "./config";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
-import { deployments } from "./deployments";
+import {
+	deployments,
+	commonDeploymentCMDSetup,
+	rollbackDeployment,
+	viewDeployment,
+} from "./deployments";
 import {
 	buildHandler,
 	buildOptions,
@@ -23,6 +28,7 @@ import {
 	subdomainOptions,
 } from "./deprecated";
 import { devHandler, devOptions } from "./dev";
+import { confirm } from "./dialogs";
 import { workerNamespaceCommands } from "./dispatch-namespace";
 import { docsHandler, docsOptions } from "./docs";
 import { generateHandler, generateOptions } from "./generate";
@@ -41,13 +47,7 @@ import { secret, secretBulkHandler, secretBulkOptions } from "./secret";
 import { tailOptions, tailHandler } from "./tail";
 import { generateTypes } from "./type-generation";
 import { updateCheck } from "./update-check";
-import {
-	listScopes,
-	login,
-	logout,
-	requireAuth,
-	validateScopeKeys,
-} from "./user";
+import { listScopes, login, logout, validateScopeKeys } from "./user";
 import { whoami } from "./whoami";
 
 import type { Config } from "./config";
@@ -580,41 +580,100 @@ export function createCLIParser(argv: string[]) {
 	const deploymentsWarning =
 		"🚧`wrangler deployments` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose";
 	wrangler.command(
-		"deployments [deployment-id]",
+		"deployments",
 		"🚢 Displays the 10 most recent deployments for a worker",
 		(yargs) =>
 			yargs
-				.positional("deployment-id", {
-					describe: "The ID of the deployment you want to inspect",
-					type: "string",
-					demandOption: false,
-				})
 				.option("name", {
 					describe: "The name of your worker",
 					type: "string",
 				})
+				.command(
+					"rollback <deployment-id>",
+					"🔙 Rollback a deployment",
+					(rollbackYargs) =>
+						rollbackYargs
+							.positional("deployment-id", {
+								describe: "The ID of the deployment to rollback to",
+								type: "string",
+								demandOption: true,
+							})
+							.option("yes", {
+								alias: "y",
+								describe: "Skip confirmation prompt",
+								type: "boolean",
+								default: false,
+							}),
+                        async (rollbackYargs) => {
+						const firstHash = rollbackYargs.deploymentId.substring(
+							0,
+							rollbackYargs.deploymentId.indexOf("-")
+						);
+
+						if (
+							!(await confirm(
+								`This deployment ${firstHash} will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback.`
+							))
+						) {
+							return;
+						}
+
+						const { accountId, scriptName, config } =
+							await commonDeploymentCMDSetup(rollbackYargs, deploymentsWarning);
+
+						await rollbackDeployment(
+							accountId,
+							scriptName,
+							config,
+							rollbackYargs.deploymentId
+						);
+					}
+				)
+				.command(
+					"view <deployment-id>",
+					"🔍 View a deployment",
+					async (viewYargs) =>
+						viewYargs
+							.positional("deployment-id", {
+								describe: "The ID of the deployment you want to inspect",
+								type: "string",
+								demandOption: true,
+							})
+							.option("yes", {
+								alias: "y",
+								describe: "Skip confirmation prompt",
+								type: "boolean",
+								default: false,
+							}),
+					async (
+						viewYargs: ArgumentsCamelCase<{
+							deploymentId: string;
+							yes: boolean;
+						}>
+					) => {
+						const { accountId, scriptName, config } =
+							await commonDeploymentCMDSetup(viewYargs, deploymentsWarning);
+
+						await viewDeployment(
+							accountId,
+							scriptName,
+							config,
+							viewYargs.deploymentId
+						);
+					}
+				)
 				.epilogue(deploymentsWarning),
 		async (
 			deploymentsYargs: ArgumentsCamelCase<{
 				name: string;
 				deploymentId: string;
 			}>
-		) => {
-			await printWranglerBanner();
-			const config = readConfig(deploymentsYargs.config, deploymentsYargs);
-			const accountId = await requireAuth(config);
-			const scriptName = getScriptName(
-				{ name: deploymentsYargs.name, env: undefined },
-				config
+		) => {	
+			const { accountId, scriptName, config } = await initializeDeployments(
+				deploymentsYargs,
+				deploymentsWarning
 			);
-
-			logger.log(`${deploymentsWarning}\n`);
-			await deployments(
-				accountId,
-				scriptName,
-				config,
-				deploymentsYargs.deploymentId
-			);
+			await deployments(accountId, scriptName, config);
 		}
 	);
 

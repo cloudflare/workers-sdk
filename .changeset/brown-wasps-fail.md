@@ -2,8 +2,15 @@
 "wrangler": minor
 ---
 
-Added a positional in the 'Deployments' command <deployment-id>.
-<deployment-id> will get the details of the deployment, including versioned script, bindings, and usage model information.
+Added sub commands in the `deployments` command:
+`view <deployment-id>` will get the details of a deployment, including versioned script, bindings, and usage model information.
+This information can be used to help debug bad deployments or get insights on changes between deployments.
+
+`rollback <deployment-id>` will rollback to a specific deployment in the runtime. This will be useful in situations like recovering from a bad
+deployment quickly while resolving issues. This rollback only changes the code in the runtime and doesn't affect any code or configurations
+in a developer's local setup.
+
+example of `view <deployment-id>` output:
 
 ```ts
 	{
