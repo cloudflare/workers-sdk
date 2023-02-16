@@ -186,7 +186,7 @@ describe("deployments", () => {
 				setIsTTY(true);
 				msw.use(
 					rest.put(
-						"*/account/:accountID/workers/scripts/:scriptName",
+						"*/accounts/:accountID/workers/scripts/:scriptName",
 						(req, res, ctx) => {
 							expect(req.url.searchParams.get("rollback_to")).toBe(
 								"3mEgaU1T-Intrepid-someThing"

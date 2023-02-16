@@ -135,8 +135,8 @@ export async function rollbackDeployment(
 		}
 	);
 
-	await fetchResult<DeploymentListRes["latest"]>(
-		`/account/${accountId}/workers/scripts/${scriptName}?rollback_to=${deploymentId}`,
+	await fetchResult<DeploymentListResult["latest"]>(
+		`/accounts/${accountId}/workers/scripts/${scriptName}?rollback_to=${deploymentId}`,
 		{ method: "PUT" }
 	);
 
