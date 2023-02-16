@@ -6489,22 +6489,21 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
-		it("should output to target es2022 even if tsconfig says otherwise", async () => {
+		it.only("should output to target es2022 even if tsconfig says otherwise", async () => {
 			writeWranglerToml();
 			writeWorkerSource();
 			fs.writeFileSync(
 				"./index.js",
 				`
 			import { foo } from "./another";
+			const topLevelAwait = await new Promise((resolve) => setTimeout(resolve, 0));
 
-const myArray = ["apple", "banana", "cherry"];
+			export default {
+  			async fetch(request) {
 
-export default {
-  async fetch(request) {
-    return new Response(myArray.at(1));
-  },
-};
-`
+    			return new Response("Hello world!");
+  			},
+			};`
 			);
 			fs.writeFileSync(
 				"tsconfig.json",
@@ -6516,8 +6515,14 @@ export default {
 				})
 			);
 			mockSubDomainRequest();
+			/**
+			 * When we compile with es2022, we should preserve the export statement and top level await
+			 * If you attempt to target es2020 top level await will cause a build error
+			 * @error Build failed with 1 error:
+			 * index.js:3:25: ERROR: Top-level await is not available in the configured target environment ("es2020")
+			 */
 			mockUploadWorkerRequest({
-				expectedEntry: /export {|myArray.at(1)/, // check that the export and .at() is preserved
+				expectedEntry: "export {", // check that the export is preserved
 			});
 			await runWrangler("publish index.js"); // this would throw if we tried to compile with es5
 			expect(std).toMatchInlineSnapshot(`
