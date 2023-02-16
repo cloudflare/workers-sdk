@@ -151,9 +151,15 @@ export default function useInspector(props: InspectorProps) {
 			);
 			ws.close(1013, "Too many clients; only one can be connected at a time");
 		} else {
+			// Since Wrangler proxies the inspector, reloading Chrome DevTools won't trigger debugger initialisation events (because it's connecting to an extant session).
+			// This sends a `Debugger.disable` message to the remote when a new WebSocket connection is initialised,
+			// with the assumption that the new connection will shortly send a `Debugger.enable` event and trigger re-initialisation.
+			// The key initialisation messages that are needed are the `Debugger.scriptParsed events`.
 			remoteWebSocket?.send(
 				JSON.stringify({
-					id: 100_000,
+					// This number is arbitrary, and is chosen to be high so as not to conflict with messages that DevTools might actually send.
+					// For completeness, these options don't work: 0, -1, or Number.MAX_SAFE_INTEGER
+					id: 100_000_000,
 					method: "Debugger.disable",
 				})
 			);
