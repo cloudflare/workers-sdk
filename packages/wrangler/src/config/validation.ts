@@ -1134,6 +1134,16 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateWorkerNamespaceBinding),
 			[]
 		),
+		mtls_certificates: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"mtls_certificates",
+			validateBindingArray(envName, validateMTlsCertificateBinding),
+			[]
+		),
 		logfwdr: inheritable(
 			diagnostics,
 			topLevelEnv,
@@ -1590,6 +1600,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"r2_bucket",
 			"service",
 			"logfwdr",
+			"mtls_certificate",
 		];
 
 		if (safeBindings.includes(value.type)) {
@@ -2028,6 +2039,42 @@ const validateWorkerNamespaceBinding: ValidatorFn = (
 	if (!isRequiredProperty(value, "namespace", "string")) {
 		diagnostics.errors.push(
 			`"${field}" should have a string "namespace" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	return isValid;
+};
+
+const validateMTlsCertificateBinding: ValidatorFn = (
+	diagnostics,
+	field,
+	value
+) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"mtls_certificates" bindings should be objects, but got ${JSON.stringify(
+				value
+			)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (
+		!isRequiredProperty(value, "certificate_id", "string") ||
+		(value as { certificate_id: string }).certificate_id.length === 0
+	) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "certificate_id" field but got ${JSON.stringify(
 				value
 			)}.`
 		);

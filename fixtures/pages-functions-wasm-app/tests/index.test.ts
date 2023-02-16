@@ -22,7 +22,7 @@ describe.concurrent("Pages Functions with wasm module imports", () => {
 		expect(text).toContain("Hello from pages-functions-wasm-app!");
 	});
 
-	it("should resolve any wasm module imports and render the correct response", async ({
+	it("should resolve any wasm module imports and render /meaning-of-life", async ({
 		expect,
 	}) => {
 		let response = await fetch(`http://${ip}:${port}/meaning-of-life`);
