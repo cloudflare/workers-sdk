@@ -1,5 +1,5 @@
 import { URLSearchParams } from "url";
-import { fetchResult } from "./cfetch";
+import { fetchResult, fetchScriptContent } from "./cfetch";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import type { Config } from "./config";
@@ -33,7 +33,8 @@ export type DeploymentListResult = {
 export async function deployments(
 	accountId: string,
 	scriptName: string | undefined,
-	{ send_metrics: sendMetrics }: { send_metrics?: Config["send_metrics"] } = {}
+	{ send_metrics: sendMetrics }: { send_metrics?: Config["send_metrics"] } = {},
+	deploymentId: string
 ) {
 	if (!scriptName) {
 		throw new Error(
@@ -49,11 +50,49 @@ export async function deployments(
 		}
 	);
 
-	const scriptMetadata = await fetchResult<ServiceMetadataRes>(
-		`/accounts/${accountId}/workers/services/${scriptName}`
-	);
+	const scriptTag = (
+		await fetchResult<ServiceMetadataRes>(
+			`/accounts/${accountId}/workers/services/${scriptName}`
+		)
+	).default_environment.script.tag;
 
-	const scriptTag = scriptMetadata.default_environment.script.tag;
+	if (deploymentId) {
+		const scriptContent = await fetchScriptContent(
+			`/accounts/${accountId}/workers/scripts/${scriptName}?deployment=${deploymentId}`
+		);
+		const deploymentDetails = await fetchResult<DeploymentListRes["latest"]>(
+			`/accounts/${accountId}/workers/deployments/by-script/${scriptTag}/detail/${deploymentId}`
+		);
+
+		const flatObj: Record<string, unknown> = {};
+		for (const deployDetailsKey in deploymentDetails) {
+			if (
+				Object.prototype.hasOwnProperty.call(
+					deploymentDetails,
+					deployDetailsKey
+				)
+			) {
+				//@ts-expect-error flattening objects causes the index signature to error
+				const value = deploymentDetails[deployDetailsKey];
+				if (typeof value === "object" && value !== null) {
+					for (const subKey in value) {
+						if (Object.prototype.hasOwnProperty.call(value, subKey)) {
+							flatObj[`${deployDetailsKey}.${subKey}`] = value[subKey];
+						}
+					}
+				} else {
+					flatObj[deployDetailsKey] = value;
+				}
+			}
+		}
+
+		logger.log(flatObj);
+		logger.log(scriptContent);
+
+		// early return to skip the deployments listings
+		return;
+	}
+
 	const params = new URLSearchParams({ order: "asc" });
 	const { items: deploys } = await fetchResult<DeploymentListResult>(
 		`/accounts/${accountId}/workers/deployments/by-script/${scriptTag}`,
