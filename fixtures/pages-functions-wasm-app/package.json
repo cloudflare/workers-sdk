@@ -11,7 +11,7 @@
 		"test:ci": "npx vitest"
 	},
 	"devDependencies": {
-		"undici": "^5.9.1"
+		"undici": "^5.19.1"
 	},
 	"engines": {
 		"node": ">=16.13"
