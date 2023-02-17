@@ -460,15 +460,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			resolvedEntryPointPath,
 			bundleType,
 		}: Awaited<ReturnType<typeof bundleWorker>> = props.noBundle
-				? // we can skip the whole bundling step and mock a bundle here
-				{
+			? // we can skip the whole bundling step and mock a bundle here
+			  {
 					modules: [],
 					dependencies: {},
 					resolvedEntryPointPath: props.entry.file,
 					bundleType: props.entry.format === "modules" ? "esm" : "commonjs",
 					stop: undefined,
-				}
-				: await bundleWorker(
+			  }
+			: await bundleWorker(
 					props.entry,
 					typeof destination === "string" ? destination : destination.path,
 					{
@@ -503,7 +503,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						local: false,
 						experimentalLocal: false,
 					}
-				);
+			  );
 
 		const content = readFileSync(resolvedEntryPointPath, {
 			encoding: "utf-8",
@@ -512,11 +512,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		// durable object migrations
 		const migrations = !props.dryRun
 			? await getMigrationsToUpload(scriptName, {
-				accountId,
-				config,
-				legacyEnv: props.legacyEnv,
-				env: props.env,
-			})
+					accountId,
+					config,
+					legacyEnv: props.legacyEnv,
+					env: props.env,
+			  })
 			: undefined;
 
 		const assets = await syncAssets(
@@ -543,8 +543,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				...config.text_blobs,
 				...(assets.manifest &&
 					format === "service-worker" && {
-					__STATIC_CONTENT_MANIFEST: "__STATIC_CONTENT_MANIFEST",
-				}),
+						__STATIC_CONTENT_MANIFEST: "__STATIC_CONTENT_MANIFEST",
+					}),
 			},
 			data_blobs: config.data_blobs,
 			durable_objects: config.durable_objects,
@@ -677,7 +677,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	const deployments: Promise<string[]>[] = [];
 
 	if (deployToWorkersDev && !props.platformNamespace) {
-		// Deploy to a subdomain of `workers.dev` if we are not deploying to a Workers for Platforms. 
+		// Deploy to a subdomain of `workers.dev` if we are not deploying to a Workers for Platforms.
 		// In that case the workers.dev subdomain is not required, and we should not deploy to it.
 		const userSubdomain = await getWorkersDevSubdomain(accountId);
 		const scriptURL =
@@ -921,14 +921,14 @@ async function publishRoutesFallback(
 	if (notProd) {
 		throw new Error(
 			"Service environments combined with an API token that doesn't have 'All Zones' permissions is not supported.\n" +
-			"Either turn off service environments by setting `legacy_env = true`, creating an API token with 'All Zones' permissions, or logging in via OAuth"
+				"Either turn off service environments by setting `legacy_env = true`, creating an API token with 'All Zones' permissions, or logging in via OAuth"
 		);
 	}
 	logger.warn(
 		"The current authentication token does not have 'All Zones' permissions.\n" +
-		"Falling back to using the zone-based API endpoint to update each route individually.\n" +
-		"Note that there is no access to routes associated with zones that the API token does not have permission for.\n" +
-		"Existing routes for this Worker in such zones will not be deleted."
+			"Falling back to using the zone-based API endpoint to update each route individually.\n" +
+			"Note that there is no access to routes associated with zones that the API token does not have permission for.\n" +
+			"Existing routes for this Worker in such zones will not be deleted."
 	);
 
 	const deployedRoutes: string[] = [];
@@ -1006,9 +1006,9 @@ async function publishRoutesFallback(
 	if (alreadyDeployedRoutes.size) {
 		logger.warn(
 			"Previously deployed routes:\n" +
-			"The following routes were already associated with this worker, and have not been deleted:\n" +
-			[...alreadyDeployedRoutes.values()].map((route) => ` - "${route}"\n`) +
-			"If these routes are not wanted then you can remove them in the dashboard."
+				"The following routes were already associated with this worker, and have not been deleted:\n" +
+				[...alreadyDeployedRoutes.values()].map((route) => ` - "${route}"\n`) +
+				"If these routes are not wanted then you can remove them in the dashboard."
 		);
 	}
 
