@@ -231,7 +231,8 @@ describe("deployments", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 
-			Successfully rolled back to deployment ID: 3mEgaU1T-Intrepid-someThing"
+			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing"
+            Current Deployment ID: galactic_mission_alpha
 		`);
 			});
 
