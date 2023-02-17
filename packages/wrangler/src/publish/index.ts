@@ -45,6 +45,11 @@ export function publishOptions(yargs: CommonYargsArgv) {
 				type: "boolean",
 				default: false,
 			})
+			.option("platform-namespace", {
+				describe: "Publish to the Workers for Platform namespace",
+				type: "string",
+				requiresArg: true,
+			})
 			.option("outdir", {
 				describe: "Output directory for the bundled worker",
 				type: "string",
@@ -268,6 +273,7 @@ export async function publishHandler(
 		outDir: args.outdir,
 		dryRun: args.dryRun,
 		noBundle: !(args.bundle ?? !config.no_bundle),
+		platformNamespace: args.platformNamespace,
 		keepVars: args.keepVars,
 		logpush: args.logpush,
 	});

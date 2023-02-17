@@ -60,6 +60,7 @@ type Props = {
 	outDir: string | undefined;
 	dryRun: boolean | undefined;
 	noBundle: boolean | undefined;
+	platformNamespace: string | undefined;
 	keepVars: boolean | undefined;
 	logpush: boolean | undefined;
 };
@@ -388,9 +389,13 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	const start = Date.now();
 	const notProd = Boolean(!props.legacyEnv && props.env);
 	const workerName = notProd ? `${scriptName} (${envName})` : scriptName;
-	const workerUrl = notProd
+	let workerUrl = notProd
 		? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
 		: `/accounts/${accountId}/workers/scripts/${scriptName}`;
+
+	if (props.platformNamespace) {
+		workerUrl = `/accounts/${accountId}/workers/dispatch/namespaces/${props.platformNamespace}/scripts/${scriptName}`;
+	}
 
 	let available_on_subdomain: boolean | undefined = undefined; // we'll set this later
 	let scriptTag: string | null = null;
@@ -671,7 +676,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	const uploadMs = Date.now() - start;
 	const deployments: Promise<string[]>[] = [];
 
-	if (deployToWorkersDev) {
+	if (deployToWorkersDev && !props.platformNamespace) {
 		// Deploy to a subdomain of `workers.dev`
 		const userSubdomain = await getWorkersDevSubdomain(accountId);
 		const scriptURL =
