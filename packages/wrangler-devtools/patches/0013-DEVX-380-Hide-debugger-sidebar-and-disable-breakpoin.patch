@@ -1,0 +1,91 @@
+From cde74d1233f0e89563cfe4d458af197f21c22f18 Mon Sep 17 00:00:00 2001
+From: bcoll <bcoll@cloudflare.com>
+Date: Wed, 15 Feb 2023 15:07:45 +0000
+Subject: [PATCH 13/13] DEVX-380 Hide debugger sidebar and disable breakpoints
+
+- Hides debugger sidebar
+- Removes toggle debugger sidebar command
+- Disables breakpoint creation
+---
+ front_end/panels/sources/DebuggerPlugin.ts |  5 -----
+ front_end/panels/sources/SourcesPanel.ts   |  6 +-----
+ front_end/panels/sources/sources-meta.ts   | 23 ----------------------
+ 3 files changed, 1 insertion(+), 33 deletions(-)
+
+diff --git a/front_end/panels/sources/DebuggerPlugin.ts b/front_end/panels/sources/DebuggerPlugin.ts
+index 81f01d388f..6871a61d55 100644
+--- a/front_end/panels/sources/DebuggerPlugin.ts
++++ b/front_end/panels/sources/DebuggerPlugin.ts
+@@ -228,11 +228,6 @@ export class DebuggerPlugin extends Plugin {
+     this.scriptsPanel = SourcesPanel.instance();
+     this.breakpointManager = Bindings.BreakpointManager.BreakpointManager.instance();
+ 
+-    this.breakpointManager.addEventListener(
+-        Bindings.BreakpointManager.Events.BreakpointAdded, this.breakpointChange, this);
+-    this.breakpointManager.addEventListener(
+-        Bindings.BreakpointManager.Events.BreakpointRemoved, this.breakpointChange, this);
+-
+     this.uiSourceCode.addEventListener(Workspace.UISourceCode.Events.WorkingCopyChanged, this.workingCopyChanged, this);
+     this.uiSourceCode.addEventListener(
+         Workspace.UISourceCode.Events.WorkingCopyCommitted, this.workingCopyCommitted, this);
+diff --git a/front_end/panels/sources/SourcesPanel.ts b/front_end/panels/sources/SourcesPanel.ts
+index 72287c6b5d..1e094864ea 100644
+--- a/front_end/panels/sources/SourcesPanel.ts
++++ b/front_end/panels/sources/SourcesPanel.ts
+@@ -248,6 +248,7 @@ export class SourcesPanel extends UI.Panel.Panel implements UI.ContextMenu.Provi
+         new UI.SplitWidget.SplitWidget(true, true, 'sourcesPanelSplitViewState', initialDebugSidebarWidth);
+     this.splitWidget.enableShowModeSaving();
+     this.splitWidget.show(this.element);
++    this.splitWidget.hideSidebar(false);
+ 
+     // Create scripts navigator
+     const initialNavigatorWidth = 225;
+@@ -355,11 +356,6 @@ export class SourcesPanel extends UI.Panel.Panel implements UI.ContextMenu.Provi
+     }
+     if (!isInWrapper) {
+       panel.sourcesViewInternal.leftToolbar().appendToolbarItem(panel.toggleNavigatorSidebarButton);
+-      if (panel.splitWidget.isVertical()) {
+-        panel.sourcesViewInternal.rightToolbar().appendToolbarItem(panel.toggleDebuggerSidebarButton);
+-      } else {
+-        panel.sourcesViewInternal.bottomToolbar().appendToolbarItem(panel.toggleDebuggerSidebarButton);
+-      }
+     }
+   }
+ 
+diff --git a/front_end/panels/sources/sources-meta.ts b/front_end/panels/sources/sources-meta.ts
+index c5e95ab535..9c53bca1b3 100644
+--- a/front_end/panels/sources/sources-meta.ts
++++ b/front_end/panels/sources/sources-meta.ts
+@@ -1375,29 +1375,6 @@ UI.ActionRegistration.registerActionExtension({
+   ],
+ });
+ 
+-UI.ActionRegistration.registerActionExtension({
+-  actionId: 'sources.toggle-debugger-sidebar',
+-  category: UI.ActionRegistration.ActionCategory.SOURCES,
+-  title: i18nLazyString(UIStrings.toggleDebuggerSidebar),
+-  async loadActionDelegate() {
+-    const Sources = await loadSourcesModule();
+-    return Sources.SourcesPanel.ActionDelegate.instance();
+-  },
+-  contextTypes() {
+-    return maybeRetrieveContextTypes(Sources => [Sources.SourcesView.SourcesView]);
+-  },
+-  bindings: [
+-    {
+-      platform: UI.ActionRegistration.Platforms.WindowsLinux,
+-      shortcut: 'Ctrl+Shift+h',
+-    },
+-    {
+-      platform: UI.ActionRegistration.Platforms.Mac,
+-      shortcut: 'Meta+Shift+h',
+-    },
+-  ],
+-});
+-
+ Common.Settings.registerSettingExtension({
+   settingName: 'navigatorGroupByFolder',
+   settingType: Common.Settings.SettingType.BOOLEAN,
+-- 
+2.37.1 (Apple Git-137.1)
+
