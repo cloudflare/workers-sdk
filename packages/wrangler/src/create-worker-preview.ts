@@ -130,18 +130,20 @@ export async function createPreviewSession(
 		? `/zones/${ctx.zone}/workers/edge-preview`
 		: `/accounts/${accountId}/workers/subdomain/edge-preview`;
 
-	let { exchange_url } = await fetchResult<{ exchange_url: string }>(
+	const { exchange_url } = await fetchResult<{ exchange_url: string }>(
 		initUrl,
 		undefined,
 		undefined,
 		abortSignal
 	);
 
-	exchange_url = switchHost(exchange_url, ctx.host).toString();
+	const switchedExchangeUrl = switchHost(exchange_url, ctx.host).toString();
 
-	logger.debug(`-- START EXCHANGE API REQUEST: GET ${exchange_url}`);
+	logger.debug(`-- START EXCHANGE API REQUEST: GET ${switchedExchangeUrl}`);
 	logger.debug("-- END EXCHANGE API REQUEST");
-	const exchangeResponse = await fetch(exchange_url, { signal: abortSignal });
+	const exchangeResponse = await fetch(switchedExchangeUrl, {
+		signal: abortSignal,
+	});
 	const bodyText = await exchangeResponse.text();
 	logger.debug(
 		"-- START EXCHANGE API RESPONSE:",
