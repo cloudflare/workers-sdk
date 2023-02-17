@@ -1,8 +1,9 @@
 ## ⛅️ Home to `wrangler`, the CLI for Cloudflare Workers®, as well as other tools for interacting with Workers
 
 This monorepo contains:
+
 - [`wrangler-devtools`](https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler-devtools)
-	Cloudflare's fork of Chrome DevTools for inspecting your local or remote Workers
+  Cloudflare's fork of Chrome DevTools for inspecting your local or remote Workers
 - [`templates`](https://github.com/cloudflare/workers-sdk/tree/main/templates)
   Templates & examples for writing Cloudlfare Workers
 - [`wrangler`](https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler)
