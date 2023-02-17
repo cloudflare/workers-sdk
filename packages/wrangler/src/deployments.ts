@@ -135,7 +135,7 @@ export async function rollbackDeployment(
 		}
 	);
 
-	const result = await fetchResult<{
+	const { deployment_id } = await fetchResult<{
 		deployment_id: string | null;
 	}>(
 		`/accounts/${accountId}/workers/scripts/${scriptName}?rollback_to=${deploymentId}`,
@@ -146,7 +146,7 @@ export async function rollbackDeployment(
 	);
 
 	logger.log(`Successfully rolled back to Deployment ID: ${deploymentId}`);
-	logger.log("Current Deployment ID:", result.deployment_id);
+	logger.log("Current Deployment ID:", deployment_id);
 }
 
 export async function viewDeployment(
