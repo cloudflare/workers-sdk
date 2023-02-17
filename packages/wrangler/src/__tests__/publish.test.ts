@@ -89,7 +89,7 @@ describe("publish", () => {
 			);
 			writeWorkerSource();
 			mockSubDomainRequest();
-			mockUploadWorkerRequest({ expectedType: "esm", sendScriptIds: true });
+			mockUploadWorkerRequest({ expectedType: "esm" });
 			mockOAuthServerCallback();
 
 			await runWrangler("publish ./index");
