@@ -109,6 +109,14 @@ function randomId(): string {
 	});
 }
 
+// URLs are often relative to the zone. Sometimes the base zone
+// will be grey-clouded, and so the host must be swapped out for
+// the worker route host, which is more likely to be orange-clouded
+function switchHost(originalUrl: string, host?: string): URL {
+	const url = new URL(originalUrl);
+	url.hostname = host ?? url.hostname;
+	return url;
+}
 /**
  * Generates a preview session token.
  */
@@ -129,9 +137,13 @@ export async function createPreviewSession(
 		abortSignal
 	);
 
-	logger.debug(`-- START EXCHANGE API REQUEST: GET ${exchange_url}`);
+	const switchedExchangeUrl = switchHost(exchange_url, ctx.host).toString();
+
+	logger.debug(`-- START EXCHANGE API REQUEST: GET ${switchedExchangeUrl}`);
 	logger.debug("-- END EXCHANGE API REQUEST");
-	const exchangeResponse = await fetch(exchange_url, { signal: abortSignal });
+	const exchangeResponse = await fetch(switchedExchangeUrl, {
+		signal: abortSignal,
+	});
 	const bodyText = await exchangeResponse.text();
 	logger.debug(
 		"-- START EXCHANGE API RESPONSE:",
@@ -147,16 +159,15 @@ export async function createPreviewSession(
 		token: string;
 		prewarm: string;
 	}>(bodyText);
-
-	const { host } = new URL(inspector_websocket);
-	const query = `cf_workers_preview_token=${token}`;
+	const inspector = new URL(inspector_websocket);
+	inspector.searchParams.append("cf_workers_preview_token", token);
 
 	return {
 		id: randomId(),
 		value: token,
-		host,
-		inspectorUrl: new URL(`${inspector_websocket}?${query}`),
-		prewarmUrl: new URL(prewarm),
+		host: ctx.host ?? inspector.host,
+		inspectorUrl: switchHost(inspector.href, ctx.host),
+		prewarmUrl: switchHost(prewarm, ctx.host),
 	};
 }
 

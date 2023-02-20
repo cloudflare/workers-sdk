@@ -204,7 +204,16 @@ export async function generateHandler<
 			staticRedirectsMatcher() || generateRedirectsMatcher()({ request })[0];
 
 		if (match) {
-			return getResponseFromMatch(match, url);
+			if (match.status === 200) {
+				// A 200 redirect means that we are proxying to a different asset, for example,
+				// a request with url /users/12345 could be pointed to /users/id.html. In order to
+				// do this, we overwrite the pathname, and instead match for assets with that url,
+				// and importantly, do not use the regular redirect handler - as the url visible to
+				// the user does not change
+				pathname = new URL(match.to, request.url).pathname;
+			} else {
+				return getResponseFromMatch(match, url);
+			}
 		}
 
 		if (!request.method.match(/^(get|head)$/i)) {

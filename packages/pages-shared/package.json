@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/pages-shared",
-	"version": "0.0.13",
+	"version": "0.1.0",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cloudflare/workers-sdk.git",
@@ -14,7 +14,8 @@
 	],
 	"scripts": {
 		"check:type": "tsc",
-		"test": "jest"
+		"test": "jest --forceExit",
+		"test:ci": "jest --forceExit"
 	},
 	"jest": {
 		"coverageReporters": [
