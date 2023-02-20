@@ -151,7 +151,6 @@ export default async function guessWorkerFormat(
 		absWorkingDir: entryWorkingDirectory,
 		metafile: true,
 		bundle: false,
-		format: "esm",
 		target: "es2022",
 		write: false,
 		loader: {

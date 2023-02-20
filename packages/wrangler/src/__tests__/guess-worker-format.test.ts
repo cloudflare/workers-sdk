@@ -32,6 +32,16 @@ describe("guess worker format", () => {
 		expect(guess).toBe("service-worker");
 	});
 
+	it('should detect a "server-worker" worker using `typeof module`', async () => {
+		await writeFile("./index.ts", "typeof module");
+		const guess = await guessWorkerFormat(
+			path.join(process.cwd(), "./index.ts"),
+			process.cwd(),
+			undefined
+		);
+		expect(guess).toBe("service-worker");
+	});
+
 	it("should throw an error when the hint doesn't match the guess (modules - service-worker)", async () => {
 		await writeFile("./index.ts", "export default {};");
 		await expect(
