@@ -1,6 +1,6 @@
 import path from "path";
 import getPort from "get-port";
-import { describe, expect, test, beforeAll } from "vitest";
+import { describe, expect, test, beforeAll, afterAll } from "vitest";
 import { unstable_dev } from "../../../packages/wrangler/wrangler-dist/cli.js";
 import type { UnstableDevWorker } from "../../../packages/wrangler/wrangler-dist/cli.js";
 
@@ -13,8 +13,9 @@ describe("Worker", () => {
 			port: await getPort(),
 			experimental: { experimentalLocal: true },
 		});
-		return worker.stop;
-	});
+	}, 30_000);
+
+	afterAll(() => worker.stop());
 
 	test("module traversal results in correct response", async () => {
 		const resp = await worker.fetch();
