@@ -35,6 +35,7 @@ import {
 } from "./plugins";
 import {
 	HEADER_CUSTOM_SERVICE,
+	HEADER_ORIGINAL_URL,
 	SourceOptions,
 	getUserServiceName,
 	handlePrettyErrorRequest,
@@ -407,8 +408,6 @@ export class Miniflare {
 		req: http.IncomingMessage,
 		res?: http.ServerResponse
 	): Promise<Response | undefined> => {
-		const url = new URL(req.url ?? "", "http://127.0.0.1");
-
 		// Extract headers from request
 		const headers = new Headers();
 		for (const [name, values] of Object.entries(req.headers)) {
@@ -428,6 +427,13 @@ export class Miniflare {
 		headers.delete(HEADER_CF_BLOB);
 		assert(!Array.isArray(cfBlob)); // Only `Set-Cookie` headers are arrays
 		const cf = cfBlob ? JSON.parse(cfBlob) : undefined;
+
+		// Extract original URL passed to `fetch`
+		const url = new URL(
+			headers.get(HEADER_ORIGINAL_URL) ?? req.url ?? "",
+			"http://127.0.0.1"
+		);
+		headers.delete(HEADER_ORIGINAL_URL);
 
 		const request = new Request(url, {
 			method: req.method,
@@ -722,6 +728,8 @@ export class Miniflare {
 		await this.ready;
 		const forward = new Request(input, init);
 		const url = new URL(forward.url);
+		forward.headers.set(HEADER_ORIGINAL_URL, url.toString());
+		url.protocol = this.#runtimeEntryURL!.protocol;
 		url.host = this.#runtimeEntryURL!.host;
 		if (forward.cf) {
 			forward.headers.set(HEADER_CF_BLOB, JSON.stringify(forward.cf));

@@ -99,6 +99,7 @@ function getCustomServiceName(workerIndex: number, bindingName: string) {
 
 export const HEADER_PROBE = "MF-Probe";
 export const HEADER_CUSTOM_SERVICE = "MF-Custom-Service";
+export const HEADER_ORIGINAL_URL = "MF-Original-URL";
 
 const BINDING_JSON_VERSION = "MINIFLARE_VERSION";
 const BINDING_SERVICE_USER = "MINIFLARE_USER";
@@ -129,16 +130,21 @@ const LIVE_RELOAD_SCRIPT_TEMPLATE = (
 // Using `>=` for version check to handle multiple `setOptions` calls before
 // reload complete.
 export const SCRIPT_ENTRY = `async function handleEvent(event) {
-  const request = new Request(event.request, {
-    cf: event.request.cf ?? ${BINDING_JSON_CF_BLOB}
-  });
-
   const probe = event.request.headers.get("${HEADER_PROBE}");
   if (probe !== null) {
     const probeMin = parseInt(probe);
     const status = ${BINDING_JSON_VERSION} >= probeMin ? 204 : 412;
     return new Response(null, { status });
   }
+
+  const originalUrl = event.request.headers.get("${HEADER_ORIGINAL_URL}");
+  const request = new Request(originalUrl ?? event.request.url, {
+    method: event.request.method,
+    headers: event.request.headers,
+    cf: event.request.cf ?? ${BINDING_JSON_CF_BLOB},
+    redirect: event.request.redirect,
+    body: event.request.body,
+  });
 
   if (globalThis.${BINDING_SERVICE_USER} === undefined) {
     return new Response("No entrypoint worker found", { status: 404 });
@@ -205,6 +211,7 @@ addEventListener("fetch", (event) => {
 export const SCRIPT_CUSTOM_SERVICE = `addEventListener("fetch", (event) => {
   const request = new Request(event.request);
   request.headers.set("${HEADER_CUSTOM_SERVICE}", ${BINDING_TEXT_CUSTOM_SERVICE});
+  request.headers.set("${HEADER_ORIGINAL_URL}", request.url);
   event.respondWith(${BINDING_SERVICE_LOOPBACK}.fetch(request));
 })`;
 
