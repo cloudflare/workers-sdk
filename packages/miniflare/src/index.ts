@@ -14,7 +14,6 @@ import { z } from "zod";
 import { setupCf } from "./cf";
 import {
 	Headers,
-	HeadersInit,
 	Request,
 	RequestInfo,
 	RequestInit,
@@ -159,6 +158,14 @@ type PluginRouters = {
 
 type StoppableServer = http.Server & stoppable.WithStop;
 
+const restrictedUndiciHeaders = [
+	// From Miniflare 2:
+	// https://github.com/cloudflare/miniflare/blob/9c135599dc21fe69080ada17fce6153692793bf1/packages/core/src/standards/http.ts#L129-L132
+	"transfer-encoding",
+	"connection",
+	"keep-alive",
+	"expect",
+];
 const restrictedWebSocketUpgradeHeaders = [
 	"upgrade",
 	"connection",
@@ -402,16 +409,29 @@ export class Miniflare {
 	): Promise<Response | undefined> => {
 		const url = new URL(req.url ?? "", "http://127.0.0.1");
 
+		// Extract headers from request
+		const headers = new Headers();
+		for (const [name, values] of Object.entries(req.headers)) {
+			// These headers are unsupported in undici fetch requests, they're added
+			// automatically. For custom service bindings, we may pass this request
+			// straight through to another fetch so strip them now.
+			if (restrictedUndiciHeaders.includes(name)) continue;
+			if (Array.isArray(values)) {
+				for (const value of values) headers.append(name, value);
+			} else if (values !== undefined) {
+				headers.append(name, values);
+			}
+		}
+
 		// Extract cf blob (if any) from headers
-		const cfBlobHeader = HEADER_CF_BLOB.toLowerCase();
-		const cfBlob = req.headers[cfBlobHeader];
-		delete req.headers[cfBlobHeader];
+		const cfBlob = headers.get(HEADER_CF_BLOB);
+		headers.delete(HEADER_CF_BLOB);
 		assert(!Array.isArray(cfBlob)); // Only `Set-Cookie` headers are arrays
 		const cf = cfBlob ? JSON.parse(cfBlob) : undefined;
 
 		const request = new Request(url, {
 			method: req.method,
-			headers: req.headers as HeadersInit,
+			headers,
 			body: req.method === "GET" || req.method === "HEAD" ? undefined : req,
 			duplex: "half",
 			cf,
@@ -705,6 +725,14 @@ export class Miniflare {
 		url.host = this.#runtimeEntryURL!.host;
 		if (forward.cf) {
 			forward.headers.set(HEADER_CF_BLOB, JSON.stringify(forward.cf));
+		}
+		// Remove `Content-Length: 0` headers from requests when a body is set to
+		// avoid `RequestContentLengthMismatch` errors
+		if (
+			forward.body !== null &&
+			forward.headers.get("Content-Length") === "0"
+		) {
+			forward.headers.delete("Content-Length");
 		}
 		return fetch(url, forward as RequestInit);
 	}
