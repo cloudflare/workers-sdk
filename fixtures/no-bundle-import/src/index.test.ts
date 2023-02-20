@@ -1,5 +1,5 @@
 import getPort from "get-port";
-import { describe, expect, it, beforeAll, afterAll } from "vitest";
+import { describe, expect, test, beforeAll } from "vitest";
 import { unstable_dev } from "wrangler";
 import type { UnstableDevWorker } from "wrangler";
 
@@ -12,21 +12,28 @@ describe("Worker", () => {
 			port: await getPort(),
 			experimentalLocal: true,
 		});
-		console.error(worker);
-	}, 30_000);
-
-	afterAll(async () => {
-		await worker.stop();
+		return worker.stop;
 	});
 
-	it("should respond without error, having collected modules", async () => {
+	test("module traversal results in correct response", async () => {
 		const resp = await worker.fetch();
-		console.log(resp);
-		if (resp) {
-			const text = await resp.text();
-			expect(text).toMatchInlineSnapshot(
-				`"Hello Jane Smith and Hello John Smith"`
-			);
-		}
+		const text = await resp.text();
+		expect(text).toMatchInlineSnapshot(
+			`"Hello Jane Smith and Hello John Smith"`
+		);
+	});
+
+	test("support for dynamic imports", async () => {
+		const resp = await worker.fetch("/dynamic");
+		const text = await resp.text();
+		expect(text).toMatchInlineSnapshot(`"dynamic"`);
+	});
+
+	test("no support for variable dynamic imports", async () => {
+		const resp = await worker.fetch("/dynamic-var");
+		const text = await resp.text();
+		expect(text).toMatchInlineSnapshot(
+			'"Error: No such module \\"dynamic-var.js\\"."'
+		);
 	});
 });
