@@ -27,6 +27,10 @@ const DURABLE_OBJECTS_BINDING_REGEXP = new RegExp(
 	/^(?<binding>[^=]+)=(?<className>[^@\s]+)(@(?<scriptName>.*)$)?$/
 );
 
+const SERVICE_BINDING_REGEXP = new RegExp(
+	/^(?<binding>[^=]+)=(?<service>[^@\s]+)(@(?<environment>.*)$)?$/
+);
+
 export function Options(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("directory", {
@@ -119,6 +123,11 @@ export function Options(yargs: CommonYargsArgv) {
 				type: "array",
 				description: "R2 bucket to bind (--r2 R2_BINDING)",
 			},
+			service: {
+				type: "array",
+				description: "Service to bind (--service SERVICE=worker)",
+				alias: "s",
+			},
 			"live-reload": {
 				type: "boolean",
 				default: false,
@@ -188,6 +197,7 @@ export const Handler = async ({
 	do: durableObjects = [],
 	d1: d1s = [],
 	r2: r2s = [],
+	service: services = [],
 	liveReload,
 	localProtocol,
 	experimentalEnableLocalPersistence,
@@ -542,6 +552,33 @@ export const Handler = async ({
 		inspect: undefined,
 		logPrefix: "pages",
 		logLevel: logLevel ?? "warn",
+		services: services
+				.map((serviceBinding) => {
+					const { binding, service, environment } =
+						SERVICE_BINDING_REGEXP.exec(serviceBinding.toString())?.groups ||
+						{};
+
+					if (!binding || !service) {
+						logger.warn(
+							"Could not parse Service binding:",
+							serviceBinding.toString()
+						);
+						return;
+					}
+
+					// Envs get appended to the end of the name
+					let serviceName = service;
+					if (environment) {
+						serviceName = `${service}-${environment}`;
+					}
+
+					return {
+						binding,
+						service: serviceName,
+						environment,
+					};
+				})
+				.filter(Boolean) as AdditionalDevProps["services"],
 		experimental: {
 			d1Databases: d1s.map((binding) => ({
 				binding: binding.toString(),
