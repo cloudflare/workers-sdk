@@ -32,8 +32,33 @@ describe("guess worker format", () => {
 		expect(guess).toBe("service-worker");
 	});
 
-	it('should detect a "server-worker" worker using `typeof module`', async () => {
+	it('should detect a "service-worker" worker using `typeof module`', async () => {
 		await writeFile("./index.ts", "typeof module");
+		const guess = await guessWorkerFormat(
+			path.join(process.cwd(), "./index.ts"),
+			process.cwd(),
+			undefined
+		);
+		expect(guess).toBe("service-worker");
+	});
+
+	it('should detect a "service-worker" worker using imports', async () => {
+		await writeFile(
+			"./dep.ts",
+			`
+			const value = 'thing';
+			export default value;
+			`
+		);
+		await writeFile(
+			"./index.ts",
+			`
+			import value from './dep.ts';
+			addEventListener('fetch', (event) => {
+				event.respondWith(new Response(value));
+			});
+			`
+		);
 		const guess = await guessWorkerFormat(
 			path.join(process.cwd(), "./index.ts"),
 			process.cwd(),
