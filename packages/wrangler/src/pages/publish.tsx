@@ -1,12 +1,8 @@
 import { execSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
-import { cwd } from "node:process";
 import { render, Text } from "ink";
 import SelectInput from "ink-select-input";
 import React from "react";
-import { File, FormData } from "undici";
+import { publish } from "../api/pages/publish";
 import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { prompt } from "../dialogs";
@@ -14,24 +10,20 @@ import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
-import { buildFunctions } from "./build";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { listProjects } from "./projects";
-import { upload } from "./upload";
+import { promptSelectProject } from "./prompt-select-project";
 import { pagesBetaWarning } from "./utils";
-import type { Deployment, PagesConfigCache, Project } from "./types";
-import type { ArgumentsCamelCase, Argv } from "yargs";
+import type {
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
+} from "../yargs-types";
+import type { PagesConfigCache } from "./types";
+import type { Project } from "@cloudflare/types";
 
-type PublishArgs = {
-	directory: string;
-	"project-name"?: string;
-	branch?: string;
-	"commit-hash"?: string;
-	"commit-message"?: string;
-	"commit-dirty"?: boolean;
-};
+type PublishArgs = StrictYargsOptionsToInterface<typeof Options>;
 
-export function Options(yargs: Argv): Argv<PublishArgs> {
+export function Options(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("directory", {
 			type: "string",
@@ -60,6 +52,27 @@ export function Options(yargs: Argv): Argv<PublishArgs> {
 				description:
 					"Whether or not the workspace should be considered dirty for this deployment",
 			},
+			"skip-caching": {
+				type: "boolean",
+				description: "Skip asset caching which speeds up builds",
+			},
+			bundle: {
+				type: "boolean",
+				default: undefined,
+				hidden: true,
+			},
+			"no-bundle": {
+				type: "boolean",
+				default: true,
+				description: "Whether to run bundling on `_worker.js` before deploying",
+			},
+			"experimental-worker-bundle": {
+				type: "boolean",
+				default: false,
+				hidden: true,
+				description:
+					"Whether to process non-JS module imports or not, such as wasm/text/binary, when we run bundling on `functions` or `_worker.js`",
+			},
 			config: {
 				describe: "Pages does not support wrangler.toml",
 				type: "string",
@@ -76,8 +89,12 @@ export const Handler = async ({
 	commitHash,
 	commitMessage,
 	commitDirty,
+	skipCaching,
+	bundle,
+	noBundle,
+	experimentalWorkerBundle,
 	config: wranglerConfig,
-}: ArgumentsCamelCase<PublishArgs>) => {
+}: PublishArgs) => {
 	if (wranglerConfig) {
 		throw new FatalError("Pages does not support wrangler.toml", 1);
 	}
@@ -132,24 +149,7 @@ export const Handler = async ({
 
 		switch (existingOrNew) {
 			case "existing": {
-				projectName = await new Promise((resolve) => {
-					const { unmount } = render(
-						<>
-							<Text>Select a project:</Text>
-							<SelectInput
-								items={projects.map((project) => ({
-									key: project.name,
-									label: project.name,
-									value: project,
-								}))}
-								onSelect={async (selected) => {
-									resolve(selected.value.name);
-									unmount();
-								}}
-							/>
-						</>
-					);
-				});
+				projectName = await promptSelectProject({ accountId });
 				break;
 			}
 			case "new": {
@@ -170,10 +170,11 @@ export const Handler = async ({
 
 				const productionBranch = await prompt(
 					"Enter the production branch name:",
-					"text",
-					isGitDir
-						? execSync(`git rev-parse --abbrev-ref HEAD`).toString().trim()
-						: "production"
+					{
+						defaultValue: isGitDir
+							? execSync(`git rev-parse --abbrev-ref HEAD`).toString().trim()
+							: "production",
+					}
 				);
 
 				if (!productionBranch) {
@@ -205,7 +206,6 @@ export const Handler = async ({
 	}
 
 	// We infer git info by default is not passed in
-
 	let isGitDir = true;
 	try {
 		execSync(`git rev-parse --is-inside-work-tree`, {
@@ -249,93 +249,20 @@ export const Handler = async ({
 		}
 	}
 
-	let builtFunctions: string | undefined = undefined;
-	const functionsDirectory = join(cwd(), "functions");
-	if (existsSync(functionsDirectory)) {
-		const outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`);
-
-		await new Promise((resolve) =>
-			buildFunctions({
-				outfile,
-				functionsDirectory,
-				onEnd: () => resolve(null),
-				buildOutputDirectory: dirname(outfile),
-			})
-		);
-
-		builtFunctions = readFileSync(outfile, "utf-8");
-	}
-
-	const manifest = await upload({ directory, accountId, projectName });
-
-	const formData = new FormData();
-
-	formData.append("manifest", JSON.stringify(manifest));
-
-	if (branch) {
-		formData.append("branch", branch);
-	}
-
-	if (commitMessage) {
-		formData.append("commit_message", commitMessage);
-	}
-
-	if (commitHash) {
-		formData.append("commit_hash", commitHash);
-	}
-
-	if (commitDirty !== undefined) {
-		formData.append("commit_dirty", commitDirty);
-	}
-
-	let _headers: string | undefined,
-		_redirects: string | undefined,
-		_routes: string | undefined,
-		_workerJS: string | undefined;
-
-	try {
-		_headers = readFileSync(join(directory, "_headers"), "utf-8");
-	} catch {}
-
-	try {
-		_redirects = readFileSync(join(directory, "_redirects"), "utf-8");
-	} catch {}
-
-	try {
-		_routes = readFileSync(join(directory, "_routes.json"), "utf-8");
-	} catch {}
-
-	try {
-		_workerJS = readFileSync(join(directory, "_worker.js"), "utf-8");
-	} catch {}
-
-	if (_headers) {
-		formData.append("_headers", new File([_headers], "_headers"));
-	}
-
-	if (_redirects) {
-		formData.append("_redirects", new File([_redirects], "_redirects"));
-	}
-
-	if (_routes) {
-		formData.append("_routes.json", new File([_routes], "_routes.json"));
-		logger.warn(
-			`🚨 _routes.json is an experimental feature and is subject to change. Don't use unless you really must!`
-		);
-	}
-
-	if (builtFunctions) {
-		formData.append("_worker.js", new File([builtFunctions], "_worker.js"));
-	} else if (_workerJS) {
-		formData.append("_worker.js", new File([_workerJS], "_worker.js"));
-	}
-	const deploymentResponse = await fetchResult<Deployment>(
-		`/accounts/${accountId}/pages/projects/${projectName}/deployments`,
-		{
-			method: "POST",
-			body: formData,
-		}
-	);
+	const deploymentResponse = await publish({
+		directory,
+		accountId,
+		projectName,
+		branch,
+		skipCaching,
+		commitMessage,
+		commitHash,
+		commitDirty,
+		// TODO: Here lies a known bug. If you specify both `--bundle` and `--no-bundle`, this behavior is undefined and you will get unexpected results.
+		// There is no sane way to get the true value out of yargs, so here we are.
+		bundle: bundle ?? !noBundle,
+		experimentalWorkerBundle,
+	});
 
 	saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
 		account_id: accountId,

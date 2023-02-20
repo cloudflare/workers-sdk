@@ -14,11 +14,18 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Use Node.js 16.7
+      - name: Use Node.js 16.13
         uses: actions/setup-node@v3
         with:
-          node-version: 16.7
+          node-version: 16.13
           cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
+
+      - name: Install workerd Dependencies
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt-get update
+          sudo apt-get install -y libc++1
 
       - name: Install NPM Dependencies
         run: npm ci
@@ -31,12 +38,22 @@ jobs:
         env:
           NODE_ENV: "production"
 
-      - name: Pack
+      - name: Pack wrangler
         run: npm pack
         working-directory: packages/wrangler
 
-      - name: Upload packaged artifact
+      - name: Pack @cloudflare/pages-shared
+        run: npm pack
+        working-directory: packages/pages-shared
+
+      - name: Upload packaged wrangler artifact
         uses: actions/upload-artifact@v2
         with:
           name: npm-package-wrangler-${{ github.event.number }} # encode the PR number into the artifact name
           path: packages/wrangler/wrangler-*.tgz
+
+      - name: Upload packaged @cloudflare/pages-shared artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: npm-package-cloudflare-pages-shared-${{ github.event.number }} # encode the PR number into the artifact name
+          path: packages/pages-shared/cloudflare-pages-shared-*.tgz

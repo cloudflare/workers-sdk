@@ -1,5 +1,8 @@
 import { match } from "path-to-regexp";
 
+//note: this explicitly does not include the * character, as pages requires this
+const escapeRegex = /[.+?^${}()|[\]\\]/g;
+
 type HTTPMethod =
 	| "HEAD"
 	| "OPTIONS"
@@ -16,6 +19,7 @@ type EventContext<Env, P extends string, Data> = {
 	request: Request;
 	functionPath: string;
 	waitUntil: (promise: Promise<unknown>) => void;
+	passThroughOnException: () => void;
 	next: (input?: Request | string, init?: RequestInit) => Promise<Response>;
 	env: Env & { ASSETS: { fetch: typeof fetch } };
 	params: Params<P>;
@@ -50,6 +54,7 @@ type FetchEnv = {
 
 type WorkerContext = {
 	waitUntil: (promise: Promise<unknown>) => void;
+	passThroughOnException: () => void;
 };
 
 function* executeRequest(request: Request) {
@@ -61,8 +66,13 @@ function* executeRequest(request: Request) {
 			continue;
 		}
 
-		const routeMatcher = match(route.routePath, { end: false });
-		const mountMatcher = match(route.mountPath, { end: false });
+		// replaces with "\\$&", this prepends a backslash to the matched string, e.g. "[" becomes "\["
+		const routeMatcher = match(route.routePath.replace(escapeRegex, "\\$&"), {
+			end: false,
+		});
+		const mountMatcher = match(route.mountPath.replace(escapeRegex, "\\$&"), {
+			end: false,
+		});
 		const matchResult = routeMatcher(requestPath);
 		const mountMatchResult = mountMatcher(requestPath);
 		if (matchResult && mountMatchResult) {
@@ -81,9 +91,12 @@ function* executeRequest(request: Request) {
 		if (route.method && route.method !== request.method) {
 			continue;
 		}
-
-		const routeMatcher = match(route.routePath, { end: true });
-		const mountMatcher = match(route.mountPath, { end: false });
+		const routeMatcher = match(route.routePath.replace(escapeRegex, "\\$&"), {
+			end: true,
+		});
+		const mountMatcher = match(route.mountPath.replace(escapeRegex, "\\$&"), {
+			end: false,
+		});
 		const matchResult = routeMatcher(requestPath);
 		const mountMatchResult = mountMatcher(requestPath);
 		if (matchResult && mountMatchResult && route.modules.length) {
@@ -100,9 +113,16 @@ function* executeRequest(request: Request) {
 }
 
 export default {
-	async fetch(request: Request, env: FetchEnv, workerContext: WorkerContext) {
+	async fetch(
+		originalRequest: Request,
+		env: FetchEnv,
+		workerContext: WorkerContext
+	) {
+		let request = originalRequest;
 		const handlerIterator = executeRequest(request);
 		const data = {}; // arbitrary data the user can set between functions
+		let isFailOpen = false;
+
 		const next = async (input?: RequestInfo, init?: RequestInit) => {
 			if (input !== undefined) {
 				let url = input;
@@ -124,6 +144,9 @@ export default {
 					data,
 					env,
 					waitUntil: workerContext.waitUntil.bind(workerContext),
+					passThroughOnException: () => {
+						isFailOpen = true;
+					},
 				};
 
 				const response = await handler(context);
@@ -145,9 +168,14 @@ export default {
 		};
 
 		try {
-			return next();
-		} catch (err) {
-			return new Response("Internal Error", { status: 500 });
+			return await next();
+		} catch (error) {
+			if (isFailOpen) {
+				const response = await env[__FALLBACK_SERVICE__].fetch(request);
+				return cloneResponse(response);
+			}
+
+			throw error;
 		}
 	},
 };

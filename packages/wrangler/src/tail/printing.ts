@@ -1,11 +1,12 @@
 import { logger } from "../logger";
-import type { Outcome } from "./filters";
 import type {
 	AlarmEvent,
+	EmailEvent,
 	RequestEvent,
 	ScheduledEvent,
 	TailEventMessage,
-} from "./index";
+} from "./createTail";
+import type { Outcome } from "./filters";
 import type WebSocket from "ws";
 
 export function prettyPrintLogs(data: WebSocket.RawData): void {
@@ -29,6 +30,16 @@ export function prettyPrintLogs(data: WebSocket.RawData): void {
 			url
 				? `${requestMethod} ${url} - ${outcome} @ ${datetime}`
 				: `[missing request] - ${outcome} @ ${datetime}`
+		);
+	} else if (isEmailEvent(eventMessage.event)) {
+		const outcome = prettifyOutcome(eventMessage.outcome);
+		const datetime = new Date(eventMessage.eventTimestamp).toLocaleString();
+		const mailFrom = eventMessage.event.mailFrom;
+		const rcptTo = eventMessage.event.rcptTo;
+		const rawSize = eventMessage.event.rawSize;
+
+		logger.log(
+			`Email from:${mailFrom} to:${rcptTo} size:${rawSize} @ ${datetime} - ${outcome}`
 		);
 	} else if (isAlarmEvent(eventMessage.event)) {
 		const outcome = prettifyOutcome(eventMessage.outcome);
@@ -74,6 +85,10 @@ function isScheduledEvent(
 	return Boolean(event && "cron" in event);
 }
 
+function isEmailEvent(event: TailEventMessage["event"]): event is EmailEvent {
+	return Boolean(event && "mailFrom" in event);
+}
+
 /**
  * Check to see if an event sent from a worker is an AlarmEvent.
  *
@@ -96,6 +111,8 @@ function prettifyOutcome(outcome: Outcome): string {
 			return "Canceled";
 		case "exceededCpu":
 			return "Exceeded CPU Limit";
+		case "exceededMemory":
+			return "Exceeded Memory Limit";
 		case "exception":
 			return "Exception Thrown";
 		case "unknown":

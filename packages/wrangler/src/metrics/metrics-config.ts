@@ -1,15 +1,15 @@
 import { randomUUID } from "node:crypto";
 import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { confirm } from "../dialogs";
-import { getEnvironmentVariableFactory } from "../environment-variables";
+import { getEnvironmentVariableFactory } from "../environment-variables/factory";
+import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
+import { CI } from "../is-ci";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { getAPIToken } from "../user";
-import { CI } from "./is-ci";
 
 /**
  * The date that the metrics being gathered was last updated in a way that would require
@@ -167,7 +167,7 @@ export function readMetricsConfig(): MetricsConfigFile {
  * Get the path to the metrics config file.
  */
 function getMetricsConfigPath(): string {
-	return path.resolve(os.homedir(), ".wrangler/config/metrics.json");
+	return path.resolve(getGlobalWranglerConfigPath(), "metrics.json");
 }
 
 /**

@@ -1,0 +1,78 @@
+diff --git a/node_modules/ink/build/dom.js b/node_modules/ink/build/dom.js
+index 36f4720..ed70cf7 100644
+--- a/node_modules/ink/build/dom.js
++++ b/node_modules/ink/build/dom.js
+@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
+ };
+ Object.defineProperty(exports, "__esModule", { value: true });
+ exports.setTextNodeValue = exports.createTextNode = exports.setStyle = exports.setAttribute = exports.removeChildNode = exports.insertBeforeNode = exports.appendChildNode = exports.createNode = exports.TEXT_NAME = void 0;
+-const yoga_layout_prebuilt_1 = __importDefault(require("yoga-layout-prebuilt"));
++const yoga_layout_prebuilt_1 = __importDefault(require("yoga-layout/sync"));
+ const measure_text_1 = __importDefault(require("./measure-text"));
+ const styles_1 = __importDefault(require("./styles"));
+ const wrap_text_1 = __importDefault(require("./wrap-text"));
+diff --git a/node_modules/ink/build/get-max-width.js b/node_modules/ink/build/get-max-width.js
+index 4c1218b..0c6351c 100644
+--- a/node_modules/ink/build/get-max-width.js
++++ b/node_modules/ink/build/get-max-width.js
+@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
+     return (mod && mod.__esModule) ? mod : { "default": mod };
+ };
+ Object.defineProperty(exports, "__esModule", { value: true });
+-const yoga_layout_prebuilt_1 = __importDefault(require("yoga-layout-prebuilt"));
++const yoga_layout_prebuilt_1 = __importDefault(require("yoga-layout/sync"));
+ exports.default = (yogaNode) => {
+     return (yogaNode.getComputedWidth() -
+         yogaNode.getComputedPadding(yoga_layout_prebuilt_1.default.EDGE_LEFT) -
+diff --git a/node_modules/ink/build/reconciler.js b/node_modules/ink/build/reconciler.js
+index 5bb17a7..02b5e37 100644
+--- a/node_modules/ink/build/reconciler.js
++++ b/node_modules/ink/build/reconciler.js
+@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
+ Object.defineProperty(exports, "__esModule", { value: true });
+ const scheduler_1 = require("scheduler");
+ const react_reconciler_1 = __importDefault(require("react-reconciler"));
+-const yoga_layout_prebuilt_1 = __importDefault(require("yoga-layout-prebuilt"));
++const yoga_layout_prebuilt_1 = __importDefault(require("yoga-layout/sync"));
+ const dom_1 = require("./dom");
+ // We need to conditionally perform devtools connection to avoid
+ // accidentally breaking other third-party code.
+diff --git a/node_modules/ink/build/render-node-to-output.js b/node_modules/ink/build/render-node-to-output.js
+index ff309b2..a64fb06 100644
+--- a/node_modules/ink/build/render-node-to-output.js
++++ b/node_modules/ink/build/render-node-to-output.js
+@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
+     return (mod && mod.__esModule) ? mod : { "default": mod };
+ };
+ Object.defineProperty(exports, "__esModule", { value: true });
+-const yoga_layout_prebuilt_1 = __importDefault(require("yoga-layout-prebuilt"));
++const yoga_layout_prebuilt_1 = __importDefault(require("yoga-layout/sync"));
+ const widest_line_1 = __importDefault(require("widest-line"));
+ const indent_string_1 = __importDefault(require("indent-string"));
+ const wrap_text_1 = __importDefault(require("./wrap-text"));
+diff --git a/node_modules/ink/build/renderer.js b/node_modules/ink/build/renderer.js
+index 3767f87..19f7a69 100644
+--- a/node_modules/ink/build/renderer.js
++++ b/node_modules/ink/build/renderer.js
+@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
+     return (mod && mod.__esModule) ? mod : { "default": mod };
+ };
+ Object.defineProperty(exports, "__esModule", { value: true });
+-const yoga_layout_prebuilt_1 = __importDefault(require("yoga-layout-prebuilt"));
++const yoga_layout_prebuilt_1 = __importDefault(require("yoga-layout/sync"));
+ const render_node_to_output_1 = __importDefault(require("./render-node-to-output"));
+ const output_1 = __importDefault(require("./output"));
+ exports.default = (node, terminalWidth) => {
+diff --git a/node_modules/ink/build/styles.js b/node_modules/ink/build/styles.js
+index b8b63c6..d4ca924 100644
+--- a/node_modules/ink/build/styles.js
++++ b/node_modules/ink/build/styles.js
+@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
+ };
+ Object.defineProperty(exports, "__esModule", { value: true });
+ /* eslint-disable @typescript-eslint/prefer-nullish-coalescing */
+-const yoga_layout_prebuilt_1 = __importDefault(require("yoga-layout-prebuilt"));
++const yoga_layout_prebuilt_1 = __importDefault(require("yoga-layout/sync"));
+ const applyPositionStyles = (node, style) => {
+     if ('position' in style) {
+         node.setPositionType(style.position === 'absolute'

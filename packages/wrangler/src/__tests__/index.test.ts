@@ -1,4 +1,5 @@
 import { getPackageManager } from "../package-manager";
+import { endEventLoop } from "./helpers/end-event-loop";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
@@ -31,26 +32,37 @@ describe("wrangler", () => {
 			"wrangler
 
 			Commands:
-			  wrangler init [name]       📥 Create a wrangler.toml configuration file
-			  wrangler dev [script]      👂 Start a local server for developing your worker
-			  wrangler publish [script]  🆙 Publish your Worker to Cloudflare.
-			  wrangler tail [name]       🦚 Starts a log tailing session for a published Worker.
-			  wrangler secret            🤫 Generate a secret that can be referenced in a Worker
-			  wrangler kv:namespace      🗂️  Interact with your Workers KV Namespaces
-			  wrangler kv:key            🔑 Individually manage Workers KV key-value pairs
-			  wrangler kv:bulk           💪 Interact with multiple Workers KV key-value pairs at once
-			  wrangler pages             ⚡️ Configure Cloudflare Pages
-			  wrangler r2                📦 Interact with an R2 store
-			  wrangler worker-namespace  📦 Interact with a worker namespace
-			  wrangler pubsub            📮 Interact and manage Pub/Sub Brokers
-			  wrangler login             🔓 Login to Cloudflare
-			  wrangler logout            🚪 Logout from Cloudflare
-			  wrangler whoami            🕵️  Retrieve your user info and test your auth config
+			  wrangler docs [command]              📚 Open wrangler's docs in your browser
+			  wrangler init [name]                 📥 Initialize a basic Worker project, including a wrangler.toml file
+			  wrangler generate [name] [template]  ✨ Generate a new Worker project from an existing Worker template. See https://github.com/cloudflare/templates
+			  wrangler dev [script]                👂 Start a local server for developing your worker
+			  wrangler publish [script]            🆙 Publish your Worker to Cloudflare.
+			  wrangler delete [script]             🗑  Delete your Worker from Cloudflare.
+			  wrangler tail [worker]               🦚 Starts a log tailing session for a published Worker.
+			  wrangler secret                      🤫 Generate a secret that can be referenced in a Worker
+			  wrangler secret:bulk <json>          🗄️  Bulk upload secrets for a Worker
+			  wrangler kv:namespace                🗂️  Interact with your Workers KV Namespaces
+			  wrangler kv:key                      🔑 Individually manage Workers KV key-value pairs
+			  wrangler kv:bulk                     💪 Interact with multiple Workers KV key-value pairs at once
+			  wrangler pages                       ⚡️ Configure Cloudflare Pages
+			  wrangler queues                      🇶 Configure Workers Queues
+			  wrangler r2                          📦 Interact with an R2 store
+			  wrangler dispatch-namespace          📦 Interact with a dispatch namespace
+			  wrangler d1                          🗄  Interact with a D1 database
+			  wrangler pubsub                      📮 Interact and manage Pub/Sub Brokers
+			  wrangler mtls-certificate            🪪 Manage certificates used for mTLS connections
+			  wrangler login                       🔓 Login to Cloudflare
+			  wrangler logout                      🚪 Logout from Cloudflare
+			  wrangler whoami                      🕵️  Retrieve your user info and test your auth config
+			  wrangler types                       📝 Generate types from bindings & module rules in config
+			  wrangler deployments                 🚢 Displays the 10 most recent deployments for a worker
 
 			Flags:
-			  -c, --config   Path to .toml configuration file  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
 		`);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -70,26 +82,37 @@ describe("wrangler", () => {
 			wrangler
 
 			Commands:
-			  wrangler init [name]       📥 Create a wrangler.toml configuration file
-			  wrangler dev [script]      👂 Start a local server for developing your worker
-			  wrangler publish [script]  🆙 Publish your Worker to Cloudflare.
-			  wrangler tail [name]       🦚 Starts a log tailing session for a published Worker.
-			  wrangler secret            🤫 Generate a secret that can be referenced in a Worker
-			  wrangler kv:namespace      🗂️  Interact with your Workers KV Namespaces
-			  wrangler kv:key            🔑 Individually manage Workers KV key-value pairs
-			  wrangler kv:bulk           💪 Interact with multiple Workers KV key-value pairs at once
-			  wrangler pages             ⚡️ Configure Cloudflare Pages
-			  wrangler r2                📦 Interact with an R2 store
-			  wrangler worker-namespace  📦 Interact with a worker namespace
-			  wrangler pubsub            📮 Interact and manage Pub/Sub Brokers
-			  wrangler login             🔓 Login to Cloudflare
-			  wrangler logout            🚪 Logout from Cloudflare
-			  wrangler whoami            🕵️  Retrieve your user info and test your auth config
+			  wrangler docs [command]              📚 Open wrangler's docs in your browser
+			  wrangler init [name]                 📥 Initialize a basic Worker project, including a wrangler.toml file
+			  wrangler generate [name] [template]  ✨ Generate a new Worker project from an existing Worker template. See https://github.com/cloudflare/templates
+			  wrangler dev [script]                👂 Start a local server for developing your worker
+			  wrangler publish [script]            🆙 Publish your Worker to Cloudflare.
+			  wrangler delete [script]             🗑  Delete your Worker from Cloudflare.
+			  wrangler tail [worker]               🦚 Starts a log tailing session for a published Worker.
+			  wrangler secret                      🤫 Generate a secret that can be referenced in a Worker
+			  wrangler secret:bulk <json>          🗄️  Bulk upload secrets for a Worker
+			  wrangler kv:namespace                🗂️  Interact with your Workers KV Namespaces
+			  wrangler kv:key                      🔑 Individually manage Workers KV key-value pairs
+			  wrangler kv:bulk                     💪 Interact with multiple Workers KV key-value pairs at once
+			  wrangler pages                       ⚡️ Configure Cloudflare Pages
+			  wrangler queues                      🇶 Configure Workers Queues
+			  wrangler r2                          📦 Interact with an R2 store
+			  wrangler dispatch-namespace          📦 Interact with a dispatch namespace
+			  wrangler d1                          🗄  Interact with a D1 database
+			  wrangler pubsub                      📮 Interact and manage Pub/Sub Brokers
+			  wrangler mtls-certificate            🪪 Manage certificates used for mTLS connections
+			  wrangler login                       🔓 Login to Cloudflare
+			  wrangler logout                      🚪 Logout from Cloudflare
+			  wrangler whoami                      🕵️  Retrieve your user info and test your auth config
+			  wrangler types                       📝 Generate types from bindings & module rules in config
+			  wrangler deployments                 🚢 Displays the 10 most recent deployments for a worker
 
 			Flags:
-			  -c, --config   Path to .toml configuration file  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: invalid-command[0m
@@ -133,9 +156,11 @@ describe("wrangler", () => {
 			  wrangler secret list          List all secrets for a Worker
 
 			Flags:
-			  -c, --config   Path to .toml configuration file  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
 		`);
 		});
 
@@ -143,60 +168,66 @@ describe("wrangler", () => {
 			await runWrangler("kv:namespace");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
-			        "wrangler kv:namespace
+			"wrangler kv:namespace
 
-			        🗂️  Interact with your Workers KV Namespaces
+			🗂️  Interact with your Workers KV Namespaces
 
-			        Commands:
-			          wrangler kv:namespace create <namespace>  Create a new namespace
-			          wrangler kv:namespace list                Outputs a list of all KV namespaces associated with your account id.
-			          wrangler kv:namespace delete              Deletes a given namespace.
+			Commands:
+			  wrangler kv:namespace create <namespace>  Create a new namespace
+			  wrangler kv:namespace list                Outputs a list of all KV namespaces associated with your account id.
+			  wrangler kv:namespace delete              Deletes a given namespace.
 
-			        Flags:
-			          -c, --config   Path to .toml configuration file  [string]
-			          -h, --help     Show help  [boolean]
-			          -v, --version  Show version number  [boolean]"
-		      `);
+			Flags:
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
+		`);
 		});
 
 		it("no subcommand 'kv:key' should display a list of available subcommands", async () => {
 			await runWrangler("kv:key");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
-			        "wrangler kv:key
+			"wrangler kv:key
 
-			        🔑 Individually manage Workers KV key-value pairs
+			🔑 Individually manage Workers KV key-value pairs
 
-			        Commands:
-			          wrangler kv:key put <key> [value]  Writes a single key/value pair to the given namespace.
-			          wrangler kv:key list               Outputs a list of all keys in a given namespace.
-			          wrangler kv:key get <key>          Reads a single value by key from the given namespace.
-			          wrangler kv:key delete <key>       Removes a single key value pair from the given namespace.
+			Commands:
+			  wrangler kv:key put <key> [value]  Writes a single key/value pair to the given namespace.
+			  wrangler kv:key list               Outputs a list of all keys in a given namespace.
+			  wrangler kv:key get <key>          Reads a single value by key from the given namespace.
+			  wrangler kv:key delete <key>       Removes a single key value pair from the given namespace.
 
-			        Flags:
-			          -c, --config   Path to .toml configuration file  [string]
-			          -h, --help     Show help  [boolean]
-			          -v, --version  Show version number  [boolean]"
-		      `);
+			Flags:
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
+		`);
 		});
 
 		it("no subcommand 'kv:bulk' should display a list of available subcommands", async () => {
 			await runWrangler("kv:bulk");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
-			        "wrangler kv:bulk
+			"wrangler kv:bulk
 
-			        💪 Interact with multiple Workers KV key-value pairs at once
+			💪 Interact with multiple Workers KV key-value pairs at once
 
-			        Commands:
-			          wrangler kv:bulk put <filename>     Upload multiple key-value pairs to a namespace
-			          wrangler kv:bulk delete <filename>  Delete multiple key-value pairs from a namespace
+			Commands:
+			  wrangler kv:bulk put <filename>     Upload multiple key-value pairs to a namespace
+			  wrangler kv:bulk delete <filename>  Delete multiple key-value pairs from a namespace
 
-			        Flags:
-			          -c, --config   Path to .toml configuration file  [string]
-			          -h, --help     Show help  [boolean]
-			          -v, --version  Show version number  [boolean]"
-		      `);
+			Flags:
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
+		`);
 		});
 
 		it("no subcommand 'r2' should display a list of available subcommands", async () => {
@@ -212,9 +243,11 @@ describe("wrangler", () => {
 			  wrangler r2 bucket  Manage R2 buckets
 
 			Flags:
-			  -c, --config   Path to .toml configuration file  [string]
-			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]"
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]"
 		`);
 		});
 	});
@@ -227,19 +260,15 @@ describe("wrangler", () => {
 		await runWrangler("build");
 		await endEventLoop();
 		expect(std.out).toMatchInlineSnapshot(`
-		      "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDeprecation: \`wrangler build\` has been deprecated.[0m
+		"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDeprecation: \`wrangler build\` has been deprecated.[0m
 
-		        Please refer to [4mhttps://developers.cloudflare.com/workers/wrangler/migration/deprecations/#build[0m
-		        for more information.
-		        Attempting to run \`wrangler publish --dry-run --outdir=dist\` for you instead:
+		  Please refer to [4mhttps://developers.cloudflare.com/workers/wrangler/migration/deprecations/#build[0m
+		  for more information.
+		  Attempting to run \`wrangler publish --dry-run --outdir=dist\` for you instead:
 
 
-		      --dry-run: exiting now.
-		      Total Upload: 0xx KiB / gzip: 0xx KiB"
-	    `);
+		Total Upload: xx KiB / gzip: xx KiB
+		--dry-run: exiting now."
+	`);
 	});
 });
-
-function endEventLoop() {
-	return new Promise((resolve) => setImmediate(resolve));
-}

@@ -7,8 +7,11 @@ import type { Properties } from "./metrics-dispatcher";
 export type EventNames =
 	| "view accounts"
 	| "deploy worker script"
+	| "delete worker script"
 	| "begin log stream"
 	| "end log stream"
+	| "begin pages log stream"
+	| "end pages log stream"
 	| "create encrypted variable"
 	| "delete encrypted variable"
 	| "list encrypted variables"
@@ -40,18 +43,21 @@ export type EventNames =
 	| "unrevoke pubsub broker credentials"
 	| "list pubsub broker revoked credentials"
 	| "list pubsub broker public-keys"
-	| "list worker namespaces"
-	| "view worker namespace"
-	| "create worker namespace"
-	| "delete worker namespace"
-	| "rename worker namespace"
+	| "list dispatch namespaces"
+	| "view dispatch namespace"
+	| "create dispatch namespace"
+	| "delete dispatch namespace"
+	| "rename dispatch namespace"
 	| "create pages project"
 	| "list pages projects"
 	| "create pages deployment"
 	| "list pages deployments"
 	| "build pages functions"
 	| "run dev"
-	| "run pages dev";
+	| "run dev (api)"
+	| "run pages dev"
+	| "view docs"
+	| "view deployments";
 
 /**
  * Send a metrics event, with no extra properties, to Cloudflare, if usage tracking is enabled.

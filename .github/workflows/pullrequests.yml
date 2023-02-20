@@ -5,20 +5,17 @@ on: pull_request
 jobs:
   check:
     name: "Checks"
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: Use Node.js 16.7
+      - name: Use Node.js 16.13
         uses: actions/setup-node@v3
         with:
-          node-version: 16.7
+          node-version: 16.13
           cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
 
       - uses: actions/cache@v3
@@ -29,11 +26,23 @@ jobs:
             tsconfig.tsbuildinfo
           key: ${{ matrix.os }}-eslint-tsbuildinfo-${{ hashFiles('**/*.ts','**/*.js', 'package.json', 'tsconfig.json') }}
 
+      - name: Install workerd Dependencies
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt-get update
+          sudo apt-get install -y libc++1
+
       - name: Install NPM Dependencies
         run: npm ci
 
+      - name: Build
+        run: npm run build
+
       - name: Check for errors
         run: npm run check
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
 
   test:
     name: "Tests"
@@ -47,11 +56,18 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Use Node.js 16.7
+      - name: Use Node.js 16.13
         uses: actions/setup-node@v3
         with:
-          node-version: 16.7
+          node-version: 16.13
           cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
+
+      - name: Install workerd Dependencies
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt-get update
+          sudo apt-get install -y libc++1
 
       - name: Install NPM Dependencies
         run: npm ci
@@ -63,6 +79,10 @@ jobs:
 
       - name: Run tests & collect coverage
         run: npm run test:ci
+        env:
+          TMP_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TMP_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          NODE_OPTIONS: "--max_old_space_size=8192"
 
       - name: Report Code Coverage
         uses: codecov/codecov-action@v3

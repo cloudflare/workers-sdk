@@ -1,0 +1,21 @@
+{
+	"name": "worker-openapi",
+	"version": "1.0.0",
+	"private": true,
+	"description": "Cloudflare workers template with OpenAPI 3 schema generation and validation",
+	"keywords": [],
+	"license": "MIT",
+	"author": "",
+	"main": "src/index.ts",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"dependencies": {
+		"@cloudflare/itty-router-openapi": "^0.0.10"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20221111.1",
+		"@types/service-worker-mock": "^2.0.1",
+		"wrangler": "^2.4.4"
+	}
+}

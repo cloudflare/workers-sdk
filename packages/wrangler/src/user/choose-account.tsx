@@ -1,40 +1,10 @@
-import { Text } from "ink";
-import SelectInput from "ink-select-input";
-import React from "react";
 import { fetchListResult } from "../cfetch";
-import { logger } from "../logger";
-import { getCloudflareAccountIdFromEnv } from "./env-vars";
+import { getCloudflareAccountIdFromEnv } from "./auth-variables";
 
 export type ChooseAccountItem = {
 	id: string;
 	name: string;
 };
-
-/**
- * A component that allows the user to select from a list of available accounts.
- */
-export function ChooseAccount(props: {
-	accounts: ChooseAccountItem[];
-	onSelect: (account: { name: string; id: string }) => void;
-	onError: (error: Error) => void;
-}) {
-	return (
-		<>
-			<Text bold>Select an account from below:</Text>
-			<SelectInput
-				items={props.accounts.map((item) => ({
-					key: item.id,
-					label: item.name,
-					value: item,
-				}))}
-				onSelect={(item) => {
-					logger.log(`Using account: "${item.value.name} - ${item.value.id}"`);
-					props.onSelect({ id: item.value.id, name: item.value.name });
-				}}
-			/>
-		</>
-	);
-}
 
 /**
  * Infer a list of available accounts for the current user.

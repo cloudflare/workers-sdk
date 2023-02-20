@@ -1,62 +1,33 @@
-import { spawn, spawnSync } from "child_process";
-import * as path from "path";
+import { spawnSync } from "node:child_process";
+import { resolve } from "node:path";
 import { fetch } from "undici";
-import type { ChildProcess } from "child_process";
-import type { Response } from "undici";
-
-const waitUntilReady = async (url: string): Promise<Response> => {
-  let response: Response | undefined = undefined;
-
-  while (response === undefined) {
-    await new Promise((resolvePromise) => setTimeout(resolvePromise, 500));
-
-    try {
-      response = await fetch(url);
-    } catch {}
-  }
-
-  return response as Response;
-};
+import { describe, it, beforeAll, afterAll } from "vitest";
+import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 const isWindows = process.platform === "win32";
 
-describe("Remix", () => {
-  let wranglerProcess: ChildProcess;
+describe.concurrent("Remix", () => {
+	let ip: string;
+	let port: number;
+	let stop: () => void;
 
-  beforeAll(async () => {
-    spawnSync("npm", ["run", "build"], {
-      shell: isWindows,
-      cwd: path.resolve(__dirname, "../"),
-    });
-    wranglerProcess = spawn("npm", ["run", "dev:wrangler"], {
-      shell: isWindows,
-      cwd: path.resolve(__dirname, "../"),
-      env: { BROWSER: "none", ...process.env },
-    });
-    wranglerProcess.stdout?.on("data", (chunk) => {
-      console.log(chunk.toString());
-    });
-    wranglerProcess.stderr?.on("data", (chunk) => {
-      console.log(chunk.toString());
-    });
-  });
+	beforeAll(async () => {
+		spawnSync("npm", ["run", "build"], {
+			shell: isWindows,
+			cwd: resolve(__dirname, ".."),
+		});
+		({ ip, port, stop } = await runWranglerPagesDev(
+			resolve(__dirname, ".."),
+			"public",
+			["--port=0"]
+		));
+	});
 
-  afterAll(async () => {
-    await new Promise((resolve, reject) => {
-      wranglerProcess.once("exit", (code) => {
-        if (!code) {
-          resolve(code);
-        } else {
-          reject(code);
-        }
-      });
-      wranglerProcess.kill("SIGTERM");
-    });
-  });
+	afterAll(async () => await stop());
 
-  it("renders", async () => {
-    const response = await waitUntilReady("http://localhost:8788/");
-    const text = await response.text();
-    expect(text).toContain("Welcome to Remix");
-  });
+	it("renders", async ({ expect }) => {
+		const response = await fetch(`http://${ip}:${port}/`);
+		const text = await response.text();
+		expect(text).toContain("Welcome to Remix");
+	});
 });

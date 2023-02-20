@@ -7,7 +7,7 @@
 
 /**
  * These are the filters we accept in the CLI. They
- * were copied directly from wrangler 1 in order to
+ * were copied directly from Wrangler v1 in order to
  * maintain compatability, so they aren't actually the exact
  * filters we need to send up to the tail worker. They generally map 1:1,
  * but often require some transformation or
@@ -58,13 +58,14 @@ type OutcomeFilter = {
 
 /**
  * There are five possible outcomes we can get, three of which
- * (exception, exceededCpu, and unknown) are considered errors
+ * (exception, exceededCpu, exceededMemory, and unknown) are considered errors
  */
 export type Outcome =
 	| "ok"
 	| "canceled"
 	| "exception"
 	| "exceededCpu"
+	| "exceededMemory"
 	| "unknown";
 
 /**
@@ -121,7 +122,6 @@ type QueryFilter = {
  */
 export type TailFilterMessage = {
 	filters: TailAPIFilter[];
-	debug: boolean;
 };
 
 /**
@@ -129,12 +129,10 @@ export type TailFilterMessage = {
  * into a message that we can send to the tail worker.
  *
  * @param cliFilters An object containing all the filters passed in from the CLI
- * @param debug Whether or not we should be in debug mode
  * @returns A filter message ready to be sent to the tail worker
  */
 export function translateCLICommandToFilterMessage(
-	cliFilters: TailCLIFilters,
-	debug: boolean
+	cliFilters: TailCLIFilters
 ): TailFilterMessage {
 	const apiFilters: TailAPIFilter[] = [];
 
@@ -164,7 +162,6 @@ export function translateCLICommandToFilterMessage(
 
 	return {
 		filters: apiFilters,
-		debug,
 	};
 }
 
@@ -210,6 +207,7 @@ function parseOutcome(
 			case "error":
 				outcomes.add("exception");
 				outcomes.add("exceededCpu");
+				outcomes.add("exceededMemory");
 				outcomes.add("unknown");
 				break;
 

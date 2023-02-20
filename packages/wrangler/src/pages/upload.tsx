@@ -1,40 +1,36 @@
 import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
-import {
-	basename,
-	dirname,
-	extname,
-	join,
-	relative,
-	resolve,
-	sep,
-} from "node:path";
-import { hash as blake3hash } from "blake3-wasm";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { render, Text } from "ink";
 import Spinner from "ink-spinner";
 import { getType } from "mime";
+import { Minimatch } from "minimatch";
 import PQueue from "p-queue";
 import prettyBytes from "pretty-bytes";
 import React from "react";
 import { fetchResult } from "../cfetch";
 import { FatalError } from "../errors";
+import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import {
+	MAX_ASSET_COUNT,
+	MAX_ASSET_SIZE,
 	BULK_UPLOAD_CONCURRENCY,
 	MAX_BUCKET_FILE_COUNT,
 	MAX_BUCKET_SIZE,
 	MAX_CHECK_MISSING_ATTEMPTS,
 	MAX_UPLOAD_ATTEMPTS,
 } from "./constants";
+import { hashFile } from "./hash";
 import { pagesBetaWarning } from "./utils";
+import type {
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
+} from "../yargs-types";
 import type { UploadPayloadFile } from "./types";
-import type { ArgumentsCamelCase, Argv } from "yargs";
 
-type UploadArgs = {
-	directory: string;
-	"output-manifest-path"?: string;
-};
+type UploadArgs = StrictYargsOptionsToInterface<typeof Options>;
 
-export function Options(yargs: Argv): Argv<UploadArgs> {
+export function Options(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("directory", {
 			type: "string",
@@ -46,6 +42,10 @@ export function Options(yargs: Argv): Argv<UploadArgs> {
 				type: "string",
 				description: "The name of the project you want to deploy to",
 			},
+			"skip-caching": {
+				type: "boolean",
+				description: "Skip asset caching which speeds up builds",
+			},
 		})
 		.epilogue(pagesBetaWarning);
 }
@@ -53,7 +53,8 @@ export function Options(yargs: Argv): Argv<UploadArgs> {
 export const Handler = async ({
 	directory,
 	outputManifestPath,
-}: ArgumentsCamelCase<UploadArgs>) => {
+	skipCaching,
+}: UploadArgs) => {
 	if (!directory) {
 		throw new FatalError("Must specify a directory.", 1);
 	}
@@ -65,6 +66,7 @@ export const Handler = async ({
 	const manifest = await upload({
 		directory,
 		jwt: process.env.CF_PAGES_UPLOAD_JWT,
+		skipCaching: skipCaching ?? false,
 	});
 
 	if (outputManifestPath) {
@@ -80,8 +82,14 @@ export const upload = async (
 		| {
 				directory: string;
 				jwt: string;
+				skipCaching: boolean;
 		  }
-		| { directory: string; accountId: string; projectName: string }
+		| {
+				directory: string;
+				accountId: string;
+				projectName: string;
+				skipCaching: boolean;
+		  }
 ) => {
 	async function fetchJwt(): Promise<string> {
 		if ("jwt" in args) {
@@ -107,10 +115,11 @@ export const upload = async (
 		"_redirects",
 		"_headers",
 		"_routes.json",
-		".DS_Store",
-		"node_modules",
-		".git",
-	];
+		"functions",
+		"**/.DS_Store",
+		"**/node_modules",
+		"**/.git",
+	].map((pattern) => new Minimatch(pattern));
 
 	const directory = resolve(args.directory);
 
@@ -132,10 +141,13 @@ export const upload = async (
 		await Promise.all(
 			files.map(async (file) => {
 				const filepath = join(dir, file);
+				const relativeFilepath = relative(startingDir, filepath);
 				const filestat = await stat(filepath);
 
-				if (IGNORE_LIST.includes(file)) {
-					return;
+				for (const minimatch of IGNORE_LIST) {
+					if (minimatch.match(relativeFilepath)) {
+						return;
+					}
 				}
 
 				if (filestat.isSymbolicLink()) {
@@ -145,17 +157,12 @@ export const upload = async (
 				if (filestat.isDirectory()) {
 					fileMap = await walk(filepath, fileMap, startingDir);
 				} else {
-					const name = relative(startingDir, filepath).split(sep).join("/");
+					const name = relativeFilepath.split(sep).join("/");
 
-					const fileContent = await readFile(filepath);
-
-					const base64Content = fileContent.toString("base64");
-					const extension = extname(basename(name)).substring(1);
-
-					if (filestat.size > 25 * 1024 * 1024) {
+					if (filestat.size > MAX_ASSET_SIZE) {
 						throw new FatalError(
 							`Error: Pages only supports files up to ${prettyBytes(
-								25 * 1024 * 1024
+								MAX_ASSET_SIZE
 							)} in size\n${name} is ${prettyBytes(filestat.size)} in size`,
 							1
 						);
@@ -166,9 +173,7 @@ export const upload = async (
 						path: filepath,
 						contentType: getType(name) || "application/octet-stream",
 						sizeInBytes: filestat.size,
-						hash: blake3hash(base64Content + extension)
-							.toString("hex")
-							.slice(0, 32),
+						hash: hashFile(filepath),
 					});
 				}
 			})
@@ -179,9 +184,9 @@ export const upload = async (
 
 	const fileMap = await walk(directory);
 
-	if (fileMap.size > 20000) {
+	if (fileMap.size > MAX_ASSET_COUNT) {
 		throw new FatalError(
-			`Error: Pages only supports up to 20,000 files in a deployment. Ensure you have specified your build output directory correctly.`,
+			`Error: Pages only supports up to ${MAX_ASSET_COUNT.toLocaleString()} files in a deployment. Ensure you have specified your build output directory correctly.`,
 			1
 		);
 	}
@@ -193,7 +198,12 @@ export const upload = async (
 	const start = Date.now();
 
 	let attempts = 0;
-	const getMissingHashes = async (): Promise<string[]> => {
+	const getMissingHashes = async (skipCaching: boolean): Promise<string[]> => {
+		if (skipCaching) {
+			console.debug("Force skipping cache");
+			return files.map(({ hash }) => hash);
+		}
+
 		try {
 			return await fetchResult<string[]>(`/pages/assets/check-missing`, {
 				method: "POST",
@@ -216,13 +226,13 @@ export const upload = async (
 					// Looks like the JWT expired, fetch another one
 					jwt = await fetchJwt();
 				}
-				return getMissingHashes();
+				return getMissingHashes(skipCaching);
 			} else {
 				throw e;
 			}
 		}
 	};
-	const missingHashes = await getMissingHashes();
+	const missingHashes = await getMissingHashes(args.skipCaching);
 
 	const sortedFiles = files
 		.filter((file) => missingHashes.includes(file.hash))
@@ -292,7 +302,8 @@ export const upload = async (
 			);
 
 			try {
-				return await fetchResult(`/pages/assets/upload`, {
+				console.debug("POST /pages/assets/upload");
+				const res = await fetchResult(`/pages/assets/upload`, {
 					method: "POST",
 					headers: {
 						"Content-Type": "application/json",
@@ -300,25 +311,28 @@ export const upload = async (
 					},
 					body: JSON.stringify(payload),
 				});
+				console.debug("result:", res);
 			} catch (e) {
 				if (attempts < MAX_UPLOAD_ATTEMPTS) {
+					console.debug("failed:", e, "retrying...");
 					// Exponential backoff, 1 second first time, then 2 second, then 4 second etc.
 					await new Promise((resolvePromise) =>
 						setTimeout(resolvePromise, Math.pow(2, attempts++) * 1000)
 					);
 
-					if ((e as { code: number }).code === 8000013) {
+					if ((e as { code: number }).code === 8000013 || isJwtExpired(jwt)) {
 						// Looks like the JWT expired, fetch another one
 						jwt = await fetchJwt();
 					}
 					return doUpload();
 				} else {
+					console.debug("failed:", e);
 					throw e;
 				}
 			}
 		};
 
-		queue.add(() =>
+		void queue.add(() =>
 			doUpload().then(
 				() => {
 					counter += bucket.files.length;
@@ -327,7 +341,9 @@ export const upload = async (
 				(error) => {
 					return Promise.reject(
 						new FatalError(
-							"Failed to upload files. Please try again.",
+							`Failed to upload files. Please try again. Error: ${JSON.stringify(
+								error
+							)})`,
 							error.code || 1
 						)
 					);
@@ -366,7 +382,7 @@ export const upload = async (
 		} catch (e) {
 			await new Promise((resolvePromise) => setTimeout(resolvePromise, 1000));
 
-			if ((e as { code: number }).code === 8000013) {
+			if ((e as { code: number }).code === 8000013 || isJwtExpired(jwt)) {
 				// Looks like the JWT expired, fetch another one
 				jwt = await fetchJwt();
 			}
@@ -400,6 +416,23 @@ export const upload = async (
 	);
 };
 
+// Decode and check that the current JWT has not expired
+function isJwtExpired(token: string): boolean | undefined {
+	try {
+		const decodedJwt = JSON.parse(
+			Buffer.from(token.split(".")[1], "base64").toString()
+		);
+
+		const dateNow = new Date().getTime() / 1000;
+
+		return decodedJwt.exp <= dateNow;
+	} catch (e) {
+		if (e instanceof Error) {
+			throw new Error(`Invalid token: ${e.message}`);
+		}
+	}
+}
+
 function formatTime(duration: number) {
 	return `(${(duration / 1000).toFixed(2)} sec)`;
 }
@@ -408,7 +441,7 @@ function Progress({ done, total }: { done: number; total: number }) {
 	return (
 		<>
 			<Text>
-				<Spinner type="earth" />
+				{isInteractive() ? <Spinner type="earth" /> : null}
 				{` Uploading... (${done}/${total})\n`}
 			</Text>
 		</>

@@ -1,0 +1,14 @@
+{
+	"name": "template-worker",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"deploy": "wrangler publish index.js",
+		"dev": "wrangler dev index.js --local",
+		"test": "vitest"
+	},
+	"devDependencies": {
+		"vitest": "^0.24.5",
+		"wrangler": "^2.0.0"
+	}
+}

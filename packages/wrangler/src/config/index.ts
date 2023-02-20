@@ -1,9 +1,13 @@
+import fs from "node:fs";
+import dotenv from "dotenv";
 import { findUpSync } from "find-up";
 import { logger } from "../logger";
-import { parseTOML, readFileSync } from "../parse";
+import { parseJSONC, parseTOML, readFileSync } from "../parse";
+import { removeD1BetaPrefix } from "../worker";
 import { normalizeAndValidateConfig } from "./validation";
 import type { CfWorkerInit } from "../worker";
-import type { Config, RawConfig } from "./config";
+import type { CommonYargsOptions } from "../yargs-types";
+import type { Config, OnlyCamelCase, RawConfig } from "./config";
 
 export type {
 	Config,
@@ -21,18 +25,21 @@ export type {
 /**
  * Get the Wrangler configuration; read it from the give `configPath` if available.
  */
-export function readConfig(
+
+export function readConfig<CommandArgs>(
 	configPath: string | undefined,
-	args: unknown
+	// Include command specific args as well as the wrangler global flags
+	args: CommandArgs & OnlyCamelCase<CommonYargsOptions>
 ): Config {
 	let rawConfig: RawConfig = {};
 	if (!configPath) {
-		configPath = findWranglerToml();
+		configPath = findWranglerToml(process.cwd(), args.experimentalJsonConfig);
 	}
-
 	// Load the configuration from disk if available
-	if (configPath) {
+	if (configPath?.endsWith("toml")) {
 		rawConfig = parseTOML(readFileSync(configPath), configPath);
+	} else if (configPath?.endsWith("json")) {
+		rawConfig = parseJSONC(readFileSync(configPath), configPath);
 	}
 
 	// Process the top-level configuration.
@@ -57,10 +64,16 @@ export function readConfig(
  * from the current working directory.
  */
 export function findWranglerToml(
-	referencePath: string = process.cwd()
+	referencePath: string = process.cwd(),
+	preferJson = false
 ): string | undefined {
-	const configPath = findUpSync("wrangler.toml", { cwd: referencePath });
-	return configPath;
+	if (preferJson) {
+		return (
+			findUpSync(`wrangler.json`, { cwd: referencePath }) ??
+			findUpSync(`wrangler.toml`, { cwd: referencePath })
+		);
+	}
+	return findUpSync(`wrangler.toml`, { cwd: referencePath });
 }
 
 /**
@@ -84,14 +97,18 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		data_blobs,
 		durable_objects,
 		kv_namespaces,
+		queues,
+		d1_databases,
 		r2_buckets,
 		logfwdr,
 		services,
+		analytics_engine_datasets,
 		text_blobs,
 		unsafe,
 		vars,
 		wasm_modules,
-		worker_namespaces,
+		dispatch_namespaces,
+		mtls_certificates,
 	} = bindings;
 
 	if (data_blobs !== undefined && Object.keys(data_blobs).length > 0) {
@@ -138,6 +155,40 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		});
 	}
 
+	if (queues !== undefined && queues.length > 0) {
+		output.push({
+			type: "Queues",
+			entries: queues.map(({ binding, queue_name }) => {
+				return {
+					key: binding,
+					value: queue_name,
+				};
+			}),
+		});
+	}
+
+	if (d1_databases !== undefined && d1_databases.length > 0) {
+		output.push({
+			type: "D1 Databases",
+			entries: d1_databases.map(
+				({ binding, database_name, database_id, preview_database_id }) => {
+					let databaseValue = `${database_id}`;
+					if (database_name) {
+						databaseValue = `${database_name} (${database_id})`;
+					}
+					//database_id is local when running `wrangler dev --local`
+					if (preview_database_id && database_id !== "local") {
+						databaseValue += `, Preview: (${preview_database_id})`;
+					}
+					return {
+						key: removeD1BetaPrefix(binding),
+						value: databaseValue,
+					};
+				}
+			),
+		});
+	}
+
 	if (r2_buckets !== undefined && r2_buckets.length > 0) {
 		output.push({
 			type: "R2 Buckets",
@@ -179,6 +230,21 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		});
 	}
 
+	if (
+		analytics_engine_datasets !== undefined &&
+		analytics_engine_datasets.length > 0
+	) {
+		output.push({
+			type: "Analytics Engine Datasets",
+			entries: analytics_engine_datasets.map(({ binding, dataset }) => {
+				return {
+					key: binding,
+					value: dataset ?? binding,
+				};
+			}),
+		});
+	}
+
 	if (text_blobs !== undefined && Object.keys(text_blobs).length > 0) {
 		output.push({
 			type: "Text Blobs",
@@ -202,10 +268,20 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 	if (vars !== undefined && Object.keys(vars).length > 0) {
 		output.push({
 			type: "Vars",
-			entries: Object.entries(vars).map(([key, value]) => ({
-				key,
-				value: `"${truncate(`${value}`)}"`,
-			})),
+			entries: Object.entries(vars).map(([key, value]) => {
+				let parsedValue;
+				if (typeof value === "string") {
+					parsedValue = `"${truncate(value)}"`;
+				} else if (typeof value === "object") {
+					parsedValue = JSON.stringify(value, null, 1);
+				} else {
+					parsedValue = `${truncate(`${value}`)}`;
+				}
+				return {
+					key,
+					value: parsedValue,
+				};
+			}),
 		});
 	}
 
@@ -219,13 +295,25 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		});
 	}
 
-	if (worker_namespaces !== undefined && worker_namespaces.length > 0) {
+	if (dispatch_namespaces !== undefined && dispatch_namespaces.length > 0) {
 		output.push({
-			type: "Worker Namespaces",
-			entries: worker_namespaces.map(({ binding, namespace }) => {
+			type: "dispatch namespaces",
+			entries: dispatch_namespaces.map(({ binding, namespace }) => {
 				return {
 					key: binding,
 					value: namespace,
+				};
+			}),
+		});
+	}
+
+	if (mtls_certificates !== undefined && mtls_certificates.length > 0) {
+		output.push({
+			type: "mTLS Certificates",
+			entries: mtls_certificates.map(({ binding, certificate_id }) => {
+				return {
+					key: binding,
+					value: certificate_id,
 				};
 			}),
 		});
@@ -248,4 +336,40 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 	].join("\n");
 
 	logger.log(message);
+}
+
+export function withConfig<T>(
+	handler: (
+		t: OnlyCamelCase<T & CommonYargsOptions> & { config: Config }
+	) => Promise<void>
+) {
+	return (t: OnlyCamelCase<T & CommonYargsOptions>) => {
+		return handler({ ...t, config: readConfig(t.config, t) });
+	};
+}
+
+export interface DotEnv {
+	path: string;
+	parsed: dotenv.DotenvParseOutput;
+}
+
+function tryLoadDotEnv(path: string): DotEnv | undefined {
+	try {
+		const parsed = dotenv.parse(fs.readFileSync(path));
+		return { path, parsed };
+	} catch (e) {
+		logger.debug(`Failed to load .env file "${path}":`, e);
+	}
+}
+
+/**
+ * Loads a dotenv file from <path>, preferring to read <path>.<environment> if
+ * <environment> is defined and that file exists.
+ */
+export function loadDotEnv(path: string, env?: string): DotEnv | undefined {
+	if (env === undefined) {
+		return tryLoadDotEnv(path);
+	} else {
+		return tryLoadDotEnv(`${path}.${env}`) ?? tryLoadDotEnv(path);
+	}
 }

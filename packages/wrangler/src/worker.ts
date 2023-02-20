@@ -1,9 +1,11 @@
+import type { Environment } from "./config";
 import type { Route } from "./config/environment";
 import type { ApiCredentials } from "./user";
 
 /**
  * A Cloudflare account.
  */
+
 export interface CfAccount {
 	/**
 	 * An API token.
@@ -65,14 +67,14 @@ export interface CfModule {
 /**
  * A map of variable names to values.
  */
-interface CfVars {
+export interface CfVars {
 	[key: string]: unknown;
 }
 
 /**
  * A KV namespace.
  */
-interface CfKvNamespace {
+export interface CfKvNamespace {
 	binding: string;
 	id: string;
 }
@@ -81,7 +83,7 @@ interface CfKvNamespace {
  * A binding to a wasm module (in service-worker format)
  */
 
-interface CfWasmModuleBindings {
+export interface CfWasmModuleBindings {
 	[key: string]: string;
 }
 
@@ -89,7 +91,7 @@ interface CfWasmModuleBindings {
  * A binding to a text blob (in service-worker format)
  */
 
-interface CfTextBlobBindings {
+export interface CfTextBlobBindings {
 	[key: string]: string;
 }
 
@@ -97,23 +99,43 @@ interface CfTextBlobBindings {
  * A binding to a data blob (in service-worker format)
  */
 
-interface CfDataBlobBindings {
+export interface CfDataBlobBindings {
 	[key: string]: string;
 }
 
 /**
  * A Durable Object.
  */
-interface CfDurableObject {
+export interface CfDurableObject {
 	name: string;
 	class_name: string;
 	script_name?: string;
 	environment?: string;
 }
 
-interface CfR2Bucket {
+export interface CfQueue {
+	binding: string;
+	queue_name: string;
+}
+
+export interface CfR2Bucket {
 	binding: string;
 	bucket_name: string;
+}
+
+export const D1_BETA_PREFIX = `__D1_BETA__` as const;
+export type D1PrefixedBinding = `${typeof D1_BETA_PREFIX}${string}`;
+
+// TODO: figure out if this is duplicated in packages/wrangler/src/config/environment.ts
+export interface CfD1Database {
+	// For now, all D1 bindings are alpha
+	binding: D1PrefixedBinding;
+	database_id: string;
+	database_name?: string;
+	preview_database_id?: string;
+	database_internal_env?: string;
+	migrations_table?: string;
+	migrations_dir?: string;
 }
 
 interface CfService {
@@ -122,9 +144,19 @@ interface CfService {
 	environment?: string;
 }
 
-interface CfWorkerNamespace {
+interface CfAnalyticsEngineDataset {
+	binding: string;
+	dataset?: string;
+}
+
+interface CfDispatchNamespace {
 	binding: string;
 	namespace: string;
+}
+
+interface CfMTlsCertificate {
+	binding: string;
+	certificate_id: string;
 }
 
 interface CfLogfwdr {
@@ -181,9 +213,13 @@ export interface CfWorkerInit {
 		text_blobs: CfTextBlobBindings | undefined;
 		data_blobs: CfDataBlobBindings | undefined;
 		durable_objects: { bindings: CfDurableObject[] } | undefined;
+		queues: CfQueue[] | undefined;
 		r2_buckets: CfR2Bucket[] | undefined;
+		d1_databases: CfD1Database[] | undefined;
 		services: CfService[] | undefined;
-		worker_namespaces: CfWorkerNamespace[] | undefined;
+		analytics_engine_datasets: CfAnalyticsEngineDataset[] | undefined;
+		dispatch_namespaces: CfDispatchNamespace[] | undefined;
+		mtls_certificates: CfMTlsCertificate[] | undefined;
 		logfwdr: CfLogfwdr | undefined;
 		unsafe: CfUnsafeBinding[] | undefined;
 	};
@@ -191,6 +227,8 @@ export interface CfWorkerInit {
 	compatibility_date: string | undefined;
 	compatibility_flags: string[] | undefined;
 	usage_model: "bundled" | "unbound" | undefined;
+	keepVars: boolean | undefined;
+	logpush: boolean | undefined;
 }
 
 export interface CfWorkerContext {
@@ -200,4 +238,20 @@ export interface CfWorkerContext {
 	host: string | undefined;
 	routes: Route[] | undefined;
 	sendMetrics: boolean | undefined;
+}
+
+// Prefix binding with identifier which will then get picked up by the D1 shim.
+// Once the D1 Api is out of beta, this function can be removed.
+export function identifyD1BindingsAsBeta(
+	dbs: Environment["d1_databases"]
+): CfD1Database[] | undefined {
+	return dbs?.map((db) => ({
+		...db,
+		binding: `${D1_BETA_PREFIX}${db.binding}`,
+	}));
+}
+
+// Remove beta prefix
+export function removeD1BetaPrefix(binding: D1PrefixedBinding): string {
+	return binding.slice(D1_BETA_PREFIX.length);
 }

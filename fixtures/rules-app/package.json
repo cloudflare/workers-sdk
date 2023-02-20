@@ -1,9 +1,12 @@
 {
-  "name": "rules-app",
-  "version": "1.0.0",
-  "description": "",
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "private": true
+	"name": "rules-app",
+	"version": "1.0.0",
+	"private": true,
+	"description": "",
+	"keywords": [],
+	"license": "ISC",
+	"author": "",
+	"scripts": {
+		"check:type": "tsc"
+	}
 }

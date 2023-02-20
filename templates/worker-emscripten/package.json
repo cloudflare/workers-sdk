@@ -1,0 +1,18 @@
+{
+	"name": "template-worker-emscripten",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"build": "bash build.sh && webpack",
+		"deploy": "wrangler publish index.js",
+		"dev": "wrangler dev index.js --local"
+	},
+	"devDependencies": {
+		"copy-webpack-plugin": "^5.0.3",
+		"exports-loader": "^0.7.0",
+		"shelljs": "^0.8.3",
+		"webpack": "^4.42.1",
+		"webpack-cli": "^4.9.0",
+		"wrangler": "^2.0.0"
+	}
+}

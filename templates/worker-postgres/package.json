@@ -1,0 +1,15 @@
+{
+	"name": "template-worker-postgres",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"build": "esbuild --bundle --sourcemap --outfile=dist/index.mjs --minify --format=esm ./src/index.js --external:*.wasm --inject:./src/deno/workers-override.ts",
+		"deploy": "wrangler publish src/index.ts",
+		"dev": "wrangler dev src/index.ts --local"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^3.0.0",
+		"esbuild": "^0.13.10",
+		"wrangler": "^2.0.0"
+	}
+}

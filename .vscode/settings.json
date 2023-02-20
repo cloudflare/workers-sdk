@@ -3,6 +3,7 @@
 	"cSpell.words": [
 		"cfetch",
 		"clipboardy",
+		"cloudflareaccess",
 		"cloudflared",
 		"Codespaces",
 		"esbuild",
@@ -10,6 +11,7 @@
 		"execa",
 		"iarna",
 		"keyvalue",
+		"logfwdr",
 		"middlewares",
 		"Miniflare",
 		"mrbbot",
@@ -26,6 +28,7 @@
 		"undici",
 		"unrevoke",
 		"Untriaged",
+		"versionless",
 		"wasmvalue",
 		"weakmap",
 		"weakset",
@@ -37,11 +40,14 @@
 		"TESTTEXTBLOBNAME",
 		"TESTWASMNAME",
 		"extensionless",
+		"webcontainer",
 		"yxxx"
 	],
 	"eslint.runtime": "node",
 	"files.trimTrailingWhitespace": true,
 	"typescript.tsdk": "node_modules/typescript/lib",
 	"editor.tabSize": 2,
-	"files.associations": { "api-extractor.json": "jsonc" }
+	"files.associations": {
+		"api-extractor.json": "jsonc"
+	}
 }

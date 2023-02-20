@@ -1,5 +1,4 @@
-import { render, Text } from "ink";
-import SelectInput from "ink-select-input";
+import { render } from "ink";
 import Table from "ink-table";
 import React from "react";
 import { format as timeagoFormat } from "timeago.js";
@@ -9,16 +8,17 @@ import { FatalError } from "../errors";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
-import { listProjects } from "./projects";
+import { promptSelectProject } from "./prompt-select-project";
 import { pagesBetaWarning } from "./utils";
+import type {
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
+} from "../yargs-types";
 import type { Deployment, PagesConfigCache } from "./types";
-import type { ArgumentsCamelCase, Argv } from "yargs";
 
-type ListArgs = {
-	"project-name"?: string;
-};
+type ListArgs = StrictYargsOptionsToInterface<typeof ListOptions>;
 
-export function ListOptions(yargs: Argv): Argv<ListArgs> {
+export function ListOptions(yargs: CommonYargsArgv) {
 	return yargs
 		.options({
 			"project-name": {
@@ -30,9 +30,7 @@ export function ListOptions(yargs: Argv): Argv<ListArgs> {
 		.epilogue(pagesBetaWarning);
 }
 
-export async function ListHandler({
-	projectName,
-}: ArgumentsCamelCase<ListArgs>) {
+export async function ListHandler({ projectName }: ListArgs) {
 	const config = getConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME);
 	const accountId = await requireAuth(config);
 
@@ -40,25 +38,7 @@ export async function ListHandler({
 
 	const isInteractive = process.stdin.isTTY;
 	if (!projectName && isInteractive) {
-		const projects = await listProjects({ accountId });
-		projectName = await new Promise((resolve) => {
-			const { unmount } = render(
-				<>
-					<Text>Select a project:</Text>
-					<SelectInput
-						items={projects.map((project) => ({
-							key: project.name,
-							label: project.name,
-							value: project,
-						}))}
-						onSelect={async (selected) => {
-							resolve(selected.value.name);
-							unmount();
-						}}
-					/>
-				</>
-			);
-		});
+		projectName = await promptSelectProject({ accountId });
 	}
 
 	if (!projectName) {

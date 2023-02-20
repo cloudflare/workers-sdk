@@ -1,5 +1,5 @@
 export default {
-  async fetch(request) {
-    return new Response(`${request.url} ${new Date()}`);
-  },
+	async fetch(request) {
+		return new Response(`${request.url} ${new Date()}`);
+	},
 };

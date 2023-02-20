@@ -1,10 +1,15 @@
 {
 	"name": "wranglerjs-compat-webpack-plugin",
-	"version": "0.0.5",
-	"description": "A webpack plugin to emulate the behavior of wrangler1's `type = webpack`",
-	"homepage": "https://github.com/cloudflare/wrangler2#readme",
+	"version": "0.0.7",
+	"description": "A webpack plugin to emulate the behavior of Wrangler v1's `type = webpack`",
+	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
 	"bugs": {
-		"url": "https://github.com/cloudflare/wrangler2/issues"
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/wranglerjs-compat-webpack-plugin"
 	},
 	"license": "MIT OR Apache-2.0",
 	"author": "wrangler@cloudflare.com",
@@ -14,8 +19,8 @@
 	"scripts": {
 		"build": "run-p build:*",
 		"build:d.ts": "tsc",
-		"build:js": "esbuild src/index.ts --bundle --platform=node --external:execa --external:webpack --external:esbuild --external:rimraf --target=node16.7 --outfile=lib/index.js --format=cjs --sourcemap",
-		"test:plugin": "jest"
+		"build:js": "esbuild src/index.ts --bundle --platform=node --external:execa --external:webpack --external:esbuild --external:rimraf --target=node16.13 --outfile=lib/index.js --format=cjs --sourcemap",
+		"test:plugin": "jest --forceExit"
 	},
 	"jest": {
 		"moduleNameMapper": {
@@ -50,7 +55,7 @@
 		"@types/rimraf": "^3.0.2",
 		"@types/tar": "^6.1.1",
 		"@types/webpack": "^4.41.32",
-		"esbuild": "^0.14.51",
+		"esbuild": "0.16.3",
 		"execa": "^6.1.0",
 		"jest": "^27.5.1",
 		"jest-fetch-mock": "^3.0.3",
@@ -58,7 +63,7 @@
 		"tar": "^6.1.11",
 		"tosource": "^2.0.0-alpha.3",
 		"typescript": "^4.6.3",
-		"undici": "^5.5.1",
+		"undici": "^5.9.1",
 		"webpack": "^4.46.0"
 	}
 }

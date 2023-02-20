@@ -5,31 +5,16 @@
 	"sideEffects": false,
 	"main": "dist/worker.js",
 	"scripts": {
+		"check:type": "tsc && tsc -p tests/tsconfig.json",
 		"dev": "npx wrangler pages dev public --binding=NAME=VALUE --binding=OTHER_NAME=THING=WITH=EQUALS --r2=BUCKET --port 8789",
-		"test": "npx jest --forceExit",
-		"test:ci": "npx jest --forceExit"
-	},
-	"jest": {
-		"restoreMocks": true,
-		"testRegex": ".*.(test|spec)\\.[jt]sx?$",
-		"testTimeout": 30000,
-		"transform": {
-			"^.+\\.c?(t|j)sx?$": [
-				"esbuild-jest",
-				{
-					"sourcemap": true
-				}
-			]
-		},
-		"transformIgnorePatterns": [
-			"node_modules/(?!find-up|locate-path|p-locate|p-limit|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream)"
-		]
+		"test": "npx vitest",
+		"test:ci": "npx vitest"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^3.2.0",
-		"undici": "^5.5.1"
+		"@cloudflare/workers-types": "^4.20221111.1",
+		"undici": "^5.9.1"
 	},
 	"engines": {
-		"node": ">=14"
+		"node": ">=16.13"
 	}
 }

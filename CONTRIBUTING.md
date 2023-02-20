@@ -1,6 +1,6 @@
 # Contributing
 
-Wrangler2 is an open source project and we welcome contributions from you. Thank you!
+Wrangler is an open source project and we welcome contributions from you. Thank you!
 
 Below you can find some guidance on how to be most effective when contributing to the project.
 
@@ -8,7 +8,7 @@ Below you can find some guidance on how to be most effective when contributing t
 
 ### Set up your environment
 
-Wrangler2 is built and run on the Node.js JavaScript runtime.
+Wrangler is built and run on the Node.js JavaScript runtime.
 
 - Install the latest LTS version of [Node.js](https://nodejs.dev/) - we recommend using a Node version manager like [nvm](https://github.com/nvm-sh/nvm).
 - Install a code editor - we recommend using [VS Code](https://code.visualstudio.com/).
@@ -20,7 +20,7 @@ Wrangler2 is built and run on the Node.js JavaScript runtime.
 Any contributions you make will be via [Pull Requests](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests) on [GitHub](https://github.com/) developed in a local git repository and pushed to your own fork of the repository.
 
 - Ensure you have [created an account](https://docs.github.com/en/get-started/onboarding/getting-started-with-your-github-account) on GitHub.
-- [Create your own fork](https://docs.github.com/en/get-started/quickstart/fork-a-repo) of [this repository](https://github.com/cloudflare/wrangler2).
+- [Create your own fork](https://docs.github.com/en/get-started/quickstart/fork-a-repo) of [this repository](https://github.com/cloudflare/workers-sdk).
 - Clone your fork to your local machine
   ```sh
   > git clone https://github.com/<your-github-username>/wrangler2
@@ -35,27 +35,35 @@ Any contributions you make will be via [Pull Requests](https://docs.github.com/e
   ```
 - Add `cloudflare/wrangler2` as the `upstream` remote repository.
   ```sh
-  > git remote add upstream https://github.com/cloudflare/wrangler2
+  > git remote add upstream https://github.com/cloudflare/workers-sdk
   > git remote -v
   origin	https://github.com/<your-github-username>/wrangler2 (fetch)
   origin	https://github.com/<your-github-username>/wrangler2 (push)
-  upstream	https://github.com/cloudflare/wrangler2 (fetch)
-  upstream	https://github.com/cloudflare/wrangler2 (push)
+  upstream	https://github.com/cloudflare/workers-sdk (fetch)
+  upstream	https://github.com/cloudflare/workers-sdk (push)
   ```
 - You should regularly pull from the `main` branch of the `upstream` repository to keep up to date with the latest changes to the project.
   ```sh
   > git switch main
   > git pull upstream main
-  From https://github.com/cloudflare/wrangler2
+  From https://github.com/cloudflare/workers-sdk
   * branch            main       -> FETCH_HEAD
   Already up to date.
   ```
 
 ### Install dependencies
 
+**Warning**
+When working on Wrangler, you'll need to satisfy [`workerd`](https://github.com/cloudflare/workerd)'s `libc++1` runtime dependencies:
+
+- On Linux:
+  - libc++ (e.g. the package `libc++1` on Debian Bullseye)
+- On macOS:
+  - The XCode command line tools, which can be installed with xcode-select --install
+
 The Node.js dependencies of the project are managed by the [`npm`](https://www.npmjs.com/) tool.
 
-This repository is setup as a [mono-repo](https://docs.npmjs.com/cli/v7/using-npm/workspaces) of workspaces. The workspaces are stored in the [`packages`](https://github.com/cloudflare/wrangler2/tree/main/packages) directory.
+This repository is setup as a [mono-repo](https://docs.npmjs.com/cli/v7/using-npm/workspaces) of workspaces. The workspaces are stored in the [`packages`](https://github.com/cloudflare/workers-sdk/tree/main/packages) directory.
 
 While each workspace has its own dependencies, you install the dependencies using `npm` at the root of the project.
 
@@ -217,10 +225,45 @@ fix: replace the word "deploy" with "publish" everywhere.
 We should be consistent with the word that describes how we get a worker to the edge. The command is `publish`, so let's use that everywhere.
 ```
 
-### Types of changes (and deviation from semver)
+### Types of changes
 
 We use the following guidelines to determine the kind of change for a PR:
 
-- Bugfixes and new features are considered to be 'patch' changes. If the new feature is experimental and its behaviour may functionally change, be sure to log warnings whenever they're used. (You'll note that this is where we deviate from semver, which otherwise suggests that behaviour/api changes should go into minor releases. We may revisit this in the future.)
-- New deprecation warnings for future breaking changes are considered as 'minor' changes. These changes shouldn't break existing code, but the deprecation warnings should suggest alternate solutions to not trigger the warning.
+- Bugfixes and experimental features are considered to be 'patch' changes. Be sure to log warnings when experimental features are used.
+- New stable features and new deprecation warnings for future breaking changes are considered 'minor' changes. These changes shouldn't break existing code, but the deprecation warnings should suggest alternate solutions to not trigger the warning.
 - Breaking changes are considered to be 'major' changes. These are usually when deprecations take effect, or functional breaking behaviour is added with relevant logs (either as errors or warnings.)
+
+## Miniflare Development
+
+Wrangler builds upon, and provides a new entry point for, [Miniflare](https://github.com/cloudflare/miniflare), a local Cloudflare Workers simulator. To develop on both Wrangler and Miniflare together, you need to link the two projects, but as of NodeJS `v18.3.0` and NPM `v8.15.0`, relative NPM installs between two workspaces don't work, so you need things to be manual:
+
+Assume you have the two directories checked out right beside each other:
+
+```
+❯ ll src
+drwxr-xr-x     - user 30 Jun 14:12 src
+drwxr-xr-x     - user 26 Jul 17:34 ├── miniflare
+drwxr-xr-x     - user 27 Jul 17:51 └── wrangler2
+```
+
+> Note: recommend using [exa](https://the.exa.website/) and `alias ll='exa --icons -laTL 1'` for the above output
+
+Inside `packages/wrangler/package.json`, replace:
+
+```
+"@miniflare/d1": "^2.x.x",
+"@miniflare/core": "^2.x.x",
+"@miniflare/durable-objects": "^2.x.x",
+"miniflare": "^2.x.x",
+```
+
+with
+
+```
+"miniflare": "file:../../../miniflare/packages/miniflare",
+"@miniflare/d1": "file:../../../miniflare/packages/d1",
+"@miniflare/core": "file:../../../miniflare/packages/core",
+"@miniflare/durable-objects": "file:../../../miniflare/packages/durable-objects",
+```
+
+Then run `npm install` in the root of this monorepo.

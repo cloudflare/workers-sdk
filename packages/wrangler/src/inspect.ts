@@ -11,6 +11,7 @@ import WebSocket, { WebSocketServer } from "ws";
 import { version } from "../package.json";
 import { logger } from "./logger";
 import { waitForPortToBeAvailable } from "./proxy";
+import { getAccessToken } from "./user/access";
 import type Protocol from "devtools-protocol";
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import type { MessageEvent } from "ws";
@@ -58,6 +59,8 @@ interface InspectorProps {
 	 * Sourcemap path, so that stacktraces can be interpretted
 	 */
 	sourceMapPath?: string | undefined;
+
+	host?: string;
 }
 
 export default function useInspector(props: InspectorProps) {
@@ -148,6 +151,18 @@ export default function useInspector(props: InspectorProps) {
 			);
 			ws.close(1013, "Too many clients; only one can be connected at a time");
 		} else {
+			// Since Wrangler proxies the inspector, reloading Chrome DevTools won't trigger debugger initialisation events (because it's connecting to an extant session).
+			// This sends a `Debugger.disable` message to the remote when a new WebSocket connection is initialised,
+			// with the assumption that the new connection will shortly send a `Debugger.enable` event and trigger re-initialisation.
+			// The key initialisation messages that are needed are the `Debugger.scriptParsed events`.
+			remoteWebSocket?.send(
+				JSON.stringify({
+					// This number is arbitrary, and is chosen to be high so as not to conflict with messages that DevTools might actually send.
+					// For completeness, these options don't work: 0, -1, or Number.MAX_SAFE_INTEGER
+					id: 100_000_000,
+					method: "Debugger.disable",
+				})
+			);
 			// As promised, save the created websocket in a state hook
 			setLocalWebSocket(ws);
 
@@ -204,14 +219,31 @@ export default function useInspector(props: InspectorProps) {
 	/** A simple incrementing id to attach to messages we send to devtools */
 	const messageCounterRef = useRef(1);
 
+	const cfAccessRef = useRef<string>();
+
+	useEffect(() => {
+		const run = async () => {
+			if (props.host && !cfAccessRef.current) {
+				const token = await getAccessToken(props.host);
+				cfAccessRef.current = token;
+			}
+		};
+		if (props.host) void run();
+	}, [props.host]);
+
 	// This effect tracks the connection to the remote websocket
 	// (stored in, no surprises here, `remoteWebSocket`)
 	useEffect(() => {
 		if (!props.inspectorUrl) {
 			return;
 		}
+
 		// The actual websocket instance
-		const ws = new WebSocket(props.inspectorUrl);
+		const ws = new WebSocket(props.inspectorUrl, {
+			headers: {
+				cookie: `CF_Authorization=${cfAccessRef.current}`,
+			},
+		});
 		setRemoteWebSocket(ws);
 
 		/**
@@ -320,10 +352,7 @@ export default function useInspector(props: InspectorProps) {
 														const convertedFnName =
 															pos.name || functionName || "";
 														exceptionLines.push(
-															`    at ${convertedFnName} (${pos.source?.replace(
-																`${mapContent.sourceRoot}/`,
-																""
-															)}:${pos.line}:${pos.column})`
+															`    at ${convertedFnName} (${pos.source}:${pos.line}:${pos.column})`
 														);
 													}
 												}
@@ -613,36 +642,36 @@ function logConsoleMessage(evt: Protocol.Runtime.ConsoleAPICalledEvent): void {
 							break;
 						case "weakmap":
 						case "map":
-							args.push(
-								"{\n" +
-									// Maps always have entries
-									// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-									ro.preview
-										.entries!.map(({ key, value }) => {
-											return `  ${key?.description ?? "<unknown>"} => ${
-												value.description
-											}`;
-										})
-										.join(",\n") +
-									(ro.preview.overflow ? "\n  ..." : "") +
-									"\n}"
-							);
+							ro.preview.entries === undefined
+								? args.push("{}")
+								: args.push(
+										"{\n" +
+											ro.preview.entries
+												.map(({ key, value }) => {
+													return `  ${key?.description ?? "<unknown>"} => ${
+														value.description
+													}`;
+												})
+												.join(",\n") +
+											(ro.preview.overflow ? "\n  ..." : "") +
+											"\n}"
+								  );
 
 							break;
 						case "weakset":
 						case "set":
-							args.push(
-								"{ " +
-									// Sets always have entries
-									// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-									ro.preview
-										.entries!.map(({ value }) => {
-											return `${value.description}`;
-										})
-										.join(", ") +
-									(ro.preview.overflow ? ", ..." : "") +
-									" }"
-							);
+							ro.preview.entries === undefined
+								? args.push("{}")
+								: args.push(
+										"{ " +
+											ro.preview.entries
+												.map(({ value }) => {
+													return `${value.description}`;
+												})
+												.join(", ") +
+											(ro.preview.overflow ? ", ..." : "") +
+											" }"
+								  );
 							break;
 						case "regexp":
 							break;

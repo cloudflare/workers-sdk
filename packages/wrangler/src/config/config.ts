@@ -1,4 +1,5 @@
 import type { Environment, RawEnvironment } from "./environment";
+import type { CamelCaseKey } from "yargs";
 
 /**
  * This is the static type definition for the configuration object.
@@ -17,7 +18,7 @@ import type { Environment, RawEnvironment } from "./environment";
  *
  * Legend for the annotations:
  *
- * - `@breaking`: the deprecation/optionality is a breaking change from wrangler 1.
+ * - `@breaking`: the deprecation/optionality is a breaking change from Wrangler v1.
  * - `@todo`: there's more work to be done (with details attached).
  */
 export type Config = ConfigFields<DevConfig> & Environment;
@@ -31,7 +32,7 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 	configPath: string | undefined;
 
 	/**
-	 * A boolean to enable "legacy" style wrangler environments (from wrangler 1).
+	 * A boolean to enable "legacy" style wrangler environments (from Wrangler v1).
 	 * These have been superseded by Services, but there may be projects that won't
 	 * (or can't) use them. If you're using a legacy environment, you can set this
 	 * to `true` to enable it.
@@ -95,7 +96,7 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 				/**
 				 * The location of your Worker script.
 				 *
-				 * @deprecated DO NOT use this (it's a holdover from wrangler 1.x). Either use the top level `main` field, or pass the path to your entry file as a command line argument.
+				 * @deprecated DO NOT use this (it's a holdover from Wrangler v1.x). Either use the top level `main` field, or pass the path to your entry file as a command line argument.
 				 * @breaking
 				 */
 				"entry-point"?: string;
@@ -168,13 +169,25 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 				[key: string]: string;
 		  }
 		| undefined;
+
+	/**
+	 * By default, wrangler.toml is the source of truth for your environment configuration, like a terraform file.
+	 *
+	 * If you change your vars in the dashboard, wrangler *will* override/delete them on its next publish.
+	 *
+	 * If you want to keep your dashboard vars when wrangler deploys, set this field to true.
+	 *
+	 * @default false
+	 * @nonInheritable
+	 */
+	keep_vars?: boolean;
 }
 
 export interface DevConfig {
 	/**
 	 * IP address for the local dev server to listen on,
 	 *
-	 * @default `localhost`
+	 * @default `0.0.0.0`
 	 */
 	ip: string;
 
@@ -203,10 +216,10 @@ export interface DevConfig {
 	 * Protocol that wrangler dev forwards requests on
 	 *
 	 * Setting this to `http` is not currently implemented.
-	 * See https://github.com/cloudflare/wrangler2/issues/583
+	 * See https://github.com/cloudflare/workers-sdk/issues/583
 	 *
 	 * @default `https`
-	 * @todo this needs to be implemented https://github.com/cloudflare/wrangler2/issues/583
+	 * @todo this needs to be implemented https://github.com/cloudflare/workers-sdk/issues/583
 	 */
 	upstream_protocol: "https" | "http";
 
@@ -220,7 +233,7 @@ export type RawDevConfig = Partial<DevConfig>;
 
 export interface DeprecatedConfigFields {
 	/**
-	 * The project "type". A holdover from wrangler 1.x.
+	 * The project "type". A holdover from Wrangler v1.x.
 	 * Valid values were "webpack", "javascript", and "rust".
 	 *
 	 * @deprecated DO NOT USE THIS. Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build.
@@ -230,7 +243,7 @@ export interface DeprecatedConfigFields {
 
 	/**
 	 * Path to the webpack config to use when building your worker.
-	 * A holdover from wrangler 1.x, used with `type: "webpack"`.
+	 * A holdover from Wrangler v1.x, used with `type: "webpack"`.
 	 *
 	 * @deprecated DO NOT USE THIS. Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build.
 	 * @breaking
@@ -261,3 +274,9 @@ interface EnvironmentMap {
 		[envName: string]: RawEnvironment;
 	};
 }
+
+// API dev only passes in camel-cased versions of keys, so ensure
+// only camel-cased keys are used
+export type OnlyCamelCase<T = Record<string, never>> = {
+	[key in keyof T as CamelCaseKey<key>]: T[key];
+};

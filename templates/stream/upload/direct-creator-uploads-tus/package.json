@@ -1,0 +1,12 @@
+{
+	"name": "template-direct-creator-uploads-tus",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"dev": "wrangler pages dev --local ./src",
+		"start-stackblitz": "WRANGLER_SEND_METRICS=false wrangler pages dev --local ./src"
+	},
+	"devDependencies": {
+		"wrangler": "^2.9.1"
+	}
+}

@@ -1,0 +1,20 @@
+{
+	"name": "pages-plugin-mounted-on-root-app",
+	"version": "0.0.0",
+	"private": true,
+	"sideEffects": false,
+	"main": "dist/worker.js",
+	"scripts": {
+		"check:type": "tsc && tsc -p tests/tsconfig.json",
+		"dev": "npx wrangler pages dev public --port 8793",
+		"test": "npx vitest",
+		"test:ci": "npx vitest"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20221111.1",
+		"undici": "^5.9.1"
+	},
+	"engines": {
+		"node": ">=16.13"
+	}
+}

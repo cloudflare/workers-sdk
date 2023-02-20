@@ -5,16 +5,29 @@ import TOML from "@iarna/toml";
 import { findUp } from "find-up";
 import { version as wranglerVersion } from "../package.json";
 
+import { fetchResult } from "./cfetch";
+import { fetchDashboardScript } from "./cfetch/internal";
+import { readConfig } from "./config";
 import { confirm, select } from "./dialogs";
-import { initializeGit, isGitInstalled, isInsideGitRepo } from "./git-client";
+import { initializeGit, getGitVersioon, isInsideGitRepo } from "./git-client";
 import { logger } from "./logger";
 import { getPackageManager } from "./package-manager";
 import { parsePackageJSON, parseTOML, readFileSync } from "./parse";
+import { getBasePath } from "./paths";
+import { requireAuth } from "./user";
 import { CommandLineArgsError, printWranglerBanner } from "./index";
 
-import type { Argv, ArgumentsCamelCase } from "yargs";
+import type { RawConfig } from "./config";
+import type { Route, SimpleRoute } from "./config/environment";
+import type { WorkerMetadata } from "./create-worker-upload-form";
+import type { PackageManager } from "./package-manager";
+import type { PackageJSON } from "./parse";
+import type {
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
+} from "./yargs-types";
 
-export async function initOptions(yargs: Argv) {
+export function initOptions(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("name", {
 			describe: "The name of your worker",
@@ -36,17 +49,65 @@ export async function initOptions(yargs: Argv) {
 			describe: 'Answer "yes" to any prompts for new projects',
 			type: "boolean",
 			alias: "y",
+		})
+		.option("from-dash", {
+			describe:
+				"The name of the Worker you wish to download from the Cloudflare dashboard for local development.",
+			type: "string",
+			requiresArg: true,
 		});
 }
 
-interface InitArgs {
-	name: string;
-	type?: string;
-	site?: boolean;
-	yes?: boolean;
-}
+type InitArgs = StrictYargsOptionsToInterface<typeof initOptions>;
 
-export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
+export type ServiceMetadataRes = {
+	id: string;
+	default_environment: {
+		environment: string;
+		created_on: string;
+		modified_on: string;
+		script: {
+			id: string;
+			tag: string;
+			etag: string;
+			handlers: string[];
+			modified_on: string;
+			created_on: string;
+			migration_tag: string;
+			usage_model: "bundled" | "unbound";
+			compatibility_date: string;
+			last_deployed_from?: "wrangler" | "dash" | "api";
+		};
+	};
+	created_on: string;
+	modified_on: string;
+	usage_model: "bundled" | "unbound";
+	environments: [
+		{
+			environment: string;
+			created_on: string;
+			modified_on: string;
+		}
+	];
+};
+
+export type RawSimpleRoute = { pattern: string };
+export type RawRoutes = (RawSimpleRoute | Exclude<Route, SimpleRoute>) & {
+	id: string;
+};
+export type RoutesRes = RawRoutes[];
+
+export type CronTriggersRes = {
+	schedules: [
+		{
+			cron: string;
+			created_on: Date;
+			modified_on: Date;
+		}
+	];
+};
+
+export async function initHandler(args: InitArgs) {
 	await printWranglerBanner();
 	if (args.type) {
 		let message = "The --type option is no longer supported.";
@@ -61,7 +122,11 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 	const devDepsToInstall: string[] = [];
 	const instructions: string[] = [];
 	let shouldRunPackageManagerInstall = false;
-	const creationDirectory = path.resolve(process.cwd(), args.name ?? "");
+	const fromDashScriptName = args.fromDash;
+	const creationDirectory = path.resolve(
+		process.cwd(),
+		(args.name ? args.name : fromDashScriptName) ?? ""
+	);
 
 	if (args.site) {
 		const gitDirectory =
@@ -90,6 +155,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 
 	// TODO: ask which directory to make the worker in (defaults to args.name)
 	// TODO: if args.name isn't provided, ask what to name the worker
+	// Note: `--from-dash` will be a fallback creationDir/Worker name if none is provided.
 
 	const wranglerTomlDestination = path.join(
 		creationDirectory,
@@ -97,13 +163,37 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 	);
 	let justCreatedWranglerToml = false;
 
+	let accountId = "";
+	let serviceMetadata: undefined | ServiceMetadataRes;
+
+	// If --from-dash, check that script actually exists
+	if (fromDashScriptName) {
+		const config = readConfig(args.config, args);
+		accountId = await requireAuth(config);
+		try {
+			serviceMetadata = await fetchResult<ServiceMetadataRes>(
+				`/accounts/${accountId}/workers/services/${fromDashScriptName}`
+			);
+		} catch (err) {
+			if ((err as { code?: number }).code === 10090) {
+				throw new Error(
+					"wrangler couldn't find a Worker script with that name in your account.\nRun `wrangler whoami` to confirm you're logged into the correct account."
+				);
+			}
+			throw err;
+		}
+	}
+
 	if (fs.existsSync(wranglerTomlDestination)) {
+		let shouldContinue = false;
 		logger.warn(
 			`${path.relative(process.cwd(), wranglerTomlDestination)} already exists!`
 		);
-		const shouldContinue = await confirm(
-			"Do you want to continue initializing this project?"
-		);
+		if (!fromDashScriptName) {
+			shouldContinue = await confirm(
+				"Do you want to continue initializing this project?"
+			);
+		}
 		if (!shouldContinue) {
 			return;
 		}
@@ -136,7 +226,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 
 	const yesFlag = args.yes ?? false;
 
-	if (!(await isInsideGitRepo(creationDirectory)) && (await isGitInstalled())) {
+	if (!(await isInsideGitRepo(creationDirectory)) && (await getGitVersioon())) {
 		const shouldInitGit =
 			yesFlag ||
 			(await confirm("Would you like to use git to manage this Worker?"));
@@ -144,7 +234,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 			await initializeGit(creationDirectory);
 			await writeFile(
 				path.join(creationDirectory, ".gitignore"),
-				readFileSync(path.join(__dirname, "../templates/gitignore"))
+				readFileSync(path.join(getBasePath(), "templates/gitignore"))
 			);
 			logger.log(
 				args.name && args.name !== "."
@@ -164,6 +254,8 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 		"package.json"
 	);
 	let shouldCreatePackageJson = false;
+	let shouldCreateTests = false;
+	let newWorkerTestType: "jest" | "vitest" = "jest";
 
 	if (!pathToPackageJson) {
 		// If no package.json exists, ask to create one
@@ -236,7 +328,7 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 			isTypescriptProject = true;
 			await writeFile(
 				path.join(creationDirectory, "./tsconfig.json"),
-				readFileSync(path.join(__dirname, "../templates/tsconfig.json"))
+				readFileSync(path.join(getBasePath(), "templates/tsconfig.init.json"))
 			);
 			devDepsToInstall.push("@cloudflare/workers-types");
 			devDepsToInstall.push("typescript");
@@ -285,48 +377,26 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 		!packageJsonContent.scripts?.publish &&
 		shouldCreatePackageJson;
 
-	/*
-	 * Passes the array of accumulated devDeps to install through to
-	 * the package manager. Also generates a human-readable list
-	 * of packages it installed.
-	 * If there are no devDeps to install, optionally runs
-	 * the package manager's install command.
-	 */
-	async function installPackages(
-		shouldRunInstall: boolean,
-		depsToInstall: string[]
-	) {
-		//lets install the devDeps they asked for
-		//and run their package manager's install command if needed
-		if (depsToInstall.length > 0) {
-			const formatter = new Intl.ListFormat("en", {
-				style: "long",
-				type: "conjunction",
-			});
-			await packageManager.addDevDeps(...depsToInstall);
-			const versionlessPackages = depsToInstall.map((dep) =>
-				dep === `wrangler@${wranglerVersion}` ? "wrangler" : dep
-			);
-
-			logger.log(
-				`✨ Installed ${formatter.format(
-					versionlessPackages
-				)} into devDependencies`
-			);
-		} else {
-			if (shouldRunInstall) {
-				await packageManager.install();
-			}
+	async function writePackageJsonScriptsAndUpdateWranglerToml({
+		isWritingScripts,
+		isAddingTests,
+		testRunner,
+		isCreatingWranglerToml,
+		packagePath,
+		scriptPath,
+		extraToml,
+	}: {
+		isWritingScripts: boolean;
+		isAddingTests?: boolean;
+		testRunner?: "jest" | "vitest";
+		isCreatingWranglerToml: boolean;
+		packagePath: string;
+		scriptPath: string;
+		extraToml: TOML.JsonMap;
+	}) {
+		if (isAddingTests && !testRunner) {
+			logger.error("testRunner is required if isAddingTests");
 		}
-	}
-
-	async function writePackageJsonScriptsAndUpdateWranglerToml(
-		isWritingScripts: boolean,
-		isCreatingWranglerToml: boolean,
-		packagePath: string,
-		scriptPath: string,
-		extraToml: TOML.JsonMap
-	) {
 		if (isCreatingWranglerToml) {
 			// rewrite wrangler.toml with main = "path/to/script" and any additional config specified in `extraToml`
 			const parsedWranglerToml = parseTOML(
@@ -342,7 +412,8 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 		}
 		const isNamedWorker =
 			isCreatingWranglerToml && path.dirname(packagePath) !== process.cwd();
-
+		const isAddingTestScripts =
+			isAddingTests && !packageJsonContent.scripts?.test;
 		if (isWritingScripts) {
 			await writeFile(
 				packagePath,
@@ -357,17 +428,21 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 							deploy: isCreatingWranglerToml
 								? `wrangler publish`
 								: `wrangler publish ${scriptPath}`,
+							...(isAddingTestScripts && { test: testRunner }),
 						},
-					},
+					} as PackageJSON,
 					null,
 					2
 				) + "\n"
 			);
 			instructions.push(
 				`\nTo start developing your Worker, run \`${
-					isNamedWorker ? `cd ${args.name} && ` : ""
+					isNamedWorker ? `cd ${args.name || fromDashScriptName} && ` : ""
 				}npm start\``
 			);
+			if (isAddingTestScripts) {
+				instructions.push(`To start testing your Worker, run \`npm test\``);
+			}
 			instructions.push(
 				`To publish your Worker to the Internet, run \`npm run deploy\``
 			);
@@ -385,89 +460,108 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 		}
 	}
 
-	async function getNewWorkerType(newWorkerFilename: string) {
-		return select(
-			`Would you like to create a Worker at ${newWorkerFilename}?`,
-			[
-				{
-					value: "none",
-					label: "None",
-				},
-				{
-					value: "fetch",
-					label: "Fetch handler",
-				},
-				{
-					value: "scheduled",
-					label: "Scheduled handler",
-				},
-			],
-			1
-		) as Promise<"none" | "fetch" | "scheduled">;
-	}
-
-	function getNewWorkerTemplate(
-		lang: "js" | "ts",
-		workerType: "fetch" | "scheduled"
-	) {
-		const templates = {
-			"js-fetch": "new-worker.js",
-			"js-scheduled": "new-worker-scheduled.js",
-			"ts-fetch": "new-worker.ts",
-			"ts-scheduled": "new-worker-scheduled.ts",
-		};
-
-		return templates[`${lang}-${workerType}`];
-	}
-
-	function getNewWorkerToml(workerType: "fetch" | "scheduled"): TOML.JsonMap {
-		if (workerType === "scheduled") {
-			return {
-				triggers: {
-					crons: ["1 * * * *"],
-				},
-			};
-		}
-
-		return {};
-	}
-
 	if (isTypescriptProject) {
 		if (!fs.existsSync(path.join(creationDirectory, "./src/index.ts"))) {
 			const newWorkerFilename = path.relative(
 				process.cwd(),
 				path.join(creationDirectory, "./src/index.ts")
 			);
-
-			const newWorkerType = yesFlag
-				? "fetch"
-				: await getNewWorkerType(newWorkerFilename);
-
-			if (newWorkerType !== "none") {
-				const template = getNewWorkerTemplate("ts", newWorkerType);
+			if (fromDashScriptName) {
+				logger.warn(
+					"After running `wrangler init --from-dash`, modifying your worker via the Cloudflare dashboard is discouraged.\nEdits made via the Dashboard will not be synchronized locally and will be overridden by your local code and config when you publish."
+				);
 
 				await mkdir(path.join(creationDirectory, "./src"), {
 					recursive: true,
 				});
+
+				const defaultEnvironment =
+					serviceMetadata?.default_environment.environment;
+				// I want the default environment, assuming it's the most up to date code.
+				const dashScript = await fetchDashboardScript(
+					`/accounts/${accountId}/workers/services/${fromDashScriptName}/environments/${defaultEnvironment}/content`
+				);
+
 				await writeFile(
 					path.join(creationDirectory, "./src/index.ts"),
-					readFileSync(path.join(__dirname, `../templates/${template}`))
+					dashScript
 				);
 
-				logger.log(
-					`✨ Created ${path.relative(
-						process.cwd(),
-						path.join(creationDirectory, "./src/index.ts")
-					)}`
-				);
+				await writePackageJsonScriptsAndUpdateWranglerToml({
+					isWritingScripts: shouldWritePackageJsonScripts,
+					isCreatingWranglerToml: justCreatedWranglerToml,
+					packagePath: pathToPackageJson,
+					scriptPath: "src/index.ts",
+					extraToml: (await getWorkerConfig(accountId, fromDashScriptName, {
+						defaultEnvironment,
+						environments: serviceMetadata?.environments,
+					})) as TOML.JsonMap,
+				});
+			} else {
+				const newWorkerType = yesFlag
+					? "fetch"
+					: await getNewWorkerType(newWorkerFilename);
 
-				await writePackageJsonScriptsAndUpdateWranglerToml(
-					shouldWritePackageJsonScripts,
-					justCreatedWranglerToml,
-					pathToPackageJson,
-					"src/index.ts",
-					getNewWorkerToml(newWorkerType)
-				);
+				if (newWorkerType !== "none") {
+					const template = getNewWorkerTemplate("ts", newWorkerType);
+
+					await mkdir(path.join(creationDirectory, "./src"), {
+						recursive: true,
+					});
+
+					await writeFile(
+						path.join(creationDirectory, "./src/index.ts"),
+						readFileSync(path.join(getBasePath(), `templates/${template}`))
+					);
+
+					logger.log(
+						`✨ Created ${path.relative(
+							process.cwd(),
+							path.join(creationDirectory, "./src/index.ts")
+						)}`
+					);
+
+					shouldCreateTests =
+						yesFlag ||
+						(await confirm(
+							"Would you like us to write your first test with Vitest?"
+						));
+
+					if (shouldCreateTests) {
+						if (yesFlag) {
+							logger.info("Your project will use Vitest to run your tests.");
+						}
+
+						newWorkerTestType = "vitest";
+						devDepsToInstall.push(newWorkerTestType);
+
+						await writeFile(
+							path.join(creationDirectory, "./src/index.test.ts"),
+							readFileSync(
+								path.join(
+									getBasePath(),
+									`templates/init-tests/test-${newWorkerTestType}-new-worker.ts`
+								)
+							)
+						);
+						logger.log(
+							`✨ Created ${path.relative(
+								process.cwd(),
+								path.join(creationDirectory, "./src/index.test.ts")
+							)}`
+						);
+					}
+
+					await writePackageJsonScriptsAndUpdateWranglerToml({
+						isWritingScripts: shouldWritePackageJsonScripts,
+						isAddingTests: shouldCreateTests,
+						isCreatingWranglerToml: justCreatedWranglerToml,
+						packagePath: pathToPackageJson,
+						testRunner: newWorkerTestType,
+						scriptPath: "src/index.ts",
+						extraToml: getNewWorkerToml(newWorkerType),
+					});
+				}
 			}
 		}
 	} else {
@@ -477,41 +571,106 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 				path.join(creationDirectory, "./src/index.js")
 			);
 
-			const newWorkerType = yesFlag
-				? "fetch"
-				: await getNewWorkerType(newWorkerFilename);
-
-			if (newWorkerType !== "none") {
-				const template = getNewWorkerTemplate("js", newWorkerType);
+			if (fromDashScriptName) {
+				logger.warn(
+					"After running `wrangler init --from-dash`, modifying your worker via the Cloudflare dashboard is discouraged.\nEdits made via the Dashboard will not be synchronized locally and will be overridden by your local code and config when you publish."
+				);
 
 				await mkdir(path.join(creationDirectory, "./src"), {
 					recursive: true,
 				});
+
+				const defaultEnvironment =
+					serviceMetadata?.default_environment.environment;
+
+				// I want the default environment, assuming it's the most up to date code.
+				const dashScript = await fetchDashboardScript(
+					`/accounts/${accountId}/workers/services/${fromDashScriptName}/environments/${defaultEnvironment}/content`
+				);
+
 				await writeFile(
 					path.join(creationDirectory, "./src/index.js"),
-					readFileSync(path.join(__dirname, `../templates/${template}`))
+					dashScript
 				);
 
-				logger.log(
-					`✨ Created ${path.relative(
-						process.cwd(),
-						path.join(creationDirectory, "./src/index.js")
-					)}`
-				);
+				await writePackageJsonScriptsAndUpdateWranglerToml({
+					isWritingScripts: shouldWritePackageJsonScripts,
+					isCreatingWranglerToml: justCreatedWranglerToml,
+					packagePath: pathToPackageJson,
+					scriptPath: "src/index.js",
+					//? Should we have Environment argument for `wrangler init --from-dash` - Jacob
+					extraToml: (await getWorkerConfig(accountId, fromDashScriptName, {
+						defaultEnvironment,
+						environments: serviceMetadata?.environments,
+					})) as TOML.JsonMap,
+				});
+			} else {
+				const newWorkerType = yesFlag
+					? "fetch"
+					: await getNewWorkerType(newWorkerFilename);
 
-				await writePackageJsonScriptsAndUpdateWranglerToml(
-					shouldWritePackageJsonScripts,
-					justCreatedWranglerToml,
-					pathToPackageJson,
-					"src/index.js",
-					getNewWorkerToml(newWorkerType)
-				);
+				if (newWorkerType !== "none") {
+					const template = getNewWorkerTemplate("js", newWorkerType);
+
+					await mkdir(path.join(creationDirectory, "./src"), {
+						recursive: true,
+					});
+					await writeFile(
+						path.join(creationDirectory, "./src/index.js"),
+						readFileSync(path.join(getBasePath(), `templates/${template}`))
+					);
+
+					logger.log(
+						`✨ Created ${path.relative(
+							process.cwd(),
+							path.join(creationDirectory, "./src/index.js")
+						)}`
+					);
+
+					shouldCreateTests =
+						yesFlag ||
+						(await confirm("Would you like us to write your first test?"));
+
+					if (shouldCreateTests) {
+						newWorkerTestType = await getNewWorkerTestType(yesFlag);
+						devDepsToInstall.push(newWorkerTestType);
+						await writeFile(
+							path.join(creationDirectory, "./src/index.test.js"),
+							readFileSync(
+								path.join(
+									getBasePath(),
+									`templates/init-tests/test-${newWorkerTestType}-new-worker.js`
+								)
+							)
+						);
+						logger.log(
+							`✨ Created ${path.relative(
+								process.cwd(),
+								path.join(creationDirectory, "./src/index.test.js")
+							)}`
+						);
+					}
+
+					await writePackageJsonScriptsAndUpdateWranglerToml({
+						isWritingScripts: shouldWritePackageJsonScripts,
+						isAddingTests: shouldCreateTests,
+						testRunner: newWorkerTestType,
+						isCreatingWranglerToml: justCreatedWranglerToml,
+						packagePath: pathToPackageJson,
+						scriptPath: "src/index.js",
+						extraToml: getNewWorkerToml(newWorkerType),
+					});
+				}
 			}
 		}
 	}
 	// install packages as the final step of init
 	try {
-		await installPackages(shouldRunPackageManagerInstall, devDepsToInstall);
+		await installPackages(
+			shouldRunPackageManagerInstall,
+			devDepsToInstall,
+			packageManager
+		);
 	} catch (e) {
 		// fetching packages could fail due to loss of internet, etc
 		// we should let folks know we failed to fetch, but their
@@ -524,6 +683,106 @@ export async function initHandler(args: ArgumentsCamelCase<InitArgs>) {
 
 	// let users know what to do now
 	instructions.forEach((instruction) => logger.log(instruction));
+}
+
+/*
+ * Passes the array of accumulated devDeps to install through to
+ * the package manager. Also generates a human-readable list
+ * of packages it installed.
+ * If there are no devDeps to install, optionally runs
+ * the package manager's install command.
+ */
+async function installPackages(
+	shouldRunInstall: boolean,
+	depsToInstall: string[],
+	packageManager: PackageManager
+) {
+	//lets install the devDeps they asked for
+	//and run their package manager's install command if needed
+	if (depsToInstall.length > 0) {
+		const formatter = new Intl.ListFormat("en", {
+			style: "long",
+			type: "conjunction",
+		});
+		await packageManager.addDevDeps(...depsToInstall);
+		const versionlessPackages = depsToInstall.map((dep) =>
+			dep === `wrangler@${wranglerVersion}` ? "wrangler" : dep
+		);
+
+		logger.log(
+			`✨ Installed ${formatter.format(
+				versionlessPackages
+			)} into devDependencies`
+		);
+	} else {
+		if (shouldRunInstall) {
+			await packageManager.install();
+		}
+	}
+}
+
+async function getNewWorkerType(newWorkerFilename: string) {
+	return select(`Would you like to create a Worker at ${newWorkerFilename}?`, {
+		choices: [
+			{
+				value: "none",
+				title: "None",
+			},
+			{
+				value: "fetch",
+				title: "Fetch handler",
+			},
+			{
+				value: "scheduled",
+				title: "Scheduled handler",
+			},
+		],
+		defaultOption: 1,
+	});
+}
+
+async function getNewWorkerTestType(yesFlag?: boolean) {
+	return yesFlag
+		? "jest"
+		: select(`Which test runner would you like to use?`, {
+				choices: [
+					{
+						value: "vitest",
+						title: "Vitest",
+					},
+					{
+						value: "jest",
+						title: "Jest",
+					},
+				],
+				defaultOption: 1,
+		  });
+}
+
+function getNewWorkerTemplate(
+	lang: "js" | "ts",
+	workerType: "fetch" | "scheduled"
+) {
+	const templates = {
+		"js-fetch": "new-worker.js",
+		"js-scheduled": "new-worker-scheduled.js",
+		"ts-fetch": "new-worker.ts",
+		"ts-scheduled": "new-worker-scheduled.ts",
+	};
+
+	return templates[`${lang}-${workerType}`];
+}
+
+function getNewWorkerToml(workerType: "fetch" | "scheduled"): TOML.JsonMap {
+	if (workerType === "scheduled") {
+		return {
+			triggers: {
+				crons: ["1 * * * *"],
+			},
+		};
+	}
+
+	return {};
 }
 
 /**
@@ -546,4 +805,218 @@ async function findPath(
 			cwd: cwd,
 		});
 	}
+}
+
+async function getWorkerConfig(
+	accountId: string,
+	fromDashScriptName: string,
+	{
+		defaultEnvironment,
+		environments,
+	}: {
+		defaultEnvironment: string | undefined;
+		environments: ServiceMetadataRes["environments"] | undefined;
+	}
+): Promise<RawConfig> {
+	const [bindings, routes, serviceEnvMetadata, cronTriggers] =
+		await Promise.all([
+			fetchResult<WorkerMetadata["bindings"]>(
+				`/accounts/${accountId}/workers/services/${fromDashScriptName}/environments/${defaultEnvironment}/bindings`
+			),
+			fetchResult<RoutesRes>(
+				`/accounts/${accountId}/workers/services/${fromDashScriptName}/environments/${defaultEnvironment}/routes`
+			),
+			fetchResult<ServiceMetadataRes["default_environment"]>(
+				`/accounts/${accountId}/workers/services/${fromDashScriptName}/environments/${defaultEnvironment}`
+			),
+			fetchResult<CronTriggersRes>(
+				`/accounts/${accountId}/workers/scripts/${fromDashScriptName}/schedules`
+			),
+		]).catch((e) => {
+			throw new Error(
+				`Error Occurred ${e}: Unable to fetch bindings, routes, or services metadata from the dashboard. Please try again later.`
+			);
+		});
+
+	const mappedBindings = bindings
+		.filter((binding) => (binding.type as string) !== "secret_text")
+		// Combine the same types into {[type]: [binding]}
+		.reduce((configObj, binding) => {
+			// Some types have different names in wrangler.toml
+			// I want the type safety of the binding being destructured after the case narrowing the union but type is unused
+
+			switch (binding.type) {
+				case "plain_text":
+					{
+						configObj.vars = {
+							...(configObj.vars ?? {}),
+							[binding.name]: binding.text,
+						};
+					}
+					break;
+				case "json":
+					{
+						configObj.vars = {
+							...(configObj.vars ?? {}),
+							name: binding.name,
+							json: binding.json,
+						};
+					}
+					break;
+				case "kv_namespace":
+					{
+						configObj.kv_namespaces = [
+							...(configObj.kv_namespaces ?? []),
+							{ id: binding.namespace_id, binding: binding.name },
+						];
+					}
+					break;
+				case "durable_object_namespace":
+					{
+						configObj.durable_objects = {
+							bindings: [
+								...(configObj.durable_objects?.bindings ?? []),
+								{
+									name: binding.name,
+									class_name: binding.class_name,
+									script_name: binding.script_name,
+									environment: binding.environment,
+								},
+							],
+						};
+					}
+					break;
+				case "r2_bucket":
+					{
+						configObj.r2_buckets = [
+							...(configObj.r2_buckets ?? []),
+							{ binding: binding.name, bucket_name: binding.bucket_name },
+						];
+					}
+					break;
+				case "service":
+					{
+						configObj.services = [
+							...(configObj.services ?? []),
+							{
+								binding: binding.name,
+								service: binding.service,
+								environment: binding.environment,
+							},
+						];
+					}
+					break;
+				case "analytics_engine":
+					{
+						configObj.analytics_engine_datasets = [
+							...(configObj.analytics_engine_datasets ?? []),
+							{ binding: binding.name, dataset: binding.dataset },
+						];
+					}
+					break;
+				case "dispatch_namespace":
+					{
+						configObj.dispatch_namespaces = [
+							...(configObj.dispatch_namespaces ?? []),
+							{ binding: binding.name, namespace: binding.namespace },
+						];
+					}
+					break;
+				case "logfwdr":
+					{
+						configObj.logfwdr = {
+							// TODO: Messaging about adding schema file path
+							schema: "",
+							bindings: [
+								...(configObj.logfwdr?.bindings ?? []),
+								{ name: binding.name, destination: binding.destination },
+							],
+						};
+					}
+					break;
+				case "wasm_module":
+					{
+						configObj.wasm_modules = {
+							...(configObj.wasm_modules ?? {}),
+							[binding.name]: binding.part,
+						};
+					}
+					break;
+				case "text_blob":
+					{
+						configObj.text_blobs = {
+							...(configObj.text_blobs ?? {}),
+							[binding.name]: binding.part,
+						};
+					}
+					break;
+				case "data_blob":
+					{
+						configObj.data_blobs = {
+							...(configObj.data_blobs ?? {}),
+							[binding.name]: binding.part,
+						};
+					}
+					break;
+				default: {
+					// If we don't know what the type is, its an unsafe binding
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					if (!(binding as any)?.type) break;
+					configObj.unsafe = {
+						bindings: [...(configObj.unsafe?.bindings ?? []), binding],
+					};
+				}
+			}
+
+			return configObj;
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		}, {} as RawConfig);
+
+	const durableObjectClassNames = bindings
+		.filter((binding) => binding.type === "durable_object_namespace")
+		.map(
+			(durableObject) => (durableObject as { class_name: string }).class_name
+		);
+
+	const routeOrRoutes = routes.map((rawRoute) => {
+		const { id: _id, ...route } = rawRoute;
+		if (Object.keys(route).length === 1) {
+			return route.pattern;
+		} else {
+			return route as Route;
+		}
+	});
+	const routeOrRoutesToConfig =
+		routeOrRoutes.length > 1
+			? { routes: routeOrRoutes }
+			: { route: routeOrRoutes[0] };
+
+	return {
+		compatibility_date:
+			serviceEnvMetadata.script.compatibility_date ??
+			new Date().toISOString().substring(0, 10),
+		...routeOrRoutesToConfig,
+		usage_model: serviceEnvMetadata.script.usage_model,
+		...(durableObjectClassNames.length
+			? {
+					migrations: [
+						{
+							tag: serviceEnvMetadata.script.migration_tag,
+							new_classes: durableObjectClassNames,
+						},
+					],
+			  }
+			: {}),
+		triggers: {
+			crons: cronTriggers.schedules.map((scheduled) => scheduled.cron),
+		},
+		env: environments
+			?.filter((env) => env.environment !== "production")
+			// `env` can have multiple Environments, with different configs.
+			.reduce((envObj, { environment }) => {
+				return { ...envObj, [environment]: {} };
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			}, {} as RawConfig["env"]),
+		...mappedBindings,
+	};
 }

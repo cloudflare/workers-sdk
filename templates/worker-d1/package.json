@@ -1,0 +1,20 @@
+{
+	"name": "template-worker-d1",
+	"version": "1.0.0",
+	"private": true,
+	"description": "**Note: requires D1 Beta Access**",
+	"keywords": [],
+	"license": "ISC",
+	"author": "",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"devDependencies": {
+		"@cloudflare/d1": "^1.4.1",
+		"@cloudflare/workers-types": "^3.14.0",
+		"itty-router": "^2.6.1",
+		"typescript": "^4.7.4",
+		"wrangler": "^2.9.1"
+	}
+}

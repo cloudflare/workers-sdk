@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Cloudflare Stream + Stripe Checkout Example — Homepage</title>
+		<link rel="stylesheet" href="css/global.css" />
+		<script src="https://js.stripe.com/v3/"></script>
+		<!-- 	TODO: Check session cookie, redirect to watch page if present -->
+	</head>
+	<body>
+		<div class="sr-root">
+			<div class="sr-main">
+				<section class="container">
+					<form action="/api/create-checkout-session" method="POST">
+						<button type="submit" id="submit">Purchase Ticket</button>
+					</form>
+				</section>
+			</div>
+		</div>
+	</body>
+</html>

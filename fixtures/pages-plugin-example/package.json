@@ -1,16 +1,17 @@
 {
-  "name": "pages-plugin-example",
-  "main": "index.js",
-  "version": "0.0.0",
-  "private": true,
-  "types": "index.d.ts",
-  "files": [
-    "index.js",
-    "index.d.ts",
-    "tsconfig.json",
-    "public/"
-  ],
-  "scripts": {
-    "build": "npx wrangler pages functions build --plugin --outfile=index.js"
-  }
+	"name": "pages-plugin-example",
+	"version": "0.0.0",
+	"private": true,
+	"main": "index.js",
+	"types": "index.d.ts",
+	"files": [
+		"index.js",
+		"index.d.ts",
+		"tsconfig.json",
+		"public/"
+	],
+	"scripts": {
+		"build": "npx wrangler pages functions build --plugin --outfile=index.js",
+		"check:type": "tsc"
+	}
 }

@@ -1,6 +1,6 @@
 ## ⛅️ wrangler
 
-> This package is for wrangler v2.x, released first in May 2022. If you're looking for v1.x of the `@cloudflare/wrangler` package, visit https://www.npmjs.com/package/@cloudflare/wrangler / https://github.com/cloudflare/wrangler. v1 vs v2 comparison is at [our docs site](https://developers.cloudflare.com/workers/wrangler/compare-v1-v2/)
+> This package is for wrangler v2.x, released first in May 2022. If you're looking for v1.x of the `@cloudflare/wrangler` package, visit https://www.npmjs.com/package/@cloudflare/wrangler / https://github.com/cloudflare/wrangler-legacy. v1 vs v2 comparison is at [our docs site](https://developers.cloudflare.com/workers/wrangler/compare-v1-v2/)
 
 `wrangler` is a command line tool for building [Cloudflare Workers](https://workers.cloudflare.com/).
 
@@ -14,7 +14,7 @@ echo "export default { fetch() { return new Response('hello world') } }" > index
 # try it out
 npx wrangler dev index.js
 # and then publish it
-npx wrangler publish index.js --name my-worker
+npx wrangler publish index.js --name my-worker --latest
 # visit https://my-worker.<your workers subdomain>.workers.dev
 ```
 
@@ -64,3 +64,7 @@ For more commands and options, refer to the [documentation](https://developers.c
 ## Documentation
 
 For the latest Wrangler documentation, [click here](https://developers.cloudflare.com/workers/wrangler/).
+
+## Contributing
+
+Refer to the [`CONTRIBUTING.md`](/CONTRIBUTING.md) guide for details.

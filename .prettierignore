@@ -1,3 +1,4 @@
+packages/pages-shared/dist/
 packages/wrangler/vendor/
 packages/wrangler/wrangler-dist/
 packages/wrangler/miniflare-dist/
@@ -5,10 +6,19 @@ packages/wrangler/emitted-types/
 packages/wrangler/coverage/
 packages/wrangler/CHANGELOG.md
 packages/jest-environment-wrangler/CHANGELOG.md
-packages/examples/worker-app/dist/
-packages/examples/remix-pages-app/build
-packages/examples/remix-pages-app/public/
 packages/prerelease-registry/_worker.js
 packages/jest-environment-wrangler/dist/
 packages/wranglerjs-compat-webpack-plugin/lib
 packages/wrangler-devtools/built-devtools
+fixtures/pages-plugin-example/index.js
+fixtures/remix-pages-app/build/
+fixtures/remix-pages-app/public/build/
+fixtures/worker-app/dist/
+fixtures/pages-functions-app/public/cdn-cgi/
+
+# Moved from /templates
+*-lock.*
+*.lock
+*.log
+
+/worker-rust/target/

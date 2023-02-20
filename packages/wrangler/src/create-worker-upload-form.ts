@@ -23,6 +23,35 @@ export function toMimeType(type: CfModuleType): string {
 	}
 }
 
+type WorkerMetadataBinding =
+	// If you add any new binding types here, also add it to safeBindings
+	// under validateUnsafeBinding in config/validation.ts
+	| { type: "plain_text"; name: string; text: string }
+	| { type: "json"; name: string; json: unknown }
+	| { type: "wasm_module"; name: string; part: string }
+	| { type: "text_blob"; name: string; part: string }
+	| { type: "data_blob"; name: string; part: string }
+	| { type: "kv_namespace"; name: string; namespace_id: string }
+	| {
+			type: "durable_object_namespace";
+			name: string;
+			class_name: string;
+			script_name?: string;
+			environment?: string;
+	  }
+	| { type: "queue"; name: string; queue_name: string }
+	| { type: "r2_bucket"; name: string; bucket_name: string }
+	| { type: "d1"; name: string; id: string; internalEnv?: string }
+	| { type: "service"; name: string; service: string; environment?: string }
+	| { type: "analytics_engine"; name: string; dataset?: string }
+	| { type: "dispatch_namespace"; name: string; namespace: string }
+	| { type: "mtls_certificate"; name: string; certificate_id: string }
+	| {
+			type: "logfwdr";
+			name: string;
+			destination: string;
+	  };
+
 export interface WorkerMetadata {
 	/** The name of the entry point module. Only exists when the worker is in the ES module format */
 	main_module?: string;
@@ -33,31 +62,9 @@ export interface WorkerMetadata {
 	usage_model?: "bundled" | "unbound";
 	migrations?: CfDurableObjectMigrations;
 	capnp_schema?: string;
-	// If you add any new binding types here, also add it to safeBindings
-	// under validateUnsafeBinding in config/validation.ts
-	bindings: (
-		| { type: "plain_text"; name: string; text: string }
-		| { type: "json"; name: string; json: unknown }
-		| { type: "wasm_module"; name: string; part: string }
-		| { type: "text_blob"; name: string; part: string }
-		| { type: "data_blob"; name: string; part: string }
-		| { type: "kv_namespace"; name: string; namespace_id: string }
-		| {
-				type: "durable_object_namespace";
-				name: string;
-				class_name: string;
-				script_name?: string;
-				environment?: string;
-		  }
-		| { type: "r2_bucket"; name: string; bucket_name: string }
-		| { type: "service"; name: string; service: string; environment?: string }
-		| { type: "namespace"; name: string; namespace: string }
-		| {
-				type: "logfwdr";
-				name: string;
-				destination: string;
-		  }
-	)[];
+	bindings: WorkerMetadataBinding[];
+	keep_bindings?: WorkerMetadataBinding["type"][];
+	logpush?: boolean;
 }
 
 /**
@@ -72,6 +79,8 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		usage_model,
 		compatibility_date,
 		compatibility_flags,
+		keepVars,
+		logpush,
 	} = worker;
 
 	let { modules } = worker;
@@ -106,6 +115,14 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		}
 	);
 
+	bindings.queues?.forEach(({ binding, queue_name }) => {
+		metadataBindings.push({
+			type: "queue",
+			name: binding,
+			queue_name,
+		});
+	});
+
 	bindings.r2_buckets?.forEach(({ binding, bucket_name }) => {
 		metadataBindings.push({
 			name: binding,
@@ -113,6 +130,17 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			bucket_name,
 		});
 	});
+
+	bindings.d1_databases?.forEach(
+		({ binding, database_id, database_internal_env }) => {
+			metadataBindings.push({
+				name: binding,
+				type: "d1",
+				id: database_id,
+				internalEnv: database_internal_env,
+			});
+		}
+	);
 
 	bindings.services?.forEach(({ binding, service, environment }) => {
 		metadataBindings.push({
@@ -123,11 +151,27 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		});
 	});
 
-	bindings.worker_namespaces?.forEach(({ binding, namespace }) => {
+	bindings.analytics_engine_datasets?.forEach(({ binding, dataset }) => {
 		metadataBindings.push({
 			name: binding,
-			type: "namespace",
+			type: "analytics_engine",
+			dataset,
+		});
+	});
+
+	bindings.dispatch_namespaces?.forEach(({ binding, namespace }) => {
+		metadataBindings.push({
+			name: binding,
+			type: "dispatch_namespace",
 			namespace,
+		});
+	});
+
+	bindings.mtls_certificates?.forEach(({ binding, certificate_id }) => {
+		metadataBindings.push({
+			name: binding,
+			type: "mtls_certificate",
+			certificate_id,
 		});
 	});
 
@@ -255,6 +299,8 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		...(usage_model && { usage_model }),
 		...(migrations && { migrations }),
 		capnp_schema: bindings.logfwdr?.schema,
+		...(keepVars && { keep_bindings: ["plain_text", "json"] }),
+		...(logpush !== undefined && { logpush }),
 	};
 
 	formData.set("metadata", JSON.stringify(metadata));

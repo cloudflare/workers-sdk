@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link
+			rel="stylesheet"
+			href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
+		/>
+		<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+		<style>
+			html,
+			body {
+				display: grid;
+				place-items: center center;
+				min-height: 100vh;
+			}
+
+			* {
+				margin: 0;
+				padding: 0;
+			}
+
+			h1 {
+				text-align: center;
+			}
+
+			.header-info {
+				text-align: center;
+				font-style: italic;
+				color: gray;
+			}
+
+			.info {
+				text-align: center;
+				padding: 1rem;
+				color: gray;
+			}
+
+			.info #status {
+				height: 10px;
+				width: 10px;
+				background-color: #bbb;
+				border-radius: 50%;
+				display: inline-block;
+			}
+
+			.info #status.online {
+				background-color: green;
+			}
+
+			.info #status.offline {
+				background-color: red;
+			}
+
+			#state .row,
+			#keyboard .row {
+				display: flex;
+			}
+
+			#state .letter,
+			#keyboard .letter {
+				border: 2px solid gray;
+				border-radius: 1px;
+				margin: 2px;
+				font-size: 2.5rem;
+				font-weight: 700;
+				height: 3rem;
+				width: 3rem;
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				text-transform: uppercase;
+			}
+
+			.filled-letter {
+				border: 2px solid black !important;
+			}
+
+			section {
+				margin: 1rem 0;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+			}
+
+			#announce {
+				height: 1rem;
+			}
+
+			#announce.success {
+				color: green;
+			}
+			#announce.error {
+				color: red;
+			}
+
+			#keyboard div {
+				display: flex;
+			}
+
+			#keyboard button {
+				color: black;
+				font-size: 1rem;
+				font-weight: 700;
+				padding: 0.4rem;
+				margin: 1px;
+				cursor: pointer;
+				text-transform: uppercase;
+			}
+
+			.yellow {
+				background-color: yellow;
+			}
+
+			.green {
+				background-color: green;
+			}
+
+			.grey {
+				background-color: gray;
+			}
+		</style>
+	</head>
+
+	<body>
+		<main>
+			<h1>Wordle co-operative</h1>
+			<div class="header-info">share the URL to invite other players</div>
+
+			<div class="info">
+				<span id="ping">... connecting</span>
+				<span id="status"></span>
+				<div id="score"></div>
+			</div>
+
+			<section id="state" x-data="getstate">
+				<!-- This state is sent from DO -->
+				<template x-for="(guess, i) in guesses">
+					<div class="row">
+						<template x-for="(_, index) in Array.from({ length: 5 })">
+							<div
+								:id="'row_' + i + '_index_' + index"
+								:class="`letter ${guess[index]?.color} ${guess[index]?.letter ? 'filled-letter' : ''}`"
+								x-text="guess[index]?.letter ? guess[index]?.letter : ''"
+								x-init="$watch('guess[index]?.letter', (value, oldValue) => {
+                  if (oldValue != value) {
+                    animate('row_' + i + '_index_' + index)
+                  }
+                })"
+							></div>
+						</template>
+					</div>
+				</template>
+			</section>
+
+			<section>
+				<span id="announce"></span>
+			</section>
+
+			<section id="keyboard">
+				<div id="guess-input-row" class="row">
+					<div class="letter"></div>
+					<div class="letter"></div>
+					<div class="letter"></div>
+					<div class="letter"></div>
+					<div class="letter"></div>
+				</div>
+
+				<div>
+					<button>q</button>
+					<button>w</button>
+					<button>e</button>
+					<button>r</button>
+					<button>t</button>
+					<button>y</button>
+					<button>u</button>
+					<button>i</button>
+					<button>o</button>
+					<button>p</button>
+				</div>
+				<div>
+					<button>a</button>
+					<button>s</button>
+					<button>d</button>
+					<button>f</button>
+					<button>g</button>
+					<button>h</button>
+					<button>j</button>
+					<button>k</button>
+					<button>l</button>
+				</div>
+				<div>
+					<button>Del</button>
+					<button>z</button>
+					<button>x</button>
+					<button>c</button>
+					<button>v</button>
+					<button>b</button>
+					<button>n</button>
+					<button>m</button>
+					<button>Enter</button>
+				</div>
+			</section>
+		</main>
+
+		<script type="module">
+			import QuickLRU from 'https://cdn.jsdelivr.net/npm/quick-lru@6.1.1/index.js';
+			import Alpine from 'https://cdn.jsdelivr.net/npm/alpinejs@3.10.2/dist/module.esm.js';
+
+			const lru = new QuickLRU({ maxSize: 50 });
+			const defaultGuesses = [[], [], [], [], [], []];
+			let state = Alpine.reactive({ guesses: defaultGuesses });
+			let currentGuess = [];
+			let nextLetter = 0;
+			let currentWebSocket = null;
+
+			Alpine.data('getstate', () => ({
+				guesses: state.guesses,
+				animate(id) {
+					animateCSS(document.getElementById(id), 'flipInX');
+				},
+			}));
+
+			Alpine.start();
+
+			function join() {
+				let ws = new WebSocket(`${location.origin.replace(/^http/, 'ws')}${location.pathname}`);
+				let rejoined = false;
+				let startTime = Date.now();
+
+				let rejoin = async () => {
+					if (!rejoined) {
+						rejoined = true;
+						currentWebSocket = null;
+
+						// Don't try to reconnect too rapidly.
+						let timeSinceLastJoin = Date.now() - startTime;
+						if (timeSinceLastJoin < 1000) {
+							// Less than 1 second elapsed since last join. Pause a bit.
+							await new Promise(resolve => setTimeout(resolve, 1000 - timeSinceLastJoin));
+						}
+
+						// OK, reconnect now!
+						join();
+					}
+				};
+
+				ws.addEventListener('open', event => {
+					currentWebSocket = ws;
+					currentWebSocket.send(JSON.stringify({ type: 'refresh' }));
+				});
+
+				ws.addEventListener('message', event => {
+					const messages = JSON.parse(event.data);
+
+					messages.forEach(message => {
+						switch (message.type) {
+							case 'announce':
+								let announce = document.getElementById('announce');
+								announce.innerText = message.data.message;
+								announce.className = message.data.style;
+
+								debounceClearAnnounce();
+
+								break;
+							case 'refresh':
+								state.guesses.splice(0, message.data.guesses.length, ...message.data.guesses);
+
+								state.guesses.forEach(g => {
+									g.forEach(x => {
+										shadeKeyBoard(x.letter, x.color);
+									});
+								});
+
+								break;
+							case 'clear-keyboard':
+								currentGuess = [];
+								nextLetter = 0;
+								const keys = document.querySelectorAll('#guess-input-row .letter');
+								for (const elem of keys) {
+									elem.textContent = '';
+								}
+								break;
+							case 'clear-buttons':
+								const buttons = document.querySelectorAll('#keyboard button');
+								for (const btn of buttons) {
+									btn.className = '';
+								}
+								break;
+							case 'pong':
+								const ping = lru.get(message.data.id);
+								if (ping) {
+									let info = document.getElementById('ping');
+									info.innerText = `👯 ${message.data.players} player(s) - ping ${
+										Date.now() - ping
+									}ms`;
+
+									let status = document.getElementById('status');
+									status.className = 'online';
+
+									let score = document.getElementById('score');
+									score.innerText = `🚀 Score: ${message.data.score || 0} 🚀`;
+
+									// set offline after no pongs
+									debounceStatusOffline();
+									break;
+								}
+								break;
+							case 'shake-input':
+								animateCSS(document.getElementById('guess-input-row'), 'shakeX');
+								break;
+							case 'celebrate':
+								window,
+									confetti({
+										particleCount: 100,
+										spread: 70,
+										origin: { y: 0.7 },
+									});
+								break;
+						}
+					});
+				});
+
+				ws.addEventListener('close', event => {
+					console.log('WebSocket closed, reconnecting:', event.code, event.reason);
+					rejoin();
+				});
+
+				ws.addEventListener('error', event => {
+					console.log('WebSocket error, reconnecting:', event);
+					rejoin();
+				});
+			}
+
+			function sendWebSocketMessage(type, data) {
+				currentWebSocket.send(JSON.stringify({ type, data }));
+			}
+
+			// client ping <-> server pong
+			setInterval(() => {
+				try {
+					const id = self.crypto.randomUUID();
+					lru.set(id, Date.now());
+					sendWebSocketMessage('ping', { id });
+				} catch (e) {}
+			}, 1000);
+
+			document.addEventListener('keyup', e => {
+				let pressedKey = String(e.key);
+				if (pressedKey === 'Backspace' && nextLetter !== 0) {
+					deleteLetter();
+					return;
+				}
+
+				if (pressedKey === 'Enter') {
+					sendGuess();
+					return;
+				}
+
+				let found = pressedKey.match(/[a-z]/gi);
+				if (!found || found.length > 1) {
+					return;
+				} else {
+					insertLetter(pressedKey);
+				}
+			});
+
+			document.getElementById('keyboard').addEventListener('click', e => {
+				const target = e.target;
+
+				if (!target.tagName === 'BUTTON') {
+					return;
+				}
+
+				let key = target.textContent;
+
+				if (key === 'Del') {
+					key = 'Backspace';
+				}
+
+				document.dispatchEvent(new KeyboardEvent('keyup', { key: key }));
+				target.blur();
+			});
+
+			function insertLetter(pressedKey) {
+				if (nextLetter === 5) {
+					return;
+				}
+				pressedKey = pressedKey.toLowerCase();
+				let letter = document.querySelector(`#guess-input-row div:nth-child(${nextLetter + 1})`);
+				animateCSS(letter, 'pulse');
+				letter.textContent = pressedKey;
+				currentGuess.push(pressedKey);
+				nextLetter += 1;
+			}
+
+			function deleteLetter() {
+				let letter = document.querySelector(`#guess-input-row div:nth-child(${nextLetter})`);
+				letter.textContent = '';
+				currentGuess.pop();
+				nextLetter -= 1;
+			}
+
+			function sendGuess() {
+				sendWebSocketMessage('guess', { letters: currentGuess });
+			}
+
+			function shadeKeyBoard(letter, color) {
+				for (const elem of document.querySelectorAll('#keyboard button')) {
+					if (elem.textContent === letter) {
+						let oldColor = elem.className;
+						if (oldColor === 'green') {
+							return;
+						}
+
+						if (oldColor === 'yellow' && color !== 'green') {
+							return;
+						}
+
+						elem.className = color;
+						break;
+					}
+				}
+			}
+
+			function debounce(func, timeout = 2000) {
+				let timer;
+				return (...args) => {
+					clearTimeout(timer);
+					timer = setTimeout(() => {
+						func.apply(this, args);
+					}, timeout);
+				};
+			}
+
+			const debounceClearAnnounce = debounce(() => {
+				let status = document.getElementById('announce');
+				status.innerText = '';
+			}, 5000);
+
+			const debounceStatusOffline = debounce(() => {
+				let status = document.getElementById('status');
+				status.className = 'offline';
+			}, 2000);
+
+			// https://animate.style/#javascript
+			const animateCSS = (element, animation, prefix = 'animate__') =>
+				// We create a Promise and return it
+				new Promise((resolve, reject) => {
+					const animationName = `${prefix}${animation}`;
+					element.classList.add(`${prefix}animated`, animationName);
+
+					// When the animation ends, we clean the classes and resolve the Promise
+					function handleAnimationEnd(event) {
+						event.stopPropagation();
+						element.classList.remove(`${prefix}animated`, animationName);
+						resolve('Animation ended');
+					}
+
+					element.addEventListener('animationend', handleAnimationEnd, {
+						once: true,
+					});
+				});
+
+			join();
+		</script>
+	</body>
+</html>

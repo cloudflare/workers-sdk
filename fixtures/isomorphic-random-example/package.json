@@ -1,0 +1,10 @@
+{
+	"name": "isomorphic-random-example",
+	"version": "0.0.1",
+	"private": true,
+	"description": "Isomorphic secure-random library, demonstrating `exports` use with Workers",
+	"exports": {
+		"node": "./src/node.js",
+		"workerd": "./src/workerd.mjs"
+	}
+}

@@ -4,7 +4,9 @@ import path from "node:path";
 import * as esbuild from "esbuild";
 import { execaCommand } from "execa";
 import { logger } from "./logger";
+import { getBasePath } from "./paths";
 import type { Config } from "./config";
+import type { DurableObjectBindings } from "./config/environment";
 import type { CfScriptFormat } from "./worker";
 import type { Metafile } from "esbuild";
 
@@ -25,7 +27,7 @@ export async function getEntry(
 		assets?: string | undefined;
 	},
 	config: Config,
-	command: "dev" | "publish"
+	command: "dev" | "publish" | "types"
 ): Promise<Entry> {
 	let file: string;
 	let directory = process.cwd();
@@ -40,7 +42,7 @@ export async function getEntry(
 				: // site.entry-point could be a directory
 				  path.resolve(config.site?.["entry-point"], "index.js");
 		} else if (args.assets || config.assets) {
-			file = path.resolve(__dirname, "../templates/no-op-worker.js");
+			file = path.resolve(getBasePath(), "templates/no-op-worker.js");
 		} else {
 			throw new Error(
 				`Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler ${command} path/to/script\`) or the \`main\` config field.`
@@ -150,7 +152,7 @@ export default async function guessWorkerFormat(
 		metafile: true,
 		bundle: false,
 		format: "esm",
-		target: "es2020",
+		target: "es2022",
 		write: false,
 		loader: {
 			".js": "jsx",
@@ -234,8 +236,6 @@ export function fileExists(filePath: string): boolean {
 	}
 	return false;
 }
-
-type DurableObjectBindings = Config["durable_objects"]["bindings"];
 
 /**
  * Groups the durable object bindings into two lists:

@@ -3,8 +3,8 @@ const _wasm = MYWASM;
 
 const _wasm_memory = new WebAssembly.Memory({ initial: 512 });
 let importsObject = {
-  env: { memory: _wasm_memory },
-  "./index_bg.js": index_bg,
+	env: { memory: _wasm_memory },
+	"./index_bg.js": index_bg,
 };
 
 export default new WebAssembly.Instance(_wasm, importsObject).exports;

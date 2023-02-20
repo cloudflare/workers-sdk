@@ -78,7 +78,7 @@ interface EnvironmentInheritable {
 	 * Whether we use <name>.<subdomain>.workers.dev to
 	 * test and deploy your worker.
 	 *
-	 * @default `true` (This is a breaking change from wrangler 1)
+	 * @default `true` (This is a breaking change from Wrangler v1)
 	 * @breaking
 	 * @inheritable
 	 */
@@ -210,7 +210,7 @@ interface EnvironmentInheritable {
 	 * @default `[]`
 	 * @nonInheritable
 	 */
-	worker_namespaces: {
+	dispatch_namespaces: {
 		/** The binding name used to refer to the bound service. */
 		binding: string;
 		/** The namespace to bind to. */
@@ -247,7 +247,30 @@ interface EnvironmentInheritable {
 			destination: string;
 		}[];
 	};
+
+	/**
+	 * Send Trace Events from this worker to Workers Logpush.
+	 *
+	 * This will not configure a corresponding Logpush job automatically.
+	 *
+	 * For more information about Workers Logpush, see:
+	 * https://blog.cloudflare.com/logpush-for-workers/
+	 *
+	 * @inheritable
+	 */
+	logpush: boolean | undefined;
 }
+
+export type DurableObjectBindings = {
+	/** The name of the binding used to refer to the Durable Object */
+	name: string;
+	/** The exported class name of the Durable Object */
+	class_name: string;
+	/** The script where the Durable Object is defined (if it's external to this worker) */
+	script_name?: string;
+	/** The service environment of the script_name to bind to */
+	environment?: string;
+}[];
 
 /**
  * The `EnvironmentNonInheritable` interface declares all the configuration fields for an environment
@@ -291,16 +314,7 @@ interface EnvironmentNonInheritable {
 	 * @nonInheritable
 	 */
 	durable_objects: {
-		bindings: {
-			/** The name of the binding used to refer to the Durable Object */
-			name: string;
-			/** The exported class name of the Durable Object */
-			class_name: string;
-			/** The script where the Durable Object is defined (if it's external to this worker) */
-			script_name?: string;
-			/** The service environment of the script_name to bind to */
-			environment?: string;
-		}[];
+		bindings: DurableObjectBindings;
 	};
 
 	/**
@@ -326,6 +340,44 @@ interface EnvironmentNonInheritable {
 	}[];
 
 	/**
+	 * Specifies Queues that are bound to this Worker environment.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default `{}`
+	 * @nonInheritable
+	 */
+	queues: {
+		/** Producer bindings */
+		producers?: {
+			/** The binding name used to refer to the Queue in the worker. */
+			binding: string;
+
+			/** The name of this Queue. */
+			queue: string;
+		}[];
+
+		/** Consumer configuration */
+		consumers?: {
+			/** The name of the queue from which this script should consume. */
+			queue: string;
+
+			/** The maximum number of messages per batch */
+			max_batch_size?: number;
+
+			/** The maximum number of seconds to wait to fill a batch with messages. */
+			max_batch_timeout?: number;
+
+			/** The maximum number of retries for each message. */
+			max_retries?: number;
+
+			/** The queue to send messages that failed to be consumed. */
+			dead_letter_queue?: string;
+		}[];
+	};
+
+	/**
 	 * Specifies R2 buckets that are bound to this Worker environment.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
@@ -341,6 +393,32 @@ interface EnvironmentNonInheritable {
 		bucket_name: string;
 		/** The preview name of this R2 bucket at the edge. */
 		preview_bucket_name?: string;
+	}[];
+
+	/**
+	 * Specifies D1 databases that are bound to this Worker environment.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default `[]`
+	 * @nonInheritable
+	 */
+	d1_databases: {
+		/** The binding name used to refer to the D1 database in the worker. */
+		binding: string;
+		/** The name of this D1 database. */
+		database_name: string;
+		/** The UUID of this D1 database (not required). */
+		database_id: string;
+		/** The UUID of this D1 database for Wrangler Dev (if specified). */
+		preview_database_id?: string;
+		/** The name of the migrations table for this D1 database (defaults to 'd1_migrations'). */
+		migrations_table?: string;
+		/** The path to the directory of migrations for this D1 database (defaults to './migrations'). */
+		migrations_dir?: string;
+		/** Internal use only. */
+		database_internal_env?: string;
 	}[];
 
 	/**
@@ -362,6 +440,22 @@ interface EnvironmentNonInheritable {
 				environment?: string;
 		  }[]
 		| undefined;
+
+	/**
+	 * Specifies analytics engine datasets that are bound to this Worker environment.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default `[]`
+	 * @nonInheritable
+	 */
+	analytics_engine_datasets: {
+		/** The binding name used to refer to the dataset in the worker. */
+		binding: string;
+		/** The name of this dataset to write to. */
+		dataset?: string;
+	}[];
 
 	/**
 	 * "Unsafe" tables for features that aren't directly supported by wrangler.
@@ -386,6 +480,13 @@ interface EnvironmentNonInheritable {
 			[key: string]: unknown;
 		}[];
 	};
+
+	mtls_certificates: {
+		/** The binding name used to refer to the certificate in the worker */
+		binding: string;
+		/** The uuid of the uploaded mTLS certificate */
+		certificate_id: string;
+	}[];
 }
 
 /**
@@ -403,7 +504,7 @@ interface EnvironmentDeprecated {
 	/**
 	 * Legacy way of defining KVNamespaces that is no longer supported.
 	 *
-	 * @deprecated DO NOT USE. This was a legacy bug from wrangler 1, that we do not want to support.
+	 * @deprecated DO NOT USE. This was a legacy bug from Wrangler v1, that we do not want to support.
 	 */
 	"kv-namespaces"?: string;
 

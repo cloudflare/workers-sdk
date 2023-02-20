@@ -76,6 +76,10 @@ build/Release
 node_modules/
 jspm_packages/
 
+# Moved from ./templates for ignoring all locks in templates
+templates/**/*-lock.*
+templates/**/*.lock
+
 # Snowpack dependency directory (https://snowpack.dev/)
 web_modules/
 
@@ -180,3 +184,7 @@ packages/prerelease-registry/_worker.js
 packages/wranglerjs-compat-webpack-plugin/lib
 .wrangler-1-cache
 emitted-types/
+_routes.generated.json
+
+# Vendored npm dependencies
+!vendor/*.tgz

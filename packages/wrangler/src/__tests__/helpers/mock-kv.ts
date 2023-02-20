@@ -1,5 +1,6 @@
-import { createFetchResult, setMockRawResponse } from "./mock-cfetch";
-import type { NamespaceKeyInfo } from "../../kv";
+import { rest } from "msw";
+import { createFetchResult, msw } from "./msw";
+import type { NamespaceKeyInfo } from "../../kv/helpers";
 
 export function mockKeyListRequest(
 	expectedNamespaceId: string,
@@ -9,25 +10,37 @@ export function mockKeyListRequest(
 ) {
 	const requests = { count: 0 };
 	// See https://api.cloudflare.com/#workers-kv-namespace-list-a-namespace-s-keys
+	msw.use(
+		rest.get(
+			"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/keys",
+			(req, res, ctx) => {
+				requests.count++;
+				expect(req.params.accountId).toEqual("some-account-id");
+				expect(req.params.namespaceId).toEqual(expectedNamespaceId);
+				let response: undefined | NamespaceKeyInfo[];
+				if (expectedKeys.length <= keysPerRequest) {
+					response = expectedKeys;
+				}
 
-	setMockRawResponse(
-		"/accounts/:accountId/storage/kv/namespaces/:namespaceId/keys",
-		"GET",
-		([_url, accountId, namespaceId], _init, query) => {
-			requests.count++;
-			expect(accountId).toEqual("some-account-id");
-			expect(namespaceId).toEqual(expectedNamespaceId);
-			if (expectedKeys.length <= keysPerRequest) {
-				return createFetchResult(expectedKeys);
-			} else {
-				const start = parseInt(query.get("cursor") ?? "0") || 0;
+				const start = parseInt(req.url.searchParams.get("cursor") ?? "0") || 0;
 				const end = start + keysPerRequest;
 				const cursor = end < expectedKeys.length ? end : blankCursorValue;
-				return createFetchResult(expectedKeys.slice(start, end), true, [], [], {
-					cursor,
-				});
+
+				return res(
+					ctx.json(
+						createFetchResult(
+							response ? response : expectedKeys.slice(start, end),
+							true,
+							[],
+							[],
+							{
+								cursor,
+							}
+						)
+					)
+				);
 			}
-		}
+		)
 	);
 	return requests;
 }

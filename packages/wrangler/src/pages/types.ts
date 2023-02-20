@@ -10,9 +10,15 @@ export type Project = {
 	};
 	created_on: string;
 	production_branch: string;
+	deployment_configs?: {
+		production?: {
+			d1_databases?: Record<string, { id: string }>;
+		};
+	};
 };
 export type Deployment = {
 	id: string;
+	created_on: string;
 	environment: string;
 	deployment_trigger: {
 		metadata: {

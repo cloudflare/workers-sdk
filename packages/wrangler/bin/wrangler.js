@@ -4,7 +4,7 @@ const path = require("path");
 const fs = require("fs");
 const os = require("os");
 
-const MIN_NODE_VERSION = "16.7.0";
+const MIN_NODE_VERSION = "16.13.0";
 const debug =
 	process.env["WRANGLER_LOG"] === "debug"
 		? (...args) => console.log(...args)
@@ -62,15 +62,21 @@ Consider using a Node.js version manager such as https://volta.sh/ or https://gi
 			...process.argv.slice(2),
 		],
 		{
-			stdio: "inherit",
+			stdio: ["inherit", "inherit", "inherit", "ipc"],
 			env: {
 				...process.env,
 				NODE_EXTRA_CA_CERTS: pathToCACerts,
 			},
 		}
-	).on("exit", (code) =>
-		process.exit(code === undefined || code === null ? 0 : code)
-	);
+	)
+		.on("exit", (code) =>
+			process.exit(code === undefined || code === null ? 0 : code)
+		)
+		.on("message", (message) => {
+			if (process.send) {
+				process.send(message);
+			}
+		});
 }
 
 /**
@@ -87,7 +93,15 @@ function runDelegatedWrangler() {
 	} = JSON.parse(fs.readFileSync(packageJsonPath));
 	const resolvedBinaryPath = path.resolve(packageJsonPath, "..", binaryPath);
 
-	debug(`Delegating to locally-installed version of wrangler @ v${version}`);
+	// Make sure the user knows we're delegating to a different installation
+	const currentPackageJsonPath = path.resolve(__dirname, "..", "package.json");
+	const currentPackage = JSON.parse(fs.readFileSync(currentPackageJsonPath));
+	const argv = process.argv.slice(2).join(" ");
+	console.log(
+		`Delegating to locally-installed wrangler@${version} over global wrangler@${currentPackage.version}...
+Run \`npx wrangler ${argv}\` to use the local version directly.
+`
+	);
 
 	// this call to `spawn` is simpler because the delegated version will do all
 	// of the other work.
@@ -95,11 +109,17 @@ function runDelegatedWrangler() {
 		process.execPath,
 		[resolvedBinaryPath, ...process.argv.slice(2)],
 		{
-			stdio: "inherit",
+			stdio: ["inherit", "inherit", "inherit", "ipc"],
 		}
-	).on("exit", (code) =>
-		process.exit(code === undefined || code === null ? 0 : code)
-	);
+	)
+		.on("exit", (code) =>
+			process.exit(code === undefined || code === null ? 0 : code)
+		)
+		.on("message", (message) => {
+			if (process.send) {
+				process.send(message);
+			}
+		});
 }
 
 /**

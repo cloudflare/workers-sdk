@@ -1,0 +1,12 @@
+{
+	"compilerOptions": {
+		"target": "ES2020",
+		"esModuleInterop": true,
+		"module": "CommonJS",
+		"lib": ["ES2020"],
+		"types": ["node"],
+		"moduleResolution": "node",
+		"noEmit": true
+	},
+	"include": ["tests", "../../node-types.d.ts"]
+}

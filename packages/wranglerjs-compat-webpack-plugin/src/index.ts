@@ -1,28 +1,28 @@
 /*
  * This is a webpack plugin that aims to recreate the functionality of
- * Wrangler 1's `type = wepback` setting for workers projects.
+ * Wrangler v1's `type = wepback` setting for workers projects.
  *
  * It's kind of gross, and not good for _new_ projects, but it should work ok at
- * getting people using Wrangler 1 with the inbuilt webpack 4 support migrated
+ * getting people using Wrangler v1 with the inbuilt webpack 4 support migrated
  * over to Wrangler 2. Combined with docs on ejecting webpack, the pain of
  * losing 1's (tenuous at best) webpack support should be mostly mitigated.
  *
- * This plugin attempts to replicate Wrangler 1's behavior 1:1 (specifically,
- * https://github.com/cloudflare/wrangler/blob/master/src/wranglerjs/mod.rs#L39-L58)
+ * This plugin attempts to replicate Wrangler v1's behavior 1:1 (specifically,
+ * https://github.com/cloudflare/wrangler-legacy/blob/master/src/wranglerjs/mod.rs#L39-L58)
  * so it:
  *
- * - figures out where the actual worker is located, and saves that location as "package_dir" (https://github.com/cloudflare/wrangler/blob/master/src/settings/toml/target.rs#L40-L50)
- *   - if it's a sites project (https://github.com/cloudflare/wrangler/blob/master/src/wranglerjs/mod.rs#L161-L163)
- *     - generates a worker if necessary (https://github.com/cloudflare/wrangler/blob/master/src/settings/toml/site.rs#L42-L56)
- *   - runs `npm install` (https://github.com/cloudflare/wrangler/blob/master/src/wranglerjs/mod.rs#L165)
- *   - use the "main" file of {package_dir} as the entry if none is specified (https://github.com/cloudflare/wrangler/blob/master/src/upload/package.rs#L16-L27)
- * - runs wranglerjs-equivalent webpack hooks that: (https://github.com/cloudflare/wrangler/blob/master/src/wranglerjs/mod.rs#L44)
- *   - assert `target` is `webworker` (https://github.com/cloudflare/wrangler/blob/master/wranglerjs/index.js#L52-L60)
- *   - assert `output.filename` is `worker.js` and `output.sourceMapFilename` is `worker.map.js` (https://github.com/cloudflare/wrangler/blob/master/wranglerjs/index.js#L62-L92)
- *   - bundle all emitted JS into a single file (https://github.com/cloudflare/wrangler/blob/master/wranglerjs/index.js#L118-L121)
- * - takes webpack output and writes it to disk (https://github.com/cloudflare/wrangler/blob/master/src/wranglerjs/mod.rs#L144)
- *   - at `{package_dir}/worker` (https://github.com/cloudflare/wrangler/blob/master/src/wranglerjs/bundle.rs#L35-L37)
- *   - if there's WASM, adds some hardcoded js to import it (https://github.com/cloudflare/wrangler/blob/master/src/wranglerjs/bundle.rs#L47-L64)
+ * - figures out where the actual worker is located, and saves that location as "package_dir" (https://github.com/cloudflare/wrangler-legacy/blob/master/src/settings/toml/target.rs#L40-L50)
+ *   - if it's a sites project (https://github.com/cloudflare/wrangler-legacy/blob/master/src/wranglerjs/mod.rs#L161-L163)
+ *     - generates a worker if necessary (https://github.com/cloudflare/wrangler-legacy/blob/master/src/settings/toml/site.rs#L42-L56)
+ *   - runs `npm install` (https://github.com/cloudflare/wrangler-legacy/blob/master/src/wranglerjs/mod.rs#L165)
+ *   - use the "main" file of {package_dir} as the entry if none is specified (https://github.com/cloudflare/wrangler-legacy/blob/master/src/upload/package.rs#L16-L27)
+ * - runs wranglerjs-equivalent webpack hooks that: (https://github.com/cloudflare/wrangler-legacy/blob/master/src/wranglerjs/mod.rs#L44)
+ *   - assert `target` is `webworker` (https://github.com/cloudflare/wrangler-legacy/blob/master/wranglerjs/index.js#L52-L60)
+ *   - assert `output.filename` is `worker.js` and `output.sourceMapFilename` is `worker.map.js` (https://github.com/cloudflare/wrangler-legacy/blob/master/wranglerjs/index.js#L62-L92)
+ *   - bundle all emitted JS into a single file (https://github.com/cloudflare/wrangler-legacy/blob/master/wranglerjs/index.js#L118-L121)
+ * - takes webpack output and writes it to disk (https://github.com/cloudflare/wrangler-legacy/blob/master/src/wranglerjs/mod.rs#L144)
+ *   - at `{package_dir}/worker` (https://github.com/cloudflare/wrangler-legacy/blob/master/src/wranglerjs/bundle.rs#L35-L37)
+ *   - if there's WASM, adds some hardcoded js to import it (https://github.com/cloudflare/wrangler-legacy/blob/master/src/wranglerjs/bundle.rs#L47-L64)
  */
 
 import child_process from "node:child_process";
@@ -79,6 +79,9 @@ export class WranglerJsCompatWebpackPlugin {
 		this.config = readConfig(pathToWranglerToml, {
 			env: environment,
 			"legacy-env": true,
+			experimentalJsonConfig: false,
+			v: undefined,
+			config: undefined,
 		});
 	}
 
@@ -104,10 +107,10 @@ export class WranglerJsCompatWebpackPlugin {
 	}
 
 	/**
-	 * Emulates behavior from [`Target::package_dir`](https://github.com/cloudflare/wrangler/blob/master/src/settings/toml/target.rs#L40-L50).
+	 * Emulates behavior from [`Target::package_dir`](https://github.com/cloudflare/wrangler-legacy/blob/master/src/settings/toml/target.rs#L40-L50).
 	 *
 	 * We encourage the user to specify the "context" and "entry" explicitly in
-	 * their webpack config, since wrangler 1 kind of inferred that stuff but
+	 * their webpack config, since Wrangler v1 kind of inferred that stuff but
 	 * wrangler 2 is very hands-off for custom builds.
 	 *
 	 * This has to be a synchronous function that only returns something
@@ -126,7 +129,7 @@ export class WranglerJsCompatWebpackPlugin {
 	) {
 		if (context === undefined || entry === undefined) {
 			const weWouldGuess =
-				"With `type = webpack`, wrangler 1 would try to guess where your worker lives.";
+				"With `type = webpack`, Wrangler v1 would try to guess where your worker lives.";
 			const noLonger =
 				"Now that you're running webpack outside of wrangler, you need to specify this explicitly.";
 			const docsUrl = "https://v4.webpack.js.org/configuration/entry-context/";
@@ -149,7 +152,7 @@ export class WranglerJsCompatWebpackPlugin {
 	}
 
 	/**
-	 * Mimics wrangler-js' [assertions for build output](https://github.com/cloudflare/wrangler/blob/master/wranglerjs/index.js#L52-L92)
+	 * Mimics wrangler-js' [assertions for build output](https://github.com/cloudflare/wrangler-legacy/blob/master/wranglerjs/index.js#L52-L92)
 	 */
 	private checkOutputs(compiler: Compiler) {
 		if (compiler.options.target !== "webworker") {
@@ -160,8 +163,8 @@ export class WranglerJsCompatWebpackPlugin {
 	}
 
 	/**
-	 * Partially equivalent to [`setup_build`](https://github.com/cloudflare/wrangler/blob/master/src/wranglerjs/mod.rs#L154-L210)
-	 * in wrangler 1, with the notable exception of preparing to run webpack
+	 * Partially equivalent to [`setup_build`](https://github.com/cloudflare/wrangler-legacy/blob/master/src/wranglerjs/mod.rs#L154-L210)
+	 * in Wrangler v1, with the notable exception of preparing to run webpack
 	 * since we now have the user do that.
 	 */
 	private async setupBuild() {
@@ -179,8 +182,8 @@ export class WranglerJsCompatWebpackPlugin {
 
 	/**
 	 * Generate a sites-worker if one doesn't exist already.
-	 * equivalent to [`Site::scaffold_worker`](https://github.com/cloudflare/wrangler/blob/master/src/settings/toml/site.rs#L42-L56)
-	 * in wrangler 1.
+	 * equivalent to [`Site::scaffold_worker`](https://github.com/cloudflare/wrangler-legacy/blob/master/src/settings/toml/site.rs#L42-L56)
+	 * in Wrangler v1.
 	 */
 	private async scaffoldSitesWorker() {
 		if (fs.existsSync(this.packageDir)) {
@@ -212,7 +215,7 @@ export class WranglerJsCompatWebpackPlugin {
 			);
 		}
 
-		// https://github.com/cloudflare/wrangler/blob/master/wranglerjs/index.js#L118-L121
+		// https://github.com/cloudflare/wrangler-legacy/blob/master/wranglerjs/index.js#L118-L121
 		this.output = {
 			js: jsAssets.reduce((acc: string, k) => {
 				const asset = assets[k];
@@ -231,7 +234,7 @@ export class WranglerJsCompatWebpackPlugin {
 	}
 
 	/**
-	 * Mimics [`Bundle::write`](https://github.com/cloudflare/wrangler/blob/master/src/wranglerjs/bundle.rs#L34-L68)
+	 * Mimics [`Bundle::write`](https://github.com/cloudflare/wrangler-legacy/blob/master/src/wranglerjs/bundle.rs#L34-L68)
 	 */
 	private writeOutput() {
 		if (!this.output) {

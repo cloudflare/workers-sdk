@@ -1,5 +1,4 @@
-import { confirm, prompt, select } from "../../dialogs";
-import { normalizeSlashes } from "./mock-console";
+import prompts from "prompts";
 
 /**
  * The expected values for a confirmation request.
@@ -7,6 +6,8 @@ import { normalizeSlashes } from "./mock-console";
 export interface ConfirmExpectation {
 	/** The text expected to be seen in the confirmation dialog. */
 	text: string;
+
+	options?: { defaultValue: boolean };
 	/** The mock response send back from the confirmation dialog. */
 	result: boolean;
 }
@@ -19,35 +20,22 @@ export interface ConfirmExpectation {
  * then an error is thrown.
  */
 export function mockConfirm(...expectations: ConfirmExpectation[]) {
-	(confirm as jest.Mock).mockImplementation((text: string) => {
-		for (const expectation of expectations) {
-			if (normalizeSlashes(text) === normalizeSlashes(expectation.text)) {
-				expectations = expectations.filter((e) => e !== expectation);
-				return Promise.resolve(expectation.result);
-			}
-		}
-		throw new Error(`Unexpected confirmation message: ${text}`);
-	});
-	return () => {
-		if (expectations.length > 0) {
-			throw new Error(
-				"The following expected confirmation dialogs were not used:\n" +
-					expectations.map((e) => `- "${e.text}"`).join("\n")
-			);
-		}
-	};
-}
+	for (const expectation of expectations) {
+		(prompts as unknown as jest.Mock).mockImplementationOnce(
+			({ type, name, message, initial }) => {
+				expect({ type, name, message }).toStrictEqual({
+					type: "confirm",
+					name: "value",
+					message: expectation.text,
+				});
+				if (expectation.options) {
+					expect(initial).toStrictEqual(expectation.options?.defaultValue);
+				}
 
-export function clearConfirmMocks() {
-	(confirm as jest.Mock).mockReset();
-	// Because confirm was originally a spy, calling mockReset will simply reset
-	// it as a function with no return value (!), so we need to accitionally reset
-	// the mock implementation to the one that throws (from jest.setup.js).
-	(confirm as jest.Mock).mockImplementation((text: string) => {
-		throw new Error(
-			`Unexpected call to \`confirm("${text}")\`.\nYou should use \`mockConfirm()\` to mock calls to \`confirm()\` with expectations. Search the codebase for \`mockConfirm\` to learn more.`
+				return Promise.resolve({ value: expectation.result });
+			}
 		);
-	});
+	}
 }
 
 /**
@@ -57,7 +45,10 @@ export interface PromptExpectation {
 	/** The text expected to be seen in the prompt dialog. */
 	text: string;
 	/** The type of the prompt. */
-	type: "text" | "password";
+	options?: {
+		defaultValue?: string;
+		isSecret?: boolean;
+	};
 	/** The mock response send back from the prompt dialog. */
 	result: string;
 }
@@ -70,45 +61,44 @@ export interface PromptExpectation {
  * then an error is thrown.
  */
 export function mockPrompt(...expectations: PromptExpectation[]) {
-	(prompt as jest.Mock).mockImplementation(
-		(text: string, type: "text" | "password") => {
-			for (const expectation of expectations) {
-				if (text === expectation.text && type == expectation.type) {
-					expectations = expectations.filter((e) => e !== expectation);
-					return Promise.resolve(expectation.result);
+	for (const expectation of expectations) {
+		(prompts as unknown as jest.Mock).mockImplementationOnce(
+			({ type, name, message, initial, style }) => {
+				expect({ type, name, message }).toStrictEqual({
+					type: "text",
+					name: "value",
+					message: expectation.text,
+				});
+				if (expectation.options) {
+					expect(initial).toStrictEqual(expectation.options?.defaultValue);
+					expect(style).toStrictEqual(
+						expectation.options?.isSecret ? "password" : "default"
+					);
 				}
+				return Promise.resolve({ value: expectation.result });
 			}
-			throw new Error(`Unexpected confirmation message: ${text}`);
-		}
-	);
-	return () => {
-		if (expectations.length > 0) {
-			throw new Error(
-				"The following expected prompt dialogs were not used:\n" +
-					expectations.map((e) => `- "${e.text}"`).join("\n")
-			);
-		}
-	};
-}
-
-export function clearPromptMocks() {
-	(prompt as jest.Mock).mockReset();
-	// Because prompt was originally a spy, calling mockReset will simply reset
-	// it as a function with no return value (!), so we need to accitionally reset
-	// the mock implementation to the one that throws (from jest.setup.js).
-	(prompt as jest.Mock).mockImplementation((text: string) => {
-		throw new Error(
-			`Unexpected call to \`prompt(${text}, ...)\`.\nYou should use \`mockPrompt()\` to mock calls to \`prompt()\` with expectations. Search the codebase for \`mockPrompt\` to learn more.`
 		);
-	});
+	}
 }
 
+interface SelectOptions<Values> {
+	choices: SelectOption<Values>[];
+	defaultOption?: number;
+}
+
+interface SelectOption<Values> {
+	title: string;
+	description?: string;
+	value: Values;
+}
 /**
  * The expected values for a select request.
  */
-export interface SelectExpectation {
+export interface SelectExpectation<Values> {
 	/** The text expected to be seen in the select dialog. */
 	text: string;
+
+	options?: SelectOptions<Values>;
 	/** The mock response send back from the select dialog. */
 	result: string;
 }
@@ -120,34 +110,30 @@ export interface SelectExpectation {
  * If there is a call to `select()` that does not match any of the expectations
  * then an error is thrown.
  */
-export function mockSelect(...expectations: SelectExpectation[]) {
-	(select as jest.Mock).mockImplementation((text: string) => {
-		for (const expectation of expectations) {
-			if (normalizeSlashes(text) === normalizeSlashes(expectation.text)) {
-				expectations = expectations.filter((e) => e !== expectation);
-				return Promise.resolve(expectation.result);
+export function mockSelect<Values>(
+	...expectations: SelectExpectation<Values>[]
+) {
+	for (const expectation of expectations) {
+		(prompts as unknown as jest.Mock).mockImplementationOnce(
+			({ type, name, message, choices, initial }) => {
+				expect({ type, name, message }).toStrictEqual({
+					type: "select",
+					name: "value",
+					message: expectation.text,
+				});
+				if (expectation.options) {
+					expect(choices).toStrictEqual(expectation.options?.choices);
+					expect(initial).toStrictEqual(expectation.options?.defaultOption);
+				}
+				return Promise.resolve({ value: expectation.result });
 			}
-		}
-		throw new Error(`Unexpected select message: ${text}`);
-	});
-	return () => {
-		if (expectations.length > 0) {
-			throw new Error(
-				"The following expected select dialogs were not used:\n" +
-					expectations.map((e) => `- "${e.text}"`).join("\n")
-			);
-		}
-	};
+		);
+	}
 }
 
-export function clearSelectMocks() {
-	(select as jest.Mock).mockReset();
-	// Because select was originally a spy, calling mockReset will simply reset
-	// it as a function with no return value (!), so we need to additionally reset
-	// the mock implementation to the one that throws (from jest.setup.js).
-	(select as jest.Mock).mockImplementation((text: string) => {
-		throw new Error(
-			`Unexpected call to \`select("${text}")\`.\nYou should use \`mockSelect()\` to mock calls to \`select()\` with expectations. Search the codebase for \`mockSelect\` to learn more.`
-		);
-	});
+export function clearDialogs() {
+	// No dialog mocks should be left after each test, and so calling the dialog methods should throw
+	expect(() => prompts({ type: "select", name: "unknown" })).toThrow(
+		"Unexpected call to "
+	);
 }

@@ -1,0 +1,21 @@
+{
+	"name": "pages-ws-app",
+	"version": "0.0.0",
+	"private": true,
+	"sideEffects": false,
+	"main": "server/index.js",
+	"scripts": {
+		"build": "esbuild --bundle --platform=node server/index.ts --outfile=dist/index.js",
+		"check:type": "tsc && tsc -p tests/tsconfig.json",
+		"dev": "npx wrangler pages dev --port 8790 --proxy 8791 -- npm run server",
+		"server": "node dist/index.js",
+		"test": "npx vitest",
+		"test:ci": "npx vitest"
+	},
+	"devDependencies": {
+		"ws": "^8.8.0"
+	},
+	"engines": {
+		"node": ">=14"
+	}
+}

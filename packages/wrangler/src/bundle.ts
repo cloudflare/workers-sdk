@@ -7,13 +7,15 @@ import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
 import * as esbuild from "esbuild";
 import tmp from "tmp-promise";
 import createModuleCollector from "./module-collection";
+import { getBasePath, toUrlPath } from "./paths";
 import type { Config } from "./config";
+import type { DurableObjectBindings } from "./config/environment";
 import type { WorkerRegistry } from "./dev-registry";
 import type { Entry } from "./entry";
 import type { CfModule } from "./worker";
-
-type BundleResult = {
+export type BundleResult = {
 	modules: CfModule[];
+	dependencies: esbuild.Metafile["outputs"][string]["inputs"];
 	resolvedEntryPointPath: string;
 	bundleType: "esm" | "commonjs";
 	stop: (() => void) | undefined;
@@ -27,31 +29,61 @@ type StaticAssetsConfig =
 	| undefined;
 
 /**
- * Searches for any uses of node's builtin modules, and throws an error if it
- * finds anything. This plugin is only used when nodeCompat is not enabled.
- * Supports both regular node builtins, and the new "node:<MODULE>" format.
+ * When applying the middleware facade for service workers, we need to inject
+ * some code at the top of the final output bundle. Applying an inject too early
+ * will allow esbuild to reorder the code. Additionally, we need to make sure
+ * user code is bundled in the final esbuild step with `watch` correctly
+ * configured, so code changes are detected.
+ *
+ * This type is used as the return type for the `MiddlewareFn` type representing
+ * a facade-applying function. Returned injects should be injected with the
+ * final esbuild step.
  */
-const checkForNodeBuiltinsPlugin = {
-	name: "checkForNodeBuiltins",
-	setup(build: esbuild.PluginBuild) {
-		build.onResolve(
-			{
-				filter: new RegExp(
-					"^(" +
-						builtinModules.join("|") +
-						"|" +
-						builtinModules.map((module) => "node:" + module).join("|") +
-						")$"
-				),
-			},
-			() => {
-				throw new Error(
-					`Detected a Node builtin module import while Node compatibility is disabled.\nAdd node_compat = true to your wrangler.toml file to enable Node compatibility.`
-				);
-			}
-		);
-	},
-};
+type EntryWithInject = Entry & { inject?: string[] };
+
+/**
+ * RegExp matching against esbuild's error text when it is unable to resolve
+ * a Node built-in module. If we detect this when node_compat is disabled,
+ * we'll rewrite the error to suggest enabling it.
+ */
+const nodeBuiltinResolveErrorText = new RegExp(
+	'^Could not resolve "(' +
+		builtinModules.join("|") +
+		"|" +
+		builtinModules.map((module) => "node:" + module).join("|") +
+		')"$'
+);
+
+/**
+ * Returns true if the passed value looks like an esbuild BuildFailure object
+ */
+export function isBuildFailure(err: unknown): err is esbuild.BuildFailure {
+	return (
+		typeof err === "object" &&
+		err !== null &&
+		"errors" in err &&
+		"warnings" in err
+	);
+}
+
+/**
+ * Rewrites esbuild BuildFailures for failing to resolve Node built-in modules
+ * to suggest enabling Node compat as opposed to `platform: "node"`.
+ */
+export function rewriteNodeCompatBuildFailure(err: esbuild.BuildFailure) {
+	for (const error of err.errors) {
+		const match = nodeBuiltinResolveErrorText.exec(error.text);
+		if (match !== null) {
+			error.notes = [
+				{
+					location: null,
+					text: `The package "${match[1]}" wasn't found on the file system but is built into node.
+Add "node_compat = true" to your wrangler.toml file to enable Node compatibility.`,
+				},
+			];
+		}
+	}
+}
 
 /**
  * Generate a bundle for the worker identified by the arguments passed in.
@@ -61,23 +93,38 @@ export async function bundleWorker(
 	destination: string,
 	options: {
 		serveAssetsFromWorker: boolean;
-		assets: StaticAssetsConfig;
-		jsxFactory: string | undefined;
-		jsxFragment: string | undefined;
+		assets?: StaticAssetsConfig;
+		betaD1Shims?: string[];
+		doBindings: DurableObjectBindings;
+		jsxFactory?: string;
+		jsxFragment?: string;
 		rules: Config["rules"];
-		watch?: esbuild.WatchMode;
-		tsconfig: string | undefined;
-		minify: boolean | undefined;
-		nodeCompat: boolean | undefined;
+		watch?: esbuild.WatchMode | boolean;
+		tsconfig?: string;
+		minify?: boolean;
+		nodeCompat?: boolean;
 		define: Config["define"];
 		checkFetch: boolean;
-		services: Config["services"];
-		workerDefinitions: WorkerRegistry | undefined;
-		firstPartyWorkerDevFacade: boolean | undefined;
+		services?: Config["services"];
+		workerDefinitions?: WorkerRegistry;
+		firstPartyWorkerDevFacade?: boolean;
+		targetConsumer: "dev" | "publish";
+		local: boolean;
+		testScheduled?: boolean;
+		experimentalLocal?: boolean;
+		inject?: string[];
+		loader?: Record<string, string>;
+		sourcemap?: esbuild.CommonOptions["sourcemap"];
+		plugins?: esbuild.Plugin[];
+		// TODO: Rip these out https://github.com/cloudflare/workers-sdk/issues/2153
+		disableModuleCollection?: boolean;
+		isOutfile?: boolean;
 	}
 ): Promise<BundleResult> {
 	const {
 		serveAssetsFromWorker,
+		betaD1Shims,
+		doBindings,
 		jsxFactory,
 		jsxFragment,
 		rules,
@@ -86,10 +133,20 @@ export async function bundleWorker(
 		minify,
 		nodeCompat,
 		checkFetch,
+		local,
 		assets,
 		workerDefinitions,
 		services,
 		firstPartyWorkerDevFacade,
+		targetConsumer,
+		testScheduled,
+		experimentalLocal,
+		inject: injectOption,
+		loader,
+		sourcemap,
+		plugins,
+		disableModuleCollection,
+		isOutfile,
 	} = options;
 
 	// We create a temporary directory for any oneoff files we
@@ -98,7 +155,7 @@ export async function bundleWorker(
 	const tmpDir = await tmp.dir({ unsafeCleanup: true });
 
 	const entryDirectory = path.dirname(entry.file);
-	const moduleCollector = createModuleCollector({
+	let moduleCollector = createModuleCollector({
 		wrangler1xlegacyModuleReferences: {
 			rootDirectory: entryDirectory,
 			fileNames: new Set(
@@ -114,6 +171,15 @@ export async function bundleWorker(
 		format: entry.format,
 		rules,
 	});
+	if (disableModuleCollection) {
+		moduleCollector = {
+			modules: [],
+			plugin: {
+				name: moduleCollector.plugin.name,
+				setup: () => {},
+			},
+		};
+	}
 
 	// In dev, we want to patch `fetch()` with a special version that looks
 	// for bad usages and can warn the user about them; so we inject
@@ -129,7 +195,7 @@ export async function bundleWorker(
 		});
 		fs.writeFileSync(
 			checkedFetchFileToInject,
-			fs.readFileSync(path.resolve(__dirname, "../templates/checked-fetch.js"))
+			fs.readFileSync(path.resolve(getBasePath(), "templates/checked-fetch.js"))
 		);
 	}
 
@@ -139,7 +205,38 @@ export async function bundleWorker(
 	// a new entry point, that we call "middleware" or "facades".
 	// Look at implementations of these functions to learn more.
 
-	type MiddlewareFn = (arg0: Entry) => Promise<Entry>;
+	// We also have middleware that uses a more "traditional" middleware stack,
+	// which is all loaded as one in a stack.
+	const middlewareToLoad: MiddlewareLoader[] = [];
+
+	if (testScheduled) {
+		middlewareToLoad.push({
+			path: "templates/middleware/middleware-scheduled.ts",
+		});
+	}
+	if (experimentalLocal) {
+		// In Miniflare 3, we bind the user's worker as a service binding in a
+		// special entry worker that handles things like injecting `Request.cf`,
+		// live-reload, and the pretty-error page.
+		//
+		// Unfortunately, due to a bug in `workerd`, errors thrown asynchronously by
+		// native APIs don't have `stack`s. This means Miniflare can't extract the
+		// `stack` trace from dispatching to the user worker service binding by
+		// `try/catch`.
+		//
+		// As a stop-gap solution, if the `MF-Experimental-Error-Stack` header is
+		// truthy on responses, the body will be interpreted as a JSON-error of the
+		// form `{ message?: string, name?: string, stack?: string }`.
+		//
+		// This middleware wraps the user's worker in a `try/catch`, and rewrites
+		// errors in this format so a pretty-error page can be shown.
+		middlewareToLoad.push({
+			path: "templates/middleware/middleware-miniflare3-json-error.ts",
+			dev: true,
+		});
+	}
+
+	type MiddlewareFn = (currentEntry: Entry) => Promise<EntryWithInject>;
 	const middleware: (false | undefined | MiddlewareFn)[] = [
 		// serve static assets
 		serveAssetsFromWorker &&
@@ -172,35 +269,83 @@ export async function bundleWorker(
 			((currentEntry: Entry) => {
 				return applyFirstPartyWorkerDevFacade(currentEntry, tmpDir.path);
 			}),
+
+		Array.isArray(betaD1Shims) &&
+			betaD1Shims.length > 0 &&
+			((currentEntry: Entry) => {
+				return applyD1BetaFacade(
+					currentEntry,
+					tmpDir.path,
+					betaD1Shims,
+					local,
+					doBindings
+				);
+			}),
+
+		// Middleware loader: to add middleware, we add the path to the middleware
+		// Currently for demonstration purposes we have two example middlewares
+		// Middlewares are togglable by changing the `publish` (default=false) and `dev` (default=true) options
+		// As we are not yet supporting user created middlewares yet, if no wrangler applied middleware
+		// are found, we will not load any middleware. We also need to check if there are middlewares compatible with
+		// the target consumer (dev / publish).
+		(middlewareToLoad.filter(
+			(m) =>
+				(m.publish && targetConsumer === "publish") ||
+				(m.dev !== false && targetConsumer === "dev")
+		).length > 0 ||
+			process.env.EXPERIMENTAL_MIDDLEWARE === "true") &&
+			((currentEntry: Entry) => {
+				return applyMiddlewareLoaderFacade(
+					currentEntry,
+					tmpDir.path,
+					middlewareToLoad.filter(
+						// We dynamically filter the middleware depending on where we are bundling for
+						(m) =>
+							(targetConsumer === "dev" && m.dev !== false) ||
+							(m.publish && targetConsumer === "publish")
+					)
+				);
+			}),
 	].filter(Boolean);
 
-	let inputEntry = entry;
+	const inject: string[] = injectOption ?? [];
+	if (checkFetch) inject.push(checkedFetchFileToInject);
 
+	let inputEntry: EntryWithInject = entry;
 	for (const middlewareFn of middleware as MiddlewareFn[]) {
 		inputEntry = await middlewareFn(inputEntry);
+		if (inputEntry.inject !== undefined) inject.push(...inputEntry.inject);
 	}
 
 	// At this point, inputEntry points to the entry point we want to build.
 
-	const result = await esbuild.build({
+	const buildOptions: esbuild.BuildOptions & { metafile: true } = {
 		entryPoints: [inputEntry.file],
 		bundle: true,
 		absWorkingDir: entry.directory,
 		outdir: destination,
-		inject: checkFetch ? [checkedFetchFileToInject] : [],
+		...(isOutfile
+			? {
+					outdir: undefined,
+					outfile: destination,
+			  }
+			: {}),
+		inject,
 		external: ["__STATIC_CONTENT_MANIFEST"],
 		format: entry.format === "modules" ? "esm" : "iife",
-		target: "es2020",
-		sourcemap: true,
-		// The root included, as the sources are relative paths to tmpDir
-		sourceRoot: entryDirectory,
+		// Our workerd runtime uses the same V8 version as recent Chrome, which is highly ES2022 compliant: https://kangax.github.io/compat-table/es2016plus/
+		target: "es2022",
+		sourcemap: sourcemap ?? true, // this needs to use ?? to accept false
+		// Include a reference to the output folder in the sourcemap.
+		// This is omitted by default, but we need it to properly resolve source paths in error output.
+		sourceRoot: destination,
 		minify,
 		metafile: true,
-		conditions: ["worker", "browser"],
+		conditions: ["workerd", "worker", "browser"],
 		...(process.env.NODE_ENV && {
 			define: {
 				// use process.env["NODE_ENV" + ""] so that esbuild doesn't replace it
-				// when we do a build of wrangler. (re: https://github.com/cloudflare/wrangler2/issues/1477)
+				// when we do a build of wrangler. (re: https://github.com/cloudflare/workers-sdk/issues/1477)
 				"process.env.NODE_ENV": `"${process.env["NODE_ENV" + ""]}"`,
 				...(nodeCompat ? { global: "globalThis" } : {}),
 				...(checkFetch ? { fetch: "checkedFetch" } : {}),
@@ -211,20 +356,31 @@ export async function bundleWorker(
 			".js": "jsx",
 			".mjs": "jsx",
 			".cjs": "jsx",
+			...(loader || {}),
 		},
 		plugins: [
 			moduleCollector.plugin,
 			...(nodeCompat
 				? [NodeGlobalsPolyfills({ buffer: true }), NodeModulesPolyfills()]
-				: // we use checkForNodeBuiltinsPlugin to throw a nicer error
-				  // if we find node builtins when nodeCompat isn't turned on
-				  [checkForNodeBuiltinsPlugin]),
+				: []),
+			...(plugins || []),
 		],
 		...(jsxFactory && { jsxFactory }),
 		...(jsxFragment && { jsxFragment }),
 		...(tsconfig && { tsconfig }),
 		watch,
-	});
+		// The default logLevel is "warning". So that we can rewrite errors before
+		// logging, we disable esbuild's default logging, and log build failures
+		// ourselves.
+		logLevel: "silent",
+	};
+	let result;
+	try {
+		result = await esbuild.build(buildOptions);
+	} catch (e) {
+		if (!nodeCompat && isBuildFailure(e)) rewriteNodeCompatBuildFailure(e);
+		throw e;
+	}
 
 	const entryPointOutputs = Object.entries(result.metafile.outputs).filter(
 		([_path, output]) => output.entryPoint !== undefined
@@ -240,19 +396,31 @@ export async function bundleWorker(
 			listEntryPoints(entryPointOutputs)
 	);
 
-	const entryPointExports = entryPointOutputs[0][1].exports;
+	const { exports: entryPointExports, inputs: dependencies } =
+		entryPointOutputs[0][1];
 	const bundleType = entryPointExports.length > 0 ? "esm" : "commonjs";
 
 	const sourceMapPath = Object.keys(result.metafile.outputs).filter((_path) =>
 		_path.includes(".map")
 	)[0];
 
+	const resolvedEntryPointPath = path.resolve(
+		entry.directory,
+		entryPointOutputs[0][0]
+	);
+
+	// copy all referenced modules into the output bundle directory
+	for (const module of moduleCollector.modules) {
+		fs.writeFileSync(
+			path.join(path.dirname(resolvedEntryPointPath), module.name),
+			module.content
+		);
+	}
+
 	return {
 		modules: moduleCollector.modules,
-		resolvedEntryPointPath: path.resolve(
-			entry.directory,
-			entryPointOutputs[0][0]
-		),
+		dependencies,
+		resolvedEntryPointPath,
 		bundleType,
 		stop: result.stop,
 		sourceMapPath,
@@ -262,7 +430,7 @@ export async function bundleWorker(
 /**
  * A simple plugin to alias modules and mark them as external
  */
-function esbuildAliasExternalPlugin(
+export function esbuildAliasExternalPlugin(
 	aliases: Record<string, string>
 ): esbuild.Plugin {
 	return {
@@ -301,7 +469,9 @@ async function applyFormatDevErrorsFacade(
 ): Promise<Entry> {
 	const targetPath = path.join(tmpDirPath, "format-dev-errors.entry.js");
 	await esbuild.build({
-		entryPoints: [path.resolve(__dirname, "../templates/format-dev-errors.ts")],
+		entryPoints: [
+			path.resolve(getBasePath(), "templates/format-dev-errors.ts"),
+		],
 		bundle: true,
 		sourcemap: true,
 		format: "esm",
@@ -320,6 +490,169 @@ async function applyFormatDevErrorsFacade(
 }
 
 /**
+ * A facade that acts as a "middleware loader".
+ * Instead of needing to apply a facade for each individual middleware, this allows
+ * middleware to be written in a more traditional manner and then be applied all
+ * at once, requiring just two esbuild steps, rather than 1 per middleware.
+ */
+
+interface MiddlewareLoader {
+	path: string;
+	// By default all middleware will run on dev, but will not be run when published
+	publish?: boolean;
+	dev?: boolean;
+}
+
+async function applyMiddlewareLoaderFacade(
+	entry: Entry,
+	tmpDirPath: string,
+	middleware: MiddlewareLoader[] // a list of paths to middleware files
+): Promise<EntryWithInject> {
+	// Firstly we need to insert the middleware array into the project,
+	// and then we load the middleware - this insertion and loading is
+	// different for each format.
+
+	// Make sure we resolve all files relative to the actual temporary directory,
+	// otherwise we'll have issues with source maps
+	tmpDirPath = fs.realpathSync(tmpDirPath);
+
+	const targetPathInsertion = path.join(
+		tmpDirPath,
+		"middleware-insertion.entry.js"
+	);
+
+	// We need to import each of the middlewares, so we need to generate a
+	// random, unique identifier that we can use for the import.
+	// Middlewares are required to be default exports so we can import to any name.
+	const middlewareIdentifiers = middleware.map(
+		(_, index) => `__MIDDLEWARE_${index}__`
+	);
+
+	const dynamicFacadePath = path.join(
+		tmpDirPath,
+		"middleware-insertion-facade.js"
+	);
+
+	if (entry.format === "modules") {
+		// We use a facade to expose the required middleware alongside any user defined
+		// middleware on the worker object
+
+		const imports = middlewareIdentifiers
+			.map((m) => `import ${m} from "${m}";`)
+			.join("\n");
+
+		// write a file with all of the imports required
+		fs.writeFileSync(
+			dynamicFacadePath,
+			`import worker from "__ENTRY_POINT__";
+			${imports}
+			const facade = {
+				...worker,
+				middleware: [
+					${middlewareIdentifiers.join(",")}${middlewareIdentifiers.length > 0 ? "," : ""}
+					...(worker.middleware ? worker.middleware : []),
+				]
+			}
+			export * from "__ENTRY_POINT__";
+			export default facade;`
+		);
+
+		await esbuild.build({
+			entryPoints: [dynamicFacadePath],
+			bundle: true,
+			sourcemap: true,
+			format: "esm",
+			plugins: [
+				esbuildAliasExternalPlugin({
+					__ENTRY_POINT__: entry.file,
+					...Object.fromEntries(
+						middleware.map((val, index) => [
+							middlewareIdentifiers[index],
+							toUrlPath(path.resolve(getBasePath(), val.path)),
+						])
+					),
+				}),
+			],
+			outfile: targetPathInsertion,
+		});
+		const targetPathLoader = path.join(
+			tmpDirPath,
+			"middleware-loader.entry.js"
+		);
+		const loaderPath = path.resolve(
+			getBasePath(),
+			"templates/middleware/loader-modules.ts"
+		);
+		await esbuild.build({
+			entryPoints: [loaderPath],
+			bundle: true,
+			sourcemap: true,
+			format: "esm",
+			plugins: [
+				esbuildAliasExternalPlugin({
+					__ENTRY_POINT__: targetPathInsertion,
+					"./common": path.resolve(
+						getBasePath(),
+						"templates/middleware/common.ts"
+					),
+				}),
+			],
+			outfile: targetPathLoader,
+		});
+		return {
+			...entry,
+			file: targetPathLoader,
+		};
+	} else {
+		const imports = middlewareIdentifiers
+			.map((m) => `import ${m} from "${m}";`)
+			.join("\n");
+		const contents = `import { __facade_registerInternal__ } from "__LOADER__";
+			${imports}
+			__facade_registerInternal__([${middlewareIdentifiers.join(",")}]);`;
+		fs.writeFileSync(dynamicFacadePath, contents);
+
+		await esbuild.build({
+			entryPoints: [dynamicFacadePath],
+			bundle: true,
+			sourcemap: true,
+			format: "iife",
+			plugins: [
+				{
+					name: "dynamic-facade-imports",
+					setup(build) {
+						build.onResolve({ filter: /^__LOADER__$/ }, () => {
+							const loaderPath = path.resolve(
+								getBasePath(),
+								"templates/middleware/loader-sw.ts"
+							);
+							return { path: loaderPath };
+						});
+						const middlewareFilter = /^__MIDDLEWARE_(\d+)__$/;
+						build.onResolve({ filter: middlewareFilter }, (args) => {
+							const match = middlewareFilter.exec(args.path);
+							assert(match !== null);
+							const middlewareIndex = parseInt(match[1]);
+							return {
+								path: path.resolve(
+									getBasePath(),
+									middleware[middlewareIndex].path
+								),
+							};
+						});
+					},
+				},
+			],
+			outfile: targetPathInsertion,
+		});
+		return {
+			...entry,
+			inject: [targetPathInsertion],
+		};
+	}
+}
+
+/**
  * A middleware that serves static assets from a worker.
  * This powers --assets / config.assets
  */
@@ -333,7 +666,7 @@ async function applyStaticAssetFacade(
 
 	await esbuild.build({
 		entryPoints: [
-			path.resolve(__dirname, "../templates/serve-static-assets.ts"),
+			path.resolve(getBasePath(), "templates/serve-static-assets.ts"),
 		],
 		bundle: true,
 		format: "esm",
@@ -341,7 +674,7 @@ async function applyStaticAssetFacade(
 		plugins: [
 			esbuildAliasExternalPlugin({
 				__ENTRY_POINT__: entry.file,
-				__KV_ASSET_HANDLER__: path.join(__dirname, "../kv-asset-handler.js"),
+				__KV_ASSET_HANDLER__: path.join(getBasePath(), "kv-asset-handler.js"),
 				__STATIC_CONTENT_MANIFEST: "__STATIC_CONTENT_MANIFEST",
 			}),
 		],
@@ -379,7 +712,7 @@ async function applyMultiWorkerDevFacade(
 	services: Config["services"],
 	workerDefinitions: WorkerRegistry
 ) {
-	const targetPath = path.join(tmpDirPath, "serve-static-assets.entry.js");
+	const targetPath = path.join(tmpDirPath, "multiworker-dev-facade.entry.js");
 	const serviceMap = Object.fromEntries(
 		(services || []).map((serviceBinding) => [
 			serviceBinding.binding,
@@ -390,10 +723,10 @@ async function applyMultiWorkerDevFacade(
 	await esbuild.build({
 		entryPoints: [
 			path.join(
-				__dirname,
+				getBasePath(),
 				entry.format === "modules"
-					? "../templates/service-bindings-module-facade.js"
-					: "../templates/service-bindings-sw-facade.js"
+					? "templates/service-bindings-module-facade.js"
+					: "templates/service-bindings-sw-facade.js"
 			),
 		],
 		bundle: true,
@@ -439,8 +772,8 @@ async function applyFirstPartyWorkerDevFacade(
 	await esbuild.build({
 		entryPoints: [
 			path.resolve(
-				__dirname,
-				"../templates/first-party-worker-module-facade.ts"
+				getBasePath(),
+				"templates/first-party-worker-module-facade.ts"
 			),
 		],
 		bundle: true,
@@ -451,6 +784,78 @@ async function applyFirstPartyWorkerDevFacade(
 				__ENTRY_POINT__: entry.file,
 			}),
 		],
+		outfile: targetPath,
+	});
+
+	return {
+		...entry,
+		file: targetPath,
+	};
+}
+
+/**
+ * A middleware that injects the beta D1 API in JS.
+ *
+ * This code be removed from here when the API is in Workers core,
+ * but moved inside Miniflare for simulating D1.
+ */
+async function applyD1BetaFacade(
+	entry: Entry,
+	tmpDirPath: string,
+	betaD1Shims: string[],
+	local: boolean,
+	doBindings: DurableObjectBindings
+): Promise<Entry> {
+	let entrypointPath = path.resolve(
+		getBasePath(),
+		"templates/d1-beta-facade.js"
+	);
+	if (Array.isArray(doBindings) && doBindings.length > 0) {
+		//we have DO bindings, so we need to shim them
+		const maskedDoBindings = doBindings
+			// Don't shim anything not local to this worker
+			.filter((b) => !b.script_name)
+			// Reexport the DO classnames
+			.map(
+				(b) =>
+					`export const ${b.class_name} = maskDurableObjectDefinition(OTHER_EXPORTS.${b.class_name});`
+			)
+			.join("\n");
+		const baseFile = fs.readFileSync(
+			path.resolve(getBasePath(), "templates/d1-beta-facade.js"),
+			"utf8"
+		);
+		//getMaskedEnv is already used to shim regular Workers
+		const contents = `
+		${baseFile}
+
+		var maskDurableObjectDefinition = (cls) =>
+		class extends cls {
+			constructor(state, env) {
+				super(state, getMaskedEnv(env));
+			}
+		};
+		${maskedDoBindings}`;
+		const doD1FacadePath = path.join(tmpDirPath, "d1-do-facade.js");
+		//write our shim so we can build it
+		fs.writeFileSync(doD1FacadePath, contents);
+		entrypointPath = doD1FacadePath;
+	}
+	const targetPath = path.join(tmpDirPath, "d1-beta-facade.entry.js");
+	await esbuild.build({
+		entryPoints: [entrypointPath],
+		bundle: true,
+		format: "esm",
+		sourcemap: true,
+		plugins: [
+			esbuildAliasExternalPlugin({
+				__ENTRY_POINT__: entry.file,
+			}),
+		],
+		define: {
+			__D1_IMPORTS__: JSON.stringify(betaD1Shims),
+			__LOCAL_MODE__: JSON.stringify(local),
+		},
 		outfile: targetPath,
 	});
 

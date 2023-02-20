@@ -18,7 +18,7 @@ export const getArtifactForWorkflowRun = async ({
 	gitHubFetch: ReturnType<typeof generateGitHubFetch>;
 	waitUntil: (promise: Promise<unknown>) => void;
 }) => {
-	const cacheKey = `https://prerelease-registry.developers.workers.dev/runs/${runID}/${name}`;
+	const cacheKey = `https://prerelease-registry.devprod.cloudflare.dev/runs/${runID}/${name}`;
 
 	const cache = caches.default;
 
@@ -27,7 +27,7 @@ export const getArtifactForWorkflowRun = async ({
 
 	try {
 		const artifactsResponse = await gitHubFetch(
-			`https://api.github.com/repos/cloudflare/wrangler2/actions/runs/${runID}/artifacts`,
+			`https://api.github.com/repos/cloudflare/workers-sdk/actions/runs/${runID}/artifacts`,
 			{
 				headers: {
 					Accept: "application/vnd.github.v3+json",

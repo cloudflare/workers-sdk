@@ -15,11 +15,18 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Use Node.js 16.7
+      - name: Use Node.js 16.13
         uses: actions/setup-node@v3
         with:
-          node-version: 16.7
+          node-version: 16.13
           cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
+
+      - name: Install workerd Dependencies
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt-get update
+          sudo apt-get install -y libc++1
 
       - name: Install NPM Dependencies
         run: npm ci
@@ -27,8 +34,13 @@ jobs:
       - name: Modify package.json version
         run: node .github/version-script.js
 
+      - name: Build
+        run: npm run build
+
       - name: Check for errors
         run: npm run check
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
 
       - name: Publish `wrangler@wasm` to NPM
         run: npm publish --tag wasm

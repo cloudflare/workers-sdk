@@ -1,6 +1,8 @@
 name = "prerelease-registry"
 compatibility_date = "2022-01-31"
-account_id = "95e065d2e3f97a1e50bae58aea71df6d"
+account_id = "e35fd947284363a46fd7061634477114"
+
+route = { pattern = "prerelease-registry.devprod.cloudflare.dev", custom_domain = true }
 
 [vars]
-GITHUB_USER = "gregbrimble"
+GITHUB_USER = "workers-devprod"

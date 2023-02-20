@@ -1,4 +1,6 @@
-export async function onRequest(context) {
+export async function onRequest(
+	context: EventContext<unknown, never, Record<string, unknown>>
+) {
 	// Contents of context object
 	const {
 		request, // same as existing Worker API
