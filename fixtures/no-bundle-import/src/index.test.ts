@@ -1,16 +1,17 @@
+import path from "path";
 import getPort from "get-port";
 import { describe, expect, test, beforeAll } from "vitest";
-import { unstable_dev } from "wrangler";
-import type { UnstableDevWorker } from "wrangler";
+import { unstable_dev } from "../../../packages/wrangler/wrangler-dist/cli.js";
+import type { UnstableDevWorker } from "../../../packages/wrangler/wrangler-dist/cli.js";
 
 describe("Worker", () => {
 	let worker: UnstableDevWorker;
 
 	beforeAll(async () => {
-		worker = await unstable_dev("src/index.js", {
+		worker = await unstable_dev(path.resolve(__dirname, "index.js"), {
 			bundle: false,
 			port: await getPort(),
-			experimentalLocal: true,
+			experimental: { experimentalLocal: true },
 		});
 		return worker.stop;
 	});
