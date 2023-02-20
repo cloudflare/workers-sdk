@@ -14,6 +14,7 @@ import {
 import { runCustomBuild } from "../entry";
 import { logger } from "../logger";
 import { waitForPortToBeAvailable } from "../proxy";
+import traverseModuleGraph from "../traverse-module-graph";
 import {
 	setupBindings,
 	getMiniflare3,
@@ -251,14 +252,7 @@ async function runEsbuild({
 		dependencies,
 		sourceMapPath,
 	}: Awaited<ReturnType<typeof bundleWorker>> = noBundle
-		? {
-				modules: [],
-				dependencies: {},
-				resolvedEntryPointPath: entry.file,
-				bundleType: entry.format === "modules" ? "esm" : "commonjs",
-				stop: undefined,
-				sourceMapPath: undefined,
-		  }
+		? await traverseModuleGraph(entry, tsconfig)
 		: await bundleWorker(entry, destination, {
 				serveAssetsFromWorker,
 				jsxFactory,
