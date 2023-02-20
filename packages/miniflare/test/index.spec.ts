@@ -60,6 +60,9 @@ test("Miniflare: web socket kitchen sink", async (t) => {
 			CUSTOM(request) {
 				// Testing dispatchFetch custom cf injection
 				t.deepEqual(request.cf, { country: "MF" });
+				// Testing `MF-Custom-Service` header removed:
+				// https://github.com/cloudflare/miniflare/issues/475
+				t.is(request.headers.get("MF-Custom-Service"), null);
 				// Testing WebSocket-upgrading fetch
 				return fetch(`http://localhost:${port}`, request);
 			},
