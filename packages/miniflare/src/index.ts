@@ -421,6 +421,7 @@ export class Miniflare {
 		try {
 			const customService = request.headers.get(HEADER_CUSTOM_SERVICE);
 			if (customService !== null) {
+				request.headers.delete(HEADER_CUSTOM_SERVICE);
 				response = await this.#handleLoopbackCustomService(
 					request,
 					customService
