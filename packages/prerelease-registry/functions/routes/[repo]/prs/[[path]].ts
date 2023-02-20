@@ -1,5 +1,6 @@
-import { getArtifactForWorkflowRun } from "../../utils/getArtifactForWorkflowRun";
-import { generateGitHubFetch } from "../../utils/gitHubFetch";
+import { getArtifactForWorkflowRun } from "../../../utils/getArtifactForWorkflowRun";
+import { generateGitHubFetch } from "../../../utils/gitHubFetch";
+import { repos } from "../../../utils/repoAllowlist";
 
 interface PullRequest {
 	head: { ref: string; sha: string };
@@ -15,11 +16,11 @@ const WORKFLOW_ID = 19014954;
 
 export const onRequestGet: PagesFunction<
 	{ GITHUB_API_TOKEN: string; GITHUB_USER: string },
-	"path"
+	"path" | "repo"
 > = async ({ params, env, waitUntil }) => {
-	const { path } = params;
+	const { repo, path } = params;
 
-	if (!Array.isArray(path)) {
+	if (!Array.isArray(path) || !repos.includes(repo as string)) {
 		return new Response(null, { status: 404 });
 	}
 
@@ -32,7 +33,7 @@ export const onRequestGet: PagesFunction<
 
 	try {
 		const pullRequestsResponse = await gitHubFetch(
-			`https://api.github.com/repos/cloudflare/workers-sdk/pulls/${pullRequestID}`,
+			`https://api.github.com/repos/cloudflare/${repo}/pulls/${pullRequestID}`,
 			{
 				headers: {
 					Accept: "application/vnd.github.v3+json",
@@ -52,7 +53,7 @@ export const onRequestGet: PagesFunction<
 		} = (await pullRequestsResponse.json()) as PullRequest;
 
 		const workflowRunsResponse = await gitHubFetch(
-			`https://api.github.com/repos/cloudflare/workers-sdk/actions/runs?branch=${branch}&per_page=100&event=pull_request`,
+			`https://api.github.com/repos/cloudflare/${repo}/actions/runs?branch=${branch}&per_page=100&event=pull_request`,
 			{
 				headers: {
 					Accept: "application/vnd.github.v3+json",
@@ -80,6 +81,7 @@ export const onRequestGet: PagesFunction<
 		if (workflowRun === undefined) return new Response(null, { status: 404 });
 
 		return getArtifactForWorkflowRun({
+			repo: repo as string,
 			runID: workflowRun.id,
 			name,
 			gitHubFetch,
