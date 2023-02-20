@@ -98,3 +98,44 @@ test("Miniflare: web socket kitchen sink", async (t) => {
 	t.is(serverCloseEvent.code, 1000);
 	t.is(serverCloseEvent.reason, "Test Closure");
 });
+
+test("Miniflare: custom service binding to another Miniflare instance", async (t) => {
+	const mfOther = new Miniflare({
+		port: await getPort(),
+		modules: true,
+		script: `export default {
+      async fetch(request) {
+        const method = request.method;
+        const body = request.body && await request.text();
+        return Response.json({ method, body });
+      }
+    }`,
+	});
+	t.teardown(() => mfOther.dispose());
+
+	const mf = new Miniflare({
+		port: await getPort(),
+		script: `addEventListener("fetch", (event) => {
+      event.respondWith(CUSTOM.fetch(event.request));
+    })`,
+		serviceBindings: {
+			async CUSTOM(request) {
+				return await mfOther.dispatchFetch(request);
+			},
+		},
+	});
+	t.teardown(() => mf.dispose());
+
+	let res = await mf.dispatchFetch("http://localhost");
+	t.deepEqual(await res.json(), { method: "GET", body: null });
+
+	res = await mf.dispatchFetch("http://localhost", {
+		method: "POST",
+		body: "body",
+	});
+	t.deepEqual(await res.json(), { method: "POST", body: "body" });
+
+	// https://github.com/cloudflare/miniflare/issues/476
+	res = await mf.dispatchFetch("http://localhost", { method: "DELETE" });
+	t.deepEqual(await res.json(), { method: "DELETE", body: null });
+});
