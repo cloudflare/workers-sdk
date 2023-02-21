@@ -47,7 +47,6 @@ import type {
 } from "@miniflare/tre";
 import type { MiniflareOptions } from "miniflare";
 import type { ChildProcess } from "node:child_process";
-import type { RequestInit } from "undici";
 
 export interface LocalProps {
 	name: string | undefined;
@@ -817,14 +816,14 @@ export async function transformMf2OptionsToMf3Options({
 	// Build authenticated Cloudflare API fetch function if required
 	let cloudflareFetch: CloudflareFetch | undefined;
 	if (kvRemote && authenticatedAccountId !== undefined) {
+		const { Response: Miniflare3Response } = await getMiniflare3();
 		const preferredAccountId =
 			authenticatedAccountId === true ? undefined : authenticatedAccountId;
 		const accountId = await requireAuth({ account_id: preferredAccountId });
-		cloudflareFetch = (resource, searchParams, init) => {
+		cloudflareFetch = async (resource, searchParams, init) => {
 			resource = `/accounts/${accountId}/${resource}`;
-			// Miniflare and Wrangler's `undici` versions may be slightly different,
-			// but their `RequestInit` types *should* be compatible
-			return performApiFetch(resource, init as RequestInit, searchParams);
+			const response = await performApiFetch(resource, init, searchParams);
+			return new Miniflare3Response(response.body, response);
 		};
 	}
 
@@ -919,5 +918,5 @@ export async function getMiniflare3(): Promise<
 	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 	typeof import("@miniflare/tre")
 > {
-	return (miniflare3Module ??= await npxImport("@miniflare/tre@3.0.0-next.8"));
+	return (miniflare3Module ??= await npxImport("@miniflare/tre@3.0.0-next.10"));
 }
