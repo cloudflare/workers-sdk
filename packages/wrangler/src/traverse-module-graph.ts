@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import chalk from "chalk";
 import * as esbuild from "esbuild";
+import { CommonESBuildOptions } from "./bundle";
 import { logger } from "./logger";
 import createModuleCollector from "./module-collection";
 import type { BundleResult } from "./bundle";
@@ -34,15 +35,11 @@ export default async function traverseModuleGraph(
 			metafile: true,
 			// This is required for ESBuild to collect modules
 			bundle: true,
-			target: "es2022",
+			target: CommonESBuildOptions.target,
 			// Ignore external packages
 			packages: "external",
 			write: false,
-			loader: {
-				".js": "jsx",
-				".mjs": "jsx",
-				".cjs": "jsx",
-			},
+			loader: CommonESBuildOptions.loader,
 			...(tsconfig && { tsconfig }),
 			plugins: [moduleCollector.plugin],
 		});
