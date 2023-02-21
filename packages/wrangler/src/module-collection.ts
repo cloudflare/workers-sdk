@@ -47,6 +47,7 @@ export default function createModuleCollector(props: {
 		rootDirectory: string;
 		fileNames: Set<string>;
 	};
+	preserveFileNames?: boolean;
 }): {
 	modules: CfModule[];
 	plugin: esbuild.Plugin;
@@ -206,7 +207,9 @@ export default function createModuleCollector(props: {
 									.createHash("sha1")
 									.update(fileContent)
 									.digest("hex");
-								const fileName = `./${fileHash}-${path.basename(args.path)}`;
+								const fileName = props.preserveFileNames
+									? filePath
+									: `./${fileHash}-${path.basename(args.path)}`;
 
 								// add the module to the array
 								modules.push({
