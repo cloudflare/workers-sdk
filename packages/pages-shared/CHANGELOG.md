@@ -1,5 +1,21 @@
 # @cloudflare/pages-shared
 
+## 0.2.0
+
+### Minor Changes
+
+- [#2708](https://github.com/cloudflare/workers-sdk/pull/2708) [`b3346cfb`](https://github.com/cloudflare/workers-sdk/commit/b3346cfbecb2c20f7cce3c3bf8a585b7fd8811aa) Thanks [@Skye-31](https://github.com/Skye-31)! - Feat: Pages now supports Proxying (200 status) redirects in it's \_redirects file
+
+  This will look something like the following, where a request to /users/123 will appear as that in the browser, but will internally go to /users/[id].html.
+
+  ```
+  /users/:id /users/[id] 200
+  ```
+
+### Patch Changes
+
+- [#2771](https://github.com/cloudflare/workers-sdk/pull/2771) [`4ede044e`](https://github.com/cloudflare/workers-sdk/commit/4ede044e9247fdc689cbe537dcc5afbda71cf99c) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: upgrade `miniflare` to [`2.12.1`](https://github.com/cloudflare/miniflare/releases/tag/v2.12.1) and `@miniflare/tre` to [`3.0.0-next.10`](https://github.com/cloudflare/miniflare/releases/tag/v3.0.0-next.10)
+
 ## 0.1.0
 
 ### Minor Changes
