@@ -456,8 +456,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			resolvedEntryPointPath,
 			bundleType,
 		}: Awaited<ReturnType<typeof bundleWorker>> = props.noBundle
-			? // we can skip the whole bundling step and mock a bundle here
-			  await traverseModuleGraph(props.entry, props.rules, props.tsconfig)
+			? await traverseModuleGraph(props.entry, props.rules, props.tsconfig)
 			: await bundleWorker(
 					props.entry,
 					typeof destination === "string" ? destination : destination.path,
