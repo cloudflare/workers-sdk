@@ -1,5 +1,8 @@
 import { readFileSync } from "node:fs";
 import { FormData, File } from "undici";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore-next-line
+FormData.constructor.name = "FormData";
 import type {
 	CfWorkerInit,
 	CfModuleType,

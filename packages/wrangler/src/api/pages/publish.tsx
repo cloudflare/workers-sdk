@@ -3,6 +3,9 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve as resolvePath } from "node:path";
 import { cwd } from "node:process";
 import { File, FormData } from "undici";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore-next-line
+FormData.constructor.name = "FormData";
 import { fetchResult } from "../../cfetch";
 import { FatalError } from "../../errors";
 import { logger } from "../../logger";

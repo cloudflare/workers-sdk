@@ -1,5 +1,8 @@
 import { URLSearchParams } from "node:url";
 import { FormData } from "undici";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore-next-line
+FormData.constructor.name = "FormData";
 import { fetchListResult, fetchResult, fetchKVGetValue } from "../cfetch";
 import { logger } from "../logger";
 import type { Config } from "../config";
