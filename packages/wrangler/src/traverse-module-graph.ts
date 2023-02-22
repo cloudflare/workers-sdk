@@ -56,6 +56,7 @@ export default async function traverseModuleGraph(
 ): Promise<BundleResult> {
 	await init;
 
+	const bundleType = entry.format === "modules" ? "esm" : "commonjs";
 	const entrypoint = path.relative(entry.directory, entry.file);
 	// The fact that we're using esbuild to try and traverse the dependency graph to find modules
 	// to upload is an internal detail & optimisation. Errors from esbuild should generally be ignored, and the worker
@@ -163,7 +164,7 @@ export default async function traverseModuleGraph(
 			),
 			dependencies: {},
 			resolvedEntryPointPath: entry.file,
-			bundleType: entry.format === "modules" ? "esm" : "commonjs",
+			bundleType,
 			stop: undefined,
 			sourceMapPath: undefined,
 		};
@@ -182,7 +183,7 @@ export default async function traverseModuleGraph(
 			modules: [],
 			dependencies: {},
 			resolvedEntryPointPath: entry.file,
-			bundleType: entry.format === "modules" ? "esm" : "commonjs",
+			bundleType,
 			stop: undefined,
 			sourceMapPath: undefined,
 		};
