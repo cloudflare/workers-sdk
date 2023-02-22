@@ -173,6 +173,8 @@ Changes should be committed to a new local branch, which then gets pushed to you
   git push -u origin <new-branch-name>
   ```
 - Once you are happy with your changes, create a Pull Request on GitHub
+- The format for Pull Request titles is `[package name] description`, where the package name should indicate which package of the `workers-sdk` monorepo your PR pertains to (e.g. `wrangler`/`pages-shared`/`wrangler-devtools`), and the description should be a succinct summary of the change you're making.
+- GitHub will insert a template for the body of your Pull Request—it's important to carefully fill out all the fields, giving as much detail as possible to reviewers.
 
 ## Changesets
 
