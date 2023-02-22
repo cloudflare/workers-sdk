@@ -31,13 +31,6 @@ describe("Worker", () => {
 		expect(text).toMatchInlineSnapshot(`"dynamic"`);
 	});
 
-	test("no support for variable dynamic imports", async () => {
-		const resp = await worker.fetch("/dynamic-var");
-		const text = await resp.text();
-		expect(text).toMatchInlineSnapshot(
-			'"Error: No such module \\"dynamic-var.js\\"."'
-		);
-	});
 	test("basic wasm support", async () => {
 		const resp = await worker.fetch("/wasm");
 		const text = await resp.text();

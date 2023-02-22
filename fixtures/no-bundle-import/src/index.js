@@ -12,10 +12,6 @@ export default {
 		if (url.pathname === "/dynamic") {
 			return new Response(`${(await import("./dynamic.js")).default}`);
 		}
-		if (url.pathname === "/dynamic-var") {
-			const name = "./dynamic-var.js";
-			return new Response(`${(await import(name)).default}`);
-		}
 		if (url.pathname === "/wasm") {
 			return new Response(
 				await new Promise(async (resolve) => {
