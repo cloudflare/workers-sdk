@@ -1,14 +1,13 @@
 {
-  "private": true,
-  "name": "worker-dart",
-  "version": "1.0.0",
-  "description": "Dart hello world for Cloudflare Workers",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "",
-  "license": "MIT",
-  "devDependencies": {
-  }
+	"name": "worker-dart",
+	"version": "1.0.0",
+	"private": true,
+	"description": "Dart hello world for Cloudflare Workers",
+	"license": "MIT",
+	"author": "",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"devDependencies": {}
 }

@@ -14,7 +14,7 @@ Further documentation for Wrangler can be found [here](https://developers.cloudf
 
 #### Transcrypt
 
-Before building your project, you'll need to do one-time setup of Transcrypt.  Assuming you have Python 3.7 and virtualenv installed per the linked instructions above, that setup on unix systems looks like the following (for windows see [virtualenv docs](https://virtualenv.pypa.io/en/latest/user_guide.html#activators)):
+Before building your project, you'll need to do one-time setup of Transcrypt. Assuming you have Python 3.7 and virtualenv installed per the linked instructions above, that setup on unix systems looks like the following (for windows see [virtualenv docs](https://virtualenv.pypa.io/en/latest/user_guide.html#activators)):
 
 ```
 cd projectname
@@ -26,7 +26,7 @@ source env/bin/activate
 pip install transcrypt
 ```
 
-After that you can run Wrangler commands, such as `wrangler publish` to push your code to Cloudflare.  If you exit virtualenv (`deactivate`) and return to the project directory later, you'll need to activate virtualenv (`source env/bin/activate`) but will not need to rerun the other installation commands.
+After that you can run Wrangler commands, such as `wrangler publish` to push your code to Cloudflare. If you exit virtualenv (`deactivate`) and return to the project directory later, you'll need to activate virtualenv (`source env/bin/activate`) but will not need to rerun the other installation commands.
 
 If `python3` is not Python 3.7 on your system, make sure you install it, create the virtualenv using the right version of Python, and edit webpack.config.js under `command` to specify the correct path to the Python 3.7 executable in the virtualenv directory. If you are using Windows, see [this workaround for an issue with transcrypt-loader paths](https://github.com/QQuick/Transcrypt/issues/624#issuecomment-507866238).
 
@@ -41,4 +41,3 @@ def handleRequest(request):
         'headers' : { 'content-type' : 'text/plain' }
     })))
 ```
-
