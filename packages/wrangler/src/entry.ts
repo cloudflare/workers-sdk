@@ -3,7 +3,7 @@ import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 import * as esbuild from "esbuild";
 import { execaCommand } from "execa";
-import { CommonESBuildOptions } from "./bundle";
+import { COMMON_ESBUILD_OPTIONS } from "./bundle";
 import { logger } from "./logger";
 import { getBasePath } from "./paths";
 import type { Config } from "./config";
@@ -152,9 +152,9 @@ export default async function guessWorkerFormat(
 		absWorkingDir: entryWorkingDirectory,
 		metafile: true,
 		bundle: false,
-		target: CommonESBuildOptions.target,
+		target: COMMON_ESBUILD_OPTIONS.target,
 		write: false,
-		loader: CommonESBuildOptions.loader,
+		loader: COMMON_ESBUILD_OPTIONS.loader,
 		...(tsconfig && { tsconfig }),
 	});
 	// result.metafile is defined because of the `metafile: true` option above.

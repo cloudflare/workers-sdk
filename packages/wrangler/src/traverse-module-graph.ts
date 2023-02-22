@@ -3,7 +3,7 @@ import path from "node:path";
 import chalk from "chalk";
 import { init, parse } from "es-module-lexer";
 import * as esbuild from "esbuild";
-import { CommonESBuildOptions, isBuildFailure } from "./bundle";
+import { COMMON_ESBUILD_OPTIONS, isBuildFailure } from "./bundle";
 import { logger } from "./logger";
 import createModuleCollector from "./module-collection";
 import { ParseError } from "./parse";
@@ -82,11 +82,11 @@ export default async function traverseModuleGraph(
 			metafile: true,
 			// This is required for ESBuild to collect modules
 			bundle: true,
-			target: CommonESBuildOptions.target,
+			target: COMMON_ESBUILD_OPTIONS.target,
 			// Ignore external packages
 			packages: "external",
 			write: false,
-			loader: CommonESBuildOptions.loader,
+			loader: COMMON_ESBUILD_OPTIONS.loader,
 			...(tsconfig && { tsconfig }),
 			plugins: [
 				moduleCollector.plugin,
