@@ -1,0 +1,3 @@
+name = "worker-kotlin"
+main =  "build/js/packages/worker-kotlin/kotlin/worker-kotlin.js"
+compatibility_date = "2022-08-11"
