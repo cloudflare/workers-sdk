@@ -137,6 +137,16 @@ describe.concurrent("Pages Functions", () => {
 			const text = await response.text();
 			expect(text).toContain("I'm a fixed response");
 		});
+
+		it("should support proxying through to next(request)", async ({
+			expect,
+		}) => {
+			const response = await fetch(
+				`http://${ip}:${port}/mounted-plugin/proxy-me-somewhere-else`
+			);
+			const text = await response.text();
+			expect(text).toContain("Successful!");
+		});
 	});
 
 	describe.concurrent("can import static assets", () => {

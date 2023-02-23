@@ -133,7 +133,11 @@ export default function (pluginArgs: unknown) {
 		const handlerIterator = executeRequest(request, relativePathname);
 		const pluginNext = async (input?: RequestInfo, init?: RequestInit) => {
 			if (input !== undefined) {
-				request = new Request(input, init);
+				let url = input;
+				if (typeof input === "string") {
+					url = new URL(input, request.url).toString();
+				}
+				request = new Request(url, init);
 			}
 
 			const result = handlerIterator.next();
@@ -141,7 +145,7 @@ export default function (pluginArgs: unknown) {
 			if (result.done === false) {
 				const { handler, params, path } = result.value;
 				const context = {
-					request,
+					request: new Request(request.clone()),
 					functionPath: workerContext.functionPath + path,
 					next: pluginNext,
 					params,
@@ -157,7 +161,7 @@ export default function (pluginArgs: unknown) {
 
 				return cloneResponse(response);
 			} else {
-				return next();
+				return next(request);
 			}
 		};
 
