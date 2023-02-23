@@ -29,7 +29,7 @@
 	"dependencies": {
 		"acorn": "^8.8.0",
 		"acorn-walk": "^8.2.0",
-		"better-sqlite3": "^7.6.2",
+		"better-sqlite3": "^8.1.0",
 		"capnp-ts": "^0.7.0",
 		"exit-hook": "^2.2.1",
 		"get-port": "^5.1.1",
