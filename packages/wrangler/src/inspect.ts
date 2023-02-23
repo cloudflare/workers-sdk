@@ -745,7 +745,7 @@ function logConsoleMessage(evt: Protocol.Runtime.ConsoleAPICalledEvent): void {
  * Opens the chrome debugger
  */
 export const openInspector = async (inspectorPort: number) => {
-	const url = `https://built-devtools.pages.dev/js_app?experiments=true&v8only=true&ws=localhost:${inspectorPort}/ws`;
+	const url = `https://devtools.devprod.cloudflare.dev/js_app?theme=systemPreferred&ws=localhost:${inspectorPort}/ws`;
 	const errorMessage =
 		"Failed to open inspector.\nInspector depends on having a Chromium-based browser installed, maybe you need to install one?";
 
@@ -770,6 +770,9 @@ export const openInspector = async (inspectorPort: number) => {
 			},
 			{
 				name: open.apps.edge,
+			},
+			{
+				name: open.apps.firefox,
 			},
 		],
 	});
