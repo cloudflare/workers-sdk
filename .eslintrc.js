@@ -17,7 +17,7 @@ function* walkTsConfigs(root) {
 module.exports = {
 	parser: "@typescript-eslint/parser",
 	parserOptions: {
-		ecmaVersion: 2020,
+		ecmaVersion: 2022,
 		project: Array.from(walkTsConfigs(__dirname)),
 		sourceType: "module",
 	},
@@ -49,6 +49,10 @@ module.exports = {
 				"no-mixed-spaces-and-tabs": ["error", "smart-tabs"],
 				"no-shadow": "error",
 				"require-yield": "off",
+				"@typescript-eslint/prefer-nullish-coalescing": [
+					"warn",
+					{ ignoreTernaryTests: false, ignoreConditionalTests: false },
+				],
 				"@typescript-eslint/consistent-type-imports": ["error"],
 				"@typescript-eslint/no-empty-function": "off",
 				"@typescript-eslint/no-explicit-any": "error",
