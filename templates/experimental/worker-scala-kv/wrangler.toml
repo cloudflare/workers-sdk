@@ -1,0 +1,6 @@
+name = "worker-scala-kv"
+main = "src/main/scala/Main.scala"
+
+kv_namespaces = [
+  { binding = "<TEST_NAMESPACE>", id = "<TEST_ID>" }
+]

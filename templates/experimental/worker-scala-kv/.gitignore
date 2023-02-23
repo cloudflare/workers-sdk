@@ -1,0 +1,14 @@
+/dist
+**/*.rs.bk
+Cargo.lock
+bin/
+pkg/
+wasm-pack.log
+worker/
+node_modules/
+.cargo-ok
+/index.js
+/index.js.map
+/target/
+/project/target/
+/project/project/target/

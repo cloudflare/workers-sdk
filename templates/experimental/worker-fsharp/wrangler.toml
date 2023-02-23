@@ -1,0 +1,10 @@
+#For wrangler configuration documentation see:
+#https://developers.cloudflare.com/workers/wrangler/configuration/
+
+name = "worker-fsharp"
+compatibility_date = "2022-09-16"
+main = "./worker/script.js" # by default, or whatever file webpack outputs
+
+# Migration with Webpack to Wrangler: https://developers.cloudflare.com/workers/wrangler/migration/eject-webpack/
+[build]
+command = "npm run build"
