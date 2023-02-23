@@ -35,7 +35,7 @@ export const ModuleTypeToRuleType = flipObject(RuleTypeToModuleType);
 export const DEFAULT_MODULE_RULES: Config["rules"] = [
 	{ type: "Text", globs: ["**/*.txt", "**/*.html"] },
 	{ type: "Data", globs: ["**/*.bin"] },
-	{ type: "CompiledWasm", globs: ["**/*.wasm"] },
+	{ type: "CompiledWasm", globs: ["**/*.wasm", "**/*.wasm?module"] },
 ];
 
 export default function createModuleCollector(props: {
