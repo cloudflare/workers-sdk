@@ -88,4 +88,9 @@ declare global {
 	// by `vite`. Therefore, define it as an empty interface.
 	// eslint-disable-next-line @typescript-eslint/no-empty-interface
 	interface Worker {}
+
+	// `MessagePort` has been global since Node 15, but isn't included in
+	// `@types/node`. This is required by `undici`'s types.
+	// eslint-disable-next-line no-var,@typescript-eslint/consistent-type-imports
+	var MessagePort: typeof import("worker_threads").MessagePort;
 }

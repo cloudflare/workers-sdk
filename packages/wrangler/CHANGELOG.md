@@ -1,5 +1,42 @@
 # wrangler
 
+## 2.11.0
+
+### Minor Changes
+
+- [#2651](https://github.com/cloudflare/workers-sdk/pull/2651) [`a9adfbe7`](https://github.com/cloudflare/workers-sdk/commit/a9adfbe7ea32d4a7c8121d7b34ce9ed51c826033) Thanks [@penalosa](https://github.com/penalosa)! - Previously, wrangler dev would not work if the root of your zone wasn't behind Cloudflare. This behaviour has changed so that now only the route which your Worker is exposed on has to be behind Cloudflare.
+
+* [#2708](https://github.com/cloudflare/workers-sdk/pull/2708) [`b3346cfb`](https://github.com/cloudflare/workers-sdk/commit/b3346cfbecb2c20f7cce3c3bf8a585b7fd8811aa) Thanks [@Skye-31](https://github.com/Skye-31)! - Feat: Pages now supports Proxying (200 status) redirects in it's \_redirects file
+
+  This will look something like the following, where a request to /users/123 will appear as that in the browser, but will internally go to /users/[id].html.
+
+  ```
+  /users/:id /users/[id] 200
+  ```
+
+### Patch Changes
+
+- [#2766](https://github.com/cloudflare/workers-sdk/pull/2766) [`7912e63a`](https://github.com/cloudflare/workers-sdk/commit/7912e63aa15affc6e3d4a8cfe5dd54348c6e79ba) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: correctly detect `service-worker` format when using `typeof module`
+
+  Wrangler automatically detects whether your code is a `modules` or `service-worker` format Worker based on the presence of a `default` `export`. This check currently works by building your entrypoint with `esbuild` and looking at the output metafile.
+
+  Previously, we were passing `format: "esm"` to `esbuild` when performing this check, which enables _format conversion_. This may introduce `export default` into the built code, even if it wasn't there to start with, resulting in incorrect format detections.
+
+  This change removes `format: "esm"` which disables format conversion when bundling is disabled. See https://esbuild.github.io/api/#format for more details.
+
+* [#2780](https://github.com/cloudflare/workers-sdk/pull/2780) [`80f1187a`](https://github.com/cloudflare/workers-sdk/commit/80f1187a4f90764de53d7488d4e13ea73b748ced) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Ensure we don't mangle internal constructor names in the wrangler bundle when building with esbuild
+
+  Undici changed how they referenced `FormData`, which meant that when used in our bundle process, we were failing to upload `multipart/form-data` bodies. This affected `wrangler pages publish` and `wrangler publish`.
+
+- [#2720](https://github.com/cloudflare/workers-sdk/pull/2720) [`de0cb57a`](https://github.com/cloudflare/workers-sdk/commit/de0cb57a7a537e6a8554621451b3fd76ffb2e1d1) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - Fix: Upgraded to ES2022 for improved compatibility
+  Upgraded worker code target version from ES2020 to ES2022 for better compatibility and unblocking of a workaround related to [issue #2029](https://github.com/cloudflare/workers-sdk/issues/2029). The worker runtime now uses the same V8 version as recent Chrome and is 99% ES2016+ compliant. The only thing we don't support on the Workers runtime, the remaining 1%, is the ES2022 RegEx feature as seen in the compat table for the latest Chrome version.
+
+  Compatibility table: https://kangax.github.io/compat-table/es2016plus/
+
+  [resolves #2716](https://github.com/cloudflare/workers-sdk/issues/2716)
+
+* [#2771](https://github.com/cloudflare/workers-sdk/pull/2771) [`4ede044e`](https://github.com/cloudflare/workers-sdk/commit/4ede044e9247fdc689cbe537dcc5afbda71cf99c) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: upgrade `miniflare` to [`2.12.1`](https://github.com/cloudflare/miniflare/releases/tag/v2.12.1) and `@miniflare/tre` to [`3.0.0-next.10`](https://github.com/cloudflare/miniflare/releases/tag/v3.0.0-next.10)
+
 ## 2.10.0
 
 ### Minor Changes

@@ -38,6 +38,7 @@ async function buildMain(flags: BuildFlags = {}) {
 		wranglerPackageDir
 	)}"`;
 	await build({
+		keepNames: true,
 		entryPoints: ["./src/cli.ts"],
 		bundle: true,
 		outdir,

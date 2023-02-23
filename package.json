@@ -23,8 +23,8 @@
 		"fix": "npm run prettify && npm run check:lint -- --fix",
 		"postinstall": "patch-package",
 		"prettify": "prettier . --write --ignore-unknown",
-		"test": "npm run clean --workspace=wrangler && npm run bundle --workspace=wrangler && npm run test --workspace=packages/wrangler --workspace=packages/pages-shared --if-present && npx vitest && npx jest",
-		"test:ci": "npm run test:ci --workspace=packages/wrangler --workspace=packages/pages-shared --if-present && npx vitest && npx jest"
+		"test": "npm run clean --workspace=wrangler && npm run bundle --workspace=wrangler && npm run test --workspace=packages/wrangler --workspace=packages/pages-shared --if-present && npx vitest && npx jest --forceExit",
+		"test:ci": "npm run test:ci --workspace=packages/wrangler --workspace=packages/pages-shared --if-present && npx vitest && npx jest --forceExit"
 	},
 	"jest": {
 		"projects": [
@@ -59,6 +59,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20221111.1",
+		"eslint-plugin-no-only-tests": "^3.1.0",
 		"patch-package": "^6.5.1"
 	},
 	"engines": {

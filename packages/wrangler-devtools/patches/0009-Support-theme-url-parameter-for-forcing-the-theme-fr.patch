@@ -1,7 +1,7 @@
 From 0edd0dbfe2704ef6bc527cbfa68dd35989d95cc5 Mon Sep 17 00:00:00 2001
 From: Samuel Macleod <smacleod@cloudflare.com>
 Date: Fri, 20 Jan 2023 19:19:37 +0000
-Subject: [PATCH 09/12] Support theme= url parameter for forcing the theme from
+Subject: [PATCH 09/13] Support theme= url parameter for forcing the theme from
  outside
 
 ---
