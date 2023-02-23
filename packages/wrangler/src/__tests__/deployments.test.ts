@@ -1,5 +1,3 @@
-import * as fs from "node:fs";
-import * as TOML from "@iarna/toml";
 import { rest } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -35,7 +33,7 @@ describe("deployments", () => {
 		);
 	});
 
-	it("should log helper message for deployments command", async () => {
+	it("should log a help message for deployments command", async () => {
 		await runWrangler("deployments --help");
 		expect(std.out).toMatchInlineSnapshot(`
 		"wrangler deployments
@@ -61,14 +59,7 @@ describe("deployments", () => {
 	});
 
 	it("should log deployments", async () => {
-		fs.writeFileSync(
-			"./wrangler.toml",
-			TOML.stringify({
-				compatibility_date: "2022-01-12",
-				name: "test-script-name",
-			}),
-			"utf-8"
-		);
+		writeWranglerToml();
 
 		await runWrangler("deployments");
 		expect(std.out).toMatchInlineSnapshot(`
@@ -138,17 +129,9 @@ describe("deployments", () => {
 	});
 
 	describe("deployments subcommands", () => {
-		describe("deployment details", () => {
+		describe("deployment view", () => {
 			it("should log deployment details", async () => {
 				writeWranglerToml();
-				fs.writeFileSync(
-					"./wrangler.toml",
-					TOML.stringify({
-						compatibility_date: "2022-01-12",
-						name: "test-script-name",
-					}),
-					"utf-8"
-				);
 
 				await runWrangler("deployments view 1701-E");
 
@@ -180,10 +163,12 @@ describe("deployments", () => {
 			});
 		});
 
-		describe("rollback subcommand", () => {
+		describe("deployments rollback", () => {
 			const { setIsTTY } = useMockIsTTY();
+			const requests = { count: 0 };
 			beforeEach(() => {
 				setIsTTY(true);
+				requests.count = 0;
 				msw.use(
 					rest.put(
 						"*/accounts/:accountID/workers/scripts/:scriptName",
@@ -191,6 +176,8 @@ describe("deployments", () => {
 							expect(req.url.searchParams.get("rollback_to")).toBe(
 								"3mEgaU1T-Intrepid-someThing"
 							);
+
+							requests.count++;
 
 							return res.once(
 								ctx.json(
@@ -234,6 +221,8 @@ describe("deployments", () => {
 			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing
 			Current Deployment ID: galactic_mission_alpha"
 		`);
+
+				expect(requests.count).toEqual(1);
 			});
 
 			it("should early exit from rollback if user denies continuing", async () => {
@@ -244,6 +233,8 @@ describe("deployments", () => {
 
 				await runWrangler("deployments rollback 3mEgaU1T-Intrpid-someThing");
 				expect(std.out).toMatchInlineSnapshot(`""`);
+
+				expect(requests.count).toEqual(0);
 			});
 
 			it("should skip prompt automatically in rollback if in a non-TTY environment", async () => {
@@ -258,6 +249,8 @@ describe("deployments", () => {
 			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing
 			Current Deployment ID: galactic_mission_alpha"
 		`);
+
+				expect(requests.count).toEqual(1);
 			});
 		});
 	});

@@ -136,7 +136,7 @@ export const mswSuccessDeploymentDetails = [
 				},
 			};`;
 			} else {
-				scriptContent = "DIDN'T GET SCRIPT CONTENT";
+				return res(ctx.status(400));
 			}
 			return res.once(ctx.text(scriptContent));
 		}
