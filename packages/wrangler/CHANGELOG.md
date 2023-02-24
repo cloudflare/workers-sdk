@@ -1,5 +1,13 @@
 # wrangler
 
+## 2.11.1
+
+### Patch Changes
+
+- [#2795](https://github.com/cloudflare/workers-sdk/pull/2795) [`ec3e181e`](https://github.com/cloudflare/workers-sdk/commit/ec3e181eb91534ff79198847f7bf01a606fe2b4a) Thanks [@penalosa](https://github.com/penalosa)! - fix: Adds a `duplex: "half"` property to R2 fetch requests with stream bodies in order to be compatible with undici v5.20
+
+* [#2789](https://github.com/cloudflare/workers-sdk/pull/2789) [`4ca8c0b0`](https://github.com/cloudflare/workers-sdk/commit/4ca8c0b02878ec259c6d48a47a2aa6e47f59bea0) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Support overriding the next URL in subsequent executions with `next("/new-path")` from within a Pages Plugin
+
 ## 2.11.0
 
 ### Minor Changes
