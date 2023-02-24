@@ -65,7 +65,8 @@
 		"start": "npm run bundle && cross-env NODE_OPTIONS=--enable-source-maps ./bin/wrangler.js",
 		"test": "npm run assert-git-version && jest --silent=false --verbose=true --forceExit",
 		"test-watch": "npm run test -- --runInBand --testTimeout=50000 --watch",
-		"test:ci": "npm run test -- --verbose=true --coverage"
+		"test:ci": "npm run test -- --verbose=true --coverage",
+		"test:smoke": "esbuild --bundle scripts/smoke-test.ts --outfile=scripts/smoke-test.mjs --platform=node --format=esm && zx scripts/smoke-test.mjs && rm scripts/smoke-test.mjs"
 	},
 	"jest": {
 		"coverageReporters": [
@@ -184,7 +185,8 @@
 		"ws": "^8.5.0",
 		"xdg-app-paths": "^7.3.0",
 		"yargs": "^17.4.1",
-		"yoga-layout": "file:../../vendor/yoga-layout-2.0.0-beta.1.tgz"
+		"yoga-layout": "file:../../vendor/yoga-layout-2.0.0-beta.1.tgz",
+		"zx": "^7.1.1"
 	},
 	"optionalDependencies": {
 		"fsevents": "~2.3.2"
