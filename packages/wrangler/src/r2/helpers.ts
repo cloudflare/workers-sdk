@@ -113,6 +113,7 @@ export async function putR2Object(
 			body: object,
 			headers,
 			method: "PUT",
+			duplex: "half",
 		}
 	);
 }
