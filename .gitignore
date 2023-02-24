@@ -188,3 +188,6 @@ _routes.generated.json
 
 # Vendored npm dependencies
 !vendor/*.tgz
+
+# IntelliJ 
+.idea/
