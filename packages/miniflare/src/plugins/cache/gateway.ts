@@ -7,8 +7,8 @@ import { Headers, HeadersInit, Request, Response, fetch } from "../../http";
 import { Clock, Log, millisToSeconds } from "../../shared";
 import { Storage } from "../../storage";
 import { isSitesRequest } from "../kv";
+import { _getRangeResponse } from "../shared";
 import { CacheMiss, PurgeFailure, StorageFailure } from "./errors";
-import { _getRangeResponse } from "./range";
 
 interface CacheMetadata {
 	headers: string[][];
