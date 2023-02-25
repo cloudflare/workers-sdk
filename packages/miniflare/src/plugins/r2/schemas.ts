@@ -110,7 +110,7 @@ export const R2PutRequestSchema = z
 		customFields: RecordSchema.optional(), // (renamed in transform)
 		httpFields: R2HttpFieldsSchema.optional(), // (renamed in transform)
 		onlyIf: R2ConditionalSchema.optional(),
-		md5: Base64DataSchema.optional(), // (intentionally base64, not hex)  // TODO: make sure we're testing this is base64
+		md5: Base64DataSchema.optional(), // (intentionally base64, not hex)
 		sha1: HexDataSchema.optional(),
 		sha256: HexDataSchema.optional(),
 		sha384: HexDataSchema.optional(),
