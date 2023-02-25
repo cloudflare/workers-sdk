@@ -105,7 +105,17 @@ export class R2Gateway {
 		value: Uint8Array,
 		options: R2PutOptions
 	): Promise<R2Object> {
-		const checksums = validate.key(key).size(value).hash(value, options);
+		let meta: R2Object | undefined;
+		try {
+			meta = await this.head(key);
+		} catch (e) {
+			if (!(e instanceof NoSuchKey)) throw e;
+		}
+		const checksums = validate
+			.key(key)
+			.size(value)
+			.condition(meta, options.onlyIf)
+			.hash(value, options);
 
 		// build metadata
 		const md5Hash = crypto.createHash("md5").update(value).digest("hex");
