@@ -17,51 +17,45 @@ const UNPAIRED_SURROGATE_PAIR_REGEX =
 	/^(?:[^\uD800-\uDBFF]|^)[\uDC00-\uDFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])$/;
 const MAX_VALUE_SIZE = 5 * 1_000 * 1_000 * 1_000 - 5 * 1_000 * 1_000;
 
-// false -> the condition testing "failed"
-function testR2Conditional(
-	conditional?: R2Conditional,
-	metadata?: R2ObjectMetadata
+function identity(ms: number) {
+	return ms;
+}
+function truncateToSeconds(ms: number) {
+	return Math.floor(ms / 1000) * 1000;
+}
+
+// Returns `true` iff the condition passed
+/** @internal */
+export function _testR2Conditional(
+	cond: R2Conditional,
+	metadata?: Pick<R2ObjectMetadata, "etag" | "uploaded">
 ): boolean {
-	const { etagMatches, etagDoesNotMatch, uploadedBefore, uploadedAfter } =
-		conditional ?? {};
+	// Adapted from internal R2 gateway implementation.
+	// See also https://datatracker.ietf.org/doc/html/rfc7232#section-6.
 
-	// If the object doesn't exist
 	if (metadata === undefined) {
-		// the etagDoesNotMatch and uploadedBefore automatically pass
-		// etagMatches and uploadedAfter automatically fail if they exist
-		return etagMatches === undefined && uploadedAfter === undefined;
+		const ifMatch = cond.etagMatches === undefined;
+		const ifModifiedSince = cond.uploadedAfter === undefined;
+		return ifMatch && ifModifiedSince;
 	}
 
-	const { etag, uploaded } = metadata;
+	const { etag, uploaded: lastModifiedRaw } = metadata;
+	const ifMatch = cond.etagMatches === undefined || cond.etagMatches === etag;
+	const ifNoneMatch =
+		cond.etagDoesNotMatch === undefined || cond.etagDoesNotMatch !== etag;
 
-	// ifMatch check
-	const ifMatch = etagMatches ? etagMatches === etag : null;
-	if (ifMatch === false) return false;
+	const maybeTruncate = cond.secondsGranularity ? truncateToSeconds : identity;
+	const lastModified = maybeTruncate(lastModifiedRaw);
+	const ifModifiedSince =
+		cond.uploadedAfter === undefined ||
+		maybeTruncate(cond.uploadedAfter.getTime()) < lastModified ||
+		(cond.etagDoesNotMatch !== undefined && ifNoneMatch);
+	const ifUnmodifiedSince =
+		cond.uploadedBefore === undefined ||
+		lastModified < maybeTruncate(cond.uploadedBefore.getTime()) ||
+		(cond.etagMatches !== undefined && ifMatch);
 
-	// ifNoMatch check
-	const ifNoneMatch = etagDoesNotMatch ? etagDoesNotMatch !== etag : null;
-
-	if (ifNoneMatch === false) return false;
-
-	// ifUnmodifiedSince check
-	if (
-		ifMatch !== true && // if "ifMatch" is true, we ignore date checking
-		uploadedBefore !== undefined &&
-		uploaded > uploadedBefore.getTime()
-	) {
-		return false;
-	}
-
-	// ifModifiedSince check
-	if (
-		ifNoneMatch !== true && // if "ifNoneMatch" is true, we ignore date checking
-		uploadedAfter !== undefined &&
-		uploaded < uploadedAfter.getTime()
-	) {
-		return false;
-	}
-
-	return true;
+	return ifMatch && ifNoneMatch && ifModifiedSince && ifUnmodifiedSince;
 }
 
 export const R2_HASH_ALGORITHMS = [
@@ -95,7 +89,7 @@ export class Validator {
 	}
 
 	condition(meta?: R2Object, onlyIf?: R2Conditional): Validator {
-		if (onlyIf !== undefined && !testR2Conditional(onlyIf, meta)) {
+		if (onlyIf !== undefined && !_testR2Conditional(onlyIf, meta)) {
 			let error = new PreconditionFailed();
 			if (meta !== undefined) error = error.attach(meta);
 			throw error;
