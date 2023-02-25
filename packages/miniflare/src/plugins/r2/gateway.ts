@@ -55,6 +55,7 @@ export class R2Gateway {
 
 		if (stored?.metadata === undefined) throw new NoSuchKey();
 		const { metadata } = stored;
+		metadata.range = { offset: 0, length: metadata.size };
 
 		return new R2Object(metadata);
 	}
