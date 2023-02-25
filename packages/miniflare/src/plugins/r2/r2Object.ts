@@ -33,6 +33,9 @@ export interface R2ObjectMetadata {
 	customMetadata: Record<string, string>;
 	// If a GET request was made with a range option, this will be added
 	range?: R2Range;
+	// Hashes used to check the received object’s integrity. At most one can be
+	// specified.
+	checksums?: R2StringChecksums;
 }
 
 export interface EncodedMetadata {
@@ -60,6 +63,7 @@ export class R2Object implements R2ObjectMetadata {
 	readonly httpMetadata: R2HttpFields;
 	readonly customMetadata: Record<string, string>;
 	readonly range?: R2Range;
+	readonly checksums: R2StringChecksums;
 
 	constructor(metadata: R2ObjectMetadata) {
 		this.key = metadata.key;
@@ -71,6 +75,22 @@ export class R2Object implements R2ObjectMetadata {
 		this.httpMetadata = metadata.httpMetadata;
 		this.customMetadata = metadata.customMetadata;
 		this.range = metadata.range;
+
+		// For non-multipart uploads, we always need to store an MD5 hash in
+		// `checksums`, but never explicitly stored one. Luckily, `R2Bucket#put()`
+		// always makes `etag` an MD5 hash.
+		const checksums: R2StringChecksums = { ...metadata.checksums };
+		const etag = metadata.etag;
+		if (etag.length === 32 && HEX_REGEXP.test(etag)) {
+			checksums.md5 = metadata.etag;
+		} else if (etag.length === 24 && BASE64_REGEXP.test(etag)) {
+			// TODO: remove this when we switch underlying storage mechanisms
+			// Previous versions of Miniflare 3 base64 encoded `etag` instead
+			checksums.md5 = Buffer.from(etag, "base64").toString("hex");
+		} else {
+			assert.fail("Expected `etag` to be an MD5 hash");
+		}
+		this.checksums = checksums;
 	}
 
 	// Format for return to the Workers Runtime
@@ -83,6 +103,13 @@ export class R2Object implements R2ObjectMetadata {
 				k,
 				v,
 			})),
+			checksums: {
+				0: this.checksums.md5,
+				1: this.checksums.sha1,
+				2: this.checksums.sha256,
+				3: this.checksums.sha384,
+				4: this.checksums.sha512,
+			},
 		};
 	}
 

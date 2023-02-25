@@ -111,10 +111,10 @@ export const R2PutRequestSchema = z
 		httpFields: R2HttpFieldsSchema.optional(), // (renamed in transform)
 		onlyIf: R2ConditionalSchema.optional(),
 		md5: Base64DataSchema.optional(), // (intentionally base64, not hex)  // TODO: make sure we're testing this is base64
-		sha1: HexDataSchema.optional(), // TODO: support
-		sha256: HexDataSchema.optional(), // TODO: support
-		sha384: HexDataSchema.optional(), // TODO: support
-		sha512: HexDataSchema.optional(), // TODO: support
+		sha1: HexDataSchema.optional(),
+		sha256: HexDataSchema.optional(),
+		sha384: HexDataSchema.optional(),
+		sha512: HexDataSchema.optional(),
 	})
 	.transform((value) => ({
 		method: value.method,
