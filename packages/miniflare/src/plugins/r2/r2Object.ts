@@ -44,7 +44,7 @@ export interface EncodedMetadata {
 }
 
 export function createVersion(): string {
-	return crypto.randomBytes(24).toString("base64");
+	return crypto.randomBytes(16).toString("hex");
 }
 
 /**
