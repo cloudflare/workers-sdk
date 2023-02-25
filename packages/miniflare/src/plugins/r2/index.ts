@@ -45,3 +45,4 @@ export const R2_PLUGIN: Plugin<
 
 export * from "./r2Object";
 export * from "./gateway";
+export * from "./schemas";
