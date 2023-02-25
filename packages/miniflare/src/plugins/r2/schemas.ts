@@ -175,7 +175,7 @@ export const R2DeleteRequestSchema = z.intersection(
 	z.object({ method: z.literal("delete") }),
 	z.union([
 		z.object({ object: z.string() }),
-		z.object({ objects: z.string().array() }), // TODO: support
+		z.object({ objects: z.string().array() }),
 	])
 );
 
