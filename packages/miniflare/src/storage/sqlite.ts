@@ -2,7 +2,6 @@ import crypto from "crypto";
 import Database, { Database as DatabaseType } from "better-sqlite3";
 import { defaultClock } from "../shared";
 import { LocalStorage } from "./local";
-import { parseRange } from "./memory";
 import {
 	Range,
 	RangeStoredValueMeta,
@@ -10,6 +9,7 @@ import {
 	StoredKeyMeta,
 	StoredMeta,
 	StoredValueMeta,
+	parseRange,
 } from "./storage";
 
 // Don't use this!

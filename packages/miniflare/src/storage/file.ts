@@ -15,6 +15,7 @@ import {
 	StoredKeyMeta,
 	StoredMeta,
 	StoredValueMeta,
+	parseRange,
 } from "./storage";
 
 export interface FileRange {
@@ -57,25 +58,7 @@ export async function readFileRange(
 		filePath = await fs.realpath(filePath);
 		const { size } = await fs.lstat(filePath);
 		// build offset and length as necessary
-		if (suffix !== undefined) {
-			if (suffix <= 0) {
-				throw new Error("Suffix must be > 0");
-			}
-			if (suffix > size) suffix = size;
-			offset = size - suffix;
-			length = size - offset;
-		}
-		if (offset === undefined) offset = 0;
-		if (length === undefined) {
-			// get length of file
-			length = size - offset;
-		}
-
-		// check offset and length are valid
-		if (offset < 0) throw new Error("Offset must be >= 0");
-		if (offset >= size) throw new Error("Offset must be < size");
-		if (length <= 0) throw new Error("Length must be > 0");
-		if (offset + length > size) length = size - offset;
+		({ offset, length } = parseRange({ offset, length, suffix }, size));
 
 		// read file
 		fd = await fs.open(filePath, "r");

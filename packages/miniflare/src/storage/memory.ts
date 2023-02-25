@@ -8,34 +8,9 @@ import {
 	StoredMeta,
 	StoredValueMeta,
 	cloneMetadata,
+	parseRange,
 } from "./storage";
 
-export function parseRange(
-	{ offset, length, suffix }: Range,
-	size: number
-): Required<Pick<Range, "offset" | "length">> {
-	// build proper offset and length
-	if (suffix !== undefined) {
-		if (suffix <= 0) {
-			throw new Error("Suffix must be > 0");
-		}
-		if (suffix > size) suffix = size;
-		offset = size - suffix;
-		length = size - offset;
-	}
-	if (offset === undefined) offset = 0;
-	if (length === undefined) length = size - offset;
-
-	// if offset is negative or greater than size, throw an error
-	if (offset < 0) throw new Error("Offset must be >= 0");
-	if (offset >= size) throw new Error("Offset must be < size");
-	// if length is less than or equal to 0, throw an error
-	if (length <= 0) throw new Error("Length must be > 0");
-	// if length goes beyond actual length, adjust length to the end of the value
-	if (offset + length > size) length = size - offset;
-
-	return { offset, length };
-}
 export class MemoryStorage extends LocalStorage {
 	#sqliteDatabase?: DatabaseType;
 
@@ -87,7 +62,6 @@ export class MemoryStorage extends LocalStorage {
 		if (stored === undefined) return;
 		const { value } = stored;
 		const size = value.byteLength;
-
 		const { offset, length } = parseRange(range, size);
 
 		return {

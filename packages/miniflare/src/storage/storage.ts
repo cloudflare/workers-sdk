@@ -45,6 +45,35 @@ export interface Range {
 	length?: number;
 	suffix?: number;
 }
+export interface ParsedRange {
+	offset: number;
+	length: number;
+}
+export function parseRange(
+	{ offset, length, suffix }: Range,
+	size: number
+): ParsedRange {
+	if (suffix !== undefined) {
+		if (suffix <= 0) {
+			throw new Error("Suffix must be > 0");
+		}
+		if (suffix > size) suffix = size;
+		offset = size - suffix;
+		length = size - offset;
+	}
+	if (offset === undefined) offset = 0;
+	if (length === undefined) length = size - offset;
+
+	// If offset is negative or greater than size, throw an error
+	if (offset < 0) throw new Error("Offset must be >= 0");
+	if (offset > size) throw new Error("Offset must be < size");
+	// If length is less than or equal to 0, throw an error
+	if (length <= 0) throw new Error("Length must be > 0");
+	// If length goes beyond actual length, adjust length to the end of the value
+	if (offset + length > size) length = size - offset;
+
+	return { offset, length };
+}
 
 export interface StorageListOptions {
 	// Stage 1: filtering
