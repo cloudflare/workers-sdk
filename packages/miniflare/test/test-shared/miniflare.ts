@@ -53,7 +53,7 @@ export function miniflareTest<
       export default {
         async fetch(request, env, ctx) {
           try {
-            return handler(globalThis, request, env, ctx);
+            return await handler(globalThis, request, env, ctx);
           } catch (e) {
             const error = reduceError(e);
             return Response.json(error, {
@@ -71,7 +71,7 @@ export function miniflareTest<
 
 	const test = anyTest as TestFn<Context>;
 	test.before(async (t) => {
-		const log = new TestLog();
+		const log = new TestLog(t);
 		const clock: TestClock = { timestamp: 1_000_000 }; // 1000s
 		const clockFunction = () => clock.timestamp;
 

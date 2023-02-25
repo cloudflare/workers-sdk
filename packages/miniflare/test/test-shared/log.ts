@@ -1,10 +1,13 @@
 import { Log, LogLevel } from "@miniflare/tre";
+import { ExecutionContext } from "ava";
+
+const consoleLog = new Log(LogLevel.VERBOSE);
 
 export type LogEntry = [level: LogLevel, message: string];
 export class TestLog extends Log {
 	logs: LogEntry[] = [];
 
-	constructor() {
+	constructor(private readonly t?: ExecutionContext) {
 		super(LogLevel.VERBOSE);
 	}
 
@@ -17,7 +20,12 @@ export class TestLog extends Log {
 	}
 
 	error(message: Error): void {
-		throw message;
+		if (this.t === undefined) {
+			throw message;
+		} else {
+			consoleLog.error(message);
+			this.t.fail(message.stack);
+		}
 	}
 
 	logsAtLevel(level: LogLevel): string[] {
