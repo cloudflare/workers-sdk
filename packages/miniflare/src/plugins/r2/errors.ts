@@ -14,7 +14,6 @@ enum CfCode {
 	InternalError = 10001,
 	NoSuchObjectKey = 10007,
 	EntityTooLarge = 100100,
-	InvalidDigest = 10014,
 	InvalidObjectName = 10020,
 	InvalidMaxKeys = 10022,
 	InvalidArgument = 10029,
@@ -114,21 +113,21 @@ export class EntityTooLarge extends R2Error {
 	}
 }
 
-export class InvalidDigest extends R2Error {
-	constructor() {
-		super(
-			Status.BadRequest,
-			"The Content-MD5 you specified is not valid.",
-			CfCode.InvalidDigest
-		);
-	}
-}
-
 export class BadDigest extends R2Error {
-	constructor() {
+	constructor(
+		algorithm: "MD5" | "SHA-1" | "SHA-256" | "SHA-384" | "SHA-512",
+		provided: Buffer,
+		calculated: Buffer
+	) {
 		super(
 			Status.BadRequest,
-			"The Content-MD5 you specified did not match what we received.",
+			[
+				`The ${algorithm} checksum you specified did not match what we received.`,
+				`You provided a ${algorithm} checksum with value: ${provided.toString(
+					"hex"
+				)}`,
+				`Actual ${algorithm} was: ${calculated.toString("hex")}`,
+			].join("\n"),
 			CfCode.BadDigest
 		);
 	}

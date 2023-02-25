@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { z } from "zod";
 import { Log } from "../../shared";
 import { RangeStoredValueMeta, Storage } from "../../storage";
@@ -104,28 +105,24 @@ export class R2Gateway {
 		value: Uint8Array,
 		options: R2PutOptions
 	): Promise<R2Object> {
-		const { customMetadata, md5, httpMetadata } = options;
-
-		const hash = validate.key(key).size(value).md5(value, md5);
+		const checksums = validate.key(key).size(value).hash(value, options);
 
 		// build metadata
+		const md5Hash = crypto.createHash("md5").update(value).digest("hex");
 		const metadata: R2ObjectMetadata = {
 			key,
 			size: value.byteLength,
-			etag: hash.toString("hex"),
+			etag: md5Hash,
 			version: createVersion(),
-			httpEtag: `"${hash}"`,
+			httpEtag: `"${md5Hash}"`,
 			uploaded: Date.now(),
-			httpMetadata: httpMetadata ?? {},
-			customMetadata: customMetadata ?? {},
+			httpMetadata: options.httpMetadata ?? {},
+			customMetadata: options.customMetadata ?? {},
+			checksums,
 		};
 
 		// Store value with expiration and metadata
-		await this.storage.put<R2ObjectMetadata>(key, {
-			value,
-			metadata,
-		});
-
+		await this.storage.put<R2ObjectMetadata>(key, { value, metadata });
 		return new R2Object(metadata);
 	}
 

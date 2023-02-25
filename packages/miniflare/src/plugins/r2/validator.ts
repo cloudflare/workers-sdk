@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { R2StringChecksums } from "@cloudflare/workers-types/experimental";
 import {
 	BadDigest,
 	EntityTooLarge,
@@ -62,14 +63,37 @@ function testR2Conditional(
 
 	return true;
 }
+
+export const R2_HASH_ALGORITHMS = [
+	{ name: "MD5", field: "md5" },
+	{ name: "SHA-1", field: "sha1" },
+	{ name: "SHA-256", field: "sha256" },
+	{ name: "SHA-384", field: "sha384" },
+	{ name: "SHA-512", field: "sha512" },
+] as const;
+export type R2Hashes = Record<
+	(typeof R2_HASH_ALGORITHMS)[number]["field"],
+	Buffer | undefined
+>;
+
 export class Validator {
-	md5(value: Uint8Array, md5?: Buffer): Buffer {
-		const md5Hash = crypto.createHash("md5").update(value).digest();
-		if (md5 !== undefined && !md5.equals(md5Hash)) {
-			throw new BadDigest();
+	hash(value: Uint8Array, hashes: R2Hashes): R2StringChecksums {
+		const checksums: R2StringChecksums = {};
+		for (const { name, field } of R2_HASH_ALGORITHMS) {
+			const providedHash = hashes[field];
+			if (providedHash !== undefined) {
+				const computedHash = crypto.createHash(field).update(value).digest();
+				if (!providedHash.equals(computedHash)) {
+					throw new BadDigest(name, providedHash, computedHash);
+				}
+				// Store computed hash to ensure consistent casing in returned checksums
+				// from `R2Object`
+				checksums[field] = computedHash.toString("hex");
+			}
 		}
-		return md5Hash;
+		return checksums;
 	}
+
 	condition(meta: R2Object, onlyIf?: R2Conditional): Validator {
 		// test conditional should it exist
 		if (!testR2Conditional(onlyIf, meta) || meta?.size === 0) {
