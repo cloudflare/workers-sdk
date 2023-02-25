@@ -113,9 +113,14 @@ export class R2Gateway {
 		return new R2Object(metadata);
 	}
 
-	async delete(key: string) {
-		validate.key(key);
-		await this.storage.delete(key);
+	async delete(keys: string | string[]) {
+		if (Array.isArray(keys)) {
+			for (const key of keys) validate.key(key);
+			await this.storage.deleteMany(keys);
+		} else {
+			validate.key(keys);
+			await this.storage.delete(keys);
+		}
 	}
 
 	async list(listOptions: R2ListOptions = {}): Promise<R2Objects> {

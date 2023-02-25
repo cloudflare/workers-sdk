@@ -1,4 +1,3 @@
-import assert from "assert";
 import { TextDecoder } from "util";
 import { Request, Response } from "../../http";
 import {
@@ -86,9 +85,9 @@ export class R2Router extends Router<R2Gateway> {
 		const gateway = this.gatewayFactory.get(params.bucket, persist);
 
 		if (metadata.method === "delete") {
-			assert("object" in metadata);
-			// TODO: support multiple delete
-			await gateway.delete(metadata.object);
+			await gateway.delete(
+				"object" in metadata ? metadata.object : metadata.objects
+			);
 			return new Response();
 		} else if (metadata.method === "put") {
 			const result = await gateway.put(metadata.object, value, metadata);
