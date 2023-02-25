@@ -94,10 +94,11 @@ export class Validator {
 		return checksums;
 	}
 
-	condition(meta: R2Object, onlyIf?: R2Conditional): Validator {
-		// test conditional should it exist
-		if (!testR2Conditional(onlyIf, meta) || meta?.size === 0) {
-			throw new PreconditionFailed().attach(meta);
+	condition(meta?: R2Object, onlyIf?: R2Conditional): Validator {
+		if (onlyIf !== undefined && !testR2Conditional(onlyIf, meta)) {
+			let error = new PreconditionFailed();
+			if (meta !== undefined) error = error.attach(meta);
+			throw error;
 		}
 		return this;
 	}
