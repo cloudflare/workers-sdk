@@ -142,18 +142,26 @@ export class R2Gateway {
 	async list(listOptions: R2ListOptions = {}): Promise<R2Objects> {
 		validate.limit(listOptions.limit);
 
-		const { prefix = "", include = [], cursor = "" } = listOptions;
+		const { prefix = "", include = [], cursor = "", startAfter } = listOptions;
 		let { delimiter, limit = MAX_LIST_KEYS } = listOptions;
 		if (delimiter === "") delimiter = undefined;
 
-		// if include contains inputs, we reduce the limit to max 100
+		// If include contains inputs, we reduce the limit to max 100
 		if (include.length > 0) limit = Math.min(limit, 100);
 
+		// If startAfter is set, we should increment the limit here, as `startAfter`
+		// is exclusive, but we're using inclusive `start` to implement it.
+		// Ideally we want to return `limit` number of keys here. However, doing
+		// this would be incompatible with the returned opaque `cursor`. Luckily,
+		// the R2 list contract allows us to return less than `limit` keys, as
+		// long as we set `truncated: true`. We'll fix this behaviour when we switch
+		// to the new storage system.
 		const res = await this.storage.list<R2ObjectMetadata>({
 			prefix,
 			limit,
 			cursor,
 			delimiter,
+			start: startAfter,
 		});
 		const delimitedPrefixes = new Set(res.delimitedPrefixes ?? []);
 
@@ -171,6 +179,11 @@ export class R2Gateway {
 
 				return new R2Object(metadata);
 			});
+
+		if (startAfter !== undefined && objects[0]?.key === startAfter) {
+			// If the first key matched `startAfter`, remove it as this is exclusive
+			objects.splice(0, 1);
+		}
 
 		const cursorLength = res.cursor.length > 0;
 		return {
