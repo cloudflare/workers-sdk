@@ -1,4 +1,5 @@
 import { Response } from "../../http";
+import { HttpError } from "../../shared";
 import { CfHeader } from "../shared/constants";
 import { R2Object } from "./r2Object";
 
@@ -22,22 +23,22 @@ enum CfCode {
 	InvalidRange = 10039,
 }
 
-export class R2Error extends Error {
-	status: number;
-	v4Code: number;
+export class R2Error extends HttpError {
 	object?: R2Object;
-	constructor(status: number, message: string, v4Code: number) {
-		super(message);
-		this.name = "R2Error";
-		this.status = status;
-		this.v4Code = v4Code;
+
+	constructor(
+		code: number,
+		message: string,
+		readonly v4Code: number
+	) {
+		super(code, message);
 	}
 
 	toResponse() {
 		if (this.object !== undefined) {
 			const { metadataSize, value } = this.object.encode();
 			return new Response(value, {
-				status: this.status,
+				status: this.code,
 				headers: {
 					[CfHeader.MetadataSize]: `${metadataSize}`,
 					"Content-Type": "application/json",
@@ -51,7 +52,7 @@ export class R2Error extends Error {
 			});
 		}
 		return new Response(null, {
-			status: this.status,
+			status: this.code,
 			headers: {
 				[CfHeader.Error]: JSON.stringify({
 					message: this.message,

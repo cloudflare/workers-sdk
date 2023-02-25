@@ -1,16 +1,17 @@
+import assert from "assert";
 import crypto from "crypto";
 import { TextEncoder } from "util";
-import { R2Objects, R2Range } from "./gateway";
+import type { R2StringChecksums } from "@cloudflare/workers-types/experimental";
+import { R2Objects } from "./gateway";
+import {
+	BASE64_REGEXP,
+	HEX_REGEXP,
+	R2HeadResponse,
+	R2HttpFields,
+	R2Range,
+} from "./schemas";
 
 const encoder = new TextEncoder();
-export interface R2HTTPMetadata {
-	contentType?: string;
-	contentLanguage?: string;
-	contentDisposition?: string;
-	contentEncoding?: string;
-	cacheControl?: string;
-	cacheExpiry?: Date;
-}
 
 export interface R2ObjectMetadata {
 	// The object’s key.
@@ -21,27 +22,17 @@ export interface R2ObjectMetadata {
 	size: number;
 	// The etag associated with the object upload.
 	etag: string;
-	// The object’s etag, in quotes so as to be returned as a header.
+	// The object's etag, in quotes to be returned as a header.
 	httpEtag: string;
 	// The time the object was uploaded.
 	uploaded: number;
-	// Various HTTP headers associated with the object. Refer to HTTP Metadata.
-	httpMetadata: R2HTTPMetadata;
+	// Various HTTP headers associated with the object. Refer to HTTP Metadata:
+	// https://developers.cloudflare.com/r2/runtime-apis/#http-metadata.
+	httpMetadata: R2HttpFields;
 	// A map of custom, user-defined metadata associated with the object.
 	customMetadata: Record<string, string>;
 	// If a GET request was made with a range option, this will be added
 	range?: R2Range;
-}
-
-// R2ObjectMetadata in the format the Workers Runtime expects to be returned
-export interface RawR2ObjectMetadata
-	extends Omit<R2ObjectMetadata, "key" | "httpMetadata" | "customMetadata"> {
-	// The object’s name.
-	name: string;
-	// Various HTTP headers associated with the object. Refer to HTTP Metadata.
-	httpFields: R2HTTPMetadata;
-	// A map of custom, user-defined metadata associated with the object.
-	customFields: { k: string; v: string }[];
 }
 
 export interface EncodedMetadata {
@@ -60,25 +51,16 @@ export function createVersion(): string {
  * will have an R2Object created.
  */
 export class R2Object implements R2ObjectMetadata {
-	// The object’s key.
-	key: string;
-	// Random unique string associated with a specific upload of a key.
-	version: string;
-	// Size of the object in bytes.
-	size: number;
-	// The etag associated with the object upload.
-	etag: string;
-	// The object’s etag, in quotes so as to be returned as a header.
-	httpEtag: string;
-	// The time the object was uploaded.
-	uploaded: number;
-	// Various HTTP headers associated with the object. Refer to
-	// https://developers.cloudflare.com/r2/runtime-apis/#http-metadata.
-	httpMetadata: R2HTTPMetadata;
-	// A map of custom, user-defined metadata associated with the object.
-	customMetadata: Record<string, string>;
-	// If a GET request was made with a range option, this will be added
-	range?: R2Range;
+	readonly key: string;
+	readonly version: string;
+	readonly size: number;
+	readonly etag: string;
+	readonly httpEtag: string;
+	readonly uploaded: number;
+	readonly httpMetadata: R2HttpFields;
+	readonly customMetadata: Record<string, string>;
+	readonly range?: R2Range;
+
 	constructor(metadata: R2ObjectMetadata) {
 		this.key = metadata.key;
 		this.version = metadata.version;
@@ -92,7 +74,7 @@ export class R2Object implements R2ObjectMetadata {
 	}
 
 	// Format for return to the Workers Runtime
-	rawProperties(): RawR2ObjectMetadata {
+	#rawProperties(): R2HeadResponse {
 		return {
 			...this,
 			name: this.key,
@@ -105,7 +87,7 @@ export class R2Object implements R2ObjectMetadata {
 	}
 
 	encode(): EncodedMetadata {
-		const json = JSON.stringify(this.rawProperties());
+		const json = JSON.stringify(this.#rawProperties());
 		const bytes = encoder.encode(json);
 		return { metadataSize: bytes.length, value: bytes };
 	}
@@ -113,7 +95,7 @@ export class R2Object implements R2ObjectMetadata {
 	static encodeMultiple(objects: R2Objects): EncodedMetadata {
 		const json = JSON.stringify({
 			...objects,
-			objects: objects.objects.map((o) => o.rawProperties()),
+			objects: objects.objects.map((o) => o.#rawProperties()),
 		});
 		const bytes = encoder.encode(json);
 		return { metadataSize: bytes.length, value: bytes };
@@ -121,7 +103,7 @@ export class R2Object implements R2ObjectMetadata {
 }
 
 export class R2ObjectBody extends R2Object {
-	body: Uint8Array;
+	readonly body: Uint8Array;
 
 	constructor(metadata: R2ObjectMetadata, body: Uint8Array) {
 		super(metadata);
