@@ -9,7 +9,6 @@ import {
 	decodePersist,
 } from "../shared";
 import { HEADER_CACHE_WARN_USAGE } from "./constants";
-import { fallible } from "./errors";
 import { CacheGateway } from "./gateway";
 
 export interface CacheParams {
@@ -134,7 +133,7 @@ export class CacheRouter extends Router<CacheGateway> {
 		const persist = decodePersist(req.headers);
 		const gateway = this.gatewayFactory.get(namespace, persist);
 		const key = new Request(uri, req as RequestInit);
-		return fallible(gateway.match(key, req.cf?.cacheKey));
+		return gateway.match(key, req.cf?.cacheKey);
 	};
 
 	@PUT("/:uri")
@@ -147,7 +146,7 @@ export class CacheRouter extends Router<CacheGateway> {
 		const bodyBuffer = Buffer.from(await req.arrayBuffer());
 		const bodyArray = new Uint8Array(removeTransferEncodingChunked(bodyBuffer));
 		const key = new Request(uri, { ...(req as RequestInit), body: undefined });
-		return fallible(gateway.put(key, bodyArray, req.cf?.cacheKey));
+		return gateway.put(key, bodyArray, req.cf?.cacheKey);
 	};
 
 	@PURGE("/:uri")
@@ -158,6 +157,6 @@ export class CacheRouter extends Router<CacheGateway> {
 		const persist = decodePersist(req.headers);
 		const gateway = this.gatewayFactory.get(namespace, persist);
 		const key = new Request(uri, req as RequestInit);
-		return fallible(gateway.delete(key, req.cf?.cacheKey));
+		return gateway.delete(key, req.cf?.cacheKey);
 	};
 }

@@ -1,6 +1,7 @@
-import { existsSync } from "fs";
+import { existsSync, mkdirSync } from "fs";
 import fs from "fs/promises";
 import path from "path";
+import Database, { Database as DatabaseType } from "better-sqlite3";
 import {
 	MiniflareError,
 	defaultClock,
@@ -138,6 +139,7 @@ export interface FileMeta<Meta = unknown> extends StoredMeta<Meta> {
 
 export class FileStorage extends LocalStorage {
 	protected readonly root: string;
+	#sqliteDatabase?: DatabaseType;
 
 	constructor(
 		root: string,
@@ -316,5 +318,11 @@ export class FileStorage extends LocalStorage {
 			});
 		}
 		return keys;
+	}
+
+	getSqliteDatabase(): DatabaseType {
+		if (this.#sqliteDatabase !== undefined) return this.#sqliteDatabase;
+		mkdirSync(path.dirname(this.root), { recursive: true });
+		return (this.#sqliteDatabase = new Database(this.root + ".sqlite3"));
 	}
 }

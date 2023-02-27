@@ -1,3 +1,4 @@
+import { Database as DatabaseType } from "better-sqlite3";
 import { CloudflareFetch } from "../plugins";
 import {
 	Awaitable,
@@ -164,6 +165,12 @@ export abstract class Storage {
 		let count = 0;
 		for (const result of await Promise.all(results)) if (result) count++;
 		return count;
+	}
+
+	// Gets an SQLite database backed by this type of storage
+	getSqliteDatabase(): DatabaseType {
+		const name = this.constructor.name;
+		throw new Error(`SQLite storage not implemented for ${name}`);
 	}
 }
 

@@ -196,36 +196,96 @@ function getSourceMappedStack(workerSrcOpts: SourceOptions[], error: Error) {
 // matching the schema below with the `MF-Experimental-Error-Stack` header set
 // to a truthy value, in order to display the pretty-error page.
 export const HEADER_ERROR_STACK = "MF-Experimental-Error-Stack";
-const ErrorSchema = z.object({
-	message: z.ostring(),
-	name: z.ostring(),
-	stack: z.ostring(),
-});
+
+export interface JsonError {
+	message?: string;
+	name?: string;
+	stack?: string;
+	cause?: JsonError;
+}
+export const JsonErrorSchema: z.ZodType<JsonError> = z.lazy(() =>
+	z.object({
+		message: z.string().optional(),
+		name: z.string().optional(),
+		stack: z.string().optional(),
+		cause: JsonErrorSchema.optional(),
+	})
+);
+
+interface StandardErrorConstructor {
+	new (message?: string, options?: { cause?: Error }): Error;
+}
+const ALLOWED_ERROR_SUBCLASS_CONSTRUCTORS: StandardErrorConstructor[] = [
+	EvalError,
+	RangeError,
+	ReferenceError,
+	SyntaxError,
+	TypeError,
+	URIError,
+];
+export function reviveError(
+	workerSrcOpts: SourceOptions[],
+	jsonError: JsonError
+): Error {
+	// At a high level, this function takes a JSON-serialisable representation of
+	// an `Error`, and converts it to an `Error`. `Error`s may have `cause`s, so
+	// we need to do this recursively.
+	let cause: Error | undefined;
+	if (jsonError.cause !== undefined) {
+		cause = reviveError(workerSrcOpts, jsonError.cause);
+	}
+
+	// If this is one of the built-in error types, construct an instance of that.
+	// For example, if we threw a `TypeError` in the Worker, we'd like to
+	// construct a `TypeError` here, so it looks like the error has been thrown
+	// through a regular function call, not an HTTP request (i.e. we want
+	// `instanceof TypeError` to pass in Node for `TypeError`s thrown in Workers).
+	let ctor: StandardErrorConstructor = Error;
+	if (jsonError.name !== undefined && jsonError.name in globalThis) {
+		const maybeCtor = (globalThis as Record<string, unknown>)[
+			jsonError.name
+		] as StandardErrorConstructor;
+		if (ALLOWED_ERROR_SUBCLASS_CONSTRUCTORS.includes(maybeCtor)) {
+			ctor = maybeCtor;
+		}
+	}
+
+	// Construct the error, copying over the correct name and stack trace.
+	// Because constructing an `Error` captures the stack trace at point of
+	// construction, we override the stack trace to the one from the Worker in the
+	// JSON-serialised error.
+	const error = new ctor(jsonError.message, { cause });
+	if (jsonError.name !== undefined) error.name = jsonError.name;
+	error.stack = jsonError.stack;
+
+	// Try to apply source-mapping to the stack trace
+	error.stack = getSourceMappedStack(workerSrcOpts, error);
+
+	return error;
+}
+
 export async function handlePrettyErrorRequest(
 	log: Log,
 	workerSrcOpts: SourceOptions[],
 	request: Request
 ): Promise<Response> {
 	// Parse and validate the error we've been given from user code
-	const caught = ErrorSchema.parse(await request.json());
+	const caught = JsonErrorSchema.parse(await request.json());
 
+	// Convert the error into a regular `Error` object and try to source-map it.
 	// We need to give `name`, `message` and `stack` to Youch, but StackTracy,
 	// Youch's dependency for parsing `stack`s, will only extract `stack` from
 	// an object if it's an `instanceof Error`.
-	const error = new Error();
-	error.name = caught.name as string;
-	error.message = caught.message as string;
-	error.stack = caught.stack;
-
-	// Try to apply source-mapping
-	error.stack = getSourceMappedStack(workerSrcOpts, error);
+	const error = reviveError(workerSrcOpts, caught);
 
 	// Log source-mapped error to console if logging enabled
 	log.error(error);
 
 	// Lazily import `youch` when required
 	const Youch: typeof import("youch").default = require("youch");
-	const youch = new Youch(error, {
+	// `cause` is usually more useful than the error itself, display that instead
+	// TODO(someday): would be nice if we could display both
+	const youch = new Youch(error.cause ?? error, {
 		url: request.url,
 		method: request.method,
 		headers: Object.fromEntries(request.headers),
