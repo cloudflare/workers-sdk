@@ -8,6 +8,7 @@ import * as metrics from "../metrics";
 import { buildFunctions } from "./buildFunctions";
 import { isInPagesCI } from "./constants";
 import {
+	EXIT_CODE_FUNCTIONS_NOTHING_TO_BUILD_ERROR,
 	EXIT_CODE_FUNCTIONS_NO_ROUTES_ERROR,
 	FunctionsNoRoutesError,
 	getFunctionsNoRoutesWarning,
@@ -152,14 +153,17 @@ export const Handler = async ({
 	let bundle: BundleResult | undefined = undefined;
 
 	if (!foundWorkerScript && !existsSync(directory)) {
-		throw new FatalError(`Could not find anything to build.
+		throw new FatalError(
+			`Could not find anything to build.
 We first looked inside the build output directory (${basename(
-			resolvePath(buildOutputDirectory)
-		)}), then looked for the Functions directory (${basename(
-			directory
-		)}) but couldn't find anything to build.
+				resolvePath(buildOutputDirectory)
+			)}), then looked for the Functions directory (${basename(
+				directory
+			)}) but couldn't find anything to build.
 	➤ If you are trying to build _worker.js, please make sure you provide the [--build-output-directory] containing your static files.
-	➤ If you are trying to build Pages Functions, please make sure [--directory] points to the location of your Functions files.`);
+	➤ If you are trying to build Pages Functions, please make sure [--directory] points to the location of your Functions files.`,
+			EXIT_CODE_FUNCTIONS_NOTHING_TO_BUILD_ERROR
+		);
 	}
 
 	/**

@@ -9,6 +9,7 @@ import { RoutesValidationError } from "./functions/routes-validation";
  * Exit code for `pages functions build` when no routes are found.
  */
 export const EXIT_CODE_FUNCTIONS_NO_ROUTES_ERROR = 156;
+export const EXIT_CODE_FUNCTIONS_NOTHING_TO_BUILD_ERROR = 157;
 
 /**
  * Pages error when no routes are found in the functions directory
