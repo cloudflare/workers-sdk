@@ -205,4 +205,8 @@ export class SqliteStorage extends LocalStorage {
 			sql`SELECT key, attributes FROM ${unsafe_raw(this.namespace)}`
 		);
 	}
+
+	getSqliteDatabase(): DatabaseType {
+		return this.database;
+	}
 }

@@ -35,10 +35,13 @@ import {
 } from "./plugins";
 import {
 	HEADER_CUSTOM_SERVICE,
+	HEADER_ERROR_STACK,
 	HEADER_ORIGINAL_URL,
+	JsonErrorSchema,
 	SourceOptions,
 	getUserServiceName,
 	handlePrettyErrorRequest,
+	reviveError,
 } from "./plugins/core";
 import {
 	Config,
@@ -391,17 +394,15 @@ export class Miniflare {
 					const response = await this.#routers[key]?.route(request, url);
 					if (response !== undefined) return response;
 				} catch (e) {
-					if (e instanceof HttpError) {
-						return new Response(e.message, {
-							status: e.code,
-							// Custom statusMessage is required for runtime error messages
-							statusText: e.message.substring(0, 512),
-						});
-					}
+					if (e instanceof HttpError) return e.toResponse();
 					throw e;
 				}
 			}
 		}
+	}
+
+	get #workerSrcOpts(): SourceOptions[] {
+		return this.#workerOpts.map<SourceOptions>(({ core }) => core);
 	}
 
 	#handleLoopback = async (
@@ -453,12 +454,9 @@ export class Miniflare {
 					customService
 				);
 			} else if (url.pathname === "/core/error") {
-				const workerSrcOpts = this.#workerOpts.map<SourceOptions>(
-					({ core }) => core
-				);
 				response = await handlePrettyErrorRequest(
 					this.#log,
-					workerSrcOpts,
+					this.#workerSrcOpts,
 					request
 				);
 			} else {
@@ -742,7 +740,17 @@ export class Miniflare {
 		) {
 			forward.headers.delete("Content-Length");
 		}
-		return fetch(url, forward as RequestInit);
+
+		const response = await fetch(url, forward as RequestInit);
+
+		// If the Worker threw an uncaught exception, propagate it to the caller
+		const stack = response.headers.get(HEADER_ERROR_STACK);
+		if (response.status === 500 && stack !== null) {
+			const caught = JsonErrorSchema.parse(await response.json());
+			throw reviveError(this.#workerSrcOpts, caught);
+		}
+
+		return response;
 	}
 
 	async dispose(): Promise<void> {

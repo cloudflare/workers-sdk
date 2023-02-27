@@ -3,8 +3,8 @@ import path from "path";
 import { FileStorage, HeadersInit, LogLevel } from "@miniflare/tre";
 import { miniflareTest, useTmp, utf8Encode } from "../../test-shared";
 
-const test = miniflareTest(async (global, req) => {
-	// Sort headers
+const test = miniflareTest({}, async (global, req) => {
+	// Partition headers
 	let name: string | undefined;
 	let cfCacheKey: string | undefined;
 	let bufferPut = false;

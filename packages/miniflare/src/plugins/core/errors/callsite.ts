@@ -121,6 +121,9 @@ export class CallSite implements NodeJS.CallSite {
 	getFileName(): string | null {
 		return this.opts.fileName;
 	}
+	getScriptNameOrSourceURL(): string | null {
+		return this.opts.fileName;
+	}
 	getLineNumber(): number | null {
 		return this.opts.lineNumber;
 	}

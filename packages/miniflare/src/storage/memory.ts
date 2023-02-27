@@ -1,3 +1,4 @@
+import Database, { Database as DatabaseType } from "better-sqlite3";
 import { defaultClock } from "../shared";
 import { LocalStorage } from "./local";
 import {
@@ -36,6 +37,8 @@ export function parseRange(
 	return { offset, length };
 }
 export class MemoryStorage extends LocalStorage {
+	#sqliteDatabase?: DatabaseType;
+
 	constructor(
 		protected map = new Map<string, StoredValueMeta>(),
 		clock = defaultClock
@@ -127,5 +130,9 @@ export class MemoryStorage extends LocalStorage {
 		return Array.from(this.map.entries()).map(
 			MemoryStorage.entryToStoredKey
 		) as StoredKeyMeta<Meta>[];
+	}
+
+	getSqliteDatabase(): DatabaseType {
+		return (this.#sqliteDatabase ??= new Database(":memory:"));
 	}
 }

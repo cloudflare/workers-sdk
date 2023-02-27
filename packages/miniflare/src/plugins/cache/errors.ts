@@ -1,4 +1,5 @@
 import { HeadersInit, Response } from "../../http";
+import { HttpError } from "../../shared";
 import { CfHeader } from "../shared/constants";
 
 enum Status {
@@ -7,30 +8,18 @@ enum Status {
 	CacheMiss = 504,
 }
 
-export async function fallible<T>(promise: Promise<T>): Promise<T | Response> {
-	try {
-		return await promise;
-	} catch (e) {
-		if (e instanceof CacheError) {
-			return e.toResponse();
-		}
-		throw e;
-	}
-}
-
-export class CacheError extends Error {
+export class CacheError extends HttpError {
 	constructor(
-		private status: number,
+		code: number,
 		message: string,
 		readonly headers: HeadersInit = []
 	) {
-		super(message);
-		this.name = "CacheError";
+		super(code, message);
 	}
 
 	toResponse() {
 		return new Response(null, {
-			status: this.status,
+			status: this.code,
 			headers: this.headers,
 		});
 	}

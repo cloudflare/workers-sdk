@@ -4,12 +4,7 @@ import type {
 	Request as WorkerRequest,
 	Response as WorkerResponse,
 } from "@cloudflare/workers-types/experimental";
-import {
-	Awaitable,
-	Miniflare,
-	MiniflareOptions,
-	ModuleDefinition,
-} from "@miniflare/tre";
+import { Awaitable, Miniflare, MiniflareOptions } from "@miniflare/tre";
 import anyTest, { TestFn } from "ava";
 import { getPort } from "./http";
 import { TestLog } from "./log";
@@ -30,7 +25,7 @@ type MiniflareOptionsWithoutScripts = Exclude<
 	"script" | "scriptPath" | "modules" | "modulesRoot"
 >;
 
-interface MiniflareTestContext {
+export interface MiniflareTestContext {
 	mf: Miniflare;
 	url: URL;
 
@@ -40,40 +35,57 @@ interface MiniflareTestContext {
 	clock: TestClock;
 	setOptions(opts: MiniflareOptionsWithoutScripts): Promise<void>;
 }
-const test = anyTest as TestFn<MiniflareTestContext>;
 
-export function miniflareTest<Env>(
-	handler: TestMiniflareHandler<Env>,
-	userOpts?: MiniflareOptionsWithoutScripts
-): TestFn<MiniflareTestContext> {
-	const script = `
-    const handler = (${handler.toString()});
-    export default {
-      async fetch(request, env, ctx) {
-        try {
-          return handler(globalThis, request, env, ctx);
-        } catch (e) {
-          return new Response(e?.stack ?? String(e), { status: 500 });
-        } 
+export function miniflareTest<
+	Env,
+	Context extends MiniflareTestContext = MiniflareTestContext,
+>(
+	userOpts: MiniflareOptionsWithoutScripts,
+	handler?: TestMiniflareHandler<Env>
+): TestFn<Context> {
+	const scriptOpts: MiniflareOptions = {};
+	if (handler !== undefined) {
+		const script = `
+      const handler = (${handler.toString()});
+      function reduceError(e) {
+        return {
+          name: e?.name,
+          message: e?.message ?? String(e),
+          stack: e?.stack,
+          cause: e?.cause === undefined ? undefined : reduceError(e.cause),
+        };
       }
-    }
-  `;
+      export default {
+        async fetch(request, env, ctx) {
+          try {
+            return handler(globalThis, request, env, ctx);
+          } catch (e) {
+            const error = reduceError(e);
+            return Response.json(error, {
+              status: 500,
+              headers: { "MF-Experimental-Error-Stack": "true" },
+            });
+          } 
+        }
+      }
+    `;
+		scriptOpts.modules = [
+			{ type: "ESModule", path: "index.mjs", contents: script },
+		];
+	}
 
+	const test = anyTest as TestFn<Context>;
 	test.before(async (t) => {
 		const log = new TestLog();
 		const clock: TestClock = { timestamp: 1_000_000 }; // 1000s
 		const clockFunction = () => clock.timestamp;
-
-		const modules: ModuleDefinition[] = [
-			{ type: "ESModule", path: "index.mjs", contents: script },
-		];
 
 		const opts: MiniflareOptions = {
 			port: await getPort(),
 			log,
 			clock: clockFunction,
 			verbose: true,
-			modules,
+			...scriptOpts,
 		};
 
 		t.context.mf = new Miniflare({ ...userOpts, ...opts });
