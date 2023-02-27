@@ -14,7 +14,7 @@ fn log_request(req: &Request) {
 }
 
 #[event(fetch)]
-pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Response> {
+pub async fn main(req: Request, env: Env, _ctx: Context) -> Result<Response> {
     log_request(&req);
 
     // Optionally, get more helpful error messages written to the console in the case of a panic.
@@ -33,14 +33,14 @@ pub async fn main(req: Request, env: Env, _ctx: worker::Context) -> Result<Respo
         .post_async("/form/:field", |mut req, ctx| async move {
             if let Some(name) = ctx.param("field") {
                 let form = req.form_data().await?;
-                match form.get(name) {
+                return match form.get(name) {
                     Some(FormEntry::Field(value)) => {
-                        return Response::from_json(&json!({ name: value }))
+                        Response::from_json(&json!({ name: value }))
                     }
                     Some(FormEntry::File(_)) => {
-                        return Response::error("`field` param in form shouldn't be a File", 422);
+                        Response::error("`field` param in form shouldn't be a File", 422)
                     }
-                    None => return Response::error("Bad Request", 400),
+                    None => Response::error("Bad Request", 400),
                 }
             }
 
