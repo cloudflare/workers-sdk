@@ -1,6 +1,10 @@
 import assert from "assert";
+import crypto from "crypto";
+import fs from "fs";
 import http from "http";
 import net from "net";
+import os from "os";
+import path from "path";
 import { Duplex } from "stream";
 import type {
 	IncomingRequestCfProperties,
@@ -22,6 +26,7 @@ import {
 	fetch,
 } from "./http";
 import {
+	DurableObjectClassNames,
 	GatewayConstructor,
 	GatewayFactory,
 	HEADER_CF_BLOB,
@@ -124,8 +129,8 @@ function validateOptions(
 // in other services.
 function getDurableObjectClassNames(
 	allWorkerOpts: PluginWorkerOptions[]
-): Map<string, string[]> {
-	const serviceClassNames = new Map<string, string[]>();
+): DurableObjectClassNames {
+	const serviceClassNames: DurableObjectClassNames = new Map();
 	for (const workerOpts of allWorkerOpts) {
 		const workerServiceName = getUserServiceName(workerOpts.core.name);
 		for (const designator of Object.values(
@@ -136,9 +141,10 @@ function getDurableObjectClassNames(
 				normaliseDurableObject(designator);
 			let classNames = serviceClassNames.get(serviceName);
 			if (classNames === undefined) {
-				serviceClassNames.set(serviceName, (classNames = []));
+				classNames = new Set();
+				serviceClassNames.set(serviceName, classNames);
 			}
-			classNames.push(className);
+			classNames.add(className);
 		}
 	}
 	return serviceClassNames;
@@ -200,6 +206,12 @@ export class Miniflare {
 	#runtime?: Runtime;
 	#removeRuntimeExitHook?: () => void;
 	#runtimeEntryURL?: URL;
+
+	// Path to temporary directory for use as scratch space/"in-memory" Durable
+	// Object storage. Note this may not exist, it's up to the consumers to
+	// create this if needed. Deleted on `dispose()`.
+	readonly #tmpPath: string;
+	readonly #removeTmpPathExitHook: () => void;
 
 	// Mutual exclusion lock for runtime operations (i.e. initialisation and
 	// updating config). This essentially puts initialisation and future updates
@@ -270,6 +282,17 @@ export class Miniflare {
 					}
 				}
 			}
+		});
+
+		// Build path for temporary directory. We don't actually want to create this
+		// unless it's needed (i.e. we have Durable Objects enabled). This means we
+		// can't use `fs.mkdtemp()`, as that always creates the directory.
+		this.#tmpPath = path.join(
+			os.tmpdir(),
+			`miniflare-${crypto.randomBytes(16).toString("hex")}`
+		);
+		this.#removeTmpPathExitHook = exitHook(() => {
+			fs.rmSync(this.#tmpPath, { force: true, recursive: true });
 		});
 
 		this.#disposeController = new AbortController();
@@ -646,6 +669,7 @@ export class Miniflare {
 					durableObjectClassNames,
 					additionalModules,
 					loopbackPort,
+					tmpPath: this.#tmpPath,
 				});
 				if (pluginServices !== undefined) {
 					for (const service of pluginServices) {
@@ -759,10 +783,15 @@ export class Miniflare {
 			await this.#initPromise;
 			await this.#lastUpdatePromise;
 		} finally {
-			// Cleanup as much as possible even if `#init()` threw
+			// Remove exit hooks, we're cleaning up what they would've cleaned up now
+			this.#removeTmpPathExitHook();
 			this.#removeRuntimeExitHook?.();
+
+			// Cleanup as much as possible even if `#init()` threw
 			await this.#runtime?.dispose();
 			await this.#stopLoopbackServer();
+			// `rm -rf ${#tmpPath}`, this won't throw if `#tmpPath` doesn't exist
+			await fs.promises.rm(this.#tmpPath, { force: true, recursive: true });
 		}
 	}
 }

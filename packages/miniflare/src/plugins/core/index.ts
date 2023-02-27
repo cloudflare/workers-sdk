@@ -7,11 +7,11 @@ import {
 	Service,
 	Worker_Binding,
 	Worker_Module,
-	kVoid,
 	supportedCompatibilityDate,
 } from "../../runtime";
 import { Awaitable, JsonSchema, Log, MiniflareCoreError } from "../../shared";
 import { getCacheServiceName } from "../cache";
+import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import {
 	BINDING_SERVICE_LOOPBACK,
 	CloudflareFetchSchema,
@@ -383,7 +383,9 @@ export const CORE_PLUGIN: Plugin<
 			}
 
 			const name = getUserServiceName(options.name);
-			const classNames = durableObjectClassNames.get(name) ?? [];
+			const classNames = Array.from(
+				durableObjectClassNames.get(name) ?? new Set<string>()
+			);
 			const compatibilityDate = validateCompatibilityDate(
 				log,
 				options.compatibilityDate ?? FALLBACK_COMPATIBILITY_DATE
@@ -398,9 +400,15 @@ export const CORE_PLUGIN: Plugin<
 					bindings: workerBindings,
 					durableObjectNamespaces: classNames.map((className) => ({
 						className,
-						uniqueKey: className,
+						// This `uniqueKey` will (among other things) be used as part of the
+						// path when persisting to the file-system. `-` is invalid in
+						// JavaScript class names, but safe on filesystems (incl. Windows).
+						uniqueKey: `${options.name ?? ""}-${className}`,
 					})),
-					durableObjectStorage: { inMemory: kVoid },
+					durableObjectStorage:
+						classNames.length === 0
+							? undefined
+							: { localDisk: DURABLE_OBJECTS_STORAGE_SERVICE_NAME },
 					cacheApiOutbound: { name: getCacheServiceName(workerIndex) },
 				},
 			});

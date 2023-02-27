@@ -59,7 +59,10 @@ export type Worker = (
 	durableObjectStorage?: Worker_DurableObjectStorage;
 };
 
-export type Worker_DurableObjectStorage = { none?: Void } | { inMemory?: Void };
+export type Worker_DurableObjectStorage =
+	| { none?: Void }
+	| { inMemory?: Void }
+	| { localDisk?: string };
 
 export type Worker_Module = {
 	name?: string;

@@ -524,10 +524,12 @@ export declare class Worker_DurableObjectNamespace extends __S {
 export declare enum Worker_DurableObjectStorage_Which {
 	NONE = 0,
 	IN_MEMORY = 1,
+	LOCAL_DISK = 2,
 }
 export declare class Worker_DurableObjectStorage extends __S {
 	static readonly NONE = Worker_DurableObjectStorage_Which.NONE;
 	static readonly IN_MEMORY = Worker_DurableObjectStorage_Which.IN_MEMORY;
+	static readonly LOCAL_DISK = Worker_DurableObjectStorage_Which.LOCAL_DISK;
 	static readonly _capnp: {
 		displayName: string;
 		id: string;
@@ -537,6 +539,9 @@ export declare class Worker_DurableObjectStorage extends __S {
 	setNone(): void;
 	isInMemory(): boolean;
 	setInMemory(): void;
+	getLocalDisk(): string;
+	isLocalDisk(): boolean;
+	setLocalDisk(value: string): void;
 	toString(): string;
 	which(): Worker_DurableObjectStorage_Which;
 }

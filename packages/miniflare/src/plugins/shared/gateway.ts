@@ -45,11 +45,11 @@ export interface RemoteStorageConstructor {
 	): RemoteStorage;
 }
 
-const DEFAULT_PERSIST_ROOT = ".mf";
+export const DEFAULT_PERSIST_ROOT = ".mf";
 
 export const PARAM_FILE_UNSANITISE = "unsanitise";
 
-function maybeParseURL(url: Persistence): URL | undefined {
+export function maybeParseURL(url: Persistence): URL | undefined {
 	try {
 		if (typeof url === "string") return new URL(url);
 	} catch {}
@@ -101,7 +101,7 @@ export class GatewayFactory<Gateway> {
 			} else if (url.protocol === "sqlite:") {
 				return new SqliteStorage(url.pathname, sanitisedNamespace, this.clock);
 			}
-			// TODO: support Redis/SQLite storages?
+			// TODO: support Redis storage?
 			if (url.protocol === "remote:") {
 				const { cloudflareFetch, remoteStorageClass } = this;
 				if (cloudflareFetch === undefined) {

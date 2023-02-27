@@ -1,13 +1,19 @@
+import fs from "fs/promises";
+import path from "path";
+import { fileURLToPath } from "url";
 import { z } from "zod";
 import { Worker_Binding } from "../../runtime";
-import { MiniflareError } from "../../shared";
+import { MiniflareCoreError } from "../../shared";
 import { getUserServiceName } from "../core";
-import { PersistenceSchema, Plugin } from "../shared";
+import {
+	DEFAULT_PERSIST_ROOT,
+	Persistence,
+	PersistenceSchema,
+	Plugin,
+	maybeParseURL,
+} from "../shared";
 import { DurableObjectsStorageGateway } from "./gateway";
 import { DurableObjectsStorageRouter } from "./router";
-
-export type DurableObjectsErrorCode = "ERR_PERSIST_UNSUPPORTED"; // Durable Object persistence is not yet supported
-export class DurableObjectsError extends MiniflareError<DurableObjectsErrorCode> {}
 
 export const DurableObjectsOptionsSchema = z.object({
 	durableObjects: z
@@ -41,6 +47,49 @@ export function normaliseDurableObject(
 }
 
 export const DURABLE_OBJECTS_PLUGIN_NAME = "do";
+
+export const DURABLE_OBJECTS_STORAGE_SERVICE_NAME = `${DURABLE_OBJECTS_PLUGIN_NAME}:storage`;
+function normaliseDurableObjectStoragePath(
+	tmpPath: string,
+	persist: Persistence
+): string {
+	// If persistence is disabled, use "memory" storage. Note we're still
+	// returning a path on the file-system here. Miniflare 2's in-memory storage
+	// persisted between options reloads. However, we restart the `workerd`
+	// process on each reload which would destroy any in-memory data. We'd like to
+	// keep Miniflare 2's behaviour, so persist to a temporary path which we
+	// destroy on `dispose()`.
+	const memoryishPath = path.join(tmpPath, DURABLE_OBJECTS_PLUGIN_NAME);
+	if (persist === undefined || persist === false) {
+		return memoryishPath;
+	}
+
+	// Try parse `persist` as a URL
+	const url = maybeParseURL(persist);
+	if (url !== undefined) {
+		if (url.protocol === "memory:") {
+			return memoryishPath;
+		} else if (url.protocol === "file:") {
+			// Note we're ignoring `PARAM_FILE_UNSANITISE` here, file names should
+			// be Durable Object IDs which are just hex strings.
+			return fileURLToPath(url);
+		}
+		// Omitting `sqlite:` and `remote:`. `sqlite:` expects all data to be stored
+		// in a single SQLite database, which isn't possible here. We could
+		// `path.dirname()` the SQLite database path and use that, but the path
+		// might be ":memory:" which we definitely can't support.
+		throw new MiniflareCoreError(
+			"ERR_PERSIST_UNSUPPORTED",
+			`Unsupported "${url.protocol}" persistence protocol for Durable Object storage: ${url.href}`
+		);
+	}
+
+	// Otherwise, fallback to file storage
+	return persist === true
+		? path.join(DEFAULT_PERSIST_ROOT, DURABLE_OBJECTS_PLUGIN_NAME)
+		: persist;
+}
+
 export const DURABLE_OBJECTS_PLUGIN: Plugin<
 	typeof DurableObjectsOptionsSchema,
 	typeof DurableObjectsSharedOptionsSchema,
@@ -61,19 +110,35 @@ export const DURABLE_OBJECTS_PLUGIN: Plugin<
 			}
 		);
 	},
-	getServices({ options, sharedOptions }) {
-		if (
-			// If we have Durable Object bindings...
-			Object.keys(options.durableObjects ?? {}).length > 0 &&
-			// ...and persistence is enabled...
-			sharedOptions.durableObjectsPersist
-		) {
-			// ...throw, as Durable-Durable Objects are not yet supported
-			throw new DurableObjectsError(
-				"ERR_PERSIST_UNSUPPORTED",
-				"Persisted Durable Objects are not yet supported"
-			);
+	async getServices({ sharedOptions, tmpPath, durableObjectClassNames }) {
+		// Check if we even have any Durable Object bindings, if we don't, we can
+		// skip creating the storage directory
+		let hasDurableObjects = false;
+		for (const classNames of durableObjectClassNames.values()) {
+			if (classNames.size > 0) {
+				hasDurableObjects = true;
+				break;
+			}
 		}
+		if (!hasDurableObjects) return;
+
+		const storagePath = normaliseDurableObjectStoragePath(
+			tmpPath,
+			sharedOptions.durableObjectsPersist
+		);
+		// `workerd` requires the `disk.path` to exist. Setting `recursive: true`
+		// is like `mkdir -p`: it won't fail if the directory already exists, and it
+		// will create all non-existing parents.
+		await fs.mkdir(storagePath, { recursive: true });
+		return [
+			{
+				// Note this service will be de-duped by name if multiple Workers create
+				// it. Each Worker will have the same `sharedOptions` though, so this
+				// isn't a problem.
+				name: DURABLE_OBJECTS_STORAGE_SERVICE_NAME,
+				disk: { path: storagePath, writable: true },
+			},
+		];
 	},
 };
 
