@@ -1,5 +1,25 @@
 # wrangler
 
+## 2.12.0
+
+### Minor Changes
+
+- [#2810](https://github.com/cloudflare/workers-sdk/pull/2810) [`62784131`](https://github.com/cloudflare/workers-sdk/commit/62784131385d641c3512b09565d801a5ecd39725) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: upgrade `@miniflare/tre` to [`3.0.0-next.12`](https://github.com/cloudflare/miniflare/releases/tag/v3.0.0-next.12), incorporating changes from [`3.0.0-next.11`](https://github.com/cloudflare/miniflare/releases/tag/v3.0.0-next.11)
+
+  Notably, this brings the following improvements to `wrangler dev --experimental-local`:
+
+  - Adds support for Durable Objects and D1
+  - Fixes an issue blocking clean exits and script reloads
+  - Bumps to `better-sqlite3@8`, allowing installation on Node 19
+
+* [#2665](https://github.com/cloudflare/workers-sdk/pull/2665) [`4756d6a1`](https://github.com/cloudflare/workers-sdk/commit/4756d6a143168da84548203b7b0bc23db0b92c95) Thanks [@alankemp](https://github.com/alankemp)! - Add new [unsafe.metadata] section to wrangler.toml allowing arbitary data to be added to the metadata section of the upload
+
+### Patch Changes
+
+- [#2539](https://github.com/cloudflare/workers-sdk/pull/2539) [`3725086c`](https://github.com/cloudflare/workers-sdk/commit/3725086c4b6854f6fb1e7e0517d3a526d0f9567b) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Add support for the `nodejs_compat` Compatibility Flag when bundling a Worker with Wrangler
+
+  This new Compatibility Flag is incompatible with the legacy `--node-compat` CLI argument and `node_compat` configuration option. If you want to use the new runtime Node.js compatibility features, please remove the `--node-compat` argument from your CLI command or your config file.
+
 ## 2.11.1
 
 ### Patch Changes
