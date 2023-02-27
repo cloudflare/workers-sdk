@@ -4,7 +4,7 @@ import { Awaitable, Log, OptionalZodTypeOf } from "../../shared";
 import { GatewayConstructor, RemoteStorageConstructor } from "./gateway";
 import { RouterConstructor } from "./router";
 
-export type DurableObjectClassNames = Map<string, string[]>;
+export type DurableObjectClassNames = Map<string, Set<string>>;
 
 export interface PluginServicesOptions<
 	Options extends z.ZodType,
@@ -19,6 +19,7 @@ export interface PluginServicesOptions<
 	durableObjectClassNames: DurableObjectClassNames;
 	additionalModules: Worker_Module[];
 	loopbackPort: number;
+	tmpPath: string;
 }
 
 export interface PluginBase<

@@ -1517,6 +1517,9 @@ var Worker_DurableObjectStorage_Which;
 	Worker_DurableObjectStorage_Which[
 		(Worker_DurableObjectStorage_Which["IN_MEMORY"] = 1)
 	] = "IN_MEMORY";
+	Worker_DurableObjectStorage_Which[
+		(Worker_DurableObjectStorage_Which["LOCAL_DISK"] = 2)
+	] = "LOCAL_DISK";
 })(
 	(Worker_DurableObjectStorage_Which =
 		exports.Worker_DurableObjectStorage_Which ||
@@ -1535,6 +1538,22 @@ class Worker_DurableObjectStorage extends capnp_ts_1.Struct {
 	setInMemory() {
 		capnp_ts_1.Struct.setUint16(2, 1, this);
 	}
+	getLocalDisk() {
+		capnp_ts_1.Struct.testWhich(
+			"localDisk",
+			capnp_ts_1.Struct.getUint16(2, this),
+			2,
+			this
+		);
+		return capnp_ts_1.Struct.getText(8, this);
+	}
+	isLocalDisk() {
+		return capnp_ts_1.Struct.getUint16(2, this) === 2;
+	}
+	setLocalDisk(value) {
+		capnp_ts_1.Struct.setUint16(2, 2, this);
+		capnp_ts_1.Struct.setText(8, value, this);
+	}
 	toString() {
 		return "Worker_DurableObjectStorage_" + super.toString();
 	}
@@ -1546,10 +1565,12 @@ exports.Worker_DurableObjectStorage = Worker_DurableObjectStorage;
 Worker_DurableObjectStorage.NONE = Worker_DurableObjectStorage_Which.NONE;
 Worker_DurableObjectStorage.IN_MEMORY =
 	Worker_DurableObjectStorage_Which.IN_MEMORY;
+Worker_DurableObjectStorage.LOCAL_DISK =
+	Worker_DurableObjectStorage_Which.LOCAL_DISK;
 Worker_DurableObjectStorage._capnp = {
 	displayName: "durableObjectStorage",
 	id: "cc72b3faa57827d4",
-	size: new capnp_ts_1.ObjectSize(8, 8),
+	size: new capnp_ts_1.ObjectSize(8, 9),
 };
 var Worker_Which;
 (function (Worker_Which) {
@@ -1756,7 +1777,7 @@ Worker.DurableObjectNamespace = Worker_DurableObjectNamespace;
 Worker._capnp = {
 	displayName: "Worker",
 	id: "acfa77e88fd97d1c",
-	size: new capnp_ts_1.ObjectSize(8, 8),
+	size: new capnp_ts_1.ObjectSize(8, 9),
 	defaultGlobalOutbound: capnp.readRawPointer(
 		new Uint8Array([
 			0x10, 0x05, 0x40, 0x02, 0x11, 0x05, 0x4a, 0x00, 0x00, 0xff, 0x69, 0x6e,
