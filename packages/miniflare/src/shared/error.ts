@@ -1,4 +1,4 @@
-import { Response } from "@miniflare/tre";
+import { Response } from "../http";
 
 export class MiniflareError<
 	Code extends string | number = string | number,
