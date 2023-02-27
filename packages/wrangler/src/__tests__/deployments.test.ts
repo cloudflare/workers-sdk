@@ -69,23 +69,23 @@ describe("deployments", () => {
 		Deployment ID: Constitution-Class
 		Created on:    2021-01-01T00:00:00.000000Z
 		Author:        Jean-Luc-Picard@federation.org
-		Trigger:       Upload from Wrangler 🤠
+		Source:       Upload from Wrangler 🤠
 
 		Deployment ID: Intrepid-Class
 		Created on:    2021-02-02T00:00:00.000000Z
 		Author:        Kathryn-Janeway@federation.org
-		Trigger:       Rollback from Wrangler 🤠
+		Source:       Rollback from Wrangler 🤠
 		Rollback from: MOCK-DEPLOYMENT-ID-1111
 
 		Deployment ID: Intrepid-Class
 		Created on:    2021-02-03T00:00:00.000000Z
 		Author:        Kathryn-Janeway@federation.org
-		Trigger:       Wrangler 🤠
+		Source:       Wrangler 🤠
 
 		Deployment ID: Galaxy-Class
 		Created on:    2021-01-04T00:00:00.000000Z
 		Author:        Jean-Luc-Picard@federation.org
-		Trigger:       Rollback from Wrangler 🤠
+		Source:       Rollback from Wrangler 🤠
 		Rollback from: MOCK-DEPLOYMENT-ID-2222
 		🟩 Active"
 	`);
@@ -100,23 +100,23 @@ describe("deployments", () => {
 		Deployment ID: Constitution-Class
 		Created on:    2021-01-01T00:00:00.000000Z
 		Author:        Jean-Luc-Picard@federation.org
-		Trigger:       Upload from Wrangler 🤠
+		Source:       Upload from Wrangler 🤠
 
 		Deployment ID: Intrepid-Class
 		Created on:    2021-02-02T00:00:00.000000Z
 		Author:        Kathryn-Janeway@federation.org
-		Trigger:       Rollback from Wrangler 🤠
+		Source:       Rollback from Wrangler 🤠
 		Rollback from: MOCK-DEPLOYMENT-ID-1111
 
 		Deployment ID: Intrepid-Class
 		Created on:    2021-02-03T00:00:00.000000Z
 		Author:        Kathryn-Janeway@federation.org
-		Trigger:       Wrangler 🤠
+		Source:       Wrangler 🤠
 
 		Deployment ID: Galaxy-Class
 		Created on:    2021-01-04T00:00:00.000000Z
 		Author:        Jean-Luc-Picard@federation.org
-		Trigger:       Rollback from Wrangler 🤠
+		Source:       Rollback from Wrangler 🤠
 		Rollback from: MOCK-DEPLOYMENT-ID-2222
 		🟩 Active"
 	`);
@@ -232,7 +232,10 @@ describe("deployments", () => {
 				});
 
 				await runWrangler("deployments rollback 3mEgaU1T-Intrpid-someThing");
-				expect(std.out).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
+			"
+		`);
 
 				expect(requests.count).toEqual(0);
 			});
@@ -242,10 +245,10 @@ describe("deployments", () => {
 
 				await runWrangler("deployments rollback 3mEgaU1T-Intrepid-someThing");
 				expect(std.out).toMatchInlineSnapshot(`
-			"? This deployment 3mEgaU1T will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback. Note: Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, R2, KV, etc.).
-			🤖 Using default value in non-interactive context: yes
-			🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
+			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 
+			? This deployment 3mEgaU1T will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback. Note: Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, R2, KV, etc.).
+			🤖 Using default value in non-interactive context: yes
 			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing
 			Current Deployment ID: galactic_mission_alpha"
 		`);
