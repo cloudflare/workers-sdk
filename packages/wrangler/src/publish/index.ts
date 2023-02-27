@@ -158,7 +158,7 @@ export function publishOptions(yargs: CommonYargsArgv) {
 				type: "boolean",
 			})
 			.option("node-compat", {
-				describe: "Enable node.js compatibility",
+				describe: "Enable Node.js compatibility",
 				type: "boolean",
 			})
 			.option("dry-run", {

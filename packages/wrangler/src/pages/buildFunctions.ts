@@ -30,7 +30,8 @@ export async function buildFunctions({
 	plugin = false,
 	buildOutputDirectory,
 	routesOutputPath,
-	nodeCompat,
+	legacyNodeCompat,
+	nodejsCompat,
 	local,
 	d1Databases,
 	experimentalWorkerBundle = false,
@@ -44,7 +45,6 @@ export async function buildFunctions({
 		| "watch"
 		| "plugin"
 		| "buildOutputDirectory"
-		| "nodeCompat"
 	>
 > & {
 	functionsDirectory: string;
@@ -54,6 +54,8 @@ export async function buildFunctions({
 	local: boolean;
 	d1Databases?: string[];
 	experimentalWorkerBundle?: boolean;
+	legacyNodeCompat?: boolean;
+	nodejsCompat?: boolean;
 }) {
 	RUNNING_BUILDERS.forEach(
 		(runningBuilder) => runningBuilder.stop && runningBuilder.stop()
@@ -101,7 +103,7 @@ export async function buildFunctions({
 			minify,
 			sourcemap,
 			watch,
-			nodeCompat,
+			legacyNodeCompat,
 			functionsDirectory: absoluteFunctionsDirectory,
 			local,
 			betaD1Shims: d1Databases,
@@ -120,7 +122,8 @@ export async function buildFunctions({
 			betaD1Shims: d1Databases,
 			onEnd,
 			buildOutputDirectory,
-			nodeCompat,
+			legacyNodeCompat,
+			nodejsCompat,
 			experimentalWorkerBundle,
 		});
 	}
