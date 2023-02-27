@@ -137,6 +137,11 @@ export async function publish({
 		isProduction = project.production_branch === branch;
 	}
 
+	const deploymentConfig =
+		project.deployment_configs[isProduction ? "production" : "preview"];
+	const nodejsCompat =
+		deploymentConfig.compatibility_flags?.includes("nodejs_compat");
+
 	/**
 	 * Evaluate if this is an Advanced Mode or Pages Functions project. If Advanced Mode, we'll
 	 * go ahead and upload `_worker.js` as is, but if Pages Functions, we need to attempt to build
@@ -176,6 +181,7 @@ export async function publish({
 				routesOutputPath,
 				local: false,
 				d1Databases,
+				nodejsCompat,
 				experimentalWorkerBundle,
 			});
 
@@ -261,6 +267,7 @@ export async function publish({
 				watch: false,
 				onEnd: () => {},
 				betaD1Shims: d1Databases,
+				nodejsCompat,
 				experimentalWorkerBundle,
 			});
 			workerFileContents = readFileSync(outfile, "utf8");

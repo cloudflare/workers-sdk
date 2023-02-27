@@ -31,6 +31,7 @@ export function useEsbuild({
 	tsconfig,
 	minify,
 	legacyNodeCompat,
+	nodejsCompat,
 	betaD1Shims,
 	define,
 	noBundle,
@@ -55,6 +56,7 @@ export function useEsbuild({
 	tsconfig: string | undefined;
 	minify: boolean | undefined;
 	legacyNodeCompat: boolean | undefined;
+	nodejsCompat: boolean | undefined;
 	betaD1Shims?: string[];
 	noBundle: boolean;
 	workerDefinitions: WorkerRegistry;
@@ -122,6 +124,7 @@ export function useEsbuild({
 						tsconfig,
 						minify,
 						legacyNodeCompat,
+						nodejsCompat,
 						betaD1Shims,
 						doBindings: durableObjects.bindings,
 						define,
@@ -189,6 +192,7 @@ export function useEsbuild({
 		noBundle,
 		minify,
 		legacyNodeCompat,
+		nodejsCompat,
 		define,
 		assets,
 		services,

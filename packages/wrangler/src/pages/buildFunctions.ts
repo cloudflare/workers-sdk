@@ -31,6 +31,7 @@ export async function buildFunctions({
 	buildOutputDirectory,
 	routesOutputPath,
 	legacyNodeCompat,
+	nodejsCompat,
 	local,
 	d1Databases,
 	experimentalWorkerBundle = false,
@@ -54,6 +55,7 @@ export async function buildFunctions({
 	d1Databases?: string[];
 	experimentalWorkerBundle?: boolean;
 	legacyNodeCompat?: boolean;
+	nodejsCompat?: boolean;
 }) {
 	RUNNING_BUILDERS.forEach(
 		(runningBuilder) => runningBuilder.stop && runningBuilder.stop()
@@ -121,6 +123,7 @@ export async function buildFunctions({
 			onEnd,
 			buildOutputDirectory,
 			legacyNodeCompat,
+			nodejsCompat,
 			experimentalWorkerBundle,
 		});
 	}

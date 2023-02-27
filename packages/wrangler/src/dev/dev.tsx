@@ -139,6 +139,7 @@ export type DevProps = {
 	usageModel: "bundled" | "unbound" | undefined;
 	minify: boolean | undefined;
 	legacyNodeCompat: boolean | undefined;
+	nodejsCompat: boolean | undefined;
 	build: Config["build"];
 	env: string | undefined;
 	legacyEnv: boolean;
@@ -279,6 +280,7 @@ function DevSession(props: DevSessionProps) {
 		tsconfig: props.tsconfig,
 		minify: props.minify,
 		legacyNodeCompat: props.legacyNodeCompat,
+		nodejsCompat: props.nodejsCompat,
 		betaD1Shims,
 		define: props.define,
 		noBundle: props.noBundle,

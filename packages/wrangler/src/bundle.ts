@@ -85,6 +85,15 @@ Add "node_compat = true" to your wrangler.toml file to enable Node compatibility
 	}
 }
 
+const nodejsCompatPlugin: esbuild.Plugin = {
+	name: "nodejs_compat Plugin",
+	setup(pluginBuild) {
+		pluginBuild.onResolve({ filter: /node:.*/ }, () => {
+			return { external: true };
+		});
+	},
+};
+
 /**
  * Generate a bundle for the worker identified by the arguments passed in.
  */
@@ -103,6 +112,7 @@ export async function bundleWorker(
 		tsconfig?: string;
 		minify?: boolean;
 		legacyNodeCompat?: boolean;
+		nodejsCompat?: boolean;
 		define: Config["define"];
 		checkFetch: boolean;
 		services?: Config["services"];
@@ -132,6 +142,7 @@ export async function bundleWorker(
 		tsconfig,
 		minify,
 		legacyNodeCompat,
+		nodejsCompat,
 		checkFetch,
 		local,
 		assets,
@@ -363,6 +374,7 @@ export async function bundleWorker(
 			...(legacyNodeCompat
 				? [NodeGlobalsPolyfills({ buffer: true }), NodeModulesPolyfills()]
 				: []),
+			...(nodejsCompat ? [nodejsCompatPlugin] : []),
 			...(plugins || []),
 		],
 		...(jsxFactory && { jsxFactory }),

@@ -1566,6 +1566,21 @@ describe("wrangler dev", () => {
 		`);
 		});
 	});
+
+	describe("`nodejs_compat` compatibility flag", () => {
+		it("should conflict with the --node-compat option", async () => {
+			writeWranglerToml();
+			fs.writeFileSync("index.js", `export default {};`);
+
+			await expect(
+				runWrangler(
+					"dev index.js --compatibility-flag=nodejs_compat --node-compat"
+				)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"The \`nodejs_compat\` compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file."`
+			);
+		});
+	});
 });
 
 function mockGetZones(domain: string, zones: { id: string }[] = []) {
