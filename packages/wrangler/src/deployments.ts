@@ -135,7 +135,7 @@ export async function rollbackDeployment(
 		}
 	);
 
-	const { deployment_id } = await fetchResult<{
+	let { deployment_id } = await fetchResult<{
 		deployment_id: string | null;
 	}>(
 		`/accounts/${accountId}/workers/scripts/${scriptName}?rollback_to=${deploymentId}`,
@@ -144,6 +144,9 @@ export async function rollbackDeployment(
 			headers: { "content-type": "application/javascript" },
 		}
 	);
+
+	deploymentId = addHyphens(deploymentId) ?? deploymentId;
+	deployment_id = addHyphens(deployment_id) ?? deployment_id;
 
 	logger.log(`Successfully rolled back to Deployment ID: ${deploymentId}`);
 	logger.log("Current Deployment ID:", deployment_id);
@@ -217,4 +220,26 @@ export async function commonDeploymentCMDSetup(
 	logger.log(`${deploymentsWarning}\n`);
 
 	return { accountId, scriptName, config };
+}
+
+export function addHyphens(uuid: string | null): string | null {
+	if (uuid == null) {
+		return uuid;
+	}
+
+	if (uuid.length != 32) {
+		return null;
+	}
+
+	let uuid_parts: string[] = [];
+	uuid_parts.push(uuid.slice(0, 8));
+	uuid_parts.push(uuid.slice(8, 12));
+	uuid_parts.push(uuid.slice(12, 16));
+	uuid_parts.push(uuid.slice(16, 20));
+	uuid_parts.push(uuid.slice(20));
+
+	let hyphenated = "";
+	uuid_parts.forEach((part) => (hyphenated += part + "-"));
+
+	return hyphenated.slice(0, 36);
 }
