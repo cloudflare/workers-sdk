@@ -109,7 +109,7 @@ export const Handler = async ({
 	watch,
 	plugin,
 	buildOutputDirectory,
-	nodeCompat,
+	nodeCompat: legacyNodeCompat,
 	bindings,
 	experimentalWorkerBundle,
 }: PagesBuildArgs) => {
@@ -118,7 +118,7 @@ export const Handler = async ({
 		logger.log(pagesBetaWarning);
 	}
 
-	if (nodeCompat) {
+	if (legacyNodeCompat) {
 		console.warn(
 			"Enabling Node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
 		);
@@ -199,7 +199,7 @@ We first looked inside the build output directory (${basename(
 				watch,
 				plugin,
 				buildOutputDirectory,
-				nodeCompat,
+				legacyNodeCompat,
 				routesOutputPath,
 				local: false,
 				d1Databases,

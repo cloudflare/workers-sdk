@@ -339,8 +339,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const minify = props.minify ?? config.minify;
 
-	const nodeCompat = props.nodeCompat ?? config.node_compat;
-	if (nodeCompat) {
+	const legacyNodeCompat = props.nodeCompat ?? config.node_compat;
+	if (legacyNodeCompat) {
 		logger.warn(
 			"Enabling Node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
 		);
@@ -353,7 +353,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	}
 
-	if (props.noBundle && nodeCompat) {
+	if (props.noBundle && legacyNodeCompat) {
 		logger.warn(
 			"`--node-compat` and `--no-bundle` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process."
 		);
@@ -478,7 +478,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						rules: props.rules,
 						tsconfig: props.tsconfig ?? config.tsconfig,
 						minify,
-						nodeCompat,
+						legacyNodeCompat,
 						define: { ...config.define, ...props.defines },
 						checkFetch: false,
 						assets: config.assets && {

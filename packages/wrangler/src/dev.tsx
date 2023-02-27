@@ -388,7 +388,7 @@ export async function startDev(args: StartDevOptions) {
 
 		const {
 			entry,
-			nodeCompat,
+			legacyNodeCompat,
 			upstreamProtocol,
 			zoneId,
 			host,
@@ -427,7 +427,7 @@ export async function startDev(args: StartDevOptions) {
 					rules={getRules(configParam)}
 					legacyEnv={isLegacyEnv(configParam)}
 					minify={args.minify ?? configParam.minify}
-					nodeCompat={nodeCompat}
+					legacyNodeCompat={legacyNodeCompat}
 					build={configParam.build || {}}
 					define={{ ...configParam.define, ...cliDefines }}
 					initialMode={
@@ -523,7 +523,7 @@ export async function startApiDev(args: StartDevOptions) {
 
 	const {
 		entry,
-		nodeCompat,
+		legacyNodeCompat,
 		upstreamProtocol,
 		zoneId,
 		host,
@@ -562,7 +562,7 @@ export async function startApiDev(args: StartDevOptions) {
 			rules: getRules(configParam),
 			legacyEnv: isLegacyEnv(configParam),
 			minify: args.minify ?? configParam.minify,
-			nodeCompat: nodeCompat,
+			legacyNodeCompat,
 			build: configParam.build || {},
 			define: { ...config.define, ...cliDefines },
 			initialMode: args.local ? "local" : "remote",
@@ -742,8 +742,8 @@ async function validateDevServerSettings(
 				"https://github.com/cloudflare/workers-sdk/issues/583."
 		);
 	}
-	const nodeCompat = args.nodeCompat ?? config.node_compat;
-	if (nodeCompat) {
+	const legacyNodeCompat = args.nodeCompat ?? config.node_compat;
+	if (legacyNodeCompat) {
 		logger.warn(
 			"Enabling Node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
 		);
@@ -768,7 +768,7 @@ async function validateDevServerSettings(
 	return {
 		entry,
 		upstreamProtocol,
-		nodeCompat,
+		legacyNodeCompat,
 		getLocalPort,
 		getInspectorPort,
 		zoneId,

@@ -30,7 +30,7 @@ export function useEsbuild({
 	serveAssetsFromWorker,
 	tsconfig,
 	minify,
-	nodeCompat,
+	legacyNodeCompat,
 	betaD1Shims,
 	define,
 	noBundle,
@@ -54,7 +54,7 @@ export function useEsbuild({
 	serveAssetsFromWorker: boolean;
 	tsconfig: string | undefined;
 	minify: boolean | undefined;
-	nodeCompat: boolean | undefined;
+	legacyNodeCompat: boolean | undefined;
 	betaD1Shims?: string[];
 	noBundle: boolean;
 	workerDefinitions: WorkerRegistry;
@@ -85,7 +85,7 @@ export function useEsbuild({
 		const watchMode: WatchMode = {
 			async onRebuild(error) {
 				if (error !== null) {
-					if (!nodeCompat) rewriteNodeCompatBuildFailure(error);
+					if (!legacyNodeCompat) rewriteNodeCompatBuildFailure(error);
 					logBuildFailure(error);
 					logger.error("Watch build failed:", error.message);
 				} else {
@@ -121,7 +121,7 @@ export function useEsbuild({
 						watch: watchMode,
 						tsconfig,
 						minify,
-						nodeCompat,
+						legacyNodeCompat,
 						betaD1Shims,
 						doBindings: durableObjects.bindings,
 						define,
@@ -188,7 +188,7 @@ export function useEsbuild({
 		exit,
 		noBundle,
 		minify,
-		nodeCompat,
+		legacyNodeCompat,
 		define,
 		assets,
 		services,

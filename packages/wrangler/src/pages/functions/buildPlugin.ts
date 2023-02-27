@@ -15,7 +15,7 @@ export function buildPlugin({
 	sourcemap = false,
 	watch = false,
 	onEnd = () => {},
-	nodeCompat,
+	legacyNodeCompat,
 	functionsDirectory,
 	local,
 	betaD1Shims,
@@ -32,7 +32,7 @@ export function buildPlugin({
 			minify,
 			sourcemap,
 			watch,
-			nodeCompat,
+			legacyNodeCompat,
 			define: {},
 			betaD1Shims: (betaD1Shims || []).map(
 				(binding) => `${D1_BETA_PREFIX}${binding}`

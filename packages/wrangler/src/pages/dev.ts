@@ -193,7 +193,7 @@ export const Handler = async ({
 	experimentalEnableLocalPersistence,
 	persist,
 	persistTo,
-	nodeCompat,
+	nodeCompat: legacyNodeCompat,
 	experimentalLocal,
 	config: config,
 	_: [_pages, _dev, ...remaining],
@@ -313,7 +313,7 @@ export const Handler = async ({
 		// Try to use Functions
 		scriptPath = join(tmpdir(), `./functionsWorker-${Math.random()}.mjs`);
 
-		if (nodeCompat) {
+		if (legacyNodeCompat) {
 			console.warn(
 				"Enabling Node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
 			);
@@ -330,7 +330,7 @@ export const Handler = async ({
 					watch: true,
 					onEnd,
 					buildOutputDirectory: directory,
-					nodeCompat,
+					legacyNodeCompat,
 					local: true,
 					experimentalWorkerBundle,
 				});
@@ -503,7 +503,7 @@ export const Handler = async ({
 		localProtocol,
 		compatibilityDate,
 		compatibilityFlags,
-		nodeCompat,
+		nodeCompat: legacyNodeCompat,
 		vars: Object.fromEntries(
 			bindings
 				.map((binding) => binding.toString().split("="))
