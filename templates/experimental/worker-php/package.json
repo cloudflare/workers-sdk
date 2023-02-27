@@ -1,0 +1,22 @@
+{
+	"name": "hello-php-workers",
+	"version": "1.0.0",
+	"private": true,
+	"description": "PHP hello world for Cloudflare Workers",
+	"license": "MIT",
+	"author": "Cody Koeninger <ckoeninger@cloudflare.com>",
+	"main": "index.js",
+	"scripts": {
+		"build": "babel index.php -o index.js",
+		"format": "prettier --write '**/*.{js,css,json,md}'",
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"dependencies": {
+		"babel-preset-php": "^2.0.0"
+	},
+	"devDependencies": {
+		"@babel/cli": "^7.8.4",
+		"@babel/core": "^7.8.4",
+		"prettier": "^1.18.2"
+	}
+}

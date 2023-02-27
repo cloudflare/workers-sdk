@@ -1,0 +1,13 @@
+{
+	"name": "worker-fsharp",
+	"version": "0.0.1",
+	"private": true,
+	"description": "Fable 'Hello World' using CloudFlare Workers",
+	"repository": "https://github.com/fable-compiler/cfworker-hello-world",
+	"license": "MIT",
+	"author": "Joerg Beekmann",
+	"dependencies": {},
+	"devDependencies": {
+		"webpack": "^4.39.3"
+	}
+}

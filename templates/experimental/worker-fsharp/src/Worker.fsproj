@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="CloudflareWorkers.fs" />
+    <Compile Include="FetchUtils.fs" />
+    <Compile Include="Worker.fs" />
+  </ItemGroup>
+  <!-- Newest stable versions at time of writing -->
+  <ItemGroup>
+    <PackageReference Include="Fable.Core" Version="3.1.6" />
+    <PackageReference Include="Fable.Browser.Event" Version="1.2.1" />
+    <PackageReference Include="Fable.Fetch" Version="2.2.0" />
+    <PackageReference Include="Fable.Node" Version="1.0.2" />
+  </ItemGroup>
+</Project>
