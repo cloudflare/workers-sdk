@@ -416,6 +416,7 @@ export async function startLocalServer({
 				log,
 				kvNamespaces: bindings?.kv_namespaces,
 				r2Buckets: bindings?.r2_buckets,
+				d1Databases: bindings?.d1_databases,
 				authenticatedAccountId: accountId,
 				kvRemote: experimentalLocalRemoteKv,
 				inspectorPort,

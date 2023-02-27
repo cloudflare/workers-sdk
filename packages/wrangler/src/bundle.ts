@@ -288,7 +288,7 @@ export async function bundleWorker(
 					currentEntry,
 					tmpDir.path,
 					betaD1Shims,
-					local,
+					local && !experimentalLocal,
 					doBindings
 				);
 			}),
@@ -816,7 +816,7 @@ async function applyD1BetaFacade(
 	entry: Entry,
 	tmpDirPath: string,
 	betaD1Shims: string[],
-	local: boolean,
+	miniflare2: boolean,
 	doBindings: DurableObjectBindings
 ): Promise<Entry> {
 	let entrypointPath = path.resolve(
@@ -867,7 +867,7 @@ async function applyD1BetaFacade(
 		],
 		define: {
 			__D1_IMPORTS__: JSON.stringify(betaD1Shims),
-			__LOCAL_MODE__: JSON.stringify(local),
+			__LOCAL_MODE__: JSON.stringify(miniflare2),
 		},
 		outfile: targetPath,
 	});

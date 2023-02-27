@@ -11,7 +11,7 @@ var D1Database = class {
 		return new D1PreparedStatement(this, query);
 	}
 	async dump() {
-		const response = await this.binding.fetch("/dump", {
+		const response = await this.binding.fetch("http://d1/dump", {
 			method: "POST",
 			headers: {
 				"content-type": "application/json",
@@ -79,7 +79,7 @@ var D1Database = class {
 						params,
 				  }
 		);
-		const response = await this.binding.fetch(endpoint, {
+		const response = await this.binding.fetch(new URL(endpoint, "http://d1"), {
 			method: "POST",
 			headers: {
 				"content-type": "application/json",
