@@ -145,6 +145,7 @@ export const SCRIPT_ENTRY = `async function handleEvent(event) {
     redirect: event.request.redirect,
     body: event.request.body,
   });
+  request.headers.delete("${HEADER_ORIGINAL_URL}");
 
   if (globalThis.${BINDING_SERVICE_USER} === undefined) {
     return new Response("No entrypoint worker found", { status: 404 });
