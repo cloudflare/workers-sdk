@@ -255,10 +255,10 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		});
 	}
 
-	if (unsafe !== undefined && unsafe.length > 0) {
+	if (unsafe?.bindings !== undefined && unsafe.bindings.length > 0) {
 		output.push({
 			type: "Unsafe",
-			entries: unsafe.map(({ name, type }) => ({
+			entries: unsafe.bindings.map(({ name, type }) => ({
 				key: type,
 				value: name,
 			})),
@@ -316,6 +316,16 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 					value: certificate_id,
 				};
 			}),
+		});
+	}
+
+	if (unsafe?.metadata !== undefined) {
+		output.push({
+			type: "Unsafe Metadata",
+			entries: Object.entries(unsafe.metadata).map(([key, value]) => ({
+				key,
+				value: `${value}`,
+			})),
 		});
 	}
 

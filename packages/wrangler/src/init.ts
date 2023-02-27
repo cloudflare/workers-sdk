@@ -964,6 +964,7 @@ async function getWorkerConfig(
 					if (!(binding as any)?.type) break;
 					configObj.unsafe = {
 						bindings: [...(configObj.unsafe?.bindings ?? []), binding],
+						metadata: configObj.unsafe?.metadata ?? undefined,
 					};
 				}
 			}

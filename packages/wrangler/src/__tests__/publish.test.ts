@@ -4559,6 +4559,10 @@ addEventListener('fetch', event => {});`
 							data: 1337,
 						},
 					],
+					metadata: {
+						extra_data: "interesting value",
+						more_data: "dubious value",
+					},
 				},
 				vars: {
 					ENV_VAR_ONE: 123,
@@ -4603,6 +4607,10 @@ addEventListener('fetch', event => {});`
 
 			mockUploadWorkerRequest({
 				expectedType: "sw",
+				expectedUnsafeMetaData: {
+					extra_data: "interesting value",
+					more_data: "dubious value",
+				},
 				expectedBindings: [
 					{ json: 123, name: "ENV_VAR_ONE", type: "json" },
 					{
@@ -4726,6 +4734,9 @@ addEventListener('fetch', event => {});`
 			- Wasm Modules:
 			  - WASM_MODULE_ONE: some_wasm.wasm
 			  - WASM_MODULE_TWO: more_wasm.wasm
+			- Unsafe Metadata:
+			  - extra_data: interesting value
+			  - more_data: dubious value
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
@@ -4794,6 +4805,7 @@ addEventListener('fetch', event => {});`
 							data: 1337,
 						},
 					],
+					metadata: undefined,
 				},
 				vars: {
 					ENV_VAR_ONE: 123,
@@ -4907,6 +4919,7 @@ addEventListener('fetch', event => {});`
 							data: 1337,
 						},
 					],
+					metadata: undefined,
 				},
 				// text_blobs, vars, wasm_modules and data_blobs are fine because they're object literals,
 				// and by definition cannot have two keys of the same name
@@ -5055,6 +5068,7 @@ addEventListener('fetch', event => {});`
 							data: null,
 						},
 					],
+					metadata: undefined,
 				},
 				vars: {
 					ENV_VAR_ONE: 123,
@@ -5992,6 +6006,7 @@ addEventListener('fetch', event => {});`
 								param: "binding-param",
 							},
 						],
+						metadata: undefined,
 					},
 				});
 				writeWorkerSource();
@@ -6036,6 +6051,7 @@ addEventListener('fetch', event => {});`
 								text: "text",
 							},
 						],
+						metadata: undefined,
 					},
 				});
 				writeWorkerSource();
@@ -7547,6 +7563,7 @@ function mockUploadWorkerRequest(
 		expectedCompatibilityDate?: string;
 		expectedCompatibilityFlags?: string[];
 		expectedMigrations?: CfWorkerInit["migrations"];
+		expectedUnsafeMetaData?: Record<string, string>;
 		env?: string;
 		legacyEnv?: boolean;
 		sendScriptIds?: boolean;
@@ -7566,6 +7583,7 @@ function mockUploadWorkerRequest(
 		env = undefined,
 		legacyEnv = false,
 		expectedMigrations,
+		expectedUnsafeMetaData,
 		sendScriptIds,
 		keepVars,
 	} = options;
@@ -7634,6 +7652,11 @@ function mockUploadWorkerRequest(
 		}
 		if ("expectedMigrations" in options) {
 			expect(metadata.migrations).toEqual(expectedMigrations);
+		}
+		if (expectedUnsafeMetaData !== undefined) {
+			Object.keys(expectedUnsafeMetaData).forEach((key) => {
+				expect(metadata[key]).toEqual(expectedUnsafeMetaData[key]);
+			});
 		}
 		for (const [name, content] of Object.entries(expectedModules)) {
 			expect(formBody.get(name)).toEqual(content);
