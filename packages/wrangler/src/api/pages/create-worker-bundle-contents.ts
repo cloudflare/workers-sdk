@@ -70,6 +70,7 @@ function createWorkerBundleFormData(workerBundle: BundleResult): FormData {
 		usage_model: undefined,
 		keepVars: undefined,
 		logpush: undefined,
+		placement: undefined,
 	};
 
 	return createWorkerUploadForm(worker);

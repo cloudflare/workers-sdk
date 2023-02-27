@@ -265,6 +265,13 @@ interface EnvironmentInheritable {
 	 * @inheritable
 	 */
 	logpush: boolean | undefined;
+
+	/**
+	 * Specify how the worker should be located to minimize round-trip time.
+	 *
+	 * More details: https://developers.cloudflare.com/workers/platform/smart-placement/
+	 */
+	placement: { mode?: "off" | "smart" } | undefined;
 }
 
 export type DurableObjectBindings = {

@@ -4,6 +4,7 @@ import type {
 	CfWorkerInit,
 	CfModuleType,
 	CfDurableObjectMigrations,
+	CfPlacement,
 } from "./worker.js";
 
 export function toMimeType(type: CfModuleType): string {
@@ -71,6 +72,7 @@ export interface WorkerMetadata {
 	bindings: WorkerMetadataBinding[];
 	keep_bindings?: WorkerMetadataBinding["type"][];
 	logpush?: boolean;
+	placement?: CfPlacement;
 	// Allow unsafe.metadata to add arbitary properties at runtime
 	[key: string]: unknown;
 }
@@ -89,6 +91,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		compatibility_flags,
 		keepVars,
 		logpush,
+		placement,
 	} = worker;
 
 	let { modules } = worker;
@@ -320,6 +323,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		capnp_schema: bindings.logfwdr?.schema,
 		...(keepVars && { keep_bindings: ["plain_text", "json"] }),
 		...(logpush !== undefined && { logpush }),
+		...(placement && { placement }),
 	};
 
 	if (bindings.unsafe?.metadata !== undefined) {

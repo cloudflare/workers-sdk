@@ -35,7 +35,7 @@ import type {
 import type { Entry } from "../entry";
 import type { PutConsumerBody } from "../queues/client";
 import type { AssetPaths } from "../sites";
-import type { CfWorkerInit } from "../worker";
+import type { CfWorkerInit, CfPlacement } from "../worker";
 
 type Props = {
 	config: Config;
@@ -571,6 +571,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			});
 		}
 
+		// The upload api doesn't accept off as a valid mode, instead it treats an empty string as off.
+		const placement: CfPlacement | undefined = config.placement
+			? { mode: config.placement.mode === "off" ? "" : config.placement.mode }
+			: undefined;
+
 		const worker: CfWorkerInit = {
 			name: scriptName,
 			main: {
@@ -586,6 +591,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			usage_model: config.usage_model,
 			keepVars,
 			logpush: props.logpush !== undefined ? props.logpush : config.logpush,
+			placement,
 		};
 
 		// As this is not deterministic for testing, we detect if in a jest environment and run asynchronously

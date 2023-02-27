@@ -84,6 +84,7 @@ describe("normalizeAndValidateConfig()", () => {
 			first_party_worker: undefined,
 			keep_vars: undefined,
 			logpush: undefined,
+			placement: undefined,
 		});
 		expect(diagnostics.hasErrors()).toBe(false);
 		expect(diagnostics.hasWarnings()).toBe(false);
@@ -955,6 +956,9 @@ describe("normalizeAndValidateConfig()", () => {
 				node_compat: true,
 				first_party_worker: true,
 				logpush: true,
+				placement: {
+					mode: "smart",
+				},
 			};
 
 			const { config, diagnostics } = normalizeAndValidateConfig(
@@ -1030,6 +1034,9 @@ describe("normalizeAndValidateConfig()", () => {
 				node_compat: "INVALID",
 				first_party_worker: "INVALID",
 				logpush: "INVALID",
+				placement: {
+					mode: "INVALID",
+				},
 			} as unknown as RawEnvironment;
 
 			const { config, diagnostics } = normalizeAndValidateConfig(
@@ -1093,6 +1100,7 @@ describe("normalizeAndValidateConfig()", () => {
 			  - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got 111.
 			  - Expected \\"main\\" to be of type string but got 1333.
 			  - Expected \\"usage_model\\" field to be one of [\\"bundled\\",\\"unbound\\"] but got \\"INVALID\\".
+			  - Expected \\"placement.mode\\" field to be one of [\\"off\\",\\"smart\\"] but got \\"INVALID\\".
 			  - The field \\"define.DEF1\\" should be a string but got 1777.
 			  - Expected \\"no_bundle\\" to be of type boolean but got \\"INVALID\\".
 			  - Expected \\"minify\\" to be of type boolean but got \\"INVALID\\".

@@ -873,6 +873,28 @@ function validateRoutes(
 	);
 }
 
+function normalizeAndValidatePlacement(
+	diagnostics: Diagnostics,
+	topLevelEnv: Environment | undefined,
+	rawEnv: RawEnvironment
+): Config["placement"] {
+	const { mode } = rawEnv.placement ?? {};
+
+	validateOptionalProperty(diagnostics, "placement", "mode", mode, "string", [
+		"off",
+		"smart",
+	]);
+
+	return inheritable(
+		diagnostics,
+		topLevelEnv,
+		rawEnv,
+		"placement",
+		() => true,
+		undefined
+	);
+}
+
 /**
  * Validate top-level environment configuration and return the normalized values.
  */
@@ -1060,6 +1082,7 @@ function normalizeAndValidateEnvironment(
 			isOneOf("bundled", "unbound"),
 			undefined
 		),
+		placement: normalizeAndValidatePlacement(diagnostics, topLevelEnv, rawEnv),
 		build,
 		workers_dev,
 		// Not inherited fields
