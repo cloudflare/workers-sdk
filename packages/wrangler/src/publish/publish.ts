@@ -22,6 +22,7 @@ import { getWorkersDevSubdomain } from "../routes";
 import { syncAssets } from "../sites";
 import { identifyD1BindingsAsBeta } from "../worker";
 import { getZoneForRoute } from "../zones";
+import { addHyphens } from "../deployments";
 import type { FetchError } from "../cfetch";
 import type { Config } from "../config";
 import type {
@@ -645,7 +646,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				);
 
 				available_on_subdomain = result.available_on_subdomain;
-				deploymentId = result.deployment_id;
+				deploymentId = addHyphens(result.deployment_id) ?? result.deployment_id;
 
 				if (config.first_party_worker) {
 					// Print some useful information returned after publishing
