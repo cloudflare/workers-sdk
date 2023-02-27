@@ -567,7 +567,7 @@ export function createCLIParser(argv: string[]) {
 				analytics_engine_datasets: config.analytics_engine_datasets,
 				dispatch_namespaces: config.dispatch_namespaces,
 				logfwdr: config.logfwdr,
-				unsafe: { bindings: config.unsafe?.bindings },
+				unsafe: config.unsafe,
 				rules: config.rules,
 				queues: config.queues,
 			};

@@ -1162,10 +1162,8 @@ function normalizeAndValidateEnvironment(
 			rawEnv,
 			envName,
 			"unsafe",
-			validateBindingsProperty(envName, validateUnsafeBinding),
-			{
-				bindings: [],
-			}
+			validateUnsafeSettings(envName),
+			{}
 		),
 		zone_id: rawEnv.zone_id,
 		no_bundle: inheritable(
@@ -1493,6 +1491,62 @@ const validateBindingsProperty =
 			}
 		}
 		return isValid;
+	};
+
+const validateUnsafeSettings =
+	(envName: string): ValidatorFn =>
+	(diagnostics, field, value, config) => {
+		const fieldPath =
+			config === undefined ? `${field}` : `env.${envName}.${field}`;
+
+		if (typeof value !== "object" || value === null || Array.isArray(value)) {
+			diagnostics.errors.push(
+				`The field "${fieldPath}" should be an object but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			return false;
+		}
+
+		// At least one of bindings and metadata must exist
+		if (!hasProperty(value, "bindings") && !hasProperty(value, "metadata")) {
+			diagnostics.errors.push(
+				`The field "${fieldPath}" should contain at least one of "bindings" or "metadata" properties but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			return false;
+		}
+
+		// unsafe.bindings
+		if (hasProperty(value, "bindings") && value.bindings !== undefined) {
+			const validateBindingsFn = validateBindingsProperty(
+				envName,
+				validateUnsafeBinding
+			);
+			const valid = validateBindingsFn(diagnostics, field, value, config);
+			if (!valid) {
+				return false;
+			}
+		}
+
+		// unsafe.metadata
+		if (
+			hasProperty(value, "metadata") &&
+			value.metadata !== undefined &&
+			(typeof value.metadata !== "object" ||
+				value.metadata === null ||
+				Array.isArray(value.metadata))
+		) {
+			diagnostics.errors.push(
+				`The field "${fieldPath}.metadata" should be an object but got ${JSON.stringify(
+					value.metadata
+				)}.`
+			);
+			return false;
+		}
+
+		return true;
 	};
 
 /**
