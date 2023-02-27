@@ -99,7 +99,8 @@ export async function startDevServer(
 			),
 			tsconfig: props.tsconfig,
 			minify: props.minify,
-			nodeCompat: props.nodeCompat,
+			legacyNodeCompat: props.legacyNodeCompat,
+			nodejsCompat: props.nodejsCompat,
 			define: props.define,
 			noBundle: props.noBundle,
 			assets: props.assetsConfig,
@@ -211,7 +212,8 @@ async function runEsbuild({
 	serveAssetsFromWorker,
 	tsconfig,
 	minify,
-	nodeCompat,
+	legacyNodeCompat,
+	nodejsCompat,
 	define,
 	noBundle,
 	workerDefinitions,
@@ -234,7 +236,8 @@ async function runEsbuild({
 	serveAssetsFromWorker: boolean;
 	tsconfig: string | undefined;
 	minify: boolean | undefined;
-	nodeCompat: boolean | undefined;
+	legacyNodeCompat: boolean | undefined;
+	nodejsCompat: boolean | undefined;
 	noBundle: boolean;
 	workerDefinitions: WorkerRegistry;
 	firstPartyWorkerDevFacade: boolean | undefined;
@@ -260,7 +263,8 @@ async function runEsbuild({
 				rules,
 				tsconfig,
 				minify,
-				nodeCompat,
+				legacyNodeCompat,
+				nodejsCompat,
 				define,
 				checkFetch: true,
 				assets: assets && {
@@ -406,6 +410,7 @@ export async function startLocalServer({
 				log,
 				kvNamespaces: bindings?.kv_namespaces,
 				r2Buckets: bindings?.r2_buckets,
+				d1Databases: bindings?.d1_databases,
 				authenticatedAccountId: accountId,
 				kvRemote: experimentalLocalRemoteKv,
 				inspectorPort,

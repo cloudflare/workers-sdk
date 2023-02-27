@@ -231,6 +231,7 @@ function useLocalWorker({
 					enablePagesAssetsServiceBinding,
 					kvNamespaces: bindings?.kv_namespaces,
 					r2Buckets: bindings?.r2_buckets,
+					d1Databases: bindings?.d1_databases,
 					authenticatedAccountId: accountId,
 					kvRemote: experimentalLocalRemoteKv,
 					inspectorPort: runtimeInspectorPort,
@@ -776,6 +777,7 @@ export interface SetupMiniflare3Options {
 	// we need actual namespace IDs to connect to.
 	kvNamespaces: CfKvNamespace[] | undefined;
 	r2Buckets: CfR2Bucket[] | undefined;
+	d1Databases: CfD1Database[] | undefined;
 
 	// Account ID to use for authenticated Cloudflare fetch. If true, prompt
 	// user for ID if multiple available.
@@ -809,6 +811,7 @@ export async function transformMf2OptionsToMf3Options({
 	enablePagesAssetsServiceBinding,
 	kvNamespaces,
 	r2Buckets,
+	d1Databases,
 	authenticatedAccountId,
 	kvRemote,
 	inspectorPort,
@@ -835,6 +838,12 @@ export async function transformMf2OptionsToMf3Options({
 		),
 		r2Buckets: Object.fromEntries(
 			r2Buckets?.map(({ binding, bucket_name }) => [binding, bucket_name]) ?? []
+		),
+		d1Databases: Object.fromEntries(
+			d1Databases?.map(({ binding, database_id, preview_database_id }) => [
+				binding,
+				preview_database_id ?? database_id,
+			]) ?? []
 		),
 		inspectorPort,
 		verbose: true,
@@ -918,5 +927,5 @@ export async function getMiniflare3(): Promise<
 	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 	typeof import("@miniflare/tre")
 > {
-	return (miniflare3Module ??= await npxImport("@miniflare/tre@3.0.0-next.10"));
+	return (miniflare3Module ??= await npxImport("@miniflare/tre@3.0.0-next.12"));
 }

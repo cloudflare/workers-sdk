@@ -229,7 +229,7 @@ export function devOptions(yargs: CommonYargsArgv) {
 				type: "boolean",
 			})
 			.option("node-compat", {
-				describe: "Enable node.js compatibility",
+				describe: "Enable Node.js compatibility",
 				type: "boolean",
 			})
 			.option("experimental-enable-local-persistence", {
@@ -388,7 +388,8 @@ export async function startDev(args: StartDevOptions) {
 
 		const {
 			entry,
-			nodeCompat,
+			legacyNodeCompat,
+			nodejsCompat,
 			upstreamProtocol,
 			zoneId,
 			host,
@@ -427,7 +428,8 @@ export async function startDev(args: StartDevOptions) {
 					rules={getRules(configParam)}
 					legacyEnv={isLegacyEnv(configParam)}
 					minify={args.minify ?? configParam.minify}
-					nodeCompat={nodeCompat}
+					legacyNodeCompat={legacyNodeCompat}
+					nodejsCompat={nodejsCompat}
 					build={configParam.build || {}}
 					define={{ ...configParam.define, ...cliDefines }}
 					initialMode={
@@ -523,7 +525,8 @@ export async function startApiDev(args: StartDevOptions) {
 
 	const {
 		entry,
-		nodeCompat,
+		legacyNodeCompat,
+		nodejsCompat,
 		upstreamProtocol,
 		zoneId,
 		host,
@@ -562,7 +565,8 @@ export async function startApiDev(args: StartDevOptions) {
 			rules: getRules(configParam),
 			legacyEnv: isLegacyEnv(configParam),
 			minify: args.minify ?? configParam.minify,
-			nodeCompat: nodeCompat,
+			legacyNodeCompat,
+			nodejsCompat,
 			build: configParam.build || {},
 			define: { ...config.define, ...cliDefines },
 			initialMode: args.local ? "local" : "remote",
@@ -742,10 +746,19 @@ async function validateDevServerSettings(
 				"https://github.com/cloudflare/workers-sdk/issues/583."
 		);
 	}
-	const nodeCompat = args.nodeCompat ?? config.node_compat;
-	if (nodeCompat) {
+	const legacyNodeCompat = args.nodeCompat ?? config.node_compat;
+	if (legacyNodeCompat) {
 		logger.warn(
-			"Enabling node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
+			"Enabling Node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
+		);
+	}
+
+	const compatibilityFlags =
+		args.compatibilityFlags ?? config.compatibility_flags;
+	const nodejsCompat = compatibilityFlags?.includes("nodejs_compat");
+	if (legacyNodeCompat && nodejsCompat) {
+		throw new Error(
+			"The `nodejs_compat` compatibility flag cannot be used in conjunction with the legacy `--node-compat` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the `--node-compat` argument from your CLI command or `node_compat = true` from your config file."
 		);
 	}
 
@@ -768,7 +781,8 @@ async function validateDevServerSettings(
 	return {
 		entry,
 		upstreamProtocol,
-		nodeCompat,
+		legacyNodeCompat,
+		nodejsCompat,
 		getLocalPort,
 		getInspectorPort,
 		zoneId,
