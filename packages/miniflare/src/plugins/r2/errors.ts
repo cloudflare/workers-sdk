@@ -14,6 +14,7 @@ enum CfCode {
 	InternalError = 10001,
 	NoSuchObjectKey = 10007,
 	EntityTooLarge = 100100,
+	MetadataTooLarge = 10012,
 	InvalidObjectName = 10020,
 	InvalidMaxKeys = 10022,
 	InvalidArgument = 10029,
@@ -109,6 +110,16 @@ export class EntityTooLarge extends R2Error {
 			Status.BadRequest,
 			"Your proposed upload exceeds the maximum allowed object size.",
 			CfCode.EntityTooLarge
+		);
+	}
+}
+
+export class MetadataTooLarge extends R2Error {
+	constructor() {
+		super(
+			Status.BadRequest,
+			"Your metadata headers exceed the maximum allowed metadata size.",
+			CfCode.MetadataTooLarge
 		);
 	}
 }

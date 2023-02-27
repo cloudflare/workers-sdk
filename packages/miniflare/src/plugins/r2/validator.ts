@@ -5,6 +5,7 @@ import {
 	EntityTooLarge,
 	InvalidMaxKeys,
 	InvalidObjectName,
+	MetadataTooLarge,
 	PreconditionFailed,
 } from "./errors";
 import { R2Object, R2ObjectMetadata } from "./r2Object";
@@ -12,7 +13,9 @@ import { R2Conditional } from "./schemas";
 
 export const MAX_LIST_KEYS = 1_000;
 const MAX_KEY_SIZE = 1024;
-const MAX_VALUE_SIZE = 5 * 1_000 * 1_000 * 1_000 - 5 * 1_000 * 1_000;
+// https://developers.cloudflare.com/r2/platform/limits/
+const MAX_VALUE_SIZE = 5_000_000_000 - 5_000_000; // 5GB - 5MB
+const MAX_METADATA_SIZE = 2048; // 2048B
 
 function identity(ms: number) {
 	return ms;
@@ -67,6 +70,14 @@ export type R2Hashes = Record<
 	Buffer | undefined
 >;
 
+function serialisedLength(x: string) {
+	//  Adapted from internal R2 gateway implementation
+	for (let i = 0; i < x.length; i++) {
+		if (x.charCodeAt(i) >= 256) return x.length * 2;
+	}
+	return x.length;
+}
+
 export class Validator {
 	hash(value: Uint8Array, hashes: R2Hashes): R2StringChecksums {
 		const checksums: R2StringChecksums = {};
@@ -95,9 +106,20 @@ export class Validator {
 	}
 
 	size(value: Uint8Array): Validator {
-		// TODO: should we be validating httpMetadata/customMetadata size too
 		if (value.byteLength > MAX_VALUE_SIZE) {
 			throw new EntityTooLarge();
+		}
+		return this;
+	}
+
+	metadataSize(customMetadata?: Record<string, string>): Validator {
+		if (customMetadata === undefined) return this;
+		let metadataLength = 0;
+		for (const [key, value] of Object.entries(customMetadata)) {
+			metadataLength += serialisedLength(key) + serialisedLength(value);
+		}
+		if (metadataLength > MAX_METADATA_SIZE) {
+			throw new MetadataTooLarge();
 		}
 		return this;
 	}
