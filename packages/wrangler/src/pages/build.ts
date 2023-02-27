@@ -75,10 +75,22 @@ export function Options(yargs: CommonYargsArgv) {
 				description: "The directory to output static assets to",
 			},
 			"node-compat": {
-				describe: "Enable node.js compatibility",
+				describe: "Enable Node.js compatibility",
 				default: false,
 				type: "boolean",
 				hidden: true,
+			},
+			"compatibility-date": {
+				describe: "Date to use for compatibility checks",
+				type: "string",
+				requiresArg: true,
+			},
+			"compatibility-flags": {
+				describe: "Flags to use for compatibility checks",
+				alias: "compatibility-flag",
+				type: "string",
+				requiresArg: true,
+				array: true,
 			},
 			bindings: {
 				type: "string",
@@ -109,7 +121,8 @@ export const Handler = async ({
 	watch,
 	plugin,
 	buildOutputDirectory,
-	nodeCompat,
+	nodeCompat: legacyNodeCompat,
+	compatibilityFlags,
 	bindings,
 	experimentalWorkerBundle,
 }: PagesBuildArgs) => {
@@ -118,9 +131,15 @@ export const Handler = async ({
 		logger.log(pagesBetaWarning);
 	}
 
-	if (nodeCompat) {
+	if (legacyNodeCompat) {
 		console.warn(
-			"Enabling node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
+			"Enabling Node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
+		);
+	}
+	const nodejsCompat = compatibilityFlags?.includes("nodejs_compat");
+	if (legacyNodeCompat && nodejsCompat) {
+		throw new Error(
+			"The `nodejs_compat` compatibility flag cannot be used in conjunction with the legacy `--node-compat` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the `--node-compat` argument from your CLI command."
 		);
 	}
 
@@ -199,7 +218,8 @@ We first looked inside the build output directory (${basename(
 				watch,
 				plugin,
 				buildOutputDirectory,
-				nodeCompat,
+				legacyNodeCompat,
+				nodejsCompat,
 				routesOutputPath,
 				local: false,
 				d1Databases,

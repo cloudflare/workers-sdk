@@ -20,7 +20,7 @@ function runWrangler() {
 		// Note Volta and nvm are also recommended in the official docs:
 		// https://developers.cloudflare.com/workers/get-started/guide#2-install-the-workers-cli
 		console.error(
-			`Wrangler requires at least node.js v${MIN_NODE_VERSION}. You are using v${process.versions.node}. Please update your version of node.js.
+			`Wrangler requires at least Node.js v${MIN_NODE_VERSION}. You are using v${process.versions.node}. Please update your version of Node.js.
 
 Consider using a Node.js version manager such as https://volta.sh/ or https://github.com/nvm-sh/nvm.`
 		);
