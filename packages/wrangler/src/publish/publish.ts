@@ -342,7 +342,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	const nodeCompat = props.nodeCompat ?? config.node_compat;
 	if (nodeCompat) {
 		logger.warn(
-			"Enabling node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
+			"Enabling Node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
 		);
 	}
 

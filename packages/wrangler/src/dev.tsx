@@ -229,7 +229,7 @@ export function devOptions(yargs: CommonYargsArgv) {
 				type: "boolean",
 			})
 			.option("node-compat", {
-				describe: "Enable node.js compatibility",
+				describe: "Enable Node.js compatibility",
 				type: "boolean",
 			})
 			.option("experimental-enable-local-persistence", {
@@ -745,7 +745,7 @@ async function validateDevServerSettings(
 	const nodeCompat = args.nodeCompat ?? config.node_compat;
 	if (nodeCompat) {
 		logger.warn(
-			"Enabling node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
+			"Enabling Node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
 		);
 	}
 

@@ -75,7 +75,7 @@ export function Options(yargs: CommonYargsArgv) {
 				description: "The directory to output static assets to",
 			},
 			"node-compat": {
-				describe: "Enable node.js compatibility",
+				describe: "Enable Node.js compatibility",
 				default: false,
 				type: "boolean",
 				hidden: true,
@@ -120,7 +120,7 @@ export const Handler = async ({
 
 	if (nodeCompat) {
 		console.warn(
-			"Enabling node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
+			"Enabling Node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
 		);
 	}
 
