@@ -367,7 +367,17 @@ parameter in module format Workers.
   with different binding names. If a `string[]` of binding names is specified,
   the binding name and bucket name are assumed to be the same.
 
-#### D1, Analytics Engine and Queues
+#### D1
+
+- `d1Databases?: Record<string, string> | string[]`
+
+  Record mapping binding name to D1 database IDs to inject as `Fetcher` bindings
+  into this Worker. Note these bindings must be wrapped with a facade to provide
+  the expected `D1Database` API. Different Workers may bind to the same database
+  ID with different binding names. If a `string[]` of binding names is
+  specified, the binding name and database ID are assumed to be the same.
+
+#### Analytics Engine and Queues
 
 _Not yet supported_
 
@@ -431,9 +441,7 @@ Options shared between all Workers/"nanoservices".
   should be prepended to `resource` to form the request URL. Appropriate
   authorization headers should also be added.
 
-<!--TODO: implement custom logger-->
-
-#### Cache, Durable Objects, KV and R2
+#### Cache, Durable Objects, KV, R2 and D1
 
 - `cachePersist?: Persistence`
 
@@ -453,13 +461,17 @@ Options shared between all Workers/"nanoservices".
 
   Where to persist data stored in R2 buckets. See docs for `Persistence`.
 
-#### D1, Analytics Engine and Queues
+- `d1Persist?: Persistence`
+
+  Where to persist data stored in D1 databases. See docs for `Persistence`.
+
+#### Analytics Engine and Queues
 
 _Not yet supported_
 
 ### `type MiniflareOptions`
 
-`SharedOptions & (WorkerOptions | workers: WorkerOptions[]))`
+`SharedOptions & (WorkerOptions | { workers: WorkerOptions[] })`
 
 Miniflare accepts either a single Worker configuration or multiple Worker
 configurations in the `workers` array. When specifying an array of Workers, the
