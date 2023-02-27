@@ -373,7 +373,6 @@ test.serial("operations persist cached data", async (t) => {
 	t.teardown(() => t.context.setOptions({}));
 
 	const key = "http://localhost/cache-persist";
-	const storedKey = new URL("/cache-persist", t.context.url).toString();
 
 	// Check put respects persist
 	await t.context.mf.dispatchFetch(key, {
@@ -381,7 +380,7 @@ test.serial("operations persist cached data", async (t) => {
 		headers: { "Test-Response-Cache-Control": "max-age=3600" },
 		body: "body",
 	});
-	let stored = await storage.get(storedKey);
+	let stored = await storage.get(key);
 	t.deepEqual(stored?.value, utf8Encode("body"));
 
 	// Check match respects persist
@@ -392,7 +391,7 @@ test.serial("operations persist cached data", async (t) => {
 	// Check delete respects persist
 	res = await t.context.mf.dispatchFetch(key, { method: "DELETE" });
 	t.is(res.status, 204);
-	stored = await storage.get(storedKey);
+	stored = await storage.get(key);
 	t.is(stored, undefined);
 });
 test.serial("operations are no-ops when caching disabled", async (t) => {
