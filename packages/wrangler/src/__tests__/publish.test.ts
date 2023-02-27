@@ -6658,7 +6658,7 @@ export default{
 			          "err": "",
 			          "out": "Total Upload: xx KiB / gzip: xx KiB
 			        --dry-run: exiting now.",
-			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
+			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling Node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
 
 			        ",
 			        }
@@ -6705,11 +6705,83 @@ export default{
 			          "err": "",
 			          "out": "Total Upload: xx KiB / gzip: xx KiB
 			        --dry-run: exiting now.",
-			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
+			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling Node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
 
 			        ",
 			        }
 		      `);
+		});
+	});
+
+	describe("`nodejs_compat` compatibility flag", () => {
+		it('when absent, should error on any "external" `node:*` imports', async () => {
+			writeWranglerToml();
+			fs.writeFileSync(
+				"index.js",
+				`
+      import AsyncHooks from 'node:async_hooks';
+      console.log(AsyncHooks);
+      export default {}
+      `
+			);
+			let err: esbuild.BuildFailure | undefined;
+			try {
+				await runWrangler("publish index.js --dry-run"); // expecting this to throw, as node compatibility isn't enabled
+			} catch (e) {
+				err = e as esbuild.BuildFailure;
+			}
+			expect(
+				esbuild.formatMessagesSync(err?.errors ?? [], { kind: "error" }).join()
+			).toMatch(/Could not resolve "node:async_hooks"/);
+		});
+
+		it('when present, should support any "external" `node:*` imports', async () => {
+			writeWranglerToml();
+			fs.writeFileSync(
+				"index.js",
+				`
+      import AsyncHooks from 'node:async_hooks';
+      console.log(AsyncHooks);
+      export default {}
+      `
+			);
+
+			await runWrangler(
+				"publish index.js --dry-run --outdir=dist --compatibility-flag=nodejs_compat"
+			);
+
+			expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "Total Upload: xx KiB / gzip: xx KiB
+			--dry-run: exiting now.",
+			  "warn": "",
+			}
+		`);
+			expect(fs.readFileSync("dist/index.js", { encoding: "utf-8" })).toContain(
+				`import AsyncHooks from "node:async_hooks";`
+			);
+		});
+
+		it("should conflict with the --node-compat option", async () => {
+			writeWranglerToml();
+			fs.writeFileSync(
+				"index.js",
+				`
+      import AsyncHooks from 'node:async_hooks';
+      console.log(AsyncHooks);
+      export default {}
+      `
+			);
+
+			await expect(
+				runWrangler(
+					"publish index.js --dry-run --outdir=dist --compatibility-flag=nodejs_compat --node-compat"
+				)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"The \`nodejs_compat\` compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file."`
+			);
 		});
 	});
 
@@ -7125,7 +7197,7 @@ export default{
 				"publish index.js --no-bundle --node-compat --dry-run --outdir dist"
 			);
 			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling Node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
 
 
 			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--node-compat\` and \`--no-bundle\` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process.[0m
@@ -7145,7 +7217,7 @@ export default{
 			fs.writeFileSync("index.js", scriptContent);
 			await runWrangler("publish index.js --dry-run --outdir dist");
 			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling Node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
 
 
 			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--node-compat\` and \`--no-bundle\` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process.[0m

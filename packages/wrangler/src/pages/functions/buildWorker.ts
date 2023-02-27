@@ -17,7 +17,8 @@ export type Options = {
 	watch?: boolean;
 	onEnd?: () => void;
 	buildOutputDirectory?: string;
-	nodeCompat?: boolean;
+	legacyNodeCompat?: boolean;
+	nodejsCompat?: boolean;
 	functionsDirectory: string;
 	local: boolean;
 	betaD1Shims?: string[];
@@ -33,7 +34,8 @@ export function buildWorker({
 	watch = false,
 	onEnd = () => {},
 	buildOutputDirectory,
-	nodeCompat,
+	legacyNodeCompat,
+	nodejsCompat,
 	functionsDirectory,
 	local,
 	betaD1Shims,
@@ -51,7 +53,8 @@ export function buildWorker({
 			minify,
 			sourcemap,
 			watch,
-			nodeCompat,
+			legacyNodeCompat,
+			nodejsCompat,
 			loader: {
 				".txt": "text",
 				".html": "text",
@@ -162,7 +165,8 @@ export type RawOptions = {
 	plugins?: Plugin[];
 	onEnd?: () => void;
 	buildOutputDirectory?: string;
-	nodeCompat?: boolean;
+	legacyNodeCompat?: boolean;
+	nodejsCompat?: boolean;
 	local: boolean;
 	betaD1Shims?: string[];
 	experimentalWorkerBundle?: boolean;
@@ -184,7 +188,8 @@ export function buildRawWorker({
 	watch = false,
 	plugins = [],
 	onEnd = () => {},
-	nodeCompat,
+	legacyNodeCompat,
+	nodejsCompat,
 	local,
 	betaD1Shims,
 	experimentalWorkerBundle = false,
@@ -200,7 +205,8 @@ export function buildRawWorker({
 			minify,
 			sourcemap,
 			watch,
-			nodeCompat,
+			legacyNodeCompat,
+			nodejsCompat,
 			loader: {
 				".txt": "text",
 				".html": "text",
