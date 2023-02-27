@@ -114,6 +114,7 @@ export class R2Gateway {
 		const checksums = validate
 			.key(key)
 			.size(value)
+			.metadataSize(options.customMetadata)
 			.condition(meta, options.onlyIf)
 			.hash(value, options);
 

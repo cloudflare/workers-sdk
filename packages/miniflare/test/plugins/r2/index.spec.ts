@@ -149,13 +149,31 @@ class TestR2Bucket implements R2Bucket {
 		options?: R2PutOptions
 	): Promise<R2Object> {
 		const url = `http://localhost/${encodeURIComponent(this.ns + key)}`;
+
+		let valueBlob: Blob;
+		if (value === null) {
+			valueBlob = new Blob([]);
+		} else if (value instanceof ArrayBuffer) {
+			valueBlob = new Blob([new Uint8Array(value)]);
+		} else if (ArrayBuffer.isView(value)) {
+			valueBlob = new Blob([viewToArray(value)]);
+		} else if (value instanceof ReadableStream) {
+			// @ts-expect-error `ReadableStream` is an `AsyncIterable`
+			valueBlob = await blob(value);
+		} else {
+			valueBlob = new Blob([value]);
+		}
+
+		// We can't store options in headers as some put() tests include extended
+		// characters in them, and `undici` validates all headers are byte strings,
+		// so use a form data body instead
+		const formData = new FormData();
+		formData.set("options", maybeJsonStringify(options));
+		formData.set("value", valueBlob);
 		const res = await this.mf.dispatchFetch(url, {
 			method: "PUT",
-			headers: {
-				Accept: "multipart/form-data",
-				"Test-Options": maybeJsonStringify(options),
-			},
-			body: ArrayBuffer.isView(value) ? viewToArray(value) : value,
+			headers: { Accept: "multipart/form-data" },
+			body: formData,
 		});
 		return deconstructResponse(res);
 	}
@@ -382,11 +400,12 @@ const test = miniflareTest<{ BUCKET: R2Bucket }, Context>(
 			const options = maybeJsonParse(optionsHeader);
 			return constructResponse(await env.BUCKET.get(key, options));
 		} else if (method === "PUT") {
-			const optionsHeader = request.headers.get("Test-Options");
-			const options = maybeJsonParse(optionsHeader);
-			return constructResponse(
-				await env.BUCKET.put(key, await request.arrayBuffer(), options)
-			);
+			const formData = await request.formData();
+			const optionsData = formData.get("options");
+			if (typeof optionsData !== "string") throw new TypeError();
+			const options = maybeJsonParse(optionsData);
+			const value = formData.get("value");
+			return constructResponse(await env.BUCKET.put(key, value, options));
 		} else if (method === "DELETE") {
 			const keys = await request.json<string | string[]>();
 			await env.BUCKET.delete(keys);
@@ -801,6 +820,39 @@ test("put: stores only if passes onlyIf", async (t) => {
 	// Check non-existent key with failed condition
 	const object = await r2.put("no-key", "2", { onlyIf: { etagMatches: etag } });
 	t.is(object as R2Object | null, null);
+});
+test("put: validates metadata size", async (t) => {
+	const { r2 } = t.context;
+
+	// TODO(soon): add check for max value size once we have streaming support
+	//  (don't really want to allocate 5GB buffers in tests :sweat_smile:)
+
+	const expectations: ThrowsExpectation = {
+		instanceOf: Error,
+		message:
+			"put: Your metadata headers exceed the maximum allowed metadata size. (10012)",
+	};
+
+	// Check with ASCII characters
+	await r2.put("key", "value", { customMetadata: { key: "x".repeat(2045) } });
+	await t.throwsAsync(
+		r2.put("key", "value", { customMetadata: { key: "x".repeat(2046) } }),
+		expectations
+	);
+	await r2.put("key", "value", { customMetadata: { hi: "x".repeat(2046) } });
+
+	// Check with extended characters: note "🙂" is 2 UTF-16 code units, so
+	// `"🙂".length === 2`, and it requires 4 bytes to store
+	await r2.put("key", "value", { customMetadata: { key: "🙂".repeat(511) } }); // 3 + 4*511 = 2047
+	await r2.put("key", "value", { customMetadata: { key1: "🙂".repeat(511) } }); // 4 + 4*511 = 2048
+	await t.throwsAsync(
+		r2.put("key", "value", { customMetadata: { key12: "🙂".repeat(511) } }), // 5 + 4*511 = 2049
+		expectations
+	);
+	await t.throwsAsync(
+		r2.put("key", "value", { customMetadata: { key: "🙂".repeat(512) } }), // 3 + 4*512 = 2051
+		expectations
+	);
 });
 
 test("delete: deletes existing keys", async (t) => {
