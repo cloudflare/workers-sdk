@@ -34,7 +34,6 @@ export async function buildFunctions({
 	nodejsCompat,
 	local,
 	d1Databases,
-	experimentalWorkerBundle = false,
 }: Partial<
 	Pick<
 		PagesBuildArgs,
@@ -53,7 +52,6 @@ export async function buildFunctions({
 	routesOutputPath?: PagesBuildArgs["outputRoutesPath"];
 	local: boolean;
 	d1Databases?: string[];
-	experimentalWorkerBundle?: boolean;
 	legacyNodeCompat?: boolean;
 	nodejsCompat?: boolean;
 }) {
@@ -124,7 +122,6 @@ export async function buildFunctions({
 			buildOutputDirectory,
 			legacyNodeCompat,
 			nodejsCompat,
-			experimentalWorkerBundle,
 		});
 	}
 

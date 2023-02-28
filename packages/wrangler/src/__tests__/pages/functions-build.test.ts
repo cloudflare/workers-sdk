@@ -39,7 +39,7 @@ describe("functions build", () => {
 		/* --------------------------------- */
 		await runWrangler(`pages functions build`);
 
-		expect(existsSync("_worker.js")).toBe(true);
+		expect(existsSync("_worker.bundle")).toBe(true);
 		expect(std.out).toMatchInlineSnapshot(`
 		"🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 		✨ Compiled Worker successfully"
@@ -47,7 +47,7 @@ describe("functions build", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should include any external modules imported by functions in the output bundle when the [--experimental-worker-bundle] flag is set", async () => {
+	it("should include any external modules imported by functions in the output bundle", async () => {
 		/* ---------------------------- */
 		/*       Set up wasm files      */
 		/* ---------------------------- */
@@ -76,9 +76,7 @@ describe("functions build", () => {
 		/* --------------------------------- */
 		/*     Run cmd & make assertions     */
 		/* --------------------------------- */
-		await runWrangler(
-			`pages functions build --outfile=_worker.bundle --experimental-worker-bundle=true`
-		);
+		await runWrangler(`pages functions build --outfile=_worker.bundle`);
 
 		expect(existsSync("_worker.bundle")).toBe(true);
 		expect(std.out).toMatchInlineSnapshot(`
@@ -126,39 +124,7 @@ describe("functions build", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should fail building if functions use external module imports, but the [--experimental-worker-bundle] flag is not set", async () => {
-		/* ---------------------------- */
-		/*       Set up wasm files      */
-		/* ---------------------------- */
-		mkdirSync("wasm");
-		writeFileSync("wasm/greeting.wasm", "Hello wasm Functions!");
-
-		/* ---------------------------- */
-		/*       Set up Functions       */
-		/* ---------------------------- */
-		mkdirSync("functions");
-		writeFileSync(
-			"functions/hello.js",
-			`
-    import hello from "./../wasm/greeting.wasm";
-
-    export async function onRequest() {
-      const module = await WebAssembly.instantiate(greeting);
-      return new Response(module.exports.hello);
-    }
-    `
-		);
-
-		/* --------------------------------- */
-		/*     Run cmd & make assertions     */
-		/* --------------------------------- */
-		await expect(runWrangler(`pages functions build`)).rejects.toThrowError();
-		expect(std.err).toContain(
-			`ERROR: No loader is configured for ".wasm" files: ../wasm/greeting.wasm`
-		);
-	});
-
-	it("should build _worker.js if the [--experimental-worker-bundle] flag is set", async () => {
+	it("should build _worker.js", async () => {
 		/* ---------------------------- */
 		/*       Set up js files        */
 		/* ---------------------------- */
@@ -190,7 +156,7 @@ export default {
 		/*     Run cmd & make assertions     */
 		/* --------------------------------- */
 		await runWrangler(
-			`pages functions build --build-output-directory=public --outfile=_worker.bundle --experimental-worker-bundle=true`
+			`pages functions build --build-output-directory=public --outfile=_worker.bundle`
 		);
 		expect(existsSync("_worker.bundle")).toBe(true);
 		expect(std.out).toMatchInlineSnapshot(`
@@ -236,13 +202,6 @@ export default {
 		------formdata-undici-0.test--"
 	`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
-
-		await expect(
-			runWrangler(`pages functions build --build-output-directory=public`)
-		).rejects.toThrowError();
-		expect(std.err).toMatch(
-			/ENOENT: no such file or directory, scandir '.*functions'/
-		);
 	});
 
 	it("should include all external modules imported by _worker.js in the output bundle, when bundling _worker.js", async () => {
@@ -275,12 +234,10 @@ export default {
 		/* --------------------------------- */
 		/*     Run cmd & make assertions     */
 		/* --------------------------------- */
-		await runWrangler(
-			`pages functions build --build-output-directory=public --experimental-worker-bundle=true`
-		);
+		await runWrangler(`pages functions build --build-output-directory=public`);
 
 		// built to _worker.js by default
-		expect(existsSync("_worker.js")).toBe(true);
+		expect(existsSync("_worker.bundle")).toBe(true);
 		expect(std.out).toMatchInlineSnapshot(`
 		"🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 		✨ Compiled Worker successfully"
@@ -289,7 +246,7 @@ export default {
 		// some values in workerBundleContents, such as the undici form boundary
 		// or the file hashes, are randomly generated. Let's replace them
 		// with static values so we can test the file contents
-		const workerBundleContents = readFileSync("_worker.js", "utf-8");
+		const workerBundleContents = readFileSync("_worker.bundle", "utf-8");
 		const workerBundleWithConstantData = replaceRandomWithConstantData(
 			workerBundleContents,
 			[
@@ -321,7 +278,7 @@ export default {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should build _worker.js over /functions, if both are present and the [--experimental-worker-bundle] flag is set", async () => {
+	it("should build _worker.js over /functions, if both are present", async () => {
 		/* ---------------------------- */
 		/*       Set up _worker.js      */
 		/* ---------------------------- */
@@ -352,9 +309,7 @@ export default {
 		/* --------------------------------- */
 		/*     Run cmd & make assertions     */
 		/* --------------------------------- */
-		await runWrangler(
-			`pages functions build --outfile=public/_worker.bundle --experimental-worker-bundle=true`
-		);
+		await runWrangler(`pages functions build --outfile=public/_worker.bundle`);
 
 		expect(existsSync("public/_worker.bundle")).toBe(true);
 		expect(std.out).toMatchInlineSnapshot(`
@@ -415,16 +370,16 @@ export default {
 		);
 
 		await runWrangler(
-			`pages functions build --outfile=public/_worker.js --compatibility-flag=nodejs_compat`
+			`pages functions build --outfile=public/_worker.bundle --compatibility-flag=nodejs_compat`
 		);
 
-		expect(existsSync("public/_worker.js")).toBe(true);
+		expect(existsSync("public/_worker.bundle")).toBe(true);
 		expect(std.out).toMatchInlineSnapshot(`
 		"🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 		✨ Compiled Worker successfully"
 	`);
 
-		expect(readFileSync("public/_worker.js", "utf-8")).toContain(
+		expect(readFileSync("public/_worker.bundle", "utf-8")).toContain(
 			`import { AsyncLocalStorage } from "node:async_hooks";`
 		);
 	});
@@ -444,7 +399,7 @@ export default {
 		);
 
 		await expect(
-			runWrangler(`pages functions build --outfile=public/_worker.js`)
+			runWrangler(`pages functions build --outfile=public/_worker.bundle`)
 		).rejects.toThrowErrorMatchingInlineSnapshot(`
 		"Build failed with 1 error:
 		hello.js:2:36: ERROR: Could not resolve \\"node:async_hooks\\""

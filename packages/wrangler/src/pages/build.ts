@@ -1,4 +1,4 @@
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve as resolvePath } from "node:path";
 import { createUploadWorkerBundleContents } from "../api/pages/create-worker-bundle-contents";
@@ -32,7 +32,7 @@ export function Options(yargs: CommonYargsArgv) {
 		.options({
 			outfile: {
 				type: "string",
-				default: "_worker.js",
+				default: "_worker.bundle",
 				description: "The location of the output Worker script",
 			},
 			"output-config-path": {
@@ -99,13 +99,6 @@ export function Options(yargs: CommonYargsArgv) {
 				deprecated: true,
 				hidden: true,
 			},
-			"experimental-worker-bundle": {
-				type: "boolean",
-				default: false,
-				hidden: true,
-				description:
-					"Whether to process non-JS module imports or not, such as wasm/text/binary, when we run bundling on `functions` or `_worker.js`",
-			},
 		})
 		.epilogue(pagesBetaWarning);
 }
@@ -124,7 +117,6 @@ export const Handler = async ({
 	nodeCompat: legacyNodeCompat,
 	compatibilityFlags,
 	bindings,
-	experimentalWorkerBundle,
 }: PagesBuildArgs) => {
 	if (!isInPagesCI) {
 		// Beta message for `wrangler pages <commands>` usage
@@ -174,16 +166,17 @@ We first looked inside the build output directory (${basename(
 	 * prioritize building `_worker.js` over Pages Functions, if both exist
 	 * and if we were able to resolve _worker.js
 	 */
-	if (experimentalWorkerBundle && foundWorkerScript) {
+	if (foundWorkerScript) {
 		/**
 		 * `buildRawWorker` builds `_worker.js`, but doesn't give us the bundle
 		 * we want to return, which includes the external dependencies (like wasm,
 		 * binary, text). Let's output that build result to memory and only write
 		 * to disk once we have the final bundle
 		 */
-		const workerOutfile = experimentalWorkerBundle
-			? join(tmpdir(), `./bundledWorker-${Math.random()}.mjs`)
-			: outfile;
+		const workerOutfile = join(
+			tmpdir(),
+			`./bundledWorker-${Math.random()}.mjs`
+		);
 
 		bundle = await buildRawWorker({
 			workerScriptPath,
@@ -194,7 +187,6 @@ We first looked inside the build output directory (${basename(
 			watch: false,
 			onEnd: () => {},
 			betaD1Shims: d1Databases,
-			experimentalWorkerBundle,
 		});
 	} else {
 		try {
@@ -204,9 +196,9 @@ We first looked inside the build output directory (${basename(
 			 * binary, text). Let's output that build result to memory and only write
 			 * to disk once we have the final bundle
 			 */
-			const functionsOutfile = experimentalWorkerBundle
-				? join(tmpdir(), `./functionsWorker-${Math.random()}.js`)
-				: outfile;
+			const functionsOutfile = plugin
+				? outfile
+				: join(tmpdir(), `./functionsWorker-${Math.random()}.js`);
 
 			bundle = await buildFunctions({
 				outfile: functionsOutfile,
@@ -223,7 +215,6 @@ We first looked inside the build output directory (${basename(
 				routesOutputPath,
 				local: false,
 				d1Databases,
-				experimentalWorkerBundle,
 			});
 		} catch (e) {
 			if (e instanceof FunctionsNoRoutesError) {
@@ -237,11 +228,12 @@ We first looked inside the build output directory (${basename(
 		}
 	}
 
-	if (experimentalWorkerBundle) {
+	if (!plugin) {
 		const workerBundleContents = await createUploadWorkerBundleContents(
 			bundle as BundleResult
 		);
 
+		mkdirSync(dirname(outfile), { recursive: true });
 		writeFileSync(
 			outfile,
 			Buffer.from(await workerBundleContents.arrayBuffer())
