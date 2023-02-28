@@ -83,6 +83,29 @@ export function buildPlugin({
 						}
 					},
 				},
+				// TODO: Replace this with a proper outdir solution for Plugins
+				// But for now, let's just mark all wasm/bin files as external
+				{
+					name: "Mark externals",
+					setup(pluginBuild) {
+						if (pluginBuild.initialOptions.outfile) {
+							const outdir = dirname(pluginBuild.initialOptions.outfile);
+
+							pluginBuild.onResolve(
+								{ filter: /.*\.(wasm|bin)/ },
+								async (args) => {
+									return {
+										external: true,
+										path: `./${relative(
+											outdir,
+											resolve(args.resolveDir, args.path)
+										)}`,
+									};
+								}
+							);
+						}
+					},
+				},
 			],
 			isOutfile: true,
 			serveAssetsFromWorker: false,
