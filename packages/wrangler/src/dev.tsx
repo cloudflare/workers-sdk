@@ -344,7 +344,6 @@ type StartDevOptions = DevArguments &
 		disableDevRegistry?: boolean;
 		enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 		onReady?: (ip: string, port: number) => void;
-		logPrefix?: string;
 		showInteractiveDevSession?: boolean;
 	};
 
@@ -467,7 +466,6 @@ export async function startDev(args: StartDevOptions) {
 					bindings={bindings}
 					crons={configParam.triggers.crons}
 					queueConsumers={configParam.queues.consumers}
-					logPrefix={args.logPrefix}
 					onReady={args.onReady}
 					inspect={args.inspect ?? true}
 					showInteractiveDevSession={args.showInteractiveDevSession}
@@ -600,7 +598,6 @@ export async function startApiDev(args: StartDevOptions) {
 			bindings: bindings,
 			crons: configParam.triggers.crons,
 			queueConsumers: configParam.queues.consumers,
-			logPrefix: args.logPrefix,
 			onReady: args.onReady,
 			inspect: args.inspect ?? true,
 			showInteractiveDevSession: args.showInteractiveDevSession,

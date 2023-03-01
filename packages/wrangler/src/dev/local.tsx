@@ -70,7 +70,6 @@ export interface LocalProps {
 	localUpstream: string | undefined;
 	inspect: boolean;
 	onReady: ((ip: string, port: number) => void) | undefined;
-	logPrefix?: string;
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 	testScheduled?: boolean;
 	experimentalLocal: boolean | undefined;
@@ -121,7 +120,6 @@ function useLocalWorker({
 	localUpstream,
 	inspect,
 	onReady,
-	logPrefix,
 	enablePagesAssetsServiceBinding,
 	experimentalLocal,
 	accountId,
@@ -216,13 +214,12 @@ function useLocalWorker({
 				dataBlobBindings,
 				crons,
 				upstream,
-				logPrefix,
 				workerDefinitions,
 				enablePagesAssetsServiceBinding,
 			});
 
 			if (experimentalLocal) {
-				const log = await buildMiniflare3Logger(logPrefix);
+				const log = await buildMiniflare3Logger();
 				const mf3Options = await transformMf2OptionsToMf3Options({
 					miniflare2Options: options,
 					format,
@@ -438,7 +435,6 @@ function useLocalWorker({
 		localProtocol,
 		localUpstream,
 		inspect,
-		logPrefix,
 		onReady,
 		enablePagesAssetsServiceBinding,
 		experimentalLocal,
@@ -577,7 +573,6 @@ interface SetupMiniflareOptionsProps {
 	dataBlobBindings: Record<string, string>;
 	crons: Config["triggers"]["crons"];
 	upstream: string | undefined;
-	logPrefix: string | undefined;
 	workerDefinitions: WorkerRegistry | undefined;
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 }
@@ -609,7 +604,6 @@ export function setupMiniflareOptions({
 	dataBlobBindings,
 	crons,
 	upstream,
-	logPrefix,
 	workerDefinitions,
 	enablePagesAssetsServiceBinding,
 }: SetupMiniflareOptionsProps): {
@@ -722,7 +716,6 @@ export function setupMiniflareOptions({
 		crons,
 		upstream,
 		logLevel: logger.loggerLevel,
-		logOptions: logPrefix ? { prefix: logPrefix } : undefined,
 		enablePagesAssetsServiceBinding,
 	};
 	// The path to the Miniflare CLI assumes that this file is being run from
@@ -789,18 +782,14 @@ export interface SetupMiniflare3Options {
 	inspectorPort: number;
 }
 
-export async function buildMiniflare3Logger(
-	logPrefix?: string
-): Promise<Miniflare3LogType> {
+export async function buildMiniflare3Logger(): Promise<Miniflare3LogType> {
 	const { Log, NoOpLog, LogLevel } = await getMiniflare3();
 
 	let level = logger.loggerLevel.toUpperCase() as Uppercase<LoggerLevel>;
 	if (level === "LOG") level = "INFO";
 	const logLevel = LogLevel[level];
 
-	return logLevel === LogLevel.NONE
-		? new NoOpLog()
-		: new Log(logLevel, { prefix: logPrefix });
+	return logLevel === LogLevel.NONE ? new NoOpLog() : new Log(logLevel);
 }
 
 export async function transformMf2OptionsToMf3Options({

@@ -132,7 +132,6 @@ export async function startDevServer(
 				queueConsumers: props.queueConsumers,
 				localProtocol: props.localProtocol,
 				localUpstream: props.localUpstream,
-				logPrefix: props.logPrefix,
 				inspect: props.inspect,
 				onReady: props.onReady,
 				enablePagesAssetsServiceBinding: props.enablePagesAssetsServiceBinding,
@@ -322,7 +321,6 @@ export async function startLocalServer({
 	localUpstream,
 	inspect,
 	onReady,
-	logPrefix,
 	enablePagesAssetsServiceBinding,
 	experimentalLocal,
 	accountId,
@@ -402,13 +400,12 @@ export async function startLocalServer({
 			dataBlobBindings,
 			crons,
 			upstream,
-			logPrefix,
 			workerDefinitions,
 			enablePagesAssetsServiceBinding,
 		});
 
 		if (experimentalLocal) {
-			const log = await buildMiniflare3Logger(logPrefix);
+			const log = await buildMiniflare3Logger();
 			const mf3Options = await transformMf2OptionsToMf3Options({
 				miniflare2Options: options,
 				format,

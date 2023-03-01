@@ -551,8 +551,7 @@ export const Handler = async ({
 		persist,
 		persistTo,
 		inspect: undefined,
-		logPrefix: "pages",
-		logLevel: logLevel ?? "warn",
+		logLevel,
 		experimental: {
 			d1Databases: d1s.map((binding) => ({
 				binding: binding.toString(),
