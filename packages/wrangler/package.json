@@ -66,7 +66,7 @@
 		"test": "npm run assert-git-version && jest --silent=false --verbose=true --forceExit",
 		"test-watch": "npm run test -- --runInBand --testTimeout=50000 --watch",
 		"test:ci": "npm run test -- --verbose=true --coverage",
-		"test:smoke": "esbuild --bundle scripts/smoke-test.ts --outfile=scripts/smoke-test.mjs --platform=node --format=esm && zx scripts/smoke-test.mjs && rm scripts/smoke-test.mjs"
+		"test:smoke": "vitest --no-threads ./e2e"
 	},
 	"jest": {
 		"coverageReporters": [
@@ -83,7 +83,7 @@
 		"setupFilesAfterEnv": [
 			"<rootDir>/src/__tests__/jest.setup.ts"
 		],
-		"testRegex": ".*.(test|spec)\\.[jt]sx?$",
+		"testRegex": "src\\/__tests__\\/.*\\.(test|spec)\\.[jt]sx?$",
 		"testTimeout": 30000,
 		"transform": {
 			"^.+\\.c?(t|j)sx?$": [
@@ -175,6 +175,7 @@
 		"remove-accents-esm": "^0.0.1",
 		"semiver": "^1.1.0",
 		"serve-static": "^1.15.0",
+		"shellac": "^0.7.3",
 		"signal-exit": "^3.0.7",
 		"supports-color": "^9.2.2",
 		"timeago.js": "^4.0.2",
@@ -182,6 +183,7 @@
 		"ts-dedent": "^2.2.0",
 		"undici": "5.20.0",
 		"update-check": "^1.5.4",
+		"vitest": "^0.29.2",
 		"ws": "^8.5.0",
 		"xdg-app-paths": "^7.3.0",
 		"yargs": "^17.4.1",

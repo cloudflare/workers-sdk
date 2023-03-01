@@ -13,7 +13,6 @@
 		"src/miniflare-cli",
 		"templates",
 		"**/__tests__",
-		"**/*.test.ts",
-		"scripts/smoke-test.ts"
+		"**/*.test.ts"
 	]
 }
