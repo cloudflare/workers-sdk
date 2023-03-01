@@ -47,7 +47,7 @@ async function main() {
 	config.log =
 		logLevel === MiniflareLogLevel.NONE
 			? new MiniflareNoOpLog()
-			: new MiniflareLog(logLevel, config.logOptions);
+			: new MiniflareLog(logLevel);
 
 	if (logLevel === MiniflareLogLevel.DEBUG) {
 		console.log("MINIFLARE OPTIONS:\n", JSON.stringify(config, null, 2));
