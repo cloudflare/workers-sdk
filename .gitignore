@@ -185,7 +185,6 @@ packages/wranglerjs-compat-webpack-plugin/lib
 .wrangler-1-cache
 emitted-types/
 _routes.generated.json
-packages/wrangler/scripts/smoke-test.mjs
 
 # Vendored npm dependencies
 !vendor/*.tgz

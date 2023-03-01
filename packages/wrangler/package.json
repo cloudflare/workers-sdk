@@ -187,8 +187,7 @@
 		"ws": "^8.5.0",
 		"xdg-app-paths": "^7.3.0",
 		"yargs": "^17.4.1",
-		"yoga-layout": "file:../../vendor/yoga-layout-2.0.0-beta.1.tgz",
-		"zx": "^7.1.1"
+		"yoga-layout": "file:../../vendor/yoga-layout-2.0.0-beta.1.tgz"
 	},
 	"optionalDependencies": {
 		"fsevents": "~2.3.2"
