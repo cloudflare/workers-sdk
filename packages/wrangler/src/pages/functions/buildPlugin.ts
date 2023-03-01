@@ -92,7 +92,7 @@ export function buildPlugin({
 							const outdir = dirname(pluginBuild.initialOptions.outfile);
 
 							pluginBuild.onResolve(
-								{ filter: /.*\.(wasm|bin)/ },
+								{ filter: /.*\.(wasm|bin)$/ },
 								async (args) => {
 									return {
 										external: true,
