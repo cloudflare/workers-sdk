@@ -69,7 +69,7 @@ describe("deployment create", () => {
 		          --commit-message  The commit message to attach to this deployment  [string]
 		          --commit-dirty    Whether or not the workspace should be considered dirty for this deployment  [boolean]
 		          --skip-caching    Skip asset caching which speeds up builds  [boolean]
-		          --no-bundle       Whether to run bundling on \`_worker.js\` before deploying  [boolean] [default: true]
+		          --no-bundle       Whether to run bundling on \`_worker.js\` before deploying  [boolean] [default: false]
 
 		    🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
 	  `);
@@ -1359,7 +1359,7 @@ describe("deployment create", () => {
 			)
 		);
 
-		await runWrangler("pages publish public --project-name=foo --bundle");
+		await runWrangler("pages publish public --project-name=foo");
 
 		expect(std.out).toMatchInlineSnapshot(`
 		    "✨ Success! Uploaded 1 files (TIMINGS)
@@ -1858,19 +1858,23 @@ and that at least one include rule is provided.
 				"------formdata-undici-0.test
 				Content-Disposition: form-data; name=\\"metadata\\"
 
-				{\\"main_module\\":\\"_worker.js\\"}
+				{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
 				------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"_worker.js\\"; filename=\\"_worker.js\\"
+				Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
 				Content-Type: application/javascript+module
 
+				// _worker.js
+				var worker_default = {
+				  async fetch(request, env) {
+				    const url = new URL(request.url);
+				    return url.pathname.startsWith(\\"/api/\\") ? new Response(\\"Ok\\") : env.ASSETS.fetch(request);
+				  }
+				};
+				export {
+				  worker_default as default
+				};
+				//# sourceMappingURL=bundledWorker-0.test.mjs.map
 
-				      export default {
-				        async fetch(request, env) {
-				          const url = new URL(request.url);
-				          return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
-				        }
-				      };
-				    
 				------formdata-undici-0.test--"
 			`);
 
@@ -2170,19 +2174,23 @@ and that at least one include rule is provided.
 				"------formdata-undici-0.test
 				Content-Disposition: form-data; name=\\"metadata\\"
 
-				{\\"main_module\\":\\"_worker.js\\"}
+				{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
 				------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"_worker.js\\"; filename=\\"_worker.js\\"
+				Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
 				Content-Type: application/javascript+module
 
+				// _worker.js
+				var worker_default = {
+				  async fetch(request, env) {
+				    const url = new URL(request.url);
+				    return url.pathname.startsWith(\\"/api/\\") ? new Response(\\"Ok\\") : env.ASSETS.fetch(request);
+				  }
+				};
+				export {
+				  worker_default as default
+				};
+				//# sourceMappingURL=bundledWorker-0.test.mjs.map
 
-				      export default {
-				        async fetch(request, env) {
-				          const url = new URL(request.url);
-				          return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
-				        }
-				      };
-				    
 				------formdata-undici-0.test--"
 			`);
 
@@ -2621,7 +2629,7 @@ async function onRequest() {
 			)
 		);
 
-		await runWrangler("pages publish public --project-name=foo --bundle");
+		await runWrangler("pages publish public --project-name=foo");
 
 		expect(std.out).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 1 files (TIMINGS)
@@ -2723,11 +2731,29 @@ async function onRequest() {
 			);
 		};
 
-		it("should not bundle the _worker.js when both `--bundle` and `--no-bundle` are omitted", async () => {
+		it("should bundle the _worker.js when both `--bundle` and `--no-bundle` are omitted", async () => {
+			simulateServer((generatedWorkerJS) =>
+				expect(workerIsBundled(generatedWorkerJS)).toBeTruthy()
+			);
+			await runWrangler("pages publish public --project-name=foo");
+			expect(std.out).toContain("✨ Uploading Worker bundle");
+		});
+
+		it("should not bundle the _worker.js when `--no-bundle` is set", async () => {
 			simulateServer((generatedWorkerJS) =>
 				expect(workerIsBundled(generatedWorkerJS)).toBeFalsy()
 			);
-			await runWrangler("pages publish public --project-name=foo");
+			await runWrangler("pages publish public --project-name=foo --no-bundle");
+			expect(std.out).toContain("✨ Uploading Worker bundle");
+		});
+
+		it("should not bundle the _worker.js when `--bundle` is set to false", async () => {
+			simulateServer((generatedWorkerJS) =>
+				expect(workerIsBundled(generatedWorkerJS)).toBeFalsy()
+			);
+			await runWrangler(
+				"pages publish public --project-name=foo --bundle=false"
+			);
 			expect(std.out).toContain("✨ Uploading Worker bundle");
 		});
 

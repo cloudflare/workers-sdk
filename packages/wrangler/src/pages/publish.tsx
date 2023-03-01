@@ -63,7 +63,7 @@ export function Options(yargs: CommonYargsArgv) {
 			},
 			"no-bundle": {
 				type: "boolean",
-				default: true,
+				default: false,
 				description: "Whether to run bundling on `_worker.js` before deploying",
 			},
 			config: {

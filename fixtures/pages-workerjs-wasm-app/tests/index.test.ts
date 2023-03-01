@@ -10,7 +10,7 @@ describe.concurrent("Pages Advanced Mode with wasm module imports", () => {
 		({ ip, port, stop } = await runWranglerPagesDev(
 			resolve(__dirname, ".."),
 			"public",
-			["--port=0", "--bundle"]
+			["--port=0"]
 		));
 	});
 
