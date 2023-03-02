@@ -103,7 +103,7 @@ export const mswSuccessDeploymentDetails = [
 					createFetchResult({
 						Tag: "",
 						Number: 0,
-						Metadata: {
+						metadata: {
 							author_id: "Picard-Gamma-6-0-7-3",
 							author_email: "Jean-Luc-Picard@federation.org",
 							source: "wrangler",
@@ -115,6 +115,9 @@ export const mswSuccessDeploymentDetails = [
 								etag: "mock-e-tag",
 								handlers: ["fetch"],
 								last_deployed_from: "wrangler",
+							},
+							script_runtime: {
+								usage_model: "bundled",
 							},
 							bindings: [],
 						},

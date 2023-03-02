@@ -69,23 +69,23 @@ describe("deployments", () => {
 		Deployment ID: Constitution-Class
 		Created on:    2021-01-01T00:00:00.000000Z
 		Author:        Jean-Luc-Picard@federation.org
-		Source:       Upload from Wrangler 🤠
+		Source:        Upload from Wrangler 🤠
 
 		Deployment ID: Intrepid-Class
 		Created on:    2021-02-02T00:00:00.000000Z
 		Author:        Kathryn-Janeway@federation.org
-		Source:       Rollback from Wrangler 🤠
+		Source:        Rollback from Wrangler 🤠
 		Rollback from: MOCK-DEPLOYMENT-ID-1111
 
 		Deployment ID: 3mEgaU1T-Intrepid-someThing
 		Created on:    2021-02-03T00:00:00.000000Z
 		Author:        Kathryn-Janeway@federation.org
-		Source:       Wrangler 🤠
+		Source:        Wrangler 🤠
 
 		Deployment ID: Galaxy-Class
 		Created on:    2021-01-04T00:00:00.000000Z
 		Author:        Jean-Luc-Picard@federation.org
-		Source:       Rollback from Wrangler 🤠
+		Source:        Rollback from Wrangler 🤠
 		Rollback from: MOCK-DEPLOYMENT-ID-2222
 		🟩 Active"
 	`);
@@ -100,23 +100,23 @@ describe("deployments", () => {
 		Deployment ID: Constitution-Class
 		Created on:    2021-01-01T00:00:00.000000Z
 		Author:        Jean-Luc-Picard@federation.org
-		Source:       Upload from Wrangler 🤠
+		Source:        Upload from Wrangler 🤠
 
 		Deployment ID: Intrepid-Class
 		Created on:    2021-02-02T00:00:00.000000Z
 		Author:        Kathryn-Janeway@federation.org
-		Source:       Rollback from Wrangler 🤠
+		Source:        Rollback from Wrangler 🤠
 		Rollback from: MOCK-DEPLOYMENT-ID-1111
 
 		Deployment ID: 3mEgaU1T-Intrepid-someThing
 		Created on:    2021-02-03T00:00:00.000000Z
 		Author:        Kathryn-Janeway@federation.org
-		Source:       Wrangler 🤠
+		Source:        Wrangler 🤠
 
 		Deployment ID: Galaxy-Class
 		Created on:    2021-01-04T00:00:00.000000Z
 		Author:        Jean-Luc-Picard@federation.org
-		Source:       Rollback from Wrangler 🤠
+		Source:        Rollback from Wrangler 🤠
 		Rollback from: MOCK-DEPLOYMENT-ID-2222
 		🟩 Active"
 	`);
@@ -138,21 +138,19 @@ describe("deployments", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 
-			{
-			  Tag: '',
-			  Number: 0,
-			  'Metadata.author_id': 'Picard-Gamma-6-0-7-3',
-			  'Metadata.author_email': 'Jean-Luc-Picard@federation.org',
-			  'Metadata.source': 'wrangler',
-			  'Metadata.created_on': '2021-01-01T00:00:00.000000Z',
-			  'Metadata.modified_on': '2021-01-01T00:00:00.000000Z',
-			  'resources.script': {
-			    etag: 'mock-e-tag',
-			    handlers: [ 'fetch' ],
-			    last_deployed_from: 'wrangler'
-			  },
-			  'resources.bindings': []
-			}
+
+			Deployment ID: undefined
+			Created on:    2021-01-01T00:00:00.000000Z
+			Author:        Jean-Luc-Picard@federation.org
+			Source:        Wrangler 🤠
+			------------------------------------------------------------
+			Author ID:          Picard-Gamma-6-0-7-3
+			Usage Model:        bundled
+			Handlers:           fetch
+			--------------------------bindings--------------------------
+
+			---------------------------script---------------------------
+
 
 						export default {
 							async fetch(request) {

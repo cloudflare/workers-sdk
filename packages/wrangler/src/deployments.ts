@@ -1,14 +1,17 @@
 import { URLSearchParams } from "url";
+import TOML from "@iarna/toml";
 import chalk from "chalk";
 import { fetchResult, fetchScriptContent } from "./cfetch";
 import { readConfig } from "./config";
 import { confirm } from "./dialogs";
+import { mapBindings } from "./init";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
 import { getScriptName, printWranglerBanner } from ".";
 
 import type { Config } from "./config";
+import type { WorkerMetadataBinding } from "./create-worker-upload-form";
 import type { ServiceMetadataRes } from "./init";
 import type { CommonYargsOptions } from "./yargs-types";
 import type { ArgumentsCamelCase } from "yargs";
@@ -28,8 +31,15 @@ type DeploymentDetails = {
 		modified_on: string;
 	};
 	resources: {
-		script: string;
-		bindings: unknown[];
+		script: {
+			handlers: string[];
+		};
+		bindings: WorkerMetadataBinding[];
+		script_runtime: {
+			compatibility_date: string | undefined;
+			compatibility_flags: string[] | undefined;
+			usage_model: string | undefined;
+		};
 	};
 };
 
@@ -81,7 +91,7 @@ export async function deployments(
 Deployment ID: ${versions.id}
 Created on:    ${versions.metadata.created_on}
 Author:        ${versions.metadata.author_email}
-Source:       ${triggerStr}`;
+Source:        ${triggerStr}`;
 
 		if (versions.annotations?.["workers/rollback_from"]) {
 			version += `\nRollback from: ${versions.annotations["workers/rollback_from"]}`;
@@ -221,26 +231,44 @@ export async function viewDeployment(
 		`/accounts/${accountId}/workers/deployments/by-script/${scriptTag}/detail/${deploymentId}`
 	);
 
-	const flatObj: Record<string, unknown> = {};
-	for (const deployDetailsKey in deploymentDetails) {
-		if (
-			Object.prototype.hasOwnProperty.call(deploymentDetails, deployDetailsKey)
-		) {
-			//@ts-expect-error flattening objects causes the index signature to error
-			const value = deploymentDetails[deployDetailsKey];
-			if (typeof value === "object" && value !== null) {
-				for (const subKey in value) {
-					if (Object.prototype.hasOwnProperty.call(value, subKey)) {
-						flatObj[`${deployDetailsKey}.${subKey}`] = value[subKey];
-					}
-				}
-			} else {
-				flatObj[deployDetailsKey] = value;
-			}
-		}
-	}
+	const triggerStr = deploymentDetails.annotations?.["workers/triggered_by"]
+		? `${formatTrigger(
+				deploymentDetails.annotations["workers/triggered_by"]
+		  )} from ${formatSource(deploymentDetails.metadata.source)}`
+		: `${formatSource(deploymentDetails.metadata.source)}`;
 
-	logger.log(flatObj);
+	const rollbackStr = deploymentDetails.annotations?.["workers/rollback_from"]
+		? `\nRollback from: ${deploymentDetails.annotations["workers/rollback_from"]}`
+		: ``;
+
+	const compatDateStr = deploymentDetails.resources.script_runtime
+		?.compatibility_date
+		? `\nCompatibility Date: ${deploymentDetails.resources.script_runtime?.compatibility_date}`
+		: ``;
+	const compatFlagsStr = deploymentDetails.resources.script_runtime
+		?.compatibility_flags
+		? `\nCompatibility Flags: ${deploymentDetails.resources.script_runtime?.compatibility_flags}`
+		: ``;
+
+	const bindings = mapBindings(deploymentDetails.resources.bindings);
+
+	const version = `
+Deployment ID: ${deploymentDetails.id}
+Created on:    ${deploymentDetails.metadata.created_on}
+Author:        ${deploymentDetails.metadata.author_email}
+Source:        ${triggerStr}${rollbackStr}
+------------------------------------------------------------
+Author ID:          ${deploymentDetails.metadata.author_id}
+Usage Model:        ${deploymentDetails.resources.script_runtime.usage_model}
+Handlers:           ${
+		deploymentDetails.resources.script.handlers
+	}${compatDateStr}${compatFlagsStr}
+--------------------------bindings--------------------------
+${TOML.stringify(bindings as TOML.JsonMap)}
+---------------------------script---------------------------
+`;
+
+	logger.log(version);
 	logger.log(scriptContent);
 
 	// early return to skip the deployments listings

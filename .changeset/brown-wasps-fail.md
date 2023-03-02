@@ -14,27 +14,37 @@ in a developer's local setup.
 example of `view <deployment-id>` output:
 
 ```ts
-	{
-    Tag: '',
-    Number: 0,
-    'Metadata.author_id': 'Picard-Gamma-6-0-7-3',
-    'Metadata.author_email': 'picard@vinyard.com',
-    'Metadata.source': 'wrangler',
-    'Metadata.created_on': '2021-01-01T00:00:00.000000Z',
-    'Metadata.modified_on': '2021-01-01T00:00:00.000000Z',
-    'resources.script': {
-      etag: 'mock-e-tag',
-      handlers: [ 'fetch' ],
-      last_deployed_from: 'wrangler'
-    },
-    'resources.bindings': []
+Deployment ID: 07d7143d-0284-427e-ba22-2d5e6e91b479
+Created on:    2023-03-02T21:05:15.622446Z
+Author:        jspspike@gmail.com
+Source:        Upload from Wrangler 🤠
+------------------------------------------------------------
+Author ID:          e5a3ca86e08fb0940d3a05691310bb42
+Usage Model:        bundled
+Handlers:           fetch
+Compatibility Date: 2022-10-03
+--------------------------bindings--------------------------
+[[r2_buckets]]
+binding = "MY_BUCKET"
+bucket_name = "testr2"
+
+[[kv_namespaces]]
+id = "79300c6d17eb4180a07270f450efe53f"
+binding = "yeee"
+
+---------------------------script---------------------------
+
+// index.js
+var worker_default = {
+  fetch(request) {
+    const base = "https://example.com";
+    const statusCode = 301;
+    const destination = new URL(request.url, base);
+    return Response.redirect(destination.toString(), statusCode);
   }
-
-
-
-  export default {
-    async fetch(request) {
-      return new Response('Hello World from Deployment 1701-E');
-    },
-  };
+};
+export {
+  worker_default as default
+};
+//# sourceMappingURL=index.js.map
 ```
