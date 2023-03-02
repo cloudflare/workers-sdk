@@ -337,7 +337,7 @@ export async function bundleWorker(
 		bundle: true,
 		absWorkingDir: entry.directory,
 		outdir: destination,
-		entryNames: entryName,
+		entryNames: entryName || path.parse(entry.file).name,
 		...(isOutfile
 			? {
 					outdir: undefined,

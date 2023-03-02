@@ -1649,7 +1649,7 @@ addEventListener('fetch', event => {});`
 			};
 			writeAssets(assets);
 			mockUploadWorkerRequest({
-				expectedMainModule: "serve-static-assets.entry.js",
+				expectedMainModule: "no-op-worker.js",
 			});
 			mockSubDomainRequest();
 			mockListKVNamespacesRequest(kvNamespace);
@@ -1740,7 +1740,7 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			writeAssets(assets);
 			mockUploadWorkerRequest({
-				expectedMainModule: "serve-static-assets.entry.js",
+				expectedMainModule: "index.js",
 			});
 			mockSubDomainRequest();
 			mockListKVNamespacesRequest(kvNamespace);
@@ -1925,7 +1925,7 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			writeAssets(assets);
 			mockUploadWorkerRequest({
-				expectedMainModule: "serve-static-assets.entry.js",
+				expectedMainModule: "index.js",
 			});
 			mockSubDomainRequest();
 			mockListKVNamespacesRequest(kvNamespace);
@@ -1972,7 +1972,7 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			writeAssets(assets);
 			mockUploadWorkerRequest({
-				expectedMainModule: "serve-static-assets.entry.js",
+				expectedMainModule: "index.js",
 			});
 			mockSubDomainRequest();
 			mockListKVNamespacesRequest(kvNamespace);
@@ -3015,7 +3015,7 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			writeAssets(assets, "my-assets");
 			mockUploadWorkerRequest({
-				expectedMainModule: "serve-static-assets.entry.js",
+				expectedMainModule: "index.js",
 			});
 			mockSubDomainRequest();
 			mockListKVNamespacesRequest(kvNamespace);
@@ -5846,7 +5846,7 @@ addEventListener('fetch', event => {});`
 
 			"
 		`);
-				const output = fs.readFileSync("tmp/d1-beta-facade.entry.js", "utf-8");
+				const output = fs.readFileSync("tmp/index.js", "utf-8");
 				expect(output).toContain(
 					`var ExampleDurableObject2 = maskDurableObjectDefinition(ExampleDurableObject);`
 				);
@@ -6575,6 +6575,47 @@ addEventListener('fetch', event => {});`
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class",
 			  "warn": "",
+			}
+		`);
+		});
+
+		it("should preserve the entry point file name, even when using a facade", async () => {
+			writeWranglerToml();
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			const assets = [
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "file-2.txt", content: "Content of file-2" },
+			];
+			const kvNamespace = {
+				title: "__test-name-workers_sites_assets",
+				id: "__test-name-workers_sites_assets-id",
+			};
+			writeAssets(assets);
+			mockListKVNamespacesRequest(kvNamespace);
+			mockKeyListRequest(kvNamespace.id, []);
+			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
+			await runWrangler("publish index.js --outdir some-dir --assets assets");
+			expect(fs.existsSync("some-dir/index.js")).toBe(true);
+			expect(fs.existsSync("some-dir/index.js.map")).toBe(true);
+			expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "out": "Reading file-1.txt...
+			Uploading as file-1.2ca234f380.txt...
+			Reading file-2.txt...
+			Uploading as file-2.5938485188.txt...
+			↗️  Done syncing assets
+			Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
+
+			",
 			}
 		`);
 		});
