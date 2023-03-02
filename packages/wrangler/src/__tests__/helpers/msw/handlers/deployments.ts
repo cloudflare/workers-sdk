@@ -59,7 +59,7 @@ export const mswSuccessDeployments = [
 								},
 							},
 							{
-								id: "Intrepid-Class",
+								id: "3mEgaU1T-Intrepid-someThing",
 								number: "NCC-74656",
 								metadata: {
 									author_id: "Kathryn-Jane-Gamma-6-0-7-3",
