@@ -12,6 +12,7 @@ import {
 import { fetchListResult, fetchResult } from "../cfetch";
 import { printBindings } from "../config";
 import { createWorkerUploadForm } from "../create-worker-upload-form";
+import { addHyphens } from "../deployments";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import { logger } from "../logger";
@@ -22,7 +23,6 @@ import { getWorkersDevSubdomain } from "../routes";
 import { syncAssets } from "../sites";
 import { identifyD1BindingsAsBeta } from "../worker";
 import { getZoneForRoute } from "../zones";
-import { addHyphens } from "../deployments";
 import type { FetchError } from "../cfetch";
 import type { Config } from "../config";
 import type {

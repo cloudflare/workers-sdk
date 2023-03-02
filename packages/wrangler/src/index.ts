@@ -28,7 +28,6 @@ import {
 	subdomainOptions,
 } from "./deprecated";
 import { devHandler, devOptions } from "./dev";
-import { confirm } from "./dialogs";
 import { workerNamespaceCommands } from "./dispatch-namespace";
 import { docsHandler, docsOptions } from "./docs";
 import { generateHandler, generateOptions } from "./generate";
@@ -589,14 +588,14 @@ export function createCLIParser(argv: string[]) {
 					type: "string",
 				})
 				.command(
-					"rollback <deployment-id>",
+					"rollback [deployment-id]",
 					"🔙 Rollback a deployment",
 					(rollbackYargs) =>
 						rollbackYargs
 							.positional("deployment-id", {
 								describe: "The ID of the deployment to rollback to",
 								type: "string",
-								demandOption: true,
+								demandOption: false,
 							})
 							.option("yes", {
 								alias: "y",
@@ -607,21 +606,6 @@ export function createCLIParser(argv: string[]) {
 					async (rollbackYargs) => {
 						const { accountId, scriptName, config } =
 							await commonDeploymentCMDSetup(rollbackYargs, deploymentsWarning);
-
-						const firstHash = rollbackYargs.deploymentId.substring(
-							0,
-							rollbackYargs.deploymentId.indexOf("-")
-						);
-
-						if (
-							!(await confirm(
-								`This deployment ${firstHash} will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback. ${chalk.blue.bold(
-									"Note:"
-								)} Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, R2, KV, etc.).`
-							))
-						) {
-							return;
-						}
 
 						await rollbackDeployment(
 							accountId,

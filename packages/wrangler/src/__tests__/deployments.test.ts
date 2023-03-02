@@ -41,7 +41,7 @@ describe("deployments", () => {
 		🚢 Displays the 10 most recent deployments for a worker
 
 		Commands:
-		  wrangler deployments rollback <deployment-id>  🔙 Rollback a deployment
+		  wrangler deployments rollback [deployment-id]  🔙 Rollback a deployment
 		  wrangler deployments view <deployment-id>      🔍 View a deployment
 
 		Flags:
@@ -77,7 +77,7 @@ describe("deployments", () => {
 		Source:       Rollback from Wrangler 🤠
 		Rollback from: MOCK-DEPLOYMENT-ID-1111
 
-		Deployment ID: Intrepid-Class
+		Deployment ID: 3mEgaU1T-Intrepid-someThing
 		Created on:    2021-02-03T00:00:00.000000Z
 		Author:        Kathryn-Janeway@federation.org
 		Source:       Wrangler 🤠
@@ -108,7 +108,7 @@ describe("deployments", () => {
 		Source:       Rollback from Wrangler 🤠
 		Rollback from: MOCK-DEPLOYMENT-ID-1111
 
-		Deployment ID: Intrepid-Class
+		Deployment ID: 3mEgaU1T-Intrepid-someThing
 		Created on:    2021-02-03T00:00:00.000000Z
 		Author:        Kathryn-Janeway@federation.org
 		Source:       Wrangler 🤠
@@ -218,6 +218,7 @@ describe("deployments", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 
+
 			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing
 			Current Deployment ID: galactic_mission_alpha"
 		`);
@@ -249,6 +250,25 @@ describe("deployments", () => {
 
 			? This deployment 3mEgaU1T will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback. Note: Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, R2, KV, etc.).
 			🤖 Using default value in non-interactive context: yes
+
+			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing
+			Current Deployment ID: galactic_mission_alpha"
+		`);
+
+				expect(requests.count).toEqual(1);
+			});
+
+			it("should automatically rollback to previous deployment when id is not specified", async () => {
+				mockConfirm({
+					text: "This deployment 3mEgaU1T will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback. Note: Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, R2, KV, etc.).",
+					result: true,
+				});
+
+				await runWrangler("deployments rollback");
+				expect(std.out).toMatchInlineSnapshot(`
+			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
+
+
 			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing
 			Current Deployment ID: galactic_mission_alpha"
 		`);

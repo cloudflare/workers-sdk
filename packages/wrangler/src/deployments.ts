@@ -1,6 +1,8 @@
 import { URLSearchParams } from "url";
+import chalk from "chalk";
 import { fetchResult, fetchScriptContent } from "./cfetch";
 import { readConfig } from "./config";
+import { confirm } from "./dialogs";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
@@ -125,8 +127,48 @@ export async function rollbackDeployment(
 	accountId: string,
 	scriptName: string | undefined,
 	{ send_metrics: sendMetrics }: { send_metrics?: Config["send_metrics"] } = {},
-	deploymentId: string
+	deploymentId: string | undefined
 ) {
+	if (deploymentId === undefined) {
+		const scriptTag = (
+			await fetchResult<ServiceMetadataRes>(
+				`/accounts/${accountId}/workers/services/${scriptName}`
+			)
+		).default_environment.script.tag;
+
+		const params = new URLSearchParams({ order: "asc" });
+		const { items: deploys } = await fetchResult<DeploymentListResult>(
+			`/accounts/${accountId}/workers/deployments/by-script/${scriptTag}`,
+			undefined,
+			params
+		);
+
+		if (deploys.length < 2) {
+			throw new Error(
+				"Cannot rollback to previous deployment since there are less than 2 deployemnts"
+			);
+		}
+
+		deploymentId = deploys.at(-2)?.id;
+		if (deploymentId === undefined) {
+			throw new Error("Cannot find previous deployment");
+		}
+	}
+
+	const firstHash = deploymentId.substring(0, deploymentId.indexOf("-"));
+
+	if (
+		!(await confirm(
+			`This deployment ${chalk.underline(
+				firstHash
+			)} will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback. ${chalk.blue.bold(
+				"Note:"
+			)} Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, R2, KV, etc.).`
+		))
+	) {
+		return;
+	}
+
 	await metrics.sendMetricsEvent(
 		"rollback deployments",
 		{ view: scriptName ? "single" : "all" },
@@ -148,7 +190,7 @@ export async function rollbackDeployment(
 	deploymentId = addHyphens(deploymentId) ?? deploymentId;
 	deployment_id = addHyphens(deployment_id) ?? deployment_id;
 
-	logger.log(`Successfully rolled back to Deployment ID: ${deploymentId}`);
+	logger.log(`\nSuccessfully rolled back to Deployment ID: ${deploymentId}`);
 	logger.log("Current Deployment ID:", deployment_id);
 }
 
