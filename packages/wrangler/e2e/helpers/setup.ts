@@ -1,7 +1,7 @@
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
-import path from "node:path";
-import os from "node:os";
 import assert from "node:assert";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 
 export async function makeRoot() {
 	return await mkdtemp(path.join(os.tmpdir(), "wrangler-smoke-"));
