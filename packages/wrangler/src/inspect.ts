@@ -283,6 +283,36 @@ export default function useInspector(props: InspectorProps) {
 			}
 		}
 
+		// Parse the source-map lazily when required, then store it, so we can we
+		// reuse the consumer for different errors without having to parse the map
+		// each time. Consumers must be destroyed when no longer needed, so create
+		// an abort controller aborted to signal destruction.
+		const sourceMapAbortController = new AbortController();
+		let sourceMapConsumerPromise: Promise<SourceMapConsumer | undefined>;
+		function getSourceMapConsumer() {
+			return (sourceMapConsumerPromise ??= (async () => {
+				// If we don't have a source map, or we've aborted, skip source mapping
+				if (!props.sourceMapPath || sourceMapAbortController.signal.aborted) {
+					return;
+				}
+				// Load and parse the source map
+				const mapContent = await readFile(props.sourceMapPath, "utf-8");
+				if (sourceMapAbortController.signal.aborted) return;
+				const map = JSON.parse(mapContent);
+				// `new SourceMapConsumer(...)` returns a `Promise<SourceMapConsumer>`
+				const consumer = await new SourceMapConsumer(map);
+				if (sourceMapAbortController.signal.aborted) {
+					consumer.destroy();
+					return;
+				}
+				sourceMapAbortController.signal.addEventListener("abort", () => {
+					sourceMapConsumerPromise = Promise.resolve(undefined);
+					consumer.destroy();
+				});
+				return consumer;
+			})());
+		}
+
 		/**
 		 * Since we have a handle on the remote websocket, we can tap
 		 * into its events, and log any pertinent ones directly to
@@ -296,72 +326,60 @@ export default function useInspector(props: InspectorProps) {
 					if (evt.method === "Runtime.exceptionThrown") {
 						const params = evt.params as Protocol.Runtime.ExceptionThrownEvent;
 
-						// Parse stack trace with source map.
-						if (props.sourceMapPath) {
-							// Parse in the sourcemap
-							const mapContent = JSON.parse(
-								await readFile(props.sourceMapPath, "utf-8")
-							);
-
+						const sourceMapConsumer = await getSourceMapConsumer();
+						if (sourceMapConsumer !== undefined) {
 							// Create the lines for the exception details log
 							const exceptionLines = [
 								params.exceptionDetails.exception?.description?.split("\n")[0],
 							];
 
-							await SourceMapConsumer.with(
-								mapContent,
-								null,
-								async (consumer) => {
-									// Pass each of the callframes into the consumer, and format the error
-									const stack = params.exceptionDetails.stackTrace?.callFrames;
+							// Pass each of the callframes into the consumer, and format the error
+							const stack = params.exceptionDetails.stackTrace?.callFrames;
 
-									stack?.forEach(
-										({ functionName, lineNumber, columnNumber }, i) => {
-											try {
-												if (lineNumber) {
-													// The line and column numbers in the stackTrace are zero indexed,
-													// whereas the sourcemap consumer indexes from one.
-													const pos = consumer.originalPositionFor({
-														line: lineNumber + 1,
-														column: columnNumber + 1,
-													});
+							stack?.forEach(
+								({ functionName, lineNumber, columnNumber }, i) => {
+									try {
+										if (lineNumber) {
+											// The line and column numbers in the stackTrace are zero indexed,
+											// whereas the sourcemap consumer indexes from one.
+											const pos = sourceMapConsumer.originalPositionFor({
+												line: lineNumber + 1,
+												column: columnNumber + 1,
+											});
 
-													// Print out line which caused error:
-													if (i === 0 && pos.source && pos.line) {
-														const fileSource = consumer.sourceContentFor(
-															pos.source
-														);
-														const fileSourceLine =
-															fileSource?.split("\n")[pos.line - 1] || "";
-														exceptionLines.push(fileSourceLine.trim());
+											// Print out line which caused error:
+											if (i === 0 && pos.source && pos.line) {
+												const fileSource = sourceMapConsumer.sourceContentFor(
+													pos.source
+												);
+												const fileSourceLine =
+													fileSource?.split("\n")[pos.line - 1] || "";
+												exceptionLines.push(fileSourceLine.trim());
 
-														// If we have a column, we can mark the position underneath
-														if (pos.column) {
-															exceptionLines.push(
-																`${" ".repeat(
-																	pos.column - fileSourceLine.search(/\S/)
-																)}^`
-															);
-														}
-													}
-
-													// From the way esbuild implements the "names" field:
-													// > To save space, the original name is only recorded when it's different from the final name.
-													// however, source-map consumer does not handle this
-													if (pos && pos.line != null) {
-														const convertedFnName =
-															pos.name || functionName || "";
-														exceptionLines.push(
-															`    at ${convertedFnName} (${pos.source}:${pos.line}:${pos.column})`
-														);
-													}
+												// If we have a column, we can mark the position underneath
+												if (pos.column) {
+													exceptionLines.push(
+														`${" ".repeat(
+															pos.column - fileSourceLine.search(/\S/)
+														)}^`
+													);
 												}
-											} catch {
-												// Line failed to parse through the sourcemap consumer
-												// We should handle this better
+											}
+
+											// From the way esbuild implements the "names" field:
+											// > To save space, the original name is only recorded when it's different from the final name.
+											// however, source-map consumer does not handle this
+											if (pos && pos.line != null) {
+												const convertedFnName = pos.name || functionName || "";
+												exceptionLines.push(
+													`    at ${convertedFnName} (${pos.source}:${pos.line}:${pos.column})`
+												);
 											}
 										}
-									);
+									} catch {
+										// Line failed to parse through the sourcemap consumer
+										// We should handle this better
+									}
 								}
 							);
 
@@ -445,6 +463,9 @@ export default function useInspector(props: InspectorProps) {
 			close();
 			// And we'll clear `remoteWebsocket`
 			setRemoteWebSocket(undefined);
+			// Destroy source map consumer, once WebSockets are closed, and we're not
+			// going to get anymore messages.
+			sourceMapAbortController.abort();
 		};
 	}, [
 		props.inspectorUrl,
