@@ -1,10 +1,10 @@
 import crypto from "node:crypto";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import { fetch } from "undici";
 import { describe, expect, it } from "vitest";
 import { RUN, runIn } from "./helpers/run";
 import { dedent, makeRoot, seed } from "./helpers/setup";
-import { fetch } from "undici";
 
 function matchWorkersDev(stdout: string): string {
 	return stdout.match(
