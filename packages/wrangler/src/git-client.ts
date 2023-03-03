@@ -144,7 +144,8 @@ export async function cloneIntoDirectory(
 	// cleanup: move the template to the target directory and delete `.git`
 	try {
 		fs.renameSync(templatePath, targetDirectory);
-	} catch {
+	} catch (e) {
+		logger.debug(e);
 		throw new Error(`Failed to find "${subdirectory}" in ${remote}`);
 	}
 	fs.rmSync(path.join(targetDirectory, ".git"), {
