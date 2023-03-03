@@ -217,8 +217,20 @@ export default function useInspector(props: InspectorProps) {
 		setRetryRemoteWebSocketConnectionSigil((x) => x + 1);
 	}
 
-	/** A simple incrementing id to attach to messages we send to devtools */
-	const messageCounterRef = useRef(1);
+	/** A simple decrementing id to attach to messages we send to devtools.
+	 * We use negative numbers to avoid ID collisions with the DevTools frontend:
+	 * https://github.com/ChromeDevTools/devtools-frontend/blob/88d8530ef2aec2c629354842dd7e9e212a025bf2/front_end/core/protocol_client/InspectorBackend.ts#L311
+	 * `workerd` accepts singed `Int32` values for `id`, so this is fine:
+	 * https://github.com/cloudflare/workerd/blob/5d644d0189246a22eec31bfd7b7c58a4afe40e57/src/workerd/io/cdp.capnp#L376
+	 */
+	const _messageCounterRef = useRef(-1);
+	const _messageResolves = useRef<Map<
+		number,
+		(result: unknown) => void
+	> | null>(null);
+	function nextMessageId() {
+		return _messageCounterRef.current--;
+	}
 
 	const cfAccessRef = useRef<string>();
 
@@ -265,10 +277,23 @@ export default function useInspector(props: InspectorProps) {
 		/**
 		 * Send a message to the remote websocket
 		 */
-		function send(event: Record<string, unknown>): void {
+		function send<Request = unknown, Response = unknown>(
+			method: string,
+			params?: Request
+		): Promise<Response | undefined> {
 			if (!isClosed()) {
+				const id = nextMessageId();
+				const event = { id, method, params };
+				let promiseResolve: ((result: Response) => void) | undefined;
+				const promise = new Promise<Response>(
+					(resolve) => (promiseResolve = resolve)
+				);
+				const resolves = (_messageResolves.current ??= new Map());
+				resolves.set(id, promiseResolve);
 				ws.send(JSON.stringify(event));
+				return promise;
 			}
+			return Promise.resolve(undefined);
 		}
 
 		/**
@@ -289,9 +314,9 @@ export default function useInspector(props: InspectorProps) {
 		// each time. Consumers must be destroyed when no longer needed, so create
 		// an abort controller aborted to signal destruction.
 		const sourceMapAbortController = new AbortController();
-		let sourceMapConsumerPromise: Promise<SourceMapConsumer | undefined>;
+		let _sourceMapConsumerPromise: Promise<SourceMapConsumer | undefined>;
 		function getSourceMapConsumer() {
-			return (sourceMapConsumerPromise ??= (async () => {
+			return (_sourceMapConsumerPromise ??= (async () => {
 				// If we don't have a source map, or we've aborted, skip source mapping
 				if (!props.sourceMapPath || sourceMapAbortController.signal.aborted) {
 					return;
@@ -307,7 +332,7 @@ export default function useInspector(props: InspectorProps) {
 					return;
 				}
 				sourceMapAbortController.signal.addEventListener("abort", () => {
-					sourceMapConsumerPromise = Promise.resolve(undefined);
+					_sourceMapConsumerPromise = Promise.resolve(undefined);
 					consumer.destroy();
 				});
 				return consumer;
@@ -320,7 +345,7 @@ export default function useInspector(props: InspectorProps) {
 		 * @param message first line of stack trace (e.g. `Error: message`)
 		 * @param frames structured stack entries for error location
 		 */
-		function formattedError(
+		function formatStructuredError(
 			consumer: SourceMapConsumer,
 			message?: string,
 			frames?: Protocol.Runtime.CallFrame[]
@@ -331,11 +356,12 @@ export default function useInspector(props: InspectorProps) {
 			frames?.forEach(({ functionName, lineNumber, columnNumber }, i) => {
 				try {
 					if (lineNumber) {
-						// The line and column numbers in the stackTrace are zero indexed,
-						// whereas the sourcemap consumer indexes from one.
+						// `Protocol.Runtime.CallFrame` uses 0-indexed line and column
+						// numbers, whereas `source-map` expects 1-indexing for lines and
+						// 0-indexing for columns;
 						const pos = consumer.originalPositionFor({
 							line: lineNumber + 1,
-							column: columnNumber + 1,
+							column: columnNumber,
 						});
 
 						// Print out line which caused error:
@@ -356,11 +382,16 @@ export default function useInspector(props: InspectorProps) {
 						// From the way esbuild implements the "names" field:
 						// > To save space, the original name is only recorded when it's different from the final name.
 						// however, source-map consumer does not handle this
-						if (pos && pos.line != null) {
+						if (pos && pos.line !== null && pos.column !== null) {
 							const convertedFnName = pos.name || functionName || "";
-							lines.push(
-								`    at ${convertedFnName} (${pos.source}:${pos.line}:${pos.column})`
-							);
+							const convertedLocation = `${pos.source}:${pos.line}:${
+								pos.column + 1
+							}`;
+							if (convertedFnName === "") {
+								lines.push(`    at ${convertedLocation}`);
+							} else {
+								lines.push(`    at ${convertedFnName} (${convertedLocation})`);
+							}
 						}
 					}
 				} catch {
@@ -369,6 +400,26 @@ export default function useInspector(props: InspectorProps) {
 				}
 			});
 			return lines.join("\n");
+		}
+
+		/**
+		 * Converts an unstructured-stack to a friendly, source-mapped error string.
+		 * @param consumer source-map to use for mapping locations
+		 * @param stack string stack trace from `Error#stack`
+		 */
+		function formatStack(consumer: SourceMapConsumer, stack: string) {
+			const message = stack.split("\n")[0];
+			const callSites = parseStack(stack);
+			const frames = callSites.map<Protocol.Runtime.CallFrame>((site) => ({
+				functionName: site.getFunctionName() ?? "",
+				// `Protocol.Runtime.CallFrame`s line numbers are 0-indexed, hence `- 1`
+				lineNumber: (site.getLineNumber() ?? 1) - 1,
+				columnNumber: site.getColumnNumber() ?? 1,
+				// Unused by `formattedError`
+				scriptId: "",
+				url: "",
+			}));
+			return formatStructuredError(consumer, message, frames);
 		}
 
 		/**
@@ -390,7 +441,7 @@ export default function useInspector(props: InspectorProps) {
 							const message =
 								params.exceptionDetails.exception?.description?.split("\n")[0];
 							const stack = params.exceptionDetails.stackTrace?.callFrames;
-							const formatted = formattedError(consumer, message, stack);
+							const formatted = formatStructuredError(consumer, message, stack);
 							// Log the parsed stacktrace
 							logger.error(params.exceptionDetails.text, formatted);
 						} else {
@@ -401,6 +452,7 @@ export default function useInspector(props: InspectorProps) {
 							);
 						}
 
+						// Try to display `Error#cause` too
 						const cause =
 							params.exceptionDetails.exception?.preview?.properties.find(
 								(prop) => prop.name === "cause"
@@ -420,24 +472,61 @@ export default function useInspector(props: InspectorProps) {
 								logger.error("Cause:", cause.value);
 							} else {
 								// If we have the full error, try source map it
-								const message = cause.value.split("\n")[0];
-								const callSites = parseStack(cause.value);
-								const stack = callSites.map<Protocol.Runtime.CallFrame>(
-									(site) => ({
-										functionName: site.getFunctionName() ?? "",
-										// `Protocol.Runtime.CallFrame`s are 0-indexed, hence `- 1`
-										lineNumber: (site.getLineNumber() ?? 1) - 1,
-										columnNumber: (site.getColumnNumber() ?? 1) - 1,
-										// Unused by `formattedError`
-										scriptId: "",
-										url: "",
-									})
-								);
-								const formatted = formattedError(consumer, message, stack);
+								const formatted = formatStack(consumer, cause.value);
 								logger.error("Cause:", formatted);
 							}
 						}
+
+						// `DOMException`s are special, the actually useful stack trace
+						// is hidden behind the `stack` getter, and not included in the
+						// preview.
+						//
+						// The two requests here are based on intercepted messages sent by
+						// the DevTools frontend to view the stack.
+						if (
+							params.exceptionDetails.exception?.className === "DOMException" &&
+							params.exceptionDetails.exception.objectId !== undefined
+						) {
+							// Get a reference to the `stack` getter
+							const objectId = params.exceptionDetails.exception.objectId;
+							const getPropertiesResponse = await send<
+								Protocol.Runtime.GetPropertiesRequest,
+								Protocol.Runtime.GetPropertiesResponse
+							>("Runtime.getProperties", {
+								objectId,
+								accessorPropertiesOnly: true,
+								generatePreview: false,
+							});
+							const stackDescriptor = getPropertiesResponse?.result.find(
+								(prop) => prop.name === "stack"
+							);
+							const getObjectId = stackDescriptor?.get?.objectId;
+							if (getObjectId !== undefined) {
+								// Invoke the `stack` getter
+								const callFunctionResponse = await send<
+									Protocol.Runtime.CallFunctionOnRequest,
+									Protocol.Runtime.CallFunctionOnResponse
+								>("Runtime.callFunctionOn", {
+									objectId,
+									functionDeclaration:
+										"function invokeGetter(getter) { return Reflect.apply(getter, this, []); }",
+									arguments: [{ objectId: getObjectId }],
+									silent: true,
+								});
+								if (callFunctionResponse !== undefined) {
+									// Log the source-mapped `stack` if we have a consumer
+									const stack = callFunctionResponse.result.value;
+									if (consumer === undefined) {
+										logger.error("Cause:", stack);
+									} else {
+										const formatted = formatStack(consumer, stack);
+										logger.error("Cause:", formatted);
+									}
+								}
+							}
+						}
 					}
+
 					if (evt.method === "Runtime.consoleAPICalled") {
 						logConsoleMessage(
 							evt.params as Protocol.Runtime.ConsoleAPICalledEvent
@@ -451,15 +540,12 @@ export default function useInspector(props: InspectorProps) {
 		}
 
 		ws.addEventListener("open", () => {
-			send({ method: "Runtime.enable", id: messageCounterRef.current });
+			void send("Runtime.enable");
 			// TODO: This doesn't actually work. Must fix.
-			send({ method: "Network.enable", id: messageCounterRef.current++ });
+			void send("Network.enable");
 
 			keepAliveInterval = setInterval(() => {
-				send({
-					method: "Runtime.getIsolateId",
-					id: messageCounterRef.current++,
-				});
+				void send("Runtime.getIsolateId");
 			}, 10_000);
 		});
 
@@ -496,7 +582,7 @@ export default function useInspector(props: InspectorProps) {
 						// we can disable the next eslint warning since
 						// we're referencing a ref that stays alive
 						// eslint-disable-next-line react-hooks/exhaustive-deps
-						id: messageCounterRef.current++,
+						id: nextMessageId(),
 						params: {},
 					})
 				);
@@ -533,12 +619,39 @@ export default function useInspector(props: InspectorProps) {
 	// and remote websockets, and handles how messages flow between them.
 	useEffect(() => {
 		/**
+		 * Attempt to handle this event as a response to a message sent by Wrangler.
+		 * Will return `true` if-and-only-if the event was handled.
+		 */
+		function maybeHandleInternalMessage(event: MessageEvent): boolean {
+			try {
+				if (typeof event.data === "string") {
+					const msg = JSON.parse(event.data);
+					if (msg.id < 0) {
+						// If `id` is negative, this message was sent from Wrangler, not the
+						// DevTools frontend, so handle it here, and don't forward it
+						const resolve = _messageResolves.current?.get(msg.id);
+						_messageResolves.current?.delete(msg.id);
+						if (resolve !== undefined) resolve(msg.result);
+						return true;
+					}
+				}
+			} catch (e) {
+				// If message failed to parse for whatever reason, let DevTools frontend
+				// handle it
+				logger.error(e);
+			}
+			return false;
+		}
+
+		/**
 		 * This event listener is used for buffering messages from
 		 * the remote websocket, and flushing them
 		 * when the local websocket connects.
 		 */
 		function bufferMessageFromRemoteSocket(event: MessageEvent) {
-			messageBufferRef.current.push(event);
+			if (!maybeHandleInternalMessage(event)) {
+				messageBufferRef.current.push(event);
+			}
 			// TODO: maybe we should have a max limit on this?
 			// if so, we should be careful when removing messages
 			// from the front, because they could be critical for
@@ -585,7 +698,9 @@ export default function useInspector(props: InspectorProps) {
 				localWebSocket,
 				"Trying to send a message to an undefined `localWebSocket`"
 			);
-			localWebSocket.send(event.data);
+			if (!maybeHandleInternalMessage(event)) {
+				localWebSocket.send(event.data);
+			}
 		}
 
 		if (localWebSocket && remoteWebSocket) {
