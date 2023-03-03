@@ -89,7 +89,7 @@ export async function generateTypes(
 		}
 	}
 
-	if (configToDTS.unsafe) {
+	if (configToDTS.unsafe?.bindings) {
 		for (const unsafe of configToDTS.unsafe.bindings) {
 			envTypeStructure.push(`${unsafe.name}: any;`);
 		}

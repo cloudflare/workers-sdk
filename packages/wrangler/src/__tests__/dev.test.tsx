@@ -1251,7 +1251,7 @@ describe("wrangler dev", () => {
 			      --experimental-local                         Run on my machine using the Cloudflare Workers runtime  [boolean] [default: false]
 			      --experimental-local-remote-kv               Read/write KV data from/to real namespaces on the Cloudflare network  [boolean] [default: false]
 			      --minify                                     Minify the script  [boolean]
-			      --node-compat                                Enable node.js compatibility  [boolean]
+			      --node-compat                                Enable Node.js compatibility  [boolean]
 			      --persist                                    Enable persistence for local mode, using default path: .wrangler/state  [boolean]
 			      --persist-to                                 Specify directory to use for local persistence (implies --persist)  [string]
 			      --live-reload                                Auto reload HTML pages when change is detected in local mode  [boolean]
@@ -1564,6 +1564,21 @@ describe("wrangler dev", () => {
 			  "warn": "",
 			}
 		`);
+		});
+	});
+
+	describe("`nodejs_compat` compatibility flag", () => {
+		it("should conflict with the --node-compat option", async () => {
+			writeWranglerToml();
+			fs.writeFileSync("index.js", `export default {};`);
+
+			await expect(
+				runWrangler(
+					"dev index.js --compatibility-flag=nodejs_compat --node-compat"
+				)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"The \`nodejs_compat\` compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file."`
+			);
 		});
 	});
 });

@@ -1,5 +1,33 @@
 # wrangler
 
+## 2.12.0
+
+### Minor Changes
+
+- [#2810](https://github.com/cloudflare/workers-sdk/pull/2810) [`62784131`](https://github.com/cloudflare/workers-sdk/commit/62784131385d641c3512b09565d801a5ecd39725) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: upgrade `@miniflare/tre` to [`3.0.0-next.12`](https://github.com/cloudflare/miniflare/releases/tag/v3.0.0-next.12), incorporating changes from [`3.0.0-next.11`](https://github.com/cloudflare/miniflare/releases/tag/v3.0.0-next.11)
+
+  Notably, this brings the following improvements to `wrangler dev --experimental-local`:
+
+  - Adds support for Durable Objects and D1
+  - Fixes an issue blocking clean exits and script reloads
+  - Bumps to `better-sqlite3@8`, allowing installation on Node 19
+
+* [#2665](https://github.com/cloudflare/workers-sdk/pull/2665) [`4756d6a1`](https://github.com/cloudflare/workers-sdk/commit/4756d6a143168da84548203b7b0bc23db0b92c95) Thanks [@alankemp](https://github.com/alankemp)! - Add new [unsafe.metadata] section to wrangler.toml allowing arbitary data to be added to the metadata section of the upload
+
+### Patch Changes
+
+- [#2539](https://github.com/cloudflare/workers-sdk/pull/2539) [`3725086c`](https://github.com/cloudflare/workers-sdk/commit/3725086c4b6854f6fb1e7e0517d3a526d0f9567b) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Add support for the `nodejs_compat` Compatibility Flag when bundling a Worker with Wrangler
+
+  This new Compatibility Flag is incompatible with the legacy `--node-compat` CLI argument and `node_compat` configuration option. If you want to use the new runtime Node.js compatibility features, please remove the `--node-compat` argument from your CLI command or your config file.
+
+## 2.11.1
+
+### Patch Changes
+
+- [#2795](https://github.com/cloudflare/workers-sdk/pull/2795) [`ec3e181e`](https://github.com/cloudflare/workers-sdk/commit/ec3e181eb91534ff79198847f7bf01a606fe2b4a) Thanks [@penalosa](https://github.com/penalosa)! - fix: Adds a `duplex: "half"` property to R2 fetch requests with stream bodies in order to be compatible with undici v5.20
+
+* [#2789](https://github.com/cloudflare/workers-sdk/pull/2789) [`4ca8c0b0`](https://github.com/cloudflare/workers-sdk/commit/4ca8c0b02878ec259c6d48a47a2aa6e47f59bea0) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Support overriding the next URL in subsequent executions with `next("/new-path")` from within a Pages Plugin
+
 ## 2.11.0
 
 ### Minor Changes

@@ -399,4 +399,55 @@ export default {
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
+
+	it("should leave Node.js imports when the `nodejs_compat` compatibility flag is set", async () => {
+		mkdirSync("functions");
+		writeFileSync(
+			"functions/hello.js",
+			`
+		import { AsyncLocalStorage } from 'node:async_hooks';
+
+    export async function onRequest() {
+			console.log(AsyncLocalStorage);
+      return new Response("Hello from Pages Functions");
+    }
+    `
+		);
+
+		await runWrangler(
+			`pages functions build --outfile=public/_worker.js --compatibility-flag=nodejs_compat`
+		);
+
+		expect(existsSync("public/_worker.js")).toBe(true);
+		expect(std.out).toMatchInlineSnapshot(`
+		"🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
+		✨ Compiled Worker successfully"
+	`);
+
+		expect(readFileSync("public/_worker.js", "utf-8")).toContain(
+			`import { AsyncLocalStorage } from "node:async_hooks";`
+		);
+	});
+
+	it("should error at Node.js imports when the `nodejs_compat` compatibility flag is not set", async () => {
+		mkdirSync("functions");
+		writeFileSync(
+			"functions/hello.js",
+			`
+		import { AsyncLocalStorage } from 'node:async_hooks';
+
+    export async function onRequest() {
+			console.log(AsyncLocalStorage);
+      return new Response("Hello from Pages Functions");
+    }
+    `
+		);
+
+		await expect(
+			runWrangler(`pages functions build --outfile=public/_worker.js`)
+		).rejects.toThrowErrorMatchingInlineSnapshot(`
+		"Build failed with 1 error:
+		hello.js:2:36: ERROR: Could not resolve \\"node:async_hooks\\""
+	`);
+	});
 });

@@ -2719,17 +2719,18 @@ describe("init", () => {
 			DATA_BLOB_ONE = \\"DATA_BLOB_ONE\\"
 			DATA_BLOB_TWO = \\"DATA_BLOB_TWO\\"
 
-			[[unsafe.bindings]]
-			type = \\"some unsafe thing\\"
-			name = \\"UNSAFE_BINDING_ONE\\"
+			[unsafe]
+			  [[unsafe.bindings]]
+			  type = \\"some unsafe thing\\"
+			  name = \\"UNSAFE_BINDING_ONE\\"
 
 			[unsafe.bindings.data.some]
 			unsafe = \\"thing\\"
 
-			[[unsafe.bindings]]
-			type = \\"another unsafe thing\\"
-			name = \\"UNSAFE_BINDING_TWO\\"
-			data = 1_337
+			  [[unsafe.bindings]]
+			  type = \\"another unsafe thing\\"
+			  name = \\"UNSAFE_BINDING_TWO\\"
+			  data = 1_337
 			"
 		`);
 			expect(std.out).toContain("cd isolinear-optical-chip");

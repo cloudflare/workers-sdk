@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "2.11.0",
+	"version": "2.12.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -118,7 +118,7 @@
 		"@cloudflare/workers-types": "^4.20221111.1",
 		"@iarna/toml": "^3.0.0",
 		"@microsoft/api-extractor": "^7.28.3",
-		"@miniflare/tre": "^3.0.0-next.10",
+		"@miniflare/tre": "3.0.0-next.12",
 		"@types/better-sqlite3": "^7.6.0",
 		"@types/busboy": "^1.5.0",
 		"@types/command-exists": "^1.2.0",

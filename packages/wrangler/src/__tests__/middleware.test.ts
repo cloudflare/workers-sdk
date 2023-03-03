@@ -750,6 +750,7 @@ describe("unchanged functionality when wrapping with middleware", () => {
 });
 
 describe("multiple middleware", () => {
+	runInTempDir();
 	it("should respond correctly with D1 databases, scheduled testing, and formatted dev errors", async () => {
 		// Kitchen sink test to check interaction between multiple middlewares
 		const scriptContent = `
@@ -769,7 +770,7 @@ describe("multiple middleware", () => {
 					const stmt = await env.DB.prepare("INSERT INTO test (id, value) VALUES (?, ?)");
 					await stmt.bind(1, "one").run();
 			  }
-			}	
+			}
 		`;
 		fs.writeFileSync("index.js", scriptContent);
 

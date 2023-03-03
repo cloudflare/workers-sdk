@@ -339,12 +339,20 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const minify = props.minify ?? config.minify;
 
-	const nodeCompat = props.nodeCompat ?? config.node_compat;
-	if (nodeCompat) {
+	const legacyNodeCompat = props.nodeCompat ?? config.node_compat;
+	if (legacyNodeCompat) {
 		logger.warn(
-			"Enabling node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
+			"Enabling Node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
 		);
 	}
+
+	const compatibilityFlags =
+		props.compatibilityFlags ?? config.compatibility_flags;
+	const nodejsCompat = compatibilityFlags.includes("nodejs_compat");
+	assert(
+		!(legacyNodeCompat && nodejsCompat),
+		"The `nodejs_compat` compatibility flag cannot be used in conjunction with the legacy `--node-compat` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the `--node-compat` argument from your CLI command or `node_compat = true` from your config file."
+	);
 
 	// Warn if user tries minify or node-compat with no-bundle
 	if (props.noBundle && minify) {
@@ -353,7 +361,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	}
 
-	if (props.noBundle && nodeCompat) {
+	if (props.noBundle && legacyNodeCompat) {
 		logger.warn(
 			"`--node-compat` and `--no-bundle` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process."
 		);
@@ -478,7 +486,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						rules: props.rules,
 						tsconfig: props.tsconfig ?? config.tsconfig,
 						minify,
-						nodeCompat,
+						legacyNodeCompat,
+						nodejsCompat,
 						define: { ...config.define, ...props.defines },
 						checkFetch: false,
 						assets: config.assets && {
@@ -553,7 +562,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			dispatch_namespaces: config.dispatch_namespaces,
 			mtls_certificates: config.mtls_certificates,
 			logfwdr: config.logfwdr,
-			unsafe: config.unsafe?.bindings,
+			unsafe: {
+				bindings: config.unsafe.bindings,
+				metadata: config.unsafe.metadata,
+			},
 		};
 
 		if (assets.manifest) {
@@ -575,8 +587,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			migrations,
 			modules,
 			compatibility_date: props.compatibilityDate ?? config.compatibility_date,
-			compatibility_flags:
-				props.compatibilityFlags ?? config.compatibility_flags,
+			compatibility_flags: compatibilityFlags,
 			usage_model: config.usage_model,
 			keepVars,
 			logpush: props.logpush !== undefined ? props.logpush : config.logpush,

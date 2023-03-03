@@ -174,6 +174,13 @@ interface CfUnsafeBinding {
 	type: string;
 }
 
+type CfUnsafeMetadata = Record<string, unknown>;
+
+interface CfUnsafe {
+	bindings: CfUnsafeBinding[] | undefined;
+	metadata: CfUnsafeMetadata | undefined;
+}
+
 export interface CfDurableObjectMigrations {
 	old_tag?: string;
 	new_tag: string;
@@ -221,7 +228,7 @@ export interface CfWorkerInit {
 		dispatch_namespaces: CfDispatchNamespace[] | undefined;
 		mtls_certificates: CfMTlsCertificate[] | undefined;
 		logfwdr: CfLogfwdr | undefined;
-		unsafe: CfUnsafeBinding[] | undefined;
+		unsafe: CfUnsafe | undefined;
 	};
 	migrations: CfDurableObjectMigrations | undefined;
 	compatibility_date: string | undefined;
