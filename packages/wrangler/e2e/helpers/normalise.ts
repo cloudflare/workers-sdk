@@ -1,24 +1,35 @@
-export function normalizeOutput(stdout: string): string {
-	return npmStripTimings(
-		removeWorkersDev(
-			removeUUID(
-				normalizeErrorMarkers(
-					replaceByte(
-						stripTrailingWhitespace(
-							normalizeSlashes(
-								normalizeTempDirs(stripTimings(removeVersionHeader(stdout)))
-							)
-						)
-					)
-				)
-			)
-		)
-	);
+import stripAnsi from "strip-ansi";
+export function normalizeOutput(
+	stdout: string,
+	replacers?: [string, string][]
+): string {
+	const functions = [
+		npmStripTimings,
+		removeWorkersDev,
+		removeUUID,
+		normalizeErrorMarkers,
+		replaceByte,
+		stripTrailingWhitespace,
+		normalizeSlashes,
+		normalizeTempDirs,
+		stripTimings,
+		removeVersionHeader,
+		stripAnsi,
+	];
+	for (const f of functions) {
+		stdout = f(stdout);
+	}
+	if (replacers) {
+		for (const [from, to] of replacers) {
+			stdout = stdout.replaceAll(from, to);
+		}
+	}
+	return stdout;
 }
 function removeWorkersDev(str: string) {
 	return str.replace(
-		/https:\/\/smoke-test-worker-(.+?)\..+?\.workers\.dev/g,
-		"https://smoke-test-worker-$1.SUBDOMAIN.workers.dev"
+		/https:\/\/(.+?)\..+?\.workers\.dev/g,
+		"https://$1.SUBDOMAIN.workers.dev"
 	);
 }
 function removeUUID(str: string) {
