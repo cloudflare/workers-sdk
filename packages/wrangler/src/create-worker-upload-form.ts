@@ -23,7 +23,7 @@ export function toMimeType(type: CfModuleType): string {
 	}
 }
 
-type WorkerMetadataBinding =
+export type WorkerMetadataBinding =
 	// If you add any new binding types here, also add it to safeBindings
 	// under validateUnsafeBinding in config/validation.ts
 	| { type: "plain_text"; name: string; text: string }

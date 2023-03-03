@@ -4,7 +4,7 @@
 
 feature: add `deployment view` and `deployment rollbak` subcommands
 
-`deployment view <deployment-id>` will get the details of a deployment, including versioned script, bindings, and usage model information.
+`deployment view <deployment-id>` will get the details of a deployment, including bindings and usage model information. When using the `--content` option, the command will return the script content for that deployment.
 This information can be used to help debug bad deployments or get insights on changes between deployments.
 
 `deployment rollback [deployment-id]` will rollback to a specific deployment in the runtime. This will be useful in situations like recovering from a bad
@@ -14,27 +14,21 @@ in a developer's local setup.
 example of `view <deployment-id>` output:
 
 ```ts
-	{
-    Tag: '',
-    Number: 0,
-    'Metadata.author_id': 'Picard-Gamma-6-0-7-3',
-    'Metadata.author_email': 'picard@vinyard.com',
-    'Metadata.source': 'wrangler',
-    'Metadata.created_on': '2021-01-01T00:00:00.000000Z',
-    'Metadata.modified_on': '2021-01-01T00:00:00.000000Z',
-    'resources.script': {
-      etag: 'mock-e-tag',
-      handlers: [ 'fetch' ],
-      last_deployed_from: 'wrangler'
-    },
-    'resources.bindings': []
-  }
+Deployment ID: 07d7143d-0284-427e-ba22-2d5e6e91b479
+Created on:    2023-03-02T21:05:15.622446Z
+Author:        jspspike@gmail.com
+Source:        Upload from Wrangler 🤠
+------------------------------------------------------------
+Author ID:          e5a3ca86e08fb0940d3a05691310bb42
+Usage Model:        bundled
+Handlers:           fetch
+Compatibility Date: 2022-10-03
+--------------------------bindings--------------------------
+[[r2_buckets]]
+binding = "MY_BUCKET"
+bucket_name = "testr2"
 
-
-
-  export default {
-    async fetch(request) {
-      return new Response('Hello World from Deployment 1701-E');
-    },
-  };
+[[kv_namespaces]]
+id = "79300c6d17eb4180a07270f450efe53f"
+binding = "yeee"
 ```

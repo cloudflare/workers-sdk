@@ -97,13 +97,23 @@ export const mswSuccessDeploymentScriptMetadata = [
 export const mswSuccessDeploymentDetails = [
 	rest.get(
 		"*/accounts/:accountId/workers/deployments/by-script/:scriptTag/detail/:deploymentId",
-		(_, res, ctx) => {
+		(req, res, ctx) => {
+			let bindings: object[] = [];
+			if (req.url.toString().includes("bindings-tag")) {
+				bindings = [
+					{
+						bucket_name: "testr2",
+						name: "MY_BUCKET",
+						type: "r2_bucket",
+					},
+				];
+			}
 			return res.once(
 				ctx.json(
 					createFetchResult({
 						Tag: "",
 						Number: 0,
-						Metadata: {
+						metadata: {
 							author_id: "Picard-Gamma-6-0-7-3",
 							author_email: "Jean-Luc-Picard@federation.org",
 							source: "wrangler",
@@ -116,7 +126,10 @@ export const mswSuccessDeploymentDetails = [
 								handlers: ["fetch"],
 								last_deployed_from: "wrangler",
 							},
-							bindings: [],
+							script_runtime: {
+								usage_model: "bundled",
+							},
+							bindings: bindings,
 						},
 					})
 				)
