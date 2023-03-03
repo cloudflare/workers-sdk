@@ -1,14 +1,15 @@
-import path from "node:path";
 import crypto from "node:crypto";
-import { dedent, makeRoot, seed } from "./helpers/setup";
-import { RUN, runIn } from "./helpers/run";
-import { describe, expect, it } from "vitest";
+import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import { describe, expect, it } from "vitest";
+import { RUN, runIn } from "./helpers/run";
+import { dedent, makeRoot, seed } from "./helpers/setup";
+import { fetch } from "undici";
 
 function matchWorkersDev(stdout: string): string {
 	return stdout.match(
 		/https:\/\/smoke-test-worker-.+?\.(.+?\.workers\.dev)/
-	)![1];
+	)?.[1] as string;
 }
 
 describe("publish", async () => {

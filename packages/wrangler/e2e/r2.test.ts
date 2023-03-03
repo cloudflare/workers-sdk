@@ -1,9 +1,9 @@
+import crypto from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import crypto from "node:crypto";
-import { makeRoot, seed } from "./helpers/setup";
-import { RUN, runIn } from "./helpers/run";
 import { describe, expect, it } from "vitest";
+import { RUN, runIn } from "./helpers/run";
+import { makeRoot, seed } from "./helpers/setup";
 
 describe("r2", async () => {
 	const root = await makeRoot();
