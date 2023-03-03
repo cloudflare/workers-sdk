@@ -83,7 +83,7 @@
 		"setupFilesAfterEnv": [
 			"<rootDir>/src/__tests__/jest.setup.ts"
 		],
-		"testRegex": "src\\/__tests__\\/.*\\.(test|spec)\\.[jt]sx?$",
+		"testRegex": "src/__tests__/.*\\.(test|spec)\\.[jt]sx?$",
 		"testTimeout": 30000,
 		"transform": {
 			"^.+\\.c?(t|j)sx?$": [
