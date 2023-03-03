@@ -314,6 +314,63 @@ export default function useInspector(props: InspectorProps) {
 		}
 
 		/**
+		 * Converts a structured-error to a friendly, source-mapped error string.
+		 * @param consumer source-map to use for mapping locations
+		 * @param message first line of stack trace (e.g. `Error: message`)
+		 * @param frames structured stack entries for error location
+		 */
+		function formattedError(
+			consumer: SourceMapConsumer,
+			message?: string,
+			frames?: Protocol.Runtime.CallFrame[]
+		): string {
+			const lines: string[] = [];
+			if (message !== undefined) lines.push(message);
+			// Pass each of the callframes into the consumer, and format the error
+			frames?.forEach(({ functionName, lineNumber, columnNumber }, i) => {
+				try {
+					if (lineNumber) {
+						// The line and column numbers in the stackTrace are zero indexed,
+						// whereas the sourcemap consumer indexes from one.
+						const pos = consumer.originalPositionFor({
+							line: lineNumber + 1,
+							column: columnNumber + 1,
+						});
+
+						// Print out line which caused error:
+						if (i === 0 && pos.source && pos.line) {
+							const fileSource = consumer.sourceContentFor(pos.source);
+							const fileSourceLine =
+								fileSource?.split("\n")[pos.line - 1] || "";
+							lines.push(fileSourceLine.trim());
+
+							// If we have a column, we can mark the position underneath
+							if (pos.column) {
+								lines.push(
+									`${" ".repeat(pos.column - fileSourceLine.search(/\S/))}^`
+								);
+							}
+						}
+
+						// From the way esbuild implements the "names" field:
+						// > To save space, the original name is only recorded when it's different from the final name.
+						// however, source-map consumer does not handle this
+						if (pos && pos.line != null) {
+							const convertedFnName = pos.name || functionName || "";
+							lines.push(
+								`    at ${convertedFnName} (${pos.source}:${pos.line}:${pos.column})`
+							);
+						}
+					}
+				} catch {
+					// Line failed to parse through the sourcemap consumer
+					// We should handle this better
+				}
+			});
+			return lines.join("\n");
+		}
+
+		/**
 		 * Since we have a handle on the remote websocket, we can tap
 		 * into its events, and log any pertinent ones directly to
 		 * the terminal (which means you have insight into your worker
@@ -326,68 +383,15 @@ export default function useInspector(props: InspectorProps) {
 					if (evt.method === "Runtime.exceptionThrown") {
 						const params = evt.params as Protocol.Runtime.ExceptionThrownEvent;
 
-						const sourceMapConsumer = await getSourceMapConsumer();
-						if (sourceMapConsumer !== undefined) {
+						const consumer = await getSourceMapConsumer();
+						if (consumer !== undefined) {
 							// Create the lines for the exception details log
-							const exceptionLines = [
-								params.exceptionDetails.exception?.description?.split("\n")[0],
-							];
-
-							// Pass each of the callframes into the consumer, and format the error
+							const message =
+								params.exceptionDetails.exception?.description?.split("\n")[0];
 							const stack = params.exceptionDetails.stackTrace?.callFrames;
-
-							stack?.forEach(
-								({ functionName, lineNumber, columnNumber }, i) => {
-									try {
-										if (lineNumber) {
-											// The line and column numbers in the stackTrace are zero indexed,
-											// whereas the sourcemap consumer indexes from one.
-											const pos = sourceMapConsumer.originalPositionFor({
-												line: lineNumber + 1,
-												column: columnNumber + 1,
-											});
-
-											// Print out line which caused error:
-											if (i === 0 && pos.source && pos.line) {
-												const fileSource = sourceMapConsumer.sourceContentFor(
-													pos.source
-												);
-												const fileSourceLine =
-													fileSource?.split("\n")[pos.line - 1] || "";
-												exceptionLines.push(fileSourceLine.trim());
-
-												// If we have a column, we can mark the position underneath
-												if (pos.column) {
-													exceptionLines.push(
-														`${" ".repeat(
-															pos.column - fileSourceLine.search(/\S/)
-														)}^`
-													);
-												}
-											}
-
-											// From the way esbuild implements the "names" field:
-											// > To save space, the original name is only recorded when it's different from the final name.
-											// however, source-map consumer does not handle this
-											if (pos && pos.line != null) {
-												const convertedFnName = pos.name || functionName || "";
-												exceptionLines.push(
-													`    at ${convertedFnName} (${pos.source}:${pos.line}:${pos.column})`
-												);
-											}
-										}
-									} catch {
-										// Line failed to parse through the sourcemap consumer
-										// We should handle this better
-									}
-								}
-							);
-
+							const formatted = formattedError(consumer, message, stack);
 							// Log the parsed stacktrace
-							logger.error(
-								params.exceptionDetails.text,
-								exceptionLines.join("\n")
-							);
+							logger.error(params.exceptionDetails.text, formatted);
 						} else {
 							// We log the stacktrace to the terminal
 							logger.error(
