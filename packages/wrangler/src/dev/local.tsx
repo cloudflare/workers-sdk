@@ -637,6 +637,7 @@ export function setupMiniflareOptions({
 			const waitMs = consumer.max_batch_timeout
 				? 1000 * consumer.max_batch_timeout
 				: undefined;
+			// TODO: Pass concurrency configuration to miniflare
 			return {
 				queueName: consumer.queue,
 				maxBatchSize: consumer.max_batch_size,

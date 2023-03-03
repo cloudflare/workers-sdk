@@ -1052,6 +1052,9 @@ async function ensureQueuesExist(config: Config) {
 function updateQueueConsumers(config: Config): Promise<string[]>[] {
 	const consumers = config.queues.consumers || [];
 	return consumers.map((consumer) => {
+		const maxConcurrency = consumer.concurrency_enabled
+			? 5
+			: consumer.max_concurrency ?? 1;
 		const body: PutConsumerBody = {
 			dead_letter_queue: consumer.dead_letter_queue,
 			settings: {
@@ -1060,6 +1063,8 @@ function updateQueueConsumers(config: Config): Promise<string[]>[] {
 				max_wait_time_ms: consumer.max_batch_timeout
 					? 1000 * consumer.max_batch_timeout
 					: undefined,
+				concurrency_enabled: maxConcurrency > 1,
+				max_concurrency: maxConcurrency,
 			},
 		};
 

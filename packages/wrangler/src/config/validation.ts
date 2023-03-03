@@ -2215,6 +2215,8 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 			"max_batch_timeout",
 			"max_retries",
 			"dead_letter_queue",
+			"concurrency_enabled",
+			"max_concurrency",
 		])
 	) {
 		isValid = false;
@@ -2230,12 +2232,14 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 
 	const options: {
 		key: string;
-		type: "number" | "string";
+		type: "number" | "string" | "boolean";
 	}[] = [
 		{ key: "max_batch_size", type: "number" },
 		{ key: "max_batch_timeout", type: "number" },
 		{ key: "max_retries", type: "number" },
 		{ key: "dead_letter_queue", type: "string" },
+		{ key: "concurrency_enabled", type: "boolean" },
+		{ key: "max_concurrency", type: "number" },
 	];
 	for (const optionalOpt of options) {
 		if (!isOptionalProperty(value, optionalOpt.key, optionalOpt.type)) {
@@ -2246,6 +2250,16 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 			);
 			isValid = false;
 		}
+	}
+
+	if (
+		hasProperty(value, "concurrency_enabled") &&
+		hasProperty(value, "max_concurrency")
+	) {
+		diagnostics.errors.push(
+			`"${field}" cannot have "concurrency_enabled" and "max_concurrency" both defined.`
+		);
+		isValid = false;
 	}
 
 	return isValid;

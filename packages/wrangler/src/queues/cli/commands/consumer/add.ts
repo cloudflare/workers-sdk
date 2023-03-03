@@ -37,6 +37,15 @@ export function options(yargs: CommonYargsArgv) {
 				type: "string",
 				describe: "Queue to send messages that failed to be consumed",
 			},
+			"concurrency-enabled": {
+				type: "boolean",
+				describe:
+					"Whether the Queue broker will make concurrent consumer invocations",
+			},
+			"max-concurrency": {
+				type: "number",
+				describe: "The maximum number of concurrent consumer Worker executions",
+			},
 		});
 }
 
@@ -44,6 +53,13 @@ export async function handler(
 	args: StrictYargsOptionsToInterface<typeof options>
 ) {
 	const config = readConfig(args.config, args);
+
+	if (args.concurrencyEnabled && args.maxConcurrency) {
+		logger.error("concurrency-enabled and max-concurrency cannot both be set");
+	}
+
+	// if concurrency is enabled set to reasonable max, if not use the configured value, falling back on 1
+	const maxConcurrency = args.concurrencyEnabled ? 5 : args.maxConcurrency ?? 1;
 
 	const body: PostConsumerBody = {
 		script_name: args.scriptName,
@@ -55,6 +71,8 @@ export async function handler(
 			max_wait_time_ms: args.batchTimeout // API expects milliseconds
 				? 1000 * args.batchTimeout
 				: undefined,
+			concurrency_enabled: maxConcurrency > 1 ? true : false,
+			max_concurrency: maxConcurrency,
 		},
 		dead_letter_queue: args.deadLetterQueue,
 	};

@@ -7372,6 +7372,7 @@ export default{
 							max_batch_size: 5,
 							max_batch_timeout: 3,
 							max_retries: 10,
+							concurrency_enabled: true,
 						},
 					],
 				},
@@ -7386,6 +7387,8 @@ export default{
 					batch_size: 5,
 					max_retries: 10,
 					max_wait_time_ms: 3000,
+					concurrency_enabled: true,
+					max_concurrency: 5,
 				},
 			});
 			await runWrangler("publish index.js");
