@@ -85,6 +85,15 @@ Add "node_compat = true" to your wrangler.toml file to enable Node compatibility
 	}
 }
 
+const nodejsCompatPlugin: esbuild.Plugin = {
+	name: "nodejs_compat Plugin",
+	setup(pluginBuild) {
+		pluginBuild.onResolve({ filter: /node:.*/ }, () => {
+			return { external: true };
+		});
+	},
+};
+
 /**
  * Generate a bundle for the worker identified by the arguments passed in.
  */
@@ -102,7 +111,8 @@ export async function bundleWorker(
 		watch?: esbuild.WatchMode | boolean;
 		tsconfig?: string;
 		minify?: boolean;
-		nodeCompat?: boolean;
+		legacyNodeCompat?: boolean;
+		nodejsCompat?: boolean;
 		define: Config["define"];
 		checkFetch: boolean;
 		services?: Config["services"];
@@ -131,7 +141,8 @@ export async function bundleWorker(
 		watch,
 		tsconfig,
 		minify,
-		nodeCompat,
+		legacyNodeCompat,
+		nodejsCompat,
 		checkFetch,
 		local,
 		assets,
@@ -277,7 +288,7 @@ export async function bundleWorker(
 					currentEntry,
 					tmpDir.path,
 					betaD1Shims,
-					local,
+					local && !experimentalLocal,
 					doBindings
 				);
 			}),
@@ -347,7 +358,7 @@ export async function bundleWorker(
 				// use process.env["NODE_ENV" + ""] so that esbuild doesn't replace it
 				// when we do a build of wrangler. (re: https://github.com/cloudflare/workers-sdk/issues/1477)
 				"process.env.NODE_ENV": `"${process.env["NODE_ENV" + ""]}"`,
-				...(nodeCompat ? { global: "globalThis" } : {}),
+				...(legacyNodeCompat ? { global: "globalThis" } : {}),
 				...(checkFetch ? { fetch: "checkedFetch" } : {}),
 				...options.define,
 			},
@@ -360,9 +371,10 @@ export async function bundleWorker(
 		},
 		plugins: [
 			moduleCollector.plugin,
-			...(nodeCompat
+			...(legacyNodeCompat
 				? [NodeGlobalsPolyfills({ buffer: true }), NodeModulesPolyfills()]
 				: []),
+			...(nodejsCompat ? [nodejsCompatPlugin] : []),
 			...(plugins || []),
 		],
 		...(jsxFactory && { jsxFactory }),
@@ -378,7 +390,8 @@ export async function bundleWorker(
 	try {
 		result = await esbuild.build(buildOptions);
 	} catch (e) {
-		if (!nodeCompat && isBuildFailure(e)) rewriteNodeCompatBuildFailure(e);
+		if (!legacyNodeCompat && isBuildFailure(e))
+			rewriteNodeCompatBuildFailure(e);
 		throw e;
 	}
 
@@ -803,7 +816,7 @@ async function applyD1BetaFacade(
 	entry: Entry,
 	tmpDirPath: string,
 	betaD1Shims: string[],
-	local: boolean,
+	miniflare2: boolean,
 	doBindings: DurableObjectBindings
 ): Promise<Entry> {
 	let entrypointPath = path.resolve(
@@ -854,7 +867,7 @@ async function applyD1BetaFacade(
 		],
 		define: {
 			__D1_IMPORTS__: JSON.stringify(betaD1Shims),
-			__LOCAL_MODE__: JSON.stringify(local),
+			__LOCAL_MODE__: JSON.stringify(miniflare2),
 		},
 		outfile: targetPath,
 	});

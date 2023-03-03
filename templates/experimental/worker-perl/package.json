@@ -1,0 +1,14 @@
+{
+	"name": "worker-perl",
+	"version": "1.0.0",
+	"private": true,
+	"description": "Perl hello world for Cloudflare Workers",
+	"license": "MIT",
+	"author": "{{ authors }}",
+	"main": "index.js",
+	"scripts": {
+		"build": "perl ~/Perlito/perlito5.pl -Cjs index.pl >> index.js",
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"devDependencies": {}
+}

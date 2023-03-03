@@ -463,7 +463,6 @@ interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
-	 * @default `{ bindings: [] }`
 	 * @nonInheritable
 	 */
 	unsafe: {
@@ -471,14 +470,20 @@ interface EnvironmentNonInheritable {
 		 * A set of bindings that should be put into a Worker's upload metadata without changes. These
 		 * can be used to implement bindings for features that haven't released and aren't supported
 		 * directly by wrangler or miniflare.
-		 *
-		 * @default []
 		 */
-		bindings: {
+		bindings?: {
 			name: string;
 			type: string;
 			[key: string]: unknown;
 		}[];
+
+		/**
+		 * Arbitrary key/value pairs that will be included in the uploaded metadata.  Values specified
+		 * here will always be applied to metadata last, so can add new or override existing fields.
+		 */
+		metadata?: {
+			[key: string]: string;
+		};
 	};
 
 	mtls_certificates: {

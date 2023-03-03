@@ -65,6 +65,8 @@ export interface WorkerMetadata {
 	bindings: WorkerMetadataBinding[];
 	keep_bindings?: WorkerMetadataBinding["type"][];
 	logpush?: boolean;
+	// Allow unsafe.metadata to add arbitary properties at runtime
+	[key: string]: unknown;
 }
 
 /**
@@ -284,9 +286,9 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		}
 	}
 
-	if (bindings.unsafe) {
+	if (bindings.unsafe?.bindings) {
 		// @ts-expect-error unsafe bindings don't need to match a specific type here
-		metadataBindings.push(...bindings.unsafe);
+		metadataBindings.push(...bindings.unsafe.bindings);
 	}
 
 	const metadata: WorkerMetadata = {
@@ -302,6 +304,12 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		...(keepVars && { keep_bindings: ["plain_text", "json"] }),
 		...(logpush !== undefined && { logpush }),
 	};
+
+	if (bindings.unsafe?.metadata !== undefined) {
+		for (const key of Object.keys(bindings.unsafe.metadata)) {
+			metadata[key] = bindings.unsafe.metadata[key];
+		}
+	}
 
 	formData.set("metadata", JSON.stringify(metadata));
 

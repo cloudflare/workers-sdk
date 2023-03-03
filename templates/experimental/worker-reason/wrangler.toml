@@ -1,0 +1,4 @@
+name = "worker-reason"
+main = "src/Demo.bs.js"
+
+compatibility_date = "2023-02-22"

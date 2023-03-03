@@ -18,7 +18,7 @@ export interface UnstableDevOptions {
 	site?: string; // Root folder of static assets for Workers Sites
 	siteInclude?: string[]; // Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.
 	siteExclude?: string[]; // Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.
-	nodeCompat?: boolean; // Enable node.js compatibility
+	nodeCompat?: boolean; // Enable Node.js compatibility
 	compatibilityDate?: string; // Date to use for compatibility checks
 	compatibilityFlags?: string[]; // Flags to use for compatibility checks
 	persist?: boolean; // Enable persistence for local mode, using default path: .wrangler/state
@@ -43,7 +43,6 @@ export interface UnstableDevOptions {
 		preview_bucket_name?: string;
 	}[];
 	logLevel?: "none" | "info" | "error" | "log" | "warn" | "debug"; // Specify logging level  [choices: "debug", "info", "log", "warn", "error", "none"] [default: "log"]
-	logPrefix?: string;
 	inspect?: boolean;
 	local?: boolean;
 	accountId?: string;
@@ -163,7 +162,7 @@ export async function unstable_dev(
 					site: options?.site, // Root folder of static assets for Workers Sites
 					siteInclude: options?.siteInclude, // Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.
 					siteExclude: options?.siteExclude, // Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.
-					nodeCompat: options?.nodeCompat, // Enable node.js compatibility
+					nodeCompat: options?.nodeCompat, // Enable Node.js compatibility
 					persist: options?.persist, // Enable persistence for local mode, using default path: .wrangler/state
 					persistTo: options?.persistTo, // Specify directory to use for local persistence (implies --persist)
 					experimentalJsonConfig: undefined,
@@ -252,7 +251,7 @@ export async function unstable_dev(
 					site: options?.site, // Root folder of static assets for Workers Sites
 					siteInclude: options?.siteInclude, // Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.
 					siteExclude: options?.siteExclude, // Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.
-					nodeCompat: options?.nodeCompat, // Enable node.js compatibility
+					nodeCompat: options?.nodeCompat, // Enable Node.js compatibility
 					persist: options?.persist, // Enable persistence for local mode, using default path: .wrangler/state
 					persistTo: options?.persistTo, // Specify directory to use for local persistence (implies --persist)
 					experimentalJsonConfig: undefined,

@@ -1,0 +1,20 @@
+{
+	"name": "worker-reason",
+	"version": "0.1.0",
+	"private": true,
+	"description": "Reason hello world for Cloudflare Workers",
+	"keywords": [
+		"BuckleScript"
+	],
+	"license": "MIT",
+	"author": "",
+	"main": "src/Demo.bs.js",
+	"scripts": {
+		"build": "bsb -make-world",
+		"clean": "bsb -clean-world",
+		"start": "bsb -make-world -w"
+	},
+	"devDependencies": {
+		"bs-platform": "^7.3.2"
+	}
+}

@@ -1,4 +1,4 @@
-// this test has to be run with a version of node.js older than 16.13 to pass
+// this test has to be run with a version of Node.js older than 16.13 to pass
 
 const { spawn } = require("child_process");
 const path = require("path");
@@ -11,7 +11,7 @@ const wranglerProcess = spawn(
 	{ stdio: "pipe" }
 );
 
-const messageToMatch = "Wrangler requires at least node.js v16.13.0";
+const messageToMatch = "Wrangler requires at least Node.js v16.13.0";
 
 wranglerProcess.once("exit", (code) => {
 	try {
@@ -25,7 +25,7 @@ wranglerProcess.once("exit", (code) => {
 	} catch (err) {
 		console.error("Error:", err);
 		throw new Error(
-			"This test has to be run with a version of node.js under 16.13 to pass"
+			"This test has to be run with a version of Node.js under 16.13 to pass"
 		);
 	}
 });
