@@ -4,7 +4,7 @@
 
 feature: add `deployment view` and `deployment rollbak` subcommands
 
-`deployment view <deployment-id>` will get the details of a deployment, including versioned script, bindings, and usage model information.
+`deployment view <deployment-id>` will get the details of a deployment, including bindings and usage model information. When using the `--content` option, the command will return the script content for that deployment.
 This information can be used to help debug bad deployments or get insights on changes between deployments.
 
 `deployment rollback [deployment-id]` will rollback to a specific deployment in the runtime. This will be useful in situations like recovering from a bad
@@ -31,20 +31,4 @@ bucket_name = "testr2"
 [[kv_namespaces]]
 id = "79300c6d17eb4180a07270f450efe53f"
 binding = "yeee"
-
----------------------------script---------------------------
-
-// index.js
-var worker_default = {
-  fetch(request) {
-    const base = "https://example.com";
-    const statusCode = 301;
-    const destination = new URL(request.url, base);
-    return Response.redirect(destination.toString(), statusCode);
-  }
-};
-export {
-  worker_default as default
-};
-//# sourceMappingURL=index.js.map
 ```

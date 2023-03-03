@@ -97,7 +97,17 @@ export const mswSuccessDeploymentScriptMetadata = [
 export const mswSuccessDeploymentDetails = [
 	rest.get(
 		"*/accounts/:accountId/workers/deployments/by-script/:scriptTag/detail/:deploymentId",
-		(_, res, ctx) => {
+		(req, res, ctx) => {
+			let bindings: object[] = [];
+			if (req.url.toString().includes("bindings-tag")) {
+				bindings = [
+					{
+						bucket_name: "testr2",
+						name: "MY_BUCKET",
+						type: "r2_bucket",
+					},
+				];
+			}
 			return res.once(
 				ctx.json(
 					createFetchResult({
@@ -119,7 +129,7 @@ export const mswSuccessDeploymentDetails = [
 							script_runtime: {
 								usage_model: "bundled",
 							},
-							bindings: [],
+							bindings: bindings,
 						},
 					})
 				)

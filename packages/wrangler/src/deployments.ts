@@ -208,7 +208,8 @@ export async function viewDeployment(
 	accountId: string,
 	scriptName: string | undefined,
 	{ send_metrics: sendMetrics }: { send_metrics?: Config["send_metrics"] } = {},
-	deploymentId: string
+	deploymentId: string,
+	content: boolean
 ) {
 	await metrics.sendMetricsEvent(
 		"view deployments",
@@ -224,9 +225,14 @@ export async function viewDeployment(
 		)
 	).default_environment.script.tag;
 
-	const scriptContent = await fetchScriptContent(
-		`/accounts/${accountId}/workers/scripts/${scriptName}?deployment=${deploymentId}`
-	);
+	if (content) {
+		const scriptContent = await fetchScriptContent(
+			`/accounts/${accountId}/workers/scripts/${scriptName}?deployment=${deploymentId}`
+		);
+		logger.log(scriptContent);
+		return;
+	}
+
 	const deploymentDetails = await fetchResult<DeploymentListResult["latest"]>(
 		`/accounts/${accountId}/workers/deployments/by-script/${scriptTag}/detail/${deploymentId}`
 	);
@@ -250,7 +256,7 @@ export async function viewDeployment(
 		? `\nCompatibility Flags: ${deploymentDetails.resources.script_runtime?.compatibility_flags}`
 		: ``;
 
-	const bindings = mapBindings(deploymentDetails.resources.bindings);
+	const bindings = deploymentDetails.resources.bindings;
 
 	const version = `
 Deployment ID: ${deploymentDetails.id}
@@ -264,12 +270,14 @@ Handlers:           ${
 		deploymentDetails.resources.script.handlers
 	}${compatDateStr}${compatFlagsStr}
 --------------------------bindings--------------------------
-${TOML.stringify(bindings as TOML.JsonMap)}
----------------------------script---------------------------
+${
+	bindings.length > 0
+		? TOML.stringify(mapBindings(bindings) as TOML.JsonMap)
+		: `None`
+}
 `;
 
 	logger.log(version);
-	logger.log(scriptContent);
 
 	// early return to skip the deployments listings
 	return;

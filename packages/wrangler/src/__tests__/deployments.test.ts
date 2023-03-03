@@ -148,8 +148,17 @@ describe("deployments", () => {
 			Usage Model:        bundled
 			Handlers:           fetch
 			--------------------------bindings--------------------------
+			None
+			"
+		`);
+			});
+			it("should log deployment script", async () => {
+				writeWranglerToml();
 
-			---------------------------script---------------------------
+				await runWrangler("deployments view 1701-E --content");
+
+				expect(std.out).toMatchInlineSnapshot(`
+			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 
 
 						export default {
@@ -157,6 +166,32 @@ describe("deployments", () => {
 								return new Response('Hello World from Deployment 1701-E');
 							},
 						};"
+		`);
+			});
+
+			it("should log deployment details with bindings", async () => {
+				writeWranglerToml();
+
+				await runWrangler("deployments view bindings-tag");
+
+				expect(std.out).toMatchInlineSnapshot(`
+			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
+
+
+			Deployment ID: undefined
+			Created on:    2021-01-01T00:00:00.000000Z
+			Author:        Jean-Luc-Picard@federation.org
+			Source:        Wrangler 🤠
+			------------------------------------------------------------
+			Author ID:          Picard-Gamma-6-0-7-3
+			Usage Model:        bundled
+			Handlers:           fetch
+			--------------------------bindings--------------------------
+			[[r2_buckets]]
+			binding = \\"MY_BUCKET\\"
+			bucket_name = \\"testr2\\"
+
+			"
 		`);
 			});
 		});

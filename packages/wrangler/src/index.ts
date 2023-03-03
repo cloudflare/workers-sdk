@@ -625,6 +625,11 @@ export function createCLIParser(argv: string[]) {
 								type: "string",
 								demandOption: true,
 							})
+							.option("content", {
+								describe: "Show script content for given deployment ID",
+								type: "boolean",
+								default: false,
+							})
 							.option("yes", {
 								alias: "y",
 								describe: "Skip confirmation prompt",
@@ -639,7 +644,8 @@ export function createCLIParser(argv: string[]) {
 							accountId,
 							scriptName,
 							config,
-							viewYargs.deploymentId
+							viewYargs.deploymentId,
+							viewYargs.content
 						);
 					}
 				)
