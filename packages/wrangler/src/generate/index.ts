@@ -74,6 +74,7 @@ export async function generateHandler(args: GenerateArgs) {
 	}
 
 	const creationDirectory = generateWorkerDirectoryName(args.name);
+	logger.debug("creationDirectory", creationDirectory);
 
 	if (args.site) {
 		const gitDirectory =
@@ -99,6 +100,8 @@ export async function generateHandler(args: GenerateArgs) {
 	);
 
 	const { remote, subdirectory } = parseTemplatePath(args.template);
+
+	logger.debug("{ remote, subdirectory }", remote, subdirectory);
 
 	await cloneIntoDirectory(remote, creationDirectory, subdirectory);
 	await initializeGit(creationDirectory);
@@ -266,6 +269,7 @@ function parseTemplatePath(templatePath: string): {
 	remote: string;
 	subdirectory?: string;
 } {
+	logger.debug("templatePath", templatePath);
 	if (!templatePath.includes("/")) {
 		// template is a cloudflare canonical template, it doesn't include a slash in the name
 		return {
@@ -278,21 +282,38 @@ function parseTemplatePath(templatePath: string): {
 		| TemplateRegexGroups
 		| undefined;
 
+	logger.debug("templatePath groups", groups);
+
 	if (!groups) {
 		throw new Error(`Unable to parse ${templatePath} as a template`);
 	}
 
 	const { user, repository, subdirectoryPath, tag, ...urlGroups } = groups;
 
+	logger.debug(
+		"{ user, repository, subdirectoryPath, tag, ...urlGroups }",
+		user,
+		repository,
+		subdirectoryPath,
+		tag,
+		JSON.stringify(urlGroups)
+	);
+
 	const urlBase = toUrlBase(urlGroups);
+	logger.debug("urlBase", urlBase);
+
 	const isHttp = urlBase.startsWith("http");
+	logger.debug("isHttp", isHttp);
 
 	const remote = `${urlBase}${isHttp ? "/" : ":"}${user}/${repository}.git${
 		tag ? `#${tag}` : ""
 	}`;
+	logger.debug("remote", remote);
 
 	// remove starting /
 	const subdirectory = subdirectoryPath?.slice(1);
+
+	logger.debug("subdirectory", subdirectory);
 
 	return { remote, subdirectory };
 }

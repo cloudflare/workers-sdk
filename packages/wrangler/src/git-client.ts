@@ -4,6 +4,7 @@ import path from "node:path";
 import { execa } from "execa";
 import { findUp } from "find-up";
 import semiver from "semiver";
+import { logger } from "./logger";
 
 /**
  * Check whether the given current working directory is within a git repository
@@ -80,7 +81,11 @@ export async function cloneIntoDirectory(
 ) {
 	const args = ["clone", "--depth", "1"];
 
+	logger.debug("clone args", args);
+
 	const gitVersion = await getGitVersioon();
+	logger.debug("clone gitVersion", gitVersion);
+
 	if (!gitVersion) {
 		throw new Error("Failed to find git installation");
 	}
@@ -90,6 +95,8 @@ export async function cloneIntoDirectory(
 	// the whole repo. useful for monorepos that may, for example,
 	// contain multiple wrangler templates
 	const useSparseCheckout = subdirectory && semiver(gitVersion, "2.26.0") > -1;
+	logger.debug("clone useSparseCheckout", useSparseCheckout);
+
 	if (useSparseCheckout) {
 		args.push("--filter=blob:none", "--sparse");
 	}
@@ -107,20 +114,32 @@ export async function cloneIntoDirectory(
 	const tempDir = fs.mkdtempSync(
 		path.join(os.tmpdir(), `wrangler-generate-repo-`)
 	);
+	logger.debug("clone tempDir", tempDir);
+
 	args.push(tempDir);
 
-	await execa("git", args);
+	logger.debug("clone final args", args);
+
+	const { stdout, stderr } = await execa("git", args);
+
+	logger.debug("clone execa stdout", stdout);
+	logger.debug("clone execa stderr", stderr);
 
 	// if we can use sparse checkout, run it now.
 	// otherwise, the entire repo was cloned anyway, so skip this step
 	if (useSparseCheckout) {
-		await execa("git", [`sparse-checkout`, `set`, subdirectory], {
+		const sp = await execa("git", [`sparse-checkout`, `set`, subdirectory], {
 			cwd: tempDir,
 		});
+
+		logger.debug("clone execa sp stdout", sp.stdout);
+		logger.debug("clone execa sp stderr", sp.stderr);
 	}
 
 	const templatePath =
 		subdirectory !== undefined ? path.join(tempDir, subdirectory) : tempDir;
+
+	logger.debug("clone templatePath", templatePath);
 
 	// cleanup: move the template to the target directory and delete `.git`
 	try {
