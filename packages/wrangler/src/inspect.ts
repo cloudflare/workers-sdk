@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import { SourceMapConsumer } from "source-map";
 import WebSocket, { WebSocketServer } from "ws";
 import { version } from "../package.json";
+import { parseStack } from "./callsite";
 import { logger } from "./logger";
 import { waitForPortToBeAvailable } from "./proxy";
 import { getAccessToken } from "./user/access";
@@ -398,6 +399,43 @@ export default function useInspector(props: InspectorProps) {
 								params.exceptionDetails.text,
 								params.exceptionDetails.exception?.description ?? ""
 							);
+						}
+
+						const cause =
+							params.exceptionDetails.exception?.preview?.properties.find(
+								(prop) => prop.name === "cause"
+							);
+						if (cause?.value !== undefined) {
+							if (
+								// If the preview was truncated, we might not have a full stack
+								// trace, so parsing/source-mapping would fail
+								cause.value.endsWith("…") ||
+								// If this isn't an `Error`-subclass, it's not going to have a
+								// stack trace
+								cause.subtype !== "error" ||
+								// If we don't have source-maps, we can't apply any source
+								// mapping, so just log the stack directly
+								consumer === undefined
+							) {
+								logger.error("Cause:", cause.value);
+							} else {
+								// If we have the full error, try source map it
+								const message = cause.value.split("\n")[0];
+								const callSites = parseStack(cause.value);
+								const stack = callSites.map<Protocol.Runtime.CallFrame>(
+									(site) => ({
+										functionName: site.getFunctionName() ?? "",
+										// `Protocol.Runtime.CallFrame`s are 0-indexed, hence `- 1`
+										lineNumber: (site.getLineNumber() ?? 1) - 1,
+										columnNumber: (site.getColumnNumber() ?? 1) - 1,
+										// Unused by `formattedError`
+										scriptId: "",
+										url: "",
+									})
+								);
+								const formatted = formattedError(consumer, message, stack);
+								logger.error("Cause:", formatted);
+							}
 						}
 					}
 					if (evt.method === "Runtime.consoleAPICalled") {
