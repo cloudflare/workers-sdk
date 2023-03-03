@@ -37,6 +37,15 @@ export function options(yargs: CommonYargsArgv) {
 				type: "string",
 				describe: "Queue to send messages that failed to be consumed",
 			},
+			"concurrency-enabled": {
+				type: "boolean",
+				describe:
+					"Whether the Queue broker will make concurrent consumer invocations",
+			},
+			"max-concurrency": {
+				type: "number",
+				describe: "The maximum number of concurrent consumer Worker executions",
+			},
 		});
 }
 
@@ -55,6 +64,8 @@ export async function handler(
 			max_wait_time_ms: args.batchTimeout // API expects milliseconds
 				? 1000 * args.batchTimeout
 				: undefined,
+			concurrency_enabled: args.concurrencyEnabled ?? true,
+			max_concurrency: args.maxConcurrency,
 		},
 		dead_letter_queue: args.deadLetterQueue,
 	};

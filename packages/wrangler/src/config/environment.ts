@@ -374,6 +374,12 @@ interface EnvironmentNonInheritable {
 
 			/** The queue to send messages that failed to be consumed. */
 			dead_letter_queue?: string;
+
+			/** Whether the Queue broker will make concurrent consumer invocations */
+			concurrency_enabled?: boolean;
+
+			/** The maximum number of concurrent consumer Worker executions */
+			max_concurrency?: number;
 		}[];
 	};
 
