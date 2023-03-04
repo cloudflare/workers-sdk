@@ -850,7 +850,7 @@ export async function transformMf2OptionsToMf3Options({
 		// relies on the fact that `require` is untyped.
 		//
 		// eslint-disable-next-line @typescript-eslint/no-var-requires
-		const generateASSETSBinding = require("../miniflare-cli/assets");
+		const generateASSETSBinding = require("../miniflare-cli/assets").default;
 		options.serviceBindings = {
 			...options.serviceBindings,
 			ASSETS: (await generateASSETSBinding({
