@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve as resolvePath } from "node:path";
+import { join, resolve as resolvePath } from "node:path";
 import { cwd } from "node:process";
 import { File, FormData } from "undici";
 import { fetchResult } from "../../cfetch";
@@ -156,7 +156,6 @@ export async function publish({
 	);
 
 	if (!_workerJS && existsSync(functionsDirectory)) {
-		const outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`);
 		const outputConfigPath = join(
 			tmpdir(),
 			`functions-filepath-routing-config-${Math.random()}.json`
@@ -164,18 +163,20 @@ export async function publish({
 
 		try {
 			workerBundle = await buildFunctions({
-				outfile,
 				outputConfigPath,
 				functionsDirectory,
 				onEnd: () => {},
-				buildOutputDirectory: dirname(outfile),
+				buildOutputDirectory: directory,
 				routesOutputPath,
 				local: false,
 				d1Databases,
 				nodejsCompat,
 			});
 
-			builtFunctions = readFileSync(outfile, "utf-8");
+			builtFunctions = readFileSync(
+				workerBundle.resolvedEntryPointPath,
+				"utf-8"
+			);
 			filepathRoutingConfig = readFileSync(outputConfigPath, "utf-8");
 		} catch (e) {
 			if (e instanceof FunctionsNoRoutesError) {

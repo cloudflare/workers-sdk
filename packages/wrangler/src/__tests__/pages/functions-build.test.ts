@@ -172,7 +172,7 @@ export default {
 			workerBundleContents,
 			[
 				[/------formdata-undici-0.[0-9]*/g, "------formdata-undici-0.test"],
-				[/bundledWorker-0.[0-9]*.mjs/g, "bundledWorker-0.test.mjs"],
+				[/functionsWorker-0.[0-9]*.js/g, "functionsWorker-0.test.js"],
 			]
 		);
 
@@ -180,9 +180,9 @@ export default {
 		"------formdata-undici-0.test
 		Content-Disposition: form-data; name=\\"metadata\\"
 
-		{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
+		{\\"main_module\\":\\"functionsWorker-0.test.js\\"}
 		------formdata-undici-0.test
-		Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
+		Content-Disposition: form-data; name=\\"functionsWorker-0.test.js\\"; filename=\\"functionsWorker-0.test.js\\"
 		Content-Type: application/javascript+module
 
 		// ../utils/meaning-of-life.js
@@ -197,7 +197,6 @@ export default {
 		export {
 		  worker_default as default
 		};
-		//# sourceMappingURL=bundledWorker-0.test.mjs.map
 
 		------formdata-undici-0.test--"
 	`);
@@ -251,7 +250,7 @@ export default {
 			workerBundleContents,
 			[
 				[/------formdata-undici-0.[0-9]*/g, "------formdata-undici-0.test"],
-				[/bundledWorker-0.[0-9]*.mjs/g, "bundledWorker-0.test.mjs"],
+				[/functionsWorker-0.[0-9]*.js/g, "functionsWorker-0.test.js"],
 				[/[0-9a-z]*-greeting.wasm/g, "test-greeting.wasm"],
 				[/[0-9a-z]*-name.wasm/g, "test-name.wasm"],
 			]
@@ -262,7 +261,7 @@ export default {
 			`Content-Disposition: form-data; name="metadata"`
 		);
 		expect(workerBundleWithConstantData).toContain(
-			`{"main_module":"bundledWorker-0.test.mjs"}`
+			`{"main_module":"functionsWorker-0.test.js"}`
 		);
 
 		// check we appended the wasm modules
@@ -325,7 +324,7 @@ export default {
 			workerBundleContents,
 			[
 				[/------formdata-undici-0.[0-9]*/g, "------formdata-undici-0.test"],
-				[/bundledWorker-0.[0-9]*.mjs/g, "bundledWorker-0.test.mjs"],
+				[/functionsWorker-0.[0-9]*.js/g, "functionsWorker-0.test.js"],
 			]
 		);
 
@@ -333,9 +332,9 @@ export default {
 		"------formdata-undici-0.test
 		Content-Disposition: form-data; name=\\"metadata\\"
 
-		{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
+		{\\"main_module\\":\\"functionsWorker-0.test.js\\"}
 		------formdata-undici-0.test
-		Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
+		Content-Disposition: form-data; name=\\"functionsWorker-0.test.js\\"; filename=\\"functionsWorker-0.test.js\\"
 		Content-Type: application/javascript+module
 
 		// _worker.js
@@ -347,7 +346,6 @@ export default {
 		export {
 		  worker_default as default
 		};
-		//# sourceMappingURL=bundledWorker-0.test.mjs.map
 
 		------formdata-undici-0.test--"
 	`);

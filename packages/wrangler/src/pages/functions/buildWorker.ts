@@ -1,4 +1,5 @@
 import { access, cp, lstat, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { build as esBuild } from "esbuild";
 import { nanoid } from "nanoid";
@@ -11,7 +12,8 @@ import type { Plugin } from "esbuild";
 
 export type Options = {
 	routesModule: string;
-	outfile: string;
+	outfile?: string;
+	outdir?: string;
 	minify?: boolean;
 	sourcemap?: boolean;
 	fallbackService?: string;
@@ -27,7 +29,8 @@ export type Options = {
 
 export function buildWorker({
 	routesModule,
-	outfile = "bundle.js",
+	outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`),
+	outdir,
 	minify = false,
 	sourcemap = false,
 	fallbackService = "ASSETS",
@@ -46,9 +49,10 @@ export function buildWorker({
 			directory: functionsDirectory,
 			format: "modules",
 		},
-		resolve(outfile),
+		outdir ? resolve(outdir) : resolve(outfile),
 		{
 			inject: [routesModule],
+			...(outdir ? { entryName: "index" } : {}),
 			minify,
 			sourcemap,
 			watch,
@@ -142,7 +146,7 @@ export function buildWorker({
 					},
 				},
 			],
-			isOutfile: true,
+			isOutfile: !outdir,
 			serveAssetsFromWorker: false,
 			disableModuleCollection: false,
 			rules: [],
@@ -156,7 +160,8 @@ export function buildWorker({
 
 export type RawOptions = {
 	workerScriptPath: string;
-	outfile: string;
+	outfile?: string;
+	outdir?: string;
 	directory: string;
 	minify?: boolean;
 	sourcemap?: boolean;
@@ -179,7 +184,8 @@ export type RawOptions = {
  */
 export function buildRawWorker({
 	workerScriptPath,
-	outfile,
+	outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`),
+	outdir,
 	directory,
 	minify = false,
 	sourcemap = false,
@@ -197,7 +203,7 @@ export function buildRawWorker({
 			directory: resolve(directory),
 			format: "modules",
 		},
-		resolve(outfile),
+		outdir ? resolve(outdir) : resolve(outfile),
 		{
 			minify,
 			sourcemap,
@@ -214,7 +220,7 @@ export function buildRawWorker({
 			),
 			doBindings: [], // Pages functions don't support internal Durable Objects
 			plugins: [...plugins, buildNotifierPlugin(onEnd)],
-			isOutfile: true,
+			isOutfile: !outdir,
 			serveAssetsFromWorker: false,
 			disableModuleCollection: false,
 			rules: [],
