@@ -13,9 +13,9 @@ describe("r2", async () => {
 	const fileContents = crypto.randomBytes(64).toString("hex");
 
 	it("create bucket", async () => {
-		const { stdout, stderr } = await runIn(root, [
-			[bucketName, "wrangler-smoke-test-bucket"],
-		])`
+		const { stdout, stderr } = await runIn(root, {
+			[bucketName]: "wrangler-smoke-test-bucket",
+		})`
     $ ${RUN} r2 bucket create ${bucketName}
     `;
 		expect(stdout).toMatchInlineSnapshot(`
@@ -28,9 +28,9 @@ describe("r2", async () => {
 		await seed(root, {
 			"test-r2.txt": fileContents,
 		});
-		const { stdout, stderr } = await runIn(root, [
-			[bucketName, "wrangler-smoke-test-bucket"],
-		])`
+		const { stdout, stderr } = await runIn(root, {
+			[bucketName]: "wrangler-smoke-test-bucket",
+		})`
 	  $ ${RUN} r2 object put ${`${bucketName}/testr2`} --file test-r2.txt --content-type text/html
 	`;
 		expect(stdout).toMatchInlineSnapshot(`
@@ -40,9 +40,9 @@ describe("r2", async () => {
 		expect(stderr).toMatchInlineSnapshot('""');
 	});
 	it("download object", async () => {
-		const { stdout, stderr } = await runIn(root, [
-			[bucketName, "wrangler-smoke-test-bucket"],
-		])`
+		const { stdout, stderr } = await runIn(root, {
+			[bucketName]: "wrangler-smoke-test-bucket",
+		})`
 	  $ ${RUN} r2 object get ${`${bucketName}/testr2`} --file test-r2o.txt
 	`;
 		expect(stdout).toMatchInlineSnapshot(`
@@ -54,9 +54,9 @@ describe("r2", async () => {
 		expect(output).toBe(fileContents);
 	});
 	it("delete object", async () => {
-		const { stdout, stderr } = await runIn(root, [
-			[bucketName, "wrangler-smoke-test-bucket"],
-		])`
+		const { stdout, stderr } = await runIn(root, {
+			[bucketName]: "wrangler-smoke-test-bucket",
+		})`
 	  $ ${RUN} r2 object delete ${`${bucketName}/testr2`}
 	`;
 		expect(stdout).toMatchInlineSnapshot(`
@@ -66,10 +66,10 @@ describe("r2", async () => {
 		expect(stderr).toMatchInlineSnapshot('""');
 	});
 	it("check object deleted", async () => {
-		const { stdout, stderr } = await runIn(root, [
-			[bucketName, "wrangler-smoke-test-bucket"],
-			[process.env.CLOUDFLARE_ACCOUNT_ID as string, "CLOUDFLARE_ACCOUNT_ID"],
-		])`
+		const { stdout, stderr } = await runIn(root, {
+			[bucketName]: "wrangler-smoke-test-bucket",
+			[process.env.CLOUDFLARE_ACCOUNT_ID as string]: "CLOUDFLARE_ACCOUNT_ID",
+		})`
     exits(1) {
 	    $ ${RUN} r2 object get ${`${bucketName}/testr2`} --file test-r2o.txt
     }
@@ -86,9 +86,9 @@ describe("r2", async () => {
 		`);
 	});
 	it("delete bucket", async () => {
-		const { stdout, stderr } = await runIn(root, [
-			[bucketName, "wrangler-smoke-test-bucket"],
-		])`
+		const { stdout, stderr } = await runIn(root, {
+			[bucketName]: "wrangler-smoke-test-bucket",
+		})`
     $ ${RUN} r2 bucket delete ${bucketName}
     `;
 		expect(stdout).toMatchInlineSnapshot(`

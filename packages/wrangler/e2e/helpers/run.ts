@@ -12,7 +12,10 @@ const WRANGLER = process.env.WRANGLER ?? `npx wrangler@beta`;
 
 const RUN = `${CF_ID} ${WRANGLER}`;
 
-function runIn(directory: string, replacers?: [string, string][]) {
+function runIn(
+	directory: string,
+	replacers?: Parameters<typeof normalizeOutput>[1]
+) {
 	return async (...p: Parameters<ReturnType<typeof shellac["in"]>>) => {
 		const { stdout, stderr } = await shellac.in(directory)(...p);
 		return {

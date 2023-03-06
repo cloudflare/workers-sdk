@@ -66,7 +66,7 @@
 		"test": "npm run assert-git-version && jest --silent=false --verbose=true --forceExit",
 		"test-watch": "npm run test -- --runInBand --testTimeout=50000 --watch",
 		"test:ci": "npm run test -- --verbose=true --coverage",
-		"test:e2e": "vitest --no-threads ./e2e/publish.test.ts"
+		"test:e2e": "vitest --no-threads ./e2e"
 	},
 	"jest": {
 		"coverageReporters": [

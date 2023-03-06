@@ -1,7 +1,7 @@
 import stripAnsi from "strip-ansi";
 export function normalizeOutput(
 	stdout: string,
-	replacers?: [string, string][]
+	replacers?: Record<string, string>
 ): string {
 	const functions = [
 		npmStripTimings,
@@ -20,7 +20,7 @@ export function normalizeOutput(
 		stdout = f(stdout);
 	}
 	if (replacers) {
-		for (const [from, to] of replacers) {
+		for (const [from, to] of Object.entries(replacers)) {
 			stdout = stdout.replaceAll(from, to);
 		}
 	}
@@ -43,8 +43,12 @@ function removeUUID(str: string) {
  * Remove the Wrangler version/update check header
  */
 function removeVersionHeader(str: string): string {
-	const splitByHeader = str.split(/----+\n/);
-	return splitByHeader.length === 2 ? splitByHeader[1] : splitByHeader[0];
+	const header = str.match(/----+\n/);
+	if (header !== null && header.index) {
+		return str.slice(header.index + header[0].length);
+	} else {
+		return str;
+	}
 }
 
 /**
