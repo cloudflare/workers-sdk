@@ -101,7 +101,7 @@ export function buildPlugin({
 				},
 			],
 			serveAssetsFromWorker: false,
-			disableModuleCollection: true,
+			disableModuleCollection: false,
 			rules: [],
 			checkFetch: local,
 			targetConsumer: local ? "dev" : "publish",
