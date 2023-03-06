@@ -165,7 +165,7 @@ export const Handler = async (args: PagesBuildArgs) => {
 			}
 		}
 
-		if (outfile) {
+		if (outfile && outfile !== bundle.resolvedEntryPointPath) {
 			writeFileSync(
 				outfile,
 				`export { default } from './${relative(
@@ -314,7 +314,7 @@ const validateArgs = (args: PagesBuildArgs): ValidatedArgs => {
 		} else if (!args.outfile && !args.outdir) {
 			// Didn't specify `--outfile`, but didn't specify `--outdir` either. Implicit old behavior defaults. Encourage to migrate to `--outdir`.
 			args.outfile ??= "_worker.js";
-			args.outdir = dirname(resolvePath(args.outfile));
+			args.outdir = ".";
 
 			logger.warn(
 				"Creating a Pages Plugin without `--outdir` is now deprecated. Please add an `--outdir` argument."
