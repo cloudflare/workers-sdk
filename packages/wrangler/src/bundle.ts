@@ -182,6 +182,9 @@ export async function bundleWorker(
 	// need to create. This is separate from the main build
 	// directory (`destination`).
 	const tmpDir = await tmp.dir({ unsafeCleanup: true });
+	// Make sure we resolve all files relative to the actual temporary directory,
+	// otherwise we'll have issues with source maps
+	const tmpDirPath = fs.realpathSync(tmpDir.path);
 
 	const entryDirectory = path.dirname(entry.file);
 	let moduleCollector = createModuleCollector({
@@ -216,10 +219,10 @@ export async function bundleWorker(
 	// we need to extract that file to an accessible place before injecting
 	// it in, hence this code here.
 
-	const checkedFetchFileToInject = path.join(tmpDir.path, "checked-fetch.js");
+	const checkedFetchFileToInject = path.join(tmpDirPath, "checked-fetch.js");
 
 	if (checkFetch && !fs.existsSync(checkedFetchFileToInject)) {
-		fs.mkdirSync(tmpDir.path, {
+		fs.mkdirSync(tmpDirPath, {
 			recursive: true,
 		});
 		fs.writeFileSync(
@@ -270,7 +273,7 @@ export async function bundleWorker(
 		// serve static assets
 		serveAssetsFromWorker &&
 			((currentEntry: Entry) => {
-				return applyStaticAssetFacade(currentEntry, tmpDir.path, assets);
+				return applyStaticAssetFacade(currentEntry, tmpDirPath, assets);
 			}),
 		// format errors nicely
 		// We use an env var here because we don't actually
@@ -278,7 +281,7 @@ export async function bundleWorker(
 		// experiment with middleware as a teaching exercise.
 		process.env.FORMAT_WRANGLER_ERRORS === "true" &&
 			((currentEntry: Entry) => {
-				return applyFormatDevErrorsFacade(currentEntry, tmpDir.path);
+				return applyFormatDevErrorsFacade(currentEntry, tmpDirPath);
 			}),
 		// bind to other dev instances/service bindings
 		workerDefinitions &&
@@ -288,7 +291,7 @@ export async function bundleWorker(
 			((currentEntry: Entry) => {
 				return applyMultiWorkerDevFacade(
 					currentEntry,
-					tmpDir.path,
+					tmpDirPath,
 					services,
 					workerDefinitions
 				);
@@ -296,7 +299,7 @@ export async function bundleWorker(
 		// Simulate internal environment when using first party workers in dev
 		firstPartyWorkerDevFacade === true &&
 			((currentEntry: Entry) => {
-				return applyFirstPartyWorkerDevFacade(currentEntry, tmpDir.path);
+				return applyFirstPartyWorkerDevFacade(currentEntry, tmpDirPath);
 			}),
 
 		Array.isArray(betaD1Shims) &&
@@ -304,7 +307,7 @@ export async function bundleWorker(
 			((currentEntry: Entry) => {
 				return applyD1BetaFacade(
 					currentEntry,
-					tmpDir.path,
+					tmpDirPath,
 					betaD1Shims,
 					local && !experimentalLocal,
 					doBindings
@@ -326,7 +329,7 @@ export async function bundleWorker(
 			((currentEntry: Entry) => {
 				return applyMiddlewareLoaderFacade(
 					currentEntry,
-					tmpDir.path,
+					tmpDirPath,
 					middlewareToLoad.filter(
 						// We dynamically filter the middleware depending on where we are bundling for
 						(m) =>
@@ -542,10 +545,6 @@ async function applyMiddlewareLoaderFacade(
 	// Firstly we need to insert the middleware array into the project,
 	// and then we load the middleware - this insertion and loading is
 	// different for each format.
-
-	// Make sure we resolve all files relative to the actual temporary directory,
-	// otherwise we'll have issues with source maps
-	tmpDirPath = fs.realpathSync(tmpDirPath);
 
 	const targetPathInsertion = path.join(
 		tmpDirPath,
