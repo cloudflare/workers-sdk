@@ -452,75 +452,80 @@ export default function useInspector(props: InspectorProps) {
 							);
 						}
 
-						// Try to display `Error#cause` too
-						const cause =
-							params.exceptionDetails.exception?.preview?.properties.find(
+						// Fetch additional properties if the error has a `cause` property,
+						// or it's a `DOMException`. The `preview` may actually contain the
+						// full `cause` stack trace, but it's likely truncated.
+						const hasCause =
+							params.exceptionDetails.exception?.preview?.properties.some(
 								(prop) => prop.name === "cause"
 							);
-						if (cause?.value !== undefined) {
-							if (
-								// If the preview was truncated, we might not have a full stack
-								// trace, so parsing/source-mapping would fail
-								cause.value.endsWith("…") ||
-								// If this isn't an `Error`-subclass, it's not going to have a
-								// stack trace
-								cause.subtype !== "error" ||
-								// If we don't have source-maps, we can't apply any source
-								// mapping, so just log the stack directly
-								consumer === undefined
-							) {
-								logger.error("Cause:", cause.value);
-							} else {
-								// If we have the full error, try source map it
-								const formatted = formatStack(consumer, cause.value);
-								logger.error("Cause:", formatted);
-							}
-						}
-
 						// `DOMException`s are special, the actually useful stack trace
 						// is hidden behind the `stack` getter, and not included in the
-						// preview.
-						//
+						// preview: https://github.com/cloudflare/workerd/blob/1b5057f2bfcfedf146f6f79ff04e99903d55412b/src/workerd/jsg/dom-exception.h#L92
+						const isDomException =
+							params.exceptionDetails.exception?.className === "DOMException";
+
 						// The two requests here are based on intercepted messages sent by
 						// the DevTools frontend to view the stack.
-						if (
-							params.exceptionDetails.exception?.className === "DOMException" &&
-							params.exceptionDetails.exception.objectId !== undefined
-						) {
-							// Get a reference to the `stack` getter
-							const objectId = params.exceptionDetails.exception.objectId;
+						const objectId = params.exceptionDetails.exception?.objectId;
+						if (objectId !== undefined && (hasCause || isDomException)) {
+							// Get all properties
 							const getPropertiesResponse = await send<
 								Protocol.Runtime.GetPropertiesRequest,
 								Protocol.Runtime.GetPropertiesResponse
 							>("Runtime.getProperties", {
 								objectId,
-								accessorPropertiesOnly: true,
+								ownProperties: false,
+								accessorPropertiesOnly: false,
 								generatePreview: false,
+								nonIndexedPropertiesOnly: false,
 							});
-							const stackDescriptor = getPropertiesResponse?.result.find(
-								(prop) => prop.name === "stack"
+
+							// If this error has a `cause` property, display it
+							const causeDescriptor = getPropertiesResponse?.result.find(
+								(prop) => prop.name === "cause"
 							);
-							const getObjectId = stackDescriptor?.get?.objectId;
-							if (getObjectId !== undefined) {
-								// Invoke the `stack` getter
-								const callFunctionResponse = await send<
-									Protocol.Runtime.CallFunctionOnRequest,
-									Protocol.Runtime.CallFunctionOnResponse
-								>("Runtime.callFunctionOn", {
-									objectId,
-									functionDeclaration:
-										"function invokeGetter(getter) { return Reflect.apply(getter, this, []); }",
-									arguments: [{ objectId: getObjectId }],
-									silent: true,
-								});
-								if (callFunctionResponse !== undefined) {
-									// Log the source-mapped `stack` if we have a consumer
-									const stack = callFunctionResponse.result.value;
-									if (consumer === undefined) {
-										logger.error("Cause:", stack);
-									} else {
-										const formatted = formatStack(consumer, stack);
-										logger.error("Cause:", formatted);
+							const cause = causeDescriptor?.value;
+							if (cause !== undefined) {
+								if (
+									cause.subtype === "error" &&
+									cause.description !== undefined &&
+									consumer !== undefined
+								) {
+									const formatted = formatStack(consumer, cause.description);
+									logger.error("Cause:", formatted);
+								} else {
+									logger.error("Cause:", cause.description ?? cause.value);
+								}
+							}
+
+							if (isDomException) {
+								// If this is a `DOMException`, get a reference to `stack`
+								const stackDescriptor = getPropertiesResponse?.result.find(
+									(prop) => prop.name === "stack"
+								);
+								const getObjectId = stackDescriptor?.get?.objectId;
+								if (getObjectId !== undefined) {
+									// Invoke the `stack` getter
+									const callFunctionResponse = await send<
+										Protocol.Runtime.CallFunctionOnRequest,
+										Protocol.Runtime.CallFunctionOnResponse
+									>("Runtime.callFunctionOn", {
+										objectId,
+										functionDeclaration:
+											"function invokeGetter(getter) { return Reflect.apply(getter, this, []); }",
+										arguments: [{ objectId: getObjectId }],
+										silent: true,
+									});
+									if (callFunctionResponse !== undefined) {
+										// Log the source-mapped `stack` if we have a consumer
+										const stack: unknown = callFunctionResponse.result.value;
+										if (typeof stack === "string" && consumer !== undefined) {
+											const formatted = formatStack(consumer, stack);
+											logger.error("Cause:", formatted);
+										} else {
+											logger.error("Cause:", stack);
+										}
 									}
 								}
 							}
