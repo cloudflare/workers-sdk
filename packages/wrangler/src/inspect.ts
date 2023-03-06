@@ -326,27 +326,27 @@ export default function useInspector(props: InspectorProps) {
 				if (sourceMapAbortController.signal.aborted) return;
 				const map = JSON.parse(mapContent);
 				// `new SourceMapConsumer(...)` returns a `Promise<SourceMapConsumer>`
-				const consumer = await new SourceMapConsumer(map);
+				const sourceMapConsumer = await new SourceMapConsumer(map);
 				if (sourceMapAbortController.signal.aborted) {
-					consumer.destroy();
+					sourceMapConsumer.destroy();
 					return;
 				}
 				sourceMapAbortController.signal.addEventListener("abort", () => {
 					_sourceMapConsumerPromise = Promise.resolve(undefined);
-					consumer.destroy();
+					sourceMapConsumer.destroy();
 				});
-				return consumer;
+				return sourceMapConsumer;
 			})());
 		}
 
 		/**
 		 * Converts a structured-error to a friendly, source-mapped error string.
-		 * @param consumer source-map to use for mapping locations
+		 * @param sourceMapConsumer source-map to use for mapping locations
 		 * @param message first line of stack trace (e.g. `Error: message`)
 		 * @param frames structured stack entries for error location
 		 */
 		function formatStructuredError(
-			consumer: SourceMapConsumer,
+			sourceMapConsumer: SourceMapConsumer,
 			message?: string,
 			frames?: Protocol.Runtime.CallFrame[]
 		): string {
@@ -359,14 +359,14 @@ export default function useInspector(props: InspectorProps) {
 						// `Protocol.Runtime.CallFrame` uses 0-indexed line and column
 						// numbers, whereas `source-map` expects 1-indexing for lines and
 						// 0-indexing for columns;
-						const pos = consumer.originalPositionFor({
+						const pos = sourceMapConsumer.originalPositionFor({
 							line: lineNumber + 1,
 							column: columnNumber,
 						});
 
 						// Print out line which caused error:
 						if (i === 0 && pos.source && pos.line) {
-							const fileSource = consumer.sourceContentFor(pos.source);
+							const fileSource = sourceMapConsumer.sourceContentFor(pos.source);
 							const fileSourceLine =
 								fileSource?.split("\n")[pos.line - 1] || "";
 							lines.push(fileSourceLine.trim());
@@ -404,10 +404,10 @@ export default function useInspector(props: InspectorProps) {
 
 		/**
 		 * Converts an unstructured-stack to a friendly, source-mapped error string.
-		 * @param consumer source-map to use for mapping locations
+		 * @param sourceMapConsumer source-map to use for mapping locations
 		 * @param stack string stack trace from `Error#stack`
 		 */
-		function formatStack(consumer: SourceMapConsumer, stack: string) {
+		function formatStack(sourceMapConsumer: SourceMapConsumer, stack: string) {
 			const message = stack.split("\n")[0];
 			const callSites = parseStack(stack);
 			const frames = callSites.map<Protocol.Runtime.CallFrame>((site) => ({
@@ -419,7 +419,7 @@ export default function useInspector(props: InspectorProps) {
 				scriptId: "",
 				url: "",
 			}));
-			return formatStructuredError(consumer, message, frames);
+			return formatStructuredError(sourceMapConsumer, message, frames);
 		}
 
 		/**
@@ -435,13 +435,17 @@ export default function useInspector(props: InspectorProps) {
 					if (evt.method === "Runtime.exceptionThrown") {
 						const params = evt.params as Protocol.Runtime.ExceptionThrownEvent;
 
-						const consumer = await getSourceMapConsumer();
-						if (consumer !== undefined) {
+						const sourceMapConsumer = await getSourceMapConsumer();
+						if (sourceMapConsumer !== undefined) {
 							// Create the lines for the exception details log
 							const message =
 								params.exceptionDetails.exception?.description?.split("\n")[0];
 							const stack = params.exceptionDetails.stackTrace?.callFrames;
-							const formatted = formatStructuredError(consumer, message, stack);
+							const formatted = formatStructuredError(
+								sourceMapConsumer,
+								message,
+								stack
+							);
 							// Log the parsed stacktrace
 							logger.error(params.exceptionDetails.text, formatted);
 						} else {
@@ -490,9 +494,12 @@ export default function useInspector(props: InspectorProps) {
 								if (
 									cause.subtype === "error" &&
 									cause.description !== undefined &&
-									consumer !== undefined
+									sourceMapConsumer !== undefined
 								) {
-									const formatted = formatStack(consumer, cause.description);
+									const formatted = formatStack(
+										sourceMapConsumer,
+										cause.description
+									);
 									logger.error("Cause:", formatted);
 								} else {
 									logger.error("Cause:", cause.description ?? cause.value);
@@ -520,8 +527,11 @@ export default function useInspector(props: InspectorProps) {
 									if (callFunctionResponse !== undefined) {
 										// Log the source-mapped `stack` if we have a consumer
 										const stack: unknown = callFunctionResponse.result.value;
-										if (typeof stack === "string" && consumer !== undefined) {
-											const formatted = formatStack(consumer, stack);
+										if (
+											typeof stack === "string" &&
+											sourceMapConsumer !== undefined
+										) {
+											const formatted = formatStack(sourceMapConsumer, stack);
 											logger.error("Cause:", formatted);
 										} else {
 											logger.error("Cause:", stack);
