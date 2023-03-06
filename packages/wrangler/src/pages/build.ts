@@ -132,16 +132,6 @@ export const Handler = async (args: PagesBuildArgs) => {
 			legacyNodeCompat,
 		} = validatedArgs;
 
-		if (!existsSync(directory)) {
-			throw new FatalError(
-				`Could not find anything to build.
-We looked for the Functions directory (${basename(
-					directory
-				)}) but couldn't find anything to build.
-	➤ Please make sure [directory] points to the location of your Functions files.`,
-				EXIT_CODE_FUNCTIONS_NOTHING_TO_BUILD_ERROR
-			);
-		}
 		try {
 			/**
 			 * `buildFunctions` builds `/functions`, but doesn't give us the bundle
@@ -200,6 +190,7 @@ We looked for the Functions directory (${basename(
 			nodejsCompat,
 			legacyNodeCompat,
 			bindings,
+			workerScriptPath,
 		} = validatedArgs;
 
 		let d1Databases: string[] | undefined = undefined;
@@ -212,28 +203,11 @@ We looked for the Functions directory (${basename(
 			}
 		}
 
-		const workerScriptPath = resolvePath(buildOutputDirectory, "_worker.js");
-		const foundWorkerScript = existsSync(workerScriptPath);
-
-		if (!foundWorkerScript && !existsSync(directory)) {
-			throw new FatalError(
-				`Could not find anything to build.
-We first looked inside the build output directory (${basename(
-					resolvePath(buildOutputDirectory)
-				)}), then looked for the Functions directory (${basename(
-					directory
-				)}) but couldn't find anything to build.
-	➤ If you are trying to build _worker.js, please make sure you provide the [--build-output-directory] containing your static files.
-	➤ If you are trying to build Pages Functions, please make sure [directory] points to the location of your Functions files.`,
-				EXIT_CODE_FUNCTIONS_NOTHING_TO_BUILD_ERROR
-			);
-		}
-
 		/**
 		 * prioritize building `_worker.js` over Pages Functions, if both exist
 		 * and if we were able to resolve _worker.js
 		 */
-		if (foundWorkerScript) {
+		if (workerScriptPath) {
 			/**
 			 * `buildRawWorker` builds `_worker.js`, but doesn't give us the bundle
 			 * we want to return, which includes the external dependencies (like wasm,
@@ -303,10 +277,11 @@ We first looked inside the build output directory (${basename(
 
 type WorkerBundleArgs = Omit<PagesBuildArgs, "nodeCompat"> & {
 	plugin: false;
-	outfile: string;
 	buildOutputDirectory: string;
 	legacyNodeCompat: boolean;
 	nodejsCompat: boolean;
+
+	workerScriptPath: string;
 };
 type PluginArgs = Omit<
 	PagesBuildArgs,
@@ -360,8 +335,11 @@ const validateArgs = (args: PagesBuildArgs): ValidatedArgs => {
 			);
 		}
 	} else {
-		args.outfile ??= "_worker.bundle";
-		args.buildOutputDirectory ??= dirname(args.outfile);
+		if (!args.outdir) {
+			args.outfile ??= "_worker.bundle";
+		}
+
+		args.buildOutputDirectory ??= args.outfile ? dirname(args.outfile) : ".";
 	}
 
 	if (args.buildOutputDirectory) {
@@ -387,8 +365,45 @@ const validateArgs = (args: PagesBuildArgs): ValidatedArgs => {
 		);
 	}
 
+	let workerScriptPath: string | undefined;
+
+	if (args.buildOutputDirectory) {
+		const prospectiveWorkerScriptPath = resolvePath(
+			args.buildOutputDirectory,
+			"_worker.js"
+		);
+
+		const foundWorkerScript = existsSync(prospectiveWorkerScriptPath);
+
+		if (foundWorkerScript) {
+			workerScriptPath = prospectiveWorkerScriptPath;
+		} else if (!foundWorkerScript && !existsSync(args.directory)) {
+			throw new FatalError(
+				`Could not find anything to build.
+We first looked inside the build output directory (${basename(
+					resolvePath(args.buildOutputDirectory)
+				)}), then looked for the Functions directory (${basename(
+					args.directory
+				)}) but couldn't find anything to build.
+	➤ If you are trying to build _worker.js, please make sure you provide the [--build-output-directory] containing your static files.
+	➤ If you are trying to build Pages Functions, please make sure [directory] points to the location of your Functions files.`,
+				EXIT_CODE_FUNCTIONS_NOTHING_TO_BUILD_ERROR
+			);
+		}
+	} else if (!existsSync(args.directory)) {
+		throw new FatalError(
+			`Could not find anything to build.
+We looked for the Functions directory (${basename(
+				args.directory
+			)}) but couldn't find anything to build.
+	➤ Please make sure [directory] points to the location of your Functions files.`,
+			EXIT_CODE_FUNCTIONS_NOTHING_TO_BUILD_ERROR
+		);
+	}
+
 	return {
 		...argsExceptNodeCompat,
+		workerScriptPath,
 		nodejsCompat,
 		legacyNodeCompat,
 	} as ValidatedArgs;
