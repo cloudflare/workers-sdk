@@ -95,7 +95,7 @@
 			]
 		},
 		"transformIgnorePatterns": [
-			"node_modules/(?!find-up|locate-path|p-locate|p-limit|p-timeout|p-queue|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream|get-port|supports-color|pretty-bytes|npx-import)"
+			"node_modules/(?!find-up|locate-path|p-locate|p-limit|p-timeout|p-queue|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream|get-port|supports-color|pretty-bytes|npx-import|stack-trace)"
 		]
 	},
 	"dependencies": {
@@ -178,6 +178,7 @@
 		"serve-static": "^1.15.0",
 		"shellac": "^0.7.3",
 		"signal-exit": "^3.0.7",
+		"stack-trace": "^1.0.0-pre2",
 		"strip-ansi": "^7.0.1",
 		"supports-color": "^9.2.2",
 		"timeago.js": "^4.0.2",

@@ -7,9 +7,9 @@ import { URL } from "node:url";
 import open from "open";
 import { useEffect, useRef, useState } from "react";
 import { SourceMapConsumer } from "source-map";
+import { parse as parseStackTrace } from "stack-trace";
 import WebSocket, { WebSocketServer } from "ws";
 import { version } from "../package.json";
-import { parseStack } from "./callsite";
 import { logger } from "./logger";
 import { waitForPortToBeAvailable } from "./proxy";
 import { getAccessToken } from "./user/access";
@@ -409,7 +409,9 @@ export default function useInspector(props: InspectorProps) {
 		 */
 		function formatStack(sourceMapConsumer: SourceMapConsumer, stack: string) {
 			const message = stack.split("\n")[0];
-			const callSites = parseStack(stack);
+			// `stack-trace` requires an object with a `stack` property:
+			// https://github.com/felixge/node-stack-trace/blob/ba06dcdb50d465cd440d84a563836e293b360427/index.js#L21-L23
+			const callSites = parseStackTrace({ stack } as Error);
 			const frames = callSites.map<Protocol.Runtime.CallFrame>((site) => ({
 				functionName: site.getFunctionName() ?? "",
 				// `Protocol.Runtime.CallFrame`s line numbers are 0-indexed, hence `- 1`
