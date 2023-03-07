@@ -375,10 +375,10 @@ interface EnvironmentNonInheritable {
 			/** The queue to send messages that failed to be consumed. */
 			dead_letter_queue?: string;
 
-			/** Whether the Queue broker will make concurrent consumer invocations */
+			/** Allow the queue consumer to automatically scale out as the backlog grows  */
 			concurrency_enabled?: boolean;
 
-			/** The maximum number of concurrent consumer Worker executions */
+			/** The maximum number of concurrent consumer Worker invocations. Leaving this unset will allow your consumer to scale to the maximum concurrency needed to keep up with the message backlog. */
 			max_concurrency?: number;
 		}[];
 	};
