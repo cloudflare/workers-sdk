@@ -1,4 +1,4 @@
-name: Publish Devtools
+name: Publish Quick Edit
 
 on:
   push:
