@@ -46,7 +46,7 @@ function getLoggerLevel(): LoggerLevel {
 
 export type TableRow<Keys extends string> = Record<Keys, string>;
 
-class Logger {
+export class Logger {
 	constructor() {}
 
 	loggerLevel = getLoggerLevel();
