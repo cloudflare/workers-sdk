@@ -10,9 +10,9 @@
 	"license": "BSD-3-Clause",
 	"author": "workers-devprod@cloudflare.com",
 	"scripts": {
-		"cleanup": "rm -rf vscode dist/assets",
-		"dev": "npx wrangler pages dev ./dist",
-		"publish": "npx wrangler pages publish --project-name quick-edit ./dist"
+		"cleanup": "rm -rf vscode web/assets",
+		"dev": "npx wrangler pages dev ./web",
+		"publish": "npx wrangler pages publish --project-name quick-edit ./web"
 	},
 	"dependencies": {
 		"wrangler": "^2.7.1",

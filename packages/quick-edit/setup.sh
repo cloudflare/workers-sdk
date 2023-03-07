@@ -7,7 +7,6 @@ cd vscode
 yarn
 yarn gulp vscode-web-min
 cd ..
-mkdir dist
-mv vscode-web dist/assets
+mv vscode-web web/assets
 # Pages doesn't support uploading folders called node_modules
-mv dist/assets/node_modules dist/assets/modules
+mv web/assets/node_modules web/assets/modules

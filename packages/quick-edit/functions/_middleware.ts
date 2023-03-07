@@ -13,6 +13,12 @@ const values = {
 					"https://openvsxorg.blob.core.windows.net/resources/{publisher}/{name}/{version}/{path}",
 			},
 		},
+		additionalBuiltinExtensions: [
+			{
+				scheme: "http",
+				path: "/cloudflare-logic",
+			},
+		],
 	}).replace(/"/g, "&quot;"),
 	WORKBENCH_AUTH_SESSION: "",
 	WORKBENCH_WEB_BASE_URL: "/assets",
