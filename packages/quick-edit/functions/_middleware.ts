@@ -1,35 +1,35 @@
-const values = {
-	WORKBENCH_WEB_CONFIGURATION: JSON.stringify({
-		productConfiguration: {
-			nameShort: "Quick Edit",
-			nameLong: "Cloudflare Workers Quick Edit",
-			applicationName: "workers-quick-edit",
-			dataFolderName: ".quick-edit",
-			version: "1.76.0",
-			extensionsGallery: {
-				serviceUrl: "https://open-vsx.org/vscode/gallery",
-				itemUrl: "https://open-vsx.org/vscode/item",
-				resourceUrlTemplate:
-					"https://openvsxorg.blob.core.windows.net/resources/{publisher}/{name}/{version}/{path}",
-			},
-		},
-		additionalBuiltinExtensions: [
-			{
-				scheme: "http",
-				path: "/cloudflare-logic",
-			},
-		],
-	}).replace(/"/g, "&quot;"),
-	WORKBENCH_AUTH_SESSION: "",
-	WORKBENCH_WEB_BASE_URL: "/assets",
-};
-
 export const onRequest = async ({
 	env,
 	request,
 	next,
 }: Parameters<PagesFunction>[0]) => {
 	const url = new URL(request.url);
+	const values = {
+		WORKBENCH_WEB_CONFIGURATION: JSON.stringify({
+			productConfiguration: {
+				nameShort: "Quick Edit",
+				nameLong: "Cloudflare Workers Quick Edit",
+				applicationName: "workers-quick-edit",
+				dataFolderName: ".quick-edit",
+				version: "1.76.0",
+				extensionsGallery: {
+					serviceUrl: "https://open-vsx.org/vscode/gallery",
+					itemUrl: "https://open-vsx.org/vscode/item",
+					resourceUrlTemplate:
+						"https://openvsxorg.blob.core.windows.net/resources/{publisher}/{name}/{version}/{path}",
+				},
+			},
+			additionalBuiltinExtensions: [
+				{
+					scheme: url.protocol === "https:" ? "https" : "http",
+					path: "/cloudflare-logic",
+				},
+			],
+		}).replace(/"/g, "&quot;"),
+		WORKBENCH_AUTH_SESSION: "",
+		WORKBENCH_WEB_BASE_URL: "/assets",
+	};
+
 	console.log(url.pathname);
 	if (url.pathname === "/") {
 		url.pathname = "/assets/out/vs/code/browser/workbench/workbench";
