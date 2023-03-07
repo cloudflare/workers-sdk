@@ -1,5 +1,42 @@
 # wrangler
 
+## 2.12.1
+
+### Patch Changes
+
+- [#2839](https://github.com/cloudflare/workers-sdk/pull/2839) [`ad4b123b`](https://github.com/cloudflare/workers-sdk/commit/ad4b123bb9fee51c0cca442e4d0ee6ebeeb020b1) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: remove `vitest` from `wrangler init`'s generated `tsconfig.json` `types` array
+
+  Previously, `wrangler init` generated a `tsconfig.json` with `"types": ["@cloudflare/workers-types", "vitest"]`, even if Vitest tests weren't generated.
+  Unlike Jest, Vitest [doesn't provide global APIs by default](https://vitest.dev/config/#globals), so there's no need for ambient types.
+
+* [#2806](https://github.com/cloudflare/workers-sdk/pull/2806) [`8d462c0c`](https://github.com/cloudflare/workers-sdk/commit/8d462c0c6fb92dc503747d66565f7bb10bb937d0) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Remove the `--experimental-worker-bundle` option from Pages Functions
+
+- [#2845](https://github.com/cloudflare/workers-sdk/pull/2845) [`e3c036d7`](https://github.com/cloudflare/workers-sdk/commit/e3c036d773ddc1e4498b016818a52a073909cf36) Thanks [@Cyb3r-Jak3](https://github.com/Cyb3r-Jak3)! - feature: include .wrangler directory in gitignore template used with `wrangler init`
+
+* [#2806](https://github.com/cloudflare/workers-sdk/pull/2806) [`8d462c0c`](https://github.com/cloudflare/workers-sdk/commit/8d462c0c6fb92dc503747d66565f7bb10bb937d0) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Add `--outdir` as an option when running `wrangler pages functions build`.
+
+  This deprecates `--outfile` when building a Pages Plugin with `--plugin`.
+
+  When building functions normally, `--outdir` may be used to produce a human-inspectable format of the `_worker.bundle` that is produced.
+
+- [#2806](https://github.com/cloudflare/workers-sdk/pull/2806) [`8d462c0c`](https://github.com/cloudflare/workers-sdk/commit/8d462c0c6fb92dc503747d66565f7bb10bb937d0) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Enable bundling in Pages Functions by default.
+
+  We now enable bundling by default for a `functions/` folder and for an `_worker.js` in Pages Functions. This allows you to use external modules such as Wasm. You can disable this behavior in Direct Upload projects by using the `--no-bundle` argument in `wrangler pages publish` and `wrangler pages dev`.
+
+* [#2836](https://github.com/cloudflare/workers-sdk/pull/2836) [`42fb97e5`](https://github.com/cloudflare/workers-sdk/commit/42fb97e5de4ed323a706c432b4ff9f73a2a8abbb) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: preserve the entrypoint filename when running `wrangler publish --outdir <dir>`.
+
+  Previously, this entrypoint filename would sometimes be overwritten with some internal filenames. It should now be based off of the entrypoint you provide for your Worker.
+
+- [#2828](https://github.com/cloudflare/workers-sdk/pull/2828) [`891ddf19`](https://github.com/cloudflare/workers-sdk/commit/891ddf19f4f9d268c52fb236f2195a7ff919601e) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Bring `pages dev` logging in line with `dev` proper's
+
+  `wrangler pages dev` now defaults to logging at the `log` level (rather than the previous `warn` level), and the `pages` prefix is removed.
+
+* [#2855](https://github.com/cloudflare/workers-sdk/pull/2855) [`226e63fa`](https://github.com/cloudflare/workers-sdk/commit/226e63fa3dc24153fb950fc9fb98d040ede30a13) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: `--experimental-local` with `wrangler pages dev`
+
+  We previously had a bug which logged an error (`local worker: TypeError: generateASSETSBinding2 is not a function`). This has now been fixed.
+
+- [#2831](https://github.com/cloudflare/workers-sdk/pull/2831) [`2b641765`](https://github.com/cloudflare/workers-sdk/commit/2b641765975d98e6e04342533fa088f51a96acab) Thanks [@Skye-31](https://github.com/Skye-31)! - Fix: Show correct link for how to create an API token in a non-interactive environment
+
 ## 2.12.0
 
 ### Minor Changes
