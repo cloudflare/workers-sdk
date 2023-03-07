@@ -18,7 +18,11 @@ const values = {
 	WORKBENCH_WEB_BASE_URL: "/assets",
 };
 
-export const onRequest = async ({ env, request, next }) => {
+export const onRequest = async ({
+	env,
+	request,
+	next,
+}: Parameters<PagesFunction>[0]) => {
 	const url = new URL(request.url);
 	console.log(url.pathname);
 	if (url.pathname === "/") {
@@ -27,7 +31,7 @@ export const onRequest = async ({ env, request, next }) => {
 		let body = await response.text();
 		body = body.replaceAll(
 			/\{\{([^}]+)\}\}/g,
-			(_, key) => values[key] ?? "undefined"
+			(_, key) => values[key as keyof typeof values] ?? "undefined"
 		);
 		body = body.replace("/node_modules/", "/modules/");
 
