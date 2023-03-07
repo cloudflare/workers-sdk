@@ -1,5 +1,5 @@
 import { access, lstat } from "node:fs/promises";
-import { dirname, relative, resolve } from "node:path";
+import { relative, resolve } from "node:path";
 import { bundleWorker } from "../../bundle";
 import { getBasePath } from "../../paths";
 import { D1_BETA_PREFIX } from "../../worker";
@@ -8,12 +8,12 @@ import type { Options as WorkerOptions } from "./buildWorker";
 
 type Options = Omit<
 	WorkerOptions,
-	"fallbackService" | "buildOutputDirectory" | "nodejsCompat"
->;
+	"outfile" | "fallbackService" | "buildOutputDirectory" | "nodejsCompat"
+> & { outdir: string };
 
 export function buildPlugin({
 	routesModule,
-	outfile = "bundle.js",
+	outdir,
 	minify = false,
 	sourcemap = false,
 	watch = false,
@@ -29,9 +29,10 @@ export function buildPlugin({
 			directory: functionsDirectory,
 			format: "modules",
 		},
-		resolve(outfile),
+		resolve(outdir),
 		{
 			inject: [routesModule],
+			entryName: "index",
 			minify,
 			sourcemap,
 			watch,
@@ -50,43 +51,57 @@ export function buildPlugin({
 				{
 					name: "Assets",
 					setup(pluginBuild) {
-						if (pluginBuild.initialOptions.outfile) {
-							const outdir = dirname(pluginBuild.initialOptions.outfile);
+						pluginBuild.onResolve({ filter: /^assets:/ }, async (args) => {
+							const directory = resolve(
+								args.resolveDir,
+								args.path.slice("assets:".length)
+							);
 
-							pluginBuild.onResolve({ filter: /^assets:/ }, async (args) => {
-								const directory = resolve(
-									args.resolveDir,
-									args.path.slice("assets:".length)
-								);
+							const exists = await access(directory)
+								.then(() => true)
+								.catch(() => false);
 
-								const exists = await access(directory)
-									.then(() => true)
-									.catch(() => false);
+							const isDirectory =
+								exists && (await lstat(directory)).isDirectory();
 
-								const isDirectory =
-									exists && (await lstat(directory)).isDirectory();
+							if (!isDirectory) {
+								return {
+									errors: [
+										{
+											text: `'${directory}' does not exist or is not a directory.`,
+										},
+									],
+								};
+							}
 
-								if (!isDirectory) {
-									return {
-										errors: [
-											{
-												text: `'${directory}' does not exist or is not a directory.`,
-											},
-										],
-									};
-								}
+							const path = `assets:./${relative(outdir, directory)}`;
 
-								const path = `assets:./${relative(outdir, directory)}`;
-
-								return { path, external: true, namespace: "assets" };
-							});
-						}
+							return { path, external: true, namespace: "assets" };
+						});
+					},
+				},
+				// TODO: Replace this with a proper outdir solution for Plugins
+				// But for now, let's just mark all wasm/bin files as external
+				{
+					name: "Mark externals",
+					setup(pluginBuild) {
+						pluginBuild.onResolve(
+							{ filter: /.*\.(wasm|bin)$/ },
+							async (args) => {
+								return {
+									external: true,
+									path: `./${relative(
+										outdir,
+										resolve(args.resolveDir, args.path)
+									)}`,
+								};
+							}
+						);
 					},
 				},
 			],
-			isOutfile: true,
 			serveAssetsFromWorker: false,
-			disableModuleCollection: true,
+			disableModuleCollection: false,
 			rules: [],
 			checkFetch: local,
 			targetConsumer: local ? "dev" : "publish",

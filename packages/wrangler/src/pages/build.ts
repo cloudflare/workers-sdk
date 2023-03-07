@@ -1,6 +1,5 @@
-import { existsSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { basename, dirname, join, resolve as resolvePath } from "node:path";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { basename, dirname, relative, resolve as resolvePath } from "node:path";
 import { createUploadWorkerBundleContents } from "../api/pages/create-worker-bundle-contents";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
@@ -8,6 +7,7 @@ import * as metrics from "../metrics";
 import { buildFunctions } from "./buildFunctions";
 import { isInPagesCI } from "./constants";
 import {
+	EXIT_CODE_FUNCTIONS_NOTHING_TO_BUILD_ERROR,
 	EXIT_CODE_FUNCTIONS_NO_ROUTES_ERROR,
 	FunctionsNoRoutesError,
 	getFunctionsNoRoutesWarning,
@@ -32,8 +32,11 @@ export function Options(yargs: CommonYargsArgv) {
 		.options({
 			outfile: {
 				type: "string",
-				default: "_worker.js",
 				description: "The location of the output Worker script",
+			},
+			outdir: {
+				type: "string",
+				description: "Output directory for the bundled Worker",
 			},
 			"output-config-path": {
 				type: "string",
@@ -99,104 +102,36 @@ export function Options(yargs: CommonYargsArgv) {
 				deprecated: true,
 				hidden: true,
 			},
-			"experimental-worker-bundle": {
-				type: "boolean",
-				default: false,
-				hidden: true,
-				description:
-					"Whether to process non-JS module imports or not, such as wasm/text/binary, when we run bundling on `functions` or `_worker.js`",
-			},
 		})
 		.epilogue(pagesBetaWarning);
 }
 
-export const Handler = async ({
-	directory,
-	outfile,
-	outputConfigPath,
-	outputRoutesPath: routesOutputPath,
-	minify,
-	sourcemap,
-	fallbackService,
-	watch,
-	plugin,
-	buildOutputDirectory,
-	nodeCompat: legacyNodeCompat,
-	compatibilityFlags,
-	bindings,
-	experimentalWorkerBundle,
-}: PagesBuildArgs) => {
+export const Handler = async (args: PagesBuildArgs) => {
 	if (!isInPagesCI) {
 		// Beta message for `wrangler pages <commands>` usage
 		logger.log(pagesBetaWarning);
 	}
 
-	if (legacyNodeCompat) {
-		console.warn(
-			"Enabling Node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
-		);
-	}
-	const nodejsCompat = compatibilityFlags?.includes("nodejs_compat");
-	if (legacyNodeCompat && nodejsCompat) {
-		throw new Error(
-			"The `nodejs_compat` compatibility flag cannot be used in conjunction with the legacy `--node-compat` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the `--node-compat` argument from your CLI command."
-		);
-	}
+	const validatedArgs = validateArgs(args);
 
-	let d1Databases: string[] | undefined = undefined;
-	if (bindings) {
-		try {
-			const decodedBindings = JSON.parse(bindings);
-			d1Databases = Object.keys(decodedBindings?.d1_databases || {});
-		} catch {
-			throw new FatalError("Could not parse a valid set of 'bindings'.", 1);
-		}
-	}
-
-	buildOutputDirectory ??= dirname(outfile);
-
-	const workerScriptPath = resolvePath(buildOutputDirectory, "_worker.js");
-	const foundWorkerScript = existsSync(workerScriptPath);
 	let bundle: BundleResult | undefined = undefined;
 
-	if (!foundWorkerScript && !existsSync(directory)) {
-		throw new FatalError(`Could not find anything to build.
-We first looked inside the build output directory (${basename(
-			resolvePath(buildOutputDirectory)
-		)}), then looked for the Functions directory (${basename(
-			directory
-		)}) but couldn't find anything to build.
-	➤ If you are trying to build _worker.js, please make sure you provide the [--build-output-directory] containing your static files.
-	➤ If you are trying to build Pages Functions, please make sure [--directory] points to the location of your Functions files.`);
-	}
+	if (validatedArgs.plugin) {
+		const {
+			directory,
+			outfile,
+			outdir,
+			outputConfigPath,
+			outputRoutesPath: routesOutputPath,
+			minify,
+			sourcemap,
+			fallbackService,
+			watch,
+			plugin,
+			nodejsCompat,
+			legacyNodeCompat,
+		} = validatedArgs;
 
-	/**
-	 * prioritize building `_worker.js` over Pages Functions, if both exist
-	 * and if we were able to resolve _worker.js
-	 */
-	if (experimentalWorkerBundle && foundWorkerScript) {
-		/**
-		 * `buildRawWorker` builds `_worker.js`, but doesn't give us the bundle
-		 * we want to return, which includes the external dependencies (like wasm,
-		 * binary, text). Let's output that build result to memory and only write
-		 * to disk once we have the final bundle
-		 */
-		const workerOutfile = experimentalWorkerBundle
-			? join(tmpdir(), `./bundledWorker-${Math.random()}.mjs`)
-			: outfile;
-
-		bundle = await buildRawWorker({
-			workerScriptPath,
-			outfile: workerOutfile,
-			directory: buildOutputDirectory,
-			local: false,
-			sourcemap: true,
-			watch: false,
-			onEnd: () => {},
-			betaD1Shims: d1Databases,
-			experimentalWorkerBundle,
-		});
-	} else {
 		try {
 			/**
 			 * `buildFunctions` builds `/functions`, but doesn't give us the bundle
@@ -204,12 +139,9 @@ We first looked inside the build output directory (${basename(
 			 * binary, text). Let's output that build result to memory and only write
 			 * to disk once we have the final bundle
 			 */
-			const functionsOutfile = experimentalWorkerBundle
-				? join(tmpdir(), `./functionsWorker-${Math.random()}.js`)
-				: outfile;
-
 			bundle = await buildFunctions({
-				outfile: functionsOutfile,
+				outfile,
+				outdir,
 				outputConfigPath,
 				functionsDirectory: directory,
 				minify,
@@ -217,13 +149,10 @@ We first looked inside the build output directory (${basename(
 				fallbackService,
 				watch,
 				plugin,
-				buildOutputDirectory,
 				legacyNodeCompat,
 				nodejsCompat,
 				routesOutputPath,
 				local: false,
-				d1Databases,
-				experimentalWorkerBundle,
 			});
 		} catch (e) {
 			if (e instanceof FunctionsNoRoutesError) {
@@ -235,18 +164,247 @@ We first looked inside the build output directory (${basename(
 				throw e;
 			}
 		}
-	}
 
-	if (experimentalWorkerBundle) {
-		const workerBundleContents = await createUploadWorkerBundleContents(
-			bundle as BundleResult
-		);
-
-		writeFileSync(
+		if (outfile && outfile !== bundle.resolvedEntryPointPath) {
+			writeFileSync(
+				outfile,
+				`export { default } from './${relative(
+					dirname(outfile),
+					bundle.resolvedEntryPointPath
+				)}'`
+			);
+		}
+	} else {
+		const {
+			directory,
 			outfile,
-			Buffer.from(await workerBundleContents.arrayBuffer())
-		);
+			outdir,
+			outputConfigPath,
+			outputRoutesPath: routesOutputPath,
+			minify,
+			sourcemap,
+			fallbackService,
+			watch,
+			plugin,
+			buildOutputDirectory,
+			nodejsCompat,
+			legacyNodeCompat,
+			bindings,
+			workerScriptPath,
+		} = validatedArgs;
+
+		let d1Databases: string[] | undefined = undefined;
+		if (bindings) {
+			try {
+				const decodedBindings = JSON.parse(bindings);
+				d1Databases = Object.keys(decodedBindings?.d1_databases || {});
+			} catch {
+				throw new FatalError("Could not parse a valid set of 'bindings'.", 1);
+			}
+		}
+
+		/**
+		 * prioritize building `_worker.js` over Pages Functions, if both exist
+		 * and if we were able to resolve _worker.js
+		 */
+		if (workerScriptPath) {
+			/**
+			 * `buildRawWorker` builds `_worker.js`, but doesn't give us the bundle
+			 * we want to return, which includes the external dependencies (like wasm,
+			 * binary, text). Let's output that build result to memory and only write
+			 * to disk once we have the final bundle
+			 */
+			bundle = await buildRawWorker({
+				workerScriptPath,
+				outdir,
+				directory: buildOutputDirectory,
+				local: false,
+				sourcemap,
+				watch,
+				betaD1Shims: d1Databases,
+			});
+		} else {
+			try {
+				/**
+				 * `buildFunctions` builds `/functions`, but doesn't give us the bundle
+				 * we want to return, which includes the external dependencies (like wasm,
+				 * binary, text). Let's output that build result to memory and only write
+				 * to disk once we have the final bundle
+				 */
+				bundle = await buildFunctions({
+					outdir,
+					outputConfigPath,
+					functionsDirectory: directory,
+					minify,
+					sourcemap,
+					fallbackService,
+					watch,
+					plugin,
+					buildOutputDirectory,
+					legacyNodeCompat,
+					nodejsCompat,
+					routesOutputPath,
+					local: false,
+					d1Databases,
+				});
+			} catch (e) {
+				if (e instanceof FunctionsNoRoutesError) {
+					throw new FatalError(
+						getFunctionsNoRoutesWarning(directory),
+						EXIT_CODE_FUNCTIONS_NO_ROUTES_ERROR
+					);
+				} else {
+					throw e;
+				}
+			}
+		}
+
+		if (outfile) {
+			const workerBundleContents = await createUploadWorkerBundleContents(
+				bundle as BundleResult
+			);
+
+			mkdirSync(dirname(outfile), { recursive: true });
+			writeFileSync(
+				outfile,
+				Buffer.from(await workerBundleContents.arrayBuffer())
+			);
+		}
 	}
 
 	await metrics.sendMetricsEvent("build pages functions");
+};
+
+type WorkerBundleArgs = Omit<PagesBuildArgs, "nodeCompat"> & {
+	plugin: false;
+	buildOutputDirectory: string;
+	legacyNodeCompat: boolean;
+	nodejsCompat: boolean;
+
+	workerScriptPath: string;
+};
+type PluginArgs = Omit<
+	PagesBuildArgs,
+	"buildOutputDirectory" | "bindings" | "nodeCompat"
+> & {
+	plugin: true;
+	outdir: string;
+	legacyNodeCompat: boolean;
+	nodejsCompat: boolean;
+};
+
+type ValidatedArgs = WorkerBundleArgs | PluginArgs;
+
+const validateArgs = (args: PagesBuildArgs): ValidatedArgs => {
+	if (args.outdir && args.outfile) {
+		throw new FatalError(
+			"Cannot specify both an `--outdir` and an `--outfile`.",
+			1
+		);
+	}
+
+	if (args.plugin) {
+		if (args.outfile) {
+			// Explicit old behavior. Encourage to migrate to `--outdir` instead.
+			logger.warn(
+				"Creating a Pages Plugin with `--outfile` is now deprecated. Please use `--outdir` instead."
+			);
+
+			args.outdir = dirname(resolvePath(args.outfile));
+		} else if (!args.outfile && !args.outdir) {
+			// Didn't specify `--outfile`, but didn't specify `--outdir` either. Implicit old behavior defaults. Encourage to migrate to `--outdir`.
+			args.outfile ??= "_worker.js";
+			args.outdir = ".";
+
+			logger.warn(
+				"Creating a Pages Plugin without `--outdir` is now deprecated. Please add an `--outdir` argument."
+			);
+		}
+
+		if (args.bindings) {
+			throw new FatalError(
+				"The `--bindings` flag cannot be used when creating a Pages Plugin with `--plugin`.",
+				1
+			);
+		}
+
+		if (args.buildOutputDirectory) {
+			throw new FatalError(
+				"The `--build-output-directory` flag cannot be used when creating a Pages Plugin with `--plugin`.",
+				1
+			);
+		}
+	} else {
+		if (!args.outdir) {
+			args.outfile ??= "_worker.bundle";
+		}
+
+		args.buildOutputDirectory ??= args.outfile ? dirname(args.outfile) : ".";
+	}
+
+	if (args.buildOutputDirectory) {
+		args.buildOutputDirectory = resolvePath(args.buildOutputDirectory);
+	}
+	if (args.outdir) {
+		args.outdir = resolvePath(args.outdir);
+	}
+	if (args.outfile) {
+		args.outfile = resolvePath(args.outfile);
+	}
+
+	const { nodeCompat: legacyNodeCompat, ...argsExceptNodeCompat } = args;
+	if (legacyNodeCompat) {
+		console.warn(
+			"Enabling Node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
+		);
+	}
+	const nodejsCompat = !!args.compatibilityFlags?.includes("nodejs_compat");
+	if (legacyNodeCompat && nodejsCompat) {
+		throw new Error(
+			"The `nodejs_compat` compatibility flag cannot be used in conjunction with the legacy `--node-compat` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the `--node-compat` argument from your CLI command."
+		);
+	}
+
+	let workerScriptPath: string | undefined;
+
+	if (args.buildOutputDirectory) {
+		const prospectiveWorkerScriptPath = resolvePath(
+			args.buildOutputDirectory,
+			"_worker.js"
+		);
+
+		const foundWorkerScript = existsSync(prospectiveWorkerScriptPath);
+
+		if (foundWorkerScript) {
+			workerScriptPath = prospectiveWorkerScriptPath;
+		} else if (!foundWorkerScript && !existsSync(args.directory)) {
+			throw new FatalError(
+				`Could not find anything to build.
+We first looked inside the build output directory (${basename(
+					resolvePath(args.buildOutputDirectory)
+				)}), then looked for the Functions directory (${basename(
+					args.directory
+				)}) but couldn't find anything to build.
+	➤ If you are trying to build _worker.js, please make sure you provide the [--build-output-directory] containing your static files.
+	➤ If you are trying to build Pages Functions, please make sure [directory] points to the location of your Functions files.`,
+				EXIT_CODE_FUNCTIONS_NOTHING_TO_BUILD_ERROR
+			);
+		}
+	} else if (!existsSync(args.directory)) {
+		throw new FatalError(
+			`Could not find anything to build.
+We looked for the Functions directory (${basename(
+				args.directory
+			)}) but couldn't find anything to build.
+	➤ Please make sure [directory] points to the location of your Functions files.`,
+			EXIT_CODE_FUNCTIONS_NOTHING_TO_BUILD_ERROR
+		);
+	}
+
+	return {
+		...argsExceptNodeCompat,
+		workerScriptPath,
+		nodejsCompat,
+		legacyNodeCompat,
+	} as ValidatedArgs;
 };

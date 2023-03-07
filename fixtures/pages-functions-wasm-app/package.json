@@ -5,8 +5,8 @@
 	"sideEffects": false,
 	"scripts": {
 		"check:type": "tsc",
-		"dev": "npx wrangler pages dev public --experimental-worker-bundle=true --port 8776",
-		"publish": "npx wrangler pages publish public --experimental-worker-bundle=true",
+		"dev": "npx wrangler pages dev public --port 8776",
+		"publish": "npx wrangler pages publish public",
 		"test": "npx vitest",
 		"test:ci": "npx vitest"
 	},

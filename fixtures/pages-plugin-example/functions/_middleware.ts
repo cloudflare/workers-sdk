@@ -1,3 +1,12 @@
+import type { PluginArgs } from "..";
+
+type ExamplePagesPluginFunction<
+	Env = unknown,
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	Params extends string = any,
+	Data extends Record<string, unknown> = Record<string, unknown>
+> = PagesPluginFunction<Env, Params, Data, PluginArgs>;
+
 class BodyHandler {
 	footerText: string;
 
@@ -11,12 +20,10 @@ class BodyHandler {
 	}
 }
 
-export const onRequest: PagesPluginFunction<
-	unknown,
-	never,
-	Record<string, unknown>,
-	{ footerText: string }
-> = async ({ next, pluginArgs }) => {
+export const onRequest: ExamplePagesPluginFunction = async ({
+	next,
+	pluginArgs,
+}) => {
 	const response = await next();
 
 	return new HTMLRewriter()
