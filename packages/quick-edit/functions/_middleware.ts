@@ -17,6 +17,7 @@ const values = {
 	WORKBENCH_AUTH_SESSION: "",
 	WORKBENCH_WEB_BASE_URL: "/assets",
 };
+
 export const onRequest = async ({ env, request, next }) => {
 	const url = new URL(request.url);
 	console.log(url.pathname);
