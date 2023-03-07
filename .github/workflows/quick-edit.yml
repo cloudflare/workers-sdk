@@ -4,8 +4,7 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "packages/quick-edit/**"
+      - "quick-edit/**"
 
 jobs:
   publish:
