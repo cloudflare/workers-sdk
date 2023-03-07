@@ -2,6 +2,8 @@ name: Publish Quick Edit
 
 on:
   push:
+    branches:
+      - main
     paths:
       - "packages/quick-edit/**"
 
