@@ -1,0 +1,21 @@
+{
+	"name": "@cloudflare/quick-edit",
+	"version": "0.0.0",
+	"private": "true",
+	"description": "VSCode for Web hosted for use in Cloudflare's Quick Editor",
+	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
+	"bugs": {
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
+	},
+	"license": "BSD-3-Clause",
+	"author": "workers-devprod@cloudflare.com",
+	"scripts": {
+		"cleanup": "rm -rf vscode dist/assets",
+		"dev": "npx wrangler pages dev ./dist",
+		"publish": "npx wrangler pages publish --project-name quick-edit ./dist"
+	},
+	"dependencies": {
+		"wrangler": "^2.7.1",
+		"yarn": "^1.22.19"
+	}
+}
