@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -122,6 +123,51 @@ describe("functions build", () => {
 		expect(workerBundleWithConstantData).toContain(`wasm Functions`);
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
+	it("should output a directory with --outdir", async () => {
+		/* ---------------------------- */
+		/*       Set up wasm files      */
+		/* ---------------------------- */
+		mkdirSync("wasm");
+		writeFileSync("wasm/greeting.wasm", "Hello");
+		writeFileSync("wasm/name.wasm", "wasm Functions");
+
+		/* ---------------------------- */
+		/*       Set up Functions       */
+		/* ---------------------------- */
+		mkdirSync("functions");
+		writeFileSync(
+			"functions/hello.js",
+			`
+    import hello from "./../wasm/greeting.wasm";
+    import name from "./../wasm/name.wasm";
+
+    export async function onRequest() {
+      const greetingModule = await WebAssembly.instantiate(greeting);
+			const nameModule = await WebAssembly.instantiate(name);
+      return new Response(greetingModule.exports.hello + " " + nameModule.exports.name);
+    }
+    `
+		);
+
+		/* --------------------------------- */
+		/*     Run cmd & make assertions     */
+		/* --------------------------------- */
+		await runWrangler(`pages functions build --outdir=dist`);
+
+		expect(existsSync("dist")).toBe(true);
+		expect(std.out).toMatchInlineSnapshot(`
+		"🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
+		✨ Compiled Worker successfully"
+	`);
+
+		expect(execSync("ls dist", { encoding: "utf-8" })).toMatchInlineSnapshot(`
+		"e8f0f80fe25d71a0fc2b9a08c877020211192308-name.wasm
+		f7ff9e8b7bb2e09b70935a5d785e0cc5d9d0abf0-greeting.wasm
+		index.js
+		"
+	`);
 	});
 
 	it("should build _worker.js", async () => {
