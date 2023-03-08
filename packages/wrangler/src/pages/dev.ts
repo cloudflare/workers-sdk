@@ -297,7 +297,7 @@ export const Handler = async ({
 		}
 
 		await runBuild();
-		watch([scriptPath], {
+		watch([workerScriptPath], {
 			persistent: true,
 			ignoreInitial: true,
 		}).on("all", async () => {
