@@ -8,7 +8,7 @@ export default defineConfig({
 						"{fixtures,packages/workers.new}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}",
 				  ]
 				: configDefaults.include,
-		exclude: [...configDefaults.exclude, "fixtures/local-mode-tests/**/*"],
+		exclude: [...configDefaults.exclude],
 		root: __dirname,
 		testTimeout: 30_000,
 	},
