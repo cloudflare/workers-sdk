@@ -1,5 +1,11 @@
 # wrangler
 
+## 2.12.2
+
+### Patch Changes
+
+- [#2873](https://github.com/cloudflare/workers-sdk/pull/2873) [`5bcc333d`](https://github.com/cloudflare/workers-sdk/commit/5bcc333d2be77751c6e362ff3365c90ad60a0928) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Prevent compile loop when using `_worker.js` and `wrangler pages dev`
+
 ## 2.12.1
 
 ### Patch Changes
