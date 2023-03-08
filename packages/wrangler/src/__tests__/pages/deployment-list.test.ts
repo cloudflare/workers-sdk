@@ -1,5 +1,6 @@
 import { rest } from "msw";
 import { endEventLoop } from "../helpers/end-event-loop";
+import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockAccountId, mockApiToken } from "./../helpers/mock-account-id";
 import { msw } from "./../helpers/msw";
 import { runInTempDir } from "./../helpers/run-in-tmp";
@@ -10,6 +11,7 @@ describe("deployment list", () => {
 	runInTempDir();
 	mockAccountId();
 	mockApiToken();
+	mockConsoleMethods();
 
 	afterEach(async () => {
 		// Force a tick to ensure that all promises resolve

@@ -1,22 +1,22 @@
-/* eslint-disable no-shadow */
 import { Blob } from "node:buffer";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { chdir } from "node:process";
 import { MockedRequest, rest } from "msw";
 import { FormData } from "undici";
+import { version } from "../../../package.json";
+import { ROUTES_SPEC_VERSION } from "../../pages/constants";
+import { isRoutesJSONSpec } from "../../pages/functions/routes-validation";
+import { endEventLoop } from "../helpers/end-event-loop";
+import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockGetUploadTokenRequest } from "../helpers/mock-get-pages-upload-token";
 import { mockSetTimeout } from "../helpers/mock-set-timeout";
-import { version } from "./../../../package.json";
-import { ROUTES_SPEC_VERSION } from "./../../pages/constants";
-import { isRoutesJSONSpec } from "./../../pages/functions/routes-validation";
-import { endEventLoop } from "./../helpers/end-event-loop";
-import { mockAccountId, mockApiToken } from "./../helpers/mock-account-id";
-import { msw } from "./../helpers/msw";
-import { FileReaderSync } from "./../helpers/msw/read-file-sync";
-import { runInTempDir } from "./../helpers/run-in-tmp";
-import { runWrangler } from "./../helpers/run-wrangler";
-import type { Project, UploadPayloadFile } from "./../../pages/types";
+import { msw } from "../helpers/msw";
+import { FileReaderSync } from "../helpers/msw/read-file-sync";
+import { runInTempDir } from "../helpers/run-in-tmp";
+import { runWrangler } from "../helpers/run-wrangler";
+import { normalizeProgressSteps } from "./project-upload.test";
+import type { Project, UploadPayloadFile } from "../../pages/types";
 import type { RestRequest } from "msw";
 
 describe("deployment create", () => {
@@ -171,11 +171,11 @@ describe("deployment create", () => {
 
 		await runWrangler("pages publish . --project-name=foo");
 
-		expect(std.out).toMatchInlineSnapshot(`
-		      "✨ Success! Uploaded 1 files (TIMINGS)
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Success! Uploaded 1 files (TIMINGS)
 
-		      ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	    `);
+		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+	`);
 	});
 
 	it("should retry uploads", async () => {
@@ -300,11 +300,11 @@ describe("deployment create", () => {
 
 		await runWrangler("pages publish . --project-name=foo");
 
-		expect(std.out).toMatchInlineSnapshot(`
-		            "✨ Success! Uploaded 1 files (TIMINGS)
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Success! Uploaded 1 files (TIMINGS)
 
-		            ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	        `);
+		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+	`);
 	});
 
 	it("should refetch a JWT if it expires while uploading", async () => {
@@ -437,11 +437,11 @@ describe("deployment create", () => {
 			"Bearer <<funfetti-auth-jwt2>>"
 		);
 
-		expect(std.out).toMatchInlineSnapshot(`
-		            "✨ Success! Uploaded 1 files (TIMINGS)
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Success! Uploaded 1 files (TIMINGS)
 
-		            ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	        `);
+		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+	`);
 	});
 
 	it("should try to use multiple buckets (up to the max concurrency)", async () => {
@@ -592,11 +592,11 @@ describe("deployment create", () => {
 			])
 		);
 
-		expect(std.out).toMatchInlineSnapshot(`
-		            "✨ Success! Uploaded 4 files (TIMINGS)
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Success! Uploaded 4 files (TIMINGS)
 
-		            ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	        `);
+		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+	`);
 	});
 
 	it("should resolve child directories correctly", async () => {
@@ -744,11 +744,11 @@ describe("deployment create", () => {
 			])
 		);
 
-		expect(std.out).toMatchInlineSnapshot(`
-		              "✨ Success! Uploaded 4 files (TIMINGS)
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Success! Uploaded 4 files (TIMINGS)
 
-		              ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	          `);
+		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+	`);
 	});
 
 	it("should resolve the current directory correctly", async () => {
@@ -897,11 +897,11 @@ describe("deployment create", () => {
 			])
 		);
 
-		expect(std.out).toMatchInlineSnapshot(`
-		              "✨ Success! Uploaded 4 files (TIMINGS)
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Success! Uploaded 4 files (TIMINGS)
 
-		              ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	          `);
+		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+	`);
 	});
 
 	it("should not error when directory names contain periods and houses a extensionless file", async () => {
@@ -1211,13 +1211,13 @@ describe("deployment create", () => {
 
 		await runWrangler("pages publish public --project-name=foo");
 
-		expect(std.out).toMatchInlineSnapshot(`
-		    "✨ Compiled Worker successfully
-		    ✨ Success! Uploaded 1 files (TIMINGS)
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Compiled Worker successfully
+		✨ Success! Uploaded 1 files (TIMINGS)
 
-		    ✨ Uploading Functions bundle
-		    ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	    `);
+		✨ Uploading Functions bundle
+		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+	`);
 
 		expect(std.err).toMatchInlineSnapshot('""');
 	});
@@ -1361,13 +1361,13 @@ describe("deployment create", () => {
 
 		await runWrangler("pages publish public --project-name=foo");
 
-		expect(std.out).toMatchInlineSnapshot(`
-		    "✨ Success! Uploaded 1 files (TIMINGS)
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Success! Uploaded 1 files (TIMINGS)
 
-		    ✨ Compiled Worker successfully
-		    ✨ Uploading Worker bundle
-		    ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	  `);
+		✨ Compiled Worker successfully
+		✨ Uploading Worker bundle
+		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+	`);
 
 		expect(std.err).toMatchInlineSnapshot('""');
 	});
@@ -1583,14 +1583,14 @@ describe("deployment create", () => {
 
 		await runWrangler("pages publish public --project-name=foo");
 
-		expect(std.out).toMatchInlineSnapshot(`
-		    "✨ Compiled Worker successfully
-		    ✨ Success! Uploaded 1 files (TIMINGS)
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Compiled Worker successfully
+		✨ Success! Uploaded 1 files (TIMINGS)
 
-		    ✨ Uploading Functions bundle
-		    ✨ Uploading _routes.json
-		    ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	    `);
+		✨ Uploading Functions bundle
+		✨ Uploading _routes.json
+		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+	`);
 
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 		expect(std.err).toMatchInlineSnapshot('""');
@@ -1920,14 +1920,14 @@ and that at least one include rule is provided.
 
 		await runWrangler("pages publish public --project-name=foo");
 
-		expect(std.out).toMatchInlineSnapshot(`
-		    "✨ Success! Uploaded 1 files (TIMINGS)
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Success! Uploaded 1 files (TIMINGS)
 
-		    ✨ Compiled Worker successfully
-		    ✨ Uploading Worker bundle
-		    ✨ Uploading _routes.json
-		    ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	  `);
+		✨ Compiled Worker successfully
+		✨ Uploading Worker bundle
+		✨ Uploading _routes.json
+		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+	`);
 
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
@@ -2229,13 +2229,13 @@ and that at least one include rule is provided.
 
 		await runWrangler("pages publish public --project-name=foo");
 
-		expect(std.out).toMatchInlineSnapshot(`
-		    "✨ Success! Uploaded 1 files (TIMINGS)
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Success! Uploaded 1 files (TIMINGS)
 
-		    ✨ Compiled Worker successfully
-		    ✨ Uploading Worker bundle
-		    ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	  `);
+		✨ Compiled Worker successfully
+		✨ Uploading Worker bundle
+		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+	`);
 
 		expect(std.err).toMatchInlineSnapshot('""');
 	});
@@ -2427,7 +2427,7 @@ async function onRequest() {
 
 		await runWrangler("pages publish public --project-name=foo");
 
-		expect(std.out).toMatchInlineSnapshot(`
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Compiled Worker successfully
 		✨ Success! Uploaded 1 files (TIMINGS)
 
@@ -2631,7 +2631,7 @@ async function onRequest() {
 
 		await runWrangler("pages publish public --project-name=foo");
 
-		expect(std.out).toMatchInlineSnapshot(`
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 1 files (TIMINGS)
 
 		✨ Compiled Worker successfully

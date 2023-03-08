@@ -31,6 +31,7 @@ describe("delete", () => {
 		Object {
 		  "debug": "",
 		  "err": "",
+		  "info": "",
 		  "out": "Successfully deleted my-script",
 		  "warn": "",
 		}
@@ -51,6 +52,7 @@ describe("delete", () => {
 		Object {
 		  "debug": "",
 		  "err": "",
+		  "info": "",
 		  "out": "Successfully deleted test-name",
 		  "warn": "",
 		}
@@ -64,6 +66,7 @@ describe("delete", () => {
 		Object {
 		  "debug": "",
 		  "err": "",
+		  "info": "",
 		  "out": "--dry-run: exiting now.",
 		  "warn": "",
 		}
@@ -82,6 +85,7 @@ describe("delete", () => {
 		Object {
 		  "debug": "",
 		  "err": "",
+		  "info": "",
 		  "out": "",
 		  "warn": "",
 		}
@@ -126,6 +130,7 @@ describe("delete", () => {
 		Object {
 		  "debug": "",
 		  "err": "",
+		  "info": "",
 		  "out": "🌀 Deleted asset namespace for Workers Site \\"__my-script-workers_sites_assets\\"
 		Successfully deleted my-script",
 		  "warn": "",
@@ -202,6 +207,7 @@ describe("delete", () => {
 		Object {
 		  "debug": "",
 		  "err": "",
+		  "info": "",
 		  "out": "🌀 Deleted asset namespace for Workers Site \\"__my-script-workers_sites_assets\\"
 		🌀 Deleted asset namespace for Workers Site \\"__my-script-workers_sites_assets_preview\\"
 		Successfully deleted my-script",

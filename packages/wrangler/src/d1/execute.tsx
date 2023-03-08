@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import chalk from "chalk";
-import { render, Static, Text } from "ink";
+import { Static, Text } from "ink";
 import Table from "ink-table";
 import { npxImport } from "npx-import";
 import React from "react";
@@ -14,6 +14,7 @@ import { logger } from "../logger";
 import { readFileSync } from "../parse";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
+import { renderToString } from "../utils/render";
 import * as options from "./options";
 import splitSqlQuery from "./splitter";
 import {
@@ -110,25 +111,27 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 
 	if (isInteractive && !json) {
 		// Render table if single result
-		render(
-			<Static items={response}>
-				{(result) => {
-					// batch results
-					if (!Array.isArray(result)) {
-						const { results, query } = result;
+		logger.log(
+			renderToString(
+				<Static items={response}>
+					{(result) => {
+						// batch results
+						if (!Array.isArray(result)) {
+							const { results, query } = result;
 
-						if (Array.isArray(results) && results.length > 0) {
-							const shortQuery = shorten(query, 48);
-							return (
-								<>
-									{shortQuery ? <Text dimColor>{shortQuery}</Text> : null}
-									<Table data={results}></Table>
-								</>
-							);
+							if (Array.isArray(results) && results.length > 0) {
+								const shortQuery = shorten(query, 48);
+								return (
+									<>
+										{shortQuery ? <Text dimColor>{shortQuery}</Text> : null}
+										<Table data={results}></Table>
+									</>
+								);
+							}
 						}
-					}
-				}}
-			</Static>
+					}}
+				</Static>
+			)
 		);
 	} else {
 		// set loggerLevel back to what it was before to actually output the JSON in stdout

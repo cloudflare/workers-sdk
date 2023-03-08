@@ -1,8 +1,9 @@
-import { render, Text, Box } from "ink";
+import { Text, Box } from "ink";
 import React from "react";
 import { fetchResult } from "../cfetch";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
+import { renderToString } from "../utils/render";
 import { d1BetaWarning } from "./utils";
 import type {
 	CommonYargsArgv,
@@ -45,20 +46,23 @@ export async function Handler({
 		throw e;
 	}
 
-	render(
-		<Box flexDirection="column">
-			<Text>✅ Successfully created DB &apos;{db.name}&apos;!</Text>
-			<Text>&nbsp;</Text>
-			<Text>
-				Add the following to your wrangler.toml to connect to it from a Worker:
-			</Text>
-			<Text>&nbsp;</Text>
-			<Text>[[ d1_databases ]]</Text>
-			<Text>
-				binding = &quot;DB&quot; # i.e. available in your Worker on env.DB
-			</Text>
-			<Text>database_name = &quot;{db.name}&quot;</Text>
-			<Text>database_id = &quot;{db.uuid}&quot;</Text>
-		</Box>
+	logger.log(
+		renderToString(
+			<Box flexDirection="column">
+				<Text>✅ Successfully created DB &apos;{db.name}&apos;!</Text>
+				<Text>&nbsp;</Text>
+				<Text>
+					Add the following to your wrangler.toml to connect to it from a
+					Worker:
+				</Text>
+				<Text>&nbsp;</Text>
+				<Text>[[ d1_databases ]]</Text>
+				<Text>
+					binding = &quot;DB&quot; # i.e. available in your Worker on env.DB
+				</Text>
+				<Text>database_name = &quot;{db.name}&quot;</Text>
+				<Text>database_id = &quot;{db.uuid}&quot;</Text>
+			</Box>
+		)
 	);
 }
