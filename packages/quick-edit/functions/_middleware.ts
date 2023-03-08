@@ -18,6 +18,17 @@ export const onRequest = async ({
 					resourceUrlTemplate:
 						"https://openvsxorg.blob.core.windows.net/resources/{publisher}/{name}/{version}/{path}",
 				},
+				extensionEnabledApiProposals: {
+					"cloudflare.cloudflare-logic": [
+						"fileSearchProvider",
+						"textSearchProvider",
+						"ipc",
+					],
+				},
+			},
+			folderUri: {
+				scheme: "cfs",
+				path: "/worker",
 			},
 			additionalBuiltinExtensions: [
 				{

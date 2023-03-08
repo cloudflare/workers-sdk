@@ -6,6 +6,7 @@
 	"categories": [
 		"Other"
 	],
+	"publisher": "cloudflare",
 	"browser": "./dist/extension.js",
 	"scripts": {
 		"package-web": "esbuild --bundle --external:vscode --format=cjs src/extension.ts --outfile=dist/extension.js",
@@ -20,7 +21,9 @@
 			}
 		]
 	},
-	"activationEvents": [],
+	"activationEvents": [
+		"onFileSystem:cfs"
+	],
 	"devDependencies": {
 		"@types/vscode": "^1.76.0",
 		"esbuild": "^0.17.11",
@@ -28,5 +31,10 @@
 	},
 	"engines": {
 		"vscode": "^1.76.0"
-	}
+	},
+	"enabledApiProposals": [
+		"fileSearchProvider",
+		"textSearchProvider",
+		"ipc"
+	]
 }
