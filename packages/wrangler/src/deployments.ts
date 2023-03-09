@@ -3,7 +3,8 @@ import TOML from "@iarna/toml";
 import chalk from "chalk";
 import { fetchResult, fetchScriptContent } from "./cfetch";
 import { readConfig } from "./config";
-import { confirm } from "./dialogs";
+import { confirm, prompt } from "./dialogs";
+import { FormData, File } from "undici";
 import { mapBindings } from "./init";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
@@ -22,6 +23,7 @@ type DeploymentDetails = {
 	annotations: {
 		"workers/triggered_by": string;
 		"workers/rollback_from": string;
+        "workers/rollback_reason": string;
 	};
 	metadata: {
 		author_id: string;
@@ -87,15 +89,20 @@ export async function deployments(
 			  )} from ${formatSource(versions.metadata.source)}`
 			: `${formatSource(versions.metadata.source)}`;
 
+
 		let version = `
-Deployment ID: ${versions.id}
-Created on:    ${versions.metadata.created_on}
-Author:        ${versions.metadata.author_email}
-Source:        ${triggerStr}`;
+Deployment ID:   ${versions.id}
+Created on:      ${versions.metadata.created_on}
+Author:          ${versions.metadata.author_email}
+Source:          ${triggerStr}`;
 
 		if (versions.annotations?.["workers/rollback_from"]) {
-			version += `\nRollback from: ${versions.annotations["workers/rollback_from"]}`;
+			version += `\nRollback from:   ${versions.annotations["workers/rollback_from"]}`;
 		}
+
+        if (versions.annotations?.["workers/rollback_reason"]) {
+			version += `\nRollback Reason: ${versions.annotations["workers/rollback_reason"]}`;
+        }
 
 		return version + `\n`;
 	});
@@ -179,6 +186,10 @@ export async function rollbackDeployment(
 		return;
 	}
 
+    const rollbackReason = await prompt("Please provide a reason for this rollback (280 characters max)", { defaultValue: "" });
+
+    let deployment_id = await rollbackRequest(accountId, scriptName, deploymentId, rollbackReason);
+
 	await metrics.sendMetricsEvent(
 		"rollback deployments",
 		{ view: scriptName ? "single" : "all" },
@@ -187,21 +198,33 @@ export async function rollbackDeployment(
 		}
 	);
 
-	let { deployment_id } = await fetchResult<{
-		deployment_id: string | null;
-	}>(
-		`/accounts/${accountId}/workers/scripts/${scriptName}?rollback_to=${deploymentId}`,
-		{
-			method: "PUT",
-			headers: { "content-type": "application/javascript" },
-		}
-	);
-
 	deploymentId = addHyphens(deploymentId) ?? deploymentId;
 	deployment_id = addHyphens(deployment_id) ?? deployment_id;
 
 	logger.log(`\nSuccessfully rolled back to Deployment ID: ${deploymentId}`);
 	logger.log("Current Deployment ID:", deployment_id);
+}
+
+async function rollbackRequest(
+    accountId: string,
+    scriptName: string | undefined,
+    deploymentId: string,
+    rollbackReason: string
+): Promise<string | null> {
+    const body = new FormData();
+    body.set("rollback_reason", rollbackReason);
+
+	const { deployment_id } = await fetchResult<{
+		deployment_id: string | null;
+	}>(
+		`/accounts/${accountId}/workers/scripts/${scriptName}?rollback_to=${deploymentId}`,
+		{
+			method: "PUT",
+            body,
+		}
+	);
+
+    return deployment_id;
 }
 
 export async function viewDeployment(
@@ -247,6 +270,8 @@ export async function viewDeployment(
 		? `\nRollback from: ${deploymentDetails.annotations["workers/rollback_from"]}`
 		: ``;
 
+    const reasonStr = deploymentDetails.annotations?.["workers/rollback_reason"] ? `\nRollback Reason: ${deploymentDetails.annotations["workers/rollback_reason"]}` : ``;
+
 	const compatDateStr = deploymentDetails.resources.script_runtime
 		?.compatibility_date
 		? `\nCompatibility Date: ${deploymentDetails.resources.script_runtime?.compatibility_date}`
@@ -259,10 +284,10 @@ export async function viewDeployment(
 	const bindings = deploymentDetails.resources.bindings;
 
 	const version = `
-Deployment ID: ${deploymentDetails.id}
-Created on:    ${deploymentDetails.metadata.created_on}
-Author:        ${deploymentDetails.metadata.author_email}
-Source:        ${triggerStr}${rollbackStr}
+Deployment ID:   ${deploymentDetails.id}
+Created on:      ${deploymentDetails.metadata.created_on}
+Author:          ${deploymentDetails.metadata.author_email}
+Source:          ${triggerStr}${rollbackStr}${reasonStr}
 ------------------------------------------------------------
 Author ID:          ${deploymentDetails.metadata.author_id}
 Usage Model:        ${deploymentDetails.resources.script_runtime.usage_model}
