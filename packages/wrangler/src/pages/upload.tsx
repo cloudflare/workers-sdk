@@ -200,7 +200,7 @@ export const upload = async (
 	let attempts = 0;
 	const getMissingHashes = async (skipCaching: boolean): Promise<string[]> => {
 		if (skipCaching) {
-			console.debug("Force skipping cache");
+			logger.debug("Force skipping cache");
 			return files.map(({ hash }) => hash);
 		}
 
@@ -302,7 +302,7 @@ export const upload = async (
 			);
 
 			try {
-				console.debug("POST /pages/assets/upload");
+				logger.debug("POST /pages/assets/upload");
 				const res = await fetchResult(`/pages/assets/upload`, {
 					method: "POST",
 					headers: {
@@ -311,10 +311,10 @@ export const upload = async (
 					},
 					body: JSON.stringify(payload),
 				});
-				console.debug("result:", res);
+				logger.debug("result:", res);
 			} catch (e) {
 				if (attempts < MAX_UPLOAD_ATTEMPTS) {
-					console.debug("failed:", e, "retrying...");
+					logger.debug("failed:", e, "retrying...");
 					// Exponential backoff, 1 second first time, then 2 second, then 4 second etc.
 					await new Promise((resolvePromise) =>
 						setTimeout(resolvePromise, Math.pow(2, attempts++) * 1000)
@@ -326,7 +326,7 @@ export const upload = async (
 					}
 					return doUpload();
 				} else {
-					console.debug("failed:", e);
+					logger.debug("failed:", e);
 					throw e;
 				}
 			}
