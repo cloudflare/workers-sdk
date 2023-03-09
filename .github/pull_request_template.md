@@ -16,4 +16,4 @@
 - [ ] Checked for creation of associated docs updates
 - [ ] Manually pulled down the changes and spot-tested
 
-**Fixes** # [insert GH or internal issue number(s)].
+Fixes # [insert GH or internal issue number(s)].
