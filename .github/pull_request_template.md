@@ -1,6 +1,6 @@
 **What this PR solves / how to test:**
 
-**Associated docs issues/PR:**
+**Associated docs issue(s)/PR(s):**
 
 - [insert associated docs issue(s)/PR(s)]
 
@@ -16,4 +16,4 @@
 - [ ] Checked for creation of associated docs updates
 - [ ] Manually pulled down the changes and spot-tested
 
-**Fixes** # [insert issue number].
+**Fixes** # [insert GH or internal issue number(s)].
