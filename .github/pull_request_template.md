@@ -7,7 +7,7 @@
 **Author has included the following, where applicable:**
 
 - [ ] Tests
-- [ ] Changeset
+- [ ] Changeset ([Changeset guidelines](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md#changesets))
 
 **Reviewer has performed the following, where applicable:**
 
