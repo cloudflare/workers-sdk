@@ -21,7 +21,7 @@ export interface ConfirmExpectation {
  */
 export function mockConfirm(...expectations: ConfirmExpectation[]) {
 	for (const expectation of expectations) {
-		(prompts as unknown as jest.Mock).mockImplementation(
+		(prompts as unknown as jest.Mock).mockImplementationOnce(
 			({ type, name, message, initial }) => {
 				expect({ type, name, message }).toStrictEqual({
 					type: "confirm",
@@ -62,7 +62,7 @@ export interface PromptExpectation {
  */
 export function mockPrompt(...expectations: PromptExpectation[]) {
 	for (const expectation of expectations) {
-		(prompts as unknown as jest.Mock).mockImplementation(
+		(prompts as unknown as jest.Mock).mockImplementationOnce(
 			({ type, name, message, initial, style }) => {
 				expect({ type, name, message }).toStrictEqual({
 					type: "text",
