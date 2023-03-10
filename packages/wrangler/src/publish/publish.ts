@@ -1060,9 +1060,6 @@ function updateQueueConsumers(config: Config): Promise<string[]>[] {
 				max_wait_time_ms: consumer.max_batch_timeout
 					? 1000 * consumer.max_batch_timeout
 					: undefined,
-				concurrency_enabled:
-					consumer.concurrency_enabled ??
-					consumer.max_concurrency !== undefined,
 				max_concurrency: consumer.max_concurrency,
 			},
 		};

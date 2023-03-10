@@ -90,7 +90,6 @@ export interface ConsumerSettings {
 	batch_size?: number;
 	max_retries?: number;
 	max_wait_time_ms?: number;
-	concurrency_enabled?: boolean;
 	max_concurrency?: number;
 }
 
