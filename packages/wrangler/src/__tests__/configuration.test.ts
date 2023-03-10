@@ -1791,7 +1791,6 @@ describe("normalizeAndValidateConfig()", () => {
 									max_batch_timeout: null,
 									max_retries: "hello",
 									dead_letter_queue: 5,
-									concurrency_enabled: 7,
 									max_concurrency: "hello",
 								},
 							],
@@ -1808,21 +1807,20 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - Unexpected fields found in queues field: \\"invalidField\\"
-					  - Unexpected fields found in queues.consumers[2] field: \\"invalidField\\""
-				`);
+			"Processing wrangler configuration:
+			  - Unexpected fields found in queues field: \\"invalidField\\"
+			  - Unexpected fields found in queues.consumers[2] field: \\"invalidField\\""
+		`);
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			"Processing wrangler configuration:
 			  - \\"queues.consumers[0]\\" should have a string \\"queue\\" field but got {}.
 			  - \\"queues.consumers[1]\\" should have a string \\"queue\\" field but got {\\"queue\\":22}.
-			  - \\"queues.consumers[3]\\" should, optionally, have a number \\"max_batch_size\\" field but got {\\"queue\\":\\"myQueue\\",\\"max_batch_size\\":\\"3\\",\\"max_batch_timeout\\":null,\\"max_retries\\":\\"hello\\",\\"dead_letter_queue\\":5,\\"concurrency_enabled\\":7,\\"max_concurrency\\":\\"hello\\"}.
-			  - \\"queues.consumers[3]\\" should, optionally, have a number \\"max_batch_timeout\\" field but got {\\"queue\\":\\"myQueue\\",\\"max_batch_size\\":\\"3\\",\\"max_batch_timeout\\":null,\\"max_retries\\":\\"hello\\",\\"dead_letter_queue\\":5,\\"concurrency_enabled\\":7,\\"max_concurrency\\":\\"hello\\"}.
-			  - \\"queues.consumers[3]\\" should, optionally, have a number \\"max_retries\\" field but got {\\"queue\\":\\"myQueue\\",\\"max_batch_size\\":\\"3\\",\\"max_batch_timeout\\":null,\\"max_retries\\":\\"hello\\",\\"dead_letter_queue\\":5,\\"concurrency_enabled\\":7,\\"max_concurrency\\":\\"hello\\"}.
-			  - \\"queues.consumers[3]\\" should, optionally, have a string \\"dead_letter_queue\\" field but got {\\"queue\\":\\"myQueue\\",\\"max_batch_size\\":\\"3\\",\\"max_batch_timeout\\":null,\\"max_retries\\":\\"hello\\",\\"dead_letter_queue\\":5,\\"concurrency_enabled\\":7,\\"max_concurrency\\":\\"hello\\"}.
-			  - \\"queues.consumers[3]\\" should, optionally, have a boolean \\"concurrency_enabled\\" field but got {\\"queue\\":\\"myQueue\\",\\"max_batch_size\\":\\"3\\",\\"max_batch_timeout\\":null,\\"max_retries\\":\\"hello\\",\\"dead_letter_queue\\":5,\\"concurrency_enabled\\":7,\\"max_concurrency\\":\\"hello\\"}.
-			  - \\"queues.consumers[3]\\" should, optionally, have a number \\"max_concurrency\\" field but got {\\"queue\\":\\"myQueue\\",\\"max_batch_size\\":\\"3\\",\\"max_batch_timeout\\":null,\\"max_retries\\":\\"hello\\",\\"dead_letter_queue\\":5,\\"concurrency_enabled\\":7,\\"max_concurrency\\":\\"hello\\"}."
+			  - \\"queues.consumers[3]\\" should, optionally, have a number \\"max_batch_size\\" field but got {\\"queue\\":\\"myQueue\\",\\"max_batch_size\\":\\"3\\",\\"max_batch_timeout\\":null,\\"max_retries\\":\\"hello\\",\\"dead_letter_queue\\":5,\\"max_concurrency\\":\\"hello\\"}.
+			  - \\"queues.consumers[3]\\" should, optionally, have a number \\"max_batch_timeout\\" field but got {\\"queue\\":\\"myQueue\\",\\"max_batch_size\\":\\"3\\",\\"max_batch_timeout\\":null,\\"max_retries\\":\\"hello\\",\\"dead_letter_queue\\":5,\\"max_concurrency\\":\\"hello\\"}.
+			  - \\"queues.consumers[3]\\" should, optionally, have a number \\"max_retries\\" field but got {\\"queue\\":\\"myQueue\\",\\"max_batch_size\\":\\"3\\",\\"max_batch_timeout\\":null,\\"max_retries\\":\\"hello\\",\\"dead_letter_queue\\":5,\\"max_concurrency\\":\\"hello\\"}.
+			  - \\"queues.consumers[3]\\" should, optionally, have a string \\"dead_letter_queue\\" field but got {\\"queue\\":\\"myQueue\\",\\"max_batch_size\\":\\"3\\",\\"max_batch_timeout\\":null,\\"max_retries\\":\\"hello\\",\\"dead_letter_queue\\":5,\\"max_concurrency\\":\\"hello\\"}.
+			  - \\"queues.consumers[3]\\" should, optionally, have a number \\"max_concurrency\\" field but got {\\"queue\\":\\"myQueue\\",\\"max_batch_size\\":\\"3\\",\\"max_batch_timeout\\":null,\\"max_retries\\":\\"hello\\",\\"dead_letter_queue\\":5,\\"max_concurrency\\":\\"hello\\"}."
 		`);
 			});
 		});
