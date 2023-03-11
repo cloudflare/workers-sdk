@@ -12,13 +12,11 @@ export interface PluginServicesOptions<
 > {
 	log: Log;
 	options: z.infer<Options>;
-	optionsVersion: number;
 	sharedOptions: OptionalZodTypeOf<SharedOptions>;
 	workerBindings: Worker_Binding[];
 	workerIndex: number;
 	durableObjectClassNames: DurableObjectClassNames;
 	additionalModules: Worker_Module[];
-	loopbackPort: number;
 	tmpPath: string;
 }
 
@@ -67,3 +65,4 @@ export function namespaceEntries(
 export * from "./constants";
 export * from "./gateway";
 export * from "./router";
+export * from "./routing";

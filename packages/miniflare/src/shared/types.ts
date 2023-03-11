@@ -11,13 +11,6 @@ export function zAwaitable<T extends z.ZodTypeAny>(
 // { a: A, b: B, ... } => A | B | ...
 export type ValueOf<T> = T[keyof T];
 
-// A | B | ... => A & B & ... (https://stackoverflow.com/a/50375286)
-export type UnionToIntersection<U> = (
-	U extends any ? (k: U) => void : never
-) extends (k: infer I) => void
-	? I
-	: never;
-
 export type OptionalZodTypeOf<T extends z.ZodTypeAny | undefined> =
 	T extends z.ZodTypeAny ? z.TypeOf<T> : undefined;
 

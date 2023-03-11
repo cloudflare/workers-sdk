@@ -20,11 +20,6 @@ export interface TestClock {
 	timestamp: number;
 }
 
-type MiniflareOptionsWithoutScripts = Exclude<
-	MiniflareOptions,
-	"script" | "scriptPath" | "modules" | "modulesRoot"
->;
-
 export interface MiniflareTestContext {
 	mf: Miniflare;
 	url: URL;
@@ -33,17 +28,17 @@ export interface MiniflareTestContext {
 	// used to prevent races.
 	log: TestLog;
 	clock: TestClock;
-	setOptions(opts: MiniflareOptionsWithoutScripts): Promise<void>;
+	setOptions(opts: Partial<MiniflareOptions>): Promise<void>;
 }
 
 export function miniflareTest<
 	Env,
 	Context extends MiniflareTestContext = MiniflareTestContext,
 >(
-	userOpts: MiniflareOptionsWithoutScripts,
+	userOpts: Partial<MiniflareOptions>,
 	handler?: TestMiniflareHandler<Env>
 ): TestFn<Context> {
-	const scriptOpts: MiniflareOptions = {};
+	let scriptOpts: MiniflareOptions | undefined;
 	if (handler !== undefined) {
 		const script = `
       const handler = (${handler.toString()});
@@ -69,9 +64,9 @@ export function miniflareTest<
         }
       }
     `;
-		scriptOpts.modules = [
-			{ type: "ESModule", path: "index.mjs", contents: script },
-		];
+		scriptOpts = {
+			modules: [{ type: "ESModule", path: "index.mjs", contents: script }],
+		};
 	}
 
 	const test = anyTest as TestFn<Context>;
@@ -80,19 +75,22 @@ export function miniflareTest<
 		const clock: TestClock = { timestamp: 1_000_000 }; // 1000s
 		const clockFunction = () => clock.timestamp;
 
-		const opts: MiniflareOptions = {
+		const opts: Partial<MiniflareOptions> = {
+			...scriptOpts,
 			port: await getPort(),
 			log,
 			clock: clockFunction,
 			verbose: true,
-			...scriptOpts,
 		};
 
-		t.context.mf = new Miniflare({ ...userOpts, ...opts });
+		// `as MiniflareOptions` required as we're not enforcing that a script is
+		// provided between `userOpts` and `opts`. We assume if it's not in
+		// `userOpts`, a `handler` has been provided.
+		t.context.mf = new Miniflare({ ...userOpts, ...opts } as MiniflareOptions);
 		t.context.log = log;
 		t.context.clock = clock;
 		t.context.setOptions = (userOpts) =>
-			t.context.mf.setOptions({ ...userOpts, ...opts });
+			t.context.mf.setOptions({ ...userOpts, ...opts } as MiniflareOptions);
 		t.context.url = await t.context.mf.ready;
 	});
 	test.after((t) => t.context.mf.dispose());

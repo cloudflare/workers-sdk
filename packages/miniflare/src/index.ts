@@ -35,6 +35,9 @@ import {
 	Plugins,
 	SERVICE_ENTRY,
 	SOCKET_ENTRY,
+	SharedOptions,
+	WorkerOptions,
+	getGlobalServices,
 	maybeGetSitesManifestModule,
 	normaliseDurableObject,
 } from "./plugins";
@@ -68,20 +71,12 @@ import {
 	Mutex,
 	NoOpLog,
 	OptionalZodTypeOf,
-	UnionToIntersection,
-	ValueOf,
 	defaultClock,
 } from "./shared";
 import { anyAbortSignal } from "./shared/signal";
 import { waitForRequest } from "./wait";
 
 // ===== `Miniflare` User Options =====
-export type WorkerOptions = UnionToIntersection<
-	z.infer<ValueOf<Plugins>["options"]>
->;
-export type SharedOptions = UnionToIntersection<
-	z.infer<Exclude<ValueOf<Plugins>["sharedOptions"], undefined>>
->;
 export type MiniflareOptions = SharedOptions &
 	(WorkerOptions | { workers: WorkerOptions[] });
 
@@ -100,6 +95,9 @@ function validateOptions(
 	const sharedOpts = opts;
 	const multipleWorkers = "workers" in opts;
 	const workerOpts = multipleWorkers ? opts.workers : [opts];
+	if (workerOpts.length === 0) {
+		throw new MiniflareCoreError("ERR_NO_WORKERS", "No workers defined");
+	}
 
 	// Initialise return values
 	const pluginSharedOpts = {} as PluginSharedOptions;
@@ -109,14 +107,29 @@ function validateOptions(
 
 	// Validate all options
 	for (const [key, plugin] of PLUGIN_ENTRIES) {
-		// @ts-expect-error pluginSharedOpts[key] could be any plugin's
 		pluginSharedOpts[key] = plugin.sharedOptions?.parse(sharedOpts);
 		for (let i = 0; i < workerOpts.length; i++) {
 			// Make sure paths are correct in validation errors
 			const path = multipleWorkers ? ["workers", i] : undefined;
-			// @ts-expect-error pluginWorkerOpts[i][key] could be any plugin's
+			// @ts-expect-error `CoreOptionsSchema` has required options which are
+			//  missing in other plugins' options.
 			pluginWorkerOpts[i][key] = plugin.options.parse(workerOpts[i], { path });
 		}
+	}
+
+	// Validate names unique
+	const names = new Set<string>();
+	for (const opts of pluginWorkerOpts) {
+		const name = opts.core.name ?? "";
+		if (names.has(name)) {
+			throw new MiniflareCoreError(
+				"ERR_DUPLICATE_NAME",
+				name === ""
+					? "Multiple workers defined without a `name`"
+					: `Multiple workers defined with the same \`name\`: "${name}"`
+			);
+		}
+		names.add(name);
 	}
 
 	return [pluginSharedOpts, pluginWorkerOpts];
@@ -148,6 +161,21 @@ function getDurableObjectClassNames(
 		}
 	}
 	return serviceClassNames;
+}
+
+// Collects all routes from all worker services
+function getWorkerRoutes(
+	allWorkerOpts: PluginWorkerOptions[]
+): Map<string, string[]> {
+	const allRoutes = new Map<string, string[]>();
+	for (const workerOpts of allWorkerOpts) {
+		if (workerOpts.core.routes !== undefined) {
+			const name = workerOpts.core.name ?? "";
+			assert(!allRoutes.has(name));
+			allRoutes.set(name, workerOpts.core.routes);
+		}
+	}
+	return allRoutes;
 }
 
 // ===== `Miniflare` Internal Storage & Routing =====
@@ -622,7 +650,24 @@ export class Miniflare {
 
 		sharedOpts.core.cf = await setupCf(this.#log, sharedOpts.core.cf);
 
-		const services: Service[] = [];
+		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
+		const allWorkerRoutes = getWorkerRoutes(allWorkerOpts);
+
+		// Use Map to dedupe services by name
+		const services = new Map<string, Service>();
+		const globalServices = getGlobalServices({
+			optionsVersion,
+			sharedOptions: sharedOpts.core,
+			allWorkerRoutes,
+			fallbackWorkerName: this.#workerOpts[0].core.name,
+			loopbackPort,
+		});
+		for (const service of globalServices) {
+			// Global services should all have unique names
+			assert(service.name !== undefined && !services.has(service.name));
+			services.set(service.name, service);
+		}
+
 		const sockets: Socket[] = [
 			{
 				name: SOCKET_ENTRY,
@@ -633,11 +678,6 @@ export class Miniflare {
 			},
 		];
 
-		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
-
-		// Dedupe services by name
-		const serviceNames = new Set<string>();
-
 		for (let i = 0; i < allWorkerOpts.length; i++) {
 			const workerOpts = allWorkerOpts[i];
 
@@ -645,6 +685,8 @@ export class Miniflare {
 			const workerBindings: Worker_Binding[] = [];
 			const additionalModules: Worker_Module[] = [];
 			for (const [key, plugin] of PLUGIN_ENTRIES) {
+				// @ts-expect-error `CoreOptionsSchema` has required options which are
+				//  missing in other plugins' options.
 				const pluginBindings = await plugin.getBindings(workerOpts[key], i);
 				if (pluginBindings !== undefined) {
 					workerBindings.push(...pluginBindings);
@@ -661,28 +703,27 @@ export class Miniflare {
 			for (const [key, plugin] of PLUGIN_ENTRIES) {
 				const pluginServices = await plugin.getServices({
 					log: this.#log,
+					// @ts-expect-error `CoreOptionsSchema` has required options which are
+					//  missing in other plugins' options.
 					options: workerOpts[key],
-					optionsVersion,
 					sharedOptions: sharedOpts[key],
 					workerBindings,
 					workerIndex: i,
 					durableObjectClassNames,
 					additionalModules,
-					loopbackPort,
 					tmpPath: this.#tmpPath,
 				});
 				if (pluginServices !== undefined) {
 					for (const service of pluginServices) {
-						if (service.name !== undefined && !serviceNames.has(service.name)) {
-							serviceNames.add(service.name);
-							services.push(service);
+						if (service.name !== undefined && !services.has(service.name)) {
+							services.set(service.name, service);
 						}
 					}
 				}
 			}
 		}
 
-		return { services, sockets };
+		return { services: Array.from(services.values()), sockets };
 	}
 
 	get ready(): Promise<URL> {

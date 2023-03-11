@@ -1,15 +1,10 @@
 import { z } from "zod";
 import { Service, Worker_Binding } from "../../runtime";
-import { SERVICE_LOOPBACK } from "../core";
 import {
-	BINDING_SERVICE_LOOPBACK,
-	BINDING_TEXT_NAMESPACE,
-	BINDING_TEXT_PLUGIN,
 	PersistenceSchema,
 	Plugin,
-	SCRIPT_PLUGIN_NAMESPACE_PERSIST,
-	encodePersist,
 	namespaceEntries,
+	pluginNamespacePersistWorker,
 } from "../shared";
 import { KV_PLUGIN_NAME } from "./constants";
 import { KVGateway } from "./gateway";
@@ -61,23 +56,11 @@ export const KV_PLUGIN: Plugin<
 		return bindings;
 	},
 	getServices({ options, sharedOptions }) {
-		const persistBinding = encodePersist(sharedOptions.kvPersist);
+		const persist = sharedOptions.kvPersist;
 		const namespaces = namespaceEntries(options.kvNamespaces);
 		const services = namespaces.map<Service>(([_, id]) => ({
 			name: `${SERVICE_NAMESPACE_PREFIX}:${id}`,
-			worker: {
-				serviceWorkerScript: SCRIPT_PLUGIN_NAMESPACE_PERSIST,
-				compatibilityDate: "2022-09-01",
-				bindings: [
-					...persistBinding,
-					{ name: BINDING_TEXT_PLUGIN, text: KV_PLUGIN_NAME },
-					{ name: BINDING_TEXT_NAMESPACE, text: id },
-					{
-						name: BINDING_SERVICE_LOOPBACK,
-						service: { name: SERVICE_LOOPBACK },
-					},
-				],
-			},
+			worker: pluginNamespacePersistWorker(KV_PLUGIN_NAME, id, persist),
 		}));
 
 		if (isWorkersSitesEnabled(options)) {

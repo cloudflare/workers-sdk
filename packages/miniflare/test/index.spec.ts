@@ -5,6 +5,8 @@ import {
 	DeferredPromise,
 	MessageEvent,
 	Miniflare,
+	MiniflareCoreError,
+	MiniflareOptions,
 	fetch,
 } from "@miniflare/tre";
 import test from "ava";
@@ -14,6 +16,79 @@ import {
 	WebSocketServer,
 } from "ws";
 import { getPort } from "./test-shared";
+
+test("Miniflare: validates options", async (t) => {
+	// Check empty workers array rejected
+	t.throws(() => new Miniflare({ workers: [] }), {
+		instanceOf: MiniflareCoreError,
+		code: "ERR_NO_WORKERS",
+		message: "No workers defined",
+	});
+
+	// Check workers with the same name rejected
+	t.throws(
+		() =>
+			new Miniflare({
+				workers: [{ script: "" }, { script: "" }],
+			}),
+		{
+			instanceOf: MiniflareCoreError,
+			code: "ERR_DUPLICATE_NAME",
+			message: "Multiple workers defined without a `name`",
+		}
+	);
+	t.throws(
+		() =>
+			new Miniflare({
+				workers: [
+					{ script: "" },
+					{ script: "", name: "a" },
+					{ script: "", name: "b" },
+					{ script: "", name: "a" },
+				],
+			}),
+		{
+			instanceOf: MiniflareCoreError,
+			code: "ERR_DUPLICATE_NAME",
+			message: 'Multiple workers defined with the same `name`: "a"',
+		}
+	);
+});
+
+test("Miniflare: routes to multiple workers with fallback", async (t) => {
+	const opts: MiniflareOptions = {
+		port: await getPort(),
+		workers: [
+			{
+				name: "a",
+				routes: ["*/api"],
+				script: `addEventListener("fetch", (event) => {
+          event.respondWith(new Response("a"));
+        })`,
+			},
+			{
+				name: "b",
+				routes: ["*/api/*"], // Less specific than "a"'s
+				script: `addEventListener("fetch", (event) => {
+          event.respondWith(new Response("b"));
+        })`,
+			},
+		],
+	};
+	const mf = new Miniflare(opts);
+
+	// Check "a"'s more specific route checked first
+	let res = await mf.dispatchFetch("http://localhost/api");
+	t.is(await res.text(), "a");
+
+	// Check "b" still accessible
+	res = await mf.dispatchFetch("http://localhost/api/2");
+	t.is(await res.text(), "b");
+
+	// Check fallback to first
+	res = await mf.dispatchFetch("http://localhost/notapi");
+	t.is(await res.text(), "a");
+});
 
 test("Miniflare: web socket kitchen sink", async (t) => {
 	// Create deferred promises for asserting asynchronous event results
