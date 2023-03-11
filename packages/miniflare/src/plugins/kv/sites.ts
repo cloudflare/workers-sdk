@@ -10,12 +10,12 @@ import {
 	testRegExps,
 } from "../../shared";
 import { FileStorage } from "../../storage";
-import { SERVICE_LOOPBACK } from "../core";
 import {
 	BINDING_SERVICE_LOOPBACK,
 	BINDING_TEXT_PERSIST,
 	HEADER_PERSIST,
 	PARAM_FILE_UNSANITISE,
+	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
 import { HEADER_SITES, KV_PLUGIN_NAME, PARAM_URL_ENCODED } from "./constants";
 
@@ -208,13 +208,10 @@ export function getSitesService(options: SitesOptions): Service {
 			serviceWorkerScript: SCRIPT_SITE,
 			compatibilityDate: "2022-09-01",
 			bindings: [
+				WORKER_BINDING_SERVICE_LOOPBACK,
 				{
 					name: BINDING_TEXT_PERSIST,
 					text: JSON.stringify(persist),
-				},
-				{
-					name: BINDING_SERVICE_LOOPBACK,
-					service: { name: SERVICE_LOOPBACK },
 				},
 				{
 					name: BINDING_JSON_SITE_FILTER,

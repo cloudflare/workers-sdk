@@ -61,6 +61,36 @@ export const ModuleDefinitionSchema = z.object({
 });
 export type ModuleDefinition = z.infer<typeof ModuleDefinitionSchema>;
 
+export const SourceOptionsSchema = z.union([
+	z.object({
+		// Manually defined modules
+		// (used by Wrangler which has its own module collection code)
+		modules: z.array(ModuleDefinitionSchema),
+		// `modules` "name"s will be their paths relative to this value.
+		// This ensures file paths in stack traces are correct.
+		modulesRoot: z.string().optional(),
+	}),
+	z.object({
+		script: z.string(),
+		// Optional script path for resolving modules, and stack traces file names
+		scriptPath: z.string().optional(),
+		// Automatically collect modules by parsing `script` if `true`, or treat as
+		// service-worker if `false`
+		modules: z.boolean().optional(),
+		// How to interpret automatically collected modules
+		modulesRules: z.array(ModuleRuleSchema).optional(),
+	}),
+	z.object({
+		scriptPath: z.string(),
+		// Automatically collect modules by parsing `scriptPath` if `true`, or treat
+		// as service-worker if `false`
+		modules: z.boolean().optional(),
+		// How to interpret automatically collected modules
+		modulesRules: z.array(ModuleRuleSchema).optional(),
+	}),
+]);
+export type SourceOptions = z.infer<typeof SourceOptionsSchema>;
+
 const DEFAULT_MODULE_RULES: ModuleRule[] = [
 	{ type: "ESModule", include: ["**/*.mjs"] },
 	{ type: "CommonJS", include: ["**/*.js", "**/*.cjs"] },

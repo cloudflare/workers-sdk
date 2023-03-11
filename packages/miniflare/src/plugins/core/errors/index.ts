@@ -5,7 +5,7 @@ import { z } from "zod";
 import { Request, Response } from "../../../http";
 import { Log } from "../../../shared";
 import {
-	ModuleDefinition,
+	SourceOptions,
 	contentsToString,
 	maybeGetStringScriptPathIndex,
 } from "../modules";
@@ -42,12 +42,6 @@ import { getSourceMapper } from "./sourcemap";
 //  [ii]  { script: "<contents:3>", modules: true },                  -> "<script:3>"
 //     ]
 //
-export interface SourceOptions {
-	script?: string;
-	scriptPath?: string;
-	modules?: boolean | ModuleDefinition[];
-	modulesRoot?: string;
-}
 
 interface SourceFile {
 	path?: string; // Path may be undefined if file is in-memory
@@ -80,7 +74,8 @@ function maybeGetFile(
 	//    ((g)[ii], (h)[ii]) custom `contents`, use those.
 	for (const srcOpts of workerSrcOpts) {
 		if (Array.isArray(srcOpts.modules)) {
-			const modulesRoot = srcOpts.modulesRoot;
+			const modulesRoot =
+				"modulesRoot" in srcOpts ? srcOpts.modulesRoot : undefined;
 			// Handle cases (h)[i] and (h)[ii], by re-resolving file relative to
 			// module root if any
 			const modulesRootedFilePath =
@@ -106,6 +101,8 @@ function maybeGetFile(
 	// 2. If path matches any `scriptPath`s with custom `script`s, use those
 	for (const srcOpts of workerSrcOpts) {
 		if (
+			"scriptPath" in srcOpts &&
+			"script" in srcOpts &&
 			srcOpts.scriptPath !== undefined &&
 			srcOpts.script !== undefined &&
 			path.resolve(srcOpts.scriptPath) === filePath
@@ -120,7 +117,7 @@ function maybeGetFile(
 	const workerIndex = maybeGetStringScriptPathIndex(file);
 	if (workerIndex !== undefined) {
 		const srcOpts = workerSrcOpts[workerIndex];
-		if (srcOpts.script !== undefined) {
+		if ("script" in srcOpts && srcOpts.script !== undefined) {
 			return { contents: srcOpts.script };
 		}
 	}
@@ -139,7 +136,7 @@ function maybeGetFile(
 			file === "worker.js" &&
 			(srcOpts.modules === undefined || srcOpts.modules === false)
 		) {
-			if (srcOpts.script !== undefined) {
+			if ("script" in srcOpts && srcOpts.script !== undefined) {
 				// Cases: (a), (c)
 				// ...if a custom `script` is defined, use that, with the defined
 				// `scriptPath` if any (Case (c))
