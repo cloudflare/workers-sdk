@@ -231,7 +231,7 @@ export function addHyphens(uuid: string | null): string | null {
 		return null;
 	}
 
-	let uuid_parts: string[] = [];
+	const uuid_parts: string[] = [];
 	uuid_parts.push(uuid.slice(0, 8));
 	uuid_parts.push(uuid.slice(8, 12));
 	uuid_parts.push(uuid.slice(12, 16));

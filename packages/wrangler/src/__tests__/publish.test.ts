@@ -7746,13 +7746,7 @@ function mockUploadWorkerRequest(
 		env = undefined,
 		legacyEnv = false,
 		expectedMigrations,
-<<<<<<< HEAD
 		expectedUnsafeMetaData,
-		sendScriptIds,
-||||||| parent of ae194df6 (Have script upload msw always return response body)
-		sendScriptIds,
-=======
->>>>>>> ae194df6 (Have script upload msw always return response body)
 		keepVars,
 	} = options;
 	if (env && !legacyEnv) {
