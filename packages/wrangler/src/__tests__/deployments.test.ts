@@ -1,5 +1,3 @@
-import * as fs from "node:fs";
-import * as TOML from "@iarna/toml";
 import { rest } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -35,7 +33,7 @@ describe("deployments", () => {
 		);
 	});
 
-	it("should log helper message for deployments command", async () => {
+	it("should log a help message for deployments command", async () => {
 		await runWrangler("deployments --help");
 		expect(std.out).toMatchInlineSnapshot(`
 		"wrangler deployments
@@ -61,14 +59,7 @@ describe("deployments", () => {
 	});
 
 	it("should log deployments", async () => {
-		fs.writeFileSync(
-			"./wrangler.toml",
-			TOML.stringify({
-				compatibility_date: "2022-01-12",
-				name: "test-script-name",
-			}),
-			"utf-8"
-		);
+		writeWranglerToml();
 
 		await runWrangler("deployments");
 		expect(std.out).toMatchInlineSnapshot(`
@@ -78,23 +69,23 @@ describe("deployments", () => {
 		Deployment ID: Constitution-Class
 		Created on:    2021-01-01T00:00:00.000000Z
 		Author:        Jean-Luc-Picard@federation.org
-		Trigger:       Upload from Wrangler 🤠
+		Source:       Upload from Wrangler 🤠
 
 		Deployment ID: Intrepid-Class
 		Created on:    2021-02-02T00:00:00.000000Z
 		Author:        Kathryn-Janeway@federation.org
-		Trigger:       Rollback from Wrangler 🤠
+		Source:       Rollback from Wrangler 🤠
 		Rollback from: MOCK-DEPLOYMENT-ID-1111
 
 		Deployment ID: Intrepid-Class
 		Created on:    2021-02-03T00:00:00.000000Z
 		Author:        Kathryn-Janeway@federation.org
-		Trigger:       Wrangler 🤠
+		Source:       Wrangler 🤠
 
 		Deployment ID: Galaxy-Class
 		Created on:    2021-01-04T00:00:00.000000Z
 		Author:        Jean-Luc-Picard@federation.org
-		Trigger:       Rollback from Wrangler 🤠
+		Source:       Rollback from Wrangler 🤠
 		Rollback from: MOCK-DEPLOYMENT-ID-2222
 		🟩 Active"
 	`);
@@ -109,23 +100,23 @@ describe("deployments", () => {
 		Deployment ID: Constitution-Class
 		Created on:    2021-01-01T00:00:00.000000Z
 		Author:        Jean-Luc-Picard@federation.org
-		Trigger:       Upload from Wrangler 🤠
+		Source:       Upload from Wrangler 🤠
 
 		Deployment ID: Intrepid-Class
 		Created on:    2021-02-02T00:00:00.000000Z
 		Author:        Kathryn-Janeway@federation.org
-		Trigger:       Rollback from Wrangler 🤠
+		Source:       Rollback from Wrangler 🤠
 		Rollback from: MOCK-DEPLOYMENT-ID-1111
 
 		Deployment ID: Intrepid-Class
 		Created on:    2021-02-03T00:00:00.000000Z
 		Author:        Kathryn-Janeway@federation.org
-		Trigger:       Wrangler 🤠
+		Source:       Wrangler 🤠
 
 		Deployment ID: Galaxy-Class
 		Created on:    2021-01-04T00:00:00.000000Z
 		Author:        Jean-Luc-Picard@federation.org
-		Trigger:       Rollback from Wrangler 🤠
+		Source:       Rollback from Wrangler 🤠
 		Rollback from: MOCK-DEPLOYMENT-ID-2222
 		🟩 Active"
 	`);
@@ -138,17 +129,9 @@ describe("deployments", () => {
 	});
 
 	describe("deployments subcommands", () => {
-		describe("deployment details", () => {
+		describe("deployment view", () => {
 			it("should log deployment details", async () => {
 				writeWranglerToml();
-				fs.writeFileSync(
-					"./wrangler.toml",
-					TOML.stringify({
-						compatibility_date: "2022-01-12",
-						name: "test-script-name",
-					}),
-					"utf-8"
-				);
 
 				await runWrangler("deployments view 1701-E");
 
@@ -180,10 +163,12 @@ describe("deployments", () => {
 			});
 		});
 
-		describe("rollback subcommand", () => {
+		describe("deployments rollback", () => {
 			const { setIsTTY } = useMockIsTTY();
+			const requests = { count: 0 };
 			beforeEach(() => {
 				setIsTTY(true);
+				requests.count = 0;
 				msw.use(
 					rest.put(
 						"*/accounts/:accountID/workers/scripts/:scriptName",
@@ -191,6 +176,8 @@ describe("deployments", () => {
 							expect(req.url.searchParams.get("rollback_to")).toBe(
 								"3mEgaU1T-Intrepid-someThing"
 							);
+
+							requests.count++;
 
 							return res.once(
 								ctx.json(
@@ -231,8 +218,11 @@ describe("deployments", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 
-			Successfully rolled back to deployment ID: 3mEgaU1T-Intrepid-someThing"
+			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing
+			Current Deployment ID: galactic_mission_alpha"
 		`);
+
+				expect(requests.count).toEqual(1);
 			});
 
 			it("should early exit from rollback if user denies continuing", async () => {
@@ -242,7 +232,12 @@ describe("deployments", () => {
 				});
 
 				await runWrangler("deployments rollback 3mEgaU1T-Intrpid-someThing");
-				expect(std.out).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
+			"
+		`);
+
+				expect(requests.count).toEqual(0);
 			});
 
 			it("should skip prompt automatically in rollback if in a non-TTY environment", async () => {
@@ -250,13 +245,15 @@ describe("deployments", () => {
 
 				await runWrangler("deployments rollback 3mEgaU1T-Intrepid-someThing");
 				expect(std.out).toMatchInlineSnapshot(`
-			"? This deployment 3mEgaU1T will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback. Note: Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, R2, KV, etc.).
-			🤖 Using default value in non-interactive context: yes
-			🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
+			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 
+			? This deployment 3mEgaU1T will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback. Note: Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, R2, KV, etc.).
+			🤖 Using default value in non-interactive context: yes
 			Successfully rolled back to Deployment ID: 3mEgaU1T-Intrepid-someThing
 			Current Deployment ID: galactic_mission_alpha"
 		`);
+
+				expect(requests.count).toEqual(1);
 			});
 		});
 	});

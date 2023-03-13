@@ -79,7 +79,7 @@ export async function deployments(
 Deployment ID: ${versions.id}
 Created on:    ${versions.metadata.created_on}
 Author:        ${versions.metadata.author_email}
-Trigger:       ${triggerStr}`;
+Source:       ${triggerStr}`;
 
 		if (versions.annotations?.["workers/rollback_from"]) {
 			version += `\nRollback from: ${versions.annotations["workers/rollback_from"]}`;

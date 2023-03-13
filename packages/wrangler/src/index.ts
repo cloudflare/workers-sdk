@@ -605,6 +605,9 @@ export function createCLIParser(argv: string[]) {
 								default: false,
 							}),
 					async (rollbackYargs) => {
+						const { accountId, scriptName, config } =
+							await commonDeploymentCMDSetup(rollbackYargs, deploymentsWarning);
+
 						const firstHash = rollbackYargs.deploymentId.substring(
 							0,
 							rollbackYargs.deploymentId.indexOf("-")
@@ -619,9 +622,6 @@ export function createCLIParser(argv: string[]) {
 						) {
 							return;
 						}
-
-						const { accountId, scriptName, config } =
-							await commonDeploymentCMDSetup(rollbackYargs, deploymentsWarning);
 
 						await rollbackDeployment(
 							accountId,
