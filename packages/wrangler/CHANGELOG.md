@@ -1,5 +1,17 @@
 # wrangler
 
+## 2.12.3
+
+### Patch Changes
+
+- [#2884](https://github.com/cloudflare/workers-sdk/pull/2884) [`e33bea9b`](https://github.com/cloudflare/workers-sdk/commit/e33bea9b2b3060c47bd7d453fdbb31889c52c45e) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Changed console.debug for logger.debug in Pages uploading. This will ensure the debug logs are only sent when debug logging is enabled with `WRANGLER_LOG=debug`.
+
+* [#2878](https://github.com/cloudflare/workers-sdk/pull/2878) [`6ebb23d5`](https://github.com/cloudflare/workers-sdk/commit/6ebb23d5b832a49a95b3a169ccf032a6260f22ef) Thanks [@rozenmd](https://github.com/rozenmd)! - feat: Add D1 binding support to Email Workers
+
+  This PR makes it possible to query D1 from an Email Worker, assuming a binding has been setup.
+
+  As D1 is in alpha and not considered "production-ready", this changeset is a patch, rather than a minor bump to wrangler.
+
 ## 2.12.2
 
 ### Patch Changes
