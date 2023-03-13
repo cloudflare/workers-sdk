@@ -580,7 +580,7 @@ export function createCLIParser(argv: string[]) {
 		"🚧`wrangler deployments` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose";
 	wrangler.command(
 		"deployments",
-		"🚢 Displays the 10 most recent deployments for a worker",
+		"🚢 List and view details for deployments",
 		(yargs) =>
 			yargs
 				.option("name", {
@@ -588,51 +588,27 @@ export function createCLIParser(argv: string[]) {
 					type: "string",
 				})
 				.command(
-					"rollback [deployment-id]",
-					"🔙 Rollback a deployment",
-					(rollbackYargs) =>
-						rollbackYargs
-							.positional("deployment-id", {
-								describe: "The ID of the deployment to rollback to",
-								type: "string",
-								demandOption: false,
-							})
-							.option("yes", {
-								alias: "y",
-								describe: "Skip confirmation prompt",
-								type: "boolean",
-								default: false,
-							}),
-					async (rollbackYargs) => {
+					"list",
+					"🚢 Displays the 10 most recent deployments for a worker",
+					async (listYargs) => listYargs,
+					async (listYargs) => {
 						const { accountId, scriptName, config } =
-							await commonDeploymentCMDSetup(rollbackYargs, deploymentsWarning);
-
-						await rollbackDeployment(
-							accountId,
-							scriptName,
-							config,
-							rollbackYargs.deploymentId
-						);
+							await commonDeploymentCMDSetup(listYargs, deploymentsWarning);
+						await deployments(accountId, scriptName, config);
 					}
 				)
 				.command(
-					"view <deployment-id>",
+					"view [deployment-id]",
 					"🔍 View a deployment",
 					async (viewYargs) =>
 						viewYargs
 							.positional("deployment-id", {
 								describe: "The ID of the deployment you want to inspect",
 								type: "string",
-								demandOption: true,
+								demandOption: false,
 							})
 							.option("content", {
 								describe: "Show script content for given deployment ID",
-								type: "boolean",
-								default: false,
-							})
-							.option("yes", {
-								alias: "y",
-								describe: "Skip confirmation prompt",
 								type: "boolean",
 								default: false,
 							}),
@@ -649,15 +625,43 @@ export function createCLIParser(argv: string[]) {
 						);
 					}
 				)
-				.epilogue(deploymentsWarning),
-		async (deploymentsYargs) => {
-			const { accountId, scriptName, config } = await commonDeploymentCMDSetup(
-				deploymentsYargs,
-				deploymentsWarning
-			);
-			await deployments(accountId, scriptName, config);
-		}
+				.command(subHelp)
+				.epilogue(deploymentsWarning)
 	);
+	const rollbackWarning =
+		"🚧`wrangler rollback` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose";
+	wrangler
+		.command(
+			"rollback [deployment-id]",
+			"🔙 Rollback a deployment",
+			(rollbackYargs) =>
+				rollbackYargs
+					.positional("deployment-id", {
+						describe: "The ID of the deployment to rollback to",
+						type: "string",
+						demandOption: false,
+					})
+					.option("message", {
+						alias: "m",
+						describe:
+							"Skip confirmation and message prompts, uses provided argument as message",
+						type: "string",
+						default: undefined,
+					}),
+			async (rollbackYargs) => {
+				const { accountId, scriptName, config } =
+					await commonDeploymentCMDSetup(rollbackYargs, rollbackWarning);
+
+				await rollbackDeployment(
+					accountId,
+					scriptName,
+					config,
+					rollbackYargs.deploymentId,
+					rollbackYargs.message
+				);
+			}
+		)
+		.epilogue(rollbackWarning);
 
 	// This set to false to allow overwrite of default behaviour
 	wrangler.version(false);

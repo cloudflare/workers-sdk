@@ -1,10 +1,10 @@
 import { URLSearchParams } from "url";
 import TOML from "@iarna/toml";
 import chalk from "chalk";
+import { FormData } from "undici";
 import { fetchResult, fetchScriptContent } from "./cfetch";
 import { readConfig } from "./config";
 import { confirm, prompt } from "./dialogs";
-import { FormData, File } from "undici";
 import { mapBindings } from "./init";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
@@ -23,7 +23,7 @@ type DeploymentDetails = {
 	annotations: {
 		"workers/triggered_by": string;
 		"workers/rollback_from": string;
-        "workers/rollback_reason": string;
+		"workers/message": string;
 	};
 	metadata: {
 		author_id: string;
@@ -89,20 +89,19 @@ export async function deployments(
 			  )} from ${formatSource(versions.metadata.source)}`
 			: `${formatSource(versions.metadata.source)}`;
 
-
 		let version = `
-Deployment ID:   ${versions.id}
-Created on:      ${versions.metadata.created_on}
-Author:          ${versions.metadata.author_email}
-Source:          ${triggerStr}`;
+Deployment ID: ${versions.id}
+Created on:    ${versions.metadata.created_on}
+Author:        ${versions.metadata.author_email}
+Source:        ${triggerStr}`;
 
 		if (versions.annotations?.["workers/rollback_from"]) {
-			version += `\nRollback from:   ${versions.annotations["workers/rollback_from"]}`;
+			version += `\nRollback from: ${versions.annotations["workers/rollback_from"]}`;
 		}
 
-        if (versions.annotations?.["workers/rollback_reason"]) {
-			version += `\nRollback Reason: ${versions.annotations["workers/rollback_reason"]}`;
-        }
+		if (versions.annotations?.["workers/message"]) {
+			version += `\nMessage:       ${versions.annotations["workers/message"]}`;
+		}
 
 		return version + `\n`;
 	});
@@ -144,7 +143,8 @@ export async function rollbackDeployment(
 	accountId: string,
 	scriptName: string | undefined,
 	{ send_metrics: sendMetrics }: { send_metrics?: Config["send_metrics"] } = {},
-	deploymentId: string | undefined
+	deploymentId: string | undefined,
+	message: string | undefined
 ) {
 	if (deploymentId === undefined) {
 		const scriptTag = (
@@ -174,21 +174,34 @@ export async function rollbackDeployment(
 
 	const firstHash = deploymentId.substring(0, deploymentId.indexOf("-"));
 
-	if (
-		!(await confirm(
-			`This deployment ${chalk.underline(
-				firstHash
-			)} will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback. ${chalk.blue.bold(
-				"Note:"
-			)} Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, R2, KV, etc.).`
-		))
-	) {
-		return;
+	let rollbackMessage = "";
+	if (message !== undefined) {
+		rollbackMessage = message;
+	} else {
+		if (
+			!(await confirm(
+				`This deployment ${chalk.underline(
+					firstHash
+				)} will immediately replace the current deployment and become the active deployment across all your deployed routes and domains. However, your local development environment will not be affected by this rollback. ${chalk.blue.bold(
+					"Note:"
+				)} Rolling back to a previous deployment will not rollback any of the bound resources (Durable Object, R2, KV, etc.).`
+			))
+		) {
+			return;
+		}
+
+		rollbackMessage = await prompt(
+			"Please provide a message for this rollback (120 characters max)",
+			{ defaultValue: "" }
+		);
 	}
 
-    const rollbackReason = await prompt("Please provide a reason for this rollback (280 characters max)", { defaultValue: "" });
-
-    let deployment_id = await rollbackRequest(accountId, scriptName, deploymentId, rollbackReason);
+	let deployment_id = await rollbackRequest(
+		accountId,
+		scriptName,
+		deploymentId,
+		rollbackMessage
+	);
 
 	await metrics.sendMetricsEvent(
 		"rollback deployments",
@@ -206,13 +219,13 @@ export async function rollbackDeployment(
 }
 
 async function rollbackRequest(
-    accountId: string,
-    scriptName: string | undefined,
-    deploymentId: string,
-    rollbackReason: string
+	accountId: string,
+	scriptName: string | undefined,
+	deploymentId: string,
+	rollbackReason: string
 ): Promise<string | null> {
-    const body = new FormData();
-    body.set("rollback_reason", rollbackReason);
+	const body = new FormData();
+	body.set("message", rollbackReason);
 
 	const { deployment_id } = await fetchResult<{
 		deployment_id: string | null;
@@ -220,18 +233,18 @@ async function rollbackRequest(
 		`/accounts/${accountId}/workers/scripts/${scriptName}?rollback_to=${deploymentId}`,
 		{
 			method: "PUT",
-            body,
+			body,
 		}
 	);
 
-    return deployment_id;
+	return deployment_id;
 }
 
 export async function viewDeployment(
 	accountId: string,
 	scriptName: string | undefined,
 	{ send_metrics: sendMetrics }: { send_metrics?: Config["send_metrics"] } = {},
-	deploymentId: string,
+	deploymentId: string | undefined,
 	content: boolean
 ) {
 	await metrics.sendMetricsEvent(
@@ -247,6 +260,20 @@ export async function viewDeployment(
 			`/accounts/${accountId}/workers/services/${scriptName}`
 		)
 	).default_environment.script.tag;
+
+	if (deploymentId === undefined) {
+		const params = new URLSearchParams({ order: "asc" });
+		const { latest } = await fetchResult<DeploymentListResult>(
+			`/accounts/${accountId}/workers/deployments/by-script/${scriptTag}`,
+			undefined,
+			params
+		);
+
+		deploymentId = latest.id;
+		if (deploymentId === undefined) {
+			throw new Error("Cannot find previous deployment");
+		}
+	}
 
 	if (content) {
 		const scriptContent = await fetchScriptContent(
@@ -267,14 +294,16 @@ export async function viewDeployment(
 		: `${formatSource(deploymentDetails.metadata.source)}`;
 
 	const rollbackStr = deploymentDetails.annotations?.["workers/rollback_from"]
-		? `\nRollback from: ${deploymentDetails.annotations["workers/rollback_from"]}`
+		? `\nRollback from:       ${deploymentDetails.annotations["workers/rollback_from"]}`
 		: ``;
 
-    const reasonStr = deploymentDetails.annotations?.["workers/rollback_reason"] ? `\nRollback Reason: ${deploymentDetails.annotations["workers/rollback_reason"]}` : ``;
+	const reasonStr = deploymentDetails.annotations?.["workers/message"]
+		? `\nMessage:             ${deploymentDetails.annotations["workers/message"]}`
+		: ``;
 
 	const compatDateStr = deploymentDetails.resources.script_runtime
 		?.compatibility_date
-		? `\nCompatibility Date: ${deploymentDetails.resources.script_runtime?.compatibility_date}`
+		? `\nCompatibility Date:  ${deploymentDetails.resources.script_runtime?.compatibility_date}`
 		: ``;
 	const compatFlagsStr = deploymentDetails.resources.script_runtime
 		?.compatibility_flags
@@ -284,14 +313,14 @@ export async function viewDeployment(
 	const bindings = deploymentDetails.resources.bindings;
 
 	const version = `
-Deployment ID:   ${deploymentDetails.id}
-Created on:      ${deploymentDetails.metadata.created_on}
-Author:          ${deploymentDetails.metadata.author_email}
-Source:          ${triggerStr}${rollbackStr}${reasonStr}
+Deployment ID:       ${deploymentDetails.id}
+Created on:          ${deploymentDetails.metadata.created_on}
+Author:              ${deploymentDetails.metadata.author_email}
+Source:              ${triggerStr}${rollbackStr}${reasonStr}
 ------------------------------------------------------------
-Author ID:          ${deploymentDetails.metadata.author_id}
-Usage Model:        ${deploymentDetails.resources.script_runtime.usage_model}
-Handlers:           ${
+Author ID:           ${deploymentDetails.metadata.author_id}
+Usage Model:         ${deploymentDetails.resources.script_runtime.usage_model}
+Handlers:            ${
 		deploymentDetails.resources.script.handlers
 	}${compatDateStr}${compatFlagsStr}
 --------------------------bindings--------------------------
