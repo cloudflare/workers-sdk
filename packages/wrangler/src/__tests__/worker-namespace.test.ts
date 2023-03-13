@@ -27,6 +27,7 @@ describe("dispatch-namespace", () => {
 		Object {
 		  "debug": "",
 		  "err": "",
+		  "info": "",
 		  "out": "wrangler dispatch-namespace
 
 		📦 Interact with a dispatch namespace

@@ -972,13 +972,14 @@ describe("wrangler", () => {
 				);
 				expect(proc.write).not.toEqual(Buffer.from("my-value"));
 				expect(std).toMatchInlineSnapshot(`
-			          Object {
-			            "debug": "",
-			            "err": "",
-			            "out": "my-value",
-			            "warn": "",
-			          }
-		        `);
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "my-value",
+			  "warn": "",
+			}
+		`);
 			});
 
 			it("should get a binary and decode as utf8 text, resulting in improper decoding", async () => {
@@ -997,7 +998,7 @@ describe("wrangler", () => {
 				);
 				expect(proc.write).not.toEqual(buf);
 				expect(JSON.stringify(std)).toMatchInlineSnapshot(
-					`"{\\"debug\\":\\"\\",\\"out\\":\\"�PNG\\\\n\\\\u001a\\\\n\\\\u0000\\\\u0000\\\\u0000\\\\rIHDR\\\\u0000\\\\u0000\\\\u0000\\\\n\\\\u0000\\\\u0000\\\\u0000\\\\n\\\\b\\\\u0006\\\\u0000\\\\u0000\\\\u0000�2Ͻ\\\\u0000\\\\u0000\\\\u0000\\\\tpHYs\\\\u0000\\\\u0000\\\\u000b\\\\u0013\\\\u0000\\\\u0000\\\\u000b\\\\u0013\\\\u0001\\\\u0000��\\\\u0018\\\\u0000\\\\u0000\\\\u0000\\\\u0001sRGB\\\\u0000��\\\\u001c�\\\\u0000\\\\u0000\\\\u0000\\\\u0004gAMA\\\\u0000\\\\u0000��\\\\u000b�a\\\\u0005\\\\u0000\\\\u0000\\\\u0000\\\\\\"IDATx\\\\u0001��1\\\\u0011\\\\u0000\\\\u0000\\\\b���π\\\\u0003:tl.����׈\\\\u0005z�\\\\u0002=�\\\\u0002\\\\u0012\\\\u0005O�1\\\\u0000\\\\u0000\\\\u0000\\\\u0000IEND�B\`�\\",\\"err\\":\\"\\",\\"warn\\":\\"\\"}"`
+					`"{\\"debug\\":\\"\\",\\"out\\":\\"�PNG\\\\n\\\\u001a\\\\n\\\\u0000\\\\u0000\\\\u0000\\\\rIHDR\\\\u0000\\\\u0000\\\\u0000\\\\n\\\\u0000\\\\u0000\\\\u0000\\\\n\\\\b\\\\u0006\\\\u0000\\\\u0000\\\\u0000�2Ͻ\\\\u0000\\\\u0000\\\\u0000\\\\tpHYs\\\\u0000\\\\u0000\\\\u000b\\\\u0013\\\\u0000\\\\u0000\\\\u000b\\\\u0013\\\\u0001\\\\u0000��\\\\u0018\\\\u0000\\\\u0000\\\\u0000\\\\u0001sRGB\\\\u0000��\\\\u001c�\\\\u0000\\\\u0000\\\\u0000\\\\u0004gAMA\\\\u0000\\\\u0000��\\\\u000b�a\\\\u0005\\\\u0000\\\\u0000\\\\u0000\\\\\\"IDATx\\\\u0001��1\\\\u0011\\\\u0000\\\\u0000\\\\b���π\\\\u0003:tl.����׈\\\\u0005z�\\\\u0002=�\\\\u0002\\\\u0012\\\\u0005O�1\\\\u0000\\\\u0000\\\\u0000\\\\u0000IEND�B\`�\\",\\"info\\":\\"\\",\\"err\\":\\"\\",\\"warn\\":\\"\\"}"`
 				);
 			});
 
@@ -1718,7 +1719,6 @@ function setMockFetchKVGetValue(
 		rest.get(
 			"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/values/:key",
 			(req, res, ctx) => {
-				console.dir(req.params);
 				expect(req.params.accountId).toEqual(accountId);
 				expect(req.params.namespaceId).toEqual(namespaceId);
 				// Getting the key from params decodes it so we need to grab the encoded key from the URL

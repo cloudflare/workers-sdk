@@ -276,9 +276,7 @@ export const upload = async (
 	}
 
 	let counter = fileMap.size - sortedFiles.length;
-	const { rerender, unmount } = render(
-		<Progress done={counter} total={fileMap.size} />
-	);
+	const { rerender, unmount } = renderProgress(counter, fileMap.size);
 
 	const queue = new PQueue({ concurrency: BULK_UPLOAD_CONCURRENCY });
 
@@ -336,7 +334,7 @@ export const upload = async (
 			doUpload().then(
 				() => {
 					counter += bucket.files.length;
-					rerender(<Progress done={counter} total={fileMap.size} />);
+					rerender(counter, fileMap.size);
 				},
 				(error) => {
 					return Promise.reject(
@@ -435,6 +433,28 @@ function isJwtExpired(token: string): boolean | undefined {
 
 function formatTime(duration: number) {
 	return `(${(duration / 1000).toFixed(2)} sec)`;
+}
+
+function renderProgress(done: number, total: number) {
+	if (isInteractive()) {
+		const { rerender, unmount } = render(
+			<Progress done={done} total={total} />
+		);
+		return {
+			// eslint-disable-next-line no-shadow
+			rerender(done: number, total: number) {
+				rerender(<Progress done={done} total={total} />);
+			},
+			unmount,
+		};
+	} else {
+		// eslint-disable-next-line no-shadow
+		const rerender = (done: number, total: number) => {
+			logger.log(`Uploading... (${done}/${total})`);
+		};
+		rerender(done, total);
+		return { rerender, unmount() {} };
+	}
 }
 
 function Progress({ done, total }: { done: number; total: number }) {

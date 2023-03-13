@@ -1,6 +1,7 @@
 import { cwd } from "process";
 import { reinitialiseAuthTokens } from "../../user";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
+import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
@@ -8,6 +9,7 @@ import writeWranglerToml from "../helpers/write-wrangler-toml";
 
 describe("migrate", () => {
 	runInTempDir();
+	mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
 
 	describe("create", () => {

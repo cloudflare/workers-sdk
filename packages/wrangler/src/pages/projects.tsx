@@ -1,5 +1,4 @@
 import { execSync } from "node:child_process";
-import { render } from "ink";
 import Table from "ink-table";
 import React from "react";
 import { format as timeagoFormat } from "timeago.js";
@@ -10,6 +9,7 @@ import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
+import { renderToString } from "../utils/render";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { pagesBetaWarning } from "./utils";
 import type {
@@ -44,10 +44,7 @@ export async function ListHandler() {
 		account_id: accountId,
 	});
 
-	const { unmount } = render(<Table data={data}></Table>, {
-		patchConsole: false,
-	});
-	unmount();
+	logger.log(renderToString(<Table data={data}></Table>));
 	await metrics.sendMetricsEvent("list pages projects");
 }
 
