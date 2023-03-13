@@ -1,4 +1,5 @@
 import path from "path";
+import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { unstable_dev } from "wrangler";
 import type { UnstableDevWorker } from "wrangler";
 

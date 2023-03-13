@@ -2,6 +2,8 @@ name: Pull Request
 
 on: pull_request
 
+env:
+  node-version: 16.13
 jobs:
   check:
     name: "Checks"
@@ -12,13 +14,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Use Node.js 16.13
+      - name: Use Node.js ${{ env.node-version }}
         uses: actions/setup-node@v3
         with:
-          node-version: 16.13
+          node-version: ${{ env.node-version }}
           cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
 
-      - uses: actions/cache@v3
+      - name: ESlint and Typescript caching
+        uses: actions/cache@v3
         id: eslint-cache
         with:
           path: |
@@ -33,7 +36,19 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libc++1
 
-      - name: Install NPM Dependencies
+      # Attempt to cache all the node_modules directories based on the OS and package lock.
+      - name: Cache node_modules
+        id: npm-cache
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-node-modules
+        with:
+          key: ${{ runner.os }}-${{ env.node-version }}-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          path: "**/node_modules"
+
+      # If the cache missed then install using `npm ci` to follow package lock exactly
+      - if: ${{ steps.npm-cache.outputs.cache-hit != 'true'}}
+        name: Install NPM Dependencies
         run: npm ci
 
       - name: Build
@@ -56,10 +71,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Use Node.js 16.13
+      - name: Use Node.js ${{ env.node-version }}
         uses: actions/setup-node@v3
         with:
-          node-version: 16.13
+          node-version: ${{ env.node-version }}
           cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
 
       - name: Install workerd Dependencies
@@ -69,7 +84,19 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libc++1
 
-      - name: Install NPM Dependencies
+      # Attempt to cache all the node_modules directories based on the OS and package lock.
+      - name: Cache node_modules
+        id: npm-cache
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-node-modules
+        with:
+          key: ${{ runner.os }}-${{ env.node-version }}-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          path: "**/node_modules"
+
+      # If the cache missed then install using `npm ci` to follow package lock exactly
+      - if: ${{ steps.npm-cache.outputs.cache-hit != 'true'}}
+        name: Install NPM Dependencies
         run: npm ci
 
       - name: Run builds

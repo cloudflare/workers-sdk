@@ -107,6 +107,7 @@ export async function bundleWorker(
 		doBindings: DurableObjectBindings;
 		jsxFactory?: string;
 		jsxFragment?: string;
+		entryName?: string;
 		rules: Config["rules"];
 		watch?: esbuild.WatchMode | boolean;
 		tsconfig?: string;
@@ -137,6 +138,7 @@ export async function bundleWorker(
 		doBindings,
 		jsxFactory,
 		jsxFragment,
+		entryName,
 		rules,
 		watch,
 		tsconfig,
@@ -335,10 +337,12 @@ export async function bundleWorker(
 		bundle: true,
 		absWorkingDir: entry.directory,
 		outdir: destination,
+		entryNames: entryName || path.parse(entry.file).name,
 		...(isOutfile
 			? {
 					outdir: undefined,
 					outfile: destination,
+					entryNames: undefined,
 			  }
 			: {}),
 		inject,

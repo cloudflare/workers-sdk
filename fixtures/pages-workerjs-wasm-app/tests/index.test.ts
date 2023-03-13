@@ -10,7 +10,7 @@ describe.concurrent("Pages Advanced Mode with wasm module imports", () => {
 		({ ip, port, stop } = await runWranglerPagesDev(
 			resolve(__dirname, ".."),
 			"public",
-			["--port=0", "--experimental-worker-bundle=true"]
+			["--port=0"]
 		));
 	});
 
@@ -25,8 +25,8 @@ describe.concurrent("Pages Advanced Mode with wasm module imports", () => {
 	it("should resolve any wasm module imports and render the correct response", async ({
 		expect,
 	}) => {
-		let response = await fetch(`http://${ip}:${port}/meaning-of-life`);
-		let text = await response.text();
+		const response = await fetch(`http://${ip}:${port}/meaning-of-life`);
+		const text = await response.text();
 		expect(text).toEqual(
 			"Hello _worker.js WASM World! The meaning of life is 21"
 		);

@@ -5,11 +5,22 @@ import { describe, it } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe.concurrent("Pages _worker.js", () => {
-	it("should throw an error when the _worker.js file imports something", ({
+	it("should throw an error when the _worker.js file imports something and --bundle is false", ({
 		expect,
 	}) => {
 		expect(() =>
-			execSync("npm run dev", {
+			execSync("npm run dev -- --bundle=false", {
+				cwd: path.resolve(__dirname, ".."),
+				stdio: "ignore",
+			})
+		).toThrowError();
+	});
+
+	it("should throw an error when the _worker.js file imports something and --no-bundle is true", ({
+		expect,
+	}) => {
+		expect(() =>
+			execSync("npm run dev -- --no-bundle", {
 				cwd: path.resolve(__dirname, ".."),
 				stdio: "ignore",
 			})

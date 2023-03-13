@@ -86,15 +86,8 @@ export function Options(yargs: CommonYargsArgv) {
 			},
 			"no-bundle": {
 				type: "boolean",
-				default: true,
-				description: "Whether to run bundling on `_worker.js`",
-			},
-			"experimental-worker-bundle": {
-				type: "boolean",
 				default: false,
-				hidden: true,
-				description:
-					"Whether to process non-JS module imports or not, such as wasm/text/binary, when we run bundling on `functions` or `_worker.js`",
+				description: "Whether to run bundling on `_worker.js`",
 			},
 			binding: {
 				type: "array",
@@ -181,7 +174,6 @@ export const Handler = async ({
 	proxy: requestedProxyPort,
 	bundle,
 	noBundle,
-	experimentalWorkerBundle,
 	scriptPath: singleWorkerScriptPath,
 	binding: bindings = [],
 	kv: kvs = [],
@@ -280,7 +272,7 @@ export const Handler = async ({
 
 		// TODO: Here lies a known bug. If you specify both `--bundle` and `--no-bundle`, this behavior is undefined and you will get unexpected results.
 		// There is no sane way to get the true value out of yargs, so here we are.
-		const enableBundling = (bundle ?? !noBundle) || experimentalWorkerBundle;
+		const enableBundling = bundle ?? !noBundle;
 		if (enableBundling) {
 			// We want to actually run the `_worker.js` script through the bundler
 			// So update the final path to the script that will be uploaded and
@@ -297,7 +289,6 @@ export const Handler = async ({
 						sourcemap: true,
 						watch: true,
 						onEnd: () => scriptReadyResolve(),
-						experimentalWorkerBundle,
 					});
 				} catch (e: unknown) {
 					logger.warn("Failed to bundle _worker.js.", e);
@@ -306,7 +297,7 @@ export const Handler = async ({
 		}
 
 		await runBuild();
-		watch([scriptPath], {
+		watch([workerScriptPath], {
 			persistent: true,
 			ignoreInitial: true,
 		}).on("all", async () => {
@@ -343,7 +334,6 @@ export const Handler = async ({
 					legacyNodeCompat,
 					nodejsCompat,
 					local: true,
-					experimentalWorkerBundle,
 				});
 				await metrics.sendMetricsEvent("build pages functions");
 			};

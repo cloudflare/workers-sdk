@@ -51,7 +51,7 @@ describe("workers change behaviour with middleware with wrangler dev", () => {
 			export default {
 				middleware: [middleware],
 				scheduled(controller, env, ctx) {
-					console.log("Scheduled worker called");
+					// Scheduled worker called
 				}
 			}
 			`;
@@ -178,7 +178,7 @@ describe("workers change behaviour with middleware with wrangler dev", () => {
 			addMiddleware(middleware);
 
 			addEventListener("scheduled", (event) => {
-				console.log("Scheduled worker called");
+				// Scheduled worker called
 			});
 			`;
 

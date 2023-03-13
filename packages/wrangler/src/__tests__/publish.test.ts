@@ -98,6 +98,7 @@ describe("publish", () => {
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 			Worker ID:  abc12345
 			Worker ETag:  etag98765
@@ -617,6 +618,7 @@ describe("publish", () => {
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -664,6 +666,7 @@ describe("publish", () => {
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -726,6 +729,7 @@ describe("publish", () => {
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (staging) (TIMINGS)
 			Published test-name (staging) (TIMINGS)
@@ -1387,6 +1391,7 @@ export default {};`
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 			--dry-run: exiting now.",
 			  "warn": "",
@@ -1420,6 +1425,7 @@ addEventListener('fetch', event => {});`
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 			--dry-run: exiting now.",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe entrypoint index.js has exports like an ES Module, but hasn't defined a default export like a module worker normally would. Building the worker using \\"service-worker\\" format...[0m
@@ -1519,6 +1525,7 @@ addEventListener('fetch', event => {});`
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "Reading file-1.txt...
 			Uploading as file-1.2ca234f380.txt...
 			Reading file-2.txt...
@@ -1649,7 +1656,7 @@ addEventListener('fetch', event => {});`
 			};
 			writeAssets(assets);
 			mockUploadWorkerRequest({
-				expectedMainModule: "serve-static-assets.entry.js",
+				expectedMainModule: "no-op-worker.js",
 			});
 			mockSubDomainRequest();
 			mockListKVNamespacesRequest(kvNamespace);
@@ -1662,6 +1669,7 @@ addEventListener('fetch', event => {});`
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "Reading file-1.txt...
 			Uploading as file-1.2ca234f380.txt...
 			Reading file-2.txt...
@@ -1740,7 +1748,7 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			writeAssets(assets);
 			mockUploadWorkerRequest({
-				expectedMainModule: "serve-static-assets.entry.js",
+				expectedMainModule: "index.js",
 			});
 			mockSubDomainRequest();
 			mockListKVNamespacesRequest(kvNamespace);
@@ -1752,6 +1760,7 @@ addEventListener('fetch', event => {});`
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "Reading file-1.txt...
 			Uploading as file-1.2ca234f380.txt...
 			Reading file-2.txt...
@@ -1781,18 +1790,19 @@ addEventListener('fetch', event => {});`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYou cannot use the service-worker format with an \`assets\` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/[0m
+			Object {
+			  "debug": "",
+			  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYou cannot use the service-worker format with an \`assets\` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/[0m
 
-			        ",
-			          "out": "
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m",
-			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
+			",
+			  "info": "",
+			  "out": "
+			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
 
-			        ",
-			        }
-		      `);
+			",
+			}
+		`);
 		});
 
 		it("should error if --assets and --site are used together", async () => {
@@ -1807,16 +1817,17 @@ addEventListener('fetch', event => {});`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Assets and Workers Sites in the same Worker.[0m
+			Object {
+			  "debug": "",
+			  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Assets and Workers Sites in the same Worker.[0m
 
-			        ",
-			          "out": "
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m",
-			          "warn": "",
-			        }
-		      `);
+			",
+			  "info": "",
+			  "out": "
+			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m",
+			  "warn": "",
+			}
+		`);
 		});
 
 		it("should error if --assets and config.site are used together", async () => {
@@ -1834,16 +1845,17 @@ addEventListener('fetch', event => {});`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Assets and Workers Sites in the same Worker.[0m
+			Object {
+			  "debug": "",
+			  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Assets and Workers Sites in the same Worker.[0m
 
-			        ",
-			          "out": "
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m",
-			          "warn": "",
-			        }
-		      `);
+			",
+			  "info": "",
+			  "out": "
+			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m",
+			  "warn": "",
+			}
+		`);
 		});
 
 		it("should error if config.assets and --site are used together", async () => {
@@ -1860,20 +1872,21 @@ addEventListener('fetch', event => {});`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Assets and Workers Sites in the same Worker.[0m
+			Object {
+			  "debug": "",
+			  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Assets and Workers Sites in the same Worker.[0m
 
-			        ",
-			          "out": "
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m",
-			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+			",
+			  "info": "",
+			  "out": "
+			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-			            - \\"assets\\" fields are experimental and may change or break at any time.
+			    - \\"assets\\" fields are experimental and may change or break at any time.
 
-			        ",
-			        }
-		      `);
+			",
+			}
+		`);
 		});
 
 		it("should error if config.assets and config.site are used together", async () => {
@@ -1893,20 +1906,21 @@ addEventListener('fetch', event => {});`
 			);
 
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Assets and Workers Sites in the same Worker.[0m
+			Object {
+			  "debug": "",
+			  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use Assets and Workers Sites in the same Worker.[0m
 
-			        ",
-			          "out": "
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m",
-			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+			",
+			  "info": "",
+			  "out": "
+			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
-			            - \\"assets\\" fields are experimental and may change or break at any time.
+			    - \\"assets\\" fields are experimental and may change or break at any time.
 
-			        ",
-			        }
-		      `);
+			",
+			}
+		`);
 		});
 
 		it("should warn if --assets is used", async () => {
@@ -1925,7 +1939,7 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			writeAssets(assets);
 			mockUploadWorkerRequest({
-				expectedMainModule: "serve-static-assets.entry.js",
+				expectedMainModule: "index.js",
 			});
 			mockSubDomainRequest();
 			mockListKVNamespacesRequest(kvNamespace);
@@ -1937,6 +1951,7 @@ addEventListener('fetch', event => {});`
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "Reading subdir/file-1.txt...
 			Uploading as subdir/file-1.2ca234f380.txt...
 			Reading subdir/file-2.txt...
@@ -1972,7 +1987,7 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			writeAssets(assets);
 			mockUploadWorkerRequest({
-				expectedMainModule: "serve-static-assets.entry.js",
+				expectedMainModule: "index.js",
 			});
 			mockSubDomainRequest();
 			mockListKVNamespacesRequest(kvNamespace);
@@ -1984,6 +1999,7 @@ addEventListener('fetch', event => {});`
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "Reading subdir/file-1.txt...
 			Uploading as subdir/file-1.2ca234f380.txt...
 			Reading subdir/file-2.txt...
@@ -2752,6 +2768,7 @@ addEventListener('fetch', event => {});`
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "Reading file-00.txt...
 			Uploading as file-00.be5be5dd26.txt...
 			Reading file-01.txt...
@@ -2985,6 +3002,7 @@ addEventListener('fetch', event => {});`
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "Reading file-1.txt...
 			Uploading as file-1.2ca234f380.txt...
 			Reading file-2.txt...
@@ -3015,7 +3033,7 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			writeAssets(assets, "my-assets");
 			mockUploadWorkerRequest({
-				expectedMainModule: "serve-static-assets.entry.js",
+				expectedMainModule: "index.js",
 			});
 			mockSubDomainRequest();
 			mockListKVNamespacesRequest(kvNamespace);
@@ -3028,6 +3046,7 @@ addEventListener('fetch', event => {});`
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "Reading file-1.txt...
 			Uploading as file-1.2ca234f380.txt...
 			Reading file-2.txt...
@@ -3840,7 +3859,7 @@ addEventListener('fetch', event => {});`
 		it("should run a custom build before publishing", async () => {
 			writeWranglerToml({
 				build: {
-					command: `node -e "console.log('custom build'); require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')"`,
+					command: `node -e "4+4; require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')"`,
 				},
 			});
 
@@ -3851,7 +3870,7 @@ addEventListener('fetch', event => {});`
 
 			await runWrangler("publish index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Running custom build: node -e \\"console.log('custom build'); require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\\"
+			"Running custom build: node -e \\"4+4; require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\\"
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -3866,7 +3885,7 @@ addEventListener('fetch', event => {});`
 			it("should run a custom build of multiple steps combined by && before publishing", async () => {
 				writeWranglerToml({
 					build: {
-						command: `echo "custom build" && echo "export default { fetch(){ return new Response(123) } }" > index.js`,
+						command: `echo "export default { fetch(){ return new Response(123) } }" > index.js`,
 					},
 				});
 
@@ -3877,7 +3896,7 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("publish index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Running custom build: echo \\"custom build\\" && echo \\"export default { fetch(){ return new Response(123) } }\\" > index.js
+			"Running custom build: echo \\"export default { fetch(){ return new Response(123) } }\\" > index.js
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -3893,22 +3912,22 @@ addEventListener('fetch', event => {});`
 			writeWranglerToml({
 				main: "index.js",
 				build: {
-					command: `node -e "console.log('custom build');"`,
+					command: `node -e "4+4;"`,
 				},
 			});
 
 			await expect(runWrangler("publish index.js")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-			              "The expected output file at \\"index.js\\" was not found after running custom build: node -e \\"console.log('custom build');\\".
+			              "The expected output file at \\"index.js\\" was not found after running custom build: node -e \\"4+4;\\".
 			              The \`main\` property in wrangler.toml should point to the file generated by the custom build."
 		            `);
 			expect(std.out).toMatchInlineSnapshot(`
-			        "Running custom build: node -e \\"console.log('custom build');\\"
+			        "Running custom build: node -e \\"4+4;\\"
 
 			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`
-			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe expected output file at \\"index.js\\" was not found after running custom build: node -e \\"console.log('custom build');\\".[0m
+			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe expected output file at \\"index.js\\" was not found after running custom build: node -e \\"4+4;\\".[0m
 
 			          The \`main\` property in wrangler.toml should point to the file generated by the custom build.
 
@@ -3921,7 +3940,7 @@ addEventListener('fetch', event => {});`
 			writeWranglerToml({
 				main: "./",
 				build: {
-					command: `node -e "console.log('custom build');"`,
+					command: `node -e "4+4;"`,
 				},
 			});
 
@@ -3931,7 +3950,7 @@ addEventListener('fetch', event => {});`
 
 			await expect(runWrangler("publish")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-			              "The expected output file at \\".\\" was not found after running custom build: node -e \\"console.log('custom build');\\".
+			              "The expected output file at \\".\\" was not found after running custom build: node -e \\"4+4;\\".
 			              The \`main\` property in wrangler.toml should point to the file generated by the custom build.
 			              The provided entry-point path, \\".\\", points to a directory, rather than a file.
 
@@ -3942,12 +3961,12 @@ addEventListener('fetch', event => {});`
 			              \`\`\`"
 		            `);
 			expect(std.out).toMatchInlineSnapshot(`
-			        "Running custom build: node -e \\"console.log('custom build');\\"
+			        "Running custom build: node -e \\"4+4;\\"
 
 			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`
-			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe expected output file at \\".\\" was not found after running custom build: node -e \\"console.log('custom build');\\".[0m
+			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe expected output file at \\".\\" was not found after running custom build: node -e \\"4+4;\\".[0m
 
 			          The \`main\` property in wrangler.toml should point to the file generated by the custom build.
 			          The provided entry-point path, \\".\\", points to a directory, rather than a file.
@@ -4197,6 +4216,7 @@ addEventListener('fetch', event => {});`
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
 			- Durable Objects:
@@ -4242,6 +4262,7 @@ addEventListener('fetch', event => {});`
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
 			- Durable Objects:
@@ -4415,6 +4436,7 @@ addEventListener('fetch', event => {});`
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
 			- Durable Objects:
@@ -4485,6 +4507,7 @@ addEventListener('fetch', event => {});`
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
 			- Durable Objects:
@@ -5555,6 +5578,7 @@ addEventListener('fetch', event => {});`
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
 			- Vars:
@@ -5846,7 +5870,7 @@ addEventListener('fetch', event => {});`
 
 			"
 		`);
-				const output = fs.readFileSync("tmp/d1-beta-facade.entry.js", "utf-8");
+				const output = fs.readFileSync("tmp/index.js", "utf-8");
 				expect(output).toContain(
 					`var ExampleDurableObject2 = maskDurableObjectDefinition(ExampleDurableObject);`
 				);
@@ -6495,6 +6519,7 @@ addEventListener('fetch', event => {});`
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -6545,6 +6570,7 @@ addEventListener('fetch', event => {});`
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -6569,12 +6595,55 @@ addEventListener('fetch', event => {});`
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class",
 			  "warn": "",
+			}
+		`);
+		});
+
+		it("should preserve the entry point file name, even when using a facade", async () => {
+			writeWranglerToml();
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			const assets = [
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "file-2.txt", content: "Content of file-2" },
+			];
+			const kvNamespace = {
+				title: "__test-name-workers_sites_assets",
+				id: "__test-name-workers_sites_assets-id",
+			};
+			writeAssets(assets);
+			mockListKVNamespacesRequest(kvNamespace);
+			mockKeyListRequest(kvNamespace.id, []);
+			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
+			await runWrangler("publish index.js --outdir some-dir --assets assets");
+			expect(fs.existsSync("some-dir/index.js")).toBe(true);
+			expect(fs.existsSync("some-dir/index.js.map")).toBe(true);
+			expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "Reading file-1.txt...
+			Uploading as file-1.2ca234f380.txt...
+			Reading file-2.txt...
+			Uploading as file-2.5938485188.txt...
+			↗️  Done syncing assets
+			Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --assets argument is experimental and may change or break at any time[0m
+
+			",
 			}
 		`);
 		});
@@ -6624,6 +6693,7 @@ export default{
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -6652,6 +6722,7 @@ export default{
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
 			- Durable Objects:
@@ -6669,16 +6740,17 @@ export default{
 			writeWorkerSource();
 			await runWrangler("publish index.js --node-compat --dry-run");
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "Total Upload: xx KiB / gzip: xx KiB
-			        --dry-run: exiting now.",
-			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling Node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "Total Upload: xx KiB / gzip: xx KiB
+			--dry-run: exiting now.",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling Node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
 
-			        ",
-			        }
-		      `);
+			",
+			}
+		`);
 		});
 
 		it("should recommend node compatibility mode when using node builtins and node-compat isn't enabled", async () => {
@@ -6716,16 +6788,17 @@ export default{
 			);
 			await runWrangler("publish index.js --node-compat --dry-run"); // this would throw if node compatibility didn't exist
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "Total Upload: xx KiB / gzip: xx KiB
-			        --dry-run: exiting now.",
-			          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling Node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "Total Upload: xx KiB / gzip: xx KiB
+			--dry-run: exiting now.",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling Node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
 
-			        ",
-			        }
-		      `);
+			",
+			}
+		`);
 		});
 	});
 
@@ -6770,6 +6843,7 @@ export default{
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 			--dry-run: exiting now.",
 			  "warn": "",
@@ -6842,6 +6916,7 @@ export default{
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -6904,23 +6979,24 @@ export default{
 				`[ParseError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
 			);
 			expect(std).toMatchInlineSnapshot(`
-			        Object {
-			          "debug": "",
-			          "err": "",
-			          "out": "Total Upload: xx KiB / gzip: xx KiB
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "Total Upload: xx KiB / gzip: xx KiB
 
-			        [31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.[0m
+			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.[0m
 
-			          Script startup timed out. This could be due to script exceeding size limits or expensive code in
-			          the global scope. [code: 11337]
+			  Script startup timed out. This could be due to script exceeding size limits or expensive code in
+			  the global scope. [code: 11337]
 
-			          If you think this is a bug, please open an issue at:
-			          [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+			  If you think this is a bug, please open an issue at:
+			  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
-			        ",
-			          "warn": "",
-			        }
-		      `);
+			",
+			  "warn": "",
+			}
+		`);
 		});
 
 		test("should check biggest dependencies when upload fails with script size error", async () => {
@@ -6970,6 +7046,7 @@ export default{
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 
 			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.[0m
@@ -7036,6 +7113,7 @@ export default{
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 
 			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.[0m
@@ -7074,6 +7152,7 @@ export default{
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWe recommend keeping your script less than 1MiB (1024 KiB) after gzip. Exceeding past this can affect cold start time[0m
 
@@ -7096,6 +7175,7 @@ export default{
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB",
 			  "warn": "",
 			}
@@ -7124,6 +7204,7 @@ export default{
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "",
 			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mHere are the 5 largest dependencies included in your script:[0m
 
@@ -7280,6 +7361,7 @@ export default{
 		Object {
 		  "debug": "",
 		  "err": "",
+		  "info": "",
 		  "out": "Total Upload: xx KiB / gzip: xx KiB
 		Uploaded test-name (TIMINGS)
 		Published test-name (TIMINGS)
