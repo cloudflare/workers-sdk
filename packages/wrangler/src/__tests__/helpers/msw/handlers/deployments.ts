@@ -49,6 +49,7 @@ export const mswSuccessDeployments = [
 								annotations: {
 									"workers/triggered_by": "rollback",
 									"workers/rollback_from": "MOCK-DEPLOYMENT-ID-1111",
+									"workers/message": "Rolled back for this version",
 								},
 								metadata: {
 									author_id: "Kathryn-Jane-Gamma-6-0-7-3",
@@ -108,10 +109,12 @@ export const mswSuccessDeploymentDetails = [
 					},
 				];
 			}
+
+			expect(req.url.toString().includes("1701-E"));
 			return res.once(
 				ctx.json(
 					createFetchResult({
-						Tag: "",
+						id: "1701-E",
 						Number: 0,
 						metadata: {
 							author_id: "Picard-Gamma-6-0-7-3",
