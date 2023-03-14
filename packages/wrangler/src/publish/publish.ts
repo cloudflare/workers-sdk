@@ -335,7 +335,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const jsxFactory = props.jsxFactory || config.jsx_factory;
 	const jsxFragment = props.jsxFragment || config.jsx_fragment;
-	const keepVars = props.keepVars ?? config.keep_vars;
+	const keepVars = props.keepVars || config.keep_vars;
 
 	const minify = props.minify ?? config.minify;
 
