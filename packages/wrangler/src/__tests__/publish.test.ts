@@ -7686,6 +7686,33 @@ export default{
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
+
+		it("should send keepVars when `keep_vars = true`", async () => {
+			process.env = {
+				CLOUDFLARE_API_TOKEN: "hunter2",
+				CLOUDFLARE_ACCOUNT_ID: "some-account-id",
+			};
+			setIsTTY(false);
+			writeWranglerToml({
+				keep_vars: true,
+			});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ keepVars: true });
+			mockOAuthServerCallback();
+			mockGetMemberships([]);
+
+			await runWrangler("publish index.js");
+
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class"
+		`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
 	});
 });
 
