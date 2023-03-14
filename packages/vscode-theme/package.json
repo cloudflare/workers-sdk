@@ -1,0 +1,46 @@
+{
+	"name": "cloudflare-theme",
+	"displayName": "Cloudflare Theme",
+	"version": "0.0.1",
+	"description": "The official vscode theme extension for Cloudflare.",
+	"categories": [
+		"Themes"
+	],
+	"keywords": [
+		"wrangler",
+		"cloudflare",
+		"workers",
+		"cloudflare workers",
+		"vscode",
+		"theme",
+		"cloudflare theme"
+	],
+	"homepage": "https://github.com/cloudflare/workers-sdk/packages/vscode-theme#readme",
+	"bugs": {
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/vscode-theme"
+	},
+	"license": "MIT OR Apache-2.0",
+	"author": "wrangler@cloudflare.com",
+	"contributes": {
+		"themes": [
+			{
+				"label": "Cloudflare Dark",
+				"uiTheme": "vs-dark",
+				"path": "./themes/cloudflare-color-theme.json"
+			},
+			{
+				"label": "Cloudflare Light",
+				"uiTheme": "vs",
+				"path": "./themes/cloudflare-light-color-theme.json"
+			}
+		]
+	},
+	"engines": {
+		"vscode": "^1.76.0"
+	}
+}
