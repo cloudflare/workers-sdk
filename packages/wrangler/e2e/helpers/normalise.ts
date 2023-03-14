@@ -1,7 +1,7 @@
 import stripAnsi from "strip-ansi";
 export function normalizeOutput(
 	stdout: string,
-	replacers?: Record<string, string>
+	substitutions?: Record<string, string>
 ): string {
 	const functions = [
 		npmStripTimings,
@@ -19,8 +19,8 @@ export function normalizeOutput(
 	for (const f of functions) {
 		stdout = f(stdout);
 	}
-	if (replacers) {
-		for (const [from, to] of Object.entries(replacers)) {
+	if (substitutions) {
+		for (const [from, to] of Object.entries(substitutions)) {
 			stdout = stdout.replaceAll(from, to);
 		}
 	}

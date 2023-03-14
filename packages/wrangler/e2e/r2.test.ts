@@ -97,4 +97,26 @@ describe("r2", async () => {
 		`);
 		expect(stderr).toMatchInlineSnapshot('""');
 	});
+	it("check bucket deleted", async () => {
+		await seed(root, {
+			"test-r2.txt": fileContents,
+		});
+		const { stdout, stderr } = await runIn(root, {
+			[bucketName]: "wrangler-smoke-test-bucket",
+		})`
+		exits(1) {
+	  	$ ${RUN} r2 object put ${`${bucketName}/testr2`} --file test-r2.txt --content-type text/html
+		}
+	`;
+		expect(stdout).toMatchInlineSnapshot(`
+			"Creating object \\"testr2\\" in bucket \\"wrangler-smoke-test-bucket\\".
+
+			If you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose"
+		`);
+		expect(stderr).toMatchInlineSnapshot(`
+			"X [ERROR] Failed to fetch /accounts/c1813c2bcbf20b513d80d455cb110774/r2/buckets/wrangler-smoke-test-bucket/objects/testr2 - 404: Not Found);
+
+			"
+		`);
+	});
 });
