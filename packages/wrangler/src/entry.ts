@@ -16,7 +16,12 @@ import type { Metafile } from "esbuild";
  *
  * It consists not just of a `file`, but also of a `directory` that is used to resolve relative paths.
  */
-export type Entry = { file: string; directory: string; format: CfScriptFormat };
+export type Entry = {
+	file: string;
+	directory: string;
+	format: CfScriptFormat;
+	moduleRoot: string;
+};
 
 /**
  * Compute the entry-point for the Worker.
@@ -100,7 +105,12 @@ export async function getEntry(
 		);
 	}
 
-	return { file, directory, format };
+	return {
+		file,
+		directory,
+		format,
+		moduleRoot: config.dir ?? path.dirname(file),
+	};
 }
 
 export async function runCustomBuild(

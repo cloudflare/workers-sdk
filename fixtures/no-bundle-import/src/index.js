@@ -48,6 +48,13 @@ export default {
 			);
 		}
 
+		if (url.pathname.startsWith("/lang")) {
+			const language = url.pathname.split("/lang/")[1];
+			return new Response(
+				`${JSON.parse((await import(`./lang/${language}`)).default).hello}`
+			);
+		}
+
 		if (url.pathname === "/txt") {
 			return new Response(text);
 		}

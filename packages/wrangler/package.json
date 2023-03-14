@@ -105,7 +105,6 @@
 		"@miniflare/durable-objects": "2.12.1",
 		"blake3-wasm": "^2.1.5",
 		"chokidar": "^3.5.3",
-		"es-module-lexer": "^1.1.1",
 		"esbuild": "0.16.5",
 		"miniflare": "2.12.1",
 		"nanoid": "^3.3.3",

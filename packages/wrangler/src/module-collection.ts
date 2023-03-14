@@ -38,29 +38,8 @@ export const DEFAULT_MODULE_RULES: Config["rules"] = [
 	{ type: "CompiledWasm", globs: ["**/*.wasm"] },
 ];
 
-export default function createModuleCollector(props: {
-	format: CfScriptFormat;
-	rules?: Config["rules"];
-	// a collection of "legacy" style module references, which are just file names
-	// we will eventually deprecate this functionality, hence the verbose greppable name
-	wrangler1xlegacyModuleReferences: {
-		rootDirectory: string;
-		fileNames: Set<string>;
-	};
-	preserveFileNames?: boolean;
-}): {
-	modules: CfModule[];
-	plugin: esbuild.Plugin;
-} {
-	const rules: Config["rules"] = [
-		...(props.rules || []),
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		...DEFAULT_MODULE_RULES!,
-	];
-
-	// First, we want to add some validations to the module rules
-	// We want to warn if rules are accidentally configured in such a way that
-	// subsequent rules will never match because `fallthrough` hasn't been set
+export function parseRules(userRules: Config["rules"] = []) {
+	const rules: Config["rules"] = [...userRules, ...DEFAULT_MODULE_RULES];
 
 	const completedRuleLocations: Record<string, number> = {};
 	let index = 0;
@@ -68,7 +47,7 @@ export default function createModuleCollector(props: {
 	for (const rule of rules) {
 		if (rule.type in completedRuleLocations) {
 			if (rules[completedRuleLocations[rule.type]].fallthrough !== false) {
-				if (index < (props.rules || []).length) {
+				if (index < userRules.length) {
 					logger.warn(
 						`The module rule at position ${index} (${JSON.stringify(
 							rule
@@ -101,6 +80,69 @@ export default function createModuleCollector(props: {
 
 	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 	rulesToRemove.forEach((rule) => rules!.splice(rules!.indexOf(rule), 1));
+
+	return { rules, rulesToRemove };
+}
+
+export async function matchFiles(
+	files: string[],
+	rules: Config["rules"],
+	rulesToRemove: Config["rules"]
+) {
+	const modules: CfModule[] = [];
+	for (const rule of rules) {
+		for (const glob of rule.globs) {
+			const regexp = globToRegExp(glob);
+			modules.push(
+				...(await Promise.all(
+					files
+						.filter((f) => regexp.test(f))
+						.map(async (name) => {
+							const filePath = name;
+							const fileContent = await readFile(filePath);
+
+							return {
+								name: filePath,
+								content: fileContent,
+								type: RuleTypeToModuleType[rule.type],
+							};
+						})
+				))
+			);
+		}
+	}
+	for (const rule of rulesToRemove) {
+		for (const glob of rule.globs) {
+			const regexp = globToRegExp(glob);
+			for (const file of files) {
+				if (regexp.test(file)) {
+					throw new Error(
+						`The file ${file} matched a module rule in your configuration (${JSON.stringify(
+							rule
+						)}), but was ignored because a previous rule with the same type was not marked as \`fallthrough = true\`.`
+					);
+				}
+			}
+		}
+	}
+	return modules;
+}
+
+export default function createModuleCollector(props: {
+	format: CfScriptFormat;
+	rules?: Config["rules"];
+	// a collection of "legacy" style module references, which are just file names
+	// we will eventually deprecate this functionality, hence the verbose greppable name
+	wrangler1xlegacyModuleReferences: {
+		rootDirectory: string;
+		fileNames: Set<string>;
+	};
+	preserveFileNames?: boolean;
+}): {
+	modules: CfModule[];
+	plugin: esbuild.Plugin;
+} {
+	const { rules, rulesToRemove } = parseRules(props.rules);
 
 	const modules: CfModule[] = [];
 	return {
