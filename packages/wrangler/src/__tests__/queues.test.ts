@@ -352,7 +352,7 @@ describe("wrangler", () => {
 				      --batch-timeout      Maximum number of seconds to wait to fill a batch with messages  [number]
 				      --message-retries    Maximum number of retries for each message  [number]
 				      --dead-letter-queue  Queue to send messages that failed to be consumed  [string]
-				      --max-concurrency    The maximum number of concurrent consumer Worker invocations  [number]"
+				      --max-concurrency    The maximum number of concurrent consumer Worker invocations. Must be a positive integer  [number]"
 			`);
 				});
 

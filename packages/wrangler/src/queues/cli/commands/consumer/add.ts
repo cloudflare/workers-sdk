@@ -40,7 +40,7 @@ export function options(yargs: CommonYargsArgv) {
 			"max-concurrency": {
 				type: "number",
 				describe:
-					"The maximum number of concurrent consumer Worker invocations",
+					"The maximum number of concurrent consumer Worker invocations. Must be a positive integer",
 			},
 		});
 }
