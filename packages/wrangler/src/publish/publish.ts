@@ -464,7 +464,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			resolvedEntryPointPath,
 			bundleType,
 		}: Awaited<ReturnType<typeof bundleWorker>> = props.noBundle
-			? await traverseModuleGraph(props.entry, props.rules, props.tsconfig)
+			? await traverseModuleGraph(props.entry, props.rules)
 			: await bundleWorker(
 					props.entry,
 					typeof destination === "string" ? destination : destination.path,

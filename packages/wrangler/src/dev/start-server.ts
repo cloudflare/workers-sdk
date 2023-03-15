@@ -255,7 +255,7 @@ async function runEsbuild({
 		dependencies,
 		sourceMapPath,
 	}: Awaited<ReturnType<typeof bundleWorker>> = noBundle
-		? await traverseModuleGraph(entry, rules, tsconfig)
+		? await traverseModuleGraph(entry, rules)
 		: await bundleWorker(entry, destination, {
 				serveAssetsFromWorker,
 				jsxFactory,
