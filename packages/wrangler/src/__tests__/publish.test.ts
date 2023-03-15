@@ -1341,6 +1341,32 @@ export default{
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
+		it("should allow cloudflare module import", async () => {
+			writeWranglerToml();
+			fs.writeFileSync(
+				"./index.js",
+				`
+import { EmailMessage } from "cloudflare:email";
+export default{
+  fetch(){
+    return new Response("all done");
+  }
+}
+`
+			);
+			mockUploadWorkerRequest();
+			mockSubDomainRequest();
+			await runWrangler("publish index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class"
+		`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
 		it("should be able to transpile entry-points in sub-directories (esm)", async () => {
 			writeWranglerToml();
 			writeWorkerSource({ basePath: "./src" });

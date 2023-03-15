@@ -94,6 +94,15 @@ const nodejsCompatPlugin: esbuild.Plugin = {
 	},
 };
 
+const cloudflareJsPlugin: esbuild.Plugin = {
+	name: "cloudflare javascript Plugin",
+	setup(pluginBuild) {
+		pluginBuild.onResolve({ filter: /^cloudflare:.*/ }, () => {
+			return { external: true };
+		});
+	},
+};
+
 /**
  * Generate a bundle for the worker identified by the arguments passed in.
  */
@@ -379,6 +388,7 @@ export async function bundleWorker(
 				? [NodeGlobalsPolyfills({ buffer: true }), NodeModulesPolyfills()]
 				: []),
 			...(nodejsCompat ? [nodejsCompatPlugin] : []),
+			...[cloudflareJsPlugin],
 			...(plugins || []),
 		],
 		...(jsxFactory && { jsxFactory }),
