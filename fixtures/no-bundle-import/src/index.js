@@ -1,4 +1,5 @@
 import { sayHello } from "./say-hello.js";
+import cjs from "./say-hello.cjs";
 
 import { johnSmith } from "./nested/index.js";
 import WASM from "./simple.wasm";
@@ -60,6 +61,14 @@ export default {
 		}
 		if (url.pathname === "/bin") {
 			return new Response(binData);
+		}
+		if (url.pathname === "/cjs") {
+			return new Response(
+				`CJS: ${cjs.sayHello("Jane Smith")} and ${johnSmith}`
+			);
+		}
+		if (url.pathname === "/cjs-loop") {
+			return new Response(`CJS: ${cjs.loop}`);
 		}
 		return new Response(`${sayHello("Jane Smith")} and ${johnSmith}`);
 	},

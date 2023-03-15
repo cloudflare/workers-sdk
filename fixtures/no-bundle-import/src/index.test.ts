@@ -31,6 +31,22 @@ describe("Worker", () => {
 		);
 	});
 
+	test("module traversal results in correct response for CommonJS", async () => {
+		const resp = await worker.fetch("/cjs");
+		const text = await resp.text();
+		expect(text).toMatchInlineSnapshot(
+			`"CJS: Hello Jane Smith and Hello John Smith"`
+		);
+	});
+
+	test("correct response for CommonJS which imports ESM", async () => {
+		const resp = await worker.fetch("/cjs-loop");
+		const text = await resp.text();
+		expect(text).toMatchInlineSnapshot(
+			'"CJS: cjs-string"'
+		);
+	});
+
 	test("support for dynamic imports", async () => {
 		const resp = await worker.fetch("/dynamic");
 		const text = await resp.text();
