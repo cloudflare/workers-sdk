@@ -1,5 +1,4 @@
 import path from "path";
-import getPort from "get-port";
 import { describe, expect, test, beforeAll, afterAll } from "vitest";
 import { unstable_dev } from "../../../packages/wrangler/wrangler-dist/cli.js";
 import type { UnstableDevWorker } from "../../../packages/wrangler/wrangler-dist/cli.js";
@@ -7,10 +6,17 @@ import type { UnstableDevWorker } from "../../../packages/wrangler/wrangler-dist
 describe("Worker", () => {
 	let worker: UnstableDevWorker;
 
+	// TODO: Remove this when `workerd` has Windows support
+	if (process.env.RUNNER_OS === "Windows") {
+		test("dummy windows test", () => {
+			expect(process.env.RUNNER_OS).toStrictEqual("Windows");
+		});
+		return;
+	}
+
 	beforeAll(async () => {
 		worker = await unstable_dev(path.resolve(__dirname, "index.js"), {
 			bundle: false,
-			port: await getPort(),
 			experimental: { experimentalLocal: true },
 		});
 	}, 30_000);
@@ -36,21 +42,25 @@ describe("Worker", () => {
 		const text = await resp.text();
 		expect(text).toMatchInlineSnapshot('"42"');
 	});
+
 	test("resolves wasm import paths relative to root", async () => {
 		const resp = await worker.fetch("/wasm-nested");
 		const text = await resp.text();
 		expect(text).toMatchInlineSnapshot('"nested42"');
 	});
+
 	test("wasm can be imported from a dynamic import", async () => {
 		const resp = await worker.fetch("/wasm-dynamic");
 		const text = await resp.text();
 		expect(text).toMatchInlineSnapshot('"sibling42subdirectory42"');
 	});
+
 	test("text data can be imported", async () => {
 		const resp = await worker.fetch("/txt");
 		const text = await resp.text();
 		expect(text).toMatchInlineSnapshot('"TEST DATA"');
 	});
+
 	test("binary data can be imported", async () => {
 		const resp = await worker.fetch("/bin");
 		const bin = await resp.arrayBuffer();
