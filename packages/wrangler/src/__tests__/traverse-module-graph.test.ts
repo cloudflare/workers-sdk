@@ -3,7 +3,7 @@ import path from "path";
 import dedent from "ts-dedent";
 import traverseModuleGraph from "../traverse-module-graph";
 import { runInTempDir } from "./helpers/run-in-tmp";
-import { ConfigModuleRuleType } from "../config";
+import type { ConfigModuleRuleType } from "../config";
 
 /*
  * This file contains inline comments with the word "javascript"
