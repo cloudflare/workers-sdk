@@ -2,7 +2,7 @@ import { URLSearchParams } from "url";
 import TOML from "@iarna/toml";
 import chalk from "chalk";
 import { FormData } from "undici";
-import { fetchResult, fetchScriptContent } from "./cfetch";
+import { fetchResult } from "./cfetch";
 import { readConfig } from "./config";
 import { confirm, prompt } from "./dialogs";
 import { mapBindings } from "./init";
@@ -244,8 +244,7 @@ export async function viewDeployment(
 	accountId: string,
 	scriptName: string | undefined,
 	{ send_metrics: sendMetrics }: { send_metrics?: Config["send_metrics"] } = {},
-	deploymentId: string | undefined,
-	content: boolean
+	deploymentId: string | undefined
 ) {
 	await metrics.sendMetricsEvent(
 		"view deployments",
@@ -273,14 +272,6 @@ export async function viewDeployment(
 		if (deploymentId === undefined) {
 			throw new Error("Cannot find previous deployment");
 		}
-	}
-
-	if (content) {
-		const scriptContent = await fetchScriptContent(
-			`/accounts/${accountId}/workers/scripts/${scriptName}?deployment=${deploymentId}`
-		);
-		logger.log(scriptContent);
-		return;
 	}
 
 	const deploymentDetails = await fetchResult<DeploymentListResult["latest"]>(

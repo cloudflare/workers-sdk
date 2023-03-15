@@ -160,22 +160,6 @@ describe("deployments", () => {
 			"
 		`);
 			});
-			it("should log deployment script", async () => {
-				writeWranglerToml();
-
-				await runWrangler("deployments view 1701-E --content");
-
-				expect(std.out).toMatchInlineSnapshot(`
-			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
-
-
-						export default {
-							async fetch(request) {
-								return new Response('Hello World from Deployment 1701-E');
-							},
-						};"
-		`);
-			});
 
 			it("should log deployment details with bindings", async () => {
 				writeWranglerToml();

@@ -601,17 +601,11 @@ export function createCLIParser(argv: string[]) {
 					"view [deployment-id]",
 					"🔍 View a deployment",
 					async (viewYargs) =>
-						viewYargs
-							.positional("deployment-id", {
-								describe: "The ID of the deployment you want to inspect",
-								type: "string",
-								demandOption: false,
-							})
-							.option("content", {
-								describe: "Show script content for given deployment ID",
-								type: "boolean",
-								default: false,
-							}),
+						viewYargs.positional("deployment-id", {
+							describe: "The ID of the deployment you want to inspect",
+							type: "string",
+							demandOption: false,
+						}),
 					async (viewYargs) => {
 						const { accountId, scriptName, config } =
 							await commonDeploymentCMDSetup(viewYargs, deploymentsWarning);
@@ -620,8 +614,7 @@ export function createCLIParser(argv: string[]) {
 							accountId,
 							scriptName,
 							config,
-							viewYargs.deploymentId,
-							viewYargs.content
+							viewYargs.deploymentId
 						);
 					}
 				)
