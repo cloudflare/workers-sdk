@@ -32,7 +32,7 @@ import {
 	createFetchResult,
 	msw,
 	mswSuccessDeployments,
-	mswSuccessLastDeployment,
+	mswSuccessDeploymentScriptMetadata,
 } from "./helpers/msw";
 import { FileReaderSync } from "./helpers/msw/read-file-sync";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -89,7 +89,7 @@ describe("publish", () => {
 			);
 			writeWorkerSource();
 			mockSubDomainRequest();
-			mockUploadWorkerRequest({ expectedType: "esm", sendScriptIds: true });
+			mockUploadWorkerRequest({ expectedType: "esm" });
 			mockOAuthServerCallback();
 
 			await runWrangler("publish ./index");
@@ -7350,54 +7350,6 @@ export default{
 		});
 	});
 
-	it("should publish if the last deployed source check fails", async () => {
-		writeWorkerSource();
-		writeWranglerToml();
-		mockSubDomainRequest();
-		mockUploadWorkerRequest();
-		msw.use(
-			rest.get(
-				"*/accounts/:accountId/workers/deployments/by-script/:scriptTag",
-				(_, res, ctx) => {
-					return res(
-						ctx.json(
-							createFetchResult({
-								latest: { number: "2" },
-							})
-						)
-					);
-				}
-			),
-			rest.get(
-				"*/accounts/:accountId/workers/services/:scriptName",
-				(_, res, ctx) => {
-					return res(
-						ctx.json(
-							createFetchResult(null, false, [
-								{ code: 10090, message: "workers.api.error.service_not_found" },
-							])
-						)
-					);
-				}
-			)
-		);
-
-		await runWrangler("publish index.js");
-		expect(std).toMatchInlineSnapshot(`
-		Object {
-		  "debug": "",
-		  "err": "",
-		  "info": "",
-		  "out": "Total Upload: xx KiB / gzip: xx KiB
-		Uploaded test-name (TIMINGS)
-		Published test-name (TIMINGS)
-		  https://test-name.test-sub-domain.workers.dev
-		Current Deployment ID: undefined",
-		  "warn": "",
-		}
-	`);
-	});
-
 	it("should not publish if there's any other kind of error when checking deployment source", async () => {
 		writeWorkerSource();
 		writeWranglerToml();
@@ -7760,7 +7712,7 @@ function mockDeploymentsListRequest() {
 }
 
 function mockLastDeploymentRequest() {
-	msw.use(...mswSuccessLastDeployment);
+	msw.use(...mswSuccessDeploymentScriptMetadata);
 }
 
 /** Create a mock handler for the request to upload a worker script. */
@@ -7778,7 +7730,6 @@ function mockUploadWorkerRequest(
 		expectedUnsafeMetaData?: Record<string, string>;
 		env?: string;
 		legacyEnv?: boolean;
-		sendScriptIds?: boolean;
 		keepVars?: boolean;
 		tag?: string;
 	} = {}
@@ -7796,7 +7747,6 @@ function mockUploadWorkerRequest(
 		legacyEnv = false,
 		expectedMigrations,
 		expectedUnsafeMetaData,
-		sendScriptIds,
 		keepVars,
 	} = options;
 	if (env && !legacyEnv) {
@@ -7878,12 +7828,11 @@ function mockUploadWorkerRequest(
 			ctx.json(
 				createFetchResult({
 					available_on_subdomain,
-					...(sendScriptIds && {
-						id: "abc12345",
-						etag: "etag98765",
-						pipeline_hash: "hash9999",
-						tag: "sample-tag",
-					}),
+					id: "abc12345",
+					etag: "etag98765",
+					pipeline_hash: "hash9999",
+					tag: "sample-tag",
+					deployment_id: "Galaxy-Class",
 				})
 			)
 		);
