@@ -31,7 +31,7 @@
 			{
 				"label": "Cloudflare Dark",
 				"uiTheme": "vs-dark",
-				"path": "./themes/cloudflare-color-theme.json"
+				"path": "./themes/cloudflare-dark-color-theme.json"
 			},
 			{
 				"label": "Cloudflare Light",
