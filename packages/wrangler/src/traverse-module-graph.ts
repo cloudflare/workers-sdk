@@ -25,9 +25,8 @@ export default async function traverseModuleGraph(
 ): Promise<BundleResult> {
 	const files = await getFiles(entry.moduleRoot);
 
-	const parsedRules = parseRules(rules);
 	const modules = (
-		await matchFiles(files, parsedRules.rules, parsedRules.rulesToRemove)
+		await matchFiles(files, parseRules(rules)
 	)
 		.filter((m) => m.name !== entry.file)
 		.map((m) => ({

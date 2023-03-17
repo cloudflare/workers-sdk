@@ -81,13 +81,15 @@ export function parseRules(userRules: Config["rules"] = []) {
 	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 	rulesToRemove.forEach((rule) => rules!.splice(rules!.indexOf(rule), 1));
 
-	return { rules, rulesToRemove };
+	return { rules, removedRules: rulesToRemove };
 }
 
 export async function matchFiles(
 	files: string[],
-	rules: Config["rules"],
-	rulesToRemove: Config["rules"]
+	{
+		rules,
+		removedRules,
+	}: { rules: Config["rules"]; removedRules: Config["rules"] }
 ) {
 	const modules: CfModule[] = [];
 	for (const rule of rules) {
@@ -111,7 +113,9 @@ export async function matchFiles(
 			);
 		}
 	}
-	for (const rule of rulesToRemove) {
+
+	// This is just a sanity check verifiying that no files match rules that were removed
+	for (const rule of removedRules) {
 		for (const glob of rule.globs) {
 			const regexp = globToRegExp(glob);
 			for (const file of files) {
@@ -142,7 +146,7 @@ export default function createModuleCollector(props: {
 	modules: CfModule[];
 	plugin: esbuild.Plugin;
 } {
-	const { rules, rulesToRemove } = parseRules(props.rules);
+	const { rules, removedRules } = parseRules(props.rules);
 
 	const modules: CfModule[] = [];
 	return {
@@ -290,7 +294,7 @@ export default function createModuleCollector(props: {
 					});
 				});
 
-				rulesToRemove.forEach((rule) => {
+				removedRules.forEach((rule) => {
 					rule.globs.forEach((glob) => {
 						build.onResolve(
 							{ filter: globToRegExp(glob) },

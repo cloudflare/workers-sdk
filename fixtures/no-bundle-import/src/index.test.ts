@@ -42,9 +42,7 @@ describe("Worker", () => {
 	test("correct response for CommonJS which imports ESM", async () => {
 		const resp = await worker.fetch("/cjs-loop");
 		const text = await resp.text();
-		expect(text).toMatchInlineSnapshot(
-			'"CJS: cjs-string"'
-		);
+		expect(text).toMatchInlineSnapshot('"CJS: cjs-string"');
 	});
 
 	test("support for dynamic imports", async () => {
