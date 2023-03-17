@@ -97,6 +97,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		data_blobs,
 		durable_objects,
 		kv_namespaces,
+		send_email,
 		queues,
 		d1_databases,
 		r2_buckets,
@@ -152,6 +153,23 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 					value: id,
 				};
 			}),
+		});
+	}
+
+	if (send_email !== undefined && send_email.length > 0) {
+		output.push({
+			type: "Send Email",
+			entries: send_email.map(
+				({ name, destination_address, allowed_destination_addresses }) => {
+					return {
+						key: name,
+						value:
+							destination_address ||
+							allowed_destination_addresses?.join(", ") ||
+							"unrestricted",
+					};
+				}
+			),
 		});
 	}
 

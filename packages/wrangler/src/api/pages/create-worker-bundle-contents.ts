@@ -49,6 +49,7 @@ function createWorkerBundleFormData(workerBundle: BundleResult): FormData {
 		bindings: {
 			vars: undefined,
 			kv_namespaces: undefined,
+			send_email: undefined,
 			wasm_modules: undefined,
 			text_blobs: undefined,
 			data_blobs: undefined,

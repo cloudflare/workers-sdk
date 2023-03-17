@@ -541,6 +541,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					? { binding: "__STATIC_CONTENT", id: assets.namespace }
 					: []
 			),
+			send_email: config.send_email,
 			vars: { ...config.vars, ...props.vars },
 			wasm_modules: config.wasm_modules,
 			text_blobs: {

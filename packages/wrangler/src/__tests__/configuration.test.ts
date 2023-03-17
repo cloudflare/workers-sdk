@@ -40,6 +40,7 @@ describe("normalizeAndValidateConfig()", () => {
 			jsx_fragment: "React.Fragment",
 			tsconfig: undefined,
 			kv_namespaces: [],
+			send_email: [],
 			legacy_env: true,
 			logfwdr: {
 				bindings: [],
@@ -903,6 +904,17 @@ describe("normalizeAndValidateConfig()", () => {
 						preview_id: "KV_PREVIEW_1",
 					},
 				],
+				send_email: [
+					{ name: "SEB_TARGET", destination_address: "teste@example.com" },
+					{ name: "SEB_UNRESTRICTED" },
+					{
+						name: "SEB_ALLOWLIST",
+						allowed_destination_addresses: [
+							"email1@example.com",
+							"email2@example.com",
+						],
+					},
+				],
 				r2_buckets: [
 					{ binding: "R2_BINDING_1", bucket_name: "R2_BUCKET_1" },
 					{
@@ -1627,6 +1639,39 @@ describe("normalizeAndValidateConfig()", () => {
 			            - \\"kv_namespaces[4]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":\\"VALID\\",\\"id\\":\\"\\"}."
 		        `);
 			});
+		});
+
+		it("should error if send_email.bindings are not valid", () => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				{
+					send_email: [
+						{},
+						{ binding: "VALID" },
+						{ name: "SEB", destination_address: 123 },
+						{
+							name: "SEB2",
+							allowed_destination_addresses: 123,
+						},
+						{
+							name: "SEB3",
+							destination_address: "email@example.com",
+							allowed_destination_addresses: ["email@example.com"],
+						},
+					],
+				} as unknown as RawConfig,
+				undefined,
+				{ env: undefined }
+			);
+
+			expect(diagnostics.hasWarnings()).toBe(false);
+			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			          "Processing wrangler configuration:
+			            - \\"send_email[0]\\" bindings should have a string \\"name\\" field but got {}.
+			            - \\"send_email[1]\\" bindings should have a string \\"name\\" field but got {\\"binding\\":\\"VALID\\"}.
+			            - \\"send_email[2]\\" bindings should, optionally, have a string \\"destination_address\\" field but got {\\"name\\":\\"SEB\\",\\"destination_address\\":123}.
+			            - \\"send_email[3]\\" bindings should, optionally, have a []string \\"allowed_destination_addresses\\" field but got {\\"name\\":\\"SEB2\\",\\"allowed_destination_addresses\\":123}.
+			            - \\"send_email[4]\\" bindings should have either a \\"destination_address\\" or \\"allowed_destination_addresses\\" field, but not both."
+		        `);
 		});
 
 		describe("[d1_databases]", () => {
