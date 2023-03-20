@@ -1,0 +1,21 @@
+{
+  "name": "asdf",
+  "displayName": "",
+  "description": "adf",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.76.0"
+  },
+  "categories": [
+    "Themes"
+  ],
+  "contributes": {
+    "themes": [
+      {
+        "label": "adf",
+        "uiTheme": "vs",
+        "path": "./themes/adf-color-theme.json"
+      }
+    ]
+  }
+}
