@@ -2,14 +2,16 @@
 "wrangler": minor
 ---
 
-feature: add `wrangler deployment view` and `wrangler rollback` subcommands
+feature: add `wrangler deployments view` and `wrangler rollback` subcommands
 
-`wrangler deployment view [deployment-id]` will get the details of a deployment, including bindings and usage model information. When using the `--content` option, the command will return the script content for that deployment.
-This information can be used to help debug bad deployments or get insights on changes between deployments.
+`wrangler deployments view [deployment-id]` will get the details of a deployment, including bindings and usage model information.
+This information can be used to help debug bad deployments.
 
 `wrangler rollback [deployment-id]` will rollback to a specific deployment in the runtime. This will be useful in situations like recovering from a bad
 deployment quickly while resolving issues. If a deployment id is not specified wrangler will rollback to the previous deployment. This rollback only changes the code in the runtime and doesn't affect any code or configurations
 in a developer's local setup.
+
+`wrangler deployments list` will list the 10 most recent deployments. This command originally existed as `wrangler deployments`
 
 example of `view <deployment-id>` output:
 
