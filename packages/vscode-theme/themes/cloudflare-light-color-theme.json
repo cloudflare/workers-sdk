@@ -2,7 +2,7 @@
 	"name": "Cloudflare Light",
 	"colors": {
 		"editor.background": "#f3f3f4",
-		"editor.foreground": "#333333",
+		"editor.foreground": "#2C3E50",
 		"list.activeSelectionIconForeground": "#fff",
 		"sideBar.background": "#f3f3f4"
 	},
@@ -11,7 +11,7 @@
 			"name": "Colors",
 			"scope": ["constant.other.color"],
 			"settings": {
-				"foreground": "#ffffff"
+				"foreground": "#2C3E50"
 			}
 		},
 		{
@@ -27,10 +27,18 @@
 			}
 		},
 		{
+			"name": "TypeScript Types",
+			"scope": ["support.type", "meta.type.annotation"],
+			"settings": {
+				"foreground": "#008080"
+			}
+		},
+		{
 			"name": "Variables",
 			"scope": [
 				"variable",
 				"string constant.other.placeholder",
+				"variable.other",
 				"variable.other.object",
 				"variable.other.readwrite",
 				"variable.other.object",
@@ -77,7 +85,7 @@
 				"keyword.other.substitution"
 			],
 			"settings": {
-				"foreground": "#89DDFF"
+				"foreground": "#008080"
 			}
 		},
 		{
@@ -123,21 +131,21 @@
 				"keyword.other"
 			],
 			"settings": {
-				"foreground": "#7b99ea"
+				"foreground": "#00268f"
 			}
 		},
 		{
 			"name": "Number, Constant, Function Argument, Tag Attribute, Embedded",
 			"scope": ["variable.other.readwrite"],
 			"settings": {
-				"foreground": "#00268f"
+				"foreground": "#8f1500"
 			}
 		},
 		{
 			"name": "Number, Constant, Function Argument, Tag Attribute, Embedded",
 			"scope": ["constant.language", "meta.var.expr"],
 			"settings": {
-				"foreground": "#8f1500"
+				"foreground": "#32008f"
 			}
 		},
 		{
