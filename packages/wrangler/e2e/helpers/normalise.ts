@@ -15,6 +15,7 @@ export function normalizeOutput(
 		stripTimings,
 		removeVersionHeader,
 		stripAnsi,
+		removeTimestamp,
 	];
 	for (const f of functions) {
 		stdout = f(stdout);
@@ -31,6 +32,10 @@ function removeWorkersDev(str: string) {
 		/https:\/\/(.+?)\..+?\.workers\.dev/g,
 		"https://$1.SUBDOMAIN.workers.dev"
 	);
+}
+
+function removeTimestamp(str: string) {
+	return str.replace(/\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d\.\d+?Z/g, "TIMESTAMP");
 }
 function removeUUID(str: string) {
 	return str.replace(
