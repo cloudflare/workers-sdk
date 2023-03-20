@@ -1,5 +1,77 @@
 # wrangler
 
+## 2.13.0
+
+### Minor Changes
+
+- [#2905](https://github.com/cloudflare/workers-sdk/pull/2905) [`6fd06241`](https://github.com/cloudflare/workers-sdk/commit/6fd062419c6b66c2c5beb7c45ec84a32dfa89e01) Thanks [@edevil](https://github.com/edevil)! - feat: support external imports from `cloudflare:...` prefixed modules
+
+  Going forward Workers will be providing built-in modules (similar to `node:...`) that can be imported using the `cloudflare:...` prefix. This change adds support to the Wrangler bundler to mark these imports as external.
+
+* [#2607](https://github.com/cloudflare/workers-sdk/pull/2607) [`163dccf4`](https://github.com/cloudflare/workers-sdk/commit/163dccf41453e1790fe8e5231d8c1cb8b6ef5a18) Thanks [@jspspike@gmail.com](https://github.com/jspspike@gmail.com)! - feature: add `wrangler deployment view` and `wrangler rollback` subcommands
+
+  `wrangler deployment view [deployment-id]` will get the details of a deployment, including bindings and usage model information. When using the `--content` option, the command will return the script content for that deployment.
+  This information can be used to help debug bad deployments or get insights on changes between deployments.
+
+  `wrangler rollback [deployment-id]` will rollback to a specific deployment in the runtime. This will be useful in situations like recovering from a bad
+  deployment quickly while resolving issues. If a deployment id is not specified wrangler will rollback to the previous deployment. This rollback only changes the code in the runtime and doesn't affect any code or configurations
+  in a developer's local setup.
+
+  example of `view <deployment-id>` output:
+
+  ```ts
+  Deployment ID: 07d7143d-0284-427e-ba22-2d5e6e91b479
+  Created on:    2023-03-02T21:05:15.622446Z
+
+  Source:        Upload from Wrangler 🤠
+  ------------------------------------------------------------
+  Author ID:          e5a3ca86e08fb0940d3a05691310bb42
+  Usage Model:        bundled
+  Handlers:           fetch
+  Compatibility Date: 2022-10-03
+  --------------------------bindings--------------------------
+  [[r2_buckets]]
+  binding = "MY_BUCKET"
+  bucket_name = "testr2"
+
+  [[kv_namespaces]]
+  id = "79300c6d17eb4180a07270f450efe53f"
+  binding = "yeee"
+  ```
+
+- [#2859](https://github.com/cloudflare/workers-sdk/pull/2859) [`ace46939`](https://github.com/cloudflare/workers-sdk/commit/ace46939ebfe43a446cac2f55c31a41fe3abb128) Thanks [@jbwcloudflare](https://github.com/jbwcloudflare)! - feature: add support for Queue Consumer concurrency
+
+  Consumer concurrency allows a consumer Worker processing messages from a queue to automatically scale out horizontally in order to keep up with the rate that messages are being written to a queue.
+  The new `max_concurrency` setting can be used to limit the maximum number of concurrent consumer Worker invocations.
+
+### Patch Changes
+
+- [#2838](https://github.com/cloudflare/workers-sdk/pull/2838) [`9fa6b167`](https://github.com/cloudflare/workers-sdk/commit/9fa6b16770586767324bbaa1ecccc587b7a19a77) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: display cause when local D1 migrations fail to apply
+
+  Previously, if `wrangler d1 migrations apply --local` failed, you'd see something like:
+
+  ```
+  ❌ Migration 0000_migration.sql failed with following Errors
+  ┌──────────┐
+  │ Error    │
+  ├──────────┤
+  │ D1_ERROR │
+  └──────────┘
+  ```
+
+  We'll now show the SQLite error that caused the failure:
+
+  ```
+  ❌ Migration 0000_migration.sql failed with following Errors
+  ┌───────────────────────────────────────────────┐
+  │ Error                                         │
+  ├───────────────────────────────────────────────┤
+  │ Error: SqliteError: unknown database "public" │
+  └───────────────────────────────────────────────┘
+  ```
+
+* [#2902](https://github.com/cloudflare/workers-sdk/pull/2902) [`9996ac44`](https://github.com/cloudflare/workers-sdk/commit/9996ac44857ef9b4dd9fe545fcd9dbf7af3ecaf5) Thanks [@jspspike](https://github.com/jspspike)! - Fix issue with `keep_vars` having no effect in wrangler.toml
+
 ## 2.12.3
 
 ### Patch Changes
