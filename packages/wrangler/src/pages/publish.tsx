@@ -71,6 +71,11 @@ export function Options(yargs: CommonYargsArgv) {
 				type: "string",
 				hidden: true,
 			},
+			json: {
+				describe: "output clean JSON on stdout",
+				type: "boolean",
+				default: false,
+			},
 		})
 		.epilogue(pagesBetaWarning);
 }
@@ -86,7 +91,10 @@ export const Handler = async ({
 	bundle,
 	noBundle,
 	config: wranglerConfig,
+	json,
 }: PublishArgs) => {
+	if (json) logger.disableStdOut();
+
 	if (wranglerConfig) {
 		throw new FatalError("Pages does not support wrangler.toml", 1);
 	}
@@ -263,5 +271,10 @@ export const Handler = async ({
 	logger.log(
 		`✨ Deployment complete! Take a peek over at ${deploymentResponse.url}`
 	);
+
+	if (json) {
+		console.log(JSON.stringify({ url: deploymentResponse.url }, null, 2));
+	}
+
 	await metrics.sendMetricsEvent("create pages deployment");
 };

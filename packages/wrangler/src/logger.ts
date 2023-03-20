@@ -37,6 +37,14 @@ class Logger {
 	loggerLevel: LoggerLevel = (getLogLevelFromEnv() as LoggerLevel) ?? "log";
 	columns = process.stdout.columns;
 
+	disableStdOut() {
+		this.stdOutDisabled = true;
+	}
+
+	enableStdOut() {
+		this.stdOutDisabled = false;
+	}
+
 	debug = (...args: unknown[]) => this.doLog("debug", args);
 	info = (...args: unknown[]) => this.doLog("info", args);
 	log = (...args: unknown[]) => this.doLog("log", args);
@@ -52,8 +60,17 @@ class Logger {
 		return this.doLog("log", [t.toString()]);
 	}
 
+	private stdOutDisabled = false;
+
 	private doLog(messageLevel: Exclude<LoggerLevel, "none">, args: unknown[]) {
 		if (LOGGER_LEVELS[this.loggerLevel] >= LOGGER_LEVELS[messageLevel]) {
+			if (
+				this.stdOutDisabled &&
+				LOGGER_LEVELS[messageLevel] <= LOGGER_LEVELS.log
+			) {
+				// switch to warn which is stderr
+				messageLevel = "warn";
+			}
 			console[messageLevel](this.formatMessage(messageLevel, format(...args)));
 		}
 	}
