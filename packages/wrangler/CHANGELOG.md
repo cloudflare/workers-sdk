@@ -10,34 +10,36 @@
 
 * [#2607](https://github.com/cloudflare/workers-sdk/pull/2607) [`163dccf4`](https://github.com/cloudflare/workers-sdk/commit/163dccf41453e1790fe8e5231d8c1cb8b6ef5a18) Thanks [@jspspike@gmail.com](https://github.com/jspspike@gmail.com)! - feature: add `wrangler deployment view` and `wrangler rollback` subcommands
 
-  `wrangler deployment view [deployment-id]` will get the details of a deployment, including bindings and usage model information. When using the `--content` option, the command will return the script content for that deployment.
-  This information can be used to help debug bad deployments or get insights on changes between deployments.
+`wrangler deployments view [deployment-id]` will get the details of a deployment, including bindings and usage model information.
+This information can be used to help debug bad deployments.
 
-  `wrangler rollback [deployment-id]` will rollback to a specific deployment in the runtime. This will be useful in situations like recovering from a bad
-  deployment quickly while resolving issues. If a deployment id is not specified wrangler will rollback to the previous deployment. This rollback only changes the code in the runtime and doesn't affect any code or configurations
-  in a developer's local setup.
+`wrangler rollback [deployment-id]` will rollback to a specific deployment in the runtime. This will be useful in situations like recovering from a bad
+deployment quickly while resolving issues. If a deployment id is not specified wrangler will rollback to the previous deployment. This rollback only changes the code in the runtime and doesn't affect any code or configurations
+in a developer's local setup.
 
-  example of `view <deployment-id>` output:
+`wrangler deployments list` will list the 10 most recent deployments. This command originally existed as `wrangler deployments`
 
-  ```ts
-  Deployment ID: 07d7143d-0284-427e-ba22-2d5e6e91b479
-  Created on:    2023-03-02T21:05:15.622446Z
+example of `view <deployment-id>` output:
 
-  Source:        Upload from Wrangler 🤠
-  ------------------------------------------------------------
-  Author ID:          e5a3ca86e08fb0940d3a05691310bb42
-  Usage Model:        bundled
-  Handlers:           fetch
-  Compatibility Date: 2022-10-03
-  --------------------------bindings--------------------------
-  [[r2_buckets]]
-  binding = "MY_BUCKET"
-  bucket_name = "testr2"
+```ts
+Deployment ID: 07d7143d-0284-427e-ba22-2d5e6e91b479
+Created on:    2023-03-02T21:05:15.622446Z
+Author:        jspspike@gmail.com
+Source:        Upload from Wrangler 🤠
+------------------------------------------------------------
+Author ID:          e5a3ca86e08fb0940d3a05691310bb42
+Usage Model:        bundled
+Handlers:           fetch
+Compatibility Date: 2022-10-03
+--------------------------bindings--------------------------
+[[r2_buckets]]
+binding = "MY_BUCKET"
+bucket_name = "testr2"
 
-  [[kv_namespaces]]
-  id = "79300c6d17eb4180a07270f450efe53f"
-  binding = "yeee"
-  ```
+[[kv_namespaces]]
+id = "79300c6d17eb4180a07270f450efe53f"
+binding = "yeee"
+```
 
 - [#2859](https://github.com/cloudflare/workers-sdk/pull/2859) [`ace46939`](https://github.com/cloudflare/workers-sdk/commit/ace46939ebfe43a446cac2f55c31a41fe3abb128) Thanks [@jbwcloudflare](https://github.com/jbwcloudflare)! - feature: add support for Queue Consumer concurrency
 
