@@ -188,6 +188,7 @@ export const Handler = async ({
 	nodeCompat: legacyNodeCompat,
 	experimentalLocal,
 	config: config,
+	env: env,
 	_: [_pages, _dev, ...remaining],
 	logLevel,
 }: StrictYargsOptionsToInterface<typeof Options>) => {
@@ -498,6 +499,7 @@ export const Handler = async ({
 	}
 
 	const { stop, waitUntilExit } = await unstable_dev(entrypoint, {
+		env,
 		ip,
 		port,
 		inspectorPort,
