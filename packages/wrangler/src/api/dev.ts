@@ -143,7 +143,6 @@ export async function unstable_dev(
 					enablePagesAssetsServiceBinding,
 					liveReload,
 					showInteractiveDevSession,
-					forceLocal,
 					onReady: (address, port) => {
 						readyPort = port;
 						readyAddress = address;
@@ -232,6 +231,7 @@ export async function unstable_dev(
 					experimentalLocal: experimentalLocal ?? false,
 					experimentalLocalRemoteKv: experimentalLocalRemoteKv ?? false,
 					enablePagesAssetsServiceBinding,
+					forceLocal,
 					liveReload,
 					onReady: (address, port) => {
 						readyPort = port;
