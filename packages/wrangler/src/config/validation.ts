@@ -133,7 +133,10 @@ export function normalizeAndValidateConfig(
 	const envName = (args as { env: string | undefined }).env;
 
 	let activeEnv = topLevelEnv;
-	if (envName !== undefined) {
+
+	// When running `pages dev` there is no toml file (configPath) so we can skip these checks which validate
+	// the environment being defined in the toml file.
+	if (configPath !== undefined && envName !== undefined) {
 		const envDiagnostics = new Diagnostics(
 			`"env.${envName}" environment configuration`
 		);
