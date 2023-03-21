@@ -1,8 +1,8 @@
 {
-	"name": "cloudflare-theme",
-	"displayName": "Cloudflare Theme",
+	"name": "solarflare-theme",
+	"displayName": "Solarflare Theme",
 	"version": "0.0.1",
-	"description": "The official vscode theme extension for Cloudflare.",
+	"description": "The official VSCode theme extension for Cloudflare.",
 	"categories": [
 		"Themes"
 	],
@@ -29,12 +29,12 @@
 	"contributes": {
 		"themes": [
 			{
-				"label": "Cloudflare Dark",
+				"label": "Solarflare Dark",
 				"uiTheme": "vs-dark",
 				"path": "./themes/cloudflare-dark-color-theme.json"
 			},
 			{
-				"label": "Cloudflare Light",
+				"label": "Solarflare Light",
 				"uiTheme": "vs",
 				"path": "./themes/cloudflare-light-color-theme.json"
 			}

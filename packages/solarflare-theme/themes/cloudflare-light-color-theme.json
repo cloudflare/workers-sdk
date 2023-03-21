@@ -4,12 +4,12 @@
 		"editor.background": "#f3f3f4",
 		"editor.foreground": "#2C3E50",
 		"list.activeSelectionIconForeground": "#fff",
-		"sideBar.background": "#f3f3f4"
+		"sideBar.background": "#D8D8DA"
 	},
 	"tokenColors": [
 		{
 			"name": "Colors",
-			"scope": ["constant.other.color"],
+			"scope": ["constant.other.color", "support.variable"],
 			"settings": {
 				"foreground": "#2C3E50"
 			}
@@ -36,7 +36,6 @@
 		{
 			"name": "Variables",
 			"scope": [
-				"variable",
 				"string constant.other.placeholder",
 				"variable.other",
 				"variable.other.object",
@@ -434,7 +433,7 @@
 				"punctuation.definition.list_item.markdown"
 			],
 			"settings": {
-				"foreground": "#EEFFFF"
+				"foreground": "#2C3E50"
 			}
 		},
 		{
@@ -567,7 +566,7 @@
 				"punctuation.section.class.end"
 			],
 			"settings": {
-				"foreground": "#EEFFFF"
+				"foreground": "#2C3E50"
 			}
 		},
 		{
@@ -589,7 +588,7 @@
 			"name": "Markup - Table",
 			"scope": ["markup.table"],
 			"settings": {
-				"foreground": "#EEFFFF"
+				"foreground": "#2C3E50"
 			}
 		}
 	]
