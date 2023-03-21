@@ -133,7 +133,6 @@ export function normalizeAndValidateConfig(
 	const envName = (args as { env: string | undefined }).env;
 
 	let activeEnv = topLevelEnv;
-
 	if (envName !== undefined) {
 		const envDiagnostics = new Diagnostics(
 			`"env.${envName}" environment configuration`
