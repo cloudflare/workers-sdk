@@ -1,0 +1,22 @@
+{
+	"$schema": "http://turbo.build/schema.json",
+	"pipeline": {
+		"dev": {},
+		"build": {
+			"dependsOn": ["^build"],
+			"outputs": ["miniflare-dist/**", "emitted-types/**", "wrangler-dist/**"]
+		},
+		"test": {
+			"dependsOn": ["^test", "^miniflare/tre"]
+		},
+		"@cloudflare/prerelease-registry#build": {
+			"dependsOn": ["wrangler#build"]
+		},
+		"@cloudflare/pages-shared#build": {
+			"dependsOn": ["wrangler#build"]
+		},
+		"pages-plugin-example#build": {
+			"dependsOn": ["wrangler#build"]
+		}
+	}
+}

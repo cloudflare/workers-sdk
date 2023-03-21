@@ -11,8 +11,7 @@
 	"author": "wrangler@cloudflare.com",
 	"workspaces": [
 		"packages/*",
-		"fixtures/*",
-		"templates/*"
+		"fixtures/*"
 	],
 	"scripts": {
 		"build": "npm run build --workspace=wrangler --workspace=jest-environment-wrangler --workspace=pages-plugin-example --workspace=wranglerjs-compat-webpack-plugin",
@@ -55,7 +54,8 @@
 		"eslint-plugin-react": "^7.32.2",
 		"eslint-plugin-react-hooks": "^4.6.0",
 		"eslint-plugin-unused-imports": "^2.0.0",
-		"patch-package": "^6.5.1"
+		"patch-package": "^6.5.1",
+		"turbo": "^1.8.4"
 	},
 	"engines": {
 		"node": ">=16.13.0"
