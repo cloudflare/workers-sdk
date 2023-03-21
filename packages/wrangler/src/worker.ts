@@ -80,6 +80,15 @@ export interface CfKvNamespace {
 }
 
 /**
+ * A binding to send email.
+ */
+export interface CfSendEmailBindings {
+	name: string;
+	destination_address?: string;
+	allowed_destination_addresses?: string[];
+}
+
+/**
  * A binding to a wasm module (in service-worker format)
  */
 
@@ -216,6 +225,7 @@ export interface CfWorkerInit {
 	bindings: {
 		vars: CfVars | undefined;
 		kv_namespaces: CfKvNamespace[] | undefined;
+		send_email: CfSendEmailBindings[] | undefined;
 		wasm_modules: CfWasmModuleBindings | undefined;
 		text_blobs: CfTextBlobBindings | undefined;
 		data_blobs: CfDataBlobBindings | undefined;

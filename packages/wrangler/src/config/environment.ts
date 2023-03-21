@@ -340,6 +340,24 @@ interface EnvironmentNonInheritable {
 	}[];
 
 	/**
+	 * These specify bindings to send email from inside your Worker.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default `[]`
+	 * @nonInheritable
+	 */
+	send_email: {
+		/** The binding name used to refer to the this binding */
+		name: string;
+		/** If this binding should be restricted to a specific verified address */
+		destination_address?: string;
+		/** If this binding should be restricted to a set of verified addresses */
+		allowed_destination_addresses?: string[];
+	}[];
+
+	/**
 	 * Specifies Queues that are bound to this Worker environment.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
