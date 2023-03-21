@@ -134,9 +134,7 @@ export function normalizeAndValidateConfig(
 
 	let activeEnv = topLevelEnv;
 
-	// When running `pages dev` there is no toml file (configPath) so we can skip these checks which validate
-	// the environment being defined in the toml file.
-	if (configPath !== undefined && envName !== undefined) {
+	if (envName !== undefined) {
 		const envDiagnostics = new Diagnostics(
 			`"env.${envName}" environment configuration`
 		);
@@ -165,25 +163,32 @@ export function normalizeAndValidateConfig(
 				isLegacyEnv,
 				rawConfig
 			);
-			const envNames = rawConfig.env
-				? `The available configured environment names are: ${JSON.stringify(
-						Object.keys(rawConfig.env)
-				  )}\n`
-				: "";
-			const message =
-				`No environment found in configuration with name "${envName}".\n` +
-				`Before using \`--env=${envName}\` there should be an equivalent environment section in the configuration.\n` +
-				`${envNames}\n` +
-				`Consider adding an environment configuration section to the wrangler.toml file:\n` +
-				"```\n[env." +
-				envName +
-				"]\n```\n";
 
-			if (envNames.length > 0) {
-				diagnostics.errors.push(message);
-			} else {
-				// Only warn (rather than error) if there are not actually any environments configured in wrangler.toml.
-				diagnostics.warnings.push(message);
+			// When running `pages dev` there is no toml file (configPath) so we don't warn the user about
+			// missing envs in the toml file
+			const shouldWarnAboutEnvsInConfig = configPath !== undefined;
+
+			if (shouldWarnAboutEnvsInConfig) {
+				const envNames = rawConfig.env
+					? `The available configured environment names are: ${JSON.stringify(
+							Object.keys(rawConfig.env)
+					  )}\n`
+					: "";
+				const message =
+					`No environment found in configuration with name "${envName}".\n` +
+					`Before using \`--env=${envName}\` there should be an equivalent environment section in the configuration.\n` +
+					`${envNames}\n` +
+					`Consider adding an environment configuration section to the wrangler.toml file:\n` +
+					"```\n[env." +
+					envName +
+					"]\n```\n";
+
+				if (envNames.length > 0) {
+					diagnostics.errors.push(message);
+				} else {
+					// Only warn (rather than error) if there are not actually any environments configured in wrangler.toml.
+					diagnostics.warnings.push(message);
+				}
 			}
 		}
 	}
