@@ -1,17 +1,16 @@
 import { getAssetFromKV } from '@cloudflare/kv-asset-handler';
 
-addEventListener('fetch', event => {
-	event.respondWith(handleEvent(event));
-});
-
-async function handleEvent(event) {
-	try {
-		return await getAssetFromKV(event);
-	} catch (e) {
-		let pathname = new URL(event.request.url).pathname;
-		return new Response(`"${pathname}" not found`, {
-			status: 404,
-			statusText: 'not found',
-		});
-	}
-}
+// eslint-disable-next-line import/no-anonymous-default-export
+export default {
+	async fetch(request) {
+		try {
+			return await getAssetFromKV(request);
+		} catch (e) {
+			let pathname = new URL(request.url).pathname;
+			return new Response(`"${pathname}" not found`, {
+				status: 404,
+				statusText: 'not found',
+			});
+		}
+	},
+};

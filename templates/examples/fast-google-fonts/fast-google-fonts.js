@@ -4,36 +4,38 @@
  * for navigational requests and the fallback is to just pass the request through
  * unmodified (safe).
  */
-addEventListener("fetch", (event) => {
-	// Fail-safe in case of an unhandled exception
-	event.passThroughOnException();
-	if (event.request.method === "GET") {
-		const url = new URL(event.request.url);
-		const accept = event.request.headers.get("Accept");
-		if (url.pathname.startsWith("/fonts.gstatic.com/")) {
-			// Pass the font requests through to the origin font server
-			// (through the underlying request cache).
-			event.respondWith(
-				proxyRequest("https:/" + url.pathname + url.search, event.request)
-			);
-		} else if (
-			accept &&
-			(accept.indexOf("text/html") >= 0 || accept.indexOf("text/css") >= 0)
-		) {
-			// The only interesting (non-proxied) requests are for HTML and CSS.
-			// All of the major browsers advertise they are requesting HTML or CSS in the accept header.
-			// For any browsers that don't (curl, etc), they will just fall-back to non-accelerated.
-			if (url.pathname.startsWith("/fonts.googleapis.com/")) {
-				// Proxy the stylesheet for pages using CSP
-				event.respondWith(
-					proxyStylesheet("https:/" + url.pathname + url.search, event.request)
+export default {
+	async fetch(request, env, ctx) {
+		// Fail-safe in case of an unhandled exception
+		ctx.passThroughOnException();
+		if (request.method === "GET") {
+			const url = new URL(request.url);
+			const accept = request.headers.get("Accept");
+			if (url.pathname.startsWith("/fonts.gstatic.com/")) {
+				// Pass the font requests through to the origin font server
+				// (through the underlying request cache).
+				ctx.respondWith(
+					proxyRequest("https:/" + url.pathname + url.search, request)
 				);
-			} else {
-				event.respondWith(processRequest(event.request, event));
+			} else if (
+				accept &&
+				(accept.indexOf("text/html") >= 0 || accept.indexOf("text/css") >= 0)
+			) {
+				// The only interesting (non-proxied) requests are for HTML and CSS.
+				// All of the major browsers advertise they are requesting HTML or CSS in the accept header.
+				// For any browsers that don't (curl, etc), they will just fall-back to non-accelerated.
+				if (url.pathname.startsWith("/fonts.googleapis.com/")) {
+					// Proxy the stylesheet for pages using CSP
+					ctx.respondWith(
+						proxyStylesheet("https:/" + url.pathname + url.search, request)
+					);
+				} else {
+					ctx.respondWith(processRequest(request));
+				}
 			}
 		}
-	}
-});
+	},
+};
 
 // Workers can only decode utf-8 so keep a list of character encodings that can be decoded.
 const VALID_CHARSETS = ["utf-8", "utf8", "iso-8859-1", "us-ascii"];
@@ -133,16 +135,15 @@ async function proxyStylesheet(url, request) {
  * Handle all non-proxied requests. Send HTML or CSS on for further processing
  * and pass everything else through unmodified.
  * @param {*} request - Original request
- * @param {*} event - Original worker event
  */
-async function processRequest(request, event) {
+async function processRequest(request) {
 	const response = await fetch(request);
 	if (response && response.status === 200) {
 		const contentType = response.headers.get("content-type");
 		if (contentType && contentType.indexOf("text/html") !== -1) {
-			return await processHtmlResponse(response, event.request, event);
+			return await processHtmlResponse(response, request);
 		} else if (contentType && contentType.indexOf("text/css") !== -1) {
-			return await processStylesheetResponse(response, event.request, event);
+			return await processStylesheetResponse(response, request);
 		}
 	}
 
@@ -160,9 +161,8 @@ async function processRequest(request, event) {
  *
  * @param {*} response The original response
  * @param {*} request The original request
- * @param {*} event worker event object
  */
-async function processHtmlResponse(response, request, event) {
+async function processHtmlResponse(response, request) {
 	// Workers can only decode utf-8. If it is anything else, pass the
 	// response through unmodified
 	const contentType = response.headers.get("content-type");
@@ -223,7 +223,7 @@ async function processHtmlResponse(response, request, event) {
 	const newResponse = new Response(readable, response);
 
 	// Start the async processing of the response stream
-	modifyHtmlStream(response.body, writable, request, event, embedStylesheet);
+	modifyHtmlStream(response.body, writable, request, embedStylesheet);
 
 	// Return the in-process response so it can be streamed.
 	return newResponse;
@@ -234,9 +234,8 @@ async function processHtmlResponse(response, request, event) {
  *
  * @param {*} response - The stylesheet response
  * @param {*} request - The original request
- * @param {*} event - The original worker event
  */
-async function processStylesheetResponse(response, request, event) {
+async function processStylesheetResponse(response, request) {
 	let body = response.body;
 	try {
 		body = await response.text();
@@ -245,7 +244,7 @@ async function processStylesheetResponse(response, request, event) {
 		let match = fontCSSRegex.exec(body);
 		while (match !== null) {
 			const matchString = match[0];
-			const fontCSS = await fetchCSS(match[2], request, event);
+			const fontCSS = await fetchCSS(match[2], request);
 			if (fontCSS.length) {
 				body = body.split(matchString).join(fontCSS);
 				fontCSSRegex.lastIndex -= matchString.length - fontCSS.length;
@@ -308,16 +307,9 @@ function chunkContainsInvalidCharset(chunk) {
  * @param {*} readable - Input stream (from the origin).
  * @param {*} writable - Output stream (to the browser).
  * @param {*} request - Original request object for downstream use.
- * @param {*} event - Worker event object
  * @param {bool} embedStylesheet - true if the stylesheet should be embedded in the HTML
  */
-async function modifyHtmlStream(
-	readable,
-	writable,
-	request,
-	event,
-	embedStylesheet
-) {
+async function modifyHtmlStream(readable, writable, request, embedStylesheet) {
 	const reader = readable.getReader();
 	const writer = writable.getWriter();
 	const encoder = new TextEncoder();
@@ -334,12 +326,7 @@ async function modifyHtmlStream(
 			const { done, value } = await reader.read();
 			if (done) {
 				if (partial.length) {
-					partial = await modifyHtmlChunk(
-						partial,
-						request,
-						event,
-						embedStylesheet
-					);
+					partial = await modifyHtmlChunk(partial, request, embedStylesheet);
 					await writer.write(encoder.encode(partial));
 					partial = "";
 				}
@@ -400,12 +387,7 @@ async function modifyHtmlStream(
 				}
 
 				if (content.length) {
-					content = await modifyHtmlChunk(
-						content,
-						request,
-						event,
-						embedStylesheet
-					);
+					content = await modifyHtmlChunk(content, request, embedStylesheet);
 				}
 			} catch (e) {
 				// Ignore the exception
@@ -431,10 +413,9 @@ async function modifyHtmlStream(
  *
  * @param {*} content - Text chunk from the streaming HTML (or accumulated head)
  * @param {*} request - Original request object for downstream use.
- * @param {*} event - Worker event object
  * @param {bool} embedStylesheet - true if the stylesheet should be embedded in the HTML
  */
-async function modifyHtmlChunk(content, request, event, embedStylesheet) {
+async function modifyHtmlChunk(content, request, embedStylesheet) {
 	// Fully tokenizing and parsing the HTML is expensive.  This regex is much faster and should be reasonably safe.
 	// It looks for Stylesheet links for the Google fonts css and extracts the URL as match #1.  It shouldn't match
 	// in-text content because the < > brackets would be escaped in the HTML.  There is some potential risk of
@@ -446,7 +427,7 @@ async function modifyHtmlChunk(content, request, event, embedStylesheet) {
 		const matchString = match[0];
 		if (matchString.indexOf("stylesheet") >= 0) {
 			if (embedStylesheet) {
-				const fontCSS = await fetchCSS(match[1], request, event);
+				const fontCSS = await fetchCSS(match[1], request);
 				if (fontCSS.length) {
 					// See if there is a media type on the link tag
 					let mediaStr = "";
@@ -488,9 +469,9 @@ var FONT_CACHE = {};
  * @param {*} url - URL for the Google font css.
  * @param {*} request - Original request for the page HTML so the user-agent can be passed through
  * and the origin can be used for rewriting the font paths.
- * @param {*} event - Worker event object
+ * @param {*} ctx - Worker context object
  */
-async function fetchCSS(url, request) {
+async function fetchCSS(url, request, ctx) {
 	let fontCSS = "";
 	if (url.startsWith("/")) url = "https:" + url;
 	const userAgent = request.headers.get("user-agent");
@@ -547,7 +528,7 @@ async function fetchCSS(url, request) {
 				try {
 					if (cache) {
 						const cacheResponse = new Response(fontCSS, { ttl: 86400 });
-						event.waitUntil(cache.put(cacheKeyRequest, cacheResponse));
+						ctx.waitUntil(cache.put(cacheKeyRequest, cacheResponse));
 					}
 				} catch (e) {
 					// Ignore the exception

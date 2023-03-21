@@ -49,22 +49,23 @@ const PATTERN_POST = "[^'\" ]+)\\s*[\"'][^>]*>";
  * for navigational requests and the fallback is to just pass the request through
  * unmodified (safe).
  */
-addEventListener("fetch", (event) => {
-	// Fail-safe in case of an unhandled exception
-	event.passThroughOnException();
+export default {
+	async fetch(request, env, ctx) {
+		ctx.passThroughOnException();
 
-	const url = new URL(event.request.url);
-	const bypass =
-		new URL(event.request.url).searchParams.get("cf-worker") === "bypass";
-	if (!bypass) {
-		let accept = event.request.headers.get("accept");
-		if (event.request.method === "GET" && isProxyRequest(url)) {
-			event.respondWith(proxyUrl(url, event.request));
-		} else if (accept && accept.indexOf("text/html") >= 0) {
-			event.respondWith(processHtmlRequest(event.request));
+		const url = new URL(request.url);
+		const bypass =
+			new URL(request.url).searchParams.get("cf-worker") === "bypass";
+		if (!bypass) {
+			let accept = request.headers.get("accept");
+			if (request.method === "GET" && isProxyRequest(url)) {
+				ctx.respondWith(proxyUrl(url, request));
+			} else if (accept && accept.indexOf("text/html") >= 0) {
+				ctx.respondWith(processHtmlRequest(request));
+			}
 		}
-	}
-});
+	},
+};
 
 // Workers can only decode utf-8 so keep a list of character encodings that can be decoded.
 const VALID_CHARSETS = ["utf-8", "utf8", "iso-8859-1", "us-ascii"];
@@ -393,7 +394,6 @@ async function modifyHtmlChunk(content, patterns, request) {
  * @param {*} originalUrl - Unmodified URL
  * @param {*} url - URL for the third-party request
  * @param {*} request - Original request for the page HTML so the user-agent can be passed through
- * @param {*} event - Worker event object.
  */
 async function hashContent(originalUrl, url, request) {
 	let proxyUrl = null;
