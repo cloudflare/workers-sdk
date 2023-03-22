@@ -46,6 +46,10 @@ export function Options(yargs: CommonYargsArgv) {
 				type: "boolean",
 				description: "Skip asset caching which speeds up builds",
 			},
+			"exclude": {
+				type: "array",
+				description: "Exclude assets by patterns",
+			}
 		})
 		.epilogue(pagesBetaWarning);
 }
@@ -54,6 +58,7 @@ export const Handler = async ({
 	directory,
 	outputManifestPath,
 	skipCaching,
+	exclude,
 }: UploadArgs) => {
 	if (!directory) {
 		throw new FatalError("Must specify a directory.", 1);
@@ -65,6 +70,7 @@ export const Handler = async ({
 
 	const manifest = await upload({
 		directory,
+		exclude,
 		jwt: process.env.CF_PAGES_UPLOAD_JWT,
 		skipCaching: skipCaching ?? false,
 	});
@@ -86,10 +92,23 @@ export const upload = async (
 		  }
 		| {
 				directory: string;
+				exclude: (string|number)[];
+				jwt: string;
+				skipCaching: boolean;
+		  }
+		| {
+				directory: string;
 				accountId: string;
 				projectName: string;
 				skipCaching: boolean;
 		  }
+		| {
+				directory: string;
+				exclude: (string|number)[];
+				accountId: string;
+				projectName: string;
+				skipCaching: boolean;
+			}
 ) => {
 	async function fetchJwt(): Promise<string> {
 		if ("jwt" in args) {
@@ -103,6 +122,14 @@ export const upload = async (
 		}
 	}
 
+	function getExclude(): string[] {
+			if ("exclude" in args) {
+					return args.exclude as string[]
+			} else {
+					return []
+			}
+	}
+
 	type FileContainer = {
 		path: string;
 		contentType: string;
@@ -110,16 +137,18 @@ export const upload = async (
 		hash: string;
 	};
 
-	const IGNORE_LIST = [
-		"_worker.js",
-		"_redirects",
-		"_headers",
-		"_routes.json",
-		"functions",
-		"**/.DS_Store",
-		"**/node_modules",
-		"**/.git",
-	].map((pattern) => new Minimatch(pattern));
+	const DEFAULT_IGNORE_LIST = [
+			"_worker.js",
+			"_redirects",
+			"_headers",
+			"_routes.json",
+			"functions",
+			"**/.DS_Store",
+			"**/node_modules",
+			"**/.git",
+	];
+
+	const IGNORE_LIST = [...DEFAULT_IGNORE_LIST, ...getExclude()].map((pattern) => new Minimatch(pattern));
 
 	const directory = resolve(args.directory);
 

@@ -71,12 +71,18 @@ export function Options(yargs: CommonYargsArgv) {
 				type: "string",
 				hidden: true,
 			},
+			exclude: {
+				type: "array",
+				default: [],
+				description: "Exclude assets by patterns",
+			}
 		})
 		.epilogue(pagesBetaWarning);
 }
 
 export const Handler = async ({
 	directory,
+	exclude,
 	projectName,
 	branch,
 	commitHash,
@@ -243,6 +249,7 @@ export const Handler = async ({
 
 	const deploymentResponse = await publish({
 		directory,
+		exclude,
 		accountId,
 		projectName,
 		branch,

@@ -72,6 +72,11 @@ interface PagesPublishOptions {
 	// TODO: Allow passing in the API key and plumb it through
 	// to the API calls so that the publish function does not
 	// rely on the `CLOUDFLARE_API_KEY` environment variable
+
+	/**
+	 * Patterns to exclude from static assets to publish to Pages
+	 */
+	exclude?: string[];
 }
 
 /**
@@ -81,6 +86,7 @@ interface PagesPublishOptions {
  */
 export async function publish({
 	directory,
+	exclude,
 	accountId,
 	projectName,
 	branch,
@@ -191,6 +197,7 @@ export async function publish({
 
 	const manifest = await upload({
 		directory,
+		exclude,
 		accountId,
 		projectName,
 		skipCaching: skipCaching ?? false,
