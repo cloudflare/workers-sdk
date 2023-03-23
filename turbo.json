@@ -7,7 +7,7 @@
 			"outputs": ["miniflare-dist/**", "emitted-types/**", "wrangler-dist/**"]
 		},
 		"test": {
-			"dependsOn": ["^test", "^miniflare/tre"]
+			"dependsOn": []
 		},
 		"@cloudflare/prerelease-registry#build": {
 			"dependsOn": ["wrangler#build"]
