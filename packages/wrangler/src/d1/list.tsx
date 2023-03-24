@@ -18,14 +18,19 @@ export function Options(d1ListYargs: CommonYargsArgv) {
 			type: "boolean",
 			default: false,
 		})
+		.option("name", {
+			describe: "filter matching name",
+			type: "string",
+		})
 		.epilogue(d1BetaWarning);
 }
 
 export async function Handler({
 	json,
+	name
 }: StrictYargsOptionsToInterface<typeof Options>): Promise<void> {
 	const accountId = await requireAuth({});
-	const dbs: Array<Database> = await listDatabases(accountId);
+	const dbs: Array<Database> = await listDatabases(accountId, name);
 
 	if (json) {
 		logger.log(JSON.stringify(dbs, null, 2));
@@ -36,7 +41,8 @@ export async function Handler({
 }
 
 export const listDatabases = async (
-	accountId: string
+	accountId: string,
+	name?: string
 ): Promise<Array<Database>> => {
 	const pageSize = 10;
 	let page = 1;
@@ -48,6 +54,7 @@ export const listDatabases = async (
 			new URLSearchParams({
 				per_page: pageSize.toString(),
 				page: page.toString(),
+				...(name ? {name} : {})
 			})
 		);
 		page++;
