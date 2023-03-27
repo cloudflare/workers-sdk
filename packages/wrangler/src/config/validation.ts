@@ -359,9 +359,9 @@ function normalizeAndValidateMainField(
 }
 
 /**
- * Validate the `dir` field and return the normalized values.
+ * Validate the `base_dir` field and return the normalized values.
  */
-function normalizeAndValidateDirField(
+function normalizeAndValidateBaseDirField(
 	configPath: string | undefined,
 	rawDir: string | undefined
 ): string | undefined {
@@ -1031,9 +1031,16 @@ function normalizeAndValidateEnvironment(
 			),
 			deprecatedUpload
 		),
-		dir: normalizeAndValidateDirField(
+		base_dir: normalizeAndValidateBaseDirField(
 			configPath,
-			inheritable(diagnostics, topLevelEnv, rawEnv, "dir", isString, undefined)
+			inheritable(
+				diagnostics,
+				topLevelEnv,
+				rawEnv,
+				"base_dir",
+				isString,
+				undefined
+			)
 		),
 		route,
 		routes,

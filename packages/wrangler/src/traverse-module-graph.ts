@@ -7,13 +7,13 @@ import type { BundleResult } from "./bundle";
 import type { Config } from "./config";
 import type { Entry } from "./entry";
 
-async function getFiles(root: string): Promise<string[]> {
+async function getFiles(root: string, relativeTo: string): Promise<string[]> {
 	const files = [];
 	for (const file of await readdir(root, { withFileTypes: true })) {
 		if (file.isDirectory()) {
-			files.push(...(await getFiles(path.join(root, file.name))));
+			files.push(...(await getFiles(path.join(root, file.name), relativeTo)));
 		} else {
-			files.push(path.join(root, file.name));
+			files.push(path.relative(relativeTo, path.join(root, file.name)));
 		}
 	}
 	return files;
@@ -23,13 +23,14 @@ export default async function traverseModuleGraph(
 	entry: Entry,
 	rules: Config["rules"]
 ): Promise<BundleResult> {
-	const files = await getFiles(entry.moduleRoot);
+	const files = await getFiles(entry.moduleRoot, entry.moduleRoot);
+	const relativeEntryPoint = path.relative(entry.moduleRoot, entry.file);
 
-	const modules = (await matchFiles(files, parseRules(rules)))
-		.filter((m) => m.name !== entry.file)
+	const modules = (await matchFiles(files, entry.moduleRoot, parseRules(rules)))
+		.filter((m) => m.name !== relativeEntryPoint)
 		.map((m) => ({
 			...m,
-			name: path.relative(entry.moduleRoot, m.name),
+			name: m.name,
 		}));
 
 	const bundleType = entry.format === "modules" ? "esm" : "commonjs";

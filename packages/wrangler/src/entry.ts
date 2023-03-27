@@ -17,9 +17,13 @@ import type { Metafile } from "esbuild";
  * It consists not just of a `file`, but also of a `directory` that is used to resolve relative paths.
  */
 export type Entry = {
+	/** A worker's entrypoint */
 	file: string;
+	/** A worker's directory. Usually where the wrangler.toml file is located */
 	directory: string;
+	/** Is this a module worker or a service worker? */
 	format: CfScriptFormat;
+	/** The directory that contains all of a `--no-bundle` worker's modules. Usually `${directory}/src`. Defaults to path.dirname(file) */
 	moduleRoot: string;
 };
 
@@ -109,7 +113,7 @@ export async function getEntry(
 		file,
 		directory,
 		format,
-		moduleRoot: config.dir ?? path.dirname(file),
+		moduleRoot: config.base_dir ?? path.dirname(file),
 	};
 }
 
@@ -158,13 +162,12 @@ export default async function guessWorkerFormat(
 	tsconfig?: string | undefined
 ): Promise<CfScriptFormat> {
 	const result = await esbuild.build({
+		...COMMON_ESBUILD_OPTIONS,
 		entryPoints: [entryFile],
 		absWorkingDir: entryWorkingDirectory,
 		metafile: true,
 		bundle: false,
-		target: COMMON_ESBUILD_OPTIONS.target,
 		write: false,
-		loader: COMMON_ESBUILD_OPTIONS.loader,
 		...(tsconfig && { tsconfig }),
 	});
 	// result.metafile is defined because of the `metafile: true` option above.

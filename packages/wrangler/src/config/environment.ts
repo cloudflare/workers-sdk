@@ -76,9 +76,9 @@ interface EnvironmentInheritable {
 
 	/**
 	 * The directory in which module rules should be evaluated in a `--no-bundle` worker
-	 * This defaults to dirname(main)
+	 * This defaults to dirname(main) when left undefined
 	 */
-	dir: string | undefined;
+	base_dir: string | undefined;
 
 	/**
 	 * Whether we use <name>.<subdomain>.workers.dev to

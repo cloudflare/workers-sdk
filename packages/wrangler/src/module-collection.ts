@@ -6,6 +6,7 @@ import { logger } from "./logger";
 import type { Config, ConfigModuleRuleType } from "./config";
 import type { CfModule, CfModuleType, CfScriptFormat } from "./worker";
 import type esbuild from "esbuild";
+import chalk from "chalk";
 
 function flipObject<
 	K extends string | number | symbol,
@@ -86,35 +87,51 @@ export function parseRules(userRules: Config["rules"] = []) {
 
 export async function matchFiles(
 	files: string[],
+	relativeTo: string,
 	{
 		rules,
 		removedRules,
 	}: { rules: Config["rules"]; removedRules: Config["rules"] }
 ) {
 	const modules: CfModule[] = [];
+
+	// Deduplicate modules. This is usually a poorly specified `wrangler.toml` configuration, but duplicate modules will cause a crash at runtime
+	const moduleNames = new Set<string>();
 	for (const rule of rules) {
 		for (const glob of rule.globs) {
-			const regexp = globToRegExp(glob);
-			modules.push(
-				...(await Promise.all(
-					files
-						.filter((f) => regexp.test(f))
-						.map(async (name) => {
-							const filePath = name;
-							const fileContent = await readFile(filePath);
+			const regexp = globToRegExp(glob, {
+				globstar: true,
+			});
+			const newModules = await Promise.all(
+				files
+					.filter((f) => regexp.test(f))
+					.map(async (name) => {
+						const filePath = name;
+						const fileContent = await readFile(path.join(relativeTo, filePath));
 
-							return {
-								name: filePath,
-								content: fileContent,
-								type: RuleTypeToModuleType[rule.type],
-							};
-						})
-				))
+						return {
+							name: filePath,
+							content: fileContent,
+							type: RuleTypeToModuleType[rule.type],
+						};
+					})
 			);
+			for (const module of newModules) {
+				if (!moduleNames.has(module.name)) {
+					moduleNames.add(module.name);
+					modules.push(module);
+				} else {
+					logger.warn(
+						`Ignoring duplicate module: ${chalk.blue(
+							module.name
+						)} (${chalk.green(module.type ?? "")})`
+					);
+				}
+			}
 		}
 	}
 
-	// This is just a sanity check verifiying that no files match rules that were removed
+	// This is just a sanity check verifying that no files match rules that were removed
 	for (const rule of removedRules) {
 		for (const glob of rule.globs) {
 			const regexp = globToRegExp(glob);
