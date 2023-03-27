@@ -1,9 +1,9 @@
-import { render } from "ink";
 import Table from "ink-table";
 import React from "react";
 import { fetchResult } from "../cfetch";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
+import { renderToString } from "../utils/render";
 import { d1BetaWarning } from "./utils";
 import type {
 	CommonYargsArgv,
@@ -31,7 +31,7 @@ export async function Handler({
 		logger.log(JSON.stringify(dbs, null, 2));
 	} else {
 		logger.log(d1BetaWarning);
-		render(<Table data={dbs}></Table>);
+		logger.log(renderToString(<Table data={dbs}></Table>));
 	}
 }
 

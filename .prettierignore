@@ -6,11 +6,11 @@ packages/wrangler/emitted-types/
 packages/wrangler/coverage/
 packages/wrangler/CHANGELOG.md
 packages/jest-environment-wrangler/CHANGELOG.md
-packages/prerelease-registry/_worker.js
+packages/prerelease-registry/dist/
 packages/jest-environment-wrangler/dist/
 packages/wranglerjs-compat-webpack-plugin/lib
 packages/wrangler-devtools/built-devtools
-fixtures/pages-plugin-example/index.js
+fixtures/pages-plugin-example/dist/
 fixtures/remix-pages-app/build/
 fixtures/remix-pages-app/public/build/
 fixtures/worker-app/dist/

@@ -344,7 +344,6 @@ type StartDevOptions = DevArguments &
 		disableDevRegistry?: boolean;
 		enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 		onReady?: (ip: string, port: number) => void;
-		logPrefix?: string;
 		showInteractiveDevSession?: boolean;
 	};
 
@@ -467,7 +466,6 @@ export async function startDev(args: StartDevOptions) {
 					bindings={bindings}
 					crons={configParam.triggers.crons}
 					queueConsumers={configParam.queues.consumers}
-					logPrefix={args.logPrefix}
 					onReady={args.onReady}
 					inspect={args.inspect ?? true}
 					showInteractiveDevSession={args.showInteractiveDevSession}
@@ -600,7 +598,6 @@ export async function startApiDev(args: StartDevOptions) {
 			bindings: bindings,
 			crons: configParam.triggers.crons,
 			queueConsumers: configParam.queues.consumers,
-			logPrefix: args.logPrefix,
 			onReady: args.onReady,
 			inspect: args.inspect ?? true,
 			showInteractiveDevSession: args.showInteractiveDevSession,
@@ -855,6 +852,7 @@ function getBindings(
 			),
 			...(args.kv || []),
 		],
+		send_email: configParam.send_email,
 		// Use a copy of combinedVars since we're modifying it later
 		vars: {
 			...getVarsForDev(configParam, env),
@@ -896,7 +894,10 @@ function getBindings(
 		mtls_certificates: configParam.mtls_certificates,
 		services: configParam.services,
 		analytics_engine_datasets: configParam.analytics_engine_datasets,
-		unsafe: configParam.unsafe?.bindings,
+		unsafe: {
+			bindings: configParam.unsafe.bindings,
+			metadata: configParam.unsafe.metadata,
+		},
 		logfwdr: configParam.logfwdr,
 		d1_databases: identifyD1BindingsAsBeta([
 			...(configParam.d1_databases ?? []).map((d1Db) => {

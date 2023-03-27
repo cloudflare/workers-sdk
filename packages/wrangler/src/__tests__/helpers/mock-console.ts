@@ -8,6 +8,7 @@ import { logger } from "../../logger";
 
 let debugSpy: jest.SpyInstance,
 	logSpy: jest.SpyInstance,
+	infoSpy: jest.SpyInstance,
 	errorSpy: jest.SpyInstance,
 	warnSpy: jest.SpyInstance;
 
@@ -17,6 +18,9 @@ const std = {
 	},
 	get out() {
 		return normalizeOutput(logSpy);
+	},
+	get info() {
+		return normalizeOutput(infoSpy);
 	},
 	get err() {
 		return normalizeOutput(errorSpy);
@@ -47,12 +51,14 @@ export function mockConsoleMethods() {
 		logger.columns = 100;
 		debugSpy = jest.spyOn(console, "debug").mockImplementation();
 		logSpy = jest.spyOn(console, "log").mockImplementation();
+		infoSpy = jest.spyOn(console, "info").mockImplementation();
 		errorSpy = jest.spyOn(console, "error").mockImplementation();
 		warnSpy = jest.spyOn(console, "warn").mockImplementation();
 	});
 	afterEach(() => {
 		debugSpy.mockRestore();
 		logSpy.mockRestore();
+		infoSpy.mockRestore();
 		errorSpy.mockRestore();
 		warnSpy.mockRestore();
 	});

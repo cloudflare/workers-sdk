@@ -1,9 +1,10 @@
 import fs from "node:fs";
 import path from "path";
-import { Box, render, Text } from "ink";
+import { Box, Text } from "ink";
 import React from "react";
 import { withConfig } from "../../config";
 import { logger } from "../../logger";
+import { renderToString } from "../../utils/render";
 import { DEFAULT_MIGRATION_PATH } from "../constants";
 import { Database } from "../options";
 import { d1BetaWarning, getDatabaseInfoFromConfig } from "../utils";
@@ -54,17 +55,19 @@ export const CreateHandler = withConfig<CreateHandlerOptions>(
 			`-- Migration number: ${nextMigrationNumber} \t ${new Date().toISOString()}\n`
 		);
 
-		render(
-			<Box flexDirection="column">
-				<Text>
-					✅ Successfully created Migration &apos;{newMigrationName}&apos;!
-				</Text>
-				<Text>&nbsp;</Text>
-				<Text>The migration is available for editing here</Text>
-				<Text>
-					{migrationsPath}/{newMigrationName}
-				</Text>
-			</Box>
+		logger.log(
+			renderToString(
+				<Box flexDirection="column">
+					<Text>
+						✅ Successfully created Migration &apos;{newMigrationName}&apos;!
+					</Text>
+					<Text>&nbsp;</Text>
+					<Text>The migration is available for editing here</Text>
+					<Text>
+						{migrationsPath}/{newMigrationName}
+					</Text>
+				</Box>
+			)
 		);
 	}
 );

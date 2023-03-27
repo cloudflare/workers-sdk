@@ -200,7 +200,7 @@ export const upload = async (
 	let attempts = 0;
 	const getMissingHashes = async (skipCaching: boolean): Promise<string[]> => {
 		if (skipCaching) {
-			console.debug("Force skipping cache");
+			logger.debug("Force skipping cache");
 			return files.map(({ hash }) => hash);
 		}
 
@@ -276,9 +276,7 @@ export const upload = async (
 	}
 
 	let counter = fileMap.size - sortedFiles.length;
-	const { rerender, unmount } = render(
-		<Progress done={counter} total={fileMap.size} />
-	);
+	const { rerender, unmount } = renderProgress(counter, fileMap.size);
 
 	const queue = new PQueue({ concurrency: BULK_UPLOAD_CONCURRENCY });
 
@@ -302,7 +300,7 @@ export const upload = async (
 			);
 
 			try {
-				console.debug("POST /pages/assets/upload");
+				logger.debug("POST /pages/assets/upload");
 				const res = await fetchResult(`/pages/assets/upload`, {
 					method: "POST",
 					headers: {
@@ -311,10 +309,10 @@ export const upload = async (
 					},
 					body: JSON.stringify(payload),
 				});
-				console.debug("result:", res);
+				logger.debug("result:", res);
 			} catch (e) {
 				if (attempts < MAX_UPLOAD_ATTEMPTS) {
-					console.debug("failed:", e, "retrying...");
+					logger.debug("failed:", e, "retrying...");
 					// Exponential backoff, 1 second first time, then 2 second, then 4 second etc.
 					await new Promise((resolvePromise) =>
 						setTimeout(resolvePromise, Math.pow(2, attempts++) * 1000)
@@ -326,7 +324,7 @@ export const upload = async (
 					}
 					return doUpload();
 				} else {
-					console.debug("failed:", e);
+					logger.debug("failed:", e);
 					throw e;
 				}
 			}
@@ -336,7 +334,7 @@ export const upload = async (
 			doUpload().then(
 				() => {
 					counter += bucket.files.length;
-					rerender(<Progress done={counter} total={fileMap.size} />);
+					rerender(counter, fileMap.size);
 				},
 				(error) => {
 					return Promise.reject(
@@ -435,6 +433,28 @@ function isJwtExpired(token: string): boolean | undefined {
 
 function formatTime(duration: number) {
 	return `(${(duration / 1000).toFixed(2)} sec)`;
+}
+
+function renderProgress(done: number, total: number) {
+	if (isInteractive()) {
+		const { rerender, unmount } = render(
+			<Progress done={done} total={total} />
+		);
+		return {
+			// eslint-disable-next-line no-shadow
+			rerender(done: number, total: number) {
+				rerender(<Progress done={done} total={total} />);
+			},
+			unmount,
+		};
+	} else {
+		// eslint-disable-next-line no-shadow
+		const rerender = (done: number, total: number) => {
+			logger.log(`Uploading... (${done}/${total})`);
+		};
+		rerender(done, total);
+		return { rerender, unmount() {} };
+	}
 }
 
 function Progress({ done, total }: { done: number; total: number }) {

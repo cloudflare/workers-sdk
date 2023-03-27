@@ -101,6 +101,15 @@ const nodejsCompatPlugin: esbuild.Plugin = {
 	},
 };
 
+const cloudflareJsPlugin: esbuild.Plugin = {
+	name: "cloudflare javascript Plugin",
+	setup(pluginBuild) {
+		pluginBuild.onResolve({ filter: /^cloudflare:.*/ }, () => {
+			return { external: true };
+		});
+	},
+};
+
 /**
  * Generate a bundle for the worker identified by the arguments passed in.
  */
@@ -114,6 +123,7 @@ export async function bundleWorker(
 		doBindings: DurableObjectBindings;
 		jsxFactory?: string;
 		jsxFragment?: string;
+		entryName?: string;
 		rules: Config["rules"];
 		watch?: esbuild.WatchMode | boolean;
 		tsconfig?: string;
@@ -144,6 +154,7 @@ export async function bundleWorker(
 		doBindings,
 		jsxFactory,
 		jsxFragment,
+		entryName,
 		rules,
 		watch,
 		tsconfig,
@@ -342,10 +353,12 @@ export async function bundleWorker(
 		bundle: true,
 		absWorkingDir: entry.directory,
 		outdir: destination,
+		entryNames: entryName || path.parse(entry.file).name,
 		...(isOutfile
 			? {
 					outdir: undefined,
 					outfile: destination,
+					entryNames: undefined,
 			  }
 			: {}),
 		inject,
@@ -379,6 +392,7 @@ export async function bundleWorker(
 				? [NodeGlobalsPolyfills({ buffer: true }), NodeModulesPolyfills()]
 				: []),
 			...(nodejsCompat ? [nodejsCompatPlugin] : []),
+			...[cloudflareJsPlugin],
 			...(plugins || []),
 		],
 		...(jsxFactory && { jsxFactory }),

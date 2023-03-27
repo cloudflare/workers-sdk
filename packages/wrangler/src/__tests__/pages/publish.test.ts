@@ -1,22 +1,22 @@
-/* eslint-disable no-shadow */
 import { Blob } from "node:buffer";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { chdir } from "node:process";
 import { MockedRequest, rest } from "msw";
 import { FormData } from "undici";
+import { version } from "../../../package.json";
+import { ROUTES_SPEC_VERSION } from "../../pages/constants";
+import { isRoutesJSONSpec } from "../../pages/functions/routes-validation";
+import { endEventLoop } from "../helpers/end-event-loop";
+import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockGetUploadTokenRequest } from "../helpers/mock-get-pages-upload-token";
 import { mockSetTimeout } from "../helpers/mock-set-timeout";
-import { version } from "./../../../package.json";
-import { ROUTES_SPEC_VERSION } from "./../../pages/constants";
-import { isRoutesJSONSpec } from "./../../pages/functions/routes-validation";
-import { endEventLoop } from "./../helpers/end-event-loop";
-import { mockAccountId, mockApiToken } from "./../helpers/mock-account-id";
-import { msw } from "./../helpers/msw";
-import { FileReaderSync } from "./../helpers/msw/read-file-sync";
-import { runInTempDir } from "./../helpers/run-in-tmp";
-import { runWrangler } from "./../helpers/run-wrangler";
-import type { Project, UploadPayloadFile } from "./../../pages/types";
+import { msw } from "../helpers/msw";
+import { FileReaderSync } from "../helpers/msw/read-file-sync";
+import { runInTempDir } from "../helpers/run-in-tmp";
+import { runWrangler } from "../helpers/run-wrangler";
+import { normalizeProgressSteps } from "./project-upload.test";
+import type { Project, UploadPayloadFile } from "../../pages/types";
 import type { RestRequest } from "msw";
 
 describe("deployment create", () => {
@@ -69,7 +69,7 @@ describe("deployment create", () => {
 		          --commit-message  The commit message to attach to this deployment  [string]
 		          --commit-dirty    Whether or not the workspace should be considered dirty for this deployment  [boolean]
 		          --skip-caching    Skip asset caching which speeds up builds  [boolean]
-		          --no-bundle       Whether to run bundling on \`_worker.js\` before deploying  [boolean] [default: true]
+		          --no-bundle       Whether to run bundling on \`_worker.js\` before deploying  [boolean] [default: false]
 
 		    🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
 	  `);
@@ -171,11 +171,11 @@ describe("deployment create", () => {
 
 		await runWrangler("pages publish . --project-name=foo");
 
-		expect(std.out).toMatchInlineSnapshot(`
-		      "✨ Success! Uploaded 1 files (TIMINGS)
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Success! Uploaded 1 files (TIMINGS)
 
-		      ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	    `);
+		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+	`);
 	});
 
 	it("should retry uploads", async () => {
@@ -300,11 +300,11 @@ describe("deployment create", () => {
 
 		await runWrangler("pages publish . --project-name=foo");
 
-		expect(std.out).toMatchInlineSnapshot(`
-		            "✨ Success! Uploaded 1 files (TIMINGS)
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Success! Uploaded 1 files (TIMINGS)
 
-		            ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	        `);
+		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+	`);
 	});
 
 	it("should refetch a JWT if it expires while uploading", async () => {
@@ -437,11 +437,11 @@ describe("deployment create", () => {
 			"Bearer <<funfetti-auth-jwt2>>"
 		);
 
-		expect(std.out).toMatchInlineSnapshot(`
-		            "✨ Success! Uploaded 1 files (TIMINGS)
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Success! Uploaded 1 files (TIMINGS)
 
-		            ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	        `);
+		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+	`);
 	});
 
 	it("should try to use multiple buckets (up to the max concurrency)", async () => {
@@ -592,11 +592,11 @@ describe("deployment create", () => {
 			])
 		);
 
-		expect(std.out).toMatchInlineSnapshot(`
-		            "✨ Success! Uploaded 4 files (TIMINGS)
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Success! Uploaded 4 files (TIMINGS)
 
-		            ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	        `);
+		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+	`);
 	});
 
 	it("should resolve child directories correctly", async () => {
@@ -744,11 +744,11 @@ describe("deployment create", () => {
 			])
 		);
 
-		expect(std.out).toMatchInlineSnapshot(`
-		              "✨ Success! Uploaded 4 files (TIMINGS)
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Success! Uploaded 4 files (TIMINGS)
 
-		              ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	          `);
+		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+	`);
 	});
 
 	it("should resolve the current directory correctly", async () => {
@@ -897,11 +897,11 @@ describe("deployment create", () => {
 			])
 		);
 
-		expect(std.out).toMatchInlineSnapshot(`
-		              "✨ Success! Uploaded 4 files (TIMINGS)
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Success! Uploaded 4 files (TIMINGS)
 
-		              ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	          `);
+		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+	`);
 	});
 
 	it("should not error when directory names contain periods and houses a extensionless file", async () => {
@@ -1116,10 +1116,10 @@ describe("deployment create", () => {
 					const body = await (req as RestRequestWithFormData).formData();
 					const manifest = JSON.parse(body.get("manifest") as string);
 
-					// for Functions projects, we auto-generate a `_worker.js`,
+					// for Functions projects, we auto-generate a `_worker.bundle`,
 					// `functions-filepath-routing-config.json`, and `_routes.json`
 					// file, based on the contents of `/functions`
-					const generatedWorkerJS = body.get("_worker.js") as string;
+					const generatedWorkerBundle = body.get("_worker.bundle") as string;
 					const generatedRoutesJSON = body.get("_routes.json") as string;
 					const generatedFilepathRoutingConfig = body.get(
 						"functions-filepath-routing-config.json"
@@ -1129,7 +1129,7 @@ describe("deployment create", () => {
 					expect([...body.keys()]).toEqual([
 						"manifest",
 						"functions-filepath-routing-config.json",
-						"_worker.js",
+						"_worker.bundle",
 						"_routes.json",
 					]);
 
@@ -1139,14 +1139,14 @@ describe("deployment create", () => {
 				                                  }
 			                            `);
 
-					// the contents of the generated `_worker.js` file is pretty massive, so I don't
+					// the contents of the generated `_worker.bundle` file is pretty massive, so I don't
 					// think snapshot testing makes much sense here. Plus, calling
 					// `.toMatchInlineSnapshot()` without any arguments, in order to generate that
 					// snapshot value, doesn't generate anything in this case (probably because the
-					// file contents is too big). So for now, let's test that _worker.js was indeed
+					// file contents is too big). So for now, let's test that _worker.bundle was indeed
 					// generated and that the file size is greater than zero
-					expect(generatedWorkerJS).not.toBeNull();
-					expect(generatedWorkerJS.length).toBeGreaterThan(0);
+					expect(generatedWorkerBundle).not.toBeNull();
+					expect(generatedWorkerBundle.length).toBeGreaterThan(0);
 
 					const maybeRoutesJSONSpec = JSON.parse(generatedRoutesJSON);
 					expect(isRoutesJSONSpec(maybeRoutesJSONSpec)).toBe(true);
@@ -1211,13 +1211,13 @@ describe("deployment create", () => {
 
 		await runWrangler("pages publish public --project-name=foo");
 
-		expect(std.out).toMatchInlineSnapshot(`
-		    "✨ Compiled Worker successfully
-		    ✨ Success! Uploaded 1 files (TIMINGS)
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Compiled Worker successfully
+		✨ Success! Uploaded 1 files (TIMINGS)
 
-		    ✨ Uploading Functions
-		    ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	    `);
+		✨ Uploading Functions bundle
+		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+	`);
 
 		expect(std.err).toMatchInlineSnapshot('""');
 	});
@@ -1301,11 +1301,11 @@ describe("deployment create", () => {
 					expect(req.params.accountId).toEqual("some-account-id");
 					const body = await (req as RestRequestWithFormData).formData();
 					const manifest = JSON.parse(body.get("manifest") as string);
-					const customWorkerJS = body.get("_worker.js");
+					const workerBundle = body.get("_worker.bundle");
 
 					// make sure this is all we uploaded
 					expect([...body.keys()].sort()).toEqual(
-						["manifest", "_worker.js"].sort()
+						["manifest", "_worker.bundle"].sort()
 					);
 
 					expect(manifest).toMatchInlineSnapshot(`
@@ -1314,8 +1314,8 @@ describe("deployment create", () => {
 				                                      }
 			                                `);
 
-					expect(workerHasD1Shim(customWorkerJS as string)).toBeTruthy();
-					expect(customWorkerJS).toContain(
+					expect(workerHasD1Shim(workerBundle as string)).toBeTruthy();
+					expect(workerBundle).toContain(
 						`console.log("SOMETHING FROM WITHIN THE WORKER");`
 					);
 
@@ -1359,15 +1359,15 @@ describe("deployment create", () => {
 			)
 		);
 
-		await runWrangler("pages publish public --project-name=foo --bundle");
+		await runWrangler("pages publish public --project-name=foo");
 
-		expect(std.out).toMatchInlineSnapshot(`
-		    "✨ Success! Uploaded 1 files (TIMINGS)
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Success! Uploaded 1 files (TIMINGS)
 
-		    ✨ Compiled Worker successfully
-		    ✨ Uploading _worker.js
-		    ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	  `);
+		✨ Compiled Worker successfully
+		✨ Uploading Worker bundle
+		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+	`);
 
 		expect(std.err).toMatchInlineSnapshot('""');
 	});
@@ -1489,7 +1489,7 @@ describe("deployment create", () => {
 					expect(req.params.accountId).toEqual("some-account-id");
 					const body = await (req as RestRequestWithFormData).formData();
 					const manifest = JSON.parse(body.get("manifest") as string);
-					const generatedWorkerJS = body.get("_worker.js") as string;
+					const generatedWorkerBundle = body.get("_worker.bundle") as string;
 					const customRoutesJSON = body.get("_routes.json") as string;
 					const generatedFilepathRoutingConfig = body.get(
 						"functions-filepath-routing-config.json"
@@ -1500,7 +1500,7 @@ describe("deployment create", () => {
 						[
 							"manifest",
 							"functions-filepath-routing-config.json",
-							"_worker.js",
+							"_worker.bundle",
 							"_routes.json",
 						].sort()
 					);
@@ -1511,9 +1511,9 @@ describe("deployment create", () => {
 				                                }
 			                          `);
 
-					// file content of generated `_worker.js` is too massive to snapshot test
-					expect(generatedWorkerJS).not.toBeNull();
-					expect(generatedWorkerJS.length).toBeGreaterThan(0);
+					// file content of generated `_worker.bundle` is too massive to snapshot test
+					expect(generatedWorkerBundle).not.toBeNull();
+					expect(generatedWorkerBundle.length).toBeGreaterThan(0);
 
 					const customRoutes = JSON.parse(customRoutesJSON);
 					expect(customRoutes).toMatchObject({
@@ -1583,14 +1583,14 @@ describe("deployment create", () => {
 
 		await runWrangler("pages publish public --project-name=foo");
 
-		expect(std.out).toMatchInlineSnapshot(`
-		    "✨ Compiled Worker successfully
-		    ✨ Success! Uploaded 1 files (TIMINGS)
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Compiled Worker successfully
+		✨ Success! Uploaded 1 files (TIMINGS)
 
-		    ✨ Uploading Functions
-		    ✨ Uploading _routes.json
-		    ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	    `);
+		✨ Uploading Functions bundle
+		✨ Uploading _routes.json
+		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+	`);
 
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 		expect(std.err).toMatchInlineSnapshot('""');
@@ -1821,13 +1821,13 @@ and that at least one include rule is provided.
 					const body = await (req as RestRequestWithFormData).formData();
 
 					const manifest = JSON.parse(body.get("manifest") as string);
-					const customWorkerJS = body.get("_worker.js") as string;
+					const workerBundle = body.get("_worker.bundle") as string;
 					const customRoutesJSON = body.get("_routes.json") as string;
 
 					// make sure this is all we uploaded
 					expect([...body.keys()]).toEqual([
 						"manifest",
-						"_worker.js",
+						"_worker.bundle",
 						"_routes.json",
 					]);
 					expect(req.params.accountId).toEqual("some-account-id");
@@ -1837,15 +1837,45 @@ and that at least one include rule is provided.
 				            }
 			          `);
 
-					expect(customWorkerJS).toMatchInlineSnapshot(`
-				"
-				      export default {
-				        async fetch(request, env) {
-				          const url = new URL(request.url);
-				          return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
-				        }
-				      };
-				    "
+					// some fields in workerBundle, such as the undici form boundary
+					// or the file hashes, are randomly generated. Let's replace these
+					// dynamic values with static ones so we can properly test the
+					// contents of `workerBundle`
+					// see https://jestjs.io/docs/snapshot-testing#property-matchers
+					let workerBundleWithConstantData = workerBundle.replace(
+						/------formdata-undici-0.[0-9]*/g,
+						"------formdata-undici-0.test"
+					);
+					workerBundleWithConstantData = workerBundleWithConstantData.replace(
+						/bundledWorker-0.[0-9]*.mjs/g,
+						"bundledWorker-0.test.mjs"
+					);
+
+					// we care about a couple of things here, like the presence of `metadata`,
+					// `bundledWorker`, the wasm import, etc., and since `workerBundle` is
+					// small enough, let's go ahead and snapshot test the whole thing
+					expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
+				"------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"metadata\\"
+
+				{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
+				------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
+				Content-Type: application/javascript+module
+
+				// _worker.js
+				var worker_default = {
+				  async fetch(request, env) {
+				    const url = new URL(request.url);
+				    return url.pathname.startsWith(\\"/api/\\") ? new Response(\\"Ok\\") : env.ASSETS.fetch(request);
+				  }
+				};
+				export {
+				  worker_default as default
+				};
+				//# sourceMappingURL=bundledWorker-0.test.mjs.map
+
+				------formdata-undici-0.test--"
 			`);
 
 					expect(JSON.parse(customRoutesJSON)).toMatchObject({
@@ -1890,14 +1920,14 @@ and that at least one include rule is provided.
 
 		await runWrangler("pages publish public --project-name=foo");
 
-		expect(std.out).toMatchInlineSnapshot(`
-		    "✨ Success! Uploaded 1 files (TIMINGS)
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Success! Uploaded 1 files (TIMINGS)
 
-		    ✨ Compiled Worker successfully
-		    ✨ Uploading _worker.js
-		    ✨ Uploading _routes.json
-		    ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	  `);
+		✨ Compiled Worker successfully
+		✨ Uploading Worker bundle
+		✨ Uploading _routes.json
+		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+	`);
 
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
@@ -2110,27 +2140,58 @@ and that at least one include rule is provided.
 				async (req, res, ctx) => {
 					const body = await (req as RestRequestWithFormData).formData();
 					const manifest = JSON.parse(body.get("manifest") as string);
-					const customWorkerJS = body.get("_worker.js");
+					const customWorkerBundle = body.get("_worker.bundle") as string;
 
 					expect(req.params.accountId).toEqual("some-account-id");
 					// make sure this is all we uploaded
 					expect([...body.keys()].sort()).toEqual(
-						["manifest", "_worker.js"].sort()
+						["manifest", "_worker.bundle"].sort()
 					);
 					expect(manifest).toMatchInlineSnapshot(`
 				Object {
 				  "/README.md": "13a03eaf24ae98378acd36ea00f77f2f",
 				}
 			`);
-					expect(customWorkerJS).toMatchInlineSnapshot(`
-				"
-				      export default {
-				        async fetch(request, env) {
-				          const url = new URL(request.url);
-				          return url.pathname.startsWith('/api/') ? new Response('Ok') : env.ASSETS.fetch(request);
-				        }
-				      };
-				    "
+
+					// some fields in workerBundle, such as the undici form boundary
+					// or the file hashes, are randomly generated. Let's replace these
+					// dynamic values with static ones so we can properly test the
+					// contents of `workerBundle`
+					// see https://jestjs.io/docs/snapshot-testing#property-matchers
+					let workerBundleWithConstantData = customWorkerBundle.replace(
+						/------formdata-undici-0.[0-9]*/g,
+						"------formdata-undici-0.test"
+					);
+					workerBundleWithConstantData = workerBundleWithConstantData.replace(
+						/bundledWorker-0.[0-9]*.mjs/g,
+						"bundledWorker-0.test.mjs"
+					);
+
+					// we care about a couple of things here, like the presence of `metadata`,
+					// `bundledWorker`, the wasm import, etc., and since `workerBundle` is
+					// small enough, let's go ahead and snapshot test the whole thing
+					expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
+				"------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"metadata\\"
+
+				{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
+				------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
+				Content-Type: application/javascript+module
+
+				// _worker.js
+				var worker_default = {
+				  async fetch(request, env) {
+				    const url = new URL(request.url);
+				    return url.pathname.startsWith(\\"/api/\\") ? new Response(\\"Ok\\") : env.ASSETS.fetch(request);
+				  }
+				};
+				export {
+				  worker_default as default
+				};
+				//# sourceMappingURL=bundledWorker-0.test.mjs.map
+
+				------formdata-undici-0.test--"
 			`);
 
 					return res.once(
@@ -2168,18 +2229,18 @@ and that at least one include rule is provided.
 
 		await runWrangler("pages publish public --project-name=foo");
 
-		expect(std.out).toMatchInlineSnapshot(`
-		    "✨ Success! Uploaded 1 files (TIMINGS)
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Success! Uploaded 1 files (TIMINGS)
 
-		    ✨ Compiled Worker successfully
-		    ✨ Uploading _worker.js
-		    ✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
-	  `);
+		✨ Compiled Worker successfully
+		✨ Uploading Worker bundle
+		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+	`);
 
 		expect(std.err).toMatchInlineSnapshot('""');
 	});
 
-	it("should bundle Functions and resolve its external module imports if the `--experimental-worker-bundle` flag is set", async () => {
+	it("should bundle Functions and resolve its external module imports", async () => {
 		// set up the directory of static files to upload.
 		mkdirSync("public");
 		writeFileSync("public/README.md", "This is a readme");
@@ -2364,11 +2425,9 @@ async function onRequest() {
 			)
 		);
 
-		await runWrangler(
-			"pages publish public --project-name=foo --experimental-worker-bundle=true"
-		);
+		await runWrangler("pages publish public --project-name=foo");
 
-		expect(std.out).toMatchInlineSnapshot(`
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Compiled Worker successfully
 		✨ Success! Uploaded 1 files (TIMINGS)
 
@@ -2380,7 +2439,7 @@ async function onRequest() {
 		expect(std.err).toMatchInlineSnapshot('""');
 	});
 
-	it("should bundle _worker.js and resolve its external module imports if the `--experimental-worker-bundle` flag is set", async () => {
+	it("should bundle _worker.js and resolve its external module imports", async () => {
 		// set up the directory of static files to upload
 		mkdirSync("public");
 		writeFileSync("public/README.md", "This is a readme");
@@ -2570,11 +2629,9 @@ async function onRequest() {
 			)
 		);
 
-		await runWrangler(
-			"pages publish public --project-name=foo --experimental-worker-bundle=true"
-		);
+		await runWrangler("pages publish public --project-name=foo");
 
-		expect(std.out).toMatchInlineSnapshot(`
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 1 files (TIMINGS)
 
 		✨ Compiled Worker successfully
@@ -2605,7 +2662,7 @@ async function onRequest() {
 			contents.includes("worker_default as default");
 
 		const simulateServer = (
-			generatedWorkerJsCheck: (workerJsContent: string) => void
+			generatedWorkerBundleCheck: (workerJsContent: string) => void
 		) => {
 			mockGetUploadTokenRequest(
 				"<<funfetti-auth-jwt>>",
@@ -2639,9 +2696,9 @@ async function onRequest() {
 					"*/accounts/:accountId/pages/projects/foo/deployments",
 					async (req, res, ctx) => {
 						const body = await (req as RestRequestWithFormData).formData();
-						const generatedWorkerJS = body.get("_worker.js") as string;
+						const generatedWorkerBundle = body.get("_worker.bundle") as string;
 
-						generatedWorkerJsCheck(generatedWorkerJS);
+						generatedWorkerBundleCheck(generatedWorkerBundle);
 
 						return res.once(
 							ctx.status(200),
@@ -2674,12 +2731,30 @@ async function onRequest() {
 			);
 		};
 
-		it("should not bundle the _worker.js when both `--bundle` and `--no-bundle` are omitted", async () => {
+		it("should bundle the _worker.js when both `--bundle` and `--no-bundle` are omitted", async () => {
+			simulateServer((generatedWorkerJS) =>
+				expect(workerIsBundled(generatedWorkerJS)).toBeTruthy()
+			);
+			await runWrangler("pages publish public --project-name=foo");
+			expect(std.out).toContain("✨ Uploading Worker bundle");
+		});
+
+		it("should not bundle the _worker.js when `--no-bundle` is set", async () => {
 			simulateServer((generatedWorkerJS) =>
 				expect(workerIsBundled(generatedWorkerJS)).toBeFalsy()
 			);
-			await runWrangler("pages publish public --project-name=foo");
-			expect(std.out).toContain("✨ Uploading _worker.js");
+			await runWrangler("pages publish public --project-name=foo --no-bundle");
+			expect(std.out).toContain("✨ Uploading Worker bundle");
+		});
+
+		it("should not bundle the _worker.js when `--bundle` is set to false", async () => {
+			simulateServer((generatedWorkerJS) =>
+				expect(workerIsBundled(generatedWorkerJS)).toBeFalsy()
+			);
+			await runWrangler(
+				"pages publish public --project-name=foo --bundle=false"
+			);
+			expect(std.out).toContain("✨ Uploading Worker bundle");
 		});
 
 		it("should bundle the _worker.js when the `--no-bundle` is set to false", async () => {
@@ -2689,7 +2764,7 @@ async function onRequest() {
 			await runWrangler(
 				"pages publish public --no-bundle=false --project-name=foo"
 			);
-			expect(std.out).toContain("✨ Uploading _worker.js");
+			expect(std.out).toContain("✨ Uploading Worker bundle");
 		});
 
 		it("should bundle the _worker.js when the `--bundle` is set to true", async () => {
@@ -2699,7 +2774,7 @@ async function onRequest() {
 			await runWrangler(
 				"pages publish public --bundle=true --project-name=foo"
 			);
-			expect(std.out).toContain("✨ Uploading _worker.js");
+			expect(std.out).toContain("✨ Uploading Worker bundle");
 		});
 	});
 });

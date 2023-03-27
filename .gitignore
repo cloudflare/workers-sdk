@@ -180,7 +180,7 @@ dist
 wrangler-dist/
 miniflare-dist
 packages/wrangler/wrangler.toml
-packages/prerelease-registry/_worker.js
+packages/prerelease-registry/_worker.bundle
 packages/wranglerjs-compat-webpack-plugin/lib
 .wrangler-1-cache
 emitted-types/

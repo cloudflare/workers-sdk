@@ -1,0 +1,55 @@
+name: Main branch
+
+# This flow will re-run tests on the main branch after a PR has been merged.
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    if: ${{ github.repository_owner == 'cloudflare' }}
+    name: "Tests"
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js 16.13
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.13
+          cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
+
+      - name: Install workerd Dependencies
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt-get update
+          sudo apt-get install -y libc++1
+
+      - name: Install NPM Dependencies
+        run: npm ci
+
+      - name: Run builds
+        run: npm run build
+        env:
+          NODE_ENV: "production"
+
+      - name: Check for errors
+        run: npm run check
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+
+      - name: Run tests
+        run: npm run test:ci
+        env:
+          TMP_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TMP_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          NODE_OPTIONS: "--max_old_space_size=8192"

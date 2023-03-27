@@ -55,14 +55,17 @@ describe("wrangler", () => {
 			  wrangler logout                      🚪 Logout from Cloudflare
 			  wrangler whoami                      🕵️  Retrieve your user info and test your auth config
 			  wrangler types                       📝 Generate types from bindings & module rules in config
-			  wrangler deployments                 🚢 Displays the 10 most recent deployments for a worker
+			  wrangler deployments                 🚢 List and view details for deployments
+			  wrangler rollback [deployment-id]    🔙 Rollback a deployment
 
 			Flags:
 			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
 			  -c, --config                    Path to .toml configuration file  [string]
 			  -e, --env                       Environment to use for operations and .env files  [string]
 			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
+			  -v, --version                   Show version number  [boolean]
+
+			🚧\`wrangler rollback\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
 		`);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -105,14 +108,17 @@ describe("wrangler", () => {
 			  wrangler logout                      🚪 Logout from Cloudflare
 			  wrangler whoami                      🕵️  Retrieve your user info and test your auth config
 			  wrangler types                       📝 Generate types from bindings & module rules in config
-			  wrangler deployments                 🚢 Displays the 10 most recent deployments for a worker
+			  wrangler deployments                 🚢 List and view details for deployments
+			  wrangler rollback [deployment-id]    🔙 Rollback a deployment
 
 			Flags:
 			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
 			  -c, --config                    Path to .toml configuration file  [string]
 			  -e, --env                       Environment to use for operations and .env files  [string]
 			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
+			  -v, --version                   Show version number  [boolean]
+
+			🚧\`wrangler rollback\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: invalid-command[0m

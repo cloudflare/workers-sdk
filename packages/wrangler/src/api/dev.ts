@@ -43,7 +43,6 @@ export interface UnstableDevOptions {
 		preview_bucket_name?: string;
 	}[];
 	logLevel?: "none" | "info" | "error" | "log" | "warn" | "debug"; // Specify logging level  [choices: "debug", "info", "log", "warn", "error", "none"] [default: "log"]
-	logPrefix?: string;
 	inspect?: boolean;
 	local?: boolean;
 	accountId?: string;
@@ -144,7 +143,6 @@ export async function unstable_dev(
 					enablePagesAssetsServiceBinding,
 					liveReload,
 					showInteractiveDevSession,
-					forceLocal,
 					onReady: (address, port) => {
 						readyPort = port;
 						readyAddress = address;
@@ -233,6 +231,7 @@ export async function unstable_dev(
 					experimentalLocal: experimentalLocal ?? false,
 					experimentalLocalRemoteKv: experimentalLocalRemoteKv ?? false,
 					enablePagesAssetsServiceBinding,
+					forceLocal,
 					liveReload,
 					onReady: (address, port) => {
 						readyPort = port;

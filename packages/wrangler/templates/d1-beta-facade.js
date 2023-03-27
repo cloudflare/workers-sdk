@@ -237,5 +237,8 @@ var shim_default = {
 	async trace(traces, env, ctx) {
 		return worker.trace(traces, getMaskedEnv(env), ctx);
 	},
+	async email(message, env, ctx) {
+		return worker.email(message, getMaskedEnv(env), ctx);
+	},
 };
 export { shim_default as default };

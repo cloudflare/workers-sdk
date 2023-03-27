@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { FatalError } from "../errors";
 import { toUrlPath } from "../paths";
 import { FunctionsNoRoutesError } from "./errors";
 import { buildPlugin } from "./functions/buildPlugin";
@@ -20,6 +21,7 @@ import type { Config } from "./functions/routes";
 
 export async function buildFunctions({
 	outfile,
+	outdir,
 	outputConfigPath,
 	functionsDirectory,
 	minify = false,
@@ -34,10 +36,11 @@ export async function buildFunctions({
 	nodejsCompat,
 	local,
 	d1Databases,
-	experimentalWorkerBundle = false,
 }: Partial<
 	Pick<
 		PagesBuildArgs,
+		| "outfile"
+		| "outdir"
 		| "outputConfigPath"
 		| "minify"
 		| "sourcemap"
@@ -49,11 +52,9 @@ export async function buildFunctions({
 > & {
 	functionsDirectory: string;
 	onEnd?: () => void;
-	outfile: Required<PagesBuildArgs>["outfile"];
 	routesOutputPath?: PagesBuildArgs["outputRoutesPath"];
 	local: boolean;
 	d1Databases?: string[];
-	experimentalWorkerBundle?: boolean;
 	legacyNodeCompat?: boolean;
 	nodejsCompat?: boolean;
 }) {
@@ -97,9 +98,16 @@ export async function buildFunctions({
 	let bundle: BundleResult;
 
 	if (plugin) {
+		if (outdir === undefined) {
+			throw new FatalError(
+				"Must specify an output directory when building a Plugin.",
+				1
+			);
+		}
+
 		bundle = await buildPlugin({
 			routesModule,
-			outfile,
+			outdir,
 			minify,
 			sourcemap,
 			watch,
@@ -107,12 +115,12 @@ export async function buildFunctions({
 			functionsDirectory: absoluteFunctionsDirectory,
 			local,
 			betaD1Shims: d1Databases,
-			onEnd,
 		});
 	} else {
 		bundle = await buildWorker({
 			routesModule,
 			outfile,
+			outdir,
 			minify,
 			sourcemap,
 			fallbackService,
@@ -124,7 +132,6 @@ export async function buildFunctions({
 			buildOutputDirectory,
 			legacyNodeCompat,
 			nodejsCompat,
-			experimentalWorkerBundle,
 		});
 	}
 

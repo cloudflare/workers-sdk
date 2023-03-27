@@ -19,7 +19,7 @@ describe("run scheduled events with middleware", () => {
 					return new Response("Hello world!");
 				},
 				scheduled(controller, env, ctx) {
-					console.log("Doing something scheduled in modules...");
+					// Doing something scheduled in modules...
 				},
 			};
 			`;
@@ -80,7 +80,7 @@ describe("run scheduled events with middleware", () => {
 		beforeEach(() => {
 			const scriptContent = `
 			addEventListener("scheduled", (event) => {
-				console.log("Doing something scheduled in service worker...");
+				// Doing something scheduled in service worker...
 			});
 
 			addEventListener("fetch", (event) => {
