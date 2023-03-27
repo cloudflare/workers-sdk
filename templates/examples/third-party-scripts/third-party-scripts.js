@@ -61,7 +61,7 @@ export default {
 			if (request.method === "GET" && isProxyRequest(url)) {
 				ctx.respondWith(proxyUrl(url, request));
 			} else if (accept && accept.indexOf("text/html") >= 0) {
-				ctx.respondWith(processHtmlRequest(request));
+				return processHtmlRequest(request);
 			}
 		}
 	},
