@@ -59,7 +59,7 @@ export default {
 		if (!bypass) {
 			let accept = request.headers.get("accept");
 			if (request.method === "GET" && isProxyRequest(url)) {
-				ctx.respondWith(proxyUrl(url, request));
+				return proxyUrl(url, request);
 			} else if (accept && accept.indexOf("text/html") >= 0) {
 				return processHtmlRequest(request);
 			}
