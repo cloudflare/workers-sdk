@@ -13,6 +13,13 @@ import type { DurableObjectBindings } from "./config/environment";
 import type { WorkerRegistry } from "./dev-registry";
 import type { Entry } from "./entry";
 import type { CfModule } from "./worker";
+
+export const COMMON_ESBUILD_OPTIONS = {
+	// Our workerd runtime uses the same V8 version as recent Chrome, which is highly ES2022 compliant: https://kangax.github.io/compat-table/es2016plus/
+	target: "es2022",
+	loader: { ".js": "jsx", ".mjs": "jsx", ".cjs": "jsx" },
+} as const;
+
 export type BundleResult = {
 	modules: CfModule[];
 	dependencies: esbuild.Metafile["outputs"][string]["inputs"];
@@ -357,8 +364,7 @@ export async function bundleWorker(
 		inject,
 		external: ["__STATIC_CONTENT_MANIFEST"],
 		format: entry.format === "modules" ? "esm" : "iife",
-		// Our workerd runtime uses the same V8 version as recent Chrome, which is highly ES2022 compliant: https://kangax.github.io/compat-table/es2016plus/
-		target: "es2022",
+		target: COMMON_ESBUILD_OPTIONS.target,
 		sourcemap: sourcemap ?? true, // this needs to use ?? to accept false
 		// Include a reference to the output folder in the sourcemap.
 		// This is omitted by default, but we need it to properly resolve source paths in error output.
@@ -377,9 +383,7 @@ export async function bundleWorker(
 			},
 		}),
 		loader: {
-			".js": "jsx",
-			".mjs": "jsx",
-			".cjs": "jsx",
+			...COMMON_ESBUILD_OPTIONS.loader,
 			...(loader || {}),
 		},
 		plugins: [

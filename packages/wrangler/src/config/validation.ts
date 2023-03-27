@@ -359,6 +359,26 @@ function normalizeAndValidateMainField(
 }
 
 /**
+ * Validate the `base_dir` field and return the normalized values.
+ */
+function normalizeAndValidateBaseDirField(
+	configPath: string | undefined,
+	rawDir: string | undefined
+): string | undefined {
+	const configDir = path.dirname(configPath ?? "wrangler.toml");
+	if (rawDir !== undefined) {
+		if (typeof rawDir === "string") {
+			const directory = path.resolve(configDir);
+			return path.resolve(directory, rawDir);
+		} else {
+			return rawDir;
+		}
+	} else {
+		return;
+	}
+}
+
+/**
  * Validate the `dev` configuration and return the normalized values.
  */
 function normalizeAndValidateDev(
@@ -1010,6 +1030,17 @@ function normalizeAndValidateEnvironment(
 				undefined
 			),
 			deprecatedUpload
+		),
+		base_dir: normalizeAndValidateBaseDirField(
+			configPath,
+			inheritable(
+				diagnostics,
+				topLevelEnv,
+				rawEnv,
+				"base_dir",
+				isString,
+				undefined
+			)
 		),
 		route,
 		routes,

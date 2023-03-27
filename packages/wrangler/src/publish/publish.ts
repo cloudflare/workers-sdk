@@ -21,6 +21,7 @@ import { ParseError } from "../parse";
 import { getQueue, putConsumer } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
 import { syncAssets } from "../sites";
+import traverseModuleGraph from "../traverse-module-graph";
 import { identifyD1BindingsAsBeta } from "../worker";
 import { getZoneForRoute } from "../zones";
 import type { FetchError } from "../cfetch";
@@ -463,14 +464,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			resolvedEntryPointPath,
 			bundleType,
 		}: Awaited<ReturnType<typeof bundleWorker>> = props.noBundle
-			? // we can skip the whole bundling step and mock a bundle here
-			  {
-					modules: [],
-					dependencies: {},
-					resolvedEntryPointPath: props.entry.file,
-					bundleType: props.entry.format === "modules" ? "esm" : "commonjs",
-					stop: undefined,
-			  }
+			? await traverseModuleGraph(props.entry, props.rules)
 			: await bundleWorker(
 					props.entry,
 					typeof destination === "string" ? destination : destination.path,

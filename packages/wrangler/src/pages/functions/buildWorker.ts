@@ -48,6 +48,7 @@ export function buildWorker({
 			file: resolve(getBasePath(), "templates/pages-template-worker.ts"),
 			directory: functionsDirectory,
 			format: "modules",
+			moduleRoot: functionsDirectory,
 		},
 		outdir ? resolve(outdir) : resolve(outfile),
 		{
@@ -202,6 +203,7 @@ export function buildRawWorker({
 			file: workerScriptPath,
 			directory: resolve(directory),
 			format: "modules",
+			moduleRoot: resolve(directory),
 		},
 		outdir ? resolve(outdir) : resolve(outfile),
 		{

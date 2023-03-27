@@ -4,6 +4,7 @@ import { useApp } from "ink";
 import { useState, useEffect } from "react";
 import { bundleWorker, rewriteNodeCompatBuildFailure } from "../bundle";
 import { logBuildFailure, logger } from "../logger";
+import traverseModuleGraph from "../traverse-module-graph";
 import type { Config } from "../config";
 import type { WorkerRegistry } from "../dev-registry";
 import type { Entry } from "../entry";
@@ -107,14 +108,7 @@ export function useEsbuild({
 				stop,
 				sourceMapPath,
 			}: Awaited<ReturnType<typeof bundleWorker>> = noBundle
-				? {
-						modules: [],
-						dependencies: {},
-						resolvedEntryPointPath: entry.file,
-						bundleType: entry.format === "modules" ? "esm" : "commonjs",
-						stop: undefined,
-						sourceMapPath: undefined,
-				  }
+				? await traverseModuleGraph(entry, rules)
 				: await bundleWorker(entry, destination, {
 						serveAssetsFromWorker,
 						jsxFactory,
