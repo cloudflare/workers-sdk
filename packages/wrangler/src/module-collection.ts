@@ -1,12 +1,12 @@
 import crypto from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import chalk from "chalk";
 import globToRegExp from "glob-to-regexp";
 import { logger } from "./logger";
 import type { Config, ConfigModuleRuleType } from "./config";
 import type { CfModule, CfModuleType, CfScriptFormat } from "./worker";
 import type esbuild from "esbuild";
-import chalk from "chalk";
 
 function flipObject<
 	K extends string | number | symbol,
