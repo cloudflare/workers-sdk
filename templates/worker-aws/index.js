@@ -81,7 +81,7 @@ async function auroraGetData(ID, env) {
 	return results.records;
 }
 
-async function auroraPostData(jsonData) {
+async function auroraPostData(jsonData, env) {
 	const client = new RDSDataClient({
 		region: await env.AWS_REGION,
 		credentialDefaultProvider: myCredentialProvider,
