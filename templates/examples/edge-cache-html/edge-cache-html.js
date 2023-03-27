@@ -24,7 +24,7 @@ export default {
 		// HTML edge cache in front of this worker (only the outermost cache
 		// should handle HTML caching in case there are varying levels of support).
 		let configured = false;
-		if (typeof EDGE_CACHE !== "undefined") {
+		if (typeof env.EDGE_CACHE !== "undefined") {
 			configured = true;
 		} else if (
 			CLOUDFLARE_API.email.length &&
