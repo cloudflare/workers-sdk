@@ -276,7 +276,7 @@ async function purgeCache(cacheVer, ctx) {
  * Update the cached copy of the given page
  * @param {Request} originalRequest - Original Request
  * @param {String} cacheVer - Cache Version
- * @param {Context} ctx - Original ctx
+ * @param {ExecutionContext} ctx - Original ctx
  */
 async function updateCache(originalRequest, cacheVer, ctx) {
 	// Clone the request, add the edge-cache header and send it through.
