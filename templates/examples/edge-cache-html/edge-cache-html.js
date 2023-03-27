@@ -251,7 +251,7 @@ async function purgeCache(cacheVer, ctx) {
 		// Purge the KV cache by bumping the version number
 		cacheVer = await GetCurrentCacheVersion(cacheVer);
 		cacheVer++;
-		ctx.waitUntil(EDGE_CACHE.put("html_cache_version", cacheVer.toString()));
+		ctx.waitUntil(env.EDGE_CACHE.put("html_cache_version", cacheVer.toString()));
 	} else {
 		// Purge everything using the API
 		const url =
