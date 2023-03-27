@@ -306,7 +306,7 @@ async function updateCache(originalRequest, cacheVer, ctx) {
  * @param {Int} cacheVer - Current cache version (if already retrieved)
  * @param {Request} request - Original Request
  * @param {Response} originalResponse - Response to (maybe) cache
- * @param {Context} ctx - Original ctx
+ * @param {ExecutionContext} ctx - Original ctx
  * @returns {bool} true if the response was cached
  */
 async function cacheResponse(cacheVer, request, originalResponse, ctx) {
