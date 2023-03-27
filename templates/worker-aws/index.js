@@ -12,7 +12,7 @@ async function myCredentialProvider(env) {
 
 async function sqsExample(env) {
 	const client = new SQSClient({
-		region: await env.AWS_REGION,
+		region: env.AWS_REGION,
 		credentialDefaultProvider: myCredentialProvider,
 	});
 
