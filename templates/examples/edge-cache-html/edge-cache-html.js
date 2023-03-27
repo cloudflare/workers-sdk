@@ -53,7 +53,7 @@ export default {
  * watch for purge responses and possibly cache HTML GET requests.
  *
  * @param {Request} originalRequest - Original request
- * @param {Context} ctx - Original context (for additional async waiting)
+ * @param {ExecutionContext} ctx - Original context (for additional async waiting)
  */
 async function processRequest(originalRequest, ctx) {
 	let cfCacheStatus = null;
