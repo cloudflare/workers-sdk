@@ -1,5 +1,29 @@
 # wrangler
 
+## 2.14.0
+
+### Minor Changes
+
+- [#2942](https://github.com/cloudflare/workers-sdk/pull/2942) [`dc1465ea`](https://github.com/cloudflare/workers-sdk/commit/dc1465ea64acf3fc9c1442e7df73f14df7dc8630) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: upgrade `miniflare` to [`2.13.0`](https://github.com/cloudflare/miniflare/releases/tag/v2.13.0)
+
+* [#2914](https://github.com/cloudflare/workers-sdk/pull/2914) [`9af1a640`](https://github.com/cloudflare/workers-sdk/commit/9af1a640237ab26e6332e73e3656d16ca9a96e64) Thanks [@edevil](https://github.com/edevil)! - feat: add support for send email bindings
+
+  Support send email bindings in order to send emails from a worker. There
+  are three types of bindings:
+
+  - Unrestricted: can send email to any verified destination address.
+  - Restricted: can only send email to the supplied destination address (which
+    does not need to be specified when sending the email but also needs to be a
+    verified destination address).
+  - Allowlist: can only send email to the supplied list of verified destination
+    addresses.
+
+### Patch Changes
+
+- [#2931](https://github.com/cloudflare/workers-sdk/pull/2931) [`5f6c4c0c`](https://github.com/cloudflare/workers-sdk/commit/5f6c4c0c4542ada3552e1bf099ecdda677c08a3d) Thanks [@Skye-31](https://github.com/Skye-31)! - Fix: Pages Dev incorrectly allowing people to turn off local mode
+
+  Local mode is not currently supported in Pages Dev, and errors when people attempt to use it. Previously, wrangler hid the "toggle local mode" button when using Pages dev, but this got broken somewhere along the line.
+
 ## 2.13.0
 
 ### Minor Changes
