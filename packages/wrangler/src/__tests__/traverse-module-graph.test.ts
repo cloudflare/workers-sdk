@@ -14,6 +14,7 @@ import type { ConfigModuleRuleType } from "../config";
 
 describe("traverse module graph", () => {
 	runInTempDir();
+
 	it("should not detect JS without module rules", async () => {
 		await writeFile(
 			"./index.js",
@@ -45,6 +46,7 @@ describe("traverse module graph", () => {
 
 		expect(bundle.modules).toStrictEqual([]);
 	});
+
 	it.each([
 		["ESModule", "esm"],
 		["CommonJS", "commonjs"],
@@ -79,7 +81,8 @@ describe("traverse module graph", () => {
 
 		expect(bundle.modules[0].type).toStrictEqual(format);
 	});
-	it("should not resolve JS without module root", async () => {
+
+	it("should not resolve JS outside the module root", async () => {
 		await mkdir("./src/nested", { recursive: true });
 		await writeFile(
 			"./src/nested/index.js",
@@ -112,6 +115,7 @@ describe("traverse module graph", () => {
 
 		expect(bundle.modules).toStrictEqual([]);
 	});
+
 	it("should resolve JS with module root", async () => {
 		await mkdir("./src/nested", { recursive: true });
 		await writeFile(
@@ -145,7 +149,42 @@ describe("traverse module graph", () => {
 
 		expect(bundle.modules[0].name).toStrictEqual("other.js");
 	});
-	it("should resolve non-JS without rules", async () => {
+
+	it("should ignore files not matched by glob", async () => {
+		await mkdir("./src/nested", { recursive: true });
+		await writeFile(
+			"./src/nested/index.js",
+			dedent/* javascript */ `
+			import { HELLO } from "../other.js"
+			export default {
+				async fetch(request) {
+					return new Response(HELLO)
+				}
+			}
+			`
+		);
+		await writeFile(
+			"./src/other.js",
+			dedent/* javascript */ `
+			export const HELLO = "WORLD"
+			`
+		);
+
+		const bundle = await traverseModuleGraph(
+			{
+				file: path.join(process.cwd(), "./src/nested/index.js"),
+				directory: path.join(process.cwd(), "./src/nested"),
+				format: "modules",
+				// The default module root is dirname(file)
+				moduleRoot: path.join(process.cwd(), "./src"),
+			},
+			[{ type: "ESModule", globs: ["**/*.mjs"] }]
+		);
+
+		expect(bundle.modules.length).toStrictEqual(0);
+	});
+
+	it("should resolve files that match the default rules", async () => {
 		await mkdir("./src", { recursive: true });
 		await writeFile(
 			"./src/index.js",
