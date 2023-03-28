@@ -307,21 +307,16 @@ export function parseRequestInput(
 ): [RequestInfo, RequestInit | undefined] {
 	if (input instanceof Request) {
 		return [input, undefined];
-	} else if (input instanceof URL) {
-		input = `${protocol}://${readyAddress}:${readyPort}${input.pathname}`;
-	} else if (typeof input === "string") {
-		try {
-			// Want to strip the URL to only get the pathname, but the user could pass in only the pathname
-			// Will error if we try and pass "/something" into new URL("/something")
-			input = `${protocol}://${readyAddress}:${readyPort}${
-				new URL(input).pathname
-			}`;
-		} catch {
-			input = `${protocol}://${readyAddress}:${readyPort}${input}`;
-		}
-	} else {
-		input = `${protocol}://${readyAddress}:${readyPort}`;
 	}
-
-	return [input, init];
+	if (!input) {
+		input = "/";
+	}
+	const url =
+		typeof input === "string"
+			? new URL(input, `${protocol}://${readyAddress}:${readyPort}`)
+			: input;
+	url.protocol = protocol;
+	url.hostname = readyAddress;
+	url.port = readyPort.toString();
+	return [url, init];
 }
