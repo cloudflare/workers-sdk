@@ -1,0 +1,13 @@
+name = "proxy-preview"
+main = "src/index.ts"
+compatibility_date = "2023-03-28"
+workers_dev = false
+
+routes = [
+  { pattern = "preview.devprod.cloudflare.dev/*", zone_name = "devprod.cloudflare.dev" },
+  { pattern = "*.preview.devprod.cloudflare.dev/*", zone_name = "devprod.cloudflare.dev" },
+  { pattern = "*.rawhttp.devprod.cloudflare.dev/*", zone_name = "devprod.cloudflare.dev" }
+]
+
+[dev]
+host = "preview.devprod.cloudflare.dev"
