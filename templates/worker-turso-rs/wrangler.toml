@@ -1,11 +1,9 @@
-name = "{{project-name}}"
+name = "doug"
 workers_dev = true
 compatibility_date = "2022-01-20"
 
-[vars]
-
 [build]
-command = "cargo install -q worker-build && worker-build --release" # required
+command = "cargo install -q worker-build && worker-build --release"
 
 [build.upload]
 dir = "build/worker"

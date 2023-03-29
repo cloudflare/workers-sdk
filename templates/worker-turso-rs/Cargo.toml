@@ -1,5 +1,5 @@
 [package]
-name = "{{project-name}}"
+name = "worker-turso-rs"
 version = "0.1.0"
 authors = ["{{authors}}"]
 edition = "2018"
@@ -20,6 +20,7 @@ serde_json = "1.0.67"
 # all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
 # code size when deploying.
 console_error_panic_hook = { version = "0.1.1", optional = true }
+libsql-client = { version = "0.16.2", default-features = false, features = ["workers_backend"] }
 
 [profile.release]
 # Tell `rustc` to optimize for small code size.

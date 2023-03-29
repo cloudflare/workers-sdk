@@ -2,3 +2,4 @@
 /build/
 **/*.rs.bk
 wasm-pack.log
+.dev.vars
