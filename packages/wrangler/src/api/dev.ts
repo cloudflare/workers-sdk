@@ -301,20 +301,14 @@ export async function unstable_dev(
 export function parseRequestInput(
 	readyAddress: string,
 	readyPort: number,
-	input?: RequestInfo,
+	input: RequestInfo = "/",
 	init?: RequestInit,
 	protocol: "http" | "https" = "http"
 ): [RequestInfo, RequestInit | undefined] {
 	if (input instanceof Request) {
 		return [input, undefined];
 	}
-	if (!input) {
-		input = "/";
-	}
-	const url =
-		typeof input === "string"
-			? new URL(input, `${protocol}://${readyAddress}:${readyPort}`)
-			: input;
+	const url = new URL(`${input}`, `${protocol}://${readyAddress}:${readyPort}`);
 	url.protocol = protocol;
 	url.hostname = readyAddress;
 	url.port = readyPort.toString();
