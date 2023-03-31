@@ -22,7 +22,7 @@ class HttpError extends Error {
 		);
 	}
 
-	public get data(): {} {
+	public get data(): Record<string, unknown> {
 		return {};
 	}
 }
