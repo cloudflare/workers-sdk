@@ -1,7 +1,7 @@
 From a742a62c90c73c8c7e766eaaad9003200a447729 Mon Sep 17 00:00:00 2001
 From: Samuel Macleod <smacleod@cloudflare.com>
 Date: Mon, 16 Jan 2023 16:51:11 +0000
-Subject: [PATCH 03/13] Show fallback image on Safari
+Subject: [PATCH 03/14] Show fallback image on Safari
 
 ---
  config/gni/devtools_grd_files.gni   |   1 +

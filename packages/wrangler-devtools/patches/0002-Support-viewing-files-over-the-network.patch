@@ -1,7 +1,7 @@
 From cc7b688a2427d7506a2f4111887a5e243fb841d4 Mon Sep 17 00:00:00 2001
 From: Samuel Macleod <smacleod@cloudflare.com>
 Date: Thu, 12 Jan 2023 15:33:43 +0000
-Subject: [PATCH 02/13] Support viewing files over the network
+Subject: [PATCH 02/14] Support viewing files over the network
 
 ---
  front_end/core/sdk/Target.ts             |  4 ++++

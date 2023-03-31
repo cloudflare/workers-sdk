@@ -1,7 +1,7 @@
 From 1a267cd3d143892fb0886907a75e3eb295b5b150 Mon Sep 17 00:00:00 2001
 From: bcoll <bcoll@cloudflare.com>
 Date: Mon, 16 Jan 2023 15:43:50 +0000
-Subject: [PATCH 06/13] DEVX-292 Remove unsupported network UI
+Subject: [PATCH 06/14] DEVX-292 Remove unsupported network UI
 
 ---
  front_end/panels/network/NetworkPanel.ts | 35 ------------------------
@@ -48,7 +48,7 @@ index 304bb09af1..aaf80fbd50 100644
 @@ -411,28 +398,6 @@ export class NetworkPanel extends UI.Panel.Panel implements UI.ContextMenu.Provi
      this.panelToolbar.appendToolbarItem(new UI.Toolbar.ToolbarSettingCheckbox(
          this.preserveLogSetting, i18nString(UIStrings.doNotClearLogOnPageReload), i18nString(UIStrings.preserveLog)));
-
+ 
 -    this.panelToolbar.appendSeparator();
 -    const disableCacheCheckbox = new UI.Toolbar.ToolbarSettingCheckbox(
 -        Common.Settings.Settings.instance().moduleSetting('cacheDisabled'),
@@ -74,6 +74,6 @@ index 304bb09af1..aaf80fbd50 100644
      this.rightToolbar.appendToolbarItem(new UI.Toolbar.ToolbarItem(this.progressBarContainer));
      this.rightToolbar.appendSeparator();
      this.rightToolbar.appendToolbarItem(new UI.Toolbar.ToolbarSettingToggle(
---
+-- 
 2.37.1 (Apple Git-137.1)
 
