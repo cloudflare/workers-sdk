@@ -1,7 +1,8 @@
-name = "proxy-preview"
+name = "edge-preview-authenticated-proxy"
 main = "src/index.ts"
 compatibility_date = "2023-03-28"
 workers_dev = false
+account_id = "e35fd947284363a46fd7061634477114"
 
 routes = [
   { pattern = "preview.devprod.cloudflare.dev/*", zone_name = "devprod.cloudflare.dev" },
