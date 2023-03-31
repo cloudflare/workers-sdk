@@ -2,6 +2,8 @@ import cookie from "cookie";
 import { Toucan } from "toucan-js";
 
 export interface Env {
+	SENTRY_ACCESS_CLIENT_SECRET: string;
+	SENTRY_ACCESS_CLIENT_ID: string;
 	SENTRY_DSN: string;
 }
 
@@ -19,6 +21,10 @@ class HttpError extends Error {
 			{ status: this.status }
 		);
 	}
+
+	public get data(): {} {
+		return {};
+	}
 }
 
 class NoExchangeUrl extends HttpError {
@@ -27,8 +33,16 @@ class NoExchangeUrl extends HttpError {
 	}
 }
 class ExchangeFailed extends HttpError {
-	constructor() {
+	constructor(
+		readonly url: string,
+		readonly exchangeStatus: number,
+		readonly body: string
+	) {
 		super("Exchange failed", 400);
+	}
+
+	public get data(): { url: string; status: number; body: string } {
+		return { url: this.url, status: this.exchangeStatus, body: this.body };
 	}
 }
 class TokenUpdateFailed extends HttpError {
@@ -143,13 +157,12 @@ async function handleTokenExchange(url: URL) {
 		const exchange = new URL(exchangeUrl);
 		// Clear sensitive token
 		exchange.search = "";
-		console.error(
-			"Failed Exchange",
+
+		throw new ExchangeFailed(
 			exchange.href,
 			exchangeRes.status,
 			await exchangeRes.text()
 		);
-		throw new ExchangeFailed();
 	}
 	const session = await exchangeRes.json<{
 		prewarm: string;
@@ -160,14 +173,13 @@ async function handleTokenExchange(url: URL) {
 		typeof session.prewarm !== "string"
 	) {
 		const exchange = new URL(exchangeUrl);
-
-		console.error(
-			"Invalid exchange response",
+		// Clear sensitive token
+		exchange.search = "";
+		throw new ExchangeFailed(
 			exchange.href,
 			exchangeRes.status,
-			session
+			JSON.stringify(session)
 		);
-		throw new ExchangeFailed();
 	}
 	return Response.json(session, {
 		headers: {
@@ -247,13 +259,16 @@ async function handleRequest(request: Request, ctx: ExecutionContext) {
 	workerUrl.hostname = remoteUrl.hostname;
 	workerUrl.protocol = remoteUrl.protocol;
 
-	return fetch(workerUrl, {
+	const workerResponse = await fetch(workerUrl, {
 		...request,
 		headers: {
 			...request.headers,
 			"cf-workers-preview-token": token,
 		},
 	});
+	// This will be embedded in an iframe. In particular, the Cloudflare error page sets this header.
+	workerResponse.headers.delete("X-Frame-Options");
+	return workerResponse;
 }
 
 // No ecosystem routers support hostname matching 😥
@@ -278,14 +293,24 @@ export default {
 					"host",
 				],
 			},
+			transportOptions: {
+				headers: {
+					"CF-Access-Client-ID": env.SENTRY_ACCESS_CLIENT_ID,
+					"CF-Access-Client-Secret": env.SENTRY_ACCESS_CLIENT_SECRET,
+				},
+			},
 		});
+
 		try {
-			return handleRequest(request, ctx);
+			return await handleRequest(request, ctx);
 		} catch (e) {
-			sentry.captureException(e);
 			if (e instanceof HttpError) {
+				sentry.captureException(e, {
+					data: { rayId: request.headers.get("cf-ray") || "", ...e.data },
+				});
 				return e.toResponse();
 			} else {
+				sentry.captureException(e);
 				console.error(e);
 				return Response.json(
 					{
