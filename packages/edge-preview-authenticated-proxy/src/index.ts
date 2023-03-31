@@ -259,16 +259,17 @@ async function handleRequest(request: Request, ctx: ExecutionContext) {
 	workerUrl.hostname = remoteUrl.hostname;
 	workerUrl.protocol = remoteUrl.protocol;
 
-	const workerResponse = await fetch(workerUrl, {
+	const original = await fetch(workerUrl, {
 		...request,
 		headers: {
 			...request.headers,
 			"cf-workers-preview-token": token,
 		},
 	});
+	const embeddable = new Response(original.body, original);
 	// This will be embedded in an iframe. In particular, the Cloudflare error page sets this header.
-	workerResponse.headers.delete("X-Frame-Options");
-	return workerResponse;
+	embeddable.headers.delete("X-Frame-Options");
+	return embeddable;
 }
 
 // No ecosystem routers support hostname matching 😥
