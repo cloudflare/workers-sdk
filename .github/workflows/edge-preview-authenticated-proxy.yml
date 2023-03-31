@@ -1,13 +1,13 @@
-name: Preview Proxy
+name: Edge Preview Authenticated Proxy Worker
 
 on:
   push:
     branches:
       - main
 jobs:
-  publish_preview_proxy:
+  publish_worker:
     if: ${{ github.repository_owner == 'cloudflare' }}
-    name: Publish Preview Proxy
+    name: Publish Worker
     needs: prerelease
     runs-on: ubuntu-latest
 
@@ -38,9 +38,9 @@ jobs:
         env:
           NODE_ENV: "production"
 
-      - name: Build & Publish Preview Proxy
+      - name: Build & Publish Worker
         run: npm run publish
         env:
           NODE_ENV: "production"
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        working-directory: packages/proxy-preview
+        working-directory: packages/edge-preview-authenticated-proxy

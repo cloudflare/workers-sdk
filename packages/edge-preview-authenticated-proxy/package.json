@@ -1,0 +1,15 @@
+{
+	"name": "edge-preview-authenticated-proxy",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"deploy": "wrangler publish",
+		"start": "wrangler dev"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20230321.0",
+		"cookie": "^0.5.0",
+		"toucan-js": "^3.1.0",
+		"wrangler": "*"
+	}
+}
