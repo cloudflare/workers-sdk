@@ -4,34 +4,36 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { Channel, FromQuickEditMessage, ToQuickEditMessage } from "./ipc";
 import {
-	CancellationToken,
 	Disposable,
-	Event,
 	EventEmitter,
-	FileChangeEvent,
 	FileChangeType,
+	FileSystemError,
+	FileType,
+	Position,
+	Range,
+	Uri,
+	workspace,
+} from "vscode";
+import type { Channel, FromQuickEditMessage, ToQuickEditMessage } from "./ipc";
+import type { WorkerLoadedMessage } from "./ipc";
+import type {
+	CancellationToken,
+	Event,
+	FileChangeEvent,
 	FileSearchOptions,
 	FileSearchProvider,
 	FileSearchQuery,
 	FileStat,
-	FileSystemError,
 	FileSystemProvider,
-	FileType,
-	Position,
 	Progress,
 	ProviderResult,
-	Range,
 	TextSearchComplete,
 	TextSearchOptions,
 	TextSearchQuery,
 	TextSearchProvider,
 	TextSearchResult,
-	Uri,
-	workspace,
 } from "vscode";
-import { WorkerLoadedMessage } from "./ipc";
 
 export class File implements FileStat {
 	type: FileType;
@@ -116,8 +118,8 @@ export class CFS
 			const pathSegments = path.split("/");
 			if (pathSegments.length > 1) {
 				let created = this.rootFolder;
-				for (const path of pathSegments.slice(0, -1)) {
-					created = created + `/${path}`;
+				for (const pathPart of pathSegments.slice(0, -1)) {
+					created = created + `/${pathPart}`;
 					try {
 						await this.readDirectory(Uri.parse(created));
 					} catch {
@@ -146,7 +148,7 @@ export class CFS
 
 	async readDirectory(uri: Uri): Promise<[string, FileType][]> {
 		const entry = this._lookupAsDirectory(uri, false);
-		let result: [string, FileType][] = [];
+		const result: [string, FileType][] = [];
 		for (const [name, child] of entry.entries) {
 			result.push([name, child.type]);
 		}
@@ -174,8 +176,8 @@ export class CFS
 			suppressChannelUpdate?: boolean;
 		}
 	): void {
-		let basename = this._basename(uri.path);
-		let parent = this._lookupParentDirectory(uri);
+		const basename = this._basename(uri.path);
+		const parent = this._lookupParentDirectory(uri);
 		let entry = parent.entries.get(basename);
 		if (entry instanceof Directory) {
 			throw FileSystemError.FileIsADirectory(uri);
@@ -222,11 +224,11 @@ export class CFS
 			throw FileSystemError.FileExists(newUri);
 		}
 
-		let entry = this._lookup(oldUri, false);
-		let oldParent = this._lookupParentDirectory(oldUri);
+		const entry = this._lookup(oldUri, false);
+		const oldParent = this._lookupParentDirectory(oldUri);
 
-		let newParent = this._lookupParentDirectory(newUri);
-		let newName = this._basename(newUri.path);
+		const newParent = this._lookupParentDirectory(newUri);
+		const newName = this._basename(newUri.path);
 
 		oldParent.entries.delete(entry.name);
 		entry.name = newName;
@@ -253,9 +255,9 @@ export class CFS
 	}
 
 	delete(uri: Uri): void {
-		let dirname = uri.with({ path: this._dirname(uri.path) });
-		let basename = this._basename(uri.path);
-		let parent = this._lookupAsDirectory(dirname, false);
+		const dirname = uri.with({ path: this._dirname(uri.path) });
+		const basename = this._basename(uri.path);
+		const parent = this._lookupAsDirectory(dirname, false);
 		if (!parent.entries.has(basename)) {
 			throw FileSystemError.FileNotFound(uri);
 		}
@@ -275,11 +277,11 @@ export class CFS
 	}
 
 	createDirectory(uri: Uri): void {
-		let basename = this._basename(uri.path);
-		let dirname = uri.with({ path: this._dirname(uri.path) });
-		let parent = this._lookupAsDirectory(dirname, false);
+		const basename = this._basename(uri.path);
+		const dirname = uri.with({ path: this._dirname(uri.path) });
+		const parent = this._lookupAsDirectory(dirname, false);
 
-		let entry = new Directory(uri, basename);
+		const entry = new Directory(uri, basename);
 		parent.entries.set(entry.name, entry);
 		parent.mtime = Date.now();
 		parent.size += 1;
@@ -294,7 +296,7 @@ export class CFS
 	private _lookup(uri: Uri, silent: false): Entry;
 	private _lookup(uri: Uri, silent: boolean): Entry | undefined;
 	private _lookup(uri: Uri, silent: boolean): Entry | undefined {
-		let parts = uri.path.split("/");
+		const parts = uri.path.split("/");
 		let entry: Entry = this.root;
 		for (const part of parts) {
 			if (!part) {
@@ -317,7 +319,7 @@ export class CFS
 	}
 
 	private _lookupAsDirectory(uri: Uri, silent: boolean): Directory {
-		let entry = this._lookup(uri, silent);
+		const entry = this._lookup(uri, silent);
 		if (entry instanceof Directory) {
 			return entry;
 		}
@@ -325,7 +327,7 @@ export class CFS
 	}
 
 	private _lookupAsFile(uri: Uri, silent: boolean): File {
-		let entry = this._lookup(uri, silent);
+		const entry = this._lookup(uri, silent);
 		if (entry instanceof File) {
 			return entry;
 		}
@@ -339,7 +341,7 @@ export class CFS
 
 	private _emitter = new EventEmitter<FileChangeEvent[]>();
 	private _bufferedEvents: FileChangeEvent[] = [];
-	private _fireSoonHandle?: any;
+	private _fireSoonHandle?: unknown;
 
 	readonly onDidChangeFile: Event<FileChangeEvent[]> = this._emitter.event;
 
@@ -352,7 +354,7 @@ export class CFS
 		this._bufferedEvents.push(...events);
 
 		if (this._fireSoonHandle) {
-			clearTimeout(this._fireSoonHandle);
+			clearTimeout(this._fireSoonHandle as number);
 		}
 
 		this._fireSoonHandle = setTimeout(() => {
@@ -394,6 +396,7 @@ export class CFS
 		let offset = haystackLen,
 			idx = -1;
 
+		// eslint-disable-next-line
 		while (true) {
 			idx = haystack.lastIndexOf(needle, offset - 1);
 			if (idx === -1 || idx + needleLen !== offset) {
@@ -427,9 +430,13 @@ export class CFS
 	}
 
 	private _convertSimple2RegExpPattern(pattern: string): string {
-		return pattern
-			.replace(/[\-\\\{\}\+\?\|\^\$\.\,\[\]\(\)\#\s]/g, "\\$&")
-			.replace(/[\*]/g, ".*");
+		return (
+			pattern
+				// eslint-disable-next-line
+				.replace(/[\-\\\{\}\+\?\|\^\$\.\,\[\]\(\)\#\s]/g, "\\$&")
+				// eslint-disable-next-line
+				.replace(/[\*]/g, ".*")
+		);
 	}
 
 	// --- search provider

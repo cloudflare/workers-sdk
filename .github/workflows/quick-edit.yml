@@ -38,7 +38,7 @@ jobs:
         run: npm run build
 
       - name: Build Quick Edit
-        run: cd packages/quick-edit && ./setup.sh
+        run: cd packages/quick-edit && ./setup.sh && npm run build
 
       - name: Publish Quick Edit
         run: npm -w packages/quick-edit run publish
