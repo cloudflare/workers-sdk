@@ -2245,20 +2245,22 @@ and that at least one include rule is provided.
 		mkdirSync("public");
 		writeFileSync("public/README.md", "This is a readme");
 
-		// set up hello.wasm
-		mkdirSync("wasm");
-		writeFileSync("wasm/hello.wasm", "HELLO WORLD");
+		// set up some "external" modules
+		mkdirSync("external");
+		writeFileSync("external/hello.wasm", "Hello Wasm modules world!");
+		writeFileSync("external/hello.txt", "Hello Text modules world!");
 
 		// set up Functions
 		mkdirSync("functions");
 		writeFileSync(
 			"functions/hello.js",
 			`
-			import hello from "./../wasm/hello.wasm";
+			import wasm from "./../external/hello.wasm";
+			import text from "./../external/hello.txt"
 			export async function onRequest() {
-				const helloModule = await WebAssembly.instantiate(hello);
-				const greeting = helloModule.exports.hello;
-				return new Response(greeting);
+				const helloModule = await WebAssembly.instantiate(wasm);
+				const wasmGreeting = helloModule.exports.hello;
+				return new Response(wasmGreeting + text);
 			}
 			`
 		);
@@ -2363,6 +2365,10 @@ and that at least one include rule is provided.
 						/[0-9a-z]*-hello.wasm/g,
 						"test-hello.wasm"
 					);
+					workerBundleWithConstantData = workerBundleWithConstantData.replace(
+						/[0-9a-z]*-hello.txt/g,
+						"test-hello.txt"
+					);
 
 					// check we appended the metadata
 					expect(workerBundleWithConstantData).toContain(
@@ -2377,18 +2383,29 @@ and that at least one include rule is provided.
 						`Content-Disposition: form-data; name="functionsWorker-0.test.js"; filename="functionsWorker-0.test.js"`
 					);
 					expect(workerBundleWithConstantData).toContain(`
-import hello from "./test-hello.wasm";
+import wasm from "./test-hello.wasm";
+import text from "./test-hello.txt";
 async function onRequest() {
-  const helloModule = await WebAssembly.instantiate(hello);
-  const greeting = helloModule.exports.hello;
-  return new Response(greeting);
+  const helloModule = await WebAssembly.instantiate(wasm);
+  const wasmGreeting = helloModule.exports.hello;
+  return new Response(wasmGreeting + text);
 }`);
 
 					// check we appended the wasm module
 					expect(workerBundleWithConstantData).toContain(
 						`Content-Disposition: form-data; name="./test-hello.wasm"; filename="./test-hello.wasm"`
 					);
-					expect(workerBundleWithConstantData).toContain(`HELLO WORLD`);
+					expect(workerBundleWithConstantData).toContain(
+						`Hello Wasm modules world!`
+					);
+
+					// check we appended the text module
+					expect(workerBundleWithConstantData).toContain(
+						`Content-Disposition: form-data; name="./test-hello.txt"; filename="./test-hello.txt"`
+					);
+					expect(workerBundleWithConstantData).toContain(
+						`Hello Text modules world!`
+					);
 
 					return res.once(
 						ctx.status(200),
@@ -2445,20 +2462,31 @@ async function onRequest() {
 		writeFileSync("public/README.md", "This is a readme");
 
 		// set up hello.wasm
-		mkdirSync("wasm");
-		writeFileSync("wasm/hello.wasm", "HELLO");
+		mkdirSync("external");
+		writeFileSync("external/hello.wasm", "Hello wasm modules");
+		writeFileSync(
+			"external/hello.html",
+			"<html><body>Hello text modules</body></html>"
+		);
 
 		// set up _worker.js
 		writeFileSync(
 			"public/_worker.js",
 			`
-			import hello from "./../wasm/hello.wasm";
+			import wasm from "./../external/hello.wasm";
+			import html from "./../external/hello.html";
 			export default {
 				async fetch(request, env) {
 					const url = new URL(request.url);
-					const helloModule = await WebAssembly.instantiate(hello);
-					const greeting = helloModule.exports.hello;
-					return url.pathname.startsWith('/hello') ? new Response(greeting) : env.ASSETS.fetch(request);
+					const helloModule = await WebAssembly.instantiate(wasm);
+					const wasmGreeting = helloModule.exports.hello;
+					if(url.pathname.startsWith('/hello-wasm')) {
+						return new Response(wasmGreeting);
+					}
+					if(url.pathname.startsWith('/hello-text')) {
+						return new Response(html);
+					}
+					return env.ASSETS.fetch(request);
 				}
 			};
 		`
@@ -2558,6 +2586,10 @@ async function onRequest() {
 						/[0-9a-z]*-hello.wasm/g,
 						"test-hello.wasm"
 					);
+					workerBundleWithConstantData = workerBundleWithConstantData.replace(
+						/[0-9a-z]*-hello.html/g,
+						"test-hello.html"
+					);
 
 					// we care about a couple of things here, like the presence of `metadata`,
 					// `bundledWorker`, the wasm import, etc., and since `workerBundle` is
@@ -2572,13 +2604,20 @@ async function onRequest() {
 				Content-Type: application/javascript+module
 
 				// _worker.js
-				import hello from \\"./test-hello.wasm\\";
+				import wasm from \\"./test-hello.wasm\\";
+				import html from \\"./test-hello.html\\";
 				var worker_default = {
 				  async fetch(request, env) {
 				    const url = new URL(request.url);
-				    const helloModule = await WebAssembly.instantiate(hello);
-				    const greeting = helloModule.exports.hello;
-				    return url.pathname.startsWith(\\"/hello\\") ? new Response(greeting) : env.ASSETS.fetch(request);
+				    const helloModule = await WebAssembly.instantiate(wasm);
+				    const wasmGreeting = helloModule.exports.hello;
+				    if (url.pathname.startsWith(\\"/hello-wasm\\")) {
+				      return new Response(wasmGreeting);
+				    }
+				    if (url.pathname.startsWith(\\"/hello-text\\")) {
+				      return new Response(html);
+				    }
+				    return env.ASSETS.fetch(request);
 				  }
 				};
 				export {
@@ -2590,7 +2629,12 @@ async function onRequest() {
 				Content-Disposition: form-data; name=\\"./test-hello.wasm\\"; filename=\\"./test-hello.wasm\\"
 				Content-Type: application/wasm
 
-				HELLO
+				Hello wasm modules
+				------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"./test-hello.html\\"; filename=\\"./test-hello.html\\"
+				Content-Type: text/plain
+
+				<html><body>Hello text modules</body></html>
 				------formdata-undici-0.test--"
 			`);
 
