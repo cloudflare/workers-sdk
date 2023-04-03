@@ -1,5 +1,17 @@
 import path from "path";
-import { Colorize, dim, green, grey, red, reset, yellow } from "kleur/colors";
+import {
+	Colorize,
+	blue,
+	bold,
+	dim,
+	green,
+	grey,
+	red,
+	reset,
+	yellow,
+} from "kleur/colors";
+import { z } from "zod";
+import { Request } from "../http";
 
 const cwd = process.cwd();
 const cwdNodeModules = path.join(cwd, "node_modules");
@@ -123,4 +135,40 @@ export class NoOpLog extends Log {
 	error(message: Error): void {
 		throw message;
 	}
+}
+
+export interface ResponseInfo {
+	status: number;
+	statusText: string;
+	method: string;
+	url: string;
+	time: number;
+}
+
+const ResponseInfoSchema = z.object({
+	status: z.number(),
+	statusText: z.string(),
+	method: z.string(),
+	url: z.string(),
+	time: z.number(),
+});
+
+export async function formatResponse(request: Request) {
+	const info = ResponseInfoSchema.parse(await request.json());
+	const url = new URL(info.url);
+
+	return [
+		`${bold(info.method)} ${url.pathname} `,
+		colourFromHTTPStatus(info.status)(
+			`${bold(info.status)} ${info.statusText} `
+		),
+		grey(`(${info.time}ms)`),
+	].join("");
+}
+
+function colourFromHTTPStatus(status: number): Colorize {
+	if (200 <= status && status < 300) return green;
+	if (400 <= status && status < 500) return yellow;
+	if (500 <= status) return red;
+	return blue;
 }
