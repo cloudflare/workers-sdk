@@ -13,7 +13,7 @@ import type { HttpTerminator } from "http-terminator";
 const DEV_REGISTRY_PORT = "6284";
 const DEV_REGISTRY_HOST = `http://localhost:${DEV_REGISTRY_PORT}`;
 
-let server: Server;
+let server: Server | null;
 let terminator: HttpTerminator;
 
 export type WorkerRegistry = Record<string, WorkerDefinition>;
@@ -102,6 +102,7 @@ export async function startWorkerRegistry() {
  */
 export async function stopWorkerRegistry() {
 	await terminator?.terminate();
+	server = null;
 }
 
 /**
