@@ -119,7 +119,11 @@ export async function handlePrettyErrorRequest({
 }
 
 export default {
-	async fetch(request: Request): Promise<Response> {
+	async fetch(
+		request: Request,
+		env: Env,
+		ctx: ExecutionContext
+	): Promise<Response> {
 		const sentry = new Toucan({
 			dsn: env.SENTRY_DSN,
 			context: ctx,
