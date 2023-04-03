@@ -14,6 +14,17 @@ In development, it's nice to have good error messages to help when debugging, an
 
 Fundamentally, this is based on [Youch](https://github.com/poppinss/youch) and [StackTracey](https://github.com/xpl/stacktracey). Neither of these projects are designed to be run in the Workers environment (although StackTracey does have support for running in the browser), and so both have been vendored in and modified. These modifications aren't upstreamable, since they involve things like changing how Youch detects node-internal modules and changing how sources are loaded.
 
+### Youch changes:
+
+- **"internal" module detection:** By default, Youch recognises modules with a prefix of `node:` to be internal modules. Instead, `format-error`s recognises modules with a prefix of `.internal` as internal modules.
+- **source loading:** Youch loads sources at error-page generation time, `format-error`s loads sources at error-page viewing time.
+- **cookies:** `format-error`s doesn't handle cookies.
+
+### Stacktracey changes:
+
+- **browser detection:** `format-error`s always reports itself to be running inside a browser, but removes references to browser globals like `window`.
+- **table rendering:** To remove the `as-table` dependency, `format-error` doesn't implement Stacktracey's `asTable` method, which Youch doesn't use.
+
 ## How can you get a formatted error page?
 
 The first thing you'll need is an error. `format-errors` requires input conforming to the `Payload` interface below, and will reject invalid input at runtime:
