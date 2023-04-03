@@ -14,14 +14,6 @@
 		"vscode:prepublish": "npm run package-web",
 		"watch-web": "npm run package-web -- --watch"
 	},
-	"contributes": {
-		"commands": [
-			{
-				"command": "cloudflare-logic.helloWorld",
-				"title": "Hello World"
-			}
-		]
-	},
 	"activationEvents": [
 		"onFileSystem:cfs"
 	],
