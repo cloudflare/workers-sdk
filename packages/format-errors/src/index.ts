@@ -1,6 +1,6 @@
+import { Toucan } from "toucan-js";
 import { z } from "zod";
 import Youch from "./Youch";
-import { Toucan } from "toucan-js";
 export interface Env {
 	SENTRY_ACCESS_CLIENT_SECRET: string;
 	SENTRY_ACCESS_CLIENT_ID: string;
