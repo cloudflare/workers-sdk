@@ -86,17 +86,11 @@ export class CFS
 
 	private readonly disposable: Disposable;
 
-	private readonly channel: ReturnType<
-		typeof Channel<FromQuickEditMessage, ToQuickEditMessage>
-	>;
+	private readonly channel: Channel<FromQuickEditMessage, ToQuickEditMessage>;
 
 	private readRoot: ((value: [string, FileType][]) => void) | null = null;
 
-	constructor(
-		channel: ReturnType<
-			typeof Channel<FromQuickEditMessage, ToQuickEditMessage>
-		>
-	) {
+	constructor(channel: Channel<FromQuickEditMessage, ToQuickEditMessage>) {
 		this.channel = channel;
 		this.disposable = Disposable.from(
 			workspace.registerFileSystemProvider(CFS.scheme, this, {

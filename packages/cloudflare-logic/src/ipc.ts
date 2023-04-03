@@ -52,15 +52,12 @@ export type FromQuickEditMessage =
 	| SetEntryPointMessage;
 export type ToQuickEditMessage = WorkerLoadedMessage;
 
-export function Channel<Send, Receive>(
-	messagePassingProtocol: MessagePassingProtocol
-) {
-	return {
-		postMessage(message: Send, transfer: ArrayBuffer[] = []) {
-			return messagePassingProtocol.postMessage(message, transfer);
-		},
-		onMessage(cb: (data: Receive) => void) {
-			return messagePassingProtocol.onDidReceiveMessage(cb);
-		},
-	};
+export class Channel<Send, Receive> {
+	constructor(readonly messagePassingProtocol: MessagePassingProtocol) {}
+	postMessage(message: Send, transfer: ArrayBuffer[] = []) {
+		return this.messagePassingProtocol.postMessage(message, transfer);
+	}
+	onMessage(cb: (data: Receive) => void) {
+		return this.messagePassingProtocol.onDidReceiveMessage(cb);
+	}
 }
