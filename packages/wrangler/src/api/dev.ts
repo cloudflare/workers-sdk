@@ -59,6 +59,7 @@ export interface UnstableDevOptions {
 		testMode?: boolean; // This option shouldn't be used - We plan on removing it eventually
 		testScheduled?: boolean; // Test scheduled events by visiting /__scheduled in browser
 		watch?: boolean; // unstable_dev doesn't support watch-mode yet in testMode
+		doUpdateCheck?: boolean;
 	};
 }
 
@@ -85,6 +86,7 @@ export async function unstable_dev(
 		disableExperimentalWarning: false,
 		showInteractiveDevSession: false,
 		testMode: true,
+		doUpdateCheck: false,
 		// Override all options, including overwriting with "undefined"
 		...options?.experimental,
 	};
@@ -99,6 +101,7 @@ export async function unstable_dev(
 		showInteractiveDevSession,
 		testMode,
 		testScheduled,
+		doUpdateCheck,
 		// 2. options for alpha/beta products/libs
 		d1Databases,
 		experimentalLocal,
@@ -183,6 +186,7 @@ export async function unstable_dev(
 					experimentalEnableLocalPersistence: undefined,
 					legacyEnv: undefined,
 					public: undefined,
+					doUpdateCheck, // whether to prompt the user to update wrangler
 					...options,
 				});
 			}).then((devServer) => {
@@ -273,6 +277,7 @@ export async function unstable_dev(
 					experimentalEnableLocalPersistence: undefined,
 					legacyEnv: undefined,
 					public: undefined,
+					doUpdateCheck, // whether to prompt the user to update wrangler
 					...options,
 				});
 			}).then((devServer) => {

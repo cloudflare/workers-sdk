@@ -559,6 +559,7 @@ export const Handler = async ({
 			showInteractiveDevSession: undefined,
 			testMode: false,
 			watch: true,
+			doUpdateCheck: true,
 		},
 	});
 	await metrics.sendMetricsEvent("run pages dev");

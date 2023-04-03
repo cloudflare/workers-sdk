@@ -91,13 +91,16 @@ ${TOML.stringify({ rules: config.build.upload.rules })}`
 	return rules;
 }
 
-export async function printWranglerBanner() {
+export async function printWranglerBanner(doUpdateCheck = true) {
 	// Let's not print this in tests
 	if (typeof jest !== "undefined") {
 		return;
 	}
 
-	const text = ` ⛅️ wrangler ${wranglerVersion} ${await updateCheck()}`;
+	let text = ` ⛅️ wrangler ${wranglerVersion}`;
+	if (doUpdateCheck) {
+		text += ` ${await updateCheck()}`;
+	}
 
 	logger.log(
 		text +

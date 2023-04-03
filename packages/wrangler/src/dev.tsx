@@ -345,6 +345,7 @@ type StartDevOptions = DevArguments &
 		enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 		onReady?: (ip: string, port: number) => void;
 		showInteractiveDevSession?: boolean;
+		doUpdateCheck?: boolean;
 	};
 
 export async function startDev(args: StartDevOptions) {
@@ -354,7 +355,7 @@ export async function startDev(args: StartDevOptions) {
 		if (args.logLevel) {
 			logger.loggerLevel = args.logLevel;
 		}
-		await printWranglerBanner();
+		await printWranglerBanner(args.doUpdateCheck);
 
 		if (args.local && process.platform !== "win32") {
 			logger.info(
@@ -515,7 +516,7 @@ export async function startApiDev(args: StartDevOptions) {
 	if (args.logLevel) {
 		logger.loggerLevel = args.logLevel;
 	}
-	await printWranglerBanner();
+	await printWranglerBanner(args.doUpdateCheck);
 
 	const configPath =
 		args.config || (args.script && findWranglerToml(path.dirname(args.script)));
