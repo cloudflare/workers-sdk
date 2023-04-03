@@ -1,4 +1,4 @@
-set -eu -o pipefail
+set -eu
 # The upstream VSCode version (tag) to build from
 VERSION=1.76.0
 
