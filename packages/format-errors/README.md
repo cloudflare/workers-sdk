@@ -6,27 +6,30 @@ A Worker that will nicely format errors, optionally inflating with source contex
      <tr><td><img src="./images/service-worker.png"></td><td><img src="./images/modules-worker.png"></td></tr>
 </table>
 
-## Why is this needed? 
+## Why is this needed?
+
 In development, it's nice to have good error messages to help when debugging, and ideally the logic for that shouldn't be bundled into your user Worker. This Worker is ~50kb when gzipped, which doesn't add _that_ much, but there's still a benefit to keeping it separate from the user Worker. Additionally, in environments where we're unable to bundle complex Workers, this error formatting Worker allows for the display of useful errors where otherwise only a stack trace would be available.
 
 ## How does it work?
+
 Fundamentally, this is based on [Youch](https://github.com/poppinss/youch) and [StackTracey](https://github.com/xpl/stacktracey). Neither of these projects are designed to be run in the Workers environment (although StackTracey does have support for running in the browser), and so both have been vendored in and modified. These modifications aren't upstreamable, since they involve things like changing how Youch detects node-internal modules and changing how sources are loaded.
 
 ## How can you get a formatted error page?
+
 The first thing you'll need is an error. `format-errors` requires input conforming to the `Payload` interface below, and will reject invalid input at runtime:
 
 ```ts
 export interface JsonError {
-  message?: string;
-  name?: string;
-  stack?: string;
-  cause?: JsonError;
+	message?: string;
+	name?: string;
+	stack?: string;
+	cause?: JsonError;
 }
 export interface Payload {
-  url?: string;
-  method?: string;
-  headers?: Record<string, string>;
-  error?: JsonError;
+	url?: string;
+	method?: string;
+	headers?: Record<string, string>;
+	error?: JsonError;
 }
 ```
 
@@ -43,35 +46,35 @@ A requirement of passing sources to `format-errors` is that the generated HTML e
 Assuming `iframeEl` is a reference to the iframe which embeds the generated error page, here's an example of how you could pass sources to the generated error page:
 
 ```ts
-const encoder = new TextEncoder()
-const channel = new MessageChannel()
+const encoder = new TextEncoder();
+const channel = new MessageChannel();
 
-iframeEl.addEventListener('load', () => {
-    iframeEl.contentWindow?.postMessage('PORT', '*', [
-        channel.port2
-    ]);
-})
+iframeEl.addEventListener("load", () => {
+	iframeEl.contentWindow?.postMessage("PORT", "*", [channel.port2]);
+});
 
-channel.port1.onmessage = data => {
-    if (data.type === 'RequestSources') {
-        const message = {
-            type: 'SourcesLoaded',
-            body: {
-                files: [
-                    {
-                        path: "index.js",
-                        contents: encoder.encode("console.log('hi')")
-                    }
-                ], 
-                internalLines: 0
-            }
-        };
-        channel.port1.postMessage(
-            message,
-            message.body.files.map(f => f.contents.buffer)
-        );
-    }
-}
+channel.port1.onmessage = (data) => {
+	if (data.type === "RequestSources") {
+		const message = {
+			type: "SourcesLoaded",
+			body: {
+				files: [
+					{
+						path: "index.js",
+						contents: encoder.encode("console.log('hi')"),
+					},
+				],
+				internalLines: 0,
+			},
+		};
+		channel.port1.postMessage(
+			message,
+			message.body.files.map((f) => f.contents.buffer)
+		);
+	}
+};
 ```
 
-The interface is fairly simple. The embedder passes a `MessagePort` to the iframe on load, over which the error page requests sources. Of note: this does not currently support sourcemaps, and it's assumed that the lines within your error stack trace map to the exact line in your source. There's one exception to that, to support _very_ limited source transformations, in the `internalLines` property. If you pass a value for `internalLines`, the error page will act as if any error messages from line numbers _below_ `internalLines` are internal, and shouldn't be surfaced to the user. Line numbers in error messages will be remapped so that it appears the user-visible source starts at line `0`, rather than line `internalLines`.
+The interface is fairly simple. The embedder passes a `MessagePort` to the iframe on load, over which the error page requests sources. Of note: this does not currently support sourcemaps, and it's assumed that the lines within your error stack trace map to the exact line in your source.
+
+There's one exception to that, to support _very_ limited source transformations, in the `internalLines` property. If you pass a value for `internalLines`, the error page will act as if any error messages from line numbers _below_ `internalLines` are internal, and shouldn't be surfaced to the user. Line numbers in error messages will be remapped so that it appears the user-visible source starts at line `0`, rather than line `internalLines`.
