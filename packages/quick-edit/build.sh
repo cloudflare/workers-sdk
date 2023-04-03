@@ -1,4 +1,4 @@
-set -eu -o pipefail
+set -eu
 
 # Cleanup development symlink to vscode
 rm -f web/vscode
