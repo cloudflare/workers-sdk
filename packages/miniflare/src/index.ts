@@ -67,11 +67,13 @@ import {
 	Clock,
 	HttpError,
 	Log,
+	LogLevel,
 	MiniflareCoreError,
 	Mutex,
 	NoOpLog,
 	OptionalZodTypeOf,
 	defaultClock,
+	formatResponse,
 } from "./shared";
 import { anyAbortSignal } from "./shared/signal";
 import { waitForRequest } from "./wait";
@@ -510,6 +512,13 @@ export class Miniflare {
 					this.#workerSrcOpts,
 					request
 				);
+			} else if (url.pathname === "/core/log") {
+				if (this.#log.level < LogLevel.INFO) {
+					return;
+				}
+
+				const response = await formatResponse(request);
+				this.#log.log(response);
 			} else {
 				// TODO: check for proxying/outbound fetch header first (with plans for fetch mocking)
 				response = await this.#handleLoopbackPlugins(request, url);

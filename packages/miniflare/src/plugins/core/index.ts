@@ -130,6 +130,7 @@ export const SCRIPT_ENTRY = `
 const matchRoutes = ${matchRoutes.toString()};
 
 async function handleEvent(event) {
+  const startTime = Date.now();
   const probe = event.request.headers.get("${HEADER_PROBE}");
   if (probe !== null) {
     const probeMin = parseInt(probe);
@@ -177,6 +178,18 @@ async function handleEvent(event) {
         });
       }
     }
+
+    event.waitUntil(${BINDING_SERVICE_LOOPBACK}.fetch("http://localhost/core/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          "status": response.status,
+          "statusText": response.statusText,
+          "method": event.request.method,
+          "url": response.url,
+          "time": Date.now() - startTime,
+        }),
+    }));
 
     const liveReloadScript = globalThis.${BINDING_DATA_LIVE_RELOAD_SCRIPT};
     if (
