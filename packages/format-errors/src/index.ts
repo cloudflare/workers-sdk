@@ -27,14 +27,12 @@ export const JsonErrorSchema: z.ZodType<JsonError> = z.lazy(() =>
 	})
 );
 
-export const PayloadSchema: z.ZodType<Payload> = z.lazy(() =>
-	z.object({
-		url: z.string().optional(),
-		method: z.string().optional(),
-		headers: z.record(z.string()),
-		error: JsonErrorSchema.optional(),
-	})
-);
+export const PayloadSchema: z.ZodType<Payload> = z.object({
+	url: z.string().optional(),
+	method: z.string().optional(),
+	headers: z.record(z.string()),
+	error: JsonErrorSchema.optional(),
+});
 
 interface StandardErrorConstructor {
 	new (message?: string, options?: { cause?: Error }): Error;
@@ -150,9 +148,7 @@ export default {
 			const payload = PayloadSchema.parse(await request.json());
 			return handlePrettyErrorRequest(payload);
 		} catch (e) {
-			sentry.captureException(e, {
-				data: { rayId: request.headers.get("cf-ray") || "" },
-			});
+			sentry.captureException(e);
 			return Response.json(
 				{
 					error: "UnexpectedError",
