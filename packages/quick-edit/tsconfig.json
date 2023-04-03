@@ -1,0 +1,11 @@
+{
+	"compilerOptions": {
+		"target": "esnext",
+		"module": "esnext",
+		"lib": ["esnext"],
+		"types": ["@cloudflare/workers-types"]
+	},
+	"include": ["functions/**/*.ts"],
+	"exclude": ["vscode", "dist"],
+	"extends": "../../tsconfig.json"
+}
