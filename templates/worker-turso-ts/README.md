@@ -14,6 +14,6 @@ In order to get this code to run, you will need to:
   database as part of the [tutorial].
 
 [turso]: https://turso.tech/
-[tutorial]: https://developers.cloudflare.com/workers/tutorials/connect-to-turso-database-from-workers/
+[tutorial]: https://developers.cloudflare.com/workers/tutorials/connect-to-turso-using-workers/
 [environment variable]: https://developers.cloudflare.com/workers/platform/environment-variables/#add-environment-variables-via-wrangler
 [secret]: https://developers.cloudflare.com/workers/platform/environment-variables/#add-secrets-to-your-project
