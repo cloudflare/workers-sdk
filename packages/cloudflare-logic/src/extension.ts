@@ -5,7 +5,7 @@ import type { FromQuickEditMessage, ToQuickEditMessage } from "./ipc";
 
 export function activate(context: vscode.ExtensionContext) {
 	if (context.messagePassingProtocol) {
-		const channel = Channel<FromQuickEditMessage, ToQuickEditMessage>(
+		const channel = new Channel<FromQuickEditMessage, ToQuickEditMessage>(
 			context.messagePassingProtocol
 		);
 		const cfs = new CFS(channel);
