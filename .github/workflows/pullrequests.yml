@@ -29,13 +29,6 @@ jobs:
             tsconfig.tsbuildinfo
           key: ${{ matrix.os }}-eslint-tsbuildinfo-${{ hashFiles('**/*.ts','**/*.js', 'package.json', 'tsconfig.json') }}
 
-      - name: Install workerd Dependencies
-        if: ${{ runner.os == 'Linux' }}
-        run: |
-          export DEBIAN_FRONTEND=noninteractive
-          sudo apt-get update
-          sudo apt-get install -y libc++1
-
       # Attempt to cache all the node_modules directories based on the OS and package lock.
       - name: Cache node_modules
         id: npm-cache
@@ -76,13 +69,6 @@ jobs:
         with:
           node-version: ${{ env.node-version }}
           cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
-
-      - name: Install workerd Dependencies
-        if: ${{ runner.os == 'Linux' }}
-        run: |
-          export DEBIAN_FRONTEND=noninteractive
-          sudo apt-get update
-          sudo apt-get install -y libc++1
 
       # Attempt to cache all the node_modules directories based on the OS and package lock.
       - name: Cache node_modules
