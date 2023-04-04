@@ -6,9 +6,6 @@
 		] /* Specify a set of bundled library declaration files that describe the target runtime environment. */,
 		"module": "es2022" /* Specify what module code is generated. */,
 		"moduleResolution": "node" /* Specify how TypeScript looks up a file from a given module specifier. */,
-		"types": [
-			"@cloudflare/workers-types/experimental"
-		] /* Specify type package names to be included without being referenced in a source file. */,
 		"allowJs": true /* Allow JavaScript files to be a part of your program. Use the `checkJS` option to get errors from these files. */,
 		"checkJs": false /* Enable error reporting in type-checked JavaScript files. */,
 		"noEmit": true /* Disable emitting files from a compilation. */,
@@ -18,5 +15,5 @@
 		"strict": true /* Enable all strict type-checking options. */,
 		"skipLibCheck": true /* Skip type checking all .d.ts files. */
 	},
-	"exclude": ["**/*.test.ts"]
+	"include": ["**/*.test.ts"]
 }
