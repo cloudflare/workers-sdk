@@ -5,7 +5,7 @@ export default defineConfig({
 		include:
 			__dirname === process.cwd()
 				? [
-						"{fixtures,packages/workers.new}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}",
+						"{fixtures,packages/workers.new,packages/edge-preview-authenticated-proxy}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}",
 				  ]
 				: configDefaults.include,
 		exclude: [...configDefaults.exclude],

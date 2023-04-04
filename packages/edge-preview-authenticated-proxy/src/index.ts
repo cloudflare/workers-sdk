@@ -64,6 +64,7 @@ function switchRemote(url: URL, remote: string) {
 	const remoteUrl = new URL(remote);
 	workerUrl.hostname = remoteUrl.hostname;
 	workerUrl.protocol = remoteUrl.protocol;
+	workerUrl.port = remoteUrl.port;
 	return workerUrl;
 }
 
@@ -207,6 +208,7 @@ async function updatePreviewToken(url: URL, ctx: ExecutionContext) {
 	const token = url.searchParams.get("token");
 	const prewarmUrl = url.searchParams.get("prewarm");
 	const remote = url.searchParams.get("remote");
+	// return Response.json([...url.searchParams.entries()]);
 	if (!token || !prewarmUrl || !remote) {
 		throw new TokenUpdateFailed();
 	}
