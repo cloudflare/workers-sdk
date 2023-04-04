@@ -29,14 +29,14 @@
 	"contributes": {
 		"themes": [
 			{
-				"label": "Solarflare Light",
-				"uiTheme": "vs",
-				"path": "./themes/cloudflare-light-color-theme.json"
-			},
-			{
 				"label": "Solarflare Dark",
 				"uiTheme": "vs-dark",
 				"path": "./themes/cloudflare-dark-color-theme.json"
+			},
+			{
+				"label": "Solarflare Light",
+				"uiTheme": "vs",
+				"path": "./themes/cloudflare-light-color-theme.json"
 			}
 		]
 	},
