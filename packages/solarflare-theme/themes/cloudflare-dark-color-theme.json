@@ -1,10 +1,25 @@
 {
 	"name": "Cloudflare Dark",
 	"colors": {
-		"editor.background": "#263238",
+		"focusBorder": "#4693FF",
+		"editor.background": "#313131",
 		"editor.foreground": "#eeffff",
-		"activityBarBadge.background": "#F38020",
-		"sideBarTitle.foreground": "#bbbbbb"
+		"activityBar.background": "#1d1d1d",
+		"activityBarBadge.background": "#0051c3",
+		"activityBar.foreground": "#4693FF",
+		"sideBarTitle.foreground": "#eeffff",
+		"sideBar.background": "#313131",
+		"sideBar.border": "#3d3d3d",
+		"statusBar.background": "#0051c3",
+		"statusBar.foreground": "#eeffff",
+		"tab.border": "#00000000",
+		"tab.activeBorder": "#0051c3",
+		"tab.inactiveBackground": "#313131",
+		"gitDecoration.modifiedResourceForeground": "#4693FF",
+		"gitDecoration.deletedResourceForeground": "#E81403",
+		"gitDecoration.addedResourceForeground": "#55D584cc",
+		"gitDecoration.untrackedResourceForeground": "#7EDFA2",
+		"gitDecoration.ignoredResourceForeground": "#ffffff59"
 	},
 	"tokenColors": [
 		{
