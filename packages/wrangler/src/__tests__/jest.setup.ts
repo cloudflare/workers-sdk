@@ -1,6 +1,10 @@
+import chalk from "chalk";
 import fetchMock from "jest-fetch-mock";
 import { MockWebSocket } from "./helpers/mock-web-socket";
 import { msw } from "./helpers/msw";
+
+//turn off chalk for tests due to inconsistencies between operating systems
+chalk.level = 0;
 
 /**
  * The relative path between the bundled code and the Wrangler package.

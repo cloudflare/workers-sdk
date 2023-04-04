@@ -37,7 +37,7 @@ export type QueryResult = {
 	};
 	query?: string;
 };
-// Max number of bytes to send in a single /execute call
+// Max number of statements to send in a single /execute call
 const QUERY_LIMIT = 10_000;
 
 export function Options(yargs: CommonYargsArgv) {

@@ -3,6 +3,7 @@ import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 import * as esbuild from "esbuild";
 import { execaCommand } from "execa";
+import { COMMON_ESBUILD_OPTIONS } from "./bundle";
 import { logger } from "./logger";
 import { getBasePath } from "./paths";
 import type { Config } from "./config";
@@ -15,7 +16,16 @@ import type { Metafile } from "esbuild";
  *
  * It consists not just of a `file`, but also of a `directory` that is used to resolve relative paths.
  */
-export type Entry = { file: string; directory: string; format: CfScriptFormat };
+export type Entry = {
+	/** A worker's entrypoint */
+	file: string;
+	/** A worker's directory. Usually where the wrangler.toml file is located */
+	directory: string;
+	/** Is this a module worker or a service worker? */
+	format: CfScriptFormat;
+	/** The directory that contains all of a `--no-bundle` worker's modules. Usually `${directory}/src`. Defaults to path.dirname(file) */
+	moduleRoot: string;
+};
 
 /**
  * Compute the entry-point for the Worker.
@@ -99,7 +109,12 @@ export async function getEntry(
 		);
 	}
 
-	return { file, directory, format };
+	return {
+		file,
+		directory,
+		format,
+		moduleRoot: config.base_dir ?? path.dirname(file),
+	};
 }
 
 export async function runCustomBuild(
@@ -147,17 +162,12 @@ export default async function guessWorkerFormat(
 	tsconfig?: string | undefined
 ): Promise<CfScriptFormat> {
 	const result = await esbuild.build({
+		...COMMON_ESBUILD_OPTIONS,
 		entryPoints: [entryFile],
 		absWorkingDir: entryWorkingDirectory,
 		metafile: true,
 		bundle: false,
-		target: "es2022",
 		write: false,
-		loader: {
-			".js": "jsx",
-			".mjs": "jsx",
-			".cjs": "jsx",
-		},
 		...(tsconfig && { tsconfig }),
 	});
 	// result.metafile is defined because of the `metafile: true` option above.

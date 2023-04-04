@@ -48,6 +48,7 @@ export function buildWorker({
 			file: resolve(getBasePath(), "templates/pages-template-worker.ts"),
 			directory: functionsDirectory,
 			format: "modules",
+			moduleRoot: functionsDirectory,
 		},
 		outdir ? resolve(outdir) : resolve(outfile),
 		{
@@ -58,10 +59,6 @@ export function buildWorker({
 			watch,
 			legacyNodeCompat,
 			nodejsCompat,
-			loader: {
-				".txt": "text",
-				".html": "text",
-			},
 			define: {
 				__FALLBACK_SERVICE__: JSON.stringify(fallbackService),
 			},
@@ -202,6 +199,7 @@ export function buildRawWorker({
 			file: workerScriptPath,
 			directory: resolve(directory),
 			format: "modules",
+			moduleRoot: resolve(directory),
 		},
 		outdir ? resolve(outdir) : resolve(outfile),
 		{
@@ -210,10 +208,6 @@ export function buildRawWorker({
 			watch,
 			legacyNodeCompat,
 			nodejsCompat,
-			loader: {
-				".txt": "text",
-				".html": "text",
-			},
 			define: {},
 			betaD1Shims: (betaD1Shims || []).map(
 				(binding) => `${D1_BETA_PREFIX}${binding}`

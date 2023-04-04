@@ -1,0 +1,46 @@
+From b6b9e129a3f09863a82d4e0af0cfd234fd0b8f1d Mon Sep 17 00:00:00 2001
+From: Samuel Macleod <smacleod@cloudflare.com>
+Date: Fri, 31 Mar 2023 23:20:07 +0100
+Subject: [PATCH 14/14] Add ping to improve connection stability
+
+---
+ front_end/core/sdk/Connections.ts | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/front_end/core/sdk/Connections.ts b/front_end/core/sdk/Connections.ts
+index f8ac89d283..cb963a973c 100644
+--- a/front_end/core/sdk/Connections.ts
++++ b/front_end/core/sdk/Connections.ts
+@@ -83,6 +83,7 @@ export class WebSocketConnection implements ProtocolClient.InspectorBackend.Conn
+   #onWebSocketDisconnect: (() => void)|null;
+   #connected: boolean;
+   #messages: string[];
++  #pingInterval: ReturnType<typeof setInterval>;
+   constructor(url: Platform.DevToolsPath.UrlString, onWebSocketDisconnect: () => void) {
+     this.#socket = new WebSocket(url);
+     this.#socket.onerror = this.onError.bind(this);
+@@ -99,6 +100,13 @@ export class WebSocketConnection implements ProtocolClient.InspectorBackend.Conn
+     this.#onWebSocketDisconnect = onWebSocketDisconnect;
+     this.#connected = false;
+     this.#messages = [];
++    let highPingId = 100_000;
++    this.#pingInterval = setInterval(() => {
++      this.sendRawMessage(JSON.stringify({
++        method: "Runtime.getIsolateId",
++        id: highPingId++,
++      }));
++    }, 10_000);
+   }
+ 
+   setOnMessage(onMessage: (arg0: (Object|string)) => void): void {
+@@ -151,6 +159,7 @@ export class WebSocketConnection implements ProtocolClient.InspectorBackend.Conn
+       this.#socket = null;
+     }
+     this.#onWebSocketDisconnect = null;
++    clearInterval(this.#pingInterval)
+   }
+ 
+   sendRawMessage(message: string): void {
+-- 
+2.37.1 (Apple Git-137.1)
+

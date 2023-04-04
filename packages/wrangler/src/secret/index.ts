@@ -100,6 +100,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 								},
 								bindings: {
 									kv_namespaces: [],
+									send_email: [],
 									vars: {},
 									durable_objects: { bindings: [] },
 									queues: [],

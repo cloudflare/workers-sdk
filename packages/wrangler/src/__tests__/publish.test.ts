@@ -32,7 +32,7 @@ import {
 	createFetchResult,
 	msw,
 	mswSuccessDeployments,
-	mswSuccessLastDeployment,
+	mswSuccessDeploymentScriptMetadata,
 } from "./helpers/msw";
 import { FileReaderSync } from "./helpers/msw/read-file-sync";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -89,7 +89,7 @@ describe("publish", () => {
 			);
 			writeWorkerSource();
 			mockSubDomainRequest();
-			mockUploadWorkerRequest({ expectedType: "esm", sendScriptIds: true });
+			mockUploadWorkerRequest({ expectedType: "esm" });
 			mockOAuthServerCallback();
 
 			await runWrangler("publish ./index");
@@ -1329,6 +1329,32 @@ export default{
 						"Hello, World!",
 				},
 			});
+			mockSubDomainRequest();
+			await runWrangler("publish index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class"
+		`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should allow cloudflare module import", async () => {
+			writeWranglerToml();
+			fs.writeFileSync(
+				"./index.js",
+				`
+import { EmailMessage } from "cloudflare:email";
+export default{
+  fetch(){
+    return new Response("all done");
+  }
+}
+`
+			);
+			mockUploadWorkerRequest();
 			mockSubDomainRequest();
 			await runWrangler("publish index.js");
 			expect(std.out).toMatchInlineSnapshot(`
@@ -7324,54 +7350,6 @@ export default{
 		});
 	});
 
-	it("should publish if the last deployed source check fails", async () => {
-		writeWorkerSource();
-		writeWranglerToml();
-		mockSubDomainRequest();
-		mockUploadWorkerRequest();
-		msw.use(
-			rest.get(
-				"*/accounts/:accountId/workers/deployments/by-script/:scriptTag",
-				(_, res, ctx) => {
-					return res(
-						ctx.json(
-							createFetchResult({
-								latest: { number: "2" },
-							})
-						)
-					);
-				}
-			),
-			rest.get(
-				"*/accounts/:accountId/workers/services/:scriptName",
-				(_, res, ctx) => {
-					return res(
-						ctx.json(
-							createFetchResult(null, false, [
-								{ code: 10090, message: "workers.api.error.service_not_found" },
-							])
-						)
-					);
-				}
-			)
-		);
-
-		await runWrangler("publish index.js");
-		expect(std).toMatchInlineSnapshot(`
-		Object {
-		  "debug": "",
-		  "err": "",
-		  "info": "",
-		  "out": "Total Upload: xx KiB / gzip: xx KiB
-		Uploaded test-name (TIMINGS)
-		Published test-name (TIMINGS)
-		  https://test-name.test-sub-domain.workers.dev
-		Current Deployment ID: undefined",
-		  "warn": "",
-		}
-	`);
-	});
-
 	it("should not publish if there's any other kind of error when checking deployment source", async () => {
 		writeWorkerSource();
 		writeWranglerToml();
@@ -7454,6 +7432,83 @@ export default{
 							max_batch_size: 5,
 							max_batch_timeout: 3,
 							max_retries: 10,
+						},
+					],
+				},
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			mockGetQueue("queue1");
+			mockPutQueueConsumer("queue1", "test-name", {
+				dead_letter_queue: "myDLQ",
+				settings: {
+					batch_size: 5,
+					max_retries: 10,
+					max_wait_time_ms: 3000,
+				},
+			});
+			await runWrangler("publish index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			  Consumer for queue1
+			Current Deployment ID: Galaxy-Class"
+		`);
+		});
+
+		it("should support queue consumer concurrency with a max concurrency specified", async () => {
+			writeWranglerToml({
+				queues: {
+					consumers: [
+						{
+							queue: "queue1",
+							dead_letter_queue: "myDLQ",
+							max_batch_size: 5,
+							max_batch_timeout: 3,
+							max_retries: 10,
+							max_concurrency: 5,
+						},
+					],
+				},
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			mockGetQueue("queue1");
+			mockPutQueueConsumer("queue1", "test-name", {
+				dead_letter_queue: "myDLQ",
+				settings: {
+					batch_size: 5,
+					max_retries: 10,
+					max_wait_time_ms: 3000,
+					max_concurrency: 5,
+				},
+			});
+			await runWrangler("publish index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			  Consumer for queue1
+			Current Deployment ID: Galaxy-Class"
+		`);
+		});
+
+		it("should support queue consumer concurrency with a null max concurrency", async () => {
+			writeWranglerToml({
+				queues: {
+					consumers: [
+						{
+							queue: "queue1",
+							dead_letter_queue: "myDLQ",
+							max_batch_size: 5,
+							max_batch_timeout: 3,
+							max_retries: 10,
+							max_concurrency: null,
 						},
 					],
 				},
@@ -7609,6 +7664,33 @@ export default{
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
+
+		it("should send keepVars when `keep_vars = true`", async () => {
+			process.env = {
+				CLOUDFLARE_API_TOKEN: "hunter2",
+				CLOUDFLARE_ACCOUNT_ID: "some-account-id",
+			};
+			setIsTTY(false);
+			writeWranglerToml({
+				keep_vars: true,
+			});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ keepVars: true });
+			mockOAuthServerCallback();
+			mockGetMemberships([]);
+
+			await runWrangler("publish index.js");
+
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class"
+		`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
 	});
 });
 
@@ -7630,7 +7712,7 @@ function mockDeploymentsListRequest() {
 }
 
 function mockLastDeploymentRequest() {
-	msw.use(...mswSuccessLastDeployment);
+	msw.use(...mswSuccessDeploymentScriptMetadata);
 }
 
 /** Create a mock handler for the request to upload a worker script. */
@@ -7648,7 +7730,6 @@ function mockUploadWorkerRequest(
 		expectedUnsafeMetaData?: Record<string, string>;
 		env?: string;
 		legacyEnv?: boolean;
-		sendScriptIds?: boolean;
 		keepVars?: boolean;
 		tag?: string;
 	} = {}
@@ -7666,7 +7747,6 @@ function mockUploadWorkerRequest(
 		legacyEnv = false,
 		expectedMigrations,
 		expectedUnsafeMetaData,
-		sendScriptIds,
 		keepVars,
 	} = options;
 	if (env && !legacyEnv) {
@@ -7748,12 +7828,11 @@ function mockUploadWorkerRequest(
 			ctx.json(
 				createFetchResult({
 					available_on_subdomain,
-					...(sendScriptIds && {
-						id: "abc12345",
-						etag: "etag98765",
-						pipeline_hash: "hash9999",
-						tag: "sample-tag",
-					}),
+					id: "abc12345",
+					etag: "etag98765",
+					pipeline_hash: "hash9999",
+					tag: "sample-tag",
+					deployment_id: "Galaxy-Class",
 				})
 			)
 		);

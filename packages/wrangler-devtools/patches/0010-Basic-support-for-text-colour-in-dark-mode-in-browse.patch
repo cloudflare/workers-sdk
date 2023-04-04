@@ -1,7 +1,7 @@
 From 9d34de7c9010659ece1be008ee852a21e06bff55 Mon Sep 17 00:00:00 2001
 From: Samuel Macleod <smacleod@cloudflare.com>
 Date: Mon, 23 Jan 2023 15:12:38 +0000
-Subject: [PATCH 10/13] Basic support for text colour in dark mode in browsers
+Subject: [PATCH 10/14] Basic support for text colour in dark mode in browsers
  that don't implement :host-context
 
 ---

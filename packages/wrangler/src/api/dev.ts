@@ -143,7 +143,6 @@ export async function unstable_dev(
 					enablePagesAssetsServiceBinding,
 					liveReload,
 					showInteractiveDevSession,
-					forceLocal,
 					onReady: (address, port) => {
 						readyPort = port;
 						readyAddress = address;
@@ -232,6 +231,7 @@ export async function unstable_dev(
 					experimentalLocal: experimentalLocal ?? false,
 					experimentalLocalRemoteKv: experimentalLocalRemoteKv ?? false,
 					enablePagesAssetsServiceBinding,
+					forceLocal,
 					liveReload,
 					onReady: (address, port) => {
 						readyPort = port;
@@ -301,27 +301,16 @@ export async function unstable_dev(
 export function parseRequestInput(
 	readyAddress: string,
 	readyPort: number,
-	input?: RequestInfo,
+	input: RequestInfo = "/",
 	init?: RequestInit,
 	protocol: "http" | "https" = "http"
 ): [RequestInfo, RequestInit | undefined] {
 	if (input instanceof Request) {
 		return [input, undefined];
-	} else if (input instanceof URL) {
-		input = `${protocol}://${readyAddress}:${readyPort}${input.pathname}`;
-	} else if (typeof input === "string") {
-		try {
-			// Want to strip the URL to only get the pathname, but the user could pass in only the pathname
-			// Will error if we try and pass "/something" into new URL("/something")
-			input = `${protocol}://${readyAddress}:${readyPort}${
-				new URL(input).pathname
-			}`;
-		} catch {
-			input = `${protocol}://${readyAddress}:${readyPort}${input}`;
-		}
-	} else {
-		input = `${protocol}://${readyAddress}:${readyPort}`;
 	}
-
-	return [input, init];
+	const url = new URL(`${input}`, `${protocol}://${readyAddress}:${readyPort}`);
+	url.protocol = protocol;
+	url.hostname = readyAddress;
+	url.port = readyPort.toString();
+	return [url, init];
 }

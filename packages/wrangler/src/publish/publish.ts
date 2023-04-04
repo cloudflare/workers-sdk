@@ -12,6 +12,7 @@ import {
 import { fetchListResult, fetchResult } from "../cfetch";
 import { printBindings } from "../config";
 import { createWorkerUploadForm } from "../create-worker-upload-form";
+import { addHyphens } from "../deployments";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import { logger } from "../logger";
@@ -20,6 +21,7 @@ import { ParseError } from "../parse";
 import { getQueue, putConsumer } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
 import { syncAssets } from "../sites";
+import traverseModuleGraph from "../traverse-module-graph";
 import { identifyD1BindingsAsBeta } from "../worker";
 import { getZoneForRoute } from "../zones";
 import type { FetchError } from "../cfetch";
@@ -30,7 +32,6 @@ import type {
 	ZoneNameRoute,
 	CustomDomainRoute,
 } from "../config/environment";
-import type { DeploymentListResult } from "../deployments";
 import type { Entry } from "../entry";
 import type { PutConsumerBody } from "../queues/client";
 import type { AssetPaths } from "../sites";
@@ -335,7 +336,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const jsxFactory = props.jsxFactory || config.jsx_factory;
 	const jsxFragment = props.jsxFragment || config.jsx_fragment;
-	const keepVars = props.keepVars ?? config.keep_vars;
+	const keepVars = props.keepVars || config.keep_vars;
 
 	const minify = props.minify ?? config.minify;
 
@@ -401,7 +402,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		: `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
 	let available_on_subdomain: boolean | undefined = undefined; // we'll set this later
-	let scriptTag: string | null = null;
+	let deploymentId: string | null = null;
 
 	const { format } = props.entry;
 
@@ -463,14 +464,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			resolvedEntryPointPath,
 			bundleType,
 		}: Awaited<ReturnType<typeof bundleWorker>> = props.noBundle
-			? // we can skip the whole bundling step and mock a bundle here
-			  {
-					modules: [],
-					dependencies: {},
-					resolvedEntryPointPath: props.entry.file,
-					bundleType: props.entry.format === "modules" ? "esm" : "commonjs",
-					stop: undefined,
-			  }
+			? await traverseModuleGraph(props.entry, props.rules)
 			: await bundleWorker(
 					props.entry,
 					typeof destination === "string" ? destination : destination.path,
@@ -541,6 +535,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					? { binding: "__STATIC_CONTENT", id: assets.namespace }
 					: []
 			),
+			send_email: config.send_email,
 			vars: { ...config.vars, ...props.vars },
 			wasm_modules: config.wasm_modules,
 			text_blobs: {
@@ -632,7 +627,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					id: string | null;
 					etag: string | null;
 					pipeline_hash: string | null;
-					tag: string | null;
+					deployment_id: string | null;
 				}>(
 					workerUrl,
 					{
@@ -649,7 +644,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				);
 
 				available_on_subdomain = result.available_on_subdomain;
-				scriptTag = result.tag;
+				deploymentId = addHyphens(result.deployment_id) ?? result.deployment_id;
 
 				if (config.first_party_worker) {
 					// Print some useful information returned after publishing
@@ -839,19 +834,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		logger.log("No publish targets for", workerName, formatTime(deployMs));
 	}
 
-	try {
-		const deploymentsList = await fetchResult<DeploymentListResult>(
-			`/accounts/${accountId}/workers/deployments/by-script/${scriptTag}`
-		);
-
-		logger.log("Current Deployment ID:", deploymentsList.latest.id);
-	} catch (e) {
-		if ((e as { code: number }).code === 10023) {
-			// TODO: remove this try/catch once deployments is completely rolled out
-		} else {
-			throw e;
-		}
-	}
+	logger.log("Current Deployment ID:", deploymentId);
 }
 
 export function helpIfErrorIsSizeOrScriptStartup(
@@ -1060,6 +1043,7 @@ function updateQueueConsumers(config: Config): Promise<string[]>[] {
 				max_wait_time_ms: consumer.max_batch_timeout
 					? 1000 * consumer.max_batch_timeout
 					: undefined,
+				max_concurrency: consumer.max_concurrency,
 			},
 		};
 

@@ -1,7 +1,7 @@
 From cde74d1233f0e89563cfe4d458af197f21c22f18 Mon Sep 17 00:00:00 2001
 From: bcoll <bcoll@cloudflare.com>
 Date: Wed, 15 Feb 2023 15:07:45 +0000
-Subject: [PATCH 13/13] DEVX-380 Hide debugger sidebar and disable breakpoints
+Subject: [PATCH 13/14] DEVX-380 Hide debugger sidebar and disable breakpoints
 
 - Hides debugger sidebar
 - Removes toggle debugger sidebar command

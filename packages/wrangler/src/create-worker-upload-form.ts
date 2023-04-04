@@ -23,7 +23,7 @@ export function toMimeType(type: CfModuleType): string {
 	}
 }
 
-type WorkerMetadataBinding =
+export type WorkerMetadataBinding =
 	// If you add any new binding types here, also add it to safeBindings
 	// under validateUnsafeBinding in config/validation.ts
 	| { type: "plain_text"; name: string; text: string }
@@ -32,6 +32,12 @@ type WorkerMetadataBinding =
 	| { type: "text_blob"; name: string; part: string }
 	| { type: "data_blob"; name: string; part: string }
 	| { type: "kv_namespace"; name: string; namespace_id: string }
+	| {
+			type: "send_email";
+			name: string;
+			destination_address?: string;
+			allowed_destination_addresses?: string[];
+	  }
 	| {
 			type: "durable_object_namespace";
 			name: string;
@@ -104,6 +110,17 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			namespace_id: id,
 		});
 	});
+
+	bindings.send_email?.forEach(
+		({ name, destination_address, allowed_destination_addresses }) => {
+			metadataBindings.push({
+				name: name,
+				type: "send_email",
+				destination_address,
+				allowed_destination_addresses,
+			});
+		}
+	);
 
 	bindings.durable_objects?.bindings.forEach(
 		({ name, class_name, script_name, environment }) => {

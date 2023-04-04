@@ -28,6 +28,7 @@ export function buildPlugin({
 			file: resolve(getBasePath(), "templates/pages-template-plugin.ts"),
 			directory: functionsDirectory,
 			format: "modules",
+			moduleRoot: functionsDirectory,
 		},
 		resolve(outdir),
 		{

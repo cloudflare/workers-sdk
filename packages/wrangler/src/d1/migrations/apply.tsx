@@ -172,10 +172,11 @@ Your database may not be available to serve requests during the migration, conti
 				}
 			} catch (e) {
 				const err = e as ParseError;
+				const maybeCause = (err.cause ?? err) as Error;
 
 				success = false;
 				errorNotes = err.notes?.map((msg) => msg.text) ?? [
-					err.message ?? err.toString(),
+					maybeCause?.message ?? maybeCause.toString(),
 				];
 			}
 

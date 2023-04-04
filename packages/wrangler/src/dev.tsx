@@ -852,6 +852,7 @@ function getBindings(
 			),
 			...(args.kv || []),
 		],
+		send_email: configParam.send_email,
 		// Use a copy of combinedVars since we're modifying it later
 		vars: {
 			...getVarsForDev(configParam, env),
