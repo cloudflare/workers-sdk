@@ -22,7 +22,7 @@ class HttpError extends Error {
 		);
 	}
 
-	public get data(): Record<string, unknown> {
+	get data(): Record<string, unknown> {
 		return {};
 	}
 }
@@ -41,7 +41,7 @@ class ExchangeFailed extends HttpError {
 		super("Exchange failed", 400);
 	}
 
-	public get data(): { url: string; status: number; body: string } {
+	get data(): { url: string; status: number; body: string } {
 		return { url: this.url, status: this.exchangeStatus, body: this.body };
 	}
 }
@@ -307,7 +307,7 @@ export default {
 		} catch (e) {
 			if (e instanceof HttpError) {
 				sentry.captureException(e, {
-					data: { rayId: request.headers.get("cf-ray") || "", ...e.data },
+					data: { ...e.data },
 				});
 				return e.toResponse();
 			} else {
