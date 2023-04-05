@@ -8,7 +8,6 @@ jobs:
   publish_worker:
     if: ${{ github.repository_owner == 'cloudflare' }}
     name: Publish Worker
-    needs: prerelease
     runs-on: ubuntu-latest
 
     steps:
