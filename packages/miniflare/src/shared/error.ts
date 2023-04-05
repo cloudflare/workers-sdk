@@ -17,7 +17,6 @@ export class MiniflareError<
 }
 
 export type MiniflareCoreErrorCode =
-	| "ERR_RUNTIME_UNSUPPORTED" // System doesn't support Cloudflare Workers runtime
 	| "ERR_RUNTIME_FAILURE" // Runtime failed to start
 	| "ERR_DISPOSED" // Attempted to use Miniflare instance after calling dispose()
 	| "ERR_MODULE_PARSE" // SyntaxError when attempting to parse/locate modules

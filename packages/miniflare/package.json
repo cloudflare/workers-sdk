@@ -23,8 +23,7 @@
 	"main": "./dist/src/index.js",
 	"types": "./dist/src/index.d.ts",
 	"files": [
-		"dist/src",
-		"lib"
+		"dist/src"
 	],
 	"dependencies": {
 		"acorn": "^8.8.0",
@@ -39,7 +38,7 @@
 		"source-map-support": "0.5.21",
 		"stoppable": "^1.1.0",
 		"undici": "^5.13.0",
-		"workerd": "^1.20230221.0",
+		"workerd": "^1.20230404.0",
 		"ws": "^8.11.0",
 		"youch": "^3.2.2",
 		"zod": "^3.20.6"

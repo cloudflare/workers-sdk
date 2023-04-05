@@ -227,8 +227,11 @@ test("fetch: requires GET for web socket upgrade", async (t) => {
 		}
 	);
 });
-test("fetch: throws catchable error on connection failure", async (t) => {
+test("fetch: throws catchable error on failure", async (t) => {
+	const server = await useServer(t, (req, res) => {
+		res.end("http response");
+	});
 	await t.throwsAsync(
-		fetch("http://0.0.0.0", { headers: { upgrade: "websocket" } })
+		fetch(server.http, { headers: { upgrade: "websocket" } })
 	);
 });

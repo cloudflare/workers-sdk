@@ -1,4 +1,5 @@
 import path from "path";
+import { pathToFileURL } from "url";
 import { globsToRegExps, testRegExps } from "@miniflare/tre";
 import test from "ava";
 
@@ -25,5 +26,10 @@ test("globsToRegExps/testRegExps: matches glob patterns", (t) => {
 	// Check absolute paths (`ModuleLinker` will `path.resolve` to absolute paths)
 	// (see https://github.com/cloudflare/miniflare/issues/244)
 	t.true(testRegExps(matcherRegExps, "/one/two/three.txt"));
-	t.true(testRegExps(matcherRegExps, path.join(process.cwd(), "src/index.js")));
+	t.true(
+		testRegExps(
+			matcherRegExps,
+			pathToFileURL(path.join(process.cwd(), "src/index.js")).href
+		)
+	);
 });

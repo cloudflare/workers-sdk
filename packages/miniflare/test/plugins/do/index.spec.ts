@@ -89,9 +89,12 @@ test("persists Durable Object data on file-system", async (t) => {
 	t.is(await res.text(), "2");
 
 	// Check removing persisted data then reloaded resets count (note we have to
-	// reload here as `workerd` keeps a copy of the SQLite database in-memory)
+	// reload here as `workerd` keeps a copy of the SQLite database in-memory,
+	// we also need to `dispose()` to avoid `EBUSY` error on Windows)
+	await mf.dispose();
 	await fs.rm(path.join(tmp, names[0]), { force: true, recursive: true });
-	await mf.setOptions(opts);
+
+	mf = new Miniflare(opts);
 	res = await mf.dispatchFetch("http://localhost");
 	t.is(await res.text(), "1");
 

@@ -50,8 +50,9 @@ export const DEFAULT_PERSIST_ROOT = ".mf";
 export const PARAM_FILE_UNSANITISE = "unsanitise";
 
 export function maybeParseURL(url: Persistence): URL | undefined {
+	if (typeof url !== "string" || path.isAbsolute(url)) return;
 	try {
-		if (typeof url === "string") return new URL(url);
+		return new URL(url);
 	} catch {}
 }
 
