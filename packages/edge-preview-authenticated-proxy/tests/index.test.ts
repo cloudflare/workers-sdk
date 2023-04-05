@@ -1,11 +1,11 @@
+import fs from "fs/promises";
+import os from "os";
+import path from "path";
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import { unstable_dev } from "wrangler";
 import type { UnstableDevWorker } from "wrangler";
-import fs from "fs/promises";
-import path from "path";
-import os from "os";
 
-describe("worker", () => {
+describe("Preview Worker", () => {
 	let worker: UnstableDevWorker;
 	let remote: UnstableDevWorker;
 	let tmpDir: string;
@@ -15,7 +15,7 @@ describe("worker", () => {
 			experimental: { disableExperimentalWarning: true },
 		});
 
-		const tmpDir = await fs.realpath(
+		tmpDir = await fs.realpath(
 			await fs.mkdtemp(path.join(os.tmpdir(), "preview-tests"))
 		);
 

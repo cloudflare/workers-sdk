@@ -4,7 +4,8 @@
 	"private": true,
 	"scripts": {
 		"deploy": "wrangler publish",
-		"start": "wrangler dev"
+		"start": "wrangler dev",
+		"test": "vitest"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20230321.0",

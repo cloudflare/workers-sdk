@@ -23,7 +23,7 @@
 		"fix": "npm run prettify && npm run check:lint -- --fix",
 		"postinstall": "patch-package",
 		"prettify": "prettier . --write --ignore-unknown",
-		"test": "npm run clean --workspace=wrangler && npm run bundle --workspace=wrangler && npm run test --workspace=packages/wrangler --workspace=packages/pages-shared --if-present && npx vitest",
+		"test": "npm run clean --workspace=wrangler && npm run bundle --workspace=wrangler && npm run test --workspace=packages/wrangler --workspace=packages/edge-preview-authenticated-proxy --workspace=packages/pages-shared --if-present && npx vitest",
 		"test:ci": "npm run test:ci --workspace=packages/wrangler --workspace=packages/pages-shared --if-present && npx vitest"
 	},
 	"dependencies": {
