@@ -54,13 +54,11 @@ import {
 import {
 	Config,
 	Runtime,
-	RuntimeConstructor,
 	RuntimeOptions,
 	Service,
 	Socket,
 	Worker_Binding,
 	Worker_Module,
-	getSupportedRuntime,
 	serializeConfig,
 } from "./runtime";
 import {
@@ -232,7 +230,6 @@ export class Miniflare {
 	#log: Log;
 	readonly #clock: Clock;
 
-	readonly #runtimeConstructor: RuntimeConstructor;
 	#runtime?: Runtime;
 	#removeRuntimeExitHook?: () => void;
 	#runtimeEntryURL?: URL;
@@ -285,12 +282,6 @@ export class Miniflare {
 		this.#log = this.#sharedOpts.core.log ?? new NoOpLog();
 		this.#clock = this.#sharedOpts.core.clock ?? defaultClock;
 		this.#initPlugins();
-
-		// Get supported shell for executing runtime binary
-		// TODO: allow this to be configured if necessary
-		this.#runtimeConstructor = getSupportedRuntime();
-		const desc = this.#runtimeConstructor.description;
-		this.#log.debug(`Running workerd ${desc}...`);
 
 		this.#liveReloadServer = new WebSocketServer({ noServer: true });
 		this.#webSocketServer = new WebSocketServer({
@@ -386,12 +377,11 @@ export class Miniflare {
 			inspectorPort: this.#sharedOpts.core.inspectorPort,
 			verbose: this.#sharedOpts.core.verbose,
 		};
-		this.#runtime = new this.#runtimeConstructor(opts);
+		this.#runtime = new Runtime(opts);
 		this.#removeRuntimeExitHook = exitHook(() => void this.#runtime?.dispose());
 
 		const accessibleHost =
-			this.#runtime.accessibleHostOverride ??
-			(host === "*" || host === "0.0.0.0" ? "127.0.0.1" : host);
+			host === "*" || host === "0.0.0.0" ? "127.0.0.1" : host;
 		this.#runtimeEntryURL = new URL(`http://${accessibleHost}:${entryPort}`);
 
 		const config = await this.#assembleConfig();

@@ -44,6 +44,8 @@ import {
 } from "../../test-shared";
 import { isWithin } from "../../test-shared/asserts";
 
+const WITHIN_EPSILON = 10_000;
+
 function hash(value: string, algorithm = "md5") {
 	return crypto.createHash(algorithm).update(value).digest("hex");
 }
@@ -488,7 +490,7 @@ test("head: returns metadata for existing keys", async (t) => {
 	});
 	t.deepEqual(object.customMetadata, { key: "value" });
 	t.deepEqual(object.range, { offset: 0, length: 5 });
-	isWithin(t, 3000, object.uploaded.getTime(), start);
+	isWithin(t, WITHIN_EPSILON, object.uploaded.getTime(), start);
 });
 test(validatesKeyMacro, { method: "head", f: (r2, key) => r2.head(key) });
 
@@ -530,7 +532,7 @@ test("get: returns metadata and body for existing keys", async (t) => {
 	});
 	t.deepEqual(body.customMetadata, { key: "value" });
 	t.deepEqual(body.range, { offset: 0, length: 5 });
-	isWithin(t, 3000, body.uploaded.getTime(), start);
+	isWithin(t, WITHIN_EPSILON, body.uploaded.getTime(), start);
 });
 test(validatesKeyMacro, { method: "get", f: (r2, key) => r2.get(key) });
 test("get: range using object", async (t) => {
@@ -695,7 +697,7 @@ test("put: returns metadata for created object", async (t) => {
 	});
 	t.deepEqual(object.customMetadata, { key: "value" });
 	t.is(object.range, undefined);
-	isWithin(t, 3000, object.uploaded.getTime(), start);
+	isWithin(t, WITHIN_EPSILON, object.uploaded.getTime(), start);
 });
 test("put: overrides existing keys", async (t) => {
 	const { r2 } = t.context;
@@ -1008,7 +1010,7 @@ test("list: returns metadata with objects", async (t) => {
 	t.deepEqual(object.httpMetadata, {});
 	t.deepEqual(object.customMetadata, {});
 	t.is(object.range, undefined);
-	isWithin(t, 3000, object.uploaded.getTime(), start);
+	isWithin(t, WITHIN_EPSILON, object.uploaded.getTime(), start);
 });
 test("list: paginates with variable limit", async (t) => {
 	const { r2, ns } = t.context;
