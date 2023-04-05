@@ -1,7 +1,3 @@
-function isLocalDev(url: URL) {
-	return url.hostname === "localhost" || url.hostname === "127.0.0.1";
-}
-
 export const onRequest = async ({
 	env,
 	request,
@@ -42,21 +38,19 @@ export const onRequest = async ({
 			],
 		}).replace(/"/g, "&quot;"),
 		WORKBENCH_AUTH_SESSION: "",
-		WORKBENCH_WEB_BASE_URL: isLocalDev(url) ? "/vscode" : "/assets",
+		WORKBENCH_WEB_BASE_URL: "/assets",
 	};
 
 	console.log(url.host);
 	if (url.pathname === "/") {
-		url.pathname = `${
-			values.WORKBENCH_WEB_BASE_URL
-		}/out/vs/code/browser/workbench/workbench${isLocalDev(url) ? "-dev" : ""}`;
+		url.pathname = `${values.WORKBENCH_WEB_BASE_URL}/out/vs/code/browser/workbench/workbench`;
 		const response = await env.ASSETS.fetch(url);
 		let body = await response.text();
 		body = body.replaceAll(
 			/\{\{([^}]+)\}\}/g,
 			(_, key) => values[key as keyof typeof values] ?? "undefined"
 		);
-		if (!isLocalDev(url)) body = body.replace("/node_modules/", "/modules/");
+		body = body.replace("/node_modules/", "/modules/");
 
 		return new Response(body, {
 			headers: {

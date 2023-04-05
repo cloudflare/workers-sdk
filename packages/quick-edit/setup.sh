@@ -16,3 +16,5 @@ git config user.email "workers-devprod@cloudflare.com"
 git config user.name "Workers DevProd"
 
 git am ../patches/*.patch
+cd ..
+ln -s $PWD/vscode $PWD/web/vscode

@@ -1,5 +1,5 @@
 {
-	"name": "@cloudflare/cloudflare-logic",
+	"name": "cloudflare-logic",
 	"displayName": "Cloudflare Logic",
 	"version": "0.0.1",
 	"private": true,
