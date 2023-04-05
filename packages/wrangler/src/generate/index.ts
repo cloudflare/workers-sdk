@@ -269,8 +269,8 @@ function parseTemplatePath(templatePath: string): {
 	if (!templatePath.includes("/")) {
 		// template is a cloudflare canonical template, it doesn't include a slash in the name
 		return {
-			remote: "https://github.com/cloudflare/templates.git",
-			subdirectory: templatePath,
+			remote: "https://github.com/cloudflare/workers-sdk.git",
+			subdirectory: `templates/${templatePath}`,
 		};
 	}
 
