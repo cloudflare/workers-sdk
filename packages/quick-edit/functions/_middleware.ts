@@ -23,7 +23,7 @@ export const onRequest = async ({
 						"https://openvsxorg.blob.core.windows.net/resources/{publisher}/{name}/{version}/{path}",
 				},
 				extensionEnabledApiProposals: {
-					"cloudflare.cloudflare-logic": [
+					"cloudflare.quick-edit-extension": [
 						"fileSearchProvider",
 						"textSearchProvider",
 						"ipc",
@@ -33,7 +33,7 @@ export const onRequest = async ({
 			additionalBuiltinExtensions: [
 				{
 					scheme: url.protocol === "https:" ? "https" : "http",
-					path: "/cloudflare-logic",
+					path: "/quick-edit-extension",
 				},
 			],
 		}).replace(/"/g, "&quot;"),

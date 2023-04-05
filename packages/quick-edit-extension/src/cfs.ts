@@ -255,6 +255,14 @@ export class CFS
 		if (!parent.entries.has(basename)) {
 			throw FileSystemError.FileNotFound(uri);
 		}
+		const entry = parent.entries.get(basename);
+		// Recursively delete all children
+		if (entry instanceof Directory) {
+			for (const child of entry.entries.values()) {
+				this.delete(child.uri);
+			}
+		}
+
 		parent.entries.delete(basename);
 		parent.mtime = Date.now();
 		parent.size -= 1;

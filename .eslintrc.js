@@ -118,7 +118,7 @@ module.exports = {
 		"packages/wrangler-devtools/built-devtools",
 		"packages/wranglerjs-compat-webpack-plugin/lib",
 		"/templates",
-		"packages/cloudflare-logic/vscode.proposed.*.d.ts",
+		"packages/quick-edit-extension/vscode.proposed.*.d.ts",
 	],
 	root: true,
 };

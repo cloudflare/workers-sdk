@@ -186,9 +186,7 @@ packages/wranglerjs-compat-webpack-plugin/lib
 emitted-types/
 _routes.generated.json
 packages/quick-edit/vscode
-packages/quick-edit/web/assets
-packages/quick-edit/web/cloudflare-logic
-packages/quick-edit/web/vscode
+packages/quick-edit/web
 
 # Vendored npm dependencies
 !vendor/*.tgz

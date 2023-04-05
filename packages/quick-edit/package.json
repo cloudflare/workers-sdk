@@ -11,9 +11,9 @@
 	"author": "workers-devprod@cloudflare.com",
 	"scripts": {
 		"build": "./build.sh",
-		"dev": "concurrently './vscode/scripts/code-web.sh --extensionDevelopmentPath ../web/cloudflare-logic' 'npm --prefix web/cloudflare-logic run watch-web' 'yarn --cwd vscode watch' 'yarn --cwd vscode watch-web'",
+		"dev": "concurrently './vscode/scripts/code-web.sh --extensionDevelopmentPath ../web/quick-edit-extension' 'npm --prefix web/quick-edit-extension run watch-web' 'yarn --cwd vscode watch' 'yarn --cwd vscode watch-web'",
 		"publish": "CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 npx wrangler pages publish --project-name quick-edit ./web",
-		"setup": "rm -rf vscode web/assets web/cloudflare-logic web/vscode && ./setup.sh && npm --prefix web/cloudflare-logic install && yarn --cwd vscode"
+		"setup": "rm -rf vscode web/assets web/quick-edit-extension web/vscode && ./setup.sh && npm --prefix web/quick-edit-extension install && yarn --cwd vscode"
 	},
 	"dependencies": {
 		"wrangler": "*",

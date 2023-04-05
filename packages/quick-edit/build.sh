@@ -9,5 +9,5 @@ mv vscode-web web/assets
 # Pages doesn't support uploading folders called node_modules
 mv web/assets/node_modules web/assets/modules
 
-# Build cloudflare-logic
-npm --prefix web/cloudflare-logic run package-web
+# Build quick-edit-extension
+npm --prefix web/quick-edit-extension run package-web
