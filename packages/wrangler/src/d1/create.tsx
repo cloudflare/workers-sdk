@@ -83,9 +83,7 @@ export const Handler = withConfig<HandlerOptions>(
 			<Box flexDirection="column">
 				<Text>
 					✅ Successfully created DB &apos;{db.name}&apos;
-					{primaryLocationHint
-						? ` using location hint ${primaryLocationHint}`
-						: ``}
+					{location ? ` using primary location hint ${location}` : ``}
 				</Text>
 				<Text>&nbsp;</Text>
 				<Text>
