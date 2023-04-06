@@ -20,8 +20,10 @@ export function Options(yargs: CommonYargsArgv) {
 			demandOption: true,
 		})
 		.option("primary-location-hint", {
-			describe: "A hint for the main location of the new DB",
+			describe:
+				"A hint for the main location of the new DB. Options:\nweur: Europe (west)\neeur: Europe (east)\napac: Asia Pacific\nwnam: North America (west)\nenam: North America (east) \n",
 			type: "string",
+			choices: ["weur", "eeur", "apac", "wnam", "enam"],
 		})
 		.epilogue(d1BetaWarning);
 }
