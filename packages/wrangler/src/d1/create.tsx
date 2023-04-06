@@ -9,7 +9,7 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Database } from "./types";
+import type { DatabaseCreationResult } from "./types";
 
 export function Options(yargs: CommonYargsArgv) {
 	return yargs
@@ -18,17 +18,22 @@ export function Options(yargs: CommonYargsArgv) {
 			type: "string",
 			demandOption: true,
 		})
+		.option("primary-location-hint", {
+			describe: "A hint for the main location of the new DB",
+			type: "string",
+		})
 		.epilogue(d1BetaWarning);
 }
 
 export async function Handler({
 	name,
+	primaryLocationHint,
 }: StrictYargsOptionsToInterface<typeof Options>): Promise<void> {
 	const accountId = await requireAuth({});
 
 	logger.log(d1BetaWarning);
 
-	let db: Database;
+	let db: DatabaseCreationResult;
 	try {
 		db = await fetchResult(`/accounts/${accountId}/d1/database`, {
 			method: "POST",
@@ -37,6 +42,9 @@ export async function Handler({
 			},
 			body: JSON.stringify({
 				name,
+				...(primaryLocationHint && {
+					primary_location_hint: primaryLocationHint,
+				}),
 			}),
 		});
 	} catch (e) {
@@ -49,14 +57,19 @@ export async function Handler({
 	logger.log(
 		renderToString(
 			<Box flexDirection="column">
-				<Text>✅ Successfully created DB &apos;{db.name}&apos;!</Text>
+				<Text>
+					✅ Successfully created DB &apos;{db.name}&apos;
+					{primaryLocationHint
+						? ` using location hint ${primaryLocationHint}`
+						: ``}
+				</Text>
 				<Text>&nbsp;</Text>
 				<Text>
 					Add the following to your wrangler.toml to connect to it from a
 					Worker:
 				</Text>
 				<Text>&nbsp;</Text>
-				<Text>[[ d1_databases ]]</Text>
+				<Text>[[d1_databases]]</Text>
 				<Text>
 					binding = &quot;DB&quot; # i.e. available in your Worker on env.DB
 				</Text>
