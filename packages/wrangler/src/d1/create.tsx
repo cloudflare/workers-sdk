@@ -29,7 +29,7 @@ export function Options(yargs: CommonYargsArgv) {
 
 export async function Handler({
 	name,
-	primaryLocationHint,
+	location,
 }: StrictYargsOptionsToInterface<typeof Options>): Promise<void> {
 	const accountId = await requireAuth({});
 
@@ -44,8 +44,8 @@ export async function Handler({
 			},
 			body: JSON.stringify({
 				name,
-				...(primaryLocationHint && {
-					primary_location_hint: primaryLocationHint,
+				...(location && {
+					primary_location_hint: location,
 				}),
 			}),
 		});
@@ -61,9 +61,7 @@ export async function Handler({
 			<Box flexDirection="column">
 				<Text>
 					✅ Successfully created DB &apos;{db.name}&apos;
-					{primaryLocationHint
-						? ` using location hint ${primaryLocationHint}`
-						: ``}
+					{location ? ` using primary location hint ${location}` : ``}
 				</Text>
 				<Text>&nbsp;</Text>
 				<Text>
