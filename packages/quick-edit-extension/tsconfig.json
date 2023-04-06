@@ -6,6 +6,7 @@
 		"lib": ["ES2020", "WebWorker"],
 		"sourceMap": true,
 		"rootDir": "src",
-		"strict": true
+		"strict": true,
+		"types": ["vscode"]
 	}
 }
