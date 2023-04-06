@@ -47,12 +47,11 @@ export const Handler = withConfig<HandlerOptions>(
 					name,
 					...(location && { primary_location_hint: location }),
 				}),
-			});
-		} catch (e) {
-			if ((e as { code: number }).code === 7502) {
-				throw new Error("A database with that name already exists");
-			}
-			throw e;
+			}),
+		});
+	} catch (e) {
+		if ((e as { code: number }).code === 7502) {
+			throw new Error("A database with that name already exists");
 		}
 
 		logger.log(
@@ -78,3 +77,29 @@ export const Handler = withConfig<HandlerOptions>(
 		);
 	}
 );
+
+	logger.log(
+		renderToString(
+			<Box flexDirection="column">
+				<Text>
+					✅ Successfully created DB &apos;{db.name}&apos;
+					{primaryLocationHint
+						? ` using location hint ${primaryLocationHint}`
+						: ``}
+				</Text>
+				<Text>&nbsp;</Text>
+				<Text>
+					Add the following to your wrangler.toml to connect to it from a
+					Worker:
+				</Text>
+				<Text>&nbsp;</Text>
+				<Text>[[d1_databases]]</Text>
+				<Text>
+					binding = &quot;DB&quot; # i.e. available in your Worker on env.DB
+				</Text>
+				<Text>database_name = &quot;{db.name}&quot;</Text>
+				<Text>database_id = &quot;{db.uuid}&quot;</Text>
+			</Box>
+		)
+	);
+}
