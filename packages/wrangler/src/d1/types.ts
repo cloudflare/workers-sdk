@@ -8,6 +8,12 @@ export type Database = {
 	migrationsFolderPath: string;
 };
 
+export type DatabaseCreationResult = {
+	uuid: string;
+	name: string;
+	primary_location_hint?: string;
+};
+
 export type Backup = {
 	id: string;
 	database_id: string;
