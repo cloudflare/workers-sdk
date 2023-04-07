@@ -193,3 +193,5 @@ packages/quick-edit/web
 
 # IntelliJ
 .idea/
+
+./vendor/vscode

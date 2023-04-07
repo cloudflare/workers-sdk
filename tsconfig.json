@@ -17,5 +17,6 @@
 		"skipLibCheck": true,
 		"types": []
 	},
-	"exclude": ["node_modules", "packages"]
+	"exclude": ["node_modules", "packages", "vendor"],
+	"include": []
 }
