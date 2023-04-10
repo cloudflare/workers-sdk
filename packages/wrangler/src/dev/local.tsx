@@ -31,13 +31,13 @@ import type {
 	CfWasmModuleBindings,
 	CfTextBlobBindings,
 	CfDataBlobBindings,
-	CfDurableObject,
 	CfKvNamespace,
 	CfR2Bucket,
 	CfVars,
 	CfQueue,
 	CfD1Database,
 } from "../worker";
+import type { CfDurableObject } from "./../bindings/bindings"
 import type { EsbuildBundle } from "./use-esbuild";
 import type {
 	Miniflare as Miniflare3Type,

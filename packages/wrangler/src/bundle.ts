@@ -9,7 +9,7 @@ import tmp from "tmp-promise";
 import createModuleCollector from "./module-collection";
 import { getBasePath, toUrlPath } from "./paths";
 import type { Config } from "./config";
-import type { DurableObjectBindings } from "./config/environment";
+import type { DurableObjectFromConfig } from "./bindings/bindings";
 import type { WorkerRegistry } from "./dev-registry";
 import type { Entry } from "./entry";
 import type { CfModule } from "./worker";
@@ -120,7 +120,7 @@ export async function bundleWorker(
 		serveAssetsFromWorker: boolean;
 		assets?: StaticAssetsConfig;
 		betaD1Shims?: string[];
-		doBindings: DurableObjectBindings;
+		doBindings: DurableObjectFromConfig;
 		jsxFactory?: string;
 		jsxFragment?: string;
 		entryName?: string;
@@ -835,7 +835,7 @@ async function applyD1BetaFacade(
 	tmpDirPath: string,
 	betaD1Shims: string[],
 	miniflare2: boolean,
-	doBindings: DurableObjectBindings
+	doBindings: DurableObjectFromConfig
 ): Promise<Entry> {
 	let entrypointPath = path.resolve(
 		getBasePath(),

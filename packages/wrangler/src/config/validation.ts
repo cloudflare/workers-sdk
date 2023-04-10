@@ -1,5 +1,6 @@
 import path from "node:path";
 import TOML from "@iarna/toml";
+import { get_env_bindings_array } from "../bindings/bindings";
 import { Diagnostics } from "./diagnostics";
 import {
 	deprecated,
@@ -25,6 +26,7 @@ import {
 	appendEnvName,
 	getBindingNames,
 	isValidName,
+	validateBindingsProperty,
 } from "./validation-helpers";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
@@ -1083,18 +1085,6 @@ function normalizeAndValidateEnvironment(
 			validateDefines(envName),
 			{}
 		),
-		durable_objects: notInheritable(
-			diagnostics,
-			topLevelEnv,
-			rawConfig,
-			rawEnv,
-			envName,
-			"durable_objects",
-			validateBindingsProperty(envName, validateDurableObjectBinding),
-			{
-				bindings: [],
-			}
-		),
 		kv_namespaces: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -1247,6 +1237,7 @@ function normalizeAndValidateEnvironment(
 			isBoolean,
 			undefined
 		),
+		...get_env_bindings_array(diagnostics, topLevelEnv, rawConfig, rawEnv, envName)
 	};
 
 	return environment;
@@ -1467,73 +1458,6 @@ const validateVars =
 		return isValid;
 	};
 
-const validateBindingsProperty =
-	(envName: string, validateBinding: ValidatorFn): ValidatorFn =>
-	(diagnostics, field, value, config) => {
-		let isValid = true;
-		const fieldPath =
-			config === undefined ? `${field}` : `env.${envName}.${field}`;
-
-		if (value !== undefined) {
-			// Check the validity of the `value` as a bindings container.
-			if (typeof value !== "object" || value === null || Array.isArray(value)) {
-				diagnostics.errors.push(
-					`The field "${fieldPath}" should be an object but got ${JSON.stringify(
-						value
-					)}.`
-				);
-				isValid = false;
-			} else if (!hasProperty(value, "bindings")) {
-				diagnostics.errors.push(
-					`The field "${fieldPath}" is missing the required "bindings" property.`
-				);
-				isValid = false;
-			} else if (!Array.isArray(value.bindings)) {
-				diagnostics.errors.push(
-					`The field "${fieldPath}.bindings" should be an array but got ${JSON.stringify(
-						value.bindings
-					)}.`
-				);
-				isValid = false;
-			} else {
-				for (let i = 0; i < value.bindings.length; i++) {
-					const binding = value.bindings[i];
-					const bindingDiagnostics = new Diagnostics(
-						`"${fieldPath}.bindings[${i}]": ${JSON.stringify(binding)}`
-					);
-					isValid =
-						validateBinding(
-							bindingDiagnostics,
-							`${fieldPath}.bindings[${i}]`,
-							binding,
-							config
-						) && isValid;
-					diagnostics.addChild(bindingDiagnostics);
-				}
-			}
-
-			const configBindingNames = getBindingNames(
-				config?.[field as keyof Environment]
-			);
-			if (isValid && configBindingNames.length > 0) {
-				// If there are top level bindings then check that they all appear in the environment.
-				const envBindingNames = new Set(getBindingNames(value));
-				const missingBindings = configBindingNames.filter(
-					(name) => !envBindingNames.has(name)
-				);
-				if (missingBindings.length > 0) {
-					diagnostics.warnings.push(
-						`The following bindings are at the top level, but not on "env.${envName}".\n` +
-							`This is not what you probably want, since "${field}" configuration is not inherited by environments.\n` +
-							`Please add a binding for each to "${fieldPath}.bindings":\n` +
-							missingBindings.map((name) => `- ${name}`).join("\n")
-					);
-				}
-			}
-		}
-		return isValid;
-	};
-
 const validateUnsafeSettings =
 	(envName: string): ValidatorFn =>
 	(diagnostics, field, value, config) => {
@@ -1589,55 +1513,6 @@ const validateUnsafeSettings =
 
 		return true;
 	};
-
-/**
- * Check that the given field is a valid "durable_object" binding object.
- */
-const validateDurableObjectBinding: ValidatorFn = (
-	diagnostics,
-	field,
-	value
-) => {
-	if (typeof value !== "object" || value === null) {
-		diagnostics.errors.push(
-			`Expected "${field}" to be an object but got ${JSON.stringify(value)}`
-		);
-		return false;
-	}
-
-	// Durable Object bindings must have a name and class_name, and optionally a script_name and an environment.
-	let isValid = true;
-	if (!isRequiredProperty(value, "name", "string")) {
-		diagnostics.errors.push(`binding should have a string "name" field.`);
-		isValid = false;
-	}
-	if (!isRequiredProperty(value, "class_name", "string")) {
-		diagnostics.errors.push(`binding should have a string "class_name" field.`);
-		isValid = false;
-	}
-	if (!isOptionalProperty(value, "script_name", "string")) {
-		diagnostics.errors.push(
-			`the field "script_name", when present, should be a string.`
-		);
-		isValid = false;
-	}
-	// environment requires a script_name
-	if (!isOptionalProperty(value, "environment", "string")) {
-		diagnostics.errors.push(
-			`the field "environment", when present, should be a string.`
-		);
-		isValid = false;
-	}
-
-	if ("environment" in value && !("script_name" in value)) {
-		diagnostics.errors.push(
-			`binding should have a "script_name" field if "environment" is present.`
-		);
-		isValid = false;
-	}
-
-	return isValid;
-};
 
 const validateCflogfwdrBinding: ValidatorFn = (diagnostics, field, value) => {
 	if (typeof value !== "object" || value === null) {

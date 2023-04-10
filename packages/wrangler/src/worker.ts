@@ -1,3 +1,4 @@
+import type { CfDurableObject } from "./bindings/bindings";
 import type { Environment } from "./config";
 import type { Route } from "./config/environment";
 import type { ApiCredentials } from "./user";
@@ -110,16 +111,6 @@ export interface CfTextBlobBindings {
 
 export interface CfDataBlobBindings {
 	[key: string]: string;
-}
-
-/**
- * A Durable Object.
- */
-export interface CfDurableObject {
-	name: string;
-	class_name: string;
-	script_name?: string;
-	environment?: string;
 }
 
 export interface CfQueue {

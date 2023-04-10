@@ -1,5 +1,5 @@
+import { Diagnostics } from "./diagnostics";
 import type { RawConfig } from "./config";
-import type { Diagnostics } from "./diagnostics";
 import type { Environment, RawEnvironment } from "./environment";
 
 /**
@@ -479,6 +479,73 @@ export const validateOptionalTypedArray = (
 	}
 	return true;
 };
+
+export const validateBindingsProperty =
+	(envName: string, validateBinding: ValidatorFn): ValidatorFn =>
+	(diagnostics, field, value, config) => {
+		let isValid = true;
+		const fieldPath =
+			config === undefined ? `${field}` : `env.${envName}.${field}`;
+
+		if (value !== undefined) {
+			// Check the validity of the `value` as a bindings container.
+			if (typeof value !== "object" || value === null || Array.isArray(value)) {
+				diagnostics.errors.push(
+					`The field "${fieldPath}" should be an object but got ${JSON.stringify(
+						value
+					)}.`
+				);
+				isValid = false;
+			} else if (!hasProperty(value, "bindings")) {
+				diagnostics.errors.push(
+					`The field "${fieldPath}" is missing the required "bindings" property.`
+				);
+				isValid = false;
+			} else if (!Array.isArray(value.bindings)) {
+				diagnostics.errors.push(
+					`The field "${fieldPath}.bindings" should be an array but got ${JSON.stringify(
+						value.bindings
+					)}.`
+				);
+				isValid = false;
+			} else {
+				for (let i = 0; i < value.bindings.length; i++) {
+					const binding = value.bindings[i];
+					const bindingDiagnostics = new Diagnostics(
+						`"${fieldPath}.bindings[${i}]": ${JSON.stringify(binding)}`
+					);
+					isValid =
+						validateBinding(
+							bindingDiagnostics,
+							`${fieldPath}.bindings[${i}]`,
+							binding,
+							config
+						) && isValid;
+					diagnostics.addChild(bindingDiagnostics);
+				}
+			}
+
+			const configBindingNames = getBindingNames(
+				config?.[field as keyof Environment]
+			);
+			if (isValid && configBindingNames.length > 0) {
+				// If there are top level bindings then check that they all appear in the environment.
+				const envBindingNames = new Set(getBindingNames(value));
+				const missingBindings = configBindingNames.filter(
+					(name) => !envBindingNames.has(name)
+				);
+				if (missingBindings.length > 0) {
+					diagnostics.warnings.push(
+						`The following bindings are at the top level, but not on "env.${envName}".\n` +
+							`This is not what you probably want, since "${field}" configuration is not inherited by environments.\n` +
+							`Please add a binding for each to "${fieldPath}.bindings":\n` +
+							missingBindings.map((name) => `- ${name}`).join("\n")
+					);
+				}
+			}
+		}
+		return isValid;
+	};
 
 /**
  * Test to see if `obj` has the required property `prop` of type `type`.

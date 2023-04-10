@@ -7,7 +7,7 @@ import { COMMON_ESBUILD_OPTIONS } from "./bundle";
 import { logger } from "./logger";
 import { getBasePath } from "./paths";
 import type { Config } from "./config";
-import type { DurableObjectBindings } from "./config/environment";
+import type { DurableObjectFromConfig } from "./bindings/bindings";
 import type { CfScriptFormat } from "./worker";
 import type { Metafile } from "esbuild";
 
@@ -251,11 +251,11 @@ export function fileExists(filePath: string): boolean {
  * those that are defined locally and those that refer to a durable object defined in another script.
  */
 function partitionDurableObjectBindings(config: Config): {
-	localBindings: DurableObjectBindings;
-	remoteBindings: DurableObjectBindings;
+	localBindings: DurableObjectFromConfig;
+	remoteBindings: DurableObjectFromConfig;
 } {
-	const localBindings: DurableObjectBindings = [];
-	const remoteBindings: DurableObjectBindings = [];
+	const localBindings: DurableObjectFromConfig = [];
+	const remoteBindings: DurableObjectFromConfig = [];
 	for (const binding of config.durable_objects.bindings) {
 		if (binding.script_name === undefined) {
 			localBindings.push(binding);
@@ -272,7 +272,7 @@ function partitionDurableObjectBindings(config: Config): {
  * externally defined Durable Object.
  */
 function generateAddScriptNameExamples(
-	localBindings: DurableObjectBindings
+	localBindings: DurableObjectFromConfig
 ): string {
 	function exampleScriptName(binding_name: string): string {
 		return `${binding_name.toLowerCase().replaceAll("_", "-")}-worker`;

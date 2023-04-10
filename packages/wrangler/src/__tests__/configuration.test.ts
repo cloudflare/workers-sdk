@@ -3026,9 +3026,6 @@ describe("normalizeAndValidateConfig()", () => {
 			    - \\"define\\" exists at the top level, but not on \\"env.ENV1\\".
 			      This is not what you probably want, since \\"define\\" is not inherited by environments.
 			      Please add \\"define\\" to \\"env.ENV1\\".
-			    - \\"durable_objects\\" exists at the top level, but not on \\"env.ENV1\\".
-			      This is not what you probably want, since \\"durable_objects\\" is not inherited by environments.
-			      Please add \\"durable_objects\\" to \\"env.ENV1\\".
 			    - \\"kv_namespaces\\" exists at the top level, but not on \\"env.ENV1\\".
 			      This is not what you probably want, since \\"kv_namespaces\\" is not inherited by environments.
 			      Please add \\"kv_namespaces\\" to \\"env.ENV1\\".
@@ -3040,7 +3037,10 @@ describe("normalizeAndValidateConfig()", () => {
 			      Please add \\"analytics_engine_datasets\\" to \\"env.ENV1\\".
 			    - \\"unsafe\\" exists at the top level, but not on \\"env.ENV1\\".
 			      This is not what you probably want, since \\"unsafe\\" is not inherited by environments.
-			      Please add \\"unsafe\\" to \\"env.ENV1\\"."
+			      Please add \\"unsafe\\" to \\"env.ENV1\\".
+			    - \\"durable_objects\\" exists at the top level, but not on \\"env.ENV1\\".
+			      This is not what you probably want, since \\"durable_objects\\" is not inherited by environments.
+			      Please add \\"durable_objects\\" to \\"env.ENV1\\"."
 		`);
 		});
 
