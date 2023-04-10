@@ -4,9 +4,11 @@ export const onRequest = async ({
 	next,
 }: Parameters<PagesFunction>[0]) => {
 	const url = new URL(request.url);
+
 	const values = {
 		WORKBENCH_WEB_CONFIGURATION: JSON.stringify({
 			configurationDefaults: {
+				"workbench.colorTheme": url.searchParams.get("theme") ? "Solarflare Dark" : "Solarflare Light",
 				"workbench.startupEditor": "none",
 				"editor.minimap.autohide": true,
 			},
