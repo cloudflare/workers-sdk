@@ -1,8 +1,8 @@
-import { fetch } from "@miniflare/core";
 import {
 	DurableObjectNamespace,
 	DurableObjectStub,
 } from "@miniflare/durable-objects";
+import { upgradingFetch } from "@miniflare/web-sockets";
 import {
 	Log as MiniflareLog,
 	LogLevel as MiniflareLogLevel,
@@ -87,7 +87,7 @@ async function main() {
 								id.toString()
 							);
 
-							return fetch(request);
+							return upgradingFetch(request);
 						};
 						return stub;
 					};
