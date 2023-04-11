@@ -20,8 +20,8 @@ index 115af9d3991..a58f1bb6c8d 100644
  		this._register(this.registerSwitchProfileAction());
  
  		this.registerProfilesActions();
-@@ -101,28 +101,28 @@ export class UserDataProfilesWorkbenchContribution extends Disposable implements
- 		this.registerHelpAction();
+@@ -97,28 +97,28 @@ export class UserDataProfilesWorkbenchContribution extends Disposable implements
+ 		this.registerDeleteProfileAction();
  	}
  
 -	private registerProfileSubMenu(): void {
