@@ -8,7 +8,10 @@ export const onRequest = async ({
 	const values = {
 		WORKBENCH_WEB_CONFIGURATION: JSON.stringify({
 			configurationDefaults: {
-				"workbench.colorTheme": url.searchParams.get("theme") === "dark" ? "Solarflare Dark" : "Solarflare Light",
+				"workbench.colorTheme":
+					url.searchParams.get("theme") === "dark"
+						? "Solarflare Dark"
+						: "Solarflare Light",
 				"workbench.startupEditor": "none",
 				"editor.minimap.autohide": true,
 			},
