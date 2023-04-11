@@ -9,14 +9,12 @@ export interface Env {
 
 	// These objects are created before first use, then stashed here
 	// for future use
-	client?: LibsqlClient;
 	router?: RouterType;
 }
 
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
 		if (env.router === undefined) {
-			env.client = buildLibsqlClient(env);
 			env.router = buildRouter(env);
 		}
 
@@ -39,16 +37,16 @@ function buildLibsqlClient(env: Env): LibsqlClient {
 }
 
 function buildRouter(env: Env): RouterType {
-	const client = env.client!;
-
 	const router = Router();
 
 	router.get("/users", async () => {
+		const client = buildLibsqlClient(env);
 		const rs = await client.execute("select * from example_users");
 		return Response.json(rs);
 	});
 
 	router.get("/add-user", async (request) => {
+		const client = buildLibsqlClient(env);
 		const email = request.query.email;
 		if (email === undefined) {
 			return new Response("Missing email", { status: 400 });
