@@ -15,17 +15,17 @@
 		"theme",
 		"cloudflare theme"
 	],
-	"homepage": "https://github.com/cloudflare/workers-sdk/packages/vscode-theme#readme",
+	"homepage": "https://github.com/cloudflare/workers-sdk/blob/main/packages/vscode-theme/README.md",
 	"bugs": {
 		"url": "https://github.com/cloudflare/workers-sdk/issues"
 	},
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cloudflare/workers-sdk.git",
-		"directory": "packages/vscode-theme"
+		"directory": "packages/solarflare-theme"
 	},
 	"license": "MIT OR Apache-2.0",
-	"author": "wrangler@cloudflare.com",
+	"author": "workers-devprod@cloudflare.com",
 	"contributes": {
 		"themes": [
 			{
