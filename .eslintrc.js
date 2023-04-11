@@ -118,6 +118,7 @@ module.exports = {
 		"packages/wrangler-devtools/built-devtools",
 		"packages/wranglerjs-compat-webpack-plugin/lib",
 		"/templates",
+		"packages/quick-edit-extension/vscode*.d.ts",
 	],
 	root: true,
 };
