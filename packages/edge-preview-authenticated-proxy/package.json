@@ -3,7 +3,7 @@
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
-		"deploy": "wrangler publish",
+		"publish": "wrangler publish",
 		"start": "wrangler dev",
 		"test": "vitest"
 	},
