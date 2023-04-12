@@ -12,6 +12,26 @@ export function activate(context: vscode.ExtensionContext) {
 		context.subscriptions.push(cfs);
 		void vscode.commands.executeCommand("workbench.action.closeAllEditors");
 
+		// Create setEntrypoint customisation with the right click menu
+		context.subscriptions.push(
+			vscode.commands.registerCommand(
+				"extension.setEntrypoint",
+				async (event: vscode.Uri) => {
+					const filePath =
+						event.path ?? vscode.window.activeTextEditor?.document.fileName;
+
+					if (filePath) {
+						channel.postMessage({
+							type: "SetEntryPoint",
+							body: {
+								path: filePath,
+							},
+						});
+					}
+				}
+			)
+		);
+
 		channel.onMessage(async (data) => {
 			if (data.type === "WorkerLoaded") {
 				console.log("WorkerLoaded", data.body);
@@ -28,4 +48,4 @@ export function activate(context: vscode.ExtensionContext) {
 	}
 }
 
-export function deactivate() {}
+export function deactivate() { }
