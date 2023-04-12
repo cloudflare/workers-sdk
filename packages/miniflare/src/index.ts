@@ -6,6 +6,7 @@ import net from "net";
 import os from "os";
 import path from "path";
 import { Duplex } from "stream";
+import { ReadableStream } from "stream/web";
 import type {
 	IncomingRequestCfProperties,
 	RequestInitCfProperties,
@@ -219,6 +220,40 @@ async function writeResponse(response: Response, res: http.ServerResponse) {
 		}
 	}
 	res.end();
+}
+
+function safeReadableStreamFrom(iterable: AsyncIterable<Uint8Array>) {
+	// Adapted from `undici`, catches errors from `next()` to avoid unhandled
+	// rejections from aborted request body streams:
+	// https://github.com/nodejs/undici/blob/dfaec78f7a29f07bb043f9006ed0ceb0d5220b55/lib/core/util.js#L369-L392
+	let iterator: AsyncIterator<Uint8Array>;
+	return new ReadableStream<Uint8Array>(
+		{
+			async start() {
+				iterator = iterable[Symbol.asyncIterator]();
+			},
+			// @ts-expect-error `pull` may return anything
+			async pull(controller): Promise<boolean> {
+				try {
+					const { done, value } = await iterator.next();
+					if (done) {
+						queueMicrotask(() => controller.close());
+					} else {
+						const buf = Buffer.isBuffer(value) ? value : Buffer.from(value);
+						controller.enqueue(new Uint8Array(buf));
+					}
+				} catch {
+					queueMicrotask(() => controller.close());
+				}
+				// @ts-expect-error `pull` may return anything
+				return controller.desiredSize > 0;
+			},
+			async cancel() {
+				await iterator.return?.();
+			},
+		},
+		0
+	);
 }
 
 export class Miniflare {
@@ -479,10 +514,12 @@ export class Miniflare {
 		);
 		headers.delete(HEADER_ORIGINAL_URL);
 
+		const noBody = req.method === "GET" || req.method === "HEAD";
+		const body = noBody ? undefined : safeReadableStreamFrom(req);
 		const request = new Request(url, {
 			method: req.method,
 			headers,
-			body: req.method === "GET" || req.method === "HEAD" ? undefined : req,
+			body,
 			duplex: "half",
 			cf,
 		});
