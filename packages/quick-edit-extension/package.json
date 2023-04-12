@@ -14,6 +14,28 @@
 		"vscode:prepublish": "npm run package-web",
 		"watch-web": "npm run package-web -- --watch"
 	},
+	"contributes": {
+		"commands": [
+			{
+				"command": "extension.setEntrypoint",
+				"title": "Set Entrypoint"
+			}
+		],
+		"menus": {
+			"commandPalette": [
+				{
+					"command": "extension.setEntrypoint",
+					"when": "editorLangId == javascript"
+				}
+			],
+			"explorer/context": [
+				{
+					"command": "extension.setEntrypoint",
+					"group": "1_modification@1"
+				}
+			]
+		}
+	},
 	"activationEvents": [
 		"onFileSystem:cfs"
 	],
