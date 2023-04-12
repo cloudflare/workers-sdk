@@ -1,6 +1,6 @@
+import http from "http";
 import type { TimerOptions } from "timers";
 import { setTimeout } from "timers/promises";
-import { request } from "undici";
 
 function attemptDelay(attempts: number) {
 	if (attempts < 10) return 10;
@@ -9,28 +9,40 @@ function attemptDelay(attempts: number) {
 	return 1000;
 }
 
-export async function waitForRequest(...options: Parameters<typeof request>) {
+// Disable keep-alive for polling requests
+const agent = new http.Agent({ keepAlive: false, maxSockets: 1 });
+
+function request(options: http.RequestOptions) {
+	return new Promise<number>((resolve, reject) => {
+		const req = http.request(options, (res) => {
+			resolve(res.statusCode ?? 0);
+			res.destroy();
+		});
+		req.on("error", (err) => reject(err));
+		req.end();
+	});
+}
+
+export async function waitForRequest(options: http.RequestOptions) {
+	options = { ...options, agent };
+
 	let attempts = 0;
-	const signal = options[1]?.signal as AbortSignal | undefined;
+	const signal = options.signal;
 	const timeoutOptions: TimerOptions = { signal };
 
 	while (!signal?.aborted) {
 		try {
-			const res = await request(...options);
-			const code = res.statusCode;
+			const code = await request(options);
 			if (code !== undefined && 200 <= code && code < 300) return;
 		} catch (e: any) {
 			const code = e.code;
-			if (code === "UND_ERR_ABORTED") return;
+			if (code === "ABORT_ERR") return;
 			if (
 				// Adapted from https://github.com/dwmkerr/wait-port/blob/0d58d29a6d6b8ea996de9c6829706bb3b0952ee8/lib/wait-port.js
 				code !== "ECONNREFUSED" &&
 				code !== "ECONNTIMEOUT" &&
 				code !== "ECONNRESET" &&
-				code !== "ENOTFOUND" &&
-				// Docker published port, but not bound in container
-				code !== "ECONNRESET" &&
-				code !== "UND_ERR_SOCKET"
+				code !== "ENOTFOUND"
 			) {
 				throw e;
 			}
