@@ -620,7 +620,10 @@ export class Miniflare {
 			exitController.signal,
 			this.#disposeController.signal
 		);
-		await waitForRequest(this.#runtimeEntryURL!, {
+		const url = this.#runtimeEntryURL!;
+		await waitForRequest({
+			hostname: url.hostname,
+			port: url.port,
 			headers: { [HEADER_PROBE]: this.#optionsVersion.toString() },
 			signal,
 		});
