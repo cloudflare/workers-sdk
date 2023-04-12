@@ -194,4 +194,6 @@ packages/quick-edit/web
 # IntelliJ
 .idea/
 
+# VSCode Theme
+*.vsix
 ./vendor/vscode
