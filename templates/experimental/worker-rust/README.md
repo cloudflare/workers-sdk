@@ -38,7 +38,7 @@ Read the latest `worker` crate documentation here: https://docs.rs/worker
 
 ## Advanced Example
 
-Given that this template only contains the most basic setup, you might want to use this more advanced example. It demonstrates how you can create multiple routes, log requests, get field data from a form and more.
+As this template comprises only the essential setup, we recommend considering our advanced example to leverage its additional functionalities. The advanced example showcases the creation of multiple routes, logging of requests, retrieval of field data from a form, and other features that may prove useful to your project.
 ```rust
 use serde_json::json;
 use worker::*;
