@@ -10,7 +10,13 @@ import {
 	Worker_Module,
 	supportedCompatibilityDate,
 } from "../../runtime";
-import { Awaitable, JsonSchema, Log, MiniflareCoreError } from "../../shared";
+import {
+	Awaitable,
+	JsonSchema,
+	Log,
+	LogLevel,
+	MiniflareCoreError,
+} from "../../shared";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import {
@@ -102,6 +108,7 @@ const BINDING_SERVICE_USER_FALLBACK = "MINIFLARE_USER_FALLBACK";
 const BINDING_TEXT_CUSTOM_SERVICE = "MINIFLARE_CUSTOM_SERVICE";
 const BINDING_JSON_CF_BLOB = "CF_BLOB";
 const BINDING_JSON_ROUTES = "MINIFLARE_ROUTES";
+const BINDING_JSON_LOG_LEVEL = "MINIFLARE_LOG_LEVEL";
 const BINDING_DATA_LIVE_RELOAD_SCRIPT = "MINIFLARE_LIVE_RELOAD_SCRIPT";
 
 const LIVE_RELOAD_SCRIPT_TEMPLATE = (
@@ -179,7 +186,8 @@ async function handleEvent(event) {
       }
     }
 
-    event.waitUntil(${BINDING_SERVICE_LOOPBACK}.fetch("http://localhost/core/log", {
+    if (${BINDING_JSON_LOG_LEVEL} >= ${LogLevel.INFO}) {
+      event.waitUntil(${BINDING_SERVICE_LOOPBACK}.fetch("http://localhost/core/log", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -189,7 +197,8 @@ async function handleEvent(event) {
           "url": response.url,
           "time": Date.now() - startTime,
         }),
-    }));
+      }));
+    }
 
     const liveReloadScript = globalThis.${BINDING_DATA_LIVE_RELOAD_SCRIPT};
     if (
@@ -421,6 +430,7 @@ export interface GlobalServicesOptions {
 	allWorkerRoutes: Map<string, string[]>;
 	fallbackWorkerName: string | undefined;
 	loopbackPort: number;
+	log: Log;
 }
 export function getGlobalServices({
 	optionsVersion,
@@ -428,6 +438,7 @@ export function getGlobalServices({
 	allWorkerRoutes,
 	fallbackWorkerName,
 	loopbackPort,
+	log,
 }: GlobalServicesOptions): Service[] {
 	// Collect list of workers we could route to, then parse and sort all routes
 	const routableWorkers = [...allWorkerRoutes.keys()];
@@ -439,6 +450,7 @@ export function getGlobalServices({
 		{ name: BINDING_JSON_VERSION, json: optionsVersion.toString() },
 		{ name: BINDING_JSON_ROUTES, json: JSON.stringify(routes) },
 		{ name: BINDING_JSON_CF_BLOB, json: JSON.stringify(sharedOptions.cf) },
+		{ name: BINDING_JSON_LOG_LEVEL, json: JSON.stringify(log.level) },
 		{
 			name: BINDING_SERVICE_USER_FALLBACK,
 			service: { name: getUserServiceName(fallbackWorkerName) },
