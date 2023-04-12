@@ -1,14 +1,14 @@
-From eee7386bd100b742b776b0dd141608b03af7ae31 Mon Sep 17 00:00:00 2001
+From befb9a90cb5c6c5c6dc8498a8b7a146f6508a4f8 Mon Sep 17 00:00:00 2001
 From: Jacob M-G Evans <jacobmgevans@gmail.com>
 Date: Fri, 31 Mar 2023 17:10:30 -0500
-Subject: [PATCH] Remove Extensions Icon & Quick Access
+Subject: [PATCH 09/10] Remove Extensions Icon & Quick Access
 
 ---
  .../browser/extensions.contribution.ts        | 98 +++++++++----------
  1 file changed, 49 insertions(+), 49 deletions(-)
 
 diff --git a/src/vs/workbench/contrib/extensions/browser/extensions.contribution.ts b/src/vs/workbench/contrib/extensions/browser/extensions.contribution.ts
-index bf9aeb00236..1a5977318fa 100644
+index bf9aeb0..1a59773 100644
 --- a/src/vs/workbench/contrib/extensions/browser/extensions.contribution.ts
 +++ b/src/vs/workbench/contrib/extensions/browser/extensions.contribution.ts
 @@ -57,7 +57,7 @@ import { IWorkspaceExtensionsConfigService } from 'vs/workbench/services/extensi
@@ -173,5 +173,5 @@ index bf9aeb00236..1a5977318fa 100644
  			title: localize('sorty by', "Sort By"),
  			when: ContextKeyExpr.and(ContextKeyExpr.or(CONTEXT_HAS_GALLERY, DefaultViewsContext)),
 -- 
-2.39.1
+2.39.2 (Apple Git-143)
 

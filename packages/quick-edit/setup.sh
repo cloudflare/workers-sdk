@@ -7,6 +7,7 @@ rm -rf ../../vendor/vscode
 mkdir -p web
 cd ..
 ln -s $PWD/quick-edit-extension $PWD/quick-edit/web/quick-edit-extension
+ln -s $PWD/solarflare-theme $PWD/quick-edit/web/solarflare-theme
 
 cd quick-edit-extension
 npx vscode-dts dev 1.76.0

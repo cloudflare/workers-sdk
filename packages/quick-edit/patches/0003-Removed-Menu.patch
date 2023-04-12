@@ -1,14 +1,14 @@
-From 33a5842e4e955e1245ceb4ff403fab7b55227c78 Mon Sep 17 00:00:00 2001
+From ca3fff3caa78e54bee3503f985dd84800632239b Mon Sep 17 00:00:00 2001
 From: Jacob M-G Evans <jacobmgevans@gmail.com>
 Date: Tue, 28 Mar 2023 14:41:00 -0500
-Subject: [PATCH] Removed Menu
+Subject: [PATCH 03/10] Removed Menu
 
 ---
  .../browser/parts/titlebar/menubarControl.ts  | 94 +++++++++----------
  1 file changed, 47 insertions(+), 47 deletions(-)
 
 diff --git a/src/vs/workbench/browser/parts/titlebar/menubarControl.ts b/src/vs/workbench/browser/parts/titlebar/menubarControl.ts
-index b27294ca65e..013cf244c83 100644
+index b27294c..013cf24 100644
 --- a/src/vs/workbench/browser/parts/titlebar/menubarControl.ts
 +++ b/src/vs/workbench/browser/parts/titlebar/menubarControl.ts
 @@ -565,53 +565,53 @@ export class CustomMenubarControl extends MenubarControl {
@@ -113,5 +113,5 @@ index b27294ca65e..013cf244c83 100644
  		// Update the menu actions
  		const updateActions = (menuActions: readonly IAction[], target: IAction[], topLevelTitle: string) => {
 -- 
-2.39.1
+2.39.2 (Apple Git-143)
 

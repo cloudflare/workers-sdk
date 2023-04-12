@@ -1,7 +1,7 @@
-From 8c73441dcb63dbab557fe2c9e13fb35d72442dde Mon Sep 17 00:00:00 2001
+From 123d396902358d75908af3a360c75950763b413f Mon Sep 17 00:00:00 2001
 From: Jacob M-G Evans <jacobmgevans@gmail.com>
 Date: Tue, 28 Mar 2023 14:53:02 -0500
-Subject: [PATCH] Remove Account & Extension
+Subject: [PATCH 05/10] Remove Account & Extension
 
 ---
  .../parts/activitybar/activitybarPart.ts      | 26 +++++++++----------
@@ -9,7 +9,7 @@ Subject: [PATCH] Remove Account & Extension
  2 files changed, 14 insertions(+), 14 deletions(-)
 
 diff --git a/src/vs/workbench/browser/parts/activitybar/activitybarPart.ts b/src/vs/workbench/browser/parts/activitybar/activitybarPart.ts
-index a7b2f3fe086..72bf723142a 100644
+index b574036..4c0dcce 100644
 --- a/src/vs/workbench/browser/parts/activitybar/activitybarPart.ts
 +++ b/src/vs/workbench/browser/parts/activitybar/activitybarPart.ts
 @@ -81,7 +81,7 @@ export class ActivitybarPart extends Part implements IPaneCompositeSelectorPart
@@ -76,7 +76,7 @@ index a7b2f3fe086..72bf723142a 100644
  			iconUrl: URI.isUri(icon) ? icon : undefined,
  			themeIcon: ThemeIcon.isThemeIcon(icon) ? icon : undefined,
 diff --git a/src/vs/workbench/contrib/extensions/browser/extensionsIcons.ts b/src/vs/workbench/contrib/extensions/browser/extensionsIcons.ts
-index 7cf7dc9f362..242d748d842 100644
+index 7cf7dc9..242d748 100644
 --- a/src/vs/workbench/contrib/extensions/browser/extensionsIcons.ts
 +++ b/src/vs/workbench/contrib/extensions/browser/extensionsIcons.ts
 @@ -7,7 +7,7 @@ import { Codicon } from 'vs/base/common/codicons';
@@ -89,5 +89,5 @@ index 7cf7dc9f362..242d748d842 100644
  export const manageExtensionIcon = registerIcon('extensions-manage', Codicon.gear, localize('manageExtensionIcon', 'Icon for the \'Manage\' action in the extensions view.'));
  
 -- 
-2.39.1
+2.39.2 (Apple Git-143)
 
