@@ -1,17 +1,17 @@
-From 6c4c576ffb388854a139e24e2a809b0480ce57f4 Mon Sep 17 00:00:00 2001
+From 6434055430af0c2789affd2296900fefc0765d2c Mon Sep 17 00:00:00 2001
 From: Jacob M-G Evans <jacobmgevans@gmail.com>
 Date: Fri, 31 Mar 2023 17:11:28 -0500
-Subject: [PATCH] Remove Profile from Setting SubMenu
+Subject: [PATCH 04/10] Remove Profile from Setting SubMenu
 
 ---
  .../browser/userDataProfile.ts                | 46 +++++++++----------
  1 file changed, 23 insertions(+), 23 deletions(-)
 
 diff --git a/src/vs/workbench/contrib/userDataProfile/browser/userDataProfile.ts b/src/vs/workbench/contrib/userDataProfile/browser/userDataProfile.ts
-index 115af9d3991..a58f1bb6c8d 100644
+index 5312130..b95cbb7 100644
 --- a/src/vs/workbench/contrib/userDataProfile/browser/userDataProfile.ts
 +++ b/src/vs/workbench/contrib/userDataProfile/browser/userDataProfile.ts
-@@ -84,7 +84,7 @@ export class UserDataProfilesWorkbenchContribution extends Disposable implements
+@@ -82,7 +82,7 @@ export class UserDataProfilesWorkbenchContribution extends Disposable implements
  	}
  
  	private registerActions(): void {
@@ -72,5 +72,5 @@ index 115af9d3991..a58f1bb6c8d 100644
  	private readonly profilesDisposable = this._register(new MutableDisposable<DisposableStore>());
  	private registerProfilesActions(): void {
 -- 
-2.39.1
+2.39.2 (Apple Git-143)
 

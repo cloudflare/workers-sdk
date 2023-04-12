@@ -1,14 +1,14 @@
-From ba24bc1a3bd87ee39ba3d3a89259c8a462ea5365 Mon Sep 17 00:00:00 2001
+From bdc5b0d280c565e2ac586f83ac1f8ad67bcd2770 Mon Sep 17 00:00:00 2001
 From: Jacob M-G Evans <jacobmgevans@gmail.com>
 Date: Tue, 28 Mar 2023 14:42:09 -0500
-Subject: [PATCH] Remove Source Control
+Subject: [PATCH 07/10] Remove Source Control
 
 ---
  .../contrib/scm/browser/scm.contribution.ts   | 100 +++++++++---------
  1 file changed, 50 insertions(+), 50 deletions(-)
 
 diff --git a/src/vs/workbench/contrib/scm/browser/scm.contribution.ts b/src/vs/workbench/contrib/scm/browser/scm.contribution.ts
-index fed3eb0f08d..013b9899ccd 100644
+index fed3eb0..013b989 100644
 --- a/src/vs/workbench/contrib/scm/browser/scm.contribution.ts
 +++ b/src/vs/workbench/contrib/scm/browser/scm.contribution.ts
 @@ -19,14 +19,14 @@ import { KeybindingsRegistry, KeybindingWeight } from 'vs/platform/keybinding/co
@@ -138,5 +138,5 @@ index fed3eb0f08d..013b9899ccd 100644
  Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench)
  	.registerWorkbenchContribution(SCMActiveResourceContextKeyController, LifecyclePhase.Restored);
 -- 
-2.39.1
+2.39.2 (Apple Git-143)
 

@@ -1,20 +1,20 @@
-From 0809f65b859b35e2f0535dcb435f3b7e68ce2d25 Mon Sep 17 00:00:00 2001
+From 1d978b85556fde86dfec9ed1455e35c9b587ba95 Mon Sep 17 00:00:00 2001
 From: Samuel Macleod <smacleod@cloudflare.com>
 Date: Mon, 3 Apr 2023 11:18:10 +0100
-Subject: [PATCH] Add Custom workbench for Cloudflare
+Subject: [PATCH 01/10] Add Custom workbench for Cloudflare
 
 ---
  src/vs/code/browser/workbench/workbench.ts | 522 +++------------------
  1 file changed, 76 insertions(+), 446 deletions(-)
 
 diff --git a/src/vs/code/browser/workbench/workbench.ts b/src/vs/code/browser/workbench/workbench.ts
-index 9f34c85..ea3cbd0 100644
+index 9f34c85..3920de3 100644
 --- a/src/vs/code/browser/workbench/workbench.ts
 +++ b/src/vs/code/browser/workbench/workbench.ts
 @@ -3,375 +3,53 @@
   *  Licensed under the MIT License. See License.txt in the project root for license information.
   *--------------------------------------------------------------------------------------------*/
-
+ 
 -import { isStandalone } from 'vs/base/browser/browser';
 -import { CancellationToken } from 'vs/base/common/cancellation';
 -import { parse } from 'vs/base/common/marshalling';
@@ -34,7 +34,7 @@ index 9f34c85..ea3cbd0 100644
 -import type { IWorkbenchConstructionOptions } from 'vs/workbench/browser/web.api';
 -import type { IWorkspace, IWorkspaceProvider } from 'vs/workbench/services/host/browser/browserHostService';
 +import { isStandalone } from "vs/base/browser/browser";
-
+ 
 -interface ICredential {
 -	service: string;
 -	account: string;
@@ -236,7 +236,7 @@ index 9f34c85..ea3cbd0 100644
 -			this.startListening();
 -		}
 +import { URI, UriComponents } from "vs/base/common/uri";
-
+ 
 -		return URI.parse(window.location.href).with({ path: this._callbackRoute, query: queryParams.join('&') });
 -	}
 -
@@ -293,7 +293,7 @@ index 9f34c85..ea3cbd0 100644
 -		if (pendingCallbacks) {
 -			this.pendingCallbacks = pendingCallbacks;
 +import { create } from "vs/workbench/workbench.web.main";
-
+ 
 -			if (this.pendingCallbacks.size === 0) {
 -				this.stopListening();
 -			}
@@ -307,10 +307,10 @@ index 9f34c85..ea3cbd0 100644
 +	IWorkspace,
 +	IWorkspaceProvider,
 +} from "vs/workbench/services/host/browser/browserHostService";
-
+ 
  class WorkspaceProvider implements IWorkspaceProvider {
 +	private static QUERY_PARAM_EMPTY_WINDOW = "ew";
-
+ 
 -	private static QUERY_PARAM_EMPTY_WINDOW = 'ew';
 -	private static QUERY_PARAM_FOLDER = 'folder';
 -	private static QUERY_PARAM_WORKSPACE = 'workspace';
@@ -339,7 +339,7 @@ index 9f34c85..ea3cbd0 100644
 -					foundWorkspace = true;
 -					break;
 +	private static QUERY_PARAM_PAYLOAD = "payload";
-
+ 
 -				// Workspace
 -				case WorkspaceProvider.QUERY_PARAM_WORKSPACE:
 -					if (config.remoteAuthority && value.startsWith(posix.sep)) {
@@ -385,16 +385,16 @@ index 9f34c85..ea3cbd0 100644
  		}
 +	) {
 +		let payload = Object.create(null);
-
+ 
 -		return new WorkspaceProvider(workspace, payload, config);
 +		return new WorkspaceProvider(
 +			{ folderUri: URI.revive(config.folderUri)! },
 +			payload
 +		);
  	}
-
+ 
  	readonly trusted = true;
-
+ 
  	private constructor(
  		readonly workspace: IWorkspace,
 -		readonly payload: object,
@@ -418,7 +418,7 @@ index 9f34c85..ea3cbd0 100644
 +		) {
  			return true; // return early if workspace and environment is not changing and we are reusing window
  		}
-
+ 
 @@ -383,7 +61,7 @@ class WorkspaceProvider implements IWorkspaceProvider {
  			} else {
  				let result;
@@ -431,7 +431,7 @@ index 9f34c85..ea3cbd0 100644
 @@ -394,122 +72,74 @@ class WorkspaceProvider implements IWorkspaceProvider {
  		return false;
  	}
-
+ 
 -	private createTargetUrl(workspace: IWorkspace, options?: { reuse?: boolean; payload?: object }): string | undefined {
 -
 +	private createTargetUrl(
@@ -443,7 +443,7 @@ index 9f34c85..ea3cbd0 100644
  		if (!workspace) {
  			targetHref = `${document.location.origin}${document.location.pathname}?${WorkspaceProvider.QUERY_PARAM_EMPTY_WINDOW}=true`;
  		}
-
+ 
 -		// Folder
 -		else if (isFolderToOpen(workspace)) {
 -			let queryParamFolder: string;
@@ -484,10 +484,10 @@ index 9f34c85..ea3cbd0 100644
 +				WorkspaceProvider.QUERY_PARAM_PAYLOAD
 +			}=${encodeURIComponent(JSON.stringify(options.payload))}`;
  		}
-
+ 
  		return targetHref;
  	}
-
+ 
  	private isSame(workspaceA: IWorkspace, workspaceB: IWorkspace): boolean {
 -		if (!workspaceA || !workspaceB) {
 -			return workspaceA === workspaceB; // both empty
@@ -504,7 +504,7 @@ index 9f34c85..ea3cbd0 100644
 -		return false;
 +		return true;
  	}
-
+ 
  	hasRemote(): boolean {
 -		if (this.workspace) {
 -			if (isFolderToOpen(this.workspace)) {
@@ -565,7 +565,7 @@ index 9f34c85..ea3cbd0 100644
 +
 +	const messagePorts = new Map();
 +	messagePorts.set("cloudflare.quick-edit-extension", port);
-
+ 
  	// Create workbench
  	create(document.body, {
  		...config,
@@ -594,6 +594,6 @@ index 9f34c85..ea3cbd0 100644
 +		createEditor(e.ports[0]!);
 +	}
 +};
---
+-- 
 2.39.2 (Apple Git-143)
 

@@ -40,6 +40,10 @@ export const onRequest = async ({
 					scheme: url.protocol === "https:" ? "https" : "http",
 					path: "/quick-edit-extension",
 				},
+				{
+					scheme: url.protocol === "https:" ? "https" : "http",
+					path: "/solarflare-theme",
+				},
 			],
 		}).replace(/"/g, "&quot;"),
 		WORKBENCH_AUTH_SESSION: "",

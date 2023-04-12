@@ -1,7 +1,7 @@
-From d67ebd90fa24951ecd0ddac0a0d095c1f9987243 Mon Sep 17 00:00:00 2001
+From 4ff93c1ca04ac255866ccb3688177d31a13af590 Mon Sep 17 00:00:00 2001
 From: Jacob M-G Evans <jacobmgevans@gmail.com>
 Date: Fri, 31 Mar 2023 17:07:44 -0500
-Subject: [PATCH] Remove 'Custom' Menu (hamburger)
+Subject: [PATCH 08/10] Remove 'Custom' Menu (hamburger)
 
 ---
  .../parts/activitybar/activitybarPart.ts      |   6 +-
@@ -10,7 +10,7 @@ Subject: [PATCH] Remove 'Custom' Menu (hamburger)
  3 files changed, 104 insertions(+), 104 deletions(-)
 
 diff --git a/src/vs/workbench/browser/parts/activitybar/activitybarPart.ts b/src/vs/workbench/browser/parts/activitybar/activitybarPart.ts
-index 72bf723142a..4a1acb49315 100644
+index 4c0dcce..aa36a9f 100644
 --- a/src/vs/workbench/browser/parts/activitybar/activitybarPart.ts
 +++ b/src/vs/workbench/browser/parts/activitybar/activitybarPart.ts
 @@ -423,9 +423,9 @@ export class ActivitybarPart extends Part implements IPaneCompositeSelectorPart
@@ -27,7 +27,7 @@ index 72bf723142a..4a1acb49315 100644
  		this.menuBarContainer = document.createElement('div');
  		this.menuBarContainer.classList.add('menubar');
 diff --git a/src/vs/workbench/browser/parts/titlebar/menubarControl.ts b/src/vs/workbench/browser/parts/titlebar/menubarControl.ts
-index 013cf244c83..457a71183cc 100644
+index 013cf24..457a711 100644
 --- a/src/vs/workbench/browser/parts/titlebar/menubarControl.ts
 +++ b/src/vs/workbench/browser/parts/titlebar/menubarControl.ts
 @@ -135,14 +135,14 @@ export abstract class MenubarControl extends Disposable {
@@ -301,7 +301,7 @@ index 013cf244c83..457a71183cc 100644
  		// Update the menu actions
  		const updateActions = (menuActions: readonly IAction[], target: IAction[], topLevelTitle: string) => {
 diff --git a/src/vs/workbench/browser/parts/titlebar/titlebarPart.ts b/src/vs/workbench/browser/parts/titlebar/titlebarPart.ts
-index 64a6afb239d..f2d352c0b2f 100644
+index 5feb7d8..3614918 100644
 --- a/src/vs/workbench/browser/parts/titlebar/titlebarPart.ts
 +++ b/src/vs/workbench/browser/parts/titlebar/titlebarPart.ts
 @@ -200,9 +200,9 @@ export class TitlebarPart extends Part implements ITitleService {
@@ -318,5 +318,5 @@ index 64a6afb239d..f2d352c0b2f 100644
  		this.customMenubar = this._register(this.instantiationService.createInstance(CustomMenubarControl));
  
 -- 
-2.39.1
+2.39.2 (Apple Git-143)
 

@@ -23,7 +23,7 @@ If you need to add additional patches to VSCode, ensure you've run `yarn setup`.
 
 1. Make your changes in the checked out VSCode in `vendor/vscode`.
 2. Commit your changes with `git commit -m "YOUR MESSAGE" --no-verify` (run this in the `vendor/vscode` directory).
-3. Prepare a new series of patches for VSCode with (again, run in the `vendor/vscode` directory) `git format-patch -o ../patches base`.
+3. Prepare a new series of patches for VSCode with (again, run in the `vendor/vscode` directory) `git format-patch -o ../../packages/quick-edit/patches base`.
 
 ## Modifying VSCode settings
 
