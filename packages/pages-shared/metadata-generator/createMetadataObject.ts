@@ -5,7 +5,6 @@ import {
 	SPLAT_REGEX,
 	PLACEHOLDER_REGEX,
 } from "./constants";
-import type { MetadataStaticRedirects } from "../asset-server/metadata";
 import type {
 	Metadata,
 	MetadataRedirects,
@@ -68,17 +67,13 @@ function constructRedirects({
 		return {};
 	}
 
-	const staticRedirects: MetadataStaticRedirects = {};
+	const staticRedirects: MetadataRedirects = {};
 	const dynamicRedirects: MetadataRedirects = {};
 	let canCreateStaticRule = true;
 	for (const rule of redirects.rules) {
 		if (!rule.from.match(SPLAT_REGEX) && !rule.from.match(PLACEHOLDER_REGEX)) {
 			if (canCreateStaticRule) {
-				staticRedirects[rule.from] = {
-					status: rule.status,
-					to: rule.to,
-					lineNumber: rule.lineNumber,
-				};
+				staticRedirects[rule.from] = { status: rule.status, to: rule.to };
 				continue;
 			} else {
 				logger(
