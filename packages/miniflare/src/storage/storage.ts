@@ -8,6 +8,7 @@ import {
 	lexicographicCompare,
 	nonCircularClone,
 } from "../shared";
+import { NewStorage } from "../storage2";
 
 export interface StoredMeta<Meta = unknown> {
 	/** Unix timestamp in seconds when this key expires */
@@ -200,6 +201,16 @@ export abstract class Storage {
 	getSqliteDatabase(): DatabaseType {
 		const name = this.constructor.name;
 		throw new Error(`SQLite storage not implemented for ${name}`);
+	}
+
+	// Whilst we are migrating gateways over to the new storage system, we'd like
+	// to keep the `GatewayConstructor` type using the old `Storage` type.
+	// Gateways implemented using new storage should call this method on their
+	// passed storages to get an appropriate implementation.
+	// TODO(soon): remove this once all gateways migrated
+	getNewStorage(): NewStorage {
+		const name = this.constructor.name;
+		throw new Error(`New storage not implemented for ${name}`);
 	}
 }
 

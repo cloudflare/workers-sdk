@@ -1,5 +1,6 @@
 import Database, { Database as DatabaseType } from "better-sqlite3";
 import { defaultClock } from "../shared";
+import { NewStorage, createMemoryStorage } from "../storage2";
 import { LocalStorage } from "./local";
 import {
 	Range,
@@ -13,6 +14,7 @@ import {
 
 export class MemoryStorage extends LocalStorage {
 	#sqliteDatabase?: DatabaseType;
+	#newStorage?: NewStorage;
 
 	constructor(
 		protected map = new Map<string, StoredValueMeta>(),
@@ -108,5 +110,9 @@ export class MemoryStorage extends LocalStorage {
 
 	getSqliteDatabase(): DatabaseType {
 		return (this.#sqliteDatabase ??= new Database(":memory:"));
+	}
+
+	getNewStorage(): NewStorage {
+		return (this.#newStorage ??= createMemoryStorage());
 	}
 }

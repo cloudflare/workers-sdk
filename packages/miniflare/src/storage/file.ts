@@ -8,6 +8,7 @@ import {
 	sanitisePath,
 	viewToArray,
 } from "../shared";
+import { NewStorage, createFileStorage } from "../storage2";
 import { LocalStorage } from "./local";
 import {
 	Range,
@@ -123,6 +124,7 @@ export interface FileMeta<Meta = unknown> extends StoredMeta<Meta> {
 export class FileStorage extends LocalStorage {
 	protected readonly root: string;
 	#sqliteDatabase?: DatabaseType;
+	#newStorage?: NewStorage;
 
 	constructor(
 		root: string,
@@ -307,5 +309,9 @@ export class FileStorage extends LocalStorage {
 		if (this.#sqliteDatabase !== undefined) return this.#sqliteDatabase;
 		mkdirSync(path.dirname(this.root), { recursive: true });
 		return (this.#sqliteDatabase = new Database(this.root + ".sqlite3"));
+	}
+
+	getNewStorage(): NewStorage {
+		return (this.#newStorage ??= createFileStorage(this.root));
 	}
 }
