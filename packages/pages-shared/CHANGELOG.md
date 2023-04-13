@@ -1,5 +1,13 @@
 # @cloudflare/pages-shared
 
+## 0.3.3
+
+### Patch Changes
+
+- [#3037](https://github.com/cloudflare/workers-sdk/pull/3037) [`f96ec321`](https://github.com/cloudflare/workers-sdk/commit/f96ec32182a6f00338d760c933dc64d47c3f0e05) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Prevent protocol-less URL redirects
+
+* [#3037](https://github.com/cloudflare/workers-sdk/pull/3037) [`f96ec321`](https://github.com/cloudflare/workers-sdk/commit/f96ec32182a6f00338d760c933dc64d47c3f0e05) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Sort the order of \_redirects static redirects correctly
+
 ## 0.3.2
 
 ### Patch Changes
