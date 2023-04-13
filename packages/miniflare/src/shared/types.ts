@@ -26,3 +26,10 @@ export type Json = Literal | { [key: string]: Json } | Json[];
 export const JsonSchema: z.ZodType<Json> = z.lazy(() =>
 	z.union([LiteralSchema, z.array(JsonSchema), z.record(JsonSchema)])
 );
+
+export function maybeApply<From, To>(
+	f: (value: From) => To,
+	maybeValue: From | undefined
+): To | undefined {
+	return maybeValue === undefined ? undefined : f(maybeValue);
+}

@@ -1,3 +1,4 @@
+import assert from "assert";
 import { Headers, Response } from "../../http";
 import {
 	DELETE,
@@ -88,9 +89,24 @@ export class KVRouter extends Router<KVGateway> {
 		const metadata =
 			metadataHeader === null ? undefined : JSON.parse(metadataHeader);
 
-		// Read body and put value into storage
-		const value = new Uint8Array(await req.arrayBuffer());
-		await gateway.put(key, value, { expiration, expirationTtl, metadata });
+		// Put value into storage
+		const value = req.body;
+		assert(value !== null);
+
+		// If we know the value length, avoid passing the body through a transform
+		// stream to count it (trusting `workerd` to send correct value here).
+		// Safety of `!`: `parseInt(null)` is `NaN`
+		const contentLength = parseInt(req.headers.get("Content-Length")!);
+		const valueLengthHint = Number.isNaN(contentLength)
+			? undefined
+			: contentLength;
+
+		await gateway.put(key, value, {
+			expiration,
+			expirationTtl,
+			metadata,
+			valueLengthHint,
+		});
 
 		return new Response();
 	};

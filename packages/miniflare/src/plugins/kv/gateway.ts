@@ -1,5 +1,14 @@
-import { Clock, HttpError, Log, millisToSeconds } from "../../shared";
-import { Storage, StoredKeyMeta, StoredValueMeta } from "../../storage";
+import { ReadableStream, TransformStream } from "stream/web";
+import {
+	Clock,
+	HttpError,
+	Log,
+	maybeApply,
+	millisToSeconds,
+	secondsToMillis,
+} from "../../shared";
+import { Storage } from "../../storage";
+import { KeyValueStorage } from "../../storage2";
 import {
 	MAX_KEY_SIZE,
 	MAX_LIST_KEYS,
@@ -47,14 +56,45 @@ function normaliseInt(value: string | number | undefined): number | undefined {
 	}
 }
 
+function createMaxValueSizeError(length: number) {
+	return new KVError(
+		413,
+		`Value length of ${length} exceeds limit of ${MAX_VALUE_SIZE}.`
+	);
+}
+class MaxLengthStream extends TransformStream<Uint8Array, Uint8Array> {
+	constructor(maxLength: number, errorFactory: (length: number) => Error) {
+		let length = 0;
+		super({
+			transform(chunk, controller) {
+				length += chunk.byteLength;
+				// If we exceeded the maximum length, don't enqueue the chunk as we'll
+				// be aborting the stream, but don't error just yet, so we get the
+				// correct final length in the error
+				if (length <= maxLength) controller.enqueue(chunk);
+			},
+			flush(controller) {
+				// If we exceeded the maximum length, abort the stream
+				if (length > maxLength) controller.error(errorFactory(length));
+			},
+		});
+	}
+}
+
 export interface KVGatewayGetOptions {
 	cacheTtl?: number;
 }
+export interface KVGatewayGetResult<Metadata = unknown> {
+	value: ReadableStream<Uint8Array>;
+	expiration?: number; // seconds since unix epoch
+	metadata: Metadata;
+}
 
-export interface KVGatewayPutOptions<Meta = unknown> {
-	expiration?: string | number;
-	expirationTtl?: string | number;
-	metadata?: Meta;
+export interface KVGatewayPutOptions<Metadata = unknown> {
+	expiration?: string | number; // seconds since unix epoch
+	expirationTtl?: string | number; // seconds relative to now
+	metadata?: Metadata;
+	valueLengthHint?: number;
 }
 
 export interface KVGatewayListOptions {
@@ -62,23 +102,33 @@ export interface KVGatewayListOptions {
 	prefix?: string;
 	cursor?: string;
 }
-export interface KVGatewayListResult<Meta = unknown> {
-	keys: StoredKeyMeta<Meta>[];
+export interface KVGatewayListKey {
+	name: string;
+	expiration?: number; // seconds since unix epoch
+	metadata?: string; // JSON-stringified metadata
+}
+export interface KVGatewayListResult {
+	keys: KVGatewayListKey[];
 	cursor?: string;
 	list_complete: boolean;
 }
 
 export class KVGateway {
+	private readonly storage: KeyValueStorage;
+
 	constructor(
 		private readonly log: Log,
-		private readonly storage: Storage,
+		legacyStorage: Storage,
 		private readonly clock: Clock
-	) {}
+	) {
+		const storage = legacyStorage.getNewStorage();
+		this.storage = new KeyValueStorage(storage, clock);
+	}
 
-	async get(
+	async get<Metadata = unknown>(
 		key: string,
 		options?: KVGatewayGetOptions
-	): Promise<StoredValueMeta | undefined> {
+	): Promise<KVGatewayGetResult<Metadata> | undefined> {
 		validateKey(key);
 		// Validate cacheTtl, but ignore it as there's only one "edge location":
 		// the user's computer
@@ -92,12 +142,19 @@ export class KVGateway {
 				`Invalid ${PARAM_CACHE_TTL} of ${cacheTtl}. Cache TTL must be at least ${MIN_CACHE_TTL}.`
 			);
 		}
-		return this.storage.get(key, false, cacheTtl);
+
+		const entry = await this.storage.get(key);
+		if (entry === null) return;
+		return {
+			value: entry.value,
+			expiration: maybeApply(millisToSeconds, entry.expiration),
+			metadata: entry.metadata as Metadata,
+		};
 	}
 
 	async put(
 		key: string,
-		value: Uint8Array,
+		value: ReadableStream<Uint8Array>,
 		options: KVGatewayPutOptions = {}
 	): Promise<void> {
 		validateKey(key);
@@ -135,13 +192,7 @@ export class KVGateway {
 			}
 		}
 
-		// Validate value and metadata size
-		if (value.byteLength > MAX_VALUE_SIZE) {
-			throw new KVError(
-				413,
-				`Value length of ${value.byteLength} exceeds limit of ${MAX_VALUE_SIZE}.`
-			);
-		}
+		// Validate metadata size
 		if (options.metadata !== undefined) {
 			const metadataJSON = JSON.stringify(options.metadata);
 			const metadataLength = Buffer.byteLength(metadataJSON);
@@ -153,9 +204,25 @@ export class KVGateway {
 			}
 		}
 
-		return this.storage.put(key, {
+		// Validate value size
+		const valueLengthHint = options.valueLengthHint;
+		if (valueLengthHint !== undefined && valueLengthHint > MAX_VALUE_SIZE) {
+			// If we know the size of the value (i.e. from `Content-Length`) use that
+			throw createMaxValueSizeError(valueLengthHint);
+		} else {
+			// Otherwise, pipe through a transform stream that counts the number of
+			// bytes and errors if it exceeds the max. This error will be thrown
+			// within the `storage.put()` call below and will be propagated up to the
+			// caller.
+			value = value.pipeThrough(
+				new MaxLengthStream(MAX_VALUE_SIZE, createMaxValueSizeError)
+			);
+		}
+
+		return this.storage.put({
+			key,
 			value,
-			expiration,
+			expiration: maybeApply(secondsToMillis, expiration),
 			metadata: options.metadata,
 		});
 	}
@@ -189,13 +256,13 @@ export class KVGateway {
 		const res = await this.storage.list({ limit, prefix, cursor });
 		return {
 			keys: res.keys.map((key) => ({
-				...key,
+				name: key.key,
+				expiration: maybeApply(millisToSeconds, key.expiration),
 				// workerd expects metadata to be a JSON-serialised string
-				metadata:
-					key.metadata === undefined ? undefined : JSON.stringify(key.metadata),
+				metadata: maybeApply(JSON.stringify, key.metadata),
 			})),
-			cursor: res.cursor === "" ? undefined : res.cursor,
-			list_complete: res.cursor === "",
+			cursor: res.cursor,
+			list_complete: res.cursor === undefined,
 		};
 	}
 }

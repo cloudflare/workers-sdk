@@ -2,6 +2,8 @@ import { ReadableStream } from "stream/web";
 import { TextEncoder } from "util";
 import { Headers, Response } from "../../http";
 
+// TODO(soon): move this to storage2 directory when Cache gateway ported
+
 const encoder = new TextEncoder();
 
 // Matches case-insensitive string "bytes", ignoring surrounding whitespace,
