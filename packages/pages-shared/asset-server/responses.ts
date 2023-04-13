@@ -11,7 +11,7 @@ function mergeHeaders(base: HeadersInit, extra: HeadersInit) {
 }
 
 export function stripLeadingDoubleSlashes(location: string) {
-	return location.replace(/^(\/|%2F|%2f)+(.*)/, "/$2");
+	return location.replace(/^(\/|%2F|%2f|%5C|%5c|\\)+(.*)/, "/$2");
 }
 
 export class OkResponse extends Response {
