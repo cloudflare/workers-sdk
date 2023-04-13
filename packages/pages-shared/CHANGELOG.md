@@ -1,5 +1,11 @@
 # @cloudflare/pages-shared
 
+## 0.3.2
+
+### Patch Changes
+
+- [#3038](https://github.com/cloudflare/workers-sdk/pull/3038) [`978471a9`](https://github.com/cloudflare/workers-sdk/commit/978471a9ff5ad7b66d48952d0a05c2cc383912c7) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Revert #2303 duplicating hash component
+
 ## 0.3.1
 
 ### Patch Changes
