@@ -70,6 +70,15 @@ describe("asset-server handler", () => {
 		}
 		{
 			const { response } = await getTestResponse({
+				request: "/%5Cwww.example.com/index/",
+				metadata,
+				findAssetEntryForPath,
+			});
+			expect(response.status).toBe(308);
+			expect(response.headers.get("Location")).toEqual("/www.example.com/");
+		}
+		{
+			const { response } = await getTestResponse({
 				request: "/%2Fwww.example.com/%2F/index/",
 				metadata,
 				findAssetEntryForPath,
@@ -79,12 +88,30 @@ describe("asset-server handler", () => {
 		}
 		{
 			const { response } = await getTestResponse({
+				request: "/%5Cwww.example.com/%5C/index/",
+				metadata,
+				findAssetEntryForPath,
+			});
+			expect(response.status).toBe(308);
+			expect(response.headers.get("Location")).toEqual("/www.example.com/\\/");
+		}
+		{
+			const { response } = await getTestResponse({
 				request: "/%2fwww.example.com/%2f/index/",
 				metadata,
 				findAssetEntryForPath,
 			});
 			expect(response.status).toBe(308);
 			expect(response.headers.get("Location")).toEqual("/www.example.com///");
+		}
+		{
+			const { response } = await getTestResponse({
+				request: "/%5cwww.example.com/%5c/index/",
+				metadata,
+				findAssetEntryForPath,
+			});
+			expect(response.status).toBe(308);
+			expect(response.headers.get("Location")).toEqual("/www.example.com/\\/");
 		}
 		{
 			const { response } = await getTestResponse({

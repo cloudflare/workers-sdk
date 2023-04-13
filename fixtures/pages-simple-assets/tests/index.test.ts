@@ -23,11 +23,21 @@ describe.concurrent("Pages Functions", () => {
 	});
 
 	it("doesn't redirect to protocol-less URLs", async ({ expect }) => {
-		const response = await fetch(
-			`http://${ip}:${port}/%2Fwww.example.com/index/`,
-			{ redirect: "manual" }
-		);
-		expect(response.status).toEqual(308);
-		expect(response.headers.get("Location")).toEqual("/www.example.com/");
+		{
+			const response = await fetch(
+				`http://${ip}:${port}/%2Fwww.example.com/index/`,
+				{ redirect: "manual" }
+			);
+			expect(response.status).toEqual(308);
+			expect(response.headers.get("Location")).toEqual("/www.example.com/");
+		}
+		{
+			const response = await fetch(
+				`http://${ip}:${port}/%5Cwww.example.com/index/`,
+				{ redirect: "manual" }
+			);
+			expect(response.status).toEqual(308);
+			expect(response.headers.get("Location")).toEqual("/www.example.com/");
+		}
 	});
 });
