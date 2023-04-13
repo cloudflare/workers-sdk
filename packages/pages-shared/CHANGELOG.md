@@ -1,5 +1,11 @@
 # @cloudflare/pages-shared
 
+## 0.3.1
+
+### Patch Changes
+
+- [#3036](https://github.com/cloudflare/workers-sdk/pull/3036) [`e4ca780f`](https://github.com/cloudflare/workers-sdk/commit/e4ca780f1e22af157aa6393008fe4f650b031f11) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Temporarily remove proxying from pages-shared
+
 ## 0.3.0
 
 ### Minor Changes

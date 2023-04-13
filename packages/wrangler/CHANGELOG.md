@@ -1,5 +1,13 @@
 # wrangler
 
+## 2.15.1
+
+### Patch Changes
+
+- [#2783](https://github.com/cloudflare/workers-sdk/pull/2783) [`4c55baf9`](https://github.com/cloudflare/workers-sdk/commit/4c55baf9cd0e3d8915272471476017e0d379a988) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Add `**/*.wasm?module` as default module rule (alias of `**/*.wasm`)
+
+* [#2989](https://github.com/cloudflare/workers-sdk/pull/2989) [`86e942bb`](https://github.com/cloudflare/workers-sdk/commit/86e942bbb943750ee57e209a214e08926fb32ac5) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Durable Object proxying websockets over local dev registry
+
 ## 2.15.0
 
 ### Minor Changes
