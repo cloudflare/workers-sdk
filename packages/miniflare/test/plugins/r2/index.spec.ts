@@ -160,7 +160,6 @@ class TestR2Bucket implements R2Bucket {
 		} else if (ArrayBuffer.isView(value)) {
 			valueBlob = new Blob([viewToArray(value)]);
 		} else if (value instanceof ReadableStream) {
-			// @ts-expect-error `ReadableStream` is an `AsyncIterable`
 			valueBlob = await blob(value);
 		} else {
 			valueBlob = new Blob([value]);

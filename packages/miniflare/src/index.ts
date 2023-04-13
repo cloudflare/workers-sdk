@@ -876,3 +876,4 @@ export * from "./plugins";
 export * from "./runtime";
 export * from "./shared";
 export * from "./storage";
+export * from "./storage2";
