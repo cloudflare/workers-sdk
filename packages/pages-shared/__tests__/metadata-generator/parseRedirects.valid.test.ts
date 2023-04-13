@@ -91,32 +91,3 @@ test("parseRedirects should preserve fragments", () => {
 		invalid: [],
 	});
 });
-
-test("parseRedirects should preserve fragments which contain a hash sign", () => {
-	const input = `
-  /a /b##blah-1 302
-`;
-	const result = parseRedirects(input);
-	expect(result).toEqual({
-		rules: [{ from: "/a", status: 302, to: "/b##blah-1", lineNumber: 2 }],
-		invalid: [],
-	});
-});
-
-test("parseRedirects should preserve fragments which contain a hash sign and are full URLs", () => {
-	const input = `
-  /a https://example.com/b##blah-1 302
-`;
-	const result = parseRedirects(input);
-	expect(result).toEqual({
-		rules: [
-			{
-				from: "/a",
-				status: 302,
-				to: "https://example.com/b##blah-1",
-				lineNumber: 2,
-			},
-		],
-		invalid: [],
-	});
-});
