@@ -204,16 +204,26 @@ export async function generateHandler<
 					  }`;
 			switch (status) {
 				case 301:
-					return new MovedPermanentlyResponse(location);
+					return new MovedPermanentlyResponse(location, undefined, {
+						preventLeadingDoubleSlash: false,
+					});
 				case 303:
-					return new SeeOtherResponse(location);
+					return new SeeOtherResponse(location, undefined, {
+						preventLeadingDoubleSlash: false,
+					});
 				case 307:
-					return new TemporaryRedirectResponse(location);
+					return new TemporaryRedirectResponse(location, undefined, {
+						preventLeadingDoubleSlash: false,
+					});
 				case 308:
-					return new PermanentRedirectResponse(location);
+					return new PermanentRedirectResponse(location, undefined, {
+						preventLeadingDoubleSlash: false,
+					});
 				case 302:
 				default:
-					return new FoundResponse(location);
+					return new FoundResponse(location, undefined, {
+						preventLeadingDoubleSlash: false,
+					});
 			}
 		}
 

@@ -92,7 +92,7 @@ test("createMetadataObject should construct mapping of from to to/status", () =>
 	expect(metadata.redirects).toEqual({
 		version: 1,
 		staticRules: {
-			"/home": { status: 302, to: "/" },
+			"/home": { status: 302, to: "/", lineNumber: 1 },
 		},
 		rules: {
 			"/blog/*": {
@@ -220,10 +220,14 @@ test("createMetadataObject should parse a realistic result", () => {
 			version: 1,
 			rules: {},
 			staticRules: {
-				"/some%20page": { status: 302, to: "/somewhere%20else" },
-				"/://so;%60me": { status: 302, to: "/nons:/&@%+~%7B%7Dense" },
-				"/nah": { status: 302, to: "https://yeah.com/" },
-				"/yeah.com": { status: 302, to: "https://nah.com/" },
+				"/some%20page": { status: 302, to: "/somewhere%20else", lineNumber: 1 },
+				"/://so;%60me": {
+					status: 302,
+					to: "/nons:/&@%+~%7B%7Dense",
+					lineNumber: 2,
+				},
+				"/nah": { status: 302, to: "https://yeah.com/", lineNumber: 3 },
+				"/yeah.com": { status: 302, to: "https://nah.com/", lineNumber: 4 },
 			},
 		},
 		headers: {
