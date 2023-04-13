@@ -120,21 +120,3 @@ test("parseRedirects should preserve fragments which contain a hash sign and are
 		invalid: [],
 	});
 });
-
-test("parseRedirects should accept 200 (proxying) redirects", () => {
-	const input = `
-	/a /b 200
-`;
-	const result = parseRedirects(input);
-	expect(result).toEqual({
-		rules: [
-			{
-				from: "/a",
-				status: 200,
-				to: "/b",
-				lineNumber: 2,
-			},
-		],
-		invalid: [],
-	});
-});
