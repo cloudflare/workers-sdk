@@ -17,18 +17,11 @@ describe("asset-server handler", () => {
 					from: `/${status}`,
 					to: "/home",
 				}))
-				.concat(
-					{
-						status: 302,
-						from: "/500",
-						to: "/home",
-					},
-					{
-						status: 200,
-						from: "/200",
-						to: "/proxied-file",
-					}
-				)
+				.concat({
+					status: 302,
+					from: "/500",
+					to: "/home",
+				})
 		);
 
 		const tests = statuses.map(async (status) => {
@@ -50,20 +43,6 @@ describe("asset-server handler", () => {
 
 		expect(response.status).toBe(302);
 		expect(response.headers.get("Location")).toBe("/home");
-
-		const { response: proxyResponse } = await getTestResponse({
-			request: "https://foo.com/200",
-			metadata,
-			findAssetEntryForPath: async (path: string) => {
-				if (path === "/proxied-file.html") {
-					return "proxied file";
-				}
-				return null;
-			},
-		});
-
-		expect(proxyResponse.status).toBe(200);
-		expect(proxyResponse.headers.get("Location")).toBeNull();
 	});
 
 	test("Match exact pathnames, before any HTML redirection", async () => {

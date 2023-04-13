@@ -34,18 +34,18 @@ test("parseRedirects should reject invalid status codes", () => {
 	const input = `
     # Valid token sails through
     /a /b 301
-    # 418 NOT OK
-    /c /d 418
+    # 200 NOT OK
+    /c /d 200
   `;
 	const result = parseRedirects(input);
 	expect(result).toEqual({
 		rules: [{ from: "/a", status: 301, to: "/b", lineNumber: 3 }],
 		invalid: [
 			{
-				line: `/c /d 418`,
+				line: `/c /d 200`,
 				lineNumber: 5,
 				message:
-					"Valid status codes are 200, 301, 302 (default), 303, 307, or 308. Got 418.",
+					"Valid status codes are 301, 302 (default), 303, 307, or 308. Got 200.",
 			},
 		],
 	});
