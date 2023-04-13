@@ -417,7 +417,21 @@ async function getTestResponse({
 	...options
 }: {
 	request: Request | string;
-} & Omit<Partial<HandlerContext<string>>, "request">): Promise<{
+} & Omit<
+	Partial<
+		HandlerContext<
+			string,
+			{
+				encoding: string | null;
+			},
+			{
+				body: ReadableStream | null;
+				contentType: string;
+			}
+		>
+	>,
+	"request"
+>): Promise<{
 	response: Response;
 	spies: HandlerSpies;
 }> {
