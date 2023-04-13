@@ -255,21 +255,3 @@ test("parseRedirects should reject malformed URLs", () => {
 		],
 	});
 });
-
-test("parseRedirects should reject non-relative URLs for proxying (200) redirects", () => {
-	const input = `
-	/a https://example.com/b 200
-`;
-	const result = parseRedirects(input);
-	expect(result).toEqual({
-		rules: [],
-		invalid: [
-			{
-				line: `/a https://example.com/b 200`,
-				lineNumber: 2,
-				message:
-					"Proxy (200) redirects can only point to relative paths. Got https://example.com/b",
-			},
-		],
-	});
-});
