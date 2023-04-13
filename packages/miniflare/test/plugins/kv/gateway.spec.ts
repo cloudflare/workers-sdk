@@ -1,34 +1,38 @@
+import assert from "assert";
+import { Blob } from "buffer";
+import { text } from "stream/consumers";
 import {
 	KVError,
 	KVGateway,
 	KVGatewayListOptions,
+	KVGatewayListResult,
+	KeyValueStorage,
 	MemoryStorage,
 	NoOpLog,
-	Storage,
-	StoredKeyMeta,
-	StoredValueMeta,
-	base64Encode,
 } from "@miniflare/tre";
-import anyTest, { Macro, TestFn } from "ava";
+import anyTest, { Macro, TestFn, ThrowsExpectation } from "ava";
 import {
 	TIME_EXPIRED,
 	TIME_EXPIRING,
 	TIME_NOW,
+	createJunkStream,
 	testClock,
-	utf8Encode,
 } from "../../test-shared";
 
 interface Context {
-	storage: Storage;
+	storage: KeyValueStorage;
 	gateway: KVGateway;
 }
 
 const test = anyTest as TestFn<Context>;
 
 test.beforeEach((t) => {
-	const storage = new MemoryStorage(undefined, testClock);
-	const gateway = new KVGateway(new NoOpLog(), storage, testClock);
-	t.context = { storage, gateway };
+	// TODO(soon): clean up this mess once we've migrated all gateways
+	const legacyStorage = new MemoryStorage(undefined, testClock);
+	const newStorage = legacyStorage.getNewStorage();
+	const gateway = new KVGateway(new NoOpLog(), legacyStorage, testClock);
+	const kvStorage = new KeyValueStorage(newStorage, testClock);
+	t.context = { storage: kvStorage, gateway };
 });
 
 const validatesKeyMacro: Macro<
@@ -68,12 +72,16 @@ test(validatesKeyMacro, "get", async (gateway, key) => {
 });
 test("get: returns value", async (t) => {
 	const { storage, gateway } = t.context;
-	await storage.put("key", {
-		value: utf8Encode("value"),
+	await storage.put({
+		key: "key",
+		value: new Blob(["value"]).stream(),
 		metadata: { testing: true },
 	});
-	t.deepEqual(await gateway.get("key"), {
-		value: utf8Encode("value"),
+	const result = await gateway.get("key");
+	assert(result !== undefined);
+	t.is(await text(result.value), "value");
+	t.deepEqual(result, {
+		value: result.value,
 		expiration: undefined,
 		metadata: { testing: true },
 	});
@@ -84,15 +92,19 @@ test("get: returns undefined for non-existent keys", async (t) => {
 });
 test("get: returns undefined for expired keys", async (t) => {
 	const { storage, gateway } = t.context;
-	await storage.put("key", {
-		value: utf8Encode("value"),
+	await storage.put({
+		key: "key",
+		value: new Blob(["value"]).stream(),
 		expiration: TIME_EXPIRED,
 	});
 	t.is(await gateway.get("key"), undefined);
 });
 test("get: validates but ignores cache ttl", async (t) => {
 	const { storage, gateway } = t.context;
-	await storage.put("key", { value: utf8Encode("value") });
+	await storage.put({
+		key: "key",
+		value: new Blob(["value"]).stream(),
+	});
 	await t.throwsAsync(gateway.get("key", { cacheTtl: "not a number" as any }), {
 		instanceOf: KVError,
 		code: 400,
@@ -108,49 +120,69 @@ test("get: validates but ignores cache ttl", async (t) => {
 });
 
 test(validatesKeyMacro, "put", async (gateway, key) => {
-	await gateway.put(key, utf8Encode("value"));
+	await gateway.put(key, new Blob(["value"]).stream());
 });
 test("put: puts value", async (t) => {
 	const { storage, gateway } = t.context;
-	await gateway.put("key", utf8Encode("value"), {
+	await gateway.put("key", new Blob(["value"]).stream(), {
 		expiration: TIME_EXPIRING,
 		metadata: { testing: true },
 	});
-	t.deepEqual(await storage.get("key"), {
-		value: utf8Encode("value"),
-		expiration: TIME_EXPIRING,
+	const result = await storage.get("key");
+	assert(result !== null);
+	t.deepEqual(result, {
+		key: "key",
+		value: result.value,
+		expiration: TIME_EXPIRING * 1000,
 		metadata: { testing: true },
 	});
+	t.is(await text(result.value), "value");
 });
 test("put: overrides existing keys", async (t) => {
 	const { storage, gateway } = t.context;
-	await gateway.put("key", utf8Encode("value1"));
-	await gateway.put("key", utf8Encode("value2"), {
+	await gateway.put("key", new Blob(["value1"]).stream());
+	await gateway.put("key", new Blob(["value2"]).stream(), {
 		expiration: TIME_EXPIRING,
 		metadata: { testing: true },
 	});
-	t.deepEqual(await storage.get("key"), {
-		value: utf8Encode("value2"),
-		expiration: TIME_EXPIRING,
+	const result = await storage.get("key");
+	assert(result !== null);
+	t.deepEqual(result, {
+		key: "key",
+		value: result.value,
+		expiration: TIME_EXPIRING * 1000,
 		metadata: { testing: true },
 	});
+	t.is(await text(result.value), "value2");
+});
+test("put: keys are case-sensitive", async (t) => {
+	const { gateway } = t.context;
+	await gateway.put("key", new Blob(["lower"]).stream());
+	await gateway.put("KEY", new Blob(["upper"]).stream());
+	let result = await gateway.get("key");
+	assert(result !== undefined);
+	t.is(await text(result.value), "lower");
+	result = await gateway.get("KEY");
+	assert(result !== undefined);
+	t.is(await text(result.value), "upper");
 });
 test("put: validates expiration ttl", async (t) => {
 	const { gateway } = t.context;
-	const value = utf8Encode("value");
-	await t.throwsAsync(gateway.put("key", value, { expirationTtl: "nan" }), {
+	const blob = new Blob(["value1"]);
+	const value = () => blob.stream();
+	await t.throwsAsync(gateway.put("key", value(), { expirationTtl: "nan" }), {
 		instanceOf: KVError,
 		code: 400,
 		message:
 			"Invalid expiration_ttl of nan. Please specify integer greater than 0.",
 	});
-	await t.throwsAsync(gateway.put("key", value, { expirationTtl: 0 }), {
+	await t.throwsAsync(gateway.put("key", value(), { expirationTtl: 0 }), {
 		instanceOf: KVError,
 		code: 400,
 		message:
 			"Invalid expiration_ttl of 0. Please specify integer greater than 0.",
 	});
-	await t.throwsAsync(gateway.put("key", value, { expirationTtl: 30 }), {
+	await t.throwsAsync(gateway.put("key", value(), { expirationTtl: 30 }), {
 		instanceOf: KVError,
 		code: 400,
 		message:
@@ -159,20 +191,21 @@ test("put: validates expiration ttl", async (t) => {
 });
 test("put: validates expiration", async (t) => {
 	const { gateway } = t.context;
-	const value = utf8Encode("value");
-	await t.throwsAsync(gateway.put("key", value, { expiration: "nan" }), {
+	const blob = new Blob(["value"]);
+	const value = () => blob.stream();
+	await t.throwsAsync(gateway.put("key", value(), { expiration: "nan" }), {
 		instanceOf: KVError,
 		code: 400,
 		message:
 			"Invalid expiration of nan. Please specify integer greater than the current number of seconds since the UNIX epoch.",
 	});
-	await t.throwsAsync(gateway.put("key", value, { expiration: TIME_NOW }), {
+	await t.throwsAsync(gateway.put("key", value(), { expiration: TIME_NOW }), {
 		instanceOf: KVError,
 		code: 400,
 		message: `Invalid expiration of ${TIME_NOW}. Please specify integer greater than the current number of seconds since the UNIX epoch.`,
 	});
 	await t.throwsAsync(
-		gateway.put("key", value, { expiration: TIME_NOW + 30 }),
+		gateway.put("key", value(), { expiration: TIME_NOW + 30 }),
 		{
 			instanceOf: KVError,
 			code: 400,
@@ -186,17 +219,30 @@ test("put: validates value size", async (t) => {
 	const { gateway } = t.context;
 	const maxValueSize = 25 * 1024 * 1024;
 	const byteLength = maxValueSize + 1;
-	await t.throwsAsync(gateway.put("key", new Uint8Array(byteLength)), {
+	const expectations: ThrowsExpectation = {
 		instanceOf: KVError,
 		code: 413,
 		message: `Value length of ${byteLength} exceeds limit of ${maxValueSize}.`,
-	});
+	};
+	// Check with and without `valueLengthHint`
+	await t.throwsAsync(
+		gateway.put("key", createJunkStream(byteLength), {
+			valueLengthHint: byteLength,
+		}),
+		expectations
+	);
+	await t.throwsAsync(
+		gateway.put("key", createJunkStream(byteLength)),
+		expectations
+	);
+	// Check 1 less byte is accepted
+	await gateway.put("key", createJunkStream(byteLength - 1));
 });
 test("put: validates metadata size", async (t) => {
 	const { gateway } = t.context;
 	const maxMetadataSize = 1024;
 	await t.throwsAsync(
-		gateway.put("key", utf8Encode("value"), {
+		gateway.put("key", new Blob(["value"]).stream(), {
 			metadata: {
 				key: "".padStart(maxMetadataSize - `{\"key\":\"\"}`.length + 1, "x"),
 			},
@@ -216,10 +262,13 @@ test(validatesKeyMacro, "delete", async (gateway, key) => {
 });
 test("delete: deletes existing keys", async (t) => {
 	const { storage, gateway } = t.context;
-	await storage.put("key", { value: utf8Encode("value") });
-	t.not(await storage.get("key"), undefined);
+	await storage.put({
+		key: "key",
+		value: new Blob(["value"]).stream(),
+	});
+	t.not(await storage.get("key"), null);
 	await gateway.delete("key");
-	t.is(await storage.get("key"), undefined);
+	t.is(await storage.get("key"), null);
 });
 test("delete: does nothing for non-existent keys", async (t) => {
 	const { gateway } = t.context;
@@ -230,9 +279,12 @@ test("delete: does nothing for non-existent keys", async (t) => {
 const listMacro: Macro<
 	[
 		{
-			values: Record<string, StoredValueMeta>;
+			values: Record<
+				string,
+				{ value: string; expiration?: number; metadata?: unknown }
+			>;
 			options?: KVGatewayListOptions;
-			pages: StoredKeyMeta[][];
+			pages: KVGatewayListResult["keys"][];
 		},
 	],
 	Context
@@ -243,7 +295,13 @@ const listMacro: Macro<
 	async exec(t, { values, options = {}, pages }) {
 		const { storage, gateway } = t.context;
 		for (const [key, value] of Object.entries(values)) {
-			await storage.put(key, value);
+			await storage.put({
+				key,
+				value: new Blob([value.value]).stream(),
+				expiration:
+					value.expiration === undefined ? undefined : value.expiration * 1000,
+				metadata: value.metadata,
+			});
 		}
 
 		let lastCursor = "";
@@ -275,26 +333,47 @@ const listMacro: Macro<
 };
 test("lists keys in sorted order", listMacro, {
 	values: {
-		key3: { value: utf8Encode("value3") },
-		key1: { value: utf8Encode("value1") },
-		key2: { value: utf8Encode("value2") },
+		key3: { value: "value3" },
+		key1: { value: "value1" },
+		key2: { value: "value2" },
 	},
 	pages: [[{ name: "key1" }, { name: "key2" }, { name: "key3" }]],
 });
 test("lists keys matching prefix", listMacro, {
 	values: {
-		section1key1: { value: utf8Encode("value11") },
-		section1key2: { value: utf8Encode("value12") },
-		section2key1: { value: utf8Encode("value21") },
+		section1key1: { value: "value11" },
+		section1key2: { value: "value12" },
+		section2key1: { value: "value21" },
 	},
 	options: { prefix: "section1" },
 	pages: [[{ name: "section1key1" }, { name: "section1key2" }]],
 });
+test("prefix is case-sensitive", listMacro, {
+	values: {
+		key1: { value: "lower1" },
+		key2: { value: "lower2 " },
+		KEY1: { value: "upper1" },
+		KEY2: { value: "upper2" },
+	},
+	options: { prefix: "KEY" },
+	pages: [[{ name: "KEY1" }, { name: "KEY2" }]],
+});
+test("prefix permits special characters", listMacro, {
+	values: {
+		["key\\_%1"]: { value: "value1" },
+		["key\\a"]: { value: "bad1" },
+		["key\\_%2"]: { value: "value2" },
+		["key\\bbb"]: { value: "bad2" },
+		["key\\_%3"]: { value: "value3" },
+	},
+	options: { prefix: "key\\_%" },
+	pages: [[{ name: "key\\_%1" }, { name: "key\\_%2" }, { name: "key\\_%3" }]],
+});
 test("lists keys with expiration", listMacro, {
 	values: {
-		key1: { value: utf8Encode("value1"), expiration: TIME_EXPIRING },
-		key2: { value: utf8Encode("value2"), expiration: TIME_EXPIRING + 100 },
-		key3: { value: utf8Encode("value3"), expiration: TIME_EXPIRING + 200 },
+		key1: { value: "value1", expiration: TIME_EXPIRING },
+		key2: { value: "value2", expiration: TIME_EXPIRING + 100 },
+		key3: { value: "value3", expiration: TIME_EXPIRING + 200 },
 	},
 	pages: [
 		[
@@ -306,9 +385,9 @@ test("lists keys with expiration", listMacro, {
 });
 test("lists keys with metadata", listMacro, {
 	values: {
-		key1: { value: utf8Encode("value1"), metadata: { testing: 1 } },
-		key2: { value: utf8Encode("value2"), metadata: { testing: 2 } },
-		key3: { value: utf8Encode("value3"), metadata: { testing: 3 } },
+		key1: { value: "value1", metadata: { testing: 1 } },
+		key2: { value: "value2", metadata: { testing: 2 } },
+		key3: { value: "value3", metadata: { testing: 3 } },
 	},
 	pages: [
 		[
@@ -321,17 +400,17 @@ test("lists keys with metadata", listMacro, {
 test("lists keys with expiration and metadata", listMacro, {
 	values: {
 		key1: {
-			value: utf8Encode("value1"),
+			value: "value1",
 			expiration: TIME_EXPIRING,
 			metadata: { testing: 1 },
 		},
 		key2: {
-			value: utf8Encode("value2"),
+			value: "value2",
 			expiration: TIME_EXPIRING + 100,
 			metadata: { testing: 2 },
 		},
 		key3: {
-			value: utf8Encode("value3"),
+			value: "value3",
 			expiration: TIME_EXPIRING + 200,
 			metadata: { testing: 3 },
 		},
@@ -362,37 +441,28 @@ test("returns an empty list with no keys", listMacro, {
 });
 test("returns an empty list with no matching keys", listMacro, {
 	values: {
-		key1: { value: utf8Encode("value1") },
-		key2: { value: utf8Encode("value2") },
-		key3: { value: utf8Encode("value3") },
+		key1: { value: "value1" },
+		key2: { value: "value2" },
+		key3: { value: "value3" },
 	},
 	options: { prefix: "none" },
 	pages: [[]],
 });
-test("returns an empty list with an invalid cursor", listMacro, {
-	values: {
-		key1: { value: utf8Encode("value1") },
-		key2: { value: utf8Encode("value2") },
-		key3: { value: utf8Encode("value3") },
-	},
-	options: { cursor: base64Encode("bad") },
-	pages: [[]],
-});
 test("paginates keys", listMacro, {
 	values: {
-		key1: { value: utf8Encode("value1") },
-		key2: { value: utf8Encode("value2") },
-		key3: { value: utf8Encode("value3") },
+		key1: { value: "value1" },
+		key2: { value: "value2" },
+		key3: { value: "value3" },
 	},
 	options: { limit: 2 },
 	pages: [[{ name: "key1" }, { name: "key2" }], [{ name: "key3" }]],
 });
 test("paginates keys matching prefix", listMacro, {
 	values: {
-		section1key1: { value: utf8Encode("value11") },
-		section1key2: { value: utf8Encode("value12") },
-		section1key3: { value: utf8Encode("value13") },
-		section2key1: { value: utf8Encode("value21") },
+		section1key1: { value: "value11" },
+		section1key2: { value: "value12" },
+		section1key3: { value: "value13" },
+		section2key1: { value: "value21" },
 	},
 	options: { prefix: "section1", limit: 2 },
 	pages: [
@@ -402,9 +472,9 @@ test("paginates keys matching prefix", listMacro, {
 });
 test("list: paginates with variable limit", async (t) => {
 	const { storage, gateway } = t.context;
-	await storage.put("key1", { value: utf8Encode("value1") });
-	await storage.put("key2", { value: utf8Encode("value2") });
-	await storage.put("key3", { value: utf8Encode("value3") });
+	await storage.put({ key: "key1", value: new Blob(["value1"]).stream() });
+	await storage.put({ key: "key2", value: new Blob(["value2"]).stream() });
+	await storage.put({ key: "key3", value: new Blob(["value3"]).stream() });
 
 	// Get first page
 	let page = await gateway.list({ limit: 1 });
@@ -425,9 +495,9 @@ test("list: paginates with variable limit", async (t) => {
 });
 test("list: returns keys inserted whilst paginating", async (t) => {
 	const { storage, gateway } = t.context;
-	await storage.put("key1", { value: utf8Encode("value1") });
-	await storage.put("key3", { value: utf8Encode("value3") });
-	await storage.put("key5", { value: utf8Encode("value5") });
+	await storage.put({ key: "key1", value: new Blob(["value1"]).stream() });
+	await storage.put({ key: "key3", value: new Blob(["value3"]).stream() });
+	await storage.put({ key: "key5", value: new Blob(["value5"]).stream() });
 
 	// Get first page
 	let page = await gateway.list({ limit: 2 });
@@ -439,8 +509,8 @@ test("list: returns keys inserted whilst paginating", async (t) => {
 	t.not(page.cursor, undefined);
 
 	// Insert key2 and key4
-	await storage.put("key2", { value: utf8Encode("value2") });
-	await storage.put("key4", { value: utf8Encode("value4") });
+	await storage.put({ key: "key2", value: new Blob(["value2"]).stream() });
+	await storage.put({ key: "key4", value: new Blob(["value4"]).stream() });
 
 	// Get second page, expecting to see key4 but not key2
 	page = await gateway.list({ limit: 2, cursor: page.cursor });
@@ -454,9 +524,10 @@ test("list: returns keys inserted whilst paginating", async (t) => {
 test("list: ignores expired keys", async (t) => {
 	const { storage, gateway } = t.context;
 	for (let i = 1; i <= 3; i++) {
-		await storage.put(`key${i}`, {
-			value: utf8Encode(`value${i}`),
-			expiration: i * 100,
+		await storage.put({
+			key: `key${i}`,
+			value: new Blob([`value${i}`]).stream(),
+			expiration: i * 100 * 1000,
 		});
 	}
 	t.deepEqual(await gateway.list(), {
@@ -467,8 +538,8 @@ test("list: ignores expired keys", async (t) => {
 });
 test("list: sorts lexicographically", async (t) => {
 	const { storage, gateway } = t.context;
-	await storage.put(", ", { value: utf8Encode("value") });
-	await storage.put("!", { value: utf8Encode("value") });
+	await storage.put({ key: ", ", value: new Blob(["value"]).stream() });
+	await storage.put({ key: "!", value: new Blob(["value"]).stream() });
 	t.deepEqual(await gateway.list(), {
 		keys: [
 			{ name: "!", expiration: undefined, metadata: undefined },

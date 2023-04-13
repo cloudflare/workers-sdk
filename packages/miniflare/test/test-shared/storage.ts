@@ -1,8 +1,9 @@
 import crypto from "crypto";
 import fs from "fs/promises";
 import path from "path";
+import { ReadableStream } from "stream/web";
 import { TextDecoder, TextEncoder } from "util";
-import { Clock, sanitisePath } from "@miniflare/tre";
+import { Clock, sanitisePath, unwrapBYOBRequest } from "@miniflare/tre";
 import { ExecutionContext } from "ava";
 
 const encoder = new TextEncoder();
@@ -37,4 +38,21 @@ export async function useTmp(t: ExecutionContext): Promise<string> {
 	);
 	await fs.mkdir(filePath, { recursive: true });
 	return filePath;
+}
+
+export function createJunkStream(length: number): ReadableStream<Uint8Array> {
+	let position = 0;
+	return new ReadableStream({
+		type: "bytes",
+		autoAllocateChunkSize: 1024,
+		pull(controller) {
+			const byobRequest = unwrapBYOBRequest(controller);
+			const v = byobRequest.view;
+			const chunkLength = Math.min(v.byteLength, length - position);
+			for (let i = 0; i < chunkLength; i++) v[i] = 120; // 'x'
+			if (chunkLength === 0) controller.close();
+			position += chunkLength;
+			byobRequest.respond(chunkLength);
+		},
+	});
 }
