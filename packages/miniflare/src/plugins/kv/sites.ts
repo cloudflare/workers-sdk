@@ -1,23 +1,61 @@
 import assert from "assert";
-import { pathToFileURL } from "url";
+import fs from "fs/promises";
+import path from "path";
 import { Request } from "../../http";
 import { Service, Worker_Binding, Worker_Module } from "../../runtime";
 import {
 	MatcherRegExps,
+	base64Decode,
+	base64Encode,
 	deserialiseRegExps,
 	globsToRegExps,
+	lexicographicCompare,
 	serialiseRegExps,
 	testRegExps,
 } from "../../shared";
-import { FileStorage } from "../../storage";
+import { createFileReadableStream } from "../../storage2";
 import {
 	BINDING_SERVICE_LOOPBACK,
 	BINDING_TEXT_PERSIST,
 	HEADER_PERSIST,
-	PARAM_FILE_UNSANITISE,
+	Persistence,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
-import { HEADER_SITES, KV_PLUGIN_NAME, PARAM_URL_ENCODED } from "./constants";
+import {
+	HEADER_SITES,
+	KV_PLUGIN_NAME,
+	MAX_LIST_KEYS,
+	PARAM_URL_ENCODED,
+} from "./constants";
+import {
+	KVGatewayGetOptions,
+	KVGatewayGetResult,
+	KVGatewayListOptions,
+	KVGatewayListResult,
+	validateGetOptions,
+	validateListOptions,
+} from "./gateway";
+
+async function* listKeysInDirectoryInner(
+	rootPath: string,
+	currentPath: string
+): AsyncGenerator<string> {
+	const fileEntries = await fs.readdir(currentPath, { withFileTypes: true });
+	for (const fileEntry of fileEntries) {
+		const filePath = path.join(currentPath, fileEntry.name);
+		if (fileEntry.isDirectory()) {
+			yield* listKeysInDirectoryInner(rootPath, filePath);
+		} else {
+			// Get key name by removing root directory & path separator
+			// (assumes `rootPath` is fully-resolved)
+			yield filePath.substring(rootPath.length + 1);
+		}
+	}
+}
+function listKeysInDirectory(rootPath: string): AsyncGenerator<string> {
+	rootPath = path.resolve(rootPath);
+	return listKeysInDirectoryInner(rootPath, rootPath);
+}
 
 export interface SitesOptions {
 	sitePath: string;
@@ -153,12 +191,9 @@ export async function getSitesBindings(
 
 	// Build __STATIC_CONTENT_MANIFEST contents
 	const staticContentManifest: Record<string, string> = {};
-	const storage = new FileStorage(options.sitePath, /* sanitise */ false);
-	const result = await storage.list();
-	assert.strictEqual(result.cursor, "");
-	for (const { name } of result.keys) {
-		if (testSiteRegExps(siteRegExps, name)) {
-			staticContentManifest[name] = encodeSitesKey(name);
+	for await (const key of listKeysInDirectory(options.sitePath)) {
+		if (testSiteRegExps(siteRegExps, key)) {
+			staticContentManifest[key] = encodeSitesKey(key);
 		}
 	}
 	const __STATIC_CONTENT_MANIFEST = JSON.stringify(staticContentManifest);
@@ -199,8 +234,7 @@ export function getSitesService(options: SitesOptions): Service {
 
 	// Use unsanitised file storage to ensure file names containing e.g. dots
 	// resolve correctly.
-	const persist = pathToFileURL(options.sitePath);
-	persist.searchParams.set(PARAM_FILE_UNSANITISE, "true");
+	const persist = path.resolve(options.sitePath);
 
 	return {
 		name: SERVICE_NAMESPACE_SITE,
@@ -220,4 +254,79 @@ export function getSitesService(options: SitesOptions): Service {
 			],
 		},
 	};
+}
+
+// Define Workers Sites specific KV gateway functions. We serve directly from
+// disk with Workers Sites to ensure we always send the most up-to-date files.
+// Otherwise, we'd have to copy files from disk to our own SQLite/blob store
+// whenever any of them changed.
+
+export async function sitesGatewayGet(
+	persist: Persistence,
+	key: string,
+	opts?: KVGatewayGetOptions
+): Promise<KVGatewayGetResult | undefined> {
+	// `persist` is a resolved path set in `getSitesService()`
+	assert(typeof persist === "string");
+
+	validateGetOptions(key, opts);
+	const filePath = path.join(persist, key);
+	if (!filePath.startsWith(persist)) return;
+	try {
+		return { value: await createFileReadableStream(filePath) };
+	} catch (e: unknown) {
+		if (
+			typeof e === "object" &&
+			e !== null &&
+			"code" in e &&
+			// @ts-expect-error `e.code` should be `unknown`, fixed in TypeScript 4.9
+			e.code === "ENOENT"
+		) {
+			return;
+		}
+		throw e;
+	}
+}
+
+export async function sitesGatewayList(
+	persist: Persistence,
+	opts: KVGatewayListOptions = {}
+): Promise<KVGatewayListResult> {
+	// `persist` is a resolved path set in `getSitesService()`
+	assert(typeof persist === "string");
+
+	validateListOptions(opts);
+	const { limit = MAX_LIST_KEYS, prefix, cursor } = opts;
+
+	// Get sorted array of all keys matching prefix
+	let keys: KVGatewayListResult["keys"] = [];
+	for await (const name of listKeysInDirectory(persist)) {
+		if (prefix === undefined || name.startsWith(prefix)) keys.push({ name });
+	}
+	keys.sort((a, b) => lexicographicCompare(a.name, b.name));
+
+	// Apply cursor
+	const startAfter = cursor === undefined ? "" : base64Decode(cursor);
+	let startIndex = 0;
+	if (startAfter !== "") {
+		// We could do a binary search here, but listing Workers Sites namespaces
+		// is an incredibly unlikely operation, so doesn't need to be optimised
+		startIndex = keys.findIndex(({ name }) => name === startAfter);
+		// If we couldn't find where to start, return nothing
+		if (startIndex === -1) startIndex = keys.length;
+		// Since we want to start AFTER this index, add 1 to it
+		startIndex++;
+	}
+
+	// Apply limit
+	const endIndex = startIndex + limit;
+	const nextCursor =
+		endIndex < keys.length ? base64Encode(keys[endIndex - 1].name) : undefined;
+	keys = keys.slice(startIndex, endIndex);
+
+	if (nextCursor === undefined) {
+		return { keys, list_complete: true, cursor: undefined };
+	} else {
+		return { keys, list_complete: false, cursor: nextCursor };
+	}
 }

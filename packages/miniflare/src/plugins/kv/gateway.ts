@@ -87,7 +87,7 @@ export interface KVGatewayGetOptions {
 export interface KVGatewayGetResult<Metadata = unknown> {
 	value: ReadableStream<Uint8Array>;
 	expiration?: number; // seconds since unix epoch
-	metadata: Metadata;
+	metadata?: Metadata;
 }
 
 export interface KVGatewayPutOptions<Metadata = unknown> {
@@ -107,10 +107,50 @@ export interface KVGatewayListKey {
 	expiration?: number; // seconds since unix epoch
 	metadata?: string; // JSON-stringified metadata
 }
-export interface KVGatewayListResult {
+export type KVGatewayListResult = {
 	keys: KVGatewayListKey[];
-	cursor?: string;
-	list_complete: boolean;
+} & (
+	| { list_complete: false; cursor: string }
+	| { list_complete: true; cursor: undefined }
+);
+
+export function validateGetOptions(
+	key: string,
+	options?: KVGatewayGetOptions
+): void {
+	validateKey(key);
+	// Validate cacheTtl, but ignore it as there's only one "edge location":
+	// the user's computer
+	const cacheTtl = options?.cacheTtl;
+	if (cacheTtl !== undefined && (isNaN(cacheTtl) || cacheTtl < MIN_CACHE_TTL)) {
+		throw new KVError(
+			400,
+			`Invalid ${PARAM_CACHE_TTL} of ${cacheTtl}. Cache TTL must be at least ${MIN_CACHE_TTL}.`
+		);
+	}
+}
+
+export function validateListOptions(options: KVGatewayListOptions): void {
+	// Validate key limit
+	const limit = options.limit;
+	if (limit !== undefined) {
+		if (isNaN(limit) || limit < 1) {
+			throw new KVError(
+				400,
+				`Invalid ${PARAM_LIST_LIMIT} of ${limit}. Please specify an integer greater than 0.`
+			);
+		}
+		if (limit > MAX_LIST_KEYS) {
+			throw new KVError(
+				400,
+				`Invalid ${PARAM_LIST_LIMIT} of ${limit}. Please specify an integer less than ${MAX_LIST_KEYS}.`
+			);
+		}
+	}
+
+	// Validate key prefix
+	const prefix = options.prefix;
+	if (prefix !== undefined) validateKeyLength(prefix);
 }
 
 export class KVGateway {
@@ -129,20 +169,7 @@ export class KVGateway {
 		key: string,
 		options?: KVGatewayGetOptions
 	): Promise<KVGatewayGetResult<Metadata> | undefined> {
-		validateKey(key);
-		// Validate cacheTtl, but ignore it as there's only one "edge location":
-		// the user's computer
-		const cacheTtl = options?.cacheTtl;
-		if (
-			cacheTtl !== undefined &&
-			(isNaN(cacheTtl) || cacheTtl < MIN_CACHE_TTL)
-		) {
-			throw new KVError(
-				400,
-				`Invalid ${PARAM_CACHE_TTL} of ${cacheTtl}. Cache TTL must be at least ${MIN_CACHE_TTL}.`
-			);
-		}
-
+		validateGetOptions(key, options);
 		const entry = await this.storage.get(key);
 		if (entry === null) return;
 		return {
@@ -233,36 +260,19 @@ export class KVGateway {
 	}
 
 	async list(options: KVGatewayListOptions = {}): Promise<KVGatewayListResult> {
-		// Validate key limit
-		const limit = options.limit ?? MAX_LIST_KEYS;
-		if (isNaN(limit) || limit < 1) {
-			throw new KVError(
-				400,
-				`Invalid ${PARAM_LIST_LIMIT} of ${limit}. Please specify an integer greater than 0.`
-			);
-		}
-		if (limit > MAX_LIST_KEYS) {
-			throw new KVError(
-				400,
-				`Invalid ${PARAM_LIST_LIMIT} of ${limit}. Please specify an integer less than ${MAX_LIST_KEYS}.`
-			);
-		}
-
-		// Validate key prefix
-		const prefix = options.prefix;
-		if (prefix !== undefined) validateKeyLength(prefix);
-
-		const cursor = options.cursor;
+		validateListOptions(options);
+		const { limit = MAX_LIST_KEYS, prefix, cursor } = options;
 		const res = await this.storage.list({ limit, prefix, cursor });
-		return {
-			keys: res.keys.map((key) => ({
-				name: key.key,
-				expiration: maybeApply(millisToSeconds, key.expiration),
-				// workerd expects metadata to be a JSON-serialised string
-				metadata: maybeApply(JSON.stringify, key.metadata),
-			})),
-			cursor: res.cursor,
-			list_complete: res.cursor === undefined,
-		};
+		const keys = res.keys.map<KVGatewayListKey>((key) => ({
+			name: key.key,
+			expiration: maybeApply(millisToSeconds, key.expiration),
+			// workerd expects metadata to be a JSON-serialised string
+			metadata: maybeApply(JSON.stringify, key.metadata),
+		}));
+		if (res.cursor === undefined) {
+			return { keys, list_complete: true, cursor: undefined };
+		} else {
+			return { keys, list_complete: false, cursor: res.cursor };
+		}
 	}
 }
