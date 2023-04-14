@@ -1,5 +1,11 @@
 # @cloudflare/pages-shared
 
+## 0.3.4
+
+### Patch Changes
+
+- [#3041](https://github.com/cloudflare/workers-sdk/pull/3041) [`b8eb093c`](https://github.com/cloudflare/workers-sdk/commit/b8eb093c903d78fd656cf9a4759d640687b96e80) Thanks [@jahands](https://github.com/jahands)! - Prevent protocol-less URL redirects (with backslashes)
+
 ## 0.3.3
 
 ### Patch Changes
