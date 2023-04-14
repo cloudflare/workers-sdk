@@ -20,7 +20,15 @@ import {
 	PARAM_LIST_PREFIX,
 	PARAM_URL_ENCODED,
 } from "./constants";
-import { KVError, KVGateway } from "./gateway";
+import {
+	KVError,
+	KVGateway,
+	KVGatewayGetOptions,
+	KVGatewayGetResult,
+	KVGatewayListOptions,
+	KVGatewayListResult,
+} from "./gateway";
+import { sitesGatewayGet, sitesGatewayList } from "./sites";
 
 export interface KVParams {
 	namespace: string;
@@ -45,20 +53,24 @@ export class KVRouter extends Router<KVGateway> {
 	get: RouteHandler<KVParams> = async (req, params, url) => {
 		// Get gateway with (persistent) storage
 		const persist = decodePersist(req.headers);
-		// Workers Sites: if this is a sites request, persist should be used as the
-		// root without any additional namespace
-		const namespace =
-			req.headers.get(HEADER_SITES) === null ? params.namespace : "";
-		const gateway = this.gatewayFactory.get(namespace, persist);
 
 		// Decode URL parameters
 		const key = decodeKey(params, url.searchParams);
 		const cacheTtlParam = url.searchParams.get(PARAM_CACHE_TTL);
-		const cacheTtl =
-			cacheTtlParam === null ? undefined : parseInt(cacheTtlParam);
+		const options: KVGatewayGetOptions = {
+			cacheTtl: cacheTtlParam === null ? undefined : parseInt(cacheTtlParam),
+		};
 
 		// Get value from storage
-		const value = await gateway.get(key, { cacheTtl });
+		let value: KVGatewayGetResult | undefined;
+		if (req.headers.get(HEADER_SITES) === null) {
+			const gateway = this.gatewayFactory.get(params.namespace, persist);
+			value = await gateway.get(key, options);
+		} else {
+			// Workers Sites: if this is a sites request, persist should be used as
+			// the root without any additional namespace
+			value = await sitesGatewayGet(persist, key, options);
+		}
 		if (value === undefined) throw new KVError(404, "Not Found");
 
 		// Return value in runtime-friendly format
@@ -129,20 +141,24 @@ export class KVRouter extends Router<KVGateway> {
 	list: RouteHandler<Omit<KVParams, "key">> = async (req, params, url) => {
 		// Get gateway with (persistent) storage
 		const persist = decodePersist(req.headers);
-		// Workers Sites: if this is a sites request, persist should be used as the
-		// root without any additional namespace
-		const namespace =
-			req.headers.get(HEADER_SITES) === null ? params.namespace : "";
-		const gateway = this.gatewayFactory.get(namespace, persist);
 
 		// Decode URL parameters
 		const limitParam = url.searchParams.get(PARAM_LIST_LIMIT);
 		const limit = limitParam === null ? undefined : parseInt(limitParam);
 		const prefix = url.searchParams.get(PARAM_LIST_PREFIX) ?? undefined;
 		const cursor = url.searchParams.get(PARAM_LIST_CURSOR) ?? undefined;
+		const options: KVGatewayListOptions = { limit, prefix, cursor };
 
 		// List keys from storage
-		const res = await gateway.list({ limit, prefix, cursor });
-		return Response.json(res);
+		let result: KVGatewayListResult;
+		if (req.headers.get(HEADER_SITES) === null) {
+			const gateway = this.gatewayFactory.get(params.namespace, persist);
+			result = await gateway.list(options);
+		} else {
+			// Workers Sites: if this is a sites request, persist should be used as
+			// the root without any additional namespace
+			result = await sitesGatewayList(persist, options);
+		}
+		return Response.json(result);
 	};
 }
