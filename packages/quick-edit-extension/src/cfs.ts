@@ -4,6 +4,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+import workersTypes from "raw:@cloudflare/workers-types/index.d.ts";
 import {
 	Disposable,
 	EventEmitter,
@@ -14,6 +15,7 @@ import {
 	Range,
 	Uri,
 	workspace,
+	FilePermission,
 } from "vscode";
 import type { Channel, FromQuickEditMessage, ToQuickEditMessage } from "./ipc";
 import type { WorkerLoadedMessage } from "./ipc";
@@ -43,6 +45,7 @@ export class File implements FileStat {
 
 	name: string;
 	data?: Uint8Array;
+	permissions?: FilePermission;
 
 	constructor(public uri: Uri, name: string) {
 		this.type = FileType.File;
@@ -50,6 +53,9 @@ export class File implements FileStat {
 		this.mtime = Date.now();
 		this.size = 0;
 		this.name = name;
+	}
+	public setReadOnly() {
+		this.permissions = FilePermission.Readonly;
 	}
 }
 
@@ -73,7 +79,7 @@ export class Directory implements FileStat {
 }
 
 export type Entry = File | Directory;
-
+const encoder = new TextEncoder();
 export class CFS
 	implements
 		FileSystemProvider,
@@ -108,6 +114,63 @@ export class CFS
 	async seed(files: WorkerLoadedMessage["body"]) {
 		this.rootFolder = files.name ?? this.rootFolder;
 		this.createDirectory(Uri.parse(`cfs:/${this.rootFolder}/`));
+		this.writeFile(
+			Uri.parse(`cfs:/${this.rootFolder}/jsconfig.json`),
+			encoder.encode(
+				`
+{
+	"compilerOptions": {
+		"module": "ESNext",
+		"target": "ES2020",
+		"checkJs": true,
+		"allowJs": true,
+		"types": [],
+		"lib": ["ES2020"]
+	}
+}
+	`.trim()
+			),
+			{
+				create: true,
+				overwrite: true,
+				readOnly: true,
+				suppressChannelUpdate: true,
+			}
+		);
+		this.writeFile(
+			Uri.parse(`cfs:/${this.rootFolder}/workers-types.d.ts`),
+			encoder.encode(
+				`
+${workersTypes}
+declare module "*.wasm" {
+	const value: WebAssembly.Module;
+	export default value;
+}
+
+declare module "*.html" {
+	const value: string;
+	export default value;
+}
+
+declare module "*.txt" {
+	const value: string;
+	export default value;
+}
+
+declare module "*.bin" {
+	const value: ArrayBuffer;
+	export default value;
+}
+	`.trim()
+			),
+			{
+				create: true,
+				overwrite: true,
+				readOnly: true,
+				suppressChannelUpdate: true,
+			}
+		);
+
 		for (const { path, contents } of files.files) {
 			const pathSegments = path.split("/");
 			if (pathSegments.length > 1) {
@@ -168,6 +231,7 @@ export class CFS
 			create: boolean;
 			overwrite: boolean;
 			suppressChannelUpdate?: boolean;
+			readOnly?: boolean;
 		}
 	): void {
 		const basename = this._basename(uri.path);
@@ -198,6 +262,9 @@ export class CFS
 		entry.mtime = Date.now();
 		entry.size = content.byteLength;
 		entry.data = content;
+		if (options.readOnly) {
+			entry.setReadOnly();
+		}
 		if (!options.suppressChannelUpdate)
 			this.channel.postMessage({
 				type: "UpdateFile",

@@ -1,0 +1,9 @@
+{
+	"extends": "../../../tsconfig.json",
+	"compilerOptions": {
+		"module": "CommonJS",
+		"types": ["node"]
+	},
+	"include": ["bundle.ts"],
+	"exclude": []
+}
