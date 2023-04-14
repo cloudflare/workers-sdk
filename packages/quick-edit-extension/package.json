@@ -10,7 +10,7 @@
 	"publisher": "cloudflare",
 	"browser": "./dist/extension.js",
 	"scripts": {
-		"package-web": "esbuild --bundle --external:vscode --format=cjs src/extension.ts --outfile=dist/extension.js",
+		"package-web": "node -r esbuild-register scripts/bundle.ts",
 		"vscode:prepublish": "npm run package-web",
 		"watch-web": "npm run package-web -- --watch"
 	},
@@ -40,7 +40,9 @@
 		"onFileSystem:cfs"
 	],
 	"devDependencies": {
-		"esbuild": "^0.17.11",
+		"@cloudflare/workers-types": "^4.20230404.0",
+		"esbuild": "0.16.3",
+		"esbuild-register": "^3.4.2",
 		"typescript": "^4.9.5"
 	},
 	"engines": {

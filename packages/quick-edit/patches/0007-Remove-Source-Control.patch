@@ -1,7 +1,7 @@
-From bdc5b0d280c565e2ac586f83ac1f8ad67bcd2770 Mon Sep 17 00:00:00 2001
+From 2138039ca5b9a35f1abefb723118c89758179ebf Mon Sep 17 00:00:00 2001
 From: Jacob M-G Evans <jacobmgevans@gmail.com>
 Date: Tue, 28 Mar 2023 14:42:09 -0500
-Subject: [PATCH 07/10] Remove Source Control
+Subject: [PATCH 07/11] Remove Source Control
 
 ---
  .../contrib/scm/browser/scm.contribution.ts   | 100 +++++++++---------

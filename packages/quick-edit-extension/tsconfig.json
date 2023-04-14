@@ -7,5 +7,6 @@
 		"sourceMap": true,
 		"rootDir": "src",
 		"strict": true
-	}
+	},
+	"exclude": ["scripts"]
 }

@@ -1,7 +1,7 @@
-From befb9a90cb5c6c5c6dc8498a8b7a146f6508a4f8 Mon Sep 17 00:00:00 2001
+From bc4b9b6591ec7f0c569f4e1f0dd05afdec43c611 Mon Sep 17 00:00:00 2001
 From: Jacob M-G Evans <jacobmgevans@gmail.com>
 Date: Fri, 31 Mar 2023 17:10:30 -0500
-Subject: [PATCH 09/10] Remove Extensions Icon & Quick Access
+Subject: [PATCH 09/11] Remove Extensions Icon & Quick Access
 
 ---
  .../browser/extensions.contribution.ts        | 98 +++++++++----------
