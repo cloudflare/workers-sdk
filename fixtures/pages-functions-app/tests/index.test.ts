@@ -219,6 +219,15 @@ describe.concurrent("Pages Functions", () => {
 			expect(response.status).toEqual(302);
 			expect(response.headers.get("Location")).toEqual("/me");
 		});
+
+		it("should support proxying (200) redirects", async ({ expect }) => {
+			const response = await fetch(`http://${ip}:${port}/users/123`, {
+				redirect: "manual",
+			});
+			const text = await response.text();
+			expect(response.status).toEqual(200);
+			expect(text).toContain("Hello, /users/[id]!");
+		});
 	});
 
 	describe.concurrent("headers", () => {

@@ -192,38 +192,47 @@ export async function generateHandler<
 			staticRedirectsMatcher() || generateRedirectsMatcher()({ request })[0];
 
 		if (match) {
-			const { status, to } = match;
-			const destination = new URL(to, request.url);
-			const location =
-				destination.origin === new URL(request.url).origin
-					? `${destination.pathname}${destination.search || search}${
-							destination.hash
-					  }`
-					: `${destination.href}${destination.search ? "" : search}${
-							destination.hash
-					  }`;
-			switch (status) {
-				case 301:
-					return new MovedPermanentlyResponse(location, undefined, {
-						preventLeadingDoubleSlash: false,
-					});
-				case 303:
-					return new SeeOtherResponse(location, undefined, {
-						preventLeadingDoubleSlash: false,
-					});
-				case 307:
-					return new TemporaryRedirectResponse(location, undefined, {
-						preventLeadingDoubleSlash: false,
-					});
-				case 308:
-					return new PermanentRedirectResponse(location, undefined, {
-						preventLeadingDoubleSlash: false,
-					});
-				case 302:
-				default:
-					return new FoundResponse(location, undefined, {
-						preventLeadingDoubleSlash: false,
-					});
+			if (match.status === 200) {
+				// A 200 redirect means that we are proxying to a different asset, for example,
+				// a request with url /users/12345 could be pointed to /users/id.html. In order to
+				// do this, we overwrite the pathname, and instead match for assets with that url,
+				// and importantly, do not use the regular redirect handler - as the url visible to
+				// the user does not change
+				pathname = new URL(match.to, request.url).pathname;
+			} else {
+				const { status, to } = match;
+				const destination = new URL(to, request.url);
+				const location =
+					destination.origin === new URL(request.url).origin
+						? `${destination.pathname}${destination.search || search}${
+								destination.hash
+						  }`
+						: `${destination.href}${destination.search ? "" : search}${
+								destination.hash
+						  }`;
+				switch (status) {
+					case 301:
+						return new MovedPermanentlyResponse(location, undefined, {
+							preventLeadingDoubleSlash: false,
+						});
+					case 303:
+						return new SeeOtherResponse(location, undefined, {
+							preventLeadingDoubleSlash: false,
+						});
+					case 307:
+						return new TemporaryRedirectResponse(location, undefined, {
+							preventLeadingDoubleSlash: false,
+						});
+					case 308:
+						return new PermanentRedirectResponse(location, undefined, {
+							preventLeadingDoubleSlash: false,
+						});
+					case 302:
+					default:
+						return new FoundResponse(location, undefined, {
+							preventLeadingDoubleSlash: false,
+						});
+				}
 			}
 		}
 
