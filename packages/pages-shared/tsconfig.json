@@ -1,9 +1,13 @@
 {
 	"extends": "../../tsconfig.json",
 	"compilerOptions": {
+		"noEmit": false,
+		"declaration": true,
+		"declarationMap": true,
+		"outDir": "dist",
 		"module": "CommonJS",
 		"types": ["jest"]
 	},
 	"include": ["**/*.ts"],
-	"exclude": []
+	"exclude": ["dist/**/*"]
 }

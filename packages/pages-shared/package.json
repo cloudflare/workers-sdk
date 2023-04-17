@@ -1,18 +1,25 @@
 {
 	"name": "@cloudflare/pages-shared",
-	"version": "0.3.4",
+	"version": "0.0.0-ship-js2",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/pages-shared"
 	},
+	"exports": {
+		"./asset-server/": "./dist/asset-server/",
+		"./environment-polyfills/": "./dist/environment-polyfills/",
+		"./metadata-generator/": "./dist/metadata-generator/"
+	},
 	"files": [
+		"dist/**/*",
 		"tsconfig.json",
 		"asset-server/**/*",
 		"environment-polyfills/**/*",
 		"metadata-generator/**/*"
 	],
 	"scripts": {
+		"build": "tsc",
 		"check:type": "tsc",
 		"test": "jest --forceExit",
 		"test:ci": "jest --forceExit"

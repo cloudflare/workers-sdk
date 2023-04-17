@@ -88,3 +88,5 @@ export type Metadata = {
 };
 
 export type Logger = (message: string) => void;
+
+export {};
