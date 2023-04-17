@@ -1,0 +1,13 @@
+{
+	"name": "worker-scala-kv",
+	"version": "1.0.0",
+	"private": true,
+	"description": "Scala example of using Cloudflare Workers KV",
+	"license": "MIT",
+	"author": "",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"devDependencies": {}
+}

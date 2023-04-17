@@ -1,10 +1,11 @@
 import path from "path";
-import { Box, render, Text } from "ink";
+import { Box, Text } from "ink";
 import Table from "ink-table";
 import React from "react";
 import { withConfig } from "../../config";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
+import { renderToString } from "../../utils/render";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";
 import { d1BetaWarning, getDatabaseInfoFromConfig } from "../utils";
 import {
@@ -78,15 +79,17 @@ export const ListHandler = withConfig<ListHandlerOptions>(
 		});
 
 		if (unappliedMigrations.length === 0) {
-			render(<Text>✅ No migrations to apply!</Text>);
+			logger.log(renderToString(<Text>✅ No migrations to apply!</Text>));
 			return;
 		}
 
-		render(
-			<Box flexDirection="column">
-				<Text>Migrations to be applied:</Text>
-				<Table data={unappliedMigrations} columns={["Name"]}></Table>
-			</Box>
+		logger.log(
+			renderToString(
+				<Box flexDirection="column">
+					<Text>Migrations to be applied:</Text>
+					<Table data={unappliedMigrations} columns={["Name"]}></Table>
+				</Box>
+			)
 		);
 	}
 );

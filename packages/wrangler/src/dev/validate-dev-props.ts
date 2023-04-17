@@ -28,4 +28,13 @@ export function validateDevProps(props: DevProps) {
 			"You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure `[rules]` in your wrangler.toml"
 		);
 	}
+
+	if (
+		props.compatibilityFlags?.includes("nodejs_compat") &&
+		props.legacyNodeCompat
+	) {
+		throw new Error(
+			"You cannot use the `nodejs_compat` compatibility flag in conjunction with the legacy `--node-compat` flag. If you want to use the new runtime Node.js compatibility features, please remove the `--node-compat` argument from your CLI command or your config file."
+		);
+	}
 }

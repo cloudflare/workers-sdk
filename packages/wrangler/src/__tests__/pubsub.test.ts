@@ -25,6 +25,7 @@ describe("wrangler", () => {
 			Object {
 			  "debug": "",
 			  "err": "",
+			  "info": "",
 			  "out": "wrangler pubsub
 
 			📮 Interact and manage Pub/Sub Brokers
@@ -55,6 +56,7 @@ describe("wrangler", () => {
 				Object {
 				  "debug": "",
 				  "err": "",
+				  "info": "",
 				  "out": "wrangler pubsub namespace
 
 				Manage your Pub/Sub Namespaces
@@ -171,6 +173,7 @@ describe("wrangler", () => {
 				Object {
 				  "debug": "",
 				  "err": "",
+				  "info": "",
 				  "out": "wrangler pubsub broker
 
 				Interact with your Pub/Sub Brokers

@@ -12,15 +12,12 @@ import {
 	TemporaryRedirectResponse,
 } from "./responses";
 import { generateRulesMatcher, replacer } from "./rulesEngine";
-import { stringifyURLToRootRelativePathname } from "./url";
 import type {
 	Metadata,
 	MetadataHeadersEntries,
 	MetadataHeadersRulesV2,
 	MetadataHeadersV1,
 	MetadataHeadersV2,
-	MetadataStaticRedirectEntry,
-	MetadataRedirectEntry,
 } from "./metadata";
 
 type BodyEncoding = "manual" | "automatic";
@@ -100,16 +97,7 @@ type FullHandlerContext<AssetEntry, ContentNegotiation, Asset> = {
 	waitUntil: (promise: Promise<unknown>) => void;
 };
 
-export type HandlerContext<
-	AssetEntry,
-	ContentNegotiation extends { encoding: string | null } = {
-		encoding: string | null;
-	},
-	Asset extends { body: ReadableStream | null; contentType: string } = {
-		body: ReadableStream | null;
-		contentType: string;
-	}
-> =
+export type HandlerContext<AssetEntry, ContentNegotiation, Asset> =
 	| FullHandlerContext<AssetEntry, ContentNegotiation, Asset>
 	| (Omit<
 			FullHandlerContext<AssetEntry, ContentNegotiation, Asset>,
@@ -204,15 +192,38 @@ export async function generateHandler<
 			staticRedirectsMatcher() || generateRedirectsMatcher()({ request })[0];
 
 		if (match) {
-			if (match.status === 200) {
-				// A 200 redirect means that we are proxying to a different asset, for example,
-				// a request with url /users/12345 could be pointed to /users/id.html. In order to
-				// do this, we overwrite the pathname, and instead match for assets with that url,
-				// and importantly, do not use the regular redirect handler - as the url visible to
-				// the user does not change
-				pathname = new URL(match.to, request.url).pathname;
-			} else {
-				return getResponseFromMatch(match, url);
+			const { status, to } = match;
+			const destination = new URL(to, request.url);
+			const location =
+				destination.origin === new URL(request.url).origin
+					? `${destination.pathname}${destination.search || search}${
+							destination.hash
+					  }`
+					: `${destination.href}${destination.search ? "" : search}${
+							destination.hash
+					  }`;
+			switch (status) {
+				case 301:
+					return new MovedPermanentlyResponse(location, undefined, {
+						preventLeadingDoubleSlash: false,
+					});
+				case 303:
+					return new SeeOtherResponse(location, undefined, {
+						preventLeadingDoubleSlash: false,
+					});
+				case 307:
+					return new TemporaryRedirectResponse(location, undefined, {
+						preventLeadingDoubleSlash: false,
+					});
+				case 308:
+					return new PermanentRedirectResponse(location, undefined, {
+						preventLeadingDoubleSlash: false,
+					});
+				case 302:
+				default:
+					return new FoundResponse(location, undefined, {
+						preventLeadingDoubleSlash: false,
+					});
 			}
 		}
 
@@ -578,49 +589,6 @@ export async function generateHandler<
 			findAssetEntryForPath,
 			serveAsset
 		);
-	}
-}
-
-/**
- * Given a redirect match and the request URL, returns the response
- * for the redirect. This function will convert the Location header
- * to be a root-relative path URL if the request origin and destination
- * origins are the same. This is so that if the project is served
- * on multiple domains, the redirects won't take the client off of their current domain.
- */
-export function getResponseFromMatch(
-	{
-		status,
-		to,
-	}: Pick<MetadataStaticRedirectEntry | MetadataRedirectEntry, "status" | "to">,
-	requestUrl: URL
-) {
-	// Inherit origin from the request URL if not specified in _redirects
-	const destination = new URL(to, requestUrl);
-	// If _redirects doesn't specify a search, inherit from the request
-	destination.search = destination.search || requestUrl.search;
-
-	// If the redirect destination origin matches the incoming request origin
-	// we stringify destination to be a root-relative path, e.g.:
-	//   https://example.com/foo/bar?baz=1 -> /foo/bar/?baz=1
-	// This way, the project can more easily be hosted on multiple domains
-	const location =
-		destination.origin === requestUrl.origin
-			? stringifyURLToRootRelativePathname(destination)
-			: destination.toString();
-
-	switch (status) {
-		case 301:
-			return new MovedPermanentlyResponse(location);
-		case 303:
-			return new SeeOtherResponse(location);
-		case 307:
-			return new TemporaryRedirectResponse(location);
-		case 308:
-			return new PermanentRedirectResponse(location);
-		case 302:
-		default:
-			return new FoundResponse(location);
 	}
 }
 

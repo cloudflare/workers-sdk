@@ -351,7 +351,8 @@ describe("wrangler", () => {
 				      --batch-size         Maximum number of messages per batch  [number]
 				      --batch-timeout      Maximum number of seconds to wait to fill a batch with messages  [number]
 				      --message-retries    Maximum number of retries for each message  [number]
-				      --dead-letter-queue  Queue to send messages that failed to be consumed  [string]"
+				      --dead-letter-queue  Queue to send messages that failed to be consumed  [string]
+				      --max-concurrency    The maximum number of concurrent consumer Worker invocations. Must be a positive integer  [number]"
 			`);
 				});
 
@@ -363,6 +364,7 @@ describe("wrangler", () => {
 							batch_size: undefined,
 							max_retries: undefined,
 							max_wait_time_ms: undefined,
+							max_concurrency: undefined,
 						},
 						dead_letter_queue: undefined,
 					};
@@ -382,13 +384,14 @@ describe("wrangler", () => {
 							batch_size: 20,
 							max_retries: 3,
 							max_wait_time_ms: 10 * 1000,
+							max_concurrency: 3,
 						},
 						dead_letter_queue: "myDLQ",
 					};
 					mockPostRequest("testQueue", expectedBody);
 
 					await runWrangler(
-						"queues consumer add testQueue testScript --env myEnv --batch-size 20 --batch-timeout 10 --message-retries 3 --dead-letter-queue myDLQ"
+						"queues consumer add testQueue testScript --env myEnv --batch-size 20 --batch-timeout 10 --message-retries 3 --max-concurrency 3 --dead-letter-queue myDLQ"
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Adding consumer to queue testQueue.

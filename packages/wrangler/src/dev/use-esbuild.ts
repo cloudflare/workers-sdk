@@ -4,6 +4,7 @@ import { useApp } from "ink";
 import { useState, useEffect } from "react";
 import { bundleWorker, rewriteNodeCompatBuildFailure } from "../bundle";
 import { logBuildFailure, logger } from "../logger";
+import traverseModuleGraph from "../traverse-module-graph";
 import type { Config } from "../config";
 import type { WorkerRegistry } from "../dev-registry";
 import type { Entry } from "../entry";
@@ -30,7 +31,8 @@ export function useEsbuild({
 	serveAssetsFromWorker,
 	tsconfig,
 	minify,
-	nodeCompat,
+	legacyNodeCompat,
+	nodejsCompat,
 	betaD1Shims,
 	define,
 	noBundle,
@@ -54,7 +56,8 @@ export function useEsbuild({
 	serveAssetsFromWorker: boolean;
 	tsconfig: string | undefined;
 	minify: boolean | undefined;
-	nodeCompat: boolean | undefined;
+	legacyNodeCompat: boolean | undefined;
+	nodejsCompat: boolean | undefined;
 	betaD1Shims?: string[];
 	noBundle: boolean;
 	workerDefinitions: WorkerRegistry;
@@ -85,7 +88,7 @@ export function useEsbuild({
 		const watchMode: WatchMode = {
 			async onRebuild(error) {
 				if (error !== null) {
-					if (!nodeCompat) rewriteNodeCompatBuildFailure(error);
+					if (!legacyNodeCompat) rewriteNodeCompatBuildFailure(error);
 					logBuildFailure(error);
 					logger.error("Watch build failed:", error.message);
 				} else {
@@ -105,14 +108,7 @@ export function useEsbuild({
 				stop,
 				sourceMapPath,
 			}: Awaited<ReturnType<typeof bundleWorker>> = noBundle
-				? {
-						modules: [],
-						dependencies: {},
-						resolvedEntryPointPath: entry.file,
-						bundleType: entry.format === "modules" ? "esm" : "commonjs",
-						stop: undefined,
-						sourceMapPath: undefined,
-				  }
+				? await traverseModuleGraph(entry, rules)
 				: await bundleWorker(entry, destination, {
 						serveAssetsFromWorker,
 						jsxFactory,
@@ -121,7 +117,8 @@ export function useEsbuild({
 						watch: watchMode,
 						tsconfig,
 						minify,
-						nodeCompat,
+						legacyNodeCompat,
+						nodejsCompat,
 						betaD1Shims,
 						doBindings: durableObjects.bindings,
 						define,
@@ -188,7 +185,8 @@ export function useEsbuild({
 		exit,
 		noBundle,
 		minify,
-		nodeCompat,
+		legacyNodeCompat,
+		nodejsCompat,
 		define,
 		assets,
 		services,

@@ -1,0 +1,6 @@
+name = "worker-python"
+main = "dist/main.js"
+compatibility_date = "2022-06-03"
+
+[build]
+command = "npm run build"

@@ -90,6 +90,7 @@ export interface ConsumerSettings {
 	batch_size?: number;
 	max_retries?: number;
 	max_wait_time_ms?: number;
+	max_concurrency?: number | null;
 }
 
 export interface ConsumerResponse extends PostConsumerBody {

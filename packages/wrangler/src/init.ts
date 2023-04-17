@@ -19,7 +19,10 @@ import { CommandLineArgsError, printWranglerBanner } from "./index";
 
 import type { RawConfig } from "./config";
 import type { Route, SimpleRoute } from "./config/environment";
-import type { WorkerMetadata } from "./create-worker-upload-form";
+import type {
+	WorkerMetadata,
+	WorkerMetadataBinding,
+} from "./create-worker-upload-form";
 import type { PackageManager } from "./package-manager";
 import type { PackageJSON } from "./parse";
 import type {
@@ -838,139 +841,7 @@ async function getWorkerConfig(
 			);
 		});
 
-	const mappedBindings = bindings
-		.filter((binding) => (binding.type as string) !== "secret_text")
-		// Combine the same types into {[type]: [binding]}
-		.reduce((configObj, binding) => {
-			// Some types have different names in wrangler.toml
-			// I want the type safety of the binding being destructured after the case narrowing the union but type is unused
-
-			switch (binding.type) {
-				case "plain_text":
-					{
-						configObj.vars = {
-							...(configObj.vars ?? {}),
-							[binding.name]: binding.text,
-						};
-					}
-					break;
-				case "json":
-					{
-						configObj.vars = {
-							...(configObj.vars ?? {}),
-							name: binding.name,
-							json: binding.json,
-						};
-					}
-					break;
-				case "kv_namespace":
-					{
-						configObj.kv_namespaces = [
-							...(configObj.kv_namespaces ?? []),
-							{ id: binding.namespace_id, binding: binding.name },
-						];
-					}
-					break;
-				case "durable_object_namespace":
-					{
-						configObj.durable_objects = {
-							bindings: [
-								...(configObj.durable_objects?.bindings ?? []),
-								{
-									name: binding.name,
-									class_name: binding.class_name,
-									script_name: binding.script_name,
-									environment: binding.environment,
-								},
-							],
-						};
-					}
-					break;
-				case "r2_bucket":
-					{
-						configObj.r2_buckets = [
-							...(configObj.r2_buckets ?? []),
-							{ binding: binding.name, bucket_name: binding.bucket_name },
-						];
-					}
-					break;
-				case "service":
-					{
-						configObj.services = [
-							...(configObj.services ?? []),
-							{
-								binding: binding.name,
-								service: binding.service,
-								environment: binding.environment,
-							},
-						];
-					}
-					break;
-				case "analytics_engine":
-					{
-						configObj.analytics_engine_datasets = [
-							...(configObj.analytics_engine_datasets ?? []),
-							{ binding: binding.name, dataset: binding.dataset },
-						];
-					}
-					break;
-				case "dispatch_namespace":
-					{
-						configObj.dispatch_namespaces = [
-							...(configObj.dispatch_namespaces ?? []),
-							{ binding: binding.name, namespace: binding.namespace },
-						];
-					}
-					break;
-				case "logfwdr":
-					{
-						configObj.logfwdr = {
-							// TODO: Messaging about adding schema file path
-							schema: "",
-							bindings: [
-								...(configObj.logfwdr?.bindings ?? []),
-								{ name: binding.name, destination: binding.destination },
-							],
-						};
-					}
-					break;
-				case "wasm_module":
-					{
-						configObj.wasm_modules = {
-							...(configObj.wasm_modules ?? {}),
-							[binding.name]: binding.part,
-						};
-					}
-					break;
-				case "text_blob":
-					{
-						configObj.text_blobs = {
-							...(configObj.text_blobs ?? {}),
-							[binding.name]: binding.part,
-						};
-					}
-					break;
-				case "data_blob":
-					{
-						configObj.data_blobs = {
-							...(configObj.data_blobs ?? {}),
-							[binding.name]: binding.part,
-						};
-					}
-					break;
-				default: {
-					// If we don't know what the type is, its an unsafe binding
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					if (!(binding as any)?.type) break;
-					configObj.unsafe = {
-						bindings: [...(configObj.unsafe?.bindings ?? []), binding],
-					};
-				}
-			}
-
-			return configObj;
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		}, {} as RawConfig);
+	const mappedBindings = mapBindings(bindings);
 
 	const durableObjectClassNames = bindings
 		.filter((binding) => binding.type === "durable_object_namespace")
@@ -1019,4 +890,143 @@ async function getWorkerConfig(
 			}, {} as RawConfig["env"]),
 		...mappedBindings,
 	};
+}
+
+export function mapBindings(bindings: WorkerMetadataBinding[]): RawConfig {
+	return (
+		bindings
+			.filter((binding) => (binding.type as string) !== "secret_text")
+			// Combine the same types into {[type]: [binding]}
+			.reduce((configObj, binding) => {
+				// Some types have different names in wrangler.toml
+				// I want the type safety of the binding being destructured after the case narrowing the union but type is unused
+
+				switch (binding.type) {
+					case "plain_text":
+						{
+							configObj.vars = {
+								...(configObj.vars ?? {}),
+								[binding.name]: binding.text,
+							};
+						}
+						break;
+					case "json":
+						{
+							configObj.vars = {
+								...(configObj.vars ?? {}),
+								name: binding.name,
+								json: binding.json,
+							};
+						}
+						break;
+					case "kv_namespace":
+						{
+							configObj.kv_namespaces = [
+								...(configObj.kv_namespaces ?? []),
+								{ id: binding.namespace_id, binding: binding.name },
+							];
+						}
+						break;
+					case "durable_object_namespace":
+						{
+							configObj.durable_objects = {
+								bindings: [
+									...(configObj.durable_objects?.bindings ?? []),
+									{
+										name: binding.name,
+										class_name: binding.class_name,
+										script_name: binding.script_name,
+										environment: binding.environment,
+									},
+								],
+							};
+						}
+						break;
+					case "r2_bucket":
+						{
+							configObj.r2_buckets = [
+								...(configObj.r2_buckets ?? []),
+								{ binding: binding.name, bucket_name: binding.bucket_name },
+							];
+						}
+						break;
+					case "service":
+						{
+							configObj.services = [
+								...(configObj.services ?? []),
+								{
+									binding: binding.name,
+									service: binding.service,
+									environment: binding.environment,
+								},
+							];
+						}
+						break;
+					case "analytics_engine":
+						{
+							configObj.analytics_engine_datasets = [
+								...(configObj.analytics_engine_datasets ?? []),
+								{ binding: binding.name, dataset: binding.dataset },
+							];
+						}
+						break;
+					case "dispatch_namespace":
+						{
+							configObj.dispatch_namespaces = [
+								...(configObj.dispatch_namespaces ?? []),
+								{ binding: binding.name, namespace: binding.namespace },
+							];
+						}
+						break;
+					case "logfwdr":
+						{
+							configObj.logfwdr = {
+								// TODO: Messaging about adding schema file path
+								schema: "",
+								bindings: [
+									...(configObj.logfwdr?.bindings ?? []),
+									{ name: binding.name, destination: binding.destination },
+								],
+							};
+						}
+						break;
+					case "wasm_module":
+						{
+							configObj.wasm_modules = {
+								...(configObj.wasm_modules ?? {}),
+								[binding.name]: binding.part,
+							};
+						}
+						break;
+					case "text_blob":
+						{
+							configObj.text_blobs = {
+								...(configObj.text_blobs ?? {}),
+								[binding.name]: binding.part,
+							};
+						}
+						break;
+					case "data_blob":
+						{
+							configObj.data_blobs = {
+								...(configObj.data_blobs ?? {}),
+								[binding.name]: binding.part,
+							};
+						}
+						break;
+					default: {
+						// If we don't know what the type is, its an unsafe binding
+						// eslint-disable-next-line @typescript-eslint/no-explicit-any
+						if (!(binding as any)?.type) break;
+						configObj.unsafe = {
+							bindings: [...(configObj.unsafe?.bindings ?? []), binding],
+							metadata: configObj.unsafe?.metadata ?? undefined,
+						};
+					}
+				}
+
+				return configObj;
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			}, {} as RawConfig)
+	);
 }

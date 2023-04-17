@@ -1,5 +1,53 @@
 # @cloudflare/pages-shared
 
+## 0.3.4
+
+### Patch Changes
+
+- [#3041](https://github.com/cloudflare/workers-sdk/pull/3041) [`b8eb093c`](https://github.com/cloudflare/workers-sdk/commit/b8eb093c903d78fd656cf9a4759d640687b96e80) Thanks [@jahands](https://github.com/jahands)! - Prevent protocol-less URL redirects (with backslashes)
+
+## 0.3.3
+
+### Patch Changes
+
+- [#3037](https://github.com/cloudflare/workers-sdk/pull/3037) [`f96ec321`](https://github.com/cloudflare/workers-sdk/commit/f96ec32182a6f00338d760c933dc64d47c3f0e05) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Prevent protocol-less URL redirects
+
+* [#3037](https://github.com/cloudflare/workers-sdk/pull/3037) [`f96ec321`](https://github.com/cloudflare/workers-sdk/commit/f96ec32182a6f00338d760c933dc64d47c3f0e05) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Sort the order of \_redirects static redirects correctly
+
+## 0.3.2
+
+### Patch Changes
+
+- [#3038](https://github.com/cloudflare/workers-sdk/pull/3038) [`978471a9`](https://github.com/cloudflare/workers-sdk/commit/978471a9ff5ad7b66d48952d0a05c2cc383912c7) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Revert #2303 duplicating hash component
+
+## 0.3.1
+
+### Patch Changes
+
+- [#3036](https://github.com/cloudflare/workers-sdk/pull/3036) [`e4ca780f`](https://github.com/cloudflare/workers-sdk/commit/e4ca780f1e22af157aa6393008fe4f650b031f11) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Temporarily remove proxying from pages-shared
+
+## 0.3.0
+
+### Minor Changes
+
+- [#2942](https://github.com/cloudflare/workers-sdk/pull/2942) [`dc1465ea`](https://github.com/cloudflare/workers-sdk/commit/dc1465ea64acf3fc9c1442e7df73f14df7dc8630) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: upgrade `miniflare` to [`2.13.0`](https://github.com/cloudflare/miniflare/releases/tag/v2.13.0)
+
+## 0.2.0
+
+### Minor Changes
+
+- [#2708](https://github.com/cloudflare/workers-sdk/pull/2708) [`b3346cfb`](https://github.com/cloudflare/workers-sdk/commit/b3346cfbecb2c20f7cce3c3bf8a585b7fd8811aa) Thanks [@Skye-31](https://github.com/Skye-31)! - Feat: Pages now supports Proxying (200 status) redirects in it's \_redirects file
+
+  This will look something like the following, where a request to /users/123 will appear as that in the browser, but will internally go to /users/[id].html.
+
+  ```
+  /users/:id /users/[id] 200
+  ```
+
+### Patch Changes
+
+- [#2771](https://github.com/cloudflare/workers-sdk/pull/2771) [`4ede044e`](https://github.com/cloudflare/workers-sdk/commit/4ede044e9247fdc689cbe537dcc5afbda71cf99c) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: upgrade `miniflare` to [`2.12.1`](https://github.com/cloudflare/miniflare/releases/tag/v2.12.1) and `@miniflare/tre` to [`3.0.0-next.10`](https://github.com/cloudflare/miniflare/releases/tag/v3.0.0-next.10)
+
 ## 0.1.0
 
 ### Minor Changes

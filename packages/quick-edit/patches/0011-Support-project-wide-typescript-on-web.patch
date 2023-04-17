@@ -1,0 +1,774 @@
+From ac6293cf9414937b3098cb82ef158c71a3342fa9 Mon Sep 17 00:00:00 2001
+From: Workers DevProd <workers-devprod@cloudflare.com>
+Date: Fri, 14 Apr 2023 01:54:40 +0100
+Subject: [PATCH 11/11] Support project-wide typescript on web
+
+---
+ .../typescript-language-features/package.json |   2 +-
+ .../src/extension.browser.ts                  |   4 -
+ .../src/tsServer/serverProcess.browser.ts     |  66 ++-
+ .../src/typescriptServiceClient.ts            |   4 +-
+ .../web/cfs-simple.ts                         | 425 ++++++++++++++++++
+ .../web/webServer.ts                          |  85 +++-
+ 6 files changed, 547 insertions(+), 39 deletions(-)
+ create mode 100644 extensions/typescript-language-features/web/cfs-simple.ts
+
+diff --git a/extensions/typescript-language-features/package.json b/extensions/typescript-language-features/package.json
+index 30ccbd8..62f99a2 100644
+--- a/extensions/typescript-language-features/package.json
++++ b/extensions/typescript-language-features/package.json
+@@ -906,7 +906,7 @@
+             "%typescript.preferences.importModuleSpecifierEnding.index%",
+             "%typescript.preferences.importModuleSpecifierEnding.js%"
+           ],
+-          "default": "auto",
++          "default": "js",
+           "description": "%typescript.preferences.importModuleSpecifierEnding%",
+           "scope": "language-overridable"
+         },
+diff --git a/extensions/typescript-language-features/src/extension.browser.ts b/extensions/typescript-language-features/src/extension.browser.ts
+index 517c6f8..b8bd688 100644
+--- a/extensions/typescript-language-features/src/extension.browser.ts
++++ b/extensions/typescript-language-features/src/extension.browser.ts
+@@ -21,7 +21,6 @@ import { TypeScriptServiceConfiguration } from './utils/configuration';
+ import { BrowserServiceConfigurationProvider } from './utils/configuration.browser';
+ import { Logger } from './utils/logger';
+ import { getPackageInfo } from './utils/packageInfo';
+-import { isWebAndHasSharedArrayBuffers } from './utils/platform';
+ import { PluginManager } from './utils/plugins';
+ 
+ class StaticVersionProvider implements ITypeScriptVersionProvider {
+@@ -103,9 +102,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<Api> {
+ }
+ 
+ async function preload(logger: Logger): Promise<void> {
+-	if (!isWebAndHasSharedArrayBuffers()) {
+-		return;
+-	}
+ 
+ 	const workspaceUri = vscode.workspace.workspaceFolders?.[0].uri;
+ 	if (!workspaceUri || workspaceUri.scheme !== 'vscode-vfs' || workspaceUri.authority !== 'github') {
+diff --git a/extensions/typescript-language-features/src/tsServer/serverProcess.browser.ts b/extensions/typescript-language-features/src/tsServer/serverProcess.browser.ts
+index c5c2af3..da19f31 100644
+--- a/extensions/typescript-language-features/src/tsServer/serverProcess.browser.ts
++++ b/extensions/typescript-language-features/src/tsServer/serverProcess.browser.ts
+@@ -105,11 +105,34 @@ class WorkerServerProcess implements TsServerProcess {
+ 				}
+ 				case 'watchDirectory':
+ 				case 'watchFile': {
+-					this.watches.create(event.data.id, vscode.Uri.from(event.data.uri), /*watchParentDirs*/ true, !!event.data.recursive, {
+-						change: uri => this.watcher.postMessage({ type: 'watch', event: 'change', uri }),
+-						create: uri => this.watcher.postMessage({ type: 'watch', event: 'create', uri }),
+-						delete: uri => this.watcher.postMessage({ type: 'watch', event: 'delete', uri }),
+-					});
++					this.watches.create(
++						event.data.id,
++						vscode.Uri.from(event.data.uri),
++						/*watchParentDirs*/ true,
++						!!event.data.recursive,
++						{
++							change: async (uri) =>
++								this.watcher.postMessage({
++									type: 'watch',
++									event: 'change',
++									uri,
++									file: await vscode.workspace.fs.readFile(uri),
++								}),
++							create: async (uri) =>
++								this.watcher.postMessage({
++									type: 'watch',
++									event: 'create',
++									uri,
++									file: await vscode.workspace.fs.readFile(uri),
++								}),
++							delete: (uri) =>
++								this.watcher.postMessage({
++									type: 'watch',
++									event: 'delete',
++									uri,
++								}),
++						}
++					);
+ 					break;
+ 				}
+ 				default:
+@@ -134,9 +157,36 @@ class WorkerServerProcess implements TsServerProcess {
+ 			}
+ 		};
+ 
+-		this.worker.postMessage(
+-			{ args, extensionUri },
+-			[syncChannel.port1, tsserverChannel.port1, watcherChannel.port1]
++		async function addFilesFromDir(
++			root: vscode.Uri
++		): Promise<[vscode.Uri, Uint8Array][]> {
++			const files = await vscode.workspace.fs.readDirectory(root);
++			const storedFiles: [vscode.Uri, Uint8Array][] = [];
++
++			for (const [name, type] of files) {
++				if (type === vscode.FileType.File) {
++					storedFiles.push([
++						vscode.Uri.parse('cfs:' + root.path + `/${name}`),
++						await vscode.workspace.fs.readFile(
++							vscode.Uri.parse('cfs:' + root.path + `/${name}`)
++						),
++					]);
++				} else {
++					storedFiles.push(
++						...(await addFilesFromDir(
++							vscode.Uri.parse('cfs:' + root.path + `/${name}`)
++						))
++					);
++				}
++			}
++			return storedFiles;
++		}
++		addFilesFromDir(vscode.Uri.parse('cfs:/')).then((storedFiles) =>
++			this.worker.postMessage({ args, extensionUri, storedFiles }, [
++				syncChannel.port1,
++				tsserverChannel.port1,
++				watcherChannel.port1,
++			])
+ 		);
+ 
+ 		const connection = new ServiceConnection<Requests>(syncChannel.port2);
+diff --git a/extensions/typescript-language-features/src/typescriptServiceClient.ts b/extensions/typescript-language-features/src/typescriptServiceClient.ts
+index 737f452..25bce58 100644
+--- a/extensions/typescript-language-features/src/typescriptServiceClient.ts
++++ b/extensions/typescript-language-features/src/typescriptServiceClient.ts
+@@ -23,7 +23,7 @@ import { ServiceConfigurationProvider, SyntaxServerConfiguration, TsServerLogLev
+ import { Disposable } from './utils/dispose';
+ import * as fileSchemes from './utils/fileSchemes';
+ import { Logger } from './utils/logger';
+-import { isWeb, isWebAndHasSharedArrayBuffers } from './utils/platform';
++import { isWeb } from './utils/platform';
+ import { TypeScriptPluginPathsProvider } from './utils/pluginPathsProvider';
+ import { PluginManager, TypeScriptServerPlugin } from './utils/plugins';
+ import { TelemetryProperties, TelemetryReporter, VSCodeTelemetryReporter } from './utils/telemetry';
+@@ -259,7 +259,7 @@ export default class TypeScriptServiceClient extends Disposable implements IType
+ 	readonly onDidChangeCapabilities = this._onDidChangeCapabilities.event;
+ 
+ 	private isProjectWideIntellisenseOnWebEnabled(): boolean {
+-		return isWebAndHasSharedArrayBuffers() && this._configuration.enableProjectWideIntellisenseOnWeb;
++		return true;
+ 	}
+ 
+ 	private cancelInflightRequestsForResource(resource: vscode.Uri): void {
+diff --git a/extensions/typescript-language-features/web/cfs-simple.ts b/extensions/typescript-language-features/web/cfs-simple.ts
+new file mode 100644
+index 0000000..0ba6abf
+--- /dev/null
++++ b/extensions/typescript-language-features/web/cfs-simple.ts
+@@ -0,0 +1,425 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Microsoft Corporation. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++import { URI } from 'vscode-uri';
++enum FilePermission {
++	/**
++	 * The file is readonly.
++	 *
++	 * *Note:* All `FileStat` from a `FileSystemProvider` that is registered with
++	 * the option `isReadonly: true` will be implicitly handled as if `FilePermission.Readonly`
++	 * is set. As a consequence, it is not possible to have a readonly file system provider
++	 * registered where some `FileStat` are not readonly.
++	 */
++	Readonly = 1,
++}
++interface FileStat {
++	/**
++	 * The type of the file, e.g. is a regular file, a directory, or symbolic link
++	 * to a file.
++	 *
++	 * *Note:* This value might be a bitmask, e.g. `FileType.File | FileType.SymbolicLink`.
++	 */
++	type: FileType;
++	/**
++	 * The creation timestamp in milliseconds elapsed since January 1, 1970 00:00:00 UTC.
++	 */
++	ctime: number;
++	/**
++	 * The modification timestamp in milliseconds elapsed since January 1, 1970 00:00:00 UTC.
++	 *
++	 * *Note:* If the file changed, it is important to provide an updated `mtime` that advanced
++	 * from the previous value. Otherwise there may be optimizations in place that will not show
++	 * the updated file contents in an editor for example.
++	 */
++	mtime: number;
++	/**
++	 * The size in bytes.
++	 *
++	 * *Note:* If the file changed, it is important to provide an updated `size`. Otherwise there
++	 * may be optimizations in place that will not show the updated file contents in an editor for
++	 * example.
++	 */
++	size: number;
++	/**
++	 * The permissions of the file, e.g. whether the file is readonly.
++	 *
++	 * *Note:* This value might be a bitmask, e.g. `FilePermission.Readonly | FilePermission.Other`.
++	 */
++	permissions?: FilePermission;
++}
++enum FileSystemProviderErrorCode {
++	FileExists = 'EntryExists',
++	FileNotFound = 'EntryNotFound',
++	FileNotADirectory = 'EntryNotADirectory',
++	FileIsADirectory = 'EntryIsADirectory',
++	FileExceedsMemoryLimit = 'EntryExceedsMemoryLimit',
++	FileTooLarge = 'EntryTooLarge',
++	FileWriteLocked = 'EntryWriteLocked',
++	NoPermissions = 'NoPermissions',
++	Unavailable = 'Unavailable',
++	Unknown = 'Unknown',
++}
++class FileSystemError extends Error {
++	static FileExists(messageOrUri?: string | URI): FileSystemError {
++		return new FileSystemError(
++			messageOrUri,
++			FileSystemProviderErrorCode.FileExists,
++			FileSystemError.FileExists
++		);
++	}
++	static FileNotFound(messageOrUri?: string | URI): FileSystemError {
++		return new FileSystemError(
++			messageOrUri,
++			FileSystemProviderErrorCode.FileNotFound,
++			FileSystemError.FileNotFound
++		);
++	}
++	static FileNotADirectory(messageOrUri?: string | URI): FileSystemError {
++		return new FileSystemError(
++			messageOrUri,
++			FileSystemProviderErrorCode.FileNotADirectory,
++			FileSystemError.FileNotADirectory
++		);
++	}
++	static FileIsADirectory(messageOrUri?: string | URI): FileSystemError {
++		return new FileSystemError(
++			messageOrUri,
++			FileSystemProviderErrorCode.FileIsADirectory,
++			FileSystemError.FileIsADirectory
++		);
++	}
++	static NoPermissions(messageOrUri?: string | URI): FileSystemError {
++		return new FileSystemError(
++			messageOrUri,
++			FileSystemProviderErrorCode.NoPermissions,
++			FileSystemError.NoPermissions
++		);
++	}
++	static Unavailable(messageOrUri?: string | URI): FileSystemError {
++		return new FileSystemError(
++			messageOrUri,
++			FileSystemProviderErrorCode.Unavailable,
++			FileSystemError.Unavailable
++		);
++	}
++
++	readonly code: string;
++
++	constructor(
++		uriOrMessage?: string | URI,
++		code: FileSystemProviderErrorCode = FileSystemProviderErrorCode.Unknown,
++		terminator?: Function
++	) {
++		super(
++			code +
++			(URI.isUri(uriOrMessage) ? uriOrMessage.toString(true) : uriOrMessage)
++		);
++
++		this.code = code;
++
++		// workaround when extending builtin objects and when compiling to ES5, see:
++		// https://github.com/microsoft/TypeScript-wiki/blob/master/Breaking-Changes.md#extending-built-ins-like-error-array-and-map-may-no-longer-work
++		Object.setPrototypeOf(this, FileSystemError.prototype);
++
++		if (
++			typeof Error.captureStackTrace === 'function' &&
++			typeof terminator === 'function'
++		) {
++			// nice stack traces
++			Error.captureStackTrace(this, terminator);
++		}
++	}
++}
++export enum FileType {
++	/**
++	 * The file type is unknown.
++	 */
++	Unknown = 0,
++	/**
++	 * A regular file.
++	 */
++	File = 1,
++	/**
++	 * A directory.
++	 */
++	Directory = 2,
++	/**
++	 * A symbolic link to a file.
++	 */
++	SymbolicLink = 64,
++}
++
++export class File implements FileStat {
++	type: FileType;
++	ctime: number;
++	mtime: number;
++	size: number;
++
++	name: string;
++	data?: Uint8Array;
++	permissions?: FilePermission;
++
++	constructor(public uri: URI, name: string) {
++		this.type = FileType.File;
++		this.ctime = Date.now();
++		this.mtime = Date.now();
++		this.size = 0;
++		this.name = name;
++	}
++
++	public setReadOnly() {
++		this.permissions = FilePermission.Readonly;
++	}
++}
++
++export class Directory implements FileStat {
++	type: FileType;
++	ctime: number;
++	mtime: number;
++	size: number;
++
++	name: string;
++	entries: Map<string, File | Directory>;
++
++	constructor(public uri: URI, name: string) {
++		this.type = FileType.Directory;
++		this.ctime = Date.now();
++		this.mtime = Date.now();
++		this.size = 0;
++		this.name = name;
++		this.entries = new Map();
++	}
++}
++
++export type Entry = File | Directory;
++function stripSlashPrefix(path: string) {
++	return path[0] === '/' ? path.slice(1) : path;
++}
++export class CFS {
++	static scheme = 'cfs';
++	private readonly rootFolder = 'cfs:';
++
++	constructor() { }
++
++	root = new Directory(URI.parse('cfs:/'), '');
++
++	async seed(files: [URI, Uint8Array][]) {
++		for (const [path, contents] of files) {
++			const pathSegments = stripSlashPrefix(path.path).split('/');
++			console.log('SEED', path, pathSegments);
++			if (pathSegments.length > 1) {
++				let created = this.rootFolder;
++				for (const pathPart of pathSegments.slice(0, -1)) {
++					created = created + `/${pathPart}`;
++					console.log('SEED', created);
++
++					try {
++						await this.readDirectory(URI.parse(created));
++					} catch {
++						await this.createDirectory(URI.parse(created));
++					}
++				}
++			}
++			await this.writeFile(path, contents, {
++				create: true,
++				overwrite: true,
++			});
++		}
++	}
++
++	stat(uri: URI): FileStat {
++		console.log('TSSERVER CFS stat', uri);
++		return this._lookup(uri, false);
++	}
++
++	readDirectory(uri: URI): [string, FileType][] {
++		const entry = this._lookupAsDirectory(uri, false);
++		const result: [string, FileType][] = [];
++		for (const [name, child] of entry.entries) {
++			result.push([name, child.type]);
++		}
++		return result;
++	}
++
++	readFile(uri: URI): Uint8Array {
++		const data = this._lookupAsFile(uri, false).data;
++		if (data) {
++			return data;
++		}
++		throw FileSystemError.FileNotFound();
++	}
++
++	writeFile(
++		uri: URI,
++		content: Uint8Array,
++		options: {
++			create: boolean;
++			overwrite: boolean;
++		}
++	): void {
++		const basename = this._basename(uri.path);
++		const parent = this._lookupParentDirectory(uri);
++		let entry = parent.entries.get(basename);
++		if (entry instanceof Directory) {
++			throw FileSystemError.FileIsADirectory(uri);
++		}
++		if (!entry && !options.create) {
++			throw FileSystemError.FileNotFound(uri);
++		}
++		if (entry && options.create && !options.overwrite) {
++			throw FileSystemError.FileExists(uri);
++		}
++		if (!entry) {
++			entry = new File(uri, basename);
++			parent.entries.set(basename, entry);
++		}
++		entry.mtime = Date.now();
++		entry.size = content.byteLength;
++		entry.data = content;
++	}
++
++	rename(oldURI: URI, newURI: URI, options: { overwrite: boolean }): void {
++		if (!options.overwrite && this._lookup(newURI, true)) {
++			throw FileSystemError.FileExists(newURI);
++		}
++
++		const entry = this._lookup(oldURI, false);
++		const oldParent = this._lookupParentDirectory(oldURI);
++
++		const newParent = this._lookupParentDirectory(newURI);
++		const newName = this._basename(newURI.path);
++
++		oldParent.entries.delete(entry.name);
++		entry.name = newName;
++		newParent.entries.set(newName, entry);
++	}
++
++	delete(uri: URI): void {
++		const dirname = uri.with({ path: this._dirname(uri.path) });
++		const basename = this._basename(uri.path);
++		const parent = this._lookupAsDirectory(dirname, false);
++		if (!parent.entries.has(basename)) {
++			throw FileSystemError.FileNotFound(uri);
++		}
++		const entry = parent.entries.get(basename);
++		// Recursively delete all children
++		if (entry instanceof Directory) {
++			for (const child of entry.entries.values()) {
++				this.delete(child.uri);
++			}
++		}
++
++		parent.entries.delete(basename);
++		parent.mtime = Date.now();
++		parent.size -= 1;
++	}
++
++	createDirectory(uri: URI): void {
++		const basename = this._basename(uri.path);
++		const dirname = uri.with({ path: this._dirname(uri.path) });
++		const parent = this._lookupAsDirectory(dirname, false);
++
++		const entry = new Directory(uri, basename);
++		parent.entries.set(entry.name, entry);
++		parent.mtime = Date.now();
++		parent.size += 1;
++	}
++
++	// --- lookup
++
++	private _lookup(uri: URI, silent: false): Entry;
++	private _lookup(uri: URI, silent: boolean): Entry | undefined;
++	private _lookup(uri: URI, silent: boolean): Entry | undefined {
++		const parts = uri.path.split('/');
++		let entry: Entry = this.root;
++		for (const part of parts) {
++			if (!part) {
++				continue;
++			}
++			let child: Entry | undefined;
++			if (entry instanceof Directory) {
++				child = entry.entries.get(part);
++			}
++			if (!child) {
++				if (!silent) {
++					throw FileSystemError.FileNotFound(uri);
++				} else {
++					return undefined;
++				}
++			}
++			entry = child;
++		}
++		return entry;
++	}
++
++	private _lookupAsDirectory(uri: URI, silent: boolean): Directory {
++		const entry = this._lookup(uri, silent);
++		if (entry instanceof Directory) {
++			return entry;
++		}
++		throw FileSystemError.FileNotADirectory(uri);
++	}
++
++	private _lookupAsFile(uri: URI, silent: boolean): File {
++		const entry = this._lookup(uri, silent);
++		if (entry instanceof File) {
++			return entry;
++		}
++		throw FileSystemError.FileIsADirectory(uri);
++	}
++
++	private _lookupParentDirectory(uri: URI): Directory {
++		const dirname = uri.with({ path: this._dirname(uri.path) });
++		return this._lookupAsDirectory(dirname, false);
++	}
++
++	private _basename(path: string): string {
++		path = this._rtrim(path, '/');
++		if (!path) {
++			return '';
++		}
++
++		return path.substr(path.lastIndexOf('/') + 1);
++	}
++
++	private _dirname(path: string): string {
++		path = this._rtrim(path, '/');
++		if (!path) {
++			return '/';
++		}
++
++		return path.substr(0, path.lastIndexOf('/'));
++	}
++
++	private _rtrim(haystack: string, needle: string): string {
++		if (!haystack || !needle) {
++			return haystack;
++		}
++
++		const needleLen = needle.length,
++			haystackLen = haystack.length;
++
++		if (needleLen === 0 || haystackLen === 0) {
++			return haystack;
++		}
++
++		let offset = haystackLen,
++			idx = -1;
++
++		// eslint-disable-next-line
++		while (true) {
++			idx = haystack.lastIndexOf(needle, offset - 1);
++			if (idx === -1 || idx + needleLen !== offset) {
++				break;
++			}
++			if (idx === 0) {
++				return '';
++			}
++			offset = idx;
++		}
++
++		return haystack.substring(0, offset);
++	}
++}
+diff --git a/extensions/typescript-language-features/web/webServer.ts b/extensions/typescript-language-features/web/webServer.ts
+index 1db00fe..da46091 100644
+--- a/extensions/typescript-language-features/web/webServer.ts
++++ b/extensions/typescript-language-features/web/webServer.ts
+@@ -6,10 +6,14 @@
+ /// <reference lib='webworker' />
+ 
+ import * as ts from 'typescript/lib/tsserverlibrary';
+-import { ApiClient, FileType, Requests } from '@vscode/sync-api-client';
+-import { ClientConnection } from '@vscode/sync-api-common/browser';
+ import { URI } from 'vscode-uri';
+ 
++// Keep an in-memory representation of the current Worker script.
++// This is in-memory within this (Web) Worker to avoid a dependency on SharedArrayBuffer
++// The contents are updated on a slight lag from VSCode filesystem events
++import { CFS, FileType } from './cfs-simple';
++const cfs = new CFS();
++
+ // GLOBALS
+ const watchFiles: Map<string, { path: string; callback: ts.FileWatcherCallback; pollingInterval?: number; options?: ts.WatchOptions }> = new Map();
+ const watchDirectories: Map<string, { path: string; callback: ts.DirectoryWatcherCallback; recursive?: boolean; options?: ts.WatchOptions }> = new Map();
+@@ -44,7 +48,8 @@ function fromResource(extensionUri: URI, uri: URI) {
+ 		&& uri.path.endsWith('.d.ts')) {
+ 		return uri.path;
+ 	}
+-	return `/${uri.scheme}/${uri.authority}${uri.path}`;
++	// Use `ts-nul-authority` when the authority is an empty string. All CFS file have an empty authority
++	return `/${uri.scheme}/${uri.authority === '' ? 'ts-nul-authority' : uri.authority}${uri.path}`;
+ }
+ function updateWatch(event: 'create' | 'change' | 'delete', uri: URI, extensionUri: URI) {
+ 	const kind = event === 'create' ? ts.FileWatcherEventKind.Created
+@@ -68,9 +73,9 @@ function updateWatch(event: 'create' | 'change' | 'delete', uri: URI, extensionU
+ 
+ type ServerHostWithImport = ts.server.ServerHost & { importPlugin(root: string, moduleName: string): Promise<ts.server.ModuleImportResult> };
+ 
+-function createServerHost(extensionUri: URI, logger: ts.server.Logger, apiClient: ApiClient | undefined, args: string[], fsWatcher: MessagePort): ServerHostWithImport {
++function createServerHost(extensionUri: URI, logger: ts.server.Logger, args: string[], fsWatcher: MessagePort): ServerHostWithImport {
+ 	const currentDirectory = '/';
+-	const fs = apiClient?.vscode.workspace.fileSystem;
++	const fs = cfs;
+ 	let watchId = 0;
+ 
+ 	// Legacy web
+@@ -170,7 +175,7 @@ function createServerHost(extensionUri: URI, logger: ts.server.Logger, apiClient
+ 		newLine: '\n',
+ 		useCaseSensitiveFileNames: true,
+ 		write: s => {
+-			apiClient?.vscode.terminal.write(s);
++			logNormal(s);
+ 		},
+ 		writeOutputIsTTY() {
+ 			return true;
+@@ -178,7 +183,9 @@ function createServerHost(extensionUri: URI, logger: ts.server.Logger, apiClient
+ 		readFile(path) {
+ 			logVerbose('fs.readFile', { path });
+ 
+-			if (!fs) {
++			// Load http resources bypassing CFS. This is pretty much just Typescript lib files
++			const resource = toResource(path);
++			if (!fs || resource.scheme.startsWith('http')) {
+ 				const webPath = getWebPath(path);
+ 				if (webPath) {
+ 					const request = new XMLHttpRequest();
+@@ -192,7 +199,7 @@ function createServerHost(extensionUri: URI, logger: ts.server.Logger, apiClient
+ 
+ 			try {
+ 				// We need to slice the bytes since we can't pass a shared array to text decoder
+-				const contents = fs.readFile(toResource(path)).slice();
++				const contents = fs.readFile(resource);
+ 				return textDecoder.decode(contents);
+ 			} catch (error) {
+ 				logNormal('Error fs.readFile', { path, error: error + '' });
+@@ -225,7 +232,10 @@ function createServerHost(extensionUri: URI, logger: ts.server.Logger, apiClient
+ 			}
+ 
+ 			try {
+-				fs.writeFile(toResource(path), textEncoder.encode(data));
++				fs.writeFile(toResource(path), textEncoder.encode(data), {
++					create: true,
++					overwrite: true,
++				});
+ 			} catch (error) {
+ 				logNormal('Error fs.writeFile', { path, error: error + '' });
+ 			}
+@@ -235,8 +245,9 @@ function createServerHost(extensionUri: URI, logger: ts.server.Logger, apiClient
+ 		},
+ 		fileExists(path: string): boolean {
+ 			logVerbose('fs.fileExists', { path });
++			const resource = toResource(path);
+ 
+-			if (!fs) {
++			if (!fs || resource.scheme.startsWith('http')) {
+ 				const webPath = getWebPath(path);
+ 				if (!webPath) {
+ 					return false;
+@@ -249,7 +260,7 @@ function createServerHost(extensionUri: URI, logger: ts.server.Logger, apiClient
+ 			}
+ 
+ 			try {
+-				return fs.stat(toResource(path)).type === FileType.File;
++				return fs.stat(resource).type === FileType.File;
+ 			} catch (error) {
+ 				logNormal('Error fs.fileExists', { path, error: error + '' });
+ 				return false;
+@@ -480,7 +491,6 @@ interface StartSessionOptions {
+ }
+ 
+ class WorkerSession extends ts.server.Session<{}> {
+-
+ 	readonly wasmCancellationToken: WasmCancellationToken;
+ 	readonly listener: (message: any) => void;
+ 
+@@ -642,16 +652,12 @@ async function initializeSession(args: string[], extensionUri: URI, ports: { tss
+ 		serverMode
+ 	};
+ 
+-	let sys: ServerHostWithImport;
+-	if (hasArgument(args, '--enableProjectWideIntelliSenseOnWeb')) {
+-		const connection = new ClientConnection<Requests>(ports.sync);
+-		await connection.serviceReady();
+-
+-		sys = createServerHost(extensionUri, logger, new ApiClient(connection), args, ports.watcher);
+-	} else {
+-		sys = createServerHost(extensionUri, logger, undefined, args, ports.watcher);
+-
+-	}
++	const sys: ServerHostWithImport = createServerHost(
++		extensionUri,
++		logger,
++		args,
++		ports.watcher
++	);
+ 
+ 	setSys(sys);
+ 	session = new WorkerSession(sys, options, ports.tsserver, logger, hrtime);
+@@ -671,6 +677,12 @@ let hasInitialized = false;
+ const listener = async (e: any) => {
+ 	if (!hasInitialized) {
+ 		hasInitialized = true;
++		await cfs.seed(
++			(e.data.storedFiles as [Parameters<typeof URI.from>[0], Uint8Array][]).map(([uri, contents]) => [
++				URI.from(uri),
++				contents,
++			])
++		);
+ 		if ('args' in e.data) {
+ 			const args = e.data.args;
+ 
+@@ -693,8 +705,33 @@ const listener = async (e: any) => {
+ 
+ 			const [sync, tsserver, watcher] = e.ports as MessagePort[];
+ 			const extensionUri = URI.from(e.data.extensionUri);
+-			watcher.onmessage = (e: any) => updateWatch(e.data.event, URI.from(e.data.uri), extensionUri);
+-			await initializeSession(args, extensionUri, { sync, tsserver, watcher }, logger);
++			watcher.onmessage = async (e: any) => {
++				try {
++					switch (e.data.event) {
++						case 'create':
++							await cfs.seed([[URI.from(e.data.uri), e.data.file]]);
++							break;
++						case 'change':
++							await cfs.writeFile(URI.from(e.data.uri), e.data.file, {
++								create: true,
++								overwrite: true,
++							});
++							break;
++						case 'delete':
++							await cfs.delete(URI.from(e.data.uri));
++							break;
++					}
++				} catch (e) {
++					console.error(e);
++				}
++				updateWatch(e.data.event, URI.from(e.data.uri), extensionUri);
++			};
++			await initializeSession(
++				args,
++				extensionUri,
++				{ sync, tsserver, watcher },
++				logger
++			);
+ 		} else {
+ 			console.error('unexpected message in place of initial message: ' + JSON.stringify(e.data));
+ 		}
+-- 
+2.39.2 (Apple Git-143)
+

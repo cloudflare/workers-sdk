@@ -10,6 +10,10 @@ function mergeHeaders(base: HeadersInit, extra: HeadersInit) {
 	});
 }
 
+export function stripLeadingDoubleSlashes(location: string) {
+	return location.replace(/^(\/|%2F|%2f|%5C|%5c|\\)+(.*)/, "/$2");
+}
+
 export class OkResponse extends Response {
 	constructor(...[body, init]: ConstructorParameters<typeof Response>) {
 		super(body, {
@@ -23,8 +27,16 @@ export class OkResponse extends Response {
 export class MovedPermanentlyResponse extends Response {
 	constructor(
 		location: string,
-		init?: ConstructorParameters<typeof Response>[1]
+		init?: ConstructorParameters<typeof Response>[1],
+		{
+			preventLeadingDoubleSlash = true,
+		}: { preventLeadingDoubleSlash: boolean } = {
+			preventLeadingDoubleSlash: true,
+		}
 	) {
+		location = preventLeadingDoubleSlash
+			? stripLeadingDoubleSlashes(location)
+			: location;
 		super(`Redirecting to ${location}`, {
 			...init,
 			status: 301,
@@ -39,8 +51,16 @@ export class MovedPermanentlyResponse extends Response {
 export class FoundResponse extends Response {
 	constructor(
 		location: string,
-		init?: ConstructorParameters<typeof Response>[1]
+		init?: ConstructorParameters<typeof Response>[1],
+		{
+			preventLeadingDoubleSlash = true,
+		}: { preventLeadingDoubleSlash: boolean } = {
+			preventLeadingDoubleSlash: true,
+		}
 	) {
+		location = preventLeadingDoubleSlash
+			? stripLeadingDoubleSlashes(location)
+			: location;
 		super(`Redirecting to ${location}`, {
 			...init,
 			status: 302,
@@ -64,8 +84,16 @@ export class NotModifiedResponse extends Response {
 export class PermanentRedirectResponse extends Response {
 	constructor(
 		location: string,
-		init?: ConstructorParameters<typeof Response>[1]
+		init?: ConstructorParameters<typeof Response>[1],
+		{
+			preventLeadingDoubleSlash = true,
+		}: { preventLeadingDoubleSlash: boolean } = {
+			preventLeadingDoubleSlash: true,
+		}
 	) {
+		location = preventLeadingDoubleSlash
+			? stripLeadingDoubleSlashes(location)
+			: location;
 		super(undefined, {
 			...init,
 			status: 308,
@@ -126,8 +154,16 @@ export class InternalServerErrorResponse extends Response {
 export class SeeOtherResponse extends Response {
 	constructor(
 		location: string,
-		init?: ConstructorParameters<typeof Response>[1]
+		init?: ConstructorParameters<typeof Response>[1],
+		{
+			preventLeadingDoubleSlash = true,
+		}: { preventLeadingDoubleSlash: boolean } = {
+			preventLeadingDoubleSlash: true,
+		}
 	) {
+		location = preventLeadingDoubleSlash
+			? stripLeadingDoubleSlashes(location)
+			: location;
 		super(`Redirecting to ${location}`, {
 			...init,
 			status: 303,
@@ -140,8 +176,16 @@ export class SeeOtherResponse extends Response {
 export class TemporaryRedirectResponse extends Response {
 	constructor(
 		location: string,
-		init?: ConstructorParameters<typeof Response>[1]
+		init?: ConstructorParameters<typeof Response>[1],
+		{
+			preventLeadingDoubleSlash = true,
+		}: { preventLeadingDoubleSlash: boolean } = {
+			preventLeadingDoubleSlash: true,
+		}
 	) {
+		location = preventLeadingDoubleSlash
+			? stripLeadingDoubleSlashes(location)
+			: location;
 		super(`Redirecting to ${location}`, {
 			...init,
 			status: 307,

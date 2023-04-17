@@ -1,0 +1,45 @@
+name: Edge Preview Authenticated Proxy Worker
+
+on:
+  push:
+    branches:
+      - main
+jobs:
+  publish_worker:
+    if: ${{ github.repository_owner == 'cloudflare' }}
+    name: Publish Worker
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js 16.13
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.13
+          cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
+
+      - name: Install workerd Dependencies
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt-get update
+          sudo apt-get install -y libc++1
+
+      - name: Install NPM Dependencies
+        run: npm ci
+
+      - name: Build wrangler
+        run: npm run build
+        env:
+          NODE_ENV: "production"
+
+      - name: Build & Publish Worker
+        run: npm run publish
+        env:
+          NODE_ENV: "production"
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        working-directory: packages/edge-preview-authenticated-proxy

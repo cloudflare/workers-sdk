@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/pages-shared",
-	"version": "0.1.0",
+	"version": "0.3.4",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cloudflare/workers-sdk.git",
@@ -14,8 +14,8 @@
 	],
 	"scripts": {
 		"check:type": "tsc",
-		"test": "jest",
-		"test:ci": "jest"
+		"test": "jest --forceExit",
+		"test:ci": "jest --forceExit"
 	},
 	"jest": {
 		"coverageReporters": [
@@ -43,11 +43,11 @@
 		]
 	},
 	"dependencies": {
-		"@miniflare/core": "2.12.0"
+		"@miniflare/core": "2.13.0"
 	},
 	"devDependencies": {
-		"@miniflare/cache": "2.12.0",
-		"@miniflare/html-rewriter": "2.12.0",
+		"@miniflare/cache": "2.13.0",
+		"@miniflare/html-rewriter": "2.13.0",
 		"@types/service-worker-mock": "^2.0.1",
 		"concurrently": "^7.3.0",
 		"glob": "^8.0.3",

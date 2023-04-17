@@ -23,7 +23,7 @@ export function toMimeType(type: CfModuleType): string {
 	}
 }
 
-type WorkerMetadataBinding =
+export type WorkerMetadataBinding =
 	// If you add any new binding types here, also add it to safeBindings
 	// under validateUnsafeBinding in config/validation.ts
 	| { type: "plain_text"; name: string; text: string }
@@ -32,6 +32,12 @@ type WorkerMetadataBinding =
 	| { type: "text_blob"; name: string; part: string }
 	| { type: "data_blob"; name: string; part: string }
 	| { type: "kv_namespace"; name: string; namespace_id: string }
+	| {
+			type: "send_email";
+			name: string;
+			destination_address?: string;
+			allowed_destination_addresses?: string[];
+	  }
 	| {
 			type: "durable_object_namespace";
 			name: string;
@@ -65,6 +71,8 @@ export interface WorkerMetadata {
 	bindings: WorkerMetadataBinding[];
 	keep_bindings?: WorkerMetadataBinding["type"][];
 	logpush?: boolean;
+	// Allow unsafe.metadata to add arbitary properties at runtime
+	[key: string]: unknown;
 }
 
 /**
@@ -102,6 +110,17 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			namespace_id: id,
 		});
 	});
+
+	bindings.send_email?.forEach(
+		({ name, destination_address, allowed_destination_addresses }) => {
+			metadataBindings.push({
+				name: name,
+				type: "send_email",
+				destination_address,
+				allowed_destination_addresses,
+			});
+		}
+	);
 
 	bindings.durable_objects?.bindings.forEach(
 		({ name, class_name, script_name, environment }) => {
@@ -284,9 +303,9 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		}
 	}
 
-	if (bindings.unsafe) {
+	if (bindings.unsafe?.bindings) {
 		// @ts-expect-error unsafe bindings don't need to match a specific type here
-		metadataBindings.push(...bindings.unsafe);
+		metadataBindings.push(...bindings.unsafe.bindings);
 	}
 
 	const metadata: WorkerMetadata = {
@@ -302,6 +321,12 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		...(keepVars && { keep_bindings: ["plain_text", "json"] }),
 		...(logpush !== undefined && { logpush }),
 	};
+
+	if (bindings.unsafe?.metadata !== undefined) {
+		for (const key of Object.keys(bindings.unsafe.metadata)) {
+			metadata[key] = bindings.unsafe.metadata[key];
+		}
+	}
 
 	formData.set("metadata", JSON.stringify(metadata));
 

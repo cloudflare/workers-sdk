@@ -1,5 +1,345 @@
 # wrangler
 
+## 2.15.1
+
+### Patch Changes
+
+- [#2783](https://github.com/cloudflare/workers-sdk/pull/2783) [`4c55baf9`](https://github.com/cloudflare/workers-sdk/commit/4c55baf9cd0e3d8915272471476017e0d379a988) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Add `**/*.wasm?module` as default module rule (alias of `**/*.wasm`)
+
+* [#2989](https://github.com/cloudflare/workers-sdk/pull/2989) [`86e942bb`](https://github.com/cloudflare/workers-sdk/commit/86e942bbb943750ee57e209a214e08926fb32ac5) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Durable Object proxying websockets over local dev registry
+
+## 2.15.0
+
+### Minor Changes
+
+- [#2769](https://github.com/cloudflare/workers-sdk/pull/2769) [`0a779904`](https://github.com/cloudflare/workers-sdk/commit/0a77990457652af36c60c52bf9c38c3a69945de4) Thanks [@penalosa](https://github.com/penalosa)! - feature: Support modules with `--no-bundle`
+
+  When the `--no-bundle` flag is set, Wrangler now has support for uploading additional modules alongside the entrypoint. This will allow modules to be imported at runtime on Cloudflare's Edge. This respects Wrangler's [module rules](https://developers.cloudflare.com/workers/wrangler/configuration/#bundling) configuration, which means that only imports of non-JS modules will trigger an upload by default. For instance, the following code will now work with `--no-bundle` (assuming the `example.wasm` file exists at the correct path):
+
+  ```js
+  // index.js
+  import wasm from './example.wasm'
+
+  export default {
+    async fetch() {
+      await WebAssembly.instantiate(wasm, ...)
+      ...
+    }
+  }
+  ```
+
+  For JS modules, it's necessary to specify an additional [module rule](https://developers.cloudflare.com/workers/wrangler/configuration/#bundling) (or rules) in your `wrangler.toml` to configure your modules as ES modules or Common JS modules. For instance, to upload additional JavaScript files as ES modules, add the following module rule to your `wrangler.toml`, which tells Wrangler that all `**/*.js` files are ES modules.
+
+  ```toml
+  rules = [
+    { type = "ESModule", globs = ["**/*.js"]},
+  ]
+  ```
+
+  If you have Common JS modules, you'd configure Wrangler with a CommonJS rule (the following rule tells Wrangler that all `.cjs` files are Common JS modules):
+
+  ```toml
+  rules = [
+    { type = "CommonJS", globs = ["**/*.cjs"]},
+  ]
+  ```
+
+  In most projects, adding a single rule will be sufficient. However, for advanced usecases where you're mixing ES modules and Common JS modules, you'll need to use multiple rule definitions. For instance, the following set of rules will match all `.mjs` files as ES modules, all `.cjs` files as Common JS modules, and the `nested/say-hello.js` file as Common JS.
+
+  ```toml
+  rules = [
+    { type = "CommonJS", globs = ["nested/say-hello.js", "**/*.cjs"]},
+    { type = "ESModule", globs = ["**/*.mjs"]}
+  ]
+  ```
+
+  If multiple rules overlap, Wrangler will log a warning about the duplicate rules, and will discard additional rules that matches a module. For example, the following rule configuration classifies `dep.js` as both a Common JS module and an ES module:
+
+  ```toml
+  rules = [
+    { type = "CommonJS", globs = ["dep.js"]},
+    { type = "ESModule", globs = ["dep.js"]}
+  ]
+  ```
+
+  Wrangler will treat `dep.js` as a Common JS module, since that was the first rule that matched, and will log the following warning:
+
+  ```
+  ▲ [WARNING] Ignoring duplicate module: dep.js (esm)
+  ```
+
+  This also adds a new configuration option to `wrangler.toml`: `base_dir`. Defaulting to the directory of your Worker's main entrypoint, this tells Wrangler where your additional modules are located, and determines the module paths against which your module rule globs are matched.
+
+  For instance, given the following directory structure:
+
+  ```
+  - wrangler.toml
+  - src/
+    - index.html
+    - vendor/
+      - dependency.js
+    - js/
+      - index.js
+  ```
+
+  If your `wrangler.toml` had `main = "src/js/index.js"`, you would need to set `base_dir = "src"` in order to be able to import `src/vendor/dependency.js` and `src/index.html` from `src/js/index.js`.
+
+### Patch Changes
+
+- [#2957](https://github.com/cloudflare/workers-sdk/pull/2957) [`084b2c58`](https://github.com/cloudflare/workers-sdk/commit/084b2c58ba051811afe4adf1518cab033ba62872) Thanks [@esimons](https://github.com/esimons)! - fix: Respect querystring params when calling `.fetch` on a worker instantiated with `unstable_dev`
+
+  Previously, querystring params would be stripped, causing issues for test cases that depended on them. For example, given the following worker script:
+
+  ```js
+  export default {
+  	fetch(req) {
+  		const url = new URL(req.url);
+  		const name = url.searchParams.get("name");
+  		return new Response("Hello, " + name);
+  	}
+  };
+  ```
+
+  would fail the following test case:
+
+  ```js
+  const worker = await unstable_dev("script.js");
+  const res = await worker.fetch("http://worker?name=Walshy");
+  const text = await res.text();
+  // Following fails, as returned text is 'Hello, null'
+  expect(text).toBe("Hello, Walshy");
+  ```
+
+* [#2840](https://github.com/cloudflare/workers-sdk/pull/2840) [`e311bbbf`](https://github.com/cloudflare/workers-sdk/commit/e311bbbf64343badd4bba7eb017b796a89eaf9fe) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: make `WRANGLER_LOG` case-insensitive, warn on unexpected values, and fallback to `log` if invalid
+
+  Previously, levels set via the `WRANGLER_LOG` environment-variable were case-sensitive.
+  If an unexpected level was set, Wrangler would fallback to `none`, hiding all logs.
+  The fallback has now been switched to `log`, and lenient case-insensitive matching is used when setting the level.
+
+- [#2044](https://github.com/cloudflare/workers-sdk/pull/2044) [`eebad0d9`](https://github.com/cloudflare/workers-sdk/commit/eebad0d9e593237b4db61047c94e2ec5b47a7b3c) Thanks [@kuba-orlik](https://github.com/kuba-orlik)! - fix: allow programmatic dev workers to be stopped and started in a single session
+
+* [#2735](https://github.com/cloudflare/workers-sdk/pull/2735) [`3f7a75cc`](https://github.com/cloudflare/workers-sdk/commit/3f7a75ccc252567be3e9062ff0c6fd7e00201d0e) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - Fix: Generate Remote URL
+  Previous URL was pointing to the old cloudflare/templates repo,
+  updated the URL to point to templates in the workers-sdk monorepo.
+
+## 2.14.0
+
+### Minor Changes
+
+- [#2942](https://github.com/cloudflare/workers-sdk/pull/2942) [`dc1465ea`](https://github.com/cloudflare/workers-sdk/commit/dc1465ea64acf3fc9c1442e7df73f14df7dc8630) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: upgrade `miniflare` to [`2.13.0`](https://github.com/cloudflare/miniflare/releases/tag/v2.13.0)
+
+* [#2914](https://github.com/cloudflare/workers-sdk/pull/2914) [`9af1a640`](https://github.com/cloudflare/workers-sdk/commit/9af1a640237ab26e6332e73e3656d16ca9a96e64) Thanks [@edevil](https://github.com/edevil)! - feat: add support for send email bindings
+
+  Support send email bindings in order to send emails from a worker. There
+  are three types of bindings:
+
+  - Unrestricted: can send email to any verified destination address.
+  - Restricted: can only send email to the supplied destination address (which
+    does not need to be specified when sending the email but also needs to be a
+    verified destination address).
+  - Allowlist: can only send email to the supplied list of verified destination
+    addresses.
+
+### Patch Changes
+
+- [#2931](https://github.com/cloudflare/workers-sdk/pull/2931) [`5f6c4c0c`](https://github.com/cloudflare/workers-sdk/commit/5f6c4c0c4542ada3552e1bf099ecdda677c08a3d) Thanks [@Skye-31](https://github.com/Skye-31)! - Fix: Pages Dev incorrectly allowing people to turn off local mode
+
+  Local mode is not currently supported in Pages Dev, and errors when people attempt to use it. Previously, wrangler hid the "toggle local mode" button when using Pages dev, but this got broken somewhere along the line.
+
+## 2.13.0
+
+### Minor Changes
+
+- [#2905](https://github.com/cloudflare/workers-sdk/pull/2905) [`6fd06241`](https://github.com/cloudflare/workers-sdk/commit/6fd062419c6b66c2c5beb7c45ec84a32dfa89e01) Thanks [@edevil](https://github.com/edevil)! - feat: support external imports from `cloudflare:...` prefixed modules
+
+  Going forward Workers will be providing built-in modules (similar to `node:...`) that can be imported using the `cloudflare:...` prefix. This change adds support to the Wrangler bundler to mark these imports as external.
+
+* [#2607](https://github.com/cloudflare/workers-sdk/pull/2607) [`163dccf4`](https://github.com/cloudflare/workers-sdk/commit/163dccf41453e1790fe8e5231d8c1cb8b6ef5a18) Thanks [@jspspike@gmail.com](https://github.com/jspspike@gmail.com)! - feature: add `wrangler deployment view` and `wrangler rollback` subcommands
+
+`wrangler deployments view [deployment-id]` will get the details of a deployment, including bindings and usage model information.
+This information can be used to help debug bad deployments.
+
+`wrangler rollback [deployment-id]` will rollback to a specific deployment in the runtime. This will be useful in situations like recovering from a bad
+deployment quickly while resolving issues. If a deployment id is not specified wrangler will rollback to the previous deployment. This rollback only changes the code in the runtime and doesn't affect any code or configurations
+in a developer's local setup.
+
+`wrangler deployments list` will list the 10 most recent deployments. This command originally existed as `wrangler deployments`
+
+example of `view <deployment-id>` output:
+
+```ts
+Deployment ID: 07d7143d-0284-427e-ba22-2d5e6e91b479
+Created on:    2023-03-02T21:05:15.622446Z
+Author:        jspspike@gmail.com
+Source:        Upload from Wrangler 🤠
+------------------------------------------------------------
+Author ID:          e5a3ca86e08fb0940d3a05691310bb42
+Usage Model:        bundled
+Handlers:           fetch
+Compatibility Date: 2022-10-03
+--------------------------bindings--------------------------
+[[r2_buckets]]
+binding = "MY_BUCKET"
+bucket_name = "testr2"
+
+[[kv_namespaces]]
+id = "79300c6d17eb4180a07270f450efe53f"
+binding = "yeee"
+```
+
+- [#2859](https://github.com/cloudflare/workers-sdk/pull/2859) [`ace46939`](https://github.com/cloudflare/workers-sdk/commit/ace46939ebfe43a446cac2f55c31a41fe3abb128) Thanks [@jbwcloudflare](https://github.com/jbwcloudflare)! - feature: add support for Queue Consumer concurrency
+
+  Consumer concurrency allows a consumer Worker processing messages from a queue to automatically scale out horizontally in order to keep up with the rate that messages are being written to a queue.
+  The new `max_concurrency` setting can be used to limit the maximum number of concurrent consumer Worker invocations.
+
+### Patch Changes
+
+- [#2838](https://github.com/cloudflare/workers-sdk/pull/2838) [`9fa6b167`](https://github.com/cloudflare/workers-sdk/commit/9fa6b16770586767324bbaa1ecccc587b7a19a77) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: display cause when local D1 migrations fail to apply
+
+  Previously, if `wrangler d1 migrations apply --local` failed, you'd see something like:
+
+  ```
+  ❌ Migration 0000_migration.sql failed with following Errors
+  ┌──────────┐
+  │ Error    │
+  ├──────────┤
+  │ D1_ERROR │
+  └──────────┘
+  ```
+
+  We'll now show the SQLite error that caused the failure:
+
+  ```
+  ❌ Migration 0000_migration.sql failed with following Errors
+  ┌───────────────────────────────────────────────┐
+  │ Error                                         │
+  ├───────────────────────────────────────────────┤
+  │ Error: SqliteError: unknown database "public" │
+  └───────────────────────────────────────────────┘
+  ```
+
+* [#2902](https://github.com/cloudflare/workers-sdk/pull/2902) [`9996ac44`](https://github.com/cloudflare/workers-sdk/commit/9996ac44857ef9b4dd9fe545fcd9dbf7af3ecaf5) Thanks [@jspspike](https://github.com/jspspike)! - Fix issue with `keep_vars` having no effect in wrangler.toml
+
+## 2.12.3
+
+### Patch Changes
+
+- [#2884](https://github.com/cloudflare/workers-sdk/pull/2884) [`e33bea9b`](https://github.com/cloudflare/workers-sdk/commit/e33bea9b2b3060c47bd7d453fdbb31889c52c45e) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Changed console.debug for logger.debug in Pages uploading. This will ensure the debug logs are only sent when debug logging is enabled with `WRANGLER_LOG=debug`.
+
+* [#2878](https://github.com/cloudflare/workers-sdk/pull/2878) [`6ebb23d5`](https://github.com/cloudflare/workers-sdk/commit/6ebb23d5b832a49a95b3a169ccf032a6260f22ef) Thanks [@rozenmd](https://github.com/rozenmd)! - feat: Add D1 binding support to Email Workers
+
+  This PR makes it possible to query D1 from an Email Worker, assuming a binding has been setup.
+
+  As D1 is in alpha and not considered "production-ready", this changeset is a patch, rather than a minor bump to wrangler.
+
+## 2.12.2
+
+### Patch Changes
+
+- [#2873](https://github.com/cloudflare/workers-sdk/pull/2873) [`5bcc333d`](https://github.com/cloudflare/workers-sdk/commit/5bcc333d2be77751c6e362ff3365c90ad60a0928) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Prevent compile loop when using `_worker.js` and `wrangler pages dev`
+
+## 2.12.1
+
+### Patch Changes
+
+- [#2839](https://github.com/cloudflare/workers-sdk/pull/2839) [`ad4b123b`](https://github.com/cloudflare/workers-sdk/commit/ad4b123bb9fee51c0cca442e4d0ee6ebeeb020b1) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: remove `vitest` from `wrangler init`'s generated `tsconfig.json` `types` array
+
+  Previously, `wrangler init` generated a `tsconfig.json` with `"types": ["@cloudflare/workers-types", "vitest"]`, even if Vitest tests weren't generated.
+  Unlike Jest, Vitest [doesn't provide global APIs by default](https://vitest.dev/config/#globals), so there's no need for ambient types.
+
+* [#2806](https://github.com/cloudflare/workers-sdk/pull/2806) [`8d462c0c`](https://github.com/cloudflare/workers-sdk/commit/8d462c0c6fb92dc503747d66565f7bb10bb937d0) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Remove the `--experimental-worker-bundle` option from Pages Functions
+
+- [#2845](https://github.com/cloudflare/workers-sdk/pull/2845) [`e3c036d7`](https://github.com/cloudflare/workers-sdk/commit/e3c036d773ddc1e4498b016818a52a073909cf36) Thanks [@Cyb3r-Jak3](https://github.com/Cyb3r-Jak3)! - feature: include .wrangler directory in gitignore template used with `wrangler init`
+
+* [#2806](https://github.com/cloudflare/workers-sdk/pull/2806) [`8d462c0c`](https://github.com/cloudflare/workers-sdk/commit/8d462c0c6fb92dc503747d66565f7bb10bb937d0) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Add `--outdir` as an option when running `wrangler pages functions build`.
+
+  This deprecates `--outfile` when building a Pages Plugin with `--plugin`.
+
+  When building functions normally, `--outdir` may be used to produce a human-inspectable format of the `_worker.bundle` that is produced.
+
+- [#2806](https://github.com/cloudflare/workers-sdk/pull/2806) [`8d462c0c`](https://github.com/cloudflare/workers-sdk/commit/8d462c0c6fb92dc503747d66565f7bb10bb937d0) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Enable bundling in Pages Functions by default.
+
+  We now enable bundling by default for a `functions/` folder and for an `_worker.js` in Pages Functions. This allows you to use external modules such as Wasm. You can disable this behavior in Direct Upload projects by using the `--no-bundle` argument in `wrangler pages publish` and `wrangler pages dev`.
+
+* [#2836](https://github.com/cloudflare/workers-sdk/pull/2836) [`42fb97e5`](https://github.com/cloudflare/workers-sdk/commit/42fb97e5de4ed323a706c432b4ff9f73a2a8abbb) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: preserve the entrypoint filename when running `wrangler publish --outdir <dir>`.
+
+  Previously, this entrypoint filename would sometimes be overwritten with some internal filenames. It should now be based off of the entrypoint you provide for your Worker.
+
+- [#2828](https://github.com/cloudflare/workers-sdk/pull/2828) [`891ddf19`](https://github.com/cloudflare/workers-sdk/commit/891ddf19f4f9d268c52fb236f2195a7ff919601e) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Bring `pages dev` logging in line with `dev` proper's
+
+  `wrangler pages dev` now defaults to logging at the `log` level (rather than the previous `warn` level), and the `pages` prefix is removed.
+
+* [#2855](https://github.com/cloudflare/workers-sdk/pull/2855) [`226e63fa`](https://github.com/cloudflare/workers-sdk/commit/226e63fa3dc24153fb950fc9fb98d040ede30a13) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: `--experimental-local` with `wrangler pages dev`
+
+  We previously had a bug which logged an error (`local worker: TypeError: generateASSETSBinding2 is not a function`). This has now been fixed.
+
+- [#2831](https://github.com/cloudflare/workers-sdk/pull/2831) [`2b641765`](https://github.com/cloudflare/workers-sdk/commit/2b641765975d98e6e04342533fa088f51a96acab) Thanks [@Skye-31](https://github.com/Skye-31)! - Fix: Show correct link for how to create an API token in a non-interactive environment
+
+## 2.12.0
+
+### Minor Changes
+
+- [#2810](https://github.com/cloudflare/workers-sdk/pull/2810) [`62784131`](https://github.com/cloudflare/workers-sdk/commit/62784131385d641c3512b09565d801a5ecd39725) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: upgrade `@miniflare/tre` to [`3.0.0-next.12`](https://github.com/cloudflare/miniflare/releases/tag/v3.0.0-next.12), incorporating changes from [`3.0.0-next.11`](https://github.com/cloudflare/miniflare/releases/tag/v3.0.0-next.11)
+
+  Notably, this brings the following improvements to `wrangler dev --experimental-local`:
+
+  - Adds support for Durable Objects and D1
+  - Fixes an issue blocking clean exits and script reloads
+  - Bumps to `better-sqlite3@8`, allowing installation on Node 19
+
+* [#2665](https://github.com/cloudflare/workers-sdk/pull/2665) [`4756d6a1`](https://github.com/cloudflare/workers-sdk/commit/4756d6a143168da84548203b7b0bc23db0b92c95) Thanks [@alankemp](https://github.com/alankemp)! - Add new [unsafe.metadata] section to wrangler.toml allowing arbitary data to be added to the metadata section of the upload
+
+### Patch Changes
+
+- [#2539](https://github.com/cloudflare/workers-sdk/pull/2539) [`3725086c`](https://github.com/cloudflare/workers-sdk/commit/3725086c4b6854f6fb1e7e0517d3a526d0f9567b) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Add support for the `nodejs_compat` Compatibility Flag when bundling a Worker with Wrangler
+
+  This new Compatibility Flag is incompatible with the legacy `--node-compat` CLI argument and `node_compat` configuration option. If you want to use the new runtime Node.js compatibility features, please remove the `--node-compat` argument from your CLI command or your config file.
+
+## 2.11.1
+
+### Patch Changes
+
+- [#2795](https://github.com/cloudflare/workers-sdk/pull/2795) [`ec3e181e`](https://github.com/cloudflare/workers-sdk/commit/ec3e181eb91534ff79198847f7bf01a606fe2b4a) Thanks [@penalosa](https://github.com/penalosa)! - fix: Adds a `duplex: "half"` property to R2 fetch requests with stream bodies in order to be compatible with undici v5.20
+
+* [#2789](https://github.com/cloudflare/workers-sdk/pull/2789) [`4ca8c0b0`](https://github.com/cloudflare/workers-sdk/commit/4ca8c0b02878ec259c6d48a47a2aa6e47f59bea0) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Support overriding the next URL in subsequent executions with `next("/new-path")` from within a Pages Plugin
+
+## 2.11.0
+
+### Minor Changes
+
+- [#2651](https://github.com/cloudflare/workers-sdk/pull/2651) [`a9adfbe7`](https://github.com/cloudflare/workers-sdk/commit/a9adfbe7ea32d4a7c8121d7b34ce9ed51c826033) Thanks [@penalosa](https://github.com/penalosa)! - Previously, wrangler dev would not work if the root of your zone wasn't behind Cloudflare. This behaviour has changed so that now only the route which your Worker is exposed on has to be behind Cloudflare.
+
+* [#2708](https://github.com/cloudflare/workers-sdk/pull/2708) [`b3346cfb`](https://github.com/cloudflare/workers-sdk/commit/b3346cfbecb2c20f7cce3c3bf8a585b7fd8811aa) Thanks [@Skye-31](https://github.com/Skye-31)! - Feat: Pages now supports Proxying (200 status) redirects in it's \_redirects file
+
+  This will look something like the following, where a request to /users/123 will appear as that in the browser, but will internally go to /users/[id].html.
+
+  ```
+  /users/:id /users/[id] 200
+  ```
+
+### Patch Changes
+
+- [#2766](https://github.com/cloudflare/workers-sdk/pull/2766) [`7912e63a`](https://github.com/cloudflare/workers-sdk/commit/7912e63aa15affc6e3d4a8cfe5dd54348c6e79ba) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: correctly detect `service-worker` format when using `typeof module`
+
+  Wrangler automatically detects whether your code is a `modules` or `service-worker` format Worker based on the presence of a `default` `export`. This check currently works by building your entrypoint with `esbuild` and looking at the output metafile.
+
+  Previously, we were passing `format: "esm"` to `esbuild` when performing this check, which enables _format conversion_. This may introduce `export default` into the built code, even if it wasn't there to start with, resulting in incorrect format detections.
+
+  This change removes `format: "esm"` which disables format conversion when bundling is disabled. See https://esbuild.github.io/api/#format for more details.
+
+* [#2780](https://github.com/cloudflare/workers-sdk/pull/2780) [`80f1187a`](https://github.com/cloudflare/workers-sdk/commit/80f1187a4f90764de53d7488d4e13ea73b748ced) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Ensure we don't mangle internal constructor names in the wrangler bundle when building with esbuild
+
+  Undici changed how they referenced `FormData`, which meant that when used in our bundle process, we were failing to upload `multipart/form-data` bodies. This affected `wrangler pages publish` and `wrangler publish`.
+
+- [#2720](https://github.com/cloudflare/workers-sdk/pull/2720) [`de0cb57a`](https://github.com/cloudflare/workers-sdk/commit/de0cb57a7a537e6a8554621451b3fd76ffb2e1d1) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - Fix: Upgraded to ES2022 for improved compatibility
+  Upgraded worker code target version from ES2020 to ES2022 for better compatibility and unblocking of a workaround related to [issue #2029](https://github.com/cloudflare/workers-sdk/issues/2029). The worker runtime now uses the same V8 version as recent Chrome and is 99% ES2016+ compliant. The only thing we don't support on the Workers runtime, the remaining 1%, is the ES2022 RegEx feature as seen in the compat table for the latest Chrome version.
+
+  Compatibility table: https://kangax.github.io/compat-table/es2016plus/
+
+  [resolves #2716](https://github.com/cloudflare/workers-sdk/issues/2716)
+
+* [#2771](https://github.com/cloudflare/workers-sdk/pull/2771) [`4ede044e`](https://github.com/cloudflare/workers-sdk/commit/4ede044e9247fdc689cbe537dcc5afbda71cf99c) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: upgrade `miniflare` to [`2.12.1`](https://github.com/cloudflare/miniflare/releases/tag/v2.12.1) and `@miniflare/tre` to [`3.0.0-next.10`](https://github.com/cloudflare/miniflare/releases/tag/v3.0.0-next.10)
+
 ## 2.10.0
 
 ### Minor Changes

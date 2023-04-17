@@ -1,0 +1,5 @@
+name: hello_workers
+environment:
+  sdk: ">=2.13.0 <3.0.0"
+dependencies:
+  js: 0.6.3

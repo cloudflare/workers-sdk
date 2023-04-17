@@ -1,10 +1,17 @@
-## ⛅️ wrangler
+## ⛅️ Home to `wrangler`, the CLI for Cloudflare Workers®, as well as other tools for interacting with Workers
 
-> This package is for wrangler v2.x, released first in May 2022. If you're looking for v1.x of the `@cloudflare/wrangler` package, visit https://www.npmjs.com/package/@cloudflare/wrangler / https://github.com/cloudflare/wrangler-legacy. v1 vs v2 comparison is at [our docs site](https://developers.cloudflare.com/workers/wrangler/compare-v1-v2/)
+This monorepo contains:
 
-`wrangler` is a command line tool for building [Cloudflare Workers](https://workers.cloudflare.com/).
+- [`wrangler-devtools`](https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler-devtools)
+  Cloudflare's fork of Chrome DevTools for inspecting your local or remote Workers
+- [`templates`](https://github.com/cloudflare/workers-sdk/tree/main/templates)
+  Templates & examples for writing Cloudlfare Workers
+- [`wrangler`](https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler)
+  A command line tool for building [Cloudflare Workers](https://workers.cloudflare.com/).
+- [`pages-shared`](https://github.com/cloudflare/workers-sdk/tree/main/packages/pages-shared)
+  Used internally to power Wrangler and Cloudflare Pages. It contains all the code that is shared between these clients.
 
-The Wrangler roadmap is tracked via GitHub Projects and can be found [here](https://github.com/orgs/cloudflare/projects/1).
+Wrangler is developed in the open on GitHub, and you can see what we're working on in [GitHub Issues](https://github.com/cloudflare/workers-sdk/issues?q=is%3Aopen+is%3Aissue). If you've found a bug or would like to request a feature, [please file an issue](https://github.com/cloudflare/workers-sdk/issues/new/choose)!
 
 ## Quick Start
 

@@ -47,7 +47,6 @@ import type {
 } from "@miniflare/tre";
 import type { MiniflareOptions } from "miniflare";
 import type { ChildProcess } from "node:child_process";
-import type { RequestInit } from "undici";
 
 export interface LocalProps {
 	name: string | undefined;
@@ -71,7 +70,6 @@ export interface LocalProps {
 	localUpstream: string | undefined;
 	inspect: boolean;
 	onReady: ((ip: string, port: number) => void) | undefined;
-	logPrefix?: string;
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 	testScheduled?: boolean;
 	experimentalLocal: boolean | undefined;
@@ -122,7 +120,6 @@ function useLocalWorker({
 	localUpstream,
 	inspect,
 	onReady,
-	logPrefix,
 	enablePagesAssetsServiceBinding,
 	experimentalLocal,
 	accountId,
@@ -217,13 +214,12 @@ function useLocalWorker({
 				dataBlobBindings,
 				crons,
 				upstream,
-				logPrefix,
 				workerDefinitions,
 				enablePagesAssetsServiceBinding,
 			});
 
 			if (experimentalLocal) {
-				const log = await buildMiniflare3Logger(logPrefix);
+				const log = await buildMiniflare3Logger();
 				const mf3Options = await transformMf2OptionsToMf3Options({
 					miniflare2Options: options,
 					format,
@@ -232,6 +228,7 @@ function useLocalWorker({
 					enablePagesAssetsServiceBinding,
 					kvNamespaces: bindings?.kv_namespaces,
 					r2Buckets: bindings?.r2_buckets,
+					d1Databases: bindings?.d1_databases,
 					authenticatedAccountId: accountId,
 					kvRemote: experimentalLocalRemoteKv,
 					inspectorPort: runtimeInspectorPort,
@@ -438,7 +435,6 @@ function useLocalWorker({
 		localProtocol,
 		localUpstream,
 		inspect,
-		logPrefix,
 		onReady,
 		enablePagesAssetsServiceBinding,
 		experimentalLocal,
@@ -577,7 +573,6 @@ interface SetupMiniflareOptionsProps {
 	dataBlobBindings: Record<string, string>;
 	crons: Config["triggers"]["crons"];
 	upstream: string | undefined;
-	logPrefix: string | undefined;
 	workerDefinitions: WorkerRegistry | undefined;
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 }
@@ -609,7 +604,6 @@ export function setupMiniflareOptions({
 	dataBlobBindings,
 	crons,
 	upstream,
-	logPrefix,
 	workerDefinitions,
 	enablePagesAssetsServiceBinding,
 }: SetupMiniflareOptionsProps): {
@@ -722,7 +716,6 @@ export function setupMiniflareOptions({
 		crons,
 		upstream,
 		logLevel: logger.loggerLevel,
-		logOptions: logPrefix ? { prefix: logPrefix } : undefined,
 		enablePagesAssetsServiceBinding,
 	};
 	// The path to the Miniflare CLI assumes that this file is being run from
@@ -777,6 +770,7 @@ export interface SetupMiniflare3Options {
 	// we need actual namespace IDs to connect to.
 	kvNamespaces: CfKvNamespace[] | undefined;
 	r2Buckets: CfR2Bucket[] | undefined;
+	d1Databases: CfD1Database[] | undefined;
 
 	// Account ID to use for authenticated Cloudflare fetch. If true, prompt
 	// user for ID if multiple available.
@@ -788,18 +782,14 @@ export interface SetupMiniflare3Options {
 	inspectorPort: number;
 }
 
-export async function buildMiniflare3Logger(
-	logPrefix?: string
-): Promise<Miniflare3LogType> {
+export async function buildMiniflare3Logger(): Promise<Miniflare3LogType> {
 	const { Log, NoOpLog, LogLevel } = await getMiniflare3();
 
 	let level = logger.loggerLevel.toUpperCase() as Uppercase<LoggerLevel>;
 	if (level === "LOG") level = "INFO";
 	const logLevel = LogLevel[level];
 
-	return logLevel === LogLevel.NONE
-		? new NoOpLog()
-		: new Log(logLevel, { prefix: logPrefix });
+	return logLevel === LogLevel.NONE ? new NoOpLog() : new Log(logLevel);
 }
 
 export async function transformMf2OptionsToMf3Options({
@@ -810,6 +800,7 @@ export async function transformMf2OptionsToMf3Options({
 	enablePagesAssetsServiceBinding,
 	kvNamespaces,
 	r2Buckets,
+	d1Databases,
 	authenticatedAccountId,
 	kvRemote,
 	inspectorPort,
@@ -817,14 +808,14 @@ export async function transformMf2OptionsToMf3Options({
 	// Build authenticated Cloudflare API fetch function if required
 	let cloudflareFetch: CloudflareFetch | undefined;
 	if (kvRemote && authenticatedAccountId !== undefined) {
+		const { Response: Miniflare3Response } = await getMiniflare3();
 		const preferredAccountId =
 			authenticatedAccountId === true ? undefined : authenticatedAccountId;
 		const accountId = await requireAuth({ account_id: preferredAccountId });
-		cloudflareFetch = (resource, searchParams, init) => {
+		cloudflareFetch = async (resource, searchParams, init) => {
 			resource = `/accounts/${accountId}/${resource}`;
-			// Miniflare and Wrangler's `undici` versions may be slightly different,
-			// but their `RequestInit` types *should* be compatible
-			return performApiFetch(resource, init as RequestInit, searchParams);
+			const response = await performApiFetch(resource, init, searchParams);
+			return new Miniflare3Response(response.body, response);
 		};
 	}
 
@@ -836,6 +827,12 @@ export async function transformMf2OptionsToMf3Options({
 		),
 		r2Buckets: Object.fromEntries(
 			r2Buckets?.map(({ binding, bucket_name }) => [binding, bucket_name]) ?? []
+		),
+		d1Databases: Object.fromEntries(
+			d1Databases?.map(({ binding, database_id, preview_database_id }) => [
+				binding,
+				preview_database_id ?? database_id,
+			]) ?? []
 		),
 		inspectorPort,
 		verbose: true,
@@ -853,7 +850,7 @@ export async function transformMf2OptionsToMf3Options({
 		// relies on the fact that `require` is untyped.
 		//
 		// eslint-disable-next-line @typescript-eslint/no-var-requires
-		const generateASSETSBinding = require("../miniflare-cli/assets");
+		const generateASSETSBinding = require("../miniflare-cli/assets").default;
 		options.serviceBindings = {
 			...options.serviceBindings,
 			ASSETS: (await generateASSETSBinding({
@@ -919,5 +916,5 @@ export async function getMiniflare3(): Promise<
 	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 	typeof import("@miniflare/tre")
 > {
-	return (miniflare3Module ??= await npxImport("@miniflare/tre@3.0.0-next.8"));
+	return (miniflare3Module ??= await npxImport("@miniflare/tre@3.0.0-next.12"));
 }

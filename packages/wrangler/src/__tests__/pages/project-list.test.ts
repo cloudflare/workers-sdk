@@ -1,5 +1,6 @@
 import { rest } from "msw";
 import { endEventLoop } from "../helpers/end-event-loop";
+import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockAccountId, mockApiToken } from "./../helpers/mock-account-id";
 import { msw } from "./../helpers/msw";
 import { runInTempDir } from "./../helpers/run-in-tmp";
@@ -8,6 +9,7 @@ import type { Project } from "./../../pages/types";
 
 describe("project list", () => {
 	runInTempDir();
+	mockConsoleMethods();
 	mockAccountId();
 	mockApiToken();
 

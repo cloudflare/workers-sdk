@@ -550,7 +550,7 @@ export const getBindingNames = (value: unknown): string[] => {
 	} else if (isNamespaceList(value)) {
 		return value.map(({ binding }) => binding);
 	} else if (isRecord(value)) {
-		return Object.keys(value);
+		return Object.keys(value).filter((k) => value[k] !== undefined);
 	} else {
 		return [];
 	}

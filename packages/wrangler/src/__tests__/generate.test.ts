@@ -107,7 +107,7 @@ describe("generate", () => {
 	});
 
 	describe("cloning", () => {
-		it.skip("clones a cloudflare template with sparse checkouts", async () => {
+		it("clones a cloudflare template with sparse checkouts", async () => {
 			await expect(
 				runWrangler("generate my-worker worker-typescript")
 			).resolves.toBeUndefined();
@@ -116,10 +116,9 @@ describe("generate", () => {
 				".git": expect.any(Object),
 				".gitignore": expect.any(String),
 				"README.md": expect.stringContaining("Template: worker-typescript"),
-				"jest.config.json": expect.any(String),
 				"package.json": expect.stringContaining("@cloudflare/workers-types"),
-				src: expect.objectContaining({ "index.ts": expect.any(String) }),
-				test: expect.objectContaining({
+				src: expect.objectContaining({
+					"index.ts": expect.any(String),
 					"index.test.ts": expect.any(String),
 				}),
 				"tsconfig.json": expect.any(String),

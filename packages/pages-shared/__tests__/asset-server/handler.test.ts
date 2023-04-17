@@ -1,7 +1,4 @@
-import {
-	generateHandler,
-	getResponseFromMatch,
-} from "../../asset-server/handler";
+import { generateHandler } from "../../asset-server/handler";
 import { createMetadataObject } from "../../metadata-generator/createMetadataObject";
 import type { HandlerContext } from "../../asset-server/handler";
 import type { Metadata } from "../../asset-server/metadata";
@@ -17,18 +14,11 @@ describe("asset-server handler", () => {
 					from: `/${status}`,
 					to: "/home",
 				}))
-				.concat(
-					{
-						status: 302,
-						from: "/500",
-						to: "/home",
-					},
-					{
-						status: 200,
-						from: "/200",
-						to: "/proxied-file",
-					}
-				)
+				.concat({
+					status: 302,
+					from: "/500",
+					to: "/home",
+				})
 		);
 
 		const tests = statuses.map(async (status) => {
@@ -50,26 +40,95 @@ describe("asset-server handler", () => {
 
 		expect(response.status).toBe(302);
 		expect(response.headers.get("Location")).toBe("/home");
+	});
 
-		const { response: proxyResponse } = await getTestResponse({
-			request: "https://foo.com/200",
-			metadata,
-			findAssetEntryForPath: async (path: string) => {
-				if (path === "/proxied-file.html") {
-					return "proxied file";
-				}
-				return null;
-			},
-		});
+	test("Won't redirect to protocol-less double-slashed URLs", async () => {
+		const metadata = createMetadataObjectWithRedirects([
+			{ from: "/", to: "/home", status: 301 },
+			{ from: "/page.html", to: "/elsewhere", status: 301 },
+		]);
+		const findAssetEntryForPath = async (path: string) => {
+			if (path === "/index.html") {
+				return "index page";
+			}
 
-		expect(proxyResponse.status).toBe(200);
-		expect(proxyResponse.headers.get("Location")).toBeNull();
+			if (path === "/page.html") {
+				return "some page";
+			}
+
+			return null;
+		};
+
+		{
+			const { response } = await getTestResponse({
+				request: "/%2Fwww.example.com/index/",
+				metadata,
+				findAssetEntryForPath,
+			});
+			expect(response.status).toBe(308);
+			expect(response.headers.get("Location")).toEqual("/www.example.com/");
+		}
+		{
+			const { response } = await getTestResponse({
+				request: "/%5Cwww.example.com/index/",
+				metadata,
+				findAssetEntryForPath,
+			});
+			expect(response.status).toBe(308);
+			expect(response.headers.get("Location")).toEqual("/www.example.com/");
+		}
+		{
+			const { response } = await getTestResponse({
+				request: "/%2Fwww.example.com/%2F/index/",
+				metadata,
+				findAssetEntryForPath,
+			});
+			expect(response.status).toBe(308);
+			expect(response.headers.get("Location")).toEqual("/www.example.com///");
+		}
+		{
+			const { response } = await getTestResponse({
+				request: "/%5Cwww.example.com/%5C/index/",
+				metadata,
+				findAssetEntryForPath,
+			});
+			expect(response.status).toBe(308);
+			expect(response.headers.get("Location")).toEqual("/www.example.com/\\/");
+		}
+		{
+			const { response } = await getTestResponse({
+				request: "/%2fwww.example.com/%2f/index/",
+				metadata,
+				findAssetEntryForPath,
+			});
+			expect(response.status).toBe(308);
+			expect(response.headers.get("Location")).toEqual("/www.example.com///");
+		}
+		{
+			const { response } = await getTestResponse({
+				request: "/%5cwww.example.com/%5c/index/",
+				metadata,
+				findAssetEntryForPath,
+			});
+			expect(response.status).toBe(308);
+			expect(response.headers.get("Location")).toEqual("/www.example.com/\\/");
+		}
+		{
+			const { response } = await getTestResponse({
+				request: "/foo/index/",
+				metadata,
+				findAssetEntryForPath,
+			});
+			expect(response.status).toBe(308);
+			expect(response.headers.get("Location")).toEqual("/foo/");
+		}
 	});
 
 	test("Match exact pathnames, before any HTML redirection", async () => {
 		const metadata = createMetadataObjectWithRedirects([
 			{ from: "/", to: "/home", status: 301 },
 			{ from: "/page.html", to: "/elsewhere", status: 301 },
+			{ from: "/protocol-less-test", to: "/%2fwww.example.com/", status: 308 },
 		]);
 		const findAssetEntryForPath = async (path: string) => {
 			if (path === "/index.html") {
@@ -119,6 +178,16 @@ describe("asset-server handler", () => {
 			});
 			expect(response.status).toBe(301);
 			expect(response.headers.get("Location")).toEqual("/elsewhere");
+		}
+		{
+			// The redirect rule takes precedence to the 308s
+			const { response } = await getTestResponse({
+				request: "/protocol-less-test",
+				metadata,
+				findAssetEntryForPath,
+			});
+			expect(response.status).toBe(308);
+			expect(response.headers.get("Location")).toEqual("/%2fwww.example.com/");
 		}
 		{
 			// This serves the HTML even though the redirect rule is present
@@ -283,23 +352,23 @@ describe("asset-server handler", () => {
 		});
 	}
 
-	test("Returns a redirect without duplicating the hash component", async () => {
-		const { response, spies } = await getTestResponse({
-			request: "https://foo.com/bar",
-			metadata: createMetadataObjectWithRedirects([
-				{ from: "/bar", to: "https://foobar.com/##heading-7", status: 301 },
-			]),
-		});
+	// test("Returns a redirect without duplicating the hash component", async () => {
+	// 	const { response, spies } = await getTestResponse({
+	// 		request: "https://foo.com/bar",
+	// 		metadata: createMetadataObjectWithRedirects([
+	// 			{ from: "/bar", to: "https://foobar.com/##heading-7", status: 301 },
+	// 		]),
+	// 	});
 
-		expect(spies.fetchAsset).toBe(0);
-		expect(spies.findAssetEntryForPath).toBe(0);
-		expect(spies.getAssetKey).toBe(0);
-		expect(spies.negotiateContent).toBe(0);
-		expect(response.status).toBe(301);
-		expect(response.headers.get("Location")).toBe(
-			"https://foobar.com/##heading-7"
-		);
-	});
+	// 	expect(spies.fetchAsset).toBe(0);
+	// 	expect(spies.findAssetEntryForPath).toBe(0);
+	// 	expect(spies.getAssetKey).toBe(0);
+	// 	expect(spies.negotiateContent).toBe(0);
+	// 	expect(response.status).toBe(301);
+	// 	expect(response.headers.get("Location")).toBe(
+	// 		"https://foobar.com/##heading-7"
+	// 	);
+	// });
 
 	test("it should redirect uri-encoded paths", async () => {
 		const { response, spies } = await getTestResponse({
@@ -317,44 +386,44 @@ describe("asset-server handler", () => {
 		expect(response.headers.get("Location")).toBe("/home");
 	});
 
-	test("getResponseFromMatch - same origin paths specified as root-relative", () => {
-		const res = getResponseFromMatch(
-			{
-				to: "/bar",
-				status: 301,
-			},
-			new URL("https://example.com/foo")
-		);
+	// 	test("getResponseFromMatch - same origin paths specified as root-relative", () => {
+	// 		const res = getResponseFromMatch(
+	// 			{
+	// 				to: "/bar",
+	// 				status: 301,
+	// 			},
+	// 			new URL("https://example.com/foo")
+	// 		);
 
-		expect(res.status).toBe(301);
-		expect(res.headers.get("Location")).toBe("/bar");
-	});
+	// 		expect(res.status).toBe(301);
+	// 		expect(res.headers.get("Location")).toBe("/bar");
+	// 	});
 
-	test("getResponseFromMatch - same origin paths specified as full URLs", () => {
-		const res = getResponseFromMatch(
-			{
-				to: "https://example.com/bar",
-				status: 301,
-			},
-			new URL("https://example.com/foo")
-		);
+	// 	test("getResponseFromMatch - same origin paths specified as full URLs", () => {
+	// 		const res = getResponseFromMatch(
+	// 			{
+	// 				to: "https://example.com/bar",
+	// 				status: 301,
+	// 			},
+	// 			new URL("https://example.com/foo")
+	// 		);
 
-		expect(res.status).toBe(301);
-		expect(res.headers.get("Location")).toBe("/bar");
-	});
-});
+	// 		expect(res.status).toBe(301);
+	// 		expect(res.headers.get("Location")).toBe("/bar");
+	// 	});
+	// });
 
-test("getResponseFromMatch - different origins", () => {
-	const res = getResponseFromMatch(
-		{
-			to: "https://bar.com/bar",
-			status: 302,
-		},
-		new URL("https://example.com/foo")
-	);
+	// test("getResponseFromMatch - different origins", () => {
+	// 	const res = getResponseFromMatch(
+	// 		{
+	// 			to: "https://bar.com/bar",
+	// 			status: 302,
+	// 		},
+	// 		new URL("https://example.com/foo")
+	// 	);
 
-	expect(res.status).toBe(302);
-	expect(res.headers.get("Location")).toBe("https://bar.com/bar");
+	// 	expect(res.status).toBe(302);
+	// 	expect(res.headers.get("Location")).toBe("https://bar.com/bar");
 });
 
 interface HandlerSpies {
@@ -375,7 +444,21 @@ async function getTestResponse({
 	...options
 }: {
 	request: Request | string;
-} & Omit<Partial<HandlerContext<string>>, "request">): Promise<{
+} & Omit<
+	Partial<
+		HandlerContext<
+			string,
+			{
+				encoding: string | null;
+			},
+			{
+				body: ReadableStream | null;
+				contentType: string;
+			}
+		>
+	>,
+	"request"
+>): Promise<{
 	response: Response;
 	spies: HandlerSpies;
 }> {

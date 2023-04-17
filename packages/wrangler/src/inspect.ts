@@ -151,6 +151,18 @@ export default function useInspector(props: InspectorProps) {
 			);
 			ws.close(1013, "Too many clients; only one can be connected at a time");
 		} else {
+			// Since Wrangler proxies the inspector, reloading Chrome DevTools won't trigger debugger initialisation events (because it's connecting to an extant session).
+			// This sends a `Debugger.disable` message to the remote when a new WebSocket connection is initialised,
+			// with the assumption that the new connection will shortly send a `Debugger.enable` event and trigger re-initialisation.
+			// The key initialisation messages that are needed are the `Debugger.scriptParsed events`.
+			remoteWebSocket?.send(
+				JSON.stringify({
+					// This number is arbitrary, and is chosen to be high so as not to conflict with messages that DevTools might actually send.
+					// For completeness, these options don't work: 0, -1, or Number.MAX_SAFE_INTEGER
+					id: 100_000_000,
+					method: "Debugger.disable",
+				})
+			);
 			// As promised, save the created websocket in a state hook
 			setLocalWebSocket(ws);
 
@@ -733,7 +745,7 @@ function logConsoleMessage(evt: Protocol.Runtime.ConsoleAPICalledEvent): void {
  * Opens the chrome debugger
  */
 export const openInspector = async (inspectorPort: number) => {
-	const url = `https://built-devtools.pages.dev/js_app?experiments=true&v8only=true&ws=localhost:${inspectorPort}/ws`;
+	const url = `https://devtools.devprod.cloudflare.dev/js_app?theme=systemPreferred&ws=localhost:${inspectorPort}/ws`;
 	const errorMessage =
 		"Failed to open inspector.\nInspector depends on having a Chromium-based browser installed, maybe you need to install one?";
 
@@ -758,6 +770,9 @@ export const openInspector = async (inspectorPort: number) => {
 			},
 			{
 				name: open.apps.edge,
+			},
+			{
+				name: open.apps.firefox,
 			},
 		],
 	});

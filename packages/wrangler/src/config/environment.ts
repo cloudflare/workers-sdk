@@ -75,6 +75,12 @@ interface EnvironmentInheritable {
 	main: string | undefined;
 
 	/**
+	 * The directory in which module rules should be evaluated in a `--no-bundle` worker
+	 * This defaults to dirname(main) when left undefined
+	 */
+	base_dir: string | undefined;
+
+	/**
 	 * Whether we use <name>.<subdomain>.workers.dev to
 	 * test and deploy your worker.
 	 *
@@ -340,6 +346,24 @@ interface EnvironmentNonInheritable {
 	}[];
 
 	/**
+	 * These specify bindings to send email from inside your Worker.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default `[]`
+	 * @nonInheritable
+	 */
+	send_email: {
+		/** The binding name used to refer to the this binding */
+		name: string;
+		/** If this binding should be restricted to a specific verified address */
+		destination_address?: string;
+		/** If this binding should be restricted to a set of verified addresses */
+		allowed_destination_addresses?: string[];
+	}[];
+
+	/**
 	 * Specifies Queues that are bound to this Worker environment.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
@@ -374,6 +398,9 @@ interface EnvironmentNonInheritable {
 
 			/** The queue to send messages that failed to be consumed. */
 			dead_letter_queue?: string;
+
+			/** The maximum number of concurrent consumer Worker invocations. Leaving this unset will allow your consumer to scale to the maximum concurrency needed to keep up with the message backlog. */
+			max_concurrency?: number | null;
 		}[];
 	};
 
@@ -463,7 +490,6 @@ interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
-	 * @default `{ bindings: [] }`
 	 * @nonInheritable
 	 */
 	unsafe: {
@@ -471,14 +497,20 @@ interface EnvironmentNonInheritable {
 		 * A set of bindings that should be put into a Worker's upload metadata without changes. These
 		 * can be used to implement bindings for features that haven't released and aren't supported
 		 * directly by wrangler or miniflare.
-		 *
-		 * @default []
 		 */
-		bindings: {
+		bindings?: {
 			name: string;
 			type: string;
 			[key: string]: unknown;
 		}[];
+
+		/**
+		 * Arbitrary key/value pairs that will be included in the uploaded metadata.  Values specified
+		 * here will always be applied to metadata last, so can add new or override existing fields.
+		 */
+		metadata?: {
+			[key: string]: string;
+		};
 	};
 
 	mtls_certificates: {

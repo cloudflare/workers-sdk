@@ -9,7 +9,12 @@ import { isBuildFailure } from "./bundle";
 import { loadDotEnv, readConfig } from "./config";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
-import { deployments } from "./deployments";
+import {
+	deployments,
+	commonDeploymentCMDSetup,
+	rollbackDeployment,
+	viewDeployment,
+} from "./deployments";
 import {
 	buildHandler,
 	buildOptions,
@@ -41,13 +46,7 @@ import { secret, secretBulkHandler, secretBulkOptions } from "./secret";
 import { tailOptions, tailHandler } from "./tail";
 import { generateTypes } from "./type-generation";
 import { updateCheck } from "./update-check";
-import {
-	listScopes,
-	login,
-	logout,
-	requireAuth,
-	validateScopeKeys,
-} from "./user";
+import { listScopes, login, logout, validateScopeKeys } from "./user";
 import { whoami } from "./whoami";
 
 import type { Config } from "./config";
@@ -567,7 +566,7 @@ export function createCLIParser(argv: string[]) {
 				analytics_engine_datasets: config.analytics_engine_datasets,
 				dispatch_namespaces: config.dispatch_namespaces,
 				logfwdr: config.logfwdr,
-				unsafe: { bindings: config.unsafe?.bindings },
+				unsafe: config.unsafe,
 				rules: config.rules,
 				queues: config.queues,
 			};
@@ -581,27 +580,81 @@ export function createCLIParser(argv: string[]) {
 		"🚧`wrangler deployments` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose";
 	wrangler.command(
 		"deployments",
-		"🚢 Displays the 10 most recent deployments for a worker",
+		"🚢 List and view details for deployments",
 		(yargs) =>
 			yargs
 				.option("name", {
 					describe: "The name of your worker",
 					type: "string",
 				})
-				.epilogue(deploymentsWarning),
-		async (deploymentsYargs) => {
-			await printWranglerBanner();
-			const config = readConfig(deploymentsYargs.config, deploymentsYargs);
-			const accountId = await requireAuth(config);
-			const scriptName = getScriptName(
-				{ name: deploymentsYargs.name, env: undefined },
-				config
-			);
+				.command(
+					"list",
+					"🚢 Displays the 10 most recent deployments for a worker",
+					async (listYargs) => listYargs,
+					async (listYargs) => {
+						const { accountId, scriptName, config } =
+							await commonDeploymentCMDSetup(listYargs, deploymentsWarning);
+						await deployments(accountId, scriptName, config);
+					}
+				)
+				.command(
+					"view [deployment-id]",
+					"🔍 View a deployment",
+					async (viewYargs) =>
+						viewYargs.positional("deployment-id", {
+							describe: "The ID of the deployment you want to inspect",
+							type: "string",
+							demandOption: false,
+						}),
+					async (viewYargs) => {
+						const { accountId, scriptName, config } =
+							await commonDeploymentCMDSetup(viewYargs, deploymentsWarning);
 
-			logger.log(`${deploymentsWarning}\n`);
-			await deployments(accountId, scriptName, config);
-		}
+						await viewDeployment(
+							accountId,
+							scriptName,
+							config,
+							viewYargs.deploymentId
+						);
+					}
+				)
+				.command(subHelp)
+				.epilogue(deploymentsWarning)
 	);
+	const rollbackWarning =
+		"🚧`wrangler rollback` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose";
+	wrangler
+		.command(
+			"rollback [deployment-id]",
+			"🔙 Rollback a deployment",
+			(rollbackYargs) =>
+				rollbackYargs
+					.positional("deployment-id", {
+						describe: "The ID of the deployment to rollback to",
+						type: "string",
+						demandOption: false,
+					})
+					.option("message", {
+						alias: "m",
+						describe:
+							"Skip confirmation and message prompts, uses provided argument as message",
+						type: "string",
+						default: undefined,
+					}),
+			async (rollbackYargs) => {
+				const { accountId, scriptName, config } =
+					await commonDeploymentCMDSetup(rollbackYargs, rollbackWarning);
+
+				await rollbackDeployment(
+					accountId,
+					scriptName,
+					config,
+					rollbackYargs.deploymentId,
+					rollbackYargs.message
+				);
+			}
+		)
+		.epilogue(rollbackWarning);
 
 	// This set to false to allow overwrite of default behaviour
 	wrangler.version(false);

@@ -1,21 +1,24 @@
 import { access, lstat } from "node:fs/promises";
-import { dirname, relative, resolve } from "node:path";
+import { relative, resolve } from "node:path";
 import { bundleWorker } from "../../bundle";
 import { getBasePath } from "../../paths";
 import { D1_BETA_PREFIX } from "../../worker";
 import { buildNotifierPlugin } from "./buildWorker";
 import type { Options as WorkerOptions } from "./buildWorker";
 
-type Options = Omit<WorkerOptions, "fallbackService" | "buildOutputDirectory">;
+type Options = Omit<
+	WorkerOptions,
+	"outfile" | "fallbackService" | "buildOutputDirectory" | "nodejsCompat"
+> & { outdir: string };
 
 export function buildPlugin({
 	routesModule,
-	outfile = "bundle.js",
+	outdir,
 	minify = false,
 	sourcemap = false,
 	watch = false,
 	onEnd = () => {},
-	nodeCompat,
+	legacyNodeCompat,
 	functionsDirectory,
 	local,
 	betaD1Shims,
@@ -25,14 +28,20 @@ export function buildPlugin({
 			file: resolve(getBasePath(), "templates/pages-template-plugin.ts"),
 			directory: functionsDirectory,
 			format: "modules",
+			moduleRoot: functionsDirectory,
 		},
-		resolve(outfile),
+		resolve(outdir),
 		{
 			inject: [routesModule],
+			entryName: "index",
 			minify,
 			sourcemap,
 			watch,
-			nodeCompat,
+			legacyNodeCompat,
+			// We don't currently have a mechanism for Plugins 'requiring' a specific compat date/flag,
+			// but if someone wants to publish a Plugin which does require this new `nodejs_compat` flag
+			// and they document that on their README.md, we should let them.
+			nodejsCompat: true,
 			define: {},
 			betaD1Shims: (betaD1Shims || []).map(
 				(binding) => `${D1_BETA_PREFIX}${binding}`
@@ -43,43 +52,57 @@ export function buildPlugin({
 				{
 					name: "Assets",
 					setup(pluginBuild) {
-						if (pluginBuild.initialOptions.outfile) {
-							const outdir = dirname(pluginBuild.initialOptions.outfile);
+						pluginBuild.onResolve({ filter: /^assets:/ }, async (args) => {
+							const directory = resolve(
+								args.resolveDir,
+								args.path.slice("assets:".length)
+							);
 
-							pluginBuild.onResolve({ filter: /^assets:/ }, async (args) => {
-								const directory = resolve(
-									args.resolveDir,
-									args.path.slice("assets:".length)
-								);
+							const exists = await access(directory)
+								.then(() => true)
+								.catch(() => false);
 
-								const exists = await access(directory)
-									.then(() => true)
-									.catch(() => false);
+							const isDirectory =
+								exists && (await lstat(directory)).isDirectory();
 
-								const isDirectory =
-									exists && (await lstat(directory)).isDirectory();
+							if (!isDirectory) {
+								return {
+									errors: [
+										{
+											text: `'${directory}' does not exist or is not a directory.`,
+										},
+									],
+								};
+							}
 
-								if (!isDirectory) {
-									return {
-										errors: [
-											{
-												text: `'${directory}' does not exist or is not a directory.`,
-											},
-										],
-									};
-								}
+							const path = `assets:./${relative(outdir, directory)}`;
 
-								const path = `assets:./${relative(outdir, directory)}`;
-
-								return { path, external: true, namespace: "assets" };
-							});
-						}
+							return { path, external: true, namespace: "assets" };
+						});
+					},
+				},
+				// TODO: Replace this with a proper outdir solution for Plugins
+				// But for now, let's just mark all wasm/bin files as external
+				{
+					name: "Mark externals",
+					setup(pluginBuild) {
+						pluginBuild.onResolve(
+							{ filter: /.*\.(wasm|bin)$/ },
+							async (args) => {
+								return {
+									external: true,
+									path: `./${relative(
+										outdir,
+										resolve(args.resolveDir, args.path)
+									)}`,
+								};
+							}
+						);
 					},
 				},
 			],
-			isOutfile: true,
 			serveAssetsFromWorker: false,
-			disableModuleCollection: true,
+			disableModuleCollection: false,
 			rules: [],
 			checkFetch: local,
 			targetConsumer: local ? "dev" : "publish",

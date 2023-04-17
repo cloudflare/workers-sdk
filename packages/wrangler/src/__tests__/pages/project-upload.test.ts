@@ -1,15 +1,15 @@
-/* eslint-disable no-shadow */
+// /* eslint-disable no-shadow */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { rest } from "msw";
 import { endEventLoop } from "../helpers/end-event-loop";
+import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
+import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockGetUploadTokenRequest } from "../helpers/mock-get-pages-upload-token";
 import { mockSetTimeout } from "../helpers/mock-set-timeout";
-import { mockAccountId, mockApiToken } from "./../helpers/mock-account-id";
-import { mockConsoleMethods } from "./../helpers/mock-console";
-import { msw } from "./../helpers/msw";
-import { runInTempDir } from "./../helpers/run-in-tmp";
-import { runWrangler } from "./../helpers/run-wrangler";
-import type { UploadPayloadFile } from "./../../pages/types";
+import { msw } from "../helpers/msw";
+import { runInTempDir } from "../helpers/run-in-tmp";
+import { runWrangler } from "../helpers/run-wrangler";
+import type { UploadPayloadFile } from "../../pages/types";
 import type { RestRequest } from "msw";
 
 describe("project upload", () => {
@@ -92,11 +92,11 @@ describe("project upload", () => {
 
 		await runWrangler("pages project upload .");
 
-		expect(std.out).toMatchInlineSnapshot(`
-            "✨ Success! Uploaded 1 files (TIMINGS)
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Success! Uploaded 1 files (TIMINGS)
 
-            ✨ Upload complete!"
-        `);
+		✨ Upload complete!"
+	`);
 	});
 
 	it("should avoid uploading some files", async () => {
@@ -172,7 +172,7 @@ describe("project upload", () => {
 
 		const requestMap = resolvedRequests.reduce<{
 			[key: string]: UploadPayloadFile;
-		}>((requestMap, req) => Object.assign(requestMap, { [req.key]: req }), {});
+		}>((map, req) => Object.assign(map, { [req.key]: req }), {});
 
 		for (const req of requests) {
 			expect(req.headers.get("Authorization")).toBe(
@@ -209,11 +209,11 @@ describe("project upload", () => {
 			value: "ZnVuYw==",
 		});
 
-		expect(std.out).toMatchInlineSnapshot(`
-            "✨ Success! Uploaded 3 files (TIMINGS)
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Success! Uploaded 3 files (TIMINGS)
 
-            ✨ Upload complete!"
-        `);
+		✨ Upload complete!"
+	`);
 	});
 
 	it("should retry uploads", async () => {
@@ -296,11 +296,11 @@ describe("project upload", () => {
 			]);
 		}
 
-		expect(std.out).toMatchInlineSnapshot(`
-            "✨ Success! Uploaded 1 files (TIMINGS)
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Success! Uploaded 1 files (TIMINGS)
 
-            ✨ Upload complete!"
-        `);
+		✨ Upload complete!"
+	`);
 	});
 
 	it("should try to use multiple buckets (up to the max concurrency)", async () => {
@@ -402,11 +402,11 @@ describe("project upload", () => {
 			])
 		);
 
-		expect(std.out).toMatchInlineSnapshot(`
-            "✨ Success! Uploaded 4 files (TIMINGS)
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Success! Uploaded 4 files (TIMINGS)
 
-            ✨ Upload complete!"
-        `);
+		✨ Upload complete!"
+	`);
 	});
 
 	it("should not error when directory names contain periods and houses a extensionless file", async () => {
@@ -479,3 +479,22 @@ describe("project upload", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 });
+
+/**
+ * When uploading assets we print out progress messages that look like:
+ *
+ * Uploading... (1/4)
+ * Uploading... (2/4)
+ * Uploading... (4/4)
+ *
+ * Note that we don't always get a progress message for every item uploaded.
+ * These upload counts are not deterministic and can change from test run to test run.
+ *
+ * Also if you run the tests in --runInBand mode then we never see any of
+ * these progress messages in the tests!!
+ *
+ * So this helper removes these message from the snapshots to keep them consistent.
+ */
+export function normalizeProgressSteps(str: string): string {
+	return str.replace(/Uploading... \(\d\/\d\)\r?\n?/g, "");
+}

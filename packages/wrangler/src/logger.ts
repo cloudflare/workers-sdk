@@ -26,15 +26,30 @@ const LOGGER_LEVEL_FORMAT_TYPE_MAP = {
 
 const getLogLevelFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_LOG",
-	defaultValue: () => "log",
 });
+
+function getLoggerLevel(): LoggerLevel {
+	const fromEnv = getLogLevelFromEnv()?.toLowerCase();
+	if (fromEnv !== undefined) {
+		if (fromEnv in LOGGER_LEVELS) return fromEnv as LoggerLevel;
+		const expected = Object.keys(LOGGER_LEVELS)
+			.map((level) => `"${level}"`)
+			.join(" | ");
+		console.warn(
+			`Unrecognised WRANGLER_LOG value ${JSON.stringify(
+				fromEnv
+			)}, expected ${expected}, defaulting to "log"...`
+		);
+	}
+	return "log";
+}
 
 export type TableRow<Keys extends string> = Record<Keys, string>;
 
-class Logger {
+export class Logger {
 	constructor() {}
 
-	loggerLevel: LoggerLevel = (getLogLevelFromEnv() as LoggerLevel) ?? "log";
+	loggerLevel = getLoggerLevel();
 	columns = process.stdout.columns;
 
 	debug = (...args: unknown[]) => this.doLog("debug", args);

@@ -1,8 +1,10 @@
 import { access, cp, lstat, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { build as esBuild } from "esbuild";
 import { nanoid } from "nanoid";
 import { bundleWorker } from "../../bundle";
+import { FatalError } from "../../errors";
 import { logger } from "../../logger";
 import { getBasePath } from "../../paths";
 import { D1_BETA_PREFIX } from "../../worker";
@@ -10,52 +12,53 @@ import type { Plugin } from "esbuild";
 
 export type Options = {
 	routesModule: string;
-	outfile: string;
+	outfile?: string;
+	outdir?: string;
 	minify?: boolean;
 	sourcemap?: boolean;
 	fallbackService?: string;
 	watch?: boolean;
 	onEnd?: () => void;
 	buildOutputDirectory?: string;
-	nodeCompat?: boolean;
+	legacyNodeCompat?: boolean;
+	nodejsCompat?: boolean;
 	functionsDirectory: string;
 	local: boolean;
 	betaD1Shims?: string[];
-	experimentalWorkerBundle?: boolean;
 };
 
 export function buildWorker({
 	routesModule,
-	outfile = "bundle.js",
+	outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`),
+	outdir,
 	minify = false,
 	sourcemap = false,
 	fallbackService = "ASSETS",
 	watch = false,
 	onEnd = () => {},
 	buildOutputDirectory,
-	nodeCompat,
+	legacyNodeCompat,
+	nodejsCompat,
 	functionsDirectory,
 	local,
 	betaD1Shims,
-	experimentalWorkerBundle = false,
 }: Options) {
 	return bundleWorker(
 		{
 			file: resolve(getBasePath(), "templates/pages-template-worker.ts"),
 			directory: functionsDirectory,
 			format: "modules",
+			moduleRoot: functionsDirectory,
 		},
-		resolve(outfile),
+		outdir ? resolve(outdir) : resolve(outfile),
 		{
 			inject: [routesModule],
+			...(outdir ? { entryName: "index" } : {}),
 			minify,
 			sourcemap,
 			watch,
-			nodeCompat,
-			loader: {
-				".txt": "text",
-				".html": "text",
-			},
+			legacyNodeCompat,
+			nodejsCompat,
 			define: {
 				__FALLBACK_SERVICE__: JSON.stringify(fallbackService),
 			},
@@ -140,9 +143,9 @@ export function buildWorker({
 					},
 				},
 			],
-			isOutfile: true,
+			isOutfile: !outdir,
 			serveAssetsFromWorker: false,
-			disableModuleCollection: experimentalWorkerBundle ? false : true,
+			disableModuleCollection: false,
 			rules: [],
 			checkFetch: local,
 			targetConsumer: local ? "dev" : "publish",
@@ -154,7 +157,8 @@ export function buildWorker({
 
 export type RawOptions = {
 	workerScriptPath: string;
-	outfile: string;
+	outfile?: string;
+	outdir?: string;
 	directory: string;
 	minify?: boolean;
 	sourcemap?: boolean;
@@ -162,10 +166,10 @@ export type RawOptions = {
 	plugins?: Plugin[];
 	onEnd?: () => void;
 	buildOutputDirectory?: string;
-	nodeCompat?: boolean;
+	legacyNodeCompat?: boolean;
+	nodejsCompat?: boolean;
 	local: boolean;
 	betaD1Shims?: string[];
-	experimentalWorkerBundle?: boolean;
 };
 
 /**
@@ -177,43 +181,42 @@ export type RawOptions = {
  */
 export function buildRawWorker({
 	workerScriptPath,
-	outfile,
+	outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`),
+	outdir,
 	directory,
 	minify = false,
 	sourcemap = false,
 	watch = false,
 	plugins = [],
 	onEnd = () => {},
-	nodeCompat,
+	legacyNodeCompat,
+	nodejsCompat,
 	local,
 	betaD1Shims,
-	experimentalWorkerBundle = false,
 }: RawOptions) {
 	return bundleWorker(
 		{
 			file: workerScriptPath,
 			directory: resolve(directory),
 			format: "modules",
+			moduleRoot: resolve(directory),
 		},
-		resolve(outfile),
+		outdir ? resolve(outdir) : resolve(outfile),
 		{
 			minify,
 			sourcemap,
 			watch,
-			nodeCompat,
-			loader: {
-				".txt": "text",
-				".html": "text",
-			},
+			legacyNodeCompat,
+			nodejsCompat,
 			define: {},
 			betaD1Shims: (betaD1Shims || []).map(
 				(binding) => `${D1_BETA_PREFIX}${binding}`
 			),
 			doBindings: [], // Pages functions don't support internal Durable Objects
 			plugins: [...plugins, buildNotifierPlugin(onEnd)],
-			isOutfile: true,
+			isOutfile: !outdir,
 			serveAssetsFromWorker: false,
-			disableModuleCollection: experimentalWorkerBundle ? false : true,
+			disableModuleCollection: false,
 			rules: [],
 			checkFetch: local,
 			targetConsumer: local ? "dev" : "publish",
@@ -277,12 +280,12 @@ const blockWorkerJsImports: Plugin = {
 				};
 			}
 			// Otherwise, block any imports that the file is requesting
-			logger.error(
+			throw new FatalError(
 				"_worker.js is not being bundled by Wrangler but it is importing from another file.\n" +
 					"This will throw an error if deployed.\n" +
-					"You should bundle the Worker in a pre-build step, remove the import if it is unused, or ask Wrangler to bundle it by setting `--bundle`."
+					"You should bundle the Worker in a pre-build step, remove the import if it is unused, or ask Wrangler to bundle it by setting `--bundle`.",
+				1
 			);
-			process.exit(1);
 		});
 	},
 };

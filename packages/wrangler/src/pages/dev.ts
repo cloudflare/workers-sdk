@@ -86,15 +86,8 @@ export function Options(yargs: CommonYargsArgv) {
 			},
 			"no-bundle": {
 				type: "boolean",
-				default: true,
-				description: "Whether to run bundling on `_worker.js`",
-			},
-			"experimental-worker-bundle": {
-				type: "boolean",
 				default: false,
-				hidden: true,
-				description:
-					"Whether to process non-JS module imports or not, such as wasm/text/binary, when we run bundling on `functions` or `_worker.js`",
+				description: "Whether to run bundling on `_worker.js`",
 			},
 			binding: {
 				type: "array",
@@ -147,7 +140,7 @@ export function Options(yargs: CommonYargsArgv) {
 				requiresArg: true,
 			},
 			"node-compat": {
-				describe: "Enable node.js compatibility",
+				describe: "Enable Node.js compatibility",
 				default: false,
 				type: "boolean",
 				hidden: true,
@@ -181,7 +174,6 @@ export const Handler = async ({
 	proxy: requestedProxyPort,
 	bundle,
 	noBundle,
-	experimentalWorkerBundle,
 	scriptPath: singleWorkerScriptPath,
 	binding: bindings = [],
 	kv: kvs = [],
@@ -193,7 +185,7 @@ export const Handler = async ({
 	experimentalEnableLocalPersistence,
 	persist,
 	persistTo,
-	nodeCompat,
+	nodeCompat: legacyNodeCompat,
 	experimentalLocal,
 	config: config,
 	_: [_pages, _dev, ...remaining],
@@ -270,6 +262,8 @@ export const Handler = async ({
 
 	let scriptPath = "";
 
+	const nodejsCompat = compatibilityFlags?.includes("nodejs_compat");
+
 	if (usingWorkerScript) {
 		scriptPath = workerScriptPath;
 		let runBuild = async () => {
@@ -278,7 +272,7 @@ export const Handler = async ({
 
 		// TODO: Here lies a known bug. If you specify both `--bundle` and `--no-bundle`, this behavior is undefined and you will get unexpected results.
 		// There is no sane way to get the true value out of yargs, so here we are.
-		const enableBundling = (bundle ?? !noBundle) || experimentalWorkerBundle;
+		const enableBundling = bundle ?? !noBundle;
 		if (enableBundling) {
 			// We want to actually run the `_worker.js` script through the bundler
 			// So update the final path to the script that will be uploaded and
@@ -290,11 +284,11 @@ export const Handler = async ({
 						workerScriptPath,
 						outfile: scriptPath,
 						directory: directory ?? ".",
+						nodejsCompat,
 						local: true,
 						sourcemap: true,
 						watch: true,
 						onEnd: () => scriptReadyResolve(),
-						experimentalWorkerBundle,
 					});
 				} catch (e: unknown) {
 					logger.warn("Failed to bundle _worker.js.", e);
@@ -303,7 +297,7 @@ export const Handler = async ({
 		}
 
 		await runBuild();
-		watch([scriptPath], {
+		watch([workerScriptPath], {
 			persistent: true,
 			ignoreInitial: true,
 		}).on("all", async () => {
@@ -313,9 +307,16 @@ export const Handler = async ({
 		// Try to use Functions
 		scriptPath = join(tmpdir(), `./functionsWorker-${Math.random()}.mjs`);
 
-		if (nodeCompat) {
+		if (legacyNodeCompat) {
 			console.warn(
-				"Enabling node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
+				"Enabling Node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
+			);
+		}
+
+		if (legacyNodeCompat && nodejsCompat) {
+			throw new FatalError(
+				"The `nodejs_compat` compatibility flag cannot be used in conjunction with the legacy `--node-compat` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the `--node-compat` argument from your CLI command or `node_compat = true` from your config file.",
+				1
 			);
 		}
 
@@ -330,9 +331,9 @@ export const Handler = async ({
 					watch: true,
 					onEnd,
 					buildOutputDirectory: directory,
-					nodeCompat,
+					legacyNodeCompat,
+					nodejsCompat,
 					local: true,
-					experimentalWorkerBundle,
 				});
 				await metrics.sendMetricsEvent("build pages functions");
 			};
@@ -503,7 +504,7 @@ export const Handler = async ({
 		localProtocol,
 		compatibilityDate,
 		compatibilityFlags,
-		nodeCompat,
+		nodeCompat: legacyNodeCompat,
 		vars: Object.fromEntries(
 			bindings
 				.map((binding) => binding.toString().split("="))
@@ -540,8 +541,7 @@ export const Handler = async ({
 		persist,
 		persistTo,
 		inspect: undefined,
-		logPrefix: "pages",
-		logLevel: logLevel ?? "warn",
+		logLevel,
 		experimental: {
 			d1Databases: d1s.map((binding) => ({
 				binding: binding.toString(),

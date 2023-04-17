@@ -138,7 +138,8 @@ export type DevProps = {
 	compatibilityFlags: string[] | undefined;
 	usageModel: "bundled" | "unbound" | undefined;
 	minify: boolean | undefined;
-	nodeCompat: boolean | undefined;
+	legacyNodeCompat: boolean | undefined;
+	nodejsCompat: boolean | undefined;
 	build: Config["build"];
 	env: string | undefined;
 	legacyEnv: boolean;
@@ -146,7 +147,6 @@ export type DevProps = {
 	host: string | undefined;
 	routes: Route[] | undefined;
 	inspect: boolean;
-	logPrefix?: string;
 	onReady: ((ip: string, port: number) => void) | undefined;
 	showInteractiveDevSession: boolean | undefined;
 	forceLocal: boolean | undefined;
@@ -278,7 +278,8 @@ function DevSession(props: DevSessionProps) {
 		),
 		tsconfig: props.tsconfig,
 		minify: props.minify,
-		nodeCompat: props.nodeCompat,
+		legacyNodeCompat: props.legacyNodeCompat,
+		nodejsCompat: props.nodejsCompat,
 		betaD1Shims,
 		define: props.define,
 		noBundle: props.noBundle,
@@ -341,7 +342,6 @@ function DevSession(props: DevSessionProps) {
 			queueConsumers={props.queueConsumers}
 			localProtocol={props.localProtocol}
 			localUpstream={props.localUpstream}
-			logPrefix={props.logPrefix}
 			inspect={props.inspect}
 			onReady={announceAndOnReady}
 			enablePagesAssetsServiceBinding={props.enablePagesAssetsServiceBinding}

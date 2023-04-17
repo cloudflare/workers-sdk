@@ -1,0 +1,14 @@
+{
+	"name": "no-bundle-import",
+	"version": "0.0.1",
+	"private": true,
+	"scripts": {
+		"deploy": "wrangler publish",
+		"start": "wrangler dev",
+		"test": "vitest"
+	},
+	"devDependencies": {
+		"get-port": "^6.1.2",
+		"wrangler": "^2.15.0"
+	}
+}

@@ -14,6 +14,7 @@ import {
 import { runCustomBuild } from "../entry";
 import { logger } from "../logger";
 import { waitForPortToBeAvailable } from "../proxy";
+import traverseModuleGraph from "../traverse-module-graph";
 import {
 	setupBindings,
 	getMiniflare3,
@@ -98,7 +99,8 @@ export async function startDevServer(
 			),
 			tsconfig: props.tsconfig,
 			minify: props.minify,
-			nodeCompat: props.nodeCompat,
+			legacyNodeCompat: props.legacyNodeCompat,
+			nodejsCompat: props.nodejsCompat,
 			define: props.define,
 			noBundle: props.noBundle,
 			assets: props.assetsConfig,
@@ -131,7 +133,6 @@ export async function startDevServer(
 				queueConsumers: props.queueConsumers,
 				localProtocol: props.localProtocol,
 				localUpstream: props.localUpstream,
-				logPrefix: props.logPrefix,
 				inspect: props.inspect,
 				onReady: props.onReady,
 				enablePagesAssetsServiceBinding: props.enablePagesAssetsServiceBinding,
@@ -210,7 +211,8 @@ async function runEsbuild({
 	serveAssetsFromWorker,
 	tsconfig,
 	minify,
-	nodeCompat,
+	legacyNodeCompat,
+	nodejsCompat,
 	define,
 	noBundle,
 	workerDefinitions,
@@ -233,7 +235,8 @@ async function runEsbuild({
 	serveAssetsFromWorker: boolean;
 	tsconfig: string | undefined;
 	minify: boolean | undefined;
-	nodeCompat: boolean | undefined;
+	legacyNodeCompat: boolean | undefined;
+	nodejsCompat: boolean | undefined;
 	noBundle: boolean;
 	workerDefinitions: WorkerRegistry;
 	firstPartyWorkerDevFacade: boolean | undefined;
@@ -251,14 +254,7 @@ async function runEsbuild({
 		dependencies,
 		sourceMapPath,
 	}: Awaited<ReturnType<typeof bundleWorker>> = noBundle
-		? {
-				modules: [],
-				dependencies: {},
-				resolvedEntryPointPath: entry.file,
-				bundleType: entry.format === "modules" ? "esm" : "commonjs",
-				stop: undefined,
-				sourceMapPath: undefined,
-		  }
+		? await traverseModuleGraph(entry, rules)
 		: await bundleWorker(entry, destination, {
 				serveAssetsFromWorker,
 				jsxFactory,
@@ -266,7 +262,8 @@ async function runEsbuild({
 				rules,
 				tsconfig,
 				minify,
-				nodeCompat,
+				legacyNodeCompat,
+				nodejsCompat,
 				define,
 				checkFetch: true,
 				assets: assets && {
@@ -318,7 +315,6 @@ export async function startLocalServer({
 	localUpstream,
 	inspect,
 	onReady,
-	logPrefix,
 	enablePagesAssetsServiceBinding,
 	experimentalLocal,
 	accountId,
@@ -398,13 +394,12 @@ export async function startLocalServer({
 			dataBlobBindings,
 			crons,
 			upstream,
-			logPrefix,
 			workerDefinitions,
 			enablePagesAssetsServiceBinding,
 		});
 
 		if (experimentalLocal) {
-			const log = await buildMiniflare3Logger(logPrefix);
+			const log = await buildMiniflare3Logger();
 			const mf3Options = await transformMf2OptionsToMf3Options({
 				miniflare2Options: options,
 				format,
@@ -412,6 +407,7 @@ export async function startLocalServer({
 				log,
 				kvNamespaces: bindings?.kv_namespaces,
 				r2Buckets: bindings?.r2_buckets,
+				d1Databases: bindings?.d1_databases,
 				authenticatedAccountId: accountId,
 				kvRemote: experimentalLocalRemoteKv,
 				inspectorPort,

@@ -2,7 +2,8 @@ import { setupServer } from "msw/node";
 import { default as mswAccessHandlers } from "./handlers/access";
 import {
 	mswSuccessDeployments,
-	mswSuccessLastDeployment,
+	mswSuccessDeploymentScriptMetadata,
+	mswSuccessDeploymentDetails,
 } from "./handlers/deployments";
 import { mswSuccessNamespacesHandlers } from "./handlers/namespaces";
 import { mswSuccessOauthHandlers } from "./handlers/oauth";
@@ -45,6 +46,7 @@ export {
 	mswSucessScriptHandlers,
 	mswZoneHandlers,
 	mswSuccessDeployments,
+	mswSuccessDeploymentDetails,
 	mswAccessHandlers,
-	mswSuccessLastDeployment,
+	mswSuccessDeploymentScriptMetadata,
 };

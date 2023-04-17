@@ -1,15 +1,15 @@
 {
 	"name": "@cloudflare/prerelease-registry",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"private": true,
-	"main": "_worker.js",
+	"main": "dist/index.js",
 	"scripts": {
-		"build": "npx wrangler pages functions build --fallback-service='' ./functions/routes",
+		"build": "npx wrangler pages functions build --fallback-service='' ./functions/routes --outdir=dist",
 		"check:type": "tsc",
 		"prepublish": "npm run build",
-		"publish": "npx wrangler publish _worker.js",
+		"publish": "npx wrangler publish dist/index.js",
 		"prestart": "npm run build",
-		"start": "npx wrangler dev _worker.js"
+		"start": "npx wrangler dev dist/index.js"
 	},
 	"dependencies": {
 		"jszip": "^3.7.1"
