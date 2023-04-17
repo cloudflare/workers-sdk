@@ -695,6 +695,7 @@ export function setupMiniflareOptions({
 					durableObjectsPersist: true,
 					kvPersist: true,
 					r2Persist: true,
+					d1Persist: true,
 			  }),
 
 		liveReload,
@@ -792,6 +793,18 @@ export async function buildMiniflare3Logger(): Promise<Miniflare3LogType> {
 	return logLevel === LogLevel.NONE ? new NoOpLog() : new Log(logLevel);
 }
 
+function transformMf2PersistToMf3(persist?: boolean | string) {
+	// Wrangler reuses Miniflare 3 instances between reloads but not Miniflare 2
+	// ones. We previously set `*Persist` options to `true` by default to
+	// persist data between reloads in the temporary script directory (Miniflare
+	// 2's working directory). However, with Miniflare 3, the working directory
+	// is the current working directory, so we want to set these to `false`
+	// and use Miniflare 3's native in-memory persistence.
+	//
+	// See https://github.com/cloudflare/workers-sdk/issues/2995.
+	return persist === true ? false : persist;
+}
+
 export async function transformMf2OptionsToMf3Options({
 	miniflare2Options,
 	format,
@@ -819,8 +832,9 @@ export async function transformMf2OptionsToMf3Options({
 		};
 	}
 
-	const options: Miniflare3Options = {
+	let options: Partial<Miniflare3Options> = {
 		...miniflare2Options,
+
 		// Miniflare 3 distinguishes between binding name and namespace/bucket IDs.
 		kvNamespaces: Object.fromEntries(
 			kvNamespaces?.map(({ binding, id }) => [binding, id]) ?? []
@@ -834,8 +848,17 @@ export async function transformMf2OptionsToMf3Options({
 				preview_database_id ?? database_id,
 			]) ?? []
 		),
+
+		cachePersist: transformMf2PersistToMf3(miniflare2Options.cachePersist),
+		durableObjectsPersist: transformMf2PersistToMf3(
+			miniflare2Options.durableObjectsPersist
+		),
+		kvPersist: transformMf2PersistToMf3(miniflare2Options.kvPersist),
+		r2Persist: transformMf2PersistToMf3(miniflare2Options.r2Persist),
+		d1Persist: transformMf2PersistToMf3(miniflare2Options.d1Persist),
+
 		inspectorPort,
-		verbose: true,
+		verbose: logger.loggerLevel === "debug",
 		cloudflareFetch,
 		log,
 	};
@@ -873,22 +896,27 @@ export async function transformMf2OptionsToMf3Options({
 		const root = path.dirname(bundle.path);
 
 		assert.strictEqual(bundle.type, "esm");
-		// Required for source mapped paths to resolve correctly
-		options.modulesRoot = root;
-		options.modules = [
-			// Entrypoint
-			{
-				type: "ESModule",
-				path: bundle.path,
-				contents: await readFile(bundle.path, "utf-8"),
-			},
-			// Misc (WebAssembly, etc, ...)
-			...bundle.modules.map((module) => ({
-				type: ModuleTypeToRuleType[module.type ?? "esm"],
-				path: path.resolve(root, module.name),
-				contents: module.content,
-			})),
-		];
+		options = {
+			// Creating a new options object ensures types check (Miniflare's
+			// options type requires source code to be specified)
+			...options,
+			// Required for source mapped paths to resolve correctly
+			modulesRoot: root,
+			modules: [
+				// Entrypoint
+				{
+					type: "ESModule",
+					path: bundle.path,
+					contents: await readFile(bundle.path, "utf-8"),
+				},
+				// Misc (WebAssembly, etc, ...)
+				...bundle.modules.map((module) => ({
+					type: ModuleTypeToRuleType[module.type ?? "esm"],
+					path: path.resolve(root, module.name),
+					contents: module.content,
+				})),
+			],
+		};
 	}
 
 	if (kvRemote) {
@@ -906,7 +934,7 @@ export async function transformMf2OptionsToMf3Options({
 		options.kvPersist = `remote:?cache=${encodeURIComponent(kvRemoteCache)}`;
 	}
 
-	return options;
+	return options as Miniflare3Options;
 }
 
 // Caching of the `npx-import`ed `@miniflare/tre` package
@@ -916,5 +944,5 @@ export async function getMiniflare3(): Promise<
 	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 	typeof import("@miniflare/tre")
 > {
-	return (miniflare3Module ??= await npxImport("@miniflare/tre@3.0.0-next.12"));
+	return (miniflare3Module ??= await npxImport("@miniflare/tre@3.0.0-next.13"));
 }
