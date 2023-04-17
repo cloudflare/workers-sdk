@@ -1,6 +1,7 @@
 import Table from "ink-table";
 import React from "react";
 import { fetchResult } from "../cfetch";
+import { withConfig } from "../config";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
@@ -10,7 +11,6 @@ import type {
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type { Database } from "./types";
-import { withConfig } from "../config";
 
 export function Options(d1ListYargs: CommonYargsArgv) {
 	return d1ListYargs
