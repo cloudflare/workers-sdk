@@ -281,7 +281,7 @@ async function executeRemotely({
 		}
 	}
 
-	const accountId = await requireAuth({});
+	const accountId = await requireAuth(config);
 	const db: Database = await getDatabaseByNameOrBinding(
 		config,
 		accountId,

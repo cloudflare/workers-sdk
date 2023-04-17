@@ -10,6 +10,7 @@ import type {
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type { Database } from "./types";
+import { withConfig } from "../config";
 
 export function Options(d1ListYargs: CommonYargsArgv) {
 	return d1ListYargs
@@ -21,19 +22,20 @@ export function Options(d1ListYargs: CommonYargsArgv) {
 		.epilogue(d1BetaWarning);
 }
 
-export async function Handler({
-	json,
-}: StrictYargsOptionsToInterface<typeof Options>): Promise<void> {
-	const accountId = await requireAuth({});
-	const dbs: Array<Database> = await listDatabases(accountId);
+type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
+export const Handler = withConfig<HandlerOptions>(
+	async ({ json, config }): Promise<void> => {
+		const accountId = await requireAuth(config);
+		const dbs: Array<Database> = await listDatabases(accountId);
 
-	if (json) {
-		logger.log(JSON.stringify(dbs, null, 2));
-	} else {
-		logger.log(d1BetaWarning);
-		logger.log(renderToString(<Table data={dbs}></Table>));
+		if (json) {
+			logger.log(JSON.stringify(dbs, null, 2));
+		} else {
+			logger.log(d1BetaWarning);
+			logger.log(renderToString(<Table data={dbs}></Table>));
+		}
 	}
-}
+);
 
 export const listDatabases = async (
 	accountId: string
