@@ -858,7 +858,7 @@ export async function transformMf2OptionsToMf3Options({
 		d1Persist: transformMf2PersistToMf3(miniflare2Options.d1Persist),
 
 		inspectorPort,
-		verbose: true,
+		verbose: logger.loggerLevel === "debug",
 		cloudflareFetch,
 		log,
 	};
