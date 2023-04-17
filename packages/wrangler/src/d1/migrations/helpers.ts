@@ -157,14 +157,11 @@ export const initMigrationsTable = async ({
 		name,
 		shouldPrompt: isInteractive() && !CI.isCI(),
 		persistTo,
-		command: `
-						CREATE TABLE IF NOT EXISTS ${migrationsTableName}
-						(
-								id         INTEGER PRIMARY KEY AUTOINCREMENT,
-								name       TEXT UNIQUE,
-								applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
-						);
-				`,
+		command: `CREATE TABLE IF NOT EXISTS ${migrationsTableName}(
+		id         INTEGER PRIMARY KEY AUTOINCREMENT,
+		name       TEXT UNIQUE,
+		applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+);`,
 		file: undefined,
 		json: undefined,
 		preview,
