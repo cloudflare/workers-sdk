@@ -661,7 +661,7 @@ async function getZoneIdHostAndRoutes(args: StartDevOptions, config: Config) {
 		args.local = true;
 	}
 
-	if (!args.local) {
+	if (!args.local && !args.experimentalLocal) {
 		if (host) {
 			zoneId = await getZoneIdFromHost(host);
 		}
