@@ -243,17 +243,16 @@ export const SCRIPT_CUSTOM_SERVICE = `addEventListener("fetch", (event) => {
   event.respondWith(${BINDING_SERVICE_LOOPBACK}.fetch(request));
 })`;
 
-const now = new Date();
-const CURRENT_COMPATIBILITY_DATE = [
-	now.getFullYear(),
-	(now.getMonth() + 1).toString().padStart(2, "0"),
-	now.getDate().toString().padStart(2, "0"),
-].join("-");
-
 const FALLBACK_COMPATIBILITY_DATE = "2000-01-01";
 
+function getCurrentCompatibilityDate() {
+	// Get current compatibility date in UTC timezone
+	const now = new Date().toISOString();
+	return now.substring(0, now.indexOf("T"));
+}
+
 function validateCompatibilityDate(log: Log, compatibilityDate: string) {
-	if (numericCompare(compatibilityDate, CURRENT_COMPATIBILITY_DATE) > 0) {
+	if (numericCompare(compatibilityDate, getCurrentCompatibilityDate()) > 0) {
 		// If this compatibility date is in the future, throw
 		throw new MiniflareCoreError(
 			"ERR_FUTURE_COMPATIBILITY_DATE",
