@@ -819,7 +819,7 @@ export async function transformMf2OptionsToMf3Options({
 		};
 	}
 
-	const options: Miniflare3Options = {
+	let options: Partial<Miniflare3Options> = {
 		...miniflare2Options,
 		// Miniflare 3 distinguishes between binding name and namespace/bucket IDs.
 		kvNamespaces: Object.fromEntries(
@@ -873,22 +873,27 @@ export async function transformMf2OptionsToMf3Options({
 		const root = path.dirname(bundle.path);
 
 		assert.strictEqual(bundle.type, "esm");
-		// Required for source mapped paths to resolve correctly
-		options.modulesRoot = root;
-		options.modules = [
-			// Entrypoint
-			{
-				type: "ESModule",
-				path: bundle.path,
-				contents: await readFile(bundle.path, "utf-8"),
-			},
-			// Misc (WebAssembly, etc, ...)
-			...bundle.modules.map((module) => ({
-				type: ModuleTypeToRuleType[module.type ?? "esm"],
-				path: path.resolve(root, module.name),
-				contents: module.content,
-			})),
-		];
+		options = {
+			// Creating a new options object ensures types check (Miniflare's
+			// options type requires source code to be specified)
+			...options,
+			// Required for source mapped paths to resolve correctly
+			modulesRoot: root,
+			modules: [
+				// Entrypoint
+				{
+					type: "ESModule",
+					path: bundle.path,
+					contents: await readFile(bundle.path, "utf-8"),
+				},
+				// Misc (WebAssembly, etc, ...)
+				...bundle.modules.map((module) => ({
+					type: ModuleTypeToRuleType[module.type ?? "esm"],
+					path: path.resolve(root, module.name),
+					contents: module.content,
+				})),
+			],
+		};
 	}
 
 	if (kvRemote) {
@@ -906,7 +911,7 @@ export async function transformMf2OptionsToMf3Options({
 		options.kvPersist = `remote:?cache=${encodeURIComponent(kvRemoteCache)}`;
 	}
 
-	return options;
+	return options as Miniflare3Options;
 }
 
 // Caching of the `npx-import`ed `@miniflare/tre` package
@@ -916,5 +921,5 @@ export async function getMiniflare3(): Promise<
 	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 	typeof import("@miniflare/tre")
 > {
-	return (miniflare3Module ??= await npxImport("@miniflare/tre@3.0.0-next.12"));
+	return (miniflare3Module ??= await npxImport("@miniflare/tre@3.0.0-next.13"));
 }

@@ -7,7 +7,7 @@ import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
 import * as esbuild from "esbuild";
 import tmp from "tmp-promise";
 import createModuleCollector from "./module-collection";
-import { getBasePath, toUrlPath } from "./paths";
+import { getBasePath } from "./paths";
 import type { Config } from "./config";
 import type { DurableObjectBindings } from "./config/environment";
 import type { WorkerRegistry } from "./dev-registry";
@@ -599,7 +599,7 @@ async function applyMiddlewareLoaderFacade(
 					...Object.fromEntries(
 						middleware.map((val, index) => [
 							middlewareIdentifiers[index],
-							toUrlPath(path.resolve(getBasePath(), val.path)),
+							path.resolve(getBasePath(), val.path),
 						])
 					),
 				}),
