@@ -1,5 +1,13 @@
 # @cloudflare/pages-shared
 
+## 0.3.5
+
+### Patch Changes
+
+- [#3052](https://github.com/cloudflare/workers-sdk/pull/3052) [`45166d38`](https://github.com/cloudflare/workers-sdk/commit/45166d38c37fe409cce11eed2f230cb062e72d6a) Thanks [@Skye-31](https://github.com/Skye-31)! - Reimplement \_redirects proxying in pages-shared
+
+  This change reverts #3038
+
 ## 0.3.4
 
 ### Patch Changes
