@@ -695,6 +695,7 @@ export function setupMiniflareOptions({
 					durableObjectsPersist: true,
 					kvPersist: true,
 					r2Persist: true,
+					d1Persist: true,
 			  }),
 
 		liveReload,
@@ -792,6 +793,18 @@ export async function buildMiniflare3Logger(): Promise<Miniflare3LogType> {
 	return logLevel === LogLevel.NONE ? new NoOpLog() : new Log(logLevel);
 }
 
+function transformMf2PersistToMf3(persist?: boolean | string) {
+	// Wrangler reuses Miniflare 3 instances between reloads but not Miniflare 2
+	// ones. We previously set `*Persist` options to `true` by default to
+	// persist data between reloads in the temporary script directory (Miniflare
+	// 2's working directory). However, with Miniflare 3, the working directory
+	// is the current working directory, so we want to set these to `false`
+	// and use Miniflare 3's native in-memory persistence.
+	//
+	// See https://github.com/cloudflare/workers-sdk/issues/2995.
+	return persist === true ? false : persist;
+}
+
 export async function transformMf2OptionsToMf3Options({
 	miniflare2Options,
 	format,
@@ -821,6 +834,7 @@ export async function transformMf2OptionsToMf3Options({
 
 	let options: Partial<Miniflare3Options> = {
 		...miniflare2Options,
+
 		// Miniflare 3 distinguishes between binding name and namespace/bucket IDs.
 		kvNamespaces: Object.fromEntries(
 			kvNamespaces?.map(({ binding, id }) => [binding, id]) ?? []
@@ -834,6 +848,15 @@ export async function transformMf2OptionsToMf3Options({
 				preview_database_id ?? database_id,
 			]) ?? []
 		),
+
+		cachePersist: transformMf2PersistToMf3(miniflare2Options.cachePersist),
+		durableObjectsPersist: transformMf2PersistToMf3(
+			miniflare2Options.durableObjectsPersist
+		),
+		kvPersist: transformMf2PersistToMf3(miniflare2Options.kvPersist),
+		r2Persist: transformMf2PersistToMf3(miniflare2Options.r2Persist),
+		d1Persist: transformMf2PersistToMf3(miniflare2Options.d1Persist),
+
 		inspectorPort,
 		verbose: true,
 		cloudflareFetch,
