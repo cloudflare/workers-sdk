@@ -66,7 +66,6 @@ import {
 	Clock,
 	HttpError,
 	Log,
-	LogLevel,
 	MiniflareCoreError,
 	Mutex,
 	NoOpLog,
