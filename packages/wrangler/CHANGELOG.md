@@ -1,5 +1,30 @@
 # wrangler
 
+## 2.16.0
+
+### Minor Changes
+
+- [#3058](https://github.com/cloudflare/workers-sdk/pull/3058) [`1bd50f56`](https://github.com/cloudflare/workers-sdk/commit/1bd50f56a7215bb9a9480a8e8560862acef9e326) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: upgrade `miniflare@3` to [`3.0.0-next.13`](https://github.com/cloudflare/miniflare/releases/tag/v3.0.0-next.13)
+
+  Notably, this adds native support for Windows to `wrangler dev --experimental-local`, logging for incoming requests, and support for a bunch of newer R2 features.
+
+### Patch Changes
+
+- [#3058](https://github.com/cloudflare/workers-sdk/pull/3058) [`1bd50f56`](https://github.com/cloudflare/workers-sdk/commit/1bd50f56a7215bb9a9480a8e8560862acef9e326) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: disable persistence without `--persist` in `--experimental-local`
+
+  This ensures `--experimental-local` doesn't persist data on the file-system, unless the `--persist` flag is set.
+  Data is still always persisted between reloads.
+
+* [#3055](https://github.com/cloudflare/workers-sdk/pull/3055) [`5f48c405`](https://github.com/cloudflare/workers-sdk/commit/5f48c405c663de0c6b2bfc27005246f1fdec6987) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: Teach D1 commands to read auth configuration from wrangler.toml
+
+  This PR fixes a bug in how D1 handles a user's accounts. We've updated the D1 commands to read from config (typically via wrangler.toml) before trying to run commands. This means if an `account_id` is defined in config, we'll use that instead of erroring out when there are multiple accounts to pick from.
+
+  Fixes #3046
+
+- [#3058](https://github.com/cloudflare/workers-sdk/pull/3058) [`1bd50f56`](https://github.com/cloudflare/workers-sdk/commit/1bd50f56a7215bb9a9480a8e8560862acef9e326) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: disable route validation when using `--experimental-local`
+
+  This ensures `wrangler dev --experimental-local` doesn't require a login or an internet connection if a `route` is configured.
+
 ## 2.15.1
 
 ### Patch Changes
