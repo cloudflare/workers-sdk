@@ -24,7 +24,7 @@ export function ListOptions(yargs: CommonYargsArgv) {
 type ListHandlerOptions = StrictYargsOptionsToInterface<typeof ListOptions>;
 export const ListHandler = withConfig<ListHandlerOptions>(
 	async ({ config, name }): Promise<void> => {
-		const accountId = await requireAuth({});
+		const accountId = await requireAuth(config);
 		logger.log(d1BetaWarning);
 		const db: Database = await getDatabaseByNameOrBinding(
 			config,
@@ -87,7 +87,7 @@ type CreateHandlerOptions = StrictYargsOptionsToInterface<typeof CreateOptions>;
 
 export const CreateHandler = withConfig<CreateHandlerOptions>(
 	async ({ config, name }): Promise<void> => {
-		const accountId = await requireAuth({});
+		const accountId = await requireAuth(config);
 		logger.log(d1BetaWarning);
 		const db: Database = await getDatabaseByNameOrBinding(
 			config,
@@ -135,7 +135,7 @@ type RestoreHandlerOptions = StrictYargsOptionsToInterface<
 >;
 export const RestoreHandler = withConfig<RestoreHandlerOptions>(
 	async ({ config, name, backupId }): Promise<void> => {
-		const accountId = await requireAuth({});
+		const accountId = await requireAuth(config);
 		logger.log(d1BetaWarning);
 		const db: Database = await getDatabaseByNameOrBinding(
 			config,
@@ -183,7 +183,7 @@ type DownloadHandlerOptions = StrictYargsOptionsToInterface<
 >;
 export const DownloadHandler = withConfig<DownloadHandlerOptions>(
 	async ({ name, backupId, output, config }): Promise<void> => {
-		const accountId = await requireAuth({});
+		const accountId = await requireAuth(config);
 		logger.log(d1BetaWarning);
 		const db: Database = await getDatabaseByNameOrBinding(
 			config,

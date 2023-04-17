@@ -1,6 +1,7 @@
 import Table from "ink-table";
 import React from "react";
 import { fetchResult } from "../cfetch";
+import { withConfig } from "../config";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
@@ -21,19 +22,20 @@ export function Options(d1ListYargs: CommonYargsArgv) {
 		.epilogue(d1BetaWarning);
 }
 
-export async function Handler({
-	json,
-}: StrictYargsOptionsToInterface<typeof Options>): Promise<void> {
-	const accountId = await requireAuth({});
-	const dbs: Array<Database> = await listDatabases(accountId);
+type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
+export const Handler = withConfig<HandlerOptions>(
+	async ({ json, config }): Promise<void> => {
+		const accountId = await requireAuth(config);
+		const dbs: Array<Database> = await listDatabases(accountId);
 
-	if (json) {
-		logger.log(JSON.stringify(dbs, null, 2));
-	} else {
-		logger.log(d1BetaWarning);
-		logger.log(renderToString(<Table data={dbs}></Table>));
+		if (json) {
+			logger.log(JSON.stringify(dbs, null, 2));
+		} else {
+			logger.log(d1BetaWarning);
+			logger.log(renderToString(<Table data={dbs}></Table>));
+		}
 	}
-}
+);
 
 export const listDatabases = async (
 	accountId: string

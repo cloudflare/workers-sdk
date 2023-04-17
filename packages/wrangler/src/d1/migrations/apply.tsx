@@ -122,7 +122,7 @@ Your database may not be available to serve requests during the migration, conti
 				"In non-local mode `databaseInfo` should be defined."
 			);
 			logger.log(renderToString(<Text>🕒 Creating backup...</Text>));
-			const accountId = await requireAuth({});
+			const accountId = await requireAuth(config);
 			await createBackup(accountId, databaseInfo.uuid);
 		}
 
