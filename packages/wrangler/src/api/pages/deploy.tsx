@@ -1,6 +1,8 @@
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { join, resolve as resolvePath } from "node:path";
 import { cwd } from "node:process";
+import { parseHeaders } from "@cloudflare/pages-shared/metadata-generator/parseHeaders";
+import { parseRedirects } from "@cloudflare/pages-shared/metadata-generator/parseRedirects";
 import { File, FormData } from "undici";
 import { fetchResult } from "../../cfetch";
 import { FatalError } from "../../errors";
@@ -223,11 +225,47 @@ export async function deploy({
 	}
 
 	if (_headers) {
+		const headers = parseHeaders(_headers);
+		const numValid = headers.rules.length;
+		const numInvalid = headers.invalid.length;
+		logger.info(
+			`Parsed ${numValid} valid header rule${numValid === 1 ? "" : "s"}.`
+		);
+
+		if (numInvalid > 0) {
+			logger.warn(`Found invalid header lines:`);
+			for (const { line, lineNumber, message } of headers.invalid) {
+				if (line)
+					logger.warn(
+						`  - ${lineNumber ? `#${lineNumber}: ` : ""}${line}\n    ${message}`
+					);
+				else logger.warn(`    ${message}`);
+			}
+		}
 		formData.append("_headers", new File([_headers], "_headers"));
 		logger.log(`✨ Uploading _headers`);
 	}
 
 	if (_redirects) {
+		const redirects = parseRedirects(_redirects);
+		const numValid = redirects.rules.length;
+		const numInvalid = redirects.invalid.length;
+		logger.info(
+			`Parsed ${numValid} valid redirect rule${numValid === 1 ? "" : "s"}.`
+		);
+
+		if (numInvalid > 0) {
+			logger.warn(`Found invalid redirect lines:`);
+			for (const { line, lineNumber, message } of redirects.invalid) {
+				if (line) {
+					logger.warn(
+						`  - ${lineNumber ? `#${lineNumber}: ` : ""}${line}\n    ${message}`
+					);
+				} else {
+					logger.warn(`    ${message}`);
+				}
+			}
+		}
 		formData.append("_redirects", new File([_redirects], "_redirects"));
 		logger.log(`✨ Uploading _redirects`);
 	}
