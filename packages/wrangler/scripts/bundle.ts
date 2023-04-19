@@ -56,6 +56,12 @@ async function buildMain(flags: BuildFlags = {}) {
 			...(process.env.SPARROW_SOURCE_KEY
 				? { SPARROW_SOURCE_KEY: `"${process.env.SPARROW_SOURCE_KEY}"` }
 				: {}),
+			...(process.env.ALGOLIA_APP_ID
+				? { ALGOLIA_APP_ID: `"${process.env.ALGOLIA_APP_ID}"` }
+				: {}),
+			...(process.env.ALGOLIA_PUBLIC_KEY
+				? { ALGOLIA_PUBLIC_KEY: `"${process.env.ALGOLIA_PUBLIC_KEY}"` }
+				: {}),
 		},
 		watch: flags.watch ? watchLogger("./wrangler-dist") : false,
 	});
