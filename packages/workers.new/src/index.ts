@@ -46,6 +46,7 @@ const redirects: Redirects = {
 		"Workers WebSocket Durable Objects",
 	],
 	"/worktop": ["worker-worktop", "src/index.ts", "Workers Worktop"],
+	"/kv-shortener": ["worker-kv-shortener", "src/index.ts", "Workers KV Shortener"],
 	"/pages-functions-cors": [
 		"pages-functions-cors",
 		"functions/api/_middleware.ts",

@@ -1,0 +1,8 @@
+name = "worker-kv-shortener"
+main = "src/index.ts"
+compatibility_date = "2022-11-14"
+
+kv_namespaces = [ { binding = "SHORTENER_KV", id = "", preview_id = "" } ]
+
+[vars]
+HOST_URL = "https://v2.vertolink.com"
