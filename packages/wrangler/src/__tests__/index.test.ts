@@ -32,7 +32,7 @@ describe("wrangler", () => {
 			"wrangler
 
 			Commands:
-			  wrangler docs [command]              📚 Open wrangler's docs in your browser
+			  wrangler docs [command..]            📚 Open wrangler's docs in your browser
 			  wrangler init [name]                 📥 Initialize a basic Worker project, including a wrangler.toml file
 			  wrangler generate [name] [template]  ✨ Generate a new Worker project from an existing Worker template. See https://github.com/cloudflare/templates
 			  wrangler dev [script]                👂 Start a local server for developing your worker
@@ -85,7 +85,7 @@ describe("wrangler", () => {
 			wrangler
 
 			Commands:
-			  wrangler docs [command]              📚 Open wrangler's docs in your browser
+			  wrangler docs [command..]            📚 Open wrangler's docs in your browser
 			  wrangler init [name]                 📥 Initialize a basic Worker project, including a wrangler.toml file
 			  wrangler generate [name] [template]  ✨ Generate a new Worker project from an existing Worker template. See https://github.com/cloudflare/templates
 			  wrangler dev [script]                👂 Start a local server for developing your worker
