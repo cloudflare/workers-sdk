@@ -39,8 +39,6 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: "production"
-          ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
-          ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
 
       - name: Check for errors
         run: npm run check
@@ -53,6 +51,8 @@ jobs:
           NPM_PUBLISH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
           # this is the "test/staging" key for sparrow analytics
           SPARROW_SOURCE_KEY: "5adf183f94b3436ba78d67f506965998"
+          ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
+          ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
         working-directory: packages/wrangler
 
       - name: Get Package Version
@@ -98,7 +98,5 @@ jobs:
         run: npm run publish
         env:
           NODE_ENV: "production"
-          ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
-          ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         working-directory: packages/prerelease-registry
