@@ -563,13 +563,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			},
 		};
 
-		if (assets.manifest) {
-			modules.push({
-				name: "__STATIC_CONTENT_MANIFEST",
-				content: JSON.stringify(assets.manifest),
-				type: "text",
-			});
-		}
+		modules.push({
+			name: "__STATIC_CONTENT_MANIFEST",
+			content: JSON.stringify(assets.manifest) || "{}",
+			type: "text",
+		});
 
 		// The upload API only accepts an empty string or no specified placement for the "off" mode.
 		const placement: CfPlacement | undefined =
