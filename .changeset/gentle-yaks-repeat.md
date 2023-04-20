@@ -1,5 +1,5 @@
 ---
-"wrangler": major
+"wrangler": patch
 ---
 
 Fix: fix local registry server closed
