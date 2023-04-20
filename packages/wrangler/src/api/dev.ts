@@ -3,6 +3,7 @@ import { startApiDev, startDev } from "../dev";
 import { logger } from "../logger";
 
 import type { Environment } from "../config";
+import type { Rule } from "../config/environment";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { RequestInit, Response, RequestInfo } from "undici";
 
@@ -42,6 +43,9 @@ export interface UnstableDevOptions {
 		bucket_name: string;
 		preview_bucket_name?: string;
 	}[];
+	bundleEntrypoint?: boolean;
+	moduleRoot?: string;
+	rules?: Rule[];
 	logLevel?: "none" | "info" | "error" | "log" | "warn" | "debug"; // Specify logging level  [choices: "debug", "info", "log", "warn", "error", "none"] [default: "log"]
 	inspect?: boolean;
 	local?: boolean;
@@ -150,6 +154,7 @@ export async function unstable_dev(
 					},
 					config: options?.config,
 					env: options?.env,
+					bundleEntrypoint: !!options?.bundleEntrypoint,
 					bundle: options?.bundle,
 					compatibilityDate: options?.compatibilityDate,
 					compatibilityFlags: options?.compatibilityFlags,

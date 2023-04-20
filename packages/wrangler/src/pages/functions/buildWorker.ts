@@ -164,6 +164,7 @@ export type RawOptions = {
 	outfile?: string;
 	outdir?: string;
 	directory: string;
+	bundle?: boolean;
 	minify?: boolean;
 	sourcemap?: boolean;
 	watch?: boolean;
@@ -188,6 +189,7 @@ export function buildRawWorker({
 	outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`),
 	outdir,
 	directory,
+	bundle = true,
 	minify = false,
 	sourcemap = false,
 	watch = false,
@@ -207,6 +209,7 @@ export function buildRawWorker({
 		},
 		outdir ? resolve(outdir) : resolve(outfile),
 		{
+			bundle,
 			minify,
 			sourcemap,
 			watch,

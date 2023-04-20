@@ -117,6 +117,7 @@ export async function bundleWorker(
 	entry: Entry,
 	destination: string,
 	options: {
+		bundle?: boolean;
 		serveAssetsFromWorker: boolean;
 		assets?: StaticAssetsConfig;
 		betaD1Shims?: string[];
@@ -149,6 +150,7 @@ export async function bundleWorker(
 	}
 ): Promise<BundleResult> {
 	const {
+		bundle = true,
 		serveAssetsFromWorker,
 		betaD1Shims,
 		doBindings,
@@ -350,7 +352,7 @@ export async function bundleWorker(
 
 	const buildOptions: esbuild.BuildOptions & { metafile: true } = {
 		entryPoints: [inputEntry.file],
-		bundle: true,
+		bundle,
 		absWorkingDir: entry.directory,
 		outdir: destination,
 		entryNames: entryName || path.parse(entry.file).name,
@@ -362,7 +364,7 @@ export async function bundleWorker(
 			  }
 			: {}),
 		inject,
-		external: ["__STATIC_CONTENT_MANIFEST"],
+		external: bundle ? ["__STATIC_CONTENT_MANIFEST"] : undefined,
 		format: entry.format === "modules" ? "esm" : "iife",
 		target: COMMON_ESBUILD_OPTIONS.target,
 		sourcemap: sourcemap ?? true, // this needs to use ?? to accept false

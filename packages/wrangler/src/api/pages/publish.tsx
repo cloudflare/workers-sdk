@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve as resolvePath } from "node:path";
 import { cwd } from "node:process";
@@ -17,6 +17,7 @@ import {
 } from "../../pages/functions/buildWorker";
 import { validateRoutes } from "../../pages/functions/routes-validation";
 import { upload } from "../../pages/upload";
+import traverseModuleGraph from "../../traverse-module-graph";
 import { createUploadWorkerBundleContents } from "./create-worker-bundle-contents";
 import type { BundleResult } from "../../bundle";
 import type { Project, Deployment } from "@cloudflare/types";
@@ -95,9 +96,10 @@ export async function publish({
 		_redirects: string | undefined,
 		_routesGenerated: string | undefined,
 		_routesCustom: string | undefined,
+		_workerJSDirectory = false,
 		_workerJS: string | undefined;
 
-	const workerScriptPath = resolvePath(directory, "_worker.js");
+	const _workerPath = resolvePath(directory, "_worker.js");
 
 	try {
 		_headers = readFileSync(join(directory, "_headers"), "utf-8");
@@ -116,7 +118,10 @@ export async function publish({
 	} catch {}
 
 	try {
-		_workerJS = readFileSync(workerScriptPath, "utf-8");
+		_workerJSDirectory = lstatSync(_workerPath).isDirectory();
+		if (!_workerJSDirectory) {
+			_workerJS = readFileSync(_workerPath, "utf-8");
+		}
 	} catch {}
 
 	// Grab the bindings from the API, we need these for shims and other such hacky inserts
@@ -243,13 +248,55 @@ export async function publish({
 	 * When using a _worker.js file, the entire /functions directory is ignored
 	 * – this includes its routing and middleware characteristics.
 	 */
-	if (_workerJS) {
+	if (_workerJSDirectory) {
+		const traverseModuleGraphResult = await traverseModuleGraph(
+			{
+				file: resolvePath(join(_workerPath, "index.js")),
+				directory: resolvePath(_workerPath),
+				format: "modules",
+				moduleRoot: resolvePath(_workerPath),
+			},
+			[
+				{
+					type: "ESModule",
+					globs: ["**/*.js"],
+				},
+			]
+		);
+
+		const outfile = join(tmpdir(), `./bundledWorker-${Math.random()}.mjs`);
+		const bundleResult = await buildRawWorker({
+			workerScriptPath: _workerPath,
+			bundle: false,
+			outfile,
+			directory,
+			local: false,
+			sourcemap: true,
+			watch: false,
+			onEnd: () => {},
+			betaD1Shims: d1Databases,
+			nodejsCompat,
+		});
+
+		workerBundle = {
+			modules: (traverseModuleGraphResult?.modules ??
+				bundleResult?.modules) as BundleResult["modules"],
+			dependencies: (bundleResult?.dependencies ??
+				traverseModuleGraphResult?.dependencies) as BundleResult["dependencies"],
+			resolvedEntryPointPath: (bundleResult?.resolvedEntryPointPath ??
+				traverseModuleGraphResult?.resolvedEntryPointPath) as BundleResult["resolvedEntryPointPath"],
+			bundleType: (bundleResult?.bundleType ??
+				traverseModuleGraphResult?.bundleType) as BundleResult["bundleType"],
+			stop: bundleResult?.stop,
+			sourceMapPath: bundleResult?.sourceMapPath,
+		};
+	} else if (_workerJS) {
 		if (bundle) {
 			const outfile = join(tmpdir(), `./bundledWorker-${Math.random()}.mjs`);
 			workerBundle = await buildRawWorker({
-				workerScriptPath,
+				workerScriptPath: _workerPath,
 				outfile,
-				directory: directory ?? ".",
+				directory,
 				local: false,
 				sourcemap: true,
 				watch: false,
@@ -258,17 +305,19 @@ export async function publish({
 				nodejsCompat,
 			});
 		} else {
-			await checkRawWorker(workerScriptPath, () => {});
-			// TODO: Replace this with the cool new no-bundle stuff when that lands: https://github.com/cloudflare/workers-sdk/pull/2769
+			await checkRawWorker(_workerPath, () => {});
+			// TODO: Let users configure this in the future.
 			workerBundle = {
 				modules: [],
 				dependencies: {},
 				stop: undefined,
-				resolvedEntryPointPath: workerScriptPath,
+				resolvedEntryPointPath: _workerPath,
 				bundleType: "esm",
 			};
 		}
+	}
 
+	if (_workerJS || _workerJSDirectory) {
 		const workerBundleContents = await createUploadWorkerBundleContents(
 			workerBundle as BundleResult
 		);

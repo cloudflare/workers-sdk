@@ -1,9 +1,17 @@
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { basename, dirname, relative, resolve as resolvePath } from "node:path";
+import { existsSync, lstatSync, mkdirSync, writeFileSync } from "node:fs";
+import {
+	basename,
+	dirname,
+	join,
+	relative,
+	resolve,
+	resolve as resolvePath,
+} from "node:path";
 import { createUploadWorkerBundleContents } from "../api/pages/create-worker-bundle-contents";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
+import traverseModuleGraph from "../traverse-module-graph";
 import { buildFunctions } from "./buildFunctions";
 import { isInPagesCI } from "./constants";
 import {
@@ -208,21 +216,64 @@ export const Handler = async (args: PagesBuildArgs) => {
 		 * and if we were able to resolve _worker.js
 		 */
 		if (workerScriptPath) {
-			/**
-			 * `buildRawWorker` builds `_worker.js`, but doesn't give us the bundle
-			 * we want to return, which includes the external dependencies (like wasm,
-			 * binary, text). Let's output that build result to memory and only write
-			 * to disk once we have the final bundle
-			 */
-			bundle = await buildRawWorker({
-				workerScriptPath,
-				outdir,
-				directory: buildOutputDirectory,
-				local: false,
-				sourcemap,
-				watch,
-				betaD1Shims: d1Databases,
-			});
+			if (lstatSync(workerScriptPath).isDirectory()) {
+				const entrypoint = resolve(join(workerScriptPath, "index.js"));
+
+				const traverseModuleGraphResult = await traverseModuleGraph(
+					{
+						file: entrypoint,
+						directory: resolve(workerScriptPath),
+						format: "modules",
+						moduleRoot: resolve(workerScriptPath),
+					},
+					[
+						{
+							type: "ESModule",
+							globs: ["**/*.js"],
+						},
+					]
+				);
+
+				const bundleResult = await buildRawWorker({
+					workerScriptPath: entrypoint,
+					bundle: false,
+					outdir,
+					directory: buildOutputDirectory,
+					local: false,
+					sourcemap,
+					watch,
+					betaD1Shims: d1Databases,
+				});
+
+				bundle = {
+					modules: (traverseModuleGraphResult?.modules ??
+						bundleResult?.modules) as BundleResult["modules"],
+					dependencies: (bundleResult?.dependencies ??
+						traverseModuleGraphResult?.dependencies) as BundleResult["dependencies"],
+					resolvedEntryPointPath: (bundleResult?.resolvedEntryPointPath ??
+						traverseModuleGraphResult?.resolvedEntryPointPath) as BundleResult["resolvedEntryPointPath"],
+					bundleType: (bundleResult?.bundleType ??
+						traverseModuleGraphResult?.bundleType) as BundleResult["bundleType"],
+					stop: bundleResult?.stop,
+					sourceMapPath: bundleResult?.sourceMapPath,
+				};
+			} else {
+				/**
+				 * `buildRawWorker` builds `_worker.js`, but doesn't give us the bundle
+				 * we want to return, which includes the external dependencies (like wasm,
+				 * binary, text). Let's output that build result to memory and only write
+				 * to disk once we have the final bundle
+				 */
+				bundle = await buildRawWorker({
+					workerScriptPath,
+					outdir,
+					directory: buildOutputDirectory,
+					local: false,
+					sourcemap,
+					watch,
+					betaD1Shims: d1Databases,
+				});
+			}
 		} else {
 			try {
 				/**

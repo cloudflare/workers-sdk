@@ -28,7 +28,7 @@ import {
 	printWranglerBanner,
 } from "./index";
 import type { Config, Environment } from "./config";
-import type { Route } from "./config/environment";
+import type { Route, Rule } from "./config/environment";
 import type { LoggerLevel } from "./logger";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type { CfWorkerInit } from "./worker";
@@ -334,6 +334,9 @@ export type AdditionalDevProps = {
 		preview_bucket_name?: string;
 	}[];
 	d1Databases?: Environment["d1_databases"];
+	bundleEntrypoint?: boolean;
+	moduleRoot?: string;
+	rules?: Rule[];
 };
 
 type StartDevOptions = DevArguments &
@@ -424,7 +427,8 @@ export async function startDev(args: StartDevOptions) {
 					zone={zoneId}
 					host={host}
 					routes={routes}
-					rules={getRules(configParam)}
+					bundleEntrypoint={!!args.bundleEntrypoint}
+					rules={args.rules ?? getRules(configParam)}
 					legacyEnv={isLegacyEnv(configParam)}
 					minify={args.minify ?? configParam.minify}
 					legacyNodeCompat={legacyNodeCompat}
@@ -560,7 +564,8 @@ export async function startApiDev(args: StartDevOptions) {
 			zone: zoneId,
 			host: host,
 			routes: routes,
-			rules: getRules(configParam),
+			bundleEntrypoint: !!args.bundleEntrypoint,
+			rules: args.rules ?? getRules(configParam),
 			legacyEnv: isLegacyEnv(configParam),
 			minify: args.minify ?? configParam.minify,
 			legacyNodeCompat,
@@ -687,7 +692,7 @@ async function validateDevServerSettings(
 	config: Config
 ) {
 	const entry = await getEntry(
-		{ assets: args.assets, script: args.script },
+		{ assets: args.assets, script: args.script, moduleRoot: args.moduleRoot },
 		config,
 		"dev"
 	);

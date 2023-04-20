@@ -1,5 +1,5 @@
 import { execSync, spawn } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { watch } from "chokidar";
@@ -255,7 +255,12 @@ export const Handler = async ({
 		directory !== undefined
 			? join(directory, singleWorkerScriptPath)
 			: singleWorkerScriptPath;
+	const usingWorkerDirectory =
+		existsSync(workerScriptPath) && lstatSync(workerScriptPath).isDirectory();
 	const usingWorkerScript = existsSync(workerScriptPath);
+	// TODO: Here lies a known bug. If you specify both `--bundle` and `--no-bundle`, this behavior is undefined and you will get unexpected results.
+	// There is no sane way to get the true value out of yargs, so here we are.
+	const enableBundling = bundle ?? !noBundle;
 
 	const functionsDirectory = "./functions";
 	let usingFunctions = !usingWorkerScript && existsSync(functionsDirectory);
@@ -270,9 +275,6 @@ export const Handler = async ({
 			await checkRawWorker(workerScriptPath, () => scriptReadyResolve());
 		};
 
-		// TODO: Here lies a known bug. If you specify both `--bundle` and `--no-bundle`, this behavior is undefined and you will get unexpected results.
-		// There is no sane way to get the true value out of yargs, so here we are.
-		const enableBundling = bundle ?? !noBundle;
 		if (enableBundling) {
 			// We want to actually run the `_worker.js` script through the bundler
 			// So update the final path to the script that will be uploaded and
@@ -281,7 +283,9 @@ export const Handler = async ({
 			runBuild = async () => {
 				try {
 					await buildRawWorker({
-						workerScriptPath,
+						workerScriptPath: usingWorkerDirectory
+							? join(workerScriptPath, "index.js")
+							: workerScriptPath,
 						outfile: scriptPath,
 						directory: directory ?? ".",
 						nodejsCompat,
@@ -396,7 +400,10 @@ export const Handler = async ({
 	let entrypoint = scriptPath;
 
 	// custom _routes.json apply only to Functions or Advanced Mode Pages projects
-	if (directory && (usingFunctions || usingWorkerScript)) {
+	if (
+		directory &&
+		(usingFunctions || usingWorkerScript || usingWorkerDirectory)
+	) {
 		const routesJSONPath = join(directory, "_routes.json");
 
 		if (existsSync(routesJSONPath)) {
@@ -538,6 +545,17 @@ export const Handler = async ({
 		r2: r2s.map((binding) => {
 			return { binding: binding.toString(), bucket_name: "" };
 		}),
+		bundleEntrypoint: true,
+		moduleRoot: workerScriptPath,
+		rules: usingWorkerDirectory
+			? [
+					{
+						type: "ESModule",
+						globs: ["**/*.js"],
+					},
+			  ]
+			: undefined,
+		bundle: enableBundling,
 		persist,
 		persistTo,
 		inspect: undefined,

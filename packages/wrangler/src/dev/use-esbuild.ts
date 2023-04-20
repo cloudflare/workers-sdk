@@ -26,6 +26,7 @@ export function useEsbuild({
 	destination,
 	jsxFactory,
 	jsxFragment,
+	bundleEntrypoint,
 	rules,
 	assets,
 	serveAssetsFromWorker,
@@ -49,6 +50,7 @@ export function useEsbuild({
 	destination: string | undefined;
 	jsxFactory: string | undefined;
 	jsxFragment: string | undefined;
+	bundleEntrypoint: boolean;
 	rules: Config["rules"];
 	assets: Config["assets"];
 	define: Config["define"];
@@ -100,42 +102,73 @@ export function useEsbuild({
 		async function build() {
 			if (!destination) return;
 
+			let traverseModuleGraphResult:
+				| Awaited<ReturnType<typeof bundleWorker>>
+				| undefined;
+			let bundleResult: Awaited<ReturnType<typeof bundleWorker>> | undefined;
+			if (noBundle) {
+				traverseModuleGraphResult = await traverseModuleGraph(entry, rules);
+			}
+
+			if (bundleEntrypoint || !noBundle) {
+				bundleResult = await bundleWorker(entry, destination, {
+					bundle: !noBundle,
+					disableModuleCollection: noBundle,
+					serveAssetsFromWorker,
+					jsxFactory,
+					jsxFragment,
+					rules,
+					watch: watchMode,
+					tsconfig,
+					minify,
+					legacyNodeCompat,
+					nodejsCompat,
+					betaD1Shims,
+					doBindings: durableObjects.bindings,
+					define,
+					checkFetch: true,
+					assets: assets && {
+						...assets,
+						// disable the cache in dev
+						bypassCache: true,
+					},
+					workerDefinitions,
+					services,
+					firstPartyWorkerDevFacade,
+					local,
+					targetConsumer,
+					testScheduled,
+					experimentalLocal,
+				});
+			}
+
 			const {
-				resolvedEntryPointPath,
-				bundleType,
 				modules,
 				dependencies,
+				resolvedEntryPointPath,
+				bundleType,
 				stop,
 				sourceMapPath,
-			}: Awaited<ReturnType<typeof bundleWorker>> = noBundle
-				? await traverseModuleGraph(entry, rules)
-				: await bundleWorker(entry, destination, {
-						serveAssetsFromWorker,
-						jsxFactory,
-						jsxFragment,
-						rules,
-						watch: watchMode,
-						tsconfig,
-						minify,
-						legacyNodeCompat,
-						nodejsCompat,
-						betaD1Shims,
-						doBindings: durableObjects.bindings,
-						define,
-						checkFetch: true,
-						assets: assets && {
-							...assets,
-							// disable the cache in dev
-							bypassCache: true,
-						},
-						workerDefinitions,
-						services,
-						firstPartyWorkerDevFacade,
-						local,
-						targetConsumer,
-						testScheduled,
-						experimentalLocal,
-				  });
+			}: Awaited<ReturnType<typeof bundleWorker>> = {
+				modules: (traverseModuleGraphResult?.modules ??
+					bundleResult?.modules) as Awaited<
+					ReturnType<typeof bundleWorker>
+				>["modules"],
+				dependencies: (bundleResult?.dependencies ??
+					traverseModuleGraphResult?.dependencies) as Awaited<
+					ReturnType<typeof bundleWorker>
+				>["dependencies"],
+				resolvedEntryPointPath: (bundleResult?.resolvedEntryPointPath ??
+					traverseModuleGraphResult?.resolvedEntryPointPath) as Awaited<
+					ReturnType<typeof bundleWorker>
+				>["resolvedEntryPointPath"],
+				bundleType: (bundleResult?.bundleType ??
+					traverseModuleGraphResult?.bundleType) as Awaited<
+					ReturnType<typeof bundleWorker>
+				>["bundleType"],
+				stop: bundleResult?.stop,
+				sourceMapPath: bundleResult?.sourceMapPath,
+			};
 
 			// Capture the `stop()` method to use as the `useEffect()` destructor.
 			stopWatching = stop;
@@ -180,6 +213,7 @@ export function useEsbuild({
 		jsxFactory,
 		jsxFragment,
 		serveAssetsFromWorker,
+		bundleEntrypoint,
 		rules,
 		tsconfig,
 		exit,
