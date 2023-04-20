@@ -273,3 +273,40 @@ test("parseRedirects should reject non-relative URLs for proxying (200) redirect
 		],
 	});
 });
+
+test("parseRedirects should reject '/* /index.html'", () => {
+	const input = `
+/* /index.html 200
+/* /index 200
+/ /index.html
+/ /index
+`;
+	const invalidRedirectError =
+		"This behaviour is default with Cloudflare Pages (when a 404.html isn't present) and will be ignored. Remove it from your _redirects to silence this warning.";
+	const result = parseRedirects(input);
+	expect(result).toEqual({
+		rules: [],
+		invalid: [
+			{
+				line: "/* /index.html 200",
+				lineNumber: 2,
+				message: invalidRedirectError,
+			},
+			{
+				line: "/* /index 200",
+				lineNumber: 3,
+				message: invalidRedirectError,
+			},
+			{
+				line: "/ /index.html",
+				lineNumber: 4,
+				message: invalidRedirectError,
+			},
+			{
+				line: "/ /index",
+				lineNumber: 5,
+				message: invalidRedirectError,
+			},
+		],
+	});
+});
