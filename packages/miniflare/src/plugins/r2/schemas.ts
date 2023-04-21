@@ -1,5 +1,30 @@
 import { z } from "zod";
 
+export interface ObjectRow {
+	key: string;
+	blob_id: string | null; // null if multipart
+	version: string;
+	size: number; // total size of object (all parts) in bytes
+	etag: string; // hex MD5 hash if not multipart
+	uploaded: number; // milliseconds since unix epoch
+	checksums: string; // JSON-serialised `R2StringChecksums` (workers-types)
+	http_metadata: string; // JSON-serialised `R2HTTPMetadata` (workers-types)
+	custom_metadata: string; // JSON-serialised user-defined metadata
+}
+export const SQL_SCHEMA = `
+CREATE TABLE IF NOT EXISTS _mf_objects (
+    key TEXT PRIMARY KEY,
+    blob_id TEXT,
+    version TEXT NOT NULL,
+    size INTEGER NOT NULL,
+    etag TEXT NOT NULL,
+    uploaded INTEGER NOT NULL,
+    checksums TEXT NOT NULL,
+    http_metadata TEXT NOT NULL,
+    custom_metadata TEXT NOT NULL
+);
+`;
+
 // https://github.com/cloudflare/workerd/blob/4290f9717bc94647d9c8afd29602cdac97fdff1b/src/workerd/api/r2-api.capnp
 
 export const HEX_REGEXP = /^[0-9a-f]*$/i;
@@ -192,6 +217,11 @@ export const R2BindingRequestSchema = z.union([
 	R2ListRequestSchema,
 	R2DeleteRequestSchema,
 ]);
+
+export type OmitRequest<T> = Omit<T, "method" | "object">;
+export type R2GetOptions = OmitRequest<z.infer<typeof R2GetRequestSchema>>;
+export type R2PutOptions = OmitRequest<z.infer<typeof R2PutRequestSchema>>;
+export type R2ListOptions = OmitRequest<z.infer<typeof R2ListRequestSchema>>;
 
 export interface R2ErrorResponse {
 	version: number;

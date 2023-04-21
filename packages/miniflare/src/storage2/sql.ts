@@ -19,3 +19,8 @@ export type TypedDatabase = Omit<Database, "prepare"> & {
 		? TypedStatement<Params, SingleResult>
 		: TypedStatement<[Params], SingleResult>;
 };
+
+export function escapeLike(prefix: string) {
+	// Prefix all instances of `\`, `_` and `%` with `\`
+	return prefix.replace(/[\\_%]/g, "\\$&");
+}

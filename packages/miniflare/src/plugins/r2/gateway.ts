@@ -1,26 +1,57 @@
+import assert from "assert";
 import crypto from "crypto";
-import { z } from "zod";
-import { Log } from "../../shared";
-import { RangeStoredValueMeta, Storage } from "../../storage";
-import { _parseRanges } from "../shared";
-import { InvalidRange, NoSuchKey } from "./errors";
+import { ReadableStream, TransformStream } from "stream/web";
 import {
-	R2Object,
-	R2ObjectBody,
-	R2ObjectMetadata,
-	createVersion,
-} from "./r2Object";
+	DeferredPromise,
+	Log,
+	base64Decode,
+	base64Encode,
+	maybeApply,
+} from "../../shared";
+import { Storage } from "../../storage";
+import { NewStorage, TypedDatabase, escapeLike } from "../../storage2";
+import { NoSuchKey } from "./errors";
+import { R2Object, R2ObjectBody } from "./r2Object";
 import {
-	R2GetRequestSchema,
-	R2ListRequestSchema,
-	R2PutRequestSchema,
+	ObjectRow,
+	R2Conditional,
+	R2GetOptions,
+	R2ListOptions,
+	R2PutOptions,
+	R2Range,
+	SQL_SCHEMA,
 } from "./schemas";
-import { MAX_LIST_KEYS, Validator } from "./validator";
+import {
+	MAX_LIST_KEYS,
+	R2Hashes,
+	R2_HASH_ALGORITHMS,
+	Validator,
+} from "./validator";
 
-export type OmitRequest<T> = Omit<T, "method" | "object">;
-export type R2GetOptions = OmitRequest<z.infer<typeof R2GetRequestSchema>>;
-export type R2PutOptions = OmitRequest<z.infer<typeof R2PutRequestSchema>>;
-export type R2ListOptions = OmitRequest<z.infer<typeof R2ListRequestSchema>>;
+class DigestingStream<
+	Algorithm extends string = string,
+> extends TransformStream<Uint8Array, Uint8Array> {
+	readonly digests: Promise<Map<Algorithm, Buffer>>;
+
+	constructor(algorithms: Algorithm[]) {
+		const digests = new DeferredPromise<Map<Algorithm, Buffer>>();
+		const hashes = algorithms.map((alg) => crypto.createHash(alg));
+		super({
+			transform(chunk, controller) {
+				for (const hash of hashes) hash.update(chunk);
+				controller.enqueue(chunk);
+			},
+			flush() {
+				const result = new Map<Algorithm, Buffer>();
+				for (let i = 0; i < hashes.length; i++) {
+					result.set(algorithms[i], hashes[i].digest());
+				}
+				digests.resolve(result);
+			},
+		});
+		this.digests = digests;
+	}
+}
 
 export interface R2Objects {
 	// An array of objects matching the list request.
@@ -42,163 +73,337 @@ export interface R2Objects {
 
 const validate = new Validator();
 
+function sqlStmts(db: TypedDatabase) {
+	const stmtGetPreviousByKey = db.prepare<
+		Pick<ObjectRow, "key">,
+		Pick<ObjectRow, "blob_id" | "etag" | "uploaded">
+	>("SELECT blob_id, etag, uploaded FROM _mf_objects WHERE key = :key");
+	const stmtPut = db.prepare<ObjectRow>(`
+    INSERT OR REPLACE INTO _mf_objects (key, blob_id, version, size, etag, uploaded, checksums, http_metadata, custom_metadata)
+    VALUES (:key, :blob_id, :version, :size, :etag, :uploaded, :checksums, :http_metadata, :custom_metadata)
+  `);
+	const stmtDelete = db.prepare<
+		Pick<ObjectRow, "key">,
+		Pick<ObjectRow, "blob_id">
+	>("DELETE FROM _mf_objects WHERE key = :key RETURNING blob_id");
+
+	function stmtListWithoutDelimiter<ExtraColumns extends (keyof ObjectRow)[]>(
+		...extraColumns: ExtraColumns
+	) {
+		const columns: (keyof ObjectRow)[] = [
+			"key",
+			"version",
+			"size",
+			"etag",
+			"uploaded",
+			"checksums",
+			...extraColumns,
+		];
+		// TODO: consider applying same `:start_after IS NULL` trick to KeyValueStore
+		return db.prepare<
+			{ limit: number; escaped_prefix: string; start_after: string | null },
+			Omit<ObjectRow, "blob_id"> & Pick<ObjectRow, ExtraColumns[number]>
+		>(`
+      SELECT ${columns.join(", ")}
+      FROM _mf_objects
+      WHERE key LIKE :escaped_prefix || '%' ESCAPE '\\'
+      AND (:start_after IS NULL OR key > :start_after)
+      ORDER BY key LIMIT :limit
+    `);
+	}
+
+	return {
+		getByKey: db.prepare<Pick<ObjectRow, "key">, ObjectRow>(`
+      SELECT key, blob_id, version, size, etag, uploaded, checksums, http_metadata, custom_metadata
+      FROM _mf_objects WHERE key = :key
+    `),
+		put: db.transaction((newRow: ObjectRow, onlyIf?: R2Conditional) => {
+			const key = newRow.key;
+			const row = stmtGetPreviousByKey.get({ key });
+			if (onlyIf !== undefined) validate.condition(row, onlyIf);
+			stmtPut.run(newRow);
+			// TODO(soon): if this is null, we'll need to delete multipart parts
+			return row?.blob_id ?? undefined;
+		}),
+		deleteByKeys: db.transaction((keys: string[]) => {
+			const blobIds: string[] = [];
+			for (const key of keys) {
+				const row = stmtDelete.get({ key });
+				// TODO(soon): if this is null, we'll need to delete multipart parts
+				if (row?.blob_id != null) blobIds.push(row.blob_id);
+			}
+			return blobIds;
+		}),
+		listWithoutDelimiter: stmtListWithoutDelimiter(),
+		listHttpMetadataWithoutDelimiter: stmtListWithoutDelimiter("http_metadata"),
+		listCustomMetadataWithoutDelimiter:
+			stmtListWithoutDelimiter("custom_metadata"),
+		listHttpCustomMetadataWithoutDelimiter: stmtListWithoutDelimiter(
+			"http_metadata",
+			"custom_metadata"
+		),
+		listMetadata: db.prepare<
+			{
+				limit: number;
+				escaped_prefix: string;
+				start_after: string | null;
+				prefix: string;
+				delimiter: string;
+			},
+			Omit<ObjectRow, "key" | "blob_id"> & {
+				last_key: string;
+				delimited_prefix_or_key: `dlp:${string}` | `key:${string}`;
+			}
+		>(`
+      SELECT
+        -- When grouping by a delimited prefix, this will give us the last key with that prefix.
+        --   NOTE: we'll use this for the next cursor. If we didn't return the last key, the next page may return the
+        --   same delimited prefix. Essentially, we're skipping over all keys with this group's delimited prefix.
+        -- When grouping by a key, this will just give us the key.
+        max(key) AS last_key,
+        iif(
+            -- Try get 1-indexed position \`i\` of :delimiter in rest of key after :prefix...
+                                                       instr(substr(key, length(:prefix) + 1), :delimiter),
+            -- ...if found, we have a delimited prefix of the :prefix followed by the rest of key up to and including the :delimiter
+            'dlp:' || substr(key, 1, length(:prefix) + instr(substr(key, length(:prefix) + 1), :delimiter) + length(:delimiter) - 1),
+            -- ...otherwise, we just have a regular key
+            'key:' || key
+        ) AS delimited_prefix_or_key,
+        -- NOTE: we'll ignore metadata for delimited prefix rows, so it doesn't matter which keys' we return
+        version, size, etag, uploaded, checksums, http_metadata, custom_metadata
+      FROM _mf_objects
+      WHERE key LIKE :escaped_prefix || '%' ESCAPE '\\'
+      AND (:start_after IS NULL OR key > :start_after)
+      GROUP BY delimited_prefix_or_key -- Group keys with same delimited prefix into a row, leaving otherS in their own rows
+      ORDER BY last_key LIMIT :limit;
+    `),
+	};
+}
+
 export class R2Gateway {
+	readonly #storage: NewStorage;
+	readonly #stmts: ReturnType<typeof sqlStmts>;
+
 	constructor(
 		private readonly log: Log,
-		private readonly storage: Storage
-	) {}
+		legacyStorage: Storage
+	) {
+		this.#storage = legacyStorage.getNewStorage();
+		this.#storage.db.pragma("case_sensitive_like = TRUE");
+		this.#storage.db.exec(SQL_SCHEMA);
+		this.#stmts = sqlStmts(this.#storage.db);
+	}
+
+	#backgroundDelete(blobId: string) {
+		void this.#storage.blob.delete(blobId).catch(() => {});
+	}
 
 	async head(key: string): Promise<R2Object> {
 		validate.key(key);
 
-		// Get value, returning null if not found
-		const stored = await this.storage.head<R2ObjectMetadata>(key);
+		const row = this.#stmts.getByKey.get({ key });
+		if (row === undefined) throw new NoSuchKey();
 
-		if (stored?.metadata === undefined) throw new NoSuchKey();
-		const { metadata } = stored;
-		metadata.range = { offset: 0, length: metadata.size };
-
-		return new R2Object(metadata);
+		const range: R2Range = { offset: 0, length: row.size };
+		return new R2Object(row, range);
 	}
 
 	async get(
 		key: string,
 		options: R2GetOptions = {}
 	): Promise<R2ObjectBody | R2Object> {
-		const meta = await this.head(key);
-		validate.key(key).condition(meta, options.onlyIf);
+		validate.key(key);
 
-		let range = options.range ?? {};
-		if (options.rangeHeader !== undefined) {
-			const ranges = _parseRanges(options.rangeHeader, meta.size);
-			if (ranges?.length === 1) {
-				// If the header contained a single range, convert it to an R2Range.
-				// Note `start` and `end` are inclusive.
-				const { start, end } = ranges[0];
-				range = { offset: start, length: end - start + 1 };
-			} else {
-				// If the header was invalid, or contained multiple ranges, just return
-				// the full response
-				range = {};
-			}
+		// TODO(soon): we may need to make this a transaction for multipart get
+		const row = this.#stmts.getByKey.get({ key });
+		if (row === undefined) throw new NoSuchKey();
+
+		const defaultRange: R2Range = { offset: 0, length: row.size };
+		const meta = new R2Object(row, defaultRange);
+		const range = validate
+			.condition(meta, options.onlyIf)
+			.range(options, row.size);
+
+		assert(row.blob_id !== null); // TODO(soon): add multipart support
+		const value = await this.#storage.blob.get(row.blob_id, range);
+		if (value === null) throw new NoSuchKey();
+
+		let valueRange: R2Range | undefined;
+		if (value.range !== undefined) {
+			assert(!Array.isArray(value.range));
+			const { start, end } = value.range;
+			valueRange = { offset: start, length: end - start + 1 };
+		} else {
+			valueRange = defaultRange;
 		}
 
-		let stored: RangeStoredValueMeta<R2ObjectMetadata> | undefined;
-
-		try {
-			stored = await this.storage.getRange<R2ObjectMetadata>(key, range);
-		} catch {
-			throw new InvalidRange();
-		}
-		if (stored?.metadata === undefined) throw new NoSuchKey();
-		const { value, metadata } = stored;
-		// add range should it exist
-		if ("range" in stored && stored.range !== undefined) {
-			metadata.range = stored.range;
-		}
-
-		return new R2ObjectBody(metadata, value);
+		// TODO(now): could we reuse `meta` `R2Object` from above?
+		return new R2ObjectBody(row, value, valueRange);
 	}
 
 	async put(
 		key: string,
-		value: Uint8Array,
+		value: ReadableStream<Uint8Array>,
+		valueSize: number,
 		options: R2PutOptions
 	): Promise<R2Object> {
-		let meta: R2Object | undefined;
-		try {
-			meta = await this.head(key);
-		} catch (e) {
-			if (!(e instanceof NoSuchKey)) throw e;
+		// Store value in the blob store, computing required digests as we go
+		// (this means we don't have to buffer the entire stream to compute them)
+		const algorithms: (keyof R2Hashes)[] = [];
+		for (const { field } of R2_HASH_ALGORITHMS) {
+			// Always compute MD5 digest
+			if (field === "md5" || field in options) algorithms.push(field);
 		}
+		const digesting = new DigestingStream(algorithms);
+		const blobId = await this.#storage.blob.put(value.pipeThrough(digesting));
+		const digests = await digesting.digests;
+		const md5Digest = digests.get("md5");
+		assert(md5Digest !== undefined);
+		const md5DigestHex = md5Digest.toString("hex");
+
 		const checksums = validate
 			.key(key)
-			.size(value)
+			.size(valueSize)
 			.metadataSize(options.customMetadata)
-			.condition(meta, options.onlyIf)
-			.hash(value, options);
-
-		// build metadata
-		const md5Hash = crypto.createHash("md5").update(value).digest("hex");
-		const metadata: R2ObjectMetadata = {
+			.hash(digests, options);
+		const version = crypto.randomBytes(16).toString("hex");
+		const row: ObjectRow = {
 			key,
-			size: value.byteLength,
-			etag: md5Hash,
-			version: createVersion(),
-			httpEtag: `"${md5Hash}"`,
+			blob_id: blobId,
+			version,
+			size: valueSize,
+			etag: md5DigestHex,
 			uploaded: Date.now(),
-			httpMetadata: options.httpMetadata ?? {},
-			customMetadata: options.customMetadata ?? {},
-			checksums,
+			checksums: JSON.stringify(checksums),
+			http_metadata: JSON.stringify(options.httpMetadata ?? {}),
+			custom_metadata: JSON.stringify(options.customMetadata ?? {}),
 		};
-
-		// Store value with expiration and metadata
-		await this.storage.put<R2ObjectMetadata>(key, { value, metadata });
-		return new R2Object(metadata);
+		let maybeOldBlobId: string | undefined;
+		try {
+			maybeOldBlobId = this.#stmts.put(row, options.onlyIf);
+		} catch (e) {
+			// Probably precondition failed. In any case, the put transaction failed,
+			// so we're not storing a reference to the blob ID
+			this.#backgroundDelete(blobId);
+			throw e;
+		}
+		if (maybeOldBlobId !== undefined) this.#backgroundDelete(maybeOldBlobId);
+		return new R2Object(row); // TODO: do we need to specify a range here?
 	}
 
 	async delete(keys: string | string[]) {
-		if (Array.isArray(keys)) {
-			for (const key of keys) validate.key(key);
-			await this.storage.deleteMany(keys);
-		} else {
-			validate.key(keys);
-			await this.storage.delete(keys);
-		}
+		if (!Array.isArray(keys)) keys = [keys];
+		for (const key of keys) validate.key(key);
+		const blobIds = this.#stmts.deleteByKeys(keys);
+		for (const blobId of blobIds) this.#backgroundDelete(blobId);
 	}
 
-	async list(listOptions: R2ListOptions = {}): Promise<R2Objects> {
-		validate.limit(listOptions.limit);
+	#listWithoutDelimiterQuery(excludeHttp: boolean, excludeCustom: boolean) {
+		if (excludeHttp && excludeCustom) return this.#stmts.listWithoutDelimiter;
+		if (excludeHttp) return this.#stmts.listCustomMetadataWithoutDelimiter;
+		if (excludeCustom) return this.#stmts.listHttpMetadataWithoutDelimiter;
+		return this.#stmts.listHttpCustomMetadataWithoutDelimiter;
+	}
 
-		const { prefix = "", include = [], cursor = "", startAfter } = listOptions;
-		let { delimiter, limit = MAX_LIST_KEYS } = listOptions;
-		if (delimiter === "") delimiter = undefined;
+	async list(opts: R2ListOptions = {}): Promise<R2Objects> {
+		const prefix = opts.prefix ?? "";
 
-		// If include contains inputs, we reduce the limit to max 100
+		let limit = opts.limit ?? MAX_LIST_KEYS;
+		validate.limit(limit);
+
+		// If metadata is requested, R2 may return fewer than `limit` results to
+		// accommodate it. Simulate this by limiting the limit to 100.
+		// See https://developers.cloudflare.com/r2/api/workers/workers-api-reference/#r2listoptions.
+		const include = opts.include ?? [];
 		if (include.length > 0) limit = Math.min(limit, 100);
+		const excludeHttp = !include.includes("httpMetadata");
+		const excludeCustom = !include.includes("customMetadata");
+		const rowObject = (
+			row: Omit<ObjectRow, "blob_id" | "http_metadata" | "custom_metadata"> & {
+				http_metadata?: string;
+				custom_metadata?: string;
+			}
+		) => {
+			if (row.http_metadata === undefined || excludeHttp) {
+				row.http_metadata = "{}";
+			}
+			if (row.custom_metadata === undefined || excludeCustom) {
+				row.custom_metadata = "{}";
+			}
+			return new R2Object(row as Omit<ObjectRow, "blob_id">);
+		};
 
-		// If startAfter is set, we should increment the limit here, as `startAfter`
-		// is exclusive, but we're using inclusive `start` to implement it.
-		// Ideally we want to return `limit` number of keys here. However, doing
-		// this would be incompatible with the returned opaque `cursor`. Luckily,
-		// the R2 list contract allows us to return less than `limit` keys, as
-		// long as we set `truncated: true`. We'll fix this behaviour when we switch
-		// to the new storage system.
-		const res = await this.storage.list<R2ObjectMetadata>({
-			prefix,
-			limit,
-			cursor,
-			delimiter,
-			start: startAfter,
-		});
-		const delimitedPrefixes = new Set(res.delimitedPrefixes ?? []);
-
-		const objects = res.keys
-			// grab metadata
-			.map((k) => k.metadata)
-			// filter out objects that exist within the delimiter
-			.filter(
-				(metadata): metadata is R2ObjectMetadata => metadata !== undefined
-			)
-			// filter "httpFields" and/or "customFields" if found in "include"
-			.map((metadata) => {
-				if (!include.includes("httpMetadata")) metadata.httpMetadata = {};
-				if (!include.includes("customMetadata")) metadata.customMetadata = {};
-
-				return new R2Object(metadata);
-			});
-
-		if (startAfter !== undefined && objects[0]?.key === startAfter) {
-			// If the first key matched `startAfter`, remove it as this is exclusive
-			objects.splice(0, 1);
+		// If cursor set, and lexicographically after `startAfter`, use that for
+		// `startAfter` instead
+		let startAfter = opts.startAfter;
+		if (opts.cursor !== undefined) {
+			const cursorStartAfter = base64Decode(opts.cursor);
+			if (startAfter === undefined || cursorStartAfter > startAfter) {
+				startAfter = cursorStartAfter;
+			}
 		}
 
-		const cursorLength = res.cursor.length > 0;
+		let delimiter = opts.delimiter;
+		if (delimiter === "") delimiter = undefined;
+
+		// Run appropriate query depending on options
+		const params = {
+			escaped_prefix: escapeLike(prefix),
+			start_after: startAfter ?? null,
+			// Increase the queried limit by 1, if we return this many results, we
+			// know there are more rows. We'll truncate to the original limit before
+			// returning results.
+			limit: limit + 1,
+		};
+
+		let objects: R2Object[];
+		const delimitedPrefixes: string[] = [];
+		let nextCursorStartAfter: string | undefined;
+
+		if (delimiter !== undefined) {
+			const rows = this.#stmts.listMetadata.all({
+				...params,
+				prefix,
+				delimiter,
+			});
+
+			// If there are more results, we'll be returning a cursor
+			const hasMoreRows = rows.length === limit + 1;
+			rows.splice(limit, 1);
+
+			objects = [];
+			for (const row of rows) {
+				if (row.delimited_prefix_or_key.startsWith("dlp:")) {
+					delimitedPrefixes.push(row.delimited_prefix_or_key.substring(4));
+				} else {
+					objects.push(rowObject({ ...row, key: row.last_key }));
+				}
+			}
+
+			if (hasMoreRows) nextCursorStartAfter = rows[limit - 1].last_key;
+		} else {
+			// If we don't have a delimiter, we can use a more efficient query
+			const query = this.#listWithoutDelimiterQuery(excludeHttp, excludeCustom);
+			const rows = query.all(params);
+
+			// If there are more results, we'll be returning a cursor
+			const hasMoreRows = rows.length === limit + 1;
+			rows.splice(limit, 1);
+
+			objects = rows.map(rowObject);
+
+			if (hasMoreRows) nextCursorStartAfter = rows[limit - 1].key;
+		}
+
+		// The cursor encodes a key to start after rather than the key to start at
+		// to ensure keys added between `list()` calls are returned.
+		const nextCursor = maybeApply(base64Encode, nextCursorStartAfter);
+
 		return {
 			objects,
-			truncated: cursorLength,
-			cursor: cursorLength ? res.cursor : undefined,
-			delimitedPrefixes: [...delimitedPrefixes],
+			truncated: nextCursor !== undefined,
+			cursor: nextCursor,
+			delimitedPrefixes,
 		};
 	}
 }

@@ -36,12 +36,7 @@ import {
 } from "@miniflare/tre";
 import { Macro, ThrowsExpectation } from "ava";
 import { z } from "zod";
-import {
-	MiniflareTestContext,
-	miniflareTest,
-	useTmp,
-	utf8Decode,
-} from "../../test-shared";
+import { MiniflareTestContext, miniflareTest, useTmp } from "../../test-shared";
 import { isWithin } from "../../test-shared/asserts";
 
 const WITHIN_EPSILON = 10_000;
@@ -973,9 +968,7 @@ test(
 	{
 		keys: ["key1", "key2", "key3", "key4"],
 		options: { startAfter: "key1", limit: 2 },
-		// TODO(soon): this should be `[["key2", "key3"], ["key4"]]`, see comment in
-		//  `gateway.ts` for details, we'll fix this with the new storage system
-		pages: [["key2"], ["key3", "key4"]],
+		pages: [["key2", "key3"], ["key4"]],
 	}
 );
 test(
@@ -1210,7 +1203,8 @@ test.serial("operations persist stored data", async (t) => {
 
 	// Create new temporary file-system persistence directory
 	const tmp = await useTmp(t);
-	const storage = new FileStorage(path.join(tmp, "bucket"));
+	const legacyStorage = new FileStorage(path.join(tmp, "bucket"));
+	const newStorage = legacyStorage.getNewStorage();
 
 	// Set option, then reset after test
 	await t.context.setOptions({ ...opts, r2Persist: tmp });
@@ -1218,8 +1212,11 @@ test.serial("operations persist stored data", async (t) => {
 
 	// Check put respects persist
 	await r2.put("key", "value");
-	const stored = await storage.get(`${ns}key`);
-	t.is(utf8Decode(stored?.value), "value");
+	const stmtListByNs = newStorage.db.prepare<{ ns: string }, { key: string }>(
+		"SELECT key FROM _mf_objects WHERE key LIKE :ns || '%'"
+	);
+	let stored = stmtListByNs.all({ ns });
+	t.deepEqual(stored, [{ key: `${ns}key` }]);
 
 	// Check head respects persist
 	const object = await r2.head("key");
@@ -1236,5 +1233,8 @@ test.serial("operations persist stored data", async (t) => {
 
 	// Check delete respects persist
 	await r2.delete("key");
-	t.false(await storage.has(`${ns}key`));
+	stored = stmtListByNs.all({ ns });
+	t.deepEqual(stored, []);
 });
+
+// TODO: add tests for empty key
