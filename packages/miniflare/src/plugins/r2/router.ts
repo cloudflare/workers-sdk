@@ -1,4 +1,5 @@
-import { TextDecoder } from "util";
+import assert from "assert";
+import { ReadableStream, TransformStream } from "stream/web";
 import { Request, Response } from "../../http";
 import {
 	CfHeader,
@@ -13,23 +14,46 @@ import { R2Gateway, R2Objects } from "./gateway";
 import { EncodedMetadata, R2Object, R2ObjectBody } from "./r2Object";
 import { R2BindingRequestSchema } from "./schemas";
 
-const decoder = new TextDecoder();
-
 async function decodeMetadata(req: Request) {
-	const bytes = await req.arrayBuffer();
-
 	const metadataSize = Number(req.headers.get(CfHeader.MetadataSize));
-	if (Number.isNaN(metadataSize)) {
-		throw new InvalidMetadata();
+	if (Number.isNaN(metadataSize)) throw new InvalidMetadata();
+
+	assert(req.body !== null);
+	const body = req.body as ReadableStream<Uint8Array>;
+
+	// Read just metadata from body stream
+	const chunks: Uint8Array[] = [];
+	let chunksLength = 0;
+	for await (const chunk of body.values({ preventCancel: true })) {
+		chunks.push(chunk);
+		chunksLength += chunk.byteLength;
+		// Once we've read enough bytes, stop
+		if (chunksLength >= metadataSize) break;
+	}
+	// If we read the entire stream without enough bytes for metadata, throw
+	if (chunksLength < metadataSize) throw new InvalidMetadata();
+	const atLeastMetadata = Buffer.concat(chunks, chunksLength);
+	const metadataJson = atLeastMetadata.subarray(0, metadataSize).toString();
+	const metadata = R2BindingRequestSchema.parse(JSON.parse(metadataJson));
+
+	let value = body;
+	// If we read some value when reading metadata (quite likely), create a new
+	// stream, write the bit we read, then write the rest of the body stream
+	if (chunksLength > metadataSize) {
+		const identity = new TransformStream();
+		const writer = identity.writable.getWriter();
+		// The promise returned by `writer.write()` will only resolve once the chunk
+		// is read, which won't be until after this function returns, so we can't
+		// use `await` here
+		void writer.write(atLeastMetadata.subarray(metadataSize)).then(() => {
+			// Release the writer without closing the stream
+			writer.releaseLock();
+			return body.pipeTo(identity.writable);
+		});
+		value = identity.readable;
 	}
 
-	const [metadataBytes, value] = [
-		bytes.slice(0, metadataSize),
-		bytes.slice(metadataSize),
-	];
-	const metadataText = decoder.decode(metadataBytes);
-	const metadata = R2BindingRequestSchema.parse(JSON.parse(metadataText));
-	return { metadata, value: new Uint8Array(value) };
+	return { metadata, metadataSize, value };
 }
 function decodeHeaderMetadata(req: Request) {
 	const header = req.headers.get(CfHeader.Request);
@@ -80,7 +104,7 @@ export class R2Router extends Router<R2Gateway> {
 
 	@PUT("/:bucket")
 	put: RouteHandler<R2Params> = async (req, params) => {
-		const { metadata, value } = await decodeMetadata(req);
+		const { metadata, metadataSize, value } = await decodeMetadata(req);
 		const persist = decodePersist(req.headers);
 		const gateway = this.gatewayFactory.get(params.bucket, persist);
 
@@ -90,7 +114,18 @@ export class R2Router extends Router<R2Gateway> {
 			);
 			return new Response();
 		} else if (metadata.method === "put") {
-			const result = await gateway.put(metadata.object, value, metadata);
+			const contentLength = Number(req.headers.get("Content-Length"));
+			// `workerd` requires a known value size for R2 put requests:
+			// - https://github.com/cloudflare/workerd/blob/e3479895a2ace28e4fd5f1399cea4c92291966ab/src/workerd/api/r2-rpc.c%2B%2B#L154-L156
+			// - https://github.com/cloudflare/workerd/blob/e3479895a2ace28e4fd5f1399cea4c92291966ab/src/workerd/api/r2-rpc.c%2B%2B#L188-L189
+			assert(!isNaN(contentLength));
+			const valueSize = contentLength - metadataSize;
+			const result = await gateway.put(
+				metadata.object,
+				value,
+				valueSize,
+				metadata
+			);
 			return encodeResult(result);
 		} else {
 			throw new InternalError(); // Unknown method: should never be reached

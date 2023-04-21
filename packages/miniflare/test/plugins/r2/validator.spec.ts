@@ -1,5 +1,5 @@
 import { R2Conditional } from "@cloudflare/workers-types/experimental";
-import { R2ObjectMetadata, _testR2Conditional } from "@miniflare/tre";
+import { R2Object, _testR2Conditional } from "@miniflare/tre";
 import test from "ava";
 
 test("testR2Conditional: matches various conditions", (t) => {
@@ -11,7 +11,7 @@ test("testR2Conditional: matches various conditions", (t) => {
 	const pastDate = new Date(uploadedDate.getTime() - 30_000);
 	const futureDate = new Date(uploadedDate.getTime() + 30_000);
 
-	const metadata: Pick<R2ObjectMetadata, "etag" | "uploaded"> = {
+	const metadata: Pick<R2Object, "etag" | "uploaded"> = {
 		etag,
 		uploaded: uploadedDate.getTime(),
 	};
