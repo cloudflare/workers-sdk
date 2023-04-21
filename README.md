@@ -74,4 +74,4 @@ For the latest Wrangler documentation, [click here](https://developers.cloudflar
 
 ## Contributing
 
-Refer to the [`CONTRIBUTING.md`](/CONTRIBUTING.md) guide for details.
+Refer to the [`CONTRIBUTING.md`](/CONTRIBUTING.md) guide for details. 
