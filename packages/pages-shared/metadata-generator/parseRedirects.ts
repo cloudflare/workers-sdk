@@ -117,7 +117,7 @@ export function parseRedirects(input: string): ParsedRedirects {
 				line,
 				lineNumber: i + 1,
 				message:
-					"This behaviour is default with Cloudflare Pages (when a 404.html isn't present) and will be ignored. Remove it from your _redirects to silence this warning.",
+					'This behaviour is default with Cloudflare Pages (when a 404.html isn\'t present) and will be ignored. Remove it from your _redirects to silence this warning.\nIf you wish to direct requests to a subfolder, for example, sending all requests to foo/index.html, you should use "/* /foo/".',
 			});
 			continue;
 		}
