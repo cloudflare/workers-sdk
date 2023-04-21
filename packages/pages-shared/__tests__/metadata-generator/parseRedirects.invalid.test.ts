@@ -281,12 +281,35 @@ test("parseRedirects should reject '/* /index.html'", () => {
 / /index.html
 / /index
 /* /foo/index.html
+
+/* /foo
+/foo/* /bar 200
+/ /foo
 `;
 	const invalidRedirectError =
-		'This behaviour is default with Cloudflare Pages (when a 404.html isn\'t present) and will be ignored. Remove it from your _redirects to silence this warning.\nIf you wish to direct requests to a subfolder, for example, sending all requests to foo/index.html, you should use "/* /foo/".';
+		"Infinite loop detected in this rule and has been ignored. This will cause a redirect to strip `.html` or `/index` and end up triggering this rule again. Please fix or remove this rule to silence this warning.";
 	const result = parseRedirects(input);
 	expect(result).toEqual({
-		rules: [],
+		rules: [
+			{
+				from: "/*",
+				status: 302,
+				to: "/foo",
+				lineNumber: 8,
+			},
+			{
+				from: "/foo/*",
+				status: 200,
+				to: "/bar",
+				lineNumber: 9,
+			},
+			{
+				from: "/",
+				status: 302,
+				to: "/foo",
+				lineNumber: 10,
+			},
+		],
 		invalid: [
 			{
 				line: "/* /index.html 200",
