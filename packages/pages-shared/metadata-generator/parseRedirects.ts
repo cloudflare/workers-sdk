@@ -6,7 +6,7 @@ import {
 	SPLAT_REGEX,
 	PLACEHOLDER_REGEX,
 } from "./constants";
-import { validateUrl } from "./validateURL";
+import { validateUrl, urlHasHost } from "./validateURL";
 import type {
 	InvalidRedirectRule,
 	ParsedRedirects,
@@ -109,6 +109,19 @@ export function parseRedirects(input: string): ParsedRedirects {
 			continue;
 		}
 
+		// We want to always block the `/* /index.html` redirect - this will cause TOO_MANY_REDIRECTS errors as
+		// the asset server will redirect it back to `/`, removing the `/index.html`. This is the case for regular
+		// redirects, as well as proxied (200) rewrites. We only want to run this on relative urls
+		if (/\/\*?$/.test(from) && /\/index(.html)?$/.test(to) && !urlHasHost(to)) {
+			invalid.push({
+				line,
+				lineNumber: i + 1,
+				message:
+					"Infinite loop detected in this rule and has been ignored. This will cause a redirect to strip `.html` or `/index` and end up triggering this rule again. Please fix or remove this rule to silence this warning.",
+			});
+			continue;
+		}
+
 		if (seen_paths.has(from)) {
 			invalid.push({
 				line,
@@ -120,10 +133,7 @@ export function parseRedirects(input: string): ParsedRedirects {
 		seen_paths.add(from);
 
 		if (status === 200) {
-			// Error can only be that it's not relative - given validateUrl is called above without onlyRelative:true,
-			// so if it's present, we can error to the user that proxying only expects relative urls
-			const [proxyTo, error] = validateUrl(to, true, true, true);
-			if (error) {
+			if (urlHasHost(to)) {
 				invalid.push({
 					line,
 					lineNumber: i + 1,
@@ -131,8 +141,6 @@ export function parseRedirects(input: string): ParsedRedirects {
 				});
 				continue;
 			}
-			rules.push({ from, to: proxyTo as string, status, lineNumber: i + 1 });
-			continue;
 		}
 
 		rules.push({ from, to, status, lineNumber: i + 1 });

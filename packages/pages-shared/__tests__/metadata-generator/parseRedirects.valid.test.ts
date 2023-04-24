@@ -138,3 +138,39 @@ test("parseRedirects should accept 200 (proxying) redirects", () => {
 		invalid: [],
 	});
 });
+
+test("parseRedirects should accept absolute URLs that end with index.html", () => {
+	const input = `
+	/foo https://bar.com/index.html 302
+`;
+	const result = parseRedirects(input);
+	expect(result).toEqual({
+		rules: [
+			{
+				from: "/foo",
+				status: 302,
+				to: "https://bar.com/index.html",
+				lineNumber: 2,
+			},
+		],
+		invalid: [],
+	});
+});
+
+test("parseRedirects should accept relative URLs that don't point to .html files", () => {
+	const input = `
+	/* /foo 200
+`;
+	const result = parseRedirects(input);
+	expect(result).toEqual({
+		rules: [
+			{
+				from: "/*",
+				status: 200,
+				to: "/foo",
+				lineNumber: 2,
+			},
+		],
+		invalid: [],
+	});
+});

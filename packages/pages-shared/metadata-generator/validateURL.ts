@@ -55,3 +55,8 @@ export const validateUrl = (
 			: 'URLs should either be relative (e.g. begin with a forward-slash), or use HTTPS (e.g. begin with "https://").',
 	];
 };
+
+export function urlHasHost(token: string): boolean {
+	const host = URL_REGEX.exec(token);
+	return Boolean(host && host.groups && host.groups.host);
+}
