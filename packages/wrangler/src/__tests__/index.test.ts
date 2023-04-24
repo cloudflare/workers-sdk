@@ -49,6 +49,7 @@ describe("wrangler", () => {
 			  wrangler r2                          📦 Interact with an R2 store
 			  wrangler dispatch-namespace          📦 Interact with a dispatch namespace
 			  wrangler d1                          🗄  Interact with a D1 database
+			  wrangler constellation               🤖 Interact with Constellation AI models
 			  wrangler pubsub                      📮 Interact and manage Pub/Sub Brokers
 			  wrangler mtls-certificate            🪪 Manage certificates used for mTLS connections
 			  wrangler login                       🔓 Login to Cloudflare
@@ -102,6 +103,7 @@ describe("wrangler", () => {
 			  wrangler r2                          📦 Interact with an R2 store
 			  wrangler dispatch-namespace          📦 Interact with a dispatch namespace
 			  wrangler d1                          🗄  Interact with a D1 database
+			  wrangler constellation               🤖 Interact with Constellation AI models
 			  wrangler pubsub                      📮 Interact and manage Pub/Sub Brokers
 			  wrangler mtls-certificate            🪪 Manage certificates used for mTLS connections
 			  wrangler login                       🔓 Login to Cloudflare

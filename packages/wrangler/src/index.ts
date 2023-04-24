@@ -7,6 +7,7 @@ import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { isBuildFailure } from "./bundle";
 import { loadDotEnv, readConfig } from "./config";
+import { constellation } from "./constellation";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
 import {
@@ -430,6 +431,15 @@ export function createCLIParser(argv: string[]) {
 	wrangler.command("d1", "🗄  Interact with a D1 database", (d1Yargs) => {
 		return d1(d1Yargs.command(subHelp));
 	});
+
+	// ai
+	wrangler.command(
+		"constellation",
+		"🤖 Interact with Constellation AI models",
+		(aiYargs) => {
+			return constellation(aiYargs.command(subHelp));
+		}
+	);
 
 	// pubsub
 	wrangler.command(
