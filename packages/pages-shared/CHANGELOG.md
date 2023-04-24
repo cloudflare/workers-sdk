@@ -1,5 +1,11 @@
 # @cloudflare/pages-shared
 
+## 0.4.0
+
+### Minor Changes
+
+- [#3083](https://github.com/cloudflare/workers-sdk/pull/3083) [`277a49b1`](https://github.com/cloudflare/workers-sdk/commit/277a49b167272d61b6c2345fe74b71d63a12666b) Thanks [@Skye-31](https://github.com/Skye-31)! - Feat(metadata-generator): Introduce validation for `/* /index.html` rules.
+
 ## 0.3.5
 
 ### Patch Changes

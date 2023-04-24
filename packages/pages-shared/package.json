@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/pages-shared",
-	"version": "0.3.5",
+	"version": "0.4.0",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cloudflare/workers-sdk.git",
