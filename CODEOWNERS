@@ -1,5 +1,6 @@
 # Global owners
 * @cloudflare/wrangler
+/packages/wrangler/CHANGELOG.md @cloudflare/wrangler-admins
 /packages/pages-shared/ @cloudflare/pages
 /packages/wrangler/pages/ @cloudflare/pages
 /packages/wrangler/src/pages/ @cloudflare/pages
