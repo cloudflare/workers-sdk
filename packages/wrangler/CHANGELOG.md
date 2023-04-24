@@ -1,5 +1,21 @@
 # wrangler
 
+## 2.17.0
+
+### Minor Changes
+
+- [#3004](https://github.com/cloudflare/workers-sdk/pull/3004) [`6d5000a7`](https://github.com/cloudflare/workers-sdk/commit/6d5000a7b80b29eb57139c6334f40c564c9ad0c9) Thanks [@rozenmd](https://github.com/rozenmd)! - feat: teach `wrangler docs` to use algolia search index
+
+  This PR lets you search Cloudflare's entire docs via `wrangler docs [search term here]`.
+
+  By default, if the search fails to find what you're looking for, you'll get an error like this:
+
+  ```
+  ✘ [ERROR] Could not find docs for: <search term goes here>. Please try again with another search term.
+  ```
+
+  If you provide the `--yes` or `-y` flag, wrangler will open the docs to https://developers.cloudflare.com/workers/wrangler/commands/, even if the search fails.
+
 ## 2.16.0
 
 ### Minor Changes
