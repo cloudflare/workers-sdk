@@ -11,7 +11,7 @@ This monorepo contains:
 - [`pages-shared`](https://github.com/cloudflare/workers-sdk/tree/main/packages/pages-shared)
   Used internally to power Wrangler and Cloudflare Pages. It contains all the code that is shared between these clients.
 
-Wrangler is developed in the open on GitHub, and you can see what we're working on in [GitHub Issues](https://github.com/cloudflare/workers-sdk/issues?q=is%3Aopen+is%3Aissue). If you've found a bug or would like to request a feature, [please file an issue](https://github.com/cloudflare/workers-sdk/issues/new/choose)!
+Wrangler and the workers-sdk is developed in the open on GitHub, and you can see what we're working on in [GitHub Issues](https://github.com/cloudflare/workers-sdk/issues?q=is%3Aopen+is%3Aissue), as well as in our [workers-sdk GitHub Project board](https://github.com/orgs/cloudflare/projects/1). If you've found a bug or would like to request a feature, [please file an issue](https://github.com/cloudflare/workers-sdk/issues/new/choose)!
 
 ## Quick Start
 
