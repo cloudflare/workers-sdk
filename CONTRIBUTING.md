@@ -237,7 +237,7 @@ We use the following guidelines to determine the kind of change for a PR:
 
 ## Releases
 
-We generally cut wrangler releases at the start of each week. If you need a release cut outside of the regular cadence, please reach out to the [@cloudflare/wrangler-admins](https://github.com/orgs/cloudflare/teams/wrangler-admins) team.
+We generally cut Wrangler releases at the start of each week. If you need a release cut outside of the regular cadence, please reach out to the [@cloudflare/wrangler-admins](https://github.com/orgs/cloudflare/teams/wrangler-admins) team.
 
 ## Miniflare Development
 
