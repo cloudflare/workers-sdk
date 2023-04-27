@@ -8,7 +8,7 @@ import type { Config } from "../config";
 const API_MAX = 10000;
 // The const below are halved from the API's true capacity to help avoid
 // hammering it with large requests.
-const BATCH_KEY_MAX = API_MAX / 2;
+export const BATCH_KEY_MAX = API_MAX / 2;
 
 type KvArgs = {
 	binding?: string;
@@ -256,7 +256,7 @@ export async function deleteKVKeyValue(
 /**
  * Formatter for converting e.g. 5328 --> 5,328
  */
-const formatNumber = new Intl.NumberFormat("en-US", {
+export const formatNumber = new Intl.NumberFormat("en-US", {
 	notation: "standard",
 }).format;
 
@@ -279,7 +279,8 @@ export async function putKVBulkKeyValue(
 	accountId: string,
 	namespaceId: string,
 	keyValues: KeyValue[],
-	quiet = false
+	quiet = false,
+	abortSignal?: AbortSignal
 ) {
 	for (let index = 0; index < keyValues.length; index += BATCH_KEY_MAX) {
 		if (!quiet && keyValues.length > BATCH_KEY_MAX) {
@@ -292,7 +293,9 @@ export async function putKVBulkKeyValue(
 				method: "PUT",
 				body: JSON.stringify(keyValues.slice(index, index + BATCH_KEY_MAX)),
 				headers: { "Content-Type": "application/json" },
-			}
+			},
+			undefined,
+			abortSignal
 		);
 	}
 

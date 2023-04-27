@@ -10,6 +10,7 @@ import {
 	printBundleSize,
 	printOffendingDependencies,
 } from "../bundle-reporter";
+import { logger } from "../logger";
 import { writeAuthConfigFile } from "../user";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockAuthDomain } from "./helpers/mock-auth-domain";
@@ -68,6 +69,7 @@ describe("publish", () => {
 		setIsTTY(true);
 		mockLastDeploymentRequest();
 		mockDeploymentsListRequest();
+		logger.loggerLevel = "log";
 	});
 
 	afterEach(() => {
@@ -1551,12 +1553,13 @@ addEventListener('fetch', event => {});`
 			Object {
 			  "debug": "",
 			  "err": "",
-			  "info": "",
-			  "out": "Reading file-1.txt...
-			Uploading as file-1.2ca234f380.txt...
-			Reading file-2.txt...
-			Uploading as file-2.5938485188.txt...
-			↗️  Done syncing assets
+			  "info": "Fetching list of already uploaded assets...
+			Building list of assets to upload...
+			 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
+			 + file-2.5938485188.txt (uploading new version of file-2.txt)
+			Uploading 2 new assets...
+			Uploaded 100% [2 out of 2]",
+			  "out": "↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -1604,12 +1607,16 @@ addEventListener('fetch', event => {});`
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 			await runWrangler("publish --config ./my-site/wrangler.toml");
 
+			expect(std.info).toMatchInlineSnapshot(`
+			"Fetching list of already uploaded assets...
+			Building list of assets to upload...
+			 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
+			 + file-2.5938485188.txt (uploading new version of file-2.txt)
+			Uploading 2 new assets...
+			Uploaded 100% [2 out of 2]"
+		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Reading file-1.txt...
-			Uploading as file-1.2ca234f380.txt...
-			Reading file-2.txt...
-			Uploading as file-2.5938485188.txt...
-			↗️  Done syncing assets
+			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -1695,12 +1702,13 @@ addEventListener('fetch', event => {});`
 			Object {
 			  "debug": "",
 			  "err": "",
-			  "info": "",
-			  "out": "Reading file-1.txt...
-			Uploading as file-1.2ca234f380.txt...
-			Reading file-2.txt...
-			Uploading as file-2.5938485188.txt...
-			↗️  Done syncing assets
+			  "info": "Fetching list of already uploaded assets...
+			Building list of assets to upload...
+			 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
+			 + file-2.5938485188.txt (uploading new version of file-2.txt)
+			Uploading 2 new assets...
+			Uploaded 100% [2 out of 2]",
+			  "out": "↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -1744,12 +1752,16 @@ addEventListener('fetch', event => {});`
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 			await runWrangler("publish");
 
+			expect(std.info).toMatchInlineSnapshot(`
+			"Fetching list of already uploaded assets...
+			Building list of assets to upload...
+			 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
+			 + file-2.5938485188.txt (uploading new version of file-2.txt)
+			Uploading 2 new assets...
+			Uploaded 100% [2 out of 2]"
+		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Reading file-1.txt...
-			Uploading as file-1.2ca234f380.txt...
-			Reading file-2.txt...
-			Uploading as file-2.5938485188.txt...
-			↗️  Done syncing assets
+			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -1786,12 +1798,13 @@ addEventListener('fetch', event => {});`
 			Object {
 			  "debug": "",
 			  "err": "",
-			  "info": "",
-			  "out": "Reading file-1.txt...
-			Uploading as file-1.2ca234f380.txt...
-			Reading file-2.txt...
-			Uploading as file-2.5938485188.txt...
-			↗️  Done syncing assets
+			  "info": "Fetching list of already uploaded assets...
+			Building list of assets to upload...
+			 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
+			 + file-2.5938485188.txt (uploading new version of file-2.txt)
+			Uploading 2 new assets...
+			Uploaded 100% [2 out of 2]",
+			  "out": "↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -1977,12 +1990,13 @@ addEventListener('fetch', event => {});`
 			Object {
 			  "debug": "",
 			  "err": "",
-			  "info": "",
-			  "out": "Reading subdir/file-1.txt...
-			Uploading as subdir/file-1.2ca234f380.txt...
-			Reading subdir/file-2.txt...
-			Uploading as subdir/file-2.5938485188.txt...
-			↗️  Done syncing assets
+			  "info": "Fetching list of already uploaded assets...
+			Building list of assets to upload...
+			 + subdir/file-1.2ca234f380.txt (uploading new version of subdir/file-1.txt)
+			 + subdir/file-2.5938485188.txt (uploading new version of subdir/file-2.txt)
+			Uploading 2 new assets...
+			Uploaded 100% [2 out of 2]",
+			  "out": "↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -2025,12 +2039,13 @@ addEventListener('fetch', event => {});`
 			Object {
 			  "debug": "",
 			  "err": "",
-			  "info": "",
-			  "out": "Reading subdir/file-1.txt...
-			Uploading as subdir/file-1.2ca234f380.txt...
-			Reading subdir/file-2.txt...
-			Uploading as subdir/file-2.5938485188.txt...
-			↗️  Done syncing assets
+			  "info": "Fetching list of already uploaded assets...
+			Building list of assets to upload...
+			 + subdir/file-1.2ca234f380.txt (uploading new version of subdir/file-1.txt)
+			 + subdir/file-2.5938485188.txt (uploading new version of subdir/file-2.txt)
+			Uploading 2 new assets...
+			Uploaded 100% [2 out of 2]",
+			  "out": "↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -2082,12 +2097,16 @@ addEventListener('fetch', event => {});`
 
 			await runWrangler("publish");
 
+			expect(std.info).toMatchInlineSnapshot(`
+			"Fetching list of already uploaded assets...
+			Building list of assets to upload...
+			 + subdir/file-1.2ca234f380.txt (uploading new version of subdir/file-1.txt)
+			 + subdir/file-2.5938485188.txt (uploading new version of subdir/file-2.txt)
+			Uploading 2 new assets...
+			Uploaded 100% [2 out of 2]"
+		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Reading subdir/file-1.txt...
-			Uploading as subdir/file-1.2ca234f380.txt...
-			Reading subdir/file-2.txt...
-			Uploading as subdir/file-2.5938485188.txt...
-			↗️  Done syncing assets
+			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -2140,12 +2159,16 @@ addEventListener('fetch', event => {});`
 
 			await runWrangler("publish");
 
+			expect(std.info).toMatchInlineSnapshot(`
+			"Fetching list of already uploaded assets...
+			Building list of assets to upload...
+			 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
+			 + file-2.5938485188.txt (uploading new version of file-2.txt)
+			Uploading 2 new assets...
+			Uploaded 100% [2 out of 2]"
+		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Reading file-1.txt...
-			Uploading as file-1.2ca234f380.txt...
-			Reading file-2.txt...
-			Uploading as file-2.5938485188.txt...
-			↗️  Done syncing assets
+			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -2192,12 +2215,16 @@ addEventListener('fetch', event => {});`
 
 			await runWrangler("publish");
 
+			expect(std.info).toMatchInlineSnapshot(`
+			"Fetching list of already uploaded assets...
+			Building list of assets to upload...
+			 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
+			 + file-2.5938485188.txt (uploading new version of file-2.txt)
+			Uploading 2 new assets...
+			Uploaded 100% [2 out of 2]"
+		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Reading file-1.txt...
-			Uploading as file-1.2ca234f380.txt...
-			Reading file-2.txt...
-			Uploading as file-2.5938485188.txt...
-			↗️  Done syncing assets
+			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -2242,12 +2269,16 @@ addEventListener('fetch', event => {});`
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 			await runWrangler("publish --env some-env --legacy-env false");
 
+			expect(std.info).toMatchInlineSnapshot(`
+			"Fetching list of already uploaded assets...
+			Building list of assets to upload...
+			 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
+			 + file-2.5938485188.txt (uploading new version of file-2.txt)
+			Uploading 2 new assets...
+			Uploaded 100% [2 out of 2]"
+		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Reading file-1.txt...
-			Uploading as file-1.2ca234f380.txt...
-			Reading file-2.txt...
-			Uploading as file-2.5938485188.txt...
-			↗️  Done syncing assets
+			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (some-env) (TIMINGS)
 			Published test-name (some-env) (TIMINGS)
@@ -2293,12 +2324,16 @@ addEventListener('fetch', event => {});`
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 			await runWrangler("publish --env some-env --legacy-env true");
 
+			expect(std.info).toMatchInlineSnapshot(`
+			"Fetching list of already uploaded assets...
+			Building list of assets to upload...
+			 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
+			 + file-2.5938485188.txt (uploading new version of file-2.txt)
+			Uploading 2 new assets...
+			Uploaded 100% [2 out of 2]"
+		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Reading file-1.txt...
-			Uploading as file-1.2ca234f380.txt...
-			Reading file-2.txt...
-			Uploading as file-2.5938485188.txt...
-			↗️  Done syncing assets
+			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name-some-env (TIMINGS)
 			Published test-name-some-env (TIMINGS)
@@ -2338,11 +2373,7 @@ addEventListener('fetch', event => {});`
 			await runWrangler("publish");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Reading file-1.txt...
-			Skipping - already uploaded.
-			Reading file-2.txt...
-			Uploading as file-2.5938485188.txt...
-			↗️  Done syncing assets
+			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -2380,10 +2411,15 @@ addEventListener('fetch', event => {});`
 			);
 			await runWrangler("publish --site-include file-1.txt");
 
+			expect(std.info).toMatchInlineSnapshot(`
+			"Fetching list of already uploaded assets...
+			Building list of assets to upload...
+			 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
+			Uploading 1 new asset...
+			Uploaded 100% [1 out of 1]"
+		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Reading file-1.txt...
-			Uploading as file-1.2ca234f380.txt...
-			↗️  Done syncing assets
+			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -2421,10 +2457,15 @@ addEventListener('fetch', event => {});`
 			);
 			await runWrangler("publish --site-exclude file-2.txt");
 
+			expect(std.info).toMatchInlineSnapshot(`
+			"Fetching list of already uploaded assets...
+			Building list of assets to upload...
+			 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
+			Uploading 1 new asset...
+			Uploaded 100% [1 out of 1]"
+		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Reading file-1.txt...
-			Uploading as file-1.2ca234f380.txt...
-			↗️  Done syncing assets
+			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -2463,10 +2504,15 @@ addEventListener('fetch', event => {});`
 			);
 			await runWrangler("publish");
 
+			expect(std.info).toMatchInlineSnapshot(`
+			"Fetching list of already uploaded assets...
+			Building list of assets to upload...
+			 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
+			Uploading 1 new asset...
+			Uploaded 100% [1 out of 1]"
+		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Reading file-1.txt...
-			Uploading as file-1.2ca234f380.txt...
-			↗️  Done syncing assets
+			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -2505,10 +2551,15 @@ addEventListener('fetch', event => {});`
 			);
 			await runWrangler("publish");
 
+			expect(std.info).toMatchInlineSnapshot(`
+			"Fetching list of already uploaded assets...
+			Building list of assets to upload...
+			 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
+			Uploading 1 new asset...
+			Uploaded 100% [1 out of 1]"
+		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Reading file-1.txt...
-			Uploading as file-1.2ca234f380.txt...
-			↗️  Done syncing assets
+			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -2547,10 +2598,15 @@ addEventListener('fetch', event => {});`
 			);
 			await runWrangler("publish --site-include file-1.txt");
 
+			expect(std.info).toMatchInlineSnapshot(`
+			"Fetching list of already uploaded assets...
+			Building list of assets to upload...
+			 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
+			Uploading 1 new asset...
+			Uploaded 100% [1 out of 1]"
+		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Reading file-1.txt...
-			Uploading as file-1.2ca234f380.txt...
-			↗️  Done syncing assets
+			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -2589,10 +2645,15 @@ addEventListener('fetch', event => {});`
 			);
 			await runWrangler("publish --site-exclude file-2.txt");
 
+			expect(std.info).toMatchInlineSnapshot(`
+			"Fetching list of already uploaded assets...
+			Building list of assets to upload...
+			 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
+			Uploading 1 new asset...
+			Uploaded 100% [1 out of 1]"
+		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Reading file-1.txt...
-			Uploading as file-1.2ca234f380.txt...
-			↗️  Done syncing assets
+			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -2633,10 +2694,15 @@ addEventListener('fetch', event => {});`
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets.slice(0, 1));
 			await runWrangler("publish");
 
+			expect(std.info).toMatchInlineSnapshot(`
+			"Fetching list of already uploaded assets...
+			Building list of assets to upload...
+			 + directory-1/file-1.2ca234f380.txt (uploading new version of directory-1/file-1.txt)
+			Uploading 1 new asset...
+			Uploaded 100% [1 out of 1]"
+		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Reading directory-1/file-1.txt...
-			Uploading as directory-1/file-1.2ca234f380.txt...
-			↗️  Done syncing assets
+			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -2681,10 +2747,15 @@ addEventListener('fetch', event => {});`
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets.slice(2));
 			await runWrangler("publish");
 
+			expect(std.info).toMatchInlineSnapshot(`
+			"Fetching list of already uploaded assets...
+			Building list of assets to upload...
+			 + .well-known/file-2.5938485188.txt (uploading new version of .well-known/file-2.txt)
+			Uploading 1 new asset...
+			Uploaded 100% [1 out of 1]"
+		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Reading .well-known/file-2.txt...
-			Uploading as .well-known/file-2.5938485188.txt...
-			↗️  Done syncing assets
+			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -2730,13 +2801,15 @@ addEventListener('fetch', event => {});`
 				`"File too-large-file.txt is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits"`
 			);
 
+			expect(std.info).toMatchInlineSnapshot(`
+			"Fetching list of already uploaded assets...
+			Building list of assets to upload...
+			 + large-file.0ea0637a45.txt (uploading new version of large-file.txt)"
+		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			        "Reading large-file.txt...
-			        Uploading as large-file.0ea0637a45.txt...
-			        Reading too-large-file.txt...
-
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		      `);
+			"
+			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+		`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mFile too-large-file.txt is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits[0m
 
@@ -2772,7 +2845,7 @@ addEventListener('fetch', event => {});`
 			await runWrangler("publish");
 
 			// We expect this to be uploaded in 4 batches
-
+			expect(requests.length).toEqual(4);
 			// The first batch has 11 files
 			expect(requests[0].uploads.length).toEqual(11);
 			// The next batch has 5 files
@@ -2794,48 +2867,34 @@ addEventListener('fetch', event => {});`
 			Object {
 			  "debug": "",
 			  "err": "",
-			  "info": "",
-			  "out": "Reading file-00.txt...
-			Uploading as file-00.be5be5dd26.txt...
-			Reading file-01.txt...
-			Uploading as file-01.4842d35994.txt...
-			Reading file-02.txt...
-			Uploading as file-02.990572ec63.txt...
-			Reading file-03.txt...
-			Uploading as file-03.9d7dda9045.txt...
-			Reading file-04.txt...
-			Uploading as file-04.2b6fac6382.txt...
-			Reading file-05.txt...
-			Uploading as file-05.55762dc758.txt...
-			Reading file-06.txt...
-			Uploading as file-06.f408a6b020.txt...
-			Reading file-07.txt...
-			Uploading as file-07.64c051715b.txt...
-			Reading file-08.txt...
-			Uploading as file-08.d286789adb.txt...
-			Reading file-09.txt...
-			Uploading as file-09.6838c183a8.txt...
-			Reading file-10.txt...
-			Uploading as file-10.6e03221d2a.txt...
-			Reading file-11.txt...
-			Uploading as file-11.37d3fb2eff.txt...
-			Reading file-12.txt...
-			Uploading as file-12.b3556942f8.txt...
-			Reading file-13.txt...
-			Uploading as file-13.680caf51b1.txt...
-			Reading file-14.txt...
-			Uploading as file-14.51e88468f0.txt...
-			Reading file-15.txt...
-			Uploading as file-15.8e3fedb394.txt...
-			Reading file-16.txt...
-			Uploading as file-16.c81c5e426f.txt...
-			Reading file-17.txt...
-			Uploading as file-17.4b2ae3c47b.txt...
-			Reading file-18.txt...
-			Uploading as file-18.07f245e02b.txt...
-			Reading file-19.txt...
-			Uploading as file-19.f0d69f705d.txt...
-			↗️  Done syncing assets
+			  "info": "Fetching list of already uploaded assets...
+			Building list of assets to upload...
+			 + file-00.be5be5dd26.txt (uploading new version of file-00.txt)
+			 + file-01.4842d35994.txt (uploading new version of file-01.txt)
+			 + file-02.990572ec63.txt (uploading new version of file-02.txt)
+			 + file-03.9d7dda9045.txt (uploading new version of file-03.txt)
+			 + file-04.2b6fac6382.txt (uploading new version of file-04.txt)
+			 + file-05.55762dc758.txt (uploading new version of file-05.txt)
+			 + file-06.f408a6b020.txt (uploading new version of file-06.txt)
+			 + file-07.64c051715b.txt (uploading new version of file-07.txt)
+			 + file-08.d286789adb.txt (uploading new version of file-08.txt)
+			 + file-09.6838c183a8.txt (uploading new version of file-09.txt)
+			 + file-10.6e03221d2a.txt (uploading new version of file-10.txt)
+			 + file-11.37d3fb2eff.txt (uploading new version of file-11.txt)
+			 + file-12.b3556942f8.txt (uploading new version of file-12.txt)
+			 + file-13.680caf51b1.txt (uploading new version of file-13.txt)
+			 + file-14.51e88468f0.txt (uploading new version of file-14.txt)
+			 + file-15.8e3fedb394.txt (uploading new version of file-15.txt)
+			 + file-16.c81c5e426f.txt (uploading new version of file-16.txt)
+			 + file-17.4b2ae3c47b.txt (uploading new version of file-17.txt)
+			 + file-18.07f245e02b.txt (uploading new version of file-18.txt)
+			 + file-19.f0d69f705d.txt (uploading new version of file-19.txt)
+			Uploading 20 new assets...
+			Uploaded 55% [11 out of 20]
+			Uploaded 80% [16 out of 20]
+			Uploaded 95% [19 out of 20]
+			Uploaded 100% [20 out of 20]",
+			  "out": "↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -2874,11 +2933,14 @@ addEventListener('fetch', event => {});`
 				`"The asset path key \\"folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.3da0d0cd12.txt\\" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits\\","`
 			);
 
+			expect(std.info).toMatchInlineSnapshot(`
+			"Fetching list of already uploaded assets...
+			Building list of assets to upload..."
+		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			        "Reading folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.txt...
-
-			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		      `);
+			"
+			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+		`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe asset path key \\"folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.3da0d0cd12.txt\\" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits\\",[0m
 
@@ -2928,14 +2990,20 @@ addEventListener('fetch', event => {});`
 
 			await runWrangler("publish");
 
+			expect(std.info).toMatchInlineSnapshot(`
+			"Fetching list of already uploaded assets...
+			Building list of assets to upload...
+			 = file-1.2ca234f380.txt (already uploaded file-1.txt)
+			 + file-2.5938485188.txt (uploading new version of file-2.txt)
+			 - file-3.somehash.txt (removing as stale)
+			 - file-4.anotherhash.txt (removing as stale)
+			Uploading 1 new asset...
+			Skipped uploading 1 existing asset.
+			Uploaded 100% [1 out of 1]
+			Removing 2 stale assets..."
+		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Reading file-1.txt...
-			Skipping - already uploaded.
-			Reading file-2.txt...
-			Uploading as file-2.5938485188.txt...
-			Deleting file-3.somehash.txt from the asset store...
-			Deleting file-4.anotherhash.txt from the asset store...
-			↗️  Done syncing assets
+			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -2985,12 +3053,16 @@ addEventListener('fetch', event => {});`
 			await runWrangler("publish");
 			process.chdir("../");
 
+			expect(std.info).toMatchInlineSnapshot(`
+			"Fetching list of already uploaded assets...
+			Building list of assets to upload...
+			 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
+			 + file-2.5938485188.txt (uploading new version of file-2.txt)
+			Uploading 2 new assets...
+			Uploaded 100% [2 out of 2]"
+		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Reading file-1.txt...
-			Uploading as file-1.2ca234f380.txt...
-			Reading file-2.txt...
-			Uploading as file-2.5938485188.txt...
-			↗️  Done syncing assets
+			"↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -3028,12 +3100,13 @@ addEventListener('fetch', event => {});`
 			Object {
 			  "debug": "",
 			  "err": "",
-			  "info": "",
-			  "out": "Reading file-1.txt...
-			Uploading as file-1.2ca234f380.txt...
-			Reading file-2.txt...
-			Uploading as file-2.5938485188.txt...
-			↗️  Done syncing assets
+			  "info": "Fetching list of already uploaded assets...
+			Building list of assets to upload...
+			 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
+			 + file-2.5938485188.txt (uploading new version of file-2.txt)
+			Uploading 2 new assets...
+			Uploaded 100% [2 out of 2]",
+			  "out": "↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -3072,12 +3145,13 @@ addEventListener('fetch', event => {});`
 			Object {
 			  "debug": "",
 			  "err": "",
-			  "info": "",
-			  "out": "Reading file-1.txt...
-			Uploading as file-1.2ca234f380.txt...
-			Reading file-2.txt...
-			Uploading as file-2.5938485188.txt...
-			↗️  Done syncing assets
+			  "info": "Fetching list of already uploaded assets...
+			Building list of assets to upload...
+			 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
+			 + file-2.5938485188.txt (uploading new version of file-2.txt)
+			Uploading 2 new assets...
+			Uploaded 100% [2 out of 2]",
+			  "out": "↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
@@ -3088,6 +3162,284 @@ addEventListener('fetch', event => {});`
 			",
 			}
 		`);
+		});
+
+		describe("should truncate diff with over 100 assets unless debug log level set", () => {
+			beforeEach(() => {
+				const assets = Array.from({ length: 110 }, (_, index) => ({
+					filePath: `file-${`${index}`.padStart(3, "0")}.txt`,
+					content: "X",
+				}));
+
+				const kvNamespace = {
+					title: "__test-name-workers_sites_assets",
+					id: "__test-name-workers_sites_assets-id",
+				};
+				writeWranglerToml({
+					main: "./index.js",
+					site: {
+						bucket: "assets",
+					},
+				});
+				writeWorkerSource();
+				writeAssets(assets);
+				mockUploadWorkerRequest();
+				mockSubDomainRequest();
+				mockListKVNamespacesRequest(kvNamespace);
+				mockKeyListRequest(kvNamespace.id, []);
+				mockUploadAssetsToKVRequest(kvNamespace.id);
+			});
+
+			it("default log level", async () => {
+				await runWrangler("publish");
+				expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "Fetching list of already uploaded assets...
+			Building list of assets to upload...
+			 + file-000.010257e8bb.txt (uploading new version of file-000.txt)
+			 + file-001.010257e8bb.txt (uploading new version of file-001.txt)
+			 + file-002.010257e8bb.txt (uploading new version of file-002.txt)
+			 + file-003.010257e8bb.txt (uploading new version of file-003.txt)
+			 + file-004.010257e8bb.txt (uploading new version of file-004.txt)
+			 + file-005.010257e8bb.txt (uploading new version of file-005.txt)
+			 + file-006.010257e8bb.txt (uploading new version of file-006.txt)
+			 + file-007.010257e8bb.txt (uploading new version of file-007.txt)
+			 + file-008.010257e8bb.txt (uploading new version of file-008.txt)
+			 + file-009.010257e8bb.txt (uploading new version of file-009.txt)
+			 + file-010.010257e8bb.txt (uploading new version of file-010.txt)
+			 + file-011.010257e8bb.txt (uploading new version of file-011.txt)
+			 + file-012.010257e8bb.txt (uploading new version of file-012.txt)
+			 + file-013.010257e8bb.txt (uploading new version of file-013.txt)
+			 + file-014.010257e8bb.txt (uploading new version of file-014.txt)
+			 + file-015.010257e8bb.txt (uploading new version of file-015.txt)
+			 + file-016.010257e8bb.txt (uploading new version of file-016.txt)
+			 + file-017.010257e8bb.txt (uploading new version of file-017.txt)
+			 + file-018.010257e8bb.txt (uploading new version of file-018.txt)
+			 + file-019.010257e8bb.txt (uploading new version of file-019.txt)
+			 + file-020.010257e8bb.txt (uploading new version of file-020.txt)
+			 + file-021.010257e8bb.txt (uploading new version of file-021.txt)
+			 + file-022.010257e8bb.txt (uploading new version of file-022.txt)
+			 + file-023.010257e8bb.txt (uploading new version of file-023.txt)
+			 + file-024.010257e8bb.txt (uploading new version of file-024.txt)
+			 + file-025.010257e8bb.txt (uploading new version of file-025.txt)
+			 + file-026.010257e8bb.txt (uploading new version of file-026.txt)
+			 + file-027.010257e8bb.txt (uploading new version of file-027.txt)
+			 + file-028.010257e8bb.txt (uploading new version of file-028.txt)
+			 + file-029.010257e8bb.txt (uploading new version of file-029.txt)
+			 + file-030.010257e8bb.txt (uploading new version of file-030.txt)
+			 + file-031.010257e8bb.txt (uploading new version of file-031.txt)
+			 + file-032.010257e8bb.txt (uploading new version of file-032.txt)
+			 + file-033.010257e8bb.txt (uploading new version of file-033.txt)
+			 + file-034.010257e8bb.txt (uploading new version of file-034.txt)
+			 + file-035.010257e8bb.txt (uploading new version of file-035.txt)
+			 + file-036.010257e8bb.txt (uploading new version of file-036.txt)
+			 + file-037.010257e8bb.txt (uploading new version of file-037.txt)
+			 + file-038.010257e8bb.txt (uploading new version of file-038.txt)
+			 + file-039.010257e8bb.txt (uploading new version of file-039.txt)
+			 + file-040.010257e8bb.txt (uploading new version of file-040.txt)
+			 + file-041.010257e8bb.txt (uploading new version of file-041.txt)
+			 + file-042.010257e8bb.txt (uploading new version of file-042.txt)
+			 + file-043.010257e8bb.txt (uploading new version of file-043.txt)
+			 + file-044.010257e8bb.txt (uploading new version of file-044.txt)
+			 + file-045.010257e8bb.txt (uploading new version of file-045.txt)
+			 + file-046.010257e8bb.txt (uploading new version of file-046.txt)
+			 + file-047.010257e8bb.txt (uploading new version of file-047.txt)
+			 + file-048.010257e8bb.txt (uploading new version of file-048.txt)
+			 + file-049.010257e8bb.txt (uploading new version of file-049.txt)
+			 + file-050.010257e8bb.txt (uploading new version of file-050.txt)
+			 + file-051.010257e8bb.txt (uploading new version of file-051.txt)
+			 + file-052.010257e8bb.txt (uploading new version of file-052.txt)
+			 + file-053.010257e8bb.txt (uploading new version of file-053.txt)
+			 + file-054.010257e8bb.txt (uploading new version of file-054.txt)
+			 + file-055.010257e8bb.txt (uploading new version of file-055.txt)
+			 + file-056.010257e8bb.txt (uploading new version of file-056.txt)
+			 + file-057.010257e8bb.txt (uploading new version of file-057.txt)
+			 + file-058.010257e8bb.txt (uploading new version of file-058.txt)
+			 + file-059.010257e8bb.txt (uploading new version of file-059.txt)
+			 + file-060.010257e8bb.txt (uploading new version of file-060.txt)
+			 + file-061.010257e8bb.txt (uploading new version of file-061.txt)
+			 + file-062.010257e8bb.txt (uploading new version of file-062.txt)
+			 + file-063.010257e8bb.txt (uploading new version of file-063.txt)
+			 + file-064.010257e8bb.txt (uploading new version of file-064.txt)
+			 + file-065.010257e8bb.txt (uploading new version of file-065.txt)
+			 + file-066.010257e8bb.txt (uploading new version of file-066.txt)
+			 + file-067.010257e8bb.txt (uploading new version of file-067.txt)
+			 + file-068.010257e8bb.txt (uploading new version of file-068.txt)
+			 + file-069.010257e8bb.txt (uploading new version of file-069.txt)
+			 + file-070.010257e8bb.txt (uploading new version of file-070.txt)
+			 + file-071.010257e8bb.txt (uploading new version of file-071.txt)
+			 + file-072.010257e8bb.txt (uploading new version of file-072.txt)
+			 + file-073.010257e8bb.txt (uploading new version of file-073.txt)
+			 + file-074.010257e8bb.txt (uploading new version of file-074.txt)
+			 + file-075.010257e8bb.txt (uploading new version of file-075.txt)
+			 + file-076.010257e8bb.txt (uploading new version of file-076.txt)
+			 + file-077.010257e8bb.txt (uploading new version of file-077.txt)
+			 + file-078.010257e8bb.txt (uploading new version of file-078.txt)
+			 + file-079.010257e8bb.txt (uploading new version of file-079.txt)
+			 + file-080.010257e8bb.txt (uploading new version of file-080.txt)
+			 + file-081.010257e8bb.txt (uploading new version of file-081.txt)
+			 + file-082.010257e8bb.txt (uploading new version of file-082.txt)
+			 + file-083.010257e8bb.txt (uploading new version of file-083.txt)
+			 + file-084.010257e8bb.txt (uploading new version of file-084.txt)
+			 + file-085.010257e8bb.txt (uploading new version of file-085.txt)
+			 + file-086.010257e8bb.txt (uploading new version of file-086.txt)
+			 + file-087.010257e8bb.txt (uploading new version of file-087.txt)
+			 + file-088.010257e8bb.txt (uploading new version of file-088.txt)
+			 + file-089.010257e8bb.txt (uploading new version of file-089.txt)
+			 + file-090.010257e8bb.txt (uploading new version of file-090.txt)
+			 + file-091.010257e8bb.txt (uploading new version of file-091.txt)
+			 + file-092.010257e8bb.txt (uploading new version of file-092.txt)
+			 + file-093.010257e8bb.txt (uploading new version of file-093.txt)
+			 + file-094.010257e8bb.txt (uploading new version of file-094.txt)
+			 + file-095.010257e8bb.txt (uploading new version of file-095.txt)
+			 + file-096.010257e8bb.txt (uploading new version of file-096.txt)
+			 + file-097.010257e8bb.txt (uploading new version of file-097.txt)
+			 + file-098.010257e8bb.txt (uploading new version of file-098.txt)
+			 + file-099.010257e8bb.txt (uploading new version of file-099.txt)
+			   (truncating changed assets log, set \`WRANGLER_LOG=debug\` environment variable to see full diff)
+			Uploading 110 new assets...
+			Uploaded 100% [110 out of 110]",
+			  "out": "↗️  Done syncing assets
+			Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class",
+			  "warn": "",
+			}
+		`);
+			});
+
+			it("debug log level", async () => {
+				logger.loggerLevel = "debug";
+				await runWrangler("publish");
+
+				const diffRegexp = /^ [+=-]/;
+				const diff = std.debug
+					.split("\n")
+					.filter((line) => diffRegexp.test(line))
+					.join("\n");
+				expect(diff).toMatchInlineSnapshot(`
+			" + file-000.010257e8bb.txt (uploading new version of file-000.txt)
+			 + file-001.010257e8bb.txt (uploading new version of file-001.txt)
+			 + file-002.010257e8bb.txt (uploading new version of file-002.txt)
+			 + file-003.010257e8bb.txt (uploading new version of file-003.txt)
+			 + file-004.010257e8bb.txt (uploading new version of file-004.txt)
+			 + file-005.010257e8bb.txt (uploading new version of file-005.txt)
+			 + file-006.010257e8bb.txt (uploading new version of file-006.txt)
+			 + file-007.010257e8bb.txt (uploading new version of file-007.txt)
+			 + file-008.010257e8bb.txt (uploading new version of file-008.txt)
+			 + file-009.010257e8bb.txt (uploading new version of file-009.txt)
+			 + file-010.010257e8bb.txt (uploading new version of file-010.txt)
+			 + file-011.010257e8bb.txt (uploading new version of file-011.txt)
+			 + file-012.010257e8bb.txt (uploading new version of file-012.txt)
+			 + file-013.010257e8bb.txt (uploading new version of file-013.txt)
+			 + file-014.010257e8bb.txt (uploading new version of file-014.txt)
+			 + file-015.010257e8bb.txt (uploading new version of file-015.txt)
+			 + file-016.010257e8bb.txt (uploading new version of file-016.txt)
+			 + file-017.010257e8bb.txt (uploading new version of file-017.txt)
+			 + file-018.010257e8bb.txt (uploading new version of file-018.txt)
+			 + file-019.010257e8bb.txt (uploading new version of file-019.txt)
+			 + file-020.010257e8bb.txt (uploading new version of file-020.txt)
+			 + file-021.010257e8bb.txt (uploading new version of file-021.txt)
+			 + file-022.010257e8bb.txt (uploading new version of file-022.txt)
+			 + file-023.010257e8bb.txt (uploading new version of file-023.txt)
+			 + file-024.010257e8bb.txt (uploading new version of file-024.txt)
+			 + file-025.010257e8bb.txt (uploading new version of file-025.txt)
+			 + file-026.010257e8bb.txt (uploading new version of file-026.txt)
+			 + file-027.010257e8bb.txt (uploading new version of file-027.txt)
+			 + file-028.010257e8bb.txt (uploading new version of file-028.txt)
+			 + file-029.010257e8bb.txt (uploading new version of file-029.txt)
+			 + file-030.010257e8bb.txt (uploading new version of file-030.txt)
+			 + file-031.010257e8bb.txt (uploading new version of file-031.txt)
+			 + file-032.010257e8bb.txt (uploading new version of file-032.txt)
+			 + file-033.010257e8bb.txt (uploading new version of file-033.txt)
+			 + file-034.010257e8bb.txt (uploading new version of file-034.txt)
+			 + file-035.010257e8bb.txt (uploading new version of file-035.txt)
+			 + file-036.010257e8bb.txt (uploading new version of file-036.txt)
+			 + file-037.010257e8bb.txt (uploading new version of file-037.txt)
+			 + file-038.010257e8bb.txt (uploading new version of file-038.txt)
+			 + file-039.010257e8bb.txt (uploading new version of file-039.txt)
+			 + file-040.010257e8bb.txt (uploading new version of file-040.txt)
+			 + file-041.010257e8bb.txt (uploading new version of file-041.txt)
+			 + file-042.010257e8bb.txt (uploading new version of file-042.txt)
+			 + file-043.010257e8bb.txt (uploading new version of file-043.txt)
+			 + file-044.010257e8bb.txt (uploading new version of file-044.txt)
+			 + file-045.010257e8bb.txt (uploading new version of file-045.txt)
+			 + file-046.010257e8bb.txt (uploading new version of file-046.txt)
+			 + file-047.010257e8bb.txt (uploading new version of file-047.txt)
+			 + file-048.010257e8bb.txt (uploading new version of file-048.txt)
+			 + file-049.010257e8bb.txt (uploading new version of file-049.txt)
+			 + file-050.010257e8bb.txt (uploading new version of file-050.txt)
+			 + file-051.010257e8bb.txt (uploading new version of file-051.txt)
+			 + file-052.010257e8bb.txt (uploading new version of file-052.txt)
+			 + file-053.010257e8bb.txt (uploading new version of file-053.txt)
+			 + file-054.010257e8bb.txt (uploading new version of file-054.txt)
+			 + file-055.010257e8bb.txt (uploading new version of file-055.txt)
+			 + file-056.010257e8bb.txt (uploading new version of file-056.txt)
+			 + file-057.010257e8bb.txt (uploading new version of file-057.txt)
+			 + file-058.010257e8bb.txt (uploading new version of file-058.txt)
+			 + file-059.010257e8bb.txt (uploading new version of file-059.txt)
+			 + file-060.010257e8bb.txt (uploading new version of file-060.txt)
+			 + file-061.010257e8bb.txt (uploading new version of file-061.txt)
+			 + file-062.010257e8bb.txt (uploading new version of file-062.txt)
+			 + file-063.010257e8bb.txt (uploading new version of file-063.txt)
+			 + file-064.010257e8bb.txt (uploading new version of file-064.txt)
+			 + file-065.010257e8bb.txt (uploading new version of file-065.txt)
+			 + file-066.010257e8bb.txt (uploading new version of file-066.txt)
+			 + file-067.010257e8bb.txt (uploading new version of file-067.txt)
+			 + file-068.010257e8bb.txt (uploading new version of file-068.txt)
+			 + file-069.010257e8bb.txt (uploading new version of file-069.txt)
+			 + file-070.010257e8bb.txt (uploading new version of file-070.txt)
+			 + file-071.010257e8bb.txt (uploading new version of file-071.txt)
+			 + file-072.010257e8bb.txt (uploading new version of file-072.txt)
+			 + file-073.010257e8bb.txt (uploading new version of file-073.txt)
+			 + file-074.010257e8bb.txt (uploading new version of file-074.txt)
+			 + file-075.010257e8bb.txt (uploading new version of file-075.txt)
+			 + file-076.010257e8bb.txt (uploading new version of file-076.txt)
+			 + file-077.010257e8bb.txt (uploading new version of file-077.txt)
+			 + file-078.010257e8bb.txt (uploading new version of file-078.txt)
+			 + file-079.010257e8bb.txt (uploading new version of file-079.txt)
+			 + file-080.010257e8bb.txt (uploading new version of file-080.txt)
+			 + file-081.010257e8bb.txt (uploading new version of file-081.txt)
+			 + file-082.010257e8bb.txt (uploading new version of file-082.txt)
+			 + file-083.010257e8bb.txt (uploading new version of file-083.txt)
+			 + file-084.010257e8bb.txt (uploading new version of file-084.txt)
+			 + file-085.010257e8bb.txt (uploading new version of file-085.txt)
+			 + file-086.010257e8bb.txt (uploading new version of file-086.txt)
+			 + file-087.010257e8bb.txt (uploading new version of file-087.txt)
+			 + file-088.010257e8bb.txt (uploading new version of file-088.txt)
+			 + file-089.010257e8bb.txt (uploading new version of file-089.txt)
+			 + file-090.010257e8bb.txt (uploading new version of file-090.txt)
+			 + file-091.010257e8bb.txt (uploading new version of file-091.txt)
+			 + file-092.010257e8bb.txt (uploading new version of file-092.txt)
+			 + file-093.010257e8bb.txt (uploading new version of file-093.txt)
+			 + file-094.010257e8bb.txt (uploading new version of file-094.txt)
+			 + file-095.010257e8bb.txt (uploading new version of file-095.txt)
+			 + file-096.010257e8bb.txt (uploading new version of file-096.txt)
+			 + file-097.010257e8bb.txt (uploading new version of file-097.txt)
+			 + file-098.010257e8bb.txt (uploading new version of file-098.txt)
+			 + file-099.010257e8bb.txt (uploading new version of file-099.txt)
+			 + file-100.010257e8bb.txt (uploading new version of file-100.txt)
+			 + file-101.010257e8bb.txt (uploading new version of file-101.txt)
+			 + file-102.010257e8bb.txt (uploading new version of file-102.txt)
+			 + file-103.010257e8bb.txt (uploading new version of file-103.txt)
+			 + file-104.010257e8bb.txt (uploading new version of file-104.txt)
+			 + file-105.010257e8bb.txt (uploading new version of file-105.txt)
+			 + file-106.010257e8bb.txt (uploading new version of file-106.txt)
+			 + file-107.010257e8bb.txt (uploading new version of file-107.txt)
+			 + file-108.010257e8bb.txt (uploading new version of file-108.txt)
+			 + file-109.010257e8bb.txt (uploading new version of file-109.txt)"
+		`);
+				expect(std.info).toMatchInlineSnapshot(`
+			"Fetching list of already uploaded assets...
+			Building list of assets to upload...
+			Uploading 110 new assets...
+			Uploaded 100% [110 out of 110]"
+		`);
+			});
 		});
 	});
 
@@ -6656,12 +7008,13 @@ addEventListener('fetch', event => {});`
 			Object {
 			  "debug": "",
 			  "err": "",
-			  "info": "",
-			  "out": "Reading file-1.txt...
-			Uploading as file-1.2ca234f380.txt...
-			Reading file-2.txt...
-			Uploading as file-2.5938485188.txt...
-			↗️  Done syncing assets
+			  "info": "Fetching list of already uploaded assets...
+			Building list of assets to upload...
+			 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
+			 + file-2.5938485188.txt (uploading new version of file-2.txt)
+			Uploading 2 new assets...
+			Uploaded 100% [2 out of 2]",
+			  "out": "↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
