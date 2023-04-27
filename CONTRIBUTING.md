@@ -235,6 +235,10 @@ We use the following guidelines to determine the kind of change for a PR:
 - New stable features and new deprecation warnings for future breaking changes are considered 'minor' changes. These changes shouldn't break existing code, but the deprecation warnings should suggest alternate solutions to not trigger the warning.
 - Breaking changes are considered to be 'major' changes. These are usually when deprecations take effect, or functional breaking behaviour is added with relevant logs (either as errors or warnings.)
 
+## Releases
+
+We generally cut Wrangler releases at the start of each week. If you need a release cut outside of the regular cadence, please reach out to the [@cloudflare/wrangler-admins](https://github.com/orgs/cloudflare/teams/wrangler-admins) team. Before reaching out, please confirm that Wrangler passes end-to-end tests by running `npm -w wrangler run test:e2e`. Note: a real Cloudflare account is planned to be set up for testing, after which point the end-to-end tests will be configured to run in CI and this manual testing step will no longer be required.
+
 ## Miniflare Development
 
 Wrangler builds upon, and provides a new entry point for, [Miniflare](https://github.com/cloudflare/miniflare), a local Cloudflare Workers simulator. To develop on both Wrangler and Miniflare together, you need to link the two projects, but as of NodeJS `v18.3.0` and NPM `v8.15.0`, relative NPM installs between two workspaces don't work, so you need things to be manual:
