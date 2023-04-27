@@ -1,6 +1,6 @@
 # Cloudflare Stream + Stripe
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/stream/auth/stripe)
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/workers-sdk/tree/main/templates/stream/auth/stripe)
 
 Host and monetize **paid** video content (live or on-demand) that you fully control, on your own website, using [Cloudflare Stream](https://www.cloudflare.com/products/cloudflare-stream/), [Cloudflare Pages](https://pages.cloudflare.com/), and [Stripe Checkout](https://stripe.com/payments/checkout).
 

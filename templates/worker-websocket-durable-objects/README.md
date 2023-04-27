@@ -1,6 +1,6 @@
 # Template: worker-websocket-durable-objects
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/worker-websocket-durable-objects)
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/workers-sdk/tree/main/templates/worker-durable-objects)
 
 A template for working with Durable Objects as WebSocket backend in Cloudflare Workers. [Check out the announcement blog post to learn more.](https://blog.cloudflare.com/introducing-websockets-in-workers/)
 

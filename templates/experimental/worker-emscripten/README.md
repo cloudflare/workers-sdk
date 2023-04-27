@@ -1,6 +1,6 @@
 # Template: worker-emscripten
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/worker-emscripten)
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/workers-sdk/tree/main/templates/experimental/worker-emscripten)
 
 A template for kick starting a Cloudflare worker project with emscripten
 

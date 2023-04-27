@@ -1,6 +1,6 @@
 # Template: worker-sites
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/worker-sites)
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/workers-sdk/tree/main/templates/worker-sites)
 
 A bare minimum template of deploying a [Workers Site](https://developers.cloudflare.com/workers/platform/sites/) application.
 
