@@ -222,6 +222,7 @@ export const Handler = async (args: PagesBuildArgs) => {
 				sourcemap,
 				watch,
 				betaD1Shims: d1Databases,
+				nodejsCompat,
 			});
 		} else {
 			try {
