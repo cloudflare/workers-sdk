@@ -237,7 +237,7 @@ We use the following guidelines to determine the kind of change for a PR:
 
 ## Releases
 
-We generally cut Wrangler releases at the start of each week. If you need a release cut outside of the regular cadence, please reach out to the [@cloudflare/wrangler-admins](https://github.com/orgs/cloudflare/teams/wrangler-admins) team.
+We generally cut Wrangler releases at the start of each week. If you need a release cut outside of the regular cadence, please reach out to the [@cloudflare/wrangler-admins](https://github.com/orgs/cloudflare/teams/wrangler-admins) team. Before reaching out, please confirm that Wrangler passes end-to-end tests by running `npm -w wrangler run test:e2e`. Note: a real Cloudflare account is planned to be set up for testing, after which point the end-to-end tests will be configured to run in CI and this manual testing step will no longer be required.
 
 ## Miniflare Development
 
