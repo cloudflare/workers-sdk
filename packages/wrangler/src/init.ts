@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import { writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import TOML from "@iarna/toml";
+import { execa } from "execa";
 import { findUp } from "find-up";
 import { version as wranglerVersion } from "../package.json";
 
@@ -58,6 +59,11 @@ export function initOptions(yargs: CommonYargsArgv) {
 				"The name of the Worker you wish to download from the Cloudflare dashboard for local development.",
 			type: "string",
 			requiresArg: true,
+		})
+		.option("do-not-delegate", {
+			describe: "Do not delegate to Create Cloudflare CLI (C3)",
+			type: "boolean",
+			hidden: true,
 		});
 }
 
@@ -170,6 +176,10 @@ export async function initHandler(args: InitArgs) {
 	let serviceMetadata: undefined | ServiceMetadataRes;
 
 	// If --from-dash, check that script actually exists
+	/*
+    Even though the init command is now deprecated and replaced by Create Cloudflare CLI (C3),
+    run this first so, if the script doesn't exist, we can fail early
+  */
 	if (fromDashScriptName) {
 		const config = readConfig(args.config, args);
 		accountId = await requireAuth(config);
@@ -184,6 +194,28 @@ export async function initHandler(args: InitArgs) {
 				);
 			}
 			throw err;
+		}
+
+		// Deprecate the `init --from-dash` command
+		//    if --do-not-delegate is not set (C3 will run wrangler with this flag set to communicate with the API)
+		if (!args.doNotDelegate) {
+			const command = `\`${packageManager.type} create cloudflare --template pre-existing --name ${fromDashScriptName}\``;
+
+			logger.warn(
+				`The \`init --from-dash\` command is no longer supported. Please use ${command} instead.\nThe \`init\` command will be removed in a future version.`
+			);
+			logger.log(`Running ${command}...`);
+
+			await execa(packageManager.type, [
+				"create",
+				"cloudflare",
+				"--template",
+				"pre-existing",
+				"--name",
+				fromDashScriptName,
+			]);
+
+			return;
 		}
 	}
 
@@ -201,6 +233,22 @@ export async function initHandler(args: InitArgs) {
 			return;
 		}
 	} else {
+		// Deprecate the `init` command
+		//    if a wrangler.toml file does not exist (C3 expects to scaffold *new* projects)
+		//    and if --from-dash is not set (C3 will run wrangler to communicate with the API)
+		if (!fromDashScriptName) {
+			const command = `\`${packageManager.type} create cloudflare\``;
+
+			logger.warn(
+				`The \`init\` command is no longer supported. Please use ${command} instead.\nThe \`init\` command will be removed in a future version.`
+			);
+			logger.log(`Running ${command}...`);
+
+			await execa(packageManager.type, ["create", "cloudflare"]);
+
+			return;
+		}
+
 		await mkdir(creationDirectory, { recursive: true });
 		const compatibilityDate = new Date().toISOString().substring(0, 10);
 
