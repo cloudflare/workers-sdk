@@ -4,7 +4,7 @@ import type {
 	Request as WorkerRequest,
 	Response as WorkerResponse,
 } from "@cloudflare/workers-types/experimental";
-import { Awaitable, Miniflare, MiniflareOptions } from "@miniflare/tre";
+import { Awaitable, Miniflare, MiniflareOptions, Timers } from "@miniflare/tre";
 import anyTest, { TestFn } from "ava";
 import { getPort } from "./http";
 import { TestLog } from "./log";
@@ -16,8 +16,25 @@ export type TestMiniflareHandler<Env> = (
 	ctx: ExecutionContext
 ) => Awaitable<WorkerResponse>;
 
-export interface TestClock {
-	timestamp: number;
+export class TestTimers implements Timers {
+	timestamp = 1_000_000; // 1000s
+	#pendingMicrotasks = new Set<Promise<unknown>>();
+
+	now = () => {
+		return this.timestamp;
+	};
+
+	queueMicrotask(closure: () => Awaitable<unknown>) {
+		const result = closure();
+		if (result instanceof Promise) {
+			this.#pendingMicrotasks.add(result);
+			result.then(() => this.#pendingMicrotasks.delete(result));
+		}
+	}
+
+	async waitForMicrotasks() {
+		await Promise.all(this.#pendingMicrotasks);
+	}
 }
 
 export interface MiniflareTestContext {
@@ -27,7 +44,7 @@ export interface MiniflareTestContext {
 	// Warning: if mutating or calling any of the following, `test.serial` must be
 	// used to prevent races.
 	log: TestLog;
-	clock: TestClock;
+	timers: TestTimers;
 	setOptions(opts: Partial<MiniflareOptions>): Promise<void>;
 }
 
@@ -72,14 +89,13 @@ export function miniflareTest<
 	const test = anyTest as TestFn<Context>;
 	test.before(async (t) => {
 		const log = new TestLog(t);
-		const clock: TestClock = { timestamp: 1_000_000 }; // 1000s
-		const clockFunction = () => clock.timestamp;
+		const timers = new TestTimers();
 
 		const opts: Partial<MiniflareOptions> = {
 			...scriptOpts,
 			port: await getPort(),
 			log,
-			clock: clockFunction,
+			timers,
 			verbose: true,
 		};
 
@@ -88,7 +104,7 @@ export function miniflareTest<
 		// `userOpts`, a `handler` has been provided.
 		t.context.mf = new Miniflare({ ...userOpts, ...opts } as MiniflareOptions);
 		t.context.log = log;
-		t.context.clock = clock;
+		t.context.timers = timers;
 		t.context.setOptions = (userOpts) =>
 			t.context.mf.setOptions({ ...userOpts, ...opts } as MiniflareOptions);
 		t.context.url = await t.context.mf.ready;

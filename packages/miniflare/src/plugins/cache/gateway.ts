@@ -4,7 +4,7 @@ import http from "http";
 import { ReadableStream, TransformStream } from "stream/web";
 import CachePolicy from "http-cache-semantics";
 import { Headers, HeadersInit, Request, Response, fetch } from "../../http";
-import { Clock, DeferredPromise, Log } from "../../shared";
+import { DeferredPromise, Log, Timers } from "../../shared";
 import { Storage } from "../../storage";
 import {
 	InclusiveRange,
@@ -26,7 +26,7 @@ interface CacheMetadata {
 	size: number;
 }
 
-function getExpiration(clock: Clock, req: Request, res: Response) {
+function getExpiration(timers: Timers, req: Request, res: Response) {
 	// Cloudflare ignores request Cache-Control
 	const reqHeaders = normaliseHeaders(req.headers);
 	delete reqHeaders["cache-control"];
@@ -59,7 +59,7 @@ function getExpiration(clock: Clock, req: Request, res: Response) {
 	// @ts-expect-error `now` isn't included in CachePolicy's type definitions
 	const originalNow = CachePolicy.prototype.now;
 	// @ts-expect-error `now` isn't included in CachePolicy's type definitions
-	CachePolicy.prototype.now = clock;
+	CachePolicy.prototype.now = timers.now;
 	try {
 		const policy = new CachePolicy(cacheReq, cacheRes, { shared: true });
 
@@ -231,12 +231,12 @@ export class CacheGateway {
 	private readonly storage: KeyValueStorage<CacheMetadata>;
 
 	constructor(
-		log: Log,
+		private readonly log: Log,
 		legacyStorage: Storage,
-		private readonly clock: Clock
+		private readonly timers: Timers
 	) {
 		const storage = legacyStorage.getNewStorage();
-		this.storage = new KeyValueStorage(storage, clock);
+		this.storage = new KeyValueStorage(storage, timers);
 	}
 
 	async match(request: Request, cacheKey?: string): Promise<Response> {
@@ -295,7 +295,7 @@ export class CacheGateway {
 		assert(body !== null);
 
 		const { storable, expiration, headers } = getExpiration(
-			this.clock,
+			this.timers,
 			request,
 			response
 		);
@@ -325,7 +325,7 @@ export class CacheGateway {
 		await this.storage.put({
 			key: cacheKey,
 			value: body,
-			expiration: this.clock() + expiration,
+			expiration: this.timers.now() + expiration,
 			metadata,
 		});
 		return new Response(null, { status: 204 });

@@ -4,7 +4,7 @@ import {
 	Awaitable,
 	base64Decode,
 	base64Encode,
-	defaultClock,
+	defaultTimers,
 	lexicographicCompare,
 	nonCircularClone,
 } from "../shared";
@@ -219,7 +219,7 @@ export abstract class RemoteStorage extends Storage {
 		protected readonly cache: Storage,
 		protected readonly cloudflareFetch: CloudflareFetch,
 		protected readonly namespace: string,
-		protected readonly clock = defaultClock
+		protected readonly timers = defaultTimers
 	) {
 		super();
 	}

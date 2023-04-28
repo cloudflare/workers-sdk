@@ -33,6 +33,7 @@ import {
 	HEADER_CF_BLOB,
 	HEADER_PROBE,
 	PLUGIN_ENTRIES,
+	Persistence,
 	Plugins,
 	SERVICE_ENTRY,
 	SOCKET_ENTRY,
@@ -63,17 +64,18 @@ import {
 	serializeConfig,
 } from "./runtime";
 import {
-	Clock,
 	HttpError,
 	Log,
 	MiniflareCoreError,
 	Mutex,
 	NoOpLog,
 	OptionalZodTypeOf,
-	defaultClock,
+	Timers,
+	defaultTimers,
 	formatResponse,
 } from "./shared";
 import { anyAbortSignal } from "./shared/signal";
+import { NewStorage } from "./storage2";
 import { waitForRequest } from "./wait";
 
 // ===== `Miniflare` User Options =====
@@ -262,7 +264,7 @@ export class Miniflare {
 	#sharedOpts: PluginSharedOptions;
 	#workerOpts: PluginWorkerOptions[];
 	#log: Log;
-	readonly #clock: Clock;
+	readonly #timers: Timers;
 
 	#runtime?: Runtime;
 	#removeRuntimeExitHook?: () => void;
@@ -314,7 +316,7 @@ export class Miniflare {
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;
 		this.#log = this.#sharedOpts.core.log ?? new NoOpLog();
-		this.#clock = this.#sharedOpts.core.clock ?? defaultClock;
+		this.#timers = this.#sharedOpts.core.timers ?? defaultTimers;
 		this.#initPlugins();
 
 		this.#liveReloadServer = new WebSocketServer({ noServer: true });
@@ -360,7 +362,7 @@ export class Miniflare {
 			if (plugin.gateway !== undefined && plugin.router !== undefined) {
 				const gatewayFactory = new GatewayFactory<any>(
 					this.#log,
-					this.#clock,
+					this.#timers,
 					this.#sharedOpts.core.cloudflareFetch,
 					key,
 					plugin.gateway,
@@ -850,6 +852,17 @@ export class Miniflare {
 		}
 
 		return response;
+	}
+
+	/** @internal */
+	_getPluginStorage(
+		plugin: keyof Plugins,
+		namespace: string,
+		persist?: Persistence
+	): NewStorage {
+		const factory = this.#gatewayFactories[plugin];
+		assert(factory !== undefined);
+		return factory.getStorage(namespace, persist).getNewStorage();
 	}
 
 	async dispose(): Promise<void> {
