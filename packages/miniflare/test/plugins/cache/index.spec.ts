@@ -226,9 +226,9 @@ const expireMacro = test.macro({
 	async exec(t, opts: { headers: HeadersInit; expectedTtl: number }) {
 		// Reset clock to known time, restoring afterwards.
 		// Note this macro must be used with `test.serial` to avoid races.
-		const originalTimestamp = t.context.clock.timestamp;
-		t.teardown(() => (t.context.clock.timestamp = originalTimestamp));
-		t.context.clock.timestamp = 1_000_000; // 1000s
+		const originalTimestamp = t.context.timers.timestamp;
+		t.teardown(() => (t.context.timers.timestamp = originalTimestamp));
+		t.context.timers.timestamp = 1_000_000; // 1000s
 
 		const key = "http://localhost/cache-expire";
 		await t.context.mf.dispatchFetch(key, {
@@ -240,11 +240,11 @@ const expireMacro = test.macro({
 		let res = await t.context.mf.dispatchFetch(key);
 		t.is(res.status, 200);
 
-		t.context.clock.timestamp += opts.expectedTtl / 2;
+		t.context.timers.timestamp += opts.expectedTtl / 2;
 		res = await t.context.mf.dispatchFetch(key);
 		t.is(res.status, 200);
 
-		t.context.clock.timestamp += opts.expectedTtl / 2;
+		t.context.timers.timestamp += opts.expectedTtl / 2;
 		res = await t.context.mf.dispatchFetch(key);
 		t.is(res.status, 404);
 	},
@@ -276,7 +276,7 @@ const isCachedMacro = test.macro({
 			.digest("hex");
 		const key = `http://localhost/cache-is-cached-${headersHash}`;
 
-		const expires = new Date(t.context.clock.timestamp + 2000).toUTCString();
+		const expires = new Date(t.context.timers.timestamp + 2000).toUTCString();
 		await t.context.mf.dispatchFetch(key, {
 			method: "PUT",
 			headers: {
@@ -406,7 +406,7 @@ test.serial("operations log warning on workers.dev subdomain", async (t) => {
 test.serial("operations persist cached data", async (t) => {
 	// Create new temporary file-system persistence directory
 	const tmp = await useTmp(t);
-	const clock = () => t.context.clock.timestamp;
+	const clock = () => t.context.timers.timestamp;
 	// TODO(soon): clean up this mess once we've migrated all gateways
 	const legacyStorage = new FileStorage(
 		path.join(tmp, "default"),
@@ -414,7 +414,7 @@ test.serial("operations persist cached data", async (t) => {
 		clock
 	);
 	const newStorage = legacyStorage.getNewStorage();
-	const kvStorage = new KeyValueStorage(newStorage, clock);
+	const kvStorage = new KeyValueStorage(newStorage, t.context.timers);
 
 	// Set option, then reset after test
 	await t.context.setOptions({ cachePersist: tmp });

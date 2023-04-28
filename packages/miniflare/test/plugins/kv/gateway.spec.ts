@@ -16,7 +16,7 @@ import {
 	TIME_EXPIRING,
 	TIME_NOW,
 	createJunkStream,
-	testClock,
+	testTimers,
 } from "../../test-shared";
 
 interface Context {
@@ -28,10 +28,10 @@ const test = anyTest as TestFn<Context>;
 
 test.beforeEach((t) => {
 	// TODO(soon): clean up this mess once we've migrated all gateways
-	const legacyStorage = new MemoryStorage(undefined, testClock);
+	const legacyStorage = new MemoryStorage(undefined, testTimers.now);
 	const newStorage = legacyStorage.getNewStorage();
-	const gateway = new KVGateway(new NoOpLog(), legacyStorage, testClock);
-	const kvStorage = new KeyValueStorage(newStorage, testClock);
+	const gateway = new KVGateway(new NoOpLog(), legacyStorage, testTimers);
+	const kvStorage = new KeyValueStorage(newStorage, testTimers);
 	t.context = { storage: kvStorage, gateway };
 });
 

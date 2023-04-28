@@ -3,7 +3,7 @@ import fs from "fs/promises";
 import path from "path";
 import { ReadableStream } from "stream/web";
 import { TextDecoder, TextEncoder } from "util";
-import { Clock, sanitisePath, unwrapBYOBRequest } from "@miniflare/tre";
+import { Timers, sanitisePath, unwrapBYOBRequest } from "@miniflare/tre";
 import { ExecutionContext } from "ava";
 
 const encoder = new TextEncoder();
@@ -27,7 +27,11 @@ export const TIME_NOW = 750;
 // Tests will check the expiry is within 120s of this.
 export const TIME_EXPIRING = 1000;
 
-export const testClock: Clock = () => TIME_NOW * 1000;
+// TODO(soon): remove once we remove the old storage system
+export const testTimers: Timers = {
+	now: () => TIME_NOW * 1000,
+	queueMicrotask,
+};
 
 const tmpRoot = path.resolve(".tmp");
 export async function useTmp(t: ExecutionContext): Promise<string> {

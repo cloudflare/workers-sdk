@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ValueOf } from "../../shared";
 
 export interface ObjectRow {
 	key: string;
@@ -10,6 +11,30 @@ export interface ObjectRow {
 	checksums: string; // JSON-serialised `R2StringChecksums` (workers-types)
 	http_metadata: string; // JSON-serialised `R2HTTPMetadata` (workers-types)
 	custom_metadata: string; // JSON-serialised user-defined metadata
+}
+export const MultipartUploadState = {
+	IN_PROGRESS: 0,
+	COMPLETED: 1,
+	ABORTED: 2,
+} as const;
+export interface MultipartUploadRow {
+	upload_id: string;
+	key: string;
+	http_metadata: string; // JSON-serialised `R2HTTPMetadata` (workers-types)
+	custom_metadata: string; // JSON-serialised user-defined metadata
+	state: ValueOf<typeof MultipartUploadState>;
+	// NOTE: we need to keep completed/aborted uploads around for referential
+	// integrity, and because error messages are different when attempting to
+	// upload parts to them
+}
+export interface MultipartPartRow {
+	upload_id: string;
+	part_number: number;
+	blob_id: string;
+	size: number; // NOTE: used to identify which parts to read for range requests
+	etag: string; // NOTE: multipart part ETag's are not MD5 checksums
+	checksum_md5: string; // NOTE: used in construction of final object's ETag
+	object_key: string | null; // null if in-progress upload
 }
 export const SQL_SCHEMA = `
 CREATE TABLE IF NOT EXISTS _mf_objects (
@@ -23,7 +48,27 @@ CREATE TABLE IF NOT EXISTS _mf_objects (
     http_metadata TEXT NOT NULL,
     custom_metadata TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS _mf_multipart_uploads (
+    upload_id TEXT PRIMARY KEY,
+    key TEXT NOT NULL,
+    http_metadata TEXT NOT NULL,
+    custom_metadata TEXT NOT NULL,
+    state TINYINT DEFAULT 0 NOT NULL
+);
+CREATE TABLE IF NOT EXISTS _mf_multipart_parts (
+    upload_id TEXT NOT NULL REFERENCES _mf_multipart_uploads(upload_id),
+    part_number INTEGER NOT NULL,
+    blob_id TEXT NOT NULL,
+    size INTEGER NOT NULL,
+    etag TEXT NOT NULL,
+    checksum_md5 TEXT NOT NULL,
+    object_key TEXT REFERENCES _mf_objects(key) DEFERRABLE INITIALLY DEFERRED,
+    PRIMARY KEY (upload_id, part_number)
+);
 `;
+// NOTE: `object_key` foreign key constraint is deferred, meaning we can delete
+// the linked object row, *then* the multipart part rows in a transaction,
+// see https://www.sqlite.org/foreignkeys.html#fk_deferred for more details
 
 // https://github.com/cloudflare/workerd/blob/4290f9717bc94647d9c8afd29602cdac97fdff1b/src/workerd/api/r2-api.capnp
 
@@ -154,13 +199,19 @@ export const R2PutRequestSchema = z
 		sha512: value.sha512,
 	}));
 
-// TODO: support multipart
-export const R2CreateMultipartUploadRequestSchema = z.object({
-	method: z.literal("createMultipartUpload"),
-	object: z.string(),
-	customFields: RecordSchema.optional(),
-	httpFields: R2HttpFieldsSchema.optional(),
-});
+export const R2CreateMultipartUploadRequestSchema = z
+	.object({
+		method: z.literal("createMultipartUpload"),
+		object: z.string(),
+		customFields: RecordSchema.optional(), // (renamed in transform)
+		httpFields: R2HttpFieldsSchema.optional(), // (renamed in transform)
+	})
+	.transform((value) => ({
+		method: value.method,
+		object: value.object,
+		customMetadata: value.customFields,
+		httpMetadata: value.httpFields,
+	}));
 
 export const R2UploadPartRequestSchema = z.object({
 	method: z.literal("uploadPart"),
@@ -206,6 +257,7 @@ export const R2DeleteRequestSchema = z.intersection(
 
 // Not using `z.discriminatedUnion()` here, as that doesn't work with
 // intersection/transformed types.
+// TODO(someday): switch to proposed `z.switch()`: https://github.com/colinhacks/zod/issues/2106
 export const R2BindingRequestSchema = z.union([
 	R2HeadRequestSchema,
 	R2GetRequestSchema,
@@ -222,6 +274,9 @@ export type OmitRequest<T> = Omit<T, "method" | "object">;
 export type R2GetOptions = OmitRequest<z.infer<typeof R2GetRequestSchema>>;
 export type R2PutOptions = OmitRequest<z.infer<typeof R2PutRequestSchema>>;
 export type R2ListOptions = OmitRequest<z.infer<typeof R2ListRequestSchema>>;
+export type R2CreateMultipartUploadOptions = OmitRequest<
+	z.infer<typeof R2CreateMultipartUploadRequestSchema>
+>;
 
 export interface R2ErrorResponse {
 	version: number;

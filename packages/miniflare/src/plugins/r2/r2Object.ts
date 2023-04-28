@@ -96,7 +96,7 @@ export class R2ObjectBody extends R2Object {
 
 	encode(): EncodedMetadata {
 		const { metadataSize, value: metadata } = super.encode();
-		const identity = new TransformStream();
+		const identity = new TransformStream<Uint8Array, Uint8Array>();
 		void metadata
 			.pipeTo(identity.writable, { preventClose: true })
 			.then(() => this.body.pipeTo(identity.writable));

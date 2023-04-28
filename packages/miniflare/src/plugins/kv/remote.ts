@@ -2,7 +2,7 @@ import assert from "assert";
 import { Blob } from "buffer";
 import { z } from "zod";
 import { BodyInit, FormData, Response } from "../../http";
-import { Clock, millisToSeconds } from "../../shared";
+import { Timers, millisToSeconds } from "../../shared";
 import {
 	RemoteStorage,
 	StorageListOptions,
@@ -78,16 +78,17 @@ const DEFAULT_CACHE_TTL = 60;
 // Returns seconds since UNIX epoch key should expire, using the specified
 // expiration only if it is sooner than the cache TTL
 function getCacheExpiration(
-	clock: Clock,
+	timers: Timers,
 	expiration?: number,
 	cacheTtl = DEFAULT_CACHE_TTL
 ): number {
 	// Return minimum expiration
-	const cacheExpiration = millisToSeconds(clock()) + cacheTtl;
+	const cacheExpiration = millisToSeconds(timers.now()) + cacheTtl;
 	if (expiration === undefined || isNaN(expiration)) return cacheExpiration;
 	else return Math.min(cacheExpiration, expiration);
 }
 
+// TODO(soon): remove all this
 export class KVRemoteStorage extends RemoteStorage {
 	async get(
 		key: string,
@@ -100,7 +101,7 @@ export class KVRemoteStorage extends RemoteStorage {
 			// cacheTtl may have changed between the original get call that cached
 			// this value and now, so check the cache is still fresh with the new TTL
 			const newExpiration = cachedValue.metadata.storedAt + cacheTtl;
-			if (newExpiration >= millisToSeconds(this.clock())) {
+			if (newExpiration >= millisToSeconds(this.timers.now())) {
 				// If the cache is still fresh, update the expiration and return
 				await this.cache.put<RemoteCacheMetadata>(key, {
 					value: cachedValue.value,
@@ -157,9 +158,9 @@ export class KVRemoteStorage extends RemoteStorage {
 		const result: StoredValueMeta = { value, expiration, metadata };
 		await this.cache.put<RemoteCacheMetadata>(key, {
 			value: result.value,
-			expiration: getCacheExpiration(this.clock, expiration, cacheTtl),
+			expiration: getCacheExpiration(this.timers, expiration, cacheTtl),
 			metadata: {
-				storedAt: millisToSeconds(this.clock()),
+				storedAt: millisToSeconds(this.timers.now()),
 				actualExpiration: result.expiration,
 				actualMetadata: result.metadata,
 			},
@@ -176,7 +177,7 @@ export class KVRemoteStorage extends RemoteStorage {
 		if (value.expiration !== undefined) {
 			// Send expiration as TTL to avoid "expiration times must be at least 60s
 			// in the future" issues from clock skew when setting `expirationTtl: 60`.
-			const desiredTtl = value.expiration - millisToSeconds(this.clock());
+			const desiredTtl = value.expiration - millisToSeconds(this.timers.now());
 			const ttl = Math.max(desiredTtl, 60);
 			searchParams.set("expiration_ttl", ttl.toString());
 		}
@@ -197,9 +198,9 @@ export class KVRemoteStorage extends RemoteStorage {
 		// Store this value in the cache
 		await this.cache.put<RemoteCacheMetadata>(key, {
 			value: value.value,
-			expiration: getCacheExpiration(this.clock, value.expiration),
+			expiration: getCacheExpiration(this.timers, value.expiration),
 			metadata: {
-				storedAt: millisToSeconds(this.clock()),
+				storedAt: millisToSeconds(this.timers.now()),
 				actualExpiration: value.expiration,
 				actualMetadata: value.metadata,
 			},
@@ -219,8 +220,11 @@ export class KVRemoteStorage extends RemoteStorage {
 		// "Store" delete in cache as tombstone
 		await this.cache.put<RemoteCacheMetadata>(key, {
 			value: new Uint8Array(),
-			expiration: getCacheExpiration(this.clock),
-			metadata: { storedAt: millisToSeconds(this.clock()), tombstone: true },
+			expiration: getCacheExpiration(this.timers),
+			metadata: {
+				storedAt: millisToSeconds(this.timers.now()),
+				tombstone: true,
+			},
 		});
 
 		// Technically, it's incorrect to always say we deleted the key by returning

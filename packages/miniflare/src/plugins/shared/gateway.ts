@@ -4,9 +4,9 @@ import { z } from "zod";
 import { RequestInit, Response } from "../../http";
 import {
 	Awaitable,
-	Clock,
 	Log,
 	MiniflareCoreError,
+	Timers,
 	sanitisePath,
 } from "../../shared";
 import {
@@ -34,7 +34,7 @@ export const CloudflareFetchSchema =
 export type CloudflareFetch = z.infer<typeof CloudflareFetchSchema>;
 
 export interface GatewayConstructor<Gateway> {
-	new (log: Log, storage: Storage, clock: Clock): Gateway;
+	new (log: Log, storage: Storage, timers: Timers): Gateway;
 }
 
 export interface RemoteStorageConstructor {
@@ -62,7 +62,7 @@ export class GatewayFactory<Gateway> {
 
 	constructor(
 		private readonly log: Log,
-		private readonly clock: Clock,
+		private readonly timers: Timers,
 		private readonly cloudflareFetch: CloudflareFetch | undefined,
 		private readonly pluginName: string,
 		private readonly gatewayClass: GatewayConstructor<Gateway>,
@@ -74,7 +74,7 @@ export class GatewayFactory<Gateway> {
 		if (storage !== undefined) return storage;
 		this.#memoryStorages.set(
 			namespace,
-			(storage = new MemoryStorage(undefined, this.clock))
+			(storage = new MemoryStorage(undefined, this.timers.now))
 		);
 		return storage;
 	}
@@ -98,9 +98,13 @@ export class GatewayFactory<Gateway> {
 				const root = path.join(fileURLToPath(url), sanitisedNamespace);
 				const unsanitise =
 					url.searchParams.get(PARAM_FILE_UNSANITISE) === "true";
-				return new FileStorage(root, !unsanitise, this.clock);
+				return new FileStorage(root, !unsanitise, this.timers.now);
 			} else if (url.protocol === "sqlite:") {
-				return new SqliteStorage(url.pathname, sanitisedNamespace, this.clock);
+				return new SqliteStorage(
+					url.pathname,
+					sanitisedNamespace,
+					this.timers.now
+				);
 			}
 			// TODO: support Redis storage?
 			if (url.protocol === "remote:") {
@@ -132,7 +136,7 @@ export class GatewayFactory<Gateway> {
 			persist === true
 				? path.join(DEFAULT_PERSIST_ROOT, this.pluginName, sanitisedNamespace)
 				: path.join(persist, sanitisedNamespace);
-		return new FileStorage(root, undefined, this.clock);
+		return new FileStorage(root, undefined, this.timers.now);
 	}
 
 	get(namespace: string, persist: Persistence): Gateway {
@@ -140,7 +144,7 @@ export class GatewayFactory<Gateway> {
 		if (cached !== undefined && cached[0] === persist) return cached[1];
 
 		const storage = this.getStorage(namespace, persist);
-		const gateway = new this.gatewayClass(this.log, storage, this.clock);
+		const gateway = new this.gatewayClass(this.log, storage, this.timers);
 		this.#gateways.set(namespace, [persist, gateway]);
 		return gateway;
 	}

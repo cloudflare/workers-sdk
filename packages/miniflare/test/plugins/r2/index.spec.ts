@@ -1,8 +1,10 @@
+// noinspection TypeScriptValidateJSTypes
+
 import assert from "assert";
 import { Blob } from "buffer";
 import crypto from "crypto";
 import path from "path";
-import { blob } from "stream/consumers";
+import { blob, text } from "stream/consumers";
 import { ReadableStream } from "stream/web";
 import type {
 	R2Bucket,
@@ -19,6 +21,7 @@ import type {
 	R2PutOptions,
 	R2Range,
 	R2StringChecksums,
+	R2UploadedPart,
 	Blob as WorkerBlob,
 	Headers as WorkerHeaders,
 	Response as WorkerResponse,
@@ -30,7 +33,12 @@ import {
 	Headers,
 	Miniflare,
 	MiniflareOptions,
+	MultipartPartRow,
+	NewStorage,
+	ObjectRow,
+	R2Gateway,
 	Response,
+	TypedDatabase,
 	viewToArray,
 	viewToBuffer,
 } from "@miniflare/tre";
@@ -40,6 +48,17 @@ import { MiniflareTestContext, miniflareTest, useTmp } from "../../test-shared";
 import { isWithin } from "../../test-shared/asserts";
 
 const WITHIN_EPSILON = 10_000;
+
+function sqlStmts(db: TypedDatabase) {
+	return {
+		getObjectByKey: db.prepare<string, ObjectRow>(
+			"SELECT * FROM _mf_objects WHERE key = ?"
+		),
+		getPartsByUploadId: db.prepare<string, MultipartPartRow>(
+			"SELECT * FROM _mf_multipart_parts WHERE upload_id = ? ORDER BY part_number"
+		),
+	};
+}
 
 function hash(value: string, algorithm = "md5") {
 	return crypto.createHash(algorithm).update(value).digest("hex");
@@ -72,7 +91,6 @@ async function deconstructResponse(res: Response): Promise<any> {
 			} else if (value.$type === "Date") {
 				return new Date(value.value);
 			}
-			// TODO: multipart upload
 		}
 		return value;
 	});
@@ -92,10 +110,26 @@ function maybeJsonStringify(value: unknown): string {
 	});
 }
 
+async function blobify(
+	value: ReadableStream | ArrayBuffer | ArrayBufferView | string | null | Blob
+) {
+	if (value === null) {
+		return new Blob([]);
+	} else if (value instanceof ArrayBuffer) {
+		return new Blob([new Uint8Array(value)]);
+	} else if (ArrayBuffer.isView(value)) {
+		return new Blob([viewToArray(value)]);
+	} else if (value instanceof ReadableStream) {
+		return await blob(value);
+	} else {
+		return new Blob([value]);
+	}
+}
+
 class TestR2Bucket implements R2Bucket {
 	constructor(
 		private readonly mf: Miniflare,
-		private readonly ns = ""
+		public ns = ""
 	) {}
 
 	async head(key: string): Promise<R2Object | null> {
@@ -147,25 +181,12 @@ class TestR2Bucket implements R2Bucket {
 	): Promise<R2Object> {
 		const url = `http://localhost/${encodeURIComponent(this.ns + key)}`;
 
-		let valueBlob: Blob;
-		if (value === null) {
-			valueBlob = new Blob([]);
-		} else if (value instanceof ArrayBuffer) {
-			valueBlob = new Blob([new Uint8Array(value)]);
-		} else if (ArrayBuffer.isView(value)) {
-			valueBlob = new Blob([viewToArray(value)]);
-		} else if (value instanceof ReadableStream) {
-			valueBlob = await blob(value);
-		} else {
-			valueBlob = new Blob([value]);
-		}
-
 		// We can't store options in headers as some put() tests include extended
 		// characters in them, and `undici` validates all headers are byte strings,
 		// so use a form data body instead
 		const formData = new FormData();
 		formData.set("options", maybeJsonStringify(options));
-		formData.set("value", valueBlob);
+		formData.set("value", await blobify(value));
 		const res = await this.mf.dispatchFetch(url, {
 			method: "PUT",
 			headers: { Accept: "multipart/form-data" },
@@ -196,15 +217,30 @@ class TestR2Bucket implements R2Bucket {
 		return deconstructResponse(res);
 	}
 
-	createMultipartUpload(
-		_key: string,
-		_options?: R2MultipartOptions
+	async createMultipartUpload(
+		key: string,
+		options?: R2MultipartOptions
 	): Promise<R2MultipartUpload> {
-		assert.fail("TestR2Bucket#createMultipartUpload() not yet implemented");
+		const nsKey = this.ns + key;
+		const url = `http://localhost/${encodeURIComponent(nsKey)}`;
+		const res = await this.mf.dispatchFetch(url, {
+			method: "POST",
+			headers: {
+				Accept: "text/plain",
+				"Test-Method": "MULTIPART-CREATE",
+				"Test-Options": maybeJsonStringify(options),
+			},
+		});
+		const uploadId = await res.text();
+		// @ts-expect-error `@cloudflare/workers-type`'s `ReadableStream` type is
+		//  incompatible with Node's
+		return new TestR2MultipartUpload(this.mf, nsKey, uploadId);
 	}
 
-	resumeMultipartUpload(_key: string, _uploadId: string): R2MultipartUpload {
-		assert.fail("TestR2Bucket#resumeMultipartUpload() not yet implemented");
+	resumeMultipartUpload(key: string, uploadId: string): R2MultipartUpload {
+		// @ts-expect-error `@cloudflare/workers-type`'s `ReadableStream` type is
+		//  incompatible with Node's
+		return new TestR2MultipartUpload(this.mf, this.ns + key, uploadId);
 	}
 }
 
@@ -275,7 +311,7 @@ class TestR2ObjectBody extends TestR2Object implements R2ObjectBody {
 
 	get bodyUsed(): boolean {
 		// Fully-implemented by `workerd`
-		assert.fail("TestR2Object#writeHttpMetadata() not implemented");
+		assert.fail("TestR2ObjectBody#bodyUsed() not implemented");
 		return false; // TypeScript requires `get` accessors return
 	}
 
@@ -295,9 +331,69 @@ class TestR2ObjectBody extends TestR2Object implements R2ObjectBody {
 	}
 }
 
+class TestR2MultipartUpload implements R2MultipartUpload {
+	constructor(
+		private readonly mf: Miniflare,
+		readonly key: string,
+		readonly uploadId: string
+	) {}
+
+	// @ts-expect-error `@cloudflare/workers-type`'s `ReadableStream` type is
+	//  incompatible with Node's
+	async uploadPart(
+		partNumber: number,
+		value: ReadableStream | ArrayBuffer | ArrayBufferView | string | null | Blob
+	): Promise<R2UploadedPart> {
+		const url = `http://localhost/${encodeURIComponent(this.key)}`;
+		const body = await blobify(value);
+		const res = await this.mf.dispatchFetch(url, {
+			method: "PUT",
+			headers: {
+				Accept: "application/json",
+				"Content-Length": String(body.size),
+				"Test-Method": "MULTIPART-UPLOAD",
+				"Test-Options": JSON.stringify({ uploadId: this.uploadId, partNumber }),
+			},
+			// Could stream this, but R2 requires known-length streams, so have to
+			// buffer anyway
+			body,
+		});
+		return (await res.json()) as R2UploadedPart;
+	}
+
+	async abort(): Promise<void> {
+		const url = `http://localhost/${encodeURIComponent(this.key)}`;
+		await this.mf.dispatchFetch(url, {
+			method: "DELETE",
+			headers: {
+				Accept: "text/plain",
+				"Test-Method": "MULTIPART-ABORT",
+				"Test-Options": JSON.stringify({ uploadId: this.uploadId }),
+			},
+		});
+	}
+
+	async complete(uploadedParts: R2UploadedPart[]): Promise<R2Object> {
+		const url = `http://localhost/${encodeURIComponent(this.key)}`;
+		const res = await this.mf.dispatchFetch(url, {
+			method: "PUT",
+			headers: {
+				Accept: "multipart/form-data",
+				"Test-Method": "MULTIPART-COMPLETE",
+				"Test-Options": JSON.stringify({
+					uploadId: this.uploadId,
+					uploadedParts,
+				}),
+			},
+		});
+		return deconstructResponse(res);
+	}
+}
+
 interface Context extends MiniflareTestContext {
 	ns: string;
 	r2: TestR2Bucket;
+	storage: NewStorage;
 }
 
 const opts: Partial<MiniflareOptions> = {
@@ -361,7 +457,6 @@ const test = miniflareTest<{ BUCKET: R2Bucket }, Context>(
 						bodyPromises.push(objectBody.blob());
 						return { ...object, $type: "R2ObjectBody", body: bodyId };
 					}
-					// TODO: R2MultipartUpload
 				}
 
 				if (
@@ -410,6 +505,29 @@ const test = miniflareTest<{ BUCKET: R2Bucket }, Context>(
 			const optionsHeader = request.headers.get("Test-Options");
 			const options = maybeJsonParse(optionsHeader);
 			return constructResponse(await env.BUCKET.list(options));
+		} else if (method === "MULTIPART-CREATE") {
+			const optionsHeader = request.headers.get("Test-Options");
+			const options = maybeJsonParse(optionsHeader);
+			const upload = await env.BUCKET.createMultipartUpload(key, options);
+			return new global.Response(upload.uploadId);
+		} else if (method === "MULTIPART-UPLOAD") {
+			const optionsHeader = request.headers.get("Test-Options");
+			const options = maybeJsonParse(optionsHeader);
+			const upload = env.BUCKET.resumeMultipartUpload(key, options.uploadId);
+			const value = request.body ?? "";
+			const part = await upload.uploadPart(options.partNumber, value);
+			return global.Response.json(part);
+		} else if (method === "MULTIPART-ABORT") {
+			const optionsHeader = request.headers.get("Test-Options");
+			const options = maybeJsonParse(optionsHeader);
+			const upload = env.BUCKET.resumeMultipartUpload(key, options.uploadId);
+			await upload.abort();
+			return new global.Response(null, { status: 204 });
+		} else if (method === "MULTIPART-COMPLETE") {
+			const optionsHeader = request.headers.get("Test-Options");
+			const options = maybeJsonParse(optionsHeader);
+			const upload = env.BUCKET.resumeMultipartUpload(key, options.uploadId);
+			return constructResponse(await upload.complete(options.uploadedParts));
 		}
 
 		return new global.Response(null, { status: 405 });
@@ -423,6 +541,7 @@ test.beforeEach((t) => {
 	)}`;
 	t.context.ns = ns;
 	t.context.r2 = new TestR2Bucket(t.context.mf, ns);
+	t.context.storage = t.context.mf._getPluginStorage("r2", "bucket");
 });
 
 const validatesKeyMacro: Macro<
@@ -694,12 +813,20 @@ test("put: returns metadata for created object", async (t) => {
 	isWithin(t, WITHIN_EPSILON, object.uploaded.getTime(), start);
 });
 test("put: overrides existing keys", async (t) => {
-	const { r2 } = t.context;
+	const { r2, ns, storage, timers } = t.context;
 	await r2.put("key", "value1");
+	const stmts = sqlStmts(storage.db);
+	const objectRow = stmts.getObjectByKey.get(`${ns}key`);
+	assert(objectRow?.blob_id != null);
+
 	await r2.put("key", "value2");
 	const body = await r2.get("key");
 	assert(body !== null);
 	t.is(await body.text(), "value2");
+
+	// Check deletes old blob
+	await timers.waitForMicrotasks();
+	t.is(await storage.blob.get(objectRow.blob_id), null);
 });
 test(validatesKeyMacro, { method: "put", f: (r2, key) => r2.put(key, "v") });
 test("put: validates checksums", async (t) => {
@@ -820,9 +947,6 @@ test("put: stores only if passes onlyIf", async (t) => {
 test("put: validates metadata size", async (t) => {
 	const { r2 } = t.context;
 
-	// TODO(soon): add check for max value size once we have streaming support
-	//  (don't really want to allocate 5GB buffers in tests :sweat_smile:)
-
 	const expectations: ThrowsExpectation<Error> = {
 		instanceOf: Error,
 		message:
@@ -852,16 +976,22 @@ test("put: validates metadata size", async (t) => {
 });
 
 test("delete: deletes existing keys", async (t) => {
-	const { r2 } = t.context;
+	const { r2, ns, storage, timers } = t.context;
 
 	// Check does nothing with non-existent key
 	await r2.delete("key");
 
 	// Check deletes single key
 	await r2.put("key", "value");
+	const stmts = sqlStmts(storage.db);
+	const objectRow = stmts.getObjectByKey.get(`${ns}key`);
+	assert(objectRow?.blob_id != null);
 	t.not(await r2.head("key"), null);
 	await r2.delete("key");
 	t.is(await r2.head("key"), null);
+	// Check deletes old blob
+	await timers.waitForMicrotasks();
+	t.is(await storage.blob.get(objectRow.blob_id), null);
 
 	// Check deletes multiple keys, skipping non-existent keys
 	await r2.put("key1", "value1");
@@ -1054,7 +1184,6 @@ test("list: returns keys inserted whilst paginating", async (t) => {
 test("list: validates limit", async (t) => {
 	const { r2 } = t.context;
 	// R2 actually accepts 0 and -1 as valid limits, but this is probably a bug
-	// TODO(now): report to R2 team
 	await t.throwsAsync(r2.list({ limit: 0 }), {
 		instanceOf: Error,
 		message: "list: MaxKeys params must be positive integer <= 1000. (10022)",
@@ -1198,6 +1327,28 @@ test("list: returns correct delimitedPrefixes for delimiter and prefix", async (
 	t.deepEqual(delimitedPrefixes(result), ["dir0/sub0/", "dir0/sub1/"]);
 });
 
+test.serial("operations permit empty key", async (t) => {
+	const { r2 } = t.context;
+	// Explicitly testing empty string key, so cannot prefix with namespace
+	r2.ns = "";
+	// Ensure globally namespaced key cleaned up, so it doesn't affect other tests
+	t.teardown(() => r2.delete(""));
+
+	await r2.put("", "empty");
+	const object = await r2.head("");
+	t.is(object?.key, "");
+
+	const objectBody = await r2.get("");
+	t.is(await objectBody?.text(), "empty");
+
+	const { objects } = await r2.list();
+	t.is(objects.length, 1);
+	t.is(objects[0].key, "");
+
+	await r2.delete("");
+	t.is(await r2.head(""), null);
+});
+
 test.serial("operations persist stored data", async (t) => {
 	const { r2, ns } = t.context;
 
@@ -1219,7 +1370,7 @@ test.serial("operations persist stored data", async (t) => {
 	t.deepEqual(stored, [{ key: `${ns}key` }]);
 
 	// Check head respects persist
-	const object = await r2.head("key");
+	let object = await r2.head("key");
 	t.is(object?.size, 5);
 
 	// Check get respects persist
@@ -1235,6 +1386,556 @@ test.serial("operations persist stored data", async (t) => {
 	await r2.delete("key");
 	stored = stmtListByNs.all({ ns });
 	t.deepEqual(stored, []);
+
+	// Check multipart operations respect persist
+	const upload = await r2.createMultipartUpload("multipart");
+	const part = await upload.uploadPart(1, "multipart");
+	object = await upload.complete([part]);
+	t.is(object?.size, 9);
+	stored = stmtListByNs.all({ ns });
+	t.deepEqual(stored, [{ key: `${ns}multipart` }]);
 });
 
-// TODO: add tests for empty key
+// Multipart tests
+const PART_SIZE = 50;
+// Reduce the minimum multipart part size, so we can use small values for tests
+test.before(() => (R2Gateway._MIN_MULTIPART_PART_SIZE = PART_SIZE));
+
+function objectNameNotValidExpectations(method: string) {
+	return <ThrowsExpectation<Error>>{
+		instanceOf: Error,
+		message: `${method}: The specified object name is not valid. (10020)`,
+	};
+}
+function doesNotExistExpectations(method: string) {
+	return <ThrowsExpectation<Error>>{
+		instanceOf: Error,
+		message: `${method}: The specified multipart upload does not exist. (10024)`,
+	};
+}
+function internalErrorExpectations(method: string) {
+	return <ThrowsExpectation<Error>>{
+		instanceOf: Error,
+		message: `${method}: We encountered an internal error. Please try again. (10001)`,
+	};
+}
+test("createMultipartUpload", async (t) => {
+	const { r2, ns } = t.context;
+
+	// Check creates upload
+	const upload1 = await r2.createMultipartUpload("key", {
+		customMetadata: { key: "value" },
+		httpMetadata: { contentType: "text/plain" },
+	});
+	t.is(upload1.key, `${ns}key`);
+	t.not(upload1.uploadId, "");
+
+	// Check creates multiple distinct uploads with different uploadIds for key
+	const upload2 = await r2.createMultipartUpload("key");
+	t.is(upload2.key, `${ns}key`);
+	t.not(upload2.uploadId, "");
+	t.not(upload2.uploadId, upload1.uploadId);
+
+	// Check validates key
+	await t.throwsAsync(
+		r2.createMultipartUpload("x".repeat(1025)),
+		objectNameNotValidExpectations("createMultipartUpload")
+	);
+});
+test("uploadPart", async (t) => {
+	const { storage, r2 } = t.context;
+
+	// Check uploads parts
+	const upload = await r2.createMultipartUpload("key");
+	const part1 = await upload.uploadPart(1, "value1");
+	t.is(part1.partNumber, 1);
+	t.not(part1.etag, "");
+	const part2 = await upload.uploadPart(2, "value two");
+	t.is(part2.partNumber, 2);
+	t.not(part2.etag, "");
+	t.not(part2.etag, part1.etag);
+	const stmts = sqlStmts(storage.db);
+	const partRows = stmts.getPartsByUploadId.all(upload.uploadId);
+	t.is(partRows.length, 2);
+	t.is(partRows[0].part_number, 1);
+	t.is(partRows[0].size, 6);
+	t.is(partRows[1].part_number, 2);
+	t.is(partRows[1].size, 9);
+	const value1 = await storage.blob.get(partRows[0].blob_id);
+	assert(value1 !== null);
+	t.is(await text(value1), "value1");
+	const value2 = await storage.blob.get(partRows[1].blob_id);
+	assert(value2 !== null);
+	t.is(await text(value2), "value two");
+
+	// Check upload part with same part number and same value
+	const part1b = await upload.uploadPart(1, "value1");
+	t.is(part1b.partNumber, 1);
+	t.not(part1b.etag, part1.etag);
+
+	// Check upload part with different part number but same value
+	const part100 = await upload.uploadPart(100, "value1");
+	t.is(part100.partNumber, 100);
+	t.not(part100.etag, part1.etag);
+
+	// Check validates key and uploadId
+	let expectations = doesNotExistExpectations("uploadPart");
+	let nonExistentUpload = r2.resumeMultipartUpload("key", "bad");
+	await t.throwsAsync(nonExistentUpload.uploadPart(1, "value"), expectations);
+	nonExistentUpload = r2.resumeMultipartUpload("badkey", upload.uploadId);
+	await t.throwsAsync(nonExistentUpload.uploadPart(1, "value"), expectations);
+	expectations = objectNameNotValidExpectations("uploadPart");
+	nonExistentUpload = r2.resumeMultipartUpload("x".repeat(1025), "bad");
+	await t.throwsAsync(nonExistentUpload.uploadPart(1, "value"), expectations);
+});
+test("abortMultipartUpload", async (t) => {
+	const { storage, r2, timers } = t.context;
+
+	// Check deletes upload and all parts for corresponding upload
+	const upload1 = await r2.createMultipartUpload("key");
+	const upload2 = await r2.createMultipartUpload("key");
+	await upload1.uploadPart(1, "value1");
+	await upload1.uploadPart(2, "value2");
+	await upload1.uploadPart(3, "value3");
+	const stmts = sqlStmts(storage.db);
+	const parts = stmts.getPartsByUploadId.all(upload1.uploadId);
+	t.is(parts.length, 3);
+	await upload1.abort();
+	t.is(stmts.getPartsByUploadId.all(upload1.uploadId).length, 0);
+	// Check blobs deleted
+	await timers.waitForMicrotasks();
+	for (const part of parts) t.is(await storage.blob.get(part.blob_id), null);
+
+	// Check cannot upload after abort
+	let expectations = doesNotExistExpectations("uploadPart");
+	await t.throwsAsync(upload1.uploadPart(4, "value4"), expectations);
+
+	// Check can abort already aborted upload
+	await upload1.abort();
+
+	// Check can abort already completed upload
+	const part1 = await upload2.uploadPart(1, "value1");
+	await upload2.complete([part1]);
+	await upload2.abort();
+	t.is(await (await r2.get("key"))?.text(), "value1");
+
+	// Check validates key and uploadId
+	const upload3 = await r2.createMultipartUpload("key");
+	// Note this is internalErrorExpectations, not doesNotExistExpectations
+	expectations = internalErrorExpectations("abortMultipartUpload");
+	let nonExistentUpload = r2.resumeMultipartUpload("key", "bad");
+	await t.throwsAsync(nonExistentUpload.abort(), expectations);
+	nonExistentUpload = r2.resumeMultipartUpload("bad", upload3.uploadId);
+	await t.throwsAsync(nonExistentUpload.abort(), expectations);
+	expectations = objectNameNotValidExpectations("abortMultipartUpload");
+	nonExistentUpload = r2.resumeMultipartUpload("x".repeat(1025), "bad");
+	await t.throwsAsync(nonExistentUpload.abort(), expectations);
+});
+test("completeMultipartUpload", async (t) => {
+	const { storage, r2, ns, timers } = t.context;
+
+	// Check creates regular key with correct metadata, and returns object
+	const upload1 = await r2.createMultipartUpload("key", {
+		customMetadata: { key: "value" },
+		httpMetadata: { contentType: "text/plain" },
+	});
+	const upload2 = await r2.createMultipartUpload("key");
+	let part1 = await upload1.uploadPart(1, "1".repeat(PART_SIZE));
+	let part2 = await upload1.uploadPart(2, "2".repeat(PART_SIZE));
+	let part3 = await upload1.uploadPart(3, "3");
+	let object = await upload1.complete([part1, part2, part3]);
+	t.is(object.key, `${ns}key`);
+	t.not(object.version, "");
+	t.is(object.size, 2 * PART_SIZE + 1);
+	t.is(object.etag, "3b676245e58d988dc75f80c0c27a9645-3");
+	t.is(object.httpEtag, '"3b676245e58d988dc75f80c0c27a9645-3"');
+	t.is(object.range, undefined);
+	t.deepEqual(object.checksums.toJSON(), {});
+	t.deepEqual(object.customMetadata, { key: "value" });
+	t.deepEqual(object.httpMetadata, { contentType: "text/plain" });
+	let objectBody = await r2.get("key");
+	t.is(
+		await objectBody?.text(),
+		`${"1".repeat(PART_SIZE)}${"2".repeat(PART_SIZE)}3`
+	);
+	const stmts = sqlStmts(storage.db);
+	const parts = stmts.getPartsByUploadId.all(upload1.uploadId);
+	t.is(parts.length, 3);
+
+	// Check requires all but last part to be greater than 5MB
+	part1 = await upload2.uploadPart(1, "1");
+	part2 = await upload2.uploadPart(2, "2");
+	part3 = await upload2.uploadPart(3, "3");
+	const sizeExpectations: ThrowsExpectation<Error> = {
+		instanceOf: Error,
+		message:
+			"completeMultipartUpload: Your proposed upload is smaller than the minimum allowed object size. (10011)",
+	};
+	await t.throwsAsync(
+		upload2.complete([part1, part2, part3]),
+		sizeExpectations
+	);
+	await t.throwsAsync(upload2.complete([part1, part2]), sizeExpectations);
+	object = await upload2.complete([part1]);
+	t.is(object.size, 1);
+	t.is(object.etag, "46d1741e8075da4ac72c71d8130fcb71-1");
+	// Check previous multipart uploads blobs deleted
+	await timers.waitForMicrotasks();
+	for (const part of parts) t.is(await storage.blob.get(part.blob_id), null);
+
+	// Check completing multiple uploads overrides existing, deleting all parts
+	t.is(stmts.getPartsByUploadId.all(upload1.uploadId).length, 0);
+	t.is(stmts.getPartsByUploadId.all(upload2.uploadId).length, 1);
+	objectBody = await r2.get("key");
+	t.is(await objectBody?.text(), "1");
+
+	// Check completing with overridden part
+	const upload3 = await r2.createMultipartUpload("key");
+	let part1a = await upload3.uploadPart(1, "value");
+	let part1b = await upload3.uploadPart(1, "value");
+	t.is(part1a.partNumber, part1b.partNumber);
+	t.not(part1a.etag, part1b.etag);
+	const notFoundExpectations: ThrowsExpectation<Error> = {
+		instanceOf: Error,
+		message:
+			"completeMultipartUpload: One or more of the specified parts could not be found. (10025)",
+	};
+	await t.throwsAsync(upload3.complete([part1a]), notFoundExpectations);
+	object = await upload3.complete([part1b]);
+	t.is(object.size, 5);
+
+	// Check completing with multiple parts of same part number
+	const upload4 = await r2.createMultipartUpload("key");
+	part1a = await upload4.uploadPart(1, "1".repeat(PART_SIZE));
+	part1b = await upload4.uploadPart(1, "2".repeat(PART_SIZE));
+	const part1c = await upload4.uploadPart(1, "3".repeat(PART_SIZE));
+	await t.throwsAsync(
+		upload4.complete([part1a, part1b, part1c]),
+		internalErrorExpectations("completeMultipartUpload")
+	);
+
+	// Check completing with out-of-order parts
+	const upload5a = await r2.createMultipartUpload("key");
+	part1 = await upload5a.uploadPart(1, "1".repeat(PART_SIZE));
+	part2 = await upload5a.uploadPart(2, "2".repeat(PART_SIZE));
+	part3 = await upload5a.uploadPart(3, "3".repeat(PART_SIZE));
+	object = await upload5a.complete([part2, part3, part1]);
+	t.is(object.size, 3 * PART_SIZE);
+	t.is(object.etag, "f1115cc5564e7e0b25bbd87d95c72c86-3");
+	objectBody = await r2.get("key");
+	t.is(
+		await objectBody?.text(),
+		`${"1".repeat(PART_SIZE)}${"2".repeat(PART_SIZE)}${"3".repeat(PART_SIZE)}`
+	);
+	const upload5b = await r2.createMultipartUpload("key");
+	part1 = await upload5b.uploadPart(1, "1");
+	part2 = await upload5b.uploadPart(2, "2".repeat(PART_SIZE));
+	part3 = await upload5b.uploadPart(3, "3".repeat(PART_SIZE));
+	// Check part size checking happens in argument order (part1's size isn't
+	// checked until too late, as it's the last argument so ignored...)
+	await t.throwsAsync(upload5b.complete([part2, part3, part1]), {
+		instanceOf: Error,
+		message:
+			"completeMultipartUpload: There was a problem with the multipart upload. (10048)",
+	});
+	const upload5c = await r2.createMultipartUpload("key");
+	part1 = await upload5c.uploadPart(1, "1".repeat(PART_SIZE));
+	part2 = await upload5c.uploadPart(2, "2".repeat(PART_SIZE));
+	part3 = await upload5c.uploadPart(3, "3");
+	// (...but here, part3 isn't the last argument, so get a regular size error)
+	await t.throwsAsync(
+		upload5c.complete([part2, part3, part1]),
+		sizeExpectations
+	);
+
+	// Check completing with missing parts
+	const upload6 = await r2.createMultipartUpload("key");
+	part2 = await upload6.uploadPart(2, "2".repeat(PART_SIZE));
+	const part5 = await upload6.uploadPart(5, "5".repeat(PART_SIZE));
+	const part9 = await upload6.uploadPart(9, "9".repeat(PART_SIZE));
+	object = await upload6.complete([part2, part5, part9]);
+	t.is(object.size, 3 * PART_SIZE);
+	t.is(object.etag, "471d773597286301a10c61cd8c84e659-3");
+	objectBody = await r2.get("key");
+	t.is(
+		await objectBody?.text(),
+		`${"2".repeat(PART_SIZE)}${"5".repeat(PART_SIZE)}${"9".repeat(PART_SIZE)}`
+	);
+
+	// Check completing with no parts
+	const upload7 = await r2.createMultipartUpload("key");
+	object = await upload7.complete([]);
+	t.is(object.size, 0);
+	t.is(object.etag, "d41d8cd98f00b204e9800998ecf8427e-0");
+	objectBody = await r2.get("key");
+	t.is(await objectBody?.text(), "");
+
+	// Check cannot complete with parts from another upload
+	const upload8a = await r2.createMultipartUpload("key");
+	const upload8b = await r2.createMultipartUpload("key");
+	part1 = await upload8b.uploadPart(1, "value");
+	await t.throwsAsync(upload8a.complete([part1]), notFoundExpectations);
+
+	// Check cannot complete already completed upload
+	const upload9 = await r2.createMultipartUpload("key");
+	part1 = await upload9.uploadPart(1, "value");
+	await upload9.complete([part1]);
+	await t.throwsAsync(
+		upload9.complete([part1]),
+		doesNotExistExpectations("completeMultipartUpload")
+	);
+
+	// Check cannot complete aborted upload
+	const upload10 = await r2.createMultipartUpload("key");
+	part1 = await upload10.uploadPart(1, "value");
+	await upload10.abort();
+	await t.throwsAsync(
+		upload10.complete([part1]),
+		doesNotExistExpectations("completeMultipartUpload")
+	);
+
+	// Check validates key and uploadId
+	const upload11 = await r2.createMultipartUpload("key");
+	// Note this is internalErrorExpectations, not doesNotExistExpectations
+	let expectations = internalErrorExpectations("completeMultipartUpload");
+	let nonExistentUpload = r2.resumeMultipartUpload("key", "bad");
+	await t.throwsAsync(nonExistentUpload.complete([]), expectations);
+	nonExistentUpload = r2.resumeMultipartUpload("badkey", upload11.uploadId);
+	await t.throwsAsync(nonExistentUpload.complete([]), expectations);
+	expectations = objectNameNotValidExpectations("completeMultipartUpload");
+	nonExistentUpload = r2.resumeMultipartUpload("x".repeat(1025), "bad");
+	await t.throwsAsync(nonExistentUpload.complete([]), expectations);
+
+	// Check requires all but last part to have same size
+	const upload13 = await r2.createMultipartUpload("key");
+	part1 = await upload13.uploadPart(1, "1".repeat(PART_SIZE));
+	part2 = await upload13.uploadPart(2, "2".repeat(PART_SIZE + 1));
+	part3 = await upload13.uploadPart(3, "3".repeat(PART_SIZE));
+	expectations = {
+		instanceOf: Error,
+		message:
+			"completeMultipartUpload: There was a problem with the multipart upload. (10048)",
+	};
+	await t.throwsAsync(upload13.complete([part1, part2, part3]), expectations);
+	part2 = await upload13.uploadPart(2, "2".repeat(PART_SIZE));
+	// Check allows last part to have different size, only if <= others
+	part3 = await upload13.uploadPart(3, "3".repeat(PART_SIZE + 1));
+	await t.throwsAsync(upload13.complete([part1, part2, part3]), expectations);
+	part3 = await upload13.uploadPart(3, "3".repeat(PART_SIZE - 1));
+	object = await upload13.complete([part1, part2, part3]);
+	t.is(object.size, 3 * PART_SIZE - 1);
+
+	// Check with non-existent and non-matching parts
+	const upload14 = await r2.createMultipartUpload("key");
+	part1 = await upload14.uploadPart(1, "1".repeat(PART_SIZE));
+	part2 = await upload14.uploadPart(2, "2");
+	await t.throwsAsync(
+		upload14.complete([part1, { partNumber: 3, etag: part2.etag }]),
+		notFoundExpectations
+	);
+	await t.throwsAsync(
+		upload14.complete([part1, { partNumber: 2, etag: "bad" }]),
+		notFoundExpectations
+	);
+	await t.throwsAsync(
+		upload14.complete([part1, { partNumber: 4, etag: "very bad" }]),
+		notFoundExpectations
+	);
+});
+// Check regular operations on buckets with existing multipart keys
+test("head: is multipart aware", async (t) => {
+	const { r2, ns } = t.context;
+
+	// Check returns nothing for in-progress multipart upload
+	const upload = await r2.createMultipartUpload("key", {
+		customMetadata: { key: "value" },
+		httpMetadata: { contentType: "text/plain" },
+	});
+	const part1 = await upload.uploadPart(1, "1".repeat(PART_SIZE));
+	const part2 = await upload.uploadPart(2, "2".repeat(PART_SIZE));
+	const part3 = await upload.uploadPart(3, "3".repeat(PART_SIZE));
+	t.is(await r2.head("key"), null);
+
+	// Check returns metadata for completed upload
+	const completed = await upload.complete([part1, part2, part3]);
+	const object = await r2.head("key");
+	t.is(object?.key, `${ns}key`);
+	t.is(object?.version, completed.version);
+	t.is(object?.size, 3 * PART_SIZE);
+	t.is(object?.etag, "f1115cc5564e7e0b25bbd87d95c72c86-3");
+	t.is(object?.httpEtag, '"f1115cc5564e7e0b25bbd87d95c72c86-3"');
+	t.deepEqual(object?.range, { offset: 0, length: 150 });
+	t.deepEqual(object?.checksums.toJSON(), {});
+	t.deepEqual(object?.customMetadata, { key: "value" });
+	t.deepEqual(object?.httpMetadata, { contentType: "text/plain" });
+});
+test("get: is multipart aware", async (t) => {
+	const { r2, ns } = t.context;
+
+	// Check returns nothing for in-progress multipart upload
+	const upload = await r2.createMultipartUpload("key", {
+		customMetadata: { key: "value" },
+		httpMetadata: { contentType: "text/plain" },
+	});
+	const part1 = await upload.uploadPart(1, "a".repeat(PART_SIZE));
+	const part2 = await upload.uploadPart(2, "b".repeat(PART_SIZE));
+	const part3 = await upload.uploadPart(3, "c".repeat(PART_SIZE));
+	t.is(await r2.get("key"), null);
+
+	// Check returns metadata and value for completed upload
+	const completed = await upload.complete([part1, part2, part3]);
+	let object = await r2.get("key");
+	t.is(object?.key, `${ns}key`);
+	t.is(object?.version, completed.version);
+	t.is(object?.size, 3 * PART_SIZE);
+	t.is(object?.etag, "d63a28fd44cfddc0215c8da47e582eb7-3");
+	t.is(object?.httpEtag, '"d63a28fd44cfddc0215c8da47e582eb7-3"');
+	t.deepEqual(object?.range, { offset: 0, length: 3 * PART_SIZE });
+	t.deepEqual(object?.checksums.toJSON(), {});
+	t.deepEqual(object?.customMetadata, { key: "value" });
+	t.deepEqual(object?.httpMetadata, { contentType: "text/plain" });
+	t.is(
+		await object?.text(),
+		`${"a".repeat(PART_SIZE)}${"b".repeat(PART_SIZE)}${"c".repeat(PART_SIZE)}`
+	);
+
+	// Check ranged get accessing single part
+	const halfPartSize = Math.floor(PART_SIZE / 2);
+	const quarterPartSize = Math.floor(PART_SIZE / 4);
+	object = (await r2.get("key", {
+		range: { offset: halfPartSize, length: quarterPartSize },
+	})) as R2ObjectBody | null;
+	t.is(await object?.text(), "a".repeat(quarterPartSize));
+
+	// Check ranged get accessing multiple parts
+	object = (await r2.get("key", {
+		range: {
+			offset: halfPartSize,
+			length: halfPartSize + PART_SIZE + quarterPartSize,
+		},
+	})) as R2ObjectBody | null;
+	t.is(
+		await object?.text(),
+		`${"a".repeat(halfPartSize)}${"b".repeat(PART_SIZE)}${"c".repeat(
+			quarterPartSize
+		)}`
+	);
+
+	// Check ranged get of suffix
+	object = (await r2.get("key", {
+		range: { suffix: quarterPartSize + PART_SIZE },
+	})) as R2ObjectBody | null;
+	t.is(
+		await object?.text(),
+		`${"b".repeat(quarterPartSize)}${"c".repeat(PART_SIZE)}`
+	);
+});
+test("put: is multipart aware", async (t) => {
+	const { storage, r2, timers } = t.context;
+
+	// Check doesn't overwrite parts for in-progress multipart upload
+	const upload = await r2.createMultipartUpload("key");
+	const part1 = await upload.uploadPart(1, "1".repeat(PART_SIZE));
+	const part2 = await upload.uploadPart(2, "2".repeat(PART_SIZE));
+	const part3 = await upload.uploadPart(3, "3".repeat(PART_SIZE));
+	await r2.put("key", "value");
+
+	const stmts = sqlStmts(storage.db);
+	t.is(stmts.getPartsByUploadId.all(upload.uploadId).length, 3);
+
+	const object = await upload.complete([part1, part2, part3]);
+	t.is(object.size, 3 * PART_SIZE);
+	const parts = stmts.getPartsByUploadId.all(upload.uploadId);
+	t.is(parts.length, 3);
+
+	// Check overwrites all multipart parts of completed upload
+	await r2.put("key", "new-value");
+	t.is(stmts.getPartsByUploadId.all(upload.uploadId).length, 0);
+	// Check deletes all previous blobs
+	await timers.waitForMicrotasks();
+	for (const part of parts) t.is(await storage.blob.get(part.blob_id), null);
+});
+test("delete: is multipart aware", async (t) => {
+	const { storage, r2, timers } = t.context;
+
+	// Check doesn't remove parts for in-progress multipart upload
+	const upload = await r2.createMultipartUpload("key");
+	const part1 = await upload.uploadPart(1, "1".repeat(PART_SIZE));
+	const part2 = await upload.uploadPart(2, "2".repeat(PART_SIZE));
+	const part3 = await upload.uploadPart(3, "3".repeat(PART_SIZE));
+	await r2.delete("key");
+
+	// Check removes all multipart parts of completed upload
+	const object = await upload.complete([part1, part2, part3]);
+	t.is(object.size, 3 * PART_SIZE);
+	const stmts = sqlStmts(storage.db);
+	const parts = stmts.getPartsByUploadId.all(upload.uploadId);
+	t.is(parts.length, 3);
+	await r2.delete("key");
+	t.is(stmts.getPartsByUploadId.all(upload.uploadId).length, 0);
+	// Check deletes all previous blobs
+	await timers.waitForMicrotasks();
+	for (const part of parts) t.is(await storage.blob.get(part.blob_id), null);
+});
+test("delete: waits for in-progress multipart gets before deleting part blobs", async (t) => {
+	const { storage, r2, timers } = t.context;
+
+	const upload = await r2.createMultipartUpload("key");
+	const part1 = await upload.uploadPart(1, "1".repeat(PART_SIZE));
+	const part2 = await upload.uploadPart(2, "2".repeat(PART_SIZE));
+	const part3 = await upload.uploadPart(3, "3".repeat(PART_SIZE));
+	await upload.complete([part1, part2, part3]);
+
+	const objectBody1 = await r2.get("key");
+	const objectBody2 = await r2.get("key", { range: { offset: PART_SIZE } });
+	const stmts = sqlStmts(storage.db);
+	const parts = stmts.getPartsByUploadId.all(upload.uploadId);
+	t.is(parts.length, 3);
+	await r2.delete("key");
+	t.is(
+		await objectBody1?.text(),
+		`${"1".repeat(PART_SIZE)}${"2".repeat(PART_SIZE)}${"3".repeat(PART_SIZE)}`
+	);
+	t.is(
+		await objectBody2?.text(),
+		`${"2".repeat(PART_SIZE)}${"3".repeat(PART_SIZE)}`
+	);
+
+	await timers.waitForMicrotasks();
+	for (const part of parts) t.is(await storage.blob.get(part.blob_id), null);
+});
+test("list: is multipart aware", async (t) => {
+	const { r2, ns } = t.context;
+
+	// Check returns nothing for in-progress multipart upload
+	const upload = await r2.createMultipartUpload("key", {
+		customMetadata: { key: "value" },
+		httpMetadata: { contentType: "text/plain" },
+	});
+	const part1 = await upload.uploadPart(1, "x".repeat(PART_SIZE));
+	const part2 = await upload.uploadPart(2, "y".repeat(PART_SIZE));
+	const part3 = await upload.uploadPart(3, "z".repeat(PART_SIZE));
+	let { objects } = await r2.list({
+		prefix: ns,
+		include: ["httpMetadata", "customMetadata"],
+	});
+	t.is(objects.length, 0);
+
+	// Check returns metadata for completed upload
+	const completed = await upload.complete([part1, part2, part3]);
+	({ objects } = await r2.list({
+		prefix: ns,
+		include: ["httpMetadata", "customMetadata"],
+	}));
+	t.is(objects.length, 1);
+	const object = objects[0];
+	t.is(object?.key, `${ns}key`);
+	t.is(object?.version, completed.version);
+	t.is(object?.size, 3 * PART_SIZE);
+	t.is(object?.etag, "9f4271a2af6d83c1d3fef1cc6d170f9f-3");
+	t.is(object?.httpEtag, '"9f4271a2af6d83c1d3fef1cc6d170f9f-3"');
+	t.is(object?.range, undefined);
+	t.deepEqual(object?.checksums.toJSON(), {});
+	t.deepEqual(object?.customMetadata, { key: "value" });
+	t.deepEqual(object?.httpMetadata, { contentType: "text/plain" });
+});

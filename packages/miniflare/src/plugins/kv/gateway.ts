@@ -1,8 +1,8 @@
 import { ReadableStream, TransformStream } from "stream/web";
 import {
-	Clock,
 	HttpError,
 	Log,
+	Timers,
 	maybeApply,
 	millisToSeconds,
 	secondsToMillis,
@@ -159,10 +159,10 @@ export class KVGateway {
 	constructor(
 		private readonly log: Log,
 		legacyStorage: Storage,
-		private readonly clock: Clock
+		private readonly timers: Timers
 	) {
 		const storage = legacyStorage.getNewStorage();
-		this.storage = new KeyValueStorage(storage, clock);
+		this.storage = new KeyValueStorage(storage, timers);
 	}
 
 	async get<Metadata = unknown>(
@@ -187,7 +187,7 @@ export class KVGateway {
 		validateKey(key);
 
 		// Normalise and validate expiration
-		const now = millisToSeconds(this.clock());
+		const now = millisToSeconds(this.timers.now());
 		let expiration = normaliseInt(options.expiration);
 		const expirationTtl = normaliseInt(options.expirationTtl);
 		if (expirationTtl !== undefined) {

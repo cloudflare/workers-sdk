@@ -8,7 +8,7 @@ import {
 	Response,
 	RouteHandler,
 	Router,
-	defaultClock,
+	defaultTimers,
 } from "@miniflare/tre";
 import test from "ava";
 
@@ -21,7 +21,7 @@ class TestRouter extends Router<TestGateway> {
 		const log = new NoOpLog();
 		super(
 			log,
-			new GatewayFactory(log, defaultClock, undefined, "test", TestGateway)
+			new GatewayFactory(log, defaultTimers, undefined, "test", TestGateway)
 		);
 	}
 

@@ -1,6 +1,11 @@
 import assert from "assert";
 import { ReadableStream } from "stream/web";
-import { Awaitable, base64Decode, base64Encode, defaultClock } from "../shared";
+import {
+	Awaitable,
+	base64Decode,
+	base64Encode,
+	defaultTimers,
+} from "../shared";
 import {
 	InclusiveRange,
 	MultipartOptions,
@@ -116,7 +121,7 @@ export class KeyValueStorage<Metadata = unknown> {
 
 	constructor(
 		private readonly storage: NewStorage,
-		private readonly clock = defaultClock
+		private readonly timers = defaultTimers
 	) {
 		storage.db.pragma("case_sensitive_like = TRUE");
 		storage.db.exec(SQL_SCHEMA);
@@ -124,7 +129,7 @@ export class KeyValueStorage<Metadata = unknown> {
 	}
 
 	#hasExpired(entry: Pick<Row, "expiration">) {
-		return entry.expiration !== null && entry.expiration <= this.clock();
+		return entry.expiration !== null && entry.expiration <= this.timers.now();
 	}
 
 	#backgroundDelete(blobId: string) {
@@ -216,7 +221,7 @@ export class KeyValueStorage<Metadata = unknown> {
 
 	async list(opts: KeyEntriesQuery): Promise<KeyEntries<Metadata>> {
 		// Find non-expired entries matching query after cursor
-		const now = this.clock();
+		const now = this.timers.now();
 		const rows = this.#stmts.list.all({
 			now,
 			escaped_prefix: escapePrefix(opts.prefix ?? ""),

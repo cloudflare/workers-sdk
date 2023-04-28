@@ -21,7 +21,13 @@ async function decodeMetadata(req: Request) {
 	assert(req.body !== null);
 	const body = req.body as ReadableStream<Uint8Array>;
 
-	// Read just metadata from body stream
+	// Read just metadata from body stream (NOTE: we can't use a `TransformStream`
+	// and buffer the first N chunks as we need this metadata to determine what
+	// to do with the rest of the body. We have to *pull* the data as opposed to
+	// passively transforming it as it's piped somewhere else. If `body` were
+	// a byte stream, we could use BYOB reads to read just enough. Even better, if
+	// this were running in the Workers runtime, we could use `readAtLeast()` to
+	// read everything at once.)
 	const chunks: Uint8Array[] = [];
 	let chunksLength = 0;
 	for await (const chunk of body.values({ preventCancel: true })) {
@@ -40,7 +46,7 @@ async function decodeMetadata(req: Request) {
 	// If we read some value when reading metadata (quite likely), create a new
 	// stream, write the bit we read, then write the rest of the body stream
 	if (chunksLength > metadataSize) {
-		const identity = new TransformStream();
+		const identity = new TransformStream<Uint8Array, Uint8Array>();
 		const writer = identity.writable.getWriter();
 		// The promise returned by `writer.write()` will only resolve once the chunk
 		// is read, which won't be until after this function returns, so we can't
@@ -72,6 +78,16 @@ function encodeResult(result: R2Object | R2ObjectBody | R2Objects) {
 	return new Response(encoded.value, {
 		headers: {
 			[CfHeader.MetadataSize]: `${encoded.metadataSize}`,
+			"Content-Type": "application/json",
+		},
+	});
+}
+
+function encodeJSONResult(result: unknown) {
+	const encoded = JSON.stringify(result);
+	return new Response(encoded, {
+		headers: {
+			[CfHeader.MetadataSize]: `${Buffer.byteLength(encoded)}`,
 			"Content-Type": "application/json",
 		},
 	});
@@ -127,6 +143,35 @@ export class R2Router extends Router<R2Gateway> {
 				metadata
 			);
 			return encodeResult(result);
+		} else if (metadata.method === "createMultipartUpload") {
+			const result = await gateway.createMultipartUpload(
+				metadata.object,
+				metadata
+			);
+			return encodeJSONResult(result);
+		} else if (metadata.method === "uploadPart") {
+			const contentLength = Number(req.headers.get("Content-Length"));
+			// `workerd` requires a known value size for R2 put requests as above
+			assert(!isNaN(contentLength));
+			const valueSize = contentLength - metadataSize;
+			const result = await gateway.uploadPart(
+				metadata.object,
+				metadata.uploadId,
+				metadata.partNumber,
+				value,
+				valueSize
+			);
+			return encodeJSONResult(result);
+		} else if (metadata.method === "completeMultipartUpload") {
+			const result = await gateway.completeMultipartUpload(
+				metadata.object,
+				metadata.uploadId,
+				metadata.parts
+			);
+			return encodeResult(result);
+		} else if (metadata.method === "abortMultipartUpload") {
+			await gateway.abortMultipartUpload(metadata.object, metadata.uploadId);
+			return new Response();
 		} else {
 			throw new InternalError(); // Unknown method: should never be reached
 		}

@@ -1,11 +1,11 @@
-import { Clock, Log } from "../../shared";
+import { Log, Timers } from "../../shared";
 import { Storage } from "../../storage";
 
 export class DurableObjectsStorageGateway {
 	constructor(
 		private readonly log: Log,
 		private readonly storage: Storage,
-		private readonly clock: Clock
+		private readonly timers: Timers
 	) {}
 
 	async get(_key: string) {

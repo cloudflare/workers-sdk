@@ -1,5 +1,5 @@
 import assert from "assert";
-import { R2StringChecksums } from "@cloudflare/workers-types/experimental";
+import type { R2StringChecksums } from "@cloudflare/workers-types/experimental";
 import { InclusiveRange } from "../../storage2";
 import { _parseRanges } from "../shared";
 import {
@@ -102,13 +102,11 @@ export class Validator {
 	}
 
 	condition(
-		meta?: R2Object | Pick<R2Object, "etag" | "uploaded">,
+		meta?: Pick<R2Object, "etag" | "uploaded">,
 		onlyIf?: R2Conditional
 	): Validator {
 		if (onlyIf !== undefined && !_testR2Conditional(onlyIf, meta)) {
-			let error = new PreconditionFailed();
-			if (meta instanceof R2Object) error = error.attach(meta);
-			throw error;
+			throw new PreconditionFailed();
 		}
 		return this;
 	}
@@ -121,14 +119,11 @@ export class Validator {
 			const ranges = _parseRanges(options.rangeHeader, size);
 			// If the header contained a single range, use it. Otherwise, if the
 			// header was invalid, or contained multiple ranges, just return the full
-			// response.
-			if (ranges?.length === 1) {
-				const [start, end] = ranges[0];
-				return { start, end };
-			}
+			// response (by returning undefined from this function).
+			if (ranges?.length === 1) return ranges[0];
 		} else if (options.range !== undefined) {
 			let { offset, length, suffix } = options.range;
-			// Eliminate suffix is specified
+			// Eliminate suffix if specified
 			if (suffix !== undefined) {
 				if (suffix <= 0) throw new InvalidRange();
 				if (suffix > size) suffix = size;
@@ -142,7 +137,7 @@ export class Validator {
 			// Clamp length to maximum
 			if (offset + length > size) length = size - offset;
 			// Convert to inclusive range
-			return { start: offset, end: offset + length - 1 }; // TODO: check -1
+			return { start: offset, end: offset + length - 1 };
 		}
 	}
 
