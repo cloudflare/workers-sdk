@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
+import chalk from "chalk";
 import ignore from "ignore";
 import xxhash from "xxhash-wasm";
 import {
@@ -9,8 +10,10 @@ import {
 	listKVNamespaces,
 	putKVBulkKeyValue,
 	deleteKVBulkKeyValue,
+	BATCH_KEY_MAX,
+	formatNumber,
 } from "./kv/helpers";
-import { logger } from "./logger";
+import { logger, LOGGER_LEVELS } from "./logger";
 import type { Config } from "./config";
 import type { KeyValue } from "./kv/helpers";
 import type { XXHashAPI } from "xxhash-wasm";
@@ -92,6 +95,15 @@ async function createKVNamespaceIfNotAlreadyExisting(
 	};
 }
 
+const MAX_DIFF_LINES = 100;
+const MAX_BUCKET_SIZE = 98 * 1000 * 1000;
+const MAX_BUCKET_KEYS = BATCH_KEY_MAX;
+const MAX_BATCH_OPERATIONS = 5;
+
+function pluralise(count: number) {
+	return count === 1 ? "" : "s";
+}
+
 /**
  * Upload the assets found within the `dirPath` directory to the sites assets KV namespace for
  * the worker given by `scriptName`.
@@ -116,13 +128,13 @@ export async function syncAssets(
 	if (siteAssets === undefined) {
 		return { manifest: undefined, namespace: undefined };
 	}
-
 	if (dryRun) {
 		logger.log("(Note: doing a dry run, not uploading or deleting anything.)");
 		return { manifest: undefined, namespace: undefined };
 	}
 	assert(accountId, "Missing accountId");
 
+	// Create assets namespace if it doesn't exist
 	const title = `__${scriptName}-workers_sites_assets${
 		preview ? "_preview" : ""
 	}`;
@@ -131,55 +143,81 @@ export async function syncAssets(
 		title,
 		accountId
 	);
-
-	// let's get all the keys in this namespace
+	// Get all existing keys in asset namespace
+	logger.info("Fetching list of already uploaded assets...");
 	const namespaceKeysResponse = await listKVNamespaceKeys(accountId, namespace);
 	const namespaceKeys = new Set(namespaceKeysResponse.map((x) => x.name));
-
-	const manifest: Record<string, string> = {};
-
-	// A batch of uploads where each bucket has to be less than 98mb
-	const uploadBuckets: KeyValue[][] = [];
-	// The "live" bucket that we'll keep filling until it's just below 98mb
-	let uploadBucket: KeyValue[] = [];
-	// A size counter for the live bucket
-	let uploadBucketSize = 0;
-
-	const include = createPatternMatcher(siteAssets.includePatterns, false);
-	const exclude = createPatternMatcher(siteAssets.excludePatterns, true);
-	const hasher = await xxhash();
 
 	const assetDirectory = path.join(
 		siteAssets.baseDirectory,
 		siteAssets.assetDirectory
 	);
+	const include = createPatternMatcher(siteAssets.includePatterns, false);
+	const exclude = createPatternMatcher(siteAssets.excludePatterns, true);
+	const hasher = await xxhash();
+
+	// Find and validate all assets before we make any changes (can't store base64
+	// contents in memory for upload as users may have *lots* of files, and we
+	// don't want to OOM: https://github.com/cloudflare/workers-sdk/issues/2223)
+
+	const manifest: Record<string, string> = {};
+	type PathKey = [path: string, key: string];
+	// A batch of uploads where each bucket has to be less than 100 MiB and
+	// contain less than 10,000 keys (although we limit to 98 MB and 5000 keys)
+	const uploadBuckets: PathKey[][] = [];
+	// The "live" bucket we'll keep filling until it's just below the size limit
+	let uploadBucket: PathKey[] = [];
+	// Current size of the live bucket in bytes (just base64 encoded values)
+	let uploadBucketSize = 0;
+
+	let uploadCount = 0;
+	let skipCount = 0;
+
+	// Always log the first MAX_DIFF_LINES lines, then require the debug log level
+	let diffCount = 0;
+	function logDiff(line: string) {
+		const level = logger.loggerLevel;
+		if (LOGGER_LEVELS[level] >= LOGGER_LEVELS.debug) {
+			// If we're logging as debug level, we want *all* diff lines to be logged
+			// at debug level, not just the first MAX_DIFF_LINES
+			logger.debug(line);
+		} else if (diffCount < MAX_DIFF_LINES) {
+			// Otherwise, log  the first MAX_DIFF_LINES diffs at info level...
+			logger.info(line);
+		} else if (diffCount === MAX_DIFF_LINES) {
+			// ...and warn when we start to truncate it
+			const msg =
+				"   (truncating changed assets log, set `WRANGLER_LOG=debug` environment variable to see full diff)";
+			logger.info(chalk.dim(msg));
+		}
+		diffCount++;
+	}
+
+	logger.info("Building list of assets to upload...");
 	for await (const absAssetFile of getFilesInFolder(assetDirectory)) {
 		const assetFile = path.relative(assetDirectory, absAssetFile);
-		if (!include(assetFile)) {
-			continue;
-		}
-		if (exclude(assetFile)) {
-			continue;
-		}
+		if (!include(assetFile) || exclude(assetFile)) continue;
 
-		logger.log(`Reading ${assetFile}...`);
 		const content = await readFile(absAssetFile, "base64");
-		await validateAssetSize(absAssetFile, assetFile);
-		// while KV accepts files that are 25 MiB **before** b64 encoding
+		// While KV accepts files that are 25 MiB **before** b64 encoding
 		// the overall bucket size must be below 100 MB **after** b64 encoding
-		const assetSize = Buffer.from(content).length;
+		const assetSize = Buffer.byteLength(content);
+		await validateAssetSize(absAssetFile, assetFile);
 		const assetKey = hashAsset(hasher, assetFile, content);
 		validateAssetKey(assetKey);
 
-		// now put each of the files into kv
 		if (!namespaceKeys.has(assetKey)) {
-			logger.log(`Uploading as ${assetKey}...`);
+			logDiff(
+				chalk.green(` + ${assetKey} (uploading new version of ${assetFile})`)
+			);
 
-			// Check if adding this asset to the bucket would
-			// push it over the 98 MiB limit KV bulk API limit
-			if (uploadBucketSize + assetSize > 98 * 1000 * 1000) {
-				// If so, move the current bucket into the batch,
-				// and reset the counter/bucket
+			// Check if adding this asset to the bucket would push it over the KV
+			// bulk API limits
+			if (
+				uploadBucketSize + assetSize > MAX_BUCKET_SIZE ||
+				uploadBucket.length + 1 > MAX_BUCKET_KEYS
+			) {
+				// If so, record the current bucket and reset it
 				uploadBuckets.push(uploadBucket);
 				uploadBucketSize = 0;
 				uploadBucket = [];
@@ -187,13 +225,11 @@ export async function syncAssets(
 
 			// Update the bucket and the size counter
 			uploadBucketSize += assetSize;
-			uploadBucket.push({
-				key: assetKey,
-				value: content,
-				base64: true,
-			});
+			uploadBucket.push([absAssetFile, assetKey]);
+			uploadCount++;
 		} else {
-			logger.log(`Skipping - already uploaded.`);
+			logDiff(chalk.dim(` = ${assetKey} (already uploaded ${assetFile})`));
+			skipCount++;
 		}
 
 		// Remove the key from the set so we know what we've already uploaded
@@ -203,23 +239,99 @@ export async function syncAssets(
 		const manifestKey = urlSafe(path.relative(assetDirectory, absAssetFile));
 		manifest[manifestKey] = assetKey;
 	}
+	// Add the last (potentially only or empty) bucket to the batch
+	if (uploadBucket.length > 0) uploadBuckets.push(uploadBucket);
 
-	// Add the last (potentially only) bucket to the batch
-	uploadBuckets.push(uploadBucket);
-
-	// keys now contains all the files we're deleting
 	for (const key of namespaceKeys) {
-		logger.log(`Deleting ${key} from the asset store...`);
+		logDiff(chalk.red(` - ${key} (removing as stale)`));
 	}
 
-	// upload each bucket in parallel
-	const bucketsToPut = [];
-	for (const bucket of uploadBuckets) {
-		bucketsToPut.push(putKVBulkKeyValue(accountId, namespace, bucket));
+	// Upload new assets, with 5 concurrent uploaders
+	if (uploadCount > 0) {
+		const s = pluralise(uploadCount);
+		logger.info(`Uploading ${formatNumber(uploadCount)} new asset${s}...`);
 	}
-	await Promise.all(bucketsToPut);
+	if (skipCount > 0) {
+		const s = pluralise(skipCount);
+		logger.info(
+			`Skipped uploading ${formatNumber(skipCount)} existing asset${s}.`
+		);
+	}
+	let uploadedCount = 0;
+	const controller = new AbortController();
+	const uploaders = Array.from(Array(MAX_BATCH_OPERATIONS)).map(async () => {
+		while (!controller.signal.aborted) {
+			// Get the next bucket to upload. If there is none, stop this uploader.
+			// JavaScript is single(ish)-threaded, so we don't need to worry about
+			// parallel access here.
+			const nextBucket = uploadBuckets.shift();
+			if (nextBucket === undefined) break;
 
-	// then delete all the assets that aren't used anymore
+			// Read all files in the bucket as base64
+			// TODO(perf): consider streaming the bulk upload body, rather than
+			//  buffering all base64 contents then JSON-stringifying. This probably
+			//  doesn't matter *too* much: we know buckets will be about 100MB, so
+			//  with 5 uploaders, we could load about 500MB into memory (+ extra
+			//  object keys/tags/copies/etc).
+			const bucket: KeyValue[] = [];
+			for (const [absAssetFile, assetKey] of nextBucket) {
+				bucket.push({
+					key: assetKey,
+					value: await readFile(absAssetFile, "base64"),
+					base64: true,
+				});
+				if (controller.signal.aborted) break;
+			}
+
+			// Upload the bucket to the KV namespace, suppressing logs, we do our own
+			try {
+				await putKVBulkKeyValue(
+					accountId,
+					namespace,
+					bucket,
+					/* quiet */ true,
+					controller.signal
+				);
+			} catch (e) {
+				// https://developer.mozilla.org/en-US/docs/Web/API/DOMException#error_names
+				// https://github.com/nodejs/undici/blob/a3efc9814447001a43a976f1c64adc41995df7e3/lib/core/errors.js#L89
+				if (
+					typeof e === "object" &&
+					e !== null &&
+					"name" in e &&
+					// @ts-expect-error `e.name` should be typed `unknown`, fixed in
+					//  TypeScript 4.9
+					e.name === "AbortError"
+				) {
+					break;
+				}
+				throw e;
+			}
+			uploadedCount += nextBucket.length;
+			const percent = Math.floor((100 * uploadedCount) / uploadCount);
+			logger.info(
+				`Uploaded ${percent}% [${formatNumber(
+					uploadedCount
+				)} out of ${formatNumber(uploadCount)}]`
+			);
+		}
+	});
+	try {
+		// Wait for all uploaders to complete, or one to fail
+		await Promise.all(uploaders);
+	} catch (e) {
+		// If any uploader fails, abort the others
+		logger.info(`Upload failed, aborting...`);
+		controller.abort();
+		throw e;
+	}
+
+	// Delete stale assets
+	const deleteCount = namespaceKeys.size;
+	if (deleteCount > 0) {
+		const s = pluralise(deleteCount);
+		logger.info(`Removing ${formatNumber(deleteCount)} stale asset${s}...`);
+	}
 	await deleteKVBulkKeyValue(accountId, namespace, Array.from(namespaceKeys));
 
 	logger.log("↗️  Done syncing assets");
