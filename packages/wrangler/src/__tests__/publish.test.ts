@@ -3164,6 +3164,74 @@ addEventListener('fetch', event => {});`
 		`);
 		});
 
+		it("should abort other bucket uploads if one bucket upload fails", async () => {
+			// Write 9 20MiB files, should end up with 3 buckets
+			const content = "X".repeat(20 * 1024 * 1024);
+			const assets = Array.from({ length: 9 }, (_, index) => ({
+				filePath: `file-${index}.txt`,
+				content,
+			}));
+
+			const kvNamespace = {
+				title: "__test-name-workers_sites_assets",
+				id: "__test-name-workers_sites_assets-id",
+			};
+			writeWranglerToml({
+				main: "./index.js",
+				site: {
+					bucket: "assets",
+				},
+			});
+			writeWorkerSource();
+			writeAssets(assets);
+			mockUploadWorkerRequest();
+			mockSubDomainRequest();
+			mockListKVNamespacesRequest(kvNamespace);
+			mockKeyListRequest(kvNamespace.id, []);
+
+			let requestCount = 0;
+			const bulkUrl =
+				"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/bulk";
+			msw.use(
+				rest.put(bulkUrl, async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+					expect(req.params.namespaceId).toEqual(kvNamespace.id);
+					requestCount++;
+					return res(
+						ctx.status(500),
+						ctx.json(
+							createFetchResult([], false, [
+								{ code: 1000, message: "Whoops! Something went wrong!" },
+							])
+						)
+					);
+				})
+			);
+
+			await expect(
+				runWrangler("publish")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"A request to the Cloudflare API (/accounts/some-account-id/storage/kv/namespaces/__test-name-workers_sites_assets-id/bulk) failed."`
+			);
+
+			expect(requestCount).toBeLessThan(3);
+			expect(std.info).toMatchInlineSnapshot(`
+			"Fetching list of already uploaded assets...
+			Building list of assets to upload...
+			 + file-0.f0d69f705d.txt (uploading new version of file-0.txt)
+			 + file-1.f0d69f705d.txt (uploading new version of file-1.txt)
+			 + file-2.f0d69f705d.txt (uploading new version of file-2.txt)
+			 + file-3.f0d69f705d.txt (uploading new version of file-3.txt)
+			 + file-4.f0d69f705d.txt (uploading new version of file-4.txt)
+			 + file-5.f0d69f705d.txt (uploading new version of file-5.txt)
+			 + file-6.f0d69f705d.txt (uploading new version of file-6.txt)
+			 + file-7.f0d69f705d.txt (uploading new version of file-7.txt)
+			 + file-8.f0d69f705d.txt (uploading new version of file-8.txt)
+			Uploading 9 new assets...
+			Upload failed, aborting..."
+		`);
+		});
+
 		describe("should truncate diff with over 100 assets unless debug log level set", () => {
 			beforeEach(() => {
 				const assets = Array.from({ length: 110 }, (_, index) => ({

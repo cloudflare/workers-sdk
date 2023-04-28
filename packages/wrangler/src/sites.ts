@@ -321,6 +321,7 @@ export async function syncAssets(
 		await Promise.all(uploaders);
 	} catch (e) {
 		// If any uploader fails, abort the others
+		logger.info(`Upload failed, aborting...`);
 		controller.abort();
 		throw e;
 	}
