@@ -61,7 +61,11 @@ export class Logger {
 		const keys: Keys[] =
 			data.length === 0 ? [] : (Object.keys(data[0]) as Keys[]);
 		const t = new CLITable({
-			head: keys.map((k) => chalk.bold.blue(k)),
+			head: keys,
+			style: {
+				head: chalk.level ? ["blue"] : [],
+				border: chalk.level ? ["gray"] : [],
+			},
 		});
 		t.push(...data.map((row) => keys.map((k) => row[k])));
 		return this.doLog("log", [t.toString()]);
