@@ -1,6 +1,6 @@
 # ⛏️ Prospector
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/workers-sdk/tree/main/templates/worker-prospector)
+[![Deploy with Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/workers-sdk/tree/main/templates/worker-prospector)
 
 An open-source template built for internal use by Cloudflare's SEO experts to parse and notify on new website content. Using D1, Queues, and Workers, this template will show you how to connect multiple Cloudflare products together to build a fully-featured application.
 

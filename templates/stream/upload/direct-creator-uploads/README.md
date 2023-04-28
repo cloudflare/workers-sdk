@@ -1,6 +1,6 @@
 # Template: Direct Creator Uploads to Cloudflare Stream
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/workers-sdk/tree/main/templates/stream/upload/direct-creator-uploads)
+[![Deploy with Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/workers-sdk/tree/main/templates/stream/upload/direct-creator-uploads)
 
 Example of (Direct Creator Uploads)[https://developers.cloudflare.com/stream/uploading-videos/direct-creator-uploads/] to Cloudflare Stream
 
