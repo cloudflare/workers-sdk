@@ -139,12 +139,12 @@ export async function syncAssets(
 		preview ? "_preview" : ""
 	}`;
 
-	logger.info("Fetching list of already uploaded assets...");
 	const { id: namespace } = await createKVNamespaceIfNotAlreadyExisting(
 		title,
 		accountId
 	);
 	// Get all existing keys in asset namespace
+	logger.info("Fetching list of already uploaded assets...");
 	const namespaceKeysResponse = await listKVNamespaceKeys(accountId, namespace);
 	const namespaceKeys = new Set(namespaceKeysResponse.map((x) => x.name));
 
