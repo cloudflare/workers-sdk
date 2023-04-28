@@ -2846,6 +2846,8 @@ addEventListener('fetch', event => {});`
 
 			// We expect this to be uploaded in 4 batches
 			expect(requests.length).toEqual(4);
+			// Buckets may be uploaded in any order, so sort them before we assert
+			requests.sort((a, b) => a.uploads[0].key.localeCompare(b.uploads[0].key));
 			// The first batch has 11 files
 			expect(requests[0].uploads.length).toEqual(11);
 			// The next batch has 5 files
@@ -2863,11 +2865,20 @@ addEventListener('fetch', event => {});`
 				}
 			}
 
-			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "Fetching list of already uploaded assets...
+			expect(std.debug).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+			"↗️  Done syncing assets
+			Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class"
+		`);
+			// Mask all but last upload progress message as upload order unknown
+			// (regexp replaces all single/double-digit percentages, i.e. not 100%)
+			expect(std.info.replace(/Uploaded \d\d?% \[\d+/g, "Uploaded X% [X"))
+				.toMatchInlineSnapshot(`
+			"Fetching list of already uploaded assets...
 			Building list of assets to upload...
 			 + file-00.be5be5dd26.txt (uploading new version of file-00.txt)
 			 + file-01.4842d35994.txt (uploading new version of file-01.txt)
@@ -2890,19 +2901,13 @@ addEventListener('fetch', event => {});`
 			 + file-18.07f245e02b.txt (uploading new version of file-18.txt)
 			 + file-19.f0d69f705d.txt (uploading new version of file-19.txt)
 			Uploading 20 new assets...
-			Uploaded 55% [11 out of 20]
-			Uploaded 80% [16 out of 20]
-			Uploaded 95% [19 out of 20]
-			Uploaded 100% [20 out of 20]",
-			  "out": "↗️  Done syncing assets
-			Total Upload: xx KiB / gzip: xx KiB
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class",
-			  "warn": "",
-			}
+			Uploaded X% [X out of 20]
+			Uploaded X% [X out of 20]
+			Uploaded X% [X out of 20]
+			Uploaded 100% [20 out of 20]"
 		`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
 		it("should error if the asset key is over 512 characters", async () => {
