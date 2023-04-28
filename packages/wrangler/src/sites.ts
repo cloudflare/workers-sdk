@@ -273,14 +273,15 @@ export async function syncAssets(
 			//  doesn't matter *too* much: we know buckets will be about 100MB, so
 			//  with 5 uploaders, we could load about 500MB into memory (+ extra
 			//  object keys/tags/copies/etc).
-			const bucket = await Promise.all(
-				nextBucket.map<Promise<KeyValue>>(async ([absAssetFile, assetKey]) => ({
+			const bucket: KeyValue[] = [];
+			for (const [absAssetFile, assetKey] of nextBucket) {
+				bucket.push({
 					key: assetKey,
 					value: await readFile(absAssetFile, "base64"),
 					base64: true,
-				}))
-			);
-			if (controller.signal.aborted) break;
+				});
+				if (controller.signal.aborted) break;
+			}
 
 			// Upload the bucket to the KV namespace, suppressing logs, we do our own
 			try {
