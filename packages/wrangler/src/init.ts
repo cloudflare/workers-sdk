@@ -64,6 +64,7 @@ export function initOptions(yargs: CommonYargsArgv) {
 			describe: "Do not delegate to Create Cloudflare CLI (C3)",
 			type: "boolean",
 			hidden: true,
+			default: true, // will be false in v3
 		});
 }
 
@@ -197,14 +198,14 @@ export async function initHandler(args: InitArgs) {
 		}
 
 		// Deprecate the `init --from-dash` command
-		//    if --do-not-delegate is not set (C3 will run wrangler with this flag set to communicate with the API)
-		if (!args.doNotDelegate) {
-			const command = `\`${packageManager.type} create cloudflare --template pre-existing --name ${fromDashScriptName}\``;
+		const replacementC3Command = `\`${packageManager.type} create cloudflare --template pre-existing --name ${fromDashScriptName}\``;
+		logger.warn(
+			`The \`init --from-dash\` command is no longer supported. Please use ${replacementC3Command} instead.\nThe \`init\` command will be removed in a future version.`
+		);
 
-			logger.warn(
-				`The \`init --from-dash\` command is no longer supported. Please use ${command} instead.\nThe \`init\` command will be removed in a future version.`
-			);
-			logger.log(`Running ${command}...`);
+		// C3 will run wrangler with the --do-not-delegate flag to communicate with the API
+		if (!args.doNotDelegate) {
+			logger.log(`Running ${replacementC3Command}...`);
 
 			await execa(packageManager.type, [
 				"create",
@@ -237,16 +238,19 @@ export async function initHandler(args: InitArgs) {
 		//    if a wrangler.toml file does not exist (C3 expects to scaffold *new* projects)
 		//    and if --from-dash is not set (C3 will run wrangler to communicate with the API)
 		if (!fromDashScriptName) {
-			const command = `\`${packageManager.type} create cloudflare\``;
+			const replacementC3Command = `\`${packageManager.type} create cloudflare\``;
 
 			logger.warn(
-				`The \`init\` command is no longer supported. Please use ${command} instead.\nThe \`init\` command will be removed in a future version.`
+				`The \`init\` command is no longer supported. Please use ${replacementC3Command} instead.\nThe \`init\` command will be removed in a future version.`
 			);
-			logger.log(`Running ${command}...`);
 
-			await execa(packageManager.type, ["create", "cloudflare"]);
+			if (!args.doNotDelegate) {
+				logger.log(`Running ${replacementC3Command}...`);
 
-			return;
+				await execa(packageManager.type, ["create", "cloudflare"]);
+
+				return;
+			}
 		}
 
 		await mkdir(creationDirectory, { recursive: true });
