@@ -223,7 +223,7 @@ export async function bundleWorker(
 		additionalModules = [],
 	} = options;
 
-	// We create a temporary directory for any oneoff files we
+	// We create a temporary directory for any one-off files we
 	// need to create. This is separate from the main build
 	// directory (`destination`).
 	const tmpDir = await tmp.dir({ unsafeCleanup: true });
@@ -283,103 +283,93 @@ export async function bundleWorker(
 	// which is all loaded as one in a stack.
 	const middlewareToLoad: MiddlewareLoader[] = [];
 
-	if (testScheduled) {
-		middlewareToLoad.push({
-			name: "scheduled",
-			path: "templates/middleware/middleware-scheduled.ts",
-			active: "dev",
-		});
-	}
-	if (local) {
-		// In Miniflare 3, we bind the user's worker as a service binding in a
-		// special entry worker that handles things like injecting `Request.cf`,
-		// live-reload, and the pretty-error page.
-		//
-		// Unfortunately, due to a bug in `workerd`, errors thrown asynchronously by
-		// native APIs don't have `stack`s. This means Miniflare can't extract the
-		// `stack` trace from dispatching to the user worker service binding by
-		// `try/catch`.
-		//
-		// As a stop-gap solution, if the `MF-Experimental-Error-Stack` header is
-		// truthy on responses, the body will be interpreted as a JSON-error of the
-		// form `{ message?: string, name?: string, stack?: string }`.
-		//
-		// This middleware wraps the user's worker in a `try/catch`, and rewrites
-		// errors in this format so a pretty-error page can be shown.
-		middlewareToLoad.push({
-			name: "miniflare3-json-error",
-			path: "templates/middleware/middleware-miniflare3-json-error.ts",
-			active: "dev",
-		});
-	}
-	if (serveAssetsFromWorker) {
-		middlewareToLoad.push({
-			name: "serve-static-assets",
-			path: "templates/middleware/middleware-serve-static-assets.ts",
-			active: "always",
-			config: {
-				spaMode:
-					typeof assets === "object" ? assets.serve_single_page_app : false,
-				cacheControl:
-					typeof assets === "object"
-						? {
-								browserTTL:
-									assets.browser_TTL || 172800 /* 2 days: 2* 60 * 60 * 24 */,
-								bypassCache: assets.bypassCache,
-						  }
-						: {},
-			},
-		});
-	}
+	middlewareToLoad.push({
+		name: "scheduled",
+		path: "templates/middleware/middleware-scheduled.ts",
+		active: targetConsumer === "dev" && !!testScheduled,
+	});
 
-	if (
-		workerDefinitions &&
-		Object.keys(workerDefinitions).length > 0 &&
-		services &&
-		services.length > 0
-	) {
-		middlewareToLoad.push({
-			name: "multiworker-dev",
-			path: "templates/middleware/middleware-multiworker-dev.ts",
-			active: "dev",
-			config: {
-				Workers: Object.fromEntries(
-					(services || []).map((serviceBinding) => [
-						serviceBinding.binding,
-						workerDefinitions?.[serviceBinding.service] || null,
-					])
-				),
-			},
-		});
-	}
+	// In Miniflare 3, we bind the user's worker as a service binding in a
+	// special entry worker that handles things like injecting `Request.cf`,
+	// live-reload, and the pretty-error page.
+	//
+	// Unfortunately, due to a bug in `workerd`, errors thrown asynchronously by
+	// native APIs don't have `stack`s. This means Miniflare can't extract the
+	// `stack` trace from dispatching to the user worker service binding by
+	// `try/catch`.
+	//
+	// As a stop-gap solution, if the `MF-Experimental-Error-Stack` header is
+	// truthy on responses, the body will be interpreted as a JSON-error of the
+	// form `{ message?: string, name?: string, stack?: string }`.
+	//
+	// This middleware wraps the user's worker in a `try/catch`, and rewrites
+	// errors in this format so a pretty-error page can be shown.
+	middlewareToLoad.push({
+		name: "miniflare3-json-error",
+		path: "templates/middleware/middleware-miniflare3-json-error.ts",
+		active: targetConsumer === "dev",
+	});
 
-	if (Array.isArray(betaD1Shims) && betaD1Shims.length > 0) {
-		middlewareToLoad.push({
-			name: "d1-beta",
-			path: "templates/middleware/middleware-d1-beta.ts",
-			active: "always",
-			config: {
-				D1_IMPORTS: betaD1Shims,
-				LOCAL_MODE: local,
-			},
-		});
-	}
+	middlewareToLoad.push({
+		name: "serve-static-assets",
+		path: "templates/middleware/middleware-serve-static-assets.ts",
+		active: serveAssetsFromWorker,
+		config: {
+			spaMode:
+				typeof assets === "object" ? assets.serve_single_page_app : false,
+			cacheControl:
+				typeof assets === "object"
+					? {
+							browserTTL:
+								assets.browser_TTL || 172800 /* 2 days: 2* 60 * 60 * 24 */,
+							bypassCache: assets.bypassCache,
+					  }
+					: {},
+		},
+	});
+
+	middlewareToLoad.push({
+		name: "multiworker-dev",
+		path: "templates/middleware/middleware-multiworker-dev.ts",
+		active:
+			targetConsumer === "dev" &&
+			!!(
+				workerDefinitions &&
+				Object.keys(workerDefinitions).length > 0 &&
+				services &&
+				services.length > 0
+			),
+		config: {
+			Workers: Object.fromEntries(
+				(services || []).map((serviceBinding) => [
+					serviceBinding.binding,
+					workerDefinitions?.[serviceBinding.service] || null,
+				])
+			),
+		},
+	});
+
+	middlewareToLoad.push({
+		name: "d1-beta",
+		path: "templates/middleware/middleware-d1-beta.ts",
+		active: Array.isArray(betaD1Shims) && betaD1Shims.length > 0,
+		config: {
+			D1_IMPORTS: betaD1Shims,
+			LOCAL_MODE: local,
+		},
+	});
 
 	const inject: string[] = injectOption ?? [];
 	if (checkFetch) inject.push(checkedFetchFileToInject);
 
 	let inputEntry: EntryWithInject = entry;
-	if (
-		middlewareToLoad.filter((m) =>
-			targetConsumer === "deploy" ? m.active === "always" : true
-		).length > 0
-	) {
+	if (middlewareToLoad.filter((m) => m.active).length > 0) {
 		inputEntry = await applyMiddlewareLoaderFacade(
 			entry,
 			tmpDir.path,
 			middlewareToLoad.filter(
 				// We dynamically filter the middleware depending on where we are bundling for
-				(m) => (targetConsumer === "deploy" ? m.active === "always" : true)
+				(m) => m.active
 			),
 			doBindings
 		);
@@ -557,7 +547,7 @@ export function esbuildAliasExternalPlugin(
 interface MiddlewareLoader {
 	name: string;
 	path: string;
-	active: "dev" | "always";
+	active: boolean;
 	// This will be provided as a virtual module at config:middleware/$NAME
 	config?: Record<string, unknown>;
 }
