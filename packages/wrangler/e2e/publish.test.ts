@@ -74,7 +74,7 @@ describe("publish", async () => {
 		expect(stderr).toMatchInlineSnapshot('""');
 		workersDev = matchWorkersDev(rawStdout);
 
-		await setTimeout(2_000);
+		await setTimeout(5_000);
 		await expect(
 			fetch(`https://${workerName}.${workersDev}`).then((r) => r.text())
 		).resolves.toMatchInlineSnapshot('"Hello World!"');

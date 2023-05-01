@@ -103,6 +103,7 @@ describe("r2", async () => {
 		});
 		const { stdout, stderr } = await runIn(root, {
 			[bucketName]: "wrangler-smoke-test-bucket",
+			[process.env.CLOUDFLARE_ACCOUNT_ID as string]: "CLOUDFLARE_ACCOUNT_ID",
 		})`
 		exits(1) {
 	  	$ ${RUN} r2 object put ${`${bucketName}/testr2`} --file test-r2.txt --content-type text/html
@@ -114,7 +115,7 @@ describe("r2", async () => {
 			If you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose"
 		`);
 		expect(stderr).toMatchInlineSnapshot(`
-			"X [ERROR] Failed to fetch /accounts/c1813c2bcbf20b513d80d455cb110774/r2/buckets/wrangler-smoke-test-bucket/objects/testr2 - 404: Not Found);
+			"X [ERROR] Failed to fetch /accounts/CLOUDFLARE_ACCOUNT_ID/r2/buckets/wrangler-smoke-test-bucket/objects/testr2 - 404: Not Found);
 
 			"
 		`);
