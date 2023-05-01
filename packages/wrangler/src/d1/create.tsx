@@ -19,12 +19,17 @@ export function Options(yargs: CommonYargsArgv) {
 			type: "string",
 			demandOption: true,
 		})
+		.option("experimental", {
+			default: false,
+			describe: "Use new experimental DB backend",
+			type: "boolean",
+		})
 		.epilogue(d1BetaWarning);
 }
 
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
 export const Handler = withConfig<HandlerOptions>(
-	async ({ name, config }): Promise<void> => {
+	async ({ name, experimental, config }): Promise<void> => {
 		const accountId = await requireAuth(config);
 
 		logger.log(d1BetaWarning);
@@ -38,6 +43,7 @@ export const Handler = withConfig<HandlerOptions>(
 				},
 				body: JSON.stringify({
 					name,
+					...(experimental ? { experimental: true } : {}),
 				}),
 			});
 		} catch (e) {
