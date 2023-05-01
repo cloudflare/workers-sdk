@@ -43,7 +43,7 @@ export interface UnstableDevOptions {
 		bucket_name: string;
 		preview_bucket_name?: string;
 	}[];
-	bundleEntrypoint?: boolean;
+	processEntrypoint?: boolean;
 	moduleRoot?: string;
 	rules?: Rule[];
 	logLevel?: "none" | "info" | "error" | "log" | "warn" | "debug"; // Specify logging level  [choices: "debug", "info", "log", "warn", "error", "none"] [default: "log"]
@@ -154,7 +154,7 @@ export async function unstable_dev(
 					},
 					config: options?.config,
 					env: options?.env,
-					bundleEntrypoint: !!options?.bundleEntrypoint,
+					processEntrypoint: !!options?.processEntrypoint,
 					bundle: options?.bundle,
 					compatibilityDate: options?.compatibilityDate,
 					compatibilityFlags: options?.compatibilityFlags,

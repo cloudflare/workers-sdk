@@ -14,10 +14,10 @@ import {
 import {
 	buildRawWorker,
 	checkRawWorker,
+	traverseAndBuildWorkerJSDirectory,
 } from "../../pages/functions/buildWorker";
 import { validateRoutes } from "../../pages/functions/routes-validation";
 import { upload } from "../../pages/upload";
-import traverseModuleGraph from "../../traverse-module-graph";
 import { createUploadWorkerBundleContents } from "./create-worker-bundle-contents";
 import type { BundleResult } from "../../bundle";
 import type { Project, Deployment } from "@cloudflare/types";
@@ -66,7 +66,7 @@ interface PagesPublishOptions {
 
 	/**
 	 * Whether to run bundling on `_worker.js` before deploying.
-	 * Default: false
+	 * Default: true
 	 */
 	bundle?: boolean;
 
@@ -96,8 +96,10 @@ export async function publish({
 		_redirects: string | undefined,
 		_routesGenerated: string | undefined,
 		_routesCustom: string | undefined,
-		_workerJSDirectory = false,
+		_workerJSIsDirectory = false,
 		_workerJS: string | undefined;
+
+	bundle = bundle ?? true;
 
 	const _workerPath = resolvePath(directory, "_worker.js");
 
@@ -118,8 +120,8 @@ export async function publish({
 	} catch {}
 
 	try {
-		_workerJSDirectory = lstatSync(_workerPath).isDirectory();
-		if (!_workerJSDirectory) {
+		_workerJSIsDirectory = lstatSync(_workerPath).isDirectory();
+		if (!_workerJSIsDirectory) {
 			_workerJS = readFileSync(_workerPath, "utf-8");
 		}
 	} catch {}
@@ -245,51 +247,16 @@ export async function publish({
 	 * Advanced Mode
 	 * https://developers.cloudflare.com/pages/platform/functions/#advanced-mode
 	 *
-	 * When using a _worker.js file, the entire /functions directory is ignored
+	 * When using a _worker.js file or _worker.js/ directory, the entire /functions directory is ignored
 	 * – this includes its routing and middleware characteristics.
 	 */
-	if (_workerJSDirectory) {
-		const traverseModuleGraphResult = await traverseModuleGraph(
-			{
-				file: resolvePath(join(_workerPath, "index.js")),
-				directory: resolvePath(_workerPath),
-				format: "modules",
-				moduleRoot: resolvePath(_workerPath),
-			},
-			[
-				{
-					type: "ESModule",
-					globs: ["**/*.js"],
-				},
-			]
-		);
-
-		const outfile = join(tmpdir(), `./bundledWorker-${Math.random()}.mjs`);
-		const bundleResult = await buildRawWorker({
-			workerScriptPath: _workerPath,
-			bundle: false,
-			outfile,
-			directory,
-			local: false,
-			sourcemap: true,
-			watch: false,
-			onEnd: () => {},
-			betaD1Shims: d1Databases,
+	if (_workerJSIsDirectory) {
+		workerBundle = await traverseAndBuildWorkerJSDirectory({
+			workerJSDirectory: _workerPath,
+			buildOutputDirectory: directory,
+			d1Databases,
 			nodejsCompat,
 		});
-
-		workerBundle = {
-			modules: (traverseModuleGraphResult?.modules ??
-				bundleResult?.modules) as BundleResult["modules"],
-			dependencies: (bundleResult?.dependencies ??
-				traverseModuleGraphResult?.dependencies) as BundleResult["dependencies"],
-			resolvedEntryPointPath: (bundleResult?.resolvedEntryPointPath ??
-				traverseModuleGraphResult?.resolvedEntryPointPath) as BundleResult["resolvedEntryPointPath"],
-			bundleType: (bundleResult?.bundleType ??
-				traverseModuleGraphResult?.bundleType) as BundleResult["bundleType"],
-			stop: bundleResult?.stop,
-			sourceMapPath: bundleResult?.sourceMapPath,
-		};
 	} else if (_workerJS) {
 		if (bundle) {
 			const outfile = join(tmpdir(), `./bundledWorker-${Math.random()}.mjs`);
@@ -317,7 +284,7 @@ export async function publish({
 		}
 	}
 
-	if (_workerJS || _workerJSDirectory) {
+	if (_workerJS || _workerJSIsDirectory) {
 		const workerBundleContents = await createUploadWorkerBundleContents(
 			workerBundle as BundleResult
 		);
@@ -351,7 +318,7 @@ export async function publish({
 	 * Pages Functions
 	 * https://developers.cloudflare.com/pages/platform/functions/
 	 */
-	if (builtFunctions && !_workerJS) {
+	if (builtFunctions && !_workerJS && !_workerJSIsDirectory) {
 		const workerBundleContents = await createUploadWorkerBundleContents(
 			workerBundle as BundleResult
 		);

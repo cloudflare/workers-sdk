@@ -545,7 +545,7 @@ export const Handler = async ({
 		r2: r2s.map((binding) => {
 			return { binding: binding.toString(), bucket_name: "" };
 		}),
-		bundleEntrypoint: true,
+		processEntrypoint: true,
 		moduleRoot: workerScriptPath,
 		rules: usingWorkerDirectory
 			? [

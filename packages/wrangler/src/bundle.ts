@@ -117,6 +117,7 @@ export async function bundleWorker(
 	entry: Entry,
 	destination: string,
 	options: {
+		// When `bundle` is set to false, we apply shims to the Worker, but won't pull in any imports
 		bundle?: boolean;
 		serveAssetsFromWorker: boolean;
 		assets?: StaticAssetsConfig;

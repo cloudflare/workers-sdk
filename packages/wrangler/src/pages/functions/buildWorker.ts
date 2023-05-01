@@ -7,7 +7,9 @@ import { bundleWorker } from "../../bundle";
 import { FatalError } from "../../errors";
 import { logger } from "../../logger";
 import { getBasePath } from "../../paths";
+import traverseModuleGraph from "../../traverse-module-graph";
 import { D1_BETA_PREFIX } from "../../worker";
+import type { BundleResult } from "../../bundle";
 import type { Plugin } from "esbuild";
 
 export type Options = {
@@ -235,6 +237,58 @@ export function buildRawWorker({
 			experimentalLocal: false,
 		}
 	);
+}
+
+export async function traverseAndBuildWorkerJSDirectory({
+	workerJSDirectory,
+	buildOutputDirectory,
+	d1Databases,
+	nodejsCompat,
+}: {
+	workerJSDirectory: string;
+	buildOutputDirectory: string;
+	d1Databases?: string[];
+	nodejsCompat?: boolean;
+}): Promise<BundleResult> {
+	const entrypoint = resolve(join(workerJSDirectory, "index.js"));
+
+	const traverseModuleGraphResult = await traverseModuleGraph(
+		{
+			file: entrypoint,
+			directory: resolve(workerJSDirectory),
+			format: "modules",
+			moduleRoot: resolve(workerJSDirectory),
+		},
+		[
+			{
+				type: "ESModule",
+				globs: ["**/*.js"],
+			},
+		]
+	);
+
+	const outfile = join(tmpdir(), `./bundledWorker-${Math.random()}.mjs`);
+	const bundleResult = await buildRawWorker({
+		workerScriptPath: entrypoint,
+		bundle: false,
+		outfile,
+		directory: buildOutputDirectory,
+		local: false,
+		sourcemap: true,
+		watch: false,
+		onEnd: () => {},
+		betaD1Shims: d1Databases,
+		nodejsCompat,
+	});
+
+	return {
+		modules: traverseModuleGraphResult.modules,
+		dependencies: bundleResult.dependencies,
+		resolvedEntryPointPath: bundleResult.resolvedEntryPointPath,
+		bundleType: bundleResult.bundleType,
+		stop: bundleResult.stop,
+		sourceMapPath: bundleResult.sourceMapPath,
+	};
 }
 
 /**

@@ -334,7 +334,7 @@ export type AdditionalDevProps = {
 		preview_bucket_name?: string;
 	}[];
 	d1Databases?: Environment["d1_databases"];
-	bundleEntrypoint?: boolean;
+	processEntrypoint?: boolean;
 	moduleRoot?: string;
 	rules?: Rule[];
 };
@@ -427,7 +427,7 @@ export async function startDev(args: StartDevOptions) {
 					zone={zoneId}
 					host={host}
 					routes={routes}
-					bundleEntrypoint={!!args.bundleEntrypoint}
+					processEntrypoint={!!args.processEntrypoint}
 					rules={args.rules ?? getRules(configParam)}
 					legacyEnv={isLegacyEnv(configParam)}
 					minify={args.minify ?? configParam.minify}
@@ -564,7 +564,7 @@ export async function startApiDev(args: StartDevOptions) {
 			zone: zoneId,
 			host: host,
 			routes: routes,
-			bundleEntrypoint: !!args.bundleEntrypoint,
+			processEntrypoint: !!args.processEntrypoint,
 			rules: args.rules ?? getRules(configParam),
 			legacyEnv: isLegacyEnv(configParam),
 			minify: args.minify ?? configParam.minify,

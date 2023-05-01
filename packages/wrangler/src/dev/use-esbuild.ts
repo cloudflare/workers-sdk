@@ -26,7 +26,7 @@ export function useEsbuild({
 	destination,
 	jsxFactory,
 	jsxFragment,
-	bundleEntrypoint,
+	processEntrypoint,
 	rules,
 	assets,
 	serveAssetsFromWorker,
@@ -50,7 +50,7 @@ export function useEsbuild({
 	destination: string | undefined;
 	jsxFactory: string | undefined;
 	jsxFragment: string | undefined;
-	bundleEntrypoint: boolean;
+	processEntrypoint: boolean;
 	rules: Config["rules"];
 	assets: Config["assets"];
 	define: Config["define"];
@@ -110,7 +110,7 @@ export function useEsbuild({
 				traverseModuleGraphResult = await traverseModuleGraph(entry, rules);
 			}
 
-			if (bundleEntrypoint || !noBundle) {
+			if (processEntrypoint || !noBundle) {
 				bundleResult = await bundleWorker(entry, destination, {
 					bundle: !noBundle,
 					disableModuleCollection: noBundle,
@@ -142,36 +142,8 @@ export function useEsbuild({
 				});
 			}
 
-			const {
-				modules,
-				dependencies,
-				resolvedEntryPointPath,
-				bundleType,
-				stop,
-				sourceMapPath,
-			}: Awaited<ReturnType<typeof bundleWorker>> = {
-				modules: (traverseModuleGraphResult?.modules ??
-					bundleResult?.modules) as Awaited<
-					ReturnType<typeof bundleWorker>
-				>["modules"],
-				dependencies: (bundleResult?.dependencies ??
-					traverseModuleGraphResult?.dependencies) as Awaited<
-					ReturnType<typeof bundleWorker>
-				>["dependencies"],
-				resolvedEntryPointPath: (bundleResult?.resolvedEntryPointPath ??
-					traverseModuleGraphResult?.resolvedEntryPointPath) as Awaited<
-					ReturnType<typeof bundleWorker>
-				>["resolvedEntryPointPath"],
-				bundleType: (bundleResult?.bundleType ??
-					traverseModuleGraphResult?.bundleType) as Awaited<
-					ReturnType<typeof bundleWorker>
-				>["bundleType"],
-				stop: bundleResult?.stop,
-				sourceMapPath: bundleResult?.sourceMapPath,
-			};
-
 			// Capture the `stop()` method to use as the `useEffect()` destructor.
-			stopWatching = stop;
+			stopWatching = bundleResult?.stop;
 
 			// if "noBundle" is true, then we need to manually watch the entry point and
 			// trigger "builds" when it changes
@@ -189,11 +161,14 @@ export function useEsbuild({
 			setBundle({
 				id: 0,
 				entry,
-				path: resolvedEntryPointPath,
-				type: bundleType,
-				modules,
-				dependencies,
-				sourceMapPath,
+				path: bundleResult?.resolvedEntryPointPath ?? entry.file,
+				type:
+					bundleResult?.bundleType ??
+					(entry.format === "modules" ? "esm" : "commonjs"),
+				modules:
+					traverseModuleGraphResult?.modules ?? bundleResult?.modules ?? [],
+				dependencies: bundleResult?.dependencies ?? {},
+				sourceMapPath: bundleResult?.sourceMapPath,
 			});
 		}
 
@@ -213,7 +188,7 @@ export function useEsbuild({
 		jsxFactory,
 		jsxFragment,
 		serveAssetsFromWorker,
-		bundleEntrypoint,
+		processEntrypoint,
 		rules,
 		tsconfig,
 		exit,

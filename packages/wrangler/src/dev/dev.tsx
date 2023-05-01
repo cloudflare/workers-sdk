@@ -116,7 +116,7 @@ export type DevProps = {
 	initialPort: number;
 	initialIp: string;
 	inspectorPort: number;
-	bundleEntrypoint: boolean;
+	processEntrypoint: boolean;
 	rules: Config["rules"];
 	accountId: string | undefined;
 	initialMode: "local" | "remote";
@@ -272,7 +272,7 @@ function DevSession(props: DevSessionProps) {
 		entry: props.entry,
 		destination: directory,
 		jsxFactory: props.jsxFactory,
-		bundleEntrypoint: props.bundleEntrypoint,
+		processEntrypoint: props.processEntrypoint,
 		rules: props.rules,
 		jsxFragment: props.jsxFragment,
 		serveAssetsFromWorker: Boolean(
