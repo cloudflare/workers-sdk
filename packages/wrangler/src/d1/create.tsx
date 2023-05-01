@@ -25,12 +25,18 @@ export function Options(yargs: CommonYargsArgv) {
 			type: "string",
 			choices: ["weur", "eeur", "apac", "wnam", "enam"],
 		})
+		.option("experimental", {
+			default: false,
+			describe: "Use new experimental DB backend",
+			type: "boolean",
+		})
 		.epilogue(d1BetaWarning);
 }
 
 export async function Handler({
 	name,
 	location,
+    experimental
 }: StrictYargsOptionsToInterface<typeof Options>): Promise<void> {
 		const accountId = await requireAuth(config);
 
@@ -47,6 +53,7 @@ export async function Handler({
 				name,
 				...(location && {
 					primary_location_hint: location,
+					...(experimental ? { experimental: true } : {}),
 				}),
 			}),
 		});
