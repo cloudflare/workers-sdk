@@ -206,7 +206,9 @@ Your database may not be available to serve requests during the migration, conti
 				)
 			);
 
-			if (errorNotes.length > 0) return;
+			if (errorNotes.length > 0) {
+				process.exitCode = 1;
+			}
 		}
 	}
 );
