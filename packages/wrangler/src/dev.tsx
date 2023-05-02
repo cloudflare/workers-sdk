@@ -337,6 +337,7 @@ export type AdditionalDevProps = {
 	processEntrypoint?: boolean;
 	moduleRoot?: string;
 	rules?: Rule[];
+	constellation?: Environment["constellation"];
 };
 
 type StartDevOptions = DevArguments &
@@ -928,6 +929,7 @@ function getBindings(
 			}),
 			...(args.d1Databases || []),
 		]),
+		constellation: configParam.constellation,
 	};
 
 	return bindings;

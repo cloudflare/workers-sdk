@@ -106,6 +106,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 									queues: [],
 									r2_buckets: [],
 									d1_databases: [],
+									constellation: [],
 									services: [],
 									analytics_engine_datasets: [],
 									wasm_modules: {},

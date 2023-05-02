@@ -26,6 +26,7 @@ describe("normalizeAndValidateConfig()", () => {
 			compatibility_flags: [],
 			configPath: undefined,
 			d1_databases: [],
+			constellation: [],
 			dev: {
 				ip: "0.0.0.0",
 				local_protocol: "http",
@@ -1768,6 +1769,100 @@ describe("normalizeAndValidateConfig()", () => {
 			  - \\"d1_databases[2]\\" bindings must have a \\"database_id\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
 			  - \\"d1_databases[3]\\" bindings must have a \\"database_id\\" field but got {\\"binding\\":\\"D1_BINDING_2\\",\\"id\\":\\"my-db\\",\\"preview_id\\":2222}.
 			  - \\"d1_databases[4]\\" bindings must have a \\"database_id\\" field but got {\\"binding\\":\\"VALID\\",\\"id\\":\\"\\"}."
+		`);
+			});
+		});
+
+		describe("[constellation]", () => {
+			it("should error if constellation is an object", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ constellation: {} } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"constellation\\" should be an array but got {}."
+		`);
+			});
+
+			it("should error if constellation is a string", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ constellation: "BAD" } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"constellation\\" should be an array but got \\"BAD\\"."
+		`);
+			});
+
+			it("should error if constellation is a number", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ constellation: 999 } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"constellation\\" should be an array but got 999."
+		`);
+			});
+
+			it("should error if constellation is null", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ constellation: null } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"constellation\\" should be an array but got null."
+		`);
+			});
+
+			it("should accept valid bindings", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						constellation: [{ binding: "VALID", project_id: "ID" }],
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error if constellation.bindings are not valid", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						constellation: [
+							{},
+							{ binding: "VALID" },
+							{ binding: 2000, project: 2111 },
+						],
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - \\"constellation[0]\\" bindings should have a string \\"binding\\" field but got {}.
+			  - \\"constellation[0]\\" bindings must have a \\"project_id\\" field but got {}.
+			  - \\"constellation[1]\\" bindings must have a \\"project_id\\" field but got {\\"binding\\":\\"VALID\\"}.
+			  - \\"constellation[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"project\\":2111}.
+			  - \\"constellation[2]\\" bindings must have a \\"project_id\\" field but got {\\"binding\\":2000,\\"project\\":2111}."
 		`);
 			});
 		});
