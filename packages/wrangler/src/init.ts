@@ -29,6 +29,7 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "./yargs-types";
+import type { ReadableStream } from "stream/web";
 
 export function initOptions(yargs: CommonYargsArgv) {
 	return yargs
@@ -485,10 +486,12 @@ export async function initHandler(args: InitArgs) {
 					`/accounts/${accountId}/workers/services/${fromDashScriptName}/environments/${defaultEnvironment}/content`
 				);
 
-				await writeFile(
-					path.join(creationDirectory, "./src/index.ts"),
-					dashScript
-				);
+				for (const file of dashScript) {
+					await writeFile(
+						path.join(creationDirectory, `./src/${file.name}`),
+						file.stream() as ReadableStream
+					);
+				}
 
 				await writePackageJsonScriptsAndUpdateWranglerToml({
 					isWritingScripts: shouldWritePackageJsonScripts,
@@ -591,10 +594,12 @@ export async function initHandler(args: InitArgs) {
 					`/accounts/${accountId}/workers/services/${fromDashScriptName}/environments/${defaultEnvironment}/content`
 				);
 
-				await writeFile(
-					path.join(creationDirectory, "./src/index.js"),
-					dashScript
-				);
+				for (const file of dashScript) {
+					await writeFile(
+						path.join(creationDirectory, `./src/${file.name}`),
+						file.stream() as ReadableStream
+					);
+				}
 
 				await writePackageJsonScriptsAndUpdateWranglerToml({
 					isWritingScripts: shouldWritePackageJsonScripts,

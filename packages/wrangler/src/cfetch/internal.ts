@@ -217,7 +217,7 @@ export async function fetchR2Objects(
 export async function fetchDashboardScript(
 	resource: string,
 	bodyInit: RequestInit = {}
-): Promise<string> {
+): Promise<File[]> {
 	await requireLoggedIn();
 	const auth = requireApiToken();
 	const headers = cloneHeaders(bodyInit.headers);
@@ -242,17 +242,16 @@ export async function fetchDashboardScript(
 	if (usesModules) {
 		// Response from edge contains generic "name = worker.js" for dashboard created scripts
 		const form = await response.formData();
-		const entries = Array.from(form.entries());
-		if (entries.length > 1)
-			throw new RangeError("Expected only one entry in multipart response");
-		const [_, file] = entries[0];
+		const files = Array.from(form.entries())
+			.filter(([_, file]) => file instanceof File)
+			.map(([_, file]) => file as File);
 
-		if (file instanceof File) {
-			return await file.text();
-		}
-
-		return file ?? "";
+		return files;
 	} else {
-		return response.text();
+		const contents = await response.text();
+		const filename = response.headers.get("cf-entrypoint") ?? "index.js";
+		const file = new File([contents], filename, { type: "text" });
+
+		return [file];
 	}
 }
