@@ -13,6 +13,7 @@ import type { DurableObjectBindings } from "./config/environment";
 import type { WorkerRegistry } from "./dev-registry";
 import type { Entry } from "./entry";
 import type { CfModule } from "./worker";
+import traverseModuleGraph from "./traverse-module-graph";
 
 export const COMMON_ESBUILD_OPTIONS = {
 	// Our workerd runtime uses the same V8 version as recent Chrome, which is highly ES2022 compliant: https://kangax.github.io/compat-table/es2016plus/
@@ -146,6 +147,7 @@ export async function bundleWorker(
 		// TODO: Rip these out https://github.com/cloudflare/workers-sdk/issues/2153
 		disableModuleCollection?: boolean;
 		isOutfile?: boolean;
+		experimentalJavascriptModuleRules?: boolean;
 	}
 ): Promise<BundleResult> {
 	const {
@@ -176,6 +178,7 @@ export async function bundleWorker(
 		plugins,
 		disableModuleCollection,
 		isOutfile,
+		experimentalJavascriptModuleRules,
 	} = options;
 
 	// We create a temporary directory for any oneoff files we
@@ -199,6 +202,8 @@ export async function bundleWorker(
 		},
 		format: entry.format,
 		rules,
+		experimentalJavascriptModuleRules,
+		moduleRoot: entry.moduleRoot,
 	});
 	if (disableModuleCollection) {
 		moduleCollector = {
@@ -440,8 +445,17 @@ export async function bundleWorker(
 		entryPointOutputs[0][0]
 	);
 
+	const additionalModules = await traverseModuleGraph(entry, rules);
+
+	const modules = [...moduleCollector.modules, ...additionalModules.modules];
+
 	// copy all referenced modules into the output bundle directory
-	for (const module of moduleCollector.modules) {
+	for (const module of modules) {
+		const modulePath = path.join(
+			path.dirname(resolvedEntryPointPath),
+			module.name
+		);
+		fs.mkdirSync(path.dirname(modulePath), { recursive: true });
 		fs.writeFileSync(
 			path.join(path.dirname(resolvedEntryPointPath), module.name),
 			module.content
@@ -449,7 +463,7 @@ export async function bundleWorker(
 	}
 
 	return {
-		modules: moduleCollector.modules,
+		modules: modules,
 		dependencies,
 		resolvedEntryPointPath,
 		bundleType,

@@ -12,7 +12,6 @@ export default {
 	async fetch(request) {
 		const { pathname } = new URL(request.url);
 		if (pathname === "/random") return new Response(hexEncode(randomBytes(8)));
-
 		console.log(
 			request.method,
 			request.url,
@@ -27,7 +26,6 @@ export default {
 
 		return new Response(`${request.url} ${now()}`);
 	},
-
 	/**
 	 * Handle a scheduled event.
 	 *

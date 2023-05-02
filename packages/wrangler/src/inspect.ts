@@ -237,7 +237,6 @@ export default function useInspector(props: InspectorProps) {
 		if (!props.inspectorUrl) {
 			return;
 		}
-
 		// The actual websocket instance
 		const ws = new WebSocket(props.inspectorUrl, {
 			headers: {

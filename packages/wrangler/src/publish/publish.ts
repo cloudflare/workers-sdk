@@ -63,6 +63,7 @@ type Props = {
 	noBundle: boolean | undefined;
 	keepVars: boolean | undefined;
 	logpush: boolean | undefined;
+	experimentalJavascriptModuleRules: boolean | undefined;
 };
 
 type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
@@ -500,6 +501,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						targetConsumer: "publish",
 						local: false,
 						experimentalLocal: false,
+						experimentalJavascriptModuleRules:
+							props.experimentalJavascriptModuleRules,
 					}
 			  );
 

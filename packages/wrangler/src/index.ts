@@ -214,6 +214,12 @@ export function createCLIParser(argv: string[]) {
 			describe: `Experimental: Support wrangler.json`,
 			type: "boolean",
 		})
+		.option("experimental-javascript-module-rules", {
+			alias: "jsm",
+			describe: `Experimental: Support JavaScript module rules`,
+			type: "boolean",
+		})
+
 		.check((args) => {
 			// Grab locally specified env params from `.env` file
 			const loaded = loadDotEnv(".env", args.env);
@@ -224,7 +230,14 @@ export function createCLIParser(argv: string[]) {
 		});
 
 	wrangler.group(
-		["experimental-json-config", "config", "env", "help", "version"],
+		[
+			"experimental-javascript-module-rules",
+			"experimental-json-config",
+			"config",
+			"env",
+			"help",
+			"version",
+		],
 		"Flags:"
 	);
 	wrangler.help().alias("h", "help");

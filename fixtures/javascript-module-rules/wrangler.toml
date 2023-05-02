@@ -1,0 +1,17 @@
+name = "javascript-module-rules"
+main = "src/index.ts"
+compatibility_date = "2023-04-28"
+rules = [
+  { type = "NodeJSCompat", globs = ["remix-build/**/*.js"]},
+  { type = "CompiledWasm", globs = ["src/**/*.wasm"]},
+  { type = "NodeJSCompat", globs = ["src/fs-shim/index.js"], specifier = "fs" },
+]
+# base_dir = "."
+
+[builtin_overrides]
+"fs" = "node_modules/fs-shim/index.js"
+
+# modules = [
+#   { type = "NodeJSCompat", globs = ["remix-build/**/*.js"] },
+#   { type = "ESModule", globs = ["other-build/**/*.js"] }
+# ]

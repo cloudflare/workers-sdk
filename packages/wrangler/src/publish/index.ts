@@ -270,5 +270,6 @@ export async function publishHandler(
 		noBundle: !(args.bundle ?? !config.no_bundle),
 		keepVars: args.keepVars,
 		logpush: args.logpush,
+		experimentalJavascriptModuleRules: args.experimentalJavascriptModuleRules,
 	});
 }

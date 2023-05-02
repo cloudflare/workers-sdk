@@ -104,7 +104,9 @@ export async function matchFiles(
 			});
 			const newModules = await Promise.all(
 				files
-					.filter((f) => regexp.test(f))
+					.filter((f) => {
+						return regexp.test(f) || regexp.test(`${relativeTo}/${f}`);
+					})
 					.map(async (name) => {
 						const filePath = name;
 						const fileContent = await readFile(path.join(relativeTo, filePath));
@@ -134,7 +136,9 @@ export async function matchFiles(
 	// This is just a sanity check verifying that no files match rules that were removed
 	for (const rule of removedRules) {
 		for (const glob of rule.globs) {
-			const regexp = globToRegExp(glob);
+			const regexp = globToRegExp(glob, {
+				globstar: true,
+			});
 			for (const file of files) {
 				if (regexp.test(file)) {
 					throw new Error(
@@ -159,6 +163,8 @@ export default function createModuleCollector(props: {
 		fileNames: Set<string>;
 	};
 	preserveFileNames?: boolean;
+	experimentalJavascriptModuleRules?: boolean;
+	moduleRoot: string;
 }): {
 	modules: CfModule[];
 	plugin: esbuild.Plugin;
@@ -183,7 +189,7 @@ export default function createModuleCollector(props: {
 
 				const rulesMatchers = rules.flatMap((rule) => {
 					return rule.globs.map((glob) => {
-						const regex = globToRegExp(glob);
+						const regex = globToRegExp(glob, { globstar: true });
 						return {
 							regex,
 							rule,
@@ -255,11 +261,15 @@ export default function createModuleCollector(props: {
 				// ~ end legacy module specifier support ~
 
 				rules?.forEach((rule) => {
-					if (rule.type === "ESModule" || rule.type === "CommonJS") return; // TODO: we should treat these as js files, and use the jsx loader
+					if (
+						!props.experimentalJavascriptModuleRules &&
+						(rule.type === "ESModule" || rule.type === "CommonJS")
+					)
+						return;
 
 					rule.globs.forEach((glob) => {
 						build.onResolve(
-							{ filter: globToRegExp(glob) },
+							{ filter: globToRegExp(glob, { globstar: true }) },
 							async (args: esbuild.OnResolveArgs) => {
 								// take the file and massage it to a
 								// transportable/manageable format
@@ -272,17 +282,21 @@ export default function createModuleCollector(props: {
 									.digest("hex");
 								const fileName = props.preserveFileNames
 									? filePath
-									: `./${fileHash}-${path.basename(args.path)}`;
+									: `${fileHash}-${path.basename(args.path)}`;
+
+								const moduleName = filePath.startsWith(props.moduleRoot)
+									? path.relative(props.moduleRoot, filePath)
+									: fileName;
 
 								// add the module to the array
 								modules.push({
-									name: fileName,
+									name: moduleName,
 									content: fileContent,
 									type: RuleTypeToModuleType[rule.type],
 								});
 
 								return {
-									path: fileName, // change the reference to the changed module
+									path: moduleName, // change the reference to the changed module
 									external: props.format === "modules", // mark it as external in the bundle
 									namespace: `wrangler-module-${rule.type}`, // just a tag, this isn't strictly necessary
 									watchFiles: [filePath], // we also add the file to esbuild's watch list
@@ -292,7 +306,7 @@ export default function createModuleCollector(props: {
 
 						if (props.format === "service-worker") {
 							build.onLoad(
-								{ filter: globToRegExp(glob) },
+								{ filter: globToRegExp(glob, { globstar: true }) },
 								async (args: esbuild.OnLoadArgs) => {
 									return {
 										// We replace the the module with an identifier
@@ -314,7 +328,7 @@ export default function createModuleCollector(props: {
 				removedRules.forEach((rule) => {
 					rule.globs.forEach((glob) => {
 						build.onResolve(
-							{ filter: globToRegExp(glob) },
+							{ filter: globToRegExp(glob, { globstar: true }) },
 							async (args: esbuild.OnResolveArgs) => {
 								throw new Error(
 									`The file ${
