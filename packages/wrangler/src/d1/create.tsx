@@ -26,6 +26,11 @@ export function Options(yargs: CommonYargsArgv) {
 			type: "string",
 			choices: LOCATION_CHOICES,
 		})
+		.option("experimental", {
+			default: false,
+			describe: "Use new experimental DB backend",
+			type: "boolean",
+		})
 		.epilogue(d1BetaWarning);
 }
 
@@ -46,12 +51,14 @@ export const Handler = withConfig<HandlerOptions>(
 				body: JSON.stringify({
 					name,
 					...(location && { primary_location_hint: location }),
+					...(experimental && { experimental: true }),
 				}),
-			}),
-		});
-	} catch (e) {
-		if ((e as { code: number }).code === 7502) {
-			throw new Error("A database with that name already exists");
+			});
+		} catch (e) {
+			if ((e as { code: number }).code === 7502) {
+				throw new Error("A database with that name already exists");
+			}
+			throw e;
 		}
 
 		logger.log(
@@ -77,27 +84,3 @@ export const Handler = withConfig<HandlerOptions>(
 		);
 	}
 );
-
-	logger.log(
-		renderToString(
-			<Box flexDirection="column">
-				<Text>
-					✅ Successfully created DB &apos;{db.name}&apos;
-					{location ? ` using primary location hint ${location}` : ``}
-				</Text>
-				<Text>&nbsp;</Text>
-				<Text>
-					Add the following to your wrangler.toml to connect to it from a
-					Worker:
-				</Text>
-				<Text>&nbsp;</Text>
-				<Text>[[d1_databases]]</Text>
-				<Text>
-					binding = &quot;DB&quot; # i.e. available in your Worker on env.DB
-				</Text>
-				<Text>database_name = &quot;{db.name}&quot;</Text>
-				<Text>database_id = &quot;{db.uuid}&quot;</Text>
-			</Box>
-		)
-	);
-}
