@@ -1,5 +1,11 @@
 # @cloudflare/pages-shared
 
+## 0.4.2
+
+### Patch Changes
+
+- [#3136](https://github.com/cloudflare/workers-sdk/pull/3136) [`823258cd`](https://github.com/cloudflare/workers-sdk/commit/823258cdf7f41747963d87bdb018b510f26184b6) Thanks [@jahands](https://github.com/jahands)! - fix: Remove global flag in pages-shared regex
+
 ## 0.4.1
 
 ### Patch Changes
