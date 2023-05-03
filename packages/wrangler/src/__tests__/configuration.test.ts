@@ -62,6 +62,7 @@ describe("normalizeAndValidateConfig()", () => {
 			rules: [],
 			site: undefined,
 			text_blobs: undefined,
+			browser: undefined,
 			triggers: {
 				crons: [],
 			},
@@ -1556,6 +1557,64 @@ describe("normalizeAndValidateConfig()", () => {
 			              - the field \\"environment\\", when present, should be a string.
 			              - binding should have a \\"script_name\\" field if \\"environment\\" is present."
 		        `);
+			});
+		});
+
+		describe("[browser]", () => {
+			it("should error if browser is an array", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ browser: [] } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"browser\\" should be an object but got []."
+		`);
+			});
+
+			it("should error if browser is a string", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ browser: "BAD" } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"browser\\" should be an object but got \\"BAD\\"."
+		`);
+			});
+
+			it("should error if browser is a number", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ browser: 999 } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"browser\\" should be an object but got 999."
+		`);
+			});
+
+			it("should error if browser is null", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ browser: null } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"browser\\" should be an object but got null."
+		`);
 			});
 		});
 

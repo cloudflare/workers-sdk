@@ -538,6 +538,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			send_email: config.send_email,
 			vars: { ...config.vars, ...props.vars },
 			wasm_modules: config.wasm_modules,
+			browser: config.browser,
 			text_blobs: {
 				...config.text_blobs,
 				...(assets.manifest &&

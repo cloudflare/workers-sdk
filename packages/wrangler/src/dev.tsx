@@ -865,6 +865,7 @@ function getBindings(
 		},
 		wasm_modules: configParam.wasm_modules,
 		text_blobs: configParam.text_blobs,
+		browser: configParam.browser,
 		data_blobs: configParam.data_blobs,
 		durable_objects: {
 			bindings: [

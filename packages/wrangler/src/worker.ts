@@ -105,6 +105,14 @@ export interface CfTextBlobBindings {
 }
 
 /**
+ * A binding to a browser
+ */
+
+export interface CfBrowserBinding {
+	binding: string;
+}
+
+/**
  * A binding to a data blob (in service-worker format)
  */
 
@@ -232,6 +240,7 @@ export interface CfWorkerInit {
 		send_email: CfSendEmailBindings[] | undefined;
 		wasm_modules: CfWasmModuleBindings | undefined;
 		text_blobs: CfTextBlobBindings | undefined;
+		browser: CfBrowserBinding | undefined;
 		data_blobs: CfDataBlobBindings | undefined;
 		durable_objects: { bindings: CfDurableObject[] } | undefined;
 		queues: CfQueue[] | undefined;
