@@ -1,5 +1,13 @@
 # @cloudflare/pages-shared
 
+## 0.4.1
+
+### Patch Changes
+
+- [#3132](https://github.com/cloudflare/workers-sdk/pull/3132) [`b503336c`](https://github.com/cloudflare/workers-sdk/commit/b503336cb3a03bb5cff7841196e144eafb6f2ef6) Thanks [@sidharthachatterjee](https://github.com/sidharthachatterjee)! - pages-shared: Strip spaces in urls
+
+* [#3131](https://github.com/cloudflare/workers-sdk/pull/3131) [`7b12604e`](https://github.com/cloudflare/workers-sdk/commit/7b12604e24434a8b4343480bebf3b1e6737336a0) Thanks [@sidharthachatterjee](https://github.com/sidharthachatterjee)! - Prevent protocol-less URL redirects for %09 (with backslashes)
+
 ## 0.4.0
 
 ### Minor Changes
