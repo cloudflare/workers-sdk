@@ -52,8 +52,8 @@ export const Handler = withConfig<HandlerOptions>(
 					name,
 					...(location && {
 						primary_location_hint: location,
-						...(experimental && { experimental: true }),
 					}),
+					...(experimental && { experimental: true }),
 				}),
 			});
 		} catch (e) {
