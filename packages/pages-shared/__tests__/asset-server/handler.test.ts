@@ -114,7 +114,7 @@ describe("asset-server handler", () => {
 				findAssetEntryForPath,
 			});
 			expect(response.status).toBe(308);
-			expect(response.headers.get("Location")).toEqual("/	/www.example.com/	/");
+			expect(response.headers.get("Location")).toEqual("/www.example.com/	/");
 		}
 		{
 			const { response } = await getTestResponse({
