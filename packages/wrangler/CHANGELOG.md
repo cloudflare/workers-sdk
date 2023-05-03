@@ -1,5 +1,11 @@
 # wrangler
 
+## 2.19.0
+
+### Minor Changes
+
+- [#3091](https://github.com/cloudflare/workers-sdk/pull/3091) [`c32f514c`](https://github.com/cloudflare/workers-sdk/commit/c32f514ca40e8b13dc9e86fdc76577b9adeb70f5) Thanks [@edevil](https://github.com/edevil)! - Added initial commands for integrating with Constellation AI.
+
 ## 2.18.0
 
 ### Minor Changes
