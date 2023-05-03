@@ -109,6 +109,15 @@ describe("asset-server handler", () => {
 		}
 		{
 			const { response } = await getTestResponse({
+				request: "/%09/www.example.com/%09/index/",
+				metadata,
+				findAssetEntryForPath,
+			});
+			expect(response.status).toBe(308);
+			expect(response.headers.get("Location")).toEqual("/	/www.example.com/	/");
+		}
+		{
+			const { response } = await getTestResponse({
 				request: "/%5Cwww.example.com/%5C/index/",
 				metadata,
 				findAssetEntryForPath,
