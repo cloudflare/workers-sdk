@@ -33,46 +33,50 @@ export function Options(yargs: CommonYargsArgv) {
 		.epilogue(d1BetaWarning);
 }
 
-export async function Handler({
-	name,
-	location,
-    experimental
-}: StrictYargsOptionsToInterface<typeof Options>): Promise<void> {
+type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
+
+export const Handler = withConfig<HandlerOptions>(
+	async ({ name, config, experimental, location }): Promise<void> => {
 		const accountId = await requireAuth(config);
 
 		logger.log(d1BetaWarning);
 
-	let db: DatabaseCreationResult;
-	try {
-		db = await fetchResult(`/accounts/${accountId}/d1/database`, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({
-				name,
-				...(location && {
-					primary_location_hint: location,
-					...(experimental ? { experimental: true } : {}),
+		let db: DatabaseCreationResult;
+		try {
+			db = await fetchResult(`/accounts/${accountId}/d1/database`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					name,
+					...(location && {
+						primary_location_hint: location,
+						...(experimental && { experimental: true }),
+					}),
 				}),
-			}),
-		});
-	} catch (e) {
-		if ((e as { code: number }).code === 7502) {
-			throw new Error("A database with that name already exists");
+			});
+		} catch (e) {
+			if ((e as { code: number }).code === 7502) {
+				throw new Error("A database with that name already exists");
+			}
+			throw e;
 		}
 
 		logger.log(
 			renderToString(
 				<Box flexDirection="column">
-					<Text>✅ Successfully created DB &apos;{db.name}&apos;!</Text>
+					<Text>
+						✅ Successfully created DB &apos;{db.name}&apos;
+						{location ? ` using primary location hint ${location}` : ``}
+					</Text>
 					<Text>&nbsp;</Text>
 					<Text>
 						Add the following to your wrangler.toml to connect to it from a
 						Worker:
 					</Text>
 					<Text>&nbsp;</Text>
-					<Text>[[ d1_databases ]]</Text>
+					<Text>[[d1_databases]]</Text>
 					<Text>
 						binding = &quot;DB&quot; # i.e. available in your Worker on env.DB
 					</Text>
@@ -83,27 +87,3 @@ export async function Handler({
 		);
 	}
 );
-
-	logger.log(
-		renderToString(
-			<Box flexDirection="column">
-				<Text>
-					✅ Successfully created DB &apos;{db.name}&apos;
-					{location ? ` using primary location hint ${location}` : ``}
-				</Text>
-				<Text>&nbsp;</Text>
-				<Text>
-					Add the following to your wrangler.toml to connect to it from a
-					Worker:
-				</Text>
-				<Text>&nbsp;</Text>
-				<Text>[[d1_databases]]</Text>
-				<Text>
-					binding = &quot;DB&quot; # i.e. available in your Worker on env.DB
-				</Text>
-				<Text>database_name = &quot;{db.name}&quot;</Text>
-				<Text>database_id = &quot;{db.uuid}&quot;</Text>
-			</Box>
-		)
-	);
-}
