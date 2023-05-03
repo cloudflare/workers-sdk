@@ -109,7 +109,7 @@ describe("asset-server handler", () => {
 		}
 		{
 			const { response } = await getTestResponse({
-				request: "/%09www.example.com/%09/index/",
+				request: "/%09/www.example.com/%09/index/",
 				metadata,
 				findAssetEntryForPath,
 			});
