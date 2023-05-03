@@ -39,5 +39,13 @@ describe.concurrent("Pages Functions", () => {
 			expect(response.status).toEqual(308);
 			expect(response.headers.get("Location")).toEqual("/www.example.com/");
 		}
+		{
+			const response = await fetch(
+				`http://${ip}:${port}/%09/www.example.com/index/`,
+				{ redirect: "manual" }
+			);
+			expect(response.status).toEqual(308);
+			expect(response.headers.get("Location")).toEqual("/www.example.com/");
+		}
 	});
 });
