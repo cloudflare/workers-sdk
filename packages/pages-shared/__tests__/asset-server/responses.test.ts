@@ -43,5 +43,8 @@ describe("stripLeadingDoubleSlashes", () => {
 		expect(stripLeadingDoubleSlashes("/foo/\\/bar")).toMatchInlineSnapshot(
 			`"/foo/\\\\/bar"`
 		);
+		expect(stripLeadingDoubleSlashes("/%09foo")).toMatchInlineSnapshot(
+			`"/foo"`
+		);
 	});
 });
