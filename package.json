@@ -14,7 +14,7 @@
 		"fixtures/*"
 	],
 	"scripts": {
-		"build": "npm run build --workspace=wrangler --workspace=jest-environment-wrangler --workspace=pages-plugin-example --workspace=wranglerjs-compat-webpack-plugin",
+		"build": "turbo build",
 		"check": "run-p check:* --aggregate-output --continue-on-error",
 		"check:format": "prettier . --check --ignore-unknown",
 		"check:lint": "eslint \"packages/**/*.[tj]s?(x)\" --cache --cache-strategy content --max-warnings=0 --config ./.eslintrc.js",
@@ -55,7 +55,7 @@
 		"eslint-plugin-react-hooks": "^4.6.0",
 		"eslint-plugin-unused-imports": "^2.0.0",
 		"patch-package": "^6.5.1",
-		"turbo": "^1.8.4"
+		"turbo": "^1.9.1"
 	},
 	"engines": {
 		"node": ">=16.13.0"
