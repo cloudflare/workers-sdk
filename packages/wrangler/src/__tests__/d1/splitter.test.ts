@@ -252,4 +252,11 @@ describe("splitSqlQuery()", () => {
 		]
 	`);
 	});
+	it("should terminate when there is no more input", () => {
+		expect(() => splitSqlIntoStatements("")).not.toThrow();
+		expect(() => splitSqlIntoStatements("  \n")).not.toThrow();
+		expect(() => splitSqlIntoStatements(";")).not.toThrow();
+		expect(() => splitSqlIntoStatements(";;")).not.toThrow();
+		expect(() => splitSqlIntoStatements(";-- comment")).not.toThrow();
+	});
 });
