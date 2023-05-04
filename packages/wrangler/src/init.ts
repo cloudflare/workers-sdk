@@ -80,11 +80,7 @@ export type ServiceMetadataRes = {
 			usage_model: "bundled" | "unbound";
 			compatibility_date: string;
 			last_deployed_from?: "wrangler" | "dash" | "api";
-			placement:
-				| {
-						mode: "smart" | "off" | undefined;
-				  }
-				| undefined;
+			placement_mode?: "smart";
 		};
 	};
 	created_on: string;
@@ -873,7 +869,10 @@ async function getWorkerConfig(
 			new Date().toISOString().substring(0, 10),
 		...routeOrRoutesToConfig,
 		usage_model: serviceEnvMetadata.script.usage_model,
-		placement: serviceEnvMetadata.script.placement,
+		placement:
+			serviceEnvMetadata.script.placement_mode === "smart"
+				? { mode: "smart" }
+				: undefined,
 		...(durableObjectClassNames.length
 			? {
 					migrations: [

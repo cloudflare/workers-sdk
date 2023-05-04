@@ -271,7 +271,7 @@ interface EnvironmentInheritable {
 	 *
 	 * More details: https://developers.cloudflare.com/workers/platform/smart-placement/
 	 */
-	placement: { mode?: "off" | "smart" } | undefined;
+	placement: { mode: "off" | "smart" } | undefined;
 }
 
 export type DurableObjectBindings = {

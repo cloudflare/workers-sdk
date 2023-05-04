@@ -204,7 +204,7 @@ export interface CfDurableObjectMigrations {
 }
 
 export interface CfPlacement {
-	mode?: "smart" | "";
+	mode: "smart";
 }
 
 /**

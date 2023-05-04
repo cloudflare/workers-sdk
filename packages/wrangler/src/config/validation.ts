@@ -878,12 +878,16 @@ function normalizeAndValidatePlacement(
 	topLevelEnv: Environment | undefined,
 	rawEnv: RawEnvironment
 ): Config["placement"] {
-	const { mode } = rawEnv.placement ?? {};
-
-	validateOptionalProperty(diagnostics, "placement", "mode", mode, "string", [
-		"off",
-		"smart",
-	]);
+	if (rawEnv.placement) {
+		validateRequiredProperty(
+			diagnostics,
+			"placement",
+			"mode",
+			rawEnv.placement.mode,
+			"string",
+			["off", "smart"]
+		);
+	}
 
 	return inheritable(
 		diagnostics,

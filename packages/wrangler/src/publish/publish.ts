@@ -571,10 +571,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			});
 		}
 
-		// The upload api doesn't accept off as a valid mode, instead it treats an empty string as off.
-		const placement: CfPlacement | undefined = config.placement
-			? { mode: config.placement.mode === "off" ? "" : config.placement.mode }
-			: undefined;
+		// The upload API only accepts an empty string or no specified placement for the "off" mode.
+		const placement: CfPlacement | undefined =
+			config.placement?.mode === "smart" ? { mode: "smart" } : undefined;
 
 		const worker: CfWorkerInit = {
 			name: scriptName,
