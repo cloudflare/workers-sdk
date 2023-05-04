@@ -22,6 +22,7 @@ export function mayContainMultipleStatements(sql: string): boolean {
 /**
  * Split an SQLQuery into an array of statements
  */
+
 export default function splitSqlQuery(sql: string): string[] {
 	if (!mayContainMultipleStatements(sql)) return [sql];
 	const split = splitSqlIntoStatements(sql);
@@ -34,128 +35,28 @@ export default function splitSqlQuery(sql: string): string[] {
 
 function splitSqlIntoStatements(sql: string): string[] {
 	const statements: string[] = [];
-	let str = "";
-	const compoundStatementStack: ((s: string) => boolean)[] = [];
 
-	const iterator = sql[Symbol.iterator]();
-	let next = iterator.next();
-	while (!next.done) {
-		const char = next.value;
+	// Use a regex pattern to match the end of each statement
+	const pattern = /(?<!['"`$a-zA-Z0-9])\s*;\s*(?!['"`$a-zA-Z0-9])/g;
+	const matches = [...sql.matchAll(pattern)];
 
-		if (compoundStatementStack[0]?.(str + char)) {
-			compoundStatementStack.shift();
-		}
-
-		switch (char) {
-			case `'`:
-			case `"`:
-			case "`":
-				str += char + consumeUntilMarker(iterator, char);
-				break;
-			case `$`: {
-				const dollarQuote =
-					"$" + consumeWhile(iterator, isDollarQuoteIdentifier);
-				str += dollarQuote;
-				if (dollarQuote.endsWith("$")) {
-					str += consumeUntilMarker(iterator, dollarQuote);
-				}
-				break;
+	let lastIndex = 0;
+	matches.forEach((match) => {
+		if (match.index !== undefined) {
+			// Add each statement to the statements array
+			const statement = sql.slice(lastIndex, match.index).trim();
+			if (statement.length > 0) {
+				statements.push(statement);
 			}
-			case `-`:
-				str += char;
-				next = iterator.next();
-				if (!next.done && next.value === "-") {
-					str += next.value + consumeUntilMarker(iterator, "\n");
-					break;
-				} else {
-					continue;
-				}
-			case `/`:
-				str += char;
-				next = iterator.next();
-				if (!next.done && next.value === "*") {
-					str += next.value + consumeUntilMarker(iterator, "*/");
-					break;
-				} else {
-					continue;
-				}
-			case `;`:
-				if (compoundStatementStack.length === 0) {
-					statements.push(str);
-					str = "";
-				} else {
-					str += char;
-				}
-				break;
-			default:
-				str += char;
-				break;
+			lastIndex = match.index + match[0].length;
 		}
+	});
 
-		if (isCompoundStatementStart(str)) {
-			compoundStatementStack.unshift(isCompoundStatementEnd);
-		}
-
-		next = iterator.next();
+	// Add the remaining statement, if any
+	const lastStatement = sql.slice(lastIndex).trim();
+	if (lastStatement.length > 0) {
+		statements.push(lastStatement);
 	}
-	statements.push(str);
 
-	return statements
-		.map((statement) => statement.trim())
-		.filter((statement) => statement.length > 0);
-}
-
-/**
- * Pulls characters from the string iterator while the predicate remains true.
- */
-function consumeWhile(
-	iterator: Iterator<string>,
-	predicate: (str: string) => boolean
-) {
-	let next = iterator.next();
-	let str = "";
-	while (!next.done) {
-		str += next.value;
-		if (!predicate(str)) {
-			break;
-		}
-		next = iterator.next();
-	}
-	return str;
-}
-
-/**
- * Pulls characters from the string iterator until the `endMarker` is found.
- */
-function consumeUntilMarker(iterator: Iterator<string>, endMarker: string) {
-	return consumeWhile(iterator, (str) => !str.endsWith(endMarker));
-}
-
-/**
- * Returns true if the `str` ends with a dollar-quoted string marker.
- * See https://www.postgresql.org/docs/current/sql-syntax-lexical.html#SQL-SYNTAX-DOLLAR-QUOTING.
- */
-function isDollarQuoteIdentifier(str: string) {
-	const lastChar = str.slice(-1);
-	return (
-		// The $ marks the end of the identifier
-		lastChar !== "$" &&
-		// we allow numbers, underscore and letters with diacritical marks
-		(/[0-9_]/i.test(lastChar) ||
-			lastChar.toLowerCase() !== lastChar.toUpperCase())
-	);
-}
-
-/**
- * Returns true if the `str` ends with a compound statement `BEGIN` marker.
- */
-function isCompoundStatementStart(str: string) {
-	return /\sBEGIN\s$/.test(str);
-}
-
-/**
- * Returns true if the `str` ends with a compound statement `END` marker.
- */
-function isCompoundStatementEnd(str: string) {
-	return /\sEND[;\s]$/.test(str);
+	return statements;
 }

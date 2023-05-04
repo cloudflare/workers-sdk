@@ -169,6 +169,7 @@ export async function executeSql({
 		throw new Error(`Error: can't use --persist-to without --local`);
 	logger.log(`🌀 Mapping SQL input into an array of statements`);
 	const queries = splitSqlQuery(sql);
+	logger.log(`🌀 After splitSqlQuery`);
 
 	if (file && sql) {
 		if (queries[0].startsWith("SQLite format 3")) {
