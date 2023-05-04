@@ -1,7 +1,7 @@
 From 9d34de7c9010659ece1be008ee852a21e06bff55 Mon Sep 17 00:00:00 2001
 From: Samuel Macleod <smacleod@cloudflare.com>
 Date: Mon, 23 Jan 2023 15:12:38 +0000
-Subject: [PATCH 10/14] Basic support for text colour in dark mode in browsers
+Subject: [PATCH 10/15] Basic support for text colour in dark mode in browsers
  that don't implement :host-context
 
 ---
@@ -46,5 +46,5 @@ index b451da60eb..8828dd8f07 100644
  <meta http-equiv="Content-Security-Policy"
    content="object-src 'none'; script-src 'sha256-yYUen+rS0+K2iGZTeGzgeav9eHB7hosjob+ahEOInok=' 'self' 'unsafe-eval' https://chrome-devtools-frontend.appspot.com">
 -- 
-2.37.1 (Apple Git-137.1)
+2.39.2 (Apple Git-143)
 

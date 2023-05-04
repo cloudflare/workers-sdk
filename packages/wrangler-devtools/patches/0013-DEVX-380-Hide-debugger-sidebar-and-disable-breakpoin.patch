@@ -1,7 +1,7 @@
 From cde74d1233f0e89563cfe4d458af197f21c22f18 Mon Sep 17 00:00:00 2001
 From: bcoll <bcoll@cloudflare.com>
 Date: Wed, 15 Feb 2023 15:07:45 +0000
-Subject: [PATCH 13/14] DEVX-380 Hide debugger sidebar and disable breakpoints
+Subject: [PATCH 13/15] DEVX-380 Hide debugger sidebar and disable breakpoints
 
 - Hides debugger sidebar
 - Removes toggle debugger sidebar command
@@ -87,5 +87,5 @@ index c5e95ab535..9c53bca1b3 100644
    settingName: 'navigatorGroupByFolder',
    settingType: Common.Settings.SettingType.BOOLEAN,
 -- 
-2.37.1 (Apple Git-137.1)
+2.39.2 (Apple Git-143)
 

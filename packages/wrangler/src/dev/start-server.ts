@@ -142,6 +142,7 @@ export async function startDevServer(
 				experimentalLocal: props.experimentalLocal,
 				accountId: props.accountId,
 				experimentalLocalRemoteKv: props.experimentalLocalRemoteKv,
+				sourceMapPath: bundle?.sourceMapPath,
 			});
 
 			return {

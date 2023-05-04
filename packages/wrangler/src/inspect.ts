@@ -15,6 +15,7 @@ import { getAccessToken } from "./user/access";
 import type Protocol from "devtools-protocol";
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import type { MessageEvent } from "ws";
+import { readFileSync } from "fs";
 
 /**
  * `useInspector` is a hook for debugging Workers applications
@@ -61,6 +62,8 @@ interface InspectorProps {
 	sourceMapPath?: string | undefined;
 
 	host?: string;
+
+	name?: string;
 }
 
 export default function useInspector(props: InspectorProps) {
@@ -494,6 +497,30 @@ export default function useInspector(props: InspectorProps) {
 		/** Send a message from the local websocket to the remote websocket */
 		function sendMessageToRemoteWebSocket(event: MessageEvent) {
 			try {
+				// Intercept Network.loadNetworkResource to load sourcemaps
+				const message = JSON.parse(event.data as string);
+				if (
+					message.method === "Network.loadNetworkResource" &&
+					props?.sourceMapPath
+				) {
+					sendMessageToLocalWebSocket({
+						data: JSON.stringify({
+							id: message.id,
+							result: {
+								resource: {
+									success: true,
+									text: readFileSync(props?.sourceMapPath, "utf8"),
+								},
+							},
+						}),
+					});
+					return;
+				}
+			} catch (e) {
+				logger.debug(e);
+				// Ignore errors, fallthrough to the remote inspector
+			}
+			try {
 				assert(
 					remoteWebSocket,
 					"Trying to send a message to an undefined `remoteWebSocket`"
@@ -517,11 +544,28 @@ export default function useInspector(props: InspectorProps) {
 		}
 
 		/** Send a message from the local websocket to the remote websocket */
-		function sendMessageToLocalWebSocket(event: MessageEvent) {
+		function sendMessageToLocalWebSocket(event: Pick<MessageEvent, "data">) {
 			assert(
 				localWebSocket,
 				"Trying to send a message to an undefined `localWebSocket`"
 			);
+			try {
+				// Intercept Debugger.scriptParsed responses to inject URL schemes
+				const message = JSON.parse(event.data as string);
+				if (message.method === "Debugger.scriptParsed") {
+					// Add the worker:// scheme conditionally, since some module types already have schemes (e.g. wasm)
+					message.params.url = new URL(
+						message.params.url,
+						`worker://${props.name}`
+					).href;
+					localWebSocket.send(JSON.stringify(message));
+					return;
+				}
+			} catch (e) {
+				logger.debug(e);
+				// Ignore errors, fallthrough to the local websocket
+			}
+
 			localWebSocket.send(event.data);
 		}
 
@@ -744,8 +788,15 @@ function logConsoleMessage(evt: Protocol.Runtime.ConsoleAPICalledEvent): void {
 /**
  * Opens the chrome debugger
  */
-export const openInspector = async (inspectorPort: number) => {
-	const url = `https://devtools.devprod.cloudflare.dev/js_app?theme=systemPreferred&ws=localhost:${inspectorPort}/ws`;
+export const openInspector = async (
+	inspectorPort: number,
+	worker: string | undefined
+) => {
+	const query = new URLSearchParams();
+	query.set("theme", "systemPreferred");
+	query.set("ws", `localhost:${inspectorPort}/ws`);
+	if (worker) query.set("domain", worker);
+	const url = `https://devtools.devprod.cloudflare.dev/js_app?${query.toString()}`;
 	const errorMessage =
 		"Failed to open inspector.\nInspector depends on having a Chromium-based browser installed, maybe you need to install one?";
 

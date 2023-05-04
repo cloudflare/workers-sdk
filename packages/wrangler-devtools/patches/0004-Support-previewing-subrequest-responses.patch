@@ -1,7 +1,7 @@
 From 6c4581cd2e985e8e94aa3c9091faec45743da6e4 Mon Sep 17 00:00:00 2001
 From: bcoll <bcoll@cloudflare.com>
 Date: Mon, 16 Jan 2023 14:26:52 +0000
-Subject: [PATCH 04/14] Support previewing subrequest responses
+Subject: [PATCH 04/15] Support previewing subrequest responses
 
 ---
  front_end/core/sdk/NetworkManager.ts   | 9 +++++++--
@@ -61,5 +61,5 @@ index 213ca7fecd..ef5c568e96 100644
  import '../../panels/js_profiler/js_profiler-meta.js';
  
 -- 
-2.37.1 (Apple Git-137.1)
+2.39.2 (Apple Git-143)
 

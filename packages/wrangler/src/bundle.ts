@@ -380,7 +380,8 @@ export async function bundleWorker(
 		external: bundle ? ["__STATIC_CONTENT_MANIFEST"] : undefined,
 		format: entry.format === "modules" ? "esm" : "iife",
 		target: COMMON_ESBUILD_OPTIONS.target,
-		sourcemap: sourcemap ?? true, // this needs to use ?? to accept false
+		// In `dev` mode, generate an external sourcemap, which will be appended later
+		sourcemap: sourcemap ?? (targetConsumer === "dev" ? "external" : true),
 		// Include a reference to the output folder in the sourcemap.
 		// This is omitted by default, but we need it to properly resolve source paths in error output.
 		sourceRoot: destination,
@@ -454,6 +455,53 @@ export async function bundleWorker(
 		entry.directory,
 		entryPointOutputs[0][0]
 	);
+
+	// Don't modify sourcemaps unless in interactive dev mode
+	// In publish (build) mode, the sourcemap should be considered part of the public API of Wrangler
+	if (targetConsumer === "dev") {
+		// Don't include the temporary directory in the source map path
+		// This should generate something of the form index.js.map
+		// This path is never resolved (by DevTools or Wrangler), so this is purely
+		// to generate slightly nicer looking source map URL comments
+		const relativeSourceMap = path.relative(
+			path.dirname(resolvedEntryPointPath),
+			sourceMapPath
+		);
+
+		// Read the generated source map from esbuild
+		const sourceMap = JSON.parse(fs.readFileSync(sourceMapPath, "utf-8"));
+
+		// The source root is a temporary directory (`tmpDir`), and so shouldn't be user-visible
+		// It provides no useful info to the user
+		sourceMap.sourceRoot = "";
+
+		// See https://docs.google.com/document/d/1U1RGAehQwRypUTovF1KRlpiOFze0b-_2gc6fAH0KY0k/edit#heading=h.mt2g20loc2ct
+		// The above link documents the x_google_ignoreList property, which is intended to mark code that shouldn't be visible in DevTools
+		// Here we use it to indicate specifically Wrangler-injected code (facades & middleware)
+		sourceMap.x_google_ignoreList = sourceMap.sources
+			// Filter anything in the generated tmpDir, and anything from Wrangler's templates
+			// This should cover facades and middleware, but intentionally doesn't include all non-user code e.g. node_modules
+			.map((s: string, idx: number) =>
+				s.includes(tmpDir.path) || s.includes("wrangler/templates") ? idx : null
+			)
+			.filter((i: number | null) => i !== null);
+
+		sourceMap.sources = sourceMap.sources.map(
+			(s: string) =>
+				// These are never loaded by Wrangler or DevTools. However, the presence of a scheme is required for DevTools to show the path as folders in the Sources view
+				// The scheme is intentially not the same as for the sourceMappingURL
+				// Without this difference in scheme, DevTools will not strip prefix `../` path elements from top level folders (../node_modules -> node_modules, for instance)
+				`worker://${entry.name}/${path.relative(entry.directory, s)}`
+		);
+
+		fs.writeFileSync(sourceMapPath, JSON.stringify(sourceMap));
+
+		// Use the `wrangler://` protocol, which triggers DevTools to load the sourcemap over the DevTools protocol, rather than directly (over the network or filesystem)
+		fs.appendFileSync(
+			resolvedEntryPointPath,
+			`\n//# sourceMappingURL=wrangler://${relativeSourceMap}`
+		);
+	}
 
 	// copy all referenced modules into the output bundle directory
 	for (const module of moduleCollector.modules) {

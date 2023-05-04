@@ -107,6 +107,7 @@ export function Remote(props: RemoteProps) {
 		logToTerminal: true,
 		sourceMapPath: props.sourceMapPath,
 		host: previewToken?.host,
+		name: props.name,
 	});
 
 	const errorHandler = useErrorHandler();

@@ -51,6 +51,7 @@ export function buildWorker({
 			directory: functionsDirectory,
 			format: "modules",
 			moduleRoot: functionsDirectory,
+			name: "pages-worker",
 		},
 		outdir ? resolve(outdir) : resolve(outfile),
 		{
@@ -205,6 +206,7 @@ export function buildRawWorker({
 			directory: resolve(directory),
 			format: "modules",
 			moduleRoot: resolve(directory),
+			name: "pages-worker",
 		},
 		outdir ? resolve(outdir) : resolve(outfile),
 		{

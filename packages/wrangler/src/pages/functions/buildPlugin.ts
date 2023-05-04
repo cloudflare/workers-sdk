@@ -29,6 +29,7 @@ export function buildPlugin({
 			directory: functionsDirectory,
 			format: "modules",
 			moduleRoot: functionsDirectory,
+			name: "pages-plugin",
 		},
 		resolve(outdir),
 		{

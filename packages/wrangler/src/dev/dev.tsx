@@ -188,6 +188,7 @@ function InteractiveDevSession(props: DevProps) {
 		inspect: props.inspect,
 		localProtocol: props.localProtocol,
 		forceLocal: props.forceLocal,
+		worker: props.name,
 	});
 
 	ip = props.initialIp;
@@ -350,6 +351,7 @@ function DevSession(props: DevSessionProps) {
 			experimentalLocal={props.experimentalLocal}
 			accountId={props.accountId}
 			experimentalLocalRemoteKv={props.experimentalLocalRemoteKv}
+			sourceMapPath={bundle?.sourceMapPath}
 		/>
 	) : (
 		<Remote
@@ -528,6 +530,7 @@ function useHotkeys(props: {
 	inspect: boolean;
 	localProtocol: "http" | "https";
 	forceLocal: boolean | undefined;
+	worker: string | undefined;
 }) {
 	const { initial, inspectorPort, inspect, localProtocol, forceLocal } = props;
 	// UGH, we should put port in context instead
@@ -560,7 +563,7 @@ function useHotkeys(props: {
 				// toggle inspector
 				case "d": {
 					if (inspect) {
-						await openInspector(inspectorPort);
+						await openInspector(inspectorPort, props.worker);
 					}
 					break;
 				}
