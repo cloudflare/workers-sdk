@@ -60,11 +60,11 @@ export function initOptions(yargs: CommonYargsArgv) {
 			type: "string",
 			requiresArg: true,
 		})
-		.option("do-not-delegate", {
-			describe: "Do not delegate to Create Cloudflare CLI (C3)",
+		.option("delegate-c3", {
+			describe: "Delegate to Create Cloudflare CLI (C3)",
 			type: "boolean",
 			hidden: true,
-			default: true, // will be false in v3
+			default: false, // will be true in v3
 		});
 }
 
@@ -204,7 +204,7 @@ export async function initHandler(args: InitArgs) {
 		);
 
 		// C3 will run wrangler with the --do-not-delegate flag to communicate with the API
-		if (!args.doNotDelegate) {
+		if (args.delegateC3) {
 			logger.log(`Running ${replacementC3Command}...`);
 
 			await execa(packageManager.type, [
@@ -244,7 +244,7 @@ export async function initHandler(args: InitArgs) {
 				`The \`init\` command is no longer supported. Please use ${replacementC3Command} instead.\nThe \`init\` command will be removed in a future version.`
 			);
 
-			if (!args.doNotDelegate) {
+			if (args.delegateC3) {
 				logger.log(`Running ${replacementC3Command}...`);
 
 				await execa(packageManager.type, ["create", "cloudflare"]);
