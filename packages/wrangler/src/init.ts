@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import { writeFile, mkdir } from "node:fs/promises";
-import path from "node:path";
+import path, { dirname, resolve } from "node:path";
 import TOML from "@iarna/toml";
 import { findUp } from "find-up";
 import { version as wranglerVersion } from "../package.json";
@@ -486,12 +486,18 @@ export async function initHandler(args: InitArgs) {
 					`/accounts/${accountId}/workers/services/${fromDashScriptName}/environments/${defaultEnvironment}/content`
 				);
 
-				for (const file of dashScript) {
-					await writeFile(
-						path.join(creationDirectory, `./src/${file.name}`),
-						file.stream() as ReadableStream
-					);
-				}
+				// TODO: writeFile in small batches to not exhaust system file descriptors
+				await Promise.all(
+					dashScript.map(async (file) => {
+						const filepath = path
+							.join(creationDirectory, `./src/${file.name}`)
+							.replace(/\.js$/, ".ts"); // change javascript extension to typescript extension
+						const directory = dirname(filepath);
+
+						await mkdir(directory, { recursive: true });
+						await writeFile(filepath, file.stream() as ReadableStream);
+					})
+				);
 
 				await writePackageJsonScriptsAndUpdateWranglerToml({
 					isWritingScripts: shouldWritePackageJsonScripts,
@@ -594,12 +600,16 @@ export async function initHandler(args: InitArgs) {
 					`/accounts/${accountId}/workers/services/${fromDashScriptName}/environments/${defaultEnvironment}/content`
 				);
 
-				for (const file of dashScript) {
-					await writeFile(
-						path.join(creationDirectory, `./src/${file.name}`),
-						file.stream() as ReadableStream
-					);
-				}
+				// TODO: writeFile in small batches to not exhaust system file descriptors
+				await Promise.all(
+					dashScript.map(async (file) => {
+						const filepath = path.join(creationDirectory, `./src/${file.name}`);
+						const directory = dirname(filepath);
+
+						await mkdir(directory, { recursive: true });
+						await writeFile(filepath, file.stream() as ReadableStream);
+					})
+				);
 
 				await writePackageJsonScriptsAndUpdateWranglerToml({
 					isWritingScripts: shouldWritePackageJsonScripts,

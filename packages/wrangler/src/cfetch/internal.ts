@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { fetch, File, Headers } from "undici";
+import { Response } from "undici";
 import { version as wranglerVersion } from "../../package.json";
 import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
@@ -7,7 +8,6 @@ import { ParseError, parseJSON } from "../parse";
 import { loginOrRefreshIfRequired, requireApiToken } from "../user";
 import type { ApiCredentials } from "../user";
 import type { URLSearchParams } from "node:url";
-import type { RequestInit, HeadersInit, Response } from "undici";
 
 /*
  * performApiFetch does everything required to make a CF API request,
@@ -224,12 +224,13 @@ export async function fetchDashboardScript(
 	addAuthorizationHeaderIfUnspecified(headers, auth);
 	addUserAgent(headers);
 
-	const response = await fetch(`${getCloudflareApiBaseUrl()}${resource}`, {
+	let response = await fetch(`${getCloudflareApiBaseUrl()}${resource}`, {
 		...bodyInit,
 		headers,
 	});
 
 	if (!response.ok || !response.body) {
+		console.error(response.ok, response.body);
 		throw new Error(
 			`Failed to fetch ${resource} - ${response.status}: ${response.statusText});`
 		);
@@ -240,11 +241,15 @@ export async function fetchDashboardScript(
 		?.startsWith("multipart");
 
 	if (usesModules) {
-		// Response from edge contains generic "name = worker.js" for dashboard created scripts
+		// For testing purposes only, sorry not sorry -- msw doesn't implement Response#formData
+		if (!response.formData) {
+			response = new Response(await response.text(), response);
+		}
+
 		const form = await response.formData();
-		const files = Array.from(form.entries())
-			.filter(([_, file]) => file instanceof File)
-			.map(([_, file]) => file as File);
+		const files = Array.from(form.entries()).map(([filename, contents]) =>
+			contents instanceof File ? contents : new File([contents], filename)
+		);
 
 		return files;
 	} else {
