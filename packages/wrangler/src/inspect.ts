@@ -16,6 +16,7 @@ import type Protocol from "devtools-protocol";
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import type { MessageEvent } from "ws";
 import { readFileSync } from "fs";
+import path from "path";
 
 /**
  * `useInspector` is a hook for debugging Workers applications
@@ -41,6 +42,13 @@ import { readFileSync } from "fs";
  * - handle more methods from console
  */
 
+// Information about Wrangler's bundling process that needs passsed through
+// for DevTools sourcemap transformation
+export interface SourceMapMetadata {
+	tmpDir: string;
+	entryDirectory: string;
+}
+
 interface InspectorProps {
 	/**
 	 * The port that the local proxy server should listen on.
@@ -59,7 +67,9 @@ interface InspectorProps {
 	/**
 	 * Sourcemap path, so that stacktraces can be interpretted
 	 */
-	sourceMapPath?: string | undefined;
+	sourceMapPath: string | undefined;
+
+	sourceMapMetadata: SourceMapMetadata | undefined;
 
 	host?: string;
 
@@ -501,15 +511,50 @@ export default function useInspector(props: InspectorProps) {
 				const message = JSON.parse(event.data as string);
 				if (
 					message.method === "Network.loadNetworkResource" &&
-					props?.sourceMapPath
+					props.sourceMapPath !== undefined &&
+					props.sourceMapMetadata !== undefined
 				) {
+					// Read the generated source map from esbuild
+					const sourceMap = JSON.parse(
+						readFileSync(props.sourceMapPath, "utf-8")
+					);
+
+					// The source root is a temporary directory (`tmpDir`), and so shouldn't be user-visible
+					// It provides no useful info to the user
+					sourceMap.sourceRoot = "";
+
+					const tmpDir = props.sourceMapMetadata.tmpDir;
+
+					// See https://docs.google.com/document/d/1U1RGAehQwRypUTovF1KRlpiOFze0b-_2gc6fAH0KY0k/edit#heading=h.mt2g20loc2ct
+					// The above link documents the x_google_ignoreList property, which is intended to mark code that shouldn't be visible in DevTools
+					// Here we use it to indicate specifically Wrangler-injected code (facades & middleware)
+					sourceMap.x_google_ignoreList = sourceMap.sources
+						// Filter anything in the generated tmpDir, and anything from Wrangler's templates
+						// This should cover facades and middleware, but intentionally doesn't include all non-user code e.g. node_modules
+						.map((s: string, idx: number) =>
+							s.includes(tmpDir) || s.includes("wrangler/templates")
+								? idx
+								: null
+						)
+						.filter((i: number | null) => i !== null);
+
+					const entryDirectory = props.sourceMapMetadata.entryDirectory;
+
+					sourceMap.sources = sourceMap.sources.map(
+						(s: string) =>
+							// These are never loaded by Wrangler or DevTools. However, the presence of a scheme is required for DevTools to show the path as folders in the Sources view
+							// The scheme is intentially not the same as for the sourceMappingURL
+							// Without this difference in scheme, DevTools will not strip prefix `../` path elements from top level folders (../node_modules -> node_modules, for instance)
+							`worker://${props.name}/${path.relative(entryDirectory, s)}`
+					);
+
 					sendMessageToLocalWebSocket({
 						data: JSON.stringify({
 							id: message.id,
 							result: {
 								resource: {
 									success: true,
-									text: readFileSync(props?.sourceMapPath, "utf8"),
+									text: JSON.stringify(sourceMap),
 								},
 							},
 						}),

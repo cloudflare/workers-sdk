@@ -300,6 +300,7 @@ async function runEsbuild({
 		modules: traverseModuleGraphResult?.modules ?? bundleResult?.modules ?? [],
 		dependencies: bundleResult?.dependencies ?? {},
 		sourceMapPath: bundleResult?.sourceMapPath,
+		sourceMapMetadata: bundleResult?.sourceMapMetadata,
 	};
 }
 

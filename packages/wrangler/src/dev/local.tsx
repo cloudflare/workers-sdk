@@ -98,6 +98,7 @@ export function Local(props: LocalProps) {
 		logToTerminal: props.experimentalLocal ?? false,
 		sourceMapPath: props.sourceMapPath,
 		name: props.name,
+		sourceMapMetadata: props.bundle?.sourceMapMetadata,
 	});
 	return null;
 }
