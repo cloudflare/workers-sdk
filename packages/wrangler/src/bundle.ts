@@ -12,8 +12,8 @@ import type { Config } from "./config";
 import type { DurableObjectBindings } from "./config/environment";
 import type { WorkerRegistry } from "./dev-registry";
 import type { Entry } from "./entry";
+import type { SourceMapMetadata } from "./inspect";
 import type { CfModule } from "./worker";
-import { SourceMapMetadata } from "./inspect";
 
 export const COMMON_ESBUILD_OPTIONS = {
 	// Our workerd runtime uses the same V8 version as recent Chrome, which is highly ES2022 compliant: https://kangax.github.io/compat-table/es2016plus/
