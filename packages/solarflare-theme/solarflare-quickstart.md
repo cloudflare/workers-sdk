@@ -1,4 +1,4 @@
-# Welcome to your VS Code Extension
+# Developing Solarflare Theme
 
 ## What's in the folder
 
@@ -8,9 +8,10 @@
 
 ## Get up and running straight away
 
-- Press `F5` to open a new window with your extension loaded.
-- Open `File > Preferences > Color Themes` and pick your color theme.
-- Open a file that has a language associated. The languages' configured grammar will tokenize the text and assign 'scopes' to the tokens. To examine these scopes, invoke the `Developer: Inspect Editor Tokens and Scopes` command from the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P` on Mac).
+- In the monorepo, you will need to open VSCode directly in `packages/solarflare-theme` to run the follow steps.
+  - Press `F5` to open a new window with your extension loaded.
+  - Open `File > Preferences > Color Themes` and pick your color theme.
+  - Open a file that has a language associated. The languages' configured grammar will tokenize the text and assign 'scopes' to the tokens. To examine these scopes, invoke the `Developer: Inspect Editor Tokens and Scopes` command from the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P` on Mac).
 
 ## Make changes
 
@@ -22,7 +23,8 @@
 
 To learn more about scopes and how they're used, check out the [color theme](https://code.visualstudio.com/api/extension-guides/color-theme) documentation.
 
-## Install your extension
+<!-- ## Install your extension
+We should publish the theme to the marketplace, but for now, we can install it locally.
 
 - To start using your extension with Visual Studio Code copy it into the `<user home>/.vscode/extensions` folder and restart Code.
-- To share your extension with the world, read on https://code.visualstudio.com/docs about publishing an extension.
+- To share your extension with the world, read on https://code.visualstudio.com/docs about publishing an extension. -->
