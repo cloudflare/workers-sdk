@@ -90,7 +90,7 @@ export function rewriteNodeCompatBuildFailure(
 				forPages
 					? 'Add the "nodejs_compat" compatibility flag to your Pages project'
 					: 'Add "node_compat = true" to your wrangler.toml file'
-			} to enable Node compatibility.`;
+			} to enable Node.js compatibility.`;
 
 			error.notes = [
 				{
