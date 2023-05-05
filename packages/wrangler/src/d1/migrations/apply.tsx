@@ -28,13 +28,24 @@ import type {
 } from "../../yargs-types";
 
 export function ApplyOptions(yargs: CommonYargsArgv) {
-	return MigrationOptions(yargs);
+	return MigrationOptions(yargs).option("experimental", {
+		default: false,
+		describe: "Use new experimental DB backend",
+		type: "boolean",
+	});
 }
 
 type ApplyHandlerOptions = StrictYargsOptionsToInterface<typeof ApplyOptions>;
 
 export const ApplyHandler = withConfig<ApplyHandlerOptions>(
-	async ({ config, database, local, persistTo, preview }): Promise<void> => {
+	async ({
+		config,
+		database,
+		local,
+		persistTo,
+		preview,
+		experimental,
+	}): Promise<void> => {
 		logger.log(d1BetaWarning);
 
 		const databaseInfo = getDatabaseInfoFromConfig(config, database);
@@ -116,7 +127,7 @@ Your database may not be available to serve requests during the migration, conti
 		if (!ok) return;
 
 		// don't backup prod db when applying migrations locally or in preview
-		if (!local && !preview) {
+		if (!local && !preview && !experimental) {
 			assert(
 				databaseInfo,
 				"In non-local mode `databaseInfo` should be defined."
