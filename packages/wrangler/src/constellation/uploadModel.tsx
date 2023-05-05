@@ -4,7 +4,6 @@ import { fetchResult } from "../cfetch";
 import { withConfig } from "../config";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
-import { takeName } from "./options";
 import { constellationBetaWarning, getProjectByName } from "./utils";
 import type {
 	CommonYargsArgv,
@@ -13,7 +12,12 @@ import type {
 import type { Model } from "./types";
 
 export function options(yargs: CommonYargsArgv) {
-	return takeName(yargs)
+	return yargs
+		.positional("projectName", {
+			describe: "The name of the project",
+			type: "string",
+			demandOption: true,
+		})
 		.positional("modelName", {
 			describe: "The name of the uploaded model",
 			type: "string",
@@ -24,15 +28,27 @@ export function options(yargs: CommonYargsArgv) {
 			type: "string",
 			demandOption: true,
 		})
+		.option("description", {
+			describe: "include a description of the model",
+			type: "string",
+			demandOption: false,
+			alias: "d",
+		})
 		.epilogue(constellationBetaWarning);
 }
 type HandlerOptions = StrictYargsOptionsToInterface<typeof options>;
 export const handler = withConfig<HandlerOptions>(
-	async ({ name, modelName, modelFile, config }): Promise<void> => {
+	async ({
+		projectName,
+		modelName,
+		modelFile,
+		description,
+		config,
+	}): Promise<void> => {
 		const accountId = await requireAuth(config);
 		logger.log(constellationBetaWarning);
 
-		const proj = await getProjectByName(config, accountId, name);
+		const proj = await getProjectByName(config, accountId, projectName);
 
 		const formData = new FormData();
 		formData.set(
@@ -42,6 +58,10 @@ export const handler = withConfig<HandlerOptions>(
 			})
 		);
 		formData.set("name", modelName);
+
+		if (description !== undefined) {
+			formData.set("description", description);
+		}
 
 		let model: Model;
 		try {
