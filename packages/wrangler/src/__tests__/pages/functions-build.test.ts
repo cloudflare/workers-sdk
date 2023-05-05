@@ -448,6 +448,8 @@ export default {
 		"Build failed with 1 error:
 		hello.js:2:36: ERROR: Could not resolve \\"node:async_hooks\\""
 	`);
+	expect(std.err).toContain("The package \"node:async_hooks\" wasn't found on the file system but is built into node.");
+	expect(std.err).toContain("Add the \"nodejs_compat\" compatibility flag to your Pages project to enable Node.js compatibility.");
 	});
 
 	it("should compile a _worker.js/ directory", async () => {

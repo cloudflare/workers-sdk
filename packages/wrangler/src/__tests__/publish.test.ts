@@ -7224,7 +7224,7 @@ export default{
 			expect(
 				esbuild.formatMessagesSync(err?.errors ?? [], { kind: "error" }).join()
 			).toMatch(
-				/The package "path" wasn't found on the file system but is built into node\.\s+Add "node_compat = true" to your wrangler\.toml file to enable Node compatibility\./
+				/The package "path" wasn't found on the file system but is built into node\.\s+Add "node_compat = true" to your wrangler\.toml file to enable Node.js compatibility\./
 			);
 		});
 
