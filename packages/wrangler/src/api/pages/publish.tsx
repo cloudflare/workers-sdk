@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve as resolvePath } from "node:path";
 import { cwd } from "node:process";
@@ -14,6 +14,7 @@ import {
 import {
 	buildRawWorker,
 	checkRawWorker,
+	traverseAndBuildWorkerJSDirectory,
 } from "../../pages/functions/buildWorker";
 import { validateRoutes } from "../../pages/functions/routes-validation";
 import { upload } from "../../pages/upload";
@@ -65,7 +66,7 @@ interface PagesPublishOptions {
 
 	/**
 	 * Whether to run bundling on `_worker.js` before deploying.
-	 * Default: false
+	 * Default: true
 	 */
 	bundle?: boolean;
 
@@ -95,9 +96,12 @@ export async function publish({
 		_redirects: string | undefined,
 		_routesGenerated: string | undefined,
 		_routesCustom: string | undefined,
+		_workerJSIsDirectory = false,
 		_workerJS: string | undefined;
 
-	const workerScriptPath = resolvePath(directory, "_worker.js");
+	bundle = bundle ?? true;
+
+	const _workerPath = resolvePath(directory, "_worker.js");
 
 	try {
 		_headers = readFileSync(join(directory, "_headers"), "utf-8");
@@ -116,7 +120,10 @@ export async function publish({
 	} catch {}
 
 	try {
-		_workerJS = readFileSync(workerScriptPath, "utf-8");
+		_workerJSIsDirectory = lstatSync(_workerPath).isDirectory();
+		if (!_workerJSIsDirectory) {
+			_workerJS = readFileSync(_workerPath, "utf-8");
+		}
 	} catch {}
 
 	// Grab the bindings from the API, we need these for shims and other such hacky inserts
@@ -240,16 +247,23 @@ export async function publish({
 	 * Advanced Mode
 	 * https://developers.cloudflare.com/pages/platform/functions/#advanced-mode
 	 *
-	 * When using a _worker.js file, the entire /functions directory is ignored
+	 * When using a _worker.js file or _worker.js/ directory, the entire /functions directory is ignored
 	 * – this includes its routing and middleware characteristics.
 	 */
-	if (_workerJS) {
+	if (_workerJSIsDirectory) {
+		workerBundle = await traverseAndBuildWorkerJSDirectory({
+			workerJSDirectory: _workerPath,
+			buildOutputDirectory: directory,
+			d1Databases,
+			nodejsCompat,
+		});
+	} else if (_workerJS) {
 		if (bundle) {
 			const outfile = join(tmpdir(), `./bundledWorker-${Math.random()}.mjs`);
 			workerBundle = await buildRawWorker({
-				workerScriptPath,
+				workerScriptPath: _workerPath,
 				outfile,
-				directory: directory ?? ".",
+				directory,
 				local: false,
 				sourcemap: true,
 				watch: false,
@@ -258,17 +272,19 @@ export async function publish({
 				nodejsCompat,
 			});
 		} else {
-			await checkRawWorker(workerScriptPath, () => {});
-			// TODO: Replace this with the cool new no-bundle stuff when that lands: https://github.com/cloudflare/workers-sdk/pull/2769
+			await checkRawWorker(_workerPath, () => {});
+			// TODO: Let users configure this in the future.
 			workerBundle = {
 				modules: [],
 				dependencies: {},
 				stop: undefined,
-				resolvedEntryPointPath: workerScriptPath,
+				resolvedEntryPointPath: _workerPath,
 				bundleType: "esm",
 			};
 		}
+	}
 
+	if (_workerJS || _workerJSIsDirectory) {
 		const workerBundleContents = await createUploadWorkerBundleContents(
 			workerBundle as BundleResult
 		);
@@ -302,7 +318,7 @@ export async function publish({
 	 * Pages Functions
 	 * https://developers.cloudflare.com/pages/platform/functions/
 	 */
-	if (builtFunctions && !_workerJS) {
+	if (builtFunctions && !_workerJS && !_workerJSIsDirectory) {
 		const workerBundleContents = await createUploadWorkerBundleContents(
 			workerBundle as BundleResult
 		);

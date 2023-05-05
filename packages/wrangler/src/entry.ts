@@ -35,6 +35,7 @@ export async function getEntry(
 		script?: string;
 		format?: CfScriptFormat | undefined;
 		assets?: string | undefined;
+		moduleRoot?: string;
 	},
 	config: Config,
 	command: "dev" | "publish" | "types"
@@ -113,7 +114,7 @@ export async function getEntry(
 		file,
 		directory,
 		format,
-		moduleRoot: config.base_dir ?? path.dirname(file),
+		moduleRoot: args.moduleRoot ?? config.base_dir ?? path.dirname(file),
 	};
 }
 

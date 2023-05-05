@@ -92,6 +92,7 @@ export async function startDevServer(
 			entry: props.entry,
 			destination: directory.name,
 			jsxFactory: props.jsxFactory,
+			processEntrypoint: props.processEntrypoint,
 			rules: props.rules,
 			jsxFragment: props.jsxFragment,
 			serveAssetsFromWorker: Boolean(
@@ -205,6 +206,7 @@ async function runEsbuild({
 	destination,
 	jsxFactory,
 	jsxFragment,
+	processEntrypoint,
 	rules,
 	assets,
 	betaD1Shims,
@@ -227,6 +229,7 @@ async function runEsbuild({
 	destination: string | undefined;
 	jsxFactory: string | undefined;
 	jsxFragment: string | undefined;
+	processEntrypoint: boolean;
 	rules: Config["rules"];
 	assets: Config["assets"];
 	betaD1Shims?: string[];
@@ -247,49 +250,55 @@ async function runEsbuild({
 }): Promise<EsbuildBundle | undefined> {
 	if (!destination) return;
 
-	const {
-		resolvedEntryPointPath,
-		bundleType,
-		modules,
-		dependencies,
-		sourceMapPath,
-	}: Awaited<ReturnType<typeof bundleWorker>> = noBundle
-		? await traverseModuleGraph(entry, rules)
-		: await bundleWorker(entry, destination, {
-				serveAssetsFromWorker,
-				jsxFactory,
-				jsxFragment,
-				rules,
-				tsconfig,
-				minify,
-				legacyNodeCompat,
-				nodejsCompat,
-				define,
-				checkFetch: true,
-				assets: assets && {
-					...assets,
-					// disable the cache in dev
-					bypassCache: true,
-				},
-				betaD1Shims,
-				workerDefinitions,
-				services,
-				firstPartyWorkerDevFacade,
-				targetConsumer: "dev", // We are starting a dev server
-				testScheduled,
-				local,
-				experimentalLocal,
-				doBindings,
-		  });
+	let traverseModuleGraphResult:
+		| Awaited<ReturnType<typeof bundleWorker>>
+		| undefined;
+	let bundleResult: Awaited<ReturnType<typeof bundleWorker>> | undefined;
+	if (noBundle) {
+		traverseModuleGraphResult = await traverseModuleGraph(entry, rules);
+	}
+
+	if (processEntrypoint || !noBundle) {
+		bundleResult = await bundleWorker(entry, destination, {
+			bundle: !noBundle,
+			disableModuleCollection: noBundle,
+			serveAssetsFromWorker,
+			jsxFactory,
+			jsxFragment,
+			rules,
+			tsconfig,
+			minify,
+			legacyNodeCompat,
+			nodejsCompat,
+			define,
+			checkFetch: true,
+			assets: assets && {
+				...assets,
+				// disable the cache in dev
+				bypassCache: true,
+			},
+			betaD1Shims,
+			workerDefinitions,
+			services,
+			firstPartyWorkerDevFacade,
+			targetConsumer: "dev", // We are starting a dev server
+			testScheduled,
+			local,
+			experimentalLocal,
+			doBindings,
+		});
+	}
 
 	return {
 		id: 0,
 		entry,
-		path: resolvedEntryPointPath,
-		type: bundleType,
-		modules,
-		dependencies,
-		sourceMapPath,
+		path: bundleResult?.resolvedEntryPointPath ?? entry.file,
+		type:
+			bundleResult?.bundleType ??
+			(entry.format === "modules" ? "esm" : "commonjs"),
+		modules: traverseModuleGraphResult?.modules ?? bundleResult?.modules ?? [],
+		dependencies: bundleResult?.dependencies ?? {},
+		sourceMapPath: bundleResult?.sourceMapPath,
 	};
 }
 

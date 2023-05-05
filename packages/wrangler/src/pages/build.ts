@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, writeFileSync } from "node:fs";
 import { basename, dirname, relative, resolve as resolvePath } from "node:path";
 import { createUploadWorkerBundleContents } from "../api/pages/create-worker-bundle-contents";
 import { FatalError } from "../errors";
@@ -12,7 +12,10 @@ import {
 	FunctionsNoRoutesError,
 	getFunctionsNoRoutesWarning,
 } from "./errors";
-import { buildRawWorker } from "./functions/buildWorker";
+import {
+	buildRawWorker,
+	traverseAndBuildWorkerJSDirectory,
+} from "./functions/buildWorker";
 import { pagesBetaWarning } from "./utils";
 import type { BundleResult } from "../bundle";
 import type {
@@ -208,21 +211,30 @@ export const Handler = async (args: PagesBuildArgs) => {
 		 * and if we were able to resolve _worker.js
 		 */
 		if (workerScriptPath) {
-			/**
-			 * `buildRawWorker` builds `_worker.js`, but doesn't give us the bundle
-			 * we want to return, which includes the external dependencies (like wasm,
-			 * binary, text). Let's output that build result to memory and only write
-			 * to disk once we have the final bundle
-			 */
-			bundle = await buildRawWorker({
-				workerScriptPath,
-				outdir,
-				directory: buildOutputDirectory,
-				local: false,
-				sourcemap,
-				watch,
-				betaD1Shims: d1Databases,
-			});
+			if (lstatSync(workerScriptPath).isDirectory()) {
+				bundle = await traverseAndBuildWorkerJSDirectory({
+					workerJSDirectory: workerScriptPath,
+					buildOutputDirectory,
+					d1Databases,
+					nodejsCompat,
+				});
+			} else {
+				/**
+				 * `buildRawWorker` builds `_worker.js`, but doesn't give us the bundle
+				 * we want to return, which includes the external dependencies (like wasm,
+				 * binary, text). Let's output that build result to memory and only write
+				 * to disk once we have the final bundle
+				 */
+				bundle = await buildRawWorker({
+					workerScriptPath,
+					outdir,
+					directory: buildOutputDirectory,
+					local: false,
+					sourcemap,
+					watch,
+					betaD1Shims: d1Databases,
+				});
+			}
 		} else {
 			try {
 				/**
