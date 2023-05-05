@@ -75,6 +75,7 @@ export interface LocalProps {
 	experimentalLocal: boolean | undefined;
 	accountId: string | undefined; // Account ID? In local mode??? :exploding_head:
 	experimentalLocalRemoteKv: boolean | undefined;
+	sourceMapPath: string | undefined;
 }
 
 type InspectorJSON = {
@@ -95,6 +96,9 @@ export function Local(props: LocalProps) {
 		inspectorUrl,
 		port: props.inspectorPort,
 		logToTerminal: props.experimentalLocal ?? false,
+		sourceMapPath: props.sourceMapPath,
+		name: props.name,
+		sourceMapMetadata: props.bundle?.sourceMapMetadata,
 	});
 	return null;
 }

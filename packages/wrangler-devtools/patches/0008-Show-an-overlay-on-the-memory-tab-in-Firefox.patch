@@ -1,7 +1,7 @@
 From 70e79d4a4e1821021d0df627a23d62ede6c558ba Mon Sep 17 00:00:00 2001
 From: Samuel Macleod <smacleod@cloudflare.com>
 Date: Thu, 19 Jan 2023 18:49:47 +0000
-Subject: [PATCH 08/14] Show an overlay on the memory tab in Firefox
+Subject: [PATCH 08/15] Show an overlay on the memory tab in Firefox
 
 ---
  front_end/entrypoint_template.html          | 18 ++++++++++++++++--
@@ -71,5 +71,5 @@ index 693621a273..9b330e7cf0 100644
    flex: auto;
    position: relative;
 -- 
-2.37.1 (Apple Git-137.1)
+2.39.2 (Apple Git-143)
 

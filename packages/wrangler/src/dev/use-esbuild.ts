@@ -8,6 +8,7 @@ import traverseModuleGraph from "../traverse-module-graph";
 import type { Config } from "../config";
 import type { WorkerRegistry } from "../dev-registry";
 import type { Entry } from "../entry";
+import type { SourceMapMetadata } from "../inspect";
 import type { CfModule } from "../worker";
 import type { WatchMode, Metafile } from "esbuild";
 
@@ -19,6 +20,7 @@ export type EsbuildBundle = {
 	modules: CfModule[];
 	dependencies: Metafile["outputs"][string]["inputs"];
 	sourceMapPath: string | undefined;
+	sourceMapMetadata: SourceMapMetadata | undefined;
 };
 
 export function useEsbuild({
@@ -169,6 +171,7 @@ export function useEsbuild({
 					traverseModuleGraphResult?.modules ?? bundleResult?.modules ?? [],
 				dependencies: bundleResult?.dependencies ?? {},
 				sourceMapPath: bundleResult?.sourceMapPath,
+				sourceMapMetadata: bundleResult?.sourceMapMetadata,
 			});
 		}
 

@@ -1,0 +1,13 @@
+{
+	"compilerOptions": {
+		"target": "es2021",
+		"lib": ["es2021"],
+		"module": "es2022",
+		"types": ["@cloudflare/workers-types/2022-11-30"],
+		"noEmit": true,
+		"isolatedModules": true,
+		"forceConsistentCasingInFileNames": true,
+		"strict": true,
+		"skipLibCheck": true
+	}
+}

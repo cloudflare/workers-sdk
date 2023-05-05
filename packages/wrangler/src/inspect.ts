@@ -1,9 +1,10 @@
+import { readFileSync } from "fs";
 import { readFile } from "fs/promises";
 import assert from "node:assert";
 import { createServer } from "node:http";
 import os from "node:os";
 import { URL } from "node:url";
-
+import path from "path";
 import open from "open";
 import { useEffect, useRef, useState } from "react";
 import { SourceMapConsumer } from "source-map";
@@ -40,6 +41,13 @@ import type { MessageEvent } from "ws";
  * - handle more methods from console
  */
 
+// Information about Wrangler's bundling process that needs passsed through
+// for DevTools sourcemap transformation
+export interface SourceMapMetadata {
+	tmpDir: string;
+	entryDirectory: string;
+}
+
 interface InspectorProps {
 	/**
 	 * The port that the local proxy server should listen on.
@@ -58,9 +66,13 @@ interface InspectorProps {
 	/**
 	 * Sourcemap path, so that stacktraces can be interpretted
 	 */
-	sourceMapPath?: string | undefined;
+	sourceMapPath: string | undefined;
+
+	sourceMapMetadata: SourceMapMetadata | undefined;
 
 	host?: string;
+
+	name?: string;
 }
 
 export default function useInspector(props: InspectorProps) {
@@ -494,6 +506,65 @@ export default function useInspector(props: InspectorProps) {
 		/** Send a message from the local websocket to the remote websocket */
 		function sendMessageToRemoteWebSocket(event: MessageEvent) {
 			try {
+				// Intercept Network.loadNetworkResource to load sourcemaps
+				const message = JSON.parse(event.data as string);
+				if (
+					message.method === "Network.loadNetworkResource" &&
+					props.sourceMapPath !== undefined &&
+					props.sourceMapMetadata !== undefined
+				) {
+					// Read the generated source map from esbuild
+					const sourceMap = JSON.parse(
+						readFileSync(props.sourceMapPath, "utf-8")
+					);
+
+					// The source root is a temporary directory (`tmpDir`), and so shouldn't be user-visible
+					// It provides no useful info to the user
+					sourceMap.sourceRoot = "";
+
+					const tmpDir = props.sourceMapMetadata.tmpDir;
+
+					// See https://docs.google.com/document/d/1U1RGAehQwRypUTovF1KRlpiOFze0b-_2gc6fAH0KY0k/edit#heading=h.mt2g20loc2ct
+					// The above link documents the x_google_ignoreList property, which is intended to mark code that shouldn't be visible in DevTools
+					// Here we use it to indicate specifically Wrangler-injected code (facades & middleware)
+					sourceMap.x_google_ignoreList = sourceMap.sources
+						// Filter anything in the generated tmpDir, and anything from Wrangler's templates
+						// This should cover facades and middleware, but intentionally doesn't include all non-user code e.g. node_modules
+						.map((s: string, idx: number) =>
+							s.includes(tmpDir) || s.includes("wrangler/templates")
+								? idx
+								: null
+						)
+						.filter((i: number | null) => i !== null);
+
+					const entryDirectory = props.sourceMapMetadata.entryDirectory;
+
+					sourceMap.sources = sourceMap.sources.map(
+						(s: string) =>
+							// These are never loaded by Wrangler or DevTools. However, the presence of a scheme is required for DevTools to show the path as folders in the Sources view
+							// The scheme is intentially not the same as for the sourceMappingURL
+							// Without this difference in scheme, DevTools will not strip prefix `../` path elements from top level folders (../node_modules -> node_modules, for instance)
+							`worker://${props.name}/${path.relative(entryDirectory, s)}`
+					);
+
+					sendMessageToLocalWebSocket({
+						data: JSON.stringify({
+							id: message.id,
+							result: {
+								resource: {
+									success: true,
+									text: JSON.stringify(sourceMap),
+								},
+							},
+						}),
+					});
+					return;
+				}
+			} catch (e) {
+				logger.debug(e);
+				// Ignore errors, fallthrough to the remote inspector
+			}
+			try {
 				assert(
 					remoteWebSocket,
 					"Trying to send a message to an undefined `remoteWebSocket`"
@@ -517,11 +588,28 @@ export default function useInspector(props: InspectorProps) {
 		}
 
 		/** Send a message from the local websocket to the remote websocket */
-		function sendMessageToLocalWebSocket(event: MessageEvent) {
+		function sendMessageToLocalWebSocket(event: Pick<MessageEvent, "data">) {
 			assert(
 				localWebSocket,
 				"Trying to send a message to an undefined `localWebSocket`"
 			);
+			try {
+				// Intercept Debugger.scriptParsed responses to inject URL schemes
+				const message = JSON.parse(event.data as string);
+				if (message.method === "Debugger.scriptParsed") {
+					// Add the worker:// scheme conditionally, since some module types already have schemes (e.g. wasm)
+					message.params.url = new URL(
+						message.params.url,
+						`worker://${props.name}`
+					).href;
+					localWebSocket.send(JSON.stringify(message));
+					return;
+				}
+			} catch (e) {
+				logger.debug(e);
+				// Ignore errors, fallthrough to the local websocket
+			}
+
 			localWebSocket.send(event.data);
 		}
 
@@ -555,7 +643,13 @@ export default function useInspector(props: InspectorProps) {
 				);
 			}
 		};
-	}, [localWebSocket, remoteWebSocket]);
+	}, [
+		localWebSocket,
+		remoteWebSocket,
+		props.name,
+		props.sourceMapMetadata,
+		props.sourceMapPath,
+	]);
 }
 
 // Credit: https://stackoverflow.com/a/2117523
@@ -744,8 +838,15 @@ function logConsoleMessage(evt: Protocol.Runtime.ConsoleAPICalledEvent): void {
 /**
  * Opens the chrome debugger
  */
-export const openInspector = async (inspectorPort: number) => {
-	const url = `https://devtools.devprod.cloudflare.dev/js_app?theme=systemPreferred&ws=localhost:${inspectorPort}/ws`;
+export const openInspector = async (
+	inspectorPort: number,
+	worker: string | undefined
+) => {
+	const query = new URLSearchParams();
+	query.set("theme", "systemPreferred");
+	query.set("ws", `localhost:${inspectorPort}/ws`);
+	if (worker) query.set("domain", worker);
+	const url = `https://devtools.devprod.cloudflare.dev/js_app?${query.toString()}`;
 	const errorMessage =
 		"Failed to open inspector.\nInspector depends on having a Chromium-based browser installed, maybe you need to install one?";
 

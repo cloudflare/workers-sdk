@@ -142,6 +142,7 @@ export async function startDevServer(
 				experimentalLocal: props.experimentalLocal,
 				accountId: props.accountId,
 				experimentalLocalRemoteKv: props.experimentalLocalRemoteKv,
+				sourceMapPath: bundle?.sourceMapPath,
 			});
 
 			return {
@@ -299,6 +300,7 @@ async function runEsbuild({
 		modules: traverseModuleGraphResult?.modules ?? bundleResult?.modules ?? [],
 		dependencies: bundleResult?.dependencies ?? {},
 		sourceMapPath: bundleResult?.sourceMapPath,
+		sourceMapMetadata: bundleResult?.sourceMapMetadata,
 	};
 }
 

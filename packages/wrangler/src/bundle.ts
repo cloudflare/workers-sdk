@@ -12,6 +12,7 @@ import type { Config } from "./config";
 import type { DurableObjectBindings } from "./config/environment";
 import type { WorkerRegistry } from "./dev-registry";
 import type { Entry } from "./entry";
+import type { SourceMapMetadata } from "./inspect";
 import type { CfModule } from "./worker";
 
 export const COMMON_ESBUILD_OPTIONS = {
@@ -27,6 +28,7 @@ export type BundleResult = {
 	bundleType: "esm" | "commonjs";
 	stop: (() => void) | undefined;
 	sourceMapPath?: string | undefined;
+	sourceMapMetadata?: SourceMapMetadata | undefined;
 };
 
 type StaticAssetsConfig =
@@ -380,7 +382,7 @@ export async function bundleWorker(
 		external: bundle ? ["__STATIC_CONTENT_MANIFEST"] : undefined,
 		format: entry.format === "modules" ? "esm" : "iife",
 		target: COMMON_ESBUILD_OPTIONS.target,
-		sourcemap: sourcemap ?? true, // this needs to use ?? to accept false
+		sourcemap: sourcemap ?? true,
 		// Include a reference to the output folder in the sourcemap.
 		// This is omitted by default, but we need it to properly resolve source paths in error output.
 		sourceRoot: destination,
@@ -470,6 +472,10 @@ export async function bundleWorker(
 		bundleType,
 		stop: result.stop,
 		sourceMapPath,
+		sourceMapMetadata: {
+			tmpDir: tmpDir.path,
+			entryDirectory: entry.directory,
+		},
 	};
 }
 
