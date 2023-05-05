@@ -25,6 +25,11 @@ export type Entry = {
 	format: CfScriptFormat;
 	/** The directory that contains all of a `--no-bundle` worker's modules. Usually `${directory}/src`. Defaults to path.dirname(file) */
 	moduleRoot: string;
+
+	/**
+	 * A worker's name
+	 */
+	name?: string | undefined;
 };
 
 /**
