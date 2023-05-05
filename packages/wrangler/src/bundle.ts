@@ -77,15 +77,25 @@ export function isBuildFailure(err: unknown): err is esbuild.BuildFailure {
  * Rewrites esbuild BuildFailures for failing to resolve Node built-in modules
  * to suggest enabling Node compat as opposed to `platform: "node"`.
  */
-export function rewriteNodeCompatBuildFailure(err: esbuild.BuildFailure) {
+export function rewriteNodeCompatBuildFailure(
+	err: esbuild.BuildFailure,
+	forPages = false
+) {
 	for (const error of err.errors) {
 		const match = nodeBuiltinResolveErrorText.exec(error.text);
 		if (match !== null) {
+			const issue = `The package "${match[1]}" wasn't found on the file system but is built into node.`;
+
+			const instructionForUser = `${
+				forPages
+					? 'Add the "nodejs_compat" compatibility flag to your Pages project'
+					: 'Add "node_compat = true" to your wrangler.toml file'
+			} to enable Node.js compatibility.`;
+
 			error.notes = [
 				{
 					location: null,
-					text: `The package "${match[1]}" wasn't found on the file system but is built into node.
-Add "node_compat = true" to your wrangler.toml file to enable Node compatibility.`,
+					text: `${issue}\n${instructionForUser}`,
 				},
 			];
 		}
@@ -148,6 +158,7 @@ export async function bundleWorker(
 		// TODO: Rip these out https://github.com/cloudflare/workers-sdk/issues/2153
 		disableModuleCollection?: boolean;
 		isOutfile?: boolean;
+		forPages?: boolean;
 	}
 ): Promise<BundleResult> {
 	const {
@@ -179,6 +190,7 @@ export async function bundleWorker(
 		plugins,
 		disableModuleCollection,
 		isOutfile,
+		forPages,
 	} = options;
 
 	// We create a temporary directory for any oneoff files we
@@ -412,7 +424,7 @@ export async function bundleWorker(
 		result = await esbuild.build(buildOptions);
 	} catch (e) {
 		if (!legacyNodeCompat && isBuildFailure(e))
-			rewriteNodeCompatBuildFailure(e);
+			rewriteNodeCompatBuildFailure(e, forPages);
 		throw e;
 	}
 

@@ -153,6 +153,7 @@ export function buildWorker({
 			targetConsumer: local ? "dev" : "publish",
 			local,
 			experimentalLocal: false,
+			forPages: true,
 		}
 	);
 }
@@ -227,6 +228,7 @@ export function buildRawWorker({
 			targetConsumer: local ? "dev" : "publish",
 			local,
 			experimentalLocal: false,
+			forPages: true,
 		}
 	);
 }
