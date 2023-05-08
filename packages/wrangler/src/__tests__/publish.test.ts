@@ -1919,11 +1919,7 @@ addEventListener('fetch', event => {});`
 			  "info": "",
 			  "out": "
 			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-			    - \\"assets\\" fields are experimental and may change or break at any time.
-
-			",
+			  "warn": "",
 			}
 		`);
 		});
@@ -1953,11 +1949,7 @@ addEventListener('fetch', event => {});`
 			  "info": "",
 			  "out": "
 			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-			    - \\"assets\\" fields are experimental and may change or break at any time.
-
-			",
+			  "warn": "",
 			}
 		`);
 		});
@@ -2051,11 +2043,7 @@ addEventListener('fetch', event => {});`
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
 			Current Deployment ID: Galaxy-Class",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-			    - \\"assets\\" fields are experimental and may change or break at any time.
-
-			",
+			  "warn": "",
 			}
 		`);
 		});

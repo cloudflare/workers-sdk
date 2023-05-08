@@ -499,13 +499,8 @@ describe("normalizeAndValidateConfig()", () => {
 			  "serve_single_page_app": false,
 			}
 		`);
-				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(false);
-
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - \\"assets\\" fields are experimental and may change or break at any time."
-		`);
 			});
 
 			it("errors when input is not a string or object", () => {
@@ -518,13 +513,9 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(config.assets).toBeUndefined();
-				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(true);
 
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - \\"assets\\" fields are experimental and may change or break at any time."
-		`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			"Processing wrangler configuration:
 			  - Expected the \`assets\` field to be a string or an object, but got number."
@@ -549,13 +540,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(config.assets).toEqual(
 					expect.objectContaining(expectedConfig.assets)
 				);
-				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(true);
 
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - \\"assets\\" fields are experimental and may change or break at any time."
-		        `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
 			            - \\"assets.bucket\\" is a required field."
@@ -580,11 +567,8 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
-				expect(diagnostics.hasWarnings()).toBe(true);
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - \\"assets\\" fields are experimental and may change or break at any time."
-		        `);
+				expect(diagnostics.hasWarnings()).toBe(false);
+
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			"Processing wrangler configuration:
 			  - Expected \\"assets.include.[0]\\" to be of type string but got 222.

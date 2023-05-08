@@ -234,8 +234,6 @@ export function normalizeAndValidateConfig(
 		[...Object.keys(config), "env"]
 	);
 
-	experimental(diagnostics, rawConfig, "assets");
-
 	return { config, diagnostics };
 }
 

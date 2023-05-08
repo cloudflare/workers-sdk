@@ -1375,11 +1375,7 @@ describe("wrangler dev", () => {
 			  "err": "",
 			  "info": "",
 			  "out": "",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-			    - \\"assets\\" fields are experimental and may change or break at any time.
-
-			",
+			  "warn": "",
 			}
 		`);
 		});
