@@ -1,5 +1,34 @@
 # wrangler
 
+## 2.20.0
+
+### Minor Changes
+
+- [#2966](https://github.com/cloudflare/workers-sdk/pull/2966) [`e351afcf`](https://github.com/cloudflare/workers-sdk/commit/e351afcff4f265f85ff3e4674cc3083eb5cd5027) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Add support for the undocumented `_worker.js/` directory in Pages
+
+* [#3095](https://github.com/cloudflare/workers-sdk/pull/3095) [`133c0423`](https://github.com/cloudflare/workers-sdk/commit/133c0423ccb4c2b35a1dd26157ce9a24c6a743bb) Thanks [@zebp](https://github.com/zebp)! - feat: add support for placement in wrangler config
+
+  Allows a `placement` object in the wrangler config with a mode of `off` or `smart` to configure [Smart placement](https://developers.cloudflare.com/workers/platform/smart-placement/). Enabling Smart Placement can be done in your `wrangler.toml` like:
+
+  ```toml
+  [placement]
+  mode = "smart"
+  ```
+
+- [#3140](https://github.com/cloudflare/workers-sdk/pull/3140) [`5fd080c8`](https://github.com/cloudflare/workers-sdk/commit/5fd080c88ee7991cde107f8723f06ea2fd2c651d) Thanks [@penalosa](https://github.com/penalosa)! - feat: Support sourcemaps in DevTools
+
+  Intercept requests from DevTools in Wrangler to inject sourcemaps and enable folders in the Sources Panel of DevTools. When errors are thrown in your Worker, DevTools should now show your source file in the Sources panel, rather than Wrangler's bundled output.
+
+### Patch Changes
+
+- [#2912](https://github.com/cloudflare/workers-sdk/pull/2912) [`5079f476`](https://github.com/cloudflare/workers-sdk/commit/5079f4767f862cb7c42f4b2b5484b0391fbe5fae) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: do not render "value of stdout.lastframe() is undefined" if the output is an empty string
+
+  Fixes #2907
+
+* [#3133](https://github.com/cloudflare/workers-sdk/pull/3133) [`d0788008`](https://github.com/cloudflare/workers-sdk/commit/d078800804899c3c8e083260f8cfdfc0397d6110) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix pages building not taking into account the nodejs_compat flag (and improve the related error message)
+
+- [#3146](https://github.com/cloudflare/workers-sdk/pull/3146) [`5b234cfd`](https://github.com/cloudflare/workers-sdk/commit/5b234cfd554aff08d065b96d7d49dfb36f40caa3) Thanks [@jspspike](https://github.com/jspspike)! - Added output for tail being in "sampling mode"
+
 ## 2.19.0
 
 ### Minor Changes
