@@ -123,6 +123,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 								usage_model: undefined,
 								keepVars: false, // this doesn't matter since it's a new script anyway
 								logpush: false,
+								placement: undefined,
 							}),
 						}
 					);

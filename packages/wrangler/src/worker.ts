@@ -203,6 +203,10 @@ export interface CfDurableObjectMigrations {
 	}[];
 }
 
+export interface CfPlacement {
+	mode: "smart";
+}
+
 /**
  * Options for creating a `CfWorker`.
  */
@@ -246,6 +250,7 @@ export interface CfWorkerInit {
 	usage_model: "bundled" | "unbound" | undefined;
 	keepVars: boolean | undefined;
 	logpush: boolean | undefined;
+	placement: CfPlacement | undefined;
 }
 
 export interface CfWorkerContext {
