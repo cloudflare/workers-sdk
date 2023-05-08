@@ -1,9 +1,11 @@
+import chalk from "chalk";
 import { logger } from "../logger";
 import type {
 	AlarmEvent,
 	EmailEvent,
 	RequestEvent,
 	ScheduledEvent,
+	TailInfo,
 	TailEventMessage,
 } from "./createTail";
 import type { Outcome } from "./filters";
@@ -48,6 +50,10 @@ export function prettyPrintLogs(data: WebSocket.RawData): void {
 		).toLocaleString();
 
 		logger.log(`Alarm @ ${datetime} - ${outcome}`);
+	} else if (isTailInfo(eventMessage.event)) {
+		if (eventMessage.event.type === "overload") {
+			logger.log(`${chalk.red.bold(eventMessage.event.message)}`);
+		}
 	} else {
 		// Unknown event type
 		const outcome = prettifyOutcome(eventMessage.outcome);
@@ -101,6 +107,10 @@ function isEmailEvent(event: TailEventMessage["event"]): event is EmailEvent {
  */
 function isAlarmEvent(event: TailEventMessage["event"]): event is AlarmEvent {
 	return Boolean(event && "scheduledTime" in event && !("cron" in event));
+}
+
+function isTailInfo(event: TailEventMessage["event"]): event is TailInfo {
+	return Boolean(event && "message" in event && "type" in event);
 }
 
 function prettifyOutcome(outcome: Outcome): string {
