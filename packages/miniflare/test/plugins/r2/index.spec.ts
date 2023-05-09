@@ -573,7 +573,7 @@ test("get: range using object", async (t) => {
 	t.is(await body.text(), "value");
 
 	// Check unsatisfiable ranges
-	const expectations: ThrowsExpectation = {
+	const expectations: ThrowsExpectation<Error> = {
 		instanceOf: Error,
 		message: "get: The requested range is not satisfiable (10039)",
 	};
@@ -713,7 +713,7 @@ test("put: validates checksums", async (t) => {
 		name: string,
 		provided: string,
 		expected: string
-	): ThrowsExpectation => ({
+	): ThrowsExpectation<Error> => ({
 		instanceOf: Error,
 		message: [
 			`put: The ${name} checksum you specified did not match what we received.`,
@@ -828,7 +828,7 @@ test("put: validates metadata size", async (t) => {
 	// TODO(soon): add check for max value size once we have streaming support
 	//  (don't really want to allocate 5GB buffers in tests :sweat_smile:)
 
-	const expectations: ThrowsExpectation = {
+	const expectations: ThrowsExpectation<Error> = {
 		instanceOf: Error,
 		message:
 			"put: Your metadata headers exceed the maximum allowed metadata size. (10012)",

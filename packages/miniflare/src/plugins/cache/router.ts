@@ -1,3 +1,5 @@
+import assert from "assert";
+import { TransformStream } from "stream/web";
 import { Headers, Request, RequestInit } from "../../http";
 import {
 	CfHeader,
@@ -17,8 +19,6 @@ export interface CacheParams {
 
 function decodeNamespace(headers: Headers) {
 	const namespace = headers.get(CfHeader.CacheNamespace);
-	// Namespace separator `:` will become a new directory when using file-system
-	// backed persistent storage
 	return namespace === null ? `default` : `named:${namespace}`;
 }
 
@@ -84,33 +84,48 @@ const LF = "\n".charCodeAt(0);
 // Therefore, we just remove the `Transfer-Encoding: chunked` header. We never
 // reuse sockets when parsing HTTP requests, so we don't need to worry about
 // delimiting HTTP messages.
-function removeTransferEncodingChunked(message: Buffer): Buffer {
-	// Split headers from the body by looking for the first instance of
-	// "\r\n\r\n" signifying end-of-headers
-	const endOfHeadersIndex = message.findIndex(
-		(_value, index) =>
-			message[index] === CR &&
-			message[index + 1] === LF &&
-			message[index + 2] === CR &&
-			message[index + 3] === LF
-	);
-	if (endOfHeadersIndex !== -1) {
-		// `subarray` returns a new `Buffer` that references the original memory
-		const headers = message.subarray(0, endOfHeadersIndex).toString();
-		// Try to remove case-insensitive `Transfer-Encoding: chunked` header.
-		// Might be last header so may not have trailing "\r\n" (only `subarray`ing)
-		// up to "\r\n\r\n", so match "\r\n" at the start.
-		const replaced = headers.replace(/\r\nTransfer-Encoding: chunked/i, "");
-		if (headers.length !== replaced.length) {
-			// If we removed something, replace the message with a concatenation of
-			// the new headers and the body
-			message = Buffer.concat([
-				Buffer.from(replaced),
-				message.subarray(endOfHeadersIndex),
-			]);
-		}
+/** @internal */
+export class _RemoveTransformEncodingChunkedStream extends TransformStream<
+	Uint8Array,
+	Uint8Array
+> {
+	constructor() {
+		let buffer = Buffer.alloc(0);
+		let replaced = false;
+
+		super({
+			transform(chunk, controller) {
+				if (replaced) {
+					controller.enqueue(chunk);
+				} else {
+					// TODO(perf): make this more efficient, we should be able to do
+					//  something like a "rope-string" of chunks for finding the index,
+					//  recording where we last got to when looking and starting there
+					buffer = Buffer.concat([buffer, chunk]);
+					const endOfHeadersIndex = buffer.findIndex(
+						(_value, index) =>
+							buffer[index] === CR &&
+							buffer[index + 1] === LF &&
+							buffer[index + 2] === CR &&
+							buffer[index + 3] === LF
+					);
+					if (endOfHeadersIndex !== -1) {
+						const headers = buffer.subarray(0, endOfHeadersIndex).toString();
+						const replacedHeaders = headers.replace(
+							/\r\nTransfer-Encoding: chunked/i,
+							""
+						);
+						controller.enqueue(Buffer.from(replacedHeaders, "utf8"));
+						controller.enqueue(buffer.subarray(endOfHeadersIndex));
+						replaced = true;
+					}
+				}
+			},
+			flush(controller) {
+				if (!replaced) controller.enqueue(buffer);
+			},
+		});
 	}
-	return message;
 }
 
 // noinspection DuplicatedCode
@@ -143,10 +158,12 @@ export class CacheRouter extends Router<CacheGateway> {
 		const namespace = decodeNamespace(req.headers);
 		const persist = decodePersist(req.headers);
 		const gateway = this.gatewayFactory.get(namespace, persist);
-		const bodyBuffer = Buffer.from(await req.arrayBuffer());
-		const bodyArray = new Uint8Array(removeTransferEncodingChunked(bodyBuffer));
+
 		const key = new Request(uri, { ...(req as RequestInit), body: undefined });
-		return gateway.put(key, bodyArray, req.cf?.cacheKey);
+		const removerStream = new _RemoveTransformEncodingChunkedStream();
+		assert(req.body !== null);
+		const bodyStream = req.body.pipeThrough(removerStream);
+		return gateway.put(key, bodyStream, req.cf?.cacheKey);
 	};
 
 	@PURGE("/:uri")

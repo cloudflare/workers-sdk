@@ -219,7 +219,7 @@ test("put: validates value size", async (t) => {
 	const { gateway } = t.context;
 	const maxValueSize = 25 * 1024 * 1024;
 	const byteLength = maxValueSize + 1;
-	const expectations: ThrowsExpectation = {
+	const expectations: ThrowsExpectation<KVError> = {
 		instanceOf: KVError,
 		code: 413,
 		message: `Value length of ${byteLength} exceeds limit of ${maxValueSize}.`,
