@@ -1,7 +1,14 @@
+import assert from "assert";
 import crypto from "crypto";
 import path from "path";
-import { FileStorage, HeadersInit, LogLevel } from "@miniflare/tre";
-import { miniflareTest, useTmp, utf8Encode } from "../../test-shared";
+import { text } from "stream/consumers";
+import {
+	FileStorage,
+	HeadersInit,
+	KeyValueStorage,
+	LogLevel,
+} from "@miniflare/tre";
+import { miniflareTest, useTmp } from "../../test-shared";
 
 const test = miniflareTest({}, async (global, req) => {
 	// Partition headers
@@ -168,7 +175,9 @@ test("match respects Range header", async (t) => {
 		},
 		body: "0123456789",
 	});
-	const res = await t.context.mf.dispatchFetch(key, {
+
+	// Check with single range
+	let res = await t.context.mf.dispatchFetch(key, {
 		headers: { Range: "bytes=2-4" },
 	});
 	t.is(res.status, 206);
@@ -176,6 +185,38 @@ test("match respects Range header", async (t) => {
 	t.is(res.headers.get("Cache-Control"), "max-age=3600");
 	t.is(res.headers.get("CF-Cache-Status"), "HIT");
 	t.is(await res.text(), "234");
+
+	// Check with multiple ranges
+	res = await t.context.mf.dispatchFetch(key, {
+		headers: { Range: "bytes=1-3,5-6" },
+	});
+	t.is(res.status, 206);
+	t.is(res.headers.get("Cache-Control"), "max-age=3600");
+	t.is(res.headers.get("CF-Cache-Status"), "HIT");
+	const contentType = res.headers.get("Content-Type");
+	assert(contentType !== null);
+	const [brand, boundary] = contentType.split("=");
+	t.is(brand, "multipart/byteranges; boundary");
+	t.is(
+		await res.text(),
+		[
+			`--${boundary}`,
+			"Content-Range: bytes 1-3/10",
+			"",
+			"123",
+			`--${boundary}`,
+			"Content-Range: bytes 5-6/10",
+			"",
+			"56",
+			`--${boundary}--`,
+		].join("\r\n")
+	);
+
+	// Check with unsatisfiable range
+	res = await t.context.mf.dispatchFetch(key, {
+		headers: { Range: "bytes=15-" },
+	});
+	t.is(res.status, 416);
 });
 
 const expireMacro = test.macro({
@@ -366,7 +407,14 @@ test.serial("operations persist cached data", async (t) => {
 	// Create new temporary file-system persistence directory
 	const tmp = await useTmp(t);
 	const clock = () => t.context.clock.timestamp;
-	const storage = new FileStorage(path.join(tmp, "default"), undefined, clock);
+	// TODO(soon): clean up this mess once we've migrated all gateways
+	const legacyStorage = new FileStorage(
+		path.join(tmp, "default"),
+		undefined,
+		clock
+	);
+	const newStorage = legacyStorage.getNewStorage();
+	const kvStorage = new KeyValueStorage(newStorage, clock);
 
 	// Set option, then reset after test
 	await t.context.setOptions({ cachePersist: tmp });
@@ -380,8 +428,9 @@ test.serial("operations persist cached data", async (t) => {
 		headers: { "Test-Response-Cache-Control": "max-age=3600" },
 		body: "body",
 	});
-	let stored = await storage.get(key);
-	t.deepEqual(stored?.value, utf8Encode("body"));
+	let stored = await kvStorage.get(key);
+	assert(stored?.value !== undefined);
+	t.deepEqual(await text(stored.value), "body");
 
 	// Check match respects persist
 	let res = await t.context.mf.dispatchFetch(key);
@@ -391,8 +440,8 @@ test.serial("operations persist cached data", async (t) => {
 	// Check delete respects persist
 	res = await t.context.mf.dispatchFetch(key, { method: "DELETE" });
 	t.is(res.status, 204);
-	stored = await storage.get(key);
-	t.is(stored, undefined);
+	stored = await kvStorage.get(key);
+	t.is(stored, null);
 });
 test.serial("operations are no-ops when caching disabled", async (t) => {
 	// Set option, then reset after test

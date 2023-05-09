@@ -1,6 +1,6 @@
 import assert from "assert";
 import { ReadableStream } from "stream/web";
-import { base64Decode, base64Encode, defaultClock } from "../shared";
+import { Awaitable, base64Decode, base64Encode, defaultClock } from "../shared";
 import {
 	InclusiveRange,
 	MultipartOptions,
@@ -107,6 +107,10 @@ function rowEntry<Metadata>(entry: Omit<Row, "blob_id">): KeyEntry<Metadata> {
 	};
 }
 
+export type RangeOptionsFactory<Metadata> = (
+	metadata: Metadata
+) => { ranges?: InclusiveRange[] } & MultipartOptions;
+
 export class KeyValueStorage<Metadata = unknown> {
 	readonly #stmts: ReturnType<typeof sqlStmts>;
 
@@ -120,7 +124,7 @@ export class KeyValueStorage<Metadata = unknown> {
 	}
 
 	#hasExpired(entry: Pick<Row, "expiration">) {
-		return entry.expiration !== null && entry.expiration < this.clock();
+		return entry.expiration !== null && entry.expiration <= this.clock();
 	}
 
 	#backgroundDelete(blobId: string) {
@@ -132,19 +136,14 @@ export class KeyValueStorage<Metadata = unknown> {
 		queueMicrotask(() => this.storage.blob.delete(blobId).catch(() => {}));
 	}
 
+	get(key: string): Promise<KeyValueEntry<Metadata> | null>;
 	get(
 		key: string,
-		range?: InclusiveRange
-	): Promise<KeyValueEntry<Metadata> | null>;
-	get(
-		key: string,
-		ranges: InclusiveRange[],
-		optsFactory: (metadata: Metadata) => MultipartOptions
+		optsFactory?: RangeOptionsFactory<Metadata>
 	): Promise<KeyMultipartValueEntry<Metadata> | null>;
 	async get(
 		key: string,
-		ranges?: InclusiveRange | InclusiveRange[],
-		optsFactory?: (metadata: Metadata) => MultipartOptions
+		optsFactory?: RangeOptionsFactory<Metadata>
 	): Promise<
 		KeyValueEntry<Metadata> | KeyMultipartValueEntry<Metadata> | null
 	> {
@@ -166,29 +165,27 @@ export class KeyValueStorage<Metadata = unknown> {
 		}
 
 		const entry = rowEntry<Metadata>(row);
-		if (Array.isArray(ranges)) {
-			// If this is a multi-range request, get multipart options from metadata,
-			// then return a multipart stream...
-			assert(optsFactory !== undefined && entry.metadata !== undefined);
-			const opts = optsFactory(entry.metadata);
-			const value = await this.storage.blob.get(row.blob_id, ranges, opts);
+		const opts = entry.metadata && optsFactory?.(entry.metadata);
+		if (opts?.ranges === undefined || opts.ranges.length <= 1) {
+			// If no range was requested, or just a single one was, return a regular
+			// stream
+			const value = await this.storage.blob.get(row.blob_id, opts?.ranges?.[0]);
 			if (value === null) return null;
-
-			const valueEntry = entry as KeyMultipartValueEntry<Metadata>;
-			valueEntry.value = value;
-			return valueEntry;
+			return { ...entry, value };
 		} else {
-			// ...otherwise just return a regular stream
-			const value = await this.storage.blob.get(row.blob_id, ranges);
+			// Otherwise, if multiple ranges were requested, return a multipart stream
+			const value = await this.storage.blob.get(row.blob_id, opts.ranges, opts);
 			if (value === null) return null;
-
-			const valueEntry = entry as KeyValueEntry<Metadata>;
-			valueEntry.value = value;
-			return valueEntry;
+			return { ...entry, value };
 		}
 	}
 
-	async put(entry: KeyValueEntry<Metadata>): Promise<void> {
+	async put(entry: KeyValueEntry<Awaitable<Metadata>>): Promise<void> {
+		// (NOTE: `Awaitable` allows metadata to be a `Promise`, this is used by
+		// the Cache gateway to include `size` in the metadata, which may only be
+		// known once the stream is written to the blob store if no `Content-Length`
+		// header was specified)
+
 		// Empty keys are not permitted because we default to starting after "" when
 		// listing. See `list()` for more details.
 		assert.notStrictEqual(entry.key, "");
@@ -199,7 +196,9 @@ export class KeyValueStorage<Metadata = unknown> {
 			blob_id: blobId,
 			expiration: entry.expiration ?? null,
 			metadata:
-				entry.metadata === undefined ? null : JSON.stringify(entry.metadata),
+				entry.metadata === undefined
+					? null
+					: JSON.stringify(await entry.metadata),
 		});
 		// Garbage collect previous entry's blob
 		if (maybeOldBlobId !== undefined) this.#backgroundDelete(maybeOldBlobId);

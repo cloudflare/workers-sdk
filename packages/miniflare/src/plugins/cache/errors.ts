@@ -4,6 +4,7 @@ import { CfHeader } from "../shared/constants";
 
 enum Status {
 	PayloadTooLarge = 413,
+	RangeNotSatisfiable = 416,
 	NotFound = 404,
 	CacheMiss = 504,
 }
@@ -50,5 +51,14 @@ export class CacheMiss extends CacheError {
 			"Asset not found in cache",
 			[[CfHeader.CacheStatus, "MISS"]]
 		);
+	}
+}
+
+export class RangeNotSatisfiable extends CacheError {
+	constructor(size: number) {
+		super(Status.RangeNotSatisfiable, "Range not satisfiable", [
+			["Content-Range", `bytes */${size}`],
+			[CfHeader.CacheStatus, "HIT"],
+		]);
 	}
 }

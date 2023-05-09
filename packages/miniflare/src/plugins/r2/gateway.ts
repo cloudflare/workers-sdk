@@ -74,7 +74,7 @@ export class R2Gateway {
 			if (ranges?.length === 1) {
 				// If the header contained a single range, convert it to an R2Range.
 				// Note `start` and `end` are inclusive.
-				const [start, end] = ranges[0];
+				const { start, end } = ranges[0];
 				range = { offset: start, length: end - start + 1 };
 			} else {
 				// If the header was invalid, or contained multiple ranges, just return
