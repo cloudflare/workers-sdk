@@ -1,5 +1,6 @@
 import { Headers } from "../../http";
 import { Worker, Worker_Binding } from "../../runtime";
+import { CoreBindings } from "../../workers";
 import { Persistence, PersistenceSchema } from "./gateway";
 
 export const SOCKET_ENTRY = "entry";
@@ -13,17 +14,17 @@ export const HEADER_PERSIST = "MF-Persist";
 // requests.
 export const HEADER_CF_BLOB = "MF-CF-Blob";
 
-export const BINDING_SERVICE_LOOPBACK = "MINIFLARE_LOOPBACK";
 export const BINDING_TEXT_PLUGIN = "MINIFLARE_PLUGIN";
 export const BINDING_TEXT_NAMESPACE = "MINIFLARE_NAMESPACE";
 export const BINDING_TEXT_PERSIST = "MINIFLARE_PERSIST";
 
 export const WORKER_BINDING_SERVICE_LOOPBACK: Worker_Binding = {
-	name: BINDING_SERVICE_LOOPBACK,
+	name: CoreBindings.SERVICE_LOOPBACK,
 	service: { name: SERVICE_LOOPBACK },
 };
 
 // TODO: make this an inherited worker in core plugin
+// TODO: do we need to URI encode namespace?
 const SCRIPT_PLUGIN_NAMESPACE_PERSIST_COMPAT_DATE = "2022-09-01";
 const SCRIPT_PLUGIN_NAMESPACE_PERSIST = `addEventListener("fetch", (event) => {
   let request = event.request;
@@ -33,7 +34,7 @@ const SCRIPT_PLUGIN_NAMESPACE_PERSIST = `addEventListener("fetch", (event) => {
     request = new Request(request);
     request.headers.set("${HEADER_PERSIST}", ${BINDING_TEXT_PERSIST});
   }
-  event.respondWith(${BINDING_SERVICE_LOOPBACK}.fetch(url, request));
+  event.respondWith(${CoreBindings.SERVICE_LOOPBACK}.fetch(url, request));
 });`;
 
 export function encodePersist(persist: Persistence): Worker_Binding[] {

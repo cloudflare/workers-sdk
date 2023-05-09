@@ -14,8 +14,8 @@ import {
 	testRegExps,
 } from "../../shared";
 import { createFileReadableStream } from "../../storage2";
+import { CoreBindings } from "../../workers";
 import {
-	BINDING_SERVICE_LOOPBACK,
 	BINDING_TEXT_PERSIST,
 	HEADER_PERSIST,
 	Persistence,
@@ -156,7 +156,7 @@ async function handleRequest(request) {
   // Add magic header to indicate namespace should be ignored, and persist
   // should be used as the root without any additional namespace
   request.headers.set("${HEADER_SITES}", "true");
-  const response = await ${BINDING_SERVICE_LOOPBACK}.fetch(request);
+  const response = await ${CoreBindings.SERVICE_LOOPBACK}.fetch(request);
   
   // If listing keys, only return included keys, and add SITES_NO_CACHE_PREFIX
   // to all result keys

@@ -3,6 +3,7 @@ import { readFileSync } from "fs";
 import fs from "fs/promises";
 import { TextEncoder } from "util";
 import { bold } from "kleur/colors";
+import SCRIPT_ENTRY from "worker:core/entry";
 import { z } from "zod";
 import {
 	Service,
@@ -14,23 +15,20 @@ import {
 	Awaitable,
 	JsonSchema,
 	Log,
-	LogLevel,
 	MiniflareCoreError,
 	Timers,
 } from "../../shared";
+import { CoreBindings, CoreHeaders } from "../../workers";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import {
-	BINDING_SERVICE_LOOPBACK,
 	CloudflareFetchSchema,
 	HEADER_CF_BLOB,
 	Plugin,
 	SERVICE_LOOPBACK,
 	WORKER_BINDING_SERVICE_LOOPBACK,
-	matchRoutes,
 	parseRoutes,
 } from "../shared";
-import { HEADER_ERROR_STACK } from "./errors";
 import {
 	ModuleLocator,
 	SourceOptions,
@@ -99,19 +97,6 @@ function getCustomServiceName(workerIndex: number, bindingName: string) {
 	return `${SERVICE_CUSTOM_PREFIX}:${workerIndex}:${bindingName}`;
 }
 
-export const HEADER_PROBE = "MF-Probe";
-export const HEADER_CUSTOM_SERVICE = "MF-Custom-Service";
-export const HEADER_ORIGINAL_URL = "MF-Original-URL";
-
-const BINDING_JSON_VERSION = "MINIFLARE_VERSION";
-const BINDING_SERVICE_USER_ROUTE_PREFIX = "MINIFLARE_USER_ROUTE_";
-const BINDING_SERVICE_USER_FALLBACK = "MINIFLARE_USER_FALLBACK";
-const BINDING_TEXT_CUSTOM_SERVICE = "MINIFLARE_CUSTOM_SERVICE";
-const BINDING_JSON_CF_BLOB = "CF_BLOB";
-const BINDING_JSON_ROUTES = "MINIFLARE_ROUTES";
-const BINDING_JSON_LOG_LEVEL = "MINIFLARE_LOG_LEVEL";
-const BINDING_DATA_LIVE_RELOAD_SCRIPT = "MINIFLARE_LIVE_RELOAD_SCRIPT";
-
 const LIVE_RELOAD_SCRIPT_TEMPLATE = (
 	port: number
 ) => `<script defer type="application/javascript">
@@ -132,116 +117,11 @@ const LIVE_RELOAD_SCRIPT_TEMPLATE = (
 })();
 </script>`;
 
-// Using `>=` for version check to handle multiple `setOptions` calls before
-// reload complete.
-export const SCRIPT_ENTRY = `
-const matchRoutes = ${matchRoutes.toString()};
-
-async function handleEvent(event) {
-  const startTime = Date.now();
-  const probe = event.request.headers.get("${HEADER_PROBE}");
-  if (probe !== null) {
-    const probeMin = parseInt(probe);
-    const status = ${BINDING_JSON_VERSION} >= probeMin ? 204 : 412;
-    return new Response(null, { status });
-  }
-
-  const originalUrl = event.request.headers.get("${HEADER_ORIGINAL_URL}");
-  const request = new Request(originalUrl ?? event.request.url, {
-    method: event.request.method,
-    headers: event.request.headers,
-    cf: event.request.cf ?? ${BINDING_JSON_CF_BLOB},
-    redirect: event.request.redirect,
-    body: event.request.body,
-  });
-  request.headers.delete("${HEADER_ORIGINAL_URL}");
-
-  let service = globalThis.${BINDING_SERVICE_USER_FALLBACK};
-  const url = new URL(request.url);
-  const route = matchRoutes(${BINDING_JSON_ROUTES}, url);
-  if (route !== null) service = globalThis["${BINDING_SERVICE_USER_ROUTE_PREFIX}" + route];
-  if (service === undefined) {
-    return new Response("No entrypoint worker found", { status: 404 });
-  }
-  
-  try {
-    let response = await service.fetch(request);
-    
-    if (
-      response.status === 500 &&
-      response.headers.get("${HEADER_ERROR_STACK}") !== null
-    ) {
-      const accept = request.headers.get("Accept")?.toLowerCase() ?? "";
-      const userAgent = request.headers.get("User-Agent")?.toLowerCase() ?? "";
-      const acceptsPrettyError =
-        !userAgent.includes("curl/") &&
-        (accept.includes("text/html") ||
-          accept.includes("*/*") ||
-          accept.includes("text/*"));
-      if (acceptsPrettyError) {
-        response = await ${BINDING_SERVICE_LOOPBACK}.fetch("http://localhost/core/error", {
-          method: "POST",
-          headers: request.headers,
-          body: response.body,
-        });
-      }
-    }
-
-    if (${BINDING_JSON_LOG_LEVEL} >= ${LogLevel.INFO}) {
-      event.waitUntil(${BINDING_SERVICE_LOOPBACK}.fetch("http://localhost/core/log", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          "status": response.status,
-          "statusText": response.statusText,
-          "method": event.request.method,
-          "url": response.url,
-          "time": Date.now() - startTime,
-        }),
-      }));
-    }
-
-    const liveReloadScript = globalThis.${BINDING_DATA_LIVE_RELOAD_SCRIPT};
-    if (
-      liveReloadScript !== undefined &&
-      response.headers.get("Content-Type")?.toLowerCase().includes("text/html")
-    ) {
-      const headers = new Headers(response.headers);
-      const contentLength = parseInt(headers.get("content-length"));
-      if (!isNaN(contentLength)) {
-        headers.set("content-length", contentLength + liveReloadScript.byteLength);
-      }
-      
-      const { readable, writable } = new IdentityTransformStream();
-      event.waitUntil((async () => {
-        await response.body?.pipeTo(writable, { preventClose: true });
-        const writer = writable.getWriter();
-        await writer.write(liveReloadScript);
-        await writer.close();
-      })());
-
-      return new Response(readable, {
-        status: response.status,
-        statusText: response.statusText,
-        headers,
-      });
-    }
-
-    return response;
-  } catch (e) {
-    // TODO: return pretty-error page here
-    return new Response(e.stack);
-  }
-}
-addEventListener("fetch", (event) => {
-  event.respondWith(handleEvent(event));
-});
-`;
 export const SCRIPT_CUSTOM_SERVICE = `addEventListener("fetch", (event) => {
   const request = new Request(event.request);
-  request.headers.set("${HEADER_CUSTOM_SERVICE}", ${BINDING_TEXT_CUSTOM_SERVICE});
-  request.headers.set("${HEADER_ORIGINAL_URL}", request.url);
-  event.respondWith(${BINDING_SERVICE_LOOPBACK}.fetch(request));
+  request.headers.set("${CoreHeaders.CUSTOM_SERVICE}", ${CoreBindings.TEXT_CUSTOM_SERVICE});
+  request.headers.set("${CoreHeaders.ORIGINAL_URL}", request.url);
+  event.respondWith(${CoreBindings.SERVICE_LOOPBACK}.fetch(request));
 })`;
 
 const FALLBACK_COMPATIBILITY_DATE = "2000-01-01";
@@ -403,7 +283,7 @@ export const CORE_PLUGIN: Plugin<
 							compatibilityDate: "2022-09-01",
 							bindings: [
 								{
-									name: BINDING_TEXT_CUSTOM_SERVICE,
+									name: CoreBindings.TEXT_CUSTOM_SERVICE,
 									text: `${workerIndex}/${name}`,
 								},
 								WORKER_BINDING_SERVICE_LOOPBACK,
@@ -441,29 +321,29 @@ export function getGlobalServices({
 	log,
 }: GlobalServicesOptions): Service[] {
 	// Collect list of workers we could route to, then parse and sort all routes
-	const routableWorkers = [...allWorkerRoutes.keys()];
+	const workerNames = [...allWorkerRoutes.keys()];
 	const routes = parseRoutes(allWorkerRoutes);
 
 	// Define core/shared services.
 	const serviceEntryBindings: Worker_Binding[] = [
 		WORKER_BINDING_SERVICE_LOOPBACK, // For converting stack-traces to pretty-error pages
-		{ name: BINDING_JSON_VERSION, json: optionsVersion.toString() },
-		{ name: BINDING_JSON_ROUTES, json: JSON.stringify(routes) },
-		{ name: BINDING_JSON_CF_BLOB, json: JSON.stringify(sharedOptions.cf) },
-		{ name: BINDING_JSON_LOG_LEVEL, json: JSON.stringify(log.level) },
+		{ name: CoreBindings.JSON_VERSION, json: optionsVersion.toString() },
+		{ name: CoreBindings.JSON_ROUTES, json: JSON.stringify(routes) },
+		{ name: CoreBindings.JSON_CF_BLOB, json: JSON.stringify(sharedOptions.cf) },
+		{ name: CoreBindings.JSON_LOG_LEVEL, json: JSON.stringify(log.level) },
 		{
-			name: BINDING_SERVICE_USER_FALLBACK,
+			name: CoreBindings.SERVICE_USER_FALLBACK,
 			service: { name: getUserServiceName(fallbackWorkerName) },
 		},
-		...routableWorkers.map((name) => ({
-			name: BINDING_SERVICE_USER_ROUTE_PREFIX + name,
+		...workerNames.map((name) => ({
+			name: CoreBindings.SERVICE_USER_ROUTE_PREFIX + name,
 			service: { name: getUserServiceName(name) },
 		})),
 	];
 	if (sharedOptions.liveReload) {
 		const liveReloadScript = LIVE_RELOAD_SCRIPT_TEMPLATE(loopbackPort);
 		serviceEntryBindings.push({
-			name: BINDING_DATA_LIVE_RELOAD_SCRIPT,
+			name: CoreBindings.DATA_LIVE_RELOAD_SCRIPT,
 			data: encoder.encode(liveReloadScript),
 		});
 	}
@@ -475,8 +355,8 @@ export function getGlobalServices({
 		{
 			name: SERVICE_ENTRY,
 			worker: {
-				serviceWorkerScript: SCRIPT_ENTRY,
-				compatibilityDate: "2022-09-01",
+				modules: [{ name: "entry.worker.js", esModule: SCRIPT_ENTRY }],
+				compatibilityDate: "2023-04-04",
 				bindings: serviceEntryBindings,
 			},
 		},

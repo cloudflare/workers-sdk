@@ -1,6 +1,6 @@
 import { z } from "zod";
+import { CoreBindings } from "../../workers";
 import {
-	BINDING_SERVICE_LOOPBACK,
 	BINDING_TEXT_PERSIST,
 	BINDING_TEXT_PLUGIN,
 	CfHeader,
@@ -31,7 +31,7 @@ export const CACHE_LOOPBACK_SCRIPT = `addEventListener("fetch", (event) => {
   url.pathname = \`/\${${BINDING_TEXT_PLUGIN}}/\${encodeURIComponent(request.url)}\`;
   if (globalThis.${BINDING_TEXT_PERSIST} !== undefined) request.headers.set("${HEADER_PERSIST}", ${BINDING_TEXT_PERSIST});
   if (globalThis.${BINDING_JSON_CACHE_WARN_USAGE}) request.headers.set("${HEADER_CACHE_WARN_USAGE}", "true");
-  event.respondWith(${BINDING_SERVICE_LOOPBACK}.fetch(url, request));
+  event.respondWith(${CoreBindings.SERVICE_LOOPBACK}.fetch(url, request));
 });`;
 // Cache service script that doesn't do any caching
 export const NOOP_CACHE_SCRIPT = `addEventListener("fetch", (event) => {

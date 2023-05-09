@@ -12,8 +12,6 @@ import {
 	Plugin,
 	maybeParseURL,
 } from "../shared";
-import { DurableObjectsStorageGateway } from "./gateway";
-import { DurableObjectsStorageRouter } from "./router";
 
 export const DurableObjectsOptionsSchema = z.object({
 	durableObjects: z
@@ -92,11 +90,8 @@ function normaliseDurableObjectStoragePath(
 
 export const DURABLE_OBJECTS_PLUGIN: Plugin<
 	typeof DurableObjectsOptionsSchema,
-	typeof DurableObjectsSharedOptionsSchema,
-	DurableObjectsStorageGateway
+	typeof DurableObjectsSharedOptionsSchema
 > = {
-	gateway: DurableObjectsStorageGateway,
-	router: DurableObjectsStorageRouter,
 	options: DurableObjectsOptionsSchema,
 	sharedOptions: DurableObjectsSharedOptionsSchema,
 	getBindings(options) {
@@ -141,5 +136,3 @@ export const DURABLE_OBJECTS_PLUGIN: Plugin<
 		];
 	},
 };
-
-export * from "./gateway";

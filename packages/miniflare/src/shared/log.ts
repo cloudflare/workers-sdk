@@ -12,18 +12,10 @@ import {
 } from "kleur/colors";
 import { z } from "zod";
 import { Request } from "../http";
+import { LogLevel } from "../workers";
 
 const cwd = process.cwd();
 const cwdNodeModules = path.join(cwd, "node_modules");
-
-export enum LogLevel {
-	NONE,
-	ERROR,
-	WARN,
-	INFO,
-	DEBUG,
-	VERBOSE,
-}
 
 const LEVEL_PREFIX: { [key in LogLevel]: string } = {
 	[LogLevel.NONE]: "",

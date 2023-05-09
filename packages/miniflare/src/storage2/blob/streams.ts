@@ -125,7 +125,7 @@ export interface MultipartReadableStream {
 	multipartContentType: string;
 	body: ReadableStream<Uint8Array>;
 }
-export function createMultipartReadableStream(
+function createMultipartReadableStream(
 	source: RangeSource,
 	ranges: InclusiveRange[],
 	opts: MultipartOptions
