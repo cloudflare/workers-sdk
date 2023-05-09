@@ -23,3 +23,10 @@ export type Migration = {
 	name: string;
 	applied_at: string;
 };
+
+export type DatabaseCreationResult = {
+	uuid: string;
+	name: string;
+	primary_location_hint?: string;
+	created_in_region?: string;
+};
