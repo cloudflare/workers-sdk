@@ -1,5 +1,9 @@
 import { fetch } from "undici";
-import { stopWorkerRegistry, registerWorker, startWorkerRegistry } from "../dev-registry";
+import {
+	stopWorkerRegistry,
+	registerWorker,
+	startWorkerRegistry,
+} from "../dev-registry";
 
 jest.unmock("undici");
 
@@ -8,17 +12,17 @@ jest.unmock("undici");
  */
 describe("unstable devRegistry testing", () => {
 	afterAll(async () => {
-		await stopWorkerRegistry()
+		await stopWorkerRegistry();
 	});
 
 	it("should start the devRegistry if the devRegistry not start", async () => {
 		await registerWorker("test", {
 			port: 6789,
-			protocol: 'http',
-			host: 'localhost',
-			mode: 'local',
-			durableObjects: [{ name: 'testing', className: 'testing' }]
-		})
+			protocol: "http",
+			host: "localhost",
+			mode: "local",
+			durableObjects: [{ name: "testing", className: "testing" }],
+		});
 		const resp = await fetch("http://localhost:6284/workers");
 		if (resp) {
 			const parsedResp = (await resp.json()) as {
@@ -28,21 +32,21 @@ describe("unstable devRegistry testing", () => {
 		}
 	});
 
-	it('should not restart the devRegistry if the devRegistry already start', async () => {
-		await startWorkerRegistry()
+	it("should not restart the devRegistry if the devRegistry already start", async () => {
+		await startWorkerRegistry();
 
 		await fetch("http://localhost:6284/workers/init", {
-			method: 'POST',
-			body: JSON.stringify({})
+			method: "POST",
+			body: JSON.stringify({}),
 		});
 
 		await registerWorker("test", {
 			port: 6789,
-			protocol: 'http',
-			host: 'localhost',
-			mode: 'local',
-			durableObjects: [{ name: 'testing', className: 'testing' }]
-		})
+			protocol: "http",
+			host: "localhost",
+			mode: "local",
+			durableObjects: [{ name: "testing", className: "testing" }],
+		});
 
 		const resp = await fetch("http://localhost:6284/workers");
 		if (resp) {
@@ -53,5 +57,5 @@ describe("unstable devRegistry testing", () => {
 			expect(parsedResp.init).toBeTruthy();
 			expect(parsedResp.test).toBeTruthy();
 		}
-	})
+	});
 });

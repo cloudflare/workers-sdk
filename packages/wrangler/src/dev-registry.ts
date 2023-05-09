@@ -98,7 +98,7 @@ export async function startWorkerRegistry() {
 		/**
 		 * The registry server may close. Reset the server to null for restart.
 		 */
-		server.on('close', () => {
+		server.on("close", () => {
 			server = null;
 		});
 	}
