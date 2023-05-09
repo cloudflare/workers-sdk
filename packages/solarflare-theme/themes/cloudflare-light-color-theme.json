@@ -3,7 +3,7 @@
 	"colors": {
 		"focusBorder": "#4693FF",
 		"editor.background": "#ffffff",
-		"editor.foreground": "#eeffff",
+		"editor.foreground": "#62676A",
 		"list.activeSelectionIconForeground": "#ffffff",
 		"activityBar.background": "#f2f2f2",
 		"activityBarBadge.background": "#0051c3",
@@ -23,7 +23,7 @@
 			"name": "Colors",
 			"scope": ["constant.other.color", "support.variable"],
 			"settings": {
-				"foreground": "#2C3E50"
+				"foreground": "#eeffff"
 			}
 		},
 		{
