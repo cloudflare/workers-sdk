@@ -313,7 +313,7 @@ async function executeRemotely({
 				body: JSON.stringify({ sql }),
 			}
 		);
-		result.map(logResult);
+		logResult(result);
 		results.push(...result);
 	}
 	return results;
