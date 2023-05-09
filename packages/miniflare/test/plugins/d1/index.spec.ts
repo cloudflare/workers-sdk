@@ -272,6 +272,18 @@ test("D1PreparedStatement: bind", async (t) => {
 		.bind("green")
 		.all<ColourRow>();
 	t.is(colourResults.results?.length, 1);
+
+	// Check with numbered parameters (execute and query)
+	// https://github.com/cloudflare/miniflare/issues/504
+	await db
+		.prepare(`INSERT INTO ${tableColours} (id, name, rgb) VALUES (?3, ?1, ?2)`)
+		.bind("yellow", 0xffff00, 4)
+		.run();
+	const colourResult = await db
+		.prepare(`SELECT * FROM ${tableColours} WHERE id = ?1`)
+		.bind(4)
+		.first<ColourRow>();
+	t.deepEqual(colourResult, { id: 4, name: "yellow", rgb: 0xffff00 });
 });
 
 // Lots of strange edge cases here...
@@ -456,8 +468,10 @@ test.serial("operations persist D1 data", async (t) => {
 
 	// Create new temporary file-system persistence directory
 	const tmp = await useTmp(t);
-	const storage = new FileStorage(path.join(tmp, "db"));
-	const sqliteDb = storage.getSqliteDatabase();
+	// TODO(soon): clean up this mess once we've migrated all gateways
+	const legacyStorage = new FileStorage(path.join(tmp, "db"));
+	const newStorage = legacyStorage.getNewStorage();
+	const sqliteDb = newStorage.db;
 
 	// Set option, then reset after test
 	await t.context.setOptions({ ...opts, d1Persist: tmp });

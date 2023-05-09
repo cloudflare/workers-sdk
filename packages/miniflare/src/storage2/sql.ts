@@ -4,7 +4,7 @@ import { Database, Statement } from "better-sqlite3";
 // Define types that define the return type at `prepare()` time.
 
 export type TypedStatement<
-	Params extends any[] = any[],
+	Params extends any[] = unknown[],
 	SingleResult = unknown,
 > = Omit<Statement<Params>, "get" | "all" | "iterate"> & {
 	get(...params: Params): SingleResult | undefined;
@@ -13,7 +13,7 @@ export type TypedStatement<
 };
 
 export type TypedDatabase = Omit<Database, "prepare"> & {
-	prepare<Params, SingleResult = unknown>(
+	prepare<Params = unknown[], SingleResult = unknown>(
 		source: string
 	): Params extends any[]
 		? TypedStatement<Params, SingleResult>
