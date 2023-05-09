@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import { writeFile, mkdir } from "node:fs/promises";
-import path, { dirname, resolve } from "node:path";
+import path, { dirname } from "node:path";
 import TOML from "@iarna/toml";
 import { findUp } from "find-up";
 import { version as wranglerVersion } from "../package.json";
