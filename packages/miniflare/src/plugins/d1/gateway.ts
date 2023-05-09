@@ -3,7 +3,7 @@ import fs from "fs/promises";
 import os from "os";
 import path from "path";
 import { performance } from "perf_hooks";
-import { Database as DatabaseType, Statement } from "better-sqlite3";
+import type { Database as DatabaseType } from "better-sqlite3";
 import { z } from "zod";
 import { Response } from "../../http";
 import { HttpError, Log } from "../../shared";
@@ -135,22 +135,8 @@ function normaliseResults(
 	);
 }
 
-const DOESNT_RETURN_DATA_MESSAGE =
-	"The columns() method is only for statements that return data";
 const EXECUTE_RETURNS_DATA_MESSAGE =
 	"SQL execute error: Execute returned results - did you mean to call query?";
-function returnsData(stmt: Statement): boolean {
-	try {
-		stmt.columns();
-		return true;
-	} catch (e) {
-		// `columns()` fails on statements that don't return data
-		if (e instanceof TypeError && e.message === DOESNT_RETURN_DATA_MESSAGE) {
-			return false;
-		}
-		throw e;
-	}
-}
 
 const CHANGES_QUERY = "SELECT total_changes() AS totalChanges";
 const CHANGES_LAST_ROW_QUERY =
@@ -169,9 +155,31 @@ export class D1Gateway {
 
 	constructor(
 		private readonly log: Log,
-		private readonly storage: Storage
+		legacyStorage: Storage
 	) {
-		this.db = storage.getSqliteDatabase();
+		const storage = legacyStorage.getNewStorage();
+		this.db = storage.db;
+	}
+
+	#prepareAndBind(query: D1SingleQuery) {
+		// D1 only respects the first statement
+		const sql = splitSqlQuery(query.sql)[0];
+		const stmt = this.db.prepare(sql);
+		const params = normaliseParams(query.params);
+		if (params.length === 0) return stmt;
+
+		try {
+			return stmt.bind(params);
+		} catch (e) {
+			// For statements using ?1, ?2, etc, we want to pass them as an array but
+			// `better-sqlite3` expects an object with the shape:
+			// `{ 1: params[0], 2: params[1], ... }`. Try bind like that instead.
+			try {
+				return stmt.bind(Object.fromEntries(params.map((v, i) => [i + 1, v])));
+			} catch {}
+			// If that still failed, re-throw the original error
+			throw e;
+		}
 	}
 
 	#getTotalChanges(): number | bigint {
@@ -184,18 +192,15 @@ export class D1Gateway {
 
 	#query: QueryRunner = (query) => {
 		const meta: OkMeta = { start: performance.now() };
-		// D1 only respects the first statement
-		const sql = splitSqlQuery(query.sql)[0];
-		const stmt = this.db.prepare(sql);
-		const params = normaliseParams(query.params);
+		const stmt = this.#prepareAndBind(query);
 		let results: Record<string, SqliteValue>[];
-		if (returnsData(stmt)) {
+		if (stmt.reader) {
 			// `better-sqlite3` doesn't return `last_row_id` and `changes` from `all`.
 			// We need to make extra queries to get them, but we only want to return
 			// them if this `stmt` made changes. So check total changes before and
 			// after querying `stmt`.
 			const initialTotalChanges = this.#getTotalChanges();
-			results = stmt.all(params);
+			results = stmt.all();
 			const { totalChanges, changes, lastRowId } = this.#getChangesLastRow();
 			if (totalChanges > initialTotalChanges) {
 				meta.last_row_id = Number(lastRowId);
@@ -204,7 +209,7 @@ export class D1Gateway {
 		} else {
 			// `/query` does support queries that don't return data,
 			// returning `[]` instead of `null`
-			const result = stmt.run(params);
+			const result = stmt.run();
 			results = [];
 			meta.last_row_id = Number(result.lastInsertRowid);
 			meta.changes = result.changes;
@@ -214,13 +219,10 @@ export class D1Gateway {
 
 	#execute: QueryRunner = (query) => {
 		const meta: OkMeta = { start: performance.now() };
-		// D1 only respects the first statement
-		const sql = splitSqlQuery(query.sql)[0];
-		const stmt = this.db.prepare(sql);
+		const stmt = this.#prepareAndBind(query);
 		// `/execute` only supports queries that don't return data
-		if (returnsData(stmt)) throw new Error(EXECUTE_RETURNS_DATA_MESSAGE);
-		const params = normaliseParams(query.params);
-		const result = stmt.run(params);
+		if (stmt.reader) throw new Error(EXECUTE_RETURNS_DATA_MESSAGE);
+		const result = stmt.run();
 		meta.last_row_id = Number(result.lastInsertRowid);
 		meta.changes = result.changes;
 		return ok(null, meta);
