@@ -120,11 +120,8 @@ async function* readStream(body, compressed) {
 		}
 		const stringData = new TextDecoder().decode(value);
 		const chunks = stringData.split("\n");
-		if (chunks.length > 1) {
-			chunks[0] = remainder + chunks[0];
-			remainder = "";
-		}
 		if (chunks.length > 0) {
+			chunks[0] = remainder + chunks[0];
 			remainder = chunks.pop();
 		}
 		yield* chunks;
