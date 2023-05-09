@@ -486,18 +486,20 @@ export async function initHandler(args: InitArgs) {
 					`/accounts/${accountId}/workers/services/${fromDashScriptName}/environments/${defaultEnvironment}/content`
 				);
 
-				// TODO: writeFile in small batches to not exhaust system file descriptors
-				await Promise.all(
-					dashScript.map(async (file) => {
-						const filepath = path
-							.join(creationDirectory, `./src/${file.name}`)
-							.replace(/\.js$/, ".ts"); // change javascript extension to typescript extension
-						const directory = dirname(filepath);
+				// writeFile in small batches (of 10) to not exhaust system file descriptors
+				for (const files of createBatches(dashScript, 10)) {
+					await Promise.all(
+						files.map(async (file) => {
+							const filepath = path
+								.join(creationDirectory, `./src/${file.name}`)
+								.replace(/\.js$/, ".ts"); // change javascript extension to typescript extension
+							const directory = dirname(filepath);
 
-						await mkdir(directory, { recursive: true });
-						await writeFile(filepath, file.stream() as ReadableStream);
-					})
-				);
+							await mkdir(directory, { recursive: true });
+							await writeFile(filepath, file.stream() as ReadableStream);
+						})
+					);
+				}
 
 				await writePackageJsonScriptsAndUpdateWranglerToml({
 					isWritingScripts: shouldWritePackageJsonScripts,
@@ -600,16 +602,21 @@ export async function initHandler(args: InitArgs) {
 					`/accounts/${accountId}/workers/services/${fromDashScriptName}/environments/${defaultEnvironment}/content`
 				);
 
-				// TODO: writeFile in small batches to not exhaust system file descriptors
-				await Promise.all(
-					dashScript.map(async (file) => {
-						const filepath = path.join(creationDirectory, `./src/${file.name}`);
-						const directory = dirname(filepath);
+				// writeFile in small batches (of 10) to not exhaust system file descriptors
+				for (const files of createBatches(dashScript, 10)) {
+					await Promise.all(
+						files.map(async (file) => {
+							const filepath = path.join(
+								creationDirectory,
+								`./src/${file.name}`
+							);
+							const directory = dirname(filepath);
 
-						await mkdir(directory, { recursive: true });
-						await writeFile(filepath, file.stream() as ReadableStream);
-					})
-				);
+							await mkdir(directory, { recursive: true });
+							await writeFile(filepath, file.stream() as ReadableStream);
+						})
+					);
+				}
 
 				await writePackageJsonScriptsAndUpdateWranglerToml({
 					isWritingScripts: shouldWritePackageJsonScripts,
@@ -1044,4 +1051,10 @@ export function mapBindings(bindings: WorkerMetadataBinding[]): RawConfig {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			}, {} as RawConfig)
 	);
+}
+
+function* createBatches<T>(array: T[], size: number): IterableIterator<T[]> {
+	for (let i = 0; i < array.length; i += size) {
+		yield array.slice(i, i + size);
+	}
 }
