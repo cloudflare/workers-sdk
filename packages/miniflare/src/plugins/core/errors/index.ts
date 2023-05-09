@@ -192,7 +192,6 @@ function getSourceMappedStack(workerSrcOpts: SourceOptions[], error: Error) {
 // As a stop-gap solution, user workers should send an HTTP 500 JSON response
 // matching the schema below with the `MF-Experimental-Error-Stack` header set
 // to a truthy value, in order to display the pretty-error page.
-export const HEADER_ERROR_STACK = "MF-Experimental-Error-Stack";
 
 export interface JsonError {
 	message?: string;

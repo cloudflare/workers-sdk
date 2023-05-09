@@ -31,7 +31,6 @@ import {
 	GatewayConstructor,
 	GatewayFactory,
 	HEADER_CF_BLOB,
-	HEADER_PROBE,
 	PLUGIN_ENTRIES,
 	Persistence,
 	Plugins,
@@ -44,9 +43,6 @@ import {
 	normaliseDurableObject,
 } from "./plugins";
 import {
-	HEADER_CUSTOM_SERVICE,
-	HEADER_ERROR_STACK,
-	HEADER_ORIGINAL_URL,
 	JsonErrorSchema,
 	SourceOptions,
 	getUserServiceName,
@@ -77,6 +73,7 @@ import {
 import { anyAbortSignal } from "./shared/signal";
 import { NewStorage } from "./storage2";
 import { waitForRequest } from "./wait";
+import { CoreHeaders } from "./workers";
 
 // ===== `Miniflare` User Options =====
 export type MiniflareOptions = SharedOptions &
@@ -171,11 +168,9 @@ function getWorkerRoutes(
 ): Map<string, string[]> {
 	const allRoutes = new Map<string, string[]>();
 	for (const workerOpts of allWorkerOpts) {
-		if (workerOpts.core.routes !== undefined) {
-			const name = workerOpts.core.name ?? "";
-			assert(!allRoutes.has(name));
-			allRoutes.set(name, workerOpts.core.routes);
-		}
+		const name = workerOpts.core.name ?? "";
+		assert(!allRoutes.has(name)); // Validated unique names earlier
+		allRoutes.set(name, workerOpts.core.routes ?? []);
 	}
 	return allRoutes;
 }
@@ -510,10 +505,10 @@ export class Miniflare {
 
 		// Extract original URL passed to `fetch`
 		const url = new URL(
-			headers.get(HEADER_ORIGINAL_URL) ?? req.url ?? "",
+			headers.get(CoreHeaders.ORIGINAL_URL) ?? req.url ?? "",
 			"http://127.0.0.1"
 		);
-		headers.delete(HEADER_ORIGINAL_URL);
+		headers.delete(CoreHeaders.ORIGINAL_URL);
 
 		const noBody = req.method === "GET" || req.method === "HEAD";
 		const body = noBody ? undefined : safeReadableStreamFrom(req);
@@ -527,9 +522,9 @@ export class Miniflare {
 
 		let response: Response | undefined;
 		try {
-			const customService = request.headers.get(HEADER_CUSTOM_SERVICE);
+			const customService = request.headers.get(CoreHeaders.CUSTOM_SERVICE);
 			if (customService !== null) {
-				request.headers.delete(HEADER_CUSTOM_SERVICE);
+				request.headers.delete(CoreHeaders.CUSTOM_SERVICE);
 				response = await this.#handleLoopbackCustomService(
 					request,
 					customService
@@ -657,7 +652,7 @@ export class Miniflare {
 		await waitForRequest({
 			hostname: url.hostname,
 			port: url.port,
-			headers: { [HEADER_PROBE]: this.#optionsVersion.toString() },
+			headers: { [CoreHeaders.PROBE]: this.#optionsVersion.toString() },
 			signal,
 		});
 
@@ -827,7 +822,7 @@ export class Miniflare {
 		await this.ready;
 		const forward = new Request(input, init);
 		const url = new URL(forward.url);
-		forward.headers.set(HEADER_ORIGINAL_URL, url.toString());
+		forward.headers.set(CoreHeaders.ORIGINAL_URL, url.toString());
 		url.protocol = this.#runtimeEntryURL!.protocol;
 		url.host = this.#runtimeEntryURL!.host;
 		if (forward.cf) {
@@ -845,7 +840,7 @@ export class Miniflare {
 		const response = await fetch(url, forward as RequestInit);
 
 		// If the Worker threw an uncaught exception, propagate it to the caller
-		const stack = response.headers.get(HEADER_ERROR_STACK);
+		const stack = response.headers.get(CoreHeaders.ERROR_STACK);
 		if (response.status === 500 && stack !== null) {
 			const caught = JsonErrorSchema.parse(await response.json());
 			throw reviveError(this.#workerSrcOpts, caught);
@@ -890,3 +885,4 @@ export * from "./runtime";
 export * from "./shared";
 export * from "./storage";
 export * from "./storage2";
+export * from "./workers";

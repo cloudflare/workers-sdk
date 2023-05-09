@@ -77,7 +77,6 @@ export * from "./cache";
 export {
 	CORE_PLUGIN,
 	CORE_PLUGIN_NAME,
-	HEADER_PROBE,
 	SERVICE_ENTRY,
 	CoreOptionsSchema,
 	CoreSharedOptionsSchema,

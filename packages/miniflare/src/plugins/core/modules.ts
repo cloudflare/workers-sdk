@@ -3,8 +3,8 @@ import { readFileSync } from "fs";
 import { builtinModules } from "module";
 import path from "path";
 import { TextDecoder, TextEncoder } from "util";
-import acorn from "acorn";
-import walk from "acorn-walk";
+import { parse } from "acorn";
+import { simple } from "acorn-walk";
 import type estree from "estree";
 import { dim } from "kleur/colors";
 import { z } from "zod";
@@ -151,7 +151,7 @@ export class ModuleLocator {
 		// Parse code and visit all import/export statements
 		let root;
 		try {
-			root = acorn.parse(code, {
+			root = parse(code, {
 				ecmaVersion: "latest",
 				sourceType: esModule ? "module" : "script",
 				locations: true,
@@ -199,7 +199,7 @@ export class ModuleLocator {
 						}
 				  },
 		};
-		walk.simple(root, visitors as Record<string, (node: any) => void>);
+		simple(root, visitors as Record<string, (node: any) => void>);
 	}
 
 	#visitModule(
