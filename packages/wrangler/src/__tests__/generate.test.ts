@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { getPackageManager } from "../package-manager";
+import { type PackageManager, getPackageManager } from "../package-manager";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
@@ -17,7 +17,7 @@ describe("generate", () => {
 
 		mockPackageManager = {
 			cwd: process.cwd(),
-			type: "mockpm",
+			type: "mockpm" as "npm",
 			addDevDeps: jest.fn(),
 			install: jest.fn(),
 		};
