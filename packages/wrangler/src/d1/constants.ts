@@ -4,3 +4,4 @@ export const LOCATION_CHOICES = ["weur", "eeur", "apac", "wnam", "enam"];
 
 // Max number of statements to send in a single /execute call
 export const DEFAULT_BATCH_SIZE = 10_000;
+export const LOCATION_CHOICES = ["weur", "eeur", "apac", "wnam", "enam"];

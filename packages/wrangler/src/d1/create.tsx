@@ -1,4 +1,4 @@
-import { Text, Box } from "ink";
+import { Box, Text } from "ink";
 import React from "react";
 import { fetchResult } from "../cfetch";
 import { withConfig } from "../config";
@@ -24,7 +24,6 @@ export function Options(yargs: CommonYargsArgv) {
 			describe:
 				"A hint for the primary location of the new DB. Options:\nweur: Western Europe\neeur: Eastern Europe\napac: Asia Pacific\nwnam: Western North America\nenam: Eastern North America \n",
 			type: "string",
-			choices: LOCATION_CHOICES,
 		})
 		.option("experimental", {
 			default: false,
@@ -40,6 +39,16 @@ export const Handler = withConfig<HandlerOptions>(
 		const accountId = await requireAuth(config);
 
 		logger.log(d1BetaWarning);
+
+		if (!experimental && location) {
+			if (LOCATION_CHOICES.indexOf(location.toLowerCase()) === -1) {
+				throw new Error(
+					`Location '${location}' invalid. Valid values are ${LOCATION_CHOICES.join(
+						","
+					)}`
+				);
+			}
+		}
 
 		let db: DatabaseCreationResult;
 		try {
