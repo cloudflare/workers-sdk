@@ -38,7 +38,11 @@ export const R2_PLUGIN: Plugin<
 		const buckets = namespaceEntries(options.r2Buckets);
 		return buckets.map<Service>(([_, id]) => ({
 			name: `${R2_PLUGIN_NAME}:${id}`,
-			worker: pluginNamespacePersistWorker(R2_PLUGIN_NAME, id, persist),
+			worker: pluginNamespacePersistWorker(
+				R2_PLUGIN_NAME,
+				encodeURIComponent(id),
+				persist
+			),
 		}));
 	},
 };

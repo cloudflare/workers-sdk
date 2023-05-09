@@ -4,7 +4,28 @@ import { Awaitable, Log, OptionalZodTypeOf } from "../../shared";
 import { GatewayConstructor, RemoteStorageConstructor } from "./gateway";
 import { RouterConstructor } from "./router";
 
+// Maps **service** names to the Durable Object class names exported by them
 export type DurableObjectClassNames = Map<string, Set<string>>;
+
+export const QueueConsumerOptionsSchema = z.object({
+	// https://developers.cloudflare.com/queues/platform/configuration/#consumer
+	// https://developers.cloudflare.com/queues/platform/limits/
+	maxBatchSize: z.number().min(0).max(100).optional(),
+	maxBatchTimeout: z.number().min(0).max(30).optional(), // seconds
+	maxRetires: z.number().min(0).max(100).optional(),
+	deadLetterQueue: z.ostring(),
+});
+export type QueueConsumerOptions = z.infer<typeof QueueConsumerOptionsSchema>;
+export interface QueueConsumer extends QueueConsumerOptions {
+	workerName: string;
+	deadLetterConsumer?: QueueConsumer;
+}
+
+// Maps queue names to the Worker that wishes to consume it. Note each queue
+// can only be consumed by one Worker, but one Worker may consume multiple
+// queues. Support for multiple consumers of a single queue is not planned
+// anytime soon.
+export type QueueConsumers = Map<string, QueueConsumer>;
 
 export interface PluginServicesOptions<
 	Options extends z.ZodType,
@@ -15,9 +36,12 @@ export interface PluginServicesOptions<
 	sharedOptions: OptionalZodTypeOf<SharedOptions>;
 	workerBindings: Worker_Binding[];
 	workerIndex: number;
-	durableObjectClassNames: DurableObjectClassNames;
 	additionalModules: Worker_Module[];
 	tmpPath: string;
+
+	// ~~Leaky abstractions~~ "Plugin specific options" :)
+	durableObjectClassNames: DurableObjectClassNames;
+	queueConsumers: QueueConsumers;
 }
 
 export interface PluginBase<

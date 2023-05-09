@@ -7,33 +7,33 @@ import os from "os";
 import path from "path";
 import { Duplex } from "stream";
 import { ReadableStream } from "stream/web";
-import type {
-	IncomingRequestCfProperties,
-	RequestInitCfProperties,
-} from "@cloudflare/workers-types/experimental";
+import type { RequestInitCfProperties } from "@cloudflare/workers-types/experimental";
 import exitHook from "exit-hook";
 import getPort from "get-port";
 import stoppable from "stoppable";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
-import { setupCf } from "./cf";
+import { fallbackCf, setupCf } from "./cf";
 import {
 	Headers,
 	Request,
-	RequestInfo,
 	RequestInit,
 	Response,
 	coupleWebSocket,
 	fetch,
 } from "./http";
 import {
+	DispatchFetch,
 	DurableObjectClassNames,
 	GatewayConstructor,
 	GatewayFactory,
 	HEADER_CF_BLOB,
 	PLUGIN_ENTRIES,
 	Persistence,
+	PluginServicesOptions,
 	Plugins,
+	QueueConsumers,
+	QueuesError,
 	SERVICE_ENTRY,
 	SOCKET_ENTRY,
 	SharedOptions,
@@ -106,6 +106,7 @@ function validateOptions(
 
 	// Validate all options
 	for (const [key, plugin] of PLUGIN_ENTRIES) {
+		// @ts-expect-error `QueuesPlugin` doesn't define shared options
 		pluginSharedOpts[key] = plugin.sharedOptions?.parse(sharedOpts);
 		for (let i = 0; i < workerOpts.length; i++) {
 			// Make sure paths are correct in validation errors
@@ -160,6 +161,57 @@ function getDurableObjectClassNames(
 		}
 	}
 	return serviceClassNames;
+}
+
+function getQueueConsumers(
+	allWorkerOpts: PluginWorkerOptions[]
+): QueueConsumers {
+	const queueConsumers: QueueConsumers = new Map();
+	for (const workerOpts of allWorkerOpts) {
+		const workerName = workerOpts.core.name ?? "";
+		let workerConsumers = workerOpts.queues.queueConsumers;
+		if (workerConsumers !== undefined) {
+			// De-sugar array consumer options to record mapping to empty options
+			if (Array.isArray(workerConsumers)) {
+				workerConsumers = Object.fromEntries(
+					workerConsumers.map((queueName) => [queueName, {}])
+				);
+			}
+
+			for (const [queueName, opts] of Object.entries(workerConsumers)) {
+				// Validate that each queue has at most one consumer...
+				const existingConsumer = queueConsumers.get(queueName);
+				if (existingConsumer !== undefined) {
+					throw new QueuesError(
+						"ERR_MULTIPLE_CONSUMERS",
+						`Multiple consumers defined for queue "${queueName}": "${existingConsumer.workerName}" and "${workerName}"`
+					);
+				}
+				// ...then store the consumer
+				queueConsumers.set(queueName, { workerName, ...opts });
+			}
+		}
+	}
+
+	// Populate all `deadLetterConsumer`s, note this may create cycles
+	for (const [queueName, consumer] of queueConsumers) {
+		if (consumer.deadLetterQueue !== undefined) {
+			// Check the dead letter queue isn't configured to be the queue itself
+			// (NOTE: Queues *does* permit DLQ cycles between multiple queues,
+			//  i.e. if Q2 is DLQ for Q1, but Q1 is DLQ for Q2)
+			if (consumer.deadLetterQueue === queueName) {
+				throw new QueuesError(
+					"ERR_DEAD_LETTER_QUEUE_CYCLE",
+					`Dead letter queue for queue "${queueName}" cannot be itself`
+				);
+			}
+			consumer.deadLetterConsumer = queueConsumers.get(
+				consumer.deadLetterQueue
+			);
+		}
+	}
+
+	return queueConsumers;
 }
 
 // Collects all routes from all worker services
@@ -358,6 +410,7 @@ export class Miniflare {
 				const gatewayFactory = new GatewayFactory<any>(
 					this.#log,
 					this.#timers,
+					this.dispatchFetch,
 					this.#sharedOpts.core.cloudflareFetch,
 					key,
 					plugin.gateway,
@@ -681,6 +734,7 @@ export class Miniflare {
 		sharedOpts.core.cf = await setupCf(this.#log, sharedOpts.core.cf);
 
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
+		const queueConsumers = getQueueConsumers(allWorkerOpts);
 		const allWorkerRoutes = getWorkerRoutes(allWorkerOpts);
 
 		// Use Map to dedupe services by name
@@ -731,18 +785,26 @@ export class Miniflare {
 			}
 
 			// Collect all services required by this worker
+			const pluginServicesOptionsBase: Omit<
+				PluginServicesOptions<z.ZodTypeAny, undefined>,
+				"options" | "sharedOptions"
+			> = {
+				log: this.#log,
+				workerBindings,
+				workerIndex: i,
+				additionalModules,
+				tmpPath: this.#tmpPath,
+				durableObjectClassNames,
+				queueConsumers,
+			};
 			for (const [key, plugin] of PLUGIN_ENTRIES) {
 				const pluginServices = await plugin.getServices({
-					log: this.#log,
+					...pluginServicesOptionsBase,
 					// @ts-expect-error `CoreOptionsSchema` has required options which are
 					//  missing in other plugins' options.
 					options: workerOpts[key],
+					// @ts-expect-error `QueuesPlugin` doesn't define shared options
 					sharedOptions: sharedOpts[key],
-					workerBindings,
-					workerIndex: i,
-					durableObjectClassNames,
-					additionalModules,
-					tmpPath: this.#tmpPath,
 				});
 				if (pluginServices !== undefined) {
 					for (const service of pluginServices) {
@@ -814,10 +876,7 @@ export class Miniflare {
 		return promise;
 	}
 
-	async dispatchFetch(
-		input: RequestInfo,
-		init?: RequestInit<Partial<IncomingRequestCfProperties>>
-	): Promise<Response> {
+	dispatchFetch: DispatchFetch = async (input, init) => {
 		this.#checkDisposed();
 		await this.ready;
 		const forward = new Request(input, init);
@@ -826,7 +885,8 @@ export class Miniflare {
 		url.protocol = this.#runtimeEntryURL!.protocol;
 		url.host = this.#runtimeEntryURL!.host;
 		if (forward.cf) {
-			forward.headers.set(HEADER_CF_BLOB, JSON.stringify(forward.cf));
+			const cf = { ...fallbackCf, ...forward.cf };
+			forward.headers.set(HEADER_CF_BLOB, JSON.stringify(cf));
 		}
 		// Remove `Content-Length: 0` headers from requests when a body is set to
 		// avoid `RequestContentLengthMismatch` errors
@@ -847,7 +907,7 @@ export class Miniflare {
 		}
 
 		return response;
-	}
+	};
 
 	/** @internal */
 	_getPluginStorage(

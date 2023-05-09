@@ -825,7 +825,7 @@ test("put: overrides existing keys", async (t) => {
 	t.is(await body.text(), "value2");
 
 	// Check deletes old blob
-	await timers.waitForMicrotasks();
+	await timers.waitForTasks();
 	t.is(await storage.blob.get(objectRow.blob_id), null);
 });
 test(validatesKeyMacro, { method: "put", f: (r2, key) => r2.put(key, "v") });
@@ -990,7 +990,7 @@ test("delete: deletes existing keys", async (t) => {
 	await r2.delete("key");
 	t.is(await r2.head("key"), null);
 	// Check deletes old blob
-	await timers.waitForMicrotasks();
+	await timers.waitForTasks();
 	t.is(await storage.blob.get(objectRow.blob_id), null);
 
 	// Check deletes multiple keys, skipping non-existent keys
@@ -1029,12 +1029,14 @@ const listMacro: Macro<
 
 		let lastCursor: string | undefined;
 		for (let pageIndex = 0; pageIndex < pages.length; pageIndex++) {
-			const { objects, truncated, cursor } = await r2.list({
+			const result = await r2.list({
 				...options,
 				prefix: ns + (options?.prefix ?? ""),
 				cursor: options?.cursor ?? lastCursor,
 				startAfter: options?.startAfter ? ns + options.startAfter : undefined,
 			});
+			const { objects, truncated } = result;
+			const cursor = truncated ? result.cursor : undefined;
 
 			// Check objects in page match
 			const objectKeys = objects.map(({ key }) => key.substring(ns.length));
@@ -1144,16 +1146,14 @@ test("list: paginates with variable limit", async (t) => {
 	let result = await r2.list({ prefix: ns, limit: 1 });
 	t.is(result.objects.length, 1);
 	t.is(result.objects[0].key, `${ns}key1`);
-	t.true(result.truncated);
-	t.not(result.cursor, undefined);
+	assert(result.truncated && result.cursor !== undefined);
 
 	// Get second page with different limit
 	result = await r2.list({ prefix: ns, limit: 2, cursor: result.cursor });
 	t.is(result.objects.length, 2);
 	t.is(result.objects[0].key, `${ns}key2`);
 	t.is(result.objects[1].key, `${ns}key3`);
-	t.false(result.truncated);
-	t.is(result.cursor, undefined);
+	t.false(result.truncated && result.cursor === undefined);
 });
 test("list: returns keys inserted whilst paginating", async (t) => {
 	const { r2, ns } = t.context;
@@ -1166,8 +1166,7 @@ test("list: returns keys inserted whilst paginating", async (t) => {
 	t.is(result.objects.length, 2);
 	t.is(result.objects[0].key, `${ns}key1`);
 	t.is(result.objects[1].key, `${ns}key3`);
-	t.true(result.truncated);
-	t.not(result.cursor, undefined);
+	assert(result.truncated && result.cursor !== undefined);
 
 	// Insert key2 and key4
 	await r2.put("key2", "value2");
@@ -1178,8 +1177,7 @@ test("list: returns keys inserted whilst paginating", async (t) => {
 	t.is(result.objects.length, 2);
 	t.is(result.objects[0].key, `${ns}key4`);
 	t.is(result.objects[1].key, `${ns}key5`);
-	t.false(result.truncated);
-	t.is(result.cursor, undefined);
+	t.false(result.truncated && result.cursor === undefined);
 });
 test("list: validates limit", async (t) => {
 	const { r2 } = t.context;
@@ -1318,7 +1316,7 @@ test("list: returns correct delimitedPrefixes for delimiter and prefix", async (
 	// Check with limit (limit includes returned objects and delimitedPrefixes)
 	const opt: R2ListOptions = { prefix: `${ns}dir0/`, delimiter: "/", limit: 2 };
 	result = await r2.list(opt);
-	t.true(result.truncated);
+	assert(result.truncated);
 	t.deepEqual(keys(result), ["dir0/file0", "dir0/file1"]);
 	t.deepEqual(delimitedPrefixes(result), []);
 	result = await r2.list({ ...opt, cursor: result.cursor });
@@ -1394,6 +1392,25 @@ test.serial("operations persist stored data", async (t) => {
 	t.is(object?.size, 9);
 	stored = stmtListByNs.all({ ns });
 	t.deepEqual(stored, [{ key: `${ns}multipart` }]);
+});
+
+test.serial("operations permit strange bucket names", async (t) => {
+	const { r2, ns } = t.context;
+
+	// Set option, then reset after test
+	const id = "my/ Bucket";
+	await t.context.setOptions({ ...opts, r2Buckets: { BUCKET: id } });
+	t.teardown(() => t.context.setOptions(opts));
+
+	// Check basic operations work
+	await r2.put("key", "value");
+	const object = await r2.get("key");
+	t.is(await object?.text(), "value");
+
+	// Check stored with correct ID
+	const storage = t.context.mf._getPluginStorage("r2", id);
+	const stmts = sqlStmts(storage.db);
+	t.not(stmts.getObjectByKey.get(`${ns}key`), undefined);
 });
 
 // Multipart tests
@@ -1503,7 +1520,7 @@ test("abortMultipartUpload", async (t) => {
 	await upload1.abort();
 	t.is(stmts.getPartsByUploadId.all(upload1.uploadId).length, 0);
 	// Check blobs deleted
-	await timers.waitForMicrotasks();
+	await timers.waitForTasks();
 	for (const part of parts) t.is(await storage.blob.get(part.blob_id), null);
 
 	// Check cannot upload after abort
@@ -1580,7 +1597,7 @@ test("completeMultipartUpload", async (t) => {
 	t.is(object.size, 1);
 	t.is(object.etag, "46d1741e8075da4ac72c71d8130fcb71-1");
 	// Check previous multipart uploads blobs deleted
-	await timers.waitForMicrotasks();
+	await timers.waitForTasks();
 	for (const part of parts) t.is(await storage.blob.get(part.blob_id), null);
 
 	// Check completing multiple uploads overrides existing, deleting all parts
@@ -1852,7 +1869,7 @@ test("put: is multipart aware", async (t) => {
 	await r2.put("key", "new-value");
 	t.is(stmts.getPartsByUploadId.all(upload.uploadId).length, 0);
 	// Check deletes all previous blobs
-	await timers.waitForMicrotasks();
+	await timers.waitForTasks();
 	for (const part of parts) t.is(await storage.blob.get(part.blob_id), null);
 });
 test("delete: is multipart aware", async (t) => {
@@ -1874,7 +1891,7 @@ test("delete: is multipart aware", async (t) => {
 	await r2.delete("key");
 	t.is(stmts.getPartsByUploadId.all(upload.uploadId).length, 0);
 	// Check deletes all previous blobs
-	await timers.waitForMicrotasks();
+	await timers.waitForTasks();
 	for (const part of parts) t.is(await storage.blob.get(part.blob_id), null);
 });
 test("delete: waits for in-progress multipart gets before deleting part blobs", async (t) => {
@@ -1901,7 +1918,7 @@ test("delete: waits for in-progress multipart gets before deleting part blobs", 
 		`${"2".repeat(PART_SIZE)}${"3".repeat(PART_SIZE)}`
 	);
 
-	await timers.waitForMicrotasks();
+	await timers.waitForTasks();
 	for (const part of parts) t.is(await storage.blob.get(part.blob_id), null);
 });
 test("list: is multipart aware", async (t) => {

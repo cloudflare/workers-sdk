@@ -21,7 +21,14 @@ class TestRouter extends Router<TestGateway> {
 		const log = new NoOpLog();
 		super(
 			log,
-			new GatewayFactory(log, defaultTimers, undefined, "test", TestGateway)
+			new GatewayFactory(
+				log,
+				defaultTimers,
+				() => assert.fail("dispatchFetch not implemented"),
+				undefined,
+				"test",
+				TestGateway
+			)
 		);
 	}
 

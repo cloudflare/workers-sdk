@@ -17,6 +17,8 @@ export type Void = typeof kVoid;
 export interface Config {
 	services?: Service[];
 	sockets?: Socket[];
+	v8Flags?: string[];
+	extension?: Extension[];
 }
 
 export type Socket = {
@@ -89,6 +91,8 @@ export type Worker_Binding = {
 	| { kvNamespace?: ServiceDesignator }
 	| { r2Bucket?: ServiceDesignator }
 	| { r2Admin?: ServiceDesignator }
+	| { wrapped?: Worker_Binding_WrappedBinding }
+	| { queue?: ServiceDesignator }
 );
 
 export interface Worker_Binding_Parameter {
@@ -106,7 +110,8 @@ export type Worker_Binding_Type =
 	| { durableObjectNamespace: Void }
 	| { kvNamespace?: Void }
 	| { r2Bucket?: Void }
-	| { r2Admin?: Void };
+	| { r2Admin?: Void }
+	| { queue?: Void };
 
 export type Worker_Binding_DurableObjectNamespaceDesignator = {
 	className?: string;
@@ -125,6 +130,12 @@ export type Worker_Binding_CryptoKey = (
 	extractable?: boolean;
 	usages?: Worker_Binding_CryptoKey_Usage[];
 };
+
+export interface Worker_Binding_WrappedBinding {
+	moduleName?: string;
+	entrypoint?: string;
+	innerBinding?: Worker_Binding[];
+}
 
 export type Worker_Binding_CryptoKey_Algorithm =
 	| { name?: string }
@@ -182,4 +193,14 @@ export interface TlsOptions {
 export interface TlsOptions_Keypair {
 	privateKey?: string;
 	certificateChain?: string;
+}
+
+export interface Extension {
+	modules?: Extension_Module[];
+}
+
+export interface Extension_Module {
+	name?: string;
+	internal?: boolean;
+	esModule?: string;
 }

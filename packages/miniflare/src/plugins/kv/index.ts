@@ -60,7 +60,11 @@ export const KV_PLUGIN: Plugin<
 		const namespaces = namespaceEntries(options.kvNamespaces);
 		const services = namespaces.map<Service>(([_, id]) => ({
 			name: `${SERVICE_NAMESPACE_PREFIX}:${id}`,
-			worker: pluginNamespacePersistWorker(KV_PLUGIN_NAME, id, persist),
+			worker: pluginNamespacePersistWorker(
+				KV_PLUGIN_NAME,
+				encodeURIComponent(id),
+				persist
+			),
 		}));
 
 		if (isWorkersSitesEnabled(options)) {

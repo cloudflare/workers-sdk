@@ -10,7 +10,8 @@ export class D1Router extends Router<D1Gateway> {
 	@POST("/:database/query")
 	query: RouteHandler<D1Params> = async (req, params) => {
 		const persist = decodePersist(req.headers);
-		const gateway = this.gatewayFactory.get(params.database, persist);
+		const database = decodeURIComponent(params.database);
+		const gateway = this.gatewayFactory.get(database, persist);
 		const query = D1QuerySchema.parse(await req.json());
 		const results = gateway.query(query);
 		return Response.json(results);
@@ -19,7 +20,8 @@ export class D1Router extends Router<D1Gateway> {
 	@POST("/:database/execute")
 	execute: RouteHandler<D1Params> = async (req, params) => {
 		const persist = decodePersist(req.headers);
-		const gateway = this.gatewayFactory.get(params.database, persist);
+		const database = decodeURIComponent(params.database);
+		const gateway = this.gatewayFactory.get(database, persist);
 		const query = D1QuerySchema.parse(await req.json());
 		const results = gateway.execute(query);
 		return Response.json(results);
@@ -28,7 +30,8 @@ export class D1Router extends Router<D1Gateway> {
 	@POST("/:database/dump")
 	dump: RouteHandler<D1Params> = async (req, params) => {
 		const persist = decodePersist(req.headers);
-		const gateway = this.gatewayFactory.get(params.database, persist);
+		const database = decodeURIComponent(params.database);
+		const gateway = this.gatewayFactory.get(database, persist);
 		const buffer = await gateway.dump();
 		return new Response(buffer, {
 			headers: { "Content-Type": "application/octet-stream" },

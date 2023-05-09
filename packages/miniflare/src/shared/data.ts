@@ -1,5 +1,3 @@
-import path from "path";
-
 export function lexicographicCompare(x: string, y: string): number {
 	if (x < y) return -1;
 	if (x === y) return 0;
@@ -39,9 +37,8 @@ export function base64Decode(encoded: string): string {
  * DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
  * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-const namespaceRegexp = /[/\\:|]/g;
 const dotRegexp = /(^|\/|\\)(\.+)(\/|\\|$)/g;
-const illegalRegexp = /[?<>*"'^\x00-\x1f\x80-\x9f]/g;
+const illegalRegexp = /[?<>*"'^/\\:|\x00-\x1f\x80-\x9f]/g;
 const windowsReservedRegexp = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$/i;
 const leadingRegexp = /^[ /\\]+/;
 const trailingRegexp = /[ /\\]+$/;
@@ -56,7 +53,6 @@ function underscoreReplacement(match: string) {
 
 export function sanitisePath(unsafe: string): string {
 	return unsafe
-		.replace(namespaceRegexp, path.sep)
 		.replace(dotRegexp, dotReplacement)
 		.replace(dotRegexp, dotReplacement)
 		.replace(illegalRegexp, "_")

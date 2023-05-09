@@ -70,6 +70,10 @@ struct Config {
   # WARNING: Use at your own risk. V8 flags can have all sorts of wild effects including completely
   #   breaking everything. V8 flags also generally do not come with any guarantee of stability
   #   between V8 versions. Most users should not set any V8 flags.
+
+  extensions @3 :List(Extension);
+  # Extensions provide capabilities to all workers. Extensions are usually prepared separately
+  # and are late-linked with the app using this config field.
 }
 
 # ========================================================================================
@@ -325,6 +329,14 @@ struct Worker {
       # R2 bucket and admin API bindings. Similar to KV namespaces, these turn operations into
       # HTTP requests aimed at the named service.
 
+      wrapped @14 :WrappedBinding;
+      # Wraps a collection of inner bindings in a common api functionality.
+
+      queue @15 :ServiceDesignator;
+      # A Queue binding, implemented by the named service. Requests to the
+      # namespace will be converted into HTTP requests targetting the given
+      # service name.
+
       # TODO(someday): dispatch, analyticsEngine, other new features
     }
 
@@ -345,6 +357,7 @@ struct Worker {
         kvNamespace @8 :Void;
         r2Bucket @9 :Void;
         r2Admin @10 :Void;
+        queue @11 :Void;
       }
     }
 
@@ -417,6 +430,26 @@ struct Worker {
         wrapKey @6;
         unwrapKey @7;
       }
+    }
+
+    struct WrappedBinding {
+      # A binding that wraps a group of (lower-level) bindings in a common API.
+
+      moduleName @0 :Text;
+      # Wrapper module name.
+      # The module must be an internal one (provided by extension or registered in the c++ code).
+      # Module will be instantitated during binding initialization phase.
+
+      entrypoint @1 :Text = "default";
+      # Module needs to export a function with a given name (default export gets "default" name).
+      # The function needs to accept a single `env` argument - a dictionary with inner bindings.
+      # Function will be invoked during initialization phase and its return value will be used as
+      # resulting binding value.
+
+      innerBindings @2 :List(Binding);
+      # Inner bindings that will be created and passed in the env dictionary.
+      # These bindings shall be used to implement end-user api, and are not available to the
+      # binding consumers unless "re-exported" in wrapBindings function.
     }
   }
 
@@ -773,4 +806,29 @@ struct TlsOptions {
   # - You have extreme backwards-compatibility needs and wish to enable obsolete and/or broken
   #   algorithms.
   # - You need quickly to disable an algorithm recently discovered to be broken.
+}
+
+# ========================================================================================
+# Extensions
+
+struct Extension {
+  # Additional capabilities for workers.
+
+  modules @0 :List(Module);
+  # List of javascript modules provided by the extension.
+  # These modules can either be imported directly as user-level api (if not marked internal)
+  # or used to define more complicated workerd constructs such as wrapped bindings and events.
+
+  struct Module {
+    # A module extending workerd functionality.
+
+    name @0 :Text;
+    # Full js module name.
+
+    internal @1 :Bool = false;
+    # Internal modules can be imported by other extension modules only and not the user code.
+
+    esModule @2 :Text;
+    # Raw source code of ES module.
+  }
 }

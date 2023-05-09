@@ -24,7 +24,6 @@ export const WORKER_BINDING_SERVICE_LOOPBACK: Worker_Binding = {
 };
 
 // TODO: make this an inherited worker in core plugin
-// TODO: do we need to URI encode namespace?
 const SCRIPT_PLUGIN_NAMESPACE_PERSIST_COMPAT_DATE = "2022-09-01";
 const SCRIPT_PLUGIN_NAMESPACE_PERSIST = `addEventListener("fetch", (event) => {
   let request = event.request;

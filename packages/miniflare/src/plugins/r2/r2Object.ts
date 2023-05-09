@@ -1,14 +1,9 @@
 import { Blob } from "buffer";
 import { ReadableStream, TransformStream } from "stream/web";
 import type { R2StringChecksums } from "@cloudflare/workers-types/experimental";
+import { HEX_REGEXP } from "../../shared";
 import { R2Objects } from "./gateway";
-import {
-	HEX_REGEXP,
-	ObjectRow,
-	R2HeadResponse,
-	R2HttpFields,
-	R2Range,
-} from "./schemas";
+import { ObjectRow, R2HeadResponse, R2HttpFields, R2Range } from "./schemas";
 
 export interface EncodedMetadata {
 	metadataSize: number;

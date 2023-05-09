@@ -16,24 +16,66 @@ export type TestMiniflareHandler<Env> = (
 	ctx: ExecutionContext
 ) => Awaitable<WorkerResponse>;
 
-export class TestTimers implements Timers {
-	timestamp = 1_000_000; // 1000s
-	#pendingMicrotasks = new Set<Promise<unknown>>();
+interface TestTimeout {
+	triggerTimestamp: number;
+	closure: () => Awaitable<unknown>;
+}
+export class TestTimers implements Timers<number> {
+	#timestamp = 1_000_000; // 1000s
+	#nextTimeoutHandle = 0;
+	#pendingTimeouts = new Map<number, TestTimeout>();
+	#runningTasks = new Set<Promise<unknown>>();
+
+	get timestamp() {
+		return this.#timestamp;
+	}
+	set timestamp(newValue: number) {
+		this.#timestamp = newValue;
+		for (const [handle, timeout] of this.#pendingTimeouts) {
+			if (timeout.triggerTimestamp <= this.timestamp) {
+				this.#pendingTimeouts.delete(handle);
+				this.queueMicrotask(timeout.closure);
+			}
+		}
+	}
 
 	now = () => {
-		return this.timestamp;
+		return this.#timestamp;
 	};
+
+	setTimeout<Args extends any[]>(
+		closure: (...args: Args) => Awaitable<unknown>,
+		delay: number,
+		...args: Args
+	): number {
+		const handle = this.#nextTimeoutHandle++;
+		const argsClosure = () => closure(...args);
+		if (delay === 0) {
+			this.queueMicrotask(argsClosure);
+		} else {
+			const timeout: TestTimeout = {
+				triggerTimestamp: this.timestamp + delay,
+				closure: argsClosure,
+			};
+			this.#pendingTimeouts.set(handle, timeout);
+		}
+		return handle;
+	}
+
+	clearTimeout(handle: number) {
+		this.#pendingTimeouts.delete(handle);
+	}
 
 	queueMicrotask(closure: () => Awaitable<unknown>) {
 		const result = closure();
 		if (result instanceof Promise) {
-			this.#pendingMicrotasks.add(result);
-			result.then(() => this.#pendingMicrotasks.delete(result));
+			this.#runningTasks.add(result);
+			result.then(() => this.#runningTasks.delete(result));
 		}
 	}
 
-	async waitForMicrotasks() {
-		await Promise.all(this.#pendingMicrotasks);
+	async waitForTasks() {
+		await Promise.all(this.#runningTasks);
 	}
 }
 
