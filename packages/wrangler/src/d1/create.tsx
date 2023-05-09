@@ -5,12 +5,13 @@ import { withConfig } from "../config";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
+import { LOCATION_CHOICES } from "./constants";
 import { d1BetaWarning } from "./utils";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Database } from "./types";
+import type { DatabaseCreationResult } from "./types";
 
 export function Options(yargs: CommonYargsArgv) {
 	return yargs
@@ -19,17 +20,23 @@ export function Options(yargs: CommonYargsArgv) {
 			type: "string",
 			demandOption: true,
 		})
+		.option("location", {
+			describe:
+				"A hint for the primary location of the new DB. Options:\nweur: Western Europe\neeur: Eastern Europe\napac: Asia Pacific\nwnam: Western North America\nenam: Eastern North America \n",
+			type: "string",
+			choices: LOCATION_CHOICES,
+		})
 		.epilogue(d1BetaWarning);
 }
 
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
 export const Handler = withConfig<HandlerOptions>(
-	async ({ name, config }): Promise<void> => {
+	async ({ name, config, location }): Promise<void> => {
 		const accountId = await requireAuth(config);
 
 		logger.log(d1BetaWarning);
 
-		let db: Database;
+		let db: DatabaseCreationResult;
 		try {
 			db = await fetchResult(`/accounts/${accountId}/d1/database`, {
 				method: "POST",
@@ -38,6 +45,7 @@ export const Handler = withConfig<HandlerOptions>(
 				},
 				body: JSON.stringify({
 					name,
+					...(location && { primary_location_hint: location }),
 				}),
 			});
 		} catch (e) {
@@ -50,14 +58,16 @@ export const Handler = withConfig<HandlerOptions>(
 		logger.log(
 			renderToString(
 				<Box flexDirection="column">
-					<Text>✅ Successfully created DB &apos;{db.name}&apos;!</Text>
-					<Text>&nbsp;</Text>
 					<Text>
-						Add the following to your wrangler.toml to connect to it from a
-						Worker:
+						✅ Successfully created DB &apos;{db.name}&apos;
+						{db.created_in_region
+							? ` in region ${db.created_in_region}`
+							: location
+							? ` using primary location hint ${location}`
+							: ``}
 					</Text>
 					<Text>&nbsp;</Text>
-					<Text>[[ d1_databases ]]</Text>
+					<Text>[[d1_databases]]</Text>
 					<Text>
 						binding = &quot;DB&quot; # i.e. available in your Worker on env.DB
 					</Text>
