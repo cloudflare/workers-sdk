@@ -39,13 +39,13 @@
 		"source-map-support": "0.5.21",
 		"stoppable": "^1.1.0",
 		"undici": "^5.13.0",
-		"workerd": "^1.20230404.0",
+		"workerd": "^1.20230419.0",
 		"ws": "^8.11.0",
 		"youch": "^3.2.2",
 		"zod": "^3.20.6"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20221111.1",
+		"@cloudflare/workers-types": "^4.20230419.0",
 		"@types/better-sqlite3": "^7.6.2",
 		"@types/debug": "^4.1.7",
 		"@types/estree": "^1.0.0",
@@ -53,7 +53,9 @@
 		"@types/http-cache-semantics": "^4.0.1",
 		"@types/source-map-support": "^0.5.6",
 		"@types/stoppable": "^1.1.1",
-		"@types/ws": "^8.5.3"
+		"@types/ws": "^8.5.3",
+		"devalue": "^4.3.0",
+		"semiver": "^1.1.0"
 	},
 	"engines": {
 		"node": ">=16.13"

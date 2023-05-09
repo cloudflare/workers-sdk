@@ -53,6 +53,7 @@ export class KVRouter extends Router<KVGateway> {
 	get: RouteHandler<KVParams> = async (req, params, url) => {
 		// Get gateway with (persistent) storage
 		const persist = decodePersist(req.headers);
+		const namespace = decodeURIComponent(params.namespace);
 
 		// Decode URL parameters
 		const key = decodeKey(params, url.searchParams);
@@ -64,7 +65,7 @@ export class KVRouter extends Router<KVGateway> {
 		// Get value from storage
 		let value: KVGatewayGetResult | undefined;
 		if (req.headers.get(HEADER_SITES) === null) {
-			const gateway = this.gatewayFactory.get(params.namespace, persist);
+			const gateway = this.gatewayFactory.get(namespace, persist);
 			value = await gateway.get(key, options);
 		} else {
 			// Workers Sites: if this is a sites request, persist should be used as
@@ -88,7 +89,8 @@ export class KVRouter extends Router<KVGateway> {
 	put: RouteHandler<KVParams> = async (req, params, url) => {
 		// Get gateway with (persistent) storage
 		const persist = decodePersist(req.headers);
-		const gateway = this.gatewayFactory.get(params.namespace, persist);
+		const namespace = decodeURIComponent(params.namespace);
+		const gateway = this.gatewayFactory.get(namespace, persist);
 
 		// Decode URL parameters
 		const key = decodeKey(params, url.searchParams);
@@ -127,7 +129,8 @@ export class KVRouter extends Router<KVGateway> {
 	delete: RouteHandler<KVParams> = async (req, params, url) => {
 		// Get gateway with (persistent) storage
 		const persist = decodePersist(req.headers);
-		const gateway = this.gatewayFactory.get(params.namespace, persist);
+		const namespace = decodeURIComponent(params.namespace);
+		const gateway = this.gatewayFactory.get(namespace, persist);
 
 		// Decode URL parameters
 		const key = decodeKey(params, url.searchParams);
@@ -141,6 +144,7 @@ export class KVRouter extends Router<KVGateway> {
 	list: RouteHandler<Omit<KVParams, "key">> = async (req, params, url) => {
 		// Get gateway with (persistent) storage
 		const persist = decodePersist(req.headers);
+		const namespace = decodeURIComponent(params.namespace);
 
 		// Decode URL parameters
 		const limitParam = url.searchParams.get(PARAM_LIST_LIMIT);
@@ -152,7 +156,7 @@ export class KVRouter extends Router<KVGateway> {
 		// List keys from storage
 		let result: KVGatewayListResult;
 		if (req.headers.get(HEADER_SITES) === null) {
-			const gateway = this.gatewayFactory.get(params.namespace, persist);
+			const gateway = this.gatewayFactory.get(namespace, persist);
 			result = await gateway.list(options);
 		} else {
 			// Workers Sites: if this is a sites request, persist should be used as

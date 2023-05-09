@@ -5,6 +5,7 @@ import { CORE_PLUGIN, CORE_PLUGIN_NAME } from "./core";
 import { D1_PLUGIN, D1_PLUGIN_NAME } from "./d1";
 import { DURABLE_OBJECTS_PLUGIN, DURABLE_OBJECTS_PLUGIN_NAME } from "./do";
 import { KV_PLUGIN, KV_PLUGIN_NAME } from "./kv";
+import { QUEUES_PLUGIN, QUEUES_PLUGIN_NAME } from "./queues";
 import { R2_PLUGIN, R2_PLUGIN_NAME } from "./r2";
 
 export const PLUGINS = {
@@ -13,6 +14,7 @@ export const PLUGINS = {
 	[D1_PLUGIN_NAME]: D1_PLUGIN,
 	[DURABLE_OBJECTS_PLUGIN_NAME]: DURABLE_OBJECTS_PLUGIN,
 	[KV_PLUGIN_NAME]: KV_PLUGIN,
+	[QUEUES_PLUGIN_NAME]: QUEUES_PLUGIN,
 	[R2_PLUGIN_NAME]: R2_PLUGIN,
 };
 export type Plugins = typeof PLUGINS;
@@ -57,6 +59,7 @@ export type WorkerOptions = z.infer<typeof CORE_PLUGIN.options> &
 	z.infer<typeof D1_PLUGIN.options> &
 	z.infer<typeof DURABLE_OBJECTS_PLUGIN.options> &
 	z.infer<typeof KV_PLUGIN.options> &
+	z.infer<typeof QUEUES_PLUGIN.options> &
 	z.infer<typeof R2_PLUGIN.options>;
 export type SharedOptions = z.infer<typeof CORE_PLUGIN.sharedOptions> &
 	z.infer<typeof CACHE_PLUGIN.sharedOptions> &
@@ -96,4 +99,5 @@ export type {
 export * from "./d1";
 export * from "./do";
 export * from "./kv";
+export * from "./queues";
 export * from "./r2";

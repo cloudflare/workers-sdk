@@ -1,7 +1,8 @@
 import path from "path";
 import { URLSearchParams, fileURLToPath } from "url";
+import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import { z } from "zod";
-import { RequestInit, Response } from "../../http";
+import { RequestInfo, RequestInit, Response } from "../../http";
 import {
 	Awaitable,
 	Log,
@@ -22,6 +23,11 @@ import {
 export const PersistenceSchema = z.boolean().or(z.string()).optional();
 export type Persistence = z.infer<typeof PersistenceSchema>;
 
+export type DispatchFetch = (
+	input: RequestInfo,
+	init?: RequestInit<Partial<IncomingRequestCfProperties>>
+) => Promise<Response>;
+
 export const CloudflareFetchSchema =
 	// TODO(soon): figure out a way to do optional parameters with z.function()
 	z.custom<
@@ -34,7 +40,13 @@ export const CloudflareFetchSchema =
 export type CloudflareFetch = z.infer<typeof CloudflareFetchSchema>;
 
 export interface GatewayConstructor<Gateway> {
-	new (log: Log, storage: Storage, timers: Timers): Gateway;
+	new (
+		log: Log,
+		storage: Storage,
+		timers: Timers,
+		namespace: string,
+		dispatchFetch: DispatchFetch
+	): Gateway;
 }
 
 export interface RemoteStorageConstructor {
@@ -63,6 +75,7 @@ export class GatewayFactory<Gateway> {
 	constructor(
 		private readonly log: Log,
 		private readonly timers: Timers,
+		private readonly dispatchFetch: DispatchFetch,
 		private readonly cloudflareFetch: CloudflareFetch | undefined,
 		private readonly pluginName: string,
 		private readonly gatewayClass: GatewayConstructor<Gateway>,
@@ -144,7 +157,13 @@ export class GatewayFactory<Gateway> {
 		if (cached !== undefined && cached[0] === persist) return cached[1];
 
 		const storage = this.getStorage(namespace, persist);
-		const gateway = new this.gatewayClass(this.log, storage, this.timers);
+		const gateway = new this.gatewayClass(
+			this.log,
+			storage,
+			this.timers,
+			namespace,
+			this.dispatchFetch
+		);
 		this.#gateways.set(namespace, [persist, gateway]);
 		return gateway;
 	}

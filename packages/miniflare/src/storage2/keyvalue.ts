@@ -2,6 +2,7 @@ import assert from "assert";
 import { ReadableStream } from "stream/web";
 import {
 	Awaitable,
+	Timers,
 	base64Decode,
 	base64Encode,
 	defaultTimers,
@@ -121,7 +122,7 @@ export class KeyValueStorage<Metadata = unknown> {
 
 	constructor(
 		private readonly storage: NewStorage,
-		private readonly timers = defaultTimers
+		private readonly timers: Timers = defaultTimers
 	) {
 		storage.db.pragma("case_sensitive_like = TRUE");
 		storage.db.exec(SQL_SCHEMA);

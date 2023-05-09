@@ -511,3 +511,39 @@ test.serial("operations persist D1 data", async (t) => {
 		.all();
 	t.deepEqual(results, [{ name: "purple" }, { name: "white" }]);
 });
+
+test.serial("operations permit strange database names", async (t) => {
+	const { db, tableColours, tableKitchenSink } = t.context;
+	const tmp = await useTmp(t);
+
+	// Set option, then reset after test
+	const id = "my/ Database";
+	await t.context.setOptions({ ...opts, d1Databases: { __D1_BETA__DB: id } });
+	t.teardown(() => t.context.setOptions(opts));
+
+	// Check basic operations work
+	// a) execute
+	await db.exec(SCHEMA(tableColours, tableKitchenSink));
+	// b) query
+	await db
+		.prepare(
+			`INSERT INTO ${tableColours} (id, name, rgb) VALUES (4, 'pink', 0xff00ff);`
+		)
+		.run();
+	// c) dump
+	const buffer = await db.dump();
+	const tmpPath = path.join(tmp, "db-dump.sqlite3");
+	await fs.writeFile(tmpPath, new Uint8Array(buffer));
+	const sqliteDbDump = new Database(tmpPath);
+	let result = sqliteDbDump
+		.prepare(`SELECT name FROM ${tableColours} WHERE id = 4`)
+		.get();
+	t.deepEqual(result, { name: "pink" });
+
+	// Check stored with correct ID
+	const storage = t.context.mf._getPluginStorage("d1", id);
+	result = storage.db
+		.prepare(`SELECT name FROM ${tableColours} WHERE id = 4`)
+		.get();
+	t.deepEqual(result, { name: "pink" });
+});

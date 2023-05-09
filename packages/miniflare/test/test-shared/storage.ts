@@ -30,6 +30,8 @@ export const TIME_EXPIRING = 1000;
 // TODO(soon): remove once we remove the old storage system
 export const testTimers: Timers = {
 	now: () => TIME_NOW * 1000,
+	setTimeout,
+	clearTimeout,
 	queueMicrotask,
 };
 

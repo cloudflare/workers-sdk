@@ -1,7 +1,9 @@
 "use strict";
 /* tslint:disable */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TlsOptions =
+exports.Extension =
+	exports.Extension_Module =
+	exports.TlsOptions =
 	exports.TlsOptions_Version =
 	exports.TlsOptions_Keypair =
 	exports.HttpOptions =
@@ -21,6 +23,7 @@ exports.TlsOptions =
 	exports.Worker_Binding =
 	exports.Worker_Binding_Which =
 	exports.Worker_Binding_Parameter =
+	exports.Worker_Binding_WrappedBinding =
 	exports.Worker_Binding_CryptoKey =
 	exports.Worker_Binding_CryptoKey_Which =
 	exports.Worker_Binding_CryptoKey_Algorithm =
@@ -101,6 +104,24 @@ class Config extends capnp_ts_1.Struct {
 	setV8Flags(value) {
 		capnp_ts_1.Struct.copyFrom(value, capnp_ts_1.Struct.getPointer(2, this));
 	}
+	adoptExtensions(value) {
+		capnp_ts_1.Struct.adopt(value, capnp_ts_1.Struct.getPointer(3, this));
+	}
+	disownExtensions() {
+		return capnp_ts_1.Struct.disown(this.getExtensions());
+	}
+	getExtensions() {
+		return capnp_ts_1.Struct.getList(3, Config._Extensions, this);
+	}
+	hasExtensions() {
+		return !capnp_ts_1.Struct.isNull(capnp_ts_1.Struct.getPointer(3, this));
+	}
+	initExtensions(length) {
+		return capnp_ts_1.Struct.initList(3, Config._Extensions, length, this);
+	}
+	setExtensions(value) {
+		capnp_ts_1.Struct.copyFrom(value, capnp_ts_1.Struct.getPointer(3, this));
+	}
 	toString() {
 		return "Config_" + super.toString();
 	}
@@ -109,7 +130,7 @@ exports.Config = Config;
 Config._capnp = {
 	displayName: "Config",
 	id: "8794486c76aaa7d6",
-	size: new capnp_ts_1.ObjectSize(0, 3),
+	size: new capnp_ts_1.ObjectSize(0, 4),
 };
 class Socket_Https extends capnp_ts_1.Struct {
 	adoptOptions(value) {
@@ -624,6 +645,8 @@ var Worker_Binding_Type_Which;
 		"R2BUCKET";
 	Worker_Binding_Type_Which[(Worker_Binding_Type_Which["R2ADMIN"] = 10)] =
 		"R2ADMIN";
+	Worker_Binding_Type_Which[(Worker_Binding_Type_Which["QUEUE"] = 11)] =
+		"QUEUE";
 })(
 	(Worker_Binding_Type_Which =
 		exports.Worker_Binding_Type_Which ||
@@ -720,6 +743,12 @@ class Worker_Binding_Type extends capnp_ts_1.Struct {
 	setR2Admin() {
 		capnp_ts_1.Struct.setUint16(0, 10, this);
 	}
+	isQueue() {
+		return capnp_ts_1.Struct.getUint16(0, this) === 11;
+	}
+	setQueue() {
+		capnp_ts_1.Struct.setUint16(0, 11, this);
+	}
 	toString() {
 		return "Worker_Binding_Type_" + super.toString();
 	}
@@ -740,6 +769,7 @@ Worker_Binding_Type.DURABLE_OBJECT_NAMESPACE =
 Worker_Binding_Type.KV_NAMESPACE = Worker_Binding_Type_Which.KV_NAMESPACE;
 Worker_Binding_Type.R2BUCKET = Worker_Binding_Type_Which.R2BUCKET;
 Worker_Binding_Type.R2ADMIN = Worker_Binding_Type_Which.R2ADMIN;
+Worker_Binding_Type.QUEUE = Worker_Binding_Type_Which.QUEUE;
 Worker_Binding_Type._capnp = {
 	displayName: "Type",
 	id: "8906a1296519bf8a",
@@ -1051,6 +1081,61 @@ Worker_Binding_CryptoKey._capnp = {
 	size: new capnp_ts_1.ObjectSize(8, 3),
 	defaultExtractable: capnp.getBitMask(false, 0),
 };
+class Worker_Binding_WrappedBinding extends capnp_ts_1.Struct {
+	getModuleName() {
+		return capnp_ts_1.Struct.getText(0, this);
+	}
+	setModuleName(value) {
+		capnp_ts_1.Struct.setText(0, value, this);
+	}
+	getEntrypoint() {
+		return capnp_ts_1.Struct.getText(
+			1,
+			this,
+			Worker_Binding_WrappedBinding._capnp.defaultEntrypoint
+		);
+	}
+	setEntrypoint(value) {
+		capnp_ts_1.Struct.setText(1, value, this);
+	}
+	adoptInnerBindings(value) {
+		capnp_ts_1.Struct.adopt(value, capnp_ts_1.Struct.getPointer(2, this));
+	}
+	disownInnerBindings() {
+		return capnp_ts_1.Struct.disown(this.getInnerBindings());
+	}
+	getInnerBindings() {
+		return capnp_ts_1.Struct.getList(
+			2,
+			Worker_Binding_WrappedBinding._InnerBindings,
+			this
+		);
+	}
+	hasInnerBindings() {
+		return !capnp_ts_1.Struct.isNull(capnp_ts_1.Struct.getPointer(2, this));
+	}
+	initInnerBindings(length) {
+		return capnp_ts_1.Struct.initList(
+			2,
+			Worker_Binding_WrappedBinding._InnerBindings,
+			length,
+			this
+		);
+	}
+	setInnerBindings(value) {
+		capnp_ts_1.Struct.copyFrom(value, capnp_ts_1.Struct.getPointer(2, this));
+	}
+	toString() {
+		return "Worker_Binding_WrappedBinding_" + super.toString();
+	}
+}
+exports.Worker_Binding_WrappedBinding = Worker_Binding_WrappedBinding;
+Worker_Binding_WrappedBinding._capnp = {
+	displayName: "WrappedBinding",
+	id: "e6f066b75f0ea113",
+	size: new capnp_ts_1.ObjectSize(0, 3),
+	defaultEntrypoint: "default",
+};
 class Worker_Binding_Parameter extends capnp_ts_1.Struct {
 	adoptType(value) {
 		capnp_ts_1.Struct.adopt(value, capnp_ts_1.Struct.getPointer(1, this));
@@ -1104,6 +1189,8 @@ var Worker_Binding_Which;
 		"KV_NAMESPACE";
 	Worker_Binding_Which[(Worker_Binding_Which["R2BUCKET"] = 10)] = "R2BUCKET";
 	Worker_Binding_Which[(Worker_Binding_Which["R2ADMIN"] = 11)] = "R2ADMIN";
+	Worker_Binding_Which[(Worker_Binding_Which["WRAPPED"] = 12)] = "WRAPPED";
+	Worker_Binding_Which[(Worker_Binding_Which["QUEUE"] = 13)] = "QUEUE";
 })(
 	(Worker_Binding_Which =
 		exports.Worker_Binding_Which || (exports.Worker_Binding_Which = {}))
@@ -1420,6 +1507,70 @@ class Worker_Binding extends capnp_ts_1.Struct {
 		capnp_ts_1.Struct.setUint16(0, 11, this);
 		capnp_ts_1.Struct.copyFrom(value, capnp_ts_1.Struct.getPointer(1, this));
 	}
+	adoptWrapped(value) {
+		capnp_ts_1.Struct.setUint16(0, 12, this);
+		capnp_ts_1.Struct.adopt(value, capnp_ts_1.Struct.getPointer(1, this));
+	}
+	disownWrapped() {
+		return capnp_ts_1.Struct.disown(this.getWrapped());
+	}
+	getWrapped() {
+		capnp_ts_1.Struct.testWhich(
+			"wrapped",
+			capnp_ts_1.Struct.getUint16(0, this),
+			12,
+			this
+		);
+		return capnp_ts_1.Struct.getStruct(1, Worker_Binding_WrappedBinding, this);
+	}
+	hasWrapped() {
+		return !capnp_ts_1.Struct.isNull(capnp_ts_1.Struct.getPointer(1, this));
+	}
+	initWrapped() {
+		capnp_ts_1.Struct.setUint16(0, 12, this);
+		return capnp_ts_1.Struct.initStructAt(
+			1,
+			Worker_Binding_WrappedBinding,
+			this
+		);
+	}
+	isWrapped() {
+		return capnp_ts_1.Struct.getUint16(0, this) === 12;
+	}
+	setWrapped(value) {
+		capnp_ts_1.Struct.setUint16(0, 12, this);
+		capnp_ts_1.Struct.copyFrom(value, capnp_ts_1.Struct.getPointer(1, this));
+	}
+	adoptQueue(value) {
+		capnp_ts_1.Struct.setUint16(0, 13, this);
+		capnp_ts_1.Struct.adopt(value, capnp_ts_1.Struct.getPointer(1, this));
+	}
+	disownQueue() {
+		return capnp_ts_1.Struct.disown(this.getQueue());
+	}
+	getQueue() {
+		capnp_ts_1.Struct.testWhich(
+			"queue",
+			capnp_ts_1.Struct.getUint16(0, this),
+			13,
+			this
+		);
+		return capnp_ts_1.Struct.getStruct(1, ServiceDesignator, this);
+	}
+	hasQueue() {
+		return !capnp_ts_1.Struct.isNull(capnp_ts_1.Struct.getPointer(1, this));
+	}
+	initQueue() {
+		capnp_ts_1.Struct.setUint16(0, 13, this);
+		return capnp_ts_1.Struct.initStructAt(1, ServiceDesignator, this);
+	}
+	isQueue() {
+		return capnp_ts_1.Struct.getUint16(0, this) === 13;
+	}
+	setQueue(value) {
+		capnp_ts_1.Struct.setUint16(0, 13, this);
+		capnp_ts_1.Struct.copyFrom(value, capnp_ts_1.Struct.getPointer(1, this));
+	}
 	toString() {
 		return "Worker_Binding_" + super.toString();
 	}
@@ -1441,10 +1592,13 @@ Worker_Binding.DURABLE_OBJECT_NAMESPACE =
 Worker_Binding.KV_NAMESPACE = Worker_Binding_Which.KV_NAMESPACE;
 Worker_Binding.R2BUCKET = Worker_Binding_Which.R2BUCKET;
 Worker_Binding.R2ADMIN = Worker_Binding_Which.R2ADMIN;
+Worker_Binding.WRAPPED = Worker_Binding_Which.WRAPPED;
+Worker_Binding.QUEUE = Worker_Binding_Which.QUEUE;
 Worker_Binding.Type = Worker_Binding_Type;
 Worker_Binding.DurableObjectNamespaceDesignator =
 	Worker_Binding_DurableObjectNamespaceDesignator;
 Worker_Binding.CryptoKey = Worker_Binding_CryptoKey;
+Worker_Binding.WrappedBinding = Worker_Binding_WrappedBinding;
 Worker_Binding._capnp = {
 	displayName: "Binding",
 	id: "8e7e492fd7e35f3e",
@@ -2276,8 +2430,75 @@ TlsOptions._capnp = {
 	defaultTrustBrowserCas: capnp.getBitMask(false, 1),
 	defaultMinVersion: capnp.getUint16Mask(0),
 };
+class Extension_Module extends capnp_ts_1.Struct {
+	getName() {
+		return capnp_ts_1.Struct.getText(0, this);
+	}
+	setName(value) {
+		capnp_ts_1.Struct.setText(0, value, this);
+	}
+	getInternal() {
+		return capnp_ts_1.Struct.getBit(
+			0,
+			this,
+			Extension_Module._capnp.defaultInternal
+		);
+	}
+	setInternal(value) {
+		capnp_ts_1.Struct.setBit(0, value, this);
+	}
+	getEsModule() {
+		return capnp_ts_1.Struct.getText(1, this);
+	}
+	setEsModule(value) {
+		capnp_ts_1.Struct.setText(1, value, this);
+	}
+	toString() {
+		return "Extension_Module_" + super.toString();
+	}
+}
+exports.Extension_Module = Extension_Module;
+Extension_Module._capnp = {
+	displayName: "Module",
+	id: "d5d16e76fdedc37d",
+	size: new capnp_ts_1.ObjectSize(8, 2),
+	defaultInternal: capnp.getBitMask(false, 0),
+};
+class Extension extends capnp_ts_1.Struct {
+	adoptModules(value) {
+		capnp_ts_1.Struct.adopt(value, capnp_ts_1.Struct.getPointer(0, this));
+	}
+	disownModules() {
+		return capnp_ts_1.Struct.disown(this.getModules());
+	}
+	getModules() {
+		return capnp_ts_1.Struct.getList(0, Extension._Modules, this);
+	}
+	hasModules() {
+		return !capnp_ts_1.Struct.isNull(capnp_ts_1.Struct.getPointer(0, this));
+	}
+	initModules(length) {
+		return capnp_ts_1.Struct.initList(0, Extension._Modules, length, this);
+	}
+	setModules(value) {
+		capnp_ts_1.Struct.copyFrom(value, capnp_ts_1.Struct.getPointer(0, this));
+	}
+	toString() {
+		return "Extension_" + super.toString();
+	}
+}
+exports.Extension = Extension;
+Extension.Module = Extension_Module;
+Extension._capnp = {
+	displayName: "Extension",
+	id: "e390128a861973a6",
+	size: new capnp_ts_1.ObjectSize(0, 1),
+};
 Config._Services = capnp.CompositeList(Service);
 Config._Sockets = capnp.CompositeList(Socket);
+Config._Extensions = capnp.CompositeList(Extension);
+Worker_Binding_WrappedBinding._InnerBindings =
+	capnp.CompositeList(Worker_Binding);
 Worker._Modules = capnp.CompositeList(Worker_Module);
 Worker._Bindings = capnp.CompositeList(Worker_Binding);
 Worker._DurableObjectNamespaces = capnp.CompositeList(
@@ -2285,3 +2506,4 @@ Worker._DurableObjectNamespaces = capnp.CompositeList(
 );
 HttpOptions._InjectRequestHeaders = capnp.CompositeList(HttpOptions_Header);
 HttpOptions._InjectResponseHeaders = capnp.CompositeList(HttpOptions_Header);
+Extension._Modules = capnp.CompositeList(Extension_Module);

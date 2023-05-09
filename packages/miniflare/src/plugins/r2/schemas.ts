@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ValueOf } from "../../shared";
+import { Base64DataSchema, HexDataSchema, ValueOf } from "../../shared";
 
 export interface ObjectRow {
 	key: string;
@@ -72,21 +72,9 @@ CREATE TABLE IF NOT EXISTS _mf_multipart_parts (
 
 // https://github.com/cloudflare/workerd/blob/4290f9717bc94647d9c8afd29602cdac97fdff1b/src/workerd/api/r2-api.capnp
 
-export const HEX_REGEXP = /^[0-9a-f]*$/i;
-// https://github.com/capnproto/capnproto/blob/6b5bcc2c6e954bc6e167ac581eb628e5a462a469/c%2B%2B/src/kj/encoding.c%2B%2B#L719-L720
-export const BASE64_REGEXP = /^[0-9a-z+/=]*$/i;
-
 export const DateSchema = z.coerce
 	.number()
 	.transform((value) => new Date(value));
-export const HexDataSchema = z
-	.string()
-	.regex(HEX_REGEXP)
-	.transform((hex) => Buffer.from(hex, "hex"));
-export const Base64DataSchema = z
-	.string()
-	.regex(BASE64_REGEXP)
-	.transform((base64) => Buffer.from(base64, "base64"));
 
 export const RecordSchema = z
 	.object({

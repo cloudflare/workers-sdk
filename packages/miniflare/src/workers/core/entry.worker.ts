@@ -1,4 +1,10 @@
+// @ts-expect-error "devalue" is ESM-only, so TypeScript requires us to use the
+//  `*.mts` extension, or set `"type": "module"` in our `package.json`. We can't
+//  do the first as ambient types from `@cloudflare/workers-types` don't seem to
+//  work, and the second would affect all consumers of `miniflare`.
+import { unflatten } from "devalue";
 import { CoreBindings, CoreHeaders, LogLevel } from "./constants";
+import { structuredSerializableRevivers } from "./devalue";
 import { WorkerRoute, matchRoutes } from "./routing";
 
 type Env = {
@@ -46,7 +52,10 @@ function getUserRequest(
 function getTargetService(request: Request, url: URL, env: Env) {
 	let service: Fetcher | undefined = env[CoreBindings.SERVICE_USER_FALLBACK];
 
-	const route = matchRoutes(env[CoreBindings.JSON_ROUTES], url);
+	const override = request.headers.get(CoreHeaders.ROUTE_OVERRIDE);
+	request.headers.delete(CoreHeaders.ROUTE_OVERRIDE);
+
+	const route = override ?? matchRoutes(env[CoreBindings.JSON_ROUTES], url);
 	if (route !== null) {
 		service = env[`${CoreBindings.SERVICE_USER_ROUTE_PREFIX}${route}`];
 	}
@@ -145,6 +154,21 @@ function maybeLogRequest(
 	);
 }
 
+async function handleQueue(
+	request: Request,
+	url: URL,
+	service: Fetcher,
+	startTime: number
+) {
+	const queueName = decodeURIComponent(url.pathname.substring(1));
+	const flattened = await request.json<number | unknown[]>();
+	const messages = unflatten(flattened, structuredSerializableRevivers);
+	const queueResponse = await service.queue(queueName, messages);
+	(queueResponse as QueueResponse & { time: number }).time =
+		Date.now() - startTime;
+	return Response.json(queueResponse);
+}
+
 export default <ExportedHandler<Env>>{
 	async fetch(request, env, ctx) {
 		const startTime = Date.now();
@@ -161,6 +185,12 @@ export default <ExportedHandler<Env>>{
 		}
 
 		try {
+			const customEvent = request.headers.get(CoreHeaders.CUSTOM_EVENT);
+			// TODO(soon): support scheduled events, requires support from workerd
+			if (customEvent === "queue") {
+				return await handleQueue(request, url, service, startTime);
+			}
+
 			let response = await service.fetch(request);
 			response = await maybePrettifyError(request, response, env);
 			response = maybeInjectLiveReload(response, env, ctx);

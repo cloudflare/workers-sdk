@@ -40,7 +40,11 @@ export const D1_PLUGIN: Plugin<
 		const databases = namespaceEntries(options.d1Databases);
 		return databases.map<Service>(([_, id]) => ({
 			name: `${SERVICE_DATABASE_PREFIX}:${id}`,
-			worker: pluginNamespacePersistWorker(D1_PLUGIN_NAME, id, persist),
+			worker: pluginNamespacePersistWorker(
+				D1_PLUGIN_NAME,
+				encodeURIComponent(id),
+				persist
+			),
 		}));
 	},
 };

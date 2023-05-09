@@ -1,6 +1,7 @@
 import assert from "assert";
 import { mkdir, readFile, stat, writeFile } from "fs/promises";
 import path from "path";
+import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import { dim } from "kleur/colors";
 import { fetch } from "undici";
 import { Plugins } from "./plugins";
@@ -9,7 +10,8 @@ import { Log, OptionalZodTypeOf } from "./shared";
 const defaultCfPath = path.resolve("node_modules", ".mf", "cf.json");
 const defaultCfFetchEndpoint = "https://workers.cloudflare.com/cf.json";
 
-const fallbackCf = {
+export const fallbackCf: IncomingRequestCfProperties = {
+	asOrganization: "",
 	asn: 395747,
 	colo: "DFW",
 	city: "Austin",
@@ -28,16 +30,34 @@ const fallbackCf = {
 	tlsCipher: "AEAD-AES128-GCM-SHA256",
 	tlsVersion: "TLSv1.3",
 	tlsClientAuth: {
-		certIssuerDNLegacy: "",
-		certIssuerDN: "",
 		certPresented: "0",
-		certSubjectDNLegacy: "",
+		certVerified: "NONE",
+		certRevoked: "0",
+		certIssuerDN: "",
 		certSubjectDN: "",
+		certIssuerDNRFC2253: "",
+		certSubjectDNRFC2253: "",
+		certIssuerDNLegacy: "",
+		certSubjectDNLegacy: "",
+		certSerial: "",
+		certIssuerSerial: "",
+		certSKI: "",
+		certIssuerSKI: "",
+		certFingerprintSHA1: "",
+		certFingerprintSHA256: "",
 		certNotBefore: "",
 		certNotAfter: "",
-		certSerial: "",
-		certFingerprintSHA1: "",
-		certVerified: "NONE",
+	},
+	edgeRequestKeepAliveStatus: 0,
+	hostMetadata: undefined,
+	clientTrustScore: 99,
+	botManagement: {
+		corporateProxy: false,
+		verifiedBot: false,
+		ja3Hash: "25b4882c2bcb50cd6b469ff28c596742",
+		staticResource: false,
+		detectionIds: [],
+		score: 99,
 	},
 };
 // Milliseconds in 1 day

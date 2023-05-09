@@ -134,7 +134,9 @@ test("Miniflare: web socket kitchen sink", async (t) => {
 			// Testing loopback server WebSocket coupling
 			CUSTOM(request) {
 				// Testing dispatchFetch custom cf injection
-				t.deepEqual(request.cf, { country: "MF" });
+				t.is(request.cf?.country, "MF");
+				// Testing dispatchFetch injects default cf values
+				t.is(request.cf?.regionCode, "TX");
 				t.is(request.headers.get("MF-Custom-Service"), null);
 				// Testing WebSocket-upgrading fetch
 				return fetch(`http://localhost:${port}`, request);

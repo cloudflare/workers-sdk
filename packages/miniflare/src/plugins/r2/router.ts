@@ -102,7 +102,8 @@ export class R2Router extends Router<R2Gateway> {
 	get: RouteHandler<R2Params> = async (req, params) => {
 		const metadata = decodeHeaderMetadata(req);
 		const persist = decodePersist(req.headers);
-		const gateway = this.gatewayFactory.get(params.bucket, persist);
+		const bucket = decodeURIComponent(params.bucket);
+		const gateway = this.gatewayFactory.get(bucket, persist);
 
 		let result: R2Object | R2ObjectBody | R2Objects;
 		if (metadata.method === "head") {
@@ -122,7 +123,8 @@ export class R2Router extends Router<R2Gateway> {
 	put: RouteHandler<R2Params> = async (req, params) => {
 		const { metadata, metadataSize, value } = await decodeMetadata(req);
 		const persist = decodePersist(req.headers);
-		const gateway = this.gatewayFactory.get(params.bucket, persist);
+		const bucket = decodeURIComponent(params.bucket);
+		const gateway = this.gatewayFactory.get(bucket, persist);
 
 		if (metadata.method === "delete") {
 			await gateway.delete(
