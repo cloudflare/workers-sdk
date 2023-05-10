@@ -10,11 +10,7 @@ import {
 	Timers,
 	sanitisePath,
 } from "../../shared";
-import {
-	NewStorage,
-	createFileStorage,
-	createMemoryStorage,
-} from "../../storage2";
+import { Storage, createFileStorage, createMemoryStorage } from "../../storage";
 
 // TODO: explain why persist passed as header, want options set to be atomic,
 //  if set gateway before script update, may be using new persist before new script
@@ -40,7 +36,7 @@ export type CloudflareFetch = z.infer<typeof CloudflareFetchSchema>;
 export interface GatewayConstructor<Gateway> {
 	new (
 		log: Log,
-		storage: NewStorage,
+		storage: Storage,
 		timers: Timers,
 		namespace: string,
 		dispatchFetch: DispatchFetch
@@ -59,7 +55,7 @@ export function maybeParseURL(url: Persistence): URL | undefined {
 }
 
 export class GatewayFactory<Gateway> {
-	readonly #memoryStorages = new Map<string, NewStorage>();
+	readonly #memoryStorages = new Map<string, Storage>();
 	readonly #gateways = new Map<string, [Persistence, Gateway]>();
 
 	constructor(
@@ -77,7 +73,7 @@ export class GatewayFactory<Gateway> {
 		return storage;
 	}
 
-	getStorage(namespace: string, persist: Persistence): NewStorage {
+	getStorage(namespace: string, persist: Persistence): Storage {
 		// If persistence is disabled, use memory storage
 		if (persist === undefined || persist === false) {
 			return this.#getMemoryStorage(namespace);

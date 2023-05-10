@@ -1,6 +1,6 @@
 import assert from "assert";
 import type { R2StringChecksums } from "@cloudflare/workers-types/experimental";
-import { InclusiveRange } from "../../storage2";
+import { InclusiveRange } from "../../storage";
 import { _parseRanges } from "../shared";
 import {
 	BadDigest,

@@ -9,8 +9,8 @@ import {
 	InclusiveRange,
 	KeyValueStorage,
 	MultipartReadableStream,
-	NewStorage,
-} from "../../storage2";
+	Storage,
+} from "../../storage";
 import { isSitesRequest } from "../kv";
 import { _parseRanges } from "../shared";
 import {
@@ -232,7 +232,7 @@ export class CacheGateway {
 
 	constructor(
 		private readonly log: Log,
-		storage: NewStorage,
+		storage: Storage,
 		private readonly timers: Timers
 	) {
 		this.storage = new KeyValueStorage(storage, timers);
