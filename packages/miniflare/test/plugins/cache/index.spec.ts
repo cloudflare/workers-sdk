@@ -3,10 +3,10 @@ import crypto from "crypto";
 import path from "path";
 import { text } from "stream/consumers";
 import {
-	FileStorage,
 	HeadersInit,
 	KeyValueStorage,
 	LogLevel,
+	createFileStorage,
 } from "@miniflare/tre";
 import { miniflareTest, useTmp } from "../../test-shared";
 
@@ -406,15 +406,8 @@ test.serial("operations log warning on workers.dev subdomain", async (t) => {
 test.serial("operations persist cached data", async (t) => {
 	// Create new temporary file-system persistence directory
 	const tmp = await useTmp(t);
-	const clock = () => t.context.timers.timestamp;
-	// TODO(soon): clean up this mess once we've migrated all gateways
-	const legacyStorage = new FileStorage(
-		path.join(tmp, "default"),
-		undefined,
-		clock
-	);
-	const newStorage = legacyStorage.getNewStorage();
-	const kvStorage = new KeyValueStorage(newStorage, t.context.timers);
+	const storage = createFileStorage(path.join(tmp, "default"));
+	const kvStorage = new KeyValueStorage(storage, t.context.timers);
 
 	// Set option, then reset after test
 	await t.context.setOptions({ cachePersist: tmp });

@@ -418,10 +418,8 @@ export class Miniflare {
 					this.#log,
 					this.#timers,
 					this.dispatchFetch,
-					this.#sharedOpts.core.cloudflareFetch,
 					key,
-					plugin.gateway,
-					plugin.remoteStorage
+					plugin.gateway
 				);
 				const router = new plugin.router(this.#log, gatewayFactory);
 				// @ts-expect-error this.#gatewayFactories[key] could be any plugin's
@@ -889,7 +887,7 @@ export class Miniflare {
 	): NewStorage {
 		const factory = this.#gatewayFactories[plugin];
 		assert(factory !== undefined);
-		return factory.getStorage(namespace, persist).getNewStorage();
+		return factory.getStorage(namespace, persist);
 	}
 
 	async dispose(): Promise<void> {
@@ -914,6 +912,5 @@ export * from "./http";
 export * from "./plugins";
 export * from "./runtime";
 export * from "./shared";
-export * from "./storage";
 export * from "./storage2";
 export * from "./workers";

@@ -6,7 +6,7 @@ import type {
 	D1PreparedStatement,
 	D1Result,
 } from "@cloudflare/workers-types/experimental";
-import { FileStorage, Miniflare, MiniflareOptions } from "@miniflare/tre";
+import { Miniflare, MiniflareOptions, createFileStorage } from "@miniflare/tre";
 import Database from "better-sqlite3";
 import {
 	MiniflareTestContext,
@@ -468,10 +468,8 @@ test.serial("operations persist D1 data", async (t) => {
 
 	// Create new temporary file-system persistence directory
 	const tmp = await useTmp(t);
-	// TODO(soon): clean up this mess once we've migrated all gateways
-	const legacyStorage = new FileStorage(path.join(tmp, "db"));
-	const newStorage = legacyStorage.getNewStorage();
-	const sqliteDb = newStorage.db;
+	const storage = createFileStorage(path.join(tmp, "db"));
+	const sqliteDb = storage.db;
 
 	// Set option, then reset after test
 	await t.context.setOptions({ ...opts, d1Persist: tmp });

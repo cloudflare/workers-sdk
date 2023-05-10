@@ -3,7 +3,7 @@ import fs from "fs/promises";
 import path from "path";
 import { ReadableStream } from "stream/web";
 import { TextDecoder, TextEncoder } from "util";
-import { Timers, sanitisePath, unwrapBYOBRequest } from "@miniflare/tre";
+import { sanitisePath, unwrapBYOBRequest } from "@miniflare/tre";
 import { ExecutionContext } from "ava";
 
 const encoder = new TextEncoder();
@@ -15,25 +15,6 @@ export function utf8Encode(value: string): Uint8Array {
 export function utf8Decode(encoded?: Uint8Array): string {
 	return decoder.decode(encoded);
 }
-
-// Stored expiration value to signal an expired key. Storages using actual
-// time should interpret this as the current time.
-export const TIME_EXPIRED = 500;
-// Time in seconds the testClock always returns:
-// TIME_EXPIRED < TIME_NOW < TIME_EXPIRING
-export const TIME_NOW = 750;
-// Stored expiration value to signal a key that will expire in the future.
-// Storages using actual time should interpret this as the current time + 1hr.
-// Tests will check the expiry is within 120s of this.
-export const TIME_EXPIRING = 1000;
-
-// TODO(soon): remove once we remove the old storage system
-export const testTimers: Timers = {
-	now: () => TIME_NOW * 1000,
-	setTimeout,
-	clearTimeout,
-	queueMicrotask,
-};
 
 const tmpRoot = path.resolve(".tmp");
 export async function useTmp(t: ExecutionContext): Promise<string> {

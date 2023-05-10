@@ -7,7 +7,7 @@ import type { Database as DatabaseType } from "better-sqlite3";
 import { z } from "zod";
 import { Response } from "../../http";
 import { HttpError, Log } from "../../shared";
-import { Storage } from "../../storage";
+import { NewStorage } from "../../storage2";
 import splitSqlQuery from "./splitter";
 
 export const D1ValueSchema = z.union([
@@ -155,9 +155,8 @@ export class D1Gateway {
 
 	constructor(
 		private readonly log: Log,
-		legacyStorage: Storage
+		storage: NewStorage
 	) {
-		const storage = legacyStorage.getNewStorage();
 		this.db = storage.db;
 	}
 

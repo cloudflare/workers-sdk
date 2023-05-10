@@ -23,7 +23,6 @@ import { CoreBindings, CoreHeaders } from "../../workers";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import {
-	CloudflareFetchSchema,
 	HEADER_CF_BLOB,
 	Plugin,
 	SERVICE_LOOPBACK,
@@ -71,7 +70,6 @@ export const CoreSharedOptionsSchema = z.object({
 
 	log: z.instanceof(Log).optional(),
 	timers: z.custom<Timers>().optional(),
-	cloudflareFetch: CloudflareFetchSchema.optional(),
 
 	// TODO: add back validation of cf object
 	cf: z.union([z.boolean(), z.string(), z.record(z.any())]).optional(),
