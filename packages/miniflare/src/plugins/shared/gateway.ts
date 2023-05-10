@@ -11,12 +11,10 @@ import {
 	sanitisePath,
 } from "../../shared";
 import {
-	FileStorage,
-	MemoryStorage,
-	RemoteStorage,
-	SqliteStorage,
-	Storage,
-} from "../../storage";
+	NewStorage,
+	createFileStorage,
+	createMemoryStorage,
+} from "../../storage2";
 
 // TODO: explain why persist passed as header, want options set to be atomic,
 //  if set gateway before script update, may be using new persist before new script
@@ -42,19 +40,11 @@ export type CloudflareFetch = z.infer<typeof CloudflareFetchSchema>;
 export interface GatewayConstructor<Gateway> {
 	new (
 		log: Log,
-		storage: Storage,
+		storage: NewStorage,
 		timers: Timers,
 		namespace: string,
 		dispatchFetch: DispatchFetch
 	): Gateway;
-}
-
-export interface RemoteStorageConstructor {
-	new (
-		cache: Storage,
-		cloudflareFetch: CloudflareFetch,
-		namespace: string
-	): RemoteStorage;
 }
 
 export const DEFAULT_PERSIST_ROOT = ".mf";
@@ -69,30 +59,25 @@ export function maybeParseURL(url: Persistence): URL | undefined {
 }
 
 export class GatewayFactory<Gateway> {
-	readonly #memoryStorages = new Map<string, MemoryStorage>();
+	readonly #memoryStorages = new Map<string, NewStorage>();
 	readonly #gateways = new Map<string, [Persistence, Gateway]>();
 
 	constructor(
 		private readonly log: Log,
 		private readonly timers: Timers,
 		private readonly dispatchFetch: DispatchFetch,
-		private readonly cloudflareFetch: CloudflareFetch | undefined,
 		private readonly pluginName: string,
-		private readonly gatewayClass: GatewayConstructor<Gateway>,
-		private readonly remoteStorageClass?: RemoteStorageConstructor
+		private readonly gatewayClass: GatewayConstructor<Gateway>
 	) {}
 
 	#getMemoryStorage(namespace: string) {
 		let storage = this.#memoryStorages.get(namespace);
 		if (storage !== undefined) return storage;
-		this.#memoryStorages.set(
-			namespace,
-			(storage = new MemoryStorage(undefined, this.timers.now))
-		);
+		this.#memoryStorages.set(namespace, (storage = createMemoryStorage()));
 		return storage;
 	}
 
-	getStorage(namespace: string, persist: Persistence): Storage {
+	getStorage(namespace: string, persist: Persistence): NewStorage {
 		// If persistence is disabled, use memory storage
 		if (persist === undefined || persist === false) {
 			return this.#getMemoryStorage(namespace);
@@ -109,34 +94,7 @@ export class GatewayFactory<Gateway> {
 			}
 			if (url.protocol === "file:") {
 				const root = path.join(fileURLToPath(url), sanitisedNamespace);
-				const unsanitise =
-					url.searchParams.get(PARAM_FILE_UNSANITISE) === "true";
-				return new FileStorage(root, !unsanitise, this.timers.now);
-			} else if (url.protocol === "sqlite:") {
-				return new SqliteStorage(
-					url.pathname,
-					sanitisedNamespace,
-					this.timers.now
-				);
-			}
-			// TODO: support Redis storage?
-			if (url.protocol === "remote:") {
-				const { cloudflareFetch, remoteStorageClass } = this;
-				if (cloudflareFetch === undefined) {
-					throw new MiniflareCoreError(
-						"ERR_PERSIST_REMOTE_UNAUTHENTICATED",
-						"Authenticated Cloudflare API `cloudflareFetch` option not provided but required for remote storage"
-					);
-				}
-				if (remoteStorageClass === undefined) {
-					throw new MiniflareCoreError(
-						"ERR_PERSIST_REMOTE_UNSUPPORTED",
-						`The "${this.pluginName}" plugin does not support remote storage`
-					);
-				}
-				const cachePersist = url.searchParams.get("cache") ?? undefined;
-				const cache = this.getStorage(namespace, cachePersist);
-				return new remoteStorageClass(cache, cloudflareFetch, namespace);
+				return createFileStorage(root);
 			}
 			throw new MiniflareCoreError(
 				"ERR_PERSIST_UNSUPPORTED",
@@ -144,12 +102,12 @@ export class GatewayFactory<Gateway> {
 			);
 		}
 
-		// Otherwise, fallback to sanitised file storage
+		// Otherwise, fallback to file storage
 		const root =
 			persist === true
 				? path.join(DEFAULT_PERSIST_ROOT, this.pluginName, sanitisedNamespace)
 				: path.join(persist, sanitisedNamespace);
-		return new FileStorage(root, undefined, this.timers.now);
+		return createFileStorage(root);
 	}
 
 	get(namespace: string, persist: Persistence): Gateway {

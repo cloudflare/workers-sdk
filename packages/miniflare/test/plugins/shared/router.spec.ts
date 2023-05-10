@@ -25,7 +25,6 @@ class TestRouter extends Router<TestGateway> {
 				log,
 				defaultTimers,
 				() => assert.fail("dispatchFetch not implemented"),
-				undefined,
 				"test",
 				TestGateway
 			)

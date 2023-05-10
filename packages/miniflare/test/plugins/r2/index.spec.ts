@@ -28,7 +28,6 @@ import type {
 } from "@cloudflare/workers-types/experimental";
 import {
 	File,
-	FileStorage,
 	FormData,
 	Headers,
 	Miniflare,
@@ -39,6 +38,7 @@ import {
 	R2Gateway,
 	Response,
 	TypedDatabase,
+	createFileStorage,
 	viewToArray,
 	viewToBuffer,
 } from "@miniflare/tre";
@@ -1352,8 +1352,7 @@ test.serial("operations persist stored data", async (t) => {
 
 	// Create new temporary file-system persistence directory
 	const tmp = await useTmp(t);
-	const legacyStorage = new FileStorage(path.join(tmp, "bucket"));
-	const newStorage = legacyStorage.getNewStorage();
+	const storage = createFileStorage(path.join(tmp, "bucket"));
 
 	// Set option, then reset after test
 	await t.context.setOptions({ ...opts, r2Persist: tmp });
@@ -1361,7 +1360,7 @@ test.serial("operations persist stored data", async (t) => {
 
 	// Check put respects persist
 	await r2.put("key", "value");
-	const stmtListByNs = newStorage.db.prepare<{ ns: string }, { key: string }>(
+	const stmtListByNs = storage.db.prepare<{ ns: string }, { key: string }>(
 		"SELECT key FROM _mf_objects WHERE key LIKE :ns || '%'"
 	);
 	let stored = stmtListByNs.all({ ns });

@@ -7,8 +7,7 @@ import {
 	millisToSeconds,
 	secondsToMillis,
 } from "../../shared";
-import { Storage } from "../../storage";
-import { KeyValueStorage } from "../../storage2";
+import { KeyValueStorage, NewStorage } from "../../storage2";
 import {
 	MAX_KEY_SIZE,
 	MAX_LIST_KEYS,
@@ -158,10 +157,9 @@ export class KVGateway {
 
 	constructor(
 		private readonly log: Log,
-		legacyStorage: Storage,
+		storage: NewStorage,
 		private readonly timers: Timers
 	) {
-		const storage = legacyStorage.getNewStorage();
 		this.storage = new KeyValueStorage(storage, timers);
 	}
 

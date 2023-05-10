@@ -7,17 +7,19 @@ import {
 	KVGatewayListOptions,
 	KVGatewayListResult,
 	KeyValueStorage,
-	MemoryStorage,
 	NoOpLog,
+	createMemoryStorage,
 } from "@miniflare/tre";
 import anyTest, { Macro, TestFn, ThrowsExpectation } from "ava";
-import {
-	TIME_EXPIRED,
-	TIME_EXPIRING,
-	TIME_NOW,
-	createJunkStream,
-	testTimers,
-} from "../../test-shared";
+import { TestTimers, createJunkStream } from "../../test-shared";
+
+// Stored expiration value to signal an expired key.
+export const TIME_EXPIRED = 500;
+// Time in seconds the testClock always returns:
+// TIME_EXPIRED < TIME_NOW < TIME_EXPIRING
+export const TIME_NOW = 1000;
+// Stored expiration value to signal a key that will expire in the future.
+export const TIME_EXPIRING = 1500;
 
 interface Context {
 	storage: KeyValueStorage;
@@ -27,11 +29,10 @@ interface Context {
 const test = anyTest as TestFn<Context>;
 
 test.beforeEach((t) => {
-	// TODO(soon): clean up this mess once we've migrated all gateways
-	const legacyStorage = new MemoryStorage(undefined, testTimers.now);
-	const newStorage = legacyStorage.getNewStorage();
-	const gateway = new KVGateway(new NoOpLog(), legacyStorage, testTimers);
-	const kvStorage = new KeyValueStorage(newStorage, testTimers);
+	const storage = createMemoryStorage();
+	const timers = new TestTimers();
+	const gateway = new KVGateway(new NoOpLog(), storage, timers);
+	const kvStorage = new KeyValueStorage(storage, timers);
 	t.context = { storage: kvStorage, gateway };
 });
 

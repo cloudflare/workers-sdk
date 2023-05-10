@@ -34,9 +34,6 @@ await mf.dispose();
 
 ## API
 
-> :warning: Features marked **(Experimental)** may change at any point and are
-> not subject to semantic versioning guarantees.
-
 ### `type Awaitable<T>`
 
 `T | Promise<T>`
@@ -121,14 +118,6 @@ Represents where data should be persisted, if anywhere.
   - If the protocol is `file:`, data will be stored on the file-system, in the
     specified directory (e.g. `file:///path/to/directory`). If the `unsanitise`
     search parameter is `true`, path sanitisation will be disabled.
-  - If the protocol is `sqlite:`, data will be stored in an SQLite database, at
-    the specified path (e.g. `sqlite:///path/to/db.sqlite`).
-  - **(Experimental)** If the protocol is `remote:`, data will be read/written
-    from/to real data stores on the Cloudflare network. By default, this will
-    cache data in-memory, but the `cache` search parameter can be set to a
-    URL-encoded persistence string to customise this. Note, this feature is only
-    supported for KV namespaces at the moment, and requires the
-    `cloudflareFetch` option to be set.
 - Otherwise, if this is just a regular `string`, data will be stored on the
   file-system, using the value as the directory path.
 
@@ -432,14 +421,6 @@ Options shared between all Workers/"nanoservices".
   If `true`, Miniflare will inject a script into HTML responses that
   automatically reloads the page in-browser whenever the Miniflare instance's
   options are updated.
-
-- **(Experimental)**
-  `cloudflareFetch?: (resource: string, searchParams?: URLSearchParams, init?: RequestInit) => Awaitable<Response>`
-
-  Authenticated `fetch` used by `remote:` storage to communicate with the
-  Cloudflare API. `https://api.cloudflare.com/client/v4/accounts/<account_id>/`
-  should be prepended to `resource` to form the request URL. Appropriate
-  authorization headers should also be added.
 
 #### Cache, Durable Objects, KV, R2 and D1
 

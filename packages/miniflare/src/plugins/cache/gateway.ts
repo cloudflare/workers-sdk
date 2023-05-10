@@ -5,11 +5,11 @@ import { ReadableStream, TransformStream } from "stream/web";
 import CachePolicy from "http-cache-semantics";
 import { Headers, HeadersInit, Request, Response, fetch } from "../../http";
 import { DeferredPromise, Log, Timers } from "../../shared";
-import { Storage } from "../../storage";
 import {
 	InclusiveRange,
 	KeyValueStorage,
 	MultipartReadableStream,
+	NewStorage,
 } from "../../storage2";
 import { isSitesRequest } from "../kv";
 import { _parseRanges } from "../shared";
@@ -232,10 +232,9 @@ export class CacheGateway {
 
 	constructor(
 		private readonly log: Log,
-		legacyStorage: Storage,
+		storage: NewStorage,
 		private readonly timers: Timers
 	) {
-		const storage = legacyStorage.getNewStorage();
 		this.storage = new KeyValueStorage(storage, timers);
 	}
 

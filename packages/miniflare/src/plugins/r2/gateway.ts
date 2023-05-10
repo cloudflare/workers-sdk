@@ -11,7 +11,6 @@ import {
 	maybeApply,
 	prefixError,
 } from "../../shared";
-import { Storage } from "../../storage";
 import {
 	BlobId,
 	InclusiveRange,
@@ -569,10 +568,10 @@ export class R2Gateway {
 
 	constructor(
 		private readonly log: Log,
-		legacyStorage: Storage,
+		storage: NewStorage,
 		private readonly timers: Timers
 	) {
-		this.#storage = legacyStorage.getNewStorage();
+		this.#storage = storage;
 		this.#storage.db.pragma("case_sensitive_like = TRUE");
 		this.#storage.db.exec(SQL_SCHEMA);
 		this.#stmts = sqlStmts(this.#storage.db);
