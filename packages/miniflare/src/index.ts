@@ -69,7 +69,7 @@ import {
 	defaultTimers,
 	formatResponse,
 } from "./shared";
-import { NewStorage } from "./storage2";
+import { Storage } from "./storage";
 import { CoreHeaders } from "./workers";
 
 // ===== `Miniflare` User Options =====
@@ -884,7 +884,7 @@ export class Miniflare {
 		plugin: keyof Plugins,
 		namespace: string,
 		persist?: Persistence
-	): NewStorage {
+	): Storage {
 		const factory = this.#gatewayFactories[plugin];
 		assert(factory !== undefined);
 		return factory.getStorage(namespace, persist);
@@ -912,5 +912,5 @@ export * from "./http";
 export * from "./plugins";
 export * from "./runtime";
 export * from "./shared";
-export * from "./storage2";
+export * from "./storage";
 export * from "./workers";

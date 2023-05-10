@@ -13,7 +13,7 @@ import {
 	MultipartReadableStream,
 } from "./blob";
 import { TypedDatabase } from "./sql";
-import { NewStorage } from "./storage";
+import { Storage } from "./storage";
 
 export interface KeyEntry<Metadata = unknown> {
 	key: string;
@@ -121,7 +121,7 @@ export class KeyValueStorage<Metadata = unknown> {
 	readonly #stmts: ReturnType<typeof sqlStmts>;
 
 	constructor(
-		private readonly storage: NewStorage,
+		private readonly storage: Storage,
 		private readonly timers: Timers = defaultTimers
 	) {
 		storage.db.pragma("case_sensitive_like = TRUE");

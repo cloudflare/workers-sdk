@@ -1,4 +1,4 @@
-import { InclusiveRange } from "../../storage2";
+import { InclusiveRange } from "../../storage";
 
 // Matches case-insensitive string "bytes", ignoring surrounding whitespace,
 // followed by "=" (example matches: "bytes=...", "ByTeS=...", "   bytes  =...")

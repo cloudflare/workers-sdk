@@ -14,10 +14,10 @@ import {
 import {
 	BlobId,
 	InclusiveRange,
-	NewStorage,
+	Storage,
 	TypedDatabase,
 	escapeLike,
-} from "../../storage2";
+} from "../../storage";
 import {
 	BadUpload,
 	EntityTooSmall,
@@ -443,6 +443,7 @@ function sqlStmts(db: TypedDatabase) {
 				parts.sort((a, b) => a.part_number - b.part_number);
 				let partSize: number | undefined;
 				for (const part of parts.slice(0, -1)) {
+					// noinspection JSUnusedAssignment
 					partSize ??= part.size;
 					if (
 						part.size < R2Gateway._MIN_MULTIPART_PART_SIZE ||
@@ -541,7 +542,7 @@ export class R2Gateway {
 	/** @internal */
 	static _MIN_MULTIPART_PART_SIZE = 5 * 1024 * 1024;
 
-	readonly #storage: NewStorage;
+	readonly #storage: Storage;
 	readonly #stmts: ReturnType<typeof sqlStmts>;
 
 	// Multipart uploads are stored as multiple blobs. Therefore, when reading a
@@ -568,7 +569,7 @@ export class R2Gateway {
 
 	constructor(
 		private readonly log: Log,
-		storage: NewStorage,
+		storage: Storage,
 		private readonly timers: Timers
 	) {
 		this.#storage = storage;
@@ -605,7 +606,7 @@ export class R2Gateway {
 	}
 
 	#assembleMultipartValue(
-		storage: NewStorage,
+		storage: Storage,
 		parts: Pick<MultipartPartRow, "blob_id" | "size">[],
 		queryRange: InclusiveRange
 	): ReadableStream<Uint8Array> {

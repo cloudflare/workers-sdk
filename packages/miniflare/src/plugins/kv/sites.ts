@@ -13,7 +13,7 @@ import {
 	serialiseRegExps,
 	testRegExps,
 } from "../../shared";
-import { createFileReadableStream } from "../../storage2";
+import { createFileReadableStream } from "../../storage";
 import { CoreBindings } from "../../workers";
 import {
 	BINDING_TEXT_PERSIST,

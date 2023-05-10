@@ -7,7 +7,7 @@ import { stringify } from "devalue";
 import { Colorize, bold, green, grey, red, reset, yellow } from "kleur/colors";
 import { z } from "zod";
 import { Log, Timers } from "../../shared";
-import { NewStorage } from "../../storage2";
+import { Storage } from "../../storage";
 import { CoreHeaders, structuredSerializableReducers } from "../../workers";
 import { DispatchFetch, QueueConsumer } from "../shared";
 
@@ -99,7 +99,7 @@ export class QueuesGateway {
 
 	constructor(
 		private readonly log: Log,
-		_storage: NewStorage,
+		_storage: Storage,
 		private readonly timers: Timers,
 		private readonly queueName: string,
 		private readonly dispatchFetch: DispatchFetch
