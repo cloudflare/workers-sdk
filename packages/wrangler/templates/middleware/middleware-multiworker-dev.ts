@@ -1,6 +1,7 @@
+// @ts-nocheck
 /// <reference path="middleware-multiworker-dev.d.ts"/>
 
-import { Workers } from "config:middleware/multiworker-dev";
+import { workers } from "config:middleware/multiworker-dev";
 import type { WorkerRegistry } from "../../src/dev-registry";
 
 export function wrap(env: Record<string, unknown>) {
@@ -11,7 +12,7 @@ export function wrap(env: Record<string, unknown>) {
 	// if Workers[name]
 	// const details = Workers[name];
 
-	for (const [name, details] of Object.entries(Workers as WorkerRegistry)) {
+	for (const [name, details] of Object.entries(workers as WorkerRegistry)) {
 		if (details) {
 			facadeEnv[name] = {
 				async fetch(...reqArgs: Parameters<Fetcher["fetch"]>) {

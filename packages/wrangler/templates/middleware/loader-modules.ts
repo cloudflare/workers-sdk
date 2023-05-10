@@ -52,6 +52,14 @@ function getMaskedEnv(rawEnv: unknown) {
 }
 
 const facade: ExportedHandler<unknown> = {
+	...Object.fromEntries(
+		Object.entries(worker).map(([trigger, handler]) => [
+			trigger,
+			(param: unknown, env: unknown, ctx: ExecutionContext) => {
+				handler(param, getMaskedEnv(env), ctx);
+			},
+		])
+	),
 	fetch(request, rawEnv, ctx) {
 		const env = getMaskedEnv(rawEnv);
 		// Get the chain of middleware from the worker object
@@ -86,20 +94,6 @@ const facade: ExportedHandler<unknown> = {
 			// as if the worker completely bypassed middleware.
 			return worker.fetch!(request, env, ctx);
 		}
-	},
-	async queue(batch, env, ctx) {
-		return worker.queue!(batch, getMaskedEnv(env), ctx);
-	},
-	async scheduled(controller, env, ctx) {
-		return worker.scheduled!(controller, getMaskedEnv(env), ctx);
-	},
-	async trace(traces, env, ctx) {
-		return worker.trace!(traces, getMaskedEnv(env), ctx);
-	},
-	// @ts-expect-error Email isn't typed properly yet
-	async email(message, env, ctx) {
-		// @ts-expect-error Email isn't typed properly yet
-		return worker.email!(message, getMaskedEnv(env), ctx);
 	},
 };
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /// <reference path="middleware-d1-beta.d.ts"/>
 
 import { D1_IMPORTS, LOCAL_MODE } from "config:middleware/d1-beta";
