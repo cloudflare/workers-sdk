@@ -35,7 +35,7 @@ export function generateOptions(yargs: CommonYargsArgv) {
 }
 type GenerateArgs = StrictYargsOptionsToInterface<typeof generateOptions>;
 
-// Originally, generate was a rust function: https://github.com/cloudflare/wrangler/blob/master/src/cli/mod.rs#L106-L123
+// Originally, generate was a rust function: https://github.com/cloudflare/wrangler-legacy/blob/master/src/cli/mod.rs#L106-L123
 export async function generateHandler(args: GenerateArgs) {
 	// somehow, `init` marks name as required but then also runs fine
 	// with the name omitted, and then substitutes it at runtime with ""
@@ -269,8 +269,8 @@ function parseTemplatePath(templatePath: string): {
 	if (!templatePath.includes("/")) {
 		// template is a cloudflare canonical template, it doesn't include a slash in the name
 		return {
-			remote: "https://github.com/cloudflare/templates.git",
-			subdirectory: templatePath,
+			remote: "https://github.com/cloudflare/workers-sdk.git",
+			subdirectory: `templates/${templatePath}`,
 		};
 	}
 

@@ -1,0 +1,12 @@
+{
+	"name": "social-image-demo",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"deploy": "wrangler publish",
+		"start": "wrangler dev"
+	},
+	"devDependencies": {
+		"wrangler": "^2.9.1"
+	}
+}

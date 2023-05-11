@@ -1,0 +1,12 @@
+{
+	"name": "pages-functions-cors",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"dev": "wrangler pages dev public"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^3.0.0",
+		"wrangler": "^2.0.0"
+	}
+}

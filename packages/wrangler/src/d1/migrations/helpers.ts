@@ -10,11 +10,15 @@ import type { ConfigFields, DevConfig, Environment } from "../../config";
 import type { QueryResult } from "../execute";
 import type { Migration } from "../types";
 
-export async function getMigrationsPath(
-	projectPath: string,
-	migrationsFolderPath: string,
-	createIfMissing: boolean
-): Promise<string> {
+export async function getMigrationsPath({
+	projectPath,
+	migrationsFolderPath,
+	createIfMissing,
+}: {
+	projectPath: string;
+	migrationsFolderPath: string;
+	createIfMissing: boolean;
+}): Promise<string> {
 	const dir = path.resolve(projectPath, migrationsFolderPath);
 	if (fs.existsSync(dir)) return dir;
 
@@ -34,21 +38,31 @@ export async function getMigrationsPath(
 	throw new Error(`No migrations present at ${dir}.`);
 }
 
-export async function getUnappliedMigrations(
-	migrationsTableName: string,
-	migrationsPath: string,
-	local: undefined | boolean,
-	config: ConfigFields<DevConfig> & Environment,
-	name: string,
-	persistTo: undefined | string
-): Promise<Array<string>> {
+export async function getUnappliedMigrations({
+	migrationsTableName,
+	migrationsPath,
+	local,
+	config,
+	name,
+	persistTo,
+	preview,
+}: {
+	migrationsTableName: string;
+	migrationsPath: string;
+	local: boolean | undefined;
+	config: ConfigFields<DevConfig> & Environment;
+	name: string;
+	persistTo: string | undefined;
+	preview: boolean | undefined;
+}): Promise<Array<string>> {
 	const appliedMigrations = (
 		await listAppliedMigrations(
 			migrationsTableName,
 			local,
 			config,
 			name,
-			persistTo
+			persistTo,
+			preview
 		)
 	).map((migration) => {
 		return migration.name;
@@ -68,24 +82,25 @@ export async function getUnappliedMigrations(
 
 const listAppliedMigrations = async (
 	migrationsTableName: string,
-	local: undefined | boolean,
+	local: boolean | undefined,
 	config: ConfigFields<DevConfig> & Environment,
 	name: string,
-	persistTo: undefined | string
+	persistTo: string | undefined,
+	preview: boolean | undefined
 ): Promise<Migration[]> => {
-	const Query = `SELECT *
-									 FROM ${migrationsTableName}
-									 ORDER BY id`;
-
-	const response: QueryResult[] | null = await executeSql(
+	const response: QueryResult[] | null = await executeSql({
 		local,
 		config,
 		name,
-		isInteractive() && !CI.isCI(),
+		shouldPrompt: isInteractive() && !CI.isCI(),
 		persistTo,
-		undefined,
-		Query
-	);
+		command: `SELECT *
+		FROM ${migrationsTableName}
+		ORDER BY id`,
+		file: undefined,
+		json: undefined,
+		preview,
+	});
 
 	if (!response || response[0].results.length === 0) return [];
 
@@ -121,27 +136,34 @@ export function getNextMigrationNumber(migrationsPath: string): number {
 	return highestMigrationNumber + 1;
 }
 
-export const initMigrationsTable = async (
-	migrationsTableName: string,
-	local: undefined | boolean,
-	config: ConfigFields<DevConfig> & Environment,
-	name: string,
-	persistTo: undefined | string
-) => {
-	return executeSql(
+export const initMigrationsTable = async ({
+	migrationsTableName,
+	local,
+	config,
+	name,
+	persistTo,
+	preview,
+}: {
+	migrationsTableName: string;
+	local: boolean | undefined;
+	config: ConfigFields<DevConfig> & Environment;
+	name: string;
+	persistTo: string | undefined;
+	preview: boolean | undefined;
+}) => {
+	return executeSql({
 		local,
 		config,
 		name,
-		isInteractive() && !CI.isCI(),
+		shouldPrompt: isInteractive() && !CI.isCI(),
 		persistTo,
-		undefined,
-		`
-						CREATE TABLE IF NOT EXISTS ${migrationsTableName}
-						(
-								id         INTEGER PRIMARY KEY AUTOINCREMENT,
-								name       TEXT UNIQUE,
-								applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
-						);
-				`
-	);
+		command: `CREATE TABLE IF NOT EXISTS ${migrationsTableName}(
+		id         INTEGER PRIMARY KEY AUTOINCREMENT,
+		name       TEXT UNIQUE,
+		applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+);`,
+		file: undefined,
+		json: undefined,
+		preview,
+	});
 };

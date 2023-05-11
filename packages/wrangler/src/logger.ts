@@ -26,15 +26,30 @@ const LOGGER_LEVEL_FORMAT_TYPE_MAP = {
 
 const getLogLevelFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_LOG",
-	defaultValue: () => "log",
 });
+
+function getLoggerLevel(): LoggerLevel {
+	const fromEnv = getLogLevelFromEnv()?.toLowerCase();
+	if (fromEnv !== undefined) {
+		if (fromEnv in LOGGER_LEVELS) return fromEnv as LoggerLevel;
+		const expected = Object.keys(LOGGER_LEVELS)
+			.map((level) => `"${level}"`)
+			.join(" | ");
+		console.warn(
+			`Unrecognised WRANGLER_LOG value ${JSON.stringify(
+				fromEnv
+			)}, expected ${expected}, defaulting to "log"...`
+		);
+	}
+	return "log";
+}
 
 export type TableRow<Keys extends string> = Record<Keys, string>;
 
-class Logger {
+export class Logger {
 	constructor() {}
 
-	loggerLevel: LoggerLevel = (getLogLevelFromEnv() as LoggerLevel) ?? "log";
+	loggerLevel = getLoggerLevel();
 	columns = process.stdout.columns;
 
 	debug = (...args: unknown[]) => this.doLog("debug", args);
@@ -46,7 +61,11 @@ class Logger {
 		const keys: Keys[] =
 			data.length === 0 ? [] : (Object.keys(data[0]) as Keys[]);
 		const t = new CLITable({
-			head: keys.map((k) => chalk.bold.blue(k)),
+			head: keys,
+			style: {
+				head: chalk.level ? ["blue"] : [],
+				border: chalk.level ? ["gray"] : [],
+			},
 		});
 		t.push(...data.map((row) => keys.map((k) => row[k])));
 		return this.doLog("log", [t.toString()]);

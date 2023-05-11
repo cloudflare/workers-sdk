@@ -55,7 +55,7 @@ function useDevRegistry(
 
 		const interval =
 			// TODO: enable this for remote mode as well
-			// https://github.com/cloudflare/wrangler2/issues/1182
+			// https://github.com/cloudflare/workers-sdk/issues/1182
 			mode === "local"
 				? setInterval(() => {
 						getBoundRegisteredWorkers({
@@ -116,6 +116,7 @@ export type DevProps = {
 	initialPort: number;
 	initialIp: string;
 	inspectorPort: number;
+	processEntrypoint: boolean;
 	rules: Config["rules"];
 	accountId: string | undefined;
 	initialMode: "local" | "remote";
@@ -138,7 +139,8 @@ export type DevProps = {
 	compatibilityFlags: string[] | undefined;
 	usageModel: "bundled" | "unbound" | undefined;
 	minify: boolean | undefined;
-	nodeCompat: boolean | undefined;
+	legacyNodeCompat: boolean | undefined;
+	nodejsCompat: boolean | undefined;
 	build: Config["build"];
 	env: string | undefined;
 	legacyEnv: boolean;
@@ -146,7 +148,6 @@ export type DevProps = {
 	host: string | undefined;
 	routes: Route[] | undefined;
 	inspect: boolean;
-	logPrefix?: string;
 	onReady: ((ip: string, port: number) => void) | undefined;
 	showInteractiveDevSession: boolean | undefined;
 	forceLocal: boolean | undefined;
@@ -187,6 +188,7 @@ function InteractiveDevSession(props: DevProps) {
 		inspect: props.inspect,
 		localProtocol: props.localProtocol,
 		forceLocal: props.forceLocal,
+		worker: props.name,
 	});
 
 	ip = props.initialIp;
@@ -271,6 +273,7 @@ function DevSession(props: DevSessionProps) {
 		entry: props.entry,
 		destination: directory,
 		jsxFactory: props.jsxFactory,
+		processEntrypoint: props.processEntrypoint,
 		rules: props.rules,
 		jsxFragment: props.jsxFragment,
 		serveAssetsFromWorker: Boolean(
@@ -278,7 +281,8 @@ function DevSession(props: DevSessionProps) {
 		),
 		tsconfig: props.tsconfig,
 		minify: props.minify,
-		nodeCompat: props.nodeCompat,
+		legacyNodeCompat: props.legacyNodeCompat,
+		nodejsCompat: props.nodejsCompat,
 		betaD1Shims,
 		define: props.define,
 		noBundle: props.noBundle,
@@ -341,13 +345,13 @@ function DevSession(props: DevSessionProps) {
 			queueConsumers={props.queueConsumers}
 			localProtocol={props.localProtocol}
 			localUpstream={props.localUpstream}
-			logPrefix={props.logPrefix}
 			inspect={props.inspect}
 			onReady={announceAndOnReady}
 			enablePagesAssetsServiceBinding={props.enablePagesAssetsServiceBinding}
 			experimentalLocal={props.experimentalLocal}
 			accountId={props.accountId}
 			experimentalLocalRemoteKv={props.experimentalLocalRemoteKv}
+			sourceMapPath={bundle?.sourceMapPath}
 		/>
 	) : (
 		<Remote
@@ -526,6 +530,7 @@ function useHotkeys(props: {
 	inspect: boolean;
 	localProtocol: "http" | "https";
 	forceLocal: boolean | undefined;
+	worker: string | undefined;
 }) {
 	const { initial, inspectorPort, inspect, localProtocol, forceLocal } = props;
 	// UGH, we should put port in context instead
@@ -558,7 +563,7 @@ function useHotkeys(props: {
 				// toggle inspector
 				case "d": {
 					if (inspect) {
-						await openInspector(inspectorPort);
+						await openInspector(inspectorPort, props.worker);
 					}
 					break;
 				}

@@ -10,7 +10,7 @@ If an issue or PR obviously relates to a release regression, we must assign an a
 
 Anyone can triage issues as they arrive in the repository.
 
-New untriaged issues can be found by filtering the issues list for those [not in a project](https://github.com/cloudflare/wrangler2/issues?q=is%3Aopen+is%3Aissue+-project%3Acloudflare%2F1+-project%3Acloudflare%2F2+).
+New untriaged issues can be found by filtering the issues list for those [not in a project](https://github.com/cloudflare/workers-sdk/issues?q=is%3Aopen+is%3Aissue+-project%3Acloudflare%2F1+-project%3Acloudflare%2F2+).
 
 Follow these steps to triage an issue.
 
@@ -29,7 +29,7 @@ This typically includes the version of Wrangler being used and steps to reproduc
 - If the issue does not provide clear steps to reproduce the problem then add the `needs reproduction` label.
 
 These labels can be revisited if the author can provide further clarification.
-You can see a list of issues that need revisiting by filtering on ["needs reproduction" and "needs clarification"](https://github.com/cloudflare/wrangler2/issues?q=is%3Aopen+is%3Aissue+project%3Acloudflare%2F1+label%3A%22needs+clarification%22).
+You can see a list of issues that need revisiting by filtering on ["needs reproduction" and "needs clarification"](https://github.com/cloudflare/workers-sdk/issues?q=is%3Aopen+is%3Aissue+project%3Acloudflare%2F1+label%3A%22needs+clarification%22).
 
 If the issue does have enough information, move on to step 2.
 

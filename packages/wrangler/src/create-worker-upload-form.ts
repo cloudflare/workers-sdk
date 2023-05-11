@@ -4,6 +4,7 @@ import type {
 	CfWorkerInit,
 	CfModuleType,
 	CfDurableObjectMigrations,
+	CfPlacement,
 } from "./worker.js";
 
 export function toMimeType(type: CfModuleType): string {
@@ -23,15 +24,22 @@ export function toMimeType(type: CfModuleType): string {
 	}
 }
 
-type WorkerMetadataBinding =
+export type WorkerMetadataBinding =
 	// If you add any new binding types here, also add it to safeBindings
 	// under validateUnsafeBinding in config/validation.ts
 	| { type: "plain_text"; name: string; text: string }
 	| { type: "json"; name: string; json: unknown }
 	| { type: "wasm_module"; name: string; part: string }
 	| { type: "text_blob"; name: string; part: string }
+	| { type: "browser"; name: string }
 	| { type: "data_blob"; name: string; part: string }
 	| { type: "kv_namespace"; name: string; namespace_id: string }
+	| {
+			type: "send_email";
+			name: string;
+			destination_address?: string;
+			allowed_destination_addresses?: string[];
+	  }
 	| {
 			type: "durable_object_namespace";
 			name: string;
@@ -45,6 +53,7 @@ type WorkerMetadataBinding =
 	| { type: "service"; name: string; service: string; environment?: string }
 	| { type: "analytics_engine"; name: string; dataset?: string }
 	| { type: "dispatch_namespace"; name: string; namespace: string }
+	| { type: "mtls_certificate"; name: string; certificate_id: string }
 	| {
 			type: "logfwdr";
 			name: string;
@@ -64,6 +73,9 @@ export interface WorkerMetadata {
 	bindings: WorkerMetadataBinding[];
 	keep_bindings?: WorkerMetadataBinding["type"][];
 	logpush?: boolean;
+	placement?: CfPlacement;
+	// Allow unsafe.metadata to add arbitary properties at runtime
+	[key: string]: unknown;
 }
 
 /**
@@ -80,6 +92,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		compatibility_flags,
 		keepVars,
 		logpush,
+		placement,
 	} = worker;
 
 	let { modules } = worker;
@@ -101,6 +114,17 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			namespace_id: id,
 		});
 	});
+
+	bindings.send_email?.forEach(
+		({ name, destination_address, allowed_destination_addresses }) => {
+			metadataBindings.push({
+				name: name,
+				type: "send_email",
+				destination_address,
+				allowed_destination_addresses,
+			});
+		}
+	);
 
 	bindings.durable_objects?.bindings.forEach(
 		({ name, class_name, script_name, environment }) => {
@@ -166,6 +190,14 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		});
 	});
 
+	bindings.mtls_certificates?.forEach(({ binding, certificate_id }) => {
+		metadataBindings.push({
+			name: binding,
+			type: "mtls_certificate",
+			certificate_id,
+		});
+	});
+
 	bindings.logfwdr?.bindings.forEach(({ name, destination }) => {
 		metadataBindings.push({
 			name: name,
@@ -187,6 +219,13 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 				type: "application/wasm",
 			})
 		);
+	}
+
+	if (bindings.browser !== undefined) {
+		metadataBindings.push({
+			name: bindings.browser.binding,
+			type: "browser",
+		});
 	}
 
 	for (const [name, filePath] of Object.entries(bindings.text_blobs || {})) {
@@ -275,9 +314,9 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		}
 	}
 
-	if (bindings.unsafe) {
+	if (bindings.unsafe?.bindings) {
 		// @ts-expect-error unsafe bindings don't need to match a specific type here
-		metadataBindings.push(...bindings.unsafe);
+		metadataBindings.push(...bindings.unsafe.bindings);
 	}
 
 	const metadata: WorkerMetadata = {
@@ -292,7 +331,14 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		capnp_schema: bindings.logfwdr?.schema,
 		...(keepVars && { keep_bindings: ["plain_text", "json"] }),
 		...(logpush !== undefined && { logpush }),
+		...(placement && { placement }),
 	};
+
+	if (bindings.unsafe?.metadata !== undefined) {
+		for (const key of Object.keys(bindings.unsafe.metadata)) {
+			metadata[key] = bindings.unsafe.metadata[key];
+		}
+	}
 
 	formData.set("metadata", JSON.stringify(metadata));
 

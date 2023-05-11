@@ -59,7 +59,7 @@ export function readableRelative(to: string) {
 declare const __RELATIVE_PACKAGE_PATH__: string;
 
 /**
- * Use this function (rather than node.js constants like `__dirname`) to specify
+ * Use this function (rather than Node.js constants like `__dirname`) to specify
  * paths that are relative to the base path of the Wrangler package.
  *
  * It is important to use this function because it reliably maps to the root of the package

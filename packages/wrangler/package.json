@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "2.9.1",
+	"version": "2.20.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -24,13 +24,13 @@
 		"http",
 		"cli"
 	],
-	"homepage": "https://github.com/cloudflare/wrangler2#readme",
+	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
 	"bugs": {
-		"url": "https://github.com/cloudflare/wrangler2/issues"
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/cloudflare/wrangler2.git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/wrangler"
 	},
 	"license": "MIT OR Apache-2.0",
@@ -63,9 +63,11 @@
 		"emit-types": "tsc -p tsconfig.emit.json && node -r esbuild-register scripts/emit-types.ts",
 		"prepublishOnly": "SOURCEMAPS=false npm run build",
 		"start": "npm run bundle && cross-env NODE_OPTIONS=--enable-source-maps ./bin/wrangler.js",
-		"test": "npm run assert-git-version && jest --silent=false --verbose=true",
+		"test": "npm run assert-git-version && jest",
 		"test-watch": "npm run test -- --runInBand --testTimeout=50000 --watch",
-		"test:ci": "npm run test -- --verbose=true --coverage"
+		"test:ci": "npm run test -- --coverage",
+		"test:debug": "npm run test -- --silent=false --verbose=true",
+		"test:e2e": "vitest --no-threads ./e2e"
 	},
 	"jest": {
 		"coverageReporters": [
@@ -82,7 +84,7 @@
 		"setupFilesAfterEnv": [
 			"<rootDir>/src/__tests__/jest.setup.ts"
 		],
-		"testRegex": ".*.(test|spec)\\.[jt]sx?$",
+		"testRegex": "src/__tests__/.*\\.(test|spec)\\.[jt]sx?$",
 		"testTimeout": 30000,
 		"transform": {
 			"^.+\\.c?(t|j)sx?$": [
@@ -100,13 +102,13 @@
 		"@cloudflare/kv-asset-handler": "^0.2.0",
 		"@esbuild-plugins/node-globals-polyfill": "^0.1.1",
 		"@esbuild-plugins/node-modules-polyfill": "^0.1.4",
-		"@miniflare/core": "2.11.0",
-		"@miniflare/d1": "2.11.0",
-		"@miniflare/durable-objects": "2.11.0",
+		"@miniflare/core": "2.14.0",
+		"@miniflare/d1": "2.14.0",
+		"@miniflare/durable-objects": "2.14.0",
 		"blake3-wasm": "^2.1.5",
 		"chokidar": "^3.5.3",
 		"esbuild": "0.16.3",
-		"miniflare": "2.11.0",
+		"miniflare": "2.14.0",
 		"nanoid": "^3.3.3",
 		"path-to-regexp": "^6.2.0",
 		"selfsigned": "^2.0.1",
@@ -118,7 +120,7 @@
 		"@cloudflare/workers-types": "^4.20221111.1",
 		"@iarna/toml": "^3.0.0",
 		"@microsoft/api-extractor": "^7.28.3",
-		"@miniflare/tre": "^3.0.0-next.8",
+		"@miniflare/tre": "3.0.0-next.13",
 		"@types/better-sqlite3": "^7.6.0",
 		"@types/busboy": "^1.5.0",
 		"@types/command-exists": "^1.2.0",
@@ -174,13 +176,16 @@
 		"remove-accents-esm": "^0.0.1",
 		"semiver": "^1.1.0",
 		"serve-static": "^1.15.0",
+		"shellac": "^0.7.3",
 		"signal-exit": "^3.0.7",
+		"strip-ansi": "^7.0.1",
 		"supports-color": "^9.2.2",
 		"timeago.js": "^4.0.2",
 		"tmp-promise": "^3.0.3",
 		"ts-dedent": "^2.2.0",
-		"undici": "5.11.0",
+		"undici": "5.20.0",
 		"update-check": "^1.5.4",
+		"vitest": "^0.29.2",
 		"ws": "^8.5.0",
 		"xdg-app-paths": "^7.3.0",
 		"yargs": "^17.4.1",

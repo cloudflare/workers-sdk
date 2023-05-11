@@ -14,6 +14,7 @@ import {
 import { runCustomBuild } from "../entry";
 import { logger } from "../logger";
 import { waitForPortToBeAvailable } from "../proxy";
+import traverseModuleGraph from "../traverse-module-graph";
 import {
 	setupBindings,
 	getMiniflare3,
@@ -91,6 +92,7 @@ export async function startDevServer(
 			entry: props.entry,
 			destination: directory.name,
 			jsxFactory: props.jsxFactory,
+			processEntrypoint: props.processEntrypoint,
 			rules: props.rules,
 			jsxFragment: props.jsxFragment,
 			serveAssetsFromWorker: Boolean(
@@ -98,7 +100,8 @@ export async function startDevServer(
 			),
 			tsconfig: props.tsconfig,
 			minify: props.minify,
-			nodeCompat: props.nodeCompat,
+			legacyNodeCompat: props.legacyNodeCompat,
+			nodejsCompat: props.nodejsCompat,
 			define: props.define,
 			noBundle: props.noBundle,
 			assets: props.assetsConfig,
@@ -131,7 +134,6 @@ export async function startDevServer(
 				queueConsumers: props.queueConsumers,
 				localProtocol: props.localProtocol,
 				localUpstream: props.localUpstream,
-				logPrefix: props.logPrefix,
 				inspect: props.inspect,
 				onReady: props.onReady,
 				enablePagesAssetsServiceBinding: props.enablePagesAssetsServiceBinding,
@@ -140,6 +142,7 @@ export async function startDevServer(
 				experimentalLocal: props.experimentalLocal,
 				accountId: props.accountId,
 				experimentalLocalRemoteKv: props.experimentalLocalRemoteKv,
+				sourceMapPath: bundle?.sourceMapPath,
 			});
 
 			return {
@@ -204,13 +207,15 @@ async function runEsbuild({
 	destination,
 	jsxFactory,
 	jsxFragment,
+	processEntrypoint,
 	rules,
 	assets,
 	betaD1Shims,
 	serveAssetsFromWorker,
 	tsconfig,
 	minify,
-	nodeCompat,
+	legacyNodeCompat,
+	nodejsCompat,
 	define,
 	noBundle,
 	workerDefinitions,
@@ -225,6 +230,7 @@ async function runEsbuild({
 	destination: string | undefined;
 	jsxFactory: string | undefined;
 	jsxFragment: string | undefined;
+	processEntrypoint: boolean;
 	rules: Config["rules"];
 	assets: Config["assets"];
 	betaD1Shims?: string[];
@@ -233,7 +239,8 @@ async function runEsbuild({
 	serveAssetsFromWorker: boolean;
 	tsconfig: string | undefined;
 	minify: boolean | undefined;
-	nodeCompat: boolean | undefined;
+	legacyNodeCompat: boolean | undefined;
+	nodejsCompat: boolean | undefined;
 	noBundle: boolean;
 	workerDefinitions: WorkerRegistry;
 	firstPartyWorkerDevFacade: boolean | undefined;
@@ -244,55 +251,56 @@ async function runEsbuild({
 }): Promise<EsbuildBundle | undefined> {
 	if (!destination) return;
 
-	const {
-		resolvedEntryPointPath,
-		bundleType,
-		modules,
-		dependencies,
-		sourceMapPath,
-	}: Awaited<ReturnType<typeof bundleWorker>> = noBundle
-		? {
-				modules: [],
-				dependencies: {},
-				resolvedEntryPointPath: entry.file,
-				bundleType: entry.format === "modules" ? "esm" : "commonjs",
-				stop: undefined,
-				sourceMapPath: undefined,
-		  }
-		: await bundleWorker(entry, destination, {
-				serveAssetsFromWorker,
-				jsxFactory,
-				jsxFragment,
-				rules,
-				tsconfig,
-				minify,
-				nodeCompat,
-				define,
-				checkFetch: true,
-				assets: assets && {
-					...assets,
-					// disable the cache in dev
-					bypassCache: true,
-				},
-				betaD1Shims,
-				workerDefinitions,
-				services,
-				firstPartyWorkerDevFacade,
-				targetConsumer: "dev", // We are starting a dev server
-				testScheduled,
-				local,
-				experimentalLocal,
-				doBindings,
-		  });
+	let traverseModuleGraphResult:
+		| Awaited<ReturnType<typeof bundleWorker>>
+		| undefined;
+	let bundleResult: Awaited<ReturnType<typeof bundleWorker>> | undefined;
+	if (noBundle) {
+		traverseModuleGraphResult = await traverseModuleGraph(entry, rules);
+	}
+
+	if (processEntrypoint || !noBundle) {
+		bundleResult = await bundleWorker(entry, destination, {
+			bundle: !noBundle,
+			disableModuleCollection: noBundle,
+			serveAssetsFromWorker,
+			jsxFactory,
+			jsxFragment,
+			rules,
+			tsconfig,
+			minify,
+			legacyNodeCompat,
+			nodejsCompat,
+			define,
+			checkFetch: true,
+			assets: assets && {
+				...assets,
+				// disable the cache in dev
+				bypassCache: true,
+			},
+			betaD1Shims,
+			workerDefinitions,
+			services,
+			firstPartyWorkerDevFacade,
+			targetConsumer: "dev", // We are starting a dev server
+			testScheduled,
+			local,
+			experimentalLocal,
+			doBindings,
+		});
+	}
 
 	return {
 		id: 0,
 		entry,
-		path: resolvedEntryPointPath,
-		type: bundleType,
-		modules,
-		dependencies,
-		sourceMapPath,
+		path: bundleResult?.resolvedEntryPointPath ?? entry.file,
+		type:
+			bundleResult?.bundleType ??
+			(entry.format === "modules" ? "esm" : "commonjs"),
+		modules: traverseModuleGraphResult?.modules ?? bundleResult?.modules ?? [],
+		dependencies: bundleResult?.dependencies ?? {},
+		sourceMapPath: bundleResult?.sourceMapPath,
+		sourceMapMetadata: bundleResult?.sourceMapMetadata,
 	};
 }
 
@@ -318,7 +326,6 @@ export async function startLocalServer({
 	localUpstream,
 	inspect,
 	onReady,
-	logPrefix,
 	enablePagesAssetsServiceBinding,
 	experimentalLocal,
 	accountId,
@@ -398,13 +405,12 @@ export async function startLocalServer({
 			dataBlobBindings,
 			crons,
 			upstream,
-			logPrefix,
 			workerDefinitions,
 			enablePagesAssetsServiceBinding,
 		});
 
 		if (experimentalLocal) {
-			const log = await buildMiniflare3Logger(logPrefix);
+			const log = await buildMiniflare3Logger();
 			const mf3Options = await transformMf2OptionsToMf3Options({
 				miniflare2Options: options,
 				format,
@@ -412,6 +418,7 @@ export async function startLocalServer({
 				log,
 				kvNamespaces: bindings?.kv_namespaces,
 				r2Buckets: bindings?.r2_buckets,
+				d1Databases: bindings?.d1_databases,
 				authenticatedAccountId: accountId,
 				kvRemote: experimentalLocalRemoteKv,
 				inspectorPort,

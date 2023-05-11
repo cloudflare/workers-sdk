@@ -1,6 +1,6 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve as resolvePath } from "node:path";
+import { join, resolve as resolvePath } from "node:path";
 import { cwd } from "node:process";
 import { File, FormData } from "undici";
 import { fetchResult } from "../../cfetch";
@@ -14,9 +14,12 @@ import {
 import {
 	buildRawWorker,
 	checkRawWorker,
+	traverseAndBuildWorkerJSDirectory,
 } from "../../pages/functions/buildWorker";
 import { validateRoutes } from "../../pages/functions/routes-validation";
 import { upload } from "../../pages/upload";
+import { createUploadWorkerBundleContents } from "./create-worker-bundle-contents";
+import type { BundleResult } from "../../bundle";
 import type { Project, Deployment } from "@cloudflare/types";
 
 interface PagesPublishOptions {
@@ -63,7 +66,7 @@ interface PagesPublishOptions {
 
 	/**
 	 * Whether to run bundling on `_worker.js` before deploying.
-	 * Default: false
+	 * Default: true
 	 */
 	bundle?: boolean;
 
@@ -93,9 +96,12 @@ export async function publish({
 		_redirects: string | undefined,
 		_routesGenerated: string | undefined,
 		_routesCustom: string | undefined,
+		_workerJSIsDirectory = false,
 		_workerJS: string | undefined;
 
-	const workerScriptPath = resolvePath(directory, "_worker.js");
+	bundle = bundle ?? true;
+
+	const _workerPath = resolvePath(directory, "_worker.js");
 
 	try {
 		_headers = readFileSync(join(directory, "_headers"), "utf-8");
@@ -114,7 +120,10 @@ export async function publish({
 	} catch {}
 
 	try {
-		_workerJS = readFileSync(workerScriptPath, "utf-8");
+		_workerJSIsDirectory = lstatSync(_workerPath).isDirectory();
+		if (!_workerJSIsDirectory) {
+			_workerJS = readFileSync(_workerPath, "utf-8");
+		}
 	} catch {}
 
 	// Grab the bindings from the API, we need these for shims and other such hacky inserts
@@ -126,12 +135,19 @@ export async function publish({
 		isProduction = project.production_branch === branch;
 	}
 
+	const deploymentConfig =
+		project.deployment_configs[isProduction ? "production" : "preview"];
+	const nodejsCompat =
+		deploymentConfig.compatibility_flags?.includes("nodejs_compat");
+
 	/**
 	 * Evaluate if this is an Advanced Mode or Pages Functions project. If Advanced Mode, we'll
 	 * go ahead and upload `_worker.js` as is, but if Pages Functions, we need to attempt to build
 	 * Functions first and exit if it failed
 	 */
 	let builtFunctions: string | undefined = undefined;
+	let workerBundle: BundleResult | undefined = undefined;
+
 	const functionsDirectory =
 		customFunctionsDirectory || join(cwd(), "functions");
 	const routesOutputPath = !existsSync(join(directory, "_routes.json"))
@@ -147,25 +163,27 @@ export async function publish({
 	);
 
 	if (!_workerJS && existsSync(functionsDirectory)) {
-		const outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`);
 		const outputConfigPath = join(
 			tmpdir(),
 			`functions-filepath-routing-config-${Math.random()}.json`
 		);
 
 		try {
-			await buildFunctions({
-				outfile,
+			workerBundle = await buildFunctions({
 				outputConfigPath,
 				functionsDirectory,
 				onEnd: () => {},
-				buildOutputDirectory: dirname(outfile),
+				buildOutputDirectory: directory,
 				routesOutputPath,
 				local: false,
 				d1Databases,
+				nodejsCompat,
 			});
 
-			builtFunctions = readFileSync(outfile, "utf-8");
+			builtFunctions = readFileSync(
+				workerBundle.resolvedEntryPointPath,
+				"utf-8"
+			);
 			filepathRoutingConfig = readFileSync(outputConfigPath, "utf-8");
 		} catch (e) {
 			if (e instanceof FunctionsNoRoutesError) {
@@ -229,30 +247,53 @@ export async function publish({
 	 * Advanced Mode
 	 * https://developers.cloudflare.com/pages/platform/functions/#advanced-mode
 	 *
-	 * When using a _worker.js file, the entire /functions directory is ignored
+	 * When using a _worker.js file or _worker.js/ directory, the entire /functions directory is ignored
 	 * – this includes its routing and middleware characteristics.
 	 */
-	if (_workerJS) {
-		let workerFileContents = _workerJS;
+	if (_workerJSIsDirectory) {
+		workerBundle = await traverseAndBuildWorkerJSDirectory({
+			workerJSDirectory: _workerPath,
+			buildOutputDirectory: directory,
+			d1Databases,
+			nodejsCompat,
+		});
+	} else if (_workerJS) {
 		if (bundle) {
 			const outfile = join(tmpdir(), `./bundledWorker-${Math.random()}.mjs`);
-			await buildRawWorker({
-				workerScriptPath,
+			workerBundle = await buildRawWorker({
+				workerScriptPath: _workerPath,
 				outfile,
-				directory: directory ?? ".",
+				directory,
 				local: false,
 				sourcemap: true,
 				watch: false,
 				onEnd: () => {},
 				betaD1Shims: d1Databases,
+				nodejsCompat,
 			});
-			workerFileContents = readFileSync(outfile, "utf8");
 		} else {
-			await checkRawWorker(workerScriptPath, () => {});
+			await checkRawWorker(_workerPath, () => {});
+			// TODO: Let users configure this in the future.
+			workerBundle = {
+				modules: [],
+				dependencies: {},
+				stop: undefined,
+				resolvedEntryPointPath: _workerPath,
+				bundleType: "esm",
+			};
 		}
+	}
 
-		formData.append("_worker.js", new File([workerFileContents], "_worker.js"));
-		logger.log(`✨ Uploading _worker.js`);
+	if (_workerJS || _workerJSIsDirectory) {
+		const workerBundleContents = await createUploadWorkerBundleContents(
+			workerBundle as BundleResult
+		);
+
+		formData.append(
+			"_worker.bundle",
+			new File([workerBundleContents], "_worker.bundle")
+		);
+		logger.log(`✨ Uploading Worker bundle`);
 
 		if (_routesCustom) {
 			// user provided a custom _routes.json file
@@ -277,10 +318,16 @@ export async function publish({
 	 * Pages Functions
 	 * https://developers.cloudflare.com/pages/platform/functions/
 	 */
-	if (builtFunctions && !_workerJS) {
-		// if Functions were build successfully, proceed to uploading the build file
-		formData.append("_worker.js", new File([builtFunctions], "_worker.js"));
-		logger.log(`✨ Uploading Functions`);
+	if (builtFunctions && !_workerJS && !_workerJSIsDirectory) {
+		const workerBundleContents = await createUploadWorkerBundleContents(
+			workerBundle as BundleResult
+		);
+
+		formData.append(
+			"_worker.bundle",
+			new File([workerBundleContents], "_worker.bundle")
+		);
+		logger.log(`✨ Uploading Functions bundle`);
 
 		if (_routesCustom) {
 			// user provided a custom _routes.json file

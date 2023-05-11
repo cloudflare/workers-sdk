@@ -1,0 +1,60 @@
+{
+	"name": "images.pages.dev",
+	"version": "0.1.0",
+	"private": true,
+	"license": "MIT",
+	"scripts": {
+		"build": "craco build",
+		"eject": "craco eject",
+		"postinstall": "cd durable_objects && npm install",
+		"start": "npx wrangler@pages pages dev --kv IMAGES -- npm run start:react",
+		"start:react": "craco start",
+		"test": "craco test"
+	},
+	"browserslist": {
+		"production": [
+			">0.2%",
+			"not dead",
+			"not op_mini all"
+		],
+		"development": [
+			"last 1 chrome version",
+			"last 1 firefox version",
+			"last 1 safari version"
+		]
+	},
+	"eslintConfig": {
+		"extends": [
+			"react-app",
+			"react-app/jest"
+		]
+	},
+	"dependencies": {
+		"@craco/craco": "^6.4.0",
+		"@ssttevee/multipart-parser": "^0.1.9",
+		"@testing-library/jest-dom": "^5.15.0",
+		"@testing-library/react": "^11.2.7",
+		"@testing-library/user-event": "^12.8.3",
+		"@types/jest": "^26.0.24",
+		"@types/node": "^12.20.36",
+		"@types/react": "^17.0.34",
+		"@types/react-dom": "^17.0.11",
+		"moment": "^2.29.1",
+		"react": "^17.0.2",
+		"react-dom": "^17.0.2",
+		"react-router-dom": "^6.0.1",
+		"react-scripts": "4.0.3",
+		"swr": "^1.0.1",
+		"typescript": "^4.4.4",
+		"web-vitals": "^1.1.2"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^3.1.1",
+		"@tailwindcss/aspect-ratio": "^0.3.0",
+		"@tailwindcss/forms": "^0.3.4",
+		"autoprefixer": "^9.8.8",
+		"postcss": "^7.0.39",
+		"tailwindcss": "npm:@tailwindcss/postcss7-compat@^2.2.17",
+		"wrangler": "^2.9.1"
+	}
+}

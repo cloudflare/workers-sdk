@@ -1,5 +1,6 @@
 export type Database = {
 	uuid: string;
+	previewDatabaseUuid?: string;
 	name: string;
 	binding: string;
 	internal_env?: string;
@@ -21,4 +22,11 @@ export type Migration = {
 	id: string;
 	name: string;
 	applied_at: string;
+};
+
+export type DatabaseCreationResult = {
+	uuid: string;
+	name: string;
+	primary_location_hint?: string;
+	created_in_region?: string;
 };

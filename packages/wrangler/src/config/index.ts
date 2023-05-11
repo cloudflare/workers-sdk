@@ -97,6 +97,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		data_blobs,
 		durable_objects,
 		kv_namespaces,
+		send_email,
 		queues,
 		d1_databases,
 		r2_buckets,
@@ -104,10 +105,12 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		services,
 		analytics_engine_datasets,
 		text_blobs,
+		browser,
 		unsafe,
 		vars,
 		wasm_modules,
 		dispatch_namespaces,
+		mtls_certificates,
 	} = bindings;
 
 	if (data_blobs !== undefined && Object.keys(data_blobs).length > 0) {
@@ -151,6 +154,23 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 					value: id,
 				};
 			}),
+		});
+	}
+
+	if (send_email !== undefined && send_email.length > 0) {
+		output.push({
+			type: "Send Email",
+			entries: send_email.map(
+				({ name, destination_address, allowed_destination_addresses }) => {
+					return {
+						key: name,
+						value:
+							destination_address ||
+							allowed_destination_addresses?.join(", ") ||
+							"unrestricted",
+					};
+				}
+			),
 		});
 	}
 
@@ -254,10 +274,17 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		});
 	}
 
-	if (unsafe !== undefined && unsafe.length > 0) {
+	if (browser !== undefined) {
+		output.push({
+			type: "Browser",
+			entries: [{ key: "Name", value: browser.binding }],
+		});
+	}
+
+	if (unsafe?.bindings !== undefined && unsafe.bindings.length > 0) {
 		output.push({
 			type: "Unsafe",
-			entries: unsafe.map(({ name, type }) => ({
+			entries: unsafe.bindings.map(({ name, type }) => ({
 				key: type,
 				value: name,
 			})),
@@ -303,6 +330,28 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 					value: namespace,
 				};
 			}),
+		});
+	}
+
+	if (mtls_certificates !== undefined && mtls_certificates.length > 0) {
+		output.push({
+			type: "mTLS Certificates",
+			entries: mtls_certificates.map(({ binding, certificate_id }) => {
+				return {
+					key: binding,
+					value: certificate_id,
+				};
+			}),
+		});
+	}
+
+	if (unsafe?.metadata !== undefined) {
+		output.push({
+			type: "Unsafe Metadata",
+			entries: Object.entries(unsafe.metadata).map(([key, value]) => ({
+				key,
+				value: `${value}`,
+			})),
 		});
 	}
 

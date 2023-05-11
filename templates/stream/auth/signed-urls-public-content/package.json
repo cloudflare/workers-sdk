@@ -1,0 +1,15 @@
+{
+	"name": "template-signed-urls-public-content",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"dev": "wrangler pages dev --local ./src",
+		"start-stackblitz": "WRANGLER_SEND_METRICS=false wrangler pages dev --local ./src"
+	},
+	"dependencies": {
+		"stripe": "^10.15.0"
+	},
+	"devDependencies": {
+		"wrangler": "^2.1.13"
+	}
+}

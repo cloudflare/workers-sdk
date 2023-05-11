@@ -34,18 +34,18 @@ test("parseRedirects should reject invalid status codes", () => {
 	const input = `
     # Valid token sails through
     /a /b 301
-    # 200 NOT OK
-    /c /d 200
+    # 418 NOT OK
+    /c /d 418
   `;
 	const result = parseRedirects(input);
 	expect(result).toEqual({
 		rules: [{ from: "/a", status: 301, to: "/b", lineNumber: 3 }],
 		invalid: [
 			{
-				line: `/c /d 200`,
+				line: `/c /d 418`,
 				lineNumber: 5,
 				message:
-					"Valid status codes are 301, 302 (default), 303, 307, or 308. Got 200.",
+					"Valid status codes are 200, 301, 302 (default), 303, 307, or 308. Got 418.",
 			},
 		],
 	});
@@ -251,6 +251,90 @@ test("parseRedirects should reject malformed URLs", () => {
 				status: 302,
 				to: "https://nah.com/",
 				lineNumber: 12,
+			},
+		],
+	});
+});
+
+test("parseRedirects should reject non-relative URLs for proxying (200) redirects", () => {
+	const input = `
+	/a https://example.com/b 200
+`;
+	const result = parseRedirects(input);
+	expect(result).toEqual({
+		rules: [],
+		invalid: [
+			{
+				line: `/a https://example.com/b 200`,
+				lineNumber: 2,
+				message:
+					"Proxy (200) redirects can only point to relative paths. Got https://example.com/b",
+			},
+		],
+	});
+});
+
+test("parseRedirects should reject '/* /index.html'", () => {
+	const input = `
+/* /index.html 200
+/* /index 200
+/ /index.html
+/ /index
+/* /foo/index.html
+
+/* /foo
+/foo/* /bar 200
+/ /foo
+`;
+	const invalidRedirectError =
+		"Infinite loop detected in this rule and has been ignored. This will cause a redirect to strip `.html` or `/index` and end up triggering this rule again. Please fix or remove this rule to silence this warning.";
+	const result = parseRedirects(input);
+	expect(result).toEqual({
+		rules: [
+			{
+				from: "/*",
+				status: 302,
+				to: "/foo",
+				lineNumber: 8,
+			},
+			{
+				from: "/foo/*",
+				status: 200,
+				to: "/bar",
+				lineNumber: 9,
+			},
+			{
+				from: "/",
+				status: 302,
+				to: "/foo",
+				lineNumber: 10,
+			},
+		],
+		invalid: [
+			{
+				line: "/* /index.html 200",
+				lineNumber: 2,
+				message: invalidRedirectError,
+			},
+			{
+				line: "/* /index 200",
+				lineNumber: 3,
+				message: invalidRedirectError,
+			},
+			{
+				line: "/ /index.html",
+				lineNumber: 4,
+				message: invalidRedirectError,
+			},
+			{
+				line: "/ /index",
+				lineNumber: 5,
+				message: invalidRedirectError,
+			},
+			{
+				line: "/* /foo/index.html",
+				lineNumber: 6,
+				message: invalidRedirectError,
 			},
 		],
 	});

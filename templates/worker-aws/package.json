@@ -1,0 +1,22 @@
+{
+	"name": "template-worker-aws",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "worktop build index.js",
+		"deploy": "wrangler publish index.js",
+		"dev": "wrangler dev index.js --local"
+	},
+	"dependencies": {
+		"@aws-sdk/client-dynamodb": "^3.82.0",
+		"@aws-sdk/client-rds": "^3.82.0",
+		"@aws-sdk/client-rds-data": "^3.82.0",
+		"@aws-sdk/client-sqs": "^3.82.0"
+	},
+	"devDependencies": {
+		"@esbuild-plugins/node-modules-polyfill": "0.1.4",
+		"worktop.build": "0.0.5",
+		"wrangler": "^2.0.0"
+	}
+}

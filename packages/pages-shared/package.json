@@ -1,9 +1,9 @@
 {
 	"name": "@cloudflare/pages-shared",
-	"version": "0.0.13",
+	"version": "0.4.2",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/cloudflare/wrangler2.git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/pages-shared"
 	},
 	"files": [
@@ -14,7 +14,8 @@
 	],
 	"scripts": {
 		"check:type": "tsc",
-		"test": "jest"
+		"test": "jest --forceExit",
+		"test:ci": "jest --forceExit"
 	},
 	"jest": {
 		"coverageReporters": [
@@ -42,11 +43,11 @@
 		]
 	},
 	"dependencies": {
-		"@miniflare/core": "2.11.0"
+		"@miniflare/core": "2.14.0"
 	},
 	"devDependencies": {
-		"@miniflare/cache": "2.11.0",
-		"@miniflare/html-rewriter": "2.11.0",
+		"@miniflare/cache": "2.14.0",
+		"@miniflare/html-rewriter": "2.14.0",
 		"@types/service-worker-mock": "^2.0.1",
 		"concurrently": "^7.3.0",
 		"glob": "^8.0.3",

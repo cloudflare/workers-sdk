@@ -32,7 +32,7 @@ describe("wrangler", () => {
 			"wrangler
 
 			Commands:
-			  wrangler docs [command]              📚 Open wrangler's docs in your browser
+			  wrangler docs [command..]            📚 Open wrangler's docs in your browser
 			  wrangler init [name]                 📥 Initialize a basic Worker project, including a wrangler.toml file
 			  wrangler generate [name] [template]  ✨ Generate a new Worker project from an existing Worker template. See https://github.com/cloudflare/templates
 			  wrangler dev [script]                👂 Start a local server for developing your worker
@@ -49,19 +49,24 @@ describe("wrangler", () => {
 			  wrangler r2                          📦 Interact with an R2 store
 			  wrangler dispatch-namespace          📦 Interact with a dispatch namespace
 			  wrangler d1                          🗄  Interact with a D1 database
+			  wrangler constellation               🤖 Interact with Constellation AI models
 			  wrangler pubsub                      📮 Interact and manage Pub/Sub Brokers
+			  wrangler mtls-certificate            🪪 Manage certificates used for mTLS connections
 			  wrangler login                       🔓 Login to Cloudflare
 			  wrangler logout                      🚪 Logout from Cloudflare
 			  wrangler whoami                      🕵️  Retrieve your user info and test your auth config
 			  wrangler types                       📝 Generate types from bindings & module rules in config
-			  wrangler deployments                 🚢 Displays the 10 most recent deployments for a worker
+			  wrangler deployments                 🚢 List and view details for deployments
+			  wrangler rollback [deployment-id]    🔙 Rollback a deployment
 
 			Flags:
 			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
 			  -c, --config                    Path to .toml configuration file  [string]
 			  -e, --env                       Environment to use for operations and .env files  [string]
 			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
+			  -v, --version                   Show version number  [boolean]
+
+			🚧\`wrangler rollback\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
 		`);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -81,7 +86,7 @@ describe("wrangler", () => {
 			wrangler
 
 			Commands:
-			  wrangler docs [command]              📚 Open wrangler's docs in your browser
+			  wrangler docs [command..]            📚 Open wrangler's docs in your browser
 			  wrangler init [name]                 📥 Initialize a basic Worker project, including a wrangler.toml file
 			  wrangler generate [name] [template]  ✨ Generate a new Worker project from an existing Worker template. See https://github.com/cloudflare/templates
 			  wrangler dev [script]                👂 Start a local server for developing your worker
@@ -98,19 +103,24 @@ describe("wrangler", () => {
 			  wrangler r2                          📦 Interact with an R2 store
 			  wrangler dispatch-namespace          📦 Interact with a dispatch namespace
 			  wrangler d1                          🗄  Interact with a D1 database
+			  wrangler constellation               🤖 Interact with Constellation AI models
 			  wrangler pubsub                      📮 Interact and manage Pub/Sub Brokers
+			  wrangler mtls-certificate            🪪 Manage certificates used for mTLS connections
 			  wrangler login                       🔓 Login to Cloudflare
 			  wrangler logout                      🚪 Logout from Cloudflare
 			  wrangler whoami                      🕵️  Retrieve your user info and test your auth config
 			  wrangler types                       📝 Generate types from bindings & module rules in config
-			  wrangler deployments                 🚢 Displays the 10 most recent deployments for a worker
+			  wrangler deployments                 🚢 List and view details for deployments
+			  wrangler rollback [deployment-id]    🔙 Rollback a deployment
 
 			Flags:
 			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
 			  -c, --config                    Path to .toml configuration file  [string]
 			  -e, --env                       Environment to use for operations and .env files  [string]
 			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
+			  -v, --version                   Show version number  [boolean]
+
+			🚧\`wrangler rollback\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: invalid-command[0m

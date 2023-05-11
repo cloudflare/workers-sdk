@@ -1,0 +1,10 @@
+{
+	"compilerOptions": {
+		"target": "esnext",
+		//    "alwaysStrict": true,
+		"strict": false,
+		"types": ["@cloudflare/workers-types", "@types/service-worker-mock"],
+		"allowJs": true
+	},
+	"include": ["src"]
+}

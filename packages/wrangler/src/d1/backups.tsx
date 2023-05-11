@@ -1,6 +1,5 @@
 import fs from "node:fs/promises";
 import * as path from "path";
-import { render } from "ink";
 import Table from "ink-table";
 import React from "react";
 import { fetchResult } from "../cfetch";
@@ -8,6 +7,7 @@ import { performApiFetch } from "../cfetch/internal";
 import { withConfig } from "../config";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
+import { renderToString } from "../utils/render";
 import { formatBytes, formatTimeAgo } from "./formatTimeAgo";
 import { Name } from "./options";
 import { d1BetaWarning, getDatabaseByNameOrBinding } from "./utils";
@@ -24,7 +24,7 @@ export function ListOptions(yargs: CommonYargsArgv) {
 type ListHandlerOptions = StrictYargsOptionsToInterface<typeof ListOptions>;
 export const ListHandler = withConfig<ListHandlerOptions>(
 	async ({ config, name }): Promise<void> => {
-		const accountId = await requireAuth({});
+		const accountId = await requireAuth(config);
 		logger.log(d1BetaWarning);
 		const db: Database = await getDatabaseByNameOrBinding(
 			config,
@@ -33,11 +33,13 @@ export const ListHandler = withConfig<ListHandlerOptions>(
 		);
 
 		const backups: Backup[] = await listBackups(accountId, db.uuid);
-		render(
-			<Table
-				data={backups}
-				columns={["created_at", "id", "num_tables", "size"]}
-			></Table>
+		logger.log(
+			renderToString(
+				<Table
+					data={backups}
+					columns={["created_at", "id", "num_tables", "size"]}
+				></Table>
+			)
 		);
 	}
 );
@@ -85,7 +87,7 @@ type CreateHandlerOptions = StrictYargsOptionsToInterface<typeof CreateOptions>;
 
 export const CreateHandler = withConfig<CreateHandlerOptions>(
 	async ({ config, name }): Promise<void> => {
-		const accountId = await requireAuth({});
+		const accountId = await requireAuth(config);
 		logger.log(d1BetaWarning);
 		const db: Database = await getDatabaseByNameOrBinding(
 			config,
@@ -94,11 +96,13 @@ export const CreateHandler = withConfig<CreateHandlerOptions>(
 		);
 
 		const backup: Backup = await createBackup(accountId, db.uuid);
-		render(
-			<Table
-				data={[backup]}
-				columns={["created_at", "id", "num_tables", "size", "state"]}
-			></Table>
+		logger.log(
+			renderToString(
+				<Table
+					data={[backup]}
+					columns={["created_at", "id", "num_tables", "size", "state"]}
+				></Table>
+			)
 		);
 	}
 );
@@ -131,7 +135,7 @@ type RestoreHandlerOptions = StrictYargsOptionsToInterface<
 >;
 export const RestoreHandler = withConfig<RestoreHandlerOptions>(
 	async ({ config, name, backupId }): Promise<void> => {
-		const accountId = await requireAuth({});
+		const accountId = await requireAuth(config);
 		logger.log(d1BetaWarning);
 		const db: Database = await getDatabaseByNameOrBinding(
 			config,
@@ -179,7 +183,7 @@ type DownloadHandlerOptions = StrictYargsOptionsToInterface<
 >;
 export const DownloadHandler = withConfig<DownloadHandlerOptions>(
 	async ({ name, backupId, output, config }): Promise<void> => {
-		const accountId = await requireAuth({});
+		const accountId = await requireAuth(config);
 		logger.log(d1BetaWarning);
 		const db: Database = await getDatabaseByNameOrBinding(
 			config,

@@ -1,0 +1,15 @@
+{
+	"name": "pages-plugin-static-forms",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"dev": "wrangler pages dev public"
+	},
+	"dependencies": {
+		"@cloudflare/pages-plugin-static-forms": "^1.0.0"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^3.0.0",
+		"wrangler": "^2.0.0"
+	}
+}

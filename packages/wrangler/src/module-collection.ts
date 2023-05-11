@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import chalk from "chalk";
 import globToRegExp from "glob-to-regexp";
 import { logger } from "./logger";
 import type { Config, ConfigModuleRuleType } from "./config";
@@ -35,31 +36,11 @@ export const ModuleTypeToRuleType = flipObject(RuleTypeToModuleType);
 export const DEFAULT_MODULE_RULES: Config["rules"] = [
 	{ type: "Text", globs: ["**/*.txt", "**/*.html"] },
 	{ type: "Data", globs: ["**/*.bin"] },
-	{ type: "CompiledWasm", globs: ["**/*.wasm"] },
+	{ type: "CompiledWasm", globs: ["**/*.wasm", "**/*.wasm?module"] },
 ];
 
-export default function createModuleCollector(props: {
-	format: CfScriptFormat;
-	rules?: Config["rules"];
-	// a collection of "legacy" style module references, which are just file names
-	// we will eventually deprecate this functionality, hence the verbose greppable name
-	wrangler1xlegacyModuleReferences: {
-		rootDirectory: string;
-		fileNames: Set<string>;
-	};
-}): {
-	modules: CfModule[];
-	plugin: esbuild.Plugin;
-} {
-	const rules: Config["rules"] = [
-		...(props.rules || []),
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		...DEFAULT_MODULE_RULES!,
-	];
-
-	// First, we want to add some validations to the module rules
-	// We want to warn if rules are accidentally configured in such a way that
-	// subsequent rules will never match because `fallthrough` hasn't been set
+export function parseRules(userRules: Config["rules"] = []) {
+	const rules: Config["rules"] = [...userRules, ...DEFAULT_MODULE_RULES];
 
 	const completedRuleLocations: Record<string, number> = {};
 	let index = 0;
@@ -67,7 +48,7 @@ export default function createModuleCollector(props: {
 	for (const rule of rules) {
 		if (rule.type in completedRuleLocations) {
 			if (rules[completedRuleLocations[rule.type]].fallthrough !== false) {
-				if (index < (props.rules || []).length) {
+				if (index < userRules.length) {
 					logger.warn(
 						`The module rule at position ${index} (${JSON.stringify(
 							rule
@@ -100,6 +81,89 @@ export default function createModuleCollector(props: {
 
 	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 	rulesToRemove.forEach((rule) => rules!.splice(rules!.indexOf(rule), 1));
+
+	return { rules, removedRules: rulesToRemove };
+}
+
+export async function matchFiles(
+	files: string[],
+	relativeTo: string,
+	{
+		rules,
+		removedRules,
+	}: { rules: Config["rules"]; removedRules: Config["rules"] }
+) {
+	const modules: CfModule[] = [];
+
+	// Deduplicate modules. This is usually a poorly specified `wrangler.toml` configuration, but duplicate modules will cause a crash at runtime
+	const moduleNames = new Set<string>();
+	for (const rule of rules) {
+		for (const glob of rule.globs) {
+			const regexp = globToRegExp(glob, {
+				globstar: true,
+			});
+			const newModules = await Promise.all(
+				files
+					.filter((f) => regexp.test(f))
+					.map(async (name) => {
+						const filePath = name;
+						const fileContent = await readFile(path.join(relativeTo, filePath));
+
+						return {
+							name: filePath,
+							content: fileContent,
+							type: RuleTypeToModuleType[rule.type],
+						};
+					})
+			);
+			for (const module of newModules) {
+				if (!moduleNames.has(module.name)) {
+					moduleNames.add(module.name);
+					modules.push(module);
+				} else {
+					logger.warn(
+						`Ignoring duplicate module: ${chalk.blue(
+							module.name
+						)} (${chalk.green(module.type ?? "")})`
+					);
+				}
+			}
+		}
+	}
+
+	// This is just a sanity check verifying that no files match rules that were removed
+	for (const rule of removedRules) {
+		for (const glob of rule.globs) {
+			const regexp = globToRegExp(glob);
+			for (const file of files) {
+				if (regexp.test(file)) {
+					throw new Error(
+						`The file ${file} matched a module rule in your configuration (${JSON.stringify(
+							rule
+						)}), but was ignored because a previous rule with the same type was not marked as \`fallthrough = true\`.`
+					);
+				}
+			}
+		}
+	}
+	return modules;
+}
+
+export default function createModuleCollector(props: {
+	format: CfScriptFormat;
+	rules?: Config["rules"];
+	// a collection of "legacy" style module references, which are just file names
+	// we will eventually deprecate this functionality, hence the verbose greppable name
+	wrangler1xlegacyModuleReferences: {
+		rootDirectory: string;
+		fileNames: Set<string>;
+	};
+	preserveFileNames?: boolean;
+}): {
+	modules: CfModule[];
+	plugin: esbuild.Plugin;
+} {
+	const { rules, removedRules } = parseRules(props.rules);
 
 	const modules: CfModule[] = [];
 	return {
@@ -206,7 +270,9 @@ export default function createModuleCollector(props: {
 									.createHash("sha1")
 									.update(fileContent)
 									.digest("hex");
-								const fileName = `./${fileHash}-${path.basename(args.path)}`;
+								const fileName = props.preserveFileNames
+									? filePath
+									: `./${fileHash}-${path.basename(args.path)}`;
 
 								// add the module to the array
 								modules.push({
@@ -245,7 +311,7 @@ export default function createModuleCollector(props: {
 					});
 				});
 
-				rulesToRemove.forEach((rule) => {
+				removedRules.forEach((rule) => {
 					rule.globs.forEach((glob) => {
 						build.onResolve(
 							{ filter: globToRegExp(glob) },

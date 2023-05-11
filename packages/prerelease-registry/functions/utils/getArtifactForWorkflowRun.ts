@@ -8,17 +8,19 @@ interface Artifact {
 const ONE_WEEK = 60 * 60 * 24 * 7;
 
 export const getArtifactForWorkflowRun = async ({
+	repo,
 	runID,
 	name,
 	gitHubFetch,
 	waitUntil,
 }: {
+	repo: string;
 	runID: number;
 	name: string;
 	gitHubFetch: ReturnType<typeof generateGitHubFetch>;
 	waitUntil: (promise: Promise<unknown>) => void;
 }) => {
-	const cacheKey = `https://prerelease-registry.devprod.cloudflare.dev/runs/${runID}/${name}`;
+	const cacheKey = `https://prerelease-registry.devprod.cloudflare.dev/${repo}/runs/${runID}/${name}`;
 
 	const cache = caches.default;
 
@@ -27,7 +29,7 @@ export const getArtifactForWorkflowRun = async ({
 
 	try {
 		const artifactsResponse = await gitHubFetch(
-			`https://api.github.com/repos/cloudflare/wrangler2/actions/runs/${runID}/artifacts`,
+			`https://api.github.com/repos/cloudflare/${repo}/actions/runs/${runID}/artifacts`,
 			{
 				headers: {
 					Accept: "application/vnd.github.v3+json",

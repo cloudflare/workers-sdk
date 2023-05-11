@@ -32,6 +32,7 @@ module.exports = {
 		"eslint-plugin-react-hooks",
 		"import",
 		"unused-imports",
+		"no-only-tests",
 	],
 	overrides: [
 		{
@@ -47,6 +48,7 @@ module.exports = {
 				"no-empty": "off",
 				"no-empty-function": "off",
 				"no-mixed-spaces-and-tabs": ["error", "smart-tabs"],
+				"no-only-tests/no-only-tests": "error",
 				"no-shadow": "error",
 				"require-yield": "off",
 				"@typescript-eslint/consistent-type-imports": ["error"],
@@ -83,6 +85,9 @@ module.exports = {
 					},
 				],
 			},
+			parserOptions: {
+				project: ["./tsconfig.json"], // Specify it only for TypeScript files
+			},
 		},
 		{
 			files: "packages/wrangler/src/**/*.ts",
@@ -112,6 +117,8 @@ module.exports = {
 		"packages/jest-environment-wrangler/dist",
 		"packages/wrangler-devtools/built-devtools",
 		"packages/wranglerjs-compat-webpack-plugin/lib",
+		"/templates",
+		"packages/quick-edit-extension/vscode*.d.ts",
 	],
 	root: true,
 };

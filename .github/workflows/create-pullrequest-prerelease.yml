@@ -37,6 +37,8 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: "production"
+          ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
+          ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
 
       - name: Pack wrangler
         run: npm pack

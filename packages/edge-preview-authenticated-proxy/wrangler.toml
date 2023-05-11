@@ -1,0 +1,19 @@
+name = "edge-preview-authenticated-proxy"
+main = "src/index.ts"
+compatibility_date = "2023-03-28"
+workers_dev = false
+account_id = "e35fd947284363a46fd7061634477114"
+
+routes = [
+  "preview.devprod.cloudflare.dev/*",
+  "*.preview.devprod.cloudflare.dev/*",
+  "*.rawhttp.devprod.cloudflare.dev/*"
+]
+
+[vars]
+SENTRY_DSN = "https://1ff9df95733c4e7d9c31dc13ab05d44a@sentry10.cfdata.org/891"
+PREVIEW = "preview.devprod.cloudflare.dev"
+RAW_HTTP = "rawhttp.devprod.cloudflare.dev"
+
+[dev]
+host = "preview.devprod.cloudflare.dev"

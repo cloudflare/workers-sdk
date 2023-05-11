@@ -7,12 +7,20 @@ import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
 import * as esbuild from "esbuild";
 import tmp from "tmp-promise";
 import createModuleCollector from "./module-collection";
-import { getBasePath, toUrlPath } from "./paths";
+import { getBasePath } from "./paths";
 import type { Config } from "./config";
 import type { DurableObjectBindings } from "./config/environment";
 import type { WorkerRegistry } from "./dev-registry";
 import type { Entry } from "./entry";
+import type { SourceMapMetadata } from "./inspect";
 import type { CfModule } from "./worker";
+
+export const COMMON_ESBUILD_OPTIONS = {
+	// Our workerd runtime uses the same V8 version as recent Chrome, which is highly ES2022 compliant: https://kangax.github.io/compat-table/es2016plus/
+	target: "es2022",
+	loader: { ".js": "jsx", ".mjs": "jsx", ".cjs": "jsx" },
+} as const;
+
 export type BundleResult = {
 	modules: CfModule[];
 	dependencies: esbuild.Metafile["outputs"][string]["inputs"];
@@ -20,6 +28,7 @@ export type BundleResult = {
 	bundleType: "esm" | "commonjs";
 	stop: (() => void) | undefined;
 	sourceMapPath?: string | undefined;
+	sourceMapMetadata?: SourceMapMetadata | undefined;
 };
 
 type StaticAssetsConfig =
@@ -70,20 +79,48 @@ export function isBuildFailure(err: unknown): err is esbuild.BuildFailure {
  * Rewrites esbuild BuildFailures for failing to resolve Node built-in modules
  * to suggest enabling Node compat as opposed to `platform: "node"`.
  */
-export function rewriteNodeCompatBuildFailure(err: esbuild.BuildFailure) {
+export function rewriteNodeCompatBuildFailure(
+	err: esbuild.BuildFailure,
+	forPages = false
+) {
 	for (const error of err.errors) {
 		const match = nodeBuiltinResolveErrorText.exec(error.text);
 		if (match !== null) {
+			const issue = `The package "${match[1]}" wasn't found on the file system but is built into node.`;
+
+			const instructionForUser = `${
+				forPages
+					? 'Add the "nodejs_compat" compatibility flag to your Pages project'
+					: 'Add "node_compat = true" to your wrangler.toml file'
+			} to enable Node.js compatibility.`;
+
 			error.notes = [
 				{
 					location: null,
-					text: `The package "${match[1]}" wasn't found on the file system but is built into node.
-Add "node_compat = true" to your wrangler.toml file to enable Node compatibility.`,
+					text: `${issue}\n${instructionForUser}`,
 				},
 			];
 		}
 	}
 }
+
+const nodejsCompatPlugin: esbuild.Plugin = {
+	name: "nodejs_compat Plugin",
+	setup(pluginBuild) {
+		pluginBuild.onResolve({ filter: /node:.*/ }, () => {
+			return { external: true };
+		});
+	},
+};
+
+const cloudflareJsPlugin: esbuild.Plugin = {
+	name: "cloudflare javascript Plugin",
+	setup(pluginBuild) {
+		pluginBuild.onResolve({ filter: /^cloudflare:.*/ }, () => {
+			return { external: true };
+		});
+	},
+};
 
 /**
  * Generate a bundle for the worker identified by the arguments passed in.
@@ -92,17 +129,21 @@ export async function bundleWorker(
 	entry: Entry,
 	destination: string,
 	options: {
+		// When `bundle` is set to false, we apply shims to the Worker, but won't pull in any imports
+		bundle?: boolean;
 		serveAssetsFromWorker: boolean;
 		assets?: StaticAssetsConfig;
 		betaD1Shims?: string[];
 		doBindings: DurableObjectBindings;
 		jsxFactory?: string;
 		jsxFragment?: string;
+		entryName?: string;
 		rules: Config["rules"];
 		watch?: esbuild.WatchMode | boolean;
 		tsconfig?: string;
 		minify?: boolean;
-		nodeCompat?: boolean;
+		legacyNodeCompat?: boolean;
+		nodejsCompat?: boolean;
 		define: Config["define"];
 		checkFetch: boolean;
 		services?: Config["services"];
@@ -116,22 +157,26 @@ export async function bundleWorker(
 		loader?: Record<string, string>;
 		sourcemap?: esbuild.CommonOptions["sourcemap"];
 		plugins?: esbuild.Plugin[];
-		// TODO: Rip these out https://github.com/cloudflare/wrangler2/issues/2153
+		// TODO: Rip these out https://github.com/cloudflare/workers-sdk/issues/2153
 		disableModuleCollection?: boolean;
 		isOutfile?: boolean;
+		forPages?: boolean;
 	}
 ): Promise<BundleResult> {
 	const {
+		bundle = true,
 		serveAssetsFromWorker,
 		betaD1Shims,
 		doBindings,
 		jsxFactory,
 		jsxFragment,
+		entryName,
 		rules,
 		watch,
 		tsconfig,
 		minify,
-		nodeCompat,
+		legacyNodeCompat,
+		nodejsCompat,
 		checkFetch,
 		local,
 		assets,
@@ -147,6 +192,7 @@ export async function bundleWorker(
 		plugins,
 		disableModuleCollection,
 		isOutfile,
+		forPages,
 	} = options;
 
 	// We create a temporary directory for any oneoff files we
@@ -277,7 +323,7 @@ export async function bundleWorker(
 					currentEntry,
 					tmpDir.path,
 					betaD1Shims,
-					local,
+					local && !experimentalLocal,
 					doBindings
 				);
 			}),
@@ -321,20 +367,22 @@ export async function bundleWorker(
 
 	const buildOptions: esbuild.BuildOptions & { metafile: true } = {
 		entryPoints: [inputEntry.file],
-		bundle: true,
+		bundle,
 		absWorkingDir: entry.directory,
 		outdir: destination,
+		entryNames: entryName || path.parse(entry.file).name,
 		...(isOutfile
 			? {
 					outdir: undefined,
 					outfile: destination,
+					entryNames: undefined,
 			  }
 			: {}),
 		inject,
-		external: ["__STATIC_CONTENT_MANIFEST"],
+		external: bundle ? ["__STATIC_CONTENT_MANIFEST"] : undefined,
 		format: entry.format === "modules" ? "esm" : "iife",
-		target: "es2020",
-		sourcemap: sourcemap ?? true, // this needs to use ?? to accept false
+		target: COMMON_ESBUILD_OPTIONS.target,
+		sourcemap: sourcemap ?? true,
 		// Include a reference to the output folder in the sourcemap.
 		// This is omitted by default, but we need it to properly resolve source paths in error output.
 		sourceRoot: destination,
@@ -344,24 +392,24 @@ export async function bundleWorker(
 		...(process.env.NODE_ENV && {
 			define: {
 				// use process.env["NODE_ENV" + ""] so that esbuild doesn't replace it
-				// when we do a build of wrangler. (re: https://github.com/cloudflare/wrangler2/issues/1477)
+				// when we do a build of wrangler. (re: https://github.com/cloudflare/workers-sdk/issues/1477)
 				"process.env.NODE_ENV": `"${process.env["NODE_ENV" + ""]}"`,
-				...(nodeCompat ? { global: "globalThis" } : {}),
+				...(legacyNodeCompat ? { global: "globalThis" } : {}),
 				...(checkFetch ? { fetch: "checkedFetch" } : {}),
 				...options.define,
 			},
 		}),
 		loader: {
-			".js": "jsx",
-			".mjs": "jsx",
-			".cjs": "jsx",
+			...COMMON_ESBUILD_OPTIONS.loader,
 			...(loader || {}),
 		},
 		plugins: [
 			moduleCollector.plugin,
-			...(nodeCompat
+			...(legacyNodeCompat
 				? [NodeGlobalsPolyfills({ buffer: true }), NodeModulesPolyfills()]
 				: []),
+			...(nodejsCompat ? [nodejsCompatPlugin] : []),
+			...[cloudflareJsPlugin],
 			...(plugins || []),
 		],
 		...(jsxFactory && { jsxFactory }),
@@ -377,7 +425,8 @@ export async function bundleWorker(
 	try {
 		result = await esbuild.build(buildOptions);
 	} catch (e) {
-		if (!nodeCompat && isBuildFailure(e)) rewriteNodeCompatBuildFailure(e);
+		if (!legacyNodeCompat && isBuildFailure(e))
+			rewriteNodeCompatBuildFailure(e, forPages);
 		throw e;
 	}
 
@@ -423,6 +472,10 @@ export async function bundleWorker(
 		bundleType,
 		stop: result.stop,
 		sourceMapPath,
+		sourceMapMetadata: {
+			tmpDir: tmpDir.path,
+			entryDirectory: entry.directory,
+		},
 	};
 }
 
@@ -567,7 +620,7 @@ async function applyMiddlewareLoaderFacade(
 					...Object.fromEntries(
 						middleware.map((val, index) => [
 							middlewareIdentifiers[index],
-							toUrlPath(path.resolve(getBasePath(), val.path)),
+							path.resolve(getBasePath(), val.path),
 						])
 					),
 				}),
@@ -802,7 +855,7 @@ async function applyD1BetaFacade(
 	entry: Entry,
 	tmpDirPath: string,
 	betaD1Shims: string[],
-	local: boolean,
+	miniflare2: boolean,
 	doBindings: DurableObjectBindings
 ): Promise<Entry> {
 	let entrypointPath = path.resolve(
@@ -853,7 +906,7 @@ async function applyD1BetaFacade(
 		],
 		define: {
 			__D1_IMPORTS__: JSON.stringify(betaD1Shims),
-			__LOCAL_MODE__: JSON.stringify(local),
+			__LOCAL_MODE__: JSON.stringify(miniflare2),
 		},
 		outfile: targetPath,
 	});

@@ -38,6 +38,7 @@ async function buildMain(flags: BuildFlags = {}) {
 		wranglerPackageDir
 	)}"`;
 	await build({
+		keepNames: true,
 		entryPoints: ["./src/cli.ts"],
 		bundle: true,
 		outdir,
@@ -54,6 +55,12 @@ async function buildMain(flags: BuildFlags = {}) {
 			"process.env.NODE_ENV": `'${process.env.NODE_ENV || "production"}'`,
 			...(process.env.SPARROW_SOURCE_KEY
 				? { SPARROW_SOURCE_KEY: `"${process.env.SPARROW_SOURCE_KEY}"` }
+				: {}),
+			...(process.env.ALGOLIA_APP_ID
+				? { ALGOLIA_APP_ID: `"${process.env.ALGOLIA_APP_ID}"` }
+				: {}),
+			...(process.env.ALGOLIA_PUBLIC_KEY
+				? { ALGOLIA_PUBLIC_KEY: `"${process.env.ALGOLIA_PUBLIC_KEY}"` }
 				: {}),
 		},
 		watch: flags.watch ? watchLogger("./wrangler-dist") : false,

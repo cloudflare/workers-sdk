@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<style>
+			html,
+			body {
+				display: grid;
+				place-items: center center;
+				min-height: 100vh;
+			}
+
+			* {
+				margin: 0;
+				padding: 0;
+			}
+
+			h1 {
+				text-align: center;
+			}
+
+			.info {
+				text-align: center;
+				padding: 1rem;
+				color: gray;
+			}
+
+			.info #dolocation {
+				display: block;
+			}
+
+			.info #status {
+				height: 10px;
+				width: 10px;
+				background-color: #bbb;
+				border-radius: 50%;
+				display: inline-block;
+			}
+
+			.info #status.online {
+				background-color: green;
+			}
+
+			.info #status.offline {
+				background-color: red;
+			}
+
+			section {
+				margin: 1rem 0;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+			}
+		</style>
+	</head>
+
+	<body>
+		<main>
+			<h1>WebSockets example</h1>
+
+			<div class="info">
+				<span id="dolocation"></span>
+				<span id="ping">... connecting</span>
+				<span id="status"></span>
+			</div>
+
+			<section x-data="getstate">
+				<h2>Connected users</h2>
+				<ul>
+					<template x-for="user in state.users">
+						<li
+							x-text="`${user.id} - last ping ${user.ping || '?'}ms from ${user.city} (${user.country})`"
+						></li>
+					</template>
+				</ul>
+			</section>
+		</main>
+
+		<script type="module">
+			import QuickLRU from 'https://cdn.jsdelivr.net/npm/quick-lru@6.1.1/index.js';
+			import Alpine from 'https://cdn.jsdelivr.net/npm/alpinejs@3.10.2/dist/module.esm.js';
+
+			const lru = new QuickLRU({ maxSize: 50 });
+			let state = Alpine.reactive({ users: [] });
+			let currentWebSocket = null;
+			let lastPingMs = null;
+
+			Alpine.data('getstate', () => ({
+				state,
+			}));
+
+			Alpine.start();
+
+			// connect to a WebSocket endpoint (same URL, just different protocol)
+			function join() {
+				let ws = new WebSocket(`${location.origin.replace(/^http/, 'ws')}${location.pathname}`);
+				let rejoined = false;
+				let startTime = Date.now();
+
+				// rejoin is called on close or error
+				let rejoin = async () => {
+					if (!rejoined) {
+						rejoined = true;
+						currentWebSocket = null;
+
+						// Don't try to reconnect too rapidly.
+						let timeSinceLastJoin = Date.now() - startTime;
+						if (timeSinceLastJoin < 1000) {
+							// Less than 1 second elapsed since last join. Pause a bit.
+							await new Promise(resolve => setTimeout(resolve, 1000 - timeSinceLastJoin));
+						}
+
+						// OK, reconnect now!
+						join();
+					}
+				};
+
+				ws.addEventListener('open', event => {
+					currentWebSocket = ws;
+				});
+
+				ws.addEventListener('message', event => {
+					const messages = JSON.parse(event.data);
+
+					messages.forEach(message => {
+						switch (message.type) {
+							case 'pong':
+								const ping = lru.get(message.data.id);
+								if (ping) {
+									let info = document.getElementById('ping');
+									lastPingMs = Date.now() - ping;
+									info.innerText = `Your ping is ${lastPingMs}ms`;
+
+									let status = document.getElementById('status');
+									status.className = 'online';
+
+									state.users = message.data.users;
+
+									if (message.data.dolocation) {
+										let dolocation = document.getElementById('dolocation');
+										dolocation.innerText = `Durable Object location: ${message.data.dolocation}`;
+									}
+
+									// set offline after no pongs
+									debounceStatusOffline();
+								}
+								break;
+						}
+					});
+				});
+
+				ws.addEventListener('close', event => {
+					console.log('WebSocket closed, reconnecting:', event.code, event.reason);
+					rejoin();
+				});
+
+				ws.addEventListener('error', event => {
+					console.log('WebSocket error, reconnecting:', event);
+					rejoin();
+				});
+			}
+
+			function sendWebSocketMessage(type, data) {
+				currentWebSocket.send(JSON.stringify({ type, data }));
+			}
+
+			// client ping <-> server pong
+			setInterval(() => {
+				try {
+					const id = self.crypto.randomUUID();
+					lru.set(id, Date.now());
+					sendWebSocketMessage('ping', { id, lastPingMs });
+				} catch (e) {}
+			}, 1000);
+
+			function debounce(func, timeout = 2000) {
+				let timer;
+				return (...args) => {
+					clearTimeout(timer);
+					timer = setTimeout(() => {
+						func.apply(this, args);
+					}, timeout);
+				};
+			}
+
+			const debounceStatusOffline = debounce(() => {
+				let status = document.getElementById('status');
+				status.className = 'offline';
+			}, 2000);
+
+			join();
+		</script>
+	</body>
+</html>

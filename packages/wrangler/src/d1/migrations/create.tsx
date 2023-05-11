@@ -1,10 +1,11 @@
 import fs from "node:fs";
 import path from "path";
-import { Box, render, Text } from "ink";
+import { Box, Text } from "ink";
 import React from "react";
 import { withConfig } from "../../config";
 import { logger } from "../../logger";
-import { requireAuth } from "../../user";
+import { renderToString } from "../../utils/render";
+import { DEFAULT_MIGRATION_PATH } from "../constants";
 import { Database } from "../options";
 import { d1BetaWarning, getDatabaseInfoFromConfig } from "../utils";
 import { getMigrationsPath, getNextMigrationNumber } from "./helpers";
@@ -25,7 +26,6 @@ type CreateHandlerOptions = StrictYargsOptionsToInterface<typeof CreateOptions>;
 
 export const CreateHandler = withConfig<CreateHandlerOptions>(
 	async ({ config, database, message }): Promise<void> => {
-		await requireAuth({});
 		logger.log(d1BetaWarning);
 
 		const databaseInfo = getDatabaseInfoFromConfig(config, database);
@@ -39,11 +39,12 @@ export const CreateHandler = withConfig<CreateHandlerOptions>(
 			return;
 		}
 
-		const migrationsPath = await getMigrationsPath(
-			path.dirname(config.configPath),
-			databaseInfo.migrationsFolderPath,
-			true
-		);
+		const migrationsPath = await getMigrationsPath({
+			projectPath: path.dirname(config.configPath),
+			migrationsFolderPath:
+				databaseInfo.migrationsFolderPath ?? DEFAULT_MIGRATION_PATH,
+			createIfMissing: true,
+		});
 		const nextMigrationNumber = pad(getNextMigrationNumber(migrationsPath), 4);
 		const migrationName = message.replaceAll(" ", "_");
 
@@ -54,17 +55,19 @@ export const CreateHandler = withConfig<CreateHandlerOptions>(
 			`-- Migration number: ${nextMigrationNumber} \t ${new Date().toISOString()}\n`
 		);
 
-		render(
-			<Box flexDirection="column">
-				<Text>
-					✅ Successfully created Migration &apos;{newMigrationName}&apos;!
-				</Text>
-				<Text>&nbsp;</Text>
-				<Text>The migration is available for editing here</Text>
-				<Text>
-					{migrationsPath}/{newMigrationName}
-				</Text>
-			</Box>
+		logger.log(
+			renderToString(
+				<Box flexDirection="column">
+					<Text>
+						✅ Successfully created Migration &apos;{newMigrationName}&apos;!
+					</Text>
+					<Text>&nbsp;</Text>
+					<Text>The migration is available for editing here</Text>
+					<Text>
+						{migrationsPath}/{newMigrationName}
+					</Text>
+				</Box>
+			)
 		);
 	}
 );

@@ -12,6 +12,7 @@ import {
 import { fetchListResult, fetchResult } from "../cfetch";
 import { printBindings } from "../config";
 import { createWorkerUploadForm } from "../create-worker-upload-form";
+import { addHyphens } from "../deployments";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import { logger } from "../logger";
@@ -20,6 +21,7 @@ import { ParseError } from "../parse";
 import { getQueue, putConsumer } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
 import { syncAssets } from "../sites";
+import traverseModuleGraph from "../traverse-module-graph";
 import { identifyD1BindingsAsBeta } from "../worker";
 import { getZoneForRoute } from "../zones";
 import type { FetchError } from "../cfetch";
@@ -30,11 +32,10 @@ import type {
 	ZoneNameRoute,
 	CustomDomainRoute,
 } from "../config/environment";
-import type { DeploymentListRes } from "../deployments";
 import type { Entry } from "../entry";
 import type { PutConsumerBody } from "../queues/client";
 import type { AssetPaths } from "../sites";
-import type { CfWorkerInit } from "../worker";
+import type { CfWorkerInit, CfPlacement } from "../worker";
 
 type Props = {
 	config: Config;
@@ -335,16 +336,24 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	const jsxFactory = props.jsxFactory || config.jsx_factory;
 	const jsxFragment = props.jsxFragment || config.jsx_fragment;
-	const keepVars = props.keepVars ?? config.keep_vars;
+	const keepVars = props.keepVars || config.keep_vars;
 
 	const minify = props.minify ?? config.minify;
 
-	const nodeCompat = props.nodeCompat ?? config.node_compat;
-	if (nodeCompat) {
+	const legacyNodeCompat = props.nodeCompat ?? config.node_compat;
+	if (legacyNodeCompat) {
 		logger.warn(
-			"Enabling node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
+			"Enabling Node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
 		);
 	}
+
+	const compatibilityFlags =
+		props.compatibilityFlags ?? config.compatibility_flags;
+	const nodejsCompat = compatibilityFlags.includes("nodejs_compat");
+	assert(
+		!(legacyNodeCompat && nodejsCompat),
+		"The `nodejs_compat` compatibility flag cannot be used in conjunction with the legacy `--node-compat` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the `--node-compat` argument from your CLI command or `node_compat = true` from your config file."
+	);
 
 	// Warn if user tries minify or node-compat with no-bundle
 	if (props.noBundle && minify) {
@@ -353,7 +362,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	}
 
-	if (props.noBundle && nodeCompat) {
+	if (props.noBundle && legacyNodeCompat) {
 		logger.warn(
 			"`--node-compat` and `--no-bundle` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process."
 		);
@@ -393,7 +402,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		: `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
 	let available_on_subdomain: boolean | undefined = undefined; // we'll set this later
-	let scriptTag: string | null = null;
+	let deploymentId: string | null = null;
 
 	const { format } = props.entry;
 
@@ -455,14 +464,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			resolvedEntryPointPath,
 			bundleType,
 		}: Awaited<ReturnType<typeof bundleWorker>> = props.noBundle
-			? // we can skip the whole bundling step and mock a bundle here
-			  {
-					modules: [],
-					dependencies: {},
-					resolvedEntryPointPath: props.entry.file,
-					bundleType: props.entry.format === "modules" ? "esm" : "commonjs",
-					stop: undefined,
-			  }
+			? await traverseModuleGraph(props.entry, props.rules)
 			: await bundleWorker(
 					props.entry,
 					typeof destination === "string" ? destination : destination.path,
@@ -478,7 +480,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						rules: props.rules,
 						tsconfig: props.tsconfig ?? config.tsconfig,
 						minify,
-						nodeCompat,
+						legacyNodeCompat,
+						nodejsCompat,
 						define: { ...config.define, ...props.defines },
 						checkFetch: false,
 						assets: config.assets && {
@@ -532,8 +535,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					? { binding: "__STATIC_CONTENT", id: assets.namespace }
 					: []
 			),
+			send_email: config.send_email,
 			vars: { ...config.vars, ...props.vars },
 			wasm_modules: config.wasm_modules,
+			browser: config.browser,
 			text_blobs: {
 				...config.text_blobs,
 				...(assets.manifest &&
@@ -551,8 +556,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			services: config.services,
 			analytics_engine_datasets: config.analytics_engine_datasets,
 			dispatch_namespaces: config.dispatch_namespaces,
+			mtls_certificates: config.mtls_certificates,
 			logfwdr: config.logfwdr,
-			unsafe: config.unsafe?.bindings,
+			unsafe: {
+				bindings: config.unsafe.bindings,
+				metadata: config.unsafe.metadata,
+			},
 		};
 
 		if (assets.manifest) {
@@ -562,6 +571,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				type: "text",
 			});
 		}
+
+		// The upload API only accepts an empty string or no specified placement for the "off" mode.
+		const placement: CfPlacement | undefined =
+			config.placement?.mode === "smart" ? { mode: "smart" } : undefined;
 
 		const worker: CfWorkerInit = {
 			name: scriptName,
@@ -574,11 +587,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			migrations,
 			modules,
 			compatibility_date: props.compatibilityDate ?? config.compatibility_date,
-			compatibility_flags:
-				props.compatibilityFlags ?? config.compatibility_flags,
+			compatibility_flags: compatibilityFlags,
 			usage_model: config.usage_model,
 			keepVars,
 			logpush: props.logpush !== undefined ? props.logpush : config.logpush,
+			placement,
 		};
 
 		// As this is not deterministic for testing, we detect if in a jest environment and run asynchronously
@@ -620,7 +633,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					id: string | null;
 					etag: string | null;
 					pipeline_hash: string | null;
-					tag: string | null;
+					deployment_id: string | null;
 				}>(
 					workerUrl,
 					{
@@ -637,7 +650,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				);
 
 				available_on_subdomain = result.available_on_subdomain;
-				scriptTag = result.tag;
+				deploymentId = addHyphens(result.deployment_id) ?? result.deployment_id;
 
 				if (config.first_party_worker) {
 					// Print some useful information returned after publishing
@@ -827,19 +840,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		logger.log("No publish targets for", workerName, formatTime(deployMs));
 	}
 
-	try {
-		const deploymentsList = await fetchResult<DeploymentListRes>(
-			`/accounts/${accountId}/workers/deployments/by-script/${scriptTag}`
-		);
-
-		logger.log("Current Deployment ID:", deploymentsList.latest.id);
-	} catch (e) {
-		if ((e as { code: number }).code === 10023) {
-			// TODO: remove this try/catch once deployments is completely rolled out
-		} else {
-			throw e;
-		}
-	}
+	logger.log("Current Deployment ID:", deploymentId);
 }
 
 export function helpIfErrorIsSizeOrScriptStartup(
@@ -1048,6 +1049,7 @@ function updateQueueConsumers(config: Config): Promise<string[]>[] {
 				max_wait_time_ms: consumer.max_batch_timeout
 					? 1000 * consumer.max_batch_timeout
 					: undefined,
+				max_concurrency: consumer.max_concurrency,
 			},
 		};
 

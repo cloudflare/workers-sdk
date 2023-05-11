@@ -1,0 +1,16 @@
+{
+	"name": "template-worker-worktop",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"deploy": "wrangler publish src/index.ts",
+		"dev": "wrangler dev src/index.ts --local",
+		"start-stackblitz": "WRANGLER_SEND_METRICS=false wrangler dev src/index.ts --local"
+	},
+	"dependencies": {
+		"worktop": "0.8.0-next.14"
+	},
+	"devDependencies": {
+		"wrangler": "^2.9.1"
+	}
+}

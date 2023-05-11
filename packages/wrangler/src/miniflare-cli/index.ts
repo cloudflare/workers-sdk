@@ -1,8 +1,8 @@
-import { fetch } from "@miniflare/core";
 import {
 	DurableObjectNamespace,
 	DurableObjectStub,
 } from "@miniflare/durable-objects";
+import { upgradingFetch } from "@miniflare/web-sockets";
 import {
 	Log as MiniflareLog,
 	LogLevel as MiniflareLogLevel,
@@ -47,7 +47,7 @@ async function main() {
 	config.log =
 		logLevel === MiniflareLogLevel.NONE
 			? new MiniflareNoOpLog()
-			: new MiniflareLog(logLevel, config.logOptions);
+			: new MiniflareLog(logLevel);
 
 	if (logLevel === MiniflareLogLevel.DEBUG) {
 		console.log("MINIFLARE OPTIONS:\n", JSON.stringify(config, null, 2));
@@ -87,7 +87,7 @@ async function main() {
 								id.toString()
 							);
 
-							return fetch(request);
+							return upgradingFetch(request);
 						};
 						return stub;
 					};

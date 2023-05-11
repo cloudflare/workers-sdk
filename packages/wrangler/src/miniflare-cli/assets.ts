@@ -12,9 +12,10 @@ import type {
 	ParsedHeaders,
 } from "@cloudflare/pages-shared/metadata-generator/types";
 import type {
-	RequestInfo as TreRequestInfo,
-	RequestInit as TreRequestInit,
-} from "@miniflare/tre";
+	Request as MiniflareRequest,
+	RequestInfo as MiniflareRequestInfo,
+	RequestInit as MiniflareRequestInit,
+} from "@miniflare/core";
 
 interface Logger {
 	log: (message: string) => void;
@@ -39,7 +40,7 @@ export default async function generateASSETSBinding(options: Options) {
 		? await import("@miniflare/tre")
 		: await import("@miniflare/core");
 
-	const Request = miniflare.Request;
+	const Request = miniflare.Request as typeof MiniflareRequest;
 	const Response = miniflare.Response;
 	// WebSockets won't work with `--experimental-local` until we expose something like `upgradingFetch` from `@miniflare/tre`.
 	const fetch = (
@@ -108,7 +109,7 @@ async function generateAssetsFetch(
 	const miniflare = tre
 		? await import("@miniflare/tre")
 		: await import("@miniflare/core");
-	const Request = miniflare.Request;
+	const Request = miniflare.Request as typeof MiniflareRequest;
 
 	const { generateHandler, parseQualityWeightedList } = await import(
 		"@cloudflare/pages-shared/asset-server/handler"
@@ -219,7 +220,7 @@ async function generateAssetsFetch(
 				const filepath = assetKeyEntryMap.get(assetKey);
 				if (!filepath) {
 					throw new Error(
-						"Could not fetch asset. Please file an issue on GitHub (https://github.com/cloudflare/wrangler2/issues/new/choose) with reproduction steps."
+						"Could not fetch asset. Please file an issue on GitHub (https://github.com/cloudflare/workers-sdk/issues/new/choose) with reproduction steps."
 					);
 				}
 				const body = readFileSync(filepath) as unknown as ReadableStream;
@@ -237,10 +238,10 @@ async function generateAssetsFetch(
 		});
 	};
 
-	return (async (input: TreRequestInfo, init?: TreRequestInit) => {
+	return async (input: MiniflareRequestInfo, init?: MiniflareRequestInit) => {
 		const request = new Request(input, init);
 		return await generateResponse(request as unknown as Request);
-	}) as typeof fetch;
+	};
 }
 
 const invalidAssetsFetch: typeof fetch = () => {

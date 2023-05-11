@@ -252,6 +252,7 @@ export type TailEventMessage = {
 		| ScheduledEvent
 		| AlarmEvent
 		| EmailEvent
+		| TailInfo
 		| undefined
 		| null;
 };
@@ -403,4 +404,12 @@ export type EmailEvent = {
 	 * Size of the email in bytes
 	 */
 	rawSize: number;
+};
+
+/**
+ * Message from tail with information about the tail itself
+ */
+export type TailInfo = {
+	message: string;
+	type: string;
 };

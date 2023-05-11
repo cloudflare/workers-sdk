@@ -7,9 +7,15 @@ import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { isBuildFailure } from "./bundle";
 import { loadDotEnv, readConfig } from "./config";
+import { constellation } from "./constellation";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
-import { deployments } from "./deployments";
+import {
+	deployments,
+	commonDeploymentCMDSetup,
+	rollbackDeployment,
+	viewDeployment,
+} from "./deployments";
 import {
 	buildHandler,
 	buildOptions,
@@ -30,6 +36,7 @@ import { initHandler, initOptions } from "./init";
 import { kvNamespace, kvKey, kvBulk } from "./kv";
 import { logBuildFailure, logger } from "./logger";
 import * as metrics from "./metrics";
+import { mTlsCertificateCommands } from "./mtls-certificate/cli";
 import { pages } from "./pages";
 import { formatMessage, ParseError } from "./parse";
 import { publishOptions, publishHandler } from "./publish";
@@ -40,13 +47,7 @@ import { secret, secretBulkHandler, secretBulkOptions } from "./secret";
 import { tailOptions, tailHandler } from "./tail";
 import { generateTypes } from "./type-generation";
 import { updateCheck } from "./update-check";
-import {
-	listScopes,
-	login,
-	logout,
-	requireAuth,
-	validateScopeKeys,
-} from "./user";
+import { listScopes, login, logout, validateScopeKeys } from "./user";
 import { whoami } from "./whoami";
 
 import type { Config } from "./config";
@@ -110,7 +111,7 @@ export async function printWranglerBanner() {
 
 export function isLegacyEnv(config: Config): boolean {
 	// We only read from config here, because we've already accounted for
-	// args["legacy-env"] in https://github.com/cloudflare/wrangler2/blob/b24aeb5722370c2e04bce97a84a1fa1e55725d79/packages/wrangler/src/config/validation.ts#L94-L98
+	// args["legacy-env"] in https://github.com/cloudflare/workers-sdk/blob/b24aeb5722370c2e04bce97a84a1fa1e55725d79/packages/wrangler/src/config/validation.ts#L94-L98
 	return config.legacy_env;
 }
 
@@ -271,7 +272,7 @@ export function createCLIParser(argv: string[]) {
 
 	// docs
 	wrangler.command(
-		"docs [command]",
+		"docs [command..]",
 		"📚 Open wrangler's docs in your browser",
 		docsOptions,
 		docsHandler
@@ -431,12 +432,30 @@ export function createCLIParser(argv: string[]) {
 		return d1(d1Yargs.command(subHelp));
 	});
 
+	// ai
+	wrangler.command(
+		"constellation",
+		"🤖 Interact with Constellation AI models",
+		(aiYargs) => {
+			return constellation(aiYargs.command(subHelp));
+		}
+	);
+
 	// pubsub
 	wrangler.command(
 		"pubsub",
 		"📮 Interact and manage Pub/Sub Brokers",
 		(pubsubYargs) => {
 			return pubSubCommands(pubsubYargs, subHelp);
+		}
+	);
+
+	// mtls-certificate
+	wrangler.command(
+		"mtls-certificate",
+		"🪪 Manage certificates used for mTLS connections",
+		(mtlsYargs) => {
+			return mTlsCertificateCommands(mtlsYargs.command(subHelp));
 		}
 	);
 
@@ -557,7 +576,7 @@ export function createCLIParser(argv: string[]) {
 				analytics_engine_datasets: config.analytics_engine_datasets,
 				dispatch_namespaces: config.dispatch_namespaces,
 				logfwdr: config.logfwdr,
-				unsafe: { bindings: config.unsafe?.bindings },
+				unsafe: config.unsafe,
 				rules: config.rules,
 				queues: config.queues,
 			};
@@ -568,30 +587,84 @@ export function createCLIParser(argv: string[]) {
 
 	//deployments
 	const deploymentsWarning =
-		"🚧`wrangler deployments` is a beta command. Please report any issues to https://github.com/cloudflare/wrangler2/issues/new/choose";
+		"🚧`wrangler deployments` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose";
 	wrangler.command(
 		"deployments",
-		"🚢 Displays the 10 most recent deployments for a worker",
+		"🚢 List and view details for deployments",
 		(yargs) =>
 			yargs
 				.option("name", {
 					describe: "The name of your worker",
 					type: "string",
 				})
-				.epilogue(deploymentsWarning),
-		async (deploymentsYargs) => {
-			await printWranglerBanner();
-			const config = readConfig(deploymentsYargs.config, deploymentsYargs);
-			const accountId = await requireAuth(config);
-			const scriptName = getScriptName(
-				{ name: deploymentsYargs.name, env: undefined },
-				config
-			);
+				.command(
+					"list",
+					"🚢 Displays the 10 most recent deployments for a worker",
+					async (listYargs) => listYargs,
+					async (listYargs) => {
+						const { accountId, scriptName, config } =
+							await commonDeploymentCMDSetup(listYargs, deploymentsWarning);
+						await deployments(accountId, scriptName, config);
+					}
+				)
+				.command(
+					"view [deployment-id]",
+					"🔍 View a deployment",
+					async (viewYargs) =>
+						viewYargs.positional("deployment-id", {
+							describe: "The ID of the deployment you want to inspect",
+							type: "string",
+							demandOption: false,
+						}),
+					async (viewYargs) => {
+						const { accountId, scriptName, config } =
+							await commonDeploymentCMDSetup(viewYargs, deploymentsWarning);
 
-			logger.log(`${deploymentsWarning}\n`);
-			await deployments(accountId, scriptName, config);
-		}
+						await viewDeployment(
+							accountId,
+							scriptName,
+							config,
+							viewYargs.deploymentId
+						);
+					}
+				)
+				.command(subHelp)
+				.epilogue(deploymentsWarning)
 	);
+	const rollbackWarning =
+		"🚧`wrangler rollback` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose";
+	wrangler
+		.command(
+			"rollback [deployment-id]",
+			"🔙 Rollback a deployment",
+			(rollbackYargs) =>
+				rollbackYargs
+					.positional("deployment-id", {
+						describe: "The ID of the deployment to rollback to",
+						type: "string",
+						demandOption: false,
+					})
+					.option("message", {
+						alias: "m",
+						describe:
+							"Skip confirmation and message prompts, uses provided argument as message",
+						type: "string",
+						default: undefined,
+					}),
+			async (rollbackYargs) => {
+				const { accountId, scriptName, config } =
+					await commonDeploymentCMDSetup(rollbackYargs, rollbackWarning);
+
+				await rollbackDeployment(
+					accountId,
+					scriptName,
+					config,
+					rollbackYargs.deploymentId,
+					rollbackYargs.message
+				);
+			}
+		)
+		.epilogue(rollbackWarning);
 
 	// This set to false to allow overwrite of default behaviour
 	wrangler.version(false);
@@ -629,7 +702,7 @@ export async function main(argv: string[]): Promise<void> {
 			await createCLIParser([...argv, "--help"]).parse();
 		} else if (e instanceof ParseError) {
 			e.notes.push({
-				text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/wrangler2/issues/new/choose",
+				text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",
 			});
 			logger.log(formatMessage(e));
 		} else if (
@@ -665,7 +738,7 @@ export async function main(argv: string[]): Promise<void> {
 			logger.error(e instanceof Error ? e.message : e);
 			logger.log(
 				`${fgGreenColor}%s${resetColor}`,
-				"If you think this is a bug then please create an issue at https://github.com/cloudflare/wrangler2/issues/new/choose"
+				"If you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose"
 			);
 		}
 		throw e;

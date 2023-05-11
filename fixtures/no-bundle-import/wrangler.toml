@@ -1,0 +1,9 @@
+name = "no-bundle-import"
+main = "src/index.js"
+compatibility_date = "2023-02-20"
+
+rules = [
+  { type = "CommonJS", globs = ["nested/say-hello.js", "**/*.cjs"]},
+  { type = "ESModule", globs = ["**/*.js"]},
+  { type = "Text", globs = ["**/*.json"], fallthrough = true}
+]

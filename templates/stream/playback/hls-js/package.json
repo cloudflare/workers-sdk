@@ -1,0 +1,12 @@
+{
+	"name": "template-hls-js",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"dev": "wrangler pages dev src --local",
+		"start-stackblitz": "WRANGLER_SEND_METRICS=false wrangler pages dev src --local"
+	},
+	"devDependencies": {
+		"wrangler": "^2.9.1"
+	}
+}

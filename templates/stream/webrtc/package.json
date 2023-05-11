@@ -1,0 +1,14 @@
+{
+	"name": "template-webrtc",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"build-ts": "tsc && cp dist/WHIPClient.js src/WHIPClient.js && cp dist/WHEPClient.js src/WHEPClient.js && cp dist/negotiateConnectionWithClientOffer.js src/negotiateConnectionWithClientOffer.js",
+		"dev": "WRANGLER_SEND_METRICS=false wrangler pages dev --local ./src",
+		"start-stackblitz": "WRANGLER_SEND_METRICS=false wrangler pages dev --local ./src"
+	},
+	"devDependencies": {
+		"typescript": "^4.5.4",
+		"wrangler": "^2.9.1"
+	}
+}

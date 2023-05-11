@@ -28,7 +28,7 @@ import {
 	printWranglerBanner,
 } from "./index";
 import type { Config, Environment } from "./config";
-import type { Route } from "./config/environment";
+import type { Route, Rule } from "./config/environment";
 import type { LoggerLevel } from "./logger";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type { CfWorkerInit } from "./worker";
@@ -229,7 +229,7 @@ export function devOptions(yargs: CommonYargsArgv) {
 				type: "boolean",
 			})
 			.option("node-compat", {
-				describe: "Enable node.js compatibility",
+				describe: "Enable Node.js compatibility",
 				type: "boolean",
 			})
 			.option("experimental-enable-local-persistence", {
@@ -334,6 +334,9 @@ export type AdditionalDevProps = {
 		preview_bucket_name?: string;
 	}[];
 	d1Databases?: Environment["d1_databases"];
+	processEntrypoint?: boolean;
+	moduleRoot?: string;
+	rules?: Rule[];
 };
 
 type StartDevOptions = DevArguments &
@@ -344,7 +347,6 @@ type StartDevOptions = DevArguments &
 		disableDevRegistry?: boolean;
 		enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 		onReady?: (ip: string, port: number) => void;
-		logPrefix?: string;
 		showInteractiveDevSession?: boolean;
 	};
 
@@ -388,7 +390,8 @@ export async function startDev(args: StartDevOptions) {
 
 		const {
 			entry,
-			nodeCompat,
+			legacyNodeCompat,
+			nodejsCompat,
 			upstreamProtocol,
 			zoneId,
 			host,
@@ -424,10 +427,12 @@ export async function startDev(args: StartDevOptions) {
 					zone={zoneId}
 					host={host}
 					routes={routes}
-					rules={getRules(configParam)}
+					processEntrypoint={!!args.processEntrypoint}
+					rules={args.rules ?? getRules(configParam)}
 					legacyEnv={isLegacyEnv(configParam)}
 					minify={args.minify ?? configParam.minify}
-					nodeCompat={nodeCompat}
+					legacyNodeCompat={legacyNodeCompat}
+					nodejsCompat={nodejsCompat}
 					build={configParam.build || {}}
 					define={{ ...configParam.define, ...cliDefines }}
 					initialMode={
@@ -465,7 +470,6 @@ export async function startDev(args: StartDevOptions) {
 					bindings={bindings}
 					crons={configParam.triggers.crons}
 					queueConsumers={configParam.queues.consumers}
-					logPrefix={args.logPrefix}
 					onReady={args.onReady}
 					inspect={args.inspect ?? true}
 					showInteractiveDevSession={args.showInteractiveDevSession}
@@ -523,7 +527,8 @@ export async function startApiDev(args: StartDevOptions) {
 
 	const {
 		entry,
-		nodeCompat,
+		legacyNodeCompat,
+		nodejsCompat,
 		upstreamProtocol,
 		zoneId,
 		host,
@@ -559,10 +564,12 @@ export async function startApiDev(args: StartDevOptions) {
 			zone: zoneId,
 			host: host,
 			routes: routes,
-			rules: getRules(configParam),
+			processEntrypoint: !!args.processEntrypoint,
+			rules: args.rules ?? getRules(configParam),
 			legacyEnv: isLegacyEnv(configParam),
 			minify: args.minify ?? configParam.minify,
-			nodeCompat: nodeCompat,
+			legacyNodeCompat,
+			nodejsCompat,
 			build: configParam.build || {},
 			define: { ...config.define, ...cliDefines },
 			initialMode: args.local ? "local" : "remote",
@@ -596,7 +603,6 @@ export async function startApiDev(args: StartDevOptions) {
 			bindings: bindings,
 			crons: configParam.triggers.crons,
 			queueConsumers: configParam.queues.consumers,
-			logPrefix: args.logPrefix,
 			onReady: args.onReady,
 			inspect: args.inspect ?? true,
 			showInteractiveDevSession: args.showInteractiveDevSession,
@@ -660,7 +666,7 @@ async function getZoneIdHostAndRoutes(args: StartDevOptions, config: Config) {
 		args.local = true;
 	}
 
-	if (!args.local) {
+	if (!args.local && !args.experimentalLocal) {
 		if (host) {
 			zoneId = await getZoneIdFromHost(host);
 		}
@@ -686,7 +692,7 @@ async function validateDevServerSettings(
 	config: Config
 ) {
 	const entry = await getEntry(
-		{ assets: args.assets, script: args.script },
+		{ assets: args.assets, script: args.script, moduleRoot: args.moduleRoot },
 		config,
 		"dev"
 	);
@@ -739,13 +745,22 @@ async function validateDevServerSettings(
 		logger.warn(
 			"Setting upstream-protocol to http is not currently implemented.\n" +
 				"If this is required in your project, please add your use case to the following issue:\n" +
-				"https://github.com/cloudflare/wrangler2/issues/583."
+				"https://github.com/cloudflare/workers-sdk/issues/583."
 		);
 	}
-	const nodeCompat = args.nodeCompat ?? config.node_compat;
-	if (nodeCompat) {
+	const legacyNodeCompat = args.nodeCompat ?? config.node_compat;
+	if (legacyNodeCompat) {
 		logger.warn(
-			"Enabling node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
+			"Enabling Node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
+		);
+	}
+
+	const compatibilityFlags =
+		args.compatibilityFlags ?? config.compatibility_flags;
+	const nodejsCompat = compatibilityFlags?.includes("nodejs_compat");
+	if (legacyNodeCompat && nodejsCompat) {
+		throw new Error(
+			"The `nodejs_compat` compatibility flag cannot be used in conjunction with the legacy `--node-compat` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the `--node-compat` argument from your CLI command or `node_compat = true` from your config file."
 		);
 	}
 
@@ -768,7 +783,8 @@ async function validateDevServerSettings(
 	return {
 		entry,
 		upstreamProtocol,
-		nodeCompat,
+		legacyNodeCompat,
+		nodejsCompat,
 		getLocalPort,
 		getInspectorPort,
 		zoneId,
@@ -841,6 +857,7 @@ function getBindings(
 			),
 			...(args.kv || []),
 		],
+		send_email: configParam.send_email,
 		// Use a copy of combinedVars since we're modifying it later
 		vars: {
 			...getVarsForDev(configParam, env),
@@ -848,6 +865,7 @@ function getBindings(
 		},
 		wasm_modules: configParam.wasm_modules,
 		text_blobs: configParam.text_blobs,
+		browser: configParam.browser,
 		data_blobs: configParam.data_blobs,
 		durable_objects: {
 			bindings: [
@@ -879,9 +897,13 @@ function getBindings(
 			...(args.r2 || []),
 		],
 		dispatch_namespaces: configParam.dispatch_namespaces,
+		mtls_certificates: configParam.mtls_certificates,
 		services: configParam.services,
 		analytics_engine_datasets: configParam.analytics_engine_datasets,
-		unsafe: configParam.unsafe?.bindings,
+		unsafe: {
+			bindings: configParam.unsafe.bindings,
+			metadata: configParam.unsafe.metadata,
+		},
 		logfwdr: configParam.logfwdr,
 		d1_databases: identifyD1BindingsAsBeta([
 			...(configParam.d1_databases ?? []).map((d1Db) => {

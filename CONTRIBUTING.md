@@ -20,7 +20,7 @@ Wrangler is built and run on the Node.js JavaScript runtime.
 Any contributions you make will be via [Pull Requests](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests) on [GitHub](https://github.com/) developed in a local git repository and pushed to your own fork of the repository.
 
 - Ensure you have [created an account](https://docs.github.com/en/get-started/onboarding/getting-started-with-your-github-account) on GitHub.
-- [Create your own fork](https://docs.github.com/en/get-started/quickstart/fork-a-repo) of [this repository](https://github.com/cloudflare/wrangler2).
+- [Create your own fork](https://docs.github.com/en/get-started/quickstart/fork-a-repo) of [this repository](https://github.com/cloudflare/workers-sdk).
 - Clone your fork to your local machine
   ```sh
   > git clone https://github.com/<your-github-username>/wrangler2
@@ -35,18 +35,18 @@ Any contributions you make will be via [Pull Requests](https://docs.github.com/e
   ```
 - Add `cloudflare/wrangler2` as the `upstream` remote repository.
   ```sh
-  > git remote add upstream https://github.com/cloudflare/wrangler2
+  > git remote add upstream https://github.com/cloudflare/workers-sdk
   > git remote -v
   origin	https://github.com/<your-github-username>/wrangler2 (fetch)
   origin	https://github.com/<your-github-username>/wrangler2 (push)
-  upstream	https://github.com/cloudflare/wrangler2 (fetch)
-  upstream	https://github.com/cloudflare/wrangler2 (push)
+  upstream	https://github.com/cloudflare/workers-sdk (fetch)
+  upstream	https://github.com/cloudflare/workers-sdk (push)
   ```
 - You should regularly pull from the `main` branch of the `upstream` repository to keep up to date with the latest changes to the project.
   ```sh
   > git switch main
   > git pull upstream main
-  From https://github.com/cloudflare/wrangler2
+  From https://github.com/cloudflare/workers-sdk
   * branch            main       -> FETCH_HEAD
   Already up to date.
   ```
@@ -63,7 +63,7 @@ When working on Wrangler, you'll need to satisfy [`workerd`](https://github.com/
 
 The Node.js dependencies of the project are managed by the [`npm`](https://www.npmjs.com/) tool.
 
-This repository is setup as a [mono-repo](https://docs.npmjs.com/cli/v7/using-npm/workspaces) of workspaces. The workspaces are stored in the [`packages`](https://github.com/cloudflare/wrangler2/tree/main/packages) directory.
+This repository is setup as a [mono-repo](https://docs.npmjs.com/cli/v7/using-npm/workspaces) of workspaces. The workspaces are stored in the [`packages`](https://github.com/cloudflare/workers-sdk/tree/main/packages) directory.
 
 While each workspace has its own dependencies, you install the dependencies using `npm` at the root of the project.
 
@@ -173,6 +173,8 @@ Changes should be committed to a new local branch, which then gets pushed to you
   git push -u origin <new-branch-name>
   ```
 - Once you are happy with your changes, create a Pull Request on GitHub
+- The format for Pull Request titles is `[package name] description`, where the package name should indicate which package of the `workers-sdk` monorepo your PR pertains to (e.g. `wrangler`/`pages-shared`/`wrangler-devtools`), and the description should be a succinct summary of the change you're making.
+- GitHub will insert a template for the body of your Pull Request—it's important to carefully fill out all the fields, giving as much detail as possible to reviewers.
 
 ## Changesets
 
@@ -232,6 +234,10 @@ We use the following guidelines to determine the kind of change for a PR:
 - Bugfixes and experimental features are considered to be 'patch' changes. Be sure to log warnings when experimental features are used.
 - New stable features and new deprecation warnings for future breaking changes are considered 'minor' changes. These changes shouldn't break existing code, but the deprecation warnings should suggest alternate solutions to not trigger the warning.
 - Breaking changes are considered to be 'major' changes. These are usually when deprecations take effect, or functional breaking behaviour is added with relevant logs (either as errors or warnings.)
+
+## Releases
+
+We generally cut Wrangler releases at the start of each week. If you need a release cut outside of the regular cadence, please reach out to the [@cloudflare/wrangler-admins](https://github.com/orgs/cloudflare/teams/wrangler-admins) team. Before reaching out, please confirm that Wrangler passes end-to-end tests by running `npm -w wrangler run test:e2e`. Note: a real Cloudflare account is planned to be set up for testing, after which point the end-to-end tests will be configured to run in CI and this manual testing step will no longer be required.
 
 ## Miniflare Development
 

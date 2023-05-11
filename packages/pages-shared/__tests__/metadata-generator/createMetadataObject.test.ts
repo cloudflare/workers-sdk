@@ -216,7 +216,6 @@ test("createMetadataObject should parse a realistic result", () => {
 	});
 
 	expect(metadata).toEqual({
-		failOpen: undefined,
 		redirects: {
 			version: 1,
 			rules: {},

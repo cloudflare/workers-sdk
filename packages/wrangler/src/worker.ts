@@ -80,6 +80,15 @@ export interface CfKvNamespace {
 }
 
 /**
+ * A binding to send email.
+ */
+export interface CfSendEmailBindings {
+	name: string;
+	destination_address?: string;
+	allowed_destination_addresses?: string[];
+}
+
+/**
  * A binding to a wasm module (in service-worker format)
  */
 
@@ -93,6 +102,14 @@ export interface CfWasmModuleBindings {
 
 export interface CfTextBlobBindings {
 	[key: string]: string;
+}
+
+/**
+ * A binding to a browser
+ */
+
+export interface CfBrowserBinding {
+	binding: string;
 }
 
 /**
@@ -154,6 +171,11 @@ interface CfDispatchNamespace {
 	namespace: string;
 }
 
+interface CfMTlsCertificate {
+	binding: string;
+	certificate_id: string;
+}
+
 interface CfLogfwdr {
 	schema: string | undefined;
 	bindings: CfLogfwdrBinding[];
@@ -169,6 +191,13 @@ interface CfUnsafeBinding {
 	type: string;
 }
 
+type CfUnsafeMetadata = Record<string, unknown>;
+
+interface CfUnsafe {
+	bindings: CfUnsafeBinding[] | undefined;
+	metadata: CfUnsafeMetadata | undefined;
+}
+
 export interface CfDurableObjectMigrations {
 	old_tag?: string;
 	new_tag: string;
@@ -180,6 +209,10 @@ export interface CfDurableObjectMigrations {
 		}[];
 		deleted_classes?: string[];
 	}[];
+}
+
+export interface CfPlacement {
+	mode: "smart";
 }
 
 /**
@@ -204,8 +237,10 @@ export interface CfWorkerInit {
 	bindings: {
 		vars: CfVars | undefined;
 		kv_namespaces: CfKvNamespace[] | undefined;
+		send_email: CfSendEmailBindings[] | undefined;
 		wasm_modules: CfWasmModuleBindings | undefined;
 		text_blobs: CfTextBlobBindings | undefined;
+		browser: CfBrowserBinding | undefined;
 		data_blobs: CfDataBlobBindings | undefined;
 		durable_objects: { bindings: CfDurableObject[] } | undefined;
 		queues: CfQueue[] | undefined;
@@ -214,8 +249,9 @@ export interface CfWorkerInit {
 		services: CfService[] | undefined;
 		analytics_engine_datasets: CfAnalyticsEngineDataset[] | undefined;
 		dispatch_namespaces: CfDispatchNamespace[] | undefined;
+		mtls_certificates: CfMTlsCertificate[] | undefined;
 		logfwdr: CfLogfwdr | undefined;
-		unsafe: CfUnsafeBinding[] | undefined;
+		unsafe: CfUnsafe | undefined;
 	};
 	migrations: CfDurableObjectMigrations | undefined;
 	compatibility_date: string | undefined;
@@ -223,6 +259,7 @@ export interface CfWorkerInit {
 	usage_model: "bundled" | "unbound" | undefined;
 	keepVars: boolean | undefined;
 	logpush: boolean | undefined;
+	placement: CfPlacement | undefined;
 }
 
 export interface CfWorkerContext {

@@ -1,0 +1,26 @@
+<html>
+	<head>
+		<link rel="stylesheet" href="style.css" />
+		<!-- This adapter normalizes cross-browser differences in WebRTC APIs. Currently necessary in order to support Firefox. -->
+		<script
+			src="https://cdnjs.cloudflare.com/ajax/libs/webrtc-adapter/8.1.2/adapter.min.js"
+			integrity="sha512-l40eBFtXx+ve5RryIELC3y6/OM6Nu89mLGQd7fg1C93tN6XrkC3supb+/YiD/Y+B8P37kdJjtG1MT1kOO2VzxA=="
+			crossorigin="anonymous"
+			referrerpolicy="no-referrer"
+		></script>
+	</head>
+	<body>
+		<h4>Broadcasting video using WHIP</h4>
+		<h5>(local mirror)</h5>
+		<video id="input-video" autoplay muted></video>
+
+		<script type="module">
+			import WHIPClient from "./WHIPClient.js";
+
+			const url = "<WEBRTC_URL_FROM_YOUR_LIVE_INPUT>";
+			const videoElement = document.getElementById("input-video");
+
+			self.client = new WHIPClient(url, videoElement);
+		</script>
+	</body>
+</html>

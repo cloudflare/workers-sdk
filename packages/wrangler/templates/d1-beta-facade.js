@@ -11,7 +11,7 @@ var D1Database = class {
 		return new D1PreparedStatement(this, query);
 	}
 	async dump() {
-		const response = await this.binding.fetch("/dump", {
+		const response = await this.binding.fetch("http://d1/dump", {
 			method: "POST",
 			headers: {
 				"content-type": "application/json",
@@ -79,7 +79,7 @@ var D1Database = class {
 						params,
 				  }
 		);
-		const response = await this.binding.fetch(endpoint, {
+		const response = await this.binding.fetch(new URL(endpoint, "http://d1"), {
 			method: "POST",
 			headers: {
 				"content-type": "application/json",
@@ -236,6 +236,9 @@ var shim_default = {
 	},
 	async trace(traces, env, ctx) {
 		return worker.trace(traces, getMaskedEnv(env), ctx);
+	},
+	async email(message, env, ctx) {
+		return worker.email(message, getMaskedEnv(env), ctx);
 	},
 };
 export { shim_default as default };

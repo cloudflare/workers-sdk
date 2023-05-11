@@ -1,0 +1,6 @@
+name = "worker-turso-ts"
+main = "src/index.ts"
+compatibility_date = "2023-03-30"
+
+[vars]
+#LIBSQL_DB_URL = "your-database-url"

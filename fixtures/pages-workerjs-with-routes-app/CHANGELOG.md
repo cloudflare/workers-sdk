@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- [#2065](https://github.com/cloudflare/wrangler2/pull/2065) [`14c44588`](https://github.com/cloudflare/wrangler2/commit/14c44588c9d22e9c9f2ad2740df57809d0cbcfbc) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix(pages): `wrangler pages dev` matches routing rules in `_routes.json` too loosely
+- [#2065](https://github.com/cloudflare/workers-sdk/pull/2065) [`14c44588`](https://github.com/cloudflare/workers-sdk/commit/14c44588c9d22e9c9f2ad2740df57809d0cbcfbc) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix(pages): `wrangler pages dev` matches routing rules in `_routes.json` too loosely
 
   Currently, the logic by which we transform routing rules in `_routes.json` to
   regular expressions, so we can perform `pathname` matching & routing when we

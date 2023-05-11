@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import fs from "node:fs";
 import path from "path";
-import { Box, render, Text } from "ink";
+import { Box, Text } from "ink";
 import Table from "ink-table";
 import React from "react";
 import { withConfig } from "../../config";
@@ -10,6 +10,7 @@ import { CI } from "../../is-ci";
 import isInteractive from "../../is-interactive";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
+import { renderToString } from "../../utils/render";
 import { createBackup } from "../backups";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";
 import { executeSql } from "../execute";
@@ -19,7 +20,7 @@ import {
 	getUnappliedMigrations,
 	initMigrationsTable,
 } from "./helpers";
-import { DatabaseWithLocal } from "./options";
+import { MigrationOptions } from "./options";
 import type { ParseError } from "../../parse";
 import type {
 	CommonYargsArgv,
@@ -27,13 +28,13 @@ import type {
 } from "../../yargs-types";
 
 export function ApplyOptions(yargs: CommonYargsArgv) {
-	return DatabaseWithLocal(yargs);
+	return MigrationOptions(yargs);
 }
 
 type ApplyHandlerOptions = StrictYargsOptionsToInterface<typeof ApplyOptions>;
 
 export const ApplyHandler = withConfig<ApplyHandlerOptions>(
-	async ({ config, database, local, persistTo }): Promise<void> => {
+	async ({ config, database, local, persistTo, preview }): Promise<void> => {
 		logger.log(d1BetaWarning);
 
 		const databaseInfo = getDatabaseInfoFromConfig(config, database);
@@ -47,31 +48,34 @@ export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 			return;
 		}
 
-		const migrationsPath = await getMigrationsPath(
-			path.dirname(config.configPath),
-			databaseInfo?.migrationsFolderPath ?? DEFAULT_MIGRATION_PATH,
-			false
-		);
+		const migrationsPath = await getMigrationsPath({
+			projectPath: path.dirname(config.configPath),
+			migrationsFolderPath:
+				databaseInfo?.migrationsFolderPath ?? DEFAULT_MIGRATION_PATH,
+			createIfMissing: false,
+		});
 
 		const migrationsTableName =
 			databaseInfo?.migrationsTableName ?? DEFAULT_MIGRATION_TABLE;
-		await initMigrationsTable(
+		await initMigrationsTable({
 			migrationsTableName,
 			local,
 			config,
-			database,
-			persistTo
-		);
+			name: database,
+			persistTo,
+			preview,
+		});
 
 		const unappliedMigrations = (
-			await getUnappliedMigrations(
+			await getUnappliedMigrations({
 				migrationsTableName,
 				migrationsPath,
 				local,
 				config,
-				database,
-				persistTo
-			)
+				name: database,
+				persistTo,
+				preview,
+			})
 		)
 			.map((migration) => {
 				return {
@@ -94,14 +98,16 @@ export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 			});
 
 		if (unappliedMigrations.length === 0) {
-			render(<Text>✅ No migrations to apply!</Text>);
+			logger.log(renderToString(<Text>✅ No migrations to apply!</Text>));
 			return;
 		}
-		render(
-			<Box flexDirection="column">
-				<Text>Migrations to be applied:</Text>
-				<Table data={unappliedMigrations} columns={["Name"]}></Table>
-			</Box>
+		logger.log(
+			renderToString(
+				<Box flexDirection="column">
+					<Text>Migrations to be applied:</Text>
+					<Table data={unappliedMigrations} columns={["Name"]}></Table>
+				</Box>
+			)
 		);
 		const ok = await confirm(
 			`About to apply ${unappliedMigrations.length} migration(s)
@@ -109,14 +115,14 @@ Your database may not be available to serve requests during the migration, conti
 		);
 		if (!ok) return;
 
-		// don't backup prod db when applying migrations locally
-		if (!local) {
+		// don't backup prod db when applying migrations locally or in preview
+		if (!local && !preview) {
 			assert(
 				databaseInfo,
 				"In non-local mode `databaseInfo` should be defined."
 			);
-			render(<Text>🕒 Creating backup...</Text>);
-			const accountId = await requireAuth({});
+			logger.log(renderToString(<Text>🕒 Creating backup...</Text>));
+			const accountId = await requireAuth(config);
 			await createBackup(accountId, databaseInfo.uuid);
 		}
 
@@ -133,15 +139,17 @@ Your database may not be available to serve requests during the migration, conti
 			let success = true;
 			let errorNotes: Array<string> = [];
 			try {
-				const response = await executeSql(
+				const response = await executeSql({
 					local,
 					config,
-					database,
-					isInteractive() && !CI.isCI(),
+					name: database,
+					shouldPrompt: isInteractive() && !CI.isCI(),
 					persistTo,
-					undefined,
-					query
-				);
+					command: query,
+					file: undefined,
+					json: undefined,
+					preview,
+				});
 
 				if (response === null) {
 					// TODO:  return error
@@ -164,35 +172,38 @@ Your database may not be available to serve requests during the migration, conti
 				}
 			} catch (e) {
 				const err = e as ParseError;
+				const maybeCause = (err.cause ?? err) as Error;
 
 				success = false;
 				errorNotes = err.notes?.map((msg) => msg.text) ?? [
-					err.message ?? err.toString(),
+					maybeCause?.message ?? maybeCause.toString(),
 				];
 			}
 
 			migration.Status = success ? "✅" : "❌";
 
-			render(
-				<Box flexDirection="column">
-					<Table
-						data={unappliedMigrations}
-						columns={["Name", "Status"]}
-					></Table>
-					{errorNotes.length > 0 && (
-						<Box flexDirection="column">
-							<Text>&nbsp;</Text>
-							<Text>
-								❌ Migration {migration.Name} failed with following Errors
-							</Text>
-							<Table
-								data={errorNotes.map((err) => {
-									return { Error: err };
-								})}
-							></Table>
-						</Box>
-					)}
-				</Box>
+			logger.log(
+				renderToString(
+					<Box flexDirection="column">
+						<Table
+							data={unappliedMigrations}
+							columns={["Name", "Status"]}
+						></Table>
+						{errorNotes.length > 0 && (
+							<Box flexDirection="column">
+								<Text>&nbsp;</Text>
+								<Text>
+									❌ Migration {migration.Name} failed with following Errors
+								</Text>
+								<Table
+									data={errorNotes.map((err) => {
+										return { Error: err };
+									})}
+								></Table>
+							</Box>
+						)}
+					</Box>
+				)
 			);
 
 			if (errorNotes.length > 0) return;

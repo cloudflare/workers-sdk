@@ -2,13 +2,13 @@
 	"name": "wranglerjs-compat-webpack-plugin",
 	"version": "0.0.7",
 	"description": "A webpack plugin to emulate the behavior of Wrangler v1's `type = webpack`",
-	"homepage": "https://github.com/cloudflare/wrangler2#readme",
+	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
 	"bugs": {
-		"url": "https://github.com/cloudflare/wrangler2/issues"
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/cloudflare/wrangler2.git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/wranglerjs-compat-webpack-plugin"
 	},
 	"license": "MIT OR Apache-2.0",
@@ -20,7 +20,7 @@
 		"build": "run-p build:*",
 		"build:d.ts": "tsc",
 		"build:js": "esbuild src/index.ts --bundle --platform=node --external:execa --external:webpack --external:esbuild --external:rimraf --target=node16.13 --outfile=lib/index.js --format=cjs --sourcemap",
-		"test:plugin": "jest"
+		"test:plugin": "jest --forceExit"
 	},
 	"jest": {
 		"moduleNameMapper": {

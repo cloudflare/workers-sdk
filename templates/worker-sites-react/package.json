@@ -1,0 +1,37 @@
+{
+	"name": "template-worker-sites-react",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"deploy": "wrangler publish",
+		"dev": "wrangler dev --local",
+		"react:build": "react-scripts build",
+		"react:eject": "react-scripts eject",
+		"react:start": "react-scripts start",
+		"react:test": "react-scripts test"
+	},
+	"browserslist": {
+		"production": [
+			">0.2%",
+			"not dead",
+			"not op_mini all"
+		],
+		"development": [
+			"last 1 chrome version",
+			"last 1 firefox version",
+			"last 1 safari version"
+		]
+	},
+	"eslintConfig": {
+		"extends": "react-app"
+	},
+	"dependencies": {
+		"@cloudflare/kv-asset-handler": "~0.1.2",
+		"react": "^16.9.0",
+		"react-dom": "^16.9.0"
+	},
+	"devDependencies": {
+		"react-scripts": "5.0.1",
+		"wrangler": "^2.0.0"
+	}
+}

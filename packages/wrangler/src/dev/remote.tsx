@@ -107,6 +107,8 @@ export function Remote(props: RemoteProps) {
 		logToTerminal: true,
 		sourceMapPath: props.sourceMapPath,
 		host: previewToken?.host,
+		name: props.name,
+		sourceMapMetadata: props.bundle?.sourceMapMetadata,
 	});
 
 	const errorHandler = useErrorHandler();
@@ -304,13 +306,13 @@ export function useWorker(
 			// TODO: Once we get service bindings working in the
 			// edge preview server, we can define remote dev service bindings
 			// and you can uncomment this code.
-			// https://github.com/cloudflare/wrangler2/issues/1182
+			// https://github.com/cloudflare/workers-sdk/issues/1182
 
 			/*
 			if (name) {
 				await registerWorker(name, {
 					mode: "remote",
-					// upstream protocol is always https (https://github.com/cloudflare/wrangler2/issues/583)
+					// upstream protocol is always https (https://github.com/cloudflare/workers-sdk/issues/583)
 					protocol: "https",
 					port: undefined,
 					host: workerPreviewToken.host,
@@ -574,6 +576,7 @@ async function createRemoteWorkerInit(props: {
 		usage_model: props.usageModel,
 		keepVars: true,
 		logpush: false,
+		placement: undefined, // no placement in dev
 	};
 
 	return init;

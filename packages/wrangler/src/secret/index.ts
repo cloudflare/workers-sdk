@@ -100,6 +100,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 								},
 								bindings: {
 									kv_namespaces: [],
+									send_email: [],
 									vars: {},
 									durable_objects: { bindings: [] },
 									queues: [],
@@ -108,11 +109,13 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 									services: [],
 									analytics_engine_datasets: [],
 									wasm_modules: {},
+									browser: undefined,
 									text_blobs: {},
 									data_blobs: {},
 									dispatch_namespaces: [],
+									mtls_certificates: [],
 									logfwdr: { schema: undefined, bindings: [] },
-									unsafe: [],
+									unsafe: { bindings: undefined, metadata: undefined },
 								},
 								modules: [],
 								migrations: undefined,
@@ -121,6 +124,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 								usage_model: undefined,
 								keepVars: false, // this doesn't matter since it's a new script anyway
 								logpush: false,
+								placement: undefined,
 							}),
 						}
 					);

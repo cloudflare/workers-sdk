@@ -4,9 +4,11 @@ import { useApp } from "ink";
 import { useState, useEffect } from "react";
 import { bundleWorker, rewriteNodeCompatBuildFailure } from "../bundle";
 import { logBuildFailure, logger } from "../logger";
+import traverseModuleGraph from "../traverse-module-graph";
 import type { Config } from "../config";
 import type { WorkerRegistry } from "../dev-registry";
 import type { Entry } from "../entry";
+import type { SourceMapMetadata } from "../inspect";
 import type { CfModule } from "../worker";
 import type { WatchMode, Metafile } from "esbuild";
 
@@ -18,6 +20,7 @@ export type EsbuildBundle = {
 	modules: CfModule[];
 	dependencies: Metafile["outputs"][string]["inputs"];
 	sourceMapPath: string | undefined;
+	sourceMapMetadata: SourceMapMetadata | undefined;
 };
 
 export function useEsbuild({
@@ -25,12 +28,14 @@ export function useEsbuild({
 	destination,
 	jsxFactory,
 	jsxFragment,
+	processEntrypoint,
 	rules,
 	assets,
 	serveAssetsFromWorker,
 	tsconfig,
 	minify,
-	nodeCompat,
+	legacyNodeCompat,
+	nodejsCompat,
 	betaD1Shims,
 	define,
 	noBundle,
@@ -47,6 +52,7 @@ export function useEsbuild({
 	destination: string | undefined;
 	jsxFactory: string | undefined;
 	jsxFragment: string | undefined;
+	processEntrypoint: boolean;
 	rules: Config["rules"];
 	assets: Config["assets"];
 	define: Config["define"];
@@ -54,7 +60,8 @@ export function useEsbuild({
 	serveAssetsFromWorker: boolean;
 	tsconfig: string | undefined;
 	minify: boolean | undefined;
-	nodeCompat: boolean | undefined;
+	legacyNodeCompat: boolean | undefined;
+	nodejsCompat: boolean | undefined;
 	betaD1Shims?: string[];
 	noBundle: boolean;
 	workerDefinitions: WorkerRegistry;
@@ -85,7 +92,7 @@ export function useEsbuild({
 		const watchMode: WatchMode = {
 			async onRebuild(error) {
 				if (error !== null) {
-					if (!nodeCompat) rewriteNodeCompatBuildFailure(error);
+					if (!legacyNodeCompat) rewriteNodeCompatBuildFailure(error);
 					logBuildFailure(error);
 					logger.error("Watch build failed:", error.message);
 				} else {
@@ -97,51 +104,48 @@ export function useEsbuild({
 		async function build() {
 			if (!destination) return;
 
-			const {
-				resolvedEntryPointPath,
-				bundleType,
-				modules,
-				dependencies,
-				stop,
-				sourceMapPath,
-			}: Awaited<ReturnType<typeof bundleWorker>> = noBundle
-				? {
-						modules: [],
-						dependencies: {},
-						resolvedEntryPointPath: entry.file,
-						bundleType: entry.format === "modules" ? "esm" : "commonjs",
-						stop: undefined,
-						sourceMapPath: undefined,
-				  }
-				: await bundleWorker(entry, destination, {
-						serveAssetsFromWorker,
-						jsxFactory,
-						jsxFragment,
-						rules,
-						watch: watchMode,
-						tsconfig,
-						minify,
-						nodeCompat,
-						betaD1Shims,
-						doBindings: durableObjects.bindings,
-						define,
-						checkFetch: true,
-						assets: assets && {
-							...assets,
-							// disable the cache in dev
-							bypassCache: true,
-						},
-						workerDefinitions,
-						services,
-						firstPartyWorkerDevFacade,
-						local,
-						targetConsumer,
-						testScheduled,
-						experimentalLocal,
-				  });
+			let traverseModuleGraphResult:
+				| Awaited<ReturnType<typeof bundleWorker>>
+				| undefined;
+			let bundleResult: Awaited<ReturnType<typeof bundleWorker>> | undefined;
+			if (noBundle) {
+				traverseModuleGraphResult = await traverseModuleGraph(entry, rules);
+			}
+
+			if (processEntrypoint || !noBundle) {
+				bundleResult = await bundleWorker(entry, destination, {
+					bundle: !noBundle,
+					disableModuleCollection: noBundle,
+					serveAssetsFromWorker,
+					jsxFactory,
+					jsxFragment,
+					rules,
+					watch: watchMode,
+					tsconfig,
+					minify,
+					legacyNodeCompat,
+					nodejsCompat,
+					betaD1Shims,
+					doBindings: durableObjects.bindings,
+					define,
+					checkFetch: true,
+					assets: assets && {
+						...assets,
+						// disable the cache in dev
+						bypassCache: true,
+					},
+					workerDefinitions,
+					services,
+					firstPartyWorkerDevFacade,
+					local,
+					targetConsumer,
+					testScheduled,
+					experimentalLocal,
+				});
+			}
 
 			// Capture the `stop()` method to use as the `useEffect()` destructor.
-			stopWatching = stop;
+			stopWatching = bundleResult?.stop;
 
 			// if "noBundle" is true, then we need to manually watch the entry point and
 			// trigger "builds" when it changes
@@ -159,11 +163,15 @@ export function useEsbuild({
 			setBundle({
 				id: 0,
 				entry,
-				path: resolvedEntryPointPath,
-				type: bundleType,
-				modules,
-				dependencies,
-				sourceMapPath,
+				path: bundleResult?.resolvedEntryPointPath ?? entry.file,
+				type:
+					bundleResult?.bundleType ??
+					(entry.format === "modules" ? "esm" : "commonjs"),
+				modules:
+					traverseModuleGraphResult?.modules ?? bundleResult?.modules ?? [],
+				dependencies: bundleResult?.dependencies ?? {},
+				sourceMapPath: bundleResult?.sourceMapPath,
+				sourceMapMetadata: bundleResult?.sourceMapMetadata,
 			});
 		}
 
@@ -183,12 +191,14 @@ export function useEsbuild({
 		jsxFactory,
 		jsxFragment,
 		serveAssetsFromWorker,
+		processEntrypoint,
 		rules,
 		tsconfig,
 		exit,
 		noBundle,
 		minify,
-		nodeCompat,
+		legacyNodeCompat,
+		nodejsCompat,
 		define,
 		assets,
 		services,
