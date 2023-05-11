@@ -166,7 +166,7 @@ function renderRoute(route: Route): string {
 //
 // if a user does not confirm that they want to override, we skip publishing
 // to these custom domains, but continue on through the rest of the
-// publish stage
+// deploy stage
 async function publishCustomDomains(
 	workerUrl: string,
 	accountId: string,
@@ -250,7 +250,7 @@ Update them to point to this script instead?`;
 		}
 	}
 
-	// publish to domains
+	// deploy to domains
 	await fetchResult(`${workerUrl}/domains/records`, {
 		method: "PUT",
 		body: JSON.stringify({ ...config, origins }),
@@ -262,7 +262,7 @@ Update them to point to this script instead?`;
 	return domains.map((domain) => renderRoute(domain));
 }
 
-export default async function publish(props: Props): Promise<void> {
+export default async function deploy(props: Props): Promise<void> {
 	// TODO: warn if git/hg has uncommitted changes
 	const { config, accountId, name } = props;
 	if (accountId && name) {
@@ -286,7 +286,7 @@ export default async function publish(props: Props): Promise<void> {
 			}
 		} catch (e) {
 			// code: 10090, message: workers.api.error.service_not_found
-			// is thrown from the above fetchResult on the first publish of a Worker
+			// is thrown from the above fetchResult on the first deploy of a Worker
 			if ((e as { code?: number }).code !== 10090) {
 				logger.error(e);
 			}
@@ -496,8 +496,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						workerDefinitions: undefined,
 						firstPartyWorkerDevFacade: false,
 						// We want to know if the build is for development or publishing
-						// This could potentially cause issues as we no longer have identical behaviour between dev and publish?
-						targetConsumer: "publish",
+						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
+						targetConsumer: "deploy",
 						local: false,
 						experimentalLocal: false,
 					}
@@ -760,7 +760,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 			if (Object.keys(routesWithOtherBindings).length > 0) {
 				let errorMessage =
-					"Can't publish a worker to routes that are assigned to another worker.\n";
+					"Can't deploy a worker to routes that are assigned to another worker.\n";
 
 				for (const worker in routesWithOtherBindings) {
 					const assignedRoutes = routesWithOtherBindings[worker];
@@ -770,7 +770,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				}
 
 				const resolution =
-					"Unassign other workers from the routes you want to publish to, and then try again.";
+					"Unassign other workers from the routes you want to deploy to, and then try again.";
 				const dashLink = `Visit ${chalk.blue(
 					chalk.underline(
 						`https://dash.cloudflare.com/${accountId}/workers/overview`
@@ -838,7 +838,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			);
 		}
 	} else {
-		logger.log("No publish targets for", workerName, formatTime(deployMs));
+		logger.log("No deploy targets for", workerName, formatTime(deployMs));
 	}
 
 	logger.log("Current Deployment ID:", deploymentId);
@@ -1059,7 +1059,7 @@ function updateQueueConsumers(config: Config): Promise<string[]>[] {
 			throw new Error("Script name is required to update queue consumers");
 		}
 		const scriptName = config.name;
-		const envName = undefined; // TODO: script environment for wrangler publish?
+		const envName = undefined; // TODO: script environment for wrangler deploy?
 		return putConsumer(config, consumer.queue, scriptName, envName, body).then(
 			() => [`Consumer for ${consumer.queue}`]
 		);

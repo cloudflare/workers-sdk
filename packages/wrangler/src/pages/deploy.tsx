@@ -2,7 +2,7 @@ import { execSync } from "node:child_process";
 import { render, Text } from "ink";
 import SelectInput from "ink-select-input";
 import React from "react";
-import { publish } from "../api/pages/publish";
+import { deploy } from "../api/pages/deploy";
 import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { prompt } from "../dialogs";
@@ -76,6 +76,7 @@ export function Options(yargs: CommonYargsArgv) {
 }
 
 export const Handler = async ({
+	_,
 	directory,
 	projectName,
 	branch,
@@ -87,6 +88,13 @@ export const Handler = async ({
 	noBundle,
 	config: wranglerConfig,
 }: PublishArgs) => {
+	// Check for deprecated `wrangler pages publish` command
+	if (_[1] === "publish") {
+		logger.warn(
+			"`wrangler pages publish` is deprecated and will be removed in the next major version.\nPlease use `wrangler pages deploy` instead, which accepts exactly the same arguments."
+		);
+	}
+
 	if (wranglerConfig) {
 		throw new FatalError("Pages does not support wrangler.toml", 1);
 	}
@@ -241,7 +249,7 @@ export const Handler = async ({
 		}
 	}
 
-	const deploymentResponse = await publish({
+	const deploymentResponse = await deploy({
 		directory,
 		accountId,
 		projectName,

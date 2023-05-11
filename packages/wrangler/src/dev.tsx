@@ -60,7 +60,7 @@ export function devOptions(yargs: CommonYargsArgv) {
 				hidden: true,
 			})
 			.option("no-bundle", {
-				describe: "Skip internal build steps and directly publish script",
+				describe: "Skip internal build steps and directly deploy script",
 				type: "boolean",
 				default: false,
 			})

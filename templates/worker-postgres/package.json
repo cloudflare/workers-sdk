@@ -4,7 +4,7 @@
 	"private": true,
 	"scripts": {
 		"build": "esbuild --bundle --sourcemap --outfile=dist/index.mjs --minify --format=esm ./src/index.js --external:*.wasm --inject:./src/deno/workers-override.ts",
-		"deploy": "wrangler publish src/index.ts",
+		"deploy": "wrangler deploy src/index.ts",
 		"dev": "wrangler dev src/index.ts --local"
 	},
 	"devDependencies": {

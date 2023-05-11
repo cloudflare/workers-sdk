@@ -4,7 +4,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"deploy": "wrangler publish src/index.js",
+		"deploy": "wrangler deploy src/index.js",
 		"dev": "wrangler dev src/index.js --local",
 		"test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
 	},

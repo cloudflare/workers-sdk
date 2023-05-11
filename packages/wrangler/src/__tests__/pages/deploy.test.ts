@@ -44,14 +44,14 @@ describe("deployment create", () => {
 		msw.restoreHandlers();
 	});
 
-	it("should be aliased with 'wrangler pages publish'", async () => {
-		await runWrangler("pages publish --help");
+	it("should be aliased with 'wrangler pages deploy'", async () => {
+		await runWrangler("pages deploy --help");
 		await endEventLoop();
 
 		expect(std.out).toMatchInlineSnapshot(`
-		    "wrangler pages publish [directory]
+		    "wrangler pages deploy [directory]
 
-		    🆙 Publish a directory of static assets as a Pages deployment
+		    🆙 Deploy a directory of static assets as a Pages deployment
 
 		    Positionals:
 		      directory  The directory of static files to upload  [string]
@@ -169,7 +169,7 @@ describe("deployment create", () => {
 			)
 		);
 
-		await runWrangler("pages publish . --project-name=foo");
+		await runWrangler("pages deploy . --project-name=foo");
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 1 files (TIMINGS)
@@ -298,7 +298,7 @@ describe("deployment create", () => {
 			)
 		);
 
-		await runWrangler("pages publish . --project-name=foo");
+		await runWrangler("pages deploy . --project-name=foo");
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 1 files (TIMINGS)
@@ -427,7 +427,7 @@ describe("deployment create", () => {
 			)
 		);
 
-		await runWrangler("pages publish . --project-name=foo");
+		await runWrangler("pages deploy . --project-name=foo");
 
 		expect(requests[0].headers.get("Authorization")).toBe(
 			"Bearer <<funfetti-auth-jwt>>"
@@ -555,7 +555,7 @@ describe("deployment create", () => {
 			)
 		);
 
-		await runWrangler("pages publish . --project-name=foo");
+		await runWrangler("pages deploy . --project-name=foo");
 
 		// We have 3 buckets, so expect 3 uploads
 		expect(requests.length).toBe(3);
@@ -1001,7 +1001,7 @@ describe("deployment create", () => {
 			)
 		);
 
-		await runWrangler("pages publish . --project-name=foo");
+		await runWrangler("pages deploy . --project-name=foo");
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
@@ -1013,7 +1013,7 @@ describe("deployment create", () => {
 			`"Pages does not support wrangler.toml"`
 		);
 		await expect(
-			runWrangler("pages publish --config foo.toml")
+			runWrangler("pages deploy --config foo.toml")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`"Pages does not support wrangler.toml"`
 		);
@@ -1209,7 +1209,7 @@ describe("deployment create", () => {
 			)
 		);
 
-		await runWrangler("pages publish public --project-name=foo");
+		await runWrangler("pages deploy public --project-name=foo");
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Compiled Worker successfully
@@ -1359,7 +1359,7 @@ describe("deployment create", () => {
 			)
 		);
 
-		await runWrangler("pages publish public --project-name=foo");
+		await runWrangler("pages deploy public --project-name=foo");
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 1 files (TIMINGS)
@@ -1581,7 +1581,7 @@ describe("deployment create", () => {
 			)
 		);
 
-		await runWrangler("pages publish public --project-name=foo");
+		await runWrangler("pages deploy public --project-name=foo");
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Compiled Worker successfully
@@ -1698,7 +1698,7 @@ describe("deployment create", () => {
 			)
 		);
 
-		await expect(runWrangler("pages publish public --project-name=foo")).rejects
+		await expect(runWrangler("pages deploy public --project-name=foo")).rejects
 			.toThrow(`Invalid _routes.json file found at: public/_routes.json
 Please make sure the JSON object has the following format:
 {
@@ -1918,7 +1918,7 @@ and that at least one include rule is provided.
 			)
 		);
 
-		await runWrangler("pages publish public --project-name=foo");
+		await runWrangler("pages deploy public --project-name=foo");
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 1 files (TIMINGS)
@@ -2038,7 +2038,7 @@ and that at least one include rule is provided.
 			)
 		);
 
-		await expect(runWrangler("pages publish public --project-name=foo")).rejects
+		await expect(runWrangler("pages deploy public --project-name=foo")).rejects
 			.toThrow(`Invalid _routes.json file found at: public/_routes.json
 Please make sure the JSON object has the following format:
 {
@@ -2227,7 +2227,7 @@ and that at least one include rule is provided.
 			)
 		);
 
-		await runWrangler("pages publish public --project-name=foo");
+		await runWrangler("pages deploy public --project-name=foo");
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 1 files (TIMINGS)
@@ -2442,7 +2442,7 @@ async function onRequest() {
 			)
 		);
 
-		await runWrangler("pages publish public --project-name=foo");
+		await runWrangler("pages deploy public --project-name=foo");
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Compiled Worker successfully
@@ -2673,7 +2673,7 @@ async function onRequest() {
 			)
 		);
 
-		await runWrangler("pages publish public --project-name=foo");
+		await runWrangler("pages deploy public --project-name=foo");
 
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 1 files (TIMINGS)
@@ -2779,7 +2779,7 @@ async function onRequest() {
 			simulateServer((generatedWorkerJS) =>
 				expect(workerIsBundled(generatedWorkerJS)).toBeTruthy()
 			);
-			await runWrangler("pages publish public --project-name=foo");
+			await runWrangler("pages deploy public --project-name=foo");
 			expect(std.out).toContain("✨ Uploading Worker bundle");
 		});
 
@@ -2787,7 +2787,7 @@ async function onRequest() {
 			simulateServer((generatedWorkerJS) =>
 				expect(workerIsBundled(generatedWorkerJS)).toBeFalsy()
 			);
-			await runWrangler("pages publish public --project-name=foo --no-bundle");
+			await runWrangler("pages deploy public --project-name=foo --no-bundle");
 			expect(std.out).toContain("✨ Uploading Worker bundle");
 		});
 
@@ -2796,7 +2796,7 @@ async function onRequest() {
 				expect(workerIsBundled(generatedWorkerJS)).toBeFalsy()
 			);
 			await runWrangler(
-				"pages publish public --project-name=foo --bundle=false"
+				"pages deploy public --project-name=foo --bundle=false"
 			);
 			expect(std.out).toContain("✨ Uploading Worker bundle");
 		});
@@ -2806,7 +2806,7 @@ async function onRequest() {
 				expect(workerIsBundled(generatedWorkerJS)).toBeTruthy()
 			);
 			await runWrangler(
-				"pages publish public --no-bundle=false --project-name=foo"
+				"pages deploy public --no-bundle=false --project-name=foo"
 			);
 			expect(std.out).toContain("✨ Uploading Worker bundle");
 		});
@@ -2815,9 +2815,7 @@ async function onRequest() {
 			simulateServer((generatedWorkerJS) =>
 				expect(workerIsBundled(generatedWorkerJS)).toBeTruthy()
 			);
-			await runWrangler(
-				"pages publish public --bundle=true --project-name=foo"
-			);
+			await runWrangler("pages deploy public --bundle=true --project-name=foo");
 			expect(std.out).toContain("✨ Uploading Worker bundle");
 		});
 	});

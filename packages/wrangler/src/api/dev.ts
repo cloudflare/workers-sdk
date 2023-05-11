@@ -12,7 +12,7 @@ export interface UnstableDevOptions {
 	env?: string; // Environment to use for operations and .env files
 	ip?: string; // IP address to listen on
 	port?: number; // Port to listen on
-	bundle?: boolean; // Set to false to skip internal build steps and directly publish script
+	bundle?: boolean; // Set to false to skip internal build steps and directly deploy script
 	inspectorPort?: number; // Port for devtools to connect to
 	localProtocol?: "http" | "https"; // Protocol to listen to requests on, defaults to http.
 	assets?: string; // Static assets to be served

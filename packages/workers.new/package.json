@@ -3,7 +3,7 @@
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
-		"deploy": "wrangler publish src/index.ts",
+		"deploy": "wrangler deploy src/index.ts",
 		"dev": "wrangler dev src/index.ts --local",
 		"test": "vitest"
 	},

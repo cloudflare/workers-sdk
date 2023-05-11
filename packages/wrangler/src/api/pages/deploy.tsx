@@ -22,9 +22,9 @@ import { createUploadWorkerBundleContents } from "./create-worker-bundle-content
 import type { BundleResult } from "../../bundle";
 import type { Project, Deployment } from "@cloudflare/types";
 
-interface PagesPublishOptions {
+interface PagesDeployOptions {
 	/**
-	 * Path to static assets to publish to Pages
+	 * Path to static assets to deploy to Pages
 	 */
 	directory: string;
 	/**
@@ -71,7 +71,7 @@ interface PagesPublishOptions {
 	bundle?: boolean;
 
 	// TODO: Allow passing in the API key and plumb it through
-	// to the API calls so that the publish function does not
+	// to the API calls so that the deploy function does not
 	// rely on the `CLOUDFLARE_API_KEY` environment variable
 }
 
@@ -80,7 +80,7 @@ interface PagesPublishOptions {
  * NOTE: You will need the `CLOUDFLARE_API_KEY` environment
  * variable set
  */
-export async function publish({
+export async function deploy({
 	directory,
 	accountId,
 	projectName,
@@ -91,7 +91,7 @@ export async function publish({
 	commitDirty,
 	functionsDirectory: customFunctionsDirectory,
 	bundle,
-}: PagesPublishOptions) {
+}: PagesDeployOptions) {
 	let _headers: string | undefined,
 		_redirects: string | undefined,
 		_routesGenerated: string | undefined,

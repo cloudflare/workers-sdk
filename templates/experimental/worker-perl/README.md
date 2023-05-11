@@ -24,6 +24,6 @@ echo -e "const window = this;\n" > index.js && \
 perl ~/Perlito/perlito5.pl -Cjs index.pl >> index.js
 ```
 
-That will compile your code into index.js, after which you can run `wrangler publish` to push it to Cloudflare. Prepending `const window = this` is a workaround for Perlito assuming the presence of a global window object, which doesn't exist in Workers.
+That will compile your code into index.js, after which you can run `wrangler deploy` to push it to Cloudflare. Prepending `const window = this` is a workaround for Perlito assuming the presence of a global window object, which doesn't exist in Workers.
 
 For more information on how Perl translates to JavaScript, see the [Perlito docs](https://github.com/fglock/Perlito/blob/master/README-perlito5-JavaScript.md).

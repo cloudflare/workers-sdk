@@ -43,7 +43,7 @@ export async function getEntry(
 		moduleRoot?: string;
 	},
 	config: Config,
-	command: "dev" | "publish" | "types"
+	command: "dev" | "deploy" | "types"
 ): Promise<Entry> {
 	let file: string;
 	let directory = process.cwd();

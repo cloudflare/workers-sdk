@@ -12,13 +12,13 @@ import * as metrics from "../metrics";
 import { getAssetPaths, getSiteAssetPaths } from "../sites";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
-import publish from "./publish";
+import deploy from "./deploy";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 
-export function publishOptions(yargs: CommonYargsArgv) {
+export function deployOptions(yargs: CommonYargsArgv) {
 	return (
 		yargs
 			.positional("script", {
@@ -41,7 +41,7 @@ export function publishOptions(yargs: CommonYargsArgv) {
 				hidden: true,
 			})
 			.option("no-bundle", {
-				describe: "Skip internal build steps and directly publish Worker",
+				describe: "Skip internal build steps and directly deploy Worker",
 				type: "boolean",
 				default: false,
 			})
@@ -162,7 +162,7 @@ export function publishOptions(yargs: CommonYargsArgv) {
 				type: "boolean",
 			})
 			.option("dry-run", {
-				describe: "Don't actually publish",
+				describe: "Don't actually deploy",
 				type: "boolean",
 			})
 			.option("keep-vars", {
@@ -184,15 +184,22 @@ export function publishOptions(yargs: CommonYargsArgv) {
 	);
 }
 
-export async function publishHandler(
-	args: StrictYargsOptionsToInterface<typeof publishOptions>
+export async function deployHandler(
+	args: StrictYargsOptionsToInterface<typeof deployOptions>
 ) {
 	await printWranglerBanner();
+
+	// Check for deprecated `wrangler publish` command
+	if (args._[0] === "publish") {
+		logger.warn(
+			"`wrangler publish` is deprecated and will be removed in the next major version.\nPlease use `wrangler deploy` instead, which accepts exactly the same arguments."
+		);
+	}
 
 	const configPath =
 		args.config || (args.script && findWranglerToml(path.dirname(args.script)));
 	const config = readConfig(configPath, args);
-	const entry = await getEntry(args, config, "publish");
+	const entry = await getEntry(args, config, "deploy");
 	await metrics.sendMetricsEvent(
 		"deploy worker script",
 		{
@@ -242,7 +249,7 @@ export async function publishHandler(
 					args.siteExclude
 			  );
 
-	await publish({
+	await deploy({
 		config,
 		accountId,
 		name: getScriptName(args, config),

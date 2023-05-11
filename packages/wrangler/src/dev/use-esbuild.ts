@@ -68,7 +68,7 @@ export function useEsbuild({
 	durableObjects: Config["durable_objects"];
 	firstPartyWorkerDevFacade: boolean | undefined;
 	local: boolean;
-	targetConsumer: "dev" | "publish";
+	targetConsumer: "dev" | "deploy";
 	testScheduled: boolean;
 	experimentalLocal: boolean | undefined;
 }): EsbuildBundle | undefined {

@@ -39,7 +39,7 @@ import * as metrics from "./metrics";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
 import { pages } from "./pages";
 import { formatMessage, ParseError } from "./parse";
-import { publishOptions, publishHandler } from "./publish";
+import { deployOptions, deployHandler } from "./publish";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
 import { queues } from "./queues/cli/commands";
 import { r2 } from "./r2";
@@ -326,12 +326,12 @@ export function createCLIParser(argv: string[]) {
 		devHandler
 	);
 
-	// publish
+	// deploy
 	wrangler.command(
-		"publish [script]",
-		"🆙 Publish your Worker to Cloudflare.",
-		publishOptions,
-		publishHandler
+		["deploy [script]", "publish [script]"],
+		"🆙 Deploy your Worker to Cloudflare.",
+		deployOptions,
+		deployHandler
 	);
 
 	// delete

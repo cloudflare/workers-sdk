@@ -430,8 +430,8 @@ export async function initHandler(args: InitArgs) {
 								? `wrangler dev`
 								: `wrangler dev ${scriptPath}`,
 							deploy: isCreatingWranglerToml
-								? `wrangler publish`
-								: `wrangler publish ${scriptPath}`,
+								? `wrangler deploy`
+								: `wrangler deploy ${scriptPath}`,
 							...(isAddingTestScripts && { test: testRunner }),
 						},
 					} as PackageJSON,
@@ -457,7 +457,7 @@ export async function initHandler(args: InitArgs) {
 				}`
 			);
 			instructions.push(
-				`To publish your Worker to the Internet, run \`npx wrangler publish\`${
+				`To publish your Worker to the Internet, run \`npx wrangler deploy\`${
 					isCreatingWranglerToml ? "" : ` ${scriptPath}`
 				}`
 			);
@@ -472,7 +472,7 @@ export async function initHandler(args: InitArgs) {
 			);
 			if (fromDashScriptName) {
 				logger.warn(
-					"After running `wrangler init --from-dash`, modifying your worker via the Cloudflare dashboard is discouraged.\nEdits made via the Dashboard will not be synchronized locally and will be overridden by your local code and config when you publish."
+					"After running `wrangler init --from-dash`, modifying your worker via the Cloudflare dashboard is discouraged.\nEdits made via the Dashboard will not be synchronized locally and will be overridden by your local code and config when you deploy."
 				);
 
 				await mkdir(path.join(creationDirectory, "./src"), {
@@ -577,7 +577,7 @@ export async function initHandler(args: InitArgs) {
 
 			if (fromDashScriptName) {
 				logger.warn(
-					"After running `wrangler init --from-dash`, modifying your worker via the Cloudflare dashboard is discouraged.\nEdits made via the Dashboard will not be synchronized locally and will be overridden by your local code and config when you publish."
+					"After running `wrangler init --from-dash`, modifying your worker via the Cloudflare dashboard is discouraged.\nEdits made via the Dashboard will not be synchronized locally and will be overridden by your local code and config when you deploy."
 				);
 
 				await mkdir(path.join(creationDirectory, "./src"), {

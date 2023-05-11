@@ -31,5 +31,5 @@ You'll be greeted with an OpenAPI page that you can use to test and call your en
 Once you are ready, you can publish your code by running the following command:
 
 ```sh
-$ wrangler publish
+$ wrangler deploy
 ```
