@@ -65,5 +65,10 @@ describe.concurrent("Pages Functions with custom _routes.json", () => {
 		response = await fetch(`http://${ip}:${port}/greetings`);
 		text = await response.text();
 		expect(text).toEqual("[/functions/greetings]: Bonjour à tous!");
+
+		// matches /*.* exclude rule
+		response = await fetch(`http://${ip}:${port}/greeting/test.json`);
+		const json = await response.json();
+		expect(json).toEqual({ value: 99 });
 	});
 });
