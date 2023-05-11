@@ -135,7 +135,7 @@
 		"@types/supports-color": "^8.1.1",
 		"@types/ws": "^8.5.3",
 		"@types/yargs": "^17.0.10",
-		"@webcontainer/env": "^1.0.1",
+		"@webcontainer/env": "^1.1.0",
 		"body-parser": "^1.20.0",
 		"chalk": "^2.4.2",
 		"cli-table3": "^0.6.3",

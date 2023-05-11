@@ -1,4 +1,5 @@
 import path from "node:path";
+import { isWebContainer } from "@webcontainer/env";
 import chalk from "chalk";
 import { watch } from "chokidar";
 import getPort from "get-port";
@@ -293,6 +294,15 @@ export function devOptions(yargs: CommonYargsArgv) {
 type DevArguments = StrictYargsOptionsToInterface<typeof devOptions>;
 
 export async function devHandler(args: DevArguments) {
+	if (isWebContainer()) {
+		logger.error(
+			`Oh no! 😟You tried to run \`wrangler dev\` in a StackBlitz WebContainer. 🤯
+This is currently not supported 😭, but we think that we'll get it to work soon... hang in there! 🥺`
+		);
+		process.exitCode = 1;
+		return;
+	}
+
 	if (!(args.local || args.experimentalLocal)) {
 		const isLoggedIn = await loginOrRefreshIfRequired();
 		if (!isLoggedIn) {
