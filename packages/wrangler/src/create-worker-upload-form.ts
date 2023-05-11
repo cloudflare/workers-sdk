@@ -31,6 +31,7 @@ export type WorkerMetadataBinding =
 	| { type: "json"; name: string; json: unknown }
 	| { type: "wasm_module"; name: string; part: string }
 	| { type: "text_blob"; name: string; part: string }
+	| { type: "browser"; name: string }
 	| { type: "data_blob"; name: string; part: string }
 	| { type: "kv_namespace"; name: string; namespace_id: string }
 	| {
@@ -218,6 +219,13 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 				type: "application/wasm",
 			})
 		);
+	}
+
+	if (bindings.browser !== undefined) {
+		metadataBindings.push({
+			name: bindings.browser.binding,
+			type: "browser",
+		});
 	}
 
 	for (const [name, filePath] of Object.entries(bindings.text_blobs || {})) {

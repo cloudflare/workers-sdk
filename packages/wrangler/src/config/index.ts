@@ -105,6 +105,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		services,
 		analytics_engine_datasets,
 		text_blobs,
+		browser,
 		unsafe,
 		vars,
 		wasm_modules,
@@ -270,6 +271,13 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 				key,
 				value: truncate(value),
 			})),
+		});
+	}
+
+	if (browser !== undefined) {
+		output.push({
+			type: "Browser",
+			entries: [{ key: "Name", value: browser.binding }],
 		});
 	}
 

@@ -52,6 +52,7 @@ function createWorkerBundleFormData(workerBundle: BundleResult): FormData {
 			send_email: undefined,
 			wasm_modules: undefined,
 			text_blobs: undefined,
+			browser: undefined,
 			data_blobs: undefined,
 			durable_objects: undefined,
 			queues: undefined,

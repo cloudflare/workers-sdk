@@ -492,6 +492,15 @@ interface EnvironmentNonInheritable {
 	}[];
 
 	/**
+	 * A browser that will be usable from the worker.
+	 */
+	browser:
+		| {
+				binding: string;
+		  }
+		| undefined;
+
+	/**
 	 * "Unsafe" tables for features that aren't directly supported by wrangler.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
