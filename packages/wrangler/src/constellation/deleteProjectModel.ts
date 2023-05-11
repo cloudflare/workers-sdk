@@ -3,7 +3,6 @@ import { withConfig } from "../config";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
-import { takeName } from "./options";
 import {
 	constellationBetaWarning,
 	getProjectByName,
@@ -16,7 +15,12 @@ import type {
 import type { Project, Model } from "./types";
 
 export function options(yargs: CommonYargsArgv) {
-	return takeName(yargs)
+	return yargs
+		.positional("projectName", {
+			describe: "The name of the project",
+			type: "string",
+			demandOption: true,
+		})
 		.positional("modelName", {
 			describe: "The name of the uploaded model",
 			type: "string",
@@ -32,11 +36,15 @@ export function options(yargs: CommonYargsArgv) {
 }
 type HandlerOptions = StrictYargsOptionsToInterface<typeof options>;
 export const handler = withConfig<HandlerOptions>(
-	async ({ name, modelName, force, config }): Promise<void> => {
+	async ({ projectName, modelName, force, config }): Promise<void> => {
 		const accountId = await requireAuth(config);
 		logger.log(constellationBetaWarning);
 
-		const proj: Project = await getProjectByName(config, accountId, name);
+		const proj: Project = await getProjectByName(
+			config,
+			accountId,
+			projectName
+		);
 
 		const model: Model = await getProjectModelByName(
 			config,

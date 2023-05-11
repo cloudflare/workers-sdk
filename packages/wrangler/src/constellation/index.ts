@@ -34,19 +34,19 @@ export function constellation(yargs: CommonYargsArgv) {
 		.command("model", "Manage your models", (constModelYargs) => {
 			return constModelYargs
 				.command(
-					"upload <name> <modelName> <modelFile>",
+					"upload <projectName> <modelName> <modelFile>",
 					"Upload a model for an existing project",
 					UploadModel.options,
 					UploadModel.handler
 				)
 				.command(
-					"list <name>",
+					"list <projectName>",
 					"List models of a project",
 					ListModel.options,
 					ListModel.handler
 				)
 				.command(
-					"delete <name> <modelName>",
+					"delete <projectName> <modelName>",
 					"Delete a model of a project",
 					DeleteProjectModel.options,
 					DeleteProjectModel.handler
