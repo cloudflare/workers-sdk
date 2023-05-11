@@ -435,7 +435,7 @@ export function createCLIParser(argv: string[]) {
 	// ai
 	wrangler.command(
 		"constellation",
-		"🤖 Interact with Constellation AI models",
+		"🤖 Interact with Constellation models",
 		(aiYargs) => {
 			return constellation(aiYargs.command(subHelp));
 		}
@@ -579,6 +579,7 @@ export function createCLIParser(argv: string[]) {
 				unsafe: config.unsafe,
 				rules: config.rules,
 				queues: config.queues,
+				constellation: config.constellation,
 			};
 
 			await generateTypes(configBindings, config);

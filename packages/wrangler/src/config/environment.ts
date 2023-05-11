@@ -456,6 +456,22 @@ interface EnvironmentNonInheritable {
 	}[];
 
 	/**
+	 * Specifies Constellation projects that are bound to this Worker environment.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default `[]`
+	 * @nonInheritable
+	 */
+	constellation: {
+		/** The binding name used to refer to the project in the worker. */
+		binding: string;
+		/** The id of the project. */
+		project_id: string;
+	}[];
+
+	/**
 	 * Specifies service bindings (worker-to-worker) that are bound to this Worker environment.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,

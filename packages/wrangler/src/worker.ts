@@ -155,6 +155,11 @@ export interface CfD1Database {
 	migrations_dir?: string;
 }
 
+export interface CfConstellation {
+	binding: string;
+	project_id: string;
+}
+
 interface CfService {
 	binding: string;
 	service: string;
@@ -246,6 +251,7 @@ export interface CfWorkerInit {
 		queues: CfQueue[] | undefined;
 		r2_buckets: CfR2Bucket[] | undefined;
 		d1_databases: CfD1Database[] | undefined;
+		constellation: CfConstellation[] | undefined;
 		services: CfService[] | undefined;
 		analytics_engine_datasets: CfAnalyticsEngineDataset[] | undefined;
 		dispatch_namespaces: CfDispatchNamespace[] | undefined;

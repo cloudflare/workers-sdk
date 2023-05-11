@@ -20,7 +20,7 @@ describe("constellation help", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 		"wrangler constellation
 
-		🤖 Interact with Constellation AI models
+		🤖 Interact with Constellation models
 
 		Commands:
 		  wrangler constellation project  Manage your projects
@@ -51,7 +51,7 @@ describe("constellation help", () => {
 		"
 		wrangler constellation
 
-		🤖 Interact with Constellation AI models
+		🤖 Interact with Constellation models
 
 		Commands:
 		  wrangler constellation project  Manage your projects
@@ -94,7 +94,7 @@ describe("constellation commands", () => {
 		await runWrangler("constellation project create new_project ONNX");
 		expect(std.out).toMatchInlineSnapshot(`
 		"--------------------
-		🚧 Constellation AI is currently in open alpha and is not recommended for production data and traffic
+		🚧 Constellation is currently in open alpha and is not recommended for production data and traffic
 		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
 		🚧 To give feedback, visit https://discord.gg/cloudflaredev
 		--------------------
@@ -108,7 +108,7 @@ describe("constellation commands", () => {
 		await runWrangler("constellation project list");
 		expect(std.out).toMatchInlineSnapshot(`
 		"--------------------
-		🚧 Constellation AI is currently in open alpha and is not recommended for production data and traffic
+		🚧 Constellation is currently in open alpha and is not recommended for production data and traffic
 		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
 		🚧 To give feedback, visit https://discord.gg/cloudflaredev
 		--------------------
@@ -131,7 +131,7 @@ describe("constellation commands", () => {
 		await runWrangler("constellation project delete new_project3");
 		expect(std.out).toMatchInlineSnapshot(`
 		"--------------------
-		🚧 Constellation AI is currently in open alpha and is not recommended for production data and traffic
+		🚧 Constellation is currently in open alpha and is not recommended for production data and traffic
 		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
 		🚧 To give feedback, visit https://discord.gg/cloudflaredev
 		--------------------
@@ -147,7 +147,7 @@ describe("constellation commands", () => {
 		await runWrangler("constellation catalog list");
 		expect(std.out).toMatchInlineSnapshot(`
 		"--------------------
-		🚧 Constellation AI is currently in open alpha and is not recommended for production data and traffic
+		🚧 Constellation is currently in open alpha and is not recommended for production data and traffic
 		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
 		🚧 To give feedback, visit https://discord.gg/cloudflaredev
 		--------------------
@@ -165,7 +165,7 @@ describe("constellation commands", () => {
 		await runWrangler("constellation runtime list");
 		expect(std.out).toMatchInlineSnapshot(`
 		"--------------------
-		🚧 Constellation AI is currently in open alpha and is not recommended for production data and traffic
+		🚧 Constellation is currently in open alpha and is not recommended for production data and traffic
 		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
 		🚧 To give feedback, visit https://discord.gg/cloudflaredev
 		--------------------
@@ -188,7 +188,7 @@ describe("constellation commands", () => {
 		);
 		expect(std.out).toMatchInlineSnapshot(`
 		"--------------------
-		🚧 Constellation AI is currently in open alpha and is not recommended for production data and traffic
+		🚧 Constellation is currently in open alpha and is not recommended for production data and traffic
 		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
 		🚧 To give feedback, visit https://discord.gg/cloudflaredev
 		--------------------
@@ -202,7 +202,7 @@ describe("constellation commands", () => {
 		await runWrangler("constellation model list new_project3");
 		expect(std.out).toMatchInlineSnapshot(`
 		"--------------------
-		🚧 Constellation AI is currently in open alpha and is not recommended for production data and traffic
+		🚧 Constellation is currently in open alpha and is not recommended for production data and traffic
 		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
 		🚧 To give feedback, visit https://discord.gg/cloudflaredev
 		--------------------
@@ -227,7 +227,7 @@ describe("constellation commands", () => {
 		await runWrangler("constellation model delete new_project3 model2");
 		expect(std.out).toMatchInlineSnapshot(`
 		"--------------------
-		🚧 Constellation AI is currently in open alpha and is not recommended for production data and traffic
+		🚧 Constellation is currently in open alpha and is not recommended for production data and traffic
 		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
 		🚧 To give feedback, visit https://discord.gg/cloudflaredev
 		--------------------
