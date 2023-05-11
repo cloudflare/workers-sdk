@@ -221,6 +221,8 @@ interface EnvironmentInheritable {
 		binding: string;
 		/** The namespace to bind to. */
 		namespace: string;
+		/** Details about the outbound worker which will handle outbound requests from your namespace */
+		outbound?: DispatchNamespaceOutbound;
 	}[];
 
 	/**
@@ -657,3 +659,12 @@ export type TailConsumer = {
 	/** (Optional) The environt of the service. */
 	environment?: string;
 };
+
+export interface DispatchNamespaceOutbound {
+	/** Name of the service handling the outbound requests */
+	service: string;
+	/** (Optional) Name of the environment handling the outbound requests. */
+	environment?: string;
+	/** (Optional) List of parameter names, for sending context from your dispatch worker to the outbound handler */
+	parameters?: string[];
+}

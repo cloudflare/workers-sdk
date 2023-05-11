@@ -337,10 +337,12 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 	if (dispatch_namespaces !== undefined && dispatch_namespaces.length > 0) {
 		output.push({
 			type: "dispatch namespaces",
-			entries: dispatch_namespaces.map(({ binding, namespace }) => {
+			entries: dispatch_namespaces.map(({ binding, namespace, outbound }) => {
 				return {
 					key: binding,
-					value: namespace,
+					value: outbound
+						? `${namespace} (outbound -> ${outbound.service})`
+						: namespace,
 				};
 			}),
 		});

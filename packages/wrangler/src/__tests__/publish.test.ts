@@ -6496,6 +6496,113 @@ addEventListener('fetch', event => {});`
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
+
+			it("should support dispatch namespace bindings with an outbound worker", async () => {
+				writeWranglerToml({
+					dispatch_namespaces: [
+						{
+							binding: "foo",
+							namespace: "Foo",
+							outbound: { service: "foo_outbound" },
+						},
+						{
+							binding: "bar",
+							namespace: "Bar",
+							outbound: { service: "bar_outbound", environment: "production" },
+						},
+					],
+				});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{
+							type: "dispatch_namespace",
+							name: "foo",
+							namespace: "Foo",
+							outbound: {
+								worker: {
+									service: "foo_outbound",
+								},
+							},
+						},
+						{
+							type: "dispatch_namespace",
+							name: "bar",
+							namespace: "Bar",
+							outbound: {
+								worker: {
+									service: "bar_outbound",
+									environment: "production",
+								},
+							},
+						},
+					],
+				});
+				await runWrangler("publish index.js");
+				expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Your worker has access to the following bindings:
+			- dispatch namespaces:
+			  - foo: Foo (outbound -> foo_outbound)
+			  - bar: Bar (outbound -> bar_outbound)
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class"
+		`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should support dispatch namespace bindings with parameterized outbounds", async () => {
+				writeWranglerToml({
+					dispatch_namespaces: [
+						{
+							binding: "foo",
+							namespace: "Foo",
+							outbound: {
+								service: "foo_outbound",
+								parameters: ["some", "outbound", "params"],
+							},
+						},
+					],
+				});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{
+							type: "dispatch_namespace",
+							name: "foo",
+							namespace: "Foo",
+							outbound: {
+								worker: {
+									service: "foo_outbound",
+								},
+								params: [
+									{ name: "some" },
+									{ name: "outbound" },
+									{ name: "params" },
+								],
+							},
+						},
+					],
+				});
+				await runWrangler("publish index.js");
+				expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Your worker has access to the following bindings:
+			- dispatch namespaces:
+			  - foo: Foo (outbound -> foo_outbound)
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class"
+		`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
 		});
 
 		describe("[unsafe]", () => {
