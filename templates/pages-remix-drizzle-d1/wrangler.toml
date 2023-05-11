@@ -1,0 +1,7 @@
+compatibility_date = "2022-04-05"
+compatibility_flags = ["streams_enable_constructors"]
+
+[[d1_databases]]
+binding = "DB" # i.e. available in your Worker on env.DB
+database_name = "blog"
+database_id = "d1a5a551-63ea-4532-b0f2-85657bbb06ff"

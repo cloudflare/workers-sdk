@@ -1,0 +1,45 @@
+{
+	"private": true,
+	"sideEffects": false,
+	"scripts": {
+		"build": "remix build",
+		"dev:remix": "remix watch",
+		"dev:wrangler": "cross-env NODE_ENV=development npm run wrangler",
+		"dev": "npm-run-all build --parallel \"dev:*\"",
+		"start": "cross-env NODE_ENV=production npm run wrangler",
+		"typecheck": "tsc",
+		"wrangler": "wrangler pages dev ./public",
+		"migrations:gen": "drizzle-kit generate:sqlite",
+		"migrations:up": "drizzle-kit up:sqlite",
+		"migrations:apply": "NO_D1_WARNING=true wrangler d1 migrations apply blog",
+		"d1:new": "NO_D1_WARNING=true wrangler d1 create blog"
+	},
+	"dependencies": {
+		"@markdoc/markdoc": "^0.2.2",
+		"@remix-run/cloudflare": "^1.16.0",
+		"@remix-run/cloudflare-pages": "^1.16.0",
+		"@remix-run/css-bundle": "^1.16.0",
+		"@remix-run/react": "^1.16.0",
+		"cross-env": "^7.0.3",
+		"drizzle-orm": "^0.25.4",
+		"isbot": "^3.6.8",
+		"react": "^18.2.0",
+		"react-dom": "^18.2.0",
+		"tiny-invariant": "^1.3.1"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^3.19.0",
+		"@remix-run/dev": "^1.16.0",
+		"@remix-run/eslint-config": "^1.16.0",
+		"@types/react": "^18.0.35",
+		"@types/react-dom": "^18.0.11",
+		"drizzle-kit": "^0.17.6",
+		"eslint": "^8.38.0",
+		"npm-run-all": "^4.1.5",
+		"typescript": "^5.0.4",
+		"wrangler": "^2.15.1"
+	},
+	"engines": {
+		"node": ">=16.13"
+	}
+}
