@@ -76,6 +76,7 @@ export class Runtime {
 		// 2. Start new process
 		const runtimeProcess = childProcess.spawn(this.#command, this.#args, {
 			stdio: "pipe",
+			env: process.env,
 		});
 		this.#process = runtimeProcess;
 		this.#processExitPromise = waitForExit(runtimeProcess);
