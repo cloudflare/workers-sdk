@@ -42,14 +42,10 @@
 		"wrangler2": "./bin/wrangler.js"
 	},
 	"files": [
-		"src",
 		"bin",
-		"miniflare-config-stubs",
 		"miniflare-dist",
 		"wrangler-dist",
 		"templates",
-		"vendor",
-		"import_meta_url.js",
 		"kv-asset-handler.js",
 		"Cloudflare_CA.pem"
 	],
