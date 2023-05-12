@@ -240,14 +240,9 @@ export function devOptions(yargs: CommonYargsArgv) {
 				deprecated: true,
 				hidden: true,
 			})
-			.option("persist", {
-				describe:
-					"Enable persistence for local mode, using default path: .wrangler/state",
-				type: "boolean",
-			})
 			.option("persist-to", {
 				describe:
-					"Specify directory to use for local persistence (implies --persist)",
+					"Specify directory to use for local persistence (defaults to .wrangler/state)",
 				type: "string",
 				requiresArg: true,
 			})
@@ -785,7 +780,6 @@ async function validateDevServerSettings(
 
 	const localPersistencePath = getLocalPersistencePath(
 		args.persistTo,
-		Boolean(args.persist),
 		config.configPath
 	);
 

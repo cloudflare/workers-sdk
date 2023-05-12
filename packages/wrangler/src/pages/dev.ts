@@ -121,21 +121,9 @@ export function Options(yargs: CommonYargsArgv) {
 				describe: "Protocol to listen to requests on, defaults to http.",
 				choices: ["http", "https"] as const,
 			},
-			"experimental-enable-local-persistence": {
-				describe:
-					"Enable persistence for local mode (deprecated, use --persist)",
-				type: "boolean",
-				deprecated: true,
-				hidden: true,
-			},
-			persist: {
-				describe:
-					"Enable persistence for local mode, using default path: .wrangler/state",
-				type: "boolean",
-			},
 			"persist-to": {
 				describe:
-					"Specify directory to use for local persistence (implies --persist)",
+					"Specify directory to use for local persistence (defaults to .wrangler/state)",
 				type: "string",
 				requiresArg: true,
 			},
@@ -182,8 +170,6 @@ export const Handler = async ({
 	r2: r2s = [],
 	liveReload,
 	localProtocol,
-	experimentalEnableLocalPersistence,
-	persist,
 	persistTo,
 	nodeCompat: legacyNodeCompat,
 	experimentalLocal,
@@ -236,14 +222,6 @@ export const Handler = async ({
 				"See https://developers.cloudflare.com/workers/platform/compatibility-dates/ for more information."
 		);
 		compatibilityDate = currentDate;
-	}
-
-	if (experimentalEnableLocalPersistence) {
-		logger.warn(
-			`--experimental-enable-local-persistence is deprecated.\n` +
-				`Move any existing data to .wrangler/state and use --persist, or\n` +
-				`use --persist-to=./wrangler-local-state to keep using the old path.`
-		);
 	}
 
 	let scriptReadyResolve: () => void;
@@ -556,7 +534,6 @@ export const Handler = async ({
 			  ]
 			: undefined,
 		bundle: enableBundling,
-		persist,
 		persistTo,
 		inspect: undefined,
 		logLevel,

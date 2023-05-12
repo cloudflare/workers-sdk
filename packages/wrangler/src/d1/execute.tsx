@@ -220,11 +220,7 @@ async function executeLocally({
 		);
 	}
 
-	const persistencePath = getLocalPersistencePath(
-		persistTo,
-		true,
-		config.configPath
-	);
+	const persistencePath = getLocalPersistencePath(persistTo, config.configPath);
 
 	const dbDir = path.join(persistencePath, "d1");
 	const dbPath = path.join(dbDir, `${localDB.binding}.sqlite3`);
