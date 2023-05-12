@@ -153,7 +153,7 @@ export async function CreateHandler({
 		`✨ Successfully created the '${projectName}' project. It will be available at https://${subdomain}/ once you create your first deployment.`
 	);
 	logger.log(
-		`To deploy a folder of assets, run 'wrangler pages publish [directory]'.`
+		`To deploy a folder of assets, run 'wrangler pages deploy [directory]'.`
 	);
 	await metrics.sendMetricsEvent("create pages project");
 }

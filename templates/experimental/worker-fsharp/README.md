@@ -54,7 +54,7 @@ Hello from Fable at: Mon Oct 19 2020 19:30:39 GMT+0000 (Coordinated Universal Ti
 
 ## Publish to Your Cloudflare Account
 
-To publish your worker to your Cloudflare account first configure a [route and zone id](https://developers.cloudflare.com/workers/cli-wrangler/configuration) in your `./wrangler.toml` file. Then execute `wrangler publish` this will deploy the worker javascript file as specified in the TOML file.
+To publish your worker to your Cloudflare account first configure a [route and zone id](https://developers.cloudflare.com/workers/cli-wrangler/configuration) in your `./wrangler.toml` file. Then execute `wrangler deploy` this will deploy the worker javascript file as specified in the TOML file.
 
 &nbsp;
 

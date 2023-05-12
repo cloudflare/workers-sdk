@@ -1,7 +1,7 @@
 import { getMetricsConfig } from "./metrics-config";
 
 /**
- * Add an additional header to publish requests if the user has opted into sending usage metrics.
+ * Add an additional header to deploy requests if the user has opted into sending usage metrics.
  *
  * This allows us to estimate the number of instances of Wrangler that have opted-in
  * without breaking our agreement not to send stuff if you have not opted-in.

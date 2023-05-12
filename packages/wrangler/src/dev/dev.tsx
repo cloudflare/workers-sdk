@@ -292,7 +292,7 @@ function DevSession(props: DevSessionProps) {
 		durableObjects: props.bindings.durable_objects || { bindings: [] },
 		firstPartyWorkerDevFacade: props.firstPartyWorker,
 		local: props.local,
-		// Enable the bundling to know whether we are using dev or publish
+		// Enable the bundling to know whether we are using dev or deploy
 		targetConsumer: "dev",
 		testScheduled: props.testScheduled ?? false,
 		experimentalLocal: props.experimentalLocal,

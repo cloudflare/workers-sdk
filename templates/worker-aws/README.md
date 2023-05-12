@@ -33,7 +33,7 @@ $ wrangler secret put AWS_SQS_QUEUE_URL
 
 Configuration of less sensitive values such as AWS_REGION can be done in the `[vars]` block of your `wrangler.toml` file if you'd prefer.
 
-After that you can use `wrangler publish` as normal. See the [wrangler documentation](https://developers.cloudflare.com/workers/cli-wrangler) for more information.
+After that you can use `wrangler deploy` as normal. See the [wrangler documentation](https://developers.cloudflare.com/workers/cli-wrangler) for more information.
 
 ## AWS Resources
 

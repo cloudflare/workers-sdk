@@ -5,7 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"build": "worktop build index.js",
-		"deploy": "wrangler publish index.js",
+		"deploy": "wrangler deploy index.js",
 		"dev": "wrangler dev index.js --local"
 	},
 	"dependencies": {

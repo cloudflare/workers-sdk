@@ -144,7 +144,7 @@ export async function compareOutputs({
 
 	try {
 		await withCapturedChildProcessOutput(
-			async () => await runWrangler2("publish"),
+			async () => await runWrangler2("deploy"),
 			{
 				stdout,
 				stderr,

@@ -1231,7 +1231,7 @@ describe("wrangler dev", () => {
 
 			Options:
 			      --name                                       Name of the worker  [string]
-			      --no-bundle                                  Skip internal build steps and directly publish script  [boolean] [default: false]
+			      --no-bundle                                  Skip internal build steps and directly deploy script  [boolean] [default: false]
 			      --compatibility-date                         Date to use for compatibility checks  [string]
 			      --compatibility-flags, --compatibility-flag  Flags to use for compatibility checks  [array]
 			      --latest                                     Use the latest version of the worker runtime  [boolean] [default: true]

@@ -1,12 +1,12 @@
 /* eslint-disable no-shadow */
 
 import * as Build from "./build";
+import * as Deploy from "./deploy";
 import * as DeploymentTails from "./deployment-tails";
 import * as Deployments from "./deployments";
 import * as Dev from "./dev";
 import * as Functions from "./functions";
 import * as Projects from "./projects";
-import * as Publish from "./publish";
 import * as Upload from "./upload";
 import { CLEANUP, pagesBetaWarning } from "./utils";
 import type { CommonYargsArgv } from "../yargs-types";
@@ -79,8 +79,8 @@ export function pages(yargs: CommonYargsArgv) {
 						.command(
 							"create [directory]",
 							"🆙 Publish a directory of static assets as a Pages deployment",
-							Publish.Options,
-							Publish.Handler
+							Deploy.Options,
+							Deploy.Handler
 						)
 						.command(
 							"tail [deployment]",
@@ -92,10 +92,10 @@ export function pages(yargs: CommonYargsArgv) {
 						.epilogue(pagesBetaWarning)
 			)
 			.command(
-				"publish [directory]",
-				"🆙 Publish a directory of static assets as a Pages deployment",
-				Publish.Options,
-				Publish.Handler
+				["deploy [directory]", "publish [directory]"],
+				"🆙 Deploy a directory of static assets as a Pages deployment",
+				Deploy.Options,
+				Deploy.Handler
 			)
 			.epilogue(pagesBetaWarning)
 	);

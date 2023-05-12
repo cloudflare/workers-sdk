@@ -25,7 +25,7 @@ cd projectname
 sbt fullOptJS
 ```
 
-That will compile your code and package it into index.js, after which you can run `wrangler publish` to push it to Cloudflare.
+That will compile your code and package it into index.js, after which you can run `wrangler deploy` to push it to Cloudflare.
 
 If you just want to check for errors during development without taking the time to package, running `sbt ~compile` will watch for filesystem changes and recompile. For more information, see the [sbt docs](https://www.scala-sbt.org/1.x/docs/sbt-by-example.html)
 

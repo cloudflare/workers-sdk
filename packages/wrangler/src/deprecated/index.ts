@@ -24,14 +24,14 @@ export async function buildHandler(buildArgs: BuildArgs) {
 					text: "Please refer to https://developers.cloudflare.com/workers/wrangler/migration/deprecations/#build for more information.",
 				},
 				{
-					text: `Attempting to run \`wrangler publish --dry-run --outdir=dist${envFlag}\` for you instead:`,
+					text: `Attempting to run \`wrangler deploy --dry-run --outdir=dist${envFlag}\` for you instead:`,
 				},
 			],
 		})
 	);
 
 	await createCLIParser([
-		"publish",
+		"deploy",
 		"--dry-run",
 		"--outdir=dist",
 		...(buildArgs.env ? ["--env", buildArgs.env] : []),
@@ -119,7 +119,7 @@ export const route = (routeYargs: CommonYargsArgv) => {
 				const deprecationNotice =
 					"`wrangler route delete` has been deprecated.";
 				const shouldDo =
-					"Remove the unwanted route(s) from wrangler.toml and run `wrangler publish` to remove your worker from those routes.";
+					"Remove the unwanted route(s) from wrangler.toml and run `wrangler deploy` to remove your worker from those routes.";
 				throw new DeprecationError(`${deprecationNotice}\n${shouldDo}`);
 			}
 		);
@@ -129,7 +129,7 @@ export const routeHandler = () => {
 	// "[DEPRECATED]. Use wrangler.toml to manage routes.
 	const deprecationNotice = "`wrangler route` has been deprecated.";
 	const shouldDo =
-		"Please use wrangler.toml and/or `wrangler publish --routes` to modify routes";
+		"Please use wrangler.toml and/or `wrangler deploy --routes` to modify routes";
 	throw new DeprecationError(`${deprecationNotice}\n${shouldDo}`);
 };
 

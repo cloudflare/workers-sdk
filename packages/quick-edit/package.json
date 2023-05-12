@@ -12,7 +12,7 @@
 	"scripts": {
 		"build": "./build.sh",
 		"dev": "concurrently '../../vendor/vscode/scripts/code-web.sh --extensionDevelopmentPath ../../packages/quick-edit/web/quick-edit-extension' 'npm --prefix web/quick-edit-extension run watch-web' 'yarn --cwd ../../vendor/vscode watch' 'yarn --cwd ../../vendor/vscode watch-web'",
-		"publish": "CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 npx wrangler pages publish --project-name quick-edit ./web",
+		"publish": "CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 npx wrangler pages deploy --project-name quick-edit ./web",
 		"setup": "rm -rf web/assets web/quick-edit-extension && ./setup.sh"
 	},
 	"dependencies": {

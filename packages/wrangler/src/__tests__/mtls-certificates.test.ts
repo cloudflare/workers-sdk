@@ -366,7 +366,7 @@ describe("wrangler", () => {
 				  wrangler init [name]                 📥 Initialize a basic Worker project, including a wrangler.toml file
 				  wrangler generate [name] [template]  ✨ Generate a new Worker project from an existing Worker template. See https://github.com/cloudflare/templates
 				  wrangler dev [script]                👂 Start a local server for developing your worker
-				  wrangler publish [script]            🆙 Publish your Worker to Cloudflare.
+				  wrangler deploy [script]             🆙 Deploy your Worker to Cloudflare.  [aliases: publish]
 				  wrangler delete [script]             🗑  Delete your Worker from Cloudflare.
 				  wrangler tail [worker]               🦚 Starts a log tailing session for a published Worker.
 				  wrangler secret                      🤫 Generate a secret that can be referenced in a Worker

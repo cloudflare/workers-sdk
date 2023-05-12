@@ -149,7 +149,7 @@ export async function bundleWorker(
 		services?: Config["services"];
 		workerDefinitions?: WorkerRegistry;
 		firstPartyWorkerDevFacade?: boolean;
-		targetConsumer: "dev" | "publish";
+		targetConsumer: "dev" | "deploy";
 		local: boolean;
 		testScheduled?: boolean;
 		experimentalLocal?: boolean;
@@ -330,13 +330,13 @@ export async function bundleWorker(
 
 		// Middleware loader: to add middleware, we add the path to the middleware
 		// Currently for demonstration purposes we have two example middlewares
-		// Middlewares are togglable by changing the `publish` (default=false) and `dev` (default=true) options
+		// Middlewares are togglable by changing the `deploy` (default=false) and `dev` (default=true) options
 		// As we are not yet supporting user created middlewares yet, if no wrangler applied middleware
 		// are found, we will not load any middleware. We also need to check if there are middlewares compatible with
-		// the target consumer (dev / publish).
+		// the target consumer (dev / deploy).
 		(middlewareToLoad.filter(
 			(m) =>
-				(m.publish && targetConsumer === "publish") ||
+				(m.deploy && targetConsumer === "deploy") ||
 				(m.dev !== false && targetConsumer === "dev")
 		).length > 0 ||
 			process.env.EXPERIMENTAL_MIDDLEWARE === "true") &&
@@ -348,7 +348,7 @@ export async function bundleWorker(
 						// We dynamically filter the middleware depending on where we are bundling for
 						(m) =>
 							(targetConsumer === "dev" && m.dev !== false) ||
-							(m.publish && targetConsumer === "publish")
+							(m.deploy && targetConsumer === "deploy")
 					)
 				);
 			}),
@@ -550,8 +550,8 @@ async function applyFormatDevErrorsFacade(
 
 interface MiddlewareLoader {
 	path: string;
-	// By default all middleware will run on dev, but will not be run when published
-	publish?: boolean;
+	// By default all middleware will run on dev, but will not be run when deployed
+	deploy?: boolean;
 	dev?: boolean;
 }
 

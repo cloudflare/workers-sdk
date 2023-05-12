@@ -190,7 +190,7 @@ interface EnvironmentInheritable {
 	};
 
 	/**
-	 * Skip internal build steps and directly publish script
+	 * Skip internal build steps and directly deploy script
 	 * @inheritable
 	 */
 	no_bundle: boolean | undefined;

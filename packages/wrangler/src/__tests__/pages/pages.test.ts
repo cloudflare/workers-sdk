@@ -26,7 +26,7 @@ describe("pages", () => {
 		  wrangler pages dev [directory] [-- command..]  🧑‍💻 Develop your full-stack Pages application locally
 		  wrangler pages project                         ⚡️ Interact with your Pages projects
 		  wrangler pages deployment                      🚀 Interact with the deployments of a project
-		  wrangler pages publish [directory]             🆙 Publish a directory of static assets as a Pages deployment
+		  wrangler pages deploy [directory]              🆙 Deploy a directory of static assets as a Pages deployment  [aliases: publish]
 
 		Flags:
 		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]

@@ -27,7 +27,7 @@ pub get
 dart2js -O2 --server-mode -o index.js index.dart
 ```
 
-That will compile your code into index.js, after which you can run `wrangler publish` to push it to Cloudflare.
+That will compile your code into index.js, after which you can run `wrangler deploy` to push it to Cloudflare.
 
 For more information on how Dart translates to JavaScript, see the [docs for dart2js](https://dart.dev/tools/dart2js) and the [interop guide](https://dart.dev/web/js-interop).
 

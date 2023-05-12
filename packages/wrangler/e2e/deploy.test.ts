@@ -12,7 +12,7 @@ function matchWorkersDev(stdout: string): string {
 	)?.[1] as string;
 }
 
-describe("publish", async () => {
+describe("deploy", async () => {
 	const root = await makeRoot();
 	const workerName = `smoke-test-worker-${crypto
 		.randomBytes(4)
@@ -56,7 +56,7 @@ describe("publish", async () => {
 			To publish your Worker to the Internet, run \`npm run deploy\`"
 		`);
 	});
-	it("publish worker", async () => {
+	it("deploy worker", async () => {
 		const {
 			stdout,
 			stderr,
@@ -79,7 +79,7 @@ describe("publish", async () => {
 			fetch(`https://${workerName}.${workersDev}`).then((r) => r.text())
 		).resolves.toMatchInlineSnapshot('"Hello World!"');
 	});
-	it("modify & publish worker", async () => {
+	it("modify & deploy worker", async () => {
 		await seed(workerPath, {
 			"src/index.ts": dedent`
         export default {
