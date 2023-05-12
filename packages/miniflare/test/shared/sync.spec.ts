@@ -40,6 +40,38 @@ test("Mutex: lock can be acquired synchronously", (t) => {
 	mutex.runWith(() => (acquired = true));
 	t.true(acquired);
 });
+test("Mutex: maintains separate drain queue", async (t) => {
+	const mutex = new Mutex();
+	const deferred1 = new DeferredPromise<void>();
+	void mutex.runWith(() => deferred1);
+	let drained = false;
+	mutex.drained().then(() => (drained = true));
+	t.false(drained);
+	deferred1.resolve();
+	await setTimeout();
+	t.true(drained);
+
+	// Check drains don't count as waiters
+	const deferred2 = new DeferredPromise<void>();
+	const deferred3 = new DeferredPromise<void>();
+	void mutex.runWith(async () => {
+		await deferred2;
+		t.true(mutex.hasWaiting); // next `runWith()` is a waiter
+	});
+	void mutex.runWith(async () => {
+		await deferred3;
+		t.false(mutex.hasWaiting); // but `drain()` isn't
+	});
+	drained = false;
+	mutex.drained().then(() => (drained = true));
+	t.false(drained);
+	deferred2.resolve();
+	await setTimeout();
+	t.false(drained);
+	deferred3.resolve();
+	await setTimeout();
+	t.true(drained);
+});
 
 test("WaitGroup: waits for all tasks to complete", async (t) => {
 	const group = new WaitGroup();

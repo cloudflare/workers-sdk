@@ -9,7 +9,6 @@ import { Duplex } from "stream";
 import { ReadableStream } from "stream/web";
 import type { RequestInitCfProperties } from "@cloudflare/workers-types/experimental";
 import exitHook from "exit-hook";
-import getPort from "get-port";
 import stoppable from "stoppable";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
@@ -70,9 +69,7 @@ import {
 	defaultTimers,
 	formatResponse,
 } from "./shared";
-import { anyAbortSignal } from "./shared/signal";
 import { NewStorage } from "./storage2";
-import { waitForRequest } from "./wait";
 import { CoreHeaders } from "./workers";
 
 // ===== `Miniflare` User Options =====
@@ -307,11 +304,12 @@ function safeReadableStreamFrom(iterable: AsyncIterable<Uint8Array>) {
 export class Miniflare {
 	readonly #gatewayFactories: PluginGatewayFactories;
 	readonly #routers: PluginRouters;
-	#optionsVersion: number;
 	#sharedOpts: PluginSharedOptions;
 	#workerOpts: PluginWorkerOptions[];
 	#log: Log;
 	readonly #timers: Timers;
+	readonly #host: string;
+	readonly #accessibleHost: string;
 
 	#runtime?: Runtime;
 	#removeRuntimeExitHook?: () => void;
@@ -328,21 +326,9 @@ export class Miniflare {
 	// in a queue, ensuring they're performed in calling order.
 	readonly #runtimeMutex: Mutex;
 
-	// Additionally, store `Promise`s for the call to `#init()` and the last call
-	// to `setOptions()`. We need the `#init()` `Promise`, so we can propagate
-	// initialisation errors in `ready`. We would have no way of catching these
-	// otherwise.
-	//
-	// We store the last `setOptions()` `Promise` as well, so we can avoid
-	// disposing or resolving `ready` until all pending `setOptions()` have
-	// completed. Note we only need to store the latest one, as the mutex queue
-	// will ensure all previous calls complete before starting the latest.
-	//
-	// We could just wait on the mutex when disposing/resolving `ready`, but we
-	// use the presence of waiters on the mutex to avoid logging ready/updated
-	// messages to the console if there are future updates.
+	// Store `#init()` `Promise`, so we can propagate initialisation errors in
+	// `ready`. We would have no way of catching these otherwise.
 	readonly #initPromise: Promise<void>;
-	#lastUpdatePromise?: Promise<void>;
 
 	// Aborted when dispose() is called
 	readonly #disposeController: AbortController;
@@ -359,11 +345,13 @@ export class Miniflare {
 
 		// Split and validate options
 		const [sharedOpts, workerOpts] = validateOptions(opts);
-		this.#optionsVersion = 1;
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;
 		this.#log = this.#sharedOpts.core.log ?? new NoOpLog();
 		this.#timers = this.#sharedOpts.core.timers ?? defaultTimers;
+		this.#host = this.#sharedOpts.core.host ?? "127.0.0.1";
+		this.#accessibleHost =
+			this.#host === "*" || this.#host === "0.0.0.0" ? "127.0.0.1" : this.#host;
 		this.#initPlugins();
 
 		this.#liveReloadServer = new WebSocketServer({ noServer: true });
@@ -442,8 +430,7 @@ export class Miniflare {
 		// Start loopback server (how the runtime accesses with Miniflare's storage)
 		// using the same host as the main runtime server. This means we can use the
 		// loopback server for live reload updates too.
-		const host = this.#sharedOpts.core.host ?? "127.0.0.1";
-		this.#loopbackServer = await this.#startLoopbackServer(0, host);
+		this.#loopbackServer = await this.#startLoopbackServer(0, this.#host);
 		const address = this.#loopbackServer.address();
 		// Note address would be string with unix socket
 		assert(address !== null && typeof address === "object");
@@ -451,12 +438,10 @@ export class Miniflare {
 		this.#loopbackPort = address.port;
 
 		// Start runtime
-		let entryPort = this.#sharedOpts.core.port;
-		if (entryPort === 0) entryPort = await getPort();
-		else if (entryPort === undefined) entryPort = await getPort({ port: 8787 });
+		const port = this.#sharedOpts.core.port ?? 0;
 		const opts: RuntimeOptions = {
-			entryHost: host,
-			entryPort,
+			entryHost: this.#host,
+			entryPort: port,
 			loopbackPort: this.#loopbackPort,
 			inspectorPort: this.#sharedOpts.core.inspectorPort,
 			verbose: this.#sharedOpts.core.verbose,
@@ -464,21 +449,8 @@ export class Miniflare {
 		this.#runtime = new Runtime(opts);
 		this.#removeRuntimeExitHook = exitHook(() => void this.#runtime?.dispose());
 
-		const accessibleHost =
-			host === "*" || host === "0.0.0.0" ? "127.0.0.1" : host;
-		this.#runtimeEntryURL = new URL(`http://${accessibleHost}:${entryPort}`);
-
-		const config = await this.#assembleConfig();
-		assert(config !== undefined);
-		const configBuffer = serializeConfig(config);
-		await this.#runtime.updateConfig(configBuffer);
-
-		// Wait for runtime to start
-		if ((await this.#waitForRuntime()) && !this.#runtimeMutex.hasWaiting) {
-			// Only log and trigger reload if there aren't pending updates
-			this.#log.info(`Ready on ${this.#runtimeEntryURL}`);
-			this.#handleReload();
-		}
+		// Update config and wait for runtime to start
+		await this.#assembleAndUpdateConfig(/* initial */ true);
 	}
 
 	async #handleLoopbackCustomService(
@@ -685,46 +657,7 @@ export class Miniflare {
 		});
 	}
 
-	async #waitForRuntime() {
-		assert(this.#runtime !== undefined);
-
-		// Setup controller aborted when runtime exits
-		const exitController = new AbortController();
-		this.#runtime.exitPromise?.then(() => exitController.abort());
-
-		// Wait for the runtime to start by repeatedly sending probe HTTP requests
-		// until either:
-		// 1) The runtime responds with an OK response
-		// 2) The runtime exits
-		// 3) The Miniflare instance is disposed
-		const signal = anyAbortSignal(
-			exitController.signal,
-			this.#disposeController.signal
-		);
-		const url = this.#runtimeEntryURL!;
-		await waitForRequest({
-			hostname: url.hostname,
-			port: url.port,
-			headers: { [CoreHeaders.PROBE]: this.#optionsVersion.toString() },
-			signal,
-		});
-
-		// If we stopped waiting because of reason 2), something's gone wrong
-		const disposeAborted = this.#disposeController.signal.aborted;
-		const exitAborted = exitController.signal.aborted;
-		if (!disposeAborted && exitAborted) {
-			throw new MiniflareCoreError(
-				"ERR_RUNTIME_FAILURE",
-				"The Workers runtime failed to start. " +
-					"There is likely additional logging output above."
-			);
-		}
-
-		return !(disposeAborted || exitAborted);
-	}
-
 	async #assembleConfig(): Promise<Config> {
-		const optionsVersion = this.#optionsVersion;
 		const allWorkerOpts = this.#workerOpts;
 		const sharedOpts = this.#sharedOpts;
 		const loopbackPort = this.#loopbackPort;
@@ -740,7 +673,6 @@ export class Miniflare {
 		// Use Map to dedupe services by name
 		const services = new Map<string, Service>();
 		const globalServices = getGlobalServices({
-			optionsVersion,
 			sharedOptions: sharedOpts.core,
 			allWorkerRoutes,
 			fallbackWorkerName: this.#workerOpts[0].core.name,
@@ -819,16 +751,53 @@ export class Miniflare {
 		return { services: Array.from(services.values()), sockets };
 	}
 
-	get ready(): Promise<URL> {
+	async #assembleAndUpdateConfig(initial = false) {
+		assert(this.#runtime !== undefined);
+		const config = await this.#assembleConfig();
+		const configBuffer = serializeConfig(config);
+		const maybePort = await this.#runtime.updateConfig(configBuffer, {
+			signal: this.#disposeController.signal,
+		});
+		if (this.#disposeController.signal.aborted) return;
+		if (maybePort === undefined) {
+			throw new MiniflareCoreError(
+				"ERR_RUNTIME_FAILURE",
+				"The Workers runtime failed to start. " +
+					"There is likely additional logging output above."
+			);
+		}
+		// noinspection HttpUrlsUsage
+		this.#runtimeEntryURL = new URL(
+			`http://${this.#accessibleHost}:${maybePort}`
+		);
+
+		if (!this.#runtimeMutex.hasWaiting) {
+			// Only log and trigger reload if there aren't pending updates
+			const ready = initial ? "Ready" : "Updated and ready";
+			this.#log.info(`${ready} on ${this.#runtimeEntryURL}`);
+			this.#handleReload();
+		}
+	}
+
+	async #waitForReady() {
 		// If `#init()` threw, we'd like to propagate the error here, so `await` it.
 		// Note we can't use `async`/`await` with getters. We'd also like to wait
 		// for `setOptions` calls to complete before resolving.
-		//
-		// Safety of `!`: `#runtimeEntryURL` is assigned in `#init()`.
-		// `#initPromise` doesn't resolve until `#init()` returns.
-		return this.#initPromise
-			.then(() => this.#lastUpdatePromise)
-			.then(() => this.#runtimeEntryURL!);
+		await this.#initPromise;
+		// We'd also like to wait for `setOptions` calls to complete before, so wait
+		// for runtime mutex to drain (i.e. all options updates applied).
+		// (NOTE: can't just repeatedly wait on the mutex as use the presence of
+		// waiters on the mutex to avoid logging ready/updated messages to the
+		// console if there are future updates)
+		await this.#runtimeMutex.drained();
+		// `#runtimeEntryURL` is assigned in `#assembleAndUpdateConfig()`, which is
+		// called by `#init()`, and `#initPromise` doesn't resolve until `#init()`
+		// returns.
+		assert(this.#runtimeEntryURL !== undefined);
+		return this.#runtimeEntryURL;
+	}
+	get ready(): Promise<URL> {
+		return this.#waitForReady();
 	}
 
 	#checkDisposed() {
@@ -844,36 +813,20 @@ export class Miniflare {
 		// This function must be run with `#runtimeMutex` held
 
 		// Split and validate options
-		// TODO: merge with previous config
 		const [sharedOpts, workerOpts] = validateOptions(opts);
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;
 		this.#log = this.#sharedOpts.core.log ?? this.#log;
 
-		// Increment version, so we know when the runtime has processed updates
-		this.#optionsVersion++;
-		// Assemble and serialize config using new version
-		const config = await this.#assembleConfig();
-		const configBuffer = serializeConfig(config);
-
 		// Send to runtime and wait for updates to process
-		assert(this.#runtime !== undefined);
-		await this.#runtime.updateConfig(configBuffer);
-
-		if ((await this.#waitForRuntime()) && !this.#runtimeMutex.hasWaiting) {
-			// Only log and trigger reload if this was the last pending update
-			this.#log.info(`Updated and ready on ${this.#runtimeEntryURL}`);
-			this.#handleReload();
-		}
+		await this.#assembleAndUpdateConfig();
 	}
 
 	setOptions(opts: MiniflareOptions): Promise<void> {
 		this.#checkDisposed();
 		// Wait for initial initialisation and other setOptions to complete before
 		// changing options
-		const promise = this.#runtimeMutex.runWith(() => this.#setOptions(opts));
-		this.#lastUpdatePromise = promise;
-		return promise;
+		return this.#runtimeMutex.runWith(() => this.#setOptions(opts));
 	}
 
 	dispatchFetch: DispatchFetch = async (input, init) => {
@@ -923,8 +876,7 @@ export class Miniflare {
 	async dispose(): Promise<void> {
 		this.#disposeController.abort();
 		try {
-			await this.#initPromise;
-			await this.#lastUpdatePromise;
+			await this.ready;
 		} finally {
 			// Remove exit hooks, we're cleaning up what they would've cleaned up now
 			this.#removeTmpPathExitHook();

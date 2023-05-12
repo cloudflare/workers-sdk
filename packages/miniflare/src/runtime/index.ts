@@ -1,11 +1,43 @@
+import assert from "assert";
 import childProcess from "child_process";
+import type { Abortable } from "events";
 import rl from "readline";
+import { Readable } from "stream";
 import { red } from "kleur/colors";
 import workerdPath, {
 	compatibilityDate as supportedCompatibilityDate,
 } from "workerd";
+import { z } from "zod";
 import { SERVICE_LOOPBACK, SOCKET_ENTRY } from "../plugins";
 import { Awaitable } from "../shared";
+
+const ControlMessageSchema = z.object({
+	event: z.literal("listen"),
+	socket: z.string(),
+	port: z.number(),
+});
+
+async function waitForPort(
+	socket: string,
+	stream: Readable,
+	options?: Abortable
+): Promise<number | undefined> {
+	if (options?.signal?.aborted) return;
+	const lines = rl.createInterface(stream);
+	// Calling `close()` will end the async iterator below and return undefined
+	const abortListener = () => lines.close();
+	options?.signal?.addEventListener("abort", abortListener, { once: true });
+	try {
+		for await (const line of lines) {
+			const message = ControlMessageSchema.safeParse(JSON.parse(line));
+			if (message.success && message.data.socket === socket) {
+				return message.data.port;
+			}
+		}
+	} finally {
+		options?.signal?.removeEventListener("abort", abortListener);
+	}
+}
 
 function waitForExit(process: childProcess.ChildProcess): Promise<void> {
 	return new Promise((resolve) => {
@@ -53,6 +85,8 @@ export class Runtime {
 			"--experimental",
 			`--socket-addr=${SOCKET_ENTRY}=${this.opts.entryHost}:${this.opts.entryPort}`,
 			`--external-addr=${SERVICE_LOOPBACK}=127.0.0.1:${this.opts.loopbackPort}`,
+			// Configure extra pipe for receiving control messages (e.g. when ready)
+			"--control-fd=3",
 			// Read config from stdin
 			"-",
 		];
@@ -68,23 +102,32 @@ export class Runtime {
 		this.#args = args;
 	}
 
-	async updateConfig(configBuffer: Buffer) {
+	async updateConfig(
+		configBuffer: Buffer,
+		options?: Abortable
+	): Promise<number | undefined> {
 		// 1. Stop existing process (if any) and wait for exit
 		await this.dispose();
 		// TODO: what happens if runtime crashes?
 
 		// 2. Start new process
 		const runtimeProcess = childProcess.spawn(this.#command, this.#args, {
-			stdio: "pipe",
+			stdio: ["pipe", "pipe", "pipe", "pipe"],
 			env: process.env,
 		});
 		this.#process = runtimeProcess;
 		this.#processExitPromise = waitForExit(runtimeProcess);
 		pipeOutput(runtimeProcess);
 
+		const controlPipe = runtimeProcess.stdio[3];
+		assert(controlPipe instanceof Readable);
+
 		// 3. Write config
 		runtimeProcess.stdin.write(configBuffer);
 		runtimeProcess.stdin.end();
+
+		// 4. Wait for socket to start listening
+		return waitForPort(SOCKET_ENTRY, controlPipe, options);
 	}
 
 	get exitPromise(): Promise<void> | undefined {

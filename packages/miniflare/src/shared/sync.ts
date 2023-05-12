@@ -30,6 +30,7 @@ export class DeferredPromise<T> extends Promise<T> {
 export class Mutex {
 	private locked = false;
 	private resolveQueue: (() => void)[] = [];
+	private drainQueue: (() => void)[] = [];
 
 	private lock(): Awaitable<void> {
 		if (!this.locked) {
@@ -45,6 +46,8 @@ export class Mutex {
 			this.resolveQueue.shift()?.();
 		} else {
 			this.locked = false;
+			let resolve: (() => void) | undefined;
+			while ((resolve = this.drainQueue.shift()) !== undefined) resolve();
 		}
 	}
 
@@ -62,6 +65,11 @@ export class Mutex {
 		} finally {
 			this.unlock();
 		}
+	}
+
+	async drained(): Promise<void> {
+		if (this.resolveQueue.length === 0) return;
+		return new Promise((resolve) => this.drainQueue.push(resolve));
 	}
 }
 

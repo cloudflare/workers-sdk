@@ -15,7 +15,6 @@ import {
 	MessageEvent as StandardMessageEvent,
 	WebSocketServer,
 } from "ws";
-import { getPort } from "./test-shared";
 
 test("Miniflare: validates options", async (t) => {
 	// Check empty workers array rejected
@@ -57,7 +56,6 @@ test("Miniflare: validates options", async (t) => {
 
 test("Miniflare: routes to multiple workers with fallback", async (t) => {
 	const opts: MiniflareOptions = {
-		port: await getPort(),
 		workers: [
 			{
 				name: "a",
@@ -126,7 +124,6 @@ test("Miniflare: web socket kitchen sink", async (t) => {
 	// Create Miniflare instance with WebSocket worker and custom service binding
 	// fetching from WebSocket origin server
 	const mf = new Miniflare({
-		port: await getPort(),
 		script: `addEventListener("fetch", (event) => {
       event.respondWith(CUSTOM.fetch(event.request));
     })`,
@@ -176,7 +173,6 @@ test("Miniflare: web socket kitchen sink", async (t) => {
 
 test("Miniflare: custom service binding to another Miniflare instance", async (t) => {
 	const mfOther = new Miniflare({
-		port: await getPort(),
 		modules: true,
 		script: `export default {
       async fetch(request) {
@@ -189,7 +185,6 @@ test("Miniflare: custom service binding to another Miniflare instance", async (t
 	t.teardown(() => mfOther.dispose());
 
 	const mf = new Miniflare({
-		port: await getPort(),
 		script: `addEventListener("fetch", (event) => {
       event.respondWith(CUSTOM.fetch(event.request));
     })`,

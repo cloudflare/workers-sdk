@@ -6,7 +6,6 @@ import type {
 } from "@cloudflare/workers-types/experimental";
 import { Awaitable, Miniflare, MiniflareOptions, Timers } from "@miniflare/tre";
 import anyTest, { TestFn } from "ava";
-import { getPort } from "./http";
 import { TestLog } from "./log";
 
 export type TestMiniflareHandler<Env> = (
@@ -135,7 +134,6 @@ export function miniflareTest<
 
 		const opts: Partial<MiniflareOptions> = {
 			...scriptOpts,
-			port: await getPort(),
 			log,
 			timers,
 			verbose: true,
