@@ -1,5 +1,4 @@
-import { R2Conditional } from "@cloudflare/workers-types/experimental";
-import { R2Object, _testR2Conditional } from "@miniflare/tre";
+import { R2Conditional, R2Object, _testR2Conditional } from "@miniflare/tre";
 import test from "ava";
 
 test("testR2Conditional: matches various conditions", (t) => {
@@ -20,11 +19,11 @@ test("testR2Conditional: matches various conditions", (t) => {
 	const usingMissing = (cond: R2Conditional) => _testR2Conditional(cond);
 
 	// Check single conditions
-	t.true(using({ etagMatches: etag }));
-	t.false(using({ etagMatches: badEtag }));
+	t.true(using({ etagMatches: [{ type: "strong", value: etag }] }));
+	t.false(using({ etagMatches: [{ type: "strong", value: badEtag }] }));
 
-	t.true(using({ etagDoesNotMatch: badEtag }));
-	t.false(using({ etagDoesNotMatch: etag }));
+	t.true(using({ etagDoesNotMatch: [{ type: "strong", value: badEtag }] }));
+	t.false(using({ etagDoesNotMatch: [{ type: "strong", value: etag }] }));
 
 	t.false(using({ uploadedBefore: pastDate }));
 	t.true(using({ uploadedBefore: futureDate }));
@@ -32,48 +31,85 @@ test("testR2Conditional: matches various conditions", (t) => {
 	t.true(using({ uploadedAfter: pastDate }));
 	t.false(using({ uploadedBefore: pastDate }));
 
+	// Check with weaker etags
+	t.false(using({ etagMatches: [{ type: "weak", value: etag }] }));
+	t.false(using({ etagDoesNotMatch: [{ type: "weak", value: etag }] }));
+	t.true(using({ etagDoesNotMatch: [{ type: "weak", value: badEtag }] }));
+	t.true(using({ etagMatches: [{ type: "wildcard" }] }));
+	t.false(using({ etagDoesNotMatch: [{ type: "wildcard" }] }));
+
 	// Check multiple conditions that evaluate to false
-	t.false(using({ etagMatches: etag, etagDoesNotMatch: etag }));
-	t.false(using({ etagMatches: etag, uploadedAfter: futureDate }));
+	t.false(
+		using({
+			etagMatches: [{ type: "strong", value: etag }],
+			etagDoesNotMatch: [{ type: "strong", value: etag }],
+		})
+	);
+	t.false(
+		using({
+			etagMatches: [{ type: "strong", value: etag }],
+			uploadedAfter: futureDate,
+		})
+	);
 	t.false(
 		using({
 			// `etagMatches` pass makes `uploadedBefore` pass, but `uploadedAfter` fails
-			etagMatches: etag,
+			etagMatches: [{ type: "strong", value: etag }],
 			uploadedAfter: futureDate,
 			uploadedBefore: pastDate,
 		})
 	);
-	t.false(using({ etagDoesNotMatch: badEtag, uploadedBefore: pastDate }));
+	t.false(
+		using({
+			etagDoesNotMatch: [{ type: "strong", value: badEtag }],
+			uploadedBefore: pastDate,
+		})
+	);
 	t.false(
 		using({
 			// `etagDoesNotMatch` pass makes `uploadedAfter` pass, but `uploadedBefore` fails
-			etagDoesNotMatch: badEtag,
+			etagDoesNotMatch: [{ type: "strong", value: badEtag }],
 			uploadedAfter: futureDate,
 			uploadedBefore: pastDate,
 		})
 	);
 	t.false(
 		using({
-			etagMatches: badEtag,
-			etagDoesNotMatch: badEtag,
+			etagMatches: [{ type: "strong", value: badEtag }],
+			etagDoesNotMatch: [{ type: "strong", value: badEtag }],
 			uploadedAfter: pastDate,
 			uploadedBefore: futureDate,
 		})
 	);
 
 	// Check multiple conditions that evaluate to true
-	t.true(using({ etagMatches: etag, etagDoesNotMatch: badEtag }));
+	t.true(
+		using({
+			etagMatches: [{ type: "strong", value: etag }],
+			etagDoesNotMatch: [{ type: "strong", value: badEtag }],
+		})
+	);
 	// `etagMatches` pass makes `uploadedBefore` pass
-	t.true(using({ etagMatches: etag, uploadedBefore: pastDate }));
+	t.true(
+		using({
+			etagMatches: [{ type: "strong", value: etag }],
+			uploadedBefore: pastDate,
+		})
+	);
 	// `etagDoesNotMatch` pass makes `uploadedAfter` pass
-	t.true(using({ etagDoesNotMatch: badEtag, uploadedAfter: futureDate }));
+	t.true(
+		using({
+			etagDoesNotMatch: [{ type: "strong", value: badEtag }],
+			uploadedAfter: futureDate,
+		})
+	);
 	t.true(
 		using({
 			// `etagMatches` pass makes `uploadedBefore` pass
-			etagMatches: etag,
+			etagMatches: [{ type: "strong", value: etag }],
 			uploadedBefore: pastDate,
 			// `etagDoesNotMatch` pass makes `uploadedAfter` pass
-			etagDoesNotMatch: badEtag,
+			etagDoesNotMatch: [{ type: "strong", value: badEtag }],
 			uploadedAfter: futureDate,
 		})
 	);
@@ -81,7 +117,7 @@ test("testR2Conditional: matches various conditions", (t) => {
 		using({
 			uploadedBefore: futureDate,
 			// `etagDoesNotMatch` pass makes `uploadedAfter` pass
-			etagDoesNotMatch: badEtag,
+			etagDoesNotMatch: [{ type: "strong", value: badEtag }],
 			uploadedAfter: futureDate,
 		})
 	);
@@ -89,20 +125,40 @@ test("testR2Conditional: matches various conditions", (t) => {
 		using({
 			uploadedAfter: pastDate,
 			// `etagMatches` pass makes `uploadedBefore` pass
-			etagMatches: etag,
+			etagMatches: [{ type: "strong", value: etag }],
 			uploadedBefore: pastDate,
 		})
 	);
 
 	// Check missing metadata fails with either `etagMatches` and `uploadedAfter`
-	t.false(usingMissing({ etagMatches: etag }));
+	t.false(usingMissing({ etagMatches: [{ type: "strong", value: etag }] }));
 	t.false(usingMissing({ uploadedAfter: pastDate }));
-	t.false(usingMissing({ etagMatches: etag, uploadedAfter: pastDate }));
-	t.true(usingMissing({ etagDoesNotMatch: etag }));
+	t.false(
+		usingMissing({
+			etagMatches: [{ type: "strong", value: etag }],
+			uploadedAfter: pastDate,
+		})
+	);
+	t.true(usingMissing({ etagDoesNotMatch: [{ type: "strong", value: etag }] }));
 	t.true(usingMissing({ uploadedBefore: pastDate }));
-	t.true(usingMissing({ etagDoesNotMatch: etag, uploadedBefore: pastDate }));
-	t.false(usingMissing({ etagMatches: etag, uploadedBefore: pastDate }));
-	t.false(usingMissing({ etagDoesNotMatch: etag, uploadedAfter: pastDate }));
+	t.true(
+		usingMissing({
+			etagDoesNotMatch: [{ type: "strong", value: etag }],
+			uploadedBefore: pastDate,
+		})
+	);
+	t.false(
+		usingMissing({
+			etagMatches: [{ type: "strong", value: etag }],
+			uploadedBefore: pastDate,
+		})
+	);
+	t.false(
+		usingMissing({
+			etagDoesNotMatch: [{ type: "strong", value: etag }],
+			uploadedAfter: pastDate,
+		})
+	);
 
 	// Check with second granularity
 	const justPastDate = new Date(uploadedDate.getTime() - 250);

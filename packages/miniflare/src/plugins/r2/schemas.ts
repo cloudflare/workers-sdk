@@ -94,12 +94,20 @@ export const R2RangeSchema = z.object({
 });
 export type R2Range = z.infer<typeof R2RangeSchema>;
 
+export const R2EtagSchema = z.discriminatedUnion("type", [
+	z.object({ type: z.literal("strong"), value: z.string() }),
+	z.object({ type: z.literal("weak"), value: z.string() }),
+	z.object({ type: z.literal("wildcard") }),
+]);
+export type R2Etag = z.infer<typeof R2EtagSchema>;
+export const R2EtagMatchSchema = R2EtagSchema.array().min(1).optional();
+
 // For more information, refer to https://datatracker.ietf.org/doc/html/rfc7232
 export const R2ConditionalSchema = z.object({
 	// Performs the operation if the object's ETag matches the given string
-	etagMatches: z.ostring(), // "If-Match"
+	etagMatches: R2EtagMatchSchema, // "If-Match"
 	// Performs the operation if the object's ETag does NOT match the given string
-	etagDoesNotMatch: z.ostring(), // "If-None-Match"
+	etagDoesNotMatch: R2EtagMatchSchema, // "If-None-Match"
 	// Performs the operation if the object was uploaded BEFORE the given date
 	uploadedBefore: DateSchema.optional(), // "If-Unmodified-Since"
 	// Performs the operation if the object was uploaded AFTER the given date
