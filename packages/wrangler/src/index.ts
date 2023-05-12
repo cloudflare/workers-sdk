@@ -98,7 +98,11 @@ export async function printWranglerBanner() {
 		return;
 	}
 
-	const text = ` ⛅️ wrangler ${wranglerVersion} ${await updateCheck()}`;
+	let text = ` ⛅️ wrangler ${wranglerVersion}`;
+	const maybeNewVersion = await updateCheck();
+	if (maybeNewVersion !== undefined) {
+		text += ` (update available ${chalk.green(maybeNewVersion)})`;
+	}
 
 	logger.log(
 		text +
@@ -107,6 +111,20 @@ export async function printWranglerBanner() {
 				? chalk.hex("#FF8800")("-".repeat(text.length))
 				: "-".repeat(text.length))
 	);
+
+	// Log a slightly more noticeable message if this is a major bump
+	if (maybeNewVersion !== undefined) {
+		const currentMajor = parseInt(wranglerVersion.split(".")[0]);
+		const newMajor = parseInt(maybeNewVersion.split(".")[0]);
+		if (newMajor > currentMajor) {
+			logger.warn(
+				`The version of Wrangler you are using is now out-of-date.
+Please update to the latest version to prevent critical errors.
+Run \`npm install --save-dev wrangler@${newMajor}\` to update to the latest version.
+After installation, run Wrangler with \`npx wrangler\`.`
+			);
+		}
+	}
 }
 
 export function isLegacyEnv(config: Config): boolean {
