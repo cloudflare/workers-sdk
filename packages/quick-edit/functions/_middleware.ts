@@ -14,6 +14,10 @@ export const onRequest = async ({
 						: "Solarflare Light",
 				"workbench.startupEditor": "none",
 				"editor.minimap.autohide": true,
+				"files.exclude": {
+					"*.d.ts": true,
+					"jsconfig.json": true,
+				},
 			},
 			productConfiguration: {
 				nameShort: "Quick Edit",
