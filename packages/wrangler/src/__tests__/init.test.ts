@@ -1096,7 +1096,7 @@ describe("init", () => {
 			✨ Created src/index.js
 
 			To start developing your Worker, run \`npx wrangler dev\`
-			To publish your Worker to the Internet, run \`npx wrangler publish\`",
+			To publish your Worker to the Internet, run \`npx wrangler deploy\`",
 			  "warn": "",
 			}
 		`);
@@ -1156,7 +1156,7 @@ describe("init", () => {
 			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
 			To start developing your Worker, run \`npx wrangler dev\`
-			To publish your Worker to the Internet, run \`npx wrangler publish\`",
+			To publish your Worker to the Internet, run \`npx wrangler deploy\`",
 			  "warn": "",
 			}
 		`);
@@ -1199,7 +1199,7 @@ describe("init", () => {
 							name: expect.stringContaining("wrangler-tests"),
 							version: "0.0.0",
 							scripts: {
-								deploy: "wrangler publish",
+								deploy: "wrangler deploy",
 								start: "wrangler dev",
 								test: "vitest",
 							},
@@ -1258,7 +1258,7 @@ describe("init", () => {
 						contents: {
 							scripts: {
 								start: "test-start",
-								deploy: "test-publish",
+								deploy: "test-deploy",
 							},
 						},
 					},
@@ -1273,7 +1273,7 @@ describe("init", () => {
 						contents: {
 							scripts: {
 								start: "test-start",
-								deploy: "test-publish",
+								deploy: "test-deploy",
 							},
 						},
 					},
@@ -1289,7 +1289,7 @@ describe("init", () => {
 			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
 			To start developing your Worker, run \`npx wrangler dev\`
-			To publish your Worker to the Internet, run \`npx wrangler publish\`"
+			To publish your Worker to the Internet, run \`npx wrangler deploy\`"
 		`);
 		});
 
@@ -1492,7 +1492,7 @@ describe("init", () => {
 			✨ Installed vitest into devDependencies
 
 			To start developing your Worker, run \`npx wrangler dev\`
-			To publish your Worker to the Internet, run \`npx wrangler publish\`",
+			To publish your Worker to the Internet, run \`npx wrangler deploy\`",
 			  "warn": "",
 			}
 		`);
@@ -1685,7 +1685,7 @@ describe("init", () => {
 			✨ Installed vitest into devDependencies
 
 			To start developing your Worker, run \`npx wrangler dev\`
-			To publish your Worker to the Internet, run \`npx wrangler publish\`",
+			To publish your Worker to the Internet, run \`npx wrangler deploy\`",
 			  "warn": "",
 			}
 		`);
@@ -1732,7 +1732,7 @@ describe("init", () => {
 							version: "0.0.0",
 							scripts: {
 								start: "wrangler dev",
-								deploy: "wrangler publish",
+								deploy: "wrangler deploy",
 							},
 						}),
 					},
@@ -1790,7 +1790,7 @@ describe("init", () => {
 							version: "0.0.0",
 							scripts: {
 								start: "wrangler dev",
-								deploy: "wrangler publish",
+								deploy: "wrangler deploy",
 								test: "jest",
 							},
 						}),
@@ -1853,7 +1853,7 @@ describe("init", () => {
 							version: "0.0.0",
 							scripts: {
 								start: "wrangler dev",
-								deploy: "wrangler publish",
+								deploy: "wrangler deploy",
 								test: "vitest",
 							},
 						}),
@@ -1905,7 +1905,7 @@ describe("init", () => {
 						contents: {
 							scripts: {
 								start: "test-start",
-								deploy: "test-publish",
+								deploy: "test-deploy",
 							},
 						},
 					},
@@ -1922,7 +1922,7 @@ describe("init", () => {
 						contents: expect.objectContaining({
 							scripts: {
 								start: "test-start",
-								deploy: "test-publish",
+								deploy: "test-deploy",
 							},
 						}),
 					},
@@ -1933,7 +1933,7 @@ describe("init", () => {
 			        ✨ Created src/index.js
 
 			        To start developing your Worker, run \`npx wrangler dev\`
-			        To publish your Worker to the Internet, run \`npx wrangler publish\`"
+			        To publish your Worker to the Internet, run \`npx wrangler deploy\`"
 		      `);
 		});
 
@@ -2056,7 +2056,7 @@ describe("init", () => {
 							name: expect.stringContaining("wrangler-tests"),
 							version: "0.0.0",
 							scripts: {
-								deploy: "wrangler publish",
+								deploy: "wrangler deploy",
 								start: "wrangler dev",
 								test: "vitest",
 							},

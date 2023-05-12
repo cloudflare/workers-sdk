@@ -69,7 +69,7 @@ describe("deployments", async () => {
 			To publish your Worker to the Internet, run \`npm run deploy\`"
 		`);
 	});
-	it("publish worker", async () => {
+	it("deploy worker", async () => {
 		const {
 			stdout,
 			stderr,
@@ -113,7 +113,7 @@ describe("deployments", async () => {
 		expect(stderr).toMatchInlineSnapshot('""');
 	});
 
-	it("modify & publish worker", async () => {
+	it("modify & deploy worker", async () => {
 		await seed(workerPath, {
 			"src/index.ts": dedent`
         export default {

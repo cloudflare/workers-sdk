@@ -27,7 +27,7 @@ npm link bs-platform
 npm run build
 ```
 
-That will compile your code into src/Demo.bs.js, after which you can run `wrangler publish` to push it to Cloudflare.
+That will compile your code into src/Demo.bs.js, after which you can run `wrangler deploy` to push it to Cloudflare.
 
 If you just want to check for errors during development, `npm run start` will watch for filesystem changes and recompile.
 

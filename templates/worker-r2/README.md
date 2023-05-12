@@ -34,7 +34,7 @@ npx wrangler r2 bucket create <YOUR_BUCKET_NAME>
 # Add config to wrangler.toml as instructed
 
 # Deploy the worker
-npx wrangler publish
+npx wrangler deploy
 ```
 
 Then test out your new Worker!

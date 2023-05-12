@@ -13,7 +13,7 @@ This is the demo for durable objects originally published at https://github.com/
 
 - Change calls from `https://...` to `http://...`, and `wss://...` to `ws://...`.
 
-Also a reminder: you need to publish this worker (or even a plain worker named `edge-chat-demo`) before you can develop on it. That's a problem that we need to solve on our end, but this is a workaround for now.
+Also a reminder: you need to deploy this worker (or even a plain worker named `edge-chat-demo`) before you can develop on it. That's a problem that we need to solve on our end, but this is a workaround for now.
 
 The original README follows -
 
@@ -44,13 +44,13 @@ For more details, take a look at the code! It is well-commented.
 
 If you haven't already, join the Durable Objects beta by visiting the [Cloudflare dashboard](https://dash.cloudflare.com/) and navigating to "Workers" and then "Durable Objects".
 
-Then, make sure you have [Wrangler](https://developers.cloudflare.com/workers/cli-wrangler/install-update), the official Workers CLI, installed. Version 1.19.3 or newer is required to publish this example as written.
+Then, make sure you have [Wrangler](https://developers.cloudflare.com/workers/cli-wrangler/install-update), the official Workers CLI, installed. Version 1.19.3 or newer is required to deploy this example as written.
 
 After installing it, run `wrangler login` to [connect it to your Cloudflare account](https://developers.cloudflare.com/workers/cli-wrangler/authentication).
 
 Once you're in the Durable Objects beta and have Wrangler installed and authenticated, you can deploy the app for the first time by adding your Cloudflare account ID (which can be viewed by running `wrangler whoami`) to the wrangler.toml file and then running:
 
-    wrangler publish
+    wrangler deploy
 
 If you get an error saying "Cannot create binding for class [...] because it is not currently configured to implement durable objects", you need to update your version of Wrangler.
 
@@ -79,4 +79,4 @@ tag = "v2"
 deleted_classes = ["ChatRoom", "RateLimiter"]
 ```
 
-Then run `wrangler publish`, which will delete the Durable Objects and all data stored in them. To remove the Worker, go to [dash.cloudflare.com](dash.cloudflare.com) and navigate to Workers -> Overview -> edge-chat-demo -> Manage Service -> Delete (bottom of page)
+Then run `wrangler deploy`, which will delete the Durable Objects and all data stored in them. To remove the Worker, go to [dash.cloudflare.com](dash.cloudflare.com) and navigate to Workers -> Overview -> edge-chat-demo -> Manage Service -> Delete (bottom of page)

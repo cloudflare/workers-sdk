@@ -17,8 +17,8 @@
 echo "export default { fetch() { return new Response('hello world') } }" > index.js
 # try it out
 npx wrangler dev index.js
-# and then publish it
-npx wrangler publish index.js --name my-worker
+# and then deploy it
+npx wrangler deploy index.js --name my-worker
 # visit https://my-worker.<your workers subdomain>.workers.dev
 ```
 
@@ -29,7 +29,7 @@ npx wrangler publish index.js --name my-worker
 npx wrangler init my-worker
 # try it out
 cd my-worker && npm run start
-# and then publish it
+# and then deploy it
 npm run deploy
 ```
 
@@ -63,7 +63,7 @@ Creates a Worker project. For details on configuration keys and values, refer to
 
 Start a local development server, with live reloading and devtools.
 
-### `wrangler publish`
+### `wrangler deploy`
 
 Publish the given script to the worldwide Cloudflare network.
 

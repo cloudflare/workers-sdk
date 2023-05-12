@@ -7,7 +7,7 @@
 		"build": "npx wrangler pages functions build --fallback-service='' ./functions/routes --outdir=dist",
 		"check:type": "tsc",
 		"prepublish": "npm run build",
-		"publish": "npx wrangler publish dist/index.js",
+		"publish": "npx wrangler deploy dist/index.js",
 		"prestart": "npm run build",
 		"start": "npx wrangler dev dist/index.js"
 	},

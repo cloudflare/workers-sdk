@@ -43,13 +43,13 @@ import writeWranglerToml from "./helpers/write-wrangler-toml";
 
 import type { Config } from "../config";
 import type { WorkerMetadata } from "../create-worker-upload-form";
+import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
 import type { KVNamespaceInfo } from "../kv/helpers";
-import type { CustomDomain, CustomDomainChangeset } from "../publish/publish";
 import type { PutConsumerBody } from "../queues/client";
 import type { CfWorkerInit } from "../worker";
 import type { ResponseComposition, RestContext, RestRequest } from "msw";
 
-describe("publish", () => {
+describe("deploy", () => {
 	mockAccountId();
 	mockApiToken();
 	runInTempDir();
@@ -94,7 +94,7 @@ describe("publish", () => {
 			mockUploadWorkerRequest({ expectedType: "esm" });
 			mockOAuthServerCallback();
 
-			await runWrangler("publish ./index");
+			await runWrangler("deploy ./index");
 
 			expect(std).toMatchInlineSnapshot(`
 			Object {
@@ -136,7 +136,7 @@ describe("publish", () => {
 			mockOAuthServerCallback("success");
 			mockDeploymentsListRequest();
 
-			await expect(runWrangler("publish index.js")).resolves.toBeUndefined();
+			await expect(runWrangler("deploy index.js")).resolves.toBeUndefined();
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Attempting to login via OAuth...
@@ -174,7 +174,7 @@ describe("publish", () => {
 				mockOAuthServerCallback("success");
 				mockDeploymentsListRequest();
 
-				await expect(runWrangler("publish index.js")).resolves.toBeUndefined();
+				await expect(runWrangler("deploy index.js")).resolves.toBeUndefined();
 
 				expect(accessTokenRequest.actual).toEqual(accessTokenRequest.expected);
 
@@ -202,7 +202,7 @@ describe("publish", () => {
 				api_token: "some-api-token",
 			});
 
-			await expect(runWrangler("publish index.js")).resolves.toBeUndefined();
+			await expect(runWrangler("deploy index.js")).resolves.toBeUndefined();
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -243,7 +243,7 @@ describe("publish", () => {
 				mockUploadWorkerRequest();
 				mockOAuthServerCallback();
 
-				await runWrangler("publish index.js");
+				await runWrangler("deploy index.js");
 
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -268,7 +268,7 @@ describe("publish", () => {
 				mockOAuthServerCallback();
 				mockGetMemberships([]);
 
-				await runWrangler("publish index.js");
+				await runWrangler("deploy index.js");
 
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -298,7 +298,7 @@ describe("publish", () => {
 					{ id: "R2-D2", account: { id: "nx01", name: "enterprise-nx" } },
 				]);
 
-				await expect(runWrangler("publish index.js")).rejects
+				await expect(runWrangler("deploy index.js")).rejects
 					.toMatchInlineSnapshot(`
 			[Error: More than one account available but unable to select one in non-interactive mode.
 			Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
@@ -326,7 +326,7 @@ describe("publish", () => {
 					{ id: "R2-D2", account: { id: "nx01", name: "enterprise-nx" } },
 				]);
 
-				await expect(runWrangler("publish index.js")).rejects.toThrowError();
+				await expect(runWrangler("deploy index.js")).rejects.toThrowError();
 
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mIn a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for wrangler to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN.[0m
@@ -349,7 +349,7 @@ describe("publish", () => {
 				mockOAuthServerCallback();
 				mockGetMemberships([]);
 
-				await expect(runWrangler("publish index.js")).rejects.toThrowError();
+				await expect(runWrangler("deploy index.js")).rejects.toThrowError();
 
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mFailed to automatically retrieve account IDs for the logged in user.[0m
@@ -373,7 +373,7 @@ describe("publish", () => {
 				legacyEnv: true,
 			});
 
-			await runWrangler("publish index.js --env some-env");
+			await runWrangler("deploy index.js --env some-env");
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name-some-env (TIMINGS)
@@ -394,7 +394,7 @@ describe("publish", () => {
 					legacyEnv: true,
 				});
 
-				await runWrangler("publish index.js --legacy-env true");
+				await runWrangler("deploy index.js --legacy-env true");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
@@ -415,7 +415,7 @@ describe("publish", () => {
 					legacyEnv: true,
 				});
 
-				await runWrangler("publish index.js --env some-env --legacy-env true");
+				await runWrangler("deploy index.js --env some-env --legacy-env true");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name-some-env (TIMINGS)
@@ -436,7 +436,7 @@ describe("publish", () => {
 					legacyEnv: true,
 				});
 
-				await runWrangler("publish index.js --env some-env --legacy-env true");
+				await runWrangler("deploy index.js --env some-env --legacy-env true");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name-some-env (TIMINGS)
@@ -467,7 +467,7 @@ describe("publish", () => {
 				writeWorkerSource();
 				mockSubDomainRequest();
 				await expect(
-					runWrangler("publish index.js --env some-env --legacy-env true")
+					runWrangler("deploy index.js --env some-env --legacy-env true")
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
 			                "Processing wrangler.toml configuration:
 			                  - No environment found in configuration with name \\"some-env\\".
@@ -487,7 +487,7 @@ describe("publish", () => {
 				writeWorkerSource();
 				mockSubDomainRequest();
 				await runWrangler(
-					"publish index.js --name voyager --env some-env --legacy-env true"
+					"deploy index.js --name voyager --env some-env --legacy-env true"
 				).catch((err) =>
 					expect(err).toMatchInlineSnapshot(`
 				            [Error: In legacy environment mode you cannot use --name and --env together. If you want to specify a Worker name for a specific environment you can add the following to your wrangler.toml config:
@@ -508,7 +508,7 @@ describe("publish", () => {
 					legacyEnv: false,
 				});
 
-				await runWrangler("publish index.js --legacy-env false");
+				await runWrangler("deploy index.js --legacy-env false");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
@@ -536,7 +536,7 @@ describe("publish", () => {
 					legacyEnv: false,
 				});
 
-				await runWrangler("publish index.js --env some-env --legacy-env false");
+				await runWrangler("deploy index.js --env some-env --legacy-env false");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (some-env) (TIMINGS)
@@ -580,7 +580,7 @@ describe("publish", () => {
 			expectedCompatibilityDate: "2022-01-12",
 		});
 		mockSubDomainRequest();
-		await runWrangler("publish ./some-path/worker/index.js");
+		await runWrangler("deploy ./some-path/worker/index.js");
 		expect(std.out).toMatchInlineSnapshot(`
 		"Total Upload: xx KiB / gzip: xx KiB
 		Your worker has access to the following bindings:
@@ -595,7 +595,7 @@ describe("publish", () => {
 	});
 
 	describe("routes", () => {
-		it("should publish the worker to a route", async () => {
+		it("should deploy the worker to a route", async () => {
 			writeWranglerToml({
 				routes: ["example.com/some-route/*"],
 			});
@@ -603,10 +603,10 @@ describe("publish", () => {
 			mockUpdateWorkerRequest({ enabled: false });
 			mockUploadWorkerRequest({ expectedType: "esm" });
 			mockPublishRoutesRequest({ routes: ["example.com/some-route/*"] });
-			await runWrangler("publish ./index");
+			await runWrangler("deploy ./index");
 		});
 
-		it("should publish with an empty string route", async () => {
+		it("should deploy with an empty string route", async () => {
 			writeWranglerToml({
 				route: "",
 			});
@@ -615,7 +615,7 @@ describe("publish", () => {
 			mockUploadWorkerRequest({ expectedType: "esm" });
 			mockSubDomainRequest();
 			mockPublishRoutesRequest({ routes: [] });
-			await runWrangler("publish ./index");
+			await runWrangler("deploy ./index");
 			expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -635,7 +635,7 @@ describe("publish", () => {
 			}
 		`);
 		});
-		it("should publish to a route with a pattern/{zone_id|zone_name} combo", async () => {
+		it("should deploy to a route with a pattern/{zone_id|zone_name} combo", async () => {
 			writeWranglerToml({
 				routes: [
 					"some-example.com/some-route/*",
@@ -663,7 +663,7 @@ describe("publish", () => {
 					"more-examples.com/*",
 				],
 			});
-			await runWrangler("publish ./index");
+			await runWrangler("deploy ./index");
 			expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -683,7 +683,7 @@ describe("publish", () => {
 		`);
 		});
 
-		it("should publish to a route with a pattern/{zone_id|zone_name} combo (service environments)", async () => {
+		it("should deploy to a route with a pattern/{zone_id|zone_name} combo (service environments)", async () => {
 			writeWranglerToml({
 				env: {
 					staging: {
@@ -726,7 +726,7 @@ describe("publish", () => {
 				env: "staging",
 				legacyEnv: false,
 			});
-			await runWrangler("publish ./index --legacy-env false --env staging");
+			await runWrangler("deploy ./index --legacy-env false --env staging");
 			expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -751,7 +751,7 @@ describe("publish", () => {
 		`);
 		});
 
-		it("should publish to legacy environment specific routes", async () => {
+		it("should deploy to legacy environment specific routes", async () => {
 			writeWranglerToml({
 				routes: ["example.com/some-route/*"],
 				env: {
@@ -772,10 +772,10 @@ describe("publish", () => {
 				legacyEnv: true,
 				env: "dev",
 			});
-			await runWrangler("publish ./index --env dev --legacy-env true");
+			await runWrangler("deploy ./index --env dev --legacy-env true");
 		});
 
-		it("services: should publish to service environment specific routes", async () => {
+		it("services: should deploy to service environment specific routes", async () => {
 			writeWranglerToml({
 				routes: ["example.com/some-route/*"],
 				env: {
@@ -794,7 +794,7 @@ describe("publish", () => {
 				routes: ["dev-example.com/some-route/*"],
 				env: "dev",
 			});
-			await runWrangler("publish ./index --env dev --legacy-env false");
+			await runWrangler("deploy ./index --env dev --legacy-env false");
 		});
 
 		it("should fallback to the Wrangler v1 zone-based API if the bulk-routes API fails", async () => {
@@ -818,7 +818,7 @@ describe("publish", () => {
 				pattern: "example.com/some-route/*",
 				script: "test-name",
 			});
-			await runWrangler("publish ./index");
+			await runWrangler("deploy ./index");
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -869,7 +869,7 @@ describe("publish", () => {
 				pattern: "example.com/some-route/*",
 				script: "test-name",
 			});
-			await expect(runWrangler("publish ./index --env=staging")).rejects
+			await expect(runWrangler("deploy ./index --env=staging")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
 			              "Service environments combined with an API token that doesn't have 'All Zones' permissions is not supported.
 			              Either turn off service environments by setting \`legacy_env = true\`, creating an API token with 'All Zones' permissions, or logging in via OAuth"
@@ -877,7 +877,7 @@ describe("publish", () => {
 		});
 
 		describe("custom domains", () => {
-			it("should publish routes marked with 'custom_domain' as separate custom domains", async () => {
+			it("should deploy routes marked with 'custom_domain' as separate custom domains", async () => {
 				writeWranglerToml({
 					routes: [{ pattern: "api.example.com", custom_domain: true }],
 				});
@@ -893,11 +893,11 @@ describe("publish", () => {
 					},
 					domains: [{ hostname: "api.example.com" }],
 				});
-				await runWrangler("publish ./index");
+				await runWrangler("deploy ./index");
 				expect(std.out).toContain("api.example.com (custom domain)");
 			});
 
-			it("should confirm override if custom domain publish would override an existing domain", async () => {
+			it("should confirm override if custom domain deploy would override an existing domain", async () => {
 				writeWranglerToml({
 					routes: [{ pattern: "api.example.com", custom_domain: true }],
 				});
@@ -938,11 +938,11 @@ describe("publish", () => {
 Update them to point to this script instead?`,
 					result: true,
 				});
-				await runWrangler("publish ./index");
+				await runWrangler("deploy ./index");
 				expect(std.out).toContain("api.example.com (custom domain)");
 			});
 
-			it("should confirm override if custom domain publish contains a conflicting DNS record", async () => {
+			it("should confirm override if custom domain deploy contains a conflicting DNS record", async () => {
 				writeWranglerToml({
 					routes: [{ pattern: "api.example.com", custom_domain: true }],
 				});
@@ -975,7 +975,7 @@ Update them to point to this script instead?`,
 Update them to point to this script instead?`,
 					result: true,
 				});
-				await runWrangler("publish ./index");
+				await runWrangler("deploy ./index");
 				expect(std.out).toContain("api.example.com (custom domain)");
 			});
 
@@ -1039,7 +1039,7 @@ Update them to point to this script instead?`,
 						result: true,
 					}
 				);
-				await runWrangler("publish ./index");
+				await runWrangler("deploy ./index");
 				expect(std.out).toContain("api.example.com (custom domain)");
 			});
 
@@ -1049,7 +1049,7 @@ Update them to point to this script instead?`,
 				});
 				writeWorkerSource();
 				await expect(
-					runWrangler("publish ./index")
+					runWrangler("deploy ./index")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"Cannot use \\"*.example.com\\" as a Custom Domain; wildcard operators (*) are not allowed"`
 				);
@@ -1061,7 +1061,7 @@ Update them to point to this script instead?`,
 				});
 				writeWorkerSource();
 				await expect(
-					runWrangler("publish ./index")
+					runWrangler("deploy ./index")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"Cannot use \\"api.example.com/at/a/path\\" as a Custom Domain; paths are not allowed"`
 				);
@@ -1100,7 +1100,7 @@ Update them to point to this script instead?`,
 Update them to point to this script instead?`,
 					result: false,
 				});
-				await runWrangler("publish ./index");
+				await runWrangler("deploy ./index");
 				expect(std.out).toContain(
 					'Publishing to Custom Domain "api.example.com" was skipped, fix conflict and try again'
 				);
@@ -1117,7 +1117,7 @@ Update them to point to this script instead?`,
 			mockUploadWorkerRequest({ expectedType: "esm" });
 			mockSubDomainRequest();
 
-			await runWrangler("publish ./index");
+			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -1135,7 +1135,7 @@ Update them to point to this script instead?`,
 			mockUploadWorkerRequest({ expectedType: "sw" });
 			mockSubDomainRequest();
 
-			await runWrangler("publish ./index");
+			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -1153,7 +1153,7 @@ Update them to point to this script instead?`,
 			mockUploadWorkerRequest();
 			mockSubDomainRequest();
 
-			await runWrangler("publish");
+			await runWrangler("deploy");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -1173,7 +1173,7 @@ Update them to point to this script instead?`,
 			mockUploadWorkerRequest({ expectedEntry: "var foo = 100;" });
 			mockSubDomainRequest();
 			process.chdir("foo");
-			await runWrangler("publish");
+			await runWrangler("deploy");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -1191,7 +1191,7 @@ Update them to point to this script instead?`,
 			mockUploadWorkerRequest();
 			mockSubDomainRequest();
 
-			await runWrangler("publish");
+			await runWrangler("deploy");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -1228,7 +1228,7 @@ Update them to point to this script instead?`,
 			mockUploadWorkerRequest({ expectedEntry: "var foo = 100;" });
 			mockSubDomainRequest();
 			process.chdir("foo");
-			await runWrangler("publish");
+			await runWrangler("deploy");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -1265,7 +1265,7 @@ Update them to point to this script instead?`,
 					},
 				},
 			});
-			await expect(runWrangler("publish")).rejects
+			await expect(runWrangler("deploy")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
 			              "Processing wrangler.toml configuration:
 			                - Don't define both the \`main\` and \`build.upload.main\` fields in your configuration.
@@ -1279,7 +1279,7 @@ Update them to point to this script instead?`,
 			writeWorkerSource({ format: "ts" });
 			mockUploadWorkerRequest({ expectedEntry: "var foo = 100;" });
 			mockSubDomainRequest();
-			await runWrangler("publish index.ts");
+			await runWrangler("deploy index.ts");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -1299,7 +1299,7 @@ Update them to point to this script instead?`,
 				expectedType: "sw",
 			});
 			mockSubDomainRequest();
-			await runWrangler("publish index.ts");
+			await runWrangler("deploy index.ts");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -1332,7 +1332,7 @@ export default{
 				},
 			});
 			mockSubDomainRequest();
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
@@ -1358,7 +1358,7 @@ export default{
 			);
 			mockUploadWorkerRequest();
 			mockSubDomainRequest();
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
@@ -1375,7 +1375,7 @@ export default{
 			mockUploadWorkerRequest({ expectedEntry: "var foo = 100;" });
 			mockSubDomainRequest();
 
-			await runWrangler("publish ./src/index.js");
+			await runWrangler("deploy ./src/index.js");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -1397,7 +1397,7 @@ export const def = "show me the money";
 export default {};`
 			);
 
-			await runWrangler("publish index.js --dry-run --outdir out");
+			await runWrangler("deploy index.js --dry-run --outdir out");
 
 			expect(
 				(
@@ -1437,7 +1437,7 @@ export const def = "show me the money";
 addEventListener('fetch', event => {});`
 			);
 
-			await runWrangler("publish index.js --dry-run --outdir out");
+			await runWrangler("deploy index.js --dry-run --outdir out");
 
 			expect(
 				(
@@ -1472,7 +1472,7 @@ addEventListener('fetch', event => {});`
 			});
 			mockSubDomainRequest();
 
-			await runWrangler("publish ./src/index.js");
+			await runWrangler("deploy ./src/index.js");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -1493,7 +1493,7 @@ addEventListener('fetch', event => {});`
 			mockUploadWorkerRequest();
 			mockSubDomainRequest();
 
-			await expect(runWrangler("publish ./index.js")).rejects
+			await expect(runWrangler("deploy ./index.js")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
 			              "Processing wrangler.toml configuration:
 			                - \\"site.bucket\\" is a required field."
@@ -1547,7 +1547,7 @@ addEventListener('fetch', event => {});`
 			mockListKVNamespacesRequest(kvNamespace);
 			mockKeyListRequest(kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
-			await runWrangler("publish ./index.js");
+			await runWrangler("deploy ./index.js");
 
 			expect(std).toMatchInlineSnapshot(`
 			Object {
@@ -1605,7 +1605,7 @@ addEventListener('fetch', event => {});`
 			mockListKVNamespacesRequest(kvNamespace);
 			mockKeyListRequest(kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
-			await runWrangler("publish --config ./my-site/wrangler.toml");
+			await runWrangler("deploy --config ./my-site/wrangler.toml");
 
 			expect(std.info).toMatchInlineSnapshot(`
 			"Fetching list of already uploaded assets...
@@ -1647,7 +1647,7 @@ addEventListener('fetch', event => {});`
 				},
 			});
 
-			await expect(runWrangler("publish")).rejects
+			await expect(runWrangler("deploy")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
 			              "Processing wrangler.toml configuration:
 			                - Don't define both the \`main\` and \`site.entry-point\` fields in your configuration.
@@ -1662,9 +1662,9 @@ addEventListener('fetch', event => {});`
 			mockUploadWorkerRequest();
 			mockSubDomainRequest();
 			await expect(
-				runWrangler("publish")
+				runWrangler("deploy")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler publish path/to/script\`) or the \`main\` config field."`
+				`"Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler deploy path/to/script\`) or the \`main\` config field."`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -1672,7 +1672,7 @@ addEventListener('fetch', event => {});`
 			        [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
 		      `);
 			expect(std.err).toMatchInlineSnapshot(`
-			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler publish path/to/script\`) or the \`main\` config field.[0m
+			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler deploy path/to/script\`) or the \`main\` config field.[0m
 
 			        "
 		      `);
@@ -1696,7 +1696,7 @@ addEventListener('fetch', event => {});`
 			mockKeyListRequest(kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 
-			await runWrangler("publish --assets assets --latest --name test-name");
+			await runWrangler("deploy --assets assets --latest --name test-name");
 
 			expect(std).toMatchInlineSnapshot(`
 			Object {
@@ -1750,7 +1750,7 @@ addEventListener('fetch', event => {});`
 			mockListKVNamespacesRequest(kvNamespace);
 			mockKeyListRequest(kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
-			await runWrangler("publish");
+			await runWrangler("deploy");
 
 			expect(std.info).toMatchInlineSnapshot(`
 			"Fetching list of already uploaded assets...
@@ -1792,7 +1792,7 @@ addEventListener('fetch', event => {});`
 			mockListKVNamespacesRequest(kvNamespace);
 			mockKeyListRequest(kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
-			await runWrangler("publish --assets assets");
+			await runWrangler("deploy --assets assets");
 
 			expect(std).toMatchInlineSnapshot(`
 			Object {
@@ -1823,7 +1823,7 @@ addEventListener('fetch', event => {});`
 			});
 			writeWorkerSource({ type: "sw" });
 			await expect(
-				runWrangler("publish --assets abc")
+				runWrangler("deploy --assets abc")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`"You cannot use the service-worker format with an \`assets\` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/"`
 			);
@@ -1850,7 +1850,7 @@ addEventListener('fetch', event => {});`
 			});
 			writeWorkerSource();
 			await expect(
-				runWrangler("publish --assets abc --site xyz")
+				runWrangler("deploy --assets abc --site xyz")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`"Cannot use Assets and Workers Sites in the same Worker."`
 			);
@@ -1878,7 +1878,7 @@ addEventListener('fetch', event => {});`
 			});
 			writeWorkerSource();
 			await expect(
-				runWrangler("publish --assets abc")
+				runWrangler("deploy --assets abc")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`"Cannot use Assets and Workers Sites in the same Worker."`
 			);
@@ -1905,7 +1905,7 @@ addEventListener('fetch', event => {});`
 			});
 			writeWorkerSource();
 			await expect(
-				runWrangler("publish --site xyz")
+				runWrangler("deploy --site xyz")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`"Cannot use Assets and Workers Sites in the same Worker."`
 			);
@@ -1939,7 +1939,7 @@ addEventListener('fetch', event => {});`
 			});
 			writeWorkerSource();
 			await expect(
-				runWrangler("publish")
+				runWrangler("deploy")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`"Cannot use Assets and Workers Sites in the same Worker."`
 			);
@@ -1985,7 +1985,7 @@ addEventListener('fetch', event => {});`
 			mockKeyListRequest(kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 
-			await runWrangler("publish --assets ./assets");
+			await runWrangler("deploy --assets ./assets");
 			expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -2034,7 +2034,7 @@ addEventListener('fetch', event => {});`
 			mockKeyListRequest(kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 
-			await runWrangler("publish");
+			await runWrangler("deploy");
 			expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -2095,7 +2095,7 @@ addEventListener('fetch', event => {});`
 			mockKeyListRequest(kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 
-			await runWrangler("publish");
+			await runWrangler("deploy");
 
 			expect(std.info).toMatchInlineSnapshot(`
 			"Fetching list of already uploaded assets...
@@ -2157,7 +2157,7 @@ addEventListener('fetch', event => {});`
 			mockKeyListRequest(kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 
-			await runWrangler("publish");
+			await runWrangler("deploy");
 
 			expect(std.info).toMatchInlineSnapshot(`
 			"Fetching list of already uploaded assets...
@@ -2213,7 +2213,7 @@ addEventListener('fetch', event => {});`
 			mockKeyListRequest(kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 
-			await runWrangler("publish");
+			await runWrangler("deploy");
 
 			expect(std.info).toMatchInlineSnapshot(`
 			"Fetching list of already uploaded assets...
@@ -2267,7 +2267,7 @@ addEventListener('fetch', event => {});`
 			mockListKVNamespacesRequest(kvNamespace);
 			mockKeyListRequest(kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
-			await runWrangler("publish --env some-env --legacy-env false");
+			await runWrangler("deploy --env some-env --legacy-env false");
 
 			expect(std.info).toMatchInlineSnapshot(`
 			"Fetching list of already uploaded assets...
@@ -2322,7 +2322,7 @@ addEventListener('fetch', event => {});`
 			mockListKVNamespacesRequest(kvNamespace);
 			mockKeyListRequest(kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
-			await runWrangler("publish --env some-env --legacy-env true");
+			await runWrangler("deploy --env some-env --legacy-env true");
 
 			expect(std.info).toMatchInlineSnapshot(`
 			"Fetching list of already uploaded assets...
@@ -2370,7 +2370,7 @@ addEventListener('fetch', event => {});`
 				kvNamespace.id,
 				assets.filter((a) => a.filePath !== "file-1.txt")
 			);
-			await runWrangler("publish");
+			await runWrangler("deploy");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"↗️  Done syncing assets
@@ -2409,7 +2409,7 @@ addEventListener('fetch', event => {});`
 				kvNamespace.id,
 				assets.filter((a) => a.filePath === "file-1.txt")
 			);
-			await runWrangler("publish --site-include file-1.txt");
+			await runWrangler("deploy --site-include file-1.txt");
 
 			expect(std.info).toMatchInlineSnapshot(`
 			"Fetching list of already uploaded assets...
@@ -2455,7 +2455,7 @@ addEventListener('fetch', event => {});`
 				kvNamespace.id,
 				assets.filter((a) => a.filePath === "file-1.txt")
 			);
-			await runWrangler("publish --site-exclude file-2.txt");
+			await runWrangler("deploy --site-exclude file-2.txt");
 
 			expect(std.info).toMatchInlineSnapshot(`
 			"Fetching list of already uploaded assets...
@@ -2502,7 +2502,7 @@ addEventListener('fetch', event => {});`
 				kvNamespace.id,
 				assets.filter((a) => a.filePath === "file-1.txt")
 			);
-			await runWrangler("publish");
+			await runWrangler("deploy");
 
 			expect(std.info).toMatchInlineSnapshot(`
 			"Fetching list of already uploaded assets...
@@ -2549,7 +2549,7 @@ addEventListener('fetch', event => {});`
 				kvNamespace.id,
 				assets.filter((a) => a.filePath === "file-1.txt")
 			);
-			await runWrangler("publish");
+			await runWrangler("deploy");
 
 			expect(std.info).toMatchInlineSnapshot(`
 			"Fetching list of already uploaded assets...
@@ -2596,7 +2596,7 @@ addEventListener('fetch', event => {});`
 				kvNamespace.id,
 				assets.filter((a) => a.filePath === "file-1.txt")
 			);
-			await runWrangler("publish --site-include file-1.txt");
+			await runWrangler("deploy --site-include file-1.txt");
 
 			expect(std.info).toMatchInlineSnapshot(`
 			"Fetching list of already uploaded assets...
@@ -2643,7 +2643,7 @@ addEventListener('fetch', event => {});`
 				kvNamespace.id,
 				assets.filter((a) => a.filePath.endsWith("file-1.txt"))
 			);
-			await runWrangler("publish --site-exclude file-2.txt");
+			await runWrangler("deploy --site-exclude file-2.txt");
 
 			expect(std.info).toMatchInlineSnapshot(`
 			"Fetching list of already uploaded assets...
@@ -2692,7 +2692,7 @@ addEventListener('fetch', event => {});`
 			mockKeyListRequest(kvNamespace.id, []);
 			// Only expect file-1 to be uploaded
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets.slice(0, 1));
-			await runWrangler("publish");
+			await runWrangler("deploy");
 
 			expect(std.info).toMatchInlineSnapshot(`
 			"Fetching list of already uploaded assets...
@@ -2745,7 +2745,7 @@ addEventListener('fetch', event => {});`
 			mockKeyListRequest(kvNamespace.id, []);
 			// Only expect file-2 to be uploaded
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets.slice(2));
-			await runWrangler("publish");
+			await runWrangler("deploy");
 
 			expect(std.info).toMatchInlineSnapshot(`
 			"Fetching list of already uploaded assets...
@@ -2796,7 +2796,7 @@ addEventListener('fetch', event => {});`
 			mockKeyListRequest(kvNamespace.id, []);
 
 			await expect(
-				runWrangler("publish")
+				runWrangler("deploy")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`"File too-large-file.txt is too big, it should be under 25 MiB. See https://developers.cloudflare.com/workers/platform/limits#kv-limits"`
 			);
@@ -2842,7 +2842,7 @@ addEventListener('fetch', event => {});`
 			mockKeyListRequest(kvNamespace.id, []);
 			const requests = mockUploadAssetsToKVRequest(kvNamespace.id);
 
-			await runWrangler("publish");
+			await runWrangler("deploy");
 
 			// We expect this to be uploaded in 4 batches
 			expect(requests.length).toEqual(4);
@@ -2933,7 +2933,7 @@ addEventListener('fetch', event => {});`
 			mockKeyListRequest(kvNamespace.id, []);
 
 			await expect(
-				runWrangler("publish")
+				runWrangler("deploy")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`"The asset path key \\"folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/folder/file.3da0d0cd12.txt\\" exceeds the maximum key size limit of 512. See https://developers.cloudflare.com/workers/platform/limits#kv-limits\\","`
 			);
@@ -2993,7 +2993,7 @@ addEventListener('fetch', event => {});`
 				"file-4.anotherhash.txt",
 			]);
 
-			await runWrangler("publish");
+			await runWrangler("deploy");
 
 			expect(std.info).toMatchInlineSnapshot(`
 			"Fetching list of already uploaded assets...
@@ -3055,7 +3055,7 @@ addEventListener('fetch', event => {});`
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 
 			process.chdir("./src");
-			await runWrangler("publish");
+			await runWrangler("deploy");
 			process.chdir("../");
 
 			expect(std.info).toMatchInlineSnapshot(`
@@ -3099,7 +3099,7 @@ addEventListener('fetch', event => {});`
 			mockKeyListRequest(kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 			process.chdir("./my-assets");
-			await runWrangler("publish --site .");
+			await runWrangler("deploy --site .");
 
 			expect(std).toMatchInlineSnapshot(`
 			Object {
@@ -3144,7 +3144,7 @@ addEventListener('fetch', event => {});`
 			mockKeyListRequest(kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
 			process.chdir("./my-assets");
-			await runWrangler("publish --assets .");
+			await runWrangler("deploy --assets .");
 
 			expect(std).toMatchInlineSnapshot(`
 			Object {
@@ -3214,7 +3214,7 @@ addEventListener('fetch', event => {});`
 			);
 
 			await expect(
-				runWrangler("publish")
+				runWrangler("deploy")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`"A request to the Cloudflare API (/accounts/some-account-id/storage/kv/namespaces/__test-name-workers_sites_assets-id/bulk) failed."`
 			);
@@ -3264,7 +3264,7 @@ addEventListener('fetch', event => {});`
 			});
 
 			it("default log level", async () => {
-				await runWrangler("publish");
+				await runWrangler("deploy");
 				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -3387,7 +3387,7 @@ addEventListener('fetch', event => {});`
 
 			it("debug log level", async () => {
 				logger.loggerLevel = "debug";
-				await runWrangler("publish");
+				await runWrangler("deploy");
 
 				const diffRegexp = /^ [+=-]/;
 				const diff = std.debug
@@ -3517,13 +3517,13 @@ addEventListener('fetch', event => {});`
 	});
 
 	describe("workers_dev setting", () => {
-		it("should publish to a workers.dev domain if workers_dev is undefined", async () => {
+		it("should deploy to a workers.dev domain if workers_dev is undefined", async () => {
 			writeWranglerToml();
 			writeWorkerSource();
 			mockUploadWorkerRequest();
 			mockSubDomainRequest();
 
-			await runWrangler("publish ./index");
+			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -3535,7 +3535,7 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should publish to the workers.dev domain if workers_dev is `true`", async () => {
+		it("should deploy to the workers.dev domain if workers_dev is `true`", async () => {
 			writeWranglerToml({
 				workers_dev: true,
 			});
@@ -3544,7 +3544,7 @@ addEventListener('fetch', event => {});`
 			mockSubDomainRequest();
 			mockUpdateWorkerRequest({ enabled: true });
 
-			await runWrangler("publish ./index");
+			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -3564,7 +3564,7 @@ addEventListener('fetch', event => {});`
 			mockUploadWorkerRequest({ available_on_subdomain: true });
 			mockSubDomainRequest();
 
-			await runWrangler("publish ./index");
+			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -3584,12 +3584,12 @@ addEventListener('fetch', event => {});`
 			mockUploadWorkerRequest();
 			mockUpdateWorkerRequest({ enabled: false });
 
-			await runWrangler("publish ./index");
+			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			No publish targets for test-name (TIMINGS)
+			No deploy targets for test-name (TIMINGS)
 			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -3605,12 +3605,12 @@ addEventListener('fetch', event => {});`
 
 			// note the lack of a mock for the subdomain disable request
 
-			await runWrangler("publish ./index");
+			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
-			No publish targets for test-name (TIMINGS)
+			No deploy targets for test-name (TIMINGS)
 			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -3630,12 +3630,12 @@ addEventListener('fetch', event => {});`
 			});
 			mockUpdateWorkerRequest({ enabled: false, env: "dev" });
 
-			await runWrangler("publish ./index --env dev --legacy-env false");
+			await runWrangler("deploy ./index --env dev --legacy-env false");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (dev) (TIMINGS)
-			No publish targets for test-name (dev) (TIMINGS)
+			No deploy targets for test-name (dev) (TIMINGS)
 			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -3656,18 +3656,18 @@ addEventListener('fetch', event => {});`
 			});
 			mockUpdateWorkerRequest({ enabled: false, env: "dev" });
 
-			await runWrangler("publish ./index --env dev --legacy-env false");
+			await runWrangler("deploy ./index --env dev --legacy-env false");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (dev) (TIMINGS)
-			No publish targets for test-name (dev) (TIMINGS)
+			No deploy targets for test-name (dev) (TIMINGS)
 			Current Deployment ID: Galaxy-Class"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should publish to a workers.dev domain if workers_dev is undefined but overwritten to `true` in environment", async () => {
+		it("should deploy to a workers.dev domain if workers_dev is undefined but overwritten to `true` in environment", async () => {
 			writeWranglerToml({
 				env: {
 					dev: {
@@ -3682,7 +3682,7 @@ addEventListener('fetch', event => {});`
 			mockSubDomainRequest();
 			mockUpdateWorkerRequest({ enabled: true, env: "dev" });
 
-			await runWrangler("publish ./index --env dev --legacy-env false");
+			await runWrangler("deploy ./index --env dev --legacy-env false");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -3694,7 +3694,7 @@ addEventListener('fetch', event => {});`
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should publish to a workers.dev domain if workers_dev is `false` but overwritten to `true` in environment", async () => {
+		it("should deploy to a workers.dev domain if workers_dev is `false` but overwritten to `true` in environment", async () => {
 			writeWranglerToml({
 				workers_dev: false,
 				env: {
@@ -3710,7 +3710,7 @@ addEventListener('fetch', event => {});`
 			mockSubDomainRequest();
 			mockUpdateWorkerRequest({ enabled: true, env: "dev" });
 
-			await runWrangler("publish ./index --env dev --legacy-env false");
+			await runWrangler("deploy ./index --env dev --legacy-env false");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -3739,7 +3739,7 @@ addEventListener('fetch', event => {});`
 			mockSubDomainRequest();
 			mockUpdateWorkerRequest({ enabled: true, env: "dev" });
 
-			await runWrangler("publish ./index --env dev --legacy-env false");
+			await runWrangler("deploy ./index --env dev --legacy-env false");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -3771,7 +3771,7 @@ addEventListener('fetch', event => {});`
 			mockSubDomainRequest();
 			mockUpdateWorkerRequest({ enabled: true, env: "dev" });
 
-			await runWrangler("publish ./index --env dev --legacy-env false");
+			await runWrangler("deploy ./index --env dev --legacy-env false");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -3804,7 +3804,7 @@ addEventListener('fetch', event => {});`
 			mockUpdateWorkerRequest({ enabled: true, env: "dev" });
 
 			await runWrangler(
-				"publish ./index --env dev --legacy-env false --compatibility-date 2022-01-14 --compatibility-flags url_standard"
+				"deploy ./index --env dev --legacy-env false --compatibility-date 2022-01-14 --compatibility-flags url_standard"
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -3821,7 +3821,7 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			let err: undefined | Error;
 			try {
-				await runWrangler("publish ./index.js");
+				await runWrangler("deploy ./index.js");
 			} catch (e) {
 				err = e as Error;
 			}
@@ -3844,7 +3844,7 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			let err: undefined | Error;
 			try {
-				await runWrangler("publish ./index.js");
+				await runWrangler("deploy ./index.js");
 			} catch (e) {
 				err = e as Error;
 			}
@@ -3866,7 +3866,7 @@ addEventListener('fetch', event => {});`
 			mockSubDomainRequest();
 			mockUpdateWorkerRequest({ enabled: true });
 
-			await runWrangler("publish ./index");
+			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -3885,7 +3885,7 @@ addEventListener('fetch', event => {});`
 			mockSubDomainRequest();
 			mockUpdateWorkerRequest({ enabled: true });
 
-			await runWrangler("publish ./index");
+			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -3910,9 +3910,9 @@ addEventListener('fetch', event => {});`
 				result: false,
 			});
 
-			await expect(runWrangler("publish ./index")).rejects
+			await expect(runWrangler("deploy ./index")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-			"You can either publish your worker to one or more routes by specifying them in wrangler.toml, or register a workers.dev subdomain here:
+			"You can either deploy your worker to one or more routes by specifying them in wrangler.toml, or register a workers.dev subdomain here:
 			https://dash.cloudflare.com/some-account-id/workers/onboarding"
 		`);
 		});
@@ -3928,7 +3928,7 @@ addEventListener('fetch', event => {});`
 				enabled: false,
 			});
 			mockPublishRoutesRequest({ routes: ["http://example.com/*"] });
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -3963,7 +3963,7 @@ addEventListener('fetch', event => {});`
 				env: "production",
 				legacyEnv: true,
 			});
-			await runWrangler("publish index.js --env production");
+			await runWrangler("deploy index.js --env production");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -3997,7 +3997,7 @@ addEventListener('fetch', event => {});`
 				env: "production",
 				legacyEnv: true,
 			});
-			await runWrangler("publish index.js --env production");
+			await runWrangler("deploy index.js --env production");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -4024,7 +4024,7 @@ addEventListener('fetch', event => {});`
 			mockPublishRoutesRequest({
 				routes: ["http://example.com/*"],
 			});
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -4060,7 +4060,7 @@ addEventListener('fetch', event => {});`
 				env: "production",
 				legacyEnv: true,
 			});
-			await runWrangler("publish index.js --env production");
+			await runWrangler("deploy index.js --env production");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -4096,7 +4096,7 @@ addEventListener('fetch', event => {});`
 				env: "production",
 				legacyEnv: true,
 			});
-			await runWrangler("publish index.js --env production");
+			await runWrangler("deploy index.js --env production");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -4132,7 +4132,7 @@ addEventListener('fetch', event => {});`
 				env: "production",
 				legacyEnv: true,
 			});
-			await runWrangler("publish index.js --env production");
+			await runWrangler("deploy index.js --env production");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -4167,7 +4167,7 @@ addEventListener('fetch', event => {});`
 				env: "production",
 				legacyEnv: true,
 			});
-			await runWrangler("publish index.js --env production");
+			await runWrangler("deploy index.js --env production");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -4269,7 +4269,7 @@ addEventListener('fetch', event => {});`
 			);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			await runWrangler("publish --dry-run --outdir dist --define abc:789");
+			await runWrangler("deploy --dry-run --outdir dist --define abc:789");
 
 			expect(fs.readFileSync("dist/index.js", "utf-8")).toContain(
 				`console.log(789);`
@@ -4292,7 +4292,7 @@ addEventListener('fetch', event => {});`
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
 			await runWrangler(
-				"publish --dry-run --outdir dist --define abc:'https://www.abc.net.au/news/'"
+				"deploy --dry-run --outdir dist --define abc:'https://www.abc.net.au/news/'"
 			);
 
 			expect(fs.readFileSync("dist/index.js", "utf-8")).toContain(
@@ -4319,7 +4319,7 @@ addEventListener('fetch', event => {});`
 			});
 			mockSubDomainRequest();
 
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 			"Running custom build: node -e \\"4+4; require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\\"
 			Total Upload: xx KiB / gzip: xx KiB
@@ -4345,7 +4345,7 @@ addEventListener('fetch', event => {});`
 				});
 				mockSubDomainRequest();
 
-				await runWrangler("publish index.js");
+				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Running custom build: echo \\"export default { fetch(){ return new Response(123) } }\\" > index.js
 			Total Upload: xx KiB / gzip: xx KiB
@@ -4367,7 +4367,7 @@ addEventListener('fetch', event => {});`
 				},
 			});
 
-			await expect(runWrangler("publish index.js")).rejects
+			await expect(runWrangler("deploy index.js")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
 			              "The expected output file at \\"index.js\\" was not found after running custom build: node -e \\"4+4;\\".
 			              The \`main\` property in wrangler.toml should point to the file generated by the custom build."
@@ -4399,7 +4399,7 @@ addEventListener('fetch', event => {});`
 			fs.mkdirSync("./dist");
 			fs.writeFileSync("./dist/index.ts", "some content", "utf-8");
 
-			await expect(runWrangler("publish")).rejects
+			await expect(runWrangler("deploy")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
 			              "The expected output file at \\".\\" was not found after running custom build: node -e \\"4+4;\\".
 			              The \`main\` property in wrangler.toml should point to the file generated by the custom build.
@@ -4453,7 +4453,7 @@ addEventListener('fetch', event => {});`
 			});
 
 			mockSubDomainRequest();
-			await runWrangler("publish index.js --minify");
+			await runWrangler("deploy index.js --minify");
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
@@ -4493,7 +4493,7 @@ addEventListener('fetch', event => {});`
 			});
 
 			mockSubDomainRequest();
-			await runWrangler("publish -e testEnv index.js");
+			await runWrangler("deploy -e testEnv index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (testEnv) (TIMINGS)
@@ -4506,7 +4506,7 @@ addEventListener('fetch', event => {});`
 	});
 
 	describe("durable object migrations", () => {
-		it("should warn when you try to publish durable objects without migrations", async () => {
+		it("should warn when you try to deploy durable objects without migrations", async () => {
 			writeWranglerToml({
 				durable_objects: {
 					bindings: [{ name: "SOMENAME", class_name: "SomeClass" }],
@@ -4518,7 +4518,7 @@ addEventListener('fetch', event => {});`
 			);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
@@ -4569,7 +4569,7 @@ addEventListener('fetch', event => {});`
 			);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
@@ -4584,7 +4584,7 @@ addEventListener('fetch', event => {});`
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should publish all migrations on first publish", async () => {
+		it("should deploy all migrations on first deploy", async () => {
 			writeWranglerToml({
 				durable_objects: {
 					bindings: [
@@ -4613,7 +4613,7 @@ addEventListener('fetch', event => {});`
 				},
 			});
 
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
@@ -4662,7 +4662,7 @@ addEventListener('fetch', event => {});`
 				},
 			});
 
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 			expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -4708,7 +4708,7 @@ addEventListener('fetch', event => {});`
 				expectedMigrations: undefined,
 			});
 
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 			expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -4729,7 +4729,7 @@ addEventListener('fetch', event => {});`
 		});
 
 		describe("service environments", () => {
-			it("should publish all migrations on first publish", async () => {
+			it("should deploy all migrations on first deploy", async () => {
 				writeWranglerToml({
 					durable_objects: {
 						bindings: [
@@ -4759,7 +4759,7 @@ addEventListener('fetch', event => {});`
 					},
 				});
 
-				await runWrangler("publish index.js --legacy-env false");
+				await runWrangler("deploy index.js --legacy-env false");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
@@ -4782,7 +4782,7 @@ addEventListener('fetch', event => {});`
 		`);
 			});
 
-			it("should publish all migrations on first publish (--env)", async () => {
+			it("should deploy all migrations on first deploy (--env)", async () => {
 				writeWranglerToml({
 					durable_objects: {
 						bindings: [
@@ -4823,7 +4823,7 @@ addEventListener('fetch', event => {});`
 					},
 				});
 
-				await runWrangler("publish index.js --legacy-env false --env xyz");
+				await runWrangler("deploy index.js --legacy-env false --env xyz");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
@@ -4882,7 +4882,7 @@ addEventListener('fetch', event => {});`
 					},
 				});
 
-				await runWrangler("publish index.js --legacy-env false");
+				await runWrangler("deploy index.js --legacy-env false");
 				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -4953,7 +4953,7 @@ addEventListener('fetch', event => {});`
 					},
 				});
 
-				await runWrangler("publish index.js --legacy-env false --env xyz");
+				await runWrangler("deploy index.js --legacy-env false --env xyz");
 				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -5202,7 +5202,7 @@ addEventListener('fetch', event => {});`
 			mockSubDomainRequest();
 			mockLegacyScriptData({ scripts: [] });
 
-			await expect(runWrangler("publish index.js")).resolves.toBeUndefined();
+			await expect(runWrangler("deploy index.js")).resolves.toBeUndefined();
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
@@ -5332,7 +5332,7 @@ addEventListener('fetch', event => {});`
 			fs.writeFileSync("./some_wasm.wasm", "some wasm");
 			fs.writeFileSync("./more_wasm.wasm", "more wasm");
 
-			await expect(runWrangler("publish index.js")).rejects
+			await expect(runWrangler("deploy index.js")).rejects
 				.toMatchInlineSnapshot(`
 						              [Error: Processing wrangler.toml configuration:
 						                - CONFLICTING_NAME_ONE assigned to Durable Object, KV Namespace, and R2 Bucket bindings.
@@ -5442,7 +5442,7 @@ addEventListener('fetch', event => {});`
 
 			writeWorkerSource({ type: "sw" });
 
-			await expect(runWrangler("publish index.js")).rejects
+			await expect(runWrangler("deploy index.js")).rejects
 				.toMatchInlineSnapshot(`
 						              [Error: Processing wrangler.toml configuration:
 						                - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
@@ -5595,7 +5595,7 @@ addEventListener('fetch', event => {});`
 			fs.writeFileSync("./some_wasm.wasm", "some wasm");
 			fs.writeFileSync("./more_wasm.wasm", "more wasm");
 
-			await expect(runWrangler("publish index.js")).rejects
+			await expect(runWrangler("deploy index.js")).rejects
 				.toMatchInlineSnapshot(`
 						              [Error: Processing wrangler.toml configuration:
 						                - CONFLICTING_DURABLE_OBJECT_NAME assigned to multiple Durable Object bindings.
@@ -5657,7 +5657,7 @@ addEventListener('fetch', event => {});`
 				});
 				mockSubDomainRequest();
 
-				await runWrangler("publish index.js");
+				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
@@ -5683,7 +5683,7 @@ addEventListener('fetch', event => {});`
 				fs.writeFileSync("./path/to/test.wasm", "SOME WASM CONTENT");
 
 				await expect(
-					runWrangler("publish index.js")
+					runWrangler("deploy index.js")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"You cannot configure [wasm_modules] with an ES module worker. Instead, import the .wasm module directly in your code"`
 				);
@@ -5728,7 +5728,7 @@ addEventListener('fetch', event => {});`
 					expectedCompatibilityDate: "2022-01-12",
 				});
 				mockSubDomainRequest();
-				await runWrangler("publish index.js --config ./path/to/wrangler.toml");
+				await runWrangler("deploy index.js --config ./path/to/wrangler.toml");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
@@ -5765,7 +5765,7 @@ addEventListener('fetch', event => {});`
 					],
 				});
 				mockSubDomainRequest();
-				await runWrangler("publish index.js");
+				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
@@ -5800,7 +5800,7 @@ addEventListener('fetch', event => {});`
 					],
 				});
 				mockSubDomainRequest();
-				await runWrangler("publish index.js");
+				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
@@ -5826,7 +5826,7 @@ addEventListener('fetch', event => {});`
 				fs.writeFileSync("./path/to/text.file", "SOME TEXT CONTENT");
 
 				await expect(
-					runWrangler("publish index.js")
+					runWrangler("deploy index.js")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml"`
 				);
@@ -5875,7 +5875,7 @@ addEventListener('fetch', event => {});`
 					expectedCompatibilityDate: "2022-01-12",
 				});
 				mockSubDomainRequest();
-				await runWrangler("publish index.js --config ./path/to/wrangler.toml");
+				await runWrangler("deploy index.js --config ./path/to/wrangler.toml");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
@@ -5913,7 +5913,7 @@ addEventListener('fetch', event => {});`
 					],
 				});
 				mockSubDomainRequest();
-				await runWrangler("publish index.js");
+				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
@@ -5939,7 +5939,7 @@ addEventListener('fetch', event => {});`
 				fs.writeFileSync("./path/to/data.bin", "SOME DATA CONTENT");
 
 				await expect(
-					runWrangler("publish index.js")
+					runWrangler("deploy index.js")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your wrangler.toml"`
 				);
@@ -5988,7 +5988,7 @@ addEventListener('fetch', event => {});`
 					expectedCompatibilityDate: "2022-01-12",
 				});
 				mockSubDomainRequest();
-				await runWrangler("publish index.js --config ./path/to/wrangler.toml");
+				await runWrangler("deploy index.js --config ./path/to/wrangler.toml");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
@@ -6027,7 +6027,7 @@ addEventListener('fetch', event => {});`
 					],
 				});
 
-				await runWrangler("publish index.js");
+				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
@@ -6052,7 +6052,7 @@ addEventListener('fetch', event => {});`
 				writeWorkerSource();
 				mockSubDomainRequest();
 				mockUploadWorkerRequest();
-				await runWrangler("publish index.js --var TEXT:sometext --var COUNT:1");
+				await runWrangler("deploy index.js --var TEXT:sometext --var COUNT:1");
 				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -6086,7 +6086,7 @@ addEventListener('fetch', event => {});`
 					],
 				});
 
-				await runWrangler("publish index.js");
+				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
@@ -6138,7 +6138,7 @@ addEventListener('fetch', event => {});`
 					],
 				});
 
-				await runWrangler("publish index.js");
+				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
@@ -6186,7 +6186,7 @@ addEventListener('fetch', event => {});`
 					],
 				});
 
-				await runWrangler("publish index.js");
+				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
@@ -6227,7 +6227,7 @@ addEventListener('fetch', event => {});`
 					],
 				});
 
-				await runWrangler("publish index.js");
+				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
@@ -6273,7 +6273,7 @@ addEventListener('fetch', event => {});`
 					],
 				});
 
-				await runWrangler("publish index.js");
+				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
@@ -6327,7 +6327,7 @@ addEventListener('fetch', event => {});`
 					],
 				});
 
-				await runWrangler("publish index.js --outdir tmp --dry-run");
+				await runWrangler("deploy index.js --outdir tmp --dry-run");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
@@ -6373,7 +6373,7 @@ addEventListener('fetch', event => {});`
 				writeWorkerSource({ type: "sw" });
 				mockSubDomainRequest();
 
-				await expect(runWrangler("publish index.js")).rejects
+				await expect(runWrangler("deploy index.js")).rejects
 					.toThrowErrorMatchingInlineSnapshot(`
 			                              "You seem to be trying to use Durable Objects in a Worker written as a service-worker.
 			                              You can use Durable Objects defined in other Workers by specifying a \`script_name\` in your wrangler.toml, where \`script_name\` is the name of the Worker that implements that Durable Object. For example:
@@ -6408,7 +6408,7 @@ addEventListener('fetch', event => {});`
 					],
 				});
 
-				await runWrangler("publish index.js");
+				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
@@ -6445,7 +6445,7 @@ addEventListener('fetch', event => {});`
 					],
 				});
 
-				await runWrangler("publish index.js");
+				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
@@ -6482,7 +6482,7 @@ addEventListener('fetch', event => {});`
 						},
 					],
 				});
-				await runWrangler("publish index.js");
+				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
@@ -6631,7 +6631,7 @@ addEventListener('fetch', event => {});`
 					],
 				});
 
-				await runWrangler("publish index.js");
+				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
@@ -6676,7 +6676,7 @@ addEventListener('fetch', event => {});`
 					],
 				});
 
-				await runWrangler("publish index.js");
+				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
@@ -6726,7 +6726,7 @@ addEventListener('fetch', event => {});`
 						"SOME TEXT CONTENT",
 				},
 			});
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
@@ -6756,7 +6756,7 @@ addEventListener('fetch', event => {});`
 						"SOME TEXT CONTENT",
 				},
 			});
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
@@ -6790,7 +6790,7 @@ addEventListener('fetch', event => {});`
 						"SOME TEXT CONTENT",
 				},
 			});
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
@@ -6840,7 +6840,7 @@ addEventListener('fetch', event => {});`
 						"SOME OTHER TEXT CONTENT",
 				},
 			});
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
@@ -6870,7 +6870,7 @@ addEventListener('fetch', event => {});`
 			// but was skipped because of fallthrough = false
 			let err: Error | undefined;
 			try {
-				await runWrangler("publish index.js");
+				await runWrangler("deploy index.js");
 			} catch (e) {
 				err = e as Error;
 			}
@@ -6897,7 +6897,7 @@ addEventListener('fetch', event => {});`
 			// but was skipped because of fallthrough = false
 			let err: Error | undefined;
 			try {
-				await runWrangler("publish index.js");
+				await runWrangler("deploy index.js");
 			} catch (e) {
 				err = e as Error;
 			}
@@ -6938,7 +6938,7 @@ addEventListener('fetch', event => {});`
 				mockUploadWorkerRequest({
 					expectedEntry: `return new Response("some-node-env");`,
 				});
-				await runWrangler("publish index.js");
+				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
@@ -6969,7 +6969,7 @@ addEventListener('fetch', event => {});`
 						"SOME TEXT CONTENT",
 				},
 			});
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
@@ -6999,7 +6999,7 @@ addEventListener('fetch', event => {});`
 						"SOME WASM CONTENT",
 				},
 			});
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
@@ -7031,7 +7031,7 @@ addEventListener('fetch', event => {});`
 						"SOME TEXT CONTENT",
 				},
 			});
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
@@ -7060,7 +7060,7 @@ addEventListener('fetch', event => {});`
 			mockUploadWorkerRequest();
 
 			await runWrangler(
-				"publish index.js --compatibility-date 2022-03-17 --name test-name"
+				"deploy index.js --compatibility-date 2022-03-17 --name test-name"
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -7100,7 +7100,7 @@ addEventListener('fetch', event => {});`
 			mockUploadWorkerRequest({
 				expectedEntry: "var foo = 123;", // make sure it imported the module correctly
 			});
-			await runWrangler("publish index.ts");
+			await runWrangler("deploy index.ts");
 			expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -7151,7 +7151,7 @@ addEventListener('fetch', event => {});`
 			mockUploadWorkerRequest({
 				expectedEntry: "export {", // check that the export is preserved
 			});
-			await runWrangler("publish index.js"); // this would throw if we tried to compile with es5
+			await runWrangler("deploy index.js"); // this would throw if we tried to compile with es5
 			expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -7174,7 +7174,7 @@ addEventListener('fetch', event => {});`
 			writeWorkerSource();
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			await runWrangler("publish index.js --outdir some-dir");
+			await runWrangler("deploy index.js --outdir some-dir");
 			expect(fs.existsSync("some-dir/index.js")).toBe(true);
 			expect(fs.existsSync("some-dir/index.js.map")).toBe(true);
 			expect(std).toMatchInlineSnapshot(`
@@ -7209,7 +7209,7 @@ addEventListener('fetch', event => {});`
 			mockListKVNamespacesRequest(kvNamespace);
 			mockKeyListRequest(kvNamespace.id, []);
 			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
-			await runWrangler("publish index.js --outdir some-dir --assets assets");
+			await runWrangler("deploy index.js --outdir some-dir --assets assets");
 			expect(fs.existsSync("some-dir/index.js")).toBe(true);
 			expect(fs.existsSync("some-dir/index.js.map")).toBe(true);
 			expect(std).toMatchInlineSnapshot(`
@@ -7261,7 +7261,7 @@ export default{
 						"Hello wasm World!",
 				},
 			});
-			await runWrangler("publish index.js --outdir some-dir");
+			await runWrangler("deploy index.js --outdir some-dir");
 
 			expect(fs.existsSync("some-dir/index.js")).toBe(true);
 			expect(fs.existsSync("some-dir/index.js.map")).toBe(true);
@@ -7293,7 +7293,7 @@ export default{
 	});
 
 	describe("--dry-run", () => {
-		it("should not publish the worker if --dry-run is specified", async () => {
+		it("should not deploy the worker if --dry-run is specified", async () => {
 			writeWranglerToml({
 				// add a durable object with migrations
 				// to make sure we _don't_ fetch migration status
@@ -7304,7 +7304,7 @@ export default{
 			});
 			writeWorkerSource();
 			process.env.CLOUDFLARE_ACCOUNT_ID = "";
-			await runWrangler("publish index.js --dry-run");
+			await runWrangler("deploy index.js --dry-run");
 			expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -7325,7 +7325,7 @@ export default{
 		it("should warn when using node compatibility mode", async () => {
 			writeWranglerToml();
 			writeWorkerSource();
-			await runWrangler("publish index.js --node-compat --dry-run");
+			await runWrangler("deploy index.js --node-compat --dry-run");
 			expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -7352,7 +7352,7 @@ export default{
 			);
 			let err: esbuild.BuildFailure | undefined;
 			try {
-				await runWrangler("publish index.js --dry-run"); // expecting this to throw, as node compatibility isn't enabled
+				await runWrangler("deploy index.js --dry-run"); // expecting this to throw, as node compatibility isn't enabled
 			} catch (e) {
 				err = e as esbuild.BuildFailure;
 			}
@@ -7373,7 +7373,7 @@ export default{
       export default {}
       `
 			);
-			await runWrangler("publish index.js --node-compat --dry-run"); // this would throw if node compatibility didn't exist
+			await runWrangler("deploy index.js --node-compat --dry-run"); // this would throw if node compatibility didn't exist
 			expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -7402,7 +7402,7 @@ export default{
 			);
 			let err: esbuild.BuildFailure | undefined;
 			try {
-				await runWrangler("publish index.js --dry-run"); // expecting this to throw, as node compatibility isn't enabled
+				await runWrangler("deploy index.js --dry-run"); // expecting this to throw, as node compatibility isn't enabled
 			} catch (e) {
 				err = e as esbuild.BuildFailure;
 			}
@@ -7423,7 +7423,7 @@ export default{
 			);
 
 			await runWrangler(
-				"publish index.js --dry-run --outdir=dist --compatibility-flag=nodejs_compat"
+				"deploy index.js --dry-run --outdir=dist --compatibility-flag=nodejs_compat"
 			);
 
 			expect(std).toMatchInlineSnapshot(`
@@ -7454,7 +7454,7 @@ export default{
 
 			await expect(
 				runWrangler(
-					"publish index.js --dry-run --outdir=dist --compatibility-flag=nodejs_compat --node-compat"
+					"deploy index.js --dry-run --outdir=dist --compatibility-flag=nodejs_compat --node-compat"
 				)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`"The \`nodejs_compat\` compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers runtime Node.js compatibility features, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file."`
@@ -7497,7 +7497,7 @@ export default{
 			});
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
-			await runWrangler("publish");
+			await runWrangler("deploy");
 
 			expect(std).toMatchInlineSnapshot(`
 			Object {
@@ -7562,7 +7562,7 @@ export default{
 				main: "index.js",
 			});
 
-			await expect(runWrangler("publish")).rejects.toMatchInlineSnapshot(
+			await expect(runWrangler("deploy")).rejects.toMatchInlineSnapshot(
 				`[ParseError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
 			);
 			expect(std).toMatchInlineSnapshot(`
@@ -7625,7 +7625,7 @@ export default{
 				main: "index.js",
 			});
 
-			await expect(runWrangler("publish")).rejects.toMatchInlineSnapshot(
+			await expect(runWrangler("deploy")).rejects.toMatchInlineSnapshot(
 				`[ParseError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
 			);
 
@@ -7693,7 +7693,7 @@ export default{
 				main: "index.js",
 			});
 
-			await expect(runWrangler("publish")).rejects.toMatchInlineSnapshot(
+			await expect(runWrangler("deploy")).rejects.toMatchInlineSnapshot(
 				`[ParseError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name) failed.]`
 			);
 			expect(std).toMatchInlineSnapshot(`
@@ -7817,7 +7817,7 @@ export default{
       const xyz = 123; // a statement that would otherwise be compiled out
     `;
 			fs.writeFileSync("index.js", scriptContent);
-			await runWrangler("publish index.js --no-bundle --dry-run --outdir dist");
+			await runWrangler("deploy index.js --no-bundle --dry-run --outdir dist");
 			expect(fs.readFileSync("dist/index.js", "utf-8")).toMatch(scriptContent);
 		});
 
@@ -7830,7 +7830,7 @@ export default{
 			const xyz = 123; // a statement that would otherwise be compiled out
 		`;
 			fs.writeFileSync("index.js", scriptContent);
-			await runWrangler("publish index.js --dry-run --outdir dist");
+			await runWrangler("deploy index.js --dry-run --outdir dist");
 			expect(fs.readFileSync("dist/index.js", "utf-8")).toMatch(scriptContent);
 		});
 	});
@@ -7843,7 +7843,7 @@ export default{
 		`;
 			fs.writeFileSync("index.js", scriptContent);
 			await runWrangler(
-				"publish index.js --no-bundle --minify --dry-run --outdir dist"
+				"deploy index.js --no-bundle --minify --dry-run --outdir dist"
 			);
 			expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--minify\` and \`--no-bundle\` can't be used together. If you want to minify your Worker and disable Wrangler's bundling, please minify as part of your own bundling process.[0m
@@ -7861,7 +7861,7 @@ export default{
 			const xyz = 123; // a statement that would otherwise be compiled out
 		`;
 			fs.writeFileSync("index.js", scriptContent);
-			await runWrangler("publish index.js --dry-run --outdir dist");
+			await runWrangler("deploy index.js --dry-run --outdir dist");
 			expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--minify\` and \`--no-bundle\` can't be used together. If you want to minify your Worker and disable Wrangler's bundling, please minify as part of your own bundling process.[0m
 
@@ -7878,7 +7878,7 @@ export default{
 		`;
 			fs.writeFileSync("index.js", scriptContent);
 			await runWrangler(
-				"publish index.js --no-bundle --node-compat --dry-run --outdir dist"
+				"deploy index.js --no-bundle --node-compat --dry-run --outdir dist"
 			);
 			expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling Node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
@@ -7899,7 +7899,7 @@ export default{
 			const xyz = 123; // a statement that would otherwise be compiled out
 		`;
 			fs.writeFileSync("index.js", scriptContent);
-			await runWrangler("publish index.js --dry-run --outdir dist");
+			await runWrangler("deploy index.js --dry-run --outdir dist");
 			expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mEnabling Node.js compatibility mode for built-ins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details.[0m
 
@@ -7911,7 +7911,7 @@ export default{
 		});
 	});
 
-	it("should not publish if there's any other kind of error when checking deployment source", async () => {
+	it("should not deploy if there's any other kind of error when checking deployment source", async () => {
 		writeWorkerSource();
 		writeWranglerToml();
 		mockSubDomainRequest();
@@ -7944,7 +7944,7 @@ export default{
 			)
 		);
 
-		await runWrangler("publish index.js");
+		await runWrangler("deploy index.js");
 		expect(std.err).toContain(
 			`A request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed`
 		);
@@ -7970,7 +7970,7 @@ export default{
 			});
 			mockGetQueue("queue1");
 
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
@@ -7983,7 +7983,7 @@ export default{
 		`);
 		});
 
-		it("should update queue consumers on publish", async () => {
+		it("should update queue consumers on deploy", async () => {
 			writeWranglerToml({
 				queues: {
 					consumers: [
@@ -8009,7 +8009,7 @@ export default{
 					max_wait_time_ms: 3000,
 				},
 			});
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
@@ -8048,7 +8048,7 @@ export default{
 					max_concurrency: 5,
 				},
 			});
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
@@ -8086,7 +8086,7 @@ export default{
 					max_wait_time_ms: 3000,
 				},
 			});
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
@@ -8118,7 +8118,7 @@ export default{
 			mockGetQueueMissing("queue1");
 
 			await expect(
-				runWrangler("publish index.js")
+				runWrangler("deploy index.js")
 			).rejects.toMatchInlineSnapshot(
 				`[Error: Queue "queue1" does not exist. To create it, run: wrangler queues create queue1]`
 			);
@@ -8137,7 +8137,7 @@ export default{
 			mockGetQueueMissing("queue1");
 
 			await expect(
-				runWrangler("publish index.js")
+				runWrangler("deploy index.js")
 			).rejects.toMatchInlineSnapshot(
 				`[Error: Queue "queue1" does not exist. To create it, run: wrangler queues create queue1]`
 			);
@@ -8161,7 +8161,7 @@ export default{
 				],
 			});
 
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
@@ -8189,7 +8189,7 @@ export default{
 			mockOAuthServerCallback();
 			mockGetMemberships([]);
 
-			await runWrangler("publish index.js --keep-vars");
+			await runWrangler("deploy index.js --keep-vars");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -8214,7 +8214,7 @@ export default{
 			mockOAuthServerCallback();
 			mockGetMemberships([]);
 
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -8241,7 +8241,7 @@ export default{
 			mockOAuthServerCallback();
 			mockGetMemberships([]);
 
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB

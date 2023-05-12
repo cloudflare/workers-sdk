@@ -5,7 +5,7 @@
 	"license": "MIT",
 	"module": "./src/downloadCounter.mjs",
 	"scripts": {
-		"publish": "npx wrangler publish"
+		"publish": "npx wrangler deploy"
 	},
 	"devDependencies": {
 		"@cloudflare/wrangler": "^1.19.5"

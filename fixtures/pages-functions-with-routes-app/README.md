@@ -11,7 +11,7 @@
 cd fixtures/pages-functions-with-routes-app
 
 # Deploy the directory of static assets as a Pages deployment
-npx wrangler pages publish public
+npx wrangler pages deploy public
 ```
 
 If deployment was successful, follow the URL refrenced in the success message in your terminal

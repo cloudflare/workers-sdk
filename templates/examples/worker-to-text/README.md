@@ -21,7 +21,7 @@ wrangler build
 wrangler dev
 
 # deploy your Worker globally to the Cloudflare network (update your wrangler.toml file for configuration)
-wrangler publish
+wrangler deploy
 ```
 
 Read the latest `worker` crate documentation here: https://docs.rs/worker
