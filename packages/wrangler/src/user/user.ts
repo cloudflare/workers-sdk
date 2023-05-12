@@ -213,7 +213,6 @@ import path from "node:path";
 import url from "node:url";
 import { TextEncoder } from "node:util";
 import TOML from "@iarna/toml";
-import { HostURL } from "@webcontainer/env";
 import { fetch } from "undici";
 import {
 	getConfigCache,
@@ -365,15 +364,7 @@ export function validateScopeKeys(
 	return scopes.every((scope) => scope in Scopes);
 }
 
-/**
- * To allow OAuth callbacks in environments such as WebContainer we need to
- * create a host URL which only resolves `localhost` to a WebContainer
- * hostname if the process is running in a WebContainer. On local this will
- * be a no-op and it leaves the URL unmodified.
- *
- * @see https://www.npmjs.com/package/@webcontainer/env
- */
-const CALLBACK_URL = HostURL.parse("http://localhost:8976/oauth/callback").href;
+const CALLBACK_URL = "http://localhost:8976/oauth/callback";
 
 let LocalState: State = {
 	...getAuthTokens(),
