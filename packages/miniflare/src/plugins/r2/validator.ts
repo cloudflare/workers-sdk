@@ -12,7 +12,7 @@ import {
 	PreconditionFailed,
 } from "./errors";
 import { R2Object } from "./r2Object";
-import { R2Conditional, R2GetOptions } from "./schemas";
+import { R2Conditional, R2Etag, R2GetOptions } from "./schemas";
 
 export const MAX_LIST_KEYS = 1_000;
 const MAX_KEY_SIZE = 1024;
@@ -25,6 +25,21 @@ function identity(ms: number) {
 }
 function truncateToSeconds(ms: number) {
 	return Math.floor(ms / 1000) * 1000;
+}
+
+function includesEtag(
+	conditions: R2Etag[],
+	etag: string,
+	comparison: "strong" | "weak"
+) {
+	// Adapted from internal R2 gateway implementation.
+	for (const condition of conditions) {
+		if (condition.type === "wildcard") return true;
+		if (condition.value === etag) {
+			if (condition.type === "strong" || comparison === "weak") return true;
+		}
+	}
+	return false;
 }
 
 // Returns `true` iff the condition passed
@@ -43,9 +58,12 @@ export function _testR2Conditional(
 	}
 
 	const { etag, uploaded: lastModifiedRaw } = metadata;
-	const ifMatch = cond.etagMatches === undefined || cond.etagMatches === etag;
+	const ifMatch =
+		cond.etagMatches === undefined ||
+		includesEtag(cond.etagMatches, etag, "strong");
 	const ifNoneMatch =
-		cond.etagDoesNotMatch === undefined || cond.etagDoesNotMatch !== etag;
+		cond.etagDoesNotMatch === undefined ||
+		!includesEtag(cond.etagDoesNotMatch, etag, "weak");
 
 	const maybeTruncate = cond.secondsGranularity ? truncateToSeconds : identity;
 	const lastModified = maybeTruncate(lastModifiedRaw);
