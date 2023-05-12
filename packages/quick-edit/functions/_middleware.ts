@@ -15,40 +15,41 @@ export const onRequest = async ({
 				"workbench.startupEditor": "none",
 				"editor.minimap.autohide": true,
 				"files.exclude": {
-					"workers-types.d.ts": true,
+					"*.d.ts": true,
 					"jsconfig.json": true,
+				}
+			},
+			productConfiguration: {
+				nameShort: "Quick Edit",
+				nameLong: "Cloudflare Workers Quick Edit",
+				applicationName: "workers-quick-edit",
+				dataFolderName: ".quick-edit",
+				version: "1.76.0",
+				extensionsGallery: {
+					serviceUrl: "https://open-vsx.org/vscode/gallery",
+					itemUrl: "https://open-vsx.org/vscode/item",
+					resourceUrlTemplate:
+						"https://openvsxorg.blob.core.windows.net/resources/{publisher}/{name}/{version}/{path}",
 				},
-				productConfiguration: {
-					nameShort: "Quick Edit",
-					nameLong: "Cloudflare Workers Quick Edit",
-					applicationName: "workers-quick-edit",
-					dataFolderName: ".quick-edit",
-					version: "1.76.0",
-					extensionsGallery: {
-						serviceUrl: "https://open-vsx.org/vscode/gallery",
-						itemUrl: "https://open-vsx.org/vscode/item",
-						resourceUrlTemplate:
-							"https://openvsxorg.blob.core.windows.net/resources/{publisher}/{name}/{version}/{path}",
-					},
-					extensionEnabledApiProposals: {
-						"cloudflare.quick-edit-extension": [
-							"fileSearchProvider",
-							"textSearchProvider",
-							"ipc",
-						],
-					},
+				extensionEnabledApiProposals: {
+					"cloudflare.quick-edit-extension": [
+						"fileSearchProvider",
+						"textSearchProvider",
+						"ipc",
+					],
 				},
-				additionalBuiltinExtensions: [
-					{
-						scheme: url.protocol === "https:" ? "https" : "http",
-						path: "/quick-edit-extension",
-					},
-					{
-						scheme: url.protocol === "https:" ? "https" : "http",
-						path: "/solarflare-theme",
-					},
-				],
-			}).replace(/"/g, "&quot;"),
+			},
+			additionalBuiltinExtensions: [
+				{
+					scheme: url.protocol === "https:" ? "https" : "http",
+					path: "/quick-edit-extension",
+				},
+				{
+					scheme: url.protocol === "https:" ? "https" : "http",
+					path: "/solarflare-theme",
+				},
+			],
+		}).replace(/"/g, "&quot;"),
 		WORKBENCH_AUTH_SESSION: "",
 		WORKBENCH_WEB_BASE_URL: "/assets",
 	};
