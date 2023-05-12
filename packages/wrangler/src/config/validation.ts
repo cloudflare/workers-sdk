@@ -33,6 +33,7 @@ import type {
 	DeprecatedUpload,
 	Environment,
 	Rule,
+	TailConsumer,
 } from "./environment";
 import type { ValidatorFn } from "./validation-helpers";
 
@@ -900,6 +901,62 @@ function normalizeAndValidatePlacement(
 	);
 }
 
+function validateTailConsumer(
+	diagnostics: Diagnostics,
+	field: string,
+	value: TailConsumer
+) {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"${field}" should be an object but got ${JSON.stringify(value)}.`
+		);
+		return false;
+	}
+
+	let isValid = true;
+
+	isValid =
+		isValid &&
+		validateRequiredProperty(
+			diagnostics,
+			field,
+			"service",
+			value.service,
+			"string"
+		);
+	isValid =
+		isValid &&
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"environment",
+			value.environment,
+			"string"
+		);
+
+	return isValid;
+}
+
+const validateTailConsumers: ValidatorFn = (diagnostics, field, value) => {
+	if (!value) {
+		return true;
+	}
+	if (!Array.isArray(value)) {
+		diagnostics.errors.push(
+			`Expected "${field}" to be an array but got ${JSON.stringify(value)}.`
+		);
+		return false;
+	}
+
+	let isValid = true;
+	for (let i = 0; i < value.length; i++) {
+		isValid =
+			validateTailConsumer(diagnostics, `${field}[${i}]`, value[i]) && isValid;
+	}
+
+	return isValid;
+};
+
 /**
  * Validate top-level environment configuration and return the normalized values.
  */
@@ -1222,6 +1279,16 @@ function normalizeAndValidateEnvironment(
 			"mtls_certificates",
 			validateBindingArray(envName, validateMTlsCertificateBinding),
 			[]
+		),
+		tail_consumers: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"tail_consumers",
+			validateTailConsumers,
+			undefined
 		),
 		logfwdr: inheritable(
 			diagnostics,

@@ -18,7 +18,7 @@ import { requireAuth } from "./user";
 import { CommandLineArgsError, printWranglerBanner } from "./index";
 
 import type { RawConfig } from "./config";
-import type { Route, SimpleRoute } from "./config/environment";
+import type { Route, SimpleRoute, TailConsumer } from "./config/environment";
 import type {
 	WorkerMetadata,
 	WorkerMetadataBinding,
@@ -81,6 +81,7 @@ export type ServiceMetadataRes = {
 			compatibility_date: string;
 			last_deployed_from?: "wrangler" | "dash" | "api";
 			placement_mode?: "smart";
+			tail_consumers?: TailConsumer[];
 		};
 	};
 	created_on: string;
@@ -893,6 +894,7 @@ async function getWorkerConfig(
 				return { ...envObj, [environment]: {} };
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			}, {} as RawConfig["env"]),
+		tail_consumers: serviceEnvMetadata.script.tail_consumers,
 		...mappedBindings,
 	};
 }

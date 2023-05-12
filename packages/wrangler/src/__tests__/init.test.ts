@@ -2251,6 +2251,7 @@ describe("init", () => {
 					migration_tag: "some-migration-tag",
 					usage_model: "bundled",
 					compatibility_date: "1987-9-27",
+					tail_consumers: [{ service: "listener" }],
 				},
 			},
 			created_on: "1987-9-27",
@@ -2452,6 +2453,7 @@ describe("init", () => {
 					},
 				],
 			},
+			tail_consumers: [{ service: "listener" }],
 		};
 
 		function mockSupportingDashRequests({
@@ -2701,6 +2703,9 @@ describe("init", () => {
 			test = { }
 			staging = { }
 
+			[[tail_consumers]]
+			service = \\"listener\\"
+
 			[vars]
 			ANOTHER-NAME = \\"thing-TEXT\\"
 
@@ -2945,6 +2950,7 @@ describe("init", () => {
 						created_on: "1988-08-07",
 						usage_model: "bundled",
 						compatibility_date: "1988-08-07",
+						tail_consumers: [{ service: "listener" }],
 					},
 				},
 				environments: [],
@@ -3001,7 +3007,7 @@ describe("init", () => {
 								success: true,
 								errors: [],
 								messages: [],
-								result: mockServiceMetadata.default_environment,
+								result: mockData.default_environment,
 							})
 						);
 					}
@@ -3053,6 +3059,7 @@ describe("init", () => {
 						},
 						usage_model: "bundled",
 						name: "isolinear-optical-chip",
+						tail_consumers: [{ service: "listener" }],
 					}),
 				},
 			});
