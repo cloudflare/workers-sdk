@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import { writeFile, mkdir } from "node:fs/promises";
-import path from "node:path";
+import path, { dirname } from "node:path";
 import TOML from "@iarna/toml";
 import { execa } from "execa";
 import { findUp } from "find-up";
@@ -30,6 +30,7 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "./yargs-types";
+import type { ReadableStream } from "stream/web";
 
 export function initOptions(yargs: CommonYargsArgv) {
 	return yargs
@@ -537,10 +538,20 @@ export async function initHandler(args: InitArgs) {
 					`/accounts/${accountId}/workers/services/${fromDashScriptName}/environments/${defaultEnvironment}/content`
 				);
 
-				await writeFile(
-					path.join(creationDirectory, "./src/index.ts"),
-					dashScript
-				);
+				// writeFile in small batches (of 10) to not exhaust system file descriptors
+				for (const files of createBatches(dashScript, 10)) {
+					await Promise.all(
+						files.map(async (file) => {
+							const filepath = path
+								.join(creationDirectory, `./src/${file.name}`)
+								.replace(/\.js$/, ".ts"); // change javascript extension to typescript extension
+							const directory = dirname(filepath);
+
+							await mkdir(directory, { recursive: true });
+							await writeFile(filepath, file.stream() as ReadableStream);
+						})
+					);
+				}
 
 				await writePackageJsonScriptsAndUpdateWranglerToml({
 					isWritingScripts: shouldWritePackageJsonScripts,
@@ -643,10 +654,21 @@ export async function initHandler(args: InitArgs) {
 					`/accounts/${accountId}/workers/services/${fromDashScriptName}/environments/${defaultEnvironment}/content`
 				);
 
-				await writeFile(
-					path.join(creationDirectory, "./src/index.js"),
-					dashScript
-				);
+				// writeFile in small batches (of 10) to not exhaust system file descriptors
+				for (const files of createBatches(dashScript, 10)) {
+					await Promise.all(
+						files.map(async (file) => {
+							const filepath = path.join(
+								creationDirectory,
+								`./src/${file.name}`
+							);
+							const directory = dirname(filepath);
+
+							await mkdir(directory, { recursive: true });
+							await writeFile(filepath, file.stream() as ReadableStream);
+						})
+					);
+				}
 
 				await writePackageJsonScriptsAndUpdateWranglerToml({
 					isWritingScripts: shouldWritePackageJsonScripts,
@@ -1092,4 +1114,10 @@ export function mapBindings(bindings: WorkerMetadataBinding[]): RawConfig {
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			}, {} as RawConfig)
 	);
+}
+
+function* createBatches<T>(array: T[], size: number): IterableIterator<T[]> {
+	for (let i = 0; i < array.length; i += size) {
+		yield array.slice(i, i + size);
+	}
 }

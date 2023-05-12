@@ -4,6 +4,7 @@ import * as TOML from "@iarna/toml";
 import { execa, execaSync } from "execa";
 import { rest } from "msw";
 import { parseConfigFileTextToJson } from "typescript";
+import { FormData } from "undici";
 import { version as wranglerVersion } from "../../package.json";
 import { getPackageManager } from "../package-manager";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -2359,6 +2360,12 @@ describe("init", () => {
 			},
 		};
 		`;
+		afterEach(() => {
+			// some test has a side-effect which is overwriting the compatibility_date
+			mockServiceMetadata.default_environment.script.compatibility_date =
+				"1987-9-27";
+			mockConfigExpected.compatibility_date = "1987-9-27";
+		});
 		const mockServiceMetadata = {
 			id: "memory-crystal",
 			default_environment: {
@@ -3125,7 +3132,7 @@ describe("init", () => {
 								success: true,
 								errors: [],
 								messages: [],
-								result: mockServiceMetadata.default_environment,
+								result: mockData.default_environment,
 							})
 						);
 					}
@@ -3198,6 +3205,72 @@ describe("init", () => {
 				},
 			});
 		});
+
+		it("should download multi-module source scripts from dashboard", async () => {
+			mockSupportingDashRequests({
+				expectedAccountId: "LCARS",
+				expectedScriptName: "isolinear-optical-chip",
+				expectedEnvironment: "test",
+				expectedCompatDate: "1987-9-27",
+			});
+			const indexjs = `
+        import handleRequest from './handleRequest.js';
+
+        export default {
+          async fetch(request, env, ctx) {
+            return handleRequest(request, env, ctx);
+          },
+        };
+      `;
+			const otherjs = `
+        export default function (request, env, ctx) {
+          return new Response("Hello World!");
+        }
+      `;
+			setMockFetchDashScript([
+				{ name: "index.js", contents: indexjs },
+				{ name: "nested/other.js", contents: otherjs },
+			]);
+			mockConfirm(
+				{
+					text: "Would you like to use git to manage this Worker?",
+					result: false,
+				},
+				{
+					text: "No package.json found. Would you like to create one?",
+					result: true,
+				},
+				{
+					text: "Would you like to use TypeScript?",
+					result: false,
+				}
+			);
+
+			await runWrangler("init --from-dash isolinear-optical-chip");
+
+			checkFiles({
+				items: {
+					"isolinear-optical-chip/src/index.js": {
+						contents: indexjs,
+					},
+					"isolinear-optical-chip/src/nested/other.js": {
+						contents: otherjs,
+					},
+					"isolinear-optical-chip/src/index.ts": false,
+					"isolinear-optical-chip/package.json": {
+						contents: expect.objectContaining({
+							name: "isolinear-optical-chip",
+						}),
+					},
+					"isolinear-optical-chip/tsconfig.json": false,
+					"isolinear-optical-chip/wrangler.toml": wranglerToml({
+						...mockConfigExpected,
+						name: "isolinear-optical-chip",
+						main: "src/index.js",
+					}),
+				},
+			});
+		});
 	});
 });
 
@@ -3219,12 +3292,38 @@ function getDefaultBranchName() {
 /**
  * Mock setter for usage within test blocks for dashboard script
  */
-export function setMockFetchDashScript(mockResponse: string) {
+export function setMockFetchDashScript(
+	mockResponse: string | { name: string; contents: string }[]
+) {
 	msw.use(
 		rest.get(
 			`*/accounts/:accountId/workers/services/:fromDashScriptName/environments/:environment/content`,
 			(_, res, ctx) => {
-				return res(ctx.text(mockResponse));
+				if (typeof mockResponse === "string") {
+					return res(ctx.text(mockResponse));
+				}
+
+				const fd = new FormData();
+
+				for (const { name, contents } of mockResponse) {
+					fd.set(name, contents);
+				}
+
+				const boundary = "--------boundary-12761293712";
+				const responseText =
+					`--${boundary}\r\n` +
+					mockResponse
+						.map(
+							({ name, contents }) =>
+								`Content-Disposition: form-data; name="${name}"\r\n\r\n${contents}`
+						)
+						.join(`\r\n--${boundary}\r\n`) +
+					`\r\n--${boundary}--`;
+
+				return res(
+					ctx.set("Content-Type", `multipart/form-data; boundary=${boundary}`),
+					ctx.body(responseText)
+				);
 			}
 		)
 	);
