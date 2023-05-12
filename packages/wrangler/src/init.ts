@@ -210,10 +210,9 @@ export async function initHandler(args: InitArgs) {
 			await execa(packageManager.type, [
 				"create",
 				"cloudflare",
-				"--template",
-				"pre-existing",
-				"--name",
 				fromDashScriptName,
+				"--type",
+				"pre-existing",
 			]);
 
 			return;
