@@ -17,7 +17,7 @@ export const onRequest = async ({
 				"files.exclude": {
 					"*.d.ts": true,
 					"jsconfig.json": true,
-				}
+				},
 			},
 			productConfiguration: {
 				nameShort: "Quick Edit",
