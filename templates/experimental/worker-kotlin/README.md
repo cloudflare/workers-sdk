@@ -18,10 +18,10 @@ After setting up Kotlin per the linked instructions above,
 ./gradlew :compileProductionExecutableKotlinJs
 ```
 
-That will compile your code and package it into a JavaScript executable, after which you can run `wrangler publish` to push it to Cloudflare.
+That will compile your code and package it into a JavaScript executable, after which you can run `wrangler deploy` to push it to Cloudflare.
 
 ```
-wrangler publish build/js/packages/kotlin-worker-hello-world/kotlin/kotlin-worker-hello-world.js
+wrangler deploy build/js/packages/kotlin-worker-hello-world/kotlin/kotlin-worker-hello-world.js
 ```
 
 For more information on interop between Kotlin and Javascript, see the [Kotlin docs](https://kotlinlang.org/docs/reference/js-interop.html). Regarding coroutines, see [this issue and workaround](https://github.com/cloudflare/kotlin-worker-hello-world/issues/2)

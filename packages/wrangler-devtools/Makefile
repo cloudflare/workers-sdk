@@ -21,7 +21,7 @@ node_modules:
 	npm ci
 
 publish: node_modules devtools-frontend/out/Default/gen/front_end
-	npx wrangler pages publish --project-name cloudflare-devtools devtools-frontend/out/Default/gen/front_end
+	npx wrangler pages deploy --project-name cloudflare-devtools devtools-frontend/out/Default/gen/front_end
 
 cleanup:
 	rm -rf devtools-frontend .gclient* .cipd node_modules depot

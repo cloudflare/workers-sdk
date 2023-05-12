@@ -26,6 +26,6 @@ npm install
 npm run build
 ```
 
-That will compile your code into index.js, after which you can run `wrangler publish` to push it to Cloudflare.
+That will compile your code into index.js, after which you can run `wrangler deploy` to push it to Cloudflare.
 
 For more information on how PHP translates to JavaScript, see the [docs for babel-preset-php](https://gitlab.com/kornelski/babel-preset-php).

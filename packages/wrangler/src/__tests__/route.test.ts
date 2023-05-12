@@ -11,7 +11,7 @@ describe("wrangler route", () => {
 			.toThrowErrorMatchingInlineSnapshot(`
             "Deprecation:
             \`wrangler route\` has been deprecated.
-            Please use wrangler.toml and/or \`wrangler publish --routes\` to modify routes"
+            Please use wrangler.toml and/or \`wrangler deploy --routes\` to modify routes"
           `);
 	});
 
@@ -20,7 +20,7 @@ describe("wrangler route", () => {
 			.toThrowErrorMatchingInlineSnapshot(`
             "Deprecation:
             \`wrangler route delete\` has been deprecated.
-            Remove the unwanted route(s) from wrangler.toml and run \`wrangler publish\` to remove your worker from those routes."
+            Remove the unwanted route(s) from wrangler.toml and run \`wrangler deploy\` to remove your worker from those routes."
           `);
 	});
 
@@ -29,7 +29,7 @@ describe("wrangler route", () => {
 			.toThrowErrorMatchingInlineSnapshot(`
             "Deprecation:
             \`wrangler route delete\` has been deprecated.
-            Remove the unwanted route(s) from wrangler.toml and run \`wrangler publish\` to remove your worker from those routes."
+            Remove the unwanted route(s) from wrangler.toml and run \`wrangler deploy\` to remove your worker from those routes."
           `);
 	});
 

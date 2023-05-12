@@ -222,9 +222,9 @@ Here's an example of a `patch` to the `wrangler` package, which provides a `fix`
 "wrangler": patch
 ---
 
-fix: replace the word "deploy" with "publish" everywhere.
+fix: replace the word "publish" with "deploy" everywhere.
 
-We should be consistent with the word that describes how we get a worker to the edge. The command is `publish`, so let's use that everywhere.
+We should be consistent with the word that describes how we get a worker to the edge. The command is `deploy`, so let's use that everywhere.
 ```
 
 ### Types of changes

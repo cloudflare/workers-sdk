@@ -1,5 +1,5 @@
-import { publish } from "./publish";
+import { deploy } from "./deploy";
 
 export const unstable_pages = {
-	publish,
+	deploy,
 };
