@@ -8,7 +8,7 @@ import {
 } from "@miniflare/tre";
 import anyTest from "ava";
 import { z } from "zod";
-import { LogEntry, TestLog, TestTimers, getPort } from "../../test-shared";
+import { LogEntry, TestLog, TestTimers } from "../../test-shared";
 
 // Only run Queues tests if we're using a supported V8 version
 const test = _QUEUES_COMPATIBLE_V8_VERSION ? anyTest : anyTest.skip;
@@ -21,10 +21,8 @@ const MessageArraySchema = z
 test("flushes partial and full batches", async (t) => {
 	let batches: string[][] = [];
 
-	const port = await getPort();
 	const timers = new TestTimers();
 	const mf = new Miniflare({
-		port,
 		timers,
 		verbose: true,
 
@@ -157,13 +155,11 @@ test("flushes partial and full batches", async (t) => {
 });
 
 test("sends all structured cloneable types", async (t) => {
-	const port = await getPort();
 	const timers = new TestTimers();
 
 	const errorPromise = new DeferredPromise<string>();
 
 	const mf = new Miniflare({
-		port,
 		timers,
 		verbose: true,
 
@@ -286,11 +282,9 @@ test("retries messages", async (t) => {
 	let errorAll = false;
 	let retryMessages: string[] = [];
 
-	const port = await getPort();
 	const log = new TestLog(t);
 	const timers = new TestTimers();
 	const mf = new Miniflare({
-		port,
 		log,
 		timers,
 
@@ -502,11 +496,9 @@ test("moves to dead letter queue", async (t) => {
 	const batches: z.infer<typeof MessageArraySchema>[] = [];
 	let retryMessages: string[] = [];
 
-	const port = await getPort();
 	const log = new TestLog(t);
 	const timers = new TestTimers();
 	const mf = new Miniflare({
-		port,
 		log,
 		timers,
 		verbose: true,
@@ -614,7 +606,6 @@ test("moves to dead letter queue", async (t) => {
 
 	// Check rejects queue as own dead letter queue
 	const promise = mf.setOptions({
-		port,
 		log,
 		timers,
 		queueConsumers: { bad: { deadLetterQueue: "bad" } },
@@ -629,11 +620,9 @@ test("moves to dead letter queue", async (t) => {
 
 test("operations permit strange queue names", async (t) => {
 	const promise = new DeferredPromise<z.infer<typeof MessageArraySchema>>();
-	const port = await getPort();
 	const timers = new TestTimers();
 	const id = "my/ Queue";
 	const mf = new Miniflare({
-		port,
 		timers,
 		verbose: true,
 		queueProducers: { QUEUE: id },

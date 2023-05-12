@@ -305,7 +305,6 @@ export const CORE_PLUGIN: Plugin<
 };
 
 export interface GlobalServicesOptions {
-	optionsVersion: number;
 	sharedOptions: z.infer<typeof CoreSharedOptionsSchema>;
 	allWorkerRoutes: Map<string, string[]>;
 	fallbackWorkerName: string | undefined;
@@ -313,7 +312,6 @@ export interface GlobalServicesOptions {
 	log: Log;
 }
 export function getGlobalServices({
-	optionsVersion,
 	sharedOptions,
 	allWorkerRoutes,
 	fallbackWorkerName,
@@ -327,7 +325,6 @@ export function getGlobalServices({
 	// Define core/shared services.
 	const serviceEntryBindings: Worker_Binding[] = [
 		WORKER_BINDING_SERVICE_LOOPBACK, // For converting stack-traces to pretty-error pages
-		{ name: CoreBindings.JSON_VERSION, json: optionsVersion.toString() },
 		{ name: CoreBindings.JSON_ROUTES, json: JSON.stringify(routes) },
 		{ name: CoreBindings.JSON_CF_BLOB, json: JSON.stringify(sharedOptions.cf) },
 		{ name: CoreBindings.JSON_LOG_LEVEL, json: JSON.stringify(log.level) },

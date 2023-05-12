@@ -2,7 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import { Miniflare, MiniflareOptions } from "@miniflare/tre";
 import test from "ava";
-import { getPort, useTmp } from "../../test-shared";
+import { useTmp } from "../../test-shared";
 
 const COUNTER_SCRIPT = (responsePrefix = "") => `export class Counter {
   constructor(state) {
@@ -26,7 +26,6 @@ export default {
 
 test("persists Durable Object data in-memory between options reloads", async (t) => {
 	const opts: MiniflareOptions = {
-		port: await getPort(),
 		modules: true,
 		script: COUNTER_SCRIPT("Options #1: "),
 		durableObjects: { COUNTER: "Counter" },
@@ -67,7 +66,6 @@ test("persists Durable Object data on file-system", async (t) => {
 	const tmp = await useTmp(t);
 	const opts: MiniflareOptions = {
 		name: "worker",
-		port: await getPort(),
 		modules: true,
 		script: COUNTER_SCRIPT(),
 		durableObjects: { COUNTER: "Counter" },
@@ -108,7 +106,6 @@ test("persists Durable Object data on file-system", async (t) => {
 test("multiple Workers access same Durable Object data", async (t) => {
 	const tmp = await useTmp(t);
 	const mf = new Miniflare({
-		port: await getPort(),
 		durableObjectsPersist: tmp,
 		workers: [
 			{

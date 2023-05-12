@@ -9,7 +9,6 @@ import { WorkerRoute, matchRoutes } from "./routing";
 
 type Env = {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
-	[CoreBindings.JSON_VERSION]: number;
 	[CoreBindings.SERVICE_USER_FALLBACK]: Fetcher;
 	[CoreBindings.TEXT_CUSTOM_SERVICE]: string;
 	[CoreBindings.JSON_CF_BLOB]: IncomingRequestCfProperties;
@@ -21,17 +20,6 @@ type Env = {
 		| Fetcher
 		| undefined; // Won't have a `Fetcher` for every possible `string`
 };
-
-function maybeCreateProbeResponse(request: Request, env: Env) {
-	const probe = request.headers.get(CoreHeaders.PROBE);
-	if (probe === null) return;
-
-	const probeMin = parseInt(probe);
-	// Using `>=` for version check to handle multiple `setOptions` calls
-	// before reload complete.
-	const status = env[CoreBindings.JSON_VERSION] >= probeMin ? 204 : 412;
-	return new Response(null, { status });
-}
 
 function getUserRequest(
 	request: Request<unknown, IncomingRequestCfProperties>,
@@ -172,12 +160,7 @@ async function handleQueue(
 export default <ExportedHandler<Env>>{
 	async fetch(request, env, ctx) {
 		const startTime = Date.now();
-
-		const maybeProbeResponse = maybeCreateProbeResponse(request, env);
-		if (maybeProbeResponse !== undefined) return maybeProbeResponse;
-
 		request = getUserRequest(request, env);
-
 		const url = new URL(request.url);
 		const service = getTargetService(request, url, env);
 		if (service === undefined) {

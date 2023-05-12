@@ -1,5 +1,4 @@
 export const CoreHeaders = {
-	PROBE: "MF-Probe",
 	CUSTOM_SERVICE: "MF-Custom-Service",
 	ORIGINAL_URL: "MF-Original-URL",
 	ERROR_STACK: "MF-Experimental-Error-Stack",
@@ -9,7 +8,6 @@ export const CoreHeaders = {
 
 export const CoreBindings = {
 	SERVICE_LOOPBACK: "MINIFLARE_LOOPBACK",
-	JSON_VERSION: "MINIFLARE_VERSION",
 	SERVICE_USER_ROUTE_PREFIX: "MINIFLARE_USER_ROUTE_",
 	SERVICE_USER_FALLBACK: "MINIFLARE_USER_FALLBACK",
 	TEXT_CUSTOM_SERVICE: "MINIFLARE_CUSTOM_SERVICE",
