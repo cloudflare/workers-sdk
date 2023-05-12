@@ -12,7 +12,7 @@ import {
 import useInspector from "../inspect";
 import { logger } from "../logger";
 import { startPreviewServer, usePreviewServer } from "../proxy";
-import { helpIfErrorIsSizeOrScriptStartup } from "../publish/deploy";
+import { helpIfErrorIsSizeOrScriptStartup } from "../deploy/deploy";
 import { syncAssets } from "../sites";
 import {
 	getAccountChoices,

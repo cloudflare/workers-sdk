@@ -39,7 +39,7 @@ import * as metrics from "./metrics";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
 import { pages } from "./pages";
 import { formatMessage, ParseError } from "./parse";
-import { deployOptions, deployHandler } from "./publish";
+import { deployOptions, deployHandler } from "./deploy";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
 import { queues } from "./queues/cli/commands";
 import { r2 } from "./r2";
