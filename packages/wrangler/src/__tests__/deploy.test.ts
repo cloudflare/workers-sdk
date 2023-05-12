@@ -43,8 +43,8 @@ import writeWranglerToml from "./helpers/write-wrangler-toml";
 
 import type { Config } from "../config";
 import type { WorkerMetadata } from "../create-worker-upload-form";
-import type { KVNamespaceInfo } from "../kv/helpers";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
+import type { KVNamespaceInfo } from "../kv/helpers";
 import type { PutConsumerBody } from "../queues/client";
 import type { CfWorkerInit } from "../worker";
 import type { ResponseComposition, RestContext, RestRequest } from "msw";

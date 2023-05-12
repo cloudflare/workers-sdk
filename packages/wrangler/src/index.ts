@@ -10,6 +10,7 @@ import { loadDotEnv, readConfig } from "./config";
 import { constellation } from "./constellation";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
+import { deployOptions, deployHandler } from "./deploy";
 import {
 	deployments,
 	commonDeploymentCMDSetup,
@@ -39,7 +40,6 @@ import * as metrics from "./metrics";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
 import { pages } from "./pages";
 import { formatMessage, ParseError } from "./parse";
-import { deployOptions, deployHandler } from "./deploy";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
 import { queues } from "./queues/cli/commands";
 import { r2 } from "./r2";

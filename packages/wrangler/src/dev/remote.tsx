@@ -9,10 +9,10 @@ import {
 	createPreviewSession,
 	createWorkerPreview,
 } from "../create-worker-preview";
+import { helpIfErrorIsSizeOrScriptStartup } from "../deploy/deploy";
 import useInspector from "../inspect";
 import { logger } from "../logger";
 import { startPreviewServer, usePreviewServer } from "../proxy";
-import { helpIfErrorIsSizeOrScriptStartup } from "../deploy/deploy";
 import { syncAssets } from "../sites";
 import {
 	getAccountChoices,
