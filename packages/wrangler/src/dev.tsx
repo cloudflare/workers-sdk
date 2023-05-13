@@ -291,7 +291,7 @@ type DevArguments = StrictYargsOptionsToInterface<typeof devOptions>;
 export async function devHandler(args: DevArguments) {
 	if (isWebContainer()) {
 		logger.error(
-			`Oh no! 😟You tried to run \`wrangler dev\` in a StackBlitz WebContainer. 🤯
+			`Oh no! 😟 You tried to run \`wrangler dev\` in a StackBlitz WebContainer. 🤯
 This is currently not supported 😭, but we think that we'll get it to work soon... hang in there! 🥺`
 		);
 		process.exitCode = 1;
