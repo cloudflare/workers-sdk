@@ -28,7 +28,8 @@ export type MiniflareCoreErrorCode =
 	| "ERR_PERSIST_REMOTE_UNSUPPORTED" // Remote storage is not supported for this database
 	| "ERR_FUTURE_COMPATIBILITY_DATE" // Compatibility date in the future
 	| "ERR_NO_WORKERS" // No workers defined
-	| "ERR_DUPLICATE_NAME"; // Multiple workers defined with same name
+	| "ERR_DUPLICATE_NAME" // Multiple workers defined with same name
+	| "ERR_DIFFERENT_UNIQUE_KEYS"; // Multiple Durable Object bindings declared for same class with different unsafe unique keys
 export class MiniflareCoreError extends MiniflareError<MiniflareCoreErrorCode> {}
 
 export class HttpError extends MiniflareError<number> {

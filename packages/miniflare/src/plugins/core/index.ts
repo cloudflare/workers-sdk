@@ -9,6 +9,7 @@ import {
 	Service,
 	Worker_Binding,
 	Worker_Module,
+	kVoid,
 	supportedCompatibilityDate,
 } from "../../runtime";
 import {
@@ -56,6 +57,8 @@ export const CoreOptionsSchema = z.intersection(
 		textBlobBindings: z.record(z.string()).optional(),
 		dataBlobBindings: z.record(z.string()).optional(),
 		serviceBindings: z.record(ServiceDesignatorSchema).optional(),
+
+		unsafeEphemeralDurableObjects: z.boolean().optional(),
 	})
 );
 
@@ -239,9 +242,9 @@ export const CORE_PLUGIN: Plugin<
 		}
 
 		const name = getUserServiceName(options.name);
-		const classNames = Array.from(
-			durableObjectClassNames.get(name) ?? new Set<string>()
-		);
+		const classNames = durableObjectClassNames.get(name);
+		const classNamesEntries = Array.from(classNames ?? []);
+
 		const compatibilityDate = validateCompatibilityDate(
 			log,
 			options.compatibilityDate ?? FALLBACK_COMPATIBILITY_DATE
@@ -255,16 +258,23 @@ export const CORE_PLUGIN: Plugin<
 					compatibilityDate,
 					compatibilityFlags: options.compatibilityFlags,
 					bindings: workerBindings,
-					durableObjectNamespaces: classNames.map((className) => ({
-						className,
-						// This `uniqueKey` will (among other things) be used as part of the
-						// path when persisting to the file-system. `-` is invalid in
-						// JavaScript class names, but safe on filesystems (incl. Windows).
-						uniqueKey: `${options.name ?? ""}-${className}`,
-					})),
+					durableObjectNamespaces: classNamesEntries.map(
+						([className, unsafeUniqueKey]) => {
+							return {
+								className,
+								// This `uniqueKey` will (among other things) be used as part of the
+								// path when persisting to the file-system. `-` is invalid in
+								// JavaScript class names, but safe on filesystems (incl. Windows).
+								uniqueKey:
+									unsafeUniqueKey ?? `${options.name ?? ""}-${className}`,
+							};
+						}
+					),
 					durableObjectStorage:
-						classNames.length === 0
+						classNamesEntries.length === 0
 							? undefined
+							: options.unsafeEphemeralDurableObjects
+							? { inMemory: kVoid }
 							: { localDisk: DURABLE_OBJECTS_STORAGE_SERVICE_NAME },
 					cacheApiOutbound: { name: getCacheServiceName(workerIndex) },
 				},
