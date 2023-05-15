@@ -31,6 +31,9 @@ describe("Preview Worker", () => {
 								prewarm: "TEST_PREWARM"
 							})
 						}
+						if(url.pathname === "/redirect") {
+							return Response.redirect("https://example.com", 302)
+						}
 						return Response.json({
 							url: request.url,
 							headers: [...request.headers.entries()]
@@ -111,5 +114,24 @@ describe("Preview Worker", () => {
 		expect(json.url).toMatchInlineSnapshot(
 			'"http://preview.devprod.cloudflare.dev/"'
 		);
+	});
+	it.only("should not follow redirects", async () => {
+		const resp = await worker.fetch(
+			`https://random-data.preview.devprod.cloudflare.dev/redirect`,
+			{
+				method: "GET",
+				headers: {
+					cookie:
+						"token=%7B%22token%22%3A%22TEST_TOKEN%22%2C%22remote%22%3A%22http%3A%2F%2F127.0.0.1%3A6756%22%7D; Domain=preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None",
+				},
+				redirect: "manual",
+			}
+		);
+
+		expect(resp.status).toMatchInlineSnapshot("302");
+		expect(resp.headers.get("Location")).toMatchInlineSnapshot(
+			'"https://example.com/"'
+		);
+		expect(await resp.text()).toMatchInlineSnapshot('""');
 	});
 });

@@ -125,6 +125,7 @@ async function handleRequest(
 			...request.headers,
 			"cf-workers-preview-token": token,
 		},
+		redirect: "manual",
 	});
 	const embeddable = new Response(original.body, original);
 	// This will be embedded in an iframe. In particular, the Cloudflare error page sets this header.
@@ -166,6 +167,7 @@ async function handleRawHttp(request: Request, url: URL) {
 			...request.headers,
 			"cf-workers-preview-token": token,
 		},
+		redirect: "manual",
 	});
 	// The client needs the raw headers from the worker
 	// Prefix them with `cf-ew-raw-`, so that response headers from _this_ worker don't interfere
