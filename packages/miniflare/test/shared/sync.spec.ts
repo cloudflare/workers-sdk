@@ -1,6 +1,6 @@
 import { setTimeout } from "timers/promises";
-import { DeferredPromise, Mutex, WaitGroup } from "@miniflare/tre";
 import test from "ava";
+import { DeferredPromise, Mutex, WaitGroup } from "miniflare";
 
 test("DeferredPromise: waits for resolve/reject callbacks", async (t) => {
 	// Check resolves with regular value

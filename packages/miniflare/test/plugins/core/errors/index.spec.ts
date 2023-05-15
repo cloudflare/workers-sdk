@@ -1,8 +1,8 @@
 import fs from "fs/promises";
 import path from "path";
-import { Miniflare } from "@miniflare/tre";
 import test from "ava";
 import esbuild from "esbuild";
+import { Miniflare } from "miniflare";
 import { useTmp } from "../../../test-shared";
 
 const FIXTURES_PATH = path.resolve(

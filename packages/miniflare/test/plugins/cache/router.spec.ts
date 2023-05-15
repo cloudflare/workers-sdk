@@ -2,13 +2,13 @@ import { Blob } from "buffer";
 import net from "net";
 import { arrayBuffer, text } from "stream/consumers";
 import { ReadableStream } from "stream/web";
+import test from "ava";
 import {
 	DeferredPromise,
 	Response,
 	_HttpParser,
 	_RemoveTransformEncodingChunkedStream,
-} from "@miniflare/tre";
-import test from "ava";
+} from "miniflare";
 import { useServer, utf8Encode } from "../../test-shared";
 
 function createChunkedStream(chunks: string[]) {

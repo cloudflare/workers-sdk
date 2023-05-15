@@ -3,14 +3,14 @@ import { Blob } from "buffer";
 import http from "http";
 import { AddressInfo } from "net";
 import { URLSearchParams } from "url";
+import test from "ava";
 import {
 	CloseEvent,
 	DeferredPromise,
 	FormData,
 	MessageEvent,
 	fetch,
-} from "@miniflare/tre";
-import test from "ava";
+} from "miniflare";
 import { WebSocketServer } from "ws";
 import { useServer } from "../test-shared";
 

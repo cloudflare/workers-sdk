@@ -3,14 +3,14 @@ import fs from "fs/promises";
 import path from "path";
 import { arrayBuffer } from "stream/consumers";
 import { TextEncoderStream } from "stream/web";
+import test, { Macro } from "ava";
 import {
 	createArrayReadableStream,
 	createFileReadableStream,
 	createFileWritableStream,
 	createMultipartArrayReadableStream,
 	createMultipartFileReadableStream,
-} from "@miniflare/tre";
-import test, { Macro } from "ava";
+} from "miniflare";
 import { useTmp, utf8Decode, utf8Encode } from "../../test-shared";
 
 function arrayInit<T>(n: number, f: (i: number) => T): T[] {

@@ -1,6 +1,7 @@
 import assert from "assert";
 import { Blob } from "buffer";
 import { text } from "stream/consumers";
+import anyTest, { Macro, TestFn, ThrowsExpectation } from "ava";
 import {
 	KVError,
 	KVGateway,
@@ -9,8 +10,7 @@ import {
 	KeyValueStorage,
 	NoOpLog,
 	createMemoryStorage,
-} from "@miniflare/tre";
-import anyTest, { Macro, TestFn, ThrowsExpectation } from "ava";
+} from "miniflare";
 import { TestTimers, createJunkStream } from "../../test-shared";
 
 // Stored expiration value to signal an expired key.

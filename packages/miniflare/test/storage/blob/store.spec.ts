@@ -4,8 +4,8 @@ import { existsSync } from "fs";
 import fs from "fs/promises";
 import path from "path";
 import { arrayBuffer, text } from "stream/consumers";
-import { BlobStore, FileBlobStore, MemoryBlobStore } from "@miniflare/tre";
 import test, { ExecutionContext, Macro } from "ava";
+import { BlobStore, FileBlobStore, MemoryBlobStore } from "miniflare";
 import { useTmp } from "../../test-shared";
 
 type BlobStoreFactory = (t: ExecutionContext) => Promise<BlobStore>;

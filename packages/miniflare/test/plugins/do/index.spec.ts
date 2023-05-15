@@ -1,7 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
-import { Miniflare, MiniflareOptions } from "@miniflare/tre";
 import test from "ava";
+import { Miniflare, MiniflareOptions } from "miniflare";
 import { useTmp } from "../../test-shared";
 
 const COUNTER_SCRIPT = (responsePrefix = "") => `export class Counter {

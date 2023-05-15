@@ -1,5 +1,5 @@
-import { Response, WebSocketPair } from "@miniflare/tre";
 import test from "ava";
+import { Response, WebSocketPair } from "miniflare";
 
 test("Response: static methods return correctly typed values", async (t) => {
 	const error = Response.error();

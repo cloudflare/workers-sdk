@@ -26,6 +26,7 @@ import type {
 	Headers as WorkerHeaders,
 	Response as WorkerResponse,
 } from "@cloudflare/workers-types/experimental";
+import { Macro, ThrowsExpectation } from "ava";
 import {
 	File,
 	FormData,
@@ -41,8 +42,7 @@ import {
 	createFileStorage,
 	viewToArray,
 	viewToBuffer,
-} from "@miniflare/tre";
-import { Macro, ThrowsExpectation } from "ava";
+} from "miniflare";
 import { z } from "zod";
 import { MiniflareTestContext, miniflareTest, useTmp } from "../../test-shared";
 import { isWithin } from "../../test-shared/asserts";
