@@ -186,58 +186,52 @@ test("multiple Workers access same Durable Object data", async (t) => {
 });
 
 test("can use Durable Object ID from one object in another", async (t) => {
-	const opts: MiniflareOptions = {
-		port: await getPort(),
-		workers: [
-			{
-				name: "a",
-				routes: ["*/id"],
-				unsafeEphemeralDurableObjects: true,
-				durableObjects: {
-					OBJECT_B: { className: "b_B", unsafeUniqueKey: "b-B" },
-				},
-				modules: true,
-				script: `
-        export class b_B {}
-        export default {
-          fetch(request, env) {
-            const id = env.OBJECT_B.newUniqueId();
-            return new Response(id);
-          }
-        }
-        `,
-			},
-			{
-				name: "b",
-				routes: ["*/*"],
-				durableObjects: { OBJECT_B: "B" },
-				modules: true,
-				script: `
-        export class B {
-          constructor(state) {
-            this.state = state;
-          }
-          fetch() {
-            return new Response("id:" + this.state.id);
-          }
-        }
-        export default {
-          fetch(request, env) {
-            const url = new URL(request.url);
-            const id = env.OBJECT_B.idFromString(url.pathname.substring(1));
-            const stub = env.OBJECT_B.get(id);
-            return stub.fetch(request);
-          }
-        }
-        `,
-			},
-		],
-	};
-	const mf = new Miniflare(opts);
-	t.teardown(() => mf.dispose());
+	const mf1 = new Miniflare({
+		name: "a",
+		routes: ["*/id"],
+		unsafeEphemeralDurableObjects: true,
+		durableObjects: {
+			OBJECT_B: { className: "b_B", unsafeUniqueKey: "b-B" },
+		},
+		modules: true,
+		script: `
+    export class b_B {}
+    export default {
+      fetch(request, env) {
+        const id = env.OBJECT_B.newUniqueId();
+        return new Response(id);
+      }
+    }
+    `,
+	});
+	const mf2 = new Miniflare({
+		name: "b",
+		routes: ["*/*"],
+		durableObjects: { OBJECT_B: "B" },
+		modules: true,
+		script: `
+    export class B {
+      constructor(state) {
+        this.state = state;
+      }
+      fetch() {
+        return new Response("id:" + this.state.id);
+      }
+    }
+    export default {
+      fetch(request, env) {
+        const url = new URL(request.url);
+        const id = env.OBJECT_B.idFromString(url.pathname.substring(1));
+        const stub = env.OBJECT_B.get(id);
+        return stub.fetch(request);
+      }
+    }
+    `,
+	});
+	t.teardown(() => Promise.all([mf1.dispose(), mf2.dispose()]));
 
-	let res = await mf.dispatchFetch("http://localhost/id");
-	const id = await res.text();
-	res = await mf.dispatchFetch(`http://localhost/${id}`);
+	const idRes = await mf1.dispatchFetch("http://localhost/id");
+	const id = await idRes.text();
+	const res = await mf2.dispatchFetch(`http://localhost/${id}`);
 	t.is(await res.text(), `id:${id}`);
 });
