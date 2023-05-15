@@ -71,6 +71,7 @@ export const CoreSharedOptionsSchema = z.object({
 	log: z.instanceof(Log).optional(),
 	timers: z.custom<Timers>().optional(),
 
+	upstream: z.string().optional(),
 	// TODO: add back validation of cf object
 	cf: z.union([z.boolean(), z.string(), z.record(z.any())]).optional(),
 
@@ -345,6 +346,12 @@ export function getGlobalServices({
 			service: { name: getUserServiceName(name) },
 		})),
 	];
+	if (sharedOptions.upstream !== undefined) {
+		serviceEntryBindings.push({
+			name: CoreBindings.TEXT_UPSTREAM_URL,
+			text: sharedOptions.upstream,
+		});
+	}
 	if (sharedOptions.liveReload) {
 		const liveReloadScript = LIVE_RELOAD_SCRIPT_TEMPLATE(loopbackPort);
 		serviceEntryBindings.push({
@@ -371,9 +378,7 @@ export function getGlobalServices({
 		{
 			name: "internet",
 			network: {
-				// Can't use `["public", "private"]` here because of
-				// https://github.com/cloudflare/workerd/issues/62
-				allow: ["0.0.0.0/0"],
+				allow: ["public", "private"],
 				deny: [],
 				tlsOptions: { trustBrowserCas: true },
 			},

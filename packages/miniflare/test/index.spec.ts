@@ -15,6 +15,7 @@ import {
 	MessageEvent as StandardMessageEvent,
 	WebSocketServer,
 } from "ws";
+import { useServer } from "./test-shared";
 
 test("Miniflare: validates options", async (t) => {
 	// Check empty workers array rejected
@@ -230,4 +231,22 @@ test("Miniflare: custom service binding to another Miniflare instance", async (t
 		url: "https://custom3.mf/c",
 		body: null,
 	});
+});
+
+test("Miniflare: uses custom upstream as origin", async (t) => {
+	const upstream = await useServer(t, (req, res) => {
+		res.end(`upstream: ${new URL(req.url ?? "", "http://upstream")}`);
+	});
+	const mf = new Miniflare({
+		upstream: new URL("/extra/", upstream.http.toString()).toString(),
+		modules: true,
+		script: `export default {
+      fetch(request) {
+        return fetch(request);
+      }
+    }`,
+	});
+	// Check rewrites protocol, hostname, and port, but keeps pathname and query
+	const res = await mf.dispatchFetch("https://random:0/path?a=1");
+	t.is(await res.text(), "upstream: http://upstream/extra/path?a=1");
 });
