@@ -281,7 +281,7 @@ export async function traverseAndBuildWorkerJSDirectory({
 	});
 
 	return {
-		modules: traverseModuleGraphResult.modules,
+		modules: bundleResult.modules,
 		dependencies: bundleResult.dependencies,
 		resolvedEntryPointPath: bundleResult.resolvedEntryPointPath,
 		bundleType: bundleResult.bundleType,

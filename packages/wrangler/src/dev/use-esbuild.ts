@@ -2,7 +2,11 @@ import assert from "node:assert";
 import { watch } from "chokidar";
 import { useApp } from "ink";
 import { useState, useEffect } from "react";
-import { bundleWorker, rewriteNodeCompatBuildFailure } from "../bundle";
+import {
+	bundleWorker,
+	dedupeModulesByName,
+	rewriteNodeCompatBuildFailure,
+} from "../bundle";
 import { logBuildFailure, logger } from "../logger";
 import traverseModuleGraph from "../traverse-module-graph";
 import type { Config } from "../config";
@@ -143,10 +147,10 @@ export function useEsbuild({
 					targetConsumer,
 					testScheduled,
 					experimentalLocal,
-					additionalModules: [
+					additionalModules: dedupeModulesByName([
 						...(traverseModuleGraphResult?.modules ?? []),
 						...additionalModules,
-					],
+					]),
 				});
 			}
 
@@ -175,10 +179,10 @@ export function useEsbuild({
 					(entry.format === "modules" ? "esm" : "commonjs"),
 				modules: bundleResult
 					? bundleResult.modules
-					: [
+					: dedupeModulesByName([
 							...(traverseModuleGraphResult?.modules ?? []),
 							...additionalModules,
-					  ],
+					  ]),
 				dependencies: bundleResult?.dependencies ?? {},
 				sourceMapPath: bundleResult?.sourceMapPath,
 				sourceMapMetadata: bundleResult?.sourceMapMetadata,

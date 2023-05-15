@@ -4,7 +4,7 @@ import * as path from "node:path";
 import * as util from "node:util";
 import onExit from "signal-exit";
 import tmp from "tmp-promise";
-import { bundleWorker } from "../bundle";
+import { bundleWorker, dedupeModulesByName } from "../bundle";
 import {
 	getBoundRegisteredWorkers,
 	registerWorker,
@@ -291,10 +291,10 @@ async function runEsbuild({
 			local,
 			experimentalLocal,
 			doBindings,
-			additionalModules: [
+			additionalModules: dedupeModulesByName([
 				...(traverseModuleGraphResult?.modules ?? []),
 				...additionalModules,
-			],
+			]),
 		});
 	}
 
@@ -307,7 +307,10 @@ async function runEsbuild({
 			(entry.format === "modules" ? "esm" : "commonjs"),
 		modules: bundleResult
 			? bundleResult.modules
-			: [...(traverseModuleGraphResult?.modules ?? []), ...additionalModules],
+			: dedupeModulesByName([
+					...(traverseModuleGraphResult?.modules ?? []),
+					...additionalModules,
+			  ]),
 		dependencies: bundleResult?.dependencies ?? {},
 		sourceMapPath: bundleResult?.sourceMapPath,
 		sourceMapMetadata: bundleResult?.sourceMapMetadata,

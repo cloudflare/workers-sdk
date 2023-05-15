@@ -459,7 +459,12 @@ export async function bundleWorker(
 		entryPointOutputs[0][0]
 	);
 
-	const modules = [...additionalModules, ...moduleCollector.modules];
+	// A collision between additionalModules and moduleCollector.modules is incredibly unlikely because moduleCollector hashes the modules it collects.
+	// However, if it happens, let's trust the explicitly provided additionalModules over the ones we discovered.
+	const modules = dedupeModulesByName([
+		...moduleCollector.modules,
+		...additionalModules,
+	]);
 
 	// copy all referenced modules into the output bundle directory
 	for (const module of modules) {
@@ -930,6 +935,18 @@ function listEntryPoints(
 	outputs: [string, ValueOf<esbuild.Metafile["outputs"]>][]
 ): string {
 	return outputs.map(([_input, output]) => output.entryPoint).join("\n");
+}
+
+/**
+ * Prefer modules towards the end of the array in the case of a collision by name.
+ */
+export function dedupeModulesByName(modules: CfModule[]): CfModule[] {
+	return Object.values(
+		modules.reduce((moduleMap, module) => {
+			moduleMap[module.name] = module;
+			return moduleMap;
+		}, {} as Record<string, CfModule>)
+	);
 }
 
 type ValueOf<T> = T[keyof T];
