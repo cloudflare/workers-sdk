@@ -77,13 +77,7 @@ describe("init", () => {
 			To publish your Worker to the Internet, run \`npm run deploy\`"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			"
-		`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
 		it("should initialize with no interactive prompts if `--yes` is used (named worker)", async () => {
@@ -116,13 +110,7 @@ describe("init", () => {
 			To publish your Worker to the Internet, run \`npm run deploy\`"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			"
-		`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
 		it("should initialize with no interactive prompts if `-y` is used", async () => {
@@ -154,11 +142,7 @@ describe("init", () => {
 			To start developing your Worker, run \`npm start\`
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			",
+			  "warn": "",
 			}
 		`);
 		});
@@ -234,11 +218,7 @@ describe("init", () => {
 			  "err": "",
 			  "info": "",
 			  "out": "✨ Created wrangler.toml",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			",
+			  "warn": "",
 			}
 		`);
 		});
@@ -273,11 +253,7 @@ describe("init", () => {
 			  "err": "",
 			  "info": "",
 			  "out": "✨ Created my-worker/wrangler.toml",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			",
+			  "warn": "",
 			}
 		`);
 		});
@@ -578,11 +554,7 @@ describe("init", () => {
 			  "info": "",
 			  "out": "✨ Created wrangler.toml
 			✨ Initialized git repository",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			",
+			  "warn": "",
 			}
 		`);
 			expect((await execa("git", ["branch", "--show-current"])).stdout).toEqual(
@@ -623,11 +595,7 @@ describe("init", () => {
 			To start developing your Worker, run \`npm start\`
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			",
+			  "warn": "",
 			}
 		`);
 		});
@@ -655,11 +623,7 @@ describe("init", () => {
 			To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			",
+			  "warn": "",
 			}
 		`);
 		});
@@ -688,11 +652,7 @@ describe("init", () => {
 			  "info": "",
 			  "out": "✨ Created wrangler.toml
 			✨ Initialized git repository",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			",
+			  "warn": "",
 			}
 		`);
 
@@ -750,11 +710,7 @@ describe("init", () => {
 			  "info": "",
 			  "out": "✨ Created wrangler.toml
 			✨ Created package.json",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			",
+			  "warn": "",
 			}
 		`);
 		});
@@ -806,11 +762,7 @@ describe("init", () => {
 			  "info": "",
 			  "out": "✨ Created my-worker/wrangler.toml
 			✨ Created my-worker/package.json",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			",
+			  "warn": "",
 			}
 		`);
 		});
@@ -856,11 +808,7 @@ describe("init", () => {
 			  "err": "",
 			  "info": "",
 			  "out": "✨ Created wrangler.toml",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			",
+			  "warn": "",
 			}
 		`);
 		});
@@ -915,11 +863,7 @@ describe("init", () => {
 			  "info": "",
 			  "out": "✨ Created path/to/worker/my-worker/wrangler.toml
 			✨ Created path/to/worker/my-worker/package.json",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			",
+			  "warn": "",
 			}
 		`);
 		});
@@ -973,11 +917,7 @@ describe("init", () => {
 			  "info": "",
 			  "out": "✨ Created wrangler.toml
 			✨ Installed wrangler into devDependencies",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			",
+			  "warn": "",
 			}
 		`);
 		});
@@ -1038,11 +978,7 @@ describe("init", () => {
 			  "info": "",
 			  "out": "✨ Created wrangler.toml
 			✨ Installed wrangler into devDependencies",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			",
+			  "warn": "",
 			}
 		`);
 		});
@@ -1098,11 +1034,7 @@ describe("init", () => {
 			  "err": "",
 			  "info": "",
 			  "out": "✨ Created wrangler.toml",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			",
+			  "warn": "",
 			}
 		`);
 		});
@@ -1165,11 +1097,7 @@ describe("init", () => {
 
 			To start developing your Worker, run \`npx wrangler dev\`
 			To publish your Worker to the Internet, run \`npx wrangler publish\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			",
+			  "warn": "",
 			}
 		`);
 		});
@@ -1229,11 +1157,7 @@ describe("init", () => {
 
 			To start developing your Worker, run \`npx wrangler dev\`
 			To publish your Worker to the Internet, run \`npx wrangler publish\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			",
+			  "warn": "",
 			}
 		`);
 		});
@@ -1408,11 +1332,7 @@ describe("init", () => {
 			  "out": "✨ Created wrangler.toml
 			✨ Created tsconfig.json
 			✨ Installed @cloudflare/workers-types and typescript into devDependencies",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			",
+			  "warn": "",
 			}
 		`);
 		});
@@ -1458,11 +1378,7 @@ describe("init", () => {
 			✨ Created my-worker/package.json
 			✨ Created my-worker/tsconfig.json
 			✨ Installed @cloudflare/workers-types and typescript into devDependencies",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			",
+			  "warn": "",
 			}
 		`);
 		});
@@ -1519,11 +1435,7 @@ describe("init", () => {
 			✨ Created package.json
 			✨ Created tsconfig.json
 			✨ Installed @cloudflare/workers-types and typescript into devDependencies",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			",
+			  "warn": "",
 			}
 		`);
 		});
@@ -1581,11 +1493,7 @@ describe("init", () => {
 
 			To start developing your Worker, run \`npx wrangler dev\`
 			To publish your Worker to the Internet, run \`npx wrangler publish\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			",
+			  "warn": "",
 			}
 		`);
 		});
@@ -1660,11 +1568,7 @@ describe("init", () => {
 			To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			",
+			  "warn": "",
 			}
 		`);
 		});
@@ -1722,11 +1626,7 @@ describe("init", () => {
 			  "out": "✨ Created wrangler.toml
 			✨ Installed @cloudflare/workers-types into devDependencies
 			🚨 Please add \\"@cloudflare/workers-types\\" to compilerOptions.types in tsconfig.json",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			",
+			  "warn": "",
 			}
 		`);
 		});
@@ -1786,11 +1686,7 @@ describe("init", () => {
 
 			To start developing your Worker, run \`npx wrangler dev\`
 			To publish your Worker to the Internet, run \`npx wrangler publish\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			",
+			  "warn": "",
 			}
 		`);
 		});
@@ -2078,11 +1974,7 @@ describe("init", () => {
 			  "err": "",
 			  "info": "",
 			  "out": "✨ Created wrangler.toml",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			",
+			  "warn": "",
 			}
 		`);
 		});
@@ -2129,11 +2021,7 @@ describe("init", () => {
 			  "err": "",
 			  "info": "",
 			  "out": "✨ Created my-worker/wrangler.toml",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			",
+			  "warn": "",
 			}
 		`);
 		});
@@ -2195,11 +2083,7 @@ describe("init", () => {
 			To start developing your Worker, run \`npm start\`
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			",
+			  "warn": "",
 			}
 		`);
 		});
@@ -2231,11 +2115,7 @@ describe("init", () => {
 			To start developing your Worker, run \`cd path/to/worker && npm start\`
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			",
+			  "warn": "",
 			}
 		`);
 		});
@@ -2267,11 +2147,7 @@ describe("init", () => {
 			To start developing your Worker, run \`cd WEIRD_w0rkr_N4m3.js.tsx.tar.gz && npm start\`
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			",
+			  "warn": "",
 			}
 		`);
 		});

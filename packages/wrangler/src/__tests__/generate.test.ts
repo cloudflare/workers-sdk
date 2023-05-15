@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import { type PackageManager, getPackageManager } from "../package-manager";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
@@ -11,17 +10,8 @@ describe("generate", () => {
 	runInTempDir();
 	const { setIsTTY } = useMockIsTTY();
 	const std = mockConsoleMethods();
-	let mockPackageManager: PackageManager;
 	beforeEach(() => {
 		setIsTTY(true);
-
-		mockPackageManager = {
-			cwd: process.cwd(),
-			type: "mockpm" as "npm",
-			addDevDeps: jest.fn(),
-			install: jest.fn(),
-		};
-		(getPackageManager as jest.Mock).mockResolvedValue(mockPackageManager);
 	});
 
 	describe("cli functionality", () => {
@@ -42,13 +32,6 @@ describe("generate", () => {
 			expect(std.out).toMatchInlineSnapshot(
 				`"✨ Created no-template/wrangler.toml"`
 			);
-			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			"
-		`);
 		});
 
 		it("complains when given the --type argument", async () => {
