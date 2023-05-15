@@ -17,6 +17,7 @@ body:
       label: Which Cloudflare product(s) does this pertain to?
       multiple: true
       options:
+        - C3
         - D1
         - KV
         - Pages
