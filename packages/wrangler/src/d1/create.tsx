@@ -83,9 +83,9 @@ export const Handler = withConfig<HandlerOptions>(
 					</Text>
 					{experimentalBackend && (
 						<Text>
-							Created your database using D1&apos;s new storage backend. The
-							new storage backend is not yet recommended for production
-							workloads and does not yet support backups.
+							Created your database using D1&apos;s new storage backend. The new
+							storage backend is not yet recommended for production workloads
+							and does not yet support backups.
 						</Text>
 					)}
 					<Text>&nbsp;</Text>
