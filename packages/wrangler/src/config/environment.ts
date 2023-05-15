@@ -551,8 +551,6 @@ interface EnvironmentNonInheritable {
 		/** The uuid of the uploaded mTLS certificate */
 		certificate_id: string;
 	}[];
-
-	tail_consumers?: TailConsumer[];
 }
 
 /**
@@ -650,10 +648,3 @@ export type ConfigModuleRuleType =
 	| "CompiledWasm"
 	| "Text"
 	| "Data";
-
-export type TailConsumer = {
-	/** The name of the service tail events will be forwarded to. */
-	service: string;
-	/** (Optional) The environt of the service. */
-	environment?: string;
-};
