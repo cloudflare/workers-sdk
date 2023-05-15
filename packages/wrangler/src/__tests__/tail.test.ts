@@ -514,10 +514,14 @@ describe("tail", () => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --format pretty");
 
-			const event = generateTailInfo();
-			const message = generateMockEventMessage({ event });
-			const serializedMessage = serialize(message);
+			let event = generateTailInfo(true);
+			let message = generateMockEventMessage({ event });
+			let serializedMessage = serialize(message);
+			api.ws.send(serializedMessage);
 
+			event = generateTailInfo(false);
+			message = generateMockEventMessage({ event });
+			serializedMessage = serialize(message);
 			api.ws.send(serializedMessage);
 			expect(
 				std.out.replace(
@@ -527,7 +531,8 @@ describe("tail", () => {
 			).toMatchInlineSnapshot(`
 			"Successfully created tail, expires at [mock expiration date]
 			Connected to test-worker, waiting for logs...
-			Tail is currently in sampling mode due to the high volume of messages. To prevent messages from being dropped consider adding filters."
+			Tail is currently in sampling mode due to the high volume of messages. To prevent messages from being dropped consider adding filters.
+			Tail has exited sampling mode and is no longer dropping messages."
 		`);
 		});
 
@@ -980,10 +985,16 @@ function generateMockEmailEvent(opts?: Partial<EmailEvent>): EmailEvent {
 	};
 }
 
-function generateTailInfo(): TailInfo {
-	return {
-		message:
-			"Tail is currently in sampling mode due to the high volume of messages. To prevent messages from being dropped consider adding filters.",
-		type: "overload",
-	};
+function generateTailInfo(overload: boolean): TailInfo {
+	return overload
+		? {
+				message:
+					"Tail is currently in sampling mode due to the high volume of messages. To prevent messages from being dropped consider adding filters.",
+				type: "overload",
+		  }
+		: {
+				message:
+					"Tail has exited sampling mode and is no longer dropping messages.",
+				type: "overload-stop",
+		  };
 }
