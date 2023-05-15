@@ -81,6 +81,13 @@ export const Handler = withConfig<HandlerOptions>(
 							? ` using primary location hint ${location}`
 							: ``}
 					</Text>
+					{experimentalBackend && (
+						<Text>
+							Creating your database using D1&apos;s new storage backend. The
+							new storage backend is not yet recommended for production
+							workloads and does not yet support backups.
+						</Text>
+					)}
 					<Text>&nbsp;</Text>
 					<Text>[[d1_databases]]</Text>
 					<Text>
