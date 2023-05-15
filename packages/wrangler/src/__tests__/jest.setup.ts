@@ -177,3 +177,16 @@ jest.mock("prompts", () => {
 		}),
 	};
 });
+
+jest.mock("execa", () => {
+	const realModule = jest.requireActual("execa");
+
+	return {
+		...realModule,
+		execa: jest.fn((...args: unknown[]) => {
+			return args[0] === "mockpm"
+				? Promise.resolve()
+				: realModule.execa(...args);
+		}),
+	};
+});
