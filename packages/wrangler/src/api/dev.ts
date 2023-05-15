@@ -5,6 +5,7 @@ import { logger } from "../logger";
 import type { Environment } from "../config";
 import type { Rule } from "../config/environment";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
+import type { CfModule } from "../worker";
 import type { RequestInit, Response, RequestInfo } from "undici";
 
 export interface UnstableDevOptions {
@@ -43,7 +44,6 @@ export interface UnstableDevOptions {
 		bucket_name: string;
 		preview_bucket_name?: string;
 	}[];
-	processEntrypoint?: boolean;
 	moduleRoot?: string;
 	rules?: Rule[];
 	logLevel?: "none" | "info" | "error" | "log" | "warn" | "debug"; // Specify logging level  [choices: "debug", "info", "log", "warn", "error", "none"] [default: "log"]
@@ -51,6 +51,8 @@ export interface UnstableDevOptions {
 	local?: boolean;
 	accountId?: string;
 	experimental?: {
+		processEntrypoint?: boolean;
+		additionalModules?: CfModule[];
 		d1Databases?: Environment["d1_databases"];
 		disableExperimentalWarning?: boolean; // Disables wrangler's warning when unstable APIs are used.
 		disableDevRegistry?: boolean; // Disables wrangler's support multi-worker setups. May reduce flakiness when used in tests in CI.
@@ -96,6 +98,8 @@ export async function unstable_dev(
 	const {
 		// there are two types of "experimental" options:
 		// 1. options to unstable_dev that we're still testing or are unsure of
+		processEntrypoint = false,
+		additionalModules,
 		disableDevRegistry,
 		disableExperimentalWarning,
 		forceLocal,
@@ -154,7 +158,8 @@ export async function unstable_dev(
 					},
 					config: options?.config,
 					env: options?.env,
-					processEntrypoint: !!options?.processEntrypoint,
+					processEntrypoint,
+					additionalModules,
 					bundle: options?.bundle,
 					compatibilityDate: options?.compatibilityDate,
 					compatibilityFlags: options?.compatibilityFlags,
@@ -245,6 +250,8 @@ export async function unstable_dev(
 					},
 					config: options?.config,
 					env: options?.env,
+					processEntrypoint,
+					additionalModules,
 					bundle: options?.bundle,
 					compatibilityDate: options?.compatibilityDate,
 					compatibilityFlags: options?.compatibilityFlags,

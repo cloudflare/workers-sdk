@@ -2,7 +2,11 @@ import assert from "node:assert";
 import { watch } from "chokidar";
 import { useApp } from "ink";
 import { useState, useEffect } from "react";
-import { bundleWorker, rewriteNodeCompatBuildFailure } from "../bundle";
+import {
+	bundleWorker,
+	dedupeModulesByName,
+	rewriteNodeCompatBuildFailure,
+} from "../bundle";
 import { logBuildFailure, logger } from "../logger";
 import traverseModuleGraph from "../traverse-module-graph";
 import type { Config } from "../config";
@@ -29,6 +33,7 @@ export function useEsbuild({
 	jsxFactory,
 	jsxFragment,
 	processEntrypoint,
+	additionalModules,
 	rules,
 	assets,
 	serveAssetsFromWorker,
@@ -53,6 +58,7 @@ export function useEsbuild({
 	jsxFactory: string | undefined;
 	jsxFragment: string | undefined;
 	processEntrypoint: boolean;
+	additionalModules: CfModule[];
 	rules: Config["rules"];
 	assets: Config["assets"];
 	define: Config["define"];
@@ -141,6 +147,10 @@ export function useEsbuild({
 					targetConsumer,
 					testScheduled,
 					experimentalLocal,
+					additionalModules: dedupeModulesByName([
+						...(traverseModuleGraphResult?.modules ?? []),
+						...additionalModules,
+					]),
 				});
 			}
 
@@ -167,8 +177,12 @@ export function useEsbuild({
 				type:
 					bundleResult?.bundleType ??
 					(entry.format === "modules" ? "esm" : "commonjs"),
-				modules:
-					traverseModuleGraphResult?.modules ?? bundleResult?.modules ?? [],
+				modules: bundleResult
+					? bundleResult.modules
+					: dedupeModulesByName([
+							...(traverseModuleGraphResult?.modules ?? []),
+							...additionalModules,
+					  ]),
 				dependencies: bundleResult?.dependencies ?? {},
 				sourceMapPath: bundleResult?.sourceMapPath,
 				sourceMapMetadata: bundleResult?.sourceMapMetadata,
@@ -192,6 +206,7 @@ export function useEsbuild({
 		jsxFragment,
 		serveAssetsFromWorker,
 		processEntrypoint,
+		additionalModules,
 		rules,
 		tsconfig,
 		exit,

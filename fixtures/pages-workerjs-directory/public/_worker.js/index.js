@@ -14,6 +14,12 @@ export default {
 			return new Response(staticMod);
 		}
 
+		if (pathname === "/d1") {
+			const stmt = env.D1.prepare("SELECT 1");
+			const values = await stmt.first();
+			return new Response(JSON.stringify(values));
+		}
+
 		if (pathname !== "/") {
 			return new Response((await import(`./${pathname.slice(1)}`)).default);
 		}

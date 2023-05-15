@@ -36,7 +36,7 @@ export default async function traverseModuleGraph(
 	const bundleType = entry.format === "modules" ? "esm" : "commonjs";
 
 	if (modules.length > 0) {
-		logger.info(`Uploading additional modules:`);
+		logger.info(`Attaching additional modules:`);
 		modules.forEach(({ name, type }) => {
 			logger.info(`- ${chalk.blue(name)} (${chalk.green(type ?? "")})`);
 		});

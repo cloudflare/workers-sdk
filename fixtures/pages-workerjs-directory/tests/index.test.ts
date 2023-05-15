@@ -11,7 +11,7 @@ describe.concurrent("Pages _worker.js/ directory", () => {
 		const { ip, port, stop } = await runWranglerPagesDev(
 			resolve(__dirname, ".."),
 			"public",
-			["--port=0"]
+			["--port=0", "--d1=D1"]
 		);
 		await expect(
 			fetch(`http://${ip}:${port}/`).then((resp) => resp.text())
@@ -23,8 +23,11 @@ describe.concurrent("Pages _worker.js/ directory", () => {
 			fetch(`http://${ip}:${port}/static`).then((resp) => resp.text())
 		).resolves.toContain("static");
 		await expect(
-			fetch(`http://${ip}:${port}/other-script`).then((resp) => resp.text())
-		).resolves.toContain("test");
+			fetch(`http://${ip}:${port}/other-script.js`).then((resp) => resp.text())
+		).resolves.toContain("other-script-test");
+		await expect(
+			fetch(`http://${ip}:${port}/d1`).then((resp) => resp.text())
+		).resolves.toContain('{"1":1}');
 		await stop();
 	});
 
@@ -33,13 +36,16 @@ describe.concurrent("Pages _worker.js/ directory", () => {
 		const file = join(dir, "./_worker.bundle");
 
 		execSync(
-			`npx wrangler pages functions build --build-output-directory public --outfile ${file} --bindings="{\\"d1_databases\\":{\\"FOO\\":{}}}"`,
+			`npx wrangler pages functions build --build-output-directory public --outfile ${file} --bindings="{\\"d1_databases\\":{\\"D1\\":{}}}"`,
 			{
 				cwd: path.resolve(__dirname, ".."),
 			}
 		);
 
-		expect(readFileSync(file, "utf-8")).toContain("D1_ERROR");
-		expect(readFileSync(file, "utf-8")).toContain('"static"');
+		const contents = readFileSync(file, "utf-8");
+
+		expect(contents).toContain("D1_ERROR");
+		expect(contents).toContain('"other-script-test"');
+		expect(contents).toContain('import staticMod from "./static.js";');
 	});
 });

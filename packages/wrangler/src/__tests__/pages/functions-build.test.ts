@@ -503,6 +503,7 @@ export const cat = "cat";`
 		Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
 		Content-Type: application/javascript+module
 
+		// _worker.js/index.js
 		import { cat } from \\"./cat.js\\";
 		var worker_default = {
 		  async fetch(request, env) {

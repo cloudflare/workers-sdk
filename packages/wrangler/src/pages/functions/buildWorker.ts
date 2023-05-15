@@ -10,6 +10,7 @@ import { getBasePath } from "../../paths";
 import traverseModuleGraph from "../../traverse-module-graph";
 import { D1_BETA_PREFIX } from "../../worker";
 import type { BundleResult } from "../../bundle";
+import type { CfModule } from "../../worker";
 import type { Plugin } from "esbuild";
 
 export type Options = {
@@ -164,6 +165,7 @@ export type RawOptions = {
 	outdir?: string;
 	directory: string;
 	bundle?: boolean;
+	external?: string[];
 	minify?: boolean;
 	sourcemap?: boolean;
 	watch?: boolean;
@@ -174,6 +176,7 @@ export type RawOptions = {
 	nodejsCompat?: boolean;
 	local: boolean;
 	betaD1Shims?: string[];
+	additionalModules?: CfModule[];
 };
 
 /**
@@ -189,6 +192,7 @@ export function buildRawWorker({
 	outdir,
 	directory,
 	bundle = true,
+	external,
 	minify = false,
 	sourcemap = false,
 	watch = false,
@@ -198,6 +202,7 @@ export function buildRawWorker({
 	nodejsCompat,
 	local,
 	betaD1Shims,
+	additionalModules,
 }: RawOptions) {
 	return bundleWorker(
 		{
@@ -219,16 +224,38 @@ export function buildRawWorker({
 				(binding) => `${D1_BETA_PREFIX}${binding}`
 			),
 			doBindings: [], // Pages functions don't support internal Durable Objects
-			plugins: [...plugins, buildNotifierPlugin(onEnd)],
+			plugins: [
+				...plugins,
+				buildNotifierPlugin(onEnd),
+				...(external
+					? [
+							// In some cases, we want to enable bundling in esbuild so that we can flatten a shim around the entrypoint, but we still don't want to actually bundle in all the chunks that a Worker references.
+							// This plugin allows us to mark those chunks as external so they are not inlined.
+							{
+								name: "external-fixer",
+								setup(pluginBuild) {
+									pluginBuild.onResolve({ filter: /.*/ }, async (args) => {
+										if (
+											external.includes(resolve(args.resolveDir, args.path))
+										) {
+											return { path: args.path, external: true };
+										}
+									});
+								},
+							} as Plugin,
+					  ]
+					: []),
+			],
 			isOutfile: !outdir,
 			serveAssetsFromWorker: false,
-			disableModuleCollection: false,
+			disableModuleCollection: external ? true : false,
 			rules: [],
 			checkFetch: local,
 			targetConsumer: local ? "dev" : "publish",
 			local,
 			experimentalLocal: false,
 			forPages: true,
+			additionalModules,
 		}
 	);
 }
@@ -264,7 +291,10 @@ export async function traverseAndBuildWorkerJSDirectory({
 	const outfile = join(tmpdir(), `./bundledWorker-${Math.random()}.mjs`);
 	const bundleResult = await buildRawWorker({
 		workerScriptPath: entrypoint,
-		bundle: false,
+		bundle: true,
+		external: traverseModuleGraphResult.modules.map((m) =>
+			join(workerJSDirectory, m.name)
+		),
 		outfile,
 		directory: buildOutputDirectory,
 		local: false,
@@ -273,10 +303,11 @@ export async function traverseAndBuildWorkerJSDirectory({
 		onEnd: () => {},
 		betaD1Shims: d1Databases,
 		nodejsCompat,
+		additionalModules: traverseModuleGraphResult.modules,
 	});
 
 	return {
-		modules: traverseModuleGraphResult.modules,
+		modules: bundleResult.modules,
 		dependencies: bundleResult.dependencies,
 		resolvedEntryPointPath: bundleResult.resolvedEntryPointPath,
 		bundleType: bundleResult.bundleType,
