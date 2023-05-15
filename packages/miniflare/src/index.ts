@@ -43,7 +43,7 @@ import {
 } from "./plugins";
 import {
 	JsonErrorSchema,
-	SourceOptions,
+	NameSourceOptions,
 	getUserServiceName,
 	handlePrettyErrorRequest,
 	reviveError,
@@ -517,8 +517,8 @@ export class Miniflare {
 		}
 	}
 
-	get #workerSrcOpts(): SourceOptions[] {
-		return this.#workerOpts.map<SourceOptions>(({ core }) => core);
+	get #workerSrcOpts(): NameSourceOptions[] {
+		return this.#workerOpts.map<NameSourceOptions>(({ core }) => core);
 	}
 
 	#handleLoopback = async (
