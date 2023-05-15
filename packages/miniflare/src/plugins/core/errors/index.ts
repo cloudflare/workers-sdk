@@ -290,6 +290,7 @@ export async function handlePrettyErrorRequest(
 		].join("");
 	});
 	return new Response(await youch.toHTML(), {
+		status: 500,
 		headers: { "Content-Type": "text/html;charset=utf-8" },
 	});
 }
