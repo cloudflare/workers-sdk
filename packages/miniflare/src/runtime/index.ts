@@ -134,14 +134,14 @@ export class Runtime {
 		return this.#processExitPromise;
 	}
 
-	dispose(): Awaitable<void> {
+	dispose(force = false): Awaitable<void> {
 		// `kill()` uses `SIGTERM` by default. In `workerd`, this waits for HTTP
 		// connections to close before exiting. Notably, Chrome sometimes keeps
 		// connections open for about 10s, blocking exit. We'd like `dispose()`/
 		// `setOptions()` to immediately terminate the existing process.
 		// Therefore, use `SIGINT` which force closes all connections.
 		// See https://github.com/cloudflare/workerd/pull/244.
-		this.#process?.kill("SIGINT");
+		this.#process?.kill(force ? "SIGKILL" : "SIGINT");
 		return this.#processExitPromise;
 	}
 }

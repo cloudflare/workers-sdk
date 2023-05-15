@@ -464,7 +464,9 @@ export class Miniflare {
 			verbose: this.#sharedOpts.core.verbose,
 		};
 		this.#runtime = new Runtime(opts);
-		this.#removeRuntimeExitHook = exitHook(() => void this.#runtime?.dispose());
+		this.#removeRuntimeExitHook = exitHook(
+			() => void this.#runtime?.dispose(/* force */ true)
+		);
 
 		// Update config and wait for runtime to start
 		await this.#assembleAndUpdateConfig(/* initial */ true);
