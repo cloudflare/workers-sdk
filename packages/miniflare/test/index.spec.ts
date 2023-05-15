@@ -233,7 +233,7 @@ test("Miniflare: custom service binding to another Miniflare instance", async (t
 	});
 });
 
-test("Miniflare: uses custom upstream as origin", async (t) => {
+test("Miniflare: custom upstream as origin", async (t) => {
 	const upstream = await useServer(t, (req, res) => {
 		res.end(`upstream: ${new URL(req.url ?? "", "http://upstream")}`);
 	});
@@ -249,4 +249,24 @@ test("Miniflare: uses custom upstream as origin", async (t) => {
 	// Check rewrites protocol, hostname, and port, but keeps pathname and query
 	const res = await mf.dispatchFetch("https://random:0/path?a=1");
 	t.is(await res.text(), "upstream: http://upstream/extra/path?a=1");
+});
+
+test("Miniflare: `node:` and `cloudflare:` modules", async (t) => {
+	const mf = new Miniflare({
+		modules: true,
+		compatibilityFlags: ["nodejs_compat"],
+		script: `
+    import assert from "node:assert";
+    import { Buffer } from "node:buffer";
+    import { connect } from "cloudflare:sockets"; 
+    export default {
+      fetch() {
+        assert.strictEqual(typeof connect, "function");
+        return new Response(Buffer.from("test").toString("base64"))
+      }
+    }
+    `,
+	});
+	const res = await mf.dispatchFetch("http://localhost");
+	t.is(await res.text(), "dGVzdA==");
 });
