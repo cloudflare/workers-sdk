@@ -14,21 +14,21 @@ import vue from "./vue";
 import type { FrameworkConfig } from "types";
 
 export const FrameworkMap: Record<string, FrameworkConfig> = {
-  angular,
-  astro,
-  docusaurus,
-  gatsby,
-  hono,
-  next,
-  nuxt,
-  qwik,
-  react,
-  remix,
-  solid,
-  svelte,
-  vue,
+	angular,
+	astro,
+	docusaurus,
+	gatsby,
+	hono,
+	next,
+	nuxt,
+	qwik,
+	react,
+	remix,
+	solid,
+	svelte,
+	vue,
 };
 
 export const supportedFramework = (framework: string) => {
-  return Object.keys(FrameworkMap).includes(framework);
+	return Object.keys(FrameworkMap).includes(framework);
 };

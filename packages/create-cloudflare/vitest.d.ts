@@ -1,12 +1,12 @@
 interface CustomMatchers<R = unknown> {
-  toExist(): R;
+	toExist(): R;
 }
 
 declare namespace Vi {
-  // eslint-disable-next-line @typescript-eslint/no-empty-interface
-  interface Assertion extends CustomMatchers {}
-  // eslint-disable-next-line @typescript-eslint/no-empty-interface
-  interface AsymmetricMatchersContaining extends CustomMatchers {}
+	// eslint-disable-next-line @typescript-eslint/no-empty-interface
+	interface Assertion extends CustomMatchers {}
+	// eslint-disable-next-line @typescript-eslint/no-empty-interface
+	interface AsymmetricMatchersContaining extends CustomMatchers {}
 
-  // Note: augmenting jest.Matchers interface will also work.
+	// Note: augmenting jest.Matchers interface will also work.
 }

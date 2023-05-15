@@ -8,28 +8,28 @@ import { AppComponent } from "./app/app.component";
 import { config } from "./app/app.config.server";
 
 interface Env {
-  ASSETS: { fetch: typeof fetch };
+	ASSETS: { fetch: typeof fetch };
 }
 
 // We attach the Cloudflare `fetch()` handler to the global scope
 // so that we can export it when we process the Angular output.
 // See tools/bundle.mjs
 (globalThis as any).__workerFetchHandler = async function fetch(
-  request: Request,
-  env: Env
+	request: Request,
+	env: Env
 ) {
-  const url = new URL(request.url);
-  console.log("render SSR", url.href);
+	const url = new URL(request.url);
+	console.log("render SSR", url.href);
 
-  // Get the root `index.html` content.
-  const indexUrl = new URL("/", url);
-  const indexResponse = await env.ASSETS.fetch(new Request(indexUrl));
-  const document = await indexResponse.text();
+	// Get the root `index.html` content.
+	const indexUrl = new URL("/", url);
+	const indexResponse = await env.ASSETS.fetch(new Request(indexUrl));
+	const document = await indexResponse.text();
 
-  const content = await renderApplication(
-    () => bootstrapApplication(AppComponent, config),
-    { document, url: url.pathname }
-  );
-  // console.log("rendered SSR", content);
-  return new Response(content, indexResponse);
+	const content = await renderApplication(
+		() => bootstrapApplication(AppComponent, config),
+		{ document, url: url.pathname }
+	);
+	// console.log("rendered SSR", content);
+	return new Response(content, indexResponse);
 };

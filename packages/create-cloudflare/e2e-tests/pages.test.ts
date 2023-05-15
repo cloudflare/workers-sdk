@@ -13,107 +13,107 @@ Areas for future improvement:
 */
 
 describe("E2E", () => {
-  let dummyPath: string;
+	let dummyPath: string;
 
-  const removeDummyFolder = () => {
-    rmSync(dummyPath, { recursive: true, force: true });
-  };
+	const removeDummyFolder = () => {
+		rmSync(dummyPath, { recursive: true, force: true });
+	};
 
-  beforeEach(() => {
-    dummyPath = join(tmpdir(), "tmp");
-    removeDummyFolder();
-    mkdirSync(dummyPath);
-  });
+	beforeEach(() => {
+		dummyPath = join(tmpdir(), "tmp");
+		removeDummyFolder();
+		mkdirSync(dummyPath);
+	});
 
-  afterEach(() => {
-    removeDummyFolder();
-  });
+	afterEach(() => {
+		removeDummyFolder();
+	});
 
-  const runCli = async (framework: string) => {
-    const projectPath = join(dummyPath, "test");
-    const argv = [
-      projectPath,
-      "--type",
-      "webFramework",
-      "--framework",
-      framework,
-      "--no-deploy",
-    ];
+	const runCli = async (framework: string) => {
+		const projectPath = join(dummyPath, "test");
+		const argv = [
+			projectPath,
+			"--type",
+			"webFramework",
+			"--framework",
+			framework,
+			"--no-deploy",
+		];
 
-    const result = await execa("node", ["./dist/cli.js", ...argv], {
-      stderr: process.stderr,
-    });
+		const result = await execa("node", ["./dist/cli.js", ...argv], {
+			stderr: process.stderr,
+		});
 
-    const { exitCode } = result;
+		const { exitCode } = result;
 
-    // Some baseline assertions for each framework
-    expect(exitCode).toBe(0);
+		// Some baseline assertions for each framework
+		expect(exitCode).toBe(0);
 
-    // Relevant project files should have been created
-    expect(projectPath).toExist();
+		// Relevant project files should have been created
+		expect(projectPath).toExist();
 
-    const pkgJsonPath = join(projectPath, "package.json");
-    expect(pkgJsonPath).toExist();
+		const pkgJsonPath = join(projectPath, "package.json");
+		expect(pkgJsonPath).toExist();
 
-    const wranglerPath = join(projectPath, "node_modules/wrangler");
-    expect(wranglerPath).toExist();
+		const wranglerPath = join(projectPath, "node_modules/wrangler");
+		expect(wranglerPath).toExist();
 
-    // Verify package scripts
-    const frameworkConfig = FrameworkMap[framework];
-    const pkgJson = readJSON(pkgJsonPath);
-    Object.entries(frameworkConfig.packageScripts).forEach(([target, cmd]) => {
-      expect(pkgJson.scripts[target]).toEqual(cmd);
-    });
+		// Verify package scripts
+		const frameworkConfig = FrameworkMap[framework];
+		const pkgJson = readJSON(pkgJsonPath);
+		Object.entries(frameworkConfig.packageScripts).forEach(([target, cmd]) => {
+			expect(pkgJson.scripts[target]).toEqual(cmd);
+		});
 
-    return {
-      result,
-      projectPath,
-    };
-  };
+		return {
+			result,
+			projectPath,
+		};
+	};
 
-  test("Astro", async () => {
-    await runCli("astro");
-  });
+	test("Astro", async () => {
+		await runCli("astro");
+	});
 
-  test("Hono", async () => {
-    await runCli("hono");
-  });
+	test("Hono", async () => {
+		await runCli("hono");
+	});
 
-  test("Next.js", async () => {
-    await runCli("next");
-  });
+	test("Next.js", async () => {
+		await runCli("next");
+	});
 
-  test("Nuxt", async () => {
-    await runCli("nuxt");
-  });
+	test("Nuxt", async () => {
+		await runCli("nuxt");
+	});
 
-  // Not possible atm since `npx qwik add cloudflare-pages`
-  // requires interactive confirmation
-  // test("Qwik", async () => {
-  //   await runCli("next", flags);
-  // });
+	// Not possible atm since `npx qwik add cloudflare-pages`
+	// requires interactive confirmation
+	// test("Qwik", async () => {
+	//   await runCli("next", flags);
+	// });
 
-  test("React", async () => {
-    await runCli("react");
-  });
+	test("React", async () => {
+		await runCli("react");
+	});
 
-  test("Remix", async () => {
-    await runCli("remix");
-  });
+	test("Remix", async () => {
+		await runCli("remix");
+	});
 
-  // Not possible atm since template selection is interactive only
-  // test("Solid", async () => {
-  //   const flags = ["--no-deploy"];
-  //   await runCli("solid", flags);
-  // });
+	// Not possible atm since template selection is interactive only
+	// test("Solid", async () => {
+	//   const flags = ["--no-deploy"];
+	//   await runCli("solid", flags);
+	// });
 
-  // Not possible atm since everything is interactive only
-  // test("Svelte", async () => {
-  //   const flags = ["--no-deploy"];
-  //   await runCli("svelte", flags);
-  // });
+	// Not possible atm since everything is interactive only
+	// test("Svelte", async () => {
+	//   const flags = ["--no-deploy"];
+	//   await runCli("svelte", flags);
+	// });
 
-  test("Vue", async () => {
-    await runCli("vue");
-  });
+	test("Vue", async () => {
+		await runCli("vue");
+	});
 });

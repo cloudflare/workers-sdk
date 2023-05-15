@@ -1,22 +1,22 @@
 export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    const url = new URL(request.url);
+	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+		const url = new URL(request.url);
 
-    const proxyUrl = url.searchParams.get('proxyUrl'); // get a query param value (?proxyUrl=...)
-    const modify = url.searchParams.has('modify'); // check if a query param is set (?proxyUrl=...&modify)
+		const proxyUrl = url.searchParams.get('proxyUrl'); // get a query param value (?proxyUrl=...)
+		const modify = url.searchParams.has('modify'); // check if a query param is set (?proxyUrl=...&modify)
 
-    if (!proxyUrl) {
-      return new Response('Bad request: Missing `proxyUrl` query param', { status: 400 });
-    }
+		if (!proxyUrl) {
+			return new Response('Bad request: Missing `proxyUrl` query param', { status: 400 });
+		}
 
-    // make subrequests with the global `fetch()` function
-    const res = await fetch(proxyUrl, request);
+		// make subrequests with the global `fetch()` function
+		const res = await fetch(proxyUrl, request);
 
-    // optionally, modify the respone
-    if (modify) {
-      res.headers.set('X-My-Header', 'My Header Value');
-    }
+		// optionally, modify the respone
+		if (modify) {
+			res.headers.set('X-My-Header', 'My Header Value');
+		}
 
-    return res;
-  },
+		return res;
+	},
 };
