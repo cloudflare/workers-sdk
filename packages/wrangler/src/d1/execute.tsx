@@ -23,12 +23,12 @@ import {
 	getDatabaseByNameOrBinding,
 	getDatabaseInfoFromConfig,
 } from "./utils";
-import type { Database } from "./types";
 import type { Config, ConfigFields, DevConfig, Environment } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+import type { Database } from "./types";
 
 export type QueryResult = {
 	results: Record<string, string | number | boolean>[];

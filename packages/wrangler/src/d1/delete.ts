@@ -5,11 +5,11 @@ import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { Name } from "./options";
 import { d1BetaWarning, getDatabaseByNameOrBinding } from "./utils";
-import type { Database } from "./types";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+import type { Database } from "./types";
 
 export function Options(d1ListYargs: CommonYargsArgv) {
 	return Name(d1ListYargs)
