@@ -73,7 +73,6 @@ function createWorkerBundleFormData(workerBundle: BundleResult): FormData {
 		keepVars: undefined,
 		logpush: undefined,
 		placement: undefined,
-		tail_consumers: undefined,
 	};
 
 	return createWorkerUploadForm(worker);

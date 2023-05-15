@@ -126,7 +126,6 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 								keepVars: false, // this doesn't matter since it's a new script anyway
 								logpush: false,
 								placement: undefined,
-								tail_consumers: undefined,
 							}),
 						}
 					);
