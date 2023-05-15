@@ -1,7 +1,7 @@
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "./constants";
 import { listDatabases } from "./list";
-import type { Config } from "../config";
 import type { Database } from "./types";
+import type { Config } from "../config";
 
 export function getDatabaseInfoFromConfig(
 	config: Config,

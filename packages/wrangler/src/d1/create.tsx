@@ -7,11 +7,11 @@ import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
 import { LOCATION_CHOICES } from "./constants";
 import { d1BetaWarning } from "./utils";
+import type { DatabaseCreationResult } from "./types";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { DatabaseCreationResult } from "./types";
 
 export function Options(yargs: CommonYargsArgv) {
 	return yargs
@@ -25,7 +25,7 @@ export function Options(yargs: CommonYargsArgv) {
 				"A hint for the primary location of the new DB. Options:\nweur: Western Europe\neeur: Eastern Europe\napac: Asia Pacific\nwnam: Western North America\nenam: Eastern North America \n",
 			type: "string",
 		})
-		.option("experimental", {
+		.option("experimental-backend", {
 			default: false,
 			describe: "Use new experimental DB backend",
 			type: "boolean",
@@ -35,12 +35,12 @@ export function Options(yargs: CommonYargsArgv) {
 
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
 export const Handler = withConfig<HandlerOptions>(
-	async ({ name, config, location, experimental }): Promise<void> => {
+	async ({ name, config, location, experimentalBackend }): Promise<void> => {
 		const accountId = await requireAuth(config);
 
 		logger.log(d1BetaWarning);
 
-		if (!experimental && location) {
+		if (!experimentalBackend && location) {
 			if (LOCATION_CHOICES.indexOf(location.toLowerCase()) === -1) {
 				throw new Error(
 					`Location '${location}' invalid. Valid values are ${LOCATION_CHOICES.join(
@@ -60,7 +60,7 @@ export const Handler = withConfig<HandlerOptions>(
 				body: JSON.stringify({
 					name,
 					...(location && { primary_location_hint: location }),
-					...(experimental && { experimental: true }),
+					...(experimentalBackend && { experimental: true }),
 				}),
 			});
 		} catch (e) {

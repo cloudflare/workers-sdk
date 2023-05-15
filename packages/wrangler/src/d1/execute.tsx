@@ -23,12 +23,12 @@ import {
 	getDatabaseByNameOrBinding,
 	getDatabaseInfoFromConfig,
 } from "./utils";
+import type { Database } from "./types";
 import type { Config, ConfigFields, DevConfig, Environment } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Database } from "./types";
 
 export type QueryResult = {
 	results: Record<string, string | number | boolean>[];
@@ -358,7 +358,7 @@ function batchSplit(queries: string[], batchSize: number) {
 	}
 	if (num_batches > 1) {
 		logger.log(
-			`🌀 We are sending ${num_batches} batch(es) to D1 (limited to ${DEFAULT_BATCH_SIZE} statements per batch. Use --batch-size to override.)`
+			`🌀 We are sending ${num_batches} batch(es) to D1 (limited to ${batchSize} statements per batch. Use --batch-size to override.)`
 		);
 	}
 	return batches;

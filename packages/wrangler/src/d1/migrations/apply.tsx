@@ -33,7 +33,7 @@ import type {
 
 export function ApplyOptions(yargs: CommonYargsArgv) {
 	return MigrationOptions(yargs)
-		.option("experimental", {
+		.option("experimentalBackend", {
 			default: false,
 			describe: "Use new experimental DB backend",
 			type: "boolean",
@@ -54,7 +54,7 @@ export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 		local,
 		persistTo,
 		preview,
-		experimental,
+		experimentalBackend,
 		batchSize,
 	}): Promise<void> => {
 		logger.log(d1BetaWarning);
@@ -137,8 +137,8 @@ Your database may not be available to serve requests during the migration, conti
 		);
 		if (!ok) return;
 
-		// don't backup prod db when applying migrations locally or in preview
-		if (!local && !preview && !experimental) {
+		// don't backup prod db when applying migrations locally, in preview, or when using the experimental backend
+		if (!(local || preview || experimentalBackend)) {
 			assert(
 				databaseInfo,
 				"In non-local mode `databaseInfo` should be defined."
