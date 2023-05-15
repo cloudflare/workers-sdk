@@ -243,6 +243,12 @@ ${dim(modulesConfig)}`;
 			throw new MiniflareCoreError("ERR_MODULE_DYNAMIC_SPEC", message);
 		}
 		const spec = specExpression.value;
+
+		// `node:` and `cloudflare:` imports don't need to be included explicitly
+		if (spec.startsWith("node:") || spec.startsWith("cloudflare:")) {
+			return;
+		}
+
 		const identifier = path.resolve(path.dirname(referencingPath), spec);
 		// The runtime requires module identifiers to be relative paths
 		const name = path.relative("", identifier);
