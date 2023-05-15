@@ -11,10 +11,10 @@
     "./templates"
   ],
   "scripts": {
-    "types:check": "tsc --noEmit",
-    "lint": "eslint .",
     "build": "node scripts/build.js",
     "watch": "node scripts/build.js --watch",
+    "check:type": "tsc --noEmit",
+    "check:lint": "eslint .",
     "test:e2e": "npm run build && vitest run --config ./vitest-e2e.config.ts",
     "test:unit": "vitest run --config ./vitest.config.ts"
   },
