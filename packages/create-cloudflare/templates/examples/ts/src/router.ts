@@ -18,3 +18,5 @@ router.post('/api/todos', async (request) => {
 
 // 404 for everything else
 router.all('*', () => new Response('Not Found.', { status: 404 }));
+
+export default router;
