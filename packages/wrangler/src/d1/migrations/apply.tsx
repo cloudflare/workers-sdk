@@ -12,7 +12,11 @@ import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { renderToString } from "../../utils/render";
 import { createBackup } from "../backups";
-import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";
+import {
+	DEFAULT_MIGRATION_PATH,
+	DEFAULT_MIGRATION_TABLE,
+	DEFAULT_BATCH_SIZE,
+} from "../constants";
 import { executeSql } from "../execute";
 import { d1BetaWarning, getDatabaseInfoFromConfig } from "../utils";
 import {
@@ -28,13 +32,31 @@ import type {
 } from "../../yargs-types";
 
 export function ApplyOptions(yargs: CommonYargsArgv) {
-	return MigrationOptions(yargs);
+	return MigrationOptions(yargs)
+		.option("experimentalBackend", {
+			default: false,
+			describe: "Use new experimental DB backend",
+			type: "boolean",
+		})
+		.option("batch-size", {
+			describe: "Number of queries to send in a single batch",
+			type: "number",
+			default: DEFAULT_BATCH_SIZE,
+		});
 }
 
 type ApplyHandlerOptions = StrictYargsOptionsToInterface<typeof ApplyOptions>;
 
 export const ApplyHandler = withConfig<ApplyHandlerOptions>(
-	async ({ config, database, local, persistTo, preview }): Promise<void> => {
+	async ({
+		config,
+		database,
+		local,
+		persistTo,
+		preview,
+		experimentalBackend,
+		batchSize,
+	}): Promise<void> => {
 		logger.log(d1BetaWarning);
 
 		const databaseInfo = getDatabaseInfoFromConfig(config, database);
@@ -115,8 +137,8 @@ Your database may not be available to serve requests during the migration, conti
 		);
 		if (!ok) return;
 
-		// don't backup prod db when applying migrations locally or in preview
-		if (!local && !preview) {
+		// don't backup prod db when applying migrations locally, in preview, or when using the experimental backend
+		if (!(local || preview || experimentalBackend)) {
 			assert(
 				databaseInfo,
 				"In non-local mode `databaseInfo` should be defined."
@@ -149,6 +171,7 @@ Your database may not be available to serve requests during the migration, conti
 					file: undefined,
 					json: undefined,
 					preview,
+					batchSize,
 				});
 
 				if (response === null) {

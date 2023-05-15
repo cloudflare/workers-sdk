@@ -15,6 +15,7 @@ import { readFileSync } from "../parse";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
+import { DEFAULT_BATCH_SIZE } from "./constants";
 import * as options from "./options";
 import splitSqlQuery from "./splitter";
 import {
@@ -37,8 +38,6 @@ export type QueryResult = {
 	};
 	query?: string;
 };
-// Max number of statements to send in a single /execute call
-const QUERY_LIMIT = 10_000;
 
 export function Options(yargs: CommonYargsArgv) {
 	return options
@@ -75,14 +74,28 @@ export function Options(yargs: CommonYargsArgv) {
 			describe: "Execute commands/files against a preview D1 DB",
 			type: "boolean",
 			default: false,
+		})
+		.option("batch-size", {
+			describe: "Number of queries to send in a single batch",
+			type: "number",
+			default: DEFAULT_BATCH_SIZE,
 		});
 }
 
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
 
 export const Handler = async (args: HandlerOptions): Promise<void> => {
-	const { local, database, yes, persistTo, file, command, json, preview } =
-		args;
+	const {
+		local,
+		database,
+		yes,
+		persistTo,
+		file,
+		command,
+		json,
+		preview,
+		batchSize,
+	} = args;
 	const existingLogLevel = logger.loggerLevel;
 	if (json) {
 		// set loggerLevel to error to avoid readConfig warnings appearing in JSON output
@@ -104,6 +117,7 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 		command,
 		json,
 		preview,
+		batchSize,
 	});
 
 	// Early exit if prompt rejected
@@ -150,6 +164,7 @@ export async function executeSql({
 	command,
 	json,
 	preview,
+	batchSize,
 }: {
 	local: boolean | undefined;
 	config: ConfigFields<DevConfig> & Environment;
@@ -160,6 +175,7 @@ export async function executeSql({
 	command: string | undefined;
 	json: boolean | undefined;
 	preview: boolean | undefined;
+	batchSize: number;
 }) {
 	const sql = file ? readFileSync(file) : command;
 	if (!sql) throw new Error(`Error: must provide --command or --file.`);
@@ -192,7 +208,7 @@ export async function executeSql({
 				config,
 				name,
 				shouldPrompt,
-				batches: batchSplit(queries),
+				batches: batchSplit(queries, batchSize),
 				json,
 				preview,
 		  });
@@ -313,7 +329,7 @@ async function executeRemotely({
 				body: JSON.stringify({ sql }),
 			}
 		);
-		result.map(logResult);
+		logResult(result);
 		results.push(...result);
 	}
 	return results;
@@ -333,18 +349,16 @@ function logResult(r: QueryResult | QueryResult[]) {
 	);
 }
 
-function batchSplit(queries: string[]) {
+function batchSplit(queries: string[], batchSize: number) {
 	logger.log(`🌀 Parsing ${queries.length} statements`);
-	const num_batches = Math.ceil(queries.length / QUERY_LIMIT);
+	const num_batches = Math.ceil(queries.length / batchSize);
 	const batches: string[] = [];
 	for (let i = 0; i < num_batches; i++) {
-		batches.push(
-			queries.slice(i * QUERY_LIMIT, (i + 1) * QUERY_LIMIT).join("; ")
-		);
+		batches.push(queries.slice(i * batchSize, (i + 1) * batchSize).join("; "));
 	}
 	if (num_batches > 1) {
 		logger.log(
-			`🌀 We are sending ${num_batches} batch(es) to D1 (limited to ${QUERY_LIMIT} statements per batch)`
+			`🌀 We are sending ${num_batches} batch(es) to D1 (limited to ${batchSize} statements per batch. Use --batch-size to override.)`
 		);
 	}
 	return batches;

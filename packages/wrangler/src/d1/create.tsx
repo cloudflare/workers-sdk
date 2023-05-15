@@ -1,4 +1,4 @@
-import { Text, Box } from "ink";
+import { Box, Text } from "ink";
 import React from "react";
 import { fetchResult } from "../cfetch";
 import { withConfig } from "../config";
@@ -24,17 +24,31 @@ export function Options(yargs: CommonYargsArgv) {
 			describe:
 				"A hint for the primary location of the new DB. Options:\nweur: Western Europe\neeur: Eastern Europe\napac: Asia Pacific\nwnam: Western North America\nenam: Eastern North America \n",
 			type: "string",
-			choices: LOCATION_CHOICES,
+		})
+		.option("experimental-backend", {
+			default: false,
+			describe: "Use new experimental DB backend",
+			type: "boolean",
 		})
 		.epilogue(d1BetaWarning);
 }
 
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
 export const Handler = withConfig<HandlerOptions>(
-	async ({ name, config, location }): Promise<void> => {
+	async ({ name, config, location, experimentalBackend }): Promise<void> => {
 		const accountId = await requireAuth(config);
 
 		logger.log(d1BetaWarning);
+
+		if (!experimentalBackend && location) {
+			if (LOCATION_CHOICES.indexOf(location.toLowerCase()) === -1) {
+				throw new Error(
+					`Location '${location}' invalid. Valid values are ${LOCATION_CHOICES.join(
+						","
+					)}`
+				);
+			}
+		}
 
 		let db: DatabaseCreationResult;
 		try {
@@ -46,6 +60,7 @@ export const Handler = withConfig<HandlerOptions>(
 				body: JSON.stringify({
 					name,
 					...(location && { primary_location_hint: location }),
+					...(experimentalBackend && { experimental: true }),
 				}),
 			});
 		} catch (e) {

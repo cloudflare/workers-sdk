@@ -4,7 +4,7 @@ import { confirm } from "../../dialogs";
 import { CI } from "../../is-ci";
 import isInteractive from "../../is-interactive";
 import { logger } from "../../logger";
-import { DEFAULT_MIGRATION_PATH } from "../constants";
+import { DEFAULT_MIGRATION_PATH, DEFAULT_BATCH_SIZE } from "../constants";
 import { executeSql } from "../execute";
 import type { ConfigFields, DevConfig, Environment } from "../../config";
 import type { QueryResult } from "../execute";
@@ -100,6 +100,7 @@ const listAppliedMigrations = async (
 		file: undefined,
 		json: undefined,
 		preview,
+		batchSize: DEFAULT_BATCH_SIZE,
 	});
 
 	if (!response || response[0].results.length === 0) return [];
@@ -165,5 +166,6 @@ export const initMigrationsTable = async ({
 		file: undefined,
 		json: undefined,
 		preview,
+		batchSize: DEFAULT_BATCH_SIZE,
 	});
 };
