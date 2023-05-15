@@ -11,6 +11,7 @@ type Env = {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
 	[CoreBindings.SERVICE_USER_FALLBACK]: Fetcher;
 	[CoreBindings.TEXT_CUSTOM_SERVICE]: string;
+	[CoreBindings.TEXT_UPSTREAM_URL]?: string;
 	[CoreBindings.JSON_CF_BLOB]: IncomingRequestCfProperties;
 	[CoreBindings.JSON_ROUTES]: WorkerRoute[];
 	[CoreBindings.JSON_LOG_LEVEL]: LogLevel;
@@ -26,7 +27,17 @@ function getUserRequest(
 	env: Env
 ) {
 	const originalUrl = request.headers.get(CoreHeaders.ORIGINAL_URL);
-	request = new Request(originalUrl ?? request.url, {
+	const upstreamUrl = env[CoreBindings.TEXT_UPSTREAM_URL];
+	let url = new URL(originalUrl ?? request.url);
+	if (upstreamUrl !== undefined) {
+		// If a custom `upstream` was specified, make sure the URL starts with it
+		let path = url.pathname + url.search;
+		// Remove leading slash, so we resolve relative to `upstream`'s path
+		if (path.startsWith("/")) path = path.substring(1);
+		url = new URL(path, upstreamUrl);
+	}
+
+	request = new Request(url, {
 		method: request.method,
 		headers: request.headers,
 		cf: request.cf ?? env[CoreBindings.JSON_CF_BLOB],
