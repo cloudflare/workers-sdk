@@ -11,5 +11,5 @@ npm create cloudflare
 # or
 yarn create cloudflare
 # or
-pnmp create cloudflare
+pnpm create cloudflare
 ```
