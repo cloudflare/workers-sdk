@@ -29,6 +29,7 @@ export function useEsbuild({
 	jsxFactory,
 	jsxFragment,
 	processEntrypoint,
+	additionalModules,
 	rules,
 	assets,
 	serveAssetsFromWorker,
@@ -53,6 +54,7 @@ export function useEsbuild({
 	jsxFactory: string | undefined;
 	jsxFragment: string | undefined;
 	processEntrypoint: boolean;
+	additionalModules: CfModule[];
 	rules: Config["rules"];
 	assets: Config["assets"];
 	define: Config["define"];
@@ -141,6 +143,10 @@ export function useEsbuild({
 					targetConsumer,
 					testScheduled,
 					experimentalLocal,
+					additionalModules: [
+						...(traverseModuleGraphResult?.modules ?? []),
+						...additionalModules,
+					],
 				});
 			}
 
@@ -167,8 +173,12 @@ export function useEsbuild({
 				type:
 					bundleResult?.bundleType ??
 					(entry.format === "modules" ? "esm" : "commonjs"),
-				modules:
-					traverseModuleGraphResult?.modules ?? bundleResult?.modules ?? [],
+				modules: bundleResult
+					? bundleResult.modules
+					: [
+							...(traverseModuleGraphResult?.modules ?? []),
+							...additionalModules,
+					  ],
 				dependencies: bundleResult?.dependencies ?? {},
 				sourceMapPath: bundleResult?.sourceMapPath,
 				sourceMapMetadata: bundleResult?.sourceMapMetadata,
@@ -192,6 +202,7 @@ export function useEsbuild({
 		jsxFragment,
 		serveAssetsFromWorker,
 		processEntrypoint,
+		additionalModules,
 		rules,
 		tsconfig,
 		exit,

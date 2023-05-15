@@ -30,6 +30,7 @@ import type { Config } from "../config";
 import type { DurableObjectBindings } from "../config/environment";
 import type { WorkerRegistry } from "../dev-registry";
 import type { Entry } from "../entry";
+import type { CfModule } from "../worker";
 import type { DevProps, DirectorySyncResult } from "./dev";
 import type { LocalProps } from "./local";
 import type { EsbuildBundle } from "./use-esbuild";
@@ -93,6 +94,7 @@ export async function startDevServer(
 			destination: directory.name,
 			jsxFactory: props.jsxFactory,
 			processEntrypoint: props.processEntrypoint,
+			additionalModules: props.additionalModules,
 			rules: props.rules,
 			jsxFragment: props.jsxFragment,
 			serveAssetsFromWorker: Boolean(
@@ -208,6 +210,7 @@ async function runEsbuild({
 	jsxFactory,
 	jsxFragment,
 	processEntrypoint,
+	additionalModules,
 	rules,
 	assets,
 	betaD1Shims,
@@ -231,6 +234,7 @@ async function runEsbuild({
 	jsxFactory: string | undefined;
 	jsxFragment: string | undefined;
 	processEntrypoint: boolean;
+	additionalModules: CfModule[];
 	rules: Config["rules"];
 	assets: Config["assets"];
 	betaD1Shims?: string[];
@@ -287,6 +291,10 @@ async function runEsbuild({
 			local,
 			experimentalLocal,
 			doBindings,
+			additionalModules: [
+				...(traverseModuleGraphResult?.modules ?? []),
+				...additionalModules,
+			],
 		});
 	}
 
@@ -297,7 +305,9 @@ async function runEsbuild({
 		type:
 			bundleResult?.bundleType ??
 			(entry.format === "modules" ? "esm" : "commonjs"),
-		modules: traverseModuleGraphResult?.modules ?? bundleResult?.modules ?? [],
+		modules: bundleResult
+			? bundleResult.modules
+			: [...(traverseModuleGraphResult?.modules ?? []), ...additionalModules],
 		dependencies: bundleResult?.dependencies ?? {},
 		sourceMapPath: bundleResult?.sourceMapPath,
 		sourceMapMetadata: bundleResult?.sourceMapMetadata,

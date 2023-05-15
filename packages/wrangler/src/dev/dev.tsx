@@ -30,7 +30,7 @@ import type { WorkerRegistry } from "../dev-registry";
 import type { Entry } from "../entry";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { AssetPaths } from "../sites";
-import type { CfWorkerInit } from "../worker";
+import type { CfModule, CfWorkerInit } from "../worker";
 
 /**
  * This hooks establishes a connection with the dev registry,
@@ -117,6 +117,7 @@ export type DevProps = {
 	initialIp: string;
 	inspectorPort: number;
 	processEntrypoint: boolean;
+	additionalModules: CfModule[];
 	rules: Config["rules"];
 	accountId: string | undefined;
 	initialMode: "local" | "remote";
@@ -274,6 +275,7 @@ function DevSession(props: DevSessionProps) {
 		destination: directory,
 		jsxFactory: props.jsxFactory,
 		processEntrypoint: props.processEntrypoint,
+		additionalModules: props.additionalModules,
 		rules: props.rules,
 		jsxFragment: props.jsxFragment,
 		serveAssetsFromWorker: Boolean(

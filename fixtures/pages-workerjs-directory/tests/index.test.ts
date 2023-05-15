@@ -23,8 +23,8 @@ describe.concurrent("Pages _worker.js/ directory", () => {
 			fetch(`http://${ip}:${port}/static`).then((resp) => resp.text())
 		).resolves.toContain("static");
 		await expect(
-			fetch(`http://${ip}:${port}/other-script`).then((resp) => resp.text())
-		).resolves.toContain("test");
+			fetch(`http://${ip}:${port}/other-script.js`).then((resp) => resp.text())
+		).resolves.toContain("other-script-test");
 		await stop();
 	});
 

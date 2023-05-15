@@ -10,6 +10,7 @@ import { getBasePath } from "../../paths";
 import traverseModuleGraph from "../../traverse-module-graph";
 import { D1_BETA_PREFIX } from "../../worker";
 import type { BundleResult } from "../../bundle";
+import type { CfModule } from "../../worker";
 import type { Plugin } from "esbuild";
 
 export type Options = {
@@ -174,6 +175,7 @@ export type RawOptions = {
 	nodejsCompat?: boolean;
 	local: boolean;
 	betaD1Shims?: string[];
+	additionalModules?: CfModule[];
 };
 
 /**
@@ -198,6 +200,7 @@ export function buildRawWorker({
 	nodejsCompat,
 	local,
 	betaD1Shims,
+	additionalModules,
 }: RawOptions) {
 	return bundleWorker(
 		{
@@ -229,6 +232,7 @@ export function buildRawWorker({
 			local,
 			experimentalLocal: false,
 			forPages: true,
+			additionalModules,
 		}
 	);
 }
@@ -273,6 +277,7 @@ export async function traverseAndBuildWorkerJSDirectory({
 		onEnd: () => {},
 		betaD1Shims: d1Databases,
 		nodejsCompat,
+		additionalModules: traverseModuleGraphResult.modules,
 	});
 
 	return {

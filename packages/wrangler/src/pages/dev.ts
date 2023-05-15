@@ -13,10 +13,15 @@ import { getBasePath } from "../paths";
 import { buildFunctions } from "./buildFunctions";
 import { ROUTES_SPEC_VERSION, SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
 import { FunctionsNoRoutesError, getFunctionsNoRoutesWarning } from "./errors";
-import { buildRawWorker, checkRawWorker } from "./functions/buildWorker";
+import {
+	buildRawWorker,
+	checkRawWorker,
+	traverseAndBuildWorkerJSDirectory,
+} from "./functions/buildWorker";
 import { validateRoutes } from "./functions/routes-validation";
 import { CLEANUP, CLEANUP_CALLBACKS, pagesBetaWarning } from "./utils";
 import type { AdditionalDevProps } from "../dev";
+import type { CfModule } from "../worker";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -268,8 +273,28 @@ export const Handler = async ({
 	let scriptPath = "";
 
 	const nodejsCompat = compatibilityFlags?.includes("nodejs_compat");
+	let modules: CfModule[] = [];
 
-	if (usingWorkerScript) {
+	if (usingWorkerDirectory) {
+		const runBuild = async () => {
+			const bundleResult = await traverseAndBuildWorkerJSDirectory({
+				workerJSDirectory: workerScriptPath,
+				buildOutputDirectory: directory ?? ".",
+				nodejsCompat,
+			});
+			modules = bundleResult.modules;
+			scriptPath = bundleResult.resolvedEntryPointPath;
+		};
+
+		await runBuild().then(() => scriptReadyResolve());
+
+		watch([workerScriptPath], {
+			persistent: true,
+			ignoreInitial: true,
+		}).on("all", async () => {
+			await runBuild();
+		});
+	} else if (usingWorkerScript) {
 		scriptPath = workerScriptPath;
 		let runBuild = async () => {
 			await checkRawWorker(workerScriptPath, () => scriptReadyResolve());
@@ -545,8 +570,6 @@ export const Handler = async ({
 		r2: r2s.map((binding) => {
 			return { binding: binding.toString(), bucket_name: "" };
 		}),
-		processEntrypoint: true,
-		moduleRoot: workerScriptPath,
 		rules: usingWorkerDirectory
 			? [
 					{
@@ -561,6 +584,8 @@ export const Handler = async ({
 		inspect: undefined,
 		logLevel,
 		experimental: {
+			processEntrypoint: true,
+			additionalModules: modules,
 			d1Databases: d1s.map((binding) => ({
 				binding: binding.toString(),
 				database_id: "", // Required for types, but unused by dev

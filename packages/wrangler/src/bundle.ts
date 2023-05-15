@@ -157,6 +157,7 @@ export async function bundleWorker(
 		loader?: Record<string, string>;
 		sourcemap?: esbuild.CommonOptions["sourcemap"];
 		plugins?: esbuild.Plugin[];
+		additionalModules?: CfModule[];
 		// TODO: Rip these out https://github.com/cloudflare/workers-sdk/issues/2153
 		disableModuleCollection?: boolean;
 		isOutfile?: boolean;
@@ -193,6 +194,7 @@ export async function bundleWorker(
 		disableModuleCollection,
 		isOutfile,
 		forPages,
+		additionalModules = [],
 	} = options;
 
 	// We create a temporary directory for any oneoff files we
@@ -457,16 +459,20 @@ export async function bundleWorker(
 		entryPointOutputs[0][0]
 	);
 
+	const modules = [...additionalModules, ...moduleCollector.modules];
+
 	// copy all referenced modules into the output bundle directory
-	for (const module of moduleCollector.modules) {
-		fs.writeFileSync(
-			path.join(path.dirname(resolvedEntryPointPath), module.name),
-			module.content
+	for (const module of modules) {
+		const modulePath = path.join(
+			path.dirname(resolvedEntryPointPath),
+			module.name
 		);
+		fs.mkdirSync(path.dirname(modulePath), { recursive: true });
+		fs.writeFileSync(modulePath, module.content);
 	}
 
 	return {
-		modules: moduleCollector.modules,
+		modules,
 		dependencies,
 		resolvedEntryPointPath,
 		bundleType,

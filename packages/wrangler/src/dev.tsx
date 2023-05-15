@@ -31,7 +31,7 @@ import type { Config, Environment } from "./config";
 import type { Route, Rule } from "./config/environment";
 import type { LoggerLevel } from "./logger";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
-import type { CfWorkerInit } from "./worker";
+import type { CfWorkerInit, CfModule } from "./worker";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -335,6 +335,7 @@ export type AdditionalDevProps = {
 	}[];
 	d1Databases?: Environment["d1_databases"];
 	processEntrypoint?: boolean;
+	additionalModules?: CfModule[];
 	moduleRoot?: string;
 	rules?: Rule[];
 };
@@ -400,6 +401,8 @@ export async function startDev(args: StartDevOptions) {
 			getInspectorPort,
 			cliDefines,
 			localPersistencePath,
+			processEntrypoint,
+			additionalModules,
 		} = await validateDevServerSettings(args, config);
 
 		await metrics.sendMetricsEvent(
@@ -427,7 +430,8 @@ export async function startDev(args: StartDevOptions) {
 					zone={zoneId}
 					host={host}
 					routes={routes}
-					processEntrypoint={!!args.processEntrypoint}
+					processEntrypoint={processEntrypoint}
+					additionalModules={additionalModules}
 					rules={args.rules ?? getRules(configParam)}
 					legacyEnv={isLegacyEnv(configParam)}
 					minify={args.minify ?? configParam.minify}
@@ -537,6 +541,8 @@ export async function startApiDev(args: StartDevOptions) {
 		getInspectorPort,
 		cliDefines,
 		localPersistencePath,
+		processEntrypoint,
+		additionalModules,
 	} = await validateDevServerSettings(args, config);
 
 	await metrics.sendMetricsEvent(
@@ -564,7 +570,8 @@ export async function startApiDev(args: StartDevOptions) {
 			zone: zoneId,
 			host: host,
 			routes: routes,
-			processEntrypoint: !!args.processEntrypoint,
+			processEntrypoint,
+			additionalModules,
 			rules: args.rules ?? getRules(configParam),
 			legacyEnv: isLegacyEnv(configParam),
 			minify: args.minify ?? configParam.minify,
@@ -792,6 +799,8 @@ async function validateDevServerSettings(
 		routes,
 		cliDefines,
 		localPersistencePath,
+		processEntrypoint: !!args.processEntrypoint,
+		additionalModules: args.additionalModules ?? [],
 	};
 }
 
