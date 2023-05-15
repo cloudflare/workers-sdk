@@ -35,7 +35,7 @@ async function getActiveExperiments(fingerprint: unknown, experiments: Array<{ n
 // Hash a string using the Web Crypto API
 async function hash(algorithm: 'SHA-1' | 'SHA-256' | 'SHA-512', message: string): Promise<Uint8Array> {
   const msgUint8 = new TextEncoder().encode(message); // encode as (utf-8) Uint8Array
-  const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8); // hash the message
+  const hashBuffer = await crypto.subtle.digest(algorithm, msgUint8); // hash the message
   const hashArray = new Uint8Array(hashBuffer); // convert buffer to byte array
   return hashArray;
 }
