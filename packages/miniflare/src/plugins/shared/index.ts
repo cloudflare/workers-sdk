@@ -5,7 +5,10 @@ import { GatewayConstructor, RemoteStorageConstructor } from "./gateway";
 import { RouterConstructor } from "./router";
 
 // Maps **service** names to the Durable Object class names exported by them
-export type DurableObjectClassNames = Map<string, Set<string>>;
+export type DurableObjectClassNames = Map<
+	string,
+	Map</* className */ string, /* unsafeUniqueKey */ string | undefined>
+>;
 
 export const QueueConsumerOptionsSchema = z.object({
 	// https://developers.cloudflare.com/queues/platform/configuration/#consumer

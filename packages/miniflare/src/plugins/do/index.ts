@@ -21,6 +21,11 @@ export const DurableObjectsOptionsSchema = z.object({
 				z.object({
 					className: z.string(),
 					scriptName: z.string().optional(),
+					// Allow `uniqueKey` to be customised. We use in Wrangler when setting
+					// up stub Durable Objects that proxy requests to Durable Objects in
+					// another `workerd` process, to ensure the IDs created by the stub
+					// object can be used by the real object too.
+					unsafeUniqueKey: z.string().optional(),
 				}),
 			])
 		)
@@ -34,14 +39,15 @@ export function normaliseDurableObject(
 	designator: NonNullable<
 		z.infer<typeof DurableObjectsOptionsSchema>["durableObjects"]
 	>[string]
-): [className: string, serviceName: string | undefined] {
+): { className: string; serviceName?: string; unsafeUniqueKey?: string } {
 	const isObject = typeof designator === "object";
 	const className = isObject ? designator.className : designator;
 	const serviceName =
 		isObject && designator.scriptName !== undefined
 			? getUserServiceName(designator.scriptName)
 			: undefined;
-	return [className, serviceName];
+	const unsafeUniqueKey = isObject ? designator.unsafeUniqueKey : undefined;
+	return { className, serviceName, unsafeUniqueKey };
 }
 
 export const DURABLE_OBJECTS_PLUGIN_NAME = "do";
@@ -97,7 +103,7 @@ export const DURABLE_OBJECTS_PLUGIN: Plugin<
 	getBindings(options) {
 		return Object.entries(options.durableObjects ?? {}).map<Worker_Binding>(
 			([name, klass]) => {
-				const [className, serviceName] = normaliseDurableObject(klass);
+				const { className, serviceName } = normaliseDurableObject(klass);
 				return {
 					name,
 					durableObjectNamespace: { className, serviceName },
