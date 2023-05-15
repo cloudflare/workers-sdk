@@ -1,5 +1,5 @@
-import { Log, LogLevel } from "@miniflare/tre";
 import { ExecutionContext } from "ava";
+import { Log, LogLevel } from "miniflare";
 
 // Adapted from https://github.com/chalk/ansi-regex/blob/02fa893d619d3da85411acc8fd4e2eea0e95a9d9/index.js
 /*!

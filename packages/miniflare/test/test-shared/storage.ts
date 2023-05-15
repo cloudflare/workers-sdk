@@ -3,8 +3,8 @@ import fs from "fs/promises";
 import path from "path";
 import { ReadableStream } from "stream/web";
 import { TextDecoder, TextEncoder } from "util";
-import { sanitisePath, unwrapBYOBRequest } from "@miniflare/tre";
 import { ExecutionContext } from "ava";
+import { sanitisePath, unwrapBYOBRequest } from "miniflare";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();

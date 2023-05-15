@@ -6,8 +6,8 @@ import type {
 	D1PreparedStatement,
 	D1Result,
 } from "@cloudflare/workers-types/experimental";
-import { Miniflare, MiniflareOptions, createFileStorage } from "@miniflare/tre";
 import Database from "better-sqlite3";
+import { Miniflare, MiniflareOptions, createFileStorage } from "miniflare";
 import {
 	MiniflareTestContext,
 	miniflareTest,

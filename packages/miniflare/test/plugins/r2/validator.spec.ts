@@ -1,5 +1,5 @@
-import { R2Conditional, R2Object, _testR2Conditional } from "@miniflare/tre";
 import test from "ava";
+import { R2Conditional, R2Object, _testR2Conditional } from "miniflare";
 
 test("testR2Conditional: matches various conditions", (t) => {
 	// Adapted from internal R2 gateway tests

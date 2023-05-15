@@ -1,5 +1,5 @@
-import { Request } from "@miniflare/tre";
 import test from "ava";
+import { Request } from "miniflare";
 
 test("Request: clone: returns correctly typed value", async (t) => {
 	const request = new Request("http://localhost/", {

@@ -1,4 +1,5 @@
 import assert from "assert";
+import test from "ava";
 import {
 	GET,
 	GatewayFactory,
@@ -9,8 +10,7 @@ import {
 	RouteHandler,
 	Router,
 	defaultTimers,
-} from "@miniflare/tre";
-import test from "ava";
+} from "miniflare";
 
 class TestGateway {
 	constructor() {}

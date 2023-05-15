@@ -1,6 +1,7 @@
 import assert from "assert";
 import http from "http";
 import { AddressInfo } from "net";
+import test from "ava";
 import {
 	DeferredPromise,
 	MessageEvent,
@@ -8,8 +9,7 @@ import {
 	MiniflareCoreError,
 	MiniflareOptions,
 	fetch,
-} from "@miniflare/tre";
-import test from "ava";
+} from "miniflare";
 import {
 	CloseEvent as StandardCloseEvent,
 	MessageEvent as StandardMessageEvent,

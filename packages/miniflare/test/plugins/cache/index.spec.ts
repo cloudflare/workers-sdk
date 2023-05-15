@@ -7,7 +7,7 @@ import {
 	KeyValueStorage,
 	LogLevel,
 	createFileStorage,
-} from "@miniflare/tre";
+} from "miniflare";
 import { miniflareTest, useTmp } from "../../test-shared";
 
 const test = miniflareTest({}, async (global, req) => {

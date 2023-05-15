@@ -1,5 +1,5 @@
-import { _parseRanges } from "@miniflare/tre";
 import test from "ava";
+import { _parseRanges } from "miniflare";
 
 test('_parseRanges: case-insensitive unit must be "bytes"', (t) => {
 	// Check case-insensitive and ignores whitespace

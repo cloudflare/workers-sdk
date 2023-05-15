@@ -4,8 +4,8 @@ import type {
 	Request as WorkerRequest,
 	Response as WorkerResponse,
 } from "@cloudflare/workers-types/experimental";
-import { Awaitable, Miniflare, MiniflareOptions, Timers } from "@miniflare/tre";
 import anyTest, { TestFn } from "ava";
+import { Awaitable, Miniflare, MiniflareOptions, Timers } from "miniflare";
 import { TestLog } from "./log";
 
 export type TestMiniflareHandler<Env> = (

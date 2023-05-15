@@ -2,6 +2,8 @@ import assert from "assert";
 import http from "http";
 import { AddressInfo } from "net";
 import { setImmediate } from "timers/promises";
+import test from "ava";
+import { expectTypeOf } from "expect-type";
 import {
 	CloseEvent,
 	DeferredPromise,
@@ -10,9 +12,7 @@ import {
 	WebSocketPair,
 	coupleWebSocket,
 	viewToBuffer,
-} from "@miniflare/tre";
-import test from "ava";
-import { expectTypeOf } from "expect-type";
+} from "miniflare";
 import NodeWebSocket, { Event as WebSocketEvent, WebSocketServer } from "ws";
 import { useServer, utf8Decode, utf8Encode } from "../test-shared";
 

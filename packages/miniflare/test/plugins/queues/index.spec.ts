@@ -1,3 +1,4 @@
+import anyTest from "ava";
 import {
 	DeferredPromise,
 	LogLevel,
@@ -5,8 +6,7 @@ import {
 	QueuesError,
 	Response,
 	_QUEUES_COMPATIBLE_V8_VERSION,
-} from "@miniflare/tre";
-import anyTest from "ava";
+} from "miniflare";
 import { z } from "zod";
 import { LogEntry, TestLog, TestTimers } from "../../test-shared";
 

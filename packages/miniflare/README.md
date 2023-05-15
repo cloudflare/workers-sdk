@@ -11,11 +11,11 @@
 ## Quick Start
 
 ```shell
-$ npm install @miniflare/tre --save-dev
+$ npm install miniflare --save-dev
 ```
 
 ```js
-import { Miniflare } from "@miniflare/tre";
+import { Miniflare } from "miniflare";
 
 // Create a new Miniflare instance, starting a workerd server
 const mf = new Miniflare({
