@@ -4,6 +4,7 @@ import type { UrlAndMap } from "source-map-support";
 import { z } from "zod";
 import { Request, Response } from "../../../http";
 import { Log } from "../../../shared";
+import { getUserServiceName } from "../constants";
 import {
 	SourceOptions,
 	contentsToString,
@@ -13,33 +14,31 @@ import { getSourceMapper } from "./sourcemap";
 
 // Subset of core worker options that define Worker source code.
 // These are the possible cases, and corresponding reported source files in
-// workerd stack traces. Note that all service-worker scripts will be called
-// "worker.js" in `workerd`, so we can't differentiate between multiple workers.
-// TODO: see if we can add a service-worker script path config option to handle
-//  case (i)[i]
+// workerd stack traces.
 //
 // Single Worker:
-// (a) { script: "<contents>" }                                       -> "worker.js"
-// (b) { script: "<contents>", modules: true }                        -> "<script:0>"
-// (c) { script: "<contents>", scriptPath: "<path>" }                 -> "worker.js"
-// (d) { script: "<contents>", scriptPath: "<path>", modules: true }  -> "<path>"
-// (e) { scriptPath: "<path>" }                                       -> "worker.js"
-// (f) { scriptPath: "<path>", modules: true }                        -> "<path>"
+// (a) { script: "<contents>" }                                          -> "core:user:"
+// (b) { script: "<contents>", modules: true }                           -> "<script:0>"
+// (c) { script: "<contents>", scriptPath: "<path>" }                    -> "core:user:"
+// (d) { script: "<contents>", scriptPath: "<path>", modules: true }     -> "<path>"
+// (e) { scriptPath: "<path>" }                                          -> "core:user:"
+// (f) { scriptPath: "<path>", modules: true }                           -> "<path>"
 // (g) { modules: [
-//   [i]  { ..., path: "<path:0>", contents: "<contents:0>" },        -> "<path:0>" relative to cwd
-//  [ii]  { ..., path: "<path:1>" },                                  -> "<path:1>" relative to cwd
+//   [i]  { ..., path: "<path:0>", contents: "<contents:0>" },           -> "<path:0>" relative to cwd
+//  [ii]  { ..., path: "<path:1>" },                                     -> "<path:1>" relative to cwd
 //     ] }
 // (h) { modulesRoot: "<root>", modules: [
-//   [i]  { ..., path: "<path:0>", contents: "<contents:0>" },        -> "<path:0>" relative to "<root>"
-//  [ii]  { ..., path: "<path:1>" },                                  -> "<path:1>" relative to "<root>"
+//   [i]  { ..., path: "<path:0>", contents: "<contents:0>" },           -> "<path:0>" relative to "<root>"
+//  [ii]  { ..., path: "<path:1>" },                                     -> "<path:1>" relative to "<root>"
 //     ] }
 //
 // Multiple Workers (array of `SourceOptions`):
-// (i) [                                                                 (note cannot differentiate "worker.js"s)
-//   [i]  { script: "<contents:0>" },                                 -> "worker.js"
-//        { script: "<contents:1>" },                                 -> "worker.js"
-//        { script: "<contents:2>", scriptPath: "<path:2>" },         -> "worker.js"
-//  [ii]  { script: "<contents:3>", modules: true },                  -> "<script:3>"
+// (i) [
+//   [i]  { script: "<contents:0>" },                                    -> "core:user:"
+//  [ii]  { name: "a", script: "<contents:1>" },                         -> "core:user:a"
+// [iii]  { name: "b", script: "<contents:2>", scriptPath: "<path:2>" }, -> "core:user:b"
+//  [iv]  { name: "c", scriptPath: "<path:3>" },                         -> "core:user:c"
+//   [v]  { script: "<contents:3>", modules: true },                     -> "<script:3>"
 //     ]
 //
 
@@ -59,11 +58,13 @@ function maybeGetDiskFile(filePath: string): SourceFile | undefined {
 	}
 }
 
+export type NameSourceOptions = SourceOptions & { name?: string };
+
 // Try to extract the path and contents of a `file` reported in a JavaScript
 // stack-trace. See the `SourceOptions` comment for examples of what these look
 // like.
 function maybeGetFile(
-	workerSrcOpts: SourceOptions[],
+	workerSrcOpts: NameSourceOptions[],
 	file: string
 ): SourceFile | undefined {
 	// Resolve file relative to current working directory
@@ -111,7 +112,7 @@ function maybeGetFile(
 		}
 	}
 
-	// Cases: (b), (i)[ii]
+	// Cases: (b), (i)[v]
 	// 3. If file looks like "<script:n>", and the `n`th worker has a custom
 	//    `script`, use that.
 	const workerIndex = maybeGetStringScriptPathIndex(file);
@@ -122,22 +123,15 @@ function maybeGetFile(
 		}
 	}
 
-	// Cases: (a), (c), (e)
-	// 4. If there is a single worker defined with `modules` disabled, the
-	//    file is "worker.js", then...
-	//
-	//    Note: can't handle case (i)[i], as cannot distinguish between multiple
-	//    "worker.js"s, hence the check for a single worker. We'd rather be
-	//    conservative and return no contents (and therefore no source code in the
-	//    error page) over incorrect ones.
-	if (workerSrcOpts.length === 1) {
-		const srcOpts = workerSrcOpts[0];
+	// Cases: (a), (c), (e), (i)[i], (i)[ii], (i)[iii], (i)[iv]
+	// 4. If `file` is the name of a service, use that services' source.
+	for (const srcOpts of workerSrcOpts) {
 		if (
-			file === "worker.js" &&
+			file === getUserServiceName(srcOpts.name) &&
 			(srcOpts.modules === undefined || srcOpts.modules === false)
 		) {
 			if ("script" in srcOpts && srcOpts.script !== undefined) {
-				// Cases: (a), (c)
+				// Cases: (a), (c), (i)[i], (i)[ii], (i)[iii]
 				// ...if a custom `script` is defined, use that, with the defined
 				// `scriptPath` if any (Case (c))
 				return {
@@ -148,7 +142,7 @@ function maybeGetFile(
 					contents: srcOpts.script,
 				};
 			} else if (srcOpts.scriptPath !== undefined) {
-				// Case: (e)
+				// Case: (e), (i)[iv]
 				// ...otherwise, if a `scriptPath` is defined, use that
 				return maybeGetDiskFile(path.resolve(srcOpts.scriptPath));
 			}
@@ -160,7 +154,10 @@ function maybeGetFile(
 	return maybeGetDiskFile(filePath);
 }
 
-function getSourceMappedStack(workerSrcOpts: SourceOptions[], error: Error) {
+function getSourceMappedStack(
+	workerSrcOpts: NameSourceOptions[],
+	error: Error
+) {
 	// This function needs to match the signature of the `retrieveSourceMap`
 	// option from the "source-map-support" package.
 	function retrieveSourceMap(file: string): UrlAndMap | null {
@@ -220,7 +217,7 @@ const ALLOWED_ERROR_SUBCLASS_CONSTRUCTORS: StandardErrorConstructor[] = [
 	URIError,
 ];
 export function reviveError(
-	workerSrcOpts: SourceOptions[],
+	workerSrcOpts: NameSourceOptions[],
 	jsonError: JsonError
 ): Error {
 	// At a high level, this function takes a JSON-serialisable representation of
@@ -262,7 +259,7 @@ export function reviveError(
 
 export async function handlePrettyErrorRequest(
 	log: Log,
-	workerSrcOpts: SourceOptions[],
+	workerSrcOpts: NameSourceOptions[],
 	request: Request
 ): Promise<Response> {
 	// Parse and validate the error we've been given from user code

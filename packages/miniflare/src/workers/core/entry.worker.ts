@@ -171,6 +171,13 @@ async function handleQueue(
 export default <ExportedHandler<Env>>{
 	async fetch(request, env, ctx) {
 		const startTime = Date.now();
+
+		// `dispatchFetch()` will always inject the passed URL as a header. When
+		// calling this function, we never want to display the pretty-error page.
+		// Instead, we propagate the error and reject the returned `Promise`.
+		const isDispatchFetch =
+			request.headers.get(CoreHeaders.ORIGINAL_URL) !== null;
+
 		request = getUserRequest(request, env);
 		const url = new URL(request.url);
 		const service = getTargetService(request, url, env);
@@ -186,7 +193,9 @@ export default <ExportedHandler<Env>>{
 			}
 
 			let response = await service.fetch(request);
-			response = await maybePrettifyError(request, response, env);
+			if (!isDispatchFetch) {
+				response = await maybePrettifyError(request, response, env);
+			}
 			response = maybeInjectLiveReload(response, env, ctx);
 			maybeLogRequest(request, response, env, ctx, startTime);
 			return response;
