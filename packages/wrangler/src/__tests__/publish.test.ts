@@ -4980,6 +4980,34 @@ addEventListener('fetch', event => {});`
 		});
 	});
 
+	describe("tail consumers", () => {
+		it("should allow specifying workers as tail consumers", async () => {
+			writeWranglerToml({
+				tail_consumers: [
+					{ service: "listener " },
+					{ service: "test-listener", environment: "production" },
+				],
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedTailConsumers: [
+					{ service: "listener " },
+					{ service: "test-listener", environment: "production" },
+				],
+			});
+
+			await runWrangler("publish index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class"
+		`);
+		});
+	});
+
 	describe("bindings", () => {
 		it("should allow bindings with different names", async () => {
 			writeWranglerToml({
@@ -8153,6 +8181,7 @@ function mockUploadWorkerRequest(
 		expectedCompatibilityDate?: string;
 		expectedCompatibilityFlags?: string[];
 		expectedMigrations?: CfWorkerInit["migrations"];
+		expectedTailConsumers?: CfWorkerInit["tail_consumers"];
 		expectedUnsafeMetaData?: Record<string, string>;
 		env?: string;
 		legacyEnv?: boolean;
@@ -8172,6 +8201,7 @@ function mockUploadWorkerRequest(
 		env = undefined,
 		legacyEnv = false,
 		expectedMigrations,
+		expectedTailConsumers,
 		expectedUnsafeMetaData,
 		keepVars,
 	} = options;
@@ -8240,6 +8270,9 @@ function mockUploadWorkerRequest(
 		}
 		if ("expectedMigrations" in options) {
 			expect(metadata.migrations).toEqual(expectedMigrations);
+		}
+		if ("expectedTailConsumers" in options) {
+			expect(metadata.tail_consumers).toEqual(expectedTailConsumers);
 		}
 		if (expectedUnsafeMetaData !== undefined) {
 			Object.keys(expectedUnsafeMetaData).forEach((key) => {
