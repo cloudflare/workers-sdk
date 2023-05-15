@@ -50,7 +50,7 @@ describe("init", () => {
 
 	describe("options", () => {
 		it("should initialize with no interactive prompts if `--yes` is used", async () => {
-			await runWrangler("init --yes");
+			await runWrangler("init --yes --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -86,7 +86,7 @@ describe("init", () => {
 		});
 
 		it("should initialize with no interactive prompts if `--yes` is used (named worker)", async () => {
-			await runWrangler("init my-worker --yes");
+			await runWrangler("init my-worker --yes --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -125,7 +125,7 @@ describe("init", () => {
 		});
 
 		it("should initialize with no interactive prompts if `-y` is used", async () => {
-			await runWrangler("init -y");
+			await runWrangler("init -y --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -215,7 +215,7 @@ describe("init", () => {
 					result: false,
 				}
 			);
-			await runWrangler("init");
+			await runWrangler("init --no-delegate-c3");
 			checkFiles({
 				items: {
 					"wrangler.toml": wranglerToml({
@@ -253,7 +253,7 @@ describe("init", () => {
 					result: false,
 				}
 			);
-			await runWrangler("init my-worker");
+			await runWrangler("init my-worker --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -296,7 +296,7 @@ describe("init", () => {
 				result: false,
 			});
 
-			await runWrangler("init");
+			await runWrangler("init --no-delegate-c3");
 			expect(std.warn).toContain("wrangler.toml already exists!");
 
 			checkFiles({
@@ -335,7 +335,7 @@ describe("init", () => {
 				result: false,
 			});
 
-			await runWrangler("init path/to/worker");
+			await runWrangler("init path/to/worker --no-delegate-c3");
 
 			expect(std.warn).toContain("wrangler.toml already exists!");
 			checkFiles({
@@ -399,7 +399,7 @@ describe("init", () => {
 				result: true,
 			});
 
-			await runWrangler("init");
+			await runWrangler("init --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -433,7 +433,7 @@ describe("init", () => {
 				}
 			);
 
-			await runWrangler("init");
+			await runWrangler("init --no-delegate-c3");
 
 			expect(std.warn).toContain("wrangler.toml already exists!");
 			checkFiles({
@@ -495,7 +495,7 @@ describe("init", () => {
 				text: "Would you like us to write your first test with Vitest?",
 				result: true,
 			});
-			await runWrangler("init");
+			await runWrangler("init --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -532,7 +532,7 @@ describe("init", () => {
 				text: "Would you like us to write your first test with Vitest?",
 				result: true,
 			});
-			await runWrangler("init");
+			await runWrangler("init --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -558,7 +558,7 @@ describe("init", () => {
 				}
 			);
 
-			await runWrangler("init");
+			await runWrangler("init --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -593,7 +593,7 @@ describe("init", () => {
 			await execa("git", ["init"]);
 			setWorkingDirectory("some-folder");
 
-			await runWrangler("init -y");
+			await runWrangler("init -y --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -636,7 +636,7 @@ describe("init", () => {
 			await execa("git", ["init"], { cwd: "path/to/worker" });
 			expect(fs.lstatSync("path/to/worker/.git").isDirectory()).toBe(true);
 
-			await runWrangler("init path/to/worker/my-worker -y");
+			await runWrangler("init path/to/worker/my-worker -y --no-delegate-c3");
 
 			// Note the lack of "✨ Initialized git repository" in the log
 			expect(std).toMatchInlineSnapshot(`
@@ -679,7 +679,7 @@ describe("init", () => {
 					result: false,
 				}
 			);
-			await runWrangler("init");
+			await runWrangler("init --no-delegate-c3");
 			expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -725,7 +725,7 @@ describe("init", () => {
 				result: "none",
 			});
 
-			await runWrangler("init");
+			await runWrangler("init --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -782,7 +782,7 @@ describe("init", () => {
 				result: "none",
 			});
 
-			await runWrangler("init my-worker");
+			await runWrangler("init my-worker --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -842,7 +842,7 @@ describe("init", () => {
 				},
 			});
 
-			await runWrangler("init");
+			await runWrangler("init --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -898,7 +898,7 @@ describe("init", () => {
 				},
 			});
 
-			await runWrangler("init path/to/worker/my-worker");
+			await runWrangler("init path/to/worker/my-worker --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -953,7 +953,7 @@ describe("init", () => {
 				},
 			});
 
-			await runWrangler("init");
+			await runWrangler("init --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -1015,7 +1015,7 @@ describe("init", () => {
 			});
 			setWorkingDirectory("path/to/worker/my-worker");
 
-			await runWrangler("init");
+			await runWrangler("init --no-delegate-c3");
 
 			setWorkingDirectory("../../../..");
 			checkFiles({
@@ -1081,7 +1081,7 @@ describe("init", () => {
 			});
 			setWorkingDirectory("./sub-1/sub-2");
 
-			await runWrangler("init");
+			await runWrangler("init --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -1142,7 +1142,7 @@ describe("init", () => {
 				},
 			});
 
-			await runWrangler("init");
+			await runWrangler("init --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -1207,7 +1207,7 @@ describe("init", () => {
 				},
 			});
 
-			await runWrangler("init");
+			await runWrangler("init --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -1265,7 +1265,7 @@ describe("init", () => {
 				result: true,
 			});
 
-			await runWrangler("init");
+			await runWrangler("init --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -1340,7 +1340,7 @@ describe("init", () => {
 				},
 			});
 
-			await runWrangler("init");
+			await runWrangler("init --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -1391,7 +1391,7 @@ describe("init", () => {
 				},
 			});
 
-			await runWrangler("init");
+			await runWrangler("init --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -1440,7 +1440,7 @@ describe("init", () => {
 				},
 			});
 
-			await runWrangler("init my-worker");
+			await runWrangler("init my-worker --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -1489,7 +1489,7 @@ describe("init", () => {
 				result: "none",
 			});
 
-			await runWrangler("init");
+			await runWrangler("init --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -1559,7 +1559,7 @@ describe("init", () => {
 				},
 			});
 
-			await runWrangler("init");
+			await runWrangler("init --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -1635,7 +1635,7 @@ describe("init", () => {
 				},
 			});
 
-			await runWrangler("init path/to/worker/my-worker");
+			await runWrangler("init path/to/worker/my-worker --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -1702,7 +1702,7 @@ describe("init", () => {
 				},
 			});
 
-			await runWrangler("init");
+			await runWrangler("init --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -1763,7 +1763,7 @@ describe("init", () => {
 			});
 			setWorkingDirectory("./sub-1/sub-2");
 
-			await runWrangler("init");
+			await runWrangler("init --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -1823,7 +1823,7 @@ describe("init", () => {
 				text: "Would you like us to write your first test?",
 				result: false,
 			});
-			await runWrangler("init");
+			await runWrangler("init --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -1880,7 +1880,7 @@ describe("init", () => {
 				text: "Which test runner would you like to use?",
 				result: "jest",
 			});
-			await runWrangler("init");
+			await runWrangler("init --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -1943,7 +1943,7 @@ describe("init", () => {
 				text: "Which test runner would you like to use?",
 				result: "vitest",
 			});
-			await runWrangler("init");
+			await runWrangler("init --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -2015,7 +2015,7 @@ describe("init", () => {
 				},
 			});
 
-			await runWrangler("init");
+			await runWrangler("init --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -2063,7 +2063,7 @@ describe("init", () => {
 				},
 			});
 
-			await runWrangler("init");
+			await runWrangler("init --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -2114,7 +2114,7 @@ describe("init", () => {
 				},
 			});
 
-			await runWrangler("init my-worker");
+			await runWrangler("init my-worker --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -2140,7 +2140,7 @@ describe("init", () => {
 
 	describe("worker names", () => {
 		it("should create a worker with a given name", async () => {
-			await runWrangler("init my-worker -y");
+			await runWrangler("init my-worker -y --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -2153,7 +2153,7 @@ describe("init", () => {
 		});
 
 		it('should create a worker with the name of the current directory if "name" is .', async () => {
-			await runWrangler("init . -y");
+			await runWrangler("init . -y --no-delegate-c3");
 
 			const workerName = path.basename(process.cwd()).toLowerCase();
 			checkFiles({
@@ -2204,7 +2204,7 @@ describe("init", () => {
 		});
 
 		it('should create a worker in a nested directory if "name" is path/to/worker', async () => {
-			await runWrangler("init path/to/worker -y");
+			await runWrangler("init path/to/worker -y --no-delegate-c3");
 
 			checkFiles({
 				items: {
@@ -2240,7 +2240,9 @@ describe("init", () => {
 		});
 
 		it("should normalize characters that aren't lowercase alphanumeric, underscores, or dashes", async () => {
-			await runWrangler("init WEIRD_w0rkr_N4m3.js.tsx.tar.gz -y");
+			await runWrangler(
+				"init WEIRD_w0rkr_N4m3.js.tsx.tar.gz -y --no-delegate-c3"
+			);
 
 			checkFiles({
 				items: {
@@ -2315,7 +2317,7 @@ describe("init", () => {
 				},
 			});
 
-			await runWrangler("init sub/folder/worker");
+			await runWrangler("init sub/folder/worker --no-delegate-c3");
 
 			// Ancestor files are untouched.
 			checkFiles({
@@ -2719,7 +2721,7 @@ describe("init", () => {
 			);
 
 			await runWrangler(
-				"init isolinear-optical-chip --from-dash memory-crystal"
+				"init isolinear-optical-chip --from-dash memory-crystal --no-delegate-c3"
 			);
 
 			expect(std.out).toContain("cd isolinear-optical-chip");
@@ -2777,7 +2779,9 @@ describe("init", () => {
 			);
 
 			await expect(
-				runWrangler("init isolinear-optical-chip --from-dash i-dont-exist")
+				runWrangler(
+					"init isolinear-optical-chip --from-dash i-dont-exist --no-delegate-c3"
+				)
 			).rejects.toThrowError();
 		});
 
@@ -2804,7 +2808,9 @@ describe("init", () => {
 				}
 			);
 
-			await runWrangler("init --from-dash isolinear-optical-chip");
+			await runWrangler(
+				"init --from-dash isolinear-optical-chip --no-delegate-c3"
+			);
 
 			expect(fs.readFileSync("./isolinear-optical-chip/wrangler.toml", "utf8"))
 				.toMatchInlineSnapshot(`
@@ -2933,7 +2939,9 @@ describe("init", () => {
 				}
 			);
 
-			await runWrangler("init  --from-dash isolinear-optical-chip");
+			await runWrangler(
+				"init  --from-dash isolinear-optical-chip --no-delegate-c3"
+			);
 
 			checkFiles({
 				items: {
@@ -2984,7 +2992,9 @@ describe("init", () => {
 				}
 			);
 
-			await runWrangler("init  --from-dash isolinear-optical-chip");
+			await runWrangler(
+				"init  --from-dash isolinear-optical-chip --no-delegate-c3"
+			);
 
 			mockConfigExpected.compatibility_date = "1988-08-07";
 			checkFiles({
@@ -3045,7 +3055,7 @@ describe("init", () => {
 			);
 
 			await expect(
-				runWrangler("init --from-dash isolinear-optical-chip")
+				runWrangler("init --from-dash isolinear-optical-chip --no-delegate-c3")
 			).rejects.toThrowError();
 		});
 
@@ -3164,7 +3174,9 @@ describe("init", () => {
 				}
 			);
 
-			await runWrangler("init  --from-dash isolinear-optical-chip");
+			await runWrangler(
+				"init  --from-dash isolinear-optical-chip --no-delegate-c3"
+			);
 
 			checkFiles({
 				items: {

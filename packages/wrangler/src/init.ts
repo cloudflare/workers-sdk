@@ -64,7 +64,7 @@ export function initOptions(yargs: CommonYargsArgv) {
 			describe: "Delegate to Create Cloudflare CLI (C3)",
 			type: "boolean",
 			hidden: true,
-			default: false, // will be true in v3
+			default: true,
 		});
 }
 
