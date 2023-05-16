@@ -1,15 +1,16 @@
 # create-cloudflare
 
-`create-cloudflare` is a scaffolding tool meant to help users get started with Cloudflare Pages using their framework of choice as quickly and easily as possible.
-
-Instead of having to choose from a set of pre-constructed templates, this tool allows you to run the creation commands of your desired framework directly. This means that you can configure it with all the options the
-
-To get started, run the following command:
+A CLI for creating and deploying new applications to Cloudflare.
 
 ```bash
-npm create cloudflare
+npm create cloudflare@latest
+# or
+pnpm create cloudflare@latest
 # or
 yarn create cloudflare
-# or
-pnpm create cloudflare
 ```
+
+### Community
+
+- Join us [on Discord](https://discord.gg/cloudflaredev)
+- File an issue [on Github](https://github.com/cloudflare/workers-sdk/issues/new/choose)
