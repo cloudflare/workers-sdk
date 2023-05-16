@@ -70,26 +70,21 @@ export const runPagesGenerator = async (args: PagesGeneratorArgs) => {
 };
 
 const getFrameworkSelection = async (args: PagesGeneratorArgs) => {
-	let framework: string;
+	const frameworkOptions = Object.entries(FrameworkMap).map(
+		([key, { displayName }]) => ({
+			label: displayName,
+			value: key,
+		})
+	);
 
-	if (args.framework) {
-		framework = args.framework;
-	} else {
-		const frameworkOptions = Object.entries(FrameworkMap).map(
-			([key, { displayName }]) => ({
-				label: displayName,
-				value: key,
-			})
-		);
-
-		framework = await selectInput({
-			question: "Which development framework do you want to use?",
-			options: frameworkOptions,
-			renderSubmitted: (option: Option) => {
-				return `${brandColor("framework")} ${dim(option.label)}`;
-			},
-		});
-	}
+	const framework = await selectInput({
+		question: "Which development framework do you want to use?",
+		options: frameworkOptions,
+		renderSubmitted: (option: Option) => {
+			return `${brandColor("framework")} ${dim(option.label)}`;
+		},
+		initialValue: args.framework,
+	});
 
 	// Validate answers
 	framework || crash("A framework must be selected to continue.");

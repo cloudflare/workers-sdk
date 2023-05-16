@@ -1,7 +1,7 @@
 import { TextPrompt, SelectPrompt, ConfirmPrompt } from "@clack/core";
 import { isCancel } from "@clack/prompts";
 import logUpdate from "log-update";
-import { shapes, cancel, space, status, newline } from "./cli";
+import { shapes, cancel, space, status, newline, logRaw } from "./cli";
 import { blue, dim, gray, brandColor, bold } from "./colors";
 
 const grayBar = gray(shapes.bar);
@@ -14,10 +14,12 @@ export type TextOptions = {
 	defaultValue: string;
 	helpText?: string;
 	validate?: (value: string) => string | void;
+	initialValue?: string;
 };
 
 export const textInput = async (opts: TextOptions) => {
-	const { renderSubmitted, question, defaultValue, validate } = opts;
+	const { renderSubmitted, question, defaultValue, validate, initialValue } =
+		opts;
 	const helpText = opts.helpText || ``;
 
 	const prompt = new TextPrompt({
@@ -52,14 +54,21 @@ export const textInput = async (opts: TextOptions) => {
 		},
 	});
 
-	const value = await prompt.prompt();
+	let value: string;
+	if (initialValue) {
+		logRaw(`${leftT} ${question}`);
+		logRaw(`${grayBar} ${renderSubmitted(initialValue)}\n${grayBar}`);
+		value = initialValue;
+	} else {
+		value = (await prompt.prompt()) as string;
 
-	if (isCancel(value)) {
-		cancel("Operation cancelled.");
-		process.exit(0);
+		if (isCancel(value)) {
+			cancel("Operation cancelled.");
+			process.exit(0);
+		}
 	}
 
-	return value as string;
+	return value;
 };
 
 export type Option = {
@@ -72,10 +81,11 @@ type SelectOptions = {
 	renderSubmitted: (option: Option) => string;
 	options: Option[];
 	helpText?: string;
+	initialValue?: string;
 };
 
 export const selectInput = async (opts: SelectOptions) => {
-	const { question, options, renderSubmitted } = opts;
+	const { question, options, renderSubmitted, initialValue } = opts;
 	const helpText = opts.helpText || ``;
 
 	const prompt = new SelectPrompt({
@@ -111,11 +121,24 @@ export const selectInput = async (opts: SelectOptions) => {
 		},
 	});
 
-	const value = await prompt.prompt();
+	let value: string;
+	if (initialValue) {
+		logRaw(`${leftT} ${question}`);
+		logRaw(
+			`${grayBar} ${renderSubmitted({
+				label: initialValue,
+				value: initialValue,
+			})}`
+		);
+		logRaw(`${grayBar}`);
+		value = initialValue;
+	} else {
+		value = (await prompt.prompt()) as string;
 
-	if (isCancel(value)) {
-		cancel("Operation cancelled.");
-		process.exit(0);
+		if (isCancel(value)) {
+			cancel("Operation cancelled.");
+			process.exit(0);
+		}
 	}
 
 	return value as string;
@@ -128,11 +151,18 @@ type ConfirmOptions = {
 	activeText?: string;
 	inactiveText?: string;
 	helpText?: string;
+	initialValue?: boolean;
 };
 
 export const confirmInput = async (opts: ConfirmOptions) => {
-	const { activeText, inactiveText, question, renderSubmitted, defaultValue } =
-		opts;
+	const {
+		activeText,
+		inactiveText,
+		question,
+		renderSubmitted,
+		defaultValue,
+		initialValue,
+	} = opts;
 	const helpText = opts.helpText || `(y/n)`;
 
 	const active = activeText || "Yes";
@@ -163,11 +193,20 @@ export const confirmInput = async (opts: ConfirmOptions) => {
 		},
 	});
 
-	const value = Boolean(await prompt.prompt());
+	let value: boolean;
 
-	if (isCancel(value)) {
-		cancel("Operation cancelled.");
-		process.exit(0);
+	if (initialValue !== undefined) {
+		logRaw(`${leftT} ${question}`);
+		logRaw(`${grayBar} ${renderSubmitted(initialValue)}`);
+		logRaw(`${grayBar}`);
+		value = initialValue;
+	} else {
+		value = Boolean(await prompt.prompt());
+
+		if (isCancel(value)) {
+			cancel("Operation cancelled.");
+			process.exit(0);
+		}
 	}
 
 	return value;
