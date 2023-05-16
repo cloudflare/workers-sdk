@@ -1,3 +1,25 @@
 name = "<TBD>"
 main = "src/worker.ts"
 compatibility_date = "2023-04-21"
+
+# KV Namespace bindings - For more information: https://developers.cloudflare.com/workers/runtime-apis/kv/#kv-bindings
+# kv_namespaces = [{binding = "MY_KV_NAMESPACE", id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}]
+
+# Durable Object binding - For more information: https://developers.cloudflare.com/workers/runtime-apis/durable-objects
+# durable_objects.bindings = [name ="MY_DURABLE_OBJECT", class_name = "MyDurableObjectClass"]
+
+# R2 bucket binding - For more information: https://developers.cloudflare.com/workers/wrangler/configuration/#r2-buckets
+# r2_buckets = [{binding = "MY_BUCKET", bucket_name = "my-bucket"}]
+
+# Service binding - For more information: https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
+# services = [{binding = "MY_BINDING", service = "MY_WORKER}]
+
+# Queues bindings - For more information: https://developers.cloudflare.com/queues/learning/how-queues-works/
+# [[queues.producers]]
+# queue = "my-queue"
+# binding = "ERROR_QUEUE"
+
+# [[queues.consumers]]
+# queue = "my-queue"
+# max_batch_size = 100
+# max_batch_timeout = 30
