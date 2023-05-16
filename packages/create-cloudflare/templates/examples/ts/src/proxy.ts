@@ -14,8 +14,8 @@ export default {
 
 		// optionally, modify the respone
 		if (modify) {
-		  res = new Response(res.body, res);
-		  res.headers.set('X-My-Header', 'My Header Value');
+			res = new Response(res.body, res);
+			res.headers.set('X-My-Header', 'My Header Value');
 		}
 
 		return res;
