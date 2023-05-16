@@ -1,9 +1,17 @@
+import { randomBytes } from "crypto";
 import fs from "fs/promises";
 import os from "os";
 import path from "path";
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import { unstable_dev } from "wrangler";
 import type { UnstableDevWorker } from "wrangler";
+
+function removeUUID(str: string) {
+	return str.replace(
+		/\w{8}-\w{4}-\w{4}-\w{4}-\w{12}/g,
+		"00000000-0000-0000-0000-000000000000"
+	);
+}
 
 describe("Preview Worker", () => {
 	let worker: UnstableDevWorker;
@@ -70,6 +78,8 @@ describe("Preview Worker", () => {
 		} catch {}
 	});
 
+	let tokenId: string | null = null;
+
 	it("should obtain token from exchange_url", async () => {
 		const resp = await worker.fetch(
 			`https://preview.devprod.cloudflare.dev/exchange?exchange_url=${encodeURIComponent(
@@ -89,6 +99,51 @@ describe("Preview Worker", () => {
 		`
 		);
 	});
+	it("should allow tokens > 4096 bytes", async () => {
+		// 4096 is the size limit for cookies
+		const token = randomBytes(4096).toString("hex");
+		expect(token.length).toBe(8192);
+
+		let resp = await worker.fetch(
+			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=${encodeURIComponent(
+				token
+			)}&prewarm=${encodeURIComponent(
+				"http://127.0.0.1:6756/prewarm"
+			)}&remote=${encodeURIComponent(
+				"http://127.0.0.1:6756"
+			)}&suffix=${encodeURIComponent("/hello?world")}`,
+			{
+				method: "GET",
+				redirect: "manual",
+			}
+		);
+		expect(await resp.text()).toMatchInlineSnapshot('""');
+		expect(resp.headers.get("location")).toMatchInlineSnapshot(
+			'"/hello?world"'
+		);
+		expect(removeUUID(resp.headers.get("set-cookie"))).toMatchInlineSnapshot(
+			'"token=00000000-0000-0000-0000-000000000000; Domain=preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None"'
+		);
+		tokenId = resp.headers.get("set-cookie").split(";")[0].split("=")[1];
+		resp = await worker.fetch(
+			`https://random-data.preview.devprod.cloudflare.dev`,
+			{
+				method: "GET",
+				headers: {
+					cookie: `token=${tokenId}; Domain=preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None`,
+				},
+			}
+		);
+
+		const json = await resp.json();
+
+		expect(
+			json.headers.find(([h]: [string]) => h === "cf-workers-preview-token")[1]
+		).toBe(token);
+		expect(json.url).toMatchInlineSnapshot(
+			'"http://preview.devprod.cloudflare.dev/"'
+		);
+	});
 	it("should be redirected with cookie", async () => {
 		const resp = await worker.fetch(
 			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&prewarm=${encodeURIComponent(
@@ -101,21 +156,22 @@ describe("Preview Worker", () => {
 				redirect: "manual",
 			}
 		);
-		expect(Object.fromEntries([...resp.headers.entries()])).toMatchObject({
-			"content-length": "0",
-			location: "/hello?world",
-			"set-cookie":
-				"token=%7B%22token%22%3A%22TEST_TOKEN%22%2C%22remote%22%3A%22http%3A%2F%2F127.0.0.1%3A6756%22%7D; Domain=preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None",
-		});
+		expect(resp.headers.get("location")).toMatchInlineSnapshot(
+			'"/hello?world"'
+		);
+		expect(removeUUID(resp.headers.get("set-cookie"))).toMatchInlineSnapshot(
+			'"token=00000000-0000-0000-0000-000000000000; Domain=preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None"'
+		);
+		tokenId = resp.headers.get("set-cookie").split(";")[0].split("=")[1];
 	});
+
 	it("should convert cookie to header", async () => {
 		const resp = await worker.fetch(
 			`https://random-data.preview.devprod.cloudflare.dev`,
 			{
 				method: "GET",
 				headers: {
-					cookie:
-						"token=%7B%22token%22%3A%22TEST_TOKEN%22%2C%22remote%22%3A%22http%3A%2F%2F127.0.0.1%3A6756%22%7D; Domain=preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None",
+					cookie: `token=${tokenId}; Domain=preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None`,
 				},
 			}
 		);
@@ -134,8 +190,7 @@ describe("Preview Worker", () => {
 			{
 				method: "GET",
 				headers: {
-					cookie:
-						"token=%7B%22token%22%3A%22TEST_TOKEN%22%2C%22remote%22%3A%22http%3A%2F%2F127.0.0.1%3A6756%22%7D; Domain=preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None",
+					cookie: `token=${tokenId}; Domain=preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None`,
 				},
 				redirect: "manual",
 			}
@@ -153,8 +208,7 @@ describe("Preview Worker", () => {
 			{
 				method: "PUT",
 				headers: {
-					cookie:
-						"token=%7B%22token%22%3A%22TEST_TOKEN%22%2C%22remote%22%3A%22http%3A%2F%2F127.0.0.1%3A6756%22%7D; Domain=preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None",
+					cookie: `token=${tokenId}; Domain=preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None`,
 				},
 				redirect: "manual",
 			}
@@ -169,8 +223,7 @@ describe("Preview Worker", () => {
 				method: "PUT",
 				headers: {
 					"X-Custom-Header": "custom",
-					cookie:
-						"token=%7B%22token%22%3A%22TEST_TOKEN%22%2C%22remote%22%3A%22http%3A%2F%2F127.0.0.1%3A6756%22%7D; Domain=preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None",
+					cookie: `token=${tokenId}; Domain=preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None`,
 				},
 				redirect: "manual",
 			}
@@ -184,8 +237,7 @@ describe("Preview Worker", () => {
 			{
 				method: "PUT",
 				headers: {
-					cookie:
-						"token=%7B%22token%22%3A%22TEST_TOKEN%22%2C%22remote%22%3A%22http%3A%2F%2F127.0.0.1%3A6756%22%7D; Domain=preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None",
+					cookie: `token=${tokenId}; Domain=preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None`,
 				},
 				redirect: "manual",
 			}
