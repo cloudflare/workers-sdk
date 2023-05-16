@@ -309,7 +309,8 @@ export function convertModuleDefinition(
 	def: ModuleDefinition
 ): Worker_Module {
 	// The runtime requires module identifiers to be relative paths
-	const name = path.relative(modulesRoot, def.path);
+	let name = path.relative(modulesRoot, def.path);
+	if (path.sep === "\\") name = name.replaceAll("\\", "/");
 	const contents = def.contents ?? readFileSync(def.path);
 	switch (def.type) {
 		case "ESModule":

@@ -18,12 +18,17 @@ const FIXTURES_PATH = path.resolve(
 );
 const SERVICE_WORKER_ENTRY_PATH = path.join(FIXTURES_PATH, "service-worker.ts");
 const MODULES_ENTRY_PATH = path.join(FIXTURES_PATH, "modules.ts");
+const DEP_ENTRY_PATH = path.join(FIXTURES_PATH, "nested/dep.ts");
 
 test("source maps workers", async (t) => {
 	// Build fixtures
 	const tmp = await useTmp(t);
 	await esbuild.build({
-		entryPoints: [SERVICE_WORKER_ENTRY_PATH, MODULES_ENTRY_PATH],
+		entryPoints: [
+			SERVICE_WORKER_ENTRY_PATH,
+			MODULES_ENTRY_PATH,
+			DEP_ENTRY_PATH,
+		],
 		format: "esm",
 		bundle: true,
 		sourcemap: true,
@@ -31,6 +36,7 @@ test("source maps workers", async (t) => {
 	});
 	const serviceWorkerPath = path.join(tmp, "service-worker.js");
 	const modulesPath = path.join(tmp, "modules.js");
+	const depPath = path.join(tmp, "nested", "dep.js");
 	const serviceWorkerContent = await fs.readFile(serviceWorkerPath, "utf8");
 	const modulesContent = await fs.readFile(modulesPath, "utf8");
 
@@ -96,6 +102,19 @@ test("source maps workers", async (t) => {
 				modulesRoot: tmp,
 				modules: [{ type: "ESModule", path: modulesPath }],
 			},
+			{
+				name: "e",
+				routes: ["*/e"],
+				modules: [
+					// Check importing module with source map (e.g. Wrangler no bundle with built dependencies)
+					{
+						type: "ESModule",
+						path: modulesPath,
+						contents: `import { createErrorResponse } from "./nested/dep.js"; export default { fetch: createErrorResponse };`,
+					},
+					{ type: "ESModule", path: depPath },
+				],
+			},
 		],
 	});
 	error = await t.throwsAsync(mf.dispatchFetch("http://localhost"), {
@@ -118,4 +137,9 @@ test("source maps workers", async (t) => {
 		message: "d",
 	});
 	t.regex(String(error?.stack), /modules\.ts:5:19/);
+	error = await t.throwsAsync(mf.dispatchFetch("http://localhost/e"), {
+		instanceOf: TypeError,
+		message: "Dependency error",
+	});
+	t.regex(String(error?.stack), /nested\/dep\.ts:4:17/);
 });
