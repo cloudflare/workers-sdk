@@ -1,0 +1,7 @@
+name = "<TBD>"
+main = "src/worker.ts"
+compatibility_date = "2023-04-21"
+
+# TODO: add comments for bindings
+# TODO: add comments for vars
+# TODO: add comments for secrets

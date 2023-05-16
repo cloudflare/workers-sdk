@@ -119,6 +119,9 @@ module.exports = {
 		"packages/wranglerjs-compat-webpack-plugin/lib",
 		"/templates",
 		"packages/quick-edit-extension/vscode*.d.ts",
+		"packages/create-cloudflare/**/templates/**",
+		"packages/create-cloudflare/dist",
+		"packages/create-cloudflare/scripts",
 	],
 	root: true,
 };

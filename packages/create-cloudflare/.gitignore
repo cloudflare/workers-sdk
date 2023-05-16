@@ -1,0 +1,5 @@
+node_modules
+/dist
+create-cloudflare-*.tgz
+
+.DS_Store
