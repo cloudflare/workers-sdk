@@ -220,6 +220,11 @@ export interface CfPlacement {
 	mode: "smart";
 }
 
+export interface CfTailConsumer {
+	service: string;
+	environment?: string;
+}
+
 /**
  * Options for creating a `CfWorker`.
  */
@@ -266,6 +271,7 @@ export interface CfWorkerInit {
 	keepVars: boolean | undefined;
 	logpush: boolean | undefined;
 	placement: CfPlacement | undefined;
+	tail_consumers: CfTailConsumer[] | undefined;
 }
 
 export interface CfWorkerContext {

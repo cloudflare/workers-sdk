@@ -577,6 +577,7 @@ async function createRemoteWorkerInit(props: {
 		keepVars: true,
 		logpush: false,
 		placement: undefined, // no placement in dev
+		tail_consumers: undefined, // no tail consumers in dev - TODO revist?
 	};
 
 	return init;
