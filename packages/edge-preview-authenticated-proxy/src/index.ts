@@ -118,15 +118,18 @@ async function handleRequest(
 	if (!token || !remote) {
 		throw new PreviewRequestFailed();
 	}
+	const toForward = new Request(
+		switchRemote(url, remote),
+		new Request(request, {
+			headers: {
+				...Object.fromEntries(request.headers),
+				"cf-workers-preview-token": token,
+			},
+			redirect: "manual",
+		})
+	);
 
-	const original = await fetch(switchRemote(url, remote), {
-		...request,
-		headers: {
-			...request.headers,
-			"cf-workers-preview-token": token,
-		},
-		redirect: "manual",
-	});
+	const original = await fetch(toForward);
 	const embeddable = new Response(original.body, original);
 	// This will be embedded in an iframe. In particular, the Cloudflare error page sets this header.
 	embeddable.headers.delete("X-Frame-Options");
@@ -161,14 +164,18 @@ async function handleRawHttp(request: Request, url: URL) {
 		throw new RawHttpFailed();
 	}
 
-	const workerResponse = await fetch(switchRemote(url, remote), {
-		...request,
-		headers: {
-			...request.headers,
-			"cf-workers-preview-token": token,
-		},
-		redirect: "manual",
-	});
+	const toForward = new Request(
+		switchRemote(url, remote),
+		new Request(request, {
+			headers: {
+				...Object.fromEntries(request.headers),
+				"cf-workers-preview-token": token,
+			},
+			redirect: "manual",
+		})
+	);
+
+	const workerResponse = await fetch(toForward);
 	// The client needs the raw headers from the worker
 	// Prefix them with `cf-ew-raw-`, so that response headers from _this_ worker don't interfere
 	const rawHeaders: Record<string, string> = {};
