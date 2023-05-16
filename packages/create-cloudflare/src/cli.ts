@@ -41,7 +41,7 @@ const parseArgs = async (argv: string[]) => {
 		.help().argv;
 
 	const [name] = args._;
-	const { deploy, framework, type, ts, open } = args;
+	const { deploy, framework, type, ts } = args;
 
 	return {
 		projectName: name,
@@ -49,7 +49,6 @@ const parseArgs = async (argv: string[]) => {
 		framework,
 		deploy,
 		ts,
-		open,
 	};
 };
 
