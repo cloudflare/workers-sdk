@@ -7,14 +7,17 @@ import {
 	runFrameworkGenerator,
 } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
+import { getFrameworkVersion } from "../index";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
 const { npx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
+	const version = getFrameworkVersion(ctx);
+
 	await runFrameworkGenerator(
 		ctx,
-		`${npx} create-astro@latest ${ctx.project.name} --no-install`
+		`${npx} create-astro@${version} ${ctx.project.name} --no-install`
 	);
 
 	logRaw(""); // newline

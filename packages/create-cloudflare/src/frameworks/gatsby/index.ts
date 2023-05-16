@@ -2,6 +2,7 @@ import { brandColor, dim } from "helpers/colors";
 import { detectPackageManager, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
 import { confirmInput, textInput } from "helpers/interactive";
+import { getFrameworkVersion } from "../index";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
 const { npm, npx } = detectPackageManager();
@@ -29,9 +30,10 @@ const generate = async (ctx: PagesGeneratorContext) => {
 		});
 	}
 
+	const version = getFrameworkVersion(ctx);
 	await runFrameworkGenerator(
 		ctx,
-		`${npx} gatsby new ${ctx.project.name} ${templateUrl}`
+		`${npx} gatsby@${version} new ${ctx.project.name} ${templateUrl}`
 	);
 };
 

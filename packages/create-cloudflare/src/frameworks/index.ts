@@ -1,3 +1,4 @@
+import { crash } from "helpers/cli";
 import angular from "./angular";
 import astro from "./astro";
 import docusaurus from "./docusaurus";
@@ -10,8 +11,9 @@ import react from "./react";
 import remix from "./remix";
 import solid from "./solid";
 import svelte from "./svelte";
+import versionMap from "./versionMap.json";
 import vue from "./vue";
-import type { FrameworkConfig } from "types";
+import type { FrameworkConfig, PagesGeneratorContext } from "types";
 
 export const FrameworkMap: Record<string, FrameworkConfig> = {
 	angular,
@@ -27,6 +29,15 @@ export const FrameworkMap: Record<string, FrameworkConfig> = {
 	solid,
 	svelte,
 	vue,
+};
+
+export const getFrameworkVersion = (ctx: PagesGeneratorContext) => {
+	if (!ctx.framework) {
+		return crash("Framework not specified.");
+	}
+
+	const framework = ctx.framework.name as keyof typeof versionMap;
+	return versionMap[framework];
 };
 
 export const supportedFramework = (framework: string) => {

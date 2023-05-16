@@ -6,6 +6,7 @@ import {
 	runFrameworkGenerator,
 } from "helpers/command";
 import { probePaths, usesTypescript, writeFile } from "helpers/files";
+import { getFrameworkVersion } from "../index";
 import { apiHelloJs, apiHelloTs, nextConfigJs } from "./templates";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
@@ -13,8 +14,12 @@ const { npm, npx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
 	const projectName = ctx.project.name;
+	const version = getFrameworkVersion(ctx);
 
-	await runFrameworkGenerator(ctx, `${npx} create-next-app ${projectName}`);
+	await runFrameworkGenerator(
+		ctx,
+		`${npx} create-next-app@${version} ${projectName}`
+	);
 };
 
 const configure = async (ctx: PagesGeneratorContext) => {

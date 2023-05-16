@@ -5,12 +5,18 @@ import {
 	runFrameworkGenerator,
 } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
+import { getFrameworkVersion } from "..";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
 const { npx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
-	await runFrameworkGenerator(ctx, `${npx} nuxi init ${ctx.project.name}`);
+	const version = getFrameworkVersion(ctx);
+
+	await runFrameworkGenerator(
+		ctx,
+		`${npx} nuxi@${version} init ${ctx.project.name}`
+	);
 
 	logRaw(""); // newline
 };

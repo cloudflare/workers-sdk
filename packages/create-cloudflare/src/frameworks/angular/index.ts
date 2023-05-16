@@ -9,14 +9,17 @@ import {
 } from "helpers/command";
 import { readFile, readJSON, writeFile } from "helpers/files";
 import { spinner } from "helpers/interactive";
+import { getFrameworkVersion } from "../index";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
 const { npx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
+	const version = getFrameworkVersion(ctx);
+
 	await runFrameworkGenerator(
 		ctx,
-		`${npx} @angular/cli@next new ${ctx.project.name} --standalone`
+		`${npx} @angular/cli@${version} new ${ctx.project.name} --standalone`
 	);
 };
 
