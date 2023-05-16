@@ -87,6 +87,7 @@ describe("normalizeAndValidateConfig()", () => {
 			keep_vars: undefined,
 			logpush: undefined,
 			placement: undefined,
+			tail_consumers: undefined,
 		});
 		expect(diagnostics.hasErrors()).toBe(false);
 		expect(diagnostics.hasWarnings()).toBe(false);
@@ -4380,6 +4381,61 @@ describe("normalizeAndValidateConfig()", () => {
 
 			  - \\"env.ENV1\\" environment configuration
 			    - The field \\"env.ENV1.unsafe.metadata\\" should be an object but got null."
+		`);
+			});
+		});
+
+		describe("[tail_consumers]", () => {
+			it("should error if tail_consumers is not an array", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						tail_consumers: "this sure isn't an array",
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - Expected \\"tail_consumers\\" to be an array but got \\"this sure isn't an array\\"."
+		`);
+			});
+
+			it("should error on invalid tail_consumers", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						tail_consumers: [
+							"some string",
+							456,
+							{
+								binding: "other",
+								namespace: "shape",
+							},
+							{ service: {} },
+							{
+								service: 123,
+								environment: "prod",
+							},
+							// these are valid
+							{ service: "tail_listener" },
+							{ service: "listener_two", environment: "production" },
+						],
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - \\"tail_consumers[0]\\" should be an object but got \\"some string\\".
+			  - \\"tail_consumers[1]\\" should be an object but got 456.
+			  - \\"tail_consumers[2].service\\" is a required field.
+			  - Expected \\"tail_consumers[3].service\\" to be of type string but got {}.
+			  - Expected \\"tail_consumers[4].service\\" to be of type string but got 123."
 		`);
 			});
 		});

@@ -593,6 +593,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			keepVars,
 			logpush: props.logpush !== undefined ? props.logpush : config.logpush,
 			placement,
+			tail_consumers: config.tail_consumers,
 		};
 
 		// As this is not deterministic for testing, we detect if in a jest environment and run asynchronously
