@@ -42,7 +42,7 @@ export const runWorkersGenerator = async (args: Args) => {
 	await printSummary(ctx);
 };
 
-async function getTemplatePath(ctx: Context) {
+async function getTemplate(ctx: Context) {
 	if (ctx.args.ts === undefined) {
 		ctx.args.ts = await confirmInput({
 			question: "Do you want to use TypeScript?",
@@ -52,21 +52,22 @@ async function getTemplatePath(ctx: Context) {
 		});
 	}
 
-	return resolve(
+	const preexisting = ctx.args.type === "pre-existing";
+	const template = preexisting ? "simple" : ctx.args.type;
+	const path = resolve(
 		// eslint-disable-next-line no-restricted-globals
 		__dirname,
 		"..",
 		"templates",
-		ctx.args.type,
+		template,
 		ctx.args.ts ? "ts" : "js"
 	);
+
+	return { preexisting, template, path };
 }
 
 async function copyFiles(ctx: Context) {
-	const preexisting = ctx.args.type === "pre-existing";
-	const template = preexisting ? "simple" : ctx.args.type;
-	// eslint-disable-next-line no-restricted-globals
-	const srcdir = await getTemplatePath(ctx);
+	const { template, path: srcdir } = await getTemplate(ctx);
 	const destdir = ctx.project.path;
 
 	// copy template files
@@ -75,7 +76,7 @@ async function copyFiles(ctx: Context) {
 }
 
 async function copyExistingWorkerFiles(ctx: Context) {
-	const preexisting = ctx.args.type === "pre-existing";
+	const { preexisting } = await getTemplate(ctx);
 
 	if (preexisting) {
 		await chooseAccount(ctx);
