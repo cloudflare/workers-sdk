@@ -1,14 +1,17 @@
 import { logRaw } from "helpers/cli";
 import { detectPackageManager, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
+import { getFrameworkVersion } from "..";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
 const { npm, npx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
+	const version = getFrameworkVersion(ctx);
+
 	await runFrameworkGenerator(
 		ctx,
-		`${npx} create-react-app ${ctx.project.name}`
+		`${npx} create-react-app@${version} ${ctx.project.name}`
 	);
 
 	logRaw("");

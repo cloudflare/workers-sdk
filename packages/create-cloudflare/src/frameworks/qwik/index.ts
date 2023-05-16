@@ -6,16 +6,19 @@ import {
 	runFrameworkGenerator,
 } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
+import { getFrameworkVersion } from "..";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
 const { npm, npx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
+	const version = getFrameworkVersion(ctx);
+
 	// TODO: make this interactive when its possible to specify the project name
 	// to create-qwik in interactive mode
 	await runFrameworkGenerator(
 		ctx,
-		`${npm} create qwik@latest basic ${ctx.project.name}`
+		`${npm} create qwik@${version} basic ${ctx.project.name}`
 	);
 };
 

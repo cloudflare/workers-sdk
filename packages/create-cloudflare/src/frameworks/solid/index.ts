@@ -7,6 +7,7 @@ import {
 	runFrameworkGenerator,
 } from "helpers/command";
 import { compatDateFlag, usesTypescript, writeFile } from "helpers/files";
+import { getFrameworkVersion } from "..";
 import { viteConfig } from "./templates";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
@@ -18,7 +19,8 @@ const generate = async (ctx: PagesGeneratorContext) => {
 	process.chdir(ctx.project.path);
 
 	// Run the create-solid command
-	await runFrameworkGenerator(ctx, `${npm} create solid@latest`);
+	const version = getFrameworkVersion(ctx);
+	await runFrameworkGenerator(ctx, `${npm} create solid@${version}`);
 
 	logRaw("");
 };

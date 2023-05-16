@@ -1,13 +1,16 @@
 import { detectPackageManager, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
+import { getFrameworkVersion } from "..";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
 const { npm } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
+	const version = getFrameworkVersion(ctx);
+
 	await runFrameworkGenerator(
 		ctx,
-		`${npm} create docusaurus ${ctx.project.name} classic`
+		`${npm} create docusaurus@${version} ${ctx.project.name} classic`
 	);
 };
 

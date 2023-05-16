@@ -3,14 +3,17 @@ import {
 	detectPackageManager,
 	runFrameworkGenerator,
 } from "helpers/command.js";
+import { getFrameworkVersion } from "..";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
 const { npm, npx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
+	const version = getFrameworkVersion(ctx);
+
 	await runFrameworkGenerator(
 		ctx,
-		`${npx} create-remix@latest ${ctx.project.name} --template cloudflare-pages`
+		`${npx} create-remix@${version} ${ctx.project.name} --template cloudflare-pages`
 	);
 
 	logRaw(""); // newline
