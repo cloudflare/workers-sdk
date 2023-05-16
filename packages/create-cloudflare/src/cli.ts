@@ -38,12 +38,6 @@ const parseArgs = async (argv: string[]) => {
 		.option("framework", { type: "string" })
 		.option("deploy", { type: "boolean" })
 		.option("ts", { type: "boolean" })
-		.option("open", {
-			type: "boolean",
-			default: true,
-			description:
-				"opens your browser after your deployment, set --no-open to disable",
-		})
 		.help().argv;
 
 	const [name] = args._;
@@ -122,7 +116,6 @@ const templateMap: Record<string, TemplateConfig> = {
 			runWorkersGenerator({
 				projectName: args.projectName,
 				type: "chatgptPlugin",
-				open: true,
 				ts: true,
 			}),
 	},
