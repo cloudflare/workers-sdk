@@ -86,7 +86,7 @@ const validateType = async (args: PagesGeneratorArgs) => {
 		question: "What type of application do you want to create?",
 		options: templateOptions,
 		renderSubmitted: (option: Option) => {
-			return `${brandColor("type")} ${dim(option.value)}`;
+			return `${brandColor("type")} ${dim(option.label)}`;
 		},
 	});
 
@@ -103,11 +103,11 @@ type TemplateConfig = {
 
 const templateMap: Record<string, TemplateConfig> = {
 	webFramework: {
-		label: "Web Framework",
+		label: "Website or web app",
 		handler: runPagesGenerator,
 	},
 	simple: {
-		label: `Simple Worker`,
+		label: `"Hello World" script`,
 		handler: runWorkersGenerator,
 	},
 	common: {

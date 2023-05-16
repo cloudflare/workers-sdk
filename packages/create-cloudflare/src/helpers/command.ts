@@ -74,7 +74,7 @@ export const runFrameworkGenerator = async (
 ) => {
 	endSection(
 		`Continue with ${ctx.framework?.config.displayName}`,
-		`Creating your application via \`${cmd.trim()}\``
+		`via \`${cmd.trim()}\``
 	);
 
 	if (process.env.VITEST) {
