@@ -16,7 +16,7 @@ import type { PagesGeneratorArgs } from "types";
 export const main = async (argv: string[]) => {
 	printBanner();
 
-	const args = await parseArgs(argv);
+	const args = (await parseArgs(argv)) as PagesGeneratorArgs;
 	await validateName(args);
 	await validateType(args);
 
@@ -56,7 +56,7 @@ const parseArgs = async (argv: string[]) => {
 		deploy,
 		ts,
 		open,
-	} as PagesGeneratorArgs;
+	};
 };
 
 const validateName = async (args: Partial<PagesGeneratorArgs>) => {
