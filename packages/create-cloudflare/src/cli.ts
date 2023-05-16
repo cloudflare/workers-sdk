@@ -12,7 +12,6 @@ import { runPagesGenerator } from "./pages";
 import { runWorkersGenerator } from "./workers";
 import type { Option } from "helpers/interactive";
 import type { PagesGeneratorArgs } from "types";
-import { Context } from "vitest";
 
 export const main = async (argv: string[]) => {
 	printBanner();
