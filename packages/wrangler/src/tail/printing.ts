@@ -53,6 +53,8 @@ export function prettyPrintLogs(data: WebSocket.RawData): void {
 	} else if (isTailInfo(eventMessage.event)) {
 		if (eventMessage.event.type === "overload") {
 			logger.log(`${chalk.red.bold(eventMessage.event.message)}`);
+		} else if (eventMessage.event.type === "overload-stop") {
+			logger.log(`${chalk.yellow.bold(eventMessage.event.message)}`);
 		}
 	} else {
 		// Unknown event type
