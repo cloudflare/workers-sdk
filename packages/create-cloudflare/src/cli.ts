@@ -116,12 +116,12 @@ const templateMap: Record<string, TemplateConfig> = {
 		label: "Common Worker functions",
 		handler: runWorkersGenerator,
 	},
-	chatgpt: {
+	chatgptPlugin: {
 		label: `ChatGPT plugin (Typescript)`,
 		handler: (args) =>
 			runWorkersGenerator({
 				projectName: args.projectName,
-				type: "chatgpt",
+				type: "chatgptPlugin",
 				open: true,
 				ts: true,
 			}),
