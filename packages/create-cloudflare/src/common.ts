@@ -7,7 +7,6 @@ import {
 	log,
 	logRaw,
 	newline,
-	openInBrowser,
 	shapes,
 	startSection,
 } from "helpers/cli";
@@ -18,8 +17,7 @@ import {
 	runCommand,
 	wranglerLogin,
 } from "helpers/command";
-import { confirmInput, selectInput, spinner } from "helpers/interactive";
-import { poll } from "helpers/poll";
+import { confirmInput, selectInput } from "helpers/interactive";
 import type { Option } from "helpers/interactive";
 import type { PagesGeneratorArgs, PagesGeneratorContext } from "types";
 
@@ -161,6 +159,7 @@ export const printSummary = async (ctx: PagesGeneratorContext) => {
 			`${bgGreen(" SUCCESS ")}`,
 			`${dim(`View your deployed application at`)}`,
 			`${blue(ctx.deployedUrl)}`,
+			`${dim(`(this may take a few mins)`)}`,
 		].join(" ");
 		logRaw(msg);
 	} else {
@@ -180,29 +179,6 @@ export const printSummary = async (ctx: PagesGeneratorContext) => {
 		log(`${dim(entry[0])} ${blue(entry[1])}`);
 	});
 	newline();
-
-	if (ctx.deployedUrl) {
-		const s = spinner();
-		s.start("Waiting for deployment to become available");
-
-		const success = await poll(ctx.deployedUrl);
-
-		if (success) {
-			s.stop(
-				`${brandColor("deployment")} ${dim("is ready at:")} ${blue(
-					ctx.deployedUrl
-				)}`
-			);
-
-			if (ctx.args.open) {
-				await openInBrowser(ctx.deployedUrl);
-			}
-		} else {
-			s.stop(
-				`${brandColor("deployment")} timed out waiting for ${ctx.deployedUrl}.`
-			);
-		}
-	}
 
 	endSection("See you again soon!");
 };
