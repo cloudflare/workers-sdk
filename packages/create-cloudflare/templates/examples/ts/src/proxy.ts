@@ -10,11 +10,12 @@ export default {
 		}
 
 		// make subrequests with the global `fetch()` function
-		const res = await fetch(proxyUrl, request);
+		let res = await fetch(proxyUrl, request);
 
 		// optionally, modify the respone
 		if (modify) {
-			res.headers.set('X-My-Header', 'My Header Value');
+		  res = new Response(res.body, res);
+		  res.headers.set('X-My-Header', 'My Header Value');
 		}
 
 		return res;
