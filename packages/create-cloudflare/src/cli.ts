@@ -78,9 +78,9 @@ const validateName = async (args: Partial<PagesGeneratorArgs>) => {
 };
 
 const validateType = async (args: PagesGeneratorArgs) => {
-	const templateOptions = Object.entries(templateMap).map(
-		([value, { label }]) => ({ value, label })
-	);
+	const templateOptions = Object.entries(templateMap)
+		.filter(([_, { hidden }]) => !hidden)
+		.map(([value, { label }]) => ({ value, label }));
 
 	args.type ||= await selectInput({
 		question: "What type of application do you want to create?",
@@ -98,6 +98,7 @@ const validateType = async (args: PagesGeneratorArgs) => {
 type TemplateConfig = {
 	label: string;
 	handler: (args: PagesGeneratorArgs) => Promise<void>;
+	hidden?: boolean;
 };
 
 const templateMap: Record<string, TemplateConfig> = {
@@ -109,13 +110,14 @@ const templateMap: Record<string, TemplateConfig> = {
 		label: `Simple Worker`,
 		handler: runWorkersGenerator,
 	},
-	examples: {
-		label: "Simple Worker (with examples)",
+	common: {
+		label: "Common Worker functions",
 		handler: runWorkersGenerator,
 	},
 	"pre-existing": {
 		label: "Pre-existing Worker (from Dashboard)",
 		handler: runWorkersGenerator,
+		hidden: true,
 	},
 };
 
