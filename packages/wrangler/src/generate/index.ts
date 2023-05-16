@@ -46,6 +46,7 @@ export async function generateHandler(args: GenerateArgs) {
 			site: undefined,
 			yes: undefined,
 			fromDash: undefined,
+			delegateC3: false,
 			v: undefined,
 			config: undefined,
 			env: undefined,
