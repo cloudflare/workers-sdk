@@ -16,12 +16,15 @@ import type { PagesGeneratorArgs } from "types";
 export const main = async (argv: string[]) => {
 	printBanner();
 
-	const args = (await parseArgs(argv)) as PagesGeneratorArgs;
-	await validateName(args);
-	await validateType(args);
+	const args = await parseArgs(argv);
+	const validatedArgs: PagesGeneratorArgs = {
+		...args,
+		projectName: await validateName(args.name),
+		type: await validateType(args.type),
+	};
 
-	const { handler } = templateMap[args.type];
-	await handler(args);
+	const { handler } = templateMap[validatedArgs.type];
+	await handler(validatedArgs);
 };
 
 const printBanner = () => {
@@ -38,25 +41,22 @@ const parseArgs = async (argv: string[]) => {
 		.option("framework", { type: "string" })
 		.option("deploy", { type: "boolean" })
 		.option("ts", { type: "boolean" })
+		.option("open", {
+			type: "boolean",
+			default: true,
+			description:
+				"opens your browser after your deployment, set --no-open to disable",
+		})
 		.help().argv;
 
-	const [name] = args._;
-	const { deploy, framework, type, ts } = args;
-
-	return {
-		projectName: name,
-		type,
-		framework,
-		deploy,
-		ts,
-	};
+	return args;
 };
 
-const validateName = async (args: Partial<PagesGeneratorArgs>) => {
+const validateName = async (name: string | undefined): Promise<string> => {
 	const haikunator = new Haikunator();
 
-	args.projectName = await textInput({
-		initialValue: args.projectName,
+	return await textInput({
+		initialValue: name,
 		question: `Where do you want to create your application?`,
 		helpText: "also used as application name",
 		renderSubmitted: (value: string) => {
@@ -71,23 +71,24 @@ const validateName = async (args: Partial<PagesGeneratorArgs>) => {
 	});
 };
 
-const validateType = async (args: PagesGeneratorArgs) => {
+const validateType = async (type: string | undefined) => {
 	const templateOptions = Object.entries(templateMap)
 		.filter(([_, { hidden }]) => !hidden)
 		.map(([value, { label }]) => ({ value, label }));
 
-	args.type = await selectInput({
+	type = await selectInput({
 		question: "What type of application do you want to create?",
 		options: templateOptions,
 		renderSubmitted: (option: Option) => {
 			return `${brandColor("type")} ${dim(option.label)}`;
 		},
-		initialValue: args.type,
+		initialValue: type,
 	});
 
-	if (!args.type || !Object.keys(templateMap).includes(args.type)) {
+	if (!type || !Object.keys(templateMap).includes(type)) {
 		crash("An application type must be specified to continue.");
 	}
+	return type;
 };
 
 type TemplateConfig = {
@@ -113,8 +114,7 @@ const templateMap: Record<string, TemplateConfig> = {
 		label: `ChatGPT plugin (Typescript)`,
 		handler: (args) =>
 			runWorkersGenerator({
-				projectName: args.projectName,
-				type: "chatgptPlugin",
+				...args,
 				ts: true,
 			}),
 	},

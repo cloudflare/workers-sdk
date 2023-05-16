@@ -7,6 +7,7 @@ import {
 	log,
 	logRaw,
 	newline,
+	openInBrowser,
 	shapes,
 	startSection,
 } from "helpers/cli";
@@ -18,6 +19,7 @@ import {
 	wranglerLogin,
 } from "helpers/command";
 import { confirmInput, selectInput } from "helpers/interactive";
+import { poll } from "helpers/poll";
 import type { Option } from "helpers/interactive";
 import type { PagesGeneratorArgs, PagesGeneratorContext } from "types";
 
@@ -158,7 +160,6 @@ export const printSummary = async (ctx: PagesGeneratorContext) => {
 			`${bgGreen(" SUCCESS ")}`,
 			`${dim(`View your deployed application at`)}`,
 			`${blue(ctx.deployedUrl)}`,
-			`${dim(`(this may take a few mins)`)}`,
 		].join(" ");
 		logRaw(msg);
 	} else {
@@ -179,5 +180,13 @@ export const printSummary = async (ctx: PagesGeneratorContext) => {
 	});
 	newline();
 
+	if (ctx.deployedUrl) {
+		const success = await poll(ctx.deployedUrl);
+		if (success) {
+			if (ctx.args.open) {
+				await openInBrowser(ctx.deployedUrl);
+			}
+		}
+	}
 	endSection("See you again soon!");
 };
