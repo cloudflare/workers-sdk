@@ -10,4 +10,7 @@ interface Env {
 	//
 	// Example binding to a Service. Learn more at https://developers.cloudflare.com/workers/runtime-apis/service-bindings/
 	// MY_SERVICE: Fetcher;
+	//
+	// Example binding to a Queue. Learn more at https://developers.cloudflare.com/queues/javascript-apis/
+	// MY_QUEUE: Queue;
 }
