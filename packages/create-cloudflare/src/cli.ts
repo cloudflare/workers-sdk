@@ -38,12 +38,6 @@ const parseArgs = async (argv: string[]) => {
 		.option("framework", { type: "string" })
 		.option("deploy", { type: "boolean" })
 		.option("ts", { type: "boolean" })
-		.option("open", {
-			type: "boolean",
-			default: true,
-			description:
-				"opens your browser after your deployment, set --no-open to disable",
-		})
 		.help().argv;
 
 	const [name] = args._;
