@@ -49,11 +49,9 @@ export const setupProjectDirectory = (args: PagesGeneratorArgs) => {
 };
 
 export const offerToDeploy = async (ctx: PagesGeneratorContext) => {
-	if (ctx.args.deploy === false) return;
-
 	startSection(`Deploy with Cloudflare`, `Step 3 of 3`);
 
-	ctx.args.deploy ||= await confirmInput({
+	ctx.args.deploy = await confirmInput({
 		question: "Do you want to deploy your application?",
 		renderSubmitted: (value: boolean) =>
 			`${brandColor(value ? `yes` : `no`)} ${dim(
@@ -61,6 +59,7 @@ export const offerToDeploy = async (ctx: PagesGeneratorContext) => {
 					ctx.framework?.config.deployCommand ?? "deploy"
 				}\``
 			)}`,
+		initialValue: ctx.args.deploy,
 	});
 
 	if (!ctx.args.deploy) return;
