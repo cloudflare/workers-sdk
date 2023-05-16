@@ -30,7 +30,7 @@
 		"@changesets/changelog-github": "^0.4.5",
 		"@changesets/cli": "^2.22.0",
 		"@types/jest": "^28.1.6",
-		"@types/node": "^16.11.11",
+		"@types/node": "^20.0.0",
 		"@typescript-eslint/eslint-plugin": "^5.46.0",
 		"@typescript-eslint/parser": "^5.46.0",
 		"cross-env": "^7.0.3",
@@ -45,7 +45,7 @@
 		"rimraf": "^3.0.2",
 		"typescript": "^4.8.4",
 		"vite": "^4.0.4",
-		"vitest": "^0.26.3"
+		"vitest": "^0.31.0"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20221111.1",

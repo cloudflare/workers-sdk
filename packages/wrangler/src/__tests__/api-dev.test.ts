@@ -3,6 +3,7 @@ import { Request } from "undici";
 import { unstable_dev } from "../api";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
+jest.unmock("child_process");
 jest.unmock("undici");
 
 describe("unstable_dev", () => {
@@ -42,14 +43,13 @@ describe("unstable_dev", () => {
 		const worker = await unstable_dev(
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 			{
-				port: 9191,
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
 				},
 			}
 		);
-		expect(worker.port).toBe(9191);
+		expect(worker.port).not.toBe(0);
 		await worker.stop();
 	});
 });
@@ -113,15 +113,13 @@ describe("unstable dev fetch input parsing", () => {
 	};
 	`;
 		fs.writeFileSync("index.js", scriptContent);
-		const port = 21213;
 		const worker = await unstable_dev("index.js", {
-			port,
 			experimental: {
 				disableExperimentalWarning: true,
 				disableDevRegistry: true,
 			},
 		});
-		const req = new Request("http://0.0.0.0:21213/test", {
+		const req = new Request(`http://127.0.0.1:${worker.port}/test`, {
 			method: "POST",
 		});
 		const resp = await worker.fetch(req);

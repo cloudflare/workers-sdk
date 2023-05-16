@@ -43,11 +43,10 @@
 		]
 	},
 	"dependencies": {
-		"@miniflare/core": "2.14.0"
+		"miniflare": "^3.0.0"
 	},
 	"devDependencies": {
-		"@miniflare/cache": "2.14.0",
-		"@miniflare/html-rewriter": "2.14.0",
+		"@cloudflare/workers-types": "^4.20230511.0",
 		"@types/service-worker-mock": "^2.0.1",
 		"concurrently": "^7.3.0",
 		"glob": "^8.0.3",

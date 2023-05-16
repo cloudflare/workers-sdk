@@ -1,6 +1,7 @@
 import { fetch } from "undici";
 import { unstable_dev } from "../api";
 
+jest.unmock("child_process");
 jest.unmock("undici");
 
 /**
@@ -70,16 +71,20 @@ describe("multi-worker testing", () => {
 	it("should be able to stop and start the server with no warning logs", async () => {
 		// Spy on all the console methods
 		let logs = "";
-		(["debug", "info", "log", "warn", "error"] as const).forEach((method) =>
-			jest
-				.spyOn(console, method)
-				.mockImplementation((...args: unknown[]) => (logs += `\n${args}`))
+		// Resolve when we see `[mf:inf] GET / 200 OK` message. This log is sent in
+		// a `waitUntil()`, which may execute after tests complete. To stop Jest
+		// complaining about logging after a test, wait for this log.
+		let requestResolve: () => void;
+		const requestPromise = new Promise<void>(
+			(resolve) => (requestResolve = resolve)
 		);
-
-		// Spy on the std out that is written to by Miniflare 2
-		jest
-			.spyOn(process.stdout, "write")
-			.mockImplementation((chunk: unknown) => ((logs += `\n${chunk}`), true));
+		(["debug", "info", "log", "warn", "error"] as const).forEach((method) =>
+			jest.spyOn(console, method).mockImplementation((...args: unknown[]) => {
+				logs += `\n${args}`;
+				// Regexp ignores colour codes
+				if (/\[mf:inf].+GET.+\/.+200.+OK/.test(String(args))) requestResolve();
+			})
+		);
 
 		async function startWorker() {
 			return await unstable_dev(
@@ -114,6 +119,8 @@ describe("multi-worker testing", () => {
 			expect(logs).not.toMatch(
 				/Failed to register worker in local service registry/
 			);
+
+			await requestPromise;
 		} finally {
 			await worker?.stop();
 		}

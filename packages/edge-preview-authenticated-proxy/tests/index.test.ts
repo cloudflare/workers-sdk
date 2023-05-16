@@ -102,6 +102,7 @@ describe("Preview Worker", () => {
 			}
 		);
 		expect(Object.fromEntries([...resp.headers.entries()])).toMatchObject({
+			"content-length": "0",
 			location: "/hello?world",
 			"set-cookie":
 				"token=%7B%22token%22%3A%22TEST_TOKEN%22%2C%22remote%22%3A%22http%3A%2F%2F127.0.0.1%3A6756%22%7D; Domain=preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None",
@@ -119,7 +120,7 @@ describe("Preview Worker", () => {
 			}
 		);
 
-		const json = await resp.json();
+		const json = (await resp.json()) as { headers: string[][]; url: string };
 		expect(Object.fromEntries([...json.headers])).toMatchObject({
 			"cf-workers-preview-token": "TEST_TOKEN",
 		});

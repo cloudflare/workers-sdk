@@ -79,36 +79,14 @@ async function buildMain(flags: BuildFlags = {}) {
 	await fs.copyFile(wasmSrc, wasmDst);
 }
 
-async function buildMiniflareCLI(flags: BuildFlags = {}) {
-	await build({
-		entryPoints: ["./src/miniflare-cli/index.ts"],
-		bundle: true,
-		outfile: "./miniflare-dist/index.mjs",
-		platform: "node",
-		format: "esm",
-		external: EXTERNAL_DEPENDENCIES,
-		sourcemap: process.env.SOURCEMAPS !== "false",
-		define: {
-			"process.env.NODE_ENV": `'${process.env.NODE_ENV || "production"}'`,
-		},
-		watch: flags.watch ? watchLogger("./miniflare-dist/index.mjs") : false,
-	});
-}
-
 async function run() {
 	// main cli
 	await buildMain();
 
-	// custom miniflare cli
-	await buildMiniflareCLI();
-
 	// After built once completely, rerun them both in watch mode
 	if (process.argv.includes("--watch")) {
 		console.log("Built. Watching for changes...");
-		await Promise.all([
-			buildMain({ watch: true }),
-			buildMiniflareCLI({ watch: true }),
-		]);
+		await buildMain({ watch: true });
 	}
 }
 

@@ -4,6 +4,7 @@ import { logger } from "../logger";
 
 import type { Environment } from "../config";
 import type { Rule } from "../config/environment";
+import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { CfModule } from "../worker";
 import type { RequestInit, Response, RequestInfo } from "undici";
@@ -57,8 +58,6 @@ export interface UnstableDevOptions {
 		disableExperimentalWarning?: boolean; // Disables wrangler's warning when unstable APIs are used.
 		disableDevRegistry?: boolean; // Disables wrangler's support multi-worker setups. May reduce flakiness when used in tests in CI.
 		enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
-		experimentalLocal?: boolean; // Use Miniflare 3 instead of Miniflare 2
-		experimentalLocalRemoteKv?: boolean;
 		forceLocal?: boolean;
 		liveReload?: boolean; // Auto reload HTML pages when change is detected in local mode
 		showInteractiveDevSession?: boolean;
@@ -109,8 +108,6 @@ export async function unstable_dev(
 		testScheduled,
 		// 2. options for alpha/beta products/libs
 		d1Databases,
-		experimentalLocal,
-		experimentalLocalRemoteKv,
 		enablePagesAssetsServiceBinding,
 	} = experimentalOptions;
 
@@ -125,188 +122,122 @@ export async function unstable_dev(
 			`unstable_dev() is experimental\nunstable_dev()'s behaviour will likely change in future releases`
 		);
 	}
-	let readyPort: number;
-	let readyAddress: string;
+
+	type ReadyInformation = { address: string; port: number };
+	let readyResolve: (info: ReadyInformation) => void;
+	const readyPromise = new Promise<ReadyInformation>((resolve) => {
+		readyResolve = resolve;
+	});
+
+	const defaultLogLevel = testMode ? "none" : "log";
+
+	const devOptions: StartDevOptions = {
+		script: script,
+		inspect: false,
+		logLevel: options?.logLevel ?? defaultLogLevel,
+		_: [],
+		$0: "",
+		port: options?.port ?? 0,
+		remote: false,
+		local: undefined,
+		experimentalLocal: undefined,
+		d1Databases,
+		disableDevRegistry,
+		testScheduled: testScheduled ?? false,
+		enablePagesAssetsServiceBinding,
+		forceLocal,
+		liveReload,
+		showInteractiveDevSession,
+		onReady: (address, port) => {
+			readyResolve({ address, port });
+		},
+		config: options?.config,
+		env: options?.env,
+		processEntrypoint,
+					additionalModules,
+		bundle: options?.bundle,
+		compatibilityDate: options?.compatibilityDate,
+		compatibilityFlags: options?.compatibilityFlags,
+		ip: options?.ip,
+		inspectorPort: options?.inspectorPort,
+		v: undefined,
+		localProtocol: options?.localProtocol,
+		assets: options?.assets,
+		site: options?.site, // Root folder of static assets for Workers Sites
+		siteInclude: options?.siteInclude, // Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.
+		siteExclude: options?.siteExclude, // Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.
+		nodeCompat: options?.nodeCompat, // Enable Node.js compatibility
+		persist: options?.persist, // Enable persistence for local mode, using default path: .wrangler/state
+		persistTo: options?.persistTo, // Specify directory to use for local persistence (implies --persist)
+		experimentalJsonConfig: undefined,
+		name: undefined,
+		noBundle: false,
+		format: undefined,
+		latest: false,
+		routes: undefined,
+		host: undefined,
+		localUpstream: undefined,
+		experimentalPublic: undefined,
+		upstreamProtocol: undefined,
+		var: undefined,
+		define: undefined,
+		jsxFactory: undefined,
+		jsxFragment: undefined,
+		tsconfig: undefined,
+		minify: undefined,
+		experimentalEnableLocalPersistence: undefined,
+		legacyEnv: undefined,
+		public: undefined,
+		...options,
+	};
+
 	//due to Pages adoption of unstable_dev, we can't *just* disable rebuilds and watching. instead, we'll have two versions of startDev, which will converge.
 	if (testMode) {
-		//in testMode, we can run multiple wranglers in parallel, but rebuilds might not work out of the box
-		return new Promise<UnstableDevWorker>((resolve) => {
-			//lmao
-			return new Promise<Awaited<ReturnType<typeof startApiDev>>>((ready) => {
-				// once the devServer is ready for requests, we resolve the inner promise
-				// (where we've named the resolve function "ready")
-				const devServer = startApiDev({
-					script: script,
-					inspect: false,
-					logLevel: "none",
-					_: [],
-					$0: "",
-					port: options?.port ?? 0,
-					local: true,
-					d1Databases,
-					disableDevRegistry,
-					testScheduled: testScheduled ?? false,
-					experimentalLocal: experimentalLocal ?? false,
-					experimentalLocalRemoteKv: experimentalLocalRemoteKv ?? false,
-					enablePagesAssetsServiceBinding,
-					liveReload,
-					showInteractiveDevSession,
-					onReady: (address, port) => {
-						readyPort = port;
-						readyAddress = address;
-						ready(devServer);
-					},
-					config: options?.config,
-					env: options?.env,
-					processEntrypoint,
-					additionalModules,
-					bundle: options?.bundle,
-					compatibilityDate: options?.compatibilityDate,
-					compatibilityFlags: options?.compatibilityFlags,
-					ip: options?.ip,
-					inspectorPort: options?.inspectorPort,
-					v: undefined,
-					localProtocol: options?.localProtocol,
-					assets: options?.assets,
-					site: options?.site, // Root folder of static assets for Workers Sites
-					siteInclude: options?.siteInclude, // Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.
-					siteExclude: options?.siteExclude, // Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.
-					nodeCompat: options?.nodeCompat, // Enable Node.js compatibility
-					persist: options?.persist, // Enable persistence for local mode, using default path: .wrangler/state
-					persistTo: options?.persistTo, // Specify directory to use for local persistence (implies --persist)
-					experimentalJsonConfig: undefined,
-					name: undefined,
-					noBundle: false,
-					format: undefined,
-					latest: false,
-					routes: undefined,
-					host: undefined,
-					localUpstream: undefined,
-					experimentalPublic: undefined,
-					upstreamProtocol: undefined,
-					var: undefined,
-					define: undefined,
-					jsxFactory: undefined,
-					jsxFragment: undefined,
-					tsconfig: undefined,
-					minify: undefined,
-					experimentalEnableLocalPersistence: undefined,
-					legacyEnv: undefined,
-					public: undefined,
-					...options,
-				});
-			}).then((devServer) => {
-				// now that the inner promise has resolved, we can resolve the outer promise
-				// with an object that lets you fetch and stop the dev server
-				resolve({
-					port: readyPort,
-					address: readyAddress,
-					stop: devServer.stop,
-					fetch: async (input?: RequestInfo, init?: RequestInit) => {
-						return await fetch(
-							...parseRequestInput(
-								readyAddress,
-								readyPort,
-								input,
-								init,
-								options?.localProtocol
-							)
-						);
-					},
-					//no-op, does nothing in tests
-					waitUntilExit: async () => {
-						return;
-					},
-				});
-			});
-		});
+		// in testMode, we can run multiple wranglers in parallel, but rebuilds might not work out of the box
+		// once the devServer is ready for requests, we resolve the ready promise
+		const devServer = await startApiDev(devOptions);
+		const { port, address } = await readyPromise;
+		return {
+			port,
+			address,
+			stop: devServer.stop,
+			fetch: async (input?: RequestInfo, init?: RequestInit) => {
+				return await fetch(
+					...parseRequestInput(
+						address,
+						port,
+						input,
+						init,
+						options?.localProtocol
+					)
+				);
+			},
+			//no-op, does nothing in tests
+			waitUntilExit: async () => {
+				return;
+			},
+		};
 	} else {
 		//outside of test mode, rebuilds work fine, but only one instance of wrangler will work at a time
-
-		return new Promise<UnstableDevWorker>((resolve) => {
-			//lmao
-			return new Promise<Awaited<ReturnType<typeof startDev>>>((ready) => {
-				const devServer = startDev({
-					script: script,
-					inspect: false,
-					_: [],
-					$0: "",
-					logLevel: options?.logLevel ?? "log",
-					port: options?.port ?? 0,
-					local: true,
-					showInteractiveDevSession,
-					d1Databases,
-					disableDevRegistry,
-					testScheduled: testScheduled ?? false,
-					experimentalLocal: experimentalLocal ?? false,
-					experimentalLocalRemoteKv: experimentalLocalRemoteKv ?? false,
-					enablePagesAssetsServiceBinding,
-					forceLocal,
-					liveReload,
-					onReady: (address, port) => {
-						readyPort = port;
-						readyAddress = address;
-						ready(devServer);
-					},
-					config: options?.config,
-					env: options?.env,
-					processEntrypoint,
-					additionalModules,
-					bundle: options?.bundle,
-					compatibilityDate: options?.compatibilityDate,
-					compatibilityFlags: options?.compatibilityFlags,
-					ip: options?.ip,
-					inspectorPort: options?.inspectorPort,
-					v: undefined,
-					localProtocol: options?.localProtocol,
-					assets: options?.assets,
-					site: options?.site, // Root folder of static assets for Workers Sites
-					siteInclude: options?.siteInclude, // Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.
-					siteExclude: options?.siteExclude, // Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.
-					nodeCompat: options?.nodeCompat, // Enable Node.js compatibility
-					persist: options?.persist, // Enable persistence for local mode, using default path: .wrangler/state
-					persistTo: options?.persistTo, // Specify directory to use for local persistence (implies --persist)
-					experimentalJsonConfig: undefined,
-					name: undefined,
-					noBundle: false,
-					format: undefined,
-					latest: false,
-					routes: undefined,
-					host: undefined,
-					localUpstream: undefined,
-					experimentalPublic: undefined,
-					upstreamProtocol: undefined,
-					var: undefined,
-					define: undefined,
-					jsxFactory: undefined,
-					jsxFragment: undefined,
-					tsconfig: undefined,
-					minify: undefined,
-					experimentalEnableLocalPersistence: undefined,
-					legacyEnv: undefined,
-					public: undefined,
-					...options,
-				});
-			}).then((devServer) => {
-				resolve({
-					port: readyPort,
-					address: readyAddress,
-					stop: devServer.stop,
-					fetch: async (input?: RequestInfo, init?: RequestInit) => {
-						return await fetch(
-							...parseRequestInput(
-								readyAddress,
-								readyPort,
-								input,
-								init,
-								options?.localProtocol
-							)
-						);
-					},
-					waitUntilExit: devServer.devReactElement.waitUntilExit,
-				});
-			});
-		});
+		const devServer = await startDev(devOptions);
+		const { port, address } = await readyPromise;
+		return {
+			port,
+			address,
+			stop: devServer.stop,
+			fetch: async (input?: RequestInfo, init?: RequestInit) => {
+				return await fetch(
+					...parseRequestInput(
+						address,
+						port,
+						input,
+						init,
+						options?.localProtocol
+					)
+				);
+			},
+			waitUntilExit: devServer.devReactElement.waitUntilExit,
+		};
 	}
 }
 
@@ -316,13 +247,20 @@ export function parseRequestInput(
 	input: RequestInfo = "/",
 	init?: RequestInit,
 	protocol: "http" | "https" = "http"
-): [RequestInfo, RequestInit | undefined] {
-	if (input instanceof Request) {
-		return [input, undefined];
-	}
-	const url = new URL(`${input}`, `${protocol}://${readyAddress}:${readyPort}`);
+): [RequestInfo, RequestInit] {
+	// Make sure URL is absolute
+	if (typeof input === "string") input = new URL(input, "http://placeholder");
+	// Adapted from Miniflare 3's `dispatchFetch()` function
+	const forward = new Request(input, init);
+	const url = new URL(forward.url);
+	forward.headers.set("MF-Original-URL", url.toString());
 	url.protocol = protocol;
 	url.hostname = readyAddress;
 	url.port = readyPort.toString();
-	return [url, init];
+	// Remove `Content-Length: 0` headers from requests when a body is set to
+	// avoid `RequestContentLengthMismatch` errors
+	if (forward.body !== null && forward.headers.get("Content-Length") === "0") {
+		forward.headers.delete("Content-Length");
+	}
+	return [url, forward as RequestInit];
 }

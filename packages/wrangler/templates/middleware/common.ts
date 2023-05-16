@@ -5,13 +5,18 @@ export type Dispatcher = (
 	init: { cron?: string }
 ) => Awaitable<void>;
 
+export type IncomingRequest = Request<
+	unknown,
+	IncomingRequestCfProperties<unknown>
+>;
+
 export interface MiddlewareContext {
 	dispatch: Dispatcher;
-	next(request: Request, env: any): Awaitable<Response>;
+	next(request: IncomingRequest, env: any): Awaitable<Response>;
 }
 
 export type Middleware = (
-	request: Request,
+	request: IncomingRequest,
 	env: any,
 	ctx: ExecutionContext,
 	middlewareCtx: MiddlewareContext
@@ -32,7 +37,7 @@ export function __facade_registerInternal__(
 }
 
 function __facade_invokeChain__(
-	request: Request,
+	request: IncomingRequest,
 	env: any,
 	ctx: ExecutionContext,
 	dispatch: Dispatcher,
@@ -49,7 +54,7 @@ function __facade_invokeChain__(
 }
 
 export function __facade_invoke__(
-	request: Request,
+	request: IncomingRequest,
 	env: any,
 	ctx: ExecutionContext,
 	dispatch: Dispatcher,

@@ -1,5 +1,10 @@
-import { execSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	writeFileSync,
+	readdirSync,
+} from "node:fs";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
@@ -162,11 +167,12 @@ describe("functions build", () => {
 		✨ Compiled Worker successfully"
 	`);
 
-		expect(execSync("ls dist", { encoding: "utf-8" })).toMatchInlineSnapshot(`
-		"e8f0f80fe25d71a0fc2b9a08c877020211192308-name.wasm
-		f7ff9e8b7bb2e09b70935a5d785e0cc5d9d0abf0-greeting.wasm
-		index.js
-		"
+		expect(readdirSync("dist").sort()).toMatchInlineSnapshot(`
+		Array [
+		  "e8f0f80fe25d71a0fc2b9a08c877020211192308-name.wasm",
+		  "f7ff9e8b7bb2e09b70935a5d785e0cc5d9d0abf0-greeting.wasm",
+		  "index.js",
+		]
 	`);
 	});
 

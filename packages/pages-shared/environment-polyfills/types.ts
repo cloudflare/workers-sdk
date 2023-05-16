@@ -1,35 +1,25 @@
 import {
-	Headers as MiniflareHeaders,
-	Request as MiniflareRequest,
-	Response as MiniflareResponse,
-} from "@miniflare/core";
-import { HTMLRewriter as MiniflareHTMLRewriter } from "@miniflare/html-rewriter";
-import type { CacheInterface as MiniflareCacheInterface } from "@miniflare/cache";
-import type { fetch as miniflareFetch } from "@miniflare/core";
-import type { ReadableStream as SimilarReadableStream } from "stream/web";
+	Headers as WorkerHeaders,
+	Request as WorkerRequest,
+	Response as WorkerResponse,
+	HTMLRewriter as WorkerHTMLRewriter,
+} from "@cloudflare/workers-types/experimental";
+import type {
+	fetch as workerFetch,
+	ReadableStream as WorkerReadableStream,
+	CacheStorage as WorkerCacheStorage,
+} from "@cloudflare/workers-types/experimental";
 
 declare global {
-	const fetch: typeof miniflareFetch;
-	class Headers extends MiniflareHeaders {}
-	class Request extends MiniflareRequest {}
-	class Response extends MiniflareResponse {}
+	const fetch: typeof workerFetch;
+	class Headers extends WorkerHeaders {}
+	class Request extends WorkerRequest {}
+	class Response extends WorkerResponse {}
 
-	type CacheInterface = Omit<MiniflareCacheInterface, "match"> & {
-		match(
-			...args: Parameters<MiniflareCacheInterface["match"]>
-		): Promise<Response | undefined>;
-	};
-
-	class CacheStorage {
-		get default(): CacheInterface;
-		open(cacheName: string): Promise<CacheInterface>;
-	}
-
-	class HTMLRewriter extends MiniflareHTMLRewriter {
-		transform(response: Response): Response;
-	}
-
-	type ReadableStream = SimilarReadableStream;
+	// Not polyfilled
+	type ReadableStream = WorkerReadableStream;
+	type CacheStorage = WorkerCacheStorage;
+	class HTMLRewriter extends WorkerHTMLRewriter {}
 }
 
 export type PolyfilledRuntimeEnvironment = {

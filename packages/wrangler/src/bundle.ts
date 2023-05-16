@@ -152,7 +152,6 @@ export async function bundleWorker(
 		targetConsumer: "dev" | "deploy";
 		local: boolean;
 		testScheduled?: boolean;
-		experimentalLocal?: boolean;
 		inject?: string[];
 		loader?: Record<string, string>;
 		sourcemap?: esbuild.CommonOptions["sourcemap"];
@@ -186,7 +185,6 @@ export async function bundleWorker(
 		firstPartyWorkerDevFacade,
 		targetConsumer,
 		testScheduled,
-		experimentalLocal,
 		inject: injectOption,
 		loader,
 		sourcemap,
@@ -262,7 +260,7 @@ export async function bundleWorker(
 			path: "templates/middleware/middleware-scheduled.ts",
 		});
 	}
-	if (experimentalLocal) {
+	if (local) {
 		// In Miniflare 3, we bind the user's worker as a service binding in a
 		// special entry worker that handles things like injecting `Request.cf`,
 		// live-reload, and the pretty-error page.
@@ -325,7 +323,6 @@ export async function bundleWorker(
 					currentEntry,
 					tmpDir.path,
 					betaD1Shims,
-					local && !experimentalLocal,
 					doBindings
 				);
 			}),
@@ -866,7 +863,6 @@ async function applyD1BetaFacade(
 	entry: Entry,
 	tmpDirPath: string,
 	betaD1Shims: string[],
-	miniflare2: boolean,
 	doBindings: DurableObjectBindings
 ): Promise<Entry> {
 	let entrypointPath = path.resolve(
@@ -917,7 +913,7 @@ async function applyD1BetaFacade(
 		],
 		define: {
 			__D1_IMPORTS__: JSON.stringify(betaD1Shims),
-			__LOCAL_MODE__: JSON.stringify(miniflare2),
+			__LOCAL_MODE__: "false", // TODO: remove
 		},
 		outfile: targetPath,
 	});
