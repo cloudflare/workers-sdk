@@ -54,7 +54,18 @@ export type WorkerMetadataBinding =
 	| { type: "constellation"; name: string; project: string }
 	| { type: "service"; name: string; service: string; environment?: string }
 	| { type: "analytics_engine"; name: string; dataset?: string }
-	| { type: "dispatch_namespace"; name: string; namespace: string }
+	| {
+			type: "dispatch_namespace";
+			name: string;
+			namespace: string;
+			outbound?: {
+				worker: {
+					service: string;
+					environment?: string;
+				};
+				params?: { name: string }[];
+			};
+	  }
 	| { type: "mtls_certificate"; name: string; certificate_id: string }
 	| {
 			type: "logfwdr";
@@ -194,11 +205,20 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		});
 	});
 
-	bindings.dispatch_namespaces?.forEach(({ binding, namespace }) => {
+	bindings.dispatch_namespaces?.forEach(({ binding, namespace, outbound }) => {
 		metadataBindings.push({
 			name: binding,
 			type: "dispatch_namespace",
 			namespace,
+			...(outbound && {
+				outbound: {
+					worker: {
+						service: outbound.service,
+						environment: outbound.environment,
+					},
+					params: outbound.parameters?.map((p) => ({ name: p })),
+				},
+			}),
 		});
 	});
 

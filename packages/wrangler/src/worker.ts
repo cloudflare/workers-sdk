@@ -174,6 +174,11 @@ interface CfAnalyticsEngineDataset {
 interface CfDispatchNamespace {
 	binding: string;
 	namespace: string;
+	outbound?: {
+		service: string;
+		environment?: string;
+		parameters?: string[];
+	};
 }
 
 interface CfMTlsCertificate {

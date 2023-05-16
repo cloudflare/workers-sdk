@@ -34,6 +34,7 @@ import type {
 	Environment,
 	Rule,
 	TailConsumer,
+	DispatchNamespaceOutbound,
 } from "./environment";
 import type { ValidatorFn } from "./validation-helpers";
 
@@ -2368,8 +2369,65 @@ const validateWorkerNamespaceBinding: ValidatorFn = (
 		);
 		isValid = false;
 	}
+	if (hasProperty(value, "outbound")) {
+		if (
+			!validateWorkerNamespaceOutbound(
+				diagnostics,
+				`${field}.outbound`,
+				value.outbound ?? {}
+			)
+		) {
+			diagnostics.errors.push(`"${field}" has an invalid outbound definition.`);
+			isValid = false;
+		}
+	}
 	return isValid;
 };
+
+function validateWorkerNamespaceOutbound(
+	diagnostics: Diagnostics,
+	field: string,
+	value: DispatchNamespaceOutbound
+): boolean {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"${field}" should be an object, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+
+	let isValid = true;
+
+	// Namespace outbounds need at least a service name
+	isValid =
+		isValid &&
+		validateRequiredProperty(
+			diagnostics,
+			field,
+			"service",
+			value.service,
+			"string"
+		);
+	isValid =
+		isValid &&
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"environment",
+			value.environment,
+			"string"
+		);
+	isValid =
+		isValid &&
+		validateOptionalTypedArray(
+			diagnostics,
+			`${field}.parameters`,
+			value.parameters,
+			"string"
+		);
+
+	return isValid;
+}
 
 const validateMTlsCertificateBinding: ValidatorFn = (
 	diagnostics,

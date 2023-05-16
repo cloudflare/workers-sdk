@@ -2401,6 +2401,113 @@ describe("normalizeAndValidateConfig()", () => {
 			  - \\"dispatch_namespaces[6]\\" should have a string \\"namespace\\" field but got {\\"binding\\":123,\\"service\\":456}."
 		`);
 			});
+
+			test("should error on invalid outbounds for a namespace", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						dispatch_namespaces: [
+							{
+								binding: "DISPATCH_NAMESPACE_BINDING_1",
+								namespace: "NAMESPACE",
+								outbound: "a string",
+							},
+							{
+								binding: "DISPATCH_NAMESPACE_BINDING_2",
+								namespace: "NAMESPACE",
+								outbound: [{ not: "valid" }],
+							},
+							{
+								binding: "DISPATCH_NAMESPACE_BINDING_3",
+								namespace: "NAMESPACE",
+								outbound: {
+									service: 123,
+								},
+							},
+							{
+								binding: "DISPATCH_NAMESPACE_BINDING_4",
+								namespace: "NAMESPACE",
+								outbound: {
+									service: "outbound",
+									environment: { bad: "env" },
+								},
+							},
+							{
+								binding: "DISPATCH_NAMESPACE_BINDING_5",
+								namespace: "NAMESPACE",
+								outbound: {
+									environment: "production",
+								},
+							},
+							{
+								binding: "DISPATCH_NAMESPACE_BINDING_6",
+								namespace: "NAMESPACE",
+								outbound: {
+									service: "outbound",
+									parameters: "bad",
+								},
+							},
+							{
+								binding: "DISPATCH_NAMESPACE_BINDING_7",
+								namespace: "NAMESPACE",
+								outbound: {
+									service: "outbound",
+									parameters: false,
+								},
+							},
+							{
+								binding: "DISPATCH_NAMESPACE_BINDING_8",
+								namespace: "NAMESPACE",
+								outbound: {
+									service: "outbound",
+									parameters: [true, { not: "good" }],
+								},
+							},
+							// these are correct
+							{
+								binding: "DISPATCH_NAMESPACE_BINDING_9",
+								namespace: "NAMESPACE",
+								outbound: {
+									service: "outbound",
+									parameters: ["finally", "real", "params"],
+								},
+							},
+							{
+								binding: "DISPATCH_NAMESPACE_BINDING_10",
+								namespace: "NAMESPACE",
+								outbound: {
+									service: "outbound",
+									environment: "production",
+									parameters: ["some", "more", "params"],
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - \\"dispatch_namespaces[0].outbound\\" should be an object, but got \\"a string\\"
+			  - \\"dispatch_namespaces[0]\\" has an invalid outbound definition.
+			  - \\"dispatch_namespaces[1].outbound.service\\" is a required field.
+			  - \\"dispatch_namespaces[1]\\" has an invalid outbound definition.
+			  - Expected \\"dispatch_namespaces[2].outbound.service\\" to be of type string but got 123.
+			  - \\"dispatch_namespaces[2]\\" has an invalid outbound definition.
+			  - Expected \\"dispatch_namespaces[3].outbound.environment\\" to be of type string but got {\\"bad\\":\\"env\\"}.
+			  - \\"dispatch_namespaces[3]\\" has an invalid outbound definition.
+			  - \\"dispatch_namespaces[4].outbound.service\\" is a required field.
+			  - \\"dispatch_namespaces[4]\\" has an invalid outbound definition.
+			  - Expected \\"dispatch_namespaces[5].outbound.parameters\\" to be an array of strings but got \\"bad\\"
+			  - \\"dispatch_namespaces[5]\\" has an invalid outbound definition.
+			  - Expected \\"dispatch_namespaces[6].outbound.parameters\\" to be an array of strings but got false
+			  - \\"dispatch_namespaces[6]\\" has an invalid outbound definition.
+			  - Expected \\"dispatch_namespaces[7].outbound.parameters.[0]\\" to be of type string but got true.
+			  - Expected \\"dispatch_namespaces[7].outbound.parameters.[1]\\" to be of type string but got {\\"not\\":\\"good\\"}.
+			  - \\"dispatch_namespaces[7]\\" has an invalid outbound definition."
+		`);
+			});
 		});
 
 		describe("[mtls_certificates]", () => {

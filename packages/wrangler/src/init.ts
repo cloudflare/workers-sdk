@@ -1010,7 +1010,18 @@ export function mapBindings(bindings: WorkerMetadataBinding[]): RawConfig {
 						{
 							configObj.dispatch_namespaces = [
 								...(configObj.dispatch_namespaces ?? []),
-								{ binding: binding.name, namespace: binding.namespace },
+								{
+									binding: binding.name,
+									namespace: binding.namespace,
+									...(binding.outbound && {
+										outbound: {
+											service: binding.outbound.worker.service,
+											environment: binding.outbound.worker.environment,
+											parameters:
+												binding.outbound.params?.map((p) => p.name) ?? [],
+										},
+									}),
+								},
 							];
 						}
 						break;
