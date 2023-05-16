@@ -270,3 +270,27 @@ test("Miniflare: `node:` and `cloudflare:` modules", async (t) => {
 	const res = await mf.dispatchFetch("http://localhost");
 	t.is(await res.text(), "dGVzdA==");
 });
+
+test("Miniflare: modules in sub-directories", async (t) => {
+	const mf = new Miniflare({
+		modules: [
+			{
+				type: "ESModule",
+				path: "index.js",
+				contents: `import { b } from "./sub1/index.js"; export default { fetch() { return new Response(String(b + 3)); } }`,
+			},
+			{
+				type: "ESModule",
+				path: "sub1/index.js",
+				contents: `import { c } from "./sub2/index.js"; export const b = c + 20;`,
+			},
+			{
+				type: "ESModule",
+				path: "sub1/sub2/index.js",
+				contents: `export const c = 100;`,
+			},
+		],
+	});
+	const res = await mf.dispatchFetch("http://localhost");
+	t.is(await res.text(), "123");
+});
