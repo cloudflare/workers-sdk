@@ -8,7 +8,7 @@ import {
 	runFrameworkGenerator,
 } from "helpers/command";
 import { compatDateFlag, usesTypescript } from "helpers/files";
-import { getFrameworkVersion } from "..";
+import { getFrameworkVersion } from "../index";
 import { platformInterface } from "./templates";
 import type * as recast from "recast";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";

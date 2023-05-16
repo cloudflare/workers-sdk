@@ -7,7 +7,7 @@ import {
 	runFrameworkGenerator,
 } from "helpers/command";
 import { compatDateFlag, usesTypescript, writeFile } from "helpers/files";
-import { getFrameworkVersion } from "..";
+import { getFrameworkVersion } from "../index";
 import { viteConfig } from "./templates";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 

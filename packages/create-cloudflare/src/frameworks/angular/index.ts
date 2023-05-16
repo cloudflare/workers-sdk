@@ -9,7 +9,7 @@ import {
 } from "helpers/command";
 import { readFile, readJSON, writeFile } from "helpers/files";
 import { spinner } from "helpers/interactive";
-import { getFrameworkVersion } from "..";
+import { getFrameworkVersion } from "../index";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
 const { npx } = detectPackageManager();

@@ -1,7 +1,7 @@
 import { logRaw } from "helpers/cli";
 import { detectPackageManager, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
-import { getFrameworkVersion } from "..";
+import { getFrameworkVersion } from "../index";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
 const { npm, npx } = detectPackageManager();
