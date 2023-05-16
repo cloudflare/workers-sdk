@@ -12,6 +12,7 @@ import { runPagesGenerator } from "./pages";
 import { runWorkersGenerator } from "./workers";
 import type { Option } from "helpers/interactive";
 import type { PagesGeneratorArgs } from "types";
+import { Context } from "vitest";
 
 export const main = async (argv: string[]) => {
 	printBanner();
@@ -115,6 +116,16 @@ const templateMap: Record<string, TemplateConfig> = {
 	common: {
 		label: "Common Worker functions",
 		handler: runWorkersGenerator,
+	},
+	chatgpt: {
+		label: `ChatGPT plugin (Typescript)`,
+		handler: (args) =>
+			runWorkersGenerator({
+				projectName: args.projectName,
+				type: "chatgpt",
+				open: true,
+				ts: true,
+			}),
 	},
 	"pre-existing": {
 		label: "Pre-existing Worker (from Dashboard)",
