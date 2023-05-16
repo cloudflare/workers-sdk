@@ -29,9 +29,9 @@ export const runWorkersGenerator = async (args: Args) => {
 	await copyFiles(ctx);
 	await copyExistingWorkerFiles(ctx);
 	await updateFiles(ctx);
-	endSection("Project created");
+	endSection("Application created");
 
-	startSection("Installing your dependencies", "Step 2 of 3");
+	startSection("Installing dependencies", "Step 2 of 3");
 	chdir(ctx.project.path);
 	await npmInstall();
 	endSection("Dependencies Installed");
@@ -47,7 +47,7 @@ async function getTemplate(ctx: Context) {
 		ctx.args.ts = await confirmInput({
 			question: "Do you want to use TypeScript?",
 			renderSubmitted: (value) =>
-				`${brandColor("typescript")} ${dim(`"${value}"`)}`,
+				`${brandColor("typescript")} ${dim(`${value ? "yes" : "no"}`)}`,
 			defaultValue: true,
 		});
 	}

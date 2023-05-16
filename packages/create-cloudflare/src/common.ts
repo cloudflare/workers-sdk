@@ -167,7 +167,7 @@ export const printSummary = async (ctx: PagesGeneratorContext) => {
 		const msg = [
 			`${gray(shapes.leftT)}`,
 			`${bgGreen(" APPLICATION CREATED ")}`,
-			`${dim(`Deploy your appliction with`)}`,
+			`${dim(`Deploy your application with`)}`,
 			`${blue(
 				`${npm} run ${ctx.framework?.config.deployCommand ?? "deploy"}`
 			)}`,

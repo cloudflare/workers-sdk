@@ -1,5 +1,6 @@
 import { cp, rm } from "node:fs/promises";
 import { resolve } from "node:path";
+import { logRaw } from "helpers/cli";
 import { brandColor, dim } from "helpers/colors";
 import {
 	detectPackageManager,
@@ -12,7 +13,7 @@ import { spinner } from "helpers/interactive";
 import { getFrameworkVersion } from "../index";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
-const { npx } = detectPackageManager();
+const { npx, npm } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
 	const version = getFrameworkVersion(ctx);
@@ -21,6 +22,8 @@ const generate = async (ctx: PagesGeneratorContext) => {
 		ctx,
 		`${npx} @angular/cli@${version} new ${ctx.project.name} --standalone`
 	);
+
+	logRaw("");
 };
 
 const configure = async (ctx: PagesGeneratorContext) => {
@@ -28,10 +31,10 @@ const configure = async (ctx: PagesGeneratorContext) => {
 	await runCommand(`${npx} @angular/cli@next analytics disable`, {
 		silent: true,
 	});
-	await addSSRAdaptor();
+	await addSSRAdapter();
 	await installCFWorker(ctx);
 	await updateAppCode();
-	await updateAngularJson(ctx);
+	updateAngularJson(ctx);
 };
 
 const config: FrameworkConfig = {
@@ -54,14 +57,14 @@ export default config;
 
 async function installCFWorker(ctx: PagesGeneratorContext) {
 	const s = spinner();
-	s.start(`Adding Cloudflare Pages adaptor code`);
+	s.start(`Adding Cloudflare Pages adapter code`);
 	await cp(
 		// eslint-disable-next-line no-restricted-globals
 		resolve(__dirname, "./angular/templates"),
 		resolve(ctx.project.path),
 		{ recursive: true, force: true }
 	);
-	s.stop(`${brandColor("added")} ${dim("Cloudflare Pages adaptor code`")}`);
+	s.stop(`${brandColor("copied")} ${dim("adapter code")}`);
 
 	await installPackages(
 		[
@@ -75,21 +78,20 @@ async function installCFWorker(ctx: PagesGeneratorContext) {
 		],
 		{
 			dev: true,
-			startText: "Installing adaptor dependencies",
-			doneText: "Installed",
+			startText: "Installing adapter dependencies",
+			doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
 		}
 	);
 }
 
-async function addSSRAdaptor() {
-	await runCommand(
-		`${npx} ng add @nguniversal/express-engine --skip-confirmation`,
-		{
-			silent: true,
-			startText: "Installing Angular SSR",
-			doneText: `${brandColor("installed")}`,
-		}
-	);
+async function addSSRAdapter() {
+	const cmd = `${npx} ng add @nguniversal/express-engine`;
+
+	await runCommand(`${cmd} --skip-confirmation`, {
+		silent: true,
+		startText: "Installing Angular SSR",
+		doneText: `${brandColor("installed")} ${dim(`via \`${cmd}\``)}`,
+	});
 }
 
 async function updateAppCode() {
@@ -97,16 +99,17 @@ async function updateAppCode() {
 	s.start(`Updating application code`);
 
 	// Add the `provideClientHydration()` provider to the app config.
-	const appConfig = readFile(resolve("src/app/app.config.ts"));
+	const appConfigPath = "src/app/app.config.ts";
+	const appConfig = readFile(resolve(appConfigPath));
 	const newAppConfig =
 		"import { provideClientHydration } from '@angular/platform-browser';\n" +
 		appConfig.replace("providers: [", "providers: [provideClientHydration(), ");
-	await writeFile(resolve("src/app/app.config.ts"), newAppConfig);
+	writeFile(resolve(appConfigPath), newAppConfig);
 
 	// Remove the unwanted node.js server entry-point
 	await rm(resolve("server.ts"));
 
-	s.stop(`Done updating application code`);
+	s.stop(`${brandColor(`updated`)} ${dim(appConfigPath)}`);
 }
 
 function updateAngularJson(ctx: PagesGeneratorContext) {
@@ -121,5 +124,5 @@ function updateAngularJson(ctx: PagesGeneratorContext) {
 	delete architectSection["serve-ssr"];
 
 	writeFile(resolve("angular.json"), JSON.stringify(angularJson, null, 2));
-	s.stop(`Updated angular.json config`);
+	s.stop(`${brandColor(`updated`)} ${dim(`\`angular.json\``)}`);
 }
