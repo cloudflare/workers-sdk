@@ -200,8 +200,21 @@ export async function initHandler(args: InitArgs) {
 			throw err;
 		}
 
+		const c3Arguments = [
+			"create",
+			"cloudflare@2",
+			fromDashScriptName,
+			"--",
+			"--type",
+			"pre-existing",
+			"--name",
+			fromDashScriptName,
+		];
+
 		// Deprecate the `init --from-dash` command
-		const replacementC3Command = `\`${packageManager.type} create cloudflare --template pre-existing --name ${fromDashScriptName}\``;
+		const replacementC3Command = `\`${packageManager.type} ${c3Arguments.join(
+			" "
+		)}\``;
 		logger.warn(
 			`The \`init --from-dash\` command is no longer supported. Please use ${replacementC3Command} instead.\nThe \`init\` command will be removed in a future version.`
 		);
@@ -210,13 +223,7 @@ export async function initHandler(args: InitArgs) {
 		if (args.delegateC3) {
 			logger.log(`Running ${replacementC3Command}...`);
 
-			await execa(packageManager.type, [
-				"create",
-				"cloudflare",
-				fromDashScriptName,
-				"--type",
-				"pre-existing",
-			]);
+			await execa(packageManager.type, c3Arguments, { stdio: "inherit" });
 
 			return;
 		}
@@ -240,7 +247,7 @@ export async function initHandler(args: InitArgs) {
 		//    if a wrangler.toml file does not exist (C3 expects to scaffold *new* projects)
 		//    and if --from-dash is not set (C3 will run wrangler to communicate with the API)
 		if (!fromDashScriptName) {
-			const replacementC3Command = `\`${packageManager.type} create cloudflare\``;
+			const replacementC3Command = `\`${packageManager.type} create cloudflare@2\``;
 
 			logger.warn(
 				`The \`init\` command is no longer supported. Please use ${replacementC3Command} instead.\nThe \`init\` command will be removed in a future version.`
@@ -249,7 +256,9 @@ export async function initHandler(args: InitArgs) {
 			if (args.delegateC3) {
 				logger.log(`Running ${replacementC3Command}...`);
 
-				await execa(packageManager.type, ["create", "cloudflare"]);
+				await execa(packageManager.type, ["create", "cloudflare@2"], {
+					stdio: "inherit",
+				});
 
 				return;
 			}
