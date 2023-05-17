@@ -1,5 +1,11 @@
 # @cloudflare/pages-shared
 
+## 0.5.0
+
+### Minor Changes
+
+- [#3150](https://github.com/cloudflare/workers-sdk/pull/3150) [`7512d4cc`](https://github.com/cloudflare/workers-sdk/commit/7512d4cc3cb3a0d3d6d766aeb1f912fdb8493d0b) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: upgrade `miniflare` to [`2.14.0`](https://github.com/cloudflare/miniflare/releases/tag/v2.14.0)
+
 ## 0.4.2
 
 ### Patch Changes

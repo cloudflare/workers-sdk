@@ -16,6 +16,6 @@
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20221111.1",
 		"@types/service-worker-mock": "^2.0.1",
-		"wrangler": "^2.4.4"
+		"wrangler": "^3.0.0"
 	}
 }

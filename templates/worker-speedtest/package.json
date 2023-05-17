@@ -19,6 +19,6 @@
 		"miniflare": "^2.14.0",
 		"prettier": "^2.7.1",
 		"ts-jest": "^28.0.7",
-		"wrangler": "^2.0.0"
+		"wrangler": "^3.0.0"
 	}
 }

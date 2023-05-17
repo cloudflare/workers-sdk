@@ -1,6 +1,6 @@
 {
 	"name": "news-feed-app",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"private": true,
 	"scripts": {
 		"build": "react-scripts build",
@@ -41,7 +41,7 @@
 		"react-icons": "^4.4.0",
 		"react-scripts": "5.0.1",
 		"web-vitals": "^2.1.4",
-		"wrangler": "^2.0.16"
+		"wrangler": "^3.0.0"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^3.14.1",

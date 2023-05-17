@@ -17,6 +17,6 @@
 	"devDependencies": {
 		"@esbuild-plugins/node-modules-polyfill": "0.1.4",
 		"worktop.build": "0.0.5",
-		"wrangler": "^2.0.0"
+		"wrangler": "^3.0.0"
 	}
 }

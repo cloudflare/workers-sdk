@@ -1,5 +1,100 @@
 # wrangler
 
+## 3.0.0
+
+### Major Changes
+
+- [#3197](https://github.com/cloudflare/workers-sdk/pull/3197) [`3b3fadfa`](https://github.com/cloudflare/workers-sdk/commit/3b3fadfa16009c6eac2f0aa747db8b06eb80a391) Thanks [@mrbbot](https://github.com/mrbbot)! - feature: rename `wrangler publish` to `wrangler deploy`
+
+  This ensures consistency with other messaging, documentation and our dashboard,
+  which all refer to deployments. This also avoids confusion with the similar but
+  very different `npm publish` command. `wrangler publish` will remain a
+  deprecated alias for now, but will be removed in the next major version of Wrangler.
+
+* [#3197](https://github.com/cloudflare/workers-sdk/pull/3197) [`bac9b5de`](https://github.com/cloudflare/workers-sdk/commit/bac9b5de31210e57760ecaec599fe921a426f921) Thanks [@mrbbot](https://github.com/mrbbot)! - feature: enable local development with Miniflare 3 and `workerd` by default
+
+  `wrangler dev` now runs fully-locally by default, using the open-source Cloudflare Workers runtime [`workerd`](https://github.com/cloudflare/workerd).
+  To restore the previous behaviour of running on a remote machine with access to production data, use the new `--remote` flag.
+  The `--local` and `--experimental-local` flags have been deprecated, as this behaviour is now the default, and will be removed in the next major version.
+
+- [#3197](https://github.com/cloudflare/workers-sdk/pull/3197) [`02a672ed`](https://github.com/cloudflare/workers-sdk/commit/02a672ed39921a75f32d6d2665d5a0080a71e34f) Thanks [@mrbbot](https://github.com/mrbbot)! - feature: enable persistent storage in local mode by default
+
+  Wrangler will now persist local KV, R2, D1, Cache and Durable Object data
+  in the `.wrangler` folder, by default, between reloads. This persistence
+  directory can be customised with the `--persist-to` flag. The `--persist` flag
+  has been removed, as this is now the default behaviour.
+
+* [#3197](https://github.com/cloudflare/workers-sdk/pull/3197) [`dc755fdc`](https://github.com/cloudflare/workers-sdk/commit/dc755fdc885a4e8d35338e65e7e54156499e4454) Thanks [@mrbbot](https://github.com/mrbbot)! - feature: remove delegation to locally installed versions
+
+  Previously, if Wrangler was installed globally _and_ locally within a project,
+  running the global Wrangler would instead invoke the local version.
+  This behaviour was contrary to most other JavaScript CLI tools and has now been
+  removed. We recommend you use `npx wrangler` instead, which will invoke the
+  local version if installed, or install globally if not.
+
+- [#3197](https://github.com/cloudflare/workers-sdk/pull/3197) [`24e1607a`](https://github.com/cloudflare/workers-sdk/commit/24e1607a5257d68da2beee90bbc61e8d04cf8742) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: remove unused files from published package
+
+  Specifically, the `src` and `miniflare-config-stubs` directories have been removed.
+
+### Minor Changes
+
+- [#3200](https://github.com/cloudflare/workers-sdk/pull/3200) [`f1b8a1cc`](https://github.com/cloudflare/workers-sdk/commit/f1b8a1cccc47396047656cab540abdb4ec0be19a) Thanks [@matthewdavidrodgers](https://github.com/matthewdavidrodgers)! - Support outbounds for dispatch_namespace bindings
+
+* [#3197](https://github.com/cloudflare/workers-sdk/pull/3197) [`b7c590b5`](https://github.com/cloudflare/workers-sdk/commit/b7c590b54e595fa5386762b9235bce625daade4e) Thanks [@mrbbot](https://github.com/mrbbot)! - feature: warn when a new major version is available
+
+- [#3197](https://github.com/cloudflare/workers-sdk/pull/3197) [`e1e5d782`](https://github.com/cloudflare/workers-sdk/commit/e1e5d782c059dcd8343a6d2776a34f16e9d2b735) Thanks [@mrbbot](https://github.com/mrbbot)! - feature: add warning when trying to use `wrangler dev` inside a WebContainer
+
+* [#3230](https://github.com/cloudflare/workers-sdk/pull/3230) [`41fc45c2`](https://github.com/cloudflare/workers-sdk/commit/41fc45c225f0d269a1bb06d89754a2a14ba7d517) Thanks [@matthewdavidrodgers](https://github.com/matthewdavidrodgers)! - Support tail_consumers in script upload
+
+- [#3157](https://github.com/cloudflare/workers-sdk/pull/3157) [`4d7781f7`](https://github.com/cloudflare/workers-sdk/commit/4d7781f78ace94d3f627ba0b8ea7e5662a0cbe1f) Thanks [@edevil](https://github.com/edevil)! - [wrangler] feat: Support for Constellation bindings
+
+  Added support for a new type of safe bindings called "Constellation"
+  that allows interacting with uploaded models in the context of these
+  projects.
+
+  ```toml
+  [[constellation]]
+  binding = 'AI'
+  project_id = '9d478427-dea6-4988-9b16-f6f8888d974c'
+  ```
+
+* [#3135](https://github.com/cloudflare/workers-sdk/pull/3135) [`cc2adc2e`](https://github.com/cloudflare/workers-sdk/commit/cc2adc2e8b28d1e38563bf72085d44e330563b08) Thanks [@edevil](https://github.com/edevil)! - [wrangler] feat: Support for Browser Workers
+
+  These bindings allow one to use puppeteer to control a browser
+  in a worker script.
+
+- [#3150](https://github.com/cloudflare/workers-sdk/pull/3150) [`7512d4cc`](https://github.com/cloudflare/workers-sdk/commit/7512d4cc3cb3a0d3d6d766aeb1f912fdb8493d0b) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: upgrade `miniflare` to [`2.14.0`](https://github.com/cloudflare/miniflare/releases/tag/v2.14.0)
+
+### Patch Changes
+
+- [#3175](https://github.com/cloudflare/workers-sdk/pull/3175) [`561b962f`](https://github.com/cloudflare/workers-sdk/commit/561b962f8e051ede6ce16ba189ab2088910e9cf4) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: `_worker.js/` directory support for dynamically imported chunks in `wrangler pages dev`
+
+* [#3186](https://github.com/cloudflare/workers-sdk/pull/3186) [`3050ce7f`](https://github.com/cloudflare/workers-sdk/commit/3050ce7f9d28067c1a5e3189f42d7a9e335569cb) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure pages \_routes.json emulation in dev command handles .s and \*s
+
+  Fixes #3184
+
+- [#3048](https://github.com/cloudflare/workers-sdk/pull/3048) [`6ccc4fa6`](https://github.com/cloudflare/workers-sdk/commit/6ccc4fa672204ec671a1c99db04b4acbd52d5f20) Thanks [@oustn](https://github.com/oustn)! - Fix: fix local registry server closed
+
+  Closes [#1920](https://github.com/cloudflare/workers-sdk/issues/1920). Sometimes start the local dev server will kill
+  the devRegistry server so that the devRegistry server can't be used. We can listen the devRegistry server close event
+  and reset server to `null`. When registerWorker is called, we can check if the server is `null` and start a new server.
+
+* [#3001](https://github.com/cloudflare/workers-sdk/pull/3001) [`f9722873`](https://github.com/cloudflare/workers-sdk/commit/f9722873def41d21c3a90d9bb14747e76d2e01e1) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: make it possible to create a D1 database backed by the experimental backend, and make `d1 execute`'s batch size configurable
+
+  With this PR, users will be able to run `wrangler d1 create <NAME> --experimental-backend` to create new D1 dbs that use an experimental backend. You can also run `wrangler d1 migrations apply <NAME> experimental-backend` to run migrations against an experimental database.
+
+  On top of that, both `wrangler d1 migrations apply <NAME>` and `wrangler d1 execute <NAME>` now have a configurable `batch-size` flag, as the experimental backend can handle more than 10000 statements at a time.
+
+- [#3153](https://github.com/cloudflare/workers-sdk/pull/3153) [`1b67a405`](https://github.com/cloudflare/workers-sdk/commit/1b67a405b7777efc401a44f59389ef00654b439d) Thanks [@edevil](https://github.com/edevil)! - [wrangler] fix: constellation command help
+
+  Changed `name` to `projectName` in some Constellation commands that interacted with projects. Also added the possibility to specify a model description when uploading it.
+
+* [#3214](https://github.com/cloudflare/workers-sdk/pull/3214) [`ce04aac0`](https://github.com/cloudflare/workers-sdk/commit/ce04aac04b473ad0074f0102bb15ebd4da42e55a) Thanks [@jspspike](https://github.com/jspspike)! - Add message for when `wrangler tail` exits sampling mode
+
+- [#3168](https://github.com/cloudflare/workers-sdk/pull/3168) [`88ff9d7d`](https://github.com/cloudflare/workers-sdk/commit/88ff9d7d848a4f2bb0f836c3b2758434334d5144) Thanks [@rozenmd](https://github.com/rozenmd)! - feat: (alpha) - make it possible to give D1 a hint on where it should create the database
+
+* [#3175](https://github.com/cloudflare/workers-sdk/pull/3175) [`561b962f`](https://github.com/cloudflare/workers-sdk/commit/561b962f8e051ede6ce16ba189ab2088910e9cf4) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: `_worker.js/` directory support for D1 bindings
+
 ## 2.20.0
 
 ### Minor Changes
