@@ -6552,7 +6552,13 @@ addEventListener('fetch', event => {});`
 			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`wrangler publish\` is deprecated and will be removed in the next major version.[0m
+
+			  Please use \`wrangler deploy\` instead, which accepts exactly the same arguments.
+
+			"
+		`);
 			});
 
 			it("should support dispatch namespace bindings with parameterized outbounds", async () => {
@@ -6601,7 +6607,13 @@ addEventListener('fetch', event => {});`
 			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`wrangler publish\` is deprecated and will be removed in the next major version.[0m
+
+			  Please use \`wrangler deploy\` instead, which accepts exactly the same arguments.
+
+			"
+		`);
 			});
 		});
 
