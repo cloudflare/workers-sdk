@@ -2,6 +2,7 @@
 	"editor.defaultFormatter": "esbenp.prettier-vscode",
 	"cSpell.words": [
 		"cfetch",
+		"chatgpt",
 		"clipboardy",
 		"cloudflareaccess",
 		"cloudflared",
@@ -9,6 +10,8 @@
 		"esbuild",
 		"eslintcache",
 		"execa",
+		"haikunate",
+		"haikunator",
 		"iarna",
 		"keyvalue",
 		"logfwdr",
