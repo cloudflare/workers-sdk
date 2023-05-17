@@ -49,8 +49,5 @@ export const usesTypescript = (projectRoot = ".") => {
 // Generate a compatibility date flag
 export const compatDateFlag = () => {
 	const date = new Date();
-	const month = date.getMonth() + 1;
-	const day = date.getDate();
-	const year = date.getFullYear();
-	return `--compatibility-date=${month}-${day}-${year}`;
+	return `--compatibility-date=${date.toISOString().slice(0, 10)}`;
 };
