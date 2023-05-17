@@ -96,15 +96,18 @@ async function copyExistingWorkerFiles(ctx: Context) {
 		const tempdir = await mkdtemp(
 			join(tmpdir(), "c3-wrangler-init--from-dash-")
 		);
-		await runCommand(`npx wrangler init --from-dash ${ctx.existingScript} -y`, {
-			silent: true,
-			cwd: tempdir, // use a tempdir because we don't want all the files
-			env: { CLOUDFLARE_ACCOUNT_ID: ctx.account?.id },
-			startText: "Downloading existing worker files",
-			doneText: `${brandColor("downloaded")} ${dim(
-				`existing "${ctx.existingScript}" worker files`
-			)}`,
-		});
+		await runCommand(
+			`npx wrangler@3 init --from-dash ${ctx.existingScript} -y`,
+			{
+				silent: true,
+				cwd: tempdir, // use a tempdir because we don't want all the files
+				env: { CLOUDFLARE_ACCOUNT_ID: ctx.account?.id },
+				startText: "Downloading existing worker files",
+				doneText: `${brandColor("downloaded")} ${dim(
+					`existing "${ctx.existingScript}" worker files`
+				)}`,
+			}
+		);
 
 		// remove any src/* files from the template
 		for (const filename of await readdir(join(ctx.project.path, "src"))) {
