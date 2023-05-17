@@ -16,7 +16,7 @@ import type { PagesGeneratorArgs } from "types";
 export const main = async (argv: string[]) => {
 	printBanner();
 
-	const args = await parseArgs(argv);
+	const args = (await parseArgs(argv)) as PagesGeneratorArgs;
 	await validateName(args);
 	await validateType(args);
 
@@ -38,16 +38,10 @@ const parseArgs = async (argv: string[]) => {
 		.option("framework", { type: "string" })
 		.option("deploy", { type: "boolean" })
 		.option("ts", { type: "boolean" })
-		.option("open", {
-			type: "boolean",
-			default: true,
-			description:
-				"opens your browser after your deployment, set --no-open to disable",
-		})
 		.help().argv;
 
 	const [name] = args._;
-	const { deploy, framework, type, ts, open } = args;
+	const { deploy, framework, type, ts } = args;
 
 	return {
 		projectName: name,
@@ -55,8 +49,7 @@ const parseArgs = async (argv: string[]) => {
 		framework,
 		deploy,
 		ts,
-		open,
-	} as PagesGeneratorArgs;
+	};
 };
 
 const validateName = async (args: Partial<PagesGeneratorArgs>) => {
@@ -115,6 +108,15 @@ const templateMap: Record<string, TemplateConfig> = {
 	common: {
 		label: "Common Worker functions",
 		handler: runWorkersGenerator,
+	},
+	chatgptPlugin: {
+		label: `ChatGPT plugin (Typescript)`,
+		handler: (args) =>
+			runWorkersGenerator({
+				projectName: args.projectName,
+				type: "chatgptPlugin",
+				ts: true,
+			}),
 	},
 	"pre-existing": {
 		label: "Pre-existing Worker (from Dashboard)",
