@@ -569,7 +569,7 @@ export const Handler = async ({
 			additionalModules: modules,
 			d1Databases: d1s.map((binding) => ({
 				binding: binding.toString(),
-				database_id: "", // Required for types, but unused by dev
+				database_id: binding.toString(),
 				database_name: `local-${binding}`,
 			})),
 			disableExperimentalWarning: true,
