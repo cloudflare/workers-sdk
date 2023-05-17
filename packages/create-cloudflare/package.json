@@ -1,9 +1,21 @@
 {
   "name": "create-cloudflare",
   "version": "2.0.1",
-  "description": "",
-  "license": "ISC",
-  "author": "",
+  "description": "A CLI for creating and deploying new applications to Cloudflare.",
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "cloudflare workers",
+    "serverless",
+    "serverless application"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cloudflare/workers-sdk.git",
+    "directory": "packages/create-cloudflare"
+  },
+  "license": "MIT OR Apache-2.0",
+  "author": "wrangler@cloudflare.com",
   "exports": {
     ".": "./dist/cli.js"
   },
@@ -48,5 +60,8 @@
     "which-pm-runs": "^1.1.0",
     "wrangler": "^2.13.0",
     "yargs": "^17.7.1"
+  },
+  "engines": {
+    "node": ">=16.13.0"
   }
 }
