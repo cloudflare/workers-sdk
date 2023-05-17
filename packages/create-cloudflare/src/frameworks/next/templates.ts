@@ -1,5 +1,5 @@
-export const apiHelloTs = `
-// Next.js Edge API Routes: https://nextjs.org/docs/api-routes/edge-api-routes
+export const apiPagesDirHelloTs = `
+// Next.js Edge API Routes: https://nextjs.org/docs/pages/building-your-application/routing/api-routes#edge-api-routes
 
 import type { NextRequest } from 'next/server'
 
@@ -12,8 +12,8 @@ export default async function handler(req: NextRequest) {
 }
 `;
 
-export const apiHelloJs = `
-// Next.js Edge API Routes: https://nextjs.org/docs/api-routes/edge-api-routes
+export const apiPagesDirHelloJs = `
+// Next.js Edge API Routes: https://nextjs.org/docs/pages/building-your-application/routing/api-routes#edge-api-routes
 
 export const config = {
   runtime: 'edge',
@@ -24,12 +24,24 @@ export default async function handler(req) {
 }
 `;
 
-export const nextConfigJs = `
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  reactStrictMode: true,
-  runtime: 'edge',
-}
+export const apiAppDirHelloTs = `
+// Next.js Edge API Route Handlers: https://nextjs.org/docs/app/building-your-application/routing/router-handlers#edge-and-nodejs-runtimes
 
-module.exports = nextConfig
+import type { NextRequest } from 'next/server'
+
+export const runtime = 'edge'
+
+export async function GET(request: NextRequest) {
+  return new Response(JSON.stringify({ name: 'John Doe' }))
+}
+`;
+
+export const apiAppDirHelloJs = `
+// Next.js Edge API Route Handlers: https://nextjs.org/docs/app/building-your-application/routing/router-handlers#edge-and-nodejs-runtimes
+
+export const runtime = 'edge'
+
+export async function GET(request) {
+  return new Response(JSON.stringify({ name: 'John Doe' }))
+}
 `;
