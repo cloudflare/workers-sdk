@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import { unstable_dev } from "../api";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
+jest.unmock("child_process");
 jest.unmock("undici");
 
 describe("run scheduled events with middleware", () => {

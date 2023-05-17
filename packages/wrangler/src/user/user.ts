@@ -832,14 +832,12 @@ function base64urlEncode(value: string): string {
 
 async function generatePKCECodes(): Promise<PKCECodes> {
 	const output = new Uint32Array(RECOMMENDED_CODE_VERIFIER_LENGTH);
-	// @ts-expect-error crypto's types aren't there yet
 	crypto.getRandomValues(output);
 	const codeVerifier = base64urlEncode(
 		Array.from(output)
 			.map((num: number) => PKCE_CHARSET[num % PKCE_CHARSET.length])
 			.join("")
 	);
-	// @ts-expect-error crypto's types aren't there yet
 	const buffer = await crypto.subtle.digest(
 		"SHA-256",
 		new TextEncoder().encode(codeVerifier)

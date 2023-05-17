@@ -191,39 +191,25 @@ export function devOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 			})
+			.option("remote", {
+				alias: "r",
+				describe:
+					"Run on the global Cloudflare network with access to production resources",
+				type: "boolean",
+				default: false,
+			})
 			.option("local", {
 				alias: "l",
 				describe: "Run on my machine",
 				type: "boolean",
-				default: false, // I bet this will a point of contention. We'll revisit it.
+				deprecated: true,
+				hidden: true,
 			})
 			.option("experimental-local", {
 				describe: "Run on my machine using the Cloudflare Workers runtime",
 				type: "boolean",
-				default: false,
-			})
-			.option("experimental-local-remote-kv", {
-				describe:
-					"Read/write KV data from/to real namespaces on the Cloudflare network",
-				type: "boolean",
-				default: false,
-			})
-			.check((argv) => {
-				if (argv.local && argv["experimental-local"]) {
-					throw new Error(
-						"--local and --experimental-local are mutually exclusive. " +
-							"Please enable one or the other."
-					);
-				}
-				if (
-					argv["experimental-local-remote-kv"] &&
-					!argv["experimental-local"]
-				) {
-					throw new Error(
-						"--experimental-local-remote-kv requires --experimental-local to be enabled."
-					);
-				}
-				return true;
+				deprecated: true,
+				hidden: true,
 			})
 			.option("minify", {
 				describe: "Minify the script",
@@ -252,11 +238,9 @@ export function devOptions(yargs: CommonYargsArgv) {
 				type: "boolean",
 			})
 			.check((argv) => {
-				const local = argv["local"] || argv["experimental-local"];
-				if (argv["live-reload"] && !local) {
+				if (argv["live-reload"] && argv.remote) {
 					throw new Error(
-						"--live-reload is only supported in local mode. " +
-							"Please enable either --local or --experimental-local."
+						"--live-reload is only supported in local mode. Please just use one of either --remote or --live-reload."
 					);
 				}
 				return true;
@@ -298,7 +282,7 @@ This is currently not supported 😭, but we think that we'll get it to work soo
 		return;
 	}
 
-	if (!(args.local || args.experimentalLocal)) {
+	if (args.remote) {
 		const isLoggedIn = await loginOrRefreshIfRequired();
 		if (!isLoggedIn) {
 			throw new Error(
@@ -346,7 +330,7 @@ export type AdditionalDevProps = {
 	constellation?: Environment["constellation"];
 };
 
-type StartDevOptions = DevArguments &
+export type StartDevOptions = DevArguments &
 	// These options can be passed in directly when called with the `wrangler.dev()` API.
 	// They aren't exposed as CLI arguments.
 	AdditionalDevProps & {
@@ -365,14 +349,25 @@ export async function startDev(args: StartDevOptions) {
 			logger.loggerLevel = args.logLevel;
 		}
 		await printWranglerBanner();
-
-		if (args.local && process.platform !== "win32") {
-			logger.info(
-				chalk.magenta(
-					`Want to try out the next version of local mode using the open-source Workers runtime?\nSwitch out --local for ${chalk.bold(
-						"--experimental-local"
-					)} and let us know what you think at https://discord.gg/cloudflaredev !`
-				)
+		// TODO(v3.1): remove this message
+		if (!args.remote && typeof jest === "undefined") {
+			logger.log(
+				chalk.blue(`${chalk.green(
+					`wrangler dev`
+				)} now uses local mode by default, powered by 🔥 Miniflare and 👷 workerd.
+To run an edge preview session for your Worker, use ${chalk.green(
+					`wrangler dev --remote`
+				)}`)
+			);
+		}
+		if (args.local) {
+			logger.warn(
+				"--local is no longer required and will be removed in a future version.\n`wrangler dev` now uses the local Cloudflare Workers runtime by default. 🎉"
+			);
+		}
+		if (args.experimentalLocal) {
+			logger.warn(
+				"--experimental-local is no longer required and will be removed in a future version.\n`wrangler dev` now uses the local Cloudflare Workers runtime by default. 🎉"
 			);
 		}
 
@@ -405,6 +400,7 @@ export async function startDev(args: StartDevOptions) {
 			routes,
 			getLocalPort,
 			getInspectorPort,
+			getRuntimeInspectorPort,
 			cliDefines,
 			localPersistencePath,
 			processEntrypoint,
@@ -414,10 +410,10 @@ export async function startDev(args: StartDevOptions) {
 		await metrics.sendMetricsEvent(
 			"run dev",
 			{
-				local: args.local,
+				local: !args.remote,
 				usesTypeScript: /\.tsx?$/.test(entry.file),
 			},
-			{ sendMetrics: config.send_metrics, offline: args.local }
+			{ sendMetrics: config.send_metrics, offline: !args.remote }
 		);
 
 		// eslint-disable-next-line no-inner-declarations
@@ -445,9 +441,7 @@ export async function startDev(args: StartDevOptions) {
 					nodejsCompat={nodejsCompat}
 					build={configParam.build || {}}
 					define={{ ...configParam.define, ...cliDefines }}
-					initialMode={
-						args.local || args.experimentalLocal ? "local" : "remote"
-					}
+					initialMode={args.remote ? "remote" : "local"}
 					jsxFactory={args.jsxFactory || configParam.jsx_factory}
 					jsxFragment={args.jsxFragment || configParam.jsx_fragment}
 					tsconfig={args.tsconfig ?? configParam.tsconfig}
@@ -468,6 +462,7 @@ export async function startDev(args: StartDevOptions) {
 						configParam.dev.inspector_port ??
 						(await getInspectorPort())
 					}
+					runtimeInspectorPort={await getRuntimeInspectorPort()}
 					isWorkersSite={Boolean(args.site || configParam.site)}
 					compatibilityDate={getDevCompatibilityDate(
 						configParam,
@@ -488,8 +483,6 @@ export async function startDev(args: StartDevOptions) {
 					firstPartyWorker={configParam.first_party_worker}
 					sendMetrics={configParam.send_metrics}
 					testScheduled={args.testScheduled}
-					experimentalLocal={args.experimentalLocal}
-					experimentalLocalRemoteKv={args.experimentalLocalRemoteKv}
 				/>
 			);
 		}
@@ -545,6 +538,7 @@ export async function startApiDev(args: StartDevOptions) {
 		routes,
 		getLocalPort,
 		getInspectorPort,
+		getRuntimeInspectorPort,
 		cliDefines,
 		localPersistencePath,
 		processEntrypoint,
@@ -553,8 +547,8 @@ export async function startApiDev(args: StartDevOptions) {
 
 	await metrics.sendMetricsEvent(
 		"run dev (api)",
-		{ local: args.local },
-		{ sendMetrics: config.send_metrics, offline: args.local }
+		{ local: !args.remote },
+		{ sendMetrics: config.send_metrics, offline: !args.remote }
 	);
 
 	// eslint-disable-next-line no-inner-declarations
@@ -585,7 +579,7 @@ export async function startApiDev(args: StartDevOptions) {
 			nodejsCompat,
 			build: configParam.build || {},
 			define: { ...config.define, ...cliDefines },
-			initialMode: args.local ? "local" : "remote",
+			initialMode: args.remote ? "remote" : "local",
 			jsxFactory: args.jsxFactory ?? configParam.jsx_factory,
 			jsxFragment: args.jsxFragment ?? configParam.jsx_fragment,
 			tsconfig: args.tsconfig ?? configParam.tsconfig,
@@ -604,6 +598,7 @@ export async function startApiDev(args: StartDevOptions) {
 				args.inspectorPort ??
 				configParam.dev.inspector_port ??
 				(await getInspectorPort()),
+			runtimeInspectorPort: await getRuntimeInspectorPort(),
 			isWorkersSite: Boolean(args.site || configParam.site),
 			compatibilityDate: getDevCompatibilityDate(
 				config,
@@ -621,12 +616,10 @@ export async function startApiDev(args: StartDevOptions) {
 			showInteractiveDevSession: args.showInteractiveDevSession,
 			forceLocal: args.forceLocal,
 			enablePagesAssetsServiceBinding: args.enablePagesAssetsServiceBinding,
-			local: args.local ?? true,
+			local: !args.remote,
 			firstPartyWorker: configParam.first_party_worker,
 			sendMetrics: configParam.send_metrics,
 			testScheduled: args.testScheduled,
-			experimentalLocal: args.experimentalLocal,
-			experimentalLocalRemoteKv: args.experimentalLocalRemoteKv,
 			disableDevRegistry: args.disableDevRegistry ?? false,
 		});
 	}
@@ -645,7 +638,7 @@ export async function startApiDev(args: StartDevOptions) {
 /**
  * Avoiding calling `getPort()` multiple times by memoizing the first result.
  */
-function memoizeGetPort(defaultPort: number) {
+function memoizeGetPort(defaultPort?: number) {
 	let portValue: number;
 	return async () => {
 		return portValue || (portValue = await getPort({ port: defaultPort }));
@@ -675,11 +668,7 @@ async function getZoneIdHostAndRoutes(args: StartDevOptions, config: Config) {
 	const routes: Route[] | undefined =
 		args.routes || (config.route && [config.route]) || config.routes;
 
-	if (args.forceLocal) {
-		args.local = true;
-	}
-
-	if (!args.local && !args.experimentalLocal) {
+	if (args.remote) {
 		if (host) {
 			zoneId = await getZoneIdFromHost(host);
 		}
@@ -713,6 +702,12 @@ async function validateDevServerSettings(
 	const { zoneId, host, routes } = await getZoneIdHostAndRoutes(args, config);
 	const getLocalPort = memoizeGetPort(DEFAULT_LOCAL_PORT);
 	const getInspectorPort = memoizeGetPort(DEFAULT_INSPECTOR_PORT);
+
+	// Our inspector proxy server will be binding to the result of
+	// `getInspectorPort`. If we attempted to bind workerd to the same inspector
+	// port, we'd get a port already in use error. Therefore, generate a new port
+	// for our runtime to bind its inspector service to.
+	const getRuntimeInspectorPort = memoizeGetPort();
 
 	if (config.services && config.services.length > 0) {
 		logger.warn(
@@ -799,6 +794,7 @@ async function validateDevServerSettings(
 		nodejsCompat,
 		getLocalPort,
 		getInspectorPort,
+		getRuntimeInspectorPort,
 		zoneId,
 		host,
 		routes,
@@ -813,7 +809,7 @@ function getBindingsAndAssetPaths(args: StartDevOptions, configParam: Config) {
 	const cliVars = collectKeyValues(args.var);
 
 	// now log all available bindings into the terminal
-	const bindings = getBindings(configParam, args.env, args.local ?? false, {
+	const bindings = getBindings(configParam, args.env, !args.remote, {
 		kv: args.kv,
 		vars: { ...args.vars, ...cliVars },
 		durableObjects: args.durableObjects,
@@ -921,12 +917,12 @@ function getBindings(
 		logfwdr: configParam.logfwdr,
 		d1_databases: identifyD1BindingsAsBeta([
 			...(configParam.d1_databases ?? []).map((d1Db) => {
-				//in local dev, bindings don't matter
+				const database_id = d1Db.preview_database_id
+					? d1Db.preview_database_id
+					: d1Db.database_id;
+
 				if (local) {
-					return {
-						...d1Db,
-						database_id: "local",
-					};
+					return { ...d1Db, database_id };
 				}
 				// if you have a preview_database_id, we'll use it, but we shouldn't force people to use it.
 				if (!d1Db.preview_database_id && !process.env.NO_D1_WARNING) {
@@ -934,12 +930,7 @@ function getBindings(
 						`--------------------\n💡 Recommendation: for development, use a preview D1 database rather than the one you'd use in production.\n💡 Create a new D1 database with "wrangler d1 create <name>" and add its id as preview_database_id to the d1_database "${d1Db.binding}" in your wrangler.toml\n--------------------\n`
 					);
 				}
-				return {
-					...d1Db,
-					database_id: d1Db.preview_database_id
-						? d1Db.preview_database_id
-						: d1Db.database_id,
-				};
+				return { ...d1Db, database_id };
 			}),
 			...(args.d1Databases || []),
 		]),

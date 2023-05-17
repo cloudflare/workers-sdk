@@ -13,6 +13,7 @@
 		"test:ci": "npx vitest"
 	},
 	"devDependencies": {
+		"miniflare": "^3.0.0",
 		"ws": "^8.8.0"
 	},
 	"engines": {

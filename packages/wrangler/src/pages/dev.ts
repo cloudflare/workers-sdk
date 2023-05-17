@@ -49,6 +49,8 @@ export function Options(yargs: CommonYargsArgv) {
 				type: "boolean",
 				default: true,
 				description: "Run on my machine",
+				deprecated: true,
+				hidden: true,
 			},
 			"compatibility-date": {
 				describe: "Date to use for compatibility checks",
@@ -141,7 +143,8 @@ export function Options(yargs: CommonYargsArgv) {
 			"experimental-local": {
 				describe: "Run on my machine using the Cloudflare Workers runtime",
 				type: "boolean",
-				default: false,
+				deprecated: true,
+				hidden: true,
 			},
 			config: {
 				describe: "Pages does not support wrangler.toml",
@@ -157,7 +160,6 @@ export function Options(yargs: CommonYargsArgv) {
 }
 
 export const Handler = async ({
-	local,
 	directory,
 	compatibilityDate,
 	compatibilityFlags,
@@ -189,8 +191,10 @@ export const Handler = async ({
 		logger.loggerLevel = logLevel;
 	}
 
-	if (!local) {
-		throw new FatalError("Only local mode is supported at the moment.", 1);
+	if (experimentalLocal) {
+		logger.warn(
+			"--experimental-local is no longer required and will be removed in a future version.\n`wrangler pages dev` now uses the local Cloudflare Workers runtime by default."
+		);
 	}
 
 	if (config) {
@@ -522,7 +526,7 @@ export const Handler = async ({
 		),
 		kv: kvs.map((binding) => ({
 			binding: binding.toString(),
-			id: "",
+			id: binding.toString(),
 		})),
 		durableObjects: durableObjects
 			.map((durableObject) => {
@@ -546,7 +550,7 @@ export const Handler = async ({
 			})
 			.filter(Boolean) as AdditionalDevProps["durableObjects"],
 		r2: r2s.map((binding) => {
-			return { binding: binding.toString(), bucket_name: "" };
+			return { binding: binding.toString(), bucket_name: binding.toString() };
 		}),
 		rules: usingWorkerDirectory
 			? [
@@ -573,7 +577,6 @@ export const Handler = async ({
 				proxyPort,
 				directory,
 			},
-			experimentalLocal,
 			liveReload,
 			forceLocal: true,
 			showInteractiveDevSession: undefined,

@@ -29,6 +29,13 @@ describe("pages deployment tail", () => {
 		process.env.CF_PAGES = "1";
 	});
 
+	beforeEach(() => {
+		// You may be inclined to change this to `jest.requireMock ()`. Do it, I
+		// dare you... Have fun fixing this tests :)
+		// (hint: https://github.com/aelbore/esbuild-jest/blob/daa5847b3b382d9ddf6cc26e60ad949d202c4461/src/index.ts#L33)
+		const mockWs = jest["requireMock"]("ws");
+		mockWs.useOriginal = false;
+	});
 	afterAll(() => {
 		delete process.env.CF_PAGES;
 	});
