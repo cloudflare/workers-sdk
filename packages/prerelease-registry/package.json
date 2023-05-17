@@ -12,7 +12,8 @@
 		"start": "npx wrangler dev dist/index.js"
 	},
 	"dependencies": {
-		"jszip": "^3.7.1"
+		"jszip": "^3.7.1",
+		"wrangler": "*"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20221111.1",

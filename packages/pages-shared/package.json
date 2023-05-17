@@ -43,7 +43,8 @@
 		]
 	},
 	"dependencies": {
-		"miniflare": "^3.0.0"
+		"miniflare": "^3.0.0",
+		"wrangler": "*"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20230511.0",
