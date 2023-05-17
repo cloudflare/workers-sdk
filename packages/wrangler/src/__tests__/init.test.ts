@@ -2768,8 +2768,8 @@ describe("init", () => {
 			  "debug": "",
 			  "err": "",
 			  "info": "",
-			  "out": "Running \`mockpm create cloudflare@2 existing-memory-crystal -- --type pre-existing --name existing-memory-crystal\`...",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init --from-dash\` command is no longer supported. Please use \`mockpm create cloudflare@2 existing-memory-crystal -- --type pre-existing --name existing-memory-crystal\` instead.[0m
+			  "out": "Running \`mockpm create cloudflare@2 existing-memory-crystal -- --type pre-existing\`...",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init --from-dash\` command is no longer supported. Please use \`mockpm create cloudflare@2 existing-memory-crystal -- --type pre-existing\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
