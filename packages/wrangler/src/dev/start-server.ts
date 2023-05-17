@@ -80,7 +80,8 @@ export async function startDevServer(
 		destination: directory.name,
 		jsxFactory: props.jsxFactory,
 		processEntrypoint: props.processEntrypoint,
-		additionalModules: props.additionalModules,rules: props.rules,
+		additionalModules: props.additionalModules,
+		rules: props.rules,
 		jsxFragment: props.jsxFragment,
 		serveAssetsFromWorker: Boolean(
 			props.assetPaths && !props.isWorkersSite && props.local
