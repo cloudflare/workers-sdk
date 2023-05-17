@@ -11,7 +11,6 @@ import {
 	yellow,
 } from "kleur/colors";
 import { z } from "zod";
-import { Request } from "../http";
 import { LogLevel } from "../workers";
 
 const cwd = process.cwd();
@@ -133,16 +132,16 @@ export class NoOpLog extends Log {
 	}
 }
 
-const ResponseInfoSchema = z.object({
+export const ResponseInfoSchema = z.object({
 	status: z.number(),
 	statusText: z.string(),
 	method: z.string(),
 	url: z.string(),
 	time: z.number(),
 });
+export type ResponseInfo = z.infer<typeof ResponseInfoSchema>;
 
-export async function formatResponse(request: Request) {
-	const info = ResponseInfoSchema.parse(await request.json());
+export async function formatResponse(info: ResponseInfo) {
 	const url = new URL(info.url);
 
 	const lines = [
