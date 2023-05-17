@@ -100,7 +100,7 @@ async function handleRequest(
 	}
 
 	if (isPreviewUpdateRequest(request, url, env)) {
-		return updatePreviewToken(url, ctx);
+		return updatePreviewToken(url, env, ctx);
 	}
 
 	if (isRawHttpRequest(url, env)) {
@@ -114,7 +114,12 @@ async function handleRequest(
 	 * but otherwise will pass the request through unchanged
 	 */
 	const parsedCookies = cookie.parse(request.headers.get("Cookie") ?? "");
-	const { token, remote } = JSON.parse(parsedCookies?.token ?? "{}");
+
+	const tokenId = parsedCookies?.token;
+
+	const { token, remote } = JSON.parse(
+		(await env.TOKEN_LOOKUP.get(tokenId)) ?? "{}"
+	);
 	if (!token || !remote) {
 		throw new PreviewRequestFailed();
 	}
@@ -210,7 +215,7 @@ async function handleRawHttp(request: Request, url: URL) {
  * It will redirect to the suffix provide, setting a cookie with the `token` and `remote`
  * for future use.
  */
-async function updatePreviewToken(url: URL, ctx: ExecutionContext) {
+async function updatePreviewToken(url: URL, env: Env, ctx: ExecutionContext) {
 	const token = url.searchParams.get("token");
 	const prewarmUrl = url.searchParams.get("prewarm");
 	const remote = url.searchParams.get("remote");
@@ -228,20 +233,27 @@ async function updatePreviewToken(url: URL, ctx: ExecutionContext) {
 		})
 	);
 
+	// The token can sometimes be too large for a cookie (4096 bytes).
+	// Store the token in KV, and allow lookups
+
+	const tokenId = crypto.randomUUID();
+
+	await env.TOKEN_LOOKUP.put(tokenId, JSON.stringify({ token, remote }), {
+		// A preview token should only be valid for an hour.
+		// Store it for 2 just in case
+		expirationTtl: 60 * 60 * 2,
+	});
+
 	return new Response(null, {
 		status: 307,
 		headers: {
 			Location: url.searchParams.get("suffix") ?? "/",
-			"Set-Cookie": cookie.serialize(
-				"token",
-				JSON.stringify({ token, remote }),
-				{
-					secure: true,
-					sameSite: "none",
-					httpOnly: true,
-					domain: url.hostname,
-				}
-			),
+			"Set-Cookie": cookie.serialize("token", tokenId, {
+				secure: true,
+				sameSite: "none",
+				httpOnly: true,
+				domain: url.hostname,
+			}),
 		},
 	});
 }
