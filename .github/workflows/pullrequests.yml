@@ -8,6 +8,11 @@ jobs:
   check:
     name: "Checks"
     runs-on: ubuntu-latest
+    # https://turbo.build/repo/docs/ci/github-actions#remote-caching
+    # env:
+    #  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+    #  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+    #  TURBO_REMOTE_ONLY: true
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
@@ -18,16 +23,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ env.node-version }}
-          cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
-
-      - name: ESlint and Typescript caching
-        uses: actions/cache@v3
-        id: eslint-cache
-        with:
-          path: |
-            .eslintcache
-            tsconfig.tsbuildinfo
-          key: ${{ matrix.os }}-eslint-tsbuildinfo-${{ hashFiles('**/*.ts','**/*.js', 'package.json', 'tsconfig.json') }}
+          cache: "npm"
 
       - name: Install workerd Dependencies
         if: ${{ runner.os == 'Linux' }}
@@ -36,19 +32,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libc++1
 
-      # Attempt to cache all the node_modules directories based on the OS and package lock.
-      - name: Cache node_modules
-        id: npm-cache
-        uses: actions/cache@v3
-        env:
-          cache-name: cache-node-modules
-        with:
-          key: ${{ runner.os }}-${{ env.node-version }}-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
-          path: "**/node_modules"
-
-      # If the cache missed then install using `npm ci` to follow package lock exactly
-      - if: ${{ steps.npm-cache.outputs.cache-hit != 'true'}}
-        name: Install NPM Dependencies
+      - name: Install NPM Dependencies
         run: npm ci
 
       - name: Build
@@ -65,6 +49,11 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    # https://turbo.build/repo/docs/ci/github-actions#remote-caching
+    # env:
+    #  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+    #  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+    #  TURBO_REMOTE_ONLY: true
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
@@ -84,19 +73,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libc++1
 
-      # Attempt to cache all the node_modules directories based on the OS and package lock.
-      - name: Cache node_modules
-        id: npm-cache
-        uses: actions/cache@v3
-        env:
-          cache-name: cache-node-modules
-        with:
-          key: ${{ runner.os }}-${{ env.node-version }}-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
-          path: "**/node_modules"
-
-      # If the cache missed then install using `npm ci` to follow package lock exactly
-      - if: ${{ steps.npm-cache.outputs.cache-hit != 'true'}}
-        name: Install NPM Dependencies
+      - name: Install NPM Dependencies
         run: npm ci
 
       - name: Run builds
