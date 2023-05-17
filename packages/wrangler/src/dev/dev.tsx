@@ -116,6 +116,7 @@ export type DevProps = {
 	initialPort: number;
 	initialIp: string;
 	inspectorPort: number;
+	runtimeInspectorPort: number;
 	processEntrypoint: boolean;
 	additionalModules: CfModule[];
 	rules: Config["rules"];
@@ -156,8 +157,6 @@ export type DevProps = {
 	firstPartyWorker: boolean | undefined;
 	sendMetrics: boolean | undefined;
 	testScheduled: boolean | undefined;
-	experimentalLocal: boolean | undefined;
-	experimentalLocalRemoteKv: boolean | undefined;
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
@@ -341,6 +340,7 @@ function DevSession(props: DevSessionProps) {
 			initialIp={props.initialIp}
 			rules={props.rules}
 			inspectorPort={props.inspectorPort}
+			runtimeInspectorPort={props.runtimeInspectorPort}
 			localPersistencePath={props.localPersistencePath}
 			liveReload={props.liveReload}
 			crons={props.crons}
@@ -350,9 +350,6 @@ function DevSession(props: DevSessionProps) {
 			inspect={props.inspect}
 			onReady={announceAndOnReady}
 			enablePagesAssetsServiceBinding={props.enablePagesAssetsServiceBinding}
-			experimentalLocal={props.experimentalLocal}
-			accountId={props.accountId}
-			experimentalLocalRemoteKv={props.experimentalLocalRemoteKv}
 			sourceMapPath={bundle?.sourceMapPath}
 		/>
 	) : (

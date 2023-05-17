@@ -13,7 +13,13 @@ async function getFiles(root: string, relativeTo: string): Promise<string[]> {
 		if (file.isDirectory()) {
 			files.push(...(await getFiles(path.join(root, file.name), relativeTo)));
 		} else {
-			files.push(path.relative(relativeTo, path.join(root, file.name)));
+			// Module names should always use `/`. This is also required to match globs correctly on Windows. Later code will
+			// `path.resolve()` with these names to read contents which will perform appropriate normalisation.
+			files.push(
+				path
+					.relative(relativeTo, path.join(root, file.name))
+					.replaceAll("\\", "/")
+			);
 		}
 	}
 	return files;
@@ -24,7 +30,9 @@ export default async function traverseModuleGraph(
 	rules: Config["rules"]
 ): Promise<BundleResult> {
 	const files = await getFiles(entry.moduleRoot, entry.moduleRoot);
-	const relativeEntryPoint = path.relative(entry.moduleRoot, entry.file);
+	const relativeEntryPoint = path
+		.relative(entry.moduleRoot, entry.file)
+		.replaceAll("\\", "/");
 
 	const modules = (await matchFiles(files, entry.moduleRoot, parseRules(rules)))
 		.filter((m) => m.name !== relativeEntryPoint)

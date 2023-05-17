@@ -1,23 +1,14 @@
 import path from "path";
 import { describe, expect, test, beforeAll, afterAll } from "vitest";
-import { unstable_dev } from "../../../packages/wrangler/wrangler-dist/cli.js";
-import type { UnstableDevWorker } from "../../../packages/wrangler/wrangler-dist/cli.js";
+import { unstable_dev } from "wrangler";
+import type { UnstableDevWorker } from "wrangler";
 
 describe("Worker", () => {
 	let worker: UnstableDevWorker;
 
-	// TODO: Remove this when `workerd` has Windows support
-	if (process.env.RUNNER_OS === "Windows") {
-		test("dummy windows test", () => {
-			expect(process.env.RUNNER_OS).toStrictEqual("Windows");
-		});
-		return;
-	}
-
 	beforeAll(async () => {
 		worker = await unstable_dev(path.resolve(__dirname, "index.js"), {
 			bundle: false,
-			experimental: { experimentalLocal: true },
 		});
 	}, 30_000);
 

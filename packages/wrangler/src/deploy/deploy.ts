@@ -499,7 +499,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
 						targetConsumer: "deploy",
 						local: false,
-						experimentalLocal: false,
 					}
 			  );
 

@@ -1,8 +1,7 @@
 import { polyfill } from ".";
 
 export default async () => {
-	const mf = await import("@miniflare/core");
-
+	const mf = await import("miniflare");
 	polyfill({
 		fetch: mf.fetch,
 		Headers: mf.Headers,

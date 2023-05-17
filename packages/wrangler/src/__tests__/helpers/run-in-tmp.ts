@@ -15,6 +15,7 @@ export function runInTempDir({ homedir } = { homedir: "./home" }) {
 		);
 
 		process.chdir(tmpDir);
+		process.env.PWD = tmpDir;
 		// The path that is returned from `homedir()` should be absolute.
 		const absHomedir = path.resolve(tmpDir, homedir);
 		// Override where the home directory is so that we can write our own user config,
@@ -32,6 +33,7 @@ export function runInTempDir({ homedir } = { homedir: "./home" }) {
 	afterEach(() => {
 		if (fs.existsSync(tmpDir)) {
 			process.chdir(originalCwd);
+			process.env.PWD = originalCwd;
 			fs.rmSync(tmpDir, { recursive: true });
 		}
 	});

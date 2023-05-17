@@ -9,8 +9,8 @@ type Env = {
  * Setup globals/vars as required
  */
 
-export default <ExportedHandler>{
-	async fetch(request: Request, env: Env, ctx: ExecutionContext) {
+export default <ExportedHandler<Env>>{
+	async fetch(request, env, ctx) {
 		if (worker.fetch === undefined) {
 			throw new TypeError("Entry point missing `fetch` handler");
 		}

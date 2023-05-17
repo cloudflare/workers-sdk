@@ -1,10 +1,10 @@
+import assert from "node:assert";
 import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import chalk from "chalk";
 import { Static, Text } from "ink";
 import Table from "ink-table";
-import { npxImport } from "npx-import";
 import React from "react";
 import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
@@ -29,6 +29,7 @@ import type {
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type { Database } from "./types";
+import type { D1SuccessResponse } from "miniflare";
 
 export type QueryResult = {
 	results: Record<string, string | number | boolean>[];
@@ -236,14 +237,14 @@ async function executeLocally({
 		);
 	}
 
+	const id = localDB.previewDatabaseUuid ?? localDB.uuid;
 	const persistencePath = getLocalPersistencePath(persistTo, config.configPath);
+	const dbDir = path.join(persistencePath, "v3", "d1", id);
+	const dbPath = path.join(dbDir, `db.sqlite`);
 
-	const dbDir = path.join(persistencePath, "d1");
-	const dbPath = path.join(dbDir, `${localDB.binding}.sqlite3`);
-	const [{ D1Database, D1DatabaseAPI }, { createSQLiteDB }] = await npxImport<
-		// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-		[typeof import("@miniflare/d1"), typeof import("@miniflare/shared")]
-	>(["@miniflare/d1", "@miniflare/shared"], logger.log);
+	// eslint-disable-next-line @typescript-eslint/no-var-requires
+	const { D1Gateway, NoOpLog, createFileStorage } = require("miniflare");
+	const storage = createFileStorage(dbDir);
 
 	if (!existsSync(dbDir)) {
 		const ok =
@@ -256,10 +257,27 @@ async function executeLocally({
 
 	logger.log(`🌀 Loading DB at ${readableRelative(dbPath)}`);
 
-	const sqliteDb = await createSQLiteDB(dbPath);
-	const db = new D1Database(new D1DatabaseAPI(sqliteDb));
-	const stmts = queries.map((query) => db.prepare(query));
-	return (await db.batch(stmts)) as QueryResult[];
+	const db = new D1Gateway(new NoOpLog(), storage);
+	let results: D1SuccessResponse | D1SuccessResponse[];
+	try {
+		results = db.query(queries.map((query) => ({ sql: query })));
+	} catch (e: unknown) {
+		throw (e as { cause?: unknown })?.cause ?? e;
+	}
+	assert(Array.isArray(results));
+	return results.map<QueryResult>((result) => ({
+		results: (result.results ?? []).map((row) =>
+			Object.fromEntries(
+				Object.entries(row).map(([key, value]) => {
+					if (Array.isArray(value)) value = `[${value.join(", ")}]`;
+					if (value === null) value = "null";
+					return [key, value];
+				})
+			)
+		),
+		success: result.success,
+		meta: { duration: result.meta?.duration },
+	}));
 }
 
 async function executeRemotely({

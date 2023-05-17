@@ -8,7 +8,6 @@ import { PKCE_CHARSET } from "../user";
  */
 export function generateRandomState(lengthOfState: number): string {
 	const output = new Uint32Array(lengthOfState);
-	// @ts-expect-error crypto's types aren't there yet
 	crypto.getRandomValues(output);
 	return Array.from(output)
 		.map((num: number) => PKCE_CHARSET[num % PKCE_CHARSET.length])

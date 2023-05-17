@@ -146,7 +146,6 @@ export function useEsbuild({
 					local,
 					targetConsumer,
 					testScheduled,
-					experimentalLocal,
 					additionalModules: dedupeModulesByName([
 						...(traverseModuleGraphResult?.modules ?? []),
 						...additionalModules,

@@ -197,3 +197,5 @@ packages/quick-edit/web
 # VSCode Theme
 *.vsix
 vendor/vscode
+
+.wrangler/

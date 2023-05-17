@@ -42,10 +42,33 @@ jest.mock("child_process", () => {
 });
 
 jest.mock("ws", () => {
-	return {
+	// `miniflare` needs to use the real `ws` module, but tail tests require us
+	// to mock `ws`. `esbuild-jest` won't let us use type annotations in our tests
+	// if those files contain `jest.mock()` calls, so we mock here, pass-through
+	// by default, and allow mocking conditionally.
+	const realModule = jest.requireActual("ws");
+	const module = {
 		__esModule: true,
-		default: MockWebSocket,
+		useOriginal: true,
 	};
+	Object.defineProperties(module, {
+		default: {
+			get() {
+				return module.useOriginal ? realModule.default : MockWebSocket;
+			},
+		},
+		WebSocket: {
+			get() {
+				return module.useOriginal ? realModule.WebSocket : MockWebSocket;
+			},
+		},
+		WebSocketServer: {
+			get() {
+				return realModule.WebSocketServer;
+			},
+		},
+	});
+	return module;
 });
 
 jest.mock("undici", () => {

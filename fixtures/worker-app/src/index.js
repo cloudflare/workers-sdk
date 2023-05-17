@@ -20,9 +20,9 @@ export default {
 			request.cf
 		);
 
-		await fetch(new URL("https://example.com"));
+		await fetch(new URL("http://example.com"));
 		await fetch(
-			new Request("https://example.com", { method: "POST", body: "foo" })
+			new Request("http://example.com", { method: "POST", body: "foo" })
 		);
 
 		return new Response(`${request.url} ${now()}`);
