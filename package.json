@@ -17,10 +17,10 @@
 		"build": "turbo build",
 		"check": "run-p check:* --aggregate-output --continue-on-error",
 		"check:format": "prettier . --check --ignore-unknown",
-		"check:lint": "eslint \"packages/**/*.[tj]s?(x)\" --cache --cache-strategy content --max-warnings=0 --config ./.eslintrc.js",
 		"check:type": "npm run check:type --workspaces --if-present",
 		"fix": "npm run prettify && npm run check:lint -- --fix",
 		"postinstall": "patch-package",
+		"lint": "turbo lint",
 		"prettify": "prettier . --write --ignore-unknown",
 		"test": "npm run clean --workspace=wrangler && npm run bundle --workspace=wrangler && npm run test --workspace=packages/wrangler --workspace=packages/edge-preview-authenticated-proxy --workspace=packages/pages-shared --if-present",
 		"test:ci": "npm run test:ci --workspace=packages/wrangler --workspace=packages/pages-shared --if-present"
