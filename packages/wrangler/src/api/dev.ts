@@ -154,7 +154,7 @@ export async function unstable_dev(
 		config: options?.config,
 		env: options?.env,
 		processEntrypoint,
-					additionalModules,
+		additionalModules,
 		bundle: options?.bundle,
 		compatibilityDate: options?.compatibilityDate,
 		compatibilityFlags: options?.compatibilityFlags,
