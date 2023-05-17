@@ -229,11 +229,13 @@ export const spinner = () => {
 	const maxDots = 4;
 	let loop: NodeJS.Timer;
 	let startMsg: string;
+	let currentMsg: string;
 
 	return {
 		start: (msg: string, helpText?: string) => {
 			helpText ||= ``;
-			startMsg = `${msg} ${dim(helpText)}`;
+			currentMsg = msg;
+			startMsg = `${currentMsg} ${dim(helpText)}`;
 
 			let index = 0;
 			let dots = 1;
@@ -241,8 +243,11 @@ export const spinner = () => {
 			loop = setInterval(() => {
 				const frame = frames[(index = ++index % frames.length)];
 				dots = ++dots % maxDots;
-				logUpdate(`${color(frame)} ${msg} ${".".repeat(dots)}`);
+				logUpdate(`${color(frame)} ${currentMsg} ${".".repeat(dots)}`);
 			}, frameRate);
+		},
+		update(msg: string) {
+			currentMsg = msg;
 		},
 		stop: (msg: string) => {
 			// Write the final message and clear the loop
