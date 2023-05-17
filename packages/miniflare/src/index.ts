@@ -65,6 +65,7 @@ import {
 	Mutex,
 	NoOpLog,
 	OptionalZodTypeOf,
+	ResponseInfoSchema,
 	Timers,
 	defaultTimers,
 	formatResponse,
@@ -580,7 +581,16 @@ export class Miniflare {
 					request
 				);
 			} else if (url.pathname === "/core/log") {
-				this.#log.info(await formatResponse(request));
+				const text = await request.text();
+				try {
+					// `JSON.parse()`ing may fail if the request was aborted and a partial
+					// body was received
+					const info = ResponseInfoSchema.parse(JSON.parse(text));
+					this.#log.info(await formatResponse(info));
+				} catch (e: unknown) {
+					this.#log.debug(`Error parsing response log: ${String(e)}`);
+				}
+				response = new Response(null, { status: 204 });
 			} else {
 				// TODO: check for proxying/outbound fetch header first (with plans for fetch mocking)
 				response = await this.#handleLoopbackPlugins(request, url);
