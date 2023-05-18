@@ -16,14 +16,16 @@
 		"statusBar.foreground": "#eeffff",
 		"tab.border": "#0051c30e",
 		"tab.activeBorder": "#0051c3",
-		"tab.inactiveBackground": "#f5f5f5"
+		"tab.inactiveBackground": "#f5f5f5",
+		"gitlens.gutterBackgroundColor": "#ff0000",
+		"gitlens.gutterForegroundColor": "#ff0000"
 	},
 	"tokenColors": [
 		{
 			"name": "Colors",
 			"scope": ["constant.other.color", "support.variable"],
 			"settings": {
-				"foreground": "#eeffff"
+				"foreground": "#FF8C00"
 			}
 		},
 		{
@@ -57,6 +59,19 @@
 			],
 			"settings": {
 				"foreground": "#00268f"
+			}
+		},
+		{
+			"name": "Support Tokens",
+			"scope": [
+				"support",
+				"support.variable",
+				"support.class",
+				"support.type",
+				"support.function"
+			],
+			"settings": {
+				"foreground": "#FF8C00"
 			}
 		},
 		{
