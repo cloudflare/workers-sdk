@@ -53,7 +53,7 @@ const configure = async (ctx: PagesGeneratorContext) => {
 	const projectName = ctx.project.name;
 
 	// Add a compatible function handler example
-	let apiPath = probePaths(
+	const path = probePaths(
 		[
 			`${projectName}/pages/api`,
 			`${projectName}/src/pages/api`,
@@ -62,13 +62,11 @@ const configure = async (ctx: PagesGeneratorContext) => {
 			`${projectName}/src/app`,
 			`${projectName}/app`,
 		],
-		"Could not find the `/api` directory"
+		"Could not find the `/api` or `/app` directory"
 	);
 
-	if (/\/app$/.test(apiPath)) {
-		// App directory template may not generate an API route handler.
-		apiPath = `${apiPath}/api`;
-	}
+	// App directory template may not generate an API route handler, so we update the path to add an `api` directory.
+	const apiPath = path.replace(/\/app$/, "/app/api");
 
 	const [handlerPath, handlerFile] = getApiTemplate(
 		apiPath,
