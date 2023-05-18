@@ -1,0 +1,43 @@
+name: C3 Tests
+
+on:
+  pull_request:
+    paths:
+      - packages/create-cloudflare
+
+env:
+  node-version: latest
+
+jobs:
+  check:
+    name: "Checks"
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js ${{ env.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.node-version }}
+          cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
+
+      - name: Install NPM Dependencies
+        run: npm ci
+
+      - name: Check Types
+        run: npm run check:types
+
+      - name: Lint
+        run: npm run check:lint
+
+      - name: Unit Tests
+        run: npm run test:unit
+
+      - name: E2E Tests
+        run: npm run test:e2e
