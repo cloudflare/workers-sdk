@@ -22,8 +22,8 @@
 	"main": "./dist/cli.js",
 	"bin": "./dist/cli.js",
 	"files": [
-		"./dist",
-		"./templates"
+		"dist",
+		"templates"
 	],
 	"scripts": {
 		"build": "node scripts/build.js",
