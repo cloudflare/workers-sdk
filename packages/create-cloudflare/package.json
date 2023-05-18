@@ -1,6 +1,6 @@
 {
 	"name": "create-cloudflare",
-	"version": "2.0.3",
+	"version": "2.0.4",
 	"description": "A CLI for creating and deploying new applications to Cloudflare.",
 	"keywords": [
 		"cloudflare",
@@ -29,6 +29,7 @@
 		"build": "node scripts/build.js",
 		"check:lint": "eslint .",
 		"check:type": "tsc --noEmit",
+		"prepublishOnly": "npm run build",
 		"test:e2e": "npm run build && vitest run --config ./vitest-e2e.config.ts",
 		"test:unit": "vitest run --config ./vitest.config.ts",
 		"watch": "node scripts/build.js --watch"
