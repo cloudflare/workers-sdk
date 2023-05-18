@@ -6,4 +6,4 @@
   /packages/wrangler/pages/ @cloudflare/pages
   /packages/wrangler/src/pages/ @cloudflare/pages
   /packages/wrangler/src/pages.\* @cloudflare/pages
-  /packages/create-cloudflare/ @jculvey
+  /packages/create-cloudflare/ @jculvey @RamIdeas @petebacondarwin
