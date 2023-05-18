@@ -1,5 +1,11 @@
 # @cloudflare/pages-shared
 
+## 0.5.1
+
+### Patch Changes
+
+- [#2921](https://github.com/cloudflare/workers-sdk/pull/2921) [`066f0b05`](https://github.com/cloudflare/workers-sdk/commit/066f0b050e90351190386764604daaa068a69b73) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Add `x-deployment-id` header when opted-in
+
 ## 0.5.0
 
 ### Minor Changes
