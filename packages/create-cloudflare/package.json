@@ -33,13 +33,13 @@
 		"test:unit": "vitest run --config ./vitest.config.ts",
 		"watch": "node scripts/build.js --watch"
 	},
-	"dependencies": {},
 	"devDependencies": {
 		"@babel/parser": "^7.21.3",
 		"@babel/types": "^7.21.4",
 		"@clack/prompts": "^0.6.3",
 		"@cloudflare/workers-types": "^4.20230419.0",
 		"@types/command-exists": "^1.2.0",
+		"@types/cross-spawn": "^6.0.2",
 		"@types/esprima": "^4.0.3",
 		"@types/node": "^18.15.3",
 		"@types/which-pm-runs": "^1.0.0",
@@ -48,6 +48,7 @@
 		"@typescript-eslint/parser": "^5.55.0",
 		"chalk": "^5.2.0",
 		"command-exists": "^1.2.9",
+		"cross-spawn": "^7.0.3",
 		"esbuild": "^0.17.12",
 		"execa": "^7.1.1",
 		"haikunator": "^2.1.2",

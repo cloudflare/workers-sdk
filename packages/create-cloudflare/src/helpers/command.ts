@@ -1,6 +1,6 @@
-import { spawn } from "child_process";
 import { existsSync } from "fs";
 import path from "path";
+import { spawn } from "cross-spawn";
 import whichPmRuns from "which-pm-runs";
 import { endSection, logRaw, stripAnsi } from "./cli";
 import { brandColor, dim } from "./colors";
