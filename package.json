@@ -55,7 +55,7 @@
 		"eslint-plugin-react-hooks": "^4.6.0",
 		"eslint-plugin-unused-imports": "^2.0.0",
 		"patch-package": "^6.5.1",
-		"turbo": "^1.9.7"
+		"turbo": "^1.9.8"
 	},
 	"engines": {
 		"node": ">=16.13.0"
