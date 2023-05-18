@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.0.5
+
+### Patch Changes
+
+- [#3267](https://github.com/cloudflare/workers-sdk/pull/3267) [`186eed94`](https://github.com/cloudflare/workers-sdk/commit/186eed94050d2224eb70799b2d2611d9dba91515) Thanks [@KianNH](https://github.com/KianNH)! - [C3] Fix Worker path in JavaScript template
+
 ## 2.0.3
 
 ### Patch Changes
