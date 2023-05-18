@@ -23,7 +23,7 @@
 			"name": "Colors",
 			"scope": ["constant.other.color", "support.variable"],
 			"settings": {
-				"foreground": "#eeffff"
+				"foreground": "#FF8C00"
 			}
 		},
 		{
@@ -57,6 +57,19 @@
 			],
 			"settings": {
 				"foreground": "#00268f"
+			}
+		},
+		{
+			"name": "Support Tokens",
+			"scope": [
+				"support",
+				"support.variable",
+				"support.class",
+				"support.type",
+				"support.function"
+			],
+			"settings": {
+				"foreground": "#FF8C00"
 			}
 		},
 		{
