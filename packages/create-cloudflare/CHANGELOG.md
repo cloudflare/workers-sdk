@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.0.7
+
+### Patch Changes
+
+- [#3283](https://github.com/cloudflare/workers-sdk/pull/3283) [`74decfa7`](https://github.com/cloudflare/workers-sdk/commit/74decfa768b7a8ba0f04cf6f437ef075629fb6a7) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: Use correct path to worker source in wrangler.toml of JavaScript simple template
+
 ## 2.0.6
 
 ### Patch Changes
