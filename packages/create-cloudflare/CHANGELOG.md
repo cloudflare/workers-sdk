@@ -1,5 +1,13 @@
 # create-cloudflare
 
+## 2.0.6
+
+### Patch Changes
+
+- [#3273](https://github.com/cloudflare/workers-sdk/pull/3273) [`20479027`](https://github.com/cloudflare/workers-sdk/commit/204790272a813a511837a660d3d3143d8996f641) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: support spawning new processes on Windows
+
+* [#3282](https://github.com/cloudflare/workers-sdk/pull/3282) [`e9210590`](https://github.com/cloudflare/workers-sdk/commit/e9210590d3406fe899170542b67286b2ae299fe9) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure templates are included in deployed package
+
 ## 2.0.5
 
 ### Patch Changes
