@@ -16,6 +16,7 @@
 		"setup": "rm -rf web/assets web/quick-edit-extension && ./setup.sh"
 	},
 	"dependencies": {
+		"tsconfig": "*",
 		"wrangler": "*",
 		"yarn": "^1.22.19"
 	},

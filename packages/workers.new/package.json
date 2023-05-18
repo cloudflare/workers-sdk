@@ -8,8 +8,12 @@
 		"lint": "eslint",
 		"test": "vitest"
 	},
+	"dependencies": {
+		"eslint-worker-config": "*",
+		"tsconfig": "*",
+		"wrangler": "*"
+	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^3.0.0",
-		"wrangler": "^3.0.0"
+		"@cloudflare/workers-types": "^3.0.0"
 	}
 }

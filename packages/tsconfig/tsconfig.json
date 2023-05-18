@@ -1,3 +1,4 @@
+// If this file becomes the "base" file we can create more TS configs in this package folder
 {
 	"$schema": "https://json.schemastore.org/tsconfig",
 	"compilerOptions": {

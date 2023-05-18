@@ -13,7 +13,9 @@
 		"start": "npx wrangler dev dist/index.js"
 	},
 	"dependencies": {
+		"eslint-worker-config": "*",
 		"jszip": "^3.7.1",
+		"tsconfig": "*",
 		"wrangler": "*"
 	},
 	"devDependencies": {

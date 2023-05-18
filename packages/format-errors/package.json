@@ -12,6 +12,8 @@
 		"mustache": "^4.2.0",
 		"typescript": "^5.0.2",
 		"wrangler": "*",
-		"zod": "^3.21.4"
+		"zod": "^3.21.4",
+		"eslint-worker-config": "*",
+		"tsconfig": "*"
 	}
 }

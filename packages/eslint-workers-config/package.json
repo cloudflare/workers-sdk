@@ -1,0 +1,15 @@
+{
+	"name": "eslint-worker-config",
+	"version": "1.0.0",
+	"description": "ESLint config for workers-sdk Monorepo",
+	"main": "index.js",
+	"dependencies": {
+		"eslint": "^8.40.0",
+		"eslint-config-turbo": "latest",
+		"eslint-plugin-import": "2.26.x",
+		"eslint-plugin-no-only-tests": "^3.1.0",
+		"eslint-plugin-react": "^7.32.2",
+		"eslint-plugin-react-hooks": "^4.6.0",
+		"eslint-plugin-unused-imports": "^2.0.0"
+	}
+}

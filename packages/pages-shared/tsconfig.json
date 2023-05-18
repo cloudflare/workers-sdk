@@ -1,5 +1,5 @@
 {
-	"extends": "../../tsconfig.json",
+	"extends": "tsconfig/tsconfig.json",
 	"compilerOptions": {
 		"module": "CommonJS",
 		"types": ["jest"]

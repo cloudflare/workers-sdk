@@ -1,24 +1,8 @@
-const fs = require("fs");
-const path = require("path");
-
-function* walkTsConfigs(root) {
-	const entries = fs.readdirSync(root, { withFileTypes: true });
-	for (const entry of entries) {
-		if (entry.name === "node_modules") continue; // Ignore `node_modules`s
-		const entryPath = path.join(root, entry.name);
-		if (entry.isDirectory()) {
-			yield* walkTsConfigs(entryPath);
-		} else if (entry.name === "tsconfig.json") {
-			yield entryPath;
-		}
-	}
-}
-
 module.exports = {
 	parser: "@typescript-eslint/parser",
 	parserOptions: {
 		ecmaVersion: 2020,
-		project: Array.from(walkTsConfigs(__dirname)),
+		// project: __dirname, // Root eslint config in each package is responsible for this
 		sourceType: "module",
 	},
 	settings: {
@@ -34,6 +18,7 @@ module.exports = {
 		"unused-imports",
 		"no-only-tests",
 	],
+	extends: ["turbo"],
 	overrides: [
 		{
 			files: ["*.ts", "*.tsx"],
@@ -43,6 +28,7 @@ module.exports = {
 				"plugin:react/recommended",
 				"plugin:react-hooks/recommended",
 				"plugin:import/typescript",
+				"turbo",
 			],
 			rules: {
 				"no-empty": "off",
@@ -108,20 +94,19 @@ module.exports = {
 		},
 	],
 	ignorePatterns: [
-		"packages/wrangler/vendor",
-		"packages/wrangler/*-dist",
-		"packages/wrangler/pages/functions/template-worker.ts",
-		"packages/wrangler/templates",
-		"packages/wrangler/emitted-types",
+		"wrangler/vendor",
+		"wrangler/*-dist",
+		"wrangler/pages/functions/template-worker.ts",
+		"wrangler/templates",
+		"wrangler/emitted-types",
 		"examples/remix-pages-app/public",
-		"packages/jest-environment-wrangler/dist",
-		"packages/wrangler-devtools/built-devtools",
-		"packages/wranglerjs-compat-webpack-plugin/lib",
+		"jest-environment-wrangler/dist",
+		"wrangler-devtools/built-devtools",
+		"wranglerjs-compat-webpack-plugin/lib",
 		"/templates",
-		"packages/quick-edit-extension/vscode*.d.ts",
-		"packages/create-cloudflare/**/templates/**",
-		"packages/create-cloudflare/dist",
-		"packages/create-cloudflare/scripts",
+		"quick-edit-extension/vscode*.d.ts",
+		"create-cloudflare/**/templates/**",
+		"create-cloudflare/dist",
+		"create-cloudflare/scripts",
 	],
-	root: true,
 };
