@@ -3,10 +3,10 @@ name: C3 Tests
 on:
   pull_request:
     paths:
-      - packages/create-cloudflare
+      - packages/create-cloudflare/**
 
 env:
-  node-version: latest
+  node-version: 16.13
 
 jobs:
   check:
@@ -27,17 +27,38 @@ jobs:
           node-version: ${{ env.node-version }}
           cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
 
-      - name: Install NPM Dependencies
+      - name: ESlint and Typescript caching
+        uses: actions/cache@v3
+        id: eslint-cache
+        with:
+          path: |
+            .eslintcache
+            tsconfig.tsbuildinfo
+          key: ${{ matrix.os }}-eslint-tsbuildinfo-${{ hashFiles('**/*.ts','**/*.js', 'package.json', 'tsconfig.json') }}
+
+      # Attempt to cache all the node_modules directories based on the OS and package lock.
+      - name: Cache node_modules
+        id: npm-cache
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-node-modules
+        with:
+          key: ${{ runner.os }}-${{ env.node-version }}-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          path: "**/node_modules"
+
+      # If the cache missed then install using `npm ci` to follow package lock exactly
+      - if: ${{ steps.npm-cache.outputs.cache-hit != 'true'}}
+        name: Install NPM Dependencies
         run: npm ci
 
       - name: Check Types
-        run: npm run check:types
+        run: npm run check:type -w create-cloudflare
 
       - name: Lint
-        run: npm run check:lint
+        run: npm run check:lint -w create-cloudflare
 
       - name: Unit Tests
-        run: npm run test:unit
+        run: npm run test:unit -w create-cloudflare
 
       - name: E2E Tests
-        run: npm run test:e2e
+        run: npm run test:e2e -w create-cloudflare
