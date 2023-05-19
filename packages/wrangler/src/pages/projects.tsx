@@ -4,7 +4,7 @@ import React from "react";
 import { format as timeagoFormat } from "timeago.js";
 import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
-import { prompt } from "../dialogs";
+import { confirm, prompt } from "../dialogs";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -156,4 +156,44 @@ export async function CreateHandler({
 		`To deploy a folder of assets, run 'wrangler pages deploy [directory]'.`
 	);
 	await metrics.sendMetricsEvent("create pages project");
+}
+
+export function DeleteOptions(yargs: CommonYargsArgv) {
+	return yargs
+		.positional("project-name", {
+			type: "string",
+			demandOption: true,
+			description: "The name of your Pages project",
+		})
+		.options({
+			yes: {
+				alias: "y",
+				type: "boolean",
+				description: 'Answer "yes" to confirm project deletion',
+			},
+		})
+		.epilogue(pagesBetaWarning);
+}
+
+export async function DeleteHandler(
+	args: StrictYargsOptionsToInterface<typeof DeleteOptions>
+) {
+	const config = getConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME);
+	const accountId = await requireAuth(config);
+
+	const confirmed =
+		args.yes ||
+		(await confirm(
+			`Are you sure you want to delete "${args.projectName}"? This action cannot be undone.`
+		));
+
+	if (confirmed) {
+		logger.log("Deleting", args.projectName);
+		await fetchResult(
+			`/accounts/${accountId}/pages/projects/${args.projectName}`,
+			{ method: "DELETE" }
+		);
+
+		logger.log("Successfully deleted", args.projectName);
+	}
 }
