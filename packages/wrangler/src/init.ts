@@ -207,8 +207,6 @@ export async function initHandler(args: InitArgs) {
 			"--",
 			"--type",
 			"pre-existing",
-			"--name",
-			fromDashScriptName,
 		];
 
 		// Deprecate the `init --from-dash` command
