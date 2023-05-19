@@ -1,0 +1,216 @@
+From 72cb22cd99390d3010db32ff3b814416f9cddf34 Mon Sep 17 00:00:00 2001
+From: Workers DevProd <workers-devprod@cloudflare.com>
+Date: Fri, 19 May 2023 15:03:27 -0500
+Subject: [PATCH 12/12] Remove instances of localStorage implementations
+
+---
+ .../browser/userDataProfile.ts                | 54 +++++++++----------
+ .../splash/browser/splash.contribution.ts     |  4 +-
+ .../configuration/browser/configuration.ts    | 22 ++++----
+ .../localization/browser/localeService.ts     | 26 ++++-----
+ 4 files changed, 53 insertions(+), 53 deletions(-)
+
+diff --git a/src/vs/platform/userDataProfile/browser/userDataProfile.ts b/src/vs/platform/userDataProfile/browser/userDataProfile.ts
+index 044e7ee..34f70e3 100644
+--- a/src/vs/platform/userDataProfile/browser/userDataProfile.ts
++++ b/src/vs/platform/userDataProfile/browser/userDataProfile.ts
+@@ -66,15 +66,15 @@ export class BrowserUserDataProfilesService extends UserDataProfilesService impl
+ 	}
+ 
+ 	protected override getStoredProfiles(): StoredUserDataProfile[] {
+-		try {
+-			const value = window.localStorage.getItem(UserDataProfilesService.PROFILES_KEY);
+-			if (value) {
+-				return revive(JSON.parse(value));
+-			}
+-		} catch (error) {
+-			/* ignore */
+-			this.logService.error(error);
+-		}
++		// try {
++		// 	const value = window.localStorage.getItem(UserDataProfilesService.PROFILES_KEY);
++		// 	if (value) {
++		// 		return revive(JSON.parse(value));
++		// 	}
++		// } catch (error) {
++		// 	/* ignore */
++		// 	this.logService.error(error);
++		// }
+ 		return [];
+ 	}
+ 
+@@ -84,31 +84,31 @@ export class BrowserUserDataProfilesService extends UserDataProfilesService impl
+ 	}
+ 
+ 	protected override saveStoredProfiles(storedProfiles: StoredUserDataProfile[]): void {
+-		window.localStorage.setItem(UserDataProfilesService.PROFILES_KEY, JSON.stringify(storedProfiles));
++		// window.localStorage.setItem(UserDataProfilesService.PROFILES_KEY, JSON.stringify(storedProfiles));
+ 	}
+ 
+ 	protected override getStoredProfileAssociations(): StoredProfileAssociations {
+-		const migrateKey = 'profileAssociationsMigration';
+-		try {
+-			const value = window.localStorage.getItem(UserDataProfilesService.PROFILE_ASSOCIATIONS_KEY);
+-			if (value) {
+-				let associations: StoredProfileAssociations = JSON.parse(value);
+-				if (!window.localStorage.getItem(migrateKey)) {
+-					associations = this.migrateStoredProfileAssociations(associations);
+-					this.saveStoredProfileAssociations(associations);
+-					window.localStorage.setItem(migrateKey, 'true');
+-				}
+-				return associations;
+-			}
+-		} catch (error) {
+-			/* ignore */
+-			this.logService.error(error);
+-		}
++		// const migrateKey = 'profileAssociationsMigration';
++		// try {
++		// 	const value = window.localStorage.getItem(UserDataProfilesService.PROFILE_ASSOCIATIONS_KEY);
++		// 	if (value) {
++		// 		let associations: StoredProfileAssociations = JSON.parse(value);
++		// 		if (!window.localStorage.getItem(migrateKey)) {
++		// 			associations = this.migrateStoredProfileAssociations(associations);
++		// 			this.saveStoredProfileAssociations(associations);
++		// 			window.localStorage.setItem(migrateKey, 'true');
++		// 		}
++		// 		return associations;
++		// 	}
++		// } catch (error) {
++		// 	/* ignore */
++		// 	this.logService.error(error);
++		// }
+ 		return {};
+ 	}
+ 
+ 	protected override saveStoredProfileAssociations(storedProfileAssociations: StoredProfileAssociations): void {
+-		window.localStorage.setItem(UserDataProfilesService.PROFILE_ASSOCIATIONS_KEY, JSON.stringify(storedProfileAssociations));
++		// window.localStorage.setItem(UserDataProfilesService.PROFILE_ASSOCIATIONS_KEY, JSON.stringify(storedProfileAssociations));
+ 	}
+ 
+ }
+diff --git a/src/vs/workbench/contrib/splash/browser/splash.contribution.ts b/src/vs/workbench/contrib/splash/browser/splash.contribution.ts
+index a6b4093..d877f0c 100644
+--- a/src/vs/workbench/contrib/splash/browser/splash.contribution.ts
++++ b/src/vs/workbench/contrib/splash/browser/splash.contribution.ts
+@@ -15,8 +15,8 @@ registerSingleton(ISplashStorageService, class SplashStorageService implements I
+ 	_serviceBrand: undefined;
+ 
+ 	async saveWindowSplash(splash: IPartsSplash): Promise<void> {
+-		const raw = JSON.stringify(splash);
+-		localStorage.setItem('monaco-parts-splash', raw);
++		// const raw = JSON.stringify(splash);
++		// localStorage.setItem('monaco-parts-splash', raw);
+ 	}
+ }, InstantiationType.Delayed);
+ 
+diff --git a/src/vs/workbench/services/configuration/browser/configuration.ts b/src/vs/workbench/services/configuration/browser/configuration.ts
+index 83e284a..82ed7d2 100644
+--- a/src/vs/workbench/services/configuration/browser/configuration.ts
++++ b/src/vs/workbench/services/configuration/browser/configuration.ts
+@@ -74,12 +74,12 @@ export class DefaultConfiguration extends BaseDefaultConfiguration {
+ 			this.initiaizeCachedConfigurationDefaultsOverridesPromise = (async () => {
+ 				try {
+ 					// Read only when the cache exists
+-					if (window.localStorage.getItem(DefaultConfiguration.DEFAULT_OVERRIDES_CACHE_EXISTS_KEY)) {
+-						const content = await this.configurationCache.read(this.cacheKey);
+-						if (content) {
+-							this.cachedConfigurationDefaultsOverrides = JSON.parse(content);
+-						}
+-					}
++					// if (window.localStorage.getItem(DefaultConfiguration.DEFAULT_OVERRIDES_CACHE_EXISTS_KEY)) {
++					// 	const content = await this.configurationCache.read(this.cacheKey);
++					// 	if (content) {
++					// 		this.cachedConfigurationDefaultsOverrides = JSON.parse(content);
++					// 	}
++					// }
+ 				} catch (error) { /* ignore */ }
+ 				this.cachedConfigurationDefaultsOverrides = isObject(this.cachedConfigurationDefaultsOverrides) ? this.cachedConfigurationDefaultsOverrides : {};
+ 			})();
+@@ -107,10 +107,10 @@ export class DefaultConfiguration extends BaseDefaultConfiguration {
+ 		}
+ 		try {
+ 			if (Object.keys(cachedConfigurationDefaultsOverrides).length) {
+-				window.localStorage.setItem(DefaultConfiguration.DEFAULT_OVERRIDES_CACHE_EXISTS_KEY, 'yes');
++				// window.localStorage.setItem(DefaultConfiguration.DEFAULT_OVERRIDES_CACHE_EXISTS_KEY, 'yes');
+ 				await this.configurationCache.write(this.cacheKey, JSON.stringify(cachedConfigurationDefaultsOverrides));
+ 			} else {
+-				window.localStorage.removeItem(DefaultConfiguration.DEFAULT_OVERRIDES_CACHE_EXISTS_KEY);
++				// window.localStorage.removeItem(DefaultConfiguration.DEFAULT_OVERRIDES_CACHE_EXISTS_KEY);
+ 				await this.configurationCache.remove(this.cacheKey);
+ 			}
+ 		} catch (error) {/* Ignore error */ }
+@@ -233,8 +233,8 @@ class FileServiceBasedConfiguration extends Disposable {
+ 					return content;
+ 				} catch (error) {
+ 					this.logService.trace(`Error while resolving configuration file '${resource.toString()}': ${errors.getErrorMessage(error)}`);
+-					if ((<FileOperationError>error).fileOperationResult !== FileOperationResult.FILE_NOT_FOUND
+-						&& (<FileOperationError>error).fileOperationResult !== FileOperationResult.FILE_NOT_DIRECTORY) {
++					if ((<FileOperationError> error).fileOperationResult !== FileOperationResult.FILE_NOT_FOUND
++						&& (<FileOperationError> error).fileOperationResult !== FileOperationResult.FILE_NOT_DIRECTORY) {
+ 						this.logService.error(error);
+ 					}
+ 				}
+@@ -398,7 +398,7 @@ export class RemoteUserConfiguration extends Disposable {
+ 			try {
+ 				content = await this._userConfiguration.resolveContent();
+ 			} catch (error) {
+-				if ((<FileOperationError>error).fileOperationResult !== FileOperationResult.FILE_NOT_FOUND) {
++				if ((<FileOperationError> error).fileOperationResult !== FileOperationResult.FILE_NOT_FOUND) {
+ 					return;
+ 				}
+ 			}
+diff --git a/src/vs/workbench/services/localization/browser/localeService.ts b/src/vs/workbench/services/localization/browser/localeService.ts
+index a089f5e..b564e62 100644
+--- a/src/vs/workbench/services/localization/browser/localeService.ts
++++ b/src/vs/workbench/services/localization/browser/localeService.ts
+@@ -29,15 +29,15 @@ export class WebLocaleService implements ILocaleService {
+ 		if (locale === Language.value() || (!locale && Language.value() === navigator.language)) {
+ 			return;
+ 		}
+-		if (locale) {
+-			window.localStorage.setItem(WebLocaleService._LOCAL_STORAGE_LOCALE_KEY, locale);
+-			if (languagePackItem.extensionId) {
+-				window.localStorage.setItem(WebLocaleService._LOCAL_STORAGE_EXTENSION_ID_KEY, languagePackItem.extensionId);
+-			}
+-		} else {
+-			window.localStorage.removeItem(WebLocaleService._LOCAL_STORAGE_LOCALE_KEY);
+-			window.localStorage.removeItem(WebLocaleService._LOCAL_STORAGE_EXTENSION_ID_KEY);
+-		}
++		// if (locale) {
++		// 	window.localStorage.setItem(WebLocaleService._LOCAL_STORAGE_LOCALE_KEY, locale);
++		// 	if (languagePackItem.extensionId) {
++		// 		window.localStorage.setItem(WebLocaleService._LOCAL_STORAGE_EXTENSION_ID_KEY, languagePackItem.extensionId);
++		// 	}
++		// } else {
++		// 	window.localStorage.removeItem(WebLocaleService._LOCAL_STORAGE_LOCALE_KEY);
++		// 	window.localStorage.removeItem(WebLocaleService._LOCAL_STORAGE_EXTENSION_ID_KEY);
++		// }
+ 
+ 		const restartDialog = await this.dialogService.confirm({
+ 			type: 'info',
+@@ -52,8 +52,8 @@ export class WebLocaleService implements ILocaleService {
+ 	}
+ 
+ 	async clearLocalePreference(): Promise<void> {
+-		window.localStorage.removeItem(WebLocaleService._LOCAL_STORAGE_LOCALE_KEY);
+-		window.localStorage.removeItem(WebLocaleService._LOCAL_STORAGE_EXTENSION_ID_KEY);
++		// window.localStorage.removeItem(WebLocaleService._LOCAL_STORAGE_LOCALE_KEY);
++		// window.localStorage.removeItem(WebLocaleService._LOCAL_STORAGE_EXTENSION_ID_KEY);
+ 
+ 		if (Language.value() === navigator.language) {
+ 			return;
+@@ -80,8 +80,8 @@ class WebActiveLanguagePackService implements IActiveLanguagePackService {
+ 		if (language === LANGUAGE_DEFAULT) {
+ 			return undefined;
+ 		}
+-		const extensionId = window.localStorage.getItem(WebLocaleService._LOCAL_STORAGE_EXTENSION_ID_KEY);
+-		return withNullAsUndefined(extensionId);
++		// const extensionId = window.localStorage.getItem(WebLocaleService._LOCAL_STORAGE_EXTENSION_ID_KEY);
++		return undefined;
+ 	}
+ }
+ 
+-- 
+2.40.1
+
