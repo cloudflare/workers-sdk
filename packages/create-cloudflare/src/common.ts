@@ -137,7 +137,7 @@ export const printSummary = async (ctx: PagesGeneratorContext) => {
 	const nextSteps = [
 		[
 			`Run the development server`,
-			`${npm} run ${ctx.framework?.config.devCommand ?? "dev"}`,
+			`${npm} run ${ctx.framework?.config.devCommand ?? "start"}`,
 		],
 		[
 			`Deploy your application`,
