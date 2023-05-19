@@ -16,55 +16,86 @@ type RunOptions = {
 	cwd?: string;
 };
 
+type PrintOptions<T> = {
+	promise: Promise<T> | (() => Promise<T>);
+	startText: string;
+	doneText?: string;
+};
+
 export const runCommand = async (
 	command: string,
 	opts?: RunOptions
 ): Promise<string> => {
+	return printAsyncStatus({
+		promise() {
+			const [executable, ...args] = command.split(" ");
+
+			const squelch = opts?.silent || process.env.VITEST;
+
+			const cmd = spawn(executable, [...args], {
+				// TODO: ideally inherit stderr, but npm install uses this for warnings
+				// stdio: [ioMode, ioMode, "inherit"],
+				stdio: squelch ? "pipe" : "inherit",
+				env: {
+					...process.env,
+					...opts?.env,
+				},
+				cwd: opts?.cwd,
+			});
+
+			let output = ``;
+
+			if (opts?.silent) {
+				cmd.stdout?.on("data", (data) => {
+					output += data;
+				});
+				cmd.stderr?.on("data", (data) => {
+					output += data;
+				});
+			}
+
+			return new Promise<string>((resolve, reject) => {
+				cmd.on("close", (code) => {
+					if (code === 0) {
+						resolve(stripAnsi(output));
+					} else {
+						reject(new Error(output, { cause: code }));
+					}
+				});
+			});
+		},
+		startText: opts?.startText ?? command,
+		doneText: opts?.doneText,
+	});
+};
+
+export const printAsyncStatus = async <T>({
+	promise,
+	...opts
+}: PrintOptions<T>): Promise<T> => {
 	const s = spinner();
 
-	if (opts?.startText && !process.env.VITEST) {
-		s.start(opts?.startText || command);
+	if (!process.env.VITEST) {
+		s.start(opts.startText);
 	}
 
-	const [executable, ...args] = command.trim().replace(/\s+/g, ` `).split(" ");
-
-	const squelch = opts?.silent || process.env.VITEST;
-
-	const cmd = spawn(executable, [...args], {
-		// TODO: ideally inherit stderr, but npm install uses this for warnings
-		// stdio: [ioMode, ioMode, "inherit"],
-		stdio: squelch ? "pipe" : "inherit",
-		env: {
-			...process.env,
-			...opts?.env,
-		},
-		cwd: opts?.cwd,
-	});
-
-	let output = ``;
-
-	if (opts?.silent) {
-		cmd.stdout?.on("data", (data) => {
-			output += data;
-		});
-		cmd.stderr?.on("data", (data) => {
-			output += data;
-		});
+	if (typeof promise === "function") {
+		promise = promise();
 	}
 
-	return await new Promise((resolve, reject) => {
-		cmd.on("close", (code) => {
-			if (code === 0) {
-				if (opts?.doneText && !process.env.VITEST) {
-					s.stop(opts?.doneText);
-				}
-				resolve(stripAnsi(output));
-			} else {
-				logRaw(output);
-				reject(code);
-			}
-		});
-	});
+	try {
+		await promise;
+
+		if (opts.doneText && !process.env.VITEST) {
+			s.stop(opts.doneText);
+		} else {
+			s.stop();
+		}
+	} catch (err) {
+		s.stop((err as Error).message);
+	}
+
+	return promise;
 };
 
 export const retry = async <T>(times: number, fn: () => Promise<T>) => {
@@ -100,7 +131,7 @@ export const runFrameworkGenerator = async (
 
 type InstallConfig = {
 	startText?: string;
-	doneText?: string;
+	doneText: string;
 	dev?: boolean;
 };
 

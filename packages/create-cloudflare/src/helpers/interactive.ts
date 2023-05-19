@@ -257,10 +257,10 @@ export const spinner = () => {
 		update(msg: string) {
 			currentMsg = msg;
 		},
-		stop: (msg: string) => {
+		stop: (msg?: string) => {
 			// Write the final message and clear the loop
 			logUpdate.clear();
-			logUpdate(`${leftT} ${startMsg}\n${grayBar} ${msg}`);
+			if (msg) logUpdate(`${leftT} ${startMsg}\n${grayBar} ${msg}`);
 			logUpdate.done();
 			newline();
 			clearLoop();
