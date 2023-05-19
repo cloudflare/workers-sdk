@@ -42,6 +42,7 @@ const parseArgs = async (argv: string[]) => {
 		.option("framework", { type: "string" })
 		.option("deploy", { type: "boolean" })
 		.option("ts", { type: "boolean" })
+		.option("git", { type: "boolean" })
 		.option("open", {
 			type: "boolean",
 			default: true,

@@ -8,6 +8,8 @@ import { npmInstall, runCommand } from "helpers/command";
 import { confirmInput, textInput } from "helpers/interactive";
 import {
 	chooseAccount,
+	gitCommit,
+	offerGit,
 	offerToDeploy,
 	printSummary,
 	runDeploy,
@@ -29,11 +31,13 @@ export const runWorkersGenerator = async (args: Args) => {
 	await copyFiles(ctx);
 	await copyExistingWorkerFiles(ctx);
 	await updateFiles(ctx);
+	await offerGit(ctx);
 	endSection("Application created");
 
 	startSection("Installing dependencies", "Step 2 of 3");
 	chdir(ctx.project.path);
 	await npmInstall();
+	await gitCommit(ctx);
 	endSection("Dependencies Installed");
 
 	await offerToDeploy(ctx);

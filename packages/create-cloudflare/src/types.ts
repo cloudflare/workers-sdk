@@ -10,6 +10,7 @@ export type PagesGeneratorArgs = {
 	deploy?: boolean;
 	ts?: boolean;
 	open: boolean;
+	git?: boolean;
 };
 
 export type PagesGeneratorContext = {

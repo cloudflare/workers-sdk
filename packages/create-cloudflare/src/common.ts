@@ -1,6 +1,8 @@
 import { existsSync, mkdirSync } from "fs";
 import { basename, dirname, relative, resolve } from "path";
 import { chdir } from "process";
+import { execa } from "execa";
+import { findUp } from "find-up";
 import {
 	crash,
 	endSection,
@@ -15,6 +17,7 @@ import { dim, blue, gray, bgGreen, brandColor } from "helpers/colors";
 import {
 	detectPackageManager,
 	listAccounts,
+	printAsyncStatus,
 	runCommand,
 	wranglerLogin,
 } from "helpers/command";
@@ -197,3 +200,82 @@ export const printSummary = async (ctx: PagesGeneratorContext) => {
 	}
 	endSection("See you again soon!");
 };
+
+export const offerGit = async (ctx: PagesGeneratorContext) => {
+	const insideGitRepo = await isInsideGitRepo(ctx.project.path);
+
+	if (insideGitRepo) return;
+
+	ctx.args.git ??= await confirmInput({
+		question: "Do you want to use git?",
+		renderSubmitted: (value: boolean) => `${brandColor(value ? `yes` : `no`)}`,
+		defaultValue: true,
+	});
+
+	if (ctx.args.git) {
+		await printAsyncStatus({
+			promise: initializeGit(ctx.project.path),
+			startText: "Initializing git",
+			doneText: `${brandColor("initialized")} ${dim(`git`)}`,
+		});
+	}
+};
+
+export const gitCommit = async (ctx: PagesGeneratorContext) => {
+	const insideGitRepo = await isInsideGitRepo(ctx.project.path);
+
+	if (!insideGitRepo) return;
+
+	await printAsyncStatus({
+		async promise() {
+			await execa("git", ["add", "."]);
+			await execa("git", [
+				"commit",
+				"-m",
+				"Initial commit (by Create-Cloudflare CLI)",
+			]);
+		},
+		startText: "Committing new files",
+		doneText: `${brandColor("git")} ${dim(`initial commit`)}`,
+	});
+};
+
+/**
+ * Check whether the given current working directory is within a git repository
+ * by looking for a `.git` directory in this or an ancestor directory.
+ */
+export async function isInsideGitRepo(cwd: string) {
+	const res = await findUp(".git", { cwd, type: "directory" });
+	return res !== undefined;
+}
+
+/**
+ * Initialize a new Worker project with a git repository.
+ *
+ * We want the branch to be called `main` but earlier versions of git do not support `--initial-branch`.
+ * If that is the case then we just fallback to the default initial branch name.
+ */
+export async function initializeGit(cwd: string) {
+	try {
+		// Get the default init branch name
+		const { stdout: defaultBranchName } = await execa("git", [
+			"config",
+			"--get",
+			"init.defaultBranch",
+		]);
+
+		// Try to create the repository with the HEAD branch of defaultBranchName ?? `main`.
+		await execa(
+			"git",
+			["init", "--initial-branch", defaultBranchName.trim() ?? "main"],
+			{
+				cwd,
+			}
+		);
+	} catch {
+		// Unable to create the repo with a HEAD branch name, so just fall back to the default.
+		await execa("git", ["init"], {
+			cwd,
+		});
+	}
+}
