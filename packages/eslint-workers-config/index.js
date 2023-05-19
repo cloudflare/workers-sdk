@@ -1,4 +1,6 @@
+// Settings here should be considered Global ESLint settings for the monorepo
 module.exports = {
+	ignorePatterns: ["**/node_modules/**", "examples", "**/templates/**"],
 	parser: "@typescript-eslint/parser",
 	parserOptions: {
 		ecmaVersion: 2020,
@@ -92,21 +94,5 @@ module.exports = {
 				],
 			},
 		},
-	],
-	ignorePatterns: [
-		"wrangler/vendor",
-		"wrangler/*-dist",
-		"wrangler/pages/functions/template-worker.ts",
-		"wrangler/templates",
-		"wrangler/emitted-types",
-		"examples/remix-pages-app/public",
-		"jest-environment-wrangler/dist",
-		"wrangler-devtools/built-devtools",
-		"wranglerjs-compat-webpack-plugin/lib",
-		"/templates",
-		"quick-edit-extension/vscode*.d.ts",
-		"create-cloudflare/**/templates/**",
-		"create-cloudflare/dist",
-		"create-cloudflare/scripts",
 	],
 };
