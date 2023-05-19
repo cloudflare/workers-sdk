@@ -51,7 +51,7 @@ const parseArgs = async (argv: string[]) => {
 		.help().argv;
 
 	return {
-		projectName: String(args._[0]),
+		projectName: args._[0] as string | undefined,
 		...args,
 	};
 };

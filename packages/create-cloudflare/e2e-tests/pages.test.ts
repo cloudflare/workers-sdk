@@ -15,18 +15,18 @@ Areas for future improvement:
 describe("E2E", () => {
 	let dummyPath: string;
 
-	const removeDummyFolder = () => {
-		rmSync(dummyPath, { recursive: true, force: true });
+	const removeDummyFolder = (path: string) => {
+		rmSync(path, { recursive: true, force: true });
 	};
 
 	beforeEach(() => {
 		dummyPath = join(tmpdir(), "tmp");
-		removeDummyFolder();
+		removeDummyFolder(dummyPath);
 		mkdirSync(dummyPath);
 	});
 
 	afterEach(() => {
-		removeDummyFolder();
+		removeDummyFolder(dummyPath);
 	});
 
 	const runCli = async (framework: string) => {
