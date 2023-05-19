@@ -17,9 +17,10 @@ export const main = async (argv: string[]) => {
 	printBanner();
 
 	const args = await parseArgs(argv);
+
 	const validatedArgs: PagesGeneratorArgs = {
 		...args,
-		projectName: await validateName(args.name),
+		projectName: await validateName(args.projectName),
 		type: await validateType(args.type),
 	};
 
@@ -49,7 +50,10 @@ const parseArgs = async (argv: string[]) => {
 		})
 		.help().argv;
 
-	return args;
+	return {
+		projectName: String(args._[0]),
+		...args,
+	};
 };
 
 const validateName = async (name: string | undefined): Promise<string> => {

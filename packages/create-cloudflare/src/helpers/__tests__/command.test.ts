@@ -1,4 +1,4 @@
-import { spawn } from "child_process";
+import { spawn } from "cross-spawn";
 import { beforeEach, afterEach, describe, expect, test, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
 import {
@@ -16,7 +16,7 @@ describe("Command Helpers", () => {
 
 	beforeEach(() => {
 		// Mock out the child_process.spawn function
-		vi.mock("child_process", () => {
+		vi.mock("cross-spawn", () => {
 			const mockedSpawn = vi.fn().mockImplementation(() => ({
 				on: vi.fn().mockImplementation((event, cb) => {
 					if (event === "close") {

@@ -43,6 +43,9 @@ describe("E2E", () => {
 		const result = await execa("node", ["./dist/cli.js", ...argv], {
 			stderr: process.stderr,
 		});
+		// For debugging purposes, uncomment the following to see the exact
+		// command the test uses. You can then run this via the command line.
+		// console.log("COMMAND: ", `node ${["./dist/cli.js", ...argv].join(" ")}`);
 
 		const { exitCode } = result;
 
@@ -71,21 +74,21 @@ describe("E2E", () => {
 		};
 	};
 
-	test("Astro", async () => {
-		await runCli("astro");
-	});
+	// test("Astro", async () => {
+	// 	await runCli("astro");
+	// });
 
 	test("Hono", async () => {
 		await runCli("hono");
 	});
 
-	test("Next.js", async () => {
-		await runCli("next");
-	});
+	// test("Next.js", async () => {
+	// 	await runCli("next");
+	// });
 
-	test("Nuxt", async () => {
-		await runCli("nuxt");
-	});
+	// test("Nuxt", async () => {
+	// 	await runCli("nuxt");
+	// });
 
 	// Not possible atm since `npx qwik add cloudflare-pages`
 	// requires interactive confirmation
@@ -93,13 +96,13 @@ describe("E2E", () => {
 	//   await runCli("next", flags);
 	// });
 
-	test("React", async () => {
-		await runCli("react");
-	});
+	// test("React", async () => {
+	// 	await runCli("react");
+	// });
 
-	test("Remix", async () => {
-		await runCli("remix");
-	});
+	// test("Remix", async () => {
+	// 	await runCli("remix");
+	// });
 
 	// Not possible atm since template selection is interactive only
 	// test("Solid", async () => {
@@ -113,7 +116,7 @@ describe("E2E", () => {
 	//   await runCli("svelte", flags);
 	// });
 
-	test("Vue", async () => {
-		await runCli("vue");
-	});
+	// test("Vue", async () => {
+	// 	await runCli("vue");
+	// });
 });

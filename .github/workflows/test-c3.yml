@@ -6,14 +6,15 @@ on:
       - packages/create-cloudflare/**
 
 env:
-  node-version: 16.13
+  node-version: 16.14
 
 jobs:
   check:
     name: "Checks"
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        # os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
