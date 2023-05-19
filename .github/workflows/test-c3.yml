@@ -3,7 +3,7 @@ name: C3 Tests
 on:
   pull_request:
     paths:
-      - packages/create-cloudflare
+      - packages/create-cloudflare/**
 
 env:
   node-version: latest
