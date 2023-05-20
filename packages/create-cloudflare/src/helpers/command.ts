@@ -67,6 +67,19 @@ export const runCommand = async (
 	});
 };
 
+export const retry = async <T>(times: number, fn: () => Promise<T>) => {
+	let error: unknown = null;
+	while (times > 0) {
+		try {
+			return await fn();
+		} catch (e) {
+			error = e;
+			times--;
+		}
+	}
+	throw error;
+};
+
 // Prints the section header & footer while running the `cmd`
 export const runFrameworkGenerator = async (
 	ctx: PagesGeneratorContext,
