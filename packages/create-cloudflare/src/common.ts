@@ -18,7 +18,7 @@ import {
 	runCommand,
 	wranglerLogin,
 } from "helpers/command";
-import { confirmInput, selectInput } from "helpers/interactive";
+import { confirmInput, selectInput, spinner } from "helpers/interactive";
 import { poll } from "helpers/poll";
 import type { Option } from "helpers/interactive";
 import type { PagesGeneratorArgs, PagesGeneratorContext } from "types";
@@ -108,13 +108,20 @@ export const runDeploy = async (ctx: PagesGeneratorContext) => {
 };
 
 export const chooseAccount = async (ctx: PagesGeneratorContext) => {
+	const s = spinner();
+	s.start(`Selecting Cloudflare account ${dim("retrieving accounts")}`);
 	const accounts = await listAccounts();
 
 	let accountId: string;
 
 	if (Object.keys(accounts).length == 1) {
-		accountId = Object.values(accounts)[0];
+		const accountName = Object.keys(accounts)[0];
+		accountId = accounts[accountName];
+		s.stop(`${brandColor("account")} ${dim(accountName)}`);
 	} else {
+		s.stop(
+			`${brandColor("account")} ${dim("more than one account available")}`
+		);
 		const accountOptions = Object.entries(accounts).map(([name, id]) => ({
 			label: name,
 			value: id,
