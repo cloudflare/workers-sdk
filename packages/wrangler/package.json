@@ -63,7 +63,7 @@
 		"test-watch": "npm run test -- --runInBand --testTimeout=50000 --watch",
 		"test:ci": "npm run test -- --coverage",
 		"test:debug": "npm run test -- --silent=false --verbose=true",
-		"test:e2e": "vitest --no-threads ./e2e"
+		"test:e2e": "vitest --single-thread ./e2e"
 	},
 	"jest": {
 		"coverageReporters": [
