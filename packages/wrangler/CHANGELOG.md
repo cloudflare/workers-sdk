@@ -1,5 +1,11 @@
 # wrangler
 
+## 3.0.1
+
+### Patch Changes
+
+- [#3277](https://github.com/cloudflare/workers-sdk/pull/3277) [`99e6ccf5`](https://github.com/cloudflare/workers-sdk/commit/99e6ccf504f66e4885cddf91b7a09d2e256b2d11) Thanks [@RamIdeas](https://github.com/RamIdeas)! - fix: remove extraneous arg when wrangler delegates to c3
+
 ## 3.0.0
 
 ### Major Changes

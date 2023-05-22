@@ -1,5 +1,18 @@
 # create-cloudflare
 
+## 2.0.8
+
+### Patch Changes
+
+- [#3260](https://github.com/cloudflare/workers-sdk/pull/3260) [`7249f344`](https://github.com/cloudflare/workers-sdk/commit/7249f344109fe1a8f67859e9aff227c7951bc6b9) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: add polling for deployed Pages projects
+
+  When create-cloudflare deploys to Pages, it can take a while before the website is ready to be viewed.
+  This change adds back in polling of the site and then opening a browser when the URL is ready.
+
+* [#3272](https://github.com/cloudflare/workers-sdk/pull/3272) [`57f80551`](https://github.com/cloudflare/workers-sdk/commit/57f80551961c2f67bf057591518d573f71a51c8f) Thanks [@markdalgleish](https://github.com/markdalgleish)! - Use full Remix template URL rather than the `cloudflare-pages` shorthand since it will be removed in a future version of `create-remix`
+
+- [#3291](https://github.com/cloudflare/workers-sdk/pull/3291) [`c1be44c8`](https://github.com/cloudflare/workers-sdk/commit/c1be44c8ef64f18dbd65a2399e845d3df1d0c1f2) Thanks [@Cherry](https://github.com/Cherry)! - fix: specify correct startup command in logs for newly created c3 projects
+
 ## 2.0.7
 
 ### Patch Changes
