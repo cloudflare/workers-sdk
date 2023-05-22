@@ -6,7 +6,7 @@
 	"main": "server/index.js",
 	"scripts": {
 		"build": "esbuild --bundle --platform=node server/index.ts --outfile=dist/index.js",
-		"check:type": "tsc && tsc -p tests/tsconfig.json",
+		"check:type": "tsc",
 		"dev": "npx wrangler pages dev --port 8790 --proxy 8791 -- npm run server",
 		"server": "node dist/index.js",
 		"test": "npx vitest",
@@ -14,6 +14,7 @@
 	},
 	"devDependencies": {
 		"miniflare": "^3.0.0",
+		"workers-tsconfig": "*",
 		"ws": "^8.8.0"
 	},
 	"engines": {

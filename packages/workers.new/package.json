@@ -10,7 +10,7 @@
 	},
 	"dependencies": {
 		"eslint-worker-config": "*",
-		"tsconfig": "*",
+		"workers-tsconfig": "*",
 		"wrangler": "*"
 	},
 	"devDependencies": {

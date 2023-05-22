@@ -4,14 +4,15 @@
 	"private": true,
 	"sideEffects": false,
 	"scripts": {
-		"check:type": "tsc && tsc -p tests/tsconfig.json",
+		"check:type": "tsc",
 		"dev": "npx wrangler pages dev public --port 8776",
 		"test": "npx vitest",
 		"test:ci": "npx vitest"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20221111.1",
-		"undici": "^5.9.1"
+		"undici": "^5.9.1",
+		"workers-tsconfig": "*"
 	},
 	"engines": {
 		"node": ">=16.13"

@@ -1,7 +1,7 @@
 {
 	"name": "eslint-worker-config",
 	"version": "1.0.0",
-	"description": "ESLint config for workers-sdk Monorepo",
+	"description": "ESLint config for workers-sdk",
 	"main": "index.js",
 	"dependencies": {
 		"eslint": "^8.40.0",

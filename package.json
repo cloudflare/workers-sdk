@@ -14,16 +14,17 @@
 		"fixtures/*"
 	],
 	"scripts": {
-		"build": "turbo build",
-		"check": "turbo lint && turbo check:type && npm run check:format",
+		"build": "turbo run build",
+		"check": "turbo run lint && turbo run check:type && npm run check:format",
 		"check:format": "prettier . --check --ignore-unknown",
-		"check:type": "turbo check:type",
+		"check:type": "turbo run check:type",
 		"fix": "npm run prettify && eslint --fix",
 		"postinstall": "patch-package",
-		"lint": "turbo lint",
+		"lint": "turbo run lint",
 		"prettify": "prettier . --write --ignore-unknown",
-		"test": "npm run clean --workspace=wrangler && npm run bundle --workspace=wrangler && npm run test --workspace=packages/wrangler --workspace=packages/edge-preview-authenticated-proxy --workspace=packages/pages-shared --if-present",
-		"test:ci": "npm run test:ci --workspace=packages/wrangler --workspace=packages/pages-shared --if-present"
+		"test": "turbo run test",
+		"test:ci": "npm run test:ci --workspace=packages/wrangler --workspace=packages/pages-shared --if-present",
+		"test:watch": "turbo run test:watch"
 	},
 	"dependencies": {
 		"@changesets/changelog-github": "^0.4.5",

@@ -1,4 +1,9 @@
-// Settings here should be considered Global ESLint settings for the monorepo
+// Settings here should be considered Global ESLint settings for the monorepo. We don't need to define --config in each package.
+
+// https://eslint.org/docs/latest/use/configure/
+// https://eslint.org/docs/latest/use/configure/configuration-files#using-configuration-files
+// This can be in the form of a .eslintrc.* file or an eslintConfig field in a package.json file,
+// both of which ESLint will look for and read automatically, or you can specify a configuration file on the command line.
 module.exports = {
 	ignorePatterns: ["**/node_modules/**", "examples", "**/templates/**"],
 	parser: "@typescript-eslint/parser",

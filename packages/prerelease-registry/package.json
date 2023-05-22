@@ -15,7 +15,7 @@
 	"dependencies": {
 		"eslint-worker-config": "*",
 		"jszip": "^3.7.1",
-		"tsconfig": "*",
+		"workers-tsconfig": "*",
 		"wrangler": "*"
 	},
 	"devDependencies": {

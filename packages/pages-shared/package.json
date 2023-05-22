@@ -44,7 +44,7 @@
 	},
 	"dependencies": {
 		"miniflare": "^3.0.0",
-		"tsconfig": "*",
+		"workers-tsconfig": "*",
 		"wrangler": "*"
 	},
 	"devDependencies": {

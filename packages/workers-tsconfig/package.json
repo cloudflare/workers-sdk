@@ -1,0 +1,4 @@
+{
+	"name": "workers-tsconfig",
+	"description": "Shared tsconfig for workers-sdk"
+}

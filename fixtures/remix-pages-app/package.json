@@ -8,7 +8,7 @@
 		"dev:wrangler": "cross-env NODE_ENV=development wrangler pages dev ./public",
 		"dev": "remix build && run-p \"dev:*\"",
 		"start": "cross-env NODE_ENV=production npm run dev:wrangler",
-		"check:type": "tsc && tsc -p tests/tsconfig.json",
+		"check:type": "tsc",
 		"test": "npx vitest",
 		"test:ci": "npx vitest"
 	},
@@ -29,7 +29,8 @@
 		"eslint": "^8.27.0",
 		"npm-run-all": "^4.1.5",
 		"remix": "^1.14.3",
-		"typescript": "^4.8.4"
+		"typescript": "^4.8.4",
+		"workers-tsconfig": "*"
 	},
 	"engines": {
 		"node": ">=16.13"

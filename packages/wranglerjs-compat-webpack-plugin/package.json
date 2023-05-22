@@ -63,9 +63,9 @@
 		"npm-run-all": "^4.1.5",
 		"tar": "^6.1.11",
 		"tosource": "^2.0.0-alpha.3",
-		"tsconfig": "*",
 		"typescript": "^4.6.3",
 		"undici": "^5.9.1",
-		"webpack": "^4.46.0"
+		"webpack": "^4.46.0",
+		"workers-tsconfig": "*"
 	}
 }

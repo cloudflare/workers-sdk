@@ -57,12 +57,12 @@
 		"log-update": "^5.0.1",
 		"open": "^8.4.0",
 		"recast": "^0.22.0",
-		"tsconfig": "*",
 		"typescript": "^5.0.2",
 		"undici": "^5.22.0",
 		"vite-tsconfig-paths": "^4.0.8",
 		"vitest": "^0.30.0",
 		"which-pm-runs": "^1.1.0",
+		"workers-tsconfig": "*",
 		"wrangler": "^3.0.1",
 		"yargs": "^17.7.1"
 	},
