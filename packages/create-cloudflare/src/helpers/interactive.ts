@@ -1,7 +1,15 @@
 import { TextPrompt, SelectPrompt, ConfirmPrompt } from "@clack/core";
 import { isCancel } from "@clack/prompts";
 import logUpdate from "log-update";
-import { shapes, cancel, space, status, newline, logRaw } from "./cli";
+import {
+	shapes,
+	cancel,
+	space,
+	status,
+	newline,
+	logRaw,
+	updateStatus,
+} from "./cli";
 import { blue, dim, gray, brandColor, bold } from "./colors";
 
 const grayBar = gray(shapes.bar);
@@ -213,7 +221,8 @@ export const confirmInput = async (opts: ConfirmOptions) => {
 };
 
 export const spinner = () => {
-	const frames = ["┤", "┘", "┴", "└", "├", "┌", "┬", "┐"];
+	const spinnerFrames = ["┤", "┘", "┴", "└", "├", "┌", "┬", "┐"];
+	const ellipsisFrames = ["", ".", "..", "...", " ..", "  .", ""];
 
 	// Alternative animations we considered. Keeping around in case we
 	// introduce different animations for different use cases.
@@ -245,13 +254,20 @@ export const spinner = () => {
 			startMsg = `${currentMsg} ${dim(helpText)}`;
 
 			let index = 0;
-			let dots = 1;
 
 			clearLoop();
 			loop = setInterval(() => {
-				const frame = frames[(index = ++index % frames.length)];
-				dots = ++dots % maxDots;
-				logUpdate(`${color(frame)} ${currentMsg} ${".".repeat(dots)}`);
+				index++;
+				const spinnerFrame = spinnerFrames[index % spinnerFrames.length];
+				const ellipsisFrame = ellipsisFrames[index % ellipsisFrames.length];
+
+				if (msg) {
+					if (!process.env.VITEST) {
+						logUpdate(`${color(spinnerFrame)} ${currentMsg} ${ellipsisFrame}`);
+					} else {
+						updateStatus(msg);
+					}
+				}
 			}, frameRate);
 		},
 		update(msg: string) {
@@ -260,7 +276,13 @@ export const spinner = () => {
 		stop: (msg?: string) => {
 			// Write the final message and clear the loop
 			logUpdate.clear();
-			if (msg) logUpdate(`${leftT} ${startMsg}\n${grayBar} ${msg}`);
+			if (msg) {
+				if (!process.env.VITEST) {
+					logUpdate(`${leftT} ${startMsg}\n${grayBar} ${msg}`);
+				} else {
+					updateStatus(msg);
+				}
+			}
 			logUpdate.done();
 			newline();
 			clearLoop();

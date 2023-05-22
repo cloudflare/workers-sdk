@@ -18,6 +18,7 @@ type RunOptions = {
 
 type PrintOptions<T> = {
 	promise: Promise<T> | (() => Promise<T>);
+	useSpinner?: boolean;
 	startText: string;
 	doneText?: string;
 };
@@ -27,6 +28,9 @@ export const runCommand = async (
 	opts?: RunOptions
 ): Promise<string> => {
 	return printAsyncStatus({
+		useSpinner: opts?.silent, // only use the spinner if we're not spawning with stdio: 'inherit'
+		startText: opts?.startText || command,
+		doneText: opts?.doneText,
 		promise() {
 			const [executable, ...args] = command.split(" ");
 
@@ -64,8 +68,6 @@ export const runCommand = async (
 				});
 			});
 		},
-		startText: opts?.startText ?? command,
-		doneText: opts?.doneText,
 	});
 };
 
@@ -73,11 +75,13 @@ export const printAsyncStatus = async <T>({
 	promise,
 	...opts
 }: PrintOptions<T>): Promise<T> => {
-	const s = spinner();
+	let s: ReturnType<typeof spinner> | undefined;
 
-	if (!process.env.VITEST) {
-		s.start(opts.startText);
+	if (opts.useSpinner) {
+		s = spinner();
 	}
+
+	s?.start(opts?.startText);
 
 	if (typeof promise === "function") {
 		promise = promise();
@@ -87,12 +91,12 @@ export const printAsyncStatus = async <T>({
 		await promise;
 
 		if (opts.doneText && !process.env.VITEST) {
-			s.stop(opts.doneText);
-		} else {
-			s.stop();
+			s?.stop(opts.doneText);
 		}
 	} catch (err) {
-		s.stop((err as Error).message);
+		s?.stop((err as Error).message);
+	} finally {
+		s?.stop();
 	}
 
 	return promise;
