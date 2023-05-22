@@ -1,5 +1,4 @@
 
-packages/wrangler/vendor/
 packages/wrangler/wrangler-dist/
 packages/wrangler/miniflare-dist/
 packages/wrangler/emitted-types/
@@ -8,18 +7,18 @@ packages/wrangler/CHANGELOG.md
 packages/jest-environment-wrangler/CHANGELOG.md
 packages/wranglerjs-compat-webpack-plugin/lib
 packages/wrangler-devtools/built-devtools
-packages/quick-edit-extension/vscode*.d.ts
 packages/edge-preview-authenticated-proxy/package.json
 packages/format-errors/package.json
 packages/**/dist/**
-
 
 fixtures/remix-pages-app/build/
 fixtures/remix-pages-app/public/build/
 fixtures/pages-functions-app/public/cdn-cgi/
 fixtures/remix-pages-app/functions/[[path]].js
 fixtures/**/dist/**
+**/vendor/**
 
+**/*.d.ts
 
 # Moved from /templates
 *-lock.*
