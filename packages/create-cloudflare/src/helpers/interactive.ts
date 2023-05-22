@@ -235,7 +235,6 @@ export const spinner = () => {
 
 	const color = brandColor;
 	const frameRate = 120;
-	const maxDots = 4;
 	let loop: NodeJS.Timer | null = null;
 	let startMsg: string;
 	let currentMsg: string;

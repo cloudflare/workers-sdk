@@ -2,7 +2,7 @@ import { existsSync } from "fs";
 import path from "path";
 import { spawn } from "cross-spawn";
 import whichPmRuns from "which-pm-runs";
-import { endSection, logRaw, stripAnsi } from "./cli";
+import { endSection, stripAnsi } from "./cli";
 import { brandColor, dim } from "./colors";
 import { spinner } from "./interactive";
 import type { PagesGeneratorContext } from "types";
@@ -135,7 +135,7 @@ export const runFrameworkGenerator = async (
 
 type InstallConfig = {
 	startText?: string;
-	doneText: string;
+	doneText?: string;
 	dev?: boolean;
 };
 
