@@ -150,6 +150,8 @@ export const Handler = async (args: PagesBuildArgs) => {
 				minify,
 				sourcemap,
 				fallbackService,
+				// This only watches already existing files using the esbuild watching mechanism
+				// it will not watch new files that are added to the functions directory!
 				watch,
 				plugin,
 				legacyNodeCompat,
