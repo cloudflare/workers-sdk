@@ -35,25 +35,16 @@ describe("deployments", async () => {
 
 	it("init worker", async () => {
 		const { stdout } = await runIn(root, { [workerName]: "smoke-test-worker" })`
-    $ ${RUN} init ${workerName}
+    $ ${RUN} init --yes --no-delegate-c3 ${workerName}
     `;
 		expect(stdout).toMatchInlineSnapshot(`
 			"Using npm as package manager.
 			✨ Created smoke-test-worker/wrangler.toml
-			? Would you like to use git to manage this Worker?
-			🤖 Using default value in non-interactive context: yes
 			✨ Initialized git repository at smoke-test-worker
-			? No package.json found. Would you like to create one?
-			🤖 Using default value in non-interactive context: yes
 			✨ Created smoke-test-worker/package.json
-			? Would you like to use TypeScript?
-			🤖 Using default value in non-interactive context: yes
 			✨ Created smoke-test-worker/tsconfig.json
-			? Would you like to create a Worker at smoke-test-worker/src/index.ts?
-			🤖 Using default value in non-interactive context: Fetch handler
 			✨ Created smoke-test-worker/src/index.ts
-			? Would you like us to write your first test with Vitest?
-			🤖 Using default value in non-interactive context: yes
+			Your project will use Vitest to run your tests.
 			✨ Created smoke-test-worker/src/index.test.ts
 
 			added (N) packages, and audited (N) packages in (TIMINGS)
@@ -75,7 +66,7 @@ describe("deployments", async () => {
 			stderr,
 			raw: { stdout: rawStdout },
 		} = await runIn(workerPath, { [workerName]: "smoke-test-worker" })`
-	  $ ${RUN} publish
+	  $ ${RUN} deploy
 	`;
 		expect(stdout).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -127,7 +118,7 @@ describe("deployments", async () => {
 			stderr,
 			raw: { stdout: rawStdout },
 		} = await runIn(workerPath, { [workerName]: "smoke-test-worker" })`
-	  $ ${RUN} publish
+	  $ ${RUN} deploy
 	`;
 		expect(stdout).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
