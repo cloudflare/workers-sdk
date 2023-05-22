@@ -33,7 +33,7 @@ import type {
 
 export function ApplyOptions(yargs: CommonYargsArgv) {
 	return MigrationOptions(yargs)
-		.option("experimentalBackend", {
+		.option("experimental-backend", {
 			default: false,
 			describe: "Use new experimental DB backend",
 			type: "boolean",
