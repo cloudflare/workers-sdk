@@ -90,9 +90,7 @@ export const printAsyncStatus = async <T>({
 	try {
 		await promise;
 
-		if (opts.doneText && !process.env.VITEST) {
-			s?.stop(opts.doneText);
-		}
+		s?.stop(opts.doneText);
 	} catch (err) {
 		s?.stop((err as Error).message);
 	} finally {
