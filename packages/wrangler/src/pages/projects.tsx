@@ -86,12 +86,20 @@ export function CreateOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				description: "The name of the production branch of your project",
 			},
+			"compatibility-flags": {
+				describe: "Flags to use for compatibility checks",
+				alias: "compatibility-flag",
+				type: "string",
+				requiresArg: true,
+				array: true,
+			},
 		})
 		.epilogue(pagesBetaWarning);
 }
 
 export async function CreateHandler({
 	productionBranch,
+	compatibilityFlags,
 	projectName,
 }: StrictYargsOptionsToInterface<typeof CreateOptions>) {
 	const config = getConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME);
@@ -143,6 +151,21 @@ export async function CreateHandler({
 			}),
 		}
 	);
+
+	if (compatibilityFlags) {
+		await fetchResult<Project>(
+			`/accounts/${accountId}/pages/projects/${projectName}`,
+			{
+				method: "PATCH",
+				body: JSON.stringify({
+					deployment_configs: {
+						production: { compatibility_flags: [...compatibilityFlags] },
+						preview: { compatibility_flags: [...compatibilityFlags] },
+					},
+				}),
+			}
+		);
+	}
 
 	saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
 		account_id: accountId,
