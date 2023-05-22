@@ -23,11 +23,11 @@ yarn create cloudflare
 To create a new website or web framework without interaction, run:
 
 ```bash
-npm create cloudflare@latest -- --type webFramework -- --framework <frameworkName>
+npm create cloudflare@latest -- --type webFramework --framework <frameworkName>
 # or
-pnpm create cloudflare@latest
+pnpm create cloudflare@latest ...
 # or
-yarn create cloudflare
+yarn create cloudflare ...
 ```
 
 Currently supported framework options: `angular`, `astro`, `docusaurus`, `gatsby`, `hono`, `next`, `nuxt`, `qwik`, `react`, `remix`, `solid`, `svelte`, `vue`.
@@ -37,7 +37,7 @@ Currently supported framework options: `angular`, `astro`, `docusaurus`, `gatsby
 To create a new Javascript "Hello World" worker, run:
 
 ```bash
-npm create cloudflare@latest hello-world -- --type simple --ts false
+npm create cloudflare@latest hello-world -- --type simple --no-ts
 ```
 
 To create a new Typescript "Hello World" worker, run:
