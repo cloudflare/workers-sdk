@@ -1,4 +1,4 @@
-import { mkdirSync, rmSync } from "fs";
+import { existsSync, rmSync, mkdtempSync, realpathSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { execa } from "execa";
@@ -15,18 +15,15 @@ Areas for future improvement:
 describe("E2E", () => {
 	let dummyPath: string;
 
-	const removeDummyFolder = () => {
-		rmSync(dummyPath, { recursive: true, force: true });
-	};
-
 	beforeEach(() => {
-		dummyPath = join(tmpdir(), "tmp");
-		removeDummyFolder();
-		mkdirSync(dummyPath);
+		// Use realpath because the temporary path can point to a symlink rather than the actual path.
+		dummyPath = realpathSync(mkdtempSync(join(tmpdir(), "c3-tests")));
 	});
 
 	afterEach(() => {
-		removeDummyFolder();
+		if (existsSync(dummyPath)) {
+			rmSync(dummyPath, { recursive: true });
+		}
 	});
 
 	const runCli = async (framework: string) => {
@@ -43,6 +40,9 @@ describe("E2E", () => {
 		const result = await execa("node", ["./dist/cli.js", ...argv], {
 			stderr: process.stderr,
 		});
+		// For debugging purposes, uncomment the following to see the exact
+		// command the test uses. You can then run this via the command line.
+		// console.log("COMMAND: ", `node ${["./dist/cli.js", ...argv].join(" ")}`);
 
 		const { exitCode } = result;
 
@@ -89,9 +89,9 @@ describe("E2E", () => {
 
 	// Not possible atm since `npx qwik add cloudflare-pages`
 	// requires interactive confirmation
-	// test("Qwik", async () => {
-	//   await runCli("next", flags);
-	// });
+	test.skip("Qwik", async () => {
+		await runCli("next");
+	});
 
 	test("React", async () => {
 		await runCli("react");
@@ -102,16 +102,14 @@ describe("E2E", () => {
 	});
 
 	// Not possible atm since template selection is interactive only
-	// test("Solid", async () => {
-	//   const flags = ["--no-deploy"];
-	//   await runCli("solid", flags);
-	// });
+	test.skip("Solid", async () => {
+		await runCli("solid");
+	});
 
 	// Not possible atm since everything is interactive only
-	// test("Svelte", async () => {
-	//   const flags = ["--no-deploy"];
-	//   await runCli("svelte", flags);
-	// });
+	test.skip("Svelte", async () => {
+		await runCli("svelte");
+	});
 
 	test("Vue", async () => {
 		await runCli("vue");

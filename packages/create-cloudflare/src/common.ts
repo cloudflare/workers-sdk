@@ -7,6 +7,7 @@ import {
 	log,
 	logRaw,
 	newline,
+	openInBrowser,
 	shapes,
 	startSection,
 } from "helpers/cli";
@@ -17,7 +18,8 @@ import {
 	runCommand,
 	wranglerLogin,
 } from "helpers/command";
-import { confirmInput, selectInput } from "helpers/interactive";
+import { confirmInput, selectInput, spinner } from "helpers/interactive";
+import { poll } from "helpers/poll";
 import type { Option } from "helpers/interactive";
 import type { PagesGeneratorArgs, PagesGeneratorContext } from "types";
 
@@ -106,13 +108,20 @@ export const runDeploy = async (ctx: PagesGeneratorContext) => {
 };
 
 export const chooseAccount = async (ctx: PagesGeneratorContext) => {
+	const s = spinner();
+	s.start(`Selecting Cloudflare account ${dim("retrieving accounts")}`);
 	const accounts = await listAccounts();
 
 	let accountId: string;
 
 	if (Object.keys(accounts).length == 1) {
-		accountId = Object.values(accounts)[0];
+		const accountName = Object.keys(accounts)[0];
+		accountId = accounts[accountName];
+		s.stop(`${brandColor("account")} ${dim(accountName)}`);
 	} else {
+		s.stop(
+			`${brandColor("account")} ${dim("more than one account available")}`
+		);
 		const accountOptions = Object.entries(accounts).map(([name, id]) => ({
 			label: name,
 			value: id,
@@ -158,7 +167,6 @@ export const printSummary = async (ctx: PagesGeneratorContext) => {
 			`${bgGreen(" SUCCESS ")}`,
 			`${dim(`View your deployed application at`)}`,
 			`${blue(ctx.deployedUrl)}`,
-			`${dim(`(this may take a few mins)`)}`,
 		].join(" ");
 		logRaw(msg);
 	} else {
@@ -179,5 +187,13 @@ export const printSummary = async (ctx: PagesGeneratorContext) => {
 	});
 	newline();
 
+	if (ctx.deployedUrl) {
+		const success = await poll(ctx.deployedUrl);
+		if (success) {
+			if (ctx.args.open) {
+				await openInBrowser(ctx.deployedUrl);
+			}
+		}
+	}
 	endSection("See you again soon!");
 };

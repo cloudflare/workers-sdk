@@ -67,6 +67,19 @@ export const runCommand = async (
 	});
 };
 
+export const retry = async <T>(times: number, fn: () => Promise<T>) => {
+	let error: unknown = null;
+	while (times > 0) {
+		try {
+			return await fn();
+		} catch (e) {
+			error = e;
+			times--;
+		}
+	}
+	throw error;
+};
+
 // Prints the section header & footer while running the `cmd`
 export const runFrameworkGenerator = async (
 	ctx: PagesGeneratorContext,
@@ -172,10 +185,12 @@ export const isLoggedIn = async () => {
 export const wranglerLogin = async () => {
 	const { npx } = detectPackageManager();
 
+	const s = spinner();
+	s.start(`Logging into Cloudflare ${dim("checking authentication status")}`);
 	const alreadyLoggedIn = await isLoggedIn();
+	s.stop(brandColor(alreadyLoggedIn ? "logged in" : "not logged in"));
 	if (alreadyLoggedIn) return true;
 
-	const s = spinner();
 	s.start(`Logging into Cloudflare ${dim("This will open a browser window")}`);
 
 	// We're using a custom spinner since this is a little complicated.

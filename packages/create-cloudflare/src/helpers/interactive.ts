@@ -227,22 +227,35 @@ export const spinner = () => {
 	const color = brandColor;
 	const frameRate = 120;
 	const maxDots = 4;
-	let loop: NodeJS.Timer;
+	let loop: NodeJS.Timer | null = null;
 	let startMsg: string;
+	let currentMsg: string;
+
+	function clearLoop() {
+		if (loop) {
+			clearTimeout(loop);
+		}
+		loop = null;
+	}
 
 	return {
 		start: (msg: string, helpText?: string) => {
 			helpText ||= ``;
-			startMsg = `${msg} ${dim(helpText)}`;
+			currentMsg = msg;
+			startMsg = `${currentMsg} ${dim(helpText)}`;
 
 			let index = 0;
 			let dots = 1;
 
+			clearLoop();
 			loop = setInterval(() => {
 				const frame = frames[(index = ++index % frames.length)];
 				dots = ++dots % maxDots;
-				logUpdate(`${color(frame)} ${msg} ${".".repeat(dots)}`);
+				logUpdate(`${color(frame)} ${currentMsg} ${".".repeat(dots)}`);
 			}, frameRate);
+		},
+		update(msg: string) {
+			currentMsg = msg;
 		},
 		stop: (msg: string) => {
 			// Write the final message and clear the loop
@@ -250,8 +263,7 @@ export const spinner = () => {
 			logUpdate(`${leftT} ${startMsg}\n${grayBar} ${msg}`);
 			logUpdate.done();
 			newline();
-
-			clearTimeout(loop);
+			clearLoop();
 		},
 	};
 };

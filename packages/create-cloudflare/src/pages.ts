@@ -7,6 +7,7 @@ import { dim, brandColor } from "helpers/colors";
 import {
 	detectPackageManager,
 	installWrangler,
+	retry,
 	runCommand,
 } from "helpers/command";
 import { readJSON, writeFile } from "helpers/files";
@@ -19,6 +20,9 @@ import {
 } from "./common";
 import type { Option } from "helpers/interactive";
 import type { PagesGeneratorArgs, PagesGeneratorContext } from "types";
+
+/** How many times to retry the create project command before failing. */
+const CREATE_PROJECT_RETRIES = 3;
 
 const { npx } = detectPackageManager();
 
@@ -126,16 +130,19 @@ const createProject = async (ctx: PagesGeneratorContext) => {
 		crash("Failed to read Cloudflare account.");
 		return;
 	}
+	const CLOUDFLARE_ACCOUNT_ID = ctx.account.id;
 	const cmd = `${npx} wrangler pages project create ${ctx.project.name} --production-branch main`;
 
 	try {
-		await runCommand(cmd, {
-			silent: true,
-			cwd: ctx.project.path,
-			env: { CLOUDFLARE_ACCOUNT_ID: ctx.account.id },
-			startText: "Creating Pages project",
-			doneText: `${brandColor("created")} ${dim(`via \`${cmd}\``)}`,
-		});
+		await retry(CREATE_PROJECT_RETRIES, async () =>
+			runCommand(cmd, {
+				silent: true,
+				cwd: ctx.project.path,
+				env: { CLOUDFLARE_ACCOUNT_ID },
+				startText: "Creating Pages project",
+				doneText: `${brandColor("created")} ${dim(`via \`${cmd}\``)}`,
+			})
+		);
 	} catch (error) {
 		crash("Failed to create pages application. See output above.");
 	}
