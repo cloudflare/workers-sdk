@@ -105,5 +105,6 @@ const config: FrameworkConfig = {
 		"--import-alias",
 		'"@/*"',
 	],
+	compatibilityFlags: ["nodejs_compat"],
 };
 export default config;

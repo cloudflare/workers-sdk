@@ -131,7 +131,13 @@ const createProject = async (ctx: PagesGeneratorContext) => {
 		return;
 	}
 	const CLOUDFLARE_ACCOUNT_ID = ctx.account.id;
-	const cmd = `${npx} wrangler pages project create ${ctx.project.name} --production-branch main`;
+
+	const compatFlags = ctx.framework?.config.compatibilityFlags?.join(" ");
+	const compatFlagsArg = compatFlags
+		? `--compatibility-flags ${compatFlags}`
+		: "";
+
+	const cmd = `${npx} wrangler pages project create ${ctx.project.name} --production-branch main ${compatFlagsArg}`;
 
 	try {
 		await retry(CREATE_PROJECT_RETRIES, async () =>
