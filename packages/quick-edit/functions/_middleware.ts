@@ -18,6 +18,7 @@ export const onRequest = async ({
 					"*.d.ts": true,
 					"jsconfig.json": true,
 				},
+				"telemetry.telemetryLevel": "off",
 			},
 			productConfiguration: {
 				nameShort: "Quick Edit",
@@ -25,12 +26,6 @@ export const onRequest = async ({
 				applicationName: "workers-quick-edit",
 				dataFolderName: ".quick-edit",
 				version: "1.76.0",
-				extensionsGallery: {
-					serviceUrl: "https://open-vsx.org/vscode/gallery",
-					itemUrl: "https://open-vsx.org/vscode/item",
-					resourceUrlTemplate:
-						"https://openvsxorg.blob.core.windows.net/resources/{publisher}/{name}/{version}/{path}",
-				},
 				extensionEnabledApiProposals: {
 					"cloudflare.quick-edit-extension": [
 						"fileSearchProvider",
