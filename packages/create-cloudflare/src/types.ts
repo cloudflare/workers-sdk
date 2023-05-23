@@ -39,4 +39,5 @@ export type FrameworkConfig = {
 	deployCommand?: string;
 	devCommand?: string;
 	testFlags?: string[];
+	compatibilityFlags?: string[];
 };
