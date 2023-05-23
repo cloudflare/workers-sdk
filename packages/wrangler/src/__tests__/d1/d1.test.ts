@@ -18,6 +18,7 @@ describe("d1", () => {
 
 		Commands:
 		  wrangler d1 list                List D1 databases
+		  wrangler d1 info <name>         Get information about a D1 database, including the current database size and state.
 		  wrangler d1 create <name>       Create D1 database
 		  wrangler d1 delete <name>       Delete D1 database
 		  wrangler d1 backup              Interact with D1 Backups
@@ -58,6 +59,7 @@ describe("d1", () => {
 
 		Commands:
 		  wrangler d1 list                List D1 databases
+		  wrangler d1 info <name>         Get information about a D1 database, including the current database size and state.
 		  wrangler d1 create <name>       Create D1 database
 		  wrangler d1 delete <name>       Delete D1 database
 		  wrangler d1 backup              Interact with D1 Backups

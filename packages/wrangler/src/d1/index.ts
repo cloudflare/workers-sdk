@@ -2,6 +2,7 @@ import * as Backups from "./backups";
 import * as Create from "./create";
 import * as Delete from "./delete";
 import * as Execute from "./execute";
+import * as Info from "./info";
 import * as List from "./list";
 import * as Migrations from "./migrations";
 import { d1BetaWarning } from "./utils";
@@ -11,6 +12,12 @@ export function d1(yargs: CommonYargsArgv) {
 	return (
 		yargs
 			.command("list", "List D1 databases", List.Options, List.Handler)
+			.command(
+				"info <name>",
+				"Get information about a D1 database, including the current database size and state.",
+				Info.Options,
+				Info.Handler
+			)
 			.command(
 				"create <name>",
 				"Create D1 database",
