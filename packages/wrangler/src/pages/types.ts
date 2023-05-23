@@ -2,6 +2,7 @@ type DeploymentConfig = {
 	d1_databases?: Record<string, { id: string }>;
 	compatibility_flags?: string[];
 	compatibility_flag?: string;
+	compatibility_date?: string;
 };
 
 export type Project = {

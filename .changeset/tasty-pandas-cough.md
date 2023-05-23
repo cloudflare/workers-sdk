@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-Add a `--compatibility-flags` option to the `pages project create` command
+Add the `--compatibility-flags` and `--compatibility-date` options to the `pages project create` command
