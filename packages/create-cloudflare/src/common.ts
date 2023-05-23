@@ -31,8 +31,10 @@ const { npm } = detectPackageManager();
 export const setupProjectDirectory = (args: PagesGeneratorArgs) => {
 	// Crash if the directory already exists
 	const path = resolve(args.projectName);
+	const isCWD = path === process.cwd();
+	const existsAlready = existsSync(path);
 
-	if (existsSync(path)) {
+	if (!isCWD && existsAlready) {
 		crash(
 			`Directory \`${args.projectName}\` already exists. Please choose a new name.`
 		);
@@ -41,16 +43,13 @@ export const setupProjectDirectory = (args: PagesGeneratorArgs) => {
 	const directory = dirname(path);
 	const name = basename(path);
 
-	// resolve the relative path so we can give the user nice instructions
-	const relativePath = relative(process.cwd(), path);
-
 	// If the target is a nested directory, create the parent
 	mkdirSync(directory, { recursive: true });
 
 	// Change to the parent directory
 	chdir(directory);
 
-	return { name, relativePath, path };
+	return { name, path };
 };
 
 export const offerToDeploy = async (ctx: PagesGeneratorContext) => {

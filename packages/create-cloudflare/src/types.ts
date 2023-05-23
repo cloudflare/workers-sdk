@@ -28,7 +28,6 @@ export type PagesGeneratorContext = {
 	project: {
 		name: string;
 		path: string;
-		relativePath: string;
 	};
 };
 

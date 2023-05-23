@@ -21,10 +21,10 @@ import type {
 } from "types";
 
 export const runWorkersGenerator = async (args: Args) => {
-	const { name, path, relativePath } = setupProjectDirectory(args);
+	const { name, path } = setupProjectDirectory(args);
 
 	const ctx: Context = {
-		project: { name, relativePath, path },
+		project: { name, path },
 		args,
 	};
 

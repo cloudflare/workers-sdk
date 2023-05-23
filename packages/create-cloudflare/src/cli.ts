@@ -71,9 +71,15 @@ const validateName = async (name: string | undefined): Promise<string> => {
 			return `${brandColor("dir")} ${dim(value)}`;
 		},
 		defaultValue: haikunator.haikunate({ tokenHex: true }),
-		validate: (value: string) => {
-			if (value && existsSync(resolve(value))) {
-				return `\`${value}\` already exists. Please choose a new folder. `;
+		validate: (path: string) => {
+			if (!path) return; // will use default value
+
+			const absolutePath = resolve(path);
+			const isCWD = absolutePath === process.cwd();
+			const existsAlready = existsSync(absolutePath);
+
+			if (!isCWD && existsAlready) {
+				return `\`${path}\` already exists. Please choose a new folder. `;
 			}
 		},
 	});

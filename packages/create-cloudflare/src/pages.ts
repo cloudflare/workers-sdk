@@ -34,14 +34,13 @@ const defaultFrameworkConfig = {
 };
 
 export const runPagesGenerator = async (args: PagesGeneratorArgs) => {
-	const { name, relativePath, path } = setupProjectDirectory(args);
+	const { name, path } = setupProjectDirectory(args);
 	const framework = await getFrameworkSelection(args);
 
 	const frameworkConfig = FrameworkMap[framework];
 	const ctx: PagesGeneratorContext = {
 		project: {
 			name,
-			relativePath,
 			path,
 		},
 		framework: {
