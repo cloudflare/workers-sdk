@@ -1,3 +1,9 @@
+type DeploymentConfig = {
+	d1_databases?: Record<string, { id: string }>;
+	compatibility_flags?: string[];
+	compatibility_flag?: string;
+};
+
 export type Project = {
 	name: string;
 	subdomain: string;
@@ -11,9 +17,8 @@ export type Project = {
 	created_on: string;
 	production_branch: string;
 	deployment_configs?: {
-		production?: {
-			d1_databases?: Record<string, { id: string }>;
-		};
+		production?: DeploymentConfig;
+		preview?: DeploymentConfig;
 	};
 };
 export type Deployment = {

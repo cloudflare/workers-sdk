@@ -141,31 +141,25 @@ export async function CreateHandler({
 		throw new FatalError("Must specify a production branch.", 1);
 	}
 
+	const body: Partial<Project> = {
+		name: projectName,
+		production_branch: productionBranch,
+	};
+
+	if (compatibilityFlags) {
+		body.deployment_configs = {
+			production: { compatibility_flags: [...compatibilityFlags] },
+			preview: { compatibility_flags: [...compatibilityFlags] },
+		};
+	}
+
 	const { subdomain } = await fetchResult<Project>(
 		`/accounts/${accountId}/pages/projects`,
 		{
 			method: "POST",
-			body: JSON.stringify({
-				name: projectName,
-				production_branch: productionBranch,
-			}),
+			body: JSON.stringify(body),
 		}
 	);
-
-	if (compatibilityFlags) {
-		await fetchResult<Project>(
-			`/accounts/${accountId}/pages/projects/${projectName}`,
-			{
-				method: "PATCH",
-				body: JSON.stringify({
-					deployment_configs: {
-						production: { compatibility_flags: [...compatibilityFlags] },
-						preview: { compatibility_flags: [...compatibilityFlags] },
-					},
-				}),
-			}
-		);
-	}
 
 	saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
 		account_id: accountId,
