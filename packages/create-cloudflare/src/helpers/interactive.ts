@@ -221,6 +221,19 @@ export const confirmInput = async (opts: ConfirmOptions) => {
 };
 
 export const spinner = () => {
+	// essentially a mock
+	if (process.env.VITEST) {
+		const stub = (msg: string) => {
+			if (msg) updateStatus(`${leftT} ${msg}`);
+		};
+
+		return {
+			start: stub,
+			update: stub,
+			stop: stub,
+		};
+	}
+
 	const spinnerFrames = ["┤", "┘", "┴", "└", "├", "┌", "┬", "┐"];
 	const ellipsisFrames = ["", ".", "..", "...", " ..", "  .", ""];
 
@@ -247,7 +260,7 @@ export const spinner = () => {
 	}
 
 	return {
-		start: (msg: string, helpText?: string) => {
+		start(msg: string, helpText?: string) {
 			helpText ||= ``;
 			currentMsg = msg;
 			startMsg = `${currentMsg} ${dim(helpText)}`;
@@ -261,29 +274,21 @@ export const spinner = () => {
 				const ellipsisFrame = ellipsisFrames[index % ellipsisFrames.length];
 
 				if (msg) {
-					if (!process.env.VITEST) {
-						logUpdate(`${color(spinnerFrame)} ${currentMsg} ${ellipsisFrame}`);
-					} else {
-						updateStatus(msg);
-					}
+					logUpdate(`${color(spinnerFrame)} ${currentMsg} ${ellipsisFrame}`);
 				}
 			}, frameRate);
 		},
 		update(msg: string) {
 			currentMsg = msg;
 		},
-		stop: (msg?: string) => {
+		stop(msg?: string) {
 			// Write the final message and clear the loop
 			logUpdate.clear();
 			if (msg) {
-				if (!process.env.VITEST) {
-					logUpdate(`${leftT} ${startMsg}\n${grayBar} ${msg}`);
-				} else {
-					updateStatus(msg);
-				}
+				logUpdate(`${leftT} ${startMsg}\n${grayBar} ${msg}`);
+				logUpdate.done();
+				newline();
 			}
-			logUpdate.done();
-			newline();
 			clearLoop();
 		},
 	};

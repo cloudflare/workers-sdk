@@ -1,7 +1,6 @@
 import { existsSync, mkdirSync } from "fs";
 import { basename, dirname, relative, resolve } from "path";
 import { chdir } from "process";
-import { execa } from "execa";
 import { findUp } from "find-up";
 import {
 	crash,
@@ -19,6 +18,7 @@ import {
 	listAccounts,
 	printAsyncStatus,
 	runCommand,
+	runCommands,
 	wranglerLogin,
 } from "helpers/command";
 import { confirmInput, selectInput, spinner } from "helpers/interactive";
@@ -208,7 +208,8 @@ export const offerGit = async (ctx: PagesGeneratorContext) => {
 
 	ctx.args.git ??= await confirmInput({
 		question: "Do you want to use git?",
-		renderSubmitted: (value: boolean) => `${brandColor(value ? `yes` : `no`)}`,
+		renderSubmitted: (value: boolean) =>
+			`${brandColor("git")} ${dim(value ? `yes` : `no`)}`,
 		defaultValue: true,
 	});
 
@@ -226,15 +227,12 @@ export const gitCommit = async (ctx: PagesGeneratorContext) => {
 
 	if (!insideGitRepo) return;
 
-	await printAsyncStatus({
-		async promise() {
-			await execa("git", ["add", "."]);
-			await execa("git", [
-				"commit",
-				"-m",
-				"Initial commit (by Create-Cloudflare CLI)",
-			]);
-		},
+	await runCommands({
+		silent: true,
+		commands: [
+			"git add .",
+			["git", "commit", "-m", "Initial commit (by Create-Cloudflare CLI)"],
+		],
 		startText: "Committing new files",
 		doneText: `${brandColor("git")} ${dim(`initial commit`)}`,
 	});
@@ -258,24 +256,18 @@ export async function isInsideGitRepo(cwd: string) {
 export async function initializeGit(cwd: string) {
 	try {
 		// Get the default init branch name
-		const { stdout: defaultBranchName } = await execa("git", [
-			"config",
-			"--get",
-			"init.defaultBranch",
-		]);
+		const defaultBranchName = await runCommand(
+			"git config --get init.defaultBranch",
+			{ useSpinner: false, silent: true, cwd }
+		);
 
 		// Try to create the repository with the HEAD branch of defaultBranchName ?? `main`.
-		await execa(
-			"git",
-			["init", "--initial-branch", defaultBranchName.trim() ?? "main"],
-			{
-				cwd,
-			}
+		await runCommand(
+			`git init --initial-branch ${defaultBranchName.trim() ?? "main"}`, // branch names can't contain spaces, so this is safe
+			{ useSpinner: false, silent: true, cwd }
 		);
 	} catch {
 		// Unable to create the repo with a HEAD branch name, so just fall back to the default.
-		await execa("git", ["init"], {
-			cwd,
-		});
+		await runCommand(`git init`, { useSpinner: false, silent: true, cwd });
 	}
 }

@@ -7,13 +7,28 @@ import { brandColor, dim } from "./colors";
 import { spinner } from "./interactive";
 import type { PagesGeneratorContext } from "types";
 
+/**
+ * Command can be either:
+ *    - a string, like `git commit -m "Changes"`
+ *    - a string array, like ['git', 'commit', '-m', '"Initial commit"']
+ *
+ * The string version is a convenience but is unsafe if your args contain spaces
+ */
+type Command = string | string[];
+
 type RunOptions = {
 	startText?: string;
 	doneText?: string;
 	silent?: boolean;
 	captureOutput?: boolean;
+	useSpinner?: boolean;
 	env?: NodeJS.ProcessEnv;
 	cwd?: string;
+};
+
+type MultiRunOptions = RunOptions & {
+	commands: Command[];
+	startText: string;
 };
 
 type PrintOptions<T> = {
@@ -24,15 +39,19 @@ type PrintOptions<T> = {
 };
 
 export const runCommand = async (
-	command: string,
+	command: Command,
 	opts?: RunOptions
 ): Promise<string> => {
+	if (typeof command === "string") {
+		command = command.split(" ");
+	}
+
 	return printAsyncStatus({
-		useSpinner: opts?.silent, // only use the spinner if we're not spawning with stdio: 'inherit'
-		startText: opts?.startText || command,
+		useSpinner: opts?.useSpinner ?? opts?.silent,
+		startText: opts?.startText || command.join(" "),
 		doneText: opts?.doneText,
 		promise() {
-			const [executable, ...args] = command.split(" ");
+			const [executable, ...args] = command;
 
 			const squelch = opts?.silent || process.env.VITEST;
 
@@ -49,7 +68,7 @@ export const runCommand = async (
 
 			let output = ``;
 
-			if (opts?.silent) {
+			if (opts?.captureOutput ?? squelch) {
 				cmd.stdout?.on("data", (data) => {
 					output += data;
 				});
@@ -70,6 +89,20 @@ export const runCommand = async (
 		},
 	});
 };
+
+// run mutliple commands in sequence (not parallel)
+export async function runCommands({ commands, ...opts }: MultiRunOptions) {
+	return printAsyncStatus({
+		useSpinner: opts.useSpinner ?? opts.silent,
+		startText: opts.startText,
+		doneText: opts.doneText,
+		async promise() {
+			for (const command of commands) {
+				await runCommand(command, { ...opts, useSpinner: false });
+			}
+		},
+	});
+}
 
 export const printAsyncStatus = async <T>({
 	promise,
