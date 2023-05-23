@@ -27,6 +27,7 @@
 	],
 	"scripts": {
 		"build": "node scripts/build.js",
+		"check:lint": "eslint",
 		"check:type": "tsc --noEmit",
 		"prepublishOnly": "npm run build",
 		"lint": "eslint",

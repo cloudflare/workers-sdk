@@ -12,7 +12,7 @@
 		"test:watch": {
 			"cache": false
 		},
-		"lint": {},
+		"check:lint": {},
 		"check:type": {}
 	}
 }

@@ -5,8 +5,8 @@
 	"main": "dist/index.js",
 	"scripts": {
 		"build": "npx wrangler pages functions build --fallback-service='' ./functions/routes --outdir=dist",
+		"check:lint": "eslint",
 		"check:type": "tsc",
-		"lint": "eslint",
 		"prepublish": "npm run build",
 		"publish": "npx wrangler deploy dist/index.js",
 		"prestart": "npm run build",
