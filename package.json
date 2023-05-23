@@ -23,7 +23,7 @@
 		"postinstall": "patch-package",
 		"prettify": "prettier . --write --ignore-unknown",
 		"test": "turbo run test",
-		"test:ci": "npm run test:ci --workspace=packages/wrangler --workspace=packages/pages-shared --if-present",
+		"test:ci": "turbo run test:ci --filter=wrangler --filter=pages-shared",
 		"test:watch": "turbo run test:watch"
 	},
 	"dependencies": {

@@ -13,6 +13,7 @@
 			"cache": false
 		},
 		"check:lint": {},
-		"check:type": {}
+		"check:type": {},
+		"test:ci": {}
 	}
 }
