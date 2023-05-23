@@ -46,8 +46,11 @@ const parseArgs = async (argv: string[]) => {
 		.option("open", {
 			type: "boolean",
 			default: true,
-			description:
-				"opens your browser after your deployment, set --no-open to disable",
+			description: "Opens your browser after your deployment",
+		})
+		.option("existing-script", {
+			type: "string",
+			hidden: templateMap["pre-existing"].hidden,
 		})
 		.help().argv;
 
