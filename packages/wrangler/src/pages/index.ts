@@ -62,6 +62,12 @@ export function pages(yargs: CommonYargsArgv) {
 						Projects.CreateOptions,
 						Projects.CreateHandler
 					)
+					.command(
+						"delete [project-name]",
+						"Delete a Cloudflare Pages project",
+						Projects.DeleteOptions,
+						Projects.DeleteHandler
+					)
 					.command("upload [directory]", false, Upload.Options, Upload.Handler)
 					.epilogue(pagesBetaWarning)
 			)
