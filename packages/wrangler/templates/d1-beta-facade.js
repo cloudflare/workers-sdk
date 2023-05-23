@@ -178,6 +178,7 @@ var D1PreparedStatement = class {
 		const s = firstIfArray(
 			await this.database._send("/query", this.statement, this.params)
 		);
+		console.log("d1 response: ", s);
 		const raw = [];
 		for (var r in s.results) {
 			const entry = Object.keys(s.results[r]).map((k) => {
