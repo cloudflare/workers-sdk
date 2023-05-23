@@ -2,8 +2,8 @@ import * as Backups from "./backups";
 import * as Create from "./create";
 import * as Delete from "./delete";
 import * as Execute from "./execute";
-import * as List from "./list";
 import * as Info from "./info";
+import * as List from "./list";
 import * as Migrations from "./migrations";
 import { d1BetaWarning } from "./utils";
 import type { CommonYargsArgv } from "../yargs-types";
@@ -14,7 +14,7 @@ export function d1(yargs: CommonYargsArgv) {
 			.command("list", "List D1 databases", List.Options, List.Handler)
 			.command(
 				"info <name>",
-				"Get info on D1 database",
+				"Get information about a D1 database, including the current database size and state.",
 				Info.Options,
 				Info.Handler
 			)
