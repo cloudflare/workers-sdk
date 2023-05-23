@@ -86,12 +86,26 @@ export function CreateOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				description: "The name of the production branch of your project",
 			},
+			"compatibility-flags": {
+				describe: "Flags to use for compatibility checks",
+				alias: "compatibility-flag",
+				type: "string",
+				requiresArg: true,
+				array: true,
+			},
+			"compatibility-date": {
+				describe: "Date to use for compatibility checks",
+				type: "string",
+				requiresArg: true,
+			},
 		})
 		.epilogue(pagesBetaWarning);
 }
 
 export async function CreateHandler({
 	productionBranch,
+	compatibilityFlags,
+	compatibilityDate,
 	projectName,
 }: StrictYargsOptionsToInterface<typeof CreateOptions>) {
 	const config = getConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME);
@@ -133,14 +147,29 @@ export async function CreateHandler({
 		throw new FatalError("Must specify a production branch.", 1);
 	}
 
+	const deploymentConfig = {
+		...(compatibilityFlags && {
+			compatibility_flags: [...compatibilityFlags],
+		}),
+		...(compatibilityDate && {
+			compatibility_date: compatibilityDate,
+		}),
+	};
+
+	const body: Partial<Project> = {
+		name: projectName,
+		production_branch: productionBranch,
+		deployment_configs: {
+			production: { ...deploymentConfig },
+			preview: { ...deploymentConfig },
+		},
+	};
+
 	const { subdomain } = await fetchResult<Project>(
 		`/accounts/${accountId}/pages/projects`,
 		{
 			method: "POST",
-			body: JSON.stringify({
-				name: projectName,
-				production_branch: productionBranch,
-			}),
+			body: JSON.stringify(body),
 		}
 	);
 
