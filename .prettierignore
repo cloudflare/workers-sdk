@@ -14,7 +14,7 @@ packages/**/dist/**
 fixtures/remix-pages-app/build/
 fixtures/remix-pages-app/public/build/
 fixtures/pages-functions-app/public/cdn-cgi/
-fixtures/remix-pages-app/functions/[[path]].js
+fixtures/remix-pages-app/functions/**
 fixtures/**/dist/**
 **/vendor/**
 
