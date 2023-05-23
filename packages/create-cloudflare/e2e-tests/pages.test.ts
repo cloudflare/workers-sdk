@@ -35,6 +35,7 @@ describe("E2E", () => {
 			"--framework",
 			framework,
 			"--no-deploy",
+			"--no-git",
 		];
 
 		const result = await execa("node", ["./dist/cli.js", ...argv], {
