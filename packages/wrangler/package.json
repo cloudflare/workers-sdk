@@ -54,7 +54,7 @@
 		"build": "npm run clean && npm run bundle && npm run emit-types",
 		"bundle": "node -r esbuild-register scripts/bundle.ts",
 		"check:lint": "eslint",
-		"check:type": "node -r esbuild-register scripts/tsc-all.ts",
+		"check:type": "tsc",
 		"clean": "rimraf wrangler-dist miniflare-dist emitted-types",
 		"dev": "npm run clean && concurrently -c black,blue --kill-others-on-fail false 'npm run bundle -- --watch' 'npm run check:type -- --watch --preserveWatchOutput'",
 		"emit-types": "tsc -p tsconfig.emit.json && node -r esbuild-register scripts/emit-types.ts",
