@@ -465,9 +465,7 @@ export class Miniflare {
 			verbose: this.#sharedOpts.core.verbose,
 		};
 		this.#runtime = new Runtime(opts);
-		this.#removeRuntimeExitHook = exitHook(
-			() => void this.#runtime?.dispose(/* force */ true)
-		);
+		this.#removeRuntimeExitHook = exitHook(() => void this.#runtime?.dispose());
 
 		// Update config and wait for runtime to start
 		await this.#assembleAndUpdateConfig(/* initial */ true);
@@ -673,7 +671,10 @@ export class Miniflare {
 		hostname?: string
 	): Promise<StoppableServer> {
 		return new Promise((resolve) => {
-			const server = stoppable(http.createServer(this.#handleLoopback));
+			const server = stoppable(
+				http.createServer(this.#handleLoopback),
+				/* grace */ 0
+			);
 			server.on("upgrade", this.#handleLoopbackUpgrade);
 			server.listen(port as any, hostname, () => resolve(server));
 		});
