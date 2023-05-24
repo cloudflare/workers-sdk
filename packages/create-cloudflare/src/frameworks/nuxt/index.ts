@@ -5,14 +5,14 @@ import { detectPackageManager } from "helpers/packages";
 import { getFrameworkVersion } from "..";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
-const { npx } = detectPackageManager();
+const { dlx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
 	const version = getFrameworkVersion(ctx);
 
 	await runFrameworkGenerator(
 		ctx,
-		`${npx} nuxi@${version} init ${ctx.project.name}`
+		`${dlx} nuxi@${version} init ${ctx.project.name}`
 	);
 
 	logRaw(""); // newline

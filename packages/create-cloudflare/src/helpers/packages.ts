@@ -18,7 +18,7 @@ export const detectPackageManager = () => {
 			if (semver.gt(version, "6.0.0")) {
 				return {
 					npm: "pnpm",
-					npx: "pnpm exec",
+					npx: "pnpm",
 					dlx: "pnpm dlx",
 				};
 			}
@@ -28,24 +28,17 @@ export const detectPackageManager = () => {
 				dlx: "pnpx",
 			};
 		case "yarn":
-			if (semver.gt(version, "3.0.0")) {
-				return {
-					npm: "yarn",
-					npx: "yarn exec",
-					dlx: "yarn dlx",
-				};
-			}
 			if (semver.gt(version, "2.0.0")) {
 				return {
 					npm: "yarn",
-					npx: "npx",
+					npx: "yarn",
 					dlx: "yarn dlx",
 				};
 			}
 			return {
 				npm: "yarn",
-				npx: "yarn exec --",
-				dlx: "yarn exec --",
+				npx: "yarn",
+				dlx: "yarn",
 			};
 		case "npm":
 		default:

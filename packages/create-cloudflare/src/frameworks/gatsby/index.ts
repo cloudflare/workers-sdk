@@ -6,7 +6,7 @@ import { detectPackageManager } from "helpers/packages";
 import { getFrameworkVersion } from "../index";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
-const { npm, npx } = detectPackageManager();
+const { npm, dlx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
 	const defaultTemplate = "https://github.com/gatsbyjs/gatsby-starter-blog";
@@ -37,7 +37,7 @@ const generate = async (ctx: PagesGeneratorContext) => {
 	const version = getFrameworkVersion(ctx);
 	await runFrameworkGenerator(
 		ctx,
-		`${npx} gatsby@${version} new ${ctx.project.name} ${templateUrl}`
+		`${dlx} gatsby@${version} new ${ctx.project.name} ${templateUrl}`
 	);
 };
 

@@ -4,14 +4,14 @@ import { detectPackageManager } from "helpers/packages";
 import { getFrameworkVersion } from "../index";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
-const { npm } = detectPackageManager();
+const { npm, dlx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
 	const version = getFrameworkVersion(ctx);
 
 	await runFrameworkGenerator(
 		ctx,
-		`${npm} create docusaurus@${version} ${ctx.project.name} classic`
+		`${dlx} create-docusaurus@${version} ${ctx.project.name} classic`
 	);
 };
 
