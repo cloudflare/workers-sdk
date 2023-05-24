@@ -1,15 +1,7 @@
 import { TextPrompt, SelectPrompt, ConfirmPrompt } from "@clack/core";
 import { isCancel } from "@clack/prompts";
 import logUpdate from "log-update";
-import {
-	shapes,
-	cancel,
-	space,
-	status,
-	newline,
-	logRaw,
-	updateStatus,
-} from "./cli";
+import { shapes, cancel, space, status, newline, logRaw } from "./cli";
 import { blue, dim, gray, brandColor, bold } from "./colors";
 
 const grayBar = gray(shapes.bar);
@@ -221,19 +213,6 @@ export const confirmInput = async (opts: ConfirmOptions) => {
 };
 
 export const spinner = () => {
-	// essentially a mock
-	if (process.env.VITEST) {
-		const stub = (msg: string) => {
-			if (msg) updateStatus(`${leftT} ${msg}`);
-		};
-
-		return {
-			start: stub,
-			update: stub,
-			stop: stub,
-		};
-	}
-
 	const spinnerFrames = ["┤", "┘", "┴", "└", "├", "┌", "┬", "┐"];
 	const ellipsisFrames = ["", ".", "..", "...", " ..", "  .", ""];
 

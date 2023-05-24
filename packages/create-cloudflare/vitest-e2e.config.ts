@@ -9,7 +9,7 @@ export default defineConfig({
 		root: ".",
 		singleThread: true,
 		threads: false,
-		testTimeout: 1000 * 60 * 1, // 1 min for lengthy installs
+		testTimeout: 1000 * 60 * 3, // 3 min for lengthy installs
 		setupFiles: ["e2e-tests/setup.ts"],
 	},
 });
