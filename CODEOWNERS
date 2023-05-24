@@ -5,4 +5,5 @@
 /packages/pages-shared/ @cloudflare/pages
 /packages/wrangler/pages/ @cloudflare/pages
 /packages/wrangler/src/pages/ @cloudflare/pages
+/packages/wrangler/src/d1/ @cloudflare/d1
 /packages/create-cloudflare/ @jculvey @RamIdeas @petebacondarwin
