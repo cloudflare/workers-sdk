@@ -27,10 +27,10 @@ $ pnpm create cloudflare my-project worktop
 You will need to add a `JWT_SECRET` for your project for JWT token signing and verification.
 
 ```sh
-$ wrangler secret put JWT_SECRET <value>
+$ triangle secret put JWT_SECRET <value>
 ```
 
-> Refer to [Wrangler Secrets](https://developers.cloudflare.com/workers/wrangler/commands/#secret) for documentation.
+> Refer to [Triangle Secrets](https://developers.cloudflare.com/workers/triangle/commands/#secret) for documentation.
 
 ## Requests
 

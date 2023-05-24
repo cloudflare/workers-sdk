@@ -1,9 +1,9 @@
 # Global owners
 
-- @cloudflare/wrangler
-  /packages/wrangler/CHANGELOG.md @cloudflare/wrangler-admins
+- @khulnasoft/triangle
+  /packages/triangle/CHANGELOG.md @khulnasoft/triangle-admins
   /packages/pages-shared/ @cloudflare/pages
-  /packages/wrangler/pages/ @cloudflare/pages
-  /packages/wrangler/src/pages/ @cloudflare/pages
-  /packages/wrangler/src/pages.\* @cloudflare/pages
+  /packages/triangle/pages/ @cloudflare/pages
+  /packages/triangle/src/pages/ @cloudflare/pages
+  /packages/triangle/src/pages.\* @cloudflare/pages
   /packages/create-cloudflare/ @jculvey @RamIdeas @petebacondarwin

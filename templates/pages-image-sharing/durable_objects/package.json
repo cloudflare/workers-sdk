@@ -5,9 +5,9 @@
 	"license": "MIT",
 	"module": "./src/downloadCounter.mjs",
 	"scripts": {
-		"publish": "npx wrangler deploy"
+		"publish": "npx triangle deploy"
 	},
 	"devDependencies": {
-		"@cloudflare/wrangler": "^1.19.5"
+		"@khulnasoft/triangle": "^1.19.5"
 	}
 }

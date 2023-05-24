@@ -26,15 +26,15 @@ Run the following commands in the console:
 
 ```sh
 # Next, make sure you've logged in
-npx wrangler login
+npx triangle login
 
 # Create your R2 bucket
-npx wrangler r2 bucket create <YOUR_BUCKET_NAME>
+npx triangle r2 bucket create <YOUR_BUCKET_NAME>
 
-# Add config to wrangler.toml as instructed
+# Add config to triangle.toml as instructed
 
 # Deploy the worker
-npx wrangler deploy
+npx triangle deploy
 ```
 
 Then test out your new Worker!

@@ -6,7 +6,7 @@ import { crash, endSection, startSection } from "helpers/cli";
 import { dim, brandColor } from "helpers/colors";
 import {
 	detectPackageManager,
-	installWrangler,
+	installTriangle,
 	retry,
 	runCommand,
 } from "helpers/command";
@@ -106,8 +106,8 @@ const getFrameworkSelection = async (args: PagesGeneratorArgs) => {
 const updatePackageScripts = async (ctx: PagesGeneratorContext) => {
 	chdir(ctx.project.path);
 
-	// Install wrangler so that the dev/deploy commands work
-	await installWrangler();
+	// Install triangle so that the dev/deploy commands work
+	await installTriangle();
 
 	const { packageScripts } = ctx.framework?.config ?? {};
 	if (packageScripts) {
@@ -140,7 +140,7 @@ const createProject = async (ctx: PagesGeneratorContext) => {
 		? `--compatibility-flags ${compatFlags}`
 		: "";
 
-	const cmd = `${npx} wrangler pages project create ${ctx.project.name} --production-branch main ${compatFlagsArg}`;
+	const cmd = `${npx} triangle pages project create ${ctx.project.name} --production-branch main ${compatFlagsArg}`;
 
 	try {
 		await retry(CREATE_PROJECT_RETRIES, async () =>

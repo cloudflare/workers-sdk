@@ -2,17 +2,17 @@
 
 Your [Reason](https://reasonml.github.io/) code in [Demo.re](https://github.com/cloudflare/reason-worker-hello-world/blob/master/src/Demo.re), running on Cloudflare Workers
 
-In addition to [Wrangler](https://github.com/cloudflare/wrangler) you will need to [install BuckleScript](https://reasonml.github.io/docs/en/installation) using npm or Yarn.
+In addition to [Triangle](https://github.com/khulnasoft/triangle) you will need to [install BuckleScript](https://reasonml.github.io/docs/en/installation) using npm or Yarn.
 
-#### Wrangler
+#### Triangle
 
-To generate using [wrangler](https://github.com/cloudflare/wrangler)
+To generate using [triangle](https://github.com/khulnasoft/triangle)
 
 ```
-wrangler generate projectname https://github.com/cloudflare/reason-worker-hello-world
+triangle generate projectname https://github.com/cloudflare/reason-worker-hello-world
 ```
 
-Further documentation for Wrangler can be found [here](https://developers.cloudflare.com/workers/tooling/wrangler).
+Further documentation for Triangle can be found [here](https://developers.cloudflare.com/workers/tooling/triangle).
 
 #### BuckleScript
 
@@ -27,7 +27,7 @@ npm link bs-platform
 npm run build
 ```
 
-That will compile your code into src/Demo.bs.js, after which you can run `wrangler deploy` to push it to Cloudflare.
+That will compile your code into src/Demo.bs.js, after which you can run `triangle deploy` to push it to Cloudflare.
 
 If you just want to check for errors during development, `npm run start` will watch for filesystem changes and recompile.
 

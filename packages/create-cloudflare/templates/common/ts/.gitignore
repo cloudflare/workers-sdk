@@ -166,7 +166,7 @@ dist
 .yarn/install-state.gz
 .pnp.\*
 
-# wrangler project
+# triangle project
 
 .dev.vars
-.wrangler/
+.triangle/

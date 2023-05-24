@@ -5,7 +5,7 @@
 	"scripts": {
 		"build": "react-scripts build",
 		"eject": "react-scripts eject",
-		"start": "npx wrangler pages dev --kv comment_db kv_userDatabase -- react-scripts start",
+		"start": "npx triangle pages dev --kv comment_db kv_userDatabase -- react-scripts start",
 		"test": "react-scripts test"
 	},
 	"browserslist": {
@@ -41,7 +41,7 @@
 		"react-icons": "^4.4.0",
 		"react-scripts": "5.0.1",
 		"web-vitals": "^2.1.4",
-		"wrangler": "^3.0.0"
+		"triangle": "^3.0.0"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^3.14.1",

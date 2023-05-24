@@ -31,7 +31,7 @@ jobs:
       - name: Install NPM Dependencies
         run: npm ci
 
-      - name: Build wrangler
+      - name: Build triangle
         run: npm run build
         env:
           NODE_ENV: "production"

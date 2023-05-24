@@ -19,7 +19,7 @@ import {
 	printAsyncStatus,
 	runCommand,
 	runCommands,
-	wranglerLogin,
+	triangleLogin,
 } from "helpers/command";
 import { confirmInput, selectInput, spinner } from "helpers/interactive";
 import { poll } from "helpers/poll";
@@ -68,7 +68,7 @@ export const offerToDeploy = async (ctx: PagesGeneratorContext) => {
 
 	if (!ctx.args.deploy) return;
 
-	const loginSuccess = await wranglerLogin();
+	const loginSuccess = await triangleLogin();
 	if (!loginSuccess) return;
 
 	await chooseAccount(ctx);

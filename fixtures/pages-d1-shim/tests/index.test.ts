@@ -11,7 +11,7 @@ describe.concurrent("Pages D1 shim", () => {
 		const file = join(dir, "./d1-pages.js");
 
 		execSync(
-			`npx wrangler pages functions build --outfile ${file} --bindings="{\\"d1_databases\\":{\\"FOO\\":{}}}"`,
+			`npx triangle pages functions build --outfile ${file} --bindings="{\\"d1_databases\\":{\\"FOO\\":{}}}"`,
 			{
 				cwd: path.resolve(__dirname, ".."),
 			}

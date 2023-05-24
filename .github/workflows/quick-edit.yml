@@ -34,7 +34,7 @@ jobs:
       - name: Install NPM Dependencies
         run: npm ci
 
-      - name: Build Wrangler
+      - name: Build Triangle
         run: npm run build
 
       - name: Build Quick Edit

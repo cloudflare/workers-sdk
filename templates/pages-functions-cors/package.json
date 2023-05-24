@@ -3,10 +3,10 @@
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
-		"dev": "wrangler pages dev public"
+		"dev": "triangle pages dev public"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^3.0.0",
-		"wrangler": "^3.0.0"
+		"triangle": "^3.0.0"
 	}
 }

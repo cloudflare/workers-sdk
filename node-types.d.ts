@@ -1,4 +1,4 @@
-// https://github.com/cloudflare/workers-sdk/pull/2496#discussion_r1062516883
+// https://github.com/khulnasoft/workers-sdk/pull/2496#discussion_r1062516883
 
 import { WebAssembly as WorkerWebAssembly } from "@cloudflare/workers-types";
 import type {

@@ -21,8 +21,8 @@ const config: FrameworkConfig = {
 	generate,
 	displayName: "React",
 	packageScripts: {
-		"pages:dev": `wrangler pages dev ${compatDateFlag()} --port 3000 -- ${npm} start`,
-		"pages:deploy": `${npm} run build && wrangler pages publish ./build`,
+		"pages:dev": `triangle pages dev ${compatDateFlag()} --port 3000 -- ${npm} start`,
+		"pages:deploy": `${npm} run build && triangle pages publish ./build`,
 	},
 };
 export default config;

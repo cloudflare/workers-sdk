@@ -1,21 +1,21 @@
 {
-	"name": "wrangler-root",
+	"name": "triangle-root",
 	"version": "0.0.0",
 	"private": true,
-	"description": "Monorepo for wrangler and associated packages",
-	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
+	"description": "Monorepo for triangle and associated packages",
+	"homepage": "https://github.com/khulnasoft/workers-sdk#readme",
 	"bugs": {
-		"url": "https://github.com/cloudflare/workers-sdk/issues"
+		"url": "https://github.com/khulnasoft/workers-sdk/issues"
 	},
 	"license": "MIT OR Apache-2.0",
-	"author": "wrangler@cloudflare.com",
+	"author": "triangle@cloudflare.com",
 	"workspaces": [
 		"packages/*",
 		"fixtures/*",
 		"templates/*"
 	],
 	"scripts": {
-		"build": "npm run build --workspace=wrangler --workspace=jest-environment-wrangler --workspace=pages-plugin-example --workspace=wranglerjs-compat-webpack-plugin",
+		"build": "npm run build --workspace=triangle --workspace=jest-environment-triangle --workspace=pages-plugin-example --workspace=trianglejs-compat-webpack-plugin",
 		"check": "run-p check:* --aggregate-output --continue-on-error",
 		"check:format": "prettier . --check --ignore-unknown",
 		"check:lint": "eslint \"packages/**/*.[tj]s?(x)\" --cache --cache-strategy content --max-warnings=0 --config ./.eslintrc.js",
@@ -23,8 +23,8 @@
 		"fix": "npm run prettify && npm run check:lint -- --fix",
 		"postinstall": "patch-package",
 		"prettify": "prettier . --write --ignore-unknown",
-		"test": "npm run clean --workspace=wrangler && npm run bundle --workspace=wrangler && npm run test --workspace=packages/wrangler --workspace=packages/edge-preview-authenticated-proxy --workspace=packages/pages-shared --if-present",
-		"test:ci": "npm run test:ci --workspace=packages/wrangler --workspace=packages/pages-shared --if-present"
+		"test": "npm run clean --workspace=triangle && npm run bundle --workspace=triangle && npm run test --workspace=packages/triangle --workspace=packages/edge-preview-authenticated-proxy --workspace=packages/pages-shared --if-present",
+		"test:ci": "npm run test:ci --workspace=packages/triangle --workspace=packages/pages-shared --if-present"
 	},
 	"dependencies": {
 		"@changesets/changelog-github": "^0.4.5",

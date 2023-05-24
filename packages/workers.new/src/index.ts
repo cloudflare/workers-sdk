@@ -5,10 +5,10 @@
 type Redirects = Record<string, [string, string, string, string?]>;
 
 // stackblitz repository source
-const source = "github/cloudflare/wrangler2/tree/main/templates";
+const source = "github/khulnasoft/triangle2/tree/main/templates";
 
 // deploy with cloudflare source
-const src = "https://github.com/cloudflare/wrangler2/tree/main/templates";
+const src = "https://github.com/khulnasoft/triangle2/tree/main/templates";
 
 const redirects: Redirects = {
 	"/pages-image-sharing": [
@@ -281,7 +281,7 @@ function getListHTML(redirectsParam: Redirects) {
 			})
 			.join("\n")}
 	</ul>
-	<p class="subheading">Want to contribute a template? <a class="url" href="https://github.com/cloudflare/wrangler2/tree/main/templates"> Send a PR to the Wrangler repository.</a></p>
+	<p class="subheading">Want to contribute a template? <a class="url" href="https://github.com/khulnasoft/triangle2/tree/main/templates"> Send a PR to the Triangle repository.</a></p>
 </body>
 </html>
 `;

@@ -22,18 +22,18 @@ $ pnpm create cloudflare my-project worker-aws
 
 [`index.js`](https://github.com/cloudflare/workers-aws-template/blob/master/index.js) is the content of the Workers script. In `handleRequest`, uncomment the example for the service you want to try out.
 
-You'll need to use wrangler secrets to add appropriate values for `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, plus any of the service specific secrets, e.g.
+You'll need to use triangle secrets to add appropriate values for `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, plus any of the service specific secrets, e.g.
 
 ```sh
-$ wrangler secret put AWS_ACCESS_KEY_ID
-$ wrangler secret put AWS_SECRET_ACCESS_KEY
-$ wrangler secret put AWS_AURORA_SECRET_ARN
-$ wrangler secret put AWS_SQS_QUEUE_URL
+$ triangle secret put AWS_ACCESS_KEY_ID
+$ triangle secret put AWS_SECRET_ACCESS_KEY
+$ triangle secret put AWS_AURORA_SECRET_ARN
+$ triangle secret put AWS_SQS_QUEUE_URL
 ```
 
-Configuration of less sensitive values such as AWS_REGION can be done in the `[vars]` block of your `wrangler.toml` file if you'd prefer.
+Configuration of less sensitive values such as AWS_REGION can be done in the `[vars]` block of your `triangle.toml` file if you'd prefer.
 
-After that you can use `wrangler deploy` as normal. See the [wrangler documentation](https://developers.cloudflare.com/workers/cli-wrangler) for more information.
+After that you can use `triangle deploy` as normal. See the [triangle documentation](https://developers.cloudflare.com/workers/cli-triangle) for more information.
 
 ## AWS Resources
 

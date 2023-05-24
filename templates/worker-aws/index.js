@@ -8,7 +8,7 @@ addEventListener('fetch', event => {
 
 async function myCredentialProvider() {
 	return {
-		// use wrangler secrets to provide these global variables
+		// use triangle secrets to provide these global variables
 		accessKeyId: AWS_ACCESS_KEY_ID,
 		secretAccessKey: AWS_SECRET_ACCESS_KEY,
 	};
@@ -38,7 +38,7 @@ async function sqsExample() {
 	});
 
 	const send = new SendMessageCommand({
-		// use wrangler secrets to provide this global variable
+		// use triangle secrets to provide this global variable
 		QueueUrl: AWS_SQS_QUEUE_URL,
 		MessageBody: 'Hello SQS from a Cloudflare Worker',
 	});

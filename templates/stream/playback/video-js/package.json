@@ -3,10 +3,10 @@
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
-		"dev": "wrangler pages dev src --local",
-		"start-stackblitz": "WRANGLER_SEND_METRICS=false wrangler pages dev src --local"
+		"dev": "triangle pages dev src --local",
+		"start-stackblitz": "TRIANGLER_SEND_METRICS=false triangle pages dev src --local"
 	},
 	"devDependencies": {
-		"wrangler": "^2.9.1"
+		"triangle": "^2.9.1"
 	}
 }

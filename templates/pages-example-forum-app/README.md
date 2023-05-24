@@ -32,7 +32,7 @@ $ pnpm create cloudflare my-project pages-example-forum-app
 
 > **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.
 
-To run this locally, ensure you have `Wrangler` version `>=16.7.0` then run
+To run this locally, ensure you have `Triangle` version `>=16.7.0` then run
 
 ```sh
 npm install && npm run start

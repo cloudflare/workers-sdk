@@ -1,5 +1,5 @@
-import { unstable_dev } from "wrangler";
-import type { UnstableDevWorker } from "wrangler";
+import { unstable_dev } from "triangle";
+import type { UnstableDevWorker } from "triangle";
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
 
 describe("Worker", () => {

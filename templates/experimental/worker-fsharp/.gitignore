@@ -10,7 +10,7 @@ yarn-error.log
 symbolCache.db
 
 
-# Wrangler/Workers
+# Triangle/Workers
 /target
 /dist
 worker/

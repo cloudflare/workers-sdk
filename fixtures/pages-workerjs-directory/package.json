@@ -5,7 +5,7 @@
 	"sideEffects": false,
 	"scripts": {
 		"check:type": "tsc",
-		"dev": "npx wrangler pages dev public --port 8794",
+		"dev": "npx triangle pages dev public --port 8794",
 		"test": "npx vitest",
 		"test:ci": "npx vitest"
 	},

@@ -5,14 +5,14 @@ import { describe, it, beforeAll, afterAll } from "vitest";
 import type { ChildProcess } from "child_process";
 
 describe.concurrent("Pages Functions", () => {
-	let wranglerProcess: ChildProcess;
+	let triangleProcess: ChildProcess;
 	let ip: string;
 	let port: number;
 
 	beforeAll(async () => {
 		await new Promise((resolve) => {
-			wranglerProcess = fork(
-				path.join("..", "..", "packages", "wrangler", "bin", "wrangler.js"),
+			triangleProcess = fork(
+				path.join("..", "..", "packages", "triangle", "bin", "triangle.js"),
 				["pages", "dev", "public", "--port=0"],
 				{
 					stdio: ["inherit", "inherit", "inherit", "ipc"],
@@ -29,14 +29,14 @@ describe.concurrent("Pages Functions", () => {
 
 	afterAll(async () => {
 		await new Promise((resolve, reject) => {
-			wranglerProcess.once("exit", (code) => {
+			triangleProcess.once("exit", (code) => {
 				if (!code) {
 					resolve(code);
 				} else {
 					reject(code);
 				}
 			});
-			wranglerProcess.kill("SIGTERM");
+			triangleProcess.kill("SIGTERM");
 		});
 	});
 

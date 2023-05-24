@@ -9,10 +9,10 @@ The sample plugin allows ChatGPT users to search for repositories using GitHub's
 ## Get started
 
 0. Sign up for [Cloudflare Workers](https://workers.dev). The free tier is more than enough for most use cases.
-1. Install [wrangler](https://developers.cloudflare.com/workers/cli-wrangler/install-update), the Cloudflare Workers CLI
+1. Install [triangle](https://developers.cloudflare.com/workers/cli-triangle/install-update), the Cloudflare Workers CLI
 2. Clone this project and install dependencies with `npm install`
-3. Run `wrangler login` to login to your Cloudflare account in wrangler
-4. Run `wrangler publish` to publish the plugin to Cloudflare Workers
+3. Run `triangle login` to login to your Cloudflare account in triangle
+4. Run `triangle publish` to publish the plugin to Cloudflare Workers
 
 ## Usage
 

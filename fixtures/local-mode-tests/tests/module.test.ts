@@ -1,7 +1,7 @@
 import path from "path";
 import { describe, it, beforeAll, afterAll, expect } from "vitest";
-import { unstable_dev } from "wrangler";
-import type { UnstableDevWorker } from "wrangler";
+import { unstable_dev } from "triangle";
+import type { UnstableDevWorker } from "triangle";
 
 describe("worker", () => {
 	let worker: UnstableDevWorker;
@@ -21,7 +21,7 @@ describe("worker", () => {
 		worker = await unstable_dev(
 			path.resolve(__dirname, "..", "src", "module.ts"),
 			{
-				config: path.resolve(__dirname, "..", "src", "wrangler.module.toml"),
+				config: path.resolve(__dirname, "..", "src", "triangle.module.toml"),
 				vars: { VAR4: "https://google.com" },
 				experimental: {
 					disableExperimentalWarning: true,

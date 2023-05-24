@@ -7,9 +7,9 @@
 	"author": "",
 	"main": "src/index.js",
 	"scripts": {
-		"db:query": "wrangler d1 execute UPDATE_THIS_FOR_REMOTE_USE --local --command='SELECT * FROM Customers'",
-		"db:query-json": "wrangler d1 execute UPDATE_THIS_FOR_REMOTE_USE --local --command='SELECT * FROM Customers' --json",
-		"db:reset": "wrangler d1 execute UPDATE_THIS_FOR_REMOTE_USE --local --file=./schema.sql",
-		"start": "wrangler dev --local"
+		"db:query": "triangle d1 execute UPDATE_THIS_FOR_REMOTE_USE --local --command='SELECT * FROM Customers'",
+		"db:query-json": "triangle d1 execute UPDATE_THIS_FOR_REMOTE_USE --local --command='SELECT * FROM Customers' --json",
+		"db:reset": "triangle d1 execute UPDATE_THIS_FOR_REMOTE_USE --local --file=./schema.sql",
+		"start": "triangle dev --local"
 	}
 }

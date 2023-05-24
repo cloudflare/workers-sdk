@@ -12,5 +12,5 @@ command = "cargo install -q worker-build && worker-build --release" # required
 globs = ["**/*.wasm"]
 type = "CompiledWasm"
 
-# read more about configuring your Worker via wrangler.toml at:
-# https://developers.cloudflare.com/workers/cli-wrangler/configuration
+# read more about configuring your Worker via triangle.toml at:
+# https://developers.cloudflare.com/workers/cli-triangle/configuration

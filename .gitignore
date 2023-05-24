@@ -177,12 +177,12 @@ dist
 
 # End of https://www.toptal.com/developers/gitignore/api/node,macos
 
-wrangler-dist/
+triangle-dist/
 miniflare-dist
-packages/wrangler/wrangler.toml
+packages/triangle/triangle.toml
 packages/prerelease-registry/_worker.bundle
-packages/wranglerjs-compat-webpack-plugin/lib
-.wrangler-1-cache
+packages/trianglejs-compat-webpack-plugin/lib
+.triangle-1-cache
 emitted-types/
 _routes.generated.json
 packages/quick-edit/vscode
@@ -198,4 +198,4 @@ packages/quick-edit/web
 *.vsix
 vendor/vscode
 
-.wrangler/
+.triangle/

@@ -3,12 +3,12 @@
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
-		"deploy": "wrangler deploy src/index.ts",
-		"dev": "wrangler dev src/index.ts --local",
+		"deploy": "triangle deploy src/index.ts",
+		"dev": "triangle dev src/index.ts --local",
 		"test": "vitest"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^3.0.0",
-		"wrangler": "^3.0.0"
+		"triangle": "^3.0.0"
 	}
 }

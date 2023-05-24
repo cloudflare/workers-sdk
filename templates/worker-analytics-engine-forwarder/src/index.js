@@ -1,10 +1,10 @@
 /*
   Using this template:
-  In wrangler.toml
+  In triangle.toml
     * Edit the worker name.
     * Edit the "dataset" field in the analytics_engine binding to specify the name of the Workers Analytics Engine dataset to write to.
   In a terminal
-    * Run "wrangler secret put BEARER_TOKEN" and enter a secret value. You must also supply this token when calling the worker (see README.md).
+    * Run "triangle secret put BEARER_TOKEN" and enter a secret value. You must also supply this token when calling the worker (see README.md).
   In this file:
     * Edit the "writeDataPoint" call in the "processLogEntry" function to map your event data to fields in the analytics engine data point.
     * Optionally you could add additional code in that function to filter or process your messages before logging them.

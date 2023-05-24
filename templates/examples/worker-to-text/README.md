@@ -11,17 +11,17 @@ This template starts you off with a `src/lib.rs` file, acting as an entrypoint f
 your Worker. Feel free to add more code in this file, or create Rust modules anywhere else for this
 project to use.
 
-With `wrangler`, you can build, test, and deploy your Worker with the following commands:
+With `triangle`, you can build, test, and deploy your Worker with the following commands:
 
 ```bash
 # compiles your project to WebAssembly and will warn of any issues
-wrangler build
+triangle build
 
 # run your Worker in an ideal development workflow (with a local server, file watcher & more)
-wrangler dev
+triangle dev
 
-# deploy your Worker globally to the Cloudflare network (update your wrangler.toml file for configuration)
-wrangler deploy
+# deploy your Worker globally to the Cloudflare network (update your triangle.toml file for configuration)
+triangle deploy
 ```
 
 Read the latest `worker` crate documentation here: https://docs.rs/worker

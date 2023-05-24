@@ -11,7 +11,7 @@ Up to 25 events can be received at one time.
 Authentication is via bearer token. You can use any token or password string as long as you supply the same string to both the worker and the caller. To configure the token on the worker side you must set the `BEARER_TOKEN` secret to the token value by running (in a terminal, from within this project directory):
 
 ```
-npx wrangler secret put BEARER_TOKEN
+npx triangle secret put BEARER_TOKEN
 ```
 
 then entering your token value.

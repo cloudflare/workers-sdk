@@ -23,7 +23,7 @@ describe.concurrent.skip("Service Bindings", () => {
 
 	beforeAll(() => {
 		aProcess = fork(
-			path.join("..", "..", "..", "packages", "wrangler", "bin", "wrangler.js"),
+			path.join("..", "..", "..", "packages", "triangle", "bin", "triangle.js"),
 			["dev", "index.ts", "--local", "--port=0"],
 			{
 				stdio: ["ignore", "ignore", "ignore", "ipc"],
@@ -37,7 +37,7 @@ describe.concurrent.skip("Service Bindings", () => {
 		});
 
 		bProcess = fork(
-			path.join("..", "..", "..", "packages", "wrangler", "bin", "wrangler.js"),
+			path.join("..", "..", "..", "packages", "triangle", "bin", "triangle.js"),
 			["dev", "index.ts", "--local", "--port=0"],
 			{
 				stdio: ["ignore", "ignore", "ignore", "ipc"],
@@ -75,7 +75,7 @@ describe.concurrent.skip("Service Bindings", () => {
 		});
 	});
 
-	it("connects up Durable Objects and keeps state across wrangler instances", async () => {
+	it("connects up Durable Objects and keeps state across triangle instances", async () => {
 		await aReadyPromise;
 		await bReadyPromise;
 

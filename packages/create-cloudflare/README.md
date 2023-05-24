@@ -56,4 +56,4 @@ Current template options are: `simple`, `common`, or `chatgptPlugin`.
 ### Community
 
 - Join us [on Discord](https://discord.cloudflare.com)
-- File an issue [on Github](https://github.com/cloudflare/workers-sdk/issues/new/choose)
+- File an issue [on Github](https://github.com/khulnasoft/workers-sdk/issues/new/choose)

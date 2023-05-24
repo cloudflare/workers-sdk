@@ -7,7 +7,7 @@ setting up Turso and creating a database.
 
 In order to get this code to run, you will need to:
 
-- Edit `wrangler.toml` and set the `LIBSQL_DB_URL` [environment variable]
+- Edit `triangle.toml` and set the `LIBSQL_DB_URL` [environment variable]
 
 - Create a new [Secret] to securely store the (sensitive) `LIBSQL_DB_AUTH_TOKEN`
   for your database. These values are created when you create your first Turso
@@ -15,5 +15,5 @@ In order to get this code to run, you will need to:
 
 [turso]: https://turso.tech/
 [tutorial]: https://developers.cloudflare.com/workers/tutorials/connect-to-turso-using-workers/
-[environment variable]: https://developers.cloudflare.com/workers/platform/environment-variables/#add-environment-variables-via-wrangler
+[environment variable]: https://developers.cloudflare.com/workers/platform/environment-variables/#add-environment-variables-via-triangle
 [secret]: https://developers.cloudflare.com/workers/platform/environment-variables/#add-secrets-to-your-project

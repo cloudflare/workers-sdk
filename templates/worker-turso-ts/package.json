@@ -3,8 +3,8 @@
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
-		"deploy": "wrangler deploy",
-		"start": "wrangler dev --local"
+		"deploy": "triangle deploy",
+		"start": "triangle dev --local"
 	},
 	"dependencies": {
 		"@libsql/client": "^0.1.1",
@@ -13,6 +13,6 @@
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20230321.0",
 		"typescript": "^5.0.3",
-		"wrangler": "^3.0.0"
+		"triangle": "^3.0.0"
 	}
 }

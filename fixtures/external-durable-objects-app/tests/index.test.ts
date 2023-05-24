@@ -5,28 +5,28 @@ import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import type { ChildProcess } from "child_process";
 
 describe.concurrent.skip("Pages Functions", () => {
-	let aWranglerProcess: ChildProcess;
+	let aTriangleProcess: ChildProcess;
 	let aIP: string;
 	let aPort: number;
 	let aResolveReadyPromise: (value: unknown) => void;
 	const aReadyPromise = new Promise((resolve) => {
 		aResolveReadyPromise = resolve;
 	});
-	let bWranglerProcess: ChildProcess;
+	let bTriangleProcess: ChildProcess;
 	let bIP: string;
 	let bPort: number;
 	let bResolveReadyPromise: (value: unknown) => void;
 	const bReadyPromise = new Promise((resolve) => {
 		bResolveReadyPromise = resolve;
 	});
-	let cWranglerProcess: ChildProcess;
+	let cTriangleProcess: ChildProcess;
 	let cIP: string;
 	let cPort: number;
 	let cResolveReadyPromise: (value: unknown) => void;
 	const cReadyPromise = new Promise((resolve) => {
 		cResolveReadyPromise = resolve;
 	});
-	let dWranglerProcess: ChildProcess;
+	let dTriangleProcess: ChildProcess;
 	let dIP: string;
 	let dPort: number;
 	let dResolveReadyPromise: (value: unknown) => void;
@@ -35,8 +35,8 @@ describe.concurrent.skip("Pages Functions", () => {
 	});
 
 	beforeAll(() => {
-		aWranglerProcess = fork(
-			path.join("..", "..", "..", "packages", "wrangler", "bin", "wrangler.js"),
+		aTriangleProcess = fork(
+			path.join("..", "..", "..", "packages", "triangle", "bin", "triangle.js"),
 			["dev", "index.ts", "--local", "--port=0"],
 			{
 				stdio: ["ignore", "ignore", "ignore", "ipc"],
@@ -48,8 +48,8 @@ describe.concurrent.skip("Pages Functions", () => {
 			aPort = parsedMessage.port;
 			aResolveReadyPromise(undefined);
 		});
-		bWranglerProcess = fork(
-			path.join("..", "..", "..", "packages", "wrangler", "bin", "wrangler.js"),
+		bTriangleProcess = fork(
+			path.join("..", "..", "..", "packages", "triangle", "bin", "triangle.js"),
 			["dev", "index.ts", "--local", "--port=0"],
 			{
 				stdio: ["ignore", "ignore", "ignore", "ipc"],
@@ -61,8 +61,8 @@ describe.concurrent.skip("Pages Functions", () => {
 			bPort = parsedMessage.port;
 			bResolveReadyPromise(undefined);
 		});
-		cWranglerProcess = fork(
-			path.join("..", "..", "..", "packages", "wrangler", "bin", "wrangler.js"),
+		cTriangleProcess = fork(
+			path.join("..", "..", "..", "packages", "triangle", "bin", "triangle.js"),
 			["dev", "index.ts", "--local", "--port=0"],
 			{
 				stdio: ["ignore", "ignore", "ignore", "ipc"],
@@ -74,8 +74,8 @@ describe.concurrent.skip("Pages Functions", () => {
 			cPort = parsedMessage.port;
 			cResolveReadyPromise(undefined);
 		});
-		dWranglerProcess = fork(
-			path.join("..", "..", "..", "packages", "wrangler", "bin", "wrangler.js"),
+		dTriangleProcess = fork(
+			path.join("..", "..", "..", "packages", "triangle", "bin", "triangle.js"),
 			[
 				"pages",
 				"dev",
@@ -102,42 +102,42 @@ describe.concurrent.skip("Pages Functions", () => {
 		await dReadyPromise;
 
 		await new Promise((resolve, reject) => {
-			aWranglerProcess.once("exit", (code) => {
+			aTriangleProcess.once("exit", (code) => {
 				if (!code) {
 					resolve(code);
 				} else {
 					reject(code);
 				}
 			});
-			aWranglerProcess.kill("SIGTERM");
-			bWranglerProcess.once("exit", (code) => {
+			aTriangleProcess.kill("SIGTERM");
+			bTriangleProcess.once("exit", (code) => {
 				if (!code) {
 					resolve(code);
 				} else {
 					reject(code);
 				}
 			});
-			bWranglerProcess.kill("SIGTERM");
-			cWranglerProcess.once("exit", (code) => {
+			bTriangleProcess.kill("SIGTERM");
+			cTriangleProcess.once("exit", (code) => {
 				if (!code) {
 					resolve(code);
 				} else {
 					reject(code);
 				}
 			});
-			cWranglerProcess.kill("SIGTERM");
-			dWranglerProcess.once("exit", (code) => {
+			cTriangleProcess.kill("SIGTERM");
+			dTriangleProcess.once("exit", (code) => {
 				if (!code) {
 					resolve(code);
 				} else {
 					reject(code);
 				}
 			});
-			dWranglerProcess.kill("SIGTERM");
+			dTriangleProcess.kill("SIGTERM");
 		});
 	});
 
-	it("connects up Durable Objects and keeps state across wrangler instances", async () => {
+	it("connects up Durable Objects and keeps state across triangle instances", async () => {
 		await aReadyPromise;
 		await bReadyPromise;
 		await cReadyPromise;

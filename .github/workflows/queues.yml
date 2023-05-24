@@ -7,7 +7,7 @@ on:
 jobs:
   build:
     if: ${{ github.repository_owner == 'cloudflare' }}
-    name: Build and release `wrangler@queues` to NPM
+    name: Build and release `triangle@queues` to NPM
     runs-on: ubuntu-latest
 
     steps:
@@ -43,9 +43,9 @@ jobs:
       - name: Modify package.json version
         run: node .github/version-script.js
 
-      - name: Publish `wrangler@queues` to NPM
+      - name: Publish `triangle@queues` to NPM
         run: npm publish --tag queues
         env:
           NODE_ENV: "production"
           NPM_PUBLISH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
-        working-directory: packages/wrangler
+        working-directory: packages/triangle

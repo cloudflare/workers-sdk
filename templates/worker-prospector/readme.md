@@ -16,27 +16,27 @@ $ yarn create cloudflare my-project prospector
 $ pnpm create cloudflare my-project prospector
 ```
 
-Install Wrangler if not already installed.
+Install Triangle if not already installed.
 
 ```bash
-$ npm install @cloudflare/wrangler -g
+$ npm install @khulnasoft/triangle -g
 ```
 
-Login to your account using Wrangler.
+Login to your account using Triangle.
 
 ```
-$ wrangler login
+$ triangle login
 
 ```
 
 Create a new D1 database and Queues instance.
 
 ```bash
-$ wrangler d1 create $DATABASE_NAME
-$ wrangler queues create $QUEUE_NAME
+$ triangle d1 create $DATABASE_NAME
+$ triangle queues create $QUEUE_NAME
 ```
 
-Update `wrangler.toml` with the appropriate bindings. See [configuration](#configuration) for more information.
+Update `triangle.toml` with the appropriate bindings. See [configuration](#configuration) for more information.
 
 Run the `bin/migrate script` to create the tables in the database.
 
@@ -59,7 +59,7 @@ Prospector is configured with a combination of environment variables and secrets
 - `AUTH_TOKEN` - An optional token to use for authentication when scraping websites. If not provided, authentication will be disabled. If provided, it will be used to authenticate against the website using the Authorization header, passed as a bearer token.
 - `SITEMAP_URL` - The URL of the sitemap to use for scraping. This is required.
 
-Additionally, you must configure a D1 database and Queues instance. They should be configured in the `wrangler.toml` file:
+Additionally, you must configure a D1 database and Queues instance. They should be configured in the `triangle.toml` file:
 
 ```toml
 [[ d1_databases ]]
@@ -80,7 +80,7 @@ preview_database_id = "{{database_preview_id}}"
   dead_letter_queue = "{{dlq_queue_name}}"
 ```
 
-Finally, you must enable a cron trigger to run the scraper. This is configured in the `wrangler.toml` file:
+Finally, you must enable a cron trigger to run the scraper. This is configured in the `triangle.toml` file:
 
 ```toml
 [triggers]

@@ -1,5 +1,5 @@
 ---
-"wrangler": patch
+"triangle": patch
 ---
 
 add `d1 info` command for people to check DB size
@@ -9,7 +9,7 @@ This PR adds a `d1 info <NAME>` command for getting information about a D1 datab
 Usage:
 
 ```
-> npx wrangler d1 info northwind
+> npx triangle d1 info northwind
 
 ┌───────────────────┬──────────────────────────────────────┐
 │                   │ d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06 │
@@ -27,7 +27,7 @@ Usage:
 ```
 
 ```
-> npx wrangler d1 info northwind --json
+> npx triangle d1 info northwind --json
 {
   "uuid": "d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06",
   "name": "northwind",

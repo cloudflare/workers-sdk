@@ -220,35 +220,35 @@ export const detectPackageManager = () => {
 	};
 };
 
-export const installWrangler = async () => {
+export const installTriangle = async () => {
 	const { npm } = detectPackageManager();
 
 	// Exit early if already installed
-	if (existsSync(path.resolve("node_modules", "wrangler"))) {
+	if (existsSync(path.resolve("node_modules", "triangle"))) {
 		return;
 	}
 
-	await installPackages([`wrangler`], {
+	await installPackages([`triangle`], {
 		dev: true,
-		startText: `Installing wrangler ${dim(
+		startText: `Installing triangle ${dim(
 			"A command line tool for building Cloudflare Workers"
 		)}`,
 		doneText: `${brandColor("installed")} ${dim(
-			`via \`${npm} install wrangler --save-dev\``
+			`via \`${npm} install triangle --save-dev\``
 		)}`,
 	});
 };
 
 export const isLoggedIn = async () => {
 	const { npx } = detectPackageManager();
-	const output = await runCommand(`${npx} wrangler whoami`, {
+	const output = await runCommand(`${npx} triangle whoami`, {
 		silent: true,
 	});
 
 	return !/not authenticated/.test(output);
 };
 
-export const wranglerLogin = async () => {
+export const triangleLogin = async () => {
 	const { npx } = detectPackageManager();
 
 	const s = spinner();
@@ -261,13 +261,13 @@ export const wranglerLogin = async () => {
 
 	// We're using a custom spinner since this is a little complicated.
 	// We want to vary the done status based on the output
-	const output = await runCommand(`${npx} wrangler login`, {
+	const output = await runCommand(`${npx} triangle login`, {
 		silent: true,
 	});
 	const success = /Successfully logged in/.test(output);
 
 	const verb = success ? "allowed" : "denied";
-	s.stop(`${brandColor(verb)} ${dim("via `wrangler login`")}`);
+	s.stop(`${brandColor(verb)} ${dim("via `triangle login`")}`);
 
 	return success;
 };
@@ -275,7 +275,7 @@ export const wranglerLogin = async () => {
 export const listAccounts = async () => {
 	const { npx } = detectPackageManager();
 
-	const output = await runCommand(`${npx} wrangler whoami`, {
+	const output = await runCommand(`${npx} triangle whoami`, {
 		silent: true,
 	});
 

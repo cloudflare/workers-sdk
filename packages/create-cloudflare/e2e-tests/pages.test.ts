@@ -56,8 +56,8 @@ describe("E2E", () => {
 		const pkgJsonPath = join(projectPath, "package.json");
 		expect(pkgJsonPath).toExist();
 
-		const wranglerPath = join(projectPath, "node_modules/wrangler");
-		expect(wranglerPath).toExist();
+		const trianglePath = join(projectPath, "node_modules/triangle");
+		expect(trianglePath).toExist();
 
 		// Verify package scripts
 		const frameworkConfig = FrameworkMap[framework];

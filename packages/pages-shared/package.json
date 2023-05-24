@@ -3,7 +3,7 @@
 	"version": "0.5.1",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"url": "https://github.com/khulnasoft/workers-sdk.git",
 		"directory": "packages/pages-shared"
 	},
 	"files": [

@@ -7,7 +7,7 @@
 		"build": "craco build",
 		"eject": "craco eject",
 		"postinstall": "cd durable_objects && npm install",
-		"start": "npx wrangler@pages pages dev --kv IMAGES -- npm run start:react",
+		"start": "npx triangle@pages pages dev --kv IMAGES -- npm run start:react",
 		"start:react": "craco start",
 		"test": "craco test"
 	},
@@ -55,6 +55,6 @@
 		"autoprefixer": "^9.8.8",
 		"postcss": "^7.0.39",
 		"tailwindcss": "npm:@tailwindcss/postcss7-compat@^2.2.17",
-		"wrangler": "^3.0.0"
+		"triangle": "^3.0.0"
 	}
 }

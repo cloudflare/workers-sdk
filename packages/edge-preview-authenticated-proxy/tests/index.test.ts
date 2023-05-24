@@ -3,8 +3,8 @@ import fs from "fs/promises";
 import os from "os";
 import path from "path";
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
-import { unstable_dev } from "wrangler";
-import type { UnstableDevWorker } from "wrangler";
+import { unstable_dev } from "triangle";
+import type { UnstableDevWorker } from "triangle";
 
 function removeUUID(str: string) {
 	return str.replace(

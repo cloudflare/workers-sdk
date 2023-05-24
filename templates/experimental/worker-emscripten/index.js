@@ -7,7 +7,7 @@ import emscripten from './build/module.js';
 // so we can initialize the WASM instance ourselves
 // since Workers puts your wasm file in global scope
 // as a binding. In this case, this binding is called
-// `wasm` as that is the name Wrangler uses
+// `wasm` as that is the name Triangle uses
 // for any uploaded wasm module
 let emscripten_module = new Promise((resolve, reject) => {
 	emscripten({

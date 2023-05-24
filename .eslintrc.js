@@ -90,7 +90,7 @@ module.exports = {
 			},
 		},
 		{
-			files: "packages/wrangler/src/**/*.ts",
+			files: "packages/triangle/src/**/*.ts",
 			excludedFiles: "*.test.ts",
 			rules: {
 				"no-restricted-globals": [
@@ -108,15 +108,15 @@ module.exports = {
 		},
 	],
 	ignorePatterns: [
-		"packages/wrangler/vendor",
-		"packages/wrangler/*-dist",
-		"packages/wrangler/pages/functions/template-worker.ts",
-		"packages/wrangler/templates",
-		"packages/wrangler/emitted-types",
+		"packages/triangle/vendor",
+		"packages/triangle/*-dist",
+		"packages/triangle/pages/functions/template-worker.ts",
+		"packages/triangle/templates",
+		"packages/triangle/emitted-types",
 		"examples/remix-pages-app/public",
-		"packages/jest-environment-wrangler/dist",
-		"packages/wrangler-devtools/built-devtools",
-		"packages/wranglerjs-compat-webpack-plugin/lib",
+		"packages/jest-environment-triangle/dist",
+		"packages/triangle-devtools/built-devtools",
+		"packages/trianglejs-compat-webpack-plugin/lib",
 		"/templates",
 		"packages/quick-edit-extension/vscode*.d.ts",
 		"packages/create-cloudflare/**/templates/**",

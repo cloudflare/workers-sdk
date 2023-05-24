@@ -11,11 +11,11 @@
 	],
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"url": "https://github.com/khulnasoft/workers-sdk.git",
 		"directory": "packages/create-cloudflare"
 	},
 	"license": "MIT OR Apache-2.0",
-	"author": "wrangler@cloudflare.com",
+	"author": "triangle@cloudflare.com",
 	"exports": {
 		".": "./dist/cli.js"
 	},
@@ -61,7 +61,7 @@
 		"vite-tsconfig-paths": "^4.0.8",
 		"vitest": "^0.30.0",
 		"which-pm-runs": "^1.1.0",
-		"wrangler": "^3.0.1",
+		"triangle": "^3.0.1",
 		"yargs": "^17.7.1"
 	},
 	"engines": {

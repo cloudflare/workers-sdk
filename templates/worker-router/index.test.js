@@ -1,4 +1,4 @@
-import { unstable_dev } from 'wrangler';
+import { unstable_dev } from 'triangle';
 import { describe, expect, it, beforeAll, afterAll } from 'vitest';
 
 describe('Worker', () => {

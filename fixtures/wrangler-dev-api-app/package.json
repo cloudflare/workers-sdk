@@ -1,11 +1,11 @@
 {
-	"name": "wrangler-dev-api-app",
+	"name": "triangle-dev-api-app",
 	"version": "1.0.0",
 	"private": true,
 	"description": "",
 	"license": "ISC",
 	"author": "",
 	"scripts": {
-		"dev": "node --no-warnings ./src/wrangler-dev.mjs"
+		"dev": "node --no-warnings ./src/triangle-dev.mjs"
 	}
 }

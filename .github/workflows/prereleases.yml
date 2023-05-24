@@ -53,11 +53,11 @@ jobs:
           SPARROW_SOURCE_KEY: "5adf183f94b3436ba78d67f506965998"
           ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
           ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
-        working-directory: packages/wrangler
+        working-directory: packages/triangle
 
       - name: Get Package Version
-        run: echo "WRANGLER_VERSION=$(npm view wrangler@beta version)" >> $GITHUB_ENV
-        working-directory: packages/wrangler
+        run: echo "TRIANGLER_VERSION=$(npm view triangle@beta version)" >> $GITHUB_ENV
+        working-directory: packages/triangle
 
   publish_prerelease_registry:
     if: ${{ github.repository_owner == 'cloudflare' }}
@@ -87,7 +87,7 @@ jobs:
       - name: Install NPM Dependencies
         run: npm ci
 
-      - name: Build wrangler
+      - name: Build triangle
         run: npm run build
         env:
           NODE_ENV: "production"

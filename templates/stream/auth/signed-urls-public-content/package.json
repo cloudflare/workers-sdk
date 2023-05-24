@@ -3,13 +3,13 @@
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
-		"dev": "wrangler pages dev --local ./src",
-		"start-stackblitz": "WRANGLER_SEND_METRICS=false wrangler pages dev --local ./src"
+		"dev": "triangle pages dev --local ./src",
+		"start-stackblitz": "TRIANGLER_SEND_METRICS=false triangle pages dev --local ./src"
 	},
 	"dependencies": {
 		"stripe": "^10.15.0"
 	},
 	"devDependencies": {
-		"wrangler": "^2.1.13"
+		"triangle": "^2.1.13"
 	}
 }

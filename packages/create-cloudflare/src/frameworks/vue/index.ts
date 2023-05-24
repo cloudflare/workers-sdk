@@ -17,8 +17,8 @@ const config: FrameworkConfig = {
 	generate,
 	displayName: "Vue",
 	packageScripts: {
-		"pages:dev": `wrangler pages dev ${compatDateFlag()} --proxy 5173 -- ${npm} run dev`,
-		"pages:deploy": `${npm} run build && wrangler pages publish ./dist`,
+		"pages:dev": `triangle pages dev ${compatDateFlag()} --proxy 5173 -- ${npm} run dev`,
+		"pages:deploy": `${npm} run build && triangle pages publish ./dist`,
 	},
 	testFlags: ["--ts"],
 };

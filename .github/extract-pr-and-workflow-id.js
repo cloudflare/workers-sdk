@@ -6,7 +6,7 @@ const allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
 
 for (const artifact of allArtifacts.data.artifacts) {
 	// Extract the PR number from the artifact name
-	const match = /^npm-package-wrangler-(\d+)$/.exec(artifact.name);
+	const match = /^npm-package-triangle-(\d+)$/.exec(artifact.name);
 	if (match) {
 		fs.appendFileSync(
 			process.env.GITHUB_ENV,

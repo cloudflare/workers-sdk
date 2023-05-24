@@ -41,8 +41,8 @@ const config: FrameworkConfig = {
 	generate,
 	displayName: "Gatsby",
 	packageScripts: {
-		"pages:dev": `wrangler pages dev ${compatDateFlag()} --proxy 8000 -- ${npm} run develop`,
-		"pages:deploy": `${npm} run build && wrangler pages publish ./public`,
+		"pages:dev": `triangle pages dev ${compatDateFlag()} --proxy 8000 -- ${npm} run develop`,
+		"pages:deploy": `${npm} run build && triangle pages publish ./public`,
 	},
 };
 export default config;

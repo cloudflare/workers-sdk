@@ -3,10 +3,10 @@
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
-		"deploy": "wrangler deploy",
-		"start": "wrangler dev"
+		"deploy": "triangle deploy",
+		"start": "triangle dev"
 	},
 	"devDependencies": {
-		"wrangler": "^2.9.1"
+		"triangle": "^2.9.1"
 	}
 }

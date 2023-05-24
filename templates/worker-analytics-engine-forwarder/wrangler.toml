@@ -9,4 +9,4 @@ analytics_engine_datasets = [
 
 
 # secrets:
-# use "wrangler secret put BEARER_TOKEN" to set a bearer token.
+# use "triangle secret put BEARER_TOKEN" to set a bearer token.

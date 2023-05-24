@@ -1,10 +1,10 @@
 import path from "path";
 import { describe, it, beforeAll, afterAll, expect } from "vitest";
-import { unstable_dev } from "wrangler";
-import type { UnstableDevWorker } from "wrangler";
+import { unstable_dev } from "triangle";
+import type { UnstableDevWorker } from "triangle";
 
 // Okay this test is seriously flaky, even without devRegistry enabled
-// TODO: figure out why we can't run 8 wranglers at once
+// TODO: figure out why we can't run 8 triangles at once
 describe.skip("worker", () => {
 	let workers: UnstableDevWorker[];
 	let resolveReadyPromise: (value: unknown) => void;

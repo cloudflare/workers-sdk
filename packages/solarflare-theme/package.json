@@ -7,7 +7,7 @@
 		"Themes"
 	],
 	"keywords": [
-		"wrangler",
+		"triangle",
 		"cloudflare",
 		"workers",
 		"cloudflare workers",
@@ -15,13 +15,13 @@
 		"theme",
 		"cloudflare theme"
 	],
-	"homepage": "https://github.com/cloudflare/workers-sdk/blob/main/packages/vscode-theme/README.md",
+	"homepage": "https://github.com/khulnasoft/workers-sdk/blob/main/packages/vscode-theme/README.md",
 	"bugs": {
-		"url": "https://github.com/cloudflare/workers-sdk/issues"
+		"url": "https://github.com/khulnasoft/workers-sdk/issues"
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"url": "https://github.com/khulnasoft/workers-sdk.git",
 		"directory": "packages/solarflare-theme"
 	},
 	"license": "MIT OR Apache-2.0",

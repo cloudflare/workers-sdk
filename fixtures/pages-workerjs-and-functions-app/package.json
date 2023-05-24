@@ -5,7 +5,7 @@
 	"sideEffects": false,
 	"scripts": {
 		"check:type": "tsc && tsc -p tests/tsconfig.json",
-		"dev": "npx wrangler pages dev public --port 8955",
+		"dev": "npx triangle pages dev public --port 8955",
 		"test": "npx vitest",
 		"test:ci": "npx vitest"
 	},

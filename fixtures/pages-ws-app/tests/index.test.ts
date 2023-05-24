@@ -7,7 +7,7 @@ import type { ChildProcess } from "child_process";
 const isWindows = process.platform === "win32";
 
 describe.concurrent.skip("Pages Functions", () => {
-	let wranglerProcess: ChildProcess;
+	let triangleProcess: ChildProcess;
 	let ip: string;
 	let port: number;
 	let resolveReadyPromise: (value: unknown) => void;
@@ -20,8 +20,8 @@ describe.concurrent.skip("Pages Functions", () => {
 			shell: isWindows,
 			cwd: path.resolve(__dirname, ".."),
 		});
-		wranglerProcess = fork(
-			path.join("..", "..", "packages", "wrangler", "bin", "wrangler.js"),
+		triangleProcess = fork(
+			path.join("..", "..", "packages", "triangle", "bin", "triangle.js"),
 			["pages", "dev", "--port=0", "--proxy=8791", "--", "npm run server"],
 			{
 				cwd: path.resolve(__dirname, ".."),
@@ -37,14 +37,14 @@ describe.concurrent.skip("Pages Functions", () => {
 	afterAll(async () => {
 		await readyPromise;
 		await new Promise((resolve, reject) => {
-			wranglerProcess.once("exit", (code) => {
+			triangleProcess.once("exit", (code) => {
 				if (!code) {
 					resolve(code);
 				} else {
 					reject(code);
 				}
 			});
-			wranglerProcess.kill("SIGTERM");
+			triangleProcess.kill("SIGTERM");
 		});
 	});
 

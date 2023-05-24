@@ -1,0 +1,16 @@
+{
+	"name": "@khulnasoft/triangle-devtools",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Chrome Devtools hosted for easy use with Triangle",
+	"homepage": "https://github.com/khulnasoft/workers-sdk#readme",
+	"bugs": {
+		"url": "https://github.com/khulnasoft/workers-sdk/issues"
+	},
+	"license": "BSD-3-Clause",
+	"author": "workers-devprod@cloudflare.com",
+	"devDependencies": {
+		"patch-package": "^6.5.1",
+		"triangle": "^3.0.0"
+	}
+}

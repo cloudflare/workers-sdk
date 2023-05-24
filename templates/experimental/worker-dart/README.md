@@ -2,17 +2,17 @@
 
 Your [Dart](https://dart.dev/) code in [index.dart](https://github.com/cloudflare/dart-worker-hello-world/blob/master/index.dart), running on Cloudflare Workers
 
-In addition to [Wrangler](https://github.com/cloudflare/wrangler) you will need to [install Dart](https://dart.dev/get-dart).
+In addition to [Triangle](https://github.com/khulnasoft/triangle) you will need to [install Dart](https://dart.dev/get-dart).
 
-#### Wrangler
+#### Triangle
 
-To generate using [wrangler](https://github.com/cloudflare/wrangler)
+To generate using [triangle](https://github.com/khulnasoft/triangle)
 
 ```
-wrangler generate projectname https://github.com/cloudflare/dart-worker-hello-world
+triangle generate projectname https://github.com/cloudflare/dart-worker-hello-world
 ```
 
-Further documentation for Wrangler can be found [here](https://developers.cloudflare.com/workers/tooling/wrangler).
+Further documentation for Triangle can be found [here](https://developers.cloudflare.com/workers/tooling/triangle).
 
 #### Dart
 
@@ -27,7 +27,7 @@ pub get
 dart2js -O2 --server-mode -o index.js index.dart
 ```
 
-That will compile your code into index.js, after which you can run `wrangler deploy` to push it to Cloudflare.
+That will compile your code into index.js, after which you can run `triangle deploy` to push it to Cloudflare.
 
 For more information on how Dart translates to JavaScript, see the [docs for dart2js](https://dart.dev/tools/dart2js) and the [interop guide](https://dart.dev/web/js-interop).
 

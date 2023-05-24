@@ -15,7 +15,7 @@ export const generateGitHubFetch = ({
 		);
 		gitHubRequest.headers.set(
 			"User-Agent",
-			"@cloudflare/workers-sdk/packages/prerelease-registry"
+			"@khulnasoft/workers-sdk/packages/prerelease-registry"
 		);
 
 		return fetch(gitHubRequest);

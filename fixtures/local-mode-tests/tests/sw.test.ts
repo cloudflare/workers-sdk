@@ -1,7 +1,7 @@
 import path from "path";
 import { describe, it, beforeAll, afterAll, expect } from "vitest";
-import { unstable_dev } from "wrangler";
-import type { UnstableDevWorker } from "wrangler";
+import { unstable_dev } from "triangle";
+import type { UnstableDevWorker } from "triangle";
 
 describe("worker", () => {
 	let worker: UnstableDevWorker;
@@ -19,7 +19,7 @@ describe("worker", () => {
 
 		//since the script is invoked from the directory above, need to specify index.js is in src/
 		worker = await unstable_dev(path.resolve(__dirname, "..", "src", "sw.ts"), {
-			config: path.resolve(__dirname, "..", "src", "wrangler.sw.toml"),
+			config: path.resolve(__dirname, "..", "src", "triangle.sw.toml"),
 			experimental: {
 				disableExperimentalWarning: true,
 				disableDevRegistry: true,

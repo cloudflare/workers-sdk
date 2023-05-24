@@ -1,6 +1,6 @@
 ---
 "create-cloudflare": patch
-"wrangler": patch
+"triangle": patch
 ---
 
-Allow wrangler to run C3 with additional flags to respect non-interactive flow when --yes/-y flag is set
+Allow triangle to run C3 with additional flags to respect non-interactive flow when --yes/-y flag is set

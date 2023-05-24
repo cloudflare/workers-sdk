@@ -53,5 +53,5 @@ jobs:
           ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
           NODE_ENV: "production"
           # This is the "production" key for sparrow analytics.
-          # Include this here because this step will rebuild Wrangler and needs to have this available
+          # Include this here because this step will rebuild Triangle and needs to have this available
           SPARROW_SOURCE_KEY: "50598e014ed44c739ec8074fdc16057c"

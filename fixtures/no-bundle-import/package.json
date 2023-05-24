@@ -3,12 +3,12 @@
 	"version": "0.0.1",
 	"private": true,
 	"scripts": {
-		"deploy": "wrangler deploy",
-		"start": "wrangler dev",
+		"deploy": "triangle deploy",
+		"start": "triangle dev",
 		"test": "vitest"
 	},
 	"devDependencies": {
 		"get-port": "^6.1.2",
-		"wrangler": "^3.0.0"
+		"triangle": "^3.0.0"
 	}
 }

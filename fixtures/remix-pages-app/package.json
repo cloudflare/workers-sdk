@@ -5,9 +5,9 @@
 	"scripts": {
 		"build": "remix build",
 		"dev:remix": "remix watch",
-		"dev:wrangler": "cross-env NODE_ENV=development wrangler pages dev ./public",
+		"dev:triangle": "cross-env NODE_ENV=development triangle pages dev ./public",
 		"dev": "remix build && run-p \"dev:*\"",
-		"start": "cross-env NODE_ENV=production npm run dev:wrangler",
+		"start": "cross-env NODE_ENV=production npm run dev:triangle",
 		"check:type": "tsc && tsc -p tests/tsconfig.json",
 		"test": "npx vitest",
 		"test:ci": "npx vitest"

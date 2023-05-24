@@ -9,7 +9,7 @@ Fixes # [insert GH or internal issue number(s)].
 **Author has included the following, where applicable:**
 
 - [ ] Tests
-- [ ] Changeset ([Changeset guidelines](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md#changesets))
+- [ ] Changeset ([Changeset guidelines](https://github.com/khulnasoft/workers-sdk/blob/main/CONTRIBUTING.md#changesets))
 
 **Reviewer is to perform the following, as applicable:**
 

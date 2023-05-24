@@ -3,13 +3,13 @@
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
-		"deploy": "wrangler deploy src/index.ts",
-		"start": "wrangler dev src/index.ts --local",
-		"start-stackblitz": "WRANGLER_SEND_METRICS=false wrangler dev src/index.ts --local"
+		"deploy": "triangle deploy src/index.ts",
+		"start": "triangle dev src/index.ts --local",
+		"start-stackblitz": "TRIANGLER_SEND_METRICS=false triangle dev src/index.ts --local"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^3.0.0",
 		"typescript": "^4.0.0",
-		"wrangler": "^3.0.0"
+		"triangle": "^3.0.0"
 	}
 }

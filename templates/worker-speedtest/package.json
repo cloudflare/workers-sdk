@@ -4,8 +4,8 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"deploy": "wrangler deploy src/index.js",
-		"dev": "wrangler dev src/index.js --local",
+		"deploy": "triangle deploy src/index.js",
+		"dev": "triangle dev src/index.js --local",
 		"test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
 	},
 	"devDependencies": {
@@ -19,6 +19,6 @@
 		"miniflare": "^2.14.0",
 		"prettier": "^2.7.1",
 		"ts-jest": "^28.0.7",
-		"wrangler": "^3.0.0"
+		"triangle": "^3.0.0"
 	}
 }

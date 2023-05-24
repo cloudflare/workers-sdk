@@ -9,7 +9,7 @@ execSync("npx changeset version");
 
 // HACK: run a newer version of npm that can update package-lock.json using local dependencies.
 // See https://github.com/npm/cli/issues/4379 and https://github.com/npm/cli/pull/4371.
-// The error looks like: `No matching version found for wrangler@^2.15.0.`
+// The error looks like: `No matching version found for triangle@^2.15.0.`
 if (!process.version.startsWith("v16")) {
 	throw new Error(
 		"You have updated node version and so you must now remove the hack below!"

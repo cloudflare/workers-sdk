@@ -11,7 +11,7 @@
 		"public/"
 	],
 	"scripts": {
-		"build": "npx wrangler pages functions build --plugin --outdir=dist",
+		"build": "npx triangle pages functions build --plugin --outdir=dist",
 		"check:type": "tsc"
 	}
 }

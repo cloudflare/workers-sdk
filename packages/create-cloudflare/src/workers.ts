@@ -95,13 +95,13 @@ async function copyExistingWorkerFiles(ctx: Context) {
 			});
 		}
 
-		// `wrangler init --from-dash` bails if you opt-out of creating a package.json
+		// `triangle init --from-dash` bails if you opt-out of creating a package.json
 		// so run it (with -y) in a tempdir and copy the src files after
 		const tempdir = await mkdtemp(
-			join(tmpdir(), "c3-wrangler-init--from-dash-")
+			join(tmpdir(), "c3-triangle-init--from-dash-")
 		);
 		await runCommand(
-			`npx wrangler@3 init --from-dash ${ctx.args.existingScript} -y --no-delegate-c3`,
+			`npx triangle@3 init --from-dash ${ctx.args.existingScript} -y --no-delegate-c3`,
 			{
 				silent: true,
 				cwd: tempdir, // use a tempdir because we don't want all the files
@@ -125,10 +125,10 @@ async function copyExistingWorkerFiles(ctx: Context) {
 			{ recursive: true }
 		);
 
-		// copy wrangler.toml from the downloaded worker
+		// copy triangle.toml from the downloaded worker
 		await cp(
-			join(tempdir, ctx.args.existingScript, "wrangler.toml"),
-			join(ctx.project.path, "wrangler.toml")
+			join(tempdir, ctx.args.existingScript, "triangle.toml"),
+			join(ctx.project.path, "triangle.toml")
 		);
 	}
 }
@@ -137,18 +137,18 @@ async function updateFiles(ctx: Context) {
 	// build file paths
 	const paths = {
 		packagejson: resolve(ctx.project.path, "package.json"),
-		wranglertoml: resolve(ctx.project.path, "wrangler.toml"),
+		triangletoml: resolve(ctx.project.path, "triangle.toml"),
 	};
 
 	// read files
 	const contents = {
 		packagejson: JSON.parse(await readFile(paths.packagejson, "utf-8")),
-		wranglertoml: await readFile(paths.wranglertoml, "utf-8"),
+		triangletoml: await readFile(paths.triangletoml, "utf-8"),
 	};
 
 	// update files
 	contents.packagejson.name = ctx.project.name;
-	contents.wranglertoml = contents.wranglertoml
+	contents.triangletoml = contents.triangletoml
 		.replace(/^name = .+$/m, `name = "${ctx.project.name}"`)
 		.replace(
 			/^compatibility_date = .+$/m,
@@ -160,5 +160,5 @@ async function updateFiles(ctx: Context) {
 		paths.packagejson,
 		JSON.stringify(contents.packagejson, null, 2)
 	);
-	await writeFile(paths.wranglertoml, contents.wranglertoml);
+	await writeFile(paths.triangletoml, contents.triangletoml);
 }

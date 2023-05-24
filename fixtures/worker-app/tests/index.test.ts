@@ -1,13 +1,13 @@
 import { resolve } from "path";
 import { fetch } from "undici";
 import { describe, it, beforeAll, afterAll } from "vitest";
-import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
+import { runTriangleDev } from "../../shared/src/run-triangle-long-lived";
 
-describe.concurrent("'wrangler dev' correctly renders pages", () => {
+describe.concurrent("'triangle dev' correctly renders pages", () => {
 	let ip, port, stop;
 
 	beforeAll(async () => {
-		({ ip, port, stop } = await runWranglerDev(resolve(__dirname, ".."), [
+		({ ip, port, stop } = await runTriangleDev(resolve(__dirname, ".."), [
 			"--local",
 			"--port=0",
 		]));

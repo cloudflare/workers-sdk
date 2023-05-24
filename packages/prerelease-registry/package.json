@@ -4,12 +4,12 @@
 	"private": true,
 	"main": "dist/index.js",
 	"scripts": {
-		"build": "npx wrangler pages functions build --fallback-service='' ./functions/routes --outdir=dist",
+		"build": "npx triangle pages functions build --fallback-service='' ./functions/routes --outdir=dist",
 		"check:type": "tsc",
 		"prepublish": "npm run build",
-		"publish": "npx wrangler deploy dist/index.js",
+		"publish": "npx triangle deploy dist/index.js",
 		"prestart": "npm run build",
-		"start": "npx wrangler dev dist/index.js"
+		"start": "npx triangle dev dist/index.js"
 	},
 	"dependencies": {
 		"jszip": "^3.7.1"

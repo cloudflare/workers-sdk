@@ -3,8 +3,8 @@
 	"version": "0.1.0",
 	"private": true,
 	"scripts": {
-		"publish": "wrangler deploy",
-		"start": "wrangler dev",
+		"publish": "triangle deploy",
+		"start": "triangle dev",
 		"test": "vitest"
 	},
 	"devDependencies": {
@@ -12,6 +12,6 @@
 		"cookie": "^0.5.0",
 		"toucan-js": "^3.1.0",
 		"vitest": "^0.31.0",
-		"wrangler": "*"
+		"triangle": "*"
 	}
 }

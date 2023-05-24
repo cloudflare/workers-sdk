@@ -38,7 +38,7 @@ const config: FrameworkConfig = {
 	configure,
 	displayName: "Qwik",
 	packageScripts: {
-		"pages:dev": `wrangler pages dev ${compatDateFlag()} -- ${npm} run dev`,
+		"pages:dev": `triangle pages dev ${compatDateFlag()} -- ${npm} run dev`,
 		"pages:deploy": `${npm} run build && ${npm} run deploy`,
 	},
 };

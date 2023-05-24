@@ -6,7 +6,7 @@
 	"main": "dist/worker.js",
 	"scripts": {
 		"check:type": "tsc && tsc -p tests/tsconfig.json",
-		"dev": "npx wrangler pages dev public --port 12345 --node-compat",
+		"dev": "npx triangle pages dev public --port 12345 --node-compat",
 		"test": "npx vitest",
 		"test:ci": "npx vitest"
 	},

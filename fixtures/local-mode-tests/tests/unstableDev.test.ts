@@ -1,11 +1,11 @@
 import path from "path";
 import { describe, it, beforeAll, afterAll, expect } from "vitest";
-import { unstable_dev } from "wrangler";
-import type { UnstableDevWorker } from "wrangler";
+import { unstable_dev } from "triangle";
+import type { UnstableDevWorker } from "triangle";
 
 // TODO: add test for `experimentalLocal: true` once issue with dynamic
 //  `import()` and `npx-import` resolved:
-//  https://github.com/cloudflare/workers-sdk/pull/1940#issuecomment-1261166695
+//  https://github.com/khulnasoft/workers-sdk/pull/1940#issuecomment-1261166695
 describe("worker in local mode", () => {
 	let worker: UnstableDevWorker;
 	let resolveReadyPromise: (value: unknown) => void;

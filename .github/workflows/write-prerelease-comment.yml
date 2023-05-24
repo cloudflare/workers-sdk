@@ -24,7 +24,7 @@ jobs:
 
             for (const artifact of allArtifacts.data.artifacts) {
               // Extract the PR number from the artifact name
-              const match = /^npm-package-wrangler-(\d+)$/.exec(artifact.name);
+              const match = /^npm-package-triangle-(\d+)$/.exec(artifact.name);
               if (match) {
                 require("fs").appendFileSync(
                   process.env.GITHUB_ENV,
@@ -40,22 +40,22 @@ jobs:
         with:
           number: ${{ env.WORKFLOW_RUN_PR }}
           message: |
-            A wrangler prerelease is available for testing. You can install this latest build in your project with:
+            A triangle prerelease is available for testing. You can install this latest build in your project with:
 
             ```sh
-            npm install --save-dev https://prerelease-registry.devprod.cloudflare.dev/workers-sdk/runs/${{ env.WORKFLOW_RUN_ID }}/npm-package-wrangler-${{ env.WORKFLOW_RUN_PR }}
+            npm install --save-dev https://prerelease-registry.devprod.cloudflare.dev/workers-sdk/runs/${{ env.WORKFLOW_RUN_ID }}/npm-package-triangle-${{ env.WORKFLOW_RUN_PR }}
             ```
 
             You can reference the automatically updated head of this PR with:
 
             ```sh
-            npm install --save-dev https://prerelease-registry.devprod.cloudflare.dev/workers-sdk/prs/${{ env.WORKFLOW_RUN_PR }}/npm-package-wrangler-${{ env.WORKFLOW_RUN_PR }}
+            npm install --save-dev https://prerelease-registry.devprod.cloudflare.dev/workers-sdk/prs/${{ env.WORKFLOW_RUN_PR }}/npm-package-triangle-${{ env.WORKFLOW_RUN_PR }}
             ```
 
             Or you can use `npx` with this latest build directly:
 
             ```sh
-            npx https://prerelease-registry.devprod.cloudflare.dev/workers-sdk/runs/${{ env.WORKFLOW_RUN_ID }}/npm-package-wrangler-${{ env.WORKFLOW_RUN_PR }} dev path/to/script.js
+            npx https://prerelease-registry.devprod.cloudflare.dev/workers-sdk/runs/${{ env.WORKFLOW_RUN_ID }}/npm-package-triangle-${{ env.WORKFLOW_RUN_PR }} dev path/to/script.js
             ```
 
             <details><summary>Additional artifacts:</summary>

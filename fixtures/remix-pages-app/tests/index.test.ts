@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import { fetch } from "undici";
 import { describe, it, beforeAll, afterAll } from "vitest";
-import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
+import { runTrianglePagesDev } from "../../shared/src/run-triangle-long-lived";
 
 const isWindows = process.platform === "win32";
 
@@ -16,7 +16,7 @@ describe.concurrent("Remix", () => {
 			shell: isWindows,
 			cwd: resolve(__dirname, ".."),
 		});
-		({ ip, port, stop } = await runWranglerPagesDev(
+		({ ip, port, stop } = await runTrianglePagesDev(
 			resolve(__dirname, ".."),
 			"public",
 			["--port=0"]

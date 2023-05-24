@@ -1,4 +1,4 @@
-import { unstable_dev } from "wrangler";
+import { unstable_dev } from "triangle";
 
 //since the script is invoked from the directory above, need to specify index.js is in src/
 const worker = await unstable_dev("src/index.js");

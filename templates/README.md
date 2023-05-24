@@ -24,7 +24,7 @@ There are a few ways to quickly jumpstart your next project using one of the tem
    To create a `my-project` directory using the [`worker-typescript`](/worker-typescript) template, you may run one of the following commands:
 
    > **Note**
-   > This package has now been sunsetted! We recommend using the `wrangler generate [name] [template]` command to create new projects with templates.
+   > This package has now been sunsetted! We recommend using the `triangle generate [name] [template]` command to create new projects with templates.
 
    ```sh
    $ npm init cloudflare my-project worker-typescript

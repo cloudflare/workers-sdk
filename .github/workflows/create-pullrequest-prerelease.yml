@@ -40,19 +40,19 @@ jobs:
           ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
           ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
 
-      - name: Pack wrangler
+      - name: Pack triangle
         run: npm pack
-        working-directory: packages/wrangler
+        working-directory: packages/triangle
 
       - name: Pack @cloudflare/pages-shared
         run: npm pack
         working-directory: packages/pages-shared
 
-      - name: Upload packaged wrangler artifact
+      - name: Upload packaged triangle artifact
         uses: actions/upload-artifact@v2
         with:
-          name: npm-package-wrangler-${{ github.event.number }} # encode the PR number into the artifact name
-          path: packages/wrangler/wrangler-*.tgz
+          name: npm-package-triangle-${{ github.event.number }} # encode the PR number into the artifact name
+          path: packages/triangle/triangle-*.tgz
 
       - name: Upload packaged @cloudflare/pages-shared artifact
         uses: actions/upload-artifact@v2

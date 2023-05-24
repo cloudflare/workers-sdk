@@ -1,5 +1,5 @@
 ---
-"wrangler": minor
+"triangle": minor
 ---
 
-feat: add `wrangler pages project delete` command
+feat: add `triangle pages project delete` command

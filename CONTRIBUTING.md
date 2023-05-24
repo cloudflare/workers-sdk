@@ -1,6 +1,6 @@
 # Contributing
 
-Wrangler is an open source project and we welcome contributions from you. Thank you!
+Triangle is an open source project and we welcome contributions from you. Thank you!
 
 Below you can find some guidance on how to be most effective when contributing to the project.
 
@@ -8,7 +8,7 @@ Below you can find some guidance on how to be most effective when contributing t
 
 ### Set up your environment
 
-Wrangler is built and run on the Node.js JavaScript runtime.
+Triangle is built and run on the Node.js JavaScript runtime.
 
 - Install the latest LTS version of [Node.js](https://nodejs.dev/) - we recommend using a Node version manager like [nvm](https://github.com/nvm-sh/nvm).
 - Install a code editor - we recommend using [VS Code](https://code.visualstudio.com/).
@@ -20,33 +20,33 @@ Wrangler is built and run on the Node.js JavaScript runtime.
 Any contributions you make will be via [Pull Requests](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests) on [GitHub](https://github.com/) developed in a local git repository and pushed to your own fork of the repository.
 
 - Ensure you have [created an account](https://docs.github.com/en/get-started/onboarding/getting-started-with-your-github-account) on GitHub.
-- [Create your own fork](https://docs.github.com/en/get-started/quickstart/fork-a-repo) of [this repository](https://github.com/cloudflare/workers-sdk).
+- [Create your own fork](https://docs.github.com/en/get-started/quickstart/fork-a-repo) of [this repository](https://github.com/khulnasoft/workers-sdk).
 - Clone your fork to your local machine
   ```sh
-  > git clone https://github.com/<your-github-username>/wrangler2
-  > cd wrangler2
+  > git clone https://github.com/<your-github-username>/triangle2
+  > cd triangle2
   ```
   You can see that your fork is setup as the `origin` remote repository.
   Any changes you wish to make should be in a local branch that is then pushed to this origin remote.
   ```sh
   > git remote -v
-  origin	https://github.com/<your-github-username>/wrangler2 (fetch)
-  origin	https://github.com/<your-github-username>/wrangler2 (push)
+  origin	https://github.com/<your-github-username>/triangle2 (fetch)
+  origin	https://github.com/<your-github-username>/triangle2 (push)
   ```
-- Add `cloudflare/wrangler2` as the `upstream` remote repository.
+- Add `khulnasoft/triangle2` as the `upstream` remote repository.
   ```sh
-  > git remote add upstream https://github.com/cloudflare/workers-sdk
+  > git remote add upstream https://github.com/khulnasoft/workers-sdk
   > git remote -v
-  origin	https://github.com/<your-github-username>/wrangler2 (fetch)
-  origin	https://github.com/<your-github-username>/wrangler2 (push)
-  upstream	https://github.com/cloudflare/workers-sdk (fetch)
-  upstream	https://github.com/cloudflare/workers-sdk (push)
+  origin	https://github.com/<your-github-username>/triangle2 (fetch)
+  origin	https://github.com/<your-github-username>/triangle2 (push)
+  upstream	https://github.com/khulnasoft/workers-sdk (fetch)
+  upstream	https://github.com/khulnasoft/workers-sdk (push)
   ```
 - You should regularly pull from the `main` branch of the `upstream` repository to keep up to date with the latest changes to the project.
   ```sh
   > git switch main
   > git pull upstream main
-  From https://github.com/cloudflare/workers-sdk
+  From https://github.com/khulnasoft/workers-sdk
   * branch            main       -> FETCH_HEAD
   Already up to date.
   ```
@@ -54,7 +54,7 @@ Any contributions you make will be via [Pull Requests](https://docs.github.com/e
 ### Install dependencies
 
 **Warning**
-When working on Wrangler, you'll need to satisfy [`workerd`](https://github.com/cloudflare/workerd)'s `libc++1` runtime dependencies:
+When working on Triangle, you'll need to satisfy [`workerd`](https://github.com/cloudflare/workerd)'s `libc++1` runtime dependencies:
 
 - On Linux:
   - libc++ (e.g. the package `libc++1` on Debian Bullseye)
@@ -63,13 +63,13 @@ When working on Wrangler, you'll need to satisfy [`workerd`](https://github.com/
 
 The Node.js dependencies of the project are managed by the [`npm`](https://www.npmjs.com/) tool.
 
-This repository is setup as a [mono-repo](https://docs.npmjs.com/cli/v7/using-npm/workspaces) of workspaces. The workspaces are stored in the [`packages`](https://github.com/cloudflare/workers-sdk/tree/main/packages) directory.
+This repository is setup as a [mono-repo](https://docs.npmjs.com/cli/v7/using-npm/workspaces) of workspaces. The workspaces are stored in the [`packages`](https://github.com/khulnasoft/workers-sdk/tree/main/packages) directory.
 
 While each workspace has its own dependencies, you install the dependencies using `npm` at the root of the project.
 
 - Install all the dependencies
   ```sh
-  > cd wrangler2
+  > cd triangle2
   > npm install
   ```
 
@@ -77,15 +77,15 @@ While each workspace has its own dependencies, you install the dependencies usin
 
 ## Building and running
 
-Each wrangler workspace in this project is written in [TypeScript](https://www.typescriptlang.org/) and compiled, by [esbuild](https://github.com/evanw/esbuild), into JavaScript bundles for distribution.
+Each triangle workspace in this project is written in [TypeScript](https://www.typescriptlang.org/) and compiled, by [esbuild](https://github.com/evanw/esbuild), into JavaScript bundles for distribution.
 
-- Run a distributable for a specific workspace (e.g. wrangler)
+- Run a distributable for a specific workspace (e.g. triangle)
   ```sh
-  > npm start -w wrangler
+  > npm start -w triangle
   ```
-- Build a distributable for a specific workspace(e.g. wrangler)
+- Build a distributable for a specific workspace(e.g. triangle)
   ```sh
-  > npm run build -w wrangler
+  > npm run build -w triangle
   ```
 
 ## Checking the code
@@ -137,13 +137,13 @@ Tests in a workspace are executed, by [Jest](https://jestjs.io/), which is confi
   ```sh
   > npm run test
   ```
-- Run the tests for a specific workspace (e.g. wrangler)
+- Run the tests for a specific workspace (e.g. triangle)
   ```sh
-  > npm run test -w wrangler
+  > npm run test -w triangle
   ```
-- Watch the files in a specific workspace (e.g. wrangler), and run the tests when anything changes
+- Watch the files in a specific workspace (e.g. triangle), and run the tests when anything changes
   ```sh
-  > npm run test-watch -w wrangler
+  > npm run test-watch -w triangle
   ```
   This will also run all the tests in a single process (rather than in parallel shards) and will increase the test-timeout to 50 seconds, which is helpful when debugging.
 
@@ -173,7 +173,7 @@ Changes should be committed to a new local branch, which then gets pushed to you
   git push -u origin <new-branch-name>
   ```
 - Once you are happy with your changes, create a Pull Request on GitHub
-- The format for Pull Request titles is `[package name] description`, where the package name should indicate which package of the `workers-sdk` monorepo your PR pertains to (e.g. `wrangler`/`pages-shared`/`wrangler-devtools`), and the description should be a succinct summary of the change you're making.
+- The format for Pull Request titles is `[package name] description`, where the package name should indicate which package of the `workers-sdk` monorepo your PR pertains to (e.g. `triangle`/`pages-shared`/`triangle-devtools`), and the description should be a succinct summary of the change you're making.
 - GitHub will insert a template for the body of your Pull Request—it's important to carefully fill out all the fields, giving as much detail as possible to reviewers.
 
 ## Changesets
@@ -215,11 +215,11 @@ To help maintain consistency in the changelog, changesets should have the follow
 
 The generated changeset file will contain the package name and type of change (eg. `patch`, `minor`, or `major`), followed by our changeset format described above.
 
-Here's an example of a `patch` to the `wrangler` package, which provides a `fix`:
+Here's an example of a `patch` to the `triangle` package, which provides a `fix`:
 
 ```
 ---
-"wrangler": patch
+"triangle": patch
 ---
 
 fix: replace the word "publish" with "deploy" everywhere.
@@ -237,11 +237,11 @@ We use the following guidelines to determine the kind of change for a PR:
 
 ## Releases
 
-We generally cut Wrangler releases at the start of each week. If you need a release cut outside of the regular cadence, please reach out to the [@cloudflare/wrangler-admins](https://github.com/orgs/cloudflare/teams/wrangler-admins) team. Before reaching out, please confirm that Wrangler passes end-to-end tests by running `npm -w wrangler run test:e2e`. Note: a real Cloudflare account is planned to be set up for testing, after which point the end-to-end tests will be configured to run in CI and this manual testing step will no longer be required.
+We generally cut Triangle releases at the start of each week. If you need a release cut outside of the regular cadence, please reach out to the [@khulnasoft/triangle-admins](https://github.com/orgs/cloudflare/teams/triangle-admins) team. Before reaching out, please confirm that Triangle passes end-to-end tests by running `npm -w triangle run test:e2e`. Note: a real Cloudflare account is planned to be set up for testing, after which point the end-to-end tests will be configured to run in CI and this manual testing step will no longer be required.
 
 ## Miniflare Development
 
-Wrangler builds upon, and provides a new entry point for, [Miniflare](https://github.com/cloudflare/miniflare), a local Cloudflare Workers simulator. To develop on both Wrangler and Miniflare together, you need to link the two projects, but as of NodeJS `v18.3.0` and NPM `v8.15.0`, relative NPM installs between two workspaces don't work, so you need things to be manual:
+Triangle builds upon, and provides a new entry point for, [Miniflare](https://github.com/cloudflare/miniflare), a local Cloudflare Workers simulator. To develop on both Triangle and Miniflare together, you need to link the two projects, but as of NodeJS `v18.3.0` and NPM `v8.15.0`, relative NPM installs between two workspaces don't work, so you need things to be manual:
 
 Assume you have the two directories checked out right beside each other:
 
@@ -249,12 +249,12 @@ Assume you have the two directories checked out right beside each other:
 ❯ ll src
 drwxr-xr-x     - user 30 Jun 14:12 src
 drwxr-xr-x     - user 26 Jul 17:34 ├── miniflare
-drwxr-xr-x     - user 27 Jul 17:51 └── wrangler2
+drwxr-xr-x     - user 27 Jul 17:51 └── triangle2
 ```
 
 > Note: recommend using [exa](https://the.exa.website/) and `alias ll='exa --icons -laTL 1'` for the above output
 
-Inside `packages/wrangler/package.json`, replace:
+Inside `packages/triangle/package.json`, replace:
 
 ```
 "@miniflare/d1": "^2.x.x",

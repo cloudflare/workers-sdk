@@ -4,7 +4,7 @@ import whichPMRuns from "which-pm-runs";
 import {
 	detectPackageManager,
 	installPackages,
-	installWrangler,
+	installTriangle,
 	npmInstall,
 	runCommand,
 } from "../command";
@@ -59,9 +59,9 @@ describe("Command Helpers", () => {
 		expectSpawnWith("ls -l");
 	});
 
-	test("installWrangler", async () => {
-		await installWrangler();
-		expectSpawnWith("npm install --save-dev wrangler");
+	test("installTriangle", async () => {
+		await installTriangle();
+		expectSpawnWith("npm install --save-dev triangle");
 	});
 
 	test("npmInstall", async () => {

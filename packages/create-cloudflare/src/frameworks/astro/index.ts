@@ -44,8 +44,8 @@ const config: FrameworkConfig = {
 	configure,
 	displayName: "Astro",
 	packageScripts: {
-		"pages:dev": `wrangler pages dev ${compatDateFlag()} --proxy 3000 -- astro dev`,
-		"pages:deploy": `astro build && wrangler pages publish ./dist`,
+		"pages:dev": `triangle pages dev ${compatDateFlag()} --proxy 3000 -- astro dev`,
+		"pages:deploy": `astro build && triangle pages publish ./dist`,
 	},
 	testFlags: [
 		"--skip-houston",

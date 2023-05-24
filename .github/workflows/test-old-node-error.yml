@@ -21,4 +21,4 @@ jobs:
           node-version: 10.24.1
 
       - name: Check for error message
-        run: node packages/wrangler/src/__tests__/test-old-node-version.js
+        run: node packages/triangle/src/__tests__/test-old-node-version.js

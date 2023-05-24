@@ -2,15 +2,15 @@
 
 Your Python code in [index.py](https://github.com/cloudflare/python-worker-hello-world/blob/master/index.py), running on Cloudflare Workers.
 
-In addition to [Wrangler](https://github.com/cloudflare/wrangler2) and [npm](https://www.npmjs.com/get-npm), you will need to install [Transcrypt](https://www.transcrypt.org/docs/html/installation_use.html), including Python 3.7 and virtualenv.
+In addition to [Triangle](https://github.com/khulnasoft/triangle2) and [npm](https://www.npmjs.com/get-npm), you will need to install [Transcrypt](https://www.transcrypt.org/docs/html/installation_use.html), including Python 3.7 and virtualenv.
 
-#### Wrangler
+#### Triangle
 
 - Clone repository (`git clone https://github.com/cloudflare/python-worker-hello-world`)
 - Run `npm install`
-- Update `wrangler.toml` with your project `name`, `account_id`, and `route` as required
+- Update `triangle.toml` with your project `name`, `account_id`, and `route` as required
 
-Further documentation for Wrangler can be found [here](https://developers.cloudflare.com/workers/wrangler/).
+Further documentation for Triangle can be found [here](https://developers.cloudflare.com/workers/triangle/).
 
 #### Transcrypt
 
@@ -26,7 +26,7 @@ source env/bin/activate
 pip install transcrypt
 ```
 
-After that you can run Wrangler commands, such as `wrangler deploy` to push your code to Cloudflare. If you exit virtualenv (`deactivate`) and return to the project directory later, you'll need to activate virtualenv (`source env/bin/activate`) but will not need to rerun the other installation commands.
+After that you can run Triangle commands, such as `triangle deploy` to push your code to Cloudflare. If you exit virtualenv (`deactivate`) and return to the project directory later, you'll need to activate virtualenv (`source env/bin/activate`) but will not need to rerun the other installation commands.
 
 If `python3` is not Python 3.7 on your system, make sure you install it, create the virtualenv using the right version of Python, and edit webpack.config.js under `command` to specify the correct path to the Python 3.7 executable in the virtualenv directory. If you are using Windows, see [this workaround for an issue with transcrypt-loader paths](https://github.com/QQuick/Transcrypt/issues/624#issuecomment-507866238).
 

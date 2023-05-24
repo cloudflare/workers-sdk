@@ -21,8 +21,8 @@
 // writing regular Workers (without Durable Objects) too, but for now, you must be in the Durable
 // Objects beta to be able to use the new syntax, while we work out the quirks.
 //
-// To see an example configuration for uploading module-based Workers, check out the wrangler.toml
-// file or one of our Durable Object templates for Wrangler:
+// To see an example configuration for uploading module-based Workers, check out the triangle.toml
+// file or one of our Durable Object templates for Triangle:
 //   * https://github.com/cloudflare/durable-objects-template
 //   * https://github.com/cloudflare/durable-objects-rollup-esm
 //   * https://github.com/cloudflare/durable-objects-webpack-commonjs
@@ -44,7 +44,7 @@
 // call into existing code that has different environment requirements, then you need to be able
 // to pass the environment as a parameter instead.
 //
-// Once again, see the wrangler.toml file to understand how the environment is configured.
+// Once again, see the triangle.toml file to understand how the environment is configured.
 
 // =======================================================================================
 // The regular Worker part...
@@ -53,7 +53,7 @@
 // clients. This part is stateless.
 
 // With the introduction of modules, we're experimenting with allowing text/data blobs to be
-// uploaded and exposed as synthetic modules. In wrangler.toml we specify a rule that files ending
+// uploaded and exposed as synthetic modules. In triangle.toml we specify a rule that files ending
 // in .html should be uploaded as "Data", equivalent to content-type `application/octet-stream`.
 // So when we import it as `HTML` here, we get the HTML content as an `ArrayBuffer`. This lets us
 // serve our app's static asset without relying on any separate storage. (However, the space

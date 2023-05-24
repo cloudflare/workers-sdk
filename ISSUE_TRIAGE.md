@@ -1,4 +1,4 @@
-# Triage Process and GitHub Labels for Wrangler
+# Triage Process and GitHub Labels for Triangle
 
 This document describes how the team uses labels to triage issues on GitHub.
 
@@ -10,32 +10,32 @@ If an issue or PR obviously relates to a release regression, we must assign an a
 
 Anyone can triage issues as they arrive in the repository.
 
-New untriaged issues can be found by filtering the issues list for those [not in a project](https://github.com/cloudflare/workers-sdk/issues?q=is%3Aopen+is%3Aissue+-project%3Acloudflare%2F1+-project%3Acloudflare%2F2+).
+New untriaged issues can be found by filtering the issues list for those [not in a project](https://github.com/khulnasoft/workers-sdk/issues?q=is%3Aopen+is%3Aissue+-project%3Acloudflare%2F1+-project%3Acloudflare%2F2+).
 
 Follow these steps to triage an issue.
 
-### Step 0: Is this a Pages or Wrangler issue?
+### Step 0: Is this a Pages or Triangle issue?
 
 If the issue refers only to Pages commands then apply the `pages` label and add the issue to the [Pages](https://github.com/orgs/cloudflare/projects/2) Github project.
 
-Otherwise, add the issue to the [Wrangler](https://github.com/orgs/cloudflare/projects/1) Github project, set its status to `Untriaged`, and continue to step 1.
+Otherwise, add the issue to the [Triangle](https://github.com/orgs/cloudflare/projects/1) Github project, set its status to `Untriaged`, and continue to step 1.
 
 ### Step 1: Does the issue have enough information?
 
 Gauge whether the issue has enough information to act upon.
-This typically includes the version of Wrangler being used and steps to reproduce.
+This typically includes the version of Triangle being used and steps to reproduce.
 
 - If the issue may be legitimate but needs more information, add the `needs clarification` label.
 - If the issue does not provide clear steps to reproduce the problem then add the `needs reproduction` label.
 
 These labels can be revisited if the author can provide further clarification.
-You can see a list of issues that need revisiting by filtering on ["needs reproduction" and "needs clarification"](https://github.com/cloudflare/workers-sdk/issues?q=is%3Aopen+is%3Aissue+project%3Acloudflare%2F1+label%3A%22needs+clarification%22).
+You can see a list of issues that need revisiting by filtering on ["needs reproduction" and "needs clarification"](https://github.com/khulnasoft/workers-sdk/issues?q=is%3Aopen+is%3Aissue+project%3Acloudflare%2F1+label%3A%22needs+clarification%22).
 
 If the issue does have enough information, move on to step 2.
 
 ### Step 2: Type of issue
 
-Change the state of the issue in the [Wrangler](https://github.com/orgs/cloudflare/projects/1) to `Backlog`.
+Change the state of the issue in the [Triangle](https://github.com/orgs/cloudflare/projects/1) to `Backlog`.
 
 - By default, all issues are considered bugs, apply the `bug` label and a priority label.
 - If the issue is a feature request, apply the `enhancement` label. Use your judgement to determine
@@ -49,7 +49,7 @@ support contact.
 
 ### Step 3: Set a Priority
 
-For bug reports, set a priority level in the [Wrangler](https://github.com/orgs/cloudflare/projects/1) GitHub project.
+For bug reports, set a priority level in the [Triangle](https://github.com/orgs/cloudflare/projects/1) GitHub project.
 
 | Label | Description                                                                                                                                                                                                                                          |
 | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -69,9 +69,9 @@ The following labels can also be added to issues to provide further information 
 | Label         | Description                                                                                                                   |
 | ------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | big idea      | The issue covers a large change that is likely to require significant planning and implementation via multiple PRs.           |
-| blocked       | The issue cannot be resolved because it is blocked by another issue, inside or outside the Wrangler project.                  |
+| blocked       | The issue cannot be resolved because it is blocked by another issue, inside or outside the Triangle project.                  |
 | documentation | The issue refers to documentation, error messages or warnings, then apply the `documentation` label.                          |
-| internal      | The issue refers to a problem with the Cloudflare internal API or processes that cannot be resolved within Wrangler alone.    |
-| maintenance   | The issue refers to changes that will improve the processes of the Wrangler team, rather than Wrangler itself.                |
-| polish        | Resolving the issue will improve the Developer Experience when using Wrangler, rather than changing it fundamental behaviour. |
-| quick win     | The issue only requires minor changes, and would be a good first contribution to Wrangler                                     |
+| internal      | The issue refers to a problem with the Cloudflare internal API or processes that cannot be resolved within Triangle alone.    |
+| maintenance   | The issue refers to changes that will improve the processes of the Triangle team, rather than Triangle itself.                |
+| polish        | Resolving the issue will improve the Developer Experience when using Triangle, rather than changing it fundamental behaviour. |
+| quick win     | The issue only requires minor changes, and would be a good first contribution to Triangle                                     |

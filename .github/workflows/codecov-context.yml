@@ -32,13 +32,13 @@ jobs:
       - name: Install NPM Dependencies
         run: npm ci
 
-      - name: Build wrangler
+      - name: Build triangle
         run: npm run build
         env:
           NODE_ENV: "production"
 
       - name: Run tests & collect coverage
-        run: npm run test:ci -w wrangler
+        run: npm run test:ci -w triangle
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
 

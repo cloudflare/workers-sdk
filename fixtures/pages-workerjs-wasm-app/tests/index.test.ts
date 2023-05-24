@@ -1,13 +1,13 @@
 import { resolve } from "node:path";
 import { fetch } from "undici";
 import { describe, it, beforeAll, afterAll } from "vitest";
-import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
+import { runTrianglePagesDev } from "../../shared/src/run-triangle-long-lived";
 
 describe.concurrent("Pages Advanced Mode with wasm module imports", () => {
 	let ip, port, stop;
 
 	beforeAll(async () => {
-		({ ip, port, stop } = await runWranglerPagesDev(
+		({ ip, port, stop } = await runTrianglePagesDev(
 			resolve(__dirname, ".."),
 			"public",
 			["--port=0"]
