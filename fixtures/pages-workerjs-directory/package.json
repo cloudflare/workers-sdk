@@ -9,6 +9,9 @@
 		"test": "npx vitest",
 		"test:ci": "npx vitest"
 	},
+	"dependencies": {
+		"wrangler": "*"
+	},
 	"devDependencies": {
 		"undici": "^5.9.1"
 	},

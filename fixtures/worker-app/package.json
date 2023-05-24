@@ -10,5 +10,8 @@
 		"check:type": "tsc",
 		"test": "npx vitest",
 		"test:ci": "npx vitest"
+	},
+	"dependencies": {
+		"wrangler": "*"
 	}
 }

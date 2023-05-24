@@ -15,6 +15,7 @@
 	"devDependencies": {
 		"miniflare": "^3.0.0",
 		"workers-tsconfig": "*",
+		"wrangler": "*",
 		"ws": "^8.8.0"
 	},
 	"engines": {

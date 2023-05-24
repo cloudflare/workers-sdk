@@ -11,7 +11,8 @@
 		"test:ci": "npx vitest"
 	},
 	"dependencies": {
-		"stripe": "^9.1.0"
+		"stripe": "^9.1.0",
+		"wrangler": "*"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20221111.1",
