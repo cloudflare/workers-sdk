@@ -3,13 +3,13 @@ import { resolve } from "node:path";
 import { logRaw } from "helpers/cli";
 import { brandColor, dim } from "helpers/colors";
 import {
-	detectPackageManager,
 	installPackages,
 	runCommand,
 	runFrameworkGenerator,
 } from "helpers/command";
 import { readFile, readJSON, writeFile } from "helpers/files";
 import { spinner } from "helpers/interactive";
+import { detectPackageManager } from "helpers/packages";
 import { getFrameworkVersion } from "../index";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 

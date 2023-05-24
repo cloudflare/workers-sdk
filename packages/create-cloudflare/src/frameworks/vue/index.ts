@@ -1,5 +1,6 @@
-import { detectPackageManager, runFrameworkGenerator } from "helpers/command";
+import { runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
+import { detectPackageManager } from "helpers/packages";
 import { getFrameworkVersion } from "../index";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 

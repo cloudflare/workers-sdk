@@ -2,12 +2,12 @@ import { logRaw, updateStatus } from "helpers/cli";
 import { parseTs, transformFile } from "helpers/codemod";
 import { blue, dim, brandColor } from "helpers/colors";
 import {
-	detectPackageManager,
 	installPackages,
 	npmInstall,
 	runFrameworkGenerator,
 } from "helpers/command";
 import { compatDateFlag, usesTypescript } from "helpers/files";
+import { detectPackageManager } from "helpers/packages";
 import { getFrameworkVersion } from "../index";
 import { platformInterface } from "./templates";
 import type * as recast from "recast";

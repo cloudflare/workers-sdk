@@ -1,8 +1,6 @@
 import { logRaw } from "helpers/cli";
-import {
-	detectPackageManager,
-	runFrameworkGenerator,
-} from "helpers/command.js";
+import { runFrameworkGenerator } from "helpers/command.js";
+import { detectPackageManager } from "helpers/packages";
 import { getFrameworkVersion } from "../index";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 

@@ -1,8 +1,8 @@
 import { spawn } from "cross-spawn";
+import { detectPackageManager } from "helpers/packages";
 import { beforeEach, afterEach, describe, expect, test, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
 import {
-	detectPackageManager,
 	installPackages,
 	installWrangler,
 	npmInstall,

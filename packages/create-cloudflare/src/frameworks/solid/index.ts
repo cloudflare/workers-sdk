@@ -1,12 +1,9 @@
 import { mkdirSync } from "fs";
 import { logRaw, updateStatus } from "helpers/cli";
 import { blue, brandColor, dim } from "helpers/colors";
-import {
-	detectPackageManager,
-	installPackages,
-	runFrameworkGenerator,
-} from "helpers/command";
+import { installPackages, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag, usesTypescript, writeFile } from "helpers/files";
+import { detectPackageManager } from "helpers/packages";
 import { getFrameworkVersion } from "../index";
 import { viteConfig } from "./templates";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";

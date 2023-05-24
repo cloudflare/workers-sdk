@@ -14,7 +14,6 @@ import {
 } from "helpers/cli";
 import { dim, blue, gray, bgGreen, brandColor } from "helpers/colors";
 import {
-	detectPackageManager,
 	listAccounts,
 	printAsyncStatus,
 	runCommand,
@@ -22,6 +21,7 @@ import {
 	wranglerLogin,
 } from "helpers/command";
 import { confirmInput, selectInput, spinner } from "helpers/interactive";
+import { detectPackageManager } from "helpers/packages";
 import { poll } from "helpers/poll";
 import type { Option } from "helpers/interactive";
 import type { PagesGeneratorArgs, PagesGeneratorContext } from "types";

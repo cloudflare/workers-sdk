@@ -1,12 +1,9 @@
 import { mkdirSync } from "fs";
 import { updateStatus } from "helpers/cli";
 import { brandColor, dim } from "helpers/colors";
-import {
-	detectPackageManager,
-	installPackages,
-	runFrameworkGenerator,
-} from "helpers/command";
+import { installPackages, runFrameworkGenerator } from "helpers/command";
 import { probePaths, usesTypescript, writeFile } from "helpers/files";
+import { detectPackageManager } from "helpers/packages";
 import { getFrameworkVersion } from "../index";
 import {
 	apiAppDirHelloJs,
