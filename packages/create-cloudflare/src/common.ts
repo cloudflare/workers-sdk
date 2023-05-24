@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync } from "fs";
-import { basename, dirname, relative, resolve } from "path";
+import { basename, dirname, resolve } from "path";
 import { chdir } from "process";
 import {
 	crash,
