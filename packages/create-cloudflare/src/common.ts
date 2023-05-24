@@ -1,7 +1,6 @@
 import { existsSync, mkdirSync } from "fs";
 import { basename, dirname, relative, resolve } from "path";
 import { chdir } from "process";
-import { findUp } from "find-up";
 import {
 	crash,
 	endSection,
@@ -11,6 +10,7 @@ import {
 	openInBrowser,
 	shapes,
 	startSection,
+	updateStatus,
 } from "helpers/cli";
 import { dim, blue, gray, bgGreen, brandColor } from "helpers/colors";
 import {
@@ -202,6 +202,22 @@ export const printSummary = async (ctx: PagesGeneratorContext) => {
 };
 
 export const offerGit = async (ctx: PagesGeneratorContext) => {
+	const gitInstalled = await isGitInstalled();
+
+	if (!gitInstalled) {
+		// haven't prompted yet, if provided as --git arg
+		if (ctx.args.git) {
+			updateStatus(
+				"Couldn't find `git` installed on your machine. Continuing without git."
+			);
+		}
+
+		// override true (--git flag) and undefined (not prompted yet) to false (don't use git)
+		ctx.args.git = false;
+
+		return; // bail early
+	}
+
 	const insideGitRepo = await isInsideGitRepo(ctx.project.path);
 
 	if (insideGitRepo) return;
@@ -216,7 +232,7 @@ export const offerGit = async (ctx: PagesGeneratorContext) => {
 	if (ctx.args.git) {
 		await printAsyncStatus({
 			promise: initializeGit(ctx.project.path),
-			startText: "Initializing git",
+			startText: "Initializing git repo",
 			doneText: `${brandColor("initialized")} ${dim(`git`)}`,
 		});
 	}
@@ -229,6 +245,7 @@ export const gitCommit = async (ctx: PagesGeneratorContext) => {
 
 	await runCommands({
 		silent: true,
+		cwd: ctx.project.path,
 		commands: [
 			"git add .",
 			["git", "commit", "-m", "Initial commit (by Create-Cloudflare CLI)"],
@@ -239,12 +256,35 @@ export const gitCommit = async (ctx: PagesGeneratorContext) => {
 };
 
 /**
+ * Check whether git is available on the user's machine.
+ */
+export async function isGitInstalled() {
+	try {
+		await runCommand("git -v", { useSpinner: false, silent: true });
+
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+/**
  * Check whether the given current working directory is within a git repository
  * by looking for a `.git` directory in this or an ancestor directory.
  */
 export async function isInsideGitRepo(cwd: string) {
-	const res = await findUp(".git", { cwd, type: "directory" });
-	return res !== undefined;
+	try {
+		const output = await runCommand("git status", {
+			cwd,
+			useSpinner: false,
+			silent: true,
+			captureOutput: true,
+		});
+
+		return output.includes("not a git repository") === false;
+	} catch (err) {
+		return false;
+	}
 }
 
 /**
