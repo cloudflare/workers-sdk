@@ -4,7 +4,11 @@ import { resolve, join } from "path";
 import { chdir } from "process";
 import { endSection, updateStatus, startSection } from "helpers/cli";
 import { brandColor, dim } from "helpers/colors";
-import { npmInstall, runCommand } from "helpers/command";
+import {
+	getWorkerdCompatibilityDate,
+	npmInstall,
+	runCommand,
+} from "helpers/command";
 import { confirmInput, textInput } from "helpers/interactive";
 import {
 	chooseAccount,
@@ -149,12 +153,14 @@ async function updateFiles(ctx: Context) {
 	};
 
 	// update files
-	contents.packagejson.name = ctx.project.name;
+	if (contents.packagejson.name === "<TBD>") {
+		contents.packagejson.name = ctx.project.name;
+	}
 	contents.wranglertoml = contents.wranglertoml
-		.replace(/^name = .+$/m, `name = "${ctx.project.name}"`)
+		.replace(/^name\s*=\s*"<TBD>"/m, `name = "${ctx.project.name}"`)
 		.replace(
-			/^compatibility_date = .+$/m,
-			`compatibility_date = "${new Date().toISOString().substring(0, 10)}"`
+			/^compatibility_date\s*=\s*"<TBD>"/m,
+			`compatibility_date = "${await getWorkerdCompatibilityDate()}"`
 		);
 
 	// write files

@@ -42,6 +42,7 @@
 		"webassemblymemory",
 		"websockets",
 		"xxhash",
+		"workerd",
 		"zjcompt"
 	],
 	"cSpell.ignoreWords": [

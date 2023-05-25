@@ -1,6 +1,6 @@
 name = "<TBD>"
 main = "src/worker.js"
-compatibility_date = "2023-04-21"
+compatibility_date = "<TBD>"
 
 # Variable bindings. These are arbitrary, plaintext strings (similar to environment variables)
 # Note: Use secrets to store sensitive data.
