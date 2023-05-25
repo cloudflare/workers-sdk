@@ -2,6 +2,8 @@
 
 * @cloudflare/wrangler
 /packages/wrangler/CHANGELOG.md @cloudflare/wrangler-admins
+/.changeset/ @cloudflare/wrangler @cloudflare/pages @cloudflare/d1
+/fixtures/ @cloudflare/wrangler @cloudflare/pages @cloudflare/d1
 /packages/pages-shared/ @cloudflare/pages
 /packages/wrangler/pages/ @cloudflare/pages
 /packages/wrangler/src/pages/ @cloudflare/pages
