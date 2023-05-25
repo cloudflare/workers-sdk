@@ -1,5 +1,7 @@
 import { defineWorkspace, configDefaults } from 'vitest/config'
 
+
+// Vitest supports monorepo workspaces, merging configs in packages and more: https://vitest.dev/guide/workspace.html
 export default defineWorkspace(['packages/*',
   'fixtures/*', {
     test: {
