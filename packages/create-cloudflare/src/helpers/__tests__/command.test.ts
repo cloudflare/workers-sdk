@@ -48,6 +48,15 @@ describe("Command Helpers", () => {
 	test("runCommand", async () => {
 		await runCommand("ls -l");
 		expectSpawnWith("ls -l");
+
+		await runCommand(" ls -l ");
+		expectSpawnWith("ls -l");
+
+		await runCommand(" ls  -l ");
+		expectSpawnWith("ls -l");
+
+		await runCommand(" ls \t -l ");
+		expectSpawnWith("ls -l");
 	});
 
 	test("installWrangler", async () => {

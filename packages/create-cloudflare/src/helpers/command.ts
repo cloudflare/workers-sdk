@@ -26,7 +26,7 @@ export const runCommand = async (
 		s.start(opts?.startText || command);
 	}
 
-	const [executable, ...args] = command.split(" ");
+	const [executable, ...args] = command.trim().replace(/\s+/g, ` `).split(" ");
 
 	const squelch = opts?.silent || process.env.VITEST;
 
