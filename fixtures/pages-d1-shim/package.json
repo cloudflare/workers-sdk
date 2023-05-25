@@ -6,8 +6,11 @@
 	"scripts": {
 		"check:type": "tsc",
 		"dev": "npx wrangler pages dev ./public --d1 foobar --port 8777",
-		"test": "npx vitest",
-		"test:ci": "npx vitest"
+		"test": "npx vitest run",
+		"test:ci": "npx vitest run"
+	},
+	"dependencies": {
+		"wrangler": "*"
 	},
 	"devDependencies": {
 		"undici": "^5.9.1",

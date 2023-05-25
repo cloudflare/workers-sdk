@@ -9,8 +9,8 @@
 		"dev": "remix build && run-p \"dev:*\"",
 		"start": "cross-env NODE_ENV=production npm run dev:wrangler",
 		"check:type": "tsc",
-		"test": "npx vitest",
-		"test:ci": "npx vitest"
+		"test": "npx vitest run",
+		"test:ci": "npx vitest run"
 	},
 	"dependencies": {
 		"@remix-run/cloudflare": "^1.8.2",

@@ -15,6 +15,7 @@
 		},
 		"check:lint": {},
 		"check:type": {},
-		"test:ci": {}
+		"test:ci": {},
+		"check:format": {}
 	}
 }

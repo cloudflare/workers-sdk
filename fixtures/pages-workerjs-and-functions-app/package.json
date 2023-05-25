@@ -6,8 +6,8 @@
 	"scripts": {
 		"check:type": "tsc",
 		"dev": "npx wrangler pages dev public --port 8955",
-		"test": "npx vitest",
-		"test:ci": "npx vitest"
+		"test": "npx vitest run",
+		"test:ci": "npx vitest run"
 	},
 	"devDependencies": {
 		"undici": "^5.9.1",

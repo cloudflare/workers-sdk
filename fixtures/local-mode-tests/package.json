@@ -9,8 +9,8 @@
 	"main": "index.js",
 	"scripts": {
 		"check:type": "tsc",
-		"test": "npx vitest",
-		"test:ci": "npx vitest"
+		"test": "npx vitest run",
+		"test:ci": "npx vitest run"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20221111.1",

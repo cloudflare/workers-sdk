@@ -7,8 +7,11 @@
 	"scripts": {
 		"check:type": "tsc",
 		"dev": "npx wrangler pages dev public --port 8793",
-		"test": "npx vitest",
-		"test:ci": "npx vitest"
+		"test": "npx vitest run",
+		"test:ci": "npx vitest run"
+	},
+	"dependencies": {
+		"wrangler": "*"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20221111.1",
