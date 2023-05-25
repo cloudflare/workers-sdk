@@ -29,7 +29,7 @@ describe("Command Helpers", () => {
 		});
 
 		vi.mock("which-pm-runs");
-		vi.mocked(whichPMRuns).mockReturnValue({ name: "npm", version: "dev" });
+		vi.mocked(whichPMRuns).mockReturnValue({ name: "npm", version: "8.3.1" });
 
 		vi.mock("fs", () => ({
 			existsSync: vi.fn(() => false),
@@ -72,7 +72,7 @@ describe("Command Helpers", () => {
 	test("npmInstall from pnpm", async () => {
 		vi.mocked(whichPMRuns).mockReturnValue({
 			name: "pnpm",
-			version: "dev",
+			version: "8.5.1",
 		});
 
 		await npmInstall();
@@ -84,25 +84,62 @@ describe("Command Helpers", () => {
 		expectSpawnWith("npm install --save-dev foo bar baz");
 	});
 
-	test("detectPackageManager", async () => {
+	describe("detectPackageManager", async () => {
 		let pm = detectPackageManager();
-		expect(pm.npm).toBe("npm");
-		expect(pm.npx).toBe("npx");
 
-		vi.mocked(whichPMRuns).mockReturnValue({
-			name: "pnpm",
-			version: "dev",
+		test("npm", () => {
+			expect(pm.npm).toBe("npm");
+			expect(pm.npx).toBe("npx");
+			expect(pm.dlx).toBe("npx");
 		});
-		pm = detectPackageManager();
-		expect(pm.npm).toBe("pnpm");
-		expect(pm.npx).toBe("pnpx");
 
-		vi.mocked(whichPMRuns).mockReturnValue({
-			name: "yarn",
-			version: "dev",
+		test("pnpm", () => {
+			vi.mocked(whichPMRuns).mockReturnValue({
+				name: "pnpm",
+				version: "8.5.1",
+			});
+			pm = detectPackageManager();
+			expect(pm.npm).toBe("pnpm");
+			expect(pm.npx).toBe("pnpm");
+			expect(pm.dlx).toBe("pnpm dlx");
+
+			vi.mocked(whichPMRuns).mockReturnValue({
+				name: "pnpm",
+				version: "6.35.1",
+			});
+			pm = detectPackageManager();
+			expect(pm.npm).toBe("pnpm");
+			expect(pm.npx).toBe("pnpm");
+			expect(pm.dlx).toBe("pnpm dlx");
+
+			vi.mocked(whichPMRuns).mockReturnValue({
+				name: "pnpm",
+				version: "5.18.10",
+			});
+			pm = detectPackageManager();
+			expect(pm.npm).toBe("pnpm");
+			expect(pm.npx).toBe("pnpx");
+			expect(pm.dlx).toBe("pnpx");
 		});
-		pm = detectPackageManager();
-		expect(pm.npm).toBe("yarn");
-		expect(pm.npx).toBe("npx");
+
+		test("yarn", () => {
+			vi.mocked(whichPMRuns).mockReturnValue({
+				name: "yarn",
+				version: "3.5.1",
+			});
+			pm = detectPackageManager();
+			expect(pm.npm).toBe("yarn");
+			expect(pm.npx).toBe("yarn");
+			expect(pm.dlx).toBe("yarn dlx");
+
+			vi.mocked(whichPMRuns).mockReturnValue({
+				name: "yarn",
+				version: "1.22.0",
+			});
+			pm = detectPackageManager();
+			expect(pm.npm).toBe("yarn");
+			expect(pm.npx).toBe("yarn");
+			expect(pm.dlx).toBe("yarn");
+		});
 	});
 });
