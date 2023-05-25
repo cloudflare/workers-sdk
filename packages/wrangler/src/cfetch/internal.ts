@@ -2,7 +2,7 @@ import assert from "node:assert";
 import { fetch, File, Headers } from "undici";
 import { Response } from "undici";
 import { version as wranglerVersion } from "../../package.json";
-import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables";
+import { getCloudflareApiBaseUrl, getCloudflareExtraHeaders } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import { ParseError, parseJSON } from "../parse";
 import { loginOrRefreshIfRequired, requireApiToken } from "../user";
@@ -31,6 +31,28 @@ export async function performApiFetch(
 	const headers = cloneHeaders(init.headers);
 	addAuthorizationHeaderIfUnspecified(headers, apiToken);
 	addUserAgent(headers);
+
+	const extraHeaders = getCloudflareExtraHeaders();
+	if (extraHeaders !== "") {
+		try {
+			const extraHeadersObject: {[k: string]: string} = JSON.parse(extraHeaders);
+			for (const [k, v] of Object.entries(extraHeadersObject)) {
+				headers[k] = v;
+			}
+		} catch (err) {
+			throw new ParseError({
+				text: "Unable to parse CLOUDFLARE_EXTRA_HEADERS as JSON.",
+				notes: [
+					{
+						text: truncate(extraHeaders, 100),
+					},
+					{
+						text: `${err}`,
+					},
+				],
+			});
+		}
+	}
 
 	const queryString = queryParams ? `?${queryParams.toString()}` : "";
 	logger.debug(

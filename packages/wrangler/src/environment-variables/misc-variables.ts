@@ -18,6 +18,15 @@ export const getCloudflareApiEnvironmentFromEnv = getEnvironmentVariableFactory(
 );
 
 /**
+ * `CLOUDFLARE_EXTRA_HEADERS` specifies extra headers to add to override on API requests.
+ */
+export const getCloudflareExtraHeaders = getEnvironmentVariableFactory({
+	variableName: "CLOUDFLARE_EXTRA_HEADERS",
+	defaultValue: () => "",
+});
+
+
+/**
  * `CLOUDFLARE_API_BASE_URL` specifies the URL to the Cloudflare API.
  */
 export const getCloudflareApiBaseUrl = getEnvironmentVariableFactory({

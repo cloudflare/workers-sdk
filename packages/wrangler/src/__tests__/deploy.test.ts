@@ -223,6 +223,98 @@ describe("deploy", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
+	describe("CLOUDFLARE_EXTRA_HEADERS", () => {
+			const ENV_COPY = process.env;
+
+			function mockUploadHeaders(
+				headers?: {[k: string]: string},
+			) {
+				msw.use(
+					rest.put(
+						"*/accounts/:accountId/workers/scripts/:scriptName",
+						async(req, res, ctx) => {
+							for (const [k, v] of Object.entries(headers ?? {})) {
+								expect(req.headers.has(k)).toBe(true);
+								expect(req.headers.get(k)).toBe(v);
+							}
+							return res(
+								ctx.json(
+									createFetchResult({
+										availableOnSubdomain: false,
+										id: "abc12345",
+										etag: "etag98765",
+										pipeline_hash: "hash9999",
+										tag: "sample-tag",
+										deployment_id: "Galaxy-Class",
+									})
+								)
+							);
+						}
+					)
+				);
+			}
+
+			afterEach(() => {
+				process.env = ENV_COPY;
+			});
+
+			it("should error on bad value in CLOUDFLARE_EXTRA_HEADERS", async () => {
+				process.env = {
+					CLOUDFLARE_EXTRA_HEADERS: "this isn't valid json...",
+					CLOUDFLARE_API_TOKEN: "hunter2",
+					CLOUDFLARE_ACCOUNT_ID: "some-account-id",
+				};
+
+				writeWranglerToml({ workers_dev: false });
+				writeWorkerSource();
+
+				mockUploadHeaders();
+				mockOAuthServerCallback();
+				mockGetMemberships([]);
+
+				await expect(runWrangler("publish index.js")).rejects
+					.toMatchInlineSnapshot(`[ParseError: Unable to parse CLOUDFLARE_EXTRA_HEADERS as JSON.]`);
+			});
+
+			it("should add additional headers to API requests", async () => {
+				process.env = {
+					CLOUDFLARE_EXTRA_HEADERS: `{"Some-Header": "some_value"}`,
+					CLOUDFLARE_API_TOKEN: "hunter2",
+					CLOUDFLARE_ACCOUNT_ID: "some-account-id",
+				};
+
+				writeWranglerToml({ workers_dev: false });
+				writeWorkerSource();
+
+				mockUploadHeaders({
+					"some-header": "some_value",
+				});
+				mockOAuthServerCallback();
+				mockGetMemberships([]);
+
+				await expect(runWrangler("publish index.js")).resolves.toBeUndefined();
+			});
+
+			it("should replace existing headers", async () => {
+				process.env = {
+					CLOUDFLARE_EXTRA_HEADERS: `{"Authorization": "Bearer nothunter2"}`,
+					CLOUDFLARE_API_TOKEN: "hunter2",
+					CLOUDFLARE_ACCOUNT_ID: "some-account-id",
+				};
+
+				writeWranglerToml({ workers_dev: false });
+				writeWorkerSource();
+
+				mockUploadHeaders({
+					"authorization": "Bearer nothunter2",
+				});
+				mockOAuthServerCallback();
+				mockGetMemberships([]);
+
+				await expect(runWrangler("publish index.js")).resolves.toBeUndefined();
+			});
+		});
+
 		describe("non-TTY", () => {
 			const ENV_COPY = process.env;
 
