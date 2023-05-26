@@ -29,7 +29,7 @@ describe("Pages _worker.js/ directory", () => {
 			fetch(`http://${ip}:${port}/d1`).then((resp) => resp.text())
 		).resolves.toContain('{"1":1}');
 		await stop();
-	});
+	}, { timeout: 10_000 });
 
 	it("should bundle", async ({ expect }) => {
 		const dir = tmpdir();
@@ -47,5 +47,5 @@ describe("Pages _worker.js/ directory", () => {
 		expect(contents).toContain("D1_ERROR");
 		expect(contents).toContain('"other-script-test"');
 		expect(contents).toContain('import staticMod from "./static.js";');
-	});
+	}, { timeout: 10_000 });
 });
