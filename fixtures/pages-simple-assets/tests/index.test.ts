@@ -1,20 +1,15 @@
-import { resolve } from "node:path";
+import { relative } from "node:path";
 import { fetch } from "undici";
-import { describe, it, beforeAll, afterAll } from "vitest";
+import { describe, it, afterAll } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
-describe.concurrent("Pages Functions", () => {
-	let ip, port, stop;
-
-	beforeAll(async () => {
-		({ ip, port, stop } = await runWranglerPagesDev(
-			resolve(__dirname, ".."),
-			"public",
-			[]
-		));
-
-		return async () => await stop();
-	}, 60_000);
+describe("Pages Functions", async () => {
+	const { ip, port, stop } = await runWranglerPagesDev(
+		relative(__dirname, ".."),
+		"public",
+		[]
+	)
+	afterAll(async () => { await stop() });
 
 	it("renders static pages", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/`);
