@@ -68,6 +68,25 @@ describe("trimSqlQuery()", () => {
 				"
 	`);
 	});
+	it("should throw when provided multiple transactions", () => {
+		expect(() =>
+			trimSqlQuery(`PRAGMA foreign_keys=OFF;
+		BEGIN TRANSACTION;
+		CREATE TABLE d1_kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+		CREATE TABLE Customers (CustomerID INT, CompanyName TEXT, ContactName TEXT, PRIMARY KEY ('CustomerID'));
+		INSERT INTO Customers VALUES(1,'Alfreds Futterkiste','Maria Anders');
+		INSERT INTO Customers VALUES(4,'Around the Horn','Thomas Hardy');
+		COMMIT;
+		BEGIN TRANSACTION;
+		INSERT INTO Customers VALUES(11,'Bs Beverages','Victoria Ashworth');
+		INSERT INTO Customers VALUES(13,'Bs Beverages','Random Name');
+		COMMIT;`)
+		).toThrowErrorMatchingInlineSnapshot(`
+		"Wrangler could not process the provided SQL file, as it contains several transactions.
+		D1 runs your SQL in a transaction for you.
+		Please export an SQL file from your SQLite database and try again."
+	`);
+	});
 
 	it("should handle strings", () => {
 		expect(
