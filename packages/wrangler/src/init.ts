@@ -132,6 +132,7 @@ export async function initHandler(args: InitArgs) {
 		throw new CommandLineArgsError(message);
 	}
 
+	const yesFlag = args.yes ?? false;
 	const devDepsToInstall: string[] = [];
 	const instructions: string[] = [];
 	let shouldRunPackageManagerInstall = false;
@@ -209,6 +210,10 @@ export async function initHandler(args: InitArgs) {
 			"pre-existing",
 		];
 
+		if (yesFlag) {
+			c3Arguments.push("--wrangler-defaults");
+		}
+
 		// Deprecate the `init --from-dash` command
 		const replacementC3Command = `\`${packageManager.type} ${c3Arguments.join(
 			" "
@@ -245,7 +250,16 @@ export async function initHandler(args: InitArgs) {
 		//    if a wrangler.toml file does not exist (C3 expects to scaffold *new* projects)
 		//    and if --from-dash is not set (C3 will run wrangler to communicate with the API)
 		if (!fromDashScriptName) {
-			const replacementC3Command = `\`${packageManager.type} create cloudflare@2\``;
+			const c3Arguments = ["create", "cloudflare@2"];
+
+			if (yesFlag) {
+				c3Arguments.push("--", "--wrangler-defaults");
+			}
+
+			// Deprecate the `init --from-dash` command
+			const replacementC3Command = `\`${packageManager.type} ${c3Arguments.join(
+				" "
+			)}\``;
 
 			logger.warn(
 				`The \`init\` command is no longer supported. Please use ${replacementC3Command} instead.\nThe \`init\` command will be removed in a future version.`
@@ -287,8 +301,6 @@ export async function initHandler(args: InitArgs) {
 			);
 		}
 	}
-
-	const yesFlag = args.yes ?? false;
 
 	if (!(await isInsideGitRepo(creationDirectory)) && (await getGitVersioon())) {
 		const shouldInitGit =
