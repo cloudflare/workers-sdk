@@ -213,7 +213,8 @@ export const confirmInput = async (opts: ConfirmOptions) => {
 };
 
 export const spinner = () => {
-	const frames = ["┤", "┘", "┴", "└", "├", "┌", "┬", "┐"];
+	const spinnerFrames = ["┤", "┘", "┴", "└", "├", "┌", "┬", "┐"];
+	const ellipsisFrames = ["", ".", "..", "...", " ..", "  .", ""];
 
 	// Alternative animations we considered. Keeping around in case we
 	// introduce different animations for different use cases.
@@ -226,7 +227,6 @@ export const spinner = () => {
 
 	const color = brandColor;
 	const frameRate = 120;
-	const maxDots = 4;
 	let loop: NodeJS.Timer | null = null;
 	let startMsg: string;
 	let currentMsg: string;
@@ -239,30 +239,35 @@ export const spinner = () => {
 	}
 
 	return {
-		start: (msg: string, helpText?: string) => {
+		start(msg: string, helpText?: string) {
 			helpText ||= ``;
 			currentMsg = msg;
 			startMsg = `${currentMsg} ${dim(helpText)}`;
 
 			let index = 0;
-			let dots = 1;
 
 			clearLoop();
 			loop = setInterval(() => {
-				const frame = frames[(index = ++index % frames.length)];
-				dots = ++dots % maxDots;
-				logUpdate(`${color(frame)} ${currentMsg} ${".".repeat(dots)}`);
+				index++;
+				const spinnerFrame = spinnerFrames[index % spinnerFrames.length];
+				const ellipsisFrame = ellipsisFrames[index % ellipsisFrames.length];
+
+				if (msg) {
+					logUpdate(`${color(spinnerFrame)} ${currentMsg} ${ellipsisFrame}`);
+				}
 			}, frameRate);
 		},
 		update(msg: string) {
 			currentMsg = msg;
 		},
-		stop: (msg: string) => {
+		stop(msg?: string) {
 			// Write the final message and clear the loop
 			logUpdate.clear();
-			logUpdate(`${leftT} ${startMsg}\n${grayBar} ${msg}`);
-			logUpdate.done();
-			newline();
+			if (msg) {
+				logUpdate(`${leftT} ${startMsg}\n${grayBar} ${msg}`);
+				logUpdate.done();
+				newline();
+			}
 			clearLoop();
 		},
 	};
