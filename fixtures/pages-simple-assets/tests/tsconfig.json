@@ -1,5 +1,5 @@
 {
-	"extends": "workers-tsconfig/tsconfig.json",
+	"extends": "../tsconfig.json",
 	"compilerOptions": {
 		"types": ["node"],
 		"esModuleInterop": true

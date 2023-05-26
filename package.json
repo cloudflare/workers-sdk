@@ -15,7 +15,7 @@
 	],
 	"scripts": {
 		"build": "turbo build",
-		"check": "turbo check:lint check:type && npm run check:format",
+		"check": "turbo check:lint check:type check:format",
 		"check:format": "prettier . --check --ignore-unknown",
 		"check:lint": "turbo check:lint",
 		"check:type": "turbo check:type",
@@ -44,7 +44,7 @@
 		"rimraf": "^3.0.2",
 		"typescript": "^4.8.4",
 		"vite": "^4.0.4",
-		"vitest": "^0.31.0"
+		"vitest": "^0.31.1"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20221111.1",

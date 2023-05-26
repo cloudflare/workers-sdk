@@ -12,9 +12,9 @@ describe.concurrent("Pages Functions", () => {
 			"public",
 			[]
 		));
-	});
 
-	afterAll(async () => await stop());
+		return async () => await stop();
+	}, 60_000);
 
 	it("renders static pages", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/`);
