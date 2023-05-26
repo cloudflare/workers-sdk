@@ -11,6 +11,8 @@ export type PagesGeneratorArgs = {
 	ts?: boolean;
 	open: boolean;
 	git?: boolean;
+	existingScript?: string;
+	wranglerDefaults?: boolean;
 };
 
 export type PagesGeneratorContext = {
@@ -27,9 +29,7 @@ export type PagesGeneratorContext = {
 	project: {
 		name: string;
 		path: string;
-		relativePath: string;
 	};
-	existingScript?: string;
 };
 
 export type FrameworkConfig = {

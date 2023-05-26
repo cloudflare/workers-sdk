@@ -21,10 +21,10 @@ import type {
 } from "types";
 
 export const runWorkersGenerator = async (args: Args) => {
-	const { name, path, relativePath } = setupProjectDirectory(args);
+	const { name, path } = setupProjectDirectory(args);
 
 	const ctx: Context = {
-		project: { name, relativePath, path },
+		project: { name, path },
 		args,
 	};
 
@@ -53,6 +53,7 @@ async function getTemplate(ctx: Context) {
 			renderSubmitted: (value) =>
 				`${brandColor("typescript")} ${dim(`${value ? "yes" : "no"}`)}`,
 			defaultValue: true,
+			acceptDefault: ctx.args.wranglerDefaults,
 		});
 	}
 
@@ -85,13 +86,14 @@ async function copyExistingWorkerFiles(ctx: Context) {
 	if (preexisting) {
 		await chooseAccount(ctx);
 
-		if (ctx.existingScript === undefined) {
-			ctx.existingScript = await textInput({
+		if (ctx.args.existingScript === undefined) {
+			ctx.args.existingScript = await textInput({
 				question:
 					"Please specify the name of the existing worker in this account?",
 				renderSubmitted: (value) =>
 					`${brandColor("worker")} ${dim(`"${value}"`)}`,
 				defaultValue: ctx.project.name,
+				acceptDefault: ctx.args.wranglerDefaults,
 			});
 		}
 
@@ -101,14 +103,14 @@ async function copyExistingWorkerFiles(ctx: Context) {
 			join(tmpdir(), "c3-wrangler-init--from-dash-")
 		);
 		await runCommand(
-			`npx wrangler@3 init --from-dash ${ctx.existingScript} -y --no-delegate-c3`,
+			`npx wrangler@3 init --from-dash ${ctx.args.existingScript} -y --no-delegate-c3`,
 			{
 				silent: true,
 				cwd: tempdir, // use a tempdir because we don't want all the files
 				env: { CLOUDFLARE_ACCOUNT_ID: ctx.account?.id },
 				startText: "Downloading existing worker files",
 				doneText: `${brandColor("downloaded")} ${dim(
-					`existing "${ctx.existingScript}" worker files`
+					`existing "${ctx.args.existingScript}" worker files`
 				)}`,
 			}
 		);
@@ -120,14 +122,14 @@ async function copyExistingWorkerFiles(ctx: Context) {
 
 		// copy src/* files from the downloaded worker
 		await cp(
-			join(tempdir, ctx.existingScript, "src"),
+			join(tempdir, ctx.args.existingScript, "src"),
 			join(ctx.project.path, "src"),
 			{ recursive: true }
 		);
 
 		// copy wrangler.toml from the downloaded worker
 		await cp(
-			join(tempdir, ctx.existingScript, "wrangler.toml"),
+			join(tempdir, ctx.args.existingScript, "wrangler.toml"),
 			join(ctx.project.path, "wrangler.toml")
 		);
 	}

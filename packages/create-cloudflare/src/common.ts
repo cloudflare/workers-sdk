@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync } from "fs";
-import { basename, dirname, relative, resolve } from "path";
+import { existsSync, mkdirSync, readdirSync } from "fs";
+import { basename, dirname, resolve } from "path";
 import { chdir } from "process";
 import {
 	crash,
@@ -28,21 +28,25 @@ import type { PagesGeneratorArgs, PagesGeneratorContext } from "types";
 
 const { npm } = detectPackageManager();
 
+export const validateProjectDirectory = (relativePath: string) => {
+	const path = resolve(relativePath);
+	const existsAlready = existsSync(path);
+	const isEmpty = existsAlready && readdirSync(path).length === 0; // allow existing dirs _if empty_ to ensure c3 is non-destructive
+
+	if (existsAlready && !isEmpty) {
+		crash(
+			`Directory \`${relativePath}\` already exists and is not empty. Please choose a new name.`
+		);
+	}
+};
+
 export const setupProjectDirectory = (args: PagesGeneratorArgs) => {
 	// Crash if the directory already exists
 	const path = resolve(args.projectName);
-
-	if (existsSync(path)) {
-		crash(
-			`Directory \`${args.projectName}\` already exists. Please choose a new name.`
-		);
-	}
+	validateProjectDirectory(path);
 
 	const directory = dirname(path);
 	const name = basename(path);
-
-	// resolve the relative path so we can give the user nice instructions
-	const relativePath = relative(process.cwd(), path);
 
 	// If the target is a nested directory, create the parent
 	mkdirSync(directory, { recursive: true });
@@ -50,7 +54,7 @@ export const setupProjectDirectory = (args: PagesGeneratorArgs) => {
 	// Change to the parent directory
 	chdir(directory);
 
-	return { name, relativePath, path };
+	return { name, path };
 };
 
 export const offerToDeploy = async (ctx: PagesGeneratorContext) => {
@@ -64,7 +68,8 @@ export const offerToDeploy = async (ctx: PagesGeneratorContext) => {
 					ctx.framework?.config.deployCommand ?? "deploy"
 				}\``
 			)}`,
-		initialValue: ctx.args.deploy,
+		defaultValue: ctx.args.deploy ?? (ctx.args.wranglerDefaults ? false : true), // if --wrangler-defaults, default to false, otherwise default to true
+		acceptDefault: ctx.args.wranglerDefaults,
 	});
 
 	if (!ctx.args.deploy) return;
@@ -136,6 +141,8 @@ export const chooseAccount = async (ctx: PagesGeneratorContext) => {
 			renderSubmitted: (option: Option) => {
 				return `${brandColor("account")} ${dim(option.label)}`;
 			},
+			defaultValue: accountOptions[0].value,
+			acceptDefault: ctx.args.wranglerDefaults,
 		});
 	}
 	const accountName = Object.keys(accounts).find(
@@ -227,6 +234,7 @@ export const offerGit = async (ctx: PagesGeneratorContext) => {
 		renderSubmitted: (value: boolean) =>
 			`${brandColor("git")} ${dim(value ? `yes` : `no`)}`,
 		defaultValue: true,
+		acceptDefault: ctx.args.wranglerDefaults,
 	});
 
 	if (ctx.args.git) {
