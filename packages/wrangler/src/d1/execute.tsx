@@ -2,7 +2,6 @@ import assert from "node:assert";
 import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
-import chalk from "chalk";
 import { Static, Text } from "ink";
 import Table from "ink-table";
 import React from "react";
@@ -15,9 +14,8 @@ import { readFileSync } from "../parse";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
-import { DEFAULT_BATCH_SIZE } from "./constants";
 import * as options from "./options";
-import splitSqlQuery from "./splitter";
+import { trimSqlQuery } from "./trimmer";
 import {
 	d1BetaWarning,
 	getDatabaseByNameOrBinding,
@@ -79,7 +77,7 @@ export function Options(yargs: CommonYargsArgv) {
 		.option("batch-size", {
 			describe: "Number of queries to send in a single batch",
 			type: "number",
-			default: DEFAULT_BATCH_SIZE,
+			hidden: true,
 		});
 }
 
@@ -103,6 +101,11 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 		logger.loggerLevel = "error";
 	}
 	const config = readConfig(args.config, args);
+	if (batchSize) {
+		logger.warn(
+			"--batch-size is no longer needed, and this option will be deprecated in a future release"
+		);
+	}
 	logger.log(d1BetaWarning);
 	if (file && command)
 		return logger.error(`Error: can't provide both --command and --file.`);
@@ -118,7 +121,6 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 		command,
 		json,
 		preview,
-		batchSize,
 	});
 
 	// Early exit if prompt rejected
@@ -165,7 +167,6 @@ export async function executeSql({
 	command,
 	json,
 	preview,
-	batchSize,
 }: {
 	local: boolean | undefined;
 	config: ConfigFields<DevConfig> & Environment;
@@ -176,7 +177,6 @@ export async function executeSql({
 	command: string | undefined;
 	json: boolean | undefined;
 	preview: boolean | undefined;
-	batchSize: number;
 }) {
 	const sql = file ? readFileSync(file) : command;
 	if (!sql) throw new Error(`Error: must provide --command or --file.`);
@@ -185,10 +185,10 @@ export async function executeSql({
 	if (persistTo && !local)
 		throw new Error(`Error: can't use --persist-to without --local`);
 	logger.log(`🌀 Mapping SQL input into an array of statements`);
-	const queries = splitSqlQuery(sql);
+	const queries = trimSqlQuery(sql);
 
 	if (file && sql) {
-		if (queries[0].startsWith("SQLite format 3")) {
+		if (queries.startsWith("SQLite format 3")) {
 			//TODO: update this error to recommend using `wrangler d1 restore` when it exists
 			throw new Error(
 				"Provided file is a binary SQLite database file instead of an SQL text file.\nThe execute command can only process SQL text files.\nPlease export an SQL file from your SQLite database and try again."
@@ -208,9 +208,7 @@ export async function executeSql({
 		: await executeRemotely({
 				config,
 				name,
-				shouldPrompt,
-				batches: batchSplit(queries, batchSize),
-				json,
+				queries,
 				preview,
 		  });
 }
@@ -226,7 +224,7 @@ async function executeLocally({
 	config: Config;
 	name: string;
 	shouldPrompt: boolean | undefined;
-	queries: string[];
+	queries: string;
 	persistTo: string | undefined;
 	json: boolean | undefined;
 }) {
@@ -260,7 +258,8 @@ async function executeLocally({
 	const db = new D1Gateway(new NoOpLog(), storage);
 	let results: D1SuccessResponse | D1SuccessResponse[];
 	try {
-		results = db.query(queries.map((query) => ({ sql: query })));
+		//TODO: verify if this works
+		results = db.query({ sql: queries });
 	} catch (e: unknown) {
 		throw (e as { cause?: unknown })?.cause ?? e;
 	}
@@ -283,34 +282,14 @@ async function executeLocally({
 async function executeRemotely({
 	config,
 	name,
-	shouldPrompt,
-	batches,
-	json,
+	queries,
 	preview,
 }: {
 	config: Config;
 	name: string;
-	shouldPrompt: boolean | undefined;
-	batches: string[];
-	json: boolean | undefined;
+	queries: string;
 	preview: boolean | undefined;
 }) {
-	const multiple_batches = batches.length > 1;
-	// in JSON mode, we don't want a prompt here
-	if (multiple_batches && !json) {
-		const warning = `⚠️  Too much SQL to send at once, this execution will be sent as ${batches.length} batches.`;
-
-		if (shouldPrompt) {
-			const ok = await confirm(
-				`${warning}\nℹ️  Each batch is sent individually and may leave your DB in an unexpected state if a later batch fails.\n⚠️  Make sure you have a recent backup. Ok to proceed?`
-			);
-			if (!ok) return null;
-			logger.log(`🌀 Let's go`);
-		} else {
-			logger.error(warning);
-		}
-	}
-
 	const accountId = await requireAuth(config);
 	const db: Database = await getDatabaseByNameOrBinding(
 		config,
@@ -325,28 +304,20 @@ async function executeRemotely({
 	const dbUuid = preview ? db.previewDatabaseUuid : db.uuid;
 	logger.log(`🌀 Executing on ${name} (${dbUuid}):`);
 
-	const results: QueryResult[] = [];
-	for (const sql of batches) {
-		if (multiple_batches)
-			logger.log(
-				chalk.gray(`  ${sql.slice(0, 70)}${sql.length > 70 ? "..." : ""}`)
-			);
+	const result = await fetchResult<QueryResult[]>(
+		`/accounts/${accountId}/d1/database/${dbUuid}/query`,
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				...(db.internal_env ? { "x-d1-internal-env": db.internal_env } : {}),
+			},
+			body: JSON.stringify({ sql: queries }),
+		}
+	);
+	logResult(result);
 
-		const result = await fetchResult<QueryResult[]>(
-			`/accounts/${accountId}/d1/database/${dbUuid}/query`,
-			{
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					...(db.internal_env ? { "x-d1-internal-env": db.internal_env } : {}),
-				},
-				body: JSON.stringify({ sql }),
-			}
-		);
-		logResult(result);
-		results.push(...result);
-	}
-	return results;
+	return result;
 }
 
 function logResult(r: QueryResult | QueryResult[]) {
@@ -361,21 +332,6 @@ function logResult(r: QueryResult | QueryResult[]) {
 				: r.meta?.duration
 		}ms`
 	);
-}
-
-function batchSplit(queries: string[], batchSize: number) {
-	logger.log(`🌀 Parsing ${queries.length} statements`);
-	const num_batches = Math.ceil(queries.length / batchSize);
-	const batches: string[] = [];
-	for (let i = 0; i < num_batches; i++) {
-		batches.push(queries.slice(i * batchSize, (i + 1) * batchSize).join("; "));
-	}
-	if (num_batches > 1) {
-		logger.log(
-			`🌀 We are sending ${num_batches} batch(es) to D1 (limited to ${batchSize} statements per batch. Use --batch-size to override.)`
-		);
-	}
-	return batches;
 }
 
 function shorten(query: string | undefined, length: number) {

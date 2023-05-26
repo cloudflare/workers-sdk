@@ -12,11 +12,7 @@ import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { renderToString } from "../../utils/render";
 import { createBackup } from "../backups";
-import {
-	DEFAULT_MIGRATION_PATH,
-	DEFAULT_MIGRATION_TABLE,
-	DEFAULT_BATCH_SIZE,
-} from "../constants";
+import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";
 import { executeSql } from "../execute";
 import { d1BetaWarning, getDatabaseInfoFromConfig } from "../utils";
 import {
@@ -41,7 +37,7 @@ export function ApplyOptions(yargs: CommonYargsArgv) {
 		.option("batch-size", {
 			describe: "Number of queries to send in a single batch",
 			type: "number",
-			default: DEFAULT_BATCH_SIZE,
+			hidden: true,
 		});
 }
 
@@ -58,6 +54,11 @@ export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 		batchSize,
 	}): Promise<void> => {
 		logger.log(d1BetaWarning);
+		if (batchSize) {
+			logger.warn(
+				"--batch-size is no longer needed, and this option will be deprecated in a future release"
+			);
+		}
 
 		const databaseInfo = getDatabaseInfoFromConfig(config, database);
 		if (!databaseInfo && !local) {
@@ -171,7 +172,6 @@ Your database may not be available to serve requests during the migration, conti
 					file: undefined,
 					json: undefined,
 					preview,
-					batchSize,
 				});
 
 				if (response === null) {
