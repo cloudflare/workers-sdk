@@ -1,11 +1,11 @@
-import { relative } from "node:path";
+import { resolve } from "node:path";
 import { fetch } from "undici";
 import { describe, it, afterAll } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Pages Functions", async () => {
 	const { ip, port, stop } = await runWranglerPagesDev(
-		relative(__dirname, ".."),
+		resolve(__dirname, ".."),
 		"public",
 		[]
 	)
