@@ -8,8 +8,10 @@ describe("Pages Functions", async () => {
 		resolve(__dirname, ".."),
 		"public",
 		[]
-	)
-	afterAll(async () => { await stop() });
+	);
+	afterAll(async () => {
+		await stop();
+	});
 
 	it("renders static pages", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/`);
