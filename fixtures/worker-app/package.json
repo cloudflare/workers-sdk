@@ -9,7 +9,8 @@
 	"scripts": {
 		"check:type": "tsc",
 		"test": "npx vitest run",
-		"test:ci": "npx vitest run"
+		"test:ci": "npx vitest run",
+		"test:watch": "npx vitest"
 	},
 	"dependencies": {
 		"wrangler": "*"

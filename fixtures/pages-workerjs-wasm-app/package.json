@@ -8,7 +8,8 @@
 		"dev": "npx wrangler pages dev public --port 8776",
 		"publish": "npx wrangler pages deploy public",
 		"test": "npx vitest run",
-		"test:ci": "npx vitest run"
+		"test:ci": "npx vitest run",
+		"test:watch": "npx vitest"
 	},
 	"dependencies": {
 		"wrangler": "*"

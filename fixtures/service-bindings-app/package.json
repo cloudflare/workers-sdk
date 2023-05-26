@@ -6,7 +6,8 @@
 		"check:type": "tsc",
 		"dev": "npx concurrently -s first -k \"wrangler dev a/index.ts --local --port 8300\" \"wrangler dev b/index.ts --local --port 8301\"",
 		"test": "npx vitest run",
-		"test:ci": "npx vitest run"
+		"test:ci": "npx vitest run",
+		"test:watch": "npx vitest"
 	},
 	"dependencies": {
 		"wrangler": "*"

@@ -8,7 +8,8 @@
 		"check:type": "tsc",
 		"dev": "npx wrangler pages dev public --port 8793",
 		"test": "npx vitest run",
-		"test:ci": "npx vitest run"
+		"test:ci": "npx vitest run",
+		"test:watch": "npx vitest"
 	},
 	"dependencies": {
 		"wrangler": "*"

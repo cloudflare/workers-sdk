@@ -6,7 +6,8 @@
 		"check:lint": "eslint",
 		"publish": "wrangler deploy",
 		"start": "wrangler dev",
-		"test": "vitest"
+		"test": "vitest run",
+		"test:watch": "npx vitest"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20230321.0",
