@@ -239,9 +239,7 @@ export const offerGit = async (ctx: PagesGeneratorContext) => {
 };
 
 export const gitCommit = async (ctx: PagesGeneratorContext) => {
-	const insideGitRepo = await isInsideGitRepo(ctx.project.path);
-
-	if (!insideGitRepo) return;
+	if (!ctx.args.git) return;
 
 	await runCommands({
 		silent: true,
