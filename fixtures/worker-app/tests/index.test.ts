@@ -3,7 +3,7 @@ import { fetch } from "undici";
 import { describe, it, beforeAll, afterAll } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
-describe.concurrent("'wrangler dev' correctly renders pages", () => {
+describe("'wrangler dev' correctly renders pages", () => {
 	let ip, port, stop;
 
 	beforeAll(async () => {

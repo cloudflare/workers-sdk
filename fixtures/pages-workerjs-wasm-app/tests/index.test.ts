@@ -3,7 +3,7 @@ import { fetch } from "undici";
 import { describe, it, beforeAll, afterAll } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
-describe.concurrent("Pages Advanced Mode with wasm module imports", () => {
+describe("Pages Advanced Mode with wasm module imports", () => {
 	let ip, port, stop;
 
 	beforeAll(async () => {

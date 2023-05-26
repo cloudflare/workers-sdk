@@ -3,7 +3,7 @@ import { fetch } from "undici";
 import { describe, it, beforeAll, afterAll } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
-describe.concurrent("Pages Functions", () => {
+describe("Pages Functions", () => {
 	let ip, port, stop;
 
 	beforeAll(async () => {
@@ -91,7 +91,7 @@ describe.concurrent("Pages Functions", () => {
 		expect(text).toContain("<h1>An asset</h1>");
 	});
 
-	describe.concurrent("can mount a plugin", () => {
+	describe("can mount a plugin", () => {
 		it("should mount Middleware", async ({ expect }) => {
 			const response = await fetch(
 				`http://${ip}:${port}/mounted-plugin/some-page`
@@ -149,7 +149,7 @@ describe.concurrent("Pages Functions", () => {
 		});
 	});
 
-	describe.concurrent("can import static assets", () => {
+	describe("can import static assets", () => {
 		it("should render a static asset", async ({ expect }) => {
 			const response = await fetch(`http://${ip}:${port}/static`);
 			const text = await response.text();
@@ -190,7 +190,7 @@ describe.concurrent("Pages Functions", () => {
 		});
 	});
 
-	describe.concurrent("it supports R2", () => {
+	describe("it supports R2", () => {
 		it("should allow creates", async ({ expect }) => {
 			const response = await fetch(`http://${ip}:${port}/r2/create`, {
 				method: "PUT",
@@ -211,7 +211,7 @@ describe.concurrent("Pages Functions", () => {
 		});
 	});
 
-	describe.concurrent("redirects", () => {
+	describe("redirects", () => {
 		it("still attaches redirects correctly", async ({ expect }) => {
 			const response = await fetch(`http://${ip}:${port}/redirect`, {
 				redirect: "manual",
@@ -230,7 +230,7 @@ describe.concurrent("Pages Functions", () => {
 		});
 	});
 
-	describe.concurrent("headers", () => {
+	describe("headers", () => {
 		it("still attaches headers correctly", async ({ expect }) => {
 			const response = await fetch(`http://${ip}:${port}/`);
 
@@ -244,7 +244,7 @@ describe.concurrent("Pages Functions", () => {
 		});
 	});
 
-	describe.concurrent("passThroughOnException", () => {
+	describe("passThroughOnException", () => {
 		it("works on a single handler", async ({ expect }) => {
 			const response = await fetch(
 				`http://${ip}:${port}/passThroughOnExceptionOpen`

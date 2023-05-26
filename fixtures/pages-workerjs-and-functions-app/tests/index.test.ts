@@ -3,7 +3,7 @@ import { fetch } from "undici";
 import { describe, it, beforeAll, afterAll } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
-describe.concurrent(
+describe(
 	"Pages project with `_worker.js` and `/functions` directory",
 	() => {
 		let ip, port, stop;

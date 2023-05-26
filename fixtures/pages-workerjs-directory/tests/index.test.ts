@@ -6,7 +6,7 @@ import { fetch } from "undici";
 import { describe, it } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
-describe.concurrent("Pages _worker.js/ directory", () => {
+describe("Pages _worker.js/ directory", () => {
 	it("should support non-bundling with 'dev'", async ({ expect }) => {
 		const { ip, port, stop } = await runWranglerPagesDev(
 			resolve(__dirname, ".."),

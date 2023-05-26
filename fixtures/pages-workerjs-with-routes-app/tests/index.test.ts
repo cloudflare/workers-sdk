@@ -3,7 +3,7 @@ import { fetch } from "undici";
 import { describe, it, beforeAll, afterAll } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
-describe.concurrent("Pages Advanced Mode with custom _routes.json", () => {
+describe("Pages Advanced Mode with custom _routes.json", () => {
 	let ip, port, stop;
 
 	beforeAll(async () => {

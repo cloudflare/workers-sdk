@@ -3,7 +3,7 @@ import { fetch } from "undici";
 import { describe, it } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
-describe.concurrent("Pages Dev", () => {
+describe("Pages Dev", () => {
 	it("should work with `--node-compat` when running code requiring polyfills", async ({
 		expect,
 	}) => {
@@ -19,5 +19,5 @@ describe.concurrent("Pages Dev", () => {
 		);
 
 		await stop();
-	});
+	}, { timeout: 10_000 });
 });

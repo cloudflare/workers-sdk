@@ -5,7 +5,7 @@ import * as path from "path";
 import { join } from "path";
 import { describe, it } from "vitest";
 
-describe.concurrent("Pages D1 shim", () => {
+describe("Pages D1 shim", () => {
 	it("applies the D1 shim", async ({ expect }) => {
 		const dir = tmpdir();
 		const file = join(dir, "./d1-pages.js");
