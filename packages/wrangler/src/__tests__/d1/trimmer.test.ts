@@ -58,7 +58,7 @@ describe("trimSqlQuery()", () => {
 		COMMIT;`)
 		).toMatchInlineSnapshot(`
 		"PRAGMA foreign_keys=OFF;
-
+				
 				CREATE TABLE d1_kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 				CREATE TABLE Customers (CustomerID INT, CompanyName TEXT, ContactName TEXT, PRIMARY KEY ('CustomerID'));
 				INSERT INTO Customers VALUES(1,'Alfreds Futterkiste','Maria Anders');
