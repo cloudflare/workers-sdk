@@ -208,6 +208,8 @@ export async function initHandler(args: InitArgs) {
 			"--",
 			"--type",
 			"pre-existing",
+			"--existing-script",
+			fromDashScriptName,
 		];
 
 		if (yesFlag) {
