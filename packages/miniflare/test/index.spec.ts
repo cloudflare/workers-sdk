@@ -294,3 +294,16 @@ test("Miniflare: modules in sub-directories", async (t) => {
 	const res = await mf.dispatchFetch("http://localhost");
 	t.is(await res.text(), "123");
 });
+
+test("Miniflare: HTTPS fetches using browser CA certificates", async (t) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: `export default {
+      fetch() {
+        return fetch("https://workers.cloudflare.com/cf.json");
+      }
+    }`,
+	});
+	const res = await mf.dispatchFetch("http://localhost");
+	t.true(res.ok);
+});
