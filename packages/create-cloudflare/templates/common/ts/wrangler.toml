@@ -12,11 +12,10 @@ compatibility_date = "2023-04-21"
 # binding = "MY_DURABLE_OBJECT"
 # class_name = "MyDurableObject"
 
-# # Bucket binding - For more information: https://developers.cloudflare.com/workers/runtime-apis/kv#bucket
-# [[buckets]]
+# # R2 Bucket binding - For more information: https://developers.cloudflare.com/r2/api/workers/workers-api-reference/#create-a-binding
+# [[r2_buckets]]
 # binding = "MY_BUCKET"
-# name = "my-bucket"
-# bucket_id = "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+# bucket_name = "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
 
 # # Service binding - For more information: https://developers.cloudflare.com/workers/platform/services
 # [[routes]]
