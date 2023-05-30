@@ -101,13 +101,13 @@ export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 		)
 			.map((migration) => {
 				return {
-					Name: migration,
-					Status: "🕒️",
+					name: migration,
+					status: "🕒️",
 				};
 			})
 			.sort((a, b) => {
-				const migrationNumberA = parseInt(a.Name.split("_")[0]);
-				const migrationNumberB = parseInt(b.Name.split("_")[0]);
+				const migrationNumberA = parseInt(a.name.split("_")[0]);
+				const migrationNumberB = parseInt(b.name.split("_")[0]);
 				if (migrationNumberA < migrationNumberB) {
 					return -1;
 				}
@@ -127,7 +127,7 @@ export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 			renderToString(
 				<Box flexDirection="column">
 					<Text>Migrations to be applied:</Text>
-					<Table data={unappliedMigrations} columns={["Name"]}></Table>
+					<Table data={unappliedMigrations} columns={["name"]}></Table>
 				</Box>
 			)
 		);
@@ -150,12 +150,12 @@ Your database may not be available to serve requests during the migration, conti
 
 		for (const migration of unappliedMigrations) {
 			let query = fs.readFileSync(
-				`${migrationsPath}/${migration.Name}`,
+				`${migrationsPath}/${migration.name}`,
 				"utf8"
 			);
 			query += `
 								INSERT INTO ${migrationsTableName} (name)
-								values ('${migration.Name}');
+								values ('${migration.name}');
 						`;
 
 			let success = true;
@@ -203,33 +203,36 @@ Your database may not be available to serve requests during the migration, conti
 				];
 			}
 
-			migration.Status = success ? "✅" : "❌";
+			migration.status = success ? "✅" : "❌";
 
 			logger.log(
 				renderToString(
 					<Box flexDirection="column">
-						<Table
-							data={unappliedMigrations}
-							columns={["Name", "Status"]}
-						></Table>
+						<Table data={unappliedMigrations} columns={["name", "status"]} />
 						{errorNotes.length > 0 && (
 							<Box flexDirection="column">
 								<Text>&nbsp;</Text>
 								<Text>
-									❌ Migration {migration.Name} failed with following Errors
+									❌ Migration {migration.name}{" "}
+									{errorNotes.length > 0
+										? "failed with the following errors:"
+										: ""}
 								</Text>
-								<Table
-									data={errorNotes.map((err) => {
-										return { Error: err };
-									})}
-								></Table>
 							</Box>
 						)}
 					</Box>
 				)
 			);
 
-			if (errorNotes.length > 0) return;
+			if (errorNotes.length > 0) {
+				throw new Error(
+					errorNotes
+						.map((err) => {
+							return err;
+						})
+						.join("\n")
+				);
+			}
 		}
 	}
 );

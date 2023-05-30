@@ -98,7 +98,7 @@ const listAppliedMigrations = async (
 		FROM ${migrationsTableName}
 		ORDER BY id`,
 		file: undefined,
-		json: undefined,
+		json: true,
 		preview,
 		batchSize: DEFAULT_BATCH_SIZE,
 	});
@@ -164,7 +164,7 @@ export const initMigrationsTable = async ({
 		applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );`,
 		file: undefined,
-		json: undefined,
+		json: true,
 		preview,
 		batchSize: DEFAULT_BATCH_SIZE,
 	});
