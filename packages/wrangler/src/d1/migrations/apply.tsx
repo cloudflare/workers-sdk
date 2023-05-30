@@ -190,7 +190,10 @@ Your database may not be available to serve requests during the migration, conti
 							<Box flexDirection="column">
 								<Text>&nbsp;</Text>
 								<Text>
-									❌ Migration {migration.name} failed with following errors:
+									❌ Migration {migration.name}{" "}
+									{errorNotes.length > 0
+										? "failed with the following errors:"
+										: ""}
 								</Text>
 							</Box>
 						)}
