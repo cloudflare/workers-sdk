@@ -394,9 +394,7 @@ describe("wrangler", () => {
 				  -c, --config                    Path to .toml configuration file  [string]
 				  -e, --env                       Environment to use for operations and .env files  [string]
 				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]
-
-				🚧\`wrangler rollback\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
+				  -v, --version                   Show version number  [boolean]"
 			`);
 				});
 			});
