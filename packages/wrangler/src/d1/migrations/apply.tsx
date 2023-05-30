@@ -193,7 +193,7 @@ Your database may not be available to serve requests during the migration, conti
 							<Box flexDirection="column">
 								<Text>&nbsp;</Text>
 								<Text>
-									❌ Migration {migration.Name} failed with following Errors
+									❌ Migration {migration.Name} failed with following errors
 								</Text>
 								<Table
 									data={errorNotes.map((err) => {
@@ -207,7 +207,7 @@ Your database may not be available to serve requests during the migration, conti
 			);
 
 			if (errorNotes.length > 0) {
-				process.exitCode = 1;
+				throw new Error("One or more of your migrations failed to run.");
 			}
 		}
 	}
