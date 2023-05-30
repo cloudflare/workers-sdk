@@ -9,7 +9,6 @@ module.exports = {
 	parser: "@typescript-eslint/parser",
 	parserOptions: {
 		ecmaVersion: 2020,
-		// project: __dirname, // Root eslint config in each package is responsible for this
 		sourceType: "module",
 	},
 	settings: {
