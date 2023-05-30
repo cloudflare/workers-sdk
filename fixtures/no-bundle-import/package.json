@@ -10,6 +10,6 @@
 	},
 	"devDependencies": {
 		"get-port": "^6.1.2",
-		"wrangler": "^3.0.0"
+		"wrangler": "*"
 	}
 }
