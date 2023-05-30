@@ -161,6 +161,11 @@ export async function executeSql({
 	json: boolean | undefined;
 	preview: boolean | undefined;
 }) {
+	const existingLogLevel = logger.loggerLevel;
+	if (json) {
+		// set loggerLevel to error to avoid logs appearing in JSON output
+		logger.loggerLevel = "error";
+	}
 	const sql = file ? readFileSync(file) : command;
 	if (!sql) throw new Error(`Error: must provide --command or --file.`);
 	if (preview && local)
@@ -178,8 +183,7 @@ export async function executeSql({
 			);
 		}
 	}
-
-	return local
+	const result = local
 		? await executeLocally({
 				config,
 				name,
@@ -196,6 +200,8 @@ export async function executeSql({
 				json,
 				preview,
 		  });
+	if (json) logger.loggerLevel = existingLogLevel;
+	return result;
 }
 
 async function executeLocally({
