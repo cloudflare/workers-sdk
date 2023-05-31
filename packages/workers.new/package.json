@@ -7,12 +7,10 @@
 		"deploy": "wrangler deploy src/index.ts",
 		"dev": "wrangler dev src/index.ts --local"
 	},
-	"dependencies": {
+	"devDependencies": {
+		"@cloudflare/workers-types": "^3.0.0",
 		"eslint-worker-config": "*",
 		"workers-tsconfig": "*",
 		"wrangler": "*"
-	},
-	"devDependencies": {
-		"@cloudflare/workers-types": "^3.0.0"
 	}
 }

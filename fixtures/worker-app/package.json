@@ -12,7 +12,7 @@
 		"test:ci": "npx vitest run",
 		"test:watch": "npx vitest"
 	},
-	"dependencies": {
+	"devDependencies": {
 		"wrangler": "*"
 	}
 }

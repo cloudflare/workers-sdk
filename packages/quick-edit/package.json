@@ -16,12 +16,12 @@
 		"setup": "rm -rf web/assets web/quick-edit-extension && ./setup.sh"
 	},
 	"dependencies": {
-		"workers-tsconfig": "*",
-		"wrangler": "*",
 		"yarn": "^1.22.19"
 	},
 	"devDependencies": {
-		"concurrently": "^8.0.1"
+		"concurrently": "^8.0.1",
+		"workers-tsconfig": "*",
+		"wrangler": "*"
 	},
 	"engines": {
 		"node": "<17"

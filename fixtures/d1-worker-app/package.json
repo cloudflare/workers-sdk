@@ -12,7 +12,7 @@
 		"db:reset": "wrangler d1 execute UPDATE_THIS_FOR_REMOTE_USE --local --file=./schema.sql",
 		"start": "wrangler dev --local"
 	},
-	"dependencies": {
+	"devDependencies": {
 		"wrangler": "*"
 	}
 }

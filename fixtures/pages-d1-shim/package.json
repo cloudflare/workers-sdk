@@ -10,12 +10,10 @@
 		"test:ci": "npx vitest run",
 		"test:watch": "npx vitest"
 	},
-	"dependencies": {
-		"wrangler": "*"
-	},
 	"devDependencies": {
 		"undici": "^5.9.1",
-		"workers-tsconfig": "*"
+		"workers-tsconfig": "*",
+		"wrangler": "*"
 	},
 	"engines": {
 		"node": ">=16.13"

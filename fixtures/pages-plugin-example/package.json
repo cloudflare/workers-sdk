@@ -14,7 +14,7 @@
 		"build": "npx wrangler pages functions build --plugin --outdir=dist",
 		"check:type": "tsc"
 	},
-	"dependencies": {
+	"devDependencies": {
 		"wrangler": "*"
 	}
 }

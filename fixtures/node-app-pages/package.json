@@ -12,13 +12,13 @@
 		"test:watch": "npx vitest"
 	},
 	"dependencies": {
-		"stripe": "^9.1.0",
-		"wrangler": "*"
+		"stripe": "^9.1.0"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20221111.1",
 		"undici": "^5.9.1",
-		"workers-tsconfig": "*"
+		"workers-tsconfig": "*",
+		"wrangler": "*"
 	},
 	"engines": {
 		"node": ">=16.13"

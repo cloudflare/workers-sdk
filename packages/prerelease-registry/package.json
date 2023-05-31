@@ -13,13 +13,13 @@
 		"start": "npx wrangler dev dist/index.js"
 	},
 	"dependencies": {
-		"eslint-worker-config": "*",
-		"jszip": "^3.7.1",
-		"workers-tsconfig": "*",
-		"wrangler": "*"
+		"jszip": "^3.7.1"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20221111.1",
-		"typescript": "^4.5.5"
+		"eslint-worker-config": "*",
+		"typescript": "^4.5.5",
+		"workers-tsconfig": "*",
+		"wrangler": "*"
 	}
 }

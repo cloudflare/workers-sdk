@@ -9,11 +9,9 @@
 		"test": "npx vitest run",
 		"test:ci": "npx vitest run"
 	},
-	"dependencies": {
-		"wrangler": "*"
-	},
 	"devDependencies": {
-		"undici": "^5.9.1"
+		"undici": "^5.9.1",
+		"wrangler": "*"
 	},
 	"engines": {
 		"node": ">=16.13"

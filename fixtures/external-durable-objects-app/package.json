@@ -9,11 +9,9 @@
 		"test:ci": "npx vitest run",
 		"test:watch": "npx vitest"
 	},
-	"dependencies": {
-		"wrangler": "*"
-	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20221111.1",
-		"workers-tsconfig": "*"
+		"workers-tsconfig": "*",
+		"wrangler": "*"
 	}
 }

@@ -43,15 +43,15 @@
 		]
 	},
 	"dependencies": {
-		"miniflare": "^3.0.0",
-		"workers-tsconfig": "*",
-		"wrangler": "*"
+		"miniflare": "^3.0.0"
 	},
 	"devDependencies": {
+		"workers-tsconfig": "*",
 		"@cloudflare/workers-types": "^4.20230511.0",
 		"@types/service-worker-mock": "^2.0.1",
 		"concurrently": "^7.3.0",
 		"glob": "^8.0.3",
-		"service-worker-mock": "^2.0.5"
+		"service-worker-mock": "^2.0.5",
+		"wrangler": "*"
 	}
 }
