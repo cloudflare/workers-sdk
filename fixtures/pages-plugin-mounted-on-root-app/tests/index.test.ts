@@ -15,7 +15,7 @@ describe("Pages Functions", () => {
 				path.join("..", "..", "packages", "wrangler", "bin", "wrangler.js"),
 				["pages", "dev", "public", "--port=0"],
 				{
-					stdio: ["inherit", "inherit", "inherit", "ipc"],
+					stdio: ["ignore", "ignore", "ignore", "ipc"],
 					cwd: path.resolve(__dirname, ".."),
 				}
 			).on("message", (message) => {

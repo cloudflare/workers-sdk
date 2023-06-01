@@ -1,14 +1,19 @@
 import { resolve } from "node:path";
 import { fetch } from "undici";
-import { describe, it, afterAll } from "vitest";
+import { describe, it, afterAll, beforeAll } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Pages Functions", async () => {
-	const { ip, port, stop } = await runWranglerPagesDev(
-		resolve(__dirname, ".."),
-		"public",
-		[]
-	);
+	let ip: string, port: number, stop: () => Promise<unknown>;
+
+	beforeAll(async () => {
+		({ ip, port, stop } = await runWranglerPagesDev(
+			resolve(__dirname, ".."),
+			"public",
+			["--port=0"]
+		));
+	});
+
 	afterAll(async () => {
 		await stop();
 	});

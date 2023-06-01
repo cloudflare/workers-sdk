@@ -7,7 +7,7 @@
 		},
 		"build": { "dependsOn": ["^build"] },
 		"test": {
-			"inputs": ["src/**/*.tsx", "src/**/*.ts", "test/**/*.ts", "test/**/*.tsx"]
+			"dependsOn": ["^build"]
 		},
 		"test:watch": {
 			"cache": false
