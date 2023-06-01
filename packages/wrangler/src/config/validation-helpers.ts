@@ -534,6 +534,27 @@ export const validateAdditionalProperties = (
 };
 
 /**
+ * Add a diagnostic error for any configurations that include both cron triggers and smart placement
+ */
+export const validateSmartPlacementConfig = (
+	diagnostics: Diagnostics,
+	placement: { mode: "off" | "smart" } | undefined,
+	triggers:
+		| {
+				crons: string[];
+		  }
+		| undefined
+): boolean => {
+	if (placement?.mode === "smart" && !!triggers?.crons?.length) {
+		diagnostics.errors.push(
+			`You cannot configure both [triggers] and [placement] in your wrangler.toml. Placement is not supported with cron triggers.`
+		);
+		return false;
+	}
+	return true;
+};
+
+/**
  * Get the names of the bindings collection in `value`.
  *
  * Will return an empty array if it doesn't understand the value
