@@ -14,17 +14,17 @@
 		"test:watch": "npx vitest"
 	},
 	"dependencies": {
-		"@remix-run/cloudflare": "^1.8.2",
 		"@remix-run/cloudflare-pages": "^1.8.2",
-		"@remix-run/react": "^1.8.2",
 		"cross-env": "^7.0.3",
 		"react": "^17.0.2",
 		"react-dom": "^17.0.2"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^3.18.0",
-		"@remix-run/dev": "^1.8.2",
+		"@remix-run/cloudflare": "^1.16.1",
+		"@remix-run/dev": "^1.16.1",
 		"@remix-run/eslint-config": "^1.8.2",
+		"@remix-run/react": "^1.16.1",
 		"@types/react": "^17.0.52",
 		"@types/react-dom": "^17.0.18",
 		"eslint": "^8.27.0",
