@@ -29,8 +29,8 @@
 		"build": "node scripts/build.js",
 		"check:lint": "eslint",
 		"check:type": "tsc --noEmit",
-		"prepublishOnly": "npm run build",
 		"lint": "eslint",
+		"prepublishOnly": "npm run build",
 		"test:e2e": "npm run build && vitest run --config ./vitest-e2e.config.ts",
 		"test:unit": "vitest run --config ./vitest.config.ts",
 		"watch": "node scripts/build.js --watch"
