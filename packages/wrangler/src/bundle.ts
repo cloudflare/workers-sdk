@@ -624,7 +624,7 @@ async function applyMiddlewareLoaderFacade(
 			format: "esm",
 			plugins: [
 				esbuildAliasExternalPlugin({
-					__ENTRY_POINT__: entry.file,
+					__ENTRY_POINT__: path.resolve(entry.directory, entry.file),
 					...Object.fromEntries(
 						middleware.map((val, index) => [
 							middlewareIdentifiers[index],
