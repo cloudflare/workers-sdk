@@ -1,6 +1,5 @@
 import * as fs from "node:fs";
 import { rest } from "msw";
-import prettyBytes from "pretty-bytes";
 import { MAX_UPLOAD_SIZE } from "../r2/constants";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -108,7 +107,10 @@ describe("r2", () => {
 			  -c, --config                    Path to .toml configuration file  [string]
 			  -e, --env                       Environment to use for operations and .env files  [string]
 			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
+			  -v, --version                   Show version number  [boolean]
+
+			Options:
+			  -l, --location  A hint to control where the bucket will be created  [string] [choices: \\"auto\\", \\"apac\\", \\"eeur\\", \\"enam\\", \\"weur\\", \\"wnam\\"] [default: \\"auto\\"]"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`
 				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
@@ -137,13 +139,50 @@ describe("r2", () => {
 			  -c, --config                    Path to .toml configuration file  [string]
 			  -e, --env                       Environment to use for operations and .env files  [string]
 			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]"
+			  -v, --version                   Show version number  [boolean]
+
+			Options:
+			  -l, --location  A hint to control where the bucket will be created  [string] [choices: \\"auto\\", \\"apac\\", \\"eeur\\", \\"enam\\", \\"weur\\", \\"wnam\\"] [default: \\"auto\\"]"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`
 				            "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown arguments: def, ghi[0m
 
 				            "
 			          `);
+			});
+
+			it("should error for unknown locations", async () => {
+				await expect(runWrangler("r2 bucket create abc --location antarctica"))
+					.rejects.toThrowErrorMatchingInlineSnapshot(`
+			"Invalid values:
+			  Argument: location, Given: \\"antarctica\\", Choices: \\"auto\\", \\"apac\\", \\"eeur\\", \\"enam\\", \\"weur\\", \\"wnam\\""
+		`);
+				expect(std.out).toMatchInlineSnapshot(`
+			"
+			wrangler r2 bucket create <name>
+
+			Create a new R2 bucket
+
+			Positionals:
+			  name  The name of the new bucket  [string] [required]
+
+			Flags:
+			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+			  -c, --config                    Path to .toml configuration file  [string]
+			  -e, --env                       Environment to use for operations and .env files  [string]
+			  -h, --help                      Show help  [boolean]
+			  -v, --version                   Show version number  [boolean]
+
+			Options:
+			  -l, --location  A hint to control where the bucket will be created  [string] [choices: \\"auto\\", \\"apac\\", \\"eeur\\", \\"enam\\", \\"weur\\", \\"wnam\\"] [default: \\"auto\\"]"
+		`);
+				expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalid values:[0m
+
+			    Argument: location, Given: \\"antarctica\\", Choices: \\"auto\\", \\"apac\\", \\"eeur\\", \\"enam\\", \\"weur\\", \\"wnam\\"
+
+			"
+		`);
 			});
 
 			it("should create a bucket & check request inputs", async () => {
@@ -153,12 +192,37 @@ describe("r2", () => {
 						async (request, response, context) => {
 							const { accountId } = request.params;
 							expect(accountId).toEqual("some-account-id");
-							expect(await request.json()).toEqual({ name: "testBucket" });
+							expect(await request.json()).toEqual({
+								name: "testBucket",
+								locationHint: "auto",
+							});
 							return response.once(context.json(createFetchResult({})));
 						}
 					)
 				);
 				await runWrangler("r2 bucket create testBucket");
+				expect(std.out).toMatchInlineSnapshot(`
+				            "Creating bucket testBucket.
+				            Created bucket testBucket."
+			          `);
+			});
+
+			it("should create a bucket with a location hint", async () => {
+				msw.use(
+					rest.post(
+						"*/accounts/:accountId/r2/buckets",
+						async (request, response, context) => {
+							const { accountId } = request.params;
+							expect(accountId).toEqual("some-account-id");
+							expect(await request.json()).toEqual({
+								name: "testBucket",
+								locationHint: "wnam",
+							});
+							return response.once(context.json(createFetchResult({})));
+						}
+					)
+				);
+				await runWrangler("r2 bucket create testBucket --location wnam");
 				expect(std.out).toMatchInlineSnapshot(`
 				            "Creating bucket testBucket.
 				            Created bucket testBucket."
@@ -283,10 +347,8 @@ describe("r2", () => {
 					`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
 				)
 			).rejects.toThrowErrorMatchingInlineSnapshot(`
-			"Error: Wrangler only supports uploading files up to ${prettyBytes(
-				MAX_UPLOAD_SIZE
-			)} in size
-			wormhole-img.png is ${prettyBytes(TOO_BIG_FILE_SIZE)} in size"
+			"Error: Wrangler only supports uploading files up to 315 MB in size
+			wormhole-img.png is 316 MB in size"
 		`);
 		});
 

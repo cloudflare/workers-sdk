@@ -221,22 +221,30 @@ export function r2(r2Yargs: CommonYargsArgv) {
 				"create <name>",
 				"Create a new R2 bucket",
 				(yargs) => {
-					return yargs.positional("name", {
-						describe: "The name of the new bucket",
-						type: "string",
-						demandOption: true,
-					});
+					return yargs
+						.positional("name", {
+							describe: "The name of the new bucket",
+							type: "string",
+							demandOption: true,
+						})
+						.option("location", {
+							describe: "A hint to control where the bucket will be created",
+							alias: "l",
+							type: "string",
+							default: "auto",
+							choices: ["auto", "apac", "eeur", "enam", "weur", "wnam"],
+						});
 				},
 				async (args) => {
 					await printWranglerBanner();
 
 					const config = readConfig(args.config, args);
-
 					const accountId = await requireAuth(config);
 
 					logger.log(`Creating bucket ${args.name}.`);
-					await createR2Bucket(accountId, args.name);
+					await createR2Bucket(accountId, args.name, args.location);
 					logger.log(`Created bucket ${args.name}.`);
+
 					await metrics.sendMetricsEvent("create r2 bucket", {
 						sendMetrics: config.send_metrics,
 					});
