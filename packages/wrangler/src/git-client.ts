@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { execa } from "execa";
 import { findUp } from "find-up";
+import { copySync } from "fs-extra";
 import semiver from "semiver";
 
 /**
@@ -125,8 +126,22 @@ export async function cloneIntoDirectory(
 	// cleanup: move the template to the target directory and delete `.git`
 	try {
 		fs.renameSync(templatePath, targetDirectory);
-	} catch {
-		throw new Error(`Failed to find "${subdirectory}" in ${remote}`);
+	} catch (err) {
+		// @ts-expect-error non standard property on Error
+		if (err.code !== "EXDEV") {
+			throw new Error(`Failed to find "${subdirectory}" in ${remote}`);
+		}
+		// likely on a different filesystem, so we need to copy instead of rename
+		// and then remove the original directory
+		try {
+			copySync(templatePath, targetDirectory);
+			fs.rmSync(templatePath, {
+				recursive: true,
+				force: true,
+			});
+		} catch {
+			throw new Error(`Failed to find "${subdirectory}" in ${remote}`);
+		}
 	}
 	fs.rmSync(path.join(targetDirectory, ".git"), {
 		recursive: true,
