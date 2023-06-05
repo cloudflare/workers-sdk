@@ -5,7 +5,7 @@ import { join, resolve } from "node:path";
 import { watch } from "chokidar";
 import * as esbuild from "esbuild";
 import { unstable_dev } from "../api";
-import { esbuildAliasExternalPlugin } from "../deployment-bundle/bundle";
+import { esbuildAliasExternalPlugin } from "../deployment-bundle/esbuild-plugins/alias-external";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";

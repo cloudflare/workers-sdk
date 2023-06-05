@@ -9,6 +9,9 @@ import tmp from "tmp-promise";
 import createModuleCollector from "../module-collection";
 import { getBasePath } from "../paths";
 import { dedent } from "../utils/dedent";
+import { cloudflareInternalPlugin } from "./esbuild-plugins/cloudflare-internal";
+import { configProviderPlugin } from "./esbuild-plugins/config-provider";
+import { nodejsCompatPlugin } from "./esbuild-plugins/nodejs-compat";
 import type { Config } from "../config";
 import type { DurableObjectBindings } from "../config/environment";
 import type { WorkerRegistry } from "../dev-registry";
@@ -32,7 +35,7 @@ export type BundleResult = {
 	sourceMapMetadata?: SourceMapMetadata | undefined;
 };
 
-type StaticAssetsConfig =
+export type StaticAssetsConfig =
 	| (Config["assets"] & {
 			bypassCache: boolean | undefined;
 	  })
@@ -104,51 +107,6 @@ export function rewriteNodeCompatBuildFailure(
 		}
 	}
 }
-
-const nodejsCompatPlugin: esbuild.Plugin = {
-	name: "nodejs_compat Plugin",
-	setup(pluginBuild) {
-		pluginBuild.onResolve({ filter: /node:.*/ }, () => {
-			return { external: true };
-		});
-	},
-};
-
-const cloudflareJsPlugin: esbuild.Plugin = {
-	name: "cloudflare javascript Plugin",
-	setup(pluginBuild) {
-		pluginBuild.onResolve({ filter: /^cloudflare:.*/ }, () => {
-			return { external: true };
-		});
-	},
-};
-
-// Supports imports like import { SOME_CONFIG } from config:middleware/json
-const configProviderPlugin: (
-	config: Record<string, Record<string, unknown>>
-) => esbuild.Plugin = (config) => ({
-	name: "middleware config provider",
-	setup(build) {
-		build.onResolve({ filter: /^config:/ }, (args) => ({
-			path: args.path,
-			namespace: "wrangler-config",
-		}));
-
-		build.onLoad(
-			{ filter: /.*/, namespace: "wrangler-config" },
-			async (args) => {
-				const middleware = args.path.split("config:middleware/")[1];
-				if (!config[middleware]) {
-					throw new Error(`No config found for ${middleware}`);
-				}
-				return {
-					loader: "json",
-					contents: JSON.stringify(config[middleware]),
-				};
-			}
-		);
-	},
-});
 
 /**
  * Generate a bundle for the worker identified by the arguments passed in.
@@ -408,7 +366,7 @@ export async function bundleWorker(
 				? [NodeGlobalsPolyfills({ buffer: true }), NodeModulesPolyfills()]
 				: []),
 			...(nodejsCompat ? [nodejsCompatPlugin] : []),
-			...[cloudflareJsPlugin],
+			...[cloudflareInternalPlugin],
 			...(plugins || []),
 			configProviderPlugin(
 				Object.fromEntries(
@@ -490,37 +448,6 @@ export async function bundleWorker(
 		sourceMapMetadata: {
 			tmpDir: tmpDir.path,
 			entryDirectory: entry.directory,
-		},
-	};
-}
-
-/**
- * A simple plugin to alias modules and mark them as external
- */
-export function esbuildAliasExternalPlugin(
-	aliases: Record<string, string>
-): esbuild.Plugin {
-	return {
-		name: "alias",
-		setup(build) {
-			build.onResolve({ filter: /.*/g }, (args) => {
-				// If it's the entrypoint, let it be as is
-				if (args.kind === "entry-point") {
-					return {
-						path: args.path,
-					};
-				}
-				// If it's not a recognised alias, then throw an error
-				if (!Object.keys(aliases).includes(args.path)) {
-					throw new Error("unrecognized module: " + args.path);
-				}
-
-				// Otherwise, return the alias
-				return {
-					path: aliases[args.path as keyof typeof aliases],
-					external: true,
-				};
-			});
 		},
 	};
 }
