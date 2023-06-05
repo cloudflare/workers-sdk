@@ -1,6 +1,6 @@
-// src/shim.ts
-import worker, * as OTHER_EXPORTS from "__ENTRY_POINT__";
-export * from "__ENTRY_POINT__";
+/// <reference path="middleware-d1-beta.d.ts"/>
+
+import { D1_IMPORTS, LOCAL_MODE } from "config:middleware/d1-beta";
 
 // src/index.ts
 var D1Database = class {
@@ -214,8 +214,6 @@ function mapD1Result(result) {
 }
 
 // src/shim.ts
-var D1_IMPORTS = __D1_IMPORTS__;
-var LOCAL_MODE = __LOCAL_MODE__;
 var D1_BETA_PREFIX = `__D1_BETA__`;
 var envMap = /* @__PURE__ */ new Map();
 function getMaskedEnv(env) {
@@ -235,22 +233,7 @@ function getMaskedEnv(env) {
 	envMap.set(env, newEnvObj);
 	return newEnvObj;
 }
-var shim_default = {
-	...worker,
-	async fetch(request, env, ctx) {
-		return worker.fetch(request, getMaskedEnv(env), ctx);
-	},
-	async queue(batch, env, ctx) {
-		return worker.queue(batch, getMaskedEnv(env), ctx);
-	},
-	async scheduled(controller, env, ctx) {
-		return worker.scheduled(controller, getMaskedEnv(env), ctx);
-	},
-	async trace(traces, env, ctx) {
-		return worker.trace(traces, getMaskedEnv(env), ctx);
-	},
-	async email(message, env, ctx) {
-		return worker.email(message, getMaskedEnv(env), ctx);
-	},
-};
-export { shim_default as default };
+
+export function wrap(env: Record<string, unknown>) {
+	return getMaskedEnv(env);
+}

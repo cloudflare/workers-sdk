@@ -41,8 +41,19 @@ const __facade_modules_fetch__: Middleware = function (request, env, ctx) {
 	return worker.fetch(request, env, ctx);
 };
 
+function getMaskedEnv(rawEnv: unknown) {
+	let env = rawEnv as Record<string, unknown>;
+	if (worker.envWrappers && worker.envWrappers.length > 0) {
+		for (const wrapFn of worker.envWrappers) {
+			env = wrapFn(env);
+		}
+	}
+	return env;
+}
+
 const facade: ExportedHandler<unknown> = {
-	fetch(request, env, ctx) {
+	fetch(request, rawEnv, ctx) {
+		const env = getMaskedEnv(rawEnv);
 		// Get the chain of middleware from the worker object
 		if (worker.middleware && worker.middleware.length > 0) {
 			for (const middleware of worker.middleware) {
@@ -76,9 +87,20 @@ const facade: ExportedHandler<unknown> = {
 			return worker.fetch!(request, env, ctx);
 		}
 	},
-	scheduled: worker.scheduled,
-	queue: worker.queue,
-	trace: worker.trace,
+	async queue(batch, env, ctx) {
+		return worker.queue!(batch, getMaskedEnv(env), ctx);
+	},
+	async scheduled(controller, env, ctx) {
+		return worker.scheduled!(controller, getMaskedEnv(env), ctx);
+	},
+	async trace(traces, env, ctx) {
+		return worker.trace!(traces, getMaskedEnv(env), ctx);
+	},
+	// @ts-expect-error Email isn't typed properly yet
+	async email(message, env, ctx) {
+		// @ts-expect-error Email isn't typed properly yet
+		return worker.email!(message, getMaskedEnv(env), ctx);
+	},
 };
 
 export default facade;
