@@ -5,12 +5,26 @@ import { createWorkerUploadForm } from "./deployment-bundle/create-worker-upload
 import { logger } from "./logger";
 import { parseJSON } from "./parse";
 import { getAccessToken } from "./user/access";
-import type {
-	CfAccount,
-	CfWorkerContext,
-	CfWorkerInit,
-} from "./deployment-bundle/worker";
+import type { CfWorkerContext, CfWorkerInit } from "./deployment-bundle/worker";
+import type { ApiCredentials } from "./user";
 import type { HeadersInit } from "undici";
+
+/**
+ * A Cloudflare account.
+ */
+
+export interface CfAccount {
+	/**
+	 * An API token.
+	 *
+	 * @link https://api.cloudflare.com/#user-api-tokens-properties
+	 */
+	apiToken: ApiCredentials;
+	/**
+	 * An account ID.
+	 */
+	accountId: string;
+}
 
 /**
  * A Preview Session on the edge

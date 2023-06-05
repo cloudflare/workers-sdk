@@ -21,6 +21,7 @@ import {
 } from "../user";
 import type { Route } from "../config/environment";
 import type {
+	CfAccount,
 	CfPreviewToken,
 	CfPreviewSession,
 } from "../create-worker-preview";
@@ -28,7 +29,6 @@ import type {
 	CfModule,
 	CfWorkerInit,
 	CfScriptFormat,
-	CfAccount,
 	CfWorkerContext,
 } from "../deployment-bundle/worker";
 import type { AssetPaths } from "../sites";
