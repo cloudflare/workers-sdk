@@ -3,11 +3,11 @@ import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 import * as esbuild from "esbuild";
 import { execaCommand } from "execa";
+import { logger } from "../logger";
+import { getBasePath } from "../paths";
 import { COMMON_ESBUILD_OPTIONS } from "./bundle";
-import { logger } from "./logger";
-import { getBasePath } from "./paths";
-import type { Config } from "./config";
-import type { DurableObjectBindings } from "./config/environment";
+import type { Config } from "../config";
+import type { DurableObjectBindings } from "../config/environment";
 import type { CfScriptFormat } from "./worker";
 import type { Metafile } from "esbuild";
 

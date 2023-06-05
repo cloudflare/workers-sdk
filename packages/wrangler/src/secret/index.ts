@@ -1,7 +1,7 @@
 import path from "node:path";
 import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
-import { createWorkerUploadForm } from "../create-worker-upload-form";
+import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import { confirm, prompt } from "../dialogs";
 import {
 	getLegacyScriptName,

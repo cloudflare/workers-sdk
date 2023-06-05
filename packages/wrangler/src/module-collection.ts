@@ -5,7 +5,11 @@ import chalk from "chalk";
 import globToRegExp from "glob-to-regexp";
 import { logger } from "./logger";
 import type { Config, ConfigModuleRuleType } from "./config";
-import type { CfModule, CfModuleType, CfScriptFormat } from "./worker";
+import type {
+	CfModule,
+	CfModuleType,
+	CfScriptFormat,
+} from "./deployment-bundle/worker";
 import type esbuild from "esbuild";
 
 function flipObject<

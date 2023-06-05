@@ -3,14 +3,14 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { build as esBuild } from "esbuild";
 import { nanoid } from "nanoid";
-import { bundleWorker } from "../../bundle";
+import { bundleWorker } from "../../deployment-bundle/bundle";
+import traverseModuleGraph from "../../deployment-bundle/traverse-module-graph";
+import { D1_BETA_PREFIX } from "../../deployment-bundle/worker";
 import { FatalError } from "../../errors";
 import { logger } from "../../logger";
 import { getBasePath } from "../../paths";
-import traverseModuleGraph from "../../traverse-module-graph";
-import { D1_BETA_PREFIX } from "../../worker";
-import type { BundleResult } from "../../bundle";
-import type { CfModule } from "../../worker";
+import type { BundleResult } from "../../deployment-bundle/bundle";
+import type { CfModule } from "../../deployment-bundle/worker";
 import type { Plugin } from "esbuild";
 
 export type Options = {

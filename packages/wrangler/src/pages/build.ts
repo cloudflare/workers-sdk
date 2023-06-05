@@ -15,8 +15,7 @@ import {
 	buildRawWorker,
 	traverseAndBuildWorkerJSDirectory,
 } from "./functions/buildWorker";
-
-import type { BundleResult } from "../bundle";
+import type { BundleResult } from "../deployment-bundle/bundle";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,

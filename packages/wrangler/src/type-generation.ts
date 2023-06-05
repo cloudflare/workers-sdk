@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import { findUpSync } from "find-up";
-import { getEntry } from "./entry";
+import { getEntry } from "./deployment-bundle/entry";
 import { logger } from "./logger";
 import type { Config } from "./config";
 

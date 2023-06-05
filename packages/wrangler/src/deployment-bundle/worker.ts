@@ -1,6 +1,6 @@
-import type { Environment } from "./config";
-import type { Route } from "./config/environment";
-import type { ApiCredentials } from "./user";
+import type { Environment } from "../config";
+import type { Route } from "../config/environment";
+import type { ApiCredentials } from "../user";
 
 /**
  * A Cloudflare account.

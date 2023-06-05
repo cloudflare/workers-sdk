@@ -6,14 +6,14 @@ import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
 import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
 import * as esbuild from "esbuild";
 import tmp from "tmp-promise";
-import createModuleCollector from "./module-collection";
-import { getBasePath } from "./paths";
-import { dedent } from "./utils/dedent";
-import type { Config } from "./config";
-import type { DurableObjectBindings } from "./config/environment";
-import type { WorkerRegistry } from "./dev-registry";
+import createModuleCollector from "../module-collection";
+import { getBasePath } from "../paths";
+import { dedent } from "../utils/dedent";
+import type { Config } from "../config";
+import type { DurableObjectBindings } from "../config/environment";
+import type { WorkerRegistry } from "../dev-registry";
+import type { SourceMapMetadata } from "../inspect";
 import type { Entry } from "./entry";
-import type { SourceMapMetadata } from "./inspect";
 import type { CfModule } from "./worker";
 
 export const COMMON_ESBUILD_OPTIONS = {

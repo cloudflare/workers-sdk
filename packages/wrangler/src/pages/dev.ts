@@ -5,7 +5,7 @@ import { join, resolve } from "node:path";
 import { watch } from "chokidar";
 import * as esbuild from "esbuild";
 import { unstable_dev } from "../api";
-import { esbuildAliasExternalPlugin } from "../bundle";
+import { esbuildAliasExternalPlugin } from "../deployment-bundle/bundle";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -20,8 +20,8 @@ import {
 } from "./functions/buildWorker";
 import { validateRoutes } from "./functions/routes-validation";
 import { CLEANUP, CLEANUP_CALLBACKS } from "./utils";
+import type { CfModule } from "../deployment-bundle/worker";
 import type { AdditionalDevProps } from "../dev";
-import type { CfModule } from "../worker";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,

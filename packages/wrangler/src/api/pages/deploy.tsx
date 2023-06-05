@@ -19,7 +19,7 @@ import {
 import { validateRoutes } from "../../pages/functions/routes-validation";
 import { upload } from "../../pages/upload";
 import { createUploadWorkerBundleContents } from "./create-worker-bundle-contents";
-import type { BundleResult } from "../../bundle";
+import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Project, Deployment } from "@cloudflare/types";
 
 interface PagesDeployOptions {

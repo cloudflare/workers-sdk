@@ -1,11 +1,11 @@
 import fs from "node:fs";
 import dotenv from "dotenv";
 import { findUpSync } from "find-up";
+import { removeD1BetaPrefix } from "../deployment-bundle/worker";
 import { logger } from "../logger";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
-import { removeD1BetaPrefix } from "../worker";
 import { normalizeAndValidateConfig } from "./validation";
-import type { CfWorkerInit } from "../worker";
+import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { CommonYargsOptions } from "../yargs-types";
 import type { Config, OnlyCamelCase, RawConfig } from "./config";
 

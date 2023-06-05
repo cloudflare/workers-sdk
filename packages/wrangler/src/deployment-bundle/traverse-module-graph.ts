@@ -1,10 +1,10 @@
 import { readdir } from "node:fs/promises";
 import path from "node:path";
 import chalk from "chalk";
-import { logger } from "./logger";
-import { matchFiles, parseRules } from "./module-collection";
+import { logger } from "../logger";
+import { matchFiles, parseRules } from "../module-collection";
+import type { Config } from "../config";
 import type { BundleResult } from "./bundle";
-import type { Config } from "./config";
 import type { Entry } from "./entry";
 
 async function getFiles(root: string, relativeTo: string): Promise<string[]> {

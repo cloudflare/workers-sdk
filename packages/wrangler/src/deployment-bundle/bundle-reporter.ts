@@ -1,6 +1,6 @@
 import { Blob } from "node:buffer";
 import { gzipSync } from "node:zlib";
-import { logger } from "./logger";
+import { logger } from "../logger";
 import type { CfModule } from "./worker";
 import type { Metafile } from "esbuild";
 

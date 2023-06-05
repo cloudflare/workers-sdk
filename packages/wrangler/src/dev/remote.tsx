@@ -4,12 +4,12 @@ import { Text } from "ink";
 import SelectInput from "ink-select-input";
 import React, { useState, useEffect, useRef } from "react";
 import { useErrorHandler } from "react-error-boundary";
-import { printBundleSize } from "../bundle-reporter";
 import {
 	createPreviewSession,
 	createWorkerPreview,
 } from "../create-worker-preview";
 import { helpIfErrorIsSizeOrScriptStartup } from "../deploy/deploy";
+import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import useInspector from "../inspect";
 import { logger } from "../logger";
 import { startPreviewServer, usePreviewServer } from "../proxy";
@@ -24,15 +24,15 @@ import type {
 	CfPreviewToken,
 	CfPreviewSession,
 } from "../create-worker-preview";
-import type { AssetPaths } from "../sites";
-import type { ChooseAccountItem } from "../user";
 import type {
 	CfModule,
 	CfWorkerInit,
 	CfScriptFormat,
 	CfAccount,
 	CfWorkerContext,
-} from "../worker";
+} from "../deployment-bundle/worker";
+import type { AssetPaths } from "../sites";
+import type { ChooseAccountItem } from "../user";
 import type { EsbuildBundle } from "./use-esbuild";
 
 interface RemoteProps {

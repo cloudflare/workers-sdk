@@ -1,8 +1,8 @@
 import { access, lstat } from "node:fs/promises";
 import { relative, resolve } from "node:path";
-import { bundleWorker } from "../../bundle";
+import { bundleWorker } from "../../deployment-bundle/bundle";
+import { D1_BETA_PREFIX } from "../../deployment-bundle/worker";
 import { getBasePath } from "../../paths";
-import { D1_BETA_PREFIX } from "../../worker";
 import { buildNotifierPlugin } from "./buildWorker";
 import type { Options as WorkerOptions } from "./buildWorker";
 
