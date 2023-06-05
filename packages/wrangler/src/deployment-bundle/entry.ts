@@ -240,7 +240,7 @@ type ValueOf<T> = T[keyof T];
  * Returns true if the given `filePath` exists as-is,
  * or if some version of it (by appending a common extension) exists.
  */
-export function fileExists(filePath: string): boolean {
+function fileExists(filePath: string): boolean {
 	if (path.extname(filePath) !== "") {
 		return existsSync(filePath);
 	}
