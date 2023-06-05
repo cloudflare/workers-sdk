@@ -298,7 +298,7 @@ export const Handler = async ({
 						nodejsCompat,
 						local: true,
 						sourcemap: true,
-						watch: true,
+						watch: false,
 						onEnd: () => scriptReadyResolve(),
 					});
 				} catch (e: unknown) {
@@ -339,7 +339,7 @@ export const Handler = async ({
 					outfile: scriptPath,
 					functionsDirectory,
 					sourcemap: true,
-					watch: true,
+					watch: false,
 					onEnd,
 					buildOutputDirectory: directory,
 					legacyNodeCompat,
