@@ -4,7 +4,7 @@ import chalk from "chalk";
 import onExit from "signal-exit";
 import tmp from "tmp-promise";
 import { bundleWorker, dedupeModulesByName } from "../deployment-bundle/bundle";
-import { runCustomBuild } from "../deployment-bundle/entry";
+import { runCustomBuild } from "../deployment-bundle/run-custom-build";
 import traverseModuleGraph from "../deployment-bundle/traverse-module-graph";
 import {
 	getBoundRegisteredWorkers,
