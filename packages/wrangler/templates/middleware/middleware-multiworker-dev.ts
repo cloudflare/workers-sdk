@@ -1,6 +1,7 @@
 /// <reference path="middleware-multiworker-dev.d.ts"/>
 
 import { Workers } from "config:middleware/multiworker-dev";
+import type { WorkerRegistry } from "../../src/dev-registry";
 
 export function wrap(env: Record<string, unknown>) {
 	const facadeEnv = { ...env };
@@ -10,10 +11,10 @@ export function wrap(env: Record<string, unknown>) {
 	// if Workers[name]
 	// const details = Workers[name];
 
-	for (const [name, details] of Object.entries(Workers)) {
+	for (const [name, details] of Object.entries(Workers as WorkerRegistry)) {
 		if (details) {
 			facadeEnv[name] = {
-				async fetch(...reqArgs) {
+				async fetch(...reqArgs: Parameters<Fetcher["fetch"]>) {
 					const reqFromArgs = new Request(...reqArgs);
 					if (details.headers) {
 						for (const [key, value] of Object.entries(details.headers)) {
@@ -22,13 +23,19 @@ export function wrap(env: Record<string, unknown>) {
 							// (much like wrangler dev already does via proxy.ts)
 							reqFromArgs.headers.set(key, value);
 						}
-						return env[name].fetch(reqFromArgs);
+						return (env[name] as Fetcher).fetch(reqFromArgs);
 					}
 
 					const url = new URL(reqFromArgs.url);
-					url.protocol = details.protocol;
-					url.host = details.host;
-					if (details.port !== undefined) url.port = details.port;
+					if (details.protocol !== undefined) {
+						url.protocol = details.protocol;
+					}
+					if (details.host !== undefined) {
+						url.host = details.host;
+					}
+					if (details.port !== undefined) {
+						url.port = details.port.toString();
+					}
 
 					const request = new Request(url.toString(), reqFromArgs);
 					return fetch(request);
