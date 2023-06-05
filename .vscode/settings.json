@@ -18,6 +18,7 @@
 		"isolinear",
 		"keyvalue",
 		"logfwdr",
+		"metafile",
 		"middlewares",
 		"Miniflare",
 		"mockpm",

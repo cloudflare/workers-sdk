@@ -1,8 +1,8 @@
-import assert from "node:assert";
 import path from "node:path";
 import * as esbuild from "esbuild";
 import { logger } from "../logger";
 import { COMMON_ESBUILD_OPTIONS } from "./bundle";
+import { getEntryPointFromMetafile } from "./entry-point-from-metafile";
 import type { CfScriptFormat } from "./worker";
 
 /**
@@ -28,30 +28,15 @@ export default async function guessWorkerFormat(
 		write: false,
 		...(tsconfig && { tsconfig }),
 	});
+
 	// result.metafile is defined because of the `metafile: true` option above.
 	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 	const metafile = result.metafile!;
-	const entryPoints = Object.entries(metafile.outputs).filter(
-		([_path, output]) => output.entryPoint !== undefined
-	);
-	if (entryPoints.length !== 1) {
-		const entryPointList = entryPoints
-			.map(([_input, output]) => output.entryPoint)
-			.join("\n");
-		assert(
-			entryPoints.length > 0,
-			`Cannot find entry-point "${entryFile}" in generated bundle.\n${entryPointList}`
-		);
-		assert(
-			entryPoints.length < 2,
-			`More than one entry-point found for generated bundle.\n${entryPointList}`
-		);
-	}
 
+	const { exports } = getEntryPointFromMetafile(entryFile, metafile);
 	let guessedWorkerFormat: CfScriptFormat;
-	const scriptExports = entryPoints[0][1].exports;
-	if (scriptExports.length > 0) {
-		if (scriptExports.includes("default")) {
+	if (exports.length > 0) {
+		if (exports.includes("default")) {
 			guessedWorkerFormat = "modules";
 		} else {
 			logger.warn(
