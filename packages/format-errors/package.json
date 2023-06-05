@@ -13,7 +13,7 @@
 		"typescript": "^5.0.2",
 		"wrangler": "*",
 		"zod": "^3.21.4",
-		"eslint-worker-config": "*",
+		"eslint-config-worker": "*",
 		"tsconfig": "*"
 	}
 }

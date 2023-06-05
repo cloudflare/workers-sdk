@@ -52,7 +52,7 @@
 		"command-exists": "^1.2.9",
 		"cross-spawn": "^7.0.3",
 		"esbuild": "^0.17.12",
-		"eslint-worker-config": "*",
+		"eslint-config-worker": "*",
 		"execa": "^7.1.1",
 		"haikunator": "^2.1.2",
 		"log-update": "^5.0.1",

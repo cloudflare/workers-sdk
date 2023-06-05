@@ -1,5 +1,5 @@
 module.exports = {
 	root: true,
-	extends: ["eslint-worker-config"],
+	extends: ["worker"],
 	ignorePatterns: ["lib"],
 };

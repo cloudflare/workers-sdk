@@ -56,7 +56,7 @@
 		"@types/tar": "^6.1.1",
 		"@types/webpack": "^4.41.32",
 		"esbuild": "0.16.3",
-		"eslint-worker-config": "*",
+		"eslint-config-worker": "*",
 		"execa": "^6.1.0",
 		"jest": "^27.5.1",
 		"jest-fetch-mock": "^3.0.3",

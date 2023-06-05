@@ -17,7 +17,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20221111.1",
-		"eslint-worker-config": "*",
+		"eslint-config-worker": "*",
 		"typescript": "^4.5.5",
 		"workers-tsconfig": "*",
 		"wrangler": "*"

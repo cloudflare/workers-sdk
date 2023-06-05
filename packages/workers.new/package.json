@@ -9,7 +9,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^3.0.0",
-		"eslint-worker-config": "*",
+		"eslint-config-worker": "*",
 		"workers-tsconfig": "*",
 		"wrangler": "*"
 	}
