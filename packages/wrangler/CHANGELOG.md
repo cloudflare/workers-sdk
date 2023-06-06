@@ -1,5 +1,71 @@
 # wrangler
 
+## 3.1.0
+
+### Minor Changes
+
+- [#3293](https://github.com/cloudflare/workers-sdk/pull/3293) [`4a88db32`](https://github.com/cloudflare/workers-sdk/commit/4a88db32c8962a55bbcad82048a858fbce3f8e93) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: add `wrangler pages project delete` command
+
+### Patch Changes
+
+- [#3399](https://github.com/cloudflare/workers-sdk/pull/3399) [`d8a9995b`](https://github.com/cloudflare/workers-sdk/commit/d8a9995b3748893057b4cb657abd8f658b1f5875) Thanks [@Skye-31](https://github.com/Skye-31)! - Fix: wrangler pages dev --script-path argument when using a proxy command instead of directory mode
+
+  Fixes a regression in wrangler@3.x, where `wrangler pages dev --script-path=<my script path> -- <proxy command>` would start throwing esbuild errors.
+
+* [#3311](https://github.com/cloudflare/workers-sdk/pull/3311) [`116d3fd9`](https://github.com/cloudflare/workers-sdk/commit/116d3fd92fd4a2352202ebcb9b5c4e4c4f49c74b) Thanks [@Maximo-Guk](https://github.com/Maximo-Guk)! - Fix: Avoid unnecessary rebuilding pages functions in wrangler pages dev
+
+- [#3314](https://github.com/cloudflare/workers-sdk/pull/3314) [`d5a230f1`](https://github.com/cloudflare/workers-sdk/commit/d5a230f1e74c1d8c619491291a6e2408cc8ec8d1) Thanks [@elithrar](https://github.com/elithrar)! - Fixed `wrangler d1 migrations` to use `--experimental-backend` and not `--experimentalBackend` so that it is consistent with `wrangler d1 create`.
+
+* [#3373](https://github.com/cloudflare/workers-sdk/pull/3373) [`55703e52`](https://github.com/cloudflare/workers-sdk/commit/55703e52da35b15f5c11f9e3936cc5b1ad5836dc) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: wrangler rollback shouldn't print its warning in the global menu
+
+- [#3124](https://github.com/cloudflare/workers-sdk/pull/3124) [`2956c31d`](https://github.com/cloudflare/workers-sdk/commit/2956c31d6c310e8fcfe6b68a0ace1f6e7bf7bf4c) Thanks [@verokarhu](https://github.com/verokarhu)! - fix: failed d1 migrations not treated as errors
+
+  This PR teaches wrangler to return a non-success exit code when a set of migrations fails.
+
+  It also cleans up `wrangler d1 migrations apply` output significantly, to only log information relevant to migrations.
+
+* [#3390](https://github.com/cloudflare/workers-sdk/pull/3390) [`b5b46b4a`](https://github.com/cloudflare/workers-sdk/commit/b5b46b4a52a309d0b15d1424e35eaae2877c5cb9) Thanks [@shahsimpson](https://github.com/shahsimpson)! - Prevents uploads with both cron triggers and smart placement enabled
+
+- [#3358](https://github.com/cloudflare/workers-sdk/pull/3358) [`27b5aec5`](https://github.com/cloudflare/workers-sdk/commit/27b5aec5484a4b4de4f49a73eec0535a8574c518) Thanks [@rozenmd](https://github.com/rozenmd)! - This PR implements a trimmer that removes BEGIN TRANSACTION/COMMIT from SQL files sent to the API (since the D1 API already wraps SQL in a transaction for users).
+
+* [#3324](https://github.com/cloudflare/workers-sdk/pull/3324) [`ed9fbf79`](https://github.com/cloudflare/workers-sdk/commit/ed9fbf79988b694dc4fd8f2347d85b3f8aa19a4b) Thanks [@rozenmd](https://github.com/rozenmd)! - add `d1 info` command for people to check DB size
+
+  This PR adds a `d1 info <NAME>` command for getting information about a D1 database, including the current database size and state.
+
+  Usage:
+
+  ```
+  > npx wrangler d1 info northwind
+
+  ┌───────────────────┬──────────────────────────────────────┐
+  │                   │ d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06 │
+  ├───────────────────┼──────────────────────────────────────┤
+  │ name              │ northwind                            │
+  ├───────────────────┼──────────────────────────────────────┤
+  │ version           │ beta                                 │
+  ├───────────────────┼──────────────────────────────────────┤
+  │ num_tables        │ 13                                   │
+  ├───────────────────┼──────────────────────────────────────┤
+  │ file_size         │ 33.1 MB                              │
+  ├───────────────────┼──────────────────────────────────────┤
+  │ running_in_region │ WEUR                                 │
+  └───────────────────┴──────────────────────────────────────┘
+  ```
+
+  ```
+  > npx wrangler d1 info northwind --json
+  {
+    "uuid": "d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06",
+    "name": "northwind",
+    "version": "beta",
+    "num_tables": 13,
+    "file_size": 33067008,
+    "running_in_region": "WEUR"
+  }
+  ```
+
+- [#3317](https://github.com/cloudflare/workers-sdk/pull/3317) [`3dae2585`](https://github.com/cloudflare/workers-sdk/commit/3dae25857bc9674209db5d4997ac9ae691fd473e) Thanks [@jculvey](https://github.com/jculvey)! - Add the `--compatibility-flags` and `--compatibility-date` options to the `pages project create` command
+
 ## 3.0.1
 
 ### Patch Changes
