@@ -1,5 +1,15 @@
 # create-cloudflare
 
+## 2.0.9
+
+### Patch Changes
+
+- [#3245](https://github.com/cloudflare/workers-sdk/pull/3245) [`4082cfcb`](https://github.com/cloudflare/workers-sdk/commit/4082cfcbdf08740d4a608d3d87df22e51ad0ce4a) Thanks [@james-elicx](https://github.com/james-elicx)! - Support for setting compatibility flags for each framework when creating a new pages project.
+
+* [#3295](https://github.com/cloudflare/workers-sdk/pull/3295) [`2dc55daf`](https://github.com/cloudflare/workers-sdk/commit/2dc55dafaac1d42a6ec5a2cd90942f9a168b9f40) Thanks [@Cherry](https://github.com/Cherry)! - fix: use tabs by default in prettier configs
+
+- [#3245](https://github.com/cloudflare/workers-sdk/pull/3245) [`4082cfcb`](https://github.com/cloudflare/workers-sdk/commit/4082cfcbdf08740d4a608d3d87df22e51ad0ce4a) Thanks [@james-elicx](https://github.com/james-elicx)! - Fix support for creating API route handlers in the Next.js template when using the app directory.
+
 ## 2.0.8
 
 ### Patch Changes

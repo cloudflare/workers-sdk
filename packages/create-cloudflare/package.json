@@ -1,6 +1,6 @@
 {
 	"name": "create-cloudflare",
-	"version": "2.0.8",
+	"version": "2.0.9",
 	"description": "A CLI for creating and deploying new applications to Cloudflare.",
 	"keywords": [
 		"cloudflare",
@@ -61,7 +61,7 @@
 		"vite-tsconfig-paths": "^4.0.8",
 		"vitest": "^0.30.0",
 		"which-pm-runs": "^1.1.0",
-		"wrangler": "^3.0.1",
+		"wrangler": "^3.1.0",
 		"yargs": "^17.7.1"
 	},
 	"engines": {
