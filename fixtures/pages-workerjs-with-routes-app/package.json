@@ -8,7 +8,8 @@
 		"dev": "npx wrangler pages dev public --port 8751",
 		"test": "npx vitest run",
 		"test:ci": "npx vitest run",
-		"test:watch": "npx vitest"
+		"test:watch": "npx vitest",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
 		"undici": "^5.9.1",

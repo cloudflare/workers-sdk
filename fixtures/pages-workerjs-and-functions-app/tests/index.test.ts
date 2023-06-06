@@ -4,7 +4,7 @@ import { describe, it, beforeAll, afterAll } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Pages project with `_worker.js` and `/functions` directory", () => {
-	let ip, port, stop;
+	let ip: string, port: number, stop: () => Promise<unknown>;
 
 	beforeAll(async () => {
 		({ ip, port, stop } = await runWranglerPagesDev(
@@ -14,7 +14,9 @@ describe("Pages project with `_worker.js` and `/functions` directory", () => {
 		));
 	});
 
-	afterAll(async () => await stop());
+	afterAll(async () => {
+		await stop();
+	});
 
 	it("renders static pages", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/`);

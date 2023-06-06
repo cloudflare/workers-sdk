@@ -15,16 +15,17 @@
 	],
 	"scripts": {
 		"build": "turbo build",
-		"check": "turbo check:lint check:type check:format",
+		"check": "turbo check:lint check:type check:format type:tests",
 		"check:format": "prettier . --check --ignore-unknown",
 		"check:lint": "turbo check:lint",
-		"check:type": "turbo check:type",
+		"check:type": "turbo check:type type:tests",
 		"fix": "npm run prettify && eslint --fix",
 		"postinstall": "patch-package",
 		"prettify": "prettier . --write --ignore-unknown",
 		"test": "turbo test",
 		"test:ci": "turbo test:ci --filter=wrangler --filter=pages-shared",
-		"test:watch": "turbo test:watch"
+		"test:watch": "turbo test:watch",
+		"type:tests": "turbo type:tests"
 	},
 	"dependencies": {
 		"@changesets/changelog-github": "^0.4.5",

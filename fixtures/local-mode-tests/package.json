@@ -11,7 +11,8 @@
 		"check:type": "tsc",
 		"test": "npx vitest run",
 		"test:ci": "npx vitest run",
-		"test:watch": "npx vitest"
+		"test:watch": "npx vitest",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20221111.1",

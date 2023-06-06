@@ -21,6 +21,7 @@
 		"topological": {
 			"dependsOn": ["^topological"]
 		},
+		"type:tests": {},
 		"test:ci": {},
 		"//#check:format": { "cache": true }
 	}

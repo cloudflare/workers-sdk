@@ -4,7 +4,7 @@ import { describe, it, beforeAll, afterAll } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("'wrangler dev' correctly renders pages", () => {
-	let ip, port, stop;
+	let ip: string, port: number, stop: () => Promise<unknown>;
 
 	beforeAll(async () => {
 		({ ip, port, stop } = await runWranglerDev(resolve(__dirname, ".."), [
@@ -13,7 +13,9 @@ describe("'wrangler dev' correctly renders pages", () => {
 		]));
 	});
 
-	afterAll(async () => await stop());
+	afterAll(async () => {
+		await stop();
+	});
 
 	it("renders ", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/`);
