@@ -52,49 +52,69 @@ function getMaskedEnv(rawEnv: unknown) {
 }
 
 const facade: ExportedHandler<unknown> = {
-	...Object.fromEntries(
-		Object.entries(worker).map(([trigger, handler]) => [
-			trigger,
-			(param: unknown, env: unknown, ctx: ExecutionContext) => {
-				handler.call(worker, param, getMaskedEnv(env), ctx);
-			},
-		])
-	),
-	fetch(request, rawEnv, ctx) {
-		const env = getMaskedEnv(rawEnv);
-		// Get the chain of middleware from the worker object
-		if (worker.middleware && worker.middleware.length > 0) {
-			for (const middleware of worker.middleware) {
-				__facade_register__(middleware);
-			}
+	...(worker.tail && {
+		tail(events, env, ctx) {
+			worker.tail!(events, getMaskedEnv(env), ctx);
+		},
+	}),
+	...(worker.trace && {
+		trace(events, env, ctx) {
+			worker.trace!(events, getMaskedEnv(env), ctx);
+		},
+	}),
+	...(worker.scheduled && {
+		scheduled(controller, env, ctx) {
+			worker.scheduled!(controller, getMaskedEnv(env), ctx);
+		},
+	}),
+	...(worker.queue && {
+		queue(batch, env, ctx) {
+			worker.queue!(batch, getMaskedEnv(env), ctx);
+		},
+	}),
+	...(worker.test && {
+		test(controller, env, ctx) {
+			worker.test!(controller, getMaskedEnv(env), ctx);
+		},
+	}),
 
-			const __facade_modules_dispatch__: Dispatcher = function (type, init) {
-				if (type === "scheduled" && worker.scheduled !== undefined) {
-					const controller = new __Facade_ScheduledController__(
-						Date.now(),
-						init.cron ?? "",
-						() => {}
-					);
-					return worker.scheduled(controller, env, ctx);
+	...(worker.fetch && {
+		fetch(request, rawEnv, ctx) {
+			const env = getMaskedEnv(rawEnv);
+			// Get the chain of middleware from the worker object
+			if (worker.middleware && worker.middleware.length > 0) {
+				for (const middleware of worker.middleware) {
+					__facade_register__(middleware);
 				}
-			};
 
-			return __facade_invoke__(
-				request,
-				env,
-				ctx,
-				__facade_modules_dispatch__,
-				__facade_modules_fetch__
-			);
-		} else {
-			// We didn't have any middleware so we can skip the invocation chain,
-			// and just call the fetch handler directly
+				const __facade_modules_dispatch__: Dispatcher = function (type, init) {
+					if (type === "scheduled" && worker.scheduled !== undefined) {
+						const controller = new __Facade_ScheduledController__(
+							Date.now(),
+							init.cron ?? "",
+							() => {}
+						);
+						return worker.scheduled(controller, env, ctx);
+					}
+				};
 
-			// We "don't care" if this is undefined as we want to have the same behaviour
-			// as if the worker completely bypassed middleware.
-			return worker.fetch!(request, env, ctx);
-		}
-	},
+				return __facade_invoke__(
+					request,
+					env,
+					ctx,
+					__facade_modules_dispatch__,
+					__facade_modules_fetch__
+				);
+			} else {
+				// We didn't have any middleware so we can skip the invocation chain,
+				// and just call the fetch handler directly
+
+				// We "don't care" if this is undefined as we want to have the same behavior
+				// as if the worker completely bypassed middleware.
+				return worker.fetch!(request, env, ctx);
+			}
+		},
+	}),
 };
 
 export default facade;
