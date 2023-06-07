@@ -50,7 +50,9 @@ var D1Database = class {
 			.indexOf(1);
 		if (error !== -1) {
 			throw new Error(
-				`D1_EXEC_ERROR: Error in line $(error + 1): ${lines[error]}: ${exec[error].error}`,
+				`D1_EXEC_ERROR: Error in line ${error + 1}: ${lines[error]}: ${
+					exec[error].error
+				}`,
 				{
 					cause: new Error(
 						"Error in line " +
