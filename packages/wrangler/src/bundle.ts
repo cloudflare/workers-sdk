@@ -178,7 +178,6 @@ export async function bundleWorker(
 		workerDefinitions?: WorkerRegistry;
 		firstPartyWorkerDevFacade?: boolean;
 		targetConsumer: "dev" | "deploy";
-		local: boolean;
 		testScheduled?: boolean;
 		inject?: string[];
 		loader?: Record<string, string>;
@@ -206,7 +205,6 @@ export async function bundleWorker(
 		legacyNodeCompat,
 		nodejsCompat,
 		checkFetch,
-		local,
 		assets,
 		workerDefinitions,
 		services,

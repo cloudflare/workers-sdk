@@ -143,7 +143,6 @@ export function useEsbuild({
 					workerDefinitions,
 					services,
 					firstPartyWorkerDevFacade,
-					local,
 					targetConsumer,
 					testScheduled,
 					additionalModules: dedupeModulesByName([

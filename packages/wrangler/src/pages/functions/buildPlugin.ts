@@ -106,7 +106,6 @@ export function buildPlugin({
 			rules: [],
 			checkFetch: local,
 			targetConsumer: local ? "dev" : "deploy",
-			local,
 			forPages: true,
 		}
 	);
