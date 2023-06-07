@@ -20,11 +20,11 @@ var D1Database = class {
 		if (response.status !== 200) {
 			try {
 				const err = await response.json();
-				throw new Error("D1_DUMP_ERROR", {
+				throw new Error(`D1_DUMP_ERROR: ${err.error}`, {
 					cause: new Error(err.error),
 				});
 			} catch (e) {
-				throw new Error("D1_DUMP_ERROR", {
+				throw new Error(`D1_DUMP_ERROR: Status + ${response.status}`, {
 					cause: new Error("Status " + response.status),
 				});
 			}
@@ -49,16 +49,19 @@ var D1Database = class {
 			})
 			.indexOf(1);
 		if (error !== -1) {
-			throw new Error("D1_EXEC_ERROR", {
-				cause: new Error(
-					"Error in line " +
-						(error + 1) +
-						": " +
-						lines[error] +
-						": " +
-						exec[error].error
-				),
-			});
+			throw new Error(
+				`D1_EXEC_ERROR: Error in line $(error + 1): ${lines[error]}: ${exec[error].error}`,
+				{
+					cause: new Error(
+						"Error in line " +
+							(error + 1) +
+							": " +
+							lines[error] +
+							": " +
+							exec[error].error
+					),
+				}
+			);
 		} else {
 			return {
 				count: exec.length,
@@ -90,14 +93,16 @@ var D1Database = class {
 			const answer = await response.json();
 			if (answer.error && dothrow) {
 				const err = answer;
-				throw new Error("D1_ERROR", { cause: new Error(err.error) });
+				throw new Error(`D1_ERROR: ${err.error}`, {
+					cause: new Error(err.error),
+				});
 			} else {
 				return Array.isArray(answer)
 					? answer.map((r) => mapD1Result(r))
 					: mapD1Result(answer);
 			}
 		} catch (e) {
-			throw new Error("D1_ERROR", {
+			throw new Error(`D1_ERROR: ${e.cause || "Something went wrong"}`, {
 				cause: new Error(e.cause || "Something went wrong"),
 			});
 		}
@@ -135,15 +140,20 @@ var D1PreparedStatement = class {
 						break;
 					}
 				default:
-					throw new Error("D1_TYPE_ERROR", {
-						cause: new Error(
-							"Type '" +
-								typeof values[r] +
-								"' not supported for value '" +
-								values[r] +
-								"'"
-						),
-					});
+					throw new Error(
+						`D1_TYPE_ERROR: Type '${typeof values[
+							r
+						]}' not supported for value '${values[r]}'`,
+						{
+							cause: new Error(
+								"Type '" +
+									typeof values[r] +
+									"' not supported for value '" +
+									values[r] +
+									"'"
+							),
+						}
+					);
 			}
 		}
 		return new D1PreparedStatement(this.database, this.statement, values);
@@ -155,7 +165,7 @@ var D1PreparedStatement = class {
 		const results = info.results;
 		if (colName !== void 0) {
 			if (results.length > 0 && results[0][colName] === void 0) {
-				throw new Error("D1_COLUMN_NOTFOUND", {
+				throw new Error(`D1_COLUMN_NOTFOUND: Column not found (${colName})`, {
 					cause: new Error("Column not found"),
 				});
 			}
