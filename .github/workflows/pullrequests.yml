@@ -27,7 +27,7 @@ jobs:
           path: |
             .eslintcache
             tsconfig.tsbuildinfo
-          key: ${{ matrix.os }}-eslint-tsbuildinfo-${{ hashFiles('**/*.ts','**/*.js', 'package.json', 'tsconfig.json') }}
+          key: ${{ runner.os }}-eslint-tsbuildinfo-${{ hashFiles('**/*.ts','**/*.js', 'package.json', 'tsconfig.json') }}
 
       - name: Install workerd Dependencies
         if: ${{ runner.os == 'Linux' }}
