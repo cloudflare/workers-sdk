@@ -1,7 +1,6 @@
-// @ts-nocheck
 /// <reference path="middleware-d1-beta.d.ts"/>
 
-import { D1_IMPORTS, LOCAL_MODE } from "config:middleware/d1-beta";
+import { D1_IMPORTS } from "config:middleware/d1-beta";
 
 // src/index.ts
 class D1Database {
@@ -232,9 +231,7 @@ function getMaskedEnv(env: Record<string, Fetcher | D1Database>) {
 	).forEach((bindingName) => {
 		newEnv.delete(bindingName);
 		const newName = bindingName.slice(D1_BETA_PREFIX.length);
-		const newBinding = !LOCAL_MODE
-			? new D1Database(env[bindingName] as Fetcher)
-			: env[bindingName];
+		const newBinding = new D1Database(env[bindingName] as Fetcher);
 		newEnv.set(newName, newBinding);
 	});
 	const newEnvObj = Object.fromEntries(newEnv.entries());

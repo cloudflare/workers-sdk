@@ -56,7 +56,7 @@ const facade: ExportedHandler<unknown> = {
 		Object.entries(worker).map(([trigger, handler]) => [
 			trigger,
 			(param: unknown, env: unknown, ctx: ExecutionContext) => {
-				handler(param, getMaskedEnv(env), ctx);
+				handler.call(worker, param, getMaskedEnv(env), ctx);
 			},
 		])
 	),

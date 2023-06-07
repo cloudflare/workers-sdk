@@ -343,7 +343,6 @@ export async function bundleWorker(
 			active: Array.isArray(betaD1Shims) && betaD1Shims.length > 0,
 			config: {
 				D1_IMPORTS: betaD1Shims,
-				LOCAL_MODE: local,
 			},
 		},
 	];

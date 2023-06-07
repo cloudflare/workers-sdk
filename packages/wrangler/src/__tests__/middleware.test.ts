@@ -22,17 +22,6 @@ async function seedFs(files: Record<string, string>): Promise<void> {
 		await writeFile(location, contents);
 	}
 }
-async function checkFs(files: Record<string, string>): Promise<void> {
-	for (const [location, contents] of Object.entries(files)) {
-		const fileContents = await readFile(location, "utf8");
-		expect(
-			fileContents
-				.replace(/\t/g, "  ")
-				.replace(/\/\/ .*/g, "")
-				.trim()
-		).toBe(contents.replace(/\t/g, "  ").trim());
-	}
-}
 describe("middleware", () => {
 	describe("workers change behaviour with middleware with wrangler dev", () => {
 		runInTempDir();
@@ -788,347 +777,350 @@ describe("middleware", () => {
 
 			await runWrangler("publish --dry-run --outdir dist");
 
-			await checkFs({
-				"dist/index.js": dedent/* javascript */ `
-
-
-var __facade_middleware__ = [];
-function __facade_register__(...args) {
-	__facade_middleware__.push(...args.flat());
-}
-function __facade_invokeChain__(request, env, ctx, dispatch, middlewareChain) {
-	const [head, ...tail] = middlewareChain;
-	const middlewareCtx = {
-		dispatch,
-		next(newRequest, newEnv) {
-			return __facade_invokeChain__(newRequest, newEnv, ctx, dispatch, tail);
-		}
-	};
-	return head(request, env, ctx, middlewareCtx);
-}
-function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
-	return __facade_invokeChain__(request, env, ctx, dispatch, [
-		...__facade_middleware__,
-		finalMiddleware
-	]);
-}
-
-
-var src_default = {
-	async fetch(request, env) {
-		return Response.json(env);
-	}
-};
-var DurableObjectExample = class {
-	constructor(state, env) {
-	}
-	async fetch(request) {
-		return new Response("Hello World");
-	}
-};
-
-
-var D1_IMPORTS = ["__D1_BETA__DB"];
-var LOCAL_MODE = false;
-
-
-var D1Database = class {
-	constructor(binding) {
-		this.binding = binding;
-	}
-	prepare(query) {
-		return new D1PreparedStatement(this, query);
-	}
-	async dump() {
-		const response = await this.binding.fetch("http://d1/dump", {
-			method: "POST",
-			headers: {
-				"content-type": "application/json"
+			const fileContents = await readFile("dist/index.js", "utf8");
+			expect(
+				fileContents
+					.replace(/\t/g, "  ")
+					.replace(/\/\/ .*/g, "")
+					.trim()
+			).toMatchInlineSnapshot(`
+			"var __facade_middleware__ = [];
+			function __facade_register__(...args) {
+			  __facade_middleware__.push(...args.flat());
 			}
-		});
-		if (response.status !== 200) {
-			try {
-				const err = await response.json();
-				throw new Error("D1_DUMP_ERROR", {
-					cause: new Error(err.error)
-				});
-			} catch (e) {
-				throw new Error("D1_DUMP_ERROR", {
-					cause: new Error("Status " + response.status)
-				});
+			function __facade_invokeChain__(request, env, ctx, dispatch, middlewareChain) {
+			  const [head, ...tail] = middlewareChain;
+			  const middlewareCtx = {
+			    dispatch,
+			    next(newRequest, newEnv) {
+			      return __facade_invokeChain__(newRequest, newEnv, ctx, dispatch, tail);
+			    }
+			  };
+			  return head(request, env, ctx, middlewareCtx);
 			}
-		}
-		return await response.arrayBuffer();
-	}
-	async batch(statements) {
-		const exec = await this._send(
-			"/query",
-			statements.map((s) => s.statement),
-			statements.map((s) => s.params)
-		);
-		return exec;
-	}
-	async exec(query) {
-		const lines = query.trim().split("\\n");
-		const _exec = await this._send("/query", lines, [], false);
-		const exec = Array.isArray(_exec) ? _exec : [_exec];
-		const error = exec.map((r) => {
-			return r.error ? 1 : 0;
-		}).indexOf(1);
-		if (error !== -1) {
-			throw new Error("D1_EXEC_ERROR", {
-				cause: new Error(
-					"Error in line " + (error + 1) + ": " + lines[error] + ": " + exec[error].error
-				)
-			});
-		} else {
-			return {
-				count: exec.length,
-				duration: exec.reduce((p, c) => {
-					return p + c.meta.duration;
-				}, 0)
+			function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
+			  return __facade_invokeChain__(request, env, ctx, dispatch, [
+			    ...__facade_middleware__,
+			    finalMiddleware
+			  ]);
+			}
+
+
+			var src_default = {
+			  async fetch(request, env) {
+			    return Response.json(env);
+			  }
 			};
-		}
-	}
-	async _send(endpoint, query, params, dothrow = true) {
-		const body = JSON.stringify(
-			typeof query == "object" ? query.map((s, index) => {
-				return { sql: s, params: params[index] };
-			}) : {
-				sql: query,
-				params
-			}
-		);
-		const response = await this.binding.fetch(new URL(endpoint, "http://d1"), {
-			method: "POST",
-			headers: {
-				"content-type": "application/json"
-			},
-			body
-		});
-		try {
-			const answer = await response.json();
-			if (answer.error && dothrow) {
-				const err = answer;
-				throw new Error("D1_ERROR", { cause: new Error(err.error) });
-			} else {
-				return Array.isArray(answer) ? answer.map((r) => mapD1Result(r)) : mapD1Result(answer);
-			}
-		} catch (e) {
-			throw new Error("D1_ERROR", {
-				cause: new Error(e.cause || "Something went wrong")
-			});
-		}
-	}
-};
-var D1PreparedStatement = class {
-	constructor(database, statement, values) {
-		this.database = database;
-		this.statement = statement;
-		this.params = values || [];
-	}
-	bind(...values) {
-		for (var r in values) {
-			switch (typeof values[r]) {
-				case "number":
-				case "string":
-					break;
-				case "object":
-					if (values[r] == null)
-						break;
-					if (Array.isArray(values[r]) && values[r].map((b) => {
-						return typeof b == "number" && b >= 0 && b < 256 ? 1 : 0;
-					}).indexOf(0) == -1)
-						break;
-					if (values[r] instanceof ArrayBuffer) {
-						values[r] = Array.from(new Uint8Array(values[r]));
-						break;
-					}
-					if (ArrayBuffer.isView(values[r])) {
-						values[r] = Array.from(values[r]);
-						break;
-					}
-				default:
-					throw new Error("D1_TYPE_ERROR", {
-						cause: new Error(
-							"Type '" + typeof values[r] + "' not supported for value '" + values[r] + "'"
-						)
-					});
-			}
-		}
-		return new D1PreparedStatement(this.database, this.statement, values);
-	}
-	async first(colName) {
-		const info = firstIfArray(
-			await this.database._send("/query", this.statement, this.params)
-		);
-		const results = info.results;
-		if (colName !== void 0) {
-			if (results.length > 0 && results[0][colName] === void 0) {
-				throw new Error("D1_COLUMN_NOTFOUND", {
-					cause: new Error("Column not found")
-				});
-			}
-			return results.length < 1 ? null : results[0][colName];
-		} else {
-			return results.length < 1 ? null : results[0];
-		}
-	}
-	async run() {
-		return firstIfArray(
-			await this.database._send("/execute", this.statement, this.params)
-		);
-	}
-	async all() {
-		return firstIfArray(
-			await this.database._send("/query", this.statement, this.params)
-		);
-	}
-	async raw() {
-		const s = firstIfArray(
-			await this.database._send("/query", this.statement, this.params)
-		);
-		const raw = [];
-		for (var r in s.results) {
-			const entry = Object.keys(s.results[r]).map((k) => {
-				return s.results[r][k];
-			});
-			raw.push(entry);
-		}
-		return raw;
-	}
-};
-function firstIfArray(results) {
-	return Array.isArray(results) ? results[0] : results;
-}
-function mapD1Result(result) {
-	let map = {
-		results: result.results || [],
-		success: result.success === void 0 ? true : result.success,
-		meta: result.meta || {}
-	};
-	result.error && (map.error = result.error);
-	return map;
-}
-var D1_BETA_PREFIX = \`__D1_BETA__\`;
-var envMap = /* @__PURE__ */ new Map();
-function getMaskedEnv(env) {
-	if (envMap.has(env))
-		return envMap.get(env);
-	const newEnv = new Map(Object.entries(env));
-	D1_IMPORTS.filter(
-		(bindingName) => bindingName.startsWith(D1_BETA_PREFIX)
-	).forEach((bindingName) => {
-		newEnv.delete(bindingName);
-		const newName = bindingName.slice(D1_BETA_PREFIX.length);
-		const newBinding = !LOCAL_MODE ? new D1Database(env[bindingName]) : env[bindingName];
-		newEnv.set(newName, newBinding);
-	});
-	const newEnvObj = Object.fromEntries(newEnv.entries());
-	envMap.set(env, newEnvObj);
-	return newEnvObj;
-}
-function wrap(env) {
-	return getMaskedEnv(env);
-}
-
-
-var envWrappers = [wrap].filter(Boolean);
-var facade = {
-	...src_default,
-	envWrappers,
-	middleware: [
-		void 0,
-		...src_default.middleware ? src_default.middleware : []
-	].filter(Boolean)
-};
-var maskDurableObjectDefinition = (cls) => class extends cls {
-	constructor(state, env) {
-		let wrappedEnv = env;
-		for (const wrapFn of envWrappers) {
-			wrappedEnv = wrapFn(wrappedEnv);
-		}
-		super(state, wrappedEnv);
-	}
-};
-var DurableObjectExample2 = maskDurableObjectDefinition(DurableObjectExample);
-var middleware_insertion_facade_default = facade;
-
-
-var __Facade_ScheduledController__ = class {
-	constructor(scheduledTime, cron, noRetry) {
-		this.scheduledTime = scheduledTime;
-		this.cron = cron;
-		this.#noRetry = noRetry;
-	}
-	#noRetry;
-	noRetry() {
-		if (!(this instanceof __Facade_ScheduledController__)) {
-			throw new TypeError("Illegal invocation");
-		}
-		this.#noRetry();
-	}
-};
-var __facade_modules_fetch__ = function(request, env, ctx) {
-	if (middleware_insertion_facade_default.fetch === void 0)
-		throw new Error("No fetch handler!");
-	return middleware_insertion_facade_default.fetch(request, env, ctx);
-};
-function getMaskedEnv2(rawEnv) {
-	let env = rawEnv;
-	if (middleware_insertion_facade_default.envWrappers && middleware_insertion_facade_default.envWrappers.length > 0) {
-		for (const wrapFn of middleware_insertion_facade_default.envWrappers) {
-			env = wrapFn(env);
-		}
-	}
-	return env;
-}
-var facade2 = {
-	...Object.fromEntries(
-		Object.entries(middleware_insertion_facade_default).map(([trigger, handler]) => [
-			trigger,
-			(param, env, ctx) => {
-				handler(param, getMaskedEnv2(env), ctx);
-			}
-		])
-	),
-	fetch(request, rawEnv, ctx) {
-		const env = getMaskedEnv2(rawEnv);
-		if (middleware_insertion_facade_default.middleware && middleware_insertion_facade_default.middleware.length > 0) {
-			for (const middleware of middleware_insertion_facade_default.middleware) {
-				__facade_register__(middleware);
-			}
-			const __facade_modules_dispatch__ = function(type, init) {
-				if (type === "scheduled" && middleware_insertion_facade_default.scheduled !== void 0) {
-					const controller = new __Facade_ScheduledController__(
-						Date.now(),
-						init.cron ?? "",
-						() => {
-						}
-					);
-					return middleware_insertion_facade_default.scheduled(controller, env, ctx);
-				}
+			var DurableObjectExample = class {
+			  constructor(state, env) {
+			  }
+			  async fetch(request) {
+			    return new Response(\\"Hello World\\");
+			  }
 			};
-			return __facade_invoke__(
-				request,
-				env,
-				ctx,
-				__facade_modules_dispatch__,
-				__facade_modules_fetch__
-			);
-		} else {
-			return middleware_insertion_facade_default.fetch(request, env, ctx);
-		}
-	}
-};
-var middleware_loader_entry_default = facade2;
-export {
-	DurableObjectExample2 as DurableObjectExample,
-	middleware_loader_entry_default as default
-};
-//# sourceMappingURL=index.js.map
-			`,
-			});
+
+
+			var D1_IMPORTS = [\\"__D1_BETA__DB\\"];
+
+
+			var D1Database = class {
+			  constructor(binding) {
+			    this.binding = binding;
+			  }
+			  prepare(query) {
+			    return new D1PreparedStatement(this, query);
+			  }
+			  async dump() {
+			    const response = await this.binding.fetch(\\"http://d1/dump\\", {
+			      method: \\"POST\\",
+			      headers: {
+			        \\"content-type\\": \\"application/json\\"
+			      }
+			    });
+			    if (response.status !== 200) {
+			      try {
+			        const err = await response.json();
+			        throw new Error(\\"D1_DUMP_ERROR\\", {
+			          cause: new Error(err.error)
+			        });
+			      } catch (e) {
+			        throw new Error(\\"D1_DUMP_ERROR\\", {
+			          cause: new Error(\\"Status \\" + response.status)
+			        });
+			      }
+			    }
+			    return await response.arrayBuffer();
+			  }
+			  async batch(statements) {
+			    const exec = await this._send(
+			      \\"/query\\",
+			      statements.map((s) => s.statement),
+			      statements.map((s) => s.params)
+			    );
+			    return exec;
+			  }
+			  async exec(query) {
+			    const lines = query.trim().split(\\"\\\\n\\");
+			    const _exec = await this._send(\\"/query\\", lines, [], false);
+			    const exec = Array.isArray(_exec) ? _exec : [_exec];
+			    const error = exec.map((r) => {
+			      return r.error ? 1 : 0;
+			    }).indexOf(1);
+			    if (error !== -1) {
+			      throw new Error(\\"D1_EXEC_ERROR\\", {
+			        cause: new Error(
+			          \\"Error in line \\" + (error + 1) + \\": \\" + lines[error] + \\": \\" + exec[error].error
+			        )
+			      });
+			    } else {
+			      return {
+			        count: exec.length,
+			        duration: exec.reduce((p, c) => {
+			          return p + c.meta.duration;
+			        }, 0)
+			      };
+			    }
+			  }
+			  async _send(endpoint, query, params, dothrow = true) {
+			    const body = JSON.stringify(
+			      typeof query == \\"object\\" ? query.map((s, index) => {
+			        return { sql: s, params: params[index] };
+			      }) : {
+			        sql: query,
+			        params
+			      }
+			    );
+			    const response = await this.binding.fetch(new URL(endpoint, \\"http://d1\\"), {
+			      method: \\"POST\\",
+			      headers: {
+			        \\"content-type\\": \\"application/json\\"
+			      },
+			      body
+			    });
+			    try {
+			      const answer = await response.json();
+			      if (answer.error && dothrow) {
+			        const err = answer;
+			        throw new Error(\\"D1_ERROR\\", { cause: new Error(err.error) });
+			      } else {
+			        return Array.isArray(answer) ? answer.map((r) => mapD1Result(r)) : mapD1Result(answer);
+			      }
+			    } catch (e) {
+			      const error = e;
+			      throw new Error(\\"D1_ERROR\\", {
+			        cause: new Error(\`\${error.cause}\` || \\"Something went wrong\\")
+			      });
+			    }
+			  }
+			};
+			var D1PreparedStatement = class {
+			  constructor(database, statement, params = []) {
+			    this.database = database;
+			    this.statement = statement;
+			    this.params = params;
+			  }
+			  bind(...values) {
+			    for (var r in values) {
+			      const value = values[r];
+			      switch (typeof value) {
+			        case \\"number\\":
+			        case \\"string\\":
+			          break;
+			        case \\"object\\":
+			          if (value == null)
+			            break;
+			          if (Array.isArray(value) && value.map((b) => {
+			            return typeof b == \\"number\\" && b >= 0 && b < 256 ? 1 : 0;
+			          }).indexOf(0) == -1)
+			            break;
+			          if (value instanceof ArrayBuffer) {
+			            values[r] = Array.from(new Uint8Array(value));
+			            break;
+			          }
+			          if (ArrayBuffer.isView(value)) {
+			            values[r] = Array.from(new Uint8Array(value.buffer));
+			            break;
+			          }
+			        default:
+			          throw new Error(\\"D1_TYPE_ERROR\\", {
+			            cause: new Error(
+			              \\"Type '\\" + typeof value + \\"' not supported for value '\\" + value + \\"'\\"
+			            )
+			          });
+			      }
+			    }
+			    return new D1PreparedStatement(this.database, this.statement, values);
+			  }
+			  async first(colName) {
+			    const info = firstIfArray(
+			      await this.database._send(\\"/query\\", this.statement, this.params)
+			    );
+			    const results = info.results;
+			    if (colName !== void 0) {
+			      if (results.length > 0 && results[0][colName] === void 0) {
+			        throw new Error(\\"D1_COLUMN_NOTFOUND\\", {
+			          cause: new Error(\\"Column not found\\")
+			        });
+			      }
+			      return results.length < 1 ? null : results[0][colName];
+			    } else {
+			      return results.length < 1 ? null : results[0];
+			    }
+			  }
+			  async run() {
+			    return firstIfArray(
+			      await this.database._send(\\"/execute\\", this.statement, this.params)
+			    );
+			  }
+			  async all() {
+			    return firstIfArray(
+			      await this.database._send(\\"/query\\", this.statement, this.params)
+			    );
+			  }
+			  async raw() {
+			    const s = firstIfArray(
+			      await this.database._send(\\"/query\\", this.statement, this.params)
+			    );
+			    const raw = [];
+			    for (var r in s.results) {
+			      const entry = Object.keys(s.results[r]).map((k) => {
+			        return s.results[r][k];
+			      });
+			      raw.push(entry);
+			    }
+			    return raw;
+			  }
+			};
+			function firstIfArray(results) {
+			  return Array.isArray(results) ? results[0] : results;
+			}
+			function mapD1Result(result) {
+			  let map = {
+			    results: result.results || [],
+			    success: result.success === void 0 ? true : result.success,
+			    meta: result.meta || {}
+			  };
+			  result.error && (map.error = result.error);
+			  return map;
+			}
+			var D1_BETA_PREFIX = \`__D1_BETA__\`;
+			var envMap = /* @__PURE__ */ new Map();
+			function getMaskedEnv(env) {
+			  if (envMap.has(env))
+			    return envMap.get(env);
+			  const newEnv = new Map(Object.entries(env));
+			  D1_IMPORTS.filter(
+			    (bindingName) => bindingName.startsWith(D1_BETA_PREFIX)
+			  ).forEach((bindingName) => {
+			    newEnv.delete(bindingName);
+			    const newName = bindingName.slice(D1_BETA_PREFIX.length);
+			    const newBinding = new D1Database(env[bindingName]);
+			    newEnv.set(newName, newBinding);
+			  });
+			  const newEnvObj = Object.fromEntries(newEnv.entries());
+			  envMap.set(env, newEnvObj);
+			  return newEnvObj;
+			}
+			function wrap(env) {
+			  return getMaskedEnv(env);
+			}
+
+
+			var envWrappers = [wrap].filter(Boolean);
+			var facade = {
+			  ...src_default,
+			  envWrappers,
+			  middleware: [
+			    void 0,
+			    ...src_default.middleware ? src_default.middleware : []
+			  ].filter(Boolean)
+			};
+			var maskDurableObjectDefinition = (cls) => class extends cls {
+			  constructor(state, env) {
+			    let wrappedEnv = env;
+			    for (const wrapFn of envWrappers) {
+			      wrappedEnv = wrapFn(wrappedEnv);
+			    }
+			    super(state, wrappedEnv);
+			  }
+			};
+			var DurableObjectExample2 = maskDurableObjectDefinition(DurableObjectExample);
+			var middleware_insertion_facade_default = facade;
+
+
+			var __Facade_ScheduledController__ = class {
+			  constructor(scheduledTime, cron, noRetry) {
+			    this.scheduledTime = scheduledTime;
+			    this.cron = cron;
+			    this.#noRetry = noRetry;
+			  }
+			  #noRetry;
+			  noRetry() {
+			    if (!(this instanceof __Facade_ScheduledController__)) {
+			      throw new TypeError(\\"Illegal invocation\\");
+			    }
+			    this.#noRetry();
+			  }
+			};
+			var __facade_modules_fetch__ = function(request, env, ctx) {
+			  if (middleware_insertion_facade_default.fetch === void 0)
+			    throw new Error(\\"No fetch handler!\\");
+			  return middleware_insertion_facade_default.fetch(request, env, ctx);
+			};
+			function getMaskedEnv2(rawEnv) {
+			  let env = rawEnv;
+			  if (middleware_insertion_facade_default.envWrappers && middleware_insertion_facade_default.envWrappers.length > 0) {
+			    for (const wrapFn of middleware_insertion_facade_default.envWrappers) {
+			      env = wrapFn(env);
+			    }
+			  }
+			  return env;
+			}
+			var facade2 = {
+			  ...Object.fromEntries(
+			    Object.entries(middleware_insertion_facade_default).map(([trigger, handler]) => [
+			      trigger,
+			      (param, env, ctx) => {
+			        handler.call(middleware_insertion_facade_default, param, getMaskedEnv2(env), ctx);
+			      }
+			    ])
+			  ),
+			  fetch(request, rawEnv, ctx) {
+			    const env = getMaskedEnv2(rawEnv);
+			    if (middleware_insertion_facade_default.middleware && middleware_insertion_facade_default.middleware.length > 0) {
+			      for (const middleware of middleware_insertion_facade_default.middleware) {
+			        __facade_register__(middleware);
+			      }
+			      const __facade_modules_dispatch__ = function(type, init) {
+			        if (type === \\"scheduled\\" && middleware_insertion_facade_default.scheduled !== void 0) {
+			          const controller = new __Facade_ScheduledController__(
+			            Date.now(),
+			            init.cron ?? \\"\\",
+			            () => {
+			            }
+			          );
+			          return middleware_insertion_facade_default.scheduled(controller, env, ctx);
+			        }
+			      };
+			      return __facade_invoke__(
+			        request,
+			        env,
+			        ctx,
+			        __facade_modules_dispatch__,
+			        __facade_modules_fetch__
+			      );
+			    } else {
+			      return middleware_insertion_facade_default.fetch(request, env, ctx);
+			    }
+			  }
+			};
+			var middleware_loader_entry_default = facade2;
+			export {
+			  DurableObjectExample2 as DurableObjectExample,
+			  middleware_loader_entry_default as default
+			};
+			//# sourceMappingURL=index.js.map"
+		`);
 		});
 		it("should respond correctly with D1 databases, scheduled testing, and formatted dev errors", async () => {
 			jest.setTimeout(5_000);
@@ -1180,9 +1172,11 @@ export {
 				expect(await res.json()).toEqual([{ id: 1, value: "one" }]);
 				res = await worker.fetch("http://localhost/bad");
 				expect(res.status).toBe(500);
-				expect(res.headers.get("Content-Type")).toBe(
-					"text/html; charset=UTF-8"
-				);
+				// TODO: in miniflare 3 we don't have the `pretty-error` middleware implemented.
+				// instead it uses `middleware-miniflare3-json-error`, which outputs JSON rather than text.
+				// expect(res.headers.get("Content-Type")).toBe(
+				// 	"text/html; charset=UTF-8"
+				// );
 				expect(await res.text()).toContain("Not found!");
 			} finally {
 				await worker.stop();
