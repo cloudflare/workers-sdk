@@ -109,6 +109,25 @@ The code is checked for type errors by [TypeScript](https://www.typescriptlang.o
   ```
 - VS Code will also run type-checking while editing source code, providing immediate feedback.
 
+#### Changing TypeScript Version in VS Code's Command Palette
+
+For TypeScript to work properly in the Monorepo the version used in VSCode must be the project's current TypeScript version, follow these steps:
+
+1. Open the project in VSCode.
+
+2. Press `Ctrl + Shift + P` (or `Cmd + Shift + P` on macOS) to open the command palette.
+
+3. In the command palette, type "Select TypeScript Version" and select the command with the same name that appears in the list.
+
+4. A submenu will appear with a list of available TypeScript versions. Choose the desired version you want to use for this project. If you have multiple versions installed, they will be listed here.
+
+- Selecting "Use Workspace Version" will use the version of TypeScript installed in the project's `node_modules` directory.
+
+5. After selecting the TypeScript version, VSCode will reload the workspace using the chosen version.
+
+Now you have successfully switched the TypeScript version used within the project via the command palette in VSCode.
+Remember that this change is specific to the current project and will not affect other projects or the default TypeScript version used by VSCode.
+
 ### Linting
 
 The code is checked for linting errors by [ESLint](https://eslint.org/).
