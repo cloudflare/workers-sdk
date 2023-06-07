@@ -16,7 +16,7 @@ import {
 	buildRawWorker,
 	traverseAndBuildWorkerJSDirectory,
 } from "./functions/buildWorker";
-import { pagesBetaWarning } from "./utils";
+
 import type { BundleResult } from "../bundle";
 import type {
 	CommonYargsArgv,
@@ -106,13 +106,12 @@ export function Options(yargs: CommonYargsArgv) {
 				hidden: true,
 			},
 		})
-		.epilogue(pagesBetaWarning);
 }
 
 export const Handler = async (args: PagesBuildArgs) => {
 	if (!isInPagesCI) {
 		// Beta message for `wrangler pages <commands>` usage
-		logger.log(pagesBetaWarning);
+		;
 	}
 
 	const validatedArgs = validateArgs(args);

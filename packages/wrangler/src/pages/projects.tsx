@@ -11,7 +11,7 @@ import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
-import { pagesBetaWarning } from "./utils";
+
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -19,7 +19,7 @@ import type {
 import type { PagesConfigCache, Project } from "./types";
 
 export function ListOptions(yargs: CommonYargsArgv) {
-	return yargs.epilogue(pagesBetaWarning);
+	return yargs
 }
 
 export async function ListHandler() {
@@ -99,7 +99,7 @@ export function CreateOptions(yargs: CommonYargsArgv) {
 				requiresArg: true,
 			},
 		})
-		.epilogue(pagesBetaWarning);
+
 }
 
 export async function CreateHandler({
@@ -201,7 +201,7 @@ export function DeleteOptions(yargs: CommonYargsArgv) {
 				description: 'Answer "yes" to confirm project deletion',
 			},
 		})
-		.epilogue(pagesBetaWarning);
+
 }
 
 export async function DeleteHandler(

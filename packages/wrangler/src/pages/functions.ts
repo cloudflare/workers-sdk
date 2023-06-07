@@ -5,7 +5,7 @@ import { logger } from "../logger";
 import { isInPagesCI } from "./constants";
 import { optimizeRoutesJSONSpec } from "./functions/routes-transformation";
 import { validateRoutes } from "./functions/routes-validation";
-import { pagesBetaWarning } from "./utils";
+
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -39,7 +39,7 @@ export async function OptimizeRoutesHandler({
 }: OptimizeRoutesArgs) {
 	if (!isInPagesCI) {
 		// Beta message for `wrangler pages <commands>` usage
-		logger.log(pagesBetaWarning);
+		;
 	}
 
 	let routesFileContents: string;

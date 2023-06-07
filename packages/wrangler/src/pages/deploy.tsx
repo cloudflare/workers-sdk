@@ -13,7 +13,7 @@ import { requireAuth } from "../user";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { listProjects } from "./projects";
 import { promptSelectProject } from "./prompt-select-project";
-import { pagesBetaWarning } from "./utils";
+
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -72,7 +72,6 @@ export function Options(yargs: CommonYargsArgv) {
 				hidden: true,
 			},
 		})
-		.epilogue(pagesBetaWarning);
 }
 
 export const Handler = async ({

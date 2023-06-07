@@ -10,7 +10,7 @@ import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { promptSelectProject } from "./prompt-select-project";
-import { pagesBetaWarning } from "./utils";
+
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -28,7 +28,7 @@ export function ListOptions(yargs: CommonYargsArgv) {
 					"The name of the project you would like to list deployments for",
 			},
 		})
-		.epilogue(pagesBetaWarning);
+
 }
 
 export async function ListHandler({ projectName }: ListArgs) {
