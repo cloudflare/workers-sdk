@@ -19,7 +19,7 @@ import type {
 import type { PagesConfigCache, Project } from "./types";
 
 export function ListOptions(yargs: CommonYargsArgv) {
-	return yargs
+	return yargs;
 }
 
 export async function ListHandler() {
@@ -98,8 +98,7 @@ export function CreateOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 			},
-		})
-
+		});
 }
 
 export async function CreateHandler({
@@ -200,8 +199,7 @@ export function DeleteOptions(yargs: CommonYargsArgv) {
 				type: "boolean",
 				description: 'Answer "yes" to confirm project deletion',
 			},
-		})
-
+		});
 }
 
 export async function DeleteHandler(

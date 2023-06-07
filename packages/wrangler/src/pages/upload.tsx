@@ -46,8 +46,7 @@ export function Options(yargs: CommonYargsArgv) {
 				type: "boolean",
 				description: "Skip asset caching which speeds up builds",
 			},
-		})
-
+		});
 }
 
 export const Handler = async ({

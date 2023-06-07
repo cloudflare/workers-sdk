@@ -104,7 +104,7 @@ export function Options(yargs: CommonYargsArgv) {
 				deprecated: true,
 				hidden: true,
 			},
-		})
+		});
 }
 
 export const Handler = async (args: PagesBuildArgs) => {

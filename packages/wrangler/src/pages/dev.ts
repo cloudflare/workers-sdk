@@ -155,8 +155,7 @@ export function Options(yargs: CommonYargsArgv) {
 				choices: ["debug", "info", "log", "warn", "error", "none"] as const,
 				describe: "Specify logging level",
 			},
-		})
-
+		});
 }
 
 export const Handler = async ({

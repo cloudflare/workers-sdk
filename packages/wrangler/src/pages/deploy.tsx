@@ -71,7 +71,7 @@ export function Options(yargs: CommonYargsArgv) {
 				type: "string",
 				hidden: true,
 			},
-		})
+		});
 }
 
 export const Handler = async ({
