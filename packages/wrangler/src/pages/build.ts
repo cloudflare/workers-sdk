@@ -5,7 +5,6 @@ import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { buildFunctions } from "./buildFunctions";
-import { isInPagesCI } from "./constants";
 import {
 	EXIT_CODE_FUNCTIONS_NOTHING_TO_BUILD_ERROR,
 	EXIT_CODE_FUNCTIONS_NO_ROUTES_ERROR,
@@ -109,11 +108,6 @@ export function Options(yargs: CommonYargsArgv) {
 }
 
 export const Handler = async (args: PagesBuildArgs) => {
-	if (!isInPagesCI) {
-		// Beta message for `wrangler pages <commands>` usage
-		;
-	}
-
 	const validatedArgs = validateArgs(args);
 
 	let bundle: BundleResult | undefined = undefined;

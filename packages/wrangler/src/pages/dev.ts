@@ -184,9 +184,6 @@ export const Handler = async ({
 	_: [_pages, _dev, ...remaining],
 	logLevel,
 }: StrictYargsOptionsToInterface<typeof Options>) => {
-	// Beta message for `wrangler pages <commands>` usage
-	;
-
 	if (logLevel) {
 		logger.loggerLevel = logLevel;
 	}
