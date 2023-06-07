@@ -840,11 +840,11 @@ describe("middleware", () => {
 			    if (response.status !== 200) {
 			      try {
 			        const err = await response.json();
-			        throw new Error(\\"D1_DUMP_ERROR\\", {
+			        throw new Error(\`D1_DUMP_ERROR: \${err.error}\`, {
 			          cause: new Error(err.error)
 			        });
 			      } catch (e) {
-			        throw new Error(\\"D1_DUMP_ERROR\\", {
+			        throw new Error(\`D1_DUMP_ERROR: Status + \${response.status}\`, {
 			          cause: new Error(\\"Status \\" + response.status)
 			        });
 			      }
@@ -867,11 +867,14 @@ describe("middleware", () => {
 			      return r.error ? 1 : 0;
 			    }).indexOf(1);
 			    if (error !== -1) {
-			      throw new Error(\\"D1_EXEC_ERROR\\", {
-			        cause: new Error(
-			          \\"Error in line \\" + (error + 1) + \\": \\" + lines[error] + \\": \\" + exec[error].error
-			        )
-			      });
+			      throw new Error(
+			        \`D1_EXEC_ERROR: Error in line \${error + 1}: \${lines[error]}: \${exec[error].error}\`,
+			        {
+			          cause: new Error(
+			            \\"Error in line \\" + (error + 1) + \\": \\" + lines[error] + \\": \\" + exec[error].error
+			          )
+			        }
+			      );
 			    } else {
 			      return {
 			        count: exec.length,
@@ -901,13 +904,15 @@ describe("middleware", () => {
 			      const answer = await response.json();
 			      if (answer.error && dothrow) {
 			        const err = answer;
-			        throw new Error(\\"D1_ERROR\\", { cause: new Error(err.error) });
+			        throw new Error(\`D1_ERROR: \${err.error}\`, {
+			          cause: new Error(err.error)
+			        });
 			      } else {
 			        return Array.isArray(answer) ? answer.map((r) => mapD1Result(r)) : mapD1Result(answer);
 			      }
 			    } catch (e) {
 			      const error = e;
-			      throw new Error(\\"D1_ERROR\\", {
+			      throw new Error(\`D1_ERROR: \${error.cause || \\"Something went wrong\\"}\`, {
 			        cause: new Error(\`\${error.cause}\` || \\"Something went wrong\\")
 			      });
 			    }
@@ -942,11 +947,14 @@ describe("middleware", () => {
 			            break;
 			          }
 			        default:
-			          throw new Error(\\"D1_TYPE_ERROR\\", {
-			            cause: new Error(
-			              \\"Type '\\" + typeof value + \\"' not supported for value '\\" + value + \\"'\\"
-			            )
-			          });
+			          throw new Error(
+			            \`D1_TYPE_ERROR: Type '\${typeof value}' not supported for value '\${value}'\`,
+			            {
+			              cause: new Error(
+			                \`Type '\${typeof value}' not supported for value '\${value}'\`
+			              )
+			            }
+			          );
 			      }
 			    }
 			    return new D1PreparedStatement(this.database, this.statement, values);
@@ -958,7 +966,7 @@ describe("middleware", () => {
 			    const results = info.results;
 			    if (colName !== void 0) {
 			      if (results.length > 0 && results[0][colName] === void 0) {
-			        throw new Error(\\"D1_COLUMN_NOTFOUND\\", {
+			        throw new Error(\`D1_COLUMN_NOTFOUND: Column not found (\${colName})\`, {
 			          cause: new Error(\\"Column not found\\")
 			        });
 			      }
@@ -1077,14 +1085,21 @@ describe("middleware", () => {
 			  return env;
 			}
 			var facade2 = {
-			  ...Object.fromEntries(
-			    Object.entries(middleware_insertion_facade_default).map(([trigger, handler]) => [
-			      trigger,
-			      (param, env, ctx) => {
-			        handler.call(middleware_insertion_facade_default, param, getMaskedEnv2(env), ctx);
-			      }
-			    ])
-			  ),
+			  ...middleware_insertion_facade_default.tail && {
+			    tail: maskHandlerEnv(middleware_insertion_facade_default.tail)
+			  },
+			  ...middleware_insertion_facade_default.trace && {
+			    trace: maskHandlerEnv(middleware_insertion_facade_default.trace)
+			  },
+			  ...middleware_insertion_facade_default.scheduled && {
+			    scheduled: maskHandlerEnv(middleware_insertion_facade_default.scheduled)
+			  },
+			  ...middleware_insertion_facade_default.queue && {
+			    queue: maskHandlerEnv(middleware_insertion_facade_default.queue)
+			  },
+			  ...middleware_insertion_facade_default.test && {
+			    test: maskHandlerEnv(middleware_insertion_facade_default.test)
+			  },
 			  fetch(request, rawEnv, ctx) {
 			    const env = getMaskedEnv2(rawEnv);
 			    if (middleware_insertion_facade_default.middleware && middleware_insertion_facade_default.middleware.length > 0) {
@@ -1114,6 +1129,9 @@ describe("middleware", () => {
 			    }
 			  }
 			};
+			function maskHandlerEnv(handler) {
+			  return (data, env, ctx) => handler(data, getMaskedEnv2(env), ctx);
+			}
 			var middleware_loader_entry_default = facade2;
 			export {
 			  DurableObjectExample2 as DurableObjectExample,
