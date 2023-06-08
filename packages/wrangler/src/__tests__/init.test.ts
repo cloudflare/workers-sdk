@@ -82,28 +82,48 @@ describe("init", () => {
 			});
 		});
 
-		test("with -y flag, delegates to c3 with --wrangler-defaults", async () => {
-			await runWrangler("init --yes");
-
-			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Running \`mockpm create cloudflare@2 -- --wrangler-defaults\`...",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 -- --wrangler-defaults\` instead.[0m
-
-			  The \`init\` command will be removed in a future version.
-
-			",
-			}
-		`);
+		it("should initialize with no interactive prompts if `-y` is used", async () => {
+			await runWrangler("init -y");
 
 			expect(execa).toHaveBeenCalledWith(
 				"mockpm",
 				["create", "cloudflare@2", "--", "--wrangler-defaults"],
 				{ stdio: "inherit" }
 			);
+
+			checkFiles({
+				items: {
+					"./src/index.js": false,
+					"./src/index.ts": true,
+					"./tsconfig.json": true,
+					"./package.json": true,
+					"./wrangler.toml": true,
+				},
+			});
+
+			expect(std).toMatchInlineSnapshot(`
+        Object {
+          "debug": "",
+          "err": "",
+          "info": "Your project will use Vitest to run your tests.",
+          "out": "✨ Created wrangler.toml
+        ✨ Initialized git repository
+        ✨ Created package.json
+        ✨ Created tsconfig.json
+        ✨ Created src/index.ts
+        ✨ Created src/index.test.ts
+        ✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
+
+        To start developing your Worker, run \`npm start\`
+        To start testing your Worker, run \`npm test\`
+        To publish your Worker to the Internet, run \`npm run deploy\`",
+          "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 -- --wrangler-defaults\` instead.[0m
+
+          The \`init\` command will be removed in a future version.
+
+        ",
+        }
+    `);
 		});
 	});
 
