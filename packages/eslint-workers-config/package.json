@@ -5,7 +5,7 @@
 	"description": "ESLint config for workers-sdk",
 	"main": "index.js",
 	"dependencies": {
-		"eslint": "^8.40.0",
+		"eslint": "^8.42.0",
 		"eslint-config-turbo": "latest",
 		"eslint-plugin-import": "2.26.x",
 		"eslint-plugin-no-only-tests": "^3.1.0",
