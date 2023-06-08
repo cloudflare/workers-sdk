@@ -121,10 +121,14 @@ describe("Preview Worker", () => {
 		expect(resp.headers.get("location")).toMatchInlineSnapshot(
 			'"/hello?world"'
 		);
-		expect(removeUUID(resp.headers.get("set-cookie"))).toMatchInlineSnapshot(
+		expect(
+			removeUUID(resp.headers.get("set-cookie") ?? "")
+		).toMatchInlineSnapshot(
 			'"token=00000000-0000-0000-0000-000000000000; Domain=preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None"'
 		);
-		tokenId = resp.headers.get("set-cookie").split(";")[0].split("=")[1];
+		tokenId = (resp.headers.get("set-cookie") ?? "")
+			.split(";")[0]
+			.split("=")[1];
 		resp = await worker.fetch(
 			`https://random-data.preview.devprod.cloudflare.dev`,
 			{
@@ -135,7 +139,7 @@ describe("Preview Worker", () => {
 			}
 		);
 
-		const json = await resp.json();
+		const json = (await resp.json()) as any;
 
 		expect(
 			json.headers.find(([h]: [string]) => h === "cf-workers-preview-token")[1]
@@ -159,10 +163,14 @@ describe("Preview Worker", () => {
 		expect(resp.headers.get("location")).toMatchInlineSnapshot(
 			'"/hello?world"'
 		);
-		expect(removeUUID(resp.headers.get("set-cookie"))).toMatchInlineSnapshot(
+		expect(
+			removeUUID(resp.headers.get("set-cookie") ?? "")
+		).toMatchInlineSnapshot(
 			'"token=00000000-0000-0000-0000-000000000000; Domain=preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None"'
 		);
-		tokenId = resp.headers.get("set-cookie").split(";")[0].split("=")[1];
+		tokenId = (resp.headers.get("set-cookie") ?? "")
+			.split(";")[0]
+			.split("=")[1];
 	});
 
 	it("should convert cookie to header", async () => {
