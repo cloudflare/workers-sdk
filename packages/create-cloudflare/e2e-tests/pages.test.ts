@@ -34,6 +34,8 @@ describe("E2E", () => {
 			"webFramework",
 			"--framework",
 			framework,
+			"--no-deploy",
+			"--no-git",
 			"--wrangler-defaults",
 		];
 
