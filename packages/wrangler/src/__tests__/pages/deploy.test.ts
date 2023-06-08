@@ -49,30 +49,28 @@ describe("deployment create", () => {
 		await endEventLoop();
 
 		expect(std.out).toMatchInlineSnapshot(`
-		    "wrangler pages deploy [directory]
+		"wrangler pages deploy [directory]
 
-		    🆙 Deploy a directory of static assets as a Pages deployment
+		🆙 Deploy a directory of static assets as a Pages deployment
 
-		    Positionals:
-		      directory  The directory of static files to upload  [string]
+		Positionals:
+		  directory  The directory of static files to upload  [string]
 
-		    Flags:
-		      -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-		      -e, --env                       Environment to use for operations and .env files  [string]
-		      -h, --help                      Show help  [boolean]
-		      -v, --version                   Show version number  [boolean]
+		Flags:
+		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+		  -e, --env                       Environment to use for operations and .env files  [string]
+		  -h, --help                      Show help  [boolean]
+		  -v, --version                   Show version number  [boolean]
 
-		    Options:
-		          --project-name    The name of the project you want to deploy to  [string]
-		          --branch          The name of the branch you want to deploy to  [string]
-		          --commit-hash     The SHA to attach to this deployment  [string]
-		          --commit-message  The commit message to attach to this deployment  [string]
-		          --commit-dirty    Whether or not the workspace should be considered dirty for this deployment  [boolean]
-		          --skip-caching    Skip asset caching which speeds up builds  [boolean]
-		          --no-bundle       Whether to run bundling on \`_worker.js\` before deploying  [boolean] [default: false]
-
-		    🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
-	  `);
+		Options:
+		      --project-name    The name of the project you want to deploy to  [string]
+		      --branch          The name of the branch you want to deploy to  [string]
+		      --commit-hash     The SHA to attach to this deployment  [string]
+		      --commit-message  The commit message to attach to this deployment  [string]
+		      --commit-dirty    Whether or not the workspace should be considered dirty for this deployment  [boolean]
+		      --skip-caching    Skip asset caching which speeds up builds  [boolean]
+		      --no-bundle       Whether to run bundling on \`_worker.js\` before deploying  [boolean] [default: false]"
+	`);
 	});
 
 	it("should upload a directory of files", async () => {

@@ -8,9 +8,6 @@ export const CLEANUP = () => {
 	RUNNING_BUILDERS.forEach((builder) => builder.stop?.());
 };
 
-export const pagesBetaWarning =
-	"🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose";
-
 export function isUrl(maybeUrl?: string): maybeUrl is string {
 	if (!maybeUrl) return false;
 
