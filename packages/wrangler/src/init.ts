@@ -270,7 +270,7 @@ export async function initHandler(args: InitArgs) {
 			if (args.delegateC3) {
 				logger.log(`Running ${replacementC3Command}...`);
 
-				await execa(packageManager.type, ["create", "cloudflare@2"], {
+				await execa(packageManager.type, c3Arguments, {
 					stdio: "inherit",
 				});
 
