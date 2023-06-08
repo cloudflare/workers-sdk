@@ -210,7 +210,6 @@ function useLocalWorker(props: LocalProps) {
 					typeof error === "object" &&
 					error !== null &&
 					"code" in error &&
-					// @ts-expect-error `error.code` should be typed `unknown`, fixed in TS 4.9
 					error.code === "ERR_RUNTIME_FAILURE"
 				) {
 					// Don't log a full verbose stack-trace when Miniflare 3's workerd instance fails to start.

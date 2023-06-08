@@ -25,7 +25,7 @@ import type {
 import type { Deployment, PagesConfigCache } from "./types";
 
 const statusChoices = ["ok", "error", "canceled"] as const;
-type StatusChoice = typeof statusChoices[number];
+type StatusChoice = (typeof statusChoices)[number];
 const isStatusChoiceList = (
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	data?: any[]
