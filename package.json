@@ -19,6 +19,7 @@
 		"check:format": "prettier . --check --ignore-unknown",
 		"check:lint": "turbo check:lint",
 		"check:type": "turbo check:type type:tests",
+		"dev": "turbo dev",
 		"fix": "npm run prettify && eslint --fix",
 		"postinstall": "patch-package",
 		"prettify": "prettier . --write --ignore-unknown",
