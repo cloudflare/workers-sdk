@@ -21,7 +21,7 @@ import {
 	MAX_UPLOAD_ATTEMPTS,
 } from "./constants";
 import { hashFile } from "./hash";
-import { pagesBetaWarning } from "./utils";
+
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -46,8 +46,7 @@ export function Options(yargs: CommonYargsArgv) {
 				type: "boolean",
 				description: "Skip asset caching which speeds up builds",
 			},
-		})
-		.epilogue(pagesBetaWarning);
+		});
 }
 
 export const Handler = async ({

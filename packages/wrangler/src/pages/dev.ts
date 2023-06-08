@@ -19,7 +19,7 @@ import {
 	traverseAndBuildWorkerJSDirectory,
 } from "./functions/buildWorker";
 import { validateRoutes } from "./functions/routes-validation";
-import { CLEANUP, CLEANUP_CALLBACKS, pagesBetaWarning } from "./utils";
+import { CLEANUP, CLEANUP_CALLBACKS } from "./utils";
 import type { AdditionalDevProps } from "../dev";
 import type { CfModule } from "../worker";
 import type {
@@ -155,8 +155,7 @@ export function Options(yargs: CommonYargsArgv) {
 				choices: ["debug", "info", "log", "warn", "error", "none"] as const,
 				describe: "Specify logging level",
 			},
-		})
-		.epilogue(pagesBetaWarning);
+		});
 }
 
 export const Handler = async ({
@@ -184,9 +183,6 @@ export const Handler = async ({
 	_: [_pages, _dev, ...remaining],
 	logLevel,
 }: StrictYargsOptionsToInterface<typeof Options>) => {
-	// Beta message for `wrangler pages <commands>` usage
-	logger.log(pagesBetaWarning);
-
 	if (logLevel) {
 		logger.loggerLevel = logLevel;
 	}

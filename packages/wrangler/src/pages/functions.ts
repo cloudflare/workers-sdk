@@ -1,11 +1,9 @@
 import { existsSync, lstatSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { FatalError } from "../errors";
-import { logger } from "../logger";
-import { isInPagesCI } from "./constants";
 import { optimizeRoutesJSONSpec } from "./functions/routes-transformation";
 import { validateRoutes } from "./functions/routes-validation";
-import { pagesBetaWarning } from "./utils";
+
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -37,11 +35,6 @@ export async function OptimizeRoutesHandler({
 	routesPath,
 	outputRoutesPath,
 }: OptimizeRoutesArgs) {
-	if (!isInPagesCI) {
-		// Beta message for `wrangler pages <commands>` usage
-		logger.log(pagesBetaWarning);
-	}
-
 	let routesFileContents: string;
 	const routesOutputDirectory = path.dirname(outputRoutesPath);
 

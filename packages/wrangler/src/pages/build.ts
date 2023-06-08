@@ -5,7 +5,6 @@ import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { buildFunctions } from "./buildFunctions";
-import { isInPagesCI } from "./constants";
 import {
 	EXIT_CODE_FUNCTIONS_NOTHING_TO_BUILD_ERROR,
 	EXIT_CODE_FUNCTIONS_NO_ROUTES_ERROR,
@@ -16,7 +15,7 @@ import {
 	buildRawWorker,
 	traverseAndBuildWorkerJSDirectory,
 } from "./functions/buildWorker";
-import { pagesBetaWarning } from "./utils";
+
 import type { BundleResult } from "../bundle";
 import type {
 	CommonYargsArgv,
@@ -105,16 +104,10 @@ export function Options(yargs: CommonYargsArgv) {
 				deprecated: true,
 				hidden: true,
 			},
-		})
-		.epilogue(pagesBetaWarning);
+		});
 }
 
 export const Handler = async (args: PagesBuildArgs) => {
-	if (!isInPagesCI) {
-		// Beta message for `wrangler pages <commands>` usage
-		logger.log(pagesBetaWarning);
-	}
-
 	const validatedArgs = validateArgs(args);
 
 	let bundle: BundleResult | undefined = undefined;
