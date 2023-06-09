@@ -6,11 +6,11 @@ import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
 import { d1BetaWarning } from "./utils";
+import type { Database } from "./types";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Database } from "./types";
 
 export function Options(d1ListYargs: CommonYargsArgv) {
 	return d1ListYargs

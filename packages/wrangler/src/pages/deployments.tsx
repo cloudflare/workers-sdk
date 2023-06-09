@@ -11,11 +11,11 @@ import { renderToString } from "../utils/render";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { promptSelectProject } from "./prompt-select-project";
 
+import type { Deployment, PagesConfigCache } from "./types";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Deployment, PagesConfigCache } from "./types";
 
 type ListArgs = StrictYargsOptionsToInterface<typeof ListOptions>;
 

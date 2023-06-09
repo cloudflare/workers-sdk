@@ -20,13 +20,13 @@ import {
 } from "./functions/buildWorker";
 import { validateRoutes } from "./functions/routes-validation";
 import { CLEANUP, CLEANUP_CALLBACKS } from "./utils";
+import type { RoutesJSONSpec } from "./functions/routes-transformation";
 import type { AdditionalDevProps } from "../dev";
 import type { CfModule } from "../worker";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { RoutesJSONSpec } from "./functions/routes-transformation";
 
 const DURABLE_OBJECTS_BINDING_REGEXP = new RegExp(
 	/^(?<binding>[^=]+)=(?<className>[^@\s]+)(@(?<scriptName>.*)$)?$/

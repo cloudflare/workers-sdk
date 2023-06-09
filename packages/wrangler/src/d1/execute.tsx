@@ -23,12 +23,12 @@ import {
 	getDatabaseByNameOrBinding,
 	getDatabaseInfoFromConfig,
 } from "./utils";
+import type { Database } from "./types";
 import type { Config, ConfigFields, DevConfig, Environment } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Database } from "./types";
 import type { D1SuccessResponse } from "miniflare";
 
 export type QueryResult = {

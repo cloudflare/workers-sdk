@@ -16,14 +16,14 @@ import { localPropsToConfigBundle, maybeRegisterLocalWorker } from "./local";
 import { MiniflareServer } from "./miniflare";
 import { startRemoteServer } from "./remote";
 import { validateDevProps } from "./validate-dev-props";
+import type { DevProps, DirectorySyncResult } from "./dev";
+import type { LocalProps } from "./local";
+import type { EsbuildBundle } from "./use-esbuild";
 import type { Config } from "../config";
 import type { DurableObjectBindings } from "../config/environment";
 import type { WorkerRegistry } from "../dev-registry";
 import type { Entry } from "../entry";
 import type { CfModule } from "../worker";
-import type { DevProps, DirectorySyncResult } from "./dev";
-import type { LocalProps } from "./local";
-import type { EsbuildBundle } from "./use-esbuild";
 
 export async function startDevServer(
 	props: DevProps & {
