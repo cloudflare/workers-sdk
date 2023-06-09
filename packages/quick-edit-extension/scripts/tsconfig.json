@@ -1,5 +1,5 @@
 {
-	"extends": "workers-tsconfig/tsconfig.json",
+	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
 	"compilerOptions": {
 		"module": "CommonJS",
 		"types": ["node"]
