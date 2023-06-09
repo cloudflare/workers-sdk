@@ -16,7 +16,7 @@
 			"dependsOn": ["^topological"]
 		},
 		"check:type": {
-			"dependsOn": ["^build"]
+			"dependsOn": ["^topological"]
 		},
 		"topological": {
 			"dependsOn": ["^topological"]
