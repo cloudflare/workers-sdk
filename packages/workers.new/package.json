@@ -8,9 +8,9 @@
 		"dev": "wrangler dev src/index.ts --local"
 	},
 	"devDependencies": {
+		"@cloudflare/eslint-config-worker": "*",
+		"@cloudflare/workers-tsconfig": "*",
 		"@cloudflare/workers-types": "^3.0.0",
-		"eslint-config-worker": "*",
-		"workers-tsconfig": "*",
 		"wrangler": "*"
 	}
 }

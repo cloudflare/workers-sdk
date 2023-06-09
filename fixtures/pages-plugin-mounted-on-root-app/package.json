@@ -13,10 +13,10 @@
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "*",
 		"@cloudflare/workers-types": "^4.20221111.1",
 		"pages-plugin-example": "*",
 		"undici": "^5.9.1",
-		"workers-tsconfig": "*",
 		"wrangler": "*"
 	},
 	"engines": {

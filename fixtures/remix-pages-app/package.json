@@ -21,6 +21,7 @@
 		"react-dom": "^17.0.2"
 	},
 	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "*",
 		"@cloudflare/workers-types": "^3.18.0",
 		"@remix-run/cloudflare": "^1.16.1",
 		"@remix-run/dev": "^1.16.1",
@@ -32,7 +33,6 @@
 		"npm-run-all": "^4.1.5",
 		"remix": "^1.14.3",
 		"typescript": "^4.8.4",
-		"workers-tsconfig": "*",
 		"wrangler": "*"
 	},
 	"engines": {

@@ -16,10 +16,10 @@
 		"jszip": "^3.7.1"
 	},
 	"devDependencies": {
+		"@cloudflare/eslint-config-worker": "*",
+		"@cloudflare/workers-tsconfig": "*",
 		"@cloudflare/workers-types": "^4.20221111.1",
-		"eslint-config-worker": "*",
 		"typescript": "^4.5.5",
-		"workers-tsconfig": "*",
 		"wrangler": "*"
 	}
 }

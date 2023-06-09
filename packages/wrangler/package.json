@@ -111,7 +111,9 @@
 		"xxhash-wasm": "^1.0.1"
 	},
 	"devDependencies": {
+		"@cloudflare/eslint-config-worker": "*",
 		"@cloudflare/types": "^6.18.4",
+		"@cloudflare/workers-tsconfig": "*",
 		"@cloudflare/workers-types": "^4.20230511.0",
 		"@iarna/toml": "^3.0.0",
 		"@microsoft/api-extractor": "^7.28.3",
@@ -139,7 +141,6 @@
 		"concurrently": "^7.2.2",
 		"devtools-protocol": "^0.0.955664",
 		"dotenv": "^16.0.0",
-		"eslint-config-worker": "*",
 		"execa": "^6.1.0",
 		"express": "^4.18.1",
 		"finalhandler": "^1.2.0",
@@ -181,7 +182,6 @@
 		"undici": "5.20.0",
 		"update-check": "^1.5.4",
 		"vitest": "^0.31.0",
-		"workers-tsconfig": "*",
 		"ws": "^8.5.0",
 		"xdg-app-paths": "^7.3.0",
 		"yargs": "^17.4.1",
