@@ -1,6 +1,6 @@
 {
 	"name": "eslint-config-worker",
-	"version": "0.0.0",
+	"version": "0.0.1",
 	"private": true,
 	"description": "ESLint config for workers-sdk",
 	"main": "index.js",
