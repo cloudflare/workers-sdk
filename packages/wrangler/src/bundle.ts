@@ -570,7 +570,9 @@ async function applyMiddlewareLoaderFacade(
 	const imports = middlewareIdentifiers
 		.map(
 			([id, middlewarePath]) =>
-				/*javascript*/ `import * as ${id} from "${middlewarePath}";`
+				/*javascript*/ `import * as ${id} from "${prepareFilePath(
+					middlewarePath
+				)}";`
 		)
 		.join("\n");
 
@@ -595,7 +597,7 @@ async function applyMiddlewareLoaderFacade(
 		await fs.promises.writeFile(
 			dynamicFacadePath,
 			dedent/*javascript*/ `
-				import worker, * as OTHER_EXPORTS from "${entry.file}";
+				import worker, * as OTHER_EXPORTS from "${prepareFilePath(entry.file)}";
 				${imports}
 				const envWrappers = [${middlewareWrappers}].filter(Boolean);
 				const facade = {
@@ -606,7 +608,7 @@ async function applyMiddlewareLoaderFacade(
 						...(worker.middleware ? worker.middleware : []),
 					].filter(Boolean)
 				}
-				export * from "${entry.file}";
+				export * from "${prepareFilePath(entry.file)}";
 
 				const maskDurableObjectDefinition = (cls) =>
 					class extends cls {
@@ -635,10 +637,12 @@ async function applyMiddlewareLoaderFacade(
 
 		const baseLoader = await fs.promises.readFile(loaderPath, "utf-8");
 		const transformedLoader = baseLoader
-			.replaceAll("__ENTRY_POINT__", dynamicFacadePath)
+			.replaceAll("__ENTRY_POINT__", prepareFilePath(dynamicFacadePath))
 			.replace(
 				"./common",
-				path.resolve(getBasePath(), "templates/middleware/common.ts")
+				prepareFilePath(
+					path.resolve(getBasePath(), "templates/middleware/common.ts")
+				)
 			);
 
 		await fs.promises.writeFile(targetPathLoader, transformedLoader);
@@ -656,7 +660,7 @@ async function applyMiddlewareLoaderFacade(
 		await fs.promises.writeFile(
 			dynamicFacadePath,
 			dedent/*javascript*/ `
-				import { __facade_registerInternal__ } from "${loaderSwPath}";
+				import { __facade_registerInternal__ } from "${prepareFilePath(loaderSwPath)}";
 				${imports}
 				__facade_registerInternal__([${middlewareFns}])
 			`
@@ -691,3 +695,15 @@ export function dedupeModulesByName(modules: CfModule[]): CfModule[] {
 }
 
 type ValueOf<T> = T[keyof T];
+
+/**
+ * Process the given file path to ensure it will work on all OSes.
+ *
+ * Windows paths contain backslashes, which are taken to be escape characters
+ * when inserted directly into source code.
+ * This function will escape these backslashes to make sure they work in all OSes.
+ *
+ */
+function prepareFilePath(filePath: string): string {
+	return JSON.stringify(filePath).slice(1, -1);
+}
