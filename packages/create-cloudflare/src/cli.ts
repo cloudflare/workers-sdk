@@ -19,8 +19,12 @@ export const main = async (argv: string[]) => {
 
 	const validatedArgs: PagesGeneratorArgs = {
 		...args,
-		projectName: await validateName(args.projectName),
-		type: await validateType(args.type),
+		projectName: await validateName(args.projectName, {
+			acceptDefault: args.wranglerDefaults,
+		}),
+		type: await validateType(args.type, {
+			acceptDefault: args.wranglerDefaults,
+		}),
 	};
 
 	const { handler } = templateMap[validatedArgs.type];
