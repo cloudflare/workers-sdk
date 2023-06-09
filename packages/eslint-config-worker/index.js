@@ -1,15 +1,22 @@
 // Settings here should be considered Global ESLint settings for the monorepo. We don't need to define --config in each package.
-
 // https://eslint.org/docs/latest/use/configure/
 // https://eslint.org/docs/latest/use/configure/configuration-files#using-configuration-files
 // This can be in the form of a .eslintrc.* file or an eslintConfig field in a package.json file,
 // both of which ESLint will look for and read automatically, or you can specify a configuration file on the command line.
+/** @type {import("eslint").Linter.Config} */
 module.exports = {
-	ignorePatterns: ["**/node_modules/**", "examples", "**/templates/**"],
+	ignorePatterns: [
+		"**/node_modules/**",
+		"examples",
+		"**/templates/**",
+		".eslintrc.js",
+		"**/dist/**",
+	],
 	parser: "@typescript-eslint/parser",
 	parserOptions: {
-		ecmaVersion: 2020,
+		ecmaVersion: 2022,
 		sourceType: "module",
+		project: true,
 	},
 	settings: {
 		react: {
@@ -36,6 +43,7 @@ module.exports = {
 				"plugin:import/typescript",
 				"turbo",
 			],
+
 			rules: {
 				"no-empty": "off",
 				"no-empty-function": "off",
@@ -74,26 +82,6 @@ module.exports = {
 						varsIgnorePattern: "^_",
 						args: "after-used",
 						argsIgnorePattern: "^_",
-					},
-				],
-			},
-			parserOptions: {
-				project: ["./tsconfig.json"], // Specify it only for TypeScript files
-			},
-		},
-		{
-			files: "packages/wrangler/src/**/*.ts",
-			excludedFiles: "*.test.ts",
-			rules: {
-				"no-restricted-globals": [
-					"error",
-					{
-						name: "__dirname",
-						message: "Use `getBasePath()` instead.",
-					},
-					{
-						name: "__filename",
-						message: "Use `getBasePath()` instead.",
 					},
 				],
 			},

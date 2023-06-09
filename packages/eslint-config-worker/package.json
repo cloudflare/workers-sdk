@@ -1,5 +1,5 @@
 {
-	"name": "eslint-config-worker",
+	"name": "@cloudflare/eslint-config-worker",
 	"version": "0.0.1",
 	"private": true,
 	"description": "ESLint config for workers-sdk",

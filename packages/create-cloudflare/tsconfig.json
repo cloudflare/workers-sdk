@@ -1,4 +1,5 @@
 {
+	"root": true,
 	"extends": "workers-tsconfig/tsconfig.json",
 	"include": ["**/*.ts"],
 	"exclude": ["node_modules", "dist", "templates", "**/templates/**"],

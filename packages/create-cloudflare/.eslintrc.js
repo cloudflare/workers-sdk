@@ -1,5 +1,5 @@
 module.exports = {
 	root: true,
-	extends: ["worker"],
+	extends: ["@cloudflare/eslint-config-worker"],
 	ignorePatterns: ["dist", "scripts"],
 };
