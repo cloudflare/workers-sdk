@@ -1,6 +1,5 @@
 {
 	"$schema": "http://turbo.build/schema.json",
-
 	"pipeline": {
 		"wrangler#dev": {
 			"persistent": true,

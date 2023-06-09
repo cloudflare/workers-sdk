@@ -139,6 +139,7 @@ describe("Preview Worker", () => {
 			}
 		);
 
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- ignoring this test type error for sake of turborepo PR
 		const json = (await resp.json()) as any;
 
 		expect(
