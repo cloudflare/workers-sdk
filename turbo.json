@@ -16,7 +16,7 @@
 			"dependsOn": ["^topological"]
 		},
 		"check:type": {
-			"dependsOn": ["wrangler#build"]
+			"dependsOn": ["^build"]
 		},
 		"topological": {
 			"dependsOn": ["^topological"]
