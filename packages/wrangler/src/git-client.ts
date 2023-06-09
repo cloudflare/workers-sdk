@@ -3,7 +3,6 @@ import os from "node:os";
 import path from "node:path";
 import { execa } from "execa";
 import { findUp } from "find-up";
-import { copySync } from "fs-extra";
 import semiver from "semiver";
 
 /**
@@ -134,7 +133,7 @@ export async function cloneIntoDirectory(
 		// likely on a different filesystem, so we need to copy instead of rename
 		// and then remove the original directory
 		try {
-			copySync(templatePath, targetDirectory);
+			fs.cpSync(templatePath, targetDirectory);
 			fs.rmSync(templatePath, {
 				recursive: true,
 				force: true,
