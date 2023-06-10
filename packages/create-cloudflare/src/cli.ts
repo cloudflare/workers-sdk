@@ -126,7 +126,7 @@ const templateMap: Record<string, TemplateConfig> = {
 		handler: runWorkersGenerator,
 	},
 	chatgptPlugin: {
-		label: `ChatGPT plugin (TypeScript)`,
+		label: `ChatGPT plugin`,
 		handler: (args) =>
 			runWorkersGenerator({
 				...args,
