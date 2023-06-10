@@ -6,8 +6,6 @@
 <a href="https://discord.gg/CloudflareDev"><img alt="Discord" src="https://img.shields.io/discord/595317990191398933?color=%23F48120&style=flat-square"></a>
 </section>
 
-> This package is for wrangler v2.x, released first in May 2022. If you're looking for v1.x of the `@cloudflare/wrangler` package, visit https://www.npmjs.com/package/@cloudflare/wrangler / https://github.com/cloudflare/wrangler-legacy.
-
 `wrangler` is a command line tool for building [Cloudflare Workers](https://workers.cloudflare.com/).
 
 ## Quick Start
@@ -26,7 +24,7 @@ npx wrangler deploy index.js --name my-worker
 
 ```bash
 # Generate a new project
-npx wrangler init my-worker
+npx wrangler init my-worker --no-delegate-c3
 # try it out
 cd my-worker && npm run start
 # and then deploy it
