@@ -230,7 +230,7 @@ export const offerGit = async (ctx: PagesGeneratorContext) => {
 	if (insideGitRepo) return;
 
 	ctx.args.git ??= await confirmInput({
-		question: "Do you want to use git?",
+		question: "Do you want to use git for version control?",
 		renderSubmitted: (value: boolean) =>
 			`${brandColor("git")} ${dim(value ? `yes` : `no`)}`,
 		defaultValue: true,
