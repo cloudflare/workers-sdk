@@ -156,6 +156,7 @@ export default {
 							}
 							// user has overriden context.data, so we need to merge it with the existing data
 							Object.assign(data, value);
+							return true;
 						}
 						return Reflect.set(obj, prop, value);
 					},
