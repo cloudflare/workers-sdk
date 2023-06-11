@@ -292,4 +292,31 @@ describe.concurrent("Pages Functions", () => {
 			);
 		});
 	});
+
+	describe.concurrent("middleware data", () => {
+		it("allows middleware to set data", async ({ expect }) => {
+			const response = await fetch(
+				`http://${ip}:${port}/middleware-data/additional-data`
+			);
+
+			expect(response.status).toEqual(200);
+			const data = await response.json();
+			expect(data).toEqual({
+				foo: "bar",
+			});
+		});
+
+		it("allows middleware to mutate data", async ({ expect }) => {
+			const response = await fetch(
+				`http://${ip}:${port}/middleware-data/mutate-data`
+			);
+
+			expect(response.status).toEqual(200);
+			const data = await response.json();
+			expect(data).toEqual({
+				foo: "bar",
+				bar: "baz",
+			});
+		});
+	});
 });
