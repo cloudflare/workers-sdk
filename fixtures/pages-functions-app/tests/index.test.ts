@@ -292,4 +292,51 @@ describe.concurrent("Pages Functions", () => {
 			);
 		});
 	});
+
+	describe.concurrent("middleware data", () => {
+		it("allows middleware to set data", async ({ expect }) => {
+			const response = await fetch(
+				`http://${ip}:${port}/middleware-data/additional-data`
+			);
+
+			expect(response.status).toEqual(200);
+			const data = await response.json();
+			expect(data).toEqual({
+				foo: "bar",
+			});
+		});
+
+		it("allows middleware to mutate data", async ({ expect }) => {
+			const response = await fetch(
+				`http://${ip}:${port}/middleware-data/mutate-data`
+			);
+
+			expect(response.status).toEqual(200);
+			const data = await response.json();
+			expect(data).toEqual({
+				foo: "bar",
+				bar: "baz",
+			});
+		});
+
+		it("allows middleware to be overriden and not merged", async ({
+			expect,
+		}) => {
+			const response = await fetch(
+				`http://${ip}:${port}/middleware-data/merge-data`
+			);
+			const data = await response.json();
+			expect(data).toEqual({
+				bar: "baz",
+			});
+		});
+
+		it("middleware throws when set to non-object", async ({ expect }) => {
+			const response = await fetch(
+				`http://${ip}:${port}/middleware-data/bad-data`
+			);
+
+			expect(response.status).toEqual(500);
+		});
+	});
 });

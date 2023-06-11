@@ -122,7 +122,8 @@ function* executeRequest(request: Request, relativePathname: string) {
 export default function (pluginArgs: unknown) {
 	const onRequest: PagesPluginFunction = async (workerContext) => {
 		let { request } = workerContext;
-		const { env, next, data } = workerContext;
+		const { env, next } = workerContext;
+		let { data } = workerContext;
 
 		const url = new URL(request.url);
 		// TODO: Replace this with something actually legible.
@@ -149,7 +150,16 @@ export default function (pluginArgs: unknown) {
 					functionPath: workerContext.functionPath + path,
 					next: pluginNext,
 					params,
-					data,
+					get data() {
+						return data;
+					},
+					set data(value) {
+						if (typeof value !== "object" || value === null) {
+							throw new Error("context.data must be an object");
+						}
+						// user has overriden context.data, so we need to merge it with the existing data
+						data = value;
+					},
 					pluginArgs,
 					env,
 					waitUntil: workerContext.waitUntil.bind(workerContext),
