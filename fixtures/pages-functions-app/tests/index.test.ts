@@ -318,5 +318,13 @@ describe.concurrent("Pages Functions", () => {
 				bar: "baz",
 			});
 		});
+
+		it("middleware throws when set to non-object", async ({ expect }) => {
+			const response = await fetch(
+				`http://${ip}:${port}/middleware-data/bad-data`
+			);
+
+			expect(response.status).toEqual(500);
+		});
 	});
 });

@@ -144,38 +144,27 @@ export default function (pluginArgs: unknown) {
 			// Note we can't use `!result.done` because this doesn't narrow to the correct type
 			if (result.done === false) {
 				const { handler, params, path } = result.value;
-				const rawContext = {
+				const context = {
 					request: new Request(request.clone()),
 					functionPath: workerContext.functionPath + path,
 					next: pluginNext,
 					params,
-					data,
+					get data() {
+						return data;
+					},
+					set data(value) {
+						if (typeof value !== "object" || value === null) {
+							throw new Error("context.data must be an object");
+						}
+						// user has overriden context.data, so we need to merge it with the existing data
+						Object.assign(data, value);
+					},
 					pluginArgs,
 					env,
 					waitUntil: workerContext.waitUntil.bind(workerContext),
 					passThroughOnException:
 						workerContext.passThroughOnException.bind(workerContext),
 				};
-				const context = new Proxy(rawContext, {
-					set(obj, prop, value) {
-						if (prop === "data") {
-							if (typeof value !== "object" || value === null) {
-								throw new Error("context.data must be an object");
-							}
-							// user has overriden context.data, so we need to merge it with the existing data
-							Object.assign(data, value);
-							return true;
-						}
-						return Reflect.set(obj, prop, value);
-					},
-					get(target, prop, receiver) {
-						if (prop === "data") {
-							// if the user accesses context.data, return the merged data
-							return data;
-						}
-						return Reflect.get(target, prop, receiver);
-					},
-				});
 
 				const response = await handler(context);
 
