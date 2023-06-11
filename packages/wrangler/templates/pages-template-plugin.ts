@@ -122,7 +122,8 @@ function* executeRequest(request: Request, relativePathname: string) {
 export default function (pluginArgs: unknown) {
 	const onRequest: PagesPluginFunction = async (workerContext) => {
 		let { request } = workerContext;
-		const { env, next, data } = workerContext;
+		const { env, next } = workerContext;
+		let { data } = workerContext;
 
 		const url = new URL(request.url);
 		// TODO: Replace this with something actually legible.
@@ -157,7 +158,7 @@ export default function (pluginArgs: unknown) {
 							throw new Error("context.data must be an object");
 						}
 						// user has overriden context.data, so we need to merge it with the existing data
-						Object.assign(data, value);
+						data = value;
 					},
 					pluginArgs,
 					env,

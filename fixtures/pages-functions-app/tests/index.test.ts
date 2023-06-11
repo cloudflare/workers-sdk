@@ -319,6 +319,18 @@ describe.concurrent("Pages Functions", () => {
 			});
 		});
 
+		it("allows middleware to be overriden and not merged", async ({
+			expect,
+		}) => {
+			const response = await fetch(
+				`http://${ip}:${port}/middleware-data/merge-data`
+			);
+			const data = await response.json();
+			expect(data).toEqual({
+				bar: "baz",
+			});
+		});
+
 		it("middleware throws when set to non-object", async ({ expect }) => {
 			const response = await fetch(
 				`http://${ip}:${port}/middleware-data/bad-data`
