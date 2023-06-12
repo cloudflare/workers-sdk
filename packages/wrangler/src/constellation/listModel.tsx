@@ -6,11 +6,11 @@ import {
 	getProjectByName,
 	listModels,
 } from "./utils";
-import type { Project } from "./types";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+import type { Project } from "./types";
 
 export function options(yargs: CommonYargsArgv) {
 	return yargs

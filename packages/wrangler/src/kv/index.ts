@@ -25,8 +25,8 @@ import {
 	putKVKeyValue,
 	unexpectedKVKeyValueProps,
 } from "./helpers";
-import type { KeyValue } from "./helpers";
 import type { CommonYargsArgv } from "../yargs-types";
+import type { KeyValue } from "./helpers";
 
 export function kvNamespace(kvYargs: CommonYargsArgv) {
 	return kvYargs

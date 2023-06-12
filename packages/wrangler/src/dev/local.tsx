@@ -7,13 +7,13 @@ import { registerWorker } from "../dev-registry";
 import useInspector from "../inspect";
 import { logger } from "../logger";
 import { MiniflareServer } from "./miniflare";
-import type { ConfigBundle, ReloadedEvent } from "./miniflare";
-import type { EsbuildBundle } from "./use-esbuild";
 import type { Config } from "../config";
 import type { WorkerRegistry } from "../dev-registry";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { AssetPaths } from "../sites";
 import type { CfWorkerInit, CfScriptFormat } from "../worker";
+import type { ConfigBundle, ReloadedEvent } from "./miniflare";
+import type { EsbuildBundle } from "./use-esbuild";
 
 export interface LocalProps {
 	name: string | undefined;
