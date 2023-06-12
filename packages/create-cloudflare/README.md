@@ -50,10 +50,10 @@ Current template options are: `hello-world`, `common`, or `chatgptPlugin`.
 
 #### Additional arguments
 
-| | |
-| ----------- |:------------:|
-| `--deploy` | deploy your application automatically, bypassing the interactive prompt |
-| `--no-deploy` | create and scaffold a new application and bypass deployment prompt |
+|               |                                                                         |
+| ------------- | :---------------------------------------------------------------------: |
+| `--deploy`    | deploy your application automatically, bypassing the interactive prompt |
+| `--no-deploy` |   create and scaffold a new application and bypass deployment prompt    |
 
 ### Community
 
