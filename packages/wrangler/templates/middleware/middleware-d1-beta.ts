@@ -1,13 +1,11 @@
-// src/shim.ts
-import worker, * as OTHER_EXPORTS from "__ENTRY_POINT__";
-export * from "__ENTRY_POINT__";
+/// <reference path="middleware-d1-beta.d.ts"/>
+
+import { D1_IMPORTS } from "config:middleware/d1-beta";
 
 // src/index.ts
-var D1Database = class {
-	constructor(binding) {
-		this.binding = binding;
-	}
-	prepare(query) {
+class D1Database {
+	constructor(readonly binding: Fetcher) {}
+	prepare(query: string) {
 		return new D1PreparedStatement(this, query);
 	}
 	async dump() {
@@ -19,7 +17,7 @@ var D1Database = class {
 		});
 		if (response.status !== 200) {
 			try {
-				const err = await response.json();
+				const err = (await response.json()) as { error: string };
 				throw new Error(`D1_DUMP_ERROR: ${err.error}`, {
 					cause: new Error(err.error),
 				});
@@ -31,7 +29,7 @@ var D1Database = class {
 		}
 		return await response.arrayBuffer();
 	}
-	async batch(statements) {
+	async batch(statements: D1PreparedStatement[]) {
 		const exec = await this._send(
 			"/query",
 			statements.map((s) => s.statement),
@@ -39,7 +37,7 @@ var D1Database = class {
 		);
 		return exec;
 	}
-	async exec(query) {
+	async exec(query: string) {
 		const lines = query.trim().split("\n");
 		const _exec = await this._send("/query", lines, [], false);
 		const exec = Array.isArray(_exec) ? _exec : [_exec];
@@ -68,12 +66,17 @@ var D1Database = class {
 			return {
 				count: exec.length,
 				duration: exec.reduce((p, c) => {
-					return p + c.meta.duration;
+					return p + (c.meta.duration as number);
 				}, 0),
 			};
 		}
 	}
-	async _send(endpoint, query, params, dothrow = true) {
+	async _send(
+		endpoint: string,
+		query: string | string[],
+		params: unknown[],
+		dothrow = true
+	) {
 		const body = JSON.stringify(
 			typeof query == "object"
 				? query.map((s, index) => {
@@ -92,7 +95,7 @@ var D1Database = class {
 			body,
 		});
 		try {
-			const answer = await response.json();
+			const answer = (await response.json()) as { error?: string };
 			if (answer.error && dothrow) {
 				const err = answer;
 				throw new Error(`D1_ERROR: ${err.error}`, {
@@ -104,55 +107,52 @@ var D1Database = class {
 					: mapD1Result(answer);
 			}
 		} catch (e) {
-			throw new Error(`D1_ERROR: ${e.cause || "Something went wrong"}`, {
-				cause: new Error(e.cause || "Something went wrong"),
+			const error = e as Error;
+			throw new Error(`D1_ERROR: ${error.cause || "Something went wrong"}`, {
+				cause: new Error(`${error.cause}` || "Something went wrong"),
 			});
 		}
 	}
-};
-var D1PreparedStatement = class {
-	constructor(database, statement, values) {
-		this.database = database;
-		this.statement = statement;
-		this.params = values || [];
-	}
-	bind(...values) {
+}
+
+class D1PreparedStatement {
+	constructor(
+		readonly database: D1Database,
+		readonly statement: string,
+		readonly params: unknown[] = []
+	) {}
+	bind(...values: unknown[]) {
 		for (var r in values) {
-			switch (typeof values[r]) {
+			const value = values[r];
+			switch (typeof value) {
 				case "number":
 				case "string":
 					break;
 				case "object":
-					if (values[r] == null) break;
+					if (value == null) break;
 					if (
-						Array.isArray(values[r]) &&
-						values[r]
+						Array.isArray(value) &&
+						value
 							.map((b) => {
 								return typeof b == "number" && b >= 0 && b < 256 ? 1 : 0;
 							})
 							.indexOf(0) == -1
 					)
 						break;
-					if (values[r] instanceof ArrayBuffer) {
-						values[r] = Array.from(new Uint8Array(values[r]));
+					if (value instanceof ArrayBuffer) {
+						values[r] = Array.from(new Uint8Array(value));
 						break;
 					}
-					if (ArrayBuffer.isView(values[r])) {
-						values[r] = Array.from(values[r]);
+					if (ArrayBuffer.isView(value)) {
+						values[r] = Array.from(new Uint8Array(value.buffer));
 						break;
 					}
 				default:
 					throw new Error(
-						`D1_TYPE_ERROR: Type '${typeof values[
-							r
-						]}' not supported for value '${values[r]}'`,
+						`D1_TYPE_ERROR: Type '${typeof value}' not supported for value '${value}'`,
 						{
 							cause: new Error(
-								"Type '" +
-									typeof values[r] +
-									"' not supported for value '" +
-									values[r] +
-									"'"
+								`Type '${typeof value}' not supported for value '${value}'`
 							),
 						}
 					);
@@ -160,7 +160,7 @@ var D1PreparedStatement = class {
 		}
 		return new D1PreparedStatement(this.database, this.statement, values);
 	}
-	async first(colName) {
+	async first(colName: string) {
 		const info = firstIfArray(
 			await this.database._send("/query", this.statement, this.params)
 		);
@@ -199,12 +199,12 @@ var D1PreparedStatement = class {
 		}
 		return raw;
 	}
-};
-function firstIfArray(results) {
+}
+function firstIfArray(results: unknown) {
 	return Array.isArray(results) ? results[0] : results;
 }
-function mapD1Result(result) {
-	let map = {
+function mapD1Result(result: Partial<D1Result>): D1Result {
+	let map: D1Result = {
 		results: result.results || [],
 		success: result.success === void 0 ? true : result.success,
 		meta: result.meta || {},
@@ -213,12 +213,17 @@ function mapD1Result(result) {
 	return map;
 }
 
+type D1Result = {
+	results: unknown[];
+	success: boolean;
+	meta: Record<string, unknown>;
+	error?: string;
+};
+
 // src/shim.ts
-var D1_IMPORTS = __D1_IMPORTS__;
-var LOCAL_MODE = __LOCAL_MODE__;
 var D1_BETA_PREFIX = `__D1_BETA__`;
 var envMap = /* @__PURE__ */ new Map();
-function getMaskedEnv(env) {
+function getMaskedEnv(env: Record<string, Fetcher | D1Database>) {
 	if (envMap.has(env)) return envMap.get(env);
 	const newEnv = new Map(Object.entries(env));
 	D1_IMPORTS.filter((bindingName) =>
@@ -226,31 +231,14 @@ function getMaskedEnv(env) {
 	).forEach((bindingName) => {
 		newEnv.delete(bindingName);
 		const newName = bindingName.slice(D1_BETA_PREFIX.length);
-		const newBinding = !LOCAL_MODE
-			? new D1Database(env[bindingName])
-			: env[bindingName];
+		const newBinding = new D1Database(env[bindingName] as Fetcher);
 		newEnv.set(newName, newBinding);
 	});
 	const newEnvObj = Object.fromEntries(newEnv.entries());
 	envMap.set(env, newEnvObj);
 	return newEnvObj;
 }
-var shim_default = {
-	...worker,
-	async fetch(request, env, ctx) {
-		return worker.fetch(request, getMaskedEnv(env), ctx);
-	},
-	async queue(batch, env, ctx) {
-		return worker.queue(batch, getMaskedEnv(env), ctx);
-	},
-	async scheduled(controller, env, ctx) {
-		return worker.scheduled(controller, getMaskedEnv(env), ctx);
-	},
-	async trace(traces, env, ctx) {
-		return worker.trace(traces, getMaskedEnv(env), ctx);
-	},
-	async email(message, env, ctx) {
-		return worker.email(message, getMaskedEnv(env), ctx);
-	},
-};
-export { shim_default as default };
+
+export function wrap(env: Record<string, D1Database | Fetcher>) {
+	return getMaskedEnv(env);
+}

@@ -498,7 +498,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						// We want to know if the build is for development or publishing
 						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
 						targetConsumer: "deploy",
-						local: false,
 					}
 			  );
 

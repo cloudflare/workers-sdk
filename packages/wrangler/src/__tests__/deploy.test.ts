@@ -6356,7 +6356,7 @@ addEventListener('fetch', event => {});`
 				expect(output).toContain(
 					`ExampleDurableObject2 as ExampleDurableObject,`
 				);
-				expect(output).toContain(`shim_default as default`);
+				expect(output).toContain(`middleware_loader_entry_default as default`);
 			});
 
 			it("should error when detecting a service-worker worker implementing durable objects", async () => {
