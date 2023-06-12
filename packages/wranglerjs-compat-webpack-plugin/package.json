@@ -50,6 +50,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "*",
+		"@cloudflare/workers-tsconfig": "*",
 		"@octokit/core": "^3.6.0",
 		"@schemastore/package": "^0.0.6",
 		"@types/jest": "^27.4.1",
@@ -65,7 +66,6 @@
 		"tosource": "^2.0.0-alpha.3",
 		"typescript": "^4.6.3",
 		"undici": "^5.9.1",
-		"webpack": "^4.46.0",
-		"workers-tsconfig": "*"
+		"webpack": "^4.46.0"
 	}
 }

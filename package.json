@@ -24,7 +24,7 @@
 		"postinstall": "patch-package",
 		"prettify": "prettier . --write --ignore-unknown",
 		"test": "turbo test",
-		"test:ci": "turbo test:ci --filter=wrangler --filter=pages-shared --concurrency=1",
+		"test:ci": "turbo test:ci --filter=wrangler --filter=pages-shared",
 		"test:watch": "turbo test:watch",
 		"type:tests": "turbo type:tests"
 	},
