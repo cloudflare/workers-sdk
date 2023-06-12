@@ -56,7 +56,16 @@ function getMaskedEnv(rawEnv: unknown) {
 	return env;
 }
 
-const facade: ExportedHandler<unknown> = {
+/**
+ * This type is here to cause a type error if a new export handler is added to
+ * `ExportHandler` without it being included in the `facade` below.
+ */
+type MissingExportHandlers = Omit<
+	Required<ExportedHandler>,
+	"tail" | "trace" | "scheduled" | "queue" | "test" | "fetch"
+>;
+
+const facade: ExportedHandler<unknown> & MissingExportHandlers = {
 	...(worker.tail && {
 		tail: maskHandlerEnv(worker.tail),
 	}),
