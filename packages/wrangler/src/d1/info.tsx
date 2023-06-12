@@ -99,8 +99,8 @@ export const Handler = withConfig<HandlerOptions>(
 			output = {
 				...output,
 				...(graphqlResult && {
-					read_queries_24h: metrics.readQueries.toLocaleString(),
-					write_queries_24h: metrics.writeQueries.toLocaleString(),
+					read_queries_24h: metrics.readQueries,
+					write_queries_24h: metrics.writeQueries,
 				}),
 			};
 		}
@@ -111,10 +111,20 @@ export const Handler = withConfig<HandlerOptions>(
 			// Snip off the "uuid" property from the response and use those as the header
 
 			const entries = Object.entries(output).filter(([k, _v]) => k !== "uuid");
-			const data = entries.map(([k, v]) => ({
-				[db.binding || ""]: k,
-				[db.uuid]: k === "file_size" ? prettyBytes(Number(v)) : v,
-			}));
+			const data = entries.map(([k, v]) => {
+				let value;
+				if (k === "file_size") {
+					value = prettyBytes(Number(v));
+				} else if (k === "read_queries_24h" || k === "write_queries_24h") {
+					value = v.toLocaleString();
+				} else {
+					value = v;
+				}
+				return {
+					[db.binding || ""]: k,
+					[db.uuid]: value,
+				};
+			});
 
 			logger.log(renderToString(<Table data={data} />));
 		}
