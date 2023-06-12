@@ -75,6 +75,7 @@ export const Handler = withConfig<HandlerOptions>(
 							{
 								datetimeHour_geq: yesterday.toISOString(),
 								datetimeHour_leq: today.toISOString(),
+								databaseId: db.uuid,
 							},
 						],
 					},
