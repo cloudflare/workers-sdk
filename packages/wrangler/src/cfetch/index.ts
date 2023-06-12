@@ -48,12 +48,11 @@ export async function fetchResult<ResponseType>(
  */
 export async function fetchGraphqlResult<ResponseType>(
 	init: RequestInit = {},
-
 	abortSignal?: AbortSignal
 ): Promise<ResponseType> {
 	const json = await fetchInternal<ResponseType>(
 		"/graphql",
-		init,
+		init, //you might be tempted to hardcode method = 'POST', but GET is allowed: https://graphql.org/learn/serving-over-http/#get-request
 		undefined,
 		abortSignal
 	);
