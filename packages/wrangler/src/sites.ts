@@ -299,7 +299,7 @@ export async function syncAssets(
 					typeof e === "object" &&
 					e !== null &&
 					"name" in e &&
-					e.name === "AbortError"
+					(e as { name: string }).name === "AbortError"
 				) {
 					break;
 				}

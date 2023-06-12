@@ -16,7 +16,7 @@ function runIn(
 	directory: string,
 	replacers?: Parameters<typeof normalizeOutput>[1]
 ) {
-	return async (...p: Parameters<ReturnType<(typeof shellac)["in"]>>) => {
+	return async (...p: Parameters<ReturnType<typeof shellac["in"]>>) => {
 		const { stdout, stderr } = await shellac.in(directory)(...p);
 		return {
 			stdout: normalizeOutput(stdout, replacers),

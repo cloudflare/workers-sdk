@@ -210,7 +210,7 @@ function useLocalWorker(props: LocalProps) {
 					typeof error === "object" &&
 					error !== null &&
 					"code" in error &&
-					error.code === "ERR_RUNTIME_FAILURE"
+					(error as { code: string }).code === "ERR_RUNTIME_FAILURE"
 				) {
 					// Don't log a full verbose stack-trace when Miniflare 3's workerd instance fails to start.
 					// workerd will log its own errors, and our stack trace won't have any useful information.
