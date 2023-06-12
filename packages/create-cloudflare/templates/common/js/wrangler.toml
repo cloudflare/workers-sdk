@@ -8,9 +8,13 @@ compatibility_date = "2023-04-21"
 # id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
 # # Durable Object binding - For more information: https://developers.cloudflare.com/workers/runtime-apis/durable-objects
-# [[durable_objects]]
-# binding = "MY_DURABLE_OBJECT"
+# [[durable_objects.bindings]]
+# name = "MY_DURABLE_OBJECT"
 # class_name = "MyDurableObject"
+# # Durable Object migration - For more information: https://developers.cloudflare.com/workers/learning/using-durable-objects#configure-durable-object-classes-with-migrations
+# [[migrations]]
+# tag = "v1"
+# new_classes = ["MyDurableObject"]
 
 # # R2 Bucket binding - For more information: https://developers.cloudflare.com/r2/api/workers/workers-api-reference/#create-a-binding
 # [[r2_buckets]]
