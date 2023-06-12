@@ -37,19 +37,21 @@ Currently supported framework options: `angular`, `astro`, `docusaurus`, `gatsby
 To create a new Javascript "Hello World" worker, run:
 
 ```bash
-npm create cloudflare@latest hello-world -- --type simple --no-ts
+npm create cloudflare@latest hello-world -- --type hello-world --no-ts
 ```
 
 To create a new Typescript "Hello World" worker, run:
 
 ```bash
-npm create cloudflare@latest hello-world -- --type simple --ts
+npm create cloudflare@latest hello-world -- --type hello-world --ts
 ```
 
-Current template options are: `simple`, `common`, or `chatgptPlugin`.
+Current template options are: `hello-world`, `common`, or `chatgptPlugin`.
 
 #### Additional arguments
 
+| | |
+| ----------- |:------------:|
 | `--deploy` | deploy your application automatically, bypassing the interactive prompt |
 | `--no-deploy` | create and scaffold a new application and bypass deployment prompt |
 

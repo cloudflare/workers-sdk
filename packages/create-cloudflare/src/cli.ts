@@ -95,7 +95,7 @@ const validateType = async (
 		renderSubmitted: (option: Option) => {
 			return `${brandColor("type")} ${dim(option.label)}`;
 		},
-		defaultValue: type ?? "simple",
+		defaultValue: type ?? "hello-world",
 		acceptDefault,
 	});
 
@@ -117,8 +117,8 @@ const templateMap: Record<string, TemplateConfig> = {
 		label: "Website or web app",
 		handler: runPagesGenerator,
 	},
-	simple: {
-		label: `"Hello World" script`,
+	"hello-world": {
+		label: `"Hello World" Worker`,
 		handler: runWorkersGenerator,
 	},
 	common: {

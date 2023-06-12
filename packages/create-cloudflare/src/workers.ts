@@ -58,7 +58,7 @@ async function getTemplate(ctx: Context) {
 	}
 
 	const preexisting = ctx.args.type === "pre-existing";
-	const template = preexisting ? "simple" : ctx.args.type;
+	const template = preexisting ? "hello-world" : ctx.args.type;
 	const path = resolve(
 		// eslint-disable-next-line no-restricted-globals
 		__dirname,
