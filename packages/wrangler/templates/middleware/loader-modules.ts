@@ -36,8 +36,13 @@ class __Facade_ScheduledController__ implements ScheduledController {
 	}
 }
 
-const __facade_modules_fetch__: Middleware = function (request, env, ctx) {
-	if (worker.fetch === undefined) throw new Error("No fetch handler!"); // TODO: proper error message
+const __facade_modules_fetch__: ExportedHandlerFetchHandler = function (
+	request,
+	env,
+	ctx
+) {
+	if (worker.fetch === undefined)
+		throw new Error("Handler does not export a fetch() function.");
 	return worker.fetch(request, env, ctx);
 };
 
@@ -100,7 +105,7 @@ const facade: ExportedHandler<unknown> = {
 
 			// We "don't care" if this is undefined as we want to have the same behavior
 			// as if the worker completely bypassed middleware.
-			return worker.fetch!(request, env, ctx);
+			return __facade_modules_fetch__(request, env, ctx);
 		}
 	},
 };

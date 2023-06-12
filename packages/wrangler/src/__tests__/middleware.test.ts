@@ -1072,7 +1072,7 @@ describe("middleware", () => {
 			};
 			var __facade_modules_fetch__ = function(request, env, ctx) {
 			  if (middleware_insertion_facade_default.fetch === void 0)
-			    throw new Error(\\"No fetch handler!\\");
+			    throw new Error(\\"Handler does not export a fetch() function.\\");
 			  return middleware_insertion_facade_default.fetch(request, env, ctx);
 			};
 			function getMaskedEnv2(rawEnv) {
@@ -1125,7 +1125,7 @@ describe("middleware", () => {
 			        __facade_modules_fetch__
 			      );
 			    } else {
-			      return middleware_insertion_facade_default.fetch(request, env, ctx);
+			      return __facade_modules_fetch__(request, env, ctx);
 			    }
 			  }
 			};
