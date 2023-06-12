@@ -1,7 +1,8 @@
+import { subDays } from "date-fns";
 import Table from "ink-table";
 import prettyBytes from "pretty-bytes";
 import React from "react";
-import { fetchResult } from "../cfetch";
+import { fetchGraphqlResult, fetchResult } from "../cfetch";
 import { withConfig } from "../config";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
@@ -11,7 +12,7 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Database } from "./types";
+import type { D1MetricsGraphQLResponse, Database } from "./types";
 
 export function Options(d1ListYargs: CommonYargsArgv) {
 	return d1ListYargs
@@ -46,12 +47,65 @@ export const Handler = withConfig<HandlerOptions>(
 				},
 			}
 		);
+		const today = new Date();
+		const yesterday = subDays(today, 1);
+		const graphqlResult = await fetchGraphqlResult<D1MetricsGraphQLResponse>({
+			method: "POST",
+			body: JSON.stringify({
+				query: `query getD1MetricsOverviewQuery($accountTag: string, $filter: ZoneWorkersRequestsFilter_InputObject) {
+						  viewer {
+						    accounts(filter: {accountTag: $accountTag}) {
+						      d1AnalyticsAdaptiveGroups(limit: 10000, filter: $filter) {
+						        sum {
+						          readQueries
+						          writeQueries
+					        }
+					        dimensions {
+						          datetimeHour
+					        }
+								}
+				    	}
+				  	}
+					}`,
+				operationName: "getD1MetricsOverviewQuery",
+				variables: {
+					accountTag: accountId,
+					filter: {
+						AND: [
+							{
+								datetimeHour_geq: yesterday.toISOString(),
+								datetimeHour_leq: today.toISOString(),
+							},
+						],
+					},
+				},
+			}),
+			headers: {
+				"Content-Type": "application/json",
+			},
+		});
+
+		const metrics = { readQueries: 0, writeQueries: 0 };
+		graphqlResult?.data?.viewer?.accounts[0]?.d1AnalyticsAdaptiveGroups?.forEach(
+			(row) => {
+				metrics.readQueries += row?.sum?.readQueries ?? 0;
+				metrics.writeQueries += row?.sum?.writeQueries ?? 0;
+			}
+		);
+		const output = {
+			...result,
+			...(graphqlResult && {
+				read_queries_24h: metrics.readQueries,
+				write_queries_24h: metrics.writeQueries,
+			}),
+		};
+
 		if (json) {
-			logger.log(JSON.stringify(result, null, 2));
+			logger.log(JSON.stringify(output, null, 2));
 		} else {
 			// Snip off the "uuid" property from the response and use those as the header
 
-			const entries = Object.entries(result).filter(([k, _v]) => k !== "uuid");
+			const entries = Object.entries(output).filter(([k, _v]) => k !== "uuid");
 			const data = entries.map(([k, v]) => ({
 				[db.binding || ""]: k,
 				[db.uuid]: k === "file_size" ? prettyBytes(Number(v)) : v,
