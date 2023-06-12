@@ -47,59 +47,63 @@ export const Handler = withConfig<HandlerOptions>(
 				},
 			}
 		);
-		const today = new Date();
-		const yesterday = subDays(today, 1);
-		const graphqlResult = await fetchGraphqlResult<D1MetricsGraphQLResponse>({
-			method: "POST",
-			body: JSON.stringify({
-				query: `query getD1MetricsOverviewQuery($accountTag: string, $filter: ZoneWorkersRequestsFilter_InputObject) {
-						  viewer {
-						    accounts(filter: {accountTag: $accountTag}) {
-						      d1AnalyticsAdaptiveGroups(limit: 10000, filter: $filter) {
-						        sum {
-						          readQueries
-						          writeQueries
-					        }
-					        dimensions {
-						          datetimeHour
-					        }
-								}
-				    	}
-				  	}
-					}`,
-				operationName: "getD1MetricsOverviewQuery",
-				variables: {
-					accountTag: accountId,
-					filter: {
-						AND: [
-							{
-								datetimeHour_geq: yesterday.toISOString(),
-								datetimeHour_leq: today.toISOString(),
-								databaseId: db.uuid,
-							},
-						],
-					},
-				},
-			}),
-			headers: {
-				"Content-Type": "application/json",
-			},
-		});
 
-		const metrics = { readQueries: 0, writeQueries: 0 };
-		graphqlResult?.data?.viewer?.accounts[0]?.d1AnalyticsAdaptiveGroups?.forEach(
-			(row) => {
-				metrics.readQueries += row?.sum?.readQueries ?? 0;
-				metrics.writeQueries += row?.sum?.writeQueries ?? 0;
-			}
-		);
-		const output = {
-			...result,
-			...(graphqlResult && {
-				read_queries_24h: metrics.readQueries,
-				write_queries_24h: metrics.writeQueries,
-			}),
-		};
+		let output: Record<string, string | number> = { ...result };
+		if (result.version === "beta") {
+			const today = new Date();
+			const yesterday = subDays(today, 1);
+			const graphqlResult = await fetchGraphqlResult<D1MetricsGraphQLResponse>({
+				method: "POST",
+				body: JSON.stringify({
+					query: `query getD1MetricsOverviewQuery($accountTag: string, $filter: ZoneWorkersRequestsFilter_InputObject) {
+								viewer {
+									accounts(filter: {accountTag: $accountTag}) {
+										d1AnalyticsAdaptiveGroups(limit: 10000, filter: $filter) {
+											sum {
+												readQueries
+												writeQueries
+										}
+										dimensions {
+												datetimeHour
+										}
+									}
+								}
+							}
+						}`,
+					operationName: "getD1MetricsOverviewQuery",
+					variables: {
+						accountTag: accountId,
+						filter: {
+							AND: [
+								{
+									datetimeHour_geq: yesterday.toISOString(),
+									datetimeHour_leq: today.toISOString(),
+									databaseId: db.uuid,
+								},
+							],
+						},
+					},
+				}),
+				headers: {
+					"Content-Type": "application/json",
+				},
+			});
+
+			const metrics = { readQueries: 0, writeQueries: 0 };
+			graphqlResult?.data?.viewer?.accounts[0]?.d1AnalyticsAdaptiveGroups?.forEach(
+				(row) => {
+					metrics.readQueries += row?.sum?.readQueries ?? 0;
+					metrics.writeQueries += row?.sum?.writeQueries ?? 0;
+				}
+			);
+			output = {
+				...output,
+				...(graphqlResult && {
+					read_queries_24h: metrics.readQueries,
+					write_queries_24h: metrics.writeQueries,
+				}),
+			};
+		}
 
 		if (json) {
 			logger.log(JSON.stringify(output, null, 2));
