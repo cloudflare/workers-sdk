@@ -99,8 +99,8 @@ export const Handler = withConfig<HandlerOptions>(
 			output = {
 				...output,
 				...(graphqlResult && {
-					read_queries_24h: metrics.readQueries,
-					write_queries_24h: metrics.writeQueries,
+					read_queries_24h: metrics.readQueries.toLocaleString(),
+					write_queries_24h: metrics.writeQueries.toLocaleString(),
 				}),
 			};
 		}
