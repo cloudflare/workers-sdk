@@ -28,7 +28,6 @@ describe("fetchGraphqlResult", () => {
 		);
 		expect(
 			await fetchGraphqlResult({
-				method: "POST",
 				body: JSON.stringify({
 					query: `{
                     viewer {
@@ -38,5 +37,41 @@ describe("fetchGraphqlResult", () => {
 				}),
 			})
 		).toEqual({ data: { viewer: { __typename: "viewer" } }, errors: null });
+	});
+
+	it("should accept a request with no init, but return no data", async () => {
+		mockOAuthServerCallback();
+		const now = new Date().toISOString();
+		msw.use(
+			rest.post("*/graphql", async (req, res, ctx) => {
+				return res(
+					ctx.status(200),
+					ctx.json({
+						data: null,
+						errors: [
+							{
+								message: "failed to recognize JSON request: 'EOF'",
+								path: null,
+								extensions: {
+									timestamp: now,
+								},
+							},
+						],
+					})
+				);
+			})
+		);
+		expect(await fetchGraphqlResult()).toEqual({
+			data: null,
+			errors: [
+				{
+					message: "failed to recognize JSON request: 'EOF'",
+					path: null,
+					extensions: {
+						timestamp: now,
+					},
+				},
+			],
+		});
 	});
 });
