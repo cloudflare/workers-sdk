@@ -49,6 +49,10 @@ export const Handler = withConfig<HandlerOptions>(
 		);
 
 		let output: Record<string, string | number> = { ...result };
+		if (output["file_size"]) {
+			output["database_size"] = output["file_size"];
+			delete output["file_size"];
+		}
 		if (result.version === "beta") {
 			const today = new Date();
 			const yesterday = subDays(today, 1);
@@ -113,7 +117,7 @@ export const Handler = withConfig<HandlerOptions>(
 			const entries = Object.entries(output).filter(([k, _v]) => k !== "uuid");
 			const data = entries.map(([k, v]) => {
 				let value;
-				if (k === "file_size") {
+				if (k === "database_size") {
 					value = prettyBytes(Number(v));
 				} else if (k === "read_queries_24h" || k === "write_queries_24h") {
 					value = v.toLocaleString();
