@@ -35,11 +35,11 @@ compatibility_date = "2023-04-21"
 # [[queues.consumers]]
 # queue = "my-queue"
 
-# [env.production]
+# [env.production.vars]
 # MY_VARIABLE = "production_value"
 
-# [env.staging]
+# [env.staging.vars]
 # MY_VARIABLE = "staging_value"
 
-# [env.shared]
+# [env.shared.vars]
 # SHARED_VARIABLE = "shared_value"
