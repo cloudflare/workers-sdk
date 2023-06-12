@@ -22,10 +22,9 @@ compatibility_date = "2023-04-21"
 # bucket_name = "my-bucket"
 
 # # Service binding - For more information: https://developers.cloudflare.com/workers/platform/services
-# [[routes]]
+# [[services]]
 # binding = "MY_SERVICE"
-# pattern = "/api/*"
-# script = "api.js"
+# service = "/api/*"
 
 # # Queue producer binding - For more information: https://developers.cloudflare.com/queues/get-started
 # [[queues.producers]]
