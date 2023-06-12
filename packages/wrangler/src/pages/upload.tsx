@@ -22,11 +22,11 @@ import {
 } from "./constants";
 import { hashFile } from "./hash";
 
+import type { UploadPayloadFile } from "./types";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { UploadPayloadFile } from "./types";
 
 type UploadArgs = StrictYargsOptionsToInterface<typeof Options>;
 

@@ -8,11 +8,11 @@ import {
 	getProjectByName,
 	getProjectModelByName,
 } from "./utils";
+import type { Project, Model } from "./types";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Project, Model } from "./types";
 
 export function options(yargs: CommonYargsArgv) {
 	return yargs

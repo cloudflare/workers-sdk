@@ -7,13 +7,13 @@ import { registerWorker } from "../dev-registry";
 import useInspector from "../inspect";
 import { logger } from "../logger";
 import { MiniflareServer } from "./miniflare";
+import type { ConfigBundle, ReloadedEvent } from "./miniflare";
+import type { EsbuildBundle } from "./use-esbuild";
 import type { Config } from "../config";
 import type { WorkerRegistry } from "../dev-registry";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { AssetPaths } from "../sites";
 import type { CfWorkerInit, CfScriptFormat } from "../worker";
-import type { ConfigBundle, ReloadedEvent } from "./miniflare";
-import type { EsbuildBundle } from "./use-esbuild";
 
 export interface LocalProps {
 	name: string | undefined;
@@ -210,8 +210,7 @@ function useLocalWorker(props: LocalProps) {
 					typeof error === "object" &&
 					error !== null &&
 					"code" in error &&
-					// @ts-expect-error `error.code` should be typed `unknown`, fixed in TS 4.9
-					error.code === "ERR_RUNTIME_FAILURE"
+					(error as { code: string }).code === "ERR_RUNTIME_FAILURE"
 				) {
 					// Don't log a full verbose stack-trace when Miniflare 3's workerd instance fails to start.
 					// workerd will log its own errors, and our stack trace won't have any useful information.

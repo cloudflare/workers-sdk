@@ -14,11 +14,11 @@ import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { listProjects } from "./projects";
 import { promptSelectProject } from "./prompt-select-project";
 
+import type { PagesConfigCache } from "./types";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { PagesConfigCache } from "./types";
 import type { Project } from "@cloudflare/types";
 
 type PublishArgs = StrictYargsOptionsToInterface<typeof Options>;

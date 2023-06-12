@@ -28,7 +28,8 @@
 	"scripts": {
 		"build": "node scripts/build.js",
 		"check:lint": "eslint .",
-		"check:type": "tsc --noEmit",
+		"check:type": "tsc",
+		"lint": "eslint",
 		"prepublishOnly": "npm run build",
 		"test:e2e": "npm run build && vitest run --config ./vitest-e2e.config.ts",
 		"test:unit": "vitest run --config ./vitest.config.ts",
@@ -38,6 +39,8 @@
 		"@babel/parser": "^7.21.3",
 		"@babel/types": "^7.21.4",
 		"@clack/prompts": "^0.6.3",
+		"@cloudflare/eslint-config-worker": "*",
+		"@cloudflare/workers-tsconfig": "*",
 		"@cloudflare/workers-types": "^4.20230419.0",
 		"@types/command-exists": "^1.2.0",
 		"@types/cross-spawn": "^6.0.2",
@@ -61,7 +64,7 @@
 		"vite-tsconfig-paths": "^4.0.8",
 		"vitest": "^0.30.0",
 		"which-pm-runs": "^1.1.0",
-		"wrangler": "^3.1.0",
+		"wrangler": "*",
 		"yargs": "^17.7.1"
 	},
 	"engines": {

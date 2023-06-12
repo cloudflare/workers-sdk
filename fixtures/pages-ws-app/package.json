@@ -6,14 +6,18 @@
 	"main": "server/index.js",
 	"scripts": {
 		"build": "esbuild --bundle --platform=node server/index.ts --outfile=dist/index.js",
-		"check:type": "tsc && tsc -p tests/tsconfig.json",
+		"check:type": "tsc",
 		"dev": "npx wrangler pages dev --port 8790 --proxy 8791 -- npm run server",
 		"server": "node dist/index.js",
-		"test": "npx vitest",
-		"test:ci": "npx vitest"
+		"test": "npx vitest run",
+		"test:ci": "npx vitest run",
+		"test:watch": "npx vitest",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "*",
 		"miniflare": "^3.0.0",
+		"wrangler": "*",
 		"ws": "^8.8.0"
 	},
 	"engines": {

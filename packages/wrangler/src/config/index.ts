@@ -5,9 +5,9 @@ import { logger } from "../logger";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
 import { removeD1BetaPrefix } from "../worker";
 import { normalizeAndValidateConfig } from "./validation";
+import type { Config, OnlyCamelCase, RawConfig } from "./config";
 import type { CfWorkerInit } from "../worker";
 import type { CommonYargsOptions } from "../yargs-types";
-import type { Config, OnlyCamelCase, RawConfig } from "./config";
 
 export type {
 	Config,

@@ -7,11 +7,11 @@ import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
 import { LOCATION_CHOICES } from "./constants";
 import { d1BetaWarning } from "./utils";
+import type { DatabaseCreationResult } from "./types";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { DatabaseCreationResult } from "./types";
 
 export function Options(yargs: CommonYargsArgv) {
 	return yargs

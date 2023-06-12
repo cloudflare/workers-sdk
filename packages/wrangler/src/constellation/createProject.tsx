@@ -4,11 +4,11 @@ import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { takeName } from "./options";
 import { constellationBetaWarning } from "./utils";
+import type { Project } from "./types";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Project } from "./types";
 
 export function options(yargs: CommonYargsArgv) {
 	return takeName(yargs)

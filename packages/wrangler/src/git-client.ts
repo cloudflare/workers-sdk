@@ -28,7 +28,7 @@ export async function getGitVersioon(): Promise<string | null> {
 
 		const [gitVersion] =
 			/\d+.\d+.\d+/.exec(gitVersionExecutionResult.stdout) || [];
-		return gitVersion;
+		return gitVersion ?? null;
 	} catch (err) {
 		return null;
 	}

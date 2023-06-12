@@ -12,6 +12,7 @@ import {
 } from "miniflare";
 import { logger } from "../logger";
 import { ModuleTypeToRuleType } from "../module-collection";
+import type { EsbuildBundle } from "./use-esbuild";
 import type { Config } from "../config";
 import type { WorkerRegistry } from "../dev-registry";
 import type { LoggerLevel } from "../logger";
@@ -25,7 +26,6 @@ import type {
 	CfScriptFormat,
 } from "../worker";
 import type { CfWorkerInit } from "../worker";
-import type { EsbuildBundle } from "./use-esbuild";
 import type {
 	MiniflareOptions,
 	SourceOptions,

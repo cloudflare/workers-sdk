@@ -19,6 +19,7 @@ import {
 	requireApiToken,
 	saveAccountToCache,
 } from "../user";
+import type { EsbuildBundle } from "./use-esbuild";
 import type { Route } from "../config/environment";
 import type {
 	CfPreviewToken,
@@ -33,7 +34,6 @@ import type {
 	CfAccount,
 	CfWorkerContext,
 } from "../worker";
-import type { EsbuildBundle } from "./use-esbuild";
 
 interface RemoteProps {
 	name: string | undefined;

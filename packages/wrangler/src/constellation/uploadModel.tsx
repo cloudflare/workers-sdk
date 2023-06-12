@@ -5,11 +5,11 @@ import { withConfig } from "../config";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { constellationBetaWarning, getProjectByName } from "./utils";
+import type { Model } from "./types";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Model } from "./types";
 
 export function options(yargs: CommonYargsArgv) {
 	return yargs
