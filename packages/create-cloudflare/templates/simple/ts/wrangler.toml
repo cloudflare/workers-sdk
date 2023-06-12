@@ -27,11 +27,14 @@ compatibility_date = "2023-04-21"
 # pattern = "/api/*"
 # script = "api.js"
 
-# # Queue binding - For more information: https://developers.cloudflare.com/workers/runtime-apis/queues
-# [[queues]]
+# # Queue producer binding - For more information: https://developers.cloudflare.com/queues/get-started
+# [[queues.producers]]
 # binding = "MY_QUEUE"
-# name = "my-queue"
-# zone_id = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
+# queue = "my-queue"
+
+# # Queue consumer binding - For more information: https://developers.cloudflare.com/queues/get-started
+# [[queues.consumers]]
+# queue = "my-queue"
 
 # [env.production]
 # MY_VARIABLE = "production_value"
