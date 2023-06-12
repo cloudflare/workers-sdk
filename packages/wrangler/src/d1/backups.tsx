@@ -11,11 +11,11 @@ import { renderToString } from "../utils/render";
 import { formatBytes, formatTimeAgo } from "./formatTimeAgo";
 import { Name } from "./options";
 import { d1BetaWarning, getDatabaseByNameOrBinding } from "./utils";
-import type { Backup, Database } from "./types";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+import type { Backup, Database } from "./types";
 import type { Response } from "undici";
 
 export function ListOptions(yargs: CommonYargsArgv) {

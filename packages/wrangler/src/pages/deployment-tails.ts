@@ -18,11 +18,11 @@ import { requireAuth } from "../user";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { promptSelectProject } from "./prompt-select-project";
 import { isUrl } from "./utils";
-import type { Deployment, PagesConfigCache } from "./types";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+import type { Deployment, PagesConfigCache } from "./types";
 
 const statusChoices = ["ok", "error", "canceled"] as const;
 type StatusChoice = typeof statusChoices[number];

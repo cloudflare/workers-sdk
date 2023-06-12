@@ -12,11 +12,11 @@ import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 
-import type { PagesConfigCache, Project } from "./types";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+import type { PagesConfigCache, Project } from "./types";
 
 export function ListOptions(yargs: CommonYargsArgv) {
 	return yargs;

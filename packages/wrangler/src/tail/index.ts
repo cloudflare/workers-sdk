@@ -19,12 +19,12 @@ import {
 	prettyPrintLogs,
 	translateCLICommandToFilterMessage,
 } from "./createTail";
-import type { TailCLIFilters } from "./createTail";
 import type { WorkerMetadata } from "../create-worker-upload-form";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+import type { TailCLIFilters } from "./createTail";
 import type { RawData } from "ws";
 
 export function tailOptions(yargs: CommonYargsArgv) {
