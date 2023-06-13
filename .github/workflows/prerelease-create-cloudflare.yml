@@ -1,9 +1,12 @@
-name: Prerelease
+name: Prerelease create-cloudflare
 
 on:
+  repository_dispatch:
+    types: [pre-release-create-cloudflare]
   push:
     branches:
       - main
+
 jobs:
   prerelease:
     if: ${{ github.repository_owner == 'cloudflare' }}
