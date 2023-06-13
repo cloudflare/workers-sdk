@@ -14,6 +14,7 @@ export type TextOptions = {
 	defaultValue: string;
 	acceptDefault: boolean | undefined; // must be specified, but can be undefined (≈ false)
 	helpText?: string;
+	format?: (value: string) => string;
 	validate?: (value: string) => string | void;
 };
 
@@ -21,6 +22,7 @@ export const textInput = async (opts: TextOptions) => {
 	const { renderSubmitted, question, defaultValue, validate, acceptDefault } =
 		opts;
 	const helpText = opts.helpText || ``;
+	const format = opts.format || ((val: string) => val);
 
 	const prompt = new TextPrompt({
 		defaultValue: defaultValue,
@@ -30,21 +32,23 @@ export const textInput = async (opts: TextOptions) => {
 			switch (this.state) {
 				case "initial":
 					body += `${blCorner} ${bold(question)} ${dim(helpText)}\n`;
-					body += `${space(2)}${gray(defaultValue)}\n`;
+					body += `${space(2)}${gray(format(defaultValue))}\n`;
 					break;
 				case "active":
 					body += `${blCorner} ${bold(question)} ${dim(helpText)}\n`;
-					body += `${space(2)}${this.value}\n`;
+					body += `${space(2)}${format(this.value)}\n`;
 					break;
 				case "submit":
 					body += `${leftT} ${question}\n`;
-					body += `${grayBar} ${renderSubmitted(this.value)}\n${grayBar}`;
+					body += `${grayBar} ${renderSubmitted(
+						format(this.value)
+					)}\n${grayBar}`;
 					break;
 				case "error":
 					body += `${leftT} ${status.error} ${dim(this.error)}\n`;
 					body += `${grayBar}\n`;
 					body += `${blCorner} ${question} ${dim(helpText)}\n`;
-					body += `${space(2)}${this.value}\n`;
+					body += `${space(2)}${format(this.value)}\n`;
 					break;
 				default:
 					break;

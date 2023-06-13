@@ -79,6 +79,7 @@ const validateName = async (
 		defaultValue,
 		acceptDefault,
 		validate: (value = defaultValue) => validateProjectDirectory(value),
+		format: (val: string) => `./${val}`,
 	});
 };
 

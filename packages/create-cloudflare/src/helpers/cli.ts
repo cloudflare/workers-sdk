@@ -36,7 +36,7 @@ export const status = {
 // This is useful for places where clack trims lines of output
 // but we need leading spaces
 export const space = (n = 1) => {
-	return [...Array(n)].map(() => hidden("-")).join("");
+	return [...Array(n)].map(() => hidden("\u200A")).join("");
 };
 
 // Primitive for printing to stdout. Use this instead of
