@@ -1,4 +1,3 @@
-import { subDays } from "date-fns";
 import Table from "ink-table";
 import prettyBytes from "pretty-bytes";
 import React from "react";
@@ -48,14 +47,15 @@ export const Handler = withConfig<HandlerOptions>(
 			}
 		);
 
-		let output: Record<string, string | number> = { ...result };
+		const output: Record<string, string | number> = { ...result };
 		if (output["file_size"]) {
 			output["database_size"] = output["file_size"];
 			delete output["file_size"];
 		}
 		if (result.version === "beta") {
 			const today = new Date();
-			const yesterday = subDays(today, 1);
+			const yesterday = new Date(new Date(today).setDate(today.getDate() - 1));
+
 			const graphqlResult = await fetchGraphqlResult<D1MetricsGraphQLResponse>({
 				method: "POST",
 				body: JSON.stringify({
@@ -94,19 +94,16 @@ export const Handler = withConfig<HandlerOptions>(
 			});
 
 			const metrics = { readQueries: 0, writeQueries: 0 };
-			graphqlResult?.data?.viewer?.accounts[0]?.d1AnalyticsAdaptiveGroups?.forEach(
-				(row) => {
-					metrics.readQueries += row?.sum?.readQueries ?? 0;
-					metrics.writeQueries += row?.sum?.writeQueries ?? 0;
-				}
-			);
-			output = {
-				...output,
-				...(graphqlResult && {
-					read_queries_24h: metrics.readQueries,
-					write_queries_24h: metrics.writeQueries,
-				}),
-			};
+			if (graphqlResult) {
+				graphqlResult.data?.viewer?.accounts[0]?.d1AnalyticsAdaptiveGroups?.forEach(
+					(row) => {
+						metrics.readQueries += row?.sum?.readQueries ?? 0;
+						metrics.writeQueries += row?.sum?.writeQueries ?? 0;
+					}
+				);
+				output.read_queries_24h = metrics.readQueries;
+				output.write_queries_24h = metrics.writeQueries;
+			}
 		}
 
 		if (json) {

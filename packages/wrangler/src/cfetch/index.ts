@@ -52,7 +52,7 @@ export async function fetchGraphqlResult<ResponseType>(
 ): Promise<ResponseType> {
 	const json = await fetchInternal<ResponseType>(
 		"/graphql",
-		{ ...init, method: "POST" }, //Cloudflare API v4 doesn't allow POSTs to /graphql
+		{ ...init, method: "POST" }, //Cloudflare API v4 doesn't allow GETs to /graphql
 		undefined,
 		abortSignal
 	);
