@@ -5,7 +5,7 @@
 This project is based off the Default Typescript Worker starter. To create a new project like this, run the following:
 
 ```sh
-npx wrangler@d1 init -y
+npx wrangler@d1 init -y --no-delegate-c3
 ```
 
 > **Note the "@d1"**—we're using a prerelease version of Wrangler under the `d1` tag. You can install this into an existing Wrangler project using `npm install wrangler@d1`

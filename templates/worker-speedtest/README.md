@@ -13,11 +13,11 @@ _Note:_ when running this as your own worker, your latency measurements may diff
 To create a `my-project` directory using this template, run:
 
 ```sh
-$ npm init cloudflare my-project worker-speedtest
+$ npm init cloudflare my-project worker-speedtest --no-delegate-c3
 # or
-$ yarn create cloudflare my-project worker-speedtest
+$ yarn create cloudflare my-project worker-speedtest --no-delegate-c3
 # or
-$ pnpm create cloudflare my-project worker-speedtest
+$ pnpm create cloudflare my-project worker-speedtest --no-delegate-c3
 ```
 
 > **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.

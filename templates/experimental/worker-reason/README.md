@@ -4,21 +4,32 @@ Your [Reason](https://reasonml.github.io/) code in [Demo.re](https://github.com/
 
 In addition to [Wrangler](https://github.com/cloudflare/wrangler) you will need to [install BuckleScript](https://reasonml.github.io/docs/en/installation) using npm or Yarn.
 
-#### Wrangler
+## Setup
 
-To generate using [wrangler](https://github.com/cloudflare/wrangler)
+To create a `my-project` directory using this template, run:
 
+```sh
+$ npm init cloudflare my-project worker-reason --no-delegate-c3
+# or
+$ yarn create cloudflare my-project worker-reason --no-delegate-c3
+# or
+$ pnpm create cloudflare my-project worker-reason --no-delegate-c3
 ```
-wrangler generate projectname https://github.com/cloudflare/reason-worker-hello-world
-```
+
+> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.
+
+
+## Wrangler
+
+Wrangler is used to develop, deploy, and configure your Worker via CLI.
 
 Further documentation for Wrangler can be found [here](https://developers.cloudflare.com/workers/tooling/wrangler).
 
-#### BuckleScript
+## BuckleScript
 
 After installing BuckleScript per the linked instructions above,
 
-```
+```sh
 cd projectname
 
 # assuming you installed BuckleScript globally, need to run this once

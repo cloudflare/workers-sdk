@@ -9,11 +9,11 @@ This repo contains example code and a PostgreSQL driver that can be used in any 
 To create a `my-project` directory using this template, run:
 
 ```sh
-$ npm init cloudflare my-project worker-postgres
+$ npm init cloudflare my-project worker-postgres --no-delegate-c3
 # or
-$ yarn create cloudflare my-project worker-postgres
+$ yarn create cloudflare my-project worker-postgres --no-delegate-c3
 # or
-$ pnpm create cloudflare my-project worker-postgres
+$ pnpm create cloudflare my-project worker-postgres --no-delegate-c3
 ```
 
 > **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.

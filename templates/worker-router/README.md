@@ -11,11 +11,11 @@ This template demonstrates using the [`itty-router`](https://github.com/kwhitley
 To create a `my-project` directory using this template, run:
 
 ```sh
-$ npm init cloudflare my-project worker
+$ npm init cloudflare my-project worker --no-delegate-c3
 # or
-$ yarn create cloudflare my-project worker
+$ yarn create cloudflare my-project worker --no-delegate-c3
 # or
-$ pnpm create cloudflare my-project worker
+$ pnpm create cloudflare my-project worker --no-delegate-c3
 ```
 
 > **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.

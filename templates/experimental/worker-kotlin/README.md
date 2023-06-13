@@ -4,6 +4,20 @@ Your Kotlin code in [main.kt](https://github.com/cloudflare/kotlin-worker-hello-
 
 In addition to [Wrangler v2.x](https://github.com/cloudflare/wrangler2) you will need to install Kotlin, including a JDK and support for Gradle projects. The easiest way to do this is using the free Community Edition of [IntelliJ IDEA](https://kotlinlang.org/docs/tutorials/jvm-get-started.html).
 
+## Setup
+
+To create a `my-project` directory using this template, run:
+
+```sh
+$ npm init cloudflare my-project worker-kotlin --no-delegate-c3
+# or
+$ yarn create cloudflare my-project worker-kotlin --no-delegate-c3
+# or
+$ pnpm create cloudflare my-project worker-kotlin --no-delegate-c3
+```
+
+> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.
+
 ## Wrangler
 
 Configure the [wrangler.toml](wrangler.toml) by filling in the `account_id` from the Workers pages of your Cloudflare Dashboard.

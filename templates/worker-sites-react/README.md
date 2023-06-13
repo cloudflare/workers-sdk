@@ -11,11 +11,11 @@ To learn how to deploy your own sites to Workers, check out the [video tutorial]
 To create a `my-project` directory using this template, run:
 
 ```sh
-$ npm init cloudflare my-project worker-sites-react
+$ npm init cloudflare my-project worker-sites-react --no-delegate-c3
 # or
-$ yarn create cloudflare my-project worker-sites-react
+$ yarn create cloudflare my-project worker-sites-react --no-delegate-c3
 # or
-$ pnpm create cloudflare my-project worker-sites-react
+$ pnpm create cloudflare my-project worker-sites-react --no-delegate-c3
 ```
 
 > **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.

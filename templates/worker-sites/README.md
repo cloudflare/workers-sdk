@@ -9,11 +9,11 @@ A bare minimum template of deploying a [Workers Site](https://developers.cloudfl
 To create a `my-project` directory using this template, run:
 
 ```sh
-$ npm init cloudflare my-project worker-sites
+$ npm init cloudflare my-project worker-sites --no-delegate-c3
 # or
-$ yarn create cloudflare my-project worker-sites
+$ yarn create cloudflare my-project worker-sites --no-delegate-c3
 # or
-$ pnpm create cloudflare my-project worker-sites
+$ pnpm create cloudflare my-project worker-sites --no-delegate-c3
 ```
 
 > **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.

@@ -9,11 +9,11 @@ An open-source template built for internal use by Cloudflare's SEO experts to pa
 Clone the repository from the `cloudflare/tmemplates` repository:
 
 ```bash
-$ npm init cloudflare my-project prospector
+$ npm init cloudflare my-project prospector --no-delegate-c3
 # or
-$ yarn create cloudflare my-project prospector
+$ yarn create cloudflare my-project prospector --no-delegate-c3
 # or
-$ pnpm create cloudflare my-project prospector
+$ pnpm create cloudflare my-project prospector --no-delegate-c3
 ```
 
 Install Wrangler if not already installed.

@@ -4,21 +4,32 @@ Your Perl code in [index.pl](https://github.com/cloudflare/perl-worker-hello-wor
 
 In addition to [Wrangler](https://github.com/cloudflare/wrangler) you will need to install Perl 5 and [Perlito](https://github.com/fglock/Perlito), a compiler from Perl to Java and JavaScript. Clone Perlito from GitHub (last tested on commit 97c296f), don't install the older version available on CPAN.
 
-#### Wrangler
+## Setup
 
-To generate using [wrangler](https://github.com/cloudflare/wrangler)
+To create a `my-project` directory using this template, run:
 
+```sh
+$ npm init cloudflare my-project worker-perl --no-delegate-c3
+# or
+$ yarn create cloudflare my-project worker-perl --no-delegate-c3
+# or
+$ pnpm create cloudflare my-project worker-perl --no-delegate-c3
 ```
-wrangler generate projectname https://github.com/cloudflare/perl-worker-hello-world
-```
+
+> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.
+
+
+## Wrangler
+
+Wrangler is used to develop, deploy, and configure your Worker via CLI.
 
 Further documentation for Wrangler can be found [here](https://developers.cloudflare.com/workers/tooling/wrangler).
 
-#### Perlito
+## Perlito
 
 Assuming you've cloned the Perlito repo to `~/Perlito` and `perl` on your path is Perl 5, run
 
-```
+```sh
 cd projectname
 echo -e "const window = this;\n" > index.js && \
 perl ~/Perlito/perlito5.pl -Cjs index.pl >> index.js

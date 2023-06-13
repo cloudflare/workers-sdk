@@ -33,11 +33,17 @@ To authenticate wrangler commands it is recomended you [configure wrangler](http
 
 ### Generate a New Project
 
-To create a new project based on this template execute:
+To create a `my-project` directory using this template, run:
 
+```sh
+$ npm init cloudflare my-project worker-fsharp --no-delegate-c3
+# or
+$ yarn create cloudflare my-project worker-fsharp --no-delegate-c3
+# or
+$ pnpm create cloudflare my-project worker-fsharp --no-delegate-c3
 ```
-wrangler generate projectname https://github.com/fable-compiler/cfworker-hello-world
-```
+
+> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.
 
 ### Build and Deploy to Dev
 

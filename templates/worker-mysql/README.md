@@ -9,11 +9,11 @@ This repo contains example code and a MySQL driver that can be used in any Worke
 To create a `my-project` directory using this template, run:
 
 ```sh
-$ npm init cloudflare my-project worker-mysql
+$ npm init cloudflare my-project worker-mysql --no-delegate-c3
 # or
-$ yarn create cloudflare my-project worker-mysql
+$ yarn create cloudflare my-project worker-mysql --no-delegate-c3
 # or
-$ pnpm create cloudflare my-project worker-mysql
+$ pnpm create cloudflare my-project worker-mysql --no-delegate-c3
 ```
 
 > **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.
