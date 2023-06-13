@@ -1,5 +1,4 @@
 import { fromXML } from "from-xml";
-import Puppeteer from "@cloudflare/puppeteer";
 
 import {
 	DBNotifier,
@@ -127,12 +126,12 @@ export const getNeedsChecking = async (
 	const updatedByLastMod = await db
 		.prepare(
 			`
-    select * from urls 
+    select * from urls
     ${
 			noNewKeywordsToQuery
 				? `
       -- new records
-      where last_checked is null 
+      where last_checked is null
 
       -- needs rechecking
       or last_checked > date('now', '-1 day')
@@ -158,9 +157,15 @@ export const updateStoredUrls = async (db: D1Database, authToken: string) => {
 
 	const { results: sitemaps } = await db
 		.prepare("select * from sitemaps")
-		.all();
+		.all<DBSitemap>();
+
+	if (!sitemaps) {
+		console.log("No sitemaps found, exiting");
+		return;
+	}
+
 	const sitemapResponses: Array<SitemapXMLResponse> = await Promise.all(
-		sitemaps!.map(async (sitemap: DBSitemap) => {
+		sitemaps.map(async (sitemap: DBSitemap) => {
 			return (await xmlToURLs({
 				url: sitemap.url,
 				sitemapId: sitemap.id,
@@ -199,10 +204,20 @@ export const handleQueuedUrl = async (url: DBUrl, db: D1Database) => {
 
 	const notifierMatchQuery = await db
 		.prepare("select * from notifier_matches")
-		.all();
+		.all<DBNotifierMatch>();
+	if (notifierMatchQuery.results === undefined) {
+		console.log("No notifier matches found");
+		return;
+	}
 	const notifierMatches: Array<DBNotifierMatch> = notifierMatchQuery.results;
 
-	const notifierQuery = await db.prepare("select * from notifiers").all();
+	const notifierQuery = await db
+		.prepare("select * from notifiers")
+		.all<DBNotifier>();
+	if (notifierQuery.results === undefined) {
+		console.log("No notifiers found");
+		return;
+	}
 	const notifiers: Array<DBNotifier> = notifierQuery.results;
 
 	const response = await fetch(url.url);

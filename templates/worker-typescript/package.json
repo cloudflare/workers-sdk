@@ -6,7 +6,7 @@
 		"deploy": "wrangler deploy src/index.ts",
 		"dev": "wrangler dev src/index.ts --local",
 		"start-stackblitz": "WRANGLER_SEND_METRICS=false wrangler dev src/index.ts --local",
-		"test": "vitest"
+		"test": "vitest run"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^3.0.0",

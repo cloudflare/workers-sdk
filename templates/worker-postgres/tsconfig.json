@@ -9,6 +9,5 @@
 		"moduleResolution": "node",
 		"module": "esnext",
 		"allowJs": true
-	},
-	"include": ["src"]
+	}
 }

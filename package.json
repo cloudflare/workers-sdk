@@ -11,7 +11,8 @@
 	"author": "wrangler@cloudflare.com",
 	"workspaces": [
 		"packages/*",
-		"fixtures/*"
+		"fixtures/*",
+		"templates/*"
 	],
 	"scripts": {
 		"build": "turbo build",

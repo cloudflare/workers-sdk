@@ -1,8 +1,4 @@
-/**
- * @param {Request} request
- * @returns {Promise<Response>}
- */
-export default async function (request) {
+export default async function (request: Request) {
 	const reqTime = new Date();
 
 	const res = new Response('OK');

@@ -1,11 +1,7 @@
 const DEFAULT_NUM_BYTES = 0;
 const MAX_BYTES = 1e8;
 
-/**
- * @param {Request} request
- * @returns {Promise<Response>}
- */
-export default async function (request) {
+export default async function (request: Request) {
 	const reqTime = new Date();
 
 	const { searchParams: qs } = new URL(request.url);
