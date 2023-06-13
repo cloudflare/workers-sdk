@@ -20,7 +20,7 @@
 		"build": "run-p build:*",
 		"build:d.ts": "tsc",
 		"build:js": "esbuild src/index.ts --bundle --platform=node --external:execa --external:webpack --external:esbuild --external:rimraf --target=node16.13 --outfile=lib/index.js --format=cjs --sourcemap",
-		"test:plugin": "jest --forceExit"
+		"test": "jest --forceExit"
 	},
 	"jest": {
 		"moduleNameMapper": {
