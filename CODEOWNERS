@@ -10,7 +10,7 @@
 /packages/wrangler/src/api/pages/ @cloudflare/pages
 /packages/wrangler/src/pages/ @cloudflare/pages
 
-/packages/wrangler/src/api/d1/ @cloudflare/d1
-/packages/wrangler/src/d1/ @cloudflare/d1
+/packages/wrangler/src/api/d1/ @cloudflare/d1 @cloudflare/wrangler
+/packages/wrangler/src/d1/ @cloudflare/d1 @cloudflare/wrangler
 
 /packages/create-cloudflare/ @jculvey @RamIdeas @petebacondarwin
