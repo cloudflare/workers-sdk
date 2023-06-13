@@ -255,3 +255,36 @@ describe("Preview Worker", () => {
 		expect(await resp.text()).toMatchInlineSnapshot('"407"');
 	});
 });
+
+describe("Raw HTTP preview", () => {
+	let worker: UnstableDevWorker;
+
+	beforeAll(async () => {
+		worker = await unstable_dev("src/index.ts", {
+			// @ts-expect-error TODO: figure out the right way to get the server to accept host from the request
+			host: "0000.rawhttp.devprod.cloudflare.dev",
+			experimental: {
+				disableExperimentalWarning: true,
+			},
+		});
+	});
+
+	afterAll(async () => {
+		await worker.stop();
+	});
+
+	it("should allow arbitrary headers in cross-origin requests", async () => {
+		const resp = await worker.fetch(
+			`https://0000.rawhttp.devprod.cloudflare.dev`,
+			{
+				method: "OPTIONS",
+				headers: {
+					"Access-Control-Request-Headers": "foo",
+					origin: "https://cloudflare.dev",
+				},
+			}
+		);
+
+		expect(resp.headers.get("Access-Control-Allow-Headers")).toBe("foo");
+	});
+});

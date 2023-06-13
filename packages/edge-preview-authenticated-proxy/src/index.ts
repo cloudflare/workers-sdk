@@ -145,7 +145,7 @@ async function handleRequest(
  * It must be called with a random subdomain (i.e. some-random-data.rawhttp.devprod.cloudflare.dev)
  * for consistency with the preview endpoint. This is not currently used, but may be in future
  *
- * It required two parameters, passed as headers:
+ * It requires two parameters, passed as headers:
  *  - `X-CF-Token`  A preview token, as in /.update-preview-token
  *  - `X-CF-Remote` Which endpoint to hit with preview requests, as in /.update-preview-token
  */
@@ -156,9 +156,11 @@ async function handleRawHttp(request: Request, url: URL) {
 				"Access-Control-Allow-Origin": request.headers.get("Origin") ?? "",
 				"Access-Control-Allow-Method": "*",
 				"Access-Control-Allow-Credentials": "true",
-				"Access-Control-Allow-Headers": "x-cf-token,x-cf-remote",
+				"Access-Control-Allow-Headers":
+					request.headers.get("Access-Control-Request-Headers") ??
+					"x-cf-token,x-cf-remote",
 				"Access-Control-Expose-Headers": "*",
-				Vary: "Origin",
+				Vary: "Origin, Access-Control-Request-Headers",
 			},
 		});
 	}
@@ -191,7 +193,6 @@ async function handleRawHttp(request: Request, url: URL) {
 			"Access-Control-Allow-Origin": request.headers.get("Origin") ?? "",
 			"Access-Control-Allow-Method": "*",
 			"Access-Control-Allow-Credentials": "true",
-			"Access-Control-Allow-Headers": "x-cf-token,x-cf-remote",
 			"cf-ew-status": workerResponse.status.toString(),
 			"Access-Control-Expose-Headers": "*",
 			Vary: "Origin",
