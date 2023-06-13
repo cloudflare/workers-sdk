@@ -5,61 +5,53 @@ import { describe, it } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Pages _worker.js", () => {
-	it(
-		"should throw an error when the _worker.js file imports something and --bundle is false",
-		({ expect }) => {
-			expect(() =>
-				execSync("npm run dev -- --bundle=false", {
-					cwd: path.resolve(__dirname, ".."),
-					stdio: "ignore",
-				})
-			).toThrowError();
-		},
-		{ timeout: 10_000 }
-	);
+	it("should throw an error when the _worker.js file imports something and --bundle is false", ({
+		expect,
+	}) => {
+		expect(() =>
+			execSync("npm run dev -- --bundle=false", {
+				cwd: path.resolve(__dirname, ".."),
+				stdio: "ignore",
+			})
+		).toThrowError();
+	});
 
-	it(
-		"should throw an error when the _worker.js file imports something and --no-bundle is true",
-		({ expect }) => {
-			expect(() =>
-				execSync("npm run dev -- --no-bundle", {
-					cwd: path.resolve(__dirname, ".."),
-					stdio: "ignore",
-				})
-			).toThrowError();
-		},
-		{ timeout: 10_000 }
-	);
+	it("should throw an error when the _worker.js file imports something and --no-bundle is true", ({
+		expect,
+	}) => {
+		expect(() =>
+			execSync("npm run dev -- --no-bundle", {
+				cwd: path.resolve(__dirname, ".."),
+				stdio: "ignore",
+			})
+		).toThrowError();
+	});
 
-	it(
-		"should not throw an error when the _worker.js file imports something if --no-bundle is false",
-		async ({ expect }) => {
-			const { ip, port, stop } = await runWranglerPagesDev(
-				resolve(__dirname, ".."),
-				"./workerjs-test",
-				["--no-bundle=false", "--port=0"]
-			);
-			await expect(
-				fetch(`http://${ip}:${port}/`).then((resp) => resp.text())
-			).resolves.toContain("test");
-			await stop();
-		},
-		{ timeout: 10_000 }
-	);
+	it("should not throw an error when the _worker.js file imports something if --no-bundle is false", async ({
+		expect,
+	}) => {
+		const { ip, port, stop } = await runWranglerPagesDev(
+			resolve(__dirname, ".."),
+			"./workerjs-test",
+			["--no-bundle=false", "--port=0"]
+		);
+		await expect(
+			fetch(`http://${ip}:${port}/`).then((resp) => resp.text())
+		).resolves.toContain("test");
+		await stop();
+	});
 
-	it(
-		"should not throw an error when the _worker.js file imports something if --bundle is true",
-		async ({ expect }) => {
-			const { ip, port, stop } = await runWranglerPagesDev(
-				resolve(__dirname, ".."),
-				"./workerjs-test",
-				["--bundle", "--port=0"]
-			);
-			await expect(
-				fetch(`http://${ip}:${port}/`).then((resp) => resp.text())
-			).resolves.toContain("test");
-			await stop();
-		},
-		{ timeout: 10_000 }
-	);
+	it("should not throw an error when the _worker.js file imports something if --bundle is true", async ({
+		expect,
+	}) => {
+		const { ip, port, stop } = await runWranglerPagesDev(
+			resolve(__dirname, ".."),
+			"./workerjs-test",
+			["--bundle", "--port=0"]
+		);
+		await expect(
+			fetch(`http://${ip}:${port}/`).then((resp) => resp.text())
+		).resolves.toContain("test");
+		await stop();
+	});
 });
