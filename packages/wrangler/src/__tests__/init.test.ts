@@ -81,6 +81,16 @@ describe("init", () => {
 				stdio: "inherit",
 			});
 		});
+
+		it("if `-y` is used, delegate to c3 with --wrangler-defaults", async () => {
+			await runWrangler("init -y");
+
+			expect(execa).toHaveBeenCalledWith(
+				"mockpm",
+				["create", "cloudflare@2", "--", "--wrangler-defaults"],
+				{ stdio: "inherit" }
+			);
+		});
 	});
 
 	describe("deprecated behaviour is retained with --no-delegate-c3", () => {
@@ -113,7 +123,7 @@ describe("init", () => {
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 -- --wrangler-defaults\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -152,7 +162,7 @@ describe("init", () => {
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 -- --wrangler-defaults\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -189,7 +199,7 @@ describe("init", () => {
 			To start developing your Worker, run \`npm start\`
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 -- --wrangler-defaults\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -658,7 +668,7 @@ describe("init", () => {
 			To start developing your Worker, run \`npm start\`
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 -- --wrangler-defaults\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -690,7 +700,7 @@ describe("init", () => {
 			To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 -- --wrangler-defaults\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -2232,7 +2242,7 @@ describe("init", () => {
 			To start developing your Worker, run \`npm start\`
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 -- --wrangler-defaults\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -2268,7 +2278,7 @@ describe("init", () => {
 			To start developing your Worker, run \`cd path/to/worker && npm start\`
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 -- --wrangler-defaults\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -2306,7 +2316,7 @@ describe("init", () => {
 			To start developing your Worker, run \`cd WEIRD_w0rkr_N4m3.js.tsx.tar.gz && npm start\`
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 -- --wrangler-defaults\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 
@@ -2768,8 +2778,8 @@ describe("init", () => {
 			  "debug": "",
 			  "err": "",
 			  "info": "",
-			  "out": "Running \`mockpm create cloudflare@2 existing-memory-crystal -- --type pre-existing\`...",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init --from-dash\` command is no longer supported. Please use \`mockpm create cloudflare@2 existing-memory-crystal -- --type pre-existing\` instead.[0m
+			  "out": "Running \`mockpm create cloudflare@2 existing-memory-crystal -- --type pre-existing --existing-script existing-memory-crystal\`...",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init --from-dash\` command is no longer supported. Please use \`mockpm create cloudflare@2 existing-memory-crystal -- --type pre-existing --existing-script existing-memory-crystal\` instead.[0m
 
 			  The \`init\` command will be removed in a future version.
 

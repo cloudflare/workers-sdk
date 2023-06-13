@@ -12,13 +12,13 @@ export type TextOptions = {
 	renderSubmitted: (value: string) => string;
 	question: string;
 	defaultValue: string;
+	acceptDefault: boolean | undefined; // must be specified, but can be undefined (≈ false)
 	helpText?: string;
 	validate?: (value: string) => string | void;
-	initialValue?: string;
 };
 
 export const textInput = async (opts: TextOptions) => {
-	const { renderSubmitted, question, defaultValue, validate, initialValue } =
+	const { renderSubmitted, question, defaultValue, validate, acceptDefault } =
 		opts;
 	const helpText = opts.helpText || ``;
 
@@ -55,10 +55,11 @@ export const textInput = async (opts: TextOptions) => {
 	});
 
 	let value: string;
-	if (initialValue) {
+	if (acceptDefault) {
 		logRaw(`${leftT} ${question}`);
-		logRaw(`${grayBar} ${renderSubmitted(initialValue)}\n${grayBar}`);
-		value = initialValue;
+		logRaw(`${grayBar} ${renderSubmitted(defaultValue)}\n${grayBar}`);
+		value = defaultValue;
+		validate?.(value);
 	} else {
 		value = (await prompt.prompt()) as string;
 
@@ -81,16 +82,18 @@ type SelectOptions = {
 	renderSubmitted: (option: Option) => string;
 	options: Option[];
 	helpText?: string;
-	initialValue?: string;
+	defaultValue: string;
+	acceptDefault: boolean | undefined; // must be specified, but can be undefined (≈ false)
 };
 
 export const selectInput = async (opts: SelectOptions) => {
-	const { question, options, renderSubmitted, initialValue } = opts;
+	const { question, options, renderSubmitted, defaultValue, acceptDefault } =
+		opts;
 	const helpText = opts.helpText || ``;
 
 	const prompt = new SelectPrompt({
 		options,
-		initialValue: options[0].value,
+		initialValue: defaultValue ?? options[0].value,
 		render() {
 			const renderOption = (opt: Option, i: number) => {
 				const { label } = opt;
@@ -122,16 +125,16 @@ export const selectInput = async (opts: SelectOptions) => {
 	});
 
 	let value: string;
-	if (initialValue) {
+	if (acceptDefault) {
 		logRaw(`${leftT} ${question}`);
 		logRaw(
 			`${grayBar} ${renderSubmitted({
-				label: initialValue,
-				value: initialValue,
+				label: defaultValue,
+				value: defaultValue,
 			})}`
 		);
 		logRaw(`${grayBar}`);
-		value = initialValue;
+		value = defaultValue;
 	} else {
 		value = (await prompt.prompt()) as string;
 
@@ -148,10 +151,10 @@ type ConfirmOptions = {
 	question: string;
 	renderSubmitted: (value: boolean) => string;
 	defaultValue?: boolean;
+	acceptDefault: boolean | undefined; // must be specified, but can be undefined (≈ false)
 	activeText?: string;
 	inactiveText?: string;
 	helpText?: string;
-	initialValue?: boolean;
 };
 
 export const confirmInput = async (opts: ConfirmOptions) => {
@@ -160,18 +163,17 @@ export const confirmInput = async (opts: ConfirmOptions) => {
 		inactiveText,
 		question,
 		renderSubmitted,
-		defaultValue,
-		initialValue,
+		defaultValue = true,
+		acceptDefault,
 	} = opts;
 	const helpText = opts.helpText || `(y/n)`;
-
 	const active = activeText || "Yes";
 	const inactive = inactiveText || "No";
 
 	const prompt = new ConfirmPrompt({
 		active,
 		inactive,
-		initialValue: defaultValue || true,
+		initialValue: defaultValue,
 		render() {
 			const yesColor = this.value ? blue : dim;
 			const noColor = this.value ? dim : blue;
@@ -195,11 +197,11 @@ export const confirmInput = async (opts: ConfirmOptions) => {
 
 	let value: boolean;
 
-	if (initialValue !== undefined) {
+	if (acceptDefault) {
 		logRaw(`${leftT} ${question}`);
-		logRaw(`${grayBar} ${renderSubmitted(initialValue)}`);
+		logRaw(`${grayBar} ${renderSubmitted(defaultValue)}`);
 		logRaw(`${grayBar}`);
-		value = initialValue;
+		value = defaultValue;
 	} else {
 		value = Boolean(await prompt.prompt());
 
@@ -213,7 +215,8 @@ export const confirmInput = async (opts: ConfirmOptions) => {
 };
 
 export const spinner = () => {
-	const frames = ["┤", "┘", "┴", "└", "├", "┌", "┬", "┐"];
+	const spinnerFrames = ["┤", "┘", "┴", "└", "├", "┌", "┬", "┐"];
+	const ellipsisFrames = ["", ".", "..", "...", " ..", "  .", ""];
 
 	// Alternative animations we considered. Keeping around in case we
 	// introduce different animations for different use cases.
@@ -226,7 +229,6 @@ export const spinner = () => {
 
 	const color = brandColor;
 	const frameRate = 120;
-	const maxDots = 4;
 	let loop: NodeJS.Timer | null = null;
 	let startMsg: string;
 	let currentMsg: string;
@@ -239,30 +241,35 @@ export const spinner = () => {
 	}
 
 	return {
-		start: (msg: string, helpText?: string) => {
+		start(msg: string, helpText?: string) {
 			helpText ||= ``;
 			currentMsg = msg;
 			startMsg = `${currentMsg} ${dim(helpText)}`;
 
 			let index = 0;
-			let dots = 1;
 
 			clearLoop();
 			loop = setInterval(() => {
-				const frame = frames[(index = ++index % frames.length)];
-				dots = ++dots % maxDots;
-				logUpdate(`${color(frame)} ${currentMsg} ${".".repeat(dots)}`);
+				index++;
+				const spinnerFrame = spinnerFrames[index % spinnerFrames.length];
+				const ellipsisFrame = ellipsisFrames[index % ellipsisFrames.length];
+
+				if (msg) {
+					logUpdate(`${color(spinnerFrame)} ${currentMsg} ${ellipsisFrame}`);
+				}
 			}, frameRate);
 		},
 		update(msg: string) {
 			currentMsg = msg;
 		},
-		stop: (msg: string) => {
+		stop(msg?: string) {
 			// Write the final message and clear the loop
 			logUpdate.clear();
-			logUpdate(`${leftT} ${startMsg}\n${grayBar} ${msg}`);
-			logUpdate.done();
-			newline();
+			if (msg) {
+				logUpdate(`${leftT} ${startMsg}\n${grayBar} ${msg}`);
+				logUpdate.done();
+				newline();
+			}
 			clearLoop();
 		},
 	};

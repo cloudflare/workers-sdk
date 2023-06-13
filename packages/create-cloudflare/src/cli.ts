@@ -1,6 +1,4 @@
 #!/usr/bin/env node
-import { existsSync } from "fs";
-import { resolve } from "path";
 import Haikunator from "haikunator";
 import { crash, logRaw, startSection } from "helpers/cli";
 import { dim, brandColor } from "helpers/colors";
@@ -8,6 +6,7 @@ import { selectInput, textInput } from "helpers/interactive";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { version } from "../package.json";
+import { validateProjectDirectory } from "./common";
 import { runPagesGenerator } from "./pages";
 import { runWorkersGenerator } from "./workers";
 import type { Option } from "helpers/interactive";
@@ -20,8 +19,12 @@ export const main = async (argv: string[]) => {
 
 	const validatedArgs: PagesGeneratorArgs = {
 		...args,
-		projectName: await validateName(args.projectName),
-		type: await validateType(args.type),
+		projectName: await validateName(args.projectName, {
+			acceptDefault: args.wranglerDefaults,
+		}),
+		type: await validateType(args.type, {
+			acceptDefault: args.wranglerDefaults,
+		}),
 	};
 
 	const { handler } = templateMap[validatedArgs.type];
@@ -42,12 +45,18 @@ const parseArgs = async (argv: string[]) => {
 		.option("framework", { type: "string" })
 		.option("deploy", { type: "boolean" })
 		.option("ts", { type: "boolean" })
+		.option("git", { type: "boolean" })
 		.option("open", {
 			type: "boolean",
 			default: true,
 			description:
 				"opens your browser after your deployment, set --no-open to disable",
 		})
+		.option("existing-script", {
+			type: "string",
+			hidden: templateMap["pre-existing"].hidden,
+		})
+		.option("wrangler-defaults", { type: "boolean", hidden: true })
 		.help().argv;
 
 	return {
@@ -56,26 +65,26 @@ const parseArgs = async (argv: string[]) => {
 	};
 };
 
-const validateName = async (name: string | undefined): Promise<string> => {
-	const haikunator = new Haikunator();
-
-	return await textInput({
-		initialValue: name,
+const validateName = async (
+	name: string | undefined,
+	{ acceptDefault = false } = {}
+): Promise<string> => {
+	return textInput({
 		question: `Where do you want to create your application?`,
 		helpText: "also used as application name",
 		renderSubmitted: (value: string) => {
 			return `${brandColor("dir")} ${dim(value)}`;
 		},
-		defaultValue: haikunator.haikunate({ tokenHex: true }),
-		validate: (value: string) => {
-			if (value && existsSync(resolve(value))) {
-				return `\`${value}\` already exists. Please choose a new folder. `;
-			}
-		},
+		defaultValue: name ?? new Haikunator().haikunate({ tokenHex: true }),
+		acceptDefault,
+		validate: validateProjectDirectory,
 	});
 };
 
-const validateType = async (type: string | undefined) => {
+const validateType = async (
+	type: string | undefined,
+	{ acceptDefault = false } = {}
+) => {
 	const templateOptions = Object.entries(templateMap)
 		.filter(([_, { hidden }]) => !hidden)
 		.map(([value, { label }]) => ({ value, label }));
@@ -86,12 +95,14 @@ const validateType = async (type: string | undefined) => {
 		renderSubmitted: (option: Option) => {
 			return `${brandColor("type")} ${dim(option.label)}`;
 		},
-		initialValue: type,
+		defaultValue: type ?? "simple",
+		acceptDefault,
 	});
 
 	if (!type || !Object.keys(templateMap).includes(type)) {
 		crash("An application type must be specified to continue.");
 	}
+
 	return type;
 };
 
@@ -115,7 +126,7 @@ const templateMap: Record<string, TemplateConfig> = {
 		handler: runWorkersGenerator,
 	},
 	chatgptPlugin: {
-		label: `ChatGPT plugin (Typescript)`,
+		label: `ChatGPT plugin`,
 		handler: (args) =>
 			runWorkersGenerator({
 				...args,

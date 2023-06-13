@@ -16,6 +16,8 @@ const generate = async (ctx: PagesGeneratorContext) => {
 			const status = value ? "yes" : "no";
 			return `${brandColor(`template`)} ${status}`;
 		},
+		defaultValue: true,
+		acceptDefault: false,
 	});
 
 	let templateUrl = "";
@@ -27,6 +29,7 @@ const generate = async (ctx: PagesGeneratorContext) => {
 				return `${brandColor("template")} ${dim(result)}`;
 			},
 			defaultValue: defaultTemplate,
+			acceptDefault: false,
 		});
 	}
 

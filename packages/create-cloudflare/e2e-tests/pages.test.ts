@@ -35,6 +35,8 @@ describe("E2E", () => {
 			"--framework",
 			framework,
 			"--no-deploy",
+			"--no-git",
+			"--wrangler-defaults",
 		];
 
 		const result = await execa("node", ["./dist/cli.js", ...argv], {

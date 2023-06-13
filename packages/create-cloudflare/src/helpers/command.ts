@@ -2,69 +2,135 @@ import { existsSync } from "fs";
 import path from "path";
 import { spawn } from "cross-spawn";
 import whichPmRuns from "which-pm-runs";
-import { endSection, logRaw, stripAnsi } from "./cli";
+import { endSection, stripAnsi } from "./cli";
 import { brandColor, dim } from "./colors";
 import { spinner } from "./interactive";
 import type { PagesGeneratorContext } from "types";
+
+/**
+ * Command can be either:
+ *    - a string, like `git commit -m "Changes"`
+ *    - a string array, like ['git', 'commit', '-m', '"Initial commit"']
+ *
+ * The string version is a convenience but is unsafe if your args contain spaces
+ */
+type Command = string | string[];
 
 type RunOptions = {
 	startText?: string;
 	doneText?: string;
 	silent?: boolean;
 	captureOutput?: boolean;
+	useSpinner?: boolean;
 	env?: NodeJS.ProcessEnv;
 	cwd?: string;
 };
 
+type MultiRunOptions = RunOptions & {
+	commands: Command[];
+	startText: string;
+};
+
+type PrintOptions<T> = {
+	promise: Promise<T> | (() => Promise<T>);
+	useSpinner?: boolean;
+	startText: string;
+	doneText?: string;
+};
+
 export const runCommand = async (
-	command: string,
+	command: Command,
 	opts?: RunOptions
 ): Promise<string> => {
-	const s = spinner();
-
-	if (opts?.startText && !process.env.VITEST) {
-		s.start(opts?.startText || command);
+	if (typeof command === "string") {
+		command = command.trim().replace(/\s+/g, ` `).split(" ");
 	}
 
-	const [executable, ...args] = command.trim().replace(/\s+/g, ` `).split(" ");
+	return printAsyncStatus({
+		useSpinner: opts?.useSpinner ?? opts?.silent,
+		startText: opts?.startText || command.join(" "),
+		doneText: opts?.doneText,
+		promise() {
+			const [executable, ...args] = command;
 
-	const squelch = opts?.silent || process.env.VITEST;
+			const squelch = opts?.silent || process.env.VITEST;
 
-	const cmd = spawn(executable, [...args], {
-		// TODO: ideally inherit stderr, but npm install uses this for warnings
-		// stdio: [ioMode, ioMode, "inherit"],
-		stdio: squelch ? "pipe" : "inherit",
-		env: {
-			...process.env,
-			...opts?.env,
-		},
-		cwd: opts?.cwd,
-	});
+			const cmd = spawn(executable, [...args], {
+				// TODO: ideally inherit stderr, but npm install uses this for warnings
+				// stdio: [ioMode, ioMode, "inherit"],
+				stdio: squelch ? "pipe" : "inherit",
+				env: {
+					...process.env,
+					...opts?.env,
+				},
+				cwd: opts?.cwd,
+			});
 
-	let output = ``;
+			let output = ``;
 
-	if (opts?.silent) {
-		cmd.stdout?.on("data", (data) => {
-			output += data;
-		});
-		cmd.stderr?.on("data", (data) => {
-			output += data;
-		});
-	}
-
-	return await new Promise((resolve, reject) => {
-		cmd.on("close", (code) => {
-			if (code === 0) {
-				if (opts?.doneText && !process.env.VITEST) {
-					s.stop(opts?.doneText);
-				}
-				resolve(stripAnsi(output));
-			} else {
-				logRaw(output);
-				reject(code);
+			if (opts?.captureOutput ?? squelch) {
+				cmd.stdout?.on("data", (data) => {
+					output += data;
+				});
+				cmd.stderr?.on("data", (data) => {
+					output += data;
+				});
 			}
-		});
+
+			return new Promise<string>((resolve, reject) => {
+				cmd.on("close", (code) => {
+					if (code === 0) {
+						resolve(stripAnsi(output));
+					} else {
+						reject(new Error(output, { cause: code }));
+					}
+				});
+			});
+		},
 	});
+};
+
+// run mutliple commands in sequence (not parallel)
+export async function runCommands({ commands, ...opts }: MultiRunOptions) {
+	return printAsyncStatus({
+		useSpinner: opts.useSpinner ?? opts.silent,
+		startText: opts.startText,
+		doneText: opts.doneText,
+		async promise() {
+			for (const command of commands) {
+				await runCommand(command, { ...opts, useSpinner: false });
+			}
+		},
+	});
+}
+
+export const printAsyncStatus = async <T>({
+	promise,
+	...opts
+}: PrintOptions<T>): Promise<T> => {
+	let s: ReturnType<typeof spinner> | undefined;
+
+	if (opts.useSpinner) {
+		s = spinner();
+	}
+
+	s?.start(opts?.startText);
+
+	if (typeof promise === "function") {
+		promise = promise();
+	}
+
+	try {
+		await promise;
+
+		s?.stop(opts.doneText);
+	} catch (err) {
+		s?.stop((err as Error).message);
+	} finally {
+		s?.stop();
+	}
+
+	return promise;
 };
 
 export const retry = async <T>(times: number, fn: () => Promise<T>) => {

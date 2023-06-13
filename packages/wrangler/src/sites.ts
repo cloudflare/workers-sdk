@@ -299,9 +299,7 @@ export async function syncAssets(
 					typeof e === "object" &&
 					e !== null &&
 					"name" in e &&
-					// @ts-expect-error `e.name` should be typed `unknown`, fixed in
-					//  TypeScript 4.9
-					e.name === "AbortError"
+					(e as { name: string }).name === "AbortError"
 				) {
 					break;
 				}

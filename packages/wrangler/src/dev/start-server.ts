@@ -205,7 +205,6 @@ async function runEsbuild({
 	services,
 	firstPartyWorkerDevFacade,
 	testScheduled,
-	local,
 	doBindings,
 }: {
 	entry: Entry;
@@ -266,7 +265,6 @@ async function runEsbuild({
 			firstPartyWorkerDevFacade,
 			targetConsumer: "dev", // We are starting a dev server
 			testScheduled,
-			local,
 			doBindings,
 			additionalModules: dedupeModulesByName([
 				...(traverseModuleGraphResult?.modules ?? []),

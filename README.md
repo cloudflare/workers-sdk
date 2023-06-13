@@ -5,7 +5,7 @@ This monorepo contains:
 - [`wrangler-devtools`](https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler-devtools)
   Cloudflare's fork of Chrome DevTools for inspecting your local or remote Workers
 - [`templates`](https://github.com/cloudflare/workers-sdk/tree/main/templates)
-  Templates & examples for writing Cloudlfare Workers
+  Templates & examples for writing Cloudflare Workers
 - [`wrangler`](https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler)
   A command line tool for building [Cloudflare Workers](https://workers.cloudflare.com/).
 - [`pages-shared`](https://github.com/cloudflare/workers-sdk/tree/main/packages/pages-shared)

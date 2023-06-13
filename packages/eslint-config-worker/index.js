@@ -1,25 +1,22 @@
-const fs = require("fs");
-const path = require("path");
-
-function* walkTsConfigs(root) {
-	const entries = fs.readdirSync(root, { withFileTypes: true });
-	for (const entry of entries) {
-		if (entry.name === "node_modules") continue; // Ignore `node_modules`s
-		const entryPath = path.join(root, entry.name);
-		if (entry.isDirectory()) {
-			yield* walkTsConfigs(entryPath);
-		} else if (entry.name === "tsconfig.json") {
-			yield entryPath;
-		}
-	}
-}
-
+// Settings here should be considered Global ESLint settings for the monorepo. We don't need to define --config in each package.
+// https://eslint.org/docs/latest/use/configure/
+// https://eslint.org/docs/latest/use/configure/configuration-files#using-configuration-files
+// This can be in the form of a .eslintrc.* file or an eslintConfig field in a package.json file,
+// both of which ESLint will look for and read automatically, or you can specify a configuration file on the command line.
+/** @type {import("eslint").Linter.Config} */
 module.exports = {
+	ignorePatterns: [
+		"**/node_modules/**",
+		"examples",
+		"**/templates/**",
+		".eslintrc.js",
+		"**/dist/**",
+	],
 	parser: "@typescript-eslint/parser",
 	parserOptions: {
-		ecmaVersion: 2020,
-		project: Array.from(walkTsConfigs(__dirname)),
+		ecmaVersion: 2022,
 		sourceType: "module",
+		project: true,
 	},
 	settings: {
 		react: {
@@ -34,6 +31,7 @@ module.exports = {
 		"unused-imports",
 		"no-only-tests",
 	],
+	extends: ["turbo"],
 	overrides: [
 		{
 			files: ["*.ts", "*.tsx"],
@@ -43,7 +41,9 @@ module.exports = {
 				"plugin:react/recommended",
 				"plugin:react-hooks/recommended",
 				"plugin:import/typescript",
+				"turbo",
 			],
+
 			rules: {
 				"no-empty": "off",
 				"no-empty-function": "off",
@@ -85,43 +85,6 @@ module.exports = {
 					},
 				],
 			},
-			parserOptions: {
-				project: ["./tsconfig.json"], // Specify it only for TypeScript files
-			},
-		},
-		{
-			files: "packages/wrangler/src/**/*.ts",
-			excludedFiles: "*.test.ts",
-			rules: {
-				"no-restricted-globals": [
-					"error",
-					{
-						name: "__dirname",
-						message: "Use `getBasePath()` instead.",
-					},
-					{
-						name: "__filename",
-						message: "Use `getBasePath()` instead.",
-					},
-				],
-			},
 		},
 	],
-	ignorePatterns: [
-		"packages/wrangler/vendor",
-		"packages/wrangler/*-dist",
-		"packages/wrangler/pages/functions/template-worker.ts",
-		"packages/wrangler/templates",
-		"packages/wrangler/emitted-types",
-		"examples/remix-pages-app/public",
-		"packages/jest-environment-wrangler/dist",
-		"packages/wrangler-devtools/built-devtools",
-		"packages/wranglerjs-compat-webpack-plugin/lib",
-		"/templates",
-		"packages/quick-edit-extension/vscode*.d.ts",
-		"packages/create-cloudflare/**/templates/**",
-		"packages/create-cloudflare/dist",
-		"packages/create-cloudflare/scripts",
-	],
-	root: true,
 };

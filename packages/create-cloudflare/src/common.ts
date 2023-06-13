@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync } from "fs";
-import { basename, dirname, relative, resolve } from "path";
+import { existsSync, mkdirSync, readdirSync } from "fs";
+import { basename, dirname, resolve } from "path";
 import { chdir } from "process";
 import {
 	crash,
@@ -10,12 +10,15 @@ import {
 	openInBrowser,
 	shapes,
 	startSection,
+	updateStatus,
 } from "helpers/cli";
 import { dim, blue, gray, bgGreen, brandColor } from "helpers/colors";
 import {
 	detectPackageManager,
 	listAccounts,
+	printAsyncStatus,
 	runCommand,
+	runCommands,
 	wranglerLogin,
 } from "helpers/command";
 import { confirmInput, selectInput, spinner } from "helpers/interactive";
@@ -25,21 +28,25 @@ import type { PagesGeneratorArgs, PagesGeneratorContext } from "types";
 
 const { npm } = detectPackageManager();
 
+export const validateProjectDirectory = (relativePath: string) => {
+	const path = resolve(relativePath);
+	const existsAlready = existsSync(path);
+	const isEmpty = existsAlready && readdirSync(path).length === 0; // allow existing dirs _if empty_ to ensure c3 is non-destructive
+
+	if (existsAlready && !isEmpty) {
+		crash(
+			`Directory \`${relativePath}\` already exists and is not empty. Please choose a new name.`
+		);
+	}
+};
+
 export const setupProjectDirectory = (args: PagesGeneratorArgs) => {
 	// Crash if the directory already exists
 	const path = resolve(args.projectName);
-
-	if (existsSync(path)) {
-		crash(
-			`Directory \`${args.projectName}\` already exists. Please choose a new name.`
-		);
-	}
+	validateProjectDirectory(path);
 
 	const directory = dirname(path);
 	const name = basename(path);
-
-	// resolve the relative path so we can give the user nice instructions
-	const relativePath = relative(process.cwd(), path);
 
 	// If the target is a nested directory, create the parent
 	mkdirSync(directory, { recursive: true });
@@ -47,7 +54,7 @@ export const setupProjectDirectory = (args: PagesGeneratorArgs) => {
 	// Change to the parent directory
 	chdir(directory);
 
-	return { name, relativePath, path };
+	return { name, path };
 };
 
 export const offerToDeploy = async (ctx: PagesGeneratorContext) => {
@@ -61,7 +68,8 @@ export const offerToDeploy = async (ctx: PagesGeneratorContext) => {
 					ctx.framework?.config.deployCommand ?? "deploy"
 				}\``
 			)}`,
-		initialValue: ctx.args.deploy,
+		defaultValue: ctx.args.deploy ?? (ctx.args.wranglerDefaults ? false : true), // if --wrangler-defaults, default to false, otherwise default to true
+		acceptDefault: ctx.args.wranglerDefaults,
 	});
 
 	if (!ctx.args.deploy) return;
@@ -133,6 +141,8 @@ export const chooseAccount = async (ctx: PagesGeneratorContext) => {
 			renderSubmitted: (option: Option) => {
 				return `${brandColor("account")} ${dim(option.label)}`;
 			},
+			defaultValue: accountOptions[0].value,
+			acceptDefault: ctx.args.wranglerDefaults,
 		});
 	}
 	const accountName = Object.keys(accounts).find(
@@ -197,3 +207,113 @@ export const printSummary = async (ctx: PagesGeneratorContext) => {
 	}
 	endSection("See you again soon!");
 };
+
+export const offerGit = async (ctx: PagesGeneratorContext) => {
+	const gitInstalled = await isGitInstalled();
+
+	if (!gitInstalled) {
+		// haven't prompted yet, if provided as --git arg
+		if (ctx.args.git) {
+			updateStatus(
+				"Couldn't find `git` installed on your machine. Continuing without git."
+			);
+		}
+
+		// override true (--git flag) and undefined (not prompted yet) to false (don't use git)
+		ctx.args.git = false;
+
+		return; // bail early
+	}
+
+	const insideGitRepo = await isInsideGitRepo(ctx.project.path);
+
+	if (insideGitRepo) return;
+
+	ctx.args.git ??= await confirmInput({
+		question: "Do you want to use git for version control?",
+		renderSubmitted: (value: boolean) =>
+			`${brandColor("git")} ${dim(value ? `yes` : `no`)}`,
+		defaultValue: true,
+		acceptDefault: ctx.args.wranglerDefaults,
+	});
+
+	if (ctx.args.git) {
+		await printAsyncStatus({
+			promise: initializeGit(ctx.project.path),
+			startText: "Initializing git repo",
+			doneText: `${brandColor("initialized")} ${dim(`git`)}`,
+		});
+	}
+};
+
+export const gitCommit = async (ctx: PagesGeneratorContext) => {
+	if (!ctx.args.git) return;
+
+	await runCommands({
+		silent: true,
+		cwd: ctx.project.path,
+		commands: [
+			"git add .",
+			["git", "commit", "-m", "Initial commit (by Create-Cloudflare CLI)"],
+		],
+		startText: "Committing new files",
+		doneText: `${brandColor("git")} ${dim(`initial commit`)}`,
+	});
+};
+
+/**
+ * Check whether git is available on the user's machine.
+ */
+export async function isGitInstalled() {
+	try {
+		await runCommand("git -v", { useSpinner: false, silent: true });
+
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Check whether the given current working directory is within a git repository
+ * by looking for a `.git` directory in this or an ancestor directory.
+ */
+export async function isInsideGitRepo(cwd: string) {
+	try {
+		const output = await runCommand("git status", {
+			cwd,
+			useSpinner: false,
+			silent: true,
+			captureOutput: true,
+		});
+
+		return output.includes("not a git repository") === false;
+	} catch (err) {
+		return false;
+	}
+}
+
+/**
+ * Initialize a new Worker project with a git repository.
+ *
+ * We want the branch to be called `main` but earlier versions of git do not support `--initial-branch`.
+ * If that is the case then we just fallback to the default initial branch name.
+ */
+export async function initializeGit(cwd: string) {
+	try {
+		// Get the default init branch name
+		const defaultBranchName = await runCommand(
+			"git config --get init.defaultBranch",
+			{ useSpinner: false, silent: true, cwd }
+		);
+
+		// Try to create the repository with the HEAD branch of defaultBranchName ?? `main`.
+		await runCommand(
+			`git init --initial-branch ${defaultBranchName.trim() ?? "main"}`, // branch names can't contain spaces, so this is safe
+			{ useSpinner: false, silent: true, cwd }
+		);
+	} catch {
+		// Unable to create the repo with a HEAD branch name, so just fall back to the default.
+		await runCommand(`git init`, { useSpinner: false, silent: true, cwd });
+	}
+}

@@ -23,22 +23,22 @@ Any contributions you make will be via [Pull Requests](https://docs.github.com/e
 - [Create your own fork](https://docs.github.com/en/get-started/quickstart/fork-a-repo) of [this repository](https://github.com/cloudflare/workers-sdk).
 - Clone your fork to your local machine
   ```sh
-  > git clone https://github.com/<your-github-username>/wrangler2
-  > cd wrangler2
+  > git clone https://github.com/<your-github-username>/workers-sdk
+  > cd workers-sdk
   ```
   You can see that your fork is setup as the `origin` remote repository.
   Any changes you wish to make should be in a local branch that is then pushed to this origin remote.
   ```sh
   > git remote -v
-  origin	https://github.com/<your-github-username>/wrangler2 (fetch)
-  origin	https://github.com/<your-github-username>/wrangler2 (push)
+  origin	https://github.com/<your-github-username>/workers-sdk (fetch)
+  origin	https://github.com/<your-github-username>/workers-sdk (push)
   ```
-- Add `cloudflare/wrangler2` as the `upstream` remote repository.
+- Add `cloudflare/workers-sdk` as the `upstream` remote repository.
   ```sh
   > git remote add upstream https://github.com/cloudflare/workers-sdk
   > git remote -v
-  origin	https://github.com/<your-github-username>/wrangler2 (fetch)
-  origin	https://github.com/<your-github-username>/wrangler2 (push)
+  origin	https://github.com/<your-github-username>/workers-sdk (fetch)
+  origin	https://github.com/<your-github-username>/workers-sdk (push)
   upstream	https://github.com/cloudflare/workers-sdk (fetch)
   upstream	https://github.com/cloudflare/workers-sdk (push)
   ```
@@ -69,7 +69,7 @@ While each workspace has its own dependencies, you install the dependencies usin
 
 - Install all the dependencies
   ```sh
-  > cd wrangler2
+  > cd workers-sdk
   > npm install
   ```
 
@@ -108,6 +108,25 @@ The code is checked for type errors by [TypeScript](https://www.typescriptlang.o
   > npm run check:type
   ```
 - VS Code will also run type-checking while editing source code, providing immediate feedback.
+
+#### Changing TypeScript Version in VS Code's Command Palette
+
+For TypeScript to work properly in the Monorepo the version used in VSCode must be the project's current TypeScript version, follow these steps:
+
+1. Open the project in VSCode.
+
+2. Press `Ctrl + Shift + P` (or `Cmd + Shift + P` on macOS) to open the command palette.
+
+3. In the command palette, type "Select TypeScript Version" and select the command with the same name that appears in the list.
+
+4. A submenu will appear with a list of available TypeScript versions. Choose the desired version you want to use for this project. If you have multiple versions installed, they will be listed here.
+
+- Selecting "Use Workspace Version" will use the version of TypeScript installed in the project's `node_modules` directory.
+
+5. After selecting the TypeScript version, VSCode will reload the workspace using the chosen version.
+
+Now you have successfully switched the TypeScript version used within the project via the command palette in VSCode.
+Remember that this change is specific to the current project and will not affect other projects or the default TypeScript version used by VSCode.
 
 ### Linting
 
@@ -249,7 +268,7 @@ Assume you have the two directories checked out right beside each other:
 ❯ ll src
 drwxr-xr-x     - user 30 Jun 14:12 src
 drwxr-xr-x     - user 26 Jul 17:34 ├── miniflare
-drwxr-xr-x     - user 27 Jul 17:51 └── wrangler2
+drwxr-xr-x     - user 27 Jul 17:51 └── workers-sdk
 ```
 
 > Note: recommend using [exa](https://the.exa.website/) and `alias ll='exa --icons -laTL 1'` for the above output

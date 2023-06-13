@@ -3,12 +3,17 @@
 	"version": "0.1.0",
 	"private": true,
 	"scripts": {
+		"check:lint": "eslint .",
 		"publish": "wrangler deploy",
 		"start": "wrangler dev",
-		"test": "vitest"
+		"test": "vitest run",
+		"test:watch": "npx vitest",
+		"type:tests": "tsc -p ./tests/tsconfig.json",
+		"check:type": "tsc"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20230321.0",
+		"@cloudflare/eslint-config-worker": "*",
 		"cookie": "^0.5.0",
 		"toucan-js": "^3.1.0",
 		"vitest": "^0.31.0",

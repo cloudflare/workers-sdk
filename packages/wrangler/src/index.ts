@@ -650,40 +650,42 @@ export function createCLIParser(argv: string[]) {
 				.command(subHelp)
 				.epilogue(deploymentsWarning)
 	);
+
 	const rollbackWarning =
 		"🚧`wrangler rollback` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose";
-	wrangler
-		.command(
-			"rollback [deployment-id]",
-			"🔙 Rollback a deployment",
-			(rollbackYargs) =>
-				rollbackYargs
-					.positional("deployment-id", {
-						describe: "The ID of the deployment to rollback to",
-						type: "string",
-						demandOption: false,
-					})
-					.option("message", {
-						alias: "m",
-						describe:
-							"Skip confirmation and message prompts, uses provided argument as message",
-						type: "string",
-						default: undefined,
-					}),
-			async (rollbackYargs) => {
-				const { accountId, scriptName, config } =
-					await commonDeploymentCMDSetup(rollbackYargs, rollbackWarning);
+	wrangler.command(
+		"rollback [deployment-id]",
+		"🔙 Rollback a deployment",
+		(rollbackYargs) =>
+			rollbackYargs
+				.positional("deployment-id", {
+					describe: "The ID of the deployment to rollback to",
+					type: "string",
+					demandOption: false,
+				})
+				.option("message", {
+					alias: "m",
+					describe:
+						"Skip confirmation and message prompts, uses provided argument as message",
+					type: "string",
+					default: undefined,
+				})
+				.epilogue(rollbackWarning),
+		async (rollbackYargs) => {
+			const { accountId, scriptName, config } = await commonDeploymentCMDSetup(
+				rollbackYargs,
+				rollbackWarning
+			);
 
-				await rollbackDeployment(
-					accountId,
-					scriptName,
-					config,
-					rollbackYargs.deploymentId,
-					rollbackYargs.message
-				);
-			}
-		)
-		.epilogue(rollbackWarning);
+			await rollbackDeployment(
+				accountId,
+				scriptName,
+				config,
+				rollbackYargs.deploymentId,
+				rollbackYargs.message
+			);
+		}
+	);
 
 	// This set to false to allow overwrite of default behaviour
 	wrangler.version(false);

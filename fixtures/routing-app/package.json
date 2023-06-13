@@ -1,0 +1,8 @@
+{
+	"name": "routing-app",
+	"version": "0.0.0",
+	"description": "routing-app for testing",
+	"scripts": {
+		"check:type": "tsc"
+	}
+}

@@ -199,3 +199,9 @@ packages/quick-edit/web
 vendor/vscode
 
 .wrangler/
+
+# Turbo Repo
+build/**
+dist/**
+.next/**
+.turbo
