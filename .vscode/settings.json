@@ -51,6 +51,7 @@
 	"typescript.tsdk": "node_modules/typescript/lib",
 	"editor.tabSize": 2,
 	"files.associations": {
-		"api-extractor.json": "jsonc"
+		"api-extractor.json": "jsonc",
+		"CODEOWNERS": "plaintext"
 	}
 }
