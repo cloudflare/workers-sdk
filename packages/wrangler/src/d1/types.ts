@@ -30,3 +30,34 @@ export type Migration = {
 	name: string;
 	applied_at: string;
 };
+
+export interface D1Metrics {
+	sum?: {
+		readQueries?: number;
+		writeQueries?: number;
+		queryBatchResponseBytes?: number;
+	};
+	quantiles?: {
+		queryBatchTimeMsP90?: number;
+	};
+	avg?: {
+		queryBatchTimeMs?: number;
+	};
+	dimensions: {
+		databaseId?: string;
+		date?: string;
+		datetime?: string;
+		datetimeMinute?: string;
+		datetimeFiveMinutes?: string;
+		datetimeFifteenMinutes?: string;
+		datetimeHour?: string;
+	};
+}
+
+export interface D1MetricsGraphQLResponse {
+	data: {
+		viewer: {
+			accounts: { d1AnalyticsAdaptiveGroups?: D1Metrics[] }[];
+		};
+	};
+}

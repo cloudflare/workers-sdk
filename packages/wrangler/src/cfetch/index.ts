@@ -44,6 +44,26 @@ export async function fetchResult<ResponseType>(
 }
 
 /**
+ * Make a fetch request to the GraphQL API, and return the JSON response.
+ */
+export async function fetchGraphqlResult<ResponseType>(
+	init: RequestInit = {},
+	abortSignal?: AbortSignal
+): Promise<ResponseType> {
+	const json = await fetchInternal<ResponseType>(
+		"/graphql",
+		{ ...init, method: "POST" }, //Cloudflare API v4 doesn't allow GETs to /graphql
+		undefined,
+		abortSignal
+	);
+	if (json) {
+		return json;
+	} else {
+		throw new Error("A request to the Cloudflare API (/graphql) failed.");
+	}
+}
+
+/**
  * Make a fetch request for a list of values,
  * extracting the `result` from the JSON response,
  * and repeating the request if the results are paginated.
