@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import dedent from "ts-dedent";
 import traverseModuleGraph from "../traverse-module-graph";
+import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import type { ConfigModuleRuleType } from "../config";
 
@@ -14,6 +15,7 @@ import type { ConfigModuleRuleType } from "../config";
 
 describe("traverse module graph", () => {
 	runInTempDir();
+	mockConsoleMethods();
 
 	it("should not detect JS without module rules", async () => {
 		await writeFile(
