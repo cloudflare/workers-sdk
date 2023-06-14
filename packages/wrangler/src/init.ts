@@ -10,6 +10,7 @@ import { fetchResult } from "./cfetch";
 import { fetchDashboardScript } from "./cfetch/internal";
 import { readConfig } from "./config";
 import { confirm, select } from "./dialogs";
+import { getC3CommandFromEnv } from "./environment-variables/misc-variables";
 import { initializeGit, getGitVersioon, isInsideGitRepo } from "./git-client";
 import { logger } from "./logger";
 import { getPackageManager } from "./package-manager";
@@ -202,8 +203,7 @@ export async function initHandler(args: InitArgs) {
 		}
 
 		const c3Arguments = [
-			"create",
-			"cloudflare@2",
+			...getC3CommandFromEnv().split(" "),
 			fromDashScriptName,
 			"--",
 			"--type",
@@ -252,7 +252,7 @@ export async function initHandler(args: InitArgs) {
 		//    if a wrangler.toml file does not exist (C3 expects to scaffold *new* projects)
 		//    and if --from-dash is not set (C3 will run wrangler to communicate with the API)
 		if (!fromDashScriptName) {
-			const c3Arguments = ["create", "cloudflare@2"];
+			const c3Arguments = getC3CommandFromEnv().split(" ");
 
 			if (yesFlag) {
 				c3Arguments.push("--", "--wrangler-defaults");

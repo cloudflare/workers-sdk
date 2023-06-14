@@ -91,9 +91,70 @@ describe("init", () => {
 				{ stdio: "inherit" }
 			);
 		});
+
+		describe("with custom C3 command", () => {
+			const ORIGINAL_ENV = process.env;
+
+			beforeEach(() => {
+				process.env = {
+					...ORIGINAL_ENV,
+					WRANGLER_C3_COMMAND: "run create-cloudflare",
+				};
+			});
+
+			afterEach(() => {
+				process.env = ORIGINAL_ENV;
+			});
+
+			test("shows deprecation message and delegates to C3", async () => {
+				await runWrangler("init");
+
+				checkFiles({
+					items: {
+						"./src/index.js": false,
+						"./src/index.ts": false,
+						"./tsconfig.json": false,
+						"./package.json": false,
+						"./wrangler.toml": false,
+					},
+				});
+
+				expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "Running \`mockpm run create-cloudflare\`...",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm run create-cloudflare\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
+			}
+		`);
+
+				expect(execa).toHaveBeenCalledWith(
+					"mockpm",
+					["run", "create-cloudflare"],
+					{
+						stdio: "inherit",
+					}
+				);
+			});
+
+			it("if `-y` is used, delegate to c3 with --wrangler-defaults", async () => {
+				await runWrangler("init -y");
+
+				expect(execa).toHaveBeenCalledWith(
+					"mockpm",
+					["run", "create-cloudflare", "--", "--wrangler-defaults"],
+					{ stdio: "inherit" }
+				);
+			});
+		});
 	});
 
-	describe("deprecated behaviour is retained with --no-delegate-c3", () => {
+	describe("deprecated behavior is retained with --no-delegate-c3", () => {
 		describe("options", () => {
 			it("should initialize with no interactive prompts if `--yes` is used", async () => {
 				await runWrangler("init --yes --no-delegate-c3");
@@ -2787,17 +2848,21 @@ describe("init", () => {
 			}
 		`);
 
+				expect(execa).toHaveBeenCalledTimes(1);
 				expect(execa).toHaveBeenCalledWith(
 					"mockpm",
-					["create", "cloudflare@2"],
+					[
+						"create",
+						"cloudflare@2",
+						"existing-memory-crystal",
+						"--",
+						"--type",
+						"pre-existing",
+						"--existing-script",
+						"existing-memory-crystal",
+					],
 					{ stdio: "inherit" }
 				);
-				expect(execa).toHaveBeenCalledWith("git", ["--version"]);
-				expect(execa).toHaveBeenCalledWith("git", [
-					"config",
-					"--get",
-					"init.defaultBranch",
-				]);
 			});
 
 			//TODO: Tests for a case when a worker name doesn't exist - JACOB & CASS
