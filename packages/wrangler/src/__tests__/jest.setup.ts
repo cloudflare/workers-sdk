@@ -213,3 +213,8 @@ jest.mock("execa", () => {
 		}),
 	};
 });
+
+afterEach(() => {
+	// It is important that we clear mocks between tests to avoid leakage.
+	jest.clearAllMocks();
+});
