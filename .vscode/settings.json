@@ -12,11 +12,14 @@
 		"execa",
 		"haikunate",
 		"haikunator",
+		"httplogs",
 		"iarna",
+		"isolinear",
 		"keyvalue",
 		"logfwdr",
 		"middlewares",
 		"Miniflare",
+		"mockpm",
 		"mrbbot",
 		"outdir",
 		"outfile",
@@ -37,7 +40,8 @@
 		"weakset",
 		"webassemblymemory",
 		"websockets",
-		"xxhash"
+		"xxhash",
+		"zjcompt"
 	],
 	"cSpell.ignoreWords": [
 		"TESTTEXTBLOBNAME",
