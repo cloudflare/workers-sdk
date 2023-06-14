@@ -36,7 +36,7 @@ export const textInput = async (opts: TextOptions) => {
 					break;
 				case "active":
 					body += `${blCorner} ${bold(question)} ${dim(helpText)}\n`;
-					body += `${space(2)}${format(this.value)}\n`;
+					body += `${space(2)}${format(this.value || dim(defaultValue))}\n`;
 					break;
 				case "submit":
 					body += `${leftT} ${question}\n`;
