@@ -14,8 +14,8 @@
 	],
 	"scripts": {
 		"check:type": "tsc",
-		"test": "jest --forceExit",
-		"test:ci": "jest --forceExit"
+		"test": "vitest",
+		"test:ci": "vitest run"
 	},
 	"jest": {
 		"coverageReporters": [
