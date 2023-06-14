@@ -33,17 +33,20 @@ export const validateProjectDirectory = (relativePath: string) => {
 	const existsAlready = existsSync(path);
 	const isEmpty = existsAlready && readdirSync(path).length === 0; // allow existing dirs _if empty_ to ensure c3 is non-destructive
 
-	if (existsAlready && !isEmpty) {
-		crash(
-			`Directory \`${relativePath}\` already exists and is not empty. Please choose a new name.`
-		);
+	if (relativePath && existsAlready && !isEmpty) {
+		return `Directory \`${relativePath}\` already exists and is not empty. Please choose a new name.`;
 	}
 };
 
 export const setupProjectDirectory = (args: PagesGeneratorArgs) => {
 	// Crash if the directory already exists
 	const path = resolve(args.projectName);
-	validateProjectDirectory(path);
+	const err = validateProjectDirectory(path);
+	if (err) {
+		crash(
+			`Directory \`${path}\` already exists and is not empty. Please choose a new name.`
+		);
+	}
 
 	const directory = dirname(path);
 	const name = basename(path);
