@@ -8,7 +8,7 @@
 		"dev": "wrangler dev src/index.ts --local"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^3.0.0",
+		"@cloudflare/workers-types": "^4.20230518.0 ",
 		"esbuild": "^0.13.10",
 		"wrangler": "^3.0.0"
 	}

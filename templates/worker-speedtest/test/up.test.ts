@@ -1,30 +1,8 @@
-import worker from '../src/up.js';
+import { run } from './helpers';
 
-/**
- * @param {number} [num]
- * @returns {Promise<Response>}
- */
-async function run(num) {
-	let url = 'https://x.com/up';
-	if (num != null) url += '?bytes=' + num;
-	let req = new Request(url);
-	return worker(req);
-}
-
-/**
- * @param {Response} res
- * @returns {Promise<string>}
- */
-async function read(res) {
+async function read(res: Response) {
 	return res.text();
 }
-
-test('get request', async () => {
-	const req = new Request('http://falcon', { method: 'GET' });
-	const res = await run(req);
-	expect(await read(res)).toEqual('OK');
-	expect(res.status).toBe(200);
-});
 
 test('get request', async () => {
 	const res = await run('GET');
@@ -54,6 +32,7 @@ test('includes request time', async () => {
 	const { headers } = await run('POST');
 	const reqTime = headers.get('cf-meta-request-time');
 
+	if (!reqTime) throw new Error('missing request time header');
 	expect(reqTime);
 	expect(+reqTime <= Date.now());
 	expect(+reqTime > Date.now() - 60 * 1000);

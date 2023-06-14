@@ -2,11 +2,7 @@ import down from './down.js';
 import up from './up.js';
 
 export default {
-	/**
-	 * @param {Request} req
-	 * @returns {Promise<Response>}
-	 */
-	async fetch(req) {
+	async fetch(req: Request) {
 		let url = new URL(req.url);
 		let path = url.pathname.replace(/[/]$/, '');
 

@@ -1,16 +1,12 @@
 {
 	"compilerOptions": {
 		"noEmit": true,
-		"lib": ["es2020"],
-		"target": "es2020",
 		"module": "esnext",
+		"target": "esnext",
+		"lib": ["esnext"],
+		"strict": true,
 		"moduleResolution": "node",
-		"types": ["@cloudflare/workers-types"],
-		"forceConsistentCasingInFileNames": true,
-		"preserveConstEnums": true,
-		"alwaysStrict": true,
-		"strict": true
+		"types": ["@cloudflare/workers-types"]
 	},
-	"include": ["src"],
-	"exclude": ["node_modules", "dist", "test"]
+	"exclude": ["node_modules", "dist"]
 }
