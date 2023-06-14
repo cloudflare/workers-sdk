@@ -8,5 +8,5 @@
 		"moduleResolution": "node",
 		"types": ["@cloudflare/workers-types"]
 	},
-	"exclude": ["node_modules", "dist", "test"]
+	"exclude": ["node_modules", "dist"]
 }
