@@ -13,9 +13,11 @@ import * as metrics from "../metrics";
 import { parseJSON, readFileSync } from "../parse";
 import { requireAuth } from "../user";
 
+import { secretKeyWizard } from "./secretKey";
+import { SecretBindingType, type CreateSecretBody, type SecretBulkArgs } from './types';
+import { readFromStdin, trimTrailingWhitespace } from "./util";
 import type {
 	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 
 export const secret = (secretYargs: CommonYargsArgv) => {
@@ -38,6 +40,14 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 						describe: "Name of the Worker",
 						type: "string",
 						requiresArg: true,
+					})
+					.option("type", {
+						describe: `Type of secret, options are: ${Object.keys(
+							SecretBindingType
+						).join(", ")}`,
+						type: "string",
+						requiresArg: true,
+						default: "text",
 					});
 			},
 			async (args) => {
@@ -54,18 +64,44 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 				const accountId = await requireAuth(config);
 
 				const isInteractive = process.stdin.isTTY;
-				const secretValue = trimTrailingWhitespace(
-					isInteractive
-						? await prompt("Enter a secret value:", { isSecret: true })
-						: await readFromStdin()
-				);
+
+				const secretType = args.type;
+				let createSecretBody: CreateSecretBody;
+				switch (secretType) {
+					case SecretBindingType.text: {
+						const secretValue = trimTrailingWhitespace(
+							isInteractive
+								? await prompt("Enter a secret value:", { isSecret: true })
+								: await readFromStdin()
+						);
+						createSecretBody = {
+							name: args.key,
+							type: "secret_text",
+							text: secretValue,
+						};
+						break;
+					}
+					case SecretBindingType.key: {
+						createSecretBody = await secretKeyWizard(
+							args.key ?? "",
+							isInteractive
+						);
+						break;
+					}
+					default: {
+						throw new Error(
+							`Unrecognized secret type. Must be one of: ${Object.keys(
+								SecretBindingType
+							).join(", ")}`
+						);
+					}
+				}
 
 				logger.log(
 					`🌀 Creating the secret for the Worker "${scriptName}" ${
 						args.env && !isLegacyEnv(config) ? `(${args.env})` : ""
 					}`
 				);
-
 				async function submitSecret() {
 					const url =
 						!args.env || isLegacyEnv(config)
@@ -75,11 +111,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 					return await fetchResult(url, {
 						method: "PUT",
 						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({
-							name: args.key,
-							text: secretValue,
-							type: "secret_text",
-						}),
+						body: JSON.stringify(createSecretBody),
 					});
 				}
 
@@ -249,63 +281,6 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 			}
 		);
 };
-
-export const secretBulkOptions = (yargs: CommonYargsArgv) => {
-	return yargs
-		.positional("json", {
-			describe: `The JSON file of key-value pairs to upload, in form {"key": value, ...}`,
-			type: "string",
-			demandOption: "true",
-		})
-		.option("name", {
-			describe: "Name of the Worker",
-			type: "string",
-			requiresArg: true,
-		});
-};
-
-/**
- * Remove trailing white space from inputs.
- * Matching Wrangler legacy behavior with handling inputs
- */
-function trimTrailingWhitespace(str: string) {
-	return str.trimEnd();
-}
-
-/**
- * Get a promise to the streamed input from stdin.
- *
- * This function can be used to grab the incoming stream of data from, say,
- * piping the output of another process into the wrangler process.
- */
-function readFromStdin(): Promise<string> {
-	return new Promise((resolve, reject) => {
-		const stdin = process.stdin;
-		const chunks: string[] = [];
-
-		// When there is data ready to be read, the `readable` event will be triggered.
-		// In the handler for `readable` we call `read()` over and over until all the available data has been read.
-		stdin.on("readable", () => {
-			let chunk;
-			while (null !== (chunk = stdin.read())) {
-				chunks.push(chunk);
-			}
-		});
-
-		// When the streamed data is complete the `end` event will be triggered.
-		// In the handler for `end` we join the chunks together and resolve the promise.
-		stdin.on("end", () => {
-			resolve(chunks.join(""));
-		});
-
-		// If there is an `error` event then the handler will reject the promise.
-		stdin.on("error", (err) => {
-			reject(err);
-		});
-	});
-}
-
-type SecretBulkArgs = StrictYargsOptionsToInterface<typeof secretBulkOptions>;
 
 export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
 	await printWranglerBanner();

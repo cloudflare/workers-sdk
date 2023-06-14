@@ -124,6 +124,7 @@
 		"@types/glob-to-regexp": "0.4.1",
 		"@types/javascript-time-ago": "^2.0.3",
 		"@types/mime": "^2.0.3",
+		"@types/node": "^20.3.1",
 		"@types/prompts": "^2.0.14",
 		"@types/react": "^17.0.37",
 		"@types/serve-static": "^1.13.10",
