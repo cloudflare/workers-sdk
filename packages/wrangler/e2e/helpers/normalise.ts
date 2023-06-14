@@ -4,6 +4,7 @@ export function normalizeOutput(
 	substitutions?: Record<string, string>
 ): string {
 	const functions = [
+		removeVersionHeader,
 		npmStripTimings,
 		removeWorkersDev,
 		removeUUID,
@@ -13,9 +14,10 @@ export function normalizeOutput(
 		normalizeSlashes,
 		normalizeTempDirs,
 		stripTimings,
-		removeVersionHeader,
 		stripAnsi,
 		removeTimestamp,
+		stripDevTimings,
+		stripEmptyNewlines,
 	];
 	for (const f of functions) {
 		stdout = f(stdout);
@@ -27,6 +29,15 @@ export function normalizeOutput(
 	}
 	return stdout;
 }
+
+function stripEmptyNewlines(stdout: string): string {
+	return stdout.replace(/\n+/g, "\n");
+}
+
+function stripDevTimings(stdout: string): string {
+	return stdout.replace(/\(\dms\)/g, "(TIMINGS)");
+}
+
 function removeWorkersDev(str: string) {
 	return str.replace(
 		/https:\/\/(.+?)\..+?\.workers\.dev/g,
@@ -35,7 +46,9 @@ function removeWorkersDev(str: string) {
 }
 
 function removeTimestamp(str: string) {
-	return str.replace(/\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d\.\d+?Z/g, "TIMESTAMP");
+	return str
+		.replace(/\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d\.\d+?Z/g, "TIMESTAMP")
+		.replace(/\d\d:\d\d:\d\d/g, "TIMESTAMP");
 }
 function removeUUID(str: string) {
 	return str.replace(

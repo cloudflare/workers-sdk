@@ -7,17 +7,16 @@ assert(
 	"Please provide a CLOUDFLARE_ACCOUNT_ID as an environment variable"
 );
 
-const CF_ID = `CLOUDFLARE_ACCOUNT_ID=${process.env.CLOUDFLARE_ACCOUNT_ID}`;
-const WRANGLER = process.env.WRANGLER ?? `npx wrangler@beta`;
-
-const RUN = `${CF_ID} ${WRANGLER}`;
+const RUN = process.env.WRANGLER ?? `npx --prefer-offline wrangler@beta`;
 
 function runIn(
 	directory: string,
 	replacers?: Parameters<typeof normalizeOutput>[1]
 ) {
 	return async (...p: Parameters<ReturnType<typeof shellac["in"]>>) => {
-		const { stdout, stderr } = await shellac.in(directory)(...p);
+		const { stdout, stderr } = await shellac.env(process.env).in(directory)(
+			...p
+		);
 		return {
 			stdout: normalizeOutput(stdout, replacers),
 			stderr: normalizeOutput(stderr, replacers),
@@ -25,4 +24,24 @@ function runIn(
 		};
 	};
 }
-export { RUN, runIn };
+
+function runInBg(
+	directory: string,
+	replacers?: Parameters<typeof normalizeOutput>[1]
+) {
+	return async (...p: Parameters<typeof shellac["bg"]>) => {
+		const { pid, promise } = await shellac
+			.env(process.env)
+			.in(directory)
+			.bg(...p);
+		return {
+			pid,
+			promise: promise.then(({ stdout, stderr }) => ({
+				stdout: normalizeOutput(stdout, replacers),
+				stderr: normalizeOutput(stderr, replacers),
+				raw: { stdout, stderr },
+			})),
+		};
+	};
+}
+export { RUN, runIn, runInBg };

@@ -63,7 +63,7 @@
 		"test": "npm run assert-git-version && jest",
 		"test:ci": "npm run test -- --coverage",
 		"test:debug": "npm run test -- --silent=false --verbose=true",
-		"test:e2e": "vitest --single-thread ./e2e",
+		"test:e2e": "vitest --test-timeout 120000 --single-thread --dir ./e2e run",
 		"test:watch": "npm run test -- --runInBand --testTimeout=50000 --watch",
 		"type:tests": "tsc -p ./src/__tests__/tsconfig.json && tsc -p ./e2e/tsconfig.json"
 	},
@@ -172,7 +172,7 @@
 		"remove-accents-esm": "^0.0.1",
 		"semiver": "^1.1.0",
 		"serve-static": "^1.15.0",
-		"shellac": "^0.7.3",
+		"shellac": "^0.8.0",
 		"signal-exit": "^3.0.7",
 		"strip-ansi": "^7.0.1",
 		"supports-color": "^9.2.2",

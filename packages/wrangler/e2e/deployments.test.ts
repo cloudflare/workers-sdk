@@ -1,8 +1,8 @@
 import crypto from "node:crypto";
 import path from "node:path";
-import { setTimeout } from "node:timers/promises";
 import { fetch } from "undici";
 import { describe, expect, it } from "vitest";
+import { retry } from "./helpers/retry";
 import { RUN, runIn } from "./helpers/run";
 import { dedent, makeRoot, seed } from "./helpers/setup";
 
@@ -46,15 +46,11 @@ describe("deployments", async () => {
 			✨ Created smoke-test-worker/src/index.ts
 			Your project will use Vitest to run your tests.
 			✨ Created smoke-test-worker/src/index.test.ts
-
 			added (N) packages, and audited (N) packages in (TIMINGS)
-
 			(N) packages are looking for funding
 			  run \`npm fund\` for details
-
 			found 0 vulnerabilities
 			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
-
 			To start developing your Worker, run \`cd smoke-test-worker && npm start\`
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`"
@@ -78,10 +74,11 @@ describe("deployments", async () => {
 		expect(stderr).toMatchInlineSnapshot('""');
 		workersDev = matchWorkersDev(rawStdout);
 
-		await setTimeout(2_000);
-		await expect(
-			fetch(`https://${workerName}.${workersDev}`).then((r) => r.text())
-		).resolves.toMatchInlineSnapshot('"Hello World!"');
+		await retry(() =>
+			expect(
+				fetch(`https://${workerName}.${workersDev}`).then((r) => r.text())
+			).resolves.toMatchInlineSnapshot('"Hello World!"')
+		);
 	});
 
 	it("list 1 deployment", async () => {
@@ -93,8 +90,6 @@ describe("deployments", async () => {
 	`;
 		expect(stdout).toMatchInlineSnapshot(`
 			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
-
-
 			Deployment ID: 00000000-0000-0000-0000-000000000000
 			Created on:    TIMESTAMP
 			Author:        person@example.com
@@ -130,10 +125,11 @@ describe("deployments", async () => {
 		expect(stderr).toMatchInlineSnapshot('""');
 		workersDev = matchWorkersDev(rawStdout);
 
-		await setTimeout(10_000);
-		await expect(
-			fetch(`https://${workerName}.${workersDev}`).then((r) => r.text())
-		).resolves.toMatchInlineSnapshot('"Updated Worker!"');
+		await retry(() =>
+			expect(
+				fetch(`https://${workerName}.${workersDev}`).then((r) => r.text())
+			).resolves.toMatchInlineSnapshot('"Updated Worker!"')
+		);
 	});
 
 	it("list 2 deployments", async () => {
@@ -145,13 +141,10 @@ describe("deployments", async () => {
 	`;
 		expect(stdout).toMatchInlineSnapshot(`
 			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
-
-
 			Deployment ID: 00000000-0000-0000-0000-000000000000
 			Created on:    TIMESTAMP
 			Author:        person@example.com
 			Source:        Upload from Wrangler 🤠
-
 			Deployment ID: 00000000-0000-0000-0000-000000000000
 			Created on:    TIMESTAMP
 			Author:        person@example.com
@@ -170,8 +163,6 @@ describe("deployments", async () => {
 	`;
 		expect(stdout).toMatchInlineSnapshot(`
 			"🚧\`wrangler rollback\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
-
-
 			Successfully rolled back to Deployment ID: 00000000-0000-0000-0000-000000000000
 			Current Deployment ID: 00000000-0000-0000-0000-000000000000"
 		`);
@@ -187,18 +178,14 @@ describe("deployments", async () => {
 	`;
 		expect(stdout).toMatchInlineSnapshot(`
 			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
-
-
 			Deployment ID: 00000000-0000-0000-0000-000000000000
 			Created on:    TIMESTAMP
 			Author:        person@example.com
 			Source:        Upload from Wrangler 🤠
-
 			Deployment ID: 00000000-0000-0000-0000-000000000000
 			Created on:    TIMESTAMP
 			Author:        person@example.com
 			Source:        Upload from Wrangler 🤠
-
 			Deployment ID: 00000000-0000-0000-0000-000000000000
 			Created on:    TIMESTAMP
 			Author:        person@example.com
@@ -222,9 +209,10 @@ describe("deployments", async () => {
 			Successfully deleted smoke-test-worker"
 		`);
 		expect(stderr).toMatchInlineSnapshot('""');
-		await setTimeout(10_000);
-		await expect(
-			fetch(`https://${workerName}.${workersDev}`).then((r) => r.status)
-		).resolves.toBe(404);
+		await retry(() =>
+			expect(
+				fetch(`https://${workerName}.${workersDev}`).then((r) => r.status)
+			).resolves.toBe(404)
+		);
 	});
 });
