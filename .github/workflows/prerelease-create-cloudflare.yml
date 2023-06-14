@@ -44,6 +44,7 @@ jobs:
           NODE_ENV: "production"
 
       - name: Publish Beta to NPM
-        run: npm publish -w create-cloudflare --tag beta
+        run: npm publish --tag beta
         env:
           NPM_PUBLISH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+        working-directory: packages/create-cloudflare
