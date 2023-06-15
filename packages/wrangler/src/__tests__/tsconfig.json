@@ -6,6 +6,12 @@
 		"types": ["node", "vitest/globals"],
 		"jsx": "preserve"
 	},
-	"include": ["./**.ts", "./**.tsx", "./**.js", "**/*.d.ts"],
+	"include": [
+		"./**/*.ts",
+		"./**/*.tsx",
+		"./**/*.js",
+		"**/*.d.ts",
+		"./**/*.test.[jt]sx?"
+	],
 	"exclude": ["../selfsigned.d.ts"]
 }

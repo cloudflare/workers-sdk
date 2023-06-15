@@ -14,8 +14,7 @@
 	],
 	"scripts": {
 		"check:type": "tsc",
-		"test": "vitest",
-		"test:ci": "vitest run"
+		"test": "vitest"
 	},
 	"dependencies": {
 		"miniflare": "^3.0.1"
