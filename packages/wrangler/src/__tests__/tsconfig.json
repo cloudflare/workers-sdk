@@ -1,8 +1,11 @@
 {
 	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
 	"compilerOptions": {
-		"types": ["node"],
+		"module": "esnext",
+		"target": "esnext",
+		"types": ["node", "vitest/globals"],
 		"jsx": "preserve"
 	},
-	"include": ["../*.d.ts", "**/*.ts", "**/*.tsx", "**/*.js"]
+	"include": ["./**.ts", "./**.tsx", "./**.js", "**/*.d.ts"],
+	"exclude": ["../selfsigned.d.ts"]
 }
