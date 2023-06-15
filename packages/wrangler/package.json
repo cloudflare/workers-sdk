@@ -65,6 +65,7 @@
 		"test:ci": "npm run assert-git-version && vitest run -- --coverage",
 		"test:debug": "npm run test -- --silent=false --verbose=true",
 		"test:e2e": "vitest run --test-timeout 120000 --single-thread --dir ./e2e run",
+		"test:watch": "vitest watch --single-thread --testTimeout=50000",
 		"type:tests": "tsc -p ./src/__tests__/tsconfig.json && tsc -p ./e2e/tsconfig.json"
 	},
 	"dependencies": {
@@ -150,8 +151,6 @@
 		"ts-dedent": "^2.2.0",
 		"undici": "5.20.0",
 		"update-check": "^1.5.4",
-		"vitest": "^0.31.0",
-		"vitest-fetch-mock": "^0.2.2",
 		"ws": "^8.5.0",
 		"xdg-app-paths": "^7.3.0",
 		"yargs": "^17.4.1",

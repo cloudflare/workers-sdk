@@ -13,6 +13,6 @@
 		"src/miniflare-cli",
 		"templates",
 		"**/__tests__",
-		"**/*.test.ts"
+		"**/e2e"
 	]
 }

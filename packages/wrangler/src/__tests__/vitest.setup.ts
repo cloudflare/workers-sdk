@@ -1,4 +1,5 @@
 import chalk from "chalk";
+import { defineConfig } from "vite/config";
 import { vi, beforeAll, afterAll, afterEach } from "vitest";
 import createFetchMock from 'vitest-fetch-mock';
 import { MockWebSocket } from "./helpers/mock-web-socket";
