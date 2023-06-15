@@ -76,7 +76,7 @@ describe("E2E: Workers templates", () => {
 	});
 
 	test("queues", async () => {
-		await runCli("hello-world");
+		await runCli("queues");
 	});
 
 	test("scheduled", async () => {
