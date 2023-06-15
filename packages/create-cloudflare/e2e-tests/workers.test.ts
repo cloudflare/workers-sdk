@@ -80,6 +80,6 @@ describe("E2E: Workers templates", () => {
 	});
 
 	test("scheduled", async () => {
-		await runCli("hello-world");
+		await runCli("scheduled");
 	});
 });
