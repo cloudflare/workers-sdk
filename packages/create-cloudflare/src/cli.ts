@@ -122,10 +122,10 @@ const templateMap: Record<string, TemplateConfig> = {
 		handler: runWorkersGenerator,
 	},
 	common: {
-		label: "Common Worker functions",
+		label: "Example router & proxy Worker",
 		handler: runWorkersGenerator,
 	},
-	"scheduled-worker": {
+	scheduled: {
 		label: "Scheduled Worker (Cron Trigger)",
 		handler: runWorkersGenerator,
 	},
