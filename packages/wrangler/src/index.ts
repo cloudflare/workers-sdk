@@ -3,6 +3,7 @@ import TOML from "@iarna/toml";
 import chalk from "chalk";
 import supportsColor from "supports-color";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
+import { vitest } from "vitest";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { isBuildFailure } from "./bundle";
@@ -94,7 +95,7 @@ ${TOML.stringify({ rules: config.build.upload.rules })}`
 
 export async function printWranglerBanner() {
 	// Let's not print this in tests
-	if (typeof jest !== "undefined") {
+	if (typeof vitest !== "undefined") {
 		return;
 	}
 

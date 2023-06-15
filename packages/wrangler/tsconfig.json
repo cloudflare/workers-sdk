@@ -2,7 +2,7 @@
 	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
 	"compilerOptions": {
 		"module": "CommonJS",
-		"types": ["node"],
+		"types": ["node", "vitest/globals"],
 		"jsx": "react"
 	},
 	"include": ["**/*.ts", "**/*.tsx", "**/*.js"],
@@ -12,7 +12,7 @@
 		"*-dist",
 		"src/miniflare-cli",
 		"templates",
-		"**/__tests__",
-		"**/e2e"
+		"**/e2e",
+		"src/pages/functions"
 	]
 }

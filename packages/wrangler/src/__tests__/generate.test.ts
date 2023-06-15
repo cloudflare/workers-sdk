@@ -18,14 +18,15 @@ describe("generate", () => {
 		mockPackageManager = {
 			cwd: process.cwd(),
 			type: "mockpm" as "npm",
-			addDevDeps: jest.fn(),
-			install: jest.fn(),
+			addDevDeps: vi.fn(),
+			install: vi.fn(),
 		};
-		(getPackageManager as jest.Mock).mockResolvedValue(mockPackageManager);
+
+		vi.fn(getPackageManager).mockResolvedValue(mockPackageManager);
 	});
 
 	describe("cli functionality", () => {
-		afterEach(() => {});
+		afterEach(() => { });
 
 		it("defers to `wrangler init` when no template is given", async () => {
 			mockConfirm(

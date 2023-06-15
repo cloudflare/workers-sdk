@@ -21,20 +21,21 @@ export interface ConfirmExpectation {
  */
 export function mockConfirm(...expectations: ConfirmExpectation[]) {
 	for (const expectation of expectations) {
-		(prompts as unknown as jest.Mock).mockImplementationOnce(
-			({ type, name, message, initial }) => {
-				expect({ type, name, message }).toStrictEqual({
-					type: "confirm",
-					name: "value",
-					message: expectation.text,
-				});
-				if (expectation.options) {
-					expect(initial).toStrictEqual(expectation.options?.defaultValue);
-				}
+		vi.fn(prompts).mockImplementationOnce((promptsMock) => {
+			const { type, name, message, initial } =
+				promptsMock as prompts.PromptObject;
 
-				return Promise.resolve({ value: expectation.result });
+			expect({ type, name, message }).toStrictEqual({
+				type: "confirm",
+				name: "value",
+				message: expectation.text,
+			});
+			if (expectation.options) {
+				expect(initial).toStrictEqual(expectation.options?.defaultValue);
 			}
-		);
+
+			return Promise.resolve({ value: expectation.result });
+		});
 	}
 }
 
@@ -62,22 +63,22 @@ export interface PromptExpectation {
  */
 export function mockPrompt(...expectations: PromptExpectation[]) {
 	for (const expectation of expectations) {
-		(prompts as unknown as jest.Mock).mockImplementationOnce(
-			({ type, name, message, initial, style }) => {
-				expect({ type, name, message }).toStrictEqual({
-					type: "text",
-					name: "value",
-					message: expectation.text,
-				});
-				if (expectation.options) {
-					expect(initial).toStrictEqual(expectation.options?.defaultValue);
-					expect(style).toStrictEqual(
-						expectation.options?.isSecret ? "password" : "default"
-					);
-				}
-				return Promise.resolve({ value: expectation.result });
+		vi.fn(prompts).mockImplementationOnce((promptsMock) => {
+			const { type, name, message, initial, style } =
+				promptsMock as prompts.PromptObject;
+			expect({ type, name, message }).toStrictEqual({
+				type: "text",
+				name: "value",
+				message: expectation.text,
+			});
+			if (expectation.options) {
+				expect(initial).toStrictEqual(expectation.options?.defaultValue);
+				expect(style).toStrictEqual(
+					expectation.options?.isSecret ? "password" : "default"
+				);
 			}
-		);
+			return Promise.resolve({ value: expectation.result });
+		});
 	}
 }
 
@@ -114,20 +115,20 @@ export function mockSelect<Values>(
 	...expectations: SelectExpectation<Values>[]
 ) {
 	for (const expectation of expectations) {
-		(prompts as unknown as jest.Mock).mockImplementationOnce(
-			({ type, name, message, choices, initial }) => {
-				expect({ type, name, message }).toStrictEqual({
-					type: "select",
-					name: "value",
-					message: expectation.text,
-				});
-				if (expectation.options) {
-					expect(choices).toStrictEqual(expectation.options?.choices);
-					expect(initial).toStrictEqual(expectation.options?.defaultOption);
-				}
-				return Promise.resolve({ value: expectation.result });
+		vi.fn(prompts).mockImplementationOnce((promptsMock) => {
+			const { type, name, message, choices, initial } =
+				promptsMock as prompts.PromptObject;
+			expect({ type, name, message }).toStrictEqual({
+				type: "select",
+				name: "value",
+				message: expectation.text,
+			});
+			if (expectation.options) {
+				expect(choices).toStrictEqual(expectation.options?.choices);
+				expect(initial).toStrictEqual(expectation.options?.defaultOption);
 			}
-		);
+			return Promise.resolve({ value: expectation.result });
+		});
 	}
 }
 

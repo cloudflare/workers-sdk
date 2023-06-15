@@ -5,6 +5,7 @@ import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { getHttpsOptions } from "../https-options";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
+import type nodeFSType from "node:fs";
 
 describe("getHttpsOptions()", () => {
 	runInTempDir();
@@ -63,7 +64,7 @@ describe("getHttpsOptions()", () => {
 			path.resolve(getGlobalWranglerConfigPath(), "local-cert/cert.pem"),
 			ORIGINAL_CERT
 		);
-		mockStatSync(/\.pem$/, { mtimeMs: new Date(2000).valueOf() });
+		await mockStatSync(/\.pem$/, { mtimeMs: new Date(2000).valueOf() });
 
 		const result = await getHttpsOptions();
 		const key = fs.readFileSync(
@@ -87,7 +88,7 @@ describe("getHttpsOptions()", () => {
 
 	it("should warn if not able to write to the cache (legacy config path)", async () => {
 		fs.mkdirSync(path.join(os.homedir(), ".wrangler"));
-		mockWriteFileSyncThrow(/\.pem$/);
+		await mockWriteFileSyncThrow(/\.pem$/);
 		await getHttpsOptions();
 		expect(
 			fs.existsSync(
@@ -114,7 +115,7 @@ describe("getHttpsOptions()", () => {
 	});
 
 	it("should warn if not able to write to the cache", async () => {
-		mockWriteFileSyncThrow(/\.pem$/);
+		await mockWriteFileSyncThrow(/\.pem$/);
 		await getHttpsOptions();
 		expect(
 			fs.existsSync(
@@ -140,18 +141,18 @@ describe("getHttpsOptions()", () => {
 	});
 });
 
-function mockStatSync(matcher: RegExp, stats: Partial<fs.Stats>) {
-	const originalStatSync = jest.requireActual("node:fs").statSync;
-	jest.spyOn(fs, "statSync").mockImplementation((statPath, options) => {
+async function mockStatSync(matcher: RegExp, stats: Partial<fs.Stats>) {
+	const originalStatSync = (await vi.importActual<typeof nodeFSType>("node:fs")).statSync;
+	vi.spyOn(fs, "statSync").mockImplementation((statPath, options) => {
 		return matcher.test(statPath.toString())
 			? (stats as fs.Stats)
 			: originalStatSync(statPath, options);
 	});
 }
 
-function mockWriteFileSyncThrow(matcher: RegExp) {
-	const originalWriteFileSync = jest.requireActual("node:fs").writeFileSync;
-	jest
+async function mockWriteFileSyncThrow(matcher: RegExp) {
+	const originalWriteFileSync = (await vi.importActual<typeof nodeFSType>("node:fs")).writeFileSync;
+	vi
 		.spyOn(fs, "writeFileSync")
 		.mockImplementation((filePath, data, options) => {
 			if (matcher.test(filePath.toString())) {

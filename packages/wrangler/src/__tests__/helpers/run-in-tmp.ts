@@ -25,7 +25,7 @@ export function runInTempDir({ homedir } = { homedir: "./home" }) {
 		// rather than an alias to the module (e.g. `import * as os from "node:os";`).
 		// This is because the module gets transpiled so that the "method" `homedir()` gets converted to a
 		// getter that is not configurable (and so cannot be spied upon).
-		jest.spyOn(os, "homedir")?.mockReturnValue(absHomedir);
+		vi.spyOn(os, "homedir")?.mockReturnValue(absHomedir);
 		// Now that we have changed the home directory location, we must reinitialize the user auth state
 		reinitialiseAuthTokens();
 	});

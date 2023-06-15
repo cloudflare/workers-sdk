@@ -1,4 +1,3 @@
-import MockWebSocket from "jest-websocket-mock";
 import { rest } from "msw";
 import { Headers, Request } from "undici";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -18,7 +17,13 @@ import type {
 import type { RequestInit } from "undici";
 import type WebSocket from "ws";
 
-describe("pages deployment tail", () => {
+// Were global before too, test file should still isolate by default based on Vitest config
+const MockWebSocket = await vi.importMock<typeof WebSocket>("ws");
+const websocketURL = "ws://localhost:1234";
+const MockWebSocketType = new MockWebSocket(websocketURL);
+const mockWebSockets: typeof MockWebSocketType[] = [];
+
+describe("pages deployment tail", async () => {
 	runInTempDir();
 	mockAccountId();
 	mockApiToken();
@@ -29,13 +34,6 @@ describe("pages deployment tail", () => {
 		process.env.CF_PAGES = "1";
 	});
 
-	beforeEach(() => {
-		// You may be inclined to change this to `jest.requireMock ()`. Do it, I
-		// dare you... Have fun fixing this tests :)
-		// (hint: https://github.com/aelbore/esbuild-jest/blob/daa5847b3b382d9ddf6cc26e60ad949d202c4461/src/index.ts#L33)
-		const mockWs = jest["requireMock"]("ws");
-		mockWs.useOriginal = false;
-	});
 	afterAll(() => {
 		delete process.env.CF_PAGES;
 	});
@@ -68,7 +66,7 @@ describe("pages deployment tail", () => {
 				"pages deployment tail mock-deployment-id --project-name mock-project"
 			);
 
-			await expect(api.ws.connected).resolves.toBeTruthy();
+			await expect(api.ws.OPEN).resolves.toBeTruthy();
 			expect(api.requests.creation.length).toStrictEqual(1);
 			expect(api.requests.deletion.count).toStrictEqual(0);
 
@@ -84,7 +82,7 @@ describe("pages deployment tail", () => {
 				"pages deployment tail https://87bbc8fe.mock.pages.dev --project-name mock-project"
 			);
 
-			await expect(api.ws.connected).resolves.toBeTruthy();
+			await expect(api.ws.OPEN).resolves.toBeTruthy();
 			expect(api.requests.creation.length).toStrictEqual(1);
 			expect(api.requests.deletion.count).toStrictEqual(0);
 
@@ -108,7 +106,7 @@ describe("pages deployment tail", () => {
 				"pages deployment tail mock-deployment --project-name mock-project"
 			);
 
-			await expect(api.ws.connected).resolves.toBeTruthy();
+			await expect(api.ws.OPEN).resolves.toBeTruthy();
 			expect(api.requests.creation.length).toStrictEqual(1);
 			expect(api.requests.deletion.count).toStrictEqual(0);
 
@@ -692,7 +690,7 @@ type MockAPI = {
 		creation: RequestInit[];
 		deletion: RequestCounter;
 	};
-	ws: MockWebSocket;
+	ws: typeof MockWebSocketType;
 	nextMessageJson(): Promise<unknown>;
 	closeHelper: () => Promise<void>;
 };
@@ -837,9 +835,6 @@ function mockDeleteTailRequest(): RequestCounter {
 	return requests;
 }
 
-const mockWebSockets: MockWebSocket[] = [];
-
-const websocketURL = "ws://localhost:1234";
 /**
  * All-in-one convenience method to mock the appropriate API calls before
  * each test, and clean up afterwards.
@@ -854,17 +849,24 @@ function mockTailAPIs(): MockAPI {
 			creation: [],
 			deployments: { count: 0 },
 		},
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		ws: null!, // will be set in the `beforeEach()`.
+		ws: new MockWebSocket(websocketURL),
 
 		/**
 		 * Parse the next message received by the mock websocket as JSON
 		 * @returns JSON.parse of the next message received by the websocket
 		 */
-		async nextMessageJson() {
-			const message = await api.ws.nextMessage;
-			return JSON.parse(message as string);
+		nextMessageJson() {
+			return new Promise((resolve) => {
+				const handleMessage = (event: WebSocket.MessageEvent) => {
+					api.ws.removeEventListener("message", handleMessage);
+					const message = JSON.parse(String(event.data));
+					resolve(message);
+				};
+
+				api.ws.addEventListener("message", handleMessage);
+			});
 		},
+
 		/**
 		 * Close the mock websocket and clean up the API.
 		 * The setTimeout forces a cycle to allow for closing and cleanup
@@ -876,7 +878,6 @@ function mockTailAPIs(): MockAPI {
 		},
 	};
 
-	api.ws = new MockWebSocket(websocketURL);
 	mockWebSockets.push(api.ws);
 
 	api.requests.creation = mockCreateTailRequest();

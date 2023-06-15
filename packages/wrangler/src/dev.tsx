@@ -5,6 +5,7 @@ import { watch } from "chokidar";
 import getPort from "get-port";
 import { render } from "ink";
 import React from "react";
+import { vitest } from "vitest";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import Dev from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
@@ -350,7 +351,7 @@ export async function startDev(args: StartDevOptions) {
 		}
 		await printWranglerBanner();
 		// TODO(v3.1): remove this message
-		if (!args.remote && typeof jest === "undefined") {
+		if (!args.remote && typeof vitest === "undefined") {
 			logger.log(
 				chalk.blue(`${chalk.green(
 					`wrangler dev`
@@ -500,7 +501,7 @@ To run an edge preview session for your Worker, use ${chalk.green(
 		// tests), as that would stop communication with the test runner.
 		let apiStopped = false;
 		void devReactElement.waitUntilExit().then(() => {
-			if (!apiStopped && typeof jest === "undefined") process.disconnect?.();
+			if (!apiStopped && typeof vitest === "undefined") process.disconnect?.();
 		});
 
 		rerender = devReactElement.rerender;

@@ -5,7 +5,7 @@ import {
 	startWorkerRegistry,
 } from "../dev-registry";
 
-jest.unmock("undici");
+vi.unmock("undici");
 
 /**
  * Sometimes the devRegistry killed by some reason, the register worker will to restart it.

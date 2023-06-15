@@ -1,18 +1,14 @@
 import chalk from "chalk";
-import { defineConfig } from "vite/config";
 import { vi, beforeAll, afterAll, afterEach } from "vitest";
-import createFetchMock from 'vitest-fetch-mock';
-import { MockWebSocket } from "./helpers/mock-web-socket";
+import createFetchMock from "vitest-fetch-mock";
+// import { MockWebSocket } from "./helpers/mock-web-socket";
 import { msw } from "./helpers/msw";
-import type * as MetricsConfig from "../metrics/metrics-config"
-import type * as  ChildProcess from "child_process";
-import type * as Execa from "execa"
+import type * as MetricsConfig from "../metrics/metrics-config";
+import type * as ChildProcess from "child_process";
+import type * as Execa from "execa";
 import type * as Ink from "ink";
-import type * as NodePath from "node:path"
+import type * as NodePath from "node:path";
 import type * as React from "react";
-import type { WebSocket } from "ws"
-
-
 
 const fetchMocker = createFetchMock(vi);
 
@@ -53,41 +49,42 @@ vi.mock("child_process", () => {
 		spawnSync: vi.fn().mockImplementation(async (binary, ...args) => {
 			if (binary === "cloudflared") return { error: true };
 
-
-			return (await vi.importActual<typeof ChildProcess>("child_process")).spawnSync(binary, ...args);
+			return (
+				await vi.importActual<typeof ChildProcess>("child_process")
+			).spawnSync(binary, ...args);
 		}),
 	};
 });
 
-vi.mock("ws", async () => {
-	// `miniflare` needs to use the real `ws` module, but tail tests require us
-	// to mock `ws`. `esbuild-vi` won't let us use type annotations in our tests
-	// if those files contain `vi.mock()` calls, so we mock here, pass-through
-	// by default, and allow mocking conditionally.
-	const realModule = (await vi.importActual<typeof WebSocket>("ws"));
-	const module = {
-		__esModule: true,
-		useOriginal: true,
-	};
-	Object.defineProperties(module, {
-		default: {
-			get() {
-				return module.useOriginal ? realModule : MockWebSocket;
-			},
-		},
-		WebSocket: {
-			get() {
-				return module.useOriginal ? realModule.WebSocket : MockWebSocket;
-			},
-		},
-		WebSocketServer: {
-			get() {
-				return realModule.WebSocketServer;
-			},
-		},
-	});
-	return module;
-});
+// vi.mock("ws", async () => {
+// 	// `miniflare` needs to use the real `ws` module, but tail tests require us
+// 	// to mock `ws`. `esbuild-vi` won't let us use type annotations in our tests
+// 	// if those files contain `vi.mock()` calls, so we mock here, pass-through
+// 	// by default, and allow mocking conditionally.
+// 	const realModule = await vi.importActual<typeof WebSocket>("ws");
+// 	const module = {
+// 		__esModule: true,
+// 		useOriginal: true,
+// 	};
+// 	Object.defineProperties(module, {
+// 		default: {
+// 			get() {
+// 				return module.useOriginal ? realModule : MockWebSocket;
+// 			},
+// 		},
+// 		WebSocket: {
+// 			get() {
+// 				return module.useOriginal ? realModule.WebSocket : MockWebSocket;
+// 			},
+// 		},
+// 		WebSocketServer: {
+// 			get() {
+// 				return realModule.WebSocketServer;
+// 			},
+// 		},
+// 	});
+// 	return module;
+// });
 
 vi.mock("undici", () => {
 	return {
@@ -123,8 +120,8 @@ afterEach(() => {
 afterAll(() => msw.close());
 
 vi.mock("../dev/dev", async () => {
-	const { useApp } = (await vi.importActual<typeof Ink>("ink"));
-	const { useEffect } = (await vi.importActual<typeof React>("react"));
+	const { useApp } = await vi.importActual<typeof Ink>("ink");
+	const { useEffect } = await vi.importActual<typeof React>("react");
 	return vi.fn().mockImplementation(() => {
 		const { exit } = useApp();
 		useEffect(() => {
@@ -178,7 +175,9 @@ vi.mock("xdg-app-paths", () => {
 		default: vi.fn().mockImplementation(() => {
 			return {
 				config() {
-					return (vi.importActual<typeof NodePath>("node:path").then(pkg => pkg.resolve("test-xdg-config")))
+					return vi
+						.importActual<typeof NodePath>("node:path")
+						.then((pkg) => pkg.resolve("test-xdg-config"));
 				},
 			};
 		}),
@@ -186,7 +185,9 @@ vi.mock("xdg-app-paths", () => {
 });
 
 vi.mock("../metrics/metrics-config", async () => {
-	const realModule = (await vi.importActual<typeof MetricsConfig>("../metrics/metrics-config"));
+	const realModule = await vi.importActual<typeof MetricsConfig>(
+		"../metrics/metrics-config"
+	);
 	const fakeModule = {
 		...realModule,
 		// Although we mock out the getMetricsConfig() function in most tests,
@@ -197,12 +198,12 @@ vi.mock("../metrics/metrics-config", async () => {
 			fakeModule.useOriginal
 				? realModule.getMetricsConfig(...args)
 				: async () => {
-					return {
-						enabled: false,
-						deviceId: "mock-device",
-						userId: undefined,
-					};
-				},
+						return {
+							enabled: false,
+							deviceId: "mock-device",
+							userId: undefined,
+						};
+				  },
 	};
 	return fakeModule;
 });
@@ -220,7 +221,7 @@ vi.mock("prompts", () => {
 });
 
 vi.mock("execa", async () => {
-	const realModule = (await vi.importActual<typeof Execa>("execa"));
+	const realModule = await vi.importActual<typeof Execa>("execa");
 
 	return {
 		...realModule,

@@ -1,11 +1,12 @@
+import type { SpyInstance } from "vitest";
 /**
  * We use this module to mock process methods (write only for now),
  * and optionally assert on the values they're called with in our tests.
  */
 
-let writeSpy: jest.SpyInstance;
+let writeSpy: SpyInstance;
 
-function captureLastWriteCall(spy: jest.SpyInstance): Buffer | undefined {
+function captureLastWriteCall(spy: SpyInstance): Buffer | undefined {
 	const calls = spy.mock.calls;
 
 	// Loop through and find the buffer in calls
@@ -21,7 +22,8 @@ function captureLastWriteCall(spy: jest.SpyInstance): Buffer | undefined {
 
 export function mockProcess() {
 	beforeEach(() => {
-		writeSpy = jest.spyOn(process.stdout, "write").mockImplementation();
+		// @ts-expect-error - we're mocking process here, Vitest cares about the return type of this function we don't want to return anything
+		writeSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => {});
 	});
 	afterEach(() => {
 		writeSpy.mockRestore();

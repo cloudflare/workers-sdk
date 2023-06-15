@@ -1,8 +1,8 @@
 import { fetch } from "undici";
 import { unstable_dev } from "../api";
 
-jest.unmock("child_process");
-jest.unmock("undici");
+vi.unmock("child_process");
+vi.unmock("undici");
 
 /**
  * a huge caveat to how testing multi-worker scripts works:
@@ -79,7 +79,7 @@ describe("multi-worker testing", () => {
 			(resolve) => (requestResolve = resolve)
 		);
 		(["debug", "info", "log", "warn", "error"] as const).forEach((method) =>
-			jest.spyOn(console, method).mockImplementation((...args: unknown[]) => {
+			vi.spyOn(console, method).mockImplementation((...args: unknown[]) => {
 				logs += `\n${args}`;
 				// Regexp ignores colour codes
 				if (/\[mf:inf].+GET.+\/.+200.+OK/.test(String(args))) requestResolve();

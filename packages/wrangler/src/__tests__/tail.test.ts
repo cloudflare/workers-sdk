@@ -1,4 +1,3 @@
-import MockWebSocket from "jest-websocket-mock";
 import { rest } from "msw";
 import { Headers, Request } from "undici";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -19,15 +18,13 @@ import type {
 import type { RequestInit } from "undici";
 import type WebSocket from "ws";
 
-describe("tail", () => {
-	beforeEach(() => {
-		// You may be inclined to change this to `jest.requireMock ()`. Do it, I
-		// dare you... Have fun fixing this tests :)
-		// (hint: https://github.com/aelbore/esbuild-jest/blob/daa5847b3b382d9ddf6cc26e60ad949d202c4461/src/index.ts#L33)
-		const mockWs = jest["requireMock"]("ws");
-		mockWs.useOriginal = false;
-	});
+// Were global before too, test file should still isolate by default based on Vitest config
+const MockWebSocket = await vi.importMock<typeof WebSocket>("ws");
+const websocketURL = "ws://localhost:1234";
+const MockWebSocketType = new MockWebSocket(websocketURL);
+const mockWebSockets: typeof MockWebSocketType[] = [];
 
+describe("tail", async () => {
 	beforeEach(() => msw.use(...mswSucessScriptHandlers));
 	runInTempDir();
 	mockAccountId();
@@ -77,7 +74,7 @@ describe("tail", () => {
 
 			await runWrangler("tail test-worker");
 
-			await expect(api.ws.connected).resolves.toBeTruthy();
+			await expect(api.ws.OPEN).resolves.toBeTruthy();
 			expect(api.requests.creation.length).toStrictEqual(1);
 			expect(api.requests.deletion.count).toStrictEqual(0);
 
@@ -122,7 +119,7 @@ describe("tail", () => {
 			);
 			await runWrangler("tail example.com/*");
 
-			await expect(api.ws.connected).resolves.toBeTruthy();
+			await expect(api.ws.OPEN).resolves.toBeTruthy();
 			expect(api.requests.creation.length).toStrictEqual(1);
 			expect(api.requests.deletion.count).toStrictEqual(0);
 
@@ -186,7 +183,7 @@ describe("tail", () => {
 
 			await runWrangler("tail test-worker --env some-env --legacy-env true");
 
-			await expect(api.ws.connected).resolves.toBeTruthy();
+			await expect(api.ws.OPEN).resolves.toBeTruthy();
 			expect(api.requests.creation.length).toStrictEqual(1);
 			expect(api.requests.deletion.count).toStrictEqual(0);
 
@@ -200,7 +197,7 @@ describe("tail", () => {
 
 			await runWrangler("tail test-worker --env some-env --legacy-env false");
 
-			await expect(api.ws.connected).resolves.toBeTruthy();
+			await expect(api.ws.OPEN).resolves.toBeTruthy();
 			expect(api.requests.creation.length).toStrictEqual(1);
 			expect(api.requests.deletion.count).toStrictEqual(0);
 
@@ -738,7 +735,7 @@ type MockAPI = {
 		creation: RequestInit[];
 		deletion: RequestCounter;
 	};
-	ws: MockWebSocket;
+	ws: typeof MockWebSocketType;
 	nextMessageJson(): Promise<unknown>;
 	closeHelper: () => Promise<void>;
 };
@@ -759,7 +756,7 @@ type RequestCounter = {
  * @returns a `RequestCounter` for counting how many times the API is hit
  */
 function mockCreateTailRequest(
-	websocketURL: string,
+	wsURL: string,
 	env?: string,
 	legacyEnv = false,
 	expectedScriptName = legacyEnv && env ? `test-worker-${env}` : "test-worker"
@@ -781,7 +778,7 @@ function mockCreateTailRequest(
 				return res.once(
 					ctx.json(
 						createFetchResult({
-							url: websocketURL,
+							url: wsURL,
 							id: "tail-id",
 							expires_at: mockTailExpiration,
 						})
@@ -858,8 +855,6 @@ function mockDeleteTailRequest(
 	return requests;
 }
 
-const mockWebSockets: MockWebSocket[] = [];
-
 /**
  * All-in-one convenience method to mock the appropriate API calls before
  * each test, and clean up afterwards.
@@ -872,22 +867,27 @@ function mockWebsocketAPIs(
 	legacyEnv = false,
 	expectedScriptName?: string
 ): MockAPI {
-	const websocketURL = "ws://localhost:1234";
 	const api: MockAPI = {
 		requests: {
 			deletion: { count: 0 },
 			creation: [],
 		},
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-		ws: null!, // will be set in the `beforeEach()` below.
+		ws: new MockWebSocket(websocketURL),
 
 		/**
 		 * Parse the next message received by the mock websocket as JSON
 		 * @returns JSON.parse of the next message received by the websocket
 		 */
-		async nextMessageJson() {
-			const message = await api.ws.nextMessage;
-			return JSON.parse(message as string);
+		nextMessageJson() {
+			return new Promise((resolve) => {
+				const handleMessage = (event: WebSocket.MessageEvent) => {
+					api.ws.removeEventListener("message", handleMessage);
+					const message = JSON.parse(String(event.data));
+					resolve(message);
+				};
+
+				api.ws.addEventListener("message", handleMessage);
+			});
 		},
 		/**
 		 * Close the mock websocket and clean up the API.
@@ -910,7 +910,7 @@ function mockWebsocketAPIs(
 		legacyEnv,
 		expectedScriptName
 	);
-	api.ws = new MockWebSocket(websocketURL);
+
 	mockWebSockets.push(api.ws);
 
 	return api;

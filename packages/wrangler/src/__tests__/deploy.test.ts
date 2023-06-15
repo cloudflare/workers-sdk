@@ -63,7 +63,7 @@ describe("deploy", () => {
 
 	beforeEach(() => {
 		// @ts-expect-error we're using a very simple setTimeout mock here
-		jest.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
+		vi.spyOn(global, "setTimeout").mockImplementation((fn, _period) => {
 			setImmediate(fn);
 		});
 		setIsTTY(true);
@@ -3837,9 +3837,9 @@ addEventListener('fetch', event => {});`
 		});
 
 		it("should error if a compatibility_date is missing and suggest the correct month", async () => {
-			jest.spyOn(Date.prototype, "getMonth").mockImplementation(() => 11);
-			jest.spyOn(Date.prototype, "getFullYear").mockImplementation(() => 2020);
-			jest.spyOn(Date.prototype, "getDate").mockImplementation(() => 1);
+			vi.spyOn(Date.prototype, "getMonth").mockImplementation(() => 11);
+			vi.spyOn(Date.prototype, "getFullYear").mockImplementation(() => 2020);
+			vi.spyOn(Date.prototype, "getDate").mockImplementation(() => 1);
 
 			writeWorkerSource();
 			let err: undefined | Error;
@@ -8728,7 +8728,7 @@ function checkAssetUpload(asset: ExpectedAsset, upload: StaticAssetUpload) {
 	// The asset key consists of: `<basename>.<hash>.<extension>`
 	const keyMatcher = new RegExp(
 		"^" +
-			asset.filePath.replace(/(\.[^.]+)$/, ".[a-z0-9]+$1").replace(/\./g, "\\.")
+		asset.filePath.replace(/(\.[^.]+)$/, ".[a-z0-9]+$1").replace(/\./g, "\\.")
 	);
 	expect(upload.key).toMatch(keyMatcher);
 	// The asset value is base64 encoded.

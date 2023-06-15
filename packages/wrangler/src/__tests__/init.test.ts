@@ -37,10 +37,10 @@ describe("init", () => {
 			cwd: process.cwd(),
 			// @ts-expect-error we're making a fake package manager here
 			type: "mockpm",
-			addDevDeps: jest.fn(),
-			install: jest.fn(),
+			addDevDeps: vi.fn(),
+			install: vi.fn(),
 		};
-		(getPackageManager as jest.Mock).mockResolvedValue(mockPackageManager);
+		vi.fn(getPackageManager).mockResolvedValue(mockPackageManager);
 	});
 
 	afterEach(() => {
@@ -1959,7 +1959,7 @@ describe("init", () => {
 			        To publish your Worker to the Internet, run \`npm run deploy\`"
 		      `);
 			});
-			it("should add a jest test for a non-ts project with .js extension", async () => {
+			it("should add a vi test for a non-ts project with .js extension", async () => {
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -3139,7 +3139,7 @@ describe("init", () => {
 
 			it("should use fallback compatibility date if none is upstream", async () => {
 				const mockDate = "1988-08-07";
-				jest
+				vi
 					.spyOn(Date.prototype, "toISOString")
 					.mockImplementation(() => `${mockDate}T00:00:00.000Z`);
 
@@ -3236,7 +3236,7 @@ describe("init", () => {
 
 			it("should not include migrations in config file when none are necessary", async () => {
 				const mockDate = "1988-08-07";
-				jest
+				vi
 					.spyOn(Date.prototype, "toISOString")
 					.mockImplementation(() => `${mockDate}T00:00:00.000Z`);
 				const mockData = {

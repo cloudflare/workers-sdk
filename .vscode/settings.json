@@ -57,5 +57,8 @@
 	"files.associations": {
 		"api-extractor.json": "jsonc",
 		"CODEOWNERS": "plaintext"
+	},
+	"[typescript]": {
+		"editor.defaultFormatter": "esbenp.prettier-vscode"
 	}
 }

@@ -1,3 +1,4 @@
 import makeServiceWorkerEnv from "service-worker-mock";
+import { vi } from "vitest";
 
-Object.assign(globalThis, makeServiceWorkerEnv());
+vi.stubGlobal('globalThis', makeServiceWorkerEnv())

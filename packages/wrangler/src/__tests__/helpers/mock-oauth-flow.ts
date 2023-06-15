@@ -3,6 +3,7 @@ import { Request } from "undici";
 import openInBrowser from "../../open-in-browser";
 import { mockHttpServer } from "./mock-http-server";
 import { createFetchResult, msw } from "./msw";
+import type { MockedFunction } from "vitest";
 
 export function mockGetMemberships(
 	accounts: { id: string; account: { id: string; name: string } }[]
@@ -39,30 +40,30 @@ export const mockOAuthFlow = () => {
 	const mockOAuthServerCallback = (
 		respondWith?: "timeout" | "success" | "failure" | GrantResponseOptions
 	) => {
-		(
-			openInBrowser as jest.MockedFunction<typeof openInBrowser>
-		).mockImplementation(async (url: string) => {
-			if (respondWith) mockGrantAuthorization({ respondWith });
-			// We don't support the grant response timing out.
-			if (oauthGrantResponse === "timeout") {
-				throw "unimplemented";
-			}
+		(openInBrowser as MockedFunction<typeof openInBrowser>).mockImplementation(
+			async (url: string) => {
+				if (respondWith) mockGrantAuthorization({ respondWith });
+				// We don't support the grant response timing out.
+				if (oauthGrantResponse === "timeout") {
+					throw "unimplemented";
+				}
 
-			// Create a fake callback request that would be created by the OAuth server
-			const { searchParams } = new URL(url);
-			const queryParams = toQueryParams(oauthGrantResponse, searchParams);
-			const request = new Request(
-				`${searchParams.get("redirect_uri")}?${queryParams}`
-			);
-
-			// Trigger the mock HttpServer to handle this fake request to continue the OAuth flow.
-			fetchHttp(request).catch((e) => {
-				throw new Error(
-					"Failed to send OAuth Grant to wrangler, maybe the server was closed?",
-					e as Error
+				// Create a fake callback request that would be created by the OAuth server
+				const { searchParams } = new URL(url);
+				const queryParams = toQueryParams(oauthGrantResponse, searchParams);
+				const request = new Request(
+					`${searchParams.get("redirect_uri")}?${queryParams}`
 				);
-			});
-		});
+
+				// Trigger the mock HttpServer to handle this fake request to continue the OAuth flow.
+				fetchHttp(request).catch((e) => {
+					throw new Error(
+						"Failed to send OAuth Grant to wrangler, maybe the server was closed?",
+						e as Error
+					);
+				});
+			}
+		);
 	};
 
 	// Handled in `mockOAuthServerCallback`

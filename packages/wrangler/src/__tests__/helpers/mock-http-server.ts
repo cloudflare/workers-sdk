@@ -10,12 +10,12 @@ export function mockHttpServer() {
 	let listener: http.RequestListener;
 
 	beforeEach(() => {
-		jest
+		vi
 			.spyOn(http, "createServer")
 			.mockImplementation((...args: unknown[]) => {
 				listener = args.pop() as http.RequestListener;
 				return {
-					listen: jest.fn(),
+					listen: vi.fn(),
 					close(callback?: (err?: Error) => void) {
 						callback?.();
 						return this;
@@ -32,7 +32,7 @@ export function mockHttpServer() {
 
 		// The listener will attache a callback to the response by calling `resp.end(callback)`.
 		// We want to capture that so that we can trigger it after the listener has completed its work.
-		const endSpy = jest.spyOn(resp, "end");
+		const endSpy = vi.spyOn(resp, "end");
 
 		// The `await` here is important to allow the listener to complete its async work before we end the response.
 		await listener(req as unknown as http.IncomingMessage, resp);

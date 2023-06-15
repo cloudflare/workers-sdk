@@ -54,7 +54,7 @@
 		"build": "npm run clean && npm run bundle && npm run emit-types",
 		"bundle": "node -r esbuild-register scripts/bundle.ts",
 		"check:lint": "eslint .",
-		"check:type": "tsc",
+		"check:type": "tsc -p ./tsconfig.json",
 		"clean": "rimraf wrangler-dist miniflare-dist emitted-types",
 		"create-cloudflare": "create-cloudflare",
 		"dev": "npm run clean && concurrently -c black,blue --kill-others-on-fail false 'npm run bundle -- --watch' 'npm run check:type -- --watch --preserveWatchOutput'",
@@ -66,7 +66,7 @@
 		"test:debug": "npm run test -- --silent=false --verbose=true",
 		"test:e2e": "vitest run --test-timeout 120000 --single-thread --dir ./e2e run",
 		"test:watch": "vitest watch --single-thread --testTimeout=50000",
-		"type:tests": "tsc -p ./src/__tests__/tsconfig.json && tsc -p ./e2e/tsconfig.json"
+		"type:tests": "tsc -p ./src/__tests__/tsconfig.json && tsc -p ./e2e/tsconfig.json && tsc -p ./src/pages/functions/tsconfig.json"
 	},
 	"dependencies": {
 		"@cloudflare/kv-asset-handler": "^0.2.0",

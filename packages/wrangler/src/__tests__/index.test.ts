@@ -16,10 +16,10 @@ describe("wrangler", () => {
 			cwd: process.cwd(),
 			// @ts-expect-error we're making a fake package manager here
 			type: "mockpm",
-			addDevDeps: jest.fn(),
-			install: jest.fn(),
+			addDevDeps: vi.fn(),
+			install: vi.fn(),
 		};
-		(getPackageManager as jest.Mock).mockResolvedValue(mockPackageManager);
+		vi.fn(getPackageManager).mockResolvedValue(mockPackageManager);
 	});
 
 	const std = mockConsoleMethods();

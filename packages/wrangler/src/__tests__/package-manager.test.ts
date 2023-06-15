@@ -2,9 +2,11 @@ import { writeFileSync } from "node:fs";
 import { mockBinary } from "./helpers/mock-bin";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
+import type * as packageManagerType from "../package-manager";
 
-const { getPackageManager, getPackageManagerName } =
-	jest.requireActual("../package-manager");
+
+const { getPackageManager, getPackageManagerName } = await vi.importActual<typeof packageManagerType>("../package-manager")
+
 interface TestCase {
 	npm: boolean;
 	pnpm: boolean;

@@ -128,7 +128,7 @@ describe("parseTOML", () => {
 	it("should fail to parse toml with invalid string", () => {
 		try {
 			parseTOML(`name = 'fail"`);
-			fail("parseTOML did not throw");
+			throw new Error("parseTOML did not throw");
 		} catch (err) {
 			expect({ ...(err as Error) }).toStrictEqual({
 				name: "ParseError",
@@ -149,7 +149,7 @@ describe("parseTOML", () => {
 	it("should fail to parse toml with invalid header", () => {
 		try {
 			parseTOML(`\n[name`, "config.toml");
-			fail("parseTOML did not throw");
+			throw new Error("parseTOML did not throw");
 		} catch (err) {
 			expect({ ...(err as Error) }).toStrictEqual({
 				name: "ParseError",
@@ -217,7 +217,7 @@ describe("parseJSON", () => {
 	it("should fail to parse json with invalid string", () => {
 		try {
 			parseJSON(`\n{\n"version" "1\n}\n`);
-			fail("parseJSON did not throw");
+			throw new Error("parseJSON did not throw");
 		} catch (err) {
 			expect({ ...(err as Error) }).toStrictEqual({
 				name: "ParseError",
@@ -240,7 +240,7 @@ describe("parseJSON", () => {
 			fileText = `{\n\t"a":{\n\t\t"b":{\n\t\t\t"c":[012345]\n}\n}\n}`;
 		try {
 			parseJSON(fileText, file);
-			fail("parseJSON did not throw");
+			throw new Error("parseJSON did not throw");
 		} catch (err) {
 			expect({ ...(err as Error) }).toStrictEqual({
 				name: "ParseError",
@@ -321,7 +321,7 @@ describe("parseJSONC", () => {
 	it("should fail to parse jsonc with invalid string", () => {
 		try {
 			parseJSONC(`\n{\n"version" "1\n}\n`);
-			fail("parseJSONC did not throw");
+			throw new Error("parseJSONC did not throw");
 		} catch (err) {
 			expect({ ...(err as Error) }).toStrictEqual({
 				name: "ParseError",
@@ -345,7 +345,7 @@ describe("parseJSONC", () => {
 			fileText = `{\n\t"a":{\n\t\t"b":{\n\t\t\t"c":[012345]\n}\n}\n}`;
 		try {
 			parseJSONC(fileText, file);
-			fail("parseJSONC did not throw");
+			throw new Error("parseJSONC did not throw");
 		} catch (err) {
 			expect({ ...(err as Error) }).toStrictEqual({
 				name: "ParseError",

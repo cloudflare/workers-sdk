@@ -17,6 +17,8 @@ import { mockConfirm, clearDialogs } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw, mswSuccessOauthHandlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
+import type * as MetricsConfig from "../metrics/metrics-config";
+import type { SpyInstance } from "vitest";
 
 declare const global: { SPARROW_SOURCE_KEY: string | undefined };
 
@@ -25,10 +27,10 @@ describe("metrics", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
 
-	beforeEach(() => {
+	beforeEach(async () => {
 		// Tell jest to use the original version of the `getMetricsConfig()` function in these tests.
-		const mockMetricsConfig = jest.requireMock("../metrics/metrics-config");
-		mockMetricsConfig.useOriginal = true;
+		await vi.importActual<typeof MetricsConfig>("../metrics/metrics-config");
+
 		global.SPARROW_SOURCE_KEY = "MOCK_KEY";
 		logger.loggerLevel = "debug";
 		// Create a node_modules directory to store config-cache files
@@ -216,13 +218,14 @@ describe("metrics", () => {
 	});
 
 	describe("getMetricsConfig()", () => {
-		let isCISpy: jest.SpyInstance;
+
+		let isCISpy: SpyInstance
 
 		const { setIsTTY } = useMockIsTTY();
 		beforeEach(() => {
 			// Default the mock TTY to interactive for all these tests.
 			setIsTTY(true);
-			isCISpy = jest.spyOn(CI, "isCI").mockReturnValue(false);
+			isCISpy = vi.spyOn(CI, "isCI").mockReturnValue(false);
 		});
 
 		describe("enabled", () => {

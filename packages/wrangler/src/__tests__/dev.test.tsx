@@ -1,9 +1,7 @@
 import * as fs from "node:fs";
-import getPort from "get-port";
 import { rest } from "msw";
 import patchConsole from "patch-console";
 import dedent from "ts-dedent";
-import Dev from "../dev/dev";
 import { CI } from "../is-ci";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -16,8 +14,14 @@ import {
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
+import type * as DevType from "../dev/dev";
+import type * as getPortType from "get-port";
 
-describe("wrangler dev", () => {
+describe("wrangler dev", async () => {
+	const Dev = (await vi.importMock<typeof DevType>("../dev/dev"))
+		.DevImplementation;
+	const getPort = (await vi.importMock<typeof getPortType>("get-port")).default;
+
 	beforeEach(() => {
 		msw.use(
 			...mswZoneHandlers,
@@ -31,14 +35,14 @@ describe("wrangler dev", () => {
 	mockApiToken();
 	const std = mockConsoleMethods();
 	afterEach(() => {
-		(Dev as jest.Mock).mockClear();
+		Dev.mockClear();
 		patchConsole(() => {});
 		msw.resetHandlers();
 	});
 
 	describe("authorization", () => {
 		mockApiToken({ apiToken: null });
-		const isCISpy = jest.spyOn(CI, "isCI").mockReturnValue(true);
+		const isCISpy = vi.spyOn(CI, "isCI").mockReturnValue(true);
 
 		it("should kick you to the login flow when running wrangler dev in remote mode without authorization", async () => {
 			fs.writeFileSync("index.js", `export default {};`);
@@ -110,7 +114,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].usageModel).toEqual("unbound");
+			expect(Dev.mock.calls[0][0].usageModel).toEqual("unbound");
 		});
 
 		it("should read wrangler.toml's usage_model in local mode", async () => {
@@ -120,7 +124,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].usageModel).toEqual("unbound");
+			expect(Dev.mock.calls[0][0].usageModel).toEqual("unbound");
 		});
 	});
 
@@ -151,9 +155,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].entry.file).toMatch(
-				/index\.js$/
-			);
+			expect(Dev.mock.calls[0][0].entry.file).toMatch(/index\.js$/);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -169,9 +171,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev --env=ENV1");
-			expect((Dev as jest.Mock).mock.calls[0][0].entry.file).toMatch(
-				/index\.js$/
-			);
+			expect(Dev.mock.calls[0][0].entry.file).toMatch(/index\.js$/);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -188,9 +188,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev --env=ENV1");
-			expect((Dev as jest.Mock).mock.calls[0][0].entry.file).toMatch(
-				/index\.js$/
-			);
+			expect(Dev.mock.calls[0][0].entry.file).toMatch(/index\.js$/);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -208,7 +206,7 @@ describe("wrangler dev", () => {
 				routes: ["http://5.some-host.com/some/path/*"],
 			});
 			await runWrangler("dev --remote");
-			expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
+			expect(Dev.mock.calls[0][0]).toEqual(
 				expect.objectContaining({
 					host: "5.some-host.com",
 					zone: "some-zone-id-5",
@@ -225,7 +223,7 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
 			await runWrangler("dev --remote --host some-host.com");
-			expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
+			expect(Dev.mock.calls[0][0]).toEqual(
 				expect.objectContaining({
 					host: "some-host.com",
 					zone: "some-zone-id",
@@ -243,7 +241,7 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].host).toEqual("some-host.com");
+			expect(Dev.mock.calls[0][0].host).toEqual("some-host.com");
 		});
 
 		it("should read --route", async () => {
@@ -253,7 +251,7 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
 			await runWrangler("dev --route http://some-host.com/some/path/*");
-			expect((Dev as jest.Mock).mock.calls[0][0].host).toEqual("some-host.com");
+			expect(Dev.mock.calls[0][0].host).toEqual("some-host.com");
 		});
 
 		it("should read wrangler.toml's routes", async () => {
@@ -267,7 +265,7 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].host).toEqual("some-host.com");
+			expect(Dev.mock.calls[0][0].host).toEqual("some-host.com");
 		});
 
 		it("should read wrangler.toml's environment specific routes", async () => {
@@ -289,7 +287,7 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
 			await runWrangler("dev --env staging");
-			expect((Dev as jest.Mock).mock.calls[0][0].host).toEqual("some-host.com");
+			expect(Dev.mock.calls[0][0].host).toEqual("some-host.com");
 		});
 
 		it("should strip leading `*` from given host when deducing a zone id", async () => {
@@ -300,7 +298,7 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].host).toEqual("some-host.com");
+			expect(Dev.mock.calls[0][0].host).toEqual("some-host.com");
 		});
 
 		it("should strip leading `*.` from given host when deducing a zone id", async () => {
@@ -311,7 +309,7 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].host).toEqual("some-host.com");
+			expect(Dev.mock.calls[0][0].host).toEqual("some-host.com");
 		});
 
 		it("should, when provided, use a configured zone_id", async () => {
@@ -323,7 +321,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev --remote");
-			expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
+			expect(Dev.mock.calls[0][0]).toEqual(
 				expect.objectContaining({
 					host: "some-domain.com",
 					zone: "some-zone-id",
@@ -344,7 +342,7 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			mockGetZones("some-zone.com", [{ id: "a-zone-id" }]);
 			await runWrangler("dev --remote");
-			expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
+			expect(Dev.mock.calls[0][0]).toEqual(
 				expect.objectContaining({
 					// note that it uses the provided zone_name as a host too
 					host: "some-zone.com",
@@ -469,7 +467,7 @@ describe("wrangler dev", () => {
 
 			await runWrangler("dev --remote --host 111.222.333.some-host.com");
 
-			const devMockCall = (Dev as jest.Mock).mock.calls[0][0];
+			const devMockCall = Dev.mock.calls[0][0];
 
 			expect(devMockCall).toHaveProperty("host", "111.222.333.some-host.com");
 			expect(devMockCall).toHaveProperty(
@@ -491,13 +489,13 @@ describe("wrangler dev", () => {
 				routes: ["http://5.some-host.com/some/path/*"],
 			});
 			await runWrangler("dev --remote");
-			expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
+			expect(Dev.mock.calls[0][0]).toEqual(
 				expect.objectContaining({
 					host: "5.some-host.com",
 					zone: "some-zone-id-5",
 				})
 			);
-			(Dev as jest.Mock).mockClear();
+			Dev.mockClear();
 
 			// config.route
 			mockGetZones("4.some-host.com", [{ id: "some-zone-id-4" }]);
@@ -506,13 +504,13 @@ describe("wrangler dev", () => {
 				route: "https://4.some-host.com/some/path/*",
 			});
 			await runWrangler("dev --remote");
-			expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
+			expect(Dev.mock.calls[0][0]).toEqual(
 				expect.objectContaining({
 					host: "4.some-host.com",
 					zone: "some-zone-id-4",
 				})
 			);
-			(Dev as jest.Mock).mockClear();
+			Dev.mockClear();
 
 			// --routes
 			mockGetZones("3.some-host.com", [{ id: "some-zone-id-3" }]);
@@ -523,13 +521,13 @@ describe("wrangler dev", () => {
 			await runWrangler(
 				"dev --remote --routes http://3.some-host.com/some/path/*"
 			);
-			expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
+			expect(Dev.mock.calls[0][0]).toEqual(
 				expect.objectContaining({
 					host: "3.some-host.com",
 					zone: "some-zone-id-3",
 				})
 			);
-			(Dev as jest.Mock).mockClear();
+			Dev.mockClear();
 
 			// config.dev.host
 			mockGetZones("2.some-host.com", [{ id: "some-zone-id-2" }]);
@@ -543,13 +541,13 @@ describe("wrangler dev", () => {
 			await runWrangler(
 				"dev --remote --routes http://3.some-host.com/some/path/*"
 			);
-			expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
+			expect(Dev.mock.calls[0][0]).toEqual(
 				expect.objectContaining({
 					host: "2.some-host.com",
 					zone: "some-zone-id-2",
 				})
 			);
-			(Dev as jest.Mock).mockClear();
+			Dev.mockClear();
 
 			// --host
 			mockGetZones("1.some-host.com", [{ id: "some-zone-id-1" }]);
@@ -563,13 +561,13 @@ describe("wrangler dev", () => {
 			await runWrangler(
 				"dev --remote --routes http://3.some-host.com/some/path/* --host 1.some-host.com"
 			);
-			expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
+			expect(Dev.mock.calls[0][0]).toEqual(
 				expect.objectContaining({
 					host: "1.some-host.com",
 					zone: "some-zone-id-1",
 				})
 			);
-			(Dev as jest.Mock).mockClear();
+			Dev.mockClear();
 		});
 
 		it("should error if a host can't resolve to a zone", async () => {
@@ -591,7 +589,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev --host some-host.com");
-			expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual(undefined);
+			expect(Dev.mock.calls[0][0].zone).toEqual(undefined);
 		});
 	});
 
@@ -605,9 +603,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].localUpstream).toEqual(
-				"2.some-host.com"
-			);
+			expect(Dev.mock.calls[0][0].localUpstream).toEqual("2.some-host.com");
 		});
 
 		it("should use route from toml by default", async () => {
@@ -617,9 +613,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].host).toEqual(
-				"4.some-host.com"
-			);
+			expect(Dev.mock.calls[0][0].host).toEqual("4.some-host.com");
 		});
 
 		it("should respect the option when provided", async () => {
@@ -629,9 +623,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev --local-upstream some-host.com");
-			expect((Dev as jest.Mock).mock.calls[0][0].localUpstream).toEqual(
-				"some-host.com"
-			);
+			expect(Dev.mock.calls[0][0].localUpstream).toEqual("some-host.com");
 		});
 	});
 
@@ -650,7 +642,7 @@ describe("wrangler dev", () => {
 			);
 
 			// and the command would pass through
-			expect((Dev as jest.Mock).mock.calls[0][0].build).toEqual({
+			expect(Dev.mock.calls[0][0].build).toEqual({
 				command:
 					"node -e \"4+4; require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\"",
 				cwd: undefined,
@@ -756,9 +748,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].upstreamProtocol).toEqual(
-				"https"
-			);
+			expect(Dev.mock.calls[0][0].upstreamProtocol).toEqual("https");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -770,9 +760,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev --upstream-protocol=http");
-			expect((Dev as jest.Mock).mock.calls[0][0].upstreamProtocol).toEqual(
-				"http"
-			);
+			expect(Dev.mock.calls[0][0].upstreamProtocol).toEqual("http");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
 			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mSetting upstream-protocol to http is not currently implemented.[0m
@@ -793,7 +781,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].localProtocol).toEqual("http");
+			expect(Dev.mock.calls[0][0].localProtocol).toEqual("http");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -808,9 +796,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].localProtocol).toEqual(
-				"https"
-			);
+			expect(Dev.mock.calls[0][0].localProtocol).toEqual("https");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -827,7 +813,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev --local-protocol=http");
-			expect((Dev as jest.Mock).mock.calls[0][0].localProtocol).toEqual("http");
+			expect(Dev.mock.calls[0][0].localProtocol).toEqual("http");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -841,7 +827,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual("0.0.0.0");
+			expect(Dev.mock.calls[0][0].initialIp).toEqual("0.0.0.0");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -856,7 +842,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual("1.2.3.4");
+			expect(Dev.mock.calls[0][0].initialIp).toEqual("1.2.3.4");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -871,7 +857,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev --ip=5.6.7.8");
-			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual("5.6.7.8");
+			expect(Dev.mock.calls[0][0].initialIp).toEqual("5.6.7.8");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -885,7 +871,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].inspectorPort).toEqual(9229);
+			expect(Dev.mock.calls[0][0].inspectorPort).toEqual(9229);
 			expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -903,7 +889,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev --inspector-port=9999");
-			expect((Dev as jest.Mock).mock.calls[0][0].inspectorPort).toEqual(9999);
+			expect(Dev.mock.calls[0][0].inspectorPort).toEqual(9999);
 			expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -924,7 +910,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].inspectorPort).toEqual(9999);
+			expect(Dev.mock.calls[0][0].inspectorPort).toEqual(9999);
 			expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -960,7 +946,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].initialPort).toEqual(8787);
+			expect(Dev.mock.calls[0][0].initialPort).toEqual(8787);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -975,10 +961,10 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			// Mock `getPort()` to resolve to a completely different port.
-			(getPort as jest.Mock).mockResolvedValue(98765);
+			getPort.mockResolvedValue(98765);
 
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].initialPort).toEqual(8888);
+			expect(Dev.mock.calls[0][0].initialPort).toEqual(8888);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1009,10 +995,10 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			// Mock `getPort()` to resolve to a completely different port.
-			(getPort as jest.Mock).mockResolvedValue(98765);
+			getPort.mockResolvedValue(98765);
 
 			await runWrangler("dev --port=9999");
-			expect((Dev as jest.Mock).mock.calls[0][0].initialPort).toEqual(9999);
+			expect(Dev.mock.calls[0][0].initialPort).toEqual(9999);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1024,10 +1010,10 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			// Mock `getPort()` to resolve to a completely different port.
-			(getPort as jest.Mock).mockResolvedValue(98765);
+			getPort.mockResolvedValue(98765);
 
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].initialPort).toEqual(98765);
+			expect(Dev.mock.calls[0][0].initialPort).toEqual(98765);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1057,7 +1043,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual("0.0.0.0");
+			expect(Dev.mock.calls[0][0].initialIp).toEqual("0.0.0.0");
 			expect(std.out).toMatchInlineSnapshot(`
 			        "Your worker has access to the following bindings:
 			        - Durable Objects:
@@ -1127,8 +1113,7 @@ describe("wrangler dev", () => {
 				},
 			});
 			await runWrangler("dev");
-			const varBindings: Record<string, unknown> = (Dev as jest.Mock).mock
-				.calls[0][0].bindings.vars;
+			const varBindings = Dev.mock.calls[0][0].bindings.vars;
 
 			expect(varBindings).toEqual({
 				VAR_1: "var #1 value",
@@ -1162,8 +1147,7 @@ describe("wrangler dev", () => {
 
 			writeWranglerToml({ main: "index.js", env: { custom: {} } });
 			await runWrangler("dev --env custom");
-			const varBindings: Record<string, unknown> = (Dev as jest.Mock).mock
-				.calls[0][0].bindings.vars;
+			const varBindings = Dev.mock.calls[0][0].bindings.vars;
 
 			expect(varBindings).toEqual({ CUSTOM_VAR: "custom" });
 			expect(std.out).toMatchInlineSnapshot(`
@@ -1307,13 +1291,13 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].isWorkersSite).toEqual(false);
+			expect(Dev.mock.calls[0][0].isWorkersSite).toEqual(false);
 
 			await runWrangler("dev --site abc");
-			expect((Dev as jest.Mock).mock.calls[1][0].isWorkersSite).toEqual(true);
+			expect(Dev.mock.calls[1][0].isWorkersSite).toEqual(true);
 
 			await runWrangler("dev --assets abc");
-			expect((Dev as jest.Mock).mock.calls[2][0].isWorkersSite).toEqual(false);
+			expect(Dev.mock.calls[2][0].isWorkersSite).toEqual(false);
 		});
 		it("should warn if --assets is used", async () => {
 			writeWranglerToml({
@@ -1380,7 +1364,7 @@ describe("wrangler dev", () => {
 		it("should default to true, without a warning", async () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev index.js");
-			expect((Dev as jest.Mock).mock.calls[0][0].inspect).toEqual(true);
+			expect(Dev.mock.calls[0][0].inspect).toEqual(true);
 			expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -1395,7 +1379,7 @@ describe("wrangler dev", () => {
 		it("should pass true, with a warning", async () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev index.js --inspect");
-			expect((Dev as jest.Mock).mock.calls[0][0].inspect).toEqual(true);
+			expect(Dev.mock.calls[0][0].inspect).toEqual(true);
 			expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
@@ -1412,7 +1396,7 @@ describe("wrangler dev", () => {
 		it("should pass false, without a warning", async () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev index.js --inspect false");
-			expect((Dev as jest.Mock).mock.calls[0][0].inspect).toEqual(false);
+			expect(Dev.mock.calls[0][0].inspect).toEqual(false);
 			expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",

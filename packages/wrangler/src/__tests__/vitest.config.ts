@@ -3,6 +3,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     name: "wrangler-tests",
+    globals: true,
     reporters: [
       "json",
       "html",
