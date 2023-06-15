@@ -129,7 +129,7 @@ const templateMap: Record<string, TemplateConfig> = {
 		label: "Scheduled Worker (Cron Trigger)",
 		handler: runWorkersGenerator,
 	},
-	"queues": {
+	queues: {
 		label: "Queue consumer & producer Worker",
 		handler: runWorkersGenerator,
 	},
