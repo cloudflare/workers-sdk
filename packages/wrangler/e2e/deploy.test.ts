@@ -1,10 +1,12 @@
 import crypto from "node:crypto";
 import path from "node:path";
+import shellac from "shellac";
 import { fetch } from "undici";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
+import { normalizeOutput } from "./helpers/normalize";
 import { retry } from "./helpers/retry";
-import { RUN, runIn } from "./helpers/run";
 import { dedent, makeRoot, seed } from "./helpers/setup";
+import { WRANGLER } from "./helpers/wrangler-command";
 
 function matchWorkersDev(stdout: string): string {
 	return stdout.match(
@@ -12,19 +14,27 @@ function matchWorkersDev(stdout: string): string {
 	)?.[1] as string;
 }
 
-describe("deploy", async () => {
-	const root = await makeRoot();
-	const workerName = `smoke-test-worker-${crypto
-		.randomBytes(4)
-		.toString("hex")}`;
-	const workerPath = path.join(root, workerName);
+describe("deploy", () => {
+	let workerName: string;
+	let workerPath: string;
 	let workersDev: string | null = null;
+	let run: typeof shellac;
+	let normalize: (str: string) => string;
+
+	beforeAll(async () => {
+		const root = await makeRoot();
+		run = shellac.in(root).env(process.env);
+		workerName = `smoke-test-worker-${crypto.randomBytes(4).toString("hex")}`;
+		workerPath = path.join(root, workerName);
+		normalize = (str) =>
+			normalizeOutput(str, { [workerName]: "smoke-test-worker" });
+	});
 
 	it("init worker", async () => {
-		const { stdout } = await runIn(root, { [workerName]: "smoke-test-worker" })`
-    $ ${RUN} init --yes --no-delegate-c3 ${workerName}
-    `;
-		expect(stdout).toMatchInlineSnapshot(`
+		const { stdout } =
+			await run`$ ${WRANGLER} init --yes --no-delegate-c3 ${workerName}`;
+
+		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"Using npm as package manager.
 			✨ Created smoke-test-worker/wrangler.toml
 			✨ Initialized git repository at smoke-test-worker
@@ -43,15 +53,10 @@ describe("deploy", async () => {
 			To publish your Worker to the Internet, run \`npm run deploy\`"
 		`);
 	});
+
 	it("deploy worker", async () => {
-		const {
-			stdout,
-			stderr,
-			raw: { stdout: rawStdout },
-		} = await runIn(workerPath, { [workerName]: "smoke-test-worker" })`
-	  $ ${RUN} deploy
-	`;
-		expect(stdout).toMatchInlineSnapshot(`
+		const { stdout, stderr } = await run`$ ${WRANGLER} deploy`;
+		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded smoke-test-worker (TIMINGS)
 			Published smoke-test-worker (TIMINGS)
@@ -59,7 +64,7 @@ describe("deploy", async () => {
 			Current Deployment ID: 00000000-0000-0000-0000-000000000000"
 		`);
 		expect(stderr).toMatchInlineSnapshot('""');
-		workersDev = matchWorkersDev(rawStdout);
+		workersDev = matchWorkersDev(stdout);
 
 		await retry(() =>
 			expect(
@@ -67,6 +72,7 @@ describe("deploy", async () => {
 			).resolves.toMatchInlineSnapshot('"Hello World!"')
 		);
 	});
+
 	it("modify & deploy worker", async () => {
 		await seed(workerPath, {
 			"src/index.ts": dedent`
@@ -76,14 +82,8 @@ describe("deploy", async () => {
           }
         }`,
 		});
-		const {
-			stdout,
-			stderr,
-			raw: { stdout: rawStdout },
-		} = await runIn(workerPath, { [workerName]: "smoke-test-worker" })`
-	  $ ${RUN} deploy
-	`;
-		expect(stdout).toMatchInlineSnapshot(`
+		const { stdout, stderr } = await run`$ ${WRANGLER} deploy`;
+		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded smoke-test-worker (TIMINGS)
 			Published smoke-test-worker (TIMINGS)
@@ -91,7 +91,7 @@ describe("deploy", async () => {
 			Current Deployment ID: 00000000-0000-0000-0000-000000000000"
 		`);
 		expect(stderr).toMatchInlineSnapshot('""');
-		workersDev = matchWorkersDev(rawStdout);
+		workersDev = matchWorkersDev(stdout);
 
 		await retry(() =>
 			expect(
@@ -101,12 +101,8 @@ describe("deploy", async () => {
 	});
 
 	it("delete worker", async () => {
-		const { stdout, stderr } = await runIn(workerPath, {
-			[workerName]: "smoke-test-worker",
-		})`
-	  $ ${RUN} delete
-	  `;
-		expect(stdout).toMatchInlineSnapshot(`
+		const { stdout, stderr } = await run.in(workerPath)`$ ${WRANGLER} delete`;
+		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"? Are you sure you want to delete smoke-test-worker? This action cannot be undone.
 			🤖 Using default value in non-interactive context: yes
 			Successfully deleted smoke-test-worker"
