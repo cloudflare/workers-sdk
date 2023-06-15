@@ -125,6 +125,14 @@ const templateMap: Record<string, TemplateConfig> = {
 		label: "Common Worker functions",
 		handler: runWorkersGenerator,
 	},
+	"scheduled-worker": {
+		label: "Scheduled Worker (Cron Trigger)",
+		handler: runWorkersGenerator,
+	},
+	"queues": {
+		label: "Queue consumer & producer Worker",
+		handler: runWorkersGenerator,
+	},
 	chatgptPlugin: {
 		label: `ChatGPT plugin`,
 		handler: (args) =>
