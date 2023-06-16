@@ -23,27 +23,30 @@ describe("deployments", () => {
 	let workerName: string;
 	let workerPath: string;
 	let workersDev: string | null = null;
-	let run: typeof shellac;
+	let runInRoot: typeof shellac;
+	let runInWorker: typeof shellac;
 	let normalize: (str: string) => string;
 
 	beforeAll(async () => {
 		root = await makeRoot();
 		workerName = `smoke-test-worker-${crypto.randomBytes(4).toString("hex")}`;
 		workerPath = path.join(root, workerName);
-		run = shellac.in(workerPath).env(process.env);
-		const email = matchWhoamiEmail((await run`$ ${WRANGLER} whoami`).stdout);
+		runInRoot = shellac.in(root).env(process.env);
+		runInWorker = shellac.in(workerPath).env(process.env);
+		const email = matchWhoamiEmail(
+			(await runInRoot`$ ${WRANGLER} whoami`).stdout
+		);
 		normalize = (str) =>
 			normalizeOutput(str, {
 				[workerName]: "smoke-test-worker",
 				[email]: "person@example.com",
 			});
-	});
+	}, 50_000);
 
 	it("init worker", async () => {
-		const { stdout } = await run.in(
-			root
-		)`$ ${WRANGLER} init --yes --no-delegate-c3 ${workerName}`;
-		expect(normalizeOutput(stdout)).toMatchInlineSnapshot(`
+		const { stdout } =
+			await runInRoot`$ ${WRANGLER} init --yes --no-delegate-c3 ${workerName}`;
+		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"Using npm as package manager.
 			✨ Created smoke-test-worker/wrangler.toml
 			✨ Initialized git repository at smoke-test-worker
@@ -64,11 +67,7 @@ describe("deployments", () => {
 	});
 
 	it("deploy worker", async () => {
-		const {
-			stdout,
-			stderr,
-			raw: { stdout: rawStdout },
-		} = await run`$ ${WRANGLER} deploy`;
+		const { stdout, stderr } = await runInWorker`$ ${WRANGLER} deploy`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded smoke-test-worker (TIMINGS)
@@ -77,17 +76,20 @@ describe("deployments", () => {
 			Current Deployment ID: 00000000-0000-0000-0000-000000000000"
 		`);
 		expect(stderr).toMatchInlineSnapshot('""');
-		workersDev = matchWorkersDev(rawStdout);
+		workersDev = matchWorkersDev(stdout);
 
-		await retry(() =>
-			expect(
-				fetch(`https://${workerName}.${workersDev}`).then((r) => r.text())
-			).resolves.toMatchInlineSnapshot('"Hello World!"')
+		const { text } = await retry(
+			(s) => s.status !== 200,
+			async () => {
+				const r = await fetch(`https://${workerName}.${workersDev}`);
+				return { text: await r.text(), status: r.status };
+			}
 		);
+		expect(text).toMatchInlineSnapshot('"Hello World!"');
 	});
 
 	it("list 1 deployment", async () => {
-		const { stdout, stderr } = await run`
+		const { stdout, stderr } = await runInWorker`
 	  $ ${WRANGLER} deployments list
 	`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
@@ -110,7 +112,7 @@ describe("deployments", () => {
           }
         }`,
 		});
-		const { stdout, stderr } = await run`$ ${WRANGLER} deploy`;
+		const { stdout, stderr } = await runInWorker`$ ${WRANGLER} deploy`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded smoke-test-worker (TIMINGS)
@@ -121,17 +123,19 @@ describe("deployments", () => {
 		expect(stderr).toMatchInlineSnapshot('""');
 		workersDev = matchWorkersDev(stdout);
 
-		await retry(() =>
-			expect(
-				fetch(`https://${workerName}.${workersDev}`).then((r) => r.text())
-			).resolves.toMatchInlineSnapshot('"Updated Worker!"')
+		const { text } = await retry(
+			(s) => s.status !== 200 || s.text === "Hello World!",
+			async () => {
+				const r = await fetch(`https://${workerName}.${workersDev}`);
+				return { text: await r.text(), status: r.status };
+			}
 		);
+		expect(text).toMatchInlineSnapshot('"Updated Worker!"');
 	});
 
 	it("list 2 deployments", async () => {
-		const { stdout, stderr } = await run.in(
-			workerPath
-		)`$ ${WRANGLER} deployments list`;
+		const { stdout, stderr } =
+			await runInWorker`$ ${WRANGLER} deployments list`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 			Deployment ID: 00000000-0000-0000-0000-000000000000
@@ -148,9 +152,8 @@ describe("deployments", () => {
 	});
 
 	it("rollback", async () => {
-		const { stdout, stderr } = await run.in(
-			workerPath
-		)`$ ${WRANGLER} rollback --message "A test message"`;
+		const { stdout, stderr } =
+			await runInWorker`$ ${WRANGLER} rollback --message "A test message"`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"🚧\`wrangler rollback\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 			Successfully rolled back to Deployment ID: 00000000-0000-0000-0000-000000000000
@@ -160,9 +163,8 @@ describe("deployments", () => {
 	});
 
 	it("list deployments", async () => {
-		const { stdout, stderr } = await run.in(
-			workerPath
-		)`$ ${WRANGLER} deployments list`;
+		const { stdout, stderr } =
+			await runInWorker`$ ${WRANGLER} deployments list`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"🚧\`wrangler deployments\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
 			Deployment ID: 00000000-0000-0000-0000-000000000000
@@ -185,17 +187,17 @@ describe("deployments", () => {
 	});
 
 	it("delete worker", async () => {
-		const { stdout, stderr } = await run`$ ${WRANGLER} delete`;
+		const { stdout, stderr } = await runInWorker`$ ${WRANGLER} delete`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"? Are you sure you want to delete smoke-test-worker? This action cannot be undone.
 			🤖 Using default value in non-interactive context: yes
 			Successfully deleted smoke-test-worker"
 		`);
 		expect(stderr).toMatchInlineSnapshot('""');
-		await retry(() =>
-			expect(
-				fetch(`https://${workerName}.${workersDev}`).then((r) => r.status)
-			).resolves.toBe(404)
+		const status = await retry(
+			(s) => s === 200 || s === 500,
+			() => fetch(`https://${workerName}.${workersDev}`).then((r) => r.status)
 		);
+		expect(status).toBe(404);
 	});
 });

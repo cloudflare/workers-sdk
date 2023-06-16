@@ -79,7 +79,7 @@ describe("r2", () => {
 			}
     `;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
-		"Downloading \\"testr2\\" from \\"wrangler-smoke-test-bucket\\".
+			"Downloading \\"testr2\\" from \\"wrangler-smoke-test-bucket\\".
 			If you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose"
 		`);
 		expect(normalize(stderr)).toMatchInlineSnapshot(`
