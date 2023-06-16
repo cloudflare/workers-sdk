@@ -249,12 +249,11 @@ export function createCLIParser(argv: string[]) {
 			}
 			return true;
 		})
-    .epilogue(`Please report any issues to ${chalk.cyan("https://github.com/cloudflare/workers-sdk/issues/new/choose")}`);
-
+    .epilogue(`Please report any issues to ${highlight("https://github.com/cloudflare/workers-sdk/issues/new/choose", "#3B818D")}`);
 
 	wrangler.group(
 		["experimental-json-config", "config", "env", "help", "version"],
-		"Flags:"
+		"Global Flags:"
 	);
 	wrangler.help("help", "⚑Show help").alias("h", "help");
 
@@ -300,8 +299,8 @@ export function createCLIParser(argv: string[]) {
 
 	// docs
 	wrangler.command(
-		"docs [command..]",
-		"📚 Open wrangler's docs in your browser",
+		"docs [command]",
+		"📖Open wrangler commands doc in your browser",
 		docsOptions,
 		docsHandler
 	);
@@ -309,37 +308,23 @@ export function createCLIParser(argv: string[]) {
 	// init
 	wrangler.command(
 		"init [name]",
-		"📥 Initialize a basic Worker project, including a wrangler.toml file",
+		"🔸Innitialize a basic worker application",
 		initOptions,
 		initHandler
 	);
 
-	// generate
-	wrangler.command(
-		"generate [name] [template]",
-		"✨ Generate a new Worker project from an existing Worker template. See https://github.com/cloudflare/templates",
-		generateOptions,
-		generateHandler
-	);
-
-	// [DEPRECATED] build
-	wrangler.command("build", false, buildOptions, buildHandler);
-
-	// [DEPRECATED] config
-	wrangler.command("config", false, noOpOptions, configHandler);
-
-	// dev
+  // dev
 	wrangler.command(
 		"dev [script]",
-		"👂 Start a local server for developing your worker",
+		"🔸Start a local server for developing a worker",
 		devOptions,
 		devHandler
 	);
 
-	// deploy
+  // deploy
 	wrangler.command(
 		["deploy [script]", "publish [script]"],
-		"🆙 Deploy your Worker to Cloudflare.",
+		"🔸Deploy a Worker to Cloudflare",
 		deployOptions,
 		deployHandler
 	);
@@ -430,67 +415,66 @@ export function createCLIParser(argv: string[]) {
   // delete
 	wrangler.command(
 		"delete [script]",
-		"🗑  Delete your Worker from Cloudflare.",
+		"🔸Delete a Worker from Cloudflare",
 		deleteOptions,
 		deleteHandler
 	);
 
-	// tail
+  // tail
 	wrangler.command(
 		"tail [worker]",
-		"🦚 Starts a log tailing session for a published Worker.",
+		"🔸Start a log tailing session for a Worker",
 		tailOptions,
 		tailHandler
 	);
 
-	// [DEPRECATED] preview
-	wrangler.command(
-		"preview [method] [body]",
-		false,
-		previewOptions,
-		previewHandler
-	);
-
-	// [DEPRECATED] route
-	wrangler.command(
-		"route",
-		false, // I think we want to hide this command
-		// "➡️  List or delete worker routes",
-		(routeYargs) => {
-			return route(routeYargs);
-		},
-		routeHandler
-	);
-
-	// [DEPRECATED] subdomain
-	wrangler.command(
-		"subdomain [name]",
-		false,
-		// "👷 Create or change your workers.dev subdomain.",
-		subdomainOptions,
-		subdomainHandler
-	);
-
-	// secret
+  // secret
 	wrangler.command(
 		"secret",
-		"🤫 Generate a secret that can be referenced in a Worker",
+		"🔸Generate a secret that can be referenced in a Worker",
 		(secretYargs) => {
 			return secret(secretYargs.command(subHelp));
 		}
 	);
 
+  // type generation
 	wrangler.command(
-		"secret:bulk [json]",
-		"🔸Bulk upload secrets for a Worker",
-		secretBulkOptions,
-		secretBulkHandler
+		"types",
+		"🔸Generate types from bindings & module rules in config",
+		() => {},
+		async (args) => {
+			await printWranglerBanner();
+			const config = readConfig(undefined, args);
+
+			const configBindings: Partial<Config> = {
+				kv_namespaces: config.kv_namespaces ?? [],
+				vars: { ...config.vars },
+				wasm_modules: config.wasm_modules,
+				text_blobs: {
+					...config.text_blobs,
+				},
+				data_blobs: config.data_blobs,
+				durable_objects: config.durable_objects,
+				r2_buckets: config.r2_buckets,
+				d1_databases: config.d1_databases,
+				services: config.services,
+				analytics_engine_datasets: config.analytics_engine_datasets,
+				dispatch_namespaces: config.dispatch_namespaces,
+				logfwdr: config.logfwdr,
+				unsafe: config.unsafe,
+				rules: config.rules,
+				queues: config.queues,
+				constellation: config.constellation,
+			};
+
+			await generateTypes(configBindings, config);
+		}
 	);
 
-	// kv namespace
+  // kv namespace
 	wrangler.command(
 		"kv:namespace",
-		"🗂️  Interact with your Workers KV Namespaces",
+		"🔹Manage Workers KV namespaces",
 		(namespaceYargs) => {
 			return kvNamespace(namespaceYargs.command(subHelp));
 		}
@@ -499,7 +483,7 @@ export function createCLIParser(argv: string[]) {
 	// kv key
 	wrangler.command(
 		"kv:key",
-		"🔑 Individually manage Workers KV key-value pairs",
+		"🔹Manage individual Workers KV key-value pairs",
 		(keyYargs) => {
 			return kvKey(keyYargs.command(subHelp));
 		}
@@ -508,69 +492,81 @@ export function createCLIParser(argv: string[]) {
 	// kv bulk
 	wrangler.command(
 		"kv:bulk",
-		"💪 Interact with multiple Workers KV key-value pairs at once",
+		"🔹Manage Workers KV key-value pairs in bulk",
 		(bulkYargs) => {
 			return kvBulk(bulkYargs.command(subHelp));
 		}
 	);
 
-	// pages
-	wrangler.command("pages", "⚡️ Configure Cloudflare Pages", (pagesYargs) => {
-		return pages(pagesYargs.command(subHelp));
-	});
-
-	// queues
-	wrangler.command("queues", "🇶 Configure Workers Queues", (queuesYargs) => {
-		return queues(queuesYargs.command(subHelp));
-	});
-
-	// r2
-	wrangler.command("r2", "📦 Interact with an R2 store", (r2Yargs) => {
-		return r2(r2Yargs.command(subHelp));
-	});
-
-	// dispatch-namespace
+  // queues
 	wrangler.command(
-		"dispatch-namespace",
-		"📦 Interact with a dispatch namespace",
-		(workerNamespaceYargs) => {
-			return workerNamespaceCommands(workerNamespaceYargs, subHelp);
-		}
-	);
-
-	// d1
-	wrangler.command("d1", "🗄  Interact with a D1 database", (d1Yargs) => {
-		return d1(d1Yargs.command(subHelp));
+    "queues",
+    "🔹Manage Workers Queues",
+    (queuesYargs) => {
+		  return queues(queuesYargs.command(subHelp));
 	});
 
-	// ai
+  // d1
 	wrangler.command(
-		"constellation",
-		"🤖 Interact with Constellation models",
-		(aiYargs) => {
-			return constellation(aiYargs.command(subHelp));
-		}
-	);
+    "d1",
+    "🔹Manage Workers D1 databases",
+    (d1Yargs) => {
+		  return d1(d1Yargs.command(subHelp));
+	});
 
-	// pubsub
+  // r2
 	wrangler.command(
-		"pubsub",
-		"📮 Interact and manage Pub/Sub Brokers",
-		(pubsubYargs) => {
-			return pubSubCommands(pubsubYargs, subHelp);
-		}
-	);
+    "r2",
+    "🔹Manage R2 buckets & objects",
+    (r2Yargs) => {
+		  return r2(r2Yargs.command(subHelp));
+	});
 
-	// mtls-certificate
+  // mtls-certificate
 	wrangler.command(
 		"mtls-certificate",
-		"🪪 Manage certificates used for mTLS connections",
+		"🔹Manage certificates used for mTLS connections",
 		(mtlsYargs) => {
 			return mTlsCertificateCommands(mtlsYargs.command(subHelp));
 		}
 	);
 
-	/**
+  // pubsub
+	wrangler.command(
+		"pubsub",
+		`🔹Manage Pub/Sub brokers ${highlight("private beta", "#FF8800")}`,
+		(pubsubYargs) => {
+			return pubSubCommands(pubsubYargs, subHelp);
+		}
+	);
+
+  // pages
+	wrangler.command(
+    "pages",
+    "🔹Configure Cloudflare Pages applications",
+    (pagesYargs) => {
+		  return pages(pagesYargs.command(subHelp));
+	});
+
+  // dispatch-namespace
+	wrangler.command(
+		"dispatch-namespace",
+		"🔹Manage dispatch namespaces",
+		(workerNamespaceYargs) => {
+			return workerNamespaceCommands(workerNamespaceYargs, subHelp);
+		}
+	);
+
+  // ai
+	wrangler.command(
+		"constellation",
+		"🔹Manage Constellation models",
+		(aiYargs) => {
+			return constellation(aiYargs.command(subHelp));
+		}
+	);
+
+  /**
 	 * User Group: login, logout, and whoami
 	 * TODO: group commands into User group similar to .group() for flags in yargs
 	 */
@@ -578,7 +574,7 @@ export function createCLIParser(argv: string[]) {
 	wrangler.command(
 		// this needs scopes as an option?
 		"login",
-		"🔓 Login to Cloudflare",
+		"🔓Login to Cloudflare",
 		(yargs) => {
 			// TODO: This needs some copy editing
 			// I mean, this entire app does, but this too.
@@ -636,7 +632,7 @@ export function createCLIParser(argv: string[]) {
 	wrangler.command(
 		// this needs scopes as an option?
 		"logout",
-		"🚪 Logout from Cloudflare",
+		"🔓Logout from Cloudflare",
 		() => {},
 		async (args) => {
 			await printWranglerBanner();
@@ -651,7 +647,7 @@ export function createCLIParser(argv: string[]) {
 	// whoami
 	wrangler.command(
 		"whoami",
-		"🕵️  Retrieve your user info and test your auth config",
+		"🔓Retrieve user info and test your auth config",
 		() => {},
 		async (args) => {
 			await printWranglerBanner();
@@ -663,112 +659,42 @@ export function createCLIParser(argv: string[]) {
 		}
 	);
 
-	// type generation
+
+  // LIZ HERE
+
+	// [DEPRECATED] generate
 	wrangler.command(
-		"types",
-		"📝 Generate types from bindings & module rules in config",
-		() => {},
-		async (args) => {
-			await printWranglerBanner();
-			const config = readConfig(undefined, args);
-
-			const configBindings: Partial<Config> = {
-				kv_namespaces: config.kv_namespaces ?? [],
-				vars: { ...config.vars },
-				wasm_modules: config.wasm_modules,
-				text_blobs: {
-					...config.text_blobs,
-				},
-				data_blobs: config.data_blobs,
-				durable_objects: config.durable_objects,
-				r2_buckets: config.r2_buckets,
-				d1_databases: config.d1_databases,
-				services: config.services,
-				analytics_engine_datasets: config.analytics_engine_datasets,
-				dispatch_namespaces: config.dispatch_namespaces,
-				logfwdr: config.logfwdr,
-				unsafe: config.unsafe,
-				rules: config.rules,
-				queues: config.queues,
-				constellation: config.constellation,
-			};
-
-			await generateTypes(configBindings, config);
-		}
+		"generate [name] [template]",
+    false,
+		// "✨ Generate a new Worker project from an existing Worker template. See https://github.com/cloudflare/templates",
+		generateOptions,
+		generateHandler
 	);
 
-	//deployments
-	const deploymentsWarning =
-		"🚧`wrangler deployments` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose";
-	wrangler.command(
-		"deployments",
-		"🚢 List and view details for deployments",
-		(yargs) =>
-			yargs
-				.option("name", {
-					describe: "The name of your worker",
-					type: "string",
-				})
-				.command(
-					"list",
-					"🚢 Displays the 10 most recent deployments for a worker",
-					async (listYargs) => listYargs,
-					async (listYargs) => {
-						const { accountId, scriptName, config } =
-							await commonDeploymentCMDSetup(listYargs, deploymentsWarning);
-						await deployments(accountId, scriptName, config);
-					}
-				)
-				.command(
-					"view [deployment-id]",
-					"🔍 View a deployment",
-					async (viewYargs) =>
-						viewYargs.positional("deployment-id", {
-							describe: "The ID of the deployment you want to inspect",
-							type: "string",
-							demandOption: false,
-						}),
-					async (viewYargs) => {
-						const { accountId, scriptName, config } =
-							await commonDeploymentCMDSetup(viewYargs, deploymentsWarning);
+	// [DEPRECATED] build
+	wrangler.command("build", false, buildOptions, buildHandler);
 
-						await viewDeployment(
-							accountId,
-							scriptName,
-							config,
-							viewYargs.deploymentId
-						);
-					}
-				)
-				.command(subHelp)
-				.epilogue(deploymentsWarning)
+	// [DEPRECATED] config
+	wrangler.command("config", false, noOpOptions, configHandler);
+
+	// [DEPRECATED] preview
+	wrangler.command(
+		"preview [method] [body]",
+		false,
+		previewOptions,
+		previewHandler
 	);
 
-	const rollbackWarning =
-		"🚧`wrangler rollback` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose";
+	// [DEPRECATED] route
 	wrangler.command(
-		"rollback [deployment-id]",
-		"🔙 Rollback a deployment",
-		(rollbackYargs) =>
-			rollbackYargs
-				.positional("deployment-id", {
-					describe: "The ID of the deployment to rollback to",
-					type: "string",
-					demandOption: false,
-				})
-				.option("message", {
-					alias: "m",
-					describe:
-						"Skip confirmation and message prompts, uses provided argument as message",
-					type: "string",
-					default: undefined,
-				})
-				.epilogue(rollbackWarning),
-		async (rollbackYargs) => {
-			const { accountId, scriptName, config } = await commonDeploymentCMDSetup(
-				rollbackYargs,
-				rollbackWarning
-			);
+		"route",
+		false, // I think we want to hide this command
+		// "➡️  List or delete worker routes",
+		(routeYargs) => {
+			return route(routeYargs);
+		},
+		routeHandler
+	);
 
 	// [DEPRECATED] subdomain
 	wrangler.command(
@@ -777,6 +703,13 @@ export function createCLIParser(argv: string[]) {
 		// "👷 Create or change your workers.dev subdomain.",
 		subdomainOptions,
 		subdomainHandler
+	);
+
+	wrangler.command(
+		"secret:bulk [json]",
+		"🔸Bulk upload secrets for a Worker",
+		secretBulkOptions,
+		secretBulkHandler
 	);
 
 	// This set to false to allow overwrite of default behaviour
