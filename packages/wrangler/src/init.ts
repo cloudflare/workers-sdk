@@ -123,15 +123,6 @@ export type CronTriggersRes = {
 
 export async function initHandler(args: InitArgs) {
 	await printWranglerBanner();
-	if (args.type) {
-		let message = "The --type option is no longer supported.";
-		if (args.type === "webpack") {
-			message +=
-				"\nIf you wish to use webpack then you will need to create a custom build.";
-			// TODO: Add a link to docs
-		}
-		throw new CommandLineArgsError(message);
-	}
 
 	const yesFlag = args.yes ?? false;
 	const devDepsToInstall: string[] = [];
@@ -143,22 +134,8 @@ export async function initHandler(args: InitArgs) {
 		(args.name ? args.name : fromDashScriptName) ?? ""
 	);
 
-	if (args.site) {
-		const gitDirectory =
-			creationDirectory !== process.cwd()
-				? path.basename(creationDirectory)
-				: "my-site";
-		const message =
-			"The --site option is no longer supported.\n" +
-			"If you wish to create a brand new Worker Sites project then clone the `worker-sites-template` starter repository:\n\n" +
-			"```\n" +
-			`git clone --depth=1 --branch=wrangler2 https://github.com/cloudflare/worker-sites-template ${gitDirectory}\n` +
-			`cd ${gitDirectory}\n` +
-			"```\n\n" +
-			"Find out more about how to create and maintain Sites projects at https://developers.cloudflare.com/workers/platform/sites.\n" +
-			"Have you considered using Cloudflare Pages instead? See https://pages.cloudflare.com/.";
-		throw new CommandLineArgsError(message);
-	}
+	assertNoTypeArg(args);
+	assertNoSiteArg(args, creationDirectory);
 
 	// TODO: make sure args.name is a valid identifier for a worker name
 	const workerName = path
@@ -252,11 +229,21 @@ export async function initHandler(args: InitArgs) {
 		//    if a wrangler.toml file does not exist (C3 expects to scaffold *new* projects)
 		//    and if --from-dash is not set (C3 will run wrangler to communicate with the API)
 		if (!fromDashScriptName) {
-			const c3Arguments = getC3CommandFromEnv().split(" ");
+			const c3Arguments: string[] = [];
+
+			if (args.name) {
+				c3Arguments.push(args.name);
+			}
 
 			if (yesFlag) {
-				c3Arguments.push("--", "--wrangler-defaults");
+				c3Arguments.push("--wrangler-defaults");
 			}
+
+			if (c3Arguments.length > 0) {
+				c3Arguments.unshift("--");
+			}
+
+			c3Arguments.unshift(...getC3CommandFromEnv().split(" "));
 
 			// Deprecate the `init --from-dash` command
 			const replacementC3Command = `\`${packageManager.type} ${c3Arguments.join(
@@ -1153,5 +1140,37 @@ export function mapBindings(bindings: WorkerMetadataBinding[]): RawConfig {
 function* createBatches<T>(array: T[], size: number): IterableIterator<T[]> {
 	for (let i = 0; i < array.length; i += size) {
 		yield array.slice(i, i + size);
+	}
+}
+
+/** Assert that there is no type argument passed. */
+function assertNoTypeArg(args: InitArgs) {
+	if (args.type) {
+		let message = "The --type option is no longer supported.";
+		if (args.type === "webpack") {
+			message +=
+				"\nIf you wish to use webpack then you will need to create a custom build.";
+			// TODO: Add a link to docs
+		}
+		throw new CommandLineArgsError(message);
+	}
+}
+
+function assertNoSiteArg(args: InitArgs, creationDirectory: string) {
+	if (args.site) {
+		const gitDirectory =
+			creationDirectory !== process.cwd()
+				? path.basename(creationDirectory)
+				: "my-site";
+		const message =
+			"The --site option is no longer supported.\n" +
+			"If you wish to create a brand new Worker Sites project then clone the `worker-sites-template` starter repository:\n\n" +
+			"```\n" +
+			`git clone --depth=1 --branch=wrangler2 https://github.com/cloudflare/worker-sites-template ${gitDirectory}\n` +
+			`cd ${gitDirectory}\n` +
+			"```\n\n" +
+			"Find out more about how to create and maintain Sites projects at https://developers.cloudflare.com/workers/platform/sites.\n" +
+			"Have you considered using Cloudflare Pages instead? See https://pages.cloudflare.com/.";
+		throw new CommandLineArgsError(message);
 	}
 }
