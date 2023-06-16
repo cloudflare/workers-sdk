@@ -212,25 +212,25 @@ export function createCLIParser(argv: string[]) {
 		// the `wrangler` variable
 		.version(false)
 		.option("v", {
-			describe: "Show version number",
+			describe: "⚑Show version number",
 			alias: "version",
 			type: "boolean",
 		})
 		.option("config", {
 			alias: "c",
-			describe: "Path to .toml configuration file",
+			describe: "⚑Path to .toml configuration file",
 			type: "string",
 			requiresArg: true,
 		})
 		.option("env", {
 			alias: "e",
-			describe: "Environment to use for operations and .env files",
+			describe: "⚑Environment to use for operations and .env files",
 			type: "string",
 			requiresArg: true,
 		})
 		.option("experimental-json-config", {
 			alias: "j",
-			describe: `Experimental: Support wrangler.json`,
+			describe: `⚑Experimental: support wrangler.json`,
 			type: "boolean",
 		})
 		.check((args) => {
@@ -246,7 +246,7 @@ export function createCLIParser(argv: string[]) {
 		["experimental-json-config", "config", "env", "help", "version"],
 		"Flags:"
 	);
-	wrangler.help().alias("h", "help");
+	wrangler.help("help", "⚑Show help").alias("h", "help");
 
 	// Default help command that supports the subcommands
 	const subHelp: Yargs.CommandModule<CommonYargsOptions, CommonYargsOptions> = {
