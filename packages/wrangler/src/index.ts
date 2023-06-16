@@ -189,6 +189,14 @@ export function demandOneOfOption(...options: string[]) {
 
 export class CommandLineArgsError extends Error {}
 
+const highlight = (text: string, colorHex: string) => {
+  const highlightText = supportsColor.stdout
+  ? chalk.hex(colorHex)(text)
+  : text;
+
+  return highlightText;
+}
+
 export function createCLIParser(argv: string[]) {
 	// Type check result against CommonYargsOptions to make sure we've included
 	// all common options
@@ -240,7 +248,9 @@ export function createCLIParser(argv: string[]) {
 				if (!(key in process.env)) process.env[key] = value;
 			}
 			return true;
-		});
+		})
+    .epilogue(`Please report any issues to ${chalk.cyan("https://github.com/cloudflare/workers-sdk/issues/new/choose")}`);
+
 
 	wrangler.group(
 		["experimental-json-config", "config", "env", "help", "version"],
@@ -472,7 +482,7 @@ export function createCLIParser(argv: string[]) {
 
 	wrangler.command(
 		"secret:bulk [json]",
-		"🗄️  Bulk upload secrets for a Worker",
+		"🔸Bulk upload secrets for a Worker",
 		secretBulkOptions,
 		secretBulkHandler
 	);
@@ -760,14 +770,13 @@ export function createCLIParser(argv: string[]) {
 				rollbackWarning
 			);
 
-			await rollbackDeployment(
-				accountId,
-				scriptName,
-				config,
-				rollbackYargs.deploymentId,
-				rollbackYargs.message
-			);
-		}
+	// [DEPRECATED] subdomain
+	wrangler.command(
+		"subdomain [name]",
+		false,
+		// "👷 Create or change your workers.dev subdomain.",
+		subdomainOptions,
+		subdomainHandler
 	);
 
 	// This set to false to allow overwrite of default behaviour
