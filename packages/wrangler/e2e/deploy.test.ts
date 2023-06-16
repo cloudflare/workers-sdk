@@ -18,21 +18,23 @@ describe("deploy", () => {
 	let workerName: string;
 	let workerPath: string;
 	let workersDev: string | null = null;
-	let run: typeof shellac;
+	let runInRoot: typeof shellac;
+	let runInWorker: typeof shellac;
 	let normalize: (str: string) => string;
 
 	beforeAll(async () => {
 		const root = await makeRoot();
-		run = shellac.in(root).env(process.env);
+		runInRoot = shellac.in(root).env(process.env);
 		workerName = `smoke-test-worker-${crypto.randomBytes(4).toString("hex")}`;
 		workerPath = path.join(root, workerName);
+		runInWorker = shellac.in(workerPath).env(process.env);
 		normalize = (str) =>
 			normalizeOutput(str, { [workerName]: "smoke-test-worker" });
 	});
 
 	it("init worker", async () => {
 		const { stdout } =
-			await run`$ ${WRANGLER} init --yes --no-delegate-c3 ${workerName}`;
+			await runInRoot`$ ${WRANGLER} init --yes --no-delegate-c3 ${workerName}`;
 
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"Using npm as package manager.
@@ -55,7 +57,7 @@ describe("deploy", () => {
 	});
 
 	it("deploy worker", async () => {
-		const { stdout, stderr } = await run`$ ${WRANGLER} deploy`;
+		const { stdout, stderr } = await runInWorker`$ ${WRANGLER} deploy`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded smoke-test-worker (TIMINGS)
@@ -66,11 +68,10 @@ describe("deploy", () => {
 		expect(stderr).toMatchInlineSnapshot('""');
 		workersDev = matchWorkersDev(stdout);
 
-		await retry(() =>
-			expect(
-				fetch(`https://${workerName}.${workersDev}`).then((r) => r.text())
-			).resolves.toMatchInlineSnapshot('"Hello World!"')
+		const responseText = await retry("", () =>
+			fetch(`https://${workerName}.${workersDev}`).then((r) => r.text())
 		);
+		expect(responseText).toMatchInlineSnapshot('"Hello World!"');
 	});
 
 	it("modify & deploy worker", async () => {
@@ -82,7 +83,7 @@ describe("deploy", () => {
           }
         }`,
 		});
-		const { stdout, stderr } = await run`$ ${WRANGLER} deploy`;
+		const { stdout, stderr } = await runInWorker`$ ${WRANGLER} deploy`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded smoke-test-worker (TIMINGS)
@@ -93,25 +94,23 @@ describe("deploy", () => {
 		expect(stderr).toMatchInlineSnapshot('""');
 		workersDev = matchWorkersDev(stdout);
 
-		await retry(() =>
-			expect(
-				fetch(`https://${workerName}.${workersDev}`).then((r) => r.text())
-			).resolves.toMatchInlineSnapshot('"Updated Worker!"')
+		const responseText = await retry("Hello World!", () =>
+			fetch(`https://${workerName}.${workersDev}`).then((r) => r.text())
 		);
+		expect(responseText).toMatchInlineSnapshot('"Updated Worker!"');
 	});
 
 	it("delete worker", async () => {
-		const { stdout, stderr } = await run.in(workerPath)`$ ${WRANGLER} delete`;
+		const { stdout, stderr } = await runInWorker`$ ${WRANGLER} delete`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"? Are you sure you want to delete smoke-test-worker? This action cannot be undone.
 			🤖 Using default value in non-interactive context: yes
 			Successfully deleted smoke-test-worker"
 		`);
 		expect(stderr).toMatchInlineSnapshot('""');
-		await retry(() =>
-			expect(
-				fetch(`https://${workerName}.${workersDev}`).then((r) => r.status)
-			).resolves.toBe(404)
+		const status = await retry(200, () =>
+			fetch(`https://${workerName}.${workersDev}`).then((r) => r.status)
 		);
+		expect(status).toBe(404);
 	});
 });

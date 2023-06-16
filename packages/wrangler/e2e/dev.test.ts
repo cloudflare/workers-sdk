@@ -1,9 +1,10 @@
 import crypto from "node:crypto";
 import path from "node:path";
+import { setTimeout } from "node:timers/promises";
 import getPort from "get-port";
 import shellac from "shellac";
 import { fetch } from "undici";
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { retry } from "./helpers/retry";
 import { dedent, makeRoot, seed } from "./helpers/setup";
 import { WRANGLER } from "./helpers/wrangler-command";
@@ -16,11 +17,15 @@ async function runDevSession(
 	let pid;
 	try {
 		const port = await getPort();
-		const bg = await shellac.in(workerPath).env(process.env).bg`
+		// Must use the `in` statement in the shellac script rather than `.in()` modifier on the `shellac` object
+		// otherwise the working directory does not get picked up.
+		const bg = await shellac.env(process.env).bg`
+		in ${workerPath} {
 			exits {
 				$$ ${WRANGLER} dev ${flags} --port ${port}
 			}
-		`;
+		}
+			`;
 		pid = bg.pid;
 		await session(port);
 		return bg.promise;
@@ -33,13 +38,10 @@ describe("basic dev tests", () => {
 	let workerName: string;
 	let workerPath: string;
 
-	beforeAll(async () => {
+	beforeEach(async () => {
 		const root = await makeRoot();
 		workerName = `smoke-test-worker-${crypto.randomBytes(4).toString("hex")}`;
 		workerPath = path.join(root, workerName);
-	});
-
-	beforeEach(async () => {
 		await seed(workerPath, {
 			"wrangler.toml": dedent`
 					name = "${workerName}"
@@ -64,11 +66,10 @@ describe("basic dev tests", () => {
 
 	it("can modify worker during dev session (local)", async () => {
 		await runDevSession(workerPath, "", async (port) => {
-			await retry(() =>
-				expect(
-					fetch(`http://127.0.0.1:${port}`).then((r) => r.text())
-				).resolves.toMatchInlineSnapshot('"Hello World!"')
+			const responseText = await retry("", () =>
+				fetch(`http://127.0.0.1:${port}`).then((r) => r.text())
 			);
+			expect(responseText).toMatchInlineSnapshot('"Hello World!"');
 
 			await seed(workerPath, {
 				"src/index.ts": dedent`
@@ -78,21 +79,21 @@ describe("basic dev tests", () => {
 							}
 						}`,
 			});
-			await retry(() =>
-				expect(
-					fetch(`http://127.0.0.1:${port}`).then((r) => r.text())
-				).resolves.toMatchInlineSnapshot('"Updated Worker!"')
+
+			const response2Text = await retry("Hello World!", () =>
+				fetch(`http://127.0.0.1:${port}`).then((r) => r.text())
 			);
+			expect(response2Text).toMatchInlineSnapshot('"Updated Worker!"');
 		});
 	});
 
 	it("can modify worker during dev session (remote)", async () => {
 		await runDevSession(workerPath, "--remote --ip 127.0.0.1", async (port) => {
-			await retry(() =>
-				expect(
-					fetch(`http://127.0.0.1:${port}`).then((r) => r.text())
-				).resolves.toMatchInlineSnapshot('"Hello World!"')
+			const responseText = await retry("", () =>
+				fetch(`http://127.0.0.1:${port}`).then((r) => r.text())
 			);
+			expect(responseText).toMatchInlineSnapshot('"Hello World!"');
+
 			await seed(workerPath, {
 				"src/index.ts": dedent`
 						export default {
@@ -101,11 +102,14 @@ describe("basic dev tests", () => {
 							}
 						}`,
 			});
-			await retry(() =>
-				expect(
-					fetch(`http://127.0.0.1:${port}`).then((r) => r.text())
-				).resolves.toMatchInlineSnapshot('"Updated Worker!"')
+
+			// Give a bit of time for the change to propagate.
+			await setTimeout(5000);
+
+			const response2Text = await retry("Hello World!", () =>
+				fetch(`http://127.0.0.1:${port}`).then((r) => r.text())
 			);
+			expect(response2Text).toMatchInlineSnapshot('"Updated Worker!"');
 		});
 	});
 });

@@ -1,17 +1,20 @@
 import { setTimeout } from "node:timers/promises";
 
-export async function retry(
-	promise: () => Promise<unknown>,
+export async function retry<T>(
+	originalState: T,
+	action: () => Promise<T>,
 	n = 20
-): Promise<void> {
-	if (n === 0) {
-		await promise();
-	} else {
+): Promise<T> {
+	while (n >= 0) {
 		try {
-			await promise();
-		} catch {
+			const currentState = await action();
+			if (currentState !== originalState) {
+				return currentState;
+			}
+		} catch (e) {
 			await setTimeout(2_000);
-			return retry(promise, n - 1);
+			n--;
 		}
 	}
+	throw new Error("Timed out waiting for state to change");
 }
