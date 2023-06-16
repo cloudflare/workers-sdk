@@ -1,0 +1,4 @@
+name = "qr-code-generator"
+main = "src/worker.js"
+compatibility_date = "2023-05-18"
+node_compat = true
