@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path, { join, resolve } from "node:path";
 import { fetch } from "undici";
@@ -11,7 +11,7 @@ describe("Pages _worker.js/ directory", () => {
 		const { ip, port, stop } = await runWranglerPagesDev(
 			resolve(__dirname, ".."),
 			"public",
-			["--port=0", "--d1=D1"]
+			["--port=0", "--d1=D1", "--d1=PUT=elsewhere"]
 		);
 		await expect(
 			fetch(`http://${ip}:${port}/`).then((resp) => resp.text())
@@ -29,6 +29,15 @@ describe("Pages _worker.js/ directory", () => {
 			fetch(`http://${ip}:${port}/d1`).then((resp) => resp.text())
 		).resolves.toContain('{"1":1}');
 		await stop();
+
+		console.log(__dirname);
+
+		expect(
+			existsSync(join(__dirname, "../.wrangler/state/v3/d1/D1"))
+		).toBeTruthy();
+		expect(
+			existsSync(join(__dirname, "../.wrangler/state/v3/d1/elsewhere"))
+		).toBeTruthy();
 	});
 
 	it("should bundle", async ({ expect }) => {

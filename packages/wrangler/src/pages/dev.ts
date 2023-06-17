@@ -32,6 +32,10 @@ const DURABLE_OBJECTS_BINDING_REGEXP = new RegExp(
 	/^(?<binding>[^=]+)=(?<className>[^@\s]+)(@(?<scriptName>.*)$)?$/
 );
 
+const D1_BINDING_REGEXP = new RegExp(
+	/^(?<binding>[^=]+)(?:=(?<databaseId>[^\s]+))?$/
+);
+
 export function Options(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("directory", {
@@ -563,11 +567,16 @@ export const Handler = async ({
 		experimental: {
 			processEntrypoint: true,
 			additionalModules: modules,
-			d1Databases: d1s.map((binding) => ({
-				binding: binding.toString(),
-				database_id: binding.toString(),
-				database_name: `local-${binding}`,
-			})),
+			d1Databases: d1s.map((d1) => {
+				const { binding, databaseId } =
+					D1_BINDING_REGEXP.exec(d1.toString())?.groups || {};
+
+				return {
+					binding,
+					database_id: databaseId || d1.toString(),
+					database_name: `local-${d1}`,
+				};
+			}),
 			disableExperimentalWarning: true,
 			enablePagesAssetsServiceBinding: {
 				proxyPort,
