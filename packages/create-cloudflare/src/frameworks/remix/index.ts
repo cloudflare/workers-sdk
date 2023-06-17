@@ -21,7 +21,7 @@ const config: FrameworkConfig = {
 	generate,
 	displayName: "Remix",
 	packageScripts: {
-		"pages:deploy": `${npm} run build && wrangler pages publish ./public`,
+		"pages:deploy": `${npm} run build && wrangler pages deploy ./public`,
 	},
 	devCommand: "dev",
 	testFlags: ["--typescript", "--no-install"],

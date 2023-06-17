@@ -29,7 +29,7 @@ const config: FrameworkConfig = {
 	displayName: "Nuxt",
 	packageScripts: {
 		"pages:dev": `wrangler pages dev ${compatDateFlag()} --proxy 3000 -- npm run dev`,
-		"pages:deploy": `NODE_VERSION=17 npm run generate && wrangler pages publish ./dist`,
+		"pages:deploy": `NODE_VERSION=17 npm run generate && wrangler pages deploy ./dist`,
 	},
 };
 export default config;

@@ -20,7 +20,7 @@ const config: FrameworkConfig = {
 	displayName: "Docusaurus",
 	packageScripts: {
 		"pages:dev": `wrangler pages dev ${compatDateFlag()} --proxy 3000 -- ${npm} run start`,
-		"pages:deploy": `NODE_VERSION=16 ${npm} run build && wrangler pages publish ./build`,
+		"pages:deploy": `NODE_VERSION=16 ${npm} run build && wrangler pages deploy ./build`,
 	},
 };
 export default config;
