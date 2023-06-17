@@ -32,9 +32,7 @@ const DURABLE_OBJECTS_BINDING_REGEXP = new RegExp(
 	/^(?<binding>[^=]+)=(?<className>[^@\s]+)(@(?<scriptName>.*)$)?$/
 );
 
-const D1_BINDING_REGEXP = new RegExp(
-	/^(?<binding>[^=]+)(?:=(?<databaseId>[^\s]+))?$/
-);
+const BINDING_REGEXP = new RegExp(/^(?<binding>[^=]+)(?:=(?<ref>[^\s]+))?$/);
 
 export function Options(yargs: CommonYargsArgv) {
 	return yargs
@@ -524,10 +522,14 @@ export const Handler = async ({
 				.map((binding) => binding.toString().split("="))
 				.map(([key, ...values]) => [key, values.join("=")])
 		),
-		kv: kvs.map((binding) => ({
-			binding: binding.toString(),
-			id: binding.toString(),
-		})),
+		kv: kvs.map((kv) => {
+			const { binding, ref } = BINDING_REGEXP.exec(kv.toString())?.groups || {};
+
+			return {
+				binding,
+				id: ref || kv.toString(),
+			};
+		}),
 		durableObjects: durableObjects
 			.map((durableObject) => {
 				const { binding, className, scriptName } =
@@ -549,8 +551,10 @@ export const Handler = async ({
 				};
 			})
 			.filter(Boolean) as AdditionalDevProps["durableObjects"],
-		r2: r2s.map((binding) => {
-			return { binding: binding.toString(), bucket_name: binding.toString() };
+		r2: r2s.map((r2) => {
+			const { binding, ref } = BINDING_REGEXP.exec(r2.toString())?.groups || {};
+
+			return { binding, bucket_name: ref || binding.toString() };
 		}),
 		rules: usingWorkerDirectory
 			? [
@@ -568,12 +572,12 @@ export const Handler = async ({
 			processEntrypoint: true,
 			additionalModules: modules,
 			d1Databases: d1s.map((d1) => {
-				const { binding, databaseId } =
-					D1_BINDING_REGEXP.exec(d1.toString())?.groups || {};
+				const { binding, ref } =
+					BINDING_REGEXP.exec(d1.toString())?.groups || {};
 
 				return {
 					binding,
-					database_id: databaseId || d1.toString(),
+					database_id: ref || d1.toString(),
 					database_name: `local-${d1}`,
 				};
 			}),

@@ -11,7 +11,15 @@ describe("Pages _worker.js/ directory", () => {
 		const { ip, port, stop } = await runWranglerPagesDev(
 			resolve(__dirname, ".."),
 			"public",
-			["--port=0", "--d1=D1", "--d1=PUT=elsewhere"]
+			[
+				"--port=0",
+				"--d1=D1",
+				"--d1=PUT=elsewhere",
+				"--kv=KV",
+				"--kv=KV_REF=other_kv",
+				"--r2=R2",
+				"--r2=R2_REF=other_r2",
+			]
 		);
 		await expect(
 			fetch(`http://${ip}:${port}/`).then((resp) => resp.text())
@@ -37,6 +45,18 @@ describe("Pages _worker.js/ directory", () => {
 		).toBeTruthy();
 		expect(
 			existsSync(join(__dirname, "../.wrangler/state/v3/d1/elsewhere"))
+		).toBeTruthy();
+		expect(
+			existsSync(join(__dirname, "../.wrangler/state/v3/kv/KV"))
+		).toBeTruthy();
+		expect(
+			existsSync(join(__dirname, "../.wrangler/state/v3/kv/other_kv"))
+		).toBeTruthy();
+		expect(
+			existsSync(join(__dirname, "../.wrangler/state/v3/r2/R2"))
+		).toBeTruthy();
+		expect(
+			existsSync(join(__dirname, "../.wrangler/state/v3/r2/other_r2"))
 		).toBeTruthy();
 	});
 

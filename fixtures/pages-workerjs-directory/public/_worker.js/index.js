@@ -24,6 +24,22 @@ export default {
 			return new Response(JSON.stringify(values));
 		}
 
+		if (pathname === "/kv") {
+			await env.KV.put("key", "value");
+
+			await env.KV_REF.put("key", "value");
+
+			return new Response("saved");
+		}
+
+		if (pathname === "/r2") {
+			await env.R2.put("key", "value");
+
+			await env.R2_REF.put("key", "value");
+
+			return new Response("saved");
+		}
+
 		if (pathname !== "/") {
 			return new Response((await import(`./${pathname.slice(1)}`)).default);
 		}
