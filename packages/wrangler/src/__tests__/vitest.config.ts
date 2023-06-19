@@ -10,8 +10,7 @@ export default mergeConfig(
 			restoreMocks: true,
 			alias: {
 				clipboardy: "./helpers/clipboardy-mock.js",
-				"miniflare/cli":
-					"<rootDir>/../../node_modules/miniflare/dist/src/cli.js",
+				"miniflare/cli": "../../node_modules/miniflare/dist/src/cli.js",
 			},
 			setupFiles: ["./vitest.setup.ts"],
 		},
