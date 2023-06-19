@@ -70,12 +70,15 @@ export interface RuntimeOptions {
 
 export class Runtime {
 	readonly #command: string;
-	readonly #args: string[];
 
 	#process?: childProcess.ChildProcess;
 	#processExitPromise?: Promise<void>;
 
 	constructor(private opts: RuntimeOptions) {
+		this.#command = workerdPath;
+	}
+
+	get #args() {
 		const args: string[] = [
 			"serve",
 			// Required to use binary capnp config
@@ -98,17 +101,20 @@ export class Runtime {
 			args.push("--verbose");
 		}
 
-		this.#command = workerdPath;
-		this.#args = args;
+		return args;
 	}
 
 	async updateConfig(
 		configBuffer: Buffer,
-		options?: Abortable
+		options?: Abortable & Partial<Pick<RuntimeOptions, "entryPort">>
 	): Promise<number | undefined> {
 		// 1. Stop existing process (if any) and wait for exit
 		await this.dispose();
 		// TODO: what happens if runtime crashes?
+
+		if (options?.entryPort !== undefined) {
+			this.opts.entryPort = options.entryPort;
+		}
 
 		// 2. Start new process
 		const runtimeProcess = childProcess.spawn(this.#command, this.#args, {
