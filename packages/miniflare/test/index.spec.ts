@@ -55,6 +55,23 @@ test("Miniflare: validates options", async (t) => {
 	);
 });
 
+test("Miniflare: keeps port between updates", async (t) => {
+	const opts: MiniflareOptions = {
+		port: 0,
+		script: `addEventListener("fetch", (event) => {
+      event.respondWith(new Response("a"));
+    })`,
+	};
+	const mf = new Miniflare(opts);
+	const initialURL = await mf.ready;
+
+	await mf.setOptions(opts);
+	const updatedURL = await mf.ready;
+
+	t.not(initialURL.port, "0");
+	t.is(initialURL.port, updatedURL.port);
+});
+
 test("Miniflare: routes to multiple workers with fallback", async (t) => {
 	const opts: MiniflareOptions = {
 		workers: [
