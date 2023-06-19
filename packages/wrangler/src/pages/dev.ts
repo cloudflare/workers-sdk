@@ -28,10 +28,26 @@ import type {
 } from "../yargs-types";
 import type { RoutesJSONSpec } from "./functions/routes-transformation";
 
+/*
+ * DURABLE_OBJECTS_BINDING_REGEXP matches strings like:
+ * - "binding=className"
+ * - "BINDING=MyClass"
+ * - "BINDING=MyClass@service-name"
+ * Every DO needs a binding (the JS reference) and the exported class name it refers to.
+ * Optionally, users can also provide a service name if they want to reference a DO from another dev session over the dev registry.
+ */
 const DURABLE_OBJECTS_BINDING_REGEXP = new RegExp(
 	/^(?<binding>[^=]+)=(?<className>[^@\s]+)(@(?<scriptName>.*)$)?$/
 );
 
+/* BINDING_REGEXP matches strings like:
+ * - "binding"
+ * - "BINDING"
+ * - "BINDING=ref"
+ * This is used to capture both the binding name (how the binding is used in JS) as well as the reference if provided.
+ * In the case of a D1 database, that's the database ID.
+ * This is useful to people who want to reference the same database in multiple bindings, or a Worker and Pages project dev session want to reference the same database.
+ */
 const BINDING_REGEXP = new RegExp(/^(?<binding>[^=]+)(?:=(?<ref>[^\s]+))?$/);
 
 export function Options(yargs: CommonYargsArgv) {
