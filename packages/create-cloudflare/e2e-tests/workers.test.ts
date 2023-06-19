@@ -74,4 +74,12 @@ describe("E2E: Workers templates", () => {
 	test("chatgptPlugin", async () => {
 		await runCli("chatgptPlugin");
 	});
+
+	test("queues", async () => {
+		await runCli("queues");
+	});
+
+	test("scheduled", async () => {
+		await runCli("scheduled");
+	});
 });
