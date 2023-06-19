@@ -62,7 +62,7 @@
 		"typescript": "^5.0.2",
 		"undici": "^5.22.0",
 		"vite-tsconfig-paths": "^4.0.8",
-		"vitest": "^0.30.0",
+		"vitest": "^0.32.2",
 		"which-pm-runs": "^1.1.0",
 		"wrangler": "*",
 		"yargs": "^17.7.1"

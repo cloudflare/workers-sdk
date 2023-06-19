@@ -7,5 +7,8 @@ export default defineConfig({
 		hookTimeout: 30_000,
 		teardownTimeout: 30_000,
 		useAtomics: true,
+		restoreMocks: true,
+		globals: true,
+		testNamePattern: RegExp(".test.[jt]sx?"),
 	},
 });
