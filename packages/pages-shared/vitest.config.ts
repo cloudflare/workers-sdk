@@ -1,5 +1,5 @@
 import { defineProject, mergeConfig } from "vitest/config";
-import configShared from "../../vitest.config";
+import configShared from "../../vitest.shared";
 
 export default mergeConfig(
 	configShared,
@@ -8,7 +8,7 @@ export default mergeConfig(
 			name: "pages-shared-tests",
 			globals: true,
 			restoreMocks: true,
-			setupFiles: "<rootDir>/__tests__/vitest.setup.ts",
+			setupFiles: "./__tests__/vitest.setup.ts",
 			exclude: ["**/node_modules/**", "**/dist/**"],
 		},
 	})
