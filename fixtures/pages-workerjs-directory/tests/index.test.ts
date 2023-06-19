@@ -1,3 +1,4 @@
+import { tmpdir } from "node:os";
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -8,11 +9,14 @@ import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Pages _worker.js/ directory", () => {
 	it("should support non-bundling with 'dev'", async ({ expect }) => {
+		const tmpDir = join(tmpdir(), Math.random().toString(36).slice(2));
+
 		const { ip, port, stop } = await runWranglerPagesDev(
 			resolve(__dirname, ".."),
 			"public",
 			[
 				"--port=0",
+				`--persist-to=${tmpDir}`,
 				"--d1=D1",
 				"--d1=PUT=elsewhere",
 				"--kv=KV",
@@ -36,28 +40,20 @@ describe("Pages _worker.js/ directory", () => {
 		await expect(
 			fetch(`http://${ip}:${port}/d1`).then((resp) => resp.text())
 		).resolves.toContain('{"1":1}');
+		await expect(
+			fetch(`http://${ip}:${port}/kv`).then((resp) => resp.text())
+		).resolves.toContain("saved");
+		await expect(
+			fetch(`http://${ip}:${port}/r2`).then((resp) => resp.text())
+		).resolves.toContain("saved");
 		await stop();
 
-		console.log(__dirname);
-
-		expect(
-			existsSync(join(__dirname, "../.wrangler/state/v3/d1/D1"))
-		).toBeTruthy();
-		expect(
-			existsSync(join(__dirname, "../.wrangler/state/v3/d1/elsewhere"))
-		).toBeTruthy();
-		expect(
-			existsSync(join(__dirname, "../.wrangler/state/v3/kv/KV"))
-		).toBeTruthy();
-		expect(
-			existsSync(join(__dirname, "../.wrangler/state/v3/kv/other_kv"))
-		).toBeTruthy();
-		expect(
-			existsSync(join(__dirname, "../.wrangler/state/v3/r2/R2"))
-		).toBeTruthy();
-		expect(
-			existsSync(join(__dirname, "../.wrangler/state/v3/r2/other_r2"))
-		).toBeTruthy();
+		expect(existsSync(join(tmpDir, "./v3/d1/D1"))).toBeTruthy();
+		expect(existsSync(join(tmpDir, "./v3/d1/elsewhere"))).toBeTruthy();
+		expect(existsSync(join(tmpDir, "./v3/kv/KV"))).toBeTruthy();
+		expect(existsSync(join(tmpDir, "./v3/kv/other_kv"))).toBeTruthy();
+		expect(existsSync(join(tmpDir, "./v3/r2/R2"))).toBeTruthy();
+		expect(existsSync(join(tmpDir, "./v3/r2/other_r2"))).toBeTruthy();
 	});
 
 	it("should bundle", async ({ expect }) => {

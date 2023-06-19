@@ -21,7 +21,11 @@ export default {
 			const stmt = env.PUT.prepare("SELECT 1");
 			const values = await stmt.first();
 
-			return new Response(JSON.stringify(values));
+			if (JSON.stringify(values1) === JSON.stringify(values)) {
+				return new Response(JSON.stringify(values));
+			}
+
+			return new Response("couldn't select 1");
 		}
 
 		if (pathname === "/kv") {
