@@ -1,23 +1,19 @@
 import { logRaw } from "helpers/cli";
 import { brandColor, dim } from "helpers/colors";
-import {
-	detectPackageManager,
-	npmInstall,
-	runCommand,
-	runFrameworkGenerator,
-} from "helpers/command";
+import { npmInstall, runCommand, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
+import { detectPackageManager } from "helpers/packages";
 import { getFrameworkVersion } from "../index";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
-const { npx } = detectPackageManager();
+const { npx, dlx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
 	const version = getFrameworkVersion(ctx);
 
 	await runFrameworkGenerator(
 		ctx,
-		`${npx} create-astro@${version} ${ctx.project.name} --no-install`
+		`${dlx} create-astro@${version} ${ctx.project.name} --no-install`
 	);
 
 	logRaw(""); // newline

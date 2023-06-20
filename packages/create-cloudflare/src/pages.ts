@@ -4,14 +4,10 @@ import { chdir } from "process";
 import { FrameworkMap, supportedFramework } from "frameworks/index";
 import { crash, endSection, startSection } from "helpers/cli";
 import { dim, brandColor } from "helpers/colors";
-import {
-	detectPackageManager,
-	installWrangler,
-	retry,
-	runCommand,
-} from "helpers/command";
+import { installWrangler, retry, runCommand } from "helpers/command";
 import { readJSON, writeFile } from "helpers/files";
 import { selectInput, spinner } from "helpers/interactive";
+import { detectPackageManager } from "helpers/packages";
 import {
 	gitCommit,
 	offerGit,

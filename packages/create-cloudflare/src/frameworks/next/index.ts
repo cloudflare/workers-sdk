@@ -1,12 +1,9 @@
 import { mkdirSync } from "fs";
 import { updateStatus } from "helpers/cli";
 import { brandColor, dim } from "helpers/colors";
-import {
-	detectPackageManager,
-	installPackages,
-	runFrameworkGenerator,
-} from "helpers/command";
+import { installPackages, runFrameworkGenerator } from "helpers/command";
 import { probePaths, usesTypescript, writeFile } from "helpers/files";
+import { detectPackageManager } from "helpers/packages";
 import { getFrameworkVersion } from "../index";
 import {
 	apiAppDirHelloJs,
@@ -16,7 +13,7 @@ import {
 } from "./templates";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
-const { npm, npx } = detectPackageManager();
+const { npm, npx, dlx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
 	const projectName = ctx.project.name;
@@ -24,7 +21,7 @@ const generate = async (ctx: PagesGeneratorContext) => {
 
 	await runFrameworkGenerator(
 		ctx,
-		`${npx} create-next-app@${version} ${projectName}`
+		`${dlx} create-next-app@${version} ${projectName}`
 	);
 };
 

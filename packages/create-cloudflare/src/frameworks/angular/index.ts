@@ -3,24 +3,24 @@ import { resolve } from "node:path";
 import { logRaw } from "helpers/cli";
 import { brandColor, dim } from "helpers/colors";
 import {
-	detectPackageManager,
 	installPackages,
 	runCommand,
 	runFrameworkGenerator,
 } from "helpers/command";
 import { readFile, readJSON, writeFile } from "helpers/files";
 import { spinner } from "helpers/interactive";
+import { detectPackageManager } from "helpers/packages";
 import { getFrameworkVersion } from "../index";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
-const { npx, npm } = detectPackageManager();
+const { dlx, npx, npm } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
 	const version = getFrameworkVersion(ctx);
 
 	await runFrameworkGenerator(
 		ctx,
-		`${npx} @angular/cli@${version} new ${ctx.project.name} --standalone`
+		`${dlx} @angular/cli@${version} new ${ctx.project.name} --standalone`
 	);
 
 	logRaw("");
@@ -44,10 +44,10 @@ const config: FrameworkConfig = {
 	packageScripts: {
 		process:
 			"node ./tools/copy-worker-files.mjs && node ./tools/copy-client-files.mjs && node ./tools/bundle.mjs",
-		prestart: "npm run build:ssr && npm run process",
+		prestart: `${npm} run build:ssr && npm run process`,
 		start:
 			"wrangler pages dev dist/cloudflare --compatibility-date=2021-09-20 --experimental-local",
-		predeploy: "npm run build:ssr && npm run process",
+		predeploy: `${npm} run build:ssr && npm run process`,
 		deploy: "wrangler pages publish dist/cloudflare",
 	},
 	deployCommand: "deploy",
