@@ -69,15 +69,16 @@ const validateName = async (
 	name: string | undefined,
 	{ acceptDefault = false } = {}
 ): Promise<string> => {
+	const defaultValue = name ?? new Haikunator().haikunate({ tokenHex: true });
 	return textInput({
 		question: `Where do you want to create your application?`,
 		helpText: "also used as application name",
 		renderSubmitted: (value: string) => {
 			return `${brandColor("dir")} ${dim(value)}`;
 		},
-		defaultValue: name ?? new Haikunator().haikunate({ tokenHex: true }),
+		defaultValue,
 		acceptDefault,
-		validate: validateProjectDirectory,
+		validate: (value = defaultValue) => validateProjectDirectory(value),
 	});
 };
 
