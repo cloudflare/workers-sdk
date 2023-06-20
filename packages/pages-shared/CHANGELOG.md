@@ -1,5 +1,15 @@
 # @cloudflare/pages-shared
 
+## 0.5.2
+
+### Patch Changes
+
+- [#3454](https://github.com/cloudflare/workers-sdk/pull/3454) [`a2194043`](https://github.com/cloudflare/workers-sdk/commit/a2194043c6c755e9308b3ffc1e9afb0d1544f6b9) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: upgrade `miniflare` to `3.0.1`
+
+  This version ensures root CA certificates are trusted on Windows.
+  It also loads extra certificates from the `NODE_EXTRA_CA_CERTS` environment variable,
+  allowing `wrangler dev` to be used with Cloudflare WARP enabled.
+
 ## 0.5.1
 
 ### Patch Changes
