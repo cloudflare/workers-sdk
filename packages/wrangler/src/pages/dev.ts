@@ -538,14 +538,22 @@ export const Handler = async ({
 				.map((binding) => binding.toString().split("="))
 				.map(([key, ...values]) => [key, values.join("=")])
 		),
-		kv: kvs.map((kv) => {
-			const { binding, ref } = BINDING_REGEXP.exec(kv.toString())?.groups || {};
+		kv: kvs
+			.map((kv) => {
+				const { binding, ref } =
+					BINDING_REGEXP.exec(kv.toString())?.groups || {};
 
-			return {
-				binding,
-				id: ref || kv.toString(),
-			};
-		}),
+				if (!binding) {
+					logger.warn("Could not parse KV binding:", kv.toString());
+					return;
+				}
+
+				return {
+					binding,
+					id: ref || kv.toString(),
+				};
+			})
+			.filter(Boolean) as AdditionalDevProps["kv"],
 		durableObjects: durableObjects
 			.map((durableObject) => {
 				const { binding, className, scriptName } =
@@ -567,11 +575,19 @@ export const Handler = async ({
 				};
 			})
 			.filter(Boolean) as AdditionalDevProps["durableObjects"],
-		r2: r2s.map((r2) => {
-			const { binding, ref } = BINDING_REGEXP.exec(r2.toString())?.groups || {};
+		r2: r2s
+			.map((r2) => {
+				const { binding, ref } =
+					BINDING_REGEXP.exec(r2.toString())?.groups || {};
 
-			return { binding, bucket_name: ref || binding.toString() };
-		}),
+				if (!binding) {
+					logger.warn("Could not parse R2 binding:", r2.toString());
+					return;
+				}
+
+				return { binding, bucket_name: ref || binding.toString() };
+			})
+			.filter(Boolean) as AdditionalDevProps["r2"],
 		rules: usingWorkerDirectory
 			? [
 					{
@@ -587,16 +603,23 @@ export const Handler = async ({
 		experimental: {
 			processEntrypoint: true,
 			additionalModules: modules,
-			d1Databases: d1s.map((d1) => {
-				const { binding, ref } =
-					BINDING_REGEXP.exec(d1.toString())?.groups || {};
+			d1Databases: d1s
+				.map((d1) => {
+					const { binding, ref } =
+						BINDING_REGEXP.exec(d1.toString())?.groups || {};
 
-				return {
-					binding,
-					database_id: ref || d1.toString(),
-					database_name: `local-${d1}`,
-				};
-			}),
+					if (!binding) {
+						logger.warn("Could not parse D1 binding:", d1.toString());
+						return;
+					}
+
+					return {
+						binding,
+						database_id: ref || d1.toString(),
+						database_name: `local-${d1}`,
+					};
+				})
+				.filter(Boolean) as AdditionalDevProps["d1Databases"],
 			disableExperimentalWarning: true,
 			enablePagesAssetsServiceBinding: {
 				proxyPort,
