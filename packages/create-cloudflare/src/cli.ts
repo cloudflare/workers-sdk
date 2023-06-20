@@ -78,7 +78,8 @@ const validateName = async (
 		},
 		defaultValue,
 		acceptDefault,
-		validate: (value = defaultValue) => validateProjectDirectory(value),
+		// if the user deletes all the text then it should revert to the default
+		validate: (value) => validateProjectDirectory(value || defaultValue),
 	});
 };
 
