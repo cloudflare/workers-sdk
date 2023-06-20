@@ -23,8 +23,8 @@ function checkURL(request, init) {
 
 globalThis.fetch = new Proxy(globalThis.fetch, {
 	apply(target, thisArg, argArray) {
-		const [request, init] = argArray
-		checkURL(request, init)
-		return Reflect.apply(target, thisArg, argArray)
-	}
-})
+		const [request, init] = argArray;
+		checkURL(request, init);
+		return Reflect.apply(target, thisArg, argArray);
+	},
+});
