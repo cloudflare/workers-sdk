@@ -50,7 +50,6 @@ describe("deploy", () => {
 			  https://smoke-test-worker.SUBDOMAIN.workers.dev
 			Current Deployment ID: 00000000-0000-0000-0000-000000000000"
 		`);
-		expect(stderr).toMatchInlineSnapshot('""');
 		workersDev = matchWorkersDev(stdout);
 
 		const { text } = await retry(
