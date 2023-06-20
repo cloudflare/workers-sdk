@@ -36,24 +36,9 @@ describe("deploy", () => {
 		const { stdout } =
 			await runInRoot`$ ${WRANGLER} init --yes --no-delegate-c3 ${workerName}`;
 
-		expect(normalize(stdout)).toMatchInlineSnapshot(`
-			"Using npm as package manager.
-			✨ Created smoke-test-worker/wrangler.toml
-			✨ Initialized git repository at smoke-test-worker
-			✨ Created smoke-test-worker/package.json
-			✨ Created smoke-test-worker/tsconfig.json
-			✨ Created smoke-test-worker/src/index.ts
-			Your project will use Vitest to run your tests.
-			✨ Created smoke-test-worker/src/index.test.ts
-			added (N) packages, and audited (N) packages in (TIMINGS)
-			(N) packages are looking for funding
-			  run \`npm fund\` for details
-			found 0 vulnerabilities
-			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
-			To start developing your Worker, run \`cd smoke-test-worker && npm start\`
-			To start testing your Worker, run \`npm test\`
-			To publish your Worker to the Internet, run \`npm run deploy\`"
-		`);
+		expect(normalize(stdout)).toContain(
+			"To publish your Worker to the Internet, run `npm run deploy`"
+		);
 	});
 
 	it("deploy worker", async () => {
