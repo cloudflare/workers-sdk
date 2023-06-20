@@ -1,5 +1,6 @@
 import { generateHandler } from "../../asset-server/handler";
 import { createMetadataObject } from "../../metadata-generator/createMetadataObject";
+import { ExtendedRequest } from "../override-request";
 import type { HandlerContext } from "../../asset-server/handler";
 import type { Metadata } from "../../asset-server/metadata";
 import type { RedirectRule } from "../../metadata-generator/types";
@@ -500,7 +501,8 @@ async function getTestResponse({
 	};
 
 	const response = await generateHandler<string>({
-		request: request instanceof Request ? request : new Request(request),
+		request:
+			request instanceof Request ? request : new ExtendedRequest(request),
 		metadata,
 		xServerEnvHeader: "dev",
 		logError: console.error,

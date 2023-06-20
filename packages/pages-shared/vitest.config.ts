@@ -8,8 +8,12 @@ export default mergeConfig(
 			name: "pages-shared-tests",
 			globals: true,
 			restoreMocks: true,
-			setupFiles: "./__tests__/vitest.setup.ts",
-			exclude: ["**/node_modules/**", "**/dist/**"],
+			setupFiles: "./vitest.setup.ts",
+			exclude: [
+				"**/node_modules/**",
+				"**/dist/**",
+				"./__tests__/override-request.ts",
+			],
 		},
 	})
 );
