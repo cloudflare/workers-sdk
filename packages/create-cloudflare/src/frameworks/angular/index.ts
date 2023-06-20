@@ -98,18 +98,12 @@ async function updateAppCode() {
 	const s = spinner();
 	s.start(`Updating application code`);
 
-	// Update an app config file to:
-	// - add the `provideClientHydration()` provider to enable hydration
-	// - add the `provideHttpClient(withFetch())` call to enable `fetch` usage in `HttpClient`
+	// Add the `provideClientHydration()` provider to the app config.
 	const appConfigPath = "src/app/app.config.ts";
 	const appConfig = readFile(resolve(appConfigPath));
 	const newAppConfig =
 		"import { provideClientHydration } from '@angular/platform-browser';\n" +
-		"import { provideHttpClient, withFetch } from '@angular/common/http';\n" +
-		appConfig.replace(
-			"providers: [",
-			"providers: [provideHttpClient(withFetch()), provideClientHydration(), "
-		);
+		appConfig.replace("providers: [", "providers: [provideClientHydration(), ");
 	writeFile(resolve(appConfigPath), newAppConfig);
 
 	// Remove the unwanted node.js server entry-point
