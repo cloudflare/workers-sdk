@@ -24,6 +24,18 @@ describe("Pages Functions", async () => {
 		expect(text).toContain("Hello, world!");
 	});
 
+	it("doesn't escape out of the build output directory", async ({ expect }) => {
+		let response = await fetch(`http://${ip}:${port}/..%2fpackage.json`);
+		let text = await response.text();
+		expect(text).toContain("Hello, world!");
+
+		response = await fetch(
+			`http://${ip}:${port}/other-path%2f..%2f..%2fpackage.json`
+		);
+		text = await response.text();
+		expect(text).toContain("Hello, world!");
+	});
+
 	it("doesn't redirect to protocol-less URLs", async ({ expect }) => {
 		{
 			const response = await fetch(
