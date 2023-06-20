@@ -13,9 +13,9 @@ import type { Option } from "helpers/interactive";
 import type { PagesGeneratorArgs } from "types";
 
 export const main = async (argv: string[]) => {
-	printBanner();
-
 	const args = await parseArgs(argv);
+
+	printBanner();
 
 	const validatedArgs: PagesGeneratorArgs = {
 		...args,
@@ -57,6 +57,7 @@ const parseArgs = async (argv: string[]) => {
 			hidden: templateMap["pre-existing"].hidden,
 		})
 		.option("wrangler-defaults", { type: "boolean", hidden: true })
+		.version(version)
 		.help().argv;
 
 	return {
