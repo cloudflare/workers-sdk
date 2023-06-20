@@ -104,7 +104,7 @@ export function stripTimings(stdout: string): string {
 export function npmStripTimings(stdout: string): string {
 	return stdout
 		.replace(
-			/added \d+ packages, and audited \d+ packages in \d+s/,
+			/added \d+ packages, and audited \d+ packages in [\dms]+/,
 			"added (N) packages, and audited (N) packages in (TIMINGS)"
 		)
 		.replace(

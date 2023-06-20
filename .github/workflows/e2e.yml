@@ -60,7 +60,7 @@ jobs:
         run: npm ci
 
       - name: Run builds
-        run: npm run -w wrangler build
+        run: npm run build
         env:
           NODE_ENV: "production"
 

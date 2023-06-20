@@ -1,11 +1,12 @@
 import crypto from "node:crypto";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import shellac from "shellac";
 import { fetch } from "undici";
 import { beforeAll, describe, expect, it } from "vitest";
 import { normalizeOutput } from "./helpers/normalize";
 import { retry } from "./helpers/retry";
-import { dedent, makeRoot, seed } from "./helpers/setup";
+import { makeRoot } from "./helpers/setup";
 import { WRANGLER } from "./helpers/wrangler-command";
 
 function matchWorkersDev(stdout: string): string {
@@ -14,7 +15,7 @@ function matchWorkersDev(stdout: string): string {
 	)?.[1] as string;
 }
 
-describe("deploy", () => {
+describe("c3 integration", () => {
 	let workerName: string;
 	let workerPath: string;
 	let workersDev: string | null = null;
@@ -32,31 +33,23 @@ describe("deploy", () => {
 			normalizeOutput(str, { [workerName]: "smoke-test-worker" });
 	});
 
-	it("init worker", async () => {
-		const { stdout } =
-			await runInRoot`$ ${WRANGLER} init --yes --no-delegate-c3 ${workerName}`;
+	it("init project via c3", async () => {
+		const pathToC3 = path.resolve(__dirname, "../../create-cloudflare");
+		const env = {
+			...process.env,
+			WRANGLER_C3_COMMAND: `exec ${pathToC3}`,
+			GIT_AUTHOR_NAME: "test-user",
+			GIT_AUTHOR_EMAIL: "test-user@cloudflare.com",
+			GIT_COMMITTER_NAME: "test-user",
+			GIT_COMMITTER_EMAIL: "test-user@cloudflare.com",
+		};
 
-		expect(normalize(stdout)).toMatchInlineSnapshot(`
-			"Using npm as package manager.
-			✨ Created smoke-test-worker/wrangler.toml
-			✨ Initialized git repository at smoke-test-worker
-			✨ Created smoke-test-worker/package.json
-			✨ Created smoke-test-worker/tsconfig.json
-			✨ Created smoke-test-worker/src/index.ts
-			Your project will use Vitest to run your tests.
-			✨ Created smoke-test-worker/src/index.test.ts
-			added (N) packages, and audited (N) packages in (TIMINGS)
-			(N) packages are looking for funding
-			  run \`npm fund\` for details
-			found 0 vulnerabilities
-			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
-			To start developing your Worker, run \`cd smoke-test-worker && npm start\`
-			To start testing your Worker, run \`npm test\`
-			To publish your Worker to the Internet, run \`npm run deploy\`"
-		`);
+		await runInRoot.env(env)`$ ${WRANGLER} init ${workerName} --yes`;
+
+		expect(existsSync(workerPath)).toBe(true);
 	});
 
-	it("deploy worker", async () => {
+	it("deploy the worker", async () => {
 		const { stdout, stderr } = await runInWorker`$ ${WRANGLER} deploy`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
@@ -67,7 +60,6 @@ describe("deploy", () => {
 		`);
 		expect(stderr).toMatchInlineSnapshot('""');
 		workersDev = matchWorkersDev(stdout);
-
 		const { text } = await retry(
 			(s) => s.status !== 200,
 			async () => {
@@ -78,38 +70,8 @@ describe("deploy", () => {
 		expect(text).toMatchInlineSnapshot('"Hello World!"');
 	});
 
-	it("modify & deploy worker", async () => {
-		await seed(workerPath, {
-			"src/index.ts": dedent`
-        export default {
-          fetch(request) {
-            return new Response("Updated Worker!")
-          }
-        }`,
-		});
-		const { stdout, stderr } = await runInWorker`$ ${WRANGLER} deploy`;
-		expect(normalize(stdout)).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Uploaded smoke-test-worker (TIMINGS)
-			Published smoke-test-worker (TIMINGS)
-			  https://smoke-test-worker.SUBDOMAIN.workers.dev
-			Current Deployment ID: 00000000-0000-0000-0000-000000000000"
-		`);
-		expect(stderr).toMatchInlineSnapshot('""');
-		workersDev = matchWorkersDev(stdout);
-
-		const { text } = await retry(
-			(s) => s.status !== 200 || s.text === "Hello World!",
-			async () => {
-				const r = await fetch(`https://${workerName}.${workersDev}`);
-				return { text: await r.text(), status: r.status };
-			}
-		);
-		expect(text).toMatchInlineSnapshot('"Updated Worker!"');
-	});
-
-	it("delete worker", async () => {
-		const { stdout, stderr } = await runInWorker`$ ${WRANGLER} delete`;
+	it("delete the worker", async () => {
+		const { stdout, stderr } = await runInWorker`$$ ${WRANGLER} delete`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"? Are you sure you want to delete smoke-test-worker? This action cannot be undone.
 			🤖 Using default value in non-interactive context: yes
