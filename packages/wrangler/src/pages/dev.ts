@@ -28,9 +28,27 @@ import type {
 } from "../yargs-types";
 import type { RoutesJSONSpec } from "./functions/routes-transformation";
 
+/*
+ * DURABLE_OBJECTS_BINDING_REGEXP matches strings like:
+ * - "binding=className"
+ * - "BINDING=MyClass"
+ * - "BINDING=MyClass@service-name"
+ * Every DO needs a binding (the JS reference) and the exported class name it refers to.
+ * Optionally, users can also provide a service name if they want to reference a DO from another dev session over the dev registry.
+ */
 const DURABLE_OBJECTS_BINDING_REGEXP = new RegExp(
 	/^(?<binding>[^=]+)=(?<className>[^@\s]+)(@(?<scriptName>.*)$)?$/
 );
+
+/* BINDING_REGEXP matches strings like:
+ * - "binding"
+ * - "BINDING"
+ * - "BINDING=ref"
+ * This is used to capture both the binding name (how the binding is used in JS) as well as the reference if provided.
+ * In the case of a D1 database, that's the database ID.
+ * This is useful to people who want to reference the same database in multiple bindings, or a Worker and Pages project dev session want to reference the same database.
+ */
+const BINDING_REGEXP = new RegExp(/^(?<binding>[^=]+)(?:=(?<ref>[^\s]+))?$/);
 
 export function Options(yargs: CommonYargsArgv) {
 	return yargs
@@ -520,10 +538,22 @@ export const Handler = async ({
 				.map((binding) => binding.toString().split("="))
 				.map(([key, ...values]) => [key, values.join("=")])
 		),
-		kv: kvs.map((binding) => ({
-			binding: binding.toString(),
-			id: binding.toString(),
-		})),
+		kv: kvs
+			.map((kv) => {
+				const { binding, ref } =
+					BINDING_REGEXP.exec(kv.toString())?.groups || {};
+
+				if (!binding) {
+					logger.warn("Could not parse KV binding:", kv.toString());
+					return;
+				}
+
+				return {
+					binding,
+					id: ref || kv.toString(),
+				};
+			})
+			.filter(Boolean) as AdditionalDevProps["kv"],
 		durableObjects: durableObjects
 			.map((durableObject) => {
 				const { binding, className, scriptName } =
@@ -545,9 +575,19 @@ export const Handler = async ({
 				};
 			})
 			.filter(Boolean) as AdditionalDevProps["durableObjects"],
-		r2: r2s.map((binding) => {
-			return { binding: binding.toString(), bucket_name: binding.toString() };
-		}),
+		r2: r2s
+			.map((r2) => {
+				const { binding, ref } =
+					BINDING_REGEXP.exec(r2.toString())?.groups || {};
+
+				if (!binding) {
+					logger.warn("Could not parse R2 binding:", r2.toString());
+					return;
+				}
+
+				return { binding, bucket_name: ref || binding.toString() };
+			})
+			.filter(Boolean) as AdditionalDevProps["r2"],
 		rules: usingWorkerDirectory
 			? [
 					{
@@ -563,11 +603,23 @@ export const Handler = async ({
 		experimental: {
 			processEntrypoint: true,
 			additionalModules: modules,
-			d1Databases: d1s.map((binding) => ({
-				binding: binding.toString(),
-				database_id: binding.toString(),
-				database_name: `local-${binding}`,
-			})),
+			d1Databases: d1s
+				.map((d1) => {
+					const { binding, ref } =
+						BINDING_REGEXP.exec(d1.toString())?.groups || {};
+
+					if (!binding) {
+						logger.warn("Could not parse D1 binding:", d1.toString());
+						return;
+					}
+
+					return {
+						binding,
+						database_id: ref || d1.toString(),
+						database_name: `local-${d1}`,
+					};
+				})
+				.filter(Boolean) as AdditionalDevProps["d1Databases"],
 			disableExperimentalWarning: true,
 			enablePagesAssetsServiceBinding: {
 				proxyPort,

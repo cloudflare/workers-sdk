@@ -15,9 +15,33 @@ export default {
 		}
 
 		if (pathname === "/d1") {
-			const stmt = env.D1.prepare("SELECT 1");
+			const stmt1 = env.D1.prepare("SELECT 1");
+			const values1 = await stmt1.first();
+
+			const stmt = env.PUT.prepare("SELECT 1");
 			const values = await stmt.first();
-			return new Response(JSON.stringify(values));
+
+			if (JSON.stringify(values1) === JSON.stringify(values)) {
+				return new Response(JSON.stringify(values));
+			}
+
+			return new Response("couldn't select 1");
+		}
+
+		if (pathname === "/kv") {
+			await env.KV.put("key", "value");
+
+			await env.KV_REF.put("key", "value");
+
+			return new Response("saved");
+		}
+
+		if (pathname === "/r2") {
+			await env.R2.put("key", "value");
+
+			await env.R2_REF.put("key", "value");
+
+			return new Response("saved");
 		}
 
 		if (pathname !== "/") {
