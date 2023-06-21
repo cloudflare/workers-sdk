@@ -334,7 +334,90 @@ export function createCLIParser(argv: string[]) {
 		deployHandler
 	);
 
-	// delete
+  //deployments
+	const deploymentsWarning =
+    "🚧`wrangler deployments` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose";
+  wrangler.command(
+    "deployments",
+    "🔸List and view details for deployments for a Worker",
+    (yargs) =>
+      yargs
+        .option("name", {
+          describe: "The name of your worker",
+          type: "string",
+        })
+        .command(
+          "list",
+          "🔸Displays the 10 most recent deployments for a worker",
+          async (listYargs) => listYargs,
+          async (listYargs) => {
+            const { accountId, scriptName, config } =
+              await commonDeploymentCMDSetup(listYargs, deploymentsWarning);
+            await deployments(accountId, scriptName, config);
+          }
+        )
+        .command(
+          "view [deployment-id]",
+          "🔸View a deployment",
+          async (viewYargs) =>
+            viewYargs.positional("deployment-id", {
+              describe: "The ID of the deployment you want to inspect",
+              type: "string",
+              demandOption: false,
+            }),
+          async (viewYargs) => {
+            const { accountId, scriptName, config } =
+              await commonDeploymentCMDSetup(viewYargs, deploymentsWarning);
+
+            await viewDeployment(
+              accountId,
+              scriptName,
+              config,
+              viewYargs.deploymentId
+            );
+          }
+        )
+        .command(subHelp)
+        .epilogue(deploymentsWarning)
+  );
+
+  const rollbackWarning =
+		"🚧`wrangler rollback` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose";
+	wrangler.command(
+		"rollback [deployment-id]",
+		`🔸Rollback a deployment for a Worker ${highlight("open beta", "#FF8800")}`,
+		(rollbackYargs) =>
+			rollbackYargs
+				.positional("deployment-id", {
+					describe: "The ID of the deployment to rollback to",
+					type: "string",
+					demandOption: false,
+				})
+				.option("message", {
+					alias: "m",
+					describe:
+						"Skip confirmation and message prompts, uses provided argument as message",
+					type: "string",
+					default: undefined,
+				})
+				.epilogue(rollbackWarning),
+		async (rollbackYargs) => {
+			const { accountId, scriptName, config } = await commonDeploymentCMDSetup(
+				rollbackYargs,
+				rollbackWarning
+			);
+
+			await rollbackDeployment(
+				accountId,
+				scriptName,
+				config,
+				rollbackYargs.deploymentId,
+				rollbackYargs.message
+			);
+		}
+	);
+
+  // delete
 	wrangler.command(
 		"delete [script]",
 		"🗑  Delete your Worker from Cloudflare.",
