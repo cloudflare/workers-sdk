@@ -395,7 +395,6 @@ export async function bundleWorker(
 				// when we do a build of wrangler. (re: https://github.com/cloudflare/workers-sdk/issues/1477)
 				"process.env.NODE_ENV": `"${process.env["NODE_ENV" + ""]}"`,
 				...(legacyNodeCompat ? { global: "globalThis" } : {}),
-				...(checkFetch ? { fetch: "checkedFetch" } : {}),
 				...options.define,
 			},
 		}),
