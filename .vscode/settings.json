@@ -31,6 +31,7 @@
 		"selfsigned",
 		"textfile",
 		"tsbuildinfo",
+		"turborepo",
 		"undici",
 		"unrevoke",
 		"Untriaged",
