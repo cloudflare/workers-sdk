@@ -44,11 +44,11 @@ const config: FrameworkConfig = {
 	packageScripts: {
 		process:
 			"node ./tools/copy-worker-files.mjs && node ./tools/copy-client-files.mjs && node ./tools/bundle.mjs",
-		prestart: `${npm} run build:ssr && npm run process`,
+		prestart: `${npm} run build:ssr && ${npm} run process`,
 		start:
 			"wrangler pages dev dist/cloudflare --compatibility-date=2021-09-20 --experimental-local",
-		predeploy: `${npm} run build:ssr && npm run process`,
-		deploy: "wrangler pages publish dist/cloudflare",
+		predeploy: `${npm} run build:ssr && ${npm} run process`,
+		deploy: "wrangler pages deploy dist/cloudflare",
 	},
 	deployCommand: "deploy",
 	devCommand: "start",

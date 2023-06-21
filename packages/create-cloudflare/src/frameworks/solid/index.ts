@@ -47,7 +47,7 @@ const config: FrameworkConfig = {
 	displayName: "Solid",
 	packageScripts: {
 		"pages:dev": `wrangler pages dev ${compatDateFlag()} --proxy 3000 -- ${npm} run dev`,
-		"pages:deploy": `${npm} run build build && wrangler pages publish ./dist/public`,
+		"pages:deploy": `${npm} run build build && wrangler pages deploy ./dist/public`,
 	},
 };
 export default config;

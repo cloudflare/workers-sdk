@@ -23,7 +23,7 @@ const config: FrameworkConfig = {
 	displayName: "React",
 	packageScripts: {
 		"pages:dev": `wrangler pages dev ${compatDateFlag()} --port 3000 -- ${npm} start`,
-		"pages:deploy": `${npm} run build && wrangler pages publish ./build`,
+		"pages:deploy": `${npm} run build && wrangler pages deploy ./build`,
 	},
 };
 export default config;
