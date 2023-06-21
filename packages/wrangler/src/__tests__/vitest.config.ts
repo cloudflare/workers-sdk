@@ -13,6 +13,8 @@ export default mergeConfig(
 				"miniflare/cli": "../../node_modules/miniflare/dist/src/cli.js",
 			},
 			setupFiles: ["./vitest.setup.ts"],
+			exclude: ["./helpers/**"],
+			threads: false,
 		},
 	})
 );
