@@ -261,10 +261,7 @@ export class WranglerJsCompatWebpackPlugin {
 /**
  *  Wrapper around rimraf
  */
-function rm(
-	pathToRemove: string,
-	options?: RimrafSyncOptions
-): void {
+function rm(pathToRemove: string, options?: RimrafSyncOptions): void {
 	options !== undefined
 		? rimrafSync(pathToRemove, options)
 		: rimrafSync(pathToRemove);
