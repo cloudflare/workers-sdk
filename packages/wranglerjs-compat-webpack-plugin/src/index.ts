@@ -28,8 +28,9 @@
 import child_process from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import rimraf from "rimraf";
+import { rimrafSync } from "rimraf";
 import { readConfig } from "wrangler/src/config";
+import type { RimrafSyncOptions } from "rimraf";
 
 import type {
 	Compiler,
@@ -258,24 +259,15 @@ export class WranglerJsCompatWebpackPlugin {
 }
 
 /**
- * Promise wrapper around rimraf
+ *  Wrapper around rimraf
  */
 function rm(
 	pathToRemove: string,
-	options?: rimraf.Options
-): Promise<null | undefined> {
-	return new Promise((resolve, reject) => {
-		const callback = (result: Error | null | undefined) => {
-			if (result instanceof Error) {
-				reject(result);
-			} else {
-				resolve(result);
-			}
-		};
-		options !== undefined
-			? rimraf(pathToRemove, options, callback)
-			: rimraf(pathToRemove, callback);
-	});
+	options?: RimrafSyncOptions
+): void {
+	options !== undefined
+		? rimrafSync(pathToRemove, options)
+		: rimrafSync(pathToRemove);
 }
 
 /**

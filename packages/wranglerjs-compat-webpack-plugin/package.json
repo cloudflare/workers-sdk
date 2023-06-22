@@ -46,7 +46,7 @@
 		]
 	},
 	"dependencies": {
-		"rimraf": "^3.0.2"
+		"rimraf": "^5.0.1"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "*",
