@@ -13,19 +13,18 @@ describe("Basic C3 functionality", () => {
 
 	test("--version", async () => {
 		const result = await runCli(["--version"]);
-		expect(result.stdout).toContain(version);
+		expect(result.stdout).toEqual(version);
 	});
 
 	test("--version with positionals", async () => {
 		const argv = "foo bar baz --version".split(" ");
 		const result = await runCli(argv);
-		expect(result.stdout).toContain(version);
+		expect(result.stdout).toEqual(version);
 	});
 
 	test("--version with flags", async () => {
 		const argv = "foo --type webFramework --no-deploy --version".split(" ");
 		const result = await runCli(argv);
-
-		expect(result.stdout).toContain(version);
+		expect(result.stdout).toEqual(version);
 	});
 });
