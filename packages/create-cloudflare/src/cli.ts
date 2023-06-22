@@ -72,7 +72,7 @@ const validateName = async (
 ): Promise<string> => {
 	const defaultValue = name ?? new Haikunator().haikunate({ tokenHex: true });
 	return textInput({
-		question: `Where do you want to create your application?`,
+		question: `In which directory do you want to create your application?`,
 		helpText: "also used as application name",
 		renderSubmitted: (value: string) => {
 			return `${brandColor("dir")} ${dim(value)}`;
