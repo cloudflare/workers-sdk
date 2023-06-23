@@ -3,31 +3,51 @@ import { detectPackageManager } from "helpers/packages";
 import { beforeEach, afterEach, describe, expect, test, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
 import {
+	getWorkerdCompatibilityDate,
 	installPackages,
 	installWrangler,
 	npmInstall,
 	runCommand,
 } from "../command";
 
+// We can change how the mock spawn works by setting these variables
+let spawnResultCode = 0;
+let spawnStdout: string | undefined = undefined;
+let spawnStderr: string | undefined = undefined;
+
 describe("Command Helpers", () => {
 	afterEach(() => {
 		vi.clearAllMocks();
+		spawnResultCode = 0;
+		spawnStdout = undefined;
+		spawnStderr = undefined;
 	});
 
 	beforeEach(() => {
 		// Mock out the child_process.spawn function
 		vi.mock("cross-spawn", () => {
-			const mockedSpawn = vi.fn().mockImplementation(() => ({
-				on: vi.fn().mockImplementation((event, cb) => {
-					if (event === "close") {
-						cb(0);
-					}
-				}),
-			}));
+			const mockedSpawn = vi.fn().mockImplementation(() => {
+				return {
+					on: vi.fn().mockImplementation((event, cb) => {
+						if (event === "close") {
+							cb(spawnResultCode);
+						}
+					}),
+					stdout: {
+						on(event: "data", cb: (data: string) => void) {
+							spawnStdout !== undefined && cb(spawnStdout);
+						},
+					},
+					stderr: {
+						on(event: "data", cb: (data: string) => void) {
+							spawnStderr !== undefined && cb(spawnStderr);
+						},
+					},
+				};
+			});
 
 			return { spawn: mockedSpawn };
 		});
-
 		vi.mock("which-pm-runs");
 		vi.mocked(whichPMRuns).mockReturnValue({ name: "npm", version: "8.3.1" });
 
@@ -140,6 +160,37 @@ describe("Command Helpers", () => {
 			expect(pm.npm).toBe("yarn");
 			expect(pm.npx).toBe("yarn");
 			expect(pm.dlx).toBe("yarn");
+		});
+	});
+
+	describe("getWorkerdCompatibilityDate()", () => {
+		test("normal flow", async () => {
+			spawnStdout = "2.20250110.5";
+			const date = await getWorkerdCompatibilityDate();
+			expectSpawnWith("npm info workerd dist-tags.latest");
+			expect(date).toBe("2025-01-10");
+		});
+
+		test("empty result", async () => {
+			spawnStdout = "";
+			const date = await getWorkerdCompatibilityDate();
+			expectSpawnWith("npm info workerd dist-tags.latest");
+			expect(date).toBe("2023-05-18");
+		});
+
+		test("verbose output (e.g. yarn or debug mode)", async () => {
+			spawnStdout =
+				"Debugger attached.\nyarn info v1.22.19\n2.20250110.5\n✨  Done in 0.83s.";
+			const date = await getWorkerdCompatibilityDate();
+			expectSpawnWith("npm info workerd dist-tags.latest");
+			expect(date).toBe("2025-01-10");
+		});
+
+		test("command failed", async () => {
+			spawnResultCode = 1;
+			const date = await getWorkerdCompatibilityDate();
+			expectSpawnWith("npm info workerd dist-tags.latest");
+			expect(date).toBe("2023-05-18");
 		});
 	});
 });
