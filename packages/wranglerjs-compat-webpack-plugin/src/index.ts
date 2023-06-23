@@ -30,7 +30,6 @@ import fs from "node:fs";
 import path from "node:path";
 import { rimrafSync } from "rimraf";
 import { readConfig } from "wrangler/src/config";
-import type { RimrafSyncOptions } from "rimraf";
 
 import type {
 	Compiler,
@@ -204,7 +203,7 @@ export class WranglerJsCompatWebpackPlugin {
 			template,
 			this.packageDir,
 		]);
-		await rm(path.resolve(this.packageDir, ".git"));
+		rimrafSync(path.resolve(this.packageDir, ".git"));
 	}
 
 	private bundleAssets({ assets }: Compilation) {
@@ -256,15 +255,6 @@ export class WranglerJsCompatWebpackPlugin {
 			this.output.js
 		);
 	}
-}
-
-/**
- *  Wrapper around rimraf
- */
-function rm(pathToRemove: string, options?: RimrafSyncOptions): void {
-	options !== undefined
-		? rimrafSync(pathToRemove, options)
-		: rimrafSync(pathToRemove);
 }
 
 /**
