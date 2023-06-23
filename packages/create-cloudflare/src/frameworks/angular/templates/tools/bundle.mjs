@@ -37,7 +37,8 @@ async function bundleMain() {
 		],
 	});
 
-	let main = result.outputFiles[0].text;
+	// Store the original promise (before Angular/Zone.js replaces it) on the global scope.
+	let main = "globalThis.OGPromise = Promise;\n" + result.outputFiles[0].text;
 
 	// Patch any dynamic imports (converting `require()` calls to `import()` calls).
 	main = main.replace(
@@ -45,7 +46,9 @@ async function bundleMain() {
 		'promises.push(import("./" + __webpack_require__.u(chunkId)).then((mod) => installChunk(mod.default))'
 	);
 	// Export the fetch handler (grabbing it from the global).
-	main += "\nexport default { fetch : globalThis.__workerFetchHandler };";
+	// Also Cloudflare expects `fetch()` to return an original Promise (not a ZoneAwarePromise).
+	main +=
+		"\nexport default { fetch: (request, env) => globalThis.OGPromise.resolve(globalThis.__workerFetchHandler(request, env)) };";
 
 	await fs.writeFile(path.resolve(workerPath, "index.js"), main);
 }
