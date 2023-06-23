@@ -313,13 +313,19 @@ export const listAccounts = async () => {
  * @returns The latest compatibility date for workerd in the form "YYYY-MM-DD"
  */
 export async function getWorkerdCompatibilityDate() {
-	return runCommand("npm info workerd dist-tags.latest", {
+	const { npm } = detectPackageManager();
+	return runCommand(`${npm} info workerd dist-tags.latest`, {
 		silent: true,
 		captureOutput: true,
 		startText: "Retrieving current workerd compatibility date",
 		transform: (result) => {
-			const date = result.split(".")[1];
-			return `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`;
+			// The format of the workerd version is `major.yyyymmdd.patch`.
+			const match = result.match(/\d+\.(\d{4})(\d{2})(\d{2})\.\d+/);
+			if (!match) {
+				throw new Error("Could not find workerd date");
+			}
+			const [, year, month, date] = match;
+			return `${year}-${month}-${date}`;
 		},
 		fallback: () => "2023-05-18",
 		doneText: (output) => `${brandColor("compatibility date")} ${dim(output)}`,

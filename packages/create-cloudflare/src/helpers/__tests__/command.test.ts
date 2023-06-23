@@ -178,6 +178,14 @@ describe("Command Helpers", () => {
 			expect(date).toBe("2023-05-18");
 		});
 
+		test("verbose output (e.g. yarn or debug mode)", async () => {
+			spawnStdout =
+				"Debugger attached.\nyarn info v1.22.19\n2.20250110.5\n✨  Done in 0.83s.";
+			const date = await getWorkerdCompatibilityDate();
+			expectSpawnWith("npm info workerd dist-tags.latest");
+			expect(date).toBe("2025-01-10");
+		});
+
 		test("command failed", async () => {
 			spawnResultCode = 1;
 			const date = await getWorkerdCompatibilityDate();
