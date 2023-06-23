@@ -18,14 +18,16 @@ type Command = string | string[];
 
 type RunOptions = {
 	startText?: string;
-	doneText?: string | ((result: string) => string);
+	doneText?: string | ((output: string) => string);
 	silent?: boolean;
 	captureOutput?: boolean;
 	useSpinner?: boolean;
 	env?: NodeJS.ProcessEnv;
 	cwd?: string;
-	transform?: (output: string) => string;
-	fallback?: (error: unknown) => string;
+	/** If defined this function is called to all you to transform the output from the command into a new string. */
+	transformOutput?: (output: string) => string;
+	/** If defined, this function is called to return a string that is used if the `transformOutput()` fails. */
+	fallbackOutput?: (error: unknown) => string;
 };
 
 type MultiRunOptions = RunOptions & {
@@ -37,7 +39,7 @@ type PrintOptions<T> = {
 	promise: Promise<T> | (() => Promise<T>);
 	useSpinner?: boolean;
 	startText: string;
-	doneText?: string | ((result: T) => string);
+	doneText?: string | ((output: T) => string);
 };
 
 export const runCommand = async (
@@ -87,8 +89,9 @@ export const runCommand = async (
 						}
 
 						// Process any captured output
-						const transform = opts.transform ?? ((result: string) => result);
-						const processedOutput = transform(stripAnsi(output));
+						const transformOutput =
+							opts.transformOutput ?? ((result: string) => result);
+						const processedOutput = transformOutput(stripAnsi(output));
 
 						// Send the captured (and processed) output back to the caller
 						resolve(processedOutput);
@@ -96,8 +99,8 @@ export const runCommand = async (
 						// Something went wrong.
 						// Perhaps the command or the transform failed.
 						// If there is a fallback use the result of calling that
-						if (opts.fallback) {
-							resolve(opts.fallback(e));
+						if (opts.fallbackOutput) {
+							resolve(opts.fallbackOutput(e));
 						} else {
 							reject(new Error(output, { cause: e }));
 						}
@@ -318,7 +321,7 @@ export async function getWorkerdCompatibilityDate() {
 		silent: true,
 		captureOutput: true,
 		startText: "Retrieving current workerd compatibility date",
-		transform: (result) => {
+		transformOutput: (result) => {
 			// The format of the workerd version is `major.yyyymmdd.patch`.
 			const match = result.match(/\d+\.(\d{4})(\d{2})(\d{2})\.\d+/);
 			if (!match) {
@@ -327,7 +330,7 @@ export async function getWorkerdCompatibilityDate() {
 			const [, year, month, date] = match;
 			return `${year}-${month}-${date}`;
 		},
-		fallback: () => "2023-05-18",
+		fallbackOutput: () => "2023-05-18",
 		doneText: (output) => `${brandColor("compatibility date")} ${dim(output)}`,
 	});
 }
