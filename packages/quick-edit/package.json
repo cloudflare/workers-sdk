@@ -19,7 +19,6 @@
 		"yarn": "^1.22.19"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-tsconfig": "*",
 		"concurrently": "^8.0.1",
 		"wrangler": "*"
 	},

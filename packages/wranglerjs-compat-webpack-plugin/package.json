@@ -49,8 +49,6 @@
 		"rimraf": "^3.0.2"
 	},
 	"devDependencies": {
-		"@cloudflare/eslint-config-worker": "*",
-		"@cloudflare/workers-tsconfig": "*",
 		"@octokit/core": "^3.6.0",
 		"@schemastore/package": "^0.0.6",
 		"@types/jest": "^27.4.1",

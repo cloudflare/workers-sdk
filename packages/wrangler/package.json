@@ -111,9 +111,7 @@
 		"xxhash-wasm": "^1.0.1"
 	},
 	"devDependencies": {
-		"@cloudflare/eslint-config-worker": "*",
 		"@cloudflare/types": "^6.18.4",
-		"@cloudflare/workers-tsconfig": "*",
 		"@cloudflare/workers-types": "^4.20230511.0",
 		"@iarna/toml": "^3.0.0",
 		"@microsoft/api-extractor": "^7.28.3",

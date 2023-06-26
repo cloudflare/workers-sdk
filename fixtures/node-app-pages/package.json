@@ -16,7 +16,6 @@
 		"stripe": "^9.1.0"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-tsconfig": "*",
 		"@cloudflare/workers-types": "^4.20221111.1",
 		"undici": "^5.9.1",
 		"wrangler": "*"
