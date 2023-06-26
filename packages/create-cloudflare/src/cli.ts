@@ -70,8 +70,10 @@ const validateName = async (
 	name: string | undefined,
 	{ acceptDefault = false } = {}
 ): Promise<string> => {
-	const defaultValue = name ?? new Haikunator().haikunate({ tokenHex: true });
+	const defaultValue = new Haikunator().haikunate({ tokenHex: true });
+
 	return textInput({
+		initialValue: name,
 		question: `In which directory do you want to create your application?`,
 		helpText: "also used as application name",
 		renderSubmitted: (value: string) => {
@@ -98,7 +100,8 @@ const validateType = async (
 		renderSubmitted: (option: Option) => {
 			return `${brandColor("type")} ${dim(option.label)}`;
 		},
-		defaultValue: type ?? "hello-world",
+		initialValue: type,
+		defaultValue: "hello-world",
 		acceptDefault,
 	});
 

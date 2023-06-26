@@ -11,6 +11,7 @@ const leftT = gray(shapes.leftT);
 export type TextOptions = {
 	renderSubmitted: (value: string) => string;
 	question: string;
+	initialValue?: string;
 	defaultValue: string;
 	acceptDefault: boolean | undefined; // must be specified, but can be undefined (≈ false)
 	helpText?: string;
@@ -19,8 +20,14 @@ export type TextOptions = {
 };
 
 export const textInput = async (opts: TextOptions) => {
-	const { renderSubmitted, question, defaultValue, validate, acceptDefault } =
-		opts;
+	const {
+		renderSubmitted,
+		question,
+		initialValue,
+		defaultValue,
+		validate,
+		acceptDefault,
+	} = opts;
 	const helpText = opts.helpText || ``;
 	const format = opts.format || ((val: string) => val);
 
@@ -59,10 +66,10 @@ export const textInput = async (opts: TextOptions) => {
 	});
 
 	let value: string;
-	if (acceptDefault) {
+	if (initialValue || acceptDefault) {
+		value = initialValue || defaultValue;
 		logRaw(`${leftT} ${question}`);
-		logRaw(`${grayBar} ${renderSubmitted(defaultValue)}\n${grayBar}`);
-		value = defaultValue;
+		logRaw(`${grayBar} ${renderSubmitted(value)}\n${grayBar}`);
 		validate?.(value);
 	} else {
 		value = (await prompt.prompt()) as string;
@@ -86,13 +93,21 @@ type SelectOptions = {
 	renderSubmitted: (option: Option) => string;
 	options: Option[];
 	helpText?: string;
+	initialValue?: string;
 	defaultValue: string;
 	acceptDefault: boolean | undefined; // must be specified, but can be undefined (≈ false)
 };
 
 export const selectInput = async (opts: SelectOptions) => {
-	const { question, options, renderSubmitted, defaultValue, acceptDefault } =
-		opts;
+	const {
+		question,
+		options,
+		renderSubmitted,
+		defaultValue,
+		initialValue,
+		acceptDefault,
+	} = opts;
+
 	const helpText = opts.helpText || ``;
 
 	const prompt = new SelectPrompt({
@@ -129,16 +144,18 @@ export const selectInput = async (opts: SelectOptions) => {
 	});
 
 	let value: string;
-	if (acceptDefault) {
+
+	if (initialValue || acceptDefault) {
+		value = initialValue || defaultValue;
+
 		logRaw(`${leftT} ${question}`);
 		logRaw(
 			`${grayBar} ${renderSubmitted({
-				label: defaultValue,
-				value: defaultValue,
+				label: value,
+				value: value,
 			})}`
 		);
 		logRaw(`${grayBar}`);
-		value = defaultValue;
 	} else {
 		value = (await prompt.prompt()) as string;
 

@@ -26,7 +26,7 @@ describe("E2E", () => {
 		}
 	});
 
-	const runCli = async (framework: string) => {
+	const runCli = async (framework: string, args: string[] = []) => {
 		const projectPath = join(dummyPath, "test");
 		const argv = [
 			projectPath,
@@ -36,8 +36,12 @@ describe("E2E", () => {
 			framework,
 			"--no-deploy",
 			"--no-git",
-			"--wrangler-defaults",
+			// TODO: Don't make this the default. Create a test that exercises this option on its own
+			// "--wrangler-defaults",
+			...args,
 		];
+
+		console.log(`node ./dist/cli.js ${argv.join(" ")}`);
 
 		const result = await execa("node", ["./dist/cli.js", ...argv], {
 			stderr: process.stderr,
