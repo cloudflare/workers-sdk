@@ -41,8 +41,6 @@ describe("E2E", () => {
 			...args,
 		];
 
-		console.log(`node ./dist/cli.js ${argv.join(" ")}`);
-
 		const result = await execa("node", ["./dist/cli.js", ...argv], {
 			stderr: process.stderr,
 		});
