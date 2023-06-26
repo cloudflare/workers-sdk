@@ -19,12 +19,8 @@ export const main = async (argv: string[]) => {
 
 	const validatedArgs: PagesGeneratorArgs = {
 		...args,
-		projectName: await validateName(args.projectName, {
-			acceptDefault: args.wranglerDefaults,
-		}),
-		type: await validateType(args.type, {
-			acceptDefault: args.wranglerDefaults,
-		}),
+		projectName: await validateName(args),
+		type: await validateType(args),
 	};
 
 	const { handler } = templateMap[validatedArgs.type];
@@ -67,13 +63,13 @@ const parseArgs = async (argv: string[]) => {
 };
 
 const validateName = async (
-	name: string | undefined,
-	{ acceptDefault = false } = {}
+	args: Awaited<ReturnType<typeof parseArgs>>
 ): Promise<string> => {
+	const acceptDefault = args.wranglerDefaults || false;
 	const defaultValue = new Haikunator().haikunate({ tokenHex: true });
 
 	return textInput({
-		initialValue: name,
+		initialValue: args.projectName,
 		question: `In which directory do you want to create your application?`,
 		helpText: "also used as application name",
 		renderSubmitted: (value: string) => {
@@ -86,10 +82,19 @@ const validateName = async (
 	});
 };
 
-const validateType = async (
-	type: string | undefined,
-	{ acceptDefault = false } = {}
-) => {
+const validateType = async (args: Awaited<ReturnType<typeof parseArgs>>) => {
+	let { type } = args;
+	const acceptDefault = args.wranglerDefaults || false;
+
+	// attempt to infer type from other params
+	if (!type) {
+		if (args.framework) {
+			type = "webFramework";
+		} else if (args.existingScript) {
+			type = "pre-existing";
+		}
+	}
+
 	const templateOptions = Object.entries(templateMap)
 		.filter(([_, { hidden }]) => !hidden)
 		.map(([value, { label }]) => ({ value, label }));
