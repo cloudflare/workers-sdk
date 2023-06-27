@@ -5,8 +5,9 @@ import http from "http";
 import net from "net";
 import os from "os";
 import path from "path";
-import { Duplex } from "stream";
+import { Duplex, Transform, Writable } from "stream";
 import { ReadableStream } from "stream/web";
+import zlib from "zlib";
 import type { RequestInitCfProperties } from "@cloudflare/workers-types/experimental";
 import exitHook from "exit-hook";
 import stoppable from "stoppable";
@@ -277,15 +278,68 @@ const restrictedWebSocketUpgradeHeaders = [
 	"sec-websocket-accept",
 ];
 
-async function writeResponse(response: Response, res: http.ServerResponse) {
-	const headers = Object.fromEntries(response.headers);
-	res.writeHead(response.status, response.statusText, headers);
-	if (response.body) {
-		for await (const chunk of response.body) {
-			if (chunk) res.write(chunk);
+export function _transformsForContentEncoding(encoding?: string): Transform[] {
+	const encoders: Transform[] = [];
+	if (!encoding) return encoders;
+
+	// Reverse of https://github.com/nodejs/undici/blob/48d9578f431cbbd6e74f77455ba92184f57096cf/lib/fetch/index.js#L1660
+	const codings = encoding
+		.toLowerCase()
+		.split(",")
+		.map((x) => x.trim());
+	for (const coding of codings) {
+		if (/(x-)?gzip/.test(coding)) {
+			encoders.push(zlib.createGzip());
+		} else if (/(x-)?deflate/.test(coding)) {
+			encoders.push(zlib.createDeflate());
+		} else if (coding === "br") {
+			encoders.push(zlib.createBrotliCompress());
+		} else {
+			// Unknown encoding, don't do any encoding at all
+			encoders.length = 0;
+			break;
 		}
 	}
-	res.end();
+	return encoders;
+}
+
+async function writeResponse(response: Response, res: http.ServerResponse) {
+	const headers = Object.fromEntries(response.headers);
+
+	// If a `Content-Encoding` header is set, we'll need to encode the body
+	// (likely only set by custom service bindings)
+	const encoding = headers["content-encoding"]?.toString();
+	const encoders = _transformsForContentEncoding(encoding);
+	if (encoders.length > 0) {
+		// `Content-Length` if set, will be wrong as it's for the decoded length
+		delete headers["content-length"];
+	}
+
+	res.writeHead(response.status, response.statusText, headers);
+
+	// `initialStream` is the stream we'll write the response to. It
+	// should end up as the first encoder, piping to the next encoder,
+	// and finally piping to the response:
+	//
+	// encoders[0] (initialStream) -> encoders[1] -> res
+	//
+	// Not using `pipeline(passThrough, ...encoders, res)` here as that
+	// gives a premature close error with server sent events. This also
+	// avoids creating an extra stream even when we're not encoding.
+	let initialStream: Writable = res;
+	for (let i = encoders.length - 1; i >= 0; i--) {
+		encoders[i].pipe(initialStream);
+		initialStream = encoders[i];
+	}
+
+	// Response body may be null if empty
+	if (response.body) {
+		for await (const chunk of response.body) {
+			if (chunk) initialStream.write(chunk);
+		}
+	}
+
+	initialStream.end();
 }
 
 function safeReadableStreamFrom(iterable: AsyncIterable<Uint8Array>) {
