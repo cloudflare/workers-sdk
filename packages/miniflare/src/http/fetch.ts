@@ -1,10 +1,14 @@
 import http from "http";
-import { Headers, RequestInfo, fetch as baseFetch } from "undici";
+import { Agent, Headers, RequestInfo, fetch as baseFetch } from "undici";
 import NodeWebSocket from "ws";
 import { DeferredPromise } from "../shared";
 import { Request, RequestInit } from "./request";
 import { Response } from "./response";
 import { WebSocketPair, coupleWebSocket } from "./websocket";
+
+export const allowUnauthorizedAgent = new Agent({
+	connect: { rejectUnauthorized: false },
+});
 
 const ignored = ["transfer-encoding", "connection", "keep-alive", "expect"];
 function headersFromIncomingRequest(req: http.IncomingMessage): Headers {
@@ -21,7 +25,8 @@ export async function fetch(
 	input: RequestInfo,
 	init?: RequestInit | Request
 ): Promise<Response> {
-	const request = new Request(input, init as RequestInit);
+	const requestInit = init as RequestInit;
+	const request = new Request(input, requestInit);
 
 	// Handle WebSocket upgrades
 	if (
@@ -48,10 +53,16 @@ export async function fetch(
 			}
 		}
 
+		const rejectUnauthorized =
+			requestInit?.dispatcher === allowUnauthorizedAgent
+				? { rejectUnauthorized: false }
+				: {};
+
 		// Establish web socket connection
 		const ws = new NodeWebSocket(url, protocols, {
 			followRedirects: request.redirect === "follow",
 			headers,
+			...rejectUnauthorized,
 		});
 
 		// Get response headers from upgrade
@@ -70,6 +81,8 @@ export async function fetch(
 		});
 	}
 
-	const response = await baseFetch(request);
+	const response = await baseFetch(request, {
+		dispatcher: requestInit?.dispatcher,
+	});
 	return new Response(response.body, response);
 }

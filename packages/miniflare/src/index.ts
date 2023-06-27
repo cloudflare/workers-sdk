@@ -18,6 +18,8 @@ import {
 	Request,
 	RequestInit,
 	Response,
+	allowUnauthorizedAgent,
+	configureEntrySocket,
 	coupleWebSocket,
 	fetch,
 } from "./http";
@@ -33,8 +35,6 @@ import {
 	Plugins,
 	QueueConsumers,
 	QueuesError,
-	SERVICE_ENTRY,
-	SOCKET_ENTRY,
 	SharedOptions,
 	WorkerOptions,
 	getGlobalServices,
@@ -716,15 +716,7 @@ export class Miniflare {
 			services.set(service.name, service);
 		}
 
-		const sockets: Socket[] = [
-			{
-				name: SOCKET_ENTRY,
-				service: { name: SERVICE_ENTRY },
-				// Even though we inject a `cf` object in the entry worker, allow it to
-				// be customised via `dispatchFetch`
-				http: { cfBlobHeader: HEADER_CF_BLOB },
-			},
-		];
+		const sockets: Socket[] = [await configureEntrySocket(sharedOpts.core)];
 
 		for (let i = 0; i < allWorkerOpts.length; i++) {
 			const workerOpts = allWorkerOpts[i];
@@ -799,9 +791,13 @@ export class Miniflare {
 					"There is likely additional logging output above."
 			);
 		}
+
+		const entrySocket = config.sockets?.[0];
+		const secure = entrySocket !== undefined && "https" in entrySocket;
+
 		// noinspection HttpUrlsUsage
 		this.#runtimeEntryURL = new URL(
-			`http://${this.#accessibleHost}:${maybePort}`
+			`${secure ? "https" : "http"}://${this.#accessibleHost}:${maybePort}`
 		);
 
 		if (!this.#runtimeMutex.hasWaiting) {
@@ -865,6 +861,7 @@ export class Miniflare {
 	dispatchFetch: DispatchFetch = async (input, init) => {
 		this.#checkDisposed();
 		await this.ready;
+
 		const forward = new Request(input, init);
 		const url = new URL(forward.url);
 		forward.headers.set(CoreHeaders.ORIGINAL_URL, url.toString());
@@ -883,7 +880,12 @@ export class Miniflare {
 			forward.headers.delete("Content-Length");
 		}
 
-		const response = await fetch(url, forward as RequestInit);
+		const forwardInit = forward as RequestInit;
+		if (url.protocol === "https:") {
+			forwardInit.dispatcher = allowUnauthorizedAgent;
+		}
+
+		const response = await fetch(url, forwardInit);
 
 		// If the Worker threw an uncaught exception, propagate it to the caller
 		const stack = response.headers.get(CoreHeaders.ERROR_STACK);
