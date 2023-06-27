@@ -87,7 +87,7 @@ export class Runtime {
 			// (e.g. "streams_enable_constructors"), see https://github.com/cloudflare/workerd/pull/21
 			"--experimental",
 			`--socket-addr=${SOCKET_ENTRY}=${this.opts.entryHost}:${this.opts.entryPort}`,
-			`--external-addr=${SERVICE_LOOPBACK}=127.0.0.1:${this.opts.loopbackPort}`,
+			`--external-addr=${SERVICE_LOOPBACK}=localhost:${this.opts.loopbackPort}`,
 			// Configure extra pipe for receiving control messages (e.g. when ready)
 			"--control-fd=3",
 			// Read config from stdin
