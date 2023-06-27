@@ -10,6 +10,7 @@ import { ReadableStream } from "stream/web";
 import zlib from "zlib";
 import type { RequestInitCfProperties } from "@cloudflare/workers-types/experimental";
 import exitHook from "exit-hook";
+import { splitCookiesString } from "set-cookie-parser";
 import stoppable from "stoppable";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
@@ -304,7 +305,17 @@ export function _transformsForContentEncoding(encoding?: string): Transform[] {
 }
 
 async function writeResponse(response: Response, res: http.ServerResponse) {
-	const headers = Object.fromEntries(response.headers);
+	// Convert headers into Node-friendly format
+	const headers: http.OutgoingHttpHeaders = {};
+	for (const entry of response.headers) {
+		const key = entry[0].toLowerCase();
+		const value = entry[1];
+		if (key === "set-cookie") {
+			headers[key] = splitCookiesString(value);
+		} else {
+			headers[key] = value;
+		}
+	}
 
 	// If a `Content-Encoding` header is set, we'll need to encode the body
 	// (likely only set by custom service bindings)

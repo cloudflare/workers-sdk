@@ -152,6 +152,38 @@ test("Miniflare: custom service using Content-Encoding header", async (t) => {
 	// await test("deflate, gzip");
 });
 
+test("Miniflare: custom service using Set-Cookie header", async (t) => {
+	const testCookies = [
+		"key1=value1; Max-Age=3600",
+		"key2=value2; Domain=example.com; Secure",
+	];
+	const { http } = await useServer(t, (req, res) => {
+		res.writeHead(200, { "Set-Cookie": testCookies });
+		res.end();
+	});
+	const mf = new Miniflare({
+		modules: true,
+		script: `export default {
+      async fetch(request, env, ctx) {
+        const res = await env.CUSTOM.fetch(request);
+        return Response.json(res.headers.getSetCookie());
+      }
+    }`,
+		serviceBindings: {
+			CUSTOM(request) {
+				return fetch(http, request);
+			},
+		},
+		// Enable `Headers#getSetCookie()`:
+		// https://github.com/cloudflare/workerd/blob/14b54764609c263ea36ab862bb8bf512f9b1387b/src/workerd/io/compatibility-date.capnp#L273-L278
+		compatibilityDate: "2023-03-01",
+	});
+	t.teardown(() => mf.dispose());
+
+	const res = await mf.dispatchFetch("http://localhost");
+	t.deepEqual(await res.json(), testCookies);
+});
+
 test("Miniflare: web socket kitchen sink", async (t) => {
 	// Create deferred promises for asserting asynchronous event results
 	const clientEventPromise = new DeferredPromise<MessageEvent>();
