@@ -2,6 +2,7 @@ export * from "./fetch";
 export * from "./request";
 export * from "./response";
 export * from "./websocket";
+export * from "./server";
 
 export { File, FormData, Headers } from "undici";
 export type {

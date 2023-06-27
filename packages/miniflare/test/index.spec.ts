@@ -15,7 +15,7 @@ import {
 	MessageEvent as StandardMessageEvent,
 	WebSocketServer,
 } from "ws";
-import { useServer } from "./test-shared";
+import { TestLog, useServer } from "./test-shared";
 
 test("Miniflare: validates options", async (t) => {
 	// Check empty workers array rejected
@@ -323,4 +323,24 @@ test("Miniflare: HTTPS fetches using browser CA certificates", async (t) => {
 	});
 	const res = await mf.dispatchFetch("http://localhost");
 	t.true(res.ok);
+});
+
+test("Miniflare: Accepts https requests", async (t) => {
+	const log = new TestLog(t);
+
+	const mf = new Miniflare({
+		log,
+		modules: true,
+		https: true,
+		script: `export default {
+      fetch() {
+        return new Response("Hello world");
+      }
+    }`,
+	});
+
+	const res = await mf.dispatchFetch("https://localhost");
+	t.true(res.ok);
+
+	t.assert(log.logs[0][1].startsWith("Ready on https://"));
 });
