@@ -1,6 +1,7 @@
 import assert from "assert";
 import http from "http";
 import { AddressInfo } from "net";
+import { Writable } from "stream";
 import test from "ava";
 import {
 	DeferredPromise,
@@ -8,6 +9,7 @@ import {
 	Miniflare,
 	MiniflareCoreError,
 	MiniflareOptions,
+	_transformsForContentEncoding,
 	fetch,
 } from "miniflare";
 import {
@@ -104,6 +106,50 @@ test("Miniflare: routes to multiple workers with fallback", async (t) => {
 	// Check fallback to first
 	res = await mf.dispatchFetch("http://localhost/notapi");
 	t.is(await res.text(), "a");
+});
+
+test("Miniflare: custom service using Content-Encoding header", async (t) => {
+	const testBody = "x".repeat(100);
+	const { http } = await useServer(t, (req, res) => {
+		const testEncoding = req.headers["x-test-encoding"]?.toString();
+		const encoders = _transformsForContentEncoding(testEncoding);
+		let initialStream: Writable = res;
+		for (let i = encoders.length - 1; i >= 0; i--) {
+			encoders[i].pipe(initialStream);
+			initialStream = encoders[i];
+		}
+		res.writeHead(200, { "Content-Encoding": testEncoding });
+		initialStream.write(testBody);
+		initialStream.end();
+	});
+	const mf = new Miniflare({
+		script: `addEventListener("fetch", (event) => {
+      event.respondWith(CUSTOM.fetch(event.request));
+    })`,
+		serviceBindings: {
+			CUSTOM(request) {
+				return fetch(http, request);
+			},
+		},
+	});
+	t.teardown(() => mf.dispose());
+
+	const test = async (encoding: string) => {
+		const res = await mf.dispatchFetch("http://localhost", {
+			headers: { "X-Test-Encoding": encoding },
+		});
+		t.is(res.headers.get("Content-Encoding"), encoding);
+		t.is(await res.text(), testBody, encoding);
+	};
+
+	await test("gzip");
+	await test("deflate");
+	await test("br");
+	// `undici`'s `fetch()` is currently broken when `Content-Encoding` specifies
+	// multiple encodings. Once https://github.com/nodejs/undici/pull/2159 is
+	// released, we can re-enable this test.
+	// TODO(soon): re-enable this test
+	// await test("deflate, gzip");
 });
 
 test("Miniflare: web socket kitchen sink", async (t) => {
