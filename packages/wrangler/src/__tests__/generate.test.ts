@@ -220,6 +220,50 @@ describe("generate", () => {
 				"wrangler.toml": expect.any(String),
 			});
 		});
+
+		it("clones a cloudflare template across drives", async () => {
+			const fsMock = jest.spyOn(fs, "renameSync").mockImplementation(() => {
+				// Simulate the error we get if we use renameSync across different Windows drives (e.g. C: to D:).
+				const error = new Error("EXDEV: cross-device link not permitted");
+				// @ts-expect-error non standard property on Error
+				error.code = "EXDEV";
+				throw error;
+			});
+			await expect(
+				runWrangler("generate my-worker worker-typescript")
+			).resolves.toBeUndefined();
+
+			expect(readDirectory("my-worker")).toMatchObject<Directory>({
+				".git": expect.any(Object),
+				".gitignore": expect.any(String),
+				"README.md": expect.stringContaining("Template: worker-typescript"),
+				"package.json": expect.stringContaining("@cloudflare/workers-types"),
+				src: expect.objectContaining({
+					"index.ts": expect.any(String),
+					"index.test.ts": expect.any(String),
+				}),
+				"tsconfig.json": expect.any(String),
+				"wrangler.toml": expect.any(String),
+			});
+
+			fsMock.mockRestore();
+		});
+
+		it("mocks an error thrown", async () => {
+			const fsMock = jest.spyOn(fs, "renameSync").mockImplementation(() => {
+				// Simulate a different error to what we get if we use renameSync across different Windows drives.
+				const error = new Error("something");
+				// @ts-expect-error non standard property on Error
+				error.code = "unknown";
+				throw error;
+			});
+
+			await expect(
+				runWrangler("generate my-worker worker-typescript")
+			).rejects.toThrow();
+
+			fsMock.mockRestore();
+		});
 	});
 });
 
