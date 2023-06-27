@@ -171,6 +171,7 @@ export const selectInput = async (opts: SelectOptions) => {
 type ConfirmOptions = {
 	question: string;
 	renderSubmitted: (value: boolean) => string;
+	initialValue?: boolean;
 	defaultValue?: boolean;
 	acceptDefault: boolean | undefined; // must be specified, but can be undefined (≈ false)
 	activeText?: string;
@@ -185,8 +186,10 @@ export const confirmInput = async (opts: ConfirmOptions) => {
 		question,
 		renderSubmitted,
 		defaultValue = true,
+		initialValue,
 		acceptDefault,
 	} = opts;
+
 	const helpText = opts.helpText || `(y/n)`;
 	const active = activeText || "Yes";
 	const inactive = inactiveText || "No";
@@ -218,11 +221,11 @@ export const confirmInput = async (opts: ConfirmOptions) => {
 
 	let value: boolean;
 
-	if (acceptDefault) {
+	if (initialValue !== undefined || acceptDefault) {
+		value = initialValue ?? defaultValue;
 		logRaw(`${leftT} ${question}`);
-		logRaw(`${grayBar} ${renderSubmitted(defaultValue)}`);
+		logRaw(`${grayBar} ${renderSubmitted(value)}`);
 		logRaw(`${grayBar}`);
-		value = defaultValue;
 	} else {
 		value = Boolean(await prompt.prompt());
 

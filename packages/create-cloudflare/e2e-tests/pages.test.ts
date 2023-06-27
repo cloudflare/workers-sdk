@@ -36,17 +36,16 @@ describe("E2E", () => {
 			framework,
 			"--no-deploy",
 			"--no-git",
-			// TODO: Don't make this the default. Create a test that exercises this option on its own
-			// "--wrangler-defaults",
 			...args,
 		];
+
+		// For debugging purposes, uncomment the following to see the exact
+		// command the test uses. You can then run this via the command line.
+		// console.log("COMMAND: ", `node ${["./dist/cli.js", ...argv].join(" ")}`);
 
 		const result = await execa("node", ["./dist/cli.js", ...argv], {
 			stderr: process.stderr,
 		});
-		// For debugging purposes, uncomment the following to see the exact
-		// command the test uses. You can then run this via the command line.
-		// console.log("COMMAND: ", `node ${["./dist/cli.js", ...argv].join(" ")}`);
 
 		const { exitCode } = result;
 
@@ -117,5 +116,9 @@ describe("E2E", () => {
 
 	test("Vue", async () => {
 		await runCli("vue");
+	});
+
+	test("Hono (wrangler defaults)", async () => {
+		await runCli("hono", ["wrangler-defaults"]);
 	});
 });

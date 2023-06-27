@@ -69,7 +69,8 @@ export const offerToDeploy = async (ctx: PagesGeneratorContext) => {
 					ctx.framework?.config.deployCommand ?? "deploy"
 				}\``
 			)}`,
-		defaultValue: ctx.args.deploy ?? (ctx.args.wranglerDefaults ? false : true), // if --wrangler-defaults, default to false, otherwise default to true
+		initialValue: ctx.args.deploy,
+		defaultValue: ctx.args.wranglerDefaults ? false : true, // if --wrangler-defaults, default to false, otherwise default to true
 		acceptDefault: ctx.args.wranglerDefaults,
 	});
 
@@ -235,6 +236,7 @@ export const offerGit = async (ctx: PagesGeneratorContext) => {
 		renderSubmitted: (value: boolean) =>
 			`${brandColor("git")} ${dim(value ? `yes` : `no`)}`,
 		defaultValue: true,
+		initialValue: ctx.args.git,
 		acceptDefault: ctx.args.wranglerDefaults,
 	});
 
