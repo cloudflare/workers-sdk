@@ -733,8 +733,8 @@ export class Miniflare {
 	};
 
 	#startLoopbackServer(
-		port: string | number,
-		hostname?: string
+		port: number,
+		hostname: string
 	): Promise<StoppableServer> {
 		return new Promise((resolve) => {
 			const server = stoppable(
@@ -742,7 +742,7 @@ export class Miniflare {
 				/* grace */ 0
 			);
 			server.on("upgrade", this.#handleLoopbackUpgrade);
-			server.listen(port as any, hostname, () => resolve(server));
+			server.listen(port, hostname, () => resolve(server));
 		});
 	}
 
