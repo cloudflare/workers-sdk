@@ -2,7 +2,12 @@ import cookie from "cookie";
 import { Toucan } from "toucan-js";
 
 class HttpError extends Error {
-	constructor(message: string, readonly status: number) {
+	constructor(
+		message: string,
+		readonly status: number,
+		// Only report errors to sentry when they represent actionable errors
+		readonly reportable: boolean
+	) {
 		super(message);
 		Object.setPrototypeOf(this, new.target.prototype);
 	}
@@ -12,7 +17,13 @@ class HttpError extends Error {
 				error: this.name,
 				message: this.message,
 			},
-			{ status: this.status }
+			{
+				status: this.status,
+				headers: {
+					"Access-Control-Allow-Origin": "*",
+					"Access-Control-Allow-Method": "GET,PUT,POST",
+				},
+			}
 		);
 	}
 
@@ -22,8 +33,8 @@ class HttpError extends Error {
 }
 
 class NoExchangeUrl extends HttpError {
-	constructor() {
-		super("No exchange_url provided", 400);
+	constructor(reportable: boolean) {
+		super("No exchange_url provided", 400, reportable);
 	}
 }
 
@@ -31,9 +42,10 @@ class ExchangeFailed extends HttpError {
 	constructor(
 		readonly url: string,
 		readonly exchangeStatus: number,
-		readonly body: string
+		readonly body: string,
+		reportable: boolean
 	) {
-		super("Exchange failed", 400);
+		super("Exchange failed", 400, reportable);
 	}
 
 	get data(): { url: string; status: number; body: string } {
@@ -42,20 +54,23 @@ class ExchangeFailed extends HttpError {
 }
 
 class TokenUpdateFailed extends HttpError {
-	constructor() {
-		super("Provide token, prewarmUrl and remote", 400);
+	constructor(reportable: boolean) {
+		super("Provide token, prewarmUrl and remote", 400, reportable);
 	}
 }
 
 class RawHttpFailed extends HttpError {
-	constructor() {
-		super("Provide token, and remote", 400);
+	constructor(reportable: boolean) {
+		super("Provide token, and remote", 400, reportable);
 	}
 }
 
 class PreviewRequestFailed extends HttpError {
-	constructor() {
-		super("Provide token, and remote", 400);
+	constructor(private tokenId: string, reportable: boolean) {
+		super("Token and remote not found", 400, reportable);
+	}
+	get data(): { tokenId: string } {
+		return { tokenId: this.tokenId };
 	}
 }
 
@@ -121,7 +136,8 @@ async function handleRequest(
 		(await env.TOKEN_LOOKUP.get(tokenId)) ?? "{}"
 	);
 	if (!token || !remote) {
-		throw new PreviewRequestFailed();
+		// Report this error if a tokenId was provided
+		throw new PreviewRequestFailed(tokenId, !!tokenId);
 	}
 
 	const original = await fetch(
@@ -167,7 +183,7 @@ async function handleRawHttp(request: Request, url: URL) {
 	const token = request.headers.get("X-CF-Token");
 	const remote = request.headers.get("X-CF-Remote");
 	if (!token || !remote) {
-		throw new RawHttpFailed();
+		throw new RawHttpFailed(false);
 	}
 
 	const workerResponse = await fetch(
@@ -222,7 +238,7 @@ async function updatePreviewToken(url: URL, env: Env, ctx: ExecutionContext) {
 	const remote = url.searchParams.get("remote");
 	// return Response.json([...url.searchParams.entries()]);
 	if (!token || !prewarmUrl || !remote) {
-		throw new TokenUpdateFailed();
+		throw new TokenUpdateFailed(false);
 	}
 
 	ctx.waitUntil(
@@ -267,7 +283,7 @@ async function updatePreviewToken(url: URL, env: Env, ctx: ExecutionContext) {
 async function handleTokenExchange(url: URL) {
 	const exchangeUrl = url.searchParams.get("exchange_url");
 	if (!exchangeUrl) {
-		throw new NoExchangeUrl();
+		throw new NoExchangeUrl(false);
 	}
 	const exchangeRes = await fetch(exchangeUrl);
 	if (exchangeRes.status !== 200) {
@@ -278,7 +294,8 @@ async function handleTokenExchange(url: URL) {
 		throw new ExchangeFailed(
 			exchange.href,
 			exchangeRes.status,
-			await exchangeRes.text()
+			await exchangeRes.text(),
+			true
 		);
 	}
 	const session = await exchangeRes.json<{
@@ -295,7 +312,8 @@ async function handleTokenExchange(url: URL) {
 		throw new ExchangeFailed(
 			exchange.href,
 			exchangeRes.status,
-			JSON.stringify(session)
+			JSON.stringify(session),
+			true
 		);
 	}
 	return Response.json(session, {
@@ -341,9 +359,8 @@ export default {
 		} catch (e) {
 			console.error(e);
 			if (e instanceof HttpError) {
-				sentry.captureException(e, {
-					data: { ...e.data },
-				});
+				sentry.setContext("extra_details", e.data);
+				sentry.captureException(e);
 				return e.toResponse();
 			} else {
 				sentry.captureException(e);
