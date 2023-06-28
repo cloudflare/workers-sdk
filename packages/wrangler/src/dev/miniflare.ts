@@ -10,6 +10,7 @@ import {
 	Mutex,
 	Miniflare,
 } from "miniflare";
+import { getHttpsOptions } from "../https-options";
 import { logger } from "../logger";
 import { ModuleTypeToRuleType } from "../module-collection";
 import type { Config } from "../config";
@@ -371,11 +372,6 @@ async function buildMiniflareOptions(
 	log: Log,
 	config: ConfigBundle
 ): Promise<{ options: MiniflareOptions; internalObjects: CfDurableObject[] }> {
-	if (config.localProtocol === "https") {
-		logger.warn(
-			"Miniflare 3 does not support HTTPS servers yet, starting an HTTP server instead..."
-		);
-	}
 	if (config.crons.length > 0) {
 		logger.warn("Miniflare 3 does not support CRON triggers yet, ignoring...");
 	}
@@ -391,6 +387,15 @@ async function buildMiniflareOptions(
 	const sitesOptions = buildSitesOptions(config);
 	const persistOptions = buildPersistOptions(config);
 
+	let httpsOptions: { httpsKey: string; httpsCert: string } | undefined;
+	if (config.localProtocol === "https") {
+		const cert = await getHttpsOptions();
+		httpsOptions = {
+			httpsKey: cert.key,
+			httpsCert: cert.cert,
+		};
+	}
+
 	const options: MiniflareOptions = {
 		host: config.initialIp,
 		port: config.initialPort,
@@ -400,6 +405,8 @@ async function buildMiniflareOptions(
 
 		log,
 		verbose: logger.loggerLevel === "debug",
+
+		...httpsOptions,
 
 		...persistOptions,
 		workers: [
