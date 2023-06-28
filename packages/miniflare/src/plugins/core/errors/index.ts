@@ -177,7 +177,7 @@ function getSourceMappedStack(
 		const sourceMapFile = maybeGetDiskFile(sourceMapPath);
 		if (sourceMapFile === undefined) return null;
 
-		return { map: sourceMapFile.contents };
+		return { map: sourceMapFile.contents, url: sourceMapFile.path };
 	}
 
 	return getSourceMapper()(retrieveSourceMap, error);
