@@ -3,7 +3,7 @@ import path from "path";
 import test from "ava";
 import esbuild from "esbuild";
 import { Miniflare } from "miniflare";
-import { useTmp } from "../../../test-shared";
+import { escapeRegexp, useTmp } from "../../../test-shared";
 
 const FIXTURES_PATH = path.resolve(
 	__dirname,
@@ -59,11 +59,14 @@ test("source maps workers", async (t) => {
 	let error = await t.throwsAsync(mf.dispatchFetch("http://localhost"), {
 		message: "unnamed",
 	});
-	t.regex(String(error?.stack), /service-worker\.ts:6:17/);
+	const serviceWorkerEntryRegexp = escapeRegexp(
+		`${SERVICE_WORKER_ENTRY_PATH}:6:17`
+	);
+	t.regex(String(error?.stack), serviceWorkerEntryRegexp);
 	error = await t.throwsAsync(mf.dispatchFetch("http://localhost/a"), {
 		message: "a",
 	});
-	t.regex(String(error?.stack), /service-worker\.ts:6:17/);
+	t.regex(String(error?.stack), serviceWorkerEntryRegexp);
 
 	// Check modules workers source mapped
 	await mf.setOptions({
@@ -120,26 +123,28 @@ test("source maps workers", async (t) => {
 	error = await t.throwsAsync(mf.dispatchFetch("http://localhost"), {
 		message: "unnamed",
 	});
-	t.regex(String(error?.stack), /modules\.ts:5:19/);
+	const modulesEntryRegexp = escapeRegexp(`${MODULES_ENTRY_PATH}:5:19`);
+	t.regex(String(error?.stack), modulesEntryRegexp);
 	error = await t.throwsAsync(mf.dispatchFetch("http://localhost/a"), {
 		message: "a",
 	});
-	t.regex(String(error?.stack), /modules\.ts:5:19/);
+	t.regex(String(error?.stack), modulesEntryRegexp);
 	error = await t.throwsAsync(mf.dispatchFetch("http://localhost/b"), {
 		message: "b",
 	});
-	t.regex(String(error?.stack), /modules\.ts:5:19/);
+	t.regex(String(error?.stack), modulesEntryRegexp);
 	error = await t.throwsAsync(mf.dispatchFetch("http://localhost/c"), {
 		message: "c",
 	});
-	t.regex(String(error?.stack), /modules\.ts:5:19/);
+	t.regex(String(error?.stack), modulesEntryRegexp);
 	error = await t.throwsAsync(mf.dispatchFetch("http://localhost/d"), {
 		message: "d",
 	});
-	t.regex(String(error?.stack), /modules\.ts:5:19/);
+	t.regex(String(error?.stack), modulesEntryRegexp);
 	error = await t.throwsAsync(mf.dispatchFetch("http://localhost/e"), {
 		instanceOf: TypeError,
 		message: "Dependency error",
 	});
-	t.regex(String(error?.stack), /nested\/dep\.ts:4:17/);
+	const nestedRegexp = escapeRegexp(`${DEP_ENTRY_PATH}:4:17`);
+	t.regex(String(error?.stack), nestedRegexp);
 });
