@@ -33,8 +33,8 @@ class HttpError extends Error {
 }
 
 class NoExchangeUrl extends HttpError {
-	constructor(reportable: boolean) {
-		super("No exchange_url provided", 400, reportable);
+	constructor() {
+		super("No exchange_url provided", 400, false);
 	}
 }
 
@@ -42,10 +42,9 @@ class ExchangeFailed extends HttpError {
 	constructor(
 		readonly url: string,
 		readonly exchangeStatus: number,
-		readonly body: string,
-		reportable: boolean
+		readonly body: string
 	) {
-		super("Exchange failed", 400, reportable);
+		super("Exchange failed", 400, true);
 	}
 
 	get data(): { url: string; status: number; body: string } {
@@ -54,14 +53,14 @@ class ExchangeFailed extends HttpError {
 }
 
 class TokenUpdateFailed extends HttpError {
-	constructor(reportable: boolean) {
-		super("Provide token, prewarmUrl and remote", 400, reportable);
+	constructor() {
+		super("Provide token, prewarmUrl and remote", 400, false);
 	}
 }
 
 class RawHttpFailed extends HttpError {
-	constructor(reportable: boolean) {
-		super("Provide token, and remote", 400, reportable);
+	constructor() {
+		super("Provide token, and remote", 400, false);
 	}
 }
 
@@ -183,7 +182,7 @@ async function handleRawHttp(request: Request, url: URL) {
 	const token = request.headers.get("X-CF-Token");
 	const remote = request.headers.get("X-CF-Remote");
 	if (!token || !remote) {
-		throw new RawHttpFailed(false);
+		throw new RawHttpFailed();
 	}
 
 	const workerResponse = await fetch(
@@ -238,7 +237,7 @@ async function updatePreviewToken(url: URL, env: Env, ctx: ExecutionContext) {
 	const remote = url.searchParams.get("remote");
 	// return Response.json([...url.searchParams.entries()]);
 	if (!token || !prewarmUrl || !remote) {
-		throw new TokenUpdateFailed(false);
+		throw new TokenUpdateFailed();
 	}
 
 	ctx.waitUntil(
@@ -283,7 +282,7 @@ async function updatePreviewToken(url: URL, env: Env, ctx: ExecutionContext) {
 async function handleTokenExchange(url: URL) {
 	const exchangeUrl = url.searchParams.get("exchange_url");
 	if (!exchangeUrl) {
-		throw new NoExchangeUrl(false);
+		throw new NoExchangeUrl();
 	}
 	const exchangeRes = await fetch(exchangeUrl);
 	if (exchangeRes.status !== 200) {
@@ -294,8 +293,7 @@ async function handleTokenExchange(url: URL) {
 		throw new ExchangeFailed(
 			exchange.href,
 			exchangeRes.status,
-			await exchangeRes.text(),
-			true
+			await exchangeRes.text()
 		);
 	}
 	const session = await exchangeRes.json<{
@@ -312,8 +310,7 @@ async function handleTokenExchange(url: URL) {
 		throw new ExchangeFailed(
 			exchange.href,
 			exchangeRes.status,
-			JSON.stringify(session),
-			true
+			JSON.stringify(session)
 		);
 	}
 	return Response.json(session, {
