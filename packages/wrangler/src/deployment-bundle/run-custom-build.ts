@@ -50,7 +50,7 @@ function assertEntryPointExists(
 	expectedEntryRelative: string,
 	errorMessage: string
 ) {
-	if (fileExists(expectedEntryAbsolute) === false) {
+	if (!fileExists(expectedEntryAbsolute)) {
 		throw new Error(
 			getMissingEntryPointMessage(
 				errorMessage,
