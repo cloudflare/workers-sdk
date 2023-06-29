@@ -20,11 +20,10 @@ import {
 	runCommands,
 	wranglerLogin,
 } from "helpers/command";
-import { confirmInput, selectInput, spinner } from "helpers/interactive";
+import { inputPrompt, processArgument, spinner } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
 import { poll } from "helpers/poll";
-import type { Option } from "helpers/interactive";
-import type { PagesGeneratorArgs, PagesGeneratorContext } from "types";
+import type { C3Args, PagesGeneratorContext } from "types";
 
 const { npm } = detectPackageManager();
 
@@ -38,7 +37,7 @@ export const validateProjectDirectory = (relativePath: string) => {
 	}
 };
 
-export const setupProjectDirectory = (args: PagesGeneratorArgs) => {
+export const setupProjectDirectory = (args: C3Args) => {
 	// Crash if the directory already exists
 	const path = resolve(args.projectName);
 	const err = validateProjectDirectory(path);
@@ -61,17 +60,15 @@ export const setupProjectDirectory = (args: PagesGeneratorArgs) => {
 export const offerToDeploy = async (ctx: PagesGeneratorContext) => {
 	startSection(`Deploy with Cloudflare`, `Step 3 of 3`);
 
-	ctx.args.deploy = await confirmInput({
+	const label = `deploy via \`${npm} run ${
+		ctx.framework?.config.deployCommand ?? "deploy"
+	}\``;
+
+	ctx.args.deploy = await processArgument(ctx.args, "deploy", {
+		type: "confirm",
 		question: "Do you want to deploy your application?",
-		renderSubmitted: (value: boolean) =>
-			`${brandColor(value ? `yes` : `no`)} ${dim(
-				`deploying via \`${npm} run ${
-					ctx.framework?.config.deployCommand ?? "deploy"
-				}\``
-			)}`,
-		initialValue: ctx.args.deploy,
-		defaultValue: ctx.args.wranglerDefaults ? false : true, // if --wrangler-defaults, default to false, otherwise default to true
-		acceptDefault: ctx.args.wranglerDefaults,
+		label,
+		defaultValue: true,
 	});
 
 	if (!ctx.args.deploy) return;
@@ -137,14 +134,12 @@ export const chooseAccount = async (ctx: PagesGeneratorContext) => {
 			value: id,
 		}));
 
-		accountId = await selectInput({
+		accountId = await inputPrompt({
+			type: "select",
 			question: "Which account do you want to use?",
 			options: accountOptions,
-			renderSubmitted: (option: Option) => {
-				return `${brandColor("account")} ${dim(option.label)}`;
-			},
+			label: "account",
 			defaultValue: accountOptions[0].value,
-			acceptDefault: ctx.args.wranglerDefaults,
 		});
 	}
 	const accountName = Object.keys(accounts).find(
@@ -231,13 +226,11 @@ export const offerGit = async (ctx: PagesGeneratorContext) => {
 
 	if (insideGitRepo) return;
 
-	ctx.args.git ??= await confirmInput({
+	ctx.args.git = await processArgument(ctx.args, "git", {
+		type: "confirm",
 		question: "Do you want to use git for version control?",
-		renderSubmitted: (value: boolean) =>
-			`${brandColor("git")} ${dim(value ? `yes` : `no`)}`,
+		label: "git",
 		defaultValue: true,
-		initialValue: ctx.args.git,
-		acceptDefault: ctx.args.wranglerDefaults,
 	});
 
 	if (ctx.args.git) {

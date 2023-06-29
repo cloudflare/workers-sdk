@@ -9,7 +9,7 @@ import {
 	npmInstall,
 	runCommand,
 } from "helpers/command";
-import { confirmInput, textInput } from "helpers/interactive";
+import { processArgument } from "helpers/interactive";
 import {
 	chooseAccount,
 	gitCommit,
@@ -19,12 +19,9 @@ import {
 	runDeploy,
 	setupProjectDirectory,
 } from "./common";
-import type {
-	PagesGeneratorArgs as Args,
-	PagesGeneratorContext as Context,
-} from "types";
+import type { C3Args, PagesGeneratorContext as Context } from "types";
 
-export const runWorkersGenerator = async (args: Args) => {
+export const runWorkersGenerator = async (args: C3Args) => {
 	const { name, path } = setupProjectDirectory(args);
 
 	const ctx: Context = {
@@ -52,12 +49,11 @@ export const runWorkersGenerator = async (args: Args) => {
 
 async function getTemplate(ctx: Context) {
 	if (ctx.args.ts === undefined) {
-		ctx.args.ts = await confirmInput({
+		ctx.args.ts = await processArgument<boolean>(ctx.args, "ts", {
+			type: "confirm",
 			question: "Do you want to use TypeScript?",
-			renderSubmitted: (value) =>
-				`${brandColor("typescript")} ${dim(`${value ? "yes" : "no"}`)}`,
+			label: "typescript",
 			defaultValue: true,
-			acceptDefault: ctx.args.wranglerDefaults,
 		});
 	}
 
@@ -91,14 +87,17 @@ async function copyExistingWorkerFiles(ctx: Context) {
 		await chooseAccount(ctx);
 
 		if (ctx.args.existingScript === undefined) {
-			ctx.args.existingScript = await textInput({
-				question:
-					"Please specify the name of the existing worker in this account?",
-				renderSubmitted: (value) =>
-					`${brandColor("worker")} ${dim(`"${value}"`)}`,
-				defaultValue: ctx.project.name,
-				acceptDefault: ctx.args.wranglerDefaults,
-			});
+			ctx.args.existingScript = await processArgument<string>(
+				ctx.args,
+				"existingScript",
+				{
+					type: "text",
+					question:
+						"Please specify the name of the existing worker in this account?",
+					label: "worker",
+					defaultValue: ctx.project.name,
+				}
+			);
 		}
 
 		// `wrangler init --from-dash` bails if you opt-out of creating a package.json

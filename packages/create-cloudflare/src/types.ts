@@ -1,22 +1,25 @@
 import type { FrameworkMap } from "frameworks/index";
+// import { parseArgs } from "./cli";
 
 export type FrameworkName = keyof typeof FrameworkMap;
 
-export type PagesGeneratorArgs = {
+export type C3Args = {
 	projectName: string;
 	type: string;
 	framework?: string;
 	frameworkChoices?: FrameworkName[];
 	deploy?: boolean;
 	ts?: boolean;
-	open: boolean;
+	open?: boolean;
 	git?: boolean;
 	existingScript?: string;
 	wranglerDefaults?: boolean;
 };
 
+export type C3Arg = C3Args[keyof C3Args];
+
 export type PagesGeneratorContext = {
-	args: PagesGeneratorArgs;
+	args: C3Args;
 	deployedUrl?: string;
 	account?: {
 		id: string;
