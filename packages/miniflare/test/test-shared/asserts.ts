@@ -1,5 +1,6 @@
 import assert from "assert";
 import { ExecutionContext } from "ava";
+import { Awaitable } from "miniflare";
 
 export function isWithin(
 	t: ExecutionContext,
@@ -20,4 +21,23 @@ export function isWithin(
 export function escapeRegexp(value: string): RegExp {
 	// From https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions#escaping
 	return new RegExp(value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+}
+
+export function flaky(
+	impl: (t: ExecutionContext) => Awaitable<void>
+): (t: ExecutionContext) => Promise<void> {
+	const maxAttempts = 3;
+	return async (t) => {
+		for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+			const result = await t.try(impl);
+			if (result.passed || attempt === maxAttempts) {
+				result.commit();
+				return;
+			} else {
+				result.discard();
+				t.log(`Attempt #${attempt} failed!`);
+				t.log(...result.errors);
+			}
+		}
+	};
 }

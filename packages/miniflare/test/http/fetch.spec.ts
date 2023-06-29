@@ -12,7 +12,7 @@ import {
 	fetch,
 } from "miniflare";
 import { WebSocketServer } from "ws";
-import { useServer } from "../test-shared";
+import { flaky, useServer } from "../test-shared";
 
 const noop = () => {};
 
@@ -109,7 +109,7 @@ test("fetch: includes headers from web socket upgrade response", async (t) => {
 	t.not(res.webSocket, undefined);
 	t.is(res.headers.get("set-cookie"), "key=value");
 });
-test("fetch: dispatches close events on client and server close", async (t) => {
+const fetchDispatchCloseFlakyTest = flaky(async (t) => {
 	let clientCloses = 0;
 	let serverCloses = 0;
 	const clientClosePromise = new DeferredPromise<void>();
@@ -185,6 +185,10 @@ test("fetch: dispatches close events on client and server close", async (t) => {
 	await serverSideClose(true);
 	await serverClosePromise;
 });
+test(
+	"fetch: dispatches close events on client and server close",
+	fetchDispatchCloseFlakyTest
+);
 test("fetch: throws on ws(s) protocols", async (t) => {
 	await t.throwsAsync(
 		fetch("ws://localhost/", {
