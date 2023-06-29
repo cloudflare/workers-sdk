@@ -1,3 +1,4 @@
+import { test, expect } from "vitest";
 // Snapshot values
 const maxDynamicRedirectRules = 100;
 const maxLineLength = 2000;
@@ -165,9 +166,9 @@ test("parseRedirects should reject a combination of lots of static and dynamic r
 			.map((_, i) => `/a/${i} /b/${i}`)
 			.join("\n")}
       ${Array(maxDynamicRedirectRules + 50)
-				.fill(undefined)
-				.map((_, i) => `/a/${i}/* /b/${i}/:splat`)
-				.join("\n")}
+			.fill(undefined)
+			.map((_, i) => `/a/${i}/* /b/${i}/:splat`)
+			.join("\n")}
     # BUT DO GET COUNTED AS TOTAL LINES SKIPPED
   `;
 

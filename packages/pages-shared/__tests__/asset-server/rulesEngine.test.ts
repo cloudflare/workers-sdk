@@ -1,3 +1,4 @@
+import { describe, test, expect } from "vitest";
 import { generateRulesMatcher, replacer } from "../../asset-server/rulesEngine";
 
 describe("rules engine", () => {
@@ -71,25 +72,25 @@ describe("rules engine", () => {
 });
 
 describe("replacer", () => {
-	it("should replace splats", () => {
+	test("should replace splats", () => {
 		expect(replacer("/blog/:splat", { splat: "look/a/value" })).toEqual(
 			"/blog/look/a/value"
 		);
 	});
 
-	it("should replace placeholders", () => {
+	test("should replace placeholders", () => {
 		expect(
 			replacer("/:code/:name.jpg", { name: "tricycle", code: "123" })
 		).toEqual("/123/tricycle.jpg");
 	});
 
-	it("should replace splats and placeholders", () => {
+	test("should replace splats and placeholders", () => {
 		expect(
 			replacer("/:code/:splat", { splat: "tricycle/images", code: "123" })
 		).toEqual("/123/tricycle/images");
 	});
 
-	it("should replace all instances of placeholders", () => {
+	test("should replace all instances of placeholders", () => {
 		expect(
 			replacer(
 				"Link: </assets/:value/main.js>; rel=preload; as=script, </assets/:value/lang.js>; rel=preload; as=script",
