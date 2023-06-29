@@ -1,3 +1,4 @@
+import http from "http";
 import path from "path";
 import {
 	Colorize,
@@ -144,11 +145,10 @@ export type ResponseInfo = z.infer<typeof ResponseInfoSchema>;
 export async function formatResponse(info: ResponseInfo) {
 	const url = new URL(info.url);
 
+	const statusText = info.statusText.trim() || http.STATUS_CODES[info.status];
 	const lines = [
 		`${bold(info.method)} ${url.pathname} `,
-		colourFromHTTPStatus(info.status)(
-			`${bold(info.status)} ${info.statusText} `
-		),
+		colourFromHTTPStatus(info.status)(`${bold(info.status)} ${statusText} `),
 		grey(`(${info.time}ms)`),
 	];
 	return reset(lines.join(""));
