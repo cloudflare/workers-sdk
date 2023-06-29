@@ -23,7 +23,7 @@ export function configProviderPlugin(
 	config: Record<string, Record<string, unknown>>
 ): Plugin {
 	return {
-		name: "middleware config provider",
+		name: "middleware config provider plugin",
 		setup(build) {
 			build.onResolve({ filter: /^config:/ }, (args) => ({
 				path: args.path,
