@@ -1,3 +1,4 @@
+import { test, expect } from "vitest";
 // Snapshot values
 const maxDynamicRedirectRules = 100;
 const maxLineLength = 2000;
