@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import dedent from "ts-dedent";
-import traverseModuleGraph from "../traverse-module-graph";
+import traverseModuleGraph from "../deployment-bundle/traverse-module-graph";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import type { ConfigModuleRuleType } from "../config";

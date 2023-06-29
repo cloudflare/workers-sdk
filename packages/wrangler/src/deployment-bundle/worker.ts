@@ -1,23 +1,5 @@
-import type { Environment } from "./config";
-import type { Route } from "./config/environment";
-import type { ApiCredentials } from "./user";
-
-/**
- * A Cloudflare account.
- */
-
-export interface CfAccount {
-	/**
-	 * An API token.
-	 *
-	 * @link https://api.cloudflare.com/#user-api-tokens-properties
-	 */
-	apiToken: ApiCredentials;
-	/**
-	 * An account ID.
-	 */
-	accountId: string;
-}
+import type { Environment } from "../config";
+import type { Route } from "../config/environment";
 
 /**
  * The type of Worker

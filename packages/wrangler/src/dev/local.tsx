@@ -8,10 +8,10 @@ import useInspector from "../inspect";
 import { logger } from "../logger";
 import { MiniflareServer } from "./miniflare";
 import type { Config } from "../config";
+import type { CfWorkerInit, CfScriptFormat } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { AssetPaths } from "../sites";
-import type { CfWorkerInit, CfScriptFormat } from "../worker";
 import type { ConfigBundle, ReloadedEvent } from "./miniflare";
 import type { EsbuildBundle } from "./use-esbuild";
 

@@ -13,9 +13,6 @@ import {
 import { logger } from "../logger";
 import { ModuleTypeToRuleType } from "../module-collection";
 import type { Config } from "../config";
-import type { WorkerRegistry } from "../dev-registry";
-import type { LoggerLevel } from "../logger";
-import type { AssetPaths } from "../sites";
 import type {
 	CfD1Database,
 	CfDurableObject,
@@ -23,8 +20,11 @@ import type {
 	CfQueue,
 	CfR2Bucket,
 	CfScriptFormat,
-} from "../worker";
-import type { CfWorkerInit } from "../worker";
+} from "../deployment-bundle/worker";
+import type { CfWorkerInit } from "../deployment-bundle/worker";
+import type { WorkerRegistry } from "../dev-registry";
+import type { LoggerLevel } from "../logger";
+import type { AssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
 import type {
 	MiniflareOptions,

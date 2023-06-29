@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import * as fs from "node:fs";
 import { builtinModules } from "node:module";
 import * as path from "node:path";
@@ -6,14 +5,18 @@ import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
 import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
 import * as esbuild from "esbuild";
 import tmp from "tmp-promise";
-import createModuleCollector from "./module-collection";
-import { getBasePath } from "./paths";
-import { dedent } from "./utils/dedent";
-import type { Config } from "./config";
-import type { DurableObjectBindings } from "./config/environment";
-import type { WorkerRegistry } from "./dev-registry";
+import createModuleCollector from "../module-collection";
+import { getBasePath } from "../paths";
+import { dedent } from "../utils/dedent";
+import { getEntryPointFromMetafile } from "./entry-point-from-metafile";
+import { cloudflareInternalPlugin } from "./esbuild-plugins/cloudflare-internal";
+import { configProviderPlugin } from "./esbuild-plugins/config-provider";
+import { nodejsCompatPlugin } from "./esbuild-plugins/nodejs-compat";
+import type { Config } from "../config";
+import type { DurableObjectBindings } from "../config/environment";
+import type { WorkerRegistry } from "../dev-registry";
+import type { SourceMapMetadata } from "../inspect";
 import type { Entry } from "./entry";
-import type { SourceMapMetadata } from "./inspect";
 import type { CfModule } from "./worker";
 
 export const COMMON_ESBUILD_OPTIONS = {
@@ -32,7 +35,7 @@ export type BundleResult = {
 	sourceMapMetadata?: SourceMapMetadata | undefined;
 };
 
-type StaticAssetsConfig =
+export type StaticAssetsConfig =
 	| (Config["assets"] & {
 			bypassCache: boolean | undefined;
 	  })
@@ -104,51 +107,6 @@ export function rewriteNodeCompatBuildFailure(
 		}
 	}
 }
-
-const nodejsCompatPlugin: esbuild.Plugin = {
-	name: "nodejs_compat Plugin",
-	setup(pluginBuild) {
-		pluginBuild.onResolve({ filter: /node:.*/ }, () => {
-			return { external: true };
-		});
-	},
-};
-
-const cloudflareJsPlugin: esbuild.Plugin = {
-	name: "cloudflare javascript Plugin",
-	setup(pluginBuild) {
-		pluginBuild.onResolve({ filter: /^cloudflare:.*/ }, () => {
-			return { external: true };
-		});
-	},
-};
-
-// Supports imports like import { SOME_CONFIG } from config:middleware/json
-const configProviderPlugin: (
-	config: Record<string, Record<string, unknown>>
-) => esbuild.Plugin = (config) => ({
-	name: "middleware config provider",
-	setup(build) {
-		build.onResolve({ filter: /^config:/ }, (args) => ({
-			path: args.path,
-			namespace: "wrangler-config",
-		}));
-
-		build.onLoad(
-			{ filter: /.*/, namespace: "wrangler-config" },
-			async (args) => {
-				const middleware = args.path.split("config:middleware/")[1];
-				if (!config[middleware]) {
-					throw new Error(`No config found for ${middleware}`);
-				}
-				return {
-					loader: "json",
-					contents: JSON.stringify(config[middleware]),
-				};
-			}
-		);
-	},
-});
 
 /**
  * Generate a bundle for the worker identified by the arguments passed in.
@@ -408,7 +366,7 @@ export async function bundleWorker(
 				? [NodeGlobalsPolyfills({ buffer: true }), NodeModulesPolyfills()]
 				: []),
 			...(nodejsCompat ? [nodejsCompatPlugin] : []),
-			...[cloudflareJsPlugin],
+			...[cloudflareInternalPlugin],
 			...(plugins || []),
 			configProviderPlugin(
 				Object.fromEntries(
@@ -436,23 +394,8 @@ export async function bundleWorker(
 		throw e;
 	}
 
-	const entryPointOutputs = Object.entries(result.metafile.outputs).filter(
-		([_path, output]) => output.entryPoint !== undefined
-	);
-	assert(
-		entryPointOutputs.length > 0,
-		`Cannot find entry-point "${entry.file}" in generated bundle.` +
-			listEntryPoints(entryPointOutputs)
-	);
-	assert(
-		entryPointOutputs.length < 2,
-		"More than one entry-point found for generated bundle." +
-			listEntryPoints(entryPointOutputs)
-	);
-
-	const { exports: entryPointExports, inputs: dependencies } =
-		entryPointOutputs[0][1];
-	const bundleType = entryPointExports.length > 0 ? "esm" : "commonjs";
+	const entryPoint = getEntryPointFromMetafile(entry.file, result.metafile);
+	const bundleType = entryPoint.exports.length > 0 ? "esm" : "commonjs";
 
 	const sourceMapPath = Object.keys(result.metafile.outputs).filter((_path) =>
 		_path.includes(".map")
@@ -460,7 +403,7 @@ export async function bundleWorker(
 
 	const resolvedEntryPointPath = path.resolve(
 		entry.directory,
-		entryPointOutputs[0][0]
+		entryPoint.relativePath
 	);
 
 	// A collision between additionalModules and moduleCollector.modules is incredibly unlikely because moduleCollector hashes the modules it collects.
@@ -482,7 +425,7 @@ export async function bundleWorker(
 
 	return {
 		modules,
-		dependencies,
+		dependencies: entryPoint.dependencies,
 		resolvedEntryPointPath,
 		bundleType,
 		stop: result.stop,
@@ -490,37 +433,6 @@ export async function bundleWorker(
 		sourceMapMetadata: {
 			tmpDir: tmpDir.path,
 			entryDirectory: entry.directory,
-		},
-	};
-}
-
-/**
- * A simple plugin to alias modules and mark them as external
- */
-export function esbuildAliasExternalPlugin(
-	aliases: Record<string, string>
-): esbuild.Plugin {
-	return {
-		name: "alias",
-		setup(build) {
-			build.onResolve({ filter: /.*/g }, (args) => {
-				// If it's the entrypoint, let it be as is
-				if (args.kind === "entry-point") {
-					return {
-						path: args.path,
-					};
-				}
-				// If it's not a recognised alias, then throw an error
-				if (!Object.keys(aliases).includes(args.path)) {
-					throw new Error("unrecognized module: " + args.path);
-				}
-
-				// Otherwise, return the alias
-				return {
-					path: aliases[args.path as keyof typeof aliases],
-					external: true,
-				};
-			});
 		},
 	};
 }
@@ -673,15 +585,6 @@ async function applyMiddlewareLoaderFacade(
 }
 
 /**
- * Generate a string that describes the entry-points that were identified by esbuild.
- */
-function listEntryPoints(
-	outputs: [string, ValueOf<esbuild.Metafile["outputs"]>][]
-): string {
-	return outputs.map(([_input, output]) => output.entryPoint).join("\n");
-}
-
-/**
  * Prefer modules towards the end of the array in the case of a collision by name.
  */
 export function dedupeModulesByName(modules: CfModule[]): CfModule[] {
@@ -692,9 +595,6 @@ export function dedupeModulesByName(modules: CfModule[]): CfModule[] {
 		}, {} as Record<string, CfModule>)
 	);
 }
-
-type ValueOf<T> = T[keyof T];
-
 /**
  * Process the given file path to ensure it will work on all OSes.
  *

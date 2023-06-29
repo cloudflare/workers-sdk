@@ -4,14 +4,16 @@ import path from "node:path";
 import { URLSearchParams } from "node:url";
 import chalk from "chalk";
 import tmp from "tmp-promise";
-import { bundleWorker } from "../bundle";
+import { fetchListResult, fetchResult } from "../cfetch";
+import { printBindings } from "../config";
+import { bundleWorker } from "../deployment-bundle/bundle";
 import {
 	printBundleSize,
 	printOffendingDependencies,
-} from "../bundle-reporter";
-import { fetchListResult, fetchResult } from "../cfetch";
-import { printBindings } from "../config";
-import { createWorkerUploadForm } from "../create-worker-upload-form";
+} from "../deployment-bundle/bundle-reporter";
+import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
+import traverseModuleGraph from "../deployment-bundle/traverse-module-graph";
+import { identifyD1BindingsAsBeta } from "../deployment-bundle/worker";
 import { addHyphens } from "../deployments";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
@@ -21,8 +23,6 @@ import { ParseError } from "../parse";
 import { getQueue, putConsumer } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
 import { syncAssets } from "../sites";
-import traverseModuleGraph from "../traverse-module-graph";
-import { identifyD1BindingsAsBeta } from "../worker";
 import { getZoneForRoute } from "../zones";
 import type { FetchError } from "../cfetch";
 import type { Config } from "../config";
@@ -32,10 +32,10 @@ import type {
 	ZoneNameRoute,
 	CustomDomainRoute,
 } from "../config/environment";
-import type { Entry } from "../entry";
+import type { Entry } from "../deployment-bundle/entry";
+import type { CfWorkerInit, CfPlacement } from "../deployment-bundle/worker";
 import type { PutConsumerBody } from "../queues/client";
 import type { AssetPaths } from "../sites";
-import type { CfWorkerInit, CfPlacement } from "../worker";
 
 type Props = {
 	config: Config;

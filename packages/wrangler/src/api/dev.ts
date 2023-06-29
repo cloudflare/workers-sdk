@@ -4,9 +4,9 @@ import { logger } from "../logger";
 
 import type { Environment } from "../config";
 import type { Rule } from "../config/environment";
+import type { CfModule } from "../deployment-bundle/worker";
 import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
-import type { CfModule } from "../worker";
 import type { RequestInit, Response, RequestInfo } from "undici";
 
 export interface UnstableDevOptions {

@@ -1,6 +1,7 @@
 {
 	"editor.defaultFormatter": "esbenp.prettier-vscode",
 	"cSpell.words": [
+		"Abortable",
 		"cfetch",
 		"chatgpt",
 		"clipboardy",
@@ -17,10 +18,12 @@
 		"isolinear",
 		"keyvalue",
 		"logfwdr",
+		"metafile",
 		"middlewares",
 		"Miniflare",
 		"mockpm",
 		"mrbbot",
+		"mtls",
 		"outdir",
 		"outfile",
 		"pgrep",
@@ -41,6 +44,7 @@
 		"weakset",
 		"webassemblymemory",
 		"websockets",
+		"workerd",
 		"xxhash",
 		"workerd",
 		"zjcompt"

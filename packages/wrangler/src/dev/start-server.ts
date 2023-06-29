@@ -3,24 +3,24 @@ import * as util from "node:util";
 import chalk from "chalk";
 import onExit from "signal-exit";
 import tmp from "tmp-promise";
-import { bundleWorker, dedupeModulesByName } from "../bundle";
+import { bundleWorker, dedupeModulesByName } from "../deployment-bundle/bundle";
+import { runCustomBuild } from "../deployment-bundle/run-custom-build";
+import traverseModuleGraph from "../deployment-bundle/traverse-module-graph";
 import {
 	getBoundRegisteredWorkers,
 	startWorkerRegistry,
 	stopWorkerRegistry,
 } from "../dev-registry";
-import { runCustomBuild } from "../entry";
 import { logger } from "../logger";
-import traverseModuleGraph from "../traverse-module-graph";
 import { localPropsToConfigBundle, maybeRegisterLocalWorker } from "./local";
 import { MiniflareServer } from "./miniflare";
 import { startRemoteServer } from "./remote";
 import { validateDevProps } from "./validate-dev-props";
 import type { Config } from "../config";
 import type { DurableObjectBindings } from "../config/environment";
+import type { Entry } from "../deployment-bundle/entry";
+import type { CfModule } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
-import type { Entry } from "../entry";
-import type { CfModule } from "../worker";
 import type { DevProps, DirectorySyncResult } from "./dev";
 import type { LocalProps } from "./local";
 import type { EsbuildBundle } from "./use-esbuild";
@@ -323,7 +323,7 @@ export async function startLocalServer(props: LocalProps) {
 				stop: () => {
 					abortController.abort();
 					logger.log("⎔ Shutting down local server...");
-					// Initialisation errors are also thrown asynchronously by dispose().
+					// Initialization errors are also thrown asynchronously by dispose().
 					// The `addEventListener("error")` above should've caught them though.
 					server.onDispose().catch(() => {});
 					removeMiniflareServerExitListener();

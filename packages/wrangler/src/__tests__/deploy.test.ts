@@ -9,7 +9,7 @@ import { FormData } from "undici";
 import {
 	printBundleSize,
 	printOffendingDependencies,
-} from "../bundle-reporter";
+} from "../deployment-bundle/bundle-reporter";
 import { logger } from "../logger";
 import { writeAuthConfigFile } from "../user";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -42,11 +42,11 @@ import { writeWorkerSource } from "./helpers/write-worker-source";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
 
 import type { Config } from "../config";
-import type { WorkerMetadata } from "../create-worker-upload-form";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
+import type { WorkerMetadata } from "../deployment-bundle/create-worker-upload-form";
+import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { KVNamespaceInfo } from "../kv/helpers";
 import type { PutConsumerBody } from "../queues/client";
-import type { CfWorkerInit } from "../worker";
 import type { ResponseComposition, RestContext, RestRequest } from "msw";
 
 describe("deploy", () => {

@@ -10,13 +10,13 @@ import { withErrorBoundary, useErrorHandler } from "react-error-boundary";
 import onExit from "signal-exit";
 import tmp from "tmp-promise";
 import { fetch } from "undici";
+import { runCustomBuild } from "../deployment-bundle/run-custom-build";
 import {
 	getBoundRegisteredWorkers,
 	startWorkerRegistry,
 	stopWorkerRegistry,
 	unregisterWorker,
 } from "../dev-registry";
-import { runCustomBuild } from "../entry";
 import { openInspector } from "../inspect";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
@@ -26,11 +26,11 @@ import { useEsbuild } from "./use-esbuild";
 import { validateDevProps } from "./validate-dev-props";
 import type { Config } from "../config";
 import type { Route } from "../config/environment";
+import type { Entry } from "../deployment-bundle/entry";
+import type { CfModule, CfWorkerInit } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
-import type { Entry } from "../entry";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { AssetPaths } from "../sites";
-import type { CfModule, CfWorkerInit } from "../worker";
 
 /**
  * This hooks establishes a connection with the dev registry,

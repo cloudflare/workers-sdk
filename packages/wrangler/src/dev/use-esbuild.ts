@@ -6,14 +6,14 @@ import {
 	bundleWorker,
 	dedupeModulesByName,
 	rewriteNodeCompatBuildFailure,
-} from "../bundle";
+} from "../deployment-bundle/bundle";
+import traverseModuleGraph from "../deployment-bundle/traverse-module-graph";
 import { logBuildFailure, logger } from "../logger";
-import traverseModuleGraph from "../traverse-module-graph";
 import type { Config } from "../config";
+import type { Entry } from "../deployment-bundle/entry";
+import type { CfModule } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
-import type { Entry } from "../entry";
 import type { SourceMapMetadata } from "../inspect";
-import type { CfModule } from "../worker";
 import type { WatchMode, Metafile } from "esbuild";
 
 export type EsbuildBundle = {

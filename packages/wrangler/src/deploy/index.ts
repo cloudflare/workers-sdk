@@ -1,6 +1,6 @@
 import path from "node:path";
 import { findWranglerToml, readConfig } from "../config";
-import { getEntry } from "../entry";
+import { getEntry } from "../deployment-bundle/entry";
 import {
 	getRules,
 	getScriptName,

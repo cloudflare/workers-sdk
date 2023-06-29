@@ -24,7 +24,7 @@ import type { Route, SimpleRoute, TailConsumer } from "./config/environment";
 import type {
 	WorkerMetadata,
 	WorkerMetadataBinding,
-} from "./create-worker-upload-form";
+} from "./deployment-bundle/create-worker-upload-form";
 import type { PackageManager } from "./package-manager";
 import type { PackageJSON } from "./parse";
 import type {
