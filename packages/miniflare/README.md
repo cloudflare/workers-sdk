@@ -173,6 +173,27 @@ level will be logged.
   Creates a new logger that logs nothing to the `console`, and always `throw`s
   `message`s logged at the `ERROR` level.
 
+### `interface QueueConsumerOptions`
+
+- `maxBatchSize?: number`
+
+  Maximum number of messages allowed in each batch. Defaults to `5`.
+
+- `maxBatchTimeout?: number`
+
+  Maximum number of seconds to wait for a full batch. If a message is sent, and
+  this timeout elapses, a partial batch will be dispatched. Defaults to `1`.
+
+- `maxRetries?: number`
+
+  Maximum number of times to retry dispatching a message, if handling it throws,
+  or it is explicitly retried. Defaults to `2`.
+
+- `deadLetterQueue?: string`
+
+  Name of another Queue to send a message on if it fails processing after
+  `maxRetries`. If this isn't specified, failed messages will be discarded.
+
 ### `interface WorkerOptions`
 
 Options for an individual Worker/"nanoservice". All bindings are accessible on
@@ -295,6 +316,13 @@ parameter in module format Workers.
     handler. This allows you to access data and functions defined in Node.js
     from your Worker.
 
+- `routes?: string[]`
+
+  Array of route patterns for this Worker. These follow the same
+  [routing rules](https://developers.cloudflare.com/workers/platform/triggers/routes/#matching-behavior)
+  as deployed Workers. If no routes match, Miniflare will fallback to the Worker
+  defined first.
+
 #### Cache
 
 - `cache?: boolean`
@@ -366,7 +394,25 @@ parameter in module format Workers.
   ID with different binding names. If a `string[]` of binding names is
   specified, the binding name and database ID are assumed to be the same.
 
-#### Analytics Engine and Queues
+#### Queues
+
+> :warning: Queues are only supported with Node.js 18 or above.
+
+- `queueProducers?: Record<string, string> | string[]`
+
+  Record mapping binding name to queue names to inject as `WorkerQueue` bindings
+  into this Worker. Different Workers may bind to the same queue name with
+  different binding names. If a `string[]` of binding names is specified, the
+  binding name and queue name are assumed to be the same.
+
+- `queueConsumers?: Record<string, QueueConsumerOptions> | string[]`
+
+  Record mapping queue name to consumer options. Messages enqueued on the
+  corresponding queues will be dispatched to this Worker. Note each queue can
+  have at most one consumer. If a `string[]` of queue names is specified,
+  default consumer options will be used.
+
+#### Analytics Engine
 
 _Not yet supported_
 
@@ -387,6 +433,45 @@ Options shared between all Workers/"nanoservices".
   specified port is in use, Miniflare throws an error, rather than attempting to
   find a free port.
 
+- `https?: boolean`
+
+  If `true`, start an HTTPS server using a pre-generated self-signed certificate
+  for `localhost`. Note this certificate is not valid for any other hostnames or
+  IP addresses. If you need to access the HTTPS server from another device,
+  you'll need to generate your own certificate and use the other `https*`
+  options below.
+
+  ```shell
+  $ openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 365 -out cert.pem
+  ```
+
+  ```js
+  new Miniflare({
+  	httpsKeyPath: "key.pem",
+  	httpsCertPath: "cert.pem",
+  });
+  ```
+
+- `httpsKey?: string`
+
+  When one of `httpsCert` or `httpCertPath` is also specified, starts an HTTPS
+  server using the value of this option as the PEM encoded private key.
+
+- `httpsKeyPath?: string`
+
+  When one of `httpsCert` or `httpCertPath` is also specified, starts an HTTPS
+  server using the PEM encoded private key stored at this file path.
+
+- `httpsCert?: string`
+
+  When one of `httpsKey` or `httpsKeyPath` is also specified, starts an HTTPS
+  server using the value of this option as the PEM encoded certificate chain.
+
+- `httpsCertPath?: string`
+
+  When one of `httpsKey` or `httpsKeyPath` is also specified, starts an HTTPS
+  server using the PEM encoded certificate chain stored at this file path.
+
 - `inspectorPort?: number`
 
   Port that `workerd` should start a DevTools inspector server on. Visit
@@ -403,6 +488,13 @@ Options shared between all Workers/"nanoservices".
 
   Logger implementation for Miniflare's errors, warnings and informative
   messages.
+
+- `upstream?: string`
+
+  URL to use as the origin for incoming requests. If specified, all incoming
+  `request.url`s will be rewritten to start with this string. This is especially
+  useful when testing Workers that act as a proxy, and not as origins
+  themselves.
 
 - `cf?: boolean | string | Record<string, any>`
 
