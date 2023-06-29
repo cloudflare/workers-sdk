@@ -114,11 +114,12 @@ function getMissingEntryPointMessage(
  */
 
 function fileExists(filePath: string): boolean {
+	const SOURCE_FILE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx"];
 	if (path.extname(filePath) !== "") {
 		return existsSync(filePath);
 	}
 	const base = path.join(path.dirname(filePath), path.basename(filePath));
-	for (const ext of [".ts", ".tsx", ".js", ".jsx"]) {
+	for (const ext of SOURCE_FILE_EXTENSIONS) {
 		if (existsSync(base + ext)) {
 			return true;
 		}
