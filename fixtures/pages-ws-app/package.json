@@ -16,7 +16,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "*",
-		"miniflare": "^3.0.2",
+		"miniflare": "0.20230628.0",
 		"wrangler": "*",
 		"ws": "^8.8.0"
 	},
