@@ -5,8 +5,7 @@
 [`workerd`](https://github.com/cloudflare/workerd).
 
 > :warning: Miniflare 3 is API-only, and does not expose a CLI. Use Wrangler
-> with `wrangler dev --experimental-local` to develop your Workers locally with
-> Miniflare 3.
+> with `wrangler dev` to develop your Workers locally with Miniflare 3.
 
 ## Quick Start
 
@@ -523,8 +522,7 @@ Options shared between all Workers/"nanoservices".
 
 - `durableObjectsPersist?: Persistence`
 
-  _Not yet supported_, Miniflare will throw if this is truthy and Durable Object
-  bindings are specified.
+  Where to persist data stored in Durable Objects. See docs for `Persistence`.
 
 - `kvPersist?: Persistence`
 
@@ -538,7 +536,7 @@ Options shared between all Workers/"nanoservices".
 
   Where to persist data stored in D1 databases. See docs for `Persistence`.
 
-#### Analytics Engine and Queues
+#### Analytics Engine
 
 _Not yet supported_
 
