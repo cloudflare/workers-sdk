@@ -1,12 +1,15 @@
 import { URL } from "node:url";
 import { fetch } from "undici";
-import { fetchResult } from "./cfetch";
-import { createWorkerUploadForm } from "./deployment-bundle/create-worker-upload-form";
-import { logger } from "./logger";
-import { parseJSON } from "./parse";
-import { getAccessToken } from "./user/access";
-import type { CfWorkerContext, CfWorkerInit } from "./deployment-bundle/worker";
-import type { ApiCredentials } from "./user";
+import { fetchResult } from "../cfetch";
+import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
+import { logger } from "../logger";
+import { parseJSON } from "../parse";
+import { getAccessToken } from "../user/access";
+import type {
+	CfWorkerContext,
+	CfWorkerInit,
+} from "../deployment-bundle/worker";
+import type { ApiCredentials } from "../user";
 import type { HeadersInit } from "undici";
 
 /**

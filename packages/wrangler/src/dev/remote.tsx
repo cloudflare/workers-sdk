@@ -5,27 +5,22 @@ import { Text } from "ink";
 import SelectInput from "ink-select-input";
 import React, { useState, useEffect, useRef } from "react";
 import { useErrorHandler } from "react-error-boundary";
-import {
-	createPreviewSession,
-	createWorkerPreview,
-} from "../create-worker-preview";
 import { helpIfErrorIsSizeOrScriptStartup } from "../deploy/deploy";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
-import useInspector from "../inspect";
 import { logger } from "../logger";
-import { startPreviewServer, usePreviewServer } from "../proxy";
 import { syncAssets } from "../sites";
 import {
 	getAccountChoices,
 	requireApiToken,
 	saveAccountToCache,
 } from "../user";
+import {
+	createPreviewSession,
+	createWorkerPreview,
+} from "./create-worker-preview";
+import useInspector from "./inspect";
+import { startPreviewServer, usePreviewServer } from "./proxy";
 import type { Route } from "../config/environment";
-import type {
-	CfAccount,
-	CfPreviewToken,
-	CfPreviewSession,
-} from "../create-worker-preview";
 import type {
 	CfModule,
 	CfWorkerInit,
@@ -34,6 +29,11 @@ import type {
 } from "../deployment-bundle/worker";
 import type { AssetPaths } from "../sites";
 import type { ChooseAccountItem } from "../user";
+import type {
+	CfAccount,
+	CfPreviewToken,
+	CfPreviewSession,
+} from "./create-worker-preview";
 import type { EsbuildBundle } from "./use-esbuild";
 
 interface RemoteProps {
@@ -610,7 +610,7 @@ async function createRemoteWorkerInit(props: {
 		keepVars: true,
 		logpush: false,
 		placement: undefined, // no placement in dev
-		tail_consumers: undefined, // no tail consumers in dev - TODO revist?
+		tail_consumers: undefined, // no tail consumers in dev - TODO revisit?
 	};
 
 	return init;
