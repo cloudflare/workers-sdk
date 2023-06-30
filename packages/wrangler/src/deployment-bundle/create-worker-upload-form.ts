@@ -103,7 +103,7 @@ export interface WorkerMetadata {
 	logpush?: boolean;
 	placement?: CfPlacement;
 	tail_consumers?: CfTailConsumer[];
-	// Allow unsafe.metadata to add arbitary properties at runtime
+	// Allow unsafe.metadata to add arbitrary properties at runtime
 	[key: string]: unknown;
 }
 
