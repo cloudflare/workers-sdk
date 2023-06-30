@@ -15,7 +15,6 @@ import { nodejsCompatPlugin } from "./esbuild-plugins/nodejs-compat";
 import type { Config } from "../config";
 import type { DurableObjectBindings } from "../config/environment";
 import type { WorkerRegistry } from "../dev-registry";
-import type { SourceMapMetadata } from "../inspect";
 import type { ModuleCollector } from "../module-collection";
 import type { Entry } from "./entry";
 import type { CfModule } from "./worker";
@@ -25,6 +24,15 @@ export const COMMON_ESBUILD_OPTIONS = {
 	target: "es2022",
 	loader: { ".js": "jsx", ".mjs": "jsx", ".cjs": "jsx" },
 } as const;
+
+/**
+ * Information about Wrangler's bundling process that needs passed through
+ * for DevTools sourcemap transformation
+ */
+export interface SourceMapMetadata {
+	tmpDir: string;
+	entryDirectory: string;
+}
 
 export type BundleResult = {
 	modules: CfModule[];

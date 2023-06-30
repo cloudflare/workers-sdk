@@ -10,10 +10,10 @@ import {
 import traverseModuleGraph from "../deployment-bundle/traverse-module-graph";
 import { logBuildFailure, logBuildWarnings } from "../logger";
 import type { Config } from "../config";
+import type { SourceMapMetadata } from "../deployment-bundle/bundle";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfModule } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
-import type { SourceMapMetadata } from "../inspect";
 import type { ModuleCollector } from "../module-collection";
 import type { Metafile, BuildResult, PluginBuild } from "esbuild";
 
