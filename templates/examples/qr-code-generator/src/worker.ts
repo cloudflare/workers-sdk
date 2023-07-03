@@ -1,9 +1,9 @@
 const qr = require('qr-image');
 
 export default {
-	async fetch(request, env, ctx) {
-		if (request.method === 'POST') {
-			return generateQRCode(request);
+	async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+		if (req.method === 'POST') {
+			return generateQRCode(req);
 		}
 
 		return new Response(landing, {
@@ -14,8 +14,8 @@ export default {
 	},
 };
 
-async function generateQRCode(request) {
-	const { text } = await request.json();
+async function generateQRCode(req: Request): Promise<Response> {
+	const { text } = await req.json();
 	const headers = { 'Content-Type': 'image/png' };
 	const qr_png = qr.imageSync(text || 'https://workers.dev');
 	return new Response(qr_png, { headers });
