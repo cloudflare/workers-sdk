@@ -166,7 +166,11 @@ export const printSummary = async (ctx: PagesGeneratorContext) => {
 		[
 			`Read the documentation`,
 			`https://developers.cloudflare.com/${
-				ctx.framework ? "pages" : "workers"
+				ctx.framework
+					? ctx.framework.config.type === "workers"
+						? "workers"
+						: "pages"
+					: "workers"
 			}`,
 		],
 		[`Stuck? Join us at`, `https://discord.gg/cloudflaredev`],
