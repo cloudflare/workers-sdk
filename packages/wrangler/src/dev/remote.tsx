@@ -83,7 +83,6 @@ export function Remote(props: RemoteProps) {
 		zone: props.zone,
 		host: props.host,
 		routes: props.routes,
-		onReady: props.onReady,
 		sendMetrics: props.sendMetrics,
 		port: props.port,
 	});
@@ -96,6 +95,7 @@ export function Remote(props: RemoteProps) {
 		localProtocol: props.localProtocol,
 		localPort: props.port,
 		ip: props.ip,
+		onReady: props.onReady,
 	});
 
 	useInspector({
@@ -172,7 +172,6 @@ interface RemoteWorkerProps {
 	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
-	onReady: ((ip: string, port: number) => void) | undefined;
 	sendMetrics: boolean | undefined;
 	port: number;
 }
@@ -187,8 +186,6 @@ export function useWorker(
 	// something's "happened" in our system; We make a ref and
 	// mark it once we log our initial message. Refs are vars!
 	const startedRef = useRef(false);
-	// functions must be destructured before use inside a useEffect, otherwise the entire props object has to be added to the dependency array
-	const { onReady } = props;
 	// This effect sets up the preview session
 	useEffect(() => {
 		const abortController = new AbortController();
@@ -323,7 +320,6 @@ export function useWorker(
 				});
 			}
 			*/
-			onReady?.(props.host || "localhost", props.port);
 		}
 		start().catch((err) => {
 			// we want to log the error, but not end the process
@@ -375,7 +371,6 @@ export function useWorker(
 		props.host,
 		props.routes,
 		session,
-		onReady,
 		props.sendMetrics,
 		props.port,
 	]);
