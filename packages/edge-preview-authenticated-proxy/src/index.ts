@@ -356,8 +356,10 @@ export default {
 		} catch (e) {
 			console.error(e);
 			if (e instanceof HttpError) {
-				sentry.setContext("extra_details", e.data);
-				sentry.captureException(e);
+				if (e.reportable) {
+					sentry.setContext("Details", e.data);
+					sentry.captureException(e);
+				}
 				return e.toResponse();
 			} else {
 				sentry.captureException(e);
