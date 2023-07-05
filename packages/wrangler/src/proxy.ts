@@ -194,14 +194,12 @@ export function usePreviewServer({
 	localProtocol,
 	localPort: port,
 	ip,
-	onReady,
 }: {
 	previewToken: CfPreviewToken | undefined;
 	assetDirectory: string | undefined;
 	localProtocol: "https" | "http";
 	localPort: number;
 	ip: string;
-	onReady: ((finalIp: string, finalPort: number) => void) | undefined;
 }) {
 	/** Creates an HTTP/1 proxy that sends requests over HTTP/2. */
 	const [proxy, setProxy] = useState<PreviewProxy>();
@@ -301,7 +299,6 @@ export function usePreviewServer({
 					const usedPort =
 						address && typeof address === "object" ? address.port : port;
 					logger.log(`⬣ Listening at ${localProtocol}://${ip}:${usedPort}`);
-					onReady?.(ip, usedPort);
 					const accessibleHosts =
 						ip !== "0.0.0.0" ? [ip] : getAccessibleHosts();
 					for (const accessibleHost of accessibleHosts) {
@@ -324,7 +321,7 @@ export function usePreviewServer({
 				.terminate()
 				.catch(() => logger.error("Failed to terminate the proxy server."));
 		};
-	}, [port, ip, proxy, localProtocol, onReady]);
+	}, [port, ip, proxy, localProtocol]);
 }
 
 function configureProxyServer({
