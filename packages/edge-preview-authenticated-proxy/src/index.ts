@@ -2,7 +2,12 @@ import cookie from "cookie";
 import { Toucan } from "toucan-js";
 
 class HttpError extends Error {
-	constructor(message: string, readonly status: number) {
+	constructor(
+		message: string,
+		readonly status: number,
+		// Only report errors to sentry when they represent actionable errors
+		readonly reportable: boolean
+	) {
 		super(message);
 		Object.setPrototypeOf(this, new.target.prototype);
 	}
@@ -12,7 +17,13 @@ class HttpError extends Error {
 				error: this.name,
 				message: this.message,
 			},
-			{ status: this.status }
+			{
+				status: this.status,
+				headers: {
+					"Access-Control-Allow-Origin": "*",
+					"Access-Control-Allow-Method": "GET,PUT,POST",
+				},
+			}
 		);
 	}
 
@@ -23,7 +34,7 @@ class HttpError extends Error {
 
 class NoExchangeUrl extends HttpError {
 	constructor() {
-		super("No exchange_url provided", 400);
+		super("No exchange_url provided", 400, false);
 	}
 }
 
@@ -33,7 +44,7 @@ class ExchangeFailed extends HttpError {
 		readonly exchangeStatus: number,
 		readonly body: string
 	) {
-		super("Exchange failed", 400);
+		super("Exchange failed", 400, true);
 	}
 
 	get data(): { url: string; status: number; body: string } {
@@ -43,19 +54,22 @@ class ExchangeFailed extends HttpError {
 
 class TokenUpdateFailed extends HttpError {
 	constructor() {
-		super("Provide token, prewarmUrl and remote", 400);
+		super("Provide token, prewarmUrl and remote", 400, false);
 	}
 }
 
 class RawHttpFailed extends HttpError {
 	constructor() {
-		super("Provide token, and remote", 400);
+		super("Provide token, and remote", 400, false);
 	}
 }
 
 class PreviewRequestFailed extends HttpError {
-	constructor() {
-		super("Provide token, and remote", 400);
+	constructor(private tokenId: string, reportable: boolean) {
+		super("Token and remote not found", 400, reportable);
+	}
+	get data(): { tokenId: string } {
+		return { tokenId: this.tokenId };
 	}
 }
 
@@ -121,7 +135,8 @@ async function handleRequest(
 		(await env.TOKEN_LOOKUP.get(tokenId)) ?? "{}"
 	);
 	if (!token || !remote) {
-		throw new PreviewRequestFailed();
+		// Report this error if a tokenId was provided
+		throw new PreviewRequestFailed(tokenId, !!tokenId);
 	}
 
 	const original = await fetch(
@@ -341,9 +356,8 @@ export default {
 		} catch (e) {
 			console.error(e);
 			if (e instanceof HttpError) {
-				sentry.captureException(e, {
-					data: { ...e.data },
-				});
+				sentry.setContext("extra_details", e.data);
+				sentry.captureException(e);
 				return e.toResponse();
 			} else {
 				sentry.captureException(e);
