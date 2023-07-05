@@ -606,7 +606,7 @@ interface EnvironmentNonInheritable {
 		 * here will always be applied to metadata last, so can add new or override existing fields.
 		 */
 		metadata?: {
-			[key: string]: string;
+			[key: string]: unknown;
 		};
 
 		/**

@@ -401,7 +401,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 			type: "Unsafe Metadata",
 			entries: Object.entries(unsafe.metadata).map(([key, value]) => ({
 				key,
-				value: `${typeof value === "object" ? JSON.stringify(value) : value}`,
+				value: JSON.stringify(value),
 			})),
 		});
 	}

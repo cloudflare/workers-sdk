@@ -22,7 +22,7 @@ export function mockUploadWorkerRequest(
 		expectedCompatibilityFlags?: string[];
 		expectedMigrations?: CfWorkerInit["migrations"];
 		expectedTailConsumers?: CfWorkerInit["tail_consumers"];
-		expectedUnsafeMetaData?: Record<string, string>;
+		expectedUnsafeMetaData?: Record<string, unknown>;
 		expectedCapnpSchema?: string;
 		expectedLimits?: CfWorkerInit["limits"];
 		env?: string;
