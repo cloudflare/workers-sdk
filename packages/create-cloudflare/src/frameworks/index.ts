@@ -4,6 +4,7 @@ import astro from "./astro";
 import docusaurus from "./docusaurus";
 import gatsby from "./gatsby";
 import hono from "./hono";
+import htmx from "./htmx";
 import next from "./next";
 import nuxt from "./nuxt";
 import qwik from "./qwik";
@@ -21,6 +22,7 @@ export const FrameworkMap: Record<string, FrameworkConfig> = {
 	docusaurus,
 	gatsby,
 	hono,
+	htmx,
 	next,
 	nuxt,
 	qwik,
