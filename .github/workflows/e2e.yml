@@ -78,6 +78,20 @@ jobs:
         env:
           NODE_ENV: "production"
 
+      - name: Build C3 package for npm
+        run: cd packages/create-cloudflare && npm pack
+        env:
+          NODE_ENV: "production"
+
+      - name: Move C3 package to tmp directory
+        shell: bash
+        id: "move-c3"
+        run: |
+          cp packages/create-cloudflare/create-cloudflare-*.tgz $HOME
+          echo "dir=$(ls $HOME/create-cloudflare-*.tgz)" >> $GITHUB_OUTPUT;
+        env:
+          NODE_ENV: "production"
+
       - name: Run tests
         id: e2e-1
         continue-on-error: true
@@ -86,6 +100,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
           WRANGLER: npm install ${{ steps.move-wrangler.outputs.dir}} && npx --prefer-offline wrangler
+          WRANGLER_C3_COMMAND: install ${{ steps.move-c3.outputs.dir}} && npm exec --prefer-offline create-cloudflare
           NODE_OPTIONS: "--max_old_space_size=8192"
 
       - name: Retry tests
@@ -95,4 +110,5 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
           WRANGLER: npm install ${{ steps.move-wrangler.outputs.dir}} && npx --prefer-offline wrangler
+          WRANGLER_C3_COMMAND: install ${{ steps.move-c3.outputs.dir}} && npm exec --prefer-offline create-cloudflare
           NODE_OPTIONS: "--max_old_space_size=8192"

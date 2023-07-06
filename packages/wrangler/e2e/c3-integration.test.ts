@@ -35,16 +35,16 @@ describe("c3 integration", () => {
 
 	it("init project via c3", async () => {
 		const pathToC3 = path.resolve(__dirname, "../../create-cloudflare");
+		console.log(pathToC3);
 		const env = {
 			...process.env,
-			WRANGLER_C3_COMMAND: `exec ${pathToC3}`,
 			GIT_AUTHOR_NAME: "test-user",
 			GIT_AUTHOR_EMAIL: "test-user@cloudflare.com",
 			GIT_COMMITTER_NAME: "test-user",
 			GIT_COMMITTER_EMAIL: "test-user@cloudflare.com",
 		};
 
-		await runInRoot.env(env)`$ ${WRANGLER} init ${workerName} --yes`;
+		await runInRoot.env(env)`$$ ${WRANGLER} init ${workerName} --yes`;
 
 		expect(existsSync(workerPath)).toBe(true);
 	});
