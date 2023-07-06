@@ -28,20 +28,25 @@ describe("E2E", () => {
 
 	const runCli = async (framework: string, args: string[] = []) => {
 		const projectPath = join(dummyPath, "test");
-		const argv = [
+
+		let argv = [
 			projectPath,
 			"--type",
 			"webFramework",
 			"--framework",
 			framework,
 			"--no-deploy",
-			"--no-git",
-			...args,
 		];
+
+		if (args.length > 0) {
+			argv = [...argv, ...args];
+		} else {
+			argv = [...argv, "--no-git"];
+		}
 
 		// For debugging purposes, uncomment the following to see the exact
 		// command the test uses. You can then run this via the command line.
-		// console.log("COMMAND: ", `node ${["./dist/cli.js", ...argv].join(" ")}`);
+		console.log("COMMAND: ", `node ${["./dist/cli.js", ...argv].join(" ")}`);
 
 		const result = await execa("node", ["./dist/cli.js", ...argv], {
 			stderr: process.stderr,
@@ -119,6 +124,9 @@ describe("E2E", () => {
 	});
 
 	test("Hono (wrangler defaults)", async () => {
-		await runCli("hono", ["wrangler-defaults"]);
+		const { projectPath } = await runCli("hono", ["--wrangler-defaults"]);
+
+		// verify that wrangler-defaults defaults to `true` for using git
+		expect(join(projectPath, ".git")).toExist();
 	});
 });
