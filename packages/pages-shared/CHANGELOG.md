@@ -1,5 +1,11 @@
 # @cloudflare/pages-shared
 
+## 0.5.3
+
+### Patch Changes
+
+- [#3541](https://github.com/cloudflare/workers-sdk/pull/3541) [`09f317d4`](https://github.com/cloudflare/workers-sdk/commit/09f317d4c42d1787bdc636f13b4a303fa9a5b4b0) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Bump miniflare@3.0.2
+
 ## 0.5.2
 
 ### Patch Changes

@@ -1,5 +1,38 @@
 # create-cloudflare
 
+## 2.0.11
+
+### Patch Changes
+
+- [#3465](https://github.com/cloudflare/workers-sdk/pull/3465) [`528cc0fc`](https://github.com/cloudflare/workers-sdk/commit/528cc0fc583e9672247d5934c8b33afebbb834e7) Thanks [@jculvey](https://github.com/jculvey)! - Improvements to the project name selection prompt.
+
+* [#3500](https://github.com/cloudflare/workers-sdk/pull/3500) [`c43fc4e8`](https://github.com/cloudflare/workers-sdk/commit/c43fc4e826eeca8a92c6749485eb3b8b47c4a818) Thanks [@jculvey](https://github.com/jculvey)! - Fix the output of the --version flag
+
+- [#3343](https://github.com/cloudflare/workers-sdk/pull/3343) [`cc9ced83`](https://github.com/cloudflare/workers-sdk/commit/cc9ced83bc9f996b0380d46859990780e574884c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: use a valid compatibility date for worker templates
+
+  Previously, we changed wrangler.toml to use the current date for the
+  compatibility_date setting in wrangler.toml when generating workers.
+  But this is almost always going to be too recent and results in a warning.
+
+  Now we look up the most recent compatibility date via npm on the workerd
+  package and use that instead.
+
+  Fixes https://github.com/cloudflare/workers-sdk/issues/2385
+
+* [#3516](https://github.com/cloudflare/workers-sdk/pull/3516) [`941764d0`](https://github.com/cloudflare/workers-sdk/commit/941764d0a2003ec8108ba75efe25978b000f637c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure the Angular fetch handler returns a "real" promise to Cloudflare
+
+  Angular employs the Zone.js library to patch potentially async operations so that
+  it can trigger change detection reliably. But in order to do this, it swaps out
+  the native `Promise` with a `ZoneAwarePromise` class.
+
+  The Cloudflare runtime (i.e. workerd) does runtime checks on the value returned
+  from the `fetch()` handler, expecting it to be a native `Promise` and fails if not.
+
+  This fix ensures that the actual object returned from the `fetch()` is actually a
+  native `Promise`. We don't need to stop Angular using `ZoneAwarePromises` elsewhere.
+
+- [#3486](https://github.com/cloudflare/workers-sdk/pull/3486) [`436f752d`](https://github.com/cloudflare/workers-sdk/commit/436f752d77b12b81d91341185fc9229f25571a69) Thanks [@Cherry](https://github.com/Cherry)! - fix: use wrangler deploy command for deploying applications instead of the deprecated wrangler publish
+
 ## 2.0.10
 
 ### Patch Changes

@@ -1,5 +1,17 @@
 # wrangler
 
+## 3.1.2
+
+### Patch Changes
+
+- [#3529](https://github.com/cloudflare/workers-sdk/pull/3529) [`bcdc1fe5`](https://github.com/cloudflare/workers-sdk/commit/bcdc1fe5684f325c86ff0f2c57af781ecba5b621) Thanks [@jspspike](https://github.com/jspspike)! - Support https in wrangler dev local mode
+
+* [#3541](https://github.com/cloudflare/workers-sdk/pull/3541) [`09f317d4`](https://github.com/cloudflare/workers-sdk/commit/09f317d4c42d1787bdc636f13b4a303fa9a5b4b0) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Bump miniflare@3.0.2
+
+- [#3497](https://github.com/cloudflare/workers-sdk/pull/3497) [`c5f3bf45`](https://github.com/cloudflare/workers-sdk/commit/c5f3bf45c0b7dd632ce63d0c4df846a2b8695021) Thanks [@evanderkoogh](https://github.com/evanderkoogh)! - Refactor dev-only checkedFetch check from a method substitution to a JavaScript Proxy to be able to support Proxied global fetch function.
+
+* [#3403](https://github.com/cloudflare/workers-sdk/pull/3403) [`8d1521e9`](https://github.com/cloudflare/workers-sdk/commit/8d1521e9ce77136f6da6a1313748e597b3622f8b) Thanks [@Cherry](https://github.com/Cherry)! - fix: wrangler generate will now work cross-device. This is very common on Windows install that use C:/ for the OS and another drive for user files.
+
 ## 3.1.1
 
 ### Patch Changes
