@@ -23,6 +23,7 @@ import {
 import { inputPrompt, processArgument, spinner } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
 import { poll } from "helpers/poll";
+import { C3_DEFAULTS } from "./cli";
 import type { C3Args, PagesGeneratorContext } from "types";
 
 const { npm } = detectPackageManager();
@@ -68,7 +69,7 @@ export const offerToDeploy = async (ctx: PagesGeneratorContext) => {
 		type: "confirm",
 		question: "Do you want to deploy your application?",
 		label,
-		defaultValue: true,
+		defaultValue: C3_DEFAULTS.deploy,
 	});
 
 	if (!ctx.args.deploy) return;
@@ -230,7 +231,7 @@ export const offerGit = async (ctx: PagesGeneratorContext) => {
 		type: "confirm",
 		question: "Do you want to use git for version control?",
 		label: "git",
-		defaultValue: true,
+		defaultValue: C3_DEFAULTS.git,
 	});
 
 	if (ctx.args.git) {

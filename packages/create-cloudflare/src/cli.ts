@@ -12,20 +12,46 @@ import { runPagesGenerator } from "./pages";
 import { runWorkersGenerator } from "./workers";
 import type { C3Args } from "types";
 
+export const C3_DEFAULTS = {
+	projectName: new Haikunator().haikunate({ tokenHex: true }),
+	type: "hello-world",
+	framework: "angular",
+	deploy: true,
+	git: true,
+	open: true,
+	ts: true,
+};
+
+const WRANGLER_DEFAULTS = {
+	...C3_DEFAULTS,
+	deploy: false,
+};
+
 export const main = async (argv: string[]) => {
-	const args = await parseArgs(argv);
+	let args = await parseArgs(argv);
 
 	printBanner();
 
-	const defaultName = new Haikunator().haikunate({ tokenHex: true });
+	if (args.wranglerDefaults) {
+		args = {
+			...args,
+			...WRANGLER_DEFAULTS,
+		};
+	} else if (args.acceptDefaults) {
+		args = {
+			...args,
+			...C3_DEFAULTS,
+		};
+	}
 
 	const projectName = await processArgument<string>(args, "projectName", {
 		type: "text",
 		question: `In which directory do you want to create your application?`,
 		helpText: "also used as application name",
-		defaultValue: defaultName,
+		defaultValue: C3_DEFAULTS.projectName,
 		label: "dir",
-		validate: (value) => validateProjectDirectory(String(value) || defaultName),
+		validate: (value) =>
+			validateProjectDirectory(String(value) || C3_DEFAULTS.projectName),
 		format: (val) => `./${val}`,
 	});
 
@@ -47,7 +73,7 @@ export const main = async (argv: string[]) => {
 		question: "What type of application do you want to create?",
 		label: "type",
 		options: templateOptions,
-		defaultValue: "hello-world",
+		defaultValue: C3_DEFAULTS.type,
 	});
 
 	if (!type || !Object.keys(templateMap).includes(type)) {
@@ -88,6 +114,10 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 		.option("existing-script", {
 			type: "string",
 			hidden: templateMap["pre-existing"].hidden,
+		})
+		.option("accept-defaults", {
+			alias: "y",
+			type: "boolean",
 		})
 		.option("wrangler-defaults", { type: "boolean", hidden: true })
 		.version(version)

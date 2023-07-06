@@ -10,6 +10,7 @@ import {
 	runCommand,
 } from "helpers/command";
 import { processArgument } from "helpers/interactive";
+import { C3_DEFAULTS } from "./cli";
 import {
 	chooseAccount,
 	gitCommit,
@@ -53,7 +54,7 @@ async function getTemplate(ctx: Context) {
 			type: "confirm",
 			question: "Do you want to use TypeScript?",
 			label: "typescript",
-			defaultValue: true,
+			defaultValue: C3_DEFAULTS.ts,
 		});
 	}
 

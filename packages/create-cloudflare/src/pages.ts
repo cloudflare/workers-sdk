@@ -8,6 +8,7 @@ import { installWrangler, retry, runCommand } from "helpers/command";
 import { readJSON, writeFile } from "helpers/files";
 import { processArgument, spinner } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
+import { C3_DEFAULTS } from "./cli";
 import {
 	gitCommit,
 	offerGit,
@@ -84,7 +85,7 @@ const getFrameworkSelection = async (args: C3Args) => {
 		label: "framework",
 		question: "Which development framework do you want to use?",
 		options: frameworkOptions,
-		defaultValue: args.framework ?? "svelte",
+		defaultValue: C3_DEFAULTS.framework,
 	});
 
 	// Validate answers

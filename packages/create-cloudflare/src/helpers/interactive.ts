@@ -67,18 +67,6 @@ export const processArgument = async <T>(
 		return value as T;
 	}
 
-	// If running in non-interactive mode, use the defaultValue
-	if (args.wranglerDefaults) {
-		promptConfig.validate?.(promptConfig.defaultValue);
-
-		const lines = renderSubmitted({
-			value: promptConfig.defaultValue,
-		});
-		logRaw(lines.join("\n"));
-
-		return promptConfig.defaultValue as T;
-	}
-
 	value = await inputPrompt(promptConfig);
 
 	return value as T;
@@ -151,8 +139,8 @@ const renderSubmit = (config: PromptConfig, value: string) => {
 
 	const content =
 		config.type === "confirm"
-			? `${grayBar} ${brandColor(label)} ${dim(value)}`
-			: `${grayBar} ${brandColor(value)} ${dim(label)}`;
+			? `${grayBar} ${brandColor(value)} ${dim(label)}`
+			: `${grayBar} ${brandColor(label)} ${dim(value)}`;
 
 	return [`${leftT} ${question}`, content, `${grayBar}`];
 };

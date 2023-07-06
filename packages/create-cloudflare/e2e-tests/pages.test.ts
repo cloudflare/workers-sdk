@@ -29,7 +29,7 @@ describe("E2E", () => {
 	const runCli = async (framework: string, args: string[] = []) => {
 		const projectPath = join(dummyPath, "test");
 
-		let argv = [
+		const argv = [
 			projectPath,
 			"--type",
 			"webFramework",
@@ -39,14 +39,14 @@ describe("E2E", () => {
 		];
 
 		if (args.length > 0) {
-			argv = [...argv, ...args];
+			argv.push(...args);
 		} else {
-			argv = [...argv, "--no-git"];
+			argv.push("--no-git");
 		}
 
 		// For debugging purposes, uncomment the following to see the exact
 		// command the test uses. You can then run this via the command line.
-		console.log("COMMAND: ", `node ${["./dist/cli.js", ...argv].join(" ")}`);
+		// console.log("COMMAND: ", `node ${["./dist/cli.js", ...argv].join(" ")}`);
 
 		const result = await execa("node", ["./dist/cli.js", ...argv], {
 			stderr: process.stderr,
