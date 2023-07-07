@@ -123,7 +123,13 @@ describe("E2E", () => {
 		await runCli("vue");
 	});
 
-	test("Hono (wrangler defaults)", async () => {
+	// This test blows up in CI due to Github providing an unusual git user email address.
+	// E.g.
+	// ```
+	// fatal: empty ident name (for <runner@fv-az176-734.urr04s1gdzguhowldvrowxwctd.dx.
+	// internal.cloudapp.net>) not allowed
+	// ```
+	test.skip("Hono (wrangler defaults)", async () => {
 		const { projectPath } = await runCli("hono", ["--wrangler-defaults"]);
 
 		// verify that wrangler-defaults defaults to `true` for using git
