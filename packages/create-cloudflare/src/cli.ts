@@ -28,21 +28,9 @@ const WRANGLER_DEFAULTS = {
 };
 
 export const main = async (argv: string[]) => {
-	let args = await parseArgs(argv);
+	const args = await parseArgs(argv);
 
 	printBanner();
-
-	if (args.wranglerDefaults) {
-		args = {
-			...args,
-			...WRANGLER_DEFAULTS,
-		};
-	} else if (args.acceptDefaults) {
-		args = {
-			...args,
-			...C3_DEFAULTS,
-		};
-	}
 
 	const projectName = await processArgument<string>(args, "projectName", {
 		type: "text",
@@ -124,9 +112,11 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 		.help().argv;
 
 	return {
+		...(args.wranglerDefaults && WRANGLER_DEFAULTS),
+		...(args.acceptDefaults && C3_DEFAULTS),
 		projectName: args._[0] as string | undefined,
 		...args,
-	} as Partial<C3Args>;
+	};
 };
 
 type TemplateConfig = {
