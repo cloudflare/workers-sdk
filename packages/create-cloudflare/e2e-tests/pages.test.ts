@@ -26,8 +26,9 @@ describe("E2E", () => {
 		}
 	});
 
-	const runCli = async (framework: string) => {
+	const runCli = async (framework: string, args: string[] = []) => {
 		const projectPath = join(dummyPath, "test");
+
 		const argv = [
 			projectPath,
 			"--type",
@@ -35,16 +36,21 @@ describe("E2E", () => {
 			"--framework",
 			framework,
 			"--no-deploy",
-			"--no-git",
-			"--wrangler-defaults",
 		];
+
+		if (args.length > 0) {
+			argv.push(...args);
+		} else {
+			argv.push("--no-git");
+		}
+
+		// For debugging purposes, uncomment the following to see the exact
+		// command the test uses. You can then run this via the command line.
+		// console.log("COMMAND: ", `node ${["./dist/cli.js", ...argv].join(" ")}`);
 
 		const result = await execa("node", ["./dist/cli.js", ...argv], {
 			stderr: process.stderr,
 		});
-		// For debugging purposes, uncomment the following to see the exact
-		// command the test uses. You can then run this via the command line.
-		// console.log("COMMAND: ", `node ${["./dist/cli.js", ...argv].join(" ")}`);
 
 		const { exitCode } = result;
 
@@ -115,5 +121,18 @@ describe("E2E", () => {
 
 	test("Vue", async () => {
 		await runCli("vue");
+	});
+
+	// This test blows up in CI due to Github providing an unusual git user email address.
+	// E.g.
+	// ```
+	// fatal: empty ident name (for <runner@fv-az176-734.urr04s1gdzguhowldvrowxwctd.dx.
+	// internal.cloudapp.net>) not allowed
+	// ```
+	test.skip("Hono (wrangler defaults)", async () => {
+		const { projectPath } = await runCli("hono", ["--wrangler-defaults"]);
+
+		// verify that wrangler-defaults defaults to `true` for using git
+		expect(join(projectPath, ".git")).toExist();
 	});
 });

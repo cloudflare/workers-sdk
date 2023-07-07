@@ -6,8 +6,9 @@ import { crash, endSection, startSection } from "helpers/cli";
 import { dim, brandColor } from "helpers/colors";
 import { installWrangler, retry, runCommand } from "helpers/command";
 import { readJSON, writeFile } from "helpers/files";
-import { selectInput, spinner } from "helpers/interactive";
+import { processArgument, spinner } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
+import { C3_DEFAULTS } from "./cli";
 import {
 	gitCommit,
 	offerGit,
@@ -16,8 +17,7 @@ import {
 	runDeploy,
 	setupProjectDirectory,
 } from "./common";
-import type { Option } from "helpers/interactive";
-import type { PagesGeneratorArgs, PagesGeneratorContext } from "types";
+import type { C3Args, PagesGeneratorContext } from "types";
 
 /** How many times to retry the create project command before failing. */
 const CREATE_PROJECT_RETRIES = 3;
@@ -29,7 +29,7 @@ const defaultFrameworkConfig = {
 	devCommand: "pages:dev",
 };
 
-export const runPagesGenerator = async (args: PagesGeneratorArgs) => {
+export const runPagesGenerator = async (args: C3Args) => {
 	const { name, path } = setupProjectDirectory(args);
 	const framework = await getFrameworkSelection(args);
 
@@ -72,7 +72,7 @@ export const runPagesGenerator = async (args: PagesGeneratorArgs) => {
 	await printSummary(ctx);
 };
 
-const getFrameworkSelection = async (args: PagesGeneratorArgs) => {
+const getFrameworkSelection = async (args: C3Args) => {
 	const frameworkOptions = Object.entries(FrameworkMap).map(
 		([key, { displayName }]) => ({
 			label: displayName,
@@ -80,14 +80,12 @@ const getFrameworkSelection = async (args: PagesGeneratorArgs) => {
 		})
 	);
 
-	const framework = await selectInput({
+	const framework = await processArgument<string>(args, "framework", {
+		type: "select",
+		label: "framework",
 		question: "Which development framework do you want to use?",
 		options: frameworkOptions,
-		renderSubmitted: (option: Option) => {
-			return `${brandColor("framework")} ${dim(option.label)}`;
-		},
-		defaultValue: args.framework ?? "svelte",
-		acceptDefault: Boolean(args.framework),
+		defaultValue: C3_DEFAULTS.framework,
 	});
 
 	// Validate answers

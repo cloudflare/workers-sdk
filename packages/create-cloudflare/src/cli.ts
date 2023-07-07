@@ -1,33 +1,80 @@
 #!/usr/bin/env node
+// import { TextPrompt, SelectPrompt, ConfirmPrompt } from "@clack/core";
 import Haikunator from "haikunator";
 import { crash, logRaw, startSection } from "helpers/cli";
-import { dim, brandColor } from "helpers/colors";
-import { selectInput, textInput } from "helpers/interactive";
+import { dim } from "helpers/colors";
+import { processArgument } from "helpers/interactive";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { version } from "../package.json";
 import { validateProjectDirectory } from "./common";
 import { runPagesGenerator } from "./pages";
 import { runWorkersGenerator } from "./workers";
-import type { Option } from "helpers/interactive";
-import type { PagesGeneratorArgs } from "types";
+import type { C3Args } from "types";
+
+export const C3_DEFAULTS = {
+	projectName: new Haikunator().haikunate({ tokenHex: true }),
+	type: "hello-world",
+	framework: "angular",
+	deploy: true,
+	git: true,
+	open: true,
+	ts: true,
+};
+
+const WRANGLER_DEFAULTS = {
+	...C3_DEFAULTS,
+	deploy: false,
+};
 
 export const main = async (argv: string[]) => {
 	const args = await parseArgs(argv);
 
 	printBanner();
 
-	const validatedArgs: PagesGeneratorArgs = {
+	const projectName = await processArgument<string>(args, "projectName", {
+		type: "text",
+		question: `In which directory do you want to create your application?`,
+		helpText: "also used as application name",
+		defaultValue: C3_DEFAULTS.projectName,
+		label: "dir",
+		validate: (value) =>
+			validateProjectDirectory(String(value) || C3_DEFAULTS.projectName),
+		format: (val) => `./${val}`,
+	});
+
+	// If not specified, attempt to infer the `type` argument from other flags
+	if (!args.type) {
+		if (args.framework) {
+			args.type = "webFramework";
+		} else if (args.existingScript) {
+			args.type = "pre-existing";
+		}
+	}
+
+	const templateOptions = Object.entries(templateMap)
+		.filter(([_, { hidden }]) => !hidden)
+		.map(([value, { label }]) => ({ value, label }));
+
+	const type = await processArgument<string>(args, "type", {
+		type: "select",
+		question: "What type of application do you want to create?",
+		label: "type",
+		options: templateOptions,
+		defaultValue: C3_DEFAULTS.type,
+	});
+
+	if (!type || !Object.keys(templateMap).includes(type)) {
+		return crash("An application type must be specified to continue.");
+	}
+
+	const validatedArgs: C3Args = {
 		...args,
-		projectName: await validateName(args.projectName, {
-			acceptDefault: args.wranglerDefaults,
-		}),
-		type: await validateType(args.type, {
-			acceptDefault: args.wranglerDefaults,
-		}),
+		type,
+		projectName,
 	};
 
-	const { handler } = templateMap[validatedArgs.type];
+	const { handler } = templateMap[type];
 	await handler(validatedArgs);
 };
 
@@ -36,7 +83,7 @@ const printBanner = () => {
 	startSection(`Create an application with Cloudflare`, "Step 1 of 3");
 };
 
-const parseArgs = async (argv: string[]) => {
+export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 	const args = await yargs(hideBin(argv))
 		.scriptName("create-cloudflare")
 		.usage("$0 [args]")
@@ -56,62 +103,25 @@ const parseArgs = async (argv: string[]) => {
 			type: "string",
 			hidden: templateMap["pre-existing"].hidden,
 		})
+		.option("accept-defaults", {
+			alias: "y",
+			type: "boolean",
+		})
 		.option("wrangler-defaults", { type: "boolean", hidden: true })
 		.version(version)
 		.help().argv;
 
 	return {
+		...(args.wranglerDefaults && WRANGLER_DEFAULTS),
+		...(args.acceptDefaults && C3_DEFAULTS),
 		projectName: args._[0] as string | undefined,
 		...args,
 	};
 };
 
-const validateName = async (
-	name: string | undefined,
-	{ acceptDefault = false } = {}
-): Promise<string> => {
-	const defaultValue = name ?? new Haikunator().haikunate({ tokenHex: true });
-	return textInput({
-		question: `In which directory do you want to create your application?`,
-		helpText: "also used as application name",
-		renderSubmitted: (value: string) => {
-			return `${brandColor("dir")} ${dim(value)}`;
-		},
-		defaultValue,
-		acceptDefault,
-		validate: (value) => validateProjectDirectory(value || defaultValue),
-		format: (val: string) => `./${val}`,
-	});
-};
-
-const validateType = async (
-	type: string | undefined,
-	{ acceptDefault = false } = {}
-) => {
-	const templateOptions = Object.entries(templateMap)
-		.filter(([_, { hidden }]) => !hidden)
-		.map(([value, { label }]) => ({ value, label }));
-
-	type = await selectInput({
-		question: "What type of application do you want to create?",
-		options: templateOptions,
-		renderSubmitted: (option: Option) => {
-			return `${brandColor("type")} ${dim(option.label)}`;
-		},
-		defaultValue: type ?? "hello-world",
-		acceptDefault,
-	});
-
-	if (!type || !Object.keys(templateMap).includes(type)) {
-		crash("An application type must be specified to continue.");
-	}
-
-	return type;
-};
-
 type TemplateConfig = {
 	label: string;
-	handler: (args: PagesGeneratorArgs) => Promise<void>;
+	handler: (args: C3Args) => Promise<void>;
 	hidden?: boolean;
 };
 
