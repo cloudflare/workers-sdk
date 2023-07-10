@@ -14,6 +14,7 @@ import type { Entry } from "../deployment-bundle/entry";
 import type { CfModule } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
 import type { SourceMapMetadata } from "../inspect";
+import type { ModuleCollector } from "../module-collection";
 import type { WatchMode, Metafile } from "esbuild";
 
 export type EsbuildBundle = {
@@ -25,6 +26,11 @@ export type EsbuildBundle = {
 	dependencies: Metafile["outputs"][string]["inputs"];
 	sourceMapPath: string | undefined;
 	sourceMapMetadata: SourceMapMetadata | undefined;
+};
+
+export type BundleInfo = {
+	bundle: EsbuildBundle;
+	moduleCollector: ModuleCollector | undefined;
 };
 
 export function useEsbuild({
@@ -78,7 +84,7 @@ export function useEsbuild({
 	testScheduled: boolean;
 	experimentalLocal: boolean | undefined;
 }): EsbuildBundle | undefined {
-	const [bundle, setBundle] = useState<EsbuildBundle>();
+	const [bundleInfo, setBundleInfo] = useState<BundleInfo>();
 	const { exit } = useApp();
 	useEffect(() => {
 		let stopWatching: (() => void) | undefined = undefined;
@@ -86,12 +92,16 @@ export function useEsbuild({
 		function updateBundle() {
 			// nothing really changes here, so let's increment the id
 			// to change the return object's identity
-			setBundle((previousBundle) => {
+			setBundleInfo((previousBundle) => {
 				assert(
 					previousBundle,
 					"Rebuild triggered with no previous build available"
 				);
-				return { ...previousBundle, id: previousBundle.id + 1 };
+				previousBundle.bundle.modules = dedupeModulesByName([
+					...previousBundle.bundle.modules,
+					...(previousBundle.moduleCollector?.modules ?? []),
+				]);
+				return { ...previousBundle, id: previousBundle.bundle.id + 1 };
 			});
 		}
 
@@ -168,22 +178,25 @@ export function useEsbuild({
 					void watcher.close();
 				};
 			}
-			setBundle({
-				id: 0,
-				entry,
-				path: bundleResult?.resolvedEntryPointPath ?? entry.file,
-				type:
-					bundleResult?.bundleType ??
-					(entry.format === "modules" ? "esm" : "commonjs"),
-				modules: bundleResult
-					? bundleResult.modules
-					: dedupeModulesByName([
-							...(traverseModuleGraphResult?.modules ?? []),
-							...additionalModules,
-					  ]),
-				dependencies: bundleResult?.dependencies ?? {},
-				sourceMapPath: bundleResult?.sourceMapPath,
-				sourceMapMetadata: bundleResult?.sourceMapMetadata,
+			setBundleInfo({
+				bundle: {
+					id: 0,
+					entry,
+					path: bundleResult?.resolvedEntryPointPath ?? entry.file,
+					type:
+						bundleResult?.bundleType ??
+						(entry.format === "modules" ? "esm" : "commonjs"),
+					modules: bundleResult
+						? bundleResult.modules
+						: dedupeModulesByName([
+								...(traverseModuleGraphResult?.modules ?? []),
+								...additionalModules,
+						  ]),
+					dependencies: bundleResult?.dependencies ?? {},
+					sourceMapPath: bundleResult?.sourceMapPath,
+					sourceMapMetadata: bundleResult?.sourceMapMetadata,
+				},
+				moduleCollector: bundleResult?.moduleCollector,
 			});
 		}
 
@@ -224,5 +237,5 @@ export function useEsbuild({
 		testScheduled,
 		experimentalLocal,
 	]);
-	return bundle;
+	return bundleInfo?.bundle;
 }

@@ -153,6 +153,11 @@ export async function matchFiles(
 	return modules;
 }
 
+export type ModuleCollector = {
+	modules: CfModule[];
+	plugin: esbuild.Plugin;
+};
+
 export default function createModuleCollector(props: {
 	format: CfScriptFormat;
 	rules?: Config["rules"];
@@ -163,10 +168,7 @@ export default function createModuleCollector(props: {
 		fileNames: Set<string>;
 	};
 	preserveFileNames?: boolean;
-}): {
-	modules: CfModule[];
-	plugin: esbuild.Plugin;
-} {
+}): ModuleCollector {
 	const { rules, removedRules } = parseRules(props.rules);
 
 	const modules: CfModule[] = [];

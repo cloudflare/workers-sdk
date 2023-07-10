@@ -309,6 +309,7 @@ export async function traverseAndBuildWorkerJSDirectory({
 		bundleType: bundleResult.bundleType,
 		stop: bundleResult.stop,
 		sourceMapPath: bundleResult.sourceMapPath,
+		moduleCollector: bundleResult.moduleCollector,
 	};
 }
 
