@@ -16,6 +16,7 @@ import type { Config } from "../config";
 import type { DurableObjectBindings } from "../config/environment";
 import type { WorkerRegistry } from "../dev-registry";
 import type { SourceMapMetadata } from "../inspect";
+import type { ModuleCollector } from "../module-collection";
 import type { Entry } from "./entry";
 import type { CfModule } from "./worker";
 
@@ -33,6 +34,7 @@ export type BundleResult = {
 	stop: (() => void) | undefined;
 	sourceMapPath?: string | undefined;
 	sourceMapMetadata?: SourceMapMetadata | undefined;
+	moduleCollector: ModuleCollector | undefined;
 };
 
 export type StaticAssetsConfig =
@@ -434,6 +436,7 @@ export async function bundleWorker(
 			tmpDir: tmpDir.path,
 			entryDirectory: entry.directory,
 		},
+		moduleCollector,
 	};
 }
 

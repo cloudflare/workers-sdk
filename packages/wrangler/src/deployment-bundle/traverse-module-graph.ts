@@ -58,5 +58,6 @@ export default async function traverseModuleGraph(
 		stop: undefined,
 		sourceMapPath: undefined,
 		sourceMapMetadata: undefined,
+		moduleCollector: undefined,
 	};
 }
