@@ -152,6 +152,7 @@ export const chooseAccount = async (ctx: PagesGeneratorContext) => {
 
 export const printSummary = async (ctx: PagesGeneratorContext) => {
 	const nextSteps = [
+		[`Navigate to the new directory:`, `cd ${ctx.project.name}`],
 		[
 			`Run the development server`,
 			`${npm} run ${ctx.framework?.config.devCommand ?? "start"}`,
