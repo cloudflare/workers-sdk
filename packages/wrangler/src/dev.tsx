@@ -513,8 +513,9 @@ To run an edge preview session for your Worker, use ${chalk.green(
 				await watcher?.close();
 			},
 		};
-	} finally {
+	} catch (e) {
 		await watcher?.close();
+		throw e;
 	}
 }
 
