@@ -1084,6 +1084,7 @@ describe("middleware", () => {
 			  }
 			  return env;
 			}
+			var registeredMiddleware = false;
 			var facade2 = {
 			  ...middleware_insertion_facade_default.tail && {
 			    tail: maskHandlerEnv(middleware_insertion_facade_default.tail)
@@ -1103,8 +1104,11 @@ describe("middleware", () => {
 			  fetch(request, rawEnv, ctx) {
 			    const env = getMaskedEnv2(rawEnv);
 			    if (middleware_insertion_facade_default.middleware && middleware_insertion_facade_default.middleware.length > 0) {
-			      for (const middleware of middleware_insertion_facade_default.middleware) {
-			        __facade_register__(middleware);
+			      if (!registeredMiddleware) {
+			        registeredMiddleware = true;
+			        for (const middleware of middleware_insertion_facade_default.middleware) {
+			          __facade_register__(middleware);
+			        }
 			      }
 			      const __facade_modules_dispatch__ = function(type, init) {
 			        if (type === \\"scheduled\\" && middleware_insertion_facade_default.scheduled !== void 0) {
