@@ -1,7 +1,7 @@
 ---
-"@cloudflare/pages-shared": patch
-"wrangler": patch
-"pages-ws-app": patch
+"@cloudflare/pages-shared": minor
+"wrangler": minor
+"pages-ws-app": minor
 ---
 
 Upgrade Miniflare (and hence `workerd`) to `v3.20230710.0`
