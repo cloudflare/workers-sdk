@@ -62,7 +62,7 @@ function getMaskedEnv(rawEnv: unknown) {
  */
 type MissingExportHandlers = Omit<
 	Required<ExportedHandler>,
-	"tail" | "trace" | "scheduled" | "queue" | "test" | "fetch"
+	"tail" | "trace" | "scheduled" | "queue" | "test" | "email" | "fetch"
 >;
 
 let registeredMiddleware = false;
@@ -82,6 +82,9 @@ const facade: ExportedHandler<unknown> & MissingExportHandlers = {
 	}),
 	...(worker.test && {
 		test: maskHandlerEnv(worker.test),
+	}),
+	...(worker.email && {
+		email: maskHandlerEnv(worker.email),
 	}),
 
 	fetch(request, rawEnv, ctx) {
