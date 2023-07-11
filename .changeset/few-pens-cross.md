@@ -4,4 +4,4 @@
 "pages-ws-app": minor
 ---
 
-Upgrade Miniflare (and hence `workerd`) to `v3.20230710.0`
+Upgrade Miniflare (and hence `workerd`) to `v3.20230710.0`.
