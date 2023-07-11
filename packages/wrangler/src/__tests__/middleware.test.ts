@@ -1101,6 +1101,9 @@ describe("middleware", () => {
 			  ...middleware_insertion_facade_default.test && {
 			    test: maskHandlerEnv(middleware_insertion_facade_default.test)
 			  },
+			  ...middleware_insertion_facade_default.email && {
+			    email: maskHandlerEnv(middleware_insertion_facade_default.email)
+			  },
 			  fetch(request, rawEnv, ctx) {
 			    const env = getMaskedEnv2(rawEnv);
 			    if (middleware_insertion_facade_default.middleware && middleware_insertion_facade_default.middleware.length > 0) {
