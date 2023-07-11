@@ -65,6 +65,8 @@ type MissingExportHandlers = Omit<
 	"tail" | "trace" | "scheduled" | "queue" | "test" | "fetch"
 >;
 
+let registeredMiddleware = false;
+
 const facade: ExportedHandler<unknown> & MissingExportHandlers = {
 	...(worker.tail && {
 		tail: maskHandlerEnv(worker.tail),
@@ -86,8 +88,13 @@ const facade: ExportedHandler<unknown> & MissingExportHandlers = {
 		const env = getMaskedEnv(rawEnv);
 		// Get the chain of middleware from the worker object
 		if (worker.middleware && worker.middleware.length > 0) {
-			for (const middleware of worker.middleware) {
-				__facade_register__(middleware);
+			// Make sure we only register middleware once:
+			// https://github.com/cloudflare/workers-sdk/issues/2386#issuecomment-1614715911
+			if (!registeredMiddleware) {
+				registeredMiddleware = true;
+				for (const middleware of worker.middleware) {
+					__facade_register__(middleware);
+				}
 			}
 
 			const __facade_modules_dispatch__: Dispatcher = function (type, init) {
