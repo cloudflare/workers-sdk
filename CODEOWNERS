@@ -5,7 +5,7 @@
 /.changeset/ @cloudflare/wrangler @cloudflare/pages @cloudflare/d1
 /fixtures/ @cloudflare/wrangler @cloudflare/pages @cloudflare/d1
 
-/packages/pages-shared/ @cloudflare/pages @cloudflare/wrangler
+/packages/pages-shared/ @cloudflare/pages
 /packages/wrangler/pages/ @cloudflare/pages @cloudflare/wrangler
 /packages/wrangler/src/api/pages/ @cloudflare/pages @cloudflare/wrangler
 /packages/wrangler/src/pages/ @cloudflare/pages @cloudflare/wrangler
