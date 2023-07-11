@@ -47,6 +47,9 @@ describe("basic dev tests", () => {
 					name = "${workerName}"
 					main = "src/index.ts"
 					compatibility_date = "2023-01-01"
+					
+					[vars]
+					KEY = "value"
 			`,
 			"src/index.ts": dedent`
 					export default {
@@ -78,8 +81,8 @@ describe("basic dev tests", () => {
 			await seed(workerPath, {
 				"src/index.ts": dedent`
 						export default {
-							fetch(request) {
-								return new Response("Updated Worker!")
+							fetch(request, env) {
+								return new Response("Updated Worker! " + env.KEY)
 							}
 						}`,
 			});
@@ -91,7 +94,26 @@ describe("basic dev tests", () => {
 					return { text: await r.text(), status: r.status };
 				}
 			);
-			expect(text2).toMatchInlineSnapshot('"Updated Worker!"');
+			expect(text2).toMatchInlineSnapshot('"Updated Worker! value"');
+
+			await seed(workerPath, {
+				"wrangler.toml": dedent`
+						name = "${workerName}"
+						main = "src/index.ts"
+						compatibility_date = "2023-01-01"
+						
+						[vars]
+						KEY = "updated"
+				`,
+			});
+			const { text: text3 } = await retry(
+				(s) => s.status !== 200 || s.text === "Updated Worker! value",
+				async () => {
+					const r = await fetch(`http://127.0.0.1:${port}`);
+					return { text: await r.text(), status: r.status };
+				}
+			);
+			expect(text3).toMatchInlineSnapshot('"Updated Worker! updated"');
 		});
 	});
 
