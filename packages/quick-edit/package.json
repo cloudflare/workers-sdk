@@ -24,6 +24,6 @@
 		"wrangler": "*"
 	},
 	"engines": {
-		"node": "<17"
+		"node": ">=14.0.0"
 	}
 }
