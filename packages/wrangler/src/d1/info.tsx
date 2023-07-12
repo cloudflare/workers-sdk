@@ -1,12 +1,16 @@
 import Table from "ink-table";
 import prettyBytes from "pretty-bytes";
 import React from "react";
-import { fetchGraphqlResult, fetchResult } from "../cfetch";
+import { fetchGraphqlResult } from "../cfetch";
 import { withConfig } from "../config";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
-import { d1BetaWarning, getDatabaseByNameOrBinding } from "./utils";
+import {
+	d1BetaWarning,
+	getDatabaseByNameOrBinding,
+	getDatabaseInfoFromId,
+} from "./utils";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -38,14 +42,7 @@ export const Handler = withConfig<HandlerOptions>(
 			name
 		);
 
-		const result = await fetchResult<Record<string, string>>(
-			`/accounts/${accountId}/d1/database/${db.uuid}`,
-			{
-				headers: {
-					"Content-Type": "application/json",
-				},
-			}
-		);
+		const result = await getDatabaseInfoFromId(accountId, db.uuid);
 
 		const output: Record<string, string | number> = { ...result };
 		if (output["file_size"]) {

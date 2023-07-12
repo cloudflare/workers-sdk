@@ -15,6 +15,15 @@ export type DatabaseCreationResult = {
 	created_in_region?: string;
 };
 
+export type DatabaseInfo = {
+	uuid: string;
+	name: string;
+	version: "alpha" | "beta";
+	num_tables: number;
+	file_size: number;
+	running_in_region?: string;
+};
+
 export type Backup = {
 	id: string;
 	database_id: string;

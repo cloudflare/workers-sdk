@@ -5,6 +5,7 @@ import * as Execute from "./execute";
 import * as Info from "./info";
 import * as List from "./list";
 import * as Migrations from "./migrations";
+import * as TimeTravel from "./timeTravel";
 import { d1BetaWarning } from "./utils";
 import type { CommonYargsArgv } from "../yargs-types";
 
@@ -78,6 +79,22 @@ export function d1(yargs: CommonYargsArgv) {
 				"Executed command or SQL file",
 				Execute.Options,
 				Execute.Handler
+			)
+			.command("time-travel", "Interact with D1 Time Travel", (yargs2) =>
+				yargs2
+					.demandCommand()
+					.command(
+						"info <database>",
+						"Get information about D1 at a point in time.",
+						TimeTravel.InfoOptions,
+						TimeTravel.InfoHandler
+					)
+					.command(
+						"restore <database>",
+						"Restore a D1 database to a point in time.",
+						TimeTravel.RestoreOptions,
+						TimeTravel.RestoreHandler
+					)
 			)
 			.command("migrations", "Interact with D1 Migrations", (yargs2) =>
 				yargs2
