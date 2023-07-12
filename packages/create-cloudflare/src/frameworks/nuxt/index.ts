@@ -19,10 +19,9 @@ const generate = async (ctx: PagesGeneratorContext) => {
 	logRaw(""); // newline
 };
 
-
 const configure = async (ctx: PagesGeneratorContext) => {
 	process.chdir(ctx.project.path);
-	writeFile('./.node-version', '17');
+	writeFile("./.node-version", "17");
 	await npmInstall();
 };
 
@@ -32,7 +31,8 @@ const config: FrameworkConfig = {
 	displayName: "Nuxt",
 	packageScripts: {
 		"pages:dev": `wrangler pages dev ${compatDateFlag()} --proxy 3000 -- npm run dev`,
-		"pages:deploy": "NITRO_PRESET=cloudflare-pages npm run build && wrangler pages deploy ./dist",
+		"pages:deploy":
+			"NITRO_PRESET=cloudflare-pages npm run build && wrangler pages deploy ./dist",
 	},
 };
 export default config;
