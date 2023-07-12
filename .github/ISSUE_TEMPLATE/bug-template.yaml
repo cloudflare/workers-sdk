@@ -25,11 +25,18 @@ body:
         - Queues
         - R2
         - Workers for Platforms
-        - Workers/Other
-        - Wrangler
+        - Constellation
+        - Wrangler core
+        - Other
   - type: input
     attributes:
-      label: What version of `Wrangler` are you using?
+      label: What version of Wrangler are you using?
+      placeholder: 0.0.0
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: What version of Node are you using?
       placeholder: 0.0.0
     validations:
       required: true
@@ -45,3 +52,17 @@ body:
       description: Steps to reproduce
     validations:
       required: true
+  - type: input
+    attributes:
+      label: Please provide a link to a minimal reproduction
+      description: Although not required, we often request a minimal reproduction to help troubleshoot the issue, so providing this up-front streamlines the process towards resolution.
+      placeholder: https://github.com/foobar-user/minimal-repro
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: Please provide any relevant error logs
+      description: Although not required, we often request logs to help troubleshoot the issue, so providing this up-front streamlines the process towards resolution. Please be careful to hide any sesntivie information.
+    validations:
+      required: false
+
