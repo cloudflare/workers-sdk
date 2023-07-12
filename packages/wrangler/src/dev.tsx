@@ -7,7 +7,6 @@ import { render } from "ink";
 import React from "react";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import { getEntry } from "./deployment-bundle/entry";
-import { identifyD1BindingsAsBeta } from "./deployment-bundle/worker";
 import Dev from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
 import { getLocalPersistencePath } from "./dev/get-local-persistence-path";
@@ -916,7 +915,7 @@ function getBindings(
 			capnp: configParam.unsafe.capnp,
 		},
 		logfwdr: configParam.logfwdr,
-		d1_databases: identifyD1BindingsAsBeta([
+		d1_databases: [
 			...(configParam.d1_databases ?? []).map((d1Db) => {
 				const database_id = d1Db.preview_database_id
 					? d1Db.preview_database_id
@@ -934,7 +933,7 @@ function getBindings(
 				return { ...d1Db, database_id };
 			}),
 			...(args.d1Databases || []),
-		]),
+		],
 		constellation: configParam.constellation,
 	};
 

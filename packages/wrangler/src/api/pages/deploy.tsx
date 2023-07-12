@@ -268,7 +268,6 @@ export async function deploy({
 				sourcemap: true,
 				watch: false,
 				onEnd: () => {},
-				betaD1Shims: d1Databases,
 				nodejsCompat,
 			});
 		} else {
