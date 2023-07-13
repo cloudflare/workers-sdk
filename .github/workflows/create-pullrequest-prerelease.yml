@@ -45,7 +45,7 @@ jobs:
         working-directory: packages/wrangler
 
       - name: Upload packaged wrangler artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: npm-package-wrangler-${{ github.event.number }} # encode the PR number into the artifact name
           path: packages/wrangler/wrangler-*.tgz
@@ -55,7 +55,7 @@ jobs:
         working-directory: packages/pages-shared
 
       - name: Upload packaged @cloudflare/pages-shared artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: npm-package-cloudflare-pages-shared-${{ github.event.number }} # encode the PR number into the artifact name
           path: packages/pages-shared/cloudflare-pages-shared-*.tgz
@@ -65,7 +65,7 @@ jobs:
         working-directory: packages/create-cloudflare
 
       - name: Upload packaged @cloudflare/create-cloudflare artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: npm-package-create-cloudflare-${{ github.event.number }} # encode the PR number into the artifact name
           path: packages/create-cloudflare/create-cloudflare-*.tgz
