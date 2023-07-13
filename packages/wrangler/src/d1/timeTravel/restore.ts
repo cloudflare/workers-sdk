@@ -23,7 +23,8 @@ export function RestoreOptions(yargs: CommonYargsArgv) {
 			type: "string",
 		})
 		.option("timestamp", {
-			describe: "Timestamp to use for time travel",
+			describe:
+				"accepts a Unix (seconds from epoch) or RFC3339 timestamp (e.g. 2023-07-13T08:46:42.228Z) to retrieve a bookmark for",
 			type: "string",
 		})
 		.option("json", {

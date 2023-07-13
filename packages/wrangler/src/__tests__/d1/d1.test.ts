@@ -23,7 +23,7 @@ describe("d1", () => {
 		  wrangler d1 delete <name>       Delete D1 database
 		  wrangler d1 backup              Interact with D1 Backups
 		  wrangler d1 execute <database>  Executed command or SQL file
-		  wrangler d1 time-travel         Interact with D1 Time Travel
+		  wrangler d1 time-travel         Use Time Travel to restore, fork or copy a database at a specific point-in-time.
 		  wrangler d1 migrations          Interact with D1 Migrations
 
 		Flags:
@@ -65,7 +65,7 @@ describe("d1", () => {
 		  wrangler d1 delete <name>       Delete D1 database
 		  wrangler d1 backup              Interact with D1 Backups
 		  wrangler d1 execute <database>  Executed command or SQL file
-		  wrangler d1 time-travel         Interact with D1 Time Travel
+		  wrangler d1 time-travel         Use Time Travel to restore, fork or copy a database at a specific point-in-time.
 		  wrangler d1 migrations          Interact with D1 Migrations
 
 		Flags:
@@ -135,11 +135,11 @@ describe("d1", () => {
 		"
 		wrangler d1 time-travel
 
-		Interact with D1 Time Travel
+		Use Time Travel to restore, fork or copy a database at a specific point-in-time.
 
 		Commands:
-		  wrangler d1 time-travel info <database>     Get information about D1 at a point in time.
-		  wrangler d1 time-travel restore <database>  Restore a D1 database to a point in time.
+		  wrangler d1 time-travel info <database>     Retrieve information about a database at a specific point-in-time using Time Travel.
+		  wrangler d1 time-travel restore <database>  Restore a database back to a specific point-in-time.
 
 		Flags:
 		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]

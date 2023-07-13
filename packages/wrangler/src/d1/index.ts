@@ -80,21 +80,24 @@ export function d1(yargs: CommonYargsArgv) {
 				Execute.Options,
 				Execute.Handler
 			)
-			.command("time-travel", "Interact with D1 Time Travel", (yargs2) =>
-				yargs2
-					.demandCommand()
-					.command(
-						"info <database>",
-						"Get information about D1 at a point in time.",
-						TimeTravel.InfoOptions,
-						TimeTravel.InfoHandler
-					)
-					.command(
-						"restore <database>",
-						"Restore a D1 database to a point in time.",
-						TimeTravel.RestoreOptions,
-						TimeTravel.RestoreHandler
-					)
+			.command(
+				"time-travel",
+				"Use Time Travel to restore, fork or copy a database at a specific point-in-time.",
+				(yargs2) =>
+					yargs2
+						.demandCommand()
+						.command(
+							"info <database>",
+							"Retrieve information about a database at a specific point-in-time using Time Travel.",
+							TimeTravel.InfoOptions,
+							TimeTravel.InfoHandler
+						)
+						.command(
+							"restore <database>",
+							"Restore a database back to a specific point-in-time.",
+							TimeTravel.RestoreOptions,
+							TimeTravel.RestoreHandler
+						)
 			)
 			.command("migrations", "Interact with D1 Migrations", (yargs2) =>
 				yargs2

@@ -17,7 +17,7 @@ export function InfoOptions(yargs: CommonYargsArgv) {
 	return Database(yargs)
 		.option("timestamp", {
 			describe:
-				"timestamp (accepts unix timestamp or ISO strings) to use for time travel",
+				"accepts a Unix (seconds from epoch) or RFC3339 timestamp (e.g. 2023-07-13T08:46:42.228Z) to retrieve a bookmark for",
 			type: "string",
 		})
 		.option("json", {
