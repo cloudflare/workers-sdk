@@ -39,7 +39,7 @@ body:
       label: What version of Node are you using?
       placeholder: 0.0.0
     validations:
-      required: true
+      required: false
   - type: input
     attributes:
       label: What operating system are you using?
