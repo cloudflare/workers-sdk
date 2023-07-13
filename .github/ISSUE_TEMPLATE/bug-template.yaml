@@ -62,7 +62,7 @@ body:
   - type: textarea
     attributes:
       label: Please provide any relevant error logs
-      description: Although not required, we often request logs to help troubleshoot the issue, so providing this up-front streamlines the process towards resolution. Please be careful to hide any sesntivie information.
+      description: Although not required, we often request logs to help troubleshoot the issue, so providing this up-front streamlines the process towards resolution. Please be careful to hide any sensitive information.
     validations:
       required: false
 
