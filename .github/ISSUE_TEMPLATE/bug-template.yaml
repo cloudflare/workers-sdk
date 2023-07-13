@@ -30,8 +30,8 @@ body:
         - Other
   - type: input
     attributes:
-      label: What version of Wrangler are you using?
-      placeholder: 0.0.0
+      label: What version(s) of the tool(s) are you using?
+      placeholder: 0.0.0 [Wrangler], 0.0.0 [C3], etc.
     validations:
       required: true
   - type: input
