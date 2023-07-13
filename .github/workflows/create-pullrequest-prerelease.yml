@@ -67,5 +67,5 @@ jobs:
       - name: Upload packaged @cloudflare/create-cloudflare artifact
         uses: actions/upload-artifact@v2
         with:
-          name: npm-package-cloudflare-create-cloudflare-${{ github.event.number }} # encode the PR number into the artifact name
-          path: packages/create-cloudflare/cloudflare-create-cloudflare-*.tgz
+          name: npm-package-create-cloudflare-${{ github.event.number }} # encode the PR number into the artifact name
+          path: packages/create-cloudflare/create-cloudflare-*.tgz
