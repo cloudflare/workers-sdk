@@ -1,5 +1,5 @@
 // This file is not used directly.
-// Instead its contents are used in of `.github/workflows/write-prerelease-comment.yml`
+// Instead its contents are used in `.github/workflows/write-prerelease-comment.yml`
 // Any changes here should be copied into the CI step there.
 const allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
 	owner: context.repo.owner,

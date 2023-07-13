@@ -13,7 +13,7 @@ jobs:
     name: Write comment to the PR
     steps:
       - name: "Put PR and workflow ID on the environment"
-        uses: actions/github-script@v5
+        uses: actions/github-script@v6
         with:
           script: |
             // Copied from .github/extract-pr-and-workflow-id.js
@@ -68,7 +68,7 @@ jobs:
 
             Note that these links will no longer work once [the GitHub Actions artifact expires](https://docs.github.com/en/organizations/managing-organization-settings/configuring-the-retention-period-for-github-actions-artifacts-and-logs-in-your-organization).
 
-      - name: "Comment on PR with Wrangler link"
+      - name: "Comment on PR with C3 link"
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           number: ${{ env.WORKFLOW_RUN_PR_FOR_CREATE_CLOUDFLARE }}
