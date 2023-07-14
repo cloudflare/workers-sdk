@@ -57,12 +57,10 @@ export const runCommand = async (
 		promise() {
 			const [executable, ...args] = command;
 
-			const squelch = opts.silent || process.env.VITEST;
-
 			const cmd = spawn(executable, [...args], {
 				// TODO: ideally inherit stderr, but npm install uses this for warnings
 				// stdio: [ioMode, ioMode, "inherit"],
-				stdio: squelch ? "pipe" : "inherit",
+				stdio: opts.silent ? "pipe" : "inherit",
 				env: {
 					...process.env,
 					...opts.env,
@@ -72,7 +70,7 @@ export const runCommand = async (
 
 			let output = ``;
 
-			if (opts?.captureOutput ?? squelch) {
+			if (opts?.captureOutput ?? opts.silent) {
 				cmd.stdout?.on("data", (data) => {
 					output += data;
 				});

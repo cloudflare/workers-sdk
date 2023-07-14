@@ -1,5 +1,4 @@
 import { spawn } from "cross-spawn";
-import { red } from "helpers/colors";
 
 export const keys = {
 	enter: "\x0d",
@@ -18,12 +17,16 @@ export type PromptHandler = {
 
 export type RunnerConfig = {
 	promptHandlers?: PromptHandler[];
-	argv: string[];
+	argv?: string[];
 };
 
-export const runC3 = async ({ argv, promptHandlers = [] }: RunnerConfig) => {
+export const runC3 = async ({
+	argv = [],
+	promptHandlers = [],
+}: RunnerConfig) => {
 	const proc = spawn("node", ["./dist/cli.js", ...argv]);
 	const output: string[] = [];
+	const stderr: string[] = [];
 
 	await new Promise((resolve, rejects) => {
 		proc.stdout.on("data", (data) => {
@@ -51,7 +54,7 @@ export const runC3 = async ({ argv, promptHandlers = [] }: RunnerConfig) => {
 		});
 
 		proc.stderr.on("data", (data) => {
-			console.error(red(data.toString()));
+			stderr.push(data);
 		});
 
 		proc.on("close", (code) => {
@@ -67,5 +70,8 @@ export const runC3 = async ({ argv, promptHandlers = [] }: RunnerConfig) => {
 		});
 	});
 
-	return { output: output.join("\n").trim() };
+	return {
+		output: output.join("\n").trim(),
+		stderr: stderr.join("\n").trim(),
+	};
 };
