@@ -49,7 +49,7 @@ body:
   - type: textarea
     attributes:
       label: Describe the Bug
-      description: Steps to reproduce
+      description: Include steps to reproduce, describe the behaviour you observe, and describe the behaviour you _expect_ to observe
     validations:
       required: true
   - type: input
