@@ -26,6 +26,7 @@ body:
         - R2
         - Workers for Platforms
         - Constellation
+        - Workers Runtime
         - Wrangler core
         - Other
   - type: input
