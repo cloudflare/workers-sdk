@@ -1,10 +1,10 @@
-import { existsSync, rmSync, mkdtempSync, realpathSync } from "fs";
+import { existsSync, rmSync, mkdirSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
-import { execa } from "execa";
 import { FrameworkMap } from "frameworks/index";
 import { readJSON } from "helpers/files";
 import { describe, expect, test, afterEach, beforeEach } from "vitest";
+import { runC3 } from "./helpers";
 
 /*
 Areas for future improvement:
@@ -13,22 +13,21 @@ Areas for future improvement:
 */
 
 describe("E2E", () => {
-	let dummyPath: string;
+	let projectPath: string;
 
 	beforeEach(() => {
-		// Use realpath because the temporary path can point to a symlink rather than the actual path.
-		dummyPath = realpathSync(mkdtempSync(join(tmpdir(), "c3-tests")));
+		projectPath = join(tmpdir(), "c3-test-pages");
+		rmSync(projectPath, { recursive: true, force: true });
+		mkdirSync(projectPath);
 	});
 
 	afterEach(() => {
-		if (existsSync(dummyPath)) {
-			rmSync(dummyPath, { recursive: true });
+		if (existsSync(projectPath)) {
+			rmSync(projectPath, { recursive: true });
 		}
 	});
 
 	const runCli = async (framework: string, args: string[] = []) => {
-		const projectPath = join(dummyPath, "test");
-
 		const argv = [
 			projectPath,
 			"--type",
@@ -48,14 +47,7 @@ describe("E2E", () => {
 		// command the test uses. You can then run this via the command line.
 		// console.log("COMMAND: ", `node ${["./dist/cli.js", ...argv].join(" ")}`);
 
-		const result = await execa("node", ["./dist/cli.js", ...argv], {
-			stderr: process.stderr,
-		});
-
-		const { exitCode } = result;
-
-		// Some baseline assertions for each framework
-		expect(exitCode).toBe(0);
+		await runC3({ argv });
 
 		// Relevant project files should have been created
 		expect(projectPath).toExist();
@@ -72,55 +64,24 @@ describe("E2E", () => {
 		Object.entries(frameworkConfig.packageScripts).forEach(([target, cmd]) => {
 			expect(pkgJson.scripts[target]).toEqual(cmd);
 		});
-
-		return {
-			result,
-			projectPath,
-		};
 	};
 
-	test("Astro", async () => {
-		await runCli("astro");
-	});
+	test.each(["astro", "hono", "next", "nuxt", "react", "remix", "vue"])(
+		"%s",
+		async (name) => {
+			await runCli(name);
+		}
+	);
 
-	test("Hono", async () => {
-		await runCli("hono");
-	});
-
-	test("Next.js", async () => {
-		await runCli("next");
-	});
-
-	test("Nuxt", async () => {
-		await runCli("nuxt");
-	});
-
-	// Not possible atm since `npx qwik add cloudflare-pages`
-	// requires interactive confirmation
-	test.skip("Qwik", async () => {
-		await runCli("next");
-	});
-
-	test("React", async () => {
-		await runCli("react");
-	});
-
-	test("Remix", async () => {
-		await runCli("remix");
-	});
-
-	// Not possible atm since template selection is interactive only
-	test.skip("Solid", async () => {
-		await runCli("solid");
-	});
-
-	// Not possible atm since everything is interactive only
-	test.skip("Svelte", async () => {
-		await runCli("svelte");
-	});
-
-	test("Vue", async () => {
-		await runCli("vue");
+	test.skip.each([
+		// Not possible since it requires interactive input
+		"solid",
+		"svelte",
+		// Not possible atm since `npx qwik add cloudflare-pages`
+		// requires interactive confirmation
+		"qwik",
+	])("%s", async (name) => {
+		await runCli(name);
 	});
 
 	// This test blows up in CI due to Github providing an unusual git user email address.
@@ -130,7 +91,7 @@ describe("E2E", () => {
 	// internal.cloudapp.net>) not allowed
 	// ```
 	test.skip("Hono (wrangler defaults)", async () => {
-		const { projectPath } = await runCli("hono", ["--wrangler-defaults"]);
+		await runCli("hono", ["--wrangler-defaults"]);
 
 		// verify that wrangler-defaults defaults to `true` for using git
 		expect(join(projectPath, ".git")).toExist();
