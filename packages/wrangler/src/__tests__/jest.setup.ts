@@ -34,7 +34,7 @@ jest.mock("child_process", () => {
 	return {
 		__esModule: true,
 		...jest.requireActual("child_process"),
-		spawnSync: jest.fn().mockImplementation(async (binary, ...args) => {
+		spawnSync: jest.fn().mockImplementation((binary, ...args) => {
 			if (binary === "cloudflared") return { error: true };
 			return jest.requireActual("child_process").spawnSync(binary, ...args);
 		}),
@@ -213,6 +213,8 @@ jest.mock("execa", () => {
 		}),
 	};
 });
+
+jest.mock("../deployment-bundle/call-capnp");
 
 afterEach(() => {
 	// It is important that we clear mocks between tests to avoid leakage.

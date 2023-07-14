@@ -127,6 +127,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 								logpush: false,
 								placement: undefined,
 								tail_consumers: undefined,
+								capnp_src_prefix: undefined,
 							}),
 						}
 					);

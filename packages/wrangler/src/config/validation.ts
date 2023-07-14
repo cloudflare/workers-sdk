@@ -1299,11 +1299,19 @@ function normalizeAndValidateEnvironment(
 			topLevelEnv,
 			rawEnv,
 			"logfwdr",
-			validateBindingsProperty(envName, validateCflogfwdrBinding),
+			validateCflogfwdrObject(envName),
 			{
 				schema: undefined,
 				bindings: [],
 			}
+		),
+		capnp_src_prefix: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"capnp_src_prefix",
+			isString,
+			undefined
 		),
 		unsafe: notInheritable(
 			diagnostics,
@@ -1688,6 +1696,32 @@ const validateUnsafeSettings =
 			if (!valid) {
 				return false;
 			}
+			// If we have an array of bindings, we should validate each one to check their capnp_schema property
+			if (Array.isArray(value.bindings)) {
+				let isValid = true;
+				// we've already validated above that each item is an object, with name and type, so only capnp_schema needs to be checked
+				for (const binding of value.bindings as { capnp_schema?: string }[]) {
+					if (!isOptionalProperty(binding, "capnp_schema", "string")) {
+						diagnostics.errors.push(
+							`the "unsafe.bindings" field "capnp_schema", when present, should be a string. Got ${JSON.stringify(
+								binding.capnp_schema
+							)}`
+						);
+						isValid = false;
+						continue;
+					}
+					if (binding.capnp_schema?.endsWith(".compiled")) {
+						diagnostics.errors.push(
+							`"unsafe.bindings" field "capnp_schema" should not be pre-compiled - Wrangler will run capnp for you.`
+						);
+						isValid = false;
+						return isValid;
+					}
+				}
+				if (!isValid) {
+					return isValid;
+				}
+			}
 		}
 
 		// unsafe.metadata
@@ -1757,6 +1791,41 @@ const validateDurableObjectBinding: ValidatorFn = (
 
 	return isValid;
 };
+
+const validateCflogfwdrObject: (env: string) => ValidatorFn =
+	(envName) => (diagnostics, field, value, topLevelEnv) => {
+		//validate the bindings property first, as this also validates that it's an object, etc.
+		const bindingsValidation = validateBindingsProperty(
+			envName,
+			validateCflogfwdrBinding
+		);
+		if (!bindingsValidation(diagnostics, field, value, topLevelEnv))
+			return false;
+
+		const v = value as { bindings: []; schema: string | undefined };
+
+		// if there's something in the bindings array, the logfwdr schema is required, so we can exit early when there's no bindings
+		if (!v?.bindings.length) return true;
+
+		// we now know there are bindings, so we need to validate the schema property
+		if (!isRequiredProperty(v, "schema", "string")) {
+			diagnostics.errors.push(
+				`"${field}" bindings should have a string "schema" field but got ${JSON.stringify(
+					v
+				)}.`
+			);
+			return false;
+		}
+
+		//schema is definitely a string now, however it's historically been used to parse pre-compiled capnp, so an error should be thrown for that
+		if (v.schema?.endsWith(".compiled")) {
+			diagnostics.errors.push(
+				`"${field}" bindings "schema" field should not be pre-compiled - Wrangler will run capnp for you.`
+			);
+		}
+
+		return true;
+	};
 
 const validateCflogfwdrBinding: ValidatorFn = (diagnostics, field, value) => {
 	if (typeof value !== "object" || value === null) {

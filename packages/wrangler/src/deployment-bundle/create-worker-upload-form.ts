@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { FormData, File } from "undici";
+import { callCapnp } from "./call-capnp";
 import type {
 	CfWorkerInit,
 	CfModuleType,
@@ -108,6 +109,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		logpush,
 		placement,
 		tail_consumers,
+		capnp_src_prefix,
 	} = worker;
 
 	let { modules } = worker;
@@ -346,9 +348,34 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		}
 	}
 
+	const capnp_schemas: string[] = [];
+
 	if (bindings.unsafe?.bindings) {
 		// @ts-expect-error unsafe bindings don't need to match a specific type here
 		metadataBindings.push(...bindings.unsafe.bindings);
+		for (const binding of bindings.unsafe.bindings) {
+			if (binding.capnp_schema) {
+				capnp_schemas.push(binding.capnp_schema);
+			}
+		}
+	}
+
+	if (bindings.logfwdr?.schema) {
+		capnp_schemas.push(bindings.logfwdr.schema);
+	}
+
+	let capnpSchemaOutputFile: string | undefined;
+
+	if (capnp_schemas.length) {
+		const capnpOutput = callCapnp(capnp_schemas, capnp_src_prefix);
+		capnpSchemaOutputFile = `./capnp-${Date.now()}.compiled`;
+
+		formData.set(
+			capnpSchemaOutputFile,
+			new File([capnpOutput], capnpSchemaOutputFile, {
+				type: "application/octet-stream",
+			})
+		);
 	}
 
 	const metadata: WorkerMetadata = {
@@ -360,7 +387,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		...(compatibility_flags && { compatibility_flags }),
 		...(usage_model && { usage_model }),
 		...(migrations && { migrations }),
-		capnp_schema: bindings.logfwdr?.schema,
+		capnp_schema: capnpSchemaOutputFile,
 		...(keepVars && { keep_bindings: ["plain_text", "json"] }),
 		...(logpush !== undefined && { logpush }),
 		...(placement && { placement }),
@@ -386,16 +413,6 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			module.name,
 			new File([module.content], module.name, {
 				type: toMimeType(module.type ?? main.type ?? "esm"),
-			})
-		);
-	}
-
-	if (bindings.logfwdr && bindings.logfwdr.schema) {
-		const filePath = bindings.logfwdr.schema;
-		formData.set(
-			filePath,
-			new File([readFileSync(filePath)], filePath, {
-				type: "application/octet-stream",
 			})
 		);
 	}

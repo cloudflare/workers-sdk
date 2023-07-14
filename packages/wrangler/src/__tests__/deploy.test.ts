@@ -10,6 +10,7 @@ import {
 	printBundleSize,
 	printOffendingDependencies,
 } from "../deployment-bundle/bundle-reporter";
+import { callCapnp } from "../deployment-bundle/call-capnp";
 import { logger } from "../logger";
 import { writeAuthConfigFile } from "../user";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -5078,19 +5079,6 @@ addEventListener('fetch', event => {});`
 					DATA_BLOB_ONE: "./some-data-blob.bin",
 					DATA_BLOB_TWO: "./more-data-blob.bin",
 				},
-				logfwdr: {
-					schema: "./message.capnp.compiled",
-					bindings: [
-						{
-							name: "httplogs",
-							destination: "httplogs",
-						},
-						{
-							name: "trace",
-							destination: "trace",
-						},
-					],
-				},
 			});
 
 			writeWorkerSource({ type: "sw" });
@@ -5104,8 +5092,6 @@ addEventListener('fetch', event => {});`
 
 			fs.writeFileSync("./some-data-blob.bin", "some data");
 			fs.writeFileSync("./more-data-blob.bin", "more data");
-
-			fs.writeFileSync("./message.capnp.compiled", "compiled capnp messages");
 
 			mockUploadWorkerRequest({
 				expectedType: "sw",
@@ -5164,16 +5150,6 @@ addEventListener('fetch', event => {});`
 						type: "analytics_engine",
 					},
 					{
-						name: "httplogs",
-						type: "logfwdr",
-						destination: "httplogs",
-					},
-					{
-						name: "trace",
-						type: "logfwdr",
-						destination: "trace",
-					},
-					{
 						name: "WASM_MODULE_ONE",
 						part: "WASM_MODULE_ONE",
 						type: "wasm_module",
@@ -5218,9 +5194,6 @@ addEventListener('fetch', event => {});`
 			- R2 Buckets:
 			  - R2_BUCKET_ONE: r2-bucket-one-name
 			  - R2_BUCKET_TWO: r2-bucket-two-name
-			- logfwdr:
-			  - httplogs: httplogs
-			  - trace: trace
 			- Analytics Engine Datasets:
 			  - AE_DATASET_ONE: ae-dataset-one-name
 			  - AE_DATASET_TWO: ae-dataset-two-name
@@ -6104,11 +6077,15 @@ addEventListener('fetch', event => {});`
 
 		describe("[logfwdr]", () => {
 			it("should support logfwdr bindings", async () => {
-				fs.writeFileSync("./message.capnp.compiled", "compiled capnp messages");
+				(callCapnp as jest.MockedFunction<typeof callCapnp>).mockImplementation(
+					() => Buffer.from("compiled capnp messages")
+				);
+
+				fs.writeFileSync("./message.capnp", "pre-compiled capnp messages");
 
 				writeWranglerToml({
 					logfwdr: {
-						schema: "./message.capnp.compiled",
+						schema: "./message.capnp",
 						bindings: [
 							{
 								name: "httplogs",
@@ -6136,6 +6113,7 @@ addEventListener('fetch', event => {});`
 							destination: "trace",
 						},
 					],
+					expectedCapnpSchema: "compiled capnp messages",
 				});
 
 				await runWrangler("deploy index.js");
@@ -6152,6 +6130,87 @@ addEventListener('fetch', event => {});`
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should error for compiled logfwdr schemas", async () => {
+				writeWranglerToml({
+					logfwdr: {
+						schema: "./message.capnp.compiled",
+						bindings: [
+							{
+								name: "httplogs",
+								destination: "httplogs",
+							},
+							{
+								name: "trace",
+								destination: "trace",
+							},
+						],
+					},
+				});
+
+				await expect(() => runWrangler("deploy index.js")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+			"Processing wrangler.toml configuration:
+			  - \\"logfwdr\\" bindings \\"schema\\" field should not be pre-compiled - Wrangler will run capnp for you."
+		`);
+			});
+
+			it("should when a logfwdr schema isn't specified", async () => {
+				writeWranglerToml({
+					logfwdr: {
+						schema: undefined,
+						bindings: [
+							{
+								name: "httplogs",
+								destination: "httplogs",
+							},
+							{
+								name: "trace",
+								destination: "trace",
+							},
+						],
+					},
+				});
+
+				await expect(() => runWrangler("deploy index.js")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+			"Processing wrangler.toml configuration:
+			  - \\"logfwdr\\" bindings should have a string \\"schema\\" field but got {\\"bindings\\":[{\\"name\\":\\"httplogs\\",\\"destination\\":\\"httplogs\\"},{\\"name\\":\\"trace\\",\\"destination\\":\\"trace\\"}]}."
+		`);
+			});
+
+			it("should error when the capnp CLI tool is not present", async () => {
+				(callCapnp as jest.MockedFunction<typeof callCapnp>).mockImplementation(
+					() => {
+						throw new Error(
+							"The capnp compiler is required to upload capnp schemas, but is not present."
+						);
+					}
+				);
+
+				writeWranglerToml({
+					logfwdr: {
+						schema: "./message.capnp",
+						bindings: [
+							{
+								name: "httplogs",
+								destination: "httplogs",
+							},
+							{
+								name: "trace",
+								destination: "trace",
+							},
+						],
+					},
+				});
+				writeWorkerSource();
+
+				await expect(() =>
+					runWrangler("deploy index.js")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`"The capnp compiler is required to upload capnp schemas, but is not present."`
+				);
 			});
 		});
 
@@ -6711,6 +6770,50 @@ addEventListener('fetch', event => {});`
 			        For more details, see [4mhttps://developers.cloudflare.com/workers/cli-wrangler/configuration[0m
 
 			"
+		`);
+			});
+			it("should error if using unsafe bindings capnp_schemas which are invalid", async () => {
+				writeWranglerToml({
+					unsafe: {
+						bindings: [
+							{
+								name: "my-binding",
+								type: "plain_text",
+								text: "text",
+								capnp_schema: false, // expects a string
+							},
+						],
+						metadata: undefined,
+					},
+				});
+				writeWorkerSource();
+
+				await expect(() => runWrangler("deploy index.js")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+			"Processing wrangler.toml configuration:
+			  - the \\"unsafe.bindings\\" field \\"capnp_schema\\", when present, should be a string. Got false"
+		`);
+			});
+			it("should error if using unsafe bindings capnp_schemas which are pre-compiled", async () => {
+				writeWranglerToml({
+					unsafe: {
+						bindings: [
+							{
+								name: "my-binding",
+								type: "plain_text",
+								text: "text",
+								capnp_schema: "my-schema.capnp.compiled",
+							},
+						],
+						metadata: undefined,
+					},
+				});
+				writeWorkerSource();
+
+				await expect(() => runWrangler("deploy index.js")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+			"Processing wrangler.toml configuration:
+			  - \\"unsafe.bindings\\" field \\"capnp_schema\\" should not be pre-compiled - Wrangler will run capnp for you."
 		`);
 			});
 		});
@@ -8302,6 +8405,7 @@ function mockUploadWorkerRequest(
 		expectedMigrations?: CfWorkerInit["migrations"];
 		expectedTailConsumers?: CfWorkerInit["tail_consumers"];
 		expectedUnsafeMetaData?: Record<string, string>;
+		expectedCapnpSchema?: string;
 		env?: string;
 		legacyEnv?: boolean;
 		keepVars?: boolean;
@@ -8322,6 +8426,7 @@ function mockUploadWorkerRequest(
 		expectedMigrations,
 		expectedTailConsumers,
 		expectedUnsafeMetaData,
+		expectedCapnpSchema,
 		keepVars,
 	} = options;
 	if (env && !legacyEnv) {
@@ -8392,6 +8497,11 @@ function mockUploadWorkerRequest(
 		}
 		if ("expectedTailConsumers" in options) {
 			expect(metadata.tail_consumers).toEqual(expectedTailConsumers);
+		}
+		if ("expectedCapnpSchema" in options) {
+			expect(formBody.get(metadata.capnp_schema ?? "")).toEqual(
+				expectedCapnpSchema
+			);
 		}
 		if (expectedUnsafeMetaData !== undefined) {
 			Object.keys(expectedUnsafeMetaData).forEach((key) => {

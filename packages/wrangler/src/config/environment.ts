@@ -239,7 +239,7 @@ interface EnvironmentInheritable {
 	zone_id?: string;
 
 	/**
-	 * Specify a compiled capnp schema to use
+	 * Specify a capnp schema to use
 	 * Then add a binding per field in the top level message that you will send to logfwdr
 	 *
 	 * @default `{schema:undefined,bindings:[]}`
@@ -255,6 +255,11 @@ interface EnvironmentInheritable {
 			destination: string;
 		}[];
 	};
+
+	/**
+	 * The source prefix to provide to capnp when Wrangler is compiling your capnp schemas
+	 */
+	capnp_src_prefix: string | undefined;
 
 	/**
 	 * Send Trace Events from this worker to Workers Logpush.

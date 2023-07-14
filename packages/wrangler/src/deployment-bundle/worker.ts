@@ -181,6 +181,7 @@ interface CfLogfwdrBinding {
 interface CfUnsafeBinding {
 	name: string;
 	type: string;
+	capnp_schema?: string;
 }
 
 type CfUnsafeMetadata = Record<string, unknown>;
@@ -259,6 +260,7 @@ export interface CfWorkerInit {
 	logpush: boolean | undefined;
 	placement: CfPlacement | undefined;
 	tail_consumers: CfTailConsumer[] | undefined;
+	capnp_src_prefix: string | undefined;
 }
 
 export interface CfWorkerContext {
