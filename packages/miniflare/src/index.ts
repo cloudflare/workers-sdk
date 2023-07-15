@@ -44,8 +44,11 @@ import {
 	normaliseDurableObject,
 } from "./plugins";
 import {
+	CUSTOM_SERVICE_KNOWN_OUTBOUND,
+	CustomServiceKind,
 	JsonErrorSchema,
 	NameSourceOptions,
+	ServiceDesignatorSchema,
 	getUserServiceName,
 	handlePrettyErrorRequest,
 	reviveError,
@@ -545,9 +548,15 @@ export class Miniflare {
 		// TODO: technically may want to keep old versions around so can always
 		//  recover this in case of setOptions()?
 		const workerIndex = parseInt(customService.substring(0, slashIndex));
-		const serviceName = customService.substring(slashIndex + 1);
-		const service =
-			this.#workerOpts[workerIndex]?.core.serviceBindings?.[serviceName];
+		const serviceKind = customService[slashIndex + 1] as CustomServiceKind;
+		const serviceName = customService.substring(slashIndex + 2);
+		let service: z.infer<typeof ServiceDesignatorSchema> | undefined;
+		if (serviceKind === CustomServiceKind.UNKNOWN) {
+			service =
+				this.#workerOpts[workerIndex]?.core.serviceBindings?.[serviceName];
+		} else if (serviceName === CUSTOM_SERVICE_KNOWN_OUTBOUND) {
+			service = this.#workerOpts[workerIndex]?.core.outboundService;
+		}
 		// Should only define custom service bindings if `service` is a function
 		assert(typeof service === "function");
 		try {

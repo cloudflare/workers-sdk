@@ -12,12 +12,28 @@ const SERVICE_CUSTOM_PREFIX = `${CORE_PLUGIN_NAME}:custom`;
 export function getUserServiceName(workerName = "") {
 	return `${SERVICE_USER_PREFIX}:${workerName}`;
 }
+
+// Namespace custom services to avoid conflicts between user-specified names
+// and hardcoded Miniflare names
+export enum CustomServiceKind {
+	UNKNOWN = "#", // User specified name (i.e. `serviceBindings`)
+	KNOWN = "$", // Miniflare specified name (i.e. `outboundService`)
+}
+
+export const CUSTOM_SERVICE_KNOWN_OUTBOUND = "outbound";
+
 export function getBuiltinServiceName(
 	workerIndex: number,
+	kind: CustomServiceKind,
 	bindingName: string
 ) {
-	return `${SERVICE_BUILTIN_PREFIX}:${workerIndex}:${bindingName}`;
+	return `${SERVICE_BUILTIN_PREFIX}:${workerIndex}:${kind}${bindingName}`;
 }
-export function getCustomServiceName(workerIndex: number, bindingName: string) {
-	return `${SERVICE_CUSTOM_PREFIX}:${workerIndex}:${bindingName}`;
+
+export function getCustomServiceName(
+	workerIndex: number,
+	kind: CustomServiceKind,
+	bindingName: string
+) {
+	return `${SERVICE_CUSTOM_PREFIX}:${workerIndex}:${kind}${bindingName}`;
 }

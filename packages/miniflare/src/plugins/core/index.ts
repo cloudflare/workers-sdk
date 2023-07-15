@@ -8,6 +8,7 @@ import SCRIPT_ENTRY from "worker:core/entry";
 import { z } from "zod";
 import {
 	Service,
+	ServiceDesignator,
 	Worker_Binding,
 	Worker_Module,
 	kVoid,
@@ -31,6 +32,8 @@ import {
 	parseRoutes,
 } from "../shared";
 import {
+	CUSTOM_SERVICE_KNOWN_OUTBOUND,
+	CustomServiceKind,
 	SERVICE_ENTRY,
 	getBuiltinServiceName,
 	getCustomServiceName,
@@ -82,6 +85,7 @@ export const CoreOptionsSchema = z.intersection(
 		textBlobBindings: z.record(z.string()).optional(),
 		dataBlobBindings: z.record(z.string()).optional(),
 		serviceBindings: z.record(ServiceDesignatorSchema).optional(),
+		outboundService: ServiceDesignatorSchema.optional(),
 
 		unsafeEphemeralDurableObjects: z.boolean().optional(),
 	})
@@ -138,6 +142,57 @@ export const SCRIPT_CUSTOM_SERVICE = `addEventListener("fetch", (event) => {
   request.headers.set("${CoreHeaders.ORIGINAL_URL}", request.url);
   event.respondWith(${CoreBindings.SERVICE_LOOPBACK}.fetch(request));
 })`;
+
+function getCustomServiceDesignator(
+	workerIndex: number,
+	kind: CustomServiceKind,
+	name: string,
+	service: z.infer<typeof ServiceDesignatorSchema>
+): ServiceDesignator {
+	let serviceName: string;
+	if (typeof service === "function") {
+		// Custom `fetch` function
+		serviceName = getCustomServiceName(workerIndex, kind, name);
+	} else if (typeof service === "object") {
+		// Builtin workerd service: network, external, disk
+		serviceName = getBuiltinServiceName(workerIndex, kind, name);
+	} else {
+		// Regular user worker
+		serviceName = getUserServiceName(service);
+	}
+	return { name: serviceName };
+}
+
+function maybeGetCustomServiceService(
+	workerIndex: number,
+	kind: CustomServiceKind,
+	name: string,
+	service: z.infer<typeof ServiceDesignatorSchema>
+): Service | undefined {
+	if (typeof service === "function") {
+		// Custom `fetch` function
+		return {
+			name: getCustomServiceName(workerIndex, kind, name),
+			worker: {
+				serviceWorkerScript: SCRIPT_CUSTOM_SERVICE,
+				compatibilityDate: "2022-09-01",
+				bindings: [
+					{
+						name: CoreBindings.TEXT_CUSTOM_SERVICE,
+						text: `${workerIndex}/${kind}${name}`,
+					},
+					WORKER_BINDING_SERVICE_LOOPBACK,
+				],
+			},
+		};
+	} else if (typeof service === "object") {
+		// Builtin workerd service: network, external, disk
+		return {
+			name: getBuiltinServiceName(workerIndex, kind, name),
+			...service,
+		};
+	}
+}
 
 const FALLBACK_COMPATIBILITY_DATE = "2000-01-01";
 
@@ -217,20 +272,14 @@ export const CORE_PLUGIN: Plugin<
 		if (options.serviceBindings !== undefined) {
 			bindings.push(
 				...Object.entries(options.serviceBindings).map(([name, service]) => {
-					let serviceName: string;
-					if (typeof service === "function") {
-						// Custom `fetch` function
-						serviceName = getCustomServiceName(workerIndex, name);
-					} else if (typeof service === "object") {
-						// Builtin workerd service: network, external, disk
-						serviceName = getBuiltinServiceName(workerIndex, name);
-					} else {
-						// Regular user worker
-						serviceName = getUserServiceName(service);
-					}
 					return {
 						name: name,
-						service: { name: serviceName },
+						service: getCustomServiceDesignator(
+							workerIndex,
+							CustomServiceKind.UNKNOWN,
+							name,
+							service
+						),
 					};
 				})
 			);
@@ -288,6 +337,15 @@ export const CORE_PLUGIN: Plugin<
 							: options.unsafeEphemeralDurableObjects
 							? { inMemory: kVoid }
 							: { localDisk: DURABLE_OBJECTS_STORAGE_SERVICE_NAME },
+					globalOutbound:
+						options.outboundService === undefined
+							? undefined
+							: getCustomServiceDesignator(
+									workerIndex,
+									CustomServiceKind.KNOWN,
+									CUSTOM_SERVICE_KNOWN_OUTBOUND,
+									options.outboundService
+							  ),
 					cacheApiOutbound: { name: getCacheServiceName(workerIndex) },
 				},
 			},
@@ -296,30 +354,23 @@ export const CORE_PLUGIN: Plugin<
 		// Define custom `fetch` services if set
 		if (options.serviceBindings !== undefined) {
 			for (const [name, service] of Object.entries(options.serviceBindings)) {
-				if (typeof service === "function") {
-					// Custom `fetch` function
-					services.push({
-						name: getCustomServiceName(workerIndex, name),
-						worker: {
-							serviceWorkerScript: SCRIPT_CUSTOM_SERVICE,
-							compatibilityDate: "2022-09-01",
-							bindings: [
-								{
-									name: CoreBindings.TEXT_CUSTOM_SERVICE,
-									text: `${workerIndex}/${name}`,
-								},
-								WORKER_BINDING_SERVICE_LOOPBACK,
-							],
-						},
-					});
-				} else if (typeof service === "object") {
-					// Builtin workerd service: network, external, disk
-					services.push({
-						name: getBuiltinServiceName(workerIndex, name),
-						...service,
-					});
-				}
+				const maybeService = maybeGetCustomServiceService(
+					workerIndex,
+					CustomServiceKind.UNKNOWN,
+					name,
+					service
+				);
+				if (maybeService !== undefined) services.push(maybeService);
 			}
+		}
+		if (options.outboundService !== undefined) {
+			const maybeService = maybeGetCustomServiceService(
+				workerIndex,
+				CustomServiceKind.KNOWN,
+				CUSTOM_SERVICE_KNOWN_OUTBOUND,
+				options.outboundService
+			);
+			if (maybeService !== undefined) services.push(maybeService);
 		}
 
 		return services;
