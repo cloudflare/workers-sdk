@@ -9,6 +9,7 @@ import {
 	Miniflare,
 	MiniflareCoreError,
 	MiniflareOptions,
+	Response,
 	_transformsForContentEncoding,
 	fetch,
 } from "miniflare";
@@ -325,6 +326,46 @@ test("Miniflare: custom service binding to another Miniflare instance", async (t
 		method: "DELETE",
 		url: "https://custom3.mf/c",
 		body: null,
+	});
+});
+
+test("Miniflare: custom outbound service", async (t) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				name: "a",
+				modules: true,
+				script: `export default {
+          async fetch() {
+            const res1 = await (await fetch("https://example.com/1")).text();
+            const res2 = await (await fetch("https://example.com/2")).text();
+            return Response.json({ res1, res2 });
+          }
+        }`,
+				outboundService: "b",
+			},
+			{
+				name: "b",
+				modules: true,
+				script: `export default {
+          async fetch(request, env) {
+            if (request.url === "https://example.com/1") {
+              return new Response("one");
+            } else {
+              return fetch(request);
+            }
+          }
+        }`,
+				outboundService(request) {
+					return new Response(`fallback:${request.url}`);
+				},
+			},
+		],
+	});
+	const res = await mf.dispatchFetch("http://localhost");
+	t.deepEqual(await res.json(), {
+		res1: "one",
+		res2: "fallback:https://example.com/2",
 	});
 });
 

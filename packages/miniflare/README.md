@@ -315,6 +315,12 @@ parameter in module format Workers.
     handler. This allows you to access data and functions defined in Node.js
     from your Worker.
 
+- `outboundService?: string | { network: Network } | { external: ExternalServer } | { disk: DiskDirectory } | (request: Request) => Awaitable<Response>`
+
+  Dispatch this Worker's global `fetch()` and `connect()` requests to the
+  configured service. Service designators follow the same rules above for
+  `serviceBindings`.
+
 - `routes?: string[]`
 
   Array of route patterns for this Worker. These follow the same
