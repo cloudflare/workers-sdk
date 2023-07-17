@@ -16,11 +16,11 @@ This template requires [Docker](https://docs.docker.com/install/) for providing 
 To create a `my-project` directory using this template, run:
 
 ```sh
-$ npm init cloudflare my-project worker-emscripten --no-delegate-c3
+$ npx wrangler generate my-project https://github.com/cloudflare/workers-sdk/templates/experimental/worker-emscripten
 # or
-$ yarn create cloudflare my-project worker-emscripten --no-delegate-c3
+$ yarn wrangler generate my-project https://github.com/cloudflare/workers-sdk/templates/experimental/worker-emscripten
 # or
-$ pnpm create cloudflare my-project worker-emscripten --no-delegate-c3
+$ pnpm wrangler generate my-project https://github.com/cloudflare/workers-sdk/templates/experimental/worker-emscripten
 ```
 
 > **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.

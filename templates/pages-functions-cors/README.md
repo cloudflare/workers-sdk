@@ -9,11 +9,11 @@ A template for Pages Functions appending CORS headers.
 To create a `my-project` directory using this template, run:
 
 ```sh
-$ npm init cloudflare my-project pages-functions-cors --no-delegate-c3
+$ npx wrangler generate my-project pages-functions-cors
 # or
-$ yarn create cloudflare my-project pages-functions-cors --no-delegate-c3
+$ yarn wrangler generate my-project pages-functions-cors
 # or
-$ pnpm create cloudflare my-project pages-functions-cors --no-delegate-c3
+$ pnpm wrangler generate my-project pages-functions-cors
 ```
 
 > **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.

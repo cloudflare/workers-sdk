@@ -9,11 +9,11 @@ In addition to [Wrangler](https://github.com/cloudflare/wrangler) you will need 
 To create a `my-project` directory using this template, run:
 
 ```sh
-$ npm init cloudflare my-project worker-reason --no-delegate-c3
+$ npx wrangler generate my-project https://github.com/cloudflare/workers-sdk/templates/experimental/worker-reason
 # or
-$ yarn create cloudflare my-project worker-reason --no-delegate-c3
+$ yarn wrangler generate my-project https://github.com/cloudflare/workers-sdk/templates/experimental/worker-reason
 # or
-$ pnpm create cloudflare my-project worker-reason --no-delegate-c3
+$ pnpm wrangler generate my-project https://github.com/cloudflare/workers-sdk/templates/experimental/worker-reason
 ```
 
 > **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.

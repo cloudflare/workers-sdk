@@ -9,11 +9,11 @@ A template for working with Durable Objects as WebSocket backend in Cloudflare W
 To create a `my-project` directory using this template, run:
 
 ```sh
-$ npm init cloudflare my-project worker-websocket-durable-objects --no-delegate-c3
+$ npx wrangler generate my-project worker-websocket-durable-objects
 # or
-$ yarn create cloudflare my-project worker-websocket-durable-objects --no-delegate-c3
+$ yarn wrangler generate my-project worker-websocket-durable-objects
 # or
-$ pnpm create cloudflare my-project worker-websocket-durable-objects --no-delegate-c3
+$ pnpm wrangler generate my-project worker-websocket-durable-objects
 ```
 
 > **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.

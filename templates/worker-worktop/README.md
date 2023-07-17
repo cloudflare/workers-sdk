@@ -15,11 +15,11 @@ This template utilizes the [`worktop`](https://github.com/lukeed/worktop) framew
 To create a `my-project` directory using this template, run:
 
 ```sh
-$ npm init cloudflare my-project worktop --no-delegate-c3
+$ npx wrangler generate my-project worktop
 # or
-$ yarn create cloudflare my-project worktop --no-delegate-c3
+$ yarn wrangler generate my-project worktop
 # or
-$ pnpm create cloudflare my-project worktop --no-delegate-c3
+$ pnpm wrangler generate my-project worktop
 ```
 
 > **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.

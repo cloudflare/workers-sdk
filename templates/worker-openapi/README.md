@@ -11,11 +11,11 @@ You can try this template in your browser [here](https://worker-openapi-example.
 To create a `my-project` directory using this template, run:
 
 ```sh
-$ npm init cloudflare my-project worker-openapi --no-delegate-c3
+$ npx wrangler generate my-project worker-openapi
 # or
-$ yarn create cloudflare my-project worker-openapi --no-delegate-c3
+$ yarn wrangler generate my-project worker-openapi
 # or
-$ pnpm create cloudflare my-project worker-openapi --no-delegate-c3
+$ pnpm wrangler generate my-project worker-openapi
 ```
 
 > **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.

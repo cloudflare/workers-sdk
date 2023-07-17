@@ -10,11 +10,11 @@ setting up Turso and creating a database.
 To create a `my-project` directory using this template, run:
 
 ```sh
-$ npm init cloudflare my-project worker-turso-ts --no-delegate-c3
+$ npx wrangler generate my-project worker-turso-ts
 # or
-$ yarn create cloudflare my-project worker-turso-ts --no-delegate-c3
+$ yarn wrangler generate my-project worker-turso-ts
 # or
-$ pnpm create cloudflare my-project worker-turso-ts --no-delegate-c3
+$ pnpm wrangler generate my-project worker-turso-ts
 ```
 
 > **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.

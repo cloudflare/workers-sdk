@@ -9,11 +9,11 @@ A batteries included template for kick starting a TypeScript Cloudflare worker p
 To create a `my-project` directory using this template, run:
 
 ```sh
-$ npm init cloudflare my-project worker-typescript --no-delegate-c3
+$ npx wrangler generate my-project worker-typescript
 # or
-$ yarn create cloudflare my-project worker-typescript --no-delegate-c3
+$ yarn wrangler generate my-project worker-typescript
 # or
-$ pnpm create cloudflare my-project worker-typescript --no-delegate-c3
+$ pnpm wrangler generate my-project worker-typescript
 ```
 
 > **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.

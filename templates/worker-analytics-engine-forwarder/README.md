@@ -11,11 +11,11 @@ Up to 25 events can be received at one time.
 To create a `my-project` directory using this template, run:
 
 ```sh
-$ npm init cloudflare my-project worker-analytics-engine-forwarder --no-delegate-c3
+$ npx wrangler generate my-project worker-analytics-engine-forwarder
 # or
-$ yarn create cloudflare my-project worker-analytics-engine-forwarder --no-delegate-c3
+$ yarn wrangler generate my-project worker-analytics-engine-forwarder
 # or
-$ pnpm create cloudflare my-project worker-analytics-engine-forwarder --no-delegate-c3
+$ pnpm wrangler generate my-project worker-analytics-engine-forwarder
 ```
 
 > **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.
