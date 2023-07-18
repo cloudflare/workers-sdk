@@ -1,4 +1,4 @@
-import { existsSync, rmSync } from "fs";
+import { existsSync, mkdtempSync, realpathSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { FrameworkMap } from "frameworks/index";
@@ -14,16 +14,18 @@ Areas for future improvement:
 */
 
 describe("E2E", () => {
+	let basePath: string;
 	let projectPath: string;
 
 	beforeEach(() => {
-		projectPath = join(tmpdir(), "c3-test-pages");
+		basePath = realpathSync(mkdtempSync(tmpdir()));
+		projectPath = join(basePath, "c3-test-pages");
 		rmSync(projectPath, { recursive: true, force: true });
 	});
 
 	afterEach(() => {
-		if (existsSync(projectPath)) {
-			rmSync(projectPath, { recursive: true });
+		if (existsSync(basePath)) {
+			rmSync(basePath, { recursive: true });
 		}
 	});
 
@@ -41,7 +43,7 @@ describe("E2E", () => {
 		];
 
 		if (argv.length > 0) {
-			args.push(...args);
+			args.push(...argv);
 		} else {
 			args.push("--no-git");
 		}
