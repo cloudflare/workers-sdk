@@ -106,6 +106,10 @@ export const runCommand = async (
 						}
 					}
 				});
+
+				cmd.on("error", (code) => {
+					reject(code);
+				});
 			});
 		},
 	});
@@ -255,11 +259,14 @@ export const installWrangler = async () => {
 
 export const isLoggedIn = async () => {
 	const { npx } = detectPackageManager();
-	const output = await runCommand(`${npx} wrangler whoami`, {
-		silent: true,
-	});
-
-	return !/not authenticated/.test(output);
+	try {
+		const output = await runCommand(`${npx} wrangler whoami`, {
+			silent: true,
+		});
+		return /You are logged in/.test(output);
+	} catch (error) {
+		return false;
+	}
 };
 
 export const wranglerLogin = async () => {
