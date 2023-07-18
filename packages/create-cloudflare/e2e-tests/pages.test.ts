@@ -14,18 +14,19 @@ Areas for future improvement:
 */
 
 describe("E2E", () => {
-	let basePath: string;
+	let tmpDirPath: string;
 	let projectPath: string;
 
 	beforeEach(() => {
-		basePath = realpathSync(mkdtempSync(tmpdir()));
-		projectPath = join(basePath, "c3-test-pages");
+		tmpDirPath = realpathSync(mkdtempSync(join(tmpdir(), "c3-tests")));
+
+		projectPath = join(tmpDirPath, "pages-tests");
 		rmSync(projectPath, { recursive: true, force: true });
 	});
 
 	afterEach(() => {
-		if (existsSync(basePath)) {
-			rmSync(basePath, { recursive: true });
+		if (existsSync(projectPath)) {
+			rmSync(projectPath, { recursive: true });
 		}
 	});
 

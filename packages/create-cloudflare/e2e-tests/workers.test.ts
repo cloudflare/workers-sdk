@@ -11,11 +11,14 @@ Areas for future improvement:
 */
 
 describe("E2E: Workers templates", () => {
+	let tmpDirPath: string;
 	let projectPath: string;
 
 	beforeEach(() => {
-		// Use realpath because the temporary path can point to a symlink rather than the actual path.
-		projectPath = realpathSync(mkdtempSync(join(tmpdir(), "c3-tests")));
+		tmpDirPath = realpathSync(mkdtempSync(join(tmpdir(), "workers-tests")));
+
+		projectPath = join(tmpDirPath, "pages-tests");
+		rmSync(projectPath, { recursive: true, force: true });
 	});
 
 	afterEach(() => {

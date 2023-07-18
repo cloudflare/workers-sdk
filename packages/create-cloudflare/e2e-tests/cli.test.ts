@@ -7,14 +7,18 @@ import { keys, runC3 } from "./helpers";
 
 describe("Basic C3 functionality", () => {
 	let tmpDirPath: string;
+	let projectPath: string;
 
 	beforeEach(() => {
-		tmpDirPath = realpathSync(mkdtempSync(tmpdir()));
+		tmpDirPath = realpathSync(mkdtempSync(join(tmpdir(), "c3-tests")));
+
+		projectPath = join(tmpDirPath, "basic-tests");
+		rmSync(projectPath, { recursive: true, force: true });
 	});
 
 	afterEach(() => {
-		if (existsSync(tmpDirPath)) {
-			rmSync(tmpDirPath, { recursive: true });
+		if (existsSync(projectPath)) {
+			rmSync(projectPath, { recursive: true });
 		}
 	});
 
@@ -36,7 +40,6 @@ describe("Basic C3 functionality", () => {
 	});
 
 	test("Using arrow keys + enter", async () => {
-		const projectPath = join(tmpDirPath, "foobar");
 		const { output } = await runC3({
 			argv: [projectPath],
 			promptHandlers: [
@@ -67,7 +70,6 @@ describe("Basic C3 functionality", () => {
 	});
 
 	test("Typing custom responses", async () => {
-		const projectPath = join(tmpDirPath, "foobar");
 		const { output } = await runC3({
 			argv: [],
 			promptHandlers: [
@@ -102,7 +104,6 @@ describe("Basic C3 functionality", () => {
 	});
 
 	test("Mixed args and interactive", async () => {
-		const projectPath = join(tmpDirPath, "foobar");
 		const { output } = await runC3({
 			argv: [projectPath, "--ts", "--no-deploy"],
 			promptHandlers: [
