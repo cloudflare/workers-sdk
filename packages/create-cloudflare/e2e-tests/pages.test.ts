@@ -13,7 +13,7 @@ Areas for future improvement:
 - Add support for frameworks with global installs (like docusaurus, gatsby, etc)
 */
 
-describe("E2E", () => {
+describe("E2E: Web frameworks", () => {
 	let tmpDirPath: string;
 	let projectPath: string;
 

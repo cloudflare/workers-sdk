@@ -5,7 +5,7 @@ import { beforeEach, afterEach, describe, test, expect } from "vitest";
 import { version } from "../package.json";
 import { keys, runC3 } from "./helpers";
 
-describe("Basic C3 functionality", () => {
+describe("E2E: Basic C3 functionality", () => {
 	let tmpDirPath: string;
 	let projectPath: string;
 
