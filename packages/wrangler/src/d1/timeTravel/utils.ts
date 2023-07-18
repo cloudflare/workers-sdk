@@ -16,11 +16,10 @@ export const getBookmarkIdFromTimestamp = async (
 ): Promise<BookmarkResponse> => {
 	const searchParams = new URLSearchParams();
 
-	if (timestamp && !isISODate(timestamp)) {
-		searchParams.set("timestamp", new Date(Number(timestamp)).toISOString());
-	} else if (timestamp) {
-		searchParams.set("timestamp", timestamp);
+	if (timestamp) {
+		searchParams.append("timestamp", convertTimestampToISO(timestamp));
 	}
+
 	const bookmarkResult = await fetchResult<BookmarkResponse>(
 		`/accounts/${accountId}/d1/database/${databaseId}/time-travel/bookmark?${searchParams.toString()}`,
 		{
@@ -52,3 +51,53 @@ const ISO_DATE_REG_EXP = new RegExp(
 function isISODate(date: string) {
 	return ISO_DATE_REG_EXP.test(date);
 }
+
+/**
+ * ISO 8601 date string – like Date.prototype.toISOString(), but with local timezone offset. Credits to: https://gist.github.com/loilo/736d5beaef4a96d652f585b1b678a12c
+ * @param date
+ * @returns ISO string in the system's local time
+ */
+function getLocalISOString(date: Date) {
+	const offset = date.getTimezoneOffset();
+	const offsetAbs = Math.abs(offset);
+	const isoString = new Date(date.getTime() - offset * 60 * 1000).toISOString();
+	return `${isoString.slice(0, -1)}${offset > 0 ? "-" : "+"}${String(
+		Math.floor(offsetAbs / 60)
+	).padStart(2, "0")}:${String(offsetAbs % 60).padStart(2, "0")}`;
+}
+
+/**
+ * a function to convert a timestamp to an ISO string
+ * @param timestamp supports unix timestamp or ISO strings
+ * @returns string
+ */
+export const convertTimestampToISO = (timestamp: string): string => {
+	const parsedTimestamp = isISODate(timestamp)
+		? new Date(timestamp)
+		: new Date(Number(timestamp.length === 10 ? timestamp + "000" : timestamp));
+
+	if (parsedTimestamp.toString() === "Invalid Date") {
+		throw new Error(
+			`Invalid timestamp '${timestamp}'. Please provide a valid Unix timestamp or ISO string, for example: ${getLocalISOString(
+				new Date()
+			)}\nFor accepted format, see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date#date_time_string_format`
+		);
+	}
+
+	//also check if the date is in the future, or older than 30 days, if so, throw an error
+	const now = new Date();
+	const thirtyDaysAgo = new Date();
+	thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+	if (parsedTimestamp > now) {
+		throw new Error(
+			`Invalid timestamp '${timestamp}'. Please provide a timestamp in the past`
+		);
+	}
+	if (parsedTimestamp < thirtyDaysAgo) {
+		throw new Error(
+			`Invalid timestamp '${timestamp}'. Please provide a timestamp within the last 30 days`
+		);
+	}
+
+	return parsedTimestamp.toISOString();
+};
