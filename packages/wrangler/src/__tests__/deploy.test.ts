@@ -6081,8 +6081,6 @@ addEventListener('fetch', event => {});`
 					() => Buffer.from("compiled capnp messages")
 				);
 
-				fs.writeFileSync("./message.capnp", "pre-compiled capnp messages");
-
 				writeWranglerToml({
 					logfwdr: {
 						schema: "./message.capnp",
