@@ -1,3 +1,25 @@
+// ../../../../../../../../.npm/_npx/d6768b39ab4bfa9b/node_modules/wrangler/templates/middleware/common.ts
+var __facade_middleware__ = [];
+function __facade_register__(...args) {
+	__facade_middleware__.push(...args.flat());
+}
+function __facade_invokeChain__(request, env, ctx, dispatch, middlewareChain) {
+	const [head, ...tail] = middlewareChain;
+	const middlewareCtx = {
+		dispatch,
+		next(newRequest, newEnv) {
+			return __facade_invokeChain__(newRequest, newEnv, ctx, dispatch, tail);
+		},
+	};
+	return head(request, env, ctx, middlewareCtx);
+}
+function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
+	return __facade_invokeChain__(request, env, ctx, dispatch, [
+		...__facade_middleware__,
+		finalMiddleware,
+	]);
+}
+
 // worker.mjs
 async function requestJson(request) {
 	const text = await request.text();
@@ -67,8 +89,10 @@ var worker = {
 };
 var worker_default = worker;
 
-// ../../../../../../../../../private/var/folders/jl/n6qj9gxn54b1yh4mqyxj1wz00000gp/T/tmp-20982-osS2JN1Tqwnq/d1-beta-facade.entry.js
-var define_D1_IMPORTS_default = ["__D1_BETA__DB"];
+// wrangler-config:config:middleware/d1-beta
+var D1_IMPORTS = ["__D1_BETA__DB"];
+
+// ../../../../../../../../.npm/_npx/d6768b39ab4bfa9b/node_modules/wrangler/templates/middleware/middleware-d1-beta.ts
 var D1Database = class {
 	constructor(binding) {
 		this.binding = binding;
@@ -86,11 +110,11 @@ var D1Database = class {
 		if (response.status !== 200) {
 			try {
 				const err = await response.json();
-				throw new Error("D1_DUMP_ERROR", {
+				throw new Error(`D1_DUMP_ERROR: ${err.error}`, {
 					cause: new Error(err.error),
 				});
 			} catch (e) {
-				throw new Error("D1_DUMP_ERROR", {
+				throw new Error(`D1_DUMP_ERROR: Status + ${response.status}`, {
 					cause: new Error("Status " + response.status),
 				});
 			}
@@ -115,16 +139,21 @@ var D1Database = class {
 			})
 			.indexOf(1);
 		if (error !== -1) {
-			throw new Error("D1_EXEC_ERROR", {
-				cause: new Error(
-					"Error in line " +
-						(error + 1) +
-						": " +
-						lines[error] +
-						": " +
-						exec[error].error
-				),
-			});
+			throw new Error(
+				`D1_EXEC_ERROR: Error in line ${error + 1}: ${lines[error]}: ${
+					exec[error].error
+				}`,
+				{
+					cause: new Error(
+						"Error in line " +
+							(error + 1) +
+							": " +
+							lines[error] +
+							": " +
+							exec[error].error
+					),
+				}
+			);
 		} else {
 			return {
 				count: exec.length,
@@ -156,60 +185,63 @@ var D1Database = class {
 			const answer = await response.json();
 			if (answer.error && dothrow) {
 				const err = answer;
-				throw new Error("D1_ERROR", { cause: new Error(err.error) });
+				throw new Error(`D1_ERROR: ${err.error}`, {
+					cause: new Error(err.error),
+				});
 			} else {
 				return Array.isArray(answer)
 					? answer.map((r) => mapD1Result(r))
 					: mapD1Result(answer);
 			}
 		} catch (e) {
-			throw new Error("D1_ERROR", {
-				cause: new Error(e.cause || "Something went wrong"),
+			const error = e;
+			throw new Error(`D1_ERROR: ${error.cause || "Something went wrong"}`, {
+				cause: new Error(`${error.cause}` || "Something went wrong"),
 			});
 		}
 	}
 };
 var D1PreparedStatement = class {
-	constructor(database, statement, values) {
+	constructor(database, statement, params = []) {
 		this.database = database;
 		this.statement = statement;
-		this.params = values || [];
+		this.params = params;
 	}
 	bind(...values) {
 		for (var r in values) {
-			switch (typeof values[r]) {
+			const value = values[r];
+			switch (typeof value) {
 				case "number":
 				case "string":
 					break;
 				case "object":
-					if (values[r] == null) break;
+					if (value == null) break;
 					if (
-						Array.isArray(values[r]) &&
-						values[r]
+						Array.isArray(value) &&
+						value
 							.map((b) => {
 								return typeof b == "number" && b >= 0 && b < 256 ? 1 : 0;
 							})
 							.indexOf(0) == -1
 					)
 						break;
-					if (values[r] instanceof ArrayBuffer) {
-						values[r] = Array.from(new Uint8Array(values[r]));
+					if (value instanceof ArrayBuffer) {
+						values[r] = Array.from(new Uint8Array(value));
 						break;
 					}
-					if (ArrayBuffer.isView(values[r])) {
-						values[r] = Array.from(values[r]);
+					if (ArrayBuffer.isView(value)) {
+						values[r] = Array.from(new Uint8Array(value.buffer));
 						break;
 					}
 				default:
-					throw new Error("D1_TYPE_ERROR", {
-						cause: new Error(
-							"Type '" +
-								typeof values[r] +
-								"' not supported for value '" +
-								values[r] +
-								"'"
-						),
-					});
+					throw new Error(
+						`D1_TYPE_ERROR: Type '${typeof value}' not supported for value '${value}'`,
+						{
+							cause: new Error(
+								`Type '${typeof value}' not supported for value '${value}'`
+							),
+						}
+					);
 			}
 		}
 		return new D1PreparedStatement(this.database, this.statement, values);
@@ -221,7 +253,7 @@ var D1PreparedStatement = class {
 		const results = info.results;
 		if (colName !== void 0) {
 			if (results.length > 0 && results[0][colName] === void 0) {
-				throw new Error("D1_COLUMN_NOTFOUND", {
+				throw new Error(`D1_COLUMN_NOTFOUND: Column not found (${colName})`, {
 					cause: new Error("Column not found"),
 				});
 			}
@@ -266,8 +298,6 @@ function mapD1Result(result) {
 	result.error && (map.error = result.error);
 	return map;
 }
-var D1_IMPORTS = define_D1_IMPORTS_default;
-var LOCAL_MODE = false;
 var D1_BETA_PREFIX = `__D1_BETA__`;
 var envMap = /* @__PURE__ */ new Map();
 function getMaskedEnv(env) {
@@ -278,29 +308,122 @@ function getMaskedEnv(env) {
 	).forEach((bindingName) => {
 		newEnv.delete(bindingName);
 		const newName = bindingName.slice(D1_BETA_PREFIX.length);
-		const newBinding = !LOCAL_MODE
-			? new D1Database(env[bindingName])
-			: env[bindingName];
+		const newBinding = new D1Database(env[bindingName]);
 		newEnv.set(newName, newBinding);
 	});
 	const newEnvObj = Object.fromEntries(newEnv.entries());
 	envMap.set(env, newEnvObj);
 	return newEnvObj;
 }
-var shim_default = {
+function wrap(env) {
+	return getMaskedEnv(env);
+}
+
+// ../../../../../../../../../../private/var/folders/xn/jl0lmfkx5gd06w3_bl12w1l00000gp/T/tmp-33052-rnZHsh2hk8Bc/middleware-insertion-facade.js
+var envWrappers = [wrap].filter(Boolean);
+var facade = {
 	...worker_default,
-	async fetch(request, env, ctx) {
-		return worker_default.fetch(request, getMaskedEnv(env), ctx);
-	},
-	async queue(batch, env, ctx) {
-		return worker_default.queue(batch, getMaskedEnv(env), ctx);
-	},
-	async scheduled(controller, env, ctx) {
-		return worker_default.scheduled(controller, getMaskedEnv(env), ctx);
-	},
-	async trace(traces, env, ctx) {
-		return worker_default.trace(traces, getMaskedEnv(env), ctx);
+	envWrappers,
+	middleware: [
+		void 0,
+		...(worker_default.middleware ? worker_default.middleware : []),
+	].filter(Boolean),
+};
+var middleware_insertion_facade_default = facade;
+
+// ../../../../../../../../../../private/var/folders/xn/jl0lmfkx5gd06w3_bl12w1l00000gp/T/tmp-33052-rnZHsh2hk8Bc/middleware-loader.entry.ts
+var __Facade_ScheduledController__ = class {
+	constructor(scheduledTime, cron, noRetry) {
+		this.scheduledTime = scheduledTime;
+		this.cron = cron;
+		this.#noRetry = noRetry;
+	}
+	#noRetry;
+	noRetry() {
+		if (!(this instanceof __Facade_ScheduledController__)) {
+			throw new TypeError("Illegal invocation");
+		}
+		this.#noRetry();
+	}
+};
+var __facade_modules_fetch__ = function (request, env, ctx) {
+	if (middleware_insertion_facade_default.fetch === void 0)
+		throw new Error("Handler does not export a fetch() function.");
+	return middleware_insertion_facade_default.fetch(request, env, ctx);
+};
+function getMaskedEnv2(rawEnv) {
+	let env = rawEnv;
+	if (
+		middleware_insertion_facade_default.envWrappers &&
+		middleware_insertion_facade_default.envWrappers.length > 0
+	) {
+		for (const wrapFn of middleware_insertion_facade_default.envWrappers) {
+			env = wrapFn(env);
+		}
+	}
+	return env;
+}
+var registeredMiddleware = false;
+var facade2 = {
+	...(middleware_insertion_facade_default.tail && {
+		tail: maskHandlerEnv(middleware_insertion_facade_default.tail),
+	}),
+	...(middleware_insertion_facade_default.trace && {
+		trace: maskHandlerEnv(middleware_insertion_facade_default.trace),
+	}),
+	...(middleware_insertion_facade_default.scheduled && {
+		scheduled: maskHandlerEnv(middleware_insertion_facade_default.scheduled),
+	}),
+	...(middleware_insertion_facade_default.queue && {
+		queue: maskHandlerEnv(middleware_insertion_facade_default.queue),
+	}),
+	...(middleware_insertion_facade_default.test && {
+		test: maskHandlerEnv(middleware_insertion_facade_default.test),
+	}),
+	fetch(request, rawEnv, ctx) {
+		const env = getMaskedEnv2(rawEnv);
+		if (
+			middleware_insertion_facade_default.middleware &&
+			middleware_insertion_facade_default.middleware.length > 0
+		) {
+			if (!registeredMiddleware) {
+				registeredMiddleware = true;
+				for (const middleware of middleware_insertion_facade_default.middleware) {
+					__facade_register__(middleware);
+				}
+			}
+			const __facade_modules_dispatch__ = function (type, init) {
+				if (
+					type === "scheduled" &&
+					middleware_insertion_facade_default.scheduled !== void 0
+				) {
+					const controller = new __Facade_ScheduledController__(
+						Date.now(),
+						init.cron ?? "",
+						() => {}
+					);
+					return middleware_insertion_facade_default.scheduled(
+						controller,
+						env,
+						ctx
+					);
+				}
+			};
+			return __facade_invoke__(
+				request,
+				env,
+				ctx,
+				__facade_modules_dispatch__,
+				__facade_modules_fetch__
+			);
+		} else {
+			return __facade_modules_fetch__(request, env, ctx);
+		}
 	},
 };
-export { shim_default as default };
-//# sourceMappingURL=d1-beta-facade.entry.js.map
+function maskHandlerEnv(handler) {
+	return (data, env, ctx) => handler(data, getMaskedEnv2(env), ctx);
+}
+var middleware_loader_entry_default = facade2;
+export { middleware_loader_entry_default as default };
+//# sourceMappingURL=worker.js.map

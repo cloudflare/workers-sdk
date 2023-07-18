@@ -134,7 +134,7 @@ export type Worker_Binding_CryptoKey = (
 export interface Worker_Binding_WrappedBinding {
 	moduleName?: string;
 	entrypoint?: string;
-	innerBinding?: Worker_Binding[];
+	innerBindings?: Worker_Binding[];
 }
 
 export type Worker_Binding_CryptoKey_Algorithm =

@@ -30,10 +30,27 @@ export const D1_PLUGIN: Plugin<
 	sharedOptions: D1SharedOptionsSchema,
 	getBindings(options) {
 		const databases = namespaceEntries(options.d1Databases);
-		return databases.map<Worker_Binding>(([name, id]) => ({
-			name,
-			service: { name: `${SERVICE_DATABASE_PREFIX}:${id}` },
-		}));
+		return databases.map<Worker_Binding>(([name, id]) => {
+			const binding = name.startsWith("__D1_BETA__")
+				? // Used before Wrangler 3.3
+				  {
+						service: { name: `${SERVICE_DATABASE_PREFIX}:${id}` },
+				  }
+				: // Used after Wrangler 3.3
+				  {
+						wrapped: {
+							moduleName: "cloudflare-internal:d1-api",
+							innerBindings: [
+								{
+									name: "fetcher",
+									service: { name: `${SERVICE_DATABASE_PREFIX}:${id}` },
+								},
+							],
+						},
+				  };
+
+			return { name, ...binding };
+		});
 	},
 	getServices({ options, sharedOptions }) {
 		const persist = sharedOptions.d1Persist;
