@@ -10,6 +10,7 @@ import { processArgument, spinner } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
 import { C3_DEFAULTS } from "./cli";
 import {
+	getProductionBranch,
 	gitCommit,
 	offerGit,
 	offerToDeploy,
@@ -135,7 +136,8 @@ const createProject = async (ctx: PagesGeneratorContext) => {
 		? `--compatibility-flags ${compatFlags}`
 		: "";
 
-	const cmd = `${npx} wrangler pages project create ${ctx.project.name} --production-branch main ${compatFlagsArg}`;
+	const productionBranch = await getProductionBranch(ctx.project.path);
+	const cmd = `${npx} wrangler pages project create ${ctx.project.name} --production-branch ${productionBranch} ${compatFlagsArg}`;
 
 	try {
 		await retry(CREATE_PROJECT_RETRIES, async () =>
@@ -144,7 +146,7 @@ const createProject = async (ctx: PagesGeneratorContext) => {
 				cwd: ctx.project.path,
 				env: { CLOUDFLARE_ACCOUNT_ID },
 				startText: "Creating Pages project",
-				doneText: `${brandColor("created")} ${dim(`via \`${cmd}\``)}`,
+				doneText: `${brandColor("created")} ${dim(`via \`${cmd.trim()}\``)}`,
 			})
 		);
 	} catch (error) {

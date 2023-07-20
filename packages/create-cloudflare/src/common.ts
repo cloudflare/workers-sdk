@@ -315,3 +315,22 @@ export async function initializeGit(cwd: string) {
 		await runCommand(`git init`, { useSpinner: false, silent: true, cwd });
 	}
 }
+
+export async function getProductionBranch(cwd: string) {
+	try {
+		const productionBranch = await runCommand(
+			// "git branch --show-current", // git@^2.22
+			"git rev-parse --abbrev-ref HEAD", // git@^1.6.3
+			{
+				silent: true,
+				cwd,
+				useSpinner: false,
+				captureOutput: true,
+			}
+		);
+
+		return productionBranch.trim();
+	} catch (err) {}
+
+	return "main";
+}
