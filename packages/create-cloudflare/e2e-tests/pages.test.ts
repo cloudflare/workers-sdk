@@ -48,7 +48,7 @@ describe("E2E: Web frameworks", () => {
 
 		// For debugging purposes, uncomment the following to see the exact
 		// command the test uses. You can then run this via the command line.
-		// console.log("COMMAND: ", `node ${["./dist/cli.js", ...argv].join(" ")}`);
+		// console.log("COMMAND: ", `node ${["./dist/cli.js", ...args].join(" ")}`);
 
 		await runC3({ argv: args, promptHandlers });
 
