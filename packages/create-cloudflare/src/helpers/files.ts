@@ -46,6 +46,56 @@ export const usesTypescript = (projectRoot = ".") => {
 	return existsSync(`${projectRoot}/tsconfig.json`);
 };
 
+const eslintRcExts = ["js", "cjs", "yaml", "yml", "json"] as const;
+
+type EslintRcFileName = `.eslintrc.${typeof eslintRcExts[number]}`;
+
+type EslintUsageInfo =
+	| {
+			used: true;
+			configType: EslintRcFileName | "eslint.config.js" | "package.json";
+	  }
+	| {
+			used: false;
+	  };
+
+/*
+	checks if eslint is used and if so returns the configuration type
+	(for the various configuration types see:
+		- https://eslint.org/docs/latest/use/configure/configuration-files#configuration-file-formats
+		- https://eslint.org/docs/latest/use/configure/configuration-files-new )
+*/
+export const usesEslint = (projectRoot = "."): EslintUsageInfo => {
+	for (const ext of eslintRcExts) {
+		const eslintRcFilename = `.eslintrc.${ext}` as EslintRcFileName;
+		if (existsSync(`${projectRoot}/${eslintRcFilename}`)) {
+			return {
+				used: true,
+				configType: eslintRcFilename,
+			};
+		}
+	}
+
+	if (existsSync(`${projectRoot}/eslint.config.js`)) {
+		return {
+			used: true,
+			configType: "eslint.config.js",
+		};
+	}
+
+	try {
+		const pkgJson = readJSON(`${projectRoot}/package.json`);
+		if (pkgJson.eslintConfig) {
+			return {
+				used: true,
+				configType: "package.json",
+			};
+		}
+	} catch {}
+
+	return { used: false };
+};
+
 // Generate a compatibility date flag
 export const compatDateFlag = () => {
 	const date = new Date();

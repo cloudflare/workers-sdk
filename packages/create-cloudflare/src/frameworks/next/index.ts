@@ -1,8 +1,13 @@
-import { existsSync, mkdirSync, writeFileSync } from "fs";
-import { updateStatus } from "helpers/cli";
+import { mkdirSync, writeFileSync } from "fs";
+import { updateStatus, warn } from "helpers/cli";
 import { brandColor, dim } from "helpers/colors";
 import { installPackages, runFrameworkGenerator } from "helpers/command";
-import { probePaths, usesTypescript, writeFile } from "helpers/files";
+import {
+	probePaths,
+	usesEslint,
+	usesTypescript,
+	writeFile,
+} from "helpers/files";
 import { processArgument } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
 import { getFrameworkVersion } from "../index";
@@ -93,18 +98,19 @@ const configure = async (ctx: PagesGeneratorContext) => {
 	});
 };
 
-// Note: this isn't a generic helper since it's Next specific, this can be
-//       made into a generic helper by checking all possible types of configs
-//       (including a field in the package.json)
-//       (and potentially returning what type of config is used)
-export const usesEslint = (projectRoot = ".") => {
-	return existsSync(`${projectRoot}/.eslintrc.json`);
-};
-
 export const shouldInstallNextOnPagesEslintPlugin = async (
 	ctx: PagesGeneratorContext
 ): Promise<boolean> => {
-	if (!usesEslint(ctx.project.name)) return false;
+	const eslintUsage = usesEslint(ctx.project.name);
+
+	if (!eslintUsage.used) return false;
+
+	if (eslintUsage.configType !== ".eslintrc.json") {
+		warn(
+			`Expected .eslintrc.json from Next.js scaffolding but found ${eslintUsage.configType} instead`
+		);
+		return false;
+	}
 
 	return await processArgument(ctx.args, "eslint-plugin" as keyof C3Args, {
 		type: "confirm",
