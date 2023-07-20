@@ -116,7 +116,7 @@ const updatePackageScripts = async (ctx: PagesGeneratorContext) => {
 
 		s.start(
 			`${updatingScripts ? "Updating" : "Adding"} command scripts`,
-			`for development and deployment`
+			"for development and deployment"
 		);
 
 		const pkgJsonPath = resolve("package.json");
