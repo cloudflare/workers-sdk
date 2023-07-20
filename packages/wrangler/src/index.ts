@@ -388,7 +388,7 @@ export function createCLIParser(argv: string[]) {
 	);
 
 	wrangler.command(
-		"secret:bulk <json>",
+		"secret:bulk [json]",
 		"🗄️  Bulk upload secrets for a Worker",
 		secretBulkOptions,
 		secretBulkHandler

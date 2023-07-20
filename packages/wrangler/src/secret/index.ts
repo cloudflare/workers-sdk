@@ -1,4 +1,5 @@
 import path from "node:path";
+import { createInterface } from "node:readline";
 import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
@@ -250,20 +251,6 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 		);
 };
 
-export const secretBulkOptions = (yargs: CommonYargsArgv) => {
-	return yargs
-		.positional("json", {
-			describe: `The JSON file of key-value pairs to upload, in form {"key": value, ...}`,
-			type: "string",
-			demandOption: "true",
-		})
-		.option("name", {
-			describe: "Name of the Worker",
-			type: "string",
-			requiresArg: true,
-		});
-};
-
 /**
  * Remove trailing white space from inputs.
  * Matching Wrangler legacy behavior with handling inputs
@@ -305,6 +292,23 @@ function readFromStdin(): Promise<string> {
 	});
 }
 
+// *** Secret Bulk Section Below ***
+/**
+ * @description Options for the `secret bulk` command.
+ */
+export const secretBulkOptions = (yargs: CommonYargsArgv) => {
+	return yargs
+		.positional("json", {
+			describe: `The JSON file of key-value pairs to upload, in form {"key": value, ...}`,
+			type: "string",
+		})
+		.option("name", {
+			describe: "Name of the Worker",
+			type: "string",
+			requiresArg: true,
+		});
+};
+
 type SecretBulkArgs = StrictYargsOptionsToInterface<typeof secretBulkOptions>;
 
 export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
@@ -313,7 +317,7 @@ export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
 
 	const scriptName = getLegacyScriptName(secretBulkArgs, config);
 	if (!scriptName) {
-		throw new Error(
+		throw logger.error(
 			"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name <worker-name>`"
 		);
 	}
@@ -327,17 +331,29 @@ export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
 				: ""
 		}`
 	);
-	const jsonFilePath = path.resolve(secretBulkArgs.json);
-	const content = parseJSON<Record<string, string>>(
-		readFileSync(jsonFilePath),
-		jsonFilePath
-	);
-	for (const key in content) {
-		if (typeof content[key] !== "string") {
-			throw new Error(
-				`The value for ${key} in ${jsonFilePath} is not a string.`
-			);
+
+	let content;
+	if (secretBulkArgs.json) {
+		const jsonFilePath = path.resolve(secretBulkArgs.json);
+		content = parseJSON<Record<string, string>>(
+			readFileSync(jsonFilePath),
+			jsonFilePath
+		);
+	} else {
+		try {
+			const rl = createInterface({ input: process.stdin });
+			let pipedInput = "";
+			for await (const line of rl) {
+				pipedInput += line;
+			}
+			content = parseJSON<Record<string, string>>(pipedInput);
+		} catch {
+			return logger.error(`🚨 Please provide a JSON file or valid JSON pipe`);
 		}
+	}
+
+	if (!content) {
+		return logger.error(`🚨 No content found in JSON file or piped input.`);
 	}
 
 	const url =
