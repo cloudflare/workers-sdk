@@ -109,7 +109,7 @@ export const shouldInstallNextOnPagesEslintPlugin = async (
 	return await processArgument(ctx.args, "eslint-plugin" as keyof C3Args, {
 		type: "confirm",
 		question: "Do you want to use the next-on-pages eslint-plugin?",
-		label: "",
+		label: "eslint-plugin",
 		defaultValue: true,
 	});
 };
