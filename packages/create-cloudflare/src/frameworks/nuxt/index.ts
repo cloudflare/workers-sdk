@@ -30,9 +30,9 @@ const config: FrameworkConfig = {
 	configure,
 	displayName: "Nuxt",
 	packageScripts: {
+		build: (cmd) => `NITRO_PRESET=cloudflare-pages ${cmd}`,
 		"pages:dev": `wrangler pages dev ${compatDateFlag()} --proxy 3000 -- npm run dev`,
-		"pages:deploy":
-			"NITRO_PRESET=cloudflare-pages npm run build && wrangler pages deploy ./dist",
+		"pages:deploy": "npm run build && wrangler pages deploy ./dist",
 	},
 };
 export default config;
