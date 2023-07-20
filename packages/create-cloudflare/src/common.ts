@@ -318,8 +318,9 @@ export async function initializeGit(cwd: string) {
 
 export async function getProductionBranch(cwd: string) {
 	try {
-		const producitonBranch = await runCommand(
-			"git rev-parse --abbrev-ref HEAD",
+		const productionBranch = await runCommand(
+			// "git branch --show-current", // git@^2.22
+			"git rev-parse --abbrev-ref HEAD", // git@^1.6.3
 			{
 				silent: true,
 				cwd,
@@ -328,7 +329,7 @@ export async function getProductionBranch(cwd: string) {
 			}
 		);
 
-		return producitonBranch.trim();
+		return productionBranch.trim();
 	} catch (err) {}
 
 	return "main";

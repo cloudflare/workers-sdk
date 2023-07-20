@@ -12,7 +12,6 @@ import { C3_DEFAULTS } from "./cli";
 import {
 	getProductionBranch,
 	gitCommit,
-	isInsideGitRepo,
 	offerGit,
 	offerToDeploy,
 	printSummary,
