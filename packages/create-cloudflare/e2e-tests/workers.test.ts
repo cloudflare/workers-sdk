@@ -1,8 +1,8 @@
 import { existsSync, rmSync, mkdtempSync, realpathSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
-import { execa } from "execa";
 import { describe, expect, test, afterEach, beforeEach } from "vitest";
+import { runC3 } from "./helpers";
 
 /*
 Areas for future improvement:
@@ -11,21 +11,20 @@ Areas for future improvement:
 */
 
 describe("E2E: Workers templates", () => {
-	let dummyPath: string;
+	const tmpDirPath = realpathSync(mkdtempSync(join(tmpdir(), "workers-tests")));
+	const projectPath = join(tmpDirPath, "pages-tests");
 
 	beforeEach(() => {
-		// Use realpath because the temporary path can point to a symlink rather than the actual path.
-		dummyPath = realpathSync(mkdtempSync(join(tmpdir(), "c3-tests")));
+		rmSync(projectPath, { recursive: true, force: true });
 	});
 
 	afterEach(() => {
-		if (existsSync(dummyPath)) {
-			rmSync(dummyPath, { recursive: true });
+		if (existsSync(projectPath)) {
+			rmSync(projectPath, { recursive: true });
 		}
 	});
 
 	const runCli = async (template: string) => {
-		const projectPath = join(dummyPath, "test");
 		const argv = [
 			projectPath,
 			"--type",
@@ -36,17 +35,7 @@ describe("E2E: Workers templates", () => {
 			"--wrangler-defaults",
 		];
 
-		const result = await execa("node", ["./dist/cli.js", ...argv], {
-			stderr: process.stderr,
-		});
-		// For debugging purposes, uncomment the following to see the exact
-		// command the test uses. You can then run this via the command line.
-		// console.log("COMMAND: ", `node ${["./dist/cli.js", ...argv].join(" ")}`);
-
-		const { exitCode } = result;
-
-		// Some baseline assertions for each template
-		expect(exitCode).toBe(0);
+		await runC3({ argv });
 
 		// Relevant project files should have been created
 		expect(projectPath).toExist();
@@ -56,30 +45,12 @@ describe("E2E: Workers templates", () => {
 
 		const wranglerPath = join(projectPath, "node_modules/wrangler");
 		expect(wranglerPath).toExist();
-
-		return {
-			result,
-			projectPath,
-		};
 	};
 
-	test("hello-world", async () => {
-		await runCli("hello-world");
-	});
-
-	test("common", async () => {
-		await runCli("common");
-	});
-
-	test("chatgptPlugin", async () => {
-		await runCli("chatgptPlugin");
-	});
-
-	test("queues", async () => {
-		await runCli("queues");
-	});
-
-	test("scheduled", async () => {
-		await runCli("scheduled");
-	});
+	test.each(["hello-world", "common", "chatgptPlugin", "queues", "scheduled"])(
+		"%s",
+		async (name) => {
+			await runCli(name);
+		}
+	);
 });
