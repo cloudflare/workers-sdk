@@ -4,9 +4,11 @@ import { brandColor, dim } from "helpers/colors";
 import { installPackages, runFrameworkGenerator } from "helpers/command";
 import {
 	probePaths,
+	readJSON,
 	usesEslint,
 	usesTypescript,
 	writeFile,
+	writeJSON,
 } from "helpers/files";
 import { processArgument } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
@@ -123,18 +125,18 @@ export const shouldInstallNextOnPagesEslintPlugin = async (
 export const writeEslintrc = async (
 	ctx: PagesGeneratorContext
 ): Promise<void> => {
-	const eslintConfig = {
-		plugins: ["eslint-plugin-next-on-pages"],
-		extends: [
-			"next/core-web-vitals",
-			"plugin:eslint-plugin-next-on-pages/recommended",
-		],
-	};
+	const eslintConfig = readJSON(`${ctx.project.name}/.eslintrc.json`);
 
-	writeFileSync(
-		`${ctx.project.name}/.eslintrc.json`,
-		JSON.stringify(eslintConfig, null, "  ") + "\n"
-	);
+	eslintConfig.plugins ??= [];
+	eslintConfig.plugins.push("eslint-plugin-next-on-pages");
+
+	if(typeof eslintConfig.extends === 'string') {
+		eslintConfig.extends = [eslintConfig.extends];
+	}
+	eslintConfig.extends ??= [];
+	eslintConfig.extends.push("plugin:eslint-plugin-next-on-pages/recommended");
+
+	writeJSON(`${ctx.project.name}/.eslintrc.json`, eslintConfig, 2);
 };
 
 const config: FrameworkConfig = {

@@ -22,8 +22,8 @@ export const readJSON = (path: string) => {
 	return contents ? JSON.parse(contents) : contents;
 };
 
-export const writeJSON = (path: string, object: object) => {
-	writeFile(path, JSON.stringify(object));
+export const writeJSON = (path: string, object: object, stringifySpace?: number|string) => {
+	writeFile(path, JSON.stringify(object, null, stringifySpace));
 };
 
 // Probes a list of paths and returns the first one that exists
