@@ -315,3 +315,21 @@ export async function initializeGit(cwd: string) {
 		await runCommand(`git init`, { useSpinner: false, silent: true, cwd });
 	}
 }
+
+export async function getProductionBranch(cwd: string) {
+	try {
+		const producitonBranch = await runCommand(
+			"git rev-parse --abbrev-ref HEAD",
+			{
+				silent: true,
+				cwd,
+				useSpinner: false,
+				captureOutput: true,
+			}
+		);
+
+		return producitonBranch.trim();
+	} catch (err) {}
+
+	return "main";
+}

@@ -52,7 +52,7 @@ export const runCommand = async (
 
 	return printAsyncStatus({
 		useSpinner: opts.useSpinner ?? opts.silent,
-		startText: opts.startText || command.join(" "),
+		startText: opts.startText || command.join(" ").trim(),
 		doneText: opts.doneText,
 		promise() {
 			const [executable, ...args] = command;
