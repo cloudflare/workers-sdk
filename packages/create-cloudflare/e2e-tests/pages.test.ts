@@ -14,13 +14,10 @@ Areas for future improvement:
 */
 
 describe("E2E: Web frameworks", () => {
-	let tmpDirPath: string;
-	let projectPath: string;
+	const tmpDirPath = realpathSync(mkdtempSync(join(tmpdir(), "c3-tests")));
+	const projectPath = join(tmpDirPath, "pages-tests");
 
 	beforeEach(() => {
-		tmpDirPath = realpathSync(mkdtempSync(join(tmpdir(), "c3-tests")));
-
-		projectPath = join(tmpDirPath, "pages-tests");
 		rmSync(projectPath, { recursive: true, force: true });
 	});
 

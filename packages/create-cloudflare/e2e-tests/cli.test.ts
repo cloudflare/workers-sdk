@@ -6,13 +6,10 @@ import { version } from "../package.json";
 import { keys, runC3 } from "./helpers";
 
 describe("E2E: Basic C3 functionality", () => {
-	let tmpDirPath: string;
-	let projectPath: string;
+	const tmpDirPath = realpathSync(mkdtempSync(join(tmpdir(), "c3-tests")));
+	const projectPath = join(tmpDirPath, "basic-tests");
 
 	beforeEach(() => {
-		tmpDirPath = realpathSync(mkdtempSync(join(tmpdir(), "c3-tests")));
-
-		projectPath = join(tmpDirPath, "basic-tests");
 		rmSync(projectPath, { recursive: true, force: true });
 	});
 

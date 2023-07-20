@@ -25,7 +25,7 @@ export const runC3 = async ({
 	promptHandlers = [],
 }: RunnerConfig) => {
 	const proc = spawn("node", ["./dist/cli.js", ...argv]);
-	const output: string[] = [];
+	const stdout: string[] = [];
 	const stderr: string[] = [];
 
 	await new Promise((resolve, rejects) => {
@@ -34,7 +34,7 @@ export const runC3 = async ({
 			const currentDialog = promptHandlers[0];
 
 			lines.forEach((line) => {
-				output.push(line);
+				stdout.push(line);
 
 				if (currentDialog && currentDialog.matcher.test(line)) {
 					currentDialog.input.forEach((keystroke) => {
@@ -71,7 +71,7 @@ export const runC3 = async ({
 	});
 
 	return {
-		output: output.join("\n").trim(),
-		stderr: stderr.join("\n").trim(),
+		output: stdout.join("\n").trim(),
+		errors: stderr.join("\n").trim(),
 	};
 };

@@ -70,7 +70,7 @@ export const runCommand = async (
 
 			let output = ``;
 
-			if (opts?.captureOutput ?? opts.silent) {
+			if (opts.captureOutput ?? opts.silent) {
 				cmd.stdout?.on("data", (data) => {
 					output += data;
 				});
