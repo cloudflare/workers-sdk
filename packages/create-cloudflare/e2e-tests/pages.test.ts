@@ -29,7 +29,7 @@ describe("E2E: Web frameworks", () => {
 
 	const runCli = async (
 		framework: string,
-		{ argv = [], promptHandlers = [] }: RunnerConfig
+		{ argv = [], promptHandlers = [], overrides = {} }: RunnerConfig
 	) => {
 		const args = [
 			projectPath,
@@ -63,18 +63,40 @@ describe("E2E: Web frameworks", () => {
 
 		// Verify package scripts
 		const frameworkConfig = FrameworkMap[framework];
+
+		const frameworkTargetPackageScripts = {
+			...frameworkConfig.packageScripts,
+		} as Record<string, string>;
+
+		if (overrides.packageScripts) {
+			// override packageScripts with testing provided scripts
+			Object.entries(overrides.packageScripts).forEach(([target, cmd]) => {
+				frameworkTargetPackageScripts[target] = cmd;
+			});
+		}
+
 		const pkgJson = readJSON(pkgJsonPath);
-		Object.entries(frameworkConfig.packageScripts).forEach(([target, cmd]) => {
+		Object.entries(frameworkTargetPackageScripts).forEach(([target, cmd]) => {
 			expect(pkgJson.scripts[target]).toEqual(cmd);
 		});
 	};
 
-	test.each(["astro", "hono", "next", "nuxt", "react", "remix", "vue"])(
+	test.each(["astro", "hono", "next", "react", "remix", "vue"])(
 		"%s",
 		async (name) => {
 			await runCli(name, {});
 		}
 	);
+
+	test("Nuxt", async () => {
+		await runCli("nuxt", {
+			overrides: {
+				packageScripts: {
+					build: "NITRO_PRESET=cloudflare-pages nuxt build",
+				},
+			},
+		});
+	});
 
 	test("qwik", async () => {
 		await runCli("qwik", {
