@@ -81,12 +81,9 @@ describe("E2E: Web frameworks", () => {
 		});
 	};
 
-	test.each(["astro", "hono", "react", "remix", "vue"])(
-		"%s",
-		async (name) => {
-			await runCli(name, {});
-		}
-	);
+	test.each(["astro", "hono", "react", "remix", "vue"])("%s", async (name) => {
+		await runCli(name, {});
+	});
 
 	test("Nuxt", async () => {
 		await runCli("nuxt", {
