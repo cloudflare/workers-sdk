@@ -1,5 +1,6 @@
 import fs, { existsSync } from "fs";
 import { crash } from "./cli";
+import type { PagesGeneratorContext } from "types";
 
 export const writeFile = (path: string, content: string) => {
 	try {
@@ -69,10 +70,10 @@ type EslintUsageInfo =
 		- https://eslint.org/docs/latest/use/configure/configuration-files#configuration-file-formats
 		- https://eslint.org/docs/latest/use/configure/configuration-files-new )
 */
-export const usesEslint = (projectRoot = "."): EslintUsageInfo => {
+export const usesEslint = (ctx: PagesGeneratorContext): EslintUsageInfo => {
 	for (const ext of eslintRcExts) {
 		const eslintRcFilename = `.eslintrc.${ext}` as EslintRcFileName;
-		if (existsSync(`${projectRoot}/${eslintRcFilename}`)) {
+		if (existsSync(`${ctx.project.path}/${eslintRcFilename}`)) {
 			return {
 				used: true,
 				configType: eslintRcFilename,
@@ -80,7 +81,7 @@ export const usesEslint = (projectRoot = "."): EslintUsageInfo => {
 		}
 	}
 
-	if (existsSync(`${projectRoot}/eslint.config.js`)) {
+	if (existsSync(`${ctx.project.path}/eslint.config.js`)) {
 		return {
 			used: true,
 			configType: "eslint.config.js",
@@ -88,7 +89,7 @@ export const usesEslint = (projectRoot = "."): EslintUsageInfo => {
 	}
 
 	try {
-		const pkgJson = readJSON(`${projectRoot}/package.json`);
+		const pkgJson = readJSON(`${ctx.project.path}/package.json`);
 		if (pkgJson.eslintConfig) {
 			return {
 				used: true,

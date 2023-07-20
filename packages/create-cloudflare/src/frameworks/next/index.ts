@@ -103,7 +103,7 @@ const configure = async (ctx: PagesGeneratorContext) => {
 export const shouldInstallNextOnPagesEslintPlugin = async (
 	ctx: PagesGeneratorContext
 ): Promise<boolean> => {
-	const eslintUsage = usesEslint(ctx.project.name);
+	const eslintUsage = usesEslint(ctx);
 
 	if (!eslintUsage.used) return false;
 
