@@ -130,7 +130,7 @@ export const writeEslintrc = async (
 	eslintConfig.plugins ??= [];
 	eslintConfig.plugins.push("eslint-plugin-next-on-pages");
 
-	if(typeof eslintConfig.extends === 'string') {
+	if (typeof eslintConfig.extends === "string") {
 		eslintConfig.extends = [eslintConfig.extends];
 	}
 	eslintConfig.extends ??= [];
