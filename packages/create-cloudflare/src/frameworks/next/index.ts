@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "fs";
+import { mkdirSync } from "fs";
 import { updateStatus, warn } from "helpers/cli";
 import { brandColor, dim } from "helpers/colors";
 import { installPackages, runFrameworkGenerator } from "helpers/command";
