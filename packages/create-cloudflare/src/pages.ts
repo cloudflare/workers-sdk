@@ -108,14 +108,34 @@ const updatePackageScripts = async (ctx: PagesGeneratorContext) => {
 	const { packageScripts } = ctx.framework?.config ?? {};
 	if (packageScripts) {
 		const s = spinner();
-		// s.start(`Adding dev and deployment commands to \`package.json\``);
-		s.start(`Adding command scripts`, `for development and deployment`);
+
+		const updatingScripts =
+			Object.entries(packageScripts).filter(
+				([_, cmdOrUpdater]) => typeof cmdOrUpdater === "function"
+			).length > 0;
+
+		s.start(
+			`${updatingScripts ? "Updating" : "Adding"} command scripts`,
+			"for development and deployment"
+		);
 
 		const pkgJsonPath = resolve("package.json");
 		const pkgConfig = readJSON(pkgJsonPath);
 
-		Object.entries(packageScripts).forEach(([target, command]) => {
-			pkgConfig.scripts[target] = command;
+		Object.entries(packageScripts).forEach(([target, cmdOrUpdater]) => {
+			if (typeof cmdOrUpdater === "string") {
+				const command = cmdOrUpdater;
+				pkgConfig.scripts[target] = command;
+			} else {
+				const existingCommand = pkgConfig.scripts[target] as string | undefined;
+				if (!existingCommand) {
+					throw new Error(
+						`Could not find ${target} script to update during ${ctx.framework} setup`
+					);
+				}
+				const updater = cmdOrUpdater;
+				pkgConfig.scripts[target] = updater(existingCommand);
+			}
 		});
 
 		writeFile(pkgJsonPath, JSON.stringify(pkgConfig, null, 2));

@@ -16,6 +16,9 @@ export type PromptHandler = {
 };
 
 export type RunnerConfig = {
+	overrides?: {
+		packageScripts?: Record<string, string>;
+	};
 	promptHandlers?: PromptHandler[];
 	argv?: string[];
 };
