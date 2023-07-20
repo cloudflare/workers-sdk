@@ -41,7 +41,7 @@ Please ensure the `test` npm-script passes. Any formatting errors can typically 
 
 If adding a new template, please pick a unique name and aim for simplicity and clarity. Contributions that are meant for Workers must begin with the `worker-` prefix, while those meant for Pages must have the `pages-` prefix.
 
-Also see [Monorepo Contributing Guidelines](../CONTRIBUTING.md) for more information.
+Also see [Monorepo Contributing Guidelines](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md) for more information.
 
 ### Code of Conduct
 
