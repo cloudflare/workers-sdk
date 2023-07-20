@@ -77,7 +77,6 @@ const configure = async (ctx: PagesGeneratorContext) => {
 
 	if (installEslintPlugin) {
 		await writeEslintrc(ctx);
-		updateStatus("eslint-plugin-next-on-pages added to eslintrc");
 	}
 
 	// Add some dev dependencies
