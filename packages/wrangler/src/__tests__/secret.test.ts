@@ -518,6 +518,21 @@ describe("wrangler secret", () => {
 	});
 
 	describe("secret:bulk", () => {
+		it("should fail secret:bulk w/ no pipe or JSON input", async () => {
+			jest
+				.spyOn(readline, "createInterface")
+				.mockImplementation(() => null as unknown as Interface);
+			await runWrangler(`secret:bulk --name script-name`);
+			expect(std.out).toMatchInlineSnapshot(
+				`"🌀 Creating the secrets for the Worker \\"script-name\\" "`
+			);
+			expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Please provide a JSON file or valid JSON pipe[0m
+
+			"
+		`);
+		});
+
 		it("should use secret:bulk w/ pipe input", async () => {
 			jest.spyOn(readline, "createInterface").mockImplementation(
 				() =>
