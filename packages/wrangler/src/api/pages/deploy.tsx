@@ -17,7 +17,7 @@ import {
 	traverseAndBuildWorkerJSDirectory,
 } from "../../pages/functions/buildWorker";
 import { validateRoutes } from "../../pages/functions/routes-validation";
-import { uploadDeploymentFiles } from "./uploadDeploymentFiles";
+import { upload } from "./project/upload";
 import { createUploadWorkerBundleContents } from "./create-worker-bundle-contents";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Project, Deployment } from "@cloudflare/types";
@@ -196,7 +196,7 @@ export async function deploy({
 		}
 	}
 
-	const manifest = await uploadDeploymentFiles({
+	const manifest = await upload({
 		directory,
 		accountId,
 		projectName,

@@ -3,7 +3,7 @@ import { dirname } from "node:path";
 import { render, Text } from "ink";
 import Spinner from "ink-spinner";
 import React from "react";
-import { uploadDeploymentFiles } from "../api/pages/uploadDeploymentFiles";
+import { upload } from "../api/pages/project/upload";
 import { FatalError } from "../errors";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
@@ -52,7 +52,7 @@ export const Handler = async ({
 	let rerender: (done: number, total: number) => void | undefined;
 	let unmount: () => void | undefined;
 
-	const manifest = await uploadDeploymentFiles({
+	const manifest = await upload({
 		directory,
 		jwt: process.env.CF_PAGES_UPLOAD_JWT,
 		skipCaching: skipCaching ?? false,

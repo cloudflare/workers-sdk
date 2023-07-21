@@ -1,7 +1,7 @@
 import { deploy } from "./deploy";
-import { uploadDeploymentFiles } from "./uploadDeploymentFiles";
+import * as project from "./project/index";
 
 export const unstable_pages = {
 	deploy,
-	uploadDeploymentFiles,
+	project,
 };

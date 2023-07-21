@@ -4,9 +4,9 @@ import { getType } from "mime";
 import { Minimatch } from "minimatch";
 import PQueue from "p-queue";
 import prettyBytes from "pretty-bytes";
-import { fetchResult } from "../../cfetch";
-import { FatalError } from "../../errors";
-import { logger } from "../../logger";
+import { fetchResult } from "../../../cfetch";
+import { FatalError } from "../../../errors";
+import { logger } from "../../../logger";
 import {
 	MAX_ASSET_COUNT,
 	MAX_ASSET_SIZE,
@@ -15,11 +15,11 @@ import {
 	MAX_BUCKET_SIZE,
 	MAX_CHECK_MISSING_ATTEMPTS,
 	MAX_UPLOAD_ATTEMPTS,
-} from "../../pages/constants";
-import { hashFile } from "../../pages/hash";
-import type { UploadPayloadFile } from "../../pages/types";
+} from "../../../pages/constants";
+import { hashFile } from "../../../pages/hash";
+import type { UploadPayloadFile } from "../../../pages/types";
 
-export const uploadDeploymentFiles = async (
+export const upload = async (
 	args: {
 		skipCaching: boolean;
 		directory: string;
