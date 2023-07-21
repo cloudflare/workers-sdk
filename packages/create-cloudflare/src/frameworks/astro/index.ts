@@ -6,14 +6,14 @@ import { detectPackageManager } from "helpers/packages";
 import { getFrameworkVersion } from "../index";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
-const { npx, dlx } = detectPackageManager();
+const { npx, npm } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
 	const version = getFrameworkVersion(ctx);
 
 	await runFrameworkGenerator(
 		ctx,
-		`${dlx} create-astro@${version} ${ctx.project.name} --no-install`
+		`${npm} create astro@${version} ${ctx.project.name} --no-install`
 	);
 
 	logRaw(""); // newline

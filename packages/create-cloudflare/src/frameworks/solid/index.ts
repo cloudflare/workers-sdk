@@ -8,7 +8,7 @@ import { getFrameworkVersion } from "../index";
 import { viteConfig } from "./templates";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
-const { npm, dlx } = detectPackageManager();
+const { npm } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
 	// Create the project directory and navigate to it
@@ -17,7 +17,7 @@ const generate = async (ctx: PagesGeneratorContext) => {
 
 	// Run the create-solid command
 	const version = getFrameworkVersion(ctx);
-	await runFrameworkGenerator(ctx, `${dlx} create-solid@${version}`);
+	await runFrameworkGenerator(ctx, `${npm} create solid@${version}`);
 
 	logRaw("");
 };

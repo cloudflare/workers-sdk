@@ -13,13 +13,13 @@ import { platformInterface } from "./templates";
 import type * as recast from "recast";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
-const { npm, dlx } = detectPackageManager();
+const { npm } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
 	const version = getFrameworkVersion(ctx);
 	await runFrameworkGenerator(
 		ctx,
-		`${dlx} create-svelte@${version} ${ctx.project.name}`
+		`${npm} create svelte@${version} ${ctx.project.name}`
 	);
 
 	logRaw("");

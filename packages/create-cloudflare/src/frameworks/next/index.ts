@@ -13,7 +13,7 @@ import {
 } from "./templates";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
-const { npm, npx, dlx } = detectPackageManager();
+const { npm, npx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
 	const projectName = ctx.project.name;
@@ -21,7 +21,7 @@ const generate = async (ctx: PagesGeneratorContext) => {
 
 	await runFrameworkGenerator(
 		ctx,
-		`${dlx} create-next-app@${version} ${projectName}`
+		`${npm} create next-app@${version} ${projectName}`
 	);
 };
 

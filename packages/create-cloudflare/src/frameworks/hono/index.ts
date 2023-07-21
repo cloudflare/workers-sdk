@@ -4,14 +4,14 @@ import { detectPackageManager } from "helpers/packages";
 import { getFrameworkVersion } from "../index";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
-const { dlx } = detectPackageManager();
+const { npm } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
 	const version = getFrameworkVersion(ctx);
 
 	await runFrameworkGenerator(
 		ctx,
-		`${dlx} create-hono@${version} ${ctx.project.name} --template cloudflare-pages`
+		`${npm} create hono@${version} ${ctx.project.name} --template cloudflare-pages`
 	);
 
 	logRaw(""); // newline

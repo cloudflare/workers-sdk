@@ -4,13 +4,13 @@ import { detectPackageManager } from "helpers/packages";
 import { getFrameworkVersion } from "../index";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
-const { npm, dlx } = detectPackageManager();
+const { npm } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
 	const version = getFrameworkVersion(ctx);
 	await runFrameworkGenerator(
 		ctx,
-		`${dlx} create-vue@${version} ${ctx.project.name}`
+		`${npm} create vue@${version} ${ctx.project.name}`
 	);
 };
 
