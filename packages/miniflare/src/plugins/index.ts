@@ -83,6 +83,7 @@ export {
 	SERVICE_ENTRY,
 	CoreOptionsSchema,
 	CoreSharedOptionsSchema,
+	createFetchMock,
 	getGlobalServices,
 	ModuleRuleTypeSchema,
 	ModuleRuleSchema,
