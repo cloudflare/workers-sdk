@@ -321,6 +321,14 @@ parameter in module format Workers.
   configured service. Service designators follow the same rules above for
   `serviceBindings`.
 
+- `fetchMock?: import("undici").MockAgent`
+
+  An [`undici` `MockAgent`](https://undici.nodejs.org/#/docs/api/MockAgent) to
+  dispatch this Worker's global `fetch()` requests through.
+
+  > :warning: `outboundService` and `fetchMock` are mutually exclusive options.
+  > At most one of them may be specified per Worker.
+
 - `routes?: string[]`
 
   Array of route patterns for this Worker. These follow the same

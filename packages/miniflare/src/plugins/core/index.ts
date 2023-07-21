@@ -4,8 +4,10 @@ import fs from "fs/promises";
 import tls from "tls";
 import { TextEncoder } from "util";
 import { bold } from "kleur/colors";
+import { MockAgent } from "undici";
 import SCRIPT_ENTRY from "worker:core/entry";
 import { z } from "zod";
+import { fetch } from "../../http";
 import {
 	Service,
 	ServiceDesignator,
@@ -70,7 +72,11 @@ if (process.env.NODE_EXTRA_CA_CERTS !== undefined) {
 const encoder = new TextEncoder();
 const numericCompare = new Intl.Collator(undefined, { numeric: true }).compare;
 
-export const CoreOptionsSchema = z.intersection(
+export function createFetchMock() {
+	return new MockAgent();
+}
+
+const CoreOptionsSchemaInput = z.intersection(
 	SourceOptionsSchema,
 	z.object({
 		name: z.string().optional(),
@@ -85,11 +91,26 @@ export const CoreOptionsSchema = z.intersection(
 		textBlobBindings: z.record(z.string()).optional(),
 		dataBlobBindings: z.record(z.string()).optional(),
 		serviceBindings: z.record(ServiceDesignatorSchema).optional(),
+
 		outboundService: ServiceDesignatorSchema.optional(),
+		fetchMock: z.instanceof(MockAgent).optional(),
 
 		unsafeEphemeralDurableObjects: z.boolean().optional(),
 	})
 );
+export const CoreOptionsSchema = CoreOptionsSchemaInput.transform((value) => {
+	const fetchMock = value.fetchMock;
+	if (fetchMock !== undefined) {
+		if (value.outboundService !== undefined) {
+			throw new MiniflareCoreError(
+				"ERR_MULTIPLE_OUTBOUNDS",
+				"Only one of `outboundService` or `fetchMock` may be specified per worker"
+			);
+		}
+		value.outboundService = (req) => fetch(req, { dispatcher: fetchMock });
+	}
+	return value;
+});
 
 export const CoreSharedOptionsSchema = z.object({
 	host: z.string().optional(),

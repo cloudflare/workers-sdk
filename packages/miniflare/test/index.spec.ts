@@ -11,6 +11,7 @@ import {
 	MiniflareOptions,
 	Response,
 	_transformsForContentEncoding,
+	createFetchMock,
 	fetch,
 } from "miniflare";
 import {
@@ -367,6 +368,40 @@ test("Miniflare: custom outbound service", async (t) => {
 		res1: "one",
 		res2: "fallback:https://example.com/2",
 	});
+});
+
+test("Miniflare: fetch mocking", async (t) => {
+	const fetchMock = createFetchMock();
+	fetchMock.disableNetConnect();
+	const origin = fetchMock.get("https://example.com");
+	origin.intercept({ method: "GET", path: "/" }).reply(200, "Mocked response!");
+
+	const mf = new Miniflare({
+		modules: true,
+		script: `export default {
+      async fetch() {
+        return fetch("https://example.com/");
+      }
+    }`,
+		fetchMock,
+	});
+	const res = await mf.dispatchFetch("http://localhost");
+	t.is(await res.text(), "Mocked response!");
+
+	// Check `outboundService`and `fetchMock` mutually exclusive
+	await t.throwsAsync(
+		mf.setOptions({
+			script: "",
+			fetchMock,
+			outboundService: "",
+		}),
+		{
+			instanceOf: MiniflareCoreError,
+			code: "ERR_MULTIPLE_OUTBOUNDS",
+			message:
+				"Only one of `outboundService` or `fetchMock` may be specified per worker",
+		}
+	);
 });
 
 test("Miniflare: custom upstream as origin", async (t) => {
