@@ -1,8 +1,6 @@
 import assert from "assert";
 import crypto from "crypto";
 import v8 from "v8";
-// @ts-expect-error "devalue" is ESM-only, but we're bundling for CommonJS here.
-//  That doesn't matter to `esbuild`, which will apply format conversion.
 import { stringify } from "devalue";
 import { Colorize, bold, green, grey, red, reset, yellow } from "kleur/colors";
 import { z } from "zod";

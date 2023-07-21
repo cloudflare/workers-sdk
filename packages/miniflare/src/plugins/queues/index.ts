@@ -1,5 +1,3 @@
-// @ts-expect-error "devalue" is ESM-only, but we're bundling for CommonJS here.
-//  That doesn't matter to `esbuild`, which will apply format conversion.
 import { stringify } from "devalue";
 import semiver from "semiver";
 import { z } from "zod";

@@ -10,8 +10,8 @@ import {
 	decodePersist,
 } from "../shared";
 import { InternalError, InvalidMetadata } from "./errors";
-import { R2Gateway, R2Objects } from "./gateway";
-import { EncodedMetadata, R2Object, R2ObjectBody } from "./r2Object";
+import { R2Gateway } from "./gateway";
+import { EncodedMetadata, R2Object, R2ObjectBody, R2Objects } from "./r2Object";
 import { R2BindingRequestSchema } from "./schemas";
 
 async function decodeMetadata(req: Request) {

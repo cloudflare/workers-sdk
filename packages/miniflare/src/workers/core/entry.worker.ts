@@ -1,7 +1,3 @@
-// @ts-expect-error "devalue" is ESM-only, so TypeScript requires us to use the
-//  `*.mts` extension, or set `"type": "module"` in our `package.json`. We can't
-//  do the first as ambient types from `@cloudflare/workers-types` don't seem to
-//  work, and the second would affect all consumers of `miniflare`.
 import { unflatten } from "devalue";
 import { CoreBindings, CoreHeaders, LogLevel } from "./constants";
 import { structuredSerializableRevivers } from "./devalue";
