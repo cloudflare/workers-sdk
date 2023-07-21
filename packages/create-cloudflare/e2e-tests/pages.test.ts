@@ -1,23 +1,32 @@
 import { existsSync, mkdtempSync, realpathSync, rmSync } from "fs";
+import crypto from "node:crypto";
 import { tmpdir } from "os";
 import { join } from "path";
+import spawn from "cross-spawn";
 import { FrameworkMap } from "frameworks/index";
 import { readJSON } from "helpers/files";
+import { fetch } from "undici";
 import { describe, expect, test, afterEach, beforeEach } from "vitest";
 import { keys, runC3 } from "./helpers";
 import type { RunnerConfig } from "./helpers";
 
 /*
 Areas for future improvement:
-- Make these actually e2e by verifying that deployment works
 - Add support for frameworks with global installs (like docusaurus, gatsby, etc)
 */
 
+type FrameworkTestConfig = RunnerConfig & {
+	expectResponseToContain: string;
+};
+
 describe("E2E: Web frameworks", () => {
 	const tmpDirPath = realpathSync(mkdtempSync(join(tmpdir(), "c3-tests")));
-	const projectPath = join(tmpDirPath, "pages-tests");
+	let projectPath: string;
+	let projectName: string;
 
 	beforeEach(() => {
+		projectName = `c3-e2e-${crypto.randomBytes(4).toString("hex")}`;
+		projectPath = join(tmpDirPath, projectName);
 		rmSync(projectPath, { recursive: true, force: true });
 	});
 
@@ -25,11 +34,13 @@ describe("E2E: Web frameworks", () => {
 		if (existsSync(projectPath)) {
 			rmSync(projectPath, { recursive: true });
 		}
+
+		spawn("npx", ["wrangler", "pages", "project", "delete", "-y", projectName]);
 	});
 
 	const runCli = async (
 		framework: string,
-		{ argv = [], promptHandlers = [], overrides = {} }: RunnerConfig
+		{ argv = [], promptHandlers = [], overrides }: RunnerConfig
 	) => {
 		const args = [
 			projectPath,
@@ -37,27 +48,20 @@ describe("E2E: Web frameworks", () => {
 			"webFramework",
 			"--framework",
 			framework,
-			"--no-deploy",
+			"--deploy",
+			"--no-open",
 		];
 
-		if (argv.length > 0) {
-			args.push(...argv);
-		} else {
-			args.push("--no-git");
-		}
+		args.push(...argv);
 
-		// For debugging purposes, uncomment the following to see the exact
-		// command the test uses. You can then run this via the command line.
-		// console.log("COMMAND: ", `node ${["./dist/cli.js", ...args].join(" ")}`);
-
-		await runC3({ argv: args, promptHandlers });
+		const { output } = await runC3({ argv: args, promptHandlers });
 
 		// Relevant project files should have been created
 		expect(projectPath).toExist();
-
 		const pkgJsonPath = join(projectPath, "package.json");
 		expect(pkgJsonPath).toExist();
 
+		// Wrangler should be installed
 		const wranglerPath = join(projectPath, "node_modules/wrangler");
 		expect(wranglerPath).toExist();
 
@@ -68,7 +72,7 @@ describe("E2E: Web frameworks", () => {
 			...frameworkConfig.packageScripts,
 		} as Record<string, string>;
 
-		if (overrides.packageScripts) {
+		if (overrides && overrides.packageScripts) {
 			// override packageScripts with testing provided scripts
 			Object.entries(overrides.packageScripts).forEach(([target, cmd]) => {
 				frameworkTargetPackageScripts[target] = cmd;
@@ -79,46 +83,74 @@ describe("E2E: Web frameworks", () => {
 		Object.entries(frameworkTargetPackageScripts).forEach(([target, cmd]) => {
 			expect(pkgJson.scripts[target]).toEqual(cmd);
 		});
+
+		return { output };
 	};
 
-	test.each(["astro", "hono", "react", "remix", "vue"])("%s", async (name) => {
-		await runCli(name, {});
-	});
+	const runCliWithDeploy = async (framework: string) => {
+		const { argv, overrides, promptHandlers, expectResponseToContain } =
+			frameworkTests[framework];
 
-	test("Nuxt", async () => {
-		await runCli("nuxt", {
-			overrides: {
-				packageScripts: {
-					build: "NITRO_PRESET=cloudflare-pages nuxt build",
-				},
-			},
+		await runCli(framework, {
+			overrides,
+			promptHandlers,
+			argv: [...(argv ?? []), "--deploy", "--no-git"],
 		});
-	});
 
-	test("next", async () => {
-		await runCli("next", {
+		// Verify deployment
+		const projectUrl = `https://${projectName}.pages.dev/`;
+
+		const res = await fetch(projectUrl);
+		expect(res.status).toBe(200);
+
+		const body = await res.text();
+		expect(
+			body,
+			`(${framework}) Deployed page (${projectUrl}) didn't contain expected string: "${expectResponseToContain}"`
+		).toContain(expectResponseToContain);
+	};
+
+	const frameworkTests: Record<string, FrameworkTestConfig> = {
+		astro: {
+			expectResponseToContain: "Hello, Astronaut!",
+		},
+		hono: {
+			expectResponseToContain: "/api/hello",
+		},
+		next: {
+			expectResponseToContain: "Create Next App",
 			promptHandlers: [
 				{
 					matcher: /Do you want to use the next-on-pages eslint-plugin\?/,
 					input: ["y"],
 				},
 			],
-		});
-	});
-
-	test("qwik", async () => {
-		await runCli("qwik", {
+		},
+		nuxt: {
+			expectResponseToContain: "Welcome to Nuxt!",
+			overrides: {
+				packageScripts: {
+					build: "NITRO_PRESET=cloudflare-pages nuxt build",
+				},
+			},
+		},
+		qwik: {
+			expectResponseToContain: "Welcome to Qwik",
 			promptHandlers: [
 				{
 					matcher: /Yes looks good, finish update/,
 					input: [keys.enter],
 				},
 			],
-		});
-	});
-
-	test("solid", async () => {
-		await runCli("solid", {
+		},
+		react: {
+			expectResponseToContain: "React App",
+		},
+		remix: {
+			expectResponseToContain: "Welcome to Remix",
+		},
+		solid: {
+			expectResponseToContain: "Hello world",
 			promptHandlers: [
 				{
 					matcher: /Which template do you want to use/,
@@ -133,11 +165,9 @@ describe("E2E: Web frameworks", () => {
 					input: [keys.enter],
 				},
 			],
-		});
-	});
-
-	test("svelte", async () => {
-		await runCli("svelte", {
+		},
+		svelte: {
+			expectResponseToContain: "SvelteKit app",
 			promptHandlers: [
 				{
 					matcher: /Which Svelte app template/,
@@ -152,19 +182,17 @@ describe("E2E: Web frameworks", () => {
 					input: [keys.enter],
 				},
 			],
-		});
+		},
+		vue: {
+			expectResponseToContain: "Vite App",
+		},
+	};
+
+	test.each(Object.keys(frameworkTests))("%s", async (name) => {
+		await runCliWithDeploy(name);
 	});
 
-	// This test blows up in CI due to Github providing an unusual git user email address.
-	// E.g.
-	// ```
-	// fatal: empty ident name (for <runner@fv-az176-734.urr04s1gdzguhowldvrowxwctd.dx.
-	// internal.cloudapp.net>) not allowed
-	// ```
 	test.skip("Hono (wrangler defaults)", async () => {
 		await runCli("hono", { argv: ["--wrangler-defaults"] });
-
-		// verify that wrangler-defaults defaults to `true` for using git
-		expect(join(projectPath, ".git")).toExist();
 	});
 });

@@ -157,7 +157,7 @@ const config: FrameworkConfig = {
 		"--src-dir",
 		"--app",
 		"--import-alias",
-		'"@/*"',
+		"@/*",
 	],
 	compatibilityFlags: ["nodejs_compat"],
 };

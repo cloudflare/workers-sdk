@@ -93,7 +93,7 @@ export const runDeploy = async (ctx: PagesGeneratorContext) => {
 	const result = await runCommand(deployCmd, {
 		silent: true,
 		cwd: ctx.project.path,
-		env: { CLOUDFLARE_ACCOUNT_ID: ctx.account.id },
+		env: { CLOUDFLARE_ACCOUNT_ID: ctx.account.id, NODE_ENV: "production" },
 		startText: `Deploying your application`,
 		doneText: `${brandColor("deployed")} ${dim(`via \`${deployCmd}\``)}`,
 	});
