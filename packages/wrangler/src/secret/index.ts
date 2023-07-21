@@ -1,5 +1,5 @@
 import path from "node:path";
-import { createInterface } from "node:readline";
+import readline from "node:readline";
 import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
@@ -341,7 +341,7 @@ export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
 		);
 	} else {
 		try {
-			const rl = createInterface({ input: process.stdin });
+			const rl = readline.createInterface({ input: process.stdin });
 			let pipedInput = "";
 			for await (const line of rl) {
 				pipedInput += line;

@@ -1,7 +1,6 @@
 import * as fs from "node:fs";
 import { writeFileSync } from "node:fs";
-// eslint-disable-next-line
-import * as originalRL from "node:readline";
+import readline from "node:readline";
 import * as TOML from "@iarna/toml";
 import { rest } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -13,17 +12,7 @@ import { useMockStdin } from "./helpers/mock-stdin";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import writeWranglerToml from "./helpers/write-wrangler-toml";
-
-jest.mock("node:readline", () => {
-	return {
-		createInterface: () =>
-			JSON.stringify({
-				secret1: "secret-value",
-				password: "hunter2",
-			}),
-	};
-});
+import type { Interface } from "node:readline";
 
 function createFetchResult(result: unknown, success = true) {
 	return {
@@ -530,7 +519,15 @@ describe("wrangler secret", () => {
 
 	describe("secret:bulk", () => {
 		it("should use secret:bulk w/ pipe input", async () => {
-			writeWranglerToml();
+			jest.spyOn(readline, "createInterface").mockImplementation(
+				() =>
+					// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
+					JSON.stringify({
+						secret1: "secret-value",
+						password: "hunter2",
+					}) as unknown as Interface
+			);
+
 			let counter = 0;
 			msw.use(
 				rest.put(
@@ -551,15 +548,15 @@ describe("wrangler secret", () => {
 				)
 			);
 
-			await runWrangler(`secret:bulk`);
+			await runWrangler(`secret:bulk --name script-name`);
 			expect(std.out).toMatchInlineSnapshot(`
-					"🌀 Creating the secrets for the Worker \\"test-name\\"
-					✨ Successfully created secret for key: secret1
-					✨ Successfully created secret for key: password
+			"🌀 Creating the secrets for the Worker \\"script-name\\"
+			✨ Successfully created secret for key: secret1
+			✨ Successfully created secret for key: password
 
-					Finished processing secrets JSON file:
-					✨ 2 secrets successfully uploaded"
-			`);
+			Finished processing secrets JSON file:
+			✨ 2 secrets successfully uploaded"
+		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(counter).toEqual(2);
 		});
