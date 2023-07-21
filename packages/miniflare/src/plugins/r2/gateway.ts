@@ -27,7 +27,7 @@ import {
 	NoSuchUpload,
 	PreconditionFailed,
 } from "./errors";
-import { R2Object, R2ObjectBody } from "./r2Object";
+import { R2Object, R2ObjectBody, R2Objects } from "./r2Object";
 import {
 	MultipartPartRow,
 	MultipartUploadRow,
@@ -109,24 +109,6 @@ class DigestingStream<
 		});
 		this.digests = digests;
 	}
-}
-
-export interface R2Objects {
-	// An array of objects matching the list request.
-	objects: R2Object[];
-	// If true, indicates there are more results to be retrieved for the current
-	// list request.
-	truncated: boolean;
-	// A token that can be passed to future list calls to resume listing from that
-	// point.
-	// Only present if truncated is true.
-	cursor?: string;
-	// If a delimiter has been specified, contains all prefixes between the
-	// specified prefix and the next occurrence of the delimiter. For example, if
-	// no prefix is provided and the delimiter is "/", "foo/bar/baz" would return
-	// "foo" as a delimited prefix. If "foo/" was passed as a prefix with the same
-	// structure and delimiter, "foo/bar" would be returned as a delimited prefix.
-	delimitedPrefixes: string[];
 }
 
 const validate = new Validator();

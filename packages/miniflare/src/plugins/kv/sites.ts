@@ -279,7 +279,6 @@ export async function sitesGatewayGet(
 			typeof e === "object" &&
 			e !== null &&
 			"code" in e &&
-			// @ts-expect-error `e.code` should be `unknown`, fixed in TypeScript 4.9
 			e.code === "ENOENT"
 		) {
 			return;

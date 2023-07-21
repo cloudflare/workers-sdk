@@ -1,5 +1,3 @@
-// @ts-expect-error "devalue" is ESM-only, but we're bundling for CommonJS here.
-//  That doesn't matter to `esbuild`, which will apply format conversion.
 import { parse } from "devalue";
 import { z } from "zod";
 import { Headers, Response } from "../../http";

@@ -2,7 +2,6 @@ import { Blob } from "buffer";
 import { ReadableStream, TransformStream } from "stream/web";
 import type { R2StringChecksums } from "@cloudflare/workers-types/experimental";
 import { HEX_REGEXP } from "../../shared";
-import { R2Objects } from "./gateway";
 import { ObjectRow, R2HeadResponse, R2HttpFields, R2Range } from "./schemas";
 
 export interface EncodedMetadata {
@@ -100,4 +99,22 @@ export class R2ObjectBody extends R2Object {
 			value: identity.readable,
 		};
 	}
+}
+
+export interface R2Objects {
+	// An array of objects matching the list request.
+	objects: R2Object[];
+	// If true, indicates there are more results to be retrieved for the current
+	// list request.
+	truncated: boolean;
+	// A token that can be passed to future list calls to resume listing from that
+	// point.
+	// Only present if truncated is true.
+	cursor?: string;
+	// If a delimiter has been specified, contains all prefixes between the
+	// specified prefix and the next occurrence of the delimiter. For example, if
+	// no prefix is provided and the delimiter is "/", "foo/bar/baz" would return
+	// "foo" as a delimited prefix. If "foo/" was passed as a prefix with the same
+	// structure and delimiter, "foo/bar" would be returned as a delimited prefix.
+	delimitedPrefixes: string[];
 }
