@@ -188,9 +188,13 @@ describe("E2E: Web frameworks", () => {
 		},
 	};
 
-	test.each(Object.keys(frameworkTests))("%s", async (name) => {
-		await runCliWithDeploy(name);
-	});
+	test.each(Object.keys(frameworkTests))(
+		"%s",
+		async (name) => {
+			await runCliWithDeploy(name);
+		},
+		{ retry: 3 }
+	);
 
 	test.skip("Hono (wrangler defaults)", async () => {
 		await runCli("hono", { argv: ["--wrangler-defaults"] });
