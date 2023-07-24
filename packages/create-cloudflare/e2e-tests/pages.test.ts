@@ -10,6 +10,8 @@ import { describe, expect, test, afterEach, beforeEach } from "vitest";
 import { keys, runC3 } from "./helpers";
 import type { RunnerConfig } from "./helpers";
 
+export const TEST_PREFIX = "c3-e2e-";
+
 /*
 Areas for future improvement:
 - Add support for frameworks with global installs (like docusaurus, gatsby, etc)
@@ -25,7 +27,7 @@ describe("E2E: Web frameworks", () => {
 	let projectName: string;
 
 	beforeEach(() => {
-		projectName = `c3-e2e-${crypto.randomBytes(4).toString("hex")}`;
+		projectName = `${TEST_PREFIX}${crypto.randomBytes(4).toString("hex")}`;
 		projectPath = join(tmpDirPath, projectName);
 		rmSync(projectPath, { recursive: true, force: true });
 	});
