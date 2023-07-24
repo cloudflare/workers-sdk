@@ -26,7 +26,7 @@ export function Options(yargs: CommonYargsArgv) {
 			type: "string",
 		})
 		.option("experimental-backend", {
-			default: false,
+			default: true,
 			describe: "Use new experimental DB backend",
 			type: "boolean",
 		})
