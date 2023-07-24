@@ -1,8 +1,16 @@
 import { mkdirSync } from "fs";
-import { updateStatus } from "helpers/cli";
+import { updateStatus, warn } from "helpers/cli";
 import { brandColor, dim } from "helpers/colors";
 import { installPackages, runFrameworkGenerator } from "helpers/command";
-import { probePaths, usesTypescript, writeFile } from "helpers/files";
+import {
+	probePaths,
+	readJSON,
+	usesEslint,
+	usesTypescript,
+	writeFile,
+	writeJSON,
+} from "helpers/files";
+import { processArgument } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
 import { getFrameworkVersion } from "../index";
 import {
@@ -11,7 +19,7 @@ import {
 	apiPagesDirHelloJs,
 	apiPagesDirHelloTs,
 } from "./templates";
-import type { PagesGeneratorContext, FrameworkConfig } from "types";
+import type { PagesGeneratorContext, FrameworkConfig, C3Args } from "types";
 
 const { npm, npx, dlx } = detectPackageManager();
 
@@ -72,14 +80,63 @@ const configure = async (ctx: PagesGeneratorContext) => {
 	writeFile(handlerPath, handlerFile);
 	updateStatus("Created an example API route handler");
 
+	const installEslintPlugin = await shouldInstallNextOnPagesEslintPlugin(ctx);
+
+	if (installEslintPlugin) {
+		await writeEslintrc(ctx);
+	}
+
 	// Add some dev dependencies
 	process.chdir(projectName);
-	const packages = ["@cloudflare/next-on-pages@1", "vercel"];
+	const packages = [
+		"@cloudflare/next-on-pages@1",
+		"vercel",
+		...(installEslintPlugin ? ["eslint-plugin-next-on-pages"] : []),
+	];
 	await installPackages(packages, {
 		dev: true,
 		startText: "Adding the Cloudflare Pages adapter",
 		doneText: `${brandColor(`installed`)} ${dim(packages.join(", "))}`,
 	});
+};
+
+export const shouldInstallNextOnPagesEslintPlugin = async (
+	ctx: PagesGeneratorContext
+): Promise<boolean> => {
+	const eslintUsage = usesEslint(ctx);
+
+	if (!eslintUsage.used) return false;
+
+	if (eslintUsage.configType !== ".eslintrc.json") {
+		warn(
+			`Expected .eslintrc.json from Next.js scaffolding but found ${eslintUsage.configType} instead`
+		);
+		return false;
+	}
+
+	return await processArgument(ctx.args, "eslint-plugin" as keyof C3Args, {
+		type: "confirm",
+		question: "Do you want to use the next-on-pages eslint-plugin?",
+		label: "eslint-plugin",
+		defaultValue: true,
+	});
+};
+
+export const writeEslintrc = async (
+	ctx: PagesGeneratorContext
+): Promise<void> => {
+	const eslintConfig = readJSON(`${ctx.project.name}/.eslintrc.json`);
+
+	eslintConfig.plugins ??= [];
+	eslintConfig.plugins.push("eslint-plugin-next-on-pages");
+
+	if (typeof eslintConfig.extends === "string") {
+		eslintConfig.extends = [eslintConfig.extends];
+	}
+	eslintConfig.extends ??= [];
+	eslintConfig.extends.push("plugin:eslint-plugin-next-on-pages/recommended");
+
+	writeJSON(`${ctx.project.name}/.eslintrc.json`, eslintConfig, 2);
 };
 
 const config: FrameworkConfig = {

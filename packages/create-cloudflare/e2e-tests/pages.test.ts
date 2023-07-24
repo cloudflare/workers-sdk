@@ -81,12 +81,9 @@ describe("E2E: Web frameworks", () => {
 		});
 	};
 
-	test.each(["astro", "hono", "next", "react", "remix", "vue"])(
-		"%s",
-		async (name) => {
-			await runCli(name, {});
-		}
-	);
+	test.each(["astro", "hono", "react", "remix", "vue"])("%s", async (name) => {
+		await runCli(name, {});
+	});
 
 	test("Nuxt", async () => {
 		await runCli("nuxt", {
@@ -95,6 +92,17 @@ describe("E2E: Web frameworks", () => {
 					build: "NITRO_PRESET=cloudflare-pages nuxt build",
 				},
 			},
+		});
+	});
+
+	test("next", async () => {
+		await runCli("next", {
+			promptHandlers: [
+				{
+					matcher: /Do you want to use the next-on-pages eslint-plugin\?/,
+					input: ["y"],
+				},
+			],
 		});
 	});
 
