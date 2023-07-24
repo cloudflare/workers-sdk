@@ -38,9 +38,13 @@ jobs:
             }
 
       - name: "Comment on PR with Wrangler link"
+        env:
+          WORKFLOW_RUN_PR_FOR_WRANGLER: ${{env.WORKFLOW_RUN_PR_FOR_WRANGLER || env.WORKFLOW_RUN_PR_FOR_CLOUDFLARE-PAGES-SHARED}}
+          WORKFLOW_RUN_ID_FOR_WRANGLER: ${{env.WORKFLOW_RUN_ID_FOR_WRANGLER || env.WORKFLOW_RUN_ID_FOR_CLOUDFLARE-PAGES-SHARED}}
+
         uses: marocchino/sticky-pull-request-comment@v2
         with:
-          number: ${{ env.WORKFLOW_RUN_PR_FOR_WRANGLER }}
+          number: ${{ env.WORKFLOW_RUN_PR_FOR_WRANGLER}}
           message: |
             A wrangler prerelease is available for testing. You can install this latest build in your project with:
 
@@ -51,7 +55,7 @@ jobs:
             You can reference the automatically updated head of this PR with:
 
             ```sh
-            npm install --save-dev https://prerelease-registry.devprod.cloudflare.dev/workers-sdk/prs/${{ env.WORKFLOW_RUN_PR_FOR_WRANGLER }}/npm-package-wrangler-${{ env.WORKFLOW_RUN_PR_FOR_WRANGLER }}
+            npm install --save-dev https://prerelease-registry.devprod.cloudflare.dev/workers-sdk/prs/${{ env.WORKFLOW_RUN_ID_FOR_WRANGLER }}/npm-package-wrangler-${{ env.WORKFLOW_RUN_PR_FOR_WRANGLER }}
             ```
 
             Or you can use `npx` with this latest build directly:
