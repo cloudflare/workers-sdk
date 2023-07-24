@@ -2682,7 +2682,7 @@ describe("init", () => {
 					DATA_BLOB_TWO: "DATA_BLOB_TWO",
 				},
 				logfwdr: {
-					schema: "",
+					capnp_schema: "",
 					bindings: [
 						{
 							name: "httplogs",
@@ -3031,7 +3031,7 @@ describe("init", () => {
 			namespace = \\"namespace-mock\\"
 
 			[logfwdr]
-			schema = \\"\\"
+			capnp_schema = \\"\\"
 
 			  [[logfwdr.bindings]]
 			  name = \\"httplogs\\"

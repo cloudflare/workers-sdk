@@ -62,7 +62,7 @@ const bindingsConfigMock: Partial<Config> = {
 		{ binding: "NAMESPACE_BINDING", namespace: "NAMESPACE_ID" },
 	],
 	logfwdr: {
-		schema: "LOGFWDER_SCHEMA",
+		capnp_schema: "LOGFWDER_SCHEMA",
 		bindings: [{ name: "LOGFWDR_BINDING", destination: "LOGFWDR_DESTINATION" }],
 	},
 	data_blobs: {

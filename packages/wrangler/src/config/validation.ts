@@ -1301,7 +1301,7 @@ function normalizeAndValidateEnvironment(
 			"logfwdr",
 			validateCflogfwdrObject(envName),
 			{
-				schema: undefined,
+				capnp_schema: undefined,
 				bindings: [],
 			}
 		),
@@ -1802,15 +1802,27 @@ const validateCflogfwdrObject: (env: string) => ValidatorFn =
 		if (!bindingsValidation(diagnostics, field, value, topLevelEnv))
 			return false;
 
-		const v = value as { bindings: []; schema: string | undefined };
+		const v = value as {
+			bindings: [];
+			capnp_schema: string | undefined;
+			schema: string | undefined;
+		};
+
+		if (v?.schema !== undefined) {
+			// the user should not be using the old schema property, as we've migrated to capnp_schema for consistency with the unsafe bindings
+			diagnostics.errors.push(
+				`"${field}" binding "schema" property has been replaced with "capnp_schema", and no longer requires you to manually call capnp.`
+			);
+			return false;
+		}
 
 		// if there's something in the bindings array, the logfwdr schema is required, so we can exit early when there's no bindings
 		if (!v?.bindings.length) return true;
 
 		// we now know there are bindings, so we need to validate the schema property
-		if (!isRequiredProperty(v, "schema", "string")) {
+		if (!isRequiredProperty(v, "capnp_schema", "string")) {
 			diagnostics.errors.push(
-				`"${field}" bindings should have a string "schema" field but got ${JSON.stringify(
+				`"${field}" bindings should have a string "capnp_schema" field but got ${JSON.stringify(
 					v
 				)}.`
 			);
@@ -1818,9 +1830,9 @@ const validateCflogfwdrObject: (env: string) => ValidatorFn =
 		}
 
 		//schema is definitely a string now, however it's historically been used to parse pre-compiled capnp, so an error should be thrown for that
-		if (v.schema?.endsWith(".compiled")) {
+		if (v.capnp_schema?.endsWith(".compiled")) {
 			diagnostics.errors.push(
-				`"${field}" bindings "schema" field should not be pre-compiled - Wrangler will run capnp for you.`
+				`"${field}" bindings "capnp_schema" field should not be pre-compiled - Wrangler will run capnp for you.`
 			);
 		}
 

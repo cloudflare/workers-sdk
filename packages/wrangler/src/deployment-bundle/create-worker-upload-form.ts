@@ -360,8 +360,8 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		}
 	}
 
-	if (bindings.logfwdr?.schema) {
-		capnp_schemas.push(bindings.logfwdr.schema);
+	if (bindings.logfwdr?.capnp_schema) {
+		capnp_schemas.push(bindings.logfwdr.capnp_schema);
 	}
 
 	let capnpSchemaOutputFile: string | undefined;

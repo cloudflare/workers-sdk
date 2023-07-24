@@ -79,7 +79,7 @@ export async function generateTypes(
 		}
 	}
 
-	if (configToDTS.logfwdr?.schema) {
+	if (configToDTS.logfwdr?.capnp_schema) {
 		envTypeStructure.push(`LOGFWDR_SCHEMA: any;`);
 	}
 

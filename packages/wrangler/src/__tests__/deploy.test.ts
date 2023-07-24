@@ -6083,7 +6083,7 @@ addEventListener('fetch', event => {});`
 
 				writeWranglerToml({
 					logfwdr: {
-						schema: "./message.capnp",
+						capnp_schema: "./message.capnp",
 						bindings: [
 							{
 								name: "httplogs",
@@ -6133,7 +6133,7 @@ addEventListener('fetch', event => {});`
 			it("should error for compiled logfwdr schemas", async () => {
 				writeWranglerToml({
 					logfwdr: {
-						schema: "./message.capnp.compiled",
+						capnp_schema: "./message.capnp.compiled",
 						bindings: [
 							{
 								name: "httplogs",
@@ -6150,14 +6150,14 @@ addEventListener('fetch', event => {});`
 				await expect(() => runWrangler("deploy index.js")).rejects
 					.toThrowErrorMatchingInlineSnapshot(`
 			"Processing wrangler.toml configuration:
-			  - \\"logfwdr\\" bindings \\"schema\\" field should not be pre-compiled - Wrangler will run capnp for you."
+			  - \\"logfwdr\\" bindings \\"capnp_schema\\" field should not be pre-compiled - Wrangler will run capnp for you."
 		`);
 			});
 
 			it("should when a logfwdr schema isn't specified", async () => {
 				writeWranglerToml({
 					logfwdr: {
-						schema: undefined,
+						capnp_schema: undefined,
 						bindings: [
 							{
 								name: "httplogs",
@@ -6174,7 +6174,7 @@ addEventListener('fetch', event => {});`
 				await expect(() => runWrangler("deploy index.js")).rejects
 					.toThrowErrorMatchingInlineSnapshot(`
 			"Processing wrangler.toml configuration:
-			  - \\"logfwdr\\" bindings should have a string \\"schema\\" field but got {\\"bindings\\":[{\\"name\\":\\"httplogs\\",\\"destination\\":\\"httplogs\\"},{\\"name\\":\\"trace\\",\\"destination\\":\\"trace\\"}]}."
+			  - \\"logfwdr\\" bindings should have a string \\"capnp_schema\\" field but got {\\"bindings\\":[{\\"name\\":\\"httplogs\\",\\"destination\\":\\"httplogs\\"},{\\"name\\":\\"trace\\",\\"destination\\":\\"trace\\"}]}."
 		`);
 			});
 
@@ -6189,7 +6189,7 @@ addEventListener('fetch', event => {});`
 
 				writeWranglerToml({
 					logfwdr: {
-						schema: "./message.capnp",
+						capnp_schema: "./message.capnp",
 						bindings: [
 							{
 								name: "httplogs",
@@ -6209,6 +6209,31 @@ addEventListener('fetch', event => {});`
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`"The capnp compiler is required to upload capnp schemas, but is not present."`
 				);
+			});
+
+			it("should error when the old schema property is used", async () => {
+				writeWranglerToml({
+					logfwdr: {
+						// @ts-expect-error This should be erroring
+						schema: "./message.capnp",
+						bindings: [
+							{
+								name: "httplogs",
+								destination: "httplogs",
+							},
+							{
+								name: "trace",
+								destination: "trace",
+							},
+						],
+					},
+				});
+
+				await expect(() => runWrangler("deploy index.js")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+			"Processing wrangler.toml configuration:
+			  - \\"logfwdr\\" binding \\"schema\\" property has been replaced with \\"capnp_schema\\", and no longer requires you to manually call capnp."
+		`);
 			});
 		});
 

@@ -169,7 +169,7 @@ interface CfMTlsCertificate {
 }
 
 interface CfLogfwdr {
-	schema: string | undefined;
+	capnp_schema: string | undefined;
 	bindings: CfLogfwdrBinding[];
 }
 

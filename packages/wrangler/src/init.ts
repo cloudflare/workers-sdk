@@ -1088,7 +1088,7 @@ export function mapBindings(bindings: WorkerMetadataBinding[]): RawConfig {
 						{
 							configObj.logfwdr = {
 								// TODO: Messaging about adding schema file path
-								schema: "",
+								capnp_schema: "",
 								bindings: [
 									...(configObj.logfwdr?.bindings ?? []),
 									{ name: binding.name, destination: binding.destination },

@@ -247,7 +247,7 @@ interface EnvironmentInheritable {
 	 */
 	logfwdr: {
 		/** capnp schema filename */
-		schema: string | undefined;
+		capnp_schema: string | undefined;
 		bindings: {
 			/** The binding name used to refer to logfwdr */
 			name: string;
