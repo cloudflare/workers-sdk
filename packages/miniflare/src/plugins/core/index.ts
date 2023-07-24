@@ -65,7 +65,12 @@ if (process.env.NODE_EXTRA_CA_CERTS !== undefined) {
 	// https://nodejs.org/api/cli.html#node_extra_ca_certsfile
 	try {
 		const extra = readFileSync(process.env.NODE_EXTRA_CA_CERTS, "utf8");
-		trustedCertificates.push(extra);
+		// Split bundle into individual certificates and add each individually:
+		// https://github.com/cloudflare/miniflare/pull/587/files#r1271579671
+		const pemBegin = "-----BEGIN";
+		for (const cert of extra.split(pemBegin)) {
+			if (cert.trim() !== "") trustedCertificates.push(pemBegin + cert);
+		}
 	} catch {}
 }
 
