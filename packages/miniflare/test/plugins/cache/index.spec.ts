@@ -3,73 +3,50 @@ import crypto from "crypto";
 import path from "path";
 import { text } from "stream/consumers";
 import {
+	CacheStorage,
 	HeadersInit,
 	KeyValueStorage,
 	LogLevel,
+	Request,
+	RequestInit,
+	Response,
 	createFileStorage,
 } from "miniflare";
-import { miniflareTest, useTmp } from "../../test-shared";
+import { MiniflareTestContext, miniflareTest, useTmp } from "../../test-shared";
 
-const test = miniflareTest({}, async (global, req) => {
-	// Partition headers
-	let name: string | undefined;
-	let cfCacheKey: string | undefined;
-	let bufferPut = false;
-	const reqHeaders = new global.Headers();
-	const resHeaders = new global.Headers();
-	for (const [key, value] of req.headers) {
-		const lowerKey = key.toLowerCase();
-		if (lowerKey === "test-cache-name") {
-			name = value;
-		} else if (lowerKey === "test-cf-cache-key") {
-			cfCacheKey = value;
-		} else if (lowerKey === "test-buffer") {
-			bufferPut = true;
-		} else if (lowerKey.startsWith("test-response-")) {
-			resHeaders.set(lowerKey.substring("test-response-".length), value);
-		} else {
-			reqHeaders.set(lowerKey, value);
-		}
-	}
+interface Context extends MiniflareTestContext {
+	caches: CacheStorage;
+}
 
-	// Get cache and cache key
-	const cache =
-		name === undefined ? global.caches.default : await global.caches.open(name);
-	const key = new global.Request(req.url, {
-		headers: reqHeaders,
-		cf: cfCacheKey === undefined ? undefined : { cacheKey: cfCacheKey },
-	});
-
-	// Perform cache operation
-	if (req.method === "GET") {
-		const cachedRes = await cache.match(key);
-		return cachedRes ?? new global.Response("<miss>", { status: 404 });
-	} else if (req.method === "PUT") {
-		const body = bufferPut ? await req.arrayBuffer() : req.body;
-		const res = new global.Response(body, { headers: resHeaders });
-		await cache.put(key, res);
+const test = miniflareTest<never, Context>({}, async (global, req) => {
+	const { pathname } = new global.URL(req.url);
+	// The API proxy doesn't support putting buffered bodies, so register a
+	// special endpoint for testing
+	if (pathname === "/put-buffered") {
+		const resToCache = new global.Response("buffered", {
+			headers: { "Cache-Control": "max-age=3600" },
+		});
+		await global.caches.default.put("http://localhost/cache-hit", resToCache);
 		return new global.Response(null, { status: 204 });
-	} else if (req.method === "DELETE") {
-		const deleted = await cache.delete(key);
-		return new global.Response(null, { status: deleted ? 204 : 404 });
-	} else {
-		return new global.Response(null, { status: 405 });
 	}
+	return new global.Response(null, { status: 404 });
+});
+
+test.beforeEach(async (t) => {
+	t.context.caches = await t.context.mf.getCaches();
 });
 
 test("match returns cached responses", async (t) => {
+	const cache = t.context.caches.default;
 	const key = "http://localhost/cache-hit";
 
 	// Check caching stream body
-	await t.context.mf.dispatchFetch(key, {
-		method: "PUT",
-		headers: {
-			"Test-Response-Cache-Control": "max-age=3600",
-			"Test-Response-X-Key": "value",
-		},
-		body: "body",
+	let resToCache = new Response("body", {
+		headers: { "Cache-Control": "max-age=3600", "X-Key": "value" },
 	});
-	let res = await t.context.mf.dispatchFetch(key);
+	await cache.put(key, resToCache);
+	let res = await cache.match(key);
+	assert(res !== undefined);
 	t.is(res.status, 200);
 	t.is(res.headers.get("Cache-Control"), "max-age=3600");
 	t.is(res.headers.get("CF-Cache-Status"), "HIT");
@@ -78,108 +55,101 @@ test("match returns cached responses", async (t) => {
 
 	// Check caching binary streamed body
 	const array = new Uint8Array([1, 2, 3]);
-	await t.context.mf.dispatchFetch(key, {
-		method: "PUT",
-		headers: { "Test-Response-Cache-Control": "max-age=3600" },
-		body: array,
+	resToCache = new Response(array, {
+		headers: { "Cache-Control": "max-age=3600" },
 	});
-	res = await t.context.mf.dispatchFetch(key);
+	await cache.put(key, resToCache);
+	res = await cache.match(key);
+	assert(res !== undefined);
 	t.is(res.status, 200);
 	t.deepEqual(new Uint8Array(await res.arrayBuffer()), array);
 
 	// Check caching buffered body
-	await t.context.mf.dispatchFetch(key, {
+	await t.context.mf.dispatchFetch("http://localhost/put-buffered", {
 		method: "PUT",
-		headers: {
-			"Test-Buffer": "1",
-			"Test-Response-Cache-Control": "max-age=3600",
-		},
-		body: "body",
 	});
-	res = await t.context.mf.dispatchFetch(key);
+	res = await cache.match(key);
+	assert(res !== undefined);
 	t.is(res.status, 200);
-	t.is(await res.text(), "body");
+	t.is(await res.text(), "buffered");
 });
 test("match returns nothing on cache miss", async (t) => {
+	const cache = t.context.caches.default;
 	const key = "http://localhost/cache-miss";
-	const res = await t.context.mf.dispatchFetch(key);
-	t.is(res.status, 404);
-	t.is(await res.text(), "<miss>");
+	const res = await cache.match(key);
+	t.is(res, undefined);
 });
 test("match respects If-None-Match header", async (t) => {
+	const cache = t.context.caches.default;
 	const key = "http://localhost/cache-if-none-match";
-	await t.context.mf.dispatchFetch(key, {
-		method: "PUT",
-		headers: {
-			"Test-Response-ETag": '"thing"',
-			"Test-Response-Cache-Control": "max-age=3600",
-		},
-		body: "body",
+	const resToCache = new Response("body", {
+		headers: { ETag: '"thing"', "Cache-Control": "max-age=3600" },
 	});
+	await cache.put(key, resToCache);
 
 	const ifNoneMatch = (value: string) =>
-		t.context.mf.dispatchFetch(key, { headers: { "If-None-Match": value } });
+		cache.match(new Request(key, { headers: { "If-None-Match": value } }));
 
 	// Check returns 304 only if an ETag in `If-Modified-Since` matches
 	let res = await ifNoneMatch('"thing"');
-	t.is(res.status, 304);
+	t.is(res?.status, 304);
 	res = await ifNoneMatch('   W/"thing"      ');
-	t.is(res.status, 304);
+	t.is(res?.status, 304);
 	res = await ifNoneMatch('"not the thing"');
-	t.is(res.status, 200);
+	t.is(res?.status, 200);
 	res = await ifNoneMatch(
 		'"not the thing",    "thing"    , W/"still not the thing"'
 	);
-	t.is(res.status, 304);
+	t.is(res?.status, 304);
 	res = await ifNoneMatch("*");
-	t.is(res.status, 304);
+	t.is(res?.status, 304);
 	res = await ifNoneMatch("    *   ");
-	t.is(res.status, 304);
+	t.is(res?.status, 304);
 });
 test("match respects If-Modified-Since header", async (t) => {
+	const cache = t.context.caches.default;
 	const key = "http://localhost/cache-if-modified-since";
-	await t.context.mf.dispatchFetch(key, {
-		method: "PUT",
+	const resToCache = new Response("body", {
 		headers: {
-			"Test-Response-Last-Modified": "Tue, 13 Sep 2022 12:00:00 GMT",
-			"Test-Response-Cache-Control": "max-age=3600",
+			"Last-Modified": "Tue, 13 Sep 2022 12:00:00 GMT",
+			"Cache-Control": "max-age=3600",
 		},
-		body: "body",
 	});
+	await cache.put(key, resToCache);
 
 	const ifModifiedSince = (value: string) =>
-		t.context.mf.dispatchFetch(key, {
-			headers: { "If-Modified-Since": value },
-		});
+		cache.match(new Request(key, { headers: { "If-Modified-Since": value } }));
 
 	// Check returns 200 if modified after `If-Modified-Since`
 	let res = await ifModifiedSince("Tue, 13 Sep 2022 11:00:00 GMT");
-	t.is(res.status, 200);
+	t.is(res?.status, 200);
 	// Check returns 304 if modified on `If-Modified-Since`
 	res = await ifModifiedSince("Tue, 13 Sep 2022 12:00:00 GMT");
-	t.is(res.status, 304);
+	t.is(res?.status, 304);
 	// Check returns 304 if modified before `If-Modified-Since`
 	res = await ifModifiedSince("Tue, 13 Sep 2022 13:00:00 GMT");
-	t.is(res.status, 304);
+	t.is(res?.status, 304);
 	// Check returns 200 if `If-Modified-Since` is not a "valid" UTC date
 	res = await ifModifiedSince("13 Sep 2022 13:00:00 GMT");
-	t.is(res.status, 200);
+	t.is(res?.status, 200);
 });
 test("match respects Range header", async (t) => {
+	const cache = t.context.caches.default;
 	const key = "http://localhost/cache-range";
-	await t.context.mf.dispatchFetch(key, {
-		method: "PUT",
+	const resToCache = new Response("0123456789", {
 		headers: {
-			"Test-Response-Content-Length": "10",
-			"Test-Response-Cache-Control": "max-age=3600",
+			"Content-Length": "10",
+			"Content-Type": "text/plain",
+			"Cache-Control": "max-age=3600",
 		},
-		body: "0123456789",
 	});
+	await cache.put(key, resToCache);
 
 	// Check with single range
-	let res = await t.context.mf.dispatchFetch(key, {
-		headers: { Range: "bytes=2-4" },
-	});
+	let res = await cache.match(
+		new Request(key, { headers: { Range: "bytes=2-4" } })
+	);
+	assert(res !== undefined);
 	t.is(res.status, 206);
 	t.is(res.headers.get("Content-Length"), "3");
 	t.is(res.headers.get("Cache-Control"), "max-age=3600");
@@ -187,9 +157,10 @@ test("match respects Range header", async (t) => {
 	t.is(await res.text(), "234");
 
 	// Check with multiple ranges
-	res = await t.context.mf.dispatchFetch(key, {
-		headers: { Range: "bytes=1-3,5-6" },
-	});
+	res = await cache.match(
+		new Request(key, { headers: { Range: "bytes=1-3,5-6" } })
+	);
+	assert(res !== undefined);
 	t.is(res.status, 206);
 	t.is(res.headers.get("Cache-Control"), "max-age=3600");
 	t.is(res.headers.get("CF-Cache-Status"), "HIT");
@@ -201,10 +172,12 @@ test("match respects Range header", async (t) => {
 		await res.text(),
 		[
 			`--${boundary}`,
+			"Content-Type: text/plain",
 			"Content-Range: bytes 1-3/10",
 			"",
 			"123",
 			`--${boundary}`,
+			"Content-Type: text/plain",
 			"Content-Range: bytes 5-6/10",
 			"",
 			"56",
@@ -213,9 +186,10 @@ test("match respects Range header", async (t) => {
 	);
 
 	// Check with unsatisfiable range
-	res = await t.context.mf.dispatchFetch(key, {
-		headers: { Range: "bytes=15-" },
-	});
+	res = await cache.match(
+		new Request(key, { headers: { Range: "bytes=15-" } })
+	);
+	assert(res !== undefined);
 	t.is(res.status, 416);
 });
 
@@ -224,6 +198,8 @@ const expireMacro = test.macro({
 		return `expires after ${providedTitle}`;
 	},
 	async exec(t, opts: { headers: HeadersInit; expectedTtl: number }) {
+		const cache = t.context.caches.default;
+
 		// Reset clock to known time, restoring afterwards.
 		// Note this macro must be used with `test.serial` to avoid races.
 		const originalTimestamp = t.context.timers.timestamp;
@@ -231,36 +207,32 @@ const expireMacro = test.macro({
 		t.context.timers.timestamp = 1_000_000; // 1000s
 
 		const key = "http://localhost/cache-expire";
-		await t.context.mf.dispatchFetch(key, {
-			method: "PUT",
-			headers: opts.headers,
-			body: "body",
-		});
+		await cache.put(key, new Response("body", { headers: opts.headers }));
 
-		let res = await t.context.mf.dispatchFetch(key);
-		t.is(res.status, 200);
+		let res = await cache.match(key);
+		t.is(res?.status, 200);
 
 		t.context.timers.timestamp += opts.expectedTtl / 2;
-		res = await t.context.mf.dispatchFetch(key);
-		t.is(res.status, 200);
+		res = await cache.match(key);
+		t.is(res?.status, 200);
 
 		t.context.timers.timestamp += opts.expectedTtl / 2;
-		res = await t.context.mf.dispatchFetch(key);
-		t.is(res.status, 404);
+		res = await cache.match(key);
+		t.is(res, undefined);
 	},
 });
 test.serial("Expires", expireMacro, {
 	headers: {
-		"Test-Response-Expires": new Date(1000000 + 2000).toUTCString(),
+		Expires: new Date(1000000 + 2000).toUTCString(),
 	},
 	expectedTtl: 2000,
 });
 test.serial("Cache-Control's max-age", expireMacro, {
-	headers: { "Test-Response-Cache-Control": "max-age=1" },
+	headers: { "Cache-Control": "max-age=1" },
 	expectedTtl: 1000,
 });
 test.serial("Cache-Control's s-maxage", expireMacro, {
-	headers: { "Test-Response-Cache-Control": "s-maxage=1, max-age=10" },
+	headers: { "Cache-Control": "s-maxage=1, max-age=10" },
 	expectedTtl: 1000,
 });
 
@@ -269,6 +241,8 @@ const isCachedMacro = test.macro({
 		return `put ${providedTitle}`;
 	},
 	async exec(t, opts: { headers: Record<string, string>; cached: boolean }) {
+		const cache = t.context.caches.default;
+
 		// Use different key for each invocation of this macro
 		const headersHash = crypto
 			.createHash("sha1")
@@ -277,32 +251,28 @@ const isCachedMacro = test.macro({
 		const key = `http://localhost/cache-is-cached-${headersHash}`;
 
 		const expires = new Date(t.context.timers.timestamp + 2000).toUTCString();
-		await t.context.mf.dispatchFetch(key, {
-			method: "PUT",
-			headers: {
-				...opts.headers,
-				"Test-Response-Expires": expires,
-			},
-			body: "body",
+		const resToCache = new Response("body", {
+			headers: { ...opts.headers, Expires: expires },
 		});
-		const res = await t.context.mf.dispatchFetch(key);
-		t.is(res.status, opts.cached ? 200 : 404);
+		await cache.put(key, resToCache);
+		const res = await cache.match(key);
+		t.is(res?.status, opts.cached ? 200 : undefined);
 	},
 });
 test("does not cache with private Cache-Control", isCachedMacro, {
-	headers: { "Test-Response-Cache-Control": "private" },
+	headers: { "Cache-Control": "private" },
 	cached: false,
 });
 test("does not cache with no-store Cache-Control", isCachedMacro, {
-	headers: { "Test-Response-Cache-Control": "no-store" },
+	headers: { "Cache-Control": "no-store" },
 	cached: false,
 });
 test("does not cache with no-cache Cache-Control", isCachedMacro, {
-	headers: { "Test-Response-Cache-Control": "no-cache" },
+	headers: { "Cache-Control": "no-cache" },
 	cached: false,
 });
 test("does not cache with Set-Cookie", isCachedMacro, {
-	headers: { "Test-Response-Set-Cookie": "key=value" },
+	headers: { "Set-Cookie": "key=value" },
 	cached: false,
 });
 test(
@@ -310,97 +280,79 @@ test(
 	isCachedMacro,
 	{
 		headers: {
-			"Test-Response-Cache-Control": "private=set-cookie",
-			"Test-Response-Set-Cookie": "key=value",
+			"Cache-Control": "private=set-cookie",
+			"Set-Cookie": "key=value",
 		},
 		cached: true,
 	}
 );
 
 test("delete returns if deleted", async (t) => {
+	const cache = t.context.caches.default;
 	const key = "http://localhost/cache-delete";
-	await t.context.mf.dispatchFetch(key, {
-		method: "PUT",
-		headers: { "Test-Response-Cache-Control": "max-age=3600" },
-		body: "body",
+	const resToCache = new Response("body", {
+		headers: { "Cache-Control": "max-age=3600" },
 	});
+	await cache.put(key, resToCache);
 
 	// Check first delete deletes
-	let res = await t.context.mf.dispatchFetch(key, { method: "DELETE" });
-	t.is(res.status, 204);
+	let deleted = await cache.delete(key);
+	t.true(deleted);
 
 	// Check subsequent deletes don't match
-	res = await t.context.mf.dispatchFetch(key, { method: "DELETE" });
-	t.is(res.status, 404);
+	deleted = await cache.delete(key);
+	t.false(deleted);
 });
 
 test("operations respect cf.cacheKey", async (t) => {
+	const cache = t.context.caches.default;
 	const key = "http://localhost/cache-cf-key-unused";
 
 	// Check put respects `cf.cacheKey`
-	await t.context.mf.dispatchFetch(key, {
-		method: "PUT",
-		headers: {
-			"Test-CF-Cache-Key": "1",
-			"Test-Response-Cache-Control": "max-age=3600",
-		},
-		body: "body1",
+	const key1 = new Request(key, { cf: { cacheKey: "1" } });
+	const key2 = new Request(key, { cf: { cacheKey: "2" } });
+	const resToCache1 = new Response("body1", {
+		headers: { "Cache-Control": "max-age=3600" },
 	});
-	await t.context.mf.dispatchFetch(key, {
-		method: "PUT",
-		headers: {
-			"Test-CF-Cache-Key": "2",
-			"Test-Response-Cache-Control": "max-age=3600",
-		},
-		body: "body2",
+	const resToCache2 = new Response("body2", {
+		headers: { "Cache-Control": "max-age=3600" },
 	});
+	await cache.put(key1, resToCache1);
+	await cache.put(key2, resToCache2);
 
 	// Check match respects `cf.cacheKey`
-	let res1 = await t.context.mf.dispatchFetch(key, {
-		headers: { "Test-CF-Cache-Key": "1" },
-	});
-	let res2 = await t.context.mf.dispatchFetch(key, {
-		headers: { "Test-CF-Cache-Key": "2" },
-	});
-	t.is(await res1.text(), "body1");
-	t.is(await res2.text(), "body2");
+	const res1 = await cache.match(key1);
+	t.is(await res1?.text(), "body1");
+	const res2 = await cache.match(key2);
+	t.is(await res2?.text(), "body2");
 
 	// Check delete respects `cf.cacheKey`
-	res1 = await t.context.mf.dispatchFetch(key, {
-		method: "DELETE",
-		headers: { "Test-CF-Cache-Key": "1" },
-	});
-	res2 = await t.context.mf.dispatchFetch(key, {
-		method: "DELETE",
-		headers: { "Test-CF-Cache-Key": "2" },
-	});
-	t.is(res1.status, 204);
-	t.is(res2.status, 204);
+	const deleted1 = await cache.delete(key1);
+	t.true(deleted1);
+	const deleted2 = await cache.delete(key2);
+	t.true(deleted2);
 });
 test.serial("operations log warning on workers.dev subdomain", async (t) => {
 	// Set option, then reset after test
 	await t.context.setOptions({ cacheWarnUsage: true });
 	t.teardown(() => t.context.setOptions({}));
+	t.context.caches = await t.context.mf.getCaches();
 
+	const cache = t.context.caches.default;
 	const key = "http://localhost/cache-workers-dev-warning";
 
 	t.context.log.logs = [];
-	await t.context.mf.dispatchFetch(key, {
-		method: "PUT",
-		headers: { "Test-Response-Cache-Control": "max-age=3600" },
-		body: "body",
+	const resToCache = new Response("body", {
+		headers: { "Cache-Control": "max-age=3600" },
 	});
+	await cache.put(key, resToCache.clone());
 	t.deepEqual(t.context.log.logsAtLevel(LogLevel.WARN), [
 		"Cache operations will have no impact if you deploy to a workers.dev subdomain!",
 	]);
 
 	// Check only warns once
 	t.context.log.logs = [];
-	await t.context.mf.dispatchFetch(key, {
-		method: "PUT",
-		headers: { "Test-Response-Cache-Control": "max-age=3600" },
-		body: "body",
-	});
+	await cache.put(key, resToCache);
 	t.deepEqual(t.context.log.logsAtLevel(LogLevel.WARN), []);
 });
 test.serial("operations persist cached data", async (t) => {
@@ -412,27 +364,28 @@ test.serial("operations persist cached data", async (t) => {
 	// Set option, then reset after test
 	await t.context.setOptions({ cachePersist: tmp });
 	t.teardown(() => t.context.setOptions({}));
+	t.context.caches = await t.context.mf.getCaches();
 
+	const cache = t.context.caches.default;
 	const key = "http://localhost/cache-persist";
 
 	// Check put respects persist
-	await t.context.mf.dispatchFetch(key, {
-		method: "PUT",
-		headers: { "Test-Response-Cache-Control": "max-age=3600" },
-		body: "body",
+	const resToCache = new Response("body", {
+		headers: { "Cache-Control": "max-age=3600" },
 	});
+	await cache.put(key, resToCache);
 	let stored = await kvStorage.get(key);
 	assert(stored?.value !== undefined);
 	t.deepEqual(await text(stored.value), "body");
 
 	// Check match respects persist
-	let res = await t.context.mf.dispatchFetch(key);
-	t.is(res.status, 200);
-	t.is(await res.text(), "body");
+	const res = await cache.match(key);
+	t.is(res?.status, 200);
+	t.is(await res?.text(), "body");
 
 	// Check delete respects persist
-	res = await t.context.mf.dispatchFetch(key, { method: "DELETE" });
-	t.is(res.status, 204);
+	const deleted = await cache.delete(key);
+	t.true(deleted);
 	stored = await kvStorage.get(key);
 	t.is(stored, null);
 });
@@ -440,77 +393,51 @@ test.serial("operations are no-ops when caching disabled", async (t) => {
 	// Set option, then reset after test
 	await t.context.setOptions({ cache: false });
 	t.teardown(() => t.context.setOptions({}));
+	t.context.caches = await t.context.mf.getCaches();
 
+	const cache = t.context.caches.default;
 	const key = "http://localhost/cache-disabled";
 
 	// Check match never matches
-	await t.context.mf.dispatchFetch(key, {
-		method: "PUT",
-		headers: { "Test-Response-Cache-Control": "max-age=3600" },
-		body: "body",
+	const resToCache = new Response("body", {
+		headers: { "Cache-Control": "max-age=3600" },
 	});
-	let res = await t.context.mf.dispatchFetch(key);
-	t.is(res.status, 404);
+	await cache.put(key, resToCache.clone());
+	const res = await cache.match(key);
+	t.is(res, undefined);
 
 	// Check delete never deletes
-	await t.context.mf.dispatchFetch(key, {
-		method: "PUT",
-		headers: { "Test-Response-Cache-Control": "max-age=3600" },
-		body: "body",
-	});
-	res = await t.context.mf.dispatchFetch(key, { method: "DELETE" });
-	t.is(res.status, 404);
+	await cache.put(key, resToCache);
+	const deleted = await cache.delete(key);
+	t.false(deleted);
 });
 
 test("default and named caches are disjoint", async (t) => {
 	const key = "http://localhost/cache-disjoint";
+	const defaultCache = t.context.caches.default;
+	const namedCache1 = await t.context.caches.open("1");
+	const namedCache2 = await t.context.caches.open("2");
 
 	// Check put respects cache name
-	await t.context.mf.dispatchFetch(key, {
-		method: "PUT",
-		headers: { "Test-Response-Cache-Control": "max-age=3600" },
-		body: "bodyDefault",
-	});
-	await t.context.mf.dispatchFetch(key, {
-		method: "PUT",
-		headers: {
-			"Test-Cache-Name": "1",
-			"Test-Response-Cache-Control": "max-age=3600",
-		},
-		body: "body1",
-	});
-	await t.context.mf.dispatchFetch(key, {
-		method: "PUT",
-		headers: {
-			"Test-Cache-Name": "2",
-			"Test-Response-Cache-Control": "max-age=3600",
-		},
-		body: "body2",
-	});
+	const init: RequestInit = { headers: { "Cache-Control": "max-age=3600" } };
+	await defaultCache.put(key, new Response("bodyDefault", init));
+	await namedCache1.put(key, new Response("body1", init));
+	await namedCache2.put(key, new Response("body2", init));
 
 	// Check match respects cache name
-	let resDefault = await t.context.mf.dispatchFetch(key);
-	let res1 = await t.context.mf.dispatchFetch(key, {
-		headers: { "Test-Cache-Name": "1" },
-	});
-	let res2 = await t.context.mf.dispatchFetch(key, {
-		headers: { "Test-Cache-Name": "2" },
-	});
-	t.is(await resDefault.text(), "bodyDefault");
-	t.is(await res1.text(), "body1");
-	t.is(await res2.text(), "body2");
+	const resDefault = await defaultCache.match(key);
+	const res1 = await namedCache1.match(key);
+	const res2 = await namedCache2.match(key);
+
+	t.is(await resDefault?.text(), "bodyDefault");
+	t.is(await res1?.text(), "body1");
+	t.is(await res2?.text(), "body2");
 
 	// Check delete respects cache name
-	resDefault = await t.context.mf.dispatchFetch(key, { method: "DELETE" });
-	res1 = await t.context.mf.dispatchFetch(key, {
-		method: "DELETE",
-		headers: { "Test-Cache-Name": "1" },
-	});
-	res2 = await t.context.mf.dispatchFetch(key, {
-		method: "DELETE",
-		headers: { "Test-Cache-Name": "2" },
-	});
-	t.is(resDefault.status, 204);
-	t.is(res1.status, 204);
-	t.is(res2.status, 204);
+	const deletedDefault = await defaultCache.delete(key);
+	const deleted1 = await namedCache1.delete(key);
+	const deleted2 = await namedCache2.delete(key);
+	t.true(deletedDefault);
+	t.true(deleted1);
+	t.true(deleted2);
 });
