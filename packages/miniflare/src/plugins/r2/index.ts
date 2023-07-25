@@ -3,7 +3,9 @@ import { Service, Worker_Binding } from "../../runtime";
 import {
 	PersistenceSchema,
 	Plugin,
+	kProxyNodeBinding,
 	namespaceEntries,
+	namespaceKeys,
 	pluginNamespacePersistWorker,
 } from "../shared";
 import { R2Gateway } from "./gateway";
@@ -32,6 +34,10 @@ export const R2_PLUGIN: Plugin<
 			name,
 			r2Bucket: { name: `${R2_PLUGIN_NAME}:${id}` },
 		}));
+	},
+	getNodeBindings(options) {
+		const buckets = namespaceKeys(options.r2Buckets);
+		return Object.fromEntries(buckets.map((name) => [name, kProxyNodeBinding]));
 	},
 	getServices({ options, sharedOptions }) {
 		const persist = sharedOptions.r2Persist;

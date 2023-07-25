@@ -20,6 +20,7 @@ import {
 	HEADER_PERSIST,
 	Persistence,
 	WORKER_BINDING_SERVICE_LOOPBACK,
+	kProxyNodeBinding,
 } from "../shared";
 import {
 	HEADER_SITES,
@@ -179,6 +180,20 @@ async function handleRequest(request) {
 addEventListener("fetch", (event) => event.respondWith(handleRequest(event.request)));
 `;
 
+async function buildStaticContentManifest(
+	sitePath: string,
+	siteRegExps: SiteMatcherRegExps
+) {
+	// Build __STATIC_CONTENT_MANIFEST contents
+	const staticContentManifest: Record<string, string> = {};
+	for await (const key of listKeysInDirectory(sitePath)) {
+		if (testSiteRegExps(siteRegExps, key)) {
+			staticContentManifest[key] = encodeSitesKey(key);
+		}
+	}
+	return staticContentManifest;
+}
+
 export async function getSitesBindings(
 	options: SitesOptions
 ): Promise<Worker_Binding[]> {
@@ -189,14 +204,10 @@ export async function getSitesBindings(
 	};
 	sitesRegExpsCache.set(options, siteRegExps);
 
-	// Build __STATIC_CONTENT_MANIFEST contents
-	const staticContentManifest: Record<string, string> = {};
-	for await (const key of listKeysInDirectory(options.sitePath)) {
-		if (testSiteRegExps(siteRegExps, key)) {
-			staticContentManifest[key] = encodeSitesKey(key);
-		}
-	}
-	const __STATIC_CONTENT_MANIFEST = JSON.stringify(staticContentManifest);
+	const __STATIC_CONTENT_MANIFEST = await buildStaticContentManifest(
+		options.sitePath,
+		siteRegExps
+	);
 
 	return [
 		{
@@ -205,9 +216,23 @@ export async function getSitesBindings(
 		},
 		{
 			name: BINDING_JSON_SITE_MANIFEST,
-			json: __STATIC_CONTENT_MANIFEST,
+			json: JSON.stringify(__STATIC_CONTENT_MANIFEST),
 		},
 	];
+}
+export async function getSitesNodeBindings(
+	options: SitesOptions
+): Promise<Record<string, unknown>> {
+	const siteRegExps = sitesRegExpsCache.get(options);
+	assert(siteRegExps !== undefined);
+	const __STATIC_CONTENT_MANIFEST = await buildStaticContentManifest(
+		options.sitePath,
+		siteRegExps
+	);
+	return {
+		[BINDING_KV_NAMESPACE_SITE]: kProxyNodeBinding,
+		[BINDING_JSON_SITE_MANIFEST]: __STATIC_CONTENT_MANIFEST,
+	};
 }
 
 export function maybeGetSitesManifestModule(

@@ -42,6 +42,7 @@ import {
 	SourceMapRegistry,
 	WorkerOptions,
 	getGlobalServices,
+	kProxyNodeBinding,
 	maybeGetSitesManifestModule,
 	normaliseDurableObject,
 } from "./plugins";
@@ -1056,6 +1057,56 @@ export class Miniflare {
 		const factory = this.#gatewayFactories[plugin];
 		assert(factory !== undefined);
 		return factory.getStorage(namespace, persist);
+	}
+
+	/** @internal */
+	async _getProxyClient(): Promise<ProxyClient> {
+		this.#checkDisposed();
+		await this.ready;
+		return this.#proxyClient!;
+	}
+
+	async getBindings<Env = Record<string, unknown>>(
+		workerName?: string
+	): Promise<Env> {
+		const bindings: Record<string, unknown> = {};
+		const proxyClient = await this._getProxyClient();
+
+		// Find worker by name, defaulting to entrypoint worker if none specified
+		let workerOpts: PluginWorkerOptions | undefined;
+		if (workerName === undefined) {
+			workerOpts = this.#workerOpts[0];
+		} else {
+			workerOpts = this.#workerOpts.find(
+				({ core }) => (core.name ?? "") === workerName
+			);
+			if (workerOpts === undefined) {
+				throw new TypeError(`${JSON.stringify(workerName)} worker not found`);
+			}
+		}
+		workerName = workerOpts.core.name ?? "";
+
+		// Populate bindings from each plugin
+		for (const [key, plugin] of PLUGIN_ENTRIES) {
+			// @ts-expect-error `CoreOptionsSchema` has required options which are
+			//  missing in other plugins' options.
+			const pluginBindings = await plugin.getNodeBindings(workerOpts[key]);
+			for (const [name, binding] of Object.entries(pluginBindings)) {
+				if (binding === kProxyNodeBinding) {
+					const proxyBindingName = getProxyBindingName(key, workerName, name);
+					const proxy = proxyClient.env[proxyBindingName];
+					assert(
+						proxy !== undefined,
+						`Expected ${proxyBindingName} to be bound`
+					);
+					bindings[name] = proxy;
+				} else {
+					bindings[name] = binding;
+				}
+			}
+		}
+
+		return bindings as Env;
 	}
 
 	async dispose(): Promise<void> {

@@ -22,6 +22,7 @@ import {
 	Log,
 	MiniflareCoreError,
 	Timers,
+	viewToBuffer,
 } from "../../shared";
 import { CoreBindings, CoreHeaders } from "../../workers";
 import { getCacheServiceName } from "../cache";
@@ -32,6 +33,7 @@ import {
 	SERVICE_LOOPBACK,
 	SourceMapRegistry,
 	WORKER_BINDING_SERVICE_LOOPBACK,
+	kProxyNodeBinding,
 	parseRoutes,
 } from "../shared";
 import {
@@ -313,6 +315,51 @@ export const CORE_PLUGIN: Plugin<
 		}
 
 		return Promise.all(bindings);
+	},
+	async getNodeBindings(options) {
+		const bindingEntries: Awaitable<unknown[]>[] = [];
+
+		if (options.bindings !== undefined) {
+			bindingEntries.push(
+				...Object.entries(options.bindings).map(([name, value]) => [
+					name,
+					JSON.parse(JSON.stringify(value)),
+				])
+			);
+		}
+		if (options.wasmBindings !== undefined) {
+			bindingEntries.push(
+				...Object.entries(options.wasmBindings).map(([name, path]) =>
+					fs
+						.readFile(path)
+						.then((buffer) => [name, new WebAssembly.Module(buffer)])
+				)
+			);
+		}
+		if (options.textBlobBindings !== undefined) {
+			bindingEntries.push(
+				...Object.entries(options.textBlobBindings).map(([name, path]) =>
+					fs.readFile(path, "utf8").then((text) => [name, text])
+				)
+			);
+		}
+		if (options.dataBlobBindings !== undefined) {
+			bindingEntries.push(
+				...Object.entries(options.dataBlobBindings).map(([name, path]) =>
+					fs.readFile(path).then((buffer) => [name, viewToBuffer(buffer)])
+				)
+			);
+		}
+		if (options.serviceBindings !== undefined) {
+			bindingEntries.push(
+				...Object.keys(options.serviceBindings).map((name) => [
+					name,
+					kProxyNodeBinding,
+				])
+			);
+		}
+
+		return Object.fromEntries(await Promise.all(bindingEntries));
 	},
 	async getServices({
 		log,

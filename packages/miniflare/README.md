@@ -577,7 +577,9 @@ defined at the top-level.
 
   Updates the configuration for this Miniflare instance and restarts the
   `workerd` server. Note unlike Miniflare 2, this does _not_ merge the new
-  configuration with the old configuration.
+  configuration with the old configuration. Note that calling this function will
+  invalidate any existing values returned by the `Miniflare#get*()` methods,
+  preventing them from being used.
 
 - `ready: Promise<URL>`
 
@@ -592,7 +594,16 @@ defined at the top-level.
   no need to do that yourself first. Additionally, the host of the request's URL
   is always ignored and replaced with the `workerd` server's.
 
+- `getBindings<Env extends Record<string, unknown> = Record<string, unknown>>(workerName?: string): Promise<Env>`
+
+  Returns a `Promise` that resolves with a record mapping binding names to
+  bindings, for all bindings in the Worker with the specified `workerName`. If
+  `workerName` is not specified, defaults to the entrypoint Worker.
+
 - `dispose(): Promise<void>`
 
   Cleans up the Miniflare instance, and shuts down the `workerd` server. Note
-  that after this is called, `setOptions` and `dispatchFetch` cannot be called.
+  that after this is called, `Miniflare#setOptions()` and
+  `Miniflare#dispatchFetch()` cannot be called. Additionally, calling this
+  function will invalidate any values returned by the `Miniflare#get*()`
+  methods, preventing them from being used.

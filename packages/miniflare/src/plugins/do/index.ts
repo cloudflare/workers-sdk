@@ -10,6 +10,7 @@ import {
 	Persistence,
 	PersistenceSchema,
 	Plugin,
+	kProxyNodeBinding,
 	maybeParseURL,
 } from "../shared";
 
@@ -110,6 +111,10 @@ export const DURABLE_OBJECTS_PLUGIN: Plugin<
 				};
 			}
 		);
+	},
+	getNodeBindings(options) {
+		const objects = Object.keys(options.durableObjects ?? {});
+		return Object.fromEntries(objects.map((name) => [name, kProxyNodeBinding]));
 	},
 	async getServices({ sharedOptions, tmpPath, durableObjectClassNames }) {
 		// Check if we even have any Durable Object bindings, if we don't, we can
