@@ -89,6 +89,7 @@ export {
 	ModuleRuleSchema,
 	ModuleDefinitionSchema,
 	SourceOptionsSchema,
+	ProxyClient,
 } from "./core";
 export type {
 	ModuleRuleType,
@@ -97,6 +98,7 @@ export type {
 	GlobalServicesOptions,
 	SourceOptions,
 } from "./core";
+export type * from "./core/proxy/types";
 export * from "./d1";
 export * from "./do";
 export * from "./kv";

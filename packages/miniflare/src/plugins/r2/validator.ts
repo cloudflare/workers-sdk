@@ -11,8 +11,8 @@ import {
 	MetadataTooLarge,
 	PreconditionFailed,
 } from "./errors";
-import { R2Object } from "./r2Object";
-import { R2Conditional, R2Etag, R2GetOptions } from "./schemas";
+import { InternalR2Object } from "./r2Object";
+import { InternalR2GetOptions, R2Conditional, R2Etag } from "./schemas";
 
 export const MAX_LIST_KEYS = 1_000;
 const MAX_KEY_SIZE = 1024;
@@ -46,7 +46,7 @@ function includesEtag(
 /** @internal */
 export function _testR2Conditional(
 	cond: R2Conditional,
-	metadata?: Pick<R2Object, "etag" | "uploaded">
+	metadata?: Pick<InternalR2Object, "etag" | "uploaded">
 ): boolean {
 	// Adapted from internal R2 gateway implementation.
 	// See also https://datatracker.ietf.org/doc/html/rfc7232#section-6.
@@ -120,7 +120,7 @@ export class Validator {
 	}
 
 	condition(
-		meta?: Pick<R2Object, "etag" | "uploaded">,
+		meta?: Pick<InternalR2Object, "etag" | "uploaded">,
 		onlyIf?: R2Conditional
 	): Validator {
 		if (onlyIf !== undefined && !_testR2Conditional(onlyIf, meta)) {
@@ -130,7 +130,7 @@ export class Validator {
 	}
 
 	range(
-		options: Pick<R2GetOptions, "rangeHeader" | "range">,
+		options: Pick<InternalR2GetOptions, "rangeHeader" | "range">,
 		size: number
 	): InclusiveRange | undefined {
 		if (options.rangeHeader !== undefined) {

@@ -415,6 +415,7 @@ export interface GlobalServicesOptions {
 	fallbackWorkerName: string | undefined;
 	loopbackPort: number;
 	log: Log;
+	proxyBindings: Worker_Binding[];
 }
 export function getGlobalServices({
 	sharedOptions,
@@ -422,6 +423,7 @@ export function getGlobalServices({
 	fallbackWorkerName,
 	loopbackPort,
 	log,
+	proxyBindings,
 }: GlobalServicesOptions): Service[] {
 	// Collect list of workers we could route to, then parse and sort all routes
 	const workerNames = [...allWorkerRoutes.keys()];
@@ -441,6 +443,15 @@ export function getGlobalServices({
 			name: CoreBindings.SERVICE_USER_ROUTE_PREFIX + name,
 			service: { name: getUserServiceName(name) },
 		})),
+		{
+			name: CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY,
+			durableObjectNamespace: { className: "ProxyServer" },
+		},
+		// Add `proxyBindings` here, they'll be added to the `ProxyServer` `env`.
+		// It would be nice if we didn't add all these bindings to the entry worker,
+		// but the entry worker shares lots of `devalue` code with the proxy, and
+		// we'd rather not duplicate that.
+		...proxyBindings,
 	];
 	if (sharedOptions.upstream !== undefined) {
 		serviceEntryBindings.push({
@@ -467,6 +478,18 @@ export function getGlobalServices({
 				compatibilityDate: "2023-04-04",
 				compatibilityFlags: ["nodejs_compat", "service_binding_extra_handlers"],
 				bindings: serviceEntryBindings,
+				durableObjectNamespaces: [
+					{
+						className: "ProxyServer",
+						uniqueKey: `${SERVICE_ENTRY}-ProxyServer`,
+					},
+				],
+				// `ProxyServer` doesn't make use of Durable Object storage
+				durableObjectStorage: { inMemory: kVoid },
+				// Always use the entrypoints cache implementation for proxying. This
+				// means if the entrypoint disables caching, proxied cache operations
+				// will be no-ops. Note we always require at least one worker to be set.
+				cacheApiOutbound: { name: "cache:0" },
 			},
 		},
 		{
@@ -535,6 +558,7 @@ function getWorkerScript(
 }
 
 export * from "./errors";
+export * from "./proxy";
 export * from "./constants";
 export * from "./modules";
 export * from "./services";

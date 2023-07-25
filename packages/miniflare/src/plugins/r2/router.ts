@@ -1,6 +1,7 @@
 import assert from "assert";
-import { ReadableStream, TransformStream } from "stream/web";
+import { ReadableStream } from "stream/web";
 import { Request, Response } from "../../http";
+import { readPrefix } from "../../shared";
 import {
 	CfHeader,
 	GET,
@@ -11,7 +12,12 @@ import {
 } from "../shared";
 import { InternalError, InvalidMetadata } from "./errors";
 import { R2Gateway } from "./gateway";
-import { EncodedMetadata, R2Object, R2ObjectBody, R2Objects } from "./r2Object";
+import {
+	EncodedMetadata,
+	InternalR2Object,
+	InternalR2ObjectBody,
+	InternalR2Objects,
+} from "./r2Object";
 import { R2BindingRequestSchema } from "./schemas";
 
 async function decodeMetadata(req: Request) {
@@ -21,43 +27,10 @@ async function decodeMetadata(req: Request) {
 	assert(req.body !== null);
 	const body = req.body as ReadableStream<Uint8Array>;
 
-	// Read just metadata from body stream (NOTE: we can't use a `TransformStream`
-	// and buffer the first N chunks as we need this metadata to determine what
-	// to do with the rest of the body. We have to *pull* the data as opposed to
-	// passively transforming it as it's piped somewhere else. If `body` were
-	// a byte stream, we could use BYOB reads to read just enough. Even better, if
-	// this were running in the Workers runtime, we could use `readAtLeast()` to
-	// read everything at once.)
-	const chunks: Uint8Array[] = [];
-	let chunksLength = 0;
-	for await (const chunk of body.values({ preventCancel: true })) {
-		chunks.push(chunk);
-		chunksLength += chunk.byteLength;
-		// Once we've read enough bytes, stop
-		if (chunksLength >= metadataSize) break;
-	}
-	// If we read the entire stream without enough bytes for metadata, throw
-	if (chunksLength < metadataSize) throw new InvalidMetadata();
-	const atLeastMetadata = Buffer.concat(chunks, chunksLength);
-	const metadataJson = atLeastMetadata.subarray(0, metadataSize).toString();
+	// Read just metadata from body stream
+	const [metadataBuffer, value] = await readPrefix(body, metadataSize);
+	const metadataJson = metadataBuffer.toString();
 	const metadata = R2BindingRequestSchema.parse(JSON.parse(metadataJson));
-
-	let value = body;
-	// If we read some value when reading metadata (quite likely), create a new
-	// stream, write the bit we read, then write the rest of the body stream
-	if (chunksLength > metadataSize) {
-		const identity = new TransformStream<Uint8Array, Uint8Array>();
-		const writer = identity.writable.getWriter();
-		// The promise returned by `writer.write()` will only resolve once the chunk
-		// is read, which won't be until after this function returns, so we can't
-		// use `await` here
-		void writer.write(atLeastMetadata.subarray(metadataSize)).then(() => {
-			// Release the writer without closing the stream
-			writer.releaseLock();
-			return body.pipeTo(identity.writable);
-		});
-		value = identity.readable;
-	}
 
 	return { metadata, metadataSize, value };
 }
@@ -67,12 +40,14 @@ function decodeHeaderMetadata(req: Request) {
 	return R2BindingRequestSchema.parse(JSON.parse(header));
 }
 
-function encodeResult(result: R2Object | R2ObjectBody | R2Objects) {
+function encodeResult(
+	result: InternalR2Object | InternalR2ObjectBody | InternalR2Objects
+) {
 	let encoded: EncodedMetadata;
-	if (result instanceof R2Object) {
+	if (result instanceof InternalR2Object) {
 		encoded = result.encode();
 	} else {
-		encoded = R2Object.encodeMultiple(result);
+		encoded = InternalR2Object.encodeMultiple(result);
 	}
 
 	return new Response(encoded.value, {
@@ -105,7 +80,7 @@ export class R2Router extends Router<R2Gateway> {
 		const bucket = decodeURIComponent(params.bucket);
 		const gateway = this.gatewayFactory.get(bucket, persist);
 
-		let result: R2Object | R2ObjectBody | R2Objects;
+		let result: InternalR2Object | InternalR2ObjectBody | InternalR2Objects;
 		if (metadata.method === "head") {
 			result = await gateway.head(metadata.object);
 		} else if (metadata.method === "get") {
