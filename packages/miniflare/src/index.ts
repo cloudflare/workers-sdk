@@ -8,7 +8,11 @@ import path from "path";
 import { Duplex, Transform, Writable } from "stream";
 import { ReadableStream } from "stream/web";
 import zlib from "zlib";
-import type { RequestInitCfProperties } from "@cloudflare/workers-types/experimental";
+import type {
+	D1Database,
+	Queue,
+	RequestInitCfProperties,
+} from "@cloudflare/workers-types/experimental";
 import exitHook from "exit-hook";
 import { splitCookiesString } from "set-cookie-parser";
 import stoppable from "stoppable";
@@ -26,18 +30,27 @@ import {
 	fetch,
 } from "./http";
 import {
+	CacheStorage,
+	D1_PLUGIN_NAME,
+	DURABLE_OBJECTS_PLUGIN_NAME,
 	DispatchFetch,
 	DurableObjectClassNames,
+	DurableObjectNamespace,
 	GatewayConstructor,
 	GatewayFactory,
 	HEADER_CF_BLOB,
+	KVNamespace,
+	KV_PLUGIN_NAME,
 	PLUGIN_ENTRIES,
 	Persistence,
 	PluginServicesOptions,
 	Plugins,
 	ProxyClient,
+	QUEUES_PLUGIN_NAME,
 	QueueConsumers,
 	QueuesError,
+	R2Bucket,
+	R2_PLUGIN_NAME,
 	SharedOptions,
 	SourceMapRegistry,
 	WorkerOptions,
@@ -58,6 +71,7 @@ import {
 } from "./plugins/core";
 import {
 	Config,
+	Extension,
 	Runtime,
 	RuntimeOptions,
 	Service,
@@ -1107,6 +1121,59 @@ export class Miniflare {
 		}
 
 		return bindings as Env;
+	}
+
+	async #getProxy<T>(
+		pluginName: string,
+		bindingName: string,
+		workerName?: string
+	): Promise<T> {
+		const proxyClient = await this._getProxyClient();
+		const proxyBindingName = getProxyBindingName(
+			pluginName,
+			// Default to entrypoint worker if none specified
+			workerName ?? this.#workerOpts[0].core.name ?? "",
+			bindingName
+		);
+		const proxy = proxyClient.env[proxyBindingName];
+		if (proxy === undefined) {
+			// If the user specified an invalid binding/worker name, throw
+			const friendlyWorkerName =
+				workerName === undefined ? "entrypoint" : JSON.stringify(workerName);
+			throw new TypeError(
+				`${JSON.stringify(bindingName)} unbound in ${friendlyWorkerName} worker`
+			);
+		}
+		return proxy as T;
+	}
+	// TODO(someday): would be nice to define these in plugins
+	async getCaches(): Promise<CacheStorage> {
+		const proxyClient = await this._getProxyClient();
+		return proxyClient.global.caches as unknown as CacheStorage;
+	}
+	getD1Database(bindingName: string, workerName?: string): Promise<D1Database> {
+		return this.#getProxy(D1_PLUGIN_NAME, bindingName, workerName);
+	}
+	getDurableObjectNamespace(
+		bindingName: string,
+		workerName?: string
+	): Promise<DurableObjectNamespace> {
+		return this.#getProxy(DURABLE_OBJECTS_PLUGIN_NAME, bindingName, workerName);
+	}
+	getKVNamespace(
+		bindingName: string,
+		workerName?: string
+	): Promise<KVNamespace> {
+		return this.#getProxy(KV_PLUGIN_NAME, bindingName, workerName);
+	}
+	getQueueProducer<Body = unknown>(
+		bindingName: string,
+		workerName?: string
+	): Promise<Queue<Body>> {
+		return this.#getProxy(QUEUES_PLUGIN_NAME, bindingName, workerName);
+	}
+	getR2Bucket(bindingName: string, workerName?: string): Promise<R2Bucket> {
+		return this.#getProxy(R2_PLUGIN_NAME, bindingName, workerName);
 	}
 
 	async dispose(): Promise<void> {
