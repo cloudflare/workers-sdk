@@ -58,6 +58,9 @@ export interface PluginBase<
 		options: z.infer<Options>,
 		workerIndex: number
 	): Awaitable<Worker_Binding[] | void>;
+	getNodeBindings(
+		options: z.infer<Options>
+	): Awaitable<Record<string, unknown>>;
 	getServices(
 		options: PluginServicesOptions<Options, SharedOptions>
 	): Awaitable<Service[] | void>;
@@ -77,6 +80,22 @@ export type Plugin<
 				gateway: GatewayConstructor<Gateway>;
 				router: RouterConstructor<Gateway>;
 		  });
+
+// When this is returned as the binding from `PluginBase#getNodeBindings()`,
+// Miniflare will replace it with a proxy to the binding in `workerd`
+export const kProxyNodeBinding = Symbol("kProxyNodeBinding");
+
+export function namespaceKeys(
+	namespaces?: Record<string, string> | string[]
+): string[] {
+	if (Array.isArray(namespaces)) {
+		return namespaces;
+	} else if (namespaces !== undefined) {
+		return Object.keys(namespaces);
+	} else {
+		return [];
+	}
+}
 
 export function namespaceEntries(
 	namespaces?: Record<string, string> | string[]

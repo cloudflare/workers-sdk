@@ -6,7 +6,9 @@ import { maybeApply } from "../../shared";
 import {
 	Plugin,
 	QueueConsumerOptionsSchema,
+	kProxyNodeBinding,
 	namespaceEntries,
+	namespaceKeys,
 	pluginNamespacePersistWorker,
 } from "../shared";
 import { QueuesError } from "./errors";
@@ -68,10 +70,14 @@ export const QUEUES_PLUGIN: Plugin<
 			queue: { name: `${QUEUES_PLUGIN_NAME}:${id}` },
 		}));
 	},
+	getNodeBindings(options) {
+		const queues = namespaceKeys(options.queueProducers);
+		return Object.fromEntries(queues.map((name) => [name, kProxyNodeBinding]));
+	},
 	async getServices({ options, queueConsumers: allQueueConsumers }) {
-		const buckets = namespaceEntries(options.queueProducers);
-		if (buckets.length === 0) return [];
-		return buckets.map<Service>(([_, id]) => {
+		const queues = namespaceEntries(options.queueProducers);
+		if (queues.length === 0) return [];
+		return queues.map<Service>(([_, id]) => {
 			// Abusing persistence to store queue consumer. We don't support
 			// persisting queued data yet, but we are essentially persisting messages
 			// to a consumer. We'll unwrap this in the router as usual. Note we're

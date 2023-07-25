@@ -67,6 +67,9 @@ export const CACHE_PLUGIN: Plugin<
 	getBindings() {
 		return [];
 	},
+	getNodeBindings() {
+		return {};
+	},
 	getServices({ sharedOptions, options, workerIndex }) {
 		const persistBinding = encodePersist(sharedOptions.cachePersist);
 		return [

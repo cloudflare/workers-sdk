@@ -3,13 +3,20 @@ import { Service, Worker_Binding } from "../../runtime";
 import {
 	PersistenceSchema,
 	Plugin,
+	kProxyNodeBinding,
 	namespaceEntries,
+	namespaceKeys,
 	pluginNamespacePersistWorker,
 } from "../shared";
 import { KV_PLUGIN_NAME } from "./constants";
 import { KVGateway } from "./gateway";
 import { KVRouter } from "./router";
-import { SitesOptions, getSitesBindings, getSitesService } from "./sites";
+import {
+	SitesOptions,
+	getSitesBindings,
+	getSitesNodeBindings,
+	getSitesService,
+} from "./sites";
 
 export const KVOptionsSchema = z.object({
 	kvNamespaces: z.union([z.record(z.string()), z.string().array()]).optional(),
@@ -51,6 +58,16 @@ export const KV_PLUGIN: Plugin<
 			bindings.push(...(await getSitesBindings(options)));
 		}
 
+		return bindings;
+	},
+	async getNodeBindings(options) {
+		const namespaces = namespaceKeys(options.kvNamespaces);
+		const bindings = Object.fromEntries(
+			namespaces.map((name) => [name, kProxyNodeBinding])
+		);
+		if (isWorkersSitesEnabled(options)) {
+			Object.assign(bindings, await getSitesNodeBindings(options));
+		}
 		return bindings;
 	},
 	getServices({ options, sharedOptions }) {

@@ -3,7 +3,9 @@ import { Service, Worker_Binding } from "../../runtime";
 import {
 	PersistenceSchema,
 	Plugin,
+	kProxyNodeBinding,
 	namespaceEntries,
+	namespaceKeys,
 	pluginNamespacePersistWorker,
 } from "../shared";
 import { D1Gateway } from "./gateway";
@@ -51,6 +53,12 @@ export const D1_PLUGIN: Plugin<
 
 			return { name, ...binding };
 		});
+	},
+	getNodeBindings(options) {
+		const databases = namespaceKeys(options.d1Databases);
+		return Object.fromEntries(
+			databases.map((name) => [name, kProxyNodeBinding])
+		);
 	},
 	getServices({ options, sharedOptions }) {
 		const persist = sharedOptions.d1Persist;
