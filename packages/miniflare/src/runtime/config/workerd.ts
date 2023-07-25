@@ -18,7 +18,7 @@ export interface Config {
 	services?: Service[];
 	sockets?: Socket[];
 	v8Flags?: string[];
-	extension?: Extension[];
+	extensions?: Extension[];
 }
 
 export type Socket = {

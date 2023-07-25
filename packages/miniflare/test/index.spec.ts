@@ -1,25 +1,43 @@
+// noinspection TypeScriptValidateJSTypes
+
 import assert from "assert";
+import fs from "fs/promises";
 import http from "http";
 import { AddressInfo } from "net";
+import path from "path";
 import { Writable } from "stream";
-import test from "ava";
+import util from "util";
+import {
+	D1Database,
+	DurableObjectNamespace,
+	Fetcher,
+	KVNamespace,
+	Queue,
+	R2Bucket,
+} from "@cloudflare/workers-types/experimental";
+import test, { ThrowsExpectation } from "ava";
 import {
 	DeferredPromise,
 	MessageEvent,
 	Miniflare,
 	MiniflareCoreError,
 	MiniflareOptions,
+	ReplaceWorkersTypes,
 	Response,
+	_QUEUES_COMPATIBLE_V8_VERSION,
 	_transformsForContentEncoding,
 	createFetchMock,
 	fetch,
+	viewToBuffer,
 } from "miniflare";
 import {
 	CloseEvent as StandardCloseEvent,
 	MessageEvent as StandardMessageEvent,
 	WebSocketServer,
 } from "ws";
-import { TestLog, useServer } from "./test-shared";
+import { TestLog, useServer, useTmp, utf8Encode } from "./test-shared";
+
+const queuesTest = _QUEUES_COMPATIBLE_V8_VERSION ? test : test.skip;
 
 test("Miniflare: validates options", async (t) => {
 	// Check empty workers array rejected
@@ -67,6 +85,7 @@ test("Miniflare: keeps port between updates", async (t) => {
     })`,
 	};
 	const mf = new Miniflare(opts);
+	t.teardown(() => mf.dispose());
 	const initialURL = await mf.ready;
 
 	await mf.setOptions(opts);
@@ -96,6 +115,7 @@ test("Miniflare: routes to multiple workers with fallback", async (t) => {
 		],
 	};
 	const mf = new Miniflare(opts);
+	t.teardown(() => mf.dispose());
 
 	// Check "a"'s more specific route checked first
 	let res = await mf.dispatchFetch("http://localhost/api");
@@ -363,6 +383,7 @@ test("Miniflare: custom outbound service", async (t) => {
 			},
 		],
 	});
+	t.teardown(() => mf.dispose());
 	const res = await mf.dispatchFetch("http://localhost");
 	t.deepEqual(await res.json(), {
 		res1: "one",
@@ -385,6 +406,7 @@ test("Miniflare: fetch mocking", async (t) => {
     }`,
 		fetchMock,
 	});
+	t.teardown(() => mf.dispose());
 	const res = await mf.dispatchFetch("http://localhost");
 	t.is(await res.text(), "Mocked response!");
 
@@ -417,6 +439,7 @@ test("Miniflare: custom upstream as origin", async (t) => {
       }
     }`,
 	});
+	t.teardown(() => mf.dispose());
 	// Check rewrites protocol, hostname, and port, but keeps pathname and query
 	const res = await mf.dispatchFetch("https://random:0/path?a=1");
 	t.is(await res.text(), "upstream: http://upstream/extra/path?a=1");
@@ -438,6 +461,7 @@ test("Miniflare: `node:` and `cloudflare:` modules", async (t) => {
     }
     `,
 	});
+	t.teardown(() => mf.dispose());
 	const res = await mf.dispatchFetch("http://localhost");
 	t.is(await res.text(), "dGVzdA==");
 });
@@ -462,6 +486,7 @@ test("Miniflare: modules in sub-directories", async (t) => {
 			},
 		],
 	});
+	t.teardown(() => mf.dispose());
 	const res = await mf.dispatchFetch("http://localhost");
 	t.is(await res.text(), "123");
 });
@@ -475,11 +500,12 @@ test("Miniflare: HTTPS fetches using browser CA certificates", async (t) => {
       }
     }`,
 	});
+	t.teardown(() => mf.dispose());
 	const res = await mf.dispatchFetch("http://localhost");
 	t.true(res.ok);
 });
 
-test("Miniflare: Accepts https requests", async (t) => {
+test("Miniflare: accepts https requests", async (t) => {
 	const log = new TestLog(t);
 
 	const mf = new Miniflare({
@@ -492,6 +518,7 @@ test("Miniflare: Accepts https requests", async (t) => {
       }
     }`,
 	});
+	t.teardown(() => mf.dispose());
 
 	const res = await mf.dispatchFetch("https://localhost");
 	t.true(res.ok);
@@ -526,3 +553,169 @@ test("Miniflare: Manually triggered scheduled events", async (t) => {
 	res = await mf.dispatchFetch("http://localhost");
 	t.is(await res.text(), "true");
 });
+
+queuesTest("Miniflare: getBindings() returns all bindings", async (t) => {
+	const tmp = await useTmp(t);
+	const blobPath = path.join(tmp, "blob.txt");
+	await fs.writeFile(blobPath, "blob");
+	const mf = new Miniflare({
+		modules: true,
+		script: `
+    export class DurableObject {}
+    export default { fetch() { return new Response(null, { status: 404 }); } }
+    `,
+		bindings: { STRING: "hello", OBJECT: { a: 1, b: { c: 2 } } },
+		textBlobBindings: { TEXT: blobPath },
+		dataBlobBindings: { DATA: blobPath },
+		serviceBindings: { SELF: "" },
+		d1Databases: ["DB"],
+		durableObjects: { DO: "DurableObject" },
+		kvNamespaces: ["KV"],
+		queueProducers: ["QUEUE"],
+		r2Buckets: ["BUCKET"],
+	});
+	let disposed = false;
+	t.teardown(() => {
+		if (!disposed) return mf.dispose();
+	});
+
+	interface Env {
+		STRING: string;
+		OBJECT: unknown;
+		TEXT: string;
+		DATA: ArrayBuffer;
+		SELF: ReplaceWorkersTypes<Fetcher>;
+		DB: D1Database;
+		DO: ReplaceWorkersTypes<DurableObjectNamespace>;
+		KV: ReplaceWorkersTypes<KVNamespace>;
+		QUEUE: Queue<unknown>;
+		BUCKET: ReplaceWorkersTypes<R2Bucket>;
+	}
+	const bindings = await mf.getBindings<Env>();
+
+	t.like(bindings, {
+		STRING: "hello",
+		OBJECT: { a: 1, b: { c: 2 } },
+		TEXT: "blob",
+	});
+	t.deepEqual(bindings.DATA, viewToBuffer(utf8Encode("blob")));
+
+	const opts: util.InspectOptions = { colors: false };
+	t.regex(util.inspect(bindings.SELF, opts), /name: 'Fetcher'/);
+	t.regex(util.inspect(bindings.DB, opts), /name: 'D1Database'/);
+	t.regex(util.inspect(bindings.DO, opts), /name: 'DurableObjectNamespace'/);
+	t.regex(util.inspect(bindings.KV, opts), /name: 'KvNamespace'/);
+	t.regex(util.inspect(bindings.QUEUE, opts), /name: 'WorkerQueue'/);
+	t.regex(util.inspect(bindings.BUCKET, opts), /name: 'R2Bucket'/);
+
+	// Check with WebAssembly binding (aren't supported by modules workers)
+	// (base64 encoded module containing a single `add(i32, i32): i32` export)
+	const addWasmModule =
+		"AGFzbQEAAAABBwFgAn9/AX8DAgEABwcBA2FkZAAACgkBBwAgACABagsACgRuYW1lAgMBAAA=";
+	const addWasmPath = path.join(tmp, "add.wasm");
+	await fs.writeFile(addWasmPath, Buffer.from(addWasmModule, "base64"));
+	await mf.setOptions({
+		script:
+			'addEventListener("fetch", (event) => event.respondWith(new Response(null, { status: 404 })));',
+		wasmBindings: { ADD: addWasmPath },
+	});
+	const { ADD } = await mf.getBindings<{ ADD: WebAssembly.Module }>();
+	const instance = new WebAssembly.Instance(ADD);
+	assert(typeof instance.exports.add === "function");
+	t.is(instance.exports.add(1, 2), 3);
+
+	// Check bindings poisoned after dispose
+	await mf.dispose();
+	disposed = true;
+	const expectations: ThrowsExpectation<Error> = {
+		message:
+			"Attempted to use poisoned stub. Stubs to runtime objects must be re-created after calling `Miniflare#setOptions()` or `Miniflare#dispose()`.",
+	};
+	t.throws(() => bindings.KV.get("key"), expectations);
+});
+queuesTest(
+	"Miniflare: getBindings() and friends return bindings for different workers",
+	async (t) => {
+		const mf = new Miniflare({
+			workers: [
+				{
+					name: "a",
+					modules: true,
+					script: `
+        export class DurableObject {}
+        export default { fetch() { return new Response(null, { status: 404 }); } }
+        `,
+					d1Databases: ["DB"],
+					durableObjects: { DO: "DurableObject" },
+				},
+				{
+					// 2nd worker unnamed, to validate that not specifying a name when
+					// getting bindings gives the entrypoint, not the unnamed worker
+					script:
+						'addEventListener("fetch", (event) => event.respondWith(new Response(null, { status: 404 })));',
+					kvNamespaces: ["KV"],
+					queueProducers: ["QUEUE"],
+				},
+				{
+					name: "b",
+					script:
+						'addEventListener("fetch", (event) => event.respondWith(new Response(null, { status: 404 })));',
+					r2Buckets: ["BUCKET"],
+				},
+			],
+		});
+		t.teardown(() => mf.dispose());
+
+		// Check `getBindings()`
+		let bindings = await mf.getBindings();
+		t.deepEqual(Object.keys(bindings), ["DB", "DO"]);
+		bindings = await mf.getBindings("");
+		t.deepEqual(Object.keys(bindings), ["KV", "QUEUE"]);
+		bindings = await mf.getBindings("b");
+		t.deepEqual(Object.keys(bindings), ["BUCKET"]);
+		await t.throwsAsync(() => mf.getBindings("c"), {
+			instanceOf: TypeError,
+			message: '"c" worker not found',
+		});
+
+		const unboundExpectations = (
+			name: string
+		): ThrowsExpectation<TypeError> => ({
+			instanceOf: TypeError,
+			message: `"${name}" unbound in "c" worker`,
+		});
+
+		// Check `getD1Database()`
+		let binding: unknown = await mf.getD1Database("DB");
+		t.not(binding, undefined);
+		let expectations = unboundExpectations("DB");
+		await t.throwsAsync(() => mf.getD1Database("DB", "c"), expectations);
+
+		// Check `getDurableObjectNamespace()`
+		binding = await mf.getDurableObjectNamespace("DO");
+		t.not(binding, undefined);
+		expectations = unboundExpectations("DO");
+		await t.throwsAsync(
+			() => mf.getDurableObjectNamespace("DO", "c"),
+			expectations
+		);
+
+		// Check `getKVNamespace()`
+		binding = await mf.getKVNamespace("KV", "");
+		t.not(binding, undefined);
+		expectations = unboundExpectations("KV");
+		await t.throwsAsync(() => mf.getKVNamespace("KV", "c"), expectations);
+
+		// Check `getQueueProducer()`
+		binding = await mf.getQueueProducer("QUEUE", "");
+		t.not(binding, undefined);
+		expectations = unboundExpectations("QUEUE");
+		await t.throwsAsync(() => mf.getQueueProducer("QUEUE", "c"), expectations);
+
+		// Check `getR2Bucket()`
+		binding = await mf.getR2Bucket("BUCKET", "b");
+		t.not(binding, undefined);
+		expectations = unboundExpectations("BUCKET");
+		await t.throwsAsync(() => mf.getQueueProducer("BUCKET", "c"), expectations);
+	}
+);
