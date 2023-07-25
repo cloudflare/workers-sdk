@@ -1,49 +1,29 @@
 // noinspection TypeScriptValidateJSTypes
 
 import assert from "assert";
-import { Blob } from "buffer";
 import crypto from "crypto";
 import path from "path";
-import { blob, text } from "stream/consumers";
-import { ReadableStream } from "stream/web";
+import { text } from "stream/consumers";
 import type {
-	R2Bucket,
-	R2Checksums,
 	R2Conditional,
-	R2GetOptions,
-	R2HTTPMetadata,
 	R2ListOptions,
-	R2MultipartOptions,
-	R2MultipartUpload,
-	R2Object,
-	R2ObjectBody,
-	R2Objects,
-	R2PutOptions,
-	R2Range,
-	R2StringChecksums,
-	R2UploadedPart,
-	Blob as WorkerBlob,
-	Headers as WorkerHeaders,
-	Response as WorkerResponse,
+	R2Bucket as WorkersR2Bucket,
 } from "@cloudflare/workers-types/experimental";
 import { Macro, ThrowsExpectation } from "ava";
 import {
-	File,
-	FormData,
 	Headers,
-	Miniflare,
 	MiniflareOptions,
 	MultipartPartRow,
 	ObjectRow,
+	R2Bucket,
 	R2Gateway,
-	Response,
+	R2Object,
+	R2ObjectBody,
+	R2Objects,
 	Storage,
 	TypedDatabase,
 	createFileStorage,
-	viewToArray,
-	viewToBuffer,
 } from "miniflare";
-import { z } from "zod";
 import {
 	MiniflareTestContext,
 	isWithin,
@@ -68,335 +48,37 @@ function hash(value: string, algorithm = "md5") {
 	return crypto.createHash(algorithm).update(value).digest("hex");
 }
 
-// R2-like API for sending requests to the test worker. These tests were
-// ported from Miniflare 2, which provided this API natively.
+type NamespacedR2Bucket = R2Bucket & { ns: string };
 
-type ReducedR2Object = Omit<
-	R2Object,
-	"checksums" | "uploaded" | "writeHttpMetadata"
-> & { checksums: R2StringChecksums; uploaded: string };
-type ReducedR2ObjectBody = ReducedR2Object & { body: number };
-
-async function deconstructResponse(res: Response): Promise<any> {
-	const formData = await res.formData();
-	const payload = formData.get("payload");
-	assert(typeof payload === "string");
-	return JSON.parse(payload, (key, value) => {
-		if (typeof value === "object" && value !== null && "$type" in value) {
-			if (value.$type === "R2Object") {
-				const object = value as ReducedR2Object;
-				return new TestR2Object(object);
-			} else if (value.$type === "R2ObjectBody") {
-				const objectBody = value as ReducedR2ObjectBody;
-				const body = formData.get(objectBody.body.toString());
-				// noinspection SuspiciousTypeOfGuard
-				assert(body instanceof File);
-				return new TestR2ObjectBody(objectBody, body);
-			} else if (value.$type === "Date") {
-				return new Date(value.value);
+// Automatically prefix all keys with the specified namespace
+function nsBucket(ns: string, bucket: R2Bucket): NamespacedR2Bucket {
+	return new Proxy(bucket as NamespacedR2Bucket, {
+		get(target, key, receiver) {
+			if (key === "ns") return ns;
+			const value = Reflect.get(target, key, receiver);
+			if (typeof value === "function" && key !== "list") {
+				return (keys: string | string[], ...args: unknown[]) => {
+					if (typeof keys === "string") keys = ns + keys;
+					if (Array.isArray(keys)) keys = keys.map((key) => ns + key);
+					return value(keys, ...args);
+				};
 			}
-		}
-		return value;
+			return value;
+		},
+		set(target, key, newValue, receiver) {
+			if (key === "ns") {
+				ns = newValue;
+				return true;
+			} else {
+				return Reflect.set(target, key, newValue, receiver);
+			}
+		},
 	});
-}
-
-function maybeJsonStringify(value: unknown): string {
-	if (value == null) return "";
-	return JSON.stringify(value, (key, value) => {
-		const dateResult = z.string().datetime().safeParse(value);
-		if (dateResult.success) {
-			return { $type: "Date", value: new Date(dateResult.data).getTime() };
-		}
-		if (value instanceof Headers) {
-			return { $type: "Headers", entries: [...value] };
-		}
-		return value;
-	});
-}
-
-async function blobify(
-	value: ReadableStream | ArrayBuffer | ArrayBufferView | string | null | Blob
-) {
-	if (value === null) {
-		return new Blob([]);
-	} else if (value instanceof ArrayBuffer) {
-		return new Blob([new Uint8Array(value)]);
-	} else if (ArrayBuffer.isView(value)) {
-		return new Blob([viewToArray(value)]);
-	} else if (value instanceof ReadableStream) {
-		return await blob(value);
-	} else {
-		return new Blob([value]);
-	}
-}
-
-class TestR2Bucket implements R2Bucket {
-	constructor(
-		private readonly mf: Miniflare,
-		public ns = ""
-	) {}
-
-	async head(key: string): Promise<R2Object | null> {
-		const url = new URL(this.ns + key, "http://localhost");
-		const res = await this.mf.dispatchFetch(url, {
-			method: "GET",
-			headers: {
-				Accept: "multipart/form-data",
-				"Test-Method": "HEAD",
-			},
-		});
-		return deconstructResponse(res);
-	}
-
-	get(
-		key: string,
-		options: R2GetOptions & {
-			onlyIf: R2Conditional | Headers;
-		}
-	): Promise<R2ObjectBody | R2Object | null>;
-	get(key: string, options?: R2GetOptions): Promise<R2ObjectBody | null>;
-	async get(
-		key: string,
-		options?: R2GetOptions
-	): Promise<R2ObjectBody | R2Object | null> {
-		const url = `http://localhost/${encodeURIComponent(this.ns + key)}`;
-		const res = await this.mf.dispatchFetch(url, {
-			method: "GET",
-			headers: {
-				Accept: "multipart/form-data",
-				"Test-Options": maybeJsonStringify(options),
-			},
-		});
-		return deconstructResponse(res);
-	}
-
-	// @ts-expect-error `@cloudflare/workers-type`'s `ReadableStream` type is
-	//  incompatible with Node's
-	async put(
-		key: string,
-		value:
-			| ReadableStream
-			| ArrayBuffer
-			| ArrayBufferView
-			| string
-			| null
-			| Blob,
-		options?: R2PutOptions
-	): Promise<R2Object> {
-		const url = `http://localhost/${encodeURIComponent(this.ns + key)}`;
-
-		// We can't store options in headers as some put() tests include extended
-		// characters in them, and `undici` validates all headers are byte strings,
-		// so use a form data body instead
-		const formData = new FormData();
-		formData.set("options", maybeJsonStringify(options));
-		formData.set("value", await blobify(value));
-		const res = await this.mf.dispatchFetch(url, {
-			method: "PUT",
-			headers: { Accept: "multipart/form-data" },
-			body: formData,
-		});
-		return deconstructResponse(res);
-	}
-
-	async delete(keys: string | string[]): Promise<void> {
-		if (Array.isArray(keys)) keys = keys.map((key) => this.ns + key);
-		else keys = this.ns + keys;
-		await this.mf.dispatchFetch("http://localhost", {
-			method: "DELETE",
-			body: JSON.stringify(keys),
-			headers: { Accept: "multipart/form-data" },
-		});
-	}
-
-	async list(options?: R2ListOptions): Promise<R2Objects> {
-		const res = await this.mf.dispatchFetch("http://localhost", {
-			method: "GET",
-			headers: {
-				Accept: "multipart/form-data",
-				"Test-Method": "LIST",
-				"Test-Options": maybeJsonStringify(options),
-			},
-		});
-		return deconstructResponse(res);
-	}
-
-	async createMultipartUpload(
-		key: string,
-		options?: R2MultipartOptions
-	): Promise<R2MultipartUpload> {
-		const nsKey = this.ns + key;
-		const url = `http://localhost/${encodeURIComponent(nsKey)}`;
-		const res = await this.mf.dispatchFetch(url, {
-			method: "POST",
-			headers: {
-				Accept: "text/plain",
-				"Test-Method": "MULTIPART-CREATE",
-				"Test-Options": maybeJsonStringify(options),
-			},
-		});
-		const uploadId = await res.text();
-		// @ts-expect-error `@cloudflare/workers-type`'s `ReadableStream` type is
-		//  incompatible with Node's
-		return new TestR2MultipartUpload(this.mf, nsKey, uploadId);
-	}
-
-	resumeMultipartUpload(key: string, uploadId: string): R2MultipartUpload {
-		// @ts-expect-error `@cloudflare/workers-type`'s `ReadableStream` type is
-		//  incompatible with Node's
-		return new TestR2MultipartUpload(this.mf, this.ns + key, uploadId);
-	}
-}
-
-class TestR2Checksums implements R2Checksums {
-	readonly md5?: ArrayBuffer;
-	readonly sha1?: ArrayBuffer;
-	readonly sha256?: ArrayBuffer;
-	readonly sha384?: ArrayBuffer;
-	readonly sha512?: ArrayBuffer;
-
-	constructor(private readonly checksums: R2StringChecksums) {
-		this.md5 = this.#decode(checksums.md5);
-		this.sha1 = this.#decode(checksums.sha1);
-		this.sha256 = this.#decode(checksums.sha256);
-		this.sha384 = this.#decode(checksums.sha384);
-		this.sha512 = this.#decode(checksums.sha512);
-	}
-
-	#decode(checksum?: string) {
-		return checksum === undefined
-			? undefined
-			: viewToBuffer(Buffer.from(checksum, "hex"));
-	}
-
-	toJSON(): R2StringChecksums {
-		return this.checksums;
-	}
-}
-
-class TestR2Object implements R2Object {
-	readonly key: string;
-	readonly version: string;
-	readonly size: number;
-	readonly etag: string;
-	readonly httpEtag: string;
-	readonly checksums: R2Checksums;
-	readonly uploaded: Date;
-	readonly httpMetadata?: R2HTTPMetadata;
-	readonly customMetadata?: Record<string, string>;
-	readonly range?: R2Range;
-
-	constructor(object: ReducedR2Object) {
-		this.key = object.key;
-		this.version = object.version;
-		this.size = object.size;
-		this.etag = object.etag;
-		this.httpEtag = object.httpEtag;
-		this.checksums = new TestR2Checksums(object.checksums);
-		this.uploaded = new Date(object.uploaded);
-		this.httpMetadata = object.httpMetadata;
-		this.customMetadata = object.customMetadata;
-		this.range = object.range;
-	}
-
-	writeHttpMetadata(_headers: Headers): void {
-		// Fully-implemented by `workerd`
-		assert.fail("TestR2Object#writeHttpMetadata() not implemented");
-	}
-}
-
-class TestR2ObjectBody extends TestR2Object implements R2ObjectBody {
-	constructor(
-		object: ReducedR2Object,
-		readonly body: Blob
-	) {
-		super(object);
-	}
-
-	get bodyUsed(): boolean {
-		// Fully-implemented by `workerd`
-		assert.fail("TestR2ObjectBody#bodyUsed() not implemented");
-		return false; // TypeScript requires `get` accessors return
-	}
-
-	arrayBuffer(): Promise<ArrayBuffer> {
-		return this.body.arrayBuffer();
-	}
-	text(): Promise<string> {
-		return this.body.text();
-	}
-	async json<T>(): Promise<T> {
-		return JSON.parse(await this.body.text());
-	}
-	// @ts-expect-error `@cloudflare/workers-type`'s `Blob` type is incompatible
-	//  with Node's
-	blob(): Promise<Blob> {
-		return Promise.resolve(this.body);
-	}
-}
-
-class TestR2MultipartUpload implements R2MultipartUpload {
-	constructor(
-		private readonly mf: Miniflare,
-		readonly key: string,
-		readonly uploadId: string
-	) {}
-
-	// @ts-expect-error `@cloudflare/workers-type`'s `ReadableStream` type is
-	//  incompatible with Node's
-	async uploadPart(
-		partNumber: number,
-		value: ReadableStream | ArrayBuffer | ArrayBufferView | string | null | Blob
-	): Promise<R2UploadedPart> {
-		const url = `http://localhost/${encodeURIComponent(this.key)}`;
-		const body = await blobify(value);
-		const res = await this.mf.dispatchFetch(url, {
-			method: "PUT",
-			headers: {
-				Accept: "application/json",
-				"Content-Length": String(body.size),
-				"Test-Method": "MULTIPART-UPLOAD",
-				"Test-Options": JSON.stringify({ uploadId: this.uploadId, partNumber }),
-			},
-			// Could stream this, but R2 requires known-length streams, so have to
-			// buffer anyway
-			body,
-		});
-		return (await res.json()) as R2UploadedPart;
-	}
-
-	async abort(): Promise<void> {
-		const url = `http://localhost/${encodeURIComponent(this.key)}`;
-		await this.mf.dispatchFetch(url, {
-			method: "DELETE",
-			headers: {
-				Accept: "text/plain",
-				"Test-Method": "MULTIPART-ABORT",
-				"Test-Options": JSON.stringify({ uploadId: this.uploadId }),
-			},
-		});
-	}
-
-	async complete(uploadedParts: R2UploadedPart[]): Promise<R2Object> {
-		const url = `http://localhost/${encodeURIComponent(this.key)}`;
-		const res = await this.mf.dispatchFetch(url, {
-			method: "PUT",
-			headers: {
-				Accept: "multipart/form-data",
-				"Test-Method": "MULTIPART-COMPLETE",
-				"Test-Options": JSON.stringify({
-					uploadId: this.uploadId,
-					uploadedParts,
-				}),
-			},
-		});
-		return deconstructResponse(res);
-	}
 }
 
 interface Context extends MiniflareTestContext {
 	ns: string;
-	r2: TestR2Bucket;
+	r2: NamespacedR2Bucket;
 	storage: Storage;
 }
 
@@ -404,147 +86,21 @@ const opts: Partial<MiniflareOptions> = {
 	r2Buckets: { BUCKET: "bucket" },
 	compatibilityFlags: ["r2_list_honor_include"],
 };
-const test = miniflareTest<{ BUCKET: R2Bucket }, Context>(
+const test = miniflareTest<{ BUCKET: WorkersR2Bucket }, Context>(
 	opts,
-	async (global, request, env) => {
-		function maybeJsonParse(value: string | null): any {
-			if (value === null || value === "") return;
-			return JSON.parse(value, (key, value) => {
-				if (typeof value === "object" && value !== null && "$type" in value) {
-					if (value.$type === "Date") {
-						return new Date(value.value);
-					}
-					if (value.$type === "Headers") {
-						return new global.Headers(value.entries);
-					}
-				}
-				return value;
-			});
-		}
-
-		function reduceR2Object(
-			value: R2Object
-		): ReducedR2Object & { $type: "R2Object" } {
-			return {
-				$type: "R2Object",
-				key: value.key,
-				version: value.version,
-				size: value.size,
-				etag: value.etag,
-				httpEtag: value.httpEtag,
-				checksums: value.checksums.toJSON(),
-				uploaded: value.uploaded.toISOString(),
-				httpMetadata: value.httpMetadata,
-				customMetadata: value.customMetadata,
-				range: value.range,
-			};
-		}
-		async function constructResponse(thing: any): Promise<WorkerResponse> {
-			// Stringify `thing` as JSON, replacing `R2Object(Body)`s with a
-			// plain-object representation. Reading bodies is asynchronous, but
-			// `JSON.stringify`-replacers must be synchronous, so record body
-			// reading `Promise`s, and attach the bodies in `FormData`.
-			const bodyPromises: Promise<WorkerBlob>[] = [];
-			const payload = JSON.stringify(thing, (key, value) => {
-				if (typeof value === "object" && value !== null) {
-					// https://github.com/cloudflare/workerd/blob/c336d404a5fbe2c779b28a6ca54c338f89e2fea1/src/workerd/api/r2-bucket.h#L202
-					if (value.constructor?.name === "HeadResult" /* R2Object */) {
-						const object = value as R2Object;
-						return reduceR2Object(object);
-					}
-					// https://github.com/cloudflare/workerd/blob/c336d404a5fbe2c779b28a6ca54c338f89e2fea1/src/workerd/api/r2-bucket.h#L255
-					if (value.constructor?.name === "GetResult" /* R2ObjectBody */) {
-						const objectBody = value as R2ObjectBody;
-						const object = reduceR2Object(objectBody);
-						const bodyId = bodyPromises.length;
-						// Test bodies shouldn't be too big, so buffering them is fine
-						bodyPromises.push(objectBody.blob());
-						return { ...object, $type: "R2ObjectBody", body: bodyId };
-					}
-				}
-
-				if (
-					typeof value === "string" &&
-					// https://github.com/colinhacks/zod/blob/981af6503ee1be530fe525ac77ba95e1904ce24a/src/types.ts#L562
-					/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.test(value)
-				) {
-					return { $type: "Date", value: new Date(value).getTime() };
-				}
-
-				return value;
-			});
-
-			// Construct `FormData` containing JSON-payload and all bodies
-			const formData = new global.FormData();
-			formData.set("payload", payload);
-			const bodies = await Promise.all(bodyPromises);
-			bodies.forEach((body, i) => formData.set(i.toString(), body));
-
-			return new global.Response(formData);
-		}
-
-		// Actual `HEAD` requests can't return bodies, but we'd like them to.
-		// Also, `LIST` is not a valid HTTP method.
-		const method = request.headers.get("Test-Method") ?? request.method;
-		const { pathname } = new URL(request.url);
-		const key = decodeURIComponent(pathname.substring(1));
-		if (method === "HEAD") {
-			return constructResponse(await env.BUCKET.head(key));
-		} else if (method === "GET") {
-			const optionsHeader = request.headers.get("Test-Options");
-			const options = maybeJsonParse(optionsHeader);
-			return constructResponse(await env.BUCKET.get(key, options));
-		} else if (method === "PUT") {
-			const formData = await request.formData();
-			const optionsData = formData.get("options");
-			if (typeof optionsData !== "string") throw new TypeError();
-			const options = maybeJsonParse(optionsData);
-			const value = formData.get("value");
-			return constructResponse(await env.BUCKET.put(key, value, options));
-		} else if (method === "DELETE") {
-			const keys = await request.json<string | string[]>();
-			await env.BUCKET.delete(keys);
-			return new global.Response(null, { status: 204 });
-		} else if (method === "LIST") {
-			const optionsHeader = request.headers.get("Test-Options");
-			const options = maybeJsonParse(optionsHeader);
-			return constructResponse(await env.BUCKET.list(options));
-		} else if (method === "MULTIPART-CREATE") {
-			const optionsHeader = request.headers.get("Test-Options");
-			const options = maybeJsonParse(optionsHeader);
-			const upload = await env.BUCKET.createMultipartUpload(key, options);
-			return new global.Response(upload.uploadId);
-		} else if (method === "MULTIPART-UPLOAD") {
-			const optionsHeader = request.headers.get("Test-Options");
-			const options = maybeJsonParse(optionsHeader);
-			const upload = env.BUCKET.resumeMultipartUpload(key, options.uploadId);
-			const value = request.body ?? "";
-			const part = await upload.uploadPart(options.partNumber, value);
-			return global.Response.json(part);
-		} else if (method === "MULTIPART-ABORT") {
-			const optionsHeader = request.headers.get("Test-Options");
-			const options = maybeJsonParse(optionsHeader);
-			const upload = env.BUCKET.resumeMultipartUpload(key, options.uploadId);
-			await upload.abort();
-			return new global.Response(null, { status: 204 });
-		} else if (method === "MULTIPART-COMPLETE") {
-			const optionsHeader = request.headers.get("Test-Options");
-			const options = maybeJsonParse(optionsHeader);
-			const upload = env.BUCKET.resumeMultipartUpload(key, options.uploadId);
-			return constructResponse(await upload.complete(options.uploadedParts));
-		}
-
-		return new global.Response(null, { status: 405 });
+	async (global) => {
+		return new global.Response(null, { status: 404 });
 	}
 );
-test.beforeEach((t) => {
+
+test.beforeEach(async (t) => {
 	// Namespace keys so tests which are accessing the same Miniflare instance
 	// and bucket don't have races from key collisions
 	const ns = `${Date.now()}_${Math.floor(
 		Math.random() * Number.MAX_SAFE_INTEGER
 	)}`;
 	t.context.ns = ns;
-	t.context.r2 = new TestR2Bucket(t.context.mf, ns);
+	t.context.r2 = nsBucket(ns, await t.context.mf.getR2Bucket("BUCKET"));
 	t.context.storage = t.context.mf._getPluginStorage("r2", "bucket");
 });
 
@@ -552,7 +108,7 @@ const validatesKeyMacro: Macro<
 	[
 		{
 			method: string;
-			f: (r2: TestR2Bucket, key?: any) => Promise<unknown>;
+			f: (r2: NamespacedR2Bucket, key?: any) => Promise<unknown>;
 		},
 	],
 	Context
@@ -608,6 +164,12 @@ test("head: returns metadata for existing keys", async (t) => {
 	t.deepEqual(object.customMetadata, { key: "value" });
 	t.deepEqual(object.range, { offset: 0, length: 5 });
 	isWithin(t, WITHIN_EPSILON, object.uploaded.getTime(), start);
+
+	// Test proxying of `writeHttpMetadata()`
+	const headers = new Headers({ "X-Key": "value" });
+	t.is(object.writeHttpMetadata(headers), undefined);
+	t.is(headers.get("Content-Type"), "text/plain");
+	t.is(headers.get("X-Key"), "value");
 });
 test(validatesKeyMacro, { method: "head", f: (r2, key) => r2.head(key) });
 
@@ -650,6 +212,12 @@ test("get: returns metadata and body for existing keys", async (t) => {
 	t.deepEqual(body.customMetadata, { key: "value" });
 	t.deepEqual(body.range, { offset: 0, length: 5 });
 	isWithin(t, WITHIN_EPSILON, body.uploaded.getTime(), start);
+
+	// Test proxying of `writeHttpMetadata()`
+	const headers = new Headers({ "X-Key": "value" });
+	t.is(body.writeHttpMetadata(headers), undefined);
+	t.is(headers.get("Content-Type"), "text/plain");
+	t.is(headers.get("X-Key"), "value");
 });
 test(validatesKeyMacro, { method: "get", f: (r2, key) => r2.get(key) });
 test("get: range using object", async (t) => {
@@ -706,7 +274,7 @@ test('get: range using "Range" header', async (t) => {
 	const { r2 } = t.context;
 	const value = "abcdefghijklmnopqrstuvwxyz";
 	await r2.put("key", value);
-	const range = new Headers() as WorkerHeaders;
+	const range = new Headers();
 
 	// Check missing "Range" header returns full response
 	let body = await r2.get("key", { range });
@@ -756,15 +324,14 @@ test("get: returns body only if passes onlyIf", async (t) => {
 
 	const pass = async (cond: R2Conditional) => {
 		const object = await r2.get("key", { onlyIf: cond });
-		t.not(object, null);
-		t.true(object instanceof TestR2ObjectBody);
+		// R2ObjectBody
+		t.true(object !== null && "body" in object && object?.body !== undefined);
 	};
 	const fail = async (cond: R2Conditional) => {
 		const object = await r2.get("key", { onlyIf: cond });
 		t.not(object, null);
-		// Can't test if `object instanceof TestR2Object` as
-		// `TestR2ObjectBody extends TestR2Object`
-		t.false(object instanceof TestR2ObjectBody);
+		// R2Object
+		t.true(object !== null && !("body" in object));
 	};
 
 	await pass({ etagMatches: etag });
@@ -1352,7 +919,7 @@ test.serial("operations permit empty key", async (t) => {
 });
 
 test.serial("operations persist stored data", async (t) => {
-	const { r2, ns } = t.context;
+	const { mf, ns } = t.context;
 
 	// Create new temporary file-system persistence directory
 	const tmp = await useTmp(t);
@@ -1361,6 +928,7 @@ test.serial("operations persist stored data", async (t) => {
 	// Set option, then reset after test
 	await t.context.setOptions({ ...opts, r2Persist: tmp });
 	t.teardown(() => t.context.setOptions(opts));
+	const r2 = nsBucket(ns, await mf.getR2Bucket("BUCKET"));
 
 	// Check put respects persist
 	await r2.put("key", "value");
@@ -1398,12 +966,13 @@ test.serial("operations persist stored data", async (t) => {
 });
 
 test.serial("operations permit strange bucket names", async (t) => {
-	const { r2, ns } = t.context;
+	const { mf, ns } = t.context;
 
 	// Set option, then reset after test
 	const id = "my/ Bucket";
 	await t.context.setOptions({ ...opts, r2Buckets: { BUCKET: id } });
 	t.teardown(() => t.context.setOptions(opts));
+	const r2 = nsBucket(ns, await mf.getR2Bucket("BUCKET"));
 
 	// Check basic operations work
 	await r2.put("key", "value");
