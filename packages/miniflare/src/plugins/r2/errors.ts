@@ -1,7 +1,7 @@
 import { Response } from "../../http";
 import { HttpError } from "../../shared";
 import { CfHeader } from "../shared/constants";
-import { R2Object } from "./r2Object";
+import { InternalR2Object } from "./r2Object";
 
 enum Status {
 	BadRequest = 400,
@@ -28,7 +28,7 @@ enum CfCode {
 }
 
 export class R2Error extends HttpError {
-	object?: R2Object;
+	object?: InternalR2Object;
 
 	constructor(
 		code: number,
@@ -73,7 +73,7 @@ export class R2Error extends HttpError {
 		return this;
 	}
 
-	attach(object: R2Object) {
+	attach(object: InternalR2Object) {
 		this.object = object;
 		return this;
 	}

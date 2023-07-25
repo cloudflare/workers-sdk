@@ -1,5 +1,5 @@
 import test from "ava";
-import { R2Conditional, R2Object, _testR2Conditional } from "miniflare";
+import { InternalR2Object, R2Conditional, _testR2Conditional } from "miniflare";
 
 test("testR2Conditional: matches various conditions", (t) => {
 	// Adapted from internal R2 gateway tests
@@ -10,7 +10,7 @@ test("testR2Conditional: matches various conditions", (t) => {
 	const pastDate = new Date(uploadedDate.getTime() - 30_000);
 	const futureDate = new Date(uploadedDate.getTime() + 30_000);
 
-	const metadata: Pick<R2Object, "etag" | "uploaded"> = {
+	const metadata: Pick<InternalR2Object, "etag" | "uploaded"> = {
 		etag,
 		uploaded: uploadedDate.getTime(),
 	};

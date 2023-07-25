@@ -267,10 +267,16 @@ export const R2BindingRequestSchema = z.union([
 ]);
 
 export type OmitRequest<T> = Omit<T, "method" | "object">;
-export type R2GetOptions = OmitRequest<z.infer<typeof R2GetRequestSchema>>;
-export type R2PutOptions = OmitRequest<z.infer<typeof R2PutRequestSchema>>;
-export type R2ListOptions = OmitRequest<z.infer<typeof R2ListRequestSchema>>;
-export type R2CreateMultipartUploadOptions = OmitRequest<
+export type InternalR2GetOptions = OmitRequest<
+	z.infer<typeof R2GetRequestSchema>
+>;
+export type InternalR2PutOptions = OmitRequest<
+	z.infer<typeof R2PutRequestSchema>
+>;
+export type InternalR2ListOptions = OmitRequest<
+	z.infer<typeof R2ListRequestSchema>
+>;
+export type InternalR2CreateMultipartUploadOptions = OmitRequest<
 	z.infer<typeof R2CreateMultipartUploadRequestSchema>
 >;
 

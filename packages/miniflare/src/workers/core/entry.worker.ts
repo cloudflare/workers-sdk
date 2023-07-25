@@ -12,6 +12,7 @@ type Env = {
 	[CoreBindings.JSON_ROUTES]: WorkerRoute[];
 	[CoreBindings.JSON_LOG_LEVEL]: LogLevel;
 	[CoreBindings.DATA_LIVE_RELOAD_SCRIPT]: ArrayBuffer;
+	[CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY]: DurableObjectNamespace;
 } & {
 	[K in `${typeof CoreBindings.SERVICE_USER_ROUTE_PREFIX}${string}`]:
 		| Fetcher
@@ -149,6 +150,15 @@ function maybeLogRequest(
 	);
 }
 
+function handleProxy(request: Request, env: Env) {
+	const ns = env[CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY];
+	// Always use the same singleton Durable Object instance, so we always have
+	// access to the same "heap"
+	const id = ns.idFromName("");
+	const stub = ns.get(id);
+	return stub.fetch(request);
+}
+
 async function handleQueue(
 	request: Request,
 	url: URL,
@@ -186,6 +196,10 @@ export default <ExportedHandler<Env>>{
 	async fetch(request, env, ctx) {
 		const startTime = Date.now();
 
+		// The proxy client will always specify an operation
+		const isProxy = request.headers.get(CoreHeaders.OP) !== null;
+		if (isProxy) return handleProxy(request, env);
+
 		// `dispatchFetch()` will always inject the passed URL as a header. When
 		// calling this function, we never want to display the pretty-error page.
 		// Instead, we propagate the error and reject the returned `Promise`.
@@ -221,3 +235,5 @@ export default <ExportedHandler<Env>>{
 		}
 	},
 };
+
+export { ProxyServer } from "./proxy.worker";

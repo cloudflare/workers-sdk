@@ -35,6 +35,7 @@ import {
 	Persistence,
 	PluginServicesOptions,
 	Plugins,
+	ProxyClient,
 	QueueConsumers,
 	QueuesError,
 	SharedOptions,
@@ -78,7 +79,7 @@ import {
 	maybeApply,
 } from "./shared";
 import { Storage } from "./storage";
-import { CoreHeaders } from "./workers";
+import { CoreBindings, CoreHeaders } from "./workers";
 
 // ===== `Miniflare` User Options =====
 export type MiniflareOptions = SharedOptions &
@@ -251,6 +252,47 @@ function getWorkerRoutes(
 	return allRoutes;
 }
 
+// Get the name of a binding in the `ProxyServer`'s `env`
+function getProxyBindingName(plugin: string, worker: string, binding: string) {
+	return [
+		CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY,
+		plugin,
+		worker,
+		binding,
+	].join(":");
+}
+// Get whether a binding will need a proxy to be supported in Node (i.e. is
+// the implementation of this binding in `workerd`?). If this returns `false`,
+// there's no need to bind the binding to the `ProxyServer`.
+function isNativeTargetBinding(binding: Worker_Binding) {
+	return !(
+		"json" in binding ||
+		"wasmModule" in binding ||
+		"text" in binding ||
+		"data" in binding
+	);
+}
+// Converts a regular worker binding to binding suitable for the `ProxyServer`.
+function buildProxyBinding(
+	plugin: string,
+	worker: string,
+	binding: Worker_Binding
+): Worker_Binding {
+	assert(binding.name !== undefined);
+	const name = getProxyBindingName(plugin, worker, binding.name);
+	const proxyBinding = { ...binding, name };
+	// If this is a Durable Object namespace binding to the current worker,
+	// make sure it continues to point to that worker when bound elsewhere
+	if (
+		"durableObjectNamespace" in proxyBinding &&
+		proxyBinding.durableObjectNamespace !== undefined
+	) {
+		proxyBinding.durableObjectNamespace.serviceName ??=
+			getUserServiceName(worker);
+	}
+	return proxyBinding;
+}
+
 // ===== `Miniflare` Internal Storage & Routing =====
 type OptionalGatewayFactoryType<
 	Gateway extends GatewayConstructor<any> | undefined,
@@ -404,6 +446,7 @@ export class Miniflare {
 	#runtime?: Runtime;
 	#removeRuntimeExitHook?: () => void;
 	#runtimeEntryURL?: URL;
+	#proxyClient?: ProxyClient;
 	#sourceMapRegistry?: SourceMapRegistry;
 
 	// Path to temporary directory for use as scratch space/"in-memory" Durable
@@ -782,23 +825,14 @@ export class Miniflare {
 
 		// Use Map to dedupe services by name
 		const services = new Map<string, Service>();
-		const globalServices = getGlobalServices({
-			sharedOptions: sharedOpts.core,
-			allWorkerRoutes,
-			fallbackWorkerName: this.#workerOpts[0].core.name,
-			loopbackPort,
-			log: this.#log,
-		});
-		for (const service of globalServices) {
-			// Global services should all have unique names
-			assert(service.name !== undefined && !services.has(service.name));
-			services.set(service.name, service);
-		}
 
 		const sockets: Socket[] = [await configureEntrySocket(sharedOpts.core)];
+		// Bindings for `ProxyServer` Durable Object
+		const proxyBindings: Worker_Binding[] = [];
 
 		for (let i = 0; i < allWorkerOpts.length; i++) {
 			const workerOpts = allWorkerOpts[i];
+			const workerName = workerOpts.core.name ?? "";
 
 			// Collect all bindings from this worker
 			const workerBindings: Worker_Binding[] = [];
@@ -808,7 +842,14 @@ export class Miniflare {
 				//  missing in other plugins' options.
 				const pluginBindings = await plugin.getBindings(workerOpts[key], i);
 				if (pluginBindings !== undefined) {
-					workerBindings.push(...pluginBindings);
+					for (const binding of pluginBindings) {
+						workerBindings.push(binding);
+						// Only `workerd` native bindings need to be proxied, the rest are
+						// already supported by Node.js (e.g. json, text/data blob, wasm)
+						if (isNativeTargetBinding(binding)) {
+							proxyBindings.push(buildProxyBinding(key, workerName, binding));
+						}
+					}
 
 					if (key === "kv") {
 						// Add "__STATIC_CONTENT_MANIFEST" module if sites enabled
@@ -851,6 +892,20 @@ export class Miniflare {
 			}
 		}
 
+		const globalServices = getGlobalServices({
+			sharedOptions: sharedOpts.core,
+			allWorkerRoutes,
+			fallbackWorkerName: this.#workerOpts[0].core.name,
+			loopbackPort,
+			log: this.#log,
+			proxyBindings,
+		});
+		for (const service of globalServices) {
+			// Global services should all have unique names
+			assert(service.name !== undefined && !services.has(service.name));
+			services.set(service.name, service);
+		}
+
 		// Once we've assembled the config, and are about to restart the runtime,
 		// update the source map registry.
 		this.#sourceMapRegistry = sourceMapRegistry;
@@ -883,6 +938,17 @@ export class Miniflare {
 		this.#runtimeEntryURL = new URL(
 			`${secure ? "https" : "http"}://${this.#accessibleHost}:${maybePort}`
 		);
+		if (this.#proxyClient === undefined) {
+			this.#proxyClient = new ProxyClient(
+				this.#runtimeEntryURL,
+				this.dispatchFetch
+			);
+		} else {
+			// The `ProxyServer` "heap" will have been destroyed when `workerd` was
+			// restarted, invalidating all existing native target references. Mark
+			// all proxies as invalid, noting the new runtime URL to send requests to.
+			this.#proxyClient.poisonProxies(this.#runtimeEntryURL);
+		}
 
 		if (!this.#runtimeMutex.hasWaiting) {
 			// Only log and trigger reload if there aren't pending updates
@@ -1002,6 +1068,7 @@ export class Miniflare {
 			this.#removeRuntimeExitHook?.();
 
 			// Cleanup as much as possible even if `#init()` threw
+			await this.#proxyClient?.dispose();
 			await this.#runtime?.dispose();
 			await this.#stopLoopbackServer();
 			// `rm -rf ${#tmpPath}`, this won't throw if `#tmpPath` doesn't exist

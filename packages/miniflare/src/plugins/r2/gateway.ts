@@ -27,19 +27,23 @@ import {
 	NoSuchUpload,
 	PreconditionFailed,
 } from "./errors";
-import { R2Object, R2ObjectBody, R2Objects } from "./r2Object";
 import {
+	InternalR2Object,
+	InternalR2ObjectBody,
+	InternalR2Objects,
+} from "./r2Object";
+import {
+	InternalR2CreateMultipartUploadOptions,
+	InternalR2GetOptions,
+	InternalR2ListOptions,
+	InternalR2PutOptions,
 	MultipartPartRow,
 	MultipartUploadRow,
 	MultipartUploadState,
 	ObjectRow,
 	R2Conditional,
-	R2CreateMultipartUploadOptions,
 	R2CreateMultipartUploadResponse,
-	R2GetOptions,
-	R2ListOptions,
 	R2PublishedPart,
-	R2PutOptions,
 	R2Range,
 	R2UploadPartResponse,
 	SQL_SCHEMA,
@@ -641,20 +645,20 @@ export class R2Gateway {
 		return identity.readable;
 	}
 
-	async head(key: string): Promise<R2Object> {
+	async head(key: string): Promise<InternalR2Object> {
 		validate.key(key);
 
 		const row = this.#stmts.getByKey.get({ key });
 		if (row === undefined) throw new NoSuchKey();
 
 		const range: R2Range = { offset: 0, length: row.size };
-		return new R2Object(row, range);
+		return new InternalR2Object(row, range);
 	}
 
 	async get(
 		key: string,
-		options: R2GetOptions = {}
-	): Promise<R2ObjectBody | R2Object> {
+		options: InternalR2GetOptions = {}
+	): Promise<InternalR2ObjectBody | InternalR2Object> {
 		validate.key(key);
 
 		// Try to get this key, including multipart parts if it's multipart
@@ -668,7 +672,7 @@ export class R2Gateway {
 			validate.condition(row, options.onlyIf);
 		} catch (e) {
 			if (e instanceof PreconditionFailed) {
-				e.attach(new R2Object(row, defaultR2Range));
+				e.attach(new InternalR2Object(row, defaultR2Range));
 			}
 			throw e;
 		}
@@ -700,15 +704,15 @@ export class R2Gateway {
 			if (value === null) throw new NoSuchKey();
 		}
 
-		return new R2ObjectBody(row, value, r2Range);
+		return new InternalR2ObjectBody(row, value, r2Range);
 	}
 
 	async put(
 		key: string,
 		value: ReadableStream<Uint8Array>,
 		valueSize: number,
-		options: R2PutOptions
-	): Promise<R2Object> {
+		options: InternalR2PutOptions
+	): Promise<InternalR2Object> {
 		// Store value in the blob store, computing required digests as we go
 		// (this means we don't have to buffer the entire stream to compute them)
 		const algorithms: (keyof R2Hashes)[] = [];
@@ -751,7 +755,7 @@ export class R2Gateway {
 		if (oldBlobIds !== undefined) {
 			for (const blobId of oldBlobIds) this.#backgroundDelete(blobId);
 		}
-		return new R2Object(row);
+		return new InternalR2Object(row);
 	}
 
 	async delete(keys: string | string[]) {
@@ -768,7 +772,7 @@ export class R2Gateway {
 		return this.#stmts.listHttpCustomMetadataWithoutDelimiter;
 	}
 
-	async list(opts: R2ListOptions = {}): Promise<R2Objects> {
+	async list(opts: InternalR2ListOptions = {}): Promise<InternalR2Objects> {
 		const prefix = opts.prefix ?? "";
 
 		let limit = opts.limit ?? MAX_LIST_KEYS;
@@ -793,7 +797,7 @@ export class R2Gateway {
 			if (row.custom_metadata === undefined || excludeCustom) {
 				row.custom_metadata = "{}";
 			}
-			return new R2Object(row as Omit<ObjectRow, "blob_id">);
+			return new InternalR2Object(row as Omit<ObjectRow, "blob_id">);
 		};
 
 		// If cursor set, and lexicographically after `startAfter`, use that for
@@ -819,7 +823,7 @@ export class R2Gateway {
 			limit: limit + 1,
 		};
 
-		let objects: R2Object[];
+		let objects: InternalR2Object[];
 		const delimitedPrefixes: string[] = [];
 		let nextCursorStartAfter: string | undefined;
 
@@ -872,7 +876,7 @@ export class R2Gateway {
 
 	async createMultipartUpload(
 		key: string,
-		opts: R2CreateMultipartUploadOptions
+		opts: InternalR2CreateMultipartUploadOptions
 	): Promise<R2CreateMultipartUploadResponse> {
 		validate.key(key);
 
@@ -932,7 +936,7 @@ export class R2Gateway {
 		key: string,
 		uploadId: string,
 		parts: R2PublishedPart[]
-	): Promise<R2Object> {
+	): Promise<InternalR2Object> {
 		validate.key(key);
 		const { newRow, oldBlobIds } = this.#stmts.completeMultipartUpload(
 			key,
@@ -940,7 +944,7 @@ export class R2Gateway {
 			parts
 		);
 		for (const blobId of oldBlobIds) this.#backgroundDelete(blobId);
-		return new R2Object(newRow);
+		return new InternalR2Object(newRow);
 	}
 
 	async abortMultipartUpload(key: string, uploadId: string): Promise<void> {

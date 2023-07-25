@@ -9,7 +9,7 @@ export interface EncodedMetadata {
 	value: ReadableStream<Uint8Array>;
 }
 
-export class R2Object {
+export class InternalR2Object {
 	readonly key: string;
 	readonly version: string;
 	readonly size: number;
@@ -69,7 +69,7 @@ export class R2Object {
 		return { metadataSize: blob.size, value: blob.stream() };
 	}
 
-	static encodeMultiple(objects: R2Objects): EncodedMetadata {
+	static encodeMultiple(objects: InternalR2Objects): EncodedMetadata {
 		const json = JSON.stringify({
 			...objects,
 			objects: objects.objects.map((o) => o.#rawProperties()),
@@ -79,7 +79,7 @@ export class R2Object {
 	}
 }
 
-export class R2ObjectBody extends R2Object {
+export class InternalR2ObjectBody extends InternalR2Object {
 	constructor(
 		metadata: Omit<ObjectRow, "blob_id">,
 		readonly body: ReadableStream<Uint8Array>,
@@ -101,9 +101,9 @@ export class R2ObjectBody extends R2Object {
 	}
 }
 
-export interface R2Objects {
+export interface InternalR2Objects {
 	// An array of objects matching the list request.
-	objects: R2Object[];
+	objects: InternalR2Object[];
 	// If true, indicates there are more results to be retrieved for the current
 	// list request.
 	truncated: boolean;
