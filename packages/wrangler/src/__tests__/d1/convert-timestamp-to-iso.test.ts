@@ -13,9 +13,17 @@ describe("convertTimestampToISO", () => {
 
 	it("should reject invalid date strings", () => {
 		const timestamp = "asdf";
-		expect(() => convertTimestampToISO(timestamp))
-			.toThrowErrorMatchingInlineSnapshot(`
-		"Invalid timestamp 'asdf'. Please provide a valid Unix timestamp or ISO string, for example: 2023-08-01T00:00:00.000+00:00
+		let error = "";
+		try {
+			convertTimestampToISO(timestamp);
+		} catch (e) {
+			error = `${e}`.replace(
+				/\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d\.\d\d\d\+\d\d:\d\d/,
+				"(DATE)"
+			);
+		}
+		expect(error).toMatchInlineSnapshot(`
+		"Error: Invalid timestamp 'asdf'. Please provide a valid Unix timestamp or ISO string, for example: (DATE)
 		For accepted format, see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date#date_time_string_format"
 	`);
 	});
@@ -45,10 +53,14 @@ describe("convertTimestampToISO", () => {
 	it("should reject JS timestamps from the future", () => {
 		const date = String(+new Date() + 10000);
 
-		expect(() =>
-			convertTimestampToISO(date)
-		).toThrowErrorMatchingInlineSnapshot(
-			`"Invalid timestamp '1690848010000'. Please provide a timestamp in the past"`
+		let error = "";
+		try {
+			convertTimestampToISO(date);
+		} catch (e) {
+			error = `${e}`.replace(/\d+/, "(TIMESTAMP)");
+		}
+		expect(error).toMatchInlineSnapshot(
+			`"Error: Invalid timestamp '(TIMESTAMP)'. Please provide a timestamp in the past"`
 		);
 	});
 
