@@ -63,6 +63,7 @@ type Props = {
 	noBundle: boolean | undefined;
 	keepVars: boolean | undefined;
 	logpush: boolean | undefined;
+	oldAssetTtl: number | undefined;
 };
 
 type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
@@ -524,7 +525,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			scriptName + (!props.legacyEnv && props.env ? `-${props.env}` : ""),
 			props.assetPaths,
 			false,
-			props.dryRun
+			props.dryRun,
+			props.oldAssetTtl
 		);
 
 		const bindings: CfWorkerInit["bindings"] = {
