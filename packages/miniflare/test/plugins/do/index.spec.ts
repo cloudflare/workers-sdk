@@ -1,14 +1,23 @@
+import assert from "assert";
 import fs from "fs/promises";
 import path from "path";
 import test from "ava";
-import { Miniflare, MiniflareOptions } from "miniflare";
+import {
+	DeferredPromise,
+	MessageEvent,
+	Miniflare,
+	MiniflareOptions,
+	RequestInit,
+} from "miniflare";
 import { useTmp } from "../../test-shared";
 
 const COUNTER_SCRIPT = (responsePrefix = "") => `export class Counter {
+  instanceId = crypto.randomUUID();
   constructor(state) {
     this.storage = state.storage;
   }
   async fetch(request) {
+    if (request.cf?.instanceId) return new Response(this.instanceId);
     const count = ((await this.storage.get("count")) ?? 0) + 1;
     void this.storage.put("count", count);
     return new Response(${JSON.stringify(responsePrefix)} + count);
@@ -234,4 +243,69 @@ test("can use Durable Object ID from one object in another", async (t) => {
 	const id = await idRes.text();
 	const res = await mf2.dispatchFetch(`http://localhost/${id}`);
 	t.is(await res.text(), `id:${id}`);
+});
+
+test("proxies Durable Object methods", async (t) => {
+	const mf = new Miniflare({
+		verbose: true,
+		modules: true,
+		script: COUNTER_SCRIPT(""),
+		durableObjects: { COUNTER: "Counter" },
+	});
+	t.teardown(() => mf.dispose());
+
+	// Check can call synchronous ID creation methods
+	let ns = await mf.getDurableObjectNamespace("COUNTER");
+	let id = ns.idFromName("/a");
+	t.regex(String(id), /[0-9a-f]{64}/i);
+
+	// Check using result of proxied method in another
+	let stub = ns.get(id);
+	let res = await stub.fetch("http://placeholder/");
+	t.is(await res.text(), "1");
+
+	// Check reuses exact same instance with un-proxied access
+	res = await mf.dispatchFetch("http://localhost/a");
+	t.is(await res.text(), "2");
+	const requestId: RequestInit = { cf: { instanceId: true } };
+	const proxyIdRes = await stub.fetch("http://placeholder/", requestId);
+	const proxyId = await proxyIdRes.text();
+	const regularIdRes = await mf.dispatchFetch("http://localhost/a", requestId);
+	const regularId = await regularIdRes.text();
+	t.is(proxyId, regularId);
+
+	// Check with WebSocket
+	await mf.setOptions({
+		verbose: true,
+		modules: true,
+		script: `
+    export class WebSocketObject {
+      fetch() {
+        const [webSocket1, webSocket2] = Object.values(new WebSocketPair());
+        webSocket1.accept();
+        webSocket1.addEventListener("message", (event) => {
+          webSocket1.send("echo:" + event.data);
+        });
+        return new Response(null, { status: 101, webSocket: webSocket2 });
+      }
+    }
+    export default {
+      fetch(request, env) { return new Response(null, { status: 404 }); }
+    }
+    `,
+		durableObjects: { WEBSOCKET: "WebSocketObject" },
+	});
+	ns = await mf.getDurableObjectNamespace("WEBSOCKET");
+	id = ns.newUniqueId();
+	stub = ns.get(id);
+	res = await stub.fetch("http://placeholder/", {
+		headers: { Upgrade: "websocket" },
+	});
+	assert(res.webSocket !== null);
+	const eventPromise = new DeferredPromise<MessageEvent>();
+	res.webSocket.addEventListener("message", eventPromise.resolve);
+	res.webSocket.accept();
+	res.webSocket.send("hello");
+	const event = await eventPromise;
+	t.is(event.data, "echo:hello");
 });
