@@ -17,6 +17,5 @@ for (const artifact of allArtifacts.data.artifacts) {
 			`\nWORKFLOW_RUN_PR_FOR_${packageName}=${match[2]}` +
 				`\nWORKFLOW_RUN_ID_FOR_${packageName}=${context.payload.workflow_run.id}`
 		);
-		break;
 	}
 }
