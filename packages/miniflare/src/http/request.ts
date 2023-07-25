@@ -28,9 +28,11 @@ export class Request<
 	// error.
 	[kCf]?: CfType;
 
-	constructor(input: RequestInfo, init?: RequestInit<CfType>) {
+	constructor(input: RequestInfo | Request, init?: RequestInit<CfType>) {
 		super(input, init);
 		this[kCf] = init?.cf;
+		// Prefer `cf` from `init`, but if it's set on `input`, use that
+		if (input instanceof Request) this[kCf] ??= input.cf;
 	}
 
 	get cf() {
