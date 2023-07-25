@@ -1,31 +1,16 @@
-import path from "path";
-import {
+import type {
 	D1Database,
+	D1ExecResult,
 	D1PreparedStatement,
 	D1Result,
-} from "@cloudflare/workers-types/experimental/index";
-import { Miniflare } from "miniflare";
-import { MiniflareTestContext } from "../../test-shared";
-
-export const FIXTURES_PATH = path.resolve(
-	__dirname,
-	"..",
-	"..",
-	"..",
-	"..",
-	"test",
-	"fixtures"
-);
-
-interface D1ExecResult {
-	count: number;
-	duration: number;
-}
+} from "@cloudflare/workers-types/experimental";
+import type { Miniflare } from "miniflare";
+import { setupTest } from "./test";
 
 const kSend = Symbol("kSend");
 
-// D1-like API for sending requests to the fixture worker. These tests were
-// ported from Miniflare 2, which provided this API natively.
+// D1-like API for sending requests to the fixture worker. Note we can't use the
+// API proxy here, as without the wrapped binding we only get a `Fetcher`.
 export class TestD1Database implements D1Database {
 	constructor(private readonly mf: Miniflare) {}
 
@@ -74,7 +59,6 @@ class TestD1PreparedStatement implements D1PreparedStatement {
 		return new TestD1PreparedStatement(this.db, this.sql, params);
 	}
 
-	// TODO(now): fix, this may also return null
 	first<T = unknown>(colName?: string): Promise<T> {
 		return this.db[kSend](`/prepare/first/${colName ?? ""}`, this);
 	}
@@ -92,30 +76,11 @@ class TestD1PreparedStatement implements D1PreparedStatement {
 	}
 }
 
-export const SCHEMA = (tableColours: string, tableKitchenSink: string) => `
-CREATE TABLE ${tableColours} (id INTEGER PRIMARY KEY, name TEXT NOT NULL, rgb INTEGER NOT NULL);
-CREATE TABLE ${tableKitchenSink} (id INTEGER PRIMARY KEY, int INTEGER, real REAL, text TEXT, blob BLOB);
-INSERT INTO ${tableColours} (id, name, rgb) VALUES (1, 'red', 0xff0000);
-INSERT INTO ${tableColours} (id, name, rgb) VALUES (2, 'green', 0x00ff00);
-INSERT INTO ${tableColours} (id, name, rgb) VALUES (3, 'blue', 0x0000ff);
-`;
-
-export interface ColourRow {
-	id: number;
-	name: string;
-	rgb: number;
-}
-
-export interface KitchenSinkRow {
-	id: number;
-	int: number | null;
-	real: number | null;
-	text: string | null;
-	blob: number[] | null;
-}
-
-export interface Context extends MiniflareTestContext {
-	db: TestD1Database; // TODO(now): swap this back to `D1Database` once types fixed
-	tableColours: string;
-	tableKitchenSink: string;
-}
+// Pre-wrangler 3.3, D1 bindings needed a local compilation step, so use
+// the output version of the fixture, and the appropriately prefixed binding name
+setupTest(
+	"__D1_BETA__DB",
+	"worker.dist.mjs",
+	async (mf) => new TestD1Database(mf)
+);
+require("./suite");
