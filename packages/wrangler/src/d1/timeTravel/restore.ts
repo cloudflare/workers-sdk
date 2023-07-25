@@ -81,7 +81,7 @@ export const RestoreHandler = withConfig<HandlerOptions>(
 			`);
 			logger.log(`⚠️ This will overwrite all data in database ${database}. \nIn-flight queries and transactions will be cancelled.
 			`);
-			if (await confirm("OK to proceed (y/n)", { defaultValue: false })) {
+			if (await confirm("OK to proceed (y/N)", { defaultValue: false })) {
 				logger.log("⚡️ Time travel in progress...");
 				const result = await handleRestore(accountId, db.uuid, searchParams);
 				logger.log(`✅ Database ${database} restored back to bookmark ${result.bookmark}
