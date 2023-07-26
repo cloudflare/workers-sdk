@@ -37,6 +37,7 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "./yargs-types";
+import type { Json } from "miniflare";
 
 export function devOptions(yargs: CommonYargsArgv) {
 	return (
@@ -303,9 +304,7 @@ This is currently not supported 😭, but we think that we'll get it to work soo
 }
 
 export type AdditionalDevProps = {
-	vars?: {
-		[key: string]: unknown;
-	};
+	vars?: Record<string, string | Json>;
 	kv?: {
 		binding: string;
 		id: string;

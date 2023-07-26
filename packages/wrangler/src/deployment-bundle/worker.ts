@@ -1,5 +1,6 @@
 import type { Environment } from "../config";
 import type { Route } from "../config/environment";
+import type { Json } from "miniflare";
 
 /**
  * The type of Worker
@@ -50,7 +51,7 @@ export interface CfModule {
  * A map of variable names to values.
  */
 export interface CfVars {
-	[key: string]: unknown;
+	[key: string]: string | Json;
 }
 
 /**
