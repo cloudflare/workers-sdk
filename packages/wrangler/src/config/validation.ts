@@ -1811,7 +1811,7 @@ const validateCflogfwdrObject: (env: string) => ValidatorFn =
 		if (v?.schema !== undefined) {
 			// the user should not be using the old schema property, as we've migrated to capnp_schema for consistency with the unsafe bindings
 			diagnostics.errors.push(
-				`"${field}" binding "schema" property has been replaced with "capnp_schema", and no longer requires you to manually call capnp.`
+				`"${field}" binding "schema" property has been replaced with "capnp_schema", which expects a file path to an uncompiled capnp schema.`
 			);
 			return false;
 		}

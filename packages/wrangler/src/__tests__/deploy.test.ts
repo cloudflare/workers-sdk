@@ -6154,7 +6154,7 @@ addEventListener('fetch', event => {});`
 		`);
 			});
 
-			it("should when a logfwdr schema isn't specified", async () => {
+			it("should error when a logfwdr schema isn't specified", async () => {
 				writeWranglerToml({
 					logfwdr: {
 						capnp_schema: undefined,
@@ -6232,7 +6232,7 @@ addEventListener('fetch', event => {});`
 				await expect(() => runWrangler("deploy index.js")).rejects
 					.toThrowErrorMatchingInlineSnapshot(`
 			"Processing wrangler.toml configuration:
-			  - \\"logfwdr\\" binding \\"schema\\" property has been replaced with \\"capnp_schema\\", and no longer requires you to manually call capnp."
+			  - \\"logfwdr\\" binding \\"schema\\" property has been replaced with \\"capnp_schema\\", which expects a file path to an uncompiled capnp schema."
 		`);
 			});
 		});
@@ -6745,6 +6745,7 @@ addEventListener('fetch', event => {});`
 			"
 		`);
 			});
+
 			it("should warn if using unsafe bindings already handled by wrangler", async () => {
 				writeWranglerToml({
 					unsafe: {
@@ -6795,7 +6796,8 @@ addEventListener('fetch', event => {});`
 			"
 		`);
 			});
-			it("should error if using unsafe bindings capnp_schemas which are invalid", async () => {
+
+			it("should error if using unsafe bindings capnp_schemas containing invalid values", async () => {
 				writeWranglerToml({
 					unsafe: {
 						bindings: [
@@ -6817,6 +6819,7 @@ addEventListener('fetch', event => {});`
 			  - the \\"unsafe.bindings\\" field \\"capnp_schema\\", when present, should be a string. Got false"
 		`);
 			});
+
 			it("should error if using unsafe bindings capnp_schemas which are pre-compiled", async () => {
 				writeWranglerToml({
 					unsafe: {
