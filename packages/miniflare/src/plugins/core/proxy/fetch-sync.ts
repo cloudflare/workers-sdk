@@ -60,6 +60,7 @@ port.addEventListener("message", async (event) => {
     try {
       port.postMessage({ id, error });
     } catch {
+      // If error failed to serialise, post simplified version
       port.postMessage({ id, error: new Error(String(error)) });
     }
   }
@@ -130,6 +131,7 @@ export class SynchronousFetcher {
 				// synchronously fetch from internal Miniflare code (e.g. proxy server)
 				throw reviveError([], caught);
 			}
+			// TODO(soon): add support for MINIFLARE_ASSERT_BODIES_CONSUMED here
 			return { status, headers, body };
 		} else {
 			throw message.error;
