@@ -2,6 +2,10 @@ import { execSync, spawn } from "node:child_process";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import {
+	ROUTES_SPEC_VERSION,
+	SECONDS_TO_WAIT_FOR_PROXY,
+} from "@cloudflare/pages-shared/constants";
 import { watch } from "chokidar";
 import * as esbuild from "esbuild";
 import { unstable_dev } from "../api";
@@ -11,7 +15,6 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { getBasePath } from "../paths";
 import { buildFunctions } from "./buildFunctions";
-import { ROUTES_SPEC_VERSION, SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
 import { FunctionsNoRoutesError, getFunctionsNoRoutesWarning } from "./errors";
 import {
 	buildRawWorker,

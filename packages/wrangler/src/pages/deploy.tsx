@@ -1,4 +1,5 @@
 import { execSync } from "node:child_process";
+import { PAGES_CONFIG_CACHE_FILENAME } from "@cloudflare/pages-shared/constants";
 import { render, Text } from "ink";
 import SelectInput from "ink-select-input";
 import React from "react";
@@ -10,7 +11,6 @@ import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
-import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { listProjects } from "./projects";
 import { promptSelectProject } from "./prompt-select-project";
 
@@ -18,7 +18,7 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { PagesConfigCache } from "./types";
+import type { PagesConfigCache } from "@cloudflare/pages-shared/types";
 import type { Project } from "@cloudflare/types";
 
 type PublishArgs = StrictYargsOptionsToInterface<typeof Options>;

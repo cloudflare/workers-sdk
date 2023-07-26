@@ -8,6 +8,8 @@
 	},
 	"files": [
 		"tsconfig.json",
+		"project/**/*",
+		"types.ts",
 		"asset-server/**/*",
 		"environment-polyfills/**/*",
 		"metadata-generator/**/*"

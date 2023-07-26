@@ -1,4 +1,4 @@
-import { MAX_FUNCTIONS_ROUTES_RULE_LENGTH } from "../constants";
+import { MAX_FUNCTIONS_ROUTES_RULE_LENGTH } from "@cloudflare/pages-shared/constants";
 
 /**
  * consolidateRoutes consolidates redundant routes - eg. ["/api/*"", "/api/foo"] -> ["/api/*""]

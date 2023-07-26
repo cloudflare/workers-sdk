@@ -1,9 +1,9 @@
-import { FatalError } from "../../errors";
 import {
 	MAX_FUNCTIONS_ROUTES_RULES,
 	MAX_FUNCTIONS_ROUTES_RULE_LENGTH,
 	ROUTES_SPEC_VERSION,
-} from "../constants";
+} from "@cloudflare/pages-shared/constants";
+import { FatalError } from "../../errors";
 import { getRoutesValidationErrorMessage } from "../errors";
 import type { RoutesJSONSpec } from "./routes-transformation";
 

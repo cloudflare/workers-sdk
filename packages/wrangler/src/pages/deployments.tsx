@@ -1,3 +1,4 @@
+import { PAGES_CONFIG_CACHE_FILENAME } from "@cloudflare/pages-shared/constants";
 import Table from "ink-table";
 import React from "react";
 import { format as timeagoFormat } from "timeago.js";
@@ -8,14 +9,16 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
-import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { promptSelectProject } from "./prompt-select-project";
 
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Deployment, PagesConfigCache } from "./types";
+import type {
+	Deployment,
+	PagesConfigCache,
+} from "@cloudflare/pages-shared/types";
 
 type ListArgs = StrictYargsOptionsToInterface<typeof ListOptions>;
 

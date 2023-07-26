@@ -1,4 +1,5 @@
 import { setTimeout } from "node:timers/promises";
+import { PAGES_CONFIG_CACHE_FILENAME } from "@cloudflare/pages-shared/constants";
 import onExit from "signal-exit";
 import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
@@ -15,14 +16,16 @@ import {
 } from "../tail/createTail";
 import { translateCLICommandToFilterMessage } from "../tail/filters";
 import { requireAuth } from "../user";
-import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { promptSelectProject } from "./prompt-select-project";
 import { isUrl } from "./utils";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Deployment, PagesConfigCache } from "./types";
+import type {
+	PagesConfigCache,
+	Deployment,
+} from "@cloudflare/pages-shared/types";
 
 const statusChoices = ["ok", "error", "canceled"] as const;
 type StatusChoice = typeof statusChoices[number];

@@ -17,7 +17,7 @@ import {
 	traverseAndBuildWorkerJSDirectory,
 } from "../../pages/functions/buildWorker";
 import { validateRoutes } from "../../pages/functions/routes-validation";
-import { upload } from "./project/upload";
+import { fetchJwt, uploadWithDefaults } from "../../pages/upload";
 import { createUploadWorkerBundleContents } from "./create-worker-bundle-contents";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Project, Deployment } from "@cloudflare/types";
@@ -196,11 +196,10 @@ export async function deploy({
 		}
 	}
 
-	const manifest = await upload({
+	const manifest = await uploadWithDefaults({
 		directory,
-		accountId,
-		projectName,
 		skipCaching: skipCaching ?? false,
+		fetchJwt: () => fetchJwt(accountId, projectName),
 	});
 
 	const formData = new FormData();

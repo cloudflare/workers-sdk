@@ -1,9 +1,9 @@
-import { toUrlPath } from "../../paths";
 import {
 	MAX_FUNCTIONS_ROUTES_RULES,
 	ROUTES_SPEC_VERSION,
 	ROUTES_SPEC_DESCRIPTION,
-} from "../constants";
+} from "@cloudflare/pages-shared/constants";
+import { toUrlPath } from "../../paths";
 import {
 	compareRoutes,
 	convertRoutesToGlobPatterns,
@@ -203,7 +203,7 @@ describe("route-paths-to-glob-patterns", () => {
 			expect(
 				optimizeRoutesJSONSpec({
 					version: ROUTES_SPEC_VERSION,
-					description: ROUTES_SPEC_DESCRIPTION,
+					description: ROUTES_SPEC_DESCRIPTION("1.2.3"),
 					exclude: [],
 					include: [
 						"/api/foo/bar",
@@ -215,7 +215,7 @@ describe("route-paths-to-glob-patterns", () => {
 				})
 			).toEqual({
 				version: ROUTES_SPEC_VERSION,
-				description: ROUTES_SPEC_DESCRIPTION,
+				description: ROUTES_SPEC_DESCRIPTION("1.2.3"),
 				include: ["/middleware/*", "/foo/*", "/api/foo/bar"],
 				exclude: [],
 			});
@@ -229,13 +229,13 @@ describe("route-paths-to-glob-patterns", () => {
 			expect(
 				optimizeRoutesJSONSpec({
 					version: ROUTES_SPEC_VERSION,
-					description: ROUTES_SPEC_DESCRIPTION,
+					description: ROUTES_SPEC_DESCRIPTION("1.2.3"),
 					include,
 					exclude: [],
 				})
 			).toEqual({
 				version: ROUTES_SPEC_VERSION,
-				description: ROUTES_SPEC_DESCRIPTION,
+				description: ROUTES_SPEC_DESCRIPTION("1.2.3"),
 				include: ["/*"],
 				exclude: [],
 			});
@@ -249,7 +249,7 @@ describe("route-paths-to-glob-patterns", () => {
 			expect(
 				optimizeRoutesJSONSpec({
 					version: ROUTES_SPEC_VERSION,
-					description: ROUTES_SPEC_DESCRIPTION,
+					description: ROUTES_SPEC_DESCRIPTION("1.2.3"),
 					include,
 					exclude: [],
 				}).include.length

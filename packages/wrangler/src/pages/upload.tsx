@@ -1,17 +1,20 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import { upload } from "@cloudflare/pages-shared/project/upload";
 import { render, Text } from "ink";
 import Spinner from "ink-spinner";
 import React from "react";
-import { upload } from "../api/pages/project/upload";
+import { fetchResult } from "../cfetch";
 import { FatalError } from "../errors";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 
+import { hashFile } from "./hash";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+import type { UploadPayloadFile } from "@cloudflare/pages-shared/types";
 
 type UploadArgs = StrictYargsOptionsToInterface<typeof Options>;
 
@@ -47,29 +50,10 @@ export const Handler = async ({
 		throw new FatalError("No JWT given.", 1);
 	}
 
-	// On the first progress event from the uploader, create the progress
-	// renderer and populate these values f
-	let rerender: (done: number, total: number) => void | undefined;
-	let unmount: () => void | undefined;
-
-	const manifest = await upload({
-		directory,
+	const manifest = await uploadWithDefaults({
 		jwt: process.env.CF_PAGES_UPLOAD_JWT,
-		skipCaching: skipCaching ?? false,
-		onProgress: (done, total) => {
-			if (!rerender && !unmount) {
-				const progress = renderProgress(done, total);
-				rerender = progress.rerender;
-				unmount = progress.unmount;
-			} else {
-				rerender(done, total);
-			}
-		},
-		onUploadComplete: () => {
-			if (unmount) {
-				unmount();
-			}
-		},
+		directory,
+		skipCaching,
 	});
 
 	if (outputManifestPath) {
@@ -79,6 +63,93 @@ export const Handler = async ({
 
 	logger.log(`✨ Upload complete!`);
 };
+
+const checkMissing = (jwt: string, hashes: string[]) =>
+	fetchResult<string[]>(`/pages/assets/check-missing`, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			Authorization: `Bearer ${jwt}`,
+		},
+		body: JSON.stringify({
+			hashes,
+		}),
+	});
+
+const upsertHashes = (jwt: string, hashes: string[]) =>
+	fetchResult(`/pages/assets/upsert-hashes`, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			Authorization: `Bearer ${jwt}`,
+		},
+		body: JSON.stringify({
+			hashes,
+		}),
+	});
+
+const uploadPayload = (jwt: string, payload: UploadPayloadFile[]) =>
+	fetchResult(`/pages/assets/upload`, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			Authorization: `Bearer ${jwt}`,
+		},
+		body: JSON.stringify(payload),
+	});
+
+export const fetchJwt = async (accountId: string, projectName: string) => {
+	const { jwt } = await fetchResult<{ jwt: string }>(
+		`/accounts/${accountId}/pages/projects/${projectName}/upload-token`
+	);
+
+	return jwt;
+};
+
+interface UploadWithDefaultsBaseProps {
+	directory: string;
+	skipCaching?: boolean;
+}
+
+type UploadWithDefaultsProps =
+	| (UploadWithDefaultsBaseProps & { jwt: string })
+	| (UploadWithDefaultsBaseProps & { fetchJwt: () => Promise<string> });
+
+export async function uploadWithDefaults({
+	skipCaching = false,
+	...props
+}: UploadWithDefaultsProps) {
+	// On the first progress event from the uploader, create the progress
+	// renderer and populate these values f
+	let rerender: (done: number, total: number) => void | undefined;
+	let unmount: () => void | undefined;
+	const onProgress = (done: number, total: number): void => {
+		if (!rerender && !unmount) {
+			const progress = renderProgress(done, total);
+			rerender = progress.rerender;
+			unmount = progress.unmount;
+		} else {
+			rerender(done, total);
+		}
+	};
+	const onUploadComplete = () => {
+		if (unmount) {
+			unmount();
+		}
+	};
+
+	return await upload({
+		...props,
+		logger,
+		skipCaching: skipCaching ?? false,
+		onProgress,
+		onUploadComplete,
+		checkMissing,
+		upsertHashes,
+		uploadPayload,
+		hashFile,
+	});
+}
 
 export function renderProgress(done: number, total: number) {
 	if (isInteractive()) {

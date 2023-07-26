@@ -4,9 +4,6 @@ import { getType } from "mime";
 import { Minimatch } from "minimatch";
 import PQueue from "p-queue";
 import prettyBytes from "pretty-bytes";
-import { fetchResult } from "../../../cfetch";
-import { FatalError } from "../../../errors";
-import { logger } from "../../../logger";
 import {
 	MAX_ASSET_COUNT,
 	MAX_ASSET_SIZE,
@@ -15,44 +12,56 @@ import {
 	MAX_BUCKET_SIZE,
 	MAX_CHECK_MISSING_ATTEMPTS,
 	MAX_UPLOAD_ATTEMPTS,
-} from "../../../pages/constants";
-import { hashFile } from "../../../pages/hash";
-import type { UploadPayloadFile } from "../../../pages/types";
+} from "../constants";
+import type { UploadPayloadFile } from "../types";
 
-export const upload = async (
-	args: {
-		skipCaching: boolean;
-		directory: string;
-		/**
-		 * Called after a chunk of files has uploaded
-		 * @param done How many files have been uploaded
-		 * @param total The total files to be uploaded
-		 */
-		onProgress?: (done: number, total: number) => void;
-		/**
-		 * Called after all files have been uploaded
-		 */
-		onUploadComplete?: () => void;
-	} & (
-		| {
-				jwt: string;
-		  }
-		| {
-				directory: string;
-				accountId: string;
-				projectName: string;
-		  }
-	)
-) => {
+type LogFn = (...args: unknown[]) => void;
+
+interface UploadBaseProps {
+	logger: {
+		debug: LogFn;
+		info: LogFn;
+		log: LogFn;
+		warn: LogFn;
+		error: LogFn;
+	};
+	hashFile:
+		| ((contents: string) => string)
+		| ((contents: string) => Promise<string>);
+	skipCaching: boolean;
+	directory: string;
+
+	checkMissing: (jwt: string, hashes: string[]) => Promise<string[]>;
+	upsertHashes: (jwt: string, hashes: string[]) => Promise<unknown>;
+	uploadPayload: (
+		jwt: string,
+		payload: UploadPayloadFile[]
+	) => Promise<unknown>;
+
+	/**
+	 * Called after a chunk of files has uploaded
+	 * @param done How many files have been uploaded
+	 * @param total The total files to be uploaded
+	 */
+	onProgress?: (done: number, total: number) => void;
+	/**
+	 * Called after all files have been uploaded
+	 */
+	onUploadComplete?: () => void;
+}
+
+type UploadProps =
+	| (UploadBaseProps & { jwt: string })
+	| (UploadBaseProps & { fetchJwt: () => Promise<string> });
+
+export const upload = async (args: UploadProps) => {
+	const { logger, hashFile } = args;
+
 	async function fetchJwt(): Promise<string> {
 		if ("jwt" in args) {
 			return args.jwt;
 		} else {
-			return (
-				await fetchResult<{ jwt: string }>(
-					`/accounts/${args.accountId}/pages/projects/${args.projectName}/upload-token`
-				)
-			).jwt;
+			return await args.fetchJwt();
 		}
 	}
 
@@ -125,7 +134,7 @@ export const upload = async (
 						path: filepath,
 						contentType: getType(name) || "application/octet-stream",
 						sizeInBytes: filestat.size,
-						hash: hashFile(filepath),
+						hash: await Promise.resolve(hashFile(filepath)),
 					});
 				}
 			})
@@ -157,16 +166,10 @@ export const upload = async (
 		}
 
 		try {
-			return await fetchResult<string[]>(`/pages/assets/check-missing`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${jwt}`,
-				},
-				body: JSON.stringify({
-					hashes: files.map(({ hash }) => hash),
-				}),
-			});
+			return await args.checkMissing(
+				jwt,
+				files.map(({ hash }) => hash)
+			);
 		} catch (e) {
 			if (attempts < MAX_CHECK_MISSING_ATTEMPTS) {
 				// Exponential backoff, 1 second first time, then 2 second, then 4 second etc.
@@ -253,14 +256,7 @@ export const upload = async (
 
 			try {
 				logger.debug("POST /pages/assets/upload");
-				const res = await fetchResult(`/pages/assets/upload`, {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-						Authorization: `Bearer ${jwt}`,
-					},
-					body: JSON.stringify(payload),
-				});
+				const res = await args.uploadPayload(jwt, payload);
 				logger.debug("result:", res);
 			} catch (e) {
 				if (attempts < MAX_UPLOAD_ATTEMPTS) {
@@ -316,18 +312,12 @@ export const upload = async (
 		} files ${skippedMessage}${formatTime(uploadMs)}\n`
 	);
 
-	const doUpsertHashes = async (): Promise<void> => {
+	const doUpsertHashes = async (): Promise<unknown> => {
 		try {
-			return await fetchResult(`/pages/assets/upsert-hashes`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${jwt}`,
-				},
-				body: JSON.stringify({
-					hashes: files.map(({ hash }) => hash),
-				}),
-			});
+			return args.upsertHashes(
+				jwt,
+				files.map(({ hash }) => hash)
+			);
 		} catch (e) {
 			await new Promise((resolvePromise) => setTimeout(resolvePromise, 1000));
 
@@ -336,16 +326,10 @@ export const upload = async (
 				jwt = await fetchJwt();
 			}
 
-			return await fetchResult(`/pages/assets/upsert-hashes`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${jwt}`,
-				},
-				body: JSON.stringify({
-					hashes: files.map(({ hash }) => hash),
-				}),
-			});
+			return args.upsertHashes(
+				jwt,
+				files.map(({ hash }) => hash)
+			);
 		}
 	};
 
@@ -384,4 +368,10 @@ export function isJwtExpired(token: string): boolean | undefined {
 
 export function formatTime(duration: number) {
 	return `(${(duration / 1000).toFixed(2)} sec)`;
+}
+
+class FatalError extends Error {
+	constructor(message?: string, readonly code?: number) {
+		super(message);
+	}
 }

@@ -1,10 +1,11 @@
 import { join as pathJoin } from "node:path";
-import { toUrlPath } from "../../paths";
 import {
 	MAX_FUNCTIONS_ROUTES_RULES,
 	ROUTES_SPEC_DESCRIPTION,
 	ROUTES_SPEC_VERSION,
-} from "../constants";
+} from "@cloudflare/pages-shared/constants";
+import { version as wranglerVersion } from "../../../package.json";
+import { toUrlPath } from "../../paths";
 import { consolidateRoutes } from "./routes-consolidation";
 import type { RouteConfig } from "./routes";
 
@@ -58,7 +59,7 @@ export function convertRoutesToRoutesJSONSpec(
 	const include = convertRoutesToGlobPatterns(reversedRoutes);
 	return optimizeRoutesJSONSpec({
 		version: ROUTES_SPEC_VERSION,
-		description: ROUTES_SPEC_DESCRIPTION,
+		description: ROUTES_SPEC_DESCRIPTION(wranglerVersion),
 		include,
 		exclude: [],
 	});

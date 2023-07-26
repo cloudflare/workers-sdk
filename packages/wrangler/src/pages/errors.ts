@@ -2,7 +2,7 @@ import {
 	MAX_FUNCTIONS_ROUTES_RULES,
 	MAX_FUNCTIONS_ROUTES_RULE_LENGTH,
 	ROUTES_SPEC_VERSION,
-} from "./constants";
+} from "@cloudflare/pages-shared/constants";
 import { RoutesValidationError } from "./functions/routes-validation";
 
 /**
