@@ -45,6 +45,8 @@ function useDevRegistry(
 ): WorkerRegistry {
 	const [workers, setWorkers] = useState<WorkerRegistry>({});
 
+	const hasFailedToFetch = useRef(false);
+
 	useEffect(() => {
 		// Let's try to start registry
 		// TODO: we should probably call this in a loop
@@ -73,7 +75,10 @@ function useDevRegistry(
 								});
 							},
 							(err) => {
-								logger.warn("Failed to get worker definitions", err);
+								if (!hasFailedToFetch.current) {
+									hasFailedToFetch.current = true;
+									logger.warn("Failed to get worker definitions", err);
+								}
 							}
 						);
 				  }, 300)
