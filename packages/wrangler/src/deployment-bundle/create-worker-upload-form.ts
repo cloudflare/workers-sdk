@@ -7,6 +7,7 @@ import type {
 	CfPlacement,
 	CfTailConsumer,
 } from "./worker.js";
+import type { Json } from "miniflare";
 
 export function toMimeType(type: CfModuleType): string {
 	switch (type) {
@@ -29,7 +30,7 @@ export type WorkerMetadataBinding =
 	// If you add any new binding types here, also add it to safeBindings
 	// under validateUnsafeBinding in config/validation.ts
 	| { type: "plain_text"; name: string; text: string }
-	| { type: "json"; name: string; json: unknown }
+	| { type: "json"; name: string; json: Json }
 	| { type: "wasm_module"; name: string; part: string }
 	| { type: "text_blob"; name: string; part: string }
 	| { type: "browser"; name: string }
