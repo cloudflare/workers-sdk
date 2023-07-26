@@ -14,7 +14,6 @@ import type {
 	RequestInitCfProperties,
 } from "@cloudflare/workers-types/experimental";
 import exitHook from "exit-hook";
-import { splitCookiesString } from "set-cookie-parser";
 import stoppable from "stoppable";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
@@ -372,7 +371,7 @@ async function writeResponse(response: Response, res: http.ServerResponse) {
 		const key = entry[0].toLowerCase();
 		const value = entry[1];
 		if (key === "set-cookie") {
-			headers[key] = splitCookiesString(value);
+			headers[key] = response.headers.getSetCookie();
 		} else {
 			headers[key] = value;
 		}
