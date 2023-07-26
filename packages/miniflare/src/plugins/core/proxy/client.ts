@@ -288,6 +288,7 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 			// Need to `.pipeThrough()` here otherwise we'll get
 			// `TypeError: Response body object should not be disturbed or locked`
 			// when trying to construct a `Response` with the stream.
+			// TODO(soon): add support for MINIFLARE_ASSERT_BODIES_CONSUMED here
 			unbufferedStream = rest.pipeThrough(new TransformStream());
 		}
 

@@ -41,7 +41,7 @@ test("flushes partial and full batches", async (t) => {
             } else if (url.pathname === "/batch") {
               await env.QUEUE.sendBatch(body);
             }
-            return new Response();
+            return new Response(null, { status: 204 });
           }
         }`,
 			},
@@ -232,7 +232,7 @@ test("sends all structured cloneable types", async (t) => {
             await env.QUEUE.sendBatch(Object.entries(VALUES).map(
               ([key, value]) => ({ body: { name: key, value } })
             ));
-            return new Response();
+            return new Response(null, { status: 204 });
           },
           async queue(batch, env, ctx) {
             let error;
@@ -305,7 +305,7 @@ test("retries messages", async (t) => {
         const url = new URL(request.url);
         const body = await request.json();
         await env.QUEUE.sendBatch(body);
-        return new Response();
+        return new Response(null, { status: 204 });
       },
       async queue(batch, env, ctx) {
         const res = await env.RETRY_FILTER.fetch("http://localhost", {
@@ -532,7 +532,7 @@ test("moves to dead letter queue", async (t) => {
         const url = new URL(request.url);
         const body = await request.json();
         await env.BAD_QUEUE.sendBatch(body);
-        return new Response();
+        return new Response(null, { status: 204 });
       },
       async queue(batch, env, ctx) {
         const res = await env.RETRY_FILTER.fetch("http://localhost", {
@@ -638,7 +638,7 @@ test("operations permit strange queue names", async (t) => {
       async fetch(request, env, ctx) {
         await env.QUEUE.send("msg1");
         await env.QUEUE.sendBatch([{ body: "msg2" }]);
-        return new Response();
+        return new Response(null, { status: 204 });
       },
       async queue(batch, env, ctx) {
         await env.REPORTER.fetch("http://localhost", {
@@ -718,7 +718,8 @@ test("supports message contentTypes", async (t) => {
   },
 };`,
 	});
-	await mf.dispatchFetch("http://localhost");
+	const res = await mf.dispatchFetch("http://localhost");
+	await res.arrayBuffer(); // (drain)
 	timers.timestamp += 1000;
 	await timers.waitForTasks();
 	const batch = await promise;

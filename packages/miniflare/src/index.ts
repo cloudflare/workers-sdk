@@ -1091,6 +1091,25 @@ export class Miniflare {
 			throw reviveError(this.#workerSrcOpts, caught);
 		}
 
+		if (
+			process.env.MINIFLARE_ASSERT_BODIES_CONSUMED !== undefined &&
+			response.body !== null
+		) {
+			// Throw an uncaught exception if the body from this response isn't
+			// consumed "immediately". `undici` may hang or throw socket errors if we
+			// don't remember to do this:
+			// https://github.com/nodejs/undici/issues/583#issuecomment-1577468249
+			const originalLimit = Error.stackTraceLimit;
+			Error.stackTraceLimit = Infinity;
+			const error = new Error(
+				"`body` returned from `Miniflare#dispatchFetch()` not consumed immediately"
+			);
+			Error.stackTraceLimit = originalLimit;
+			setImmediate(() => {
+				if (!response.bodyUsed) throw error;
+			});
+		}
+
 		return response;
 	};
 
@@ -1109,7 +1128,8 @@ export class Miniflare {
 	async _getProxyClient(): Promise<ProxyClient> {
 		this.#checkDisposed();
 		await this.ready;
-		return this.#proxyClient!;
+		assert(this.#proxyClient !== undefined);
+		return this.#proxyClient;
 	}
 
 	async getBindings<Env = Record<string, unknown>>(
