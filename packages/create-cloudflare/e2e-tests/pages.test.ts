@@ -21,18 +21,26 @@ type FrameworkTestConfig = RunnerConfig & {
 	expectResponseToContain: string;
 };
 
-describe("E2E: Web frameworks", () => {
+describe(`E2E: Web frameworks`, () => {
 	const tmpDirPath = realpathSync(mkdtempSync(join(tmpdir(), "c3-tests")));
-	let projectPath: string;
-	let projectName: string;
+	const baseProjectName = `c3-e2e-${crypto.randomBytes(4).toString("hex")}`;
 
-	beforeEach(() => {
-		projectName = `${TEST_PREFIX}${crypto.randomBytes(4).toString("hex")}`;
-		projectPath = join(tmpDirPath, projectName);
+	const getProjectName = (framework: string) =>
+		`${baseProjectName}-${framework}`;
+	const getProjectPath = (framework: string) =>
+		join(tmpDirPath, getProjectName(framework));
+
+	beforeEach((ctx) => {
+		const framework = ctx.meta.name;
+		const projectPath = getProjectPath(framework);
 		rmSync(projectPath, { recursive: true, force: true });
 	});
 
-	afterEach(() => {
+	afterEach((ctx) => {
+		const framework = ctx.meta.name;
+		const projectPath = getProjectPath(framework);
+		const projectName = getProjectPath(framework);
+
 		if (existsSync(projectPath)) {
 			rmSync(projectPath, { recursive: true });
 		}
@@ -44,6 +52,8 @@ describe("E2E: Web frameworks", () => {
 		framework: string,
 		{ argv = [], promptHandlers = [], overrides }: RunnerConfig
 	) => {
+		const projectPath = getProjectPath(framework);
+
 		const args = [
 			projectPath,
 			"--type",
@@ -90,6 +100,8 @@ describe("E2E: Web frameworks", () => {
 	};
 
 	const runCliWithDeploy = async (framework: string) => {
+		const projectName = `${baseProjectName}-${framework}`;
+
 		const { argv, overrides, promptHandlers, expectResponseToContain } =
 			frameworkTests[framework];
 
@@ -190,7 +202,7 @@ describe("E2E: Web frameworks", () => {
 		},
 	};
 
-	test.each(Object.keys(frameworkTests))(
+	test.concurrent.each(Object.keys(frameworkTests))(
 		"%s",
 		async (name) => {
 			await runCliWithDeploy(name);

@@ -69,6 +69,7 @@ export const runC3 = async ({
 			if (code === 0) {
 				resolve(null);
 			} else {
+				console.log(stderr.join("\n").trim());
 				rejects(code);
 			}
 		});
