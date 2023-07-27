@@ -79,7 +79,7 @@ export async function generateTypes(
 		}
 	}
 
-	if (configToDTS.logfwdr?.schema) {
+	if (configToDTS.logfwdr?.bindings?.length) {
 		envTypeStructure.push(`LOGFWDR_SCHEMA: any;`);
 	}
 

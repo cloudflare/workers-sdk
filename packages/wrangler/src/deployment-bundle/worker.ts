@@ -170,7 +170,6 @@ interface CfMTlsCertificate {
 }
 
 interface CfLogfwdr {
-	schema: string | undefined;
 	bindings: CfLogfwdrBinding[];
 }
 
@@ -186,9 +185,22 @@ interface CfUnsafeBinding {
 
 type CfUnsafeMetadata = Record<string, unknown>;
 
+export type CfCapnp =
+	| {
+			base_path?: never;
+			source_schemas?: never;
+			compiled_schema: string;
+	  }
+	| {
+			base_path: string;
+			source_schemas: string[];
+			compiled_schema?: never;
+	  };
+
 interface CfUnsafe {
 	bindings: CfUnsafeBinding[] | undefined;
 	metadata: CfUnsafeMetadata | undefined;
+	capnp: CfCapnp | undefined;
 }
 
 export interface CfDurableObjectMigrations {

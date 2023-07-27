@@ -2682,7 +2682,6 @@ describe("init", () => {
 					DATA_BLOB_TWO: "DATA_BLOB_TWO",
 				},
 				logfwdr: {
-					schema: "",
 					bindings: [
 						{
 							name: "httplogs",
@@ -3030,16 +3029,13 @@ describe("init", () => {
 			binding = \\"name-namespace-mock\\"
 			namespace = \\"namespace-mock\\"
 
-			[logfwdr]
-			schema = \\"\\"
+			[[logfwdr.bindings]]
+			name = \\"httplogs\\"
+			destination = \\"httplogs\\"
 
-			  [[logfwdr.bindings]]
-			  name = \\"httplogs\\"
-			  destination = \\"httplogs\\"
-
-			  [[logfwdr.bindings]]
-			  name = \\"trace\\"
-			  destination = \\"trace\\"
+			[[logfwdr.bindings]]
+			name = \\"trace\\"
+			destination = \\"trace\\"
 
 			[wasm_modules]
 			WASM_MODULE_ONE = \\"./some_wasm.wasm\\"

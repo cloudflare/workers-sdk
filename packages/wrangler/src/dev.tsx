@@ -913,6 +913,7 @@ function getBindings(
 		unsafe: {
 			bindings: configParam.unsafe.bindings,
 			metadata: configParam.unsafe.metadata,
+			capnp: configParam.unsafe.capnp,
 		},
 		logfwdr: configParam.logfwdr,
 		d1_databases: identifyD1BindingsAsBeta([

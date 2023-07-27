@@ -562,6 +562,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			unsafe: {
 				bindings: config.unsafe.bindings,
 				metadata: config.unsafe.metadata,
+				capnp: config.unsafe.capnp,
 			},
 		};
 
