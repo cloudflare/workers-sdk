@@ -12,6 +12,6 @@
 		"emitDeclarationOnly": true,
 		"outDir": "emitted-types"
 	},
-	"files": ["src/api/index.ts"],
+	"files": ["src/api/index.ts", "streams.d.ts"],
 	"include": ["src/*.d.ts"]
 }
