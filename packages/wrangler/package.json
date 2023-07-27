@@ -46,8 +46,7 @@
 		"miniflare-dist",
 		"wrangler-dist",
 		"templates",
-		"kv-asset-handler.js",
-		"Cloudflare_CA.pem"
+		"kv-asset-handler.js"
 	],
 	"scripts": {
 		"assert-git-version": "node -r esbuild-register scripts/assert-git-version.ts",
