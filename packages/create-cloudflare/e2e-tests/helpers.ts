@@ -1,4 +1,5 @@
 import { spawn } from "cross-spawn";
+import { spinnerFrames } from "helpers/interactive";
 
 export const keys = {
 	enter: "\x0d",
@@ -37,6 +38,10 @@ export const runC3 = async ({
 			const currentDialog = promptHandlers[0];
 
 			lines.forEach((line) => {
+				// Uncomment to debug test output
+				// if (filterLine(line)) {
+				// 	console.log(line);
+				// }
 				stdout.push(line);
 
 				if (currentDialog && currentDialog.matcher.test(line)) {
@@ -64,17 +69,39 @@ export const runC3 = async ({
 			if (code === 0) {
 				resolve(null);
 			} else {
+				console.log(stderr.join("\n").trim());
 				rejects(code);
 			}
 		});
 
-		proc.on("error", (err) => {
-			rejects(err);
+		proc.on("error", (exitCode) => {
+			rejects({
+				exitCode,
+				output: condenseOutput(stdout).join("\n").trim(),
+				errors: stderr.join("\n").trim(),
+			});
 		});
 	});
 
 	return {
-		output: stdout.join("\n").trim(),
+		output: condenseOutput(stdout).join("\n").trim(),
 		errors: stderr.join("\n").trim(),
 	};
+};
+
+// Removes lines from the output of c3 that aren't particularly useful for debugging tests
+export const condenseOutput = (lines: string[]) => {
+	return lines.filter(filterLine);
+};
+
+const filterLine = (line: string) => {
+	// Remove all lines with spinners
+	for (const frame of spinnerFrames) {
+		if (line.includes(frame)) return false;
+	}
+
+	// Remove empty lines
+	if (line.replace(/\s/g, "").length == 0) return false;
+
+	return true;
 };
