@@ -1,5 +1,12 @@
 # create-cloudflare
 
+## 2.1.0
+
+### Minor Changes
+
+- [#3604](https://github.com/cloudflare/workers-sdk/pull/3604) [`c3ff1c2b`](https://github.com/cloudflare/workers-sdk/commit/c3ff1c2b599c99f4915dad0362c7570cc2fa2bf3) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add the option to add the `eslint-plugin-next-on-pages` eslint plugin
+  to developers creating a new Next.js app with eslint enabled
+
 ## 2.0.14
 
 ### Patch Changes
