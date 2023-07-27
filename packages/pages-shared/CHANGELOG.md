@@ -1,5 +1,11 @@
 # @cloudflare/pages-shared
 
+## 0.8.0
+
+### Minor Changes
+
+- [#3675](https://github.com/cloudflare/workers-sdk/pull/3675) [`f753f3af`](https://github.com/cloudflare/workers-sdk/commit/f753f3afb7478bb289b39c44b33acbcefe06e99a) Thanks [@1000hz](https://github.com/1000hz)! - chore: upgrade `miniflare` to [`3.20230724.0`](https://github.com/cloudflare/miniflare/releases/tag/v3.20230724.0)
+
 ## 0.7.0
 
 ### Minor Changes
