@@ -24,7 +24,6 @@ Wrangler is used to develop, deploy, and configure your Worker via CLI.
 
 Further documentation for Wrangler can be found [here](https://developers.cloudflare.com/workers/tooling/wrangler).
 
-
 ## sbt
 
 After installing sbt per the linked instructions above,
