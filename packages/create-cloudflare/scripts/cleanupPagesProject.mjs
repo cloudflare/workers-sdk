@@ -21,7 +21,7 @@ const listProjectsToDelete = async () => {
 	const { stdout } = await npx("wrangler pages project list");
 
 	for (const line of stdout.split("\n")) {
-		const c3ProjectRe = /(c3-e2e-\w*)\s+│/;
+		const c3ProjectRe = /(c3-e2e-[\w-]*)\s?│/;
 		const match = line.match(c3ProjectRe);
 
 		if (match) {
@@ -34,8 +34,12 @@ const listProjectsToDelete = async () => {
 
 const deleteProjects = async (projects) => {
 	for (const project of projects) {
-		console.log(`Deleting project: ${project}`);
-		await npx(`wrangler pages project delete -y ${project}`);
+		try {
+			console.log(`Deleting project: ${project}`);
+			await npx(`wrangler pages project delete -y ${project}`);
+		} catch (error) {
+			console.error(error);
+		}
 	}
 };
 

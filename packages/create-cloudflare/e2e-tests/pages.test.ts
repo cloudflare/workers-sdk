@@ -23,7 +23,7 @@ type FrameworkTestConfig = RunnerConfig & {
 
 describe(`E2E: Web frameworks`, () => {
 	const tmpDirPath = realpathSync(mkdtempSync(join(tmpdir(), "c3-tests")));
-	const baseProjectName = `c3-e2e-${crypto.randomBytes(4).toString("hex")}`;
+	const baseProjectName = `c3-e2e-${crypto.randomBytes(3).toString("hex")}`;
 
 	const getProjectName = (framework: string) =>
 		`${baseProjectName}-${framework}`;
@@ -39,13 +39,29 @@ describe(`E2E: Web frameworks`, () => {
 	afterEach((ctx) => {
 		const framework = ctx.meta.name;
 		const projectPath = getProjectPath(framework);
-		const projectName = getProjectPath(framework);
+		const projectName = getProjectName(framework);
 
 		if (existsSync(projectPath)) {
 			rmSync(projectPath, { recursive: true });
 		}
 
-		spawn("npx", ["wrangler", "pages", "project", "delete", "-y", projectName]);
+		try {
+			const { output } = spawn.sync("npx", [
+				"wrangler",
+				"pages",
+				"project",
+				"delete",
+				"-y",
+				projectName,
+			]);
+
+			if (!output.toString().includes(`Successfully deleted ${projectName}`)) {
+				console.error(output.toString());
+			}
+		} catch (error) {
+			console.error(`Failed to cleanup project: ${projectName}`);
+			console.error(error);
+		}
 	});
 
 	const runCli = async (
@@ -124,12 +140,25 @@ describe(`E2E: Web frameworks`, () => {
 		).toContain(expectResponseToContain);
 	};
 
+	// These are ordered based on speed and reliability for ease of debugging
 	const frameworkTests: Record<string, FrameworkTestConfig> = {
 		astro: {
 			expectResponseToContain: "Hello, Astronaut!",
 		},
 		hono: {
 			expectResponseToContain: "/api/hello",
+		},
+		qwik: {
+			expectResponseToContain: "Welcome to Qwik",
+			promptHandlers: [
+				{
+					matcher: /Yes looks good, finish update/,
+					input: [keys.enter],
+				},
+			],
+		},
+		remix: {
+			expectResponseToContain: "Welcome to Remix",
 		},
 		next: {
 			expectResponseToContain: "Create Next App",
@@ -148,20 +177,8 @@ describe(`E2E: Web frameworks`, () => {
 				},
 			},
 		},
-		qwik: {
-			expectResponseToContain: "Welcome to Qwik",
-			promptHandlers: [
-				{
-					matcher: /Yes looks good, finish update/,
-					input: [keys.enter],
-				},
-			],
-		},
 		react: {
 			expectResponseToContain: "React App",
-		},
-		remix: {
-			expectResponseToContain: "Welcome to Remix",
 		},
 		solid: {
 			expectResponseToContain: "Hello world",
