@@ -115,8 +115,12 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 									data_blobs: {},
 									dispatch_namespaces: [],
 									mtls_certificates: [],
-									logfwdr: { capnp_schema: undefined, bindings: [] },
-									unsafe: { bindings: undefined, metadata: undefined },
+									logfwdr: { bindings: [] },
+									unsafe: {
+										bindings: undefined,
+										metadata: undefined,
+										capnp: undefined,
+									},
 								},
 								modules: [],
 								migrations: undefined,
@@ -127,7 +131,6 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 								logpush: false,
 								placement: undefined,
 								tail_consumers: undefined,
-								capnp_src_prefix: undefined,
 							}),
 						}
 					);

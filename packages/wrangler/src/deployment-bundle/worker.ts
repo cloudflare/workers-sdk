@@ -169,7 +169,6 @@ interface CfMTlsCertificate {
 }
 
 interface CfLogfwdr {
-	capnp_schema: string | undefined;
 	bindings: CfLogfwdrBinding[];
 }
 
@@ -181,14 +180,26 @@ interface CfLogfwdrBinding {
 interface CfUnsafeBinding {
 	name: string;
 	type: string;
-	capnp_schema?: string;
 }
 
 type CfUnsafeMetadata = Record<string, unknown>;
 
+export type CfCapnp =
+	| {
+			base_path?: never;
+			source_schemas?: never;
+			compiled_schema: string;
+	  }
+	| {
+			base_path: string;
+			source_schemas: string[];
+			compiled_schema?: never;
+	  };
+
 interface CfUnsafe {
 	bindings: CfUnsafeBinding[] | undefined;
 	metadata: CfUnsafeMetadata | undefined;
+	capnp: CfCapnp | undefined;
 }
 
 export interface CfDurableObjectMigrations {
@@ -260,7 +271,6 @@ export interface CfWorkerInit {
 	logpush: boolean | undefined;
 	placement: CfPlacement | undefined;
 	tail_consumers: CfTailConsumer[] | undefined;
-	capnp_src_prefix: string | undefined;
 }
 
 export interface CfWorkerContext {

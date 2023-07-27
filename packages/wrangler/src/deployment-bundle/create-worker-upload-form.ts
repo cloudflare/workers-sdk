@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { FormData, File } from "undici";
-import { callCapnp } from "./call-capnp";
+import { handleUnsafeCapnp } from "./capnp";
 import type {
 	CfWorkerInit,
 	CfModuleType,
@@ -109,7 +109,6 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		logpush,
 		placement,
 		tail_consumers,
-		capnp_src_prefix,
 	} = worker;
 
 	let { modules } = worker;
@@ -348,28 +347,15 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		}
 	}
 
-	const capnp_schemas: string[] = [];
-
 	if (bindings.unsafe?.bindings) {
 		// @ts-expect-error unsafe bindings don't need to match a specific type here
 		metadataBindings.push(...bindings.unsafe.bindings);
-		for (const binding of bindings.unsafe.bindings) {
-			if (binding.capnp_schema) {
-				capnp_schemas.push(binding.capnp_schema);
-			}
-		}
-	}
-
-	if (bindings.logfwdr?.capnp_schema) {
-		capnp_schemas.push(bindings.logfwdr.capnp_schema);
 	}
 
 	let capnpSchemaOutputFile: string | undefined;
-
-	if (capnp_schemas.length) {
-		const capnpOutput = callCapnp(capnp_schemas, capnp_src_prefix);
+	if (bindings.unsafe?.capnp) {
+		const capnpOutput = handleUnsafeCapnp(bindings.unsafe.capnp);
 		capnpSchemaOutputFile = `./capnp-${Date.now()}.compiled`;
-
 		formData.set(
 			capnpSchemaOutputFile,
 			new File([capnpOutput], capnpSchemaOutputFile, {

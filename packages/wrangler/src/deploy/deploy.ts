@@ -560,6 +560,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			unsafe: {
 				bindings: config.unsafe.bindings,
 				metadata: config.unsafe.metadata,
+				capnp: config.unsafe.capnp,
 			},
 		};
 
@@ -592,7 +593,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			logpush: props.logpush !== undefined ? props.logpush : config.logpush,
 			placement,
 			tail_consumers: config.tail_consumers,
-			capnp_src_prefix: config.capnp_src_prefix,
 		};
 
 		// As this is not deterministic for testing, we detect if in a jest environment and run asynchronously

@@ -214,8 +214,6 @@ jest.mock("execa", () => {
 	};
 });
 
-jest.mock("../deployment-bundle/call-capnp");
-
 afterEach(() => {
 	// It is important that we clear mocks between tests to avoid leakage.
 	jest.clearAllMocks();

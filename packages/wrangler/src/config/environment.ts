@@ -239,15 +239,12 @@ interface EnvironmentInheritable {
 	zone_id?: string;
 
 	/**
-	 * Specify a capnp schema to use
-	 * Then add a binding per field in the top level message that you will send to logfwdr
+	 * List of bindings that you will send to logfwdr
 	 *
-	 * @default `{schema:undefined,bindings:[]}`
+	 * @default `{bindings:[]}`
 	 * @inheritable
 	 */
 	logfwdr: {
-		/** capnp schema filename */
-		capnp_schema: string | undefined;
 		bindings: {
 			/** The binding name used to refer to logfwdr */
 			name: string;
@@ -255,11 +252,6 @@ interface EnvironmentInheritable {
 			destination: string;
 		}[];
 	};
-
-	/**
-	 * The source prefix to provide to capnp when Wrangler is compiling your capnp schemas
-	 */
-	capnp_src_prefix: string | undefined;
 
 	/**
 	 * Send Trace Events from this worker to Workers Logpush.
@@ -550,6 +542,21 @@ interface EnvironmentNonInheritable {
 		metadata?: {
 			[key: string]: string;
 		};
+
+		/**
+		 * Used for internal capnp uploads for the Workers runtime
+		 */
+		capnp?:
+			| {
+					base_path: string;
+					source_schemas: string[];
+					compiled_schema?: never;
+			  }
+			| {
+					base_path?: never;
+					source_schemas?: never;
+					compiled_schema: string;
+			  };
 	};
 
 	mtls_certificates: {

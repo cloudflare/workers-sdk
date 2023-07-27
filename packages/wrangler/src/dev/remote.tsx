@@ -578,7 +578,6 @@ async function createRemoteWorkerInit(props: {
 		logpush: false,
 		placement: undefined, // no placement in dev
 		tail_consumers: undefined, // no tail consumers in dev - TODO revist?
-		capnp_src_prefix: undefined, // we only run capnp when uploading to prod
 	};
 
 	return init;

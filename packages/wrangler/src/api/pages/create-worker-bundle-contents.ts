@@ -74,7 +74,6 @@ function createWorkerBundleFormData(workerBundle: BundleResult): FormData {
 		logpush: undefined,
 		placement: undefined,
 		tail_consumers: undefined,
-		capnp_src_prefix: undefined,
 	};
 
 	return createWorkerUploadForm(worker);

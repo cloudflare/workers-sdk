@@ -1294,25 +1294,6 @@ function normalizeAndValidateEnvironment(
 			validateTailConsumers,
 			undefined
 		),
-		logfwdr: inheritable(
-			diagnostics,
-			topLevelEnv,
-			rawEnv,
-			"logfwdr",
-			validateCflogfwdrObject(envName),
-			{
-				capnp_schema: undefined,
-				bindings: [],
-			}
-		),
-		capnp_src_prefix: inheritable(
-			diagnostics,
-			topLevelEnv,
-			rawEnv,
-			"capnp_src_prefix",
-			isString,
-			undefined
-		),
 		unsafe: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -1334,6 +1315,16 @@ function normalizeAndValidateEnvironment(
 			undefined
 		),
 		zone_id: rawEnv.zone_id,
+		logfwdr: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"logfwdr",
+			validateCflogfwdrObject(envName),
+			{
+				bindings: [],
+			}
+		),
 		no_bundle: inheritable(
 			diagnostics,
 			topLevelEnv,
@@ -1677,9 +1668,13 @@ const validateUnsafeSettings =
 		}
 
 		// At least one of bindings and metadata must exist
-		if (!hasProperty(value, "bindings") && !hasProperty(value, "metadata")) {
+		if (
+			!hasProperty(value, "bindings") &&
+			!hasProperty(value, "metadata") &&
+			!hasProperty(value, "capnp")
+		) {
 			diagnostics.errors.push(
-				`The field "${fieldPath}" should contain at least one of "bindings" or "metadata" properties but got ${JSON.stringify(
+				`The field "${fieldPath}" should contain at least one of "bindings", "metadata" or "capnp" properties but got ${JSON.stringify(
 					value
 				)}.`
 			);
@@ -1695,32 +1690,6 @@ const validateUnsafeSettings =
 			const valid = validateBindingsFn(diagnostics, field, value, config);
 			if (!valid) {
 				return false;
-			}
-			// If we have an array of bindings, we should validate each one to check their capnp_schema property
-			if (Array.isArray(value.bindings)) {
-				let isValid = true;
-				// we've already validated above that each item is an object, with name and type, so only capnp_schema needs to be checked
-				for (const binding of value.bindings as { capnp_schema?: string }[]) {
-					if (!isOptionalProperty(binding, "capnp_schema", "string")) {
-						diagnostics.errors.push(
-							`the "unsafe.bindings" field "capnp_schema", when present, should be a string. Got ${JSON.stringify(
-								binding.capnp_schema
-							)}`
-						);
-						isValid = false;
-						continue;
-					}
-					if (binding.capnp_schema?.endsWith(".compiled")) {
-						diagnostics.errors.push(
-							`"unsafe.bindings" field "capnp_schema" should not be pre-compiled - Wrangler will run capnp for you.`
-						);
-						isValid = false;
-						return isValid;
-					}
-				}
-				if (!isValid) {
-					return isValid;
-				}
 			}
 		}
 
@@ -1738,6 +1707,64 @@ const validateUnsafeSettings =
 				)}.`
 			);
 			return false;
+		}
+
+		// unsafe.capnp
+		if (hasProperty(value, "capnp") && value.capnp !== undefined) {
+			if (
+				typeof value.capnp !== "object" ||
+				value.capnp === null ||
+				Array.isArray(value.capnp)
+			) {
+				diagnostics.errors.push(
+					`The field "${fieldPath}.capnp" should be an object but got ${JSON.stringify(
+						value.capnp
+					)}.`
+				);
+				return false;
+			}
+
+			// validate whether they have a compiled_schema string. If they do, they should not use base_path or source_schemas
+			if (hasProperty(value.capnp, "compiled_schema")) {
+				if (
+					hasProperty(value.capnp, "base_path") ||
+					hasProperty(value.capnp, "source_schemas")
+				) {
+					diagnostics.errors.push(
+						`The field "${fieldPath}.capnp" cannot contain both "compiled_schema" and one of "base_path" or "source_schemas".`
+					);
+					return false;
+				}
+
+				if (typeof value.capnp.compiled_schema !== "string") {
+					diagnostics.errors.push(
+						`The field "${fieldPath}.capnp.compiled_schema", when present, should be a string but got ${JSON.stringify(
+							value.capnp.compiled_schema
+						)}.`
+					);
+					return false;
+				}
+			} else {
+				// they don't have a compiled_schema property, so they must have both base_path and source_schemas
+				if (!isRequiredProperty(value.capnp, "base_path", "string")) {
+					diagnostics.errors.push(
+						`The field "${fieldPath}.capnp.base_path", when present, should be a string but got ${JSON.stringify(
+							value.capnp.base_path
+						)}`
+					);
+				}
+
+				if (
+					!validateTypedArray(
+						diagnostics,
+						`${fieldPath}.capnp.source_schemas`,
+						value.capnp.source_schemas,
+						"string"
+					)
+				) {
+					return false;
+				}
+			}
 		}
 
 		return true;
@@ -1804,36 +1831,15 @@ const validateCflogfwdrObject: (env: string) => ValidatorFn =
 
 		const v = value as {
 			bindings: [];
-			capnp_schema: string | undefined;
 			schema: string | undefined;
 		};
 
 		if (v?.schema !== undefined) {
-			// the user should not be using the old schema property, as we've migrated to capnp_schema for consistency with the unsafe bindings
+			// the user should not be using the old schema property, as we've migrated to unsafe.capnp.schema for consistency with the unsafe bindings
 			diagnostics.errors.push(
-				`"${field}" binding "schema" property has been replaced with "capnp_schema", which expects a file path to an uncompiled capnp schema.`
+				`"${field}" binding "schema" property has been replaced with the "unsafe.capnp" object, which expects a "base_path" and an array of "source_schemas" to compile, or a "compiled_schema" property.`
 			);
 			return false;
-		}
-
-		// if there's something in the bindings array, the logfwdr schema is required, so we can exit early when there's no bindings
-		if (!v?.bindings.length) return true;
-
-		// we now know there are bindings, so we need to validate the schema property
-		if (!isRequiredProperty(v, "capnp_schema", "string")) {
-			diagnostics.errors.push(
-				`"${field}" bindings should have a string "capnp_schema" field but got ${JSON.stringify(
-					v
-				)}.`
-			);
-			return false;
-		}
-
-		//schema is definitely a string now, however it's historically been used to parse pre-compiled capnp, so an error should be thrown for that
-		if (v.capnp_schema?.endsWith(".compiled")) {
-			diagnostics.errors.push(
-				`"${field}" bindings "capnp_schema" field should not be pre-compiled - Wrangler will run capnp for you.`
-			);
 		}
 
 		return true;

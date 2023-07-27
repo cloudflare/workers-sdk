@@ -1,8 +1,10 @@
 import { Blob, Buffer } from "node:buffer";
+import childProcess from "node:child_process";
 import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as TOML from "@iarna/toml";
+import commandExists from "command-exists";
 import * as esbuild from "esbuild";
 import { MockedRequest, rest } from "msw";
 import { FormData } from "undici";
@@ -10,7 +12,6 @@ import {
 	printBundleSize,
 	printOffendingDependencies,
 } from "../deployment-bundle/bundle-reporter";
-import { callCapnp } from "../deployment-bundle/call-capnp";
 import { logger } from "../logger";
 import { writeAuthConfigFile } from "../user";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -5079,6 +5080,18 @@ addEventListener('fetch', event => {});`
 					DATA_BLOB_ONE: "./some-data-blob.bin",
 					DATA_BLOB_TWO: "./more-data-blob.bin",
 				},
+				logfwdr: {
+					bindings: [
+						{
+							name: "httplogs",
+							destination: "httplogs",
+						},
+						{
+							name: "trace",
+							destination: "trace",
+						},
+					],
+				},
 			});
 
 			writeWorkerSource({ type: "sw" });
@@ -5150,6 +5163,16 @@ addEventListener('fetch', event => {});`
 						type: "analytics_engine",
 					},
 					{
+						name: "httplogs",
+						type: "logfwdr",
+						destination: "httplogs",
+					},
+					{
+						name: "trace",
+						type: "logfwdr",
+						destination: "trace",
+					},
+					{
 						name: "WASM_MODULE_ONE",
 						part: "WASM_MODULE_ONE",
 						type: "wasm_module",
@@ -5194,6 +5217,9 @@ addEventListener('fetch', event => {});`
 			- R2 Buckets:
 			  - R2_BUCKET_ONE: r2-bucket-one-name
 			  - R2_BUCKET_TWO: r2-bucket-two-name
+			- logfwdr:
+			  - httplogs: httplogs
+			  - trace: trace
 			- Analytics Engine Datasets:
 			  - AE_DATASET_ONE: ae-dataset-one-name
 			  - AE_DATASET_TWO: ae-dataset-two-name
@@ -6077,13 +6103,8 @@ addEventListener('fetch', event => {});`
 
 		describe("[logfwdr]", () => {
 			it("should support logfwdr bindings", async () => {
-				(callCapnp as jest.MockedFunction<typeof callCapnp>).mockImplementation(
-					() => Buffer.from("compiled capnp messages")
-				);
-
 				writeWranglerToml({
 					logfwdr: {
-						capnp_schema: "./message.capnp",
 						bindings: [
 							{
 								name: "httplogs",
@@ -6111,7 +6132,6 @@ addEventListener('fetch', event => {});`
 							destination: "trace",
 						},
 					],
-					expectedCapnpSchema: "compiled capnp messages",
 				});
 
 				await runWrangler("deploy index.js");
@@ -6130,10 +6150,11 @@ addEventListener('fetch', event => {});`
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
-			it("should error for compiled logfwdr schemas", async () => {
+			it("should error when logfwdr schemas are specified", async () => {
 				writeWranglerToml({
 					logfwdr: {
-						capnp_schema: "./message.capnp.compiled",
+						// @ts-expect-error this property been replaced with the unsafe.capnp section
+						schema: "./message.capnp.compiled",
 						bindings: [
 							{
 								name: "httplogs",
@@ -6150,89 +6171,7 @@ addEventListener('fetch', event => {});`
 				await expect(() => runWrangler("deploy index.js")).rejects
 					.toThrowErrorMatchingInlineSnapshot(`
 			"Processing wrangler.toml configuration:
-			  - \\"logfwdr\\" bindings \\"capnp_schema\\" field should not be pre-compiled - Wrangler will run capnp for you."
-		`);
-			});
-
-			it("should error when a logfwdr schema isn't specified", async () => {
-				writeWranglerToml({
-					logfwdr: {
-						capnp_schema: undefined,
-						bindings: [
-							{
-								name: "httplogs",
-								destination: "httplogs",
-							},
-							{
-								name: "trace",
-								destination: "trace",
-							},
-						],
-					},
-				});
-
-				await expect(() => runWrangler("deploy index.js")).rejects
-					.toThrowErrorMatchingInlineSnapshot(`
-			"Processing wrangler.toml configuration:
-			  - \\"logfwdr\\" bindings should have a string \\"capnp_schema\\" field but got {\\"bindings\\":[{\\"name\\":\\"httplogs\\",\\"destination\\":\\"httplogs\\"},{\\"name\\":\\"trace\\",\\"destination\\":\\"trace\\"}]}."
-		`);
-			});
-
-			it("should error when the capnp CLI tool is not present", async () => {
-				(callCapnp as jest.MockedFunction<typeof callCapnp>).mockImplementation(
-					() => {
-						throw new Error(
-							"The capnp compiler is required to upload capnp schemas, but is not present."
-						);
-					}
-				);
-
-				writeWranglerToml({
-					logfwdr: {
-						capnp_schema: "./message.capnp",
-						bindings: [
-							{
-								name: "httplogs",
-								destination: "httplogs",
-							},
-							{
-								name: "trace",
-								destination: "trace",
-							},
-						],
-					},
-				});
-				writeWorkerSource();
-
-				await expect(() =>
-					runWrangler("deploy index.js")
-				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`"The capnp compiler is required to upload capnp schemas, but is not present."`
-				);
-			});
-
-			it("should error when the old schema property is used", async () => {
-				writeWranglerToml({
-					logfwdr: {
-						// @ts-expect-error This should be erroring
-						schema: "./message.capnp",
-						bindings: [
-							{
-								name: "httplogs",
-								destination: "httplogs",
-							},
-							{
-								name: "trace",
-								destination: "trace",
-							},
-						],
-					},
-				});
-
-				await expect(() => runWrangler("deploy index.js")).rejects
-					.toThrowErrorMatchingInlineSnapshot(`
-			"Processing wrangler.toml configuration:
-			  - \\"logfwdr\\" binding \\"schema\\" property has been replaced with \\"capnp_schema\\", which expects a file path to an uncompiled capnp schema."
+			  - \\"logfwdr\\" binding \\"schema\\" property has been replaced with the \\"unsafe.capnp\\" object, which expects a \\"base_path\\" and an array of \\"source_schemas\\" to compile, or a \\"compiled_schema\\" property."
 		`);
 			});
 		});
@@ -6700,147 +6639,242 @@ addEventListener('fetch', event => {});`
 		});
 
 		describe("[unsafe]", () => {
-			it("should warn if using unsafe bindings", async () => {
-				writeWranglerToml({
-					unsafe: {
-						bindings: [
+			describe("[unsafe.bindings]", () => {
+				it("should warn if using unsafe bindings", async () => {
+					writeWranglerToml({
+						unsafe: {
+							bindings: [
+								{
+									name: "my-binding",
+									type: "binding-type",
+									param: "binding-param",
+								},
+							],
+							metadata: undefined,
+						},
+					});
+					writeWorkerSource();
+					mockSubDomainRequest();
+					mockUploadWorkerRequest({
+						expectedBindings: [
 							{
 								name: "my-binding",
 								type: "binding-type",
 								param: "binding-param",
 							},
 						],
-						metadata: undefined,
-					},
+					});
+
+					await runWrangler("deploy index.js");
+					expect(std.out).toMatchInlineSnapshot(`
+							"Total Upload: xx KiB / gzip: xx KiB
+							Your worker has access to the following bindings:
+							- Unsafe:
+							  - binding-type: my-binding
+							Uploaded test-name (TIMINGS)
+							Published test-name (TIMINGS)
+							  https://test-name.test-sub-domain.workers.dev
+							Current Deployment ID: Galaxy-Class"
+					`);
+					expect(std.err).toMatchInlineSnapshot(`""`);
+					expect(std.warn).toMatchInlineSnapshot(`
+							"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+							    - \\"unsafe\\" fields are experimental and may change or break at any time.
+
+							"
+					`);
 				});
-				writeWorkerSource();
-				mockSubDomainRequest();
-				mockUploadWorkerRequest({
-					expectedBindings: [
-						{
-							name: "my-binding",
-							type: "binding-type",
-							param: "binding-param",
+
+				it("should warn if using unsafe bindings already handled by wrangler", async () => {
+					writeWranglerToml({
+						unsafe: {
+							bindings: [
+								{
+									name: "my-binding",
+									type: "plain_text",
+									text: "text",
+								},
+							],
+							metadata: undefined,
 						},
-					],
-				});
-
-				await runWrangler("deploy index.js");
-				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Your worker has access to the following bindings:
-			- Unsafe:
-			  - binding-type: my-binding
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class"
-		`);
-				expect(std.err).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-			    - \\"unsafe\\" fields are experimental and may change or break at any time.
-
-			"
-		`);
-			});
-
-			it("should warn if using unsafe bindings already handled by wrangler", async () => {
-				writeWranglerToml({
-					unsafe: {
-						bindings: [
+					});
+					writeWorkerSource();
+					mockSubDomainRequest();
+					mockUploadWorkerRequest({
+						expectedBindings: [
 							{
 								name: "my-binding",
 								type: "plain_text",
 								text: "text",
 							},
 						],
-						metadata: undefined,
-					},
+					});
+
+					await runWrangler("deploy index.js");
+					expect(std.out).toMatchInlineSnapshot(`
+							"Total Upload: xx KiB / gzip: xx KiB
+							Your worker has access to the following bindings:
+							- Unsafe:
+							  - plain_text: my-binding
+							Uploaded test-name (TIMINGS)
+							Published test-name (TIMINGS)
+							  https://test-name.test-sub-domain.workers.dev
+							Current Deployment ID: Galaxy-Class"
+					`);
+					expect(std.err).toMatchInlineSnapshot(`""`);
+					expect(std.warn).toMatchInlineSnapshot(`
+							"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+							    - \\"unsafe\\" fields are experimental and may change or break at any time.
+							    - \\"unsafe.bindings[0]\\": {\\"name\\":\\"my-binding\\",\\"type\\":\\"plain_text\\",\\"text\\":\\"text\\"}
+							      - The binding type \\"plain_text\\" is directly supported by wrangler.
+							        Consider migrating this unsafe binding to a format for 'plain_text' bindings that is
+							  supported by wrangler for optimal support.
+							        For more details, see [4mhttps://developers.cloudflare.com/workers/cli-wrangler/configuration[0m
+
+							"
+					`);
 				});
-				writeWorkerSource();
-				mockSubDomainRequest();
-				mockUploadWorkerRequest({
-					expectedBindings: [
-						{
-							name: "my-binding",
-							type: "plain_text",
-							text: "text",
+			});
+			describe("[unsafe.capnp]", () => {
+				it("should accept a pre-compiled capnp schema", async () => {
+					writeWranglerToml({
+						unsafe: {
+							capnp: {
+								compiled_schema: "./my-compiled-schema",
+							},
 						},
-					],
+					});
+					writeWorkerSource();
+					mockSubDomainRequest();
+					mockUploadWorkerRequest({
+						expectedCapnpSchema: "my compiled capnp data",
+					});
+					fs.writeFileSync("./my-compiled-schema", "my compiled capnp data");
+
+					await runWrangler("deploy index.js");
+					expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Uploaded test-name (TIMINGS)
+				Published test-name (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Deployment ID: Galaxy-Class"
+			`);
+					expect(std.err).toMatchInlineSnapshot(`""`);
+					expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+				    - \\"unsafe\\" fields are experimental and may change or break at any time.
+
+				"
+			`);
 				});
-
-				await runWrangler("deploy index.js");
-				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Your worker has access to the following bindings:
-			- Unsafe:
-			  - plain_text: my-binding
-			Uploaded test-name (TIMINGS)
-			Published test-name (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Deployment ID: Galaxy-Class"
-		`);
-				expect(std.err).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-			    - \\"unsafe\\" fields are experimental and may change or break at any time.
-			    - \\"unsafe.bindings[0]\\": {\\"name\\":\\"my-binding\\",\\"type\\":\\"plain_text\\",\\"text\\":\\"text\\"}
-			      - The binding type \\"plain_text\\" is directly supported by wrangler.
-			        Consider migrating this unsafe binding to a format for 'plain_text' bindings that is
-			  supported by wrangler for optimal support.
-			        For more details, see [4mhttps://developers.cloudflare.com/workers/cli-wrangler/configuration[0m
-
-			"
-		`);
-			});
-
-			it("should error if using unsafe bindings capnp_schemas containing invalid values", async () => {
-				writeWranglerToml({
-					unsafe: {
-						bindings: [
-							{
-								name: "my-binding",
-								type: "plain_text",
-								text: "text",
-								capnp_schema: false, // expects a string
+				it("should error when both pre-compiled and uncompiled-capnp schemas are used", async () => {
+					writeWranglerToml({
+						unsafe: {
+							capnp: {
+								compiled_schema: "./my-compiled-schema",
+								// @ts-expect-error This should error as the types don't accept having both
+								source_schemas: ["./my-src-schema"],
 							},
-						],
-						metadata: undefined,
-					},
+						},
+					});
+					writeWorkerSource();
+
+					await expect(() => runWrangler("deploy index.js")).rejects
+						.toThrowErrorMatchingInlineSnapshot(`
+				"Processing wrangler.toml configuration:
+				  - The field \\"unsafe.capnp\\" cannot contain both \\"compiled_schema\\" and one of \\"base_path\\" or \\"source_schemas\\"."
+			`);
 				});
-				writeWorkerSource();
+				it("should error when no schemas are specified", async () => {
+					writeWranglerToml({
+						unsafe: {
+							// @ts-expect-error This should error as the types expect something to be present
+							capnp: {},
+						},
+					});
+					writeWorkerSource();
 
-				await expect(() => runWrangler("deploy index.js")).rejects
-					.toThrowErrorMatchingInlineSnapshot(`
-			"Processing wrangler.toml configuration:
-			  - the \\"unsafe.bindings\\" field \\"capnp_schema\\", when present, should be a string. Got false"
-		`);
-			});
-
-			it("should error if using unsafe bindings capnp_schemas which are pre-compiled", async () => {
-				writeWranglerToml({
-					unsafe: {
-						bindings: [
-							{
-								name: "my-binding",
-								type: "plain_text",
-								text: "text",
-								capnp_schema: "my-schema.capnp.compiled",
+					await expect(() => runWrangler("deploy index.js")).rejects
+						.toThrowErrorMatchingInlineSnapshot(`
+				"Processing wrangler.toml configuration:
+				  - The field \\"unsafe.capnp.base_path\\", when present, should be a string but got undefined
+				  - Expected \\"unsafe.capnp.source_schemas\\" to be an array of strings but got undefined"
+			`);
+				});
+				it("should error when the capnp compiler is not present, but is required", async () => {
+					jest.spyOn(commandExists, "sync").mockReturnValue(false);
+					writeWranglerToml({
+						unsafe: {
+							capnp: {
+								base_path: "./",
+								source_schemas: ["./my-src-schema"],
 							},
-						],
-						metadata: undefined,
-					},
-				});
-				writeWorkerSource();
+						},
+					});
+					writeWorkerSource();
 
-				await expect(() => runWrangler("deploy index.js")).rejects
-					.toThrowErrorMatchingInlineSnapshot(`
-			"Processing wrangler.toml configuration:
-			  - \\"unsafe.bindings\\" field \\"capnp_schema\\" should not be pre-compiled - Wrangler will run capnp for you."
-		`);
+					await expect(() =>
+						runWrangler("deploy index.js")
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`"The capnp compiler is required to upload capnp schemas, but is not present."`
+					);
+				});
+				it("should accept an uncompiled capnp schema", async () => {
+					jest.spyOn(commandExists, "sync").mockReturnValue(true);
+					jest
+						.spyOn(childProcess, "spawnSync")
+						.mockImplementation((cmd, args) => {
+							expect(cmd).toBe("capnp");
+							expect(args?.[0]).toBe("compile");
+							expect(args?.[1]).toBe("-o-");
+							expect(args?.[2]).toContain("--src-prefix=");
+							expect(args?.[3]).toContain("my-compiled-schema");
+							return {
+								pid: -1,
+								error: undefined,
+								stderr: Buffer.from([]),
+								stdout: Buffer.from("my compiled capnp data"),
+								status: 0,
+								signal: null,
+								output: [null],
+							};
+						});
+
+					writeWranglerToml({
+						unsafe: {
+							capnp: {
+								base_path: "./",
+								source_schemas: ["./my-compiled-schema"],
+							},
+						},
+					});
+					writeWorkerSource();
+					mockSubDomainRequest();
+					mockUploadWorkerRequest({
+						expectedCapnpSchema: "my compiled capnp data",
+					});
+					fs.writeFileSync("./my-compiled-schema", "my compiled capnp data");
+
+					await runWrangler("deploy index.js");
+					expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Uploaded test-name (TIMINGS)
+				Published test-name (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Deployment ID: Galaxy-Class"
+			`);
+					expect(std.err).toMatchInlineSnapshot(`""`);
+					expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+				    - \\"unsafe\\" fields are experimental and may change or break at any time.
+
+				"
+			`);
+				});
 			});
 		});
 	});
