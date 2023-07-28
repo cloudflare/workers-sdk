@@ -20,4 +20,3 @@ Fixes # [insert GH or internal issue number(s)].
 
 **Note for PR author:**
 We want to celebrate and highlight awesome PR review! If you think this PR received a particularly high-caliber review, please assign it the label `highlight pr review` so future reviewers can take inspiration and learn from it.
-
