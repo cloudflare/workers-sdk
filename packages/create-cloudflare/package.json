@@ -31,7 +31,8 @@
 		"check:type": "tsc",
 		"lint": "eslint",
 		"prepublishOnly": "npm run build",
-		"test:e2e": "npm run build && vitest run --config ./vitest-e2e.config.ts",
+		"test:e2e:npm": "TEST_PM=npm npm run build && vitest run --config ./vitest-e2e.config.ts",
+		"test:e2e:pnpm": "TEST_PM=pnpm npm run build && vitest run --config ./vitest-e2e.config.ts",
 		"test:unit": "vitest run --config ./vitest.config.ts",
 		"watch": "node scripts/build.js --watch"
 	},

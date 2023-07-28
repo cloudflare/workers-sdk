@@ -23,35 +23,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Use Node.js ${{ env.node-version }}
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ env.node-version }}
-          cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
-
-      - name: ESlint and Typescript caching
-        uses: actions/cache@v3
-        id: eslint-cache
-        with:
-          path: |
-            .eslintcache
-            tsconfig.tsbuildinfo
-          key: ${{ matrix.os }}-eslint-tsbuildinfo-${{ hashFiles('**/*.ts','**/*.js', 'package.json', 'tsconfig.json') }}
-
-      # Attempt to cache all the node_modules directories based on the OS and package lock.
-      - name: Cache node_modules
-        id: npm-cache
-        uses: actions/cache@v3
-        env:
-          cache-name: cache-node-modules
-        with:
-          key: ${{ runner.os }}-${{ env.node-version }}-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
-          path: "**/node_modules"
-
-      # If the cache missed then install using `npm ci` to follow package lock exactly
-      - if: ${{ steps.npm-cache.outputs.cache-hit != 'true'}}
-        name: Install NPM Dependencies
-        run: npm ci
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
 
       - name: Check Types
         run: npm run check:type -w create-cloudflare
@@ -62,8 +35,27 @@ jobs:
       - name: Unit Tests
         run: npm run test:unit -w create-cloudflare
 
+  e2e:
+    name: "E2E"
+    strategy:
+      matrix:
+        # TODO: add back windows
+        # os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest]
+        # pm: [npm, yarn, pnpm]
+        pm: [npm, pnpm]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+
       - name: E2E Tests
-        run: npm run test:e2e -w create-cloudflare
+        run: npm run test:e2e:${{matrix.pm}} -w create-cloudflare
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
