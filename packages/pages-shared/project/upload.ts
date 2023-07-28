@@ -14,6 +14,7 @@ import {
 	MAX_UPLOAD_ATTEMPTS,
 } from "../constants";
 import type { UploadPayloadFile } from "../types";
+import { getFileContentsForHashing } from "./hash";
 
 type LogFn = (...args: unknown[]) => void;
 
@@ -25,9 +26,7 @@ interface UploadBaseProps {
 		warn: LogFn;
 		error: LogFn;
 	};
-	hashFile:
-		| ((contents: string) => string)
-		| ((contents: string) => Promise<string>);
+	hashFn: (contents: string) => string;
 	skipCaching: boolean;
 	directory: string;
 
@@ -55,7 +54,7 @@ type UploadProps =
 	| (UploadBaseProps & { fetchJwt: () => Promise<string> });
 
 export const upload = async (args: UploadProps) => {
-	const { logger, hashFile } = args;
+	const { logger, hashFn } = args;
 
 	async function fetchJwt(): Promise<string> {
 		if ("jwt" in args) {
@@ -134,7 +133,7 @@ export const upload = async (args: UploadProps) => {
 						path: filepath,
 						contentType: getType(name) || "application/octet-stream",
 						sizeInBytes: filestat.size,
-						hash: await Promise.resolve(hashFile(filepath)),
+						hash: hashFn(await getFileContentsForHashing(filepath)),
 					});
 				}
 			})

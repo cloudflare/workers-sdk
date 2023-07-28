@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { upload } from "@cloudflare/pages-shared/project/upload";
+import { hash as blake3hash } from "blake3-wasm";
 import { render, Text } from "ink";
 import Spinner from "ink-spinner";
 import React from "react";
@@ -8,8 +9,6 @@ import { fetchResult } from "../cfetch";
 import { FatalError } from "../errors";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
-
-import { hashFile } from "./hash";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -147,7 +146,9 @@ export async function uploadWithDefaults({
 		checkMissing,
 		upsertHashes,
 		uploadPayload,
-		hashFile,
+		hashFn(contents) {
+			return blake3hash(contents).toString("hex").slice(0, 32);
+		},
 	});
 }
 

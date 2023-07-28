@@ -5,7 +5,12 @@
 		"types": ["node"],
 		"jsx": "react"
 	},
-	"include": ["**/*.ts", "**/*.tsx", "**/*.js"],
+	"include": [
+		"**/*.ts",
+		"**/*.tsx",
+		"**/*.js",
+		"../pages-shared/project/hash.ts"
+	],
 	"exclude": [
 		"emitted-types",
 		"node_modules",
