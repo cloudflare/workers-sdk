@@ -264,7 +264,7 @@ export const gitCommit = async (ctx: PagesGeneratorContext) => {
  */
 export async function isGitInstalled() {
 	try {
-		await runCommand("git -v", { useSpinner: false, silent: true });
+		await runCommand("git --version", { useSpinner: false, silent: true });
 
 		return true;
 	} catch {
