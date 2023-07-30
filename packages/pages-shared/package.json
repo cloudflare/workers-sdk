@@ -20,7 +20,10 @@
 		"test:ci": "vitest run"
 	},
 	"dependencies": {
-		"miniflare": "3.20230724.0"
+		"mime": "^3.0.0",
+		"miniflare": "3.20230724.0",
+		"p-queue": "^7.2.0",
+		"pretty-bytes": "^6.0.0"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "*",
