@@ -3,10 +3,11 @@ import { join, resolve } from "node:path";
 import { createMetadataObject } from "@cloudflare/pages-shared/metadata-generator/createMetadataObject";
 import { parseHeaders } from "@cloudflare/pages-shared/metadata-generator/parseHeaders";
 import { parseRedirects } from "@cloudflare/pages-shared/metadata-generator/parseRedirects";
+import { getFileContentsForHashing } from "@cloudflare/pages-shared/project/hash";
 import { watch } from "chokidar";
 import { getType } from "mime";
 import { Request, Response, fetch } from "miniflare";
-import { hashFile } from "../pages/hash";
+import { hashContents } from "../pages/hashContents";
 import type { Metadata } from "@cloudflare/pages-shared/asset-server/metadata";
 import type {
 	ParsedRedirects,
@@ -157,7 +158,7 @@ async function generateAssetsFetch(
 					lstatSync(filepath).isFile() &&
 					!ignoredFiles.includes(filepath)
 				) {
-					const hash = hashFile(filepath);
+					const hash = hashContents(await getFileContentsForHashing(filepath));
 					assetKeyEntryMap.set(hash, filepath);
 					return hash;
 				}

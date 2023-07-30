@@ -9,6 +9,7 @@
 	"files": [
 		"tsconfig.json",
 		"project/**/*",
+		"constants.ts",
 		"types.ts",
 		"asset-server/**/*",
 		"environment-polyfills/**/*",
