@@ -17,6 +17,6 @@ describe("Pages D1 shim", () => {
 			}
 		);
 
-		expect(readFileSync(file, "utf-8")).toContain("D1_ERROR");
+		expect(readFileSync(file, "utf-8")).not.toContain("D1_ERROR");
 	});
 });
