@@ -1,7 +1,7 @@
 import { parse } from "devalue";
 import { z } from "zod";
 import { Headers, Response } from "../../http";
-import { Base64DataSchema, HttpError } from "../../shared";
+import { HttpError } from "../../shared";
 import {
 	HEADER_PERSIST,
 	POST,
@@ -9,7 +9,12 @@ import {
 	RouteHandler,
 	Router,
 } from "../shared";
-import { QueueEnqueueOn, QueuesGateway } from "./gateway";
+import {
+	GatewayMessageSchema,
+	QueueContentTypeSchema,
+	QueueEnqueueOn,
+	QueuesGateway,
+} from "./gateway";
 
 const MAX_MESSAGE_SIZE_BYTES = 128 * 1000;
 const MAX_MESSAGE_BATCH_COUNT = 100;
@@ -27,6 +32,21 @@ function validateMessageSize(headers: Headers) {
 		throw new PayloadTooLargeError(
 			`message length of ${size} bytes exceeds limit of ${MAX_MESSAGE_SIZE_BYTES}`
 		);
+	}
+}
+
+function validateContentType(
+	headers: Headers
+): z.infer<typeof QueueContentTypeSchema> {
+	const format = headers.get("X-Msg-Fmt") ?? undefined; // zod will throw if null
+	const result = QueueContentTypeSchema.safeParse(format);
+	if (!result.success) {
+		throw new HttpError(
+			400,
+			`message content type ${format} is invalid; if specified, must be one of 'text', 'json', 'bytes', or 'v8'`
+		);
+	} else {
+		return result.data;
 	}
 }
 
@@ -63,7 +83,7 @@ async function decodeQueueConsumer(
 }
 
 const QueuesBatchRequestSchema = z.object({
-	messages: z.array(z.object({ body: Base64DataSchema })),
+	messages: z.array(GatewayMessageSchema),
 });
 
 export interface QueuesParams {
@@ -78,6 +98,7 @@ export class QueuesRouter extends Router<QueuesGateway> {
 	@POST("/:queue/message")
 	message: RouteHandler<QueuesParams> = async (req, params) => {
 		validateMessageSize(req.headers);
+		const contentType = validateContentType(req.headers);
 
 		// Get consumer from persistence header, if we don't have a consumer,
 		// drop the message
@@ -85,8 +106,12 @@ export class QueuesRouter extends Router<QueuesGateway> {
 		if (consumer === undefined) return new Response();
 
 		const queue = decodeURIComponent(params.queue);
-		const serialisedBody = Buffer.from(await req.arrayBuffer());
-		this.#enqueueOn(queue, consumer, [serialisedBody]);
+		this.#enqueueOn(queue, consumer, [
+			{
+				body: Buffer.from(await req.arrayBuffer()),
+				contentType,
+			},
+		]);
 		return new Response();
 	};
 
@@ -101,8 +126,7 @@ export class QueuesRouter extends Router<QueuesGateway> {
 
 		const queue = decodeURIComponent(params.queue);
 		const body = QueuesBatchRequestSchema.parse(await req.json());
-		const messages = body.messages.map(({ body }) => body);
-		this.#enqueueOn(queue, consumer, messages);
+		this.#enqueueOn(queue, consumer, body.messages);
 		return new Response();
 	};
 }
