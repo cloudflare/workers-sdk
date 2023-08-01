@@ -820,226 +820,12 @@ describe("middleware", () => {
 			};
 
 
-			var D1_IMPORTS = [\\"__D1_BETA__DB\\"];
-
-
-			var D1Database = class {
-			  constructor(binding) {
-			    this.binding = binding;
-			  }
-			  prepare(query) {
-			    return new D1PreparedStatement(this, query);
-			  }
-			  async dump() {
-			    const response = await this.binding.fetch(\\"http://d1/dump\\", {
-			      method: \\"POST\\",
-			      headers: {
-			        \\"content-type\\": \\"application/json\\"
-			      }
-			    });
-			    if (response.status !== 200) {
-			      try {
-			        const err = await response.json();
-			        throw new Error(\`D1_DUMP_ERROR: \${err.error}\`, {
-			          cause: new Error(err.error)
-			        });
-			      } catch (e) {
-			        throw new Error(\`D1_DUMP_ERROR: Status + \${response.status}\`, {
-			          cause: new Error(\\"Status \\" + response.status)
-			        });
-			      }
-			    }
-			    return await response.arrayBuffer();
-			  }
-			  async batch(statements) {
-			    const exec = await this._send(
-			      \\"/query\\",
-			      statements.map((s) => s.statement),
-			      statements.map((s) => s.params)
-			    );
-			    return exec;
-			  }
-			  async exec(query) {
-			    const lines = query.trim().split(\\"\\\\n\\");
-			    const _exec = await this._send(\\"/query\\", lines, [], false);
-			    const exec = Array.isArray(_exec) ? _exec : [_exec];
-			    const error = exec.map((r) => {
-			      return r.error ? 1 : 0;
-			    }).indexOf(1);
-			    if (error !== -1) {
-			      throw new Error(
-			        \`D1_EXEC_ERROR: Error in line \${error + 1}: \${lines[error]}: \${exec[error].error}\`,
-			        {
-			          cause: new Error(
-			            \\"Error in line \\" + (error + 1) + \\": \\" + lines[error] + \\": \\" + exec[error].error
-			          )
-			        }
-			      );
-			    } else {
-			      return {
-			        count: exec.length,
-			        duration: exec.reduce((p, c) => {
-			          return p + c.meta.duration;
-			        }, 0)
-			      };
-			    }
-			  }
-			  async _send(endpoint, query, params, dothrow = true) {
-			    const body = JSON.stringify(
-			      typeof query == \\"object\\" ? query.map((s, index) => {
-			        return { sql: s, params: params[index] };
-			      }) : {
-			        sql: query,
-			        params
-			      }
-			    );
-			    const response = await this.binding.fetch(new URL(endpoint, \\"http://d1\\"), {
-			      method: \\"POST\\",
-			      headers: {
-			        \\"content-type\\": \\"application/json\\"
-			      },
-			      body
-			    });
-			    try {
-			      const answer = await response.json();
-			      if (answer.error && dothrow) {
-			        const err = answer;
-			        throw new Error(\`D1_ERROR: \${err.error}\`, {
-			          cause: new Error(err.error)
-			        });
-			      } else {
-			        return Array.isArray(answer) ? answer.map((r) => mapD1Result(r)) : mapD1Result(answer);
-			      }
-			    } catch (e) {
-			      const error = e;
-			      throw new Error(\`D1_ERROR: \${error.cause || \\"Something went wrong\\"}\`, {
-			        cause: new Error(\`\${error.cause}\` || \\"Something went wrong\\")
-			      });
-			    }
-			  }
-			};
-			var D1PreparedStatement = class {
-			  constructor(database, statement, params = []) {
-			    this.database = database;
-			    this.statement = statement;
-			    this.params = params;
-			  }
-			  bind(...values) {
-			    for (var r in values) {
-			      const value = values[r];
-			      switch (typeof value) {
-			        case \\"number\\":
-			        case \\"string\\":
-			          break;
-			        case \\"object\\":
-			          if (value == null)
-			            break;
-			          if (Array.isArray(value) && value.map((b) => {
-			            return typeof b == \\"number\\" && b >= 0 && b < 256 ? 1 : 0;
-			          }).indexOf(0) == -1)
-			            break;
-			          if (value instanceof ArrayBuffer) {
-			            values[r] = Array.from(new Uint8Array(value));
-			            break;
-			          }
-			          if (ArrayBuffer.isView(value)) {
-			            values[r] = Array.from(new Uint8Array(value.buffer));
-			            break;
-			          }
-			        default:
-			          throw new Error(
-			            \`D1_TYPE_ERROR: Type '\${typeof value}' not supported for value '\${value}'\`,
-			            {
-			              cause: new Error(
-			                \`Type '\${typeof value}' not supported for value '\${value}'\`
-			              )
-			            }
-			          );
-			      }
-			    }
-			    return new D1PreparedStatement(this.database, this.statement, values);
-			  }
-			  async first(colName) {
-			    const info = firstIfArray(
-			      await this.database._send(\\"/query\\", this.statement, this.params)
-			    );
-			    const results = info.results;
-			    if (colName !== void 0) {
-			      if (results.length > 0 && results[0][colName] === void 0) {
-			        throw new Error(\`D1_COLUMN_NOTFOUND: Column not found (\${colName})\`, {
-			          cause: new Error(\\"Column not found\\")
-			        });
-			      }
-			      return results.length < 1 ? null : results[0][colName];
-			    } else {
-			      return results.length < 1 ? null : results[0];
-			    }
-			  }
-			  async run() {
-			    return firstIfArray(
-			      await this.database._send(\\"/execute\\", this.statement, this.params)
-			    );
-			  }
-			  async all() {
-			    return firstIfArray(
-			      await this.database._send(\\"/query\\", this.statement, this.params)
-			    );
-			  }
-			  async raw() {
-			    const s = firstIfArray(
-			      await this.database._send(\\"/query\\", this.statement, this.params)
-			    );
-			    const raw = [];
-			    for (var r in s.results) {
-			      const entry = Object.keys(s.results[r]).map((k) => {
-			        return s.results[r][k];
-			      });
-			      raw.push(entry);
-			    }
-			    return raw;
-			  }
-			};
-			function firstIfArray(results) {
-			  return Array.isArray(results) ? results[0] : results;
-			}
-			function mapD1Result(result) {
-			  let map = {
-			    results: result.results || [],
-			    success: result.success === void 0 ? true : result.success,
-			    meta: result.meta || {}
-			  };
-			  result.error && (map.error = result.error);
-			  return map;
-			}
-			var D1_BETA_PREFIX = \`__D1_BETA__\`;
-			var envMap = /* @__PURE__ */ new Map();
-			function getMaskedEnv(env) {
-			  if (envMap.has(env))
-			    return envMap.get(env);
-			  const newEnv = new Map(Object.entries(env));
-			  D1_IMPORTS.filter(
-			    (bindingName) => bindingName.startsWith(D1_BETA_PREFIX)
-			  ).forEach((bindingName) => {
-			    newEnv.delete(bindingName);
-			    const newName = bindingName.slice(D1_BETA_PREFIX.length);
-			    const newBinding = new D1Database(env[bindingName]);
-			    newEnv.set(newName, newBinding);
-			  });
-			  const newEnvObj = Object.fromEntries(newEnv.entries());
-			  envMap.set(env, newEnvObj);
-			  return newEnvObj;
-			}
-			function wrap(env) {
-			  return getMaskedEnv(env);
-			}
-
-
-			var envWrappers = [wrap].filter(Boolean);
+			var envWrappers = [].filter(Boolean);
 			var facade = {
 			  ...src_default,
 			  envWrappers,
 			  middleware: [
-			    void 0,
+			    ,
 			    ...src_default.middleware ? src_default.middleware : []
 			  ].filter(Boolean)
 			};
@@ -1075,7 +861,7 @@ describe("middleware", () => {
 			    throw new Error(\\"Handler does not export a fetch() function.\\");
 			  return middleware_insertion_facade_default.fetch(request, env, ctx);
 			};
-			function getMaskedEnv2(rawEnv) {
+			function getMaskedEnv(rawEnv) {
 			  let env = rawEnv;
 			  if (middleware_insertion_facade_default.envWrappers && middleware_insertion_facade_default.envWrappers.length > 0) {
 			    for (const wrapFn of middleware_insertion_facade_default.envWrappers) {
@@ -1105,7 +891,7 @@ describe("middleware", () => {
 			    email: maskHandlerEnv(middleware_insertion_facade_default.email)
 			  },
 			  fetch(request, rawEnv, ctx) {
-			    const env = getMaskedEnv2(rawEnv);
+			    const env = getMaskedEnv(rawEnv);
 			    if (middleware_insertion_facade_default.middleware && middleware_insertion_facade_default.middleware.length > 0) {
 			      if (!registeredMiddleware) {
 			        registeredMiddleware = true;
@@ -1137,7 +923,7 @@ describe("middleware", () => {
 			  }
 			};
 			function maskHandlerEnv(handler) {
-			  return (data, env, ctx) => handler(data, getMaskedEnv2(env), ctx);
+			  return (data, env, ctx) => handler(data, getMaskedEnv(env), ctx);
 			}
 			var middleware_loader_entry_default = facade2;
 			export {
