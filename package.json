@@ -20,7 +20,7 @@
 		"check:lint": "turbo check:lint",
 		"check:type": "turbo check:type type:tests",
 		"dev": "turbo dev",
-		"fix": "npm run prettify && eslint . --fix",
+		"fix": "npm run prettify && turbo check:lint -- --fix",
 		"postinstall": "patch-package",
 		"prettify": "prettier . --write --ignore-unknown",
 		"test": "turbo test",

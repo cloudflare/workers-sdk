@@ -1,4 +1,3 @@
-import type { Environment } from "../config";
 import type { Route } from "../config/environment";
 import type { Json } from "miniflare";
 
