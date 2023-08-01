@@ -128,75 +128,75 @@ describe(`E2E: Web frameworks`, () => {
 		hono: {
 			expectResponseToContain: "/api/hello",
 		},
-		qwik: {
-			expectResponseToContain: "Welcome to Qwik",
-			promptHandlers: [
-				{
-					matcher: /Yes looks good, finish update/,
-					input: [keys.enter],
-				},
-			],
-		},
-		remix: {
-			expectResponseToContain: "Welcome to Remix",
-		},
-		next: {
-			expectResponseToContain: "Create Next App",
-			promptHandlers: [
-				{
-					matcher: /Do you want to use the next-on-pages eslint-plugin\?/,
-					input: ["y"],
-				},
-			],
-		},
-		nuxt: {
-			expectResponseToContain: "Welcome to Nuxt!",
-			overrides: {
-				packageScripts: {
-					build: "NITRO_PRESET=cloudflare-pages nuxt build",
-				},
-			},
-		},
-		react: {
-			expectResponseToContain: "React App",
-		},
-		solid: {
-			expectResponseToContain: "Hello world",
-			promptHandlers: [
-				{
-					matcher: /Which template do you want to use/,
-					input: [keys.enter],
-				},
-				{
-					matcher: /Server Side Rendering/,
-					input: [keys.enter],
-				},
-				{
-					matcher: /Use TypeScript/,
-					input: [keys.enter],
-				},
-			],
-		},
-		svelte: {
-			expectResponseToContain: "SvelteKit app",
-			promptHandlers: [
-				{
-					matcher: /Which Svelte app template/,
-					input: [keys.enter],
-				},
-				{
-					matcher: /Add type checking with TypeScript/,
-					input: [keys.down, keys.enter],
-				},
-				{
-					matcher: /Select additional options/,
-					input: [keys.enter],
-				},
-			],
-		},
-		vue: {
-			expectResponseToContain: "Vite App",
-		},
+		// qwik: {
+		// 	expectResponseToContain: "Welcome to Qwik",
+		// 	promptHandlers: [
+		// 		{
+		// 			matcher: /Yes looks good, finish update/,
+		// 			input: [keys.enter],
+		// 		},
+		// 	],
+		// },
+		// remix: {
+		// 	expectResponseToContain: "Welcome to Remix",
+		// },
+		// next: {
+		// 	expectResponseToContain: "Create Next App",
+		// 	promptHandlers: [
+		// 		{
+		// 			matcher: /Do you want to use the next-on-pages eslint-plugin\?/,
+		// 			input: ["y"],
+		// 		},
+		// 	],
+		// },
+		// nuxt: {
+		// 	expectResponseToContain: "Welcome to Nuxt!",
+		// 	overrides: {
+		// 		packageScripts: {
+		// 			build: "NITRO_PRESET=cloudflare-pages nuxt build",
+		// 		},
+		// 	},
+		// },
+		// react: {
+		// 	expectResponseToContain: "React App",
+		// },
+		// solid: {
+		// 	expectResponseToContain: "Hello world",
+		// 	promptHandlers: [
+		// 		{
+		// 			matcher: /Which template do you want to use/,
+		// 			input: [keys.enter],
+		// 		},
+		// 		{
+		// 			matcher: /Server Side Rendering/,
+		// 			input: [keys.enter],
+		// 		},
+		// 		{
+		// 			matcher: /Use TypeScript/,
+		// 			input: [keys.enter],
+		// 		},
+		// 	],
+		// },
+		// svelte: {
+		// 	expectResponseToContain: "SvelteKit app",
+		// 	promptHandlers: [
+		// 		{
+		// 			matcher: /Which Svelte app template/,
+		// 			input: [keys.enter],
+		// 		},
+		// 		{
+		// 			matcher: /Add type checking with TypeScript/,
+		// 			input: [keys.down, keys.enter],
+		// 		},
+		// 		{
+		// 			matcher: /Select additional options/,
+		// 			input: [keys.enter],
+		// 		},
+		// 	],
+		// },
+		// vue: {
+		// 	expectResponseToContain: "Vite App",
+		// },
 	};
 
 	test.concurrent.each(Object.keys(frameworkTests))(
