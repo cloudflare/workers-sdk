@@ -4,7 +4,7 @@ import v8 from "v8";
 import { stringify } from "devalue";
 import { Colorize, bold, green, grey, red, reset, yellow } from "kleur/colors";
 import { z } from "zod";
-import { Log, Timers } from "../../shared";
+import { Base64DataSchema, Log, Timers, viewToBuffer } from "../../shared";
 import { Storage } from "../../storage";
 import { CoreHeaders, structuredSerializableReducers } from "../../workers";
 import { DispatchFetch, QueueConsumer } from "../shared";
@@ -44,6 +44,15 @@ const exceptionQueueResponse: QueueResponse = {
 	explicitAcks: [],
 };
 
+export const QueueContentTypeSchema = z
+	.enum(["text", "json", "bytes", "v8"])
+	.default("v8");
+export const GatewayMessageSchema = z.object({
+	body: Base64DataSchema,
+	contentType: QueueContentTypeSchema,
+});
+export type GatewayMessage = z.infer<typeof GatewayMessageSchema>;
+
 export class Message {
 	#failedAttempts = 0;
 
@@ -82,7 +91,7 @@ interface PendingFlush {
 export type QueueEnqueueOn = (
 	queueName: string,
 	consumer: QueueConsumer,
-	messages: (Message | Buffer)[]
+	messages: (Message | GatewayMessage)[]
 ) => void;
 
 // `QueuesGateway` slightly misrepresents what this class does. Each queue will
@@ -225,7 +234,7 @@ export class QueuesGateway {
 	enqueue(
 		enqueueOn: QueueEnqueueOn,
 		consumer: QueueConsumer,
-		messages: (Message | Buffer)[]
+		messages: (Message | GatewayMessage)[]
 	) {
 		for (const message of messages) {
 			if (message instanceof Message) {
@@ -233,7 +242,16 @@ export class QueuesGateway {
 			} else {
 				const id = crypto.randomBytes(16).toString("hex");
 				const timestamp = this.timers.now();
-				const body = v8.deserialize(message);
+				let body: unknown;
+				if (message.contentType === "text") {
+					body = message.body.toString();
+				} else if (message.contentType === "json") {
+					body = JSON.parse(message.body.toString());
+				} else if (message.contentType === "bytes") {
+					body = viewToBuffer(message.body);
+				} else {
+					body = v8.deserialize(message.body);
+				}
 				this.#messages.push(new Message(id, timestamp, body));
 			}
 		}

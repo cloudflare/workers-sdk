@@ -657,3 +657,83 @@ test("operations permit strange queue names", async (t) => {
 		{ queue: id, id: batch[1].id, body: "msg2" },
 	]);
 });
+
+test("supports message contentTypes", async (t) => {
+	const MessageContentTypeTestSchema = z
+		.object({ queue: z.string(), id: z.string(), body: z.any() })
+		.array();
+	const promise = new DeferredPromise<
+		z.infer<typeof MessageContentTypeTestSchema>
+	>();
+	const timers = new TestTimers();
+	const id = "my/ Queue";
+	const log = new TestLog(t);
+	const mf = new Miniflare({
+		log,
+		timers,
+		verbose: true,
+		queueProducers: { QUEUE: id },
+		queueConsumers: [id],
+		serviceBindings: {
+			async REPORTER(request) {
+				promise.resolve(
+					MessageContentTypeTestSchema.parse(await request.json())
+				);
+				return new Response();
+			},
+		},
+		modules: true,
+		script: `export default {
+  async fetch(request, env, ctx) {
+    await env.QUEUE.send("msg1", { contentType: "text" });
+    await env.QUEUE.send([{ message: "msg2" }], { contentType: "json" });
+    const arrayBuffer = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7]);
+    await env.QUEUE.send(arrayBuffer, { contentType: "bytes" });
+    await env.QUEUE.send(new Date(1600000000000), { contentType: "v8" });
+    return new Response();
+  },
+  async queue(batch, env, ctx) {
+    delete Date.prototype.toJSON; // JSON.stringify calls .toJSON before the replacer
+    await env.REPORTER.fetch("http://localhost", {
+      method: "POST",
+      body: JSON.stringify(
+        batch.messages.map(({ id, body }) => ({
+          queue: batch.queue,
+          id,
+          body,
+        })),
+        (_, value) => {
+          if (value instanceof ArrayBuffer) {
+            return {
+              $type: "ArrayBuffer",
+              value: Array.from(new Uint8Array(value)),
+            };
+          } else if (value instanceof Date) {
+            return { $type: "Date", value: value.getTime() };
+          }
+          return value;
+        },
+      ),
+    });
+  },
+};`,
+	});
+	await mf.dispatchFetch("http://localhost");
+	timers.timestamp += 1000;
+	await timers.waitForTasks();
+	const batch = await promise;
+	t.deepEqual(batch, [
+		{ queue: id, id: batch[0].id, body: "msg1" },
+		{ queue: id, id: batch[1].id, body: [{ message: "msg2" }] },
+		{
+			queue: id,
+			id: batch[2].id,
+			body: { $type: "ArrayBuffer", value: [0, 1, 2, 3, 4, 5, 6, 7] },
+		},
+		{
+			queue: id,
+			id: batch[3].id,
+			body: { $type: "Date", value: 1600000000000 },
+		},
+	]);
+});
