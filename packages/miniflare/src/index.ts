@@ -9,8 +9,12 @@ import { Duplex, Transform, Writable } from "stream";
 import { ReadableStream } from "stream/web";
 import zlib from "zlib";
 import type {
+	CacheStorage,
 	D1Database,
+	DurableObjectNamespace,
+	KVNamespace,
 	Queue,
+	R2Bucket,
 	RequestInitCfProperties,
 } from "@cloudflare/workers-types/experimental";
 import exitHook from "exit-hook";
@@ -29,16 +33,13 @@ import {
 	fetch,
 } from "./http";
 import {
-	CacheStorage,
 	D1_PLUGIN_NAME,
 	DURABLE_OBJECTS_PLUGIN_NAME,
 	DispatchFetch,
 	DurableObjectClassNames,
-	DurableObjectNamespace,
 	GatewayConstructor,
 	GatewayFactory,
 	HEADER_CF_BLOB,
-	KVNamespace,
 	KV_PLUGIN_NAME,
 	PLUGIN_ENTRIES,
 	Persistence,
@@ -48,8 +49,8 @@ import {
 	QUEUES_PLUGIN_NAME,
 	QueueConsumers,
 	QueuesError,
-	R2Bucket,
 	R2_PLUGIN_NAME,
+	ReplaceWorkersTypes,
 	SharedOptions,
 	SourceMapRegistry,
 	WorkerOptions,
@@ -1198,9 +1199,10 @@ export class Miniflare {
 		return proxy as T;
 	}
 	// TODO(someday): would be nice to define these in plugins
-	async getCaches(): Promise<CacheStorage> {
+	async getCaches(): Promise<ReplaceWorkersTypes<CacheStorage>> {
 		const proxyClient = await this._getProxyClient();
-		return proxyClient.global.caches as unknown as CacheStorage;
+		return proxyClient.global
+			.caches as unknown as ReplaceWorkersTypes<CacheStorage>;
 	}
 	getD1Database(bindingName: string, workerName?: string): Promise<D1Database> {
 		return this.#getProxy(D1_PLUGIN_NAME, bindingName, workerName);
@@ -1208,13 +1210,13 @@ export class Miniflare {
 	getDurableObjectNamespace(
 		bindingName: string,
 		workerName?: string
-	): Promise<DurableObjectNamespace> {
+	): Promise<ReplaceWorkersTypes<DurableObjectNamespace>> {
 		return this.#getProxy(DURABLE_OBJECTS_PLUGIN_NAME, bindingName, workerName);
 	}
 	getKVNamespace(
 		bindingName: string,
 		workerName?: string
-	): Promise<KVNamespace> {
+	): Promise<ReplaceWorkersTypes<KVNamespace>> {
 		return this.#getProxy(KV_PLUGIN_NAME, bindingName, workerName);
 	}
 	getQueueProducer<Body = unknown>(
@@ -1223,7 +1225,10 @@ export class Miniflare {
 	): Promise<Queue<Body>> {
 		return this.#getProxy(QUEUES_PLUGIN_NAME, bindingName, workerName);
 	}
-	getR2Bucket(bindingName: string, workerName?: string): Promise<R2Bucket> {
+	getR2Bucket(
+		bindingName: string,
+		workerName?: string
+	): Promise<ReplaceWorkersTypes<R2Bucket>> {
 		return this.#getProxy(R2_PLUGIN_NAME, bindingName, workerName);
 	}
 

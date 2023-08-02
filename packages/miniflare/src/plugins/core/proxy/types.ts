@@ -2,34 +2,17 @@ import { Blob } from "buffer";
 import { arrayBuffer } from "stream/consumers";
 import { ReadableStream } from "stream/web";
 import type {
+	AbortSignal as WorkerAbortSignal,
 	Blob as WorkerBlob,
-	CacheQueryOptions as WorkerCacheQueryOptions,
-	DurableObjectId as WorkerDurableObjectId,
-	DurableObjectJurisdiction as WorkerDurableObjectJurisdiction,
-	DurableObjectNamespace as WorkerDurableObjectNamespace,
-	DurableObjectNamespaceGetDurableObjectOptions as WorkerDurableObjectNamespaceGetDurableObjectOptions,
-	DurableObjectStub as WorkerDurableObjectStub,
 	File as WorkerFile,
 	Headers as WorkerHeaders,
-	KVNamespace as WorkerKVNamespace,
-	KVNamespaceGetOptions as WorkerKVNamespaceGetOptions,
-	KVNamespaceGetWithMetadataResult as WorkerKVNamespaceGetWithMetadataResult,
-	R2Bucket as WorkerR2Bucket,
-	R2Conditional as WorkerR2Conditional,
-	R2HTTPMetadata as WorkerR2HTTPMetadata,
-	R2ListOptions as WorkerR2ListOptions,
-	R2MultipartOptions as WorkerR2MultipartOptions,
-	R2MultipartUpload as WorkerR2MultipartUpload,
-	R2Object as WorkerR2Object,
-	R2ObjectBody as WorkerR2ObjectBody,
-	R2PutOptions as WorkerR2PutOptions,
-	R2Range as WorkerR2Range,
-	R2UploadedPart as WorkerR2UploadedPart,
+	ReadableStream as WorkerReadableStream,
 	Request as WorkerRequest,
+	RequestInit as WorkerRequestInit,
 	Response as WorkerResponse,
 } from "@cloudflare/workers-types/experimental";
 import { File, Headers } from "undici";
-import { Request, RequestInfo, RequestInit, Response } from "../../../http";
+import { Request, RequestInit, Response } from "../../../http";
 import { PlatformImpl } from "../../../workers";
 
 export const NODE_PLATFORM_IMPL: PlatformImpl<ReadableStream> = {
@@ -52,205 +35,157 @@ export const NODE_PLATFORM_IMPL: PlatformImpl<ReadableStream> = {
 	},
 };
 
-// Replacing `Request`, `Response`
-export type Cache = {
-	delete(
-		request: RequestInfo,
-		options?: WorkerCacheQueryOptions
-	): Promise<boolean>;
-	match(
-		request: RequestInfo,
-		options?: WorkerCacheQueryOptions
-	): Promise<Response | undefined>;
-	put(request: RequestInfo, response: Response): Promise<void>;
-};
-export type CacheStorage = {
-	open(cacheName: string): Promise<Cache>;
-	readonly default: Cache;
-};
+// Substitutes workers types with the corresponding Node implementations.
+// prettier-ignore
+export type ReplaceWorkersTypes<T> =
+  T extends WorkerRequest ? Request :
+  T extends WorkerResponse ? Response :
+  T extends WorkerReadableStream ? ReadableStream :
+  Required<T> extends Required<WorkerRequestInit> ? RequestInit :
+  T extends WorkerHeaders ? Headers :
+  T extends WorkerBlob ? Blob :
+  T extends WorkerAbortSignal ? AbortSignal :
+  T extends Promise<infer P> ? Promise<ReplaceWorkersTypes<P>> :
+  T extends (...args: infer P) => infer R ? (...args: ReplaceWorkersTypes<P>) => ReplaceWorkersTypes<R> :
+  T extends object ? { [K in keyof T]: OverloadReplaceWorkersTypes<T[K]> } :
+  T;
 
-// Replacing `Request`, `Response`
-export type Fetcher = {
-	fetch(input: RequestInfo, init?: RequestInit): Promise<Response>;
-};
+export type OverloadReplaceWorkersTypes<T> = T extends (...args: any[]) => any
+	? UnionToIntersection<ReplaceWorkersTypes<OverloadUnion<T>>>
+	: ReplaceWorkersTypes<T>;
 
-// Replacing `Request`, `Response`
-export type DurableObjectStub = Omit<WorkerDurableObjectStub, "fetch"> &
-	Fetcher;
-export type DurableObjectNamespace = Omit<
-	WorkerDurableObjectNamespace,
-	"get" | "getExisting" | "jurisdiction"
-> & {
-	get(
-		id: WorkerDurableObjectId,
-		options?: WorkerDurableObjectNamespaceGetDurableObjectOptions
-	): DurableObjectStub;
-	getExisting(
-		id: WorkerDurableObjectId,
-		options?: WorkerDurableObjectNamespaceGetDurableObjectOptions
-	): DurableObjectStub;
-	jurisdiction(
-		jurisdiction: WorkerDurableObjectJurisdiction
-	): DurableObjectNamespace;
-};
+export type UnionToIntersection<U> = (
+	U extends any ? (k: U) => void : never
+) extends (k: infer I) => void
+	? I
+	: never;
 
-// Replacing `ReadableStream`
-export type KVNamespace = Omit<WorkerKVNamespace, "get" | "getWithMetadata"> & {
-	get(
-		key: string,
-		options?: Partial<WorkerKVNamespaceGetOptions<undefined>>
-	): Promise<string | null>;
-	get(key: string, type: "text"): Promise<string | null>;
-	get<ExpectedValue = unknown>(
-		key: string,
-		type: "json"
-	): Promise<ExpectedValue | null>;
-	get(key: string, type: "arrayBuffer"): Promise<ArrayBuffer | null>;
-	get(key: string, type: "stream"): Promise<ReadableStream | null>;
-	get(
-		key: string,
-		options?: WorkerKVNamespaceGetOptions<"text">
-	): Promise<string | null>;
-	get<ExpectedValue = unknown>(
-		key: string,
-		options?: WorkerKVNamespaceGetOptions<"json">
-	): Promise<ExpectedValue | null>;
-	get(
-		key: string,
-		options?: WorkerKVNamespaceGetOptions<"arrayBuffer">
-	): Promise<ArrayBuffer | null>;
-	get(
-		key: string,
-		options?: WorkerKVNamespaceGetOptions<"stream">
-	): Promise<ReadableStream | null>;
+export type OverloadUnion2<T> = T extends {
+	(...args: infer P1): infer R1;
+	(...args: infer P2): infer R2;
+}
+	? ((...args: P1) => R1) | ((...args: P2) => R2)
+	: T;
 
-	getWithMetadata<Metadata = unknown>(
-		key: string,
-		options?: Partial<WorkerKVNamespaceGetOptions<undefined>>
-	): Promise<WorkerKVNamespaceGetWithMetadataResult<string, Metadata>>;
-	getWithMetadata<Metadata = unknown>(
-		key: string,
-		type: "text"
-	): Promise<WorkerKVNamespaceGetWithMetadataResult<string, Metadata>>;
-	getWithMetadata<ExpectedValue = unknown, Metadata = unknown>(
-		key: string,
-		type: "json"
-	): Promise<WorkerKVNamespaceGetWithMetadataResult<ExpectedValue, Metadata>>;
-	getWithMetadata<Metadata = unknown>(
-		key: string,
-		type: "arrayBuffer"
-	): Promise<WorkerKVNamespaceGetWithMetadataResult<ArrayBuffer, Metadata>>;
-	getWithMetadata<Metadata = unknown>(
-		key: string,
-		type: "stream"
-	): Promise<WorkerKVNamespaceGetWithMetadataResult<ReadableStream, Metadata>>;
-	getWithMetadata<Metadata = unknown>(
-		key: string,
-		options: WorkerKVNamespaceGetOptions<"text">
-	): Promise<WorkerKVNamespaceGetWithMetadataResult<string, Metadata>>;
-	getWithMetadata<ExpectedValue = unknown, Metadata = unknown>(
-		key: string,
-		options: WorkerKVNamespaceGetOptions<"json">
-	): Promise<WorkerKVNamespaceGetWithMetadataResult<ExpectedValue, Metadata>>;
-	getWithMetadata<Metadata = unknown>(
-		key: string,
-		options: WorkerKVNamespaceGetOptions<"arrayBuffer">
-	): Promise<WorkerKVNamespaceGetWithMetadataResult<ArrayBuffer, Metadata>>;
-	getWithMetadata<Metadata = unknown>(
-		key: string,
-		options: WorkerKVNamespaceGetOptions<"stream">
-	): Promise<WorkerKVNamespaceGetWithMetadataResult<ReadableStream, Metadata>>;
-};
+export type OverloadUnion3<T> = T extends {
+	(...args: infer P1): infer R1;
+	(...args: infer P2): infer R2;
+	(...args: infer P3): infer R3;
+}
+	? ((...args: P1) => R1) | ((...args: P2) => R2) | ((...args: P3) => R3)
+	: OverloadUnion2<T>;
 
-// Replacing `Headers`, `ReadableStream`, `Blob`
-export type R2Object = Omit<WorkerR2Object, "writeHttpMetadata"> & {
-	writeHttpMetadata(headers: Headers): void;
-};
-export type R2ObjectBody = Omit<
-	WorkerR2ObjectBody,
-	"writeHttpMetadata" | "body" | "blob"
-> & {
-	writeHttpMetadata(headers: Headers): void;
-	get body(): ReadableStream;
-	blob(): Promise<Blob>;
-};
-export type R2GetOptions = {
-	onlyIf?: WorkerR2Conditional | Headers;
-	range?: WorkerR2Range | Headers;
-};
-export type R2PutOptions = Omit<
-	WorkerR2PutOptions,
-	"onlyIf" | "httpMetadata"
-> & {
-	onlyIf?: WorkerR2Conditional | Headers;
-	httpMetadata?: WorkerR2HTTPMetadata | Headers;
-};
-export type R2MultipartOptions = Omit<
-	WorkerR2MultipartOptions,
-	"httpMetadata"
-> & {
-	httpMetadata?: WorkerR2HTTPMetadata | Headers;
-};
-export type R2MultipartUpload = Omit<
-	WorkerR2MultipartUpload,
-	"uploadPart" | "complete"
-> & {
-	uploadPart(
-		partNumber: number,
-		value: ReadableStream | (ArrayBuffer | ArrayBufferView) | string | Blob
-	): Promise<WorkerR2UploadedPart>;
-	complete(uploadedParts: WorkerR2UploadedPart[]): Promise<R2Object>;
-};
-export type R2Objects = {
-	objects: R2Object[];
-	delimitedPrefixes: string[];
-} & ({ truncated: true; cursor: string } | { truncated: false });
+export type OverloadUnion4<T> = T extends {
+	(...args: infer P1): infer R1;
+	(...args: infer P2): infer R2;
+	(...args: infer P3): infer R3;
+	(...args: infer P4): infer R4;
+}
+	?
+			| ((...args: P1) => R1)
+			| ((...args: P2) => R2)
+			| ((...args: P3) => R3)
+			| ((...args: P4) => R4)
+	: OverloadUnion3<T>;
 
-export type R2Bucket = Omit<
-	WorkerR2Bucket,
-	| "head"
-	| "get"
-	| "put"
-	| "createMultipartUpload"
-	| "resumeMultipartUpload"
-	| "list"
-> & {
-	head(key: string): Promise<R2Object | null>;
-	get(
-		key: string,
-		options: R2GetOptions & {
-			onlyIf: WorkerR2Conditional | Headers;
-		}
-	): Promise<R2ObjectBody | R2Object | null>;
-	get(key: string, options?: R2GetOptions): Promise<R2ObjectBody | null>;
-	put(
-		key: string,
-		value:
-			| ReadableStream
-			| ArrayBuffer
-			| ArrayBufferView
-			| string
-			| null
-			| Blob,
-		options?: R2PutOptions
-	): Promise<R2Object>;
-	put(
-		key: string,
-		value:
-			| ReadableStream
-			| ArrayBuffer
-			| ArrayBufferView
-			| string
-			| null
-			| Blob,
-		options?: R2PutOptions & {
-			onlyIf: WorkerR2Conditional | Headers;
-		}
-	): Promise<R2Object | null>;
-	createMultipartUpload(
-		key: string,
-		options?: R2MultipartOptions
-	): Promise<R2MultipartUpload>;
-	resumeMultipartUpload(key: string, uploadId: string): R2MultipartUpload;
-	list(options?: WorkerR2ListOptions): Promise<R2Objects>;
-};
+export type OverloadUnion5<T> = T extends {
+	(...args: infer P1): infer R1;
+	(...args: infer P2): infer R2;
+	(...args: infer P3): infer R3;
+	(...args: infer P4): infer R4;
+	(...args: infer P5): infer R5;
+}
+	?
+			| ((...args: P1) => R1)
+			| ((...args: P2) => R2)
+			| ((...args: P3) => R3)
+			| ((...args: P4) => R4)
+			| ((...args: P5) => R5)
+	: OverloadUnion4<T>;
+
+export type OverloadUnion6<T> = T extends {
+	(...args: infer P1): infer R1;
+	(...args: infer P2): infer R2;
+	(...args: infer P3): infer R3;
+	(...args: infer P4): infer R4;
+	(...args: infer P5): infer R5;
+	(...args: infer P6): infer R6;
+}
+	?
+			| ((...args: P1) => R1)
+			| ((...args: P2) => R2)
+			| ((...args: P3) => R3)
+			| ((...args: P4) => R4)
+			| ((...args: P5) => R5)
+			| ((...args: P6) => R6)
+	: OverloadUnion5<T>;
+
+export type OverloadUnion7<T> = T extends {
+	(...args: infer P1): infer R1;
+	(...args: infer P2): infer R2;
+	(...args: infer P3): infer R3;
+	(...args: infer P4): infer R4;
+	(...args: infer P5): infer R5;
+	(...args: infer P6): infer R6;
+	(...args: infer P7): infer R7;
+}
+	?
+			| ((...args: P1) => R1)
+			| ((...args: P2) => R2)
+			| ((...args: P3) => R3)
+			| ((...args: P4) => R4)
+			| ((...args: P5) => R5)
+			| ((...args: P6) => R6)
+			| ((...args: P7) => R7)
+	: OverloadUnion6<T>;
+
+export type OverloadUnion8<T> = T extends {
+	(...args: infer P1): infer R1;
+	(...args: infer P2): infer R2;
+	(...args: infer P3): infer R3;
+	(...args: infer P4): infer R4;
+	(...args: infer P5): infer R5;
+	(...args: infer P6): infer R6;
+	(...args: infer P7): infer R7;
+	(...args: infer P8): infer R8;
+}
+	?
+			| ((...args: P1) => R1)
+			| ((...args: P2) => R2)
+			| ((...args: P3) => R3)
+			| ((...args: P4) => R4)
+			| ((...args: P5) => R5)
+			| ((...args: P6) => R6)
+			| ((...args: P7) => R7)
+			| ((...args: P8) => R8)
+	: OverloadUnion7<T>;
+
+// `KVNamespace#{get,getWithMetadata}()` each have 9 overloads :D
+export type OverloadUnion9<T> = T extends {
+	(...args: infer P1): infer R1;
+	(...args: infer P2): infer R2;
+	(...args: infer P3): infer R3;
+	(...args: infer P4): infer R4;
+	(...args: infer P5): infer R5;
+	(...args: infer P6): infer R6;
+	(...args: infer P7): infer R7;
+	(...args: infer P8): infer R8;
+	(...args: infer P9): infer R9;
+}
+	?
+			| ((...args: P1) => R1)
+			| ((...args: P2) => R2)
+			| ((...args: P3) => R3)
+			| ((...args: P4) => R4)
+			| ((...args: P5) => R5)
+			| ((...args: P6) => R6)
+			| ((...args: P7) => R7)
+			| ((...args: P8) => R8)
+			| ((...args: P9) => R9)
+	: OverloadUnion8<T>;
+
+export type OverloadUnion<T extends (...args: any[]) => any> =
+	// Functions with no parameters pass the `extends` checks in the
+	// `OverloadUnionN` types with `(...args: unknown[]) => unknown` for the
+	// other overloads. Therefore, filter them out early.
+	Parameters<T> extends [] ? T : OverloadUnion9<T>;

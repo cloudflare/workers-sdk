@@ -5,9 +5,11 @@ import crypto from "crypto";
 import path from "path";
 import { text } from "stream/consumers";
 import type {
+	R2Bucket,
 	R2Conditional,
 	R2ListOptions,
-	R2Bucket as WorkersR2Bucket,
+	R2Object,
+	R2Objects,
 } from "@cloudflare/workers-types/experimental";
 import { Macro, ThrowsExpectation } from "ava";
 import {
@@ -15,11 +17,8 @@ import {
 	MiniflareOptions,
 	MultipartPartRow,
 	ObjectRow,
-	R2Bucket,
 	R2Gateway,
-	R2Object,
-	R2ObjectBody,
-	R2Objects,
+	ReplaceWorkersTypes,
 	Storage,
 	TypedDatabase,
 	createFileStorage,
@@ -48,10 +47,13 @@ function hash(value: string, algorithm = "md5") {
 	return crypto.createHash(algorithm).update(value).digest("hex");
 }
 
-type NamespacedR2Bucket = R2Bucket & { ns: string };
+type NamespacedR2Bucket = ReplaceWorkersTypes<R2Bucket> & { ns: string };
 
 // Automatically prefix all keys with the specified namespace
-function nsBucket(ns: string, bucket: R2Bucket): NamespacedR2Bucket {
+function nsBucket(
+	ns: string,
+	bucket: ReplaceWorkersTypes<R2Bucket>
+): NamespacedR2Bucket {
 	return new Proxy(bucket as NamespacedR2Bucket, {
 		get(target, key, receiver) {
 			if (key === "ns") return ns;
@@ -86,7 +88,7 @@ const opts: Partial<MiniflareOptions> = {
 	r2Buckets: { BUCKET: "bucket" },
 	compatibilityFlags: ["r2_list_honor_include"],
 };
-const test = miniflareTest<{ BUCKET: WorkersR2Bucket }, Context>(
+const test = miniflareTest<{ BUCKET: R2Bucket }, Context>(
 	opts,
 	async (global) => {
 		return new global.Response(null, { status: 404 });
@@ -167,6 +169,7 @@ test("head: returns metadata for existing keys", async (t) => {
 
 	// Test proxying of `writeHttpMetadata()`
 	const headers = new Headers({ "X-Key": "value" });
+	// noinspection JSVoidFunctionReturnValueUsed
 	t.is(object.writeHttpMetadata(headers), undefined);
 	t.is(headers.get("Content-Type"), "text/plain");
 	t.is(headers.get("X-Key"), "value");
@@ -215,6 +218,7 @@ test("get: returns metadata and body for existing keys", async (t) => {
 
 	// Test proxying of `writeHttpMetadata()`
 	const headers = new Headers({ "X-Key": "value" });
+	// noinspection JSVoidFunctionReturnValueUsed
 	t.is(body.writeHttpMetadata(headers), undefined);
 	t.is(headers.get("Content-Type"), "text/plain");
 	t.is(headers.get("X-Key"), "value");
@@ -490,7 +494,7 @@ test("put: stores only if passes onlyIf", async (t) => {
 	};
 	const fail = async (cond: R2Conditional) => {
 		const object = await r2.put("key", "2", { onlyIf: cond });
-		t.is(object as R2Object | null, null);
+		t.is(object as ReplaceWorkersTypes<R2Object> | null, null);
 		t.is(await (await r2.get("key"))?.text(), "1");
 		// No `reset()` as we've just checked we didn't update anything
 	};
@@ -841,9 +845,9 @@ test("list: returns correct delimitedPrefixes for delimiter and prefix", async (
 	const allKeys = Object.keys(values);
 	for (const [key, value] of Object.entries(values)) await r2.put(key, value);
 
-	const keys = (result: R2Objects) =>
+	const keys = (result: ReplaceWorkersTypes<R2Objects>) =>
 		result.objects.map(({ key }) => key.substring(ns.length));
-	const delimitedPrefixes = (result: R2Objects) =>
+	const delimitedPrefixes = (result: ReplaceWorkersTypes<R2Objects>) =>
 		result.delimitedPrefixes.map((prefix) => prefix.substring(ns.length));
 	const allKeysWithout = (...exclude: string[]) =>
 		allKeys.filter((value) => !exclude.includes(value));
@@ -1391,18 +1395,18 @@ test("get: is multipart aware", async (t) => {
 	// Check ranged get accessing single part
 	const halfPartSize = Math.floor(PART_SIZE / 2);
 	const quarterPartSize = Math.floor(PART_SIZE / 4);
-	object = (await r2.get("key", {
+	object = await r2.get("key", {
 		range: { offset: halfPartSize, length: quarterPartSize },
-	})) as R2ObjectBody | null;
+	});
 	t.is(await object?.text(), "a".repeat(quarterPartSize));
 
 	// Check ranged get accessing multiple parts
-	object = (await r2.get("key", {
+	object = await r2.get("key", {
 		range: {
 			offset: halfPartSize,
 			length: halfPartSize + PART_SIZE + quarterPartSize,
 		},
-	})) as R2ObjectBody | null;
+	});
 	t.is(
 		await object?.text(),
 		`${"a".repeat(halfPartSize)}${"b".repeat(PART_SIZE)}${"c".repeat(
@@ -1411,9 +1415,9 @@ test("get: is multipart aware", async (t) => {
 	);
 
 	// Check ranged get of suffix
-	object = (await r2.get("key", {
+	object = await r2.get("key", {
 		range: { suffix: quarterPartSize + PART_SIZE },
-	})) as R2ObjectBody | null;
+	});
 	t.is(
 		await object?.text(),
 		`${"b".repeat(quarterPartSize)}${"c".repeat(PART_SIZE)}`
