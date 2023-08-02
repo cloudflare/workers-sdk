@@ -2,11 +2,12 @@ import assert from "assert";
 import crypto from "crypto";
 import path from "path";
 import { text } from "stream/consumers";
+import type { CacheStorage } from "@cloudflare/workers-types/experimental";
 import {
-	CacheStorage,
 	HeadersInit,
 	KeyValueStorage,
 	LogLevel,
+	ReplaceWorkersTypes,
 	Request,
 	RequestInit,
 	Response,
@@ -15,7 +16,7 @@ import {
 import { MiniflareTestContext, miniflareTest, useTmp } from "../../test-shared";
 
 interface Context extends MiniflareTestContext {
-	caches: CacheStorage;
+	caches: ReplaceWorkersTypes<CacheStorage>;
 }
 
 const test = miniflareTest<never, Context>({}, async (global, req) => {

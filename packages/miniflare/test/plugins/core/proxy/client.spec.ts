@@ -3,13 +3,14 @@ import { Blob } from "buffer";
 import { text } from "stream/consumers";
 import { ReadableStream } from "stream/web";
 import util from "util";
+import type { Fetcher } from "@cloudflare/workers-types/experimental";
 import test, { ThrowsExpectation } from "ava";
 import {
 	DeferredPromise,
-	Fetcher,
 	File,
 	MessageEvent,
 	Miniflare,
+	ReplaceWorkersTypes,
 	Response,
 	WebSocketPair,
 } from "miniflare";
@@ -34,7 +35,9 @@ test("ProxyClient: supports service bindings with WebSockets", async (t) => {
 			},
 		},
 	});
-	const { CUSTOM } = await mf.getBindings<{ CUSTOM: Fetcher }>();
+	const { CUSTOM } = await mf.getBindings<{
+		CUSTOM: ReplaceWorkersTypes<Fetcher>;
+	}>();
 
 	const res = await CUSTOM.fetch("http://placeholder/", {
 		headers: { Upgrade: "websocket" },
