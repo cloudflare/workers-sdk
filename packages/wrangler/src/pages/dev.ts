@@ -32,6 +32,7 @@ import type {
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type { RoutesJSONSpec } from "./functions/routes-transformation";
+import { isBuildFailure } from "../deployment-bundle/bundle";
 
 /*
  * DURABLE_OBJECTS_BINDING_REGEXP matches strings like:
@@ -293,7 +294,15 @@ export const Handler = async ({
 			persistent: true,
 			ignoreInitial: true,
 		}).on("all", async () => {
-			await runBuild();
+			try {
+				await runBuild();
+			} catch (e) {
+				if (isBuildFailure(e)) {
+					logger.warn("Error building worker script:", e.message);
+					return;
+				}
+				throw e;
+			}
 		});
 	} else if (usingWorkerScript) {
 		scriptPath = workerScriptPath;
