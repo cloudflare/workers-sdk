@@ -4,6 +4,7 @@ import { build } from "esbuild";
 import { toUrlPath } from "../../paths";
 import type { UrlPath } from "../../paths";
 import type { HTTPMethod, RouteConfig } from "./routes";
+import { FunctionsBuildError } from "../errors";
 
 export async function generateConfigFromFileTree({
 	baseDir,
@@ -30,6 +31,8 @@ export async function generateConfigFromFileTree({
 				write: false,
 				bundle: false,
 				entryPoints: [path.resolve(filepath)],
+			}).catch((e) => {
+				throw new FunctionsBuildError(e.message);
 			});
 			const exportNames: string[] = [];
 			if (metafile) {

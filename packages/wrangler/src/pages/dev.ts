@@ -12,7 +12,12 @@ import * as metrics from "../metrics";
 import { getBasePath } from "../paths";
 import { buildFunctions } from "./buildFunctions";
 import { ROUTES_SPEC_VERSION, SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
-import { FunctionsNoRoutesError, getFunctionsNoRoutesWarning } from "./errors";
+import {
+	FunctionsBuildError,
+	FunctionsNoRoutesError,
+	getFunctionsBuildWarning,
+	getFunctionsNoRoutesWarning,
+} from "./errors";
 import {
 	buildRawWorker,
 	checkRawWorker,
@@ -375,6 +380,11 @@ export const Handler = async ({
 					if (e instanceof FunctionsNoRoutesError) {
 						logger.warn(
 							getFunctionsNoRoutesWarning(functionsDirectory, "skipping")
+						);
+					}
+					if (e instanceof FunctionsBuildError) {
+						logger.warn(
+							getFunctionsBuildWarning(functionsDirectory, e.message)
 						);
 					} else {
 						throw e;
