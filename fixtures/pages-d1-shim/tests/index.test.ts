@@ -6,7 +6,9 @@ import { join } from "path";
 import { describe, it } from "vitest";
 
 describe("Pages D1 shim", () => {
-	it("applies the D1 shim", async ({ expect }) => {
+	it("builds functions with D1 binding, without the shim", async ({
+		expect,
+	}) => {
 		const dir = tmpdir();
 		const file = join(dir, "./d1-pages.js");
 

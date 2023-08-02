@@ -124,7 +124,6 @@ export interface CfR2Bucket {
 
 // TODO: figure out if this is duplicated in packages/wrangler/src/config/environment.ts
 export interface CfD1Database {
-	// For now, all D1 bindings are alpha
 	binding: string;
 	database_id: string;
 	database_name?: string;
