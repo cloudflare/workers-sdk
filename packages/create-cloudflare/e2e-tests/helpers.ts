@@ -24,23 +24,11 @@ export type RunnerConfig = {
 	argv?: string[];
 };
 
-const getRunnerCommand = () => {
-	switch (process.env.TEST_PM) {
-		case "pnpm":
-			return "pnpm";
-		case "yarn":
-			return "yarn exec";
-		case "npm":
-		default:
-			return "node";
-	}
-};
-
 export const runC3 = async ({
 	argv = [],
 	promptHandlers = [],
 }: RunnerConfig) => {
-	const proc = spawn(getRunnerCommand(), ["./dist/cli.js", ...argv]);
+	const proc = spawn("node", ["./dist/cli.js", ...argv]);
 	const stdout: string[] = [];
 	const stderr: string[] = [];
 
