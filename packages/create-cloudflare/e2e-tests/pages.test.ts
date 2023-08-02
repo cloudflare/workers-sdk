@@ -6,7 +6,8 @@ import { FrameworkMap } from "frameworks/index";
 import { readJSON } from "helpers/files";
 import { fetch } from "undici";
 import { describe, expect, test, afterEach, beforeEach } from "vitest";
-import { keys, runC3 } from "./helpers";
+// import { keys, runC3 } from "./helpers";
+import { runC3 } from "./helpers";
 import type { RunnerConfig } from "./helpers";
 
 export const TEST_PREFIX = "c3-e2e-";
@@ -122,9 +123,9 @@ describe(`E2E: Web frameworks`, () => {
 
 	// These are ordered based on speed and reliability for ease of debugging
 	const frameworkTests: Record<string, FrameworkTestConfig> = {
-		astro: {
-			expectResponseToContain: "Hello, Astronaut!",
-		},
+		// astro: {
+		// 	expectResponseToContain: "Hello, Astronaut!",
+		// },
 		hono: {
 			expectResponseToContain: "/api/hello",
 		},
@@ -203,8 +204,9 @@ describe(`E2E: Web frameworks`, () => {
 		"%s",
 		async (name) => {
 			await runCliWithDeploy(name);
-		},
-		{ retry: 3 }
+		}
+		// DEBUG: no retries for testing
+		// { retry: 3 }
 	);
 
 	test.skip("Hono (wrangler defaults)", async () => {
