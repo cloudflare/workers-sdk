@@ -52,7 +52,7 @@
 		"@cloudflare/workers-types": "^4.20221111.1",
 		"esbuild": "0.16.3",
 		"patch-package": "^6.5.1",
-		"turbo": "^1.10.2"
+		"turbo": "^1.10.12"
 	},
 	"engines": {
 		"node": ">=16.13.0"
