@@ -382,19 +382,20 @@ export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
 				})
 				.catch((e) => {
 					logger.error(
-						`🚨 Error uploading secret for key: ${key}:
+						`uploading secret for key: ${key}:
                 ${e.message}`
 					);
 					return false;
 				});
 		})
 	);
+
 	const successes = bulkOutcomes.filter((outcome) => outcome).length;
 	const failures = bulkOutcomes.length - successes;
 	logger.log("");
 	logger.log("Finished processing secrets JSON file:");
 	logger.log(`✨ ${successes} secrets successfully uploaded`);
 	if (failures > 0) {
-		logger.log(`🚨 ${failures} secrets failed to upload`);
+		throw new Error(`🚨 ${failures} secrets failed to upload`);
 	}
 };
