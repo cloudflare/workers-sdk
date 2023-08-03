@@ -301,6 +301,8 @@ describe("r2", () => {
 						expect(objectName).toEqual("wormhole-img.png");
 						const headersObject = request.headers.all();
 						delete headersObject["user-agent"];
+						//This is removed because jest-fetch-mock does not support ReadableStream request bodies and has an incorrect body and content-length
+						delete headersObject["content-length"];
 						expect(headersObject).toMatchInlineSnapshot(`
 					Object {
 					  "accept": "*/*",
@@ -311,7 +313,6 @@ describe("r2", () => {
 					  "content-disposition": "content-disposition-mock",
 					  "content-encoding": "content-encoding-mock",
 					  "content-language": "content-lang-mock",
-					  "content-length": "10",
 					  "content-type": "content-type-mock",
 					  "expires": "expire-time-mock",
 					  "host": "api.cloudflare.com",
@@ -368,6 +369,112 @@ describe("r2", () => {
 			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments pipe and file are mutually exclusive[0m
 
 			"
+		`);
+		});
+
+		it("should put R2 object from local bucket", async () => {
+			await expect(() =>
+				runWrangler(
+					`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png --local`
+				)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"The specified key does not exist."`
+			);
+
+			fs.writeFileSync("wormhole-img.png", "passageway");
+			await runWrangler(
+				`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png --local`
+			);
+			expect(std.out).toMatchInlineSnapshot(`
+			"Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
+
+			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+			Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
+			Upload complete."
+		`);
+
+			await runWrangler(
+				`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png --local`
+			);
+			expect(std.out).toMatchInlineSnapshot(`
+			"Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
+
+			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+			Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
+			Upload complete.
+			Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
+			Download complete."
+		`);
+		});
+
+		it("should delete R2 object from local bucket", async () => {
+			fs.writeFileSync("wormhole-img.png", "passageway");
+			await runWrangler(
+				`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png --local`
+			);
+
+			await runWrangler(
+				`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png --local`
+			);
+			expect(std.out).toMatchInlineSnapshot(`
+			"Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
+			Upload complete.
+			Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
+			Download complete."
+		`);
+
+			await runWrangler(
+				`r2 object delete bucketName-object-test/wormhole-img.png --local`
+			);
+			expect(std.out).toMatchInlineSnapshot(`
+			"Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
+			Upload complete.
+			Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
+			Download complete.
+			Deleting object \\"wormhole-img.png\\" from bucket \\"bucketName-object-test\\".
+			Delete complete."
+		`);
+
+			await expect(() =>
+				runWrangler(
+					`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png --local`
+				)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"The specified key does not exist."`
+			);
+		});
+
+		it("should follow persist-to for object bucket", async () => {
+			fs.writeFileSync("wormhole-img.png", "passageway");
+			await runWrangler(
+				`r2 object put bucketName-object-test/file-one --file ./wormhole-img.png --local`
+			);
+
+			await runWrangler(
+				`r2 object put bucketName-object-test/file-two --file ./wormhole-img.png --local --persist-to ./different-dir`
+			);
+
+			await expect(() =>
+				runWrangler(
+					`r2 object get bucketName-object-test/file-one --file ./wormhole-img.png --local --persist-to ./different-dir`
+				)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"The specified key does not exist."`
+			);
+
+			await runWrangler(
+				`r2 object get bucketName-object-test/file-two --file ./wormhole-img.png --local --persist-to ./different-dir`
+			);
+			expect(std.out).toMatchInlineSnapshot(`
+			"Creating object \\"file-one\\" in bucket \\"bucketName-object-test\\".
+			Upload complete.
+			Creating object \\"file-two\\" in bucket \\"bucketName-object-test\\".
+			Upload complete.
+			Downloading \\"file-one\\" from \\"bucketName-object-test\\".
+
+			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+			Downloading \\"file-two\\" from \\"bucketName-object-test\\".
+			Download complete."
 		`);
 		});
 	});

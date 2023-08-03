@@ -1,6 +1,16 @@
-import { Readable } from "node:stream";
+import path from "node:path";
+import {
+	R2Gateway,
+	NoOpLog,
+	createFileStorage,
+	sanitisePath,
+	defaultTimers,
+} from "miniflare";
 import { fetchResult } from "../cfetch";
 import { fetchR2Objects } from "../cfetch/internal";
+import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
+import type { Readable } from "node:stream";
+import type { ReadableStream } from "node:stream/web";
 import type { HeadersInit } from "undici";
 
 /**
@@ -73,13 +83,13 @@ export async function getR2Object(
 	accountId: string,
 	bucketName: string,
 	objectName: string
-): Promise<Readable> {
+): Promise<ReadableStream> {
 	const response = await fetchR2Objects(
 		`/accounts/${accountId}/r2/buckets/${bucketName}/objects/${objectName}`,
 		{ method: "GET" }
 	);
 
-	return Readable.from(response.body);
+	return response.body;
 }
 
 /**
@@ -89,7 +99,7 @@ export async function putR2Object(
 	accountId: string,
 	bucketName: string,
 	objectName: string,
-	object: Readable | Buffer,
+	object: Readable | ReadableStream | Buffer,
 	options: Record<string, unknown>
 ): Promise<void> {
 	const headerKeys = [
@@ -129,4 +139,16 @@ export async function deleteR2Object(
 		`/accounts/${accountId}/r2/buckets/${bucketName}/objects/${objectName}`,
 		{ method: "DELETE" }
 	);
+}
+
+export function localGateway(
+	persistTo: string | undefined,
+	configPath: string | undefined,
+	bucketName: string
+): R2Gateway {
+	const persist = getLocalPersistencePath(persistTo, configPath);
+	const sanitisedNamespace = sanitisePath(bucketName);
+	const persistPath = path.join(persist, "v3/r2", sanitisedNamespace);
+	const storage = createFileStorage(persistPath);
+	return new R2Gateway(new NoOpLog(), storage, defaultTimers);
 }
