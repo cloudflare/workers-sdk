@@ -78,6 +78,7 @@ describe("Pages _worker.js/ directory", () => {
 
 		expect(contents).toContain("D1_ERROR");
 		expect(contents).toContain('"other-script-test"');
+		expect(contents).toContain('"other-other-script-test"');
 		expect(contents).toContain('import staticJsMod from "./static.js";');
 		expect(contents).toContain('import staticMjsMod from "./static.mjs";');
 	});
