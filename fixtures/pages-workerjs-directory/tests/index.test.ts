@@ -34,8 +34,16 @@ describe("Pages _worker.js/ directory", () => {
 			fetch(`http://${ip}:${port}/static`).then((resp) => resp.text())
 		).resolves.toContain("static");
 		await expect(
+			fetch(`http://${ip}:${port}/other-static`).then((resp) => resp.text())
+		).resolves.toContain("other-static");
+		await expect(
 			fetch(`http://${ip}:${port}/other-script.js`).then((resp) => resp.text())
 		).resolves.toContain("other-script-test");
+		await expect(
+			fetch(`http://${ip}:${port}/other-other-script.mjs`).then((resp) =>
+				resp.text()
+			)
+		).resolves.toContain("other-other-script-test");
 		await expect(
 			fetch(`http://${ip}:${port}/d1`).then((resp) => resp.text())
 		).resolves.toContain('{"1":1}');

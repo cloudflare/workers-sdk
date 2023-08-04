@@ -592,7 +592,7 @@ export const Handler = async ({
 			? [
 					{
 						type: "ESModule",
-						globs: ["**/*.js"],
+						globs: ["**/*.js", "**/*.mjs"],
 					},
 			  ]
 			: undefined,
