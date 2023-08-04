@@ -31,11 +31,11 @@ describe("Pages _worker.js/ directory", () => {
 			fetch(`http://${ip}:${port}/wasm`).then((resp) => resp.text())
 		).resolves.toContain("3");
 		await expect(
-			fetch(`http://${ip}:${port}/static`).then((resp) => resp.text())
-		).resolves.toContain("static");
+			fetch(`http://${ip}:${port}/static-js`).then((resp) => resp.text())
+		).resolves.toEqual("static import text (via js): 'js static'");
 		await expect(
-			fetch(`http://${ip}:${port}/other-static`).then((resp) => resp.text())
-		).resolves.toContain("other-static");
+			fetch(`http://${ip}:${port}/static-mjs`).then((resp) => resp.text())
+		).resolves.toEqual("static import text (via mjs): 'mjs static'");
 		await expect(
 			fetch(`http://${ip}:${port}/other-script.js`).then((resp) => resp.text())
 		).resolves.toContain("other-script-test");
@@ -78,6 +78,7 @@ describe("Pages _worker.js/ directory", () => {
 
 		expect(contents).toContain("D1_ERROR");
 		expect(contents).toContain('"other-script-test"');
-		expect(contents).toContain('import staticMod from "./static.js";');
+		expect(contents).toContain('import staticJsMod from "./static.js";');
+		expect(contents).toContain('import staticMjsMod from "./static.mjs";');
 	});
 });

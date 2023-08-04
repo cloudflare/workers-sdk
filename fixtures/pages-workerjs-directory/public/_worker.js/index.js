@@ -1,4 +1,5 @@
-import staticMod from "./static.js";
+import staticJsMod from "./static.js";
+import staticMjsMod from "./static.mjs";
 import add from "./add.wasm";
 
 export default {
@@ -10,8 +11,12 @@ export default {
 			return new Response(addModule.exports.add(1, 2).toString());
 		}
 
-		if (pathname === "/static") {
-			return new Response(staticMod);
+		if (pathname === "/static-js") {
+			return new Response(`static import text (via js): '${staticJsMod}'`);
+		}
+
+		if (pathname === "/static-mjs") {
+			return new Response(`static import text (via mjs): '${staticMjsMod}'`);
 		}
 
 		if (pathname === "/d1") {
