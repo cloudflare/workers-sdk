@@ -5,8 +5,8 @@ import { watch } from "chokidar";
 import clipboardy from "clipboardy";
 import commandExists from "command-exists";
 import { Box, Text, useApp, useInput, useStdin } from "ink";
-import React, { useState, useEffect, useRef, useMemo } from "react";
-import { withErrorBoundary, useErrorHandler } from "react-error-boundary";
+import React, { useEffect, useRef, useState } from "react";
+import { useErrorHandler, withErrorBoundary } from "react-error-boundary";
 import onExit from "signal-exit";
 import tmp from "tmp-promise";
 import { fetch } from "undici";
@@ -249,24 +249,6 @@ function DevSession(props: DevSessionProps) {
 	const directory = useTmpDir();
 	const handleError = useErrorHandler();
 
-	// Note: when D1 is out of beta, this (and all instances of `betaD1Shims`) can be removed.
-	// Additionally, useMemo is used so that new arrays aren't created on every render
-	// cause re-rendering further down.
-	const betaD1Shims = useMemo(
-		() => props.bindings.d1_databases?.map((db) => db.binding),
-		[props.bindings.d1_databases]
-	);
-
-	// If we are using d1 bindings, and are not bundling the worker
-	// we should error here as the d1 shim won't be added
-	if (Array.isArray(betaD1Shims) && betaD1Shims.length > 0 && props.noBundle) {
-		handleError(
-			new Error(
-				"While in beta, you cannot use D1 bindings without bundling your worker. Please remove `no_bundle` from your wrangler.toml file or remove the `--no-bundle` flag to access D1 bindings."
-			)
-		);
-	}
-
 	const workerDefinitions = useDevRegistry(
 		props.name,
 		props.bindings.services,
@@ -289,7 +271,6 @@ function DevSession(props: DevSessionProps) {
 		minify: props.minify,
 		legacyNodeCompat: props.legacyNodeCompat,
 		nodejsCompat: props.nodejsCompat,
-		betaD1Shims,
 		define: props.define,
 		noBundle: props.noBundle,
 		assets: props.assetsConfig,

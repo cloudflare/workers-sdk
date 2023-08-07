@@ -121,7 +121,6 @@ export async function bundleWorker(
 		bundle?: boolean;
 		serveAssetsFromWorker: boolean;
 		assets?: StaticAssetsConfig;
-		betaD1Shims?: string[];
 		doBindings: DurableObjectBindings;
 		jsxFactory?: string;
 		jsxFragment?: string;
@@ -153,7 +152,6 @@ export async function bundleWorker(
 	const {
 		bundle = true,
 		serveAssetsFromWorker,
-		betaD1Shims,
 		doBindings,
 		jsxFactory,
 		jsxFragment,
@@ -293,14 +291,6 @@ export async function bundleWorker(
 						workerDefinitions?.[serviceBinding.service] || null,
 					])
 				),
-			},
-		},
-		{
-			name: "d1-beta",
-			path: "templates/middleware/middleware-d1-beta.ts",
-			active: Array.isArray(betaD1Shims) && betaD1Shims.length > 0,
-			config: {
-				D1_IMPORTS: betaD1Shims,
 			},
 		},
 	];
@@ -490,9 +480,7 @@ async function applyMiddlewareLoaderFacade(
 		)
 		.join("\n");
 
-	const middlewareFns = middlewareIdentifiers
-		.map(([m]) => `${m}.default`)
-		.join(",");
+	const middlewareFns = middlewareIdentifiers.map(([m]) => `${m}.default`);
 
 	if (entry.format === "modules") {
 		const middlewareWrappers = middlewareIdentifiers
@@ -518,8 +506,8 @@ async function applyMiddlewareLoaderFacade(
 					...worker,
 					envWrappers,
 					middleware: [
-						${middlewareFns},
-						...(worker.middleware ? worker.middleware : []),
+						${middlewareFns.join(",")},
+            ...(worker.middleware ? worker.middleware : []),
 					].filter(Boolean)
 				}
 				export * from "${prepareFilePath(entry.file)}";

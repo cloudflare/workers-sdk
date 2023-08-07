@@ -57,7 +57,7 @@ describe("Pages _worker.js/ directory", () => {
 
 	it("should bundle", async ({ expect }) => {
 		const dir = tmpdir();
-		const file = join(dir, "./_worker.bundle");
+		const file = join(dir, "_worker.bundle");
 
 		execSync(
 			`npx wrangler pages functions build --build-output-directory public --outfile ${file} --bindings="{\\"d1_databases\\":{\\"D1\\":{}}}"`,
@@ -68,7 +68,7 @@ describe("Pages _worker.js/ directory", () => {
 
 		const contents = readFileSync(file, "utf-8");
 
-		expect(contents).toContain("D1_ERROR");
+		expect(contents).not.toContain("D1_ERROR"); // No more D1 shim in the bundle!
 		expect(contents).toContain('"other-script-test"');
 		expect(contents).toContain('import staticMod from "./static.js";');
 	});

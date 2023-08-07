@@ -52,7 +52,7 @@ describe("deployments", () => {
 	});
 
 	it("deploy worker", async () => {
-		const { stdout, stderr } = await runInWorker`$ ${WRANGLER} deploy`;
+		const { stdout } = await runInWorker`$ ${WRANGLER} deploy`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Uploaded smoke-test-worker (TIMINGS)

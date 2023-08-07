@@ -6371,13 +6371,10 @@ addEventListener('fetch', event => {});`
 			"
 		`);
 				const output = fs.readFileSync("tmp/index.js", "utf-8");
-				expect(output).toContain(
-					`var ExampleDurableObject2 = maskDurableObjectDefinition(ExampleDurableObject);`
-				);
-				expect(output).toContain(
-					`ExampleDurableObject2 as ExampleDurableObject,`
-				);
-				expect(output).toContain(`middleware_loader_entry_default as default`);
+				// D1 no longer injects middleware, so we can pass through the user's code unchanged
+				expect(output).not.toContain(`ExampleDurableObject2`);
+				// ExampleDurableObject is exported directly
+				expect(output).toContain("export {\n  ExampleDurableObject,");
 			});
 
 			it("should error when detecting a service-worker worker implementing durable objects", async () => {
