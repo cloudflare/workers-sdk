@@ -480,9 +480,7 @@ async function applyMiddlewareLoaderFacade(
 		)
 		.join("\n");
 
-	const middlewareFns = middlewareIdentifiers
-		.map(([m]) => `${m}.default`)
-		.join(",");
+	const middlewareFns = middlewareIdentifiers.map(([m]) => `${m}.default`);
 
 	if (entry.format === "modules") {
 		const middlewareWrappers = middlewareIdentifiers
@@ -508,8 +506,8 @@ async function applyMiddlewareLoaderFacade(
 					...worker,
 					envWrappers,
 					middleware: [
-						${middlewareFns},
-						...(worker.middleware ? worker.middleware : []),
+						${middlewareFns.join(",")},
+            ...(worker.middleware ? worker.middleware : []),
 					].filter(Boolean)
 				}
 				export * from "${prepareFilePath(entry.file)}";
