@@ -268,7 +268,7 @@ export async function traverseAndBuildWorkerJSDirectory({
 		[
 			{
 				type: "ESModule",
-				globs: ["**/*.js"],
+				globs: ["**/*.js", "**/*.mjs"],
 			},
 		]
 	);
