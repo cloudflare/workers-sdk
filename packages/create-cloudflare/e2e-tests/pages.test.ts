@@ -7,10 +7,8 @@ import { readJSON } from "helpers/files";
 import { fetch } from "undici";
 import { describe, expect, test, afterEach, beforeEach } from "vitest";
 // import { keys, runC3 } from "./helpers";
-import { runC3 } from "./helpers";
+import { C3_E2E_PREFIX, runC3 } from "./helpers";
 import type { RunnerConfig } from "./helpers";
-
-export const TEST_PREFIX = "c3-e2e-";
 
 /*
 Areas for future improvement:
@@ -23,7 +21,9 @@ type FrameworkTestConfig = RunnerConfig & {
 
 describe(`E2E: Web frameworks`, () => {
 	const tmpDirPath = realpathSync(mkdtempSync(join(tmpdir(), "c3-tests")));
-	const baseProjectName = `c3-e2e-${crypto.randomBytes(3).toString("hex")}`;
+
+	const randomSuffix = crypto.randomBytes(3).toString("hex");
+	const baseProjectName = `${C3_E2E_PREFIX}-${randomSuffix}`;
 
 	const getProjectName = (framework: string) =>
 		`${baseProjectName}-${framework}`;

@@ -35,7 +35,22 @@ jobs:
       - name: Unit Tests
         run: npm run test:unit -w create-cloudflare
 
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Cleanup E2E test projects
+        run: npm run test:e2e:cleanup -w create-cloudflare
+
   e2e:
+    needs: cleanup
     name: "E2E"
     strategy:
       matrix:

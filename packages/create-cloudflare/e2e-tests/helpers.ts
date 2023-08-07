@@ -1,6 +1,8 @@
 import { spawn } from "cross-spawn";
 import { spinnerFrames } from "helpers/interactive";
 
+export const C3_E2E_PREFIX = "c3-e2e-";
+
 export const keys = {
 	enter: "\x0d",
 	backspace: "\x7f",

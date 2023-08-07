@@ -171,6 +171,6 @@ const createProject = async (ctx: PagesGeneratorContext) => {
 			})
 		);
 	} catch (error) {
-		crash("Failed to create pages application. See output above.");
+		crash("Failed to create pages project. See output above.");
 	}
 };

@@ -24,10 +24,6 @@ export const detectPackageManager = () => {
 				name = "yarn";
 				version = devDependencies["yarn"].replace("^", "");
 				break;
-			case "npm":
-			default:
-				name = "npm";
-				break;
 		}
 	}
 
