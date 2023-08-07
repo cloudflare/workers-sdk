@@ -1,3 +1,7 @@
+import { existsSync, mkdtempSync, realpathSync, rmSync } from "fs";
+import crypto from "node:crypto";
+import { tmpdir } from "os";
+import { join } from "path";
 import { spawn } from "cross-spawn";
 import { spinnerFrames } from "helpers/interactive";
 
@@ -89,6 +93,26 @@ export const runC3 = async ({
 		output: condenseOutput(stdout).join("\n").trim(),
 		errors: stderr.join("\n").trim(),
 	};
+};
+
+export const testProjectDir = (suite: string) => {
+	const tmpDirPath = realpathSync(
+		mkdtempSync(join(tmpdir(), `c3-tests-${suite}`))
+	);
+
+	const randomSuffix = crypto.randomBytes(3).toString("hex");
+	const baseProjectName = `${C3_E2E_PREFIX}${randomSuffix}`;
+
+	const getName = (suffix: string) => `${baseProjectName}-${suffix}`;
+	const getPath = (suffix: string) => join(tmpDirPath, getName(suffix));
+	const clean = (suffix: string) => {
+		const path = getPath(suffix);
+		if (existsSync(getPath(path))) {
+			rmSync(path, { recursive: true, force: true });
+		}
+	};
+
+	return { getName, getPath, clean };
 };
 
 // Removes lines from the output of c3 that aren't particularly useful for debugging tests

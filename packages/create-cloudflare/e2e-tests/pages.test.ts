@@ -1,13 +1,9 @@
-import { existsSync, mkdtempSync, realpathSync, rmSync } from "fs";
-import crypto from "node:crypto";
-import { tmpdir } from "os";
 import { join } from "path";
 import { FrameworkMap } from "frameworks/index";
 import { readJSON } from "helpers/files";
 import { fetch } from "undici";
 import { describe, expect, test, afterEach, beforeEach } from "vitest";
-// import { keys, runC3 } from "./helpers";
-import { C3_E2E_PREFIX, runC3 } from "./helpers";
+import { keys, runC3, testProjectDir } from "./helpers";
 import type { RunnerConfig } from "./helpers";
 
 /*
@@ -20,36 +16,23 @@ type FrameworkTestConfig = RunnerConfig & {
 };
 
 describe(`E2E: Web frameworks`, () => {
-	const tmpDirPath = realpathSync(mkdtempSync(join(tmpdir(), "c3-tests")));
-
-	const randomSuffix = crypto.randomBytes(3).toString("hex");
-	const baseProjectName = `${C3_E2E_PREFIX}-${randomSuffix}`;
-
-	const getProjectName = (framework: string) =>
-		`${baseProjectName}-${framework}`;
-	const getProjectPath = (framework: string) =>
-		join(tmpDirPath, getProjectName(framework));
+	const { getName, getPath, clean } = testProjectDir("pages");
 
 	beforeEach((ctx) => {
 		const framework = ctx.meta.name;
-		const projectPath = getProjectPath(framework);
-		rmSync(projectPath, { recursive: true, force: true });
+		clean(framework);
 	});
 
 	afterEach((ctx) => {
 		const framework = ctx.meta.name;
-		const projectPath = getProjectPath(framework);
-
-		if (existsSync(projectPath)) {
-			rmSync(projectPath, { recursive: true });
-		}
+		clean(framework);
 	});
 
 	const runCli = async (
 		framework: string,
 		{ argv = [], promptHandlers = [], overrides }: RunnerConfig
 	) => {
-		const projectPath = getProjectPath(framework);
+		const projectPath = getPath(framework);
 
 		const args = [
 			projectPath,
@@ -97,7 +80,7 @@ describe(`E2E: Web frameworks`, () => {
 	};
 
 	const runCliWithDeploy = async (framework: string) => {
-		const projectName = `${baseProjectName}-${framework}`;
+		const projectName = getName(framework);
 
 		const { argv, overrides, promptHandlers, expectResponseToContain } =
 			frameworkTests[framework];
@@ -123,90 +106,89 @@ describe(`E2E: Web frameworks`, () => {
 
 	// These are ordered based on speed and reliability for ease of debugging
 	const frameworkTests: Record<string, FrameworkTestConfig> = {
-		// astro: {
-		// 	expectResponseToContain: "Hello, Astronaut!",
-		// },
+		astro: {
+			expectResponseToContain: "Hello, Astronaut!",
+		},
 		hono: {
 			expectResponseToContain: "/api/hello",
 		},
-		// qwik: {
-		// 	expectResponseToContain: "Welcome to Qwik",
-		// 	promptHandlers: [
-		// 		{
-		// 			matcher: /Yes looks good, finish update/,
-		// 			input: [keys.enter],
-		// 		},
-		// 	],
-		// },
-		// remix: {
-		// 	expectResponseToContain: "Welcome to Remix",
-		// },
-		// next: {
-		// 	expectResponseToContain: "Create Next App",
-		// 	promptHandlers: [
-		// 		{
-		// 			matcher: /Do you want to use the next-on-pages eslint-plugin\?/,
-		// 			input: ["y"],
-		// 		},
-		// 	],
-		// },
-		// nuxt: {
-		// 	expectResponseToContain: "Welcome to Nuxt!",
-		// 	overrides: {
-		// 		packageScripts: {
-		// 			build: "NITRO_PRESET=cloudflare-pages nuxt build",
-		// 		},
-		// 	},
-		// },
-		// react: {
-		// 	expectResponseToContain: "React App",
-		// },
-		// solid: {
-		// 	expectResponseToContain: "Hello world",
-		// 	promptHandlers: [
-		// 		{
-		// 			matcher: /Which template do you want to use/,
-		// 			input: [keys.enter],
-		// 		},
-		// 		{
-		// 			matcher: /Server Side Rendering/,
-		// 			input: [keys.enter],
-		// 		},
-		// 		{
-		// 			matcher: /Use TypeScript/,
-		// 			input: [keys.enter],
-		// 		},
-		// 	],
-		// },
-		// svelte: {
-		// 	expectResponseToContain: "SvelteKit app",
-		// 	promptHandlers: [
-		// 		{
-		// 			matcher: /Which Svelte app template/,
-		// 			input: [keys.enter],
-		// 		},
-		// 		{
-		// 			matcher: /Add type checking with TypeScript/,
-		// 			input: [keys.down, keys.enter],
-		// 		},
-		// 		{
-		// 			matcher: /Select additional options/,
-		// 			input: [keys.enter],
-		// 		},
-		// 	],
-		// },
-		// vue: {
-		// 	expectResponseToContain: "Vite App",
-		// },
+		qwik: {
+			expectResponseToContain: "Welcome to Qwik",
+			promptHandlers: [
+				{
+					matcher: /Yes looks good, finish update/,
+					input: [keys.enter],
+				},
+			],
+		},
+		remix: {
+			expectResponseToContain: "Welcome to Remix",
+		},
+		next: {
+			expectResponseToContain: "Create Next App",
+			promptHandlers: [
+				{
+					matcher: /Do you want to use the next-on-pages eslint-plugin\?/,
+					input: ["y"],
+				},
+			],
+		},
+		nuxt: {
+			expectResponseToContain: "Welcome to Nuxt!",
+			overrides: {
+				packageScripts: {
+					build: "NITRO_PRESET=cloudflare-pages nuxt build",
+				},
+			},
+		},
+		react: {
+			expectResponseToContain: "React App",
+		},
+		solid: {
+			expectResponseToContain: "Hello world",
+			promptHandlers: [
+				{
+					matcher: /Which template do you want to use/,
+					input: [keys.enter],
+				},
+				{
+					matcher: /Server Side Rendering/,
+					input: [keys.enter],
+				},
+				{
+					matcher: /Use TypeScript/,
+					input: [keys.enter],
+				},
+			],
+		},
+		svelte: {
+			expectResponseToContain: "SvelteKit app",
+			promptHandlers: [
+				{
+					matcher: /Which Svelte app template/,
+					input: [keys.enter],
+				},
+				{
+					matcher: /Add type checking with TypeScript/,
+					input: [keys.down, keys.enter],
+				},
+				{
+					matcher: /Select additional options/,
+					input: [keys.enter],
+				},
+			],
+		},
+		vue: {
+			expectResponseToContain: "Vite App",
+		},
 	};
 
 	test.concurrent.each(Object.keys(frameworkTests))(
 		"%s",
 		async (name) => {
 			await runCliWithDeploy(name);
-		}
-		// DEBUG: no retries for testing
-		// { retry: 3 }
+		},
+		{ retry: 3 }
 	);
 
 	test.skip("Hono (wrangler defaults)", async () => {

@@ -1,22 +1,16 @@
-import { existsSync, rmSync, mkdtempSync, realpathSync } from "fs";
-import { tmpdir } from "os";
-import { join } from "path";
 import { beforeEach, afterEach, describe, test, expect } from "vitest";
 import { version } from "../package.json";
-import { keys, runC3 } from "./helpers";
+import { keys, runC3, testProjectDir } from "./helpers";
 
 describe("E2E: Basic C3 functionality", () => {
-	const tmpDirPath = realpathSync(mkdtempSync(join(tmpdir(), "c3-tests")));
-	const projectPath = join(tmpDirPath, "basic-tests");
+	const { getPath, clean } = testProjectDir("cli");
 
 	beforeEach(() => {
-		rmSync(projectPath, { recursive: true, force: true });
+		clean("cli");
 	});
 
 	afterEach(() => {
-		if (existsSync(projectPath)) {
-			rmSync(projectPath, { recursive: true });
-		}
+		clean("cli");
 	});
 
 	test("--version", async () => {
@@ -38,7 +32,7 @@ describe("E2E: Basic C3 functionality", () => {
 
 	test("Using arrow keys + enter", async () => {
 		const { output } = await runC3({
-			argv: [projectPath],
+			argv: [getPath("cli")],
 			promptHandlers: [
 				{
 					matcher: /What type of application do you want to create/,
@@ -59,7 +53,7 @@ describe("E2E: Basic C3 functionality", () => {
 			],
 		});
 
-		expect(projectPath).toExist();
+		expect(getPath("cli")).toExist();
 		expect(output).toContain(`type "Hello World" Worker`);
 		expect(output).toContain(`yes typescript`);
 		expect(output).toContain(`no git`);
@@ -72,7 +66,7 @@ describe("E2E: Basic C3 functionality", () => {
 			promptHandlers: [
 				{
 					matcher: /In which directory do you want to create your application/,
-					input: [projectPath, keys.enter],
+					input: [getPath("cli"), keys.enter],
 				},
 				{
 					matcher: /What type of application do you want to create/,
@@ -93,7 +87,7 @@ describe("E2E: Basic C3 functionality", () => {
 			],
 		});
 
-		expect(projectPath).toExist();
+		expect(getPath("cli")).toExist();
 		expect(output).toContain(`type Example router & proxy Worker`);
 		expect(output).toContain(`no typescript`);
 		expect(output).toContain(`no git`);
@@ -102,7 +96,7 @@ describe("E2E: Basic C3 functionality", () => {
 
 	test("Mixed args and interactive", async () => {
 		const { output } = await runC3({
-			argv: [projectPath, "--ts", "--no-deploy"],
+			argv: [getPath("cli"), "--ts", "--no-deploy"],
 			promptHandlers: [
 				{
 					matcher: /What type of application do you want to create/,
@@ -115,7 +109,7 @@ describe("E2E: Basic C3 functionality", () => {
 			],
 		});
 
-		expect(projectPath).toExist();
+		expect(getPath("cli")).toExist();
 		expect(output).toContain(`type "Hello World" Worker`);
 		expect(output).toContain(`yes typescript`);
 		expect(output).toContain(`no git`);
