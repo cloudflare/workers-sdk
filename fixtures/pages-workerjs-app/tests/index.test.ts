@@ -4,7 +4,7 @@ import { fetch } from "undici";
 import { describe, it } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
-describe.concurrent("Pages _worker.js", () => {
+describe("Pages _worker.js", () => {
 	it("should throw an error when the _worker.js file imports something and --bundle is false", ({
 		expect,
 	}) => {

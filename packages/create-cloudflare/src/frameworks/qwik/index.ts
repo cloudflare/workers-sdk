@@ -1,15 +1,11 @@
 import { endSection } from "helpers/cli";
-import {
-	detectPackageManager,
-	npmInstall,
-	runCommand,
-	runFrameworkGenerator,
-} from "helpers/command";
+import { npmInstall, runCommand, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
+import { detectPackageManager } from "helpers/packages";
 import { getFrameworkVersion } from "../index";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
-const { npm, npx } = detectPackageManager();
+const { npm, npx, dlx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
 	const version = getFrameworkVersion(ctx);
@@ -18,7 +14,7 @@ const generate = async (ctx: PagesGeneratorContext) => {
 	// to create-qwik in interactive mode
 	await runFrameworkGenerator(
 		ctx,
-		`${npm} create qwik@${version} basic ${ctx.project.name}`
+		`${dlx} create-qwik@${version} basic ${ctx.project.name}`
 	);
 };
 

@@ -1,4 +1,5 @@
 {
+	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
 	"compilerOptions": {
 		"target": "esnext",
 		"module": "esnext",
@@ -6,6 +7,5 @@
 		"types": ["@cloudflare/workers-types"]
 	},
 	"include": ["functions/**/*.ts"],
-	"exclude": ["vscode", "dist"],
-	"extends": "../../tsconfig.json"
+	"exclude": ["vscode", "dist"]
 }

@@ -1,6 +1,6 @@
 {
 	"name": "wranglerjs-compat-webpack-plugin",
-	"version": "0.0.7",
+	"version": "0.0.8",
 	"description": "A webpack plugin to emulate the behavior of Wrangler v1's `type = webpack`",
 	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
 	"bugs": {
@@ -46,9 +46,11 @@
 		]
 	},
 	"dependencies": {
-		"rimraf": "^3.0.2"
+		"rimraf": "^5.0.1"
 	},
 	"devDependencies": {
+		"@cloudflare/eslint-config-worker": "*",
+		"@cloudflare/workers-tsconfig": "*",
 		"@octokit/core": "^3.6.0",
 		"@schemastore/package": "^0.0.6",
 		"@types/jest": "^27.4.1",

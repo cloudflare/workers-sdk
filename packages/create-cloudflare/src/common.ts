@@ -14,17 +14,17 @@ import {
 } from "helpers/cli";
 import { dim, blue, gray, bgGreen, brandColor } from "helpers/colors";
 import {
-	detectPackageManager,
 	listAccounts,
 	printAsyncStatus,
 	runCommand,
 	runCommands,
 	wranglerLogin,
 } from "helpers/command";
-import { confirmInput, selectInput, spinner } from "helpers/interactive";
+import { inputPrompt, processArgument, spinner } from "helpers/interactive";
+import { detectPackageManager } from "helpers/packages";
 import { poll } from "helpers/poll";
-import type { Option } from "helpers/interactive";
-import type { PagesGeneratorArgs, PagesGeneratorContext } from "types";
+import { C3_DEFAULTS } from "./cli";
+import type { C3Args, PagesGeneratorContext } from "types";
 
 const { npm } = detectPackageManager();
 
@@ -34,16 +34,17 @@ export const validateProjectDirectory = (relativePath: string) => {
 	const isEmpty = existsAlready && readdirSync(path).length === 0; // allow existing dirs _if empty_ to ensure c3 is non-destructive
 
 	if (existsAlready && !isEmpty) {
-		crash(
-			`Directory \`${relativePath}\` already exists and is not empty. Please choose a new name.`
-		);
+		return `Directory \`${relativePath}\` already exists and is not empty. Please choose a new name.`;
 	}
 };
 
-export const setupProjectDirectory = (args: PagesGeneratorArgs) => {
+export const setupProjectDirectory = (args: C3Args) => {
 	// Crash if the directory already exists
 	const path = resolve(args.projectName);
-	validateProjectDirectory(path);
+	const err = validateProjectDirectory(path);
+	if (err) {
+		crash(err);
+	}
 
 	const directory = dirname(path);
 	const name = basename(path);
@@ -60,16 +61,15 @@ export const setupProjectDirectory = (args: PagesGeneratorArgs) => {
 export const offerToDeploy = async (ctx: PagesGeneratorContext) => {
 	startSection(`Deploy with Cloudflare`, `Step 3 of 3`);
 
-	ctx.args.deploy = await confirmInput({
+	const label = `deploy via \`${npm} run ${
+		ctx.framework?.config.deployCommand ?? "deploy"
+	}\``;
+
+	ctx.args.deploy = await processArgument(ctx.args, "deploy", {
+		type: "confirm",
 		question: "Do you want to deploy your application?",
-		renderSubmitted: (value: boolean) =>
-			`${brandColor(value ? `yes` : `no`)} ${dim(
-				`deploying via \`${npm} run ${
-					ctx.framework?.config.deployCommand ?? "deploy"
-				}\``
-			)}`,
-		defaultValue: ctx.args.deploy ?? (ctx.args.wranglerDefaults ? false : true), // if --wrangler-defaults, default to false, otherwise default to true
-		acceptDefault: ctx.args.wranglerDefaults,
+		label,
+		defaultValue: C3_DEFAULTS.deploy,
 	});
 
 	if (!ctx.args.deploy) return;
@@ -93,7 +93,7 @@ export const runDeploy = async (ctx: PagesGeneratorContext) => {
 	const result = await runCommand(deployCmd, {
 		silent: true,
 		cwd: ctx.project.path,
-		env: { CLOUDFLARE_ACCOUNT_ID: ctx.account.id },
+		env: { CLOUDFLARE_ACCOUNT_ID: ctx.account.id, NODE_ENV: "production" },
 		startText: `Deploying your application`,
 		doneText: `${brandColor("deployed")} ${dim(`via \`${deployCmd}\``)}`,
 	});
@@ -135,14 +135,12 @@ export const chooseAccount = async (ctx: PagesGeneratorContext) => {
 			value: id,
 		}));
 
-		accountId = await selectInput({
+		accountId = await inputPrompt({
+			type: "select",
 			question: "Which account do you want to use?",
 			options: accountOptions,
-			renderSubmitted: (option: Option) => {
-				return `${brandColor("account")} ${dim(option.label)}`;
-			},
+			label: "account",
 			defaultValue: accountOptions[0].value,
-			acceptDefault: ctx.args.wranglerDefaults,
 		});
 	}
 	const accountName = Object.keys(accounts).find(
@@ -154,6 +152,7 @@ export const chooseAccount = async (ctx: PagesGeneratorContext) => {
 
 export const printSummary = async (ctx: PagesGeneratorContext) => {
 	const nextSteps = [
+		[`Navigate to the new directory`, `cd ${ctx.project.name}`],
 		[
 			`Run the development server`,
 			`${npm} run ${ctx.framework?.config.devCommand ?? "start"}`,
@@ -229,12 +228,11 @@ export const offerGit = async (ctx: PagesGeneratorContext) => {
 
 	if (insideGitRepo) return;
 
-	ctx.args.git ??= await confirmInput({
-		question: "Do you want to use git?",
-		renderSubmitted: (value: boolean) =>
-			`${brandColor("git")} ${dim(value ? `yes` : `no`)}`,
-		defaultValue: true,
-		acceptDefault: ctx.args.wranglerDefaults,
+	ctx.args.git = await processArgument(ctx.args, "git", {
+		type: "confirm",
+		question: "Do you want to use git for version control?",
+		label: "git",
+		defaultValue: C3_DEFAULTS.git,
 	});
 
 	if (ctx.args.git) {
@@ -316,4 +314,23 @@ export async function initializeGit(cwd: string) {
 		// Unable to create the repo with a HEAD branch name, so just fall back to the default.
 		await runCommand(`git init`, { useSpinner: false, silent: true, cwd });
 	}
+}
+
+export async function getProductionBranch(cwd: string) {
+	try {
+		const productionBranch = await runCommand(
+			// "git branch --show-current", // git@^2.22
+			"git rev-parse --abbrev-ref HEAD", // git@^1.6.3
+			{
+				silent: true,
+				cwd,
+				useSpinner: false,
+				captureOutput: true,
+			}
+		);
+
+		return productionBranch.trim();
+	} catch (err) {}
+
+	return "main";
 }

@@ -12,7 +12,7 @@ export default {
 		return h.fetch(request, env, ctx);
 	},
 
-	async queue(batch: MessageBatch<Error>, env: Env): Promise<void> {
+	async queue(batch: MessageBatch<string>, env: Env): Promise<void> {
 		for (const message of batch.messages) {
 			const url: DBUrl = JSON.parse(message.body);
 			await handleQueuedUrl(url, env.DB);

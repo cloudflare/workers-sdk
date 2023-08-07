@@ -1,4 +1,4 @@
-import type { BundleResult } from "../bundle";
+import type { BundleResult } from "../deployment-bundle/bundle";
 
 export const RUNNING_BUILDERS: BundleResult[] = [];
 

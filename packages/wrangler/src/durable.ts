@@ -2,7 +2,7 @@ import assert from "node:assert";
 import { fetchResult } from "./cfetch";
 import { logger } from "./logger";
 import type { Config } from "./config";
-import type { CfWorkerInit } from "./worker";
+import type { CfWorkerInit } from "./deployment-bundle/worker";
 
 /**
  * For a given Worker + migrations config, figure out which migrations

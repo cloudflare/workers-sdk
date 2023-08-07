@@ -1,17 +1,14 @@
 import { mkdirSync } from "fs";
 import { logRaw, updateStatus } from "helpers/cli";
 import { blue, brandColor, dim } from "helpers/colors";
-import {
-	detectPackageManager,
-	installPackages,
-	runFrameworkGenerator,
-} from "helpers/command";
+import { installPackages, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag, usesTypescript, writeFile } from "helpers/files";
+import { detectPackageManager } from "helpers/packages";
 import { getFrameworkVersion } from "../index";
 import { viteConfig } from "./templates";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
-const { npm } = detectPackageManager();
+const { npm, dlx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
 	// Create the project directory and navigate to it
@@ -20,7 +17,7 @@ const generate = async (ctx: PagesGeneratorContext) => {
 
 	// Run the create-solid command
 	const version = getFrameworkVersion(ctx);
-	await runFrameworkGenerator(ctx, `${npm} create solid@${version}`);
+	await runFrameworkGenerator(ctx, `${dlx} create-solid@${version}`);
 
 	logRaw("");
 };
@@ -50,7 +47,7 @@ const config: FrameworkConfig = {
 	displayName: "Solid",
 	packageScripts: {
 		"pages:dev": `wrangler pages dev ${compatDateFlag()} --proxy 3000 -- ${npm} run dev`,
-		"pages:deploy": `${npm} run build build && wrangler pages publish ./dist/public`,
+		"pages:deploy": `${npm} run build && wrangler pages deploy ./dist/public`,
 	},
 };
 export default config;

@@ -5,12 +5,12 @@ import supportsColor from "supports-color";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
-import { isBuildFailure } from "./bundle";
 import { loadDotEnv, readConfig } from "./config";
 import { constellation } from "./constellation";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
 import { deployOptions, deployHandler } from "./deploy";
+import { isBuildFailure } from "./deployment-bundle/bundle";
 import {
 	deployments,
 	commonDeploymentCMDSetup,
@@ -388,7 +388,7 @@ export function createCLIParser(argv: string[]) {
 	);
 
 	wrangler.command(
-		"secret:bulk <json>",
+		"secret:bulk [json]",
 		"🗄️  Bulk upload secrets for a Worker",
 		secretBulkOptions,
 		secretBulkHandler

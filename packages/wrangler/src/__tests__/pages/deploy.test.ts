@@ -1312,7 +1312,7 @@ describe("deployment create", () => {
 				                                      }
 			                                `);
 
-					expect(workerHasD1Shim(workerBundle as string)).toBeTruthy();
+					expect(workerHasD1Shim(workerBundle as string)).toBeFalsy();
 					expect(workerBundle).toContain(
 						`console.log("SOMETHING FROM WITHIN THE WORKER");`
 					);

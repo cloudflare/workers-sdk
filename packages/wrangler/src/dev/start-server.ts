@@ -3,24 +3,24 @@ import * as util from "node:util";
 import chalk from "chalk";
 import onExit from "signal-exit";
 import tmp from "tmp-promise";
-import { bundleWorker, dedupeModulesByName } from "../bundle";
+import { bundleWorker, dedupeModulesByName } from "../deployment-bundle/bundle";
+import { runCustomBuild } from "../deployment-bundle/run-custom-build";
+import traverseModuleGraph from "../deployment-bundle/traverse-module-graph";
 import {
 	getBoundRegisteredWorkers,
 	startWorkerRegistry,
 	stopWorkerRegistry,
 } from "../dev-registry";
-import { runCustomBuild } from "../entry";
 import { logger } from "../logger";
-import traverseModuleGraph from "../traverse-module-graph";
 import { localPropsToConfigBundle, maybeRegisterLocalWorker } from "./local";
 import { MiniflareServer } from "./miniflare";
 import { startRemoteServer } from "./remote";
 import { validateDevProps } from "./validate-dev-props";
 import type { Config } from "../config";
 import type { DurableObjectBindings } from "../config/environment";
+import type { Entry } from "../deployment-bundle/entry";
+import type { CfModule } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
-import type { Entry } from "../entry";
-import type { CfModule } from "../worker";
 import type { DevProps, DirectorySyncResult } from "./dev";
 import type { LocalProps } from "./local";
 import type { EsbuildBundle } from "./use-esbuild";
@@ -72,8 +72,6 @@ export async function startDevServer(
 		}
 	}
 
-	const betaD1Shims = props.bindings.d1_databases?.map((db) => db.binding);
-
 	//implement a react-free version of useEsbuild
 	const bundle = await runEsbuild({
 		entry: props.entry,
@@ -93,7 +91,6 @@ export async function startDevServer(
 		define: props.define,
 		noBundle: props.noBundle,
 		assets: props.assetsConfig,
-		betaD1Shims,
 		workerDefinitions,
 		services: props.bindings.services,
 		firstPartyWorkerDevFacade: props.firstPartyWorker,
@@ -193,7 +190,6 @@ async function runEsbuild({
 	additionalModules,
 	rules,
 	assets,
-	betaD1Shims,
 	serveAssetsFromWorker,
 	tsconfig,
 	minify,
@@ -205,7 +201,6 @@ async function runEsbuild({
 	services,
 	firstPartyWorkerDevFacade,
 	testScheduled,
-	local,
 	doBindings,
 }: {
 	entry: Entry;
@@ -216,7 +211,6 @@ async function runEsbuild({
 	additionalModules: CfModule[];
 	rules: Config["rules"];
 	assets: Config["assets"];
-	betaD1Shims?: string[];
 	define: Config["define"];
 	services: Config["services"];
 	serveAssetsFromWorker: boolean;
@@ -260,13 +254,11 @@ async function runEsbuild({
 				// disable the cache in dev
 				bypassCache: true,
 			},
-			betaD1Shims,
 			workerDefinitions,
 			services,
 			firstPartyWorkerDevFacade,
 			targetConsumer: "dev", // We are starting a dev server
 			testScheduled,
-			local,
 			doBindings,
 			additionalModules: dedupeModulesByName([
 				...(traverseModuleGraphResult?.modules ?? []),
@@ -325,7 +317,7 @@ export async function startLocalServer(props: LocalProps) {
 				stop: () => {
 					abortController.abort();
 					logger.log("⎔ Shutting down local server...");
-					// Initialisation errors are also thrown asynchronously by dispose().
+					// Initialization errors are also thrown asynchronously by dispose().
 					// The `addEventListener("error")` above should've caught them though.
 					server.onDispose().catch(() => {});
 					removeMiniflareServerExitListener();

@@ -1,5 +1,11 @@
 # wranglerjs-compat-webpack-plugin
 
+## 0.0.8
+
+### Patch Changes
+
+- [#3511](https://github.com/cloudflare/workers-sdk/pull/3511) [`3f61892d`](https://github.com/cloudflare/workers-sdk/commit/3f61892d251ff5ce52c7bea2aa69fb5cbe47d831) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - Upgraded rimraf dependecy. For details see: https://github.com/isaacs/rimraf#major-changes
+
 ## 0.0.7
 
 ### Patch Changes

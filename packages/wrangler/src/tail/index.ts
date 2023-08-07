@@ -19,7 +19,7 @@ import {
 	prettyPrintLogs,
 	translateCLICommandToFilterMessage,
 } from "./createTail";
-import type { WorkerMetadata } from "../create-worker-upload-form";
+import type { WorkerMetadata } from "../deployment-bundle/create-worker-upload-form";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,

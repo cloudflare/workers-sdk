@@ -5,13 +5,8 @@
 		"target": "es2020",
 		"lib": ["es2020"],
 		"strict": true,
-		"alwaysStrict": true,
-		"preserveConstEnums": true,
 		"moduleResolution": "node",
-		"sourceMap": true,
-		"types": ["@cloudflare/workers-types", "@types/jest"],
-		"allowJs": true
+		"types": ["@cloudflare/workers-types", "@types/jest"]
 	},
-	"include": ["src"],
-	"exclude": ["node_modules", "dist", "test"]
+	"exclude": ["node_modules", "dist"]
 }

@@ -12,6 +12,8 @@ import {
 	deleteKVBulkKeyValue,
 	BATCH_KEY_MAX,
 	formatNumber,
+	getKVKeyValue,
+	putKVKeyValue,
 } from "./kv/helpers";
 import { logger, LOGGER_LEVELS } from "./logger";
 import type { Config } from "./config";
@@ -120,7 +122,8 @@ export async function syncAssets(
 	scriptName: string,
 	siteAssets: AssetPaths | undefined,
 	preview: boolean,
-	dryRun: boolean | undefined
+	dryRun: boolean | undefined,
+	oldAssetTTL: number | undefined
 ): Promise<{
 	manifest: { [filePath: string]: string } | undefined;
 	namespace: string | undefined;
@@ -146,6 +149,9 @@ export async function syncAssets(
 	// Get all existing keys in asset namespace
 	logger.info("Fetching list of already uploaded assets...");
 	const namespaceKeysResponse = await listKVNamespaceKeys(accountId, namespace);
+	const namespaceKeyInfoMap = new Map<string, typeof namespaceKeysResponse[0]>(
+		namespaceKeysResponse.map((x) => [x.name, x])
+	);
 	const namespaceKeys = new Set(namespaceKeysResponse.map((x) => x.name));
 
 	const assetDirectory = path.join(
@@ -243,7 +249,9 @@ export async function syncAssets(
 	if (uploadBucket.length > 0) uploadBuckets.push(uploadBucket);
 
 	for (const key of namespaceKeys) {
-		logDiff(chalk.red(` - ${key} (removing as stale)`));
+		logDiff(
+			chalk.red(` - ${key} (${oldAssetTTL ? "expiring" : "removing"} as stale)`)
+		);
 	}
 
 	// Upload new assets, with 5 concurrent uploaders
@@ -299,9 +307,7 @@ export async function syncAssets(
 					typeof e === "object" &&
 					e !== null &&
 					"name" in e &&
-					// @ts-expect-error `e.name` should be typed `unknown`, fixed in
-					//  TypeScript 4.9
-					e.name === "AbortError"
+					(e as { name: string }).name === "AbortError"
 				) {
 					break;
 				}
@@ -328,12 +334,48 @@ export async function syncAssets(
 
 	// Delete stale assets
 	const deleteCount = namespaceKeys.size;
+
 	if (deleteCount > 0) {
 		const s = pluralise(deleteCount);
-		logger.info(`Removing ${formatNumber(deleteCount)} stale asset${s}...`);
-	}
-	await deleteKVBulkKeyValue(accountId, namespace, Array.from(namespaceKeys));
+		logger.info(
+			`${oldAssetTTL ? "Expiring" : "Removing"} ${formatNumber(
+				deleteCount
+			)} stale asset${s}...`
+		);
 
+		if (!oldAssetTTL) {
+			await deleteKVBulkKeyValue(
+				accountId,
+				namespace,
+				Array.from(namespaceKeys)
+			);
+		} else {
+			for (const namespaceKey of namespaceKeys) {
+				const expiration = namespaceKeyInfoMap.get(namespaceKey)?.expiration;
+
+				logger.info(
+					` - ${namespaceKey} ${
+						expiration ? `(already expiring at ${expiration})` : ""
+					}`
+				);
+
+				if (expiration) {
+					continue;
+				}
+
+				const currentValue = await getKVKeyValue(
+					accountId,
+					namespace,
+					namespaceKey
+				);
+				await putKVKeyValue(accountId, namespace, {
+					key: namespaceKey,
+					value: Buffer.from(currentValue),
+					expiration_ttl: oldAssetTTL,
+				});
+			}
+		}
+	}
 	logger.log("↗️  Done syncing assets");
 
 	return { manifest, namespace };

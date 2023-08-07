@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { Response } from "undici";
-import { createWorkerUploadForm } from "../../create-worker-upload-form";
-import type { BundleResult } from "../../bundle";
-import type { CfWorkerInit } from "../../worker";
+import { createWorkerUploadForm } from "../../deployment-bundle/create-worker-upload-form";
+import type { BundleResult } from "../../deployment-bundle/bundle";
+import type { CfWorkerInit } from "../../deployment-bundle/worker";
 import type { Blob } from "node:buffer";
 import type { FormData } from "undici";
 
