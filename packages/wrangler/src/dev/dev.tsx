@@ -247,7 +247,6 @@ function DevSession(props: DevSessionProps) {
 	useCustomBuild(props.entry, props.build);
 
 	const directory = useTmpDir();
-	const handleError = useErrorHandler();
 
 	const workerDefinitions = useDevRegistry(
 		props.name,
@@ -277,7 +276,6 @@ function DevSession(props: DevSessionProps) {
 		workerDefinitions,
 		services: props.bindings.services,
 		durableObjects: props.bindings.durable_objects || { bindings: [] },
-		firstPartyWorkerDevFacade: props.firstPartyWorker,
 		local: props.local,
 		// Enable the bundling to know whether we are using dev or deploy
 		targetConsumer: "dev",

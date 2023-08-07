@@ -52,7 +52,6 @@ export function useEsbuild({
 	workerDefinitions,
 	services,
 	durableObjects,
-	firstPartyWorkerDevFacade,
 	local,
 	targetConsumer,
 	testScheduled,
@@ -76,7 +75,6 @@ export function useEsbuild({
 	noBundle: boolean;
 	workerDefinitions: WorkerRegistry;
 	durableObjects: Config["durable_objects"];
-	firstPartyWorkerDevFacade: boolean | undefined;
 	local: boolean;
 	targetConsumer: "dev" | "deploy";
 	testScheduled: boolean;
@@ -149,7 +147,6 @@ export function useEsbuild({
 					},
 					workerDefinitions,
 					services,
-					firstPartyWorkerDevFacade,
 					targetConsumer,
 					testScheduled,
 					additionalModules: dedupeModulesByName([
@@ -227,7 +224,6 @@ export function useEsbuild({
 		services,
 		durableObjects,
 		workerDefinitions,
-		firstPartyWorkerDevFacade,
 		local,
 		targetConsumer,
 		testScheduled,
