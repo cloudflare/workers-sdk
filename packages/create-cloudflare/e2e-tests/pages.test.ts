@@ -124,15 +124,15 @@ describe(`E2E: Web frameworks`, () => {
 		remix: {
 			expectResponseToContain: "Welcome to Remix",
 		},
-		// next: {
-		// 	expectResponseToContain: "Create Next App",
-		// 	promptHandlers: [
-		// 		{
-		// 			matcher: /Do you want to use the next-on-pages eslint-plugin\?/,
-		// 			input: ["y"],
-		// 		},
-		// 	],
-		// },
+		next: {
+			expectResponseToContain: "Create Next App",
+			promptHandlers: [
+				{
+					matcher: /Do you want to use the next-on-pages eslint-plugin\?/,
+					input: ["y"],
+				},
+			],
+		},
 		nuxt: {
 			expectResponseToContain: "Welcome to Nuxt!",
 			overrides: {
@@ -141,9 +141,9 @@ describe(`E2E: Web frameworks`, () => {
 				},
 			},
 		},
-		// react: {
-		// 	expectResponseToContain: "React App",
-		// },
+		react: {
+			expectResponseToContain: "React App",
+		},
 		solid: {
 			expectResponseToContain: "Hello world",
 			promptHandlers: [
