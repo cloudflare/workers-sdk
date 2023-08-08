@@ -14,18 +14,17 @@ const DEFAULT_BATCH_TIMEOUT = 1; // second
 const DEFAULT_RETRIES = 2;
 
 // https://github.com/cloudflare/workerd/blob/01b87642f4eac932aa9074d7e5eec4fd3c90968a/src/workerd/io/outcome.capnp
-const Outcome = {
-	UNKNOWN: 0,
-	OK: 1,
-	EXCEPTION: 2,
-	EXCEEDED_CPU: 3,
-	KILL_SWITCH: 4,
-	DAEMON_DOWN: 5,
-	SCRIPT_NOT_FOUND: 6,
-	CANCELED: 7,
-	EXCEEDED_MEMORY: 8,
-} as const;
-const OutcomeSchema = z.nativeEnum(Outcome);
+const OutcomeSchema = z.enum([
+	"unknown",
+	"ok",
+	"exception",
+	"exceededCpu",
+	"killSwitch",
+	"daemonDown",
+	"scriptNotFound",
+	"cancelled",
+	"exceededMemory",
+]);
 
 const QueueResponseSchema = z.object({
 	outcome: OutcomeSchema,
@@ -37,7 +36,7 @@ const QueueResponseSchema = z.object({
 });
 type QueueResponse = z.infer<typeof QueueResponseSchema>;
 const exceptionQueueResponse: QueueResponse = {
-	outcome: Outcome.EXCEPTION,
+	outcome: "exception",
 	retryAll: false,
 	ackAll: false,
 	explicitRetries: [],
@@ -153,7 +152,7 @@ export class QueuesGateway {
 
 		// Get messages to retry. If dispatching the batch failed for any reason,
 		// retry all messages.
-		const retryAll = response.retryAll || response.outcome !== Outcome.OK;
+		const retryAll = response.retryAll || response.outcome !== "ok";
 		const explicitRetries = new Set(response.explicitRetries);
 
 		let failedMessages = 0;
