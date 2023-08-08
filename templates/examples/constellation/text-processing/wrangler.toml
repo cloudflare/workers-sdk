@@ -1,0 +1,24 @@
+name = "text-processing-worker"
+main = "src/index.ts"
+compatibility_date = "2023-03-14"
+node_compat = true
+workers_dev = true
+account_id = "3515b24d58ec616d11f4ce4290a02ac4"
+usage_model = "unbound"
+services = [
+  { binding = "LEO", service = "leo" }
+]
+
+[dev]
+port = 8789
+
+[env.staging]
+name = "text-processing-worker-staging"
+services = [
+  { binding = "LEO", service = "leo-staging" }
+]
+
+[[env.staging.unsafe.bindings]]
+type = "constellation"
+name = "CONSN"
+project = "6a5709fb-d885-4372-96b4-a2e78c7065ba"
