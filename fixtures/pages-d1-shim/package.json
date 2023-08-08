@@ -1,6 +1,6 @@
 {
 	"name": "pages-d1-shim",
-	"version": "0.0.1",
+	"version": "0.0.0",
 	"private": true,
 	"sideEffects": false,
 	"scripts": {
