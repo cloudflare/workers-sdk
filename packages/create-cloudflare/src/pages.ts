@@ -4,15 +4,13 @@ import { chdir } from "process";
 import { FrameworkMap, supportedFramework } from "frameworks/index";
 import { crash, endSection, startSection } from "helpers/cli";
 import { dim, brandColor } from "helpers/colors";
-import {
-	detectPackageManager,
-	installWrangler,
-	retry,
-	runCommand,
-} from "helpers/command";
+import { installWrangler, retry, runCommand } from "helpers/command";
 import { readJSON, writeFile } from "helpers/files";
-import { selectInput, spinner } from "helpers/interactive";
+import { processArgument, spinner } from "helpers/interactive";
+import { detectPackageManager } from "helpers/packages";
+import { C3_DEFAULTS } from "./cli";
 import {
+	getProductionBranch,
 	gitCommit,
 	offerGit,
 	offerToDeploy,
@@ -20,8 +18,7 @@ import {
 	runDeploy,
 	setupProjectDirectory,
 } from "./common";
-import type { Option } from "helpers/interactive";
-import type { PagesGeneratorArgs, PagesGeneratorContext } from "types";
+import type { C3Args, PagesGeneratorContext } from "types";
 
 /** How many times to retry the create project command before failing. */
 const CREATE_PROJECT_RETRIES = 3;
@@ -33,7 +30,7 @@ const defaultFrameworkConfig = {
 	devCommand: "pages:dev",
 };
 
-export const runPagesGenerator = async (args: PagesGeneratorArgs) => {
+export const runPagesGenerator = async (args: C3Args) => {
 	const { name, path } = setupProjectDirectory(args);
 	const framework = await getFrameworkSelection(args);
 
@@ -76,7 +73,7 @@ export const runPagesGenerator = async (args: PagesGeneratorArgs) => {
 	await printSummary(ctx);
 };
 
-const getFrameworkSelection = async (args: PagesGeneratorArgs) => {
+const getFrameworkSelection = async (args: C3Args) => {
 	const frameworkOptions = Object.entries(FrameworkMap).map(
 		([key, { displayName }]) => ({
 			label: displayName,
@@ -84,14 +81,12 @@ const getFrameworkSelection = async (args: PagesGeneratorArgs) => {
 		})
 	);
 
-	const framework = await selectInput({
+	const framework = await processArgument<string>(args, "framework", {
+		type: "select",
+		label: "framework",
 		question: "Which development framework do you want to use?",
 		options: frameworkOptions,
-		renderSubmitted: (option: Option) => {
-			return `${brandColor("framework")} ${dim(option.label)}`;
-		},
-		defaultValue: args.framework ?? "svelte",
-		acceptDefault: Boolean(args.framework),
+		defaultValue: C3_DEFAULTS.framework,
 	});
 
 	// Validate answers
@@ -113,14 +108,34 @@ const updatePackageScripts = async (ctx: PagesGeneratorContext) => {
 	const { packageScripts } = ctx.framework?.config ?? {};
 	if (packageScripts) {
 		const s = spinner();
-		// s.start(`Adding dev and deployment commands to \`package.json\``);
-		s.start(`Adding command scripts`, `for development and deployment`);
+
+		const updatingScripts =
+			Object.entries(packageScripts).filter(
+				([_, cmdOrUpdater]) => typeof cmdOrUpdater === "function"
+			).length > 0;
+
+		s.start(
+			`${updatingScripts ? "Updating" : "Adding"} command scripts`,
+			"for development and deployment"
+		);
 
 		const pkgJsonPath = resolve("package.json");
 		const pkgConfig = readJSON(pkgJsonPath);
 
-		Object.entries(packageScripts).forEach(([target, command]) => {
-			pkgConfig.scripts[target] = command;
+		Object.entries(packageScripts).forEach(([target, cmdOrUpdater]) => {
+			if (typeof cmdOrUpdater === "string") {
+				const command = cmdOrUpdater;
+				pkgConfig.scripts[target] = command;
+			} else {
+				const existingCommand = pkgConfig.scripts[target] as string | undefined;
+				if (!existingCommand) {
+					throw new Error(
+						`Could not find ${target} script to update during ${ctx.framework} setup`
+					);
+				}
+				const updater = cmdOrUpdater;
+				pkgConfig.scripts[target] = updater(existingCommand);
+			}
 		});
 
 		writeFile(pkgJsonPath, JSON.stringify(pkgConfig, null, 2));
@@ -141,7 +156,8 @@ const createProject = async (ctx: PagesGeneratorContext) => {
 		? `--compatibility-flags ${compatFlags}`
 		: "";
 
-	const cmd = `${npx} wrangler pages project create ${ctx.project.name} --production-branch main ${compatFlagsArg}`;
+	const productionBranch = await getProductionBranch(ctx.project.path);
+	const cmd = `${npx} wrangler pages project create ${ctx.project.name} --production-branch ${productionBranch} ${compatFlagsArg}`;
 
 	try {
 		await retry(CREATE_PROJECT_RETRIES, async () =>
@@ -150,7 +166,7 @@ const createProject = async (ctx: PagesGeneratorContext) => {
 				cwd: ctx.project.path,
 				env: { CLOUDFLARE_ACCOUNT_ID },
 				startText: "Creating Pages project",
-				doneText: `${brandColor("created")} ${dim(`via \`${cmd}\``)}`,
+				doneText: `${brandColor("created")} ${dim(`via \`${cmd.trim()}\``)}`,
 			})
 		);
 	} catch (error) {

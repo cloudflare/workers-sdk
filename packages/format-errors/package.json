@@ -3,6 +3,7 @@
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
+		"check:lint": "eslint .",
 		"publish": "wrangler deploy",
 		"start": "wrangler dev"
 	},
@@ -11,6 +12,8 @@
 		"mustache": "^4.2.0",
 		"typescript": "^5.0.2",
 		"wrangler": "*",
-		"zod": "^3.21.4"
+		"zod": "^3.21.4",
+		"@cloudflare/eslint-config-worker": "*",
+		"tsconfig": "*"
 	}
 }

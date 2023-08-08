@@ -1,16 +1,17 @@
 import { logRaw } from "helpers/cli";
-import { detectPackageManager, runFrameworkGenerator } from "helpers/command";
+import { runFrameworkGenerator } from "helpers/command";
+import { detectPackageManager } from "helpers/packages";
 import { getFrameworkVersion } from "../index";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
-const { npx } = detectPackageManager();
+const { dlx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
 	const version = getFrameworkVersion(ctx);
 
 	await runFrameworkGenerator(
 		ctx,
-		`${npx} create-hono@${version} ${ctx.project.name} --template cloudflare-pages`
+		`${dlx} create-hono@${version} ${ctx.project.name} --template cloudflare-pages`
 	);
 
 	logRaw(""); // newline

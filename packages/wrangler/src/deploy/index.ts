@@ -1,6 +1,6 @@
 import path from "node:path";
 import { findWranglerToml, readConfig } from "../config";
-import { getEntry } from "../entry";
+import { getEntry } from "../deployment-bundle/entry";
 import {
 	getRules,
 	getScriptName,
@@ -181,6 +181,11 @@ export function deployOptions(yargs: CommonYargsArgv) {
 				describe:
 					"Send Trace Events from this worker to Workers Logpush.\nThis will not configure a corresponding Logpush job automatically.",
 			})
+			.option("old-asset-ttl", {
+				describe:
+					"Expire old assets in given seconds rather than immediate deletion.",
+				type: "number",
+			})
 	);
 }
 
@@ -277,5 +282,6 @@ export async function deployHandler(
 		noBundle: !(args.bundle ?? !config.no_bundle),
 		keepVars: args.keepVars,
 		logpush: args.logpush,
+		oldAssetTtl: args.oldAssetTtl,
 	});
 }

@@ -4,9 +4,10 @@ import { logger } from "../logger";
 
 import type { Environment } from "../config";
 import type { Rule } from "../config/environment";
+import type { CfModule } from "../deployment-bundle/worker";
 import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
-import type { CfModule } from "../worker";
+import type { Json } from "miniflare";
 import type { RequestInit, Response, RequestInfo } from "undici";
 
 export interface UnstableDevOptions {
@@ -26,9 +27,7 @@ export interface UnstableDevOptions {
 	compatibilityFlags?: string[]; // Flags to use for compatibility checks
 	persist?: boolean; // Enable persistence for local mode, using default path: .wrangler/state
 	persistTo?: string; // Specify directory to use for local persistence (implies --persist)
-	vars?: {
-		[key: string]: unknown;
-	};
+	vars?: Record<string, string | Json>;
 	kv?: {
 		binding: string;
 		id: string;

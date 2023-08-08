@@ -17,3 +17,7 @@ Fixes # [insert GH or internal issue number(s)].
 - Checked for inclusion of a relevant changeset
 - Checked for creation of associated docs updates
 - Manually pulled down the changes and spot-tested
+
+**Note for PR author:**
+
+We want to celebrate and highlight awesome PR review! If you think this PR received a particularly high-caliber review, please assign it the label `highlight pr review` so future reviewers can take inspiration and learn from it.

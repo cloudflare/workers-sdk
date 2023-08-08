@@ -36,15 +36,12 @@ export const status = {
 // This is useful for places where clack trims lines of output
 // but we need leading spaces
 export const space = (n = 1) => {
-	return [...Array(n)].map(() => hidden("-")).join("");
+	return hidden("\u200A".repeat(n));
 };
 
 // Primitive for printing to stdout. Use this instead of
 // console.log or printing to stdout directly
 export const logRaw = (msg: string) => {
-	// squelch test output
-	if (process.env.VITEST) return;
-
 	process.stdout.write(`${msg}\n`);
 };
 

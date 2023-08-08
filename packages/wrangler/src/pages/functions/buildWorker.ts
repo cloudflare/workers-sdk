@@ -3,14 +3,13 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { build as esBuild } from "esbuild";
 import { nanoid } from "nanoid";
-import { bundleWorker } from "../../bundle";
+import { bundleWorker } from "../../deployment-bundle/bundle";
+import traverseModuleGraph from "../../deployment-bundle/traverse-module-graph";
 import { FatalError } from "../../errors";
 import { logger } from "../../logger";
 import { getBasePath } from "../../paths";
-import traverseModuleGraph from "../../traverse-module-graph";
-import { D1_BETA_PREFIX } from "../../worker";
-import type { BundleResult } from "../../bundle";
-import type { CfModule } from "../../worker";
+import type { BundleResult } from "../../deployment-bundle/bundle";
+import type { CfModule } from "../../deployment-bundle/worker";
 import type { Plugin } from "esbuild";
 
 export type Options = {
@@ -27,7 +26,6 @@ export type Options = {
 	nodejsCompat?: boolean;
 	functionsDirectory: string;
 	local: boolean;
-	betaD1Shims?: string[];
 };
 
 export function buildWorker({
@@ -44,7 +42,6 @@ export function buildWorker({
 	nodejsCompat,
 	functionsDirectory,
 	local,
-	betaD1Shims,
 }: Options) {
 	return bundleWorker(
 		{
@@ -65,9 +62,6 @@ export function buildWorker({
 			define: {
 				__FALLBACK_SERVICE__: JSON.stringify(fallbackService),
 			},
-			betaD1Shims: (betaD1Shims || []).map(
-				(binding) => `${D1_BETA_PREFIX}${binding}`
-			),
 			doBindings: [], // Pages functions don't support internal Durable Objects
 			plugins: [
 				buildNotifierPlugin(onEnd),
@@ -152,7 +146,6 @@ export function buildWorker({
 			rules: [],
 			checkFetch: local,
 			targetConsumer: local ? "dev" : "deploy",
-			local,
 			forPages: true,
 		}
 	);
@@ -174,7 +167,6 @@ export type RawOptions = {
 	legacyNodeCompat?: boolean;
 	nodejsCompat?: boolean;
 	local: boolean;
-	betaD1Shims?: string[];
 	additionalModules?: CfModule[];
 };
 
@@ -200,7 +192,6 @@ export function buildRawWorker({
 	legacyNodeCompat,
 	nodejsCompat,
 	local,
-	betaD1Shims,
 	additionalModules,
 }: RawOptions) {
 	return bundleWorker(
@@ -219,9 +210,6 @@ export function buildRawWorker({
 			legacyNodeCompat,
 			nodejsCompat,
 			define: {},
-			betaD1Shims: (betaD1Shims || []).map(
-				(binding) => `${D1_BETA_PREFIX}${binding}`
-			),
 			doBindings: [], // Pages functions don't support internal Durable Objects
 			plugins: [
 				...plugins,
@@ -251,7 +239,6 @@ export function buildRawWorker({
 			rules: [],
 			checkFetch: local,
 			targetConsumer: local ? "dev" : "deploy",
-			local,
 			forPages: true,
 			additionalModules,
 		}
@@ -299,7 +286,6 @@ export async function traverseAndBuildWorkerJSDirectory({
 		sourcemap: true,
 		watch: false,
 		onEnd: () => {},
-		betaD1Shims: d1Databases,
 		nodejsCompat,
 		additionalModules: traverseModuleGraphResult.modules,
 	});
@@ -311,6 +297,7 @@ export async function traverseAndBuildWorkerJSDirectory({
 		bundleType: bundleResult.bundleType,
 		stop: bundleResult.stop,
 		sourceMapPath: bundleResult.sourceMapPath,
+		moduleCollector: bundleResult.moduleCollector,
 	};
 }
 

@@ -1,3 +1,4 @@
+import { test, expect } from "vitest";
 import { parseHeaders } from "../..//metadata-generator/parseHeaders";
 
 test("parseHeaders should reject malformed initial lines", () => {

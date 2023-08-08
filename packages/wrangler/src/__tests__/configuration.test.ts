@@ -2648,7 +2648,7 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 			});
 
-			it("should error if neither unsafe.bindings nor unsafe.metadata are defined", () => {
+			it("should error if unsafe.bindings, unsafe.metadata and unsafe.capnp are undefined", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ unsafe: {} } as unknown as RawConfig,
 					undefined,
@@ -2661,7 +2661,7 @@ describe("normalizeAndValidateConfig()", () => {
 		              `);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			"Processing wrangler configuration:
-			  - The field \\"unsafe\\" should contain at least one of \\"bindings\\" or \\"metadata\\" properties but got {}."
+			  - The field \\"unsafe\\" should contain at least one of \\"bindings\\", \\"metadata\\" or \\"capnp\\" properties but got {}."
 		`);
 			});
 
@@ -4202,7 +4202,7 @@ describe("normalizeAndValidateConfig()", () => {
 		        `);
 			});
 
-			it("should error if neither unsafe.bindings nor unsafe.metadata are defined", () => {
+			it("should error if unsafe.bindings, unsafe.metadata and unsafe.capnp are undefined", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
 					{ env: { ENV1: { unsafe: {} } } } as unknown as RawConfig,
 					undefined,
@@ -4219,7 +4219,7 @@ describe("normalizeAndValidateConfig()", () => {
 			"Processing wrangler configuration:
 
 			  - \\"env.ENV1\\" environment configuration
-			    - The field \\"env.ENV1.unsafe\\" should contain at least one of \\"bindings\\" or \\"metadata\\" properties but got {}."
+			    - The field \\"env.ENV1.unsafe\\" should contain at least one of \\"bindings\\", \\"metadata\\" or \\"capnp\\" properties but got {}."
 		`);
 			});
 

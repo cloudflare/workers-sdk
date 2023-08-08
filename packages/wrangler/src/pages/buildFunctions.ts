@@ -10,7 +10,7 @@ import { generateConfigFromFileTree } from "./functions/filepath-routing";
 import { writeRoutesModule } from "./functions/routes";
 import { convertRoutesToRoutesJSONSpec } from "./functions/routes-transformation";
 import { RUNNING_BUILDERS } from "./utils";
-import type { BundleResult } from "../bundle";
+import type { BundleResult } from "../deployment-bundle/bundle";
 import type { PagesBuildArgs } from "./build";
 import type { Config } from "./functions/routes";
 
@@ -114,7 +114,6 @@ export async function buildFunctions({
 			legacyNodeCompat,
 			functionsDirectory: absoluteFunctionsDirectory,
 			local,
-			betaD1Shims: d1Databases,
 		});
 	} else {
 		bundle = await buildWorker({
@@ -127,7 +126,6 @@ export async function buildFunctions({
 			watch,
 			functionsDirectory: absoluteFunctionsDirectory,
 			local,
-			betaD1Shims: d1Databases,
 			onEnd,
 			buildOutputDirectory,
 			legacyNodeCompat,

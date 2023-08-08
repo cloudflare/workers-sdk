@@ -1,10 +1,10 @@
 import { existsSync } from "fs";
 import path from "path";
 import { spawn } from "cross-spawn";
-import whichPmRuns from "which-pm-runs";
 import { endSection, stripAnsi } from "./cli";
 import { brandColor, dim } from "./colors";
 import { spinner } from "./interactive";
+import { detectPackageManager } from "./packages";
 import type { PagesGeneratorContext } from "types";
 
 /**
@@ -18,12 +18,16 @@ type Command = string | string[];
 
 type RunOptions = {
 	startText?: string;
-	doneText?: string;
+	doneText?: string | ((output: string) => string);
 	silent?: boolean;
 	captureOutput?: boolean;
 	useSpinner?: boolean;
 	env?: NodeJS.ProcessEnv;
 	cwd?: string;
+	/** If defined this function is called to all you to transform the output from the command into a new string. */
+	transformOutput?: (output: string) => string;
+	/** If defined, this function is called to return a string that is used if the `transformOutput()` fails. */
+	fallbackOutput?: (error: unknown) => string;
 };
 
 type MultiRunOptions = RunOptions & {
@@ -35,40 +39,38 @@ type PrintOptions<T> = {
 	promise: Promise<T> | (() => Promise<T>);
 	useSpinner?: boolean;
 	startText: string;
-	doneText?: string;
+	doneText?: string | ((output: T) => string);
 };
 
 export const runCommand = async (
 	command: Command,
-	opts?: RunOptions
+	opts: RunOptions = {}
 ): Promise<string> => {
 	if (typeof command === "string") {
 		command = command.trim().replace(/\s+/g, ` `).split(" ");
 	}
 
 	return printAsyncStatus({
-		useSpinner: opts?.useSpinner ?? opts?.silent,
-		startText: opts?.startText || command.join(" "),
-		doneText: opts?.doneText,
+		useSpinner: opts.useSpinner ?? opts.silent,
+		startText: opts.startText || command.join(" ").trim(),
+		doneText: opts.doneText,
 		promise() {
 			const [executable, ...args] = command;
-
-			const squelch = opts?.silent || process.env.VITEST;
 
 			const cmd = spawn(executable, [...args], {
 				// TODO: ideally inherit stderr, but npm install uses this for warnings
 				// stdio: [ioMode, ioMode, "inherit"],
-				stdio: squelch ? "pipe" : "inherit",
+				stdio: opts.silent ? "pipe" : "inherit",
 				env: {
 					...process.env,
-					...opts?.env,
+					...opts.env,
 				},
-				cwd: opts?.cwd,
+				cwd: opts.cwd,
 			});
 
 			let output = ``;
 
-			if (opts?.captureOutput ?? squelch) {
+			if (opts.captureOutput ?? opts.silent) {
 				cmd.stdout?.on("data", (data) => {
 					output += data;
 				});
@@ -79,27 +81,50 @@ export const runCommand = async (
 
 			return new Promise<string>((resolve, reject) => {
 				cmd.on("close", (code) => {
-					if (code === 0) {
-						resolve(stripAnsi(output));
-					} else {
-						reject(new Error(output, { cause: code }));
+					try {
+						if (code !== 0) {
+							throw new Error(output, { cause: code });
+						}
+
+						// Process any captured output
+						const transformOutput =
+							opts.transformOutput ?? ((result: string) => result);
+						const processedOutput = transformOutput(stripAnsi(output));
+
+						// Send the captured (and processed) output back to the caller
+						resolve(processedOutput);
+					} catch (e) {
+						// Something went wrong.
+						// Perhaps the command or the transform failed.
+						// If there is a fallback use the result of calling that
+						if (opts.fallbackOutput) {
+							resolve(opts.fallbackOutput(e));
+						} else {
+							reject(new Error(output, { cause: e }));
+						}
 					}
+				});
+
+				cmd.on("error", (code) => {
+					reject(code);
 				});
 			});
 		},
 	});
 };
 
-// run mutliple commands in sequence (not parallel)
+// run multiple commands in sequence (not parallel)
 export async function runCommands({ commands, ...opts }: MultiRunOptions) {
 	return printAsyncStatus({
 		useSpinner: opts.useSpinner ?? opts.silent,
 		startText: opts.startText,
 		doneText: opts.doneText,
 		async promise() {
+			const results = [];
 			for (const command of commands) {
-				await runCommand(command, { ...opts, useSpinner: false });
+				results.push(await runCommand(command, { ...opts, useSpinner: false }));
 			}
+			return results.join("\n");
 		},
 	});
 }
@@ -121,9 +146,13 @@ export const printAsyncStatus = async <T>({
 	}
 
 	try {
-		await promise;
+		const output = await promise;
 
-		s?.stop(opts.doneText);
+		const doneText =
+			typeof opts.doneText === "function"
+				? opts.doneText(output)
+				: opts.doneText;
+		s?.stop(doneText);
 	} catch (err) {
 		s?.stop((err as Error).message);
 	} finally {
@@ -207,19 +236,6 @@ export const npmInstall = async () => {
 	});
 };
 
-export const detectPackageManager = () => {
-	const pm = whichPmRuns();
-
-	if (!pm) {
-		return { npm: "npm", npx: "npx" };
-	}
-
-	return {
-		npm: pm.name,
-		npx: pm.name === "pnpm" ? `pnpx` : `npx`,
-	};
-};
-
 export const installWrangler = async () => {
 	const { npm } = detectPackageManager();
 
@@ -241,11 +257,14 @@ export const installWrangler = async () => {
 
 export const isLoggedIn = async () => {
 	const { npx } = detectPackageManager();
-	const output = await runCommand(`${npx} wrangler whoami`, {
-		silent: true,
-	});
-
-	return !/not authenticated/.test(output);
+	try {
+		const output = await runCommand(`${npx} wrangler whoami`, {
+			silent: true,
+		});
+		return /You are logged in/.test(output);
+	} catch (error) {
+		return false;
+	}
 };
 
 export const wranglerLogin = async () => {
@@ -289,3 +308,34 @@ export const listAccounts = async () => {
 
 	return accounts;
 };
+
+/**
+ * Look up the latest release of workerd and use its date as the compatibility_date
+ * configuration value for wrangler.toml.
+ *
+ * If the look up fails then we fall back to a well known date.
+ *
+ * The date is extracted from the version number of the workerd package tagged as `latest`.
+ * The format of the version is `major.yyyymmdd.patch`.
+ *
+ * @returns The latest compatibility date for workerd in the form "YYYY-MM-DD"
+ */
+export async function getWorkerdCompatibilityDate() {
+	const { npm } = detectPackageManager();
+	return runCommand(`${npm} info workerd dist-tags.latest`, {
+		silent: true,
+		captureOutput: true,
+		startText: "Retrieving current workerd compatibility date",
+		transformOutput: (result) => {
+			// The format of the workerd version is `major.yyyymmdd.patch`.
+			const match = result.match(/\d+\.(\d{4})(\d{2})(\d{2})\.\d+/);
+			if (!match) {
+				throw new Error("Could not find workerd date");
+			}
+			const [, year, month, date] = match;
+			return `${year}-${month}-${date}`;
+		},
+		fallbackOutput: () => "2023-05-18",
+		doneText: (output) => `${brandColor("compatibility date")} ${dim(output)}`,
+	});
+}

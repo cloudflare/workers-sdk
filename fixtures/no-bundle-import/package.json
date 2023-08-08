@@ -5,10 +5,12 @@
 	"scripts": {
 		"deploy": "wrangler deploy",
 		"start": "wrangler dev",
-		"test": "vitest"
+		"test": "vitest run",
+		"test:ci": "vitest run",
+		"test:watch": "npx vitest"
 	},
 	"devDependencies": {
 		"get-port": "^6.1.2",
-		"wrangler": "^3.0.0"
+		"wrangler": "*"
 	}
 }

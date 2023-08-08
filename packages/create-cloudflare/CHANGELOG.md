@@ -1,5 +1,103 @@
 # create-cloudflare
 
+## 2.1.0
+
+### Minor Changes
+
+- [#3604](https://github.com/cloudflare/workers-sdk/pull/3604) [`c3ff1c2b`](https://github.com/cloudflare/workers-sdk/commit/c3ff1c2b599c99f4915dad0362c7570cc2fa2bf3) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add the option to add the `eslint-plugin-next-on-pages` eslint plugin
+  to developers creating a new Next.js app with eslint enabled
+
+## 2.0.14
+
+### Patch Changes
+
+- [#3644](https://github.com/cloudflare/workers-sdk/pull/3644) [`775eb3bd`](https://github.com/cloudflare/workers-sdk/commit/775eb3bd32611d339ec4071c3d523d1d15bc7e30) Thanks [@jculvey](https://github.com/jculvey)! - Detect production branch when creating pages project
+
+* [#3600](https://github.com/cloudflare/workers-sdk/pull/3600) [`3f7d6e7d`](https://github.com/cloudflare/workers-sdk/commit/3f7d6e7d654ea8958c6c2e0e78da4c5e4a78d2d5) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - improve the Nuxt deployment script so that it ships full stack applications (instead of server-side generated ones)
+
+  as part of this change update the Nuxt build script to include the `NITRO_PRESET` env variable set to `cloudflare-pages` (needed to build Pages compatible applications)
+
+  also write a .node-version file with the node version (so that it can properly working with the Pages CI)
+
+## 2.0.13
+
+### Patch Changes
+
+- [#3609](https://github.com/cloudflare/workers-sdk/pull/3609) [`be3a43ff`](https://github.com/cloudflare/workers-sdk/commit/be3a43ff9d96785e379e8e6bcb72b332519216b0) Thanks [@admah](https://github.com/admah)! - Removes all typescript dependencies from javascript templates.
+
+* [#3601](https://github.com/cloudflare/workers-sdk/pull/3601) [`e4ef867c`](https://github.com/cloudflare/workers-sdk/commit/e4ef867cc973d89eeee336ac4c4af62f905ae765) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - remove extra build added by mistake in solid deploy script
+
+## 2.0.12
+
+### Patch Changes
+
+- [#3525](https://github.com/cloudflare/workers-sdk/pull/3525) [`1ce32968`](https://github.com/cloudflare/workers-sdk/commit/1ce32968b990fef59953b8cd61172b98fb2386e5) Thanks [@jculvey](https://github.com/jculvey)! - C3: Infer missing --type argument from --framework or --existing-script
+
+* [#3580](https://github.com/cloudflare/workers-sdk/pull/3580) [`a7c1dd5b`](https://github.com/cloudflare/workers-sdk/commit/a7c1dd5b6c3a84b5ee4767935a2ca1820d28528e) Thanks [@jculvey](https://github.com/jculvey)! - C3: Prompt user to change directory in summary steps
+
+- [#3551](https://github.com/cloudflare/workers-sdk/pull/3551) [`137e174d`](https://github.com/cloudflare/workers-sdk/commit/137e174d79e7c5779c24de904d3cd958587a87c7) Thanks [@yusukebe](https://github.com/yusukebe)! - fix: bump up `create-hono` version
+
+  Bump up `create-hono` version to latest v0.2.6 for C3.
+
+## 2.0.11
+
+### Patch Changes
+
+- [#3465](https://github.com/cloudflare/workers-sdk/pull/3465) [`528cc0fc`](https://github.com/cloudflare/workers-sdk/commit/528cc0fc583e9672247d5934c8b33afebbb834e7) Thanks [@jculvey](https://github.com/jculvey)! - Improvements to the project name selection prompt.
+
+* [#3500](https://github.com/cloudflare/workers-sdk/pull/3500) [`c43fc4e8`](https://github.com/cloudflare/workers-sdk/commit/c43fc4e826eeca8a92c6749485eb3b8b47c4a818) Thanks [@jculvey](https://github.com/jculvey)! - Fix the output of the --version flag
+
+- [#3343](https://github.com/cloudflare/workers-sdk/pull/3343) [`cc9ced83`](https://github.com/cloudflare/workers-sdk/commit/cc9ced83bc9f996b0380d46859990780e574884c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: use a valid compatibility date for worker templates
+
+  Previously, we changed wrangler.toml to use the current date for the
+  compatibility_date setting in wrangler.toml when generating workers.
+  But this is almost always going to be too recent and results in a warning.
+
+  Now we look up the most recent compatibility date via npm on the workerd
+  package and use that instead.
+
+  Fixes https://github.com/cloudflare/workers-sdk/issues/2385
+
+* [#3516](https://github.com/cloudflare/workers-sdk/pull/3516) [`941764d0`](https://github.com/cloudflare/workers-sdk/commit/941764d0a2003ec8108ba75efe25978b000f637c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure the Angular fetch handler returns a "real" promise to Cloudflare
+
+  Angular employs the Zone.js library to patch potentially async operations so that
+  it can trigger change detection reliably. But in order to do this, it swaps out
+  the native `Promise` with a `ZoneAwarePromise` class.
+
+  The Cloudflare runtime (i.e. workerd) does runtime checks on the value returned
+  from the `fetch()` handler, expecting it to be a native `Promise` and fails if not.
+
+  This fix ensures that the actual object returned from the `fetch()` is actually a
+  native `Promise`. We don't need to stop Angular using `ZoneAwarePromises` elsewhere.
+
+- [#3486](https://github.com/cloudflare/workers-sdk/pull/3486) [`436f752d`](https://github.com/cloudflare/workers-sdk/commit/436f752d77b12b81d91341185fc9229f25571a69) Thanks [@Cherry](https://github.com/Cherry)! - fix: use wrangler deploy command for deploying applications instead of the deprecated wrangler publish
+
+## 2.0.10
+
+### Patch Changes
+
+- [#3345](https://github.com/cloudflare/workers-sdk/pull/3345) [`42f7eb81`](https://github.com/cloudflare/workers-sdk/commit/42f7eb815ea273ab6370dadf423c0cf79cc20aa8) Thanks [@jculvey](https://github.com/jculvey)! - Use `pnpm dlx` instead of `pnpx` for versions of pnpm that support it
+
+* [#3435](https://github.com/cloudflare/workers-sdk/pull/3435) [`23be8025`](https://github.com/cloudflare/workers-sdk/commit/23be8025f5812f12a69270d44deff60f4bd33ae0) Thanks [@sdnts](https://github.com/sdnts)! - Updated wrangler.toml for Workers projects generated by create-cloudflare
+
+- [#3496](https://github.com/cloudflare/workers-sdk/pull/3496) [`91135e02`](https://github.com/cloudflare/workers-sdk/commit/91135e02cc97d11a6762c05e788c705697c477cb) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure that default project name can be used
+
+  If you hit enter when asked for the name of the project, you expect it
+  to use the default value. But the project name validation was then failing
+  as it was receiving undefined for the value of the input rather than the
+  default value.
+
+  Now the validator will be passed the default if no value was provided.
+
+* [#3474](https://github.com/cloudflare/workers-sdk/pull/3474) [`a72dc0a1`](https://github.com/cloudflare/workers-sdk/commit/a72dc0a16577558e599ea9ced7fa39cd952c2b78) Thanks [@elithrar](https://github.com/elithrar)! - Add new Queues and Scheduled (Cron Trigger) Worker templates.
+
+- [#3446](https://github.com/cloudflare/workers-sdk/pull/3446) [`ca0bd174`](https://github.com/cloudflare/workers-sdk/commit/ca0bd174c4e56e0d33c88c0b9bdba9489b2c78eb) Thanks [@admah](https://github.com/admah)! - refactor: rename `simple` template to `hello-world` in create-cloudflare package
+
+  This change describes the "hello-world" template more accurately.
+  Also, new e2e tests have been added to validate that Workers templates are created correctly.
+
+* [#3359](https://github.com/cloudflare/workers-sdk/pull/3359) [`5eef992f`](https://github.com/cloudflare/workers-sdk/commit/5eef992f2c9f71a4c9d5e0cc2820aad24b7ef382) Thanks [@RamIdeas](https://github.com/RamIdeas)! - `wrangler init ... -y` now delegates to C3 without prompts (respects the `-y` flag)
+
 ## 2.0.9
 
 ### Patch Changes

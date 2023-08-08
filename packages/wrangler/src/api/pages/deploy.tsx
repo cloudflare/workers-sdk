@@ -19,7 +19,7 @@ import {
 import { validateRoutes } from "../../pages/functions/routes-validation";
 import { upload } from "../../pages/upload";
 import { createUploadWorkerBundleContents } from "./create-worker-bundle-contents";
-import type { BundleResult } from "../../bundle";
+import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Project, Deployment } from "@cloudflare/types";
 
 interface PagesDeployOptions {
@@ -268,7 +268,6 @@ export async function deploy({
 				sourcemap: true,
 				watch: false,
 				onEnd: () => {},
-				betaD1Shims: d1Databases,
 				nodejsCompat,
 			});
 		} else {
@@ -280,6 +279,7 @@ export async function deploy({
 				stop: undefined,
 				resolvedEntryPointPath: _workerPath,
 				bundleType: "esm",
+				moduleCollector: undefined,
 			};
 		}
 	}

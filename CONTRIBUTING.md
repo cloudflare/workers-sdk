@@ -109,6 +109,25 @@ The code is checked for type errors by [TypeScript](https://www.typescriptlang.o
   ```
 - VS Code will also run type-checking while editing source code, providing immediate feedback.
 
+#### Changing TypeScript Version in VS Code's Command Palette
+
+For TypeScript to work properly in the Monorepo the version used in VSCode must be the project's current TypeScript version, follow these steps:
+
+1. Open the project in VSCode.
+
+2. Press `Ctrl + Shift + P` (or `Cmd + Shift + P` on macOS) to open the command palette.
+
+3. In the command palette, type "Select TypeScript Version" and select the command with the same name that appears in the list.
+
+4. A submenu will appear with a list of available TypeScript versions. Choose the desired version you want to use for this project. If you have multiple versions installed, they will be listed here.
+
+- Selecting "Use Workspace Version" will use the version of TypeScript installed in the project's `node_modules` directory.
+
+5. After selecting the TypeScript version, VSCode will reload the workspace using the chosen version.
+
+Now you have successfully switched the TypeScript version used within the project via the command palette in VSCode.
+Remember that this change is specific to the current project and will not affect other projects or the default TypeScript version used by VSCode.
+
 ### Linting
 
 The code is checked for linting errors by [ESLint](https://eslint.org/).
@@ -175,6 +194,12 @@ Changes should be committed to a new local branch, which then gets pushed to you
 - Once you are happy with your changes, create a Pull Request on GitHub
 - The format for Pull Request titles is `[package name] description`, where the package name should indicate which package of the `workers-sdk` monorepo your PR pertains to (e.g. `wrangler`/`pages-shared`/`wrangler-devtools`), and the description should be a succinct summary of the change you're making.
 - GitHub will insert a template for the body of your Pull Request—it's important to carefully fill out all the fields, giving as much detail as possible to reviewers.
+
+## PR Review
+
+PR review is a critial and required step in the process for landing changes. This is an opportunity to catch potential issues, improve the quality of the work, celebrate good design, and learn from each other.
+
+As a reviewer, it's important to be thoughtful about the proposed changes and communicate any feedback. Examples of PR reviews that the community has identified as particularly high-caliber are labeled with the `highlight pr review` label. Please feel empowered to use these as a learning resource.
 
 ## Changesets
 

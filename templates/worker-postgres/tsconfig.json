@@ -1,14 +1,14 @@
 {
 	"compilerOptions": {
-		"strict": true,
-		"target": "esnext",
-		"alwaysStrict": true,
-		"noEmitOnError": true,
-		"preserveConstEnums": true,
-		"types": ["@cloudflare/workers-types"],
-		"moduleResolution": "node",
+		"noEmit": true,
 		"module": "esnext",
+		"target": "esnext",
+		"lib": ["esnext"],
+		"strict": true,
+		"moduleResolution": "node",
+		"types": ["@cloudflare/workers-types"],
 		"allowJs": true
 	},
-	"include": ["src"]
+	"include": ["src/**/*.ts", "src/**/*.js"],
+	"exclude": ["node_modules", "dist"]
 }

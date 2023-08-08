@@ -2,24 +2,24 @@ import { logRaw, updateStatus } from "helpers/cli";
 import { parseTs, transformFile } from "helpers/codemod";
 import { blue, dim, brandColor } from "helpers/colors";
 import {
-	detectPackageManager,
 	installPackages,
 	npmInstall,
 	runFrameworkGenerator,
 } from "helpers/command";
 import { compatDateFlag, usesTypescript } from "helpers/files";
+import { detectPackageManager } from "helpers/packages";
 import { getFrameworkVersion } from "../index";
 import { platformInterface } from "./templates";
 import type * as recast from "recast";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
-const { npm } = detectPackageManager();
+const { npm, dlx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
 	const version = getFrameworkVersion(ctx);
 	await runFrameworkGenerator(
 		ctx,
-		`${npm} create svelte@${version} ${ctx.project.name}`
+		`${dlx} create-svelte@${version} ${ctx.project.name}`
 	);
 
 	logRaw("");
@@ -76,7 +76,7 @@ const config: FrameworkConfig = {
 	displayName: "Svelte",
 	packageScripts: {
 		"pages:dev": `wrangler pages dev ${compatDateFlag()} --proxy 5173 -- ${npm} run dev`,
-		"pages:deploy": `NODE_VERSION=16 ${npm} run build && wrangler pages publish .svelte-kit/cloudflare`,
+		"pages:deploy": `NODE_VERSION=16 ${npm} run build && wrangler pages deploy .svelte-kit/cloudflare`,
 	},
 };
 export default config;

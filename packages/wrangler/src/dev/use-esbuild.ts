@@ -6,14 +6,15 @@ import {
 	bundleWorker,
 	dedupeModulesByName,
 	rewriteNodeCompatBuildFailure,
-} from "../bundle";
+} from "../deployment-bundle/bundle";
+import traverseModuleGraph from "../deployment-bundle/traverse-module-graph";
 import { logBuildFailure, logger } from "../logger";
-import traverseModuleGraph from "../traverse-module-graph";
 import type { Config } from "../config";
+import type { Entry } from "../deployment-bundle/entry";
+import type { CfModule } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
-import type { Entry } from "../entry";
 import type { SourceMapMetadata } from "../inspect";
-import type { CfModule } from "../worker";
+import type { ModuleCollector } from "../module-collection";
 import type { WatchMode, Metafile } from "esbuild";
 
 export type EsbuildBundle = {
@@ -25,6 +26,11 @@ export type EsbuildBundle = {
 	dependencies: Metafile["outputs"][string]["inputs"];
 	sourceMapPath: string | undefined;
 	sourceMapMetadata: SourceMapMetadata | undefined;
+};
+
+export type BundleInfo = {
+	bundle: EsbuildBundle;
+	moduleCollector: ModuleCollector | undefined;
 };
 
 export function useEsbuild({
@@ -41,7 +47,6 @@ export function useEsbuild({
 	minify,
 	legacyNodeCompat,
 	nodejsCompat,
-	betaD1Shims,
 	define,
 	noBundle,
 	workerDefinitions,
@@ -68,7 +73,6 @@ export function useEsbuild({
 	minify: boolean | undefined;
 	legacyNodeCompat: boolean | undefined;
 	nodejsCompat: boolean | undefined;
-	betaD1Shims?: string[];
 	noBundle: boolean;
 	workerDefinitions: WorkerRegistry;
 	durableObjects: Config["durable_objects"];
@@ -78,7 +82,7 @@ export function useEsbuild({
 	testScheduled: boolean;
 	experimentalLocal: boolean | undefined;
 }): EsbuildBundle | undefined {
-	const [bundle, setBundle] = useState<EsbuildBundle>();
+	const [bundleInfo, setBundleInfo] = useState<BundleInfo>();
 	const { exit } = useApp();
 	useEffect(() => {
 		let stopWatching: (() => void) | undefined = undefined;
@@ -86,12 +90,16 @@ export function useEsbuild({
 		function updateBundle() {
 			// nothing really changes here, so let's increment the id
 			// to change the return object's identity
-			setBundle((previousBundle) => {
+			setBundleInfo((previousBundle) => {
 				assert(
 					previousBundle,
 					"Rebuild triggered with no previous build available"
 				);
-				return { ...previousBundle, id: previousBundle.id + 1 };
+				previousBundle.bundle.modules = dedupeModulesByName([
+					...previousBundle.bundle.modules,
+					...(previousBundle.moduleCollector?.modules ?? []),
+				]);
+				return { ...previousBundle, id: previousBundle.bundle.id + 1 };
 			});
 		}
 
@@ -131,7 +139,6 @@ export function useEsbuild({
 					minify,
 					legacyNodeCompat,
 					nodejsCompat,
-					betaD1Shims,
 					doBindings: durableObjects.bindings,
 					define,
 					checkFetch: true,
@@ -143,7 +150,6 @@ export function useEsbuild({
 					workerDefinitions,
 					services,
 					firstPartyWorkerDevFacade,
-					local,
 					targetConsumer,
 					testScheduled,
 					additionalModules: dedupeModulesByName([
@@ -169,22 +175,25 @@ export function useEsbuild({
 					void watcher.close();
 				};
 			}
-			setBundle({
-				id: 0,
-				entry,
-				path: bundleResult?.resolvedEntryPointPath ?? entry.file,
-				type:
-					bundleResult?.bundleType ??
-					(entry.format === "modules" ? "esm" : "commonjs"),
-				modules: bundleResult
-					? bundleResult.modules
-					: dedupeModulesByName([
-							...(traverseModuleGraphResult?.modules ?? []),
-							...additionalModules,
-					  ]),
-				dependencies: bundleResult?.dependencies ?? {},
-				sourceMapPath: bundleResult?.sourceMapPath,
-				sourceMapMetadata: bundleResult?.sourceMapMetadata,
+			setBundleInfo({
+				bundle: {
+					id: 0,
+					entry,
+					path: bundleResult?.resolvedEntryPointPath ?? entry.file,
+					type:
+						bundleResult?.bundleType ??
+						(entry.format === "modules" ? "esm" : "commonjs"),
+					modules: bundleResult
+						? bundleResult.modules
+						: dedupeModulesByName([
+								...(traverseModuleGraphResult?.modules ?? []),
+								...additionalModules,
+						  ]),
+					dependencies: bundleResult?.dependencies ?? {},
+					sourceMapPath: bundleResult?.sourceMapPath,
+					sourceMapMetadata: bundleResult?.sourceMapMetadata,
+				},
+				moduleCollector: bundleResult?.moduleCollector,
 			});
 		}
 
@@ -219,11 +228,10 @@ export function useEsbuild({
 		durableObjects,
 		workerDefinitions,
 		firstPartyWorkerDevFacade,
-		betaD1Shims,
 		local,
 		targetConsumer,
 		testScheduled,
 		experimentalLocal,
 	]);
-	return bundle;
+	return bundleInfo?.bundle;
 }

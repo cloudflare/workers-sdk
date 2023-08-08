@@ -1,15 +1,18 @@
-import { configDefaults, defineConfig } from "vitest/config";
+import { defineConfig } from "vitest/config";
 
+// This default gets pulled in by all the Vitest runs in the monorepo.
 export default defineConfig({
 	test: {
-		include:
-			__dirname === process.cwd()
-				? [
-						"{fixtures,packages/workers.new}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}",
-				  ]
-				: configDefaults.include,
-		exclude: [...configDefaults.exclude],
-		root: __dirname,
-		testTimeout: 30_000,
+		// These timeouts are very large because the Windows CI jobs regularly take up ot 42 secs.
+		// Ideally we should not have such high defaults across all tests, but instead be able to
+		// increase timeouts for certain sets of tests.
+		// But this might need some vitest/turborepo magical incantations and bumping the values
+		// here is a simpler short term fix.
+		// Note that this will not cause tests to pass that should fail. It just means that hanging
+		// tests will take longer to fail than they would before.
+		testTimeout: 50_000,
+		hookTimeout: 50_000,
+		teardownTimeout: 50_000,
+		useAtomics: true,
 	},
 });

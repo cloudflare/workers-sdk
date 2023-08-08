@@ -1,5 +1,39 @@
 # @cloudflare/pages-shared
 
+## 0.8.0
+
+### Minor Changes
+
+- [#3675](https://github.com/cloudflare/workers-sdk/pull/3675) [`f753f3af`](https://github.com/cloudflare/workers-sdk/commit/f753f3afb7478bb289b39c44b33acbcefe06e99a) Thanks [@1000hz](https://github.com/1000hz)! - chore: upgrade `miniflare` to [`3.20230724.0`](https://github.com/cloudflare/miniflare/releases/tag/v3.20230724.0)
+
+## 0.7.0
+
+### Minor Changes
+
+- [#3628](https://github.com/cloudflare/workers-sdk/pull/3628) [`e72a5794`](https://github.com/cloudflare/workers-sdk/commit/e72a5794f219e21ede701a7184a4691058366753) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: upgrade `miniflare` to [`3.20230717.0`](https://github.com/cloudflare/miniflare/releases/tag/v3.20230717.0)
+
+## 0.6.0
+
+### Minor Changes
+
+- [#3583](https://github.com/cloudflare/workers-sdk/pull/3583) [`78ddb8de`](https://github.com/cloudflare/workers-sdk/commit/78ddb8de78152b2cb4180f23b51ee5478637d92d) Thanks [@penalosa](https://github.com/penalosa)! - Upgrade Miniflare (and hence `workerd`) to `v3.20230710.0`.
+
+## 0.5.3
+
+### Patch Changes
+
+- [#3541](https://github.com/cloudflare/workers-sdk/pull/3541) [`09f317d4`](https://github.com/cloudflare/workers-sdk/commit/09f317d4c42d1787bdc636f13b4a303fa9a5b4b0) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Bump miniflare@3.0.2
+
+## 0.5.2
+
+### Patch Changes
+
+- [#3454](https://github.com/cloudflare/workers-sdk/pull/3454) [`a2194043`](https://github.com/cloudflare/workers-sdk/commit/a2194043c6c755e9308b3ffc1e9afb0d1544f6b9) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: upgrade `miniflare` to `3.0.1`
+
+  This version ensures root CA certificates are trusted on Windows.
+  It also loads extra certificates from the `NODE_EXTRA_CA_CERTS` environment variable,
+  allowing `wrangler dev` to be used with Cloudflare WARP enabled.
+
 ## 0.5.1
 
 ### Patch Changes

@@ -4,8 +4,13 @@ import { resolve, join } from "path";
 import { chdir } from "process";
 import { endSection, updateStatus, startSection } from "helpers/cli";
 import { brandColor, dim } from "helpers/colors";
-import { npmInstall, runCommand } from "helpers/command";
-import { confirmInput, textInput } from "helpers/interactive";
+import {
+	getWorkerdCompatibilityDate,
+	npmInstall,
+	runCommand,
+} from "helpers/command";
+import { processArgument } from "helpers/interactive";
+import { C3_DEFAULTS } from "./cli";
 import {
 	chooseAccount,
 	gitCommit,
@@ -15,12 +20,9 @@ import {
 	runDeploy,
 	setupProjectDirectory,
 } from "./common";
-import type {
-	PagesGeneratorArgs as Args,
-	PagesGeneratorContext as Context,
-} from "types";
+import type { C3Args, PagesGeneratorContext as Context } from "types";
 
-export const runWorkersGenerator = async (args: Args) => {
+export const runWorkersGenerator = async (args: C3Args) => {
 	const { name, path } = setupProjectDirectory(args);
 
 	const ctx: Context = {
@@ -47,18 +49,15 @@ export const runWorkersGenerator = async (args: Args) => {
 };
 
 async function getTemplate(ctx: Context) {
-	if (ctx.args.ts === undefined) {
-		ctx.args.ts = await confirmInput({
-			question: "Do you want to use TypeScript?",
-			renderSubmitted: (value) =>
-				`${brandColor("typescript")} ${dim(`${value ? "yes" : "no"}`)}`,
-			defaultValue: true,
-			acceptDefault: ctx.args.wranglerDefaults,
-		});
-	}
+	ctx.args.ts = await processArgument<boolean>(ctx.args, "ts", {
+		type: "confirm",
+		question: "Do you want to use TypeScript?",
+		label: "typescript",
+		defaultValue: C3_DEFAULTS.ts,
+	});
 
 	const preexisting = ctx.args.type === "pre-existing";
-	const template = preexisting ? "simple" : ctx.args.type;
+	const template = preexisting ? "hello-world" : ctx.args.type;
 	const path = resolve(
 		// eslint-disable-next-line no-restricted-globals
 		__dirname,
@@ -87,14 +86,17 @@ async function copyExistingWorkerFiles(ctx: Context) {
 		await chooseAccount(ctx);
 
 		if (ctx.args.existingScript === undefined) {
-			ctx.args.existingScript = await textInput({
-				question:
-					"Please specify the name of the existing worker in this account?",
-				renderSubmitted: (value) =>
-					`${brandColor("worker")} ${dim(`"${value}"`)}`,
-				defaultValue: ctx.project.name,
-				acceptDefault: ctx.args.wranglerDefaults,
-			});
+			ctx.args.existingScript = await processArgument<string>(
+				ctx.args,
+				"existingScript",
+				{
+					type: "text",
+					question:
+						"Please specify the name of the existing worker in this account?",
+					label: "worker",
+					defaultValue: ctx.project.name,
+				}
+			);
 		}
 
 		// `wrangler init --from-dash` bails if you opt-out of creating a package.json
@@ -149,12 +151,14 @@ async function updateFiles(ctx: Context) {
 	};
 
 	// update files
-	contents.packagejson.name = ctx.project.name;
+	if (contents.packagejson.name === "<TBD>") {
+		contents.packagejson.name = ctx.project.name;
+	}
 	contents.wranglertoml = contents.wranglertoml
-		.replace(/^name = .+$/m, `name = "${ctx.project.name}"`)
+		.replace(/^name\s*=\s*"<TBD>"/m, `name = "${ctx.project.name}"`)
 		.replace(
-			/^compatibility_date = .+$/m,
-			`compatibility_date = "${new Date().toISOString().substring(0, 10)}"`
+			/^compatibility_date\s*=\s*"<TBD>"/m,
+			`compatibility_date = "${await getWorkerdCompatibilityDate()}"`
 		);
 
 	// write files

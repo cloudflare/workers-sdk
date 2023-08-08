@@ -1,8 +1,8 @@
 {
-	"extends": "../../../tsconfig.json",
+	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
 	"compilerOptions": {
 		"types": ["node", "jest"]
 	},
-	"include": ["**/*.test.ts", "../../intl-polyfill.d.ts"],
+	"include": ["**/*.ts", "../../intl-polyfill.d.ts"],
 	"exclude": []
 }

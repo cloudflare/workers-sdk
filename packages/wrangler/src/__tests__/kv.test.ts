@@ -568,7 +568,9 @@ describe("wrangler", () => {
 			      --ttl           Time for which the entries should be visible  [number]
 			      --expiration    Time since the UNIX epoch after which the entry expires  [number]
 			      --metadata      Arbitrary JSON that is associated with a key  [string]
-			      --path          Read value from the file at a given path  [string]"
+			      --path          Read value from the file at a given path  [string]
+			      --local         Interact with local storage  [boolean]
+			      --persist-to    Directory for local persistance  [string]"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
@@ -608,7 +610,9 @@ describe("wrangler", () => {
 			      --ttl           Time for which the entries should be visible  [number]
 			      --expiration    Time since the UNIX epoch after which the entry expires  [number]
 			      --metadata      Arbitrary JSON that is associated with a key  [string]
-			      --path          Read value from the file at a given path  [string]"
+			      --path          Read value from the file at a given path  [string]
+			      --local         Interact with local storage  [boolean]
+			      --persist-to    Directory for local persistance  [string]"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments binding and namespace-id is required[0m
@@ -648,7 +652,9 @@ describe("wrangler", () => {
 			      --ttl           Time for which the entries should be visible  [number]
 			      --expiration    Time since the UNIX epoch after which the entry expires  [number]
 			      --metadata      Arbitrary JSON that is associated with a key  [string]
-			      --path          Read value from the file at a given path  [string]"
+			      --path          Read value from the file at a given path  [string]
+			      --local         Interact with local storage  [boolean]
+			      --persist-to    Directory for local persistance  [string]"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments binding and namespace-id are mutually exclusive[0m
@@ -688,7 +694,9 @@ describe("wrangler", () => {
 			      --ttl           Time for which the entries should be visible  [number]
 			      --expiration    Time since the UNIX epoch after which the entry expires  [number]
 			      --metadata      Arbitrary JSON that is associated with a key  [string]
-			      --path          Read value from the file at a given path  [string]"
+			      --path          Read value from the file at a given path  [string]
+			      --local         Interact with local storage  [boolean]
+			      --persist-to    Directory for local persistance  [string]"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments value and path is required[0m
@@ -728,7 +736,9 @@ describe("wrangler", () => {
 			      --ttl           Time for which the entries should be visible  [number]
 			      --expiration    Time since the UNIX epoch after which the entry expires  [number]
 			      --metadata      Arbitrary JSON that is associated with a key  [string]
-			      --path          Read value from the file at a given path  [string]"
+			      --path          Read value from the file at a given path  [string]
+			      --local         Interact with local storage  [boolean]
+			      --persist-to    Directory for local persistance  [string]"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments value and path are mutually exclusive[0m
@@ -1102,7 +1112,9 @@ describe("wrangler", () => {
 			      --binding       The name of the namespace to get from  [string]
 			      --namespace-id  The id of the namespace to get from  [string]
 			      --preview       Interact with a preview namespace  [boolean] [default: false]
-			      --text          Decode the returned value as a utf8 string  [boolean] [default: false]"
+			      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
+			      --local         Interact with local storage  [boolean]
+			      --persist-to    Directory for local persistance  [string]"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
@@ -1137,7 +1149,9 @@ describe("wrangler", () => {
 			      --binding       The name of the namespace to get from  [string]
 			      --namespace-id  The id of the namespace to get from  [string]
 			      --preview       Interact with a preview namespace  [boolean] [default: false]
-			      --text          Decode the returned value as a utf8 string  [boolean] [default: false]"
+			      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
+			      --local         Interact with local storage  [boolean]
+			      --persist-to    Directory for local persistance  [string]"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments binding and namespace-id is required[0m
@@ -1173,7 +1187,9 @@ describe("wrangler", () => {
 			      --binding       The name of the namespace to get from  [string]
 			      --namespace-id  The id of the namespace to get from  [string]
 			      --preview       Interact with a preview namespace  [boolean] [default: false]
-			      --text          Decode the returned value as a utf8 string  [boolean] [default: false]"
+			      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
+			      --local         Interact with local storage  [boolean]
+			      --persist-to    Directory for local persistance  [string]"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments binding and namespace-id are mutually exclusive[0m
@@ -1687,6 +1703,264 @@ describe("wrangler", () => {
 		`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
+		});
+	});
+	describe("local", () => {
+		it("should put local kv storage", async () => {
+			await runWrangler(
+				`kv:key get val --namespace-id some-namespace-id --local --text`
+			);
+			expect(std.out).toMatchInlineSnapshot(`"Value not found"`);
+
+			await runWrangler(
+				`kv:key put val value --namespace-id some-namespace-id --local`
+			);
+			expect(std.out).toMatchInlineSnapshot(`
+			"Value not found
+			Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id."
+		`);
+
+			await runWrangler(
+				`kv:key get val --namespace-id some-namespace-id --local --text`
+			);
+			expect(std.out).toMatchInlineSnapshot(`
+			"Value not found
+			Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
+			value"
+		`);
+		});
+
+		it("should list local kv storage", async () => {
+			await runWrangler(`kv:key list --namespace-id some-namespace-id --local`);
+			expect(std.out).toMatchInlineSnapshot(`
+			"{
+			  \\"keys\\": [],
+			  \\"list_complete\\": true
+			}"
+		`);
+
+			await runWrangler(
+				`kv:key put val value --namespace-id some-namespace-id --local`
+			);
+
+			await runWrangler(`kv:key list --namespace-id some-namespace-id --local`);
+			expect(std.out).toMatchInlineSnapshot(`
+			"{
+			  \\"keys\\": [],
+			  \\"list_complete\\": true
+			}
+			Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
+			{
+			  \\"keys\\": [
+			    {
+			      \\"name\\": \\"val\\"
+			    }
+			  ],
+			  \\"list_complete\\": true
+			}"
+		`);
+		});
+
+		it("should delete local kv storage", async () => {
+			await runWrangler(
+				`kv:key put val value --namespace-id some-namespace-id --local`
+			);
+			await runWrangler(
+				`kv:key get val --namespace-id some-namespace-id --local --text`
+			);
+			expect(std.out).toMatchInlineSnapshot(`
+			"Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
+			value"
+		`);
+			await runWrangler(
+				`kv:key delete val --namespace-id some-namespace-id --local`
+			);
+			expect(std.out).toMatchInlineSnapshot(`
+			"Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
+			value
+			Deleting the key \\"val\\" on namespace some-namespace-id."
+		`);
+
+			await runWrangler(
+				`kv:key get val --namespace-id some-namespace-id --local --text`
+			);
+			expect(std.out).toMatchInlineSnapshot(`
+			"Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
+			value
+			Deleting the key \\"val\\" on namespace some-namespace-id.
+			Value not found"
+			`);
+		});
+
+		it("should put local bulk kv storage", async () => {
+			await runWrangler(`kv:key list --namespace-id bulk-namespace-id --local`);
+			expect(std.out).toMatchInlineSnapshot(`
+			"{
+			  \\"keys\\": [],
+			  \\"list_complete\\": true
+			}"
+		`);
+
+			const keyValues = [
+				{
+					key: "hello",
+					value: "world",
+				},
+				{
+					key: "test",
+					value: "value",
+				},
+			];
+			writeFileSync("./keys.json", JSON.stringify(keyValues));
+			await runWrangler(
+				`kv:bulk put keys.json --namespace-id bulk-namespace-id --local`
+			);
+			expect(std.out).toMatchInlineSnapshot(`
+			"{
+			  \\"keys\\": [],
+			  \\"list_complete\\": true
+			}
+			Success!"
+		`);
+
+			await runWrangler(
+				`kv:key get test --namespace-id bulk-namespace-id --local --text`
+			);
+			expect(std.out).toMatchInlineSnapshot(`
+			"{
+			  \\"keys\\": [],
+			  \\"list_complete\\": true
+			}
+			Success!
+			value"
+		`);
+
+			await runWrangler(`kv:key list --namespace-id bulk-namespace-id --local`);
+			expect(std.out).toMatchInlineSnapshot(`
+			"{
+			  \\"keys\\": [],
+			  \\"list_complete\\": true
+			}
+			Success!
+			value
+			{
+			  \\"keys\\": [
+			    {
+			      \\"name\\": \\"hello\\"
+			    },
+			    {
+			      \\"name\\": \\"test\\"
+			    }
+			  ],
+			  \\"list_complete\\": true
+			}"
+		`);
+		});
+
+		it("should delete local bulk kv storage", async () => {
+			const keyValues = [
+				{
+					key: "hello",
+					value: "world",
+				},
+				{
+					key: "test",
+					value: "value",
+				},
+			];
+			writeFileSync("./keys.json", JSON.stringify(keyValues));
+			await runWrangler(
+				`kv:bulk put keys.json --namespace-id bulk-namespace-id --local`
+			);
+			await runWrangler(`kv:key list --namespace-id bulk-namespace-id --local`);
+			expect(std.out).toMatchInlineSnapshot(`
+			"Success!
+			{
+			  \\"keys\\": [
+			    {
+			      \\"name\\": \\"hello\\"
+			    },
+			    {
+			      \\"name\\": \\"test\\"
+			    }
+			  ],
+			  \\"list_complete\\": true
+			}"
+		`);
+			const keys = ["hello", "test"];
+			writeFileSync("./keys.json", JSON.stringify(keys));
+			await runWrangler(
+				`kv:bulk delete keys.json --namespace-id bulk-namespace-id --local --force`
+			);
+			expect(std.out).toMatchInlineSnapshot(`
+			"Success!
+			{
+			  \\"keys\\": [
+			    {
+			      \\"name\\": \\"hello\\"
+			    },
+			    {
+			      \\"name\\": \\"test\\"
+			    }
+			  ],
+			  \\"list_complete\\": true
+			}
+			Success!"
+		`);
+
+			await runWrangler(`kv:key list --namespace-id bulk-namespace-id --local`);
+			expect(std.out).toMatchInlineSnapshot(`
+			"Success!
+			{
+			  \\"keys\\": [
+			    {
+			      \\"name\\": \\"hello\\"
+			    },
+			    {
+			      \\"name\\": \\"test\\"
+			    }
+			  ],
+			  \\"list_complete\\": true
+			}
+			Success!
+			{
+			  \\"keys\\": [],
+			  \\"list_complete\\": true
+			}"
+		`);
+		});
+
+		it("should follow persist-to for local kv storage", async () => {
+			await runWrangler(
+				`kv:key put val value --namespace-id some-namespace-id --local`
+			);
+
+			await runWrangler(
+				`kv:key put val persistValue --namespace-id some-namespace-id --local --persist-to ./persistdir`
+			);
+			expect(std.out).toMatchInlineSnapshot(`
+			"Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
+			Writing the value \\"persistValue\\" to key \\"val\\" on namespace some-namespace-id."
+		`);
+
+			await runWrangler(
+				`kv:key get val --namespace-id some-namespace-id --local --text`
+			);
+			expect(std.out).toMatchInlineSnapshot(`
+			"Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
+			Writing the value \\"persistValue\\" to key \\"val\\" on namespace some-namespace-id.
+			value"
+		`);
+
+			await runWrangler(
+				`kv:key get val --namespace-id some-namespace-id --local --text --persist-to ./persistdir`
+			);
+			expect(std.out).toMatchInlineSnapshot(`
+			"Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
+			Writing the value \\"persistValue\\" to key \\"val\\" on namespace some-namespace-id.
+			value
+			persistValue"
+		`);
 		});
 	});
 });

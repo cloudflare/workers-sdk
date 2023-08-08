@@ -8,7 +8,7 @@
 	"transform": {
 		"^.+\\.(t|j)sx?$": "ts-jest"
 	},
-	"testRegex": "/test/.*\\.test\\.js$",
+	"testRegex": "/test/.*\\.(test|spec)\\.(ts|tsx|js)$",
 	"testEnvironment": "miniflare",
 	"testEnvironmentOptions": {
 		"scriptPath": "./src/index.js",

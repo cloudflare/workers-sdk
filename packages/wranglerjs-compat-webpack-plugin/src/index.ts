@@ -28,7 +28,7 @@
 import child_process from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import rimraf from "rimraf";
+import { rimrafSync } from "rimraf";
 import { readConfig } from "wrangler/src/config";
 
 import type {
@@ -203,7 +203,7 @@ export class WranglerJsCompatWebpackPlugin {
 			template,
 			this.packageDir,
 		]);
-		await rm(path.resolve(this.packageDir, ".git"));
+		rimrafSync(path.resolve(this.packageDir, ".git"));
 	}
 
 	private bundleAssets({ assets }: Compilation) {
@@ -255,27 +255,6 @@ export class WranglerJsCompatWebpackPlugin {
 			this.output.js
 		);
 	}
-}
-
-/**
- * Promise wrapper around rimraf
- */
-function rm(
-	pathToRemove: string,
-	options?: rimraf.Options
-): Promise<null | undefined> {
-	return new Promise((resolve, reject) => {
-		const callback = (result: Error | null | undefined) => {
-			if (result instanceof Error) {
-				reject(result);
-			} else {
-				resolve(result);
-			}
-		};
-		options !== undefined
-			? rimraf(pathToRemove, options, callback)
-			: rimraf(pathToRemove, callback);
-	});
 }
 
 /**

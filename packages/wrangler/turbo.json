@@ -1,0 +1,42 @@
+{
+	"$schema": "http://turbo.build/schema.json",
+	"extends": ["//"],
+	"pipeline": {
+		"build": {
+			"outputs": ["miniflare-dist/**", "emitted-types/**", "wrangler-dist/**"],
+			"env": [
+				"NODE_EXTRA_CA_CERTS",
+				"CLOUDFLARE_ACCOUNT_ID",
+				"SOURCEMAPS",
+				"NODE_ENV",
+				"SPARROW_SOURCE_KEY",
+				"ALGOLIA_APP_ID",
+				"ALGOLIA_PUBLIC_KEY",
+				"NO_SCRIPT_SIZE_WARNING",
+				"CLOUDFLARE_API_TOKEN",
+				"CLOUDFLARE_ACCOUNT_ID",
+				"WRANGLER_AUTH_DOMAIN",
+				"PATH",
+				"WRANGLER_LOG",
+				"EXPERIMENTAL_MIDDLEWARE",
+				"FORMAT_WRANGLER_ERRORS",
+				"CF_PAGES",
+				"CI",
+				"CF_PAGES_UPLOAD_JWT",
+				"NO_SCRIPT_SIZE_WARNING",
+				"EXPERIMENTAL_MIDDLEWARE",
+				"NO_D1_WARNING",
+				"WRANGLER",
+				"CUSTOM_BUILD_VAR",
+				"PWD",
+				"LC_ALL",
+				"WRANGLER_SEND_METRICS",
+				"https_proxy",
+				"HTTPS_PROXY",
+				"JEST_WORKER_ID",
+				"http_proxy",
+				"HTTP_PROXY"
+			]
+		}
+	}
+}
