@@ -1,13 +1,13 @@
 {
-  "devDependencies": {
-    "@cloudflare/workers-types": "^4.20230307.0",
-    "typescript": "^4.9.5",
-    "vitest": "^0.29.2",
-    "wrangler": "^2.12.3"
-  },
-  "dependencies": {
-    "@cloudflare/constellation": "^2.0.3",
-    "lodash": "^4.17.21",
-    "string-to-stream": "^3.0.1"
-  }
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20230307.0",
+		"typescript": "^4.9.5",
+		"vitest": "^0.29.2",
+		"wrangler": "^2.12.3"
+	},
+	"dependencies": {
+		"@cloudflare/constellation": "^2.0.3",
+		"lodash": "^4.17.21",
+		"string-to-stream": "^3.0.1"
+	}
 }

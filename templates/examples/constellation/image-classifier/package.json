@@ -1,19 +1,19 @@
 {
-  "name": "image-classification",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "",
-  "license": "ISC",
-  "devDependencies": {
-    "@cloudflare/constellation": "^2.0.2",
-    "@cloudflare/workers-types": "^4.20230511.0",
-    "pngjs": "^7.0.0",
-    "string-to-stream": "^3.0.1",
-    "typescript": "^5.0.4",
-    "wrangler": "^3.1.1"
-  }
+	"name": "image-classification",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"author": "",
+	"license": "ISC",
+	"devDependencies": {
+		"@cloudflare/constellation": "^2.0.2",
+		"@cloudflare/workers-types": "^4.20230511.0",
+		"pngjs": "^7.0.0",
+		"string-to-stream": "^3.0.1",
+		"typescript": "^5.0.4",
+		"wrangler": "^3.1.1"
+	}
 }

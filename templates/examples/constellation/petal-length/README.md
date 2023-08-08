@@ -46,8 +46,8 @@ workers_dev = true
 compatibility_date = "2023-05-14"
 
 constellation = [
-    {binding = 'XGBOOST_CLASSIFIER', project_id = 'aae19900-869a-4f3a-bc16-a97af2ad3ce3'},
-    {binding = 'ONNX_CLASSIFIER', project_id = '33cf069f-635c-110a-8c78-ef7b12ebbbf2'}
+{binding = 'XGBOOST_CLASSIFIER', project_id = 'aae19900-869a-4f3a-bc16-a97af2ad3ce3'},
+{binding = 'ONNX_CLASSIFIER', project_id = '33cf069f-635c-110a-8c78-ef7b12ebbbf2'}
 ]
 ```
 

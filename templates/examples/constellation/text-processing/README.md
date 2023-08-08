@@ -16,13 +16,13 @@ curl -X POST https://text-processing-worker.constellation-ai.workers.dev -d '{"t
 Embed text with sentence-transformers:
 
 ```bash
-curl -X POST https://text-processing-worker.yourdomain.workers.dev -d '{"task": "embed", "input": "Hi my name is Isaac"}'  
+curl -X POST https://text-processing-worker.yourdomain.workers.dev -d '{"task": "embed", "input": "Hi my name is Isaac"}'
 ```
 
 Classify text with distilbert:
 
 ```bash
-curl -X POST https://text-processing-worker.yourdomain.workers.dev -d '{"task": "sentiment-analysis", "input": "Hi my name is Isaac"}'  
+curl -X POST https://text-processing-worker.yourdomain.workers.dev -d '{"task": "sentiment-analysis", "input": "Hi my name is Isaac"}'
 # [{"label":"POSITIVE","score":0.9973437190055847}]
 ```
 

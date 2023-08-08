@@ -44,7 +44,7 @@ workers_dev = true
 compatibility_date = "2023-05-14"
 
 constellation = [
-  {binding = 'CLASSIFIER', project_id = '2193053a-af0a-40a6-a757-00fa73908ef6'},
+{binding = 'CLASSIFIER', project_id = '2193053a-af0a-40a6-a757-00fa73908ef6'},
 ]
 ```
 
