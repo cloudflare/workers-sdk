@@ -34,7 +34,7 @@ describe("wrangler", () => {
 			Commands:
 			  wrangler docs [command..]            📚 Open wrangler's docs in your browser
 			  wrangler init [name]                 📥 Initialize a basic Worker project, including a wrangler.toml file
-			  wrangler generate [name] [template]  ✨ Generate a new Worker project from an existing Worker template. See https://github.com/cloudflare/templates
+			  wrangler generate [name] [template]  ✨ Generate a new Worker project from an existing Worker template. See https://github.com/cloudflare/workers-sdk/tree/main/templates
 			  wrangler dev [script]                👂 Start a local server for developing your worker
 			  wrangler deploy [script]             🆙 Deploy your Worker to Cloudflare.  [aliases: publish]
 			  wrangler delete [script]             🗑  Delete your Worker from Cloudflare.
@@ -86,7 +86,7 @@ describe("wrangler", () => {
 			Commands:
 			  wrangler docs [command..]            📚 Open wrangler's docs in your browser
 			  wrangler init [name]                 📥 Initialize a basic Worker project, including a wrangler.toml file
-			  wrangler generate [name] [template]  ✨ Generate a new Worker project from an existing Worker template. See https://github.com/cloudflare/templates
+			  wrangler generate [name] [template]  ✨ Generate a new Worker project from an existing Worker template. See https://github.com/cloudflare/workers-sdk/tree/main/templates
 			  wrangler dev [script]                👂 Start a local server for developing your worker
 			  wrangler deploy [script]             🆙 Deploy your Worker to Cloudflare.  [aliases: publish]
 			  wrangler delete [script]             🗑  Delete your Worker from Cloudflare.
