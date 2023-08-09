@@ -1,0 +1,19 @@
+{
+	"name": "additional-modules",
+	"version": "0.0.1",
+	"private": true,
+	"scripts": {
+		"build": "wrangler deploy --dry-run --outdir=dist",
+		"check:type": "tsc",
+		"deploy": "wrangler deploy",
+		"start": "wrangler dev",
+		"test": "vitest run",
+		"test:ci": "vitest run",
+		"test:watch": "vitest",
+		"type:tests": "tsc -p ./test/tsconfig.json"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20230724.0",
+		"wrangler": "*"
+	}
+}

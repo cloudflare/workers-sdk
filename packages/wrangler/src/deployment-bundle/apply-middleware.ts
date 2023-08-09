@@ -14,8 +14,9 @@ import type { Entry } from "./entry";
 export interface MiddlewareLoader {
 	name: string;
 	path: string;
-	// Each config item will be provided as a virtual module at config:middleware/${name}
-	// where `name` is a key property on the `config` record.
+	// This will be provided as a virtual module at `config:middleware/${name}`,
+	// where `name` is the name of this middleware, and the module contains
+	// named exports for each property on the `config` record.
 	config?: Record<string, unknown>;
 }
 

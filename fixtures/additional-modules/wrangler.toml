@@ -1,0 +1,9 @@
+name = "additional-modules"
+main = "src/index.ts"
+compatibility_date = "2023-08-01"
+
+find_additional_modules = true
+rules = [
+  { type = "CommonJS", globs = ["**/*.cjs"]},
+  { type = "ESModule", globs = ["**/*.js"]},
+]

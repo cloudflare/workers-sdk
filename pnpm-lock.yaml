@@ -81,6 +81,15 @@ importers:
         specifier: ^1.10.14
         version: 1.10.14
 
+  fixtures/additional-modules:
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20230724.0
+        version: 4.20230821.0
+      wrangler:
+        specifier: '*'
+        version: link:../../packages/wrangler
+
   fixtures/d1-worker-app:
     devDependencies:
       wrangler:
