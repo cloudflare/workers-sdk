@@ -1,3 +1,7 @@
+import type {
+	DnsAnswer as _DnsAnswer,
+	DnsResponse as _DnsResponse,
+} from "dns2";
 import type { FrameworkMap } from "frameworks/index";
 
 export type FrameworkName = keyof typeof FrameworkMap;
@@ -48,3 +52,12 @@ export type FrameworkConfig = {
 	testFlags?: string[];
 	compatibilityFlags?: string[];
 };
+
+// Augmenting the type from the dns2 library since the types are outdated
+export interface DnsAnswer extends _DnsAnswer {
+	ns: string;
+}
+
+export interface DnsResponse extends _DnsResponse {
+	authorities: DnsAnswer[];
+}

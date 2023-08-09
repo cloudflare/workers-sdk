@@ -1,7 +1,8 @@
-import { Resolver } from "node:dns/promises";
+import dns2 from "dns2";
 import { request } from "undici";
 import { blue, brandColor, dim } from "./colors";
 import { spinner } from "./interactive";
+import type { DnsAnswer, DnsResponse } from "types";
 
 const TIMEOUT = 1000 * 60 * 5;
 const POLL_INTERVAL = 1000;
@@ -12,9 +13,11 @@ export const poll = async (url: string): Promise<boolean> => {
 	const s = spinner();
 
 	s.start("Waiting for DNS to propagate");
+	await sleep(10 * 1000);
+
 	while (Date.now() - start < TIMEOUT) {
 		s.update(`Waiting for DNS to propagate (${secondsSince(start)}s)`);
-		if (await dnsLookup(domain)) {
+		if (await isDomainAvailable(domain)) {
 			s.stop(`${brandColor("DNS propagation")} ${dim("complete")}.`);
 			break;
 		}
@@ -54,20 +57,43 @@ export const poll = async (url: string): Promise<boolean> => {
 	return false;
 };
 
-async function dnsLookup(domain: string): Promise<boolean> {
+export const isDomainAvailable = async (domain: string) => {
 	try {
-		const resolver = new Resolver({ timeout: TIMEOUT, tries: 1 });
-		resolver.setServers([
-			"1.1.1.1",
-			"1.0.0.1",
-			"2606:4700:4700::1111",
-			"2606:4700:4700::1001",
-		]);
-		return (await resolver.resolve4(domain)).length > 0;
-	} catch (e) {
+		const nameServers = await lookupAuthoritativeServers(domain);
+		if (nameServers.length === 0) return false;
+
+		const dns = new dns2({ nameServers });
+		const res = await dns.resolve(domain, "A");
+		return res.answers.length > 0;
+	} catch (error) {
 		return false;
 	}
-}
+};
+
+// Looks up the nameservers that are responsible for this particular domain
+export const lookupAuthoritativeServers = async (domain: string) => {
+	const nameServers = await lookupRootNameservers(domain);
+	const dns = new dns2({ nameServers });
+	const res = (await dns.resolve(domain, "NS")) as DnsResponse;
+
+	return (
+		res.authorities
+			// Filter out non-authoritative authorities (ones that don't have an 'ns' property)
+			.filter((r) => Boolean(r.ns))
+			// Return only the hostnames of the authoritative servers
+			.map((r) => r.ns)
+	);
+};
+
+// Looks up the nameservers responsible for handling `pages.dev` domains
+export const lookupRootNameservers = async (domain: string) => {
+	// `pages.dev` or `workers.dev`
+	const baseDomain = domain.split(".").slice(-2).join(".");
+
+	const dns = new dns2({});
+	const nameservers = await dns.resolve(baseDomain, "NS");
+	return (nameservers.answers as DnsAnswer[]).map((n) => n.ns);
+};
 
 async function sleep(ms: number) {
 	return new Promise((res) => setTimeout(res, ms));

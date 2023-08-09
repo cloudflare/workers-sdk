@@ -50,6 +50,8 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20221111.1",
+		"@types/dns2": "^2.0.3",
+		"dns2": "^2.1.0",
 		"esbuild": "0.16.3",
 		"patch-package": "^6.5.1",
 		"turbo": "^1.10.12"
