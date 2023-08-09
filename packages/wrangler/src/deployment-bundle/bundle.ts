@@ -242,12 +242,16 @@ export async function bundleWorker(
 
 	// At this point, we take the opportunity to "wrap" any input workers
 	// with any extra functionality we may want to add.
-	const middlewareToLoad: MiddlewareLoader[] = [
-		{
+	const middlewareToLoad: MiddlewareLoader[] = [];
+
+	if (targetConsumer === "dev" && !!testScheduled) {
+		middlewareToLoad.push({
 			name: "scheduled",
 			path: "templates/middleware/middleware-scheduled.ts",
-			active: targetConsumer === "dev" && !!testScheduled,
-		},
+		});
+	}
+
+	if (targetConsumer === "dev" && local) {
 		// In Miniflare 3, we bind the user's worker as a service binding in a
 		// special entry worker that handles things like injecting `Request.cf`,
 		// live-reload, and the pretty-error page.
@@ -263,15 +267,15 @@ export async function bundleWorker(
 		//
 		// This middleware wraps the user's worker in a `try/catch`, and rewrites
 		// errors in this format so a pretty-error page can be shown.
-		{
+		middlewareToLoad.push({
 			name: "miniflare3-json-error",
 			path: "templates/middleware/middleware-miniflare3-json-error.ts",
-			active: targetConsumer === "dev" && local,
-		},
-		{
+		});
+	}
+	if (serveAssetsFromWorker) {
+		middlewareToLoad.push({
 			name: "serve-static-assets",
 			path: "templates/middleware/middleware-serve-static-assets.ts",
-			active: serveAssetsFromWorker,
 			config: {
 				spaMode:
 					typeof assets === "object" ? assets.serve_single_page_app : false,
@@ -284,18 +288,21 @@ export async function bundleWorker(
 						  }
 						: {},
 			},
-		},
-		{
+		});
+	}
+
+	if (
+		targetConsumer === "dev" &&
+		!!(
+			workerDefinitions &&
+			Object.keys(workerDefinitions).length > 0 &&
+			services &&
+			services.length > 0
+		)
+	) {
+		middlewareToLoad.push({
 			name: "multiworker-dev",
 			path: "templates/middleware/middleware-multiworker-dev.ts",
-			active:
-				targetConsumer === "dev" &&
-				!!(
-					workerDefinitions &&
-					Object.keys(workerDefinitions).length > 0 &&
-					services &&
-					services.length > 0
-				),
 			config: {
 				workers: Object.fromEntries(
 					(services || []).map((serviceBinding) => [
@@ -304,8 +311,8 @@ export async function bundleWorker(
 					])
 				),
 			},
-		},
-	];
+		});
+	}
 
 	// If using watch, build result will not be returned
 	// This plugin will retreive the build result on the first build
@@ -322,19 +329,15 @@ export async function bundleWorker(
 
 	const inject: string[] = injectOption ?? [];
 	if (checkFetch) inject.push(checkedFetchFileToInject);
-	const activeMiddleware = middlewareToLoad.filter(
-		// We dynamically filter the middleware depending on where we are bundling for
-		(m) => m.active
-	);
 	let inputEntry: EntryWithInject = entry;
 	if (
-		activeMiddleware.length > 0 ||
+		middlewareToLoad.length > 0 ||
 		process.env.EXPERIMENTAL_MIDDLEWARE === "true"
 	) {
 		inputEntry = await applyMiddlewareLoaderFacade(
 			entry,
 			tmpDirPath,
-			activeMiddleware,
+			middlewareToLoad,
 			doBindings
 		);
 		if (inputEntry.inject !== undefined) inject.push(...inputEntry.inject);
@@ -476,12 +479,11 @@ export async function bundleWorker(
  * middleware to be written in a more traditional manner and then be applied all
  * at once, requiring just two esbuild steps, rather than 1 per middleware.
  */
-
 interface MiddlewareLoader {
 	name: string;
 	path: string;
-	active: boolean;
-	// This will be provided as a virtual module at config:middleware/${name}
+	// Each config item will be provided as a virtual module at config:middleware/${name}
+	// where `name` is a key property on the `config` record.
 	config?: Record<string, unknown>;
 }
 
