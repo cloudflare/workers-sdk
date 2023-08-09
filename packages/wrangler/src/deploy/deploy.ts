@@ -452,45 +452,41 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			);
 		}
 
-		const {
-			modules,
-			dependencies,
-			resolvedEntryPointPath,
-			bundleType,
-		}: Awaited<ReturnType<typeof bundleWorker>> = props.noBundle
-			? await traverseModuleGraph(props.entry, props.rules)
-			: await bundleWorker(
-					props.entry,
-					typeof destination === "string" ? destination : destination.path,
-					{
-						serveAssetsFromWorker:
-							!props.isWorkersSite && Boolean(props.assetPaths),
-						doBindings: config.durable_objects.bindings,
-						jsxFactory,
-						jsxFragment,
-						rules: props.rules,
-						tsconfig: props.tsconfig ?? config.tsconfig,
-						minify,
-						legacyNodeCompat,
-						nodejsCompat,
-						define: { ...config.define, ...props.defines },
-						checkFetch: false,
-						assets: config.assets && {
-							...config.assets,
-							// enable the cache when publishing
-							bypassCache: false,
-						},
-						services: config.services,
-						// We don't set workerDefinitions here,
-						// because we don't want to apply the dev-time
-						// facades on top of it
-						workerDefinitions: undefined,
-						// We want to know if the build is for development or publishing
-						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
-						targetConsumer: "deploy",
-						local: false,
-					}
-			  );
+		const { modules, dependencies, resolvedEntryPointPath, bundleType } =
+			props.noBundle
+				? await traverseModuleGraph(props.entry, props.rules)
+				: await bundleWorker(
+						props.entry,
+						typeof destination === "string" ? destination : destination.path,
+						{
+							serveAssetsFromWorker:
+								!props.isWorkersSite && Boolean(props.assetPaths),
+							doBindings: config.durable_objects.bindings,
+							jsxFactory,
+							jsxFragment,
+							rules: props.rules,
+							tsconfig: props.tsconfig ?? config.tsconfig,
+							minify,
+							legacyNodeCompat,
+							nodejsCompat,
+							define: { ...config.define, ...props.defines },
+							checkFetch: false,
+							assets: config.assets && {
+								...config.assets,
+								// enable the cache when publishing
+								bypassCache: false,
+							},
+							services: config.services,
+							// We don't set workerDefinitions here,
+							// because we don't want to apply the dev-time
+							// facades on top of it
+							workerDefinitions: undefined,
+							// We want to know if the build is for development or publishing
+							// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
+							targetConsumer: "deploy",
+							local: false,
+						}
+				  );
 
 		const content = readFileSync(resolvedEntryPointPath, {
 			encoding: "utf-8",
