@@ -28,7 +28,7 @@ export type Options = {
 	local: boolean;
 };
 
-export function buildWorker({
+export function buildWorkerFromFunctions({
 	routesModule,
 	outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`),
 	outdir,

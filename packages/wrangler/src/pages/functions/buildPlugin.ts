@@ -10,7 +10,7 @@ type Options = Omit<
 	"outfile" | "fallbackService" | "buildOutputDirectory" | "nodejsCompat"
 > & { outdir: string };
 
-export function buildPlugin({
+export function buildPluginFromFunctions({
 	routesModule,
 	outdir,
 	minify = false,
