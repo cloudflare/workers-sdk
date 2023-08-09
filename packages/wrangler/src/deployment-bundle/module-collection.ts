@@ -1,15 +1,10 @@
 import crypto from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import chalk from "chalk";
 import globToRegExp from "glob-to-regexp";
-import { logger } from "./logger";
-import type { Config, ConfigModuleRuleType } from "./config";
-import type {
-	CfModule,
-	CfModuleType,
-	CfScriptFormat,
-} from "./deployment-bundle/worker";
+import { logger } from "../logger";
+import type { Config, ConfigModuleRuleType } from "../config";
+import type { CfModule, CfModuleType, CfScriptFormat } from "./worker";
 import type esbuild from "esbuild";
 
 function flipObject<
@@ -19,13 +14,14 @@ function flipObject<
 	return Object.fromEntries(Object.entries(obj).map(([k, v]) => [v, k]));
 }
 
-const RuleTypeToModuleType: Record<ConfigModuleRuleType, CfModuleType> = {
-	ESModule: "esm",
-	CommonJS: "commonjs",
-	CompiledWasm: "compiled-wasm",
-	Data: "buffer",
-	Text: "text",
-};
+export const RuleTypeToModuleType: Record<ConfigModuleRuleType, CfModuleType> =
+	{
+		ESModule: "esm",
+		CommonJS: "commonjs",
+		CompiledWasm: "compiled-wasm",
+		Data: "buffer",
+		Text: "text",
+	};
 
 export const ModuleTypeToRuleType = flipObject(RuleTypeToModuleType);
 
@@ -87,71 +83,6 @@ export function parseRules(userRules: Config["rules"] = []) {
 	rulesToRemove.forEach((rule) => rules!.splice(rules!.indexOf(rule), 1));
 
 	return { rules, removedRules: rulesToRemove };
-}
-
-export async function matchFiles(
-	files: string[],
-	relativeTo: string,
-	{
-		rules,
-		removedRules,
-	}: { rules: Config["rules"]; removedRules: Config["rules"] }
-) {
-	const modules: CfModule[] = [];
-
-	// Deduplicate modules. This is usually a poorly specified `wrangler.toml` configuration, but duplicate modules will cause a crash at runtime
-	const moduleNames = new Set<string>();
-	for (const rule of rules) {
-		for (const glob of rule.globs) {
-			const regexp = globToRegExp(glob, {
-				globstar: true,
-			});
-			const newModules = await Promise.all(
-				files
-					.filter((f) => regexp.test(f))
-					.map(async (name) => {
-						const filePath = path.join(relativeTo, name);
-						const fileContent = await readFile(filePath);
-
-						return {
-							name,
-							filePath,
-							content: fileContent,
-							type: RuleTypeToModuleType[rule.type],
-						};
-					})
-			);
-			for (const module of newModules) {
-				if (!moduleNames.has(module.name)) {
-					moduleNames.add(module.name);
-					modules.push(module);
-				} else {
-					logger.warn(
-						`Ignoring duplicate module: ${chalk.blue(
-							module.name
-						)} (${chalk.green(module.type ?? "")})`
-					);
-				}
-			}
-		}
-	}
-
-	// This is just a sanity check verifying that no files match rules that were removed
-	for (const rule of removedRules) {
-		for (const glob of rule.globs) {
-			const regexp = globToRegExp(glob);
-			for (const file of files) {
-				if (regexp.test(file)) {
-					throw new Error(
-						`The file ${file} matched a module rule in your configuration (${JSON.stringify(
-							rule
-						)}), but was ignored because a previous rule with the same type was not marked as \`fallthrough = true\`.`
-					);
-				}
-			}
-		}
-	}
-	return modules;
 }
 
 export type ModuleCollector = {

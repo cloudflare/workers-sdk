@@ -11,6 +11,7 @@ import {
 	printBundleSize,
 	printOffendingDependencies,
 } from "../deployment-bundle/bundle-reporter";
+import { getBundleType } from "../deployment-bundle/bundle-type";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import findAdditionalModules from "../deployment-bundle/find-additional-modules";
 import { addHyphens } from "../deployments";
@@ -454,7 +455,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		const { modules, dependencies, resolvedEntryPointPath, bundleType } =
 			props.noBundle
-				? await findAdditionalModules(props.entry, props.rules)
+				? {
+						modules: await findAdditionalModules(props.entry, props.rules),
+						dependencies: {},
+						resolvedEntryPointPath: props.entry.file,
+						bundleType: getBundleType(props.entry.format),
+				  }
 				: await bundleWorker(
 						props.entry,
 						typeof destination === "string" ? destination : destination.path,

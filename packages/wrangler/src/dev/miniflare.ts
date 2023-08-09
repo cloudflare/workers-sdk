@@ -10,9 +10,9 @@ import {
 	Mutex,
 	Miniflare,
 } from "miniflare";
+import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { getHttpsOptions } from "../https-options";
 import { logger } from "../logger";
-import { ModuleTypeToRuleType } from "../module-collection";
 import type { Config } from "../config";
 import type {
 	CfD1Database,

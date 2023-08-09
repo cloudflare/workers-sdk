@@ -4,7 +4,6 @@ import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
 import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
 import * as esbuild from "esbuild";
 import tmp from "tmp-promise";
-import createModuleCollector from "../module-collection";
 import { getBasePath } from "../paths";
 import { applyMiddlewareLoaderFacade } from "./apply-middleware";
 import {
@@ -16,12 +15,13 @@ import { getEntryPointFromMetafile } from "./entry-point-from-metafile";
 import { cloudflareInternalPlugin } from "./esbuild-plugins/cloudflare-internal";
 import { configProviderPlugin } from "./esbuild-plugins/config-provider";
 import { nodejsCompatPlugin } from "./esbuild-plugins/nodejs-compat";
+import createModuleCollector from "./module-collection";
 import type { Config } from "../config";
 import type { DurableObjectBindings } from "../config/environment";
 import type { WorkerRegistry } from "../dev-registry";
-import type { ModuleCollector } from "../module-collection";
 import type { MiddlewareLoader } from "./apply-middleware";
 import type { Entry } from "./entry";
+import type { ModuleCollector } from "./module-collection";
 import type { CfModule } from "./worker";
 
 export const COMMON_ESBUILD_OPTIONS = {
