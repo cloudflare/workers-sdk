@@ -4,6 +4,10 @@ import { build as esBuild } from "esbuild";
 import { nanoid } from "nanoid";
 import { bundleWorker } from "../../deployment-bundle/bundle";
 import findAdditionalModules from "../../deployment-bundle/find-additional-modules";
+import {
+	createModuleCollector,
+	noopModuleCollector,
+} from "../../deployment-bundle/module-collection";
 import { FatalError } from "../../errors";
 import { logger } from "../../logger";
 import { getBasePath } from "../../paths";
@@ -52,6 +56,10 @@ export function buildWorkerFromFunctions({
 		},
 		outdir ? resolve(outdir) : resolve(outfile),
 		{
+			bundle: true,
+			findAdditionalModules: false,
+			additionalModules: [],
+			moduleCollector: createModuleCollector({ format: "modules" }),
 			inject: [routesModule],
 			...(outdir ? { entryName: "index" } : {}),
 			minify,
@@ -142,7 +150,6 @@ export function buildWorkerFromFunctions({
 			],
 			isOutfile: !outdir,
 			serveAssetsFromWorker: false,
-			disableModuleCollection: false,
 			rules: [],
 			checkFetch: local,
 			targetConsumer: local ? "dev" : "deploy",
@@ -193,7 +200,7 @@ export function buildRawWorker({
 	legacyNodeCompat,
 	nodejsCompat,
 	local,
-	additionalModules,
+	additionalModules = [],
 }: RawOptions) {
 	return bundleWorker(
 		{
@@ -205,6 +212,11 @@ export function buildRawWorker({
 		outdir ? resolve(outdir) : resolve(outfile),
 		{
 			bundle,
+			moduleCollector: external
+				? noopModuleCollector
+				: createModuleCollector({ format: "modules" }),
+			findAdditionalModules: false,
+			additionalModules,
 			minify,
 			sourcemap,
 			watch,
@@ -236,12 +248,10 @@ export function buildRawWorker({
 			],
 			isOutfile: !outdir,
 			serveAssetsFromWorker: false,
-			disableModuleCollection: external ? true : false,
 			rules: [],
 			checkFetch: local,
 			targetConsumer: local ? "dev" : "deploy",
 			forPages: true,
-			additionalModules,
 			local,
 		}
 	);
@@ -295,7 +305,6 @@ export async function traverseAndBuildWorkerJSDirectory({
 		bundleType: bundleResult.bundleType,
 		stop: bundleResult.stop,
 		sourceMapPath: bundleResult.sourceMapPath,
-		moduleCollector: bundleResult.moduleCollector,
 	};
 }
 

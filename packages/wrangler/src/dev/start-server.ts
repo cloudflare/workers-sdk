@@ -8,6 +8,11 @@ import { bundleWorker } from "../deployment-bundle/bundle";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { dedupeModulesByName } from "../deployment-bundle/dedupe-modules";
 import findAdditionalModules from "../deployment-bundle/find-additional-modules";
+import {
+	createModuleCollector,
+	getWrangler1xLegacyModuleReferences,
+	noopModuleCollector,
+} from "../deployment-bundle/module-collection";
 import { runCustomBuild } from "../deployment-bundle/run-custom-build";
 import {
 	getBoundRegisteredWorkers,
@@ -236,11 +241,25 @@ async function runEsbuild({
 		]);
 	}
 
+	const entryDirectory = path.dirname(entry.file);
+	const moduleCollector = noBundle
+		? noopModuleCollector
+		: createModuleCollector({
+				wrangler1xLegacyModuleReferences: getWrangler1xLegacyModuleReferences(
+					entryDirectory,
+					entry.file
+				),
+				format: entry.format,
+				rules,
+		  });
+
 	const bundleResult =
 		processEntrypoint || !noBundle
 			? await bundleWorker(entry, destination, {
 					bundle: !noBundle,
-					disableModuleCollection: noBundle,
+					findAdditionalModules: false,
+					additionalModules,
+					moduleCollector,
 					serveAssetsFromWorker,
 					jsxFactory,
 					jsxFragment,
@@ -260,7 +279,6 @@ async function runEsbuild({
 					local,
 					testScheduled,
 					doBindings,
-					additionalModules,
 			  })
 			: undefined;
 
