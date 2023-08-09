@@ -30,11 +30,11 @@ export function buildPluginFromFunctions({
 		moduleRoot: functionsDirectory,
 	};
 	const moduleCollector = createModuleCollector({
-		format: "modules",
+		entry,
+		findAdditionalModules: false,
 	});
 	return bundleWorker(entry, resolve(outdir), {
 		bundle: true,
-		findAdditionalModules: false,
 		additionalModules: [],
 		moduleCollector,
 		inject: [routesModule],
@@ -101,7 +101,6 @@ export function buildPluginFromFunctions({
 			},
 		],
 		serveAssetsFromWorker: false,
-		rules: [],
 		checkFetch: local,
 		targetConsumer: local ? "dev" : "deploy",
 		forPages: true,

@@ -3,9 +3,11 @@ import path from "node:path";
 import chalk from "chalk";
 import globToRegExp from "glob-to-regexp";
 import { logger } from "../logger";
-import { parseRules, RuleTypeToModuleType } from "./module-collection";
+import { RuleTypeToModuleType } from "./module-collection";
+import { parseRules } from "./rules";
 import type { Rule } from "../config/environment";
 import type { Entry } from "./entry";
+import type { ParsedRules } from "./rules";
 import type { CfModule } from "./worker";
 
 async function getFiles(root: string, relativeTo: string): Promise<string[]> {
@@ -30,16 +32,17 @@ async function getFiles(root: string, relativeTo: string): Promise<string[]> {
  * Search the filesystem under the `moduleRoot` of the `entry` for potential additional modules
  * that match the given `rules`.
  */
-export default async function findAdditionalModules(
+export async function findAdditionalModules(
 	entry: Entry,
-	rules: Rule[]
+	rules: Rule[] | ParsedRules
 ): Promise<CfModule[]> {
 	const files = await getFiles(entry.moduleRoot, entry.moduleRoot);
 	const relativeEntryPoint = path
 		.relative(entry.moduleRoot, entry.file)
 		.replaceAll("\\", "/");
 
-	const modules = (await matchFiles(files, entry.moduleRoot, parseRules(rules)))
+	if (Array.isArray(rules)) rules = parseRules(rules);
+	const modules = (await matchFiles(files, entry.moduleRoot, rules))
 		.filter((m) => m.name !== relativeEntryPoint)
 		.map((m) => ({
 			...m,
@@ -59,7 +62,7 @@ export default async function findAdditionalModules(
 async function matchFiles(
 	files: string[],
 	relativeTo: string,
-	{ rules, removedRules }: { rules: Rule[]; removedRules: Rule[] }
+	{ rules, removedRules }: ParsedRules
 ) {
 	const modules: CfModule[] = [];
 
@@ -80,6 +83,7 @@ async function matchFiles(
 						return {
 							name: filePath,
 							content: fileContent,
+							filePath,
 							type: RuleTypeToModuleType[rule.type],
 						};
 					})
@@ -115,4 +119,22 @@ async function matchFiles(
 		}
 	}
 	return modules;
+}
+
+/**
+ * Recursively finds all directories contained within and including `root`,
+ * that should be watched for additional modules. Excludes `node_modules` and
+ * `.git` folders in case the root is the project root, to avoid watching too
+ * much.
+ */
+export async function* findAdditionalModuleWatchDirs(
+	root: string
+): AsyncGenerator<string> {
+	yield root;
+	for (const entry of await readdir(root, { withFileTypes: true })) {
+		if (entry.isDirectory()) {
+			if (entry.name === "node_modules" || entry.name === ".git") continue;
+			yield* findAdditionalModuleWatchDirs(path.join(root, entry.name));
+		}
+	}
 }

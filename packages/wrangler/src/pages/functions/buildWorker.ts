@@ -3,7 +3,7 @@ import { join, resolve } from "node:path";
 import { build as esBuild } from "esbuild";
 import { nanoid } from "nanoid";
 import { bundleWorker } from "../../deployment-bundle/bundle";
-import findAdditionalModules from "../../deployment-bundle/find-additional-modules";
+import { findAdditionalModules } from "../../deployment-bundle/find-additional-modules";
 import {
 	createModuleCollector,
 	noopModuleCollector,
@@ -13,6 +13,7 @@ import { logger } from "../../logger";
 import { getBasePath } from "../../paths";
 import { realTmpdir } from "../utils";
 import type { BundleResult } from "../../deployment-bundle/bundle";
+import type { Entry } from "../../deployment-bundle/entry";
 import type { CfModule } from "../../deployment-bundle/worker";
 import type { Plugin } from "esbuild";
 
@@ -47,116 +48,116 @@ export function buildWorkerFromFunctions({
 	functionsDirectory,
 	local,
 }: Options) {
-	return bundleWorker(
-		{
-			file: resolve(getBasePath(), "templates/pages-template-worker.ts"),
-			directory: functionsDirectory,
-			format: "modules",
-			moduleRoot: functionsDirectory,
+	const entry: Entry = {
+		file: resolve(getBasePath(), "templates/pages-template-worker.ts"),
+		directory: functionsDirectory,
+		format: "modules",
+		moduleRoot: functionsDirectory,
+	};
+	const moduleCollector = createModuleCollector({
+		entry,
+		findAdditionalModules: false,
+	});
+
+	return bundleWorker(entry, outdir ? resolve(outdir) : resolve(outfile), {
+		bundle: true,
+		additionalModules: [],
+		moduleCollector,
+		inject: [routesModule],
+		...(outdir ? { entryName: "index" } : {}),
+		minify,
+		sourcemap,
+		watch,
+		legacyNodeCompat,
+		nodejsCompat,
+		define: {
+			__FALLBACK_SERVICE__: JSON.stringify(fallbackService),
 		},
-		outdir ? resolve(outdir) : resolve(outfile),
-		{
-			bundle: true,
-			findAdditionalModules: false,
-			additionalModules: [],
-			moduleCollector: createModuleCollector({ format: "modules" }),
-			inject: [routesModule],
-			...(outdir ? { entryName: "index" } : {}),
-			minify,
-			sourcemap,
-			watch,
-			legacyNodeCompat,
-			nodejsCompat,
-			define: {
-				__FALLBACK_SERVICE__: JSON.stringify(fallbackService),
-			},
-			doBindings: [], // Pages functions don't support internal Durable Objects
-			plugins: [
-				buildNotifierPlugin(onEnd),
-				{
-					name: "Assets",
-					setup(pluginBuild) {
-						const identifiers = new Map<string, string>();
+		doBindings: [], // Pages functions don't support internal Durable Objects
+		plugins: [
+			buildNotifierPlugin(onEnd),
+			{
+				name: "Assets",
+				setup(pluginBuild) {
+					const identifiers = new Map<string, string>();
 
-						pluginBuild.onResolve({ filter: /^assets:/ }, async (args) => {
-							const directory = resolve(
-								args.resolveDir,
-								args.path.slice("assets:".length)
+					pluginBuild.onResolve({ filter: /^assets:/ }, async (args) => {
+						const directory = resolve(
+							args.resolveDir,
+							args.path.slice("assets:".length)
+						);
+
+						const exists = await access(directory)
+							.then(() => true)
+							.catch(() => false);
+
+						const isDirectory =
+							exists && (await lstat(directory)).isDirectory();
+
+						if (!isDirectory) {
+							return {
+								errors: [
+									{
+										text: `'${directory}' does not exist or is not a directory.`,
+									},
+								],
+							};
+						}
+
+						// TODO: Consider hashing the contents rather than using a unique identifier every time?
+						identifiers.set(directory, nanoid());
+						if (!buildOutputDirectory) {
+							console.warn(
+								"You're attempting to import static assets as part of your Pages Functions, but have not specified a directory in which to put them. You must use 'wrangler pages dev <directory>' rather than 'wrangler pages dev -- <command>' to import static assets in Functions."
 							);
+						}
+						return { path: directory, namespace: "assets" };
+					});
 
-							const exists = await access(directory)
-								.then(() => true)
-								.catch(() => false);
+					pluginBuild.onLoad(
+						{ filter: /.*/, namespace: "assets" },
+						async (args) => {
+							const identifier = identifiers.get(args.path);
 
-							const isDirectory =
-								exists && (await lstat(directory)).isDirectory();
-
-							if (!isDirectory) {
-								return {
-									errors: [
-										{
-											text: `'${directory}' does not exist or is not a directory.`,
-										},
-									],
-								};
-							}
-
-							// TODO: Consider hashing the contents rather than using a unique identifier every time?
-							identifiers.set(directory, nanoid());
-							if (!buildOutputDirectory) {
-								console.warn(
-									"You're attempting to import static assets as part of your Pages Functions, but have not specified a directory in which to put them. You must use 'wrangler pages dev <directory>' rather than 'wrangler pages dev -- <command>' to import static assets in Functions."
+							if (buildOutputDirectory) {
+								const staticAssetsOutputDirectory = join(
+									buildOutputDirectory,
+									"cdn-cgi",
+									"pages-plugins",
+									identifier as string
 								);
-							}
-							return { path: directory, namespace: "assets" };
-						});
+								await rm(staticAssetsOutputDirectory, {
+									force: true,
+									recursive: true,
+								});
+								await cp(args.path, staticAssetsOutputDirectory, {
+									force: true,
+									recursive: true,
+								});
 
-						pluginBuild.onLoad(
-							{ filter: /.*/, namespace: "assets" },
-							async (args) => {
-								const identifier = identifiers.get(args.path);
-
-								if (buildOutputDirectory) {
-									const staticAssetsOutputDirectory = join(
-										buildOutputDirectory,
-										"cdn-cgi",
-										"pages-plugins",
-										identifier as string
-									);
-									await rm(staticAssetsOutputDirectory, {
-										force: true,
-										recursive: true,
-									});
-									await cp(args.path, staticAssetsOutputDirectory, {
-										force: true,
-										recursive: true,
-									});
-
-									return {
-										// TODO: Watch args.path for changes and re-copy when updated
-										contents: `export const onRequest = ({ request, env, functionPath }) => {
+								return {
+									// TODO: Watch args.path for changes and re-copy when updated
+									contents: `export const onRequest = ({ request, env, functionPath }) => {
                     const url = new URL(request.url)
                     const relativePathname = \`/\${url.pathname.replace(functionPath, "") || ""}\`.replace(/^\\/\\//, '/');
                     url.pathname = '/cdn-cgi/pages-plugins/${identifier}' + relativePathname
                     request = new Request(url.toString(), request)
                     return env.ASSETS.fetch(request)
                   }`,
-									};
-								}
+								};
 							}
-						);
-					},
+						}
+					);
 				},
-			],
-			isOutfile: !outdir,
-			serveAssetsFromWorker: false,
-			rules: [],
-			checkFetch: local,
-			targetConsumer: local ? "dev" : "deploy",
-			forPages: true,
-			local,
-		}
-	);
+			},
+		],
+		isOutfile: !outdir,
+		serveAssetsFromWorker: false,
+		checkFetch: local,
+		targetConsumer: local ? "dev" : "deploy",
+		forPages: true,
+		local,
+	});
 }
 
 export type RawOptions = {
@@ -202,59 +203,54 @@ export function buildRawWorker({
 	local,
 	additionalModules = [],
 }: RawOptions) {
-	return bundleWorker(
-		{
-			file: workerScriptPath,
-			directory: resolve(directory),
-			format: "modules",
-			moduleRoot: resolve(directory),
-		},
-		outdir ? resolve(outdir) : resolve(outfile),
-		{
-			bundle,
-			moduleCollector: external
-				? noopModuleCollector
-				: createModuleCollector({ format: "modules" }),
-			findAdditionalModules: false,
-			additionalModules,
-			minify,
-			sourcemap,
-			watch,
-			legacyNodeCompat,
-			nodejsCompat,
-			define: {},
-			doBindings: [], // Pages functions don't support internal Durable Objects
-			plugins: [
-				...plugins,
-				buildNotifierPlugin(onEnd),
-				...(external
-					? [
-							// In some cases, we want to enable bundling in esbuild so that we can flatten a shim around the entrypoint, but we still don't want to actually bundle in all the chunks that a Worker references.
-							// This plugin allows us to mark those chunks as external so they are not inlined.
-							{
-								name: "external-fixer",
-								setup(pluginBuild) {
-									pluginBuild.onResolve({ filter: /.*/ }, async (args) => {
-										if (
-											external.includes(resolve(args.resolveDir, args.path))
-										) {
-											return { path: args.path, external: true };
-										}
-									});
-								},
-							} as Plugin,
-					  ]
-					: []),
-			],
-			isOutfile: !outdir,
-			serveAssetsFromWorker: false,
-			rules: [],
-			checkFetch: local,
-			targetConsumer: local ? "dev" : "deploy",
-			forPages: true,
-			local,
-		}
-	);
+	const entry: Entry = {
+		file: workerScriptPath,
+		directory: resolve(directory),
+		format: "modules",
+		moduleRoot: resolve(directory),
+	};
+	const moduleCollector = external
+		? noopModuleCollector
+		: createModuleCollector({ entry, findAdditionalModules: false });
+
+	return bundleWorker(entry, outdir ? resolve(outdir) : resolve(outfile), {
+		bundle,
+		moduleCollector,
+		additionalModules,
+		minify,
+		sourcemap,
+		watch,
+		legacyNodeCompat,
+		nodejsCompat,
+		define: {},
+		doBindings: [], // Pages functions don't support internal Durable Objects
+		plugins: [
+			...plugins,
+			buildNotifierPlugin(onEnd),
+			...(external
+				? [
+						// In some cases, we want to enable bundling in esbuild so that we can flatten a shim around the entrypoint, but we still don't want to actually bundle in all the chunks that a Worker references.
+						// This plugin allows us to mark those chunks as external so they are not inlined.
+						{
+							name: "external-fixer",
+							setup(pluginBuild) {
+								pluginBuild.onResolve({ filter: /.*/ }, async (args) => {
+									if (external.includes(resolve(args.resolveDir, args.path))) {
+										return { path: args.path, external: true };
+									}
+								});
+							},
+						} as Plugin,
+				  ]
+				: []),
+		],
+		isOutfile: !outdir,
+		serveAssetsFromWorker: false,
+		checkFetch: local,
+		targetConsumer: local ? "dev" : "deploy",
+		forPages: true,
+		local,
+	});
 }
 
 export async function traverseAndBuildWorkerJSDirectory({

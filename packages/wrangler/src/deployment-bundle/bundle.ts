@@ -52,8 +52,6 @@ export type BundleResult = {
 export type BundleOptions = {
 	// When `bundle` is set to false, we apply shims to the Worker, but won't pull in any imports
 	bundle: boolean;
-	// When `findAdditionalModules is true we will also traverse the file tree to find modules that match module rules.
-	findAdditionalModules: boolean;
 	// Known additional modules provided by the outside.
 	additionalModules: CfModule[];
 	// A module collector enables you to observe what modules are in the Worker.
@@ -65,7 +63,6 @@ export type BundleOptions = {
 	jsxFactory?: string;
 	jsxFragment?: string;
 	entryName?: string;
-	rules: Config["rules"];
 	watch?: boolean;
 	tsconfig?: string;
 	minify?: boolean;
@@ -271,6 +268,11 @@ export async function bundleWorker(
 		 */
 		inject.push(...(result.inject ?? []));
 	}
+
+	// `esbuild` doesn't support returning `watch*` options from `onStart()`
+	// plugin callbacks. Instead, we define an empty virtual module that is
+	// imported in this injected module. Importing that module registers watchers.
+	inject.push(path.resolve(getBasePath(), "templates/modules-watch-stub.js"));
 
 	const buildOptions: esbuild.BuildOptions & { metafile: true } = {
 		// Don't use entryFile here as the file may have been changed when applying the middleware

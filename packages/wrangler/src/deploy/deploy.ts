@@ -13,7 +13,7 @@ import {
 } from "../deployment-bundle/bundle-reporter";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
-import findAdditionalModules from "../deployment-bundle/find-additional-modules";
+import { findAdditionalModules } from "../deployment-bundle/find-additional-modules";
 import {
 	createModuleCollector,
 	getWrangler1xLegacyModuleReferences,
@@ -463,7 +463,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				entryDirectory,
 				props.entry.file
 			),
-			format: props.entry.format,
+			entry: props.entry,
+			// `moduleCollector` doesn't get used when `props.noBundle` is set, so
+			// `findAdditionalModules` always defaults to `false`
+			findAdditionalModules: config.find_additional_modules ?? false,
 			rules: props.rules,
 		});
 
@@ -480,7 +483,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						typeof destination === "string" ? destination : destination.path,
 						{
 							bundle: true,
-							findAdditionalModules: false,
 							additionalModules: [],
 							moduleCollector,
 							serveAssetsFromWorker:
@@ -488,7 +490,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							doBindings: config.durable_objects.bindings,
 							jsxFactory,
 							jsxFragment,
-							rules: props.rules,
 							tsconfig: props.tsconfig ?? config.tsconfig,
 							minify,
 							legacyNodeCompat,

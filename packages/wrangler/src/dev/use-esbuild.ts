@@ -7,7 +7,7 @@ import { rewriteNodeCompatBuildFailure } from "../deployment-bundle/build-failur
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { dedupeModulesByName } from "../deployment-bundle/dedupe-modules";
-import findAdditionalModules from "../deployment-bundle/find-additional-modules";
+import { findAdditionalModules as doFindAdditionalModules } from "../deployment-bundle/find-additional-modules";
 import {
 	createModuleCollector,
 	noopModuleCollector,
@@ -48,6 +48,7 @@ export function useEsbuild({
 	nodejsCompat,
 	define,
 	noBundle,
+	findAdditionalModules,
 	workerDefinitions,
 	services,
 	durableObjects,
@@ -72,6 +73,7 @@ export function useEsbuild({
 	legacyNodeCompat: boolean | undefined;
 	nodejsCompat: boolean | undefined;
 	noBundle: boolean;
+	findAdditionalModules: boolean | undefined;
 	workerDefinitions: WorkerRegistry;
 	durableObjects: Config["durable_objects"];
 	local: boolean;
@@ -92,11 +94,22 @@ export function useEsbuild({
 						entryDirectory,
 						entry.file
 					),
-					format: entry.format,
+					entry,
+					findAdditionalModules: findAdditionalModules ?? false,
 					rules: rules,
 			  });
 
-		function updateBundle() {
+		async function getAdditionalModules() {
+			return noBundle
+				? dedupeModulesByName([
+						...((await doFindAdditionalModules(entry, rules)) ?? []),
+						...additionalModules,
+				  ])
+				: additionalModules;
+		}
+
+		async function updateBundle() {
+			const newAdditionalModules = await getAdditionalModules();
 			// nothing really changes here, so let's increment the id
 			// to change the return object's identity
 			setBundle((previousBundle) => {
@@ -105,8 +118,8 @@ export function useEsbuild({
 					"Rebuild triggered with no previous build available"
 				);
 				previousBundle.modules = dedupeModulesByName([
-					...previousBundle.modules,
 					...(moduleCollector?.modules ?? []),
+					...newAdditionalModules,
 				]);
 				return { ...previousBundle, id: previousBundle.id + 1 };
 			});
@@ -116,7 +129,7 @@ export function useEsbuild({
 		const onEnd = {
 			name: "on-end",
 			setup(b: PluginBuild) {
-				b.onEnd((result: BuildResult) => {
+				b.onEnd(async (result: BuildResult) => {
 					const errors = result.errors;
 					const warnings = result.warnings;
 					if (errors.length > 0) {
@@ -129,7 +142,7 @@ export function useEsbuild({
 						// First bundle, no need to update bundle
 						bundled = true;
 					} else {
-						updateBundle();
+						await updateBundle();
 					}
 
 					if (warnings.length > 0) {
@@ -142,24 +155,16 @@ export function useEsbuild({
 		async function build() {
 			if (!destination) return;
 
-			const newAdditionalModules = noBundle
-				? dedupeModulesByName([
-						...((await findAdditionalModules(entry, rules)) ?? []),
-						...additionalModules,
-				  ])
-				: additionalModules;
-
+			const newAdditionalModules = await getAdditionalModules();
 			const bundleResult =
 				processEntrypoint || !noBundle
 					? await bundleWorker(entry, destination, {
 							bundle: !noBundle,
 							moduleCollector,
-							findAdditionalModules: false,
 							additionalModules: newAdditionalModules,
 							serveAssetsFromWorker,
 							jsxFactory,
 							jsxFragment,
-							rules,
 							watch: true,
 							tsconfig,
 							minify,
@@ -189,7 +194,7 @@ export function useEsbuild({
 				const watcher = watch(entry.file, {
 					persistent: true,
 				}).on("change", async (_event) => {
-					updateBundle();
+					await updateBundle();
 				});
 
 				stopWatching = () => {
@@ -230,6 +235,7 @@ export function useEsbuild({
 		tsconfig,
 		exit,
 		noBundle,
+		findAdditionalModules,
 		minify,
 		legacyNodeCompat,
 		nodejsCompat,
