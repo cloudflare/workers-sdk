@@ -12,7 +12,7 @@ import {
 	printOffendingDependencies,
 } from "../deployment-bundle/bundle-reporter";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
-import traverseModuleGraph from "../deployment-bundle/traverse-module-graph";
+import findAdditionalModules from "../deployment-bundle/find-additional-modules";
 import { addHyphens } from "../deployments";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
@@ -454,7 +454,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		const { modules, dependencies, resolvedEntryPointPath, bundleType } =
 			props.noBundle
-				? await traverseModuleGraph(props.entry, props.rules)
+				? await findAdditionalModules(props.entry, props.rules)
 				: await bundleWorker(
 						props.entry,
 						typeof destination === "string" ? destination : destination.path,

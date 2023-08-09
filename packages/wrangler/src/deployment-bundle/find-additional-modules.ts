@@ -25,7 +25,11 @@ async function getFiles(root: string, relativeTo: string): Promise<string[]> {
 	return files;
 }
 
-export default async function traverseModuleGraph(
+/**
+ * Search the filesystem under the `moduleRoot` of the `entry` for potential additional modules
+ * that match the given `rules`.
+ */
+export default async function findAdditionalModules(
 	entry: Entry,
 	rules: Config["rules"]
 ): Promise<BundleResult> {

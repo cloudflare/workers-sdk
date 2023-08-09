@@ -3,7 +3,7 @@ import { join, resolve } from "node:path";
 import { build as esBuild } from "esbuild";
 import { nanoid } from "nanoid";
 import { bundleWorker } from "../../deployment-bundle/bundle";
-import traverseModuleGraph from "../../deployment-bundle/traverse-module-graph";
+import findAdditionalModules from "../../deployment-bundle/find-additional-modules";
 import { FatalError } from "../../errors";
 import { logger } from "../../logger";
 import { getBasePath } from "../../paths";
@@ -258,7 +258,7 @@ export async function traverseAndBuildWorkerJSDirectory({
 }): Promise<BundleResult> {
 	const entrypoint = resolve(join(workerJSDirectory, "index.js"));
 
-	const traverseModuleGraphResult = await traverseModuleGraph(
+	const traverseModuleGraphResult = await findAdditionalModules(
 		{
 			file: entrypoint,
 			directory: resolve(workerJSDirectory),

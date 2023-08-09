@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { rewriteNodeCompatBuildFailure } from "../deployment-bundle/build-failures";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { dedupeModulesByName } from "../deployment-bundle/dedupe-modules";
-import traverseModuleGraph from "../deployment-bundle/traverse-module-graph";
+import findAdditionalModules from "../deployment-bundle/find-additional-modules";
 import { logBuildFailure, logBuildWarnings } from "../logger";
 import type { Config } from "../config";
 import type { SourceMapMetadata } from "../deployment-bundle/bundle";
@@ -134,7 +134,7 @@ export function useEsbuild({
 				| undefined;
 			let bundleResult: Awaited<ReturnType<typeof bundleWorker>> | undefined;
 			if (noBundle) {
-				traverseModuleGraphResult = await traverseModuleGraph(entry, rules);
+				traverseModuleGraphResult = await findAdditionalModules(entry, rules);
 			}
 
 			if (processEntrypoint || !noBundle) {
