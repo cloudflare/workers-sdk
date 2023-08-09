@@ -6,8 +6,8 @@ import onExit from "signal-exit";
 import tmp from "tmp-promise";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { dedupeModulesByName } from "../deployment-bundle/dedupe-modules";
+import findAdditionalModules from "../deployment-bundle/find-additional-modules";
 import { runCustomBuild } from "../deployment-bundle/run-custom-build";
-import traverseModuleGraph from "../deployment-bundle/traverse-module-graph";
 import {
 	getBoundRegisteredWorkers,
 	startWorkerRegistry,
@@ -233,7 +233,7 @@ async function runEsbuild({
 		| undefined;
 	let bundleResult: Awaited<ReturnType<typeof bundleWorker>> | undefined;
 	if (noBundle) {
-		traverseModuleGraphResult = await traverseModuleGraph(entry, rules);
+		traverseModuleGraphResult = await findAdditionalModules(entry, rules);
 	}
 
 	if (processEntrypoint || !noBundle) {
