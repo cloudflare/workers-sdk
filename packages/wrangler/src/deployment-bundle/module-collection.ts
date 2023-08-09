@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { readdirSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import globToRegExp from "glob-to-regexp";
@@ -90,12 +91,20 @@ export type ModuleCollector = {
 	plugin: esbuild.Plugin;
 };
 
-export default function createModuleCollector(props: {
+export const noopModuleCollector = {
+	modules: [],
+	plugin: {
+		name: "wrangler-module-collector",
+		setup: () => {},
+	},
+};
+
+export function createModuleCollector(props: {
 	format: CfScriptFormat;
 	rules?: Config["rules"];
 	// a collection of "legacy" style module references, which are just file names
 	// we will eventually deprecate this functionality, hence the verbose greppable name
-	wrangler1xlegacyModuleReferences: {
+	wrangler1xLegacyModuleReferences?: {
 		rootDirectory: string;
 		fileNames: Set<string>;
 	};
@@ -129,12 +138,15 @@ export default function createModuleCollector(props: {
 					});
 				});
 
-				if (props.wrangler1xlegacyModuleReferences.fileNames.size > 0) {
+				if (
+					props.wrangler1xLegacyModuleReferences &&
+					props.wrangler1xLegacyModuleReferences.fileNames.size > 0
+				) {
 					build.onResolve(
 						{
 							filter: new RegExp(
 								"^(" +
-									[...props.wrangler1xlegacyModuleReferences.fileNames]
+									[...props.wrangler1xLegacyModuleReferences.fileNames]
 										.map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
 										.join("|") +
 									")$"
@@ -160,7 +172,8 @@ export default function createModuleCollector(props: {
 							// take the file and massage it to a
 							// transportable/manageable format
 							const filePath = path.join(
-								props.wrangler1xlegacyModuleReferences.rootDirectory,
+								// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+								props.wrangler1xLegacyModuleReferences!.rootDirectory,
 								args.path
 							);
 							const fileContent = await readFile(filePath);
@@ -269,5 +282,22 @@ export default function createModuleCollector(props: {
 				});
 			},
 		},
+	};
+}
+
+export function getWrangler1xLegacyModuleReferences(
+	rootDirectory: string,
+	entryPath: string
+) {
+	return {
+		rootDirectory,
+		fileNames: new Set(
+			readdirSync(rootDirectory, { withFileTypes: true })
+				.filter(
+					(dirEntry) =>
+						dirEntry.isFile() && dirEntry.name !== path.basename(entryPath)
+				)
+				.map((dirEnt) => dirEnt.name)
+		),
 	};
 }

@@ -14,6 +14,10 @@ import {
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import findAdditionalModules from "../deployment-bundle/find-additional-modules";
+import {
+	createModuleCollector,
+	getWrangler1xLegacyModuleReferences,
+} from "../deployment-bundle/module-collection";
 import { addHyphens } from "../deployments";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
@@ -453,6 +457,16 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			);
 		}
 
+		const entryDirectory = path.dirname(props.entry.file);
+		const moduleCollector = createModuleCollector({
+			wrangler1xLegacyModuleReferences: getWrangler1xLegacyModuleReferences(
+				entryDirectory,
+				props.entry.file
+			),
+			format: props.entry.format,
+			rules: props.rules,
+		});
+
 		const { modules, dependencies, resolvedEntryPointPath, bundleType } =
 			props.noBundle
 				? {
@@ -465,6 +479,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						props.entry,
 						typeof destination === "string" ? destination : destination.path,
 						{
+							bundle: true,
+							findAdditionalModules: false,
+							additionalModules: [],
+							moduleCollector,
 							serveAssetsFromWorker:
 								!props.isWorkersSite && Boolean(props.assetPaths),
 							doBindings: config.durable_objects.bindings,

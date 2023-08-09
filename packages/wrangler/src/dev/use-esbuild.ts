@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import path from "node:path";
 import { watch } from "chokidar";
 import { useApp } from "ink";
 import { useState, useEffect } from "react";
@@ -7,11 +8,15 @@ import { bundleWorker } from "../deployment-bundle/bundle";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { dedupeModulesByName } from "../deployment-bundle/dedupe-modules";
 import findAdditionalModules from "../deployment-bundle/find-additional-modules";
+import {
+	createModuleCollector,
+	noopModuleCollector,
+	getWrangler1xLegacyModuleReferences,
+} from "../deployment-bundle/module-collection";
 import { logBuildFailure, logBuildWarnings } from "../logger";
 import type { Config } from "../config";
 import type { SourceMapMetadata } from "../deployment-bundle/bundle";
 import type { Entry } from "../deployment-bundle/entry";
-import type { ModuleCollector } from "../deployment-bundle/module-collection";
 import type { CfModule, CfModuleType } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
 import type { Metafile, BuildResult, PluginBuild } from "esbuild";
@@ -25,11 +30,6 @@ export type EsbuildBundle = {
 	dependencies: Metafile["outputs"][string]["inputs"];
 	sourceMapPath: string | undefined;
 	sourceMapMetadata: SourceMapMetadata | undefined;
-};
-
-export type BundleInfo = {
-	bundle: EsbuildBundle;
-	moduleCollector: ModuleCollector | undefined;
 };
 
 export function useEsbuild({
@@ -79,24 +79,36 @@ export function useEsbuild({
 	testScheduled: boolean;
 	experimentalLocal: boolean | undefined;
 }): EsbuildBundle | undefined {
-	const [bundleInfo, setBundleInfo] = useState<BundleInfo>();
+	const [bundle, setBundle] = useState<EsbuildBundle>();
 	const { exit } = useApp();
 	useEffect(() => {
 		let stopWatching: (() => void) | undefined = undefined;
 
+		const entryDirectory = path.dirname(entry.file);
+		const moduleCollector = noBundle
+			? noopModuleCollector
+			: createModuleCollector({
+					wrangler1xLegacyModuleReferences: getWrangler1xLegacyModuleReferences(
+						entryDirectory,
+						entry.file
+					),
+					format: entry.format,
+					rules: rules,
+			  });
+
 		function updateBundle() {
 			// nothing really changes here, so let's increment the id
 			// to change the return object's identity
-			setBundleInfo((previousBundle) => {
+			setBundle((previousBundle) => {
 				assert(
 					previousBundle,
 					"Rebuild triggered with no previous build available"
 				);
-				previousBundle.bundle.modules = dedupeModulesByName([
-					...previousBundle.bundle.modules,
-					...(previousBundle.moduleCollector?.modules ?? []),
+				previousBundle.modules = dedupeModulesByName([
+					...previousBundle.modules,
+					...(moduleCollector?.modules ?? []),
 				]);
-				return { ...previousBundle, id: previousBundle.bundle.id + 1 };
+				return { ...previousBundle, id: previousBundle.id + 1 };
 			});
 		}
 
@@ -137,35 +149,36 @@ export function useEsbuild({
 				  ])
 				: additionalModules;
 
-			let bundleResult: Awaited<ReturnType<typeof bundleWorker>> | undefined;
-			if (processEntrypoint || !noBundle) {
-				bundleResult = await bundleWorker(entry, destination, {
-					bundle: !noBundle,
-					disableModuleCollection: noBundle,
-					serveAssetsFromWorker,
-					jsxFactory,
-					jsxFragment,
-					rules,
-					watch: true,
-					tsconfig,
-					minify,
-					legacyNodeCompat,
-					nodejsCompat,
-					doBindings: durableObjects.bindings,
-					define,
-					checkFetch: true,
-					assets,
-					// disable the cache in dev
-					bypassAssetCache: true,
-					workerDefinitions,
-					services,
-					targetConsumer,
-					testScheduled,
-					additionalModules: newAdditionalModules,
-					plugins: [onEnd],
-					local,
-				});
-			}
+			const bundleResult =
+				processEntrypoint || !noBundle
+					? await bundleWorker(entry, destination, {
+							bundle: !noBundle,
+							moduleCollector,
+							findAdditionalModules: false,
+							additionalModules: newAdditionalModules,
+							serveAssetsFromWorker,
+							jsxFactory,
+							jsxFragment,
+							rules,
+							watch: true,
+							tsconfig,
+							minify,
+							legacyNodeCompat,
+							nodejsCompat,
+							doBindings: durableObjects.bindings,
+							define,
+							checkFetch: true,
+							assets,
+							// disable the cache in dev
+							bypassAssetCache: true,
+							workerDefinitions,
+							services,
+							targetConsumer,
+							testScheduled,
+							plugins: [onEnd],
+							local,
+					  })
+					: undefined;
 
 			// Capture the `stop()` method to use as the `useEffect()` destructor.
 			stopWatching = bundleResult?.stop;
@@ -183,19 +196,15 @@ export function useEsbuild({
 					void watcher.close();
 				};
 			}
-
-			setBundleInfo({
-				bundle: {
-					id: 0,
-					entry,
-					path: bundleResult?.resolvedEntryPointPath ?? entry.file,
-					type: bundleResult?.bundleType ?? getBundleType(entry.format),
-					modules: bundleResult ? bundleResult.modules : newAdditionalModules,
-					dependencies: bundleResult?.dependencies ?? {},
-					sourceMapPath: bundleResult?.sourceMapPath,
-					sourceMapMetadata: bundleResult?.sourceMapMetadata,
-				},
-				moduleCollector: bundleResult?.moduleCollector,
+			setBundle({
+				id: 0,
+				entry,
+				path: bundleResult?.resolvedEntryPointPath ?? entry.file,
+				type: bundleResult?.bundleType ?? getBundleType(entry.format),
+				modules: bundleResult ? bundleResult.modules : newAdditionalModules,
+				dependencies: bundleResult?.dependencies ?? {},
+				sourceMapPath: bundleResult?.sourceMapPath,
+				sourceMapMetadata: bundleResult?.sourceMapMetadata,
 			});
 		}
 
@@ -234,5 +243,5 @@ export function useEsbuild({
 		testScheduled,
 		experimentalLocal,
 	]);
-	return bundleInfo?.bundle;
+	return bundle;
 }

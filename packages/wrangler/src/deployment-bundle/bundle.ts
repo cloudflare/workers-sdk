@@ -15,7 +15,7 @@ import { getEntryPointFromMetafile } from "./entry-point-from-metafile";
 import { cloudflareInternalPlugin } from "./esbuild-plugins/cloudflare-internal";
 import { configProviderPlugin } from "./esbuild-plugins/config-provider";
 import { nodejsCompatPlugin } from "./esbuild-plugins/nodejs-compat";
-import createModuleCollector from "./module-collection";
+import { noopModuleCollector } from "./module-collection";
 import type { Config } from "../config";
 import type { DurableObjectBindings } from "../config/environment";
 import type { WorkerRegistry } from "../dev-registry";
@@ -47,12 +47,17 @@ export type BundleResult = {
 	stop: (() => Promise<void>) | undefined;
 	sourceMapPath?: string | undefined;
 	sourceMapMetadata?: SourceMapMetadata | undefined;
-	moduleCollector: ModuleCollector | undefined;
 };
 
 export type BundleOptions = {
 	// When `bundle` is set to false, we apply shims to the Worker, but won't pull in any imports
-	bundle?: boolean;
+	bundle: boolean;
+	// When `findAdditionalModules is true we will also traverse the file tree to find modules that match module rules.
+	findAdditionalModules: boolean;
+	// Known additional modules provided by the outside.
+	additionalModules: CfModule[];
+	// A module collector enables you to observe what modules are in the Worker.
+	moduleCollector: ModuleCollector;
 	serveAssetsFromWorker: boolean;
 	assets?: Config["assets"];
 	bypassAssetCache?: boolean;
@@ -76,9 +81,6 @@ export type BundleOptions = {
 	loader?: Record<string, string>;
 	sourcemap?: esbuild.CommonOptions["sourcemap"];
 	plugins?: esbuild.Plugin[];
-	additionalModules?: CfModule[];
-	// TODO: Rip these out https://github.com/cloudflare/workers-sdk/issues/2153
-	disableModuleCollection?: boolean;
 	isOutfile?: boolean;
 	forPages?: boolean;
 	local: boolean;
@@ -91,13 +93,14 @@ export async function bundleWorker(
 	entry: Entry,
 	destination: string,
 	{
-		bundle = true,
+		bundle,
+		moduleCollector = noopModuleCollector,
+		additionalModules = [],
 		serveAssetsFromWorker,
 		doBindings,
 		jsxFactory,
 		jsxFragment,
 		entryName,
-		rules,
 		watch,
 		tsconfig,
 		minify,
@@ -115,10 +118,8 @@ export async function bundleWorker(
 		loader,
 		sourcemap,
 		plugins,
-		disableModuleCollection,
 		isOutfile,
 		forPages,
-		additionalModules = [],
 		local,
 	}: BundleOptions
 ): Promise<BundleResult> {
@@ -131,33 +132,6 @@ export async function bundleWorker(
 	const tmpDirPath = fs.realpathSync(unsafeTmpDir.path);
 
 	const entryFile = entry.file;
-
-	const entryDirectory = path.dirname(entryFile);
-	let moduleCollector = createModuleCollector({
-		wrangler1xlegacyModuleReferences: {
-			rootDirectory: entryDirectory,
-			fileNames: new Set(
-				fs
-					.readdirSync(entryDirectory, { withFileTypes: true })
-					.filter(
-						(dirEntry) =>
-							dirEntry.isFile() && dirEntry.name !== path.basename(entryFile)
-					)
-					.map((dirEnt) => dirEnt.name)
-			),
-		},
-		format: entry.format,
-		rules,
-	});
-	if (disableModuleCollection) {
-		moduleCollector = {
-			modules: [],
-			plugin: {
-				name: moduleCollector.plugin.name,
-				setup: () => {},
-			},
-		};
-	}
 
 	// At this point, we take the opportunity to "wrap" the worker with middleware.
 	const middlewareToLoad: MiddlewareLoader[] = [];
@@ -425,6 +399,5 @@ export async function bundleWorker(
 			tmpDir: tmpDirPath,
 			entryDirectory: entry.directory,
 		},
-		moduleCollector,
 	};
 }

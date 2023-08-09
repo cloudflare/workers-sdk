@@ -277,7 +277,6 @@ export async function deploy({
 				stop: undefined,
 				resolvedEntryPointPath: _workerPath,
 				bundleType: "esm",
-				moduleCollector: undefined,
 			};
 		}
 	}

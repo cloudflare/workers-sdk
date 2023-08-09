@@ -77,8 +77,19 @@ interface EnvironmentInheritable {
 	main: string | undefined;
 
 	/**
-	 * The directory in which module rules should be evaluated in a `--no-bundle` worker
-	 * This defaults to dirname(main) when left undefined
+	 * If true then Wrangler will traverse the file tree below `base_dir`;
+	 * Any files that match `rules` will be included in the deployed worker.
+	 * Defaults to true if `no_bundle` is true, otherwise false.
+	 *
+	 * @inheritable
+	 */
+	find_additional_modules: boolean | undefined;
+
+	/**
+	 * The directory in which module rules should be evaluated when including additional files into a worker deployment.
+	 * This defaults to the directory containing the `main` entry point of the worker if not specified.
+	 *
+	 * @inheritable
 	 */
 	base_dir: string | undefined;
 
