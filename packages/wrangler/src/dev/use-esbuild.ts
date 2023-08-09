@@ -2,11 +2,9 @@ import assert from "node:assert";
 import { watch } from "chokidar";
 import { useApp } from "ink";
 import { useState, useEffect } from "react";
-import {
-	bundleWorker,
-	dedupeModulesByName,
-	rewriteNodeCompatBuildFailure,
-} from "../deployment-bundle/bundle";
+import { rewriteNodeCompatBuildFailure } from "../deployment-bundle/build-failures";
+import { bundleWorker } from "../deployment-bundle/bundle";
+import { dedupeModulesByName } from "../deployment-bundle/dedupe-modules";
 import traverseModuleGraph from "../deployment-bundle/traverse-module-graph";
 import { logBuildFailure, logBuildWarnings } from "../logger";
 import type { Config } from "../config";
@@ -155,11 +153,9 @@ export function useEsbuild({
 					doBindings: durableObjects.bindings,
 					define,
 					checkFetch: true,
-					assets: assets && {
-						...assets,
-						// disable the cache in dev
-						bypassCache: true,
-					},
+					assets,
+					// disable the cache in dev
+					bypassAssetCache: true,
 					workerDefinitions,
 					services,
 					targetConsumer,

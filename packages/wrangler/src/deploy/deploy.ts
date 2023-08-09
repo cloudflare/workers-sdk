@@ -471,11 +471,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							nodejsCompat,
 							define: { ...config.define, ...props.defines },
 							checkFetch: false,
-							assets: config.assets && {
-								...config.assets,
-								// enable the cache when publishing
-								bypassCache: false,
-							},
+							assets: config.assets,
+							// enable the cache when publishing
+							bypassAssetCache: false,
 							services: config.services,
 							// We don't set workerDefinitions here,
 							// because we don't want to apply the dev-time
