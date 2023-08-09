@@ -5,6 +5,7 @@ import chalk from "chalk";
 import onExit from "signal-exit";
 import tmp from "tmp-promise";
 import { bundleWorker } from "../deployment-bundle/bundle";
+import { getBundleType } from "../deployment-bundle/bundle-type";
 import { dedupeModulesByName } from "../deployment-bundle/dedupe-modules";
 import findAdditionalModules from "../deployment-bundle/find-additional-modules";
 import { runCustomBuild } from "../deployment-bundle/run-custom-build";
@@ -228,57 +229,47 @@ async function runEsbuild({
 }): Promise<EsbuildBundle | undefined> {
 	if (!destination) return;
 
-	let traverseModuleGraphResult:
-		| Awaited<ReturnType<typeof bundleWorker>>
-		| undefined;
-	let bundleResult: Awaited<ReturnType<typeof bundleWorker>> | undefined;
 	if (noBundle) {
-		traverseModuleGraphResult = await findAdditionalModules(entry, rules);
+		additionalModules = dedupeModulesByName([
+			...((await findAdditionalModules(entry, rules)) ?? []),
+			...additionalModules,
+		]);
 	}
 
-	if (processEntrypoint || !noBundle) {
-		bundleResult = await bundleWorker(entry, destination, {
-			bundle: !noBundle,
-			disableModuleCollection: noBundle,
-			serveAssetsFromWorker,
-			jsxFactory,
-			jsxFragment,
-			rules,
-			tsconfig,
-			minify,
-			legacyNodeCompat,
-			nodejsCompat,
-			define,
-			checkFetch: true,
-			assets,
-			// disable the cache in dev
-			bypassAssetCache: true,
-			workerDefinitions,
-			services,
-			targetConsumer: "dev", // We are starting a dev server
-			local,
-			testScheduled,
-			doBindings,
-			additionalModules: dedupeModulesByName([
-				...(traverseModuleGraphResult?.modules ?? []),
-				...additionalModules,
-			]),
-		});
-	}
+	const bundleResult =
+		processEntrypoint || !noBundle
+			? await bundleWorker(entry, destination, {
+					bundle: !noBundle,
+					disableModuleCollection: noBundle,
+					serveAssetsFromWorker,
+					jsxFactory,
+					jsxFragment,
+					rules,
+					tsconfig,
+					minify,
+					legacyNodeCompat,
+					nodejsCompat,
+					define,
+					checkFetch: true,
+					assets,
+					// disable the cache in dev
+					bypassAssetCache: true,
+					workerDefinitions,
+					services,
+					targetConsumer: "dev", // We are starting a dev server
+					local,
+					testScheduled,
+					doBindings,
+					additionalModules,
+			  })
+			: undefined;
 
 	return {
 		id: 0,
 		entry,
 		path: bundleResult?.resolvedEntryPointPath ?? entry.file,
-		type:
-			bundleResult?.bundleType ??
-			(entry.format === "modules" ? "esm" : "commonjs"),
-		modules: bundleResult
-			? bundleResult.modules
-			: dedupeModulesByName([
-					...(traverseModuleGraphResult?.modules ?? []),
-					...additionalModules,
-			  ]),
+		type: bundleResult?.bundleType ?? getBundleType(entry.format),
+		modules: bundleResult ? bundleResult.modules : additionalModules,
 		dependencies: bundleResult?.dependencies ?? {},
 		sourceMapPath: bundleResult?.sourceMapPath,
 		sourceMapMetadata: bundleResult?.sourceMapMetadata,

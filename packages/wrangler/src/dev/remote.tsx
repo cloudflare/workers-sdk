@@ -7,6 +7,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useErrorHandler } from "react-error-boundary";
 import { helpIfErrorIsSizeOrScriptStartup } from "../deploy/deploy";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
+import { getBundleType } from "../deployment-bundle/bundle-type";
 import { logger } from "../logger";
 import { syncAssets } from "../sites";
 import {
@@ -584,7 +585,7 @@ async function createRemoteWorkerInit(props: {
 		main: {
 			name: path.basename(props.bundle.path),
 			filePath: props.bundle.path,
-			type: props.format === "modules" ? "esm" : "commonjs",
+			type: getBundleType(props.format),
 			content,
 		},
 		modules,

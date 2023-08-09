@@ -1,11 +1,12 @@
-import { readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import chalk from "chalk";
+import globToRegExp from "glob-to-regexp";
 import { logger } from "../logger";
-import { matchFiles, parseRules } from "../module-collection";
-import type { Config } from "../config";
-import type { BundleResult } from "./bundle";
+import { parseRules, RuleTypeToModuleType } from "./module-collection";
+import type { Rule } from "../config/environment";
 import type { Entry } from "./entry";
+import type { CfModule } from "./worker";
 
 async function getFiles(root: string, relativeTo: string): Promise<string[]> {
 	const files = [];
@@ -31,8 +32,8 @@ async function getFiles(root: string, relativeTo: string): Promise<string[]> {
  */
 export default async function findAdditionalModules(
 	entry: Entry,
-	rules: Config["rules"]
-): Promise<BundleResult> {
+	rules: Rule[]
+): Promise<CfModule[]> {
 	const files = await getFiles(entry.moduleRoot, entry.moduleRoot);
 	const relativeEntryPoint = path
 		.relative(entry.moduleRoot, entry.file)
@@ -45,8 +46,6 @@ export default async function findAdditionalModules(
 			name: m.name,
 		}));
 
-	const bundleType = entry.format === "modules" ? "esm" : "commonjs";
-
 	if (modules.length > 0) {
 		logger.info(`Attaching additional modules:`);
 		modules.forEach(({ name, type }) => {
@@ -54,14 +53,66 @@ export default async function findAdditionalModules(
 		});
 	}
 
-	return {
-		modules,
-		dependencies: {},
-		resolvedEntryPointPath: entry.file,
-		bundleType,
-		stop: undefined,
-		sourceMapPath: undefined,
-		sourceMapMetadata: undefined,
-		moduleCollector: undefined,
-	};
+	return modules;
+}
+
+async function matchFiles(
+	files: string[],
+	relativeTo: string,
+	{ rules, removedRules }: { rules: Rule[]; removedRules: Rule[] }
+) {
+	const modules: CfModule[] = [];
+
+	// Deduplicate modules. This is usually a poorly specified `wrangler.toml` configuration, but duplicate modules will cause a crash at runtime
+	const moduleNames = new Set<string>();
+	for (const rule of rules) {
+		for (const glob of rule.globs) {
+			const regexp = globToRegExp(glob, {
+				globstar: true,
+			});
+			const newModules = await Promise.all(
+				files
+					.filter((f) => regexp.test(f))
+					.map(async (name) => {
+						const filePath = name;
+						const fileContent = await readFile(path.join(relativeTo, filePath));
+
+						return {
+							name: filePath,
+							content: fileContent,
+							type: RuleTypeToModuleType[rule.type],
+						};
+					})
+			);
+			for (const module of newModules) {
+				if (!moduleNames.has(module.name)) {
+					moduleNames.add(module.name);
+					modules.push(module);
+				} else {
+					logger.warn(
+						`Ignoring duplicate module: ${chalk.blue(
+							module.name
+						)} (${chalk.green(module.type ?? "")})`
+					);
+				}
+			}
+		}
+	}
+
+	// This is just a sanity check verifying that no files match rules that were removed
+	for (const rule of removedRules) {
+		for (const glob of rule.globs) {
+			const regexp = globToRegExp(glob);
+			for (const file of files) {
+				if (regexp.test(file)) {
+					throw new Error(
+						`The file ${file} matched a module rule in your configuration (${JSON.stringify(
+							rule
+						)}), but was ignored because a previous rule with the same type was not marked as \`fallthrough = true\`.`
+					);
+				}
+			}
+		}
+	}
+	return modules;
 }

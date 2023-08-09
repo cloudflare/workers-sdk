@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import dedent from "ts-dedent";
-import traverseModuleGraph from "../deployment-bundle/traverse-module-graph";
+import findAdditionalModules from "../deployment-bundle/find-additional-modules";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import type { ConfigModuleRuleType } from "../config";
@@ -36,7 +36,7 @@ describe("traverse module graph", () => {
 			`
 		);
 
-		const bundle = await traverseModuleGraph(
+		const modules = await findAdditionalModules(
 			{
 				file: path.join(process.cwd(), "./index.js"),
 				directory: process.cwd(),
@@ -46,7 +46,7 @@ describe("traverse module graph", () => {
 			[]
 		);
 
-		expect(bundle.modules).toStrictEqual([]);
+		expect(modules).toStrictEqual([]);
 	});
 
 	it.each([
@@ -71,7 +71,7 @@ describe("traverse module graph", () => {
 			`
 		);
 
-		const bundle = await traverseModuleGraph(
+		const modules = await findAdditionalModules(
 			{
 				file: path.join(process.cwd(), "./index.js"),
 				directory: process.cwd(),
@@ -81,7 +81,7 @@ describe("traverse module graph", () => {
 			[{ type: type as ConfigModuleRuleType, globs: ["**/*.js"] }]
 		);
 
-		expect(bundle.modules[0].type).toStrictEqual(format);
+		expect(modules[0].type).toStrictEqual(format);
 	});
 
 	it("should not resolve JS outside the module root", async () => {
@@ -104,7 +104,7 @@ describe("traverse module graph", () => {
 			`
 		);
 
-		const bundle = await traverseModuleGraph(
+		const modules = await findAdditionalModules(
 			{
 				file: path.join(process.cwd(), "./src/nested/index.js"),
 				directory: path.join(process.cwd(), "./src/nested"),
@@ -115,7 +115,7 @@ describe("traverse module graph", () => {
 			[{ type: "ESModule", globs: ["**/*.js"] }]
 		);
 
-		expect(bundle.modules).toStrictEqual([]);
+		expect(modules).toStrictEqual([]);
 	});
 
 	it("should resolve JS with module root", async () => {
@@ -138,7 +138,7 @@ describe("traverse module graph", () => {
 			`
 		);
 
-		const bundle = await traverseModuleGraph(
+		const modules = await findAdditionalModules(
 			{
 				file: path.join(process.cwd(), "./src/nested/index.js"),
 				directory: path.join(process.cwd(), "./src/nested"),
@@ -149,7 +149,7 @@ describe("traverse module graph", () => {
 			[{ type: "ESModule", globs: ["**/*.js"] }]
 		);
 
-		expect(bundle.modules[0].name).toStrictEqual("other.js");
+		expect(modules[0].name).toStrictEqual("other.js");
 	});
 
 	it("should ignore files not matched by glob", async () => {
@@ -172,7 +172,7 @@ describe("traverse module graph", () => {
 			`
 		);
 
-		const bundle = await traverseModuleGraph(
+		const modules = await findAdditionalModules(
 			{
 				file: path.join(process.cwd(), "./src/nested/index.js"),
 				directory: path.join(process.cwd(), "./src/nested"),
@@ -183,7 +183,7 @@ describe("traverse module graph", () => {
 			[{ type: "ESModule", globs: ["**/*.mjs"] }]
 		);
 
-		expect(bundle.modules.length).toStrictEqual(0);
+		expect(modules.length).toStrictEqual(0);
 	});
 
 	it("should resolve files that match the default rules", async () => {
@@ -206,7 +206,7 @@ describe("traverse module graph", () => {
 			`
 		);
 
-		const bundle = await traverseModuleGraph(
+		const modules = await findAdditionalModules(
 			{
 				file: path.join(process.cwd(), "./src/index.js"),
 				directory: path.join(process.cwd(), "./src"),
@@ -217,6 +217,6 @@ describe("traverse module graph", () => {
 			[]
 		);
 
-		expect(bundle.modules[0].name).toStrictEqual("other.txt");
+		expect(modules[0].name).toStrictEqual("other.txt");
 	});
 });
