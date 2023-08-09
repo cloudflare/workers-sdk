@@ -283,6 +283,13 @@ export default async function deploy(props: Props): Promise<void> {
 				if (!(await confirm("Would you like to continue?"))) {
 					return;
 				}
+			} else if (default_environment.script.last_deployed_from === "api") {
+				logger.warn(
+					`You are about to publish a Workers Service that was last updated via the script API.\nEdits that have been made via the script API will be overridden by your local code and config.`
+				);
+				if (!(await confirm("Would you like to continue?"))) {
+					return;
+				}
 			}
 		} catch (e) {
 			// code: 10090, message: workers.api.error.service_not_found
