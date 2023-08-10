@@ -448,10 +448,11 @@ export default {
 			"public/_worker.js/index.js",
 			`
 import { cat } from "./cat.js";
+import { dog } from "./dog.mjs";
 
 export default {
   async fetch(request, env) {
-		return new Response("Hello from _worker.js/index.js" + cat);
+		return new Response("Hello from _worker.js/index.js" + cat + dog);
 	},
 };`
 		);
@@ -459,6 +460,11 @@ export default {
 			"public/_worker.js/cat.js",
 			`
 export const cat = "cat";`
+		);
+		writeFileSync(
+			"public/_worker.js/dog.mjs",
+			`
+export const cat = "dog";`
 		);
 
 		await runWrangler(`pages functions build --outfile=public/_worker.bundle`);
@@ -487,9 +493,10 @@ export const cat = "cat";`
 
 		// _worker.js/index.js
 		import { cat } from \\"./cat.js\\";
+		import { dog } from \\"./dog.mjs\\";
 		var worker_default = {
 		  async fetch(request, env) {
-		    return new Response(\\"Hello from _worker.js/index.js\\" + cat);
+		    return new Response(\\"Hello from _worker.js/index.js\\" + cat + dog);
 		  }
 		};
 		export {
@@ -503,6 +510,12 @@ export const cat = "cat";`
 
 
 		export const cat = \\"cat\\";
+		------formdata-undici-0.test
+		Content-Disposition: form-data; name=\\"dog.mjs\\"; filename=\\"dog.mjs\\"
+		Content-Type: application/javascript+module
+
+
+		export const cat = \\"dog\\";
 		------formdata-undici-0.test--"
 	`);
 
