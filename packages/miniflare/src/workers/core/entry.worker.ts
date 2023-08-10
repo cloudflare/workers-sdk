@@ -159,7 +159,7 @@ async function handleQueue(
 	const flattened = await request.json<number | unknown[]>();
 	const messages = unflatten(flattened, structuredSerializableRevivers);
 	const queueResponse = await service.queue(queueName, messages);
-	(queueResponse as QueueResponse & { time: number }).time =
+	(queueResponse as FetcherQueueResult & { time: number }).time =
 		Date.now() - startTime;
 	return Response.json(queueResponse);
 }

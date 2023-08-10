@@ -192,7 +192,7 @@ export default (binding: string, WORKER_PATH: string) => {
 		const select = await db.prepare(`SELECT * FROM ${tableColours}`);
 		let result: ColourRow | null = await select.first<ColourRow>();
 		t.deepEqual(result, { id: 1, name: "red", rgb: 0xff0000 });
-		let id = await select.first<number>("id");
+		let id: number | null = await select.first<number>("id");
 		t.is(id, 1);
 
 		// Check with multiple statements (should only match on first statement)

@@ -54,9 +54,6 @@ export class TestD1Database implements D1Database {
 		return this[kSend]("/batch", statements);
 	}
 
-	// @ts-expect-error this function should return a `Promise<D1ExecResult>`,
-	//  not a `Promise<D1Result<T>>`, `@cloudflare/workers-types` is wrong here
-	//  TODO(now): fix in `@cloudflare/workers-types`
 	async exec(query: string): Promise<D1ExecResult> {
 		return this[kSend]("/exec", query);
 	}
