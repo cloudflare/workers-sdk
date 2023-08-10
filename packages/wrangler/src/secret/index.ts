@@ -28,7 +28,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 		})
 		.command(
 			"put <key>",
-			"Create or update a secret variable for a Worker",
+			"🔸Create or update a secret variable for a Worker",
 			(yargs) => {
 				return yargs
 					.positional("key", {
@@ -166,7 +166,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 		)
 		.command(
 			"delete <key>",
-			"Delete a secret variable from a Worker",
+			"🔸Delete a secret variable from a Worker",
 			async (yargs) => {
 				await printWranglerBanner();
 				return yargs
@@ -222,7 +222,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 		)
 		.command(
 			"list",
-			"List all secrets for a Worker",
+			"🔸List all secrets for a Worker",
 			(yargs) => {
 				return yargs.option("name", {
 					describe: "Name of the Worker",
