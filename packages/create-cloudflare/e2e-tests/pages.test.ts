@@ -2,7 +2,6 @@ import { existsSync, mkdtempSync, realpathSync, rmSync } from "fs";
 import crypto from "node:crypto";
 import { tmpdir } from "os";
 import { join } from "path";
-import spawn from "cross-spawn";
 import { FrameworkMap } from "frameworks/index";
 import { readJSON } from "helpers/files";
 import { fetch } from "undici";
@@ -39,28 +38,9 @@ describe(`E2E: Web frameworks`, () => {
 	afterEach((ctx) => {
 		const framework = ctx.meta.name;
 		const projectPath = getProjectPath(framework);
-		const projectName = getProjectName(framework);
 
 		if (existsSync(projectPath)) {
 			rmSync(projectPath, { recursive: true });
-		}
-
-		try {
-			const { output } = spawn.sync("npx", [
-				"wrangler",
-				"pages",
-				"project",
-				"delete",
-				"-y",
-				projectName,
-			]);
-
-			if (!output.toString().includes(`Successfully deleted ${projectName}`)) {
-				console.error(output.toString());
-			}
-		} catch (error) {
-			console.error(`Failed to cleanup project: ${projectName}`);
-			console.error(error);
 		}
 	});
 
