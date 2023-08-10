@@ -2,28 +2,62 @@ import dns2 from "dns2";
 import { request } from "undici";
 import { blue, brandColor, dim } from "./colors";
 import { spinner } from "./interactive";
-import type { DnsAnswer, DnsResponse } from "types";
+import type { DnsAnswer, DnsResponse } from "dns2";
 
 const TIMEOUT = 1000 * 60 * 5;
 const POLL_INTERVAL = 1000;
 
+/*
+  A helper to wait until the newly deployed domain is available.
+
+  We do this by first polling DNS until the new domain is resolvable, and then polling
+  via HTTP until we get a successful response.
+
+  Note that when polling DNS we make queries against specific nameservers to avoid negative
+  caching. Similarly, we poll via HTTP using the 'no-cache' header for the same reason.
+*/
 export const poll = async (url: string): Promise<boolean> => {
 	const start = Date.now();
 	const domain = new URL(url).host;
 	const s = spinner();
 
 	s.start("Waiting for DNS to propagate");
+
+	// Start out by sleeping for 10 seconds since it's unlikely DNS changes will
+	// have propogated before then
 	await sleep(10 * 1000);
 
+	await pollDns(domain, start, s);
+	if (await pollHttp(url, start, s)) return true;
+
+	s.stop(
+		`${brandColor(
+			"timed out"
+		)} while waiting for ${url} - try accessing it in a few minutes.`
+	);
+	return false;
+};
+
+const pollDns = async (
+	domain: string,
+	start: number,
+	s: ReturnType<typeof spinner>
+) => {
 	while (Date.now() - start < TIMEOUT) {
 		s.update(`Waiting for DNS to propagate (${secondsSince(start)}s)`);
-		if (await isDomainAvailable(domain)) {
+		if (await isDomainResolvable(domain)) {
 			s.stop(`${brandColor("DNS propagation")} ${dim("complete")}.`);
-			break;
+			return;
 		}
 		await sleep(POLL_INTERVAL);
 	}
+};
 
+const pollHttp = async (
+	url: string,
+	start: number,
+	s: ReturnType<typeof spinner>
+) => {
 	s.start("Waiting for deployment to become available");
 	while (Date.now() - start < TIMEOUT) {
 		s.update(
@@ -48,20 +82,18 @@ export const poll = async (url: string): Promise<boolean> => {
 		}
 		await sleep(POLL_INTERVAL);
 	}
-
-	s.stop(
-		`${brandColor(
-			"timed out"
-		)} while waiting for ${url} - try accessing it in a few minutes.`
-	);
-	return false;
 };
 
-export const isDomainAvailable = async (domain: string) => {
+// Determines if the domain is resolvable via DNS. Until this condition is true,
+// any HTTP requests will result in an NXDOMAIN error.
+export const isDomainResolvable = async (domain: string) => {
 	try {
-		const nameServers = await lookupAuthoritativeServers(domain);
+		const nameServers = await lookupSubdomainNameservers(domain);
+
+		// If the subdomain nameservers aren't resolvable yet, keep polling
 		if (nameServers.length === 0) return false;
 
+		// Once they are resolvable, query these nameservers for the domain's 'A' record
 		const dns = new dns2({ nameServers });
 		const res = await dns.resolve(domain, "A");
 		return res.answers.length > 0;
@@ -71,8 +103,8 @@ export const isDomainAvailable = async (domain: string) => {
 };
 
 // Looks up the nameservers that are responsible for this particular domain
-export const lookupAuthoritativeServers = async (domain: string) => {
-	const nameServers = await lookupRootNameservers(domain);
+export const lookupSubdomainNameservers = async (domain: string) => {
+	const nameServers = await lookupDomainLevelNameservers(domain);
 	const dns = new dns2({ nameServers });
 	const res = (await dns.resolve(domain, "NS")) as DnsResponse;
 
@@ -85,9 +117,9 @@ export const lookupAuthoritativeServers = async (domain: string) => {
 	);
 };
 
-// Looks up the nameservers responsible for handling `pages.dev` domains
-export const lookupRootNameservers = async (domain: string) => {
-	// `pages.dev` or `workers.dev`
+// Looks up the nameservers responsible for handling `pages.dev` or `workers.dev` domains
+export const lookupDomainLevelNameservers = async (domain: string) => {
+	// Get the last 2 parts of the domain (ie. `pages.dev` or `workers.dev`)
 	const baseDomain = domain.split(".").slice(-2).join(".");
 
 	const dns = new dns2({});
