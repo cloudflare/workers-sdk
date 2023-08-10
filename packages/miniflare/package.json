@@ -45,7 +45,7 @@
 		"zod": "^3.20.6"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20230419.0",
+		"@cloudflare/workers-types": "^4.20230807.0",
 		"@types/better-sqlite3": "^7.6.2",
 		"@types/debug": "^4.1.7",
 		"@types/estree": "^1.0.0",

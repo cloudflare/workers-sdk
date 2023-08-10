@@ -498,3 +498,31 @@ test("Miniflare: Accepts https requests", async (t) => {
 
 	t.assert(log.logs[0][1].startsWith("Ready on https://"));
 });
+
+test("Miniflare: Manually triggered scheduled events", async (t) => {
+	const log = new TestLog(t);
+
+	const mf = new Miniflare({
+		log,
+		modules: true,
+		script: `
+    let scheduledRun = false;
+    export default {
+      fetch() {
+        return new Response(scheduledRun);
+      },
+      scheduled() {
+        scheduledRun = true;
+      }
+    }`,
+	});
+
+	let res = await mf.dispatchFetch("http://localhost");
+	t.is(await res.text(), "false");
+
+	res = await mf.dispatchFetch("http://localhost/cdn-cgi/mf/scheduled");
+	t.is(await res.text(), "ok");
+
+	res = await mf.dispatchFetch("http://localhost");
+	t.is(await res.text(), "true");
+});
