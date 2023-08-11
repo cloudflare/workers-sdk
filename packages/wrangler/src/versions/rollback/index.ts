@@ -20,12 +20,13 @@ export type VersionsRollbackArgs = StrictYargsOptionsToInterface<
 export default function registerVersionsRollbackCommand(
 	yargs: CommonYargsArgv,
 	epilogue: string,
-	subHelp: SubHelp
+	subHelp: SubHelp,
+	description = "🔙 Rollback to a Worker Version"
 ) {
 	return yargs
 		.command(
 			"rollback [version-id]",
-			"🔙 Rollback to a Worker Version",
+			description,
 			versionsRollbackOptions,
 			versionsRollbackHandler
 		)

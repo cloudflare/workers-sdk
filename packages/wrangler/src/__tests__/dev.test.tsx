@@ -1191,17 +1191,17 @@ describe("wrangler dev", () => {
 			  "out": "
 			wrangler dev [script]
 
-			👂 Start a local server for developing your worker
+			Start a local server for developing a worker
 
 			Positionals:
 			  script  The path to an entry point for your worker  [string]
 
-			Flags:
-			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
+			Global Flags:
+			  -j, --experimental-json-config  ⚑Experimental: support wrangler.json  [boolean]
+			  -c, --config                    ⚑Path to .toml configuration file  [string]
+			  -e, --env                       ⚑Environment to use for operations and .env files  [string]
+			  -h, --help                      ⚑Show help  [boolean]
+			  -v, --version                   ⚑Show version number  [boolean]
 
 			Options:
 			      --name                                       Name of the worker  [string]

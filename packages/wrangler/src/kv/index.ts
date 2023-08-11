@@ -40,21 +40,21 @@ export function registerKvSubcommands(
 	return kvYargs
 		.command(
 			"namespace",
-			`🗂️  Interact with your Workers KV Namespaces`,
+			`Interact with your Workers KV Namespaces`,
 			(namespaceYargs) => {
 				return kvNamespace(namespaceYargs.command(subHelp));
 			}
 		)
 		.command(
 			"key",
-			`🔑 Individually manage Workers KV key-value pairs`,
+			`Individually manage Workers KV key-value pairs`,
 			(keyYargs) => {
 				return kvKey(keyYargs.command(subHelp));
 			}
 		)
 		.command(
 			"bulk",
-			`💪 Interact with multiple Workers KV key-value pairs at once`,
+			`Interact with multiple Workers KV key-value pairs at once`,
 			(bulkYargs) => {
 				return kvBulk(bulkYargs.command(subHelp));
 			}
@@ -118,7 +118,7 @@ export function kvNamespace(kvYargs: CommonYargsArgv) {
 		)
 		.command(
 			"list",
-			"Outputs a list of all KV namespaces associated with your account id.",
+			"Output a list of all KV namespaces associated with your account id",
 			(listArgs) => listArgs,
 			async (args) => {
 				const config = readConfig(args.config, args);
@@ -137,7 +137,7 @@ export function kvNamespace(kvYargs: CommonYargsArgv) {
 		)
 		.command(
 			"delete",
-			"Deletes a given namespace.",
+			"Delete a given namespace.",
 			(yargs) => {
 				return yargs
 					.option("binding", {
@@ -203,7 +203,7 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 	return kvYargs
 		.command(
 			"put <key> [value]",
-			"Writes a single key/value pair to the given namespace.",
+			"Write a single key/value pair to the given namespace",
 			(yargs) => {
 				return yargs
 					.positional("key", {
@@ -322,7 +322,7 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 		)
 		.command(
 			"list",
-			"Outputs a list of all keys in a given namespace.",
+			"Output a list of all keys in a given namespace",
 			(yargs) => {
 				return yargs
 					.option("binding", {
@@ -388,7 +388,7 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 		)
 		.command(
 			"get <key>",
-			"Reads a single value by key from the given namespace.",
+			"Read a single value by key from the given namespace",
 			(yargs) => {
 				return yargs
 					.positional("key", {
@@ -478,7 +478,7 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 		)
 		.command(
 			"delete <key>",
-			"Removes a single key value pair from the given namespace.",
+			"Remove a single key value pair from the given namespace",
 			(yargs) => {
 				return yargs
 					.positional("key", {

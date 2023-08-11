@@ -901,17 +901,17 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"wrangler secret:bulk [json]
 
-				Positionals:
+				POSITIONALS
 				  json  The JSON file of key-value pairs to upload, in form {\\"key\\": value, ...}  [string]
 
-				Flags:
-				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]
+				GLOBAL FLAGS
+				  -j, --experimental-json-config  ⚑ Experimental: support wrangler.json  [boolean]
+				  -c, --config                    ⚑ Path to .toml configuration file  [string]
+				  -e, --env                       ⚑ Environment to use for operations and .env files  [string]
+				  -h, --help                      ⚑ Show help  [boolean]
+				  -v, --version                   ⚑ Show version number  [boolean]
 
-				Options:
+				OPTIONS
 				      --name  Name of the Worker  [string]"
 			`);
 		});
