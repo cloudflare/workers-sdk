@@ -36,7 +36,7 @@ export function kvNamespace(kvYargs: CommonYargsArgv) {
 	return kvYargs
 		.command(
 			"create <namespace>",
-			"Create a new namespace",
+			"🔹Create a new namespace",
 			(yargs) => {
 				return yargs
 					.positional("namespace", {
@@ -95,7 +95,7 @@ export function kvNamespace(kvYargs: CommonYargsArgv) {
 		)
 		.command(
 			"list",
-			"Outputs a list of all KV namespaces associated with your account id.",
+			"🔹Output a list of all KV namespaces associated with your account id",
 			(listArgs) => listArgs,
 			async (args) => {
 				const config = readConfig(args.config, args);
@@ -114,7 +114,7 @@ export function kvNamespace(kvYargs: CommonYargsArgv) {
 		)
 		.command(
 			"delete",
-			"Deletes a given namespace.",
+			"🔹Delete a given namespace.",
 			(yargs) => {
 				return yargs
 					.option("binding", {
