@@ -1,4 +1,3 @@
-// import { execa } from "execa";
 import { fetch } from "undici";
 
 if (!process.env.CLOUDFLARE_API_TOKEN) {
