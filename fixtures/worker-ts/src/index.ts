@@ -28,7 +28,12 @@ export default {
 		ctx: ExecutionContext
 	): Promise<Response> {
 		const url = new URL(request.url);
-		if (url.pathname === "/error") throw new Error("Hello Error");
+		if (url.pathname === "/error") {
+			const err = new Error("Hello Error");
+			console.log(err);
+			console.log(err.stack);
+			throw err;
+		}
 		return new Response("Hello World!");
 	},
 };

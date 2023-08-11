@@ -243,6 +243,37 @@ export default function useInspector(props: InspectorProps) {
 		if (props.host) void run();
 	}, [props.host]);
 
+	// Initialize the source map consumer
+	const sourceMapConsumerRef = useRef<SourceMapConsumer>();
+
+	useEffect(() => {
+		if (!props.sourceMapPath) {
+			return;
+		}
+
+		const sourceMapPath = props.sourceMapPath;
+		let cleanedUp = false;
+		// Parse in the sourcemap
+		(async () => {
+			const mapContent = JSON.parse(await readFile(sourceMapPath, "utf-8"));
+
+			sourceMapConsumerRef.current = await new SourceMapConsumer(mapContent);
+
+			if (cleanedUp) {
+				sourceMapConsumerRef.current.destroy();
+				sourceMapConsumerRef.current = undefined;
+			}
+		})().catch((e) => logger.warn("Failed to parse source map.", e));
+
+		return () => {
+			cleanedUp = true;
+			if (sourceMapConsumerRef.current) {
+				sourceMapConsumerRef.current.destroy();
+				sourceMapConsumerRef.current = undefined;
+			}
+		};
+	}, [props.sourceMapPath]);
+
 	// This effect tracks the connection to the remote websocket
 	// (stored in, no surprises here, `remoteWebSocket`)
 	useEffect(() => {
@@ -309,78 +340,15 @@ export default function useInspector(props: InspectorProps) {
 						const params = evt.params as Protocol.Runtime.ExceptionThrownEvent;
 
 						// Parse stack trace with source map.
-						if (props.sourceMapPath) {
-							// Parse in the sourcemap
-							const mapContent = JSON.parse(
-								await readFile(props.sourceMapPath, "utf-8")
-							);
-
-							// Create the lines for the exception details log
-							const exceptionLines = [
-								params.exceptionDetails.exception?.description?.split("\n")[0],
-							];
-
-							await SourceMapConsumer.with(
-								mapContent,
-								null,
-								async (consumer) => {
-									// Pass each of the callframes into the consumer, and format the error
-									const stack = params.exceptionDetails.stackTrace?.callFrames;
-
-									stack?.forEach(
-										({ functionName, lineNumber, columnNumber }, i) => {
-											try {
-												if (lineNumber) {
-													// The line and column numbers in the stackTrace are zero indexed,
-													// whereas the sourcemap consumer indexes from one.
-													const pos = consumer.originalPositionFor({
-														line: lineNumber + 1,
-														column: columnNumber + 1,
-													});
-
-													// Print out line which caused error:
-													if (i === 0 && pos.source && pos.line) {
-														const fileSource = consumer.sourceContentFor(
-															pos.source
-														);
-														const fileSourceLine =
-															fileSource?.split("\n")[pos.line - 1] || "";
-														exceptionLines.push(fileSourceLine.trim());
-
-														// If we have a column, we can mark the position underneath
-														if (pos.column) {
-															exceptionLines.push(
-																`${" ".repeat(
-																	pos.column - fileSourceLine.search(/\S/)
-																)}^`
-															);
-														}
-													}
-
-													// From the way esbuild implements the "names" field:
-													// > To save space, the original name is only recorded when it's different from the final name.
-													// however, source-map consumer does not handle this
-													if (pos && pos.line != null) {
-														const convertedFnName =
-															pos.name || functionName || "";
-														exceptionLines.push(
-															`    at ${convertedFnName} (${pos.source}:${pos.line}:${pos.column})`
-														);
-													}
-												}
-											} catch {
-												// Line failed to parse through the sourcemap consumer
-												// We should handle this better
-											}
-										}
-									);
-								}
-							);
-
+						if (sourceMapConsumerRef.current) {
 							// Log the parsed stacktrace
 							logger.error(
 								params.exceptionDetails.text,
-								exceptionLines.join("\n")
+								translateErrorStackTrace(
+									sourceMapConsumerRef.current,
+									params.exceptionDetails.exception?.description,
+									params.exceptionDetails.stackTrace?.callFrames
+								)
 							);
 						} else {
 							// We log the stacktrace to the terminal
@@ -391,6 +359,14 @@ export default function useInspector(props: InspectorProps) {
 						}
 					}
 					if (evt.method === "Runtime.consoleAPICalled") {
+						// Parse stack trace with source map.
+						if (sourceMapConsumerRef.current) {
+							translateLogStackTraces(
+								sourceMapConsumerRef.current,
+								evt.params.args
+							);
+						}
+
 						logConsoleMessage(
 							evt.params as Protocol.Runtime.ConsoleAPICalledEvent
 						);
@@ -513,51 +489,72 @@ export default function useInspector(props: InspectorProps) {
 					props.sourceMapPath !== undefined &&
 					props.sourceMapMetadata !== undefined
 				) {
-					// Read the generated source map from esbuild
-					const sourceMap = JSON.parse(
-						readFileSync(props.sourceMapPath, "utf-8")
-					);
+					const url = new URL(message.params.url);
+					if (url.protocol === "worker:") {
+						if (message.params.url.endsWith(".map")) {
+							// Read the generated source map from esbuild
+							const sourceMap = JSON.parse(
+								readFileSync(props.sourceMapPath, "utf-8")
+							);
 
-					// The source root is a temporary directory (`tmpDir`), and so shouldn't be user-visible
-					// It provides no useful info to the user
-					sourceMap.sourceRoot = "";
+							// The source root is a temporary directory (`tmpDir`), and so shouldn't be user-visible
+							// It provides no useful info to the user
+							sourceMap.sourceRoot = "";
 
-					const tmpDir = props.sourceMapMetadata.tmpDir;
+							const tmpDir = props.sourceMapMetadata.tmpDir;
 
-					// See https://docs.google.com/document/d/1U1RGAehQwRypUTovF1KRlpiOFze0b-_2gc6fAH0KY0k/edit#heading=h.mt2g20loc2ct
-					// The above link documents the x_google_ignoreList property, which is intended to mark code that shouldn't be visible in DevTools
-					// Here we use it to indicate specifically Wrangler-injected code (facades & middleware)
-					sourceMap.x_google_ignoreList = sourceMap.sources
-						// Filter anything in the generated tmpDir, and anything from Wrangler's templates
-						// This should cover facades and middleware, but intentionally doesn't include all non-user code e.g. node_modules
-						.map((s: string, idx: number) =>
-							s.includes(tmpDir) || s.includes("wrangler/templates")
-								? idx
-								: null
-						)
-						.filter((i: number | null) => i !== null);
+							// See https://docs.google.com/document/d/1U1RGAehQwRypUTovF1KRlpiOFze0b-_2gc6fAH0KY0k/edit#heading=h.mt2g20loc2ct
+							// The above link documents the x_google_ignoreList property, which is intended to mark code that shouldn't be visible in DevTools
+							// Here we use it to indicate specifically Wrangler-injected code (facades & middleware)
+							sourceMap.x_google_ignoreList = sourceMap.sources
+								// Filter anything in the generated tmpDir, and anything from Wrangler's templates
+								// This should cover facades and middleware, but intentionally doesn't include all non-user code e.g. node_modules
+								.map((s: string, idx: number) =>
+									s.includes(tmpDir) || s.includes("wrangler/templates")
+										? idx
+										: null
+								)
+								.filter((i: number | null) => i !== null);
 
-					const entryDirectory = props.sourceMapMetadata.entryDirectory;
+							const entryDirectory = props.sourceMapMetadata.entryDirectory;
 
-					sourceMap.sources = sourceMap.sources.map(
-						(s: string) =>
-							// These are never loaded by Wrangler or DevTools. However, the presence of a scheme is required for DevTools to show the path as folders in the Sources view
-							// The scheme is intentially not the same as for the sourceMappingURL
-							// Without this difference in scheme, DevTools will not strip prefix `../` path elements from top level folders (../node_modules -> node_modules, for instance)
-							`worker://${props.name}/${path.relative(entryDirectory, s)}`
-					);
+							sourceMap.sources = sourceMap.sources.map(
+								(s: string) =>
+									// These are never loaded by Wrangler or DevTools. However, the presence of a scheme is required for DevTools to show the path as folders in the Sources view
+									// The scheme is intentially not the same as for the sourceMappingURL
+									// Without this difference in scheme, DevTools will not strip prefix `../` path elements from top level folders (../node_modules -> node_modules, for instance)
+									`worker://${props.name}/${path.relative(entryDirectory, s)}`
+							);
 
-					sendMessageToLocalWebSocket({
-						data: JSON.stringify({
-							id: message.id,
-							result: {
-								resource: {
-									success: true,
-									text: JSON.stringify(sourceMap),
-								},
-							},
-						}),
-					});
+							sendMessageToLocalWebSocket({
+								data: JSON.stringify({
+									id: message.id,
+									result: {
+										resource: {
+											success: true,
+											text: JSON.stringify(sourceMap),
+										},
+									},
+								}),
+							});
+						} else {
+							let text: string | undefined;
+							try {
+								text = readFileSync(url.pathname, "utf-8");
+							} catch {}
+							sendMessageToLocalWebSocket({
+								data: JSON.stringify({
+									id: message.id,
+									result: {
+										resource: {
+											success: !!text,
+											text: text,
+										},
+									},
+								}),
+							});
+						}
+					}
 					return;
 				}
 			} catch (e) {
@@ -598,10 +595,29 @@ export default function useInspector(props: InspectorProps) {
 				const message = JSON.parse(event.data as string);
 				if (message.method === "Debugger.scriptParsed") {
 					// Add the worker:// scheme conditionally, since some module types already have schemes (e.g. wasm)
-					message.params.url = new URL(
-						message.params.url,
-						`worker://${props.name}`
-					).href;
+					if (message.params.url === "core:user:main") {
+						message.params.url = `worker://${props.name}/${
+							message.params.sourceMapURL?.slice(0, -4) ?? "main.js"
+						}`;
+					} else {
+						message.params.url = new URL(
+							message.params.url,
+							`worker://${props.name}`
+						).href;
+					}
+					localWebSocket.send(JSON.stringify(message));
+					return;
+				}
+
+				if (
+					message.method === "Runtime.consoleAPICalled" &&
+					sourceMapConsumerRef.current &&
+					translateLogStackTraces(
+						sourceMapConsumerRef.current,
+						message.params.args,
+						(p) => `worker://${props.name}${p}`
+					)
+				) {
 					localWebSocket.send(JSON.stringify(message));
 					return;
 				}
@@ -650,6 +666,172 @@ export default function useInspector(props: InspectorProps) {
 		props.sourceMapMetadata,
 		props.sourceMapPath,
 	]);
+}
+
+type MinimalCallFrame = Pick<
+	Protocol.Runtime.CallFrame,
+	"lineNumber" | "columnNumber"
+> &
+	Partial<Pick<Protocol.Runtime.CallFrame, "functionName" | "url">>;
+
+function isErrorString(s: string): boolean {
+	return Boolean(s.match(/Error(?::[^\n]+)?\n\s+at [^\n]+:\d+:\d+/));
+}
+
+function parseErrorStackTrace(s: string): MinimalCallFrame[] {
+	return s
+		.split("\n")
+		.slice(1)
+		.map((line): MinimalCallFrame | undefined => {
+			let m = line.match(/^\s*at ([^\s]+?) \([^\s]+?:(\d+):(\d+)\)/);
+			if (m) {
+				return {
+					functionName: m[1],
+					lineNumber: parseInt(m[2]) - 1,
+					columnNumber: parseInt(m[3]) - 1,
+				};
+			}
+
+			m = line.match(/^\s*at [^\s]+?:(\d+):(\d+)$/);
+			if (m) {
+				return {
+					lineNumber: parseInt(m[1]) - 1,
+					columnNumber: parseInt(m[2]) - 1,
+				};
+			}
+		})
+		.filter((f): f is MinimalCallFrame => Boolean(f));
+}
+
+function translateErrorCallFrames<Frame extends MinimalCallFrame>(
+	consumer: SourceMapConsumer,
+	frames: Array<Frame>,
+	formatPath: (sourcePath: string) => string = path.relative.bind(
+		null,
+		process.cwd()
+	)
+): Array<Frame & { source?: string | null }> {
+	return frames.map((frame) => {
+		try {
+			if (frame.lineNumber) {
+				// The line and column numbers in the stackTrace are zero indexed,
+				// whereas the sourcemap consumer indexes from one.
+				const pos = consumer.originalPositionFor({
+					line: frame.lineNumber + 1,
+					column: frame.columnNumber + 1,
+				});
+
+				// From the way esbuild implements the "names" field:
+				// > To save space, the original name is only recorded when it's different from the final name.
+				// however, source-map consumer does not handle this
+				if (pos && pos.line != null) {
+					return {
+						...frame,
+						functionName: pos.name || frame.functionName || "",
+						lineNumber: pos.line - 1,
+						columnNumber: pos.column ? pos.column - 1 : null,
+						source: pos.source,
+						url: pos.source && formatPath(pos.source),
+					};
+				}
+			}
+		} catch {
+			// Line failed to parse through the sourcemap consumer
+			// We should handle this better
+		}
+
+		// return the original frame if we failed to translate it
+		return frame;
+	});
+}
+
+function translateErrorStackTrace(
+	consumer: SourceMapConsumer,
+	description: string | undefined,
+	frames?: Protocol.Runtime.CallFrame[] | undefined,
+	formatPath?: (sourcePath: string) => string
+): string {
+	if (!description) {
+		return "";
+	}
+
+	// Create the lines for the exception details log
+	const exceptionLines = [description?.split("\n")[0]];
+
+	// Pass each of the callframes into the consumer, and format the error
+	translateErrorCallFrames(
+		consumer,
+		frames ?? parseErrorStackTrace(description),
+		formatPath
+	).forEach(({ functionName, lineNumber, columnNumber, source, url }, i) => {
+		if (lineNumber) {
+			// Print out line which caused error:
+			if (i === 0 && source && lineNumber) {
+				const fileSource = consumer.sourceContentFor(source);
+				const fileSourceLine = fileSource?.split("\n")[lineNumber] || "";
+				if (fileSourceLine) {
+					exceptionLines.push(fileSourceLine.trim());
+
+					// If we have a column, we can mark the position underneath
+					if (columnNumber) {
+						exceptionLines.push(
+							`${" ".repeat(columnNumber - fileSourceLine.search(/\S/) + 1)}^`
+						);
+					}
+				}
+			}
+
+			let pos = `${url}:${lineNumber + 1}:${columnNumber + 1}`;
+			if (functionName) {
+				pos = `${functionName} (${pos})`;
+			}
+
+			exceptionLines.push(`    at ${pos}`);
+		}
+	});
+
+	return exceptionLines.join("\n");
+}
+
+function translateLogStackTraces(
+	consumer: SourceMapConsumer,
+	args: Protocol.Runtime.ConsoleAPICalledEvent["args"],
+	formatPath?: (sourcePath: string) => string
+): boolean {
+	let modified = false;
+	for (const arg of args) {
+		if (arg.type === "string") {
+			// test if it's an error stack trace
+			if (isErrorString(arg.value)) {
+				modified = true;
+				arg.value = translateErrorStackTrace(
+					consumer,
+					arg.value,
+					undefined,
+					formatPath
+				);
+			}
+		} else if (arg.type === "object" && arg.subtype === "error") {
+			modified = true;
+			arg.description = translateErrorStackTrace(
+				consumer,
+				arg.description,
+				undefined,
+				formatPath
+			);
+
+			if (arg.preview?.type === "object" && arg.preview.subtype === "error") {
+				arg.preview.description = translateErrorStackTrace(
+					consumer,
+					arg.preview.description,
+					undefined,
+					formatPath
+				);
+			}
+		}
+	}
+
+	return modified;
 }
 
 // Credit: https://stackoverflow.com/a/2117523
