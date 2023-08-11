@@ -183,8 +183,7 @@ describe(`E2E: Web frameworks`, () => {
 		},
 	};
 
-	// test.concurrent.each(Object.keys(frameworkTests))(
-	test.each(Object.keys(frameworkTests))(
+	test.concurrent.each(Object.keys(frameworkTests))(
 		"%s",
 		async (name) => {
 			await runCliWithDeploy(name);

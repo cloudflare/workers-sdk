@@ -107,7 +107,7 @@ export const testProjectDir = (suite: string) => {
 	const getPath = (suffix: string) => join(tmpDirPath, getName(suffix));
 	const clean = (suffix: string) => {
 		const path = getPath(suffix);
-		if (existsSync(getPath(path))) {
+		if (existsSync(path)) {
 			rmSync(path, { recursive: true, force: true });
 		}
 	};
