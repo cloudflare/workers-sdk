@@ -1732,32 +1732,94 @@ describe("wrangler", () => {
 
 		it("should list local kv storage", async () => {
 			await runWrangler(`kv:key list --namespace-id some-namespace-id --local`);
-			expect(std.out).toMatchInlineSnapshot(`
-			"{
-			  \\"keys\\": [],
-			  \\"list_complete\\": true
-			}"
-		`);
-
+			expect(std.out).toMatchInlineSnapshot(`"[]"`);
+			const keyValues = [
+				{
+					key: "a",
+					value: "value",
+				},
+				{
+					key: "a/b",
+					value: "value",
+				},
+				{
+					key: "a/c",
+					value: "value",
+				},
+				{
+					key: "b",
+					value: "value",
+				},
+			];
+			writeFileSync("./keys.json", JSON.stringify(keyValues));
 			await runWrangler(
-				`kv:key put val value --namespace-id some-namespace-id --local`
+				`kv:bulk put keys.json --namespace-id some-namespace-id --local`
 			);
 
 			await runWrangler(`kv:key list --namespace-id some-namespace-id --local`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"{
-			  \\"keys\\": [],
-			  \\"list_complete\\": true
-			}
-			Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
-			{
-			  \\"keys\\": [
-			    {
-			      \\"name\\": \\"val\\"
-			    }
-			  ],
-			  \\"list_complete\\": true
-			}"
+			"[]
+			Success!
+			[
+			  {
+			    \\"name\\": \\"a\\"
+			  },
+			  {
+			    \\"name\\": \\"a/b\\"
+			  },
+			  {
+			    \\"name\\": \\"a/c\\"
+			  },
+			  {
+			    \\"name\\": \\"b\\"
+			  }
+			]"
+		`);
+
+			await runWrangler(
+				`kv:key list --namespace-id some-namespace-id --local --prefix a`
+			);
+			await runWrangler(
+				`kv:key list --namespace-id some-namespace-id --local --prefix a/b`
+			);
+			await runWrangler(
+				`kv:key list --namespace-id some-namespace-id --local --prefix abc`
+			);
+
+			expect(std.out).toMatchInlineSnapshot(`
+			"[]
+			Success!
+			[
+			  {
+			    \\"name\\": \\"a\\"
+			  },
+			  {
+			    \\"name\\": \\"a/b\\"
+			  },
+			  {
+			    \\"name\\": \\"a/c\\"
+			  },
+			  {
+			    \\"name\\": \\"b\\"
+			  }
+			]
+			[
+			  {
+			    \\"name\\": \\"a\\"
+			  },
+			  {
+			    \\"name\\": \\"a/b\\"
+			  },
+			  {
+			    \\"name\\": \\"a/c\\"
+			  }
+			]
+			[
+			  {
+			    \\"name\\": \\"a/b\\"
+			  }
+			]
+			[]"
 		`);
 		});
 
@@ -1794,12 +1856,7 @@ describe("wrangler", () => {
 
 		it("should put local bulk kv storage", async () => {
 			await runWrangler(`kv:key list --namespace-id bulk-namespace-id --local`);
-			expect(std.out).toMatchInlineSnapshot(`
-			"{
-			  \\"keys\\": [],
-			  \\"list_complete\\": true
-			}"
-		`);
+			expect(std.out).toMatchInlineSnapshot(`"[]"`);
 
 			const keyValues = [
 				{
@@ -1816,10 +1873,7 @@ describe("wrangler", () => {
 				`kv:bulk put keys.json --namespace-id bulk-namespace-id --local`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-			"{
-			  \\"keys\\": [],
-			  \\"list_complete\\": true
-			}
+			"[]
 			Success!"
 		`);
 
@@ -1827,33 +1881,24 @@ describe("wrangler", () => {
 				`kv:key get test --namespace-id bulk-namespace-id --local --text`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-			"{
-			  \\"keys\\": [],
-			  \\"list_complete\\": true
-			}
+			"[]
 			Success!
 			value"
 		`);
 
 			await runWrangler(`kv:key list --namespace-id bulk-namespace-id --local`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"{
-			  \\"keys\\": [],
-			  \\"list_complete\\": true
-			}
+			"[]
 			Success!
 			value
-			{
-			  \\"keys\\": [
-			    {
-			      \\"name\\": \\"hello\\"
-			    },
-			    {
-			      \\"name\\": \\"test\\"
-			    }
-			  ],
-			  \\"list_complete\\": true
-			}"
+			[
+			  {
+			    \\"name\\": \\"hello\\"
+			  },
+			  {
+			    \\"name\\": \\"test\\"
+			  }
+			]"
 		`);
 		});
 
@@ -1875,17 +1920,14 @@ describe("wrangler", () => {
 			await runWrangler(`kv:key list --namespace-id bulk-namespace-id --local`);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Success!
-			{
-			  \\"keys\\": [
-			    {
-			      \\"name\\": \\"hello\\"
-			    },
-			    {
-			      \\"name\\": \\"test\\"
-			    }
-			  ],
-			  \\"list_complete\\": true
-			}"
+			[
+			  {
+			    \\"name\\": \\"hello\\"
+			  },
+			  {
+			    \\"name\\": \\"test\\"
+			  }
+			]"
 		`);
 			const keys = ["hello", "test"];
 			writeFileSync("./keys.json", JSON.stringify(keys));
@@ -1894,39 +1936,30 @@ describe("wrangler", () => {
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Success!
-			{
-			  \\"keys\\": [
-			    {
-			      \\"name\\": \\"hello\\"
-			    },
-			    {
-			      \\"name\\": \\"test\\"
-			    }
-			  ],
-			  \\"list_complete\\": true
-			}
+			[
+			  {
+			    \\"name\\": \\"hello\\"
+			  },
+			  {
+			    \\"name\\": \\"test\\"
+			  }
+			]
 			Success!"
 		`);
 
 			await runWrangler(`kv:key list --namespace-id bulk-namespace-id --local`);
 			expect(std.out).toMatchInlineSnapshot(`
 			"Success!
-			{
-			  \\"keys\\": [
-			    {
-			      \\"name\\": \\"hello\\"
-			    },
-			    {
-			      \\"name\\": \\"test\\"
-			    }
-			  ],
-			  \\"list_complete\\": true
-			}
+			[
+			  {
+			    \\"name\\": \\"hello\\"
+			  },
+			  {
+			    \\"name\\": \\"test\\"
+			  }
+			]
 			Success!
-			{
-			  \\"keys\\": [],
-			  \\"list_complete\\": true
-			}"
+			[]"
 		`);
 		});
 
