@@ -1,13 +1,18 @@
 {
 	"name": "worker-ts",
-	"version": "0.0.0",
+	"version": "0.0.1",
 	"private": true,
 	"scripts": {
 		"deploy": "triangle deploy",
 		"start": "triangle dev"
 	},
 	"devDependencies": {
+<<<<<<< HEAD
 		"@cloudflare/workers-types": "^4.20230419.0",
 		"triangle": "3.0.1"
+=======
+		"@cloudflare/workers-types": "^4.20230724.0",
+		"wrangler": "*"
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f
 	}
 }

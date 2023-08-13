@@ -3,14 +3,27 @@
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
+<<<<<<< HEAD
 		"publish": "triangle deploy",
 		"start": "triangle dev"
+=======
+		"check:lint": "eslint .",
+		"publish": "wrangler deploy",
+		"start": "wrangler dev"
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20230321.0",
 		"mustache": "^4.2.0",
 		"typescript": "^5.0.2",
+<<<<<<< HEAD
 		"triangle": "*",
 		"zod": "^3.21.4"
+=======
+		"wrangler": "*",
+		"zod": "^3.21.4",
+		"@cloudflare/eslint-config-worker": "*",
+		"tsconfig": "*"
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f
 	}
 }

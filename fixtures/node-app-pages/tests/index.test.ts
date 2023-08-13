@@ -3,7 +3,7 @@ import { fetch } from "undici";
 import { describe, it } from "vitest";
 import { runTrianglePagesDev } from "../../shared/src/run-triangle-long-lived";
 
-describe.concurrent("Pages Dev", () => {
+describe("Pages Dev", () => {
 	it("should work with `--node-compat` when running code requiring polyfills", async ({
 		expect,
 	}) => {

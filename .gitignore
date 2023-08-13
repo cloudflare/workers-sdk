@@ -198,4 +198,14 @@ packages/quick-edit/web
 *.vsix
 vendor/vscode
 
+<<<<<<< HEAD
 .triangle/
+=======
+.wrangler/
+
+# Turbo Repo
+build/**
+dist/**
+.next/**
+.turbo
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f

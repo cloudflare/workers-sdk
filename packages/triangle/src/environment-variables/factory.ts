@@ -2,9 +2,11 @@ import { logger } from "../logger";
 
 type VariableNames =
 	| "CLOUDFLARE_ACCOUNT_ID"
-	| "CLOUDFLARE_API_TOKEN"
+	| "CLOUDFLARE_API_BASE_URL"
 	| "CLOUDFLARE_API_KEY"
+	| "CLOUDFLARE_API_TOKEN"
 	| "CLOUDFLARE_EMAIL"
+<<<<<<< HEAD:packages/triangle/src/environment-variables/factory.ts
 	| "TRIANGLER_SEND_METRICS"
 	| "CLOUDFLARE_API_BASE_URL"
 	| "TRIANGLER_LOG"
@@ -16,6 +18,19 @@ type VariableNames =
 	| "TRIANGLER_REVOKE_URL"
 	| "TRIANGLER_CF_AUTHORIZATION_TOKEN"
 	| "NO_CONSTELLATION_WARNING";
+=======
+	| "NO_CONSTELLATION_WARNING"
+	| "WRANGLER_API_ENVIRONMENT"
+	| "WRANGLER_AUTH_DOMAIN"
+	| "WRANGLER_AUTH_URL"
+	| "WRANGLER_C3_COMMAND"
+	| "WRANGLER_CF_AUTHORIZATION_TOKEN"
+	| "WRANGLER_CLIENT_ID"
+	| "WRANGLER_LOG"
+	| "WRANGLER_REVOKE_URL"
+	| "WRANGLER_SEND_METRICS"
+	| "WRANGLER_TOKEN_URL";
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f:packages/wrangler/src/environment-variables/factory.ts
 
 type DeprecatedNames =
 	| "CF_ACCOUNT_ID"

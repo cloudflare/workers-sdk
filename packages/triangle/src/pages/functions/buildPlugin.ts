@@ -1,8 +1,7 @@
 import { access, lstat } from "node:fs/promises";
 import { relative, resolve } from "node:path";
-import { bundleWorker } from "../../bundle";
+import { bundleWorker } from "../../deployment-bundle/bundle";
 import { getBasePath } from "../../paths";
-import { D1_BETA_PREFIX } from "../../worker";
 import { buildNotifierPlugin } from "./buildWorker";
 import type { Options as WorkerOptions } from "./buildWorker";
 
@@ -21,7 +20,6 @@ export function buildPlugin({
 	legacyNodeCompat,
 	functionsDirectory,
 	local,
-	betaD1Shims,
 }: Options) {
 	return bundleWorker(
 		{
@@ -43,9 +41,6 @@ export function buildPlugin({
 			// and they document that on their README.md, we should let them.
 			nodejsCompat: true,
 			define: {},
-			betaD1Shims: (betaD1Shims || []).map(
-				(binding) => `${D1_BETA_PREFIX}${binding}`
-			),
 			doBindings: [], // Pages functions don't support internal Durable Objects
 			plugins: [
 				buildNotifierPlugin(onEnd),
@@ -106,7 +101,6 @@ export function buildPlugin({
 			rules: [],
 			checkFetch: local,
 			targetConsumer: local ? "dev" : "deploy",
-			local,
 			forPages: true,
 		}
 	);

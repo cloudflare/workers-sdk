@@ -49,6 +49,7 @@ describe("deployment create", () => {
 		await endEventLoop();
 
 		expect(std.out).toMatchInlineSnapshot(`
+<<<<<<< HEAD:packages/triangle/src/__tests__/pages/deploy.test.ts
 		    "triangle pages deploy [directory]
 
 		    🆙 Deploy a directory of static assets as a Pages deployment
@@ -73,6 +74,30 @@ describe("deployment create", () => {
 
 		    🚧 'triangle pages <command>' is a beta command. Please report any issues to https://github.com/khulnasoft/workers-sdk/issues/new/choose"
 	  `);
+=======
+		"wrangler pages deploy [directory]
+
+		🆙 Deploy a directory of static assets as a Pages deployment
+
+		Positionals:
+		  directory  The directory of static files to upload  [string]
+
+		Flags:
+		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+		  -e, --env                       Environment to use for operations and .env files  [string]
+		  -h, --help                      Show help  [boolean]
+		  -v, --version                   Show version number  [boolean]
+
+		Options:
+		      --project-name    The name of the project you want to deploy to  [string]
+		      --branch          The name of the branch you want to deploy to  [string]
+		      --commit-hash     The SHA to attach to this deployment  [string]
+		      --commit-message  The commit message to attach to this deployment  [string]
+		      --commit-dirty    Whether or not the workspace should be considered dirty for this deployment  [boolean]
+		      --skip-caching    Skip asset caching which speeds up builds  [boolean]
+		      --no-bundle       Whether to run bundling on \`_worker.js\` before deploying  [boolean] [default: false]"
+	`);
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f:packages/wrangler/src/__tests__/pages/deploy.test.ts
 	});
 
 	it("should upload a directory of files", async () => {
@@ -1314,7 +1339,7 @@ describe("deployment create", () => {
 				                                      }
 			                                `);
 
-					expect(workerHasD1Shim(workerBundle as string)).toBeTruthy();
+					expect(workerHasD1Shim(workerBundle as string)).toBeFalsy();
 					expect(workerBundle).toContain(
 						`console.log("SOMETHING FROM WITHIN THE WORKER");`
 					);

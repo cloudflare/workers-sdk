@@ -32,6 +32,7 @@ describe("triangle", () => {
 			"triangle
 
 			Commands:
+<<<<<<< HEAD:packages/triangle/src/__tests__/index.test.ts
 			  triangle docs [command..]            📚 Open triangle's docs in your browser
 			  triangle init [name]                 📥 Initialize a basic Worker project, including a triangle.toml file
 			  triangle generate [name] [template]  ✨ Generate a new Worker project from an existing Worker template. See https://github.com/cloudflare/templates
@@ -58,15 +59,47 @@ describe("triangle", () => {
 			  triangle types                       📝 Generate types from bindings & module rules in config
 			  triangle deployments                 🚢 List and view details for deployments
 			  triangle rollback [deployment-id]    🔙 Rollback a deployment
+=======
+			  wrangler docs [command..]            📚 Open wrangler's docs in your browser
+			  wrangler init [name]                 📥 Initialize a basic Worker project, including a wrangler.toml file
+			  wrangler generate [name] [template]  ✨ Generate a new Worker project from an existing Worker template. See https://github.com/cloudflare/templates
+			  wrangler dev [script]                👂 Start a local server for developing your worker
+			  wrangler deploy [script]             🆙 Deploy your Worker to Cloudflare.  [aliases: publish]
+			  wrangler delete [script]             🗑  Delete your Worker from Cloudflare.
+			  wrangler tail [worker]               🦚 Starts a log tailing session for a published Worker.
+			  wrangler secret                      🤫 Generate a secret that can be referenced in a Worker
+			  wrangler secret:bulk [json]          🗄️  Bulk upload secrets for a Worker
+			  wrangler kv:namespace                🗂️  Interact with your Workers KV Namespaces
+			  wrangler kv:key                      🔑 Individually manage Workers KV key-value pairs
+			  wrangler kv:bulk                     💪 Interact with multiple Workers KV key-value pairs at once
+			  wrangler pages                       ⚡️ Configure Cloudflare Pages
+			  wrangler queues                      🇶 Configure Workers Queues
+			  wrangler r2                          📦 Interact with an R2 store
+			  wrangler dispatch-namespace          📦 Interact with a dispatch namespace
+			  wrangler d1                          🗄  Interact with a D1 database
+			  wrangler constellation               🤖 Interact with Constellation models
+			  wrangler pubsub                      📮 Interact and manage Pub/Sub Brokers
+			  wrangler mtls-certificate            🪪 Manage certificates used for mTLS connections
+			  wrangler login                       🔓 Login to Cloudflare
+			  wrangler logout                      🚪 Logout from Cloudflare
+			  wrangler whoami                      🕵️  Retrieve your user info and test your auth config
+			  wrangler types                       📝 Generate types from bindings & module rules in config
+			  wrangler deployments                 🚢 List and view details for deployments
+			  wrangler rollback [deployment-id]    🔙 Rollback a deployment
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f:packages/wrangler/src/__tests__/index.test.ts
 
 			Flags:
 			  -j, --experimental-json-config  Experimental: Support triangle.json  [boolean]
 			  -c, --config                    Path to .toml configuration file  [string]
 			  -e, --env                       Environment to use for operations and .env files  [string]
 			  -h, --help                      Show help  [boolean]
+<<<<<<< HEAD:packages/triangle/src/__tests__/index.test.ts
 			  -v, --version                   Show version number  [boolean]
 
 			🚧\`triangle rollback\` is a beta command. Please report any issues to https://github.com/khulnasoft/workers-sdk/issues/new/choose"
+=======
+			  -v, --version                   Show version number  [boolean]"
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f:packages/wrangler/src/__tests__/index.test.ts
 		`);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -86,6 +119,7 @@ describe("triangle", () => {
 			triangle
 
 			Commands:
+<<<<<<< HEAD:packages/triangle/src/__tests__/index.test.ts
 			  triangle docs [command..]            📚 Open triangle's docs in your browser
 			  triangle init [name]                 📥 Initialize a basic Worker project, including a triangle.toml file
 			  triangle generate [name] [template]  ✨ Generate a new Worker project from an existing Worker template. See https://github.com/cloudflare/templates
@@ -112,15 +146,47 @@ describe("triangle", () => {
 			  triangle types                       📝 Generate types from bindings & module rules in config
 			  triangle deployments                 🚢 List and view details for deployments
 			  triangle rollback [deployment-id]    🔙 Rollback a deployment
+=======
+			  wrangler docs [command..]            📚 Open wrangler's docs in your browser
+			  wrangler init [name]                 📥 Initialize a basic Worker project, including a wrangler.toml file
+			  wrangler generate [name] [template]  ✨ Generate a new Worker project from an existing Worker template. See https://github.com/cloudflare/templates
+			  wrangler dev [script]                👂 Start a local server for developing your worker
+			  wrangler deploy [script]             🆙 Deploy your Worker to Cloudflare.  [aliases: publish]
+			  wrangler delete [script]             🗑  Delete your Worker from Cloudflare.
+			  wrangler tail [worker]               🦚 Starts a log tailing session for a published Worker.
+			  wrangler secret                      🤫 Generate a secret that can be referenced in a Worker
+			  wrangler secret:bulk [json]          🗄️  Bulk upload secrets for a Worker
+			  wrangler kv:namespace                🗂️  Interact with your Workers KV Namespaces
+			  wrangler kv:key                      🔑 Individually manage Workers KV key-value pairs
+			  wrangler kv:bulk                     💪 Interact with multiple Workers KV key-value pairs at once
+			  wrangler pages                       ⚡️ Configure Cloudflare Pages
+			  wrangler queues                      🇶 Configure Workers Queues
+			  wrangler r2                          📦 Interact with an R2 store
+			  wrangler dispatch-namespace          📦 Interact with a dispatch namespace
+			  wrangler d1                          🗄  Interact with a D1 database
+			  wrangler constellation               🤖 Interact with Constellation models
+			  wrangler pubsub                      📮 Interact and manage Pub/Sub Brokers
+			  wrangler mtls-certificate            🪪 Manage certificates used for mTLS connections
+			  wrangler login                       🔓 Login to Cloudflare
+			  wrangler logout                      🚪 Logout from Cloudflare
+			  wrangler whoami                      🕵️  Retrieve your user info and test your auth config
+			  wrangler types                       📝 Generate types from bindings & module rules in config
+			  wrangler deployments                 🚢 List and view details for deployments
+			  wrangler rollback [deployment-id]    🔙 Rollback a deployment
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f:packages/wrangler/src/__tests__/index.test.ts
 
 			Flags:
 			  -j, --experimental-json-config  Experimental: Support triangle.json  [boolean]
 			  -c, --config                    Path to .toml configuration file  [string]
 			  -e, --env                       Environment to use for operations and .env files  [string]
 			  -h, --help                      Show help  [boolean]
+<<<<<<< HEAD:packages/triangle/src/__tests__/index.test.ts
 			  -v, --version                   Show version number  [boolean]
 
 			🚧\`triangle rollback\` is a beta command. Please report any issues to https://github.com/khulnasoft/workers-sdk/issues/new/choose"
+=======
+			  -v, --version                   Show version number  [boolean]"
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f:packages/wrangler/src/__tests__/index.test.ts
 		`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: invalid-command[0m

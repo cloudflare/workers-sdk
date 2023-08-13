@@ -3,9 +3,8 @@ import dotenv from "dotenv";
 import { findUpSync } from "find-up";
 import { logger } from "../logger";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
-import { removeD1BetaPrefix } from "../worker";
 import { normalizeAndValidateConfig } from "./validation";
-import type { CfWorkerInit } from "../worker";
+import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { CommonYargsOptions } from "../yargs-types";
 import type { Config, OnlyCamelCase, RawConfig } from "./config";
 
@@ -201,7 +200,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 						databaseValue += `, Preview: (${preview_database_id})`;
 					}
 					return {
-						key: removeD1BetaPrefix(binding),
+						key: binding,
 						value: databaseValue,
 					};
 				}

@@ -4,7 +4,7 @@ import { fetch } from "undici";
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import type { ChildProcess } from "child_process";
 
-describe.concurrent.skip("Service Bindings", () => {
+describe.skip("Service Bindings", () => {
 	let aProcess: ChildProcess;
 	let aIP: string;
 	let aPort: number;

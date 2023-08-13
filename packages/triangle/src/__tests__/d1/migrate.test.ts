@@ -145,7 +145,33 @@ Your database may not be available to serve requests during the migration, conti
 					}
 				)
 			);
+<<<<<<< HEAD:packages/triangle/src/__tests__/d1/migrate.test.ts
 			writeTriangleToml({
+=======
+			msw.use(
+				rest.get(
+					"*/accounts/:accountId/d1/database/:databaseId",
+					async (req, res, ctx) => {
+						return res(
+							ctx.status(200),
+							ctx.json({
+								result: {
+									file_size: 7421952,
+									name: "benchmark3-v1",
+									num_tables: 2,
+									uuid: "7b0c1d24-ec57-4179-8663-9b82dafe9277",
+									version: "alpha",
+								},
+								success: true,
+								errors: [],
+								messages: [],
+							})
+						);
+					}
+				)
+			);
+			writeWranglerToml({
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f:packages/wrangler/src/__tests__/d1/migrate.test.ts
 				d1_databases: [
 					{
 						binding: "DATABASE",

@@ -1,0 +1,21 @@
+{
+	"name": "cloudflare-workers-chatgpt-plugin-example",
+	"version": "0.0.1",
+	"private": true,
+	"scripts": {
+<<<<<<< HEAD:packages/create-cloudflare/templates/chatgptPlugin/ts/package.json
+		"deploy": "triangle publish",
+		"start": "triangle dev"
+=======
+		"deploy": "wrangler deploy",
+		"start": "wrangler dev"
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f:packages/create-khulnasoft/templates/chatgptPlugin/ts/package.json
+	},
+	"dependencies": {
+		"@cloudflare/itty-router-openapi": "^0.1.2"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20230404.0",
+		"triangle": "^3.0.0"
+	}
+}

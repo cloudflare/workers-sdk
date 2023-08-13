@@ -8,7 +8,12 @@
 		"start-stackblitz": "TRIANGLER_SEND_METRICS=false triangle dev src/index.ts --local"
 	},
 	"devDependencies": {
+<<<<<<< HEAD
 		"@cloudflare/workers-types": "^3.0.0",
 		"triangle": "^3.0.0"
+=======
+		"@cloudflare/workers-types": "^4.20230518.0 ",
+		"wrangler": "^3.0.0"
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f
 	}
 }

@@ -4,13 +4,18 @@ import chalk from "chalk";
 import supportsColor from "supports-color";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
+<<<<<<< HEAD:packages/triangle/src/index.ts
 import { version as triangleVersion } from "../package.json";
 import { isBuildFailure } from "./bundle";
+=======
+import { version as wranglerVersion } from "../package.json";
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f:packages/wrangler/src/index.ts
 import { loadDotEnv, readConfig } from "./config";
 import { constellation } from "./constellation";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
 import { deployOptions, deployHandler } from "./deploy";
+import { isBuildFailure } from "./deployment-bundle/bundle";
 import {
 	deployments,
 	commonDeploymentCMDSetup,
@@ -387,8 +392,13 @@ export function createCLIParser(argv: string[]) {
 		}
 	);
 
+<<<<<<< HEAD:packages/triangle/src/index.ts
 	triangle.command(
 		"secret:bulk <json>",
+=======
+	wrangler.command(
+		"secret:bulk [json]",
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f:packages/wrangler/src/index.ts
 		"🗄️  Bulk upload secrets for a Worker",
 		secretBulkOptions,
 		secretBulkHandler
@@ -650,7 +660,9 @@ export function createCLIParser(argv: string[]) {
 				.command(subHelp)
 				.epilogue(deploymentsWarning)
 	);
+
 	const rollbackWarning =
+<<<<<<< HEAD:packages/triangle/src/index.ts
 		"🚧`triangle rollback` is a beta command. Please report any issues to https://github.com/khulnasoft/workers-sdk/issues/new/choose";
 	triangle
 		.command(
@@ -684,6 +696,42 @@ export function createCLIParser(argv: string[]) {
 			}
 		)
 		.epilogue(rollbackWarning);
+=======
+		"🚧`wrangler rollback` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose";
+	wrangler.command(
+		"rollback [deployment-id]",
+		"🔙 Rollback a deployment",
+		(rollbackYargs) =>
+			rollbackYargs
+				.positional("deployment-id", {
+					describe: "The ID of the deployment to rollback to",
+					type: "string",
+					demandOption: false,
+				})
+				.option("message", {
+					alias: "m",
+					describe:
+						"Skip confirmation and message prompts, uses provided argument as message",
+					type: "string",
+					default: undefined,
+				})
+				.epilogue(rollbackWarning),
+		async (rollbackYargs) => {
+			const { accountId, scriptName, config } = await commonDeploymentCMDSetup(
+				rollbackYargs,
+				rollbackWarning
+			);
+
+			await rollbackDeployment(
+				accountId,
+				scriptName,
+				config,
+				rollbackYargs.deploymentId,
+				rollbackYargs.message
+			);
+		}
+	);
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f:packages/wrangler/src/index.ts
 
 	// This set to false to allow overwrite of default behaviour
 	triangle.version(false);

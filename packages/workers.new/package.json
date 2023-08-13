@@ -3,12 +3,24 @@
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
+<<<<<<< HEAD
 		"deploy": "triangle deploy src/index.ts",
 		"dev": "triangle dev src/index.ts --local",
 		"test": "vitest"
+=======
+		"check:lint": "eslint .",
+		"deploy": "wrangler deploy src/index.ts",
+		"dev": "wrangler dev src/index.ts --local"
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f
 	},
 	"devDependencies": {
+		"@cloudflare/eslint-config-worker": "*",
+		"@cloudflare/workers-tsconfig": "*",
 		"@cloudflare/workers-types": "^3.0.0",
+<<<<<<< HEAD
 		"triangle": "^3.0.0"
+=======
+		"wrangler": "*"
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f
 	}
 }

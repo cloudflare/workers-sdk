@@ -40,6 +40,8 @@ async function runLongLivedTriangle(command: string[], cwd: string) {
 		command,
 		{
 			stdio: ["ignore", "ignore", "ignore", "ipc"],
+			// If you have a test timing out unexpectedly, then try using this line to find out what is happening in Wrangler.
+			// stdio: ["inherit", "inherit", "inherit", "ipc"],
 			cwd,
 		}
 	).on("message", (message) => {

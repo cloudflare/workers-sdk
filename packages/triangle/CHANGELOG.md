@@ -1,5 +1,244 @@
 # triangle
 
+## 3.5.0
+
+### Minor Changes
+
+- [#3703](https://github.com/cloudflare/workers-sdk/pull/3703) [`e600f029`](https://github.com/cloudflare/workers-sdk/commit/e600f0298d4d2780bdfc1171a5f84a5f36ce5010) Thanks [@jspspike](https://github.com/jspspike)! - Added --local option for r2 commands to interact with local persisted r2 objects
+
+* [#3704](https://github.com/cloudflare/workers-sdk/pull/3704) [`8e231afd`](https://github.com/cloudflare/workers-sdk/commit/8e231afde850f353694478a5994e6ddee6df67b1) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - secret:bulk exit 1 on failure
+  Previously `secret"bulk` would only log an error on failure of any of the upload requests.
+  Now when 'secret:bulk' has an upload request fail it throws an Error which sends an `process.exit(1)` at the root `.catch()` signal.
+  This will enable error handling in programmatic uses of `secret:bulk`.
+
+- [#3684](https://github.com/cloudflare/workers-sdk/pull/3684) [`ff8603b6`](https://github.com/cloudflare/workers-sdk/commit/ff8603b6e1320d5c136712b8100e86c552eade46) Thanks [@jspspike](https://github.com/jspspike)! - Added --local option for kv commands to interact with local persisted kv entries
+
+* [#3595](https://github.com/cloudflare/workers-sdk/pull/3595) [`c302bec6`](https://github.com/cloudflare/workers-sdk/commit/c302bec639c0eec10d07d6b950c0a2d3e16eab1e) Thanks [@geelen](https://github.com/geelen)! - Removing the D1 shim from the build process, in preparation for the Open Beta. D1 can now be used with --no-bundle enabled.
+
+- [#3707](https://github.com/cloudflare/workers-sdk/pull/3707) [`6de3c5ec`](https://github.com/cloudflare/workers-sdk/commit/6de3c5eced6f31a2a55f4c043e1025f4f4733ad0) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Added handling of .mjs files to be picked up by inside the Pages \_worker.js directory
+  (currently only .js files are)
+
+### Patch Changes
+
+- [#3693](https://github.com/cloudflare/workers-sdk/pull/3693) [`8f257126`](https://github.com/cloudflare/workers-sdk/commit/8f2571260f10660b9494332b681608b6051a7d52) Thanks [@RamIdeas](https://github.com/RamIdeas)! - Bump the version of miniflare to 3.20230801.0
+
+## 3.4.0
+
+### Minor Changes
+
+- [#3649](https://github.com/cloudflare/workers-sdk/pull/3649) [`e2234bbc`](https://github.com/cloudflare/workers-sdk/commit/e2234bbc2fc06c201dd5f256357084c86789891c) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - Feature: 'stdin' support for 'secret:bulk'
+  Added functionality that allows for files and strings to be piped in, or other means of standard input. This will allow for a broader variety of use cases and improved DX.
+  This implementation is also fully backward compatible with the previous input method of file path to JSON.
+
+  ```bash
+  # Example of piping in a file
+  > cat ./my-file.json | wrangler secret:bulk
+
+  # Example of piping in a string
+  > echo '{"key":"value"}' | wrangler secret:bulk
+
+  # Example of redirecting input from a file
+  > wrangler secret:bulk < ./my-file.json
+  ```
+
+* [#3675](https://github.com/cloudflare/workers-sdk/pull/3675) [`f753f3af`](https://github.com/cloudflare/workers-sdk/commit/f753f3afb7478bb289b39c44b33acbcefe06e99a) Thanks [@1000hz](https://github.com/1000hz)! - chore: upgrade `miniflare` to [`3.20230724.0`](https://github.com/cloudflare/miniflare/releases/tag/v3.20230724.0)
+
+### Patch Changes
+
+- [#3610](https://github.com/cloudflare/workers-sdk/pull/3610) [`bfbe49d0`](https://github.com/cloudflare/workers-sdk/commit/bfbe49d0d147ab8e32944ade524bc85f7f6f0cf3) Thanks [@Skye-31](https://github.com/Skye-31)! - Wrangler Capnp Compilation
+
+  This PR replaces logfwdr's `schema` property with a new `unsafe.capnp` object. This object accepts either a `compiled_schema` property, or a `base_path` and array of `source_schemas` to get Wrangler to compile the capnp schema for you.
+
+* [#3579](https://github.com/cloudflare/workers-sdk/pull/3579) [`d4450b0a`](https://github.com/cloudflare/workers-sdk/commit/d4450b0a095c3b31fdc09a7af2e3336048c7be70) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: remove --experimental-backend from `wrangler d1 migrations apply`
+
+  This PR removes the need to pass a `--experimental-backend` flag when running migrations against an experimental D1 db.
+
+  Closes #3596
+
+- [#3623](https://github.com/cloudflare/workers-sdk/pull/3623) [`99baf58b`](https://github.com/cloudflare/workers-sdk/commit/99baf58b7c35e85c90e1f6df4cea841f31c0a709) Thanks [@RamIdeas](https://github.com/RamIdeas)! - when running `wrangler init -y ...`, the `-y` flag is now passed to npx when delegating to C3
+
+* [#3668](https://github.com/cloudflare/workers-sdk/pull/3668) [`99032c1e`](https://github.com/cloudflare/workers-sdk/commit/99032c1e500132e16f0c1027cb4cba0c59823656) Thanks [@rozenmd](https://github.com/rozenmd)! - chore: make D1's experimental backend the default
+
+  This PR makes D1's experimental backend turned on by default.
+
+- [#3579](https://github.com/cloudflare/workers-sdk/pull/3579) [`d4450b0a`](https://github.com/cloudflare/workers-sdk/commit/d4450b0a095c3b31fdc09a7af2e3336048c7be70) Thanks [@rozenmd](https://github.com/rozenmd)! - feat: implement time travel for experimental d1 dbs
+
+  This PR adds two commands under `wrangler d1 time-travel`:
+
+  ```
+  Use Time Travel to restore, fork or copy a database at a specific point-in-time.
+
+  Commands:
+
+  wrangler d1 time-travel info <database>     Retrieve information about a database at a specific point-in-time using Time Travel.
+  Options:
+        --timestamp  accepts a Unix (seconds from epoch) or RFC3339 timestamp (e.g. 2023-07-13T08:46:42.228Z) to retrieve a bookmark for  [string]
+        --json       return output as clean JSON  [boolean] [default: false]
+
+  wrangler d1 time-travel restore <database>  Restore a database back to a specific point-in-time.
+  Options:
+        --bookmark   Bookmark to use for time travel  [string]
+        --timestamp  accepts a Unix (seconds from epoch) or RFC3339 timestamp (e.g. 2023-07-13T08:46:42.228Z) to retrieve a bookmark for  [string]
+        --json       return output as clean JSON  [boolean] [default: false]
+  ```
+
+  Closes #3577
+
+* [#3592](https://github.com/cloudflare/workers-sdk/pull/3592) [`89cd086b`](https://github.com/cloudflare/workers-sdk/commit/89cd086ba0429651a30e8287c1e9e660d2fef6d0) Thanks [@penalosa](https://github.com/penalosa)! - fix: Only log dev registry connection errors once
+
+- [#3384](https://github.com/cloudflare/workers-sdk/pull/3384) [`ccc19d57`](https://github.com/cloudflare/workers-sdk/commit/ccc19d57e0b6a557c39bedbbb92ec4e52c580975) Thanks [@Peter-Sparksuite](https://github.com/Peter-Sparksuite)! - feature: add wrangler deploy option: --old-asset-ttl [seconds]
+
+  `wrangler deploy` immediately deletes assets that are no longer current, which has a side-effect for existing progressive web app users of seeing 404 errors as the app tries to access assets that no longer exist.
+
+  This new feature:
+
+  - does not change the default behavior of immediately deleting no-longer needed assets.
+  - allows users to opt-in to expiring newly obsoleted assets after the provided number of seconds hence, so that current users will have a time buffer before seeing 404 errors.
+  - is similar in concept to what was introduced in Wrangler 1.x with https://github.com/cloudflare/wrangler-legacy/pull/2221.
+  - is careful to avoid extension of existing expiration targets on already expiring old assets, which may have contributed to unexpectedly large KV storage accumulations (perhaps why, in Wrangler 1.x, the reversion https://github.com/cloudflare/wrangler-legacy/pull/2228 happened).
+  - no breaking changes for users relying on the default behavior, but some output changes exist when the new option is used, to indicate the change in behavior.
+
+* [#3678](https://github.com/cloudflare/workers-sdk/pull/3678) [`17780b27`](https://github.com/cloudflare/workers-sdk/commit/17780b279998db00732406633958dc35eecaa70f) Thanks [@1000hz](https://github.com/1000hz)! - Refined the type of `CfVars` from `Record<string, unknown>` to `Record<string, string | Json>`
+
+## 3.3.0
+
+### Minor Changes
+
+- [#3628](https://github.com/cloudflare/workers-sdk/pull/3628) [`e72a5794`](https://github.com/cloudflare/workers-sdk/commit/e72a5794f219e21ede701a7184a4691058366753) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: upgrade `miniflare` to [`3.20230717.0`](https://github.com/cloudflare/miniflare/releases/tag/v3.20230717.0)
+
+### Patch Changes
+
+- [#3587](https://github.com/cloudflare/workers-sdk/pull/3587) [`30f114af`](https://github.com/cloudflare/workers-sdk/commit/30f114afcdae8c794364a89ad8b7a7c92fce3524) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: keep configuration watcher alive
+
+  Ensure `wrangler dev` watches the `wrangler.toml` file and reloads the server whenever configuration (e.g. KV namespaces, compatibility dates, etc) changes.
+
+* [#3588](https://github.com/cloudflare/workers-sdk/pull/3588) [`64631d8b`](https://github.com/cloudflare/workers-sdk/commit/64631d8b59572f49d65325d8f6fec098c5e912b9) Thanks [@penalosa](https://github.com/penalosa)! - fix: Preserve email handlers when applying middleware to user workers.
+
+## 3.2.0
+
+### Minor Changes
+
+- [#3583](https://github.com/cloudflare/workers-sdk/pull/3583) [`78ddb8de`](https://github.com/cloudflare/workers-sdk/commit/78ddb8de78152b2cb4180f23b51ee5478637d92d) Thanks [@penalosa](https://github.com/penalosa)! - Upgrade Miniflare (and hence `workerd`) to `v3.20230710.0`.
+
+* [#3426](https://github.com/cloudflare/workers-sdk/pull/3426) [`5a74cb55`](https://github.com/cloudflare/workers-sdk/commit/5a74cb559611b1035fe97ebbe870d7061f3b41d0) Thanks [@matthewdavidrodgers](https://github.com/matthewdavidrodgers)! - Prefer non-force deletes unless a Worker is a dependency of another.
+
+  If a Worker is used as a service binding, a durable object namespace, an outbounds for a dynamic dispatch namespace, or a tail consumer, then deleting that Worker will break those existing ones that depend upon it. Deleting with ?force=true allows you to delete anyway, which is currently the default in Wrangler.
+
+  Force deletes are not often necessary, however, and using it as the default has unfortunate consequences in the API. To avoid them, we check if any of those conditions exist, and present the information to the user. If they explicitly acknowledge they're ok with breaking their other Workers, fine, we let them do it. Otherwise, we'll always use the much safer non-force deletes. We also add a "--force" flag to the delete command to skip the checks and confirmation and proceed with ?force=true
+
+### Patch Changes
+
+- [#3585](https://github.com/cloudflare/workers-sdk/pull/3585) [`e33bb44a`](https://github.com/cloudflare/workers-sdk/commit/e33bb44a6a5a243db08835a965bf4918824d4fb7) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: register middleware once for module workers
+
+  Ensure middleware is only registered on the first request when using module workers.
+  This should prevent stack overflows and slowdowns when making large number of requests to `wrangler dev` with infrequent reloads.
+
+* [#3547](https://github.com/cloudflare/workers-sdk/pull/3547) [`e16d0272`](https://github.com/cloudflare/workers-sdk/commit/e16d0272986f3e0c8a5ba908127dc93cf8c670bc) Thanks [@jspspike](https://github.com/jspspike)! - Fixed issue with wrangler dev not finding imported files. Previously when wrangler dev would automatically reload on any file changes, it would fail to find any imported files.
+
+## 3.1.2
+
+### Patch Changes
+
+- [#3529](https://github.com/cloudflare/workers-sdk/pull/3529) [`bcdc1fe5`](https://github.com/cloudflare/workers-sdk/commit/bcdc1fe5684f325c86ff0f2c57af781ecba5b621) Thanks [@jspspike](https://github.com/jspspike)! - Support https in wrangler dev local mode
+
+* [#3541](https://github.com/cloudflare/workers-sdk/pull/3541) [`09f317d4`](https://github.com/cloudflare/workers-sdk/commit/09f317d4c42d1787bdc636f13b4a303fa9a5b4b0) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Bump miniflare@3.0.2
+
+- [#3497](https://github.com/cloudflare/workers-sdk/pull/3497) [`c5f3bf45`](https://github.com/cloudflare/workers-sdk/commit/c5f3bf45c0b7dd632ce63d0c4df846a2b8695021) Thanks [@evanderkoogh](https://github.com/evanderkoogh)! - Refactor dev-only checkedFetch check from a method substitution to a JavaScript Proxy to be able to support Proxied global fetch function.
+
+* [#3403](https://github.com/cloudflare/workers-sdk/pull/3403) [`8d1521e9`](https://github.com/cloudflare/workers-sdk/commit/8d1521e9ce77136f6da6a1313748e597b3622f8b) Thanks [@Cherry](https://github.com/Cherry)! - fix: wrangler generate will now work cross-device. This is very common on Windows install that use C:/ for the OS and another drive for user files.
+
+## 3.1.1
+
+### Patch Changes
+
+- [#3498](https://github.com/cloudflare/workers-sdk/pull/3498) [`fddffdf0`](https://github.com/cloudflare/workers-sdk/commit/fddffdf0c23d2ca56f2139a2c6bc278052594cba) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Prevent `wrangler pages dev` from serving asset files outside of the build output directory
+
+* [#3431](https://github.com/cloudflare/workers-sdk/pull/3431) [`68ba49a8`](https://github.com/cloudflare/workers-sdk/commit/68ba49a8c5bde2e9847e9599d71b9a501866c54b) Thanks [@Cherry](https://github.com/Cherry)! - fix: allow context.data to be overriden in Pages Functions
+
+- [#3414](https://github.com/cloudflare/workers-sdk/pull/3414) [`6b1870ad`](https://github.com/cloudflare/workers-sdk/commit/6b1870ad46eb8557a01fcfae0d3f948b804387a0) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: in D1, lift error.cause into the error message
+
+  Prior to this PR, folks _had_ to console.log the `error.cause` property to understand why their D1 operations were failing. With this PR, `error.cause` will continue to work, but we'll also lift the cause into the error message.
+
+* [#3483](https://github.com/cloudflare/workers-sdk/pull/3483) [`a9349a89`](https://github.com/cloudflare/workers-sdk/commit/a9349a89296dc98ac8fc52dbb013f298c9596d8f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure that the script name is passed through to C3 from `wrangler init`
+
+- [#3359](https://github.com/cloudflare/workers-sdk/pull/3359) [`5eef992f`](https://github.com/cloudflare/workers-sdk/commit/5eef992f2c9f71a4c9d5e0cc2820aad24b7ef382) Thanks [@RamIdeas](https://github.com/RamIdeas)! - `wrangler init ... -y` now delegates to C3 without prompts (respects the `-y` flag)
+
+* [#3434](https://github.com/cloudflare/workers-sdk/pull/3434) [`4beac418`](https://github.com/cloudflare/workers-sdk/commit/4beac41818b89727cd991848a8c643d744bc1703) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: add the number of read queries and write queries in the last 24 hours to the `d1 info` command
+
+- [#3454](https://github.com/cloudflare/workers-sdk/pull/3454) [`a2194043`](https://github.com/cloudflare/workers-sdk/commit/a2194043c6c755e9308b3ffc1e9afb0d1544f6b9) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: upgrade `miniflare` to `3.0.1`
+
+  This version ensures root CA certificates are trusted on Windows.
+  It also loads extra certificates from the `NODE_EXTRA_CA_CERTS` environment variable,
+  allowing `wrangler dev` to be used with Cloudflare WARP enabled.
+
+* [#3485](https://github.com/cloudflare/workers-sdk/pull/3485) [`e8df68ee`](https://github.com/cloudflare/workers-sdk/commit/e8df68eefede860f4217e3a398a0f3064f5cce38) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Allow setting a D1 database ID when using `wrangler pages dev` by providing an optional `=<ID>` suffix to the argument like `--d1 BINDING_NAME=database-id`
+
+## 3.1.0
+
+### Minor Changes
+
+- [#3293](https://github.com/cloudflare/workers-sdk/pull/3293) [`4a88db32`](https://github.com/cloudflare/workers-sdk/commit/4a88db32c8962a55bbcad82048a858fbce3f8e93) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: add `wrangler pages project delete` command
+
+### Patch Changes
+
+- [#3399](https://github.com/cloudflare/workers-sdk/pull/3399) [`d8a9995b`](https://github.com/cloudflare/workers-sdk/commit/d8a9995b3748893057b4cb657abd8f658b1f5875) Thanks [@Skye-31](https://github.com/Skye-31)! - Fix: wrangler pages dev --script-path argument when using a proxy command instead of directory mode
+
+  Fixes a regression in wrangler@3.x, where `wrangler pages dev --script-path=<my script path> -- <proxy command>` would start throwing esbuild errors.
+
+* [#3311](https://github.com/cloudflare/workers-sdk/pull/3311) [`116d3fd9`](https://github.com/cloudflare/workers-sdk/commit/116d3fd92fd4a2352202ebcb9b5c4e4c4f49c74b) Thanks [@Maximo-Guk](https://github.com/Maximo-Guk)! - Fix: Avoid unnecessary rebuilding pages functions in wrangler pages dev
+
+- [#3314](https://github.com/cloudflare/workers-sdk/pull/3314) [`d5a230f1`](https://github.com/cloudflare/workers-sdk/commit/d5a230f1e74c1d8c619491291a6e2408cc8ec8d1) Thanks [@elithrar](https://github.com/elithrar)! - Fixed `wrangler d1 migrations` to use `--experimental-backend` and not `--experimentalBackend` so that it is consistent with `wrangler d1 create`.
+
+* [#3373](https://github.com/cloudflare/workers-sdk/pull/3373) [`55703e52`](https://github.com/cloudflare/workers-sdk/commit/55703e52da35b15f5c11f9e3936cc5b1ad5836dc) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: wrangler rollback shouldn't print its warning in the global menu
+
+- [#3124](https://github.com/cloudflare/workers-sdk/pull/3124) [`2956c31d`](https://github.com/cloudflare/workers-sdk/commit/2956c31d6c310e8fcfe6b68a0ace1f6e7bf7bf4c) Thanks [@verokarhu](https://github.com/verokarhu)! - fix: failed d1 migrations not treated as errors
+
+  This PR teaches wrangler to return a non-success exit code when a set of migrations fails.
+
+  It also cleans up `wrangler d1 migrations apply` output significantly, to only log information relevant to migrations.
+
+* [#3390](https://github.com/cloudflare/workers-sdk/pull/3390) [`b5b46b4a`](https://github.com/cloudflare/workers-sdk/commit/b5b46b4a52a309d0b15d1424e35eaae2877c5cb9) Thanks [@shahsimpson](https://github.com/shahsimpson)! - Prevents uploads with both cron triggers and smart placement enabled
+
+- [#3358](https://github.com/cloudflare/workers-sdk/pull/3358) [`27b5aec5`](https://github.com/cloudflare/workers-sdk/commit/27b5aec5484a4b4de4f49a73eec0535a8574c518) Thanks [@rozenmd](https://github.com/rozenmd)! - This PR implements a trimmer that removes BEGIN TRANSACTION/COMMIT from SQL files sent to the API (since the D1 API already wraps SQL in a transaction for users).
+
+* [#3324](https://github.com/cloudflare/workers-sdk/pull/3324) [`ed9fbf79`](https://github.com/cloudflare/workers-sdk/commit/ed9fbf79988b694dc4fd8f2347d85b3f8aa19a4b) Thanks [@rozenmd](https://github.com/rozenmd)! - add `d1 info` command for people to check DB size
+
+  This PR adds a `d1 info <NAME>` command for getting information about a D1 database, including the current database size and state.
+
+  Usage:
+
+  ```
+  > npx wrangler d1 info northwind
+
+  ┌───────────────────┬──────────────────────────────────────┐
+  │                   │ d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06 │
+  ├───────────────────┼──────────────────────────────────────┤
+  │ name              │ northwind                            │
+  ├───────────────────┼──────────────────────────────────────┤
+  │ version           │ beta                                 │
+  ├───────────────────┼──────────────────────────────────────┤
+  │ num_tables        │ 13                                   │
+  ├───────────────────┼──────────────────────────────────────┤
+  │ file_size         │ 33.1 MB                              │
+  ├───────────────────┼──────────────────────────────────────┤
+  │ running_in_region │ WEUR                                 │
+  └───────────────────┴──────────────────────────────────────┘
+  ```
+
+  ```
+  > npx wrangler d1 info northwind --json
+  {
+    "uuid": "d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06",
+    "name": "northwind",
+    "version": "beta",
+    "num_tables": 13,
+    "file_size": 33067008,
+    "running_in_region": "WEUR"
+  }
+  ```
+
+- [#3317](https://github.com/cloudflare/workers-sdk/pull/3317) [`3dae2585`](https://github.com/cloudflare/workers-sdk/commit/3dae25857bc9674209db5d4997ac9ae691fd473e) Thanks [@jculvey](https://github.com/jculvey)! - Add the `--compatibility-flags` and `--compatibility-date` options to the `pages project create` command
+
 ## 3.0.1
 
 ### Patch Changes

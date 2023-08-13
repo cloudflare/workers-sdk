@@ -5,19 +5,22 @@ import { watch } from "chokidar";
 import getPort from "get-port";
 import { render } from "ink";
 import React from "react";
+<<<<<<< HEAD:packages/triangle/src/dev.tsx
 import { findTriangleToml, printBindings, readConfig } from "./config";
+=======
+import { findWranglerToml, printBindings, readConfig } from "./config";
+import { getEntry } from "./deployment-bundle/entry";
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f:packages/wrangler/src/dev.tsx
 import Dev from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
 import { getLocalPersistencePath } from "./dev/get-local-persistence-path";
 
 import { startDevServer } from "./dev/start-server";
-import { getEntry } from "./entry";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
 import { getAccountFromCache, loginOrRefreshIfRequired } from "./user";
 import { collectKeyValues } from "./utils/collectKeyValues";
-import { identifyD1BindingsAsBeta } from "./worker";
 import { getHostFromRoute, getZoneForRoute, getZoneIdFromHost } from "./zones";
 import {
 	DEFAULT_INSPECTOR_PORT,
@@ -30,13 +33,14 @@ import {
 } from "./index";
 import type { Config, Environment } from "./config";
 import type { Route, Rule } from "./config/environment";
+import type { CfWorkerInit, CfModule } from "./deployment-bundle/worker";
 import type { LoggerLevel } from "./logger";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
-import type { CfWorkerInit, CfModule } from "./worker";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "./yargs-types";
+import type { Json } from "miniflare";
 
 export function devOptions(yargs: CommonYargsArgv) {
 	return (
@@ -303,9 +307,7 @@ This is currently not supported 😭, but we think that we'll get it to work soo
 }
 
 export type AdditionalDevProps = {
-	vars?: {
-		[key: string]: unknown;
-	};
+	vars?: Record<string, string | Json>;
 	kv?: {
 		binding: string;
 		id: string;
@@ -513,8 +515,9 @@ To run an edge preview session for your Worker, use ${chalk.green(
 				await watcher?.close();
 			},
 		};
-	} finally {
+	} catch (e) {
 		await watcher?.close();
+		throw e;
 	}
 }
 
@@ -913,9 +916,10 @@ function getBindings(
 		unsafe: {
 			bindings: configParam.unsafe.bindings,
 			metadata: configParam.unsafe.metadata,
+			capnp: configParam.unsafe.capnp,
 		},
 		logfwdr: configParam.logfwdr,
-		d1_databases: identifyD1BindingsAsBeta([
+		d1_databases: [
 			...(configParam.d1_databases ?? []).map((d1Db) => {
 				const database_id = d1Db.preview_database_id
 					? d1Db.preview_database_id
@@ -933,7 +937,7 @@ function getBindings(
 				return { ...d1Db, database_id };
 			}),
 			...(args.d1Databases || []),
-		]),
+		],
 		constellation: configParam.constellation,
 	};
 

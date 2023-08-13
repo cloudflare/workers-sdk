@@ -23,24 +23,43 @@ Any contributions you make will be via [Pull Requests](https://docs.github.com/e
 - [Create your own fork](https://docs.github.com/en/get-started/quickstart/fork-a-repo) of [this repository](https://github.com/khulnasoft/workers-sdk).
 - Clone your fork to your local machine
   ```sh
+<<<<<<< HEAD
   > git clone https://github.com/<your-github-username>/triangle2
   > cd triangle2
+=======
+  > git clone https://github.com/<your-github-username>/workers-sdk
+  > cd workers-sdk
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f
   ```
   You can see that your fork is setup as the `origin` remote repository.
   Any changes you wish to make should be in a local branch that is then pushed to this origin remote.
   ```sh
   > git remote -v
+<<<<<<< HEAD
   origin	https://github.com/<your-github-username>/triangle2 (fetch)
   origin	https://github.com/<your-github-username>/triangle2 (push)
   ```
 - Add `khulnasoft/triangle2` as the `upstream` remote repository.
+=======
+  origin	https://github.com/<your-github-username>/workers-sdk (fetch)
+  origin	https://github.com/<your-github-username>/workers-sdk (push)
+  ```
+- Add `cloudflare/workers-sdk` as the `upstream` remote repository.
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f
   ```sh
   > git remote add upstream https://github.com/khulnasoft/workers-sdk
   > git remote -v
+<<<<<<< HEAD
   origin	https://github.com/<your-github-username>/triangle2 (fetch)
   origin	https://github.com/<your-github-username>/triangle2 (push)
   upstream	https://github.com/khulnasoft/workers-sdk (fetch)
   upstream	https://github.com/khulnasoft/workers-sdk (push)
+=======
+  origin	https://github.com/<your-github-username>/workers-sdk (fetch)
+  origin	https://github.com/<your-github-username>/workers-sdk (push)
+  upstream	https://github.com/cloudflare/workers-sdk (fetch)
+  upstream	https://github.com/cloudflare/workers-sdk (push)
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f
   ```
 - You should regularly pull from the `main` branch of the `upstream` repository to keep up to date with the latest changes to the project.
   ```sh
@@ -69,7 +88,11 @@ While each workspace has its own dependencies, you install the dependencies usin
 
 - Install all the dependencies
   ```sh
+<<<<<<< HEAD
   > cd triangle2
+=======
+  > cd workers-sdk
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f
   > npm install
   ```
 
@@ -108,6 +131,25 @@ The code is checked for type errors by [TypeScript](https://www.typescriptlang.o
   > npm run check:type
   ```
 - VS Code will also run type-checking while editing source code, providing immediate feedback.
+
+#### Changing TypeScript Version in VS Code's Command Palette
+
+For TypeScript to work properly in the Monorepo the version used in VSCode must be the project's current TypeScript version, follow these steps:
+
+1. Open the project in VSCode.
+
+2. Press `Ctrl + Shift + P` (or `Cmd + Shift + P` on macOS) to open the command palette.
+
+3. In the command palette, type "Select TypeScript Version" and select the command with the same name that appears in the list.
+
+4. A submenu will appear with a list of available TypeScript versions. Choose the desired version you want to use for this project. If you have multiple versions installed, they will be listed here.
+
+- Selecting "Use Workspace Version" will use the version of TypeScript installed in the project's `node_modules` directory.
+
+5. After selecting the TypeScript version, VSCode will reload the workspace using the chosen version.
+
+Now you have successfully switched the TypeScript version used within the project via the command palette in VSCode.
+Remember that this change is specific to the current project and will not affect other projects or the default TypeScript version used by VSCode.
 
 ### Linting
 
@@ -175,6 +217,12 @@ Changes should be committed to a new local branch, which then gets pushed to you
 - Once you are happy with your changes, create a Pull Request on GitHub
 - The format for Pull Request titles is `[package name] description`, where the package name should indicate which package of the `workers-sdk` monorepo your PR pertains to (e.g. `triangle`/`pages-shared`/`triangle-devtools`), and the description should be a succinct summary of the change you're making.
 - GitHub will insert a template for the body of your Pull Request—it's important to carefully fill out all the fields, giving as much detail as possible to reviewers.
+
+## PR Review
+
+PR review is a critial and required step in the process for landing changes. This is an opportunity to catch potential issues, improve the quality of the work, celebrate good design, and learn from each other.
+
+As a reviewer, it's important to be thoughtful about the proposed changes and communicate any feedback. Examples of PR reviews that the community has identified as particularly high-caliber are labeled with the `highlight pr review` label. Please feel empowered to use these as a learning resource.
 
 ## Changesets
 
@@ -249,7 +297,11 @@ Assume you have the two directories checked out right beside each other:
 ❯ ll src
 drwxr-xr-x     - user 30 Jun 14:12 src
 drwxr-xr-x     - user 26 Jul 17:34 ├── miniflare
+<<<<<<< HEAD
 drwxr-xr-x     - user 27 Jul 17:51 └── triangle2
+=======
+drwxr-xr-x     - user 27 Jul 17:51 └── workers-sdk
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f
 ```
 
 > Note: recommend using [exa](https://the.exa.website/) and `alias ll='exa --icons -laTL 1'` for the above output

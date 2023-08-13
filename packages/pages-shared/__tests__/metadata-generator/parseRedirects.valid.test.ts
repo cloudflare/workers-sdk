@@ -1,3 +1,4 @@
+import { test, expect } from "vitest";
 import { parseRedirects } from "../../metadata-generator/parseRedirects";
 
 test("parseRedirects should handle a single rule", () => {

@@ -26,6 +26,7 @@ import {
 	appendEnvName,
 	getBindingNames,
 	isValidName,
+	validateSmartPlacementConfig,
 } from "./validation-helpers";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
@@ -236,6 +237,8 @@ export function normalizeAndValidateConfig(
 		Object.keys(rawConfig),
 		[...Object.keys(config), "env"]
 	);
+
+	validateSmartPlacementConfig(diagnostics, config.placement, config.triggers);
 
 	experimental(diagnostics, rawConfig, "assets");
 
@@ -1291,17 +1294,6 @@ function normalizeAndValidateEnvironment(
 			validateTailConsumers,
 			undefined
 		),
-		logfwdr: inheritable(
-			diagnostics,
-			topLevelEnv,
-			rawEnv,
-			"logfwdr",
-			validateBindingsProperty(envName, validateCflogfwdrBinding),
-			{
-				schema: undefined,
-				bindings: [],
-			}
-		),
 		unsafe: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -1323,6 +1315,16 @@ function normalizeAndValidateEnvironment(
 			undefined
 		),
 		zone_id: rawEnv.zone_id,
+		logfwdr: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"logfwdr",
+			validateCflogfwdrObject(envName),
+			{
+				bindings: [],
+			}
+		),
 		no_bundle: inheritable(
 			diagnostics,
 			topLevelEnv,
@@ -1666,9 +1668,13 @@ const validateUnsafeSettings =
 		}
 
 		// At least one of bindings and metadata must exist
-		if (!hasProperty(value, "bindings") && !hasProperty(value, "metadata")) {
+		if (
+			!hasProperty(value, "bindings") &&
+			!hasProperty(value, "metadata") &&
+			!hasProperty(value, "capnp")
+		) {
 			diagnostics.errors.push(
-				`The field "${fieldPath}" should contain at least one of "bindings" or "metadata" properties but got ${JSON.stringify(
+				`The field "${fieldPath}" should contain at least one of "bindings", "metadata" or "capnp" properties but got ${JSON.stringify(
 					value
 				)}.`
 			);
@@ -1701,6 +1707,64 @@ const validateUnsafeSettings =
 				)}.`
 			);
 			return false;
+		}
+
+		// unsafe.capnp
+		if (hasProperty(value, "capnp") && value.capnp !== undefined) {
+			if (
+				typeof value.capnp !== "object" ||
+				value.capnp === null ||
+				Array.isArray(value.capnp)
+			) {
+				diagnostics.errors.push(
+					`The field "${fieldPath}.capnp" should be an object but got ${JSON.stringify(
+						value.capnp
+					)}.`
+				);
+				return false;
+			}
+
+			// validate whether they have a compiled_schema string. If they do, they should not use base_path or source_schemas
+			if (hasProperty(value.capnp, "compiled_schema")) {
+				if (
+					hasProperty(value.capnp, "base_path") ||
+					hasProperty(value.capnp, "source_schemas")
+				) {
+					diagnostics.errors.push(
+						`The field "${fieldPath}.capnp" cannot contain both "compiled_schema" and one of "base_path" or "source_schemas".`
+					);
+					return false;
+				}
+
+				if (typeof value.capnp.compiled_schema !== "string") {
+					diagnostics.errors.push(
+						`The field "${fieldPath}.capnp.compiled_schema", when present, should be a string but got ${JSON.stringify(
+							value.capnp.compiled_schema
+						)}.`
+					);
+					return false;
+				}
+			} else {
+				// they don't have a compiled_schema property, so they must have both base_path and source_schemas
+				if (!isRequiredProperty(value.capnp, "base_path", "string")) {
+					diagnostics.errors.push(
+						`The field "${fieldPath}.capnp.base_path", when present, should be a string but got ${JSON.stringify(
+							value.capnp.base_path
+						)}`
+					);
+				}
+
+				if (
+					!validateTypedArray(
+						diagnostics,
+						`${fieldPath}.capnp.source_schemas`,
+						value.capnp.source_schemas,
+						"string"
+					)
+				) {
+					return false;
+				}
+			}
 		}
 
 		return true;
@@ -1754,6 +1818,32 @@ const validateDurableObjectBinding: ValidatorFn = (
 
 	return isValid;
 };
+
+const validateCflogfwdrObject: (env: string) => ValidatorFn =
+	(envName) => (diagnostics, field, value, topLevelEnv) => {
+		//validate the bindings property first, as this also validates that it's an object, etc.
+		const bindingsValidation = validateBindingsProperty(
+			envName,
+			validateCflogfwdrBinding
+		);
+		if (!bindingsValidation(diagnostics, field, value, topLevelEnv))
+			return false;
+
+		const v = value as {
+			bindings: [];
+			schema: string | undefined;
+		};
+
+		if (v?.schema !== undefined) {
+			// the user should not be using the old schema property, as we've migrated to unsafe.capnp.schema for consistency with the unsafe bindings
+			diagnostics.errors.push(
+				`"${field}" binding "schema" property has been replaced with the "unsafe.capnp" object, which expects a "base_path" and an array of "source_schemas" to compile, or a "compiled_schema" property.`
+			);
+			return false;
+		}
+
+		return true;
+	};
 
 const validateCflogfwdrBinding: ValidatorFn = (diagnostics, field, value) => {
 	if (typeof value !== "object" || value === null) {

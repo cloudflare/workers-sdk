@@ -1,0 +1,24 @@
+{
+	"name": "<TBD>",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+<<<<<<< HEAD:packages/create-cloudflare/templates/common/js/package.json
+		"deploy": "triangle publish",
+		"start": "triangle dev"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20230419.0",
+		"itty-router": "^3.0.12",
+		"triangle": "^3.0.0"
+=======
+		"deploy": "wrangler deploy",
+		"start": "wrangler dev"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20230419.0",
+		"typescript": "^5.0.4",
+		"wrangler": "^3.0.0"
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f:packages/create-khulnasoft/templates/scheduled/ts/package.json
+	}
+}

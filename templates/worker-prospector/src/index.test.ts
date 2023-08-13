@@ -7,7 +7,6 @@ describe("Worker", () => {
 
 	beforeAll(async () => {
 		worker = await unstable_dev("src/index.ts", {
-			//@ts-ignore
 			experimental: { disableExperimentalWarning: true },
 		});
 	});

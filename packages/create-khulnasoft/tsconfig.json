@@ -1,0 +1,22 @@
+{
+	"root": true,
+	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
+	"include": ["**/*.ts"],
+	"exclude": ["node_modules", "dist", "templates", "**/templates/**"],
+	"compilerOptions": {
+		"target": "ESNext",
+		"module": "CommonJS",
+		"moduleResolution": "node",
+		"allowJs": true,
+		"strict": true,
+		"esModuleInterop": true,
+		"outDir": "dist",
+		"types": ["node"],
+		"resolveJsonModule": true,
+		"paths": {
+			"helpers/*": ["./src/helpers/*"],
+			"frameworks/*": ["./src/frameworks/*"],
+			"types": ["./src/types.ts"]
+		}
+	}
+}

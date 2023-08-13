@@ -4,8 +4,13 @@ import { fetch } from "undici";
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import type { ChildProcess } from "child_process";
 
+<<<<<<< HEAD
 describe.concurrent.skip("Pages Functions", () => {
 	let aTriangleProcess: ChildProcess;
+=======
+describe.skip("Pages Functions", () => {
+	let aWranglerProcess: ChildProcess;
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f
 	let aIP: string;
 	let aPort: number;
 	let aResolveReadyPromise: (value: unknown) => void;

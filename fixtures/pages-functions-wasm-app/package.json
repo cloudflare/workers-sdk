@@ -5,13 +5,23 @@
 	"sideEffects": false,
 	"scripts": {
 		"check:type": "tsc",
+<<<<<<< HEAD
 		"dev": "npx triangle pages dev public --port 8776",
 		"publish": "npx triangle pages deploy public",
 		"test": "npx vitest",
 		"test:ci": "npx vitest"
+=======
+		"dev": "npx wrangler pages dev public --port 8776",
+		"publish": "npx wrangler pages deploy public",
+		"test": "npx vitest run",
+		"test:ci": "npx vitest run",
+		"test:watch": "npx vitest",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f
 	},
 	"devDependencies": {
-		"undici": "^5.9.1"
+		"undici": "^5.9.1",
+		"wrangler": "*"
 	},
 	"engines": {
 		"node": ">=16.13"

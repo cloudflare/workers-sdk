@@ -6,7 +6,7 @@ import { runTrianglePagesDev } from "../../shared/src/run-triangle-long-lived";
 
 const isWindows = process.platform === "win32";
 
-describe.concurrent("Remix", () => {
+describe("Remix", () => {
 	let ip: string;
 	let port: number;
 	let stop: () => void;

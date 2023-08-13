@@ -1,16 +1,16 @@
 {
-	"name": "@khulnasoft/triangle-devtools",
+	"name": "@cloudflare/wrangler-devtools",
 	"version": "0.0.0",
 	"private": true,
-	"description": "Chrome Devtools hosted for easy use with Triangle",
-	"homepage": "https://github.com/khulnasoft/workers-sdk#readme",
+	"description": "Chrome Devtools hosted for easy use with Wrangler",
+	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
 	"bugs": {
-		"url": "https://github.com/khulnasoft/workers-sdk/issues"
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
 	},
 	"license": "BSD-3-Clause",
 	"author": "workers-devprod@cloudflare.com",
 	"devDependencies": {
 		"patch-package": "^6.5.1",
-		"triangle": "^3.0.0"
+		"wrangler": "^3.0.0"
 	}
 }

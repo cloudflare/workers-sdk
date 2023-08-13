@@ -1,6 +1,6 @@
 const urls = new Set();
 
-export function checkedFetch(request, init) {
+function checkURL(request, init) {
 	const url =
 		request instanceof URL
 			? request
@@ -19,5 +19,12 @@ export function checkedFetch(request, init) {
 			);
 		}
 	}
-	return globalThis.fetch(request, init);
 }
+
+globalThis.fetch = new Proxy(globalThis.fetch, {
+	apply(target, thisArg, argArray) {
+		const [request, init] = argArray;
+		checkURL(request, init);
+		return Reflect.apply(target, thisArg, argArray);
+	},
+});

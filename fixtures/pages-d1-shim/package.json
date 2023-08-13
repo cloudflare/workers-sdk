@@ -1,16 +1,27 @@
 {
 	"name": "pages-d1-shim",
-	"version": "0.0.0",
+	"version": "0.0.1",
 	"private": true,
 	"sideEffects": false,
 	"scripts": {
+<<<<<<< HEAD
 		"check:type": "tsc && tsc -p tests/tsconfig.json",
 		"dev": "npx triangle pages dev ./public --d1 foobar --port 8777",
 		"test": "npx vitest",
 		"test:ci": "npx vitest"
+=======
+		"check:type": "tsc",
+		"dev": "npx wrangler pages dev ./public --d1 foobar --port 8777",
+		"test": "npx vitest run",
+		"test:ci": "npx vitest run",
+		"test:watch": "npx vitest",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f
 	},
 	"devDependencies": {
-		"undici": "^5.9.1"
+		"@cloudflare/workers-tsconfig": "*",
+		"undici": "^5.9.1",
+		"wrangler": "*"
 	},
 	"engines": {
 		"node": ">=16.13"

@@ -38,7 +38,7 @@ jobs:
         run: npm run build
 
       - name: Build Quick Edit
-        run: cd packages/quick-edit && yarn setup && yarn build
+        run: cd packages/quick-edit && yarn setup && yarn custom:build
 
       - name: Publish Quick Edit
         run: npm -w packages/quick-edit run publish

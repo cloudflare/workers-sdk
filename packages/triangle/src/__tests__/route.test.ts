@@ -1,44 +1,44 @@
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
-import { runTriangle } from "./helpers/run-triangle";
+import { runWrangler } from "./helpers/run-wrangler";
 
-describe("triangle route", () => {
+describe("wrangler route", () => {
 	mockConsoleMethods();
 	runInTempDir();
 
-	it("shows a deprecation notice when `triangle route` is run", async () => {
-		await expect(runTriangle("route")).rejects
+	it("shows a deprecation notice when `wrangler route` is run", async () => {
+		await expect(runWrangler("route")).rejects
 			.toThrowErrorMatchingInlineSnapshot(`
             "Deprecation:
-            \`triangle route\` has been deprecated.
-            Please use triangle.toml and/or \`triangle deploy --routes\` to modify routes"
+            \`wrangler route\` has been deprecated.
+            Please use wrangler.toml and/or \`wrangler deploy --routes\` to modify routes"
           `);
 	});
 
-	it("shows a deprecation notice when `triangle route delete` is run", async () => {
-		await expect(runTriangle("route delete")).rejects
+	it("shows a deprecation notice when `wrangler route delete` is run", async () => {
+		await expect(runWrangler("route delete")).rejects
 			.toThrowErrorMatchingInlineSnapshot(`
             "Deprecation:
-            \`triangle route delete\` has been deprecated.
-            Remove the unwanted route(s) from triangle.toml and run \`triangle deploy\` to remove your worker from those routes."
+            \`wrangler route delete\` has been deprecated.
+            Remove the unwanted route(s) from wrangler.toml and run \`wrangler deploy\` to remove your worker from those routes."
           `);
 	});
 
-	it("shows a deprecation notice when `triangle route delete <id>` is run", async () => {
-		await expect(runTriangle("route delete some-zone-id")).rejects
+	it("shows a deprecation notice when `wrangler route delete <id>` is run", async () => {
+		await expect(runWrangler("route delete some-zone-id")).rejects
 			.toThrowErrorMatchingInlineSnapshot(`
             "Deprecation:
-            \`triangle route delete\` has been deprecated.
-            Remove the unwanted route(s) from triangle.toml and run \`triangle deploy\` to remove your worker from those routes."
+            \`wrangler route delete\` has been deprecated.
+            Remove the unwanted route(s) from wrangler.toml and run \`wrangler deploy\` to remove your worker from those routes."
           `);
 	});
 
-	it("shows a deprecation notice when `triangle route list` is run", async () => {
-		await expect(runTriangle("route list")).rejects
+	it("shows a deprecation notice when `wrangler route list` is run", async () => {
+		await expect(runWrangler("route list")).rejects
 			.toThrowErrorMatchingInlineSnapshot(`
             "Deprecation:
-            \`triangle route list\` has been deprecated.
-            Refer to triangle.toml for a list of routes the worker will be deployed to upon publishing.
+            \`wrangler route list\` has been deprecated.
+            Refer to wrangler.toml for a list of routes the worker will be deployed to upon publishing.
             Refer to the Cloudflare Dashboard to see the routes this worker is currently running on."
           `);
 	});

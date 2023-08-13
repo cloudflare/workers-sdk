@@ -4,8 +4,13 @@ import { fetch } from "undici";
 import { describe, it, beforeAll, afterAll } from "vitest";
 import type { ChildProcess } from "child_process";
 
+<<<<<<< HEAD
 describe.concurrent("Pages Functions", () => {
 	let triangleProcess: ChildProcess;
+=======
+describe("Pages Functions", () => {
+	let wranglerProcess: ChildProcess;
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f
 	let ip: string;
 	let port: number;
 
@@ -15,7 +20,7 @@ describe.concurrent("Pages Functions", () => {
 				path.join("..", "..", "packages", "triangle", "bin", "triangle.js"),
 				["pages", "dev", "public", "--port=0"],
 				{
-					stdio: ["inherit", "inherit", "inherit", "ipc"],
+					stdio: ["ignore", "ignore", "ignore", "ipc"],
 					cwd: path.resolve(__dirname, ".."),
 				}
 			).on("message", (message) => {

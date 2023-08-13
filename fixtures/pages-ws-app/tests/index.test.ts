@@ -6,8 +6,13 @@ import type { ChildProcess } from "child_process";
 
 const isWindows = process.platform === "win32";
 
+<<<<<<< HEAD
 describe.concurrent.skip("Pages Functions", () => {
 	let triangleProcess: ChildProcess;
+=======
+describe.skip("Pages Functions", () => {
+	let wranglerProcess: ChildProcess;
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f
 	let ip: string;
 	let port: number;
 	let resolveReadyPromise: (value: unknown) => void;

@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/pages-shared",
-	"version": "0.5.1",
+	"version": "0.8.0",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/khulnasoft/workers-sdk.git",
@@ -14,42 +14,19 @@
 	],
 	"scripts": {
 		"check:type": "tsc",
-		"test": "jest --forceExit",
-		"test:ci": "jest --forceExit"
-	},
-	"jest": {
-		"coverageReporters": [
-			"json",
-			"html",
-			"text",
-			"cobertura"
-		],
-		"restoreMocks": true,
-		"setupFilesAfterEnv": [
-			"<rootDir>/__tests__/jest.setup.ts"
-		],
-		"testRegex": ".*.(test|spec)\\.[jt]sx?$",
-		"testTimeout": 30000,
-		"transform": {
-			"^.+\\.c?(t|j)sx?$": [
-				"esbuild-jest",
-				{
-					"sourcemap": true
-				}
-			]
-		},
-		"transformIgnorePatterns": [
-			"node_modules/(?!find-up|locate-path|p-locate|p-limit|p-timeout|p-queue|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream|get-port|supports-color|pretty-bytes)"
-		]
+		"test": "vitest run",
+		"test:ci": "vitest run"
 	},
 	"dependencies": {
-		"miniflare": "^3.0.0"
+		"miniflare": "3.20230801.0"
 	},
 	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "*",
 		"@cloudflare/workers-types": "^4.20230511.0",
 		"@types/service-worker-mock": "^2.0.1",
 		"concurrently": "^7.3.0",
 		"glob": "^8.0.3",
-		"service-worker-mock": "^2.0.5"
+		"service-worker-mock": "^2.0.5",
+		"wrangler": "*"
 	}
 }

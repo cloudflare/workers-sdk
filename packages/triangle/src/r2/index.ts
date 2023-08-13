@@ -1,5 +1,7 @@
+import { Blob } from "node:buffer";
 import * as fs from "node:fs";
 import * as stream from "node:stream";
+import { createFileReadableStream, R2ObjectBody, R2Object } from "miniflare";
 
 import prettyBytes from "pretty-bytes";
 import { readConfig } from "../config";
@@ -17,10 +19,11 @@ import {
 	getR2Object,
 	listR2Buckets,
 	putR2Object,
+	localGateway,
 } from "./helpers";
 
 import type { CommonYargsArgv } from "../yargs-types";
-import type { Readable } from "node:stream";
+import type { ReadableStream } from "stream/web";
 
 export function r2(r2Yargs: CommonYargsArgv) {
 	return r2Yargs
@@ -49,6 +52,14 @@ export function r2(r2Yargs: CommonYargsArgv) {
 								alias: "p",
 								conflicts: "file",
 								type: "boolean",
+							})
+							.option("local", {
+								type: "boolean",
+								describe: "Interact with local storage",
+							})
+							.option("persist-to", {
+								type: "string",
+								describe: "Directory for local persistance",
 							});
 					},
 					async (objectGetYargs) => {
@@ -65,7 +76,23 @@ export function r2(r2Yargs: CommonYargsArgv) {
 							await printTriangleBanner();
 							logger.log(`Downloading "${key}" from "${bucket}".`);
 						}
-						const input = await getR2Object(accountId, bucket, key);
+
+						let input: ReadableStream;
+						if (objectGetYargs.local) {
+							const gateway = localGateway(
+								objectGetYargs.persistTo,
+								config.configPath,
+								bucket
+							);
+							const object = await gateway.get(key);
+							if (object instanceof R2ObjectBody) {
+								input = object.body;
+							} else if (object instanceof R2Object) {
+								input = object.encode().value;
+							}
+						} else {
+							input = await getR2Object(accountId, bucket, key);
+						}
 						const output = file ? fs.createWriteStream(file) : process.stdout;
 						await new Promise<void>((resolve, reject) => {
 							stream.pipeline(input, output, (err: unknown) => {
@@ -137,6 +164,14 @@ export function r2(r2Yargs: CommonYargsArgv) {
 								alias: "e",
 								requiresArg: true,
 								type: "string",
+							})
+							.option("local", {
+								type: "boolean",
+								describe: "Interact with local storage",
+							})
+							.option("persist-to", {
+								type: "string",
+								describe: "Directory for local persistance",
 							});
 					},
 					async (objectPutYargs) => {
@@ -144,21 +179,22 @@ export function r2(r2Yargs: CommonYargsArgv) {
 
 						const config = readConfig(objectPutYargs.config, objectPutYargs);
 						const accountId = await requireAuth(config);
-						const { objectPath, file, pipe, ...options } = objectPutYargs;
+						const { objectPath, file, pipe, local, persistTo, ...options } =
+							objectPutYargs;
 						const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
 						if (!file && !pipe) {
 							throw new CommandLineArgsError(
 								"Either the --file or --pipe options are required."
 							);
 						}
-						let object: Readable | Buffer;
+						let object: ReadableStream;
 						let objectSize: number;
 						if (file) {
-							object = fs.createReadStream(file);
+							object = await createFileReadableStream(file);
 							const stats = fs.statSync(file);
 							objectSize = stats.size;
 						} else {
-							object = await new Promise<Buffer>((resolve, reject) => {
+							const buffer = await new Promise<Buffer>((resolve, reject) => {
 								const stdin = process.stdin;
 								const chunks = Array<Buffer>();
 								stdin.on("data", (chunk) => chunks.push(chunk));
@@ -171,7 +207,9 @@ export function r2(r2Yargs: CommonYargsArgv) {
 									)
 								);
 							});
-							objectSize = object.byteLength;
+							const blob = new Blob([buffer]);
+							object = blob.stream();
+							objectSize = blob.size;
 						}
 
 						if (objectSize > MAX_UPLOAD_SIZE) {
@@ -184,10 +222,41 @@ export function r2(r2Yargs: CommonYargsArgv) {
 						}
 
 						logger.log(`Creating object "${key}" in bucket "${bucket}".`);
-						await putR2Object(accountId, bucket, key, object, {
-							...options,
-							"content-length": `${objectSize}`,
-						});
+
+						if (local) {
+							const gateway = localGateway(
+								persistTo,
+								config.configPath,
+								bucket
+							);
+
+							await gateway.put(key, object, objectSize, {
+								httpMetadata: {
+									contentType: options.contentType,
+									contentDisposition: options.contentDisposition,
+									contentEncoding: options.contentEncoding,
+									contentLanguage: options.contentLanguage,
+									cacheControl: options.cacheControl,
+									cacheExpiry:
+										options.expires === undefined
+											? undefined
+											: parseInt(options.expires),
+								},
+								customMetadata: undefined,
+								sha1: undefined,
+								sha256: undefined,
+								onlyIf: undefined,
+								md5: undefined,
+								sha384: undefined,
+								sha512: undefined,
+							});
+						} else {
+							await putR2Object(accountId, bucket, key, object, {
+								...options,
+								"content-length": `${objectSize}`,
+							});
+						}
+
 						logger.log("Upload complete.");
 					}
 				)
@@ -195,11 +264,20 @@ export function r2(r2Yargs: CommonYargsArgv) {
 					"delete <objectPath>",
 					"Delete an object in an R2 bucket",
 					(objectDeleteYargs) => {
-						return objectDeleteYargs.positional("objectPath", {
-							describe:
-								"The destination object path in the form of {bucket}/{key}",
-							type: "string",
-						});
+						return objectDeleteYargs
+							.positional("objectPath", {
+								describe:
+									"The destination object path in the form of {bucket}/{key}",
+								type: "string",
+							})
+							.option("local", {
+								type: "boolean",
+								describe: "Interact with local storage",
+							})
+							.option("persist-to", {
+								type: "string",
+								describe: "Directory for local persistance",
+							});
 					},
 					async (args) => {
 						const { objectPath } = args;
@@ -210,7 +288,18 @@ export function r2(r2Yargs: CommonYargsArgv) {
 						const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
 						logger.log(`Deleting object "${key}" from bucket "${bucket}".`);
 
-						await deleteR2Object(accountId, bucket, key);
+						if (args.local) {
+							const gateway = localGateway(
+								args.persistTo,
+								config.configPath,
+								bucket
+							);
+
+							await gateway.delete(key);
+						} else {
+							await deleteR2Object(accountId, bucket, key);
+						}
+
 						logger.log("Delete complete.");
 					}
 				);

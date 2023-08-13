@@ -5,7 +5,6 @@ import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { buildFunctions } from "./buildFunctions";
-import { isInPagesCI } from "./constants";
 import {
 	EXIT_CODE_FUNCTIONS_NOTHING_TO_BUILD_ERROR,
 	EXIT_CODE_FUNCTIONS_NO_ROUTES_ERROR,
@@ -16,8 +15,7 @@ import {
 	buildRawWorker,
 	traverseAndBuildWorkerJSDirectory,
 } from "./functions/buildWorker";
-import { pagesBetaWarning } from "./utils";
-import type { BundleResult } from "../bundle";
+import type { BundleResult } from "../deployment-bundle/bundle";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -105,16 +103,18 @@ export function Options(yargs: CommonYargsArgv) {
 				deprecated: true,
 				hidden: true,
 			},
-		})
-		.epilogue(pagesBetaWarning);
+		});
 }
 
 export const Handler = async (args: PagesBuildArgs) => {
+<<<<<<< HEAD:packages/triangle/src/pages/build.ts
 	if (!isInPagesCI) {
 		// Beta message for `triangle pages <commands>` usage
 		logger.log(pagesBetaWarning);
 	}
 
+=======
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f:packages/wrangler/src/pages/build.ts
 	const validatedArgs = validateArgs(args);
 
 	let bundle: BundleResult | undefined = undefined;
@@ -150,6 +150,8 @@ export const Handler = async (args: PagesBuildArgs) => {
 				minify,
 				sourcemap,
 				fallbackService,
+				// This only watches already existing files using the esbuild watching mechanism
+				// it will not watch new files that are added to the functions directory!
 				watch,
 				plugin,
 				legacyNodeCompat,
@@ -232,7 +234,6 @@ export const Handler = async (args: PagesBuildArgs) => {
 					local: false,
 					sourcemap,
 					watch,
-					betaD1Shims: d1Databases,
 					nodejsCompat,
 				});
 			}

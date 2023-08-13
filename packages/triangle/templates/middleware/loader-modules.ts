@@ -36,17 +36,68 @@ class __Facade_ScheduledController__ implements ScheduledController {
 	}
 }
 
-const __facade_modules_fetch__: Middleware = function (request, env, ctx) {
-	if (worker.fetch === undefined) throw new Error("No fetch handler!"); // TODO: proper error message
+const __facade_modules_fetch__: ExportedHandlerFetchHandler = function (
+	request,
+	env,
+	ctx
+) {
+	if (worker.fetch === undefined)
+		throw new Error("Handler does not export a fetch() function.");
 	return worker.fetch(request, env, ctx);
 };
 
-const facade: ExportedHandler<unknown> = {
-	fetch(request, env, ctx) {
+function getMaskedEnv(rawEnv: unknown) {
+	let env = rawEnv as Record<string, unknown>;
+	if (worker.envWrappers && worker.envWrappers.length > 0) {
+		for (const wrapFn of worker.envWrappers) {
+			env = wrapFn(env);
+		}
+	}
+	return env;
+}
+
+/**
+ * This type is here to cause a type error if a new export handler is added to
+ * `ExportHandler` without it being included in the `facade` below.
+ */
+type MissingExportHandlers = Omit<
+	Required<ExportedHandler>,
+	"tail" | "trace" | "scheduled" | "queue" | "test" | "email" | "fetch"
+>;
+
+let registeredMiddleware = false;
+
+const facade: ExportedHandler<unknown> & MissingExportHandlers = {
+	...(worker.tail && {
+		tail: maskHandlerEnv(worker.tail),
+	}),
+	...(worker.trace && {
+		trace: maskHandlerEnv(worker.trace),
+	}),
+	...(worker.scheduled && {
+		scheduled: maskHandlerEnv(worker.scheduled),
+	}),
+	...(worker.queue && {
+		queue: maskHandlerEnv(worker.queue),
+	}),
+	...(worker.test && {
+		test: maskHandlerEnv(worker.test),
+	}),
+	...(worker.email && {
+		email: maskHandlerEnv(worker.email),
+	}),
+
+	fetch(request, rawEnv, ctx) {
+		const env = getMaskedEnv(rawEnv);
 		// Get the chain of middleware from the worker object
 		if (worker.middleware && worker.middleware.length > 0) {
-			for (const middleware of worker.middleware) {
-				__facade_register__(middleware);
+			// Make sure we only register middleware once:
+			// https://github.com/cloudflare/workers-sdk/issues/2386#issuecomment-1614715911
+			if (!registeredMiddleware) {
+				registeredMiddleware = true;
+				for (const middleware of worker.middleware) {
+					__facade_register__(middleware);
+				}
 			}
 
 			const __facade_modules_dispatch__: Dispatcher = function (type, init) {
@@ -71,14 +122,16 @@ const facade: ExportedHandler<unknown> = {
 			// We didn't have any middleware so we can skip the invocation chain,
 			// and just call the fetch handler directly
 
-			// We "don't care" if this is undefined as we want to have the same behaviour
+			// We "don't care" if this is undefined as we want to have the same behavior
 			// as if the worker completely bypassed middleware.
-			return worker.fetch!(request, env, ctx);
+			return __facade_modules_fetch__(request, env, ctx);
 		}
 	},
-	scheduled: worker.scheduled,
-	queue: worker.queue,
-	trace: worker.trace,
 };
+
+type HandlerFn<D, R> = (data: D, env: unknown, ctx: ExecutionContext) => R;
+function maskHandlerEnv<D, R>(handler: HandlerFn<D, R>): HandlerFn<D, R> {
+	return (data, env, ctx) => handler(data, getMaskedEnv(env), ctx);
+}
 
 export default facade;

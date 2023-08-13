@@ -28,8 +28,13 @@
 import child_process from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+<<<<<<< HEAD:packages/trianglejs-compat-webpack-plugin/src/index.ts
 import rimraf from "rimraf";
 import { readConfig } from "triangle/src/config";
+=======
+import { rimrafSync } from "rimraf";
+import { readConfig } from "wrangler/src/config";
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f:packages/wranglerjs-compat-webpack-plugin/src/index.ts
 
 import type {
 	Compiler,
@@ -203,7 +208,7 @@ export class TriangleJsCompatWebpackPlugin {
 			template,
 			this.packageDir,
 		]);
-		await rm(path.resolve(this.packageDir, ".git"));
+		rimrafSync(path.resolve(this.packageDir, ".git"));
 	}
 
 	private bundleAssets({ assets }: Compilation) {
@@ -255,27 +260,6 @@ export class TriangleJsCompatWebpackPlugin {
 			this.output.js
 		);
 	}
-}
-
-/**
- * Promise wrapper around rimraf
- */
-function rm(
-	pathToRemove: string,
-	options?: rimraf.Options
-): Promise<null | undefined> {
-	return new Promise((resolve, reject) => {
-		const callback = (result: Error | null | undefined) => {
-			if (result instanceof Error) {
-				reject(result);
-			} else {
-				resolve(result);
-			}
-		};
-		options !== undefined
-			? rimraf(pathToRemove, options, callback)
-			: rimraf(pathToRemove, callback);
-	});
 }
 
 /**

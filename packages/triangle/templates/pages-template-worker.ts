@@ -120,7 +120,7 @@ export default {
 	) {
 		let request = originalRequest;
 		const handlerIterator = executeRequest(request);
-		const data = {}; // arbitrary data the user can set between functions
+		let data = {}; // arbitrary data the user can set between functions
 		let isFailOpen = false;
 
 		const next = async (input?: RequestInfo, init?: RequestInit) => {
@@ -141,7 +141,16 @@ export default {
 					functionPath: path,
 					next,
 					params,
-					data,
+					get data() {
+						return data;
+					},
+					set data(value) {
+						if (typeof value !== "object" || value === null) {
+							throw new Error("context.data must be an object");
+						}
+						// user has overriden context.data, so we need to merge it with the existing data
+						data = value;
+					},
 					env,
 					waitUntil: workerContext.waitUntil.bind(workerContext),
 					passThroughOnException: () => {

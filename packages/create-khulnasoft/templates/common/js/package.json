@@ -1,0 +1,13 @@
+{
+	"name": "<TBD>",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"deploy": "wrangler deploy",
+		"start": "wrangler dev"
+	},
+	"devDependencies": {
+		"itty-router": "^3.0.12",
+		"wrangler": "^3.0.0"
+	}
+}

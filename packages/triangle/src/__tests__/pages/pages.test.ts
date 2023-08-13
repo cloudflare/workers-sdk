@@ -33,9 +33,13 @@ describe("pages", () => {
 		  -c, --config                    Path to .toml configuration file  [string]
 		  -e, --env                       Environment to use for operations and .env files  [string]
 		  -h, --help                      Show help  [boolean]
+<<<<<<< HEAD:packages/triangle/src/__tests__/pages/pages.test.ts
 		  -v, --version                   Show version number  [boolean]
 
 		🚧 'triangle pages <command>' is a beta command. Please report any issues to https://github.com/khulnasoft/workers-sdk/issues/new/choose"
+=======
+		  -v, --version                   Show version number  [boolean]"
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f:packages/wrangler/src/__tests__/pages/pages.test.ts
 	`);
 	});
 
@@ -48,20 +52,32 @@ describe("pages", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
+<<<<<<< HEAD:packages/triangle/src/__tests__/pages/pages.test.ts
 			        "🚧 'triangle pages <command>' is a beta command. Please report any issues to https://github.com/khulnasoft/workers-sdk/issues/new/choose
 
 			        [32mIf you think this is a bug then please create an issue at https://github.com/khulnasoft/workers-sdk/issues/new/choose[0m"
 		      `);
+=======
+			"
+			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+		`);
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f:packages/wrangler/src/__tests__/pages/pages.test.ts
 		});
 
 		it("should display for pages:functions:build", async () => {
 			await expect(runTriangle("pages functions build")).rejects.toThrowError();
 
 			expect(std.out).toMatchInlineSnapshot(`
+<<<<<<< HEAD:packages/triangle/src/__tests__/pages/pages.test.ts
 			        "🚧 'triangle pages <command>' is a beta command. Please report any issues to https://github.com/khulnasoft/workers-sdk/issues/new/choose
 
 			        [32mIf you think this is a bug then please create an issue at https://github.com/khulnasoft/workers-sdk/issues/new/choose[0m"
 		      `);
+=======
+			"
+			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+		`);
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f:packages/wrangler/src/__tests__/pages/pages.test.ts
 		});
 
 		it("should display for pages:functions:optimize-routes", async () => {
@@ -72,10 +88,16 @@ describe("pages", () => {
 			).rejects.toThrowError();
 
 			expect(std.out).toMatchInlineSnapshot(`
+<<<<<<< HEAD:packages/triangle/src/__tests__/pages/pages.test.ts
 			        "🚧 'triangle pages <command>' is a beta command. Please report any issues to https://github.com/khulnasoft/workers-sdk/issues/new/choose
 
 			        [32mIf you think this is a bug then please create an issue at https://github.com/khulnasoft/workers-sdk/issues/new/choose[0m"
 		      `);
+=======
+			"
+			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+		`);
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f:packages/wrangler/src/__tests__/pages/pages.test.ts
 		});
 	});
 });

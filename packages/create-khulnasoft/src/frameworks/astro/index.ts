@@ -1,0 +1,62 @@
+import { logRaw } from "helpers/cli";
+import { brandColor, dim } from "helpers/colors";
+import { npmInstall, runCommand, runFrameworkGenerator } from "helpers/command";
+import { compatDateFlag } from "helpers/files";
+import { detectPackageManager } from "helpers/packages";
+import { getFrameworkVersion } from "../index";
+import type { PagesGeneratorContext, FrameworkConfig } from "types";
+
+const { npx, dlx } = detectPackageManager();
+
+const generate = async (ctx: PagesGeneratorContext) => {
+	const version = getFrameworkVersion(ctx);
+
+	await runFrameworkGenerator(
+		ctx,
+		`${dlx} create-astro@${version} ${ctx.project.name} --no-install`
+	);
+
+	logRaw(""); // newline
+};
+
+const configure = async (ctx: PagesGeneratorContext) => {
+	// Navigate to the directory and add the adapter
+	process.chdir(ctx.project.path);
+
+	// Need to ensure install first so `astro` works
+	await npmInstall();
+
+	await runCommand(`${npx} astro add cloudflare -y`, {
+		silent: true,
+		startText: "Installing adapter",
+		doneText: `${brandColor("installed")} ${dim(
+			`via \`${npx} astro add cloudflare\``
+		)}`,
+	});
+};
+
+const config: FrameworkConfig = {
+	generate,
+	configure,
+	displayName: "Astro",
+	packageScripts: {
+<<<<<<< HEAD:packages/create-cloudflare/src/frameworks/astro/index.ts
+		"pages:dev": `triangle pages dev ${compatDateFlag()} --proxy 3000 -- astro dev`,
+		"pages:deploy": `astro build && triangle pages publish ./dist`,
+=======
+		"pages:dev": `wrangler pages dev ${compatDateFlag()} --proxy 3000 -- astro dev`,
+		"pages:deploy": `astro build && wrangler pages deploy ./dist`,
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f:packages/create-khulnasoft/src/frameworks/astro/index.ts
+	},
+	testFlags: [
+		"--skip-houston",
+		"--yes",
+		"--no-install",
+		"--no-git",
+		"--template",
+		"blog",
+		"--typescript",
+		"strict",
+	],
+};
+export default config;

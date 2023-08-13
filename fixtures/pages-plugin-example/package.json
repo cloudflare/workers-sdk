@@ -11,7 +11,14 @@
 		"public/"
 	],
 	"scripts": {
+<<<<<<< HEAD
 		"build": "npx triangle pages functions build --plugin --outdir=dist",
+=======
+		"build": "wrangler pages functions build --plugin --outdir=dist",
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f
 		"check:type": "tsc"
+	},
+	"devDependencies": {
+		"wrangler": "*"
 	}
 }

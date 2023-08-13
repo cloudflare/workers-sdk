@@ -1,6 +1,11 @@
 {
+<<<<<<< HEAD:packages/triangle/package.json
 	"name": "triangle",
 	"version": "3.0.1",
+=======
+	"name": "wrangler",
+	"version": "3.5.0",
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f:packages/wrangler/package.json
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"triangle",
@@ -53,17 +58,24 @@
 		"assert-git-version": "node -r esbuild-register scripts/assert-git-version.ts",
 		"build": "npm run clean && npm run bundle && npm run emit-types",
 		"bundle": "node -r esbuild-register scripts/bundle.ts",
+<<<<<<< HEAD:packages/triangle/package.json
 		"check:type": "node -r esbuild-register scripts/tsc-all.ts",
 		"clean": "rimraf triangle-dist miniflare-dist emitted-types",
+=======
+		"check:lint": "eslint .",
+		"check:type": "tsc",
+		"clean": "rimraf wrangler-dist miniflare-dist emitted-types",
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f:packages/wrangler/package.json
 		"dev": "npm run clean && concurrently -c black,blue --kill-others-on-fail false 'npm run bundle -- --watch' 'npm run check:type -- --watch --preserveWatchOutput'",
 		"emit-types": "tsc -p tsconfig.emit.json && node -r esbuild-register scripts/emit-types.ts",
 		"prepublishOnly": "SOURCEMAPS=false npm run build",
 		"start": "npm run bundle && cross-env NODE_OPTIONS=--enable-source-maps ./bin/triangle.js",
 		"test": "npm run assert-git-version && jest",
-		"test-watch": "npm run test -- --runInBand --testTimeout=50000 --watch",
 		"test:ci": "npm run test -- --coverage",
 		"test:debug": "npm run test -- --silent=false --verbose=true",
-		"test:e2e": "vitest --single-thread ./e2e"
+		"test:e2e": "vitest --test-timeout 240000 --single-thread --dir ./e2e run",
+		"test:watch": "npm run test -- --runInBand --testTimeout=50000 --watch",
+		"type:tests": "tsc -p ./src/__tests__/tsconfig.json && tsc -p ./e2e/tsconfig.json"
 	},
 	"jest": {
 		"coverageReporters": [
@@ -81,7 +93,7 @@
 			"<rootDir>/src/__tests__/jest.setup.ts"
 		],
 		"testRegex": "src/__tests__/.*\\.(test|spec)\\.[jt]sx?$",
-		"testTimeout": 30000,
+		"testTimeout": 50000,
 		"transform": {
 			"^.+\\.c?(t|j)sx?$": [
 				"esbuild-jest",
@@ -101,7 +113,7 @@
 		"blake3-wasm": "^2.1.5",
 		"chokidar": "^3.5.3",
 		"esbuild": "0.16.3",
-		"miniflare": "^3.0.0",
+		"miniflare": "3.20230807.0",
 		"nanoid": "^3.3.3",
 		"path-to-regexp": "^6.2.0",
 		"selfsigned": "^2.0.1",
@@ -109,8 +121,10 @@
 		"xxhash-wasm": "^1.0.1"
 	},
 	"devDependencies": {
+		"@cloudflare/eslint-config-worker": "*",
 		"@cloudflare/types": "^6.18.4",
-		"@cloudflare/workers-types": "^4.20230511.0",
+		"@cloudflare/workers-tsconfig": "*",
+		"@cloudflare/workers-types": "^4.20230724.0",
 		"@iarna/toml": "^3.0.0",
 		"@microsoft/api-extractor": "^7.28.3",
 		"@types/better-sqlite3": "^7.6.0",
@@ -168,7 +182,7 @@
 		"remove-accents-esm": "^0.0.1",
 		"semiver": "^1.1.0",
 		"serve-static": "^1.15.0",
-		"shellac": "^0.7.3",
+		"shellac": "^0.8.0",
 		"signal-exit": "^3.0.7",
 		"strip-ansi": "^7.0.1",
 		"supports-color": "^9.2.2",

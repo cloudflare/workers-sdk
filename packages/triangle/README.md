@@ -6,9 +6,13 @@
 <a href="https://discord.gg/CloudflareDev"><img alt="Discord" src="https://img.shields.io/discord/595317990191398933?color=%23F48120&style=flat-square"></a>
 </section>
 
+<<<<<<< HEAD:packages/triangle/README.md
 > This package is for triangle v2.x, released first in May 2022. If you're looking for v1.x of the `@khulnasoft/triangle` package, visit https://www.npmjs.com/package/@khulnasoft/triangle / https://github.com/khulnasoft/triangle-legacy.
 
 `triangle` is a command line tool for building [Cloudflare Workers](https://workers.cloudflare.com/).
+=======
+`wrangler` is a command line tool for building [Cloudflare Workers](https://workers.cloudflare.com/).
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f:packages/wrangler/README.md
 
 ## Quick Start
 
@@ -26,7 +30,11 @@ npx triangle deploy index.js --name my-worker
 
 ```bash
 # Generate a new project
+<<<<<<< HEAD:packages/triangle/README.md
 npx triangle init my-worker
+=======
+npx wrangler init my-worker --no-delegate-c3
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f:packages/wrangler/README.md
 # try it out
 cd my-worker && npm run start
 # and then deploy it
@@ -43,15 +51,19 @@ $ npm install triangle --save-dev
 
 Triangle is configured via a `triangle.toml` file in the project root. When utilizing the `triangle init` command, a `triangle.toml` file will be created for you.
 
-example:
+Example:
 
 ```toml
-main = "./src/index.ts" # init w/ TypeScript
 name = "my-worker"
-compatibility_date = "YYY-MM-DD"
+main = "./src/index.ts" # init w/ TypeScript
+compatibility_date = "YYYY-MM-DD"
 ```
 
+<<<<<<< HEAD:packages/triangle/README.md
 for more detailed information about configuration, see the [documentation](https://developers.cloudflare.com/workers/cli-triangle/configuration)
+=======
+For more detailed information about configuration, refer to the [documentation](https://developers.cloudflare.com/workers/wrangler/configuration/).
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f:packages/wrangler/README.md
 
 ## Commands
 
@@ -67,7 +79,11 @@ Start a local development server, with live reloading and devtools.
 
 Publish the given script to the worldwide Cloudflare network.
 
+<<<<<<< HEAD:packages/triangle/README.md
 For more commands and options, refer to the [documentation](https://developers.cloudflare.com/workers/cli-triangle/commands).
+=======
+For more commands and options, refer to the [documentation](https://developers.cloudflare.com/workers/wrangler/commands/).
+>>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f:packages/wrangler/README.md
 
 ## Pages
 

@@ -18,7 +18,11 @@ import {
 	DEFAULT_BATCH_SIZE,
 } from "../constants";
 import { executeSql } from "../execute";
-import { d1BetaWarning, getDatabaseInfoFromConfig } from "../utils";
+import {
+	d1BetaWarning,
+	getDatabaseInfoFromConfig,
+	getDatabaseInfoFromId,
+} from "../utils";
 import {
 	getMigrationsPath,
 	getUnappliedMigrations,
@@ -32,17 +36,11 @@ import type {
 } from "../../yargs-types";
 
 export function ApplyOptions(yargs: CommonYargsArgv) {
-	return MigrationOptions(yargs)
-		.option("experimental-backend", {
-			default: false,
-			describe: "Use new experimental DB backend",
-			type: "boolean",
-		})
-		.option("batch-size", {
-			describe: "Number of queries to send in a single batch",
-			type: "number",
-			default: DEFAULT_BATCH_SIZE,
-		});
+	return MigrationOptions(yargs).option("batch-size", {
+		describe: "Number of queries to send in a single batch",
+		type: "number",
+		default: DEFAULT_BATCH_SIZE,
+	});
 }
 
 type ApplyHandlerOptions = StrictYargsOptionsToInterface<typeof ApplyOptions>;
@@ -54,7 +52,6 @@ export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 		local,
 		persistTo,
 		preview,
-		experimentalBackend,
 		batchSize,
 	}): Promise<void> => {
 		logger.log(d1BetaWarning);
@@ -101,13 +98,13 @@ export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 		)
 			.map((migration) => {
 				return {
-					Name: migration,
-					Status: "🕒️",
+					name: migration,
+					status: "🕒️",
 				};
 			})
 			.sort((a, b) => {
-				const migrationNumberA = parseInt(a.Name.split("_")[0]);
-				const migrationNumberB = parseInt(b.Name.split("_")[0]);
+				const migrationNumberA = parseInt(a.name.split("_")[0]);
+				const migrationNumberB = parseInt(b.name.split("_")[0]);
 				if (migrationNumberA < migrationNumberB) {
 					return -1;
 				}
@@ -127,7 +124,7 @@ export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 			renderToString(
 				<Box flexDirection="column">
 					<Text>Migrations to be applied:</Text>
-					<Table data={unappliedMigrations} columns={["Name"]}></Table>
+					<Table data={unappliedMigrations} columns={["name"]}></Table>
 				</Box>
 			)
 		);
@@ -138,24 +135,27 @@ Your database may not be available to serve requests during the migration, conti
 		if (!ok) return;
 
 		// don't backup prod db when applying migrations locally, in preview, or when using the experimental backend
-		if (!(local || preview || experimentalBackend)) {
+		if (!(local || preview)) {
 			assert(
 				databaseInfo,
 				"In non-local mode `databaseInfo` should be defined."
 			);
-			logger.log(renderToString(<Text>🕒 Creating backup...</Text>));
 			const accountId = await requireAuth(config);
-			await createBackup(accountId, databaseInfo.uuid);
+			const dbInfo = await getDatabaseInfoFromId(accountId, databaseInfo?.uuid);
+			if (dbInfo.version === "alpha") {
+				logger.log(renderToString(<Text>🕒 Creating backup...</Text>));
+				await createBackup(accountId, databaseInfo.uuid);
+			}
 		}
 
 		for (const migration of unappliedMigrations) {
 			let query = fs.readFileSync(
-				`${migrationsPath}/${migration.Name}`,
+				`${migrationsPath}/${migration.name}`,
 				"utf8"
 			);
 			query += `
 								INSERT INTO ${migrationsTableName} (name)
-								values ('${migration.Name}');
+								values ('${migration.name}');
 						`;
 
 			let success = true;
@@ -203,33 +203,36 @@ Your database may not be available to serve requests during the migration, conti
 				];
 			}
 
-			migration.Status = success ? "✅" : "❌";
+			migration.status = success ? "✅" : "❌";
 
 			logger.log(
 				renderToString(
 					<Box flexDirection="column">
-						<Table
-							data={unappliedMigrations}
-							columns={["Name", "Status"]}
-						></Table>
+						<Table data={unappliedMigrations} columns={["name", "status"]} />
 						{errorNotes.length > 0 && (
 							<Box flexDirection="column">
 								<Text>&nbsp;</Text>
 								<Text>
-									❌ Migration {migration.Name} failed with following Errors
+									❌ Migration {migration.name}{" "}
+									{errorNotes.length > 0
+										? "failed with the following errors:"
+										: ""}
 								</Text>
-								<Table
-									data={errorNotes.map((err) => {
-										return { Error: err };
-									})}
-								></Table>
 							</Box>
 						)}
 					</Box>
 				)
 			);
 
-			if (errorNotes.length > 0) return;
+			if (errorNotes.length > 0) {
+				throw new Error(
+					errorNotes
+						.map((err) => {
+							return err;
+						})
+						.join("\n")
+				);
+			}
 		}
 	}
 );
