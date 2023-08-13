@@ -3,17 +3,10 @@
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
-<<<<<<< HEAD
 		"deploy": "triangle deploy src/index.ts",
 		"dev": "triangle dev src/index.ts --local",
 		"start-stackblitz": "TRIANGLER_SEND_METRICS=false triangle dev src/index.ts --local",
 		"test": "vitest"
-=======
-		"deploy": "wrangler deploy src/index.ts",
-		"dev": "wrangler dev src/index.ts --local",
-		"start-stackblitz": "WRANGLER_SEND_METRICS=false wrangler dev src/index.ts --local",
-		"test": "vitest run"
->>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20230518.0 ",

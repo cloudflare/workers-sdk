@@ -14,13 +14,8 @@
 		"fixtures/*"
 	],
 	"scripts": {
-<<<<<<< HEAD
 		"build": "npm run build --workspace=triangle --workspace=jest-environment-triangle --workspace=pages-plugin-example --workspace=trianglejs-compat-webpack-plugin",
 		"check": "run-p check:* --aggregate-output --continue-on-error",
-=======
-		"build": "turbo build",
-		"check": "turbo check:lint check:type check:format type:tests",
->>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f
 		"check:format": "prettier . --check --ignore-unknown",
 		"check:lint": "turbo check:lint",
 		"check:type": "turbo check:type type:tests",
@@ -28,15 +23,8 @@
 		"fix": "npm run prettify && turbo check:lint -- --fix",
 		"postinstall": "patch-package",
 		"prettify": "prettier . --write --ignore-unknown",
-<<<<<<< HEAD
 		"test": "npm run clean --workspace=triangle && npm run bundle --workspace=triangle && npm run test --workspace=packages/triangle --workspace=packages/edge-preview-authenticated-proxy --workspace=packages/pages-shared --if-present",
 		"test:ci": "npm run test:ci --workspace=packages/triangle --workspace=packages/pages-shared --if-present"
-=======
-		"test": "turbo test",
-		"test:ci": "turbo test:ci --filter=!local-mode-tests --filter=!no-bundle-import --concurrency=1",
-		"test:watch": "turbo test:watch",
-		"type:tests": "turbo type:tests"
->>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f
 	},
 	"dependencies": {
 		"@changesets/changelog-github": "^0.4.5",

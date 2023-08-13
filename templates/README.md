@@ -16,14 +16,10 @@ There are a few ways to quickly jumpstart your next project using one of the tem
 
    You may select the name of any subdirectory within this repository to create your project; for example, `worker-typescript` and `examples/fast-google-fonts` are both valid subdirectory names.
 
-<<<<<<< HEAD
    To create a `my-project` directory using the [`worker-typescript`](/worker-typescript) template, you may run one of the following commands:
 
    > **Note**
    > This package has now been sunsetted! We recommend using the `triangle generate [name] [template]` command to create new projects with templates.
-=======
-   To create a `my-project` directory using the [`worker-typescript`](/worker-typescript) template, you would run the following command:
->>>>>>> da9ba3c855317c6071eb892def4965706f2fb97f
 
 `npm create cloudflare@1 my-project worker-typescript`
 
