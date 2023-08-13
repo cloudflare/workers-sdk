@@ -1,4 +1,12 @@
-import { readFile, writeFile, mkdtemp, cp, rm, readdir } from "fs/promises";
+import {
+	readFile,
+	writeFile,
+	mkdtemp,
+	cp,
+	rm,
+	readdir,
+	rename,
+} from "fs/promises";
 import { tmpdir } from "os";
 import { resolve, join } from "path";
 import { chdir } from "process";
@@ -81,6 +89,9 @@ async function copyFiles(ctx: Context) {
 	// copy template files
 	updateStatus(`Copying files from "${template}" template`);
 	await cp(srcdir, destdir, { recursive: true });
+
+	// reverse renaming from build step
+	await rename(join(destdir, "__dot__gitignore"), join(destdir, ".gitignore"));
 }
 
 async function copyExistingWorkerFiles(ctx: Context) {
