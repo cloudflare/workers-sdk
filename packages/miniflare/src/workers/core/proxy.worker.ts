@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { parse } from "devalue";
+import { readPrefix } from "miniflare:shared";
 import {
 	CoreHeaders,
 	ProxyAddresses,
@@ -55,23 +56,6 @@ function reduceError(e: any): JsonError {
 		stack: e?.stack,
 		cause: e?.cause === undefined ? undefined : reduceError(e.cause),
 	};
-}
-
-async function readPrefix(
-	stream: ReadableStream<Uint8Array>,
-	prefixLength: number
-): Promise<[prefix: Uint8Array, rest: ReadableStream]> {
-	const reader = await stream.getReader({ mode: "byob" });
-	const result = await reader.readAtLeast(
-		prefixLength,
-		new Uint8Array(prefixLength)
-	);
-	assert(result.value !== undefined);
-	reader.releaseLock();
-	// TODO(cleanup): once https://github.com/cloudflare/workerd/issues/892 fixed,
-	//  should just be able to use `stream` here
-	const rest = stream.pipeThrough(new IdentityTransformStream());
-	return [result.value, rest];
 }
 
 // Helpers taken from `devalue` (unfortunately not exported):
