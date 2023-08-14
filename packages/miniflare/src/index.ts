@@ -37,12 +37,9 @@ import {
 	D1_PLUGIN_NAME,
 	DURABLE_OBJECTS_PLUGIN_NAME,
 	DurableObjectClassNames,
-	GatewayConstructor,
-	GatewayFactory,
 	HEADER_CF_BLOB,
 	KV_PLUGIN_NAME,
 	PLUGIN_ENTRIES,
-	Persistence,
 	PluginServicesOptions,
 	Plugins,
 	ProxyClient,
@@ -309,22 +306,24 @@ function buildProxyBinding(
 	}
 	return proxyBinding;
 }
-
-// ===== `Miniflare` Internal Storage & Routing =====
-type OptionalGatewayFactoryType<
-	Gateway extends GatewayConstructor<any> | undefined,
-> = Gateway extends GatewayConstructor<any>
-	? GatewayFactory<InstanceType<Gateway>>
-	: undefined;
-type OptionalInstanceType<
-	T extends (abstract new (...args: any) => any) | undefined,
-> = T extends abstract new (...args: any) => any ? InstanceType<T> : undefined;
-type PluginGatewayFactories = {
-	[Key in keyof Plugins]: OptionalGatewayFactoryType<Plugins[Key]["gateway"]>;
-};
-type PluginRouters = {
-	[Key in keyof Plugins]: OptionalInstanceType<Plugins[Key]["router"]>;
-};
+// Gets an array of proxy bindings for internal Durable Objects, only used in
+// testing for accessing internal methods
+function getInternalDurableObjectProxyBindings(
+	plugin: string,
+	service: Service
+): Worker_Binding[] | undefined {
+	if (!("worker" in service)) return;
+	assert(service.worker !== undefined);
+	const serviceName = service.name;
+	assert(serviceName !== undefined);
+	return service.worker.durableObjectNamespaces?.map(({ className }) => {
+		assert(className !== undefined);
+		return {
+			name: getProxyBindingName(`${plugin}-internal`, serviceName, className),
+			durableObjectNamespace: { serviceName, className },
+		};
+	});
+}
 
 type StoppableServer = http.Server & stoppable.WithStop;
 
@@ -460,8 +459,6 @@ export function _initialiseInstanceRegistry() {
 }
 
 export class Miniflare {
-	readonly #gatewayFactories: PluginGatewayFactories;
-	readonly #routers: PluginRouters;
 	#sharedOpts: PluginSharedOptions;
 	#workerOpts: PluginWorkerOptions[];
 	#log: Log;
@@ -498,10 +495,6 @@ export class Miniflare {
 	readonly #webSocketExtraHeaders: WeakMap<http.IncomingMessage, Headers>;
 
 	constructor(opts: MiniflareOptions) {
-		// Initialise plugin gateway factories and routers
-		this.#gatewayFactories = {} as PluginGatewayFactories;
-		this.#routers = {} as PluginRouters;
-
 		// Split and validate options
 		const [sharedOpts, workerOpts] = validateOptions(opts);
 		this.#sharedOpts = sharedOpts;
@@ -525,8 +518,6 @@ export class Miniflare {
 		if (net.isIPv6(this.#accessibleHost)) {
 			this.#accessibleHost = `[${this.#accessibleHost}]`;
 		}
-
-		this.#initPlugins();
 
 		this.#liveReloadServer = new WebSocketServer({ noServer: true });
 		this.#webSocketServer = new WebSocketServer({
@@ -573,25 +564,6 @@ export class Miniflare {
 				maybeInstanceRegistry?.delete(this);
 				throw e;
 			});
-	}
-
-	#initPlugins() {
-		for (const [key, plugin] of PLUGIN_ENTRIES) {
-			if (plugin.gateway !== undefined && plugin.router !== undefined) {
-				const gatewayFactory = new GatewayFactory<any>(
-					this.#log,
-					this.#timers,
-					this.dispatchFetch,
-					key,
-					plugin.gateway
-				);
-				const router = new plugin.router(this.#log, gatewayFactory);
-				// @ts-expect-error this.#gatewayFactories[key] could be any plugin's
-				this.#gatewayFactories[key] = gatewayFactory;
-				// @ts-expect-error this.#routers[key] could be any plugin's
-				this.#routers[key] = router;
-			}
-		}
 	}
 
 	#handleReload() {
@@ -662,28 +634,6 @@ export class Miniflare {
 			// TODO: do we need to add `CF-Exception` header or something here?
 			//  check what runtime does
 			return new Response(e?.stack ?? e, { status: 500 });
-		}
-	}
-
-	async #handleLoopbackPlugins(
-		request: Request<RequestInitCfProperties>,
-		url: URL
-	): Promise<Response | undefined> {
-		const pathname = url.pathname;
-		for (const [key] of PLUGIN_ENTRIES) {
-			const pluginPrefix = `/${key}`;
-			if (pathname.startsWith(pluginPrefix)) {
-				// Reuse existing URL object, just remove prefix from pathname
-				url.pathname = pathname.substring(pluginPrefix.length);
-				// Try route using this plugin, and respond if matched
-				try {
-					const response = await this.#routers[key]?.route(request, url);
-					if (response !== undefined) return response;
-				} catch (e) {
-					if (e instanceof HttpError) return e.toResponse();
-					throw e;
-				}
-			}
 		}
 	}
 
@@ -760,9 +710,6 @@ export class Miniflare {
 				response = new Response(null, { status: 204 });
 			} else if (url.pathname.startsWith(SourceMapRegistry.PATHNAME_PREFIX)) {
 				response = await this.#sourceMapRegistry?.get(url);
-			} else {
-				// TODO: check for proxying/outbound fetch header first (with plans for fetch mocking)
-				response = await this.#handleLoopbackPlugins(request, url);
 			}
 		} catch (e: any) {
 			this.#log.error(e);
@@ -879,6 +826,7 @@ export class Miniflare {
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
 		const queueConsumers = getQueueConsumers(allWorkerOpts);
 		const allWorkerRoutes = getWorkerRoutes(allWorkerOpts);
+		const workerNames = [...allWorkerRoutes.keys()];
 
 		// Use Map to dedupe services by name
 		const services = new Map<string, Service>();
@@ -926,6 +874,7 @@ export class Miniflare {
 				workerIndex: i,
 				additionalModules,
 				tmpPath: this.#tmpPath,
+				workerNames,
 				sourceMapRegistry,
 				durableObjectClassNames,
 				queueConsumers,
@@ -943,6 +892,15 @@ export class Miniflare {
 					for (const service of pluginServices) {
 						if (service.name !== undefined && !services.has(service.name)) {
 							services.set(service.name, service);
+							if (key !== DURABLE_OBJECTS_PLUGIN_NAME) {
+								const maybeBindings = getInternalDurableObjectProxyBindings(
+									key,
+									service
+								);
+								if (maybeBindings !== undefined) {
+									proxyBindings.push(...maybeBindings);
+								}
+							}
 						}
 					}
 				}
@@ -1279,6 +1237,15 @@ export class Miniflare {
 		workerName?: string
 	): Promise<ReplaceWorkersTypes<R2Bucket>> {
 		return this.#getProxy(R2_PLUGIN_NAME, bindingName, workerName);
+	}
+
+	/** @internal */
+	_getInternalDurableObjectNamespace(
+		pluginName: string,
+		serviceName: string,
+		className: string
+	): Promise<ReplaceWorkersTypes<DurableObjectNamespace>> {
+		return this.#getProxy(`${pluginName}-internal`, className, serviceName);
 	}
 
 	async dispose(): Promise<void> {
