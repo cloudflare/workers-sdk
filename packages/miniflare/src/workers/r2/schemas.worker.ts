@@ -1,7 +1,7 @@
-import { z } from "zod";
-import { Base64DataSchema, HexDataSchema, ValueOf } from "../../shared";
+import { ValueOf } from "miniflare:shared";
+import { Base64DataSchema, HexDataSchema, z } from "miniflare:zod";
 
-export interface ObjectRow {
+export type ObjectRow = {
 	key: string;
 	blob_id: string | null; // null if multipart
 	version: string;
@@ -11,13 +11,13 @@ export interface ObjectRow {
 	checksums: string; // JSON-serialised `R2StringChecksums` (workers-types)
 	http_metadata: string; // JSON-serialised `R2HTTPMetadata` (workers-types)
 	custom_metadata: string; // JSON-serialised user-defined metadata
-}
+};
 export const MultipartUploadState = {
 	IN_PROGRESS: 0,
 	COMPLETED: 1,
 	ABORTED: 2,
 } as const;
-export interface MultipartUploadRow {
+export type MultipartUploadRow = {
 	upload_id: string;
 	key: string;
 	http_metadata: string; // JSON-serialised `R2HTTPMetadata` (workers-types)
@@ -26,8 +26,8 @@ export interface MultipartUploadRow {
 	// NOTE: we need to keep completed/aborted uploads around for referential
 	// integrity, and because error messages are different when attempting to
 	// upload parts to them
-}
-export interface MultipartPartRow {
+};
+export type MultipartPartRow = {
 	upload_id: string;
 	part_number: number;
 	blob_id: string;
@@ -35,7 +35,7 @@ export interface MultipartPartRow {
 	etag: string; // NOTE: multipart part ETag's are not MD5 checksums
 	checksum_md5: string; // NOTE: used in construction of final object's ETag
 	object_key: string | null; // null if in-progress upload
-}
+};
 export const SQL_SCHEMA = `
 CREATE TABLE IF NOT EXISTS _mf_objects (
     key TEXT PRIMARY KEY,
