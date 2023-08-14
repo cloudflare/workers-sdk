@@ -233,20 +233,14 @@ function getQueueConsumers(
 		}
 	}
 
-	// Populate all `deadLetterConsumer`s, note this may create cycles
 	for (const [queueName, consumer] of queueConsumers) {
-		if (consumer.deadLetterQueue !== undefined) {
-			// Check the dead letter queue isn't configured to be the queue itself
-			// (NOTE: Queues *does* permit DLQ cycles between multiple queues,
-			//  i.e. if Q2 is DLQ for Q1, but Q1 is DLQ for Q2)
-			if (consumer.deadLetterQueue === queueName) {
-				throw new QueuesError(
-					"ERR_DEAD_LETTER_QUEUE_CYCLE",
-					`Dead letter queue for queue "${queueName}" cannot be itself`
-				);
-			}
-			consumer.deadLetterConsumer = queueConsumers.get(
-				consumer.deadLetterQueue
+		// Check the dead letter queue isn't configured to be the queue itself
+		// (NOTE: Queues *does* permit DLQ cycles between multiple queues,
+		//  i.e. if Q2 is DLQ for Q1, but Q1 is DLQ for Q2)
+		if (consumer.deadLetterQueue === queueName) {
+			throw new QueuesError(
+				"ERR_DEAD_LETTER_QUEUE_CYCLE",
+				`Dead letter queue for queue "${queueName}" cannot be itself`
 			);
 		}
 	}
