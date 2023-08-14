@@ -1,19 +1,25 @@
-import { stringify } from "devalue";
-import semiver from "semiver";
+import SCRIPT_QUEUE_BROKER_OBJECT from "worker:queues/broker";
 import { z } from "zod";
-import { Service, Worker_Binding } from "../../runtime";
-import { maybeApply } from "../../shared";
+import {
+	Service,
+	Worker_Binding,
+	Worker_Binding_DurableObjectNamespaceDesignator,
+	kVoid,
+} from "../../runtime";
+import {
+	QueueBindings,
+	QueueConsumerOptionsSchema,
+	SharedBindings,
+} from "../../workers";
+import { getUserServiceName } from "../core";
 import {
 	Plugin,
-	QueueConsumerOptionsSchema,
+	SERVICE_LOOPBACK,
 	kProxyNodeBinding,
 	namespaceEntries,
 	namespaceKeys,
-	pluginNamespacePersistWorker,
+	objectEntryWorker,
 } from "../shared";
-import { QueuesError } from "./errors";
-import { QueuesGateway } from "./gateway";
-import { QueuesRouter } from "./router";
 
 export const QueuesOptionsSchema = z.object({
 	queueProducers: z
@@ -24,79 +30,84 @@ export const QueuesOptionsSchema = z.object({
 		.optional(),
 });
 
-// workerd uses V8 serialisation version 15 when sending messages:
-// https://github.com/cloudflare/workerd/blob/575eba6747054fb810f8a8138c2bf04b22339f77/src/workerd/api/queue.c%2B%2B#L17
-// This is only supported by V8 versions 10.0.29 and above:
-// https://github.com/v8/v8/commit/fc23bc1de29f415f5e3bc080055b67fb3ea19c53.
-//
-// For reference, the V8 versions associated with notable Node versions are:
-// - Miniflare's minimum supported version: Node 16.13.0 --> V8 9.4
-// - Last Node 17/unsupported version:      Node 17.9.1  --> V8 9.6
-// - First supported version:               Node 18.0.0  --> V8 10.1
-//
-// See also https://github.com/nodejs/node/issues/42192.
-/** @internal */
-export const _QUEUES_COMPATIBLE_V8_VERSION =
-	semiver(process.versions.v8, "10.0.29") >= 0;
-
-function assertCompatibleV8Version() {
-	if (!_QUEUES_COMPATIBLE_V8_VERSION) {
-		throw new QueuesError(
-			"ERR_V8_UNSUPPORTED",
-			"The version of V8 bundled with this version of Node.js does not support Queues. " +
-				"Please upgrade to the latest Node.js LTS release."
-		);
-	}
-}
-
 export const QUEUES_PLUGIN_NAME = "queues";
-export const QUEUES_PLUGIN: Plugin<
-	typeof QueuesOptionsSchema,
-	undefined,
-	QueuesGateway
-> = {
-	gateway: QueuesGateway,
-	router: QueuesRouter,
+const SERVICE_QUEUE_PREFIX = `${QUEUES_PLUGIN_NAME}:queue`;
+const QUEUE_BROKER_OBJECT_CLASS_NAME = "QueueBrokerObject";
+const QUEUE_BROKER_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
+	serviceName: SERVICE_QUEUE_PREFIX,
+	className: QUEUE_BROKER_OBJECT_CLASS_NAME,
+};
+
+export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
 	options: QueuesOptionsSchema,
 	getBindings(options) {
 		const queues = namespaceEntries(options.queueProducers);
-
-		const hasProducers = queues.length > 0;
-		const hasConsumers = Object.keys(options.queueConsumers ?? {}).length > 0;
-		if (hasProducers || hasConsumers) assertCompatibleV8Version();
-
 		return queues.map<Worker_Binding>(([name, id]) => ({
 			name,
-			queue: { name: `${QUEUES_PLUGIN_NAME}:${id}` },
+			queue: { name: `${SERVICE_QUEUE_PREFIX}:${id}` },
 		}));
 	},
 	getNodeBindings(options) {
 		const queues = namespaceKeys(options.queueProducers);
 		return Object.fromEntries(queues.map((name) => [name, kProxyNodeBinding]));
 	},
-	async getServices({ options, queueConsumers: allQueueConsumers }) {
+	async getServices({
+		options,
+		workerNames,
+		queueConsumers: allQueueConsumers,
+	}) {
 		const queues = namespaceEntries(options.queueProducers);
 		if (queues.length === 0) return [];
-		return queues.map<Service>(([_, id]) => {
-			// Abusing persistence to store queue consumer. We don't support
-			// persisting queued data yet, but we are essentially persisting messages
-			// to a consumer. We'll unwrap this in the router as usual. Note we're
-			// using `devalue` here as `consumer` may contain cycles, if a dead-letter
-			// queue references itself or another queue that references the same
-			// dead-letter queue.
-			const consumer = allQueueConsumers.get(id);
-			const persist = maybeApply(stringify, consumer);
-			return {
-				name: `${QUEUES_PLUGIN_NAME}:${id}`,
-				worker: pluginNamespacePersistWorker(
-					QUEUES_PLUGIN_NAME,
-					encodeURIComponent(id),
-					persist
-				),
-			};
-		});
+
+		const services = queues.map<Service>(([_, id]) => ({
+			name: `${SERVICE_QUEUE_PREFIX}:${id}`,
+			worker: objectEntryWorker(QUEUE_BROKER_OBJECT, id),
+		}));
+
+		const uniqueKey = `miniflare-${QUEUE_BROKER_OBJECT_CLASS_NAME}`;
+		const objectService: Service = {
+			name: SERVICE_QUEUE_PREFIX,
+			worker: {
+				compatibilityDate: "2023-07-24",
+				compatibilityFlags: [
+					"nodejs_compat",
+					"experimental",
+					"service_binding_extra_handlers",
+				],
+				modules: [
+					{ name: "broker.worker.js", esModule: SCRIPT_QUEUE_BROKER_OBJECT() },
+				],
+				durableObjectNamespaces: [
+					{ className: QUEUE_BROKER_OBJECT_CLASS_NAME, uniqueKey },
+				],
+				// Miniflare's Queue broker is in-memory only at the moment
+				durableObjectStorage: { inMemory: kVoid },
+				bindings: [
+					{
+						name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
+						service: { name: SERVICE_LOOPBACK },
+					},
+					{
+						name: SharedBindings.DURABLE_OBJECT_NAMESPACE_OBJECT,
+						durableObjectNamespace: {
+							className: QUEUE_BROKER_OBJECT_CLASS_NAME,
+						},
+					},
+					{
+						name: QueueBindings.MAYBE_JSON_QUEUE_CONSUMERS,
+						json: JSON.stringify(Object.fromEntries(allQueueConsumers)),
+					},
+					...workerNames.map((name) => ({
+						name: QueueBindings.SERVICE_WORKER_PREFIX + name,
+						service: { name: getUserServiceName(name) },
+					})),
+				],
+			},
+		};
+		services.push(objectService);
+
+		return services;
 	},
 };
 
 export * from "./errors";
-export * from "./gateway";

@@ -409,8 +409,6 @@ parameter in module format Workers.
 
 #### Queues
 
-> :warning: Queues are only supported with Node.js 18 or above.
-
 - `queueProducers?: Record<string, string> | string[]`
 
   Record mapping binding name to queue names to inject as `WorkerQueue` bindings
