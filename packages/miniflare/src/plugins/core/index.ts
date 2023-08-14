@@ -549,7 +549,7 @@ export function getGlobalServices({
 		{
 			name: SERVICE_ENTRY,
 			worker: {
-				modules: [{ name: "entry.worker.js", esModule: SCRIPT_ENTRY }],
+				modules: [{ name: "entry.worker.js", esModule: SCRIPT_ENTRY() }],
 				compatibilityDate: "2023-04-04",
 				compatibilityFlags: ["nodejs_compat", "service_binding_extra_handlers"],
 				bindings: serviceEntryBindings,

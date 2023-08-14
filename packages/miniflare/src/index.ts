@@ -18,6 +18,8 @@ import type {
 } from "@cloudflare/workers-types/experimental";
 import exitHook from "exit-hook";
 import stoppable from "stoppable";
+import SCRIPT_MINIFLARE_SHARED from "worker:shared/index";
+import SCRIPT_MINIFLARE_ZOD from "worker:shared/zod";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
 import { fallbackCf, setupCf } from "./cf";
@@ -915,6 +917,12 @@ export class Miniflare {
 		//  will probably look something like `{ wrappedBindings: { A: "a" } }`
 		//  where `"a"` is the name of a "worker" in `workers`.
 		const extensions: Extension[] = [
+			{
+				modules: [
+					{ name: "miniflare:shared", esModule: SCRIPT_MINIFLARE_SHARED() },
+					{ name: "miniflare:zod", esModule: SCRIPT_MINIFLARE_ZOD() },
+				],
+			},
 			{
 				modules: [
 					{
