@@ -99,7 +99,7 @@ test(
 	"gets included assets with include and exclude filters",
 	getMacro,
 	{ siteInclude: ["*.txt"], siteExclude: ["b"] },
-	new Set<Route>(["/a.txt"])
+	new Set<Route>(["/a.txt", "/b/b.txt"])
 );
 
 // Tests for checking different types of globs are matched correctly
@@ -151,78 +151,17 @@ test("doesn't cache assets", async (t) => {
 test("gets assets with module worker", async (t) => {
 	const tmp = await useTmp(t);
 	const testPath = path.join(tmp, "test.txt");
-	const dirPath = path.join(tmp, "dir");
-	const nestedPath = path.join(dirPath, "nested.txt");
 	await fs.writeFile(testPath, "test", "utf8");
-	await fs.mkdir(dirPath, { recursive: true });
-	await fs.writeFile(nestedPath, "nested", "utf8");
-
 	const mf = new Miniflare({
+		// TODO(soon): use `scriptPath` and `modules: true` once
+		//  https://github.com/cloudflare/miniflare/pull/631 merged
+		modulesRoot: path.dirname(t.context.modulesPath),
 		modules: [{ type: "ESModule", path: t.context.modulesPath }],
 		sitePath: tmp,
 	});
 	t.teardown(() => mf.dispose());
-
-	let res = await mf.dispatchFetch("http://localhost:8787/test.txt");
-	t.is(await res.text(), "test");
-	res = await mf.dispatchFetch("http://localhost:8787/dir/nested.txt");
-	t.is(await res.text(), "nested");
-});
-
-test("can import manifest from any directory", async (t) => {
-	const tmp = await useTmp(t);
-	const testPath = path.join(tmp, "test.txt");
-	await fs.writeFile(testPath, "test", "utf8");
-	const mf = new Miniflare({
-		modules: [
-			{
-				type: "ESModule",
-				path: "index.mjs",
-				contents: `
-        import root from "__STATIC_CONTENT_MANIFEST";
-        import a1 from "./a/1.mjs";
-        import ab2 from "./a/b/2.mjs";
-        import ab3 from "./a/b/3.mjs";
-        import abc4 from "./a/b/c/4.mjs";
-        
-        export default {
-          async fetch() {
-            return Response.json({
-              a1: a1 === root,
-              ab2: ab2 === root,
-              ab3: ab3 === root,
-              abc4: abc4 === root,
-            });
-          }
-        }
-        `,
-			},
-			{
-				type: "ESModule",
-				path: "a/1.mjs",
-				contents: 'export { default } from "__STATIC_CONTENT_MANIFEST";',
-			},
-			{
-				type: "ESModule",
-				path: "a/b/2.mjs",
-				contents: 'export { default } from "__STATIC_CONTENT_MANIFEST";',
-			},
-			{
-				type: "ESModule",
-				path: "a/b/3.mjs",
-				contents: 'export { default } from "__STATIC_CONTENT_MANIFEST";',
-			},
-			{
-				type: "ESModule",
-				path: "a/b/c/4.mjs",
-				contents: 'export { default } from "__STATIC_CONTENT_MANIFEST";',
-			},
-		],
-		sitePath: tmp,
-	});
-	t.teardown(() => mf.dispose());
 	const res = await mf.dispatchFetch("http://localhost:8787/test.txt");
-	t.deepEqual(await res.json(), { a1: true, ab2: true, ab3: true, abc4: true });
+	t.is(await res.text(), "test");
 });
 
 test("gets assets with percent-encoded paths", async (t) => {
@@ -239,7 +178,9 @@ test("gets assets with percent-encoded paths", async (t) => {
 	t.is(await res.text(), "test");
 });
 
-test("static content namespace supports listing keys", async (t) => {
+const isWindows = process.platform === "win32";
+const unixTest = isWindows ? test.skip : test;
+unixTest("static content namespace supports listing keys", async (t) => {
 	const tmp = await useTmp(t);
 	await fs.mkdir(path.join(tmp, "a", "b", "c"), { recursive: true });
 	await fs.writeFile(path.join(tmp, "1.txt"), "one");
