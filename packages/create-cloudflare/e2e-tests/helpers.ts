@@ -68,7 +68,6 @@ export const runC3 = async ({
 		});
 
 		proc.stderr.on("data", (data) => {
-			console.log(data.toString());
 			stderr.push(data);
 		});
 

@@ -209,6 +209,7 @@ export const printSummary = async (ctx: PagesGeneratorContext) => {
 		}
 	}
 	endSection("See you again soon!");
+	process.exit(0);
 };
 
 export const offerGit = async (ctx: PagesGeneratorContext) => {
