@@ -17,5 +17,3 @@ $ yarn wrangler generate my-project https://github.com/cloudflare/workers-sdk/te
 # or
 $ pnpm wrangler generate my-project https://github.com/cloudflare/workers-sdk/templates/experimental/worker-cobol
 ```
-
-> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.

@@ -18,8 +18,6 @@ $ yarn wrangler generate my-project https://github.com/cloudflare/workers-sdk/te
 $ pnpm wrangler generate my-project https://github.com/cloudflare/workers-sdk/templates/experimental/worker-rust
 ```
 
-> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.
-
 ## Wrangler
 
 Wrangler is used to develop, deploy, and configure your Worker via CLI.

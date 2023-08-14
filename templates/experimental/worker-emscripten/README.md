@@ -23,8 +23,6 @@ $ yarn wrangler generate my-project https://github.com/cloudflare/workers-sdk/te
 $ pnpm wrangler generate my-project https://github.com/cloudflare/workers-sdk/templates/experimental/worker-emscripten
 ```
 
-> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.
-
 ## Credits
 
 Shoutout to [Surma](https://twitter.com/dassurma) for his [webpack-emscripten-wasm](https://gist.github.com/surma/b2705b6cca29357ebea1c9e6e15684cc) gist that was instrumental in getting this working!

@@ -15,5 +15,3 @@ $ yarn wrangler generate my-project pages-functions-cors
 # or
 $ pnpm wrangler generate my-project pages-functions-cors
 ```
-
-> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.

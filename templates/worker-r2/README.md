@@ -18,8 +18,6 @@ $ yarn wrangler generate my-project worker-r2
 $ pnpm wrangler generate my-project worker-r2
 ```
 
-> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.
-
 ## Getting started
 
 Run the following commands in the console:

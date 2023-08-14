@@ -16,8 +16,6 @@ $ yarn wrangler generate my-project https://github.com/cloudflare/workers-sdk/te
 $ pnpm wrangler generate my-project https://github.com/cloudflare/workers-sdk/templates/experimental/worker-kotlin
 ```
 
-> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.
-
 ## Wrangler
 
 Configure the [wrangler.toml](wrangler.toml) by filling in the `account_id` from the Workers pages of your Cloudflare Dashboard.

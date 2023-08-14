@@ -18,8 +18,6 @@ $ yarn wrangler generate my-project worker-analytics-engine-forwarder
 $ pnpm wrangler generate my-project worker-analytics-engine-forwarder
 ```
 
-> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.
-
 ## Authentication
 
 Authentication is via bearer token. You can use any token or password string as long as you supply the same string to both the worker and the caller. To configure the token on the worker side you must set the `BEARER_TOKEN` secret to the token value by running (in a terminal, from within this project directory):

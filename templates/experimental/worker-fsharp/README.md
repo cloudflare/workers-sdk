@@ -43,8 +43,6 @@ $ yarn wrangler generate my-project https://github.com/cloudflare/workers-sdk/te
 $ pnpm wrangler generate my-project https://github.com/cloudflare/workers-sdk/templates/experimental/worker-fsharp
 ```
 
-> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.
-
 ### Build and Deploy to Dev
 
 1. Run `dotnet tool restore`

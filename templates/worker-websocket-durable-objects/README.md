@@ -15,5 +15,3 @@ $ yarn wrangler generate my-project worker-websocket-durable-objects
 # or
 $ pnpm wrangler generate my-project worker-websocket-durable-objects
 ```
-
-> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.

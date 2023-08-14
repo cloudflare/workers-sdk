@@ -22,8 +22,6 @@ $ yarn wrangler generate my-project worktop
 $ pnpm wrangler generate my-project worktop
 ```
 
-> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.
-
 You will need to add a `JWT_SECRET` for your project for JWT token signing and verification.
 
 ```sh

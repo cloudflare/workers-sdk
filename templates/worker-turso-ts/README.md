@@ -17,8 +17,6 @@ $ yarn wrangler generate my-project worker-turso-ts
 $ pnpm wrangler generate my-project worker-turso-ts
 ```
 
-> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.
-
 In order to get this code to run, you will need to:
 
 - Edit `wrangler.toml` and set the `LIBSQL_DB_URL` [environment variable]

@@ -16,8 +16,6 @@ $ yarn wrangler generate my-project worker-mysql
 $ pnpm wrangler generate my-project worker-mysql
 ```
 
-> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.
-
 ## Usage
 
 Before you start, please refer to the **[official tutorial](https://developers.cloudflare.com/workers/tutorials/query-postgres-from-workers-using-database-connectors)**.

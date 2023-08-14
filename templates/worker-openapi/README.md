@@ -18,8 +18,6 @@ $ yarn wrangler generate my-project worker-openapi
 $ pnpm wrangler generate my-project worker-openapi
 ```
 
-> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.
-
 ## Local development
 
 Run `wrangler dev` and head to `/docs` our `/redocs` with your browser.

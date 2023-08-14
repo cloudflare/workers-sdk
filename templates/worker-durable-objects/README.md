@@ -19,5 +19,3 @@ $ yarn wrangler generate my-project worker-durable-objects
 # or
 $ pnpm wrangler generate my-project worker-durable-objects
 ```
-
-> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.

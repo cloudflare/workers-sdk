@@ -18,8 +18,6 @@ $ yarn wrangler generate my-project worker-aws
 $ pnpm wrangler generate my-project worker-aws
 ```
 
-> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.
-
 [`index.js`](https://github.com/cloudflare/workers-aws-template/blob/master/index.js) is the content of the Workers script. In `handleRequest`, uncomment the example for the service you want to try out.
 
 You'll need to use wrangler secrets to add appropriate values for `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, plus any of the service specific secrets, e.g.

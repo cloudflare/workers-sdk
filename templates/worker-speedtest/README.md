@@ -20,8 +20,6 @@ $ yarn wrangler generate my-project worker-speedtest
 $ pnpm wrangler generate my-project worker-speedtest
 ```
 
-> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.
-
 Before publishing your code you need to edit `wrangler.toml` file and add your Cloudflare `account_id` - more information about publishing your code can be found [in the documentation](https://developers.cloudflare.com/workers/learning/getting-started).
 
 Once you are ready, you can publish your code by running the following command:

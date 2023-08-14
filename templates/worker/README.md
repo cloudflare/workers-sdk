@@ -15,5 +15,3 @@ $ yarn wrangler generate my-project worker
 # or
 $ pnpm wrangler generate my-project worker
 ```
-
-> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.
