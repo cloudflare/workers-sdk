@@ -21,6 +21,7 @@ import { upload } from "../../pages/upload";
 import { createUploadWorkerBundleContents } from "./create-worker-bundle-contents";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Project, Deployment } from "@cloudflare/types";
+import { MAX_DEPLOYMENT_ATTEMPTS } from "../../pages/constants";
 
 interface PagesDeployOptions {
 	/**
@@ -360,12 +361,35 @@ export async function deploy({
 		}
 	}
 
-	const deploymentResponse = await fetchResult<Deployment>(
-		`/accounts/${accountId}/pages/projects/${projectName}/deployments`,
-		{
-			method: "POST",
-			body: formData,
+	let attempts = 0;
+	let lastErr: unknown;
+	while (attempts < MAX_DEPLOYMENT_ATTEMPTS) {
+		try {
+			const deploymentResponse = await fetchResult<Deployment>(
+				`/accounts/${accountId}/pages/projects/${projectName}/deployments`,
+				{
+					method: "POST",
+					body: formData,
+				}
+			);
+			return deploymentResponse;
+		} catch (e) {
+			lastErr = e;
+			if (
+				(e as { code: number }).code === 8000000 &&
+				attempts < MAX_DEPLOYMENT_ATTEMPTS
+			) {
+				logger.debug("failed:", e, "retrying...");
+				// Exponential backoff, 1 second first time, then 2 second, then 4 second etc.
+				await new Promise((resolvePromise) =>
+					setTimeout(resolvePromise, Math.pow(2, attempts++) * 1000)
+				);
+			} else {
+				logger.debug("failed:", e);
+				throw e;
+			}
 		}
-	);
-	return deploymentResponse;
+	}
+	// We should never make it here, but just in case
+	throw lastErr;
 }
