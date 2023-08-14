@@ -134,7 +134,7 @@ export const KV_PLUGIN: Plugin<
 		}
 
 		if (isWorkersSitesEnabled(options)) {
-			services.push(getSitesService(options));
+			services.push(...getSitesServices(options));
 		}
 
 		return services;
