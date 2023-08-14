@@ -1,4 +1,4 @@
-import { existsSync } from "fs";
+import { existsSync, rmSync } from "fs";
 import path from "path";
 import { spawn } from "cross-spawn";
 import { endSection, stripAnsi } from "./cli";
@@ -228,6 +228,26 @@ export const installPackages = async (
 
 export const npmInstall = async () => {
 	const { npm } = detectPackageManager();
+
+	await runCommand(`${npm} install`, {
+		silent: true,
+		startText: "Installing dependencies",
+		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
+	});
+};
+
+// Resets the package manager context for a project by clearing out existing dependencies
+// and lock files then re-installing.
+export const resetPackageManager = async (ctx: PagesGeneratorContext) => {
+	const { npm } = detectPackageManager();
+
+	// Only do this when using pnpm or yarn
+	if (npm === "npm") return;
+
+	const nodeModulesPath = path.join(ctx.project.path, "node_modules");
+	rmSync(nodeModulesPath, { recursive: true });
+	const lockfilePath = path.join(ctx.project.path, "package-lock.json");
+	rmSync(lockfilePath);
 
 	await runCommand(`${npm} install`, {
 		silent: true,

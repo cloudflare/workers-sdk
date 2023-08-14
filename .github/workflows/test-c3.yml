@@ -61,7 +61,7 @@ jobs:
         # os: [ubuntu-latest, windows-latest, macos-latest]
         os: [ubuntu-latest]
         # pm: [npm, yarn, pnpm]
-        pm: [npm]
+        pm: [npm, pnpm]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
