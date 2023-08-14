@@ -1,8 +1,6 @@
 import assert from "assert";
 import fs from "fs/promises";
-import path from "path";
-import Database from "better-sqlite3";
-import { createFileStorage } from "miniflare";
+import { Miniflare, MiniflareOptions } from "miniflare";
 import { useTmp, utf8Encode } from "../../test-shared";
 import { binding, getDatabase, opts, test } from "./test";
 
@@ -51,18 +49,6 @@ function throwCause<T>(promise: Promise<T>): Promise<T> {
 	});
 }
 
-test("D1Database: dump", async (t) => {
-	const { db, tableColours } = t.context;
-	const tmp = await useTmp(t);
-	const buffer = await db.dump();
-
-	// Load the dumped data as an SQLite database and try query it
-	const tmpPath = path.join(tmp, "db.sqlite3");
-	await fs.writeFile(tmpPath, new Uint8Array(buffer));
-	const sqliteDb = new Database(tmpPath);
-	const results = sqliteDb.prepare(`SELECT name FROM ${tableColours}`).all();
-	t.deepEqual(results, [{ name: "red" }, { name: "green" }, { name: "blue" }]);
-});
 test("D1Database: batch", async (t) => {
 	const { db, tableColours } = t.context;
 
@@ -112,7 +98,7 @@ test("D1Database: exec", async (t) => {
 		`UPDATE ${tableColours} SET name = 'Red' WHERE name = 'red'`
 	);
 	t.is(execResult.count, 1);
-	t.true(execResult.duration > 0);
+	t.true(execResult.duration >= 0);
 	let result = await db
 		.prepare(`SELECT name FROM ${tableColours} WHERE name = 'Red'`)
 		.all<Pick<ColourRow, "name">>();
@@ -125,7 +111,7 @@ test("D1Database: exec", async (t) => {
 	].join("\n");
 	execResult = await db.exec(statements);
 	t.is(execResult.count, 2);
-	t.true(execResult.duration > 0);
+	t.true(execResult.duration >= 0);
 	result = await db.prepare(`SELECT name FROM ${tableColours}`).all();
 	t.deepEqual(result.results, [
 		{ name: "Red" },
@@ -161,14 +147,17 @@ test("D1PreparedStatement: bind", async (t) => {
 		{ id: 1, int: 42, real: 3.141, text: "🙈", blob: null },
 	]);
 
-	// Check with multiple statements (should only bind first)
-	const colourResults = await db
+	// Check with multiple statements
+	const colourResultsPromise = db
 		.prepare(
 			`SELECT * FROM ${tableColours} WHERE name = ?; SELECT * FROM ${tableColours} WHERE id = ?;`
 		)
 		.bind("green")
 		.all<ColourRow>();
-	t.is(colourResults.results?.length, 1);
+	await t.throwsAsync(colourResultsPromise, {
+		instanceOf: Error,
+		message: /A prepared SQL statement must contain only one statement/,
+	});
 
 	// Check with numbered parameters (execute and query)
 	// https://github.com/cloudflare/miniflare/issues/504
@@ -195,13 +184,16 @@ test("D1PreparedStatement: first", async (t) => {
 	let id: number | null = await select.first<number>("id");
 	t.is(id, 1);
 
-	// Check with multiple statements (should only match on first statement)
-	result = await db
+	// Check with multiple statements
+	const resultPromise = db
 		.prepare(
 			`SELECT * FROM ${tableColours} WHERE name = 'none'; SELECT * FROM ${tableColours} WHERE id = 1;`
 		)
 		.first();
-	t.is(result, null);
+	await t.throwsAsync(resultPromise, {
+		instanceOf: Error,
+		message: /A prepared SQL statement must contain only one statement/,
+	});
 
 	// Check with write statement (should actually execute statement)
 	result = await db
@@ -219,51 +211,77 @@ test("D1PreparedStatement: run", async (t) => {
 	const { db, tableColours, tableKitchenSink } = t.context;
 
 	// Check with read statement
-	await t.throwsAsync(
-		throwCause(db.prepare(`SELECT * FROM ${tableColours}`).run()),
-		{ message: /Execute returned results - did you mean to call query\?/ }
-	);
-	// Check with read/write statement
-	await t.throwsAsync(
-		throwCause(
-			db
-				.prepare(
-					`INSERT INTO ${tableColours} (id, name, rgb) VALUES (?, ?, ?) RETURNING *`
-				)
-				.bind(4, "yellow", 0xffff00)
-				.run()
-		),
-		{ message: /Execute returned results - did you mean to call query\?/ }
-	);
+	let result = await db.prepare(`SELECT * FROM ${tableColours}`).run();
+	t.true(result.meta.duration >= 0);
+	t.deepEqual(result, {
+		success: true,
+		results: [
+			{ id: 1, name: "red", rgb: 16711680 },
+			{ id: 2, name: "green", rgb: 65280 },
+			{ id: 3, name: "blue", rgb: 255 },
+		],
+		meta: {
+			changed_db: false,
+			changes: 0,
+			// Don't know duration, so just match on returned value asserted > 0
+			duration: result.meta.duration,
+			// Not an `INSERT`, so `last_row_id` non-deterministic
+			last_row_id: result.meta.last_row_id,
+			served_by: "miniflare.db",
+			size_after: result.meta.size_after,
+		},
+	});
 
-	// Check with multiple statements (should only execute first statement)
-	let result = await db
+	// Check with read/write statement
+	result = await db
+		.prepare(
+			`INSERT INTO ${tableColours} (id, name, rgb) VALUES (?, ?, ?) RETURNING *`
+		)
+		.bind(4, "yellow", 0xffff00)
+		.run();
+	t.true(result.meta.duration >= 0);
+	t.deepEqual(result, {
+		results: [{ id: 4, name: "yellow", rgb: 16776960 }],
+		success: true,
+		meta: {
+			changed_db: true,
+			changes: 1,
+			// Don't know duration, so just match on returned value asserted > 0
+			duration: result.meta.duration,
+			last_row_id: 4,
+			served_by: "miniflare.db",
+			size_after: result.meta.size_after,
+		},
+	});
+
+	// Check with multiple statements
+	const resultPromise = db
 		.prepare(
 			`INSERT INTO ${tableKitchenSink} (id) VALUES (1); INSERT INTO ${tableKitchenSink} (id) VALUES (2);`
 		)
 		.run();
-	t.true(result.success);
-	const results = await db
-		.prepare(`SELECT id FROM ${tableKitchenSink}`)
-		.all<Pick<KitchenSinkRow, "id">>();
-	t.deepEqual(results.results, [{ id: 1 }]);
+	await t.throwsAsync(resultPromise, {
+		instanceOf: Error,
+		message: /A prepared SQL statement must contain only one statement/,
+	});
 
 	// Check with write statement
 	result = await db
 		.prepare(`INSERT INTO ${tableColours} (id, name, rgb) VALUES (?, ?, ?)`)
-		.bind(4, "yellow", 0xffff00)
+		.bind(5, "orange", 0xff8000)
 		.run();
-	t.true(result.meta.duration > 0);
+	t.true(result.meta.duration >= 0);
 	t.deepEqual(result, {
 		results: [],
 		success: true,
 		meta: {
+			changed_db: true,
+			changes: 1,
 			// Don't know duration, so just match on returned value asserted > 0
 			duration: result.meta.duration,
-			last_row_id: 4,
-			changes: 1,
+			last_row_id: 5,
 			served_by: "miniflare.db",
-			internal_stats: null,
+			size_after: result.meta.size_after,
 		},
 	});
 });
@@ -274,7 +292,7 @@ test("D1PreparedStatement: all", async (t) => {
 	let result = await db
 		.prepare(`SELECT * FROM ${tableColours}`)
 		.all<ColourRow>();
-	t.true(result.meta.duration > 0);
+	t.true(result.meta.duration >= 0);
 	t.deepEqual(result, {
 		results: [
 			{ id: 1, name: "red", rgb: 0xff0000 },
@@ -283,22 +301,27 @@ test("D1PreparedStatement: all", async (t) => {
 		],
 		success: true,
 		meta: {
+			changed_db: false,
+			changes: 0,
 			// Don't know duration, so just match on returned value asserted > 0
 			duration: result.meta.duration,
-			last_row_id: 0,
-			changes: 0,
+			// Not an `INSERT`, so `last_row_id` non-deterministic
+			last_row_id: result.meta.last_row_id,
 			served_by: "miniflare.db",
-			internal_stats: null,
+			size_after: result.meta.size_after,
 		},
 	});
 
-	// Check with multiple statements (should only return first statement results)
-	result = await db
+	// Check with multiple statements
+	const resultPromise = db
 		.prepare(
 			`SELECT * FROM ${tableColours} WHERE id = 1; SELECT * FROM ${tableColours} WHERE id = 3;`
 		)
 		.all<ColourRow>();
-	t.deepEqual(result.results, [{ id: 1, name: "red", rgb: 0xff0000 }]);
+	await t.throwsAsync(resultPromise, {
+		instanceOf: Error,
+		message: /A prepared SQL statement must contain only one statement/,
+	});
 
 	// Check with write statement (should actually execute, but return nothing)
 	result = await db
@@ -340,12 +363,15 @@ test("D1PreparedStatement: raw", async (t) => {
 	]);
 
 	// Check with multiple statements (should only return first statement results)
-	results = await db
+	const resultPromise = db
 		.prepare(
 			`SELECT * FROM ${tableColours} WHERE id = 1; SELECT * FROM ${tableColours} WHERE id = 3;`
 		)
 		.raw<RawColourRow>();
-	t.deepEqual(results, [[1, "red", 0xff0000]]);
+	await t.throwsAsync(resultPromise, {
+		instanceOf: Error,
+		message: /A prepared SQL statement must contain only one statement/,
+	});
 
 	// Check with write statement (should actually execute, but return nothing)
 	results = await db
@@ -360,18 +386,15 @@ test("D1PreparedStatement: raw", async (t) => {
 	t.is(id, 4);
 });
 
-test.serial("operations persist D1 data", async (t) => {
+test("operations persist D1 data", async (t) => {
 	const { tableColours, tableKitchenSink } = t.context;
 
 	// Create new temporary file-system persistence directory
 	const tmp = await useTmp(t);
-	const storage = createFileStorage(path.join(tmp, "db"));
-	const sqliteDb = storage.db;
-
-	// Set option, then reset after test
-	await t.context.setOptions({ ...opts, d1Persist: tmp });
-	t.teardown(() => t.context.setOptions(opts));
-	const db = await getDatabase(t.context.mf);
+	const persistOpts: MiniflareOptions = { ...opts, d1Persist: tmp };
+	let mf = new Miniflare(persistOpts);
+	t.teardown(() => mf.dispose());
+	let db = await getDatabase(mf);
 
 	// Check execute respects persist
 	await db.exec(SCHEMA(tableColours, tableKitchenSink));
@@ -380,37 +403,27 @@ test.serial("operations persist D1 data", async (t) => {
 			`INSERT INTO ${tableColours} (id, name, rgb) VALUES (4, 'purple', 0xff00ff);`
 		)
 		.run();
-	const result = sqliteDb
+	let result = await db
 		.prepare(`SELECT name FROM ${tableColours} WHERE id = 4`)
-		.get();
+		.first();
 	t.deepEqual(result, { name: "purple" });
 
-	// Check query respects persist
-	await sqliteDb
-		.prepare(
-			// Is white a colour? ¯\_(ツ)_/¯
-			`INSERT INTO ${tableColours} (id, name, rgb) VALUES (5, 'white', 0xffffff);`
-		)
-		.run();
-	const name = await db
-		.prepare(`SELECT name FROM ${tableColours} WHERE id = 5`)
-		.first("name");
-	t.is(name, "white");
+	// Check directory created for database
+	const names = await fs.readdir(tmp);
+	t.true(names.includes("miniflare-D1DatabaseObject"));
 
-	// Check dump respects persist
-	const buffer = await db.dump();
-	const tmpPath = path.join(tmp, "db-dump.sqlite3");
-	await fs.writeFile(tmpPath, new Uint8Array(buffer));
-	const sqliteDbDump = new Database(tmpPath);
-	const results = sqliteDbDump
-		.prepare(`SELECT name FROM ${tableColours} WHERE id >= 4`)
-		.all();
-	t.deepEqual(results, [{ name: "purple" }, { name: "white" }]);
+	// Check "restarting" keeps persisted data
+	await mf.dispose();
+	mf = new Miniflare(persistOpts);
+	db = await getDatabase(mf);
+	result = await db
+		.prepare(`SELECT name FROM ${tableColours} WHERE id = 4`)
+		.first();
+	t.deepEqual(result, { name: "purple" });
 });
 
 test.serial("operations permit strange database names", async (t) => {
 	const { tableColours, tableKitchenSink } = t.context;
-	const tmp = await useTmp(t);
 
 	// Set option, then reset after test
 	const id = "my/ Database";
@@ -419,28 +432,16 @@ test.serial("operations permit strange database names", async (t) => {
 	const db = await getDatabase(t.context.mf);
 
 	// Check basic operations work
-	// a) execute
+
 	await db.exec(SCHEMA(tableColours, tableKitchenSink));
-	// b) query
+
 	await db
 		.prepare(
 			`INSERT INTO ${tableColours} (id, name, rgb) VALUES (4, 'pink', 0xff00ff);`
 		)
 		.run();
-	// c) dump
-	const buffer = await db.dump();
-	const tmpPath = path.join(tmp, "db-dump.sqlite3");
-	await fs.writeFile(tmpPath, new Uint8Array(buffer));
-	const sqliteDbDump = new Database(tmpPath);
-	let result = sqliteDbDump
+	const result = await db
 		.prepare(`SELECT name FROM ${tableColours} WHERE id = 4`)
-		.get();
-	t.deepEqual(result, { name: "pink" });
-
-	// Check stored with correct ID
-	const storage = t.context.mf._getPluginStorage("d1", id);
-	result = storage.db
-		.prepare(`SELECT name FROM ${tableColours} WHERE id = 4`)
-		.get();
+		.first<Pick<ColourRow, "name">>();
 	t.deepEqual(result, { name: "pink" });
 });

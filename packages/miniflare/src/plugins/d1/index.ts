@@ -1,15 +1,22 @@
+import fs from "fs/promises";
+import SCRIPT_D1_DATABASE_OBJECT from "worker:d1/database";
 import { z } from "zod";
-import { Service, Worker_Binding } from "../../runtime";
+import {
+	Service,
+	Worker_Binding,
+	Worker_Binding_DurableObjectNamespaceDesignator,
+} from "../../runtime";
+import { SharedBindings } from "../../workers";
 import {
 	PersistenceSchema,
 	Plugin,
+	getPersistPath,
 	kProxyNodeBinding,
+	migrateDatabase,
 	namespaceEntries,
 	namespaceKeys,
-	pluginNamespacePersistWorker,
+	objectEntryWorker,
 } from "../shared";
-import { D1Gateway } from "./gateway";
-import { D1Router } from "./router";
 
 export const D1OptionsSchema = z.object({
 	d1Databases: z.union([z.record(z.string()), z.string().array()]).optional(),
@@ -19,15 +26,18 @@ export const D1SharedOptionsSchema = z.object({
 });
 
 export const D1_PLUGIN_NAME = "d1";
-const SERVICE_DATABASE_PREFIX = `${D1_PLUGIN_NAME}:db`;
+const D1_STORAGE_SERVICE_NAME = `${D1_PLUGIN_NAME}:storage`;
+const D1_DATABASE_SERVICE_PREFIX = `${D1_PLUGIN_NAME}:db`;
+const D1_DATABASE_OBJECT_CLASS_NAME = "D1DatabaseObject";
+const D1_DATABASE_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
+	serviceName: D1_DATABASE_SERVICE_PREFIX,
+	className: D1_DATABASE_OBJECT_CLASS_NAME,
+};
 
 export const D1_PLUGIN: Plugin<
 	typeof D1OptionsSchema,
-	typeof D1SharedOptionsSchema,
-	D1Gateway
+	typeof D1SharedOptionsSchema
 > = {
-	gateway: D1Gateway,
-	router: D1Router,
 	options: D1OptionsSchema,
 	sharedOptions: D1SharedOptionsSchema,
 	getBindings(options) {
@@ -36,7 +46,7 @@ export const D1_PLUGIN: Plugin<
 			const binding = name.startsWith("__D1_BETA__")
 				? // Used before Wrangler 3.3
 				  {
-						service: { name: `${SERVICE_DATABASE_PREFIX}:${id}` },
+						service: { name: `${D1_DATABASE_SERVICE_PREFIX}:${id}` },
 				  }
 				: // Used after Wrangler 3.3
 				  {
@@ -45,7 +55,7 @@ export const D1_PLUGIN: Plugin<
 							innerBindings: [
 								{
 									name: "fetcher",
-									service: { name: `${SERVICE_DATABASE_PREFIX}:${id}` },
+									service: { name: `${D1_DATABASE_SERVICE_PREFIX}:${id}` },
 								},
 							],
 						},
@@ -60,18 +70,58 @@ export const D1_PLUGIN: Plugin<
 			databases.map((name) => [name, kProxyNodeBinding])
 		);
 	},
-	getServices({ options, sharedOptions }) {
+	async getServices({ options, sharedOptions, tmpPath, log }) {
 		const persist = sharedOptions.d1Persist;
 		const databases = namespaceEntries(options.d1Databases);
-		return databases.map<Service>(([_, id]) => ({
-			name: `${SERVICE_DATABASE_PREFIX}:${id}`,
-			worker: pluginNamespacePersistWorker(
-				D1_PLUGIN_NAME,
-				encodeURIComponent(id),
-				persist
-			),
+		const services = databases.map<Service>(([_, id]) => ({
+			name: `${D1_DATABASE_SERVICE_PREFIX}:${id}`,
+			worker: objectEntryWorker(D1_DATABASE_OBJECT, id),
 		}));
+
+		if (databases.length > 0) {
+			const uniqueKey = `miniflare-${D1_DATABASE_OBJECT_CLASS_NAME}`;
+			const persistPath = getPersistPath(D1_PLUGIN_NAME, tmpPath, persist);
+			await fs.mkdir(persistPath, { recursive: true });
+
+			const storageService: Service = {
+				name: D1_STORAGE_SERVICE_NAME,
+				disk: { path: persistPath, writable: true },
+			};
+			const objectService: Service = {
+				name: D1_DATABASE_SERVICE_PREFIX,
+				worker: {
+					compatibilityDate: "2023-07-24",
+					compatibilityFlags: ["nodejs_compat", "experimental"],
+					modules: [
+						{
+							name: "database.worker.js",
+							esModule: SCRIPT_D1_DATABASE_OBJECT(),
+						},
+					],
+					durableObjectNamespaces: [
+						{
+							className: D1_DATABASE_OBJECT_CLASS_NAME,
+							uniqueKey,
+						},
+					],
+					// Store Durable Object SQL databases in persist path
+					durableObjectStorage: { localDisk: D1_STORAGE_SERVICE_NAME },
+					// Bind blob disk directory service to object
+					bindings: [
+						{
+							name: SharedBindings.MAYBE_SERVICE_BLOBS,
+							service: { name: D1_STORAGE_SERVICE_NAME },
+						},
+					],
+				},
+			};
+			services.push(storageService, objectService);
+
+			for (const database of databases) {
+				await migrateDatabase(log, uniqueKey, persistPath, database[1]);
+			}
+		}
+
+		return services;
 	},
 };
-
-export * from "./gateway";
