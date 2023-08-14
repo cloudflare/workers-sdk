@@ -1,6 +1,18 @@
 import { unflatten } from "devalue";
-import { CoreBindings, CoreHeaders, LogLevel } from "./constants";
+import {
+	Colorize,
+	blue,
+	bold,
+	green,
+	grey,
+	red,
+	reset,
+	yellow,
+} from "kleur/colors";
+import { LogLevel, SharedHeaders } from "miniflare:shared";
+import { CoreBindings, CoreHeaders } from "./constants";
 import { structuredSerializableRevivers } from "./devalue";
+import { STATUS_CODES } from "./http";
 import { WorkerRoute, matchRoutes } from "./routing";
 
 type Env = {
@@ -126,26 +138,36 @@ function maybeInjectLiveReload(
 	});
 }
 
+function colourFromHTTPStatus(status: number): Colorize {
+	if (200 <= status && status < 300) return green;
+	if (400 <= status && status < 500) return yellow;
+	if (500 <= status) return red;
+	return blue;
+}
+
 function maybeLogRequest(
-	request: Request,
-	response: Response,
+	req: Request,
+	res: Response,
 	env: Env,
 	ctx: ExecutionContext,
 	startTime: number
 ) {
 	if (env[CoreBindings.JSON_LOG_LEVEL] < LogLevel.INFO) return;
 
+	const url = new URL(req.url);
+	const statusText = (res.statusText.trim() || STATUS_CODES[res.status]) ?? "";
+	const lines = [
+		`${bold(req.method)} ${url.pathname} `,
+		colourFromHTTPStatus(res.status)(`${bold(res.status)} ${statusText} `),
+		grey(`(${Date.now() - startTime}ms)`),
+	];
+	const message = reset(lines.join(""));
+
 	ctx.waitUntil(
 		env[CoreBindings.SERVICE_LOOPBACK].fetch("http://localhost/core/log", {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				status: response.status,
-				statusText: response.statusText,
-				method: request.method,
-				url: request.url,
-				time: Date.now() - startTime,
-			}),
+			headers: { [SharedHeaders.LOG_LEVEL]: LogLevel.INFO.toString() },
+			body: message,
 		})
 	);
 }
