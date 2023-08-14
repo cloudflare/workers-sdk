@@ -1174,17 +1174,6 @@ export class Miniflare {
 	};
 
 	/** @internal */
-	_getPluginStorage(
-		plugin: keyof Plugins,
-		namespace: string,
-		persist?: Persistence
-	): Storage {
-		const factory = this.#gatewayFactories[plugin];
-		assert(factory !== undefined);
-		return factory.getStorage(namespace, persist);
-	}
-
-	/** @internal */
 	async _getProxyClient(): Promise<ProxyClient> {
 		this.#checkDisposed();
 		await this.ready;
@@ -1319,5 +1308,4 @@ export * from "./http";
 export * from "./plugins";
 export * from "./runtime";
 export * from "./shared";
-export * from "./storage";
 export * from "./workers";
