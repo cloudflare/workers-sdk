@@ -1,8 +1,10 @@
-import { Blob } from "buffer";
-import { ReadableStream, TransformStream } from "stream/web";
-import type { R2StringChecksums } from "@cloudflare/workers-types/experimental";
-import { HEX_REGEXP } from "../../shared";
-import { ObjectRow, R2HeadResponse, R2HttpFields, R2Range } from "./schemas";
+import { HEX_REGEXP } from "miniflare:zod";
+import {
+	ObjectRow,
+	R2HeadResponse,
+	R2HttpFields,
+	R2Range,
+} from "./schemas.worker";
 
 export interface EncodedMetadata {
 	metadataSize: number;
@@ -90,7 +92,7 @@ export class InternalR2ObjectBody extends InternalR2Object {
 
 	encode(): EncodedMetadata {
 		const { metadataSize, value: metadata } = super.encode();
-		const identity = new TransformStream<Uint8Array, Uint8Array>();
+		const identity = new IdentityTransformStream();
 		void metadata
 			.pipeTo(identity.writable, { preventClose: true })
 			.then(() => this.body.pipeTo(identity.writable));

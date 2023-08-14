@@ -1,7 +1,7 @@
-import assert from "assert";
-import type { R2StringChecksums } from "@cloudflare/workers-types/experimental";
-import { InclusiveRange } from "../../storage";
-import { _parseRanges } from "../shared";
+import assert from "node:assert";
+import { Buffer } from "node:buffer";
+import { InclusiveRange, parseRanges } from "miniflare:shared";
+import { R2Limits } from "./constants";
 import {
 	BadDigest,
 	EntityTooLarge,
@@ -10,15 +10,9 @@ import {
 	InvalidRange,
 	MetadataTooLarge,
 	PreconditionFailed,
-} from "./errors";
-import { InternalR2Object } from "./r2Object";
-import { InternalR2GetOptions, R2Conditional, R2Etag } from "./schemas";
-
-export const MAX_LIST_KEYS = 1_000;
-const MAX_KEY_SIZE = 1024;
-// https://developers.cloudflare.com/r2/platform/limits/
-const MAX_VALUE_SIZE = 5_000_000_000 - 5_000_000; // 5GB - 5MB
-const MAX_METADATA_SIZE = 2048; // 2048B
+} from "./errors.worker";
+import { InternalR2Object } from "./r2Object.worker";
+import { InternalR2GetOptions, R2Conditional, R2Etag } from "./schemas.worker";
 
 function identity(ms: number) {
 	return ms;
@@ -90,6 +84,7 @@ export type R2Hashes = Record<
 	(typeof R2_HASH_ALGORITHMS)[number]["field"],
 	Buffer | undefined
 >;
+export type DigestAlgorithm = (typeof R2_HASH_ALGORITHMS)[number]["name"];
 
 function serialisedLength(x: string) {
 	//  Adapted from internal R2 gateway implementation
@@ -100,12 +95,15 @@ function serialisedLength(x: string) {
 }
 
 export class Validator {
-	hash(digests: Map<string, Buffer>, hashes: R2Hashes): R2StringChecksums {
+	hash(
+		digests: Map<DigestAlgorithm, Buffer>,
+		hashes: R2Hashes
+	): R2StringChecksums {
 		const checksums: R2StringChecksums = {};
 		for (const { name, field } of R2_HASH_ALGORITHMS) {
 			const providedHash = hashes[field];
 			if (providedHash !== undefined) {
-				const computedHash = digests.get(field);
+				const computedHash = digests.get(name);
 				// Should've computed all required digests
 				assert(computedHash !== undefined);
 				if (!providedHash.equals(computedHash)) {
@@ -134,7 +132,7 @@ export class Validator {
 		size: number
 	): InclusiveRange | undefined {
 		if (options.rangeHeader !== undefined) {
-			const ranges = _parseRanges(options.rangeHeader, size);
+			const ranges = parseRanges(options.rangeHeader, size);
 			// If the header contained a single range, use it. Otherwise, if the
 			// header was invalid, or contained multiple ranges, just return the full
 			// response (by returning undefined from this function).
@@ -160,7 +158,7 @@ export class Validator {
 	}
 
 	size(size: number): Validator {
-		if (size > MAX_VALUE_SIZE) {
+		if (size > R2Limits.MAX_VALUE_SIZE) {
 			throw new EntityTooLarge();
 		}
 		return this;
@@ -172,7 +170,7 @@ export class Validator {
 		for (const [key, value] of Object.entries(customMetadata)) {
 			metadataLength += serialisedLength(key) + serialisedLength(value);
 		}
-		if (metadataLength > MAX_METADATA_SIZE) {
+		if (metadataLength > R2Limits.MAX_METADATA_SIZE) {
 			throw new MetadataTooLarge();
 		}
 		return this;
@@ -180,14 +178,14 @@ export class Validator {
 
 	key(key: string): Validator {
 		const keyLength = Buffer.byteLength(key);
-		if (keyLength >= MAX_KEY_SIZE) {
+		if (keyLength >= R2Limits.MAX_KEY_SIZE) {
 			throw new InvalidObjectName();
 		}
 		return this;
 	}
 
 	limit(limit?: number): Validator {
-		if (limit !== undefined && (limit < 1 || limit > MAX_LIST_KEYS)) {
+		if (limit !== undefined && (limit < 1 || limit > R2Limits.MAX_LIST_KEYS)) {
 			throw new InvalidMaxKeys();
 		}
 		return this;
