@@ -1,4 +1,4 @@
-import assert from "assert";
+import assert from "node:assert";
 import { Awaitable } from "./types";
 
 export type DeferredPromiseResolve<T> = (value: T | PromiseLike<T>) => void;

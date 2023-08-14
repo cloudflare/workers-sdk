@@ -27,15 +27,6 @@ export const CoreBindings = {
 	DURABLE_OBJECT_NAMESPACE_PROXY: "MINIFLARE_PROXY",
 } as const;
 
-export enum LogLevel {
-	NONE,
-	ERROR,
-	WARN,
-	INFO,
-	DEBUG,
-	VERBOSE,
-}
-
 export const ProxyOps = {
 	// Get the target or a property of the target
 	GET: "GET",

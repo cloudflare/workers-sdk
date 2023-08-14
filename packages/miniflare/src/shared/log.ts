@@ -1,17 +1,5 @@
-import http from "http";
 import path from "path";
-import {
-	Colorize,
-	blue,
-	bold,
-	dim,
-	green,
-	grey,
-	red,
-	reset,
-	yellow,
-} from "kleur/colors";
-import { z } from "zod";
+import { Colorize, dim, green, grey, red, reset, yellow } from "kleur/colors";
 import { LogLevel } from "../workers";
 
 const cwd = process.cwd();
@@ -81,7 +69,7 @@ export class Log {
 		console.log(message);
 	}
 
-	protected logWithLevel(level: LogLevel, message: string): void {
+	logWithLevel(level: LogLevel, message: string): void {
 		if (level <= this.level) {
 			const prefix = `[${this.#prefix}${LEVEL_PREFIX[level]}${this.#suffix}]`;
 			this.log(LEVEL_COLOUR[level](`${prefix} ${message}`));
@@ -133,30 +121,23 @@ export class NoOpLog extends Log {
 	}
 }
 
-export const ResponseInfoSchema = z.object({
-	status: z.number(),
-	statusText: z.string(),
-	method: z.string(),
-	url: z.string(),
-	time: z.number(),
-});
-export type ResponseInfo = z.infer<typeof ResponseInfoSchema>;
-
-export async function formatResponse(info: ResponseInfo) {
-	const url = new URL(info.url);
-
-	const statusText = info.statusText.trim() || http.STATUS_CODES[info.status];
-	const lines = [
-		`${bold(info.method)} ${url.pathname} `,
-		colourFromHTTPStatus(info.status)(`${bold(info.status)} ${statusText} `),
-		grey(`(${info.time}ms)`),
-	];
-	return reset(lines.join(""));
-}
-
-function colourFromHTTPStatus(status: number): Colorize {
-	if (200 <= status && status < 300) return green;
-	if (400 <= status && status < 500) return yellow;
-	if (500 <= status) return red;
-	return blue;
+// Adapted from https://github.com/chalk/ansi-regex/blob/02fa893d619d3da85411acc8fd4e2eea0e95a9d9/index.js
+/*!
+ * MIT License
+ *
+ * Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+const ansiRegexpPattern = [
+	"[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]+)*|[a-zA-Z\\d]+(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)",
+	"(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-nq-uy=><~]))",
+].join("|");
+const ansiRegexp = new RegExp(ansiRegexpPattern, "g");
+export function stripAnsi(value: string) {
+	return value.replace(ansiRegexp, "");
 }

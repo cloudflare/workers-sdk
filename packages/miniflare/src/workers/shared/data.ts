@@ -1,16 +1,5 @@
-export function lexicographicCompare(x: string, y: string): number {
-	if (x < y) return -1;
-	if (x === y) return 0;
-	return 1;
-}
+import { Buffer } from "node:buffer";
 
-export function nonCircularClone<T>(value: T): T {
-	return JSON.parse(JSON.stringify(value));
-}
-
-export function viewToArray(view: ArrayBufferView): Uint8Array {
-	return new Uint8Array(view.buffer, view.byteOffset, view.byteLength);
-}
 export function viewToBuffer(view: ArrayBufferView): ArrayBuffer {
 	return view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength);
 }

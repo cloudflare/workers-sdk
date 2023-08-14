@@ -1,7 +1,8 @@
 import assert from "assert";
 import { once } from "events";
 import NodeWebSocket from "ws";
-import { TypedEventTarget, ValueOf, viewToBuffer } from "../shared";
+import { TypedEventTarget } from "../shared";
+import { ValueOf, viewToBuffer } from "../workers";
 
 export class MessageEvent extends Event {
 	readonly data: ArrayBuffer | string;

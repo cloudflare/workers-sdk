@@ -5,7 +5,7 @@ import type {
 	Response as WorkerResponse,
 } from "@cloudflare/workers-types/experimental";
 import anyTest, { TestFn } from "ava";
-import { Awaitable, Miniflare, MiniflareOptions, Timers } from "miniflare";
+import { Awaitable, Miniflare, MiniflareOptions } from "miniflare";
 import { TestLog } from "./log";
 
 export type TestMiniflareHandler<Env> = (
@@ -15,69 +15,6 @@ export type TestMiniflareHandler<Env> = (
 	ctx: ExecutionContext
 ) => Awaitable<WorkerResponse>;
 
-interface TestTimeout {
-	triggerTimestamp: number;
-	closure: () => Awaitable<unknown>;
-}
-export class TestTimers implements Timers<number> {
-	#timestamp = 1_000_000; // 1000s
-	#nextTimeoutHandle = 0;
-	#pendingTimeouts = new Map<number, TestTimeout>();
-	#runningTasks = new Set<Promise<unknown>>();
-
-	get timestamp() {
-		return this.#timestamp;
-	}
-	set timestamp(newValue: number) {
-		this.#timestamp = newValue;
-		for (const [handle, timeout] of this.#pendingTimeouts) {
-			if (timeout.triggerTimestamp <= this.timestamp) {
-				this.#pendingTimeouts.delete(handle);
-				this.queueMicrotask(timeout.closure);
-			}
-		}
-	}
-
-	now = () => {
-		return this.#timestamp;
-	};
-
-	setTimeout<Args extends any[]>(
-		closure: (...args: Args) => Awaitable<unknown>,
-		delay: number,
-		...args: Args
-	): number {
-		const handle = this.#nextTimeoutHandle++;
-		const argsClosure = () => closure(...args);
-		if (delay === 0) {
-			this.queueMicrotask(argsClosure);
-		} else {
-			const timeout: TestTimeout = {
-				triggerTimestamp: this.timestamp + delay,
-				closure: argsClosure,
-			};
-			this.#pendingTimeouts.set(handle, timeout);
-		}
-		return handle;
-	}
-
-	clearTimeout(handle: number) {
-		this.#pendingTimeouts.delete(handle);
-	}
-
-	queueMicrotask(closure: () => Awaitable<unknown>) {
-		const result = closure();
-		if (result instanceof Promise) {
-			this.#runningTasks.add(result);
-			result.then(() => this.#runningTasks.delete(result));
-		}
-	}
-
-	async waitForTasks() {
-		await Promise.all(this.#runningTasks);
-	}
-}
-
 export interface MiniflareTestContext {
 	mf: Miniflare;
 	url: URL;
@@ -85,8 +22,36 @@ export interface MiniflareTestContext {
 	// Warning: if mutating or calling any of the following, `test.serial` must be
 	// used to prevent races.
 	log: TestLog;
-	timers: TestTimers;
 	setOptions(opts: Partial<MiniflareOptions>): Promise<void>;
+}
+
+export type Namespaced<T> = T & { ns: string };
+// Automatically prefix all keys with the specified namespace, assuming keys
+// are always specified as the first parameter (true for `KVNamespace`s and
+// `R2Bucket`s)
+export function namespace<T>(ns: string, binding: T): Namespaced<T> {
+	return new Proxy(binding as Namespaced<T>, {
+		get(target, key, receiver) {
+			if (key === "ns") return ns;
+			const value = Reflect.get(target, key, receiver);
+			if (typeof value === "function" && key !== "list") {
+				return (keys: unknown, ...args: unknown[]) => {
+					if (typeof keys === "string") keys = ns + keys;
+					if (Array.isArray(keys)) keys = keys.map((key) => ns + key);
+					return (value as (...args: unknown[]) => unknown)(keys, ...args);
+				};
+			}
+			return value;
+		},
+		set(target, key, newValue, receiver) {
+			if (key === "ns") {
+				ns = newValue;
+				return true;
+			} else {
+				return Reflect.set(target, key, newValue, receiver);
+			}
+		},
+	});
 }
 
 export function miniflareTest<
@@ -130,12 +95,10 @@ export function miniflareTest<
 	const test = anyTest as TestFn<Context>;
 	test.before(async (t) => {
 		const log = new TestLog(t);
-		const timers = new TestTimers();
 
 		const opts: Partial<MiniflareOptions> = {
 			...scriptOpts,
 			log,
-			timers,
 			verbose: true,
 		};
 
@@ -144,7 +107,6 @@ export function miniflareTest<
 		// `userOpts`, a `handler` has been provided.
 		t.context.mf = new Miniflare({ ...userOpts, ...opts } as MiniflareOptions);
 		t.context.log = log;
-		t.context.timers = timers;
 		t.context.setOptions = (userOpts) =>
 			t.context.mf.setOptions({ ...userOpts, ...opts } as MiniflareOptions);
 		t.context.url = await t.context.mf.ready;

@@ -4,13 +4,15 @@ import type {
 } from "@cloudflare/workers-types/experimental";
 import {
 	Request as BaseRequest,
+	RequestInfo as BaseRequestInfo,
 	RequestInit as BaseRequestInit,
-	RequestInfo,
 } from "undici";
 
 export type RequestInitCfType =
 	| Partial<IncomingRequestCfProperties>
 	| RequestInitCfProperties;
+
+export type RequestInfo = BaseRequestInfo | Request;
 
 export interface RequestInit<
 	CfType extends RequestInitCfType = RequestInitCfType,
@@ -28,7 +30,7 @@ export class Request<
 	// error.
 	[kCf]?: CfType;
 
-	constructor(input: RequestInfo | Request, init?: RequestInit<CfType>) {
+	constructor(input: RequestInfo, init?: RequestInit<CfType>) {
 		super(input, init);
 		this[kCf] = init?.cf;
 		// Prefer `cf` from `init`, but if it's set on `input`, use that

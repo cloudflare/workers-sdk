@@ -7,7 +7,7 @@ import {
 	SOCKET_ENTRY,
 } from "../plugins";
 import { HttpOptions, Socket, Socket_Https } from "../runtime";
-import { Awaitable } from "../shared";
+import { Awaitable } from "../workers";
 import { CERT, KEY } from "./cert";
 
 export async function configureEntrySocket(

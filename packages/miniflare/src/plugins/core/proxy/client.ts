@@ -5,9 +5,10 @@ import util from "util";
 import type { ServiceWorkerGlobalScope } from "@cloudflare/workers-types/experimental";
 import { stringify } from "devalue";
 import { Headers } from "undici";
-import { Request, Response } from "../../../http";
-import { Awaitable, prefixStream, readPrefix } from "../../../shared";
+import { DispatchFetch, Request, Response } from "../../../http";
+import { prefixStream, readPrefix } from "../../../shared";
 import {
+	Awaitable,
 	CoreHeaders,
 	ProxyAddresses,
 	ProxyOps,
@@ -22,7 +23,6 @@ import {
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
 } from "../../../workers";
-import { DispatchFetch } from "../../shared";
 import { DECODER, SynchronousFetcher, SynchronousResponse } from "./fetch-sync";
 import { NODE_PLATFORM_IMPL } from "./types";
 
