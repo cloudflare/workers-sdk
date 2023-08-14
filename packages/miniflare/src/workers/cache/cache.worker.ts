@@ -1,29 +1,44 @@
-import assert from "assert";
-import crypto from "crypto";
-import http from "http";
-import { ReadableStream, TransformStream } from "stream/web";
+import assert from "node:assert";
+import { Buffer } from "node:buffer";
 import CachePolicy from "http-cache-semantics";
-import { Headers, HeadersInit, Request, Response, fetch } from "../../http";
-import { DeferredPromise, Log, Timers } from "../../shared";
 import {
+	DeferredPromise,
+	GET,
 	InclusiveRange,
 	KeyValueStorage,
+	LogLevel,
+	MiniflareDurableObject,
+	MiniflareDurableObjectCf,
 	MultipartReadableStream,
-	Storage,
-} from "../../storage";
+	PURGE,
+	PUT,
+	RouteHandler,
+	Timers,
+	parseRanges,
+} from "miniflare:shared";
 import { isSitesRequest } from "../kv";
-import { _parseRanges } from "../shared";
+
+import { CacheObjectCf } from "./constants";
 import {
 	CacheMiss,
 	PurgeFailure,
 	RangeNotSatisfiable,
 	StorageFailure,
-} from "./errors";
+} from "./errors.worker";
 
 interface CacheMetadata {
 	headers: string[][];
 	status: number;
 	size: number;
+}
+
+type CacheRouteHandler = RouteHandler<
+	unknown,
+	RequestInitCfProperties & MiniflareDurableObjectCf & CacheObjectCf
+>;
+
+function getCacheKey(req: Request<unknown, RequestInitCfProperties>) {
+	return req.cf?.cacheKey ? String(req.cf?.cacheKey) : req.url;
 }
 
 function getExpiration(timers: Timers, req: Request, res: Response) {
@@ -163,49 +178,69 @@ function getMatchResponse(reqHeaders: Headers, res: CachedResponse): Response {
 	return new Response(res.body, { status: res.status, headers: res.headers });
 }
 
-/** @internal */
-export class _HttpParser {
-	private static INSTANCE: _HttpParser;
-	static get(): _HttpParser {
-		_HttpParser.INSTANCE ??= new _HttpParser();
-		return _HttpParser.INSTANCE;
+const CR = "\r".charCodeAt(0);
+const LF = "\n".charCodeAt(0);
+const STATUS_REGEXP =
+	/^HTTP\/\d(?:\.\d)? (?<rawStatusCode>\d+) (?<statusText>.*)$/;
+export async function parseHttpResponse(
+	stream: ReadableStream
+): Promise<Response> {
+	// Buffer until first "\r\n\r\n"
+	let buffer = Buffer.alloc(0);
+	let blankLineIndex = -1;
+	for await (const chunk of stream.values({ preventCancel: true })) {
+		// TODO(perf): make this more efficient, we should be able to do something
+		//  like a "rope-string" of chunks for finding the index, recording where we
+		//  last got to when looking and starting there
+		buffer = Buffer.concat([buffer, chunk]);
+		blankLineIndex = buffer.findIndex(
+			(_value, index) =>
+				buffer[index] === CR &&
+				buffer[index + 1] === LF &&
+				buffer[index + 2] === CR &&
+				buffer[index + 3] === LF
+		);
+		if (blankLineIndex !== -1) break;
 	}
+	assert(blankLineIndex !== -1, "Expected to find blank line in HTTP message");
 
-	readonly #responses: Map<string, ReadableStream<Uint8Array>> = new Map();
-	readonly #ready: Promise<URL>;
+	// Parse status and headers
+	const rawStatusHeaders = buffer.subarray(0, blankLineIndex).toString();
+	const [rawStatus, ...rawHeaders] = rawStatusHeaders.split("\r\n");
+	// https://www.rfc-editor.org/rfc/rfc7230#section-3.1.2
+	const statusMatch = rawStatus.match(STATUS_REGEXP);
+	assert(
+		statusMatch?.groups != null,
+		`Expected first line ${JSON.stringify(rawStatus)} to be HTTP status line`
+	);
+	const { rawStatusCode, statusText } = statusMatch.groups;
+	const statusCode = parseInt(rawStatusCode);
+	// https://www.rfc-editor.org/rfc/rfc7230#section-3.2
+	const headers = rawHeaders.map((rawHeader) => {
+		const index = rawHeader.indexOf(":");
+		return [
+			rawHeader.substring(0, index),
+			rawHeader.substring(index + 1).trim(),
+		];
+	});
 
-	private constructor() {
-		const server = http.createServer(this.#listen).unref();
-		this.#ready = new Promise((resolve) => {
-			server.listen(0, "localhost", () => {
-				const address = server.address();
-				assert(address !== null && typeof address === "object");
-				resolve(new URL(`http://localhost:${address.port}`));
-			});
-		});
-	}
+	// Construct body, by concatenating prefix (what we read over from headers)
+	// with the rest of the stream
+	const prefix = buffer.subarray(blankLineIndex + 4 /* "\r\n\r\n" */);
+	// Even if `prefix.length === 0` here, we need to construct a new stream.
+	// Otherwise, we'll get a `TypeError: This ReadableStream is disturbed...`
+	// when constructing the `Response` below.
+	const { readable, writable } = new IdentityTransformStream();
+	const writer = writable.getWriter();
+	void writer
+		.write(prefix)
+		.then(() => {
+			writer.releaseLock();
+			return stream.pipeTo(writable);
+		})
+		.catch((e) => console.error("Error writing HTTP body:", e));
 
-	#listen: http.RequestListener = async (req, res) => {
-		assert(req.url !== undefined);
-		assert(res.socket !== null);
-		const stream = this.#responses.get(req.url);
-		assert(stream !== undefined);
-		// Write response to parse directly to underlying socket
-		for await (const chunk of stream) res.socket.write(chunk);
-		res.socket.end();
-	};
-
-	async parse(response: ReadableStream<Uint8Array>): Promise<Response> {
-		const baseURL = await this.#ready;
-		// Since multiple parses can be in-flight at once, an identifier is needed
-		const id = `/${crypto.randomBytes(16).toString("hex")}`;
-		this.#responses.set(id, response);
-		try {
-			return await fetch(new URL(id, baseURL));
-		} finally {
-			this.#responses.delete(id);
-		}
-	}
+	return new Response(readable, { status: statusCode, statusText, headers });
 }
 
 class SizingStream extends TransformStream<Uint8Array, Uint8Array> {
@@ -227,21 +262,31 @@ class SizingStream extends TransformStream<Uint8Array, Uint8Array> {
 	}
 }
 
-export class CacheGateway {
-	private readonly storage: KeyValueStorage<CacheMetadata>;
-
-	constructor(
-		private readonly log: Log,
-		storage: Storage,
-		private readonly timers: Timers
-	) {
-		this.storage = new KeyValueStorage(storage, timers);
+export class CacheObject extends MiniflareDurableObject {
+	#warnedUsage = false;
+	async #maybeWarnUsage(request: Request<unknown, CacheObjectCf>) {
+		if (!this.#warnedUsage && request.cf?.miniflare?.cacheWarnUsage === true) {
+			this.#warnedUsage = true;
+			await this.logWithLevel(
+				LogLevel.WARN,
+				"Cache operations will have no impact if you deploy to a workers.dev subdomain!"
+			);
+		}
 	}
 
-	async match(request: Request, cacheKey?: string): Promise<Response> {
+	#storage?: KeyValueStorage<CacheMetadata>;
+	get storage() {
+		// `KeyValueStorage` can only be constructed once `this.blob` is initialised
+		return (this.#storage ??= new KeyValueStorage(this));
+	}
+
+	@GET()
+	match: CacheRouteHandler = async (req) => {
+		await this.#maybeWarnUsage(req);
+		const cacheKey = getCacheKey(req);
+
 		// Never cache Workers Sites requests, so we always return on-disk files
-		if (isSitesRequest(request)) throw new CacheMiss();
-		cacheKey ??= request.url;
+		if (isSitesRequest(req)) throw new CacheMiss();
 
 		let resHeaders: Headers | undefined;
 		let resRanges: InclusiveRange[] | undefined;
@@ -251,9 +296,9 @@ export class CacheGateway {
 			const contentType = resHeaders.get("Content-Type");
 
 			// Need size from metadata to parse `Range` header
-			const rangeHeader = request.headers.get("Range");
+			const rangeHeader = req.headers.get("Range");
 			if (rangeHeader !== null) {
-				resRanges = _parseRanges(rangeHeader, size);
+				resRanges = parseRanges(rangeHeader, size);
 				if (resRanges === undefined) throw new RangeNotSatisfiable(size);
 			}
 
@@ -272,40 +317,46 @@ export class CacheGateway {
 		resHeaders.set("CF-Cache-Status", "HIT");
 		resRanges ??= [];
 
-		return getMatchResponse(request.headers, {
+		return getMatchResponse(req.headers, {
 			status: cached.metadata.status,
 			headers: resHeaders,
 			ranges: resRanges,
 			body: cached.value,
 			totalSize: cached.metadata.size,
 		});
-	}
+	};
 
-	async put(
-		request: Request,
-		value: ReadableStream<Uint8Array>,
-		cacheKey?: string
-	): Promise<Response> {
-		// Never cache Workers Sites requests, so we always return on-disk files.
-		if (isSitesRequest(request)) return new Response(null, { status: 204 });
+	@PUT()
+	put: CacheRouteHandler = async (req) => {
+		await this.#maybeWarnUsage(req);
+		const cacheKey = getCacheKey(req);
 
-		const response = await _HttpParser.get().parse(value);
-		let body = response.body;
+		// Never cache Workers Sites requests, so we always return on-disk files
+		if (isSitesRequest(req)) throw new CacheMiss();
+
+		assert(req.body !== null);
+		const res = await parseHttpResponse(req.body);
+		let body = res.body;
 		assert(body !== null);
 
 		const { storable, expiration, headers } = getExpiration(
 			this.timers,
-			request,
-			response
+			req,
+			res
 		);
-		if (!storable) throw new StorageFailure();
-
-		cacheKey ??= request.url;
+		if (!storable) {
+			// Make sure `body` is consumed to avoid `TypeError: Can't read from
+			// request stream after response has been sent.`
+			try {
+				await body.pipeTo(new WritableStream());
+			} catch {}
+			throw new StorageFailure();
+		}
 
 		// If we know the size, avoid passing the body through a transform stream to
 		// count it (trusting `workerd` to send correct value here).
 		// Safety of `!`: `parseInt(null)` is `NaN`
-		const contentLength = parseInt(response.headers.get("Content-Length")!);
+		const contentLength = parseInt(res.headers.get("Content-Length")!);
 		let sizePromise: Promise<number>;
 		if (Number.isNaN(contentLength)) {
 			const stream = new SizingStream();
@@ -317,7 +368,7 @@ export class CacheGateway {
 
 		const metadata: Promise<CacheMetadata> = sizePromise.then((size) => ({
 			headers: Object.entries(headers),
-			status: response.status,
+			status: res.status,
 			size,
 		}));
 
@@ -328,13 +379,16 @@ export class CacheGateway {
 			metadata,
 		});
 		return new Response(null, { status: 204 });
-	}
+	};
 
-	async delete(request: Request, cacheKey?: string): Promise<Response> {
-		cacheKey ??= request.url;
+	@PURGE()
+	delete: CacheRouteHandler = async (req) => {
+		await this.#maybeWarnUsage(req);
+		const cacheKey = getCacheKey(req);
+
 		const deleted = await this.storage.delete(cacheKey);
 		// This is an extremely vague error, but it fits with what the cache API in workerd expects
 		if (!deleted) throw new PurgeFailure();
 		return new Response(null);
-	}
+	};
 }

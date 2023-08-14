@@ -1,22 +1,28 @@
 import assert from "assert";
 import crypto from "crypto";
-import path from "path";
-import { text } from "stream/consumers";
+import fs from "fs/promises";
 import type { CacheStorage } from "@cloudflare/workers-types/experimental";
 import {
+	CACHE_PLUGIN_NAME,
 	HeadersInit,
-	KeyValueStorage,
 	LogLevel,
+	Miniflare,
+	MiniflareOptions,
 	ReplaceWorkersTypes,
 	Request,
 	RequestInit,
 	Response,
-	createFileStorage,
 } from "miniflare";
-import { MiniflareTestContext, miniflareTest, useTmp } from "../../test-shared";
+import {
+	MiniflareDurableObjectControlStub,
+	MiniflareTestContext,
+	miniflareTest,
+	useTmp,
+} from "../../test-shared";
 
 interface Context extends MiniflareTestContext {
 	caches: ReplaceWorkersTypes<CacheStorage>;
+	defaultObject: MiniflareDurableObjectControlStub;
 }
 
 const test = miniflareTest<never, Context>({}, async (global, req) => {
@@ -33,8 +39,27 @@ const test = miniflareTest<never, Context>({}, async (global, req) => {
 	return new global.Response(null, { status: 404 });
 });
 
+async function getControlStub(
+	mf: Miniflare,
+	name = "default"
+): Promise<MiniflareDurableObjectControlStub> {
+	const objectNamespace = await mf._getInternalDurableObjectNamespace(
+		CACHE_PLUGIN_NAME,
+		"cache:cache",
+		"CacheObject"
+	);
+	const objectId = objectNamespace.idFromName(name);
+	const objectStub = objectNamespace.get(objectId);
+	const stub = new MiniflareDurableObjectControlStub(objectStub);
+	await stub.enableFakeTimers(1_000_000);
+	return stub;
+}
+
 test.beforeEach(async (t) => {
 	t.context.caches = await t.context.mf.getCaches();
+
+	// Enable fake timers
+	t.context.defaultObject = await getControlStub(t.context.mf);
 });
 
 test("match returns cached responses", async (t) => {
@@ -194,18 +219,14 @@ test("match respects Range header", async (t) => {
 	t.is(res.status, 416);
 });
 
+// Note this macro must be used with `test.serial` to avoid races.
 const expireMacro = test.macro({
 	title(providedTitle) {
 		return `expires after ${providedTitle}`;
 	},
 	async exec(t, opts: { headers: HeadersInit; expectedTtl: number }) {
 		const cache = t.context.caches.default;
-
-		// Reset clock to known time, restoring afterwards.
-		// Note this macro must be used with `test.serial` to avoid races.
-		const originalTimestamp = t.context.timers.timestamp;
-		t.teardown(() => (t.context.timers.timestamp = originalTimestamp));
-		t.context.timers.timestamp = 1_000_000; // 1000s
+		const defaultObject = t.context.defaultObject;
 
 		const key = "http://localhost/cache-expire";
 		await cache.put(key, new Response("body", { headers: opts.headers }));
@@ -213,11 +234,11 @@ const expireMacro = test.macro({
 		let res = await cache.match(key);
 		t.is(res?.status, 200);
 
-		t.context.timers.timestamp += opts.expectedTtl / 2;
+		await defaultObject.advanceFakeTime(opts.expectedTtl / 2);
 		res = await cache.match(key);
 		t.is(res?.status, 200);
 
-		t.context.timers.timestamp += opts.expectedTtl / 2;
+		await defaultObject.advanceFakeTime(opts.expectedTtl / 2);
 		res = await cache.match(key);
 		t.is(res, undefined);
 	},
@@ -251,7 +272,7 @@ const isCachedMacro = test.macro({
 			.digest("hex");
 		const key = `http://localhost/cache-is-cached-${headersHash}`;
 
-		const expires = new Date(t.context.timers.timestamp + 2000).toUTCString();
+		const expires = new Date(1_000_000 + 2000).toUTCString();
 		const resToCache = new Response("body", {
 			headers: { ...opts.headers, Expires: expires },
 		});
@@ -338,6 +359,7 @@ test.serial("operations log warning on workers.dev subdomain", async (t) => {
 	await t.context.setOptions({ cacheWarnUsage: true });
 	t.teardown(() => t.context.setOptions({}));
 	t.context.caches = await t.context.mf.getCaches();
+	const defaultObject = await getControlStub(t.context.mf);
 
 	const cache = t.context.caches.default;
 	const key = "http://localhost/cache-workers-dev-warning";
@@ -347,6 +369,7 @@ test.serial("operations log warning on workers.dev subdomain", async (t) => {
 		headers: { "Cache-Control": "max-age=3600" },
 	});
 	await cache.put(key, resToCache.clone());
+	await defaultObject.waitForFakeTasks();
 	t.deepEqual(t.context.log.logsAtLevel(LogLevel.WARN), [
 		"Cache operations will have no impact if you deploy to a workers.dev subdomain!",
 	]);
@@ -354,20 +377,21 @@ test.serial("operations log warning on workers.dev subdomain", async (t) => {
 	// Check only warns once
 	t.context.log.logs = [];
 	await cache.put(key, resToCache);
+	await defaultObject.waitForFakeTasks();
 	t.deepEqual(t.context.log.logsAtLevel(LogLevel.WARN), []);
 });
-test.serial("operations persist cached data", async (t) => {
+test("operations persist cached data", async (t) => {
 	// Create new temporary file-system persistence directory
 	const tmp = await useTmp(t);
-	const storage = createFileStorage(path.join(tmp, "default"));
-	const kvStorage = new KeyValueStorage(storage, t.context.timers);
+	const opts: MiniflareOptions = {
+		modules: true,
+		script: "",
+		cachePersist: tmp,
+	};
+	let mf = new Miniflare(opts);
+	t.teardown(() => mf.dispose());
 
-	// Set option, then reset after test
-	await t.context.setOptions({ cachePersist: tmp });
-	t.teardown(() => t.context.setOptions({}));
-	t.context.caches = await t.context.mf.getCaches();
-
-	const cache = t.context.caches.default;
+	let cache = (await mf.getCaches()).default;
 	const key = "http://localhost/cache-persist";
 
 	// Check put respects persist
@@ -375,9 +399,15 @@ test.serial("operations persist cached data", async (t) => {
 		headers: { "Cache-Control": "max-age=3600" },
 	});
 	await cache.put(key, resToCache);
-	let stored = await kvStorage.get(key);
-	assert(stored?.value !== undefined);
-	t.deepEqual(await text(stored.value), "body");
+
+	// Check directory created for namespace
+	const names = await fs.readdir(tmp);
+	t.true(names.includes("miniflare-CacheObject"));
+
+	// Check "restarting" keeps persisted data
+	await mf.dispose();
+	mf = new Miniflare(opts);
+	cache = (await mf.getCaches()).default;
 
 	// Check match respects persist
 	const res = await cache.match(key);
@@ -387,8 +417,6 @@ test.serial("operations persist cached data", async (t) => {
 	// Check delete respects persist
 	const deleted = await cache.delete(key);
 	t.true(deleted);
-	stored = await kvStorage.get(key);
-	t.is(stored, null);
 });
 test.serial("operations are no-ops when caching disabled", async (t) => {
 	// Set option, then reset after test
