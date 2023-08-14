@@ -1,8 +1,9 @@
 import http from "http";
-import { Agent, Headers, RequestInfo, fetch as baseFetch } from "undici";
+import { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
+import { Agent, Headers, fetch as baseFetch } from "undici";
 import NodeWebSocket from "ws";
-import { DeferredPromise } from "../shared";
-import { Request, RequestInit } from "./request";
+import { DeferredPromise } from "../workers";
+import { Request, RequestInfo, RequestInit } from "./request";
 import { Response } from "./response";
 import { WebSocketPair, coupleWebSocket } from "./websocket";
 
@@ -86,3 +87,8 @@ export async function fetch(
 	});
 	return new Response(response.body, response);
 }
+
+export type DispatchFetch = (
+	input: RequestInfo,
+	init?: RequestInit<Partial<IncomingRequestCfProperties>>
+) => Promise<Response>;

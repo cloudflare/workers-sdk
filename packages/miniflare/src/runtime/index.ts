@@ -9,7 +9,7 @@ import workerdPath, {
 } from "workerd";
 import { z } from "zod";
 import { SERVICE_LOOPBACK, SOCKET_ENTRY } from "../plugins";
-import { Awaitable } from "../shared";
+import { Awaitable } from "../workers";
 
 const ControlMessageSchema = z.object({
 	event: z.literal("listen"),

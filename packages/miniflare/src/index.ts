@@ -15,7 +15,6 @@ import type {
 	KVNamespace,
 	Queue,
 	R2Bucket,
-	RequestInitCfProperties,
 } from "@cloudflare/workers-types/experimental";
 import exitHook from "exit-hook";
 import stoppable from "stoppable";
@@ -23,6 +22,7 @@ import { WebSocketServer } from "ws";
 import { z } from "zod";
 import { fallbackCf, setupCf } from "./cf";
 import {
+	DispatchFetch,
 	Headers,
 	Request,
 	RequestInit,
@@ -36,7 +36,6 @@ import {
 import {
 	D1_PLUGIN_NAME,
 	DURABLE_OBJECTS_PLUGIN_NAME,
-	DispatchFetch,
 	DurableObjectClassNames,
 	GatewayConstructor,
 	GatewayFactory,
@@ -82,20 +81,22 @@ import {
 	serializeConfig,
 } from "./runtime";
 import {
-	HttpError,
 	Log,
 	MiniflareCoreError,
-	Mutex,
 	NoOpLog,
 	OptionalZodTypeOf,
 	ResponseInfoSchema,
-	Timers,
-	defaultTimers,
 	formatResponse,
 	maybeApply,
 } from "./shared";
-import { Storage } from "./storage";
-import { CoreBindings, CoreHeaders } from "./workers";
+import {
+	CoreBindings,
+	CoreHeaders,
+	LogLevel,
+	Mutex,
+	SharedHeaders,
+	maybeApply,
+} from "./workers";
 
 // ===== `Miniflare` User Options =====
 export type MiniflareOptions = SharedOptions &
@@ -464,7 +465,6 @@ export class Miniflare {
 	#sharedOpts: PluginSharedOptions;
 	#workerOpts: PluginWorkerOptions[];
 	#log: Log;
-	readonly #timers: Timers;
 	readonly #host: string;
 	readonly #accessibleHost: string;
 
@@ -516,7 +516,6 @@ export class Miniflare {
 		}
 
 		this.#log = this.#sharedOpts.core.log ?? new NoOpLog();
-		this.#timers = this.#sharedOpts.core.timers ?? defaultTimers;
 		this.#host = this.#sharedOpts.core.host ?? "127.0.0.1";
 		this.#accessibleHost =
 			this.#host === "*" || this.#host === "0.0.0.0" || this.#host === "::"

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ValueOf } from "../shared";
+import { ValueOf } from "../workers";
 import { CACHE_PLUGIN, CACHE_PLUGIN_NAME } from "./cache";
 import { CORE_PLUGIN, CORE_PLUGIN_NAME } from "./core";
 import { D1_PLUGIN, D1_PLUGIN_NAME } from "./d1";

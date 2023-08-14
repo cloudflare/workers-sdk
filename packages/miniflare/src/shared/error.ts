@@ -1,5 +1,3 @@
-import { Response } from "../http";
-
 export class MiniflareError<
 	Code extends string | number = string | number,
 > extends Error {
@@ -32,17 +30,3 @@ export type MiniflareCoreErrorCode =
 	| "ERR_DIFFERENT_UNIQUE_KEYS" // Multiple Durable Object bindings declared for same class with different unsafe unique keys
 	| "ERR_MULTIPLE_OUTBOUNDS"; // Both `outboundService` and `fetchMock` specified
 export class MiniflareCoreError extends MiniflareError<MiniflareCoreErrorCode> {}
-
-export class HttpError extends MiniflareError<number> {
-	constructor(code: number, message?: string, cause?: Error) {
-		super(code, message, cause);
-	}
-
-	toResponse(): Response {
-		return new Response(this.message, {
-			status: this.code,
-			// Custom statusMessage is required for runtime error messages
-			statusText: this.message.substring(0, 512),
-		});
-	}
-}

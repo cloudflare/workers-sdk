@@ -1,9 +1,9 @@
 import assert from "assert";
 import path from "path";
 import test from "ava";
-import { Miniflare, MiniflareCoreError } from "miniflare";
+import { Miniflare, MiniflareCoreError, stripAnsi } from "miniflare";
 import { ZodError } from "zod";
-import { stripAnsi, utf8Encode } from "../../test-shared";
+import { utf8Encode } from "../../test-shared";
 
 const ROOT = path.resolve(
 	__dirname,
