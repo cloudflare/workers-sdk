@@ -214,7 +214,7 @@ test("put: validates expiration", async (t) => {
 });
 test("put: validates value size", async (t) => {
 	const { kv } = t.context;
-	const maxValueSize = 25 * 1024 * 1024;
+	const maxValueSize = 1024;
 	const byteLength = maxValueSize + 1;
 	const expectations: ThrowsExpectation<Error> = {
 		instanceOf: Error,
