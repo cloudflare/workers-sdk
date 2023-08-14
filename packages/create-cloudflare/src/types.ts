@@ -47,4 +47,5 @@ export type FrameworkConfig = {
 	devCommand?: string;
 	testFlags?: string[];
 	compatibilityFlags?: string[];
+	type?: "pages" | "workers";
 };

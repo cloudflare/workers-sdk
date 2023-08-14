@@ -145,6 +145,7 @@ const updatePackageScripts = async (ctx: PagesGeneratorContext) => {
 
 const createProject = async (ctx: PagesGeneratorContext) => {
 	if (ctx.args.deploy === false) return;
+	if (ctx.framework?.config.type === "workers") return;
 	if (!ctx.account?.id) {
 		crash("Failed to read Cloudflare account.");
 		return;
