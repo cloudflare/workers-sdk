@@ -17,6 +17,7 @@ import type {
 	R2Bucket,
 } from "@cloudflare/workers-types/experimental";
 import exitHook from "exit-hook";
+import { $ as colors$ } from "kleur/colors";
 import stoppable from "stoppable";
 import SCRIPT_MINIFLARE_SHARED from "worker:shared/index";
 import SCRIPT_MINIFLARE_ZOD from "worker:shared/zod";
@@ -84,9 +85,7 @@ import {
 	MiniflareCoreError,
 	NoOpLog,
 	OptionalZodTypeOf,
-	ResponseInfoSchema,
-	formatResponse,
-	maybeApply,
+	stripAnsi,
 } from "./shared";
 import {
 	CoreBindings,
@@ -700,15 +699,16 @@ export class Miniflare {
 					request
 				);
 			} else if (url.pathname === "/core/log") {
-				const text = await request.text();
-				try {
-					// `JSON.parse()`ing may fail if the request was aborted and a partial
-					// body was received
-					const info = ResponseInfoSchema.parse(JSON.parse(text));
-					this.#log.info(await formatResponse(info));
-				} catch (e: unknown) {
-					this.#log.debug(`Error parsing response log: ${String(e)}`);
-				}
+				// Safety of `!`: `parseInt(null)` is `NaN`
+				const level = parseInt(request.headers.get(SharedHeaders.LOG_LEVEL)!);
+				assert(
+					LogLevel.NONE <= level && level <= LogLevel.VERBOSE,
+					`Expected ${SharedHeaders.LOG_LEVEL} header to be log level, got ${level}`
+				);
+				const logLevel = level as LogLevel;
+				let message = await request.text();
+				if (!colors$.enabled) message = stripAnsi(message);
+				this.#log.logWithLevel(logLevel, message);
 				response = new Response(null, { status: 204 });
 			} else if (url.pathname.startsWith(SourceMapRegistry.PATHNAME_PREFIX)) {
 				response = await this.#sourceMapRegistry?.get(url);
