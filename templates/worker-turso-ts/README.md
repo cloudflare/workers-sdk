@@ -5,6 +5,18 @@ database, and TypeScript to implement routes that read and write the database.
 It is provided as part of a [tutorial], which walks you through the process of
 setting up Turso and creating a database.
 
+## Setup
+
+To create a `my-project` directory using this template, run:
+
+```sh
+$ npx wrangler generate my-project worker-turso-ts
+# or
+$ yarn wrangler generate my-project worker-turso-ts
+# or
+$ pnpm wrangler generate my-project worker-turso-ts
+```
+
 In order to get this code to run, you will need to:
 
 - Edit `wrangler.toml` and set the `LIBSQL_DB_URL` [environment variable]

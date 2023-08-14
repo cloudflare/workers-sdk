@@ -19,7 +19,7 @@ Alternatively:
 ```sh
 git clone https://github.com/cloudflare/templates.git
 cd templates
-npm init cloudflare northwind-demo worker-d1-api
+npx wrangler generate northwind-demo worker-d1-api
 ```
 
 ### Getting started
