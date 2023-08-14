@@ -1118,7 +1118,7 @@ export class Miniflare {
 		}
 
 		if (
-			process.env.MINIFLARE_ASSERT_BODIES_CONSUMED !== undefined &&
+			process.env.MINIFLARE_ASSERT_BODIES_CONSUMED === "true" &&
 			response.body !== null
 		) {
 			// Throw an uncaught exception if the body from this response isn't
