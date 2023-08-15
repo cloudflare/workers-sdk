@@ -27,6 +27,8 @@
 	"files": [
 		"src",
 		"dist",
+		"!src/test",
+		"!dist/test",
 		"LICENSE_APACHE",
 		"LICENSE_MIT"
 	],
