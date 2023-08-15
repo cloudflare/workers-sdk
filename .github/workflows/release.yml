@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     branches:
-      - main
+      - v2-maintenance
 
 jobs:
   release:

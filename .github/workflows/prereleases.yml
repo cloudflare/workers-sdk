@@ -3,7 +3,7 @@ name: Prerelease
 on:
   push:
     branches:
-      - main
+      - v2-maintenance
 jobs:
   prerelease:
     if: ${{ github.repository_owner == 'cloudflare' }}
