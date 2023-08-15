@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readdirSync } from "fs";
 import { basename, dirname, resolve } from "path";
 import { chdir } from "process";
+import { getFrameworkVersion } from "frameworks/index";
 import {
 	crash,
 	endSection,
@@ -23,6 +24,7 @@ import {
 import { inputPrompt, processArgument, spinner } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
 import { poll } from "helpers/poll";
+import { version } from "../package.json";
 import { C3_DEFAULTS } from "./cli";
 import type { C3Args, PagesGeneratorContext } from "types";
 
@@ -249,12 +251,13 @@ export const offerGit = async (ctx: PagesGeneratorContext) => {
 	}
 };
 
-export const gitCommit = async (
-	ctx: PagesGeneratorContext,
-	commitMessage = "Initial commit (by Create-Cloudflare CLI)"
-) => {
+export const gitCommit = async (ctx: PagesGeneratorContext) => {
 	if (!(await isGitInstalled()) || !(await isInsideGitRepo(ctx.project.path)))
 		return;
+
+	const commitMessage =
+		generateFrameworkCommitMessage(ctx) ??
+		"Initial commit (by Create-Cloudflare CLI)";
 
 	await runCommands({
 		silent: true,
@@ -263,6 +266,30 @@ export const gitCommit = async (
 		startText: "Committing new files",
 		doneText: `${brandColor("git")} ${dim(`commit`)}`,
 	});
+};
+
+const generateFrameworkCommitMessage = (ctx: PagesGeneratorContext) => {
+	if (!ctx.framework) return;
+
+	const header = "Web application initialized by Create-Cloudflare CLI";
+
+	const details: { key: string; value: string }[] = [
+		{ key: "date", value: new Date().toISOString() },
+		{ key: "create-cloudflare version", value: version },
+		{ key: "project name", value: ctx.project.name },
+	];
+
+	details.push({ key: "framework", value: `${ctx.framework.name}` });
+	details.push({
+		key: "framework cli version",
+		value: `${getFrameworkVersion(ctx)}`,
+	});
+
+	const body = `Details:\n${details
+		.map(({ key, value }) => `  ${key} = ${value}`)
+		.join("\n")}\n`;
+
+	return `${header}\n\n${body}\n`;
 };
 
 /**
