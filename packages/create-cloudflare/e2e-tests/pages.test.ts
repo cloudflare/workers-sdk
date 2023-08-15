@@ -16,7 +16,7 @@ type FrameworkTestConfig = RunnerConfig & {
 };
 
 describe(`E2E: Web frameworks`, () => {
-	const { getName, getPath, clean } = testProjectDir("pages");
+	const { getPath, clean } = testProjectDir("pages");
 
 	beforeEach((ctx) => {
 		const framework = ctx.meta.name;
@@ -80,19 +80,26 @@ describe(`E2E: Web frameworks`, () => {
 	};
 
 	const runCliWithDeploy = async (framework: string) => {
-		const projectName = getName(framework);
-
 		const { argv, overrides, promptHandlers, expectResponseToContain } =
 			frameworkTests[framework];
 
-		await runCli(framework, {
+		const { output } = await runCli(framework, {
 			overrides,
 			promptHandlers,
 			argv: [...(argv ?? []), "--deploy", "--no-git"],
 		});
 
 		// Verify deployment
-		const projectUrl = `https://${projectName}.pages.dev/`;
+		const deployedUrlRe =
+			/deployment is ready at: (https:\/\/.+\.(pages|workers)\.dev)/;
+
+		const match = output.match(deployedUrlRe);
+		if (!match || !match[1]) {
+			expect(false, "Couldn't find deployment url in C3 output").toBe(true);
+			return;
+		}
+
+		const projectUrl = match[1];
 
 		const res = await fetch(projectUrl);
 		expect(res.status).toBe(200);
@@ -110,7 +117,7 @@ describe(`E2E: Web frameworks`, () => {
 			expectResponseToContain: "Hello, Astronaut!",
 		},
 		hono: {
-			expectResponseToContain: "/api/hello",
+			expectResponseToContain: "Hello Hono!",
 		},
 		qwik: {
 			expectResponseToContain: "Welcome to Qwik",
