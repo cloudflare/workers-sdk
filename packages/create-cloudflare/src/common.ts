@@ -249,18 +249,19 @@ export const offerGit = async (ctx: PagesGeneratorContext) => {
 	}
 };
 
-export const gitCommit = async (ctx: PagesGeneratorContext) => {
-	if (!ctx.args.git) return;
+export const gitCommit = async (
+	ctx: PagesGeneratorContext,
+	commitMessage = "Initial commit (by Create-Cloudflare CLI)"
+) => {
+	if (!(await isGitInstalled()) || !(await isInsideGitRepo(ctx.project.path)))
+		return;
 
 	await runCommands({
 		silent: true,
 		cwd: ctx.project.path,
-		commands: [
-			"git add .",
-			["git", "commit", "-m", "Initial commit (by Create-Cloudflare CLI)"],
-		],
+		commands: ["git add .", ["git", "commit", "-m", commitMessage]],
 		startText: "Committing new files",
-		doneText: `${brandColor("git")} ${dim(`initial commit`)}`,
+		doneText: `${brandColor("git")} ${dim(`commit`)}`,
 	});
 };
 
