@@ -1,18 +1,13 @@
 #!/usr/bin/env node
 import { resolve } from "path";
 import { chdir } from "process";
-import {
-	FrameworkMap,
-	getFrameworkVersion,
-	supportedFramework,
-} from "frameworks/index";
+import { FrameworkMap, supportedFramework } from "frameworks/index";
 import { crash, endSection, startSection } from "helpers/cli";
 import { dim, brandColor } from "helpers/colors";
 import { installWrangler, retry, runCommand } from "helpers/command";
 import { readJSON, writeFile } from "helpers/files";
 import { processArgument, spinner } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
-import { version } from "../package.json";
 import { C3_DEFAULTS } from "./cli";
 import {
 	getProductionBranch,
@@ -66,7 +61,7 @@ export const runPagesGenerator = async (args: C3Args) => {
 	}
 	await updatePackageScripts(ctx);
 	await offerGit(ctx);
-	await gitCommit(ctx, generatePagesCommitMessage(ctx));
+	await gitCommit(ctx);
 	endSection(`Application configured`);
 
 	// Deploy
@@ -180,28 +175,4 @@ const createProject = async (ctx: PagesGeneratorContext) => {
 	} catch (error) {
 		crash("Failed to create pages project. See output above.");
 	}
-};
-
-const generatePagesCommitMessage = (ctx: PagesGeneratorContext) => {
-	const header = "Web application initialized by Create-Cloudflare CLI";
-
-	const details: { key: string; value: string }[] = [
-		{ key: "date", value: new Date().toISOString() },
-		{ key: "create-cloudflare version", value: version },
-		{ key: "project name", value: ctx.project.name },
-	];
-
-	if (ctx.framework) {
-		details.push({ key: "framework", value: `${ctx.framework.name}` });
-		details.push({
-			key: "framework cli version",
-			value: `${getFrameworkVersion(ctx)}`,
-		});
-	}
-
-	const body = `Details:\n${details
-		.map(({ key, value }) => `  ${key} = ${value}`)
-		.join("\n")}\n`;
-
-	return `${header}\n\n${body}\n`;
 };
