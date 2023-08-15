@@ -1,0 +1,35 @@
+name: "Install Dependencies"
+description: "Install dependencies, fetching from cache when possible"
+runs:
+  using: "composite"
+  steps:
+    - name: Use Node.js ${{ env.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ env.node-version }}
+        cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
+
+    - name: ESlint and Typescript caching
+      uses: actions/cache@v3
+      id: eslint-cache
+      with:
+        path: |
+          .eslintcache
+          tsconfig.tsbuildinfo
+        key: ${{ matrix.os }}-eslint-tsbuildinfo-${{ hashFiles('**/*.ts','**/*.js', 'package.json', 'tsconfig.json') }}
+
+    # Attempt to cache all the node_modules directories based on the OS and package lock.
+    - name: Cache node_modules
+      id: npm-cache
+      uses: actions/cache@v3
+      env:
+        cache-name: cache-node-modules
+      with:
+        key: ${{ runner.os }}-${{ env.node-version }}-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+        path: "**/node_modules"
+
+    # If the cache missed then install using `npm ci` to follow package lock exactly
+    - if: ${{ steps.npm-cache.outputs.cache-hit != 'true'}}
+      shell: bash
+      name: Install NPM Dependencies
+      run: npm ci

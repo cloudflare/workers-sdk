@@ -8,7 +8,7 @@ export default defineConfig({
 		cache: false,
 		root: ".",
 		testTimeout: 1000 * 60 * 3, // 3 min for lengthy installs
-		maxConcurrency: 4,
+		maxConcurrency: 3,
 		setupFiles: ["e2e-tests/setup.ts"],
 	},
 });

@@ -1,15 +1,10 @@
-import { existsSync, mkdtempSync, realpathSync, rmSync } from "fs";
-import crypto from "node:crypto";
-import { tmpdir } from "os";
 import { join } from "path";
 import { FrameworkMap } from "frameworks/index";
 import { readJSON } from "helpers/files";
 import { fetch } from "undici";
 import { describe, expect, test, afterEach, beforeEach } from "vitest";
-import { keys, runC3 } from "./helpers";
+import { keys, runC3, testProjectDir } from "./helpers";
 import type { RunnerConfig } from "./helpers";
-
-export const TEST_PREFIX = "c3-e2e-";
 
 /*
 Areas for future improvement:
@@ -21,34 +16,23 @@ type FrameworkTestConfig = RunnerConfig & {
 };
 
 describe(`E2E: Web frameworks`, () => {
-	const tmpDirPath = realpathSync(mkdtempSync(join(tmpdir(), "c3-tests")));
-	const baseProjectName = `c3-e2e-${crypto.randomBytes(3).toString("hex")}`;
-
-	const getProjectName = (framework: string) =>
-		`${baseProjectName}-${framework}`;
-	const getProjectPath = (framework: string) =>
-		join(tmpDirPath, getProjectName(framework));
+	const { getPath, clean } = testProjectDir("pages");
 
 	beforeEach((ctx) => {
 		const framework = ctx.meta.name;
-		const projectPath = getProjectPath(framework);
-		rmSync(projectPath, { recursive: true, force: true });
+		clean(framework);
 	});
 
 	afterEach((ctx) => {
 		const framework = ctx.meta.name;
-		const projectPath = getProjectPath(framework);
-
-		if (existsSync(projectPath)) {
-			rmSync(projectPath, { recursive: true });
-		}
+		clean(framework);
 	});
 
 	const runCli = async (
 		framework: string,
 		{ argv = [], promptHandlers = [], overrides }: RunnerConfig
 	) => {
-		const projectPath = getProjectPath(framework);
+		const projectPath = getPath(framework);
 
 		const args = [
 			projectPath,
@@ -96,19 +80,26 @@ describe(`E2E: Web frameworks`, () => {
 	};
 
 	const runCliWithDeploy = async (framework: string) => {
-		const projectName = `${baseProjectName}-${framework}`;
-
 		const { argv, overrides, promptHandlers, expectResponseToContain } =
 			frameworkTests[framework];
 
-		await runCli(framework, {
+		const { output } = await runCli(framework, {
 			overrides,
 			promptHandlers,
 			argv: [...(argv ?? []), "--deploy", "--no-git"],
 		});
 
 		// Verify deployment
-		const projectUrl = `https://${projectName}.pages.dev/`;
+		const deployedUrlRe =
+			/deployment is ready at: (https:\/\/.+\.(pages|workers)\.dev)/;
+
+		const match = output.match(deployedUrlRe);
+		if (!match || !match[1]) {
+			expect(false, "Couldn't find deployment url in C3 output").toBe(true);
+			return;
+		}
+
+		const projectUrl = match[1];
 
 		const res = await fetch(projectUrl);
 		expect(res.status).toBe(200);
@@ -126,7 +117,7 @@ describe(`E2E: Web frameworks`, () => {
 			expectResponseToContain: "Hello, Astronaut!",
 		},
 		hono: {
-			expectResponseToContain: "/api/hello",
+			expectResponseToContain: "Hello Hono!",
 		},
 		qwik: {
 			expectResponseToContain: "Welcome to Qwik",
