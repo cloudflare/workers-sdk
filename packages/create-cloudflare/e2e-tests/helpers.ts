@@ -45,9 +45,9 @@ export const runC3 = async ({
 
 			lines.forEach((line) => {
 				// Uncomment to debug test output
-				// if (filterLine(line)) {
-				// 	console.log(line);
-				// }
+				if (filterLine(line)) {
+					console.log(line);
+				}
 				stdout.push(line);
 
 				if (currentDialog && currentDialog.matcher.test(line)) {
