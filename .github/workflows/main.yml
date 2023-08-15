@@ -1,11 +1,11 @@
-name: Main branch
+name: Maintenance branch
 
-# This flow will re-run tests on the main branch after a PR has been merged.
+# This flow will re-run tests on the Maintenance branch after a PR has been merged.
 
 on:
   push:
     branches:
-      - main
+      - v2-maintenance
 
 jobs:
   test:
