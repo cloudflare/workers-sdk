@@ -18,6 +18,7 @@ import {
 } from "../../pages/functions/buildWorker";
 import { validateRoutes } from "../../pages/functions/routes-validation";
 import { upload } from "../../pages/upload";
+import { validate } from "../../pages/validate";
 import { createUploadWorkerBundleContents } from "./create-worker-bundle-contents";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Project, Deployment } from "@cloudflare/types";
@@ -196,8 +197,10 @@ export async function deploy({
 		}
 	}
 
+	const fileMap = await validate({ directory });
+
 	const manifest = await upload({
-		directory,
+		fileMap,
 		accountId,
 		projectName,
 		skipCaching: skipCaching ?? false,
