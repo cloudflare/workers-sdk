@@ -308,7 +308,13 @@ const createCommitMessage = async (ctx: PagesGeneratorContext) => {
  */
 async function getGitVersion() {
 	try {
-		return runCommand("git -v", { useSpinner: false, silent: true });
+		const rawGitVersion = await runCommand("git --version", {
+			useSpinner: false,
+			silent: true,
+		});
+		// let's remove the "git version " prefix as it isn't really helpful
+		const gitVersion = rawGitVersion.replace(/^git\s+version\s+/, "");
+		return gitVersion;
 	} catch {
 		return null;
 	}
