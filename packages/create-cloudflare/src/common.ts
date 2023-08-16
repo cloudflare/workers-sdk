@@ -256,7 +256,7 @@ export const gitCommit = async (ctx: PagesGeneratorContext) => {
 	if (!(await isGitInstalled()) || !(await isInsideGitRepo(ctx.project.path)))
 		return;
 
-	const commitMessage = createCommitMessage(ctx);
+	const commitMessage = await createCommitMessage(ctx);
 
 	await runCommands({
 		silent: true,
@@ -267,12 +267,15 @@ export const gitCommit = async (ctx: PagesGeneratorContext) => {
 	});
 };
 
-const createCommitMessage = (ctx: PagesGeneratorContext) => {
+const createCommitMessage = async (ctx: PagesGeneratorContext) => {
 	if (!ctx.framework) return "Initial commit (by create-cloudflare CLI)";
 
 	const header = "Initialize web application via create-cloudflare CLI";
 
 	const packageManager = detectPackageManager();
+
+	const gitVersion = await getGitVersion();
+	const insideRepo = await isInsideGitRepo(ctx.project.path);
 
 	const details = [
 		{ key: "C3", value: `create-cloudflare@${version}` },
@@ -287,6 +290,10 @@ const createCommitMessage = (ctx: PagesGeneratorContext) => {
 			key: "wrangler",
 			value: `wrangler@${wranglerVersion}`,
 		},
+		{
+			key: "git",
+			value: insideRepo ? gitVersion : 'N/A',
+		}
 	];
 
 	const body = `Details:\n${details
@@ -297,16 +304,21 @@ const createCommitMessage = (ctx: PagesGeneratorContext) => {
 };
 
 /**
+ * Return the version of git on the user's machine, or null if git is not available.
+ */
+async function getGitVersion() {
+	try {
+		return runCommand("git -v", { useSpinner: false, silent: true });
+	} catch {
+		return null;
+	}
+}
+
+/**
  * Check whether git is available on the user's machine.
  */
-export async function isGitInstalled() {
-	try {
-		await runCommand("git -v", { useSpinner: false, silent: true });
-
-		return true;
-	} catch {
-		return false;
-	}
+async function isGitInstalled() {
+	return (await getGitVersion()) !== null;
 }
 
 /**
