@@ -271,7 +271,7 @@ export const gitCommit = async (ctx: PagesGeneratorContext) => {
 const generateFrameworkCommitMessage = (ctx: PagesGeneratorContext) => {
 	if (!ctx.framework) return;
 
-	const header = "Initialize Web application via Create-Cloudflare CLI";
+	const header = "Initialize web application via Create-Cloudflare CLI";
 
 	const packageManager = detectPackageManager();
 
