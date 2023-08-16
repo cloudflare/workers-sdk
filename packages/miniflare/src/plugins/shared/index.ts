@@ -2,6 +2,7 @@ import { z } from "zod";
 import { Service, Worker_Binding, Worker_Module } from "../../runtime";
 import { Awaitable, Log, OptionalZodTypeOf } from "../../shared";
 import { GatewayConstructor } from "./gateway";
+import { SourceMapRegistry } from "./registry";
 import { RouterConstructor } from "./router";
 
 // Maps **service** names to the Durable Object class names exported by them
@@ -41,6 +42,7 @@ export interface PluginServicesOptions<
 	workerIndex: number;
 	additionalModules: Worker_Module[];
 	tmpPath: string;
+	sourceMapRegistry: SourceMapRegistry;
 
 	// ~~Leaky abstractions~~ "Plugin specific options" :)
 	durableObjectClassNames: DurableObjectClassNames;
@@ -91,5 +93,6 @@ export function namespaceEntries(
 export * from "./constants";
 export * from "./gateway";
 export * from "./range";
+export * from "./registry";
 export * from "./router";
 export * from "./routing";

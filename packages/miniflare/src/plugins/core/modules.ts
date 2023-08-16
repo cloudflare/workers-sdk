@@ -15,6 +15,7 @@ import {
 	globsToRegExps,
 	testRegExps,
 } from "../../shared";
+import { SourceMapRegistry } from "../shared";
 
 const SUGGEST_BUNDLE =
 	"If you're trying to import an npm package, you'll need to bundle your Worker first.";
@@ -122,11 +123,13 @@ function getResolveErrorPrefix(referencingPath: string): string {
 }
 
 export class ModuleLocator {
+	readonly #sourceMapRegistry: SourceMapRegistry;
 	readonly #compiledRules: CompiledModuleRule[];
 	readonly #visitedPaths = new Set<string>();
 	readonly modules: Worker_Module[] = [];
 
-	constructor(rules?: ModuleRule[]) {
+	constructor(sourceMapRegistry: SourceMapRegistry, rules?: ModuleRule[]) {
+		this.#sourceMapRegistry = sourceMapRegistry;
 		this.#compiledRules = compileModuleRules(rules);
 	}
 
@@ -144,6 +147,7 @@ export class ModuleLocator {
 	#visitJavaScriptModule(code: string, modulePath: string, esModule = true) {
 		// Register module
 		const name = path.relative("", modulePath);
+		code = this.#sourceMapRegistry.register(code, modulePath);
 		this.modules.push(
 			esModule ? { name, esModule: code } : { name, commonJsModule: code }
 		);
@@ -305,18 +309,23 @@ function contentsToArray(contents: string | Uint8Array): Uint8Array {
 	return typeof contents === "string" ? encoder.encode(contents) : contents;
 }
 export function convertModuleDefinition(
+	sourceMapRegistry: SourceMapRegistry,
 	modulesRoot: string,
 	def: ModuleDefinition
 ): Worker_Module {
 	// The runtime requires module identifiers to be relative paths
 	let name = path.relative(modulesRoot, def.path);
 	if (path.sep === "\\") name = name.replaceAll("\\", "/");
-	const contents = def.contents ?? readFileSync(def.path);
+	let contents = def.contents ?? readFileSync(def.path);
 	switch (def.type) {
 		case "ESModule":
-			return { name, esModule: contentsToString(contents) };
+			contents = contentsToString(contents);
+			contents = sourceMapRegistry.register(contents, def.path);
+			return { name, esModule: contents };
 		case "CommonJS":
-			return { name, commonJsModule: contentsToString(contents) };
+			contents = contentsToString(contents);
+			contents = sourceMapRegistry.register(contents, def.path);
+			return { name, commonJsModule: contents };
 		case "Text":
 			return { name, text: contentsToString(contents) };
 		case "Data":

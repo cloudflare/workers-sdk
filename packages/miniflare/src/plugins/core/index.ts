@@ -30,6 +30,7 @@ import {
 	HEADER_CF_BLOB,
 	Plugin,
 	SERVICE_LOOPBACK,
+	SourceMapRegistry,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 	parseRoutes,
 } from "../shared";
@@ -320,9 +321,14 @@ export const CORE_PLUGIN: Plugin<
 		workerIndex,
 		durableObjectClassNames,
 		additionalModules,
+		sourceMapRegistry,
 	}) {
 		// Define regular user worker
-		const workerScript = getWorkerScript(options, workerIndex);
+		const workerScript = getWorkerScript(
+			sourceMapRegistry,
+			options,
+			workerIndex
+		);
 		// Add additional modules (e.g. "__STATIC_CONTENT_MANIFEST") if any
 		if ("modules" in workerScript) {
 			workerScript.modules.push(...additionalModules);
@@ -480,6 +486,7 @@ export function getGlobalServices({
 }
 
 function getWorkerScript(
+	sourceMapRegistry: SourceMapRegistry,
 	options: SourceOptions,
 	workerIndex: number
 ): { serviceWorkerScript: string } | { modules: Worker_Module[] } {
@@ -489,7 +496,7 @@ function getWorkerScript(
 			("modulesRoot" in options ? options.modulesRoot : undefined) ?? "";
 		return {
 			modules: options.modules.map((module) =>
-				convertModuleDefinition(modulesRoot, module)
+				convertModuleDefinition(sourceMapRegistry, modulesRoot, module)
 			),
 		};
 	}
@@ -509,7 +516,7 @@ function getWorkerScript(
 
 	if (options.modules) {
 		// If `modules` is `true`, automatically collect modules...
-		const locator = new ModuleLocator(options.modulesRules);
+		const locator = new ModuleLocator(sourceMapRegistry, options.modulesRules);
 		// If `script` and `scriptPath` are set, resolve modules in `script`
 		// against `scriptPath`.
 		locator.visitEntrypoint(
@@ -520,6 +527,9 @@ function getWorkerScript(
 	} else {
 		// ...otherwise, `modules` will either be `false` or `undefined`, so treat
 		// `code` as a service worker
+		if ("scriptPath" in options && options.scriptPath !== undefined) {
+			code = sourceMapRegistry.register(code, options.scriptPath);
+		}
 		return { serviceWorkerScript: code };
 	}
 }
