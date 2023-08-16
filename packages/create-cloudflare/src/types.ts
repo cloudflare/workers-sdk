@@ -29,6 +29,7 @@ export type PagesGeneratorContext = {
 	framework?: {
 		name: string;
 		config: FrameworkConfig;
+		commitMessage?: string;
 	};
 	project: {
 		name: string;
