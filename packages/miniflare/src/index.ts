@@ -38,6 +38,7 @@ import {
 	QueueConsumers,
 	QueuesError,
 	SharedOptions,
+	SourceMapRegistry,
 	WorkerOptions,
 	getGlobalServices,
 	maybeGetSitesManifestModule,
@@ -403,6 +404,7 @@ export class Miniflare {
 	#runtime?: Runtime;
 	#removeRuntimeExitHook?: () => void;
 	#runtimeEntryURL?: URL;
+	#sourceMapRegistry?: SourceMapRegistry;
 
 	// Path to temporary directory for use as scratch space/"in-memory" Durable
 	// Object storage. Note this may not exist, it's up to the consumers to
@@ -664,6 +666,8 @@ export class Miniflare {
 					this.#log.debug(`Error parsing response log: ${String(e)}`);
 				}
 				response = new Response(null, { status: 204 });
+			} else if (url.pathname.startsWith(SourceMapRegistry.PATHNAME_PREFIX)) {
+				response = await this.#sourceMapRegistry?.get(url);
 			} else {
 				// TODO: check for proxying/outbound fetch header first (with plans for fetch mocking)
 				response = await this.#handleLoopbackPlugins(request, url);
@@ -771,6 +775,7 @@ export class Miniflare {
 
 		sharedOpts.core.cf = await setupCf(this.#log, sharedOpts.core.cf);
 
+		const sourceMapRegistry = new SourceMapRegistry(this.#log, loopbackPort);
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
 		const queueConsumers = getQueueConsumers(allWorkerOpts);
 		const allWorkerRoutes = getWorkerRoutes(allWorkerOpts);
@@ -823,6 +828,7 @@ export class Miniflare {
 				workerIndex: i,
 				additionalModules,
 				tmpPath: this.#tmpPath,
+				sourceMapRegistry,
 				durableObjectClassNames,
 				queueConsumers,
 			};
@@ -844,6 +850,10 @@ export class Miniflare {
 				}
 			}
 		}
+
+		// Once we've assembled the config, and are about to restart the runtime,
+		// update the source map registry.
+		this.#sourceMapRegistry = sourceMapRegistry;
 
 		return { services: Array.from(services.values()), sockets };
 	}
