@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readdirSync } from "fs";
 import { basename, dirname, resolve } from "path";
 import { chdir } from "process";
-import { getFrameworkVersion } from "frameworks/index";
+import { getFrameworkCli } from "frameworks/index";
 import {
 	crash,
 	endSection,
@@ -273,17 +273,12 @@ const generateFrameworkCommitMessage = (ctx: PagesGeneratorContext) => {
 
 	const header = "Web application initialized by Create-Cloudflare CLI";
 
-	const details: { key: string; value: string }[] = [
-		{ key: "date", value: new Date().toISOString() },
-		{ key: "create-cloudflare version", value: version },
+	const details = [
+		{ key: "C3", value: `create-cloudflare@${version}` },
 		{ key: "project name", value: ctx.project.name },
+		{ key: "framework", value: ctx.framework.name },
+		{ key: "framework cli", value: getFrameworkCli(ctx) },
 	];
-
-	details.push({ key: "framework", value: `${ctx.framework.name}` });
-	details.push({
-		key: "framework cli version",
-		value: `${getFrameworkVersion(ctx)}`,
-	});
 
 	const body = `Details:\n${details
 		.map(({ key, value }) => `  ${key} = ${value}`)

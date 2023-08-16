@@ -12,7 +12,7 @@ import {
 } from "helpers/files";
 import { processArgument } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
-import { getFrameworkVersion } from "../index";
+import { getFrameworkCli } from "../index";
 import {
 	apiAppDirHelloJs,
 	apiAppDirHelloTs,
@@ -25,11 +25,11 @@ const { npm, npx, dlx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
 	const projectName = ctx.project.name;
-	const version = getFrameworkVersion(ctx);
+	const cli = getFrameworkCli(ctx);
 
 	await runFrameworkGenerator(
 		ctx,
-		`${dlx} create-next-app@${version} ${projectName}`
+		`${dlx} ${cli} ${projectName}`
 	);
 };
 
