@@ -18,7 +18,7 @@ export function Options(yargs: CommonYargsArgv) {
 	return yargs.positional("directory", {
 		type: "string",
 		demandOption: true,
-		description: "The directory of static files to upload",
+		description: "The directory of static files to validate",
 	});
 }
 
