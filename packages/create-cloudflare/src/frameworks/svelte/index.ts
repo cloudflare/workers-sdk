@@ -8,7 +8,7 @@ import {
 } from "helpers/command";
 import { compatDateFlag, usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import { getFrameworkVersion } from "../index";
+import { getFrameworkCli } from "../index";
 import { platformInterface } from "./templates";
 import type * as recast from "recast";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
@@ -16,10 +16,10 @@ import type { PagesGeneratorContext, FrameworkConfig } from "types";
 const { npm, dlx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
-	const version = getFrameworkVersion(ctx);
+	const cli = getFrameworkCli(ctx);
 	await runFrameworkGenerator(
 		ctx,
-		`${dlx} create-svelte@${version} ${ctx.project.name}`
+		`${dlx} ${cli} ${ctx.project.name}`
 	);
 
 	logRaw("");
