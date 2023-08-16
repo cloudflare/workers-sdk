@@ -36,6 +36,7 @@ jobs:
         run: npm run test:unit -w create-cloudflare
 
   cleanup:
+    if: ${{ github.repository_owner == 'cloudflare' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
