@@ -102,9 +102,9 @@ export const runDeploy = async (ctx: PagesGeneratorContext) => {
 		...baseDeployCmd,
 		// Important: the following assumes that all framework deploy commands terminate with `wrangler pages deploy`
 		ctx.framework?.commitMessage && !insideGitRepo
-			? `--commit-message="${ctx.framework.commitMessage}"`
+			? `--commit-message="${ctx.framework.commitMessage.replaceAll('"', "\\\"")}"`
 			: "",
-	];
+	].filter(Boolean);
 
 	const result = await runCommand(deployCmd, {
 		silent: true,
@@ -266,10 +266,13 @@ export const offerGit = async (ctx: PagesGeneratorContext) => {
 };
 
 export const gitCommit = async (ctx: PagesGeneratorContext) => {
+	// Note: createCommitMessage stores the message in ctx so that it can
+	//       be used later even if we're not in a git repository, that's why
+	//       we unconditionally run this command here
+	const commitMessage = await createCommitMessage(ctx);
+
 	if (!(await isGitInstalled()) || !(await isInsideGitRepo(ctx.project.path)))
 		return;
-
-	const commitMessage = await createCommitMessage(ctx);
 
 	await runCommands({
 		silent: true,
