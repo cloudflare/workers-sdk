@@ -292,8 +292,8 @@ const createCommitMessage = async (ctx: PagesGeneratorContext) => {
 		},
 		{
 			key: "git",
-			value: insideRepo ? gitVersion : 'N/A',
-		}
+			value: insideRepo ? gitVersion : "N/A",
+		},
 	];
 
 	const body = `Details:\n${details
