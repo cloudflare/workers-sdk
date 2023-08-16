@@ -27,6 +27,7 @@ import { poll } from "helpers/poll";
 import { version } from "../package.json";
 import { C3_DEFAULTS } from "./cli";
 import type { C3Args, PagesGeneratorContext } from "types";
+import { version as wranglerVersion } from "wrangler/package.json";
 
 const { npm } = detectPackageManager();
 
@@ -255,7 +256,7 @@ export const gitCommit = async (ctx: PagesGeneratorContext) => {
 	if (!(await isGitInstalled()) || !(await isInsideGitRepo(ctx.project.path)))
 		return;
 
-	const commitMessage = generateCommitMessage(ctx);
+	const commitMessage = createCommitMessage(ctx);
 
 	await runCommands({
 		silent: true,
@@ -266,7 +267,7 @@ export const gitCommit = async (ctx: PagesGeneratorContext) => {
 	});
 };
 
-const generateCommitMessage = (ctx: PagesGeneratorContext) => {
+const createCommitMessage = (ctx: PagesGeneratorContext) => {
 	if (!ctx.framework) return "Initial commit (by create-cloudflare CLI)";
 
 	const header = "Initialize web application via create-cloudflare CLI";
@@ -281,6 +282,10 @@ const generateCommitMessage = (ctx: PagesGeneratorContext) => {
 		{
 			key: "package manager",
 			value: `${packageManager.name}@${packageManager.version}`,
+		},
+		{
+			key: "wrangler",
+			value: `wrangler@${wranglerVersion}`,
 		},
 	];
 
