@@ -273,11 +273,14 @@ const generateFrameworkCommitMessage = (ctx: PagesGeneratorContext) => {
 
 	const header = "Web application initialized by Create-Cloudflare CLI";
 
+	const packageManager = detectPackageManager();
+
 	const details = [
 		{ key: "C3", value: `create-cloudflare@${version}` },
 		{ key: "project name", value: ctx.project.name },
 		{ key: "framework", value: ctx.framework.name },
 		{ key: "framework cli", value: getFrameworkCli(ctx) },
+		{ key: "package manager", value: `${packageManager.name}@${packageManager.version}` }
 	];
 
 	const body = `Details:\n${details
