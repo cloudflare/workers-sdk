@@ -257,7 +257,7 @@ export const gitCommit = async (ctx: PagesGeneratorContext) => {
 
 	const commitMessage =
 		generateFrameworkCommitMessage(ctx) ??
-		"Initial commit (by Create-Cloudflare CLI)";
+		"Initial commit (by create-cloudflare CLI)";
 
 	await runCommands({
 		silent: true,
@@ -271,7 +271,7 @@ export const gitCommit = async (ctx: PagesGeneratorContext) => {
 const generateFrameworkCommitMessage = (ctx: PagesGeneratorContext) => {
 	if (!ctx.framework) return;
 
-	const header = "Initialize web application via Create-Cloudflare CLI";
+	const header = "Initialize web application via create-cloudflare CLI";
 
 	const packageManager = detectPackageManager();
 
