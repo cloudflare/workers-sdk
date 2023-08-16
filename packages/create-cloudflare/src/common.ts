@@ -24,10 +24,10 @@ import {
 import { inputPrompt, processArgument, spinner } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
 import { poll } from "helpers/poll";
+import { version as wranglerVersion } from "wrangler/package.json";
 import { version } from "../package.json";
 import { C3_DEFAULTS } from "./cli";
 import type { C3Args, PagesGeneratorContext } from "types";
-import { version as wranglerVersion } from "wrangler/package.json";
 
 const { npm } = detectPackageManager();
 
@@ -90,15 +90,28 @@ export const runDeploy = async (ctx: PagesGeneratorContext) => {
 		return;
 	}
 
-	const deployCmd = `${npm} run ${
-		ctx.framework?.config.deployCommand ?? "deploy"
-	}`;
+	const baseDeployCmd = [
+		npm,
+		"run",
+		ctx.framework?.config.deployCommand ?? "deploy",
+	];
+
+	const insideGitRepo = await isInsideGitRepo(ctx.project.path);
+
+	const deployCmd = [
+		...baseDeployCmd,
+		// Important: the following assumes that all framework deploy commands terminate with `wrangler pages deploy`
+		ctx.framework?.commitMessage && !insideGitRepo
+			? `--commit-message="${ctx.framework.commitMessage}"`
+			: "",
+	];
+
 	const result = await runCommand(deployCmd, {
 		silent: true,
 		cwd: ctx.project.path,
 		env: { CLOUDFLARE_ACCOUNT_ID: ctx.account.id, NODE_ENV: "production" },
 		startText: `Deploying your application`,
-		doneText: `${brandColor("deployed")} ${dim(`via \`${deployCmd}\``)}`,
+		doneText: `${brandColor("deployed")} ${dim(`via \`${baseDeployCmd}\``)}`,
 	});
 
 	const deployedUrlRegex = /https:\/\/.+\.(pages|workers)\.dev/;
@@ -300,7 +313,9 @@ const createCommitMessage = async (ctx: PagesGeneratorContext) => {
 		.map(({ key, value }) => `  ${key} = ${value}`)
 		.join("\n")}\n`;
 
-	return `${header}\n\n${body}\n`;
+	ctx.framework.commitMessage = `${header}\n\n${body}\n`;
+
+	return ctx.framework.commitMessage;
 };
 
 /**
