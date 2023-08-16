@@ -280,7 +280,10 @@ const generateFrameworkCommitMessage = (ctx: PagesGeneratorContext) => {
 		{ key: "project name", value: ctx.project.name },
 		{ key: "framework", value: ctx.framework.name },
 		{ key: "framework cli", value: getFrameworkCli(ctx) },
-		{ key: "package manager", value: `${packageManager.name}@${packageManager.version}` }
+		{
+			key: "package manager",
+			value: `${packageManager.name}@${packageManager.version}`,
+		},
 	];
 
 	const body = `Details:\n${details

@@ -9,10 +9,7 @@ const { npm, dlx } = detectPackageManager();
 const generate = async (ctx: PagesGeneratorContext) => {
 	const cli = getFrameworkCli(ctx);
 
-	await runFrameworkGenerator(
-		ctx,
-		`${dlx} ${cli} ${ctx.project.name} classic`
-	);
+	await runFrameworkGenerator(ctx, `${dlx} ${cli} ${ctx.project.name} classic`);
 };
 
 const config: FrameworkConfig = {
