@@ -111,7 +111,7 @@ export const runDeploy = async (ctx: PagesGeneratorContext) => {
 		cwd: ctx.project.path,
 		env: { CLOUDFLARE_ACCOUNT_ID: ctx.account.id, NODE_ENV: "production" },
 		startText: `Deploying your application`,
-		doneText: `${brandColor("deployed")} ${dim(`via \`${baseDeployCmd}\``)}`,
+		doneText: `${brandColor("deployed")} ${dim(`via \`${baseDeployCmd.join(' ')}\``)}`,
 	});
 
 	const deployedUrlRegex = /https:\/\/.+\.(pages|workers)\.dev/;
