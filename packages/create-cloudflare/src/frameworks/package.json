@@ -1,5 +1,10 @@
 {
 	"name": "frameworks_clis_info",
+	"description": [
+		"this package.json is only used to keep track of the frameworks cli dependencies",
+		"so that we can use dependabot to update these dependencies automatically",
+		"additionally it also contains a map that maps frameworks to their respective clis"
+	],
 	"dependencies": {
 		"@angular/cli": "^0.4.5",
 		"create-astro": "3.1.5",
@@ -15,9 +20,6 @@
 		"gatsby": "5.10.0",
 		"nuxi": "3.4.2"
 	},
-	"//1": "this package.json is only used to keep track of the frameworks cli dependencies",
-	"//2": "so that we can use dependabot to update these dependencies automatically",
-	"//3": "additionally it also contains a map that maps frameworks to their respective clis",
 	"frameworkCliMap": {
 		"angular": "@angular/cli",
 		"astro": "create-astro",
