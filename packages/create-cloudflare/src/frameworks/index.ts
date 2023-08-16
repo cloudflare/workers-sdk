@@ -44,7 +44,10 @@ export const getFrameworkVersion = (ctx: PagesGeneratorContext) => {
 	return cliMap[framework].version;
 };
 
-export const getFrameworkCli = (ctx: PagesGeneratorContext, withVersion = true) => {
+export const getFrameworkCli = (
+	ctx: PagesGeneratorContext,
+	withVersion = true
+) => {
 	if (!ctx.framework) {
 		return crash("Framework not specified.");
 	}

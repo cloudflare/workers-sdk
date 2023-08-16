@@ -50,4 +50,5 @@
 	"vue": {
 		"cli": "create-vue",
 		"version": "3.6.4"
-}	}
+	}
+}

@@ -12,10 +12,7 @@ const generate = async (ctx: PagesGeneratorContext) => {
 
 	// TODO: make this interactive when its possible to specify the project name
 	// to create-qwik in interactive mode
-	await runFrameworkGenerator(
-		ctx,
-		`${dlx} ${cli} basic ${ctx.project.name}`
-	);
+	await runFrameworkGenerator(ctx, `${dlx} ${cli} basic ${ctx.project.name}`);
 };
 
 const configure = async (ctx: PagesGeneratorContext) => {

@@ -27,10 +27,7 @@ const generate = async (ctx: PagesGeneratorContext) => {
 	const projectName = ctx.project.name;
 	const cli = getFrameworkCli(ctx);
 
-	await runFrameworkGenerator(
-		ctx,
-		`${dlx} ${cli} ${projectName}`
-	);
+	await runFrameworkGenerator(ctx, `${dlx} ${cli} ${projectName}`);
 };
 
 const getApiTemplate = (

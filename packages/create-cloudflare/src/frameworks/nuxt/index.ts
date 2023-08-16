@@ -11,10 +11,7 @@ const { dlx } = detectPackageManager();
 const generate = async (ctx: PagesGeneratorContext) => {
 	const cli = getFrameworkCli(ctx);
 
-	await runFrameworkGenerator(
-		ctx,
-		`${dlx} ${cli} init ${ctx.project.name}`
-	);
+	await runFrameworkGenerator(ctx, `${dlx} ${cli} init ${ctx.project.name}`);
 
 	logRaw(""); // newline
 };
