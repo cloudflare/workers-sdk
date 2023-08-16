@@ -319,6 +319,7 @@ export type AdditionalDevProps = {
 		binding: string;
 		bucket_name: string;
 		preview_bucket_name?: string;
+		jurisdiction?: string;
 	}[];
 	d1Databases?: Environment["d1_databases"];
 	processEntrypoint?: boolean;
@@ -889,7 +890,7 @@ function getBindings(
 		],
 		r2_buckets: [
 			...(configParam.r2_buckets?.map(
-				({ binding, preview_bucket_name, bucket_name }) => {
+				({ binding, preview_bucket_name, bucket_name, jurisdiction }) => {
 					// same idea as kv namespace preview id,
 					// same copy-on-write TODO
 					if (!preview_bucket_name && !local) {
@@ -900,6 +901,7 @@ function getBindings(
 					return {
 						binding,
 						bucket_name: preview_bucket_name ?? bucket_name,
+						jurisdiction,
 					};
 				}
 			) || []),

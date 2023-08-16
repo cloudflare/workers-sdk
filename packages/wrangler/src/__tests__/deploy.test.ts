@@ -5058,6 +5058,16 @@ addEventListener('fetch', event => {});`
 				r2_buckets: [
 					{ binding: "R2_BUCKET_ONE", bucket_name: "r2-bucket-one-name" },
 					{ binding: "R2_BUCKET_TWO", bucket_name: "r2-bucket-two-name" },
+					{
+						binding: "R2_BUCKET_ONE_EU",
+						bucket_name: "r2-bucket-one-name",
+						jurisdiction: "eu",
+					},
+					{
+						binding: "R2_BUCKET_TWO_EU",
+						bucket_name: "r2-bucket-two-name",
+						jurisdiction: "eu",
+					},
 				],
 				analytics_engine_datasets: [
 					{ binding: "AE_DATASET_ONE", dataset: "ae-dataset-one-name" },
@@ -5170,6 +5180,18 @@ addEventListener('fetch', event => {});`
 						type: "r2_bucket",
 					},
 					{
+						bucket_name: "r2-bucket-one-name",
+						jurisdiction: "eu",
+						name: "R2_BUCKET_ONE_EU",
+						type: "r2_bucket",
+					},
+					{
+						bucket_name: "r2-bucket-two-name",
+						jurisdiction: "eu",
+						name: "R2_BUCKET_TWO_EU",
+						type: "r2_bucket",
+					},
+					{
 						dataset: "ae-dataset-one-name",
 						name: "AE_DATASET_ONE",
 						type: "analytics_engine",
@@ -5234,6 +5256,8 @@ addEventListener('fetch', event => {});`
 			- R2 Buckets:
 			  - R2_BUCKET_ONE: r2-bucket-one-name
 			  - R2_BUCKET_TWO: r2-bucket-two-name
+			  - R2_BUCKET_ONE_EU: r2-bucket-one-name (eu)
+			  - R2_BUCKET_TWO_EU: r2-bucket-two-name (eu)
 			- logfwdr:
 			  - httplogs: httplogs
 			  - trace: trace

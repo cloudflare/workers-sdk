@@ -428,6 +428,8 @@ interface EnvironmentNonInheritable {
 		bucket_name: string;
 		/** The preview name of this R2 bucket at the edge. */
 		preview_bucket_name?: string;
+		/** The jurisdiction that the bucket exists in. Default if not present. */
+		jurisdiction?: string;
 	}[];
 
 	/**

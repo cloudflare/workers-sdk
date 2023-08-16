@@ -223,7 +223,10 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 	if (r2_buckets !== undefined && r2_buckets.length > 0) {
 		output.push({
 			type: "R2 Buckets",
-			entries: r2_buckets.map(({ binding, bucket_name }) => {
+			entries: r2_buckets.map(({ binding, bucket_name, jurisdiction }) => {
+				if (jurisdiction !== undefined) {
+					bucket_name += ` (${jurisdiction})`;
+				}
 				return {
 					key: binding,
 					value: bucket_name,

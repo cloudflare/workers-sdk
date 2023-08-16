@@ -120,6 +120,7 @@ export interface CfQueue {
 export interface CfR2Bucket {
 	binding: string;
 	bucket_name: string;
+	jurisdiction?: string;
 }
 
 // TODO: figure out if this is duplicated in packages/wrangler/src/config/environment.ts
