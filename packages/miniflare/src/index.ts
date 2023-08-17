@@ -19,6 +19,7 @@ import type {
 import exitHook from "exit-hook";
 import { $ as colors$ } from "kleur/colors";
 import stoppable from "stoppable";
+import { Client } from "undici";
 import SCRIPT_MINIFLARE_SHARED from "worker:shared/index";
 import SCRIPT_MINIFLARE_ZOD from "worker:shared/zod";
 import { WebSocketServer } from "ws";
@@ -30,11 +31,11 @@ import {
 	Request,
 	RequestInit,
 	Response,
-	allowUnauthorizedAgent,
 	configureEntrySocket,
 	coupleWebSocket,
 	fetch,
 	getAccessibleHosts,
+	registerAllowUnauthorizedDispatcher,
 } from "./http";
 import {
 	D1_PLUGIN_NAME,
@@ -463,6 +464,7 @@ export class Miniflare {
 	#runtime?: Runtime;
 	#removeRuntimeExitHook?: () => void;
 	#runtimeEntryURL?: URL;
+	#runtimeClient?: Client;
 	#proxyClient?: ProxyClient;
 	#sourceMapRegistry?: SourceMapRegistry;
 
@@ -984,9 +986,16 @@ export class Miniflare {
 		const secure = entrySocket !== undefined && "https" in entrySocket;
 
 		// noinspection HttpUrlsUsage
+		const previousEntry = this.#runtimeEntryURL;
 		this.#runtimeEntryURL = new URL(
 			`${secure ? "https" : "http"}://${this.#accessibleHost}:${maybePort}`
 		);
+		if (previousEntry?.toString() !== this.#runtimeEntryURL.toString()) {
+			this.#runtimeClient = new Client(this.#runtimeEntryURL, {
+				connect: { rejectUnauthorized: false },
+			});
+			registerAllowUnauthorizedDispatcher(this.#runtimeClient);
+		}
 		if (this.#proxyClient === undefined) {
 			this.#proxyClient = new ProxyClient(
 				this.#runtimeEntryURL,
@@ -1079,11 +1088,14 @@ export class Miniflare {
 		this.#checkDisposed();
 		await this.ready;
 
+		assert(this.#runtimeEntryURL !== undefined);
+		assert(this.#runtimeClient !== undefined);
+
 		const forward = new Request(input, init);
 		const url = new URL(forward.url);
 		forward.headers.set(CoreHeaders.ORIGINAL_URL, url.toString());
-		url.protocol = this.#runtimeEntryURL!.protocol;
-		url.host = this.#runtimeEntryURL!.host;
+		url.protocol = this.#runtimeEntryURL.protocol;
+		url.host = this.#runtimeEntryURL.host;
 		if (forward.cf) {
 			const cf = { ...fallbackCf, ...forward.cf };
 			forward.headers.set(HEADER_CF_BLOB, JSON.stringify(cf));
@@ -1098,10 +1110,7 @@ export class Miniflare {
 		}
 
 		const forwardInit = forward as RequestInit;
-		if (url.protocol === "https:") {
-			forwardInit.dispatcher = allowUnauthorizedAgent;
-		}
-
+		forwardInit.dispatcher = this.#runtimeClient;
 		const response = await fetch(url, forwardInit);
 
 		// If the Worker threw an uncaught exception, propagate it to the caller
