@@ -212,7 +212,7 @@ export async function deploy({
 	}
 
 	if (commitMessage) {
-		formData.append("commit_message", commitMessage);
+		formData.append("commit_message", commitMessage.replaceAll('\\n', '\n'));
 	}
 
 	if (commitHash) {
