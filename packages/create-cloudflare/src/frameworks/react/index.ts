@@ -1,5 +1,5 @@
 import { logRaw } from "helpers/cli";
-import { runFrameworkGenerator } from "helpers/command";
+import { resetPackageManager, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
 import { getFrameworkVersion } from "../index";
@@ -18,8 +18,13 @@ const generate = async (ctx: PagesGeneratorContext) => {
 	logRaw("");
 };
 
+const configure = async (ctx: PagesGeneratorContext) => {
+	await resetPackageManager(ctx);
+};
+
 const config: FrameworkConfig = {
 	generate,
+	configure,
 	displayName: "React",
 	packageScripts: {
 		"pages:dev": `wrangler pages dev ${compatDateFlag()} --port 3000 -- ${npm} start`,

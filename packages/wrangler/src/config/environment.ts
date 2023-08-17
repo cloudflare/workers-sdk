@@ -1,3 +1,5 @@
+import type { Json } from "miniflare";
+
 /**
  * The `Environment` interface declares all the configuration fields that
  * can be specified for an environment.
@@ -239,15 +241,12 @@ interface EnvironmentInheritable {
 	zone_id?: string;
 
 	/**
-	 * Specify a compiled capnp schema to use
-	 * Then add a binding per field in the top level message that you will send to logfwdr
+	 * List of bindings that you will send to logfwdr
 	 *
-	 * @default `{schema:undefined,bindings:[]}`
+	 * @default `{bindings:[]}`
 	 * @inheritable
 	 */
 	logfwdr: {
-		/** capnp schema filename */
-		schema: string | undefined;
 		bindings: {
 			/** The binding name used to refer to logfwdr */
 			name: string;
@@ -314,7 +313,7 @@ interface EnvironmentNonInheritable {
 	 * @default `{}`
 	 * @nonInheritable
 	 */
-	vars: { [key: string]: unknown };
+	vars: Record<string, string | Json>;
 
 	/**
 	 * A list of durable objects that your worker should be bound to.
@@ -545,6 +544,21 @@ interface EnvironmentNonInheritable {
 		metadata?: {
 			[key: string]: string;
 		};
+
+		/**
+		 * Used for internal capnp uploads for the Workers runtime
+		 */
+		capnp?:
+			| {
+					base_path: string;
+					source_schemas: string[];
+					compiled_schema?: never;
+			  }
+			| {
+					base_path?: never;
+					source_schemas?: never;
+					compiled_schema: string;
+			  };
 	};
 
 	mtls_certificates: {

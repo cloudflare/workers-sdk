@@ -1,4 +1,4 @@
-import { existsSync } from "fs";
+import { existsSync, rmSync } from "fs";
 import path from "path";
 import { spawn } from "cross-spawn";
 import { endSection, stripAnsi } from "./cli";
@@ -52,17 +52,15 @@ export const runCommand = async (
 
 	return printAsyncStatus({
 		useSpinner: opts.useSpinner ?? opts.silent,
-		startText: opts.startText || command.join(" "),
+		startText: opts.startText || command.join(" ").trim(),
 		doneText: opts.doneText,
 		promise() {
 			const [executable, ...args] = command;
 
-			const squelch = opts.silent || process.env.VITEST;
-
 			const cmd = spawn(executable, [...args], {
 				// TODO: ideally inherit stderr, but npm install uses this for warnings
 				// stdio: [ioMode, ioMode, "inherit"],
-				stdio: squelch ? "pipe" : "inherit",
+				stdio: opts.silent ? "pipe" : "inherit",
 				env: {
 					...process.env,
 					...opts.env,
@@ -72,7 +70,7 @@ export const runCommand = async (
 
 			let output = ``;
 
-			if (opts?.captureOutput ?? squelch) {
+			if (opts.captureOutput ?? opts.silent) {
 				cmd.stdout?.on("data", (data) => {
 					output += data;
 				});
@@ -230,6 +228,26 @@ export const installPackages = async (
 
 export const npmInstall = async () => {
 	const { npm } = detectPackageManager();
+
+	await runCommand(`${npm} install`, {
+		silent: true,
+		startText: "Installing dependencies",
+		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
+	});
+};
+
+// Resets the package manager context for a project by clearing out existing dependencies
+// and lock files then re-installing.
+export const resetPackageManager = async (ctx: PagesGeneratorContext) => {
+	const { npm } = detectPackageManager();
+
+	// Only do this when using pnpm or yarn
+	if (npm === "npm") return;
+
+	const nodeModulesPath = path.join(ctx.project.path, "node_modules");
+	rmSync(nodeModulesPath, { recursive: true });
+	const lockfilePath = path.join(ctx.project.path, "package-lock.json");
+	rmSync(lockfilePath);
 
 	await runCommand(`${npm} install`, {
 		silent: true,

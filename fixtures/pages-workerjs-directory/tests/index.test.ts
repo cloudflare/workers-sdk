@@ -31,11 +31,19 @@ describe("Pages _worker.js/ directory", () => {
 			fetch(`http://${ip}:${port}/wasm`).then((resp) => resp.text())
 		).resolves.toContain("3");
 		await expect(
-			fetch(`http://${ip}:${port}/static`).then((resp) => resp.text())
-		).resolves.toContain("static");
+			fetch(`http://${ip}:${port}/static-js`).then((resp) => resp.text())
+		).resolves.toEqual("static import text (via js): 'js static'");
+		await expect(
+			fetch(`http://${ip}:${port}/static-mjs`).then((resp) => resp.text())
+		).resolves.toEqual("static import text (via mjs): 'mjs static'");
 		await expect(
 			fetch(`http://${ip}:${port}/other-script.js`).then((resp) => resp.text())
 		).resolves.toContain("other-script-test");
+		await expect(
+			fetch(`http://${ip}:${port}/other-other-script.mjs`).then((resp) =>
+				resp.text()
+			)
+		).resolves.toContain("other-other-script-test");
 		await expect(
 			fetch(`http://${ip}:${port}/d1`).then((resp) => resp.text())
 		).resolves.toContain('{"1":1}');
@@ -57,7 +65,7 @@ describe("Pages _worker.js/ directory", () => {
 
 	it("should bundle", async ({ expect }) => {
 		const dir = tmpdir();
-		const file = join(dir, "./_worker.bundle");
+		const file = join(dir, "_worker.bundle");
 
 		execSync(
 			`npx wrangler pages functions build --build-output-directory public --outfile ${file} --bindings="{\\"d1_databases\\":{\\"D1\\":{}}}"`,
@@ -68,8 +76,10 @@ describe("Pages _worker.js/ directory", () => {
 
 		const contents = readFileSync(file, "utf-8");
 
-		expect(contents).toContain("D1_ERROR");
+		expect(contents).not.toContain("D1_ERROR"); // No more D1 shim in the bundle!
 		expect(contents).toContain('"other-script-test"');
-		expect(contents).toContain('import staticMod from "./static.js";');
+		expect(contents).toContain('"other-other-script-test"');
+		expect(contents).toContain('import staticJsMod from "./static.js";');
+		expect(contents).toContain('import staticMjsMod from "./static.mjs";');
 	});
 });

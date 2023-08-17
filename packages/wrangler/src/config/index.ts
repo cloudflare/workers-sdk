@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import dotenv from "dotenv";
 import { findUpSync } from "find-up";
-import { removeD1BetaPrefix } from "../deployment-bundle/worker";
 import { logger } from "../logger";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
 import { normalizeAndValidateConfig } from "./validation";
@@ -201,7 +200,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 						databaseValue += `, Preview: (${preview_database_id})`;
 					}
 					return {
-						key: removeD1BetaPrefix(binding),
+						key: binding,
 						value: databaseValue,
 					};
 				}

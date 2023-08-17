@@ -49,14 +49,12 @@ export const runWorkersGenerator = async (args: C3Args) => {
 };
 
 async function getTemplate(ctx: Context) {
-	if (ctx.args.ts === undefined) {
-		ctx.args.ts = await processArgument<boolean>(ctx.args, "ts", {
-			type: "confirm",
-			question: "Do you want to use TypeScript?",
-			label: "typescript",
-			defaultValue: C3_DEFAULTS.ts,
-		});
-	}
+	ctx.args.ts = await processArgument<boolean>(ctx.args, "ts", {
+		type: "confirm",
+		question: "Do you want to use TypeScript?",
+		label: "typescript",
+		defaultValue: C3_DEFAULTS.ts,
+	});
 
 	const preexisting = ctx.args.type === "pre-existing";
 	const template = preexisting ? "hello-world" : ctx.args.type;

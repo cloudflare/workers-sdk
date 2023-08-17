@@ -1,5 +1,127 @@
 # wrangler
 
+## 3.5.1
+
+### Patch Changes
+
+- [#3752](https://github.com/cloudflare/workers-sdk/pull/3752) [`8f5ed7fe`](https://github.com/cloudflare/workers-sdk/commit/8f5ed7febc1b348f3fc88eabccabd9678b6cd21a) Thanks [@DaniFoldi](https://github.com/DaniFoldi)! - Changed the binding type of WfP Dispatch Namespaces to `DispatchNamespace`
+
+* [#3765](https://github.com/cloudflare/workers-sdk/pull/3765) [`e17d3096`](https://github.com/cloudflare/workers-sdk/commit/e17d3096ecde7cf697f7d5bc6ebc3a868eb88cfa) Thanks [@RamIdeas](https://github.com/RamIdeas)! - bump miniflare version to 3.20230814.1
+
+## 3.5.0
+
+### Minor Changes
+
+- [#3703](https://github.com/cloudflare/workers-sdk/pull/3703) [`e600f029`](https://github.com/cloudflare/workers-sdk/commit/e600f0298d4d2780bdfc1171a5f84a5f36ce5010) Thanks [@jspspike](https://github.com/jspspike)! - Added --local option for r2 commands to interact with local persisted r2 objects
+
+* [#3704](https://github.com/cloudflare/workers-sdk/pull/3704) [`8e231afd`](https://github.com/cloudflare/workers-sdk/commit/8e231afde850f353694478a5994e6ddee6df67b1) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - secret:bulk exit 1 on failure
+  Previously `secret"bulk` would only log an error on failure of any of the upload requests.
+  Now when 'secret:bulk' has an upload request fail it throws an Error which sends an `process.exit(1)` at the root `.catch()` signal.
+  This will enable error handling in programmatic uses of `secret:bulk`.
+
+- [#3684](https://github.com/cloudflare/workers-sdk/pull/3684) [`ff8603b6`](https://github.com/cloudflare/workers-sdk/commit/ff8603b6e1320d5c136712b8100e86c552eade46) Thanks [@jspspike](https://github.com/jspspike)! - Added --local option for kv commands to interact with local persisted kv entries
+
+* [#3595](https://github.com/cloudflare/workers-sdk/pull/3595) [`c302bec6`](https://github.com/cloudflare/workers-sdk/commit/c302bec639c0eec10d07d6b950c0a2d3e16eab1e) Thanks [@geelen](https://github.com/geelen)! - Removing the D1 shim from the build process, in preparation for the Open Beta. D1 can now be used with --no-bundle enabled.
+
+- [#3707](https://github.com/cloudflare/workers-sdk/pull/3707) [`6de3c5ec`](https://github.com/cloudflare/workers-sdk/commit/6de3c5eced6f31a2a55f4c043e1025f4f4733ad0) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Added handling of .mjs files to be picked up by inside the Pages \_worker.js directory
+  (currently only .js files are)
+
+### Patch Changes
+
+- [#3693](https://github.com/cloudflare/workers-sdk/pull/3693) [`8f257126`](https://github.com/cloudflare/workers-sdk/commit/8f2571260f10660b9494332b681608b6051a7d52) Thanks [@RamIdeas](https://github.com/RamIdeas)! - Bump the version of miniflare to 3.20230801.0
+
+## 3.4.0
+
+### Minor Changes
+
+- [#3649](https://github.com/cloudflare/workers-sdk/pull/3649) [`e2234bbc`](https://github.com/cloudflare/workers-sdk/commit/e2234bbc2fc06c201dd5f256357084c86789891c) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - Feature: 'stdin' support for 'secret:bulk'
+  Added functionality that allows for files and strings to be piped in, or other means of standard input. This will allow for a broader variety of use cases and improved DX.
+  This implementation is also fully backward compatible with the previous input method of file path to JSON.
+
+  ```bash
+  # Example of piping in a file
+  > cat ./my-file.json | wrangler secret:bulk
+
+  # Example of piping in a string
+  > echo '{"key":"value"}' | wrangler secret:bulk
+
+  # Example of redirecting input from a file
+  > wrangler secret:bulk < ./my-file.json
+  ```
+
+* [#3675](https://github.com/cloudflare/workers-sdk/pull/3675) [`f753f3af`](https://github.com/cloudflare/workers-sdk/commit/f753f3afb7478bb289b39c44b33acbcefe06e99a) Thanks [@1000hz](https://github.com/1000hz)! - chore: upgrade `miniflare` to [`3.20230724.0`](https://github.com/cloudflare/miniflare/releases/tag/v3.20230724.0)
+
+### Patch Changes
+
+- [#3610](https://github.com/cloudflare/workers-sdk/pull/3610) [`bfbe49d0`](https://github.com/cloudflare/workers-sdk/commit/bfbe49d0d147ab8e32944ade524bc85f7f6f0cf3) Thanks [@Skye-31](https://github.com/Skye-31)! - Wrangler Capnp Compilation
+
+  This PR replaces logfwdr's `schema` property with a new `unsafe.capnp` object. This object accepts either a `compiled_schema` property, or a `base_path` and array of `source_schemas` to get Wrangler to compile the capnp schema for you.
+
+* [#3579](https://github.com/cloudflare/workers-sdk/pull/3579) [`d4450b0a`](https://github.com/cloudflare/workers-sdk/commit/d4450b0a095c3b31fdc09a7af2e3336048c7be70) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: remove --experimental-backend from `wrangler d1 migrations apply`
+
+  This PR removes the need to pass a `--experimental-backend` flag when running migrations against an experimental D1 db.
+
+  Closes #3596
+
+- [#3623](https://github.com/cloudflare/workers-sdk/pull/3623) [`99baf58b`](https://github.com/cloudflare/workers-sdk/commit/99baf58b7c35e85c90e1f6df4cea841f31c0a709) Thanks [@RamIdeas](https://github.com/RamIdeas)! - when running `wrangler init -y ...`, the `-y` flag is now passed to npx when delegating to C3
+
+* [#3668](https://github.com/cloudflare/workers-sdk/pull/3668) [`99032c1e`](https://github.com/cloudflare/workers-sdk/commit/99032c1e500132e16f0c1027cb4cba0c59823656) Thanks [@rozenmd](https://github.com/rozenmd)! - chore: make D1's experimental backend the default
+
+  This PR makes D1's experimental backend turned on by default.
+
+- [#3579](https://github.com/cloudflare/workers-sdk/pull/3579) [`d4450b0a`](https://github.com/cloudflare/workers-sdk/commit/d4450b0a095c3b31fdc09a7af2e3336048c7be70) Thanks [@rozenmd](https://github.com/rozenmd)! - feat: implement time travel for experimental d1 dbs
+
+  This PR adds two commands under `wrangler d1 time-travel`:
+
+  ```
+  Use Time Travel to restore, fork or copy a database at a specific point-in-time.
+
+  Commands:
+
+  wrangler d1 time-travel info <database>     Retrieve information about a database at a specific point-in-time using Time Travel.
+  Options:
+        --timestamp  accepts a Unix (seconds from epoch) or RFC3339 timestamp (e.g. 2023-07-13T08:46:42.228Z) to retrieve a bookmark for  [string]
+        --json       return output as clean JSON  [boolean] [default: false]
+
+  wrangler d1 time-travel restore <database>  Restore a database back to a specific point-in-time.
+  Options:
+        --bookmark   Bookmark to use for time travel  [string]
+        --timestamp  accepts a Unix (seconds from epoch) or RFC3339 timestamp (e.g. 2023-07-13T08:46:42.228Z) to retrieve a bookmark for  [string]
+        --json       return output as clean JSON  [boolean] [default: false]
+  ```
+
+  Closes #3577
+
+* [#3592](https://github.com/cloudflare/workers-sdk/pull/3592) [`89cd086b`](https://github.com/cloudflare/workers-sdk/commit/89cd086ba0429651a30e8287c1e9e660d2fef6d0) Thanks [@penalosa](https://github.com/penalosa)! - fix: Only log dev registry connection errors once
+
+- [#3384](https://github.com/cloudflare/workers-sdk/pull/3384) [`ccc19d57`](https://github.com/cloudflare/workers-sdk/commit/ccc19d57e0b6a557c39bedbbb92ec4e52c580975) Thanks [@Peter-Sparksuite](https://github.com/Peter-Sparksuite)! - feature: add wrangler deploy option: --old-asset-ttl [seconds]
+
+  `wrangler deploy` immediately deletes assets that are no longer current, which has a side-effect for existing progressive web app users of seeing 404 errors as the app tries to access assets that no longer exist.
+
+  This new feature:
+
+  - does not change the default behavior of immediately deleting no-longer needed assets.
+  - allows users to opt-in to expiring newly obsoleted assets after the provided number of seconds hence, so that current users will have a time buffer before seeing 404 errors.
+  - is similar in concept to what was introduced in Wrangler 1.x with https://github.com/cloudflare/wrangler-legacy/pull/2221.
+  - is careful to avoid extension of existing expiration targets on already expiring old assets, which may have contributed to unexpectedly large KV storage accumulations (perhaps why, in Wrangler 1.x, the reversion https://github.com/cloudflare/wrangler-legacy/pull/2228 happened).
+  - no breaking changes for users relying on the default behavior, but some output changes exist when the new option is used, to indicate the change in behavior.
+
+* [#3678](https://github.com/cloudflare/workers-sdk/pull/3678) [`17780b27`](https://github.com/cloudflare/workers-sdk/commit/17780b279998db00732406633958dc35eecaa70f) Thanks [@1000hz](https://github.com/1000hz)! - Refined the type of `CfVars` from `Record<string, unknown>` to `Record<string, string | Json>`
+
+## 3.3.0
+
+### Minor Changes
+
+- [#3628](https://github.com/cloudflare/workers-sdk/pull/3628) [`e72a5794`](https://github.com/cloudflare/workers-sdk/commit/e72a5794f219e21ede701a7184a4691058366753) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: upgrade `miniflare` to [`3.20230717.0`](https://github.com/cloudflare/miniflare/releases/tag/v3.20230717.0)
+
+### Patch Changes
+
+- [#3587](https://github.com/cloudflare/workers-sdk/pull/3587) [`30f114af`](https://github.com/cloudflare/workers-sdk/commit/30f114afcdae8c794364a89ad8b7a7c92fce3524) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: keep configuration watcher alive
+
+  Ensure `wrangler dev` watches the `wrangler.toml` file and reloads the server whenever configuration (e.g. KV namespaces, compatibility dates, etc) changes.
+
+* [#3588](https://github.com/cloudflare/workers-sdk/pull/3588) [`64631d8b`](https://github.com/cloudflare/workers-sdk/commit/64631d8b59572f49d65325d8f6fec098c5e912b9) Thanks [@penalosa](https://github.com/penalosa)! - fix: Preserve email handlers when applying middleware to user workers.
+
 ## 3.2.0
 
 ### Minor Changes

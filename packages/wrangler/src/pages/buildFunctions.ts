@@ -114,7 +114,6 @@ export async function buildFunctions({
 			legacyNodeCompat,
 			functionsDirectory: absoluteFunctionsDirectory,
 			local,
-			betaD1Shims: d1Databases,
 		});
 	} else {
 		bundle = await buildWorker({
@@ -127,7 +126,6 @@ export async function buildFunctions({
 			watch,
 			functionsDirectory: absoluteFunctionsDirectory,
 			local,
-			betaD1Shims: d1Databases,
 			onEnd,
 			buildOutputDirectory,
 			legacyNodeCompat,

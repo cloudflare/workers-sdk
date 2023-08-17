@@ -10,6 +10,7 @@ import { processArgument, spinner } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
 import { C3_DEFAULTS } from "./cli";
 import {
+	getProductionBranch,
 	gitCommit,
 	offerGit,
 	offerToDeploy,
@@ -107,14 +108,34 @@ const updatePackageScripts = async (ctx: PagesGeneratorContext) => {
 	const { packageScripts } = ctx.framework?.config ?? {};
 	if (packageScripts) {
 		const s = spinner();
-		// s.start(`Adding dev and deployment commands to \`package.json\``);
-		s.start(`Adding command scripts`, `for development and deployment`);
+
+		const updatingScripts =
+			Object.entries(packageScripts).filter(
+				([_, cmdOrUpdater]) => typeof cmdOrUpdater === "function"
+			).length > 0;
+
+		s.start(
+			`${updatingScripts ? "Updating" : "Adding"} command scripts`,
+			"for development and deployment"
+		);
 
 		const pkgJsonPath = resolve("package.json");
 		const pkgConfig = readJSON(pkgJsonPath);
 
-		Object.entries(packageScripts).forEach(([target, command]) => {
-			pkgConfig.scripts[target] = command;
+		Object.entries(packageScripts).forEach(([target, cmdOrUpdater]) => {
+			if (typeof cmdOrUpdater === "string") {
+				const command = cmdOrUpdater;
+				pkgConfig.scripts[target] = command;
+			} else {
+				const existingCommand = pkgConfig.scripts[target] as string | undefined;
+				if (!existingCommand) {
+					throw new Error(
+						`Could not find ${target} script to update during ${ctx.framework} setup`
+					);
+				}
+				const updater = cmdOrUpdater;
+				pkgConfig.scripts[target] = updater(existingCommand);
+			}
 		});
 
 		writeFile(pkgJsonPath, JSON.stringify(pkgConfig, null, 2));
@@ -124,6 +145,7 @@ const updatePackageScripts = async (ctx: PagesGeneratorContext) => {
 
 const createProject = async (ctx: PagesGeneratorContext) => {
 	if (ctx.args.deploy === false) return;
+	if (ctx.framework?.config.type === "workers") return;
 	if (!ctx.account?.id) {
 		crash("Failed to read Cloudflare account.");
 		return;
@@ -135,19 +157,22 @@ const createProject = async (ctx: PagesGeneratorContext) => {
 		? `--compatibility-flags ${compatFlags}`
 		: "";
 
-	const cmd = `${npx} wrangler pages project create ${ctx.project.name} --production-branch main ${compatFlagsArg}`;
+	const productionBranch = await getProductionBranch(ctx.project.path);
+	const cmd = `${npx} wrangler pages project create ${ctx.project.name} --production-branch ${productionBranch} ${compatFlagsArg}`;
 
 	try {
 		await retry(CREATE_PROJECT_RETRIES, async () =>
 			runCommand(cmd, {
-				silent: true,
+				// Make this command more verbose in test mode to aid
+				// troubleshooting API errors
+				silent: process.env.VITEST == undefined,
 				cwd: ctx.project.path,
 				env: { CLOUDFLARE_ACCOUNT_ID },
 				startText: "Creating Pages project",
-				doneText: `${brandColor("created")} ${dim(`via \`${cmd}\``)}`,
+				doneText: `${brandColor("created")} ${dim(`via \`${cmd.trim()}\``)}`,
 			})
 		);
 	} catch (error) {
-		crash("Failed to create pages application. See output above.");
+		crash("Failed to create pages project. See output above.");
 	}
 };

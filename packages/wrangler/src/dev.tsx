@@ -7,7 +7,6 @@ import { render } from "ink";
 import React from "react";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import { getEntry } from "./deployment-bundle/entry";
-import { identifyD1BindingsAsBeta } from "./deployment-bundle/worker";
 import Dev from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
 import { getLocalPersistencePath } from "./dev/get-local-persistence-path";
@@ -37,6 +36,7 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "./yargs-types";
+import type { Json } from "miniflare";
 
 export function devOptions(yargs: CommonYargsArgv) {
 	return (
@@ -303,9 +303,7 @@ This is currently not supported 😭, but we think that we'll get it to work soo
 }
 
 export type AdditionalDevProps = {
-	vars?: {
-		[key: string]: unknown;
-	};
+	vars?: Record<string, string | Json>;
 	kv?: {
 		binding: string;
 		id: string;
@@ -914,9 +912,10 @@ function getBindings(
 		unsafe: {
 			bindings: configParam.unsafe.bindings,
 			metadata: configParam.unsafe.metadata,
+			capnp: configParam.unsafe.capnp,
 		},
 		logfwdr: configParam.logfwdr,
-		d1_databases: identifyD1BindingsAsBeta([
+		d1_databases: [
 			...(configParam.d1_databases ?? []).map((d1Db) => {
 				const database_id = d1Db.preview_database_id
 					? d1Db.preview_database_id
@@ -934,7 +933,7 @@ function getBindings(
 				return { ...d1Db, database_id };
 			}),
 			...(args.d1Databases || []),
-		]),
+		],
 		constellation: configParam.constellation,
 	};
 

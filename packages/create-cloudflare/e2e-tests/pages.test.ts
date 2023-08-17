@@ -1,138 +1,204 @@
-import { existsSync, rmSync, mkdtempSync, realpathSync } from "fs";
-import { tmpdir } from "os";
 import { join } from "path";
-import { execa } from "execa";
 import { FrameworkMap } from "frameworks/index";
 import { readJSON } from "helpers/files";
+import { fetch } from "undici";
 import { describe, expect, test, afterEach, beforeEach } from "vitest";
+import { keys, runC3, testProjectDir } from "./helpers";
+import type { RunnerConfig } from "./helpers";
 
 /*
 Areas for future improvement:
-- Make these actually e2e by verifying that deployment works
 - Add support for frameworks with global installs (like docusaurus, gatsby, etc)
 */
 
-describe("E2E", () => {
-	let dummyPath: string;
+type FrameworkTestConfig = RunnerConfig & {
+	expectResponseToContain: string;
+};
 
-	beforeEach(() => {
-		// Use realpath because the temporary path can point to a symlink rather than the actual path.
-		dummyPath = realpathSync(mkdtempSync(join(tmpdir(), "c3-tests")));
+describe(`E2E: Web frameworks`, () => {
+	const { getPath, clean } = testProjectDir("pages");
+
+	beforeEach((ctx) => {
+		const framework = ctx.meta.name;
+		clean(framework);
 	});
 
-	afterEach(() => {
-		if (existsSync(dummyPath)) {
-			rmSync(dummyPath, { recursive: true });
-		}
+	afterEach((ctx) => {
+		const framework = ctx.meta.name;
+		clean(framework);
 	});
 
-	const runCli = async (framework: string, args: string[] = []) => {
-		const projectPath = join(dummyPath, "test");
+	const runCli = async (
+		framework: string,
+		{ argv = [], promptHandlers = [], overrides }: RunnerConfig
+	) => {
+		const projectPath = getPath(framework);
 
-		const argv = [
+		const args = [
 			projectPath,
 			"--type",
 			"webFramework",
 			"--framework",
 			framework,
-			"--no-deploy",
+			"--deploy",
+			"--no-open",
 		];
 
-		if (args.length > 0) {
-			argv.push(...args);
-		} else {
-			argv.push("--no-git");
-		}
+		args.push(...argv);
 
-		// For debugging purposes, uncomment the following to see the exact
-		// command the test uses. You can then run this via the command line.
-		// console.log("COMMAND: ", `node ${["./dist/cli.js", ...argv].join(" ")}`);
-
-		const result = await execa("node", ["./dist/cli.js", ...argv], {
-			stderr: process.stderr,
-		});
-
-		const { exitCode } = result;
-
-		// Some baseline assertions for each framework
-		expect(exitCode).toBe(0);
+		const { output } = await runC3({ argv: args, promptHandlers });
 
 		// Relevant project files should have been created
 		expect(projectPath).toExist();
-
 		const pkgJsonPath = join(projectPath, "package.json");
 		expect(pkgJsonPath).toExist();
 
+		// Wrangler should be installed
 		const wranglerPath = join(projectPath, "node_modules/wrangler");
 		expect(wranglerPath).toExist();
 
 		// Verify package scripts
 		const frameworkConfig = FrameworkMap[framework];
+
+		const frameworkTargetPackageScripts = {
+			...frameworkConfig.packageScripts,
+		} as Record<string, string>;
+
+		if (overrides && overrides.packageScripts) {
+			// override packageScripts with testing provided scripts
+			Object.entries(overrides.packageScripts).forEach(([target, cmd]) => {
+				frameworkTargetPackageScripts[target] = cmd;
+			});
+		}
+
 		const pkgJson = readJSON(pkgJsonPath);
-		Object.entries(frameworkConfig.packageScripts).forEach(([target, cmd]) => {
+		Object.entries(frameworkTargetPackageScripts).forEach(([target, cmd]) => {
 			expect(pkgJson.scripts[target]).toEqual(cmd);
 		});
 
-		return {
-			result,
-			projectPath,
-		};
+		return { output };
 	};
 
-	test("Astro", async () => {
-		await runCli("astro");
-	});
+	const runCliWithDeploy = async (framework: string) => {
+		const { argv, overrides, promptHandlers, expectResponseToContain } =
+			frameworkTests[framework];
 
-	test("Hono", async () => {
-		await runCli("hono");
-	});
+		const { output } = await runCli(framework, {
+			overrides,
+			promptHandlers,
+			argv: [...(argv ?? []), "--deploy", "--no-git"],
+		});
 
-	test("Next.js", async () => {
-		await runCli("next");
-	});
+		// Verify deployment
+		const deployedUrlRe =
+			/deployment is ready at: (https:\/\/.+\.(pages|workers)\.dev)/;
 
-	test("Nuxt", async () => {
-		await runCli("nuxt");
-	});
+		const match = output.match(deployedUrlRe);
+		if (!match || !match[1]) {
+			expect(false, "Couldn't find deployment url in C3 output").toBe(true);
+			return;
+		}
 
-	// Not possible atm since `npx qwik add cloudflare-pages`
-	// requires interactive confirmation
-	test.skip("Qwik", async () => {
-		await runCli("next");
-	});
+		const projectUrl = match[1];
 
-	test("React", async () => {
-		await runCli("react");
-	});
+		const res = await fetch(projectUrl);
+		expect(res.status).toBe(200);
 
-	test("Remix", async () => {
-		await runCli("remix");
-	});
+		const body = await res.text();
+		expect(
+			body,
+			`(${framework}) Deployed page (${projectUrl}) didn't contain expected string: "${expectResponseToContain}"`
+		).toContain(expectResponseToContain);
+	};
 
-	// Not possible atm since template selection is interactive only
-	test.skip("Solid", async () => {
-		await runCli("solid");
-	});
+	// These are ordered based on speed and reliability for ease of debugging
+	const frameworkTests: Record<string, FrameworkTestConfig> = {
+		astro: {
+			expectResponseToContain: "Hello, Astronaut!",
+		},
+		hono: {
+			expectResponseToContain: "Hello Hono!",
+		},
+		qwik: {
+			expectResponseToContain: "Welcome to Qwik",
+			promptHandlers: [
+				{
+					matcher: /Yes looks good, finish update/,
+					input: [keys.enter],
+				},
+			],
+		},
+		remix: {
+			expectResponseToContain: "Welcome to Remix",
+		},
+		next: {
+			expectResponseToContain: "Create Next App",
+			promptHandlers: [
+				{
+					matcher: /Do you want to use the next-on-pages eslint-plugin\?/,
+					input: ["y"],
+				},
+			],
+		},
+		nuxt: {
+			expectResponseToContain: "Welcome to Nuxt!",
+			overrides: {
+				packageScripts: {
+					build: "NITRO_PRESET=cloudflare-pages nuxt build",
+				},
+			},
+		},
+		react: {
+			expectResponseToContain: "React App",
+		},
+		solid: {
+			expectResponseToContain: "Hello world",
+			promptHandlers: [
+				{
+					matcher: /Which template do you want to use/,
+					input: [keys.enter],
+				},
+				{
+					matcher: /Server Side Rendering/,
+					input: [keys.enter],
+				},
+				{
+					matcher: /Use TypeScript/,
+					input: [keys.enter],
+				},
+			],
+		},
+		svelte: {
+			expectResponseToContain: "SvelteKit app",
+			promptHandlers: [
+				{
+					matcher: /Which Svelte app template/,
+					input: [keys.enter],
+				},
+				{
+					matcher: /Add type checking with TypeScript/,
+					input: [keys.down, keys.enter],
+				},
+				{
+					matcher: /Select additional options/,
+					input: [keys.enter],
+				},
+			],
+		},
+		vue: {
+			expectResponseToContain: "Vite App",
+		},
+	};
 
-	// Not possible atm since everything is interactive only
-	test.skip("Svelte", async () => {
-		await runCli("svelte");
-	});
+	test.concurrent.each(Object.keys(frameworkTests))(
+		"%s",
+		async (name) => {
+			await runCliWithDeploy(name);
+		},
+		{ retry: 3 }
+	);
 
-	test("Vue", async () => {
-		await runCli("vue");
-	});
-
-	// This test blows up in CI due to Github providing an unusual git user email address.
-	// E.g.
-	// ```
-	// fatal: empty ident name (for <runner@fv-az176-734.urr04s1gdzguhowldvrowxwctd.dx.
-	// internal.cloudapp.net>) not allowed
-	// ```
 	test.skip("Hono (wrangler defaults)", async () => {
-		const { projectPath } = await runCli("hono", ["--wrangler-defaults"]);
-
-		// verify that wrangler-defaults defaults to `true` for using git
-		expect(join(projectPath, ".git")).toExist();
+		await runCli("hono", { argv: ["--wrangler-defaults"] });
 	});
 });

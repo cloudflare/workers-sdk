@@ -93,7 +93,7 @@ export const runDeploy = async (ctx: PagesGeneratorContext) => {
 	const result = await runCommand(deployCmd, {
 		silent: true,
 		cwd: ctx.project.path,
-		env: { CLOUDFLARE_ACCOUNT_ID: ctx.account.id },
+		env: { CLOUDFLARE_ACCOUNT_ID: ctx.account.id, NODE_ENV: "production" },
 		startText: `Deploying your application`,
 		doneText: `${brandColor("deployed")} ${dim(`via \`${deployCmd}\``)}`,
 	});
@@ -152,7 +152,7 @@ export const chooseAccount = async (ctx: PagesGeneratorContext) => {
 
 export const printSummary = async (ctx: PagesGeneratorContext) => {
 	const nextSteps = [
-		[`Navigate to the new directory:`, `cd ${ctx.project.name}`],
+		[`Navigate to the new directory`, `cd ${ctx.project.name}`],
 		[
 			`Run the development server`,
 			`${npm} run ${ctx.framework?.config.devCommand ?? "start"}`,
@@ -164,7 +164,11 @@ export const printSummary = async (ctx: PagesGeneratorContext) => {
 		[
 			`Read the documentation`,
 			`https://developers.cloudflare.com/${
-				ctx.framework ? "pages" : "workers"
+				ctx.framework
+					? ctx.framework.config.type === "workers"
+						? "workers"
+						: "pages"
+					: "workers"
 			}`,
 		],
 		[`Stuck? Join us at`, `https://discord.gg/cloudflaredev`],
@@ -205,6 +209,7 @@ export const printSummary = async (ctx: PagesGeneratorContext) => {
 		}
 	}
 	endSection("See you again soon!");
+	process.exit(0);
 };
 
 export const offerGit = async (ctx: PagesGeneratorContext) => {
@@ -314,4 +319,23 @@ export async function initializeGit(cwd: string) {
 		// Unable to create the repo with a HEAD branch name, so just fall back to the default.
 		await runCommand(`git init`, { useSpinner: false, silent: true, cwd });
 	}
+}
+
+export async function getProductionBranch(cwd: string) {
+	try {
+		const productionBranch = await runCommand(
+			// "git branch --show-current", // git@^2.22
+			"git rev-parse --abbrev-ref HEAD", // git@^1.6.3
+			{
+				silent: true,
+				cwd,
+				useSpinner: false,
+				captureOutput: true,
+			}
+		);
+
+		return productionBranch.trim();
+	} catch (err) {}
+
+	return "main";
 }

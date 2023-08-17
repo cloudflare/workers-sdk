@@ -1,6 +1,15 @@
 import { URLSearchParams } from "node:url";
+import path from "path";
+import {
+	KVGateway,
+	NoOpLog,
+	createFileStorage,
+	sanitisePath,
+	defaultTimers,
+} from "miniflare";
 import { FormData } from "undici";
 import { fetchListResult, fetchResult, fetchKVGetValue } from "../cfetch";
+import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { logger } from "../logger";
 import type { Config } from "../config";
 
@@ -430,4 +439,16 @@ export function isValidKVNamespaceBinding(
 	return (
 		typeof binding === "string" && /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(binding)
 	);
+}
+
+export function localGateway(
+	persistTo: string | undefined,
+	configPath: string | undefined,
+	namespaceId: string
+): KVGateway {
+	const persist = getLocalPersistencePath(persistTo, configPath);
+	const sanitisedNamespace = sanitisePath(namespaceId);
+	const persistPath = path.join(persist, "v3/kv", sanitisedNamespace);
+	const storage = createFileStorage(persistPath);
+	return new KVGateway(new NoOpLog(), storage, defaultTimers);
 }

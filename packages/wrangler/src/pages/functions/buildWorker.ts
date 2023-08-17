@@ -5,7 +5,6 @@ import { build as esBuild } from "esbuild";
 import { nanoid } from "nanoid";
 import { bundleWorker } from "../../deployment-bundle/bundle";
 import traverseModuleGraph from "../../deployment-bundle/traverse-module-graph";
-import { D1_BETA_PREFIX } from "../../deployment-bundle/worker";
 import { FatalError } from "../../errors";
 import { logger } from "../../logger";
 import { getBasePath } from "../../paths";
@@ -27,7 +26,6 @@ export type Options = {
 	nodejsCompat?: boolean;
 	functionsDirectory: string;
 	local: boolean;
-	betaD1Shims?: string[];
 };
 
 export function buildWorker({
@@ -44,7 +42,6 @@ export function buildWorker({
 	nodejsCompat,
 	functionsDirectory,
 	local,
-	betaD1Shims,
 }: Options) {
 	return bundleWorker(
 		{
@@ -65,9 +62,6 @@ export function buildWorker({
 			define: {
 				__FALLBACK_SERVICE__: JSON.stringify(fallbackService),
 			},
-			betaD1Shims: (betaD1Shims || []).map(
-				(binding) => `${D1_BETA_PREFIX}${binding}`
-			),
 			doBindings: [], // Pages functions don't support internal Durable Objects
 			plugins: [
 				buildNotifierPlugin(onEnd),
@@ -173,7 +167,6 @@ export type RawOptions = {
 	legacyNodeCompat?: boolean;
 	nodejsCompat?: boolean;
 	local: boolean;
-	betaD1Shims?: string[];
 	additionalModules?: CfModule[];
 };
 
@@ -199,7 +192,6 @@ export function buildRawWorker({
 	legacyNodeCompat,
 	nodejsCompat,
 	local,
-	betaD1Shims,
 	additionalModules,
 }: RawOptions) {
 	return bundleWorker(
@@ -218,9 +210,6 @@ export function buildRawWorker({
 			legacyNodeCompat,
 			nodejsCompat,
 			define: {},
-			betaD1Shims: (betaD1Shims || []).map(
-				(binding) => `${D1_BETA_PREFIX}${binding}`
-			),
 			doBindings: [], // Pages functions don't support internal Durable Objects
 			plugins: [
 				...plugins,
@@ -279,7 +268,7 @@ export async function traverseAndBuildWorkerJSDirectory({
 		[
 			{
 				type: "ESModule",
-				globs: ["**/*.js"],
+				globs: ["**/*.js", "**/*.mjs"],
 			},
 		]
 	);
@@ -297,7 +286,6 @@ export async function traverseAndBuildWorkerJSDirectory({
 		sourcemap: true,
 		watch: false,
 		onEnd: () => {},
-		betaD1Shims: d1Databases,
 		nodejsCompat,
 		additionalModules: traverseModuleGraphResult.modules,
 	});

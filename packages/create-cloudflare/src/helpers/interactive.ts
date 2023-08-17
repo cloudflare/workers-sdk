@@ -259,10 +259,10 @@ const getConfirmRenderers = (config: ConfirmPromptConfig) => {
 	};
 };
 
-export const spinner = () => {
-	const spinnerFrames = ["┤", "┘", "┴", "└", "├", "┌", "┬", "┐"];
-	const ellipsisFrames = ["", ".", "..", "...", " ..", "  .", ""];
+export const spinnerFrames = ["┤", "┘", "┴", "└", "├", "┌", "┬", "┐"];
+const ellipsisFrames = ["", ".", "..", "...", " ..", "  .", ""];
 
+export const spinner = () => {
 	// Alternative animations we considered. Keeping around in case we
 	// introduce different animations for different use cases.
 	// const frames = ["▁", "▃", "▄", "▅", "▆", "▇", "▆", "▅", "▄", "▃"];

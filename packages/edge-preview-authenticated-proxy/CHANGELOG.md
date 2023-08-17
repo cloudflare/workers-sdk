@@ -1,5 +1,11 @@
 # edge-preview-authenticated-proxy
 
+## 0.1.2
+
+### Patch Changes
+
+- [#3722](https://github.com/cloudflare/workers-sdk/pull/3722) [`c220a5fe`](https://github.com/cloudflare/workers-sdk/commit/c220a5feadf5ebe7365b1e13c5f0cbeb3fad46e4) Thanks [@1000hz](https://github.com/1000hz)! - No longer included the preview token twice in rawhttp requests
+
 ## 0.1.1
 
 ### Patch Changes

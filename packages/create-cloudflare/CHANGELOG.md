@@ -1,5 +1,42 @@
 # create-cloudflare
 
+## 2.1.1
+
+### Patch Changes
+
+- [#3729](https://github.com/cloudflare/workers-sdk/pull/3729) [`9d8509e0`](https://github.com/cloudflare/workers-sdk/commit/9d8509e08acf082604ca896b4ab9ad5c05ae7505) Thanks [@jculvey](https://github.com/jculvey)! - Improve experience for WARP users by improving the reliability of the polling logic that waits for newly created apps to become available.
+
+* [#3552](https://github.com/cloudflare/workers-sdk/pull/3552) [`77a43d2a`](https://github.com/cloudflare/workers-sdk/commit/77a43d2aa3633fc53be6fe365271d6fb59f44bd6) Thanks [@yusukebe](https://github.com/yusukebe)! - fix: use workers template for Hono
+
+  Use a workers template instead of a pages template for `create-hono`.
+
+## 2.1.0
+
+### Minor Changes
+
+- [#3604](https://github.com/cloudflare/workers-sdk/pull/3604) [`c3ff1c2b`](https://github.com/cloudflare/workers-sdk/commit/c3ff1c2b599c99f4915dad0362c7570cc2fa2bf3) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add the option to add the `eslint-plugin-next-on-pages` eslint plugin
+  to developers creating a new Next.js app with eslint enabled
+
+## 2.0.14
+
+### Patch Changes
+
+- [#3644](https://github.com/cloudflare/workers-sdk/pull/3644) [`775eb3bd`](https://github.com/cloudflare/workers-sdk/commit/775eb3bd32611d339ec4071c3d523d1d15bc7e30) Thanks [@jculvey](https://github.com/jculvey)! - Detect production branch when creating pages project
+
+* [#3600](https://github.com/cloudflare/workers-sdk/pull/3600) [`3f7d6e7d`](https://github.com/cloudflare/workers-sdk/commit/3f7d6e7d654ea8958c6c2e0e78da4c5e4a78d2d5) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - improve the Nuxt deployment script so that it ships full stack applications (instead of server-side generated ones)
+
+  as part of this change update the Nuxt build script to include the `NITRO_PRESET` env variable set to `cloudflare-pages` (needed to build Pages compatible applications)
+
+  also write a .node-version file with the node version (so that it can properly working with the Pages CI)
+
+## 2.0.13
+
+### Patch Changes
+
+- [#3609](https://github.com/cloudflare/workers-sdk/pull/3609) [`be3a43ff`](https://github.com/cloudflare/workers-sdk/commit/be3a43ff9d96785e379e8e6bcb72b332519216b0) Thanks [@admah](https://github.com/admah)! - Removes all typescript dependencies from javascript templates.
+
+* [#3601](https://github.com/cloudflare/workers-sdk/pull/3601) [`e4ef867c`](https://github.com/cloudflare/workers-sdk/commit/e4ef867cc973d89eeee336ac4c4af62f905ae765) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - remove extra build added by mistake in solid deploy script
+
 ## 2.0.12
 
 ### Patch Changes

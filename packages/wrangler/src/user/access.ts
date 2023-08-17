@@ -51,7 +51,7 @@ export async function getAccessToken(
 	if (cache[domain]) {
 		return cache[domain];
 	}
-	const output = await spawnSync("cloudflared", ["access", "login", domain]);
+	const output = spawnSync("cloudflared", ["access", "login", domain]);
 	if (output.error) {
 		// The cloudflared binary is not installed
 		throw new Error(

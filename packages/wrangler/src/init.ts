@@ -182,6 +182,7 @@ export async function initHandler(args: InitArgs) {
 		const c3Arguments = [
 			...getC3CommandFromEnv().split(" "),
 			fromDashScriptName,
+			...(yesFlag ? ["-y"] : []), // --yes arg for npx
 			"--",
 			"--type",
 			"pre-existing",
@@ -241,6 +242,10 @@ export async function initHandler(args: InitArgs) {
 
 			if (c3Arguments.length > 0) {
 				c3Arguments.unshift("--");
+			}
+
+			if (yesFlag) {
+				c3Arguments.unshift("-y"); // arg for npx
 			}
 
 			c3Arguments.unshift(...getC3CommandFromEnv().split(" "));
@@ -1087,8 +1092,6 @@ export function mapBindings(bindings: WorkerMetadataBinding[]): RawConfig {
 					case "logfwdr":
 						{
 							configObj.logfwdr = {
-								// TODO: Messaging about adding schema file path
-								schema: "",
 								bindings: [
 									...(configObj.logfwdr?.bindings ?? []),
 									{ name: binding.name, destination: binding.destination },

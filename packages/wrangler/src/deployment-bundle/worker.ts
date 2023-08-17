@@ -1,5 +1,5 @@
-import type { Environment } from "../config";
 import type { Route } from "../config/environment";
+import type { Json } from "miniflare";
 
 /**
  * The type of Worker
@@ -50,7 +50,7 @@ export interface CfModule {
  * A map of variable names to values.
  */
 export interface CfVars {
-	[key: string]: unknown;
+	[key: string]: string | Json;
 }
 
 /**
@@ -122,13 +122,9 @@ export interface CfR2Bucket {
 	bucket_name: string;
 }
 
-export const D1_BETA_PREFIX = `__D1_BETA__` as const;
-export type D1PrefixedBinding = `${typeof D1_BETA_PREFIX}${string}`;
-
 // TODO: figure out if this is duplicated in packages/wrangler/src/config/environment.ts
 export interface CfD1Database {
-	// For now, all D1 bindings are alpha
-	binding: D1PrefixedBinding;
+	binding: string;
 	database_id: string;
 	database_name?: string;
 	preview_database_id?: string;
@@ -169,7 +165,6 @@ interface CfMTlsCertificate {
 }
 
 interface CfLogfwdr {
-	schema: string | undefined;
 	bindings: CfLogfwdrBinding[];
 }
 
@@ -185,9 +180,22 @@ interface CfUnsafeBinding {
 
 type CfUnsafeMetadata = Record<string, unknown>;
 
+export type CfCapnp =
+	| {
+			base_path?: never;
+			source_schemas?: never;
+			compiled_schema: string;
+	  }
+	| {
+			base_path: string;
+			source_schemas: string[];
+			compiled_schema?: never;
+	  };
+
 interface CfUnsafe {
 	bindings: CfUnsafeBinding[] | undefined;
 	metadata: CfUnsafeMetadata | undefined;
+	capnp: CfCapnp | undefined;
 }
 
 export interface CfDurableObjectMigrations {
@@ -268,20 +276,4 @@ export interface CfWorkerContext {
 	host: string | undefined;
 	routes: Route[] | undefined;
 	sendMetrics: boolean | undefined;
-}
-
-// Prefix binding with identifier which will then get picked up by the D1 shim.
-// Once the D1 Api is out of beta, this function can be removed.
-export function identifyD1BindingsAsBeta(
-	dbs: Environment["d1_databases"]
-): CfD1Database[] | undefined {
-	return dbs?.map((db) => ({
-		...db,
-		binding: `${D1_BETA_PREFIX}${db.binding}`,
-	}));
-}
-
-// Remove beta prefix
-export function removeD1BetaPrefix(binding: D1PrefixedBinding): string {
-	return binding.slice(D1_BETA_PREFIX.length);
 }

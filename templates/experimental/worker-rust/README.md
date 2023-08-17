@@ -11,14 +11,18 @@ This template is designed for compiling Rust to WebAssembly and publishing the r
 To create a `my-project` directory using this template, run:
 
 ```sh
-$ npm init cloudflare my-project worker-rust
+$ npx wrangler generate my-project https://github.com/cloudflare/workers-sdk/templates/experimental/worker-rust
 # or
-$ yarn create cloudflare my-project worker-rust
+$ yarn wrangler generate my-project https://github.com/cloudflare/workers-sdk/templates/experimental/worker-rust
 # or
-$ pnpm create cloudflare my-project worker-rust
+$ pnpm wrangler generate my-project https://github.com/cloudflare/workers-sdk/templates/experimental/worker-rust
 ```
 
-> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.
+## Wrangler
+
+Wrangler is used to develop, deploy, and configure your Worker via CLI.
+
+Further documentation for Wrangler can be found [here](https://developers.cloudflare.com/workers/tooling/wrangler).
 
 ## Usage
 

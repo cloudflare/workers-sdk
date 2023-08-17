@@ -36,13 +36,16 @@ export type PagesGeneratorContext = {
 	};
 };
 
+type UpdaterPackageScript = (cmd: string) => string;
+
 export type FrameworkConfig = {
 	generate: (ctx: PagesGeneratorContext) => Promise<void>;
 	configure?: (ctx: PagesGeneratorContext) => Promise<void>;
 	displayName: string;
-	packageScripts: Record<string, string>;
+	packageScripts: Record<string, string | UpdaterPackageScript>;
 	deployCommand?: string;
 	devCommand?: string;
 	testFlags?: string[];
 	compatibilityFlags?: string[];
+	type?: "pages" | "workers";
 };

@@ -4,7 +4,7 @@
 
 	"pipeline": {
 		"build": {
-			"env": ["VITEST"]
+			"env": ["VITEST", "TEST_PM"]
 		}
 	}
 }

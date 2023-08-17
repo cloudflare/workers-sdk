@@ -1,5 +1,23 @@
 # @cloudflare/pages-shared
 
+## 0.8.1
+
+### Patch Changes
+
+- [#3765](https://github.com/cloudflare/workers-sdk/pull/3765) [`e17d3096`](https://github.com/cloudflare/workers-sdk/commit/e17d3096ecde7cf697f7d5bc6ebc3a868eb88cfa) Thanks [@RamIdeas](https://github.com/RamIdeas)! - bump miniflare version to 3.20230814.1
+
+## 0.8.0
+
+### Minor Changes
+
+- [#3675](https://github.com/cloudflare/workers-sdk/pull/3675) [`f753f3af`](https://github.com/cloudflare/workers-sdk/commit/f753f3afb7478bb289b39c44b33acbcefe06e99a) Thanks [@1000hz](https://github.com/1000hz)! - chore: upgrade `miniflare` to [`3.20230724.0`](https://github.com/cloudflare/miniflare/releases/tag/v3.20230724.0)
+
+## 0.7.0
+
+### Minor Changes
+
+- [#3628](https://github.com/cloudflare/workers-sdk/pull/3628) [`e72a5794`](https://github.com/cloudflare/workers-sdk/commit/e72a5794f219e21ede701a7184a4691058366753) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: upgrade `miniflare` to [`3.20230717.0`](https://github.com/cloudflare/miniflare/releases/tag/v3.20230717.0)
+
 ## 0.6.0
 
 ### Minor Changes

@@ -536,7 +536,8 @@ async function createRemoteWorkerInit(props: {
 		props.name + (!props.legacyEnv && props.env ? `-${props.env}` : ""),
 		props.isWorkersSite ? props.assetPaths : undefined,
 		true,
-		false
+		false,
+		undefined
 	); // TODO: cancellable?
 
 	const init: CfWorkerInit = {

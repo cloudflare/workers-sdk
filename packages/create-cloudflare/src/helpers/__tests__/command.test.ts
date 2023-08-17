@@ -60,6 +60,15 @@ describe("Command Helpers", () => {
 		const [command, ...args] = cmd.split(" ");
 
 		expect(spawn).toHaveBeenCalledWith(command, args, {
+			stdio: "inherit",
+			env: process.env,
+		});
+	};
+
+	const expectSilentSpawnWith = (cmd: string) => {
+		const [command, ...args] = cmd.split(" ");
+
+		expect(spawn).toHaveBeenCalledWith(command, args, {
 			stdio: "pipe",
 			env: process.env,
 		});
@@ -81,12 +90,13 @@ describe("Command Helpers", () => {
 
 	test("installWrangler", async () => {
 		await installWrangler();
-		expectSpawnWith("npm install --save-dev wrangler");
+
+		expectSilentSpawnWith("npm install --save-dev wrangler");
 	});
 
 	test("npmInstall", async () => {
 		await npmInstall();
-		expectSpawnWith("npm install");
+		expectSilentSpawnWith("npm install");
 	});
 
 	test("npmInstall from pnpm", async () => {
@@ -96,12 +106,12 @@ describe("Command Helpers", () => {
 		});
 
 		await npmInstall();
-		expectSpawnWith("pnpm install");
+		expectSilentSpawnWith("pnpm install");
 	});
 
 	test("installPackages", async () => {
 		await installPackages(["foo", "bar", "baz"], { dev: true });
-		expectSpawnWith("npm install --save-dev foo bar baz");
+		expectSilentSpawnWith("npm install --save-dev foo bar baz");
 	});
 
 	describe("detectPackageManager", async () => {
@@ -167,14 +177,14 @@ describe("Command Helpers", () => {
 		test("normal flow", async () => {
 			spawnStdout = "2.20250110.5";
 			const date = await getWorkerdCompatibilityDate();
-			expectSpawnWith("npm info workerd dist-tags.latest");
+			expectSilentSpawnWith("npm info workerd dist-tags.latest");
 			expect(date).toBe("2025-01-10");
 		});
 
 		test("empty result", async () => {
 			spawnStdout = "";
 			const date = await getWorkerdCompatibilityDate();
-			expectSpawnWith("npm info workerd dist-tags.latest");
+			expectSilentSpawnWith("npm info workerd dist-tags.latest");
 			expect(date).toBe("2023-05-18");
 		});
 
@@ -182,14 +192,14 @@ describe("Command Helpers", () => {
 			spawnStdout =
 				"Debugger attached.\nyarn info v1.22.19\n2.20250110.5\n✨  Done in 0.83s.";
 			const date = await getWorkerdCompatibilityDate();
-			expectSpawnWith("npm info workerd dist-tags.latest");
+			expectSilentSpawnWith("npm info workerd dist-tags.latest");
 			expect(date).toBe("2025-01-10");
 		});
 
 		test("command failed", async () => {
 			spawnResultCode = 1;
 			const date = await getWorkerdCompatibilityDate();
-			expectSpawnWith("npm info workerd dist-tags.latest");
+			expectSilentSpawnWith("npm info workerd dist-tags.latest");
 			expect(date).toBe("2023-05-18");
 		});
 	});

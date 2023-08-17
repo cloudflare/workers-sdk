@@ -47,7 +47,6 @@ export function useEsbuild({
 	minify,
 	legacyNodeCompat,
 	nodejsCompat,
-	betaD1Shims,
 	define,
 	noBundle,
 	workerDefinitions,
@@ -74,7 +73,6 @@ export function useEsbuild({
 	minify: boolean | undefined;
 	legacyNodeCompat: boolean | undefined;
 	nodejsCompat: boolean | undefined;
-	betaD1Shims?: string[];
 	noBundle: boolean;
 	workerDefinitions: WorkerRegistry;
 	durableObjects: Config["durable_objects"];
@@ -141,7 +139,6 @@ export function useEsbuild({
 					minify,
 					legacyNodeCompat,
 					nodejsCompat,
-					betaD1Shims,
 					doBindings: durableObjects.bindings,
 					define,
 					checkFetch: true,
@@ -231,7 +228,6 @@ export function useEsbuild({
 		durableObjects,
 		workerDefinitions,
 		firstPartyWorkerDevFacade,
-		betaD1Shims,
 		local,
 		targetConsumer,
 		testScheduled,

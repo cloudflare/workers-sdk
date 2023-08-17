@@ -62,7 +62,6 @@ const bindingsConfigMock: Partial<Config> = {
 		{ binding: "NAMESPACE_BINDING", namespace: "NAMESPACE_ID" },
 	],
 	logfwdr: {
-		schema: "LOGFWDER_SCHEMA",
 		bindings: [{ name: "LOGFWDR_BINDING", destination: "LOGFWDR_DESTINATION" }],
 	},
 	data_blobs: {
@@ -124,7 +123,7 @@ describe("generateTypes()", () => {
 			D1_TESTING_SOMETHING: D1Database;
 			SERVICE_BINDING: Fetcher;
 			AE_DATASET_BINDING: AnalyticsEngineDataset;
-			NAMESPACE_BINDING: any;
+			NAMESPACE_BINDING: DispatchNamespace;
 			LOGFWDR_SCHEMA: any;
 			SOME_DATA_BLOB1: ArrayBuffer;
 			SOME_DATA_BLOB2: ArrayBuffer;
@@ -217,7 +216,12 @@ describe("generateTypes()", () => {
 				compatibility_date: "2022-01-12",
 				name: "test-name",
 				main: "./index.ts",
-				unsafe: bindingsConfigMock.unsafe ?? {},
+				unsafe: bindingsConfigMock.unsafe
+					? {
+							bindings: bindingsConfigMock.unsafe.bindings,
+							metadata: bindingsConfigMock.unsafe.metadata,
+					  }
+					: undefined,
 			} as TOML.JsonMap),
 			"utf-8"
 		);

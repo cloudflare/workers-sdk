@@ -11,7 +11,7 @@ const generate = async (ctx: PagesGeneratorContext) => {
 
 	await runFrameworkGenerator(
 		ctx,
-		`${dlx} create-hono@${version} ${ctx.project.name} --template cloudflare-pages`
+		`${dlx} create-hono@${version} ${ctx.project.name} --template cloudflare-workers`
 	);
 
 	logRaw(""); // newline
@@ -23,5 +23,6 @@ const config: FrameworkConfig = {
 	packageScripts: {},
 	deployCommand: "deploy",
 	devCommand: "dev",
+	type: "workers",
 };
 export default config;

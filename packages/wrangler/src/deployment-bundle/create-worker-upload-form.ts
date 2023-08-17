@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { FormData, File } from "undici";
+import { handleUnsafeCapnp } from "./capnp";
 import type {
 	CfWorkerInit,
 	CfModuleType,
@@ -7,6 +8,7 @@ import type {
 	CfPlacement,
 	CfTailConsumer,
 } from "./worker.js";
+import type { Json } from "miniflare";
 
 export function toMimeType(type: CfModuleType): string {
 	switch (type) {
@@ -29,7 +31,7 @@ export type WorkerMetadataBinding =
 	// If you add any new binding types here, also add it to safeBindings
 	// under validateUnsafeBinding in config/validation.ts
 	| { type: "plain_text"; name: string; text: string }
-	| { type: "json"; name: string; json: unknown }
+	| { type: "json"; name: string; json: Json }
 	| { type: "wasm_module"; name: string; part: string }
 	| { type: "text_blob"; name: string; part: string }
 	| { type: "browser"; name: string }
@@ -351,6 +353,18 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		metadataBindings.push(...bindings.unsafe.bindings);
 	}
 
+	let capnpSchemaOutputFile: string | undefined;
+	if (bindings.unsafe?.capnp) {
+		const capnpOutput = handleUnsafeCapnp(bindings.unsafe.capnp);
+		capnpSchemaOutputFile = `./capnp-${Date.now()}.compiled`;
+		formData.set(
+			capnpSchemaOutputFile,
+			new File([capnpOutput], capnpSchemaOutputFile, {
+				type: "application/octet-stream",
+			})
+		);
+	}
+
 	const metadata: WorkerMetadata = {
 		...(main.type !== "commonjs"
 			? { main_module: main.name }
@@ -360,7 +374,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		...(compatibility_flags && { compatibility_flags }),
 		...(usage_model && { usage_model }),
 		...(migrations && { migrations }),
-		capnp_schema: bindings.logfwdr?.schema,
+		capnp_schema: capnpSchemaOutputFile,
 		...(keepVars && { keep_bindings: ["plain_text", "json"] }),
 		...(logpush !== undefined && { logpush }),
 		...(placement && { placement }),
@@ -386,16 +400,6 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			module.name,
 			new File([module.content], module.name, {
 				type: toMimeType(module.type ?? main.type ?? "esm"),
-			})
-		);
-	}
-
-	if (bindings.logfwdr && bindings.logfwdr.schema) {
-		const filePath = bindings.logfwdr.schema;
-		formData.set(
-			filePath,
-			new File([readFileSync(filePath)], filePath, {
-				type: "application/octet-stream",
 			})
 		);
 	}
