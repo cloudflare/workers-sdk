@@ -149,6 +149,6 @@ export function miniflareTest<
 			t.context.mf.setOptions({ ...userOpts, ...opts } as MiniflareOptions);
 		t.context.url = await t.context.mf.ready;
 	});
-	test.after((t) => t.context.mf.dispose());
+	test.after.always((t) => t.context.mf.dispose());
 	return test;
 }

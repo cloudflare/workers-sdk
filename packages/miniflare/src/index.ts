@@ -448,6 +448,15 @@ function safeReadableStreamFrom(iterable: AsyncIterable<Uint8Array>) {
 	);
 }
 
+// Maps `Miniflare` instances to stack traces for thier construction. Used to identify un-`dispose()`d instances.
+let maybeInstanceRegistry:
+	| Map<Miniflare, string /* constructionStack */>
+	| undefined;
+/** @internal */
+export function _initialiseInstanceRegistry() {
+	return (maybeInstanceRegistry = new Map());
+}
+
 export class Miniflare {
 	readonly #gatewayFactories: PluginGatewayFactories;
 	readonly #routers: PluginRouters;
@@ -496,6 +505,15 @@ export class Miniflare {
 		const [sharedOpts, workerOpts] = validateOptions(opts);
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;
+
+		// Add to registry after initial options validation, before any servers/
+		// child processes are started
+		if (maybeInstanceRegistry !== undefined) {
+			const object = { name: "Miniflare", stack: "" };
+			Error.captureStackTrace(object, Miniflare);
+			maybeInstanceRegistry.set(this, object.stack);
+		}
+
 		this.#log = this.#sharedOpts.core.log ?? new NoOpLog();
 		this.#timers = this.#sharedOpts.core.timers ?? defaultTimers;
 		this.#host = this.#sharedOpts.core.host ?? "127.0.0.1";
@@ -1247,6 +1265,10 @@ export class Miniflare {
 			await this.#stopLoopbackServer();
 			// `rm -rf ${#tmpPath}`, this won't throw if `#tmpPath` doesn't exist
 			await fs.promises.rm(this.#tmpPath, { force: true, recursive: true });
+
+			// Remove from instance registry as last step in `finally`, to make sure
+			// all dispose steps complete
+			maybeInstanceRegistry?.delete(this);
 		}
 	}
 }

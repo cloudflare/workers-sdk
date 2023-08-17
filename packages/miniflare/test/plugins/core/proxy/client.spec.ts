@@ -35,6 +35,8 @@ test("ProxyClient: supports service bindings with WebSockets", async (t) => {
 			},
 		},
 	});
+	t.teardown(() => mf.dispose());
+
 	const { CUSTOM } = await mf.getBindings<{
 		CUSTOM: ReplaceWorkersTypes<Fetcher>;
 	}>();
@@ -53,6 +55,8 @@ test("ProxyClient: supports service bindings with WebSockets", async (t) => {
 
 test("ProxyClient: supports serialising multiple ReadableStreams, Blobs and Files", async (t) => {
 	const mf = new Miniflare({ script: nullScript });
+	t.teardown(() => mf.dispose());
+
 	const client = await mf._getProxyClient();
 	const IDENTITY = client.env.IDENTITY as {
 		asyncIdentity<Args extends any[]>(...args: Args): Promise<Args>;
@@ -130,6 +134,8 @@ test("ProxyClient: poisons dependent proxies after setOptions()/dispose()", asyn
 });
 test("ProxyClient: logging proxies provides useful information", async (t) => {
 	const mf = new Miniflare({ script: nullScript });
+	t.teardown(() => mf.dispose());
+
 	const caches = await mf.getCaches();
 	const inspectOpts: util.InspectOptions = { colors: false };
 	t.is(
@@ -160,6 +166,7 @@ test("ProxyClient: stack traces don't include internal implementation", async (t
 		// https://developers.cloudflare.com/workers/configuration/compatibility-dates/#do-not-throw-from-async-functions
 		compatibilityFlags: ["capture_async_api_throws"],
 	});
+	t.teardown(() => mf.dispose());
 
 	const ns = await mf.getDurableObjectNamespace("OBJECT");
 	const caches = await mf.getCaches();
@@ -189,6 +196,8 @@ test("ProxyClient: stack traces don't include internal implementation", async (t
 });
 test("ProxyClient: can access ReadableStream property multiple times", async (t) => {
 	const mf = new Miniflare({ script: nullScript, r2Buckets: ["BUCKET"] });
+	t.teardown(() => mf.dispose());
+
 	const bucket = await mf.getR2Bucket("BUCKET");
 	await bucket.put("key", "value");
 	const objectBody = await bucket.get("key");
@@ -198,6 +207,8 @@ test("ProxyClient: can access ReadableStream property multiple times", async (t)
 });
 test("ProxyClient: returns empty ReadableStream synchronously", async (t) => {
 	const mf = new Miniflare({ script: nullScript, r2Buckets: ["BUCKET"] });
+	t.teardown(() => mf.dispose());
+
 	const bucket = await mf.getR2Bucket("BUCKET");
 	await bucket.put("key", "");
 	const objectBody = await bucket.get("key");
