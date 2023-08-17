@@ -39,5 +39,42 @@
 			"tag": "v1",
 			"new_classes": ["UserSession"]
 		}
-	]
+	],
+
+	"env": {
+		"testing": {
+			"vars": {
+				"ACCOUNT_ID": "f7f78ebb28c2a224a9a46a3007350b7a",
+				"SENTRY_DSN": "https://0ff0cac6ca8b492d8b551626a7b9670c@sentry10.cfdata.org/978",
+				"workersDev": "devprod-playground.workers.dev"
+			},
+
+			"define": {
+				"ROOT": "'playground-testing/devprod/cloudflare/dev'",
+				"PREVIEW": "':any/playground-testing/devprod/cloudflare/dev'"
+			},
+
+			"routes": [
+				{
+					"pattern": "playground-testing.devprod.cloudflare.dev/*",
+					"zone_name": "devprod.cloudflare.dev"
+				},
+				{
+					"pattern": "*.playground-testing.devprod.cloudflare.dev/*",
+					"zone_name": "devprod.cloudflare.dev"
+				}
+			],
+
+			"durable_objects": {
+				"bindings": [{ "name": "UserSession", "class_name": "UserSession" }]
+			},
+
+			"migrations": [
+				{
+					"tag": "v1",
+					"new_classes": ["UserSession"]
+				}
+			]
+		}
+	}
 }

@@ -239,7 +239,7 @@ app.get(`${previewDomain}/.update-preview-token`, (c) => {
 	return c.redirect(url.searchParams.get("suffix") ?? "/", 307);
 });
 
-app.get(`${previewDomain}/*`, async (c) => {
+app.all(`${previewDomain}/*`, async (c) => {
 	const url = new URL(c.req.url);
 	if (c.req.headers.has("cf-raw-http")) {
 		return handleRawHttp(c.req.raw, url, c.env);

@@ -6,7 +6,7 @@
 		"check:lint": "eslint .",
 		"publish": "wrangler deploy",
 		"start": "wrangler dev",
-		"test": "vitest run",
+		"test:ci": "vitest run",
 		"test:watch": "npx vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json",
 		"check:type": "tsc"
