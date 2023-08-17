@@ -30,17 +30,26 @@ type WorkerResponse = { id: number } & (
 
 const WORKER_SCRIPT = /* javascript */ `
 const { workerData } = require("worker_threads");
-const { fetch } = require("undici");
+const { Client, fetch } = require("undici");
 
 // Not using parentPort here so we can call receiveMessageOnPort() in host
 const { notifyHandle, port } = workerData;
 
+let clientUrl;
+let client;
+
 port.addEventListener("message", async (event) => {
   const { id, method, url, headers, body } = event.data;
+  if (clientUrl !== url) {
+    clientUrl = url;
+    client = new Client(url, {
+      connect: { rejectUnauthorized: false },
+    });
+  }
   headers["${CoreHeaders.OP_SYNC}"] = "true";
   try {
     // body cannot be a ReadableStream, so no need to specify duplex
-    const response = await fetch(url, { method, headers, body });
+    const response = await fetch(url, { method, headers, body, dispatcher: client });
     const responseBody = response.headers.get("${CoreHeaders.OP_RESULT_TYPE}") === "ReadableStream"
       ? response.body
       : await response.arrayBuffer();
