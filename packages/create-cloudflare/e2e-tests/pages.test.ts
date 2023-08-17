@@ -121,9 +121,7 @@ describe(`E2E: Web frameworks`, () => {
 			`(${framework}) Deployed page (${projectUrl}) didn't contain expected string: "${expectResponseToContain}"`
 		).toContain(expectResponseToContain);
 
-		const projectName =
-			output.match(/Navigate to the new directory cd (.+)/)?.[1] ?? "";
-		await testDeploymentCommitMessage(projectName, framework);
+		await testDeploymentCommitMessage(getName(framework), framework);
 	};
 
 	// These are ordered based on speed and reliability for ease of debugging
