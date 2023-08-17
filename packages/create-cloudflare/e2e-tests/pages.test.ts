@@ -3,7 +3,7 @@ import { FrameworkMap } from "frameworks/index";
 import { readJSON } from "helpers/files";
 import { fetch } from "undici";
 import { describe, expect, test, afterEach, beforeEach } from "vitest";
-import { version } from '../package.json';
+import { version } from "../package.json";
 import { keys, runC3, testProjectDir } from "./helpers";
 import type { RunnerConfig } from "./helpers";
 
@@ -111,7 +111,8 @@ describe(`E2E: Web frameworks`, () => {
 			`(${framework}) Deployed page (${projectUrl}) didn't contain expected string: "${expectResponseToContain}"`
 		).toContain(expectResponseToContain);
 
-		const projectName = output.match(/Navigate to the new directory cd (.+)/)?.[1] ?? '';
+		const projectName =
+			output.match(/Navigate to the new directory cd (.+)/)?.[1] ?? "";
 		await testDeploymentCommitMessage(projectName, framework);
 	};
 
@@ -207,32 +208,45 @@ describe(`E2E: Web frameworks`, () => {
 	});
 });
 
-const testDeploymentCommitMessage = async (projectName: string, framework: string) => {
+const testDeploymentCommitMessage = async (
+	projectName: string,
+	framework: string
+) => {
 	// Note: we cannot simply run git and check the result since the commit can be part of the
 	//       deployment even without git, so instead we fetch the deployment info from the pages api
 	const response = await fetch(
-		`https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/pages/projects`, {
-		headers: {
-			Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
-		},
-	});
+		`https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/pages/projects`,
+		{
+			headers: {
+				Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
+			},
+		}
+	);
 
-	const result = (await response.json() as {
-		result: {
-			name: string;
-			latest_deployment?: {
-				deployment_trigger: {
-					metadata?: {
-						commit_message: string;
+	const result = (
+		(await response.json()) as {
+			result: {
+				name: string;
+				latest_deployment?: {
+					deployment_trigger: {
+						metadata?: {
+							commit_message: string;
+						};
 					};
 				};
-			};
-		}[];
-	}).result;
+			}[];
+		}
+	).result;
 
-	const projectLatestCommitMessage = result.find(project => project.name === projectName)?.latest_deployment?.deployment_trigger?.metadata?.commit_message;
-	expect(projectLatestCommitMessage).toMatch(/^Initialize web application via create-cloudflare CLI/);
-	expect(projectLatestCommitMessage).toContain(`C3 = create-cloudflare@${version}`);
+	const projectLatestCommitMessage = result.find(
+		(project) => project.name === projectName
+	)?.latest_deployment?.deployment_trigger?.metadata?.commit_message;
+	expect(projectLatestCommitMessage).toMatch(
+		/^Initialize web application via create-cloudflare CLI/
+	);
+	expect(projectLatestCommitMessage).toContain(
+		`C3 = create-cloudflare@${version}`
+	);
 	expect(projectLatestCommitMessage).toContain(`project name = ${projectName}`);
 	expect(projectLatestCommitMessage).toContain(`framework = ${framework}`);
-}
+};
