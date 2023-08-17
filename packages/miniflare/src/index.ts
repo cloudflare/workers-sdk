@@ -31,6 +31,7 @@ import {
 	configureEntrySocket,
 	coupleWebSocket,
 	fetch,
+	getAccessibleHosts,
 } from "./http";
 import {
 	D1_PLUGIN_NAME,
@@ -518,7 +519,14 @@ export class Miniflare {
 		this.#timers = this.#sharedOpts.core.timers ?? defaultTimers;
 		this.#host = this.#sharedOpts.core.host ?? "127.0.0.1";
 		this.#accessibleHost =
-			this.#host === "*" || this.#host === "0.0.0.0" ? "127.0.0.1" : this.#host;
+			this.#host === "*" || this.#host === "0.0.0.0" || this.#host === "::"
+				? "127.0.0.1"
+				: this.#host;
+
+		if (net.isIPv6(this.#accessibleHost)) {
+			this.#accessibleHost = `[${this.#accessibleHost}]`;
+		}
+
 		this.#initPlugins();
 
 		this.#liveReloadServer = new WebSocketServer({ noServer: true });
@@ -605,7 +613,7 @@ export class Miniflare {
 		// Start runtime
 		const port = this.#sharedOpts.core.port ?? 0;
 		const opts: RuntimeOptions = {
-			entryHost: this.#host,
+			entryHost: net.isIPv6(this.#host) ? `[${this.#host}]` : this.#host,
 			entryPort: port,
 			loopbackPort: this.#loopbackPort,
 			inspectorPort: this.#sharedOpts.core.inspectorPort,
@@ -702,7 +710,7 @@ export class Miniflare {
 		// Extract original URL passed to `fetch`
 		const url = new URL(
 			headers.get(CoreHeaders.ORIGINAL_URL) ?? req.url ?? "",
-			"http://127.0.0.1"
+			"http://localhost"
 		);
 		headers.delete(CoreHeaders.ORIGINAL_URL);
 
@@ -825,6 +833,10 @@ export class Miniflare {
 		port: number,
 		hostname: string
 	): Promise<StoppableServer> {
+		if (hostname === "*") {
+			hostname = "::";
+		}
+
 		return new Promise((resolve) => {
 			const server = stoppable(
 				http.createServer(this.#handleLoopback),
@@ -1018,7 +1030,24 @@ export class Miniflare {
 		if (!this.#runtimeMutex.hasWaiting) {
 			// Only log and trigger reload if there aren't pending updates
 			const ready = initial ? "Ready" : "Updated and ready";
-			this.#log.info(`${ready} on ${this.#runtimeEntryURL}`);
+			const host = net.isIPv6(this.#host) ? `[${this.#host}]` : this.#host;
+			this.#log.info(
+				`${ready} on ${secure ? "https" : "http"}://${host}:${maybePort} `
+			);
+
+			let hosts: string[];
+			if (this.#host === "::" || this.#host === "*") {
+				hosts = getAccessibleHosts(false);
+			} else if (this.#host === "0.0.0.0") {
+				hosts = getAccessibleHosts(true);
+			} else {
+				hosts = [];
+			}
+
+			for (const h of hosts) {
+				this.#log.info(`- ${secure ? "https" : "http"}://${h}:${maybePort}`);
+			}
+
 			this.#handleReload();
 		}
 	}

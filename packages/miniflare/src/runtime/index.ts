@@ -95,7 +95,7 @@ export class Runtime {
 		];
 		if (this.opts.inspectorPort !== undefined) {
 			// Required to enable the V8 inspector
-			args.push(`--inspector-addr=127.0.0.1:${this.opts.inspectorPort}`);
+			args.push(`--inspector-addr=localhost:${this.opts.inspectorPort}`);
 		}
 		if (this.opts.verbose) {
 			args.push("--verbose");

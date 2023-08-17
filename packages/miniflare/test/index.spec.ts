@@ -557,6 +557,33 @@ test("Miniflare: manually triggered scheduled events", async (t) => {
 	t.is(await res.text(), "true");
 });
 
+test("Miniflare: Listens on ipv6", async (t) => {
+	const log = new TestLog(t);
+
+	const mf = new Miniflare({
+		log,
+		modules: true,
+		host: "*",
+		script: `export default {
+      fetch() {
+        return new Response("Hello world");
+      }
+    }`,
+	});
+	t.teardown(() => mf.dispose());
+
+	const url = await mf.ready;
+
+	let response = await fetch(`http://localhost:${url.port}`);
+	t.true(response.ok);
+
+	response = await fetch(`http://[::1]:${url.port}`);
+	t.true(response.ok);
+
+	response = await fetch(`http://127.0.0.1:${url.port}`);
+	t.true(response.ok);
+});
+
 queuesTest("Miniflare: getBindings() returns all bindings", async (t) => {
 	const tmp = await useTmp(t);
 	const blobPath = path.join(tmp, "blob.txt");

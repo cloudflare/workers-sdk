@@ -3,6 +3,7 @@ export * from "./request";
 export * from "./response";
 export * from "./websocket";
 export * from "./server";
+export * from "./helpers";
 
 export { File, FormData, Headers } from "undici";
 export type {
