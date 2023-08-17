@@ -62,6 +62,8 @@
 	"editor.tabSize": 2,
 	"files.associations": {
 		"api-extractor.json": "jsonc",
-		"CODEOWNERS": "plaintext"
+		"CODEOWNERS": "plaintext",
+		"*.template": "javascript",
+		"wrangler.json": "jsonc"
 	}
 }

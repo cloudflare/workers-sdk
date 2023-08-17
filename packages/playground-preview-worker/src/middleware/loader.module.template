@@ -1,0 +1,57 @@
+import {
+  __facade_invoke__,
+  __facade_register__
+} from '__IMPORT_SPECIFIER_COMMON__';
+import worker from '__IMPORT_SPECIFIER_ENTRY_POINT__';
+export * from '__IMPORT_SPECIFIER_ENTRY_POINT__';
+class __Facade_ScheduledController__ {
+  constructor(scheduledTime, cron, noRetry) {
+    this.scheduledTime = scheduledTime;
+    this.cron = cron;
+    this.#noRetry = noRetry;
+  }
+  #noRetry;
+  noRetry() {
+    if (!(this instanceof __Facade_ScheduledController__)) {
+      throw new TypeError('Illegal invocation');
+    }
+    this.#noRetry();
+  }
+}
+const __facade_modules_fetch__ = function (request, env, ctx) {
+  if (worker.fetch === void 0) throw new Error('No fetch handler!');
+  return worker.fetch(request, env, ctx);
+};
+const facade = {
+  fetch(request, env, ctx) {
+    if (worker.middleware && worker.middleware.length > 0) {
+      for (const middleware of worker.middleware) {
+        __facade_register__(middleware);
+      }
+      const __facade_modules_dispatch__ = function (type, init) {
+        if (type === 'scheduled' && worker.scheduled !== void 0) {
+          const controller = new __Facade_ScheduledController__(
+            Date.now(),
+            init.cron ?? '',
+            () => {}
+          );
+          return worker.scheduled(controller, env, ctx);
+        }
+      };
+      return __facade_invoke__(
+        request,
+        env,
+        ctx,
+        __facade_modules_dispatch__,
+        __facade_modules_fetch__
+      );
+    } else {
+      return worker.fetch(request, env, ctx);
+    }
+  },
+  scheduled: worker.scheduled,
+  queue: worker.queue,
+  trace: worker.trace
+};
+var loader_modules_default = facade;
+export { loader_modules_default as default };
