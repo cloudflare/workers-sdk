@@ -1,7 +1,7 @@
-From 37cafef0a7f76f3c623e1c0016244b07f4dfc5d9 Mon Sep 17 00:00:00 2001
+From e17ef45cf30b880519d9be96402f784beb363c4e Mon Sep 17 00:00:00 2001
 From: Samuel Macleod <smacleod@cloudflare.com>
 Date: Thu, 4 May 2023 03:21:58 +0100
-Subject: [PATCH 14/15] Add ping to improve connection stability
+Subject: [PATCH 14/16] Add ping to improve connection stability
 
 ---
  front_end/core/protocol_client/InspectorBackend.ts | 9 +++++++++
@@ -40,5 +40,5 @@ index bc7ccf9c08..7d033a7b26 100644
  
    registerSession(target: TargetBase, sessionId: string, proxyConnection?: Connection|null): void {
 -- 
-2.39.2 (Apple Git-143)
+2.41.0
 
