@@ -1,12 +1,12 @@
-import { getSentry, sentry } from '@hono/sentry';
-import { Hono } from 'hono';
-import { getCookie, setCookie } from 'hono/cookie';
+import { getSentry, sentry } from "@hono/sentry";
+import { Hono } from "hono";
+import { getCookie, setCookie } from "hono/cookie";
 const app = new Hono<{ Bindings: Env }>({
 	// This replaces . with / in url hostnames, which allows for parameter matching in hostnames as well as paths
 	// e.g. https://something.example.com/hello/world -> something/example/com/hello/world
 	getPath: (req) => {
 		const url = new URL(req.url);
-		return url.hostname.replaceAll('.', '/') + url.pathname;
+		return url.hostname.replaceAll(".", "/") + url.pathname;
 	},
 });
 
@@ -31,8 +31,8 @@ class HttpError extends Error {
 			{
 				status: this.status,
 				headers: {
-					'Access-Control-Allow-Origin': '*',
-					'Access-Control-Allow-Method': 'GET,PUT,POST',
+					"Access-Control-Allow-Origin": "*",
+					"Access-Control-Allow-Method": "GET,PUT,POST",
 				},
 			}
 		);
@@ -45,35 +45,39 @@ class HttpError extends Error {
 
 export class WorkerTimeout extends HttpError {
 	constructor() {
-		super('Worker timed out', 400, false);
+		super("Worker timed out", 400, false);
 	}
 
 	toResponse(): Response {
-		return new Response('Worker timed out');
+		return new Response("Worker timed out");
 	}
 }
 
 export class ServiceWorkerNotSupported extends HttpError {
 	constructor() {
-		super('Service Workers are not supported in the Workers Playground', 400, false);
+		super(
+			"Service Workers are not supported in the Workers Playground",
+			400,
+			false
+		);
 	}
 }
 
 class TokenUpdateFailed extends HttpError {
 	constructor() {
-		super('Provide token, prewarmUrl and remote', 400, false);
+		super("Provide token, prewarmUrl and remote", 400, false);
 	}
 }
 
 class RawHttpFailed extends HttpError {
 	constructor() {
-		super('Provide token, and remote', 400, false);
+		super("Provide token, and remote", 400, false);
 	}
 }
 
 class PreviewRequestFailed extends HttpError {
 	constructor(private tokenId: string, reportable: boolean) {
-		super('Token and remote not found', 400, reportable);
+		super("Token and remote not found", 400, reportable);
 	}
 	get data(): { tokenId: string } {
 		return { tokenId: this.tokenId };
@@ -87,19 +91,20 @@ class PreviewRequestFailed extends HttpError {
  *  - `X-CF-Token`  A preview token, as in /.update-preview-token
  */
 async function handleRawHttp(request: Request, url: URL, env: Env) {
-	if (request.method === 'OPTIONS') {
+	if (request.method === "OPTIONS") {
 		return new Response(null, {
 			headers: {
-				'Access-Control-Allow-Origin': request.headers.get('Origin') ?? '',
-				'Access-Control-Allow-Method': '*',
-				'Access-Control-Allow-Credentials': 'true',
-				'Access-Control-Allow-Headers': request.headers.get('Access-Control-Request-Headers') ?? 'x-cf-token',
-				'Access-Control-Expose-Headers': '*',
-				Vary: 'Origin, Access-Control-Request-Headers',
+				"Access-Control-Allow-Origin": request.headers.get("Origin") ?? "",
+				"Access-Control-Allow-Method": "*",
+				"Access-Control-Allow-Credentials": "true",
+				"Access-Control-Allow-Headers":
+					request.headers.get("Access-Control-Request-Headers") ?? "x-cf-token",
+				"Access-Control-Expose-Headers": "*",
+				Vary: "Origin, Access-Control-Request-Headers",
 			},
 		});
 	}
-	const token = request.headers.get('X-CF-Token');
+	const token = request.headers.get("X-CF-Token");
 	if (!token) {
 		throw new RawHttpFailed();
 	}
@@ -111,9 +116,9 @@ async function handleRawHttp(request: Request, url: URL, env: Env) {
 		new Request(request, {
 			headers: {
 				...Object.fromEntries(request.headers),
-				'cf-run-user-worker': 'true',
+				"cf-run-user-worker": "true",
 			},
-			redirect: 'manual',
+			redirect: "manual",
 		})
 	);
 
@@ -127,23 +132,31 @@ async function handleRawHttp(request: Request, url: URL, env: Env) {
 		...workerResponse,
 		headers: {
 			...rawHeaders,
-			'Access-Control-Allow-Origin': request.headers.get('Origin') ?? '',
-			'Access-Control-Allow-Method': '*',
-			'Access-Control-Allow-Credentials': 'true',
-			'cf-ew-status': workerResponse.status.toString(),
-			'Access-Control-Expose-Headers': '*',
-			Vary: 'Origin',
+			"Access-Control-Allow-Origin": request.headers.get("Origin") ?? "",
+			"Access-Control-Allow-Method": "*",
+			"Access-Control-Allow-Credentials": "true",
+			"cf-ew-status": workerResponse.status.toString(),
+			"Access-Control-Expose-Headers": "*",
+			Vary: "Origin",
 		},
 	});
 }
-app.use('*', (c, ...args) =>
+app.use("*", (c, ...args) =>
 	sentry({
-		allowedHeaders: ['user-agent', 'accept-encoding', 'accept-language', 'cf-ray', 'content-length', 'content-type', 'host'],
+		allowedHeaders: [
+			"user-agent",
+			"accept-encoding",
+			"accept-language",
+			"cf-ray",
+			"content-length",
+			"content-type",
+			"host",
+		],
 		// @ts-ignore
 		transportOptions: {
 			headers: {
-				'CF-Access-Client-ID': c.env.SENTRY_ACCESS_CLIENT_ID,
-				'CF-Access-Client-Secret': c.env.SENTRY_ACCESS_CLIENT_SECRET,
+				"CF-Access-Client-ID": c.env.SENTRY_ACCESS_CLIENT_ID,
+				"CF-Access-Client-Secret": c.env.SENTRY_ACCESS_CLIENT_SECRET,
 			},
 		},
 	})(c, ...args)
@@ -151,13 +164,13 @@ app.use('*', (c, ...args) =>
 
 app.get(`${rootDomain}/`, async (c) => {
 	const url = new URL(c.req.url);
-	let userId = getCookie(c, 'user');
+	let userId = getCookie(c, "user");
 
 	if (!userId) {
 		userId = c.env.UserSession.newUniqueId().toString();
-		setCookie(c, 'user', userId, {
+		setCookie(c, "user", userId, {
 			secure: true,
-			sameSite: 'None',
+			sameSite: "None",
 			httpOnly: true,
 			domain: url.hostname,
 		});
@@ -165,23 +178,34 @@ app.get(`${rootDomain}/`, async (c) => {
 	const cookified = c.body(null);
 	const origin = await fetch(c.req.url, c.req);
 	const mutable = new Response(origin.body, origin);
-	if (cookified.headers.has('Set-Cookie')) mutable.headers.set('Set-Cookie', cookified.headers.get('Set-Cookie')!);
+	if (cookified.headers.has("Set-Cookie"))
+		mutable.headers.set("Set-Cookie", cookified.headers.get("Set-Cookie")!);
 	return mutable;
 });
 
 app.post(`${rootDomain}/api/worker`, async (c) => {
-	let userId = getCookie(c, 'user') as string;
+	let userId = getCookie(c, "user") as string;
 
-	const userObject = c.env.UserSession.get(c.env.UserSession.idFromString(userId));
+	const userObject = c.env.UserSession.get(
+		c.env.UserSession.idFromString(userId)
+	);
 
-	return userObject.fetch(new Request('https://example.com', { body: c.req.body, method: 'POST', headers: c.req.headers }));
+	return userObject.fetch(
+		new Request("https://example.com", {
+			body: c.req.body,
+			method: "POST",
+			headers: c.req.headers,
+		})
+	);
 });
 
 app.get(`${rootDomain}/api/inspector`, async (c) => {
 	const url = new URL(c.req.url);
-	let userId = url.searchParams.get('user')!;
+	let userId = url.searchParams.get("user")!;
 
-	const userObject = c.env.UserSession.get(c.env.UserSession.idFromString(userId));
+	const userObject = c.env.UserSession.get(
+		c.env.UserSession.idFromString(userId)
+	);
 
 	return userObject.fetch(c.req.raw);
 });
@@ -201,46 +225,48 @@ app.get(`${rootDomain}/api/inspector`, async (c) => {
  */
 app.get(`${previewDomain}/.update-preview-token`, (c) => {
 	const url = new URL(c.req.url);
-	const token = url.searchParams.get('token');
+	const token = url.searchParams.get("token");
 	if (!token) {
 		throw new TokenUpdateFailed();
 	}
-	setCookie(c, 'token', token, {
+	setCookie(c, "token", token, {
 		secure: true,
-		sameSite: 'None',
+		sameSite: "None",
 		httpOnly: true,
 		domain: url.hostname,
 	});
 
-	return c.redirect(url.searchParams.get('suffix') ?? '/', 307);
+	return c.redirect(url.searchParams.get("suffix") ?? "/", 307);
 });
 
 app.get(`${previewDomain}/*`, async (c) => {
 	const url = new URL(c.req.url);
-	if (c.req.headers.has('cf-raw-http')) {
+	if (c.req.headers.has("cf-raw-http")) {
 		return handleRawHttp(c.req.raw, url, c.env);
 	}
-	const token = getCookie(c, 'token') as string;
+	const token = getCookie(c, "token") as string;
 
 	if (!token) {
 		throw new PreviewRequestFailed(token, false);
 	}
 
-	const userObject = c.env.UserSession.get(c.env.UserSession.idFromString(token));
+	const userObject = c.env.UserSession.get(
+		c.env.UserSession.idFromString(token)
+	);
 
 	const original = await userObject.fetch(
 		url,
 		new Request(c.req.raw, {
 			headers: {
 				...Object.fromEntries(c.req.headers),
-				'cf-run-user-worker': 'true',
+				"cf-run-user-worker": "true",
 			},
-			redirect: 'manual',
+			redirect: "manual",
 		})
 	);
 	const embeddable = new Response(original.body, original);
 	// This will be embedded in an iframe. In particular, the Cloudflare error page sets this header.
-	embeddable.headers.delete('X-Frame-Options');
+	embeddable.headers.delete("X-Frame-Options");
 	return embeddable;
 });
 
@@ -251,7 +277,7 @@ app.onError((e, c) => {
 	const sentry = getSentry(c);
 	if (e instanceof HttpError) {
 		if (e.reportable) {
-			sentry.setContext('Details', e.data);
+			sentry.setContext("Details", e.data);
 			sentry.captureException(e);
 		}
 		return e.toResponse();
@@ -259,8 +285,8 @@ app.onError((e, c) => {
 		sentry.captureException(e);
 		return Response.json(
 			{
-				error: 'UnexpectedError',
-				message: 'Something went wrong',
+				error: "UnexpectedError",
+				message: "Something went wrong",
 			},
 			{
 				status: 500,
@@ -270,9 +296,13 @@ app.onError((e, c) => {
 });
 
 export default <ExportedHandler>{
-	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+	async fetch(
+		request: Request,
+		env: Env,
+		ctx: ExecutionContext
+	): Promise<Response> {
 		return app.fetch(request, env, ctx);
 	},
 };
 
-export { UserSession } from './user.do';
+export { UserSession } from "./user.do";

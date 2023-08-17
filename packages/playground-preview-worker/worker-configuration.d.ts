@@ -3,6 +3,7 @@ type Env = {
 	SENTRY_DSN: string;
 	UserSession: DurableObjectNamespace;
 	ACCOUNT_ID: string;
+	workersDev: string;
 	// Secrets
 	API_TOKEN: string;
 	SENTRY_ACCESS_CLIENT_SECRET: string;

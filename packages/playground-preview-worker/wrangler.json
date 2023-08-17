@@ -10,7 +10,8 @@
 
 	"vars": {
 		"ACCOUNT_ID": "f7f78ebb28c2a224a9a46a3007350b7a",
-		"SENTRY_DSN": "https://0ff0cac6ca8b492d8b551626a7b9670c@sentry10.cfdata.org/978"
+		"SENTRY_DSN": "https://0ff0cac6ca8b492d8b551626a7b9670c@sentry10.cfdata.org/978",
+		"workersDev": "devprod-playground.workers.dev"
 	},
 
 	"define": {

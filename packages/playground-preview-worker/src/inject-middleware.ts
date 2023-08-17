@@ -1,19 +1,28 @@
-import commonModule from './middleware/common.module.template';
-import loaderModule from './middleware/loader.module.template';
+import commonModule from "./middleware/common.module.template";
+import loaderModule from "./middleware/loader.module.template";
 
-import jsonModule from './middleware/definitions/json.module.template';
-import scheduledModule from './middleware/definitions/scheduled.module.template';
+import jsonModule from "./middleware/definitions/json.module.template";
+import scheduledModule from "./middleware/definitions/scheduled.module.template";
 
 const encoder = new TextEncoder();
 
-function inflateWorker(entrypoint: string, middleware: string[]): { entrypoint: string; additionalModules: FormData } {
+function inflateWorker(
+	entrypoint: string,
+	middleware: string[]
+): { entrypoint: string; additionalModules: FormData } {
 	const prefix = `.internal-${crypto.randomUUID()}`;
 
-	const namedMiddleware = middleware.map((m, i) => [`${prefix}-facade-${i}.js`, `__FACADE_${i}__`, m]);
+	const namedMiddleware = middleware.map((m, i) => [
+		`${prefix}-facade-${i}.js`,
+		`__FACADE_${i}__`,
+		m,
+	]);
 
-	const imports = namedMiddleware.map(([path, name]) => /*javascript*/ `import ${name} from "${path}";`).join('\n');
+	const imports = namedMiddleware
+		.map(([path, name]) => /*javascript*/ `import ${name} from "${path}";`)
+		.join("\n");
 
-	const names = namedMiddleware.map(([_path, name]) => name).join(',');
+	const names = namedMiddleware.map(([_path, name]) => name).join(",");
 
 	const collection = [
 		`${prefix}-collection.js`,
@@ -44,22 +53,22 @@ function inflateWorker(entrypoint: string, middleware: string[]): { entrypoint: 
 		{
 			name: loader[0],
 			contents: encoder.encode(loader[1]),
-			type: 'application/javascript+module',
+			type: "application/javascript+module",
 		},
 		{
 			name: common[0],
 			contents: encoder.encode(common[1]),
-			type: 'application/javascript+module',
+			type: "application/javascript+module",
 		},
 		{
 			name: collection[0],
 			contents: encoder.encode(collection[1]),
-			type: 'application/javascript+module',
+			type: "application/javascript+module",
 		},
 		...namedMiddleware.map(([path, _name, contents]) => ({
 			name: path,
 			contents: encoder.encode(contents),
-			type: 'application/javascript+module',
+			type: "application/javascript+module",
 		})),
 	];
 
@@ -81,7 +90,10 @@ function inflateWorker(entrypoint: string, middleware: string[]): { entrypoint: 
 	};
 }
 
-export function constructMiddleware(entrypoint: string): { entrypoint: string; additionalModules: FormData } {
+export function constructMiddleware(entrypoint: string): {
+	entrypoint: string;
+	additionalModules: FormData;
+} {
 	const middleware = [scheduledModule, jsonModule];
 
 	return inflateWorker(entrypoint, middleware);
