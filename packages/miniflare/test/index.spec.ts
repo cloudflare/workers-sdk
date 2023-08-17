@@ -528,7 +528,7 @@ test("Miniflare: accepts https requests", async (t) => {
 	t.assert(log.logs[0][1].startsWith("Ready on https://"));
 });
 
-test("Miniflare: Manually triggered scheduled events", async (t) => {
+test("Miniflare: manually triggered scheduled events", async (t) => {
 	const log = new TestLog(t);
 
 	const mf = new Miniflare({
@@ -545,6 +545,7 @@ test("Miniflare: Manually triggered scheduled events", async (t) => {
       }
     }`,
 	});
+	t.teardown(() => mf.dispose());
 
 	let res = await mf.dispatchFetch("http://localhost");
 	t.is(await res.text(), "false");

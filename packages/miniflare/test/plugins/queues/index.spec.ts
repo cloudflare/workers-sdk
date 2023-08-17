@@ -66,6 +66,8 @@ test("flushes partial and full batches", async (t) => {
 			},
 		],
 	});
+	t.teardown(() => mf.dispose());
+
 	async function send(message: unknown) {
 		await mf.dispatchFetch("http://localhost/send", {
 			method: "POST",
@@ -255,6 +257,7 @@ test("sends all structured cloneable types", async (t) => {
 			},
 		],
 	});
+	t.teardown(() => mf.dispose());
 
 	await mf.dispatchFetch("http://localhost");
 	timers.timestamp += 1000;
@@ -326,6 +329,8 @@ test("retries messages", async (t) => {
       }
     }`,
 	});
+	t.teardown(() => mf.dispose());
+
 	async function sendBatch(...messages: string[]) {
 		await mf.dispatchFetch("http://localhost", {
 			method: "POST",
@@ -546,6 +551,8 @@ test("moves to dead letter queue", async (t) => {
       }
     }`,
 	});
+	t.teardown(() => mf.dispose());
+
 	async function sendBatch(...messages: string[]) {
 		await mf.dispatchFetch("http://localhost", {
 			method: "POST",
@@ -648,6 +655,8 @@ test("operations permit strange queue names", async (t) => {
       }
     }`,
 	});
+	t.teardown(() => mf.dispose());
+
 	await mf.dispatchFetch("http://localhost");
 	timers.timestamp += 1000;
 	await timers.waitForTasks();
@@ -718,6 +727,8 @@ test("supports message contentTypes", async (t) => {
   },
 };`,
 	});
+	t.teardown(() => mf.dispose());
+
 	const res = await mf.dispatchFetch("http://localhost");
 	await res.arrayBuffer(); // (drain)
 	timers.timestamp += 1000;

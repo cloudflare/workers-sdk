@@ -133,6 +133,7 @@ addEventListener("fetch", (event) => {
 			},
 		],
 	});
+	t.teardown(() => mf.dispose());
 
 	// Check service-workers source mapped
 	let error = await t.throwsAsync(mf.dispatchFetch("http://localhost"), {
