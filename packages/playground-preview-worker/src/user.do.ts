@@ -13,6 +13,17 @@ function assert(v: boolean, label: string = ""): asserts v {
 	}
 }
 
+const encoder = new TextEncoder();
+
+async function hash(text: string) {
+	const hash = await crypto.subtle.digest("SHA-256", encoder.encode(text));
+	const hashArray = Array.from(new Uint8Array(hash));
+	const hashHex = hashArray
+		.map((b) => b.toString(16).padStart(2, "0"))
+		.join("");
+	return hashHex;
+}
+
 function switchRemote(url: URL, remote: string) {
 	const workerUrl = new URL(url);
 	const remoteUrl = new URL(remote);
@@ -190,8 +201,14 @@ export class UserSession {
 
 		await this.uploadWorker(this.workerName, worker);
 
+		assert(this.inspectorUrl !== undefined);
+
 		return Response.json({
-			inspector: `/api/inspector?user=${userSession}`,
+			// Include a hash of the inspector URL so as to ensure the client will reconnect
+			// when the inspector URL has changed (because of an updated preview session)
+			inspector: `/api/inspector?user=${userSession}&h=${await hash(
+				this.inspectorUrl
+			)}`,
 			preview: userSession,
 		});
 	}
