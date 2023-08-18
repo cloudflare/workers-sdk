@@ -91,19 +91,6 @@ class PreviewRequestFailed extends HttpError {
  *  - `X-CF-Token`  A preview token, as in /.update-preview-token
  */
 async function handleRawHttp(request: Request, url: URL, env: Env) {
-	if (request.method === "OPTIONS") {
-		return new Response(null, {
-			headers: {
-				"Access-Control-Allow-Origin": request.headers.get("Origin") ?? "",
-				"Access-Control-Allow-Method": "*",
-				"Access-Control-Allow-Credentials": "true",
-				"Access-Control-Allow-Headers":
-					request.headers.get("Access-Control-Request-Headers") ?? "x-cf-token",
-				"Access-Control-Expose-Headers": "*",
-				Vary: "Origin, Access-Control-Request-Headers",
-			},
-		});
-	}
 	const token = request.headers.get("X-CF-Token");
 	if (!token) {
 		throw new RawHttpFailed();
@@ -240,6 +227,19 @@ app.get(`${previewDomain}/.update-preview-token`, (c) => {
 });
 
 app.all(`${previewDomain}/*`, async (c) => {
+	if (c.req.method === "OPTIONS") {
+		return new Response(null, {
+			headers: {
+				"Access-Control-Allow-Origin": c.req.headers.get("Origin") ?? "",
+				"Access-Control-Allow-Method": "*",
+				"Access-Control-Allow-Credentials": "true",
+				"Access-Control-Allow-Headers":
+					c.req.headers.get("Access-Control-Request-Headers") ?? "x-cf-token",
+				"Access-Control-Expose-Headers": "*",
+				Vary: "Origin, Access-Control-Request-Headers",
+			},
+		});
+	}
 	const url = new URL(c.req.url);
 	if (c.req.headers.has("cf-raw-http")) {
 		return handleRawHttp(c.req.raw, url, c.env);
