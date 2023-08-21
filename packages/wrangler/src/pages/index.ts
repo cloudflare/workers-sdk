@@ -9,6 +9,7 @@ import * as Functions from "./functions";
 import * as Projects from "./projects";
 import * as Upload from "./upload";
 import { CLEANUP } from "./utils";
+import * as Validate from "./validate";
 import type { CommonYargsArgv } from "../yargs-types";
 
 process.on("SIGINT", () => {
@@ -69,6 +70,12 @@ export function pages(yargs: CommonYargsArgv) {
 						Projects.DeleteHandler
 					)
 					.command("upload [directory]", false, Upload.Options, Upload.Handler)
+					.command(
+						"validate [directory]",
+						false,
+						Validate.Options,
+						Validate.Handler
+					)
 			)
 			.command(
 				"deployment",
