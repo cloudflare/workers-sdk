@@ -235,7 +235,7 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 					})
 					.option("persist-to", {
 						type: "string",
-						describe: "Directory for local persistance",
+						describe: "Directory for local persistence",
 					})
 					.check(demandOneOfOption("value", "path"));
 			},
@@ -332,7 +332,7 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 					})
 					.option("persist-to", {
 						type: "string",
-						describe: "Directory for local persistance",
+						describe: "Directory for local persistence",
 					});
 			},
 			async ({ prefix, ...args }) => {
@@ -410,7 +410,7 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 					})
 					.option("persist-to", {
 						type: "string",
-						describe: "Directory for local persistance",
+						describe: "Directory for local persistence",
 					});
 			},
 			async ({ key, ...args }) => {
@@ -486,7 +486,7 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 					})
 					.option("persist-to", {
 						type: "string",
-						describe: "Directory for local persistance",
+						describe: "Directory for local persistence",
 					});
 			},
 			async ({ key, ...args }) => {
@@ -552,7 +552,7 @@ export const kvBulk = (kvYargs: CommonYargsArgv) => {
 					})
 					.option("persist-to", {
 						type: "string",
-						describe: "Directory for local persistance",
+						describe: "Directory for local persistence",
 					});
 			},
 			async ({ filename, ...args }) => {
@@ -681,7 +681,7 @@ export const kvBulk = (kvYargs: CommonYargsArgv) => {
 					})
 					.option("persist-to", {
 						type: "string",
-						describe: "Directory for local persistance",
+						describe: "Directory for local persistence",
 					});
 			},
 			async ({ filename, ...args }) => {

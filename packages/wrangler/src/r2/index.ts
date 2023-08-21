@@ -59,7 +59,7 @@ export function r2(r2Yargs: CommonYargsArgv) {
 							})
 							.option("persist-to", {
 								type: "string",
-								describe: "Directory for local persistance",
+								describe: "Directory for local persistence",
 							});
 					},
 					async (objectGetYargs) => {
@@ -171,7 +171,7 @@ export function r2(r2Yargs: CommonYargsArgv) {
 							})
 							.option("persist-to", {
 								type: "string",
-								describe: "Directory for local persistance",
+								describe: "Directory for local persistence",
 							});
 					},
 					async (objectPutYargs) => {
@@ -276,7 +276,7 @@ export function r2(r2Yargs: CommonYargsArgv) {
 							})
 							.option("persist-to", {
 								type: "string",
-								describe: "Directory for local persistance",
+								describe: "Directory for local persistence",
 							});
 					},
 					async (args) => {
