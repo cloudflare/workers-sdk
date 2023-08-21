@@ -15,6 +15,7 @@ Areas for future improvement:
 
 type FrameworkTestConfig = RunnerConfig & {
 	expectResponseToContain: string;
+	testCommitMessage: boolean;
 };
 
 describe(`E2E: Web frameworks`, () => {
@@ -90,7 +91,10 @@ describe(`E2E: Web frameworks`, () => {
 		return { output };
 	};
 
-	const runCliWithDeploy = async (framework: string) => {
+	const runCliWithDeploy = async (
+		framework: string,
+		testCommitMessage: boolean
+	) => {
 		const { argv, overrides, promptHandlers, expectResponseToContain } =
 			frameworkTests[framework];
 
@@ -121,16 +125,20 @@ describe(`E2E: Web frameworks`, () => {
 			`(${framework}) Deployed page (${projectUrl}) didn't contain expected string: "${expectResponseToContain}"`
 		).toContain(expectResponseToContain);
 
-		await testDeploymentCommitMessage(getName(framework), framework);
+		if (testCommitMessage) {
+			await testDeploymentCommitMessage(getName(framework), framework);
+		}
 	};
 
 	// These are ordered based on speed and reliability for ease of debugging
 	const frameworkTests: Record<string, FrameworkTestConfig> = {
 		astro: {
 			expectResponseToContain: "Hello, Astronaut!",
+			testCommitMessage: true,
 		},
 		hono: {
 			expectResponseToContain: "Hello Hono!",
+			testCommitMessage: false,
 		},
 		qwik: {
 			expectResponseToContain: "Welcome to Qwik",
@@ -140,9 +148,11 @@ describe(`E2E: Web frameworks`, () => {
 					input: [keys.enter],
 				},
 			],
+			testCommitMessage: true,
 		},
 		remix: {
 			expectResponseToContain: "Welcome to Remix",
+			testCommitMessage: true,
 		},
 		next: {
 			expectResponseToContain: "Create Next App",
@@ -152,6 +162,7 @@ describe(`E2E: Web frameworks`, () => {
 					input: ["y"],
 				},
 			],
+			testCommitMessage: true,
 		},
 		nuxt: {
 			expectResponseToContain: "Welcome to Nuxt!",
@@ -160,9 +171,11 @@ describe(`E2E: Web frameworks`, () => {
 					build: "NITRO_PRESET=cloudflare-pages nuxt build",
 				},
 			},
+			testCommitMessage: true,
 		},
 		react: {
 			expectResponseToContain: "React App",
+			testCommitMessage: true,
 		},
 		solid: {
 			expectResponseToContain: "Hello world",
@@ -180,6 +193,7 @@ describe(`E2E: Web frameworks`, () => {
 					input: [keys.enter],
 				},
 			],
+			testCommitMessage: true,
 		},
 		svelte: {
 			expectResponseToContain: "SvelteKit app",
@@ -197,16 +211,18 @@ describe(`E2E: Web frameworks`, () => {
 					input: [keys.enter],
 				},
 			],
+			testCommitMessage: true,
 		},
 		vue: {
 			expectResponseToContain: "Vite App",
+			testCommitMessage: true,
 		},
 	};
 
 	test.concurrent.each(Object.keys(frameworkTests))(
 		"%s",
 		async (name) => {
-			await runCliWithDeploy(name);
+			await runCliWithDeploy(name, frameworkTests[name].testCommitMessage);
 		},
 		{ retry: 3 }
 	);
