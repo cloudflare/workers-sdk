@@ -863,7 +863,11 @@ export class Miniflare {
 
 		sharedOpts.core.cf = await setupCf(this.#log, sharedOpts.core.cf);
 
-		const sourceMapRegistry = new SourceMapRegistry(this.#log, loopbackPort);
+		const sourceMapRegistry = new SourceMapRegistry(
+			this.#log,
+			loopbackPort,
+			sharedOpts.core.unsafeSourceMapIgnoreSourcePredicate
+		);
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
 		const queueConsumers = getQueueConsumers(allWorkerOpts);
 		const allWorkerRoutes = getWorkerRoutes(allWorkerOpts);

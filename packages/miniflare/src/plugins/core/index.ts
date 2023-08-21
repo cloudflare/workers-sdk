@@ -29,6 +29,7 @@ import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import {
 	HEADER_CF_BLOB,
+	IgnoreSourcePredicateSchema,
 	Plugin,
 	SERVICE_LOOPBACK,
 	SourceMapRegistry,
@@ -141,6 +142,8 @@ export const CoreSharedOptionsSchema = z.object({
 	cf: z.union([z.boolean(), z.string(), z.record(z.any())]).optional(),
 
 	liveReload: z.boolean().optional(),
+
+	unsafeSourceMapIgnoreSourcePredicate: IgnoreSourcePredicateSchema.optional(),
 });
 
 export const CORE_PLUGIN_NAME = "core";
