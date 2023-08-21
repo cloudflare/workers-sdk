@@ -9,6 +9,7 @@ import {
 } from "../deployment-bundle/bundle";
 import traverseModuleGraph from "../deployment-bundle/traverse-module-graph";
 import { logBuildFailure, logBuildWarnings } from "../logger";
+import type { DevEnv, StartDevWorkerOptions } from "../api";
 import type { Config } from "../config";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfModule } from "../deployment-bundle/worker";
@@ -56,6 +57,7 @@ export function useEsbuild({
 	targetConsumer,
 	testScheduled,
 	experimentalLocal,
+	onBundleStart,
 }: {
 	entry: Entry;
 	destination: string | undefined;
@@ -79,6 +81,7 @@ export function useEsbuild({
 	targetConsumer: "dev" | "deploy";
 	testScheduled: boolean;
 	experimentalLocal: boolean | undefined;
+	onBundleStart: () => void;
 }): EsbuildBundle | undefined {
 	const [bundleInfo, setBundleInfo] = useState<BundleInfo>();
 	const { exit } = useApp();
@@ -105,6 +108,9 @@ export function useEsbuild({
 		const onEnd = {
 			name: "on-end",
 			setup(b: PluginBuild) {
+				b.onStart(() => {
+					onBundleStart();
+				});
 				b.onEnd((result: BuildResult) => {
 					const errors = result.errors;
 					const warnings = result.warnings;
@@ -245,6 +251,7 @@ export function useEsbuild({
 		targetConsumer,
 		testScheduled,
 		experimentalLocal,
+		onBundleStart,
 	]);
 	return bundleInfo?.bundle;
 }

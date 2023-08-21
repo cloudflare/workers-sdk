@@ -1,7 +1,6 @@
 import * as fs from "node:fs";
 import os from "node:os";
 import * as path from "node:path";
-import { promisify } from "node:util";
 import { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
 import { logger } from "./logger";
 import type { Attributes, Options } from "selfsigned";
@@ -17,7 +16,7 @@ const ONE_DAY_IN_MS = 86400000;
  *
  * The certificates are self-signed and generated locally, and cached in the `CERT_ROOT` directory.
  */
-export async function getHttpsOptions() {
+export function getHttpsOptions() {
 	const certDirectory = path.join(getGlobalWranglerConfigPath(), "local-cert");
 	const keyPath = path.join(certDirectory, "key.pem");
 	const certPath = path.join(certDirectory, "cert.pem");
@@ -29,7 +28,7 @@ export async function getHttpsOptions() {
 
 	if (regenerate) {
 		logger.log("Generating new self-signed certificate...");
-		const { key, cert } = await generateCertificate();
+		const { key, cert } = generateCertificate();
 		try {
 			// Write certificate files so we can reuse them later.
 			fs.mkdirSync(certDirectory, { recursive: true });
@@ -67,14 +66,13 @@ function hasCertificateExpired(keyPath: string, certPath: string): boolean {
 /**
  * Generate a new self-signed certificate and cache it in `CERT_ROOT` directory.
  */
-async function generateCertificate() {
+function generateCertificate() {
 	// `selfsigned` imports `node-forge`, which is a pretty big library.
 	// To reduce startup time, only load this dynamically when needed.
 	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-	const generate: typeof import("selfsigned").generate = promisify(
+	const generate: typeof import("selfsigned").generate =
 		// eslint-disable-next-line @typescript-eslint/no-var-requires
-		require("selfsigned").generate
-	);
+		require("selfsigned").generate;
 
 	const certAttrs: Attributes = [{ name: "commonName", value: "localhost" }];
 
@@ -109,7 +107,7 @@ async function generateCertificate() {
 		],
 	};
 
-	const { private: key, cert } = await generate(certAttrs, certOptions);
+	const { private: key, cert } = generate(certAttrs, certOptions);
 	return { key, cert };
 }
 

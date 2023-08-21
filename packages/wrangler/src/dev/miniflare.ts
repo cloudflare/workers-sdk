@@ -112,7 +112,7 @@ export interface ConfigBundle {
 	serviceBindings: Record<string, (request: Request) => Promise<Response>>;
 }
 
-class WranglerLog extends Log {
+export class WranglerLog extends Log {
 	#warnedCompatibilityDateFallback = false;
 
 	info(message: string) {
@@ -132,19 +132,31 @@ class WranglerLog extends Log {
 	}
 }
 
+export const DEFAULT_WORKER_NAME = "worker";
 function getName(config: ConfigBundle) {
-	return config.name ?? "worker";
+	return config.name ?? DEFAULT_WORKER_NAME;
 }
 const IDENTIFIER_UNSAFE_REGEXP = /[^a-zA-Z0-9_$]/g;
 function getIdentifier(name: string) {
 	return name.replace(IDENTIFIER_UNSAFE_REGEXP, "_");
 }
 
+export function castLogLevel(level: LoggerLevel): LogLevel {
+	let key = level.toUpperCase() as Uppercase<LoggerLevel>;
+	if (key === "LOG") key = "INFO";
+
+	return LogLevel[key];
+}
+
 function buildLog(): Log {
-	let level = logger.loggerLevel.toUpperCase() as Uppercase<LoggerLevel>;
-	if (level === "LOG") level = "INFO";
-	const logLevel = LogLevel[level];
-	return logLevel === LogLevel.NONE ? new NoOpLog() : new WranglerLog(logLevel);
+	let level = castLogLevel(logger.loggerLevel);
+
+	// if we're in DEBUG or VERBOSE mode, clamp logLevel to WARN -- ie. don't show request logs for user worker
+	if (level >= LogLevel.DEBUG) {
+		level = Math.min(level, LogLevel.WARN);
+	}
+
+	return level === LogLevel.NONE ? new NoOpLog() : new WranglerLog(level);
 }
 
 async function buildSourceOptions(
