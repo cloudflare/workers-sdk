@@ -1,4 +1,5 @@
 import { join } from "path";
+import spawn from "cross-spawn";
 import { FrameworkMap } from "frameworks/index";
 import { readJSON } from "helpers/files";
 import { fetch } from "undici";
@@ -16,7 +17,7 @@ type FrameworkTestConfig = RunnerConfig & {
 };
 
 describe(`E2E: Web frameworks`, () => {
-	const { getPath, clean } = testProjectDir("pages");
+	const { getPath, getName, clean } = testProjectDir("pages");
 
 	beforeEach((ctx) => {
 		const framework = ctx.meta.name;
@@ -26,6 +27,26 @@ describe(`E2E: Web frameworks`, () => {
 	afterEach((ctx) => {
 		const framework = ctx.meta.name;
 		clean(framework);
+
+		// Cleanup the pages project in case we need to retry it
+		const projectName = getName(framework);
+		try {
+			const { output } = spawn.sync("npx", [
+				"wrangler",
+				"pages",
+				"project",
+				"delete",
+				"-y",
+				projectName,
+			]);
+
+			if (!output.toString().includes(`Successfully deleted ${projectName}`)) {
+				console.error(output.toString());
+			}
+		} catch (error) {
+			console.error(`Failed to cleanup project: ${projectName}`);
+			console.error(error);
+		}
 	});
 
 	const runCli = async (

@@ -251,6 +251,7 @@ export const resetPackageManager = async (ctx: PagesGeneratorContext) => {
 
 	await runCommand(`${npm} install`, {
 		silent: true,
+		cwd: ctx.project.path,
 		startText: "Installing dependencies",
 		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
 	});
