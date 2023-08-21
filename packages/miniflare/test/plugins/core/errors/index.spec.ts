@@ -60,6 +60,9 @@ test("source maps workers", async (t) => {
 
 	const mf = new Miniflare({
 		inspectorPort,
+		unsafeSourceMapIgnoreSourcePredicate(source) {
+			return source.includes("nested/dep.ts");
+		},
 		workers: [
 			{
 				bindings: { MESSAGE: "unnamed" },
@@ -215,6 +218,13 @@ addEventListener("fetch", (event) => {
 	// Check does nothing with URL source mapping URLs
 	const sourceMapURL = await getSourceMapURL(inspectorPort, "core:user:h");
 	t.regex(sourceMapURL, /^data:application\/json;base64/);
+
+	// Check adds ignored sources to `x_google_ignoreList`
+	const sourceMap = await getSourceMap(inspectorPort, "core:user:g");
+	assert(sourceMap.sourceRoot !== undefined);
+	assert(sourceMap.x_google_ignoreList?.length === 1);
+	const ignoredSource = sourceMap.sources[sourceMap.x_google_ignoreList[0]];
+	t.is(path.resolve(sourceMap.sourceRoot, ignoredSource), DEP_ENTRY_PATH);
 });
 
 function getSourceMapURL(
@@ -250,14 +260,22 @@ function getSourceMapURL(
 	return promise;
 }
 
-async function getSources(inspectorPort: number, serviceName: string) {
+async function getSourceMap(inspectorPort: number, serviceName: string) {
 	const sourceMapURL = await getSourceMapURL(inspectorPort, serviceName);
 	// The loopback server will be listening on `127.0.0.1`, which
 	// `localhost` should resolve to, but `undici` only looks at the first
 	// DNS entry, which will be `::1` on Node 17+.
-	// noinspection JSObjectNullOrUndefined
 	const res = await fetch(sourceMapURL.replace("localhost", "127.0.0.1"));
-	const { sourceRoot, sources } = (await res.json()) as RawSourceMap;
+	return (await res.json()) as RawSourceMap & {
+		x_google_ignoreList?: number[];
+	};
+}
+
+async function getSources(inspectorPort: number, serviceName: string) {
+	const { sourceRoot, sources } = await getSourceMap(
+		inspectorPort,
+		serviceName
+	);
 	assert(sourceRoot !== undefined);
 	return sources.map((source) => path.resolve(sourceRoot, source)).sort();
 }

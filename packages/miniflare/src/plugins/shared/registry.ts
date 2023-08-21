@@ -3,8 +3,15 @@ import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath, pathToFileURL } from "url";
 import type { RawSourceMap } from "source-map";
+import { z } from "zod";
 import { Response } from "../../http";
 import { Log } from "../../shared";
+
+export const IgnoreSourcePredicateSchema = z
+	.function()
+	.args(z.string())
+	.returns(z.boolean());
+export type IgnoreSourcePredicate = z.infer<typeof IgnoreSourcePredicateSchema>;
 
 function maybeParseURL(url: string): URL | undefined {
 	if (path.isAbsolute(url)) return;
@@ -18,7 +25,8 @@ export class SourceMapRegistry {
 
 	constructor(
 		private readonly log: Log,
-		private readonly loopbackPort: number
+		private readonly loopbackPort: number,
+		private readonly ignoreSourcePredicate?: IgnoreSourcePredicate
 	) {}
 
 	readonly #map = new Map<string /* id */, string /* sourceMapPath */>();
@@ -78,7 +86,7 @@ export class SourceMapRegistry {
 			);
 			return;
 		}
-		let map: RawSourceMap;
+		let map: RawSourceMap & { x_google_ignoreList?: number[] };
 		try {
 			map = JSON.parse(contents);
 		} catch (e) {
@@ -95,6 +103,18 @@ export class SourceMapRegistry {
 			map.sourceRoot === undefined
 				? sourceMapDir
 				: path.resolve(sourceMapDir, map.sourceRoot);
+
+		// Allow specific source files to be hidden from the DevTools sources panel.
+		// (e.g. Wrangler middleware and injected code)
+		// See https://docs.google.com/document/d/1U1RGAehQwRypUTovF1KRlpiOFze0b-_2gc6fAH0KY0k/edit#heading=h.mt2g20loc2ct
+		// for more details.
+		if (this.ignoreSourcePredicate !== undefined && map.sources !== undefined) {
+			const ignoreList: number[] = [];
+			for (let i = 0; i < map.sources.length; i++) {
+				if (this.ignoreSourcePredicate(map.sources[i])) ignoreList.push(i);
+			}
+			map.x_google_ignoreList = ignoreList;
+		}
 
 		return Response.json(map, {
 			// This source map will be served from the loopback server to DevTools,
