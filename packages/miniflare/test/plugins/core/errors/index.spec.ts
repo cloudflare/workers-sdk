@@ -114,6 +114,14 @@ test("source maps workers", async (t) => {
 			{
 				name: "g",
 				routes: ["*/g"],
+				bindings: { MESSAGE: "g" },
+				modules: true,
+				modulesRoot: tmp,
+				scriptPath: modulesPath,
+			},
+			{
+				name: "h",
+				routes: ["*/h"],
 				modules: [
 					// Check importing module with source map (e.g. Wrangler no bundle with built dependencies)
 					{
@@ -125,7 +133,7 @@ test("source maps workers", async (t) => {
 				],
 			},
 			{
-				name: "h",
+				name: "i",
 				// Generated with `esbuild --sourcemap=inline --sources-content=false worker.ts`
 				script: `"use strict";
 addEventListener("fetch", (event) => {
@@ -174,6 +182,10 @@ addEventListener("fetch", (event) => {
 	});
 	t.regex(String(error?.stack), modulesEntryRegexp);
 	error = await t.throwsAsync(mf.dispatchFetch("http://localhost/g"), {
+		message: "g",
+	});
+	t.regex(String(error?.stack), modulesEntryRegexp);
+	error = await t.throwsAsync(mf.dispatchFetch("http://localhost/h"), {
 		instanceOf: TypeError,
 		message: "Dependency error",
 	});
@@ -196,6 +208,8 @@ addEventListener("fetch", (event) => {
 	sources = await getSources(inspectorPort, "core:user:f");
 	t.deepEqual(sources, [MODULES_ENTRY_PATH, REDUCE_PATH]);
 	sources = await getSources(inspectorPort, "core:user:g");
+	t.deepEqual(sources, [MODULES_ENTRY_PATH, REDUCE_PATH]);
+	sources = await getSources(inspectorPort, "core:user:h");
 	t.deepEqual(sources, [DEP_ENTRY_PATH, REDUCE_PATH]); // (entry point script overridden)
 
 	// Check respects map's existing `sourceRoot`
@@ -216,11 +230,11 @@ addEventListener("fetch", (event) => {
 	]);
 
 	// Check does nothing with URL source mapping URLs
-	const sourceMapURL = await getSourceMapURL(inspectorPort, "core:user:h");
+	const sourceMapURL = await getSourceMapURL(inspectorPort, "core:user:i");
 	t.regex(sourceMapURL, /^data:application\/json;base64/);
 
 	// Check adds ignored sources to `x_google_ignoreList`
-	const sourceMap = await getSourceMap(inspectorPort, "core:user:g");
+	const sourceMap = await getSourceMap(inspectorPort, "core:user:h");
 	assert(sourceMap.sourceRoot !== undefined);
 	assert(sourceMap.x_google_ignoreList?.length === 1);
 	const ignoredSource = sourceMap.sources[sourceMap.x_google_ignoreList[0]];

@@ -80,6 +80,9 @@ export const SourceOptionsSchema = z.union([
 		modules: z.boolean().optional(),
 		// How to interpret automatically collected modules
 		modulesRules: z.array(ModuleRuleSchema).optional(),
+		// `modules` "name"s will be their paths relative to this value.
+		// This ensures file paths in stack traces are correct.
+		modulesRoot: z.string().optional(),
 	}),
 	z.object({
 		scriptPath: z.string(),
@@ -88,6 +91,9 @@ export const SourceOptionsSchema = z.union([
 		modules: z.boolean().optional(),
 		// How to interpret automatically collected modules
 		modulesRules: z.array(ModuleRuleSchema).optional(),
+		// `modules` "name"s will be their paths relative to this value.
+		// This ensures file paths in stack traces are correct.
+		modulesRoot: z.string().optional(),
 	}),
 ]);
 export type SourceOptions = z.infer<typeof SourceOptionsSchema>;
@@ -123,13 +129,15 @@ function getResolveErrorPrefix(referencingPath: string): string {
 }
 
 export class ModuleLocator {
-	readonly #sourceMapRegistry: SourceMapRegistry;
 	readonly #compiledRules: CompiledModuleRule[];
 	readonly #visitedPaths = new Set<string>();
 	readonly modules: Worker_Module[] = [];
 
-	constructor(sourceMapRegistry: SourceMapRegistry, rules?: ModuleRule[]) {
-		this.#sourceMapRegistry = sourceMapRegistry;
+	constructor(
+		private readonly sourceMapRegistry: SourceMapRegistry,
+		private readonly modulesRoot: string,
+		rules?: ModuleRule[]
+	) {
 		this.#compiledRules = compileModuleRules(rules);
 	}
 
@@ -146,8 +154,8 @@ export class ModuleLocator {
 
 	#visitJavaScriptModule(code: string, modulePath: string, esModule = true) {
 		// Register module
-		const name = path.relative("", modulePath);
-		code = this.#sourceMapRegistry.register(code, modulePath);
+		const name = path.relative(this.modulesRoot, modulePath);
+		code = this.sourceMapRegistry.register(code, modulePath);
 		this.modules.push(
 			esModule ? { name, esModule: code } : { name, commonJsModule: code }
 		);
@@ -255,7 +263,7 @@ ${dim(modulesConfig)}`;
 
 		const identifier = path.resolve(path.dirname(referencingPath), spec);
 		// The runtime requires module identifiers to be relative paths
-		const name = path.relative("", identifier);
+		const name = path.relative(this.modulesRoot, identifier);
 
 		// If we've already visited this path, return to avoid unbounded recursion
 		if (this.#visitedPaths.has(identifier)) return;
