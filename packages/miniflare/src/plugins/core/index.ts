@@ -374,10 +374,15 @@ export const CORE_PLUGIN: Plugin<
 		sourceMapRegistry,
 	}) {
 		// Define regular user worker
+		const additionalModuleNames = additionalModules.map(({ name }) => {
+			assert(name !== undefined);
+			return name;
+		});
 		const workerScript = getWorkerScript(
 			sourceMapRegistry,
 			options,
-			workerIndex
+			workerIndex,
+			additionalModuleNames
 		);
 		// Add additional modules (e.g. "__STATIC_CONTENT_MANIFEST") if any
 		if ("modules" in workerScript) {
@@ -561,7 +566,8 @@ export function getGlobalServices({
 function getWorkerScript(
 	sourceMapRegistry: SourceMapRegistry,
 	options: SourceOptions,
-	workerIndex: number
+	workerIndex: number,
+	additionalModuleNames: string[]
 ): { serviceWorkerScript: string } | { modules: Worker_Module[] } {
 	const modulesRoot =
 		("modulesRoot" in options ? options.modulesRoot : undefined) ?? "";
@@ -592,6 +598,7 @@ function getWorkerScript(
 		const locator = new ModuleLocator(
 			sourceMapRegistry,
 			modulesRoot,
+			additionalModuleNames,
 			options.modulesRules
 		);
 		// If `script` and `scriptPath` are set, resolve modules in `script`

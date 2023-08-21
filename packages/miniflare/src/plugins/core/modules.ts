@@ -136,6 +136,7 @@ export class ModuleLocator {
 	constructor(
 		private readonly sourceMapRegistry: SourceMapRegistry,
 		private readonly modulesRoot: string,
+		private readonly additionalModuleNames: string[],
 		rules?: ModuleRule[]
 	) {
 		this.#compiledRules = compileModuleRules(rules);
@@ -256,8 +257,14 @@ ${dim(modulesConfig)}`;
 		}
 		const spec = specExpression.value;
 
-		// `node:` and `cloudflare:` imports don't need to be included explicitly
-		if (spec.startsWith("node:") || spec.startsWith("cloudflare:")) {
+		// `node:`, `cloudflare:` and `workerd:` imports don't need to be included
+		// explicitly
+		if (
+			spec.startsWith("node:") ||
+			spec.startsWith("cloudflare:") ||
+			spec.startsWith("workerd:") ||
+			this.additionalModuleNames.includes(spec)
+		) {
 			return;
 		}
 

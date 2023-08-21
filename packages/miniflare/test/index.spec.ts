@@ -445,17 +445,19 @@ test("Miniflare: custom upstream as origin", async (t) => {
 	t.is(await res.text(), "upstream: http://upstream/extra/path?a=1");
 });
 
-test("Miniflare: `node:` and `cloudflare:` modules", async (t) => {
+test("Miniflare: `node:`, `cloudflare:` and `workerd:` modules", async (t) => {
 	const mf = new Miniflare({
 		modules: true,
-		compatibilityFlags: ["nodejs_compat"],
+		compatibilityFlags: ["nodejs_compat", "rtti_api"],
 		script: `
     import assert from "node:assert";
     import { Buffer } from "node:buffer";
     import { connect } from "cloudflare:sockets"; 
+    import rtti from "workerd:rtti";
     export default {
       fetch() {
         assert.strictEqual(typeof connect, "function");
+        assert.strictEqual(typeof rtti, "object");
         return new Response(Buffer.from("test").toString("base64"))
       }
     }
