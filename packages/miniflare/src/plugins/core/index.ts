@@ -1,6 +1,7 @@
 import assert from "assert";
 import { readFileSync } from "fs";
 import fs from "fs/promises";
+import path from "path";
 import tls from "tls";
 import { TextEncoder } from "util";
 import { bold } from "kleur/colors";
@@ -374,10 +375,7 @@ export const CORE_PLUGIN: Plugin<
 		sourceMapRegistry,
 	}) {
 		// Define regular user worker
-		const additionalModuleNames = additionalModules.map(({ name }) => {
-			assert(name !== undefined);
-			return name;
-		});
+		const additionalModuleNames = additionalModules.map(({ name }) => name);
 		const workerScript = getWorkerScript(
 			sourceMapRegistry,
 			options,
@@ -386,7 +384,32 @@ export const CORE_PLUGIN: Plugin<
 		);
 		// Add additional modules (e.g. "__STATIC_CONTENT_MANIFEST") if any
 		if ("modules" in workerScript) {
-			workerScript.modules.push(...additionalModules);
+			const subDirs = new Set(
+				workerScript.modules.map(({ name }) => path.posix.dirname(name))
+			);
+			// Ignore `.` as it's not a subdirectory, and we don't want to register
+			// additional modules in the root twice.
+			subDirs.delete(".");
+
+			for (const module of additionalModules) {
+				workerScript.modules.push(module);
+				// In addition to adding the module, we add stub modules in each
+				// subdirectory re-exporting each additional module. These allow
+				// additional modules to be imported in every directory.
+				for (const subDir of subDirs) {
+					const relativePath = path.posix.relative(subDir, module.name);
+					const relativePathString = JSON.stringify(relativePath);
+					workerScript.modules.push({
+						name: path.posix.join(subDir, module.name),
+						// TODO(someday): if we ever have additional modules without
+						//  default exports, this may be a problem. For now, our only
+						//  additional module is `__STATIC_CONTENT_MANIFEST` so it's fine.
+						//  If needed, we could look for instances of `export default` or
+						//  `as default` in the module's code as a heuristic.
+						esModule: `export * from ${relativePathString}; export { default } from ${relativePathString};`,
+					});
+				}
+			}
 		}
 
 		const name = getUserServiceName(options.name);
