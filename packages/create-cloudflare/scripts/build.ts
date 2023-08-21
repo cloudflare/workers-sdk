@@ -1,11 +1,11 @@
-const { build, context } = require("esbuild");
-const { cp } = require("fs/promises");
+import { build, context, BuildOptions } from "esbuild";
+import { cp } from "fs/promises";
 
 const run = async () => {
 	const argv = process.argv.slice(2);
 	const watchMode = argv[0] === "--watch";
 
-	const config = {
+	const config: BuildOptions = {
 		entryPoints: ["./src/cli.ts"],
 		bundle: true,
 		outdir: "./dist",
