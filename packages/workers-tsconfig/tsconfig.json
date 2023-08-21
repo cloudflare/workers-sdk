@@ -16,7 +16,10 @@
 		// statements throughout the imported libraries which can break them.
 		"alwaysStrict": false,
 		"skipLibCheck": true,
-		"types": []
+		"types": [],
+		"paths": {
+			"wrangler": ["../wrangler/src/cli.ts"]
+		}
 	},
 	"exclude": ["node_modules", "vendor"],
 	"include": []

@@ -14,6 +14,7 @@ import {
 	getWrangler1xLegacyModuleReferences,
 } from "../deployment-bundle/module-collection";
 import { logBuildFailure, logBuildWarnings } from "../logger";
+import type { DevEnv, StartDevWorkerOptions } from "../api";
 import type { Config } from "../config";
 import type { SourceMapMetadata } from "../deployment-bundle/bundle";
 import type { Entry } from "../deployment-bundle/entry";
@@ -56,6 +57,7 @@ export function useEsbuild({
 	targetConsumer,
 	testScheduled,
 	experimentalLocal,
+	onBundleStart,
 }: {
 	entry: Entry;
 	destination: string | undefined;
@@ -80,6 +82,7 @@ export function useEsbuild({
 	targetConsumer: "dev" | "deploy";
 	testScheduled: boolean;
 	experimentalLocal: boolean | undefined;
+	onBundleStart: () => void;
 }): EsbuildBundle | undefined {
 	const [bundle, setBundle] = useState<EsbuildBundle>();
 	const { exit } = useApp();
@@ -129,6 +132,9 @@ export function useEsbuild({
 		const onEnd = {
 			name: "on-end",
 			setup(b: PluginBuild) {
+				b.onStart(() => {
+					onBundleStart();
+				});
 				b.onEnd(async (result: BuildResult) => {
 					const errors = result.errors;
 					const warnings = result.warnings;
@@ -248,6 +254,7 @@ export function useEsbuild({
 		targetConsumer,
 		testScheduled,
 		experimentalLocal,
+		onBundleStart,
 	]);
 	return bundle;
 }
