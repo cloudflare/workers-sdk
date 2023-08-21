@@ -64,13 +64,14 @@ export class KVRouter extends Router<KVGateway> {
 
 		// Get value from storage
 		let value: KVGatewayGetResult | undefined;
-		if (req.headers.get(HEADER_SITES) === null) {
+		const siteRegExps = req.headers.get(HEADER_SITES);
+		if (siteRegExps === null) {
 			const gateway = this.gatewayFactory.get(namespace, persist);
 			value = await gateway.get(key, options);
 		} else {
 			// Workers Sites: if this is a sites request, persist should be used as
 			// the root without any additional namespace
-			value = await sitesGatewayGet(persist, key, options);
+			value = await sitesGatewayGet(persist, siteRegExps, key, options);
 		}
 		if (value === undefined) throw new KVError(404, "Not Found");
 
@@ -155,13 +156,14 @@ export class KVRouter extends Router<KVGateway> {
 
 		// List keys from storage
 		let result: KVGatewayListResult;
-		if (req.headers.get(HEADER_SITES) === null) {
+		const siteRegExps = req.headers.get(HEADER_SITES);
+		if (siteRegExps === null) {
 			const gateway = this.gatewayFactory.get(namespace, persist);
 			result = await gateway.list(options);
 		} else {
 			// Workers Sites: if this is a sites request, persist should be used as
 			// the root without any additional namespace
-			result = await sitesGatewayList(persist, options);
+			result = await sitesGatewayList(persist, siteRegExps, options);
 		}
 		return Response.json(result);
 	};

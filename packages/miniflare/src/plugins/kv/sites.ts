@@ -22,12 +22,7 @@ import {
 	WORKER_BINDING_SERVICE_LOOPBACK,
 	kProxyNodeBinding,
 } from "../shared";
-import {
-	HEADER_SITES,
-	KV_PLUGIN_NAME,
-	MAX_LIST_KEYS,
-	PARAM_URL_ENCODED,
-} from "./constants";
+import { HEADER_SITES, KV_PLUGIN_NAME, MAX_LIST_KEYS } from "./constants";
 import {
 	KVGatewayGetOptions,
 	KVGatewayGetResult,
@@ -43,7 +38,7 @@ async function* listKeysInDirectoryInner(
 ): AsyncGenerator<string> {
 	const fileEntries = await fs.readdir(currentPath, { withFileTypes: true });
 	for (const fileEntry of fileEntries) {
-		const filePath = path.join(currentPath, fileEntry.name);
+		const filePath = path.posix.join(currentPath, fileEntry.name);
 		if (fileEntry.isDirectory()) {
 			yield* listKeysInDirectoryInner(rootPath, filePath);
 		} else {
@@ -69,6 +64,20 @@ export interface SiteMatcherRegExps {
 }
 // Cache glob RegExps between `getBindings` and `getServices` calls
 const sitesRegExpsCache = new WeakMap<SitesOptions, SiteMatcherRegExps>();
+
+function serialiseSiteRegExps(exps: SiteMatcherRegExps) {
+	return {
+		include: exps.include && serialiseRegExps(exps.include),
+		exclude: exps.exclude && serialiseRegExps(exps.exclude),
+	};
+}
+
+function deserialiseSiteRegExps(exps: ReturnType<typeof serialiseSiteRegExps>) {
+	return {
+		include: exps.include && deserialiseRegExps(exps.include),
+		exclude: exps.exclude && deserialiseRegExps(exps.exclude),
+	};
+}
 
 function testSiteRegExps(regExps: SiteMatcherRegExps, key: string): boolean {
 	return (
@@ -104,77 +113,25 @@ const SERVICE_NAMESPACE_SITE = `${KV_PLUGIN_NAME}:site`;
 
 const BINDING_KV_NAMESPACE_SITE = "__STATIC_CONTENT";
 const BINDING_JSON_SITE_MANIFEST = "__STATIC_CONTENT_MANIFEST";
-const BINDING_JSON_SITE_FILTER = "MINIFLARE_SITE_FILTER";
+const BINDING_TEXT_SITE_FILTER = "MINIFLARE_SITE_FILTER";
 
 const SCRIPT_SITE = `
-// Inject key encoding/decoding functions
-const SITES_NO_CACHE_PREFIX = "${SITES_NO_CACHE_PREFIX}";
-const encodeSitesKey = ${encodeSitesKey.toString()};
-const decodeSitesKey = ${decodeSitesKey.toString()};
-
-// Inject glob matching RegExp functions
-const deserialiseRegExps = ${deserialiseRegExps.toString()};
-const testRegExps = ${testRegExps.toString()};
-const testSiteRegExps = ${testSiteRegExps.toString()};
-
-// Deserialise glob matching RegExps
-const serialisedSiteRegExps = ${BINDING_JSON_SITE_FILTER};
-const siteRegExps = {
-  include: serialisedSiteRegExps.include && deserialiseRegExps(serialisedSiteRegExps.include),
-  exclude: serialisedSiteRegExps.exclude && deserialiseRegExps(serialisedSiteRegExps.exclude),
-};
-
-async function handleRequest(request) {
+function handleRequest(request) {
   // Only permit reads
   if (request.method !== "GET") {
     const message = \`Cannot \${request.method.toLowerCase()}() with read-only Workers Sites namespace\`;
     return new Response(message, { status: 405, statusText: message });
   }
-
-  // Decode key (empty if listing)
+  
   const url = new URL(request.url);
-  let key = url.pathname.substring(1); // Strip leading "/"
-  if (url.searchParams.get("${PARAM_URL_ENCODED}")?.toLowerCase() === "true") {
-    key = decodeURIComponent(key);
-  }
+  url.pathname = \`/${KV_PLUGIN_NAME}/${BINDING_KV_NAMESPACE_SITE}/\${url.pathname}\`;
   
-  // Strip SITES_NO_CACHE_PREFIX
-  key = decodeSitesKey(key);
-  
-  // If not listing keys, check key is included, returning not found if not
-  if (key !== "" && !testSiteRegExps(siteRegExps, key)) {
-    return new Response("Not Found", { status: 404, statusText: "Not Found" })
-  }
-  
-  // Re-encode key
-  key = encodeURIComponent(key);
-  url.pathname = \`/${KV_PLUGIN_NAME}/${BINDING_KV_NAMESPACE_SITE}/\${key}\`;
-  url.searchParams.set("${PARAM_URL_ENCODED}", "true"); // Always URL encoded now
-  
-  // Send request to loopback server
   request = new Request(url, request);
   request.headers.set("${HEADER_PERSIST}", ${BINDING_TEXT_PERSIST});
   // Add magic header to indicate namespace should be ignored, and persist
   // should be used as the root without any additional namespace
-  request.headers.set("${HEADER_SITES}", "true");
-  const response = await ${CoreBindings.SERVICE_LOOPBACK}.fetch(request);
-  
-  // If listing keys, only return included keys, and add SITES_NO_CACHE_PREFIX
-  // to all result keys
-  if (key === "" && response.ok) {
-    const { keys, list_complete, cursor } = await response.json();
-    return Response.json({
-      keys: keys.filter((key) => {
-        if (!testSiteRegExps(siteRegExps, key)) return false;
-        key.name = encodeSitesKey(key.name);
-        return true;
-      }),
-      list_complete,
-      cursor,
-    });
-  }
-  
-  return response;
+  request.headers.set("${HEADER_SITES}", ${BINDING_TEXT_SITE_FILTER});
+  return ${CoreBindings.SERVICE_LOOPBACK}.fetch(request);
 }
 
 addEventListener("fetch", (event) => event.respondWith(handleRequest(event.request)));
@@ -252,10 +209,7 @@ export function getSitesService(options: SitesOptions): Service {
 	const siteRegExps = sitesRegExpsCache.get(options);
 	assert(siteRegExps !== undefined);
 	// Ensure `siteRegExps` is JSON-serialisable
-	const serialisedSiteRegExps = {
-		include: siteRegExps.include && serialiseRegExps(siteRegExps.include),
-		exclude: siteRegExps.exclude && serialiseRegExps(siteRegExps.exclude),
-	};
+	const serialisedSiteRegExps = serialiseSiteRegExps(siteRegExps);
 
 	// Use unsanitised file storage to ensure file names containing e.g. dots
 	// resolve correctly.
@@ -273,8 +227,8 @@ export function getSitesService(options: SitesOptions): Service {
 					text: JSON.stringify(persist),
 				},
 				{
-					name: BINDING_JSON_SITE_FILTER,
-					json: JSON.stringify(serialisedSiteRegExps),
+					name: BINDING_TEXT_SITE_FILTER,
+					text: JSON.stringify(serialisedSiteRegExps),
 				},
 			],
 		},
@@ -288,13 +242,19 @@ export function getSitesService(options: SitesOptions): Service {
 
 export async function sitesGatewayGet(
 	persist: Persistence,
+	serialisedSiteRegExps: string,
 	key: string,
 	opts?: KVGatewayGetOptions
 ): Promise<KVGatewayGetResult | undefined> {
 	// `persist` is a resolved path set in `getSitesService()`
 	assert(typeof persist === "string");
+	const siteRegExps = deserialiseSiteRegExps(JSON.parse(serialisedSiteRegExps));
 
 	validateGetOptions(key, opts);
+
+	key = decodeSitesKey(key);
+	if (!testSiteRegExps(siteRegExps, key)) return;
+
 	const filePath = path.join(persist, key);
 	if (!filePath.startsWith(persist)) return;
 	try {
@@ -314,17 +274,21 @@ export async function sitesGatewayGet(
 
 export async function sitesGatewayList(
 	persist: Persistence,
+	serialisedSiteRegExps: string,
 	opts: KVGatewayListOptions = {}
 ): Promise<KVGatewayListResult> {
 	// `persist` is a resolved path set in `getSitesService()`
 	assert(typeof persist === "string");
+	const siteRegExps = deserialiseSiteRegExps(JSON.parse(serialisedSiteRegExps));
 
 	validateListOptions(opts);
 	const { limit = MAX_LIST_KEYS, prefix, cursor } = opts;
 
 	// Get sorted array of all keys matching prefix
 	let keys: KVGatewayListResult["keys"] = [];
-	for await (const name of listKeysInDirectory(persist)) {
+	for await (let name of listKeysInDirectory(persist)) {
+		if (!testSiteRegExps(siteRegExps, name)) continue;
+		name = encodeSitesKey(name);
 		if (prefix === undefined || name.startsWith(prefix)) keys.push({ name });
 	}
 	keys.sort((a, b) => lexicographicCompare(a.name, b.name));
