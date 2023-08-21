@@ -563,10 +563,10 @@ function getWorkerScript(
 	options: SourceOptions,
 	workerIndex: number
 ): { serviceWorkerScript: string } | { modules: Worker_Module[] } {
+	const modulesRoot =
+		("modulesRoot" in options ? options.modulesRoot : undefined) ?? "";
 	if (Array.isArray(options.modules)) {
 		// If `modules` is a manually defined modules array, use that
-		const modulesRoot =
-			("modulesRoot" in options ? options.modulesRoot : undefined) ?? "";
 		return {
 			modules: options.modules.map((module) =>
 				convertModuleDefinition(sourceMapRegistry, modulesRoot, module)
@@ -589,7 +589,11 @@ function getWorkerScript(
 
 	if (options.modules) {
 		// If `modules` is `true`, automatically collect modules...
-		const locator = new ModuleLocator(sourceMapRegistry, options.modulesRules);
+		const locator = new ModuleLocator(
+			sourceMapRegistry,
+			modulesRoot,
+			options.modulesRules
+		);
 		// If `script` and `scriptPath` are set, resolve modules in `script`
 		// against `scriptPath`.
 		locator.visitEntrypoint(

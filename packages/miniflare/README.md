@@ -234,8 +234,9 @@ parameter in module format Workers.
 
 - `modulesRoot?: string`
 
-  If `modules` is set to an array, modules' "name"s will be their `path`s
-  relative to this value. This ensures file paths in stack traces are correct.
+  If `modules` is set to `true` or an array, modules' "name"s will be their
+  `path`s relative to this value. This ensures file paths in stack traces are
+  correct.
 
 <!-- prettier-ignore-start -->
 <!-- (for disabling `;` insertion in `js` code block) -->
