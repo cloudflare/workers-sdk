@@ -844,6 +844,7 @@ export const openInspector = async (
 ) => {
 	const query = new URLSearchParams();
 	query.set("theme", "systemPreferred");
+	query.set("debugger", "false");
 	query.set("ws", `localhost:${inspectorPort}/ws`);
 	if (worker) query.set("domain", worker);
 	const url = `https://devtools.devprod.cloudflare.dev/js_app?${query.toString()}`;
