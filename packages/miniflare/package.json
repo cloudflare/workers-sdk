@@ -1,6 +1,6 @@
 {
 	"name": "miniflare",
-	"version": "3.20230814.1",
+	"version": "3.20230821.0",
 	"description": "Fun, full-featured, fully-local simulator for Cloudflare Workers",
 	"keywords": [
 		"cloudflare",
@@ -38,7 +38,7 @@
 		"source-map-support": "0.5.21",
 		"stoppable": "^1.1.0",
 		"undici": "^5.22.1",
-		"workerd": "1.20230814.1",
+		"workerd": "1.20230821.0",
 		"ws": "^8.11.0",
 		"youch": "^3.2.2",
 		"zod": "^3.20.6"
