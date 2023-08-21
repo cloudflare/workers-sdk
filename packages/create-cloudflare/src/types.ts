@@ -35,7 +35,7 @@ export type PagesGeneratorContext = {
 		name: string;
 		path: string;
 	};
-	type?: 'pages'|'workers',
+	type?: "pages" | "workers";
 };
 
 type UpdaterPackageScript = (cmd: string) => string;

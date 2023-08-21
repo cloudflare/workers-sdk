@@ -324,7 +324,7 @@ const createCommitMessage = async (ctx: PagesGeneratorContext) => {
 		.map(({ key, value }) => `  ${key} = ${value}`)
 		.join("\n")}\n`;
 
-	if(ctx.type !== 'workers') {
+	if (ctx.type !== "workers") {
 		ctx.framework.commitMessage = `${header}\n\n${body}\n`;
 	}
 
