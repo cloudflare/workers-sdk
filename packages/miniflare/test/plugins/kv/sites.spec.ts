@@ -169,6 +169,62 @@ test("gets assets with module worker", async (t) => {
 	t.is(await res.text(), "nested");
 });
 
+test("can import manifest from any directory", async (t) => {
+	const tmp = await useTmp(t);
+	const testPath = path.join(tmp, "test.txt");
+	await fs.writeFile(testPath, "test", "utf8");
+	const mf = new Miniflare({
+		modules: [
+			{
+				type: "ESModule",
+				path: "index.mjs",
+				contents: `
+        import root from "__STATIC_CONTENT_MANIFEST";
+        import a1 from "./a/1.mjs";
+        import ab2 from "./a/b/2.mjs";
+        import ab3 from "./a/b/3.mjs";
+        import abc4 from "./a/b/c/4.mjs";
+        
+        export default {
+          async fetch() {
+            return Response.json({
+              a1: a1 === root,
+              ab2: ab2 === root,
+              ab3: ab3 === root,
+              abc4: abc4 === root,
+            });
+          }
+        }
+        `,
+			},
+			{
+				type: "ESModule",
+				path: "a/1.mjs",
+				contents: 'export { default } from "__STATIC_CONTENT_MANIFEST";',
+			},
+			{
+				type: "ESModule",
+				path: "a/b/2.mjs",
+				contents: 'export { default } from "__STATIC_CONTENT_MANIFEST";',
+			},
+			{
+				type: "ESModule",
+				path: "a/b/3.mjs",
+				contents: 'export { default } from "__STATIC_CONTENT_MANIFEST";',
+			},
+			{
+				type: "ESModule",
+				path: "a/b/c/4.mjs",
+				contents: 'export { default } from "__STATIC_CONTENT_MANIFEST";',
+			},
+		],
+		sitePath: tmp,
+	});
+	t.teardown(() => mf.dispose());
+	const res = await mf.dispatchFetch("http://localhost:8787/test.txt");
+	t.deepEqual(await res.json(), { a1: true, ab2: true, ab3: true, abc4: true });
+});
+
 test("gets assets with percent-encoded paths", async (t) => {
 	// https://github.com/cloudflare/miniflare/issues/326
 	const tmp = await useTmp(t);

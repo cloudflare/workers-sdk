@@ -67,7 +67,7 @@ export type Worker_DurableObjectStorage =
 	| { localDisk?: string };
 
 export type Worker_Module = {
-	name?: string;
+	name: string;
 } & (
 	| { esModule?: string }
 	| { commonJsModule?: string }
