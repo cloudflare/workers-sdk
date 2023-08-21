@@ -36,6 +36,7 @@ import {
 	msw,
 	mswSuccessDeployments,
 	mswSuccessDeploymentScriptMetadata,
+	mswSuccessDeploymentScriptAPI,
 } from "./helpers/msw";
 import { FileReaderSync } from "./helpers/msw/read-file-sync";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -364,6 +365,20 @@ describe("deploy", () => {
 			});
 		});
 	});
+
+	describe("warnings", () => {
+		it("should warn user when worker was last deployed from api", async () => {
+			msw.use(...mswSuccessDeploymentScriptAPI)
+			writeWranglerToml();
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+
+			await runWrangler("deploy ./index");
+
+			expect(std.warn).toMatch(/You are about to publish a Workers Service that was last updated via the script API/)
+		})
+	})
 
 	describe("environments", () => {
 		it("should use legacy environments by default", async () => {
