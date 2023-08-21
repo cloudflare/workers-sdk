@@ -368,7 +368,7 @@ describe("deploy", () => {
 
 	describe("warnings", () => {
 		it("should warn user when worker was last deployed from api", async () => {
-			msw.use(...mswSuccessDeploymentScriptAPI)
+			msw.use(...mswSuccessDeploymentScriptAPI);
 			writeWranglerToml();
 			writeWorkerSource();
 			mockSubDomainRequest();
@@ -376,9 +376,11 @@ describe("deploy", () => {
 
 			await runWrangler("deploy ./index");
 
-			expect(std.warn).toMatch(/You are about to publish a Workers Service that was last updated via the script API/)
-		})
-	})
+			expect(std.warn).toMatch(
+				/You are about to publish a Workers Service that was last updated via the script API/
+			);
+		});
+	});
 
 	describe("environments", () => {
 		it("should use legacy environments by default", async () => {
