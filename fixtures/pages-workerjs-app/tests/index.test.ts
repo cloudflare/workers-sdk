@@ -35,10 +35,13 @@ describe("Pages _worker.js", () => {
 			"./workerjs-test",
 			["--no-bundle=false", "--port=0"]
 		);
-		await expect(
-			fetch(`http://${ip}:${port}/`).then((resp) => resp.text())
-		).resolves.toContain("test");
-		await stop();
+		try {
+			await expect(
+				fetch(`http://${ip}:${port}/`).then((resp) => resp.text())
+			).resolves.toContain("test");
+		} finally {
+			await stop();
+		}
 	});
 
 	it("should not throw an error when the _worker.js file imports something if --bundle is true", async ({
@@ -49,9 +52,12 @@ describe("Pages _worker.js", () => {
 			"./workerjs-test",
 			["--bundle", "--port=0"]
 		);
-		await expect(
-			fetch(`http://${ip}:${port}/`).then((resp) => resp.text())
-		).resolves.toContain("test");
-		await stop();
+		try {
+			await expect(
+				fetch(`http://${ip}:${port}/`).then((resp) => resp.text())
+			).resolves.toContain("test");
+		} finally {
+			await stop();
+		}
 	});
 });
