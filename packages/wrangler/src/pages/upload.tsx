@@ -23,6 +23,7 @@ import type {
 } from "../yargs-types";
 import type { UploadPayloadFile } from "./types";
 import type { FileContainer } from "./validate";
+import { ApiErrorCodes } from "./errors";
 
 type UploadArgs = StrictYargsOptionsToInterface<typeof Options>;
 
@@ -131,7 +132,7 @@ export const upload = async (
 					setTimeout(resolvePromise, Math.pow(2, attempts++) * 1000)
 				);
 
-				if ((e as { code: number }).code === 8000013) {
+				if ((e as { code: number }).code === ApiErrorCodes.UNAUTHORIZED) {
 					// Looks like the JWT expired, fetch another one
 					jwt = await fetchJwt();
 				}
@@ -227,7 +228,10 @@ export const upload = async (
 						setTimeout(resolvePromise, Math.pow(2, attempts++) * 1000)
 					);
 
-					if ((e as { code: number }).code === 8000013 || isJwtExpired(jwt)) {
+					if (
+						(e as { code: number }).code === ApiErrorCodes.UNAUTHORIZED ||
+						isJwtExpired(jwt)
+					) {
 						// Looks like the JWT expired, fetch another one
 						jwt = await fetchJwt();
 					}
@@ -289,7 +293,10 @@ export const upload = async (
 		} catch (e) {
 			await new Promise((resolvePromise) => setTimeout(resolvePromise, 1000));
 
-			if ((e as { code: number }).code === 8000013 || isJwtExpired(jwt)) {
+			if (
+				(e as { code: number }).code === ApiErrorCodes.UNAUTHORIZED ||
+				isJwtExpired(jwt)
+			) {
 				// Looks like the JWT expired, fetch another one
 				jwt = await fetchJwt();
 			}

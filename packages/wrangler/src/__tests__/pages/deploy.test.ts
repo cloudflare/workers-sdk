@@ -18,6 +18,7 @@ import { runWrangler } from "../helpers/run-wrangler";
 import { normalizeProgressSteps } from "./project-upload.test";
 import type { Project, UploadPayloadFile } from "../../pages/types";
 import type { RestRequest } from "msw";
+import { ApiErrorCodes } from "../../pages/errors";
 
 describe("deployment create", () => {
 	const std = mockConsoleMethods();
@@ -231,7 +232,7 @@ describe("deployment create", () => {
 							success: false,
 							errors: [
 								{
-									code: 8000000,
+									code: ApiErrorCodes.UNKNOWN_ERROR,
 									message: "Something exploded, please retry",
 								},
 							],
@@ -389,7 +390,7 @@ describe("deployment create", () => {
 								success: false,
 								errors: [
 									{
-										code: 8000000,
+										code: ApiErrorCodes.UNKNOWN_ERROR,
 										message: "Something exploded, please retry",
 									},
 								],
@@ -523,7 +524,7 @@ describe("deployment create", () => {
 							success: false,
 							errors: [
 								{
-									code: 8000013,
+									code: ApiErrorCodes.UNAUTHORIZED,
 									message: "Authorization failed",
 								},
 							],
