@@ -26,16 +26,16 @@
 		"templates"
 	],
 	"scripts": {
-		"build": "node scripts/build.js",
+		"build": "node -r esbuild-register scripts/build.ts",
 		"check:lint": "eslint .",
 		"check:type": "tsc",
 		"lint": "eslint",
 		"prepublishOnly": "npm run build",
-		"test:e2e:cleanup": "node scripts/e2eCleanup.mjs",
+		"test:e2e:cleanup": "node -r esbuild-register scripts/e2eCleanup.ts",
 		"test:e2e:npm": "npm run build && TEST_PM=npm vitest run --config ./vitest-e2e.config.ts",
 		"test:e2e:pnpm": "npm run build && TEST_PM=pnpm vitest run --config ./vitest-e2e.config.ts",
 		"test:unit": "vitest run --config ./vitest.config.ts",
-		"watch": "node scripts/build.js --watch"
+		"watch": "node -r esbuild-register scripts/build.ts --watch"
 	},
 	"devDependencies": {
 		"@babel/parser": "^7.21.3",

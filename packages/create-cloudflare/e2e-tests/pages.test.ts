@@ -3,6 +3,7 @@ import { FrameworkMap } from "frameworks/index";
 import { readJSON } from "helpers/files";
 import { fetch } from "undici";
 import { describe, expect, test, afterEach, beforeEach } from "vitest";
+import { deleteProject } from "../scripts/e2eCleanup";
 import { keys, runC3, testProjectDir } from "./helpers";
 import type { RunnerConfig } from "./helpers";
 
@@ -16,16 +17,25 @@ type FrameworkTestConfig = RunnerConfig & {
 };
 
 describe(`E2E: Web frameworks`, () => {
-	const { getPath, clean } = testProjectDir("pages");
+	const { getPath, getName, clean } = testProjectDir("pages");
 
 	beforeEach((ctx) => {
 		const framework = ctx.meta.name;
 		clean(framework);
 	});
 
-	afterEach((ctx) => {
+	afterEach(async (ctx) => {
 		const framework = ctx.meta.name;
 		clean(framework);
+
+		// Cleanup the pages project in case we need to retry it
+		const projectName = getName(framework);
+		try {
+			await deleteProject(projectName);
+		} catch (error) {
+			console.error(`Failed to cleanup project: ${projectName}`);
+			console.error(error);
+		}
 	});
 
 	const runCli = async (

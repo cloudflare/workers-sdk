@@ -10,7 +10,23 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID) {
 	process.exit(1);
 }
 
-const apiFetch = async (path, init = { method: "GET" }, queryParams = {}) => {
+type ApiErrorBody = {
+	errors: string[];
+};
+
+type ApiSuccessBody = {
+	result: any[];
+};
+
+type Project = {
+	name: string;
+};
+
+const apiFetch = async (
+	path: string,
+	init = { method: "GET" },
+	queryParams = {}
+) => {
 	const baseUrl = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}`;
 	const queryString = queryParams
 		? `?${new URLSearchParams(queryParams).toString()}`
@@ -27,7 +43,7 @@ const apiFetch = async (path, init = { method: "GET" }, queryParams = {}) => {
 	if (response.status >= 400) {
 		console.error(`REQUEST ERROR: ${url}`);
 		console.error(`(${response.status}) ${response.statusText}`);
-		const body = await response.json();
+		const body = (await response.json()) as ApiErrorBody;
 		console.error(body.errors);
 
 		// Returning null instead of throwing an error here allows the caller to decide whether
@@ -37,7 +53,7 @@ const apiFetch = async (path, init = { method: "GET" }, queryParams = {}) => {
 		return null;
 	}
 
-	const json = await response.json();
+	const json = (await response.json()) as ApiSuccessBody;
 
 	return json.result;
 };
@@ -72,20 +88,25 @@ const listC3Projects = async () => {
 	return projects.filter((p) => p.name.startsWith("c3-e2e-"));
 };
 
-const deleteProject = async (project) => {
-	console.log(`Deleting project: ${project.name}`);
-	await apiFetch(`/pages/projects/${project.name}`, {
+export const deleteProject = async (project: string) => {
+	console.log(`Deleting project: ${project}`);
+	await apiFetch(`/pages/projects/${project}`, {
 		method: "DELETE",
 	});
 };
 
-const projectsToDelete = await listC3Projects();
-for (const project of projectsToDelete) {
-	await deleteProject(project);
-}
+const run = async () => {
+	const projectsToDelete = (await listC3Projects()) as Project[];
 
-if (projectsToDelete.length === 0) {
-	console.log(`No projects to delete.`);
-} else {
-	console.log(`Successfully deleted ${projectsToDelete.length} projects`);
-}
+	for (const project of projectsToDelete) {
+		await deleteProject(project.name);
+	}
+
+	if (projectsToDelete.length === 0) {
+		console.log(`No projects to delete.`);
+	} else {
+		console.log(`Successfully deleted ${projectsToDelete.length} projects`);
+	}
+};
+
+run();
