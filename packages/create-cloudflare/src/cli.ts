@@ -1,9 +1,10 @@
 #!/usr/bin/env node
-// import { TextPrompt, SelectPrompt, ConfirmPrompt } from "@clack/core";
 import Haikunator from "haikunator";
 import { crash, logRaw, startSection } from "helpers/cli";
 import { dim } from "helpers/colors";
-import { processArgument } from "helpers/interactive";
+import { runCommand } from "helpers/command";
+import { processArgument, spinner, spinnerFrames } from "helpers/interactive";
+import semver from "semver";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { version } from "../package.json";
@@ -16,6 +17,7 @@ export const C3_DEFAULTS = {
 	projectName: new Haikunator().haikunate({ tokenHex: true }),
 	type: "hello-world",
 	framework: "angular",
+	autoUpdate: true,
 	deploy: true,
 	git: true,
 	open: true,
@@ -30,6 +32,39 @@ const WRANGLER_DEFAULTS = {
 export const main = async (argv: string[]) => {
 	const args = await parseArgs(argv);
 
+	// Print a newline
+	logRaw("");
+
+	if (args.autoUpdate && (await isUpdateAvailable())) {
+		await runLatest();
+	} else {
+		await runCli(args);
+	}
+};
+
+const isUpdateAvailable = async () => {
+	if (process.env.VITEST) {
+		return false;
+	}
+
+	// Use a spinner when running this check since it may take some time
+	const s = spinner(spinnerFrames.vertical);
+	s.start("Checking for newer version");
+	const latestVersion = await runCommand(
+		`npm info create-cloudflare@latest dist-tags.latest`,
+		{ silent: true, useSpinner: false }
+	);
+	s.stop();
+
+	return semver.gt(latestVersion, version);
+};
+
+export const runLatest = async () => {
+	const args = process.argv.slice(2);
+	await runCommand(`npm create cloudflare@latest ${args.join(" ")}`);
+};
+
+export const runCli = async (args: Partial<C3Args>) => {
 	printBanner();
 
 	const projectName = await processArgument<string>(args, "projectName", {
@@ -79,7 +114,7 @@ export const main = async (argv: string[]) => {
 };
 
 const printBanner = () => {
-	logRaw(dim(`\nusing create-cloudflare version ${version}\n`));
+	logRaw(dim(`using create-cloudflare version ${version}\n`));
 	startSection(`Create an application with Cloudflare`, "Step 1 of 3");
 };
 
@@ -91,6 +126,7 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 		.option("type", { type: "string" })
 		.option("framework", { type: "string" })
 		.option("deploy", { type: "boolean" })
+		.option("auto-update", { type: "boolean", default: C3_DEFAULTS.autoUpdate })
 		.option("ts", { type: "boolean" })
 		.option("git", { type: "boolean" })
 		.option("open", {

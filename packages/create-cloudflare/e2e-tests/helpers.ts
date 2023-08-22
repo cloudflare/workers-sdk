@@ -4,6 +4,7 @@ import { tmpdir } from "os";
 import { join } from "path";
 import { spawn } from "cross-spawn";
 import { spinnerFrames } from "helpers/interactive";
+import type { SpinnerStyle } from "helpers/interactive";
 
 export const C3_E2E_PREFIX = "c3-e2e-";
 
@@ -122,8 +123,10 @@ export const condenseOutput = (lines: string[]) => {
 
 const filterLine = (line: string) => {
 	// Remove all lines with spinners
-	for (const frame of spinnerFrames) {
-		if (line.includes(frame)) return false;
+	for (const spinnerType of Object.keys(spinnerFrames)) {
+		for (const frame of spinnerFrames[spinnerType as SpinnerStyle]) {
+			if (line.includes(frame)) return false;
+		}
 	}
 
 	// Remove empty lines

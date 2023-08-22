@@ -259,10 +259,16 @@ const getConfirmRenderers = (config: ConfirmPromptConfig) => {
 	};
 };
 
-export const spinnerFrames = ["┤", "┘", "┴", "└", "├", "┌", "┬", "┐"];
+export type SpinnerStyle = keyof typeof spinnerFrames;
+
+export const spinnerFrames = {
+	clockwise: ["┤", "┘", "┴", "└", "├", "┌", "┬", "┐"],
+	vertical: ["▁", "▃", "▄", "▅", "▆", "▇", "▆", "▅", "▄", "▃"],
+};
+
 const ellipsisFrames = ["", ".", "..", "...", " ..", "  .", ""];
 
-export const spinner = () => {
+export const spinner = (frames: string[] = spinnerFrames.clockwise) => {
 	// Alternative animations we considered. Keeping around in case we
 	// introduce different animations for different use cases.
 	// const frames = ["▁", "▃", "▄", "▅", "▆", "▇", "▆", "▅", "▄", "▃"];
@@ -296,7 +302,7 @@ export const spinner = () => {
 			clearLoop();
 			loop = setInterval(() => {
 				index++;
-				const spinnerFrame = spinnerFrames[index % spinnerFrames.length];
+				const spinnerFrame = frames[index % frames.length];
 				const ellipsisFrame = ellipsisFrames[index % ellipsisFrames.length];
 
 				if (msg) {
