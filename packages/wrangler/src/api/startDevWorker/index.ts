@@ -13,12 +13,49 @@ import type {
 } from "./events";
 import type { StartDevWorkerOptions, DevWorker } from "./types";
 
-export function startDevWorker(options: StartDevWorkerOptions): DevWorker {
+export function startWorker(options: StartDevWorkerOptions): DevWorker {
 	const devEnv = new DevEnv();
 
-	devEnv.config.setOptions(options);
+	return devEnv.startWorker(options);
+}
 
-	return devEnv.worker;
+export function createWorkerObject(
+	devEnv: DevEnv,
+	onNameUpdate: (name: string) => void
+): DevWorker {
+	return {
+		get ready() {
+			return devEnv.proxy.ready.then(() => undefined);
+		},
+		get config() {
+			return devEnv.config.config;
+		},
+		setOptions(options) {
+			if (options.name) onNameUpdate(options.name);
+
+			return devEnv.config.setOptions(options);
+		},
+		updateOptions(options) {
+			if (options.name) onNameUpdate(options.name);
+
+			return devEnv.config.updateOptions(options);
+		},
+		async fetch(...args) {
+			const { worker } = await devEnv.proxy.ready;
+			return worker.fetch(...args);
+		},
+		async queue(...args) {
+			const { worker } = await devEnv.proxy.ready;
+			return worker.queue(...args);
+		},
+		async scheduled(...args) {
+			const { worker } = await devEnv.proxy.ready;
+			return worker.scheduled(...args);
+		},
+		async dispose() {
+			await devEnv.teardown({} as TeardownEvent);
+		},
+	};
 }
 
 export class DevEnv extends EventEmitter {
@@ -26,40 +63,18 @@ export class DevEnv extends EventEmitter {
 	bundler: BundlerController;
 	runtimes: RuntimeController[];
 	proxy: ProxyController;
+	workers = new Map<string, DevWorker>();
 
-	#worker?: DevWorker;
-	get worker(): DevWorker {
-		// eslint-disable-next-line @typescript-eslint/no-this-alias
-		const devEnv = this;
-		return (this.#worker ??= {
-			get ready() {
-				return devEnv.proxy.ready.then(() => undefined);
-			},
-			get config() {
-				return devEnv.config.config;
-			},
-			setOptions(options) {
-				devEnv.config.setOptions(options);
-			},
-			updateOptions(options) {
-				devEnv.config.updateOptions(options);
-			},
-			async fetch(...args) {
-				const { worker } = await devEnv.proxy.ready;
-				return worker.fetch(...args);
-			},
-			async queue(...args) {
-				const { worker } = await devEnv.proxy.ready;
-				return worker.queue(...args);
-			},
-			async scheduled(...args) {
-				const { worker } = await devEnv.proxy.ready;
-				return worker.scheduled(...args);
-			},
-			async dispose() {
-				await devEnv.teardown({} as TeardownEvent);
-			},
+	startWorker(options: StartDevWorkerOptions): DevWorker {
+		const worker = createWorkerObject(this, (newName) => {
+			this.workers.delete(options.name);
+			this.workers.set(newName, worker);
 		});
+
+		this.workers.set(options.name, worker);
+		this.config.setOptions(options);
+
+		return worker;
 	}
 
 	constructor({
@@ -173,6 +188,8 @@ export class ConfigController extends EventEmitter {
 	on(event: "configUpdate", listener: (_: ConfigUpdateEvent) => void): this;
 	// @ts-expect-error Missing overload implementation (only need the signature types, base implementation is fine)
 	on(event: "error", listener: (_: ErrorEvent) => void): this;
+	// @ts-expect-error Missing initialisation (only need the signature types, base implementation is fine)
+	once: typeof this.on;
 }
 
 export class BundlerController extends EventEmitter {

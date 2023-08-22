@@ -1,12 +1,13 @@
-import { type fetch, type Request, type Response } from "miniflare";
+import type { CfAccount } from "../../create-worker-preview";
 import type { WorkerConfig } from "./events";
+import type { Json, fetch, Request, Response } from "miniflare";
 import type * as undici from "undici";
 
 export interface DevWorker {
 	ready: Promise<void>;
 	config?: WorkerConfig;
 	setOptions(options: StartDevWorkerOptions): void;
-	updateOptions(options: StartDevWorkerOptions): void;
+	updateOptions(options: Partial<StartDevWorkerOptions>): void;
 	fetch: typeof fetch;
 	scheduled(cron?: string): Promise<void>;
 	queue(queueName: string, ...messages: unknown[]): Promise<void>;
@@ -19,49 +20,75 @@ export interface StartDevWorkerOptions {
 	config?: File & { env?: string };
 	compatibilityDate?: string;
 	compatibilityFlags?: string[];
-	build?: {
-		bundle?: boolean; // defaults to true
-		moduleRules?: ModuleRule[];
-		define: string[] | Record<string, string>; // either ['debug=true','version=1.0.0'] or { debug: 'true', version: '1.0.0' },
-		minify: boolean;
-		custom: CustomBuildOptions;
-	};
 
 	bindings?: Record<string, Binding>; // Type level constraint for bindings not sharing names
 	triggers?: Trigger[];
 
-	routes?: Route[]; // --route, workers_dev
 	site?: {
 		path: string;
 		include?: string[];
 		exclude?: string[];
 	};
 
-	cronSchedules?: string[]; // triggers
-	usageModel?: "bundled" | "unbound"; // usage_model
-	queue?: QueueOptions; // queues
-	durableObject?: DurableObjectOptions; // durable_objects, migrations
-	logpush?: boolean; // logpush
+	/** Options applying to the worker's build step. Applies to deploy and dev. */
+	build?: {
+		/** Whether the worker and its dependencies are bundled. Defaults to true. */
+		bundle?: boolean;
+		/** Specifies types of modules matched by globs. */
+		moduleRules?: ModuleRule[];
+		/** Replace global identifiers with constant expressions, e.g. ['debug=true','version="1.0.0"'] or { debug: 'true', version: '"1.0.0"' }. Only takes effect if bundle: true. */
+		define: string[] | Record<string, string>;
+		/** Whether the bundled worker is minified. Only takes effect if bundle: true. */
+		minify: boolean;
+		/** Options controlling a custom build step. */
+		custom: {
+			/** Custom shell command to run before bundling. Runs even if bundle. */
+			command: string;
+			/** The cwd to run the command in. */
+			workingDirectory?: string;
+			/** Filepath(s) to watch for changes. Upon changes, the command will be rerun. */
+			watch?: string | string[];
+		};
+	};
 
-	// How the user connects to their dev worker
-	server?: { hostname?: string; port?: number; secure?: boolean }; // hostname: --ip, port: --port, secure: --local-protocol
-	// What the requests look like when they arrive in the worker
-	urlOverrides?: { hostname?: string; secure?: boolean }; // hostname: --host (remote)/--local-upstream (local), port: doesn't make sense in remote/=== server.port in local, secure: --upstream-protocol
-	inspector?: { hostname?: string; port?: number; secure?: boolean };
-	remote?: boolean | { auth?: Hook<string> }; // --local, account_id
-	persist?: boolean | { path: string }; // --persist, --persist-to
-	logLevel?: LogLevel; // --log-level
-	watch?: boolean | { liveReload?: boolean }; // watch
+	/** Options applying to the worker's development preview environment. */
+	dev: {
+		/** Options applying to the worker's inspector server. */
+		inspector?: { hostname?: string; port?: number; secure?: boolean };
+		/** Whether the worker runs on the edge or locally. */
+		remote?:
+			| boolean
+			| {
+					/** Cloudflare Account credentials. Can be provided upfront or as a function which will be called only when required. */
+					auth: Hook<CfAccount>;
+			  };
+		/** Whether the worker runs on the edge or locally. */
+		persist?: boolean | { path: string };
+		/** Controls which logs are logged 🤙. */
+		logLevel?: LogLevel;
+		/** Whether the worker server restarts upon source/config file changes. */
+		watch?:
+			| boolean
+			| {
+					/** Whether a script tag is inserted on text/html responses which will reload the page upon file changes. Defaults to false. */
+					liveReload?: boolean;
+			  };
 
-	serviceBindings?: Record<string, ServiceDesignator | ServiceFetch>; // Allow arbitrary Node function for service bindings in dev
-	outboundService: ServiceFetch;
-	mockFetch: undici.MockAgent;
+		/** The local address to reach your worker. Applies to remote: true (remote mode) and remote: false (local mode). */
+		server?: { hostname?: string; port?: number; secure?: boolean }; // hostname: --ip, port: --port, secure: --local-protocol
+		/** Controls what request.url looks like inside the worker. */
+		urlOverrides?: { hostname?: string; secure?: boolean }; // hostname: --host (remote)/--local-upstream (local), port: doesn't make sense in remote/=== server.port in local, secure: --upstream-protocol
+		/** A hook for outbound fetch calls from within the worker. */
+		outboundService?: ServiceFetch;
+		/** An undici MockAgent to declaratively mock fetch calls to particular resources. */
+		mockFetch?: undici.MockAgent;
+	};
 }
 
-export type Hook<T, Arg = undefined> =
+export type Hook<T, Args extends unknown[] = unknown[]> =
 	| T
 	| Promise<T>
-	| ((arg: Arg) => T | Promise<T>);
+	| ((...args: Args) => T | Promise<T>);
 
 export type WorkerName = string;
 
@@ -88,19 +115,20 @@ export type PatternRoute = {
 export type WorkersDevRoute = { workersDev: true };
 export type Route = PatternRoute | WorkersDevRoute;
 
-export interface CustomBuildOptions {
-	command: string;
-	workingDirectory?: string;
-	watch?: string | string[];
-}
-
 export interface ModuleRule {
-	type: "ESModule" | "CommonJS" | "CompiledWasm" | "Text" | "Data";
+	type:
+		| "ESModule"
+		| "CommonJS"
+		| "NodeJSCompat"
+		| "CompiledWasm"
+		| "Text"
+		| "Data";
 	include?: string[];
 	fallthrough?: boolean;
 }
 
 export type Trigger =
+	| { type: "workers.dev" }
 	| { type: "route"; pattern: string; customDomain: true }
 	| {
 			type: "route";
@@ -116,53 +144,49 @@ export type Trigger =
 			customDomain?: true;
 			zoneId?: never;
 	  }
-	| { type: "workers.dev" }
-	| { type: "schedule"; schedule: string };
+	| { type: "schedule"; schedule: string }
+	| {
+			type: "queue-consumer";
+			name: string;
+			maxBatchSize?: number;
+			maxBatchTimeout?: number;
+			maxRetries?: string;
+			deadLetterQueue?: string;
+	  };
 
 export type Binding =
-	| { type: "kv"; id: string; previewId: string }
-	| { type: "r2" }
-	| { type: "d1" }
-	| { type: "durable-object" }
-	| { type: "service"; target: WorkerName | ServiceFetch };
+	| { type: "kv"; id: string }
+	| { type: "r2"; bucket_name: string }
+	| {
+			type: "d1";
+			/** The binding name used to refer to the D1 database in the worker. */
+			binding: string;
+			/** The name of this D1 database. */
+			database_name: string;
+			/** The UUID of this D1 database (not required). */
+			database_id: string;
+			/** The UUID of this D1 database for Wrangler Dev (if specified). */
+			preview_database_id?: string;
+			/** The name of the migrations table for this D1 database (defaults to 'd1_migrations'). */
+			migrations_table?: string;
+			/** The path to the directory of migrations for this D1 database (defaults to './migrations'). */
+			migrations_dir?: string;
+			/** Internal use only. */
+			database_internal_env?: string;
+	  }
+	| {
+			type: "durable-object";
+			className: string;
+			service?: ServiceDesignator;
+	  }
+	| { type: "service"; service: ServiceDesignator | ServiceFetch }
+	| { type: "queue-producer"; name: string }
+	| { type: "constellation"; project_id: string }
+	| { type: "var"; value: string | Json | Uint8Array };
 
-export interface IdDesignator {
-	id: string;
-	previewId?: string;
-}
-export interface NamedDesignator {
-	name: string;
-	previewName?: string;
-}
-export interface ServiceDesignator extends NamedDesignator {
-	env?: string;
-}
 export type ServiceFetch = (request: Request) => Promise<Response>;
 
-export interface QueueConsumerDesignator {
+export interface ServiceDesignator {
 	name: string;
-	maxBatchSize?: number;
-	maxBatchTimeout?: number;
-	maxRetires?: string;
-	deadLetterQueue?: string;
-}
-export interface QueueOptions {
-	consumers?: QueueConsumerDesignator[];
-	producerBindings?: Record<string, NamedDesignator>;
-}
-
-export interface DurableObjectDesignator {
-	className: string;
-	service?: ServiceDesignator;
-}
-
-export interface DurableObjectMigration {
-	tag: string;
-	newClasses?: string[];
-	renamedClasses?: { from: string; to: string }[];
-	deletedClasses?: string[];
-}
-export interface DurableObjectOptions {
-	migrations?: DurableObjectMigration[];
-	bindings?: Record<string, DurableObjectDesignator>;
+	env?: string;
 }
