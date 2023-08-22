@@ -24,36 +24,41 @@ describe("Pages _worker.js/ directory", () => {
 				"--r2=R2_REF=other_r2",
 			]
 		);
-		await expect(
-			fetch(`http://${ip}:${port}/`).then((resp) => resp.text())
-		).resolves.toContain("Hello, world!");
-		await expect(
-			fetch(`http://${ip}:${port}/wasm`).then((resp) => resp.text())
-		).resolves.toContain("3");
-		await expect(
-			fetch(`http://${ip}:${port}/static-js`).then((resp) => resp.text())
-		).resolves.toEqual("static import text (via js): 'js static'");
-		await expect(
-			fetch(`http://${ip}:${port}/static-mjs`).then((resp) => resp.text())
-		).resolves.toEqual("static import text (via mjs): 'mjs static'");
-		await expect(
-			fetch(`http://${ip}:${port}/other-script.js`).then((resp) => resp.text())
-		).resolves.toContain("other-script-test");
-		await expect(
-			fetch(`http://${ip}:${port}/other-other-script.mjs`).then((resp) =>
-				resp.text()
-			)
-		).resolves.toContain("other-other-script-test");
-		await expect(
-			fetch(`http://${ip}:${port}/d1`).then((resp) => resp.text())
-		).resolves.toContain('{"1":1}');
-		await expect(
-			fetch(`http://${ip}:${port}/kv`).then((resp) => resp.text())
-		).resolves.toContain("saved");
-		await expect(
-			fetch(`http://${ip}:${port}/r2`).then((resp) => resp.text())
-		).resolves.toContain("saved");
-		await stop();
+		try {
+			await expect(
+				fetch(`http://${ip}:${port}/`).then((resp) => resp.text())
+			).resolves.toContain("Hello, world!");
+			await expect(
+				fetch(`http://${ip}:${port}/wasm`).then((resp) => resp.text())
+			).resolves.toContain("3");
+			await expect(
+				fetch(`http://${ip}:${port}/static-js`).then((resp) => resp.text())
+			).resolves.toEqual("static import text (via js): 'js static'");
+			await expect(
+				fetch(`http://${ip}:${port}/static-mjs`).then((resp) => resp.text())
+			).resolves.toEqual("static import text (via mjs): 'mjs static'");
+			await expect(
+				fetch(`http://${ip}:${port}/other-script.js`).then((resp) =>
+					resp.text()
+				)
+			).resolves.toContain("other-script-test");
+			await expect(
+				fetch(`http://${ip}:${port}/other-other-script.mjs`).then((resp) =>
+					resp.text()
+				)
+			).resolves.toContain("other-other-script-test");
+			await expect(
+				fetch(`http://${ip}:${port}/d1`).then((resp) => resp.text())
+			).resolves.toContain('{"1":1}');
+			await expect(
+				fetch(`http://${ip}:${port}/kv`).then((resp) => resp.text())
+			).resolves.toContain("saved");
+			await expect(
+				fetch(`http://${ip}:${port}/r2`).then((resp) => resp.text())
+			).resolves.toContain("saved");
+		} finally {
+			await stop();
+		}
 
 		expect(existsSync(join(tmpDir, "./v3/d1/D1"))).toBeTruthy();
 		expect(existsSync(join(tmpDir, "./v3/d1/elsewhere"))).toBeTruthy();
