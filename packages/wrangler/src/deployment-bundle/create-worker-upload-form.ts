@@ -1,4 +1,6 @@
+import assert from "node:assert";
 import { readFileSync } from "node:fs";
+import path from "node:path";
 import { FormData, File } from "undici";
 import { handleUnsafeCapnp } from "./capnp";
 import type {
@@ -329,6 +331,48 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 				type: "application/octet-stream",
 			})
 		);
+	}
+
+	const manifestModuleName = "__STATIC_CONTENT_MANIFEST";
+	const hasManifest = modules?.some(({ name }) => name === manifestModuleName);
+	if (hasManifest && main.type === "esm") {
+		assert(modules !== undefined);
+		// Each modules-format worker has a virtual file system for module
+		// resolution. For example, uploading modules with names `1.mjs`,
+		// `a/2.mjs` and `a/b/3.mjs`, creates virtual directories `a` and `a/b`.
+		// `1.mjs` is in the virtual root directory.
+		//
+		// The above code adds the `__STATIC_CONTENT_MANIFEST` module to the root
+		// directory. This means `import manifest from "__STATIC_CONTENT_MANIFEST"`
+		// will only work if the importing module is also in the root. If the
+		// importing module was `a/b/3.mjs` for example, the import would need to
+		// be `import manifest from "../../__STATIC_CONTENT_MANIFEST"`.
+		//
+		// When Wrangler bundles all user code, this isn't a problem, as code is
+		// only ever uploaded to the root. However, once `--no-bundle` or
+		// `find_additional_modules` is enabled, the user controls the directory
+		// structure.
+		//
+		// To fix this, if we've got a modules-format worker, we add stub modules
+		// in each subdirectory that re-export the manifest module from the root.
+		// This allows the manifest to be imported as `__STATIC_CONTENT_MANIFEST`
+		// in every directory, whilst avoiding duplication of the manifest.
+
+		// Collect unique subdirectories
+		const subDirs = new Set(
+			modules.map((module) => path.posix.dirname(module.name))
+		);
+		for (const subDir of subDirs) {
+			// Ignore `.` as it's not a subdirectory, and we don't want to
+			// register the manifest module in the root twice.
+			if (subDir === ".") continue;
+			const relativePath = path.posix.relative(subDir, manifestModuleName);
+			modules.push({
+				name: path.posix.join(subDir, manifestModuleName),
+				content: `export { default } from ${JSON.stringify(relativePath)};`,
+				type: "esm",
+			});
+		}
 	}
 
 	if (main.type === "commonjs") {

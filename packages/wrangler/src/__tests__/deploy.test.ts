@@ -2199,8 +2199,10 @@ addEventListener('fetch', event => {});`
 
 		it("when using a module worker type, it should add an asset manifest module, and bind to a namespace", async () => {
 			const assets = [
-				{ filePath: "file-1.txt", content: "Content of file-1" },
-				{ filePath: "file-2.txt", content: "Content of file-2" },
+				// Using `.text` extension instead of `.txt` means files won't be
+				// treated as additional modules
+				{ filePath: "file-1.text", content: "Content of file-1" },
+				{ filePath: "file-2.text", content: "Content of file-2" },
 			];
 			const kvNamespace = {
 				title: "__test-name-workers_sites_assets",
@@ -2211,8 +2213,27 @@ addEventListener('fetch', event => {});`
 				site: {
 					bucket: "assets",
 				},
+				find_additional_modules: true,
+				rules: [{ type: "ESModule", globs: ["**/*.mjs"] }],
 			});
 			writeWorkerSource({ type: "esm" });
+			fs.mkdirSync("a/b/c", { recursive: true });
+			fs.writeFileSync(
+				"a/1.mjs",
+				'export { default } from "__STATIC_CONTENT_MANIFEST";'
+			);
+			fs.writeFileSync(
+				"a/b/2.mjs",
+				'export { default } from "__STATIC_CONTENT_MANIFEST";'
+			);
+			fs.writeFileSync(
+				"a/b/3.mjs",
+				'export { default } from "__STATIC_CONTENT_MANIFEST";'
+			);
+			fs.writeFileSync(
+				"a/b/c/4.mjs",
+				'export { default } from "__STATIC_CONTENT_MANIFEST";'
+			);
 			writeAssets(assets);
 			mockUploadWorkerRequest({
 				expectedBindings: [
@@ -2224,7 +2245,13 @@ addEventListener('fetch', event => {});`
 				],
 				expectedModules: {
 					__STATIC_CONTENT_MANIFEST:
-						'{"file-1.txt":"file-1.2ca234f380.txt","file-2.txt":"file-2.5938485188.txt"}',
+						'{"file-1.text":"file-1.2ca234f380.text","file-2.text":"file-2.5938485188.text"}',
+					"a/__STATIC_CONTENT_MANIFEST":
+						'export { default } from "../__STATIC_CONTENT_MANIFEST";',
+					"a/b/__STATIC_CONTENT_MANIFEST":
+						'export { default } from "../../__STATIC_CONTENT_MANIFEST";',
+					"a/b/c/__STATIC_CONTENT_MANIFEST":
+						'export { default } from "../../../__STATIC_CONTENT_MANIFEST";',
 				},
 			});
 			mockSubDomainRequest();
@@ -2235,10 +2262,15 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy");
 
 			expect(std.info).toMatchInlineSnapshot(`
-			"Fetching list of already uploaded assets...
+			"Attaching additional modules:
+			- a/1.mjs (esm)
+			- a/b/2.mjs (esm)
+			- a/b/3.mjs (esm)
+			- a/b/c/4.mjs (esm)
+			Fetching list of already uploaded assets...
 			Building list of assets to upload...
-			 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
-			 + file-2.5938485188.txt (uploading new version of file-2.txt)
+			 + file-1.2ca234f380.text (uploading new version of file-1.text)
+			 + file-2.5938485188.text (uploading new version of file-2.text)
 			Uploading 2 new assets...
 			Uploaded 100% [2 out of 2]"
 		`);
