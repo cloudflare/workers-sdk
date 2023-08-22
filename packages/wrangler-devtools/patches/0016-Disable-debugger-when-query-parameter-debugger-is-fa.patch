@@ -1,8 +1,7 @@
 From 238f57c76bd8dc90069bb8004f832688ee1224db Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Thu, 17 Aug 2023 13:31:48 -0500
-Subject: [PATCH 16/16] Disable debugger when query parameter `debugger` is
- false Enable debugger by default
+Subject: [PATCH 16/16] Eanble debugger when query parameter `debugger` is true
 
 ---
  front_end/panels/sources/DebuggerPlugin.ts |  8 +++++++
@@ -18,8 +17,8 @@ index 6871a61d55..50b38ca92c 100644
      this.scriptsPanel = SourcesPanel.instance();
      this.breakpointManager = Bindings.BreakpointManager.BreakpointManager.instance();
  
-+    const debuggerQueryParam = Root.Runtime.Runtime.queryParam('debugger');
-+    if (debuggerQueryParam !== 'false') {
++    const debuggerEnabled = Root.Runtime.Runtime.queryParam('debugger') === 'true';
++    if (debuggerEnabled) {
 +      this.breakpointManager.addEventListener(
 +          Bindings.BreakpointManager.Events.BreakpointAdded, this.breakpointChange, this);
 +      this.breakpointManager.addEventListener(
@@ -39,8 +38,8 @@ index 1e094864ea..ac30f5d54c 100644
      this.splitWidget.show(this.element);
 -    this.splitWidget.hideSidebar(false);
 +
-+    const debuggerQueryParam = Root.Runtime.Runtime.queryParam('debugger');
-+    if (debuggerQueryParam === 'false') {
++    const debuggerEnabled = Root.Runtime.Runtime.queryParam('debugger') === 'true';
++    if (!debuggerEnabled) {
 +      this.splitWidget.hideSidebar(false);
 +    }
  
@@ -50,8 +49,8 @@ index 1e094864ea..ac30f5d54c 100644
        panel.splitWidget.installResizer(panel.sourcesViewInternal.toolbarContainerElement());
      }
      if (!isInWrapper) {
-+      const debuggerQueryParam = Root.Runtime.Runtime.queryParam('debugger');
-+      if (debuggerQueryParam !== 'false') {
++      const debuggerEnabled = Root.Runtime.Runtime.queryParam('debugger') === 'true';
++      if (debuggerEnabled) {
 +        if (panel.splitWidget.isVertical()) {
 +          panel.sourcesViewInternal.rightToolbar().appendToolbarItem(panel.toggleDebuggerSidebarButton);
 +        } else {
@@ -69,8 +68,8 @@ index 9c53bca1b3..036c33ea16 100644
    ],
  });
  
-+const debuggerQueryParam = Root.Runtime.Runtime.queryParam('debugger');
-+if (debuggerQueryParam !== 'false') {
++const debuggerEnabled = Root.Runtime.Runtime.queryParam('debugger') === 'true';
++if (debuggerEnabled) {
 +  UI.ActionRegistration.registerActionExtension({
 +    actionId: 'sources.toggle-debugger-sidebar',
 +    category: UI.ActionRegistration.ActionCategory.SOURCES,
