@@ -8,6 +8,7 @@ import { FatalError } from "../../errors";
 import { logger } from "../../logger";
 import { buildFunctions } from "../../pages/buildFunctions";
 import {
+	ApiErrorCodes,
 	FunctionsNoRoutesError,
 	getFunctionsNoRoutesWarning,
 } from "../../pages/errors";
@@ -379,7 +380,7 @@ export async function deploy({
 		} catch (e) {
 			lastErr = e;
 			if (
-				(e as { code: number }).code === 8000000 &&
+				(e as { code: number }).code === ApiErrorCodes.UNKNOWN_ERROR &&
 				attempts < MAX_DEPLOYMENT_ATTEMPTS
 			) {
 				logger.debug("failed:", e, "retrying...");
