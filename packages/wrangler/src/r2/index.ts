@@ -1,7 +1,11 @@
 import { Blob } from "node:buffer";
 import * as fs from "node:fs";
 import * as stream from "node:stream";
-import { createFileReadableStream, R2ObjectBody, R2Object } from "miniflare";
+import {
+	createFileReadableStream,
+	InternalR2ObjectBody as MiniflareR2ObjectBody,
+	InternalR2Object as MiniflareR2Object,
+} from "miniflare";
 
 import prettyBytes from "pretty-bytes";
 import { readConfig } from "../config";
@@ -85,9 +89,9 @@ export function r2(r2Yargs: CommonYargsArgv) {
 								bucket
 							);
 							const object = await gateway.get(key);
-							if (object instanceof R2ObjectBody) {
+							if (object instanceof MiniflareR2ObjectBody) {
 								input = object.body;
-							} else if (object instanceof R2Object) {
+							} else if (object instanceof MiniflareR2Object) {
 								input = object.encode().value;
 							}
 						} else {
