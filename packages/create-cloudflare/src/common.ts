@@ -50,7 +50,7 @@ export const setupProjectDirectory = (args: C3Args) => {
 	}
 
 	const directory = dirname(path);
-	const name = basename(path);
+	const pathBasename = basename(path);
 
 	// If the target is a nested directory, create the parent
 	mkdirSync(directory, { recursive: true });
@@ -58,7 +58,7 @@ export const setupProjectDirectory = (args: C3Args) => {
 	// Change to the parent directory
 	chdir(directory);
 
-	return { name, path };
+	return { name: pathBasename, path };
 };
 
 export const offerToDeploy = async (ctx: PagesGeneratorContext) => {
@@ -103,7 +103,7 @@ export const runDeploy = async (ctx: PagesGeneratorContext) => {
 		// Important: the following assumes that all framework deploy commands terminate with `wrangler pages deploy`
 		...(ctx.framework?.commitMessage && !insideGitRepo
 			? [
-					...(name === 'npm' ? ["--"] : []),
+					...(name === "npm" ? ["--"] : []),
 					`--commit-message="${ctx.framework.commitMessage.replaceAll(
 						'"',
 						'\\"'
@@ -154,10 +154,12 @@ export const chooseAccount = async (ctx: PagesGeneratorContext) => {
 		s.stop(
 			`${brandColor("account")} ${dim("more than one account available")}`
 		);
-		const accountOptions = Object.entries(accounts).map(([name, id]) => ({
-			label: name,
-			value: id,
-		}));
+		const accountOptions = Object.entries(accounts).map(
+			([accountName, id]) => ({
+				label: accountName,
+				value: id,
+			})
+		);
 
 		accountId = await inputPrompt({
 			type: "select",
@@ -168,7 +170,7 @@ export const chooseAccount = async (ctx: PagesGeneratorContext) => {
 		});
 	}
 	const accountName = Object.keys(accounts).find(
-		(name) => accounts[name] == accountId
+		(account) => accounts[account] == accountId
 	) as string;
 
 	ctx.account = { id: accountId, name: accountName };
