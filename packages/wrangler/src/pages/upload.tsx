@@ -132,7 +132,10 @@ export const upload = async (
 					setTimeout(resolvePromise, Math.pow(2, attempts++) * 1000)
 				);
 
-				if ((e as { code: number }).code === ApiErrorCodes.UNAUTHORIZED) {
+				if (
+					(e as { code: number }).code === ApiErrorCodes.UNAUTHORIZED ||
+					isJwtExpired(jwt)
+				) {
 					// Looks like the JWT expired, fetch another one
 					jwt = await fetchJwt();
 				}
