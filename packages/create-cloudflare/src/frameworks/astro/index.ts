@@ -3,17 +3,17 @@ import { brandColor, dim } from "helpers/colors";
 import { npmInstall, runCommand, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import { getFrameworkVersion } from "../index";
+import { getFrameworkCli } from "../index";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
 const { npx, dlx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
-	const version = getFrameworkVersion(ctx);
+	const cli = getFrameworkCli(ctx);
 
 	await runFrameworkGenerator(
 		ctx,
-		`${dlx} create-astro@${version} ${ctx.project.name} --no-install`
+		`${dlx} ${cli} ${ctx.project.name} --no-install`
 	);
 
 	logRaw(""); // newline

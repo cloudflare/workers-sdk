@@ -3,18 +3,15 @@ import { npmInstall, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
 import { writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import { getFrameworkVersion } from "..";
+import { getFrameworkCli } from "../index";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
 const { dlx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
-	const version = getFrameworkVersion(ctx);
+	const cli = getFrameworkCli(ctx);
 
-	await runFrameworkGenerator(
-		ctx,
-		`${dlx} nuxi@${version} init ${ctx.project.name}`
-	);
+	await runFrameworkGenerator(ctx, `${dlx} ${cli} init ${ctx.project.name}`);
 
 	logRaw(""); // newline
 };

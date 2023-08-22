@@ -1,0 +1,38 @@
+{
+	"name": "frameworks_clis_info",
+	"description": [
+		"this package.json is only used to keep track of the frameworks cli dependencies",
+		"so that we can use dependabot to update these dependencies automatically",
+		"additionally it also contains a map that maps frameworks to their respective clis"
+	],
+	"dependencies": {
+		"@angular/cli": "^0.4.5",
+		"create-astro": "3.1.5",
+		"create-docusaurus": "2.4.1",
+		"create-hono": "0.2.6",
+		"create-next-app": "13.4.2",
+		"create-qwik": "1.2.7",
+		"create-react-app": "5.0.1",
+		"create-remix": "1.16.0",
+		"create-solid": "0.2.26",
+		"create-svelte": "4.2.0",
+		"create-vue": "3.6.4",
+		"gatsby": "5.10.0",
+		"nuxi": "3.4.2"
+	},
+	"frameworkCliMap": {
+		"angular": "@angular/cli",
+		"astro": "create-astro",
+		"docusaurus": "create-docusaurus",
+		"gatsby": "gatsby",
+		"hono": "create-hono",
+		"next": "create-next-app",
+		"nuxt": "nuxi",
+		"qwik": "create-qwik",
+		"react": "create-react-app",
+		"remix": "create-remix",
+		"solid": "create-solid",
+		"svelte": "create-svelte",
+		"vue": "create-vue"
+	}
+}

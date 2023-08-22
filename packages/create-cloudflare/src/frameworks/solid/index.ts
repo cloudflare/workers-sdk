@@ -4,7 +4,7 @@ import { blue, brandColor, dim } from "helpers/colors";
 import { installPackages, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag, usesTypescript, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import { getFrameworkVersion } from "../index";
+import { getFrameworkCli } from "../index";
 import { viteConfig } from "./templates";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
@@ -16,8 +16,8 @@ const generate = async (ctx: PagesGeneratorContext) => {
 	process.chdir(ctx.project.path);
 
 	// Run the create-solid command
-	const version = getFrameworkVersion(ctx);
-	await runFrameworkGenerator(ctx, `${dlx} create-solid@${version}`);
+	const cli = getFrameworkCli(ctx);
+	await runFrameworkGenerator(ctx, `${dlx} ${cli}`);
 
 	logRaw("");
 };

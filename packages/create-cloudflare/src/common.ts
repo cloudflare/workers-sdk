@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readdirSync } from "fs";
 import { basename, dirname, resolve } from "path";
 import { chdir } from "process";
+import { getFrameworkCli } from "frameworks/index";
 import {
 	crash,
 	endSection,
@@ -23,10 +24,12 @@ import {
 import { inputPrompt, processArgument, spinner } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
 import { poll } from "helpers/poll";
+import { version as wranglerVersion } from "wrangler/package.json";
+import { version } from "../package.json";
 import { C3_DEFAULTS } from "./cli";
 import type { C3Args, PagesGeneratorContext } from "types";
 
-const { npm } = detectPackageManager();
+const { name, npm } = detectPackageManager();
 
 export const validateProjectDirectory = (relativePath: string) => {
 	const path = resolve(relativePath);
@@ -47,7 +50,7 @@ export const setupProjectDirectory = (args: C3Args) => {
 	}
 
 	const directory = dirname(path);
-	const name = basename(path);
+	const pathBasename = basename(path);
 
 	// If the target is a nested directory, create the parent
 	mkdirSync(directory, { recursive: true });
@@ -55,7 +58,7 @@ export const setupProjectDirectory = (args: C3Args) => {
 	// Change to the parent directory
 	chdir(directory);
 
-	return { name, path };
+	return { name: pathBasename, path };
 };
 
 export const offerToDeploy = async (ctx: PagesGeneratorContext) => {
@@ -87,15 +90,36 @@ export const runDeploy = async (ctx: PagesGeneratorContext) => {
 		return;
 	}
 
-	const deployCmd = `${npm} run ${
-		ctx.framework?.config.deployCommand ?? "deploy"
-	}`;
+	const baseDeployCmd = [
+		npm,
+		"run",
+		ctx.framework?.config.deployCommand ?? "deploy",
+	];
+
+	const insideGitRepo = await isInsideGitRepo(ctx.project.path);
+
+	const deployCmd = [
+		...baseDeployCmd,
+		// Important: the following assumes that all framework deploy commands terminate with `wrangler pages deploy`
+		...(ctx.framework?.commitMessage && !insideGitRepo
+			? [
+					...(name === "npm" ? ["--"] : []),
+					`--commit-message="${ctx.framework.commitMessage.replaceAll(
+						'"',
+						'\\"'
+					)}"`,
+			  ]
+			: []),
+	];
+
 	const result = await runCommand(deployCmd, {
 		silent: true,
 		cwd: ctx.project.path,
 		env: { CLOUDFLARE_ACCOUNT_ID: ctx.account.id, NODE_ENV: "production" },
-		startText: `Deploying your application`,
-		doneText: `${brandColor("deployed")} ${dim(`via \`${deployCmd}\``)}`,
+		startText: "Deploying your application",
+		doneText: `${brandColor("deployed")} ${dim(
+			`via \`${baseDeployCmd.join(" ")}\``
+		)}`,
 	});
 
 	const deployedUrlRegex = /https:\/\/.+\.(pages|workers)\.dev/;
@@ -130,10 +154,12 @@ export const chooseAccount = async (ctx: PagesGeneratorContext) => {
 		s.stop(
 			`${brandColor("account")} ${dim("more than one account available")}`
 		);
-		const accountOptions = Object.entries(accounts).map(([name, id]) => ({
-			label: name,
-			value: id,
-		}));
+		const accountOptions = Object.entries(accounts).map(
+			([accountName, id]) => ({
+				label: accountName,
+				value: id,
+			})
+		);
 
 		accountId = await inputPrompt({
 			type: "select",
@@ -144,7 +170,7 @@ export const chooseAccount = async (ctx: PagesGeneratorContext) => {
 		});
 	}
 	const accountName = Object.keys(accounts).find(
-		(name) => accounts[name] == accountId
+		(account) => accounts[account] == accountId
 	) as string;
 
 	ctx.account = { id: accountId, name: accountName };
@@ -250,31 +276,87 @@ export const offerGit = async (ctx: PagesGeneratorContext) => {
 };
 
 export const gitCommit = async (ctx: PagesGeneratorContext) => {
-	if (!ctx.args.git) return;
+	// Note: createCommitMessage stores the message in ctx so that it can
+	//       be used later even if we're not in a git repository, that's why
+	//       we unconditionally run this command here
+	const commitMessage = await createCommitMessage(ctx);
+
+	if (!(await isGitInstalled()) || !(await isInsideGitRepo(ctx.project.path)))
+		return;
 
 	await runCommands({
 		silent: true,
 		cwd: ctx.project.path,
-		commands: [
-			"git add .",
-			["git", "commit", "-m", "Initial commit (by Create-Cloudflare CLI)"],
-		],
+		commands: ["git add .", ["git", "commit", "-m", commitMessage]],
 		startText: "Committing new files",
-		doneText: `${brandColor("git")} ${dim(`initial commit`)}`,
+		doneText: `${brandColor("git")} ${dim(`commit`)}`,
 	});
 };
+
+const createCommitMessage = async (ctx: PagesGeneratorContext) => {
+	if (!ctx.framework) return "Initial commit (by create-cloudflare CLI)";
+
+	const header = "Initialize web application via create-cloudflare CLI";
+
+	const packageManager = detectPackageManager();
+
+	const gitVersion = await getGitVersion();
+	const insideRepo = await isInsideGitRepo(ctx.project.path);
+
+	const details = [
+		{ key: "C3", value: `create-cloudflare@${version}` },
+		{ key: "project name", value: ctx.project.name },
+		{ key: "framework", value: ctx.framework.name },
+		{ key: "framework cli", value: getFrameworkCli(ctx) },
+		{
+			key: "package manager",
+			value: `${packageManager.name}@${packageManager.version}`,
+		},
+		{
+			key: "wrangler",
+			value: `wrangler@${wranglerVersion}`,
+		},
+		{
+			key: "git",
+			value: insideRepo ? gitVersion : "N/A",
+		},
+	];
+
+	const body = `Details:\n${details
+		.map(({ key, value }) => `  ${key} = ${value}`)
+		.join("\n")}\n`;
+
+	const commitMessage = `${header}\n\n${body}\n`;
+
+	if (ctx.type !== "workers") {
+		ctx.framework.commitMessage = commitMessage;
+	}
+
+	return commitMessage;
+};
+
+/**
+ * Return the version of git on the user's machine, or null if git is not available.
+ */
+async function getGitVersion() {
+	try {
+		const rawGitVersion = await runCommand("git --version", {
+			useSpinner: false,
+			silent: true,
+		});
+		// let's remove the "git version " prefix as it isn't really helpful
+		const gitVersion = rawGitVersion.replace(/^git\s+version\s+/, "");
+		return gitVersion;
+	} catch {
+		return null;
+	}
+}
 
 /**
  * Check whether git is available on the user's machine.
  */
-export async function isGitInstalled() {
-	try {
-		await runCommand("git -v", { useSpinner: false, silent: true });
-
-		return true;
-	} catch {
-		return false;
-	}
+async function isGitInstalled() {
+	return (await getGitVersion()) !== null;
 }
 
 /**

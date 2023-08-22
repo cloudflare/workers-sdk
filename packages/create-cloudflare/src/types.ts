@@ -29,11 +29,13 @@ export type PagesGeneratorContext = {
 	framework?: {
 		name: string;
 		config: FrameworkConfig;
+		commitMessage?: string;
 	};
 	project: {
 		name: string;
 		path: string;
 	};
+	type?: "pages" | "workers";
 };
 
 type UpdaterPackageScript = (cmd: string) => string;

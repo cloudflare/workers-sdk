@@ -47,7 +47,7 @@ export const runCommand = async (
 	opts: RunOptions = {}
 ): Promise<string> => {
 	if (typeof command === "string") {
-		command = command.trim().replace(/\s+/g, ` `).split(" ");
+		command = command.trim().replace(/\s+/g, " ").split(" ");
 	}
 
 	return printAsyncStatus({

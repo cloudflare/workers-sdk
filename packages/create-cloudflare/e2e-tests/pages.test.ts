@@ -14,6 +14,7 @@ Areas for future improvement:
 
 type FrameworkTestConfig = RunnerConfig & {
 	expectResponseToContain: string;
+	testCommitMessage: boolean;
 };
 
 describe(`E2E: Web frameworks`, () => {
@@ -89,7 +90,10 @@ describe(`E2E: Web frameworks`, () => {
 		return { output };
 	};
 
-	const runCliWithDeploy = async (framework: string) => {
+	const runCliWithDeploy = async (
+		framework: string,
+		testCommitMessage: boolean
+	) => {
 		const { argv, overrides, promptHandlers, expectResponseToContain } =
 			frameworkTests[framework];
 
@@ -119,15 +123,21 @@ describe(`E2E: Web frameworks`, () => {
 			body,
 			`(${framework}) Deployed page (${projectUrl}) didn't contain expected string: "${expectResponseToContain}"`
 		).toContain(expectResponseToContain);
+
+		if (testCommitMessage) {
+			await testDeploymentCommitMessage(getName(framework), framework);
+		}
 	};
 
 	// These are ordered based on speed and reliability for ease of debugging
 	const frameworkTests: Record<string, FrameworkTestConfig> = {
 		astro: {
 			expectResponseToContain: "Hello, Astronaut!",
+			testCommitMessage: true,
 		},
 		hono: {
 			expectResponseToContain: "Hello Hono!",
+			testCommitMessage: false,
 		},
 		qwik: {
 			expectResponseToContain: "Welcome to Qwik",
@@ -137,9 +147,11 @@ describe(`E2E: Web frameworks`, () => {
 					input: [keys.enter],
 				},
 			],
+			testCommitMessage: true,
 		},
 		remix: {
 			expectResponseToContain: "Welcome to Remix",
+			testCommitMessage: true,
 		},
 		next: {
 			expectResponseToContain: "Create Next App",
@@ -149,6 +161,7 @@ describe(`E2E: Web frameworks`, () => {
 					input: ["y"],
 				},
 			],
+			testCommitMessage: true,
 		},
 		nuxt: {
 			expectResponseToContain: "Welcome to Nuxt!",
@@ -157,9 +170,11 @@ describe(`E2E: Web frameworks`, () => {
 					build: "NITRO_PRESET=cloudflare-pages nuxt build",
 				},
 			},
+			testCommitMessage: true,
 		},
 		react: {
 			expectResponseToContain: "React App",
+			testCommitMessage: true,
 		},
 		solid: {
 			expectResponseToContain: "Hello world",
@@ -177,6 +192,7 @@ describe(`E2E: Web frameworks`, () => {
 					input: [keys.enter],
 				},
 			],
+			testCommitMessage: true,
 		},
 		svelte: {
 			expectResponseToContain: "SvelteKit app",
@@ -194,16 +210,18 @@ describe(`E2E: Web frameworks`, () => {
 					input: [keys.enter],
 				},
 			],
+			testCommitMessage: true,
 		},
 		vue: {
 			expectResponseToContain: "Vite App",
+			testCommitMessage: true,
 		},
 	};
 
 	test.concurrent.each(Object.keys(frameworkTests))(
 		"%s",
 		async (name) => {
-			await runCliWithDeploy(name);
+			await runCliWithDeploy(name, frameworkTests[name].testCommitMessage);
 		},
 		{ retry: 3 }
 	);
@@ -212,3 +230,48 @@ describe(`E2E: Web frameworks`, () => {
 		await runCli("hono", { argv: ["--wrangler-defaults"] });
 	});
 });
+
+const testDeploymentCommitMessage = async (
+	projectName: string,
+	framework: string
+) => {
+	// Note: we cannot simply run git and check the result since the commit can be part of the
+	//       deployment even without git, so instead we fetch the deployment info from the pages api
+	const response = await fetch(
+		`https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/pages/projects`,
+		{
+			headers: {
+				Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
+			},
+		}
+	);
+
+	const result = (
+		(await response.json()) as {
+			result: {
+				name: string;
+				latest_deployment?: {
+					deployment_trigger: {
+						metadata?: {
+							commit_message: string;
+						};
+					};
+				};
+			}[];
+		}
+	).result;
+
+	const projectLatestCommitMessage = result.find(
+		(project) => project.name === projectName
+	)?.latest_deployment?.deployment_trigger?.metadata?.commit_message;
+	expect(projectLatestCommitMessage).toMatch(
+		/^Initialize web application via create-cloudflare CLI/
+	);
+	// TODO: add back checks the following when the commit message doesn't
+	// get truncated at 128 characters
+	// expect(projectLatestCommitMessage).toContain(
+	// 	`C3 = create-cloudflare@${version}`
+	// );
+	// expect(projectLatestCommitMessage).toContain(`project name = ${projectName}`);
+	// expect(projectLatestCommitMessage).toContain(`framework = ${framework}`);
+};
