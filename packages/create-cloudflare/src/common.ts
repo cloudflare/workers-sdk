@@ -29,7 +29,7 @@ import { version } from "../package.json";
 import { C3_DEFAULTS } from "./cli";
 import type { C3Args, PagesGeneratorContext } from "types";
 
-const { npm } = detectPackageManager();
+const { name, npm } = detectPackageManager();
 
 export const validateProjectDirectory = (relativePath: string) => {
 	const path = resolve(relativePath);
@@ -103,7 +103,7 @@ export const runDeploy = async (ctx: PagesGeneratorContext) => {
 		// Important: the following assumes that all framework deploy commands terminate with `wrangler pages deploy`
 		...(ctx.framework?.commitMessage && !insideGitRepo
 			? [
-					"--",
+					...(name === 'npm' ? ["--"] : []),
 					`--commit-message="${ctx.framework.commitMessage.replaceAll(
 						'"',
 						'\\"'
