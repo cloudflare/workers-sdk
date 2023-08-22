@@ -3,7 +3,6 @@ import { FrameworkMap } from "frameworks/index";
 import { readJSON } from "helpers/files";
 import { fetch } from "undici";
 import { describe, expect, test, afterEach, beforeEach } from "vitest";
-import { version } from '../package.json';
 import { deleteProject } from "../scripts/e2eCleanup";
 import { keys, runC3, testProjectDir } from "./helpers";
 import type { RunnerConfig } from "./helpers";
