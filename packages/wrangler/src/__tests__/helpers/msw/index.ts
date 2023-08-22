@@ -4,6 +4,7 @@ import {
 	mswSuccessDeployments,
 	mswSuccessDeploymentScriptMetadata,
 	mswSuccessDeploymentDetails,
+	mswSuccessDeploymentScriptAPI,
 } from "./handlers/deployments";
 import { mswSuccessNamespacesHandlers } from "./handlers/namespaces";
 import { mswSuccessOauthHandlers } from "./handlers/oauth";
@@ -49,4 +50,5 @@ export {
 	mswSuccessDeploymentDetails,
 	mswAccessHandlers,
 	mswSuccessDeploymentScriptMetadata,
+	mswSuccessDeploymentScriptAPI,
 };
