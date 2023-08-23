@@ -66,6 +66,9 @@ const isUpdateAvailable = async () => {
 	);
 	s.stop();
 
+	// Don't auto-update to major versions
+	if (semver.diff(latestVersion, version) === "major") return false;
+
 	return semver.gt(latestVersion, version);
 };
 
