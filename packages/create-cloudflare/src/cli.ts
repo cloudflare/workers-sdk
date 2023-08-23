@@ -134,9 +134,13 @@ const printBanner = () => {
 };
 
 const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
-	const doubleDashesIdx = argv.indexOf('--');
-	const c3Args = doubleDashesIdx < 0 ? argv : argv.slice(0, doubleDashesIdx < 0 ? undefined : doubleDashesIdx);
-	const additionalArgs = doubleDashesIdx < 0 ? [] : argv.slice(doubleDashesIdx + 1);
+	const doubleDashesIdx = argv.indexOf("--");
+	const c3Args = argv.slice(
+		0,
+		doubleDashesIdx < 0 ? undefined : doubleDashesIdx
+	);
+	const additionalArgs =
+		doubleDashesIdx < 0 ? [] : argv.slice(doubleDashesIdx + 1);
 
 	const args = await yargs(hideBin(c3Args))
 		.scriptName("create-cloudflare")
