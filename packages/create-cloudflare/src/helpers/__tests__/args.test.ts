@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 import { parseArgs } from "../args";
 
-vi.mock("yargs/helpers", () => ({ hideBin: (x: unknown) => x }));
+vi.mock("yargs/helpers", () => ({ hideBin: (x: string[]) => x }));
 
 describe("Cli", () => {
 	describe("parseArgs", () => {
