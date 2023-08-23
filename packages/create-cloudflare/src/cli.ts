@@ -3,7 +3,12 @@ import Haikunator from "haikunator";
 import { crash, logRaw, startSection } from "helpers/cli";
 import { blue, dim } from "helpers/colors";
 import { runCommand } from "helpers/command";
-import { processArgument, spinner, spinnerFrames } from "helpers/interactive";
+import {
+	isInteractive,
+	processArgument,
+	spinner,
+	spinnerFrames,
+} from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
 import semver from "semver";
 import yargs from "yargs";
@@ -48,7 +53,7 @@ export const main = async (argv: string[]) => {
 // Detects if a newer version of c3 is available by comparing the version
 // specified in package.json with the `latest` tag from npm
 const isUpdateAvailable = async () => {
-	if (process.env.VITEST || process.env.CI) {
+	if (process.env.VITEST || process.env.CI || !isInteractive()) {
 		return false;
 	}
 

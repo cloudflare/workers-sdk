@@ -328,3 +328,7 @@ export const spinner = (
 		},
 	};
 };
+
+export const isInteractive = () => {
+	return process.stdin.isTTY;
+};
