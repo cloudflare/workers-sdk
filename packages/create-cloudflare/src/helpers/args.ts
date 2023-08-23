@@ -1,6 +1,7 @@
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { version } from "../../package.json";
+import { templateMap } from "../templateMap";
 import { C3_DEFAULTS, WRANGLER_DEFAULTS, logRaw } from "./cli";
 import { getRenderers, inputPrompt } from "./interactive";
 import type { PromptConfig } from "./interactive";
@@ -32,7 +33,7 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 		})
 		.option("existing-script", {
 			type: "string",
-			hidden: true, // templateMap["pre-existing"].hidden,
+			hidden: templateMap["pre-existing"].hidden,
 		})
 		.option("accept-defaults", {
 			alias: "y",
