@@ -247,7 +247,6 @@ function DevSession(props: DevSessionProps) {
 	useCustomBuild(props.entry, props.build);
 
 	const directory = useTmpDir();
-	useErrorHandler();
 
 	const workerDefinitions = useDevRegistry(
 		props.name,

@@ -53,7 +53,6 @@ export async function buildFunctions({
 	onEnd?: () => void;
 	routesOutputPath?: PagesBuildArgs["outputRoutesPath"];
 	local: boolean;
-	d1Databases?: string[];
 	legacyNodeCompat?: boolean;
 	nodejsCompat?: boolean;
 }) {
