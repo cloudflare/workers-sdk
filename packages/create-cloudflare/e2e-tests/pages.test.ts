@@ -126,7 +126,7 @@ describe(`E2E: Web frameworks`, () => {
 		).toContain(expectResponseToContain);
 
 		if (testCommitMessage) {
-			await testDeploymentCommitMessage(getName(framework));
+			await testDeploymentCommitMessage(getName(framework), framework);
 		}
 	};
 
@@ -232,7 +232,10 @@ describe(`E2E: Web frameworks`, () => {
 	});
 });
 
-const testDeploymentCommitMessage = async (projectName: string) => {
+const testDeploymentCommitMessage = async (
+	projectName: string,
+	framework: string
+) => {
 	// Note: we cannot simply run git and check the result since the commit can be part of the
 	//       deployment even without git, so instead we fetch the deployment info from the pages api
 	const response = await fetch(
