@@ -1,7 +1,9 @@
-import { getSentry, sentry } from "@hono/sentry";
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
-const app = new Hono<{ Bindings: Env }>({
+import { Toucan } from "toucan-js";
+import { ZodIssue } from "zod";
+import { handleException, setupSentry } from "./sentry";
+const app = new Hono<{ Bindings: Env; Variables: { sentry: Toucan } }>({
 	// This replaces . with / in url hostnames, which allows for parameter matching in hostnames as well as paths
 	// e.g. https://something.example.com/hello/world -> something/example/com/hello/world
 	getPath: (req) => {
@@ -12,7 +14,7 @@ const app = new Hono<{ Bindings: Env }>({
 
 const rootDomain = ROOT;
 const previewDomain = PREVIEW;
-class HttpError extends Error {
+export class HttpError extends Error {
 	constructor(
 		message: string,
 		readonly status: number,
@@ -27,6 +29,7 @@ class HttpError extends Error {
 			{
 				error: this.name,
 				message: this.message,
+				data: this.data,
 			},
 			{
 				status: this.status,
@@ -44,6 +47,7 @@ class HttpError extends Error {
 }
 
 export class WorkerTimeout extends HttpError {
+	name = "WorkerTimeout";
 	constructor() {
 		super("Worker timed out", 400, false);
 	}
@@ -54,6 +58,7 @@ export class WorkerTimeout extends HttpError {
 }
 
 export class ServiceWorkerNotSupported extends HttpError {
+	name = "ServiceWorkerNotSupported";
 	constructor() {
 		super(
 			"Service Workers are not supported in the Workers Playground",
@@ -62,25 +67,56 @@ export class ServiceWorkerNotSupported extends HttpError {
 		);
 	}
 }
+export class ZodSchemaError extends HttpError {
+	name = "ZodSchemaError";
+	constructor(private issues: ZodIssue[]) {
+		super("Something went wrong", 500, true);
+	}
+
+	get data(): { issues: string } {
+		return { issues: JSON.stringify(this.issues) };
+	}
+}
+
+export class PreviewError extends HttpError {
+	name = "PreviewError";
+	constructor(private error: string) {
+		super(error, 400, false);
+	}
+
+	get data(): { error: string } {
+		return { error: this.error };
+	}
+}
 
 class TokenUpdateFailed extends HttpError {
+	name = "TokenUpdateFailed";
 	constructor() {
-		super("Provide token, prewarmUrl and remote", 400, false);
+		super("Provide token", 400, false);
 	}
 }
 
 class RawHttpFailed extends HttpError {
+	name = "RawHttpFailed";
 	constructor() {
-		super("Provide token, and remote", 400, false);
+		super("Provide token", 400, false);
 	}
 }
 
 class PreviewRequestFailed extends HttpError {
-	constructor(private tokenId: string, reportable: boolean) {
-		super("Token and remote not found", 400, reportable);
+	name = "PreviewRequestFailed";
+	constructor(private tokenId: string | undefined, reportable: boolean) {
+		super("Token not found", 400, reportable);
 	}
-	get data(): { tokenId: string } {
+	get data(): { tokenId: string | undefined } {
 		return { tokenId: this.tokenId };
+	}
+}
+
+class UploadFailed extends HttpError {
+	name = "UploadFailed";
+	constructor() {
+		super("Token not provided", 401, false);
 	}
 }
 
@@ -128,26 +164,19 @@ async function handleRawHttp(request: Request, url: URL, env: Env) {
 		},
 	});
 }
-app.use("*", (c, ...args) =>
-	sentry({
-		allowedHeaders: [
-			"user-agent",
-			"accept-encoding",
-			"accept-language",
-			"cf-ray",
-			"content-length",
-			"content-type",
-			"host",
-		],
-		// @ts-ignore
-		transportOptions: {
-			headers: {
-				"CF-Access-Client-ID": c.env.SENTRY_ACCESS_CLIENT_ID,
-				"CF-Access-Client-Secret": c.env.SENTRY_ACCESS_CLIENT_SECRET,
-			},
-		},
-	})(c, ...args)
-);
+app.use("*", async (c, next) => {
+	c.set(
+		"sentry",
+		setupSentry(
+			c.req.raw,
+			c.executionCtx,
+			c.env.SENTRY_DSN,
+			c.env.SENTRY_ACCESS_CLIENT_ID,
+			c.env.SENTRY_ACCESS_CLIENT_SECRET
+		)
+	);
+	return await next();
+});
 
 app.get(`${rootDomain}/`, async (c) => {
 	const url = new URL(c.req.url);
@@ -165,30 +194,38 @@ app.get(`${rootDomain}/`, async (c) => {
 	const cookified = c.body(null);
 	const origin = await fetch(c.req.url, c.req);
 	const mutable = new Response(origin.body, origin);
-	if (cookified.headers.has("Set-Cookie"))
-		mutable.headers.set("Set-Cookie", cookified.headers.get("Set-Cookie")!);
+	const setCookieHeader = cookified.headers.get("Set-Cookie");
+	if (setCookieHeader !== null)
+		mutable.headers.set("Set-Cookie", setCookieHeader);
+
 	return mutable;
 });
 
 app.post(`${rootDomain}/api/worker`, async (c) => {
-	let userId = getCookie(c, "user") as string;
+	let userId = getCookie(c, "user");
+
+	if (!userId) {
+		throw new UploadFailed();
+	}
 
 	const userObject = c.env.UserSession.get(
 		c.env.UserSession.idFromString(userId)
 	);
 
-	return userObject.fetch(
-		new Request("https://example.com", {
-			body: c.req.body,
-			method: "POST",
-			headers: c.req.headers,
-		})
-	);
+	return userObject.fetch("https://example.com", {
+		body: c.req.body,
+		method: "POST",
+		headers: c.req.headers,
+	});
 });
 
 app.get(`${rootDomain}/api/inspector`, async (c) => {
 	const url = new URL(c.req.url);
-	let userId = url.searchParams.get("user")!;
+	let userId = url.searchParams.get("user");
+
+	if (!userId) {
+		throw new PreviewRequestFailed("", false);
+	}
 
 	const userObject = c.env.UserSession.get(
 		c.env.UserSession.idFromString(userId)
@@ -244,7 +281,7 @@ app.all(`${previewDomain}/*`, async (c) => {
 	if (c.req.headers.has("cf-raw-http")) {
 		return handleRawHttp(c.req.raw, url, c.env);
 	}
-	const token = getCookie(c, "token") as string;
+	const token = getCookie(c, "token");
 
 	if (!token) {
 		throw new PreviewRequestFailed(token, false);
@@ -273,26 +310,9 @@ app.all(`${previewDomain}/*`, async (c) => {
 app.all(`${rootDomain}/*`, (c) => fetch(c.req.raw));
 
 app.onError((e, c) => {
-	console.error(e.message, e.stack);
-	const sentry = getSentry(c);
-	if (e instanceof HttpError) {
-		if (e.reportable) {
-			sentry.setContext("Details", e.data);
-			sentry.captureException(e);
-		}
-		return e.toResponse();
-	} else {
-		sentry.captureException(e);
-		return Response.json(
-			{
-				error: "UnexpectedError",
-				message: "Something went wrong",
-			},
-			{
-				status: 500,
-			}
-		);
-	}
+	console.log("ONERROR");
+	const sentry = c.get("sentry");
+	return handleException(e, sentry);
 });
 
 export default <ExportedHandler>{

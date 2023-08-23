@@ -1,11 +1,30 @@
 import { z } from "zod";
+import { PreviewError } from ".";
 
-const PreviewSession = z.object({
-	result: z.object({
+const APIResponse = <T extends z.ZodTypeAny>(resultSchema: T) =>
+	z.union([
+		z.object({
+			success: z.literal(true),
+			result: resultSchema,
+		}),
+		z.object({
+			success: z.literal(false),
+			result: z.null().optional(),
+			errors: z.array(
+				z.object({
+					code: z.number(),
+					message: z.string(),
+				})
+			),
+		}),
+	]);
+
+const PreviewSession = APIResponse(
+	z.object({
 		exchange_url: z.string(),
 		token: z.string(),
-	}),
-});
+	})
+);
 
 type PreviewSession = z.infer<typeof PreviewSession>;
 
@@ -17,12 +36,11 @@ const UploadToken = z.object({
 
 type UploadToken = z.infer<typeof UploadToken>;
 
-const UploadResult = z.object({
-	result: z.object({
+const UploadResult = APIResponse(
+	z.object({
 		preview_token: z.string(),
-	}),
-});
-
+	})
+);
 export type UploadResult = z.infer<typeof UploadResult>;
 
 export type RealishPreviewConfig = {
@@ -44,20 +62,29 @@ async function cloudflareFetch(
 async function initialiseSubdomainPreview(
 	accountId: string,
 	apiToken: string
-): Promise<PreviewSession["result"]> {
-	return cloudflareFetch(
+): Promise<{
+	exchange_url: string;
+	token: string;
+}> {
+	const response = await cloudflareFetch(
 		apiToken,
 		`/accounts/${accountId}/workers/subdomain/edge-preview`
-	)
-		.then((response) => response.json())
-		.then(PreviewSession.parse)
-		.then((s) => s.result);
+	);
+	const json = await response.json();
+	const session = PreviewSession.parse(json);
+
+	if (!session.result) {
+		throw new PreviewError(
+			session?.errors?.[0].message ?? "Preview Session failed to initialise"
+		);
+	}
+	return session.result;
 }
 
 async function exchangeToken(url: string): Promise<UploadToken> {
-	return fetch(url)
-		.then((response) => response.json())
-		.then(UploadToken.parse);
+	const response = await fetch(url);
+	const json = await response.json();
+	return UploadToken.parse(json);
 }
 
 export async function setupTokens(
@@ -79,7 +106,7 @@ export async function doUpload(
 	name: string,
 	worker: FormData
 ) {
-	return cloudflareFetch(
+	const upload = await cloudflareFetch(
 		apiToken,
 		`/accounts/${accountId}/workers/scripts/${name}/edge-preview`,
 		{
@@ -90,7 +117,10 @@ export async function doUpload(
 			},
 			body: worker,
 		}
-	)
-		.then((response) => response.json())
-		.then(UploadResult.parse);
+	);
+	const result = UploadResult.parse(await upload.json());
+	if (result.success === false) {
+		throw new PreviewError(result?.errors?.[0]?.message ?? "Preview failed");
+	}
+	return result;
 }

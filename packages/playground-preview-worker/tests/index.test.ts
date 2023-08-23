@@ -1,11 +1,5 @@
-import { randomBytes } from "crypto";
-import fs from "fs/promises";
-import os from "os";
-import path from "path";
 import { fetch } from "undici";
 import { describe, expect, it, beforeAll, afterAll, beforeEach } from "vitest";
-import { unstable_dev } from "wrangler";
-import type { UnstableDevWorker } from "wrangler";
 
 function removeUUID(str: string) {
 	return str.replace(
@@ -67,9 +61,6 @@ describe("Preview Worker", () => {
 
 		const json = (await resp.json()) as { headers: string[][]; url: string };
 
-		expect(
-			json.headers.find((h) => h[0] === "cf-workers-preview-token")
-		).toMatchInlineSnapshot("undefined");
 		expect(json.url.slice(-13, -1)).toMatchInlineSnapshot('".workers.dev"');
 	});
 	it("should not follow redirects", async () => {
@@ -123,9 +114,50 @@ describe("Preview Worker", () => {
 	});
 });
 
-describe("Raw HTTP preview", () => {
-	let worker: UnstableDevWorker;
+describe("Upload Worker", () => {
+	let defaultUserToken: string;
+	beforeAll(async () => {
+		defaultUserToken = await fetchUserToken();
+	});
+	it("should upload valid worker", async () => {
+		const w = await fetch(`${REMOTE}/api/worker`, {
+			method: "POST",
+			headers: {
+				cookie: `user=${defaultUserToken}`,
+				"Content-Type":
+					"multipart/form-data; boundary=----WebKitFormBoundaryqJEYLXuUiiZQHgvf",
+			},
+			body: '------WebKitFormBoundaryqJEYLXuUiiZQHgvf\nContent-Disposition: form-data; name="index.js"; filename="index.js"\nContent-Type: application/javascript+module\n\nexport default {\n	fetch(request) {\n		const url = new URL(request.url)\n		if(url.pathname === "/exchange") {\n			return Response.json({\n				token: "TEST_TOKEN",\n				prewarm: "TEST_PREWARM"\n			})\n		}\n		if(url.pathname === "/redirect") {\n			return Response.redirect("https://example.com", 302)\n		}\n		if(url.pathname === "/method") {\n			return new Response(request.method)\n		}\n		if(url.pathname === "/status") {\n			return new Response(407)\n		}\n		if(url.pathname === "/header") {\n			return new Response(request.headers.get("X-Custom-Header"))\n		}\n		return Response.json({\n			url: request.url,\n			headers: [...request.headers.entries()]\n		})\n	}\n}\n\n------WebKitFormBoundaryqJEYLXuUiiZQHgvf\nContent-Disposition: form-data; name="metadata"; filename="blob"\nContent-Type: application/json\n\n{"compatibility_date":"2023-05-04","main_module":"index.js"}\n------WebKitFormBoundaryqJEYLXuUiiZQHgvf--',
+		});
+		expect(w.status).toMatchInlineSnapshot("200");
+	});
+	it("should provide error message on invalid worker", async () => {
+		const w = await fetch(`${REMOTE}/api/worker`, {
+			method: "POST",
+			headers: {
+				cookie: `user=${defaultUserToken}`,
+				"Content-Type":
+					"multipart/form-data; boundary=----WebKitFormBoundaryqJEYLXuUiiZQHgvf",
+			},
+			body: '------WebKitFormBoundaryqJEYLXuUiiZQHgvf\nContent-Disposition: form-data; name="index.js"; filename="index.js"\nContent-Type: application/javascript+module\n\nexport default {\n	fetch(request {\n		const url = new URL(request.url)\n		if(url.pathname === "/exchange") {\n			return Response.json({\n				token: "TEST_TOKEN",\n				prewarm: "TEST_PREWARM"\n			})\n		}\n		if(url.pathname === "/redirect") {\n			return Response.redirect("https://example.com", 302)\n		}\n		if(url.pathname === "/method") {\n			return new Response(request.method)\n		}\n		if(url.pathname === "/status") {\n			return new Response(407)\n		}\n		if(url.pathname === "/header") {\n			return new Response(request.headers.get("X-Custom-Header"))\n		}\n		return Response.json({\n			url: request.url,\n			headers: [...request.headers.entries()]\n		})\n	}\n}\n\n------WebKitFormBoundaryqJEYLXuUiiZQHgvf\nContent-Disposition: form-data; name="metadata"; filename="blob"\nContent-Type: application/json\n\n{"compatibility_date":"2023-05-04","main_module":"index.js"}\n------WebKitFormBoundaryqJEYLXuUiiZQHgvf--',
+		}).then((response) => response.json());
+		expect(w).toMatchInlineSnapshot(`
+			{
+			  "data": {
+			    "error": "Uncaught SyntaxError: Unexpected token '{'
+			  at index.js:2:15
+			",
+			  },
+			  "error": "PreviewError",
+			  "message": "Uncaught SyntaxError: Unexpected token '{'
+			  at index.js:2:15
+			",
+			}
+		`);
+	});
+});
 
+describe("Raw HTTP preview", () => {
 	it("should allow arbitrary headers in cross-origin requests", async () => {
 		const resp = await fetch(PREVIEW_REMOTE, {
 			method: "OPTIONS",

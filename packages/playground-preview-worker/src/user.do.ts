@@ -1,4 +1,6 @@
-import { ServiceWorkerNotSupported, WorkerTimeout } from ".";
+import { z } from "zod";
+import { Buffer } from "node:buffer";
+import { HttpError, ServiceWorkerNotSupported, WorkerTimeout } from ".";
 import { constructMiddleware } from "./inject-middleware";
 import {
 	RealishPreviewConfig,
@@ -6,6 +8,7 @@ import {
 	doUpload,
 	setupTokens,
 } from "./realish";
+import { handleException, setupSentry } from "./sentry";
 
 function assert(v: boolean, label: string = ""): asserts v {
 	if (!v) {
@@ -17,11 +20,7 @@ const encoder = new TextEncoder();
 
 async function hash(text: string) {
 	const hash = await crypto.subtle.digest("SHA-256", encoder.encode(text));
-	const hashArray = Array.from(new Uint8Array(hash));
-	const hashHex = hashArray
-		.map((b) => b.toString(16).padStart(2, "0"))
-		.join("");
-	return hashHex;
+	return Buffer.from(hash).toString("hex");
 }
 
 function switchRemote(url: URL, remote: string) {
@@ -65,7 +64,7 @@ export class UserSession {
 	}
 	async refreshTokens() {
 		this.config = await setupTokens(this.env.ACCOUNT_ID, this.env.API_TOKEN);
-		this.state.storage.put("config", this.config);
+		await this.state.storage.put("config", this.config);
 	}
 	async uploadWorker(name: string, worker: FormData) {
 		worker.set(
@@ -86,7 +85,7 @@ export class UserSession {
 				name,
 				worker
 			);
-		} catch {
+		} catch (e) {
 			// Try to recover _once_ from failure. This captures expired tokens, but means that genuine failures won't cause
 			// a request loop and will return an error to the user
 			await this.refreshTokens();
@@ -107,7 +106,8 @@ export class UserSession {
 			this.config.uploadConfigToken.token
 		);
 		inspector.protocol = "https:";
-		fetch(this.config.uploadConfigToken.prewarm, {
+		// Fire and forget
+		void fetch(this.config.uploadConfigToken.prewarm, {
 			method: "POST",
 			headers: {
 				"cf-workers-preview-token": uploadResult.result.preview_token,
@@ -116,13 +116,23 @@ export class UserSession {
 		this.previewToken = uploadResult.result.preview_token;
 		this.inspectorUrl = inspector.href;
 
-		this.state.storage.put("previewToken", this.previewToken);
-		this.state.storage.put("inspectorUrl", this.inspectorUrl);
+		await this.state.storage.put("previewToken", this.previewToken);
+		await this.state.storage.put("inspectorUrl", this.inspectorUrl);
 	}
 
 	async fetch(request: Request) {
+		const url = new URL(request.url);
+		// We need to construct a new Sentry instance here because throwing
+		// errors across a DO boundary will wipe stack information etc...
+		const sentry = setupSentry(
+			request,
+			undefined,
+			this.env.SENTRY_DSN,
+			this.env.SENTRY_ACCESS_CLIENT_ID,
+			this.env.SENTRY_ACCESS_CLIENT_SECRET
+		);
 		// This is an inspector request. Forward to the correct inspector URL
-		if (request.headers.get("Upgrade")) {
+		if (request.headers.get("Upgrade") && url.pathname === "/api/inspector") {
 			assert(this.inspectorUrl !== undefined);
 			return fetch(this.inspectorUrl, request);
 		}
@@ -144,14 +154,16 @@ export class UserSession {
 				})
 				// Check for expired previews and show a friendlier error page
 			).then((r) => {
-				const clone = r.clone();
-				if (clone.status === 400) {
-					return clone.text().then((t) => {
-						if (t.includes("Invalid Workers Preview configuration")) {
-							throw new WorkerTimeout();
-						}
-						return r;
-					});
+				if (r.status === 400) {
+					return r
+						.clone()
+						.text()
+						.then((t) => {
+							if (t.includes("Invalid Workers Preview configuration")) {
+								throw new WorkerTimeout();
+							}
+							return r;
+						});
 				}
 				return r;
 			});
@@ -159,7 +171,9 @@ export class UserSession {
 		const userSession = this.state.id.toString();
 		const worker = await request.formData();
 
-		const m = worker.get("metadata") as unknown as File;
+		const m = worker.get("metadata");
+
+		assert(m instanceof File);
 
 		const uploadedMetadata = JSON.parse(await m.text());
 
@@ -167,11 +181,13 @@ export class UserSession {
 			return new ServiceWorkerNotSupported().toResponse();
 		}
 
-		const year = String(new Date().getUTCFullYear());
+		const today = new Date();
 
-		const month = String(new Date().getUTCMonth() + 1).padStart(2, "0");
+		const year = String(today.getUTCFullYear());
 
-		const date = String(new Date().getUTCDate()).padStart(2, "0");
+		const month = String(today.getUTCMonth() + 1).padStart(2, "0");
+
+		const date = String(today.getUTCDate()).padStart(2, "0");
 
 		const metadata = {
 			main_module: uploadedMetadata.main_module,
@@ -189,6 +205,7 @@ export class UserSession {
 		metadata.main_module = entrypoint;
 
 		for (const [path, m] of additionalModules.entries()) {
+			assert(m instanceof File);
 			worker.set(path, m);
 		}
 
@@ -199,17 +216,21 @@ export class UserSession {
 			})
 		);
 
-		await this.uploadWorker(this.workerName, worker);
+		try {
+			await this.uploadWorker(this.workerName, worker);
 
-		assert(this.inspectorUrl !== undefined);
+			assert(this.inspectorUrl !== undefined);
 
-		return Response.json({
-			// Include a hash of the inspector URL so as to ensure the client will reconnect
-			// when the inspector URL has changed (because of an updated preview session)
-			inspector: `/api/inspector?user=${userSession}&h=${await hash(
-				this.inspectorUrl
-			)}`,
-			preview: userSession,
-		});
+			return Response.json({
+				// Include a hash of the inspector URL so as to ensure the client will reconnect
+				// when the inspector URL has changed (because of an updated preview session)
+				inspector: `/api/inspector?user=${userSession}&h=${await hash(
+					this.inspectorUrl
+				)}`,
+				preview: userSession,
+			});
+		} catch (e) {
+			return handleException(e, sentry);
+		}
 	}
 }

@@ -2,7 +2,6 @@ import commonModule from "./middleware/common.module.template";
 import loaderModule from "./middleware/loader.module.template";
 
 import jsonModule from "./middleware/definitions/json.module.template";
-import scheduledModule from "./middleware/definitions/scheduled.module.template";
 
 const encoder = new TextEncoder();
 
@@ -40,13 +39,13 @@ function inflateWorker(
     `.trim(),
 	];
 
-	const common = [`${prefix}-common.js`, commonModule as unknown as string];
+	const common = [`${prefix}-common.js`, commonModule];
 
 	const loader = [
 		`${prefix}-loader.js`,
-		(loaderModule as unknown as string)
-			.replace(/__IMPORT_SPECIFIER_COMMON__/g, common[0])
-			.replace(/__IMPORT_SPECIFIER_ENTRY_POINT__/g, collection[0]),
+		loaderModule
+			.replace(/\.\/common/g, common[0])
+			.replace(/__ENTRY_POINT__/g, collection[0]),
 	];
 
 	const modules = [
@@ -94,7 +93,7 @@ export function constructMiddleware(entrypoint: string): {
 	entrypoint: string;
 	additionalModules: FormData;
 } {
-	const middleware = [scheduledModule, jsonModule];
+	const middleware = [jsonModule];
 
 	return inflateWorker(entrypoint, middleware);
 }
