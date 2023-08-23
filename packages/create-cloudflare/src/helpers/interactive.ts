@@ -3,8 +3,8 @@ import { isCancel } from "@clack/prompts";
 import logUpdate from "log-update";
 import { shapes, cancel, space, status, newline, logRaw } from "./cli";
 import { blue, dim, gray, brandColor, bold } from "./colors";
+import type { ChalkInstance } from "chalk";
 import type { C3Arg, C3Args } from "types";
-import { ChalkInstance } from "chalk";
 
 const grayBar = gray(shapes.bar);
 const blCorner = gray(shapes.corners.bl);
