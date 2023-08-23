@@ -9,6 +9,9 @@ updates:
       #       being to test the efficacy of the solution, we shall set it
       #       to "weekly" after a testing period of 1/2 weeks
       interval: "daily"
+    versioning-strategy: increase
+    commit-message:
+      prefix: "[C3] "
     assignees:
       - "@cloudflare/c3"
     reviewers:
