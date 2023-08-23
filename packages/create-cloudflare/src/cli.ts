@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 import Haikunator from "haikunator";
 import { crash, logRaw, startSection } from "helpers/cli";
-import { dim } from "helpers/colors";
+import { blue, dim } from "helpers/colors";
 import { runCommand } from "helpers/command";
 import { processArgument, spinner, spinnerFrames } from "helpers/interactive";
+import { detectPackageManager } from "helpers/packages";
 import semver from "semver";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
@@ -29,6 +30,8 @@ const WRANGLER_DEFAULTS = {
 	deploy: false,
 };
 
+const { npm } = detectPackageManager();
+
 export const main = async (argv: string[]) => {
 	const args = await parseArgs(argv);
 
@@ -42,14 +45,16 @@ export const main = async (argv: string[]) => {
 	}
 };
 
+// Detects if a newer version of c3 is available by comparing the version
+// specified in package.json with the `latest` tag from npm
 const isUpdateAvailable = async () => {
-	if (process.env.VITEST) {
+	if (process.env.VITEST || process.env.CI) {
 		return false;
 	}
 
 	// Use a spinner when running this check since it may take some time
-	const s = spinner(spinnerFrames.vertical);
-	s.start("Checking for newer version");
+	const s = spinner(spinnerFrames.vertical, blue);
+	s.start("Checking if a newer version is available");
 	const latestVersion = await runCommand(
 		`npm info create-cloudflare@latest dist-tags.latest`,
 		{ silent: true, useSpinner: false }
@@ -59,11 +64,13 @@ const isUpdateAvailable = async () => {
 	return semver.gt(latestVersion, version);
 };
 
+// Spawn a separate process running the most recent version of c3
 export const runLatest = async () => {
 	const args = process.argv.slice(2);
-	await runCommand(`npm create cloudflare@latest ${args.join(" ")}`);
+	await runCommand(`${npm} create cloudflare@latest ${args.join(" ")}`);
 };
 
+// Entrypoint to c3
 export const runCli = async (args: Partial<C3Args>) => {
 	printBanner();
 
@@ -122,25 +129,53 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 	const args = await yargs(hideBin(argv))
 		.scriptName("create-cloudflare")
 		.usage("$0 [args]")
-		.positional("name", { type: "string" })
-		.option("type", { type: "string" })
-		.option("framework", { type: "string" })
-		.option("deploy", { type: "boolean" })
-		.option("auto-update", { type: "boolean", default: C3_DEFAULTS.autoUpdate })
-		.option("ts", { type: "boolean" })
-		.option("git", { type: "boolean" })
+		.positional("name", {
+			type: "string",
+			description:
+				"The name of your application. Will be used as the directory name",
+		})
+		.option("type", {
+			type: "string",
+			description: `The base template to use when scaffolding your application`,
+		})
+		.option("framework", {
+			type: "string",
+			description:
+				"When using the `webApp` template, specifies the desired framework",
+		})
+		.option("deploy", {
+			type: "boolean",
+			description: "Deploy your application to Cloudflare after scaffolding",
+		})
+		.option("auto-update", {
+			type: "boolean",
+			default: C3_DEFAULTS.autoUpdate,
+			description:
+				"Automatically uses the latest version of `create-cloudflare`. Set --no-auto-update to disable",
+		})
+		.option("ts", {
+			type: "boolean",
+			description: "Adds typescript support to your application",
+		})
+		.option("git", {
+			type: "boolean",
+			description: "Initializes a git repository after scaffolding",
+		})
 		.option("open", {
 			type: "boolean",
 			default: true,
 			description:
-				"opens your browser after your deployment, set --no-open to disable",
+				"Opens your browser after your deployment, set --no-open to disable",
 		})
 		.option("existing-script", {
 			type: "string",
+			description:
+				"An existing workers script to initialize an application from",
 			hidden: templateMap["pre-existing"].hidden,
 		})
 		.option("accept-defaults", {
 			alias: "y",
+			description: "Accept all defaults and bypass interactive prompts",
 			type: "boolean",
 		})
 		.option("wrangler-defaults", { type: "boolean", hidden: true })

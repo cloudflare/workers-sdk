@@ -4,6 +4,7 @@ import logUpdate from "log-update";
 import { shapes, cancel, space, status, newline, logRaw } from "./cli";
 import { blue, dim, gray, brandColor, bold } from "./colors";
 import type { C3Arg, C3Args } from "types";
+import { ChalkInstance } from "chalk";
 
 const grayBar = gray(shapes.bar);
 const blCorner = gray(shapes.corners.bl);
@@ -268,7 +269,10 @@ export const spinnerFrames = {
 
 const ellipsisFrames = ["", ".", "..", "...", " ..", "  .", ""];
 
-export const spinner = (frames: string[] = spinnerFrames.clockwise) => {
+export const spinner = (
+	frames: string[] = spinnerFrames.clockwise,
+	color: ChalkInstance = brandColor
+) => {
 	// Alternative animations we considered. Keeping around in case we
 	// introduce different animations for different use cases.
 	// const frames = ["▁", "▃", "▄", "▅", "▆", "▇", "▆", "▅", "▄", "▃"];
@@ -278,7 +282,6 @@ export const spinner = (frames: string[] = spinnerFrames.clockwise) => {
 	// const frames = ["◐", "◓", "◑", "◒"];
 	// const frames = ["㊂", "㊀", "㊁"];
 
-	const color = brandColor;
 	const frameRate = 120;
 	let loop: NodeJS.Timer | null = null;
 	let startMsg: string;
