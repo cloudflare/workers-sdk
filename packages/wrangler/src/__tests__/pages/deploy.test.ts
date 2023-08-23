@@ -5,6 +5,7 @@ import { MockedRequest, rest } from "msw";
 import { FormData } from "undici";
 import { version } from "../../../package.json";
 import { ROUTES_SPEC_VERSION } from "../../pages/constants";
+import { ApiErrorCodes } from "../../pages/errors";
 import { isRoutesJSONSpec } from "../../pages/functions/routes-validation";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -18,7 +19,6 @@ import { runWrangler } from "../helpers/run-wrangler";
 import { normalizeProgressSteps } from "./project-upload.test";
 import type { Project, UploadPayloadFile } from "../../pages/types";
 import type { RestRequest } from "msw";
-import { ApiErrorCodes } from "../../pages/errors";
 
 describe("deployment create", () => {
 	const std = mockConsoleMethods();

@@ -35,7 +35,6 @@ export async function buildFunctions({
 	legacyNodeCompat,
 	nodejsCompat,
 	local,
-	d1Databases,
 }: Partial<
 	Pick<
 		PagesBuildArgs,

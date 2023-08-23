@@ -209,7 +209,6 @@ export const Handler = async (args: PagesBuildArgs) => {
 				bundle = await traverseAndBuildWorkerJSDirectory({
 					workerJSDirectory: workerScriptPath,
 					buildOutputDirectory,
-					d1Databases,
 					nodejsCompat,
 				});
 			} else {

@@ -16,6 +16,7 @@ import {
 	MAX_UPLOAD_ATTEMPTS,
 } from "./constants";
 
+import { ApiErrorCodes } from "./errors";
 import { validate } from "./validate";
 import type {
 	CommonYargsArgv,
@@ -23,7 +24,6 @@ import type {
 } from "../yargs-types";
 import type { UploadPayloadFile } from "./types";
 import type { FileContainer } from "./validate";
-import { ApiErrorCodes } from "./errors";
 
 type UploadArgs = StrictYargsOptionsToInterface<typeof Options>;
 
