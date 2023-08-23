@@ -3,6 +3,7 @@ import { FrameworkMap } from "frameworks/index";
 import { readJSON } from "helpers/files";
 import { fetch } from "undici";
 import { describe, expect, test, afterEach, beforeEach } from "vitest";
+import { version } from "../package.json";
 import { deleteProject } from "../scripts/e2eCleanup";
 import { keys, runC3, testProjectDir } from "./helpers";
 import type { RunnerConfig } from "./helpers";
@@ -267,11 +268,9 @@ const testDeploymentCommitMessage = async (
 	expect(projectLatestCommitMessage).toMatch(
 		/^Initialize web application via create-cloudflare CLI/
 	);
-	// TODO: add back checks the following when the commit message doesn't
-	// get truncated at 128 characters
-	// expect(projectLatestCommitMessage).toContain(
-	// 	`C3 = create-cloudflare@${version}`
-	// );
-	// expect(projectLatestCommitMessage).toContain(`project name = ${projectName}`);
-	// expect(projectLatestCommitMessage).toContain(`framework = ${framework}`);
+	expect(projectLatestCommitMessage).toContain(
+		`C3 = create-cloudflare@${version}`
+	);
+	expect(projectLatestCommitMessage).toContain(`project name = ${projectName}`);
+	expect(projectLatestCommitMessage).toContain(`framework = ${framework}`);
 };
