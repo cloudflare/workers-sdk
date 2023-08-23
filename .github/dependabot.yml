@@ -1,0 +1,15 @@
+version: 2
+updates:
+  # Automatically check for updates in framework CLIs for C3
+  - package-ecosystem: "npm"
+    directory: "/packages/create-cloudflare/src/frameworks"
+    schedule:
+      # Note: this interval is likely going to be too short and create
+      #       too much noise, we are just setting it as daily for the time
+      #       being to test the efficacy of the solution, we shall set it
+      #       to "weekly" after a testing period of 1/2 weeks
+      interval: "daily"
+    assignees:
+      - "@cloudflare/c3"
+    reviewers:
+      - "@cloudflare/c3"
