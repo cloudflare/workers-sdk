@@ -30,6 +30,15 @@ jobs:
       - name: Install NPM Dependencies
         run: npm ci
 
+      - name: Extract runtime versions
+        run: node .github/extract-runtime-versions.mjs # extract versions before modifying version to include commit hash
+
+      - name: Upload runtime versions
+        uses: actions/upload-artifact@v3
+        with:
+          name: runtime-versions.md
+          path: runtime-versions.md
+
       - name: Modify package.json version
         run: node .github/version-script.js
 
