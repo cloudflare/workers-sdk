@@ -16,6 +16,7 @@ export type C3Args = {
 	existingScript?: string;
 	wranglerDefaults?: boolean;
 	acceptDefaults?: boolean;
+	additionalArgs?: string[];
 };
 
 export type C3Arg = C3Args[keyof C3Args];
@@ -30,6 +31,7 @@ export type PagesGeneratorContext = {
 	framework?: {
 		name: string;
 		config: FrameworkConfig;
+		args: string[];
 		commitMessage?: string;
 	};
 	project: {

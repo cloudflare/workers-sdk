@@ -180,6 +180,10 @@ export const runFrameworkGenerator = async (
 	ctx: PagesGeneratorContext,
 	cmd: string
 ) => {
+	if(ctx.framework?.args?.length) {
+		cmd = `${cmd} ${ctx.framework.args.join(" ")}`;
+	}
+
 	endSection(
 		`Continue with ${ctx.framework?.config.displayName}`,
 		`via \`${cmd.trim()}\``

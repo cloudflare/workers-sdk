@@ -46,6 +46,7 @@ export const runPagesGenerator = async (args: C3Args) => {
 				...defaultFrameworkConfig,
 				...frameworkConfig,
 			},
+			args: args.additionalArgs ?? [],
 		},
 		args,
 		type: frameworkConfig.type,
