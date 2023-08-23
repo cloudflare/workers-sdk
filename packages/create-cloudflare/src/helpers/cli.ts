@@ -1,4 +1,5 @@
 import { exit } from "process";
+import Haikunator from "haikunator";
 import open from "open";
 import { brandColor, dim, gray, white, red, hidden, bgRed } from "./colors";
 
@@ -125,3 +126,19 @@ export async function openInBrowser(url: string): Promise<void> {
 		warn("Failed to open browser");
 	});
 }
+
+export const C3_DEFAULTS = {
+	projectName: new Haikunator().haikunate({ tokenHex: true }),
+	type: "hello-world",
+	framework: "angular",
+	autoUpdate: true,
+	deploy: true,
+	git: true,
+	open: true,
+	ts: true,
+};
+
+export const WRANGLER_DEFAULTS = {
+	...C3_DEFAULTS,
+	deploy: false,
+};

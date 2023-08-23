@@ -2,13 +2,13 @@
 import { resolve } from "path";
 import { chdir } from "process";
 import { FrameworkMap, supportedFramework } from "frameworks/index";
-import { crash, endSection, startSection } from "helpers/cli";
+import { processArgument } from "helpers/args";
+import { C3_DEFAULTS, crash, endSection, startSection } from "helpers/cli";
 import { dim, brandColor } from "helpers/colors";
 import { installWrangler, retry, runCommand } from "helpers/command";
 import { readJSON, writeFile } from "helpers/files";
-import { processArgument, spinner } from "helpers/interactive";
+import { spinner } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
-import { C3_DEFAULTS } from "./cli";
 import {
 	getProductionBranch,
 	gitCommit,

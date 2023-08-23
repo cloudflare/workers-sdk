@@ -1,39 +1,23 @@
 #!/usr/bin/env node
-import Haikunator from "haikunator";
-import { crash, logRaw, startSection } from "helpers/cli";
+import { processArgument } from "helpers/args";
+import {
+	C3_DEFAULTS,
+	WRANGLER_DEFAULTS,
+	crash,
+	logRaw,
+	startSection,
+} from "helpers/cli";
 import { blue, dim } from "helpers/colors";
 import { runCommand } from "helpers/command";
-import {
-	isInteractive,
-	processArgument,
-	spinner,
-	spinnerFrames,
-} from "helpers/interactive";
+import { isInteractive, spinnerFrames, spinner } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
 import semver from "semver";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { version } from "../package.json";
 import { validateProjectDirectory } from "./common";
-import { runPagesGenerator } from "./pages";
-import { runWorkersGenerator } from "./workers";
+import { templateMap } from "./templateMap";
 import type { C3Args } from "types";
-
-export const C3_DEFAULTS = {
-	projectName: new Haikunator().haikunate({ tokenHex: true }),
-	type: "hello-world",
-	framework: "angular",
-	autoUpdate: true,
-	deploy: true,
-	git: true,
-	open: true,
-	ts: true,
-};
-
-const WRANGLER_DEFAULTS = {
-	...C3_DEFAULTS,
-	deploy: false,
-};
 
 const { npm } = detectPackageManager();
 
@@ -205,48 +189,6 @@ const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 		additionalArgs,
 		...args,
 	};
-};
-
-type TemplateConfig = {
-	label: string;
-	handler: (args: C3Args) => Promise<void>;
-	hidden?: boolean;
-};
-
-const templateMap: Record<string, TemplateConfig> = {
-	webFramework: {
-		label: "Website or web app",
-		handler: runPagesGenerator,
-	},
-	"hello-world": {
-		label: `"Hello World" Worker`,
-		handler: runWorkersGenerator,
-	},
-	common: {
-		label: "Example router & proxy Worker",
-		handler: runWorkersGenerator,
-	},
-	scheduled: {
-		label: "Scheduled Worker (Cron Trigger)",
-		handler: runWorkersGenerator,
-	},
-	queues: {
-		label: "Queue consumer & producer Worker",
-		handler: runWorkersGenerator,
-	},
-	chatgptPlugin: {
-		label: `ChatGPT plugin`,
-		handler: (args) =>
-			runWorkersGenerator({
-				...args,
-				ts: true,
-			}),
-	},
-	"pre-existing": {
-		label: "Pre-existing Worker (from Dashboard)",
-		handler: runWorkersGenerator,
-		hidden: true,
-	},
 };
 
 main(process.argv).catch((e) => crash(e));

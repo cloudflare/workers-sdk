@@ -1,10 +1,10 @@
 import { TextPrompt, SelectPrompt, ConfirmPrompt } from "@clack/core";
 import { isCancel } from "@clack/prompts";
 import logUpdate from "log-update";
-import { shapes, cancel, space, status, newline, logRaw } from "./cli";
+import { shapes, cancel, space, status, newline } from "./cli";
 import { blue, dim, gray, brandColor, bold } from "./colors";
 import type { ChalkInstance } from "chalk";
-import type { C3Arg, C3Args } from "types";
+import type { C3Arg } from "types";
 
 const grayBar = gray(shapes.bar);
 const blCorner = gray(shapes.corners.bl);
@@ -49,29 +49,6 @@ export type PromptConfig =
 	| TextPromptConfig
 	| ConfirmPromptConfig
 	| SelectPromptConfig;
-
-export const processArgument = async <T>(
-	args: Partial<C3Args>,
-	name: keyof C3Args,
-	promptConfig: PromptConfig
-) => {
-	let value = args[name];
-	const renderSubmitted = getRenderers(promptConfig).submit;
-
-	// If the value has already been set via args, use that
-	if (value !== undefined) {
-		promptConfig.validate?.(value);
-
-		const lines = renderSubmitted({ value });
-		logRaw(lines.join("\n"));
-
-		return value as T;
-	}
-
-	value = await inputPrompt(promptConfig);
-
-	return value as T;
-};
 
 type RenderProps =
 	| Omit<SelectPrompt<Option>, "prompt">
@@ -151,7 +128,7 @@ const handleCancel = () => {
 	process.exit(0);
 };
 
-const getRenderers = (config: PromptConfig) => {
+export const getRenderers = (config: PromptConfig) => {
 	switch (config.type) {
 		case "select":
 			return getSelectRenderers(config);

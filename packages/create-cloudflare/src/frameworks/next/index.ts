@@ -1,4 +1,5 @@
 import { mkdirSync } from "fs";
+import { processArgument } from "helpers/args";
 import { updateStatus, warn } from "helpers/cli";
 import { brandColor, dim } from "helpers/colors";
 import { installPackages, runFrameworkGenerator } from "helpers/command";
@@ -10,7 +11,6 @@ import {
 	writeFile,
 	writeJSON,
 } from "helpers/files";
-import { processArgument } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
 import { getFrameworkCli } from "../index";
 import {
