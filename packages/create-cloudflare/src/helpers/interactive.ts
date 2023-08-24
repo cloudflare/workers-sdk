@@ -3,6 +3,7 @@ import { isCancel } from "@clack/prompts";
 import logUpdate from "log-update";
 import { shapes, cancel, space, status, newline, logRaw } from "./cli";
 import { blue, dim, gray, brandColor, bold } from "./colors";
+import type { ChalkInstance } from "chalk";
 import type { C3Arg, C3Args } from "types";
 
 const grayBar = gray(shapes.bar);
@@ -259,10 +260,19 @@ const getConfirmRenderers = (config: ConfirmPromptConfig) => {
 	};
 };
 
-export const spinnerFrames = ["┤", "┘", "┴", "└", "├", "┌", "┬", "┐"];
+export type SpinnerStyle = keyof typeof spinnerFrames;
+
+export const spinnerFrames = {
+	clockwise: ["┤", "┘", "┴", "└", "├", "┌", "┬", "┐"],
+	vertical: ["▁", "▃", "▄", "▅", "▆", "▇", "▆", "▅", "▄", "▃"],
+};
+
 const ellipsisFrames = ["", ".", "..", "...", " ..", "  .", ""];
 
-export const spinner = () => {
+export const spinner = (
+	frames: string[] = spinnerFrames.clockwise,
+	color: ChalkInstance = brandColor
+) => {
 	// Alternative animations we considered. Keeping around in case we
 	// introduce different animations for different use cases.
 	// const frames = ["▁", "▃", "▄", "▅", "▆", "▇", "▆", "▅", "▄", "▃"];
@@ -272,7 +282,6 @@ export const spinner = () => {
 	// const frames = ["◐", "◓", "◑", "◒"];
 	// const frames = ["㊂", "㊀", "㊁"];
 
-	const color = brandColor;
 	const frameRate = 120;
 	let loop: NodeJS.Timer | null = null;
 	let startMsg: string;
@@ -296,7 +305,7 @@ export const spinner = () => {
 			clearLoop();
 			loop = setInterval(() => {
 				index++;
-				const spinnerFrame = spinnerFrames[index % spinnerFrames.length];
+				const spinnerFrame = frames[index % frames.length];
 				const ellipsisFrame = ellipsisFrames[index % ellipsisFrames.length];
 
 				if (msg) {
@@ -318,4 +327,8 @@ export const spinner = () => {
 			clearLoop();
 		},
 	};
+};
+
+export const isInteractive = () => {
+	return process.stdin.isTTY;
 };

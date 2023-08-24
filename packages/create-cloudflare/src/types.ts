@@ -8,6 +8,7 @@ export type C3Args = {
 	deploy?: boolean;
 	open?: boolean;
 	git?: boolean;
+	autoUpdate?: boolean;
 	// pages specific
 	framework?: string;
 	// workers specific
