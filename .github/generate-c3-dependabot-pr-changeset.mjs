@@ -43,12 +43,14 @@ if (!changes.length) {
 Framework CLI versions updated in C3
 
 The following framework CLI versions have been updated in C3:
-${changes
-	.map(
-		({ package: pkg, from, to }) =>
-			` - \`${pkg}\` from \`${from}\` to \`${to}\``
-	)
-	.join("\n")}
+${[
+	"| package | from | to |",
+	"|---------|------|----|",
+    ...changes.map(({package: pkg, from, to}) =>
+        `| \`${pkg}\`| \`${from}\` | \`${to}\` |`
+    ),
+].map(str => `   ${str}`).join("\n")
+}
 
 `
 	);
