@@ -40,7 +40,7 @@ if (!changes.length) {
 "dependabot-testing": patch
 ---
 
-Updated dependencies
+The following framework CLI versions have been updated in C3:
 ${changes
 	.map(
 		({ package: pkg, from, to }) =>
