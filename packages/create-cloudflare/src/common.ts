@@ -2,7 +2,9 @@ import { existsSync, mkdirSync, readdirSync } from "fs";
 import { basename, dirname, resolve } from "path";
 import { chdir } from "process";
 import { getFrameworkCli } from "frameworks/index";
+import { processArgument } from "helpers/args";
 import {
+	C3_DEFAULTS,
 	crash,
 	endSection,
 	log,
@@ -21,12 +23,11 @@ import {
 	runCommands,
 	wranglerLogin,
 } from "helpers/command";
-import { inputPrompt, processArgument, spinner } from "helpers/interactive";
+import { inputPrompt, spinner } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
 import { poll } from "helpers/poll";
 import { version as wranglerVersion } from "wrangler/package.json";
 import { version } from "../package.json";
-import { C3_DEFAULTS } from "./cli";
 import type { C3Args, PagesGeneratorContext } from "types";
 
 const { name, npm } = detectPackageManager();
