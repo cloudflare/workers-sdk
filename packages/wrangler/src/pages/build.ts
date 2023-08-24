@@ -186,19 +186,8 @@ export const Handler = async (args: PagesBuildArgs) => {
 			buildOutputDirectory,
 			nodejsCompat,
 			legacyNodeCompat,
-			bindings,
 			workerScriptPath,
 		} = validatedArgs;
-
-		let d1Databases: string[] | undefined = undefined;
-		if (bindings) {
-			try {
-				const decodedBindings = JSON.parse(bindings);
-				d1Databases = Object.keys(decodedBindings?.d1_databases || {});
-			} catch {
-				throw new FatalError("Could not parse a valid set of 'bindings'.", 1);
-			}
-		}
 
 		/**
 		 * prioritize building `_worker.js` over Pages Functions, if both exist
@@ -209,7 +198,6 @@ export const Handler = async (args: PagesBuildArgs) => {
 				bundle = await traverseAndBuildWorkerJSDirectory({
 					workerJSDirectory: workerScriptPath,
 					buildOutputDirectory,
-					d1Databases,
 					nodejsCompat,
 				});
 			} else {
@@ -251,7 +239,6 @@ export const Handler = async (args: PagesBuildArgs) => {
 					nodejsCompat,
 					routesOutputPath,
 					local: false,
-					d1Databases,
 				});
 			} catch (e) {
 				if (e instanceof FunctionsNoRoutesError) {
