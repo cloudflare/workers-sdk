@@ -1,5 +1,19 @@
 # wrangler
 
+## 3.6.0
+
+### Minor Changes
+
+- [#3727](https://github.com/cloudflare/workers-sdk/pull/3727) [`a5e7c0be`](https://github.com/cloudflare/workers-sdk/commit/a5e7c0be0f1b095f9af3d2b55782f9d8b2a6bb09) Thanks [@echen67](https://github.com/echen67)! - Warn user when the last deployment was via the API
+
+### Patch Changes
+
+- [#3762](https://github.com/cloudflare/workers-sdk/pull/3762) [`18dc7b54`](https://github.com/cloudflare/workers-sdk/commit/18dc7b5428ffb5c68dc5ebbbaf506d8fc2fe1f48) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Add internal `wrangler pages project validate [directory]` command which validates an asset directory
+
+* [#3758](https://github.com/cloudflare/workers-sdk/pull/3758) [`0adccc71`](https://github.com/cloudflare/workers-sdk/commit/0adccc71789efe1b42b6d3de55f6d6d7e50fda64) Thanks [@jahands](https://github.com/jahands)! - fix: Retry deployment errors in wrangler pages publish
+
+  This will improve reliability when deploying to Cloudflare Pages
+
 ## 3.5.1
 
 ### Patch Changes
