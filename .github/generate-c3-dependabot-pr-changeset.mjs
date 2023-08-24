@@ -7,7 +7,7 @@ const diff = execSync(
 
 const changedPackages =
 	diff
-		.match(/-\s*".*":\s".*",?/g)
+		.match(/-\s*".*?":\s".*?",?/g)
 		?.map((match) => match.match(/-\s*"(.*)":/)?.[1])
 		.filter(Boolean) ?? [];
 
