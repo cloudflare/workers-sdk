@@ -12,6 +12,7 @@ import type {
 	WorkerConfig,
 } from "./events";
 import type { StartDevWorkerOptions, DevWorker } from "./types";
+import { createProxyWorker } from "./ProxyController";
 
 export function startWorker(options: StartDevWorkerOptions): DevWorker {
 	const devEnv = new DevEnv();
@@ -340,6 +341,11 @@ export class ProxyController extends EventEmitter {
 	public ready: Promise<ReadyEvent> = new Promise((resolve) => {
 		this.#readyResolver = resolve;
 	});
+
+	#mf: ReturnType<typeof createProxyWorker>;
+	createWorker() {
+		this.#mf = createProxyWorker();
+	}
 
 	// ******************
 	//   Event Handlers
