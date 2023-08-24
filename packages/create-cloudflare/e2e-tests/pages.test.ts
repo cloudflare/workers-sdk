@@ -58,7 +58,11 @@ describe(`E2E: Web frameworks`, () => {
 
 		args.push(...argv);
 
-		const { output } = await runC3({ argv: args, promptHandlers });
+		const { output } = await runC3({
+			argv: args,
+			promptHandlers,
+			outputPrefix: `[${framework}]`,
+		});
 
 		// Relevant project files should have been created
 		expect(projectPath).toExist();
