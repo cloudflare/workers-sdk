@@ -140,7 +140,7 @@ export class UserSession {
 		if (request.headers.has("cf-run-user-worker")) {
 			assert(this.previewToken !== undefined);
 
-			return fetch(
+			const workerResponse = await fetch(
 				switchRemote(
 					new URL(request.url),
 					`https://${this.workerName}.${this.env.workersDev}`
@@ -152,21 +152,17 @@ export class UserSession {
 					},
 					redirect: "manual",
 				})
-				// Check for expired previews and show a friendlier error page
-			).then((r) => {
-				if (r.status === 400) {
-					return r
-						.clone()
-						.text()
-						.then((t) => {
-							if (t.includes("Invalid Workers Preview configuration")) {
-								throw new WorkerTimeout();
-							}
-							return r;
-						});
+			);
+
+			// Check for expired previews and show a friendlier error page
+			if (workerResponse.status === 400) {
+				const clone = await workerResponse.clone().text();
+				if (clone.includes("Invalid Workers Preview configuration")) {
+					throw new WorkerTimeout();
 				}
-				return r;
-			});
+				return workerResponse;
+			}
+			return workerResponse;
 		}
 		const userSession = this.state.id.toString();
 		const worker = await request.formData();
