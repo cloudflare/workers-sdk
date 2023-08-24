@@ -35,7 +35,7 @@ if (!changes.length) {
 	console.warn("No changes detected!");
 } else {
 	writeFileSync(
-		`.changeset/changeset-${Math.round(Math.random() * 100000)}.md`,
+		`.changeset/c3-frameworks-update-${(new Date()).getTime()}.md`,
 		`---
 "dependabot-testing": patch
 ---
