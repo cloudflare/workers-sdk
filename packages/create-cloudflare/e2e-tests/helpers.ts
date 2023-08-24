@@ -29,11 +29,13 @@ export type RunnerConfig = {
 	};
 	promptHandlers?: PromptHandler[];
 	argv?: string[];
+	outputPrefix?: string;
 };
 
 export const runC3 = async ({
 	argv = [],
 	promptHandlers = [],
+	outputPrefix = "",
 }: RunnerConfig) => {
 	const proc = spawn("node", ["./dist/cli.js", ...argv]);
 	const stdout: string[] = [];
@@ -47,7 +49,7 @@ export const runC3 = async ({
 			lines.forEach((line) => {
 				// Uncomment to debug test output
 				if (filterLine(line)) {
-					console.log(line);
+					console.log(`${outputPrefix} ${line}`);
 				}
 				stdout.push(line);
 
