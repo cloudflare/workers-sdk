@@ -2,7 +2,7 @@ import { execSync } from "child_process";
 import { writeFileSync } from "fs";
 
 const diff = execSync(
-	`git diff HEAD~1 packages/create-cloudflare/src/frameworks/package.json`
+	'git diff HEAD~1 packages/create-cloudflare/src/frameworks/package.json'
 ).toString();
 
 const changedPackages =
