@@ -24,16 +24,3 @@ jobs:
           git config --global user.name 'Wrangler automated PR updater'
       - name: Generate changeset
         run: node .github/generate-c3-dependabot-pr-changeset.mjs
-      # The following step makes the PR title more readable, short and generic
-      # it is to be used when we group all the dependabot C3 framework cli
-      # version updates in a single PR later on
-      # - name: Update PR Title
-      #   uses: actions/github-script@v6
-      #   with:
-      #     github-token: ${{ secrets.GITHUB_TOKEN }}
-      #     script: |
-      #       await github.rest.pulls.update({
-      #         ...context.repo,
-      #         pull_number: context.payload.pull_request.number,
-      #         title: "C3: Updating Framework CLIs versions"
-      #       });
