@@ -23,4 +23,4 @@ jobs:
           git config --global user.email wrangler@cloudflare.com
           git config --global user.name 'Wrangler automated PR updater'
       - name: Generate changeset
-        run: node .github/generate-c3-dependabot-pr-changeset.mjs
+        run: node .github/generate-c3-dependabot-pr-changeset.mjs ${{ github.event.number }}

@@ -34,8 +34,10 @@ const changes = changedPackages.map((pkg) => {
 if (!changes.length) {
 	console.warn("No changes detected!");
 } else {
+    const prNumber = process.env[2];
+
 	writeFileSync(
-		`.changeset/c3-frameworks-update-${new Date().getTime()}.md`,
+		`.changeset/c3-frameworks-update-${prNumber}.md`,
 		`---
 "dependabot-testing": patch
 ---
