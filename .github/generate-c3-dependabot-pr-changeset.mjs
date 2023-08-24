@@ -46,11 +46,12 @@ The following framework CLI versions have been updated in C3:
 ${[
 	"| package | from | to |",
 	"|---------|------|----|",
-    ...changes.map(({package: pkg, from, to}) =>
-        `| \`${pkg}\` | \`${from}\` | \`${to}\` |`
-    ),
-].map(str => ` ${str}`).join("\n")
-}
+	...changes.map(
+		({ package: pkg, from, to }) => `| \`${pkg}\` | \`${from}\` | \`${to}\` |`
+	),
+]
+	.map((str) => ` ${str}`)
+	.join("\n")}
 
 `
 	);
