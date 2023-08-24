@@ -47,9 +47,9 @@ ${[
 	"| package | from | to |",
 	"|---------|------|----|",
     ...changes.map(({package: pkg, from, to}) =>
-        `| \`${pkg}\`| \`${from}\` | \`${to}\` |`
+        `| \`${pkg}\` | \`${from}\` | \`${to}\` |`
     ),
-].map(str => `   ${str}`).join("\n")
+].map(str => ` ${str}`).join("\n")
 }
 
 `
