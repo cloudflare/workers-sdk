@@ -1,5 +1,11 @@
 # wrangler
 
+## 2.20.1
+
+### Patch Changes
+
+- [#3820](https://github.com/cloudflare/workers-sdk/pull/3820) [`546c2319`](https://github.com/cloudflare/workers-sdk/commit/546c2319268fc592f069d9c41b5dabdcf84cc94f) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Prevent `wrangler pages dev` from serving asset files outside of the build output directory
+
 ## 2.20.0
 
 ### Minor Changes
