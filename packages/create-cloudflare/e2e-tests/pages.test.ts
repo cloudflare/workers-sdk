@@ -5,6 +5,7 @@ import { fetch } from "undici";
 import { describe, expect, test, afterEach, beforeEach } from "vitest";
 import { version } from "../package.json";
 import { deleteProject } from "../scripts/e2eCleanup";
+import { frameworkToTest } from "./frameworkToTest";
 import { keys, runC3, testProjectDir } from "./helpers";
 import type { RunnerConfig } from "./helpers";
 
@@ -223,13 +224,19 @@ describe(`E2E: Web frameworks`, () => {
 		},
 	};
 
-	test.concurrent.each(Object.keys(frameworkTests))(
-		"%s",
-		async (name) => {
-			await runCliWithDeploy(name, frameworkTests[name].testCommitMessage);
-		},
-		{ retry: 3 }
-	);
+	Object.keys(frameworkTests).forEach((framework) => {
+		const skip = frameworkToTest && frameworkToTest !== framework;
+		test.skipIf(skip)(
+			framework,
+			async () => {
+				await runCliWithDeploy(
+					framework,
+					frameworkTests[framework].testCommitMessage
+				);
+			},
+			{ retry: 3 }
+		);
+	});
 
 	test.skip("Hono (wrangler defaults)", async () => {
 		await runCli("hono", { argv: ["--wrangler-defaults"] });

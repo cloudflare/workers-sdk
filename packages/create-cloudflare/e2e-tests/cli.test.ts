@@ -3,9 +3,10 @@ import { tmpdir } from "os";
 import { join } from "path";
 import { beforeEach, afterEach, describe, test, expect } from "vitest";
 import { version } from "../package.json";
+import { frameworkToTest } from "./frameworkToTest";
 import { keys, runC3 } from "./helpers";
 
-describe("E2E: Basic C3 functionality", () => {
+describe.skipIf(frameworkToTest)("E2E: Basic C3 functionality ", () => {
 	const tmpDirPath = realpathSync(mkdtempSync(join(tmpdir(), "c3-tests")));
 	const projectPath = join(tmpDirPath, "basic-tests");
 

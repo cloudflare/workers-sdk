@@ -1,5 +1,6 @@
 import { join } from "path";
 import { describe, expect, test, afterEach, beforeEach } from "vitest";
+import { frameworkToTest } from "./frameworkToTest";
 import { runC3, testProjectDir } from "./helpers";
 
 /*
@@ -7,7 +8,7 @@ Areas for future improvement:
 - Make these actually e2e by verifying that deployment works
 */
 
-describe("E2E: Workers templates", () => {
+describe.skipIf(frameworkToTest)("E2E: Workers templates", () => {
 	const { getPath, clean } = testProjectDir("workers");
 
 	beforeEach((ctx) => {
