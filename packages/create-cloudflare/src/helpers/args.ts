@@ -48,7 +48,7 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 
 	const args = await yargsObj.argv;
 
-	const positionalArgs = (await yargs(hideBin(c3Args)).argv)._;
+	const positionalArgs = args._;
 
 	// since `yargs.strict()` can't check the `positional`s for us we need to do it manually ourselves
 	if (positionalArgs.length > 1) {
