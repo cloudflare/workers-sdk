@@ -42,7 +42,23 @@ if (!changes.length) {
 "dependabot-testing": patch
 ---
 
-Framework CLI versions updated in C3
+${generateChangesetBody(changes)}
+
+`
+	);
+
+	execSync("git add .changeset");
+	execSync("git commit --amend -m '[C3] Update frameworks cli dependencies'");
+	execSync("git push -f");
+}
+
+function generateChangesetBody(changes) {
+	if (changes.length === 1) {
+		const { package: pkg, from, to } = changes[0];
+		return `C3: Bumped \`${pkg}\` from \`${from}\` to \`${to}\``;
+	}
+
+	return `Framework CLI versions updated in C3
 
 The following framework CLI versions have been updated in C3:
 ${[
@@ -54,11 +70,6 @@ ${[
 ]
 	.map((str) => ` ${str}`)
 	.join("\n")}
-
-`
-	);
-
-	execSync("git add .changeset");
-	execSync("git commit --amend -m '[C3] Update frameworks cli dependencies'");
-	execSync("git push -f");
+	}
+`;
 }
