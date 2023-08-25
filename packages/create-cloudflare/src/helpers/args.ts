@@ -16,7 +16,7 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 	const additionalArgs =
 		doubleDashesIdx < 0 ? [] : argv.slice(doubleDashesIdx + 1);
 
-	const args = await yargs(hideBin(c3Args))
+	const yargsObj = yargs(hideBin(c3Args))
 		.scriptName("create-cloudflare")
 		.usage("$0 [args]")
 		.positional("name", { type: "string" })
@@ -44,12 +44,23 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 		// note: we use strictOptions since `strict()` seems not to handle `positional`s correctly
 		.strictOptions()
 		.alias("h", "help")
-		.help().argv;
+		.help();
+
+	const args = await yargsObj.argv;
+
+	const positionalArgs = (await yargs(hideBin(c3Args)).argv)._;
+
+	// since `yargs.strict()` can't check the `positional`s for us we need to do it manually ourselves
+	if (positionalArgs.length > 1) {
+		yargsObj.showHelp();
+		console.error("\nToo many positional arguments provided");
+		process.exit(1);
+	}
 
 	return {
 		...(args.wranglerDefaults && WRANGLER_DEFAULTS),
 		...(args.acceptDefaults && C3_DEFAULTS),
-		projectName: args._[0] as string | undefined,
+		projectName: positionalArgs[0] as string | undefined,
 		additionalArgs,
 		...args,
 	};

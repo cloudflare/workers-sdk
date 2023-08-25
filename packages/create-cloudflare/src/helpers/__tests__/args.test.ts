@@ -5,9 +5,31 @@ vi.mock("yargs/helpers", () => ({ hideBin: (x: string[]) => x }));
 
 describe("Cli", () => {
 	describe("parseArgs", () => {
+		test("no arguments provide", async () => {
+			const result = await parseArgs([]);
+			expect(result.projectName).toBeFalsy();
+			expect(result.additionalArgs).toEqual([]);
+		});
+
 		test("parsing the first argument as the projectName", async () => {
 			const result = await parseArgs(["my-project"]);
 			expect(result.projectName).toBe("my-project");
+		});
+
+		test("too many positional arguments provided", async () => {
+			const processExitMock = vi
+				.spyOn(process, "exit")
+				.mockImplementation(() => null as never);
+			const consoleErrorMock = vi
+				.spyOn(console, "error")
+				.mockImplementation(() => {});
+
+			await parseArgs(["my-project", "123"]);
+
+			expect(consoleErrorMock).toHaveBeenCalledWith(
+				expect.stringMatching(/Too many positional arguments provided/)
+			);
+			expect(processExitMock).toHaveBeenCalledWith(1);
 		});
 
 		test("not parsing first argument as the projectName if it is after --", async () => {
