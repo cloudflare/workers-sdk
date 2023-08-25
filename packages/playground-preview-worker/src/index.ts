@@ -137,13 +137,15 @@ async function handleRawHttp(request: Request, url: URL, env: Env) {
 	// Delete these consumed headers so as not to bloat the request.
 	// Some tokens can be quite large and may cause nginx to reject the
 	// request due to exceeding size limits if the value is included twice.
-	request.headers.delete("X-CF-Token");
+
+	const headers = new Headers(request.headers);
+	headers.delete("X-CF-Token");
 
 	const workerResponse = await userObject.fetch(
 		url,
 		new Request(request, {
 			headers: {
-				...Object.fromEntries(request.headers),
+				...Object.fromEntries(headers),
 				"cf-run-user-worker": "true",
 			},
 			redirect: "manual",
