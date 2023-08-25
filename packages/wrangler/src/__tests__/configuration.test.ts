@@ -4772,6 +4772,7 @@ describe("normalizeAndValidateConfig()", () => {
 							// these are valid
 							{ service: "tail_listener" },
 							{ service: "listener_two", environment: "production" },
+							{ service: "listener_three", namespace: "a-dispatch-namespace" },
 						],
 					} as unknown as RawConfig,
 					undefined,
