@@ -42,7 +42,7 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 		.option("wrangler-defaults", { type: "boolean", hidden: true })
 		.version(version)
 		.strict()
-		.alias('h', 'help')
+		.alias("h", "help")
 		.help().argv;
 
 	return {

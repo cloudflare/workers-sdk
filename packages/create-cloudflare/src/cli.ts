@@ -1,11 +1,6 @@
 #!/usr/bin/env node
 import { parseArgs, processArgument } from "helpers/args";
-import {
-	C3_DEFAULTS,
-	crash,
-	logRaw,
-	startSection,
-} from "helpers/cli";
+import { C3_DEFAULTS, crash, logRaw, startSection } from "helpers/cli";
 import { blue, dim } from "helpers/colors";
 import { runCommand } from "helpers/command";
 import { isInteractive, spinnerFrames, spinner } from "helpers/interactive";
