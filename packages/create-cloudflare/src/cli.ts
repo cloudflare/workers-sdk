@@ -1,19 +1,11 @@
 #!/usr/bin/env node
-import { processArgument } from "helpers/args";
-import {
-	C3_DEFAULTS,
-	WRANGLER_DEFAULTS,
-	crash,
-	logRaw,
-	startSection,
-} from "helpers/cli";
+import { parseArgs, processArgument } from "helpers/args";
+import { C3_DEFAULTS, crash, logRaw, startSection } from "helpers/cli";
 import { blue, dim } from "helpers/colors";
 import { runCommand } from "helpers/command";
 import { isInteractive, spinnerFrames, spinner } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
 import semver from "semver";
-import yargs from "yargs";
-import { hideBin } from "yargs/helpers";
 import { version } from "../package.json";
 import { validateProjectDirectory } from "./common";
 import { templateMap } from "./templateMap";
@@ -115,80 +107,6 @@ export const runCli = async (args: Partial<C3Args>) => {
 const printBanner = () => {
 	logRaw(dim(`using create-cloudflare version ${version}\n`));
 	startSection(`Create an application with Cloudflare`, "Step 1 of 3");
-};
-
-const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
-	const doubleDashesIdx = argv.indexOf("--");
-	const c3Args = argv.slice(
-		0,
-		doubleDashesIdx < 0 ? undefined : doubleDashesIdx
-	);
-	const additionalArgs =
-		doubleDashesIdx < 0 ? [] : argv.slice(doubleDashesIdx + 1);
-
-	const args = await yargs(hideBin(c3Args))
-		.scriptName("create-cloudflare")
-		.usage("$0 [args]")
-		.positional("name", {
-			type: "string",
-			description:
-				"The name of your application. Will be used as the directory name",
-		})
-		.option("type", {
-			type: "string",
-			description: `The base template to use when scaffolding your application`,
-		})
-		.option("framework", {
-			type: "string",
-			description:
-				"When using the `webApp` template, specifies the desired framework",
-		})
-		.option("deploy", {
-			type: "boolean",
-			description: "Deploy your application to Cloudflare after scaffolding",
-		})
-		.option("auto-update", {
-			type: "boolean",
-			default: C3_DEFAULTS.autoUpdate,
-			description:
-				"Automatically uses the latest version of `create-cloudflare`. Set --no-auto-update to disable",
-		})
-		.option("ts", {
-			type: "boolean",
-			description: "Adds typescript support to your application",
-		})
-		.option("git", {
-			type: "boolean",
-			description: "Initializes a git repository after scaffolding",
-		})
-		.option("open", {
-			type: "boolean",
-			default: true,
-			description:
-				"Opens your browser after your deployment, set --no-open to disable",
-		})
-		.option("existing-script", {
-			type: "string",
-			description:
-				"An existing workers script to initialize an application from",
-			hidden: templateMap["pre-existing"].hidden,
-		})
-		.option("accept-defaults", {
-			alias: "y",
-			description: "Accept all defaults and bypass interactive prompts",
-			type: "boolean",
-		})
-		.option("wrangler-defaults", { type: "boolean", hidden: true })
-		.version(version)
-		.help().argv;
-
-	return {
-		...(args.wranglerDefaults && WRANGLER_DEFAULTS),
-		...(args.acceptDefaults && C3_DEFAULTS),
-		projectName: args._[0] as string | undefined,
-		additionalArgs,
-		...args,
-	};
 };
 
 main(process.argv).catch((e) => crash(e));
