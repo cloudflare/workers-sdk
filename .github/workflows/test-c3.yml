@@ -126,7 +126,7 @@ jobs:
             return bumpedFrameworkCli;
 
   # For dependabot versioning PRs we only want to run the e2es for the specifically bumped
-  # framework (this is both for optimization and in order to reduce unnecessary flakyness)
+  # framework (this is both for optimization and in order to reduce unnecessary flakiness)
   e2e-only-dependabot-bumped-framework:
     needs: cleanup
       get-dependabot-bumped-framework
