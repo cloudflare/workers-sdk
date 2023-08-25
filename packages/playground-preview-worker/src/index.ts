@@ -134,6 +134,11 @@ async function handleRawHttp(request: Request, url: URL, env: Env) {
 
 	const userObject = env.UserSession.get(env.UserSession.idFromString(token));
 
+	// Delete these consumed headers so as not to bloat the request.
+	// Some tokens can be quite large and may cause nginx to reject the
+	// request due to exceeding size limits if the value is included twice.
+	request.headers.delete("X-CF-Token");
+
 	const workerResponse = await userObject.fetch(
 		url,
 		new Request(request, {

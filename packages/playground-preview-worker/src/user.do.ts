@@ -1,6 +1,6 @@
-import { z } from "zod";
 import { Buffer } from "node:buffer";
-import { HttpError, ServiceWorkerNotSupported, WorkerTimeout } from ".";
+import assert from "node:assert";
+import { ServiceWorkerNotSupported, WorkerTimeout } from ".";
 import { constructMiddleware } from "./inject-middleware";
 import {
 	RealishPreviewConfig,
@@ -9,12 +9,6 @@ import {
 	setupTokens,
 } from "./realish";
 import { handleException, setupSentry } from "./sentry";
-
-function assert(v: boolean, label: string = ""): asserts v {
-	if (!v) {
-		throw new Error(`Assertion failed: ${label}`);
-	}
-}
 
 const encoder = new TextEncoder();
 

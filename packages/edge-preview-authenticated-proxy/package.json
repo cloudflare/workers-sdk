@@ -8,7 +8,6 @@
 		"start": "wrangler dev",
 		"test": "vitest",
 		"test:ci": "vitest run",
-		"test:watch": "npx vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json",
 		"check:type": "tsc"
 	},
