@@ -109,23 +109,10 @@ jobs:
         with:
           result-encoding: string
           script: |
-            const body = `${{ steps.get-pr-description.outputs.result }}`;
+            const json = require('./packages/create-cloudflare/src/frameworks/package.json')
+            const frameworkCliPackages = Object.values(json.frameworkCliMap);
 
-            const frameworkCliPackages = [
-              '@angular/cli',
-              'create-astro',
-              'create-docusaurus',
-              'create-hono',
-              'create-next-app',
-              'create-qwik',
-              'create-react-app',
-              'create-remix',
-              'create-solid',
-              'create-svelte',
-              'create-vue',
-              'gatsby',
-              'nuxi',
-            ];
+            const body = `${{ steps.get-pr-description.outputs.result }}`;
 
             const semverRegexStr = '\\d+\\.\\d+\\.\\d+';
 
