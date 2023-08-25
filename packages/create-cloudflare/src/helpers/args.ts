@@ -41,7 +41,8 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 		})
 		.option("wrangler-defaults", { type: "boolean", hidden: true })
 		.version(version)
-		.strict()
+		// note: we use strictOptions since `strict()` seems not to handle `positional`s correctly
+		.strictOptions()
 		.alias("h", "help")
 		.help().argv;
 
