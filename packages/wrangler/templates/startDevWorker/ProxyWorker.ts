@@ -1,18 +1,11 @@
-type BufferedRequest = {
-	request: Request;
-	promise: DeferredPromise<Response>;
-};
 type ProxyData = {
-	pause: boolean;
 	destinationURL: Partial<URL>;
 	destinationInspectorURL: Partial<URL>;
 	headers: Record<string, string>;
 	liveReloadUrl: boolean;
 };
 
-const buffer = new Map<Request, BufferedRequest>();
-
-let proxyData: ProxyData;
+let buffer: DeferredPromise<ProxyData>;
 
 interface Env {
 	PROXY_CONTROLLER: Fetcher;
@@ -24,31 +17,28 @@ export default {
 		if (isRequestFromProxyController(request, env)) {
 			// requests from ProxyController
 
-			proxyData = request.cf?.proxyData as ProxyData;
-			processBufferedRequests(env);
+			const { proxyData } = request.cf?.hostMetadata ?? {};
+
+			if (proxyData) buffer.resolve(proxyData);
+			else buffer = createDeferredPromise();
 
 			return new Response(null, { status: 204 });
 		}
 
 		// regular requests to be proxied
 
-		const promise = createDeferredPromise<Response>();
-		buffer.set(request, { request, promise });
-
-		// TODO(maybe): prewarm request to ensure token has not expired
-
-		processBufferedRequests(env);
-
-		return promise;
+		return buffer.then((proxyData) => {
+			return processBufferedRequest(request, env, proxyData);
+		});
 	},
-} as ExportedHandler<Env>;
+} as ExportedHandler<Env, unknown, { proxyData: ProxyData | undefined }>;
 
 type MaybePromise<T> = T | Promise<T>;
 type DeferredPromise<T> = Promise<T> & {
-	resolve: (_: MaybePromise<Response>) => void;
+	resolve: (_: MaybePromise<T>) => void;
 	reject: (_: Error) => void;
 };
-const createDeferredPromise = <T>(): DeferredPromise<T> => {
+function createDeferredPromise<T>(): DeferredPromise<T> {
 	let resolve, reject;
 	const promise = new Promise<T>((_resolve, _reject) => {
 		resolve = _resolve;
@@ -59,7 +49,7 @@ const createDeferredPromise = <T>(): DeferredPromise<T> => {
 		resolve,
 		reject,
 	} as unknown) as DeferredPromise<T>;
-};
+}
 
 function isRequestFromProxyController(req: Request, env: Env): boolean {
 	return req.headers.get("Authorization") === env.PROXY_CONTROLLER_AUTH_SECRET;
@@ -68,51 +58,49 @@ function isHtmlResponse(res: Response): boolean {
 	return res.headers.get("content-type")?.startsWith("text/html") ?? false;
 }
 
-function processBufferedRequests(env: Env) {
-	if (proxyData.destinationURL === undefined) return;
+function processBufferedRequest(
+	request: Request,
+	env: Env,
+	proxyData: ProxyData
+) {
+	const url = new URL(request.url);
 
-	for (const [request, buffered] of buffer) {
-		buffer.delete(request);
+	// override url parts for proxying
+	Object.assign(url, proxyData.destinationURL);
 
-		const url = new URL(request.url);
-
-		// override url parts for proxying
-		Object.assign(url, proxyData.destinationURL);
-
-		for (const [key, value] of Object.entries(proxyData.headers ?? {})) {
-			if (key.toLowerCase() === "cookie") {
-				const existing = request.headers.get("cookie") ?? "";
-				request.headers.set("cookie", `${existing};${value}`);
-			} else {
-				request.headers.append(key, value);
-			}
+	for (const [key, value] of Object.entries(proxyData.headers ?? {})) {
+		if (key.toLowerCase() === "cookie") {
+			const existing = request.headers.get("cookie") ?? "";
+			request.headers.set("cookie", `${existing};${value}`);
+		} else {
+			request.headers.append(key, value);
 		}
-
-		void fetch(url, new Request(request, { redirect: "manual" })) // TODO: check if redirect: manual is needed
-			.then((res) => {
-				if (isHtmlResponse(res)) {
-					res = insertLiveReloadScript(res, env);
-				}
-
-				buffered.promise.resolve(res);
-			})
-			.catch((error: Error) => {
-				// errors here are network errors or from response post-processing
-				// to catch only network errors, use the 2nd param of the fetch.then()
-
-				void sendMessageToProxyController(env, {
-					type: "error",
-					error: {
-						name: error.name,
-						message: error.message,
-						stack: error.stack,
-						cause: error.cause,
-					},
-				});
-
-				buffered.promise.reject(error);
-			});
 	}
+
+	void fetch(url, new Request(request, { redirect: "manual" })) // TODO: check if redirect: manual is needed
+		.then((res) => {
+			if (isHtmlResponse(res)) {
+				res = insertLiveReloadScript(res, env, proxyData);
+			}
+
+			return res;
+		})
+		.catch((error: Error) => {
+			// errors here are network errors or from response post-processing
+			// to catch only network errors, use the 2nd param of the fetch.then()
+
+			void sendMessageToProxyController(env, {
+				type: "error",
+				error: {
+					name: error.name,
+					message: error.message,
+					stack: error.stack,
+					cause: error.cause,
+				},
+			});
+
+			throw error;
+		});
 }
 
 type SerializedError = Pick<Error, "name" | "message" | "stack" | "cause">;
@@ -128,7 +116,11 @@ function sendMessageToProxyController(
 	});
 }
 
-function insertLiveReloadScript(response: Response, env: Env) {
+function insertLiveReloadScript(
+	response: Response,
+	env: Env,
+	proxyData: ProxyData
+) {
 	const htmlRewriter = new HTMLRewriter();
 
 	// if preview-token-expired response, errorDetails will contain "Invalid Workers Preview configuration"
