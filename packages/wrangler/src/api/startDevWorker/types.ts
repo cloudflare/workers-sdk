@@ -15,15 +15,27 @@ export interface DevWorker {
 }
 
 export interface StartDevWorkerOptions {
-	name: WorkerName;
-	script: File;
-	config?: File & { env?: string };
+	/** The name of the worker. */
+	name: string;
+	/**
+	 * The javascript or typescript entry-point of the worker.
+	 * This is the `main` property of a wrangler.toml.
+	 * You can specify a file path or provide the contents directly.
+	 */
+	script: File<string>;
+	/** The configuration of the worker. */
+	config?: File<string | Json> & { env?: string };
+	/** The compatibility date for the workerd runtime. */
 	compatibilityDate?: string;
+	/** The compatibility flags for the workerd runtime. */
 	compatibilityFlags?: string[];
 
+	/** The bindings available to the worker. The specified bindind type will be exposed to the worker on the `env` object under the same key. */
 	bindings?: Record<string, Binding>; // Type level constraint for bindings not sharing names
+	/** The triggers which will cause the worker's exported default handlers to be called. */
 	triggers?: Trigger[];
 
+	/** Options applying to (legacy) Worker Sites. Please consider using Cloudflare Pages. */
 	site?: {
 		path: string;
 		include?: string[];
@@ -62,7 +74,7 @@ export interface StartDevWorkerOptions {
 					/** Cloudflare Account credentials. Can be provided upfront or as a function which will be called only when required. */
 					auth: Hook<CfAccount>;
 			  };
-		/** Whether the worker runs on the edge or locally. */
+		/** Whether local storage (KV, Durable Objects, R2, D1, etc) is persisted. You can also specify the directory to persist data to. */
 		persist?: boolean | { path: string };
 		/** Controls which logs are logged 🤙. */
 		logLevel?: LogLevel;
@@ -89,8 +101,6 @@ export type Hook<T, Args extends unknown[] = unknown[]> =
 	| T
 	| Promise<T>
 	| ((...args: Args) => T | Promise<T>);
-
-export type WorkerName = string;
 
 export type LogLevel = "debug" | "info" | "log" | "warn" | "error" | "none";
 
