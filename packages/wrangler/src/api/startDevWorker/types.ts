@@ -24,7 +24,7 @@ export interface StartDevWorkerOptions {
 	 */
 	script: File<string>;
 	/** The configuration of the worker. */
-	config?: File<string | Json> & { env?: string };
+	config?: File<string | WorkerConfig> & { env?: string };
 	/** The compatibility date for the workerd runtime. */
 	compatibilityDate?: string;
 	/** The compatibility flags for the workerd runtime. */
@@ -68,23 +68,17 @@ export interface StartDevWorkerOptions {
 		/** Options applying to the worker's inspector server. */
 		inspector?: { hostname?: string; port?: number; secure?: boolean };
 		/** Whether the worker runs on the edge or locally. */
-		remote?:
-			| boolean
-			| {
-					/** Cloudflare Account credentials. Can be provided upfront or as a function which will be called only when required. */
-					auth: Hook<CfAccount>;
-			  };
+		remote?: boolean;
+		/** Cloudflare Account credentials. Can be provided upfront or as a function which will be called only when required. */
+		auth: Hook<CfAccount>;
 		/** Whether local storage (KV, Durable Objects, R2, D1, etc) is persisted. You can also specify the directory to persist data to. */
 		persist?: boolean | { path: string };
 		/** Controls which logs are logged 🤙. */
 		logLevel?: LogLevel;
 		/** Whether the worker server restarts upon source/config file changes. */
-		watch?:
-			| boolean
-			| {
-					/** Whether a script tag is inserted on text/html responses which will reload the page upon file changes. Defaults to false. */
-					liveReload?: boolean;
-			  };
+		watch?: boolean;
+		/** Whether a script tag is inserted on text/html responses which will reload the page upon file changes. Defaults to false. */
+		liveReload?: boolean;
 
 		/** The local address to reach your worker. Applies to remote: true (remote mode) and remote: false (local mode). */
 		server?: { hostname?: string; port?: number; secure?: boolean }; // hostname: --ip, port: --port, secure: --local-protocol

@@ -79,8 +79,7 @@ export interface ReloadStartEvent extends BundleStartEvent {
 }
 export interface ReloadCompleteEvent extends BundleCompleteEvent {
 	timeStamp: number;
-	url: URL;
-	headers: Headers | undefined;
+	proxyData: ProxyData;
 }
 // ProxyController
 export interface PreviewTokenExpiredEvent extends ReloadCompleteEvent {
@@ -118,3 +117,10 @@ interface WorkerBundle {
 	modules: WorkerModule[];
 	// ...
 }
+
+type ProxyData = {
+	destinationURL: Partial<URL>;
+	destinationInspectorURL: Partial<URL>;
+	headers: Record<string, string>;
+	liveReloadUrl: boolean;
+};

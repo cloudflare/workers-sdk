@@ -1,3 +1,8 @@
+import type {
+	ReloadCompleteEvent,
+	ReloadStartEvent,
+} from "../../src/api/startDevWorker/events";
+
 type ProxyData = {
 	destinationURL: Partial<URL>;
 	destinationInspectorURL: Partial<URL>;
@@ -5,6 +10,7 @@ type ProxyData = {
 	liveReloadUrl: boolean;
 };
 
+let buffering = false;
 let buffer: DeferredPromise<ProxyData>;
 
 interface Env {
@@ -12,40 +18,44 @@ interface Env {
 	PROXY_CONTROLLER_AUTH_SECRET: string;
 }
 
+type ProxyControllerMessages =
+	| ({ type: "reloadStart" } & ReloadStartEvent)
+	| ({ type: "reloadComplete" } & ReloadCompleteEvent);
+type Request = Parameters<
+	NonNullable<ExportedHandler<Env, unknown, ProxyControllerMessages>["fetch"]>
+>[0];
+
 export default {
 	fetch(request, env) {
 		if (isRequestFromProxyController(request, env)) {
 			// requests from ProxyController
 
-			const { proxyData } = request.cf?.hostMetadata ?? {};
-
-			if (proxyData) buffer.resolve(proxyData);
-			else buffer = createDeferredPromise();
-
-			return new Response(null, { status: 204 });
+			return processProxyControllerRequest(request, env);
 		}
 
 		// regular requests to be proxied
 
+		// this guarantees order in which requests are sent, not delivered
+		//    TODO(consider): `return buffer = buffer.then(...)` to guarantee order of request delivery
 		return buffer.then((proxyData) => {
 			return processBufferedRequest(request, env, proxyData);
 		});
 	},
-} as ExportedHandler<Env, unknown, { proxyData: ProxyData | undefined }>;
+} as ExportedHandler<Env, unknown, ProxyControllerMessages>;
 
 type MaybePromise<T> = T | Promise<T>;
 type DeferredPromise<T> = Promise<T> & {
 	resolve: (_: MaybePromise<T>) => void;
 	reject: (_: Error) => void;
 };
-function createDeferredPromise<T>(): DeferredPromise<T> {
+function createDeferredPromise<T>(chain?: Promise<T>): DeferredPromise<T> {
 	let resolve, reject;
-	const promise = new Promise<T>((_resolve, _reject) => {
+	const deferred = new Promise<T>((_resolve, _reject) => {
 		resolve = _resolve;
 		reject = _reject;
 	});
 
-	return Object.assign(promise, {
+	return Object.assign(chain ? chain.then(() => deferred) : deferred, {
 		resolve,
 		reject,
 	} as unknown) as DeferredPromise<T>;
@@ -56,6 +66,23 @@ function isRequestFromProxyController(req: Request, env: Env): boolean {
 }
 function isHtmlResponse(res: Response): boolean {
 	return res.headers.get("content-type")?.startsWith("text/html") ?? false;
+}
+
+function processProxyControllerRequest(request: Request, env: Env) {
+	const event = request.cf?.hostMetadata;
+	switch (event?.type) {
+		case "reloadStart":
+			if (buffering) break; // allow multiple reloadStart events in a row -- don't overwrite unresolved `buffer` promise with a new promise
+			buffering = true;
+			buffer = createDeferredPromise();
+			break;
+		case "reloadComplete":
+			buffering = false;
+			buffer.resolve(event.proxyData);
+			break;
+	}
+
+	return new Response(null, { status: 204 });
 }
 
 function processBufferedRequest(

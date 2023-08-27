@@ -1,4 +1,5 @@
 import { EventEmitter } from "node:events";
+import { createProxyWorker } from "./ProxyController";
 import type {
 	BundleCompleteEvent,
 	BundleStartEvent,
@@ -12,7 +13,7 @@ import type {
 	WorkerConfig,
 } from "./events";
 import type { StartDevWorkerOptions, DevWorker } from "./types";
-import { createProxyWorker } from "./ProxyController";
+import type { Miniflare } from "miniflare";
 
 export function startWorker(options: StartDevWorkerOptions): DevWorker {
 	const devEnv = new DevEnv();
@@ -342,9 +343,11 @@ export class ProxyController extends EventEmitter {
 		this.#readyResolver = resolve;
 	});
 
-	#mf: ReturnType<typeof createProxyWorker>;
-	createWorker() {
-		this.#mf = createProxyWorker();
+	proxyWorker: ReturnType<typeof createProxyWorker> | undefined;
+	createWorker(config: StartDevWorkerOptions): Miniflare {
+		this.proxyWorker = createProxyWorker(config);
+
+		return this.proxyWorker;
 	}
 
 	// ******************
