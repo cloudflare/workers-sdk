@@ -1,77 +1,13 @@
-## ⛅️ Home to `wrangler`, the CLI for Cloudflare Workers®, as well as other tools for interacting with Workers
+# RSS Builder by B!Soft MarkBook RSS Feed
 
-This monorepo contains:
-
-- [`wrangler-devtools`](https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler-devtools)
-  Cloudflare's fork of Chrome DevTools for inspecting your local or remote Workers
-- [`templates`](https://github.com/cloudflare/workers-sdk/tree/main/templates)
-  Templates & examples for writing Cloudflare Workers
-- [`wrangler`](https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler)
-  A command line tool for building [Cloudflare Workers](https://workers.cloudflare.com/).
-- [`pages-shared`](https://github.com/cloudflare/workers-sdk/tree/main/packages/pages-shared)
-  Used internally to power Wrangler and Cloudflare Pages. It contains all the code that is shared between these clients.
-
-Wrangler and the workers-sdk is developed in the open on GitHub, and you can see what we're working on in [GitHub Issues](https://github.com/cloudflare/workers-sdk/issues?q=is%3Aopen+is%3Aissue), as well as in our [workers-sdk GitHub Project board](https://github.com/orgs/cloudflare/projects/1). If you've found a bug or would like to request a feature, [please file an issue](https://github.com/cloudflare/workers-sdk/issues/new/choose)!
-
-## Quick Start
-
-```bash
-# Make a javascript file
-echo "export default { fetch() { return new Response('hello world') } }" > index.js
-# try it out
-npx wrangler dev index.js
-# and then deploy it
-npx wrangler deploy index.js --name my-worker --latest
-# visit https://my-worker.<your workers subdomain>.workers.dev
-```
-
-## Create a Project
-
-```bash
-# Generate a new project
-npx wrangler init my-worker
-# try it out
-cd my-worker && npm run start
-# and then deploy it
-npm run deploy
-```
-
-## Installation:
-
-```bash
-$ npm install wrangler --save-dev
-```
-
-## Commands
-
-### `wrangler init [name]`
-
-Creates a Worker project. For details on configuration keys and values, refer to the [documentation](https://developers.cloudflare.com/workers/wrangler/configuration/).
-
-### `wrangler dev`
-
-Start a local development server, with live reloading and devtools.
-
-### `wrangler deploy`
-
-Deploys the given script to the worldwide Cloudflare network.
-
-For more commands and options, refer to the [documentation](https://developers.cloudflare.com/workers/wrangler/commands/).
-
-## Pages
-
-### `wrangler pages dev [directory] [-- command]`
-
-Either serves a static build asset directory, or proxies itself in front of a command.
-
-Builds and runs functions from a `./functions` directory or uses a `_worker.js` file inside the static build asset directory.
-
-For more commands and options, refer to the [documentation](https://developers.cloudflare.com/pages/platform/functions#develop-and-preview-locally) or run `wrangler pages dev --help`.
-
-## Documentation
-
-For the latest Wrangler documentation, [click here](https://developers.cloudflare.com/workers/wrangler/).
-
-## Contributing
-
-Refer to the [`CONTRIBUTING.md`](/CONTRIBUTING.md) guide for details.
+https://www.markbook.com MarkBook RSS Feed. Keep up to date on the latest news. en-us mrichardson@acadiemgroup.com The Acadiem Group 2020 NEW MarkBook HTML5 is Here! 10 Oct 2020 10:00:00 -0400 
+https://www.markbook.com mrichardson@acadiemgroup.com News Our ALL NEW MarkBook HTML5 Web Application is Here! Flash or Flex is no longer required. Many added features in a clean new look. Now you can use MarkBook on your Chromebook, Android or iPadOS tablet as well as Windows, macOS or Linux devices. (Select tablets only) A new version of the app, 1.1.0 22 Dec 2020 16:30:00 -0400 
+https://www.markbook.com mrichardson@acadiemgroup.com News A new version of the app, 1.1.0, has been launched. It contains a major security update. Please see the Release Notes for the details. A new version of the app, 1.2.0 26 Jan 2021 17:30:00 -0400 
+https://www.markbook.com mrichardson@acadiemgroup.com News A new version of the app, 1.2.0, has been launched. You can now Copy Comments to many students at once and easily input entries on tablets using Numeric Keypad. Please see the Release Notes for the details. A new version of the app, 1.3.0 25 Mar 2021 17:30:00 -0400 
+https://www.markbook.com mrichardson@acadiemgroup.com News A new version of the app, 1.3.0, has been launched. Please see the Release Notes for the details. A new version of the app, 1.4.0 30 Apr 2021 08:00:00 -0400 
+https://www.markbook.com mrichardson@acadiemgroup.com News A new version of the app, 1.4.0, has been launched. Please see the Release Notes for the details. For TDSB users 6 Aug 2021 08:00:00 -0400 http://tdsb.on.ca/ mrichardson@acadiemgroup.com News TDSB users: In preparation for Single Sign On service in September, all usernames now use your Toronto District School Board email address. TDSB-logo.png Attention TDSB Users 18 Sep 2021 01:00:00 -0400 
+https://www.markbook.com mrichardson@acadiemgroup.com News On Saturday September 18th, Single Sign On (SSO) will be implemented for TDSB MarkBook (Cloud) users. After the implementation is completed, teachers will be required to sign onto MarkBook using their TDSB e- mail address and password. Teachers that are already signing onto MarkBook with their TDSB email address will have their existing class data maintained. Teachers that are currently using personal email accounts will need to contact 
+support@markbookapp.com to request existing class data transfers, if required. TDSB-logo.png For TVDSB Users 09 Sep 2022 01:00:00 -0400 
+https://www.markbook.com News On Tuesday, September 6th, Single Sign On (SSO) was implemented for TVDSB MarkBook (Cloud) users. Teachers are now required to sign onto MarkBook using their TVDSB e-mail address and password in the Microsoft 365 Apps environment. Please follow the Information Guidesheet for "Transfer from Individual to Corporate Domain using SSO in MarkBook®”. Teachers that are already signing onto MarkBook with their TVDSB email address will have their existing class data maintained. Teachers that are currently using personal email accounts will need to contact 
+support@markbookapp.com to request existing class data transfers, if required. TVDSB-logo.webp WECDSB 31 Oct 2022 01:00:00 -0400 
+https://www.markbook.com News WECDSB users, please ensure that you have updated ALL of your courses with the most recent Aspen extract that has your first initial and last name in the file name (i.e. see below). Furthermore, please ensure you have submitted a copy (screenshots) of your updated courses to your school-issued Google form. WECDSB-logo.png
