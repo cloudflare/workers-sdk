@@ -66,9 +66,5 @@ ${[
 	...changes.map(
 		({ package: pkg, from, to }) => `| \`${pkg}\` | \`${from}\` | \`${to}\` |`
 	),
-]
-	.map((str) => ` ${str}`)
-	.join("\n")}
-	}
-`;
+].join("\n")}`;
 }
