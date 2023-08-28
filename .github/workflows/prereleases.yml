@@ -46,7 +46,7 @@ jobs:
           NODE_OPTIONS: "--max_old_space_size=8192"
 
       - name: Publish Beta to NPM
-        run: npm publish --tag beta
+        run: npm publish --tag legacy-beta
         env:
           NPM_PUBLISH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
           # this is the "test/staging" key for sparrow analytics

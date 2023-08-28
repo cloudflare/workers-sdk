@@ -45,7 +45,7 @@ jobs:
         uses: changesets/action@v1
         with:
           version: node .github/changeset-version.js
-          publish: npx changeset publish
+          publish: npx changeset publish --tag legacy
           title: "v2 Maintenance Release"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
