@@ -19,7 +19,7 @@ type FrameworkTestConfig = RunnerConfig & {
 	testCommitMessage: boolean;
 };
 
-describe(`E2E: Web frameworks`, () => {
+describe.concurrent(`E2E: Web frameworks`, () => {
 	const { getPath, getName, clean } = testProjectDir("pages");
 
 	beforeEach((ctx) => {
