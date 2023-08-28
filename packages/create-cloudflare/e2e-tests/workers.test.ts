@@ -8,6 +8,9 @@ Areas for future improvement:
 - Make these actually e2e by verifying that deployment works
 */
 
+// Note: skipIf(frameworkToTest) makes it so that all the worker tests are
+//       skipped in case we are testing a specific framework
+//       (since no worker template implements a framework application)
 describe.skipIf(frameworkToTest)("E2E: Workers templates", () => {
 	const { getPath, clean } = testProjectDir("workers");
 
