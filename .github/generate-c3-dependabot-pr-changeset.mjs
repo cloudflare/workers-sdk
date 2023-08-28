@@ -43,7 +43,6 @@ if (!changes.length) {
 ---
 
 ${generateChangesetBody(changes)}
-
 `
 	);
 
