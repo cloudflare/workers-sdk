@@ -1,5 +1,27 @@
 # wrangler
 
+## 3.5.0
+
+### Minor Changes
+
+- [#3703](https://github.com/cloudflare/workers-sdk/pull/3703) [`e600f029`](https://github.com/cloudflare/workers-sdk/commit/e600f0298d4d2780bdfc1171a5f84a5f36ce5010) Thanks [@jspspike](https://github.com/jspspike)! - Added --local option for r2 commands to interact with local persisted r2 objects
+
+* [#3704](https://github.com/cloudflare/workers-sdk/pull/3704) [`8e231afd`](https://github.com/cloudflare/workers-sdk/commit/8e231afde850f353694478a5994e6ddee6df67b1) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - secret:bulk exit 1 on failure
+  Previously `secret"bulk` would only log an error on failure of any of the upload requests.
+  Now when 'secret:bulk' has an upload request fail it throws an Error which sends an `process.exit(1)` at the root `.catch()` signal.
+  This will enable error handling in programmatic uses of `secret:bulk`.
+
+- [#3684](https://github.com/cloudflare/workers-sdk/pull/3684) [`ff8603b6`](https://github.com/cloudflare/workers-sdk/commit/ff8603b6e1320d5c136712b8100e86c552eade46) Thanks [@jspspike](https://github.com/jspspike)! - Added --local option for kv commands to interact with local persisted kv entries
+
+* [#3595](https://github.com/cloudflare/workers-sdk/pull/3595) [`c302bec6`](https://github.com/cloudflare/workers-sdk/commit/c302bec639c0eec10d07d6b950c0a2d3e16eab1e) Thanks [@geelen](https://github.com/geelen)! - Removing the D1 shim from the build process, in preparation for the Open Beta. D1 can now be used with --no-bundle enabled.
+
+- [#3707](https://github.com/cloudflare/workers-sdk/pull/3707) [`6de3c5ec`](https://github.com/cloudflare/workers-sdk/commit/6de3c5eced6f31a2a55f4c043e1025f4f4733ad0) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Added handling of .mjs files to be picked up by inside the Pages \_worker.js directory
+  (currently only .js files are)
+
+### Patch Changes
+
+- [#3693](https://github.com/cloudflare/workers-sdk/pull/3693) [`8f257126`](https://github.com/cloudflare/workers-sdk/commit/8f2571260f10660b9494332b681608b6051a7d52) Thanks [@RamIdeas](https://github.com/RamIdeas)! - Bump the version of miniflare to 3.20230801.0
+
 ## 3.4.0
 
 ### Minor Changes

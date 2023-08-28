@@ -1,1 +1,1 @@
-export default "static";
+export default "js static";

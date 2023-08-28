@@ -179,22 +179,33 @@ async function handleRawHttp(request: Request, url: URL) {
 			},
 		});
 	}
-	const token = request.headers.get("X-CF-Token");
-	const remote = request.headers.get("X-CF-Remote");
+
+	const requestHeaders = new Headers(request.headers);
+
+	const token = requestHeaders.get("X-CF-Token");
+	const remote = requestHeaders.get("X-CF-Remote");
+
 	if (!token || !remote) {
 		throw new RawHttpFailed();
 	}
 
+	// Reassign the token to a different header
+	requestHeaders.set("cf-workers-preview-token", token);
+
+	// Delete these consumed headers so as not to bloat the request.
+	// Some tokens can be quite large and may cause nginx to reject the
+	// request due to exceeding size limits if the value is included twice.
+	requestHeaders.delete("X-CF-Token");
+	requestHeaders.delete("X-CF-Remote");
+
 	const workerResponse = await fetch(
 		switchRemote(url, remote),
 		new Request(request, {
-			headers: {
-				...Object.fromEntries(request.headers),
-				"cf-workers-preview-token": token,
-			},
+			headers: requestHeaders,
 			redirect: "manual",
 		})
 	);
+
 	// The client needs the raw headers from the worker
 	// Prefix them with `cf-ew-raw-`, so that response headers from _this_ worker don't interfere
 	const rawHeaders: Record<string, string> = {};

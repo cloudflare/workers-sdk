@@ -30,7 +30,7 @@ import {
 } from "./helpers";
 import type { EventNames } from "../metrics";
 import type { CommonYargsArgv } from "../yargs-types";
-import type { KeyValue } from "./helpers";
+import type { KeyValue, NamespaceKeyInfo } from "./helpers";
 
 export function kvNamespace(kvYargs: CommonYargsArgv) {
 	return kvYargs
@@ -340,7 +340,7 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 				const config = readConfig(args.config, args);
 				const namespaceId = getKVNamespaceId(args, config);
 
-				let result;
+				let result: NamespaceKeyInfo[];
 				let metricEvent: EventNames;
 				if (args.local) {
 					const kvGateway = localGateway(
@@ -348,7 +348,12 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 						config.configPath,
 						namespaceId
 					);
-					result = await kvGateway.list();
+					result = (await kvGateway.list({ prefix })).keys.map((key) => ({
+						name: key.name,
+						expiration: key.expiration,
+						metadata:
+							key.metadata === undefined ? undefined : JSON.parse(key.metadata),
+					}));
 					metricEvent = "list kv keys (local)";
 				} else {
 					const accountId = await requireAuth(config);
