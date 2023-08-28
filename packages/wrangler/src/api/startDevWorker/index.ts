@@ -1,11 +1,17 @@
 import { EventEmitter } from "node:events";
-import { createProxyWorker } from "./ProxyController";
+import path from "node:path";
+import { Miniflare, Response } from "miniflare";
+import { readFileSync } from "../../parse";
+import { getBasePath } from "../../paths";
+import { castErrorCause } from "./events";
 import type {
 	BundleCompleteEvent,
 	BundleStartEvent,
 	ConfigUpdateEvent,
 	ErrorEvent,
 	PreviewTokenExpiredEvent,
+	ProxyWorkerIncomingMessage,
+	ProxyWorkerOutgoingMessage,
 	ReadyEvent,
 	ReloadCompleteEvent,
 	ReloadStartEvent,
@@ -13,7 +19,6 @@ import type {
 	WorkerConfig,
 } from "./events";
 import type { StartDevWorkerOptions, DevWorker } from "./types";
-import type { Miniflare } from "miniflare";
 
 export function startWorker(options: StartDevWorkerOptions): DevWorker {
 	const devEnv = new DevEnv();
@@ -120,10 +125,10 @@ export class DevEnv extends EventEmitter {
 
 		runtimes.forEach((runtime) => {
 			runtime.on("reloadStart", (event) => {
-				bundler.onConfigUpdate(event);
+				proxy.onReloadStart(event);
 			});
 			runtime.on("reloadComplete", (event) => {
-				bundler.onConfigUpdate(event);
+				proxy.onReloadComplete(event);
 			});
 		});
 
@@ -272,7 +277,7 @@ export class LocalRuntimeController extends RuntimeController {
 			this.constructor.name
 		);
 	}
-	onBundleComplete(_: BundleStartEvent) {
+	onBundleComplete(_: BundleCompleteEvent) {
 		throw new NotImplementedError(
 			this.onBundleComplete.name,
 			this.constructor.name
@@ -338,49 +343,112 @@ export class RemoteRuntimeController extends RuntimeController {
 }
 
 export class ProxyController extends EventEmitter {
-	#readyResolver!: (_: ReadyEvent) => void;
+	protected readyResolver!: (_: ReadyEvent) => void;
 	public ready: Promise<ReadyEvent> = new Promise((resolve) => {
-		this.#readyResolver = resolve;
+		this.readyResolver = resolve;
 	});
 
-	proxyWorker: ReturnType<typeof createProxyWorker> | undefined;
-	createWorker(config: StartDevWorkerOptions): Miniflare {
-		this.proxyWorker = createProxyWorker(config);
+	public proxyWorker: Miniflare | undefined;
+	public inspectorProxyWorker: Miniflare | undefined;
+	protected createProxyWorker(config: StartDevWorkerOptions): Miniflare {
+		this.proxyWorker ??= new Miniflare({
+			script: readFileSync(
+				path.join(getBasePath(), `templates/startDevWorker/ProxyWorker.ts`)
+			),
+			port: config.dev?.server?.port, // random port if undefined
+			serviceBindings: {
+				PROXY_CONTROLLER: async (req): Promise<Response> => {
+					const message = (await req.json()) as ProxyWorkerOutgoingMessage;
+
+					this.onProxyWorkerMessage(message);
+
+					return new Response(null, { status: 204 });
+				},
+			},
+		});
+
+		// separate Miniflare instance while it only permits opening one port
+		this.proxyWorker ??= new Miniflare({
+			script: readFileSync(
+				path.join(
+					getBasePath(),
+					`templates/startDevWorker/InspectorProxyWorker.ts`
+				)
+			),
+			port: config.dev?.inspector?.port, // random port if undefined
+			serviceBindings: {
+				PROXY_CONTROLLER: async (req): Promise<Response> => {
+					const message = (await req.json()) as ProxyWorkerOutgoingMessage;
+
+					this.onProxyWorkerMessage(message);
+
+					return new Response(null, { status: 204 });
+				},
+			},
+		});
 
 		return this.proxyWorker;
+	}
+
+	async sendMessageToProxyWorker(
+		message: ProxyWorkerIncomingMessage,
+		retries = 3
+	) {
+		try {
+			await this.proxyWorker?.dispatchFetch("http://dummy/", {
+				cf: { hostMetadata: message },
+			});
+		} catch (cause) {
+			const error = castErrorCause(cause);
+
+			if (retries > 0) {
+				await this.sendMessageToProxyWorker(message, retries - 1);
+			}
+
+			this.emitErrorEvent("Failed to send message to ProxyWorker", error);
+
+			throw error;
+		}
 	}
 
 	// ******************
 	//   Event Handlers
 	// ******************
 
-	onConfigUpdate(_: ConfigUpdateEvent) {
-		throw new NotImplementedError(
-			this.onConfigUpdate.name,
-			this.constructor.name
-		);
+	onConfigUpdate(data: ConfigUpdateEvent) {
+		// TODO: handle config.port and config.inspectorPort changes for ProxyWorker and InspectorProxyWorker
+
+		this.createProxyWorker(data.config);
+
+		void this.sendMessageToProxyWorker({ type: "pause" });
 	}
 	onBundleStart(_: BundleStartEvent) {
-		throw new NotImplementedError(
-			this.onBundleStart.name,
-			this.constructor.name
-		);
+		void this.sendMessageToProxyWorker({ type: "pause" });
 	}
 	onReloadStart(_: ReloadStartEvent) {
-		throw new NotImplementedError(
-			this.onReloadStart.name,
-			this.constructor.name
-		);
+		void this.sendMessageToProxyWorker({ type: "pause" });
 	}
-	onReloadComplete(_: ReloadCompleteEvent) {
-		throw new NotImplementedError(
-			this.onReloadComplete.name,
-			this.constructor.name
-		);
+	onReloadComplete(data: ReloadCompleteEvent) {
+		void this.sendMessageToProxyWorker({
+			type: "play",
+			proxyData: data.proxyData,
+		});
+	}
+	onProxyWorkerMessage(message: ProxyWorkerOutgoingMessage) {
+		switch (message.type) {
+			case "previewTokenExpired":
+				this.emitPreviewTokenExpiredEvent(message);
+				break;
+
+			case "error":
+				this.emitErrorEvent("Error inside ProxyWorker", message.error);
+				break;
+		}
 	}
 
 	async teardown(_: TeardownEvent) {
-		throw new NotImplementedError(this.teardown.name, this.constructor.name);
+		await this.proxyWorker?.dispose();
+		await this.inspectorProxyWorker?.dispose();
 	}
 
 	// *********************
@@ -389,10 +457,13 @@ export class ProxyController extends EventEmitter {
 
 	emitReadyEvent(data: ReadyEvent) {
 		this.emit("ready", data);
-		this.#readyResolver(data);
+		this.readyResolver(data);
 	}
 	emitPreviewTokenExpiredEvent(data: PreviewTokenExpiredEvent) {
 		this.emit("previewTokenExpired", data);
+	}
+	emitErrorEvent(reason: string, cause?: Error) {
+		this.emit("error", { source: "ProxyController", cause, reason });
 	}
 
 	// *********************

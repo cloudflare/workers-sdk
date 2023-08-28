@@ -1,5 +1,4 @@
 import type { DevWorker } from "./types";
-import type { Headers } from "miniflare";
 
 // export class ConfigUpdateEvent extends Event implements IConfigUpdateEvent {
 // 	constructor(public config: WorkerConfig) {
@@ -46,52 +45,102 @@ import type { Headers } from "miniflare";
 // 	}
 // }
 
-export interface TeardownEvent {
-	timeStamp: number;
-}
-export interface ErrorEvent {
-	timeStamp: number;
-	error: Error;
+export type TeardownEvent = {
+	type: "teardown";
+};
+export type ErrorEvent = {
+	type: "error";
+	reason: string;
+	cause: Error;
 	source:
 		| "ConfigController"
 		| "BundlerController"
 		| "LocalRuntimeController"
 		| "RemoteRuntimeController"
-		| "ProxyController";
+		| "ProxyController"
+		| "ProxyWorker"
+		| "InspectorProxyWorker";
+};
+export function castErrorCause(cause: unknown) {
+	if (cause instanceof Error) return cause;
+
+	const error = new Error();
+	error.cause = cause;
+
+	return error;
 }
 
 // ConfigController
-export interface ConfigUpdateEvent {
-	timeStamp: number;
-	config: WorkerConfig;
-}
-// BundlerController
-export interface BundleStartEvent extends ConfigUpdateEvent {
-	timeStamp: number;
-}
-export interface BundleCompleteEvent extends BundleStartEvent {
-	timeStamp: number;
-	bundle: WorkerBundle;
-}
-// RuntimeController
-export interface ReloadStartEvent extends BundleStartEvent {
-	timeStamp: number;
-}
-export interface ReloadCompleteEvent extends BundleCompleteEvent {
-	timeStamp: number;
-	proxyData: ProxyData;
-}
-// ProxyController
-export interface PreviewTokenExpiredEvent extends ReloadCompleteEvent {
-	timeStamp: number;
-	headers: Headers;
-	// other details of failed request/response
-}
-export interface ReadyEvent extends ConfigUpdateEvent {
-	timeStamp: number;
-	worker: DevWorker;
-}
+export type ConfigUpdateEvent = {
+	type: "configUpdate";
 
+	config: WorkerConfig;
+};
+
+// BundlerController
+export type BundleStartEvent = {
+	type: "bundleStart";
+
+	config: WorkerConfig;
+};
+export type BundleCompleteEvent = {
+	type: "bundleComplete";
+
+	config: WorkerConfig;
+	bundle: WorkerBundle;
+};
+
+// RuntimeController
+export type ReloadStartEvent = {
+	type: "reloadStart";
+
+	config: WorkerConfig;
+	bundle: WorkerBundle;
+};
+export type ReloadCompleteEvent = {
+	type: "reloadComplete";
+
+	config: WorkerConfig;
+	bundle: WorkerBundle;
+	proxyData: ProxyData;
+};
+
+// ProxyController
+export type PreviewTokenExpiredEvent = {
+	type: "previewTokenExpired";
+
+	proxyData: ProxyData;
+	// ... other details of failed request/response
+};
+export type ReadyEvent = {
+	type: "ready";
+
+	worker: DevWorker;
+};
+
+// ProxyWorker
+export type ProxyWorkerIncomingMessage =
+	| {
+			type: "play";
+			proxyData: ProxyData;
+	  }
+	| { type: "pause" };
+export type ProxyWorkerOutgoingMessage =
+	| { type: "error"; error: SerializedError }
+	| { type: "previewTokenExpired"; proxyData: ProxyData };
+
+// InspectorProxyWorker
+export type InspectorProxyWorkerIncomingMessage =
+	| {
+			type: "play";
+			proxyData: ProxyData;
+	  }
+	| { type: "pause" };
+export type InspectorProxyWorkerOutgoingMessage =
+	| { type: "error"; error: SerializedError }
+	| { type: "previewTokenExpired"; proxyData: ProxyData };
+
+type SerializedError = Pick<Error, "name" | "message" | "stack" | "cause">;
 export interface WorkerConfig {
 	scriptPath: string;
 	// ...
