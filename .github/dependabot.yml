@@ -20,5 +20,5 @@ updates:
     reviewers:
       - "@cloudflare/c3"
     labels:
-      - "C3"
+      - "c3"
       - "dependencies"
