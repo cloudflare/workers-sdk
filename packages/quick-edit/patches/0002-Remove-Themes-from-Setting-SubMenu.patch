@@ -1,7 +1,7 @@
-From 2d7e7aa6b1274e430ca8fff107afb1c67212bbf5 Mon Sep 17 00:00:00 2001
+From 2890ec43e2c34f8cf530eed8b1a5a7d887c8da66 Mon Sep 17 00:00:00 2001
 From: Jacob M-G Evans <jacobmgevans@gmail.com>
 Date: Fri, 31 Mar 2023 17:11:08 -0500
-Subject: [PATCH 02/12] Remove Themes from Setting SubMenu
+Subject: [PATCH 02/13] Remove Themes from Setting SubMenu
 
 ---
  .../themes/browser/themes.contribution.ts     | 76 +++++++++----------
