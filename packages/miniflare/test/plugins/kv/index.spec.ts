@@ -1,6 +1,7 @@
 import assert from "assert";
 import { Blob } from "buffer";
 import fs from "fs/promises";
+import path from "path";
 import type {
 	KVNamespace,
 	KVNamespaceListOptions,
@@ -14,6 +15,7 @@ import {
 	ReplaceWorkersTypes,
 } from "miniflare";
 import {
+	FIXTURES_PATH,
 	MiniflareDurableObjectControlStub,
 	MiniflareTestContext,
 	Namespaced,
@@ -582,4 +584,24 @@ test("persists on file-system", async (t) => {
 	mf = new Miniflare(opts);
 	kv = await mf.getKVNamespace("NAMESPACE");
 	t.is(await kv.get("key"), "value");
+});
+
+test("migrates database to new location", async (t) => {
+	// Copy legacy data to temporary directory
+	const tmp = await useTmp(t);
+	const persistFixture = path.join(FIXTURES_PATH, "migrations", "3.20230821.0");
+	const kvPersist = path.join(tmp, "kv");
+	await fs.cp(path.join(persistFixture, "kv"), kvPersist, { recursive: true });
+
+	// Implicitly migrate data
+	const mf = new Miniflare({
+		modules: true,
+		script: "",
+		kvNamespaces: ["NAMESPACE"],
+		kvPersist,
+	});
+	t.teardown(() => mf.dispose());
+
+	const namespace = await mf.getKVNamespace("NAMESPACE");
+	t.is(await namespace.get("key"), "value");
 });

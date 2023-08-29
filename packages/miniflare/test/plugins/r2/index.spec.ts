@@ -3,6 +3,7 @@
 import assert from "assert";
 import crypto from "crypto";
 import fs from "fs/promises";
+import path from "path";
 import { text } from "stream/consumers";
 import type {
 	R2Bucket,
@@ -25,6 +26,7 @@ import type {
 	ObjectRow,
 } from "../../../src/workers/r2/schemas.worker";
 import {
+	FIXTURES_PATH,
 	MiniflareDurableObjectControlStub,
 	MiniflareTestContext,
 	Namespaced,
@@ -1524,4 +1526,25 @@ test("list: is multipart aware", async (t) => {
 	t.deepEqual(object?.checksums.toJSON(), {});
 	t.deepEqual(object?.customMetadata, { key: "value" });
 	t.deepEqual(object?.httpMetadata, { contentType: "text/plain" });
+});
+
+test("migrates database to new location", async (t) => {
+	// Copy legacy data to temporary directory
+	const tmp = await useTmp(t);
+	const persistFixture = path.join(FIXTURES_PATH, "migrations", "3.20230821.0");
+	const r2Persist = path.join(tmp, "r2");
+	await fs.cp(path.join(persistFixture, "r2"), r2Persist, { recursive: true });
+
+	// Implicitly migrate data
+	const mf = new Miniflare({
+		modules: true,
+		script: "",
+		r2Buckets: ["BUCKET"],
+		r2Persist,
+	});
+	t.teardown(() => mf.dispose());
+
+	const bucket = await mf.getR2Bucket("BUCKET");
+	const object = await bucket.get("key");
+	t.is(await object?.text(), "value");
 });
