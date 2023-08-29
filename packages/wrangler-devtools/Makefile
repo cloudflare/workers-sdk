@@ -20,10 +20,7 @@ devtools-frontend/out/Default/gen/front_end: devtools-frontend
 	cd devtools-frontend && PATH=$(PATH_WITH_DEPOT) $(ROOT)/depot/gn gen out/Default
 	cd devtools-frontend && PATH=$(PATH_WITH_DEPOT) $(ROOT)/depot/autoninja -C out/Default
 
-node_modules:
-	npm ci
-
-publish: node_modules devtools-frontend/out/Default/gen/front_end
+publish: devtools-frontend/out/Default/gen/front_end
 	npx wrangler pages deploy --project-name cloudflare-devtools devtools-frontend/out/Default/gen/front_end
 
 cleanup:
