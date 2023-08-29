@@ -167,17 +167,13 @@ export async function migrateDatabase(
 	const sanitisedNamespace = sanitisePath(namespace);
 	const previousDir = path.join(persistPath, sanitisedNamespace);
 	const previousPath = path.join(previousDir, "db.sqlite");
-	const previousShmPath = path.join(previousDir, "db.sqlite-shm");
 	const previousWalPath = path.join(previousDir, "db.sqlite-wal");
-	if (!existsSync(previousPath)) {
-		return;
-	}
+	if (!existsSync(previousPath)) return;
 
 	// Move database to new location, if database isn't already there
 	const id = durableObjectNamespaceIdFromName(uniqueKey, namespace);
 	const newDir = path.join(persistPath, uniqueKey);
 	const newPath = path.join(newDir, `${id}.sqlite`);
-	const newShmPath = path.join(newDir, `${id}.sqlite-shm`);
 	const newWalPath = path.join(newDir, `${id}.sqlite-wal`);
 	if (existsSync(newPath)) {
 		log.debug(
@@ -191,14 +187,10 @@ export async function migrateDatabase(
 
 	try {
 		await fs.copyFile(previousPath, newPath);
-		if (existsSync(previousShmPath)) {
-			await fs.copyFile(previousShmPath, newShmPath);
-		}
 		if (existsSync(previousWalPath)) {
 			await fs.copyFile(previousWalPath, newWalPath);
 		}
 		await fs.unlink(previousPath);
-		await fs.unlink(previousShmPath);
 		await fs.unlink(previousWalPath);
 	} catch (e) {
 		log.warn(`Error migrating ${previousPath} to ${newPath}: ${e}`);

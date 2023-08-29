@@ -5,7 +5,7 @@ import esbuild from "esbuild";
 import { Miniflare } from "miniflare";
 import { useTmp } from "./storage";
 
-const FIXTURES_PATH = path.resolve(
+export const FIXTURES_PATH = path.resolve(
 	require.resolve("miniflare"),
 	"..",
 	"..",
