@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.2.1
+
+### Patch Changes
+
+- [#3841](https://github.com/cloudflare/workers-sdk/pull/3841) [`81c45b98`](https://github.com/cloudflare/workers-sdk/commit/81c45b988a2f772279bc5f37dba6b8cb83afef36) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fail and display the help message if an unrecognized argument is passed to C3
+
 ## 2.2.0
 
 ### Minor Changes
