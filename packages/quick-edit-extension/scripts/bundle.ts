@@ -7,7 +7,6 @@ type BuildFlags = {
 
 async function buildMain(flags: BuildFlags = {}) {
 	const options: esbuild.BuildOptions = {
-		watch: flags.watch,
 		entryPoints: ["./src/extension.ts"],
 		bundle: true,
 		outfile: "./dist/extension.js",
@@ -40,7 +39,12 @@ async function buildMain(flags: BuildFlags = {}) {
 			},
 		],
 	};
-	await esbuild.build(options);
+	if (flags.watch) {
+		const ctx = await esbuild.context(options);
+		await ctx.watch();
+	} else {
+		await esbuild.build(options);
+	}
 }
 
 async function run() {
