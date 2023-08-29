@@ -12,12 +12,14 @@ describe("Pages Dev", () => {
 			"public",
 			["--node-compat", "--port=0"]
 		);
-		const response = await fetch(`http://${ip}:${port}/stripe`);
+		try {
+			const response = await fetch(`http://${ip}:${port}/stripe`);
 
-		await expect(response.text()).resolves.toContain(
-			`"PATH":"path/to/some-file","STRIPE_OBJECT"`
-		);
-
-		await stop();
+			await expect(response.text()).resolves.toContain(
+				`"PATH":"path/to/some-file","STRIPE_OBJECT"`
+			);
+		} finally {
+			await stop();
+		}
 	});
 });
