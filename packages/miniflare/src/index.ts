@@ -1071,7 +1071,8 @@ export class Miniflare {
 		// called by `#init()`, and `#initPromise` doesn't resolve until `#init()`
 		// returns.
 		assert(this.#runtimeEntryURL !== undefined);
-		return this.#runtimeEntryURL;
+		// Return a copy so external mutations don't propagate to `#runtimeEntryURL`
+		return new URL(this.#runtimeEntryURL.toString());
 	}
 	get ready(): Promise<URL> {
 		return this.#waitForReady();
