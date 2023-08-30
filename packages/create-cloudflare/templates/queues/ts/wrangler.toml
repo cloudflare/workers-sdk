@@ -1,5 +1,5 @@
 name = "<TBD>"
-main = "src/worker.ts"
+main = "src/index.ts"
 compatibility_date = "<TBD>"
 
 # Bind a Queue producer. Use this binding to schedule an arbitrary task that may be processed later by a Queue consumer.
