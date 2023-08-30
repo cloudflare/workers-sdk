@@ -77,6 +77,21 @@ test("Miniflare: validates options", async (t) => {
 	);
 });
 
+test("Miniflare: ready returns copy of entry URL", async (t) => {
+	const mf = new Miniflare({
+		port: 0,
+		modules: true,
+		script: "",
+	});
+	t.teardown(() => mf.dispose());
+
+	const url1 = await mf.ready;
+	url1.protocol = "ws:";
+	const url2 = await mf.ready;
+	t.not(url1, url2);
+	t.is(url2.protocol, "http:");
+});
+
 test("Miniflare: keeps port between updates", async (t) => {
 	const opts: MiniflareOptions = {
 		port: 0,
