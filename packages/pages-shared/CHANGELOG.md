@@ -1,5 +1,11 @@
 # @cloudflare/pages-shared
 
+## 0.8.2
+
+### Patch Changes
+
+- [#3870](https://github.com/cloudflare/workers-sdk/pull/3870) [`2a6fdd9e`](https://github.com/cloudflare/workers-sdk/commit/2a6fdd9e2a16bc883bd87e828927d47655d032ed) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Requests for Cloudflare Pages which match against a `_headers` rule now match regardless of the incoming request's port
+
 ## 0.8.1
 
 ### Patch Changes
