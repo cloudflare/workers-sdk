@@ -31,6 +31,7 @@ export type RunnerConfig = {
 	promptHandlers?: PromptHandler[];
 	argv?: string[];
 	outputPrefix?: string;
+	quarantine?: boolean;
 };
 
 export const runC3 = async ({

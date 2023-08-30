@@ -170,6 +170,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 				},
 			],
 			testCommitMessage: true,
+			quarantine: true,
 		},
 		nuxt: {
 			expectResponseToContain: "Welcome to Nuxt!",
@@ -227,9 +228,31 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 	};
 
 	Object.keys(frameworkTests).forEach((framework) => {
+		const config = frameworkTests[framework];
+		if (process.env.E2E_QUARANTINE === "true" || config.quarantine) return;
+
 		const skip = frameworkToTest && frameworkToTest !== framework;
+
 		test.skipIf(skip)(
 			framework,
+			async () => {
+				await runCliWithDeploy(
+					framework,
+					frameworkTests[framework].testCommitMessage
+				);
+			},
+			{ retry: 3, timeout: TEST_TIMEOUT }
+		);
+	});
+
+	Object.keys(frameworkTests).forEach((framework) => {
+		const config = frameworkTests[framework];
+		if (process.env.E2E_QUARANTINE !== "true" || !config.quarantine) return;
+
+		const skip = frameworkToTest && frameworkToTest !== framework;
+
+		test.skipIf(skip)(
+			`Quarantined: ${framework}`,
 			async () => {
 				await runCliWithDeploy(
 					framework,

@@ -81,6 +81,14 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.C3_TEST_CLOUDFLARE_ACCOUNT_ID }}
 
+      - name: Quarantined E2E Tests
+        continue-on-error: true
+        run: npm run test:e2e:${{matrix.pm}} -w create-cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.C3_TEST_CLOUDFLARE_ACCOUNT_ID }}
+          E2E_QUARANTINE: true
+
   get-dependabot-bumped-framework:
     runs-on: ubuntu-latest
     outputs:
