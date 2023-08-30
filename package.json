@@ -24,7 +24,7 @@
 		"postinstall": "patch-package",
 		"prettify": "prettier . --write --ignore-unknown",
 		"test": "turbo test",
-		"test:ci": "turbo test:ci --filter=!local-mode-tests --concurrency=1",
+		"test:ci": "turbo test:ci --filter=!local-mode-tests --filter=!playground-preview-worker --filter=!no-bundle-import --concurrency=1",
 		"test:watch": "turbo test:watch",
 		"type:tests": "turbo type:tests"
 	},

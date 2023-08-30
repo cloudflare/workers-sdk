@@ -104,13 +104,6 @@ jobs:
         env:
           NODE_ENV: "production"
 
-      - name: Build & Publish Testing Playground Worker
-        run: npm run deploy:testing
-        env:
-          NODE_ENV: "production"
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        working-directory: packages/playground-preview-worker
-
       - name: Run tests & collect coverage
         run: npm run test:ci
         env:
