@@ -234,7 +234,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 					frameworkTests[framework].testCommitMessage
 				);
 			},
-			{ retry: 3 }
+			{ retry: 3, timeout: 1000 * 60 * 3 }
 		);
 	});
 

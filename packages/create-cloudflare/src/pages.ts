@@ -23,6 +23,9 @@ import type { C3Args, PagesGeneratorContext } from "types";
 /** How many times to retry the create project command before failing. */
 const CREATE_PROJECT_RETRIES = 3;
 
+/** How many times to verify the project creation before failing. */
+const VERIFY_PROJECT_RETRIES = 3;
+
 const { npx } = detectPackageManager();
 
 const defaultFrameworkConfig = {
@@ -154,15 +157,15 @@ const createProject = async (ctx: PagesGeneratorContext) => {
 	}
 	const CLOUDFLARE_ACCOUNT_ID = ctx.account.id;
 
-	const compatFlags = ctx.framework?.config.compatibilityFlags?.join(" ");
-	const compatFlagsArg = compatFlags
-		? `--compatibility-flags ${compatFlags}`
-		: "";
-
-	const productionBranch = await getProductionBranch(ctx.project.path);
-	const cmd = `${npx} wrangler pages project create ${ctx.project.name} --production-branch ${productionBranch} ${compatFlagsArg}`;
-
 	try {
+		const compatFlags = ctx.framework?.config.compatibilityFlags?.join(" ");
+		const compatFlagsArg = compatFlags
+			? `--compatibility-flags ${compatFlags}`
+			: "";
+
+		const productionBranch = await getProductionBranch(ctx.project.path);
+		const cmd = `${npx} wrangler pages project create ${ctx.project.name} --production-branch ${productionBranch} ${compatFlagsArg}`;
+
 		await retry(CREATE_PROJECT_RETRIES, async () =>
 			runCommand(cmd, {
 				// Make this command more verbose in test mode to aid
@@ -176,5 +179,24 @@ const createProject = async (ctx: PagesGeneratorContext) => {
 		);
 	} catch (error) {
 		crash("Failed to create pages project. See output above.");
+	}
+
+	// Wait until the pages project is available for deployment
+	try {
+		const verifyProject = `${npx} wrangler pages deployment list --project-name ${ctx.project.name}`;
+
+		await retry(VERIFY_PROJECT_RETRIES, async () =>
+			runCommand(verifyProject, {
+				silent: process.env.VITEST == undefined,
+				cwd: ctx.project.path,
+				env: { CLOUDFLARE_ACCOUNT_ID },
+				startText: "Verifying Pages project",
+				doneText: `${brandColor("verified")} ${dim(
+					`project is ready for deployment`
+				)}`,
+			})
+		);
+	} catch (error) {
+		crash("Pages project isn't ready yet. Please try deploying again later.");
 	}
 };
