@@ -3,9 +3,12 @@ import { tmpdir } from "os";
 import { join } from "path";
 import { beforeEach, afterEach, describe, test, expect } from "vitest";
 import { version } from "../package.json";
+import { frameworkToTest } from "./frameworkToTest";
 import { keys, runC3 } from "./helpers";
 
-describe("E2E: Basic C3 functionality", () => {
+// Note: skipIf(frameworkToTest) makes it so that all the basic C3 functionality
+//       tests are skipped in case we are testing a specific framework
+describe.skipIf(frameworkToTest)("E2E: Basic C3 functionality ", () => {
 	const tmpDirPath = realpathSync(mkdtempSync(join(tmpdir(), "c3-tests")));
 	const projectPath = join(tmpDirPath, "basic-tests");
 

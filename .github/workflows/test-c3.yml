@@ -56,6 +56,8 @@ jobs:
   e2e:
     needs: cleanup
     name: "E2E"
+    if: |
+      github.event.pull_request.user.login != 'dependabot[bot]'
     strategy:
       matrix:
         # TODO: add back windows
@@ -76,5 +78,78 @@ jobs:
       - name: E2E Tests
         run: npm run test:e2e:${{matrix.pm}} -w create-cloudflare
         env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.C3_TEST_CLOUDFLARE_ACCOUNT_ID }}
+
+  get-dependabot-bumped-framework:
+    runs-on: ubuntu-latest
+    outputs:
+      bumped-framework-cli: ${{ steps.detect.outputs.result }}
+    if: |
+      github.event.pull_request.user.login == 'dependabot[bot]'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+          ref: ${{ github.head_ref }}
+      - name: Get PR description as string
+        id: get-pr-description
+        run: |
+          str=$(sed 's/`/\`/g' <<EOF
+            ${{ github.event.pull_request.body }}
+          EOF
+          )
+          echo 'result<<EOF' >> $GITHUB_OUTPUT
+          echo $str >> $GITHUB_OUTPUT
+          echo 'EOF' >> $GITHUB_OUTPUT
+      - name: detect-bumped-framework
+        id: detect
+        uses: actions/github-script@v6
+        with:
+          result-encoding: string
+          script: |
+            const json = require('./packages/create-cloudflare/src/frameworks/package.json')
+            const frameworkCliPackages = Object.values(json.frameworkCliMap);
+
+            const body = `${{ steps.get-pr-description.outputs.result }}`;
+
+            const semverRegexStr = '\\d+\\.\\d+\\.\\d+';
+
+            const frameworkCliRegex = new RegExp(
+              `(?:^|\\s+)Bumps\\s+\\[(${frameworkCliPackages.join(
+                '|'
+              )})\\]\\(.*?\\)\\s+from\\s+${semverRegexStr}\\s+to\\s+${semverRegexStr}`
+            );
+
+            const bumpedFrameworkCli = body.match(frameworkCliRegex)?.[1] ?? '';
+            return bumpedFrameworkCli;
+
+  # For dependabot versioning PRs we only want to run the e2es for the specifically bumped
+  # framework (this is both for optimization and in order to reduce unnecessary flakiness)
+  e2e-only-dependabot-bumped-framework:
+    needs: [cleanup, get-dependabot-bumped-framework]
+    name: "Dependabot specific E2E"
+    strategy:
+      matrix:
+        # TODO: add back windows
+        # os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest]
+        # pm: [npm, yarn, pnpm]
+        pm: [npm, pnpm]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: E2E Tests
+        run: npm run test:e2e:${{matrix.pm}} -w create-cloudflare
+        env:
+          FRAMEWORK_CLI_TO_TEST: ${{ needs.get-bumped-framework.outputs.bumped-framework-cli }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.C3_TEST_CLOUDFLARE_ACCOUNT_ID }}
