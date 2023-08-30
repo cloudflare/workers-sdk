@@ -2,15 +2,16 @@
 	"include": ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
 	"exclude": ["tests"],
 	"compilerOptions": {
-		"lib": ["DOM", "DOM.Iterable", "ES2019"],
+		"lib": ["DOM", "DOM.Iterable", "ES2022"],
 		"isolatedModules": true,
 		"esModuleInterop": true,
 		"jsx": "react-jsx",
-		"moduleResolution": "node",
+		"moduleResolution": "Bundler",
 		"resolveJsonModule": true,
-		"target": "ES2019",
+		"target": "ES2022",
 		"strict": true,
 		"allowJs": true,
+		"skipLibCheck": true,
 		"forceConsistentCasingInFileNames": true,
 		"baseUrl": ".",
 		"paths": {
@@ -18,9 +19,6 @@
 		},
 
 		// Remix takes care of building everything in `remix build`.
-		"noEmit": true,
-
-		"types": [],
-		"skipLibCheck": true
+		"noEmit": true
 	}
 }
