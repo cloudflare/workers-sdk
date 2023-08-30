@@ -3,9 +3,9 @@ import crypto from "node:crypto";
 import { tmpdir } from "os";
 import { join } from "path";
 import { spawn } from "cross-spawn";
+import { sleep } from "helpers/common";
 import { spinnerFrames } from "helpers/interactive";
 import type { SpinnerStyle } from "helpers/interactive";
-import { sleep } from "helpers/common";
 
 export const C3_E2E_PREFIX = "c3-e2e-";
 
