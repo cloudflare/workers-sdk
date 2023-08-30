@@ -6,7 +6,7 @@ on:
       - packages/create-cloudflare/**
 
 env:
-  node-version: 16.14
+  node-version: 18.17.1
 
 jobs:
   check:

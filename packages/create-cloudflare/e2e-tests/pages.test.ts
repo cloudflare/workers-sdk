@@ -14,6 +14,8 @@ Areas for future improvement:
 - Add support for frameworks with global installs (like docusaurus, gatsby, etc)
 */
 
+const TEST_TIMEOUT = 1000 * 60 * 3;
+
 type FrameworkTestConfig = RunnerConfig & {
 	expectResponseToContain: string;
 	testCommitMessage: boolean;
@@ -234,7 +236,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 					frameworkTests[framework].testCommitMessage
 				);
 			},
-			{ retry: 3, timeout: 1000 * 60 * 3 }
+			{ retry: 3, timeout: TEST_TIMEOUT }
 		);
 	});
 
