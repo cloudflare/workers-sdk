@@ -1,5 +1,57 @@
 # create-cloudflare
 
+## 2.2.1
+
+### Patch Changes
+
+- [#3841](https://github.com/cloudflare/workers-sdk/pull/3841) [`81c45b98`](https://github.com/cloudflare/workers-sdk/commit/81c45b988a2f772279bc5f37dba6b8cb83afef36) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fail and display the help message if an unrecognized argument is passed to C3
+
+## 2.2.0
+
+### Minor Changes
+
+- [#3776](https://github.com/cloudflare/workers-sdk/pull/3776) [`83e526b3`](https://github.com/cloudflare/workers-sdk/commit/83e526b3c9ea53b8cfbba5ab222613bf21c1db79) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add final commit when generating Pages projects
+
+  before after the user would have completed the creation of a Pages project
+  they would find the Cloudflare added/modified files uncommitted, instead of
+  leaving these uncommitted this change adds an extra commit (on top of the
+  framework specific) which also contains some useful information about the
+  project
+
+* [#3803](https://github.com/cloudflare/workers-sdk/pull/3803) [`9156994e`](https://github.com/cloudflare/workers-sdk/commit/9156994e1b1dccccc0dde8b6eba01a5a241f9511) Thanks [@jculvey](https://github.com/jculvey)! - C3: Checks for a newer version of create-cloudflare and uses it if available. This behavior can be suppressed with the --no-auto-update flag.
+
+### Patch Changes
+
+- [#3807](https://github.com/cloudflare/workers-sdk/pull/3807) [`fac199ba`](https://github.com/cloudflare/workers-sdk/commit/fac199ba0c3bee758ac13fa8e6133c19f4af845d) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - adjusted arguments passing so that arguments following an extra `--` are
+  passed to the underlying cli (if any)
+
+  For example:
+
+  ```
+  $ npm create cloudflare -- --framework=X -- -a -b
+  ```
+
+  now will run the framework X's cli with the `-a` and `-b` arguments
+  (such arguments will be completely ignored by C3)
+
+* [#3822](https://github.com/cloudflare/workers-sdk/pull/3822) [`3db34519`](https://github.com/cloudflare/workers-sdk/commit/3db3451988988c0af82023cc53975bbaef14ac8a) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - update the frameworks' cli versions used in C3
+
+  - `@angular/cli` from 16.1.x to 16.2.0
+  - `create-next-app` from 13.4.2 to 13.4.19
+  - `create-remix` from 1.16.0 to 1.19.3
+  - `gatsby` from 5.10.0 to 5.11.0
+  - `nuxi` from 3.4.2 to 3.6.5
+
+## 2.1.1
+
+### Patch Changes
+
+- [#3729](https://github.com/cloudflare/workers-sdk/pull/3729) [`9d8509e0`](https://github.com/cloudflare/workers-sdk/commit/9d8509e08acf082604ca896b4ab9ad5c05ae7505) Thanks [@jculvey](https://github.com/jculvey)! - Improve experience for WARP users by improving the reliability of the polling logic that waits for newly created apps to become available.
+
+* [#3552](https://github.com/cloudflare/workers-sdk/pull/3552) [`77a43d2a`](https://github.com/cloudflare/workers-sdk/commit/77a43d2aa3633fc53be6fe365271d6fb59f44bd6) Thanks [@yusukebe](https://github.com/yusukebe)! - fix: use workers template for Hono
+
+  Use a workers template instead of a pages template for `create-hono`.
+
 ## 2.1.0
 
 ### Minor Changes

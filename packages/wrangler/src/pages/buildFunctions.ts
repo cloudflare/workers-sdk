@@ -35,7 +35,6 @@ export async function buildFunctions({
 	legacyNodeCompat,
 	nodejsCompat,
 	local,
-	d1Databases,
 }: Partial<
 	Pick<
 		PagesBuildArgs,
@@ -54,7 +53,6 @@ export async function buildFunctions({
 	onEnd?: () => void;
 	routesOutputPath?: PagesBuildArgs["outputRoutesPath"];
 	local: boolean;
-	d1Databases?: string[];
 	legacyNodeCompat?: boolean;
 	nodejsCompat?: boolean;
 }) {

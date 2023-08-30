@@ -9,6 +9,7 @@
 /packages/wrangler/pages/ @cloudflare/pages @cloudflare/wrangler
 /packages/wrangler/src/api/pages/ @cloudflare/pages @cloudflare/wrangler
 /packages/wrangler/src/pages/ @cloudflare/pages @cloudflare/wrangler
+/packages/wrangler/src/__tests__/pages/ @cloudflare/pages @cloudflare/wrangler
 
 /packages/wrangler/src/api/d1/ @cloudflare/d1 @cloudflare/wrangler
 /packages/wrangler/src/d1/ @cloudflare/d1 @cloudflare/wrangler

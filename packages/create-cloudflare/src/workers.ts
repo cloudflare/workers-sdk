@@ -2,15 +2,19 @@ import { readFile, writeFile, mkdtemp, cp, rm, readdir } from "fs/promises";
 import { tmpdir } from "os";
 import { resolve, join } from "path";
 import { chdir } from "process";
-import { endSection, updateStatus, startSection } from "helpers/cli";
+import { processArgument } from "helpers/args";
+import {
+	endSection,
+	updateStatus,
+	startSection,
+	C3_DEFAULTS,
+} from "helpers/cli";
 import { brandColor, dim } from "helpers/colors";
 import {
 	getWorkerdCompatibilityDate,
 	npmInstall,
 	runCommand,
 } from "helpers/command";
-import { processArgument } from "helpers/interactive";
-import { C3_DEFAULTS } from "./cli";
 import {
 	chooseAccount,
 	gitCommit,

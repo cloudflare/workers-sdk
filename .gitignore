@@ -205,3 +205,6 @@ build/**
 dist/**
 .next/**
 .turbo
+
+# Runtime dependencies report
+runtime-versions.md

@@ -2,13 +2,13 @@
 import { resolve } from "path";
 import { chdir } from "process";
 import { FrameworkMap, supportedFramework } from "frameworks/index";
-import { crash, endSection, startSection } from "helpers/cli";
+import { processArgument } from "helpers/args";
+import { C3_DEFAULTS, crash, endSection, startSection } from "helpers/cli";
 import { dim, brandColor } from "helpers/colors";
 import { installWrangler, retry, runCommand } from "helpers/command";
 import { readJSON, writeFile } from "helpers/files";
-import { processArgument, spinner } from "helpers/interactive";
+import { spinner } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
-import { C3_DEFAULTS } from "./cli";
 import {
 	getProductionBranch,
 	gitCommit,
@@ -46,8 +46,10 @@ export const runPagesGenerator = async (args: C3Args) => {
 				...defaultFrameworkConfig,
 				...frameworkConfig,
 			},
+			args: args.additionalArgs ?? [],
 		},
 		args,
+		type: frameworkConfig.type,
 	};
 
 	// Generate
@@ -145,6 +147,7 @@ const updatePackageScripts = async (ctx: PagesGeneratorContext) => {
 
 const createProject = async (ctx: PagesGeneratorContext) => {
 	if (ctx.args.deploy === false) return;
+	if (ctx.framework?.config.type === "workers") return;
 	if (!ctx.account?.id) {
 		crash("Failed to read Cloudflare account.");
 		return;
@@ -162,7 +165,9 @@ const createProject = async (ctx: PagesGeneratorContext) => {
 	try {
 		await retry(CREATE_PROJECT_RETRIES, async () =>
 			runCommand(cmd, {
-				silent: true,
+				// Make this command more verbose in test mode to aid
+				// troubleshooting API errors
+				silent: process.env.VITEST == undefined,
 				cwd: ctx.project.path,
 				env: { CLOUDFLARE_ACCOUNT_ID },
 				startText: "Creating Pages project",
@@ -170,6 +175,6 @@ const createProject = async (ctx: PagesGeneratorContext) => {
 			})
 		);
 	} catch (error) {
-		crash("Failed to create pages application. See output above.");
+		crash("Failed to create pages project. See output above.");
 	}
 };

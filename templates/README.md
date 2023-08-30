@@ -12,13 +12,13 @@ There are a few ways to quickly jumpstart your next project using one of the tem
 
 1. **Local development, via CLI quickstart utility**
 
-   We recommend using the `npm create cloudflare@1 [folder-name] [template-name]` command to create new projects with templates.
-
-   You may select the name of any subdirectory within this repository to create your project; for example, `worker-typescript` and `examples/fast-google-fonts` are both valid subdirectory names.
+   We recommend using the `npx wrangler generate [folder-name] [template-name]` command to create new projects with templates.
 
    To create a `my-project` directory using the [`worker-typescript`](/worker-typescript) template, you would run the following command:
 
-`npm create cloudflare@1 my-project worker-typescript`
+   `npx wrangler generate my-project worker-typescript`
+
+   Each template also comes with explicit installation and setup instructions in the README.
 
 1. **Local development, via full repository clone**
 

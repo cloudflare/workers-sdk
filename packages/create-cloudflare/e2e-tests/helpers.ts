@@ -1,5 +1,12 @@
+import { existsSync, mkdtempSync, realpathSync, rmSync } from "fs";
+import crypto from "node:crypto";
+import { tmpdir } from "os";
+import { join } from "path";
 import { spawn } from "cross-spawn";
 import { spinnerFrames } from "helpers/interactive";
+import type { SpinnerStyle } from "helpers/interactive";
+
+export const C3_E2E_PREFIX = "c3-e2e-";
 
 export const keys = {
 	enter: "\x0d",
@@ -22,11 +29,13 @@ export type RunnerConfig = {
 	};
 	promptHandlers?: PromptHandler[];
 	argv?: string[];
+	outputPrefix?: string;
 };
 
 export const runC3 = async ({
 	argv = [],
 	promptHandlers = [],
+	outputPrefix = "",
 }: RunnerConfig) => {
 	const proc = spawn("node", ["./dist/cli.js", ...argv]);
 	const stdout: string[] = [];
@@ -39,9 +48,9 @@ export const runC3 = async ({
 
 			lines.forEach((line) => {
 				// Uncomment to debug test output
-				// if (filterLine(line)) {
-				// 	console.log(line);
-				// }
+				if (filterLine(line)) {
+					console.log(`${outputPrefix} ${line}`);
+				}
 				stdout.push(line);
 
 				if (currentDialog && currentDialog.matcher.test(line)) {
@@ -89,6 +98,26 @@ export const runC3 = async ({
 	};
 };
 
+export const testProjectDir = (suite: string) => {
+	const tmpDirPath = realpathSync(
+		mkdtempSync(join(tmpdir(), `c3-tests-${suite}`))
+	);
+
+	const randomSuffix = crypto.randomBytes(3).toString("hex");
+	const baseProjectName = `${C3_E2E_PREFIX}${randomSuffix}`;
+
+	const getName = (suffix: string) => `${baseProjectName}-${suffix}`;
+	const getPath = (suffix: string) => join(tmpDirPath, getName(suffix));
+	const clean = (suffix: string) => {
+		const path = getPath(suffix);
+		if (existsSync(path)) {
+			rmSync(path, { recursive: true, force: true });
+		}
+	};
+
+	return { getName, getPath, clean };
+};
+
 // Removes lines from the output of c3 that aren't particularly useful for debugging tests
 export const condenseOutput = (lines: string[]) => {
 	return lines.filter(filterLine);
@@ -96,8 +125,10 @@ export const condenseOutput = (lines: string[]) => {
 
 const filterLine = (line: string) => {
 	// Remove all lines with spinners
-	for (const frame of spinnerFrames) {
-		if (line.includes(frame)) return false;
+	for (const spinnerType of Object.keys(spinnerFrames)) {
+		for (const frame of spinnerFrames[spinnerType as SpinnerStyle]) {
+			if (line.includes(frame)) return false;
+		}
 	}
 
 	// Remove empty lines

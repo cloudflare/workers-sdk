@@ -570,7 +570,7 @@ describe("wrangler", () => {
 			      --metadata      Arbitrary JSON that is associated with a key  [string]
 			      --path          Read value from the file at a given path  [string]
 			      --local         Interact with local storage  [boolean]
-			      --persist-to    Directory for local persistance  [string]"
+			      --persist-to    Directory for local persistence  [string]"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
@@ -612,7 +612,7 @@ describe("wrangler", () => {
 			      --metadata      Arbitrary JSON that is associated with a key  [string]
 			      --path          Read value from the file at a given path  [string]
 			      --local         Interact with local storage  [boolean]
-			      --persist-to    Directory for local persistance  [string]"
+			      --persist-to    Directory for local persistence  [string]"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments binding and namespace-id is required[0m
@@ -654,7 +654,7 @@ describe("wrangler", () => {
 			      --metadata      Arbitrary JSON that is associated with a key  [string]
 			      --path          Read value from the file at a given path  [string]
 			      --local         Interact with local storage  [boolean]
-			      --persist-to    Directory for local persistance  [string]"
+			      --persist-to    Directory for local persistence  [string]"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments binding and namespace-id are mutually exclusive[0m
@@ -696,7 +696,7 @@ describe("wrangler", () => {
 			      --metadata      Arbitrary JSON that is associated with a key  [string]
 			      --path          Read value from the file at a given path  [string]
 			      --local         Interact with local storage  [boolean]
-			      --persist-to    Directory for local persistance  [string]"
+			      --persist-to    Directory for local persistence  [string]"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments value and path is required[0m
@@ -738,7 +738,7 @@ describe("wrangler", () => {
 			      --metadata      Arbitrary JSON that is associated with a key  [string]
 			      --path          Read value from the file at a given path  [string]
 			      --local         Interact with local storage  [boolean]
-			      --persist-to    Directory for local persistance  [string]"
+			      --persist-to    Directory for local persistence  [string]"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments value and path are mutually exclusive[0m
@@ -1114,7 +1114,7 @@ describe("wrangler", () => {
 			      --preview       Interact with a preview namespace  [boolean] [default: false]
 			      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
 			      --local         Interact with local storage  [boolean]
-			      --persist-to    Directory for local persistance  [string]"
+			      --persist-to    Directory for local persistence  [string]"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
@@ -1151,7 +1151,7 @@ describe("wrangler", () => {
 			      --preview       Interact with a preview namespace  [boolean] [default: false]
 			      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
 			      --local         Interact with local storage  [boolean]
-			      --persist-to    Directory for local persistance  [string]"
+			      --persist-to    Directory for local persistence  [string]"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mExactly one of the arguments binding and namespace-id is required[0m
@@ -1189,7 +1189,7 @@ describe("wrangler", () => {
 			      --preview       Interact with a preview namespace  [boolean] [default: false]
 			      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
 			      --local         Interact with local storage  [boolean]
-			      --persist-to    Directory for local persistance  [string]"
+			      --persist-to    Directory for local persistence  [string]"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mArguments binding and namespace-id are mutually exclusive[0m

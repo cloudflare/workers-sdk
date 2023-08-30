@@ -10,25 +10,26 @@ import {
 import { readFile, readJSON, writeFile } from "helpers/files";
 import { spinner } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
-import { getFrameworkVersion } from "../index";
+import { getFrameworkCli } from "../index";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
 const { dlx, npx, npm } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
-	const version = getFrameworkVersion(ctx);
+	const cli = getFrameworkCli(ctx);
 
 	await runFrameworkGenerator(
 		ctx,
-		`${dlx} @angular/cli@${version} new ${ctx.project.name} --standalone`
+		`${dlx} ${cli} new ${ctx.project.name} --standalone`
 	);
 
 	logRaw("");
 };
 
 const configure = async (ctx: PagesGeneratorContext) => {
+	const cli = getFrameworkCli(ctx, false);
 	process.chdir(ctx.project.path);
-	await runCommand(`${npx} @angular/cli@next analytics disable`, {
+	await runCommand(`${npx} ${cli}@next analytics disable`, {
 		silent: true,
 	});
 	await addSSRAdapter();

@@ -9,11 +9,9 @@ A simple template for working with WebSockets in Cloudflare Workers. [Check out 
 To create a `my-project` directory using this template, run:
 
 ```sh
-$ npm init cloudflare my-project worker-websocket
+$ npx wrangler generate my-project worker-websocket
 # or
-$ yarn create cloudflare my-project worker-websocket
+$ yarn wrangler generate my-project worker-websocket
 # or
-$ pnpm create cloudflare my-project worker-websocket
+$ pnpm wrangler generate my-project worker-websocket
 ```
-
-> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.

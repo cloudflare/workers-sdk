@@ -1,30 +1,28 @@
-import { existsSync, rmSync, mkdtempSync, realpathSync } from "fs";
-import { tmpdir } from "os";
 import { join } from "path";
 import { describe, expect, test, afterEach, beforeEach } from "vitest";
-import { runC3 } from "./helpers";
+import { runC3, testProjectDir } from "./helpers";
 
 /*
 Areas for future improvement:
 - Make these actually e2e by verifying that deployment works
-- Add support for frameworks with global installs (like docusaurus, gatsby, etc)
 */
 
 describe("E2E: Workers templates", () => {
-	const tmpDirPath = realpathSync(mkdtempSync(join(tmpdir(), "workers-tests")));
-	const projectPath = join(tmpDirPath, "pages-tests");
+	const { getPath, clean } = testProjectDir("workers");
 
-	beforeEach(() => {
-		rmSync(projectPath, { recursive: true, force: true });
+	beforeEach((ctx) => {
+		const template = ctx.meta.name;
+		clean(template);
 	});
 
-	afterEach(() => {
-		if (existsSync(projectPath)) {
-			rmSync(projectPath, { recursive: true });
-		}
+	afterEach((ctx) => {
+		const template = ctx.meta.name;
+		clean(template);
 	});
 
 	const runCli = async (template: string) => {
+		const projectPath = getPath(template);
+
 		const argv = [
 			projectPath,
 			"--type",

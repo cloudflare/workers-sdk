@@ -5,6 +5,7 @@ import { MockedRequest, rest } from "msw";
 import { FormData } from "undici";
 import { version } from "../../../package.json";
 import { ROUTES_SPEC_VERSION } from "../../pages/constants";
+import { ApiErrorCodes } from "../../pages/errors";
 import { isRoutesJSONSpec } from "../../pages/functions/routes-validation";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -231,7 +232,7 @@ describe("deployment create", () => {
 							success: false,
 							errors: [
 								{
-									code: 800000,
+									code: ApiErrorCodes.UNKNOWN_ERROR,
 									message: "Something exploded, please retry",
 								},
 							],
@@ -298,6 +299,169 @@ describe("deployment create", () => {
 
 		await runWrangler("pages deploy . --project-name=foo");
 
+		// Should be 2 attempts to upload
+		expect(requests.length).toBe(2);
+
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+		"✨ Success! Uploaded 1 files (TIMINGS)
+
+		✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+	`);
+	});
+
+	it("should retry POST /deployments", async () => {
+		writeFileSync("logo.txt", "foobar");
+
+		mockGetUploadTokenRequest(
+			"<<funfetti-auth-jwt>>",
+			"some-account-id",
+			"foo"
+		);
+
+		// Accumulate multiple requests then assert afterwards
+		const requests: RestRequest[] = [];
+		msw.use(
+			rest.post("*/pages/assets/check-missing", async (req, res, ctx) => {
+				const body = await req.json();
+
+				expect(req.headers.get("Authorization")).toBe(
+					"Bearer <<funfetti-auth-jwt>>"
+				);
+				expect(body).toMatchObject({
+					hashes: ["1a98fb08af91aca4a7df1764a2c4ddb0"],
+				});
+
+				return res.once(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: body.hashes,
+					})
+				);
+			}),
+			rest.post("*/pages/assets/upload", async (req, res, ctx) => {
+				expect(req.headers.get("Authorization")).toBe(
+					"Bearer <<funfetti-auth-jwt>>"
+				);
+				expect(await req.json()).toMatchObject([
+					{
+						key: "1a98fb08af91aca4a7df1764a2c4ddb0",
+						value: Buffer.from("foobar").toString("base64"),
+						metadata: {
+							contentType: "text/plain",
+						},
+						base64: true,
+					},
+				]);
+
+				return res(
+					ctx.status(200),
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: null,
+					})
+				);
+			}),
+			rest.post(
+				"*/accounts/:accountId/pages/projects/foo/deployments",
+				async (req, res, ctx) => {
+					requests.push(req);
+					expect(req.params.accountId).toEqual("some-account-id");
+					expect(await (req as RestRequestWithFormData).formData())
+						.toMatchInlineSnapshot(`
+				      FormData {
+				        Symbol(state): Array [
+				          Object {
+				            "name": "manifest",
+				            "value": "{\\"/logo.txt\\":\\"1a98fb08af91aca4a7df1764a2c4ddb0\\"}",
+				          },
+				        ],
+				      }
+			    `);
+
+					if (requests.length < 2) {
+						return res(
+							ctx.status(500),
+							ctx.json({
+								success: false,
+								errors: [
+									{
+										code: ApiErrorCodes.UNKNOWN_ERROR,
+										message: "Something exploded, please retry",
+									},
+								],
+								messages: [],
+								result: null,
+							})
+						);
+					} else {
+						return res.once(
+							ctx.status(200),
+							ctx.json({
+								success: true,
+								errors: [],
+								messages: [],
+								result: { url: "https://abcxyz.foo.pages.dev/" },
+							})
+						);
+					}
+				}
+			),
+			rest.post(
+				"*/accounts/:accountId/pages/projects/foo/deployments",
+				async (req, res, ctx) => {
+					requests.push(req);
+					expect(req.params.accountId).toEqual("some-account-id");
+					expect(await (req as RestRequestWithFormData).formData())
+						.toMatchInlineSnapshot(`
+				      FormData {
+				        Symbol(state): Array [
+				          Object {
+				            "name": "manifest",
+				            "value": "{\\"/logo.txt\\":\\"1a98fb08af91aca4a7df1764a2c4ddb0\\"}",
+				          },
+				        ],
+				      }
+			    `);
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: { url: "https://abcxyz.foo.pages.dev/" },
+						})
+					);
+				}
+			),
+			rest.get(
+				"*/accounts/:accountId/pages/projects/foo",
+				async (req, res, ctx) => {
+					expect(req.params.accountId).toEqual("some-account-id");
+
+					return res.once(
+						ctx.status(200),
+						ctx.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: { deployment_configs: { production: {}, preview: {} } },
+						})
+					);
+				}
+			)
+		);
+
+		await runWrangler("pages deploy . --project-name=foo");
+
+		// Should be 2 attempts to POST /deployments
+		expect(requests.length).toBe(2);
+
 		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
 		"✨ Success! Uploaded 1 files (TIMINGS)
 
@@ -360,7 +524,7 @@ describe("deployment create", () => {
 							success: false,
 							errors: [
 								{
-									code: 8000013,
+									code: ApiErrorCodes.UNAUTHORIZED,
 									message: "Authorization failed",
 								},
 							],

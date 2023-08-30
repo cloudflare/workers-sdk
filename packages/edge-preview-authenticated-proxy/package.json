@@ -1,13 +1,13 @@
 {
 	"name": "edge-preview-authenticated-proxy",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"private": true,
 	"scripts": {
 		"check:lint": "eslint .",
 		"publish": "wrangler deploy",
 		"start": "wrangler dev",
-		"test": "vitest run",
-		"test:watch": "npx vitest",
+		"test": "vitest",
+		"test:ci": "vitest run",
 		"type:tests": "tsc -p ./tests/tsconfig.json",
 		"check:type": "tsc"
 	},

@@ -1,4 +1,5 @@
 import { mkdirSync } from "fs";
+import { processArgument } from "helpers/args";
 import { updateStatus, warn } from "helpers/cli";
 import { brandColor, dim } from "helpers/colors";
 import { installPackages, runFrameworkGenerator } from "helpers/command";
@@ -10,9 +11,8 @@ import {
 	writeFile,
 	writeJSON,
 } from "helpers/files";
-import { processArgument } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
-import { getFrameworkVersion } from "../index";
+import { getFrameworkCli } from "../index";
 import {
 	apiAppDirHelloJs,
 	apiAppDirHelloTs,
@@ -25,12 +25,9 @@ const { npm, npx, dlx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
 	const projectName = ctx.project.name;
-	const version = getFrameworkVersion(ctx);
+	const cli = getFrameworkCli(ctx);
 
-	await runFrameworkGenerator(
-		ctx,
-		`${dlx} create-next-app@${version} ${projectName}`
-	);
+	await runFrameworkGenerator(ctx, `${dlx} ${cli} ${projectName}`);
 };
 
 const getApiTemplate = (
@@ -144,7 +141,7 @@ const config: FrameworkConfig = {
 	configure,
 	displayName: "Next",
 	packageScripts: {
-		"pages:build": `${npx} @cloudflare/next-on-pages@1`,
+		"pages:build": `${dlx} @cloudflare/next-on-pages@1`,
 		"pages:deploy": `${npm} run pages:build && wrangler pages deploy .vercel/output/static`,
 		"pages:watch": `${npx} @cloudflare/next-on-pages@1 --watch`,
 		"pages:dev": `${npx} wrangler pages dev .vercel/output/static --compatibility-flag=nodejs_compat`,

@@ -123,7 +123,7 @@ describe("generateTypes()", () => {
 			D1_TESTING_SOMETHING: D1Database;
 			SERVICE_BINDING: Fetcher;
 			AE_DATASET_BINDING: AnalyticsEngineDataset;
-			NAMESPACE_BINDING: any;
+			NAMESPACE_BINDING: DispatchNamespace;
 			LOGFWDR_SCHEMA: any;
 			SOME_DATA_BLOB1: ArrayBuffer;
 			SOME_DATA_BLOB2: ArrayBuffer;

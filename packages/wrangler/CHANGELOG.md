@@ -1,5 +1,27 @@
 # wrangler
 
+## 3.6.0
+
+### Minor Changes
+
+- [#3727](https://github.com/cloudflare/workers-sdk/pull/3727) [`a5e7c0be`](https://github.com/cloudflare/workers-sdk/commit/a5e7c0be0f1b095f9af3d2b55782f9d8b2a6bb09) Thanks [@echen67](https://github.com/echen67)! - Warn user when the last deployment was via the API
+
+### Patch Changes
+
+- [#3762](https://github.com/cloudflare/workers-sdk/pull/3762) [`18dc7b54`](https://github.com/cloudflare/workers-sdk/commit/18dc7b5428ffb5c68dc5ebbbaf506d8fc2fe1f48) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Add internal `wrangler pages project validate [directory]` command which validates an asset directory
+
+* [#3758](https://github.com/cloudflare/workers-sdk/pull/3758) [`0adccc71`](https://github.com/cloudflare/workers-sdk/commit/0adccc71789efe1b42b6d3de55f6d6d7e50fda64) Thanks [@jahands](https://github.com/jahands)! - fix: Retry deployment errors in wrangler pages publish
+
+  This will improve reliability when deploying to Cloudflare Pages
+
+## 3.5.1
+
+### Patch Changes
+
+- [#3752](https://github.com/cloudflare/workers-sdk/pull/3752) [`8f5ed7fe`](https://github.com/cloudflare/workers-sdk/commit/8f5ed7febc1b348f3fc88eabccabd9678b6cd21a) Thanks [@DaniFoldi](https://github.com/DaniFoldi)! - Changed the binding type of WfP Dispatch Namespaces to `DispatchNamespace`
+
+* [#3765](https://github.com/cloudflare/workers-sdk/pull/3765) [`e17d3096`](https://github.com/cloudflare/workers-sdk/commit/e17d3096ecde7cf697f7d5bc6ebc3a868eb88cfa) Thanks [@RamIdeas](https://github.com/RamIdeas)! - bump miniflare version to 3.20230814.1
+
 ## 3.5.0
 
 ### Minor Changes
