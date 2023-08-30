@@ -5,6 +5,7 @@ import { join } from "path";
 import { spawn } from "cross-spawn";
 import { spinnerFrames } from "helpers/interactive";
 import type { SpinnerStyle } from "helpers/interactive";
+import { sleep } from "helpers/common";
 
 export const C3_E2E_PREFIX = "c3-e2e-";
 
@@ -46,7 +47,7 @@ export const runC3 = async ({
 			const lines: string[] = data.toString().split("\n");
 			const currentDialog = promptHandlers[0];
 
-			lines.forEach((line) => {
+			lines.forEach(async (line) => {
 				// Uncomment to debug test output
 				if (filterLine(line)) {
 					console.log(`${outputPrefix} ${line}`);
@@ -54,6 +55,9 @@ export const runC3 = async ({
 				stdout.push(line);
 
 				if (currentDialog && currentDialog.matcher.test(line)) {
+					// Add a small sleep to avoid input race
+					await sleep(500);
+
 					currentDialog.input.forEach((keystroke) => {
 						proc.stdin.write(keystroke);
 					});
