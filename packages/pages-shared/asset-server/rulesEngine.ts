@@ -7,10 +7,11 @@ const escapeRegex = (str: string) => {
 	return str.replace(ESCAPE_REGEX_CHARACTERS, "\\$&");
 };
 
-// Placeholder names must begin with a colon, be alphanumeric and optionally contain underscores.
+// Placeholder names must begin with a colon then a letter, be alphanumeric and optionally contain underscores.
 // e.g. :place_123_holder
-const HOST_PLACEHOLDER_REGEX = /(?<=^https:\\\/\\\/[^/]*?):([^\\]+)(?=\\)/g;
-const PLACEHOLDER_REGEX = /:(\w+)/g;
+const HOST_PLACEHOLDER_REGEX =
+	/(?<=^https:\\\/\\\/[^/]*?):([A-Za-z]\w*)(?=\\)/g;
+const PLACEHOLDER_REGEX = /:([A-Za-z]\w*)/g;
 
 export type Replacements = Record<string, string>;
 
@@ -67,11 +68,22 @@ export const generateRulesMatcher = <T>(
 	][];
 
 	return ({ request }: { request: Request }) => {
-		const { pathname, host } = new URL(request.url);
+		const { pathname, hostname } = new URL(request.url);
 
 		return compiledRules
 			.map(([{ crossHost, regExp }, match]) => {
-				const test = crossHost ? `https://${host}${pathname}` : pathname;
+				// This, rather confusingly, means that although we enforce `https://` protocols in
+				// the rules of `_headers`/`_redirects`, we don't actually respect that at all at runtime.
+				// When processing a request against an absolute URL rule, we rewrite the protocol to `https://`.
+				// This has the benefit of ensuring attackers can't specify a different protocol
+				// to circumvent a developer's security rules (e.g. CORS), but it isn't obvious behavior.
+				// We should consider different syntax in the future for developers when they specify rules.
+				// For example, `*://example.com/path`, `://example.com/path` or `//example.com/`.
+				// Though we'd need to be careful with that last one
+				// as that would currently be read as a relative URL.
+				// Perhaps, if we ever move the `_headers`/`_redirects` files to acting ahead of Functions,
+				// this might be a good time for this change.
+				const test = crossHost ? `https://${hostname}${pathname}` : pathname;
 				const result = regExp.exec(test);
 				if (result) {
 					return replacerFn(match, result.groups || {});

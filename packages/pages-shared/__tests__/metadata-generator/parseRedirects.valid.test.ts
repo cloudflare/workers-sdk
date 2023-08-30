@@ -158,6 +158,38 @@ test("parseRedirects should accept absolute URLs that end with index.html", () =
 	});
 });
 
+test("parseRedirects should accept going to absolute URLs with ports", () => {
+	const input = `
+	/foo https://bar.com:123/index.html 302
+	/cat https://cat.com:12345 302
+	/dog https://dog.com:12345
+	`;
+	const result = parseRedirects(input);
+	expect(result).toEqual({
+		rules: [
+			{
+				from: "/foo",
+				status: 302,
+				to: "https://bar.com:123/index.html",
+				lineNumber: 2,
+			},
+			{
+				from: "/cat",
+				status: 302,
+				to: "https://cat.com:12345/",
+				lineNumber: 3,
+			},
+			{
+				from: "/dog",
+				status: 302,
+				to: "https://dog.com:12345/",
+				lineNumber: 4,
+			},
+		],
+		invalid: [],
+	});
+});
+
 test("parseRedirects should accept relative URLs that don't point to .html files", () => {
 	const input = `
 	/* /foo 200

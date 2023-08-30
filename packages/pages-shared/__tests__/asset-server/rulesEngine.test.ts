@@ -24,6 +24,11 @@ describe("rules engine", () => {
 				request: new Request("https://example.com//fake.host/actually-a-path"),
 			})
 		).toEqual([5]);
+		expect(
+			matcher({
+				request: new Request("other://custom.domain:123/test"),
+			})
+		).toEqual([1, 3]);
 	});
 
 	test("it should escape funky rules", () => {
