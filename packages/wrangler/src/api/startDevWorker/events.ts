@@ -1,23 +1,23 @@
-import type { DevWorker } from "./types";
+import type { Config, DevWorker } from "./types";
 
 // export class ConfigUpdateEvent extends Event implements IConfigUpdateEvent {
-// 	constructor(public config: WorkerConfig) {
+// 	constructor(public config: Config) {
 // 		super("configUpdate");
 // 	}
 // }
 // export class BundleStartEvent extends Event implements IBundleStartEvent {
-// 	constructor(public config: WorkerConfig) {
+// 	constructor(public config: Config) {
 // 		super("bundleStart");
 // 	}
 // }
 
 // export class BundleCompleteEvent extends Event implements IBundleCompleteEvent {
-// 	constructor(public bundle: WorkerBundle, public config: WorkerConfig) {
+// 	constructor(public bundle: WorkerBundle, public config: Config) {
 // 		super("bundleComplete");
 // 	}
 // }
 // export class ReloadStartEvent extends Event implements IReloadStartEvent {
-// 	constructor(public config: WorkerConfig) {
+// 	constructor(public config: Config) {
 // 		super("reloadStart");
 // 	}
 // }
@@ -26,7 +26,7 @@ import type { DevWorker } from "./types";
 // 		public url: URL,
 // 		public headers: Headers | undefined,
 // 		public bundle: WorkerBundle,
-// 		public config: WorkerConfig
+// 		public config: Config
 // 	) {
 // 		super("reloadComplete");
 // 	}
@@ -39,7 +39,7 @@ import type { DevWorker } from "./types";
 // 		public url: URL,
 // 		public headers: Headers,
 // 		public bundle: WorkerBundle,
-// 		public config: WorkerConfig
+// 		public config: Config
 // 	) {
 // 		super("previewTokenExpired");
 // 	}
@@ -74,19 +74,19 @@ export function castErrorCause(cause: unknown) {
 export type ConfigUpdateEvent = {
 	type: "configUpdate";
 
-	config: WorkerConfig;
+	config: Config;
 };
 
 // BundlerController
 export type BundleStartEvent = {
 	type: "bundleStart";
 
-	config: WorkerConfig;
+	config: Config;
 };
 export type BundleCompleteEvent = {
 	type: "bundleComplete";
 
-	config: WorkerConfig;
+	config: Config;
 	bundle: WorkerBundle;
 };
 
@@ -94,13 +94,13 @@ export type BundleCompleteEvent = {
 export type ReloadStartEvent = {
 	type: "reloadStart";
 
-	config: WorkerConfig;
+	config: Config;
 	bundle: WorkerBundle;
 };
 export type ReloadCompleteEvent = {
 	type: "reloadComplete";
 
-	config: WorkerConfig;
+	config: Config;
 	bundle: WorkerBundle;
 	proxyData: ProxyData;
 };
@@ -141,10 +141,6 @@ export type InspectorProxyWorkerOutgoingMessage =
 	| { type: "previewTokenExpired"; proxyData: ProxyData };
 
 type SerializedError = Pick<Error, "name" | "message" | "stack" | "cause">;
-export interface WorkerConfig {
-	scriptPath: string;
-	// ...
-}
 
 type WorkerModuleFormat = "modules" | "service-worker";
 type WorkerModuleType =
@@ -167,9 +163,9 @@ interface WorkerBundle {
 	// ...
 }
 
-type ProxyData = {
+export type ProxyData = {
 	destinationURL: Partial<URL>;
 	destinationInspectorURL: Partial<URL>;
 	headers: Record<string, string>;
-	liveReloadUrl: boolean;
+	liveReloadUrl?: string;
 };

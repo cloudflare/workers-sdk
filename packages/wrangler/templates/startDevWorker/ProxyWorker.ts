@@ -1,14 +1,8 @@
 import type {
 	ProxyWorkerIncomingMessage,
 	ProxyWorkerOutgoingMessage,
+	ProxyData,
 } from "../../src/api/startDevWorker/events";
-
-type ProxyData = {
-	destinationURL: Partial<URL>;
-	destinationInspectorURL: Partial<URL>;
-	headers: Record<string, string>;
-	liveReloadUrl: boolean;
-};
 
 let buffering = false;
 let buffer: DeferredPromise<ProxyData>;
@@ -75,6 +69,7 @@ function processProxyControllerRequest(request: Request, env: Env) {
 			buffering = true;
 			buffer = createDeferredPromise();
 			break;
+
 		case "play":
 			buffering = false;
 			buffer.resolve(event.proxyData);
@@ -166,7 +161,10 @@ function insertLiveReloadScript(
 
 	htmlRewriter.onDocument({
 		end(end) {
-			if (errorDetails.includes("Invalid Workers Preview configuration")) {
+			if (
+				response.status === 400 &&
+				errorDetails.includes("Invalid Workers Preview configuration")
+			) {
 				void sendMessageToProxyController(env, {
 					type: "previewTokenExpired",
 					proxyData,

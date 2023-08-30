@@ -1,11 +1,13 @@
+import type { Config, RawConfig } from "../../config/config";
 import type { CfAccount } from "../../create-worker-preview";
-import type { WorkerConfig } from "./events";
 import type { Json, fetch, Request, Response } from "miniflare";
 import type * as undici from "undici";
 
+export { Config };
+
 export interface DevWorker {
 	ready: Promise<void>;
-	config?: WorkerConfig;
+	config?: Config;
 	setOptions(options: StartDevWorkerOptions): void;
 	updateOptions(options: Partial<StartDevWorkerOptions>): void;
 	fetch: typeof fetch;
@@ -24,7 +26,7 @@ export interface StartDevWorkerOptions {
 	 */
 	script: File<string>;
 	/** The configuration of the worker. */
-	config?: File<string | WorkerConfig> & { env?: string };
+	config?: File<string | RawConfig> & { env?: string };
 	/** The compatibility date for the workerd runtime. */
 	compatibilityDate?: string;
 	/** The compatibility flags for the workerd runtime. */
@@ -186,7 +188,8 @@ export type Binding =
 	| { type: "service"; service: ServiceDesignator | ServiceFetch }
 	| { type: "queue-producer"; name: string }
 	| { type: "constellation"; project_id: string }
-	| { type: "var"; value: string | Json | Uint8Array };
+	| { type: "var"; value: string | Json | Uint8Array }
+	| { type: `unsafe-${string}`; [key: string]: unknown };
 
 export type ServiceFetch = (request: Request) => Promise<Response>;
 

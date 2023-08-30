@@ -16,9 +16,8 @@ import type {
 	ReloadCompleteEvent,
 	ReloadStartEvent,
 	TeardownEvent,
-	WorkerConfig,
 } from "./events";
-import type { StartDevWorkerOptions, DevWorker } from "./types";
+import type { StartDevWorkerOptions, Config, DevWorker } from "./types";
 
 export function startWorker(options: StartDevWorkerOptions): DevWorker {
 	const devEnv = new DevEnv();
@@ -160,7 +159,7 @@ export class DevEnv extends EventEmitter {
 }
 
 export class ConfigController extends EventEmitter {
-	config?: WorkerConfig;
+	config?: Config;
 
 	setOptions(_: StartDevWorkerOptions) {
 		throw new NotImplementedError(this.setOptions.name, this.constructor.name);
@@ -350,12 +349,12 @@ export class ProxyController extends EventEmitter {
 
 	public proxyWorker: Miniflare | undefined;
 	public inspectorProxyWorker: Miniflare | undefined;
-	protected createProxyWorker(config: StartDevWorkerOptions): Miniflare {
+	protected createProxyWorker(config: Config): Miniflare {
 		this.proxyWorker ??= new Miniflare({
 			script: readFileSync(
 				path.join(getBasePath(), `templates/startDevWorker/ProxyWorker.ts`)
 			),
-			port: config.dev?.server?.port, // random port if undefined
+			port: config.dev?.port, // random port if undefined
 			serviceBindings: {
 				PROXY_CONTROLLER: async (req): Promise<Response> => {
 					const message = (await req.json()) as ProxyWorkerOutgoingMessage;
@@ -368,14 +367,14 @@ export class ProxyController extends EventEmitter {
 		});
 
 		// separate Miniflare instance while it only permits opening one port
-		this.proxyWorker ??= new Miniflare({
+		this.inspectorProxyWorker ??= new Miniflare({
 			script: readFileSync(
 				path.join(
 					getBasePath(),
 					`templates/startDevWorker/InspectorProxyWorker.ts`
 				)
 			),
-			port: config.dev?.inspector?.port, // random port if undefined
+			port: config.dev?.inspector_port, // random port if undefined
 			serviceBindings: {
 				PROXY_CONTROLLER: async (req): Promise<Response> => {
 					const message = (await req.json()) as ProxyWorkerOutgoingMessage;
