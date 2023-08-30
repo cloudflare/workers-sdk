@@ -141,3 +141,7 @@ const filterLine = (line: string) => {
 
 	return true;
 };
+
+export const isQuarantineMode = () => {
+	return process.env.E2E_QUARANTINE === "true";
+};

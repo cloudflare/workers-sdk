@@ -81,8 +81,30 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.C3_TEST_CLOUDFLARE_ACCOUNT_ID }}
 
-      - name: Quarantined E2E Tests
-        continue-on-error: true
+  e2e-quarantine:
+    needs: cleanup
+    name: "E2E (Quarantine)"
+    continue-on-error: true
+    if: |
+      github.event.pull_request.user.login != 'dependabot[bot]'
+    strategy:
+      matrix:
+        # TODO: add back windows
+        # os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest]
+        # pm: [npm, yarn, pnpm]
+        pm: [npm, pnpm]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: E2E Tests
         run: npm run test:e2e:${{matrix.pm}} -w create-cloudflare
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}

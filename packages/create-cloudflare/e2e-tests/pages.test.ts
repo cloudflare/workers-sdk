@@ -6,7 +6,7 @@ import { describe, expect, test, afterEach, beforeEach } from "vitest";
 import { version } from "../package.json";
 import { deleteProject } from "../scripts/e2eCleanup";
 import { frameworkToTest } from "./frameworkToTest";
-import { keys, runC3, testProjectDir } from "./helpers";
+import { isQuarantineMode, keys, runC3, testProjectDir } from "./helpers";
 import type { RunnerConfig } from "./helpers";
 
 /*
@@ -229,7 +229,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 
 	Object.keys(frameworkTests).forEach((framework) => {
 		const config = frameworkTests[framework];
-		if (process.env.E2E_QUARANTINE === "true" || config.quarantine) return;
+		if (isQuarantineMode() || config.quarantine) return;
 
 		const skip = frameworkToTest && frameworkToTest !== framework;
 
@@ -247,7 +247,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 
 	Object.keys(frameworkTests).forEach((framework) => {
 		const config = frameworkTests[framework];
-		if (process.env.E2E_QUARANTINE !== "true" || !config.quarantine) return;
+		if (!isQuarantineMode || !config.quarantine) return;
 
 		const skip = frameworkToTest && frameworkToTest !== framework;
 
