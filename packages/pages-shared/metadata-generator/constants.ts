@@ -12,4 +12,4 @@ export const MAX_STATIC_REDIRECT_RULES = 2000;
 export const UNSET_OPERATOR = "! ";
 
 export const SPLAT_REGEX = /\*/g;
-export const PLACEHOLDER_REGEX = /:\w+/g;
+export const PLACEHOLDER_REGEX = /:[A-Za-z]\w*/g;
