@@ -1,25 +1,15 @@
 /** @type {import('@remix-run/dev').AppConfig} */
-module.exports = {
-	publicPath: "/build/",
+export default {
+	ignoredRouteFiles: ["**/*.css"],
+	server: "./server.ts",
 	serverBuildPath: "functions/[[path]].js",
-	serverConditions: ["worker"],
-	serverMainFields: ["workerd", "browser", "module", "main"],
+	serverConditions: ["workerd", "worker", "browser"],
+	serverDependenciesToBundle: "all",
+	serverMainFields: ["browser", "module", "main"],
+	serverMinify: true,
 	serverModuleFormat: "esm",
 	serverPlatform: "neutral",
-	serverDependenciesToBundle: "all",
-	serverMinify: true,
-	server: "./server.js",
-	devServerBroadcastDelay: 1000,
-	ignoredRouteFiles: ["**/.*"],
-	future: {
-		v2_errorBoundary: true,
-		v2_normalizeFormMethod: true,
-		v2_meta: true,
-		v2_headers: true,
-		v2_routeConvention: true,
-	},
 	// appDirectory: "app",
 	// assetsBuildDirectory: "public/build",
-	// serverBuildPath: "functions/[[path]].js",
 	// publicPath: "/build/",
 };
