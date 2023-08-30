@@ -55,6 +55,7 @@ import { whoami } from "./whoami";
 import type { Config } from "./config";
 import type { CommonYargsArgv, CommonYargsOptions } from "./yargs-types";
 import type Yargs from "yargs";
+import { hyperdrive } from "./hyperdrive/index";
 
 const resetColor = "\x1b[0m";
 const fgGreenColor = "\x1b[32m";
@@ -451,6 +452,15 @@ export function createCLIParser(argv: string[]) {
 	wrangler.command("d1", "🗄  Interact with a D1 database", (d1Yargs) => {
 		return d1(d1Yargs.command(subHelp));
 	});
+
+	// hyperdrive
+	wrangler.command(
+		"hyperdrive",
+		"🚀 Configure Hyperdrive databases",
+		(hyperdriveYargs) => {
+			return hyperdrive(hyperdriveYargs.command(subHelp));
+		}
+	);
 
 	// ai
 	wrangler.command("ai", "🤖 Interact with AI models", (aiYargs) => {
