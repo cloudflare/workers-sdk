@@ -464,6 +464,7 @@ test("Miniflare: `node:`, `cloudflare:` and `workerd:` modules", async (t) => {
 	const mf = new Miniflare({
 		modules: true,
 		compatibilityFlags: ["nodejs_compat", "rtti_api"],
+		scriptPath: "index.mjs",
 		script: `
     import assert from "node:assert";
     import { Buffer } from "node:buffer";

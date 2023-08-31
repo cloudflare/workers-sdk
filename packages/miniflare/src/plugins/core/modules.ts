@@ -210,18 +210,18 @@ export class ModuleLocator {
 		// noinspection JSUnusedGlobalSymbols
 		const visitors = {
 			ImportDeclaration: (node: estree.ImportDeclaration) => {
-				this.#visitModule(modulePath, type, node.source);
+				this.#visitModule(modulePath, name, type, node.source);
 			},
 			ExportNamedDeclaration: (node: estree.ExportNamedDeclaration) => {
 				if (node.source != null) {
-					this.#visitModule(modulePath, type, node.source);
+					this.#visitModule(modulePath, name, type, node.source);
 				}
 			},
 			ExportAllDeclaration: (node: estree.ExportAllDeclaration) => {
-				this.#visitModule(modulePath, type, node.source);
+				this.#visitModule(modulePath, name, type, node.source);
 			},
 			ImportExpression: (node: estree.ImportExpression) => {
-				this.#visitModule(modulePath, type, node.source);
+				this.#visitModule(modulePath, name, type, node.source);
 			},
 			CallExpression: isESM
 				? undefined
@@ -233,7 +233,7 @@ export class ModuleLocator {
 							node.callee.name === "require" &&
 							argument !== undefined
 						) {
-							this.#visitModule(modulePath, type, argument);
+							this.#visitModule(modulePath, name, type, argument);
 						}
 				  },
 		};
@@ -242,10 +242,11 @@ export class ModuleLocator {
 
 	#visitModule(
 		referencingPath: string,
+		referencingName: string,
 		referencingType: JavaScriptModuleRuleType,
 		specExpression: estree.Expression | estree.SpreadElement
 	) {
-		if (maybeGetStringScriptPathIndex(referencingPath) !== undefined) {
+		if (maybeGetStringScriptPathIndex(referencingName) !== undefined) {
 			const prefix = getResolveErrorPrefix(referencingPath);
 			throw new MiniflareCoreError(
 				"ERR_MODULE_STRING_SCRIPT",
