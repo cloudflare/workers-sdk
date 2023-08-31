@@ -50,6 +50,7 @@ async function fetchSingleRange(
 		// If we specified a range, but received full content, make sure the range
 		// covered the full content
 		// Safety of `!`: `parseInt(null)` is `NaN`
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		const contentLength = parseInt(res.headers.get("Content-Length")!);
 		assert(!Number.isNaN(contentLength));
 		assertFullRangeRequest(range, contentLength);
@@ -120,6 +121,7 @@ async function fetchMultipleRanges(
 	assert(res.ok);
 
 	// Safety of `!`: `parseInt(null)` is `NaN`
+	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 	const contentLength = parseInt(res.headers.get("Content-Length")!);
 	assert(!Number.isNaN(contentLength));
 

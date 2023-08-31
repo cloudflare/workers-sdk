@@ -696,6 +696,7 @@ export class Miniflare {
 				);
 			} else if (url.pathname === "/core/log") {
 				// Safety of `!`: `parseInt(null)` is `NaN`
+				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 				const level = parseInt(request.headers.get(SharedHeaders.LOG_LEVEL)!);
 				assert(
 					LogLevel.NONE <= level && level <= LogLevel.VERBOSE,

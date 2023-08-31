@@ -356,6 +356,7 @@ export class CacheObject extends MiniflareDurableObject {
 		// If we know the size, avoid passing the body through a transform stream to
 		// count it (trusting `workerd` to send correct value here).
 		// Safety of `!`: `parseInt(null)` is `NaN`
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		const contentLength = parseInt(res.headers.get("Content-Length")!);
 		let sizePromise: Promise<number>;
 		if (Number.isNaN(contentLength)) {
