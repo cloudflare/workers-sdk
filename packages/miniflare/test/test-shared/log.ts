@@ -18,7 +18,7 @@ const ansiRegexpPattern = [
 	"(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-nq-uy=><~]))",
 ].join("|");
 const ansiRegexp = new RegExp(ansiRegexpPattern, "g");
-function stripAnsi(value: string) {
+export function stripAnsi(value: string) {
 	return value.replace(ansiRegexp, "");
 }
 

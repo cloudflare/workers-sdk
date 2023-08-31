@@ -564,7 +564,16 @@ export class Miniflare {
 
 		this.#disposeController = new AbortController();
 		this.#runtimeMutex = new Mutex();
-		this.#initPromise = this.#runtimeMutex.runWith(() => this.#init());
+		this.#initPromise = this.#runtimeMutex
+			.runWith(() => this.#init())
+			.catch((e) => {
+				// If initialisation failed, attempting to `dispose()` this instance
+				// will too. Therefore, remove from the instance registry now, so we
+				// can still test async initialisation failures, without test failures
+				// telling us to `dispose()` the instance.
+				maybeInstanceRegistry?.delete(this);
+				throw e;
+			});
 	}
 
 	#initPlugins() {
