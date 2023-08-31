@@ -29,7 +29,7 @@
 		"remote:test": "dotenv -- turbo test",
 		"remote:test:ci": "dotenv -- turbo test:ci --filter=!local-mode-tests --filter=!playground-preview-worker --filter=!no-bundle-import --concurrency=1",
 		"remote:type:tests": "dotenv -- turbo type:tests",
-		"test": "turbo test",
+		"test": "turbo test --concurrency=1",
 		"test:ci": "turbo test:ci --filter=!local-mode-tests --filter=!playground-preview-worker --filter=!no-bundle-import --concurrency=1",
 		"test:watch": "turbo test:watch",
 		"type:tests": "turbo type:tests"
@@ -57,7 +57,7 @@
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20230821.0",
 		"dotenv-cli": "^7.3.0",
-		"esbuild": "0.16.3",
+		"esbuild": "0.17.19",
 		"patch-package": "^6.5.1",
 		"turbo": "^1.10.13"
 	},

@@ -93,7 +93,6 @@ export async function startDevServer(
 		assets: props.assetsConfig,
 		workerDefinitions,
 		services: props.bindings.services,
-		firstPartyWorkerDevFacade: props.firstPartyWorker,
 		testScheduled: props.testScheduled,
 		local: props.local,
 		doBindings: props.bindings.durable_objects?.bindings ?? [],
@@ -199,7 +198,6 @@ async function runEsbuild({
 	noBundle,
 	workerDefinitions,
 	services,
-	firstPartyWorkerDevFacade,
 	testScheduled,
 	doBindings,
 }: {
@@ -220,7 +218,6 @@ async function runEsbuild({
 	nodejsCompat: boolean | undefined;
 	noBundle: boolean;
 	workerDefinitions: WorkerRegistry;
-	firstPartyWorkerDevFacade: boolean | undefined;
 	testScheduled?: boolean;
 	local: boolean;
 	doBindings: DurableObjectBindings;
@@ -256,7 +253,6 @@ async function runEsbuild({
 			},
 			workerDefinitions,
 			services,
-			firstPartyWorkerDevFacade,
 			targetConsumer: "dev", // We are starting a dev server
 			testScheduled,
 			doBindings,
