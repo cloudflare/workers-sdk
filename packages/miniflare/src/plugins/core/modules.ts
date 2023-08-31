@@ -131,6 +131,13 @@ function compileModuleRules(rules?: ModuleRule[]) {
 	return compiledRules;
 }
 
+function moduleName(modulesRoot: string, modulePath: string) {
+	// The runtime requires module identifiers to be relative paths
+	const name = path.relative(modulesRoot, modulePath);
+	// Module names should always use `/` as the separator
+	return path.sep === "\\" ? name.replaceAll("\\", "/") : name;
+}
+
 function getResolveErrorPrefix(referencingPath: string): string {
 	const relative = path.relative("", referencingPath);
 	return `Unable to resolve "${relative}" dependency`;
@@ -173,7 +180,7 @@ export class ModuleLocator {
 		type: JavaScriptModuleRuleType
 	) {
 		// Register module
-		const name = path.relative(this.modulesRoot, modulePath);
+		const name = moduleName(this.modulesRoot, modulePath);
 		const module = createJavaScriptModule(
 			this.sourceMapRegistry,
 			code,
@@ -300,8 +307,7 @@ ${dim(modulesConfig)}`;
 		}
 
 		const identifier = path.resolve(path.dirname(referencingPath), spec);
-		// The runtime requires module identifiers to be relative paths
-		const name = path.relative(this.modulesRoot, identifier);
+		const name = moduleName(this.modulesRoot, identifier);
 
 		// If we've already visited this path, return to avoid unbounded recursion
 		if (this.#visitedPaths.has(identifier)) return;
@@ -381,8 +387,7 @@ export function convertModuleDefinition(
 	def: ModuleDefinition
 ): Worker_Module {
 	// The runtime requires module identifiers to be relative paths
-	let name = path.relative(modulesRoot, def.path);
-	if (path.sep === "\\") name = name.replaceAll("\\", "/");
+	const name = moduleName(modulesRoot, def.path);
 	const contents = def.contents ?? readFileSync(def.path);
 	switch (def.type) {
 		case "ESModule":
