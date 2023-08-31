@@ -8,14 +8,14 @@ import {
 	rewriteNodeCompatBuildFailure,
 } from "../deployment-bundle/bundle";
 import traverseModuleGraph from "../deployment-bundle/traverse-module-graph";
-import { logBuildFailure, logger } from "../logger";
+import { logBuildFailure, logBuildWarnings } from "../logger";
 import type { Config } from "../config";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfModule } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
 import type { SourceMapMetadata } from "../inspect";
 import type { ModuleCollector } from "../module-collection";
-import type { WatchMode, Metafile } from "esbuild";
+import type { Metafile, BuildResult, PluginBuild } from "esbuild";
 
 export type EsbuildBundle = {
 	id: number;
@@ -101,15 +101,30 @@ export function useEsbuild({
 			});
 		}
 
-		const watchMode: WatchMode = {
-			async onRebuild(error) {
-				if (error !== null) {
-					if (!legacyNodeCompat) rewriteNodeCompatBuildFailure(error);
-					logBuildFailure(error);
-					logger.error("Watch build failed:", error.message);
-				} else {
-					updateBundle();
-				}
+		let bundled = false;
+		const onEnd = {
+			name: "on-end",
+			setup(b: PluginBuild) {
+				b.onEnd((result: BuildResult) => {
+					const errors = result.errors;
+					const warnings = result.warnings;
+					if (errors.length > 0) {
+						if (!legacyNodeCompat) rewriteNodeCompatBuildFailure(result.errors);
+						logBuildFailure(errors, warnings);
+						return;
+					}
+
+					if (!bundled) {
+						// First bundle, no need to update bundle
+						bundled = true;
+					} else {
+						updateBundle();
+					}
+
+					if (warnings.length > 0) {
+						logBuildWarnings(warnings);
+					}
+				});
 			},
 		};
 
@@ -132,7 +147,7 @@ export function useEsbuild({
 					jsxFactory,
 					jsxFragment,
 					rules,
-					watch: watchMode,
+					watch: true,
 					tsconfig,
 					minify,
 					legacyNodeCompat,
@@ -153,6 +168,7 @@ export function useEsbuild({
 						...(traverseModuleGraphResult?.modules ?? []),
 						...additionalModules,
 					]),
+					plugins: [onEnd],
 				});
 			}
 
@@ -172,6 +188,7 @@ export function useEsbuild({
 					void watcher.close();
 				};
 			}
+
 			setBundleInfo({
 				bundle: {
 					id: 0,
