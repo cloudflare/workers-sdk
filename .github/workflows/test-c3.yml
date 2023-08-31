@@ -36,6 +36,7 @@ jobs:
         run: npm run test:unit -w create-cloudflare
 
   cleanup:
+    name: "Cleanup Test Projects"
     if: ${{ github.repository_owner == 'cloudflare' }}
     runs-on: ubuntu-latest
     steps:
@@ -55,7 +56,7 @@ jobs:
 
   e2e:
     needs: cleanup
-    name: format('E2E ({0}) {1}', ${{matrix.pm}}, ${{ matrix.quarantine == false && '' || '(Quarantine)'}})
+    name: ${{ format('E2E ({0}) {1}', matrix.pm, matrix.quarantine == false && '' || '[Quarantine]') }}
     continue-on-error: ${{ matrix.quarantine }}
     if: |
       github.event.pull_request.user.login != 'dependabot[bot]'
@@ -82,6 +83,7 @@ jobs:
           E2E_QUARANTINE: ${{ matrix.quarantine }}
 
   get-dependabot-bumped-framework:
+    name: "Get bumped framework (dependabot-only)"
     runs-on: ubuntu-latest
     outputs:
       bumped-framework-cli: ${{ steps.detect.outputs.result }}
@@ -129,7 +131,7 @@ jobs:
   # framework (this is both for optimization and in order to reduce unnecessary flakiness)
   e2e-only-dependabot-bumped-framework:
     needs: [cleanup, get-dependabot-bumped-framework]
-    name: format('Dependabot E2E ({0}) {1}', ${{matrix.pm}}, ${{ matrix.quarantine == false && '' || '(Quarantine)'}})
+    name: ${{ format('Dependabot E2E ({0}) {1}', matrix.pm, matrix.quarantine == false && '' || '(Quarantine)') }}
     continue-on-error: ${{ matrix.quarantine }}
     strategy:
       matrix:
