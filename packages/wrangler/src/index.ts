@@ -753,7 +753,7 @@ export async function main(argv: string[]): Promise<void> {
 				`${thisTerminalIsUnsupported}\n${soWranglerWontWork}\n${tryRunningItIn}${oneOfThese}`
 			);
 		} else if (isBuildFailure(e)) {
-			logBuildFailure(e);
+			logBuildFailure(e.errors, e.warnings);
 			logger.error(e.message);
 		} else {
 			logger.error(e instanceof Error ? e.message : e);

@@ -31,7 +31,7 @@ export type BundleResult = {
 	dependencies: esbuild.Metafile["outputs"][string]["inputs"];
 	resolvedEntryPointPath: string;
 	bundleType: "esm" | "commonjs";
-	stop: (() => void) | undefined;
+	stop: (() => Promise<void>) | undefined;
 	sourceMapPath?: string | undefined;
 	sourceMapMetadata?: SourceMapMetadata | undefined;
 	moduleCollector: ModuleCollector | undefined;
@@ -86,10 +86,10 @@ export function isBuildFailure(err: unknown): err is esbuild.BuildFailure {
  * to suggest enabling Node compat as opposed to `platform: "node"`.
  */
 export function rewriteNodeCompatBuildFailure(
-	err: esbuild.BuildFailure,
+	errors: esbuild.Message[],
 	forPages = false
 ) {
-	for (const error of err.errors) {
+	for (const error of errors) {
 		const match = nodeBuiltinResolveErrorText.exec(error.text);
 		if (match !== null) {
 			const issue = `The package "${match[1]}" wasn't found on the file system but is built into node.`;
@@ -126,7 +126,7 @@ export async function bundleWorker(
 		jsxFragment?: string;
 		entryName?: string;
 		rules: Config["rules"];
-		watch?: esbuild.WatchMode | boolean;
+		watch?: boolean;
 		tsconfig?: string;
 		minify?: boolean;
 		legacyNodeCompat?: boolean;
@@ -294,6 +294,19 @@ export async function bundleWorker(
 		},
 	];
 
+	// If using watch, build result will not be returned
+	// This plugin will retreive the build result on the first build
+	let initialBuildResult: (result: esbuild.BuildResult) => void;
+	const initialBuildResultPromise = new Promise<esbuild.BuildResult>(
+		(resolve) => (initialBuildResult = resolve)
+	);
+	const buildResultPlugin: esbuild.Plugin = {
+		name: "Initial build result plugin",
+		setup(build) {
+			build.onEnd(initialBuildResult);
+		},
+	};
+
 	const inject: string[] = injectOption ?? [];
 	if (checkFetch) inject.push(checkedFetchFileToInject);
 	const activeMiddleware = middlewareToLoad.filter(
@@ -357,7 +370,8 @@ export async function bundleWorker(
 				? [NodeGlobalsPolyfills({ buffer: true }), NodeModulesPolyfills()]
 				: []),
 			...(nodejsCompat ? [nodejsCompatPlugin] : []),
-			...[cloudflareInternalPlugin],
+			cloudflareInternalPlugin,
+			buildResultPlugin,
 			...(plugins || []),
 			configProviderPlugin(
 				Object.fromEntries(
@@ -370,18 +384,32 @@ export async function bundleWorker(
 		...(jsxFactory && { jsxFactory }),
 		...(jsxFragment && { jsxFragment }),
 		...(tsconfig && { tsconfig }),
-		watch,
 		// The default logLevel is "warning". So that we can rewrite errors before
 		// logging, we disable esbuild's default logging, and log build failures
 		// ourselves.
 		logLevel: "silent",
 	};
-	let result;
+
+	let result: esbuild.BuildResult<typeof buildOptions>;
+	let stop: BundleResult["stop"];
 	try {
-		result = await esbuild.build(buildOptions);
+		if (watch) {
+			const ctx = await esbuild.context(buildOptions);
+			await ctx.watch();
+			result = await initialBuildResultPromise;
+			if (result.errors.length > 0) {
+				throw new Error("Failed to build");
+			}
+
+			stop = async function () {
+				await ctx.dispose();
+			};
+		} else {
+			result = await esbuild.build(buildOptions);
+		}
 	} catch (e) {
 		if (!legacyNodeCompat && isBuildFailure(e))
-			rewriteNodeCompatBuildFailure(e, forPages);
+			rewriteNodeCompatBuildFailure(e.errors, forPages);
 		throw e;
 	}
 
@@ -419,7 +447,7 @@ export async function bundleWorker(
 		dependencies: entryPoint.dependencies,
 		resolvedEntryPointPath,
 		bundleType,
-		stop: result.stop,
+		stop,
 		sourceMapPath,
 		sourceMapMetadata: {
 			tmpDir: tmpDir.path,
