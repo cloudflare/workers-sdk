@@ -108,7 +108,7 @@ export const testProjectDir = (suite: string) => {
 		mkdtempSync(join(tmpdir(), `c3-tests-${suite}`))
 	);
 
-	const randomSuffix = crypto.randomBytes(3).toString("hex");
+	const randomSuffix = crypto.randomBytes(4).toString("hex");
 	const baseProjectName = `${C3_E2E_PREFIX}${randomSuffix}`;
 
 	const getName = (suffix: string) => `${baseProjectName}-${suffix}`;

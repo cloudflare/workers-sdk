@@ -8,6 +8,7 @@ import { dim, brandColor } from "helpers/colors";
 import { installWrangler, retry, runCommand } from "helpers/command";
 import { readJSON, writeFile } from "helpers/files";
 import { spinner } from "helpers/interactive";
+import { debug } from "helpers/logging";
 import { detectPackageManager } from "helpers/packages";
 import {
 	getProductionBranch,
@@ -196,6 +197,8 @@ const createProject = async (ctx: PagesGeneratorContext) => {
 				)}`,
 			})
 		);
+
+		debug(`Validated pages project ${ctx.project.name}`);
 	} catch (error) {
 		crash("Pages project isn't ready yet. Please try deploying again later.");
 	}
