@@ -75,6 +75,7 @@ export type Worker_Module = {
 	| { data?: Uint8Array }
 	| { wasm?: Uint8Array }
 	| { json?: string }
+	| { nodeJsCompatModule?: string }
 );
 
 export type Worker_Binding = {
@@ -93,6 +94,8 @@ export type Worker_Binding = {
 	| { r2Admin?: ServiceDesignator }
 	| { wrapped?: Worker_Binding_WrappedBinding }
 	| { queue?: ServiceDesignator }
+	| { fromEnvironment?: string }
+	| { analyticsEngine?: ServiceDesignator }
 );
 
 export interface Worker_Binding_Parameter {
@@ -111,7 +114,8 @@ export type Worker_Binding_Type =
 	| { kvNamespace?: Void }
 	| { r2Bucket?: Void }
 	| { r2Admin?: Void }
-	| { queue?: Void };
+	| { queue?: Void }
+	| { analyticsEngine?: Void };
 
 export type Worker_Binding_DurableObjectNamespaceDesignator = {
 	className?: string;

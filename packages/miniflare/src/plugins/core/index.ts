@@ -588,7 +588,7 @@ export function getGlobalServices({
 
 function getWorkerScript(
 	sourceMapRegistry: SourceMapRegistry,
-	options: SourceOptions,
+	options: SourceOptions & { compatibilityFlags?: string[] },
 	workerIndex: number,
 	additionalModuleNames: string[]
 ): { serviceWorkerScript: string } | { modules: Worker_Module[] } {
@@ -622,7 +622,8 @@ function getWorkerScript(
 			sourceMapRegistry,
 			modulesRoot,
 			additionalModuleNames,
-			options.modulesRules
+			options.modulesRules,
+			options.compatibilityFlags
 		);
 		// If `script` and `scriptPath` are set, resolve modules in `script`
 		// against `scriptPath`.

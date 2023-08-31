@@ -24,7 +24,12 @@ const SUGGEST_NODE =
 	"that uses Node.js built-ins, you'll either need to:" +
 	"\n- Bundle your Worker, configuring your bundler to polyfill Node.js built-ins" +
 	"\n- Configure your bundler to load Workers-compatible builds by changing the main fields/conditions" +
+	"\n- Enable the `nodejs_compat` compatibility flag and use the `NodeJsCompatModule` module type" +
 	"\n- Find an alternative package that doesn't require Node.js built-ins";
+
+const builtinModulesWithPrefix = builtinModules.concat(
+	builtinModules.map((module) => `node:${module}`)
+);
 
 // Module identifier used if script came from `script` option
 export function buildStringScriptPath(workerIndex: number) {
@@ -38,14 +43,17 @@ export function maybeGetStringScriptPathIndex(
 	return match === null ? undefined : parseInt(match[1]);
 }
 
-export const ModuleRuleTypeSchema = z.union([
-	z.literal("ESModule"),
-	z.literal("CommonJS"),
-	z.literal("Text"),
-	z.literal("Data"),
-	z.literal("CompiledWasm"),
+export const ModuleRuleTypeSchema = z.enum([
+	"ESModule",
+	"CommonJS",
+	"NodeJsCompatModule",
+	"Text",
+	"Data",
+	"CompiledWasm",
 ]);
 export type ModuleRuleType = z.infer<typeof ModuleRuleTypeSchema>;
+
+type JavaScriptModuleRuleType = "ESModule" | "CommonJS" | "NodeJsCompatModule";
 
 export const ModuleRuleSchema = z.object({
 	type: ModuleRuleTypeSchema,
@@ -130,6 +138,7 @@ function getResolveErrorPrefix(referencingPath: string): string {
 
 export class ModuleLocator {
 	readonly #compiledRules: CompiledModuleRule[];
+	readonly #nodejsCompat: boolean;
 	readonly #visitedPaths = new Set<string>();
 	readonly modules: Worker_Module[] = [];
 
@@ -137,9 +146,14 @@ export class ModuleLocator {
 		private readonly sourceMapRegistry: SourceMapRegistry,
 		private readonly modulesRoot: string,
 		private readonly additionalModuleNames: string[],
-		rules?: ModuleRule[]
+		rules?: ModuleRule[],
+		compatibilityFlags?: string[]
 	) {
 		this.#compiledRules = compileModuleRules(rules);
+		// `nodejs_compat` doesn't have a default-on date, so we know whether it's
+		// enabled just by looking at flags:
+		// https://github.com/cloudflare/workerd/blob/edcd0300bc7b8f56040d090177db947edd22f91b/src/workerd/io/compatibility-date.capnp#L237-L240
+		this.#nodejsCompat = compatibilityFlags?.includes("nodejs_compat") ?? false;
 	}
 
 	visitEntrypoint(code: string, modulePath: string) {
@@ -150,23 +164,32 @@ export class ModuleLocator {
 		this.#visitedPaths.add(modulePath);
 
 		// Entrypoint is always an ES module
-		this.#visitJavaScriptModule(code, modulePath);
+		this.#visitJavaScriptModule(code, modulePath, "ESModule");
 	}
 
-	#visitJavaScriptModule(code: string, modulePath: string, esModule = true) {
+	#visitJavaScriptModule(
+		code: string,
+		modulePath: string,
+		type: JavaScriptModuleRuleType
+	) {
 		// Register module
 		const name = path.relative(this.modulesRoot, modulePath);
-		code = this.sourceMapRegistry.register(code, modulePath);
-		this.modules.push(
-			esModule ? { name, esModule: code } : { name, commonJsModule: code }
+		const module = createJavaScriptModule(
+			this.sourceMapRegistry,
+			code,
+			name,
+			modulePath,
+			type
 		);
+		this.modules.push(module);
 
 		// Parse code and visit all import/export statements
+		const isESM = type === "ESModule";
 		let root;
 		try {
 			root = parse(code, {
 				ecmaVersion: "latest",
-				sourceType: esModule ? "module" : "script",
+				sourceType: isESM ? "module" : "script",
 				locations: true,
 			});
 		} catch (e: any) {
@@ -187,18 +210,20 @@ export class ModuleLocator {
 		// noinspection JSUnusedGlobalSymbols
 		const visitors = {
 			ImportDeclaration: (node: estree.ImportDeclaration) => {
-				this.#visitModule(modulePath, node.source);
+				this.#visitModule(modulePath, type, node.source);
 			},
 			ExportNamedDeclaration: (node: estree.ExportNamedDeclaration) => {
-				if (node.source != null) this.#visitModule(modulePath, node.source);
+				if (node.source != null) {
+					this.#visitModule(modulePath, type, node.source);
+				}
 			},
 			ExportAllDeclaration: (node: estree.ExportAllDeclaration) => {
-				this.#visitModule(modulePath, node.source);
+				this.#visitModule(modulePath, type, node.source);
 			},
 			ImportExpression: (node: estree.ImportExpression) => {
-				this.#visitModule(modulePath, node.source);
+				this.#visitModule(modulePath, type, node.source);
 			},
-			CallExpression: esModule
+			CallExpression: isESM
 				? undefined
 				: (node: estree.CallExpression) => {
 						// TODO: check global?
@@ -208,7 +233,7 @@ export class ModuleLocator {
 							node.callee.name === "require" &&
 							argument !== undefined
 						) {
-							this.#visitModule(modulePath, argument);
+							this.#visitModule(modulePath, type, argument);
 						}
 				  },
 		};
@@ -217,6 +242,7 @@ export class ModuleLocator {
 
 	#visitModule(
 		referencingPath: string,
+		referencingType: JavaScriptModuleRuleType,
 		specExpression: estree.Expression | estree.SpreadElement
 	) {
 		if (maybeGetStringScriptPathIndex(referencingPath) !== undefined) {
@@ -238,8 +264,10 @@ export class ModuleLocator {
 				return `      { type: "${def.type}", path: "${def.path}" }`;
 			});
 			const modulesConfig = `  new Miniflare({
+    ...,
     modules: [
-${modules.join(",\n")}
+${modules.join(",\n")},
+      ...
     ]
   })`;
 
@@ -257,12 +285,14 @@ ${dim(modulesConfig)}`;
 		}
 		const spec = specExpression.value;
 
-		// `node:`, `cloudflare:` and `workerd:` imports don't need to be included
-		// explicitly
+		// `node:` (assuming `nodejs_compat` flag enabled), `cloudflare:` and
+		// `workerd:` imports don't need to be included explicitly
+		const isNodeJsCompatModule = referencingType === "NodeJsCompatModule";
 		if (
-			spec.startsWith("node:") ||
+			(this.#nodejsCompat && spec.startsWith("node:")) ||
 			spec.startsWith("cloudflare:") ||
 			spec.startsWith("workerd:") ||
+			(isNodeJsCompatModule && builtinModulesWithPrefix.includes(spec)) ||
 			this.additionalModuleNames.includes(spec)
 		) {
 			return;
@@ -282,7 +312,7 @@ ${dim(modulesConfig)}`;
 		);
 		if (rule === undefined) {
 			const prefix = getResolveErrorPrefix(referencingPath);
-			const isBuiltin = builtinModules.includes(spec);
+			const isBuiltin = builtinModulesWithPrefix.includes(spec);
 			const suggestion = isBuiltin ? SUGGEST_NODE : SUGGEST_BUNDLE;
 			throw new MiniflareCoreError(
 				"ERR_MODULE_RULE",
@@ -294,10 +324,10 @@ ${dim(modulesConfig)}`;
 		const data = readFileSync(identifier);
 		switch (rule.type) {
 			case "ESModule":
-				this.#visitJavaScriptModule(data.toString("utf8"), identifier);
-				break;
 			case "CommonJS":
-				this.#visitJavaScriptModule(data.toString("utf8"), identifier, false);
+			case "NodeJsCompatModule":
+				const code = data.toString("utf8");
+				this.#visitJavaScriptModule(code, identifier, rule.type);
 				break;
 			case "Text":
 				this.modules.push({ name, text: data.toString("utf8") });
@@ -310,9 +340,30 @@ ${dim(modulesConfig)}`;
 				break;
 			default:
 				// `type` should've been validated against `ModuleRuleTypeSchema`
-				assert.fail(`Unreachable: ${rule.type} modules are unsupported`);
+				const exhaustive: never = rule.type;
+				assert.fail(`Unreachable: ${exhaustive} modules are unsupported`);
 		}
 	}
+}
+
+function createJavaScriptModule(
+	sourceMapRegistry: SourceMapRegistry,
+	code: string,
+	name: string,
+	modulePath: string,
+	type: JavaScriptModuleRuleType
+): Worker_Module {
+	code = sourceMapRegistry.register(code, modulePath);
+	if (type === "ESModule") {
+		return { name, esModule: code };
+	} else if (type === "CommonJS") {
+		return { name, commonJsModule: code };
+	} else if (type === "NodeJsCompatModule") {
+		return { name, nodeJsCompatModule: code };
+	}
+	// noinspection UnnecessaryLocalVariableJS
+	const exhaustive: never = type;
+	assert.fail(`Unreachable: ${exhaustive} JavaScript modules are unsupported`);
 }
 
 const encoder = new TextEncoder();
@@ -331,16 +382,18 @@ export function convertModuleDefinition(
 	// The runtime requires module identifiers to be relative paths
 	let name = path.relative(modulesRoot, def.path);
 	if (path.sep === "\\") name = name.replaceAll("\\", "/");
-	let contents = def.contents ?? readFileSync(def.path);
+	const contents = def.contents ?? readFileSync(def.path);
 	switch (def.type) {
 		case "ESModule":
-			contents = contentsToString(contents);
-			contents = sourceMapRegistry.register(contents, def.path);
-			return { name, esModule: contents };
 		case "CommonJS":
-			contents = contentsToString(contents);
-			contents = sourceMapRegistry.register(contents, def.path);
-			return { name, commonJsModule: contents };
+		case "NodeJsCompatModule":
+			return createJavaScriptModule(
+				sourceMapRegistry,
+				contentsToString(contents),
+				name,
+				def.path,
+				def.type
+			);
 		case "Text":
 			return { name, text: contentsToString(contents) };
 		case "Data":
@@ -349,22 +402,32 @@ export function convertModuleDefinition(
 			return { name, wasm: contentsToArray(contents) };
 		default:
 			// `type` should've been validated against `ModuleRuleTypeSchema`
-			assert.fail(`Unreachable: ${def.type} modules are unsupported`);
+			const exhaustive: never = def.type;
+			assert.fail(`Unreachable: ${exhaustive} modules are unsupported`);
 	}
 }
 function convertWorkerModule(mod: Worker_Module): ModuleDefinition {
 	const path = mod.name;
 	assert(path !== undefined);
 
-	if ("esModule" in mod) return { path, type: "ESModule" };
-	else if ("commonJsModule" in mod) return { path, type: "CommonJS" };
-	else if ("text" in mod) return { path, type: "Text" };
-	else if ("data" in mod) return { path, type: "Data" };
-	else if ("wasm" in mod) return { path, type: "CompiledWasm" };
+	// Mark keys in `mod` as required for exhaustiveness checking
+	const m = mod as Required<Worker_Module>;
+
+	if ("esModule" in m) return { path, type: "ESModule" };
+	else if ("commonJsModule" in m) return { path, type: "CommonJS" };
+	else if ("nodeJsCompatModule" in m)
+		return { path, type: "NodeJsCompatModule" };
+	else if ("text" in m) return { path, type: "Text" };
+	else if ("data" in m) return { path, type: "Data" };
+	else if ("wasm" in m) return { path, type: "CompiledWasm" };
 
 	// This function is only used for building error messages including
 	// generated modules, and these are the types we generate.
+	assert(!("json" in m), "Unreachable: json modules aren't generated");
+	const exhaustive: never = m;
 	assert.fail(
-		`Unreachable: [${Object.keys(mod).join(", ")}] modules are unsupported`
+		`Unreachable: [${Object.keys(exhaustive).join(
+			", "
+		)}] modules are unsupported`
 	);
 }
