@@ -246,6 +246,12 @@ struct Worker {
 
       json @6 :Text;
       # Importing this will produce the result of parsing the given text as JSON.
+
+      nodeJsCompatModule @7 :Text;
+      # A Node.js module is a specialization of a commonJsModule that:
+      # (a) allows for importing Node.js-compat built-ins without the node: specifier-prefix
+      # (b) exposes the subset of common Node.js globals such as process, Buffer, etc that
+      #     we implement in the workerd runtime.
     }
   }
 
@@ -337,7 +343,18 @@ struct Worker {
       # namespace will be converted into HTTP requests targetting the given
       # service name.
 
-      # TODO(someday): dispatch, analyticsEngine, other new features
+      fromEnvironment @16 :Text;
+      # Takes the value of an environment variable from the system. The value specified here is
+      # the name of a system environment variable. The value of the binding is obtained by invoking
+      # `getenv()` with that name. If the environment variable isn't set, the binding value is
+      # `null`.
+
+      analyticsEngine @17 :ServiceDesignator;
+      # A binding for Analytics Engine. Allows workers to store information through Analytics Engine Events.
+      # workerd will forward AnalyticsEngineEvents to designated service in the body of HTTP requests
+      # This binding is subject to change and requires the `--experimental` flag
+
+      # TODO(someday): dispatch, other new features
     }
 
     struct Type {
@@ -358,6 +375,7 @@ struct Worker {
         r2Bucket @9 :Void;
         r2Admin @10 :Void;
         queue @11 :Void;
+        analyticsEngine @12 : Void;
       }
     }
 
@@ -783,7 +801,7 @@ struct TlsOptions {
 
   minVersion @4 :Version = goodDefault;
   # Minimum TLS version that will be allowed. Generally you should not override this unless you
-  # have unusual backwards-compatibilty needs.
+  # have unusual backwards-compatibility needs.
 
   enum Version {
     goodDefault @0;
