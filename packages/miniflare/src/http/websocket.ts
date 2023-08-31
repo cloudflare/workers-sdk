@@ -88,7 +88,8 @@ export class WebSocket extends TypedEventTarget<WebSocketEventMap> {
 	}
 
 	async #queuingDispatchToPair(event: ValueOf<WebSocketEventMap>) {
-		const pair = this[kPair]!;
+		const pair = this[kPair];
+		assert(pair !== undefined);
 		if (pair[kAccepted]) {
 			pair.dispatchEvent(event);
 		} else {
@@ -183,8 +184,11 @@ export class WebSocket extends TypedEventTarget<WebSocketEventMap> {
 		//     -------      | -------                         -------------
 		//                  |
 
+		const pair = this[kPair];
+		assert(pair !== undefined);
+
 		this[kClosedOutgoing] = true;
-		this[kPair]![kClosedIncoming] = true;
+		pair[kClosedIncoming] = true;
 
 		const event = new CloseEvent("close", { code, reason });
 		void this.#queuingDispatchToPair(event);

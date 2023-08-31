@@ -22,7 +22,10 @@ export class DeferredPromise<T> extends Promise<T> {
 			return executor(resolve, reject);
 		});
 		// Cannot access `this` until after `super`
+		// Safety of `!`: callback passed to `super()` is executed immediately
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		this.resolve = promiseResolve!;
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		this.reject = promiseReject!;
 	}
 }
