@@ -1,5 +1,5 @@
 name = "<TBD>"
-main = "src/worker.js"
+main = "src/index.js"
 compatibility_date = "<TBD>"
 
 # Variable bindings. These are arbitrary, plaintext strings (similar to environment variables)

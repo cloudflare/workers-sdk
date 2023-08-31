@@ -1,5 +1,5 @@
 name = "<TBD>"
-main = "src/worker.ts"
+main = "src/index.ts"
 compatibility_date = "<TBD>"
 
 # Variable bindings. These are arbitrary, plaintext strings (similar to environment variables)
