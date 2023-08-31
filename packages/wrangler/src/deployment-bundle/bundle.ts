@@ -135,7 +135,6 @@ export async function bundleWorker(
 		checkFetch: boolean;
 		services?: Config["services"];
 		workerDefinitions?: WorkerRegistry;
-		firstPartyWorkerDevFacade?: boolean;
 		targetConsumer: "dev" | "deploy";
 		testScheduled?: boolean;
 		inject?: string[];
