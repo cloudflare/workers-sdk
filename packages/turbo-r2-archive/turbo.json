@@ -1,0 +1,15 @@
+{
+	"$schema": "https://turbo.build/schema.json",
+	"extends": ["//"],
+	"pipeline": {
+		"build": {
+			"outputs": ["dist/**"],
+			"inputs": ["src/**"]
+		},
+		"type:check": {},
+		"start": {
+			"cache": false,
+			"persistent": true
+		}
+	}
+}

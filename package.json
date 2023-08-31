@@ -23,6 +23,12 @@
 		"fix": "npm run prettify && turbo check:lint -- --fix",
 		"postinstall": "patch-package",
 		"prettify": "prettier . --write --ignore-unknown",
+		"remote:build": "dotenv -- turbo build",
+		"remote:check": "dotenv -- turbo check",
+		"remote:dev": "dotenv -- turbo dev",
+		"remote:test": "dotenv -- turbo test",
+		"remote:test:ci": "dotenv -- turbo test:ci --filter=!local-mode-tests --filter=!playground-preview-worker --filter=!no-bundle-import --concurrency=1",
+		"remote:type:tests": "dotenv -- turbo type:tests",
 		"test": "turbo test",
 		"test:ci": "turbo test:ci --filter=!local-mode-tests --filter=!playground-preview-worker --filter=!no-bundle-import --concurrency=1",
 		"test:watch": "turbo test:watch",
@@ -50,9 +56,10 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20230821.0",
+		"dotenv-cli": "^7.3.0",
 		"esbuild": "0.16.3",
 		"patch-package": "^6.5.1",
-		"turbo": "^1.10.12"
+		"turbo": "^1.10.13"
 	},
 	"engines": {
 		"node": ">=16.13.0"
