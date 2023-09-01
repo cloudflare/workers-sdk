@@ -49,10 +49,14 @@ describe.skipIf(frameworkToTest)("E2E: Workers templates", () => {
 		expect(wranglerPath).toExist();
 	};
 
-	test.each(["hello-world", "common", "chatgptPlugin", "queues", "scheduled", "openapi"])(
-		"%s",
-		async (name) => {
-			await runCli(name);
-		}
-	);
+	test.each([
+		"hello-world",
+		"common",
+		"chatgptPlugin",
+		"queues",
+		"scheduled",
+		"openapi",
+	])("%s", async (name) => {
+		await runCli(name);
+	});
 });

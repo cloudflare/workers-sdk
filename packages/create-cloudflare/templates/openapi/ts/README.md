@@ -5,7 +5,6 @@ This is a Cloudflare Worker with OpenAPI 3.1 using [itty-router-openapi](https:/
 This is an example project made to be used as a quick start into building OpenAPI compliant Workers that generates the
 `openapi.json` schema automatically from code and validates the incoming request to the defined parameters or request body.
 
-
 ## Get started
 
 1. Sign up for [Cloudflare Workers](https://workers.dev). The free tier is more than enough for most use cases.
@@ -13,13 +12,11 @@ This is an example project made to be used as a quick start into building OpenAP
 3. Run `wrangler login` to login to your Cloudflare account in wrangler
 4. Run `wrangler deploy` to publish the API to Cloudflare Workers
 
-
 ## Project structure
 
 1. Your main router is defined in `src/index.ts`.
 2. Each endpoint has its own file in `src/endpoints/`.
 3. For more information read the [itty-router-openapi official documentation](https://cloudflare.github.io/itty-router-openapi/).
-
 
 ## Development
 
