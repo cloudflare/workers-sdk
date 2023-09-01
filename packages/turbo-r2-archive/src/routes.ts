@@ -35,9 +35,7 @@ router.post("/artifacts/manual-cache-bust", async (c) => {
 	/**
 	 * manual cache busting, it will bust the entire cache.
 	 */
-	await bustOldCache({
-		...c.env,
-	});
+	await bustOldCache(c.env.R2_ARTIFACT_ARCHIVE);
 
 	// maybe this could return the keys that were busted?
 	return c.json({ success: true });
