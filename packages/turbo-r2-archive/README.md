@@ -4,7 +4,7 @@
 
 ## Overview
 
-This is a Worker that will act as an event server for caching TurboRepo artifacts. Compliant with the TurboRepo API, for remote caching, it will store the cache artifacts in a Cloudflare R2 bucket and purge the cache on a schedule. This allows for all the benefits of remote caching TurboRepo artifacts on Cloudflare's edge network.
+This is a Worker that will act as an event server for caching TurboRepo artifacts. Compliant with the TurboRepo API, for remote caching, it will store the cache artifacts in a Cloudflare R2 bucket and purge the R2 Objects on a schedule, using [R2 Object lifecycle rules](https://blog.cloudflare.com/introducing-object-lifecycle-management-for-cloudflare-r2/). This allows for all the benefits of remote caching TurboRepo artifacts on Cloudflare's edge network.
 
 This will require a Cloudflare account, with a zone and R2.
 
@@ -35,11 +35,6 @@ To utilize the `TURBO_REMOTE_CACHE_SIGNATURE_KEY` which will increase the securi
 
 ```jsonc
 {
-	"vars": {
-		"EXPIRATION_HOURS": 144 // 6 days
-	},
-	"crons": ["0 1 * * 0"], // Every Sunday at 1am
-
 	"r2_buckets": [
 		{
 			"binding": "R2_ARTIFACT_ARCHIVE", // The binding name for the bucket, used in the Worker i.e. env.R2_ARTIFACT_ARCHIVE.get(<key>)
@@ -56,19 +51,15 @@ The endpoints are protected by a bearer token. The token is stored as a secret i
 echo <VALUE> | wrangler secret put TURBO_TOKEN
 ```
 
-The `crons` array is a list of cron expressions that will trigger the purge. The default is every Sunday at 1am. The default expiration time is 6 days, expressed in `vars` `EXPIRATION_HOURS`, which allows for the cache to be completely purged once a week.
-
-<!-- Add the setting up the R2 bucket -->
+<!-- Add the setting up the R2 bucket & Object Rules -->
 
 ### Manual Cache Purge
 
 The cache can also be purged manually by sending a `POST` request to the `<baseURL>/artifacts/manual-cache-bust` endpoint. This can be done with the following command:
 
 ```bash
-https -A bearer -a <TURBO_TOKEN> POST <baseURL>/artifacts/manual-cache-bust expireInHours:=0
+https -A bearer -a <TURBO_TOKEN> POST <baseURL>/artifacts/manual-cache-bust
 ```
-
-Setting the value to `0` will purge the entire cache.
 
 ## How can I develop & test locally?
 
