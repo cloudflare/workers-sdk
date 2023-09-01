@@ -37,6 +37,14 @@ export const templateMap: Record<string, TemplateConfig> = {
 				ts: true,
 			}),
 	},
+	openapi: {
+		label: `OpenAPI 3.1`,
+		handler: (args) =>
+			runWorkersGenerator({
+				...args,
+				ts: true,
+			}),
+	},
 	"pre-existing": {
 		label: "Pre-existing Worker (from Dashboard)",
 		handler: runWorkersGenerator,

@@ -46,7 +46,7 @@ To create a new Typescript "Hello World" worker, run:
 npm create cloudflare@latest hello-world -- --type hello-world --ts
 ```
 
-Current template options are: `hello-world`, `common`, or `chatgptPlugin`.
+Current template options are: `hello-world`, `common`, `chatgptPlugin`, or `openapi`.
 
 #### Additional arguments
 
