@@ -27,7 +27,7 @@ router.onError((error, c) => {
 router.use("*", cors());
 
 router.use("*", async (c, next) => {
-	const middleware = bearerAuth({ token: "SECRET" });
+	const middleware = bearerAuth({ token: c.env.TURBO_TOKEN });
 	await middleware(c, next);
 });
 
@@ -49,7 +49,7 @@ router.post(
 
 router.put(
 	"/v8/artifacts/:artifactID",
-	zValidator("json", paramValidator),
+	zValidator("param", paramValidator),
 	zValidator("query", queryValidator),
 	async (c) => {
 		const { artifactID } = c.req.valid("param");
@@ -99,7 +99,7 @@ router.get(
 
 		if (artifactID === "list") {
 			const list = await c.env.R2_ARTIFACT_ARCHIVE.list();
-			return c.json(list.objects.map((object) => object));
+			return c.json(list.objects);
 		}
 
 		const r2Object = await c.env.R2_ARTIFACT_ARCHIVE.get(
