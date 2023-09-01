@@ -24,7 +24,7 @@
 		"postinstall": "patch-package",
 		"prettify": "prettier . --write --ignore-unknown",
 		"remote:build": "dotenv -- turbo build",
-		"remote:check": "dotenv -- turbo check",
+		"remote:check": "dotenv -- npm run check",
 		"remote:dev": "dotenv -- turbo dev",
 		"remote:test": "dotenv -- turbo test",
 		"remote:test:ci": "dotenv -- turbo test:ci --filter=!local-mode-tests --filter=!playground-preview-worker --filter=!no-bundle-import --concurrency=1",

@@ -1,17 +1,23 @@
-async function bustEntireCache(list: R2Objects, env: Env) {
+async function bustEntireCache(
+	list: R2Objects,
+	R2_ARTIFACT_ARCHIVE: Env["R2_ARTIFACT_ARCHIVE"]
+) {
 	for (const object of list.objects) {
-		await env.R2_ARTIFACT_ARCHIVE.delete(object.key);
+		await R2_ARTIFACT_ARCHIVE.delete(object.key);
 	}
 }
 
-export async function bustOldCache(env: Env, cursor?: string) {
-	const list = await env.R2_ARTIFACT_ARCHIVE.list({
+export async function bustOldCache(
+	R2_ARTIFACT_ARCHIVE: Env["R2_ARTIFACT_ARCHIVE"],
+	cursor?: string
+) {
+	const list = await R2_ARTIFACT_ARCHIVE.list({
 		limit: 500,
 		cursor,
 	});
-	await bustEntireCache(list, env);
+	await bustEntireCache(list, R2_ARTIFACT_ARCHIVE);
 
 	if (list.truncated) {
-		await bustOldCache(env, list.cursor);
+		await bustOldCache(R2_ARTIFACT_ARCHIVE, list.cursor);
 	}
 }
