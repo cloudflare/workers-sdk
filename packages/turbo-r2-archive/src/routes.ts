@@ -31,21 +31,17 @@ router.use("*", async (c, next) => {
 	await middleware(c, next);
 });
 
-router.post(
-	"/artifacts/manual-cache-bust",
-	zValidator("json", z.object({ expireInHours: z.number().optional() })),
-	async (c) => {
-		const { expireInHours } = c.req.valid("json");
-		/**
-		 * manual cache busting, if no expiration hours are provided, it will bust the entire cache.
-		 */
-		await bustOldCache({
-			...c.env,
-			EXPIRATION_HOURS: expireInHours ?? 0,
-		});
-		return c.json({ success: true });
-	}
-);
+router.post("/artifacts/manual-cache-bust", async (c) => {
+	/**
+	 * manual cache busting, it will bust the entire cache.
+	 */
+	await bustOldCache({
+		...c.env,
+	});
+
+	// maybe this could return the keys that were busted?
+	return c.json({ success: true });
+});
 
 router.put(
 	"/v8/artifacts/:artifactID",
