@@ -1,9 +1,4 @@
-import {
-	ApiException,
-	OpenAPIRoute,
-	Query,
-	ValidationError,
-} from "@cloudflare/itty-router-openapi";
+import { OpenAPIRoute, Query } from "@cloudflare/itty-router-openapi";
 
 export class GetSearch extends OpenAPIRoute {
 	static schema = {
@@ -17,6 +12,7 @@ export class GetSearch extends OpenAPIRoute {
 		},
 		responses: {
 			"200": {
+				description: "Successfully response",
 				schema: {
 					repos: [
 						{
@@ -33,7 +29,7 @@ export class GetSearch extends OpenAPIRoute {
 	};
 
 	async handle(request: Request, env, ctx, data: Record<string, any>) {
-		const url = `https://api.github.com/search/repositories?q=${data.q}`;
+		const url = `https://api.github.com/search/repositories?q=${data.query.q}`;
 
 		const resp = await fetch(url, {
 			headers: {
