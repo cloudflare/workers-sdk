@@ -164,8 +164,8 @@ interface WorkerBundle {
 }
 
 export type ProxyData = {
-	destinationURL: Partial<URL>;
-	destinationInspectorURL: Partial<URL>;
+	destinationURL: Pick<URL, "hostname" | "port" | "protocol">;
+	destinationInspectorURL: string;
 	headers: Record<string, string>;
 	liveReloadUrl?: string;
 };
