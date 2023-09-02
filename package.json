@@ -9,10 +9,6 @@
 	},
 	"license": "MIT OR Apache-2.0",
 	"author": "wrangler@cloudflare.com",
-	"workspaces": [
-		"packages/*",
-		"fixtures/*"
-	],
 	"scripts": {
 		"build": "turbo build",
 		"check": "turbo check:lint check:type check:format type:tests",
@@ -20,11 +16,10 @@
 		"check:lint": "turbo check:lint",
 		"check:type": "turbo check:type type:tests",
 		"dev": "turbo dev",
-		"fix": "npm run prettify && turbo check:lint -- --fix",
-		"postinstall": "patch-package",
+		"fix": "pnpm run prettify && turbo check:lint -- --fix",
 		"prettify": "prettier . --write --ignore-unknown",
 		"remote:build": "dotenv -- turbo build",
-		"remote:check": "dotenv -- npm run check",
+		"remote:check": "dotenv -- pnpm run check",
 		"remote:dev": "dotenv -- turbo dev",
 		"remote:test": "dotenv -- turbo test",
 		"remote:test:ci": "dotenv -- turbo test:ci --filter=!local-mode-tests --filter=!playground-preview-worker --filter=!no-bundle-import --concurrency=1",
@@ -58,7 +53,6 @@
 		"@cloudflare/workers-types": "^4.20230821.0",
 		"dotenv-cli": "^7.3.0",
 		"esbuild": "0.17.19",
-		"patch-package": "^6.5.1",
 		"turbo": "^1.10.13"
 	},
 	"engines": {
@@ -66,5 +60,11 @@
 	},
 	"volta": {
 		"node": "16.13.0"
+	},
+	"pnpm": {
+		"patchedDependencies": {
+			"ink@3.2.0": "patches/ink@3.2.0.patch",
+			"toucan-js@3.2.2": "patches/toucan-js@3.2.2.patch"
+		}
 	}
 }

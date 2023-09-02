@@ -8,7 +8,7 @@
 		"dev:remix": "remix watch",
 		"dev:wrangler": "cross-env NODE_ENV=development wrangler pages dev ./public",
 		"dev": "remix build && run-p \"dev:*\"",
-		"start": "cross-env NODE_ENV=production npm run dev:wrangler",
+		"start": "cross-env NODE_ENV=production pnpm run dev:wrangler",
 		"check:type": "tsc",
 		"test": "npx vitest run",
 		"test:ci": "npx vitest run",
@@ -18,7 +18,8 @@
 		"@remix-run/cloudflare-pages": "^1.17.0",
 		"cross-env": "^7.0.3",
 		"react": "^17.0.2",
-		"react-dom": "^17.0.2"
+		"react-dom": "^17.0.2",
+		"undici": "^5.23.0"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "*",

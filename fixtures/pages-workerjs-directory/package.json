@@ -19,5 +19,8 @@
 	},
 	"volta": {
 		"node": "16.13.0"
+	},
+	"dependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:^"
 	}
 }

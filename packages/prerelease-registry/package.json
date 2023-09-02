@@ -7,9 +7,9 @@
 		"build": "wrangler pages functions build --fallback-service='' ./functions/routes --outdir=dist",
 		"check:lint": "eslint .",
 		"check:type": "tsc",
-		"prepublish": "npm run build",
+		"prepublish": "pnpm run build",
 		"publish": "wrangler deploy dist/index.js",
-		"prestart": "npm run build",
+		"prestart": "pnpm run build",
 		"start": "wrangler dev dist/index.js"
 	},
 	"dependencies": {

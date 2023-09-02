@@ -27,13 +27,13 @@ jobs:
         uses: ./.github/actions/install-dependencies
 
       - name: Check Types
-        run: npm run check:type -w create-cloudflare
+        run: pnpm run --filter create-cloudflare check:type
 
       - name: Lint
-        run: npm run check:lint -w create-cloudflare
+        run: pnpm run --filter create-cloudflare check:lint
 
       - name: Unit Tests
-        run: npm run test:unit -w create-cloudflare
+        run: pnpm run --filter create-cloudflare test:unit
 
   cleanup:
     if: ${{ github.repository_owner == 'cloudflare' }}
@@ -48,7 +48,7 @@ jobs:
         uses: ./.github/actions/install-dependencies
 
       - name: Cleanup E2E test projects
-        run: npm run test:e2e:cleanup -w create-cloudflare
+        run: pnpm run --filter create-cloudflare test:e2e:cleanup
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.C3_TEST_CLOUDFLARE_ACCOUNT_ID }}
@@ -76,7 +76,7 @@ jobs:
         uses: ./.github/actions/install-dependencies
 
       - name: E2E Tests
-        run: npm run test:e2e:${{matrix.pm}} -w create-cloudflare
+        run: pnpm run --filter create-cloudflare test:e2e:${{matrix.pm}}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.C3_TEST_CLOUDFLARE_ACCOUNT_ID }}
@@ -148,7 +148,7 @@ jobs:
         uses: ./.github/actions/install-dependencies
 
       - name: E2E Tests
-        run: npm run test:e2e:${{matrix.pm}} -w create-cloudflare
+        run: pnpm run --filter create-cloudflare test:e2e:${{matrix.pm}}
         env:
           FRAMEWORK_CLI_TO_TEST: ${{ needs.get-bumped-framework.outputs.bumped-framework-cli }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}

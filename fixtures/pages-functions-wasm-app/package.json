@@ -18,5 +18,8 @@
 	},
 	"engines": {
 		"node": ">=16.13"
+	},
+	"dependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*"
 	}
 }

@@ -30,10 +30,10 @@
 		"check:lint": "eslint .",
 		"check:type": "tsc",
 		"lint": "eslint",
-		"prepublishOnly": "npm run build",
+		"prepublishOnly": "pnpm run build",
 		"test:e2e:cleanup": "node -r esbuild-register scripts/e2eCleanup.ts",
-		"test:e2e:npm": "npm run build && TEST_PM=npm vitest run --config ./vitest-e2e.config.ts",
-		"test:e2e:pnpm": "npm run build && TEST_PM=pnpm vitest run --config ./vitest-e2e.config.ts",
+		"test:e2e:npm": "pnpm run build && TEST_PM=npm vitest run --config ./vitest-e2e.config.ts",
+		"test:e2e:pnpm": "pnpm run build && TEST_PM=pnpm vitest run --config ./vitest-e2e.config.ts",
 		"test:unit": "vitest run --config ./vitest.config.ts",
 		"test:unit:watch": "vitest --config ./vitest.config.ts",
 		"watch": "node -r esbuild-register scripts/build.ts --watch"
@@ -77,5 +77,9 @@
 	},
 	"engines": {
 		"node": ">=16.13.0"
+	},
+	"dependencies": {
+		"@clack/core": "^0.3.2",
+		"@types/semver": "^7.5.1"
 	}
 }

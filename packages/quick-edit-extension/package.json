@@ -11,8 +11,8 @@
 	"browser": "./dist/extension.js",
 	"scripts": {
 		"package-web": "node -r esbuild-register scripts/bundle.ts",
-		"vscode:prepublish": "npm run package-web",
-		"watch-web": "npm run package-web -- --watch"
+		"vscode:prepublish": "pnpm run package-web",
+		"watch-web": "pnpm run package-web -- --watch"
 	},
 	"contributes": {
 		"commands": [

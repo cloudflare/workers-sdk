@@ -15,12 +15,14 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
       - name: Use Node.js 16.13
         uses: actions/setup-node@v3
         with:
           node-version: 16.13
-          cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
+          cache: "pnpm"
 
       - name: Install workerd Dependencies
         if: ${{ runner.os == 'Linux' }}
@@ -30,13 +32,13 @@ jobs:
           sudo apt-get install -y libc++1
 
       - name: Install NPM Dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: npm run build
+        run: pnpm run build
 
       - name: Check for errors
-        run: npm run check
+        run: pnpm run check
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
 
@@ -44,7 +46,7 @@ jobs:
         run: node .github/version-script.js
 
       - name: Publish to NPM
-        run: npm publish --tag d1
+        run: pnpm publish --tag d1
         env:
           NODE_ENV: "production"
           NPM_PUBLISH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}

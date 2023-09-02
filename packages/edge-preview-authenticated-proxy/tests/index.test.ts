@@ -1,7 +1,7 @@
 import { randomBytes } from "crypto";
 import fs from "fs/promises";
 import os from "os";
-import path from "path";
+import path, { resolve } from "path";
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import { unstable_dev } from "wrangler";
 import type { UnstableDevWorker } from "wrangler";
@@ -19,12 +19,15 @@ describe("Preview Worker", () => {
 	let tmpDir: string;
 
 	beforeAll(async () => {
-		worker = await unstable_dev("src/index.ts", {
-			experimental: {
-				disableExperimentalWarning: true,
-				// experimentalLocal: true,
-			},
-		});
+		worker = await unstable_dev(
+			resolve(__dirname, resolve(__dirname, "../src/index.ts")),
+			{
+				experimental: {
+					disableExperimentalWarning: true,
+					// experimentalLocal: true,
+				},
+			}
+		);
 
 		tmpDir = await fs.realpath(
 			await fs.mkdtemp(path.join(os.tmpdir(), "preview-tests"))
@@ -260,7 +263,7 @@ describe("Raw HTTP preview", () => {
 	let worker: UnstableDevWorker;
 
 	beforeAll(async () => {
-		worker = await unstable_dev("src/index.ts", {
+		worker = await unstable_dev(resolve(__dirname, "../src/index.ts"), {
 			// @ts-expect-error TODO: figure out the right way to get the server to accept host from the request
 			host: "0000.rawhttp.devprod.cloudflare.dev",
 			experimental: {

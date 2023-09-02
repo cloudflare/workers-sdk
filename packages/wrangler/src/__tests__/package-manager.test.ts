@@ -175,7 +175,7 @@ const testCases: TestCase[] = [
 		npmLockFile: false,
 		yarnLockFile: false,
 		pnpmLockFile: false,
-		expectedPackageManager: "npm",
+		expectedPackageManager: "pnpm",
 	},
 	{
 		npm: true,
