@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import module from "node:module";
 import path from "node:path";
 import url from "node:url";
+import { execSync } from "node:child_process";
 
 /**
  * @param {string} from
@@ -31,8 +32,10 @@ const wranglerVersion = wranglerPackage.version;
 const miniflareVersionConstraint = wranglerPackage.dependencies.miniflare;
 
 // 2. Load `miniflare` `package.json`, getting `miniflare` version and `workerd` version constraint
-const wranglerRequire = module.createRequire(wranglerPackagePath);
-const miniflareMainPath = wranglerRequire.resolve("miniflare");
+const miniflareMainPath = path.resolve(
+	__dirname,
+	"../packages/wrangler/node_modules/miniflare"
+);
 const miniflarePackageJsonPath = findClosestPackageJson(miniflareMainPath);
 assert(miniflarePackageJsonPath !== undefined);
 const miniflarePackagePath = path.dirname(miniflarePackageJsonPath);
@@ -45,13 +48,14 @@ const miniflareVersion = miniflarePackage.version;
 const workerdVersionConstraint = miniflarePackage.dependencies.workerd;
 
 // 3. Load `workerd` `package.json`, getting `workerd` version
-const miniflareRequire = module.createRequire(miniflarePackagePath);
-const workerdMainPath = miniflareRequire.resolve("workerd");
-const workerdPackageJsonPath = findClosestPackageJson(workerdMainPath);
-assert(workerdPackageJsonPath !== undefined);
-const workerdPackageJson = await fs.readFile(workerdPackageJsonPath, "utf8");
-const workerdPackage = JSON.parse(workerdPackageJson);
-const workerdVersion = workerdPackage.version;
+const workerdMainPath = path.resolve(
+	__dirname,
+	"../packages/wrangler/node_modules/miniflare/node_modules/.bin/workerd"
+);
+
+const workerdVersion = execSync(workerdMainPath + " --version")
+	.toString()
+	.split(" ")[1];
 
 // 4. Write basic markdown report
 const report = [
