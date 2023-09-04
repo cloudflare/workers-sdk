@@ -1,16 +1,14 @@
-import type { Config, RawConfig } from "../../config/config";
+import type { RawConfig } from "../../config/config";
 import type { CfAccount } from "../../create-worker-preview";
-import type { Json, fetch, Request, Response } from "miniflare";
+import type { Json, Request, Response, DispatchFetch } from "miniflare";
 import type * as undici from "undici";
-
-export { Config };
 
 export interface DevWorker {
 	ready: Promise<void>;
-	config?: Config;
+	config?: StartDevWorkerOptions;
 	setOptions(options: StartDevWorkerOptions): void;
 	updateOptions(options: Partial<StartDevWorkerOptions>): void;
-	fetch: typeof fetch;
+	fetch: DispatchFetch;
 	scheduled(cron?: string): Promise<void>;
 	queue(queueName: string, ...messages: unknown[]): Promise<void>;
 	dispose(): Promise<void>;
@@ -66,7 +64,7 @@ export interface StartDevWorkerOptions {
 	};
 
 	/** Options applying to the worker's development preview environment. */
-	dev: {
+	dev?: {
 		/** Options applying to the worker's inspector server. */
 		inspector?: { hostname?: string; port?: number; secure?: boolean };
 		/** Whether the worker runs on the edge or locally. */

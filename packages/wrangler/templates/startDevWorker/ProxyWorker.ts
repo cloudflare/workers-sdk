@@ -1,15 +1,18 @@
+import assert from "node:assert";
 import type {
 	ProxyWorkerIncomingMessage,
 	ProxyWorkerOutgoingMessage,
 	ProxyData,
 } from "../../src/api/startDevWorker/events";
-
-let buffering = false;
-let buffer: DeferredPromise<ProxyData>;
+import {
+	DeferredPromise,
+	createDeferredPromise,
+} from "../../src/api/startDevWorker/utils";
 
 interface Env {
 	PROXY_CONTROLLER: Fetcher;
 	PROXY_CONTROLLER_AUTH_SECRET: string;
+	DURABLE_OBJECT: DurableObjectNamespace;
 }
 
 type Request = Parameters<
@@ -19,39 +22,105 @@ type Request = Parameters<
 >[0];
 
 export default {
-	fetch(request, env) {
-		if (isRequestFromProxyController(request, env)) {
-			// requests from ProxyController
+	fetch(req, env) {
+		const singleton = env.DURABLE_OBJECT.idFromName("");
+		const inspectorProxy = env.DURABLE_OBJECT.get(singleton);
 
-			return processProxyControllerRequest(request, env);
-		}
-
-		// regular requests to be proxied
-
-		// this guarantees order in which requests are sent, not delivered
-		//    TODO(consider): `return buffer = buffer.then(...)` to guarantee order of request delivery
-		return buffer.then((proxyData) => {
-			return processBufferedRequest(request, env, proxyData);
-		});
+		return inspectorProxy.fetch(req);
 	},
 } as ExportedHandler<Env, unknown, ProxyWorkerIncomingMessage>;
 
-type MaybePromise<T> = T | Promise<T>;
-type DeferredPromise<T> = Promise<T> & {
-	resolve: (_: MaybePromise<T>) => void;
-	reject: (_: Error) => void;
-};
-function createDeferredPromise<T>(chain?: Promise<T>): DeferredPromise<T> {
-	let resolve, reject;
-	const deferred = new Promise<T>((_resolve, _reject) => {
-		resolve = _resolve;
-		reject = _reject;
-	});
+export class ProxyWorker implements DurableObject {
+	constructor(_state: DurableObjectState, readonly env: Env) {}
 
-	return Object.assign(chain ? chain.then(() => deferred) : deferred, {
-		resolve,
-		reject,
-	} as unknown) as DeferredPromise<T>;
+	proxyData?: ProxyData;
+	requestQueue = new Map<Request, DeferredPromise<Response>>();
+
+	fetch(request: Request) {
+		if (isRequestFromProxyController(request, this.env)) {
+			// requests from ProxyController
+
+			return this.processProxyControllerRequest(request);
+		}
+
+		// regular requests to be proxied
+		const promise = createDeferredPromise<Response>();
+
+		this.requestQueue.set(request, promise);
+		this.processQueue();
+
+		return promise;
+
+		// // this guarantees order in which requests are sent, not delivered
+		// //    TODO(consider): `return buffer = buffer.then(...)` to guarantee order of request delivery
+		// return this.buffer.then((proxyData) => {
+		// 	return processBufferedRequest(request, this.env, proxyData);
+		// });
+	}
+
+	processProxyControllerRequest(request: Request) {
+		const event = request.cf?.hostMetadata;
+		switch (event?.type) {
+			case "pause":
+				this.proxyData = undefined;
+				break;
+
+			case "play":
+				this.proxyData = event.proxyData;
+				this.processQueue();
+				break;
+		}
+
+		return new Response(null, { status: 204 });
+	}
+
+	processQueue() {
+		const { proxyData } = this;
+		if (proxyData === undefined) return;
+
+		for (const [request, deferred] of this.requestQueue) {
+			this.requestQueue.delete(request);
+
+			const url = new URL(request.url);
+
+			// override url parts for proxying
+			Object.assign(url, proxyData.destinationURL);
+
+			for (const [key, value] of Object.entries(proxyData.headers ?? {})) {
+				if (key.toLowerCase() === "cookie") {
+					const existing = request.headers.get("cookie") ?? "";
+					request.headers.set("cookie", `${existing};${value}`);
+				} else {
+					request.headers.append(key, value);
+				}
+			}
+
+			void fetch(url, new Request(request, { redirect: "manual" })) // TODO: check if redirect: manual is needed
+				.then((res) => {
+					if (isHtmlResponse(res)) {
+						res = insertLiveReloadScript(res, this.env, proxyData);
+					}
+
+					deferred.resolve(res);
+				})
+				.catch((error: Error) => {
+					// errors here are network errors or from response post-processing
+					// to catch only network errors, use the 2nd param of the fetch.then()
+
+					void sendMessageToProxyController(this.env, {
+						type: "error",
+						error: {
+							name: error.name,
+							message: error.message,
+							stack: error.stack,
+							cause: error.cause,
+						},
+					});
+
+					deferred.reject(error);
+				});
+		}
+	}
 }
 
 function isRequestFromProxyController(req: Request, env: Env): boolean {
@@ -59,69 +128,6 @@ function isRequestFromProxyController(req: Request, env: Env): boolean {
 }
 function isHtmlResponse(res: Response): boolean {
 	return res.headers.get("content-type")?.startsWith("text/html") ?? false;
-}
-
-function processProxyControllerRequest(request: Request, env: Env) {
-	const event = request.cf?.hostMetadata;
-	switch (event?.type) {
-		case "pause":
-			if (buffering) break; // allow multiple reloadStart events in a row -- don't overwrite unresolved `buffer` promise with a new promise
-			buffering = true;
-			buffer = createDeferredPromise();
-			break;
-
-		case "play":
-			buffering = false;
-			buffer.resolve(event.proxyData);
-			break;
-	}
-
-	return new Response(null, { status: 204 });
-}
-
-function processBufferedRequest(
-	request: Request,
-	env: Env,
-	proxyData: ProxyData
-) {
-	const url = new URL(request.url);
-
-	// override url parts for proxying
-	Object.assign(url, proxyData.destinationURL);
-
-	for (const [key, value] of Object.entries(proxyData.headers ?? {})) {
-		if (key.toLowerCase() === "cookie") {
-			const existing = request.headers.get("cookie") ?? "";
-			request.headers.set("cookie", `${existing};${value}`);
-		} else {
-			request.headers.append(key, value);
-		}
-	}
-
-	void fetch(url, new Request(request, { redirect: "manual" })) // TODO: check if redirect: manual is needed
-		.then((res) => {
-			if (isHtmlResponse(res)) {
-				res = insertLiveReloadScript(res, env, proxyData);
-			}
-
-			return res;
-		})
-		.catch((error: Error) => {
-			// errors here are network errors or from response post-processing
-			// to catch only network errors, use the 2nd param of the fetch.then()
-
-			void sendMessageToProxyController(env, {
-				type: "error",
-				error: {
-					name: error.name,
-					message: error.message,
-					stack: error.stack,
-					cause: error.cause,
-				},
-			});
-
-			throw error;
-		});
 }
 
 async function sendMessageToProxyController(
@@ -175,23 +181,23 @@ function insertLiveReloadScript(
 			// TODO: compare to existing nodejs implementation
 			if (proxyData.liveReloadUrl) {
 				end.append(`
-          <script>
-            (function() {
-              var ws;
-              function recover() {
-                ws = null;
-                setTimeout(initLiveReload, 100);
-              }
-              function initLiveReload() {
-                if (ws) return;
-                ws = new WebSocket("${proxyData.liveReloadUrl}");
-                ws.onclose = recover;
-                ws.onerror = recover;
-                ws.onmessage = location.reload.bind(location);
-              }
-            })();
-          </script>
-        `);
+					<script>
+						(function() {
+							var ws;
+							function recover() {
+								ws = null;
+								setTimeout(initLiveReload, 100);
+							}
+							function initLiveReload() {
+								if (ws) return;
+								ws = new WebSocket("${proxyData.liveReloadUrl}");
+								ws.onclose = recover;
+								ws.onerror = recover;
+								ws.onmessage = location.reload.bind(location);
+							}
+						})();
+					</script>
+				`);
 			}
 		},
 	});

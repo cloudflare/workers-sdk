@@ -1,14 +1,20 @@
+import assert from "node:assert";
+import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import path from "node:path";
+import esbuild from "esbuild";
 import { Miniflare, Response } from "miniflare";
-import { readFileSync } from "../../parse";
+// import { readFileSync } from "../../parse";
 import { getBasePath } from "../../paths";
 import { castErrorCause } from "./events";
+import { createDeferredPromise } from "./utils";
 import type {
 	BundleCompleteEvent,
 	BundleStartEvent,
 	ConfigUpdateEvent,
 	ErrorEvent,
+	InspectorProxyWorkerIncomingMessage,
+	InspectorProxyWorkerOutgoingMessage,
 	PreviewTokenExpiredEvent,
 	ProxyWorkerIncomingMessage,
 	ProxyWorkerOutgoingMessage,
@@ -17,7 +23,8 @@ import type {
 	ReloadStartEvent,
 	TeardownEvent,
 } from "./events";
-import type { StartDevWorkerOptions, Config, DevWorker } from "./types";
+import type { StartDevWorkerOptions, DevWorker } from "./types";
+import type { WebSocket } from "miniflare";
 
 export function startWorker(options: StartDevWorkerOptions): DevWorker {
 	const devEnv = new DevEnv();
@@ -47,16 +54,17 @@ export function createWorkerObject(
 			return devEnv.config.updateOptions(options);
 		},
 		async fetch(...args) {
-			const { worker } = await devEnv.proxy.ready;
-			return worker.fetch(...args);
+			const { miniflareProxyWorker } = await devEnv.proxy.ready;
+
+			return miniflareProxyWorker.dispatchFetch(...args);
 		},
 		async queue(...args) {
-			const { worker } = await devEnv.proxy.ready;
-			return worker.queue(...args);
+			// const { worker } = await devEnv.proxy.ready;
+			// return worker.queue(...args);
 		},
 		async scheduled(...args) {
-			const { worker } = await devEnv.proxy.ready;
-			return worker.scheduled(...args);
+			// const { worker } = await devEnv.proxy.ready;
+			// return worker.scheduled(...args);
 		},
 		async dispose() {
 			await devEnv.teardown({} as TeardownEvent);
@@ -78,7 +86,7 @@ export class DevEnv extends EventEmitter {
 		});
 
 		this.workers.set(options.name, worker);
-		this.config.setOptions(options);
+		// this.config.setOptions(options);
 
 		return worker;
 	}
@@ -105,8 +113,6 @@ export class DevEnv extends EventEmitter {
 
 		config.on("configUpdate", (event) => {
 			bundler.onConfigUpdate(event);
-		});
-		config.once("configUpdate", (event) => {
 			proxy.onConfigUpdate(event);
 		});
 
@@ -162,13 +168,10 @@ export class ConfigController extends EventEmitter {
 	config?: Config;
 
 	setOptions(_: StartDevWorkerOptions) {
-		throw new NotImplementedError(this.setOptions.name, this.constructor.name);
+		throwNotImplementedError(this.setOptions.name, this.constructor.name);
 	}
 	updateOptions(_: Partial<StartDevWorkerOptions>) {
-		throw new NotImplementedError(
-			this.updateOptions.name,
-			this.constructor.name
-		);
+		throwNotImplementedError(this.updateOptions.name, this.constructor.name);
 	}
 
 	// ******************
@@ -176,7 +179,7 @@ export class ConfigController extends EventEmitter {
 	// ******************
 
 	async teardown(_: TeardownEvent) {
-		throw new NotImplementedError(this.teardown.name, this.constructor.name);
+		throwNotImplementedError(this.teardown.name, this.constructor.name);
 	}
 
 	// *********************
@@ -204,14 +207,11 @@ export class BundlerController extends EventEmitter {
 	// ******************
 
 	onConfigUpdate(_: ConfigUpdateEvent) {
-		throw new NotImplementedError(
-			this.onConfigUpdate.name,
-			this.constructor.name
-		);
+		throwNotImplementedError(this.onConfigUpdate.name, this.constructor.name);
 	}
 
 	async teardown(_: TeardownEvent) {
-		throw new NotImplementedError(this.teardown.name, this.constructor.name);
+		throwNotImplementedError(this.teardown.name, this.constructor.name);
 	}
 
 	// *********************
@@ -271,23 +271,17 @@ export class LocalRuntimeController extends RuntimeController {
 	// ******************
 
 	onBundleStart(_: BundleStartEvent) {
-		throw new NotImplementedError(
-			this.onBundleStart.name,
-			this.constructor.name
-		);
+		throwNotImplementedError(this.onBundleStart.name, this.constructor.name);
 	}
 	onBundleComplete(_: BundleCompleteEvent) {
-		throw new NotImplementedError(
-			this.onBundleComplete.name,
-			this.constructor.name
-		);
+		throwNotImplementedError(this.onBundleComplete.name, this.constructor.name);
 	}
 	onPreviewTokenExpired(_: PreviewTokenExpiredEvent): void {
 		// ignore in local runtime
 	}
 
 	async teardown(_: TeardownEvent) {
-		throw new NotImplementedError(this.teardown.name, this.constructor.name);
+		throwNotImplementedError(this.teardown.name, this.constructor.name);
 	}
 
 	// *********************
@@ -307,26 +301,20 @@ export class RemoteRuntimeController extends RuntimeController {
 	// ******************
 
 	onBundleStart(_: BundleStartEvent) {
-		throw new NotImplementedError(
-			this.onBundleStart.name,
-			this.constructor.name
-		);
+		throwNotImplementedError(this.onBundleStart.name, this.constructor.name);
 	}
 	onBundleComplete(_: BundleCompleteEvent) {
-		throw new NotImplementedError(
-			this.onBundleComplete.name,
-			this.constructor.name
-		);
+		throwNotImplementedError(this.onBundleComplete.name, this.constructor.name);
 	}
 	onPreviewTokenExpired(_: PreviewTokenExpiredEvent): void {
-		throw new NotImplementedError(
+		throwNotImplementedError(
 			this.onPreviewTokenExpired.name,
 			this.constructor.name
 		);
 	}
 
 	async teardown(_: TeardownEvent) {
-		throw new NotImplementedError(this.teardown.name, this.constructor.name);
+		throwNotImplementedError(this.teardown.name, this.constructor.name);
 	}
 
 	// *********************
@@ -349,12 +337,48 @@ export class ProxyController extends EventEmitter {
 
 	public proxyWorker: Miniflare | undefined;
 	public inspectorProxyWorker: Miniflare | undefined;
-	protected createProxyWorker(config: Config): Miniflare {
+	public inspectorProxyWorkerWebSocket = createDeferredPromise<WebSocket>();
+
+	secret = randomUUID();
+
+	protected createProxyWorker(config: StartDevWorkerOptions): Miniflare {
+		const proxyWorkerResult = esbuild.buildSync({
+			entryPoints: [
+				path.join(getBasePath(), `templates/startDevWorker/ProxyWorker.ts`),
+			],
+			bundle: true,
+			format: "esm",
+			target: "esnext",
+			write: false,
+			external: ["node:*"],
+		});
+		const inspectorProxyWorkerResult = esbuild.buildSync({
+			entryPoints: [
+				path.join(
+					getBasePath(),
+					`templates/startDevWorker/InspectorProxyWorker.ts`
+				),
+			],
+			bundle: true,
+			format: "esm",
+			target: "esnext",
+			write: false,
+			external: ["node:*"],
+		});
+
 		this.proxyWorker ??= new Miniflare({
-			script: readFileSync(
-				path.join(getBasePath(), `templates/startDevWorker/ProxyWorker.ts`)
-			),
-			port: config.dev?.port, // random port if undefined
+			verbose: true,
+			compatibilityFlags: ["nodejs_compat"],
+			modules: [
+				{
+					type: "ESModule",
+					contents: proxyWorkerResult.outputFiles[0].contents,
+					path: proxyWorkerResult.outputFiles[0].path,
+				},
+			],
+			durableObjects: {
+				DURABLE_OBJECT: "ProxyWorker",
+			},
 			serviceBindings: {
 				PROXY_CONTROLLER: async (req): Promise<Response> => {
 					const message = (await req.json()) as ProxyWorkerOutgoingMessage;
@@ -364,26 +388,64 @@ export class ProxyController extends EventEmitter {
 					return new Response(null, { status: 204 });
 				},
 			},
+			bindings: {
+				PROXY_CONTROLLER_AUTH_SECRET: this.secret,
+			},
+
+			// TODO(soon): use Wrangler's self-signed cert creation instead
+			https: config.dev?.server?.secure,
+			host: config.dev?.server?.hostname,
+			port: config.dev?.server?.port, // random port if undefined
 		});
 
 		// separate Miniflare instance while it only permits opening one port
 		this.inspectorProxyWorker ??= new Miniflare({
-			script: readFileSync(
-				path.join(
-					getBasePath(),
-					`templates/startDevWorker/InspectorProxyWorker.ts`
-				)
-			),
-			port: config.dev?.inspector_port, // random port if undefined
-			serviceBindings: {
-				PROXY_CONTROLLER: async (req): Promise<Response> => {
-					const message = (await req.json()) as ProxyWorkerOutgoingMessage;
-
-					this.onProxyWorkerMessage(message);
-
-					return new Response(null, { status: 204 });
+			verbose: true,
+			compatibilityFlags: ["nodejs_compat"],
+			modules: [
+				{
+					type: "ESModule",
+					contents: inspectorProxyWorkerResult.outputFiles[0].contents,
+					path: inspectorProxyWorkerResult.outputFiles[0].path,
 				},
+			],
+			durableObjects: {
+				DURABLE_OBJECT: "InspectorProxyWorker",
 			},
+			bindings: {
+				PROXY_CONTROLLER_AUTH_SECRET: this.secret,
+			},
+
+			// TODO(soon): use Wrangler's self-signed cert creation instead
+			https: config.dev?.inspector?.secure,
+			host: config.dev?.inspector?.hostname,
+			port: config.dev?.inspector?.port, // random port if undefined
+		});
+
+		void Promise.all([
+			this.proxyWorker.ready,
+			this.inspectorProxyWorker
+				.dispatchFetch("http://dummy/", {
+					headers: { Authorization: this.secret, Upgrade: "websocket" },
+				})
+				.then(({ webSocket }) => {
+					assert(
+						webSocket,
+						"Expected webSocket on response from inspectorProxyWorker"
+					);
+
+					webSocket.addEventListener("message", (event) => {
+						assert(typeof event.data === "string");
+						this.onInspectorProxyWorkerMessage(JSON.parse(event.data));
+					});
+
+					webSocket.accept();
+					this.inspectorProxyWorkerWebSocket.resolve(webSocket);
+					// TODO: handle close and error events
+				}),
+		]).then(([proxyUrl]) => {
+			this.emitReadyEvent();
+			console.log({ proxyUrl });
 		});
 
 		return this.proxyWorker;
@@ -394,9 +456,20 @@ export class ProxyController extends EventEmitter {
 		retries = 3
 	) {
 		try {
-			await this.proxyWorker?.dispatchFetch("http://dummy/", {
+			assert(this.proxyWorker);
+
+			console.log(
+				`BEFORE Send message to ProxyWorker: ${JSON.stringify(message)}`
+			);
+
+			await this.proxyWorker.dispatchFetch("http://dummy/", {
+				headers: { Authorization: this.secret },
 				cf: { hostMetadata: message },
 			});
+
+			console.log(
+				`AFTER Send message to ProxyWorker: ${JSON.stringify(message)}`
+			);
 		} catch (cause) {
 			const error = castErrorCause(cause);
 
@@ -404,7 +477,46 @@ export class ProxyController extends EventEmitter {
 				await this.sendMessageToProxyWorker(message, retries - 1);
 			}
 
-			this.emitErrorEvent("Failed to send message to ProxyWorker", error);
+			this.emitErrorEvent(
+				`Failed to send message to ProxyWorker: ${JSON.stringify(message)}`,
+				error
+			);
+
+			throw error;
+		}
+	}
+	async sendMessageToInspectorProxyWorker(
+		message: InspectorProxyWorkerIncomingMessage,
+		retries = 3
+	): Promise<void> {
+		try {
+			const websocket = await this.inspectorProxyWorkerWebSocket;
+			assert(websocket);
+
+			console.log(
+				`BEFORE Send message to InspectorProxyWorker: ${JSON.stringify(
+					message
+				)}`
+			);
+
+			websocket.send(JSON.stringify(message));
+
+			console.log(
+				`AFTER Send message to InspectorProxyWorker: ${JSON.stringify(message)}`
+			);
+		} catch (cause) {
+			const error = castErrorCause(cause);
+
+			if (retries > 0) {
+				return this.sendMessageToInspectorProxyWorker(message, retries - 1);
+			}
+
+			this.emitErrorEvent(
+				`Failed to send message to InspectorProxyWorker: ${JSON.stringify(
+					message
+				)}`,
+				error
+			);
 
 			throw error;
 		}
@@ -419,7 +531,7 @@ export class ProxyController extends EventEmitter {
 
 		this.createProxyWorker(data.config);
 
-		void this.sendMessageToProxyWorker({ type: "pause" });
+		// void this.sendMessageToProxyWorker({ type: "pause" });
 	}
 	onBundleStart(_: BundleStartEvent) {
 		void this.sendMessageToProxyWorker({ type: "pause" });
@@ -430,6 +542,10 @@ export class ProxyController extends EventEmitter {
 	onReloadComplete(data: ReloadCompleteEvent) {
 		void this.sendMessageToProxyWorker({
 			type: "play",
+			proxyData: data.proxyData,
+		});
+		void this.sendMessageToInspectorProxyWorker({
+			type: "proxy-data",
 			proxyData: data.proxyData,
 		});
 	}
@@ -444,17 +560,37 @@ export class ProxyController extends EventEmitter {
 				break;
 		}
 	}
+	onInspectorProxyWorkerMessage(message: InspectorProxyWorkerOutgoingMessage) {
+		throwNotImplementedError(
+			"onInspectorProxyWorkerMessage",
+			"ProxyController"
+		);
+		console.log({ message });
+	}
 
 	async teardown(_: TeardownEvent) {
-		await this.proxyWorker?.dispose();
-		await this.inspectorProxyWorker?.dispose();
+		console.log("teardown");
+
+		try {
+			await this.proxyWorker?.ready;
+			await this.proxyWorker?.dispose(); // TODO: miniflare should await .ready
+			this.proxyWorker = undefined;
+		} finally {
+			await this.inspectorProxyWorker?.ready;
+			await this.inspectorProxyWorker?.dispose();
+			this.inspectorProxyWorker = undefined;
+		}
 	}
 
 	// *********************
 	//   Event Dispatchers
 	// *********************
 
-	emitReadyEvent(data: ReadyEvent) {
+	emitReadyEvent() {
+		const data = {
+			type: "ready",
+			miniflareProxyWorker: this.proxyWorker!,
+		} as const;
 		this.emit("ready", data);
 		this.readyResolver(data);
 	}
@@ -485,4 +621,10 @@ class NotImplementedError extends Error {
 		if (namespace) func = `${namespace}#${func}`;
 		super(`Not Implemented Error: ${func}`);
 	}
+}
+
+function throwNotImplementedError(func: string, namespace?: string) {
+	// throw new NotImplementedError(func, namespace);
+	if (namespace) func = `${namespace}#${func}`;
+	console.warn(`Not Implemented Error: ${func}`);
 }

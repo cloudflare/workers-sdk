@@ -1,4 +1,5 @@
-import type { Config, DevWorker } from "./types";
+import type { StartDevWorkerOptions } from "./types";
+import type { Miniflare } from "miniflare";
 
 // export class ConfigUpdateEvent extends Event implements IConfigUpdateEvent {
 // 	constructor(public config: Config) {
@@ -74,19 +75,19 @@ export function castErrorCause(cause: unknown) {
 export type ConfigUpdateEvent = {
 	type: "configUpdate";
 
-	config: Config;
+	config: StartDevWorkerOptions;
 };
 
 // BundlerController
 export type BundleStartEvent = {
 	type: "bundleStart";
 
-	config: Config;
+	config: StartDevWorkerOptions;
 };
 export type BundleCompleteEvent = {
 	type: "bundleComplete";
 
-	config: Config;
+	config: StartDevWorkerOptions;
 	bundle: WorkerBundle;
 };
 
@@ -94,13 +95,13 @@ export type BundleCompleteEvent = {
 export type ReloadStartEvent = {
 	type: "reloadStart";
 
-	config: Config;
+	config: StartDevWorkerOptions;
 	bundle: WorkerBundle;
 };
 export type ReloadCompleteEvent = {
 	type: "reloadComplete";
 
-	config: Config;
+	config: StartDevWorkerOptions;
 	bundle: WorkerBundle;
 	proxyData: ProxyData;
 };
@@ -115,7 +116,7 @@ export type PreviewTokenExpiredEvent = {
 export type ReadyEvent = {
 	type: "ready";
 
-	worker: DevWorker;
+	miniflareProxyWorker: Miniflare;
 };
 
 // ProxyWorker
@@ -130,15 +131,13 @@ export type ProxyWorkerOutgoingMessage =
 	| { type: "previewTokenExpired"; proxyData: ProxyData };
 
 // InspectorProxyWorker
-export type InspectorProxyWorkerIncomingMessage =
-	| {
-			type: "play";
-			proxyData: ProxyData;
-	  }
-	| { type: "pause" };
+export type InspectorProxyWorkerIncomingMessage = {
+	type: "proxy-data";
+	proxyData: ProxyData;
+};
 export type InspectorProxyWorkerOutgoingMessage =
 	| { type: "error"; error: SerializedError }
-	| { type: "previewTokenExpired"; proxyData: ProxyData };
+	| { type: "log"; data: unknown };
 
 type SerializedError = Pick<Error, "name" | "message" | "stack" | "cause">;
 
@@ -164,7 +163,7 @@ interface WorkerBundle {
 }
 
 export type ProxyData = {
-	destinationURL: Pick<URL, "hostname" | "port" | "protocol">;
+	destinationURL: Partial<Pick<URL, "host" | "hostname" | "port" | "protocol">>;
 	destinationInspectorURL: string;
 	headers: Record<string, string>;
 	liveReloadUrl?: string;

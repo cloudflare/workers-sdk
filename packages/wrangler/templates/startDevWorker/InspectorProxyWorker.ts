@@ -10,37 +10,21 @@
 
 import assert from "node:assert";
 import type { ProxyData } from "../../src/api/startDevWorker/events";
+import { createDeferredPromise } from "../../src/api/startDevWorker/utils";
 
 interface Env {
 	PROXY_CONTROLLER: Fetcher;
 	PROXY_CONTROLLER_AUTH_SECRET: string;
-}
-
-// TODO: extract into shared library
-type MaybePromise<T> = T | Promise<T>;
-type DeferredPromise<T> = Promise<T> & {
-	resolve: (_: MaybePromise<T>) => void;
-	reject: (_: Error) => void;
-};
-function createDeferredPromise<T>(): DeferredPromise<T> {
-	let resolve, reject;
-	const deferred = new Promise<T>((_resolve, _reject) => {
-		resolve = _resolve;
-		reject = _reject;
-	});
-
-	return Object.assign(deferred, {
-		resolve,
-		reject,
-	} as unknown) as DeferredPromise<T>;
+	WRANGLER_VERSION: string;
+	DURABLE_OBJECT: DurableObjectNamespace;
 }
 
 export default {
 	fetch(req, env) {
-		if (isRequestFromProxyController(req, env)) {
-		}
+		const singleton = env.DURABLE_OBJECT.idFromName("");
+		const inspectorProxy = env.DURABLE_OBJECT.get(singleton);
 
-		return new Response(null, { status: 404 });
+		return inspectorProxy.fetch(req);
 	},
 } as ExportedHandler<Env>;
 
@@ -50,10 +34,16 @@ export type InspectorProxyWorkerIncomingMessage = {
 };
 export type InspectorProxyWorkerOutgoingMessage = never;
 
-export class InspectorProxy implements DurableObject {
+export class InspectorProxyWorker implements DurableObject {
 	constructor(_state: DurableObjectState, readonly env: Env) {}
 
-	#proxyController?: WebSocket;
+	#websockets: {
+		proxyController?: WebSocket;
+		runtime?: WebSocket;
+		devtools?: WebSocket;
+	} = {};
+	#runtimeWebSocketPromise = createDeferredPromise<void>();
+
 	#proxyData?: ProxyData;
 
 	runtimeMessageBuffer: string[] = [];
@@ -62,32 +52,48 @@ export class InspectorProxy implements DurableObject {
 	#transformRuntimeToDevToolsMessage(data: string): string {
 		const message = JSON.parse(data);
 
+		// TODO: transform message
+
 		return JSON.stringify(message);
 	}
 	#transformDevToolsToRuntimeMesssage(data: string): string {
 		const message = JSON.parse(data);
 
+		// TODO: transform message
+
 		return JSON.stringify(message);
 	}
 
 	#handleRuntimeIncomingMessage = (event: MessageEvent) => {
-		assert(typeof event.data === "string");
+		assert(
+			typeof event.data === "string",
+			"Expected event.data from runtime to be string"
+		);
 		// TODO:
 		//  - If console log, then log via proxy controller
-		if (this.#devtoolsWebSocket?.readyState !== WebSocket.READY_STATE_OPEN) {
-			this.runtimeMessageBuffer.push(event.data);
-		} else {
-			this.#devtoolsWebSocket.send(
-				this.#transformRuntimeToDevToolsMessage(event.data)
-			);
-		}
+
+		this.runtimeMessageBuffer.push(event.data);
+
+		this.#processRuntimeMessageBuffer();
 	};
 
-	#runtimeWebSocket?: WebSocket;
-	#runtimeWebSocketPromise = createDeferredPromise<void>();
+	#processRuntimeMessageBuffer = () => {
+		if (this.#websockets.devtools === undefined) return;
 
-	#handleProxyControllerIncomingMessage = async (event: MessageEvent) => {
-		assert(typeof event.data === "string");
+		for (const data of this.runtimeMessageBuffer) {
+			this.#websockets.devtools.send(
+				this.#transformRuntimeToDevToolsMessage(data)
+			);
+		}
+
+		this.runtimeMessageBuffer.length = 0;
+	};
+
+	#handleProxyControllerIncomingMessage = (event: MessageEvent) => {
+		assert(
+			typeof event.data === "string",
+			"Expected event.data from proxy controller to be string"
+		);
 
 		const message: InspectorProxyWorkerIncomingMessage = JSON.parse(event.data);
 
@@ -102,65 +108,124 @@ export class InspectorProxy implements DurableObject {
 			// connect or reconnect to runtime inspector server
 			this.#proxyData = message.proxyData;
 
-			// use `await fetch()` over `new WebSocket()` to avoid WebSocket.READY_STATE_CONNECTING state
+			// // use `await fetch()` over `new WebSocket()` to avoid WebSocket.READY_STATE_CONNECTING state
 			const url = new URL(this.#proxyData.destinationInspectorURL);
 			url.protocol = url.protocol === "wss:" ? "https:" : "http:";
-			const res = await fetch(url, { headers: { Upgrade: "websocket" } });
-			const runtime = res.webSocket;
-			assert(runtime !== null);
+			void fetch(url, { headers: { Upgrade: "websocket" } })
+				.then((res) => {
+					const runtime = res.webSocket;
+					assert(runtime !== null, "Expected runtime WebSocket not to be null");
 
-			runtime.addEventListener("message", this.#handleRuntimeIncomingMessage);
-			runtime.accept();
-			this.#runtimeWebSocket?.close();
-			this.#runtimeWebSocket = runtime;
-			this.#runtimeWebSocketPromise.resolve();
-			// TODO: handle error and close events
+					runtime.addEventListener(
+						"message",
+						this.#handleRuntimeIncomingMessage
+					);
+					runtime.accept();
+					this.#websockets.runtime?.close();
+					this.#websockets.runtime = runtime;
+					this.#runtimeWebSocketPromise.resolve();
+					// this.#processRuntimeMessageBuffer();
+					// TODO: handle error and close events
+				})
+				.catch(console.error);
 		}
 	};
 
 	#handleProxyControllerDataRequest(req: Request) {
-		assert(req.headers.get("Upgrade") === "websocket");
+		assert(
+			req.headers.get("Upgrade") === "websocket",
+			"Expected proxy controller data request to be WebSocket upgrade"
+		);
 		const { 0: response, 1: proxyController } = new WebSocketPair();
 		proxyController.accept();
 		proxyController.addEventListener(
 			"message",
 			this.#handleProxyControllerIncomingMessage
 		);
-		this.#proxyController = proxyController;
+
+		this.#websockets.proxyController = proxyController;
+
 		return new Response(null, {
 			status: 101,
 			webSocket: response,
 		});
 	}
 
-	#handleJsonRequest(req: Request) {
+	#inspectorId = crypto.randomUUID();
+	async #handleJsonRequest(req: Request) {
+		await this.#runtimeWebSocketPromise;
+
 		const url = new URL(req.url);
+
 		if (url.pathname === "/json/version") {
-			// TODO:
-		} else if (url.pathname === "/json" || url.pathname === "/json/list") {
+			return Response.json({
+				Browser: `wrangler/v${this.env.WRANGLER_VERSION}`,
+				// TODO: (someday): The DevTools protocol should match that of Edge Worker.
+				// This could be exposed by the preview API.
+				"Protocol-Version": "1.3",
+			});
 		}
+
+		if (url.pathname === "/json" || url.pathname === "/json/list") {
+			// TODO: can we remove the `/ws` here if we only have a single worker?
+			const localHost = `${url.host}/ws`;
+			const devtoolsFrontendUrl = `https://devtools.devprod.cloudflare.dev/js_app?theme=systemPreferred&debugger=true&ws=${localHost}`;
+			const devtoolsFrontendUrlCompat = `https://devtools.devprod.cloudflare.dev/js_app?theme=systemPreferred&debugger=true&ws=${localHost}`;
+
+			return Response.json([
+				{
+					id: this.#inspectorId,
+					type: "node",
+					description: "workers",
+					webSocketDebuggerUrl: `ws://${localHost}`,
+					devtoolsFrontendUrl,
+					devtoolsFrontendUrlCompat,
+					// Below are fields that are visible in the DevTools UI.
+					title: "Cloudflare Worker",
+					faviconUrl: "https://workers.cloudflare.com/favicon.ico",
+					url:
+						"https://" +
+						(this.#websockets.runtime
+							? new URL(this.#websockets.runtime.url!).host
+							: "workers.dev"),
+				},
+			]);
+		}
+
 		return new Response(null, { status: 404 });
 	}
 
 	// -----
-	#devtoolsWebSocket?: WebSocket;
 
 	#handleDevToolsIncomingMessage = (event: MessageEvent) => {
-		assert(typeof event.data === "string");
-		this.#runtimeWebSocket?.send(
+		assert(
+			typeof event.data === "string",
+			"Expected devtools incoming message to be of type string"
+		);
+		assert(
+			this.#websockets.runtime,
+			"Cannot proxy devtools incoming message to undefined this.#websockets.runtime"
+		);
+
+		this.#websockets.runtime.send(
 			this.#transformDevToolsToRuntimeMesssage(event.data)
 		);
 	};
 
 	async #handleWebSocketUpgradeRequest(req: Request) {
-		// DevTools connected
+		// DevTools attempting to connect
+
+		// Delay devtools connection response until we've connected to the runtime inspector server
 		await this.#runtimeWebSocketPromise;
 
-		assert(req.headers.get("Upgrade") === "websocket");
+		assert(
+			req.headers.get("Upgrade") === "websocket",
+			"Expected DevTools connection to be WebSocket upgrade"
+		);
 		const { 0: response, 1: devtools } = new WebSocketPair();
-
 		devtools.accept();
-		if (this.#devtoolsWebSocket !== undefined) {
+
+		if (this.#websockets.devtools !== undefined) {
 			/** We only want to have one active Devtools instance at a time. */
 			// TODO(consider): prioritise new websocket over previous
 			devtools.close(
@@ -172,28 +237,24 @@ export class InspectorProxy implements DurableObject {
 			devtools.addEventListener("message", this.#handleDevToolsIncomingMessage);
 
 			// Send buffered messages
-			for (const message of this.runtimeMessageBuffer) {
-				devtools.send(this.#transformRuntimeToDevToolsMessage(message));
-			}
-			this.runtimeMessageBuffer.length = 0;
 
-			this.#devtoolsWebSocket = devtools;
+			this.#websockets.devtools = devtools;
+			this.#processRuntimeMessageBuffer();
 		}
 
-		return new Response(null, {
-			status: 101,
-			webSocket: response,
-		});
+		return new Response(null, { status: 101, webSocket: response });
 	}
 
 	async fetch(req: Request) {
 		if (isRequestFromProxyController(req, this.env)) {
 			return this.#handleProxyControllerDataRequest(req);
-		} else if (req.headers.get("Upgrade") === "websocket") {
-			return this.#handleWebSocketUpgradeRequest(req);
-		} else {
-			return this.#handleJsonRequest(req);
 		}
+
+		if (req.headers.get("Upgrade") === "websocket") {
+			return this.#handleWebSocketUpgradeRequest(req);
+		}
+
+		return this.#handleJsonRequest(req);
 	}
 }
 

@@ -24,5 +24,5 @@ if (typeof jest === "undefined" && require.main === module) {
  * It makes it possible to import wrangler from 'wrangler',
  * and call wrangler.unstable_dev().
  */
-export { unstable_dev, unstable_pages };
-export type { UnstableDevWorker, UnstableDevOptions };
+// TODO: selectively re-export
+export * from "./api";
