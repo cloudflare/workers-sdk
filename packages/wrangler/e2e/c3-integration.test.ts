@@ -34,10 +34,11 @@ describe("c3 integration", () => {
 			normalizeOutput(str, { [workerName]: "smoke-test-worker" });
 
 		const pathToC3 = path.resolve(__dirname, "../../create-cloudflare");
-		const c3PackedDir = await makeRoot();
-		await shellac.in(pathToC3)`$ pnpm pack --pack-destination ${c3PackedDir}`;
+		const { stdout: version } = await shellac.in(pathToC3)`
+			$ pnpm pack --pack-destination ./pack
+			$ ls pack`;
 
-		c3Packed = `${c3PackedDir}/${readdirSync(c3PackedDir)[0]}`;
+		c3Packed = path.join(pathToC3, "pack", version);
 	});
 
 	it("init project via c3", async () => {
@@ -50,7 +51,7 @@ describe("c3 integration", () => {
 			GIT_COMMITTER_EMAIL: "test-user@cloudflare.com",
 		};
 
-		await runInRoot.env(env)`$ ${WRANGLER} init ${workerName} --yes`;
+		await runInRoot.env(env)`$$ ${WRANGLER} init ${workerName} --yes`;
 
 		expect(existsSync(workerPath)).toBe(true);
 	});
