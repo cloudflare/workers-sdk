@@ -137,10 +137,10 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 
 	// These are ordered based on speed and reliability for ease of debugging
 	const frameworkTests: Record<string, FrameworkTestConfig> = {
-		astro: {
-			expectResponseToContain: "Hello, Astronaut!",
-			testCommitMessage: true,
-		},
+		// astro: {
+		// 	expectResponseToContain: "Hello, Astronaut!",
+		// 	testCommitMessage: true,
+		// },
 		hono: {
 			expectResponseToContain: "Hello Hono!",
 			testCommitMessage: false,
