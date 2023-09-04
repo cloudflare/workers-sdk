@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import shellac from "shellac";
 import { fetch } from "undici";
