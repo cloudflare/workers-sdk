@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import shellac from "shellac";
 import { fetch } from "undici";
@@ -21,6 +21,7 @@ describe("c3 integration", () => {
 	let workersDev: string | null = null;
 	let runInRoot: typeof shellac;
 	let runInWorker: typeof shellac;
+	let c3Packed: string;
 	let normalize: (str: string) => string;
 
 	beforeAll(async () => {
@@ -31,13 +32,18 @@ describe("c3 integration", () => {
 		runInWorker = shellac.in(workerPath).env(process.env);
 		normalize = (str) =>
 			normalizeOutput(str, { [workerName]: "smoke-test-worker" });
+
+		const pathToC3 = path.resolve(__dirname, "../../create-cloudflare");
+		const c3PackedDir = await makeRoot();
+		await shellac.in(pathToC3)`$ pnpm pack --pack-destination ${c3PackedDir}`;
+
+		c3Packed = `${c3PackedDir}/${readdirSync(c3PackedDir)[0]}`;
 	});
 
 	it("init project via c3", async () => {
-		const pathToC3 = path.resolve(__dirname, "../../create-cloudflare");
 		const env = {
 			...process.env,
-			WRANGLER_C3_COMMAND: `exec ${pathToC3}`,
+			WRANGLER_C3_COMMAND: `--package ${c3Packed} dlx create-cloudflare`,
 			GIT_AUTHOR_NAME: "test-user",
 			GIT_AUTHOR_EMAIL: "test-user@cloudflare.com",
 			GIT_COMMITTER_NAME: "test-user",
