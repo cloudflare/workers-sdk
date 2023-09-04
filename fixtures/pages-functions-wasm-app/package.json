@@ -14,12 +14,10 @@
 	},
 	"devDependencies": {
 		"undici": "^5.9.1",
-		"wrangler": "*"
+		"wrangler": "*",
+		"@cloudflare/workers-tsconfig": "workspace:*"
 	},
 	"engines": {
 		"node": ">=16.13"
-	},
-	"dependencies": {
-		"@cloudflare/workers-tsconfig": "workspace:*"
 	}
 }

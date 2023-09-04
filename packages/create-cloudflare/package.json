@@ -73,13 +73,11 @@
 		"which-pm-runs": "^1.1.0",
 		"wrangler": "*",
 		"yargs": "^17.7.1",
-		"yarn": "^1.22.19"
+		"yarn": "^1.22.19",
+		"@clack/core": "^0.3.2",
+		"@types/semver": "^7.5.1"
 	},
 	"engines": {
 		"node": ">=16.13.0"
-	},
-	"dependencies": {
-		"@clack/core": "^0.3.2",
-		"@types/semver": "^7.5.1"
 	}
 }

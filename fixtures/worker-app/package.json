@@ -14,11 +14,11 @@
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
-		"wrangler": "*"
+		"wrangler": "*",
+		"@cloudflare/workers-tsconfig": "workspace:^",
+		"undici": "^5.23.0"
 	},
 	"dependencies": {
-		"@cloudflare/workers-tsconfig": "workspace:^",
-		"isomorphic-random-example": "workspace:^",
-		"undici": "^5.23.0"
+		"isomorphic-random-example": "workspace:^"
 	}
 }

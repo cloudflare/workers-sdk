@@ -98,7 +98,6 @@
 	},
 	"dependencies": {
 		"@cloudflare/kv-asset-handler": "^0.2.0",
-		"@cloudflare/pages-shared": "workspace:^",
 		"@esbuild-plugins/node-globals-polyfill": "^0.2.3",
 		"@esbuild-plugins/node-modules-polyfill": "^0.2.2",
 		"blake3-wasm": "^2.1.5",
@@ -112,6 +111,7 @@
 		"xxhash-wasm": "^1.0.1"
 	},
 	"devDependencies": {
+		"@cloudflare/pages-shared": "workspace:^",
 		"@cloudflare/eslint-config-worker": "*",
 		"@cloudflare/types": "^6.18.4",
 		"@cloudflare/workers-tsconfig": "*",

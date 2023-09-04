@@ -11,11 +11,9 @@
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
+		"undici": "^5.23.0",
 		"@cloudflare/workers-tsconfig": "*",
 		"@cloudflare/workers-types": "^4.20221111.1",
 		"wrangler": "*"
-	},
-	"dependencies": {
-		"undici": "^5.23.0"
 	}
 }
