@@ -91,10 +91,6 @@ importers:
         version: link:../../packages/wrangler
 
   fixtures/external-durable-objects-app:
-    dependencies:
-      undici:
-        specifier: ^5.23.0
-        version: 5.23.0
     devDependencies:
       '@cloudflare/workers-tsconfig':
         specifier: '*'
@@ -102,6 +98,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20221111.1
         version: 4.20230821.0
+      undici:
+        specifier: ^5.23.0
+        version: 5.23.0
       wrangler:
         specifier: '*'
         version: link:../../packages/wrangler
@@ -187,11 +186,10 @@ importers:
         version: link:../../packages/wrangler
 
   fixtures/pages-functions-wasm-app:
-    dependencies:
+    devDependencies:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
-    devDependencies:
       undici:
         specifier: ^5.9.1
         version: 5.23.0
@@ -266,11 +264,10 @@ importers:
         version: link:../../packages/wrangler
 
   fixtures/pages-workerjs-app:
-    dependencies:
+    devDependencies:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
-    devDependencies:
       undici:
         specifier: ^5.9.1
         version: 5.23.0
@@ -279,11 +276,10 @@ importers:
         version: link:../../packages/wrangler
 
   fixtures/pages-workerjs-directory:
-    dependencies:
-      '@cloudflare/workers-tsconfig':
-        specifier: workspace:^
-        version: link:../../packages/workers-tsconfig
     devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/workers-tsconfig
       undici:
         specifier: ^5.9.1
         version: 5.23.0
@@ -292,11 +288,10 @@ importers:
         version: link:../../packages/wrangler
 
   fixtures/pages-workerjs-wasm-app:
-    dependencies:
-      '@cloudflare/workers-tsconfig':
-        specifier: workspace:^
-        version: link:../../packages/workers-tsconfig
     devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/workers-tsconfig
       undici:
         specifier: ^5.9.1
         version: 5.23.0
@@ -305,11 +300,10 @@ importers:
         version: link:../../packages/wrangler
 
   fixtures/pages-workerjs-with-routes-app:
-    dependencies:
-      '@cloudflare/workers-tsconfig':
-        specifier: workspace:^
-        version: link:../../packages/workers-tsconfig
     devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/workers-tsconfig
       undici:
         specifier: ^5.9.1
         version: 5.23.0
@@ -395,14 +389,13 @@ importers:
   fixtures/rules-app: {}
 
   fixtures/service-bindings-app:
-    dependencies:
-      undici:
-        specifier: ^5.23.0
-        version: 5.23.0
     devDependencies:
       '@cloudflare/workers-tsconfig':
         specifier: '*'
         version: link:../../packages/workers-tsconfig
+      undici:
+        specifier: ^5.23.0
+        version: 5.23.0
       wrangler:
         specifier: '*'
         version: link:../../packages/wrangler
@@ -419,16 +412,16 @@ importers:
 
   fixtures/worker-app:
     dependencies:
-      '@cloudflare/workers-tsconfig':
-        specifier: workspace:^
-        version: link:../../packages/workers-tsconfig
       isomorphic-random-example:
         specifier: workspace:^
         version: link:../isomorphic-random-example
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:^
+        version: link:../../packages/workers-tsconfig
       undici:
         specifier: ^5.23.0
         version: 5.23.0
-    devDependencies:
       wrangler:
         specifier: '*'
         version: link:../../packages/wrangler
@@ -447,13 +440,6 @@ importers:
   fixtures/wrangler-dev-api-app: {}
 
   packages/create-cloudflare:
-    dependencies:
-      '@clack/core':
-        specifier: ^0.3.2
-        version: 0.3.2
-      '@types/semver':
-        specifier: ^7.5.1
-        version: 7.5.1
     devDependencies:
       '@babel/parser':
         specifier: ^7.21.3
@@ -461,6 +447,9 @@ importers:
       '@babel/types':
         specifier: ^7.21.4
         version: 7.22.5
+      '@clack/core':
+        specifier: ^0.3.2
+        version: 0.3.2
       '@clack/prompts':
         specifier: ^0.6.3
         version: 0.6.3
@@ -488,6 +477,9 @@ importers:
       '@types/node':
         specifier: ^18.15.3
         version: 18.16.10
+      '@types/semver':
+        specifier: ^7.5.1
+        version: 7.5.1
       '@types/which-pm-runs':
         specifier: ^1.0.0
         version: 1.0.0
@@ -562,10 +554,6 @@ importers:
         version: 1.22.19
 
   packages/edge-preview-authenticated-proxy:
-    dependencies:
-      '@types/cookie':
-        specifier: ^0.5.1
-        version: 0.5.1
     devDependencies:
       '@cloudflare/eslint-config-worker':
         specifier: '*'
@@ -573,6 +561,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20230321.0
         version: 4.20230821.0
+      '@types/cookie':
+        specifier: ^0.5.1
+        version: 0.5.1
       cookie:
         specifier: ^0.5.0
         version: 0.5.0
@@ -789,9 +780,6 @@ importers:
       '@cloudflare/kv-asset-handler':
         specifier: ^0.2.0
         version: 0.2.0
-      '@cloudflare/pages-shared':
-        specifier: workspace:^
-        version: link:../pages-shared
       '@esbuild-plugins/node-globals-polyfill':
         specifier: ^0.2.3
         version: 0.2.3(esbuild@0.17.19)
@@ -833,6 +821,9 @@ importers:
       '@cloudflare/eslint-config-worker':
         specifier: '*'
         version: link:../eslint-config-worker
+      '@cloudflare/pages-shared':
+        specifier: workspace:^
+        version: link:../pages-shared
       '@cloudflare/types':
         specifier: ^6.18.4
         version: 6.18.4(react@17.0.2)
@@ -2581,6 +2572,7 @@ packages:
     dependencies:
       picocolors: 1.0.0
       sisteransi: 1.0.5
+    dev: true
 
   /@clack/prompts@0.6.3:
     resolution: {integrity: sha512-AM+kFmAHawpUQv2q9+mcB6jLKxXGjgu/r2EQjEwujgpCdzrST6BJqYw00GRn56/L/Izw5U7ImoLmy00X/r80Pw==}
@@ -4175,6 +4167,7 @@ packages:
 
   /@types/cookie@0.5.1:
     resolution: {integrity: sha512-COUnqfB2+ckwXXSFInsFdOAWQzCCx+a5hq2ruyj+Vjund94RJQd4LG2u9hnvJrTgunKAaax7ancBYlDrNYxA0g==}
+    dev: true
 
   /@types/cross-spawn@6.0.2:
     resolution: {integrity: sha512-KuwNhp3eza+Rhu8IFI5HUXRP0LIhqH5cAjubUvGXXthh4YYBuP2ntwEX+Cz8GJoZUHlKo247wPWOfA9LYEq4cw==}
