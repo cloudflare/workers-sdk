@@ -131,6 +131,7 @@ jobs:
     needs: [cleanup, get-dependabot-bumped-framework]
     name: "Dependabot specific E2E"
     strategy:
+      fail-fast: false
       matrix:
         # TODO: add back windows
         # os: [ubuntu-latest, windows-latest, macos-latest]
