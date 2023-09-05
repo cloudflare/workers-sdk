@@ -5,6 +5,7 @@ import path from "node:path";
 import esbuild from "esbuild";
 import { Miniflare, Response } from "miniflare";
 // import { readFileSync } from "../../parse";
+import { logConsoleMessage } from "../../inspect";
 import { getBasePath } from "../../paths";
 import { castErrorCause } from "./events";
 import { createDeferredPromise } from "./utils";
@@ -25,7 +26,9 @@ import type {
 } from "./events";
 import type { StartDevWorkerOptions, DevWorker } from "./types";
 import type { WebSocket } from "miniflare";
-import { logConsoleMessage } from "../../inspect";
+
+export * from "./types";
+export * from "./events";
 
 export function startWorker(options: StartDevWorkerOptions): DevWorker {
 	const devEnv = new DevEnv();
@@ -166,7 +169,7 @@ export class DevEnv extends EventEmitter {
 }
 
 export class ConfigController extends EventEmitter {
-	config?: Config;
+	config?: StartDevWorkerOptions;
 
 	setOptions(_: StartDevWorkerOptions) {
 		throwNotImplementedError(this.setOptions.name, this.constructor.name);
@@ -574,14 +577,16 @@ export class ProxyController extends EventEmitter {
 	async teardown(_: TeardownEvent) {
 		console.log("teardown");
 
+		const { proxyWorker, inspectorProxyWorker } = this;
+		this.proxyWorker = undefined;
+		this.inspectorProxyWorker = undefined;
+
 		try {
-			await this.proxyWorker?.ready;
-			await this.proxyWorker?.dispose(); // TODO: miniflare should await .ready
-			this.proxyWorker = undefined;
+			await proxyWorker?.ready;
+			await proxyWorker?.dispose(); // TODO: miniflare should await .ready
 		} finally {
-			await this.inspectorProxyWorker?.ready;
-			await this.inspectorProxyWorker?.dispose();
-			this.inspectorProxyWorker = undefined;
+			await inspectorProxyWorker?.ready;
+			await inspectorProxyWorker?.dispose();
 		}
 	}
 

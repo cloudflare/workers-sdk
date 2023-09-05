@@ -4,7 +4,7 @@
 //  3. ~~Receive cf data from proxy controller (use env.SECRET for auth)~~
 //  4. ~~Connect to remote websocket and establish devtools connection~~
 //  5. ~~Buffer messages from remote until we've got client connection~~
-//  6. Intercept logging messages and log them to the console (probably via websocket to proxy controller)
+//  6. ~~Intercept logging messages and log them to the console (probably via websocket to proxy controller)~~
 //  7. Rewriting messages for source maps and stuff
 //
 
@@ -89,16 +89,21 @@ export class InspectorProxyWorker implements DurableObject {
 	#processRuntimeMessageBuffer = () => {
 		if (this.#websockets.devtools === undefined) return;
 
+		console.log("runtimeMessageBuffer", this.runtimeMessageBuffer);
+
 		for (const data of this.runtimeMessageBuffer) {
 			this.#websockets.devtools.send(
 				this.#transformRuntimeToDevToolsMessage(data)
 			);
 		}
 
-		this.runtimeMessageBuffer.length = 0;
+		// this.runtimeMessageBuffer.length = 0;
 	};
 
-	runtimeMessageCounter = 0;
+	#runtimeMessageCounter = 0;
+	getNextRuntimeMessageCounter() {
+		return ++this.#runtimeMessageCounter;
+	}
 	keepAliveInterval: number | null = null;
 	#handleProxyControllerIncomingMessage = (event: MessageEvent) => {
 		assert(
@@ -122,7 +127,7 @@ export class InspectorProxyWorker implements DurableObject {
 			// // use `await fetch()` over `new WebSocket()` to avoid WebSocket.READY_STATE_CONNECTING state
 			const url = new URL(this.#proxyData.destinationInspectorURL);
 			url.protocol = url.protocol === "wss:" ? "https:" : "http:";
-			console.log({ url });
+
 			void fetch(url, { headers: { Upgrade: "websocket" } })
 				.then((res) => {
 					assert(
@@ -140,14 +145,14 @@ export class InspectorProxyWorker implements DurableObject {
 					runtime.send(
 						JSON.stringify({
 							method: "Runtime.enable",
-							id: this.runtimeMessageCounter++,
+							id: this.getNextRuntimeMessageCounter(),
 						})
 					);
 					// TODO: This doesn't actually work. Must fix.
 					runtime.send(
 						JSON.stringify({
 							method: "Network.enable",
-							id: this.runtimeMessageCounter++,
+							id: this.getNextRuntimeMessageCounter(),
 						})
 					);
 
@@ -156,7 +161,7 @@ export class InspectorProxyWorker implements DurableObject {
 						runtime.send(
 							JSON.stringify({
 								method: "Runtime.getIsolateId",
-								id: this.runtimeMessageCounter++,
+								id: this.getNextRuntimeMessageCounter(),
 							})
 						);
 					}, 10_000) as any;
@@ -211,8 +216,6 @@ export class InspectorProxyWorker implements DurableObject {
 			const localHost = `${url.host}/ws`;
 			const devtoolsFrontendUrl = `https://devtools.devprod.cloudflare.dev/js_app?theme=systemPreferred&debugger=true&ws=${localHost}`;
 
-			console.log("runtime.url", this.#websockets.runtime!.url);
-
 			return Response.json([
 				{
 					id: this.#inspectorId,
@@ -224,7 +227,7 @@ export class InspectorProxyWorker implements DurableObject {
 					// Below are fields that are visible in the DevTools UI.
 					title: "Cloudflare Worker",
 					faviconUrl: "https://workers.cloudflare.com/favicon.ico",
-					url: "http://" + localHost, // looks unnecessary
+					// url: "http://" + localHost, // looks unnecessary
 				},
 			]);
 		}
