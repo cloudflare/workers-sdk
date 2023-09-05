@@ -247,7 +247,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 
 	Object.keys(frameworkTests).forEach((framework) => {
 		const config = frameworkTests[framework];
-		if (!isQuarantineMode || !config.quarantine) return;
+		if (!isQuarantineMode() || !config.quarantine) return;
 
 		const skip = frameworkToTest && frameworkToTest !== framework;
 
