@@ -21,7 +21,7 @@
 		"miniflare": "3.20230814.1"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-tsconfig": "*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20230511.0",
 		"@types/service-worker-mock": "^2.0.1",
 		"concurrently": "^7.3.0",

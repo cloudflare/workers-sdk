@@ -22,7 +22,7 @@
 		"zod": "^3.22.2"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-tsconfig": "*",
-		"wrangler": "*"
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"wrangler": "workspace:*"
 	}
 }

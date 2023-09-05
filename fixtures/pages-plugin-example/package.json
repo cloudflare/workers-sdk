@@ -15,6 +15,6 @@
 		"check:type": "tsc"
 	},
 	"devDependencies": {
-		"wrangler": "*"
+		"wrangler": "workspace:*"
 	}
 }

@@ -87,13 +87,13 @@ importers:
   fixtures/d1-worker-app:
     devDependencies:
       wrangler:
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/wrangler
 
   fixtures/external-durable-objects-app:
     devDependencies:
       '@cloudflare/workers-tsconfig':
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: ^4.20221111.1
@@ -102,7 +102,7 @@ importers:
         specifier: ^5.23.0
         version: 5.23.0
       wrangler:
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/wrangler
 
   fixtures/isomorphic-random-example: {}
@@ -112,7 +112,7 @@ importers:
   fixtures/local-mode-tests:
     devDependencies:
       '@cloudflare/workers-tsconfig':
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: ^4.20221111.1
@@ -124,7 +124,7 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
       wrangler:
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/wrangler
 
   fixtures/no-bundle-import:
@@ -133,7 +133,7 @@ importers:
         specifier: ^6.1.2
         version: 6.1.2
       wrangler:
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/wrangler
 
   fixtures/node-app-pages:
@@ -143,7 +143,7 @@ importers:
         version: 9.16.0
     devDependencies:
       '@cloudflare/workers-tsconfig':
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: ^4.20221111.1
@@ -152,25 +152,25 @@ importers:
         specifier: ^5.9.1
         version: 5.23.0
       wrangler:
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/wrangler
 
   fixtures/pages-d1-shim:
     devDependencies:
       '@cloudflare/workers-tsconfig':
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       undici:
         specifier: ^5.9.1
         version: 5.23.0
       wrangler:
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/wrangler
 
   fixtures/pages-functions-app:
     devDependencies:
       '@cloudflare/workers-tsconfig':
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: ^4.20221111.1
@@ -182,7 +182,7 @@ importers:
         specifier: ^5.9.1
         version: 5.23.0
       wrangler:
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/wrangler
 
   fixtures/pages-functions-wasm-app:
@@ -194,13 +194,13 @@ importers:
         specifier: ^5.9.1
         version: 5.23.0
       wrangler:
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/wrangler
 
   fixtures/pages-functions-with-routes-app:
     devDependencies:
       '@cloudflare/workers-tsconfig':
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: ^4.20221111.1
@@ -209,19 +209,19 @@ importers:
         specifier: ^5.9.1
         version: 5.23.0
       wrangler:
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/wrangler
 
   fixtures/pages-plugin-example:
     devDependencies:
       wrangler:
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/wrangler
 
   fixtures/pages-plugin-mounted-on-root-app:
     devDependencies:
       '@cloudflare/workers-tsconfig':
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: ^4.20221111.1
@@ -233,13 +233,13 @@ importers:
         specifier: ^5.9.1
         version: 5.23.0
       wrangler:
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/wrangler
 
   fixtures/pages-simple-assets:
     devDependencies:
       '@cloudflare/workers-tsconfig':
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: ^4.20221111.1
@@ -248,19 +248,19 @@ importers:
         specifier: ^5.9.1
         version: 5.23.0
       wrangler:
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/wrangler
 
   fixtures/pages-workerjs-and-functions-app:
     devDependencies:
       '@cloudflare/workers-tsconfig':
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       undici:
         specifier: ^5.9.1
         version: 5.23.0
       wrangler:
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/wrangler
 
   fixtures/pages-workerjs-app:
@@ -272,7 +272,7 @@ importers:
         specifier: ^5.9.1
         version: 5.23.0
       wrangler:
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/wrangler
 
   fixtures/pages-workerjs-directory:
@@ -284,7 +284,7 @@ importers:
         specifier: ^5.9.1
         version: 5.23.0
       wrangler:
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/wrangler
 
   fixtures/pages-workerjs-wasm-app:
@@ -296,7 +296,7 @@ importers:
         specifier: ^5.9.1
         version: 5.23.0
       wrangler:
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/wrangler
 
   fixtures/pages-workerjs-with-routes-app:
@@ -308,19 +308,19 @@ importers:
         specifier: ^5.9.1
         version: 5.23.0
       wrangler:
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/wrangler
 
   fixtures/pages-ws-app:
     devDependencies:
       '@cloudflare/workers-tsconfig':
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       miniflare:
         specifier: 3.20230814.1
         version: 3.20230814.1(supports-color@9.2.2)
       wrangler:
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/wrangler
       ws:
         specifier: ^8.8.0
@@ -345,7 +345,7 @@ importers:
         version: 5.23.0
     devDependencies:
       '@cloudflare/workers-tsconfig':
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: ^3.18.0
@@ -381,7 +381,7 @@ importers:
         specifier: ^4.8.4
         version: 4.9.5
       wrangler:
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/wrangler
 
   fixtures/routing-app: {}
@@ -391,13 +391,13 @@ importers:
   fixtures/service-bindings-app:
     devDependencies:
       '@cloudflare/workers-tsconfig':
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/workers-tsconfig
       undici:
         specifier: ^5.23.0
         version: 5.23.0
       wrangler:
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/wrangler
 
   fixtures/shared: {}
@@ -423,7 +423,7 @@ importers:
         specifier: ^5.23.0
         version: 5.23.0
       wrangler:
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/wrangler
 
   fixtures/worker-ts:
@@ -432,7 +432,7 @@ importers:
         specifier: ^4.20230724.0
         version: 4.20230821.0
       wrangler:
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/wrangler
 
   fixtures/workers-chat-demo: {}
@@ -457,7 +457,7 @@ importers:
         specifier: '*'
         version: link:../eslint-config-worker
       '@cloudflare/workers-tsconfig':
-        specifier: '*'
+        specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: ^4.20230419.0
@@ -544,7 +544,7 @@ importers:
         specifier: ^1.1.0
         version: 1.1.0
       wrangler:
-        specifier: '*'
+        specifier: workspace:*
         version: link:../wrangler
       yargs:
         specifier: ^17.7.1
@@ -574,7 +574,7 @@ importers:
         specifier: ^0.31.0
         version: 0.31.4(supports-color@9.2.2)
       wrangler:
-        specifier: '*'
+        specifier: workspace:*
         version: link:../wrangler
 
   packages/eslint-config-worker:
@@ -619,7 +619,7 @@ importers:
         specifier: ^5.0.2
         version: 5.0.3
       wrangler:
-        specifier: '*'
+        specifier: workspace:*
         version: link:../wrangler
       zod:
         specifier: ^3.21.4
@@ -632,7 +632,7 @@ importers:
         version: 3.20230814.1(supports-color@9.2.2)
     devDependencies:
       '@cloudflare/workers-tsconfig':
-        specifier: '*'
+        specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: ^4.20230511.0
@@ -694,7 +694,7 @@ importers:
         specifier: '*'
         version: link:../eslint-config-worker
       '@cloudflare/workers-tsconfig':
-        specifier: '*'
+        specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: ^4.20221111.1
@@ -703,7 +703,7 @@ importers:
         specifier: ^4.5.5
         version: 4.9.5
       wrangler:
-        specifier: '*'
+        specifier: workspace:*
         version: link:../wrangler
 
   packages/quick-edit:
@@ -713,13 +713,13 @@ importers:
         version: 1.22.19
     devDependencies:
       '@cloudflare/workers-tsconfig':
-        specifier: '*'
+        specifier: workspace:*
         version: link:../workers-tsconfig
       concurrently:
         specifier: ^8.0.1
         version: 8.0.1
       wrangler:
-        specifier: '*'
+        specifier: workspace:*
         version: link:../wrangler
 
   packages/quick-edit-extension:
@@ -752,10 +752,10 @@ importers:
         version: 3.22.2
     devDependencies:
       '@cloudflare/workers-tsconfig':
-        specifier: '*'
+        specifier: workspace:*
         version: link:../workers-tsconfig
       wrangler:
-        specifier: '*'
+        specifier: workspace:*
         version: link:../wrangler
 
   packages/workers-tsconfig: {}
@@ -766,13 +766,13 @@ importers:
         specifier: '*'
         version: link:../eslint-config-worker
       '@cloudflare/workers-tsconfig':
-        specifier: '*'
+        specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: ^3.0.0
         version: 3.18.0
       wrangler:
-        specifier: '*'
+        specifier: workspace:*
         version: link:../wrangler
 
   packages/wrangler:
@@ -828,7 +828,7 @@ importers:
         specifier: ^6.18.4
         version: 6.18.4(react@17.0.2)
       '@cloudflare/workers-tsconfig':
-        specifier: '*'
+        specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: ^4.20230724.0
