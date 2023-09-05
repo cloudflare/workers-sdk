@@ -710,7 +710,9 @@ export const mapConsoleAPIMessageTypeToConsoleMethod: {
 	endGroup: "groupEnd",
 };
 
-function logConsoleMessage(evt: Protocol.Runtime.ConsoleAPICalledEvent): void {
+export function logConsoleMessage(
+	evt: Protocol.Runtime.ConsoleAPICalledEvent
+): void {
 	const args: string[] = [];
 	for (const ro of evt.args) {
 		switch (ro.type) {

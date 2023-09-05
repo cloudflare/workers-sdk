@@ -1,3 +1,4 @@
+import Protocol from "devtools-protocol";
 import type { StartDevWorkerOptions } from "./types";
 import type { Miniflare } from "miniflare";
 
@@ -137,7 +138,14 @@ export type InspectorProxyWorkerIncomingMessage = {
 };
 export type InspectorProxyWorkerOutgoingMessage =
 	| { type: "error"; error: SerializedError }
-	| { type: "log"; data: unknown };
+	| {
+			method: "Runtime.consoleAPICalled";
+			params: Protocol.Runtime.ConsoleAPICalledEvent;
+	  }
+	| {
+			method: "Runtime.exceptionThrown";
+			params: Protocol.Runtime.ExceptionThrownEvent;
+	  };
 
 type SerializedError = Pick<Error, "name" | "message" | "stack" | "cause">;
 

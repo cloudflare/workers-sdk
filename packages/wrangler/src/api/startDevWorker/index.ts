@@ -25,6 +25,7 @@ import type {
 } from "./events";
 import type { StartDevWorkerOptions, DevWorker } from "./types";
 import type { WebSocket } from "miniflare";
+import { logConsoleMessage } from "../../inspect";
 
 export function startWorker(options: StartDevWorkerOptions): DevWorker {
 	const devEnv = new DevEnv();
@@ -561,11 +562,13 @@ export class ProxyController extends EventEmitter {
 		}
 	}
 	onInspectorProxyWorkerMessage(message: InspectorProxyWorkerOutgoingMessage) {
-		throwNotImplementedError(
-			"onInspectorProxyWorkerMessage",
-			"ProxyController"
-		);
-		console.log({ message });
+		if ("type" in message) {
+			// TODO handle error
+		} else if (message.method === "Runtime.consoleAPICalled") {
+			logConsoleMessage(message.params);
+		} else if (message.method === "Runtime.exceptionThrown") {
+			// TODO: handle message
+		}
 	}
 
 	async teardown(_: TeardownEvent) {

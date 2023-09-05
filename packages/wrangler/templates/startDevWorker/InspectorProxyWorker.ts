@@ -1,16 +1,17 @@
 // TODO: Inspector Durable Object
 //  1. ~~Durable Object websocket server~~
-//  2. JSON list endpoints (proxy through to workerd and filter for core:user:*)
+//  2. ~~JSON list endpoints (proxy through to workerd and filter for core:user:*)~~
 //  3. ~~Receive cf data from proxy controller (use env.SECRET for auth)~~
 //  4. ~~Connect to remote websocket and establish devtools connection~~
 //  5. ~~Buffer messages from remote until we've got client connection~~
 //  6. Intercept logging messages and log them to the console (probably via websocket to proxy controller)
-//  7. Intercept/rewriting messages for source maps and stuff
+//  7. Rewriting messages for source maps and stuff
 //
 
 import assert from "node:assert";
 import type { ProxyData } from "../../src/api/startDevWorker/events";
 import { createDeferredPromise } from "../../src/api/startDevWorker/utils";
+import type Protocol from "devtools-protocol";
 
 interface Env {
 	PROXY_CONTROLLER: Fetcher;
@@ -69,8 +70,16 @@ export class InspectorProxyWorker implements DurableObject {
 			typeof event.data === "string",
 			"Expected event.data from runtime to be string"
 		);
-		// TODO:
-		//  - If console log, then log via proxy controller
+
+		const msg = JSON.parse(event.data) as { method: string };
+		console.log({ msg });
+
+		if (
+			msg.method === "Runtime.exceptionThrown" ||
+			msg.method === "Runtime.consoleAPICalled"
+		) {
+			this.#websockets.proxyController?.send(event.data);
+		}
 
 		this.runtimeMessageBuffer.push(event.data);
 
@@ -89,6 +98,8 @@ export class InspectorProxyWorker implements DurableObject {
 		this.runtimeMessageBuffer.length = 0;
 	};
 
+	runtimeMessageCounter = 0;
+	keepAliveInterval: number | null = null;
 	#handleProxyControllerIncomingMessage = (event: MessageEvent) => {
 		assert(
 			typeof event.data === "string",
@@ -111,8 +122,13 @@ export class InspectorProxyWorker implements DurableObject {
 			// // use `await fetch()` over `new WebSocket()` to avoid WebSocket.READY_STATE_CONNECTING state
 			const url = new URL(this.#proxyData.destinationInspectorURL);
 			url.protocol = url.protocol === "wss:" ? "https:" : "http:";
+			console.log({ url });
 			void fetch(url, { headers: { Upgrade: "websocket" } })
 				.then((res) => {
+					assert(
+						res.status === 101,
+						`Expected response status 101, got ${res.status}`
+					);
 					const runtime = res.webSocket;
 					assert(runtime !== null, "Expected runtime WebSocket not to be null");
 
@@ -121,6 +137,29 @@ export class InspectorProxyWorker implements DurableObject {
 						this.#handleRuntimeIncomingMessage
 					);
 					runtime.accept();
+					runtime.send(
+						JSON.stringify({
+							method: "Runtime.enable",
+							id: this.runtimeMessageCounter++,
+						})
+					);
+					// TODO: This doesn't actually work. Must fix.
+					runtime.send(
+						JSON.stringify({
+							method: "Network.enable",
+							id: this.runtimeMessageCounter++,
+						})
+					);
+
+					clearInterval(this.keepAliveInterval);
+					this.keepAliveInterval = setInterval(() => {
+						runtime.send(
+							JSON.stringify({
+								method: "Runtime.getIsolateId",
+								id: this.runtimeMessageCounter++,
+							})
+						);
+					}, 10_000) as any;
 					this.#websockets.runtime?.close();
 					this.#websockets.runtime = runtime;
 					this.#runtimeWebSocketPromise.resolve();
@@ -154,6 +193,7 @@ export class InspectorProxyWorker implements DurableObject {
 	#inspectorId = crypto.randomUUID();
 	async #handleJsonRequest(req: Request) {
 		await this.#runtimeWebSocketPromise;
+		assert(this.#proxyData);
 
 		const url = new URL(req.url);
 
@@ -170,24 +210,21 @@ export class InspectorProxyWorker implements DurableObject {
 			// TODO: can we remove the `/ws` here if we only have a single worker?
 			const localHost = `${url.host}/ws`;
 			const devtoolsFrontendUrl = `https://devtools.devprod.cloudflare.dev/js_app?theme=systemPreferred&debugger=true&ws=${localHost}`;
-			const devtoolsFrontendUrlCompat = `https://devtools.devprod.cloudflare.dev/js_app?theme=systemPreferred&debugger=true&ws=${localHost}`;
+
+			console.log("runtime.url", this.#websockets.runtime!.url);
 
 			return Response.json([
 				{
 					id: this.#inspectorId,
-					type: "node",
+					type: "node", // TODO: can we specify different type?
 					description: "workers",
 					webSocketDebuggerUrl: `ws://${localHost}`,
 					devtoolsFrontendUrl,
-					devtoolsFrontendUrlCompat,
+					devtoolsFrontendUrlCompat: devtoolsFrontendUrl,
 					// Below are fields that are visible in the DevTools UI.
 					title: "Cloudflare Worker",
 					faviconUrl: "https://workers.cloudflare.com/favicon.ico",
-					url:
-						"https://" +
-						(this.#websockets.runtime
-							? new URL(this.#websockets.runtime.url!).host
-							: "workers.dev"),
+					url: "http://" + localHost, // looks unnecessary
 				},
 			]);
 		}
