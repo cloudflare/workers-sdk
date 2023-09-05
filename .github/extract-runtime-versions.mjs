@@ -31,11 +31,11 @@ const wranglerVersion = wranglerPackage.version;
 const miniflareVersionConstraint = wranglerPackage.dependencies.miniflare;
 
 // 2. Load `miniflare` `package.json`, getting `miniflare` version and `workerd` version constraint
-const wranglerRequire = module.createRequire(wranglerPackagePath);
+// (`createRequire()` just needs to be passed a file in the `wrangler` directory)
+const wranglerRequire = module.createRequire(wranglerPackageJsonPath);
 const miniflareMainPath = wranglerRequire.resolve("miniflare");
 const miniflarePackageJsonPath = findClosestPackageJson(miniflareMainPath);
 assert(miniflarePackageJsonPath !== undefined);
-const miniflarePackagePath = path.dirname(miniflarePackageJsonPath);
 const miniflarePackageJson = await fs.readFile(
 	miniflarePackageJsonPath,
 	"utf8"
@@ -45,7 +45,7 @@ const miniflareVersion = miniflarePackage.version;
 const workerdVersionConstraint = miniflarePackage.dependencies.workerd;
 
 // 3. Load `workerd` `package.json`, getting `workerd` version
-const miniflareRequire = module.createRequire(miniflarePackagePath);
+const miniflareRequire = module.createRequire(miniflarePackageJsonPath);
 const workerdMainPath = miniflareRequire.resolve("workerd");
 const workerdPackageJsonPath = findClosestPackageJson(workerdMainPath);
 assert(workerdPackageJsonPath !== undefined);
