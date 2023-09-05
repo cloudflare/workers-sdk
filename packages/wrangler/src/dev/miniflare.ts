@@ -402,12 +402,18 @@ async function buildMiniflareOptions(
 		inspectorPort: config.inspect ? config.inspectorPort : undefined,
 		liveReload: config.liveReload,
 		upstream,
+		unsafeSourceMapIgnoreSourcePredicate(source) {
+			const tmpDir = config.bundle.sourceMapMetadata?.tmpDir;
+			return (
+				(tmpDir !== undefined && source.includes(tmpDir)) ||
+				source.includes("wrangler/templates")
+			);
+		},
 
 		log,
 		verbose: logger.loggerLevel === "debug",
 
 		...httpsOptions,
-
 		...persistOptions,
 		workers: [
 			{
