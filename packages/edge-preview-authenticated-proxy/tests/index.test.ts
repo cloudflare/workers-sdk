@@ -19,15 +19,12 @@ describe("Preview Worker", () => {
 	let tmpDir: string;
 
 	beforeAll(async () => {
-		worker = await unstable_dev(
-			resolve(__dirname, "../src/index.ts"),
-			{
-				experimental: {
-					disableExperimentalWarning: true,
-					// experimentalLocal: true,
-				},
-			}
-		);
+		worker = await unstable_dev(resolve(__dirname, "../src/index.ts"), {
+			experimental: {
+				disableExperimentalWarning: true,
+				// experimentalLocal: true,
+			},
+		});
 
 		tmpDir = await fs.realpath(
 			await fs.mkdtemp(path.join(os.tmpdir(), "preview-tests"))
