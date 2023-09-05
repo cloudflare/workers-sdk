@@ -20,7 +20,7 @@ describe("Preview Worker", () => {
 
 	beforeAll(async () => {
 		worker = await unstable_dev(
-			resolve(__dirname, resolve(__dirname, "../src/index.ts")),
+			resolve(__dirname, "../src/index.ts"),
 			{
 				experimental: {
 					disableExperimentalWarning: true,
