@@ -105,7 +105,10 @@ export async function cloneIntoDirectory(
 	// we first clone into a temporary directory so that if something goes wrong,
 	// the user's filesystem isn't left in a messed-up state
 	const tempDir = fs.mkdtempSync(
-		path.join(os.tmpdir(), `wrangler-generate-repo-`)
+		path.join(
+			os.tmpdir(),
+			`wrangler-generate-repo-${Math.random().toString(36).slice(2)}`
+		)
 	);
 	args.push(tempDir);
 

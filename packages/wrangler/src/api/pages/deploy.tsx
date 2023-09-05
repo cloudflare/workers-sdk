@@ -154,7 +154,7 @@ export async function deploy({
 	const functionsDirectory =
 		customFunctionsDirectory || join(cwd(), "functions");
 	const routesOutputPath = !existsSync(join(directory, "_routes.json"))
-		? join(tmpdir(), `_routes-${Math.random()}.json`)
+		? join(tmpdir(), `_routes-${Math.random().toString(36).slice(2)}.json`)
 		: undefined;
 
 	// Routing configuration displayed in the Functions tab of a deployment in Dash
@@ -163,7 +163,9 @@ export async function deploy({
 	if (!_workerJS && existsSync(functionsDirectory)) {
 		const outputConfigPath = join(
 			tmpdir(),
-			`functions-filepath-routing-config-${Math.random()}.json`
+			`functions-filepath-routing-config-${Math.random()
+				.toString(36)
+				.slice(2)}.json`
 		);
 
 		try {
@@ -258,7 +260,11 @@ export async function deploy({
 		});
 	} else if (_workerJS) {
 		if (bundle) {
-			const outfile = join(tmpdir(), `./bundledWorker-${Math.random()}.mjs`);
+			const outfile = join(
+				tmpdir(),
+				Math.random().toString(36).slice(2),
+				`./bundledWorker-${Math.random().toString(36).slice(2)}.mjs`
+			);
 			workerBundle = await buildRawWorker({
 				workerScriptPath: _workerPath,
 				outfile,

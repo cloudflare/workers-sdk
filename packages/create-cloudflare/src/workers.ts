@@ -106,7 +106,10 @@ async function copyExistingWorkerFiles(ctx: Context) {
 		// `wrangler init --from-dash` bails if you opt-out of creating a package.json
 		// so run it (with -y) in a tempdir and copy the src files after
 		const tempdir = await mkdtemp(
-			join(tmpdir(), "c3-wrangler-init--from-dash-")
+			join(
+				tmpdir(),
+				`c3-wrangler-init--from-dash-${Math.random().toString(36).slice(2)}`
+			)
 		);
 		await runCommand(
 			`npx wrangler@3 init --from-dash ${ctx.args.existingScript} -y --no-delegate-c3`,

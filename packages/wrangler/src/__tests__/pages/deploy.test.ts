@@ -2005,24 +2005,24 @@ and that at least one include rule is provided.
 					// contents of `workerBundle`
 					// see https://jestjs.io/docs/snapshot-testing#property-matchers
 					let workerBundleWithConstantData = workerBundle.replace(
-						/------formdata-undici-0.[0-9]*/g,
-						"------formdata-undici-0.test"
+						/------formdata-undici-[0-9]+/g,
+						"------formdata-undici-test"
 					);
 					workerBundleWithConstantData = workerBundleWithConstantData.replace(
-						/bundledWorker-0.[0-9]*.mjs/g,
-						"bundledWorker-0.test.mjs"
+						/bundledWorker-[A-Za-z0-9]+.mjs/g,
+						"bundledWorker-test.mjs"
 					);
 
 					// we care about a couple of things here, like the presence of `metadata`,
 					// `bundledWorker`, the wasm import, etc., and since `workerBundle` is
 					// small enough, let's go ahead and snapshot test the whole thing
 					expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
-				"------formdata-undici-0.test
+				"------formdata-undici-test
 				Content-Disposition: form-data; name=\\"metadata\\"
 
-				{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
-				------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
+				{\\"main_module\\":\\"bundledWorker-test.mjs\\"}
+				------formdata-undici-test
+				Content-Disposition: form-data; name=\\"bundledWorker-test.mjs\\"; filename=\\"bundledWorker-test.mjs\\"
 				Content-Type: application/javascript+module
 
 				// _worker.js
@@ -2035,9 +2035,9 @@ and that at least one include rule is provided.
 				export {
 				  worker_default as default
 				};
-				//# sourceMappingURL=bundledWorker-0.test.mjs.map
+				//# sourceMappingURL=bundledWorker-test.mjs.map
 
-				------formdata-undici-0.test--"
+				------formdata-undici-test--"
 			`);
 
 					expect(JSON.parse(customRoutesJSON)).toMatchObject({
@@ -2321,24 +2321,24 @@ and that at least one include rule is provided.
 					// contents of `workerBundle`
 					// see https://jestjs.io/docs/snapshot-testing#property-matchers
 					let workerBundleWithConstantData = customWorkerBundle.replace(
-						/------formdata-undici-0.[0-9]*/g,
-						"------formdata-undici-0.test"
+						/------formdata-undici-[0-9]+/g,
+						"------formdata-undici-test"
 					);
 					workerBundleWithConstantData = workerBundleWithConstantData.replace(
-						/bundledWorker-0.[0-9]*.mjs/g,
-						"bundledWorker-0.test.mjs"
+						/bundledWorker-[A-Za-z0-9]+.mjs/g,
+						"bundledWorker-test.mjs"
 					);
 
 					// we care about a couple of things here, like the presence of `metadata`,
 					// `bundledWorker`, the wasm import, etc., and since `workerBundle` is
 					// small enough, let's go ahead and snapshot test the whole thing
 					expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
-				"------formdata-undici-0.test
+				"------formdata-undici-test
 				Content-Disposition: form-data; name=\\"metadata\\"
 
-				{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
-				------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
+				{\\"main_module\\":\\"bundledWorker-test.mjs\\"}
+				------formdata-undici-test
+				Content-Disposition: form-data; name=\\"bundledWorker-test.mjs\\"; filename=\\"bundledWorker-test.mjs\\"
 				Content-Type: application/javascript+module
 
 				// _worker.js
@@ -2351,9 +2351,9 @@ and that at least one include rule is provided.
 				export {
 				  worker_default as default
 				};
-				//# sourceMappingURL=bundledWorker-0.test.mjs.map
+				//# sourceMappingURL=bundledWorker-test.mjs.map
 
-				------formdata-undici-0.test--"
+				------formdata-undici-test--"
 			`);
 
 					return res.once(
@@ -2516,12 +2516,12 @@ and that at least one include rule is provided.
 					// contents of `workerBundle`
 					// see https://jestjs.io/docs/snapshot-testing#property-matchers
 					let workerBundleWithConstantData = workerBundle.replace(
-						/------formdata-undici-0.[0-9]*/g,
-						"------formdata-undici-0.test"
+						/------formdata-undici-[A-Za-z0-9]+/g,
+						"------formdata-undici-test"
 					);
 					workerBundleWithConstantData = workerBundleWithConstantData.replace(
-						/functionsWorker-0.[0-9]*.js/g,
-						"functionsWorker-0.test.js"
+						/functionsWorker-[A-Za-z0-9]+.js/g,
+						"functionsWorker-test.js"
 					);
 					workerBundleWithConstantData = workerBundleWithConstantData.replace(
 						/[0-9a-z]*-hello.wasm/g,
@@ -2537,12 +2537,12 @@ and that at least one include rule is provided.
 						`Content-Disposition: form-data; name="metadata"`
 					);
 					expect(workerBundleWithConstantData).toContain(
-						`{"main_module":"functionsWorker-0.test.js"}`
+						`{"main_module":"functionsWorker-test.js"}`
 					);
 
 					// check we appended the compiled Worker
 					expect(workerBundleWithConstantData).toContain(
-						`Content-Disposition: form-data; name="functionsWorker-0.test.js"; filename="functionsWorker-0.test.js"`
+						`Content-Disposition: form-data; name="functionsWorker-test.js"; filename="functionsWorker-test.js"`
 					);
 					expect(workerBundleWithConstantData).toContain(`
 import wasm from "./test-hello.wasm";
@@ -2737,12 +2737,12 @@ async function onRequest() {
 					// contents of `workerBundle`
 					// see https://jestjs.io/docs/snapshot-testing#property-matchers
 					let workerBundleWithConstantData = workerBundle.replace(
-						/------formdata-undici-0.[0-9]*/g,
-						"------formdata-undici-0.test"
+						/------formdata-undici-[0-9]+/g,
+						"------formdata-undici-test"
 					);
 					workerBundleWithConstantData = workerBundleWithConstantData.replace(
-						/bundledWorker-0.[0-9]*.mjs/g,
-						"bundledWorker-0.test.mjs"
+						/bundledWorker-[A-Za-z0-9]+.mjs/g,
+						"bundledWorker-test.mjs"
 					);
 					workerBundleWithConstantData = workerBundleWithConstantData.replace(
 						/[0-9a-z]*-hello.wasm/g,
@@ -2757,12 +2757,12 @@ async function onRequest() {
 					// `bundledWorker`, the wasm import, etc., and since `workerBundle` is
 					// small enough, let's go ahead and snapshot test the whole thing
 					expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
-				"------formdata-undici-0.test
+				"------formdata-undici-test
 				Content-Disposition: form-data; name=\\"metadata\\"
 
-				{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
-				------formdata-undici-0.test
-				Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
+				{\\"main_module\\":\\"bundledWorker-test.mjs\\"}
+				------formdata-undici-test
+				Content-Disposition: form-data; name=\\"bundledWorker-test.mjs\\"; filename=\\"bundledWorker-test.mjs\\"
 				Content-Type: application/javascript+module
 
 				// _worker.js
@@ -2785,19 +2785,19 @@ async function onRequest() {
 				export {
 				  worker_default as default
 				};
-				//# sourceMappingURL=bundledWorker-0.test.mjs.map
+				//# sourceMappingURL=bundledWorker-test.mjs.map
 
-				------formdata-undici-0.test
+				------formdata-undici-test
 				Content-Disposition: form-data; name=\\"./test-hello.wasm\\"; filename=\\"./test-hello.wasm\\"
 				Content-Type: application/wasm
 
 				Hello wasm modules
-				------formdata-undici-0.test
+				------formdata-undici-test
 				Content-Disposition: form-data; name=\\"./test-hello.html\\"; filename=\\"./test-hello.html\\"
 				Content-Type: text/plain
 
 				<html><body>Hello text modules</body></html>
-				------formdata-undici-0.test--"
+				------formdata-undici-test--"
 			`);
 
 					return res.once(

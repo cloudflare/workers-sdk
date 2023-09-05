@@ -301,7 +301,11 @@ export const Handler = async ({
 			// We want to actually run the `_worker.js` script through the bundler
 			// So update the final path to the script that will be uploaded and
 			// change the `runBuild()` function to bundle the `_worker.js`.
-			scriptPath = join(tmpdir(), `./bundledWorker-${Math.random()}.mjs`);
+			scriptPath = join(
+				tmpdir(),
+				Math.random().toString(36).slice(2),
+				`./bundledWorker-${Math.random().toString(36).slice(2)}.mjs`
+			);
 			runBuild = async () => {
 				try {
 					await buildRawWorker({
@@ -331,7 +335,11 @@ export const Handler = async ({
 		});
 	} else if (usingFunctions) {
 		// Try to use Functions
-		scriptPath = join(tmpdir(), `./functionsWorker-${Math.random()}.mjs`);
+		scriptPath = join(
+			tmpdir(),
+			Math.random().toString(36).slice(2),
+			`./functionsWorker-${Math.random().toString(36).slice(2)}.mjs`
+		);
 
 		if (legacyNodeCompat) {
 			console.warn(
@@ -466,6 +474,7 @@ export const Handler = async ({
 
 				entrypoint = join(
 					tmpdir(),
+					Math.random().toString(36).slice(2),
 					`${Math.random().toString(36).slice(2)}.js`
 				);
 				await runBuild(scriptPath, entrypoint, routesJSONContents);

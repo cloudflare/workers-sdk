@@ -60,7 +60,11 @@ export async function buildFunctions({
 		(runningBuilder) => runningBuilder.stop && runningBuilder.stop()
 	);
 
-	const routesModule = join(tmpdir(), `./functionsRoutes-${Math.random()}.mjs`);
+	const routesModule = join(
+		tmpdir(),
+		Math.random().toString(36).slice(2),
+		`./functionsRoutes-${Math.random().toString(36).slice(2)}.mjs`
+	);
 	const baseURL = toUrlPath("/");
 
 	const config: Config = await generateConfigFromFileTree({
