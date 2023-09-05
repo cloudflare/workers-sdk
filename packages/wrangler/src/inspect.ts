@@ -522,49 +522,16 @@ export default function useInspector(props: InspectorProps) {
 				) {
 					const url = new URL(message.params.url);
 					if (url.protocol === "worker:" && url.pathname.endsWith(".map")) {
-						// Read the generated source map from esbuild
-						const sourceMap = JSON.parse(
-							readFileSync(props.sourceMapPath, "utf-8")
-						);
-
-						// The source root is a temporary directory (`tmpDir`), and so shouldn't be user-visible
-						// It provides no useful info to the user
-						sourceMap.sourceRoot = "";
-
-						const tmpDir = props.sourceMapMetadata.tmpDir;
-
-						// See https://docs.google.com/document/d/1U1RGAehQwRypUTovF1KRlpiOFze0b-_2gc6fAH0KY0k/edit#heading=h.mt2g20loc2ct
-						// The above link documents the x_google_ignoreList property, which is intended to mark code that shouldn't be visible in DevTools
-						// Here we use it to indicate specifically Wrangler-injected code (facades & middleware)
-						sourceMap.x_google_ignoreList = sourceMap.sources
-							// Filter anything in the generated tmpDir, and anything from Wrangler's templates
-							// This should cover facades and middleware, but intentionally doesn't include all non-user code e.g. node_modules
-							.map((s: string, idx: number) =>
-								s.includes(tmpDir) || s.includes("wrangler/templates")
-									? idx
-									: null
-							)
-							.filter((i: number | null) => i !== null);
-
-						const entryDirectory = props.sourceMapMetadata.entryDirectory;
-
-						sourceMap.sources = sourceMap.sources.map(
-							(s: string) =>
-								// These are never loaded by Wrangler or DevTools. However, the presence of a scheme is required for DevTools to show the path as folders in the Sources view
-								// The scheme is intentially not the same as for the sourceMappingURL
-								// Without this difference in scheme, DevTools will not strip prefix `../` path elements from top level folders (../node_modules -> node_modules, for instance)
-								`worker://${props.name}/${path.relative(entryDirectory, s)}`
+						const sourceMap = getSourceMap(
+							props.name ?? "undefined",
+							props.sourceMapPath,
+							props.sourceMapMetadata
 						);
 
 						sendMessageToLocalWebSocket({
 							data: JSON.stringify({
 								id: message.id,
-								result: {
-									resource: {
-										success: true,
-										text: JSON.stringify(sourceMap),
-									},
-								},
+								result: { resource: { success: true, text: sourceMap } },
 							}),
 						});
 						return;
@@ -665,6 +632,44 @@ export default function useInspector(props: InspectorProps) {
 		props.sourceMapMetadata,
 		props.sourceMapPath,
 	]);
+}
+
+export function getSourceMap(
+	name: string,
+	sourceMapPath: string,
+	sourceMapMetadata: SourceMapMetadata
+) {
+	// Read the generated source map from esbuild
+	const sourceMap = JSON.parse(readFileSync(sourceMapPath, "utf-8"));
+
+	// The source root is a temporary directory (`tmpDir`), and so shouldn't be user-visible
+	// It provides no useful info to the user
+	sourceMap.sourceRoot = "";
+
+	const tmpDir = sourceMapMetadata.tmpDir;
+
+	// See https://docs.google.com/document/d/1U1RGAehQwRypUTovF1KRlpiOFze0b-_2gc6fAH0KY0k/edit#heading=h.mt2g20loc2ct
+	// The above link documents the x_google_ignoreList property, which is intended to mark code that shouldn't be visible in DevTools
+	// Here we use it to indicate specifically Wrangler-injected code (facades & middleware)
+	sourceMap.x_google_ignoreList = sourceMap.sources
+		// Filter anything in the generated tmpDir, and anything from Wrangler's templates
+		// This should cover facades and middleware, but intentionally doesn't include all non-user code e.g. node_modules
+		.map((s: string, idx: number) =>
+			s.includes(tmpDir) || s.includes("wrangler/templates") ? idx : null
+		)
+		.filter((i: number | null) => i !== null);
+
+	const entryDirectory = sourceMapMetadata.entryDirectory;
+
+	sourceMap.sources = sourceMap.sources.map(
+		(s: string) =>
+			// These are never loaded by Wrangler or DevTools. However, the presence of a scheme is required for DevTools to show the path as folders in the Sources view
+			// The scheme is intentially not the same as for the sourceMappingURL
+			// Without this difference in scheme, DevTools will not strip prefix `../` path elements from top level folders (../node_modules -> node_modules, for instance)
+			`worker://${name}/${path.relative(entryDirectory, s)}`
+	);
+
+	return JSON.stringify(sourceMap);
 }
 
 // Credit: https://stackoverflow.com/a/2117523

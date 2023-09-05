@@ -1,6 +1,7 @@
 import Protocol from "devtools-protocol";
 import type { StartDevWorkerOptions } from "./types";
 import type { Miniflare } from "miniflare";
+import { EsbuildBundle } from "../../dev/use-esbuild";
 
 // export class ConfigUpdateEvent extends Event implements IConfigUpdateEvent {
 // 	constructor(public config: Config) {
@@ -89,7 +90,7 @@ export type BundleCompleteEvent = {
 	type: "bundleComplete";
 
 	config: StartDevWorkerOptions;
-	bundle: WorkerBundle;
+	bundle: EsbuildBundle;
 };
 
 // RuntimeController
@@ -97,13 +98,13 @@ export type ReloadStartEvent = {
 	type: "reloadStart";
 
 	config: StartDevWorkerOptions;
-	bundle: WorkerBundle;
+	bundle: EsbuildBundle;
 };
 export type ReloadCompleteEvent = {
 	type: "reloadComplete";
 
 	config: StartDevWorkerOptions;
-	bundle: WorkerBundle;
+	bundle: EsbuildBundle;
 	proxyData: ProxyData;
 };
 
@@ -162,12 +163,6 @@ interface WorkerModule {
 	name: string;
 	contents: Uint8Array;
 	type?: WorkerModuleType;
-}
-
-interface WorkerBundle {
-	format: WorkerModuleFormat;
-	modules: WorkerModule[];
-	// ...
 }
 
 export type ProxyData = {

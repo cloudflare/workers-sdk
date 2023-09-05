@@ -5,7 +5,7 @@ import path from "node:path";
 import esbuild from "esbuild";
 import { Miniflare, Response } from "miniflare";
 // import { readFileSync } from "../../parse";
-import { logConsoleMessage } from "../../inspect";
+import { getSourceMap, logConsoleMessage } from "../../inspect";
 import { getBasePath } from "../../paths";
 import { castErrorCause } from "./events";
 import { createDeferredPromise } from "./utils";
@@ -26,6 +26,7 @@ import type {
 } from "./events";
 import type { StartDevWorkerOptions, DevWorker } from "./types";
 import type { WebSocket } from "miniflare";
+import { EsbuildBundle } from "../../dev/use-esbuild";
 
 export * from "./types";
 export * from "./events";
@@ -343,9 +344,13 @@ export class ProxyController extends EventEmitter {
 	public inspectorProxyWorker: Miniflare | undefined;
 	public inspectorProxyWorkerWebSocket = createDeferredPromise<WebSocket>();
 
+	protected config?: StartDevWorkerOptions;
+	protected bundle?: EsbuildBundle;
 	secret = randomUUID();
 
-	protected createProxyWorker(config: StartDevWorkerOptions): Miniflare {
+	protected createProxyWorker(): Miniflare {
+		assert(this.config !== undefined);
+
 		const proxyWorkerResult = esbuild.buildSync({
 			entryPoints: [
 				path.join(getBasePath(), `templates/startDevWorker/ProxyWorker.ts`),
@@ -397,9 +402,9 @@ export class ProxyController extends EventEmitter {
 			},
 
 			// TODO(soon): use Wrangler's self-signed cert creation instead
-			https: config.dev?.server?.secure,
-			host: config.dev?.server?.hostname,
-			port: config.dev?.server?.port, // random port if undefined
+			https: this.config.dev?.server?.secure,
+			host: this.config.dev?.server?.hostname,
+			port: this.config.dev?.server?.port, // random port if undefined
 		});
 
 		// separate Miniflare instance while it only permits opening one port
@@ -416,14 +421,37 @@ export class ProxyController extends EventEmitter {
 			durableObjects: {
 				DURABLE_OBJECT: "InspectorProxyWorker",
 			},
+			serviceBindings: {
+				PROXY_CONTROLLER: async (req): Promise<Response> => {
+					const url = new URL(req.url);
+					if (url.pathname === "/get-source-map") {
+						assert(this.config !== undefined);
+						assert(this.bundle !== undefined);
+						if (
+							this.bundle.sourceMapPath !== undefined &&
+							this.bundle.sourceMapMetadata !== undefined
+						) {
+							const sourceMap = getSourceMap(
+								this.config.name,
+								this.bundle.sourceMapPath,
+								this.bundle.sourceMapMetadata
+							);
+							return new Response(sourceMap, {
+								headers: { "Content-Type": "application/json" },
+							});
+						}
+					}
+					return new Response(null, { status: 404 });
+				},
+			},
 			bindings: {
 				PROXY_CONTROLLER_AUTH_SECRET: this.secret,
 			},
 
 			// TODO(soon): use Wrangler's self-signed cert creation instead
-			https: config.dev?.inspector?.secure,
-			host: config.dev?.inspector?.hostname,
-			port: config.dev?.inspector?.port, // random port if undefined
+			https: this.config.dev?.inspector?.secure,
+			host: this.config.dev?.inspector?.hostname,
+			port: this.config.dev?.inspector?.port, // random port if undefined
 		});
 
 		void Promise.all([
@@ -447,10 +475,12 @@ export class ProxyController extends EventEmitter {
 					this.inspectorProxyWorkerWebSocket.resolve(webSocket);
 					// TODO: handle close and error events
 				}),
-		]).then(([proxyUrl]) => {
-			this.emitReadyEvent();
-			console.log({ proxyUrl });
-		});
+		])
+			.then(([proxyUrl]) => {
+				this.emitReadyEvent();
+				console.log({ proxyUrl });
+			})
+			.catch(console.error);
 
 		return this.proxyWorker;
 	}
@@ -533,7 +563,8 @@ export class ProxyController extends EventEmitter {
 	onConfigUpdate(data: ConfigUpdateEvent) {
 		// TODO: handle config.port and config.inspectorPort changes for ProxyWorker and InspectorProxyWorker
 
-		this.createProxyWorker(data.config);
+		this.config = data.config;
+		this.createProxyWorker();
 
 		// void this.sendMessageToProxyWorker({ type: "pause" });
 	}
@@ -544,6 +575,7 @@ export class ProxyController extends EventEmitter {
 		void this.sendMessageToProxyWorker({ type: "pause" });
 	}
 	onReloadComplete(data: ReloadCompleteEvent) {
+		this.bundle = data.bundle;
 		void this.sendMessageToProxyWorker({
 			type: "play",
 			proxyData: data.proxyData,

@@ -70,6 +70,10 @@ export class InspectorProxyWorker implements DurableObject {
 			typeof event.data === "string",
 			"Expected event.data from runtime to be string"
 		);
+		assert(
+			this.#websockets.proxyController !== undefined,
+			"Expected proxy controller websocket"
+		);
 
 		const msg = JSON.parse(event.data) as { method: string };
 		console.log({ msg });
@@ -78,7 +82,7 @@ export class InspectorProxyWorker implements DurableObject {
 			msg.method === "Runtime.exceptionThrown" ||
 			msg.method === "Runtime.consoleAPICalled"
 		) {
-			this.#websockets.proxyController?.send(event.data);
+			this.#websockets.proxyController.send(event.data);
 		}
 
 		this.runtimeMessageBuffer.push(event.data);
@@ -141,7 +145,20 @@ export class InspectorProxyWorker implements DurableObject {
 						"message",
 						this.#handleRuntimeIncomingMessage
 					);
+
+					runtime.addEventListener("close", (event) => {
+						console.log("RUNTIME CLOSE EVENT", {
+							code: event.code,
+							reason: event.reason,
+							wasClean: event.wasClean,
+						});
+					});
+					runtime.addEventListener("error", (event) => {
+						console.log("RUNTIME ERROR EVENT", event);
+					});
+
 					runtime.accept();
+					console.log(runtime.readyState);
 					runtime.send(
 						JSON.stringify({
 							method: "Runtime.enable",
@@ -149,24 +166,27 @@ export class InspectorProxyWorker implements DurableObject {
 						})
 					);
 					// TODO: This doesn't actually work. Must fix.
-					runtime.send(
-						JSON.stringify({
-							method: "Network.enable",
-							id: this.getNextRuntimeMessageCounter(),
-						})
-					);
+					// runtime.send(
+					// 	JSON.stringify({
+					// 		method: "Network.enable",
+					// 		id: this.getNextRuntimeMessageCounter(),
+					// 	})
+					// );
 
-					clearInterval(this.keepAliveInterval);
-					this.keepAliveInterval = setInterval(() => {
-						runtime.send(
-							JSON.stringify({
-								method: "Runtime.getIsolateId",
-								id: this.getNextRuntimeMessageCounter(),
-							})
-						);
-					}, 10_000) as any;
-					this.#websockets.runtime?.close();
+					// clearInterval(this.keepAliveInterval);
+					// this.keepAliveInterval = setInterval(() => {
+					// 	console.log("Sending keep alive");
+					// 	runtime.send(
+					// 		JSON.stringify({
+					// 			method: "Runtime.getIsolateId",
+					// 			id: this.getNextRuntimeMessageCounter(),
+					// 		})
+					// 	);
+					// }, 10_000) as any;
+					// this.#websockets.runtime?.close();
+					console.log("EXISTING RUNTIME SOCKET", this.#websockets.runtime);
 					this.#websockets.runtime = runtime;
+					// this.runtime = runtime;
 					this.#runtimeWebSocketPromise.resolve();
 					// this.#processRuntimeMessageBuffer();
 					// TODO: handle error and close events

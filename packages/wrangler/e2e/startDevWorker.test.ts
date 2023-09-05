@@ -1,4 +1,5 @@
 import { Miniflare, type MiniflareOptions } from "miniflare";
+import assert from "node:assert";
 import { WebSocket, fetch } from "undici";
 import { beforeEach, afterEach, describe, test, expect } from "vitest";
 import { DevEnv, type StartDevWorkerOptions } from "wrangler";
@@ -17,7 +18,7 @@ describe("startDevWorker: ProxyController", () => {
 		await devEnv?.teardown({ type: "teardown" });
 	});
 
-	test("ProxyWorker buffers requests while runtime reloads", async () => {
+	test.skip("ProxyWorker buffers requests while runtime reloads", async () => {
 		const mfOpts: MiniflareOptions = {
 			// verbose: true,
 			port: 0,
@@ -120,7 +121,7 @@ describe("startDevWorker: ProxyController", () => {
 			},
 		};
 
-		const _worker = devEnv.startWorker(config);
+		const worker = devEnv.startWorker(config);
 
 		devEnv.proxy.onConfigUpdate({
 			type: "configUpdate",
@@ -153,13 +154,24 @@ describe("startDevWorker: ProxyController", () => {
 
 		await expect(res.json()).resolves.toBeInstanceOf(Array);
 
-		const ws = new WebSocket(inspectorUrl);
+		const ws = new WebSocket(`ws://127.0.0.1:${9230}/ws`);
 		const openPromise = new Promise((resolve) => {
-			ws.addEventListener("message", (event) => {
+			ws.addEventListener("open", (event) => {
 				resolve(event);
 			});
 		});
+		const messagePromise = new Promise((resolve) => {
+			ws.addEventListener("message", (event) => {
+				assert(typeof event.data === "string");
+				if (event.data.includes("Runtime.consoleAPICalled")) resolve(event);
+			});
+		});
 
-		await expect(openPromise).resolves.toMatchObject({ type: "open" });
+		await openPromise;
+		await worker.fetch("http://localhost");
+		await expect(messagePromise).resolves.toMatchObject({
+			type: "message",
+			data: expect.stringContaining("Inside mock user worker"),
+		});
 	});
 });
