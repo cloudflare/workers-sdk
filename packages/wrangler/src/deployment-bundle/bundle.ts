@@ -229,70 +229,73 @@ export async function bundleWorker(
 
 	// At this point, we take the opportunity to "wrap" any input workers
 	// with any extra functionality we may want to add.
-	const middlewareToLoad: MiddlewareLoader[] = [
-		{
-			name: "scheduled",
-			path: "templates/middleware/middleware-scheduled.ts",
-			active: targetConsumer === "dev" && !!testScheduled,
-		},
-		// In Miniflare 3, we bind the user's worker as a service binding in a
-		// special entry worker that handles things like injecting `Request.cf`,
-		// live-reload, and the pretty-error page.
-		//
-		// Unfortunately, due to a bug in `workerd`, errors thrown asynchronously by
-		// native APIs don't have `stack`s. This means Miniflare can't extract the
-		// `stack` trace from dispatching to the user worker service binding by
-		// `try/catch`.
-		//
-		// As a stop-gap solution, if the `MF-Experimental-Error-Stack` header is
-		// truthy on responses, the body will be interpreted as a JSON-error of the
-		// form `{ message?: string, name?: string, stack?: string }`.
-		//
-		// This middleware wraps the user's worker in a `try/catch`, and rewrites
-		// errors in this format so a pretty-error page can be shown.
-		{
-			name: "miniflare3-json-error",
-			path: "templates/middleware/middleware-miniflare3-json-error.ts",
-			active: targetConsumer === "dev",
-		},
-		{
-			name: "serve-static-assets",
-			path: "templates/middleware/middleware-serve-static-assets.ts",
-			active: serveAssetsFromWorker,
-			config: {
-				spaMode:
-					typeof assets === "object" ? assets.serve_single_page_app : false,
-				cacheControl:
-					typeof assets === "object"
-						? {
-								browserTTL:
-									assets.browser_TTL || 172800 /* 2 days: 2* 60 * 60 * 24 */,
-								bypassCache: assets.bypassCache,
-						  }
-						: {},
-			},
-		},
-		{
-			name: "multiworker-dev",
-			path: "templates/middleware/middleware-multiworker-dev.ts",
-			active:
-				targetConsumer === "dev" &&
-				!!(
-					workerDefinitions &&
-					Object.keys(workerDefinitions).length > 0 &&
-					services &&
-					services.length > 0
-				),
-			config: {
-				workers: Object.fromEntries(
-					(services || []).map((serviceBinding) => [
-						serviceBinding.binding,
-						workerDefinitions?.[serviceBinding.service] || null,
-					])
-				),
-			},
-		},
-	];
+	const middlewareToLoad: MiddlewareLoader[] = bundle
+		? [
+				{
+					name: "scheduled",
+					path: "templates/middleware/middleware-scheduled.ts",
+					active: targetConsumer === "dev" && !!testScheduled,
+				},
+				// In Miniflare 3, we bind the user's worker as a service binding in a
+				// special entry worker that handles things like injecting `Request.cf`,
+				// live-reload, and the pretty-error page.
+				//
+				// Unfortunately, due to a bug in `workerd`, errors thrown asynchronously by
+				// native APIs don't have `stack`s. This means Miniflare can't extract the
+				// `stack` trace from dispatching to the user worker service binding by
+				// `try/catch`.
+				//
+				// As a stop-gap solution, if the `MF-Experimental-Error-Stack` header is
+				// truthy on responses, the body will be interpreted as a JSON-error of the
+				// form `{ message?: string, name?: string, stack?: string }`.
+				//
+				// This middleware wraps the user's worker in a `try/catch`, and rewrites
+				// errors in this format so a pretty-error page can be shown.
+				{
+					name: "miniflare3-json-error",
+					path: "templates/middleware/middleware-miniflare3-json-error.ts",
+					active: targetConsumer === "dev",
+				},
+				{
+					name: "serve-static-assets",
+					path: "templates/middleware/middleware-serve-static-assets.ts",
+					active: serveAssetsFromWorker,
+					config: {
+						spaMode:
+							typeof assets === "object" ? assets.serve_single_page_app : false,
+						cacheControl:
+							typeof assets === "object"
+								? {
+										browserTTL:
+											assets.browser_TTL ||
+											172800 /* 2 days: 2* 60 * 60 * 24 */,
+										bypassCache: assets.bypassCache,
+								  }
+								: {},
+					},
+				},
+				{
+					name: "multiworker-dev",
+					path: "templates/middleware/middleware-multiworker-dev.ts",
+					active:
+						targetConsumer === "dev" &&
+						!!(
+							workerDefinitions &&
+							Object.keys(workerDefinitions).length > 0 &&
+							services &&
+							services.length > 0
+						),
+					config: {
+						workers: Object.fromEntries(
+							(services || []).map((serviceBinding) => [
+								serviceBinding.binding,
+								workerDefinitions?.[serviceBinding.service] || null,
+							])
+						),
+					},
+				},
+		  ]
+		: [];
 
 	// If using watch, build result will not be returned
 	// This plugin will retreive the build result on the first build
