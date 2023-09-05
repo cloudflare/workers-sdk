@@ -21,6 +21,5 @@ runs:
           tsconfig.tsbuildinfo
         key: ${{ matrix.os }}-eslint-tsbuildinfo-${{ hashFiles('**/*.ts','**/*.js', 'package.json', 'tsconfig.json') }}
 
-    - shell: bash
-      name: Install NPM Dependencies
+    - name: Install NPM Dependencies
       run: pnpm install --frozen-lockfile
