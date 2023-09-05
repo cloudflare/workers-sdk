@@ -30,7 +30,11 @@ export type Options = {
 
 export function buildWorker({
 	routesModule,
-	outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`),
+	outfile = join(
+		tmpdir(),
+		Math.random().toString(36).slice(2),
+		`./functionsWorker-${Math.random().toString(36).slice(2)}.js`
+	),
 	outdir,
 	minify = false,
 	sourcemap = false,
@@ -179,7 +183,11 @@ export type RawOptions = {
  */
 export function buildRawWorker({
 	workerScriptPath,
-	outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`),
+	outfile = join(
+		tmpdir(),
+		Math.random().toString(36).slice(2),
+		`./functionsWorker-${Math.random().toString(36).slice(2)}.js`
+	),
 	outdir,
 	directory,
 	bundle = true,
@@ -273,7 +281,11 @@ export async function traverseAndBuildWorkerJSDirectory({
 		]
 	);
 
-	const outfile = join(tmpdir(), `./bundledWorker-${Math.random()}.mjs`);
+	const outfile = join(
+		tmpdir(),
+		Math.random().toString(36).slice(2),
+		`./bundledWorker-${Math.random().toString(36).slice(2)}.mjs`
+	);
 	const bundleResult = await buildRawWorker({
 		workerScriptPath: entrypoint,
 		bundle,

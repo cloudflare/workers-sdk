@@ -91,8 +91,8 @@ describe("functions build", () => {
 		const workerBundleWithConstantData = replaceRandomWithConstantData(
 			workerBundleContents,
 			[
-				[/------formdata-undici-0.[0-9]*/g, "------formdata-undici-0.test"],
-				[/functionsWorker-0.[0-9]*.js/g, "functionsWorker-0.test.js"],
+				[/------formdata-undici-[0-9]+/g, "------formdata-undici-test"],
+				[/functionsWorker-[A-Za-z0-9]+.js/g, "functionsWorker-test.js"],
 				[/[0-9a-z]*-greeting.wasm/g, "test-greeting.wasm"],
 				[/[0-9a-z]*-name.wasm/g, "test-name.wasm"],
 			]
@@ -103,12 +103,12 @@ describe("functions build", () => {
 			`Content-Disposition: form-data; name="metadata"`
 		);
 		expect(workerBundleWithConstantData).toContain(
-			`{"main_module":"functionsWorker-0.test.js"}`
+			`{"main_module":"functionsWorker-test.js"}`
 		);
 
 		// check we appended the compiled Worker
 		expect(workerBundleWithConstantData).toContain(
-			`Content-Disposition: form-data; name="functionsWorker-0.test.js"; filename="functionsWorker-0.test.js"`
+			`Content-Disposition: form-data; name="functionsWorker-test.js"; filename="functionsWorker-test.js"`
 		);
 
 		// check we appended the wasm modules
@@ -211,18 +211,18 @@ export default {
 		const workerBundleWithConstantData = replaceRandomWithConstantData(
 			workerBundleContents,
 			[
-				[/------formdata-undici-0.[0-9]*/g, "------formdata-undici-0.test"],
-				[/functionsWorker-0.[0-9]*.js/g, "functionsWorker-0.test.js"],
+				[/------formdata-undici-[A-Za-z0-9]+/g, "------formdata-undici-test"],
+				[/functionsWorker-[A-Za-z0-9]+.js/g, "functionsWorker-test.js"],
 			]
 		);
 
 		expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
-		"------formdata-undici-0.test
+		"------formdata-undici-test
 		Content-Disposition: form-data; name=\\"metadata\\"
 
-		{\\"main_module\\":\\"functionsWorker-0.test.js\\"}
-		------formdata-undici-0.test
-		Content-Disposition: form-data; name=\\"functionsWorker-0.test.js\\"; filename=\\"functionsWorker-0.test.js\\"
+		{\\"main_module\\":\\"functionsWorker-test.js\\"}
+		------formdata-undici-test
+		Content-Disposition: form-data; name=\\"functionsWorker-test.js\\"; filename=\\"functionsWorker-test.js\\"
 		Content-Type: application/javascript+module
 
 		// ../utils/meaning-of-life.js
@@ -238,7 +238,7 @@ export default {
 		  worker_default as default
 		};
 
-		------formdata-undici-0.test--"
+		------formdata-undici-test--"
 	`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
@@ -286,8 +286,8 @@ export default {
 		const workerBundleWithConstantData = replaceRandomWithConstantData(
 			workerBundleContents,
 			[
-				[/------formdata-undici-0.[0-9]*/g, "------formdata-undici-0.test"],
-				[/functionsWorker-0.[0-9]*.js/g, "functionsWorker-0.test.js"],
+				[/------formdata-undici-[A-Za-z0-9]+/g, "------formdata-undici-test"],
+				[/functionsWorker-[A-Za-z0-9]+.js/g, "functionsWorker-test.js"],
 				[/[0-9a-z]*-greeting.wasm/g, "test-greeting.wasm"],
 				[/[0-9a-z]*-name.wasm/g, "test-name.wasm"],
 			]
@@ -298,7 +298,7 @@ export default {
 			`Content-Disposition: form-data; name="metadata"`
 		);
 		expect(workerBundleWithConstantData).toContain(
-			`{"main_module":"functionsWorker-0.test.js"}`
+			`{"main_module":"functionsWorker-test.js"}`
 		);
 
 		// check we appended the wasm modules
@@ -357,18 +357,18 @@ export default {
 		const workerBundleWithConstantData = replaceRandomWithConstantData(
 			workerBundleContents,
 			[
-				[/------formdata-undici-0.[0-9]*/g, "------formdata-undici-0.test"],
-				[/functionsWorker-0.[0-9]*.js/g, "functionsWorker-0.test.js"],
+				[/------formdata-undici-[A-Za-z0-9]+/g, "------formdata-undici-test"],
+				[/functionsWorker-[A-Za-z0-9]+.js/g, "functionsWorker-test.js"],
 			]
 		);
 
 		expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
-		"------formdata-undici-0.test
+		"------formdata-undici-test
 		Content-Disposition: form-data; name=\\"metadata\\"
 
-		{\\"main_module\\":\\"functionsWorker-0.test.js\\"}
-		------formdata-undici-0.test
-		Content-Disposition: form-data; name=\\"functionsWorker-0.test.js\\"; filename=\\"functionsWorker-0.test.js\\"
+		{\\"main_module\\":\\"functionsWorker-test.js\\"}
+		------formdata-undici-test
+		Content-Disposition: form-data; name=\\"functionsWorker-test.js\\"; filename=\\"functionsWorker-test.js\\"
 		Content-Type: application/javascript+module
 
 		// _worker.js
@@ -381,7 +381,7 @@ export default {
 		  worker_default as default
 		};
 
-		------formdata-undici-0.test--"
+		------formdata-undici-test--"
 	`);
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
@@ -476,19 +476,19 @@ export const cat = "dog";`
 		const workerBundleWithConstantData = replaceRandomWithConstantData(
 			workerBundleContents,
 			[
-				[/------formdata-undici-0.[0-9]*/g, "------formdata-undici-0.test"],
-				[/bundledWorker-0.[0-9]*.mjs/g, "bundledWorker-0.test.mjs"],
-				[/bundledWorker-0.[0-9]*.map/g, "bundledWorker-0.test.map"],
+				[/------formdata-undici-[A-Za-z0-9]+/g, "------formdata-undici-test"],
+				[/bundledWorker-[A-Za-z0-9]+.mjs/g, "bundledWorker-test.mjs"],
+				[/bundledWorker-[A-Za-z0-9]+.map/g, "bundledWorker-test.map"],
 			]
 		);
 
 		expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
-		"------formdata-undici-0.test
+		"------formdata-undici-test
 		Content-Disposition: form-data; name=\\"metadata\\"
 
-		{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
-		------formdata-undici-0.test
-		Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
+		{\\"main_module\\":\\"bundledWorker-test.mjs\\"}
+		------formdata-undici-test
+		Content-Disposition: form-data; name=\\"bundledWorker-test.mjs\\"; filename=\\"bundledWorker-test.mjs\\"
 		Content-Type: application/javascript+module
 
 		// _worker.js/index.js
@@ -502,21 +502,21 @@ export const cat = "dog";`
 		export {
 		  worker_default as default
 		};
-		//# sourceMappingURL=bundledWorker-0.test.mjs.map
+		//# sourceMappingURL=bundledWorker-test.mjs.map
 
-		------formdata-undici-0.test
+		------formdata-undici-test
 		Content-Disposition: form-data; name=\\"cat.js\\"; filename=\\"cat.js\\"
 		Content-Type: application/javascript+module
 
 
 		export const cat = \\"cat\\";
-		------formdata-undici-0.test
+		------formdata-undici-test
 		Content-Disposition: form-data; name=\\"dog.mjs\\"; filename=\\"dog.mjs\\"
 		Content-Type: application/javascript+module
 
 
 		export const cat = \\"dog\\";
-		------formdata-undici-0.test--"
+		------formdata-undici-test--"
 	`);
 
 		expect(std.err).toMatchInlineSnapshot(`""`);

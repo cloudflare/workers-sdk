@@ -58,6 +58,7 @@ export async function writeRoutesModule({
 	const { importMap, routes } = parseConfig(config, srcDir);
 	const routesModule = generateRoutesModule(importMap, routes);
 
+	await fs.mkdir(path.dirname(outfile), { recursive: true });
 	await fs.writeFile(outfile, routesModule);
 
 	return outfile;
