@@ -1,5 +1,17 @@
 # wrangler
 
+## 3.7.0
+
+### Minor Changes
+
+- [#3772](https://github.com/cloudflare/workers-sdk/pull/3772) [`a3b3765d`](https://github.com/cloudflare/workers-sdk/commit/a3b3765d9fe4d6e62aa31bb02b682998f1cb7276) Thanks [@jspspike](https://github.com/jspspike)! - Bump esbuild version to 0.17.19. Breaking changes to esbuild are documented [here](https://github.com/evanw/esbuild/releases/tag/v0.17.0)
+
+* [#3895](https://github.com/cloudflare/workers-sdk/pull/3895) [`40f56562`](https://github.com/cloudflare/workers-sdk/commit/40f565628aaef2cad745aeeb4da297e7a6973e0d) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: bump `miniflare` to [`3.20230904.0`](https://github.com/cloudflare/miniflare/releases/tag/v3.20230904.0)
+
+- [#3774](https://github.com/cloudflare/workers-sdk/pull/3774) [`ae2d5cb5`](https://github.com/cloudflare/workers-sdk/commit/ae2d5cb52ee249d19ec94f9acbd77aa262eeb391) Thanks [@mrbbot](https://github.com/mrbbot)! - feat: support breakpoint debugging in local mode
+
+  `wrangler dev` now supports breakpoint debugging in local mode! Press `d` to open DevTools and set breakpoints.
+
 ## 3.6.0
 
 ### Minor Changes

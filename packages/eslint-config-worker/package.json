@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/eslint-config-worker",
-	"version": "0.0.1",
+	"version": "1.0.0",
 	"private": true,
 	"description": "ESLint config for workers-sdk",
 	"main": "index.js",
