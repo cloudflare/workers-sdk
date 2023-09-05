@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.2.2
+
+### Patch Changes
+
+- [#3880](https://github.com/cloudflare/workers-sdk/pull/3880) [`c6c435eb`](https://github.com/cloudflare/workers-sdk/commit/c6c435ebe8984590b1800ac7acf4fec9f7538373) Thanks [@admah](https://github.com/admah)! - Update Worker templates from worker.{ts,js} to index.{ts,js} to better align with docs and examples
+
 ## 2.2.1
 
 ### Patch Changes
