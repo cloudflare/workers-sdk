@@ -7,9 +7,7 @@ describe("Worker", () => {
 	let worker: UnstableDevWorker;
 
 	beforeAll(async () => {
-		worker = await unstable_dev(path.resolve(__dirname, "index.js"), {
-			bundle: false,
-		});
+		worker = await unstable_dev(path.resolve(__dirname, "index.js"));
 	}, 30_000);
 
 	afterAll(() => worker.stop());
@@ -72,5 +70,11 @@ describe("Worker", () => {
 		const expected = new Uint8Array(new ArrayBuffer(4));
 		expected.set([0, 1, 2, 10]);
 		expect(new Uint8Array(bin)).toEqual(expected);
+	});
+
+	test("actual dynamic import (that cannot be inlined by an esbuild run)", async () => {
+		const resp = await worker.fetch("/lang/fr.json");
+		const text = await resp.text();
+		expect(text).toMatchInlineSnapshot('"Bonjour"');
 	});
 });
