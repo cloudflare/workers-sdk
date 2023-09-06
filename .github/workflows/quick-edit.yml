@@ -43,7 +43,7 @@ jobs:
         run: cd packages/quick-edit && yarn setup && yarn custom:build
 
       - name: Publish Quick Edit
-        run: pnpm -w packages/quick-edit run publish
+        run: pnpm --filter quick-edit run publish
         env:
           CLOUDFLARE_ACCOUNT_ID: "e35fd947284363a46fd7061634477114"
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
