@@ -46,13 +46,18 @@ function getUserRequest(
 		url = new URL(path, upstreamUrl);
 	}
 
-	request = new Request(url, {
-		method: request.method,
-		headers: request.headers,
-		cf: request.cf ?? env[CoreBindings.JSON_CF_BLOB],
-		redirect: request.redirect,
-		body: request.body,
-	});
+	// Note when constructing new `Request`s from `request`, we must always pass
+	// `request` as is to the `new Request()` constructor. Whilst prohibited by
+	// the `Request` API spec, `GET` requests are allowed to have bodies. If
+	// `Content-Length` or `Transfer-Encoding` are specified, `workerd` will give
+	// the request a (potentially empty) body. Passing a bodied-GET-request
+	// through to the `new Request()` constructor should throw, but `workerd` has
+	// special handling to allow this if a `Request` instance is passed.
+	// See https://github.com/cloudflare/workerd/issues/1122 for more details.
+	request = new Request(url, request);
+	if (request.cf === undefined) {
+		request = new Request(request, { cf: env[CoreBindings.JSON_CF_BLOB] });
+	}
 	request.headers.delete(CoreHeaders.ORIGINAL_URL);
 	return request;
 }
