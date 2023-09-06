@@ -6,13 +6,15 @@ import { describe, expect, test, afterEach, beforeEach } from "vitest";
 import { version } from "../package.json";
 import { deleteProject } from "../scripts/e2eCleanup";
 import { frameworkToTest } from "./frameworkToTest";
-import { keys, runC3, testProjectDir } from "./helpers";
+import { isQuarantineMode, keys, runC3, testProjectDir } from "./helpers";
 import type { RunnerConfig } from "./helpers";
 
 /*
 Areas for future improvement:
 - Add support for frameworks with global installs (like docusaurus, gatsby, etc)
 */
+
+const TEST_TIMEOUT = 1000 * 60 * 3;
 
 type FrameworkTestConfig = RunnerConfig & {
 	expectResponseToContain: string;
@@ -137,10 +139,10 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 
 	// These are ordered based on speed and reliability for ease of debugging
 	const frameworkTests: Record<string, FrameworkTestConfig> = {
-		// astro: {
-		// 	expectResponseToContain: "Hello, Astronaut!",
-		// 	testCommitMessage: true,
-		// },
+		astro: {
+			expectResponseToContain: "Hello, Astronaut!",
+			testCommitMessage: true,
+		},
 		hono: {
 			expectResponseToContain: "Hello Hono!",
 			testCommitMessage: false,
@@ -168,6 +170,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 				},
 			],
 			testCommitMessage: true,
+			quarantine: true,
 		},
 		nuxt: {
 			expectResponseToContain: "Welcome to Nuxt!",
@@ -225,7 +228,11 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 	};
 
 	Object.keys(frameworkTests).forEach((framework) => {
+		const config = frameworkTests[framework];
+		if (isQuarantineMode() || config.quarantine) return;
+
 		const skip = frameworkToTest && frameworkToTest !== framework;
+
 		test.skipIf(skip)(
 			framework,
 			async () => {
@@ -234,7 +241,25 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 					frameworkTests[framework].testCommitMessage
 				);
 			},
-			{ retry: 3 }
+			{ retry: 3, timeout: TEST_TIMEOUT }
+		);
+	});
+
+	Object.keys(frameworkTests).forEach((framework) => {
+		const config = frameworkTests[framework];
+		if (!isQuarantineMode() || !config.quarantine) return;
+
+		const skip = frameworkToTest && frameworkToTest !== framework;
+
+		test.skipIf(skip)(
+			`Quarantined: ${framework}`,
+			async () => {
+				await runCliWithDeploy(
+					framework,
+					frameworkTests[framework].testCommitMessage
+				);
+			},
+			{ retry: 3, timeout: TEST_TIMEOUT }
 		);
 	});
 

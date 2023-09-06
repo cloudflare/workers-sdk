@@ -6,7 +6,7 @@ on:
       - packages/create-cloudflare/**
 
 env:
-  node-version: 16.14
+  node-version: 18.17.1
 
 jobs:
   check:
@@ -36,6 +36,7 @@ jobs:
         run: pnpm run --filter create-cloudflare test:unit
 
   cleanup:
+    name: "Cleanup Test Projects"
     if: ${{ github.repository_owner == 'cloudflare' }}
     runs-on: ubuntu-latest
     steps:
@@ -55,16 +56,15 @@ jobs:
 
   e2e:
     needs: cleanup
-    name: "E2E"
+    name: ${{ format('E2E ({0}) {1}', matrix.pm, matrix.quarantine == true && '[quarantine]' || '') }}
+    continue-on-error: ${{ matrix.quarantine }}
     if: |
       github.event.pull_request.user.login != 'dependabot[bot]'
     strategy:
       matrix:
-        # TODO: add back windows
-        # os: [ubuntu-latest, windows-latest, macos-latest]
         os: [ubuntu-latest]
-        # pm: [npm, yarn, pnpm]
         pm: [npm, pnpm]
+        quarantine: [true, false]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
@@ -80,8 +80,10 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.C3_TEST_CLOUDFLARE_ACCOUNT_ID }}
+          E2E_QUARANTINE: ${{ matrix.quarantine }}
 
   get-dependabot-bumped-framework:
+    name: "Get bumped framework (dependabot-only)"
     runs-on: ubuntu-latest
     outputs:
       bumped-framework-cli: ${{ steps.detect.outputs.result }}
@@ -129,15 +131,14 @@ jobs:
   # framework (this is both for optimization and in order to reduce unnecessary flakiness)
   e2e-only-dependabot-bumped-framework:
     needs: [cleanup, get-dependabot-bumped-framework]
-    name: "Dependabot specific E2E"
+    name: ${{ format('Dependabot E2E ({0}) {1}', matrix.pm, matrix.quarantine == true && '[quarantine]' || '') }}
+    continue-on-error: ${{ matrix.quarantine }}
     strategy:
       fail-fast: false
       matrix:
-        # TODO: add back windows
-        # os: [ubuntu-latest, windows-latest, macos-latest]
         os: [ubuntu-latest]
-        # pm: [npm, yarn, pnpm]
         pm: [npm, pnpm]
+        quarantine: [true, false]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
@@ -154,3 +155,4 @@ jobs:
           FRAMEWORK_CLI_TO_TEST: ${{ needs.get-bumped-framework.outputs.bumped-framework-cli }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.C3_TEST_CLOUDFLARE_ACCOUNT_ID }}
+          E2E_QUARANTINE: ${{ matrix.quarantine }}
