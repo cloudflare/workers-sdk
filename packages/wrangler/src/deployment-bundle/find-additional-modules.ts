@@ -10,22 +10,21 @@ import type { Entry } from "./entry";
 import type { ParsedRules } from "./rules";
 import type { CfModule } from "./worker";
 
-async function getFiles(root: string, relativeTo: string): Promise<string[]> {
-	const files = [];
+async function* getFiles(
+	root: string,
+	relativeTo: string
+): AsyncGenerator<string> {
 	for (const file of await readdir(root, { withFileTypes: true })) {
 		if (file.isDirectory()) {
-			files.push(...(await getFiles(path.join(root, file.name), relativeTo)));
+			yield* getFiles(path.join(root, file.name), relativeTo);
 		} else {
 			// Module names should always use `/`. This is also required to match globs correctly on Windows. Later code will
 			// `path.resolve()` with these names to read contents which will perform appropriate normalisation.
-			files.push(
-				path
-					.relative(relativeTo, path.join(root, file.name))
-					.replaceAll("\\", "/")
-			);
+			yield path
+				.relative(relativeTo, path.join(root, file.name))
+				.replaceAll("\\", "/");
 		}
 	}
-	return files;
 }
 
 /**
@@ -36,7 +35,7 @@ export async function findAdditionalModules(
 	entry: Entry,
 	rules: Rule[] | ParsedRules
 ): Promise<CfModule[]> {
-	const files = await getFiles(entry.moduleRoot, entry.moduleRoot);
+	const files = getFiles(entry.moduleRoot, entry.moduleRoot);
 	const relativeEntryPoint = path
 		.relative(entry.moduleRoot, entry.file)
 		.replaceAll("\\", "/");
@@ -60,35 +59,34 @@ export async function findAdditionalModules(
 }
 
 async function matchFiles(
-	files: string[],
+	files: AsyncGenerator<string>,
 	relativeTo: string,
 	{ rules, removedRules }: ParsedRules
 ) {
 	const modules: CfModule[] = [];
 
-	// Deduplicate modules. This is usually a poorly specified `wrangler.toml` configuration, but duplicate modules will cause a crash at runtime
+	// Use the `moduleNames` set to deduplicate modules.
+	// This is usually a poorly specified `wrangler.toml` configuration, but duplicate modules will cause a crash at runtime
 	const moduleNames = new Set<string>();
-	for (const rule of rules) {
-		for (const glob of rule.globs) {
-			const regexp = globToRegExp(glob, {
-				globstar: true,
-			});
-			const newModules = await Promise.all(
-				files
-					.filter((f) => regexp.test(f))
-					.map(async (name) => {
-						const filePath = name;
-						const fileContent = await readFile(path.join(relativeTo, filePath));
 
-						return {
-							name: filePath,
-							content: fileContent,
-							filePath,
-							type: RuleTypeToModuleType[rule.type],
-						};
-					})
-			);
-			for (const module of newModules) {
+	for await (const filePath of files) {
+		for (const rule of rules) {
+			for (const glob of rule.globs) {
+				const regexp = globToRegExp(glob, {
+					globstar: true,
+				});
+				if (!regexp.test(filePath)) {
+					continue;
+				}
+				const fileContent = await readFile(path.join(relativeTo, filePath));
+
+				const module = {
+					name: filePath,
+					content: fileContent,
+					filePath,
+					type: RuleTypeToModuleType[rule.type],
+				};
+
 				if (!moduleNames.has(module.name)) {
 					moduleNames.add(module.name);
 					modules.push(module);
@@ -101,16 +99,14 @@ async function matchFiles(
 				}
 			}
 		}
-	}
 
-	// This is just a sanity check verifying that no files match rules that were removed
-	for (const rule of removedRules) {
-		for (const glob of rule.globs) {
-			const regexp = globToRegExp(glob);
-			for (const file of files) {
-				if (regexp.test(file)) {
+		// This is just a sanity check verifying that no files match rules that were removed
+		for (const rule of removedRules) {
+			for (const glob of rule.globs) {
+				const regexp = globToRegExp(glob);
+				if (regexp.test(filePath)) {
 					throw new Error(
-						`The file ${file} matched a module rule in your configuration (${JSON.stringify(
+						`The file ${filePath} matched a module rule in your configuration (${JSON.stringify(
 							rule
 						)}), but was ignored because a previous rule with the same type was not marked as \`fallthrough = true\`.`
 					);
@@ -118,6 +114,7 @@ async function matchFiles(
 			}
 		}
 	}
+
 	return modules;
 }
 

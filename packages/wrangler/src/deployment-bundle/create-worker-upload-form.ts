@@ -367,8 +367,10 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			// register the manifest module in the root twice.
 			if (subDir === ".") continue;
 			const relativePath = path.posix.relative(subDir, manifestModuleName);
+			const filePath = path.posix.join(subDir, manifestModuleName);
 			modules.push({
-				name: path.posix.join(subDir, manifestModuleName),
+				name: filePath,
+				filePath,
 				content: `export { default } from ${JSON.stringify(relativePath)};`,
 				type: "esm",
 			});
