@@ -37,7 +37,11 @@ import type {
 	CustomDomainRoute,
 } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
-import type { CfWorkerInit, CfPlacement } from "../deployment-bundle/worker";
+import type {
+	CfWorkerInit,
+	CfPlacement,
+	CfModule,
+} from "../deployment-bundle/worker";
 import type { PutConsumerBody } from "../queues/client";
 import type { AssetPaths } from "../sites";
 
@@ -639,6 +643,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		printBindings({ ...withoutStaticAssets, vars: maskedVars });
 
+		if (props.outDir) {
+			writeAdditionalModules(modules, props.outDir);
+		}
+
 		if (!props.dryRun) {
 			await ensureQueuesExist(config);
 
@@ -1080,4 +1088,14 @@ function updateQueueConsumers(config: Config): Promise<string[]>[] {
 			() => [`Consumer for ${consumer.queue}`]
 		);
 	});
+}
+
+/**
+ * When we are writing files to an `outDir`, this function ensures that any additional
+ * modules that were found (by matching rules) are also copied to the destination directory.
+ */
+function writeAdditionalModules(modules: CfModule[], destination: string) {
+	for (const module of modules) {
+		writeFileSync(path.resolve(destination, module.name), module.content);
+	}
 }
