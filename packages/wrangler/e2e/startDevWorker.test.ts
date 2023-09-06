@@ -1,5 +1,6 @@
-import { Miniflare, type MiniflareOptions } from "miniflare";
 import assert from "node:assert";
+import getPort from "get-port";
+import { Miniflare, type MiniflareOptions } from "miniflare";
 import { WebSocket, fetch } from "undici";
 import { beforeEach, afterEach, describe, test, expect } from "vitest";
 import { DevEnv, type StartDevWorkerOptions } from "wrangler";
@@ -18,17 +19,16 @@ describe("startDevWorker: ProxyController", () => {
 		await devEnv?.teardown({ type: "teardown" });
 	});
 
-	test.skip("ProxyWorker buffers requests while runtime reloads", async () => {
+	test("ProxyWorker buffers requests while runtime reloads", async () => {
 		const mfOpts: MiniflareOptions = {
 			// verbose: true,
 			port: 0,
-			inspectorPort: 0,
+			inspectorPort: await getPort(),
 			modules: true,
 			compatibilityDate: "2023-08-01",
 			name: "My-Worker",
 			script: `export default {
                 fetch(req) {
-
                     return new Response("body:1");
                 }
             }`,
@@ -102,7 +102,7 @@ describe("startDevWorker: ProxyController", () => {
 		const mfOpts: MiniflareOptions = {
 			// verbose: true,
 			port: 0,
-			inspectorPort: 9777, // TODO: get workerd to report the inspectorPort so we can set 0 and retrieve the actual port later
+			inspectorPort: await getPort(), // TODO: get workerd to report the inspectorPort so we can set 0 and retrieve the actual port later
 			modules: true,
 			compatibilityDate: "2023-08-01",
 			name: "My-Worker",
@@ -174,4 +174,99 @@ describe("startDevWorker: ProxyController", () => {
 			data: expect.stringContaining("Inside mock user worker"),
 		});
 	});
+
+	test.only(
+		"DevTools reconnect on reloadComplete",
+		async () => {
+			const mfOpts: MiniflareOptions = {
+				// verbose: true,
+				port: 0,
+				inspectorPort: await getPort(),
+				modules: true,
+				compatibilityDate: "2023-08-01",
+				name: "My-Worker",
+				script: `export default {
+                fetch(req) {
+                    // debugger;
+                    console.log('Inside worker');
+                    return new Response("body:1");
+                }
+            }`,
+			};
+			const config: StartDevWorkerOptions = {
+				name: mfOpts.name ?? "",
+				script: { contents: mfOpts.script },
+				dev: {
+					server: { port: 9898 },
+					inspector: { port: 9899 },
+				},
+			};
+
+			const worker = devEnv.startWorker(config);
+
+			devEnv.proxy.onConfigUpdate({
+				type: "configUpdate",
+				config,
+			});
+
+			devEnv.proxy.onReloadStart({
+				type: "reloadStart",
+				config,
+				bundle: { format: "modules", modules: [] },
+			});
+
+			mf = new Miniflare(mfOpts);
+			const url = await mf.ready;
+
+			const { host } = url;
+			const inspectorUrl = `ws://${url.hostname}:${mfOpts.inspectorPort}/core:user:My-Worker`;
+
+			devEnv.proxy.onReloadComplete({
+				type: "reloadComplete",
+				config,
+				bundle: { format: "modules", modules: [] },
+				proxyData: {
+					destinationURL: { host },
+					destinationInspectorURL: inspectorUrl,
+					headers: {},
+				},
+			});
+
+			let res: Response;
+			// res = await worker.fetch("http://dummy");
+			// await expect(res.text()).resolves.toBe("body:1");
+
+			setTimeout(async () => {
+				devEnv.proxy.onReloadStart({
+					type: "reloadStart",
+					config,
+					bundle: { format: "modules", modules: [] },
+				});
+
+				mfOpts.script = mfOpts.script.replace("1", "2");
+				await mf?.setOptions(mfOpts);
+
+				devEnv.proxy.onReloadComplete({
+					type: "reloadComplete",
+					config,
+					bundle: { format: "modules", modules: [] },
+					proxyData: {
+						destinationURL: { host },
+						destinationInspectorURL: inspectorUrl,
+						headers: {},
+					},
+				});
+
+				res = await worker.fetch("http://dummy");
+			}, 5_000);
+
+			console.log(url);
+
+			// res = await worker.fetch("http://dummy");
+			// await expect(res.text()).resolves.toBe("body:2");
+
+			await new Promise((r) => setTimeout(r, 60_000));
+		},
+		{ timeout: 10_000 }
+	);
 });

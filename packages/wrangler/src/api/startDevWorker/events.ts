@@ -1,7 +1,7 @@
-import Protocol from "devtools-protocol";
+import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { StartDevWorkerOptions } from "./types";
+import type Protocol from "devtools-protocol";
 import type { Miniflare } from "miniflare";
-import { EsbuildBundle } from "../../dev/use-esbuild";
 
 // export class ConfigUpdateEvent extends Event implements IConfigUpdateEvent {
 // 	constructor(public config: Config) {
@@ -123,20 +123,38 @@ export type ReadyEvent = {
 };
 
 // ProxyWorker
-export type ProxyWorkerIncomingMessage =
+export type ProxyWorkerIncomingRequestBody =
 	| { type: "play"; proxyData: ProxyData }
 	| { type: "pause" };
-export type ProxyWorkerOutgoingMessage =
+export type ProxyWorkerOutgoingRequestBody =
 	| { type: "error"; error: SerializedError }
 	| { type: "previewTokenExpired"; proxyData: ProxyData };
 
 // InspectorProxyWorker
-export type InspectorProxyWorkerIncomingMessage = {
-	type: "proxy-data";
+export type DevtoolsProtocolMessage = {
+	id: number;
+	method:
+		| "Debugger.disable"
+		| "Debugger.getScriptSource"
+		| "Runtime.getIsolateId"
+		| "Runtime.enable"
+		| "Runtime.executionContextCreated"
+		| "Runtime.executionContextDestroyed"
+		| "Runtime.exceptionThrown"
+		| "Runtime.consoleAPICalled"
+		| "Network.loadNetworkResource"
+		| "Network.enable";
+	params?: unknown;
+};
+export type DevtoolsProtocolResponse = {
+	id: number;
+	result: { resource: { success: boolean; text: string } };
+};
+export type InspectorProxyWorkerIncomingWebSocketMessage = {
+	type: ReloadCompleteEvent["type"];
 	proxyData: ProxyData;
 };
-export type InspectorProxyWorkerOutgoingMessage =
-	| { type: "error"; error: SerializedError }
+export type InspectorProxyWorkerOutgoingWebsocketMessage =
 	| {
 			method: "Runtime.consoleAPICalled";
 			params: Protocol.Runtime.ConsoleAPICalledEvent;
@@ -145,6 +163,9 @@ export type InspectorProxyWorkerOutgoingMessage =
 			method: "Runtime.exceptionThrown";
 			params: Protocol.Runtime.ExceptionThrownEvent;
 	  };
+export type InspectorProxyWorkerOutgoingRequestBody =
+	| { type: "error"; error: SerializedError }
+	| { type: "get-source-map" };
 
 type SerializedError = Pick<Error, "name" | "message" | "stack" | "cause">;
 

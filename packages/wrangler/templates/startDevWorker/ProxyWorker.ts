@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import type {
-	ProxyWorkerIncomingMessage,
-	ProxyWorkerOutgoingMessage,
+	ProxyWorkerIncomingRequestBody,
+	ProxyWorkerOutgoingRequestBody,
 	ProxyData,
 } from "../../src/api/startDevWorker/events";
 import {
@@ -17,7 +17,7 @@ interface Env {
 
 type Request = Parameters<
 	NonNullable<
-		ExportedHandler<Env, unknown, ProxyWorkerIncomingMessage>["fetch"]
+		ExportedHandler<Env, unknown, ProxyWorkerIncomingRequestBody>["fetch"]
 	>
 >[0];
 
@@ -28,7 +28,7 @@ export default {
 
 		return inspectorProxy.fetch(req);
 	},
-} as ExportedHandler<Env, unknown, ProxyWorkerIncomingMessage>;
+} as ExportedHandler<Env, unknown, ProxyWorkerIncomingRequestBody>;
 
 export class ProxyWorker implements DurableObject {
 	constructor(_state: DurableObjectState, readonly env: Env) {}
@@ -132,7 +132,7 @@ function isHtmlResponse(res: Response): boolean {
 
 async function sendMessageToProxyController(
 	env: Env,
-	message: ProxyWorkerOutgoingMessage,
+	message: ProxyWorkerOutgoingRequestBody,
 	retries = 3
 ) {
 	try {

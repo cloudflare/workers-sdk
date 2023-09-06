@@ -8,17 +8,18 @@ import { Miniflare, Response } from "miniflare";
 import { getSourceMap, logConsoleMessage } from "../../inspect";
 import { getBasePath } from "../../paths";
 import { castErrorCause } from "./events";
-import { createDeferredPromise } from "./utils";
+import { assertNever, createDeferredPromise } from "./utils";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type {
 	BundleStartEvent,
 	ConfigUpdateEvent,
 	ErrorEvent,
-	InspectorProxyWorkerIncomingMessage,
-	InspectorProxyWorkerOutgoingMessage,
+	InspectorProxyWorkerIncomingWebSocketMessage,
+	InspectorProxyWorkerOutgoingRequestBody,
+	InspectorProxyWorkerOutgoingWebsocketMessage,
 	PreviewTokenExpiredEvent,
-	ProxyWorkerIncomingMessage,
-	ProxyWorkerOutgoingMessage,
+	ProxyWorkerIncomingRequestBody,
+	ProxyWorkerOutgoingRequestBody,
 	ReadyEvent,
 	ReloadCompleteEvent,
 	ReloadStartEvent,
@@ -36,12 +37,12 @@ export class ProxyController extends EventEmitter {
 	public inspectorProxyWorker: Miniflare | undefined;
 	public inspectorProxyWorkerWebSocket = createDeferredPromise<WebSocket>();
 
-	protected config?: StartDevWorkerOptions;
-	protected bundle?: EsbuildBundle;
+	protected latestConfig?: StartDevWorkerOptions;
+	protected latestBundle?: EsbuildBundle;
 	secret = randomUUID();
 
 	protected createProxyWorker(): Miniflare {
-		assert(this.config !== undefined);
+		assert(this.latestConfig !== undefined);
 
 		const proxyWorkerResult = esbuild.buildSync({
 			entryPoints: [
@@ -82,7 +83,7 @@ export class ProxyController extends EventEmitter {
 			},
 			serviceBindings: {
 				PROXY_CONTROLLER: async (req): Promise<Response> => {
-					const message = (await req.json()) as ProxyWorkerOutgoingMessage;
+					const message = (await req.json()) as ProxyWorkerOutgoingRequestBody;
 
 					this.onProxyWorkerMessage(message);
 
@@ -94,9 +95,9 @@ export class ProxyController extends EventEmitter {
 			},
 
 			// TODO(soon): use Wrangler's self-signed cert creation instead
-			https: this.config.dev?.server?.secure,
-			host: this.config.dev?.server?.hostname,
-			port: this.config.dev?.server?.port, // random port if undefined
+			https: this.latestConfig.dev?.server?.secure,
+			host: this.latestConfig.dev?.server?.hostname,
+			port: this.latestConfig.dev?.server?.port, // random port if undefined
 		});
 
 		// separate Miniflare instance while it only permits opening one port
@@ -115,28 +116,10 @@ export class ProxyController extends EventEmitter {
 			},
 			serviceBindings: {
 				PROXY_CONTROLLER: async (req): Promise<Response> => {
-					const url = new URL(req.url);
+					const body =
+						(await req.json()) as InspectorProxyWorkerOutgoingRequestBody;
 
-					if (url.pathname === "/get-source-map") {
-						assert(this.config !== undefined);
-						assert(this.bundle !== undefined);
-
-						if (
-							this.bundle.sourceMapPath !== undefined &&
-							this.bundle.sourceMapMetadata !== undefined
-						) {
-							const sourceMap = getSourceMap(
-								this.config.name,
-								this.bundle.sourceMapPath,
-								this.bundle.sourceMapMetadata
-							);
-							return new Response(sourceMap, {
-								headers: { "Content-Type": "application/json" },
-							});
-						}
-					}
-
-					return new Response(null, { status: 404 });
+					return this.onInspectorProxyWorkerRequest(body);
 				},
 			},
 			bindings: {
@@ -144,9 +127,9 @@ export class ProxyController extends EventEmitter {
 			},
 
 			// TODO(soon): use Wrangler's self-signed cert creation instead
-			https: this.config.dev?.inspector?.secure,
-			host: this.config.dev?.inspector?.hostname,
-			port: this.config.dev?.inspector?.port, // random port if undefined
+			https: this.latestConfig.dev?.inspector?.secure,
+			host: this.latestConfig.dev?.inspector?.hostname,
+			port: this.latestConfig.dev?.inspector?.port, // random port if undefined
 		});
 
 		// store the non-null versions for callbacks
@@ -183,7 +166,7 @@ export class ProxyController extends EventEmitter {
 	}
 
 	async sendMessageToProxyWorker(
-		message: ProxyWorkerIncomingMessage,
+		message: ProxyWorkerIncomingRequestBody,
 		retries = 3
 	) {
 		try {
@@ -217,7 +200,7 @@ export class ProxyController extends EventEmitter {
 		}
 	}
 	async sendMessageToInspectorProxyWorker(
-		message: InspectorProxyWorkerIncomingMessage,
+		message: InspectorProxyWorkerIncomingWebSocketMessage,
 		retries = 3
 	): Promise<void> {
 		try {
@@ -260,29 +243,36 @@ export class ProxyController extends EventEmitter {
 	onConfigUpdate(data: ConfigUpdateEvent) {
 		// TODO: handle config.port and config.inspectorPort changes for ProxyWorker and InspectorProxyWorker
 
-		this.config = data.config;
+		this.latestConfig = data.config;
 		this.createProxyWorker();
 
 		// void this.sendMessageToProxyWorker({ type: "pause" });
 	}
-	onBundleStart(_: BundleStartEvent) {
+	onBundleStart(data: BundleStartEvent) {
+		this.latestConfig = data.config;
+
 		void this.sendMessageToProxyWorker({ type: "pause" });
 	}
-	onReloadStart(_: ReloadStartEvent) {
+	onReloadStart(data: ReloadStartEvent) {
+		this.latestConfig = data.config;
+
 		void this.sendMessageToProxyWorker({ type: "pause" });
 	}
 	onReloadComplete(data: ReloadCompleteEvent) {
-		this.bundle = data.bundle;
+		this.latestConfig = data.config;
+		this.latestBundle = data.bundle;
+
 		void this.sendMessageToProxyWorker({
 			type: "play",
 			proxyData: data.proxyData,
 		});
+
 		void this.sendMessageToInspectorProxyWorker({
-			type: "proxy-data",
+			type: "reloadComplete",
 			proxyData: data.proxyData,
 		});
 	}
-	onProxyWorkerMessage(message: ProxyWorkerOutgoingMessage) {
+	onProxyWorkerMessage(message: ProxyWorkerOutgoingRequestBody) {
 		switch (message.type) {
 			case "previewTokenExpired":
 				this.emitPreviewTokenExpiredEvent(message);
@@ -293,14 +283,54 @@ export class ProxyController extends EventEmitter {
 				break;
 		}
 	}
-	onInspectorProxyWorkerMessage(message: InspectorProxyWorkerOutgoingMessage) {
-		if ("type" in message) {
-			// TODO handle error
-		} else if (message.method === "Runtime.consoleAPICalled") {
-			logConsoleMessage(message.params);
-		} else if (message.method === "Runtime.exceptionThrown") {
-			// TODO: handle message
+	onInspectorProxyWorkerMessage(
+		message: InspectorProxyWorkerOutgoingWebsocketMessage
+	) {
+		switch (message.method) {
+			case "Runtime.consoleAPICalled":
+				logConsoleMessage(message.params);
+				break;
+			case "Runtime.exceptionThrown":
+				// TODO: handle user worker exception
+				break;
+			default:
+				assertNever(message);
 		}
+	}
+	async onInspectorProxyWorkerRequest(
+		message: InspectorProxyWorkerOutgoingRequestBody
+	) {
+		switch (message.type) {
+			case "error":
+				// TODO: handle error
+
+				break;
+			case "get-source-map":
+				assert(this.latestConfig !== undefined);
+				assert(this.latestBundle !== undefined);
+
+				if (
+					this.latestBundle.sourceMapPath !== undefined &&
+					this.latestBundle.sourceMapMetadata !== undefined
+				) {
+					const sourceMap = getSourceMap(
+						this.latestConfig.name,
+						this.latestBundle.sourceMapPath,
+						this.latestBundle.sourceMapMetadata
+					);
+
+					return new Response(sourceMap, {
+						headers: { "Content-Type": "application/json" },
+					});
+				}
+
+				break;
+			default:
+				assertNever(message);
+				return new Response(null, { status: 404 });
+		}
+
+		return new Response(null, { status: 204 });
 	}
 
 	async teardown() {

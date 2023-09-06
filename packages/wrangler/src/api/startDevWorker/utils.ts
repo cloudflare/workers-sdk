@@ -29,3 +29,5 @@ export function throwNotImplementedError(func: string, namespace?: string) {
 	if (namespace) func = `${namespace}#${func}`;
 	console.warn(`Not Implemented Error: ${func}`);
 }
+
+export function assertNever(_value: never) {}
