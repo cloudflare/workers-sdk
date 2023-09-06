@@ -16,3 +16,16 @@ export function createDeferredPromise<T>(): DeferredPromise<T> {
 		reject,
 	} as unknown) as DeferredPromise<T>;
 }
+
+export class NotImplementedError extends Error {
+	constructor(func: string, namespace?: string) {
+		if (namespace) func = `${namespace}#${func}`;
+		super(`Not Implemented Error: ${func}`);
+	}
+}
+
+export function throwNotImplementedError(func: string, namespace?: string) {
+	// throw new NotImplementedError(func, namespace);
+	if (namespace) func = `${namespace}#${func}`;
+	console.warn(`Not Implemented Error: ${func}`);
+}

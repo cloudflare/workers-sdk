@@ -118,15 +118,13 @@ export type PreviewTokenExpiredEvent = {
 export type ReadyEvent = {
 	type: "ready";
 
-	miniflareProxyWorker: Miniflare;
+	proxyWorker: Miniflare;
+	inspectorProxyWorker: Miniflare;
 };
 
 // ProxyWorker
 export type ProxyWorkerIncomingMessage =
-	| {
-			type: "play";
-			proxyData: ProxyData;
-	  }
+	| { type: "play"; proxyData: ProxyData }
 	| { type: "pause" };
 export type ProxyWorkerOutgoingMessage =
 	| { type: "error"; error: SerializedError }
@@ -149,21 +147,6 @@ export type InspectorProxyWorkerOutgoingMessage =
 	  };
 
 type SerializedError = Pick<Error, "name" | "message" | "stack" | "cause">;
-
-type WorkerModuleFormat = "modules" | "service-worker";
-type WorkerModuleType =
-	| "ESModule"
-	| "CommonJS"
-	| "NodejsCompat"
-	| "Text"
-	| "Data"
-	| "CompiledWasm";
-
-interface WorkerModule {
-	name: string;
-	contents: Uint8Array;
-	type?: WorkerModuleType;
-}
 
 export type ProxyData = {
 	destinationURL: Partial<Pick<URL, "host" | "hostname" | "port" | "protocol">>;
