@@ -87,21 +87,21 @@ export class InspectorProxyWorker implements DurableObject {
 
 		this.runtimeMessageBuffer.push(event.data);
 
-		this.#processRuntimeMessageBuffer();
+		this.#tryDrainRuntimeMessageBuffer();
 	};
 
-	#processRuntimeMessageBuffer = () => {
+	#tryDrainRuntimeMessageBuffer = () => {
 		if (this.#websockets.devtools === undefined) return;
 
 		console.log("runtimeMessageBuffer", this.runtimeMessageBuffer);
 
-		for (const data of this.runtimeMessageBuffer) {
+		const runtimeMessageBuffer = this.runtimeMessageBuffer.splice(0);
+
+		for (const data of runtimeMessageBuffer) {
 			this.#websockets.devtools.send(
 				this.#transformRuntimeToDevToolsMessage(data)
 			);
 		}
-
-		// this.runtimeMessageBuffer.length = 0;
 	};
 
 	#runtimeMessageCounter = 0;
@@ -118,82 +118,75 @@ export class InspectorProxyWorker implements DurableObject {
 		const message: InspectorProxyWorkerIncomingMessage = JSON.parse(event.data);
 
 		if (message.type === "proxy-data") {
-			if (
-				this.#proxyData?.destinationInspectorURL ===
-				message.proxyData.destinationInspectorURL
-			) {
-				return;
-			}
+			const inspectorUrlChanged =
+				this.#proxyData?.destinationInspectorURL !==
+				message.proxyData.destinationInspectorURL;
 
-			// connect or reconnect to runtime inspector server
 			this.#proxyData = message.proxyData;
 
-			// // use `await fetch()` over `new WebSocket()` to avoid WebSocket.READY_STATE_CONNECTING state
-			const url = new URL(this.#proxyData.destinationInspectorURL);
-			url.protocol = url.protocol === "wss:" ? "https:" : "http:";
-
-			void fetch(url, { headers: { Upgrade: "websocket" } })
-				.then((res) => {
-					assert(
-						res.status === 101,
-						`Expected response status 101, got ${res.status}`
-					);
-					const runtime = res.webSocket;
-					assert(runtime !== null, "Expected runtime WebSocket not to be null");
-
-					runtime.addEventListener(
-						"message",
-						this.#handleRuntimeIncomingMessage
-					);
-
-					runtime.addEventListener("close", (event) => {
-						console.log("RUNTIME CLOSE EVENT", {
-							code: event.code,
-							reason: event.reason,
-							wasClean: event.wasClean,
-						});
-					});
-					runtime.addEventListener("error", (event) => {
-						console.log("RUNTIME ERROR EVENT", event);
-					});
-
-					runtime.accept();
-					console.log(runtime.readyState);
-					runtime.send(
-						JSON.stringify({
-							method: "Runtime.enable",
-							id: this.getNextRuntimeMessageCounter(),
-						})
-					);
-					// TODO: This doesn't actually work. Must fix.
-					// runtime.send(
-					// 	JSON.stringify({
-					// 		method: "Network.enable",
-					// 		id: this.getNextRuntimeMessageCounter(),
-					// 	})
-					// );
-
-					// clearInterval(this.keepAliveInterval);
-					// this.keepAliveInterval = setInterval(() => {
-					// 	console.log("Sending keep alive");
-					// 	runtime.send(
-					// 		JSON.stringify({
-					// 			method: "Runtime.getIsolateId",
-					// 			id: this.getNextRuntimeMessageCounter(),
-					// 		})
-					// 	);
-					// }, 10_000) as any;
-					// this.#websockets.runtime?.close();
-					console.log("EXISTING RUNTIME SOCKET", this.#websockets.runtime);
-					this.#websockets.runtime = runtime;
-					// this.runtime = runtime;
-					this.#runtimeWebSocketPromise.resolve();
-					// this.#processRuntimeMessageBuffer();
-					// TODO: handle error and close events
-				})
-				.catch(console.error);
+			if (inspectorUrlChanged) this.reconnectRuntimeWebSocket();
 		}
 	};
+
+	getRuntimeWebSocketPromise() {}
+	reconnectRuntimeWebSocket() {
+		assert(this.#proxyData);
+
+		const deferred = createDeferredPromise<void>();
+
+		// resolve with a promise so anything await-ing the old promise is now await-ing the new promise
+		this.#runtimeWebSocketPromise.resolve(deferred);
+		this.#runtimeWebSocketPromise = deferred;
+
+		const runtime = new WebSocket(this.#proxyData.destinationInspectorURL);
+
+		this.#websockets.runtime?.close();
+		this.#websockets.runtime = runtime;
+
+		runtime.addEventListener("message", this.#handleRuntimeIncomingMessage);
+
+		runtime.addEventListener("close", (event) => {
+			console.log("RUNTIME CLOSE EVENT", {
+				code: event.code,
+				reason: event.reason,
+				wasClean: event.wasClean,
+			});
+
+			this.reconnectRuntimeWebSocket();
+		});
+
+		runtime.addEventListener("error", (event) => {
+			console.log("RUNTIME ERROR EVENT", event);
+		});
+
+		runtime.addEventListener("open", () => {
+			runtime.send(
+				JSON.stringify({
+					method: "Runtime.enable",
+					id: this.getNextRuntimeMessageCounter(),
+				})
+			);
+			runtime.send(
+				JSON.stringify({
+					method: "Network.enable",
+					id: this.getNextRuntimeMessageCounter(),
+				})
+			);
+
+			clearInterval(this.keepAliveInterval);
+			this.keepAliveInterval = setInterval(() => {
+				console.log("Sending keep alive");
+				runtime.send(
+					JSON.stringify({
+						method: "Runtime.getIsolateId",
+						id: this.getNextRuntimeMessageCounter(),
+					})
+				);
+			}, 10_000) as any;
+
+			deferred.resolve();
+		});
+	}
 
 	#handleProxyControllerDataRequest(req: Request) {
 		assert(
@@ -299,7 +292,7 @@ export class InspectorProxyWorker implements DurableObject {
 			// Send buffered messages
 
 			this.#websockets.devtools = devtools;
-			this.#processRuntimeMessageBuffer();
+			this.#tryDrainRuntimeMessageBuffer();
 		}
 
 		return new Response(null, { status: 101, webSocket: response });
