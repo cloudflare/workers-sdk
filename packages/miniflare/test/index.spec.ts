@@ -6,6 +6,7 @@ import http from "http";
 import { AddressInfo } from "net";
 import path from "path";
 import { Writable } from "stream";
+import { json } from "stream/consumers";
 import util from "util";
 import {
 	D1Database,
@@ -400,6 +401,48 @@ test("Miniflare: custom outbound service", async (t) => {
 	t.deepEqual(await res.json(), {
 		res1: "one",
 		res2: "fallback:https://example.com/2",
+	});
+});
+
+test("Miniflare: can send GET request with body", async (t) => {
+	// https://github.com/cloudflare/workerd/issues/1122
+	const mf = new Miniflare({
+		compatibilityDate: "2023-08-01",
+		modules: true,
+		script: `export default {
+      async fetch(request) {
+        return Response.json({
+          cf: request.cf,
+          contentLength: request.headers.get("Content-Length"),
+          hasBody: request.body !== null,
+        });
+      }
+    }`,
+		cf: { key: "value" },
+	});
+	t.teardown(() => mf.dispose());
+
+	// Can't use `dispatchFetch()` here as `fetch()` prohibits `GET` requests
+	// with bodies/`Content-Length: 0` headers
+	const url = await mf.ready;
+	function get(opts: http.RequestOptions = {}): Promise<http.IncomingMessage> {
+		return new Promise((resolve, reject) => {
+			http.get(url, opts, resolve).on("error", reject);
+		});
+	}
+
+	let res = await get();
+	t.deepEqual(await json(res), {
+		cf: { key: "value" },
+		contentLength: null,
+		hasBody: false,
+	});
+
+	res = await get({ headers: { "content-length": "0" } });
+	t.deepEqual(await json(res), {
+		cf: { key: "value" },
+		contentLength: "0",
+		hasBody: true,
 	});
 });
 
