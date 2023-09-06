@@ -1,7 +1,7 @@
 import { readConfig } from "../config";
 import { logger } from "../logger";
 import { createDatabase } from "./client";
-import { hyperdriveBetaWarning, parseConnectionString } from "./common";
+import { hyperdriveBetaWarning } from "./common";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -30,21 +30,32 @@ export async function handler(
 ) {
 	const config = readConfig(args.config, args);
 
-	const origin = parseConnectionString(args.connectionString);
+	const url = new URL(args.connectionString);
 
-	if (origin) {
+	if (
+		url &&
+		url.hostname &&
+		url.port &&
+		url.pathname &&
+		url.username &&
+		url.password
+	) {
 		logger.log(`🚧 Creating '${args.name}'`);
 		const database = await createDatabase(config, {
 			name: args.name,
-			origin: origin,
+			origin: {
+				host: url.hostname,
+				port: parseInt(url.port),
+				database: url.pathname.replace("/", ""),
+				user: url.username,
+				password: url.password,
+			},
 		});
 		logger.log(
 			`✅ Created new Hyperdrive configuration\n`,
 			JSON.stringify(database, null, 2)
 		);
 	} else {
-		logger.log(
-			`❌ Invalid or incomplete database connection string`
-		);
+		logger.log(`❌ Invalid or incomplete database connection string`);
 	}
 }

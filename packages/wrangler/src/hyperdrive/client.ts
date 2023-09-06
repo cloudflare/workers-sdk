@@ -32,7 +32,7 @@ export async function createDatabase(
 	body: CreateUpdateHyperdriveBody
 ): Promise<HyperdriveDatabase> {
 	const accountId = await requireAuth(config);
-	return await fetchResult(`/accounts/${accountId}/query_cache/databases`, {
+	return await fetchResult(`/accounts/${accountId}/hyperdrive/databases`, {
 		method: "POST",
 		body: JSON.stringify(body),
 	});
@@ -44,7 +44,7 @@ export async function deleteDatabase(
 ): Promise<void> {
 	const accountId = await requireAuth(config);
 	return await fetchResult(
-		`/accounts/${accountId}/query_cache/databases/${id}`,
+		`/accounts/${accountId}/hyperdrive/databases/${id}`,
 		{
 			method: "DELETE",
 		}
@@ -57,7 +57,7 @@ export async function getDatabase(
 ): Promise<HyperdriveDatabase> {
 	const accountId = await requireAuth(config);
 	return await fetchResult(
-		`/accounts/${accountId}/query_cache/databases/${id}`,
+		`/accounts/${accountId}/hyperdrive/databases/${id}`,
 		{
 			method: "GET",
 		}
@@ -68,7 +68,7 @@ export async function listDatabases(
 	config: Config
 ): Promise<HyperdriveDatabase[]> {
 	const accountId = await requireAuth(config);
-	return await fetchResult(`/accounts/${accountId}/query_cache/databases`, {
+	return await fetchResult(`/accounts/${accountId}/hyperdrive/databases`, {
 		method: "GET",
 	});
 }
@@ -80,7 +80,7 @@ export async function updateDatabase(
 ): Promise<HyperdriveDatabase> {
 	const accountId = await requireAuth(config);
 	return await fetchResult(
-		`/accounts/${accountId}/query_cache/databases/${id}`,
+		`/accounts/${accountId}/hyperdrive/databases/${id}`,
 		{
 			method: "PUT",
 			body: JSON.stringify(body),
