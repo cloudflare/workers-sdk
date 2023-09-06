@@ -11,7 +11,7 @@
 		"@cloudflare/workers-types": "^4.20230321.0",
 		"mustache": "^4.2.0",
 		"typescript": "^5.0.2",
-		"wrangler": "*",
+		"wrangler": "workspace:*",
 		"zod": "^3.21.4",
 		"@cloudflare/eslint-config-worker": "*",
 		"tsconfig": "*"

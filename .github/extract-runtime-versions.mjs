@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import module from "node:module";
 import path from "node:path";
 import url from "node:url";
+import { execSync } from "node:child_process";
 
 /**
  * @param {string} from
@@ -53,6 +54,12 @@ const workerdPackageJson = await fs.readFile(workerdPackageJsonPath, "utf8");
 const workerdPackage = JSON.parse(workerdPackageJson);
 const workerdVersion = workerdPackage.version;
 
+const workerdBinary = path.resolve(workerdPackageJsonPath, "../bin/workerd");
+
+const workerdBinaryVersion = execSync(workerdBinary + " --version")
+	.toString()
+	.split(" ")[1];
+
 // 4. Write basic markdown report
 const report = [
 	`\`wrangler@${wranglerVersion}\` includes the following runtime dependencies:`,
@@ -61,6 +68,7 @@ const report = [
 	"|-------|----------|--------|",
 	`|\`miniflare\`|${miniflareVersionConstraint}|${miniflareVersion}|`,
 	`|\`workerd\`|${workerdVersionConstraint}|${workerdVersion}|`,
+	`|\`workerd --version\`|${workerdVersion}|${workerdBinaryVersion}|`,
 	"",
 	"Please ensure constraints are pinned, and `miniflare`/`workerd` minor versions match.",
 	"",

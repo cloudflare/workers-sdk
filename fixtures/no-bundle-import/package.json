@@ -11,6 +11,6 @@
 	},
 	"devDependencies": {
 		"get-port": "^6.1.2",
-		"wrangler": "*"
+		"wrangler": "workspace:*"
 	}
 }
