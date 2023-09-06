@@ -83,11 +83,17 @@ importers:
 
   fixtures/additional-modules:
     devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: ^4.20230724.0
         version: 4.20230821.0
+      undici:
+        specifier: ^5.9.1
+        version: 5.23.0
       wrangler:
-        specifier: '*'
+        specifier: workspace:*
         version: link:../../packages/wrangler
 
   fixtures/d1-worker-app:
@@ -406,7 +412,11 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
-  fixtures/shared: {}
+  fixtures/shared:
+    devDependencies:
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
 
   fixtures/sites-app:
     dependencies:
