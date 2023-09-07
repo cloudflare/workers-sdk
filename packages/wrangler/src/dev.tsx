@@ -845,13 +845,13 @@ function getBindings(
 		kv_namespaces: [
 			...(configParam.kv_namespaces || []).map(
 				({ binding, preview_id, id: _id }) => {
-					// In `dev`, we make folks use a separate kv namespace called
+					// In remote `dev`, we make folks use a separate kv namespace called
 					// `preview_id` instead of `id` so that they don't
 					// break production data. So here we check that a `preview_id`
 					// has actually been configured.
 					// This whole block of code will be obsoleted in the future
 					// when we have copy-on-write for previews on edge workers.
-					if (!preview_id) {
+					if (!preview_id && !local) {
 						// TODO: This error has to be a _lot_ better, ideally just asking
 						// to create a preview namespace for the user automatically
 						throw new Error(
@@ -860,7 +860,7 @@ function getBindings(
 					}
 					return {
 						binding,
-						id: preview_id,
+						id: preview_id ?? _id,
 					};
 				}
 			),
@@ -892,14 +892,14 @@ function getBindings(
 				({ binding, preview_bucket_name, bucket_name: _bucket_name }) => {
 					// same idea as kv namespace preview id,
 					// same copy-on-write TODO
-					if (!preview_bucket_name) {
+					if (!preview_bucket_name && !local) {
 						throw new Error(
 							`In development, you should use a separate r2 bucket than the one you'd use in production. Please create a new r2 bucket with "wrangler r2 bucket create <name>" and add its name as preview_bucket_name to the r2_buckets "${binding}" in your wrangler.toml`
 						);
 					}
 					return {
 						binding,
-						bucket_name: preview_bucket_name,
+						bucket_name: preview_bucket_name ?? _bucket_name,
 					};
 				}
 			) || []),
