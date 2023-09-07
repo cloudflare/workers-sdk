@@ -234,6 +234,7 @@ import {
 	getCloudflareAccessToken,
 	getCloudflareAPITokenFromEnv,
 	getCloudflareGlobalAuthEmailFromEnv,
+	getCloudflareAccountIdFromEnv,
 	getCloudflareGlobalAuthKeyFromEnv,
 	getRevokeUrlFromEnv,
 	getTokenUrlFromEnv,
@@ -1096,9 +1097,10 @@ export async function getAccountId(): Promise<string | undefined> {
 
 	// check if we have a cached value
 	const cachedAccount = getAccountFromCache();
-	if (cachedAccount) {
+	if (cachedAccount && !getCloudflareAccountIdFromEnv()) {
 		return cachedAccount.id;
 	}
+
 	const accounts = await getAccountChoices();
 	if (accounts.length === 1) {
 		saveAccountToCache({ id: accounts[0].id, name: accounts[0].name });
