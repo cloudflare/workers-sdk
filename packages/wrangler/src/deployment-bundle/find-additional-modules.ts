@@ -1,4 +1,4 @@
-import { readdir, readFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import chalk from "chalk";
 import globToRegExp from "glob-to-regexp";
@@ -133,5 +133,20 @@ export async function* findAdditionalModuleWatchDirs(
 			if (entry.name === "node_modules" || entry.name === ".git") continue;
 			yield* findAdditionalModuleWatchDirs(path.join(root, entry.name));
 		}
+	}
+}
+
+/**
+ * When we are writing files to an `outDir`, this function ensures that any additional
+ * modules that were found (by matching rules) are also copied to the destination directory.
+ */
+export async function writeAdditionalModules(
+	modules: CfModule[],
+	destination: string
+): Promise<void> {
+	for (const module of modules) {
+		const modulePath = path.resolve(destination, module.name);
+		await mkdir(path.dirname(modulePath), { recursive: true });
+		await writeFile(modulePath, module.content);
 	}
 }

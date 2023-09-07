@@ -15,6 +15,7 @@ import { getEntryPointFromMetafile } from "./entry-point-from-metafile";
 import { cloudflareInternalPlugin } from "./esbuild-plugins/cloudflare-internal";
 import { configProviderPlugin } from "./esbuild-plugins/config-provider";
 import { nodejsCompatPlugin } from "./esbuild-plugins/nodejs-compat";
+import { writeAdditionalModules } from "./find-additional-modules";
 import { noopModuleCollector } from "./module-collection";
 import type { Config } from "../config";
 import type { DurableObjectBindings } from "../config/environment";
@@ -380,15 +381,7 @@ export async function bundleWorker(
 		...additionalModules,
 	]);
 
-	// copy all referenced modules into the output bundle directory
-	for (const module of modules) {
-		const modulePath = path.join(
-			path.dirname(resolvedEntryPointPath),
-			module.name
-		);
-		fs.mkdirSync(path.dirname(modulePath), { recursive: true });
-		fs.writeFileSync(modulePath, module.content);
-	}
+	await writeAdditionalModules(modules, path.dirname(resolvedEntryPointPath));
 
 	return {
 		modules,
