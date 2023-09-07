@@ -63,7 +63,7 @@ export async function getPlaygroundWorker(hash: string) {
 	const colon = decompressed.indexOf(":");
 	const contentType = decompressed.substring(0, colon);
 
-	console.log(contentType, decompressed.substring(colon));
+	console.log(contentType, decompressed.substring(colon + 1));
 
 	return parseSerialisedPlaygroundWorker(
 		await deserializeFormData(decompressed.substring(colon + 1), contentType)

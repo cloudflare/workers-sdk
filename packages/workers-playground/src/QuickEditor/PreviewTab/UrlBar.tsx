@@ -3,7 +3,6 @@ import { createComponent } from "@cloudflare/style-container";
 import { Div } from "@cloudflare/elements";
 import { Input } from "@cloudflare/component-input";
 import { Button } from "@cloudflare/component-button";
-import { validateUrl } from "../utils";
 
 const INPUT_HEIGHT = 34;
 

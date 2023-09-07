@@ -5,7 +5,6 @@ type Props = {
 	response: Response;
 	loading: boolean;
 };
-import useSWR from "swr";
 
 const StatusIndicator: React.FC<{ statusCode: number }> = ({ statusCode }) => {
 	const backgroundColor =

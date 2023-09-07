@@ -16,7 +16,6 @@ import { Listbox } from "@cloudflare/component-forms";
 import SplitPane from "../SplitPane";
 import ResponseView from "./ResponseView";
 import RequestHeaders, { HeaderEntry } from "./RequestHeaders";
-import { validateUrl } from "../utils";
 import { ServiceContext } from "../QuickEditor";
 import { FrameError } from "../FrameErrorBoundary";
 import { fetchWorker } from "./fetchWorker";
