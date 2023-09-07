@@ -1,8 +1,10 @@
+import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { runWrangler } from "../helpers/run-wrangler";
 import writeWranglerToml from "../helpers/write-wrangler-toml";
 
 describe("time-travel", () => {
+	mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
 
 	describe("restore", () => {
