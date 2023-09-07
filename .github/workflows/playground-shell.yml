@@ -27,8 +27,8 @@ jobs:
 
   publish:
     needs: filter-packages
-    if: needs.filter-packages.outputs.continue
-    name: Build & Deploy Playground Shell to Cloudflare Pages
+    if: needs.filter-packages.outputs.continue == 'true'
+    name: Build & Deploy ${{ needs.filter-packages.outputs.package}}  to Cloudflare Pages
     runs-on: ubuntu-latest
 
     steps:
