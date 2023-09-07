@@ -844,7 +844,7 @@ function getBindings(
 	const bindings = {
 		kv_namespaces: [
 			...(configParam.kv_namespaces || []).map(
-				({ binding, preview_id, id: _id }) => {
+				({ binding, preview_id, id }) => {
 					// In remote `dev`, we make folks use a separate kv namespace called
 					// `preview_id` instead of `id` so that they don't
 					// break production data. So here we check that a `preview_id`
@@ -860,7 +860,7 @@ function getBindings(
 					}
 					return {
 						binding,
-						id: preview_id ?? _id,
+						id: preview_id ?? id,
 					};
 				}
 			),
@@ -889,7 +889,7 @@ function getBindings(
 		],
 		r2_buckets: [
 			...(configParam.r2_buckets?.map(
-				({ binding, preview_bucket_name, bucket_name: _bucket_name }) => {
+				({ binding, preview_bucket_name, bucket_name }) => {
 					// same idea as kv namespace preview id,
 					// same copy-on-write TODO
 					if (!preview_bucket_name && !local) {
@@ -899,7 +899,7 @@ function getBindings(
 					}
 					return {
 						binding,
-						bucket_name: preview_bucket_name ?? _bucket_name,
+						bucket_name: preview_bucket_name ?? bucket_name,
 					};
 				}
 			) || []),
