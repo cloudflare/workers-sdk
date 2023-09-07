@@ -37,6 +37,7 @@ jobs:
         run: pnpm run build
 
       - name: Deploy Playground Shell to Pages
+        if: steps.is-match.outputs.continue == 'true'
         run: pnpm --filter ${{ matrix.package }} run deploy
         env:
           CLOUDFLARE_ACCOUNT_ID: "e35fd947284363a46fd7061634477114"
