@@ -12,7 +12,7 @@ export function options(yargs: CommonYargsArgv) {
 		.positional("id", {
 			type: "string",
 			demandOption: true,
-			description: "The ID of the Hyperdrive configuration",
+			description: "The ID of the Hyperdrive database configuration",
 		})
 		.epilogue(hyperdriveBetaWarning);
 }
