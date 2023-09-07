@@ -5,6 +5,10 @@ import jsonModule from "./middleware/definitions/json.module.template";
 
 const encoder = new TextEncoder();
 
+function addExplanatoryComment(source: string): string {
+	return /*javascript*/ `// This is an internal file, which is part of the middleware system we use to display pretty error pages.\n${source}`;
+}
+
 function inflateWorker(
 	entrypoint: string,
 	middleware: string[]
@@ -51,22 +55,22 @@ function inflateWorker(
 	const modules = [
 		{
 			name: loader[0],
-			contents: encoder.encode(loader[1]),
+			contents: encoder.encode(addExplanatoryComment(loader[1])),
 			type: "application/javascript+module",
 		},
 		{
 			name: common[0],
-			contents: encoder.encode(common[1]),
+			contents: encoder.encode(addExplanatoryComment(common[1])),
 			type: "application/javascript+module",
 		},
 		{
 			name: collection[0],
-			contents: encoder.encode(collection[1]),
+			contents: encoder.encode(addExplanatoryComment(collection[1])),
 			type: "application/javascript+module",
 		},
 		...namedMiddleware.map(([path, _name, contents]) => ({
 			name: path,
-			contents: encoder.encode(contents),
+			contents: encoder.encode(addExplanatoryComment(contents)),
 			type: "application/javascript+module",
 		})),
 	];
