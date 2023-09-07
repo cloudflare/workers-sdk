@@ -1,8 +1,8 @@
-import './App.css';
-import QuickEditor from './QuickEditor/QuickEditor';
+import "./App.css";
+import QuickEditor from "./QuickEditor/QuickEditor";
 
 function App() {
-  return <QuickEditor />;
+	return <QuickEditor />;
 }
 
 export default App;

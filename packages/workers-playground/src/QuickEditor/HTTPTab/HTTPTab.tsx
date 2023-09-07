@@ -147,7 +147,7 @@ export function HTTPTab() {
 							!previewHash ||
 							Boolean(previewError) ||
 							!previewUrl ||
-							!validateUrl(previewUrl)
+							!previewUrl.startsWith("/")
 						}
 						data-tracking-name="send http tab request"
 					>

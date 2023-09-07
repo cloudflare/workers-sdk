@@ -38,7 +38,7 @@ export default function URLBar(props: Props) {
 
 	const onChangeInputValue = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const { value: newValue } = e.target;
-		if (!validateUrl(newValue)) {
+		if (!newValue.startsWith("/")) {
 			setValue(`/${newValue}`);
 		} else {
 			setValue(newValue);

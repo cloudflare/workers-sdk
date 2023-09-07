@@ -65,5 +65,8 @@
 		"CODEOWNERS": "plaintext",
 		"*.template": "javascript",
 		"wrangler.json": "jsonc"
+	},
+	"[html]": {
+		"editor.defaultFormatter": "esbenp.prettier-vscode"
 	}
 }

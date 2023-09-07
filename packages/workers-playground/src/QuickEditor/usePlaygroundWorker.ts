@@ -7,22 +7,26 @@ import lzstring from "lz-string";
 async function parseSerialisedPlaygroundWorker(
 	service: FormData
 ): Promise<Worker> {
-	const metadataPart = JSON.parse(
-		await (service.get("metadata") as File).text()
-	) as Record<string, string>;
+	const metadataPart = service.get("metadata");
+	let metadataJson: Record<string, string> = {};
+	if (metadataPart && metadataPart instanceof File) {
+		try {
+			metadataJson = JSON.parse(await metadataPart.text());
+		} catch {}
+	}
 
 	const worker = {
 		metadata: {
-			...(metadataPart?.compatibility_date && {
-				compatibility_date: metadataPart.compatibility_date,
+			...(metadataJson?.compatibility_date && {
+				compatibility_date: metadataJson.compatibility_date,
 			}),
-			...(metadataPart?.compatibility_flags && {
-				compatibility_flags: metadataPart.compatibility_flags,
+			...(metadataJson?.compatibility_flags && {
+				compatibility_flags: metadataJson.compatibility_flags,
 			}),
 		},
 	} as Worker;
 
-	worker.entrypoint = metadataPart.main_module;
+	worker.entrypoint = metadataJson?.main_module ?? "index.js";
 	worker.modules = Object.fromEntries(
 		await Promise.all(
 			[...service.entries()]
@@ -55,11 +59,13 @@ async function deserializeFormData(content: string, contentType: string) {
 	return await res.formData();
 }
 export async function getPlaygroundWorker(hash: string) {
-	const [contentType, ...content] = lzstring
-		.decompressFromEncodedURIComponent(hash)
-		.split(":");
+	const decompressed = lzstring.decompressFromEncodedURIComponent(hash);
+	const colon = decompressed.indexOf(":");
+	const contentType = decompressed.substring(0, colon);
+
+	console.log(contentType, decompressed.substring(colon));
 
 	return parseSerialisedPlaygroundWorker(
-		await deserializeFormData(content.join(":"), contentType)
+		await deserializeFormData(decompressed.substring(colon + 1), contentType)
 	);
 }

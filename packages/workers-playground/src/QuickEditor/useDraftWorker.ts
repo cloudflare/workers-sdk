@@ -98,7 +98,7 @@ async function compressWorker(worker: FormData) {
 	return lzstring.compressToEncodedURIComponent(
 		`${serialisedWorker.headers.get(
 			"content-type"
-		)!}:${await serialisedWorker.text()}`
+		)}:${await serialisedWorker.text()}`
 	);
 }
 
@@ -138,11 +138,16 @@ export function useDraftWorker(
 	preview: (content: Pick<Worker, "entrypoint" | "modules">) => void;
 	previewHash: PreviewHash | undefined;
 	previewError: string | undefined;
+	parseError: string | undefined;
 	isPreviewUpdating: boolean;
 } {
 	const [isPreviewUpdating, setIsPreviewUpdating] = useState(false);
 
-	const { data: worker, isLoading } = useSWR(initialHash, getPlaygroundWorker);
+	const {
+		data: worker,
+		isLoading,
+		error,
+	} = useSWR(initialHash, getPlaygroundWorker);
 
 	const [draftWorker, setDraftWorker] =
 		useState<Pick<Worker, "entrypoint" | "modules">>();
@@ -183,7 +188,6 @@ export function useDraftWorker(
 			setIsPreviewUpdating(true);
 			void updatePreview(worker).then(() => setIsPreviewUpdating(false));
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [worker]);
 
 	return {
@@ -198,6 +202,7 @@ export function useDraftWorker(
 		devtoolsUrl,
 		previewHash,
 		isPreviewUpdating,
-		previewError,
+		previewError: previewError,
+		parseError: error?.toString(),
 	};
 }
