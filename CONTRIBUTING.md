@@ -61,19 +61,19 @@ When working on Wrangler, you'll need to satisfy [`workerd`](https://github.com/
 - On macOS:
   - The XCode command line tools, which can be installed with xcode-select --install
 
-The Node.js dependencies of the project are managed by the [`npm`](https://www.npmjs.com/) tool.
+The Node.js dependencies of the project are managed by the [`pnpm`](https://pnpm.io/) tool.
 
-This repository is setup as a [mono-repo](https://docs.npmjs.com/cli/v7/using-npm/workspaces) of workspaces. The workspaces are stored in the [`packages`](https://github.com/cloudflare/workers-sdk/tree/main/packages) directory.
+This repository is setup as a [mono-repo](https://pnpm.io/workspaces) of workspaces. The workspaces are stored in the [`packages`](https://github.com/cloudflare/workers-sdk/tree/main/packages) directory.
 
-While each workspace has its own dependencies, you install the dependencies using `npm` at the root of the project.
+While each workspace has its own dependencies, you install the dependencies using `pnpm` at the root of the project.
+
+> If you haven't used `pnpm` before, you can install it with `npm install -g pnpm`
 
 - Install all the dependencies
   ```sh
   > cd workers-sdk
-  > npm install
+  > pnpm install
   ```
-
-**Do not run `npm install` in any of the workspaces directly.**
 
 ## Building and running
 
@@ -81,11 +81,11 @@ Each wrangler workspace in this project is written in [TypeScript](https://www.t
 
 - Run a distributable for a specific workspace (e.g. wrangler)
   ```sh
-  > npm start -w wrangler
+  > pnpm run --filter wrangler start
   ```
 - Build a distributable for a specific workspace(e.g. wrangler)
   ```sh
-  > npm run build -w wrangler
+  > pnpm run build --filter wrangler
   ```
 
 ## Checking the code
@@ -94,7 +94,7 @@ The code in the repository is checked for type checking, formatting, linting and
 
 - Run all checks in all the workspaces
   ```sh
-  > npm run check
+  > pnpm run check
   ```
 
 When doing normal development you may want to run these checks individually.
@@ -105,7 +105,7 @@ The code is checked for type errors by [TypeScript](https://www.typescriptlang.o
 
 - Type check all the code in the repository
   ```sh
-  > npm run check:type
+  > pnpm run check:type
   ```
 - VS Code will also run type-checking while editing source code, providing immediate feedback.
 
@@ -134,7 +134,7 @@ The code is checked for linting errors by [ESLint](https://eslint.org/).
 
 - Run the linting checks
   ```sh
-  > npm run check:lint
+  > pnpm run check:lint
   ```
 - The repository has a recommended VS Code plugin to run ESLint checks while editing source code, providing immediate feedback.
 
@@ -144,7 +144,7 @@ The code is checked for formatting errors by [Prettier](https://prettier.io/).
 
 - Run the formatting checks
   ```sh
-  > npm run check:format
+  > pnpm run check:format
   ```
 - The repository has a recommended VS Code plugin to run Prettier checks, and to automatically format using Prettier, while editing source code, providing immediate feedback.
 
@@ -154,15 +154,15 @@ Tests in a workspace are executed, by [Jest](https://jestjs.io/), which is confi
 
 - Run the tests for all the workspaces
   ```sh
-  > npm run test
+  > pnpm run test
   ```
 - Run the tests for a specific workspace (e.g. wrangler)
   ```sh
-  > npm run test -w wrangler
+  > pnpm run test --filter wrangler
   ```
 - Watch the files in a specific workspace (e.g. wrangler), and run the tests when anything changes
   ```sh
-  > npm run test-watch -w wrangler
+  > pnpm run --filter wrangler test:watch
   ```
   This will also run all the tests in a single process (rather than in parallel shards) and will increase the test-timeout to 50 seconds, which is helpful when debugging.
 
@@ -262,7 +262,7 @@ We use the following guidelines to determine the kind of change for a PR:
 
 ## Releases
 
-We generally cut Wrangler releases at the start of each week. If you need a release cut outside of the regular cadence, please reach out to the [@cloudflare/wrangler-admins](https://github.com/orgs/cloudflare/teams/wrangler-admins) team. Before reaching out, please confirm that Wrangler passes end-to-end tests by running `npm -w wrangler run test:e2e`. Note: a real Cloudflare account is planned to be set up for testing, after which point the end-to-end tests will be configured to run in CI and this manual testing step will no longer be required.
+We generally cut Wrangler releases at the start of each week. If you need a release cut outside of the regular cadence, please reach out to the [@cloudflare/wrangler-admins](https://github.com/orgs/cloudflare/teams/wrangler-admins) team.
 
 ## Miniflare Development
 

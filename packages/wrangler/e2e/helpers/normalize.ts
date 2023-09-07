@@ -61,7 +61,7 @@ function removeUUID(str: string) {
  * Remove the Wrangler version/update check header
  */
 function removeVersionHeader(str: string): string {
-	const header = str.match(/----+\n/);
+	const header = str.match(/⛅️ wrangler .*\n----+\n/);
 	if (header !== null && header.index) {
 		return str.slice(header.index + header[0].length);
 	} else {

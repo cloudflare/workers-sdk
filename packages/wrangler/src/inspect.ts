@@ -494,6 +494,13 @@ export default function useInspector(props: InspectorProps) {
 			// devtools (like execution context creation, etc)
 		}
 
+		// Determine if we're in local mode based on the remote socket's URL
+		let localMode = false;
+		if (remoteWebSocket) {
+			const { hostname } = new URL(remoteWebSocket.url);
+			localMode = ["127.0.0.1", "[::1]", "localhost"].includes(hostname);
+		}
+
 		if (remoteWebSocket && !localWebSocket) {
 			// The local websocket hasn't connected yet, so we'll
 			// buffer messages until it does.
@@ -513,52 +520,55 @@ export default function useInspector(props: InspectorProps) {
 					props.sourceMapPath !== undefined &&
 					props.sourceMapMetadata !== undefined
 				) {
-					// Read the generated source map from esbuild
-					const sourceMap = JSON.parse(
-						readFileSync(props.sourceMapPath, "utf-8")
-					);
+					const url = new URL(message.params.url);
+					if (url.protocol === "worker:" && url.pathname.endsWith(".map")) {
+						// Read the generated source map from esbuild
+						const sourceMap = JSON.parse(
+							readFileSync(props.sourceMapPath, "utf-8")
+						);
 
-					// The source root is a temporary directory (`tmpDir`), and so shouldn't be user-visible
-					// It provides no useful info to the user
-					sourceMap.sourceRoot = "";
+						// The source root is a temporary directory (`tmpDir`), and so shouldn't be user-visible
+						// It provides no useful info to the user
+						sourceMap.sourceRoot = "";
 
-					const tmpDir = props.sourceMapMetadata.tmpDir;
+						const tmpDir = props.sourceMapMetadata.tmpDir;
 
-					// See https://docs.google.com/document/d/1U1RGAehQwRypUTovF1KRlpiOFze0b-_2gc6fAH0KY0k/edit#heading=h.mt2g20loc2ct
-					// The above link documents the x_google_ignoreList property, which is intended to mark code that shouldn't be visible in DevTools
-					// Here we use it to indicate specifically Wrangler-injected code (facades & middleware)
-					sourceMap.x_google_ignoreList = sourceMap.sources
-						// Filter anything in the generated tmpDir, and anything from Wrangler's templates
-						// This should cover facades and middleware, but intentionally doesn't include all non-user code e.g. node_modules
-						.map((s: string, idx: number) =>
-							s.includes(tmpDir) || s.includes("wrangler/templates")
-								? idx
-								: null
-						)
-						.filter((i: number | null) => i !== null);
+						// See https://docs.google.com/document/d/1U1RGAehQwRypUTovF1KRlpiOFze0b-_2gc6fAH0KY0k/edit#heading=h.mt2g20loc2ct
+						// The above link documents the x_google_ignoreList property, which is intended to mark code that shouldn't be visible in DevTools
+						// Here we use it to indicate specifically Wrangler-injected code (facades & middleware)
+						sourceMap.x_google_ignoreList = sourceMap.sources
+							// Filter anything in the generated tmpDir, and anything from Wrangler's templates
+							// This should cover facades and middleware, but intentionally doesn't include all non-user code e.g. node_modules
+							.map((s: string, idx: number) =>
+								s.includes(tmpDir) || s.includes("wrangler/templates")
+									? idx
+									: null
+							)
+							.filter((i: number | null) => i !== null);
 
-					const entryDirectory = props.sourceMapMetadata.entryDirectory;
+						const entryDirectory = props.sourceMapMetadata.entryDirectory;
 
-					sourceMap.sources = sourceMap.sources.map(
-						(s: string) =>
-							// These are never loaded by Wrangler or DevTools. However, the presence of a scheme is required for DevTools to show the path as folders in the Sources view
-							// The scheme is intentially not the same as for the sourceMappingURL
-							// Without this difference in scheme, DevTools will not strip prefix `../` path elements from top level folders (../node_modules -> node_modules, for instance)
-							`worker://${props.name}/${path.relative(entryDirectory, s)}`
-					);
+						sourceMap.sources = sourceMap.sources.map(
+							(s: string) =>
+								// These are never loaded by Wrangler or DevTools. However, the presence of a scheme is required for DevTools to show the path as folders in the Sources view
+								// The scheme is intentially not the same as for the sourceMappingURL
+								// Without this difference in scheme, DevTools will not strip prefix `../` path elements from top level folders (../node_modules -> node_modules, for instance)
+								`worker://${props.name}/${path.relative(entryDirectory, s)}`
+						);
 
-					sendMessageToLocalWebSocket({
-						data: JSON.stringify({
-							id: message.id,
-							result: {
-								resource: {
-									success: true,
-									text: JSON.stringify(sourceMap),
+						sendMessageToLocalWebSocket({
+							data: JSON.stringify({
+								id: message.id,
+								result: {
+									resource: {
+										success: true,
+										text: JSON.stringify(sourceMap),
+									},
 								},
-							},
-						}),
-					});
-					return;
+							}),
+						});
+						return;
+					}
 				}
 			} catch (e) {
 				logger.debug(e);
@@ -596,7 +606,12 @@ export default function useInspector(props: InspectorProps) {
 			try {
 				// Intercept Debugger.scriptParsed responses to inject URL schemes
 				const message = JSON.parse(event.data as string);
-				if (message.method === "Debugger.scriptParsed") {
+				if (
+					message.method === "Debugger.scriptParsed" &&
+					// Breakpoint debugging doesn't work (breakpoints can be set, but not hit) with the worker:// scheme, so
+					// disable in local mode.
+					!localMode
+				) {
 					// Add the worker:// scheme conditionally, since some module types already have schemes (e.g. wasm)
 					message.params.url = new URL(
 						message.params.url,
@@ -840,12 +855,14 @@ function logConsoleMessage(evt: Protocol.Runtime.ConsoleAPICalledEvent): void {
  */
 export const openInspector = async (
 	inspectorPort: number,
-	worker: string | undefined
+	worker: string | undefined,
+	enableDebugging = false
 ) => {
 	const query = new URLSearchParams();
 	query.set("theme", "systemPreferred");
 	query.set("ws", `localhost:${inspectorPort}/ws`);
 	if (worker) query.set("domain", worker);
+	if (enableDebugging) query.set("debugger", "true");
 	const url = `https://devtools.devprod.cloudflare.dev/js_app?${query.toString()}`;
 	const errorMessage =
 		"Failed to open inspector.\nInspector depends on having a Chromium-based browser installed, maybe you need to install one?";

@@ -10,7 +10,8 @@
 			"env": [
 				"CLOUDFLARE_ACCOUNT_ID",
 				"CLOUDFLARE_API_TOKEN",
-				"FRAMEWORK_CLI_TO_TEST"
+				"FRAMEWORK_CLI_TO_TEST",
+				"E2E_QUARANTINE"
 			]
 		}
 	}

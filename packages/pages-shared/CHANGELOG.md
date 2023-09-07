@@ -1,5 +1,11 @@
 # @cloudflare/pages-shared
 
+## 0.9.0
+
+### Minor Changes
+
+- [#3895](https://github.com/cloudflare/workers-sdk/pull/3895) [`40f56562`](https://github.com/cloudflare/workers-sdk/commit/40f565628aaef2cad745aeeb4da297e7a6973e0d) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: bump `miniflare` to [`3.20230904.0`](https://github.com/cloudflare/miniflare/releases/tag/v3.20230904.0)
+
 ## 0.8.2
 
 ### Patch Changes
