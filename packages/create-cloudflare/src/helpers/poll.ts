@@ -1,6 +1,7 @@
 import dns2 from "dns2";
 import { request } from "undici";
 import { blue, brandColor, dim } from "./colors";
+import { sleep } from "./common";
 import { spinner } from "./interactive";
 import type { DnsAnswer, DnsResponse } from "dns2";
 
@@ -126,10 +127,6 @@ export const lookupDomainLevelNameservers = async (domain: string) => {
 	const nameservers = await dns.resolve(baseDomain, "NS");
 	return (nameservers.answers as DnsAnswer[]).map((n) => n.ns);
 };
-
-async function sleep(ms: number) {
-	return new Promise((res) => setTimeout(res, ms));
-}
 
 function secondsSince(start: number): number {
 	return Math.round((Date.now() - start) / 1000);

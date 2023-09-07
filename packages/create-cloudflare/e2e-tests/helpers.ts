@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import { tmpdir } from "os";
 import { join } from "path";
 import { spawn } from "cross-spawn";
+import { sleep } from "helpers/common";
 import { spinnerFrames } from "helpers/interactive";
 import type { SpinnerStyle } from "helpers/interactive";
 
@@ -30,6 +31,7 @@ export type RunnerConfig = {
 	promptHandlers?: PromptHandler[];
 	argv?: string[];
 	outputPrefix?: string;
+	quarantine?: boolean;
 };
 
 export const runC3 = async ({
@@ -46,7 +48,7 @@ export const runC3 = async ({
 			const lines: string[] = data.toString().split("\n");
 			const currentDialog = promptHandlers[0];
 
-			lines.forEach((line) => {
+			lines.forEach(async (line) => {
 				// Uncomment to debug test output
 				if (filterLine(line)) {
 					console.log(`${outputPrefix} ${line}`);
@@ -54,6 +56,9 @@ export const runC3 = async ({
 				stdout.push(line);
 
 				if (currentDialog && currentDialog.matcher.test(line)) {
+					// Add a small sleep to avoid input race
+					await sleep(500);
+
 					currentDialog.input.forEach((keystroke) => {
 						proc.stdin.write(keystroke);
 					});
@@ -103,7 +108,7 @@ export const testProjectDir = (suite: string) => {
 		mkdtempSync(join(tmpdir(), `c3-tests-${suite}`))
 	);
 
-	const randomSuffix = crypto.randomBytes(3).toString("hex");
+	const randomSuffix = crypto.randomBytes(4).toString("hex");
 	const baseProjectName = `${C3_E2E_PREFIX}${randomSuffix}`;
 
 	const getName = (suffix: string) => `${baseProjectName}-${suffix}`;
@@ -135,4 +140,8 @@ const filterLine = (line: string) => {
 	if (line.replace(/\s/g, "").length == 0) return false;
 
 	return true;
+};
+
+export const isQuarantineMode = () => {
+	return process.env.E2E_QUARANTINE === "true";
 };

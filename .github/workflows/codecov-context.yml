@@ -15,12 +15,14 @@ jobs:
         uses: actions/checkout@v3
         with:
           ref: main
-
-      - name: Use Node.js 16.13
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - name: Use Node.js 16.14
         uses: actions/setup-node@v3
         with:
-          node-version: 16.13
-          cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
+          node-version: 16.14
+          cache: "pnpm"
 
       - name: Install workerd Dependencies
         if: ${{ runner.os == 'Linux' }}
@@ -30,15 +32,15 @@ jobs:
           sudo apt-get install -y libc++1
 
       - name: Install NPM Dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build wrangler
-        run: npm run build
+        run: pnpm run build
         env:
           NODE_ENV: "production"
 
       - name: Run tests & collect coverage
-        run: npm run test:ci -w wrangler
+        run: pnpm run --filter wrangler test:ci
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
 
