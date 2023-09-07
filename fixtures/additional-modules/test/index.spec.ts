@@ -58,7 +58,21 @@ describe("find_additional_modules dev", () => {
 	});
 	afterAll(async () => {
 		await worker.stop();
-		await fs.rm(tmpDir, { recursive: true, force: true });
+		try {
+			await fs.rm(tmpDir, { recursive: true, force: true });
+		} catch (e) {
+			// It seems that Windows doesn't let us delete this, with errors like:
+			//
+			// Error: EBUSY: resource busy or locked, rmdir 'C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ'
+			// ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+			// Serialized Error: {
+			// 	"code": "EBUSY",
+			// 	"errno": -4082,
+			// 	"path": "C:\Users\RUNNER~1\AppData\Local\Temp\wrangler-modules-pKJ7OQ",
+			// 	"syscall": "rmdir",
+			// }
+			console.error(e);
+		}
 	});
 
 	test("supports bundled modules", async () => {
