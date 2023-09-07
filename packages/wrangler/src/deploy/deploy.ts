@@ -13,7 +13,10 @@ import {
 } from "../deployment-bundle/bundle-reporter";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
-import { findAdditionalModules } from "../deployment-bundle/find-additional-modules";
+import {
+	findAdditionalModules,
+	writeAdditionalModules,
+} from "../deployment-bundle/find-additional-modules";
 import {
 	createModuleCollector,
 	getWrangler1xLegacyModuleReferences,
@@ -35,13 +38,10 @@ import type {
 	ZoneIdRoute,
 	ZoneNameRoute,
 	CustomDomainRoute,
+	Rule,
 } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
-import type {
-	CfWorkerInit,
-	CfPlacement,
-	CfModule,
-} from "../deployment-bundle/worker";
+import type { CfWorkerInit, CfPlacement } from "../deployment-bundle/worker";
 import type { PutConsumerBody } from "../queues/client";
 import type { AssetPaths } from "../sites";
 
@@ -476,12 +476,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		const { modules, dependencies, resolvedEntryPointPath, bundleType } =
 			props.noBundle
-				? {
-						modules: await findAdditionalModules(props.entry, props.rules),
-						dependencies: {},
-						resolvedEntryPointPath: props.entry.file,
-						bundleType: getBundleType(props.entry.format),
-				  }
+				? await noBundleWorker(props.entry, props.rules, props.outDir)
 				: await bundleWorker(
 						props.entry,
 						typeof destination === "string" ? destination : destination.path,
@@ -642,10 +637,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		}
 
 		printBindings({ ...withoutStaticAssets, vars: maskedVars });
-
-		if (props.outDir) {
-			writeAdditionalModules(modules, props.outDir);
-		}
 
 		if (!props.dryRun) {
 			await ensureQueuesExist(config);
@@ -1090,12 +1081,20 @@ function updateQueueConsumers(config: Config): Promise<string[]>[] {
 	});
 }
 
-/**
- * When we are writing files to an `outDir`, this function ensures that any additional
- * modules that were found (by matching rules) are also copied to the destination directory.
- */
-function writeAdditionalModules(modules: CfModule[], destination: string) {
-	for (const module of modules) {
-		writeFileSync(path.resolve(destination, module.name), module.content);
+async function noBundleWorker(
+	entry: Entry,
+	rules: Rule[],
+	outDir: string | undefined
+) {
+	const modules = await findAdditionalModules(entry, rules);
+	if (outDir) {
+		await writeAdditionalModules(modules, outDir);
 	}
+
+	return {
+		modules,
+		dependencies: {},
+		resolvedEntryPointPath: entry.file,
+		bundleType: getBundleType(entry.format),
+	};
 }
