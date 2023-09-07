@@ -13,7 +13,7 @@ on:
 jobs:
   wrangler-devtools:
     name: Wrangler DevTools
-    if: github.repository_owner == 'cloudflare' && (github.event_name != 'pull_request' || (github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'wrangler-devtools-preview' )))
+    if: github.repository_owner == 'cloudflare' && (github.event_name != 'pull_request' || (github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'preview:wrangler-devtools' )))
     uses: ./.github/workflows/deploy-pages-project.yml
     with:
       package: "wrangler-devtools"
@@ -22,7 +22,7 @@ jobs:
 
   quick-edit:
     name: Quick Edit
-    if: github.repository_owner == 'cloudflare' && (github.event_name != 'pull_request' || (github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'quick-edit-preview' )))
+    if: github.repository_owner == 'cloudflare' && (github.event_name != 'pull_request' || (github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'preview:quick-edit' )))
     uses: ./.github/workflows/deploy-pages-project.yml
     with:
       package: "quick-edit"
@@ -31,7 +31,7 @@ jobs:
 
   workers-playground:
     name: Workers Playground
-    if: github.repository_owner == 'cloudflare' && (github.event_name != 'pull_request' || (github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'workers-playground-preview' )))
+    if: github.repository_owner == 'cloudflare' && (github.event_name != 'pull_request' || (github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'preview:workers-playground' )))
     uses: ./.github/workflows/deploy-pages-project.yml
     with:
       package: "workers-playground"
