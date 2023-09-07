@@ -131,38 +131,16 @@ export type ProxyWorkerOutgoingRequestBody =
 	| { type: "previewTokenExpired"; proxyData: ProxyData };
 
 // InspectorProxyWorker
-export type DevtoolsProtocolMessage = {
-	id: number;
-	method:
-		| "Debugger.disable"
-		| "Debugger.getScriptSource"
-		| "Runtime.getIsolateId"
-		| "Runtime.enable"
-		| "Runtime.executionContextCreated"
-		| "Runtime.executionContextDestroyed"
-		| "Runtime.exceptionThrown"
-		| "Runtime.consoleAPICalled"
-		| "Network.loadNetworkResource"
-		| "Network.enable";
-	params?: unknown;
-};
-export type DevtoolsProtocolResponse = {
-	id: number;
-	result: { resource: { success: boolean; text: string } };
-};
+export * from "./devtools";
+import type { DevToolsEvent, DevToolsEvents } from "./devtools";
 export type InspectorProxyWorkerIncomingWebSocketMessage = {
 	type: ReloadCompleteEvent["type"];
 	proxyData: ProxyData;
 };
 export type InspectorProxyWorkerOutgoingWebsocketMessage =
-	| {
-			method: "Runtime.consoleAPICalled";
-			params: Protocol.Runtime.ConsoleAPICalledEvent;
-	  }
-	| {
-			method: "Runtime.exceptionThrown";
-			params: Protocol.Runtime.ExceptionThrownEvent;
-	  };
+	| DevToolsEvent<"Runtime.consoleAPICalled">
+	| DevToolsEvent<"Runtime.exceptionThrown">;
+
 export type InspectorProxyWorkerOutgoingRequestBody =
 	| { type: "error"; error: SerializedError }
 	| { type: "get-source-map" };

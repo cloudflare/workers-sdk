@@ -21,8 +21,12 @@
 import assert from "node:assert";
 import {
 	castErrorCause,
-	type DevtoolsProtocolMessage,
-	type DevtoolsProtocolResponse,
+	DevToolsCommandRequest,
+	DevToolsCommandRequests,
+	DevToolsCommandResponse,
+	DevToolsCommandResponses,
+	DevToolsEvent,
+	DevToolsEvents,
 	type InspectorProxyWorkerIncomingWebSocketMessage,
 	type InspectorProxyWorkerOutgoingRequestBody,
 	type InspectorProxyWorkerOutgoingWebsocketMessage,
@@ -65,9 +69,12 @@ export class InspectorProxyWorker implements DurableObject {
 
 	runtimeMessageBuffer: string[] = [];
 
-	latestExecutionContextCreatedMessage: DevtoolsProtocolMessage | undefined;
-	executionContextId = 0;
-	getScriptSourceMessages: DevtoolsProtocolMessage[] = [];
+	// latestExecutionContextCreatedMessage:
+	// 	| DevToolsEvent<"Runtime.executionContextCreated">
+	// 	| undefined;
+	// executionContextId = 0;
+	// getScriptSourceMessages: DevToolsCommandResponse<"Debugger.getScriptSource">[] =
+	// 	[];
 	#handleRuntimeIncomingMessage = (event: MessageEvent) => {
 		assert(typeof event.data === "string");
 		assert(
@@ -75,27 +82,19 @@ export class InspectorProxyWorker implements DurableObject {
 			"Expected proxy controller websocket"
 		);
 
-		const msg = JSON.parse(event.data) as DevtoolsProtocolMessage;
+		const msg = JSON.parse(event.data) as
+			| DevToolsCommandResponses
+			| DevToolsEvents;
 		console.log("RUNTIME INCOMING MESSAGE", msg);
 
-		if (msg.method === "Runtime.executionContextCreated") {
-			console.log({ msg });
-			this.latestExecutionContextCreatedMessage = msg;
-			msg.params.context.id = ++this.executionContextId;
-		}
-		if (msg.method === "Debugger.getScriptSource") {
-			this.getScriptSourceMessages.push(msg);
-		}
-
 		if (
-			msg.method === "Runtime.exceptionThrown" ||
-			msg.method === "Runtime.consoleAPICalled"
+			"method" in msg &&
+			(msg.method === "Runtime.exceptionThrown" ||
+				msg.method === "Runtime.consoleAPICalled")
 		) {
 			this.sendProxyControllerMessage(event.data);
 		}
 
-		if (msg.params.executionContextId === 1)
-			msg.params.executionContextUniqueId = this.executionContextId;
 		this.runtimeMessageBuffer.push(JSON.stringify(msg));
 
 		this.#tryDrainRuntimeMessageBuffer();
@@ -194,15 +193,15 @@ export class InspectorProxyWorker implements DurableObject {
 				this.#websockets.runtime = undefined;
 			}
 
-			this.sendDevToolsMessage({
-				method: "Runtime.executionContextDestroyed",
-				params: {
-					executionContextId: 1,
-					executionContextUniqueId:
-						this.latestExecutionContextCreatedMessage?.params.context
-							.executionContextUniqueId,
-				},
-			});
+			// this.sendDevToolsMessage({
+			// 	method: "Runtime.executionContextDestroyed",
+			// 	params: {
+			// 		executionContextId: 1,
+			// 		// @ts-expect-error DevTools Protocol type is wrong -- this property exists!
+			// 		executionContextUniqueId:
+			// 			this.latestExecutionContextCreatedMessage?.params.context?.uniqueId,
+			// 	},
+			// });
 		});
 
 		runtime.addEventListener("error", (event) => {
@@ -316,7 +315,7 @@ export class InspectorProxyWorker implements DurableObject {
 		return res.text();
 	}
 	async sendRuntimeMessage(
-		message: string | DevtoolsProtocolMessage,
+		message: string | DevToolsCommandRequests,
 		runtime: MaybePromise<WebSocket> = this.#runtimeWebSocketPromise
 	) {
 		runtime = await runtime;
@@ -327,7 +326,7 @@ export class InspectorProxyWorker implements DurableObject {
 		runtime.send(message);
 	}
 	sendDevToolsMessage(
-		message: string | DevtoolsProtocolMessage | DevtoolsProtocolResponse
+		message: string | DevToolsCommandResponses | DevToolsEvents
 	) {
 		message = typeof message === "string" ? message : JSON.stringify(message);
 
@@ -379,18 +378,18 @@ export class InspectorProxyWorker implements DurableObject {
 			"Expected devtools incoming message to be of type string"
 		);
 
-		const message = JSON.parse(event.data) as DevtoolsProtocolMessage;
+		const message = JSON.parse(event.data) as DevToolsCommandRequests;
 		console.log("DEVTOOLS INCOMING MESSAGE", message);
 
 		if (message.method === "Network.loadNetworkResource") {
 			return void this.handleDevToolsGetSourceMapMessage(message);
 		}
 
-		if (message.params.executionContextId === this.executionContextId)
-			message.params.executionContextId = 1;
 		this.sendRuntimeMessage(JSON.stringify(message));
 	};
-	async handleDevToolsGetSourceMapMessage(message: DevtoolsProtocolMessage) {
+	async handleDevToolsGetSourceMapMessage(
+		message: DevToolsCommandRequest<"Network.loadNetworkResource">
+	) {
 		try {
 			const sourcemap = await this.sendProxyControllerRequest({
 				type: "get-source-map",
@@ -401,6 +400,7 @@ export class InspectorProxyWorker implements DurableObject {
 			// in which case we can safely not respond
 			this.sendDevToolsMessage({
 				id: message.id,
+				// @ts-expect-error DevTools Protocol type is wrong -- result.resource.text property exists!
 				result: { resource: { success: true, text: sourcemap } },
 			});
 		} catch {
