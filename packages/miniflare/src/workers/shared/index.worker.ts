@@ -63,5 +63,5 @@ export type { DeferredPromiseResolve, DeferredPromiseReject } from "./sync";
 export { Timers } from "./timers.worker";
 export type { TimerHandle } from "./timers.worker";
 
-export { maybeApply } from "./types";
-export type { Awaitable, ValueOf } from "./types";
+export { maybeApply, reduceError } from "./types";
+export type { Awaitable, ValueOf, JsonError } from "./types";

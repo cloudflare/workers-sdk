@@ -4,6 +4,7 @@ import { LogLevel, SharedBindings, SharedHeaders } from "./constants";
 import { Router } from "./router.worker";
 import { TypedSql, all, createTypedSql, isTypedValue } from "./sql.worker";
 import { Timers } from "./timers.worker";
+import { reduceError } from "./types";
 
 export interface MiniflareDurableObjectEnv {
 	// NOTE: "in-memory" storage is never in-memory. We always back simulator
@@ -130,15 +131,38 @@ export abstract class MiniflareDurableObject<
 		this.#name = name;
 
 		// Dispatch the request to the underlying router
-		const res = await super.fetch(req);
-		// Make sure we consume the request body if specified. Otherwise, calls
-		// which make requests to this object may hang and never resolve.
-		// See https://github.com/cloudflare/workerd/issues/960.
-		// Note `Router#fetch()` should never throw, returning 500 responses for
-		// unhandled exceptions.
-		if (req.body !== null && !req.bodyUsed) {
-			await req.body.pipeTo(new WritableStream());
+		try {
+			return await super.fetch(req);
+		} catch (e) {
+			// `HttpError`s are handled by `Router`. If we threw another error log it.
+			const error = reduceError(e);
+			const fallback = error.stack ?? error.message;
+
+			const loopbackService = this.env[SharedBindings.MAYBE_SERVICE_LOOPBACK];
+			if (loopbackService !== undefined) {
+				// If we have a connected loopback service, log a source mapped error
+				void loopbackService
+					.fetch("http://localhost/core/error", {
+						method: "POST",
+						body: JSON.stringify(error),
+					})
+					.catch(() => {
+						// ...falling back to `workerd` logging (requires `--verbose` flag)
+						console.error(fallback);
+					});
+			} else {
+				// Otherwise, just use `workerd`'s logging (requires `--verbose` flag)
+				console.error(fallback);
+			}
+
+			return new Response(fallback, { status: 500 });
+		} finally {
+			// Make sure we consume the request body if specified. Otherwise, calls
+			// which make requests to this object may hang and never resolve.
+			// See https://github.com/cloudflare/workerd/issues/960.
+			if (req.body !== null && !req.bodyUsed) {
+				await req.body.pipeTo(new WritableStream());
+			}
 		}
-		return res;
 	}
 }

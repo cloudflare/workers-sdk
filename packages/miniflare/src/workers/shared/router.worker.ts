@@ -45,11 +45,11 @@ export abstract class Router {
 				if (match !== null) return await handlers[key](req, match.groups, url);
 			}
 			return new Response(null, { status: 404 });
-		} catch (e: any) {
+		} catch (e) {
 			if (e instanceof HttpError) {
 				return e.toResponse();
 			}
-			return new Response(e?.stack ?? String(e), { status: 500 });
+			throw e;
 		}
 	}
 }
