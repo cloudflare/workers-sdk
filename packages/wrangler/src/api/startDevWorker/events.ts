@@ -1,6 +1,6 @@
 import type { EsbuildBundle } from "../../dev/use-esbuild";
+import type { DevToolsEvent } from "./devtools";
 import type { StartDevWorkerOptions } from "./types";
-import type Protocol from "devtools-protocol";
 import type { Miniflare } from "miniflare";
 
 // export class ConfigUpdateEvent extends Event implements IConfigUpdateEvent {
@@ -132,7 +132,6 @@ export type ProxyWorkerOutgoingRequestBody =
 
 // InspectorProxyWorker
 export * from "./devtools";
-import type { DevToolsEvent, DevToolsEvents } from "./devtools";
 export type InspectorProxyWorkerIncomingWebSocketMessage = {
 	type: ReloadCompleteEvent["type"];
 	proxyData: ProxyData;
@@ -143,9 +142,15 @@ export type InspectorProxyWorkerOutgoingWebsocketMessage =
 
 export type InspectorProxyWorkerOutgoingRequestBody =
 	| { type: "error"; error: SerializedError }
+	| { type: "runtime-websocket-error"; error: SerializedError }
 	| { type: "get-source-map" };
 
-type SerializedError = Pick<Error, "name" | "message" | "stack" | "cause">;
+export type SerializedError = {
+	message: string;
+	name?: string;
+	stack?: string | undefined;
+	cause?: unknown;
+};
 
 export type ProxyData = {
 	destinationURL: Partial<Pick<URL, "host" | "hostname" | "port" | "protocol">>;

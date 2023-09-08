@@ -70,7 +70,7 @@ export interface StartDevWorkerOptions {
 		/** Whether the worker runs on the edge or locally. */
 		remote?: boolean;
 		/** Cloudflare Account credentials. Can be provided upfront or as a function which will be called only when required. */
-		auth: Hook<CfAccount>;
+		auth?: Hook<CfAccount>;
 		/** Whether local storage (KV, Durable Objects, R2, D1, etc) is persisted. You can also specify the directory to persist data to. */
 		persist?: boolean | { path: string };
 		/** Controls which logs are logged 🤙. */

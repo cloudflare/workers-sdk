@@ -213,13 +213,14 @@ export class InspectorProxyWorker implements DurableObject {
 			}
 
 			this.sendProxyControllerRequest({
-				type: "error",
+				type: "runtime-websocket-error",
 				error: {
-					name: "runtime websocket error",
 					message: event.message,
 					cause: event.error,
 				},
 			});
+
+			this.reconnectRuntimeWebSocket();
 		});
 
 		runtime.addEventListener("open", () => {
@@ -266,22 +267,13 @@ export class InspectorProxyWorker implements DurableObject {
 				this.#websockets.proxyController = undefined;
 			}
 		});
-		proxyController.addEventListener("error", (event) => {
+		proxyController.addEventListener("error", () => {
 			// don't reconnect the proxyController websocket
 			// ProxyController can detect this event and reconnect itself
 
 			if (this.#websockets.proxyController === proxyController) {
 				this.#websockets.proxyController = undefined;
 			}
-
-			this.sendProxyControllerRequest({
-				type: "error",
-				error: {
-					name: "ProxyController websocket error",
-					message: event.message,
-					cause: event.error,
-				},
-			});
 		});
 		proxyController.addEventListener(
 			"message",
@@ -442,15 +434,6 @@ export class InspectorProxyWorker implements DurableObject {
 				if (this.#websockets.devtools === devtools) {
 					this.#websockets.devtools = undefined;
 				}
-
-				this.sendProxyControllerRequest({
-					type: "error",
-					error: {
-						name: "DevTools websocket error",
-						message: event.message,
-						cause: event.error,
-					},
-				});
 			});
 
 			// Since Wrangler proxies the inspector, reloading Chrome DevTools won't trigger debugger initialisation events (because it's connecting to an extant session).

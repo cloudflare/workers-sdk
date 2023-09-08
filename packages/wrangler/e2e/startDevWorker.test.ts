@@ -2,8 +2,9 @@ import assert from "node:assert";
 import getPort from "get-port";
 import { Miniflare, type MiniflareOptions } from "miniflare";
 import { WebSocket, fetch } from "undici";
-import { beforeEach, afterEach, describe, test, expect } from "vitest";
-import { DevEnv, type StartDevWorkerOptions } from "wrangler";
+import { beforeEach, afterEach, describe, test, expect, vi } from "vitest";
+import { DevEnv } from "wrangler";
+import type { StartDevWorkerOptions } from "../src/api/startDevWorker/types";
 
 describe("startDevWorker: ProxyController", () => {
 	let devEnv: DevEnv;
@@ -53,8 +54,6 @@ describe("startDevWorker: ProxyController", () => {
 
 		mf = new Miniflare(mfOpts);
 		const url = await mf.ready;
-
-		const { host } = url;
 		const inspectorUrl = `ws://${url.hostname}:${mfOpts.inspectorPort}/core:user:My-Worker`;
 
 		devEnv.proxy.onReloadComplete({
@@ -62,7 +61,7 @@ describe("startDevWorker: ProxyController", () => {
 			config,
 			bundle: { format: "modules", modules: [] },
 			proxyData: {
-				destinationURL: { host },
+				destinationURL: { host: url.host },
 				destinationInspectorURL: inspectorUrl,
 				headers: {},
 			},
@@ -87,7 +86,7 @@ describe("startDevWorker: ProxyController", () => {
 				config,
 				bundle: { format: "modules", modules: [] },
 				proxyData: {
-					destinationURL: { host },
+					destinationURL: { host: url.host },
 					destinationInspectorURL: inspectorUrl,
 					headers: {},
 				},
@@ -175,8 +174,8 @@ describe("startDevWorker: ProxyController", () => {
 		});
 	});
 
-	test.only(
-		"DevTools reconnect on reloadComplete",
+	test.skip(
+		"DevTools reconnect on reloadComplete", // workerd bug: executionContextId not incrementing
 		async () => {
 			const mfOpts: MiniflareOptions = {
 				// verbose: true,
@@ -217,8 +216,6 @@ describe("startDevWorker: ProxyController", () => {
 
 			mf = new Miniflare(mfOpts);
 			const url = await mf.ready;
-
-			const { host } = url;
 			const inspectorUrl = `ws://${url.hostname}:${mfOpts.inspectorPort}/core:user:My-Worker`;
 
 			devEnv.proxy.onReloadComplete({
@@ -226,7 +223,7 @@ describe("startDevWorker: ProxyController", () => {
 				config,
 				bundle: { format: "modules", modules: [] },
 				proxyData: {
-					destinationURL: { host },
+					destinationURL: { host: url.host },
 					destinationInspectorURL: inspectorUrl,
 					headers: {},
 				},
@@ -251,7 +248,7 @@ describe("startDevWorker: ProxyController", () => {
 					config,
 					bundle: { format: "modules", modules: [] },
 					proxyData: {
-						destinationURL: { host },
+						destinationURL: { host: url.host },
 						destinationInspectorURL: inspectorUrl,
 						headers: {},
 					},
@@ -269,4 +266,165 @@ describe("startDevWorker: ProxyController", () => {
 		},
 		{ timeout: 10_000 }
 	);
+
+	test("User worker exception", async () => {
+		vi.spyOn(console, "error");
+
+		const mfOpts: MiniflareOptions = {
+			// verbose: true,
+			port: 0,
+			inspectorPort: await getPort(),
+			modules: true,
+			compatibilityDate: "2023-08-01",
+			name: "My-Worker",
+			script: `export default {
+                fetch(req) {
+                    throw new Error('Boom!');
+                    return new Response("body:1");
+                }
+            }`,
+		};
+		const config: StartDevWorkerOptions = {
+			name: mfOpts.name ?? "",
+			script: { contents: mfOpts.script },
+		};
+
+		const worker = devEnv.startWorker(config);
+
+		devEnv.proxy.onConfigUpdate({
+			type: "configUpdate",
+			config,
+		});
+
+		devEnv.proxy.onReloadStart({
+			type: "reloadStart",
+			config,
+			bundle: { format: "modules", modules: [] },
+		});
+
+		mf = new Miniflare(mfOpts);
+		const url = await mf.ready;
+		const inspectorUrl = `ws://${url.hostname}:${mfOpts.inspectorPort}/core:user:My-Worker`;
+
+		devEnv.proxy.onReloadComplete({
+			type: "reloadComplete",
+			config,
+			bundle: { format: "modules", modules: [] },
+			proxyData: {
+				destinationURL: { host: url.host },
+				destinationInspectorURL: inspectorUrl,
+				headers: {},
+			},
+		});
+
+		const res = await worker.fetch("http://dummy");
+		await expect(res.text()).resolves.toMatchObject({});
+
+		expect(console.error).toBeCalledWith(
+			expect.stringContaining("Uncaught (in response) Error: Boom!")
+		);
+	});
+
+	test("config.dev.{server,inspector} changes, restart the server instance", async () => {
+		const mfOpts: MiniflareOptions = {
+			// verbose: true,
+			port: 0,
+			inspectorPort: await getPort(),
+			modules: true,
+			compatibilityDate: "2023-08-01",
+			name: "My-Worker",
+			script: `export default {
+                fetch(req) {
+                    return new Response("body:1");
+                }
+            }`,
+		};
+		let config: StartDevWorkerOptions = {
+			name: mfOpts.name ?? "",
+			script: { contents: mfOpts.script },
+			dev: {
+				server: { port: await getPort() },
+				inspector: { port: await getPort() },
+			},
+		};
+
+		const worker = devEnv.startWorker(config);
+
+		devEnv.proxy.onConfigUpdate({
+			type: "configUpdate",
+			config,
+		});
+		console.log(config);
+
+		devEnv.proxy.onReloadStart({
+			type: "reloadStart",
+			config,
+			bundle: { format: "modules", modules: [] },
+		});
+
+		mf = new Miniflare(mfOpts);
+		const userWorkerUrl = await mf.ready;
+		const inspectorUrl = `ws://${userWorkerUrl.hostname}:${mfOpts.inspectorPort}/core:user:My-Worker`;
+
+		devEnv.proxy.onReloadComplete({
+			type: "reloadComplete",
+			config,
+			bundle: { format: "modules", modules: [] },
+			proxyData: {
+				destinationURL: { host: userWorkerUrl.host },
+				destinationInspectorURL: inspectorUrl,
+				headers: {},
+			},
+		});
+
+		let res = await worker.fetch("http://dummy");
+		await expect(res.text()).resolves.toBe("body:1");
+		console.log("worker.fetch succeeded");
+
+		const oldPort = config.dev?.server?.port;
+		res = fetch(`http://127.0.0.1:${oldPort}`).then((res) => res.text());
+		await expect(res).resolves.toBe("body:1");
+		console.log("fetch succeeded");
+
+		config = {
+			name: mfOpts.name ?? "",
+			script: { contents: mfOpts.script },
+			dev: {
+				server: { port: await getPort() },
+				inspector: { port: await getPort() },
+			},
+		};
+
+		devEnv.proxy.onConfigUpdate({
+			type: "configUpdate",
+			config,
+		});
+		console.log(config);
+
+		console.time("ready");
+		await worker.ready;
+		console.timeEnd("ready");
+
+		devEnv.proxy.onReloadComplete({
+			type: "reloadComplete",
+			config,
+			bundle: { format: "modules", modules: [] },
+			proxyData: {
+				destinationURL: { host: userWorkerUrl.host },
+				destinationInspectorURL: inspectorUrl,
+				headers: {},
+			},
+		});
+
+		await expect(
+			fetch(`http://127.0.0.1:${oldPort}`).then((res) => res.text())
+		).rejects.toMatchInlineSnapshot("[TypeError: fetch failed]");
+
+		res = await worker.fetch("http://dummy");
+		await expect(res.text()).resolves.toBe("body:1");
+
+		const newPort = config.dev?.server?.port;
+		res = await fetch(`http://127.0.0.1:${newPort}`);
+		await expect(res.text()).resolves.toBe("body:1");
+	});
 });
