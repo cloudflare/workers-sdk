@@ -1,4 +1,4 @@
-import React, { createContext, useEffect } from "react";
+import React, { createContext, useEffect, useState } from "react";
 import { Div } from "@cloudflare/elements";
 import { useDraftWorker } from "./useDraftWorker";
 
@@ -7,7 +7,7 @@ import SplitPane from "./SplitPane";
 import ToolsPane from "./ToolsPane";
 import { TopBar } from "./TopBar";
 import { BACKGROUND_GRAY } from "./constants";
-import { theme } from "@cloudflare/style-const";
+import { observeDarkMode, theme } from "@cloudflare/style-const";
 import { createComponent } from "@cloudflare/style-container";
 import defaultHash from "./defaultHash";
 
@@ -36,6 +36,7 @@ function FullScreenLayout({ children }: { children: React.ReactNode }) {
 		</Div>
 	);
 }
+import { isDarkMode } from "@cloudflare/style-const";
 
 const BrandDiv = createComponent(({ theme }) => ({
 	height: theme.space[1],
@@ -43,6 +44,10 @@ const BrandDiv = createComponent(({ theme }) => ({
 }));
 
 export default function QuickEditor() {
+	const [_, setDarkMode] = useState(isDarkMode());
+	useEffect(() => {
+		observeDarkMode(() => setDarkMode(isDarkMode()));
+	}, []);
 	const workerHash = window.location.hash.slice(1);
 
 	const [previewUrl, setPreviewUrl] = React.useState<string>(`/`);

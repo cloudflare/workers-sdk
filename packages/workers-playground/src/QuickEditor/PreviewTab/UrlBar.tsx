@@ -3,7 +3,7 @@ import { createComponent } from "@cloudflare/style-container";
 import { Div } from "@cloudflare/elements";
 import { Input } from "@cloudflare/component-input";
 import { Button } from "@cloudflare/component-button";
-
+import { isDarkMode } from "@cloudflare/style-const";
 const INPUT_HEIGHT = 34;
 
 const StyledForm = createComponent(
@@ -22,7 +22,8 @@ const InputField = createComponent(
 		height: INPUT_HEIGHT,
 		marginBottom: 0,
 		borderRadius: 5,
-		borderColor: theme.colors.gray[7],
+		borderColor: isDarkMode() ? theme.colors.gray[3] : theme.colors.gray[7],
+		backgroundColor: isDarkMode() ? theme.colors.gray[9] : "auto",
 	}),
 	Input
 );

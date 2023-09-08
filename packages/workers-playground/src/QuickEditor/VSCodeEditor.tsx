@@ -11,6 +11,7 @@ import {
 import Frame from "./Frame";
 import { Div } from "@cloudflare/elements";
 import { TypedModule } from "./useDraftWorker";
+import { isDarkMode } from "@cloudflare/style-const";
 
 function stripSlashPrefix(path: string) {
 	return path[0] === "/" ? path.slice(1) : path;
@@ -24,7 +25,7 @@ function constructVSCodeURL(serviceId: string, baseURL: string) {
 	const url = new URL(baseURL);
 	url.searchParams.set("worker", workerPath);
 
-	url.searchParams.set("theme", "systemPreferred");
+	url.searchParams.set("theme", isDarkMode() ? "dark" : "default");
 
 	return url.toString();
 }

@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
+import { isDarkMode, theme } from "@cloudflare/style-const";
 import React from "react";
 // @ts-expect-error Types are wrong
 import ReactSplitPane, { Props as ReactSplitPaneProps } from "react-split-pane";
@@ -68,6 +69,7 @@ class SplitPane extends React.Component<ReactSplitPaneProps, State> {
 		const paneStyle: React.CSSProperties = {
 			overflow: "hidden",
 			...this.props.paneStyle,
+			backgroundColor: isDarkMode() ? theme.colors.gray[8] : theme.colors.white,
 		};
 
 		// the iframes in our draggable panels cause issues since

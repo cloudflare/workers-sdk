@@ -19,6 +19,7 @@
 		"@cloudflare/component-input": "^8.1.1",
 		"@cloudflare/component-textarea": "^4.1.1",
 		"@cloudflare/component-toast": "^5.1.0",
+		"@cloudflare/component-toggle": "^9.0.13",
 		"@cloudflare/component-tooltip": "^4.3.1",
 		"@cloudflare/component-visually-hidden": "^1.0.85",
 		"@cloudflare/elements": "^3.0.1",
@@ -45,6 +46,7 @@
 		"uuid": "^9.0.0"
 	},
 	"devDependencies": {
+		"@cloudflare/cloudflare-brand-assets": "^4.7.7",
 		"@types/glob-to-regexp": "^0.4.1",
 		"@types/react": "^18.2.21",
 		"@types/react-dom": "^18.2.7",

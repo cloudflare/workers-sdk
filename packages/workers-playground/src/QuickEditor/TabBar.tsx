@@ -9,11 +9,9 @@ import {
 	TabProps as ReactTabProps,
 } from "react-tabs";
 
-import { BORDER_GRAY, VSCODE_GRAY, STYLED_TAB_HEIGHT } from "./constants";
+import { BORDER_GRAY, STYLED_TAB_HEIGHT } from "./constants";
 
 const HIGHLIGHT_BLUE = theme.colors.blue[4];
-
-const VSCodeGrayDarkCheck = isDarkMode() ? "transparent" : VSCODE_GRAY;
 
 type StyledTabProps = {
 	showHighlightBar?: boolean;
@@ -40,7 +38,13 @@ export const Tab = createComponent<typeof ReactTab, StyledTabProps>(
 		userSelect: "none",
 		position: "relative",
 		fontSize: theme.fontSizes[2],
-		backgroundColor: selected ? theme.colors.white : VSCodeGrayDarkCheck,
+		backgroundColor: selected
+			? isDarkMode()
+				? theme.colors.gray[8]
+				: theme.colors.white
+			: isDarkMode()
+			? theme.colors.white
+			: theme.colors.gray[9],
 		outlineOffset: -3,
 		borderRadius: 0,
 		":first-child": {
@@ -96,7 +100,7 @@ export const TabBar = createComponent(() => ({
 	display: "flex",
 	alignItems: "center",
 	justifyContent: "space-between",
-	backgroundColor: VSCodeGrayDarkCheck,
+	backgroundColor: isDarkMode() ? theme.colors.white : theme.colors.gray[9],
 	flex: "none",
 }));
 
@@ -114,6 +118,7 @@ export const TabList = createComponent(
 export const TabBarContent = createComponent(() => ({
 	flex: "1 0 auto",
 	borderBottom: "none",
+	backgroundColor: isDarkMode() ? theme.colors.white : theme.colors.gray[9],
 }));
 
 export const Tabs = createComponent(
