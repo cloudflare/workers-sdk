@@ -240,6 +240,20 @@ export async function handlePrettyErrorRequest(
 	// Log source-mapped error to console if logging enabled
 	log.error(error);
 
+	// Only return a pretty-error HTML page if the client accepts it. Specifically
+	// don't return a HTML page to cURL, as HTML with minified scripts is hard to
+	// read in the terminal.
+	const accept = request.headers.get("Accept")?.toLowerCase() ?? "";
+	const userAgent = request.headers.get("User-Agent")?.toLowerCase() ?? "";
+	const acceptsPrettyError =
+		!userAgent.includes("curl/") &&
+		(accept.includes("text/html") ||
+			accept.includes("*/*") ||
+			accept.includes("text/*"));
+	if (!acceptsPrettyError) {
+		return new Response(error.stack, { status: 500 });
+	}
+
 	// Lazily import `youch` when required
 	const Youch: typeof import("youch").default = require("youch");
 	// `cause` is usually more useful than the error itself, display that instead

@@ -81,25 +81,21 @@ function maybePrettifyError(request: Request, response: Response, env: Env) {
 		return response;
 	}
 
-	const accept = request.headers.get("Accept")?.toLowerCase() ?? "";
-	const userAgent = request.headers.get("User-Agent")?.toLowerCase() ?? "";
-	const acceptsPrettyError =
-		!userAgent.includes("curl/") &&
-		(accept.includes("text/html") ||
-			accept.includes("*/*") ||
-			accept.includes("text/*"));
-	if (acceptsPrettyError) {
-		return env[CoreBindings.SERVICE_LOOPBACK].fetch(
-			"http://localhost/core/error",
-			{
-				method: "POST",
-				headers: request.headers,
-				body: response.body,
-			}
-		);
-	} else {
-		return response;
-	}
+	// Forward `Accept` and `User-Agent` headers if defined
+	const accept = request.headers.get("Accept");
+	const userAgent = request.headers.get("User-Agent");
+	const headers = new Headers();
+	if (accept !== null) headers.set("Accept", accept);
+	if (userAgent !== null) headers.set("User-Agent", userAgent);
+
+	return env[CoreBindings.SERVICE_LOOPBACK].fetch(
+		"http://localhost/core/error",
+		{
+			method: "POST",
+			headers,
+			body: response.body,
+		}
+	);
 }
 
 function maybeInjectLiveReload(
