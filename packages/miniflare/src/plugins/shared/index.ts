@@ -7,7 +7,6 @@ import { z } from "zod";
 import { Service, Worker_Binding, Worker_Module } from "../../runtime";
 import { Log, MiniflareCoreError, OptionalZodTypeOf } from "../../shared";
 import { Awaitable, QueueConsumerSchema, sanitisePath } from "../../workers";
-import { SourceMapRegistry } from "./registry";
 
 export const DEFAULT_PERSIST_ROOT = ".mf";
 
@@ -38,7 +37,6 @@ export interface PluginServicesOptions<
 	additionalModules: Worker_Module[];
 	tmpPath: string;
 	workerNames: string[];
-	sourceMapRegistry: SourceMapRegistry;
 
 	// ~~Leaky abstractions~~ "Plugin specific options" :)
 	durableObjectClassNames: DurableObjectClassNames;
@@ -98,7 +96,7 @@ export function namespaceEntries(
 	}
 }
 
-function maybeParseURL(url: Persistence): URL | undefined {
+export function maybeParseURL(url: Persistence): URL | undefined {
 	if (typeof url !== "string" || path.isAbsolute(url)) return;
 	try {
 		return new URL(url);
@@ -198,5 +196,4 @@ export async function migrateDatabase(
 }
 
 export * from "./constants";
-export * from "./registry";
 export * from "./routing";

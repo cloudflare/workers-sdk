@@ -53,7 +53,6 @@ import {
 	R2_PLUGIN_NAME,
 	ReplaceWorkersTypes,
 	SharedOptions,
-	SourceMapRegistry,
 	WorkerOptions,
 	getGlobalServices,
 	kProxyNodeBinding,
@@ -445,7 +444,7 @@ function safeReadableStreamFrom(iterable: AsyncIterable<Uint8Array>) {
 	);
 }
 
-// Maps `Miniflare` instances to stack traces for thier construction. Used to identify un-`dispose()`d instances.
+// Maps `Miniflare` instances to stack traces for their construction. Used to identify un-`dispose()`d instances.
 let maybeInstanceRegistry:
 	| Map<Miniflare, string /* constructionStack */>
 	| undefined;
@@ -466,7 +465,6 @@ export class Miniflare {
 	#runtimeEntryURL?: URL;
 	#runtimeClient?: Client;
 	#proxyClient?: ProxyClient;
-	#sourceMapRegistry?: SourceMapRegistry;
 
 	// Path to temporary directory for use as scratch space/"in-memory" Durable
 	// Object storage. Note this may not exist, it's up to the consumers to
@@ -707,8 +705,6 @@ export class Miniflare {
 				if (!colors$.enabled) message = stripAnsi(message);
 				this.#log.logWithLevel(logLevel, message);
 				response = new Response(null, { status: 204 });
-			} else if (url.pathname.startsWith(SourceMapRegistry.PATHNAME_PREFIX)) {
-				response = await this.#sourceMapRegistry?.get(url);
 			}
 		} catch (e: any) {
 			this.#log.error(e);
@@ -817,11 +813,6 @@ export class Miniflare {
 
 		sharedOpts.core.cf = await setupCf(this.#log, sharedOpts.core.cf);
 
-		const sourceMapRegistry = new SourceMapRegistry(
-			this.#log,
-			loopbackPort,
-			sharedOpts.core.unsafeSourceMapIgnoreSourcePredicate
-		);
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
 		const queueConsumers = getQueueConsumers(allWorkerOpts);
 		const allWorkerRoutes = getWorkerRoutes(allWorkerOpts);
@@ -874,7 +865,6 @@ export class Miniflare {
 				additionalModules,
 				tmpPath: this.#tmpPath,
 				workerNames,
-				sourceMapRegistry,
 				durableObjectClassNames,
 				queueConsumers,
 			};
@@ -957,10 +947,6 @@ export class Miniflare {
 			assert(service.name !== undefined && !services.has(service.name));
 			services.set(service.name, service);
 		}
-
-		// Once we've assembled the config, and are about to restart the runtime,
-		// update the source map registry.
-		this.#sourceMapRegistry = sourceMapRegistry;
 
 		return { services: Array.from(services.values()), sockets, extensions };
 	}

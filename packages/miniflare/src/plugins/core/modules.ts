@@ -2,6 +2,7 @@ import assert from "assert";
 import { readFileSync } from "fs";
 import { builtinModules } from "module";
 import path from "path";
+import { pathToFileURL } from "url";
 import { TextDecoder, TextEncoder } from "util";
 import { parse } from "acorn";
 import { simple } from "acorn-walk";
@@ -11,7 +12,6 @@ import { z } from "zod";
 import { Worker_Module } from "../../runtime";
 import { MiniflareCoreError, globsToRegExps } from "../../shared";
 import { MatcherRegExps, testRegExps } from "../../workers";
-import { SourceMapRegistry } from "../shared";
 
 const SUGGEST_BUNDLE =
 	"If you're trying to import an npm package, you'll need to bundle your Worker first.";
@@ -29,9 +29,9 @@ const builtinModulesWithPrefix = builtinModules.concat(
 
 // Module identifier used if script came from `script` option
 export function buildStringScriptPath(workerIndex: number) {
-	return `<script:${workerIndex}>`;
+	return `script:${workerIndex}`;
 }
-const stringScriptRegexp = /^<script:(\d+)>$/;
+const stringScriptRegexp = /^script:(\d+)$/;
 export function maybeGetStringScriptPathIndex(
 	scriptPath: string
 ): number | undefined {
@@ -133,6 +133,15 @@ function moduleName(modulesRoot: string, modulePath: string) {
 	// Module names should always use `/` as the separator
 	return path.sep === "\\" ? name.replaceAll("\\", "/") : name;
 }
+export function withSourceURL(script: string, scriptPath: string): string {
+	let scriptURL: URL | string = scriptPath;
+	if (maybeGetStringScriptPathIndex(scriptPath) === undefined) {
+		scriptURL = pathToFileURL(scriptPath);
+	}
+	// Make sure `//# sourceURL` comment is on its own line
+	const sourceURL = `\n//# sourceURL=${scriptURL}\n`;
+	return script + sourceURL;
+}
 
 function getResolveErrorPrefix(referencingPath: string): string {
 	const relative = path.relative("", referencingPath);
@@ -146,7 +155,6 @@ export class ModuleLocator {
 	readonly modules: Worker_Module[] = [];
 
 	constructor(
-		private readonly sourceMapRegistry: SourceMapRegistry,
 		private readonly modulesRoot: string,
 		private readonly additionalModuleNames: string[],
 		rules?: ModuleRule[],
@@ -160,7 +168,7 @@ export class ModuleLocator {
 	}
 
 	visitEntrypoint(code: string, modulePath: string) {
-		modulePath = path.resolve(modulePath);
+		modulePath = path.resolve(this.modulesRoot, modulePath);
 
 		// If we've already visited this path, return
 		if (this.#visitedPaths.has(modulePath)) return;
@@ -177,13 +185,7 @@ export class ModuleLocator {
 	) {
 		// Register module
 		const name = moduleName(this.modulesRoot, modulePath);
-		const module = createJavaScriptModule(
-			this.sourceMapRegistry,
-			code,
-			name,
-			modulePath,
-			type
-		);
+		const module = createJavaScriptModule(code, name, modulePath, type);
 		this.modules.push(module);
 
 		// Parse code and visit all import/export statements
@@ -350,13 +352,12 @@ ${dim(modulesConfig)}`;
 }
 
 function createJavaScriptModule(
-	sourceMapRegistry: SourceMapRegistry,
 	code: string,
 	name: string,
 	modulePath: string,
 	type: JavaScriptModuleRuleType
 ): Worker_Module {
-	code = sourceMapRegistry.register(code, modulePath);
+	code = withSourceURL(code, modulePath);
 	if (type === "ESModule") {
 		return { name, esModule: code };
 	} else if (type === "CommonJS") {
@@ -378,7 +379,6 @@ function contentsToArray(contents: string | Uint8Array): Uint8Array {
 	return typeof contents === "string" ? encoder.encode(contents) : contents;
 }
 export function convertModuleDefinition(
-	sourceMapRegistry: SourceMapRegistry,
 	modulesRoot: string,
 	def: ModuleDefinition
 ): Worker_Module {
@@ -390,10 +390,9 @@ export function convertModuleDefinition(
 		case "CommonJS":
 		case "NodeJsCompatModule":
 			return createJavaScriptModule(
-				sourceMapRegistry,
 				contentsToString(contents),
 				name,
-				def.path,
+				path.resolve(modulesRoot, def.path),
 				def.type
 			);
 		case "Text":
