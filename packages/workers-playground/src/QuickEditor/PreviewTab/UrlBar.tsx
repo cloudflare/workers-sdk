@@ -23,7 +23,7 @@ const InputField = createComponent(
 		marginBottom: 0,
 		borderRadius: 5,
 		borderColor: isDarkMode() ? theme.colors.gray[3] : theme.colors.gray[7],
-		backgroundColor: isDarkMode() ? theme.colors.gray[9] : "auto",
+		backgroundColor: isDarkMode() ? theme.colors.gray[9] : theme.colors.white,
 	}),
 	Input
 );
