@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { parse } from "devalue";
-import { readPrefix } from "miniflare:shared";
+import { readPrefix, reduceError } from "miniflare:shared";
 import {
 	CoreHeaders,
 	ProxyAddresses,
@@ -41,22 +41,6 @@ const WORKERS_PLATFORM_IMPL: PlatformImpl<ReadableStream> = {
 		return body;
 	},
 };
-
-interface JsonError {
-	message?: string;
-	name?: string;
-	stack?: string;
-	cause?: JsonError;
-}
-
-function reduceError(e: any): JsonError {
-	return {
-		name: e?.name,
-		message: e?.message ?? String(e),
-		stack: e?.stack,
-		cause: e?.cause === undefined ? undefined : reduceError(e.cause),
-	};
-}
 
 // Helpers taken from `devalue` (unfortunately not exported):
 // https://github.com/Rich-Harris/devalue/blob/50af63e2b2c648f6e6ea29904a14faac25a581fc/src/utils.js#L31-L51

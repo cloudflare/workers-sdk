@@ -10,6 +10,7 @@ import { SharedBindings } from "../../workers";
 import {
 	PersistenceSchema,
 	Plugin,
+	SERVICE_LOOPBACK,
 	getPersistPath,
 	kProxyNodeBinding,
 	migrateDatabase,
@@ -91,6 +92,10 @@ export const R2_PLUGIN: Plugin<
 						{
 							name: SharedBindings.MAYBE_SERVICE_BLOBS,
 							service: { name: R2_STORAGE_SERVICE_NAME },
+						},
+						{
+							name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
+							service: { name: SERVICE_LOOPBACK },
 						},
 					],
 				},
