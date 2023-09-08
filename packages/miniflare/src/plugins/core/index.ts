@@ -28,10 +28,8 @@ import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import {
 	HEADER_CF_BLOB,
-	IgnoreSourcePredicateSchema,
 	Plugin,
 	SERVICE_LOOPBACK,
-	SourceMapRegistry,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 	kProxyNodeBinding,
 	parseRoutes,
@@ -50,6 +48,7 @@ import {
 	SourceOptionsSchema,
 	buildStringScriptPath,
 	convertModuleDefinition,
+	withSourceURL,
 } from "./modules";
 import { ServiceDesignatorSchema } from "./services";
 
@@ -140,8 +139,6 @@ export const CoreSharedOptionsSchema = z.object({
 	cf: z.union([z.boolean(), z.string(), z.record(z.any())]).optional(),
 
 	liveReload: z.boolean().optional(),
-
-	unsafeSourceMapIgnoreSourcePredicate: IgnoreSourcePredicateSchema.optional(),
 });
 
 export const CORE_PLUGIN_NAME = "core";
@@ -369,12 +366,10 @@ export const CORE_PLUGIN: Plugin<
 		workerIndex,
 		durableObjectClassNames,
 		additionalModules,
-		sourceMapRegistry,
 	}) {
 		// Define regular user worker
 		const additionalModuleNames = additionalModules.map(({ name }) => name);
 		const workerScript = getWorkerScript(
-			sourceMapRegistry,
 			options,
 			workerIndex,
 			additionalModuleNames
@@ -582,7 +577,6 @@ export function getGlobalServices({
 }
 
 function getWorkerScript(
-	sourceMapRegistry: SourceMapRegistry,
 	options: SourceOptions & { compatibilityFlags?: string[] },
 	workerIndex: number,
 	additionalModuleNames: string[]
@@ -593,7 +587,7 @@ function getWorkerScript(
 		// If `modules` is a manually defined modules array, use that
 		return {
 			modules: options.modules.map((module) =>
-				convertModuleDefinition(sourceMapRegistry, modulesRoot, module)
+				convertModuleDefinition(modulesRoot, module)
 			),
 		};
 	}
@@ -611,10 +605,10 @@ function getWorkerScript(
 		assert.fail("Unreachable: Workers must have code");
 	}
 
+	const scriptPath = options.scriptPath ?? buildStringScriptPath(workerIndex);
 	if (options.modules) {
 		// If `modules` is `true`, automatically collect modules...
 		const locator = new ModuleLocator(
-			sourceMapRegistry,
 			modulesRoot,
 			additionalModuleNames,
 			options.modulesRules,
@@ -622,17 +616,12 @@ function getWorkerScript(
 		);
 		// If `script` and `scriptPath` are set, resolve modules in `script`
 		// against `scriptPath`.
-		locator.visitEntrypoint(
-			code,
-			options.scriptPath ?? buildStringScriptPath(workerIndex)
-		);
+		locator.visitEntrypoint(code, scriptPath);
 		return { modules: locator.modules };
 	} else {
 		// ...otherwise, `modules` will either be `false` or `undefined`, so treat
 		// `code` as a service worker
-		if ("scriptPath" in options && options.scriptPath !== undefined) {
-			code = sourceMapRegistry.register(code, options.scriptPath);
-		}
+		code = withSourceURL(code, scriptPath);
 		return { serviceWorkerScript: code };
 	}
 }

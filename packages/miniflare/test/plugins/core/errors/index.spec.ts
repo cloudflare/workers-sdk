@@ -3,12 +3,12 @@ import fs from "fs/promises";
 import http from "http";
 import { AddressInfo } from "net";
 import path from "path";
+import { fileURLToPath } from "url";
 import test from "ava";
 import Protocol from "devtools-protocol";
 import esbuild from "esbuild";
 import { DeferredPromise, Miniflare } from "miniflare";
 import { RawSourceMap } from "source-map";
-import { fetch } from "undici";
 import NodeWebSocket from "ws";
 import { escapeRegexp, useTmp } from "../../../test-shared";
 
@@ -60,9 +60,6 @@ test("source maps workers", async (t) => {
 
 	const mf = new Miniflare({
 		inspectorPort,
-		unsafeSourceMapIgnoreSourcePredicate(source) {
-			return source.includes("nested/dep.ts");
-		},
 		workers: [
 			{
 				bindings: { MESSAGE: "unnamed" },
@@ -232,13 +229,6 @@ addEventListener("fetch", (event) => {
 	// Check does nothing with URL source mapping URLs
 	const sourceMapURL = await getSourceMapURL(inspectorPort, "core:user:i");
 	t.regex(sourceMapURL, /^data:application\/json;base64/);
-
-	// Check adds ignored sources to `x_google_ignoreList`
-	const sourceMap = await getSourceMap(inspectorPort, "core:user:h");
-	assert(sourceMap.sourceRoot !== undefined);
-	assert(sourceMap.x_google_ignoreList?.length === 1);
-	const ignoredSource = sourceMap.sources[sourceMap.x_google_ignoreList[0]];
-	t.is(path.resolve(sourceMap.sourceRoot, ignoredSource), DEP_ENTRY_PATH);
 });
 
 function getSourceMapURL(
@@ -257,7 +247,7 @@ function getSourceMapURL(
 				if (params.sourceMapURL === undefined || params.sourceMapURL === "") {
 					return;
 				}
-				sourceMapURL = params.sourceMapURL;
+				sourceMapURL = new URL(params.sourceMapURL, params.url).toString();
 				ws.close();
 			}
 		} catch (e) {
@@ -274,22 +264,18 @@ function getSourceMapURL(
 	return promise;
 }
 
-async function getSourceMap(inspectorPort: number, serviceName: string) {
-	const sourceMapURL = await getSourceMapURL(inspectorPort, serviceName);
-	// The loopback server will be listening on `127.0.0.1`, which
-	// `localhost` should resolve to, but `undici` only looks at the first
-	// DNS entry, which will be `::1` on Node 17+.
-	const res = await fetch(sourceMapURL.replace("localhost", "127.0.0.1"));
-	return (await res.json()) as RawSourceMap & {
-		x_google_ignoreList?: number[];
-	};
-}
-
 async function getSources(inspectorPort: number, serviceName: string) {
-	const { sourceRoot, sources } = await getSourceMap(
-		inspectorPort,
-		serviceName
-	);
-	assert(sourceRoot !== undefined);
-	return sources.map((source) => path.resolve(sourceRoot, source)).sort();
+	const sourceMapURL = await getSourceMapURL(inspectorPort, serviceName);
+	assert(sourceMapURL.startsWith("file:"));
+	const sourceMapPath = fileURLToPath(sourceMapURL);
+	const sourceMapData = await fs.readFile(sourceMapPath, "utf8");
+	const sourceMap: RawSourceMap = JSON.parse(sourceMapData);
+	return sourceMap.sources
+		.map((source) => {
+			if (sourceMap.sourceRoot) {
+				source = path.posix.join(sourceMap.sourceRoot, source);
+			}
+			return fileURLToPath(new URL(source, sourceMapURL));
+		})
+		.sort();
 }

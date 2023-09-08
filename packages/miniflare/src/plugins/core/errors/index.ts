@@ -1,10 +1,11 @@
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 import type { UrlAndMap } from "source-map-support";
 import { z } from "zod";
 import { Request, Response } from "../../../http";
 import { Log } from "../../../shared";
-import { getUserServiceName } from "../constants";
+import { maybeParseURL } from "../../shared";
 import {
 	SourceOptions,
 	contentsToString,
@@ -17,28 +18,28 @@ import { getSourceMapper } from "./sourcemap";
 // workerd stack traces.
 //
 // Single Worker:
-// (a) { script: "<contents>" }                                          -> "core:user:"
+// (a) { script: "<contents>" }                                          -> "<script:0>"
 // (b) { script: "<contents>", modules: true }                           -> "<script:0>"
-// (c) { script: "<contents>", scriptPath: "<path>" }                    -> "core:user:"
-// (d) { script: "<contents>", scriptPath: "<path>", modules: true }     -> "<path>"
-// (e) { scriptPath: "<path>" }                                          -> "core:user:"
-// (f) { scriptPath: "<path>", modules: true }                           -> "<path>"
+// (c) { script: "<contents>", scriptPath: "<path>" }                    -> "file://<path>"
+// (d) { script: "<contents>", scriptPath: "<path>", modules: true }     -> "file://<path>"
+// (e) { scriptPath: "<path>" }                                          -> "file://<path>"
+// (f) { scriptPath: "<path>", modules: true }                           -> "file://<path>"
 // (g) { modules: [
-//   [i]  { ..., path: "<path:0>", contents: "<contents:0>" },           -> "<path:0>" relative to cwd
-//  [ii]  { ..., path: "<path:1>" },                                     -> "<path:1>" relative to cwd
+//   [i]  { ..., path: "<path:0>", contents: "<contents:0>" },           -> "file://<path:0>"
+//  [ii]  { ..., path: "<path:1>" },                                     -> "file://<path:1>"
 //     ] }
 // (h) { modulesRoot: "<root>", modules: [
-//   [i]  { ..., path: "<path:0>", contents: "<contents:0>" },           -> "<path:0>" relative to "<root>"
-//  [ii]  { ..., path: "<path:1>" },                                     -> "<path:1>" relative to "<root>"
+//   [i]  { ..., path: "<path:0>", contents: "<contents:0>" },           -> "file://<path:0>"
+//  [ii]  { ..., path: "<path:1>" },                                     -> "file://<path:1>"
 //     ] }
 //
 // Multiple Workers (array of `SourceOptions`):
 // (i) [
-//   [i]  { script: "<contents:0>" },                                    -> "core:user:"
-//  [ii]  { name: "a", script: "<contents:1>" },                         -> "core:user:a"
-// [iii]  { name: "b", script: "<contents:2>", scriptPath: "<path:2>" }, -> "core:user:b"
-//  [iv]  { name: "c", scriptPath: "<path:3>" },                         -> "core:user:c"
-//   [v]  { script: "<contents:3>", modules: true },                     -> "<script:3>"
+//   [i]  { script: "<contents:0>" },                                    -> "<script:0>"
+//  [ii]  { name: "a", script: "<contents:1>" },                         -> "<script:1>"
+// [iii]  { name: "b", script: "<contents:2>", scriptPath: "<path:2>" }, -> "file://<path:2>"
+//  [iv]  { name: "c", scriptPath: "<path:3>" },                         -> "file://<path:3>"
+//   [v]  { script: "<contents:4>", modules: true },                     -> "<script:4>"
 //     ]
 //
 
@@ -61,61 +62,54 @@ function maybeGetDiskFile(filePath: string): SourceFile | undefined {
 export type NameSourceOptions = SourceOptions & { name?: string };
 
 // Try to extract the path and contents of a `file` reported in a JavaScript
-// stack-trace. See the `SourceOptions` comment for examples of what these look
-// like.
+// stack-trace. See the big comment above for examples of what these look like.
 function maybeGetFile(
 	workerSrcOpts: NameSourceOptions[],
-	file: string
+	fileSpecifier: string
 ): SourceFile | undefined {
-	// Resolve file relative to current working directory
-	const filePath = path.resolve(file);
+	// If `file` looks like a `file://` URL, use that
+	const maybeUrl = maybeParseURL(fileSpecifier);
+	if (maybeUrl !== undefined && maybeUrl.protocol === "file:") {
+		const filePath = fileURLToPath(maybeUrl);
 
-	// Cases: (g), (h)
-	// 1. If path matches any `modules` with ((g)[i], (h)[i]) or without
-	//    ((g)[ii], (h)[ii]) custom `contents`, use those.
-	for (const srcOpts of workerSrcOpts) {
-		if (Array.isArray(srcOpts.modules)) {
-			const modulesRoot =
-				"modulesRoot" in srcOpts ? srcOpts.modulesRoot : undefined;
-			// Handle cases (h)[i] and (h)[ii], by re-resolving file relative to
-			// module root if any
-			const modulesRootedFilePath =
-				modulesRoot === undefined ? filePath : path.resolve(modulesRoot, file);
-			for (const module of srcOpts.modules) {
-				if (path.resolve(module.path) === modulesRootedFilePath) {
-					if (module.contents === undefined) {
-						// Cases: (g)[ii], (h)[ii]
-						return maybeGetDiskFile(modulesRootedFilePath);
-					} else {
+		// Check if this `filePath` matches any scripts with custom contents...
+		for (const srcOpts of workerSrcOpts) {
+			if (Array.isArray(srcOpts.modules)) {
+				const modulesRoot = srcOpts.modulesRoot ?? "";
+				for (const module of srcOpts.modules) {
+					if (
+						module.contents !== undefined &&
+						path.resolve(modulesRoot, module.path) === filePath
+					) {
 						// Cases: (g)[i], (h)[i]
-						return {
-							path: modulesRootedFilePath,
-							contents: contentsToString(module.contents),
-						};
+						const contents = contentsToString(module.contents);
+						return { path: filePath, contents };
 					}
+				}
+			} else if (
+				"script" in srcOpts &&
+				"scriptPath" in srcOpts &&
+				srcOpts.script !== undefined &&
+				srcOpts.scriptPath !== undefined
+			) {
+				// Use `modulesRoot` if it and `modules` are truthy, otherwise ""
+				const modulesRoot = (srcOpts.modules && srcOpts.modulesRoot) || "";
+				if (path.resolve(modulesRoot, srcOpts.scriptPath) === filePath) {
+					// Cases: (c), (d), (i)[iii]
+					return { path: filePath, contents: srcOpts.script };
 				}
 			}
 		}
+
+		// ...otherwise, read contents from disk
+		// Cases: (e), (f), (g)[ii], (h)[ii], (i)[iv]
+		return maybeGetDiskFile(filePath);
 	}
 
-	// Case: (d)
-	// 2. If path matches any `scriptPath`s with custom `script`s, use those
-	for (const srcOpts of workerSrcOpts) {
-		if (
-			"scriptPath" in srcOpts &&
-			"script" in srcOpts &&
-			srcOpts.scriptPath !== undefined &&
-			srcOpts.script !== undefined &&
-			path.resolve(srcOpts.scriptPath) === filePath
-		) {
-			return { path: filePath, contents: srcOpts.script };
-		}
-	}
-
-	// Cases: (b), (i)[v]
-	// 3. If file looks like "<script:n>", and the `n`th worker has a custom
-	//    `script`, use that.
-	const workerIndex = maybeGetStringScriptPathIndex(file);
+	// Cases: (a), (b), (i)[i], (i)[ii], (i)[v]
+	// If `file` looks like "<script:n>", and the `n`th worker has a custom
+	// `script`, use that.
+	const workerIndex = maybeGetStringScriptPathIndex(fileSpecifier);
 	if (workerIndex !== undefined) {
 		const srcOpts = workerSrcOpts[workerIndex];
 		if ("script" in srcOpts && srcOpts.script !== undefined) {
@@ -123,35 +117,7 @@ function maybeGetFile(
 		}
 	}
 
-	// Cases: (a), (c), (e), (i)[i], (i)[ii], (i)[iii], (i)[iv]
-	// 4. If `file` is the name of a service, use that services' source.
-	for (const srcOpts of workerSrcOpts) {
-		if (
-			file === getUserServiceName(srcOpts.name) &&
-			(srcOpts.modules === undefined || srcOpts.modules === false)
-		) {
-			if ("script" in srcOpts && srcOpts.script !== undefined) {
-				// Cases: (a), (c), (i)[i], (i)[ii], (i)[iii]
-				// ...if a custom `script` is defined, use that, with the defined
-				// `scriptPath` if any (Case (c))
-				return {
-					path:
-						srcOpts.scriptPath === undefined
-							? undefined
-							: path.resolve(srcOpts.scriptPath),
-					contents: srcOpts.script,
-				};
-			} else if (srcOpts.scriptPath !== undefined) {
-				// Case: (e), (i)[iv]
-				// ...otherwise, if a `scriptPath` is defined, use that
-				return maybeGetDiskFile(path.resolve(srcOpts.scriptPath));
-			}
-		}
-	}
-
-	// Cases: (f)
-	// 5. Finally, fallback to file-system lookup
-	return maybeGetDiskFile(filePath);
+	// Otherwise, something's gone wrong, so don't do any source mapping.
 }
 
 function getSourceMappedStack(
@@ -160,8 +126,8 @@ function getSourceMappedStack(
 ) {
 	// This function needs to match the signature of the `retrieveSourceMap`
 	// option from the "source-map-support" package.
-	function retrieveSourceMap(file: string): UrlAndMap | null {
-		const sourceFile = maybeGetFile(workerSrcOpts, file);
+	function retrieveSourceMap(fileSpecifier: string): UrlAndMap | null {
+		const sourceFile = maybeGetFile(workerSrcOpts, fileSpecifier);
 		if (sourceFile?.path === undefined) return null;
 
 		// Find the last source mapping URL if any
