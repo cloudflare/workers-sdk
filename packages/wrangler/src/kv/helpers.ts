@@ -1,17 +1,13 @@
 import { URLSearchParams } from "node:url";
-import path from "path";
-import {
-	KVGateway,
-	NoOpLog,
-	createFileStorage,
-	sanitisePath,
-	defaultTimers,
-} from "miniflare";
+import { Miniflare } from "miniflare";
 import { FormData } from "undici";
 import { fetchListResult, fetchResult, fetchKVGetValue } from "../cfetch";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
+import { buildPersistOptions } from "../dev/miniflare";
 import { logger } from "../logger";
 import type { Config } from "../config";
+import type { KVNamespace } from "@cloudflare/workers-types/experimental";
+import type { ReplaceWorkersTypes } from "miniflare";
 
 /** The largest number of kv items we can pass to the API in a single request. */
 const API_MAX = 10000;
@@ -441,14 +437,26 @@ export function isValidKVNamespaceBinding(
 	);
 }
 
-export function localGateway(
+// TODO(soon): once we upgrade to TypeScript 5.2, this should actually use `using`:
+//  https://devblogs.microsoft.com/typescript/announcing-typescript-5-2/#using-declarations-and-explicit-resource-management
+export async function usingLocalNamespace<T>(
 	persistTo: string | undefined,
 	configPath: string | undefined,
-	namespaceId: string
-): KVGateway {
+	namespaceId: string,
+	closure: (namespace: ReplaceWorkersTypes<KVNamespace>) => Promise<T>
+): Promise<T> {
 	const persist = getLocalPersistencePath(persistTo, configPath);
-	const sanitisedNamespace = sanitisePath(namespaceId);
-	const persistPath = path.join(persist, "v3/kv", sanitisedNamespace);
-	const storage = createFileStorage(persistPath);
-	return new KVGateway(new NoOpLog(), storage, defaultTimers);
+	const persistOptions = buildPersistOptions(persist);
+	const mf = new Miniflare({
+		script:
+			'addEventListener("fetch", (e) => e.respondWith(new Response(null, { status: 404 })))',
+		...persistOptions,
+		kvNamespaces: { NAMESPACE: namespaceId },
+	});
+	const namespace = await mf.getKVNamespace("NAMESPACE");
+	try {
+		return await closure(namespace);
+	} finally {
+		await mf.dispose();
+	}
 }

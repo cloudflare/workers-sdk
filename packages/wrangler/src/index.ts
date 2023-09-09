@@ -763,6 +763,13 @@ export async function main(argv: string[]): Promise<void> {
 			);
 		}
 		throw e;
+	} finally {
+		// In the bootstrapper script `bin/wrangler.js`, we open an IPC channel, so
+		// IPC messages from this process are propagated through the bootstrapper.
+		// Make sure this channel is closed once it's no longer needed, so we can
+		// cleanly exit. Note, we don't want to disconnect if this file was imported
+		// in Jest, as that would stop communication with the test runner.
+		if (typeof jest === "undefined") process.disconnect?.();
 	}
 }
 
