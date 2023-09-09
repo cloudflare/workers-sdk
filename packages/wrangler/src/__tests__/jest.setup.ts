@@ -34,6 +34,7 @@ jest.mock("child_process", () => {
 	return {
 		__esModule: true,
 		...jest.requireActual("child_process"),
+		default: jest.requireActual("child_process"),
 		spawnSync: jest.fn().mockImplementation((binary, ...args) => {
 			if (binary === "cloudflared") return { error: true };
 			return jest.requireActual("child_process").spawnSync(binary, ...args);
