@@ -122,7 +122,6 @@
 		"@cloudflare/workers-types": "^4.20230724.0",
 		"@iarna/toml": "^3.0.0",
 		"@microsoft/api-extractor": "^7.28.3",
-		"@types/better-sqlite3": "^7.6.0",
 		"@types/body-parser": "^1.19.2",
 		"@types/busboy": "^1.5.0",
 		"@types/command-exists": "^1.2.0",
