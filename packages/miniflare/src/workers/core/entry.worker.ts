@@ -1,4 +1,3 @@
-import { unflatten } from "devalue";
 import {
 	Colorize,
 	blue,
@@ -11,7 +10,6 @@ import {
 } from "kleur/colors";
 import { LogLevel, SharedHeaders } from "miniflare:shared";
 import { CoreBindings, CoreHeaders } from "./constants";
-import { structuredSerializableRevivers } from "./devalue";
 import { STATUS_CODES } from "./http";
 import { WorkerRoute, matchRoutes } from "./routing";
 
@@ -188,21 +186,6 @@ function handleProxy(request: Request, env: Env) {
 	return stub.fetch(request);
 }
 
-async function handleQueue(
-	request: Request,
-	url: URL,
-	service: Fetcher,
-	startTime: number
-) {
-	const queueName = decodeURIComponent(url.pathname.substring(1));
-	const flattened = await request.json<number | unknown[]>();
-	const messages = unflatten(flattened, structuredSerializableRevivers);
-	const queueResponse = await service.queue(queueName, messages);
-	(queueResponse as FetcherQueueResult & { time: number }).time =
-		Date.now() - startTime;
-	return Response.json(queueResponse);
-}
-
 async function handleScheduled(
 	params: URLSearchParams,
 	service: Fetcher
@@ -243,11 +226,6 @@ export default <ExportedHandler<Env>>{
 		}
 
 		try {
-			const customEvent = request.headers.get(CoreHeaders.CUSTOM_EVENT);
-			if (customEvent === "queue") {
-				return await handleQueue(request, url, service, startTime);
-			}
-
 			if (url.pathname === "/cdn-cgi/mf/scheduled") {
 				return await handleScheduled(url.searchParams, service);
 			}

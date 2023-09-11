@@ -3,7 +3,6 @@ export const CoreHeaders = {
 	ORIGINAL_URL: "MF-Original-URL",
 	ERROR_STACK: "MF-Experimental-Error-Stack",
 	ROUTE_OVERRIDE: "MF-Route-Override",
-	CUSTOM_EVENT: "MF-Custom-Event",
 
 	// API Proxy
 	OP: "MF-Op",
