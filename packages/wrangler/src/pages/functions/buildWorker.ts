@@ -160,14 +160,10 @@ export type RawOptions = {
 	outfile?: string;
 	outdir?: string;
 	directory: string;
-	bundle?: boolean;
 	rules?: Rule[];
-	minify?: boolean;
 	sourcemap?: boolean;
 	watch?: boolean;
-	plugins?: Plugin[];
 	onEnd?: () => void;
-	buildOutputDirectory?: string;
 	legacyNodeCompat?: boolean;
 	nodejsCompat?: boolean;
 	local: boolean;
@@ -185,12 +181,9 @@ export function buildRawWorker({
 	outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`),
 	outdir,
 	directory,
-	bundle = true,
 	rules,
-	minify = false,
 	sourcemap = false,
 	watch = false,
-	plugins = [],
 	onEnd = () => {},
 	legacyNodeCompat,
 	nodejsCompat,
@@ -209,17 +202,17 @@ export function buildRawWorker({
 	});
 
 	return bundleWorker(entry, outdir ? resolve(outdir) : resolve(outfile), {
-		bundle,
+		bundle: true,
 		entryName: outfile,
 		moduleCollector,
-		minify,
+		minify: false,
 		sourcemap,
 		watch,
-		legacyNodeCompat,
 		nodejsCompat,
+		legacyNodeCompat,
 		define: {},
 		doBindings: [], // Pages functions don't support internal Durable Objects
-		plugins: [...plugins, buildNotifierPlugin(onEnd)],
+		plugins: [buildNotifierPlugin(onEnd)],
 		isOutfile: !outdir,
 		serveAssetsFromWorker: false,
 		checkFetch: local,
@@ -248,7 +241,6 @@ export async function traverseAndBuildWorkerJSDirectory({
 	const outfile = join(tmpdir(), `./bundledWorker-${Math.random()}.mjs`);
 	const bundleResult = await buildRawWorker({
 		workerScriptPath: entrypoint,
-		bundle: true,
 		rules,
 		outfile,
 		directory: workerJSDirectory,
