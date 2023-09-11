@@ -10,6 +10,7 @@ import { constellation } from "./constellation";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
 import { deployOptions, deployHandler } from "./deploy";
+import { isAuthenticationError } from "./deploy/deploy";
 import { isBuildFailure } from "./deployment-bundle/bundle";
 import {
 	deployments,
@@ -721,6 +722,9 @@ export async function main(argv: string[]): Promise<void> {
 			// The workaround is to re-run the parsing with an additional `--help` flag, which will result in the correct help message being displayed.
 			// The `wrangler` object is "frozen"; we cannot reuse that with different args, so we must create a new CLI parser to generate the help message.
 			await createCLIParser([...argv, "--help"]).parse();
+		} else if (isAuthenticationError(e)) {
+			logger.log(formatMessage(e));
+			await whoami();
 		} else if (e instanceof ParseError) {
 			e.notes.push({
 				text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",

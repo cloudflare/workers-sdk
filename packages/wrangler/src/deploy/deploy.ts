@@ -294,7 +294,10 @@ export default async function deploy(props: Props): Promise<void> {
 		} catch (e) {
 			// code: 10090, message: workers.api.error.service_not_found
 			// is thrown from the above fetchResult on the first deploy of a Worker
-			if ((e as { code?: number }).code !== 10090) {
+			if (
+				(e as { code?: number }).code !== 10090 &&
+				(e as { code?: number }).code !== 10000
+			) {
 				logger.error(e);
 			}
 		}
@@ -1001,7 +1004,7 @@ async function publishRoutesFallback(
 	return deployedRoutes;
 }
 
-function isAuthenticationError(e: unknown): e is ParseError {
+export function isAuthenticationError(e: unknown): e is ParseError {
 	return e instanceof ParseError && (e as { code?: number }).code === 10000;
 }
 
