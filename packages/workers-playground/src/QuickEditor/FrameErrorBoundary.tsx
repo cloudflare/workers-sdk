@@ -4,7 +4,7 @@ import { Div } from "@cloudflare/elements";
 
 export const FrameError = ({ children }: { children: React.ReactNode }) => {
 	return (
-		<Div p={3}>
+		<Div p={3} zIndex={100} position="relative">
 			<Toast type="error">{children}</Toast>
 		</Div>
 	);

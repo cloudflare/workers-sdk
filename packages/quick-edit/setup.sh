@@ -25,3 +25,4 @@ git config user.name "Workers DevProd"
 git am ../../packages/quick-edit/patches/*.patch
 yarn
 cd ../../packages/quick-edit
+pnpm exec tsx bundle-dts.mjs

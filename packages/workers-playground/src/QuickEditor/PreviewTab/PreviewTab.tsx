@@ -5,6 +5,7 @@ import UrlBar from "./UrlBar";
 import { ServiceContext } from "../QuickEditor";
 import FrameErrorBoundary, { FrameError } from "../FrameErrorBoundary";
 import { useRefreshableIframe } from "./useRefreshableIframe";
+import { theme } from "@cloudflare/style-const";
 
 export function getPreviewIframeUrl(edgePreview: string, previewUrl: string) {
 	const url = new URL(edgePreview);
@@ -52,11 +53,21 @@ function PreviewTab() {
 				borderTop="1px solid"
 				borderColor="gray.7"
 			>
-				{draftWorker?.previewError ? (
-					<FrameError>{draftWorker.previewError}</FrameError>
-				) : (
-					frame
+				{draftWorker?.previewError && (
+					<>
+						<Div
+							zIndex={100}
+							position="absolute"
+							height="100%"
+							width="100%"
+							backgroundColor={theme.colors.white}
+							opacity={0.4}
+						></Div>
+						<FrameError>{draftWorker.previewError}</FrameError>
+					</>
 				)}
+
+				{frame}
 			</Div>
 		</Div>
 	);
