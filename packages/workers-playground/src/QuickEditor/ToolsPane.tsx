@@ -1,4 +1,4 @@
-import { Div } from "@cloudflare/elements";
+import { A, Div } from "@cloudflare/elements";
 import { createComponent } from "@cloudflare/style-container";
 
 import SplitPane from "./SplitPane";
@@ -7,6 +7,7 @@ import PreviewTab from "./PreviewTab/PreviewTab";
 import DevtoolsIframe from "./DevtoolsIframe";
 import { HTTPTab } from "./HTTPTab/HTTPTab";
 import { Icon } from "@cloudflare/component-icon";
+import { isDarkMode, theme } from "@cloudflare/style-const";
 const Main = createComponent(() => ({
 	display: "flex",
 	flexDirection: "column",
@@ -39,11 +40,33 @@ export default function ToolsPane() {
 								alignItems="center"
 								width="100%"
 								height="100%"
-								pr={2}
+								pr={3}
+								gap={2}
 							>
-								{/* <DocsLink href="https://developers.cloudflare.com/workers/examples">
-                    <Trans id="worker_editor.examples" />
-                  </DocsLink> */}
+								<A
+									target="_blank"
+									display={"inline-flex"}
+									href={`https://developers.cloudflare.com/workers`}
+								>
+									<Icon
+										type="documentation"
+										color={
+											isDarkMode() ? theme.colors.black : theme.colors.gray[5]
+										}
+									></Icon>
+								</A>
+								<A
+									target="_blank"
+									display={"inline-flex"}
+									href={`https://discord.gg/cloudflaredev`}
+								>
+									<Icon
+										type="discord"
+										color={
+											isDarkMode() ? theme.colors.black : theme.colors.gray[5]
+										}
+									></Icon>
+								</A>
 							</Div>
 						</TabBar>
 
