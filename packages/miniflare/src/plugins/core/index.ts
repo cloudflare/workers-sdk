@@ -523,9 +523,7 @@ export function getGlobalServices({
 			durableObjectNamespace: { className: "ProxyServer" },
 		},
 		// Add `proxyBindings` here, they'll be added to the `ProxyServer` `env`.
-		// It would be nice if we didn't add all these bindings to the entry worker,
-		// but the entry worker shares lots of `devalue` code with the proxy, and
-		// we'd rather not duplicate that.
+		// TODO(someday): consider making the proxy server a separate worker
 		...proxyBindings,
 	];
 	if (sharedOptions.upstream !== undefined) {
