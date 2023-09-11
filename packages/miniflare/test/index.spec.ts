@@ -837,6 +837,51 @@ test("Miniflare: getBindings() and friends return bindings for different workers
 	await t.throwsAsync(() => mf.getQueueProducer("BUCKET", "c"), expectations);
 });
 
+test("Miniflare: allows direct access to workers", async (t) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				name: "a",
+				script: `addEventListener("fetch", (e) => e.respondWith(new Response("a")))`,
+				unsafeDirectPort: 0,
+			},
+			{
+				routes: ["*/*"],
+				script: `addEventListener("fetch", (e) => e.respondWith(new Response("b")))`,
+			},
+			{
+				name: "c",
+				script: `addEventListener("fetch", (e) => e.respondWith(new Response("c")))`,
+				unsafeDirectHost: "127.0.0.1",
+			},
+		],
+	});
+	t.teardown(() => mf.dispose());
+
+	// Check can access workers as usual
+	let res = await mf.dispatchFetch("http://localhost/");
+	t.is(await res.text(), "b");
+
+	// Check can access workers directly
+	// (`undefined` worker name should default to entrypoint, not unnamed worker)
+	const aURL = await mf.unsafeGetDirectURL();
+	const cURL = await mf.unsafeGetDirectURL("c");
+	res = await fetch(aURL);
+	t.is(await res.text(), "a");
+	res = await fetch(cURL);
+	t.is(await res.text(), "c");
+
+	// Can can only access configured for direct access
+	await t.throwsAsync(mf.unsafeGetDirectURL("d"), {
+		instanceOf: TypeError,
+		message: '"d" worker not found',
+	});
+	await t.throwsAsync(mf.unsafeGetDirectURL(""), {
+		instanceOf: TypeError,
+		message: 'Direct access disabled in "" worker',
+	});
+});
+
 // Only test `MINIFLARE_WORKERD_PATH` on Unix. The test uses a Node.js script
 // with a shebang, directly as the replacement `workerd` binary, which won't
 // work on Windows.
