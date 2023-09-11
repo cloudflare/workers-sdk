@@ -4,7 +4,6 @@ import { Div } from "@cloudflare/elements";
 import { Input } from "@cloudflare/component-input";
 import { Button } from "@cloudflare/component-button";
 import { isDarkMode } from "@cloudflare/style-const";
-const INPUT_HEIGHT = 34;
 
 const StyledForm = createComponent(
 	({ theme }) => ({
@@ -19,7 +18,6 @@ const StyledForm = createComponent(
 const InputField = createComponent(
 	({ theme }) => ({
 		flex: "auto",
-		height: INPUT_HEIGHT,
 		marginBottom: 0,
 		borderRadius: 5,
 		borderColor: isDarkMode() ? theme.colors.gray[3] : theme.colors.gray[7],
@@ -52,18 +50,14 @@ export default function URLBar(props: Props) {
 				props.onSubmit(value);
 			}}
 		>
-			<Div display="flex" gap={2} width="100%" alignItems="center">
+			<Div display="flex" gap={2} width="100%">
 				<InputField
 					name="url"
 					autoComplete="off"
 					value={value}
 					onChange={onChangeInputValue}
 				/>
-				<Button
-					type="default"
-					onClick={() => props.onSubmit(value)}
-					loading={props.loading}
-				>
+				<Button type="default" submit={true} loading={props.loading}>
 					Send
 				</Button>
 			</Div>

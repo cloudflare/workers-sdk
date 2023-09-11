@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useDebounce } from "@cloudflare/util-hooks";
 import lzstring from "lz-string";
 import { matchFiles, parseRules, toMimeType } from "./module-collection";
-import { getPlaygroundWorker } from "./usePlaygroundWorker";
+import { getPlaygroundWorker } from "./getPlaygroundWorker";
 import useSWR from "swr";
 
 export const DeployPlaygroundWorkerResponse = eg.union([

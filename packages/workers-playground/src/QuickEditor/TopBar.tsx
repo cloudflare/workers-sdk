@@ -23,7 +23,7 @@ const AnimatedToast = createComponent(
 	({ theme }) => ({
 		position: "fixed",
 		right: theme.space[3],
-		top: `calc(48px + ${theme.space[1] + theme.space[2]}px)`,
+		top: `calc(${BAR_HEIGHT}px + ${theme.space[1] + theme.space[2]}px)`,
 		zIndex: 10,
 		display: "flex",
 		alignItems: "center",
