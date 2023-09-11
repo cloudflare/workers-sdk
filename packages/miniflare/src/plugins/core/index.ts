@@ -103,6 +103,8 @@ const CoreOptionsSchemaInput = z.intersection(
 		fetchMock: z.instanceof(MockAgent).optional(),
 
 		unsafeEphemeralDurableObjects: z.boolean().optional(),
+		unsafeDirectHost: z.string().optional(),
+		unsafeDirectPort: z.number().optional(),
 	})
 );
 export const CoreOptionsSchema = CoreOptionsSchemaInput.transform((value) => {

@@ -53,8 +53,10 @@ import {
 	QueuesError,
 	R2_PLUGIN_NAME,
 	ReplaceWorkersTypes,
+	SOCKET_ENTRY,
 	SharedOptions,
 	WorkerOptions,
+	getDirectSocketName,
 	getGlobalServices,
 	kProxyNodeBinding,
 	maybeGetSitesManifestModule,
@@ -77,6 +79,7 @@ import {
 	RuntimeOptions,
 	Service,
 	Socket,
+	SocketIdentifier,
 	Worker_Binding,
 	Worker_Module,
 	serializeConfig,
@@ -97,6 +100,13 @@ import {
 	maybeApply,
 } from "./workers";
 import { _formatZodError } from "./zod-format";
+
+const DEFAULT_HOST = "127.0.0.1";
+function getAccessibleHost(host: string) {
+	return host === "*" || host === "0.0.0.0" || host === "::"
+		? "127.0.0.1"
+		: host;
+}
 
 // ===== `Miniflare` User Options =====
 export type MiniflareOptions = SharedOptions &
@@ -534,6 +544,7 @@ export class Miniflare {
 	#runtime?: Runtime;
 	#removeRuntimeExitHook?: () => void;
 	#runtimeEntryURL?: URL;
+	#socketPorts?: Map<SocketIdentifier, number>;
 	#runtimeClient?: Client;
 	#proxyClient?: ProxyClient;
 
@@ -575,11 +586,11 @@ export class Miniflare {
 		}
 
 		this.#log = this.#sharedOpts.core.log ?? new NoOpLog();
-		this.#host = this.#sharedOpts.core.host ?? "127.0.0.1";
-		this.#accessibleHost =
-			this.#host === "*" || this.#host === "0.0.0.0" || this.#host === "::"
-				? "127.0.0.1"
-				: this.#host;
+		this.#host = this.#sharedOpts.core.host ?? DEFAULT_HOST;
+		// TODO: maybe remove `#accessibleHost` field, and just get whenever
+		//  constructing entry URL, then extract constructing entry URL into
+		//  function used `getUnsafeGetDirectURL()` too?
+		this.#accessibleHost = getAccessibleHost(this.#host);
 
 		if (net.isIPv6(this.#accessibleHost)) {
 			this.#accessibleHost = `[${this.#accessibleHost}]`;
@@ -965,6 +976,20 @@ export class Miniflare {
 					}
 				}
 			}
+
+			// Allow additional sockets to be opened directly to specific workers,
+			// bypassing Miniflare's entry worker.
+			let { unsafeDirectHost, unsafeDirectPort } = workerOpts.core;
+			if (unsafeDirectHost !== undefined || unsafeDirectPort !== undefined) {
+				unsafeDirectHost ??= DEFAULT_HOST;
+				unsafeDirectPort ??= 0;
+				sockets.push({
+					name: getDirectSocketName(i),
+					address: `${unsafeDirectHost}:${unsafeDirectPort}`,
+					service: { name: getUserServiceName(workerName) },
+					http: {},
+				});
+			}
 		}
 
 		// For testing proxy client serialisation, add an API that just returns its
@@ -1027,28 +1052,46 @@ export class Miniflare {
 		assert(this.#runtime !== undefined);
 		const config = await this.#assembleConfig();
 		const configBuffer = serializeConfig(config);
-		const maybePort = await this.#runtime.updateConfig(configBuffer, {
-			signal: this.#disposeController.signal,
-			entryPort: maybeApply(parseInt, this.#runtimeEntryURL?.port),
-		});
+
+		// Get all socket names we expect to get ports for
+		assert(config.sockets !== undefined);
+		const requiredSockets: SocketIdentifier[] = config.sockets.map(
+			({ name }) => {
+				assert(name !== undefined);
+				return name;
+			}
+		);
+
+		const maybeSocketPorts = await this.#runtime.updateConfig(
+			configBuffer,
+			requiredSockets,
+			{
+				signal: this.#disposeController.signal,
+				entryPort: maybeApply(parseInt, this.#runtimeEntryURL?.port),
+			}
+		);
 		if (this.#disposeController.signal.aborted) return;
-		if (maybePort === undefined) {
+		if (maybeSocketPorts === undefined) {
 			throw new MiniflareCoreError(
 				"ERR_RUNTIME_FAILURE",
 				"The Workers runtime failed to start. " +
 					"There is likely additional logging output above."
 			);
 		}
+		// Note: `updateConfig()` doesn't resolve until ports for all required
+		// sockets have been recorded. At this point, `maybeSocketPorts` contains
+		// all of `requiredSockets` as keys.
+		this.#socketPorts = maybeSocketPorts;
 
 		const entrySocket = config.sockets?.[0];
 		const secure = entrySocket !== undefined && "https" in entrySocket;
-
-		// noinspection HttpUrlsUsage
-		const previousEntry = this.#runtimeEntryURL;
+		const previousEntryURL = this.#runtimeEntryURL;
+		const entryPort = maybeSocketPorts.get(SOCKET_ENTRY);
+		assert(entryPort !== undefined);
 		this.#runtimeEntryURL = new URL(
-			`${secure ? "https" : "http"}://${this.#accessibleHost}:${maybePort}`
+			`${secure ? "https" : "http"}://${this.#accessibleHost}:${entryPort}`
 		);
-		if (previousEntry?.toString() !== this.#runtimeEntryURL.toString()) {
+		if (previousEntryURL?.toString() !== this.#runtimeEntryURL.toString()) {
 			this.#runtimeClient = new Client(this.#runtimeEntryURL, {
 				connect: { rejectUnauthorized: false },
 			});
@@ -1072,7 +1115,7 @@ export class Miniflare {
 
 			const host = net.isIPv6(this.#host) ? `[${this.#host}]` : this.#host;
 			this.#log.info(
-				`${ready} on ${secure ? "https" : "http"}://${host}:${maybePort} `
+				`${ready} on ${secure ? "https" : "http"}://${host}:${entryPort} `
 			);
 
 			if (initial) {
@@ -1086,7 +1129,7 @@ export class Miniflare {
 				}
 
 				for (const h of hosts) {
-					this.#log.info(`- ${secure ? "https" : "http"}://${h}:${maybePort}`);
+					this.#log.info(`- ${secure ? "https" : "http"}://${h}:${entryPort}`);
 				}
 			}
 
@@ -1114,6 +1157,35 @@ export class Miniflare {
 	}
 	get ready(): Promise<URL> {
 		return this.#waitForReady();
+	}
+
+	async unsafeGetDirectURL(workerName?: string) {
+		this.#checkDisposed();
+		await this.ready;
+
+		// Get worker index and options from name, defaulting to entrypoint
+		const workerIndex = this.#findAndAssertWorkerIndex(workerName);
+		const workerOpts = this.#workerOpts[workerIndex];
+
+		// Try to get direct access port for worker
+		const socketName = getDirectSocketName(workerIndex);
+		// `#socketPorts` is assigned in `#assembleAndUpdateConfig()`, which is
+		// called by `#init()`, and `ready` doesn't resolve until `#init()` returns.
+		assert(this.#socketPorts !== undefined);
+		const maybePort = this.#socketPorts.get(socketName);
+		if (maybePort === undefined) {
+			const friendlyWorkerName =
+				workerName === undefined ? "entrypoint" : JSON.stringify(workerName);
+			throw new TypeError(
+				`Direct access disabled in ${friendlyWorkerName} worker`
+			);
+		}
+
+		// Construct accessible URL from configured host and port
+		const host = workerOpts.core.unsafeDirectHost ?? DEFAULT_HOST;
+		const accessibleHost = getAccessibleHost(host);
+		// noinspection HttpUrlsUsage
+		return new URL(`http://${accessibleHost}:${maybePort}`);
 	}
 
 	#checkDisposed() {
@@ -1212,6 +1284,20 @@ export class Miniflare {
 		return this.#proxyClient;
 	}
 
+	#findAndAssertWorkerIndex(workerName?: string): number {
+		if (workerName === undefined) {
+			return 0;
+		} else {
+			const index = this.#workerOpts.findIndex(
+				({ core }) => (core.name ?? "") === workerName
+			);
+			if (index === -1) {
+				throw new TypeError(`${JSON.stringify(workerName)} worker not found`);
+			}
+			return index;
+		}
+	}
+
 	async getBindings<Env = Record<string, unknown>>(
 		workerName?: string
 	): Promise<Env> {
@@ -1219,17 +1305,8 @@ export class Miniflare {
 		const proxyClient = await this._getProxyClient();
 
 		// Find worker by name, defaulting to entrypoint worker if none specified
-		let workerOpts: PluginWorkerOptions | undefined;
-		if (workerName === undefined) {
-			workerOpts = this.#workerOpts[0];
-		} else {
-			workerOpts = this.#workerOpts.find(
-				({ core }) => (core.name ?? "") === workerName
-			);
-			if (workerOpts === undefined) {
-				throw new TypeError(`${JSON.stringify(workerName)} worker not found`);
-			}
-		}
+		const workerIndex = this.#findAndAssertWorkerIndex(workerName);
+		const workerOpts = this.#workerOpts[workerIndex];
 		workerName = workerOpts.core.name ?? "";
 
 		// Populate bindings from each plugin

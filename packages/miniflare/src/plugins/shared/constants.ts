@@ -7,6 +7,11 @@ import {
 import { CoreBindings, SharedBindings } from "../../workers";
 
 export const SOCKET_ENTRY = "entry";
+const SOCKET_DIRECT_PREFIX = "direct";
+
+export function getDirectSocketName(workerIndex: number) {
+	return `${SOCKET_DIRECT_PREFIX}:${workerIndex}`;
+}
 
 // Service looping back to Miniflare's Node.js process (for storage, etc)
 export const SERVICE_LOOPBACK = "loopback";

@@ -17,22 +17,35 @@ const ControlMessageSchema = z.object({
 	port: z.number(),
 });
 
-async function waitForPort(
-	socket: string,
+export type SocketIdentifier = string;
+
+async function waitForPorts(
+	requiredSockets: SocketIdentifier[],
 	stream: Readable,
 	options?: Abortable
-): Promise<number | undefined> {
+): Promise<Map<SocketIdentifier, number> | undefined> {
 	if (options?.signal?.aborted) return;
 	const lines = rl.createInterface(stream);
 	// Calling `close()` will end the async iterator below and return undefined
 	const abortListener = () => lines.close();
 	options?.signal?.addEventListener("abort", abortListener, { once: true });
+	// We're going to be mutating `sockets`, so shallow copy it
+	requiredSockets = Array.from(requiredSockets);
+	const socketPorts = new Map<SocketIdentifier, number>();
 	try {
 		for await (const line of lines) {
 			const message = ControlMessageSchema.safeParse(JSON.parse(line));
-			if (message.success && message.data.socket === socket) {
-				return message.data.port;
-			}
+			// If this was an unrecognised control message, ignore it
+			if (!message.success) continue;
+			const socket = message.data.socket;
+			const index = requiredSockets.indexOf(socket);
+			// If this wasn't a required socket, ignore it
+			if (index === -1) continue;
+			// Record the port of this socket
+			socketPorts.set(socket, message.data.port);
+			// Satisfy the requirement, if there are no more, return the ports map
+			requiredSockets.splice(index, 1);
+			if (requiredSockets.length === 0) return socketPorts;
 		}
 	} finally {
 		options?.signal?.removeEventListener("abort", abortListener);
@@ -106,8 +119,9 @@ export class Runtime {
 
 	async updateConfig(
 		configBuffer: Buffer,
+		requiredSockets: SocketIdentifier[],
 		options?: Abortable & Partial<Pick<RuntimeOptions, "entryPort">>
-	): Promise<number | undefined> {
+	): Promise<Map<SocketIdentifier, number /* port */> | undefined> {
 		// 1. Stop existing process (if any) and wait for exit
 		await this.dispose();
 		// TODO: what happens if runtime crashes?
@@ -132,8 +146,8 @@ export class Runtime {
 		runtimeProcess.stdin.write(configBuffer);
 		runtimeProcess.stdin.end();
 
-		// 4. Wait for socket to start listening
-		return waitForPort(SOCKET_ENTRY, controlPipe, options);
+		// 4. Wait for sockets to start listening
+		return waitForPorts(requiredSockets, controlPipe, options);
 	}
 
 	dispose(): Awaitable<void> {
