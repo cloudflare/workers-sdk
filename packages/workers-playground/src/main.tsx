@@ -1,12 +1,12 @@
 import "./global";
+import "./index.css";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import { StyleProvider } from "@cloudflare/style-provider";
-const felaRenderer = getRenderer();
-
-import "./index.css";
 import { getRenderer } from "./QuickEditor/felaRenderer";
+
+const felaRenderer = getRenderer();
 
 // This is a slightly hacky way to get the Cloudflare design system components
 // to recognise system dark mode as soon as possible (rather than with a delay)

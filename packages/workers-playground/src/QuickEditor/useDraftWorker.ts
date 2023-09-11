@@ -108,7 +108,6 @@ async function updatePreviewHash(content: Worker): Promise<PreviewHash> {
 	const res = await fetch("/api/worker", {
 		method: "POST",
 		body: worker,
-		credentials: "include",
 	});
 	const data = await res.json();
 	const deploy = DeployPlaygroundWorkerResponse.assertDecode(data);

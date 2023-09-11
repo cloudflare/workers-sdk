@@ -18,83 +18,17 @@ worker.set("metadata", JSON.stringify(metadata));
 
 worker.set(
 	"index.js",
-	new Blob(
-		[
-			/*javascript*/ `
-import welcome from "welcome.html"
-
-/**
- * @typedef {Object} Env
-*/
-
-export default {
-    /**
-     * @param {Request} request
-     * @param {Env} env
-     * @param {ExecutionContext} ctx
-     * @returns {Response}
-     */
-    fetch(request, env, ctx) {
-        console.log("Hello Cloudflare Workers!")
-
-        return new Response(welcome, {
-            headers: {
-                "content-type": "text/html"
-            }
-        })
-    }
-}
-  `.trim(),
-		],
-		{
-			type: "application/javascript+module",
-		}
-	),
+	new Blob([await readFile("./welcome/index.js", "utf8")], {
+		type: "application/javascript+module",
+	}),
 	"index.js"
 );
 
 worker.set(
 	"welcome.html",
-	new Blob(
-		[
-			/*html*/ `
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cloudflare Workers Playground</title>
-    <link rel="stylesheet" href="https://welcome.devprod.cloudflare.dev/style.css">
-</head>
-
-<body>
-    <div class="circuits">
-        <img src="https://welcome.devprod.cloudflare.dev/circuits.svg" />
-    </div>
-    <main>
-        <img src="https://welcome.devprod.cloudflare.dev/logo.svg" class="logo" />
-        <p>Welcome! Use this Playground to test drive a Worker, create a demo to share online, and when ready deploy
-            directly to the edge by setting up a Cloudflare account.</p>
-        <h1>What is a Worker?</h1>
-        <p>A Cloudflare Worker is JavaScript code you write that handles your web site's HTTP traffic directly in
-            Cloudflare's edge locations around the world, allowing you to locate code close to your end users in order
-            to respond to them more quickly</p>
-        <h1>Try it yourself</h1>
-        <p>On your left is a sample Worker that is running on this site. You can edit it live and see the results here.
-            Edit the path above to /api to see how the example Worker handles different routes. You can also edit the
-            code to see what's possible and bring your next idea to life.</p>
-    </main>
-</body>
-
-</html>
-  `.trim(),
-		],
-		{
-			type: "text/plain",
-		}
-	),
+	new Blob([await readFile("./welcome/welcome.html", "utf8")], {
+		type: "text/plain",
+	}),
 	"welcome.html"
 );
 

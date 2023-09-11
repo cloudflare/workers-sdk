@@ -9,7 +9,7 @@
 		"skipLibCheck": true,
 		// "preserveSymlinks": true,
 		/* Bundler mode */
-		"moduleResolution": "node",
+		"moduleResolution": "bundler",
 		"resolveJsonModule": true,
 		"isolatedModules": true,
 		"noEmit": true,
@@ -18,9 +18,6 @@
 
 		/* Linting */
 		"strict": true,
-		"noUnusedLocals": true,
-		"noUnusedParameters": true,
-		"noFallthroughCasesInSwitch": true,
 		"paths": {
 			"@components/*": ["./src/components/*"],
 			"react": ["./node_modules/@types/react"]

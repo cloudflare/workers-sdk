@@ -4,8 +4,8 @@ import { createComponent } from "@cloudflare/style-container";
 const Logo = createComponent(
 	() => ({
 		display: "block",
-		width: 143,
-		height: 37.5,
+		width: 122,
+		height: 32,
 		"& .CloudflareWorkersLogoCombinationMark--cloudflare-wordmark": {
 			fill: "currentcolor",
 			opacity: ".6",
