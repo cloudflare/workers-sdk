@@ -29,11 +29,17 @@ type WorkerResponse = { id: number } & (
 );
 
 const WORKER_SCRIPT = /* javascript */ `
+const { createRequire } = require("module");
 const { workerData } = require("worker_threads");
-const { Client, fetch } = require("undici");
 
 // Not using parentPort here so we can call receiveMessageOnPort() in host
-const { notifyHandle, port } = workerData;
+const { notifyHandle, port, filename } = workerData;
+
+// When running Miniflare from Jest, regular 'require("undici")' will fail here
+// with "Error: Cannot find module 'undici'". Instead we need to create a
+// 'require' using the '__filename' of the host... :(
+const actualRequire = createRequire(filename);
+const { Client, fetch } = actualRequire("undici");
 
 let clientUrl;
 let client;
@@ -103,6 +109,7 @@ export class SynchronousFetcher {
 			workerData: {
 				notifyHandle: this.#notifyHandle,
 				port: this.#channel.port2,
+				filename: __filename,
 			},
 			transferList: [this.#channel.port2],
 		});
