@@ -1012,22 +1012,25 @@ export class Miniflare {
 		if (!this.#runtimeMutex.hasWaiting) {
 			// Only log and trigger reload if there aren't pending updates
 			const ready = initial ? "Ready" : "Updated and ready";
+
 			const host = net.isIPv6(this.#host) ? `[${this.#host}]` : this.#host;
 			this.#log.info(
 				`${ready} on ${secure ? "https" : "http"}://${host}:${maybePort} `
 			);
 
-			let hosts: string[];
-			if (this.#host === "::" || this.#host === "*") {
-				hosts = getAccessibleHosts(false);
-			} else if (this.#host === "0.0.0.0") {
-				hosts = getAccessibleHosts(true);
-			} else {
-				hosts = [];
-			}
+			if (initial) {
+				let hosts: string[];
+				if (this.#host === "::" || this.#host === "*") {
+					hosts = getAccessibleHosts(false);
+				} else if (this.#host === "0.0.0.0") {
+					hosts = getAccessibleHosts(true);
+				} else {
+					hosts = [];
+				}
 
-			for (const h of hosts) {
-				this.#log.info(`- ${secure ? "https" : "http"}://${h}:${maybePort}`);
+				for (const h of hosts) {
+					this.#log.info(`- ${secure ? "https" : "http"}://${h}:${maybePort}`);
+				}
 			}
 
 			this.#handleReload();
