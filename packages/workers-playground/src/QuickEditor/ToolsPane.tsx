@@ -22,16 +22,16 @@ export default function ToolsPane() {
 		<SplitPane split="horizontal" defaultSize="70%" minSize={50} maxSize={-50}>
 			<Div width="100%">
 				<Main>
-					<Tabs defaultIndex={1} forceRenderTabPanel={true}>
+					<Tabs defaultIndex={0} forceRenderTabPanel={true}>
 						<TabBar>
 							<TabList className="worker-editor-tablist">
 								<Tab>
-									<Icon type="two-way" mr={2} />
-									HTTP
-								</Tab>
-								<Tab>
 									<Icon type="eye" mr={2} />
 									Preview
+								</Tab>
+								<Tab>
+									<Icon type="two-way" mr={2} />
+									HTTP
 								</Tab>
 							</TabList>
 							<Div
@@ -71,10 +71,10 @@ export default function ToolsPane() {
 						</TabBar>
 
 						<TabPanel>
-							<HTTPTab />
+							<PreviewTab />
 						</TabPanel>
 						<TabPanel>
-							<PreviewTab />
+							<HTTPTab />
 						</TabPanel>
 					</Tabs>
 				</Main>
