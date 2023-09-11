@@ -56,7 +56,13 @@ interface RemoteProps {
 	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
-	onReady?: ((ip: string, port: number) => void) | undefined;
+	onReady?:
+		| ((
+				ip: string,
+				port: number,
+				previewToken: CfPreviewToken | undefined
+		  ) => void)
+		| undefined;
 	sourceMapPath: string | undefined;
 	sendMetrics: boolean | undefined;
 }
@@ -83,7 +89,7 @@ export function Remote(props: RemoteProps) {
 		zone: props.zone,
 		host: props.host,
 		routes: props.routes,
-		onReady: props.onReady,
+		onReady: (ip, port) => props.onReady?.(ip, port, previewToken),
 		sendMetrics: props.sendMetrics,
 		port: props.port,
 	});
@@ -417,7 +423,9 @@ export async function startRemoteServer(props: RemoteProps) {
 		localProtocol: props.localProtocol,
 		localPort: props.port,
 		ip: props.ip,
-		onReady: props.onReady,
+		onReady: (ip, port) => {
+			props.onReady?.(ip, port, previewToken);
+		},
 	});
 	if (!previewServer) {
 		throw logger.error("Failed to start remote server");

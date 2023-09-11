@@ -3,6 +3,7 @@ import * as util from "node:util";
 import chalk from "chalk";
 import onExit from "signal-exit";
 import tmp from "tmp-promise";
+import { DevEnv, type StartDevWorkerOptions } from "../api";
 import { bundleWorker, dedupeModulesByName } from "../deployment-bundle/bundle";
 import { runCustomBuild } from "../deployment-bundle/run-custom-build";
 import traverseModuleGraph from "../deployment-bundle/traverse-module-graph";
@@ -72,6 +73,35 @@ export async function startDevServer(
 		}
 	}
 
+	const devEnv = new DevEnv();
+	const startDevWorkerOptions: StartDevWorkerOptions = {
+		name: props.name ?? "worker",
+		script: { contents: "" },
+		dev: {
+			server: {
+				hostname: props.initialIp,
+				port: props.initialPort,
+				secure: props.localProtocol === "https",
+			},
+			inspector: {
+				port: props.inspectorPort,
+			},
+			liveReload: props.liveReload,
+			remote: !props.local,
+		},
+	};
+
+	// temp: fake these events by calling the handler directly
+	console.log("FAKE CONFIG UPDATE", startDevWorkerOptions);
+	devEnv.proxy.onConfigUpdate({
+		type: "configUpdate",
+		config: startDevWorkerOptions,
+	});
+	devEnv.proxy.onBundleStart({
+		type: "bundleStart",
+		config: startDevWorkerOptions,
+	});
+
 	//implement a react-free version of useEsbuild
 	const bundle = await runEsbuild({
 		entry: props.entry,
@@ -99,6 +129,13 @@ export async function startDevServer(
 	});
 
 	if (props.local) {
+		// temp: fake these events by calling the handler directly
+		devEnv.proxy.onReloadStart({
+			type: "reloadStart",
+			config: startDevWorkerOptions,
+			bundle,
+		});
+
 		const { stop } = await startLocalServer({
 			name: props.name,
 			bundle: bundle,
@@ -118,8 +155,25 @@ export async function startDevServer(
 			queueConsumers: props.queueConsumers,
 			localProtocol: props.localProtocol,
 			localUpstream: props.localUpstream,
-			inspect: props.inspect,
-			onReady: props.onReady,
+			inspect: true,
+			onReady: (ip, port) => {
+				props.onReady?.(ip, port);
+
+				// temp: fake these events by calling the handler directly
+				devEnv.proxy.onReloadComplete({
+					type: "reloadComplete",
+					config: startDevWorkerOptions,
+					bundle,
+					proxyData: {
+						destinationURL: { hostname: ip, port: port.toString() },
+						destinationInspectorURL: `ws://127.0.0.1:${
+							props.runtimeInspectorPort
+						}/core:user:${props.name ?? ""}`,
+						headers: {},
+						liveReload: props.liveReload,
+					},
+				});
+			},
 			enablePagesAssetsServiceBinding: props.enablePagesAssetsServiceBinding,
 			usageModel: props.usageModel,
 			workerDefinitions,
@@ -155,7 +209,30 @@ export async function startDevServer(
 			zone: props.zone,
 			host: props.host,
 			routes: props.routes,
-			onReady: props.onReady,
+			onReady: (ip, port, previewToken) => {
+				props.onReady?.(ip, port);
+
+				if (previewToken) {
+					// temp: fake these events by calling the handler directly
+					devEnv.proxy.onReloadComplete({
+						type: "reloadComplete",
+						config: startDevWorkerOptions,
+						bundle,
+						proxyData: {
+							destinationURL: {
+								hostname: previewToken.host, // TODO: is this a host or hostname? i.e. does it contain port?
+								port: port.toString(),
+							},
+							destinationInspectorURL: previewToken.inspectorUrl.href,
+							headers: {
+								"cf-workers-preview-token": previewToken.value,
+								// cookie: `CF_Authorization=${previewToken.value}`,
+							},
+							liveReload: props.liveReload,
+						},
+					});
+				}
+			},
 			sourceMapPath: bundle?.sourceMapPath,
 			sendMetrics: props.sendMetrics,
 		});
@@ -202,7 +279,7 @@ async function runEsbuild({
 	doBindings,
 }: {
 	entry: Entry;
-	destination: string | undefined;
+	destination: string;
 	jsxFactory: string | undefined;
 	jsxFragment: string | undefined;
 	processEntrypoint: boolean;
@@ -221,9 +298,7 @@ async function runEsbuild({
 	testScheduled?: boolean;
 	local: boolean;
 	doBindings: DurableObjectBindings;
-}): Promise<EsbuildBundle | undefined> {
-	if (!destination) return;
-
+}): Promise<EsbuildBundle> {
 	let traverseModuleGraphResult:
 		| Awaited<ReturnType<typeof bundleWorker>>
 		| undefined;
