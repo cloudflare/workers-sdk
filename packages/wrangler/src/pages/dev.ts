@@ -324,6 +324,7 @@ export const Handler = async ({
 						outfile: scriptPath,
 						directory: directory ?? ".",
 						nodejsCompat,
+						legacyNodeCompat,
 						local: true,
 						sourcemap: true,
 						watch: false,
