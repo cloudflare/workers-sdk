@@ -209,8 +209,8 @@ export const Handler = async (args: PagesBuildArgs) => {
 				 */
 				bundle = await buildRawWorker({
 					workerScriptPath,
+					baseDirectory: buildOutputDirectory,
 					outdir,
-					directory: buildOutputDirectory,
 					local: false,
 					sourcemap,
 					watch,

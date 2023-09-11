@@ -280,15 +280,17 @@ export async function bundleWorker(
 		entryPoints: [entry.file],
 		bundle,
 		absWorkingDir: entry.directory,
-		outdir: destination,
-		entryNames: entryName || path.parse(entryFile).name,
 		...(isOutfile
 			? {
 					outdir: undefined,
 					outfile: destination,
 					entryNames: undefined,
 			  }
-			: {}),
+			: {
+					outdir: destination,
+					outfile: undefined,
+					entryNames: entryName || path.parse(entryFile).name,
+			  }),
 		inject,
 		external: bundle ? ["__STATIC_CONTENT_MANIFEST"] : undefined,
 		format: entry.format === "modules" ? "esm" : "iife",

@@ -1,5 +1,5 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 import { render, Text } from "ink";
 import Spinner from "ink-spinner";
 import PQueue from "p-queue";
@@ -59,7 +59,7 @@ export const Handler = async ({
 		throw new FatalError("No JWT given.", 1);
 	}
 
-	const fileMap = await validate({ directory });
+	const fileMap = await validate(resolve(directory));
 
 	const manifest = await upload({
 		fileMap,

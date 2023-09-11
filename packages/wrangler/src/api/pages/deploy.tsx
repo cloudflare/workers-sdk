@@ -104,14 +104,17 @@ export async function deploy({
 
 	bundle = bundle ?? true;
 
-	const _workerPath = resolvePath(directory, "_worker.js");
+	// Ensure that base directory is absolute
+	const baseDirectory = resolvePath(directory);
+
+	const _workerPath = join(baseDirectory, "_worker.js");
 
 	try {
-		_headers = readFileSync(join(directory, "_headers"), "utf-8");
+		_headers = readFileSync(join(baseDirectory, "_headers"), "utf-8");
 	} catch {}
 
 	try {
-		_redirects = readFileSync(join(directory, "_redirects"), "utf-8");
+		_redirects = readFileSync(join(baseDirectory, "_redirects"), "utf-8");
 	} catch {}
 
 	try {
@@ -119,7 +122,7 @@ export async function deploy({
 		 * Developers can specify a custom _routes.json file, for projects with Pages
 		 * Functions or projects in Advanced Mode
 		 */
-		_routesCustom = readFileSync(join(directory, "_routes.json"), "utf-8");
+		_routesCustom = readFileSync(join(baseDirectory, "_routes.json"), "utf-8");
 	} catch {}
 
 	try {
@@ -153,7 +156,7 @@ export async function deploy({
 
 	const functionsDirectory =
 		customFunctionsDirectory || join(cwd(), "functions");
-	const routesOutputPath = !existsSync(join(directory, "_routes.json"))
+	const routesOutputPath = !existsSync(join(baseDirectory, "_routes.json"))
 		? join(tmpdir(), `_routes-${Math.random()}.json`)
 		: undefined;
 
@@ -171,7 +174,7 @@ export async function deploy({
 				outputConfigPath,
 				functionsDirectory,
 				onEnd: () => {},
-				buildOutputDirectory: directory,
+				buildOutputDirectory: baseDirectory,
 				routesOutputPath,
 				local: false,
 				nodejsCompat,
@@ -193,7 +196,7 @@ export async function deploy({
 		}
 	}
 
-	const fileMap = await validate({ directory });
+	const fileMap = await validate(baseDirectory);
 
 	const manifest = await upload({
 		fileMap,
@@ -259,8 +262,8 @@ export async function deploy({
 			const outfile = join(tmpdir(), `./bundledWorker-${Math.random()}.mjs`);
 			workerBundle = await buildRawWorker({
 				workerScriptPath: _workerPath,
+				baseDirectory,
 				outfile,
-				directory,
 				local: false,
 				sourcemap: true,
 				onEnd: () => {},
@@ -294,7 +297,7 @@ export async function deploy({
 			// user provided a custom _routes.json file
 			try {
 				const routesCustomJSON = JSON.parse(_routesCustom);
-				validateRoutes(routesCustomJSON, join(directory, "_routes.json"));
+				validateRoutes(routesCustomJSON, join(baseDirectory, "_routes.json"));
 
 				formData.append(
 					"_routes.json",
@@ -328,7 +331,7 @@ export async function deploy({
 			// user provided a custom _routes.json file
 			try {
 				const routesCustomJSON = JSON.parse(_routesCustom);
-				validateRoutes(routesCustomJSON, join(directory, "_routes.json"));
+				validateRoutes(routesCustomJSON, join(baseDirectory, "_routes.json"));
 
 				formData.append(
 					"_routes.json",

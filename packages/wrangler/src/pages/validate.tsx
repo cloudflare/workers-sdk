@@ -1,5 +1,5 @@
 import { readdir, stat } from "node:fs/promises";
-import { join, relative, resolve, sep } from "node:path";
+import { join, relative, sep } from "node:path";
 import { getType } from "mime";
 import { Minimatch } from "minimatch";
 import prettyBytes from "pretty-bytes";
@@ -27,9 +27,7 @@ export const Handler = async ({ directory }: UploadArgs) => {
 		throw new FatalError("Must specify a directory.", 1);
 	}
 
-	await validate({
-		directory,
-	});
+	await validate(directory);
 };
 
 export type FileContainer = {
@@ -39,9 +37,9 @@ export type FileContainer = {
 	hash: string;
 };
 
-export const validate = async (args: {
-	directory: string;
-}): Promise<Map<string, FileContainer>> => {
+export const validate = async (
+	directory: string
+): Promise<Map<string, FileContainer>> => {
 	const IGNORE_LIST = [
 		"_worker.js",
 		"_redirects",
@@ -52,8 +50,6 @@ export const validate = async (args: {
 		"**/node_modules",
 		"**/.git",
 	].map((pattern) => new Minimatch(pattern));
-
-	const directory = resolve(args.directory);
 
 	// TODO(future): Use this to more efficiently load files in and speed up uploading
 	// Limit memory to 1 GB unless more is specified

@@ -322,7 +322,7 @@ export const Handler = async ({
 							? join(workerScriptPath, "index.js")
 							: workerScriptPath,
 						outfile: scriptPath,
-						directory: directory ?? ".",
+						baseDirectory: directory ?? resolve("."),
 						nodejsCompat,
 						legacyNodeCompat,
 						local: true,
