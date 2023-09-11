@@ -50,7 +50,7 @@ export default function QuickEditor() {
 	}, []);
 	const workerHash = window.location.hash.slice(1);
 
-	const [previewUrl, setPreviewUrl] = React.useState<string>(`/`);
+	const [previewUrl, setPreviewUrl] = React.useState(`/`);
 
 	const [initialWorkerContentHash, setInitialHash] = React.useState(workerHash);
 
