@@ -87,6 +87,10 @@ describe("find_additional_modules dev", () => {
 		const res = await get(worker, "/dynamic");
 		expect(await res.text()).toBe("dynamic");
 	});
+	test("supports commonjs lazy imports", async () => {
+		const res = await get(worker, "/common");
+		expect(await res.text()).toBe("common");
+	});
 	test("supports variable dynamic imports", async () => {
 		const res = await get(worker, "/lang/en");
 		expect(await res.text()).toBe("hello");
@@ -169,6 +173,7 @@ describe("find_additional_modules deploy", () => {
 
 			// src/index.ts
 			import text from \\"./text.txt\\";
+			import common from \\"./common.cjs\\";
 			var src_default = {
 			  async fetch(request) {
 			    const url = new URL(request.url);
@@ -177,6 +182,9 @@ describe("find_additional_modules deploy", () => {
 			    }
 			    if (url.pathname === \\"/text\\") {
 			      return new Response(text);
+			    }
+			    if (url.pathname === \\"/common\\") {
+			      return new Response(common);
 			    }
 			    if (url.pathname === \\"/dynamic\\") {
 			      return new Response((await import(\\"./dynamic.js\\")).default);

@@ -1,5 +1,6 @@
 import dep from "./dep";
 import text from "./text.txt";
+import common from "./common.cjs";
 
 export default <ExportedHandler>{
 	async fetch(request) {
@@ -9,6 +10,9 @@ export default <ExportedHandler>{
 		}
 		if (url.pathname === "/text") {
 			return new Response(text);
+		}
+		if (url.pathname === "/common") {
+			return new Response(common);
 		}
 		if (url.pathname === "/dynamic") {
 			return new Response((await import("./dynamic.js")).default);
