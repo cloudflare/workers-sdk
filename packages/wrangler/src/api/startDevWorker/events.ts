@@ -156,5 +156,5 @@ export type ProxyData = {
 	destinationURL: Partial<Pick<URL, "host" | "hostname" | "port" | "protocol">>;
 	destinationInspectorURL: string;
 	headers: Record<string, string>;
-	liveReloadUrl?: string;
+	liveReload?: boolean;
 };

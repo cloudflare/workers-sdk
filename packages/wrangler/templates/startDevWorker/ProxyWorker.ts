@@ -21,6 +21,7 @@ type Request = Parameters<
 	>
 >[0];
 
+let liveReloadProtocol = "";
 export default {
 	fetch(req, env) {
 		const singleton = env.DURABLE_OBJECT.idFromName("");
@@ -31,12 +32,18 @@ export default {
 } as ExportedHandler<Env, unknown, ProxyWorkerIncomingRequestBody>;
 
 export class ProxyWorker implements DurableObject {
-	constructor(_state: DurableObjectState, readonly env: Env) {}
+	constructor(readonly state: DurableObjectState, readonly env: Env) {}
 
 	proxyData?: ProxyData;
 	requestQueue = new Map<Request, DeferredPromise<Response>>();
 
 	fetch(request: Request) {
+		if (isRequestForLiveReloadWebsocket(request)) {
+			// requests for live-reload websocket
+
+			return this.handleLiveReloadWebSocket(request);
+		}
+
 		if (isRequestFromProxyController(request, this.env)) {
 			// requests from ProxyController
 
@@ -50,12 +57,20 @@ export class ProxyWorker implements DurableObject {
 		this.processQueue();
 
 		return promise;
+	}
 
-		// // this guarantees order in which requests are sent, not delivered
-		// //    TODO(consider): `return buffer = buffer.then(...)` to guarantee order of request delivery
-		// return this.buffer.then((proxyData) => {
-		// 	return processBufferedRequest(request, this.env, proxyData);
-		// });
+	handleLiveReloadWebSocket(request: Request) {
+		const { 0: response, 1: liveReload } = new WebSocketPair();
+		const websocketProtocol =
+			request.headers.get("Sec-WebSocket-Protocol") ?? "";
+
+		this.state.acceptWebSocket(liveReload, ["live-reload"]);
+
+		return new Response(null, {
+			status: 101,
+			webSocket: response,
+			headers: { "Sec-WebSocket-Protocol": websocketProtocol },
+		});
 	}
 
 	processProxyControllerRequest(request: Request) {
@@ -68,6 +83,10 @@ export class ProxyWorker implements DurableObject {
 			case "play":
 				this.proxyData = event.proxyData;
 				this.processQueue();
+				this.state
+					.getWebSockets("live-reload")
+					.forEach((ws) => ws.send("reload"));
+
 				break;
 		}
 
@@ -78,27 +97,27 @@ export class ProxyWorker implements DurableObject {
 		const { proxyData } = this;
 		if (proxyData === undefined) return;
 
-		for (const [request, deferred] of this.requestQueue) {
-			this.requestQueue.delete(request);
+		for (const [req, deferred] of this.requestQueue) {
+			this.requestQueue.delete(req);
 
-			const url = new URL(request.url);
+			const url = new URL(req.url);
 
 			// override url parts for proxying
 			Object.assign(url, proxyData.destinationURL);
 
 			for (const [key, value] of Object.entries(proxyData.headers ?? {})) {
 				if (key.toLowerCase() === "cookie") {
-					const existing = request.headers.get("cookie") ?? "";
-					request.headers.set("cookie", `${existing};${value}`);
+					const existing = req.headers.get("cookie") ?? "";
+					req.headers.set("cookie", `${existing};${value}`);
 				} else {
-					request.headers.append(key, value);
+					req.headers.append(key, value);
 				}
 			}
 
-			void fetch(url, new Request(request, { redirect: "manual" })) // TODO: check if redirect: manual is needed
+			void fetch(url, new Request(req, { redirect: "manual" })) // TODO: check if redirect: manual is needed
 				.then((res) => {
 					if (isHtmlResponse(res)) {
-						res = insertLiveReloadScript(res, this.env, proxyData);
+						res = insertLiveReloadScript(req, res, this.env, proxyData);
 					}
 
 					deferred.resolve(res);
@@ -129,6 +148,13 @@ function isRequestFromProxyController(req: Request, env: Env): boolean {
 function isHtmlResponse(res: Response): boolean {
 	return res.headers.get("content-type")?.startsWith("text/html") ?? false;
 }
+function isRequestForLiveReloadWebsocket(req: Request): boolean {
+	liveReloadProtocol ||= crypto.randomUUID();
+	const websocketProtocol = req.headers.get("Sec-WebSocket-Protocol");
+	const isWebSocketUpgrade = req.headers.get("Upgrade") === "websocket";
+
+	return isWebSocketUpgrade && websocketProtocol === liveReloadProtocol;
+}
 
 async function sendMessageToProxyController(
 	env: Env,
@@ -151,6 +177,7 @@ async function sendMessageToProxyController(
 }
 
 function insertLiveReloadScript(
+	request: Request,
 	response: Response,
 	env: Env,
 	proxyData: ProxyData
@@ -179,7 +206,11 @@ function insertLiveReloadScript(
 
 			// if liveReload enabled, append a script tag
 			// TODO: compare to existing nodejs implementation
-			if (proxyData.liveReloadUrl) {
+			if (proxyData.liveReload) {
+				const websocketUrl = new URL(request.url);
+				websocketUrl.protocol =
+					websocketUrl.protocol === "http:" ? "ws:" : "wss:";
+
 				end.append(`
 					<script>
 						(function() {
@@ -190,7 +221,7 @@ function insertLiveReloadScript(
 							}
 							function initLiveReload() {
 								if (ws) return;
-								ws = new WebSocket("${proxyData.liveReloadUrl}");
+								ws = new WebSocket("${websocketUrl.origin}", { protocol: liveReloadProtocol });
 								ws.onclose = recover;
 								ws.onerror = recover;
 								ws.onmessage = location.reload.bind(location);
