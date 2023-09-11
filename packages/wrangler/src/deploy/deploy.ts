@@ -482,7 +482,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						typeof destination === "string" ? destination : destination.path,
 						{
 							bundle: true,
-							additionalModules: [],
 							moduleCollector,
 							serveAssetsFromWorker:
 								!props.isWorkersSite && Boolean(props.assetPaths),

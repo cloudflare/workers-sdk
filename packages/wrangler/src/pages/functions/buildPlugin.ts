@@ -35,7 +35,6 @@ export function buildPluginFromFunctions({
 	});
 	return bundleWorker(entry, resolve(outdir), {
 		bundle: true,
-		additionalModules: [],
 		moduleCollector,
 		inject: [routesModule],
 		entryName: "index",

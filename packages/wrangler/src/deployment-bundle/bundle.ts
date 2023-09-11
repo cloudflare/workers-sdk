@@ -54,7 +54,7 @@ export type BundleOptions = {
 	// When `bundle` is set to false, we apply shims to the Worker, but won't pull in any imports
 	bundle: boolean;
 	// Known additional modules provided by the outside.
-	additionalModules: CfModule[];
+	additionalModules?: CfModule[];
 	// A module collector enables you to observe what modules are in the Worker.
 	moduleCollector: ModuleCollector;
 	serveAssetsFromWorker: boolean;

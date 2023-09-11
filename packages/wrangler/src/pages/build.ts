@@ -198,7 +198,6 @@ export const Handler = async (args: PagesBuildArgs) => {
 			if (lstatSync(workerScriptPath).isDirectory()) {
 				bundle = await traverseAndBuildWorkerJSDirectory({
 					workerJSDirectory: workerScriptPath,
-					buildOutputDirectory,
 					nodejsCompat,
 				});
 			} else {

@@ -252,7 +252,6 @@ export async function deploy({
 	if (_workerJSIsDirectory) {
 		workerBundle = await traverseAndBuildWorkerJSDirectory({
 			workerJSDirectory: _workerPath,
-			buildOutputDirectory: directory,
 			nodejsCompat,
 		});
 	} else if (_workerJS) {
