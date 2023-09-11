@@ -35,7 +35,13 @@ import {
 	MessageEvent as StandardMessageEvent,
 	WebSocketServer,
 } from "ws";
-import { TestLog, useServer, useTmp, utf8Encode } from "./test-shared";
+import {
+	FIXTURES_PATH,
+	TestLog,
+	useServer,
+	useTmp,
+	utf8Encode,
+} from "./test-shared";
 
 test("Miniflare: validates options", async (t) => {
 	// Check empty workers array rejected
@@ -802,3 +808,29 @@ test("Miniflare: getBindings() and friends return bindings for different workers
 	expectations = unboundExpectations("BUCKET");
 	await t.throwsAsync(() => mf.getQueueProducer("BUCKET", "c"), expectations);
 });
+
+// Only test `MINIFLARE_WORKERD_PATH` on Unix. The test uses a Node.js script
+// with a shebang, directly as the replacement `workerd` binary, which won't
+// work on Windows.
+const isWindows = process.platform === "win32";
+const unixSerialTest = isWindows ? test.skip : test.serial;
+unixSerialTest(
+	"Miniflare: MINIFLARE_WORKERD_PATH overrides workerd path",
+	async (t) => {
+		const workerdPath = path.join(FIXTURES_PATH, "little-workerd.mjs");
+
+		const original = process.env.MINIFLARE_WORKERD_PATH;
+		process.env.MINIFLARE_WORKERD_PATH = workerdPath;
+		t.teardown(() => {
+			// Setting key/values pairs on `process.env` coerces values to strings
+			if (original === undefined) delete process.env.MINIFLARE_WORKERD_PATH;
+			else process.env.MINIFLARE_WORKERD_PATH = original;
+		});
+
+		const mf = new Miniflare({ script: "" });
+		t.teardown(() => mf.dispose());
+
+		const res = await mf.dispatchFetch("http://localhost");
+		t.is(await res.text(), "When I grow up, I want to be a big workerd!");
+	}
+);

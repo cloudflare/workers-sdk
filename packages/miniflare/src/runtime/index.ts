@@ -75,7 +75,7 @@ export class Runtime {
 	#processExitPromise?: Promise<void>;
 
 	constructor(private opts: RuntimeOptions) {
-		this.#command = workerdPath;
+		this.#command = process.env.MINIFLARE_WORKERD_PATH ?? workerdPath;
 	}
 
 	get #args() {
