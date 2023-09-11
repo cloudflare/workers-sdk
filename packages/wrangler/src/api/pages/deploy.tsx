@@ -263,7 +263,6 @@ export async function deploy({
 				directory,
 				local: false,
 				sourcemap: true,
-				watch: false,
 				onEnd: () => {},
 				nodejsCompat,
 			});

@@ -246,7 +246,6 @@ export async function traverseAndBuildWorkerJSDirectory({
 		directory: workerJSDirectory,
 		local: false,
 		sourcemap: true,
-		watch: false,
 		onEnd: () => {},
 		nodejsCompat,
 	});
