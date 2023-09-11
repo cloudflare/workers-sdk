@@ -1,4 +1,3 @@
-import "./App.css";
 import QuickEditor from "./QuickEditor/QuickEditor";
 
 function App() {
