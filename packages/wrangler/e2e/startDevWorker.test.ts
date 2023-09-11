@@ -1,23 +1,31 @@
 import assert from "node:assert";
 import getPort from "get-port";
-import { Miniflare, type MiniflareOptions } from "miniflare";
-import { WebSocket, fetch } from "undici";
+import {
+	Miniflare,
+	type Response as MiniflareResponse,
+	type MiniflareOptions,
+} from "miniflare";
+import * as undici from "undici";
 import { beforeEach, afterEach, describe, test, expect, vi } from "vitest";
 import { DevEnv } from "wrangler";
 import type { StartDevWorkerOptions } from "../src/api/startDevWorker/types";
+import type { EsbuildBundle } from "../src/dev/use-esbuild";
 
 describe("startDevWorker: ProxyController", () => {
 	let devEnv: DevEnv;
 	let mf: Miniflare | undefined;
+	const fakeBundle = {} as EsbuildBundle;
+	let res: MiniflareResponse | undici.Response | undefined;
 
 	beforeEach(() => {
 		devEnv = new DevEnv();
+		res = undefined;
 	});
 	afterEach(async () => {
 		await new Promise((resolve) => setTimeout(resolve, 1000));
 
 		await mf?.dispose();
-		await devEnv?.teardown({ type: "teardown" });
+		await devEnv?.teardown();
 	});
 
 	test("ProxyWorker buffers requests while runtime reloads", async () => {
@@ -49,7 +57,7 @@ describe("startDevWorker: ProxyController", () => {
 		devEnv.proxy.onReloadStart({
 			type: "reloadStart",
 			config,
-			bundle: { format: "modules", modules: [] },
+			bundle: fakeBundle,
 		});
 
 		mf = new Miniflare(mfOpts);
@@ -59,7 +67,7 @@ describe("startDevWorker: ProxyController", () => {
 		devEnv.proxy.onReloadComplete({
 			type: "reloadComplete",
 			config,
-			bundle: { format: "modules", modules: [] },
+			bundle: fakeBundle,
 			proxyData: {
 				destinationURL: { host: url.host },
 				destinationInspectorURL: inspectorUrl,
@@ -67,14 +75,14 @@ describe("startDevWorker: ProxyController", () => {
 			},
 		});
 
-		let res = await worker.fetch("http://dummy");
+		res = await worker.fetch("http://dummy");
 
 		await expect(res.text()).resolves.toBe("body:1");
 
 		devEnv.proxy.onReloadStart({
 			type: "reloadStart",
 			config,
-			bundle: { format: "modules", modules: [] },
+			bundle: fakeBundle,
 		});
 
 		mfOpts.script = mfOpts.script.replace("1", "2");
@@ -84,7 +92,7 @@ describe("startDevWorker: ProxyController", () => {
 			devEnv.proxy.onReloadComplete({
 				type: "reloadComplete",
 				config,
-				bundle: { format: "modules", modules: [] },
+				bundle: fakeBundle,
 				proxyData: {
 					destinationURL: { host: url.host },
 					destinationInspectorURL: inspectorUrl,
@@ -130,7 +138,7 @@ describe("startDevWorker: ProxyController", () => {
 		devEnv.proxy.onReloadStart({
 			type: "reloadStart",
 			config,
-			bundle: { format: "modules", modules: [] },
+			bundle: fakeBundle,
 		});
 
 		mf = new Miniflare(mfOpts);
@@ -140,7 +148,7 @@ describe("startDevWorker: ProxyController", () => {
 		devEnv.proxy.onReloadComplete({
 			type: "reloadComplete",
 			config,
-			bundle: { format: "modules", modules: [] },
+			bundle: fakeBundle,
 			proxyData: {
 				destinationURL: { host: url.host },
 				destinationInspectorURL: inspectorUrl,
@@ -149,11 +157,11 @@ describe("startDevWorker: ProxyController", () => {
 		});
 
 		await devEnv.proxy.ready;
-		const res = await fetch(`http://127.0.0.1:${9230}/json`);
+		res = await undici.fetch(`http://127.0.0.1:${9230}/json`);
 
 		await expect(res.json()).resolves.toBeInstanceOf(Array);
 
-		const ws = new WebSocket(`ws://127.0.0.1:${9230}/ws`);
+		const ws = new undici.WebSocket(`ws://127.0.0.1:${9230}/ws`);
 		const openPromise = new Promise((resolve) => {
 			ws.addEventListener("open", (event) => {
 				resolve(event);
@@ -211,7 +219,7 @@ describe("startDevWorker: ProxyController", () => {
 			devEnv.proxy.onReloadStart({
 				type: "reloadStart",
 				config,
-				bundle: { format: "modules", modules: [] },
+				bundle: fakeBundle,
 			});
 
 			mf = new Miniflare(mfOpts);
@@ -221,7 +229,7 @@ describe("startDevWorker: ProxyController", () => {
 			devEnv.proxy.onReloadComplete({
 				type: "reloadComplete",
 				config,
-				bundle: { format: "modules", modules: [] },
+				bundle: fakeBundle,
 				proxyData: {
 					destinationURL: { host: url.host },
 					destinationInspectorURL: inspectorUrl,
@@ -229,7 +237,6 @@ describe("startDevWorker: ProxyController", () => {
 				},
 			});
 
-			let res: Response;
 			// res = await worker.fetch("http://dummy");
 			// await expect(res.text()).resolves.toBe("body:1");
 
@@ -237,7 +244,7 @@ describe("startDevWorker: ProxyController", () => {
 				devEnv.proxy.onReloadStart({
 					type: "reloadStart",
 					config,
-					bundle: { format: "modules", modules: [] },
+					bundle: fakeBundle,
 				});
 
 				mfOpts.script = mfOpts.script.replace("1", "2");
@@ -246,7 +253,7 @@ describe("startDevWorker: ProxyController", () => {
 				devEnv.proxy.onReloadComplete({
 					type: "reloadComplete",
 					config,
-					bundle: { format: "modules", modules: [] },
+					bundle: fakeBundle,
 					proxyData: {
 						destinationURL: { host: url.host },
 						destinationInspectorURL: inspectorUrl,
@@ -299,7 +306,7 @@ describe("startDevWorker: ProxyController", () => {
 		devEnv.proxy.onReloadStart({
 			type: "reloadStart",
 			config,
-			bundle: { format: "modules", modules: [] },
+			bundle: fakeBundle,
 		});
 
 		mf = new Miniflare(mfOpts);
@@ -309,7 +316,7 @@ describe("startDevWorker: ProxyController", () => {
 		devEnv.proxy.onReloadComplete({
 			type: "reloadComplete",
 			config,
-			bundle: { format: "modules", modules: [] },
+			bundle: fakeBundle,
 			proxyData: {
 				destinationURL: { host: url.host },
 				destinationInspectorURL: inspectorUrl,
@@ -317,7 +324,7 @@ describe("startDevWorker: ProxyController", () => {
 			},
 		});
 
-		const res = await worker.fetch("http://dummy");
+		res = await worker.fetch("http://dummy");
 		await expect(res.text()).resolves.toMatchObject({});
 
 		expect(console.error).toBeCalledWith(
@@ -359,7 +366,7 @@ describe("startDevWorker: ProxyController", () => {
 		devEnv.proxy.onReloadStart({
 			type: "reloadStart",
 			config,
-			bundle: { format: "modules", modules: [] },
+			bundle: fakeBundle,
 		});
 
 		mf = new Miniflare(mfOpts);
@@ -369,7 +376,7 @@ describe("startDevWorker: ProxyController", () => {
 		devEnv.proxy.onReloadComplete({
 			type: "reloadComplete",
 			config,
-			bundle: { format: "modules", modules: [] },
+			bundle: fakeBundle,
 			proxyData: {
 				destinationURL: { host: userWorkerUrl.host },
 				destinationInspectorURL: inspectorUrl,
@@ -377,13 +384,13 @@ describe("startDevWorker: ProxyController", () => {
 			},
 		});
 
-		let res = await worker.fetch("http://dummy");
+		res = await worker.fetch("http://dummy");
 		await expect(res.text()).resolves.toBe("body:1");
 		console.log("worker.fetch succeeded");
 
 		const oldPort = config.dev?.server?.port;
-		res = fetch(`http://127.0.0.1:${oldPort}`).then((res) => res.text());
-		await expect(res).resolves.toBe("body:1");
+		res = await undici.fetch(`http://127.0.0.1:${oldPort}`);
+		await expect(res.text()).resolves.toBe("body:1");
 		console.log("fetch succeeded");
 
 		config = {
@@ -408,7 +415,7 @@ describe("startDevWorker: ProxyController", () => {
 		devEnv.proxy.onReloadComplete({
 			type: "reloadComplete",
 			config,
-			bundle: { format: "modules", modules: [] },
+			bundle: fakeBundle,
 			proxyData: {
 				destinationURL: { host: userWorkerUrl.host },
 				destinationInspectorURL: inspectorUrl,
@@ -417,14 +424,14 @@ describe("startDevWorker: ProxyController", () => {
 		});
 
 		await expect(
-			fetch(`http://127.0.0.1:${oldPort}`).then((res) => res.text())
+			undici.fetch(`http://127.0.0.1:${oldPort}`)
 		).rejects.toMatchInlineSnapshot("[TypeError: fetch failed]");
 
 		res = await worker.fetch("http://dummy");
 		await expect(res.text()).resolves.toBe("body:1");
 
 		const newPort = config.dev?.server?.port;
-		res = await fetch(`http://127.0.0.1:${newPort}`);
+		res = await undici.fetch(`http://127.0.0.1:${newPort}`);
 		await expect(res.text()).resolves.toBe("body:1");
 	});
 });

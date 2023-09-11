@@ -1,7 +1,10 @@
 {
 	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
 	"compilerOptions": {
-		"types": ["node"]
+		"types": ["node"],
+		"paths": {
+			"wrangler": ["../src/cli.ts"]
+		}
 	},
 	"include": ["**/*.ts"],
 	"exclude": []
