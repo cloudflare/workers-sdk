@@ -7,6 +7,7 @@ import os from "os";
 import path from "path";
 import { Duplex, Transform, Writable } from "stream";
 import { ReadableStream } from "stream/web";
+import util from "util";
 import zlib from "zlib";
 import type {
 	CacheStorage,
@@ -95,6 +96,7 @@ import {
 	SharedHeaders,
 	maybeApply,
 } from "./workers";
+import { _formatZodError } from "./zod-format";
 
 // ===== `Miniflare` User Options =====
 export type MiniflareOptions = SharedOptions &
@@ -108,12 +110,21 @@ type PluginSharedOptions = {
 	[Key in keyof Plugins]: OptionalZodTypeOf<Plugins[Key]["sharedOptions"]>;
 };
 
+function hasMultipleWorkers(opts: unknown): opts is { workers: unknown[] } {
+	return (
+		typeof opts === "object" &&
+		opts !== null &&
+		"workers" in opts &&
+		Array.isArray(opts.workers)
+	);
+}
+
 function validateOptions(
-	opts: MiniflareOptions
+	opts: unknown
 ): [PluginSharedOptions, PluginWorkerOptions[]] {
 	// Normalise options into shared and worker-specific
 	const sharedOpts = opts;
-	const multipleWorkers = "workers" in opts;
+	const multipleWorkers = hasMultipleWorkers(opts);
 	const workerOpts = multipleWorkers ? opts.workers : [opts];
 	if (workerOpts.length === 0) {
 		throw new MiniflareCoreError("ERR_NO_WORKERS", "No workers defined");
@@ -126,16 +137,76 @@ function validateOptions(
 	);
 
 	// Validate all options
-	for (const [key, plugin] of PLUGIN_ENTRIES) {
-		// @ts-expect-error `QueuesPlugin` doesn't define shared options
-		pluginSharedOpts[key] = plugin.sharedOptions?.parse(sharedOpts);
-		for (let i = 0; i < workerOpts.length; i++) {
-			// Make sure paths are correct in validation errors
-			const path = multipleWorkers ? ["workers", i] : undefined;
-			// @ts-expect-error `CoreOptionsSchema` has required options which are
-			//  missing in other plugins' options.
-			pluginWorkerOpts[i][key] = plugin.options.parse(workerOpts[i], { path });
+	try {
+		for (const [key, plugin] of PLUGIN_ENTRIES) {
+			// @ts-expect-error types of individual plugin options are unknown
+			pluginSharedOpts[key] = plugin.sharedOptions?.parse(sharedOpts);
+			for (let i = 0; i < workerOpts.length; i++) {
+				// Make sure paths are correct in validation errors
+				const path = multipleWorkers ? ["workers", i] : undefined;
+				// @ts-expect-error types of individual plugin options are unknown
+				pluginWorkerOpts[i][key] = plugin.options.parse(workerOpts[i], {
+					path,
+				});
+			}
 		}
+	} catch (e) {
+		if (e instanceof z.ZodError) {
+			let formatted: string | undefined;
+			try {
+				formatted = _formatZodError(e, opts);
+			} catch (formatError) {
+				// If formatting failed for some reason, we'd like to know, so log a
+				// bunch of debugging information, including the full validation error
+				// so users at least know what was wrong.
+
+				const title = "[Miniflare] Validation Error Format Failure";
+				const message = [
+					"### Input",
+					"```",
+					util.inspect(opts, { depth: null }),
+					"```",
+					"",
+					"### Validation Error",
+					"```",
+					e.stack,
+					"```",
+					"",
+					"### Format Error",
+					"```",
+					typeof formatError === "object" &&
+					formatError !== null &&
+					"stack" in formatError &&
+					typeof formatError.stack === "string"
+						? formatError.stack
+						: String(formatError),
+					"```",
+				].join("\n");
+				const githubIssueUrl = new URL(
+					"https://github.com/cloudflare/miniflare/issues/new"
+				);
+				githubIssueUrl.searchParams.set("title", title);
+				githubIssueUrl.searchParams.set("body", message);
+
+				formatted = [
+					"Unable to format validation error.",
+					"Please open the following URL in your browser to create a GitHub issue:",
+					githubIssueUrl,
+					"",
+					message,
+					"",
+				].join("\n");
+			}
+			const error = new MiniflareCoreError(
+				"ERR_VALIDATION",
+				`Unexpected options passed to \`new Miniflare()\` constructor:\n${formatted}`
+			);
+			// Add the `cause` as a getter, so it isn't logged automatically with the
+			// error, but can still be accessed if needed
+			Object.defineProperty(error, "cause", { get: () => e });
+			throw error;
+		}
+		throw e;
 	}
 
 	// Validate names unique
@@ -1277,3 +1348,4 @@ export * from "./plugins";
 export * from "./runtime";
 export * from "./shared";
 export * from "./workers";
+export * from "./zod-format";

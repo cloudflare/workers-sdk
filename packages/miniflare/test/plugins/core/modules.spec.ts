@@ -2,7 +2,6 @@ import assert from "assert";
 import path from "path";
 import test from "ava";
 import { Miniflare, MiniflareCoreError, stripAnsi } from "miniflare";
-import { ZodError } from "zod";
 import { utf8Encode } from "../../test-shared";
 
 const ROOT = path.resolve(
@@ -138,7 +137,7 @@ test("Miniflare: automatically collects modules", async (t) => {
 			modulesRules: [{ type: "PNG", include: ["**/*.png"] }],
 			script: "",
 		}),
-		{ instanceOf: ZodError }
+		{ instanceOf: MiniflareCoreError, code: "ERR_VALIDATION" }
 	);
 });
 test("Miniflare: automatically collects modules with cycles", async (t) => {
