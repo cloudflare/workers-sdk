@@ -1,3 +1,4 @@
+export * from "./colour";
 export * from "./error";
 export * from "./event";
 export * from "./log";
