@@ -78,7 +78,8 @@
 		},
 		"patchedDependencies": {
 			"ink@3.2.0": "patches/ink@3.2.0.patch",
-			"toucan-js@3.2.2": "patches/toucan-js@3.2.2.patch"
+			"toucan-js@3.2.2": "patches/toucan-js@3.2.2.patch",
+			"@cloudflare/component-listbox@1.10.4": "patches/@cloudflare__component-listbox@1.10.4.patch"
 		}
 	}
 }

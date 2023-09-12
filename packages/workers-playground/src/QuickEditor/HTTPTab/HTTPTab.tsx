@@ -12,7 +12,7 @@ import { Textarea } from "@cloudflare/component-textarea";
 import { Button } from "@cloudflare/component-button";
 import { Icon } from "@cloudflare/component-icon";
 import { Toast } from "@cloudflare/component-toast";
-import { Listbox } from "@cloudflare/component-forms";
+import { Listbox } from "@cloudflare/component-listbox";
 import SplitPane from "../SplitPane";
 import ResponseView from "./ResponseView";
 import RequestHeaders, { HeaderEntry } from "./RequestHeaders";
@@ -123,7 +123,6 @@ export function HTTPTab() {
 				>
 					<Listbox
 						marginBottom={0}
-						hideLabel={true}
 						value={method}
 						options={SELECT_OPTIONS}
 						onChange={(option) => setMethod(option.value)}
