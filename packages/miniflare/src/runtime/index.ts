@@ -11,13 +11,20 @@ import { z } from "zod";
 import { SERVICE_LOOPBACK, SOCKET_ENTRY } from "../plugins";
 import { Awaitable } from "../workers";
 
-const ControlMessageSchema = z.object({
-	event: z.literal("listen"),
-	socket: z.string(),
-	port: z.number(),
-});
+const ControlMessageSchema = z.discriminatedUnion("event", [
+	z.object({
+		event: z.literal("listen"),
+		socket: z.string(),
+		port: z.number(),
+	}),
+	z.object({
+		event: z.literal("listen-inspector"),
+		port: z.number(),
+	}),
+]);
 
-export type SocketIdentifier = string;
+export const kInspectorSocket = Symbol("kInspectorSocket");
+export type SocketIdentifier = string | typeof kInspectorSocket;
 
 async function waitForPorts(
 	requiredSockets: SocketIdentifier[],
@@ -37,12 +44,14 @@ async function waitForPorts(
 			const message = ControlMessageSchema.safeParse(JSON.parse(line));
 			// If this was an unrecognised control message, ignore it
 			if (!message.success) continue;
-			const socket = message.data.socket;
+			const data = message.data;
+			const socket: SocketIdentifier =
+				data.event === "listen-inspector" ? kInspectorSocket : data.socket;
 			const index = requiredSockets.indexOf(socket);
 			// If this wasn't a required socket, ignore it
 			if (index === -1) continue;
 			// Record the port of this socket
-			socketPorts.set(socket, message.data.port);
+			socketPorts.set(socket, data.port);
 			// Satisfy the requirement, if there are no more, return the ports map
 			requiredSockets.splice(index, 1);
 			if (requiredSockets.length === 0) return socketPorts;
