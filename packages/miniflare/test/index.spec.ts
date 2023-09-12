@@ -124,22 +124,40 @@ test("Miniflare: ready returns copy of entry URL", async (t) => {
 	t.is(url2.protocol, "http:");
 });
 
-test("Miniflare: keeps port between updates", async (t) => {
+test("Miniflare: setOptions: can update host/port", async (t) => {
+	// Extract loopback port from injected live reload script
+	const loopbackPortRegexp = /\/\/ Miniflare Live Reload.+url\.port = (\d+)/s;
+
 	const opts: MiniflareOptions = {
 		port: 0,
+		liveReload: true,
 		script: `addEventListener("fetch", (event) => {
-      event.respondWith(new Response("a"));
+      event.respondWith(new Response("<p>👋</p>", {
+        headers: { "Content-Type": "text/html;charset=utf-8" }
+      }));
     })`,
 	};
 	const mf = new Miniflare(opts);
 	t.teardown(() => mf.dispose());
-	const initialURL = await mf.ready;
 
+	const initialURL = await mf.ready;
+	let res = await mf.dispatchFetch("http://localhost");
+	const initialLoopbackPort = loopbackPortRegexp.exec(await res.text())?.[1];
+
+	opts.host = "0.0.0.0";
 	await mf.setOptions(opts);
 	const updatedURL = await mf.ready;
+	res = await mf.dispatchFetch("http://localhost");
+	const updatedLoopbackPort = loopbackPortRegexp.exec(await res.text())?.[1];
 
+	// Make sure a new port was allocated when `port: 0` was passed to `setOptions()`
 	t.not(initialURL.port, "0");
-	t.is(initialURL.port, updatedURL.port);
+	t.not(initialURL.port, updatedURL.port);
+
+	// Make sure updating the host restarted the loopback server
+	t.not(initialLoopbackPort, undefined);
+	t.not(updatedLoopbackPort, undefined);
+	t.not(initialLoopbackPort, updatedLoopbackPort);
 });
 
 test("Miniflare: routes to multiple workers with fallback", async (t) => {
@@ -649,7 +667,7 @@ test("Miniflare: manually triggered scheduled events", async (t) => {
 	t.is(await res.text(), "true");
 });
 
-test("Miniflare: Listens on ipv6", async (t) => {
+test("Miniflare: listens on ipv6", async (t) => {
 	const log = new TestLog(t);
 
 	const mf = new Miniflare({

@@ -26,10 +26,18 @@ const ControlMessageSchema = z.discriminatedUnion("event", [
 export const kInspectorSocket = Symbol("kInspectorSocket");
 export type SocketIdentifier = string | typeof kInspectorSocket;
 
+export interface RuntimeOptions {
+	entryHost: string;
+	entryPort: number;
+	loopbackPort: number;
+	requiredSockets: SocketIdentifier[];
+	inspectorPort?: number;
+	verbose?: boolean;
+}
+
 async function waitForPorts(
-	requiredSockets: SocketIdentifier[],
 	stream: Readable,
-	options?: Abortable
+	options: Abortable & Pick<RuntimeOptions, "requiredSockets">
 ): Promise<Map<SocketIdentifier, number> | undefined> {
 	if (options?.signal?.aborted) return;
 	const lines = rl.createInterface(stream);
@@ -37,7 +45,7 @@ async function waitForPorts(
 	const abortListener = () => lines.close();
 	options?.signal?.addEventListener("abort", abortListener, { once: true });
 	// We're going to be mutating `sockets`, so shallow copy it
-	requiredSockets = Array.from(requiredSockets);
+	const requiredSockets = Array.from(options.requiredSockets);
 	const socketPorts = new Map<SocketIdentifier, number>();
 	try {
 		for await (const line of lines) {
@@ -82,65 +90,52 @@ function pipeOutput(runtime: childProcess.ChildProcessWithoutNullStreams) {
 	// runtime.stderr.pipe(process.stderr);
 }
 
-export interface RuntimeOptions {
-	entryHost: string;
-	entryPort: number;
-	loopbackPort: number;
-	inspectorPort?: number;
-	verbose?: boolean;
+function getRuntimeCommand() {
+	return process.env.MINIFLARE_WORKERD_PATH ?? workerdPath;
+}
+
+function getRuntimeArgs(options: RuntimeOptions) {
+	const args: string[] = [
+		"serve",
+		// Required to use binary capnp config
+		"--binary",
+		// Required to use compatibility flags without a default-on date,
+		// (e.g. "streams_enable_constructors"), see https://github.com/cloudflare/workerd/pull/21
+		"--experimental",
+		`--socket-addr=${SOCKET_ENTRY}=${options.entryHost}:${options.entryPort}`,
+		`--external-addr=${SERVICE_LOOPBACK}=localhost:${options.loopbackPort}`,
+		// Configure extra pipe for receiving control messages (e.g. when ready)
+		"--control-fd=3",
+		// Read config from stdin
+		"-",
+	];
+	if (options.inspectorPort !== undefined) {
+		// Required to enable the V8 inspector
+		args.push(`--inspector-addr=localhost:${options.inspectorPort}`);
+	}
+	if (options.verbose) {
+		args.push("--verbose");
+	}
+
+	return args;
 }
 
 export class Runtime {
-	readonly #command: string;
-
 	#process?: childProcess.ChildProcess;
 	#processExitPromise?: Promise<void>;
 
-	constructor(private opts: RuntimeOptions) {
-		this.#command = process.env.MINIFLARE_WORKERD_PATH ?? workerdPath;
-	}
-
-	get #args() {
-		const args: string[] = [
-			"serve",
-			// Required to use binary capnp config
-			"--binary",
-			// Required to use compatibility flags without a default-on date,
-			// (e.g. "streams_enable_constructors"), see https://github.com/cloudflare/workerd/pull/21
-			"--experimental",
-			`--socket-addr=${SOCKET_ENTRY}=${this.opts.entryHost}:${this.opts.entryPort}`,
-			`--external-addr=${SERVICE_LOOPBACK}=localhost:${this.opts.loopbackPort}`,
-			// Configure extra pipe for receiving control messages (e.g. when ready)
-			"--control-fd=3",
-			// Read config from stdin
-			"-",
-		];
-		if (this.opts.inspectorPort !== undefined) {
-			// Required to enable the V8 inspector
-			args.push(`--inspector-addr=localhost:${this.opts.inspectorPort}`);
-		}
-		if (this.opts.verbose) {
-			args.push("--verbose");
-		}
-
-		return args;
-	}
-
 	async updateConfig(
 		configBuffer: Buffer,
-		requiredSockets: SocketIdentifier[],
-		options?: Abortable & Partial<Pick<RuntimeOptions, "entryPort">>
+		options: Abortable & RuntimeOptions
 	): Promise<Map<SocketIdentifier, number /* port */> | undefined> {
 		// 1. Stop existing process (if any) and wait for exit
 		await this.dispose();
 		// TODO: what happens if runtime crashes?
 
-		if (options?.entryPort !== undefined) {
-			this.opts.entryPort = options.entryPort;
-		}
-
 		// 2. Start new process
-		const runtimeProcess = childProcess.spawn(this.#command, this.#args, {
+		const command = getRuntimeCommand();
+		const args = getRuntimeArgs(options);
+		const runtimeProcess = childProcess.spawn(command, args, {
 			stdio: ["pipe", "pipe", "pipe", "pipe"],
 			env: process.env,
 		});
@@ -156,7 +151,7 @@ export class Runtime {
 		runtimeProcess.stdin.end();
 
 		// 4. Wait for sockets to start listening
-		return waitForPorts(requiredSockets, controlPipe, options);
+		return waitForPorts(controlPipe, options);
 	}
 
 	dispose(): Awaitable<void> {

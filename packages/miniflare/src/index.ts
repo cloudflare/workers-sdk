@@ -1,5 +1,6 @@
 import assert from "assert";
 import crypto from "crypto";
+import { Abortable } from "events";
 import fs from "fs";
 import http from "http";
 import net from "net";
@@ -98,15 +99,24 @@ import {
 	LogLevel,
 	Mutex,
 	SharedHeaders,
-	maybeApply,
 } from "./workers";
 import { _formatZodError } from "./zod-format";
 
 const DEFAULT_HOST = "127.0.0.1";
+function getURLSafeHost(host: string) {
+	return net.isIPv6(host) ? `[${host}]` : host;
+}
 function getAccessibleHost(host: string) {
-	return host === "*" || host === "0.0.0.0" || host === "::"
-		? "127.0.0.1"
-		: host;
+	const accessibleHost =
+		host === "*" || host === "0.0.0.0" || host === "::" ? "127.0.0.1" : host;
+	return getURLSafeHost(accessibleHost);
+}
+
+function getServerPort(server: http.Server) {
+	const address = server.address();
+	// Note address would be string with unix socket
+	assert(address !== null && typeof address === "object");
+	return address.port;
 }
 
 // ===== `Miniflare` User Options =====
@@ -539,11 +549,9 @@ export class Miniflare {
 	#sharedOpts: PluginSharedOptions;
 	#workerOpts: PluginWorkerOptions[];
 	#log: Log;
-	readonly #host: string;
-	readonly #accessibleHost: string;
 
-	#runtime?: Runtime;
-	#removeRuntimeExitHook?: () => void;
+	readonly #runtime?: Runtime;
+	readonly #removeRuntimeExitHook?: () => void;
 	#runtimeEntryURL?: URL;
 	#socketPorts?: Map<SocketIdentifier, number>;
 	#runtimeClient?: Client;
@@ -567,7 +575,7 @@ export class Miniflare {
 	// Aborted when dispose() is called
 	readonly #disposeController: AbortController;
 	#loopbackServer?: StoppableServer;
-	#loopbackPort?: number;
+	#loopbackHost?: string;
 	readonly #liveReloadServer: WebSocketServer;
 	readonly #webSocketServer: WebSocketServer;
 	readonly #webSocketExtraHeaders: WeakMap<http.IncomingMessage, Headers>;
@@ -587,15 +595,6 @@ export class Miniflare {
 		}
 
 		this.#log = this.#sharedOpts.core.log ?? new NoOpLog();
-		this.#host = this.#sharedOpts.core.host ?? DEFAULT_HOST;
-		// TODO: maybe remove `#accessibleHost` field, and just get whenever
-		//  constructing entry URL, then extract constructing entry URL into
-		//  function used `getUnsafeGetDirectURL()` too?
-		this.#accessibleHost = getAccessibleHost(this.#host);
-
-		if (net.isIPv6(this.#accessibleHost)) {
-			this.#accessibleHost = `[${this.#accessibleHost}]`;
-		}
 
 		this.#liveReloadServer = new WebSocketServer({ noServer: true });
 		this.#webSocketServer = new WebSocketServer({
@@ -630,10 +629,14 @@ export class Miniflare {
 			fs.rmSync(this.#tmpPath, { force: true, recursive: true });
 		});
 
+		// Setup runtime
+		this.#runtime = new Runtime();
+		this.#removeRuntimeExitHook = exitHook(() => void this.#runtime?.dispose());
+
 		this.#disposeController = new AbortController();
 		this.#runtimeMutex = new Mutex();
 		this.#initPromise = this.#runtimeMutex
-			.runWith(() => this.#init())
+			.runWith(() => this.#assembleAndUpdateConfig())
 			.catch((e) => {
 				// If initialisation failed, attempting to `dispose()` this instance
 				// will too. Therefore, remove from the instance registry now, so we
@@ -653,35 +656,6 @@ export class Miniflare {
 		for (const ws of this.#webSocketServer.clients) {
 			ws.close(1012, "Service Restart");
 		}
-	}
-
-	async #init() {
-		// This function must be run with `#runtimeMutex` held
-
-		// Start loopback server (how the runtime accesses with Miniflare's storage)
-		// using the same host as the main runtime server. This means we can use the
-		// loopback server for live reload updates too.
-		this.#loopbackServer = await this.#startLoopbackServer(0, this.#host);
-		const address = this.#loopbackServer.address();
-		// Note address would be string with unix socket
-		assert(address !== null && typeof address === "object");
-		// noinspection JSObjectNullOrUndefined
-		this.#loopbackPort = address.port;
-
-		// Start runtime
-		const port = this.#sharedOpts.core.port ?? 0;
-		const opts: RuntimeOptions = {
-			entryHost: net.isIPv6(this.#host) ? `[${this.#host}]` : this.#host,
-			entryPort: port,
-			loopbackPort: this.#loopbackPort,
-			inspectorPort: this.#sharedOpts.core.inspectorPort,
-			verbose: this.#sharedOpts.core.verbose,
-		};
-		this.#runtime = new Runtime(opts);
-		this.#removeRuntimeExitHook = exitHook(() => void this.#runtime?.dispose());
-
-		// Update config and wait for runtime to start
-		await this.#assembleAndUpdateConfig();
 	}
 
 	async #handleLoopbackCustomService(
@@ -862,13 +836,29 @@ export class Miniflare {
 		await writeResponse(response, res);
 	};
 
-	#startLoopbackServer(
-		port: number,
-		hostname: string
-	): Promise<StoppableServer> {
-		if (hostname === "*") {
-			hostname = "::";
+	async #getLoopbackPort(): Promise<number> {
+		// This function must be run with `#runtimeMutex` held
+
+		// Start loopback server (how the runtime accesses Node.js) using the same
+		// host as the main runtime server. This means we can use the loopback
+		// server for live reload updates too.
+		const loopbackHost = this.#sharedOpts.core.host ?? DEFAULT_HOST;
+		// If we've already started the loopback server...
+		if (this.#loopbackServer !== undefined) {
+			// ...and it's using the correct host, reuse it
+			if (this.#loopbackHost === loopbackHost) {
+				return getServerPort(this.#loopbackServer);
+			}
+			// Otherwise, stop it, and create a new one
+			await this.#stopLoopbackServer();
 		}
+		this.#loopbackServer = await this.#startLoopbackServer(loopbackHost);
+		this.#loopbackHost = loopbackHost;
+		return getServerPort(this.#loopbackServer);
+	}
+
+	#startLoopbackServer(hostname: string): Promise<StoppableServer> {
+		if (hostname === "*") hostname = "::";
 
 		return new Promise((resolve) => {
 			const server = stoppable(
@@ -876,7 +866,7 @@ export class Miniflare {
 				/* grace */ 0
 			);
 			server.on("upgrade", this.#handleLoopbackUpgrade);
-			server.listen(port, hostname, () => resolve(server));
+			server.listen(0, hostname, () => resolve(server));
 		});
 	}
 
@@ -887,12 +877,9 @@ export class Miniflare {
 		});
 	}
 
-	async #assembleConfig(): Promise<Config> {
+	async #assembleConfig(loopbackPort: number): Promise<Config> {
 		const allWorkerOpts = this.#workerOpts;
 		const sharedOpts = this.#sharedOpts;
-		const loopbackPort = this.#loopbackPort;
-		// #assembleConfig is always called after the loopback server is created
-		assert(loopbackPort !== undefined);
 
 		sharedOpts.core.cf = await setupCf(this.#log, sharedOpts.core.cf);
 
@@ -1049,9 +1036,11 @@ export class Miniflare {
 	}
 
 	async #assembleAndUpdateConfig() {
+		// This function must be run with `#runtimeMutex` held
 		const initial = !this.#runtimeEntryURL;
 		assert(this.#runtime !== undefined);
-		const config = await this.#assembleConfig();
+		const loopbackPort = await this.#getLoopbackPort();
+		const config = await this.#assembleConfig(loopbackPort);
 		const configBuffer = serializeConfig(config);
 
 		// Get all socket names we expect to get ports for
@@ -1062,18 +1051,26 @@ export class Miniflare {
 				return name;
 			}
 		);
-		// TODO(now): there's a bug here if the inspector was not enabled initially,
-		//  fixed by a later commit in this PR
 		if (this.#sharedOpts.core.inspectorPort !== undefined) {
 			requiredSockets.push(kInspectorSocket);
 		}
+
+		// Reload runtime
+		const host = this.#sharedOpts.core.host ?? DEFAULT_HOST;
+		const urlSafeHost = getURLSafeHost(host);
+		const accessibleHost = getAccessibleHost(host);
+		const runtimeOpts: Abortable & RuntimeOptions = {
+			signal: this.#disposeController.signal,
+			entryHost: urlSafeHost,
+			entryPort: this.#sharedOpts.core.port ?? 0,
+			loopbackPort,
+			requiredSockets,
+			inspectorPort: this.#sharedOpts.core.inspectorPort,
+			verbose: this.#sharedOpts.core.verbose,
+		};
 		const maybeSocketPorts = await this.#runtime.updateConfig(
 			configBuffer,
-			requiredSockets,
-			{
-				signal: this.#disposeController.signal,
-				entryPort: maybeApply(parseInt, this.#runtimeEntryURL?.port),
-			}
+			runtimeOpts
 		);
 		if (this.#disposeController.signal.aborted) return;
 		if (maybeSocketPorts === undefined) {
@@ -1094,7 +1091,7 @@ export class Miniflare {
 		const entryPort = maybeSocketPorts.get(SOCKET_ENTRY);
 		assert(entryPort !== undefined);
 		this.#runtimeEntryURL = new URL(
-			`${secure ? "https" : "http"}://${this.#accessibleHost}:${entryPort}`
+			`${secure ? "https" : "http"}://${accessibleHost}:${entryPort}`
 		);
 		if (previousEntryURL?.toString() !== this.#runtimeEntryURL.toString()) {
 			this.#runtimeClient = new Client(this.#runtimeEntryURL, {
@@ -1118,16 +1115,15 @@ export class Miniflare {
 			// Only log and trigger reload if there aren't pending updates
 			const ready = initial ? "Ready" : "Updated and ready";
 
-			const host = net.isIPv6(this.#host) ? `[${this.#host}]` : this.#host;
 			this.#log.info(
-				`${ready} on ${secure ? "https" : "http"}://${host}:${entryPort} `
+				`${ready} on ${secure ? "https" : "http"}://${urlSafeHost}:${entryPort}`
 			);
 
 			if (initial) {
 				let hosts: string[];
-				if (this.#host === "::" || this.#host === "*") {
+				if (host === "::" || host === "*") {
 					hosts = getAccessibleHosts(false);
-				} else if (this.#host === "0.0.0.0") {
+				} else if (host === "0.0.0.0") {
 					hosts = getAccessibleHosts(true);
 				} else {
 					hosts = [];
