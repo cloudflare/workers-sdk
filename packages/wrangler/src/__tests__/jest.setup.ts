@@ -24,9 +24,12 @@ process.env.LC_ALL = "en";
 
 // Mock out getPort since we don't actually care about what ports are open in unit tests.
 jest.mock("get-port", () => {
+	const { default: getPort } = jest.requireActual("get-port");
 	return {
 		__esModule: true,
-		default: jest.fn().mockImplementation(async (options) => options.port),
+		default: jest
+			.fn()
+			.mockImplementation(async (options) => options?.port ?? getPort()),
 	};
 });
 

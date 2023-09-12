@@ -1,10 +1,15 @@
 import * as fs from "node:fs";
 import { Request } from "undici";
 import { unstable_dev } from "../api";
+import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
 jest.unmock("child_process");
 jest.unmock("undici");
+
+beforeAll(() => {
+	msw.close();
+});
 
 describe("unstable_dev", () => {
 	it("should return Hello World", async () => {

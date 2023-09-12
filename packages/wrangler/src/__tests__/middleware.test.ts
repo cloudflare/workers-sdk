@@ -5,6 +5,10 @@ import dedent from "ts-dedent";
 import { unstable_dev } from "../api";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import { msw } from "./helpers/msw";
+beforeAll(() => {
+	msw.close();
+});
 
 jest.unmock("child_process");
 jest.unmock("undici");

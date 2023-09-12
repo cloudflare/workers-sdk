@@ -27,6 +27,7 @@ import {
 	isLegacyEnv,
 	printWranglerBanner,
 } from "./index";
+import type { ProxyData } from "./api";
 import type { Config, Environment } from "./config";
 import type { Route, Rule } from "./config/environment";
 import type { CfWorkerInit, CfModule } from "./deployment-bundle/worker";
@@ -335,7 +336,7 @@ export type StartDevOptions = DevArguments &
 		forceLocal?: boolean;
 		disableDevRegistry?: boolean;
 		enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
-		onReady?: (ip: string, port: number) => void;
+		onReady?: (ip: string, port: number, proxyData: ProxyData) => void;
 		showInteractiveDevSession?: boolean;
 	};
 
@@ -597,7 +598,7 @@ export async function startApiDev(args: StartDevOptions) {
 				args.inspectorPort ??
 				configParam.dev.inspector_port ??
 				(await getInspectorPort()),
-			runtimeInspectorPort: await getRuntimeInspectorPort(),
+			runtimeInspectorPort: await getPort(),
 			isWorkersSite: Boolean(args.site || configParam.site),
 			compatibilityDate: getDevCompatibilityDate(
 				config,
@@ -700,7 +701,7 @@ async function validateDevServerSettings(
 
 	const { zoneId, host, routes } = await getZoneIdHostAndRoutes(args, config);
 	const getLocalPort = memoizeGetPort(DEFAULT_LOCAL_PORT);
-	const getInspectorPort = memoizeGetPort(DEFAULT_INSPECTOR_PORT);
+	const getInspectorPort = memoizeGetPort();
 
 	// Our inspector proxy server will be binding to the result of
 	// `getInspectorPort`. If we attempted to bind workerd to the same inspector

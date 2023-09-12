@@ -174,7 +174,7 @@ export class InspectorProxyWorker implements DurableObject {
 		runtime.addEventListener("message", this.#handleRuntimeIncomingMessage);
 
 		runtime.addEventListener("close", (event) => {
-			console.error("RUNTIME WEBSOCKET CLOSED", event.code, event.reason);
+			this.sendDebugLog("RUNTIME WEBSOCKET CLOSED", event.code, event.reason);
 
 			// don't reconnect the runtime websocket
 			// if it closes unexpectedly (very rare or a case where reconnecting won't succeed anyway)

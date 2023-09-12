@@ -455,6 +455,11 @@ export class ProxyController extends EventEmitter {
 		this.inspectorProxyWorker = undefined;
 
 		try {
+			const websocket = await this.inspectorProxyWorkerWebSocket;
+			websocket?.close();
+		} catch {}
+
+		try {
 			await proxyWorker?.ready;
 			await proxyWorker?.dispose(); // TODO: miniflare should await .ready
 		} finally {

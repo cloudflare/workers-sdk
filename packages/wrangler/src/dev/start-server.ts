@@ -3,7 +3,7 @@ import * as util from "node:util";
 import chalk from "chalk";
 import onExit from "signal-exit";
 import tmp from "tmp-promise";
-import { DevEnv, ProxyData, type StartDevWorkerOptions } from "../api";
+import { DevEnv, type StartDevWorkerOptions } from "../api";
 import { bundleWorker, dedupeModulesByName } from "../deployment-bundle/bundle";
 import { runCustomBuild } from "../deployment-bundle/run-custom-build";
 import traverseModuleGraph from "../deployment-bundle/traverse-module-graph";
@@ -17,6 +17,7 @@ import { localPropsToConfigBundle, maybeRegisterLocalWorker } from "./local";
 import { DEFAULT_WORKER_NAME, MiniflareServer } from "./miniflare";
 import { startRemoteServer } from "./remote";
 import { validateDevProps } from "./validate-dev-props";
+import type { ProxyData } from "../api";
 import type { Config } from "../config";
 import type { DurableObjectBindings } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
@@ -177,6 +178,7 @@ export async function startDevServer(
 			stop: async () => {
 				stop();
 				await stopWorkerRegistry();
+				await devEnv.teardown();
 			},
 			// TODO: inspectorUrl,
 		};
