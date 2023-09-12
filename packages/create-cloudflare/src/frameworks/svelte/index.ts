@@ -73,7 +73,7 @@ const config: FrameworkConfig = {
 	displayName: "Svelte",
 	packageScripts: {
 		"pages:dev": `wrangler pages dev ${compatDateFlag()} --proxy 5173 -- ${npm} run dev`,
-		"pages:deploy": `NODE_VERSION=16 ${npm} run build && wrangler pages deploy .svelte-kit/cloudflare`,
+		"pages:deploy": `${npm} run build && wrangler pages deploy .svelte-kit/cloudflare`,
 	},
 };
 export default config;
