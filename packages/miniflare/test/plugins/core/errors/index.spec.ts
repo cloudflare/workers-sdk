@@ -1,7 +1,5 @@
 import assert from "assert";
 import fs from "fs/promises";
-import http from "http";
-import { AddressInfo } from "net";
 import path from "path";
 import { fileURLToPath } from "url";
 import test from "ava";
@@ -48,18 +46,8 @@ test("source maps workers", async (t) => {
 	const serviceWorkerContent = await fs.readFile(serviceWorkerPath, "utf8");
 	const modulesContent = await fs.readFile(modulesPath, "utf8");
 
-	// The OS should assign random ports in sequential order, meaning
-	// `inspectorPort` is unlikely to be immediately chosen as a random port again
-	const server = http.createServer();
-	const inspectorPort = await new Promise<number>((resolve, reject) => {
-		server.listen(0, () => {
-			const port = (server.address() as AddressInfo).port;
-			server.close((err) => (err ? reject(err) : resolve(port)));
-		});
-	});
-
 	const mf = new Miniflare({
-		inspectorPort,
+		inspectorPort: 0,
 		workers: [
 			{
 				bindings: { MESSAGE: "unnamed" },
@@ -190,23 +178,24 @@ addEventListener("fetch", (event) => {
 	t.regex(String(error?.stack), nestedRegexp);
 
 	// Check source mapping URLs rewritten
-	let sources = await getSources(inspectorPort, "core:user:");
+	const inspectorBaseURL = await mf.getInspectorURL();
+	let sources = await getSources(inspectorBaseURL, "core:user:");
 	t.deepEqual(sources, [REDUCE_PATH, SERVICE_WORKER_ENTRY_PATH]);
-	sources = await getSources(inspectorPort, "core:user:a");
+	sources = await getSources(inspectorBaseURL, "core:user:a");
 	t.deepEqual(sources, [REDUCE_PATH, SERVICE_WORKER_ENTRY_PATH]);
-	sources = await getSources(inspectorPort, "core:user:b");
+	sources = await getSources(inspectorBaseURL, "core:user:b");
 	t.deepEqual(sources, [MODULES_ENTRY_PATH, REDUCE_PATH]);
-	sources = await getSources(inspectorPort, "core:user:c");
+	sources = await getSources(inspectorBaseURL, "core:user:c");
 	t.deepEqual(sources, [MODULES_ENTRY_PATH, REDUCE_PATH]);
-	sources = await getSources(inspectorPort, "core:user:d");
+	sources = await getSources(inspectorBaseURL, "core:user:d");
 	t.deepEqual(sources, [MODULES_ENTRY_PATH, REDUCE_PATH]);
-	sources = await getSources(inspectorPort, "core:user:e");
+	sources = await getSources(inspectorBaseURL, "core:user:e");
 	t.deepEqual(sources, [MODULES_ENTRY_PATH, REDUCE_PATH]);
-	sources = await getSources(inspectorPort, "core:user:f");
+	sources = await getSources(inspectorBaseURL, "core:user:f");
 	t.deepEqual(sources, [MODULES_ENTRY_PATH, REDUCE_PATH]);
-	sources = await getSources(inspectorPort, "core:user:g");
+	sources = await getSources(inspectorBaseURL, "core:user:g");
 	t.deepEqual(sources, [MODULES_ENTRY_PATH, REDUCE_PATH]);
-	sources = await getSources(inspectorPort, "core:user:h");
+	sources = await getSources(inspectorBaseURL, "core:user:h");
 	t.deepEqual(sources, [DEP_ENTRY_PATH, REDUCE_PATH]); // (entry point script overridden)
 
 	// Check respects map's existing `sourceRoot`
@@ -217,7 +206,7 @@ addEventListener("fetch", (event) => {
 	);
 	serviceWorkerMap.sourceRoot = sourceRoot;
 	await fs.writeFile(serviceWorkerMapPath, JSON.stringify(serviceWorkerMap));
-	t.deepEqual(await getSources(inspectorPort, "core:user:"), [
+	t.deepEqual(await getSources(inspectorBaseURL, "core:user:"), [
 		path.resolve(tmp, sourceRoot, path.relative(tmp, REDUCE_PATH)),
 		path.resolve(
 			tmp,
@@ -227,18 +216,18 @@ addEventListener("fetch", (event) => {
 	]);
 
 	// Check does nothing with URL source mapping URLs
-	const sourceMapURL = await getSourceMapURL(inspectorPort, "core:user:i");
+	const sourceMapURL = await getSourceMapURL(inspectorBaseURL, "core:user:i");
 	t.regex(sourceMapURL, /^data:application\/json;base64/);
 });
 
 function getSourceMapURL(
-	inspectorPort: number,
+	inspectorBaseURL: URL,
 	serviceName: string
 ): Promise<string> {
 	let sourceMapURL: string | undefined;
 	const promise = new DeferredPromise<string>();
-	const inspectorUrl = `ws://127.0.0.1:${inspectorPort}/${serviceName}`;
-	const ws = new NodeWebSocket(inspectorUrl);
+	const inspectorURL = new URL(`/${serviceName}`, inspectorBaseURL);
+	const ws = new NodeWebSocket(inspectorURL);
 	ws.on("message", async (raw) => {
 		try {
 			const message = JSON.parse(raw.toString("utf8"));
@@ -264,8 +253,8 @@ function getSourceMapURL(
 	return promise;
 }
 
-async function getSources(inspectorPort: number, serviceName: string) {
-	const sourceMapURL = await getSourceMapURL(inspectorPort, serviceName);
+async function getSources(inspectorBaseURL: URL, serviceName: string) {
+	const sourceMapURL = await getSourceMapURL(inspectorBaseURL, serviceName);
 	assert(sourceMapURL.startsWith("file:"));
 	const sourceMapPath = fileURLToPath(sourceMapURL);
 	const sourceMapData = await fs.readFile(sourceMapPath, "utf8");

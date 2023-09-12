@@ -82,6 +82,7 @@ import {
 	SocketIdentifier,
 	Worker_Binding,
 	Worker_Module,
+	kInspectorSocket,
 	serializeConfig,
 } from "./runtime";
 import {
@@ -1061,7 +1062,11 @@ export class Miniflare {
 				return name;
 			}
 		);
-
+		// TODO(now): there's a bug here if the inspector was not enabled initially,
+		//  fixed by a later commit in this PR
+		if (this.#sharedOpts.core.inspectorPort !== undefined) {
+			requiredSockets.push(kInspectorSocket);
+		}
 		const maybeSocketPorts = await this.#runtime.updateConfig(
 			configBuffer,
 			requiredSockets,
@@ -1159,7 +1164,27 @@ export class Miniflare {
 		return this.#waitForReady();
 	}
 
-	async unsafeGetDirectURL(workerName?: string) {
+	async getInspectorURL(): Promise<URL> {
+		this.#checkDisposed();
+		await this.ready;
+
+		// `#socketPorts` is assigned in `#assembleAndUpdateConfig()`, which is
+		// called by `#init()`, and `ready` doesn't resolve until `#init()` returns
+		assert(this.#socketPorts !== undefined);
+
+		// Try to get inspector port for worker
+		const maybePort = this.#socketPorts.get(kInspectorSocket);
+		if (maybePort === undefined) {
+			throw new TypeError(
+				"Inspector not enabled in Miniflare instance. " +
+					"Set the `inspectorPort` option to enable it."
+			);
+		}
+
+		return new URL(`ws://127.0.0.1:${maybePort}`);
+	}
+
+	async unsafeGetDirectURL(workerName?: string): Promise<URL> {
 		this.#checkDisposed();
 		await this.ready;
 
