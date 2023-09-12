@@ -37,7 +37,6 @@ import {
 	assertNever,
 	createDeferredPromise,
 } from "../../src/api/startDevWorker/utils";
-import type Protocol from "devtools-protocol";
 
 interface Env {
 	PROXY_CONTROLLER: Fetcher;
@@ -154,7 +153,7 @@ export class InspectorProxyWorker implements DurableObject {
 	}
 
 	reconnectRuntimeWebSocket() {
-		assert(this.#proxyData);
+		assert(this.#proxyData, "Expected this.#proxyData to be defined");
 
 		this.sendDebugLog("reconnectRuntimeWebSocket");
 
@@ -285,7 +284,10 @@ export class InspectorProxyWorker implements DurableObject {
 	sendProxyControllerMessage(
 		message: string | InspectorProxyWorkerOutgoingWebsocketMessage
 	) {
-		assert(this.#websockets.proxyController);
+		assert(
+			this.#websockets.proxyController,
+			"Expected this.#websockets.proxyController"
+		);
 
 		message = typeof message === "string" ? message : JSON.stringify(message);
 

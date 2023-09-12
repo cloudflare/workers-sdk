@@ -166,6 +166,9 @@ export class ProxyController extends EventEmitter {
 			https: this.latestConfig.dev?.inspector?.secure,
 			httpsCert: cert?.cert,
 			httpsKey: cert?.key,
+
+			// temp: debug
+			log: new Log(LogLevel.INFO, { prefix: "wrangler-InspectorProxyWorker" }),
 		};
 
 		if (this.proxyWorker === undefined) {
@@ -235,7 +238,7 @@ export class ProxyController extends EventEmitter {
 		try {
 			assert(this.inspectorProxyWorker);
 			({ webSocket } = await this.inspectorProxyWorker.dispatchFetch(
-				"http://dummy/",
+				"http://dummy/cdn-cgi/InspectorProxyWorker",
 				{ headers: { Authorization: this.secret, Upgrade: "websocket" } }
 			));
 		} catch (cause) {
@@ -277,7 +280,7 @@ export class ProxyController extends EventEmitter {
 		try {
 			assert(this.proxyWorker);
 
-			await this.proxyWorker.dispatchFetch("http://dummy/", {
+			await this.proxyWorker.dispatchFetch("http://dummy/cdn-cgi/ProxyWorker", {
 				headers: { Authorization: this.secret },
 				cf: { hostMetadata: message },
 			});
