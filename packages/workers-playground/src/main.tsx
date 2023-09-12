@@ -5,6 +5,7 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import { StyleProvider } from "@cloudflare/style-provider";
 import { getRenderer } from "./QuickEditor/felaRenderer";
+import { DarkModeSettings, setDarkMode } from "@cloudflare/style-const";
 
 const felaRenderer = getRenderer();
 
@@ -22,6 +23,7 @@ function syncDarkModeWithSystem() {
 	}
 }
 syncDarkModeWithSystem();
+setDarkMode(DarkModeSettings.SYSTEM);
 ReactDOM.createRoot(document.getElementById("root")!).render(
 	<React.StrictMode>
 		<StyleProvider renderer={felaRenderer}>
