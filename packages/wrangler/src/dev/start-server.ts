@@ -156,22 +156,15 @@ export async function startDevServer(
 			localProtocol: props.localProtocol,
 			localUpstream: props.localUpstream,
 			inspect: true,
-			onReady: (ip, port) => {
-				props.onReady?.(ip, port);
+			onReady: (ip, port, proxyData) => {
+				props.onReady?.(ip, port, proxyData);
 
 				// temp: fake these events by calling the handler directly
 				devEnv.proxy.onReloadComplete({
 					type: "reloadComplete",
 					config: startDevWorkerOptions,
 					bundle,
-					proxyData: {
-						destinationURL: { hostname: ip, port: port.toString() },
-						destinationInspectorURL: `ws://127.0.0.1:${
-							props.runtimeInspectorPort
-						}/core:user:${props.name ?? ""}`,
-						headers: {},
-						liveReload: props.liveReload,
-					},
+					proxyData,
 				});
 			},
 			enablePagesAssetsServiceBinding: props.enablePagesAssetsServiceBinding,
@@ -209,29 +202,16 @@ export async function startDevServer(
 			zone: props.zone,
 			host: props.host,
 			routes: props.routes,
-			onReady: (ip, port, previewToken) => {
-				props.onReady?.(ip, port);
+			onReady: (ip, port, proxyData) => {
+				props.onReady?.(ip, port, proxyData);
 
-				if (previewToken) {
-					// temp: fake these events by calling the handler directly
-					devEnv.proxy.onReloadComplete({
-						type: "reloadComplete",
-						config: startDevWorkerOptions,
-						bundle,
-						proxyData: {
-							destinationURL: {
-								hostname: previewToken.host, // TODO: is this a host or hostname? i.e. does it contain port?
-								port: port.toString(),
-							},
-							destinationInspectorURL: previewToken.inspectorUrl.href,
-							headers: {
-								"cf-workers-preview-token": previewToken.value,
-								// cookie: `CF_Authorization=${previewToken.value}`,
-							},
-							liveReload: props.liveReload,
-						},
-					});
-				}
+				// temp: fake these events by calling the handler directly
+				devEnv.proxy.onReloadComplete({
+					type: "reloadComplete",
+					config: startDevWorkerOptions,
+					bundle,
+					proxyData,
+				});
 			},
 			sourceMapPath: bundle?.sourceMapPath,
 			sendMetrics: props.sendMetrics,
@@ -240,6 +220,7 @@ export async function startDevServer(
 			stop: async () => {
 				stop();
 				await stopWorkerRegistry();
+				await devEnv.teardown();
 			},
 			// TODO: inspectorUrl,
 		};

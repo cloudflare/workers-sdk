@@ -1,6 +1,11 @@
 /**
  * TODO:
  *  - build (Inspector)ProxyWorker.ts ahead of time
+ *  - handle remote runtime errors (without crashing?!)
+ *  - ~~enable request logging for ProxyWorker~~
+ *  - disable request logging for User Worker
+ *  - ~~add address binding output on initial Proxy Worker creation~~
+ *  - hide proxyworker-internal requests by adding well-known pathnxame and filtering in Log subclass (see WranglerLog extends Log)
  */
 
 import assert from "node:assert";
@@ -8,7 +13,7 @@ import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import path from "node:path";
 import esbuild from "esbuild";
-import { Miniflare, Response } from "miniflare";
+import { Log, LogLevel, Miniflare, Response } from "miniflare";
 // import { readFileSync } from "../../parse";
 import { WebSocket } from "miniflare";
 import { getHttpsOptions } from "../../https-options";
@@ -125,6 +130,11 @@ export class ProxyController extends EventEmitter {
 			https: this.latestConfig.dev?.server?.secure,
 			httpsCert: cert?.cert,
 			httpsKey: cert?.key,
+
+			// log requests into the ProxyWorker (for local + remote mode)
+			//      can now disable logs on the user worker miniflare instance
+			//      miniflare's default prefix (MF:) will no longer differentiate between local and remote mode so remove it
+			log: new Log(LogLevel.INFO, { prefix: "wrangler" }),
 		};
 		const inspectorProxyWorkerOptions: MiniflareOptions = {
 			verbose: true,
@@ -267,18 +277,10 @@ export class ProxyController extends EventEmitter {
 		try {
 			assert(this.proxyWorker);
 
-			console.log(
-				`BEFORE Send message to ProxyWorker: ${JSON.stringify(message)}`
-			);
-
 			await this.proxyWorker.dispatchFetch("http://dummy/", {
 				headers: { Authorization: this.secret },
 				cf: { hostMetadata: message },
 			});
-
-			console.log(
-				`AFTER Send message to ProxyWorker: ${JSON.stringify(message)}`
-			);
 		} catch (cause) {
 			const error = castErrorCause(cause);
 
@@ -306,17 +308,7 @@ export class ProxyController extends EventEmitter {
 				await this.reconnectInspectorProxyWorker();
 			}
 
-			console.log(
-				`BEFORE Send message to InspectorProxyWorker: ${JSON.stringify(
-					message
-				)}`
-			);
-
 			websocket.send(JSON.stringify(message));
-
-			console.log(
-				`AFTER Send message to InspectorProxyWorker: ${JSON.stringify(message)}`
-			);
 		} catch (cause) {
 			const error = castErrorCause(cause);
 
@@ -373,11 +365,18 @@ export class ProxyController extends EventEmitter {
 		switch (message.type) {
 			case "previewTokenExpired":
 				this.emitPreviewTokenExpiredEvent(message);
-				break;
 
+				break;
 			case "error":
 				this.emitErrorEvent("Error inside ProxyWorker", message.error);
+
 				break;
+			case "debug-log":
+				logger.debug("[ProxyWorker]", ...message.args);
+
+				break;
+			default:
+				assertNever(message);
 		}
 	}
 	onInspectorProxyWorkerMessage(
@@ -431,6 +430,10 @@ export class ProxyController extends EventEmitter {
 				}
 
 				break;
+			case "debug-log":
+				logger.debug("[InspectorProxyWorker]", ...message.args);
+
+				break;
 			default:
 				assertNever(message);
 				return new Response(null, { status: 404 });
@@ -441,7 +444,7 @@ export class ProxyController extends EventEmitter {
 
 	_torndown = false;
 	async teardown() {
-		console.log("teardown");
+		logger.debug("ProxyController teardown");
 		this._torndown = true;
 
 		const { proxyWorker, inspectorProxyWorker } = this;

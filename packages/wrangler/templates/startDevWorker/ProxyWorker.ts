@@ -105,16 +105,17 @@ export class ProxyWorker implements DurableObject {
 			// override url parts for proxying
 			Object.assign(url, proxyData.destinationURL);
 
+			const headers = new Headers(req.headers);
 			for (const [key, value] of Object.entries(proxyData.headers ?? {})) {
 				if (key.toLowerCase() === "cookie") {
 					const existing = req.headers.get("cookie") ?? "";
-					req.headers.set("cookie", `${existing};${value}`);
+					headers.set("cookie", `${existing};${value}`);
 				} else {
-					req.headers.append(key, value);
+					headers.set(key, value);
 				}
 			}
 
-			void fetch(url, new Request(req, { redirect: "manual" })) // TODO: check if redirect: manual is needed
+			void fetch(url, new Request(req, { headers }))
 				.then((res) => {
 					if (isHtmlResponse(res)) {
 						res = insertLiveReloadScript(req, res, this.env, proxyData);
@@ -163,6 +164,7 @@ async function sendMessageToProxyController(
 ) {
 	try {
 		await env.PROXY_CONTROLLER.fetch("http://dummy", {
+			method: "POST",
 			body: JSON.stringify(message),
 		});
 	} catch (cause) {

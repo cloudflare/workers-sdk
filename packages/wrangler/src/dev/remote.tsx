@@ -10,15 +10,15 @@ import {
 } from "../create-worker-preview";
 import { helpIfErrorIsSizeOrScriptStartup } from "../deploy/deploy";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
-import useInspector from "../inspect";
 import { logger } from "../logger";
-import { startPreviewServer, usePreviewServer } from "../proxy";
+import { startPreviewServer } from "../proxy";
 import { syncAssets } from "../sites";
 import {
 	getAccountChoices,
 	requireApiToken,
 	saveAccountToCache,
 } from "../user";
+import type { ProxyData } from "../api";
 import type { Route } from "../config/environment";
 import type {
 	CfAccount,
@@ -57,11 +57,7 @@ interface RemoteProps {
 	host: string | undefined;
 	routes: Route[] | undefined;
 	onReady?:
-		| ((
-				ip: string,
-				port: number,
-				previewToken: CfPreviewToken | undefined
-		  ) => void)
+		| ((ip: string, port: number, proxyData: ProxyData) => void)
 		| undefined;
 	sourceMapPath: string | undefined;
 	sendMetrics: boolean | undefined;
@@ -72,7 +68,7 @@ export function Remote(props: RemoteProps) {
 	const accountChoicesRef = useRef<Promise<ChooseAccountItem[]>>();
 	const [accountChoices, setAccountChoices] = useState<ChooseAccountItem[]>();
 
-	const previewToken = useWorker({
+	useWorker({
 		name: props.name,
 		bundle: props.bundle,
 		format: props.format,
@@ -89,32 +85,9 @@ export function Remote(props: RemoteProps) {
 		zone: props.zone,
 		host: props.host,
 		routes: props.routes,
-		onReady: (ip, port) => props.onReady?.(ip, port, previewToken),
+		onReady: props.onReady,
 		sendMetrics: props.sendMetrics,
 		port: props.port,
-	});
-
-	usePreviewServer({
-		previewToken,
-		assetDirectory: props.isWorkersSite
-			? undefined
-			: props.assetPaths?.assetDirectory,
-		localProtocol: props.localProtocol,
-		localPort: props.port,
-		ip: props.ip,
-	});
-
-	useInspector({
-		inspectorUrl:
-			props.inspect && previewToken
-				? previewToken.inspectorUrl.href
-				: undefined,
-		port: props.inspectorPort,
-		logToTerminal: true,
-		sourceMapPath: props.sourceMapPath,
-		host: previewToken?.host,
-		name: props.name,
-		sourceMapMetadata: props.bundle?.sourceMapMetadata,
 	});
 
 	const errorHandler = useErrorHandler();
@@ -178,7 +151,9 @@ interface RemoteWorkerProps {
 	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
-	onReady: ((ip: string, port: number) => void) | undefined;
+	onReady:
+		| ((ip: string, port: number, proxyData: ProxyData) => void)
+		| undefined;
 	sendMetrics: boolean | undefined;
 	port: number;
 }
@@ -329,7 +304,18 @@ export function useWorker(
 				});
 			}
 			*/
-			onReady?.(props.host || "localhost", props.port);
+			const proxyData: ProxyData = {
+				destinationURL: {
+					protocol: "https:",
+					hostname: workerPreviewToken.host,
+					port: "443",
+				},
+				destinationInspectorURL: workerPreviewToken.inspectorUrl.href,
+				headers: { "cf-workers-preview-token": workerPreviewToken.value },
+				liveReload: false,
+			};
+
+			onReady?.(props.host || "localhost", props.port, proxyData);
 		}
 		start().catch((err) => {
 			// we want to log the error, but not end the process
@@ -424,7 +410,18 @@ export async function startRemoteServer(props: RemoteProps) {
 		localPort: props.port,
 		ip: props.ip,
 		onReady: (ip, port) => {
-			props.onReady?.(ip, port, previewToken);
+			const proxyData: ProxyData = {
+				destinationURL: {
+					protocol: "https:",
+					hostname: previewToken.host,
+					port: "443",
+				},
+				destinationInspectorURL: previewToken.inspectorUrl.href,
+				headers: { "cf-workers-preview-token": previewToken.value },
+				liveReload: false,
+			};
+
+			props.onReady?.(ip, port, proxyData);
 		},
 	});
 	if (!previewServer) {

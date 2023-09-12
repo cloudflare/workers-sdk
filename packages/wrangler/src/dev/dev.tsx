@@ -5,11 +5,18 @@ import { watch } from "chokidar";
 import clipboardy from "clipboardy";
 import commandExists from "command-exists";
 import { Box, Text, useApp, useInput, useStdin } from "ink";
-import React, { useEffect, useRef, useState } from "react";
+import React, {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { useErrorHandler, withErrorBoundary } from "react-error-boundary";
 import onExit from "signal-exit";
 import tmp from "tmp-promise";
 import { fetch } from "undici";
+import { DevEnv } from "../api";
 import { runCustomBuild } from "../deployment-bundle/run-custom-build";
 import {
 	getBoundRegisteredWorkers,
@@ -24,6 +31,7 @@ import { Local } from "./local";
 import { Remote } from "./remote";
 import { useEsbuild } from "./use-esbuild";
 import { validateDevProps } from "./validate-dev-props";
+import type { ProxyData, StartDevWorkerOptions } from "../api";
 import type { Config } from "../config";
 import type { Route } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
@@ -31,6 +39,7 @@ import type { CfModule, CfWorkerInit } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { AssetPaths } from "../sites";
+import type { EsbuildBundle } from "./use-esbuild";
 
 /**
  * This hooks establishes a connection with the dev registry,
@@ -155,7 +164,9 @@ export type DevProps = {
 	host: string | undefined;
 	routes: Route[] | undefined;
 	inspect: boolean;
-	onReady: ((ip: string, port: number) => void) | undefined;
+	onReady:
+		| ((ip: string, port: number, proxyData: ProxyData) => void)
+		| undefined;
 	showInteractiveDevSession: boolean | undefined;
 	forceLocal: boolean | undefined;
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
@@ -201,12 +212,12 @@ function InteractiveDevSession(props: DevProps) {
 
 	useTunnel(toggles.tunnel);
 
-	const onReady = (newIp: string, newPort: number) => {
+	const onReady = (newIp: string, newPort: number, proxyData: ProxyData) => {
 		if (newIp !== props.initialIp || newPort !== props.initialPort) {
 			ip = newIp;
 			port = newPort;
 			if (props.onReady) {
-				props.onReady(newIp, newPort);
+				props.onReady(newIp, newPort, proxyData);
 			}
 		}
 	};
@@ -244,7 +255,55 @@ type DevSessionProps = DevProps & {
 };
 
 function DevSession(props: DevSessionProps) {
-	useCustomBuild(props.entry, props.build);
+	const [devEnv] = useState(() => new DevEnv());
+	useEffect(() => {
+		return () => {
+			void devEnv.teardown();
+		};
+	}, [devEnv]);
+	const startDevWorkerOptions: StartDevWorkerOptions = useMemo(
+		() => ({
+			name: props.name ?? "worker",
+			script: { contents: "" },
+			dev: {
+				server: {
+					hostname: props.initialIp,
+					port: props.initialPort,
+					secure: props.localProtocol === "https",
+				},
+				inspector: {
+					port: props.inspectorPort,
+				},
+				liveReload: props.liveReload,
+			},
+		}),
+		[
+			props.name,
+			props.initialIp,
+			props.initialPort,
+			props.localProtocol,
+			props.inspectorPort,
+			props.liveReload,
+		]
+	);
+	const onBundleStart = useCallback(() => {
+		devEnv.proxy.onBundleStart({
+			type: "bundleStart",
+			config: startDevWorkerOptions,
+		});
+	}, [devEnv, startDevWorkerOptions]);
+	const onReloadStart = useCallback(
+		(bundle: EsbuildBundle) => {
+			devEnv.proxy.onReloadStart({
+				type: "reloadStart",
+				config: startDevWorkerOptions,
+				bundle,
+			});
+		},
+		[devEnv, startDevWorkerOptions]
+	);
+
+	useCustomBuild(props.entry, props.build, onBundleStart);
 
 	const directory = useTmpDir();
 
@@ -254,6 +313,14 @@ function DevSession(props: DevSessionProps) {
 		props.bindings.durable_objects,
 		props.local ? "local" : "remote"
 	);
+	useEffect(() => {
+		// temp: fake these events by calling the handler directly
+		console.log("FAKE FIRST CONFIG UPDATE", startDevWorkerOptions);
+		devEnv.proxy.onConfigUpdate({
+			type: "configUpdate",
+			config: startDevWorkerOptions,
+		});
+	}, [devEnv, startDevWorkerOptions]);
 
 	const bundle = useEsbuild({
 		entry: props.entry,
@@ -281,7 +348,11 @@ function DevSession(props: DevSessionProps) {
 		targetConsumer: "dev",
 		testScheduled: props.testScheduled ?? false,
 		experimentalLocal: props.experimentalLocal,
+		onBundleStart,
 	});
+	useEffect(() => {
+		if (bundle) onReloadStart(bundle);
+	}, [onReloadStart, bundle]);
 
 	// TODO(queues) support remote wrangler dev
 	if (
@@ -293,7 +364,11 @@ function DevSession(props: DevSessionProps) {
 		);
 	}
 
-	const announceAndOnReady: typeof props.onReady = (finalIp, finalPort) => {
+	const announceAndOnReady: typeof props.onReady = (
+		finalIp,
+		finalPort,
+		proxyData
+	) => {
 		if (process.send) {
 			process.send(
 				JSON.stringify({
@@ -304,8 +379,17 @@ function DevSession(props: DevSessionProps) {
 			);
 		}
 
+		if (bundle) {
+			devEnv.proxy.onReloadComplete({
+				type: "reloadComplete",
+				config: startDevWorkerOptions,
+				bundle,
+				proxyData,
+			});
+		}
+
 		if (props.onReady) {
-			props.onReady(finalIp, finalPort);
+			props.onReady(finalIp, finalPort, proxyData);
 		}
 	};
 
@@ -320,8 +404,8 @@ function DevSession(props: DevSessionProps) {
 			bindings={props.bindings}
 			workerDefinitions={workerDefinitions}
 			assetPaths={props.assetPaths}
-			initialPort={props.initialPort}
-			initialIp={props.initialIp}
+			initialPort={0}
+			initialIp={"127.0.0.1"}
 			rules={props.rules}
 			inspectorPort={props.inspectorPort}
 			runtimeInspectorPort={props.runtimeInspectorPort}
@@ -329,7 +413,7 @@ function DevSession(props: DevSessionProps) {
 			liveReload={props.liveReload}
 			crons={props.crons}
 			queueConsumers={props.queueConsumers}
-			localProtocol={props.localProtocol}
+			localProtocol={"http"}
 			localUpstream={props.localUpstream}
 			inspect={props.inspect}
 			onReady={announceAndOnReady}
@@ -394,7 +478,11 @@ function useTmpDir(): string | undefined {
 	return directory?.name;
 }
 
-function useCustomBuild(expectedEntry: Entry, build: Config["build"]): void {
+function useCustomBuild(
+	expectedEntry: Entry,
+	build: Config["build"],
+	onBundleStart: () => void
+): void {
 	useEffect(() => {
 		if (!build.command) return;
 		let watcher: ReturnType<typeof watch> | undefined;
@@ -407,6 +495,7 @@ function useCustomBuild(expectedEntry: Entry, build: Config["build"]): void {
 					path.relative(expectedEntry.directory, expectedEntry.file) || ".";
 				//TODO: we should buffer requests to the proxy until this completes
 				logger.log(`The file ${filePath} changed, restarting build...`);
+				onBundleStart();
 				runCustomBuild(expectedEntry.file, relativeFile, build).catch((err) => {
 					logger.error("Custom build failed:", err);
 				});
@@ -416,7 +505,7 @@ function useCustomBuild(expectedEntry: Entry, build: Config["build"]): void {
 		return () => {
 			void watcher?.close();
 		};
-	}, [build, expectedEntry]);
+	}, [build, expectedEntry, onBundleStart]);
 }
 
 function sleep(period: number) {

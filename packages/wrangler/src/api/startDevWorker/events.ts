@@ -128,7 +128,8 @@ export type ProxyWorkerIncomingRequestBody =
 	| { type: "pause" };
 export type ProxyWorkerOutgoingRequestBody =
 	| { type: "error"; error: SerializedError }
-	| { type: "previewTokenExpired"; proxyData: ProxyData };
+	| { type: "previewTokenExpired"; proxyData: ProxyData }
+	| { type: "debug-log"; args: Parameters<typeof console.debug> };
 
 // InspectorProxyWorker
 export * from "./devtools";
@@ -143,7 +144,8 @@ export type InspectorProxyWorkerOutgoingWebsocketMessage =
 export type InspectorProxyWorkerOutgoingRequestBody =
 	| { type: "error"; error: SerializedError }
 	| { type: "runtime-websocket-error"; error: SerializedError }
-	| { type: "get-source-map" };
+	| { type: "get-source-map" }
+	| { type: "debug-log"; args: Parameters<typeof console.debug> };
 
 export type SerializedError = {
 	message: string;

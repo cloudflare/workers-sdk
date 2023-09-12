@@ -69,12 +69,6 @@ export class InspectorProxyWorker implements DurableObject {
 
 	runtimeMessageBuffer: string[] = [];
 
-	// latestExecutionContextCreatedMessage:
-	// 	| DevToolsEvent<"Runtime.executionContextCreated">
-	// 	| undefined;
-	// executionContextId = 0;
-	// getScriptSourceMessages: DevToolsCommandResponse<"Debugger.getScriptSource">[] =
-	// 	[];
 	#handleRuntimeIncomingMessage = (event: MessageEvent) => {
 		assert(typeof event.data === "string");
 		assert(
@@ -85,7 +79,7 @@ export class InspectorProxyWorker implements DurableObject {
 		const msg = JSON.parse(event.data) as
 			| DevToolsCommandResponses
 			| DevToolsEvents;
-		console.log("RUNTIME INCOMING MESSAGE", msg);
+		this.sendDebugLog("RUNTIME INCOMING MESSAGE", msg);
 
 		if (
 			"method" in msg &&
@@ -124,7 +118,7 @@ export class InspectorProxyWorker implements DurableObject {
 			event.data
 		);
 
-		console.log("handleProxyControllerIncomingMessage", event.data);
+		this.sendDebugLog("handleProxyControllerIncomingMessage", event.data);
 
 		switch (message.type) {
 			case "reloadComplete":
@@ -162,7 +156,7 @@ export class InspectorProxyWorker implements DurableObject {
 	reconnectRuntimeWebSocket() {
 		assert(this.#proxyData);
 
-		console.log("reconnectRuntimeWebSocket");
+		this.sendDebugLog("reconnectRuntimeWebSocket");
 
 		const deferred = createDeferredPromise<WebSocket>();
 
@@ -171,9 +165,9 @@ export class InspectorProxyWorker implements DurableObject {
 		// if `#runtimeWebSocketPromise` was already resolved, .resolve() has no effect, so set the new promise for any new await-ers
 		this.#runtimeWebSocketPromise = deferred;
 
-		console.log("BEFORE new Websocket");
+		this.sendDebugLog("BEFORE new Websocket");
 		const runtime = new WebSocket(this.#proxyData.destinationInspectorURL);
-		console.log("AFTER new Websocket");
+		this.sendDebugLog("AFTER new Websocket");
 
 		this.#websockets.runtime?.close();
 		this.#websockets.runtime = runtime;
@@ -224,7 +218,7 @@ export class InspectorProxyWorker implements DurableObject {
 		});
 
 		runtime.addEventListener("open", () => {
-			console.log("RUNTIME WEBSOCKET OPENED");
+			this.sendDebugLog("RUNTIME WEBSOCKET OPENED");
 
 			this.sendRuntimeMessage(
 				{ method: "Runtime.enable", id: this.nextCounter() },
@@ -301,6 +295,7 @@ export class InspectorProxyWorker implements DurableObject {
 		message: InspectorProxyWorkerOutgoingRequestBody
 	) {
 		const res = await this.env.PROXY_CONTROLLER.fetch("http://dummy", {
+			method: "POST",
 			body: JSON.stringify(message),
 		});
 
@@ -313,7 +308,7 @@ export class InspectorProxyWorker implements DurableObject {
 		runtime = await runtime;
 		message = typeof message === "string" ? message : JSON.stringify(message);
 
-		console.log("SEND TO RUNTIME", message);
+		this.sendDebugLog("SEND TO RUNTIME", message);
 
 		runtime.send(message);
 	}
@@ -322,7 +317,7 @@ export class InspectorProxyWorker implements DurableObject {
 	) {
 		message = typeof message === "string" ? message : JSON.stringify(message);
 
-		console.log("SEND TO DEVTOOLS", message);
+		this.sendDebugLog("SEND TO DEVTOOLS", message);
 
 		this.#websockets.devtools?.send(message);
 	}
@@ -371,7 +366,7 @@ export class InspectorProxyWorker implements DurableObject {
 		);
 
 		const message = JSON.parse(event.data) as DevToolsCommandRequests;
-		console.log("DEVTOOLS INCOMING MESSAGE", message);
+		this.sendDebugLog("DEVTOOLS INCOMING MESSAGE", message);
 
 		if (message.method === "Network.loadNetworkResource") {
 			return void this.handleDevToolsGetSourceMapMessage(message);
@@ -402,12 +397,12 @@ export class InspectorProxyWorker implements DurableObject {
 
 	async #handleDevToolsWebSocketUpgradeRequest(req: Request) {
 		// DevTools attempting to connect
-		console.log("DEVTOOLS WEBCOCKET TRYING TO CONNECT");
+		this.sendDebugLog("DEVTOOLS WEBCOCKET TRYING TO CONNECT");
 
 		// Delay devtools connection response until we've connected to the runtime inspector server
 		await this.#runtimeWebSocketPromise;
 
-		console.log("DEVTOOLS WEBCOCKET CAN NOW CONNECT");
+		this.sendDebugLog("DEVTOOLS WEBCOCKET CAN NOW CONNECT");
 
 		assert(
 			req.headers.get("Upgrade") === "websocket",
@@ -445,7 +440,7 @@ export class InspectorProxyWorker implements DurableObject {
 				method: "Debugger.disable",
 			});
 
-			console.log("DEVTOOLS WEBCOCKET CONNECTED");
+			this.sendDebugLog("DEVTOOLS WEBCOCKET CONNECTED");
 
 			this.#websockets.devtools = devtools;
 			this.#tryDrainRuntimeMessageBuffer();
@@ -465,6 +460,10 @@ export class InspectorProxyWorker implements DurableObject {
 
 		return this.#handleDevToolsJsonRequest(req);
 	}
+
+	sendDebugLog: typeof console.debug = (...args) => {
+		this.sendProxyControllerRequest({ type: "debug-log", args });
+	};
 }
 
 function isRequestFromProxyController(req: Request, env: Env): boolean {

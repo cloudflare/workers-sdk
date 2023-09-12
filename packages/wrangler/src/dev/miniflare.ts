@@ -132,8 +132,9 @@ class WranglerLog extends Log {
 	}
 }
 
+export const DEFAULT_WORKER_NAME = "worker";
 function getName(config: ConfigBundle) {
-	return config.name ?? "worker";
+	return config.name ?? DEFAULT_WORKER_NAME;
 }
 const IDENTIFIER_UNSAFE_REGEXP = /[^a-zA-Z0-9_$]/g;
 function getIdentifier(name: string) {
