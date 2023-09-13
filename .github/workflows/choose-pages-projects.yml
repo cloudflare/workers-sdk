@@ -26,6 +26,7 @@ jobs:
     uses: ./.github/workflows/deploy-pages-project.yml
     with:
       package: "quick-edit"
+      node-version: 16.14
     secrets:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
