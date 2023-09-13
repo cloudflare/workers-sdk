@@ -13,7 +13,7 @@
 		"custom:build": "./build.sh",
 		"dev": "concurrently '../../vendor/vscode/scripts/code-web.sh --extensionDevelopmentPath ../../packages/quick-edit/web/quick-edit-extension' 'npm --prefix web/quick-edit-extension run watch-web' 'yarn --cwd ../../vendor/vscode watch' 'yarn --cwd ../../vendor/vscode watch-web'",
 		"setup": "rm -rf web/assets web/quick-edit-extension && ./setup.sh",
-		"deploy": "yarn setup && yarn custom:build && pnpm exec wrangler pages deploy --project-name quick-edit ./web"
+		"deploy": "NPM_PUBLISH_TOKEN=NOT_USED yarn setup && yarn custom:build && pnpm exec wrangler pages deploy --project-name quick-edit ./web"
 	},
 	"dependencies": {
 		"yarn": "^1.22.19"
