@@ -20,15 +20,33 @@ jobs:
     secrets:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
+  # Quick Edit requires yarn, so needs fairly specific logic
   quick-edit:
     name: Quick Edit
     if: github.repository_owner == 'cloudflare' && (github.event_name != 'pull_request' || (github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'preview:quick-edit' )))
-    uses: ./.github/workflows/deploy-pages-project.yml
-    with:
-      package: "quick-edit"
-      node-version: 16.14
-    secrets:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Build Quick Edit
+        run: cd packages/quick-edit && yarn setup && yarn custom:build
+        env:
+          NPM_PUBLISH_TOKEN: NOT_USED # yarn will error if the env var from .npmrc can't be interpolated
+
+      - name: Publish Quick Edit
+        run: pnpm --filter quick-edit run deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
   workers-playground:
     name: Workers Playground

@@ -4,10 +4,6 @@ on:
       package:
         required: true
         type: string
-      node-version:
-        required: false
-        type: number
-        default: 18
     secrets:
       CLOUDFLARE_API_TOKEN:
         required: true
@@ -23,8 +19,6 @@ jobs:
 
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
-        env:
-          node-version: ${{ inputs.node-version }}
 
       - name: Build
         run: pnpm run build
