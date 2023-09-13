@@ -1050,7 +1050,11 @@ export function mapBindings(bindings: WorkerMetadataBinding[]): RawConfig {
 						{
 							configObj.r2_buckets = [
 								...(configObj.r2_buckets ?? []),
-								{ binding: binding.name, bucket_name: binding.bucket_name },
+								{
+									binding: binding.name,
+									bucket_name: binding.bucket_name,
+									jurisdiction: binding.jurisdiction,
+								},
 							];
 						}
 						break;

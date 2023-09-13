@@ -51,7 +51,12 @@ export type WorkerMetadataBinding =
 			environment?: string;
 	  }
 	| { type: "queue"; name: string; queue_name: string }
-	| { type: "r2_bucket"; name: string; bucket_name: string }
+	| {
+			type: "r2_bucket";
+			name: string;
+			bucket_name: string;
+			jurisdiction?: string;
+	  }
 	| { type: "d1"; name: string; id: string; internalEnv?: string }
 	| { type: "constellation"; name: string; project: string }
 	| { type: "service"; name: string; service: string; environment?: string }
@@ -163,11 +168,12 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		});
 	});
 
-	bindings.r2_buckets?.forEach(({ binding, bucket_name }) => {
+	bindings.r2_buckets?.forEach(({ binding, bucket_name, jurisdiction }) => {
 		metadataBindings.push({
 			name: binding,
 			type: "r2_bucket",
 			bucket_name,
+			jurisdiction,
 		});
 	});
 
