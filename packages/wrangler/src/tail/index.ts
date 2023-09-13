@@ -178,8 +178,10 @@ export async function tailHandler(args: TailArgs) {
 		args.format === "pretty" ? prettyPrintLogs : jsonPrintLogs;
 
 	tail.on("message", printLog);
+	tail.on("error", console.error);
 
 	while (tail.readyState !== tail.OPEN) {
+		console.log({ tail });
 		switch (tail.readyState) {
 			case tail.CONNECTING:
 				await setTimeout(100);

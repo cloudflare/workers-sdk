@@ -33,7 +33,7 @@ describe("tail", () => {
 	mockAccountId();
 	mockApiToken();
 
-	const std = mockConsoleMethods();
+	// const std = mockConsoleMethods();
 
 	afterEach(() => {
 		mockWebSockets.forEach((ws) => ws.close());
@@ -45,7 +45,7 @@ describe("tail", () => {
 	 * Interaction with the tailing API, including tail creation,
 	 * deletion, and connection.
 	 */
-	describe("API interaction", () => {
+	describe.only("API interaction", () => {
 		const { setIsTTY } = useMockIsTTY();
 		it("should throw an error if name isn't provided", async () => {
 			await expect(
@@ -71,7 +71,7 @@ describe("tail", () => {
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
-		it("creates and then delete tails", async () => {
+		it.only("creates and then delete tails", async () => {
 			const api = mockWebsocketAPIs();
 			expect(api.requests.creation.length).toStrictEqual(0);
 

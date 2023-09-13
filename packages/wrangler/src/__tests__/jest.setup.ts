@@ -94,6 +94,13 @@ fetchMock.dontMock();
 beforeAll(() => {
 	msw.listen({
 		onUnhandledRequest: (request) => {
+			const { hostname } = request.url;
+			const localHostnames = ["localhost", "127.0.0.1"]; // TODO: add other local hostnames if you need them
+			if (localHostnames.includes(hostname)) {
+				console.log("MSW PASSTROUGH", request.url.href);
+				return request.passthrough();
+			}
+
 			throw new Error(
 				`No mock found for ${request.method} ${request.url.href}
 				`

@@ -17,6 +17,9 @@ export class MockWebSocket extends WebSocket {
 			case "close":
 				this.onclose = listener;
 				break;
+			case "error":
+				this.onerror = listener;
+				break;
 			default:
 				throw new Error("Unknown event type: " + event.toString());
 		}
