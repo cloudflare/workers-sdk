@@ -23,11 +23,11 @@
 	"routes": [
 		{
 			"pattern": "playground.devprod.cloudflare.dev/*",
-			"zone_name": "devprod.cloudflare.dev"
+			"zone_name": "playground.devprod.cloudflare.dev"
 		},
 		{
 			"pattern": "*.playground.devprod.cloudflare.dev/*",
-			"zone_name": "devprod.cloudflare.dev"
+			"zone_name": "playground.devprod.cloudflare.dev"
 		}
 	],
 
