@@ -41,6 +41,8 @@ jobs:
 
       - name: Build Quick Edit
         run: cd packages/quick-edit && yarn setup && yarn custom:build
+        env:
+          NPM_PUBLISH_TOKEN: NOT_USED # yarn will error if the env var from .npmrc can't be interpolated
 
       - name: Publish Quick Edit
         run: pnpm --filter quick-edit run publish
