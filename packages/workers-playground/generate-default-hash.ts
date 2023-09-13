@@ -8,6 +8,10 @@ const year = String(today.getUTCFullYear());
 const month = String(today.getUTCMonth() + 1).padStart(2, "0");
 const date = String(today.getUTCDate()).padStart(2, "0");
 
+async function generateFileForWorker(worker: FormData) {
+	return `export default "${await compressWorker(worker)}";\n`;
+}
+
 const metadata = {
 	main_module: "index.js",
 	compatibility_date: `${year}-${month}-${date}`,
@@ -56,7 +60,7 @@ if (process.argv[2] === "check") {
 		"./src/QuickEditor/defaultHash.ts",
 		"utf8"
 	);
-	const generated = `export default "${await compressWorker(worker)}"`;
+	const generated = await generateFileForWorker(worker);
 	const equal = currentFile === generated;
 	if (!equal) {
 		console.log("Default hash not up to date", equal);
@@ -67,6 +71,6 @@ if (process.argv[2] === "check") {
 } else {
 	await writeFile(
 		"./src/QuickEditor/defaultHash.ts",
-		`export default "${await compressWorker(worker)}"`
+		await generateFileForWorker(worker)
 	);
 }
