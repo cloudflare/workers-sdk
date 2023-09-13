@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.2.3
+
+### Patch Changes
+
+- [#3935](https://github.com/cloudflare/workers-sdk/pull/3935) [`bdb39edc`](https://github.com/cloudflare/workers-sdk/commit/bdb39edc4d072309794786c79005bdd59559053d) Thanks [@IgorMinar](https://github.com/IgorMinar)! - fix: remove unused env variable from sveltekit project template
+
 ## 2.2.2
 
 ### Patch Changes

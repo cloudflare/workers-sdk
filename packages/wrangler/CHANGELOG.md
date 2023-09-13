@@ -1,5 +1,35 @@
 # wrangler
 
+## 3.8.0
+
+### Minor Changes
+
+- [#3775](https://github.com/cloudflare/workers-sdk/pull/3775) [`3af30879`](https://github.com/cloudflare/workers-sdk/commit/3af3087954e2d1580c3c3b6ac9d63c0737f4ba2a) Thanks [@bthwaites](https://github.com/bthwaites)! - R2 Jurisdictional Restrictions guarantee objects in a bucket are stored within a specific jurisdiction. Wrangler now allows you to interact with buckets in a defined jurisdiction.
+
+  Wrangler R2 operations now support a `-J` flag that allows the user to specify a jurisdiction. When passing the `-J` flag, you will only be able to interact with R2 resources within that jurisdiction.
+
+  ```bash
+  # List all of the buckets in the EU jurisdiction
+  wrangler r2 bucket list -J eu
+  # Downloads the object 'myfile.txt' from the bucket 'mybucket' in EU jurisdiction
+  wrangler r2 object get mybucket/myfile.txt -J eu
+  ```
+
+  To access R2 buckets that belong to a jurisdiction from Workers, you will need to specify the jurisdiction as well as the bucket name as part of your bindings in your `wrangler.toml`:
+
+  ```toml
+  [[r2_buckets]]
+  bindings = [
+    { binding = "MY_BUCKET", bucket_name = "<YOUR_BUCKET_NAME>", jurisdiction = "<JURISDICTION>" }
+  ]
+  ```
+
+### Patch Changes
+
+- [#3901](https://github.com/cloudflare/workers-sdk/pull/3901) [`a986f19f`](https://github.com/cloudflare/workers-sdk/commit/a986f19f2d7989639524f9fd73761ea69aef4f6b) Thanks [@DaniFoldi](https://github.com/DaniFoldi)! - Only require preview_id and preview_bucket_name in remote dev mode
+
+* [#3912](https://github.com/cloudflare/workers-sdk/pull/3912) [`0ba58841`](https://github.com/cloudflare/workers-sdk/commit/0ba588414e595d946c28c971bae7ef77e6e85050) Thanks [@jspspike](https://github.com/jspspike)! - Ignore cached account id when `CLOUDFLARE_ACCOUNT_ID` is specified
+
 ## 3.7.0
 
 ### Minor Changes
