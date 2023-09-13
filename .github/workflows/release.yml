@@ -42,6 +42,9 @@ jobs:
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
 
+      - name: Setup npmrc
+        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
+
       - name: Create Version PR or Publish to NPM
         id: changesets
         uses: changesets/action@v1
