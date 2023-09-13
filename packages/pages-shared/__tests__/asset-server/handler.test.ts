@@ -1,3 +1,4 @@
+import { describe, test, expect } from "vitest";
 import { generateHandler } from "../../asset-server/handler";
 import { createMetadataObject } from "../../metadata-generator/createMetadataObject";
 import type { HandlerContext } from "../../asset-server/handler";
@@ -106,6 +107,15 @@ describe("asset-server handler", () => {
 			});
 			expect(response.status).toBe(308);
 			expect(response.headers.get("Location")).toEqual("/www.example.com///");
+		}
+		{
+			const { response } = await getTestResponse({
+				request: "/%09/www.example.com/%09/index/",
+				metadata,
+				findAssetEntryForPath,
+			});
+			expect(response.status).toBe(308);
+			expect(response.headers.get("Location")).toEqual("/www.example.com/	/");
 		}
 		{
 			const { response } = await getTestResponse({

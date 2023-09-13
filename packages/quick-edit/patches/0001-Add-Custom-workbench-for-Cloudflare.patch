@@ -1,7 +1,7 @@
-From 6849aafb8c1311b367431cbf6054a531abed2134 Mon Sep 17 00:00:00 2001
+From 16ded598b00356eaa00940713a25502cf32c2206 Mon Sep 17 00:00:00 2001
 From: Samuel Macleod <smacleod@cloudflare.com>
 Date: Mon, 3 Apr 2023 11:18:10 +0100
-Subject: [PATCH 01/11] Add Custom workbench for Cloudflare
+Subject: [PATCH 01/13] Add Custom workbench for Cloudflare
 
 ---
  src/vs/code/browser/workbench/workbench.ts | 522 +++------------------

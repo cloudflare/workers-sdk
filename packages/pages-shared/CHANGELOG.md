@@ -1,5 +1,83 @@
 # @cloudflare/pages-shared
 
+## 0.9.0
+
+### Minor Changes
+
+- [#3895](https://github.com/cloudflare/workers-sdk/pull/3895) [`40f56562`](https://github.com/cloudflare/workers-sdk/commit/40f565628aaef2cad745aeeb4da297e7a6973e0d) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: bump `miniflare` to [`3.20230904.0`](https://github.com/cloudflare/miniflare/releases/tag/v3.20230904.0)
+
+## 0.8.2
+
+### Patch Changes
+
+- [#3870](https://github.com/cloudflare/workers-sdk/pull/3870) [`2a6fdd9e`](https://github.com/cloudflare/workers-sdk/commit/2a6fdd9e2a16bc883bd87e828927d47655d032ed) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Requests for Cloudflare Pages which match against a `_headers` rule now match regardless of the incoming request's port
+
+## 0.8.1
+
+### Patch Changes
+
+- [#3765](https://github.com/cloudflare/workers-sdk/pull/3765) [`e17d3096`](https://github.com/cloudflare/workers-sdk/commit/e17d3096ecde7cf697f7d5bc6ebc3a868eb88cfa) Thanks [@RamIdeas](https://github.com/RamIdeas)! - bump miniflare version to 3.20230814.1
+
+## 0.8.0
+
+### Minor Changes
+
+- [#3675](https://github.com/cloudflare/workers-sdk/pull/3675) [`f753f3af`](https://github.com/cloudflare/workers-sdk/commit/f753f3afb7478bb289b39c44b33acbcefe06e99a) Thanks [@1000hz](https://github.com/1000hz)! - chore: upgrade `miniflare` to [`3.20230724.0`](https://github.com/cloudflare/miniflare/releases/tag/v3.20230724.0)
+
+## 0.7.0
+
+### Minor Changes
+
+- [#3628](https://github.com/cloudflare/workers-sdk/pull/3628) [`e72a5794`](https://github.com/cloudflare/workers-sdk/commit/e72a5794f219e21ede701a7184a4691058366753) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: upgrade `miniflare` to [`3.20230717.0`](https://github.com/cloudflare/miniflare/releases/tag/v3.20230717.0)
+
+## 0.6.0
+
+### Minor Changes
+
+- [#3583](https://github.com/cloudflare/workers-sdk/pull/3583) [`78ddb8de`](https://github.com/cloudflare/workers-sdk/commit/78ddb8de78152b2cb4180f23b51ee5478637d92d) Thanks [@penalosa](https://github.com/penalosa)! - Upgrade Miniflare (and hence `workerd`) to `v3.20230710.0`.
+
+## 0.5.3
+
+### Patch Changes
+
+- [#3541](https://github.com/cloudflare/workers-sdk/pull/3541) [`09f317d4`](https://github.com/cloudflare/workers-sdk/commit/09f317d4c42d1787bdc636f13b4a303fa9a5b4b0) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Bump miniflare@3.0.2
+
+## 0.5.2
+
+### Patch Changes
+
+- [#3454](https://github.com/cloudflare/workers-sdk/pull/3454) [`a2194043`](https://github.com/cloudflare/workers-sdk/commit/a2194043c6c755e9308b3ffc1e9afb0d1544f6b9) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: upgrade `miniflare` to `3.0.1`
+
+  This version ensures root CA certificates are trusted on Windows.
+  It also loads extra certificates from the `NODE_EXTRA_CA_CERTS` environment variable,
+  allowing `wrangler dev` to be used with Cloudflare WARP enabled.
+
+## 0.5.1
+
+### Patch Changes
+
+- [#2921](https://github.com/cloudflare/workers-sdk/pull/2921) [`066f0b05`](https://github.com/cloudflare/workers-sdk/commit/066f0b050e90351190386764604daaa068a69b73) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Add `x-deployment-id` header when opted-in
+
+## 0.5.0
+
+### Minor Changes
+
+- [#3150](https://github.com/cloudflare/workers-sdk/pull/3150) [`7512d4cc`](https://github.com/cloudflare/workers-sdk/commit/7512d4cc3cb3a0d3d6d766aeb1f912fdb8493d0b) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: upgrade `miniflare` to [`2.14.0`](https://github.com/cloudflare/miniflare/releases/tag/v2.14.0)
+
+## 0.4.2
+
+### Patch Changes
+
+- [#3136](https://github.com/cloudflare/workers-sdk/pull/3136) [`823258cd`](https://github.com/cloudflare/workers-sdk/commit/823258cdf7f41747963d87bdb018b510f26184b6) Thanks [@jahands](https://github.com/jahands)! - fix: Remove global flag in pages-shared regex
+
+## 0.4.1
+
+### Patch Changes
+
+- [#3132](https://github.com/cloudflare/workers-sdk/pull/3132) [`b503336c`](https://github.com/cloudflare/workers-sdk/commit/b503336cb3a03bb5cff7841196e144eafb6f2ef6) Thanks [@sidharthachatterjee](https://github.com/sidharthachatterjee)! - pages-shared: Strip spaces in urls
+
+* [#3131](https://github.com/cloudflare/workers-sdk/pull/3131) [`7b12604e`](https://github.com/cloudflare/workers-sdk/commit/7b12604e24434a8b4343480bebf3b1e6737336a0) Thanks [@sidharthachatterjee](https://github.com/sidharthachatterjee)! - Prevent protocol-less URL redirects for %09 (with backslashes)
+
 ## 0.4.0
 
 ### Minor Changes

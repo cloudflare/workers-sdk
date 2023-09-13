@@ -1,3 +1,5 @@
+import type { Json } from "miniflare";
+
 /**
  * The `Environment` interface declares all the configuration fields that
  * can be specified for an environment.
@@ -190,7 +192,7 @@ interface EnvironmentInheritable {
 	};
 
 	/**
-	 * Skip internal build steps and directly publish script
+	 * Skip internal build steps and directly deploy script
 	 * @inheritable
 	 */
 	no_bundle: boolean | undefined;
@@ -221,6 +223,8 @@ interface EnvironmentInheritable {
 		binding: string;
 		/** The namespace to bind to. */
 		namespace: string;
+		/** Details about the outbound worker which will handle outbound requests from your namespace */
+		outbound?: DispatchNamespaceOutbound;
 	}[];
 
 	/**
@@ -237,15 +241,12 @@ interface EnvironmentInheritable {
 	zone_id?: string;
 
 	/**
-	 * Specify a compiled capnp schema to use
-	 * Then add a binding per field in the top level message that you will send to logfwdr
+	 * List of bindings that you will send to logfwdr
 	 *
-	 * @default `{schema:undefined,bindings:[]}`
+	 * @default `{bindings:[]}`
 	 * @inheritable
 	 */
 	logfwdr: {
-		/** capnp schema filename */
-		schema: string | undefined;
 		bindings: {
 			/** The binding name used to refer to logfwdr */
 			name: string;
@@ -265,6 +266,13 @@ interface EnvironmentInheritable {
 	 * @inheritable
 	 */
 	logpush: boolean | undefined;
+
+	/**
+	 * Specify how the worker should be located to minimize round-trip time.
+	 *
+	 * More details: https://developers.cloudflare.com/workers/platform/smart-placement/
+	 */
+	placement: { mode: "off" | "smart" } | undefined;
 }
 
 export type DurableObjectBindings = {
@@ -305,7 +313,7 @@ interface EnvironmentNonInheritable {
 	 * @default `{}`
 	 * @nonInheritable
 	 */
-	vars: { [key: string]: unknown };
+	vars: Record<string, string | Json>;
 
 	/**
 	 * A list of durable objects that your worker should be bound to.
@@ -420,6 +428,8 @@ interface EnvironmentNonInheritable {
 		bucket_name: string;
 		/** The preview name of this R2 bucket at the edge. */
 		preview_bucket_name?: string;
+		/** The jurisdiction that the bucket exists in. Default if not present. */
+		jurisdiction?: string;
 	}[];
 
 	/**
@@ -446,6 +456,22 @@ interface EnvironmentNonInheritable {
 		migrations_dir?: string;
 		/** Internal use only. */
 		database_internal_env?: string;
+	}[];
+
+	/**
+	 * Specifies Constellation projects that are bound to this Worker environment.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default `[]`
+	 * @nonInheritable
+	 */
+	constellation: {
+		/** The binding name used to refer to the project in the worker. */
+		binding: string;
+		/** The id of the project. */
+		project_id: string;
 	}[];
 
 	/**
@@ -485,6 +511,15 @@ interface EnvironmentNonInheritable {
 	}[];
 
 	/**
+	 * A browser that will be usable from the worker.
+	 */
+	browser:
+		| {
+				binding: string;
+		  }
+		| undefined;
+
+	/**
 	 * "Unsafe" tables for features that aren't directly supported by wrangler.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
@@ -511,6 +546,21 @@ interface EnvironmentNonInheritable {
 		metadata?: {
 			[key: string]: string;
 		};
+
+		/**
+		 * Used for internal capnp uploads for the Workers runtime
+		 */
+		capnp?:
+			| {
+					base_path: string;
+					source_schemas: string[];
+					compiled_schema?: never;
+			  }
+			| {
+					base_path?: never;
+					source_schemas?: never;
+					compiled_schema: string;
+			  };
 	};
 
 	mtls_certificates: {
@@ -519,6 +569,8 @@ interface EnvironmentNonInheritable {
 		/** The uuid of the uploaded mTLS certificate */
 		certificate_id: string;
 	}[];
+
+	tail_consumers?: TailConsumer[];
 }
 
 /**
@@ -616,3 +668,19 @@ export type ConfigModuleRuleType =
 	| "CompiledWasm"
 	| "Text"
 	| "Data";
+
+export type TailConsumer = {
+	/** The name of the service tail events will be forwarded to. */
+	service: string;
+	/** (Optional) The environt of the service. */
+	environment?: string;
+};
+
+export interface DispatchNamespaceOutbound {
+	/** Name of the service handling the outbound requests */
+	service: string;
+	/** (Optional) Name of the environment handling the outbound requests. */
+	environment?: string;
+	/** (Optional) List of parameter names, for sending context from your dispatch worker to the outbound handler */
+	parameters?: string[];
+}

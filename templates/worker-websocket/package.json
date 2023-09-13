@@ -3,11 +3,12 @@
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
-		"deploy": "wrangler publish index.js",
+		"deploy": "wrangler deploy index.js",
 		"dev": "wrangler dev index.js --local",
 		"start-stackblitz": "WRANGLER_SEND_METRICS=false wrangler dev index.js --local"
 	},
 	"devDependencies": {
-		"wrangler": "^2.9.1"
+		"@cloudflare/workers-types": "^4.20230518.0 ",
+		"wrangler": "^3.0.0"
 	}
 }

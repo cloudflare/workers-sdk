@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { fetch, File, Headers } from "undici";
+import { Response } from "undici";
 import { version as wranglerVersion } from "../../package.json";
 import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
@@ -7,7 +8,7 @@ import { ParseError, parseJSON } from "../parse";
 import { loginOrRefreshIfRequired, requireApiToken } from "../user";
 import type { ApiCredentials } from "../user";
 import type { URLSearchParams } from "node:url";
-import type { RequestInit, HeadersInit, Response } from "undici";
+import type { RequestInit, HeadersInit } from "undici";
 
 /*
  * performApiFetch does everything required to make a CF API request,
@@ -217,19 +218,20 @@ export async function fetchR2Objects(
 export async function fetchDashboardScript(
 	resource: string,
 	bodyInit: RequestInit = {}
-): Promise<string> {
+): Promise<File[]> {
 	await requireLoggedIn();
 	const auth = requireApiToken();
 	const headers = cloneHeaders(bodyInit.headers);
 	addAuthorizationHeaderIfUnspecified(headers, auth);
 	addUserAgent(headers);
 
-	const response = await fetch(`${getCloudflareApiBaseUrl()}${resource}`, {
+	let response = await fetch(`${getCloudflareApiBaseUrl()}${resource}`, {
 		...bodyInit,
 		headers,
 	});
 
 	if (!response.ok || !response.body) {
+		console.error(response.ok, response.body);
 		throw new Error(
 			`Failed to fetch ${resource} - ${response.status}: ${response.statusText});`
 		);
@@ -240,19 +242,22 @@ export async function fetchDashboardScript(
 		?.startsWith("multipart");
 
 	if (usesModules) {
-		// Response from edge contains generic "name = worker.js" for dashboard created scripts
-		const form = await response.formData();
-		const entries = Array.from(form.entries());
-		if (entries.length > 1)
-			throw new RangeError("Expected only one entry in multipart response");
-		const [_, file] = entries[0];
-
-		if (file instanceof File) {
-			return await file.text();
+		// For testing purposes only, sorry not sorry -- msw doesn't implement Response#formData
+		if (!response.formData) {
+			response = new Response(await response.text(), response);
 		}
 
-		return file ?? "";
+		const form = await response.formData();
+		const files = Array.from(form.entries()).map(([filename, contents]) =>
+			contents instanceof File ? contents : new File([contents], filename)
+		);
+
+		return files;
 	} else {
-		return response.text();
+		const contents = await response.text();
+		const filename = response.headers.get("cf-entrypoint") ?? "index.js";
+		const file = new File([contents], filename, { type: "text" });
+
+		return [file];
 	}
 }

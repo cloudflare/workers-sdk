@@ -1,6 +1,16 @@
-import { Readable } from "node:stream";
+import path from "node:path";
+import {
+	R2Gateway,
+	NoOpLog,
+	createFileStorage,
+	sanitisePath,
+	defaultTimers,
+} from "miniflare";
 import { fetchResult } from "../cfetch";
 import { fetchR2Objects } from "../cfetch/internal";
+import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
+import type { Readable } from "node:stream";
+import type { ReadableStream } from "node:stream/web";
 import type { HeadersInit } from "undici";
 
 /**
@@ -15,11 +25,16 @@ export interface R2BucketInfo {
  * Fetch a list of all the buckets under the given `accountId`.
  */
 export async function listR2Buckets(
-	accountId: string
+	accountId: string,
+	jurisdiction?: string
 ): Promise<R2BucketInfo[]> {
+	const headers: HeadersInit = {};
+	if (jurisdiction !== undefined) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
 	const results = await fetchResult<{
 		buckets: R2BucketInfo[];
-	}>(`/accounts/${accountId}/r2/buckets`);
+	}>(`/accounts/${accountId}/r2/buckets`, { headers });
 	return results.buckets;
 }
 
@@ -31,11 +46,17 @@ export async function listR2Buckets(
  */
 export async function createR2Bucket(
 	accountId: string,
-	bucketName: string
+	bucketName: string,
+	jurisdiction?: string
 ): Promise<void> {
+	const headers: HeadersInit = {};
+	if (jurisdiction !== undefined) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
 	return await fetchResult<void>(`/accounts/${accountId}/r2/buckets`, {
 		method: "POST",
 		body: JSON.stringify({ name: bucketName }),
+		headers,
 	});
 }
 
@@ -44,11 +65,16 @@ export async function createR2Bucket(
  */
 export async function deleteR2Bucket(
 	accountId: string,
-	bucketName: string
+	bucketName: string,
+	jurisdiction?: string
 ): Promise<void> {
+	const headers: HeadersInit = {};
+	if (jurisdiction !== undefined) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
 	return await fetchResult<void>(
 		`/accounts/${accountId}/r2/buckets/${bucketName}`,
-		{ method: "DELETE" }
+		{ method: "DELETE", headers }
 	);
 }
 
@@ -72,14 +98,22 @@ export function bucketAndKeyFromObjectPath(objectPath = ""): {
 export async function getR2Object(
 	accountId: string,
 	bucketName: string,
-	objectName: string
-): Promise<Readable> {
+	objectName: string,
+	jurisdiction?: string
+): Promise<ReadableStream> {
+	const headers: HeadersInit = {};
+	if (jurisdiction !== undefined) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
 	const response = await fetchR2Objects(
 		`/accounts/${accountId}/r2/buckets/${bucketName}/objects/${objectName}`,
-		{ method: "GET" }
+		{
+			method: "GET",
+			headers,
+		}
 	);
 
-	return Readable.from(response.body);
+	return response.body;
 }
 
 /**
@@ -89,8 +123,9 @@ export async function putR2Object(
 	accountId: string,
 	bucketName: string,
 	objectName: string,
-	object: Readable | Buffer,
-	options: Record<string, unknown>
+	object: Readable | ReadableStream | Buffer,
+	options: Record<string, unknown>,
+	jurisdiction?: string
 ): Promise<void> {
 	const headerKeys = [
 		"content-length",
@@ -105,6 +140,9 @@ export async function putR2Object(
 	for (const key of headerKeys) {
 		const value = options[key] || "";
 		if (value && typeof value === "string") headers[key] = value;
+	}
+	if (jurisdiction !== undefined) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
 	}
 
 	await fetchR2Objects(
@@ -123,10 +161,27 @@ export async function putR2Object(
 export async function deleteR2Object(
 	accountId: string,
 	bucketName: string,
-	objectName: string
+	objectName: string,
+	jurisdiction?: string
 ): Promise<void> {
+	const headers: HeadersInit = {};
+	if (jurisdiction !== undefined) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
 	await fetchR2Objects(
 		`/accounts/${accountId}/r2/buckets/${bucketName}/objects/${objectName}`,
-		{ method: "DELETE" }
+		{ method: "DELETE", headers }
 	);
+}
+
+export function localGateway(
+	persistTo: string | undefined,
+	configPath: string | undefined,
+	bucketName: string
+): R2Gateway {
+	const persist = getLocalPersistencePath(persistTo, configPath);
+	const sanitisedNamespace = sanitisePath(bucketName);
+	const persistPath = path.join(persist, "v3/r2", sanitisedNamespace);
+	const storage = createFileStorage(persistPath);
+	return new R2Gateway(new NoOpLog(), storage, defaultTimers);
 }

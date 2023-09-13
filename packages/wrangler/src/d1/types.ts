@@ -8,6 +8,22 @@ export type Database = {
 	migrationsFolderPath: string;
 };
 
+export type DatabaseCreationResult = {
+	uuid: string;
+	name: string;
+	primary_location_hint?: string;
+	created_in_region?: string;
+};
+
+export type DatabaseInfo = {
+	uuid: string;
+	name: string;
+	version: "alpha" | "beta";
+	num_tables: number;
+	file_size: number;
+	running_in_region?: string;
+};
+
 export type Backup = {
 	id: string;
 	database_id: string;
@@ -23,3 +39,34 @@ export type Migration = {
 	name: string;
 	applied_at: string;
 };
+
+export interface D1Metrics {
+	sum?: {
+		readQueries?: number;
+		writeQueries?: number;
+		queryBatchResponseBytes?: number;
+	};
+	quantiles?: {
+		queryBatchTimeMsP90?: number;
+	};
+	avg?: {
+		queryBatchTimeMs?: number;
+	};
+	dimensions: {
+		databaseId?: string;
+		date?: string;
+		datetime?: string;
+		datetimeMinute?: string;
+		datetimeFiveMinutes?: string;
+		datetimeFifteenMinutes?: string;
+		datetimeHour?: string;
+	};
+}
+
+export interface D1MetricsGraphQLResponse {
+	data: {
+		viewer: {
+			accounts: { d1AnalyticsAdaptiveGroups?: D1Metrics[] }[];
+		};
+	};
+}

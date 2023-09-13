@@ -1,17 +1,17 @@
 type HeadersInit = ConstructorParameters<typeof Headers>[0];
 
 function mergeHeaders(base: HeadersInit, extra: HeadersInit) {
-	base = new Headers(base ?? {});
-	extra = new Headers(extra ?? {});
+	const baseHeaders = new Headers(base ?? {});
+	const extraHeaders = new Headers(extra ?? {});
 
 	return new Headers({
-		...Object.fromEntries(base.entries()),
-		...Object.fromEntries(extra.entries()),
+		...Object.fromEntries(baseHeaders.entries()),
+		...Object.fromEntries(extraHeaders.entries()),
 	});
 }
 
 export function stripLeadingDoubleSlashes(location: string) {
-	return location.replace(/^(\/|%2F|%2f|%5C|%5c|\\)+(.*)/, "/$2");
+	return location.replace(/^(\/|%2F|%2f|%5C|%5c|%09|\s|\\)+(.*)/, "/$2");
 }
 
 export class OkResponse extends Response {

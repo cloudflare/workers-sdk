@@ -94,6 +94,13 @@ export async function startWorkerRegistry() {
 				throw err;
 			}
 		});
+
+		/**
+		 * The registry server may close. Reset the server to null for restart.
+		 */
+		server.on("close", () => {
+			server = null;
+		});
 	}
 }
 
@@ -112,6 +119,10 @@ export async function registerWorker(
 	name: string,
 	definition: WorkerDefinition
 ) {
+	/**
+	 * Prevent the dev registry be closed.
+	 */
+	await startWorkerRegistry();
 	try {
 		return await fetch(`${DEV_REGISTRY_HOST}/workers/${name}`, {
 			method: "POST",

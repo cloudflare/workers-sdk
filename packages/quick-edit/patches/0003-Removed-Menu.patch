@@ -1,7 +1,7 @@
-From d779d203de3f456a7b3c7f1674ec67403e40cfa2 Mon Sep 17 00:00:00 2001
+From 63b3a3fe21e1838b8c0088b4b147c49e94f4b511 Mon Sep 17 00:00:00 2001
 From: Jacob M-G Evans <jacobmgevans@gmail.com>
 Date: Tue, 28 Mar 2023 14:41:00 -0500
-Subject: [PATCH 03/11] Removed Menu
+Subject: [PATCH 03/13] Removed Menu
 
 ---
  .../browser/parts/titlebar/menubarControl.ts  | 94 +++++++++----------

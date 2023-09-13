@@ -45,7 +45,10 @@ function transformRoutingRuleToRegExp(rule: string): RegExp {
 	}
 
 	// /foo* => /foo.* => ^/foo.*$
-	transformedRule = `^${transformedRule.replace("*", ".*")}$`;
+	// /*.* => /*\.* => /.*\..* => ^/.*\..*$
+	transformedRule = `^${transformedRule
+		.replaceAll(/\./g, "\\.")
+		.replaceAll(/\*/g, ".*")}$`;
 
 	// ^/foo.*$ => /^\/foo.*$/
 	return new RegExp(transformedRule);

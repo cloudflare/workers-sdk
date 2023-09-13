@@ -11,14 +11,12 @@ You can try this template in your browser [here](https://worker-openapi-example.
 To create a `my-project` directory using this template, run:
 
 ```sh
-$ npm init cloudflare my-project worker-openapi
+$ npx wrangler generate my-project worker-openapi
 # or
-$ yarn create cloudflare my-project worker-openapi
+$ yarn wrangler generate my-project worker-openapi
 # or
-$ pnpm create cloudflare my-project worker-openapi
+$ pnpm wrangler generate my-project worker-openapi
 ```
-
-> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.
 
 ## Local development
 
@@ -31,5 +29,5 @@ You'll be greeted with an OpenAPI page that you can use to test and call your en
 Once you are ready, you can publish your code by running the following command:
 
 ```sh
-$ wrangler publish
+$ wrangler deploy
 ```

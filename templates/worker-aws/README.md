@@ -11,14 +11,12 @@ This project is not related to, affiliated with, sponsored or endorsed by Amazon
 To create a `my-project` directory using this template, run:
 
 ```sh
-$ npm init cloudflare my-project worker-aws
+$ npx wrangler generate my-project worker-aws
 # or
-$ yarn create cloudflare my-project worker-aws
+$ yarn wrangler generate my-project worker-aws
 # or
-$ pnpm create cloudflare my-project worker-aws
+$ pnpm wrangler generate my-project worker-aws
 ```
-
-> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.
 
 [`index.js`](https://github.com/cloudflare/workers-aws-template/blob/master/index.js) is the content of the Workers script. In `handleRequest`, uncomment the example for the service you want to try out.
 
@@ -33,7 +31,7 @@ $ wrangler secret put AWS_SQS_QUEUE_URL
 
 Configuration of less sensitive values such as AWS_REGION can be done in the `[vars]` block of your `wrangler.toml` file if you'd prefer.
 
-After that you can use `wrangler publish` as normal. See the [wrangler documentation](https://developers.cloudflare.com/workers/cli-wrangler) for more information.
+After that you can use `wrangler deploy` as normal. See the [wrangler documentation](https://developers.cloudflare.com/workers/cli-wrangler) for more information.
 
 ## AWS Resources
 

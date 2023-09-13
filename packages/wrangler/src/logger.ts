@@ -3,7 +3,7 @@ import chalk from "chalk";
 import CLITable from "cli-table3";
 import { formatMessagesSync } from "esbuild";
 import { getEnvironmentVariableFactory } from "./environment-variables/factory";
-import type { BuildFailure } from "esbuild";
+import type { Message } from "esbuild";
 export const LOGGER_LEVELS = {
 	none: -1,
 	error: 0,
@@ -61,7 +61,11 @@ export class Logger {
 		const keys: Keys[] =
 			data.length === 0 ? [] : (Object.keys(data[0]) as Keys[]);
 		const t = new CLITable({
-			head: keys.map((k) => chalk.bold.blue(k)),
+			head: keys,
+			style: {
+				head: chalk.level ? ["blue"] : [],
+				border: chalk.level ? ["gray"] : [],
+			},
 		});
 		t.push(...data.map((row) => keys.map((k) => row[k])));
 		return this.doLog("log", [t.toString()]);
@@ -107,13 +111,17 @@ export class Logger {
  */
 export const logger = new Logger();
 
+export function logBuildWarnings(warnings: Message[]) {
+	const logs = formatMessagesSync(warnings, { kind: "warning", color: true });
+	for (const log of logs) console.warn(log);
+}
+
 /**
  * Logs all errors/warnings associated with an esbuild BuildFailure in the same
  * style esbuild would.
  */
-export function logBuildFailure(failure: BuildFailure) {
-	let logs = formatMessagesSync(failure.errors, { kind: "error", color: true });
+export function logBuildFailure(errors: Message[], warnings: Message[]) {
+	const logs = formatMessagesSync(errors, { kind: "error", color: true });
 	for (const log of logs) console.error(log);
-	logs = formatMessagesSync(failure.warnings, { kind: "warning", color: true });
-	for (const log of logs) console.warn(log);
+	logBuildWarnings(warnings);
 }

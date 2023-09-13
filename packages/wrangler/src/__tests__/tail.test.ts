@@ -14,11 +14,20 @@ import type {
 	ScheduledEvent,
 	AlarmEvent,
 	EmailEvent,
+	TailInfo,
 } from "../tail/createTail";
 import type { RequestInit } from "undici";
 import type WebSocket from "ws";
 
 describe("tail", () => {
+	beforeEach(() => {
+		// You may be inclined to change this to `jest.requireMock ()`. Do it, I
+		// dare you... Have fun fixing this tests :)
+		// (hint: https://github.com/aelbore/esbuild-jest/blob/daa5847b3b382d9ddf6cc26e60ad949d202c4461/src/index.ts#L33)
+		const mockWs = jest["requireMock"]("ws");
+		mockWs.useOriginal = false;
+	});
+
 	beforeEach(() => msw.use(...mswSucessScriptHandlers));
 	runInTempDir();
 	mockAccountId();
@@ -56,10 +65,10 @@ describe("tail", () => {
 			await runWrangler("tail durable-object--websocket--response");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBeginning log collection requires restarting the Durable Objects associated with durable-object--websocket--response. Any WebSocket connections or other non-persisted state will be lost as part of this restart.[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBeginning log collection requires restarting the Durable Objects associated with durable-object--websocket--response. Any WebSocket connections or other non-persisted state will be lost as part of this restart.[0m
 
-"
-`);
+			"
+		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 		it("creates and then delete tails", async () => {
@@ -503,10 +512,36 @@ describe("tail", () => {
 					)
 					.replace(mockTailExpiration.toISOString(), "[mock expiration date]")
 			).toMatchInlineSnapshot(`
-			        "Successfully created tail, expires at [mock expiration date]
-			        Connected to test-worker, waiting for logs...
-			        Email from:${mockEmailEventFrom} to:${mockEmailEventTo} size:${mockEmailEventSize} @ [mock event timestamp] - Ok"
-		      `);
+			"Successfully created tail, expires at [mock expiration date]
+			Connected to test-worker, waiting for logs...
+			Email from:from@example.com to:to@example.com size:45416 @ [mock event timestamp] - Ok"
+		`);
+		});
+
+		it("logs tail overload message", async () => {
+			const api = mockWebsocketAPIs();
+			await runWrangler("tail test-worker --format pretty");
+
+			let event = generateTailInfo(true);
+			let message = generateMockEventMessage({ event });
+			let serializedMessage = serialize(message);
+			api.ws.send(serializedMessage);
+
+			event = generateTailInfo(false);
+			message = generateMockEventMessage({ event });
+			serializedMessage = serialize(message);
+			api.ws.send(serializedMessage);
+			expect(
+				std.out.replace(
+					mockTailExpiration.toISOString(),
+					"[mock expiration date]"
+				)
+			).toMatchInlineSnapshot(`
+			"Successfully created tail, expires at [mock expiration date]
+			Connected to test-worker, waiting for logs...
+			Tail is currently in sampling mode due to the high volume of messages. To prevent messages from being dropped consider adding filters.
+			Tail has exited sampling mode and is no longer dropping messages."
+		`);
 		});
 
 		it("should not crash when the tail message has a void event", async () => {
@@ -675,6 +710,7 @@ function isRequest(
 		| RequestEvent
 		| AlarmEvent
 		| EmailEvent
+		| TailInfo
 		| undefined
 		| null
 ): event is RequestEvent {
@@ -955,4 +991,18 @@ function generateMockEmailEvent(opts?: Partial<EmailEvent>): EmailEvent {
 		rcptTo: opts?.rcptTo || mockEmailEventTo,
 		rawSize: opts?.rawSize || mockEmailEventSize,
 	};
+}
+
+function generateTailInfo(overload: boolean): TailInfo {
+	return overload
+		? {
+				message:
+					"Tail is currently in sampling mode due to the high volume of messages. To prevent messages from being dropped consider adding filters.",
+				type: "overload",
+		  }
+		: {
+				message:
+					"Tail has exited sampling mode and is no longer dropping messages.",
+				type: "overload-stop",
+		  };
 }

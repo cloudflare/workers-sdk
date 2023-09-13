@@ -3,12 +3,14 @@
 	"version": "0.0.1",
 	"private": true,
 	"scripts": {
-		"deploy": "wrangler publish",
+		"deploy": "wrangler deploy",
 		"start": "wrangler dev",
-		"test": "vitest"
+		"test": "vitest run",
+		"test:ci": "vitest run",
+		"test:watch": "npx vitest"
 	},
 	"devDependencies": {
 		"get-port": "^6.1.2",
-		"wrangler": "^2.15.0"
+		"wrangler": "workspace:*"
 	}
 }

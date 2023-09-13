@@ -1,7 +1,7 @@
-From 3b5d5f2f949840d45d8ff29db9d219dc3b6d22c6 Mon Sep 17 00:00:00 2001
+From 5696bfbc875536f679c172a957ce076c226ff241 Mon Sep 17 00:00:00 2001
 From: Jacob M-G Evans <jacobmgevans@gmail.com>
 Date: Fri, 31 Mar 2023 17:07:44 -0500
-Subject: [PATCH 08/11] Remove 'Custom' Menu (hamburger)
+Subject: [PATCH 08/13] Remove 'Custom' Menu (hamburger)
 
 ---
  .../parts/activitybar/activitybarPart.ts      |   6 +-

@@ -4,14 +4,14 @@ import React from "react";
 import { format as timeagoFormat } from "timeago.js";
 import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
-import { prompt } from "../dialogs";
+import { confirm, prompt } from "../dialogs";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
-import { pagesBetaWarning } from "./utils";
+
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -19,7 +19,7 @@ import type {
 import type { PagesConfigCache, Project } from "./types";
 
 export function ListOptions(yargs: CommonYargsArgv) {
-	return yargs.epilogue(pagesBetaWarning);
+	return yargs;
 }
 
 export async function ListHandler() {
@@ -86,12 +86,25 @@ export function CreateOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				description: "The name of the production branch of your project",
 			},
-		})
-		.epilogue(pagesBetaWarning);
+			"compatibility-flags": {
+				describe: "Flags to use for compatibility checks",
+				alias: "compatibility-flag",
+				type: "string",
+				requiresArg: true,
+				array: true,
+			},
+			"compatibility-date": {
+				describe: "Date to use for compatibility checks",
+				type: "string",
+				requiresArg: true,
+			},
+		});
 }
 
 export async function CreateHandler({
 	productionBranch,
+	compatibilityFlags,
+	compatibilityDate,
 	projectName,
 }: StrictYargsOptionsToInterface<typeof CreateOptions>) {
 	const config = getConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME);
@@ -133,14 +146,29 @@ export async function CreateHandler({
 		throw new FatalError("Must specify a production branch.", 1);
 	}
 
+	const deploymentConfig = {
+		...(compatibilityFlags && {
+			compatibility_flags: [...compatibilityFlags],
+		}),
+		...(compatibilityDate && {
+			compatibility_date: compatibilityDate,
+		}),
+	};
+
+	const body: Partial<Project> = {
+		name: projectName,
+		production_branch: productionBranch,
+		deployment_configs: {
+			production: { ...deploymentConfig },
+			preview: { ...deploymentConfig },
+		},
+	};
+
 	const { subdomain } = await fetchResult<Project>(
 		`/accounts/${accountId}/pages/projects`,
 		{
 			method: "POST",
-			body: JSON.stringify({
-				name: projectName,
-				production_branch: productionBranch,
-			}),
+			body: JSON.stringify(body),
 		}
 	);
 
@@ -153,7 +181,46 @@ export async function CreateHandler({
 		`✨ Successfully created the '${projectName}' project. It will be available at https://${subdomain}/ once you create your first deployment.`
 	);
 	logger.log(
-		`To deploy a folder of assets, run 'wrangler pages publish [directory]'.`
+		`To deploy a folder of assets, run 'wrangler pages deploy [directory]'.`
 	);
 	await metrics.sendMetricsEvent("create pages project");
+}
+
+export function DeleteOptions(yargs: CommonYargsArgv) {
+	return yargs
+		.positional("project-name", {
+			type: "string",
+			demandOption: true,
+			description: "The name of your Pages project",
+		})
+		.options({
+			yes: {
+				alias: "y",
+				type: "boolean",
+				description: 'Answer "yes" to confirm project deletion',
+			},
+		});
+}
+
+export async function DeleteHandler(
+	args: StrictYargsOptionsToInterface<typeof DeleteOptions>
+) {
+	const config = getConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME);
+	const accountId = await requireAuth(config);
+
+	const confirmed =
+		args.yes ||
+		(await confirm(
+			`Are you sure you want to delete "${args.projectName}"? This action cannot be undone.`
+		));
+
+	if (confirmed) {
+		logger.log("Deleting", args.projectName);
+		await fetchResult(
+			`/accounts/${accountId}/pages/projects/${args.projectName}`,
+			{ method: "DELETE" }
+		);
+
+		logger.log("Successfully deleted", args.projectName);
+	}
 }

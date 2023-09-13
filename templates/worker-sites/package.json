@@ -3,13 +3,13 @@
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
-		"deploy": "wrangler publish index.js",
+		"deploy": "wrangler deploy index.js",
 		"dev": "wrangler dev index.js --local"
 	},
 	"dependencies": {
 		"@cloudflare/kv-asset-handler": "~0.1.2"
 	},
 	"devDependencies": {
-		"wrangler": "^2.0.0"
+		"wrangler": "^3.0.0"
 	}
 }

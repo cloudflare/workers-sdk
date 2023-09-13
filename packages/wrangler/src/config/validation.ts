@@ -1,5 +1,6 @@
 import path from "node:path";
 import TOML from "@iarna/toml";
+import { getConstellationWarningFromEnv } from "../constellation/utils";
 import { Diagnostics } from "./diagnostics";
 import {
 	deprecated,
@@ -25,6 +26,7 @@ import {
 	appendEnvName,
 	getBindingNames,
 	isValidName,
+	validateSmartPlacementConfig,
 } from "./validation-helpers";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
@@ -32,6 +34,8 @@ import type {
 	DeprecatedUpload,
 	Environment,
 	Rule,
+	TailConsumer,
+	DispatchNamespaceOutbound,
 } from "./environment";
 import type { ValidatorFn } from "./validation-helpers";
 
@@ -233,6 +237,8 @@ export function normalizeAndValidateConfig(
 		Object.keys(rawConfig),
 		[...Object.keys(config), "env"]
 	);
+
+	validateSmartPlacementConfig(diagnostics, config.placement, config.triggers);
 
 	experimental(diagnostics, rawConfig, "assets");
 
@@ -873,6 +879,88 @@ function validateRoutes(
 	);
 }
 
+function normalizeAndValidatePlacement(
+	diagnostics: Diagnostics,
+	topLevelEnv: Environment | undefined,
+	rawEnv: RawEnvironment
+): Config["placement"] {
+	if (rawEnv.placement) {
+		validateRequiredProperty(
+			diagnostics,
+			"placement",
+			"mode",
+			rawEnv.placement.mode,
+			"string",
+			["off", "smart"]
+		);
+	}
+
+	return inheritable(
+		diagnostics,
+		topLevelEnv,
+		rawEnv,
+		"placement",
+		() => true,
+		undefined
+	);
+}
+
+function validateTailConsumer(
+	diagnostics: Diagnostics,
+	field: string,
+	value: TailConsumer
+) {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"${field}" should be an object but got ${JSON.stringify(value)}.`
+		);
+		return false;
+	}
+
+	let isValid = true;
+
+	isValid =
+		isValid &&
+		validateRequiredProperty(
+			diagnostics,
+			field,
+			"service",
+			value.service,
+			"string"
+		);
+	isValid =
+		isValid &&
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"environment",
+			value.environment,
+			"string"
+		);
+
+	return isValid;
+}
+
+const validateTailConsumers: ValidatorFn = (diagnostics, field, value) => {
+	if (!value) {
+		return true;
+	}
+	if (!Array.isArray(value)) {
+		diagnostics.errors.push(
+			`Expected "${field}" to be an array but got ${JSON.stringify(value)}.`
+		);
+		return false;
+	}
+
+	let isValid = true;
+	for (let i = 0; i < value.length; i++) {
+		isValid =
+			validateTailConsumer(diagnostics, `${field}[${i}]`, value[i]) && isValid;
+	}
+
+	return isValid;
+};
+
 /**
  * Validate top-level environment configuration and return the normalized values.
  */
@@ -1060,6 +1148,7 @@ function normalizeAndValidateEnvironment(
 			isOneOf("bundled", "unbound"),
 			undefined
 		),
+		placement: normalizeAndValidatePlacement(diagnostics, topLevelEnv, rawEnv),
 		build,
 		workers_dev,
 		// Not inherited fields
@@ -1145,6 +1234,16 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateD1Binding),
 			[]
 		),
+		constellation: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"constellation",
+			validateBindingArray(envName, validateConstellationBinding),
+			[]
+		),
 		services: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -1185,16 +1284,15 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateMTlsCertificateBinding),
 			[]
 		),
-		logfwdr: inheritable(
+		tail_consumers: notInheritable(
 			diagnostics,
 			topLevelEnv,
+			rawConfig,
 			rawEnv,
-			"logfwdr",
-			validateBindingsProperty(envName, validateCflogfwdrBinding),
-			{
-				schema: undefined,
-				bindings: [],
-			}
+			envName,
+			"tail_consumers",
+			validateTailConsumers,
+			undefined
 		),
 		unsafe: notInheritable(
 			diagnostics,
@@ -1206,7 +1304,27 @@ function normalizeAndValidateEnvironment(
 			validateUnsafeSettings(envName),
 			{}
 		),
+		browser: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"browser",
+			validateBrowserBinding(envName),
+			undefined
+		),
 		zone_id: rawEnv.zone_id,
+		logfwdr: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"logfwdr",
+			validateCflogfwdrObject(envName),
+			{
+				bindings: [],
+			}
+		),
 		no_bundle: inheritable(
 			diagnostics,
 			topLevelEnv,
@@ -1550,9 +1668,13 @@ const validateUnsafeSettings =
 		}
 
 		// At least one of bindings and metadata must exist
-		if (!hasProperty(value, "bindings") && !hasProperty(value, "metadata")) {
+		if (
+			!hasProperty(value, "bindings") &&
+			!hasProperty(value, "metadata") &&
+			!hasProperty(value, "capnp")
+		) {
 			diagnostics.errors.push(
-				`The field "${fieldPath}" should contain at least one of "bindings" or "metadata" properties but got ${JSON.stringify(
+				`The field "${fieldPath}" should contain at least one of "bindings", "metadata" or "capnp" properties but got ${JSON.stringify(
 					value
 				)}.`
 			);
@@ -1585,6 +1707,64 @@ const validateUnsafeSettings =
 				)}.`
 			);
 			return false;
+		}
+
+		// unsafe.capnp
+		if (hasProperty(value, "capnp") && value.capnp !== undefined) {
+			if (
+				typeof value.capnp !== "object" ||
+				value.capnp === null ||
+				Array.isArray(value.capnp)
+			) {
+				diagnostics.errors.push(
+					`The field "${fieldPath}.capnp" should be an object but got ${JSON.stringify(
+						value.capnp
+					)}.`
+				);
+				return false;
+			}
+
+			// validate whether they have a compiled_schema string. If they do, they should not use base_path or source_schemas
+			if (hasProperty(value.capnp, "compiled_schema")) {
+				if (
+					hasProperty(value.capnp, "base_path") ||
+					hasProperty(value.capnp, "source_schemas")
+				) {
+					diagnostics.errors.push(
+						`The field "${fieldPath}.capnp" cannot contain both "compiled_schema" and one of "base_path" or "source_schemas".`
+					);
+					return false;
+				}
+
+				if (typeof value.capnp.compiled_schema !== "string") {
+					diagnostics.errors.push(
+						`The field "${fieldPath}.capnp.compiled_schema", when present, should be a string but got ${JSON.stringify(
+							value.capnp.compiled_schema
+						)}.`
+					);
+					return false;
+				}
+			} else {
+				// they don't have a compiled_schema property, so they must have both base_path and source_schemas
+				if (!isRequiredProperty(value.capnp, "base_path", "string")) {
+					diagnostics.errors.push(
+						`The field "${fieldPath}.capnp.base_path", when present, should be a string but got ${JSON.stringify(
+							value.capnp.base_path
+						)}`
+					);
+				}
+
+				if (
+					!validateTypedArray(
+						diagnostics,
+						`${fieldPath}.capnp.source_schemas`,
+						value.capnp.source_schemas,
+						"string"
+					)
+				) {
+					return false;
+				}
+			}
 		}
 
 		return true;
@@ -1639,6 +1819,32 @@ const validateDurableObjectBinding: ValidatorFn = (
 	return isValid;
 };
 
+const validateCflogfwdrObject: (env: string) => ValidatorFn =
+	(envName) => (diagnostics, field, value, topLevelEnv) => {
+		//validate the bindings property first, as this also validates that it's an object, etc.
+		const bindingsValidation = validateBindingsProperty(
+			envName,
+			validateCflogfwdrBinding
+		);
+		if (!bindingsValidation(diagnostics, field, value, topLevelEnv))
+			return false;
+
+		const v = value as {
+			bindings: [];
+			schema: string | undefined;
+		};
+
+		if (v?.schema !== undefined) {
+			// the user should not be using the old schema property, as we've migrated to unsafe.capnp.schema for consistency with the unsafe bindings
+			diagnostics.errors.push(
+				`"${field}" binding "schema" property has been replaced with the "unsafe.capnp" object, which expects a "base_path" and an array of "source_schemas" to compile, or a "compiled_schema" property.`
+			);
+			return false;
+		}
+
+		return true;
+	};
+
 const validateCflogfwdrBinding: ValidatorFn = (diagnostics, field, value) => {
 	if (typeof value !== "object" || value === null) {
 		diagnostics.errors.push(
@@ -1662,6 +1868,30 @@ const validateCflogfwdrBinding: ValidatorFn = (diagnostics, field, value) => {
 
 	return isValid;
 };
+
+const validateBrowserBinding =
+	(envName: string): ValidatorFn =>
+	(diagnostics, field, value, config) => {
+		const fieldPath =
+			config === undefined ? `${field}` : `env.${envName}.${field}`;
+
+		if (typeof value !== "object" || value === null || Array.isArray(value)) {
+			diagnostics.errors.push(
+				`The field "${fieldPath}" should be an object but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			return false;
+		}
+
+		let isValid = true;
+		if (!isRequiredProperty(value, "binding", "string")) {
+			diagnostics.errors.push(`binding should have a string "binding" field.`);
+			isValid = false;
+		}
+
+		return isValid;
+	};
 
 /**
  * Check that the given field is a valid "unsafe" binding object.
@@ -1689,9 +1919,11 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"wasm_module",
 			"data_blob",
 			"text_blob",
+			"browser",
 			"kv_namespace",
 			"durable_object_namespace",
 			"d1_database",
+			"constellation",
 			"r2_bucket",
 			"service",
 			"logfwdr",
@@ -1932,6 +2164,14 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
+	if (!isOptionalProperty(value, "jurisdiction", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should, optionally, have a string "jurisdiction" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
 	return isValid;
 };
 
@@ -1982,6 +2222,45 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 	return isValid;
 };
 
+const validateConstellationBinding: ValidatorFn = (
+	diagnostics,
+	field,
+	value
+) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"constellation" bindings should be objects, but got ${JSON.stringify(
+				value
+			)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	// Constellation bindings must have a binding and a project.
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "project_id", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a "project_id" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (isValid && getConstellationWarningFromEnv() === undefined) {
+		diagnostics.warnings.push(
+			"Constellation Bindings are currently in beta to allow the API to evolve before general availability.\nPlease report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose\nNote: Run this command with the environment variable NO_CONSTELLATION_WARNING=true to hide this message\n\nFor example: `export NO_CONSTELLATION_WARNING=true && wrangler <YOUR COMMAND HERE>`"
+		);
+	}
+	return isValid;
+};
+
 /**
  * Check that bindings whose names might conflict, don't.
  *
@@ -1998,6 +2277,7 @@ const validateBindingsHaveUniqueNames = (
 		r2_buckets,
 		analytics_engine_datasets,
 		text_blobs,
+		browser,
 		unsafe,
 		vars,
 		define,
@@ -2013,6 +2293,7 @@ const validateBindingsHaveUniqueNames = (
 		"R2 Bucket": getBindingNames(r2_buckets),
 		"Analytics Engine Dataset": getBindingNames(analytics_engine_datasets),
 		"Text Blob": getBindingNames(text_blobs),
+		Browser: getBindingNames(browser),
 		Unsafe: getBindingNames(unsafe),
 		"Environment Variable": getBindingNames(vars),
 		Definition: getBindingNames(define),
@@ -2186,8 +2467,65 @@ const validateWorkerNamespaceBinding: ValidatorFn = (
 		);
 		isValid = false;
 	}
+	if (hasProperty(value, "outbound")) {
+		if (
+			!validateWorkerNamespaceOutbound(
+				diagnostics,
+				`${field}.outbound`,
+				value.outbound ?? {}
+			)
+		) {
+			diagnostics.errors.push(`"${field}" has an invalid outbound definition.`);
+			isValid = false;
+		}
+	}
 	return isValid;
 };
+
+function validateWorkerNamespaceOutbound(
+	diagnostics: Diagnostics,
+	field: string,
+	value: DispatchNamespaceOutbound
+): boolean {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"${field}" should be an object, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+
+	let isValid = true;
+
+	// Namespace outbounds need at least a service name
+	isValid =
+		isValid &&
+		validateRequiredProperty(
+			diagnostics,
+			field,
+			"service",
+			value.service,
+			"string"
+		);
+	isValid =
+		isValid &&
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"environment",
+			value.environment,
+			"string"
+		);
+	isValid =
+		isValid &&
+		validateOptionalTypedArray(
+			diagnostics,
+			`${field}.parameters`,
+			value.parameters,
+			"string"
+		);
+
+	return isValid;
+}
 
 const validateMTlsCertificateBinding: ValidatorFn = (
 	diagnostics,

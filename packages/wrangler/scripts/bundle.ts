@@ -1,25 +1,13 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { build } from "esbuild";
+import { build, context } from "esbuild";
 import { EXTERNAL_DEPENDENCIES } from "./deps";
-import type { WatchMode } from "esbuild";
+import type { BuildOptions } from "esbuild";
 
 // the expectation is that this is being run from the project root
 type BuildFlags = {
 	watch?: boolean;
 };
-
-function watchLogger(outputPath: string): WatchMode {
-	return {
-		onRebuild(error, _) {
-			if (error) {
-				console.error(`${outputPath} build failed.\n`, error);
-			} else {
-				console.log(`${outputPath} updated.`);
-			}
-		},
-	};
-}
 
 async function buildMain(flags: BuildFlags = {}) {
 	const outdir = path.resolve("./wrangler-dist");
@@ -37,7 +25,8 @@ async function buildMain(flags: BuildFlags = {}) {
 		outdir,
 		wranglerPackageDir
 	)}"`;
-	await build({
+
+	const options: BuildOptions = {
 		keepNames: true,
 		entryPoints: ["./src/cli.ts"],
 		bundle: true,
@@ -63,8 +52,14 @@ async function buildMain(flags: BuildFlags = {}) {
 				? { ALGOLIA_PUBLIC_KEY: `"${process.env.ALGOLIA_PUBLIC_KEY}"` }
 				: {}),
 		},
-		watch: flags.watch ? watchLogger("./wrangler-dist") : false,
-	});
+	};
+
+	if (flags.watch) {
+		const ctx = await context(options);
+		await ctx.watch();
+	} else {
+		await build(options);
+	}
 
 	// Copy `yoga-layout` `.wasm` file
 	const yogaLayoutEntrypoint = require.resolve("yoga-layout");
@@ -79,36 +74,14 @@ async function buildMain(flags: BuildFlags = {}) {
 	await fs.copyFile(wasmSrc, wasmDst);
 }
 
-async function buildMiniflareCLI(flags: BuildFlags = {}) {
-	await build({
-		entryPoints: ["./src/miniflare-cli/index.ts"],
-		bundle: true,
-		outfile: "./miniflare-dist/index.mjs",
-		platform: "node",
-		format: "esm",
-		external: EXTERNAL_DEPENDENCIES,
-		sourcemap: process.env.SOURCEMAPS !== "false",
-		define: {
-			"process.env.NODE_ENV": `'${process.env.NODE_ENV || "production"}'`,
-		},
-		watch: flags.watch ? watchLogger("./miniflare-dist/index.mjs") : false,
-	});
-}
-
 async function run() {
 	// main cli
 	await buildMain();
 
-	// custom miniflare cli
-	await buildMiniflareCLI();
-
 	// After built once completely, rerun them both in watch mode
 	if (process.argv.includes("--watch")) {
 		console.log("Built. Watching for changes...");
-		await Promise.all([
-			buildMain({ watch: true }),
-			buildMiniflareCLI({ watch: true }),
-		]);
+		await buildMain({ watch: true });
 	}
 }
 

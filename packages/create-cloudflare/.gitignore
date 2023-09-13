@@ -1,0 +1,10 @@
+node_modules
+/dist
+create-cloudflare-*.tgz
+
+.DS_Store
+
+# template lock files (the npm/yarn/pnpm/etc install step will create these for the user)
+templates/**/package-lock.json
+templates/**/yarn.lock
+templates/**/pnpm-lock.yaml

@@ -1,17 +1,23 @@
 {
 	"name": "edge-preview-authenticated-proxy",
-	"version": "0.1.0",
+	"version": "0.1.2",
 	"private": true,
 	"scripts": {
-		"publish": "wrangler publish",
+		"check:lint": "eslint .",
+		"publish": "wrangler deploy",
 		"start": "wrangler dev",
-		"test": "vitest"
+		"test": "vitest run",
+		"test:ci": "vitest run",
+		"type:tests": "tsc -p ./tests/tsconfig.json",
+		"check:type": "tsc"
 	},
 	"devDependencies": {
+		"@cloudflare/eslint-config-worker": "*",
 		"@cloudflare/workers-types": "^4.20230321.0",
 		"cookie": "^0.5.0",
 		"toucan-js": "^3.1.0",
-		"vitest": "^0.29.8",
-		"wrangler": "*"
+		"vitest": "^0.31.0",
+		"wrangler": "workspace:*",
+		"@types/cookie": "^0.5.1"
 	}
 }

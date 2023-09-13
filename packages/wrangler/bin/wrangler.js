@@ -79,80 +79,6 @@ Consider using a Node.js version manager such as https://volta.sh/ or https://gi
 		});
 }
 
-/**
- * Runs a locally-installed version of wrangler, delegating from this version.
- * @throws {MODULE_NOT_FOUND} if there isn't a locally installed version of wrangler.
- */
-function runDelegatedWrangler() {
-	const packageJsonPath = require.resolve("wrangler/package.json", {
-		paths: [process.cwd()],
-	});
-	const {
-		bin: { wrangler: binaryPath },
-		version,
-	} = JSON.parse(fs.readFileSync(packageJsonPath));
-	const resolvedBinaryPath = path.resolve(packageJsonPath, "..", binaryPath);
-
-	// Make sure the user knows we're delegating to a different installation
-	const currentPackageJsonPath = path.resolve(__dirname, "..", "package.json");
-	const currentPackage = JSON.parse(fs.readFileSync(currentPackageJsonPath));
-	const argv = process.argv.slice(2).join(" ");
-	console.log(
-		`Delegating to locally-installed wrangler@${version} over global wrangler@${currentPackage.version}...
-Run \`npx wrangler ${argv}\` to use the local version directly.
-`
-	);
-
-	// this call to `spawn` is simpler because the delegated version will do all
-	// of the other work.
-	return spawn(
-		process.execPath,
-		[resolvedBinaryPath, ...process.argv.slice(2)],
-		{
-			stdio: ["inherit", "inherit", "inherit", "ipc"],
-		}
-	)
-		.on("exit", (code) =>
-			process.exit(code === undefined || code === null ? 0 : code)
-		)
-		.on("message", (message) => {
-			if (process.send) {
-				process.send(message);
-			}
-		});
-}
-
-/**
- * Indicates if this invocation of `wrangler` should delegate
- * to a locally-installed version.
- */
-function shouldDelegate() {
-	try {
-		// `require.resolve` will throw if it can't find
-		// a locally-installed version of `wrangler`
-		const delegatedPackageJson = require.resolve("wrangler/package.json", {
-			paths: [process.cwd()],
-		});
-		const thisPackageJson = path.resolve(__dirname, "..", "package.json");
-		// if it's the same path, then we're already a local install -- no need to delegate
-		return thisPackageJson !== delegatedPackageJson;
-	} catch (e) {
-		// there's no local version to delegate to -- `require.resolve` threw
-		return false;
-	}
-}
-
-async function main() {
-	wranglerProcess = shouldDelegate() ? runDelegatedWrangler() : runWrangler();
-}
-
-process.on("SIGINT", () => {
-	wranglerProcess && wranglerProcess.kill();
-});
-process.on("SIGTERM", () => {
-	wranglerProcess && wranglerProcess.kill();
-});
-
 // semiver implementation via https://github.com/lukeed/semiver/blob/ae7eebe6053c96be63032b14fb0b68e2553fcac4/src/index.js
 
 /**
@@ -185,4 +111,12 @@ function semiver(a, b, bool) {
 
 // end semiver implementation
 
-void main();
+if (module === require.main) {
+	wranglerProcess = runWrangler();
+	process.on("SIGINT", () => {
+		wranglerProcess && wranglerProcess.kill();
+	});
+	process.on("SIGTERM", () => {
+		wranglerProcess && wranglerProcess.kill();
+	});
+}

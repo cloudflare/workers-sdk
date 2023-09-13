@@ -2,7 +2,12 @@ import cookie from "cookie";
 import { Toucan } from "toucan-js";
 
 class HttpError extends Error {
-	constructor(message: string, readonly status: number) {
+	constructor(
+		message: string,
+		readonly status: number,
+		// Only report errors to sentry when they represent actionable errors
+		readonly reportable: boolean
+	) {
 		super(message);
 		Object.setPrototypeOf(this, new.target.prototype);
 	}
@@ -12,7 +17,13 @@ class HttpError extends Error {
 				error: this.name,
 				message: this.message,
 			},
-			{ status: this.status }
+			{
+				status: this.status,
+				headers: {
+					"Access-Control-Allow-Origin": "*",
+					"Access-Control-Allow-Method": "GET,PUT,POST",
+				},
+			}
 		);
 	}
 
@@ -23,7 +34,7 @@ class HttpError extends Error {
 
 class NoExchangeUrl extends HttpError {
 	constructor() {
-		super("No exchange_url provided", 400);
+		super("No exchange_url provided", 400, false);
 	}
 }
 
@@ -33,7 +44,7 @@ class ExchangeFailed extends HttpError {
 		readonly exchangeStatus: number,
 		readonly body: string
 	) {
-		super("Exchange failed", 400);
+		super("Exchange failed", 400, true);
 	}
 
 	get data(): { url: string; status: number; body: string } {
@@ -43,19 +54,22 @@ class ExchangeFailed extends HttpError {
 
 class TokenUpdateFailed extends HttpError {
 	constructor() {
-		super("Provide token, prewarmUrl and remote", 400);
+		super("Provide token, prewarmUrl and remote", 400, false);
 	}
 }
 
 class RawHttpFailed extends HttpError {
 	constructor() {
-		super("Provide token, and remote", 400);
+		super("Provide token, and remote", 400, false);
 	}
 }
 
 class PreviewRequestFailed extends HttpError {
-	constructor() {
-		super("Provide token, and remote", 400);
+	constructor(private tokenId: string, reportable: boolean) {
+		super("Token and remote not found", 400, reportable);
+	}
+	get data(): { tokenId: string } {
+		return { tokenId: this.tokenId };
 	}
 }
 
@@ -100,7 +114,7 @@ async function handleRequest(
 	}
 
 	if (isPreviewUpdateRequest(request, url, env)) {
-		return updatePreviewToken(url, ctx);
+		return updatePreviewToken(url, env, ctx);
 	}
 
 	if (isRawHttpRequest(url, env)) {
@@ -114,18 +128,27 @@ async function handleRequest(
 	 * but otherwise will pass the request through unchanged
 	 */
 	const parsedCookies = cookie.parse(request.headers.get("Cookie") ?? "");
-	const { token, remote } = JSON.parse(parsedCookies?.token ?? "{}");
+
+	const tokenId = parsedCookies?.token;
+
+	const { token, remote } = JSON.parse(
+		(await env.TOKEN_LOOKUP.get(tokenId)) ?? "{}"
+	);
 	if (!token || !remote) {
-		throw new PreviewRequestFailed();
+		// Report this error if a tokenId was provided
+		throw new PreviewRequestFailed(tokenId, !!tokenId);
 	}
 
-	const original = await fetch(switchRemote(url, remote), {
-		...request,
-		headers: {
-			...request.headers,
-			"cf-workers-preview-token": token,
-		},
-	});
+	const original = await fetch(
+		switchRemote(url, remote),
+		new Request(request, {
+			headers: {
+				...Object.fromEntries(request.headers),
+				"cf-workers-preview-token": token,
+			},
+			redirect: "manual",
+		})
+	);
 	const embeddable = new Response(original.body, original);
 	// This will be embedded in an iframe. In particular, the Cloudflare error page sets this header.
 	embeddable.headers.delete("X-Frame-Options");
@@ -137,7 +160,7 @@ async function handleRequest(
  * It must be called with a random subdomain (i.e. some-random-data.rawhttp.devprod.cloudflare.dev)
  * for consistency with the preview endpoint. This is not currently used, but may be in future
  *
- * It required two parameters, passed as headers:
+ * It requires two parameters, passed as headers:
  *  - `X-CF-Token`  A preview token, as in /.update-preview-token
  *  - `X-CF-Remote` Which endpoint to hit with preview requests, as in /.update-preview-token
  */
@@ -148,25 +171,41 @@ async function handleRawHttp(request: Request, url: URL) {
 				"Access-Control-Allow-Origin": request.headers.get("Origin") ?? "",
 				"Access-Control-Allow-Method": "*",
 				"Access-Control-Allow-Credentials": "true",
-				"Access-Control-Allow-Headers": "x-cf-token,x-cf-remote",
+				"Access-Control-Allow-Headers":
+					request.headers.get("Access-Control-Request-Headers") ??
+					"x-cf-token,x-cf-remote",
 				"Access-Control-Expose-Headers": "*",
-				Vary: "Origin",
+				Vary: "Origin, Access-Control-Request-Headers",
 			},
 		});
 	}
-	const token = request.headers.get("X-CF-Token");
-	const remote = request.headers.get("X-CF-Remote");
+
+	const requestHeaders = new Headers(request.headers);
+
+	const token = requestHeaders.get("X-CF-Token");
+	const remote = requestHeaders.get("X-CF-Remote");
+
 	if (!token || !remote) {
 		throw new RawHttpFailed();
 	}
 
-	const workerResponse = await fetch(switchRemote(url, remote), {
-		...request,
-		headers: {
-			...request.headers,
-			"cf-workers-preview-token": token,
-		},
-	});
+	// Reassign the token to a different header
+	requestHeaders.set("cf-workers-preview-token", token);
+
+	// Delete these consumed headers so as not to bloat the request.
+	// Some tokens can be quite large and may cause nginx to reject the
+	// request due to exceeding size limits if the value is included twice.
+	requestHeaders.delete("X-CF-Token");
+	requestHeaders.delete("X-CF-Remote");
+
+	const workerResponse = await fetch(
+		switchRemote(url, remote),
+		new Request(request, {
+			headers: requestHeaders,
+			redirect: "manual",
+		})
+	);
+
 	// The client needs the raw headers from the worker
 	// Prefix them with `cf-ew-raw-`, so that response headers from _this_ worker don't interfere
 	const rawHeaders: Record<string, string> = {};
@@ -180,7 +219,6 @@ async function handleRawHttp(request: Request, url: URL) {
 			"Access-Control-Allow-Origin": request.headers.get("Origin") ?? "",
 			"Access-Control-Allow-Method": "*",
 			"Access-Control-Allow-Credentials": "true",
-			"Access-Control-Allow-Headers": "x-cf-token,x-cf-remote",
 			"cf-ew-status": workerResponse.status.toString(),
 			"Access-Control-Expose-Headers": "*",
 			Vary: "Origin",
@@ -204,7 +242,7 @@ async function handleRawHttp(request: Request, url: URL) {
  * It will redirect to the suffix provide, setting a cookie with the `token` and `remote`
  * for future use.
  */
-async function updatePreviewToken(url: URL, ctx: ExecutionContext) {
+async function updatePreviewToken(url: URL, env: Env, ctx: ExecutionContext) {
 	const token = url.searchParams.get("token");
 	const prewarmUrl = url.searchParams.get("prewarm");
 	const remote = url.searchParams.get("remote");
@@ -222,20 +260,27 @@ async function updatePreviewToken(url: URL, ctx: ExecutionContext) {
 		})
 	);
 
+	// The token can sometimes be too large for a cookie (4096 bytes).
+	// Store the token in KV, and allow lookups
+
+	const tokenId = crypto.randomUUID();
+
+	await env.TOKEN_LOOKUP.put(tokenId, JSON.stringify({ token, remote }), {
+		// A preview token should only be valid for an hour.
+		// Store it for 2 just in case
+		expirationTtl: 60 * 60 * 2,
+	});
+
 	return new Response(null, {
 		status: 307,
 		headers: {
 			Location: url.searchParams.get("suffix") ?? "/",
-			"Set-Cookie": cookie.serialize(
-				"token",
-				JSON.stringify({ token, remote }),
-				{
-					secure: true,
-					sameSite: "none",
-					httpOnly: true,
-					domain: url.hostname,
-				}
-			),
+			"Set-Cookie": cookie.serialize("token", tokenId, {
+				secure: true,
+				sameSite: "none",
+				httpOnly: true,
+				domain: url.hostname,
+			}),
 		},
 	});
 }
@@ -322,9 +367,10 @@ export default {
 		} catch (e) {
 			console.error(e);
 			if (e instanceof HttpError) {
-				sentry.captureException(e, {
-					data: { ...e.data },
-				});
+				if (e.reportable) {
+					sentry.setContext("Details", e.data);
+					sentry.captureException(e);
+				}
 				return e.toResponse();
 			} else {
 				sentry.captureException(e);

@@ -1,7 +1,5 @@
-import {
-	generateRulesMatcher,
-	replacer,
-} from "../..//asset-server/rulesEngine";
+import { describe, test, expect } from "vitest";
+import { generateRulesMatcher, replacer } from "../../asset-server/rulesEngine";
 
 describe("rules engine", () => {
 	test("it should match simple pathname hosts", () => {
@@ -26,6 +24,11 @@ describe("rules engine", () => {
 				request: new Request("https://example.com//fake.host/actually-a-path"),
 			})
 		).toEqual([5]);
+		expect(
+			matcher({
+				request: new Request("other://custom.domain:123/test"),
+			})
+		).toEqual([1, 3]);
 	});
 
 	test("it should escape funky rules", () => {
@@ -74,25 +77,25 @@ describe("rules engine", () => {
 });
 
 describe("replacer", () => {
-	it("should replace splats", () => {
+	test("should replace splats", () => {
 		expect(replacer("/blog/:splat", { splat: "look/a/value" })).toEqual(
 			"/blog/look/a/value"
 		);
 	});
 
-	it("should replace placeholders", () => {
+	test("should replace placeholders", () => {
 		expect(
 			replacer("/:code/:name.jpg", { name: "tricycle", code: "123" })
 		).toEqual("/123/tricycle.jpg");
 	});
 
-	it("should replace splats and placeholders", () => {
+	test("should replace splats and placeholders", () => {
 		expect(
 			replacer("/:code/:splat", { splat: "tricycle/images", code: "123" })
 		).toEqual("/123/tricycle/images");
 	});
 
-	it("should replace all instances of placeholders", () => {
+	test("should replace all instances of placeholders", () => {
 		expect(
 			replacer(
 				"Link: </assets/:value/main.js>; rel=preload; as=script, </assets/:value/lang.js>; rel=preload; as=script",

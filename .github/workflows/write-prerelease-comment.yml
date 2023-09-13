@@ -13,9 +13,10 @@ jobs:
     name: Write comment to the PR
     steps:
       - name: "Put PR and workflow ID on the environment"
-        uses: actions/github-script@v5
+        uses: actions/github-script@v6
         with:
           script: |
+            // Copied from .github/extract-pr-and-workflow-id.js
             const allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -24,44 +25,86 @@ jobs:
 
             for (const artifact of allArtifacts.data.artifacts) {
               // Extract the PR number from the artifact name
-              const match = /^npm-package-wrangler-(\d+)$/.exec(artifact.name);
+              const match = /^npm-package-(.+)-(\d+)$/.exec(artifact.name);
               if (match) {
+                const packageName = match[1].toUpperCase();
                 require("fs").appendFileSync(
                   process.env.GITHUB_ENV,
-                  `\nWORKFLOW_RUN_PR=${match[1]}` +
-                    `\nWORKFLOW_RUN_ID=${context.payload.workflow_run.id}`
+                  `\nWORKFLOW_RUN_PR_FOR_${packageName}=${match[2]}` +
+                    `\nWORKFLOW_RUN_ID_FOR_${packageName}=${context.payload.workflow_run.id}`
                 );
                 break;
               }
             }
 
-      - name: "Comment on PR with Link"
+      - name: "Download runtime versions"
+        # Regular `actions/download-artifact` doesn't support downloading
+        # artifacts from another workflow
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          run_id: ${{ github.event.workflow_run.id }}
+          name: runtime-versions.md
+
+      - name: "Put runtime versions on the environment"
+        id: runtime_versions
+        run: |
+          {
+            echo 'RUNTIME_VERSIONS<<EOF'
+            cat runtime-versions.md
+            echo EOF
+          } >> "$GITHUB_ENV"
+
+      - name: "Comment on PR with Wrangler link"
+        env:
+          WORKFLOW_RUN_PR_FOR_WRANGLER: ${{env.WORKFLOW_RUN_PR_FOR_WRANGLER || env.WORKFLOW_RUN_PR_FOR_CLOUDFLARE-PAGES-SHARED}}
+          WORKFLOW_RUN_ID_FOR_WRANGLER: ${{env.WORKFLOW_RUN_ID_FOR_WRANGLER || env.WORKFLOW_RUN_ID_FOR_CLOUDFLARE-PAGES-SHARED}}
+
         uses: marocchino/sticky-pull-request-comment@v2
         with:
-          number: ${{ env.WORKFLOW_RUN_PR }}
+          number: ${{ env.WORKFLOW_RUN_PR_FOR_WRANGLER}}
           message: |
             A wrangler prerelease is available for testing. You can install this latest build in your project with:
 
             ```sh
-            npm install --save-dev https://prerelease-registry.devprod.cloudflare.dev/workers-sdk/runs/${{ env.WORKFLOW_RUN_ID }}/npm-package-wrangler-${{ env.WORKFLOW_RUN_PR }}
+            npm install --save-dev https://prerelease-registry.devprod.cloudflare.dev/workers-sdk/runs/${{ env.WORKFLOW_RUN_ID_FOR_WRANGLER }}/npm-package-wrangler-${{ env.WORKFLOW_RUN_PR_FOR_WRANGLER }}
             ```
 
             You can reference the automatically updated head of this PR with:
 
             ```sh
-            npm install --save-dev https://prerelease-registry.devprod.cloudflare.dev/workers-sdk/prs/${{ env.WORKFLOW_RUN_PR }}/npm-package-wrangler-${{ env.WORKFLOW_RUN_PR }}
+            npm install --save-dev https://prerelease-registry.devprod.cloudflare.dev/workers-sdk/prs/${{ env.WORKFLOW_RUN_ID_FOR_WRANGLER }}/npm-package-wrangler-${{ env.WORKFLOW_RUN_PR_FOR_WRANGLER }}
             ```
 
             Or you can use `npx` with this latest build directly:
 
             ```sh
-            npx https://prerelease-registry.devprod.cloudflare.dev/workers-sdk/runs/${{ env.WORKFLOW_RUN_ID }}/npm-package-wrangler-${{ env.WORKFLOW_RUN_PR }} dev path/to/script.js
+            npx https://prerelease-registry.devprod.cloudflare.dev/workers-sdk/runs/${{ env.WORKFLOW_RUN_ID_FOR_WRANGLER }}/npm-package-wrangler-${{ env.WORKFLOW_RUN_PR_FOR_WRANGLER }} dev path/to/script.js
             ```
 
             <details><summary>Additional artifacts:</summary>
 
             ```sh
-            npm install https://prerelease-registry.devprod.cloudflare.dev/workers-sdk/runs/${{ env.WORKFLOW_RUN_ID }}/npm-package-cloudflare-pages-shared-${{ env.WORKFLOW_RUN_PR }}
+            npm install https://prerelease-registry.devprod.cloudflare.dev/workers-sdk/runs/${{ env.WORKFLOW_RUN_ID_FOR_WRANGLER }}/npm-package-cloudflare-pages-shared-${{ env.WORKFLOW_RUN_PR_FOR_WRANGLER }}
+            ```
+
+            Note that these links will no longer work once [the GitHub Actions artifact expires](https://docs.github.com/en/organizations/managing-organization-settings/configuring-the-retention-period-for-github-actions-artifacts-and-logs-in-your-organization).
+
+            </details>
+
+            ---
+
+            ${{ env.RUNTIME_VERSIONS }}
+
+      - name: "Comment on PR with C3 link"
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          number: ${{ env.WORKFLOW_RUN_PR_FOR_CREATE_CLOUDFLARE }}
+          message: |
+            A create-cloudflare (C3) prerelease is available for testing.
+            You can use `npx` with this latest build directly:
+
+            ```sh
+            npx https://prerelease-registry.devprod.cloudflare.dev/workers-sdk/runs/${{ env.WORKFLOW_RUN_ID_FOR_CREATE_CLOUDFLARE }}/npm-package-create-cloudflare-${{ env.WORKFLOW_RUN_PR_FOR_CREATE_CLOUDFLARE }}
             ```
 
             Note that these links will no longer work once [the GitHub Actions artifact expires](https://docs.github.com/en/organizations/managing-organization-settings/configuring-the-retention-period-for-github-actions-artifacts-and-logs-in-your-organization).

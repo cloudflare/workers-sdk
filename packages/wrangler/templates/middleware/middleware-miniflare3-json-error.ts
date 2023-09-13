@@ -30,3 +30,4 @@ const jsonError: Middleware = async (request, env, _ctx, middlewareCtx) => {
 };
 
 export default jsonError;
+export const wrap = undefined;

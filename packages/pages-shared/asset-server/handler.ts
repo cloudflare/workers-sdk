@@ -74,6 +74,7 @@ type FullHandlerContext<AssetEntry, ContentNegotiation, Asset> = {
 	request: Request;
 	metadata: Metadata;
 	xServerEnvHeader?: string;
+	xDeploymentIdHeader?: boolean;
 	logError: (err: Error) => void;
 	findAssetEntryForPath: FindAssetEntryForPath<AssetEntry>;
 	getAssetKey(assetEntry: AssetEntry, content: ContentNegotiation): string;
@@ -120,6 +121,7 @@ export async function generateHandler<
 	request,
 	metadata,
 	xServerEnvHeader,
+	xDeploymentIdHeader,
 	logError,
 	findAssetEntryForPath,
 	getAssetKey,
@@ -478,6 +480,10 @@ export async function generateHandler<
 
 			if (xServerEnvHeader) {
 				headers["x-server-env"] = xServerEnvHeader;
+			}
+
+			if (xDeploymentIdHeader && metadata.deploymentId) {
+				headers["x-deployment-id"] = metadata.deploymentId;
 			}
 
 			if (content.encoding) {

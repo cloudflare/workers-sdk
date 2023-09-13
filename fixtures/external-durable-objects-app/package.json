@@ -3,12 +3,17 @@
 	"private": true,
 	"description": "A test for external durable objects",
 	"scripts": {
-		"check:type": "tsc && tsc -p tests/tsconfig.json",
+		"check:type": "tsc",
 		"dev": "npx concurrently -s first -k \"wrangler dev a/index.ts --local --port 8400\" \"wrangler dev b/index.ts --local --port 8401\" \"npx wrangler dev c/index.ts --local --port 8402\" \"cd d && npx wrangler pages dev public --port 8403 --do PAGES_REFERENCED_DO=MyDurableObject@a\"",
-		"test": "npx vitest",
-		"test:ci": "npx vitest"
+		"test": "npx vitest run",
+		"test:ci": "npx vitest run",
+		"test:watch": "npx vitest",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20221111.1"
+		"undici": "^5.23.0",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "^4.20221111.1",
+		"wrangler": "workspace:*"
 	}
 }

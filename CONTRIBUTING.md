@@ -23,22 +23,22 @@ Any contributions you make will be via [Pull Requests](https://docs.github.com/e
 - [Create your own fork](https://docs.github.com/en/get-started/quickstart/fork-a-repo) of [this repository](https://github.com/cloudflare/workers-sdk).
 - Clone your fork to your local machine
   ```sh
-  > git clone https://github.com/<your-github-username>/wrangler2
-  > cd wrangler2
+  > git clone https://github.com/<your-github-username>/workers-sdk
+  > cd workers-sdk
   ```
   You can see that your fork is setup as the `origin` remote repository.
   Any changes you wish to make should be in a local branch that is then pushed to this origin remote.
   ```sh
   > git remote -v
-  origin	https://github.com/<your-github-username>/wrangler2 (fetch)
-  origin	https://github.com/<your-github-username>/wrangler2 (push)
+  origin	https://github.com/<your-github-username>/workers-sdk (fetch)
+  origin	https://github.com/<your-github-username>/workers-sdk (push)
   ```
-- Add `cloudflare/wrangler2` as the `upstream` remote repository.
+- Add `cloudflare/workers-sdk` as the `upstream` remote repository.
   ```sh
   > git remote add upstream https://github.com/cloudflare/workers-sdk
   > git remote -v
-  origin	https://github.com/<your-github-username>/wrangler2 (fetch)
-  origin	https://github.com/<your-github-username>/wrangler2 (push)
+  origin	https://github.com/<your-github-username>/workers-sdk (fetch)
+  origin	https://github.com/<your-github-username>/workers-sdk (push)
   upstream	https://github.com/cloudflare/workers-sdk (fetch)
   upstream	https://github.com/cloudflare/workers-sdk (push)
   ```
@@ -61,19 +61,19 @@ When working on Wrangler, you'll need to satisfy [`workerd`](https://github.com/
 - On macOS:
   - The XCode command line tools, which can be installed with xcode-select --install
 
-The Node.js dependencies of the project are managed by the [`npm`](https://www.npmjs.com/) tool.
+The Node.js dependencies of the project are managed by the [`pnpm`](https://pnpm.io/) tool.
 
-This repository is setup as a [mono-repo](https://docs.npmjs.com/cli/v7/using-npm/workspaces) of workspaces. The workspaces are stored in the [`packages`](https://github.com/cloudflare/workers-sdk/tree/main/packages) directory.
+This repository is setup as a [mono-repo](https://pnpm.io/workspaces) of workspaces. The workspaces are stored in the [`packages`](https://github.com/cloudflare/workers-sdk/tree/main/packages) directory.
 
-While each workspace has its own dependencies, you install the dependencies using `npm` at the root of the project.
+While each workspace has its own dependencies, you install the dependencies using `pnpm` at the root of the project.
+
+> If you haven't used `pnpm` before, you can install it with `npm install -g pnpm`
 
 - Install all the dependencies
   ```sh
-  > cd wrangler2
-  > npm install
+  > cd workers-sdk
+  > pnpm install
   ```
-
-**Do not run `npm install` in any of the workspaces directly.**
 
 ## Building and running
 
@@ -81,11 +81,11 @@ Each wrangler workspace in this project is written in [TypeScript](https://www.t
 
 - Run a distributable for a specific workspace (e.g. wrangler)
   ```sh
-  > npm start -w wrangler
+  > pnpm run --filter wrangler start
   ```
 - Build a distributable for a specific workspace(e.g. wrangler)
   ```sh
-  > npm run build -w wrangler
+  > pnpm run build --filter wrangler
   ```
 
 ## Checking the code
@@ -94,7 +94,7 @@ The code in the repository is checked for type checking, formatting, linting and
 
 - Run all checks in all the workspaces
   ```sh
-  > npm run check
+  > pnpm run check
   ```
 
 When doing normal development you may want to run these checks individually.
@@ -105,9 +105,28 @@ The code is checked for type errors by [TypeScript](https://www.typescriptlang.o
 
 - Type check all the code in the repository
   ```sh
-  > npm run check:type
+  > pnpm run check:type
   ```
 - VS Code will also run type-checking while editing source code, providing immediate feedback.
+
+#### Changing TypeScript Version in VS Code's Command Palette
+
+For TypeScript to work properly in the Monorepo the version used in VSCode must be the project's current TypeScript version, follow these steps:
+
+1. Open the project in VSCode.
+
+2. Press `Ctrl + Shift + P` (or `Cmd + Shift + P` on macOS) to open the command palette.
+
+3. In the command palette, type "Select TypeScript Version" and select the command with the same name that appears in the list.
+
+4. A submenu will appear with a list of available TypeScript versions. Choose the desired version you want to use for this project. If you have multiple versions installed, they will be listed here.
+
+- Selecting "Use Workspace Version" will use the version of TypeScript installed in the project's `node_modules` directory.
+
+5. After selecting the TypeScript version, VSCode will reload the workspace using the chosen version.
+
+Now you have successfully switched the TypeScript version used within the project via the command palette in VSCode.
+Remember that this change is specific to the current project and will not affect other projects or the default TypeScript version used by VSCode.
 
 ### Linting
 
@@ -115,7 +134,7 @@ The code is checked for linting errors by [ESLint](https://eslint.org/).
 
 - Run the linting checks
   ```sh
-  > npm run check:lint
+  > pnpm run check:lint
   ```
 - The repository has a recommended VS Code plugin to run ESLint checks while editing source code, providing immediate feedback.
 
@@ -125,7 +144,7 @@ The code is checked for formatting errors by [Prettier](https://prettier.io/).
 
 - Run the formatting checks
   ```sh
-  > npm run check:format
+  > pnpm run check:format
   ```
 - The repository has a recommended VS Code plugin to run Prettier checks, and to automatically format using Prettier, while editing source code, providing immediate feedback.
 
@@ -135,15 +154,15 @@ Tests in a workspace are executed, by [Jest](https://jestjs.io/), which is confi
 
 - Run the tests for all the workspaces
   ```sh
-  > npm run test
+  > pnpm run test
   ```
 - Run the tests for a specific workspace (e.g. wrangler)
   ```sh
-  > npm run test -w wrangler
+  > pnpm run test --filter wrangler
   ```
 - Watch the files in a specific workspace (e.g. wrangler), and run the tests when anything changes
   ```sh
-  > npm run test-watch -w wrangler
+  > pnpm run --filter wrangler test:watch
   ```
   This will also run all the tests in a single process (rather than in parallel shards) and will increase the test-timeout to 50 seconds, which is helpful when debugging.
 
@@ -175,6 +194,12 @@ Changes should be committed to a new local branch, which then gets pushed to you
 - Once you are happy with your changes, create a Pull Request on GitHub
 - The format for Pull Request titles is `[package name] description`, where the package name should indicate which package of the `workers-sdk` monorepo your PR pertains to (e.g. `wrangler`/`pages-shared`/`wrangler-devtools`), and the description should be a succinct summary of the change you're making.
 - GitHub will insert a template for the body of your Pull Request—it's important to carefully fill out all the fields, giving as much detail as possible to reviewers.
+
+## PR Review
+
+PR review is a critial and required step in the process for landing changes. This is an opportunity to catch potential issues, improve the quality of the work, celebrate good design, and learn from each other.
+
+As a reviewer, it's important to be thoughtful about the proposed changes and communicate any feedback. Examples of PR reviews that the community has identified as particularly high-caliber are labeled with the `highlight pr review` label. Please feel empowered to use these as a learning resource.
 
 ## Changesets
 
@@ -222,9 +247,9 @@ Here's an example of a `patch` to the `wrangler` package, which provides a `fix`
 "wrangler": patch
 ---
 
-fix: replace the word "deploy" with "publish" everywhere.
+fix: replace the word "publish" with "deploy" everywhere.
 
-We should be consistent with the word that describes how we get a worker to the edge. The command is `publish`, so let's use that everywhere.
+We should be consistent with the word that describes how we get a worker to the edge. The command is `deploy`, so let's use that everywhere.
 ```
 
 ### Types of changes
@@ -237,7 +262,7 @@ We use the following guidelines to determine the kind of change for a PR:
 
 ## Releases
 
-We generally cut Wrangler releases at the start of each week. If you need a release cut outside of the regular cadence, please reach out to the [@cloudflare/wrangler-admins](https://github.com/orgs/cloudflare/teams/wrangler-admins) team. Before reaching out, please confirm that Wrangler passes end-to-end tests by running `npm -w wrangler run test:e2e`. Note: a real Cloudflare account is planned to be set up for testing, after which point the end-to-end tests will be configured to run in CI and this manual testing step will no longer be required.
+We generally cut Wrangler releases at the start of each week. If you need a release cut outside of the regular cadence, please reach out to the [@cloudflare/wrangler-admins](https://github.com/orgs/cloudflare/teams/wrangler-admins) team.
 
 ## Miniflare Development
 
@@ -249,7 +274,7 @@ Assume you have the two directories checked out right beside each other:
 ❯ ll src
 drwxr-xr-x     - user 30 Jun 14:12 src
 drwxr-xr-x     - user 26 Jul 17:34 ├── miniflare
-drwxr-xr-x     - user 27 Jul 17:51 └── wrangler2
+drwxr-xr-x     - user 27 Jul 17:51 └── workers-sdk
 ```
 
 > Note: recommend using [exa](https://the.exa.website/) and `alias ll='exa --icons -laTL 1'` for the above output

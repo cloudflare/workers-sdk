@@ -12,7 +12,7 @@ import { requireAuth } from "./user";
 import { getScriptName, printWranglerBanner } from ".";
 
 import type { Config } from "./config";
-import type { WorkerMetadataBinding } from "./create-worker-upload-form";
+import type { WorkerMetadataBinding } from "./deployment-bundle/create-worker-upload-form";
 import type { ServiceMetadataRes } from "./init";
 import type { CommonYargsOptions } from "./yargs-types";
 import type { ArgumentsCamelCase } from "yargs";

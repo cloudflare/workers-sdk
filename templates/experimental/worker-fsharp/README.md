@@ -33,10 +33,14 @@ To authenticate wrangler commands it is recomended you [configure wrangler](http
 
 ### Generate a New Project
 
-To create a new project based on this template execute:
+To create a `my-project` directory using this template, run:
 
-```
-wrangler generate projectname https://github.com/fable-compiler/cfworker-hello-world
+```sh
+$ npx wrangler generate my-project https://github.com/cloudflare/workers-sdk/templates/experimental/worker-fsharp
+# or
+$ yarn wrangler generate my-project https://github.com/cloudflare/workers-sdk/templates/experimental/worker-fsharp
+# or
+$ pnpm wrangler generate my-project https://github.com/cloudflare/workers-sdk/templates/experimental/worker-fsharp
 ```
 
 ### Build and Deploy to Dev
@@ -54,7 +58,7 @@ Hello from Fable at: Mon Oct 19 2020 19:30:39 GMT+0000 (Coordinated Universal Ti
 
 ## Publish to Your Cloudflare Account
 
-To publish your worker to your Cloudflare account first configure a [route and zone id](https://developers.cloudflare.com/workers/cli-wrangler/configuration) in your `./wrangler.toml` file. Then execute `wrangler publish` this will deploy the worker javascript file as specified in the TOML file.
+To publish your worker to your Cloudflare account first configure a [route and zone id](https://developers.cloudflare.com/workers/cli-wrangler/configuration) in your `./wrangler.toml` file. Then execute `wrangler deploy` this will deploy the worker javascript file as specified in the TOML file.
 
 &nbsp;
 

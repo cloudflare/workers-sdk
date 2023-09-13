@@ -3,7 +3,7 @@
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
-		"deploy": "wrangler publish",
+		"deploy": "wrangler deploy",
 		"dev": "wrangler dev --local",
 		"react:build": "react-scripts build",
 		"react:eject": "react-scripts eject",
@@ -32,6 +32,6 @@
 	},
 	"devDependencies": {
 		"react-scripts": "5.0.1",
-		"wrangler": "^2.0.0"
+		"wrangler": "^3.0.0"
 	}
 }

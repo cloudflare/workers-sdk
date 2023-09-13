@@ -4,15 +4,15 @@ import { Text } from "ink";
 import SelectInput from "ink-select-input";
 import React, { useState, useEffect, useRef } from "react";
 import { useErrorHandler } from "react-error-boundary";
-import { printBundleSize } from "../bundle-reporter";
 import {
 	createPreviewSession,
 	createWorkerPreview,
 } from "../create-worker-preview";
+import { helpIfErrorIsSizeOrScriptStartup } from "../deploy/deploy";
+import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import useInspector from "../inspect";
 import { logger } from "../logger";
 import { startPreviewServer, usePreviewServer } from "../proxy";
-import { helpIfErrorIsSizeOrScriptStartup } from "../publish/publish";
 import { syncAssets } from "../sites";
 import {
 	getAccountChoices,
@@ -21,18 +21,18 @@ import {
 } from "../user";
 import type { Route } from "../config/environment";
 import type {
+	CfAccount,
 	CfPreviewToken,
 	CfPreviewSession,
 } from "../create-worker-preview";
-import type { AssetPaths } from "../sites";
-import type { ChooseAccountItem } from "../user";
 import type {
 	CfModule,
 	CfWorkerInit,
 	CfScriptFormat,
-	CfAccount,
 	CfWorkerContext,
-} from "../worker";
+} from "../deployment-bundle/worker";
+import type { AssetPaths } from "../sites";
+import type { ChooseAccountItem } from "../user";
 import type { EsbuildBundle } from "./use-esbuild";
 
 interface RemoteProps {
@@ -107,6 +107,8 @@ export function Remote(props: RemoteProps) {
 		logToTerminal: true,
 		sourceMapPath: props.sourceMapPath,
 		host: previewToken?.host,
+		name: props.name,
+		sourceMapMetadata: props.bundle?.sourceMapMetadata,
 	});
 
 	const errorHandler = useErrorHandler();
@@ -534,7 +536,8 @@ async function createRemoteWorkerInit(props: {
 		props.name + (!props.legacyEnv && props.env ? `-${props.env}` : ""),
 		props.isWorkersSite ? props.assetPaths : undefined,
 		true,
-		false
+		false,
+		undefined
 	); // TODO: cancellable?
 
 	const init: CfWorkerInit = {
@@ -574,6 +577,8 @@ async function createRemoteWorkerInit(props: {
 		usage_model: props.usageModel,
 		keepVars: true,
 		logpush: false,
+		placement: undefined, // no placement in dev
+		tail_consumers: undefined, // no tail consumers in dev - TODO revist?
 	};
 
 	return init;

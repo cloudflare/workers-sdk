@@ -27,7 +27,7 @@ export async function getWorkersDevSubdomain(
 			);
 			if (!wantsToRegister) {
 				const solutionMessage =
-					"You can either publish your worker to one or more routes by specifying them in wrangler.toml, or register a workers.dev subdomain here:";
+					"You can either deploy your worker to one or more routes by specifying them in wrangler.toml, or register a workers.dev subdomain here:";
 				const onboardingLink = `https://dash.cloudflare.com/${accountId}/workers/onboarding`;
 
 				throw new Error(`${solutionMessage}\n${onboardingLink}`);
@@ -90,7 +90,7 @@ async function registerSubdomain(accountId: string): Promise<string> {
 		);
 		if (!ok) {
 			const solutionMessage =
-				"You can either publish your worker to one or more routes by specifying them in wrangler.toml, or register a workers.dev subdomain here:";
+				"You can either deploy your worker to one or more routes by specifying them in wrangler.toml, or register a workers.dev subdomain here:";
 			const onboardingLink = `https://dash.cloudflare.com/${accountId}/workers/onboarding`;
 
 			throw new Error(`${solutionMessage}\n${onboardingLink}`);

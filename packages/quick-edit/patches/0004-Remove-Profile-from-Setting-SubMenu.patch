@@ -1,7 +1,7 @@
-From a0f0970d77717bb6715de290e08720f50693a39c Mon Sep 17 00:00:00 2001
+From 35e7910db93886b1414918d5de46037564915058 Mon Sep 17 00:00:00 2001
 From: Jacob M-G Evans <jacobmgevans@gmail.com>
 Date: Fri, 31 Mar 2023 17:11:28 -0500
-Subject: [PATCH 04/11] Remove Profile from Setting SubMenu
+Subject: [PATCH 04/13] Remove Profile from Setting SubMenu
 
 ---
  .../browser/userDataProfile.ts                | 46 +++++++++----------

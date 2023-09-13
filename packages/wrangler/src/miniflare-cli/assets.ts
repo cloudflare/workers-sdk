@@ -1,21 +1,19 @@
 import { existsSync, lstatSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { createMetadataObject } from "@cloudflare/pages-shared/metadata-generator/createMetadataObject";
 import { parseHeaders } from "@cloudflare/pages-shared/metadata-generator/parseHeaders";
 import { parseRedirects } from "@cloudflare/pages-shared/metadata-generator/parseRedirects";
 import { watch } from "chokidar";
 import { getType } from "mime";
+import { Request, Response, fetch } from "miniflare";
 import { hashFile } from "../pages/hash";
 import type { Metadata } from "@cloudflare/pages-shared/asset-server/metadata";
 import type {
 	ParsedRedirects,
 	ParsedHeaders,
 } from "@cloudflare/pages-shared/metadata-generator/types";
-import type {
-	Request as MiniflareRequest,
-	RequestInfo as MiniflareRequestInfo,
-	RequestInit as MiniflareRequestInit,
-} from "@miniflare/core";
+import type { Request as WorkersRequest } from "@cloudflare/workers-types/experimental";
+import type { RequestInit } from "miniflare";
 
 interface Logger {
 	log: (message: string) => void;
@@ -27,39 +25,25 @@ export interface Options {
 	log: Logger;
 	proxyPort?: number;
 	directory?: string;
-	tre: boolean;
 }
 
 export default async function generateASSETSBinding(options: Options) {
 	const assetsFetch =
 		options.directory !== undefined
-			? await generateAssetsFetch(options.directory, options.log, options.tre)
+			? await generateAssetsFetch(options.directory, options.log)
 			: invalidAssetsFetch;
-
-	const miniflare = options.tre
-		? await import("@miniflare/tre")
-		: await import("@miniflare/core");
-
-	const Request = miniflare.Request as typeof MiniflareRequest;
-	const Response = miniflare.Response;
-	// WebSockets won't work with `--experimental-local` until we expose something like `upgradingFetch` from `@miniflare/tre`.
-	const fetch = (
-		options.tre
-			? miniflare.fetch
-			: (await import("@miniflare/web-sockets")).upgradingFetch
-	) as (request: Request) => Promise<Response>;
 
 	return async function (miniflareRequest: Request) {
 		if (options.proxyPort) {
 			try {
 				const url = new URL(miniflareRequest.url);
 				url.host = `localhost:${options.proxyPort}`;
-				const proxyRequest = new Request(url, miniflareRequest);
+				const proxyRequest = new Request(url, miniflareRequest as RequestInit);
 				if (proxyRequest.headers.get("Upgrade") === "websocket") {
 					proxyRequest.headers.delete("Sec-WebSocket-Accept");
 					proxyRequest.headers.delete("Sec-WebSocket-Key");
 				}
-				return await fetch(proxyRequest as Request);
+				return await fetch(proxyRequest);
 			} catch (thrown) {
 				options.log.error(new Error(`Could not proxy request: ${thrown}`));
 
@@ -86,30 +70,19 @@ export default async function generateASSETSBinding(options: Options) {
 
 async function generateAssetsFetch(
 	directory: string,
-	log: Logger,
-	tre: boolean
+	log: Logger
 ): Promise<typeof fetch> {
+	directory = resolve(directory);
 	// Defer importing miniflare until we really need it
 
 	// NOTE: These dynamic imports bring in `global` type augmentations from
 	// `@cloudflare/pages-shared/environment-polyfills/types.ts`, allowing us to
 	// use `fetch`, `Headers`, `Request` and `Response` as globals in this file
 	// and the *entire* `miniflare-cli` TypeScript project.
-	const polyfill = tre
-		? (
-				await import(
-					"@cloudflare/pages-shared/environment-polyfills/miniflare-tre"
-				)
-		  ).default
-		: (await import("@cloudflare/pages-shared/environment-polyfills/miniflare"))
-				.default;
-
+	const polyfill = (
+		await import("@cloudflare/pages-shared/environment-polyfills/miniflare")
+	).default;
 	await polyfill();
-
-	const miniflare = tre
-		? await import("@miniflare/tre")
-		: await import("@miniflare/core");
-	const Request = miniflare.Request as typeof MiniflareRequest;
 
 	const { generateHandler, parseQualityWeightedList } = await import(
 		"@cloudflare/pages-shared/asset-server/handler"
@@ -169,12 +142,15 @@ async function generateAssetsFetch(
 		const assetKeyEntryMap = new Map<string, string>();
 
 		return await generateHandler<string>({
-			request,
+			request: request as unknown as WorkersRequest,
 			metadata: metadata as Metadata,
 			xServerEnvHeader: "dev",
 			logError: console.error,
 			findAssetEntryForPath: async (path) => {
-				const filepath = join(directory, path);
+				const filepath = resolve(join(directory, path));
+				if (!filepath.startsWith(directory)) {
+					return null;
+				}
 
 				if (
 					existsSync(filepath) &&
@@ -238,9 +214,9 @@ async function generateAssetsFetch(
 		});
 	};
 
-	return async (input: MiniflareRequestInfo, init?: MiniflareRequestInit) => {
-		const request = new Request(input, init);
-		return await generateResponse(request as unknown as Request);
+	return async (input, init) => {
+		const request = new Request(input, init as RequestInit);
+		return (await generateResponse(request)) as unknown as Response;
 	};
 }
 

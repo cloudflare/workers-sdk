@@ -1,11 +1,11 @@
 import { execSync, spawn } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { watch } from "chokidar";
 import * as esbuild from "esbuild";
 import { unstable_dev } from "../api";
-import { esbuildAliasExternalPlugin } from "../bundle";
+import { esbuildAliasExternalPlugin } from "../deployment-bundle/esbuild-plugins/alias-external";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -13,9 +13,14 @@ import { getBasePath } from "../paths";
 import { buildFunctions } from "./buildFunctions";
 import { ROUTES_SPEC_VERSION, SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
 import { FunctionsNoRoutesError, getFunctionsNoRoutesWarning } from "./errors";
-import { buildRawWorker, checkRawWorker } from "./functions/buildWorker";
+import {
+	buildRawWorker,
+	checkRawWorker,
+	traverseAndBuildWorkerJSDirectory,
+} from "./functions/buildWorker";
 import { validateRoutes } from "./functions/routes-validation";
-import { CLEANUP, CLEANUP_CALLBACKS, pagesBetaWarning } from "./utils";
+import { CLEANUP, CLEANUP_CALLBACKS } from "./utils";
+import type { CfModule } from "../deployment-bundle/worker";
 import type { AdditionalDevProps } from "../dev";
 import type {
 	CommonYargsArgv,
@@ -23,9 +28,27 @@ import type {
 } from "../yargs-types";
 import type { RoutesJSONSpec } from "./functions/routes-transformation";
 
+/*
+ * DURABLE_OBJECTS_BINDING_REGEXP matches strings like:
+ * - "binding=className"
+ * - "BINDING=MyClass"
+ * - "BINDING=MyClass@service-name"
+ * Every DO needs a binding (the JS reference) and the exported class name it refers to.
+ * Optionally, users can also provide a service name if they want to reference a DO from another dev session over the dev registry.
+ */
 const DURABLE_OBJECTS_BINDING_REGEXP = new RegExp(
 	/^(?<binding>[^=]+)=(?<className>[^@\s]+)(@(?<scriptName>.*)$)?$/
 );
+
+/* BINDING_REGEXP matches strings like:
+ * - "binding"
+ * - "BINDING"
+ * - "BINDING=ref"
+ * This is used to capture both the binding name (how the binding is used in JS) as well as the reference if provided.
+ * In the case of a D1 database, that's the database ID.
+ * This is useful to people who want to reference the same database in multiple bindings, or a Worker and Pages project dev session want to reference the same database.
+ */
+const BINDING_REGEXP = new RegExp(/^(?<binding>[^=]+)(?:=(?<ref>[^\s]+))?$/);
 
 export function Options(yargs: CommonYargsArgv) {
 	return yargs
@@ -44,6 +67,8 @@ export function Options(yargs: CommonYargsArgv) {
 				type: "boolean",
 				default: true,
 				description: "Run on my machine",
+				deprecated: true,
+				hidden: true,
 			},
 			"compatibility-date": {
 				describe: "Date to use for compatibility checks",
@@ -121,21 +146,9 @@ export function Options(yargs: CommonYargsArgv) {
 				describe: "Protocol to listen to requests on, defaults to http.",
 				choices: ["http", "https"] as const,
 			},
-			"experimental-enable-local-persistence": {
-				describe:
-					"Enable persistence for local mode (deprecated, use --persist)",
-				type: "boolean",
-				deprecated: true,
-				hidden: true,
-			},
-			persist: {
-				describe:
-					"Enable persistence for local mode, using default path: .wrangler/state",
-				type: "boolean",
-			},
 			"persist-to": {
 				describe:
-					"Specify directory to use for local persistence (implies --persist)",
+					"Specify directory to use for local persistence (defaults to .wrangler/state)",
 				type: "string",
 				requiresArg: true,
 			},
@@ -148,7 +161,8 @@ export function Options(yargs: CommonYargsArgv) {
 			"experimental-local": {
 				describe: "Run on my machine using the Cloudflare Workers runtime",
 				type: "boolean",
-				default: false,
+				deprecated: true,
+				hidden: true,
 			},
 			config: {
 				describe: "Pages does not support wrangler.toml",
@@ -159,12 +173,10 @@ export function Options(yargs: CommonYargsArgv) {
 				choices: ["debug", "info", "log", "warn", "error", "none"] as const,
 				describe: "Specify logging level",
 			},
-		})
-		.epilogue(pagesBetaWarning);
+		});
 }
 
 export const Handler = async ({
-	local,
 	directory,
 	compatibilityDate,
 	compatibilityFlags,
@@ -182,8 +194,6 @@ export const Handler = async ({
 	r2: r2s = [],
 	liveReload,
 	localProtocol,
-	experimentalEnableLocalPersistence,
-	persist,
 	persistTo,
 	nodeCompat: legacyNodeCompat,
 	experimentalLocal,
@@ -191,15 +201,14 @@ export const Handler = async ({
 	_: [_pages, _dev, ...remaining],
 	logLevel,
 }: StrictYargsOptionsToInterface<typeof Options>) => {
-	// Beta message for `wrangler pages <commands>` usage
-	logger.log(pagesBetaWarning);
-
 	if (logLevel) {
 		logger.loggerLevel = logLevel;
 	}
 
-	if (!local) {
-		throw new FatalError("Only local mode is supported at the moment.", 1);
+	if (experimentalLocal) {
+		logger.warn(
+			"--experimental-local is no longer required and will be removed in a future version.\n`wrangler pages dev` now uses the local Cloudflare Workers runtime by default."
+		);
 	}
 
 	if (config) {
@@ -238,14 +247,6 @@ export const Handler = async ({
 		compatibilityDate = currentDate;
 	}
 
-	if (experimentalEnableLocalPersistence) {
-		logger.warn(
-			`--experimental-enable-local-persistence is deprecated.\n` +
-				`Move any existing data to .wrangler/state and use --persist, or\n` +
-				`use --persist-to=./wrangler-local-state to keep using the old path.`
-		);
-	}
-
 	let scriptReadyResolve: () => void;
 	const scriptReadyPromise = new Promise<void>(
 		(promiseResolve) => (scriptReadyResolve = promiseResolve)
@@ -255,7 +256,12 @@ export const Handler = async ({
 		directory !== undefined
 			? join(directory, singleWorkerScriptPath)
 			: singleWorkerScriptPath;
+	const usingWorkerDirectory =
+		existsSync(workerScriptPath) && lstatSync(workerScriptPath).isDirectory();
 	const usingWorkerScript = existsSync(workerScriptPath);
+	// TODO: Here lies a known bug. If you specify both `--bundle` and `--no-bundle`, this behavior is undefined and you will get unexpected results.
+	// There is no sane way to get the true value out of yargs, so here we are.
+	const enableBundling = bundle ?? !noBundle;
 
 	const functionsDirectory = "./functions";
 	let usingFunctions = !usingWorkerScript && existsSync(functionsDirectory);
@@ -263,16 +269,33 @@ export const Handler = async ({
 	let scriptPath = "";
 
 	const nodejsCompat = compatibilityFlags?.includes("nodejs_compat");
+	let modules: CfModule[] = [];
 
-	if (usingWorkerScript) {
+	if (usingWorkerDirectory) {
+		const runBuild = async () => {
+			const bundleResult = await traverseAndBuildWorkerJSDirectory({
+				workerJSDirectory: workerScriptPath,
+				buildOutputDirectory: directory ?? ".",
+				nodejsCompat,
+			});
+			modules = bundleResult.modules;
+			scriptPath = bundleResult.resolvedEntryPointPath;
+		};
+
+		await runBuild().then(() => scriptReadyResolve());
+
+		watch([workerScriptPath], {
+			persistent: true,
+			ignoreInitial: true,
+		}).on("all", async () => {
+			await runBuild();
+		});
+	} else if (usingWorkerScript) {
 		scriptPath = workerScriptPath;
 		let runBuild = async () => {
 			await checkRawWorker(workerScriptPath, () => scriptReadyResolve());
 		};
 
-		// TODO: Here lies a known bug. If you specify both `--bundle` and `--no-bundle`, this behavior is undefined and you will get unexpected results.
-		// There is no sane way to get the true value out of yargs, so here we are.
-		const enableBundling = bundle ?? !noBundle;
 		if (enableBundling) {
 			// We want to actually run the `_worker.js` script through the bundler
 			// So update the final path to the script that will be uploaded and
@@ -281,13 +304,15 @@ export const Handler = async ({
 			runBuild = async () => {
 				try {
 					await buildRawWorker({
-						workerScriptPath,
+						workerScriptPath: usingWorkerDirectory
+							? join(workerScriptPath, "index.js")
+							: workerScriptPath,
 						outfile: scriptPath,
 						directory: directory ?? ".",
 						nodejsCompat,
 						local: true,
 						sourcemap: true,
-						watch: true,
+						watch: false,
 						onEnd: () => scriptReadyResolve(),
 					});
 				} catch (e: unknown) {
@@ -328,7 +353,7 @@ export const Handler = async ({
 					outfile: scriptPath,
 					functionsDirectory,
 					sourcemap: true,
-					watch: true,
+					watch: false,
 					onEnd,
 					buildOutputDirectory: directory,
 					legacyNodeCompat,
@@ -396,7 +421,10 @@ export const Handler = async ({
 	let entrypoint = scriptPath;
 
 	// custom _routes.json apply only to Functions or Advanced Mode Pages projects
-	if (directory && (usingFunctions || usingWorkerScript)) {
+	if (
+		directory &&
+		(usingFunctions || usingWorkerScript || usingWorkerDirectory)
+	) {
 		const routesJSONPath = join(directory, "_routes.json");
 
 		if (existsSync(routesJSONPath)) {
@@ -510,10 +538,22 @@ export const Handler = async ({
 				.map((binding) => binding.toString().split("="))
 				.map(([key, ...values]) => [key, values.join("=")])
 		),
-		kv: kvs.map((binding) => ({
-			binding: binding.toString(),
-			id: "",
-		})),
+		kv: kvs
+			.map((kv) => {
+				const { binding, ref } =
+					BINDING_REGEXP.exec(kv.toString())?.groups || {};
+
+				if (!binding) {
+					logger.warn("Could not parse KV binding:", kv.toString());
+					return;
+				}
+
+				return {
+					binding,
+					id: ref || kv.toString(),
+				};
+			})
+			.filter(Boolean) as AdditionalDevProps["kv"],
 		durableObjects: durableObjects
 			.map((durableObject) => {
 				const { binding, className, scriptName } =
@@ -535,25 +575,56 @@ export const Handler = async ({
 				};
 			})
 			.filter(Boolean) as AdditionalDevProps["durableObjects"],
-		r2: r2s.map((binding) => {
-			return { binding: binding.toString(), bucket_name: "" };
-		}),
-		persist,
+		r2: r2s
+			.map((r2) => {
+				const { binding, ref } =
+					BINDING_REGEXP.exec(r2.toString())?.groups || {};
+
+				if (!binding) {
+					logger.warn("Could not parse R2 binding:", r2.toString());
+					return;
+				}
+
+				return { binding, bucket_name: ref || binding.toString() };
+			})
+			.filter(Boolean) as AdditionalDevProps["r2"],
+		rules: usingWorkerDirectory
+			? [
+					{
+						type: "ESModule",
+						globs: ["**/*.js", "**/*.mjs"],
+					},
+			  ]
+			: undefined,
+		bundle: enableBundling,
 		persistTo,
 		inspect: undefined,
 		logLevel,
 		experimental: {
-			d1Databases: d1s.map((binding) => ({
-				binding: binding.toString(),
-				database_id: "", // Required for types, but unused by dev
-				database_name: `local-${binding}`,
-			})),
+			processEntrypoint: true,
+			additionalModules: modules,
+			d1Databases: d1s
+				.map((d1) => {
+					const { binding, ref } =
+						BINDING_REGEXP.exec(d1.toString())?.groups || {};
+
+					if (!binding) {
+						logger.warn("Could not parse D1 binding:", d1.toString());
+						return;
+					}
+
+					return {
+						binding,
+						database_id: ref || d1.toString(),
+						database_name: `local-${d1}`,
+					};
+				})
+				.filter(Boolean) as AdditionalDevProps["d1Databases"],
 			disableExperimentalWarning: true,
 			enablePagesAssetsServiceBinding: {
 				proxyPort,
 				directory,
 			},
-			experimentalLocal,
 			liveReload,
 			forceLocal: true,
 			showInteractiveDevSession: undefined,

@@ -11,7 +11,10 @@
 		"public/"
 	],
 	"scripts": {
-		"build": "npx wrangler pages functions build --plugin --outdir=dist",
+		"build": "wrangler pages functions build --plugin --outdir=dist",
 		"check:type": "tsc"
+	},
+	"devDependencies": {
+		"wrangler": "workspace:*"
 	}
 }

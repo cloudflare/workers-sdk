@@ -4,31 +4,37 @@
 	"sideEffects": false,
 	"scripts": {
 		"build": "remix build",
+		"type:tests": "tsc -p ./tests/tsconfig.json",
 		"dev:remix": "remix watch",
 		"dev:wrangler": "cross-env NODE_ENV=development wrangler pages dev ./public",
 		"dev": "remix build && run-p \"dev:*\"",
-		"start": "cross-env NODE_ENV=production npm run dev:wrangler",
-		"check:type": "tsc && tsc -p tests/tsconfig.json",
-		"test": "npx vitest",
-		"test:ci": "npx vitest"
+		"start": "cross-env NODE_ENV=production pnpm run dev:wrangler",
+		"check:type": "tsc",
+		"test": "npx vitest run",
+		"test:ci": "npx vitest run",
+		"test:watch": "npx vitest"
 	},
 	"dependencies": {
-		"@remix-run/cloudflare": "^1.8.2",
-		"@remix-run/cloudflare-pages": "^1.8.2",
-		"@remix-run/react": "^1.8.2",
+		"@remix-run/cloudflare-pages": "^1.17.0",
 		"cross-env": "^7.0.3",
 		"react": "^17.0.2",
-		"react-dom": "^17.0.2"
+		"react-dom": "^17.0.2",
+		"undici": "^5.23.0"
 	},
 	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^3.18.0",
-		"@remix-run/dev": "^1.8.2",
-		"@remix-run/eslint-config": "^1.8.2",
+		"@remix-run/cloudflare": "^1.17.0",
+		"@remix-run/dev": "^1.17.0",
+		"@remix-run/eslint-config": "^1.17.0",
+		"@remix-run/react": "^1.17.0",
 		"@types/react": "^17.0.52",
 		"@types/react-dom": "^17.0.18",
 		"eslint": "^8.27.0",
 		"npm-run-all": "^4.1.5",
-		"typescript": "^4.8.4"
+		"remix": "^1.17.0",
+		"typescript": "^4.8.4",
+		"wrangler": "workspace:*"
 	},
 	"engines": {
 		"node": ">=16.13"

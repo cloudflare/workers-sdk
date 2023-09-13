@@ -1,0 +1,45 @@
+From 6ef1528fb4a6de178b545a91f1f5ea1c5e333c95 Mon Sep 17 00:00:00 2001
+From: Workers DevProd <workers-devprod@cloudflare.com>
+Date: Tue, 23 May 2023 12:09:58 +0100
+Subject: [PATCH 12/13] Remove nls
+
+---
+ src/vs/code/browser/workbench/workbench.html | 15 +--------------
+ 1 file changed, 1 insertion(+), 14 deletions(-)
+
+diff --git a/src/vs/code/browser/workbench/workbench.html b/src/vs/code/browser/workbench/workbench.html
+index a41b5db..390736d 100644
+--- a/src/vs/code/browser/workbench/workbench.html
++++ b/src/vs/code/browser/workbench/workbench.html
+@@ -41,18 +41,6 @@
+ 			self.webPackagePaths[key] = `${baseUrl}/node_modules/${key}/${self.webPackagePaths[key]}`;
+ 		});
+ 
+-		// Set up nls if the user is not using the default language (English)
+-		const nlsConfig = {};
+-		const locale = window.localStorage.getItem('vscode.nls.locale') || navigator.language;
+-		if (!locale.startsWith('en')) {
+-			nlsConfig['vs/nls'] = {
+-				availableLanguages: {
+-					'*': locale
+-				},
+-				translationServiceUrl: '{{WORKBENCH_NLS_BASE_URL}}'
+-			};
+-		}
+-
+ 		require.config({
+ 			baseUrl: `${baseUrl}/out`,
+ 			recordStats: true,
+@@ -64,8 +52,7 @@
+ 					throw new Error(`Invalid script url: ${value}`)
+ 				}
+ 			}),
+-			paths: self.webPackagePaths,
+-			...nlsConfig
++			paths: self.webPackagePaths
+ 		});
+ 	</script>
+ 	<script>
+-- 
+2.39.2 (Apple Git-143)
+

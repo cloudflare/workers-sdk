@@ -1,7 +1,8 @@
+import { describe, test, expect } from "vitest";
 import { stripLeadingDoubleSlashes } from "../../asset-server/responses";
 
 describe("stripLeadingDoubleSlashes", () => {
-	it("strips extra leading `/`, `%2F` and `%2f`s", () => {
+	test("strips extra leading `/`, `%2F`, `%2f`s, spaces, and tabs", () => {
 		expect(stripLeadingDoubleSlashes("/")).toMatchInlineSnapshot(`"/"`);
 		expect(stripLeadingDoubleSlashes("/%2Ffoo")).toMatchInlineSnapshot(
 			`"/foo"`
@@ -43,5 +44,19 @@ describe("stripLeadingDoubleSlashes", () => {
 		expect(stripLeadingDoubleSlashes("/foo/\\/bar")).toMatchInlineSnapshot(
 			`"/foo/\\\\/bar"`
 		);
+		expect(stripLeadingDoubleSlashes("/%09foo")).toMatchInlineSnapshot(
+			`"/foo"`
+		);
+		expect(stripLeadingDoubleSlashes("/%09/foo")).toMatchInlineSnapshot(
+			`"/foo"`
+		);
+		// Unencoded space / tab
+		expect(stripLeadingDoubleSlashes("/%09/foo/%09/ /	/")).toMatchInlineSnapshot(
+			`"/foo/%09/ /	/"`
+		);
+		// Unencoded space
+		expect(stripLeadingDoubleSlashes("/ /foo")).toMatchInlineSnapshot(`"/foo"`);
+		// Unencoded tab
+		expect(stripLeadingDoubleSlashes("/	/foo")).toMatchInlineSnapshot(`"/foo"`);
 	});
 });

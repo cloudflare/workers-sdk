@@ -1,0 +1,31 @@
+{
+	"$schema": "http://turbo.build/schema.json",
+	"remoteCache": {
+		"signature": true
+	},
+	"pipeline": {
+		"wrangler#dev": {
+			"persistent": true,
+			"cache": false
+		},
+		"build": { "dependsOn": ["^build"] },
+		"test": {
+			"dependsOn": ["^build"]
+		},
+		"test:watch": {
+			"cache": false
+		},
+		"check:lint": {
+			"dependsOn": ["^topological"]
+		},
+		"check:type": {
+			"dependsOn": ["^topological"]
+		},
+		"topological": {
+			"dependsOn": ["^topological"]
+		},
+		"type:tests": {},
+		"test:ci": {},
+		"//#check:format": { "cache": true }
+	}
+}

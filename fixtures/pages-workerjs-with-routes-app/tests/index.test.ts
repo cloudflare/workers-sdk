@@ -3,8 +3,8 @@ import { fetch } from "undici";
 import { describe, it, beforeAll, afterAll } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
-describe.concurrent("Pages Advanced Mode with custom _routes.json", () => {
-	let ip, port, stop;
+describe("Pages Advanced Mode with custom _routes.json", () => {
+	let ip: string, port: number, stop: (() => Promise<unknown>) | undefined;
 
 	beforeAll(async () => {
 		({ ip, port, stop } = await runWranglerPagesDev(
@@ -14,7 +14,9 @@ describe.concurrent("Pages Advanced Mode with custom _routes.json", () => {
 		));
 	});
 
-	afterAll(async () => await stop());
+	afterAll(async () => {
+		await stop?.();
+	});
 
 	it("renders static pages", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/`);

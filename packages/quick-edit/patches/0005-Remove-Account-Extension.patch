@@ -1,7 +1,7 @@
-From a532ef3f3e5630c3c139ef377eec4d2d9d65a0fb Mon Sep 17 00:00:00 2001
+From 0525ed3c91d18e948e45df6f4331c58d5af9718b Mon Sep 17 00:00:00 2001
 From: Jacob M-G Evans <jacobmgevans@gmail.com>
 Date: Tue, 28 Mar 2023 14:53:02 -0500
-Subject: [PATCH 05/11] Remove Account & Extension
+Subject: [PATCH 05/13] Remove Account & Extension
 
 ---
  .../parts/activitybar/activitybarPart.ts      | 26 +++++++++----------

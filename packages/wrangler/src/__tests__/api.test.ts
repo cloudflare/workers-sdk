@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { Request } from "undici";
 import { parseRequestInput } from "../api/dev";
 
@@ -70,16 +71,17 @@ describe("parseRequestInput for fetch on unstable dev", () => {
 		const [input, init] = parseRequestInput(
 			"0.0.0.0",
 			8080,
-			new Request("http://cloudflare.com/test?q=testparam", { method: "POST" })
+			new Request("https://cloudflare.com/test?q=testparam", { method: "POST" })
 		);
 
-		expect(init).toBeUndefined();
-		expect(input).toBeInstanceOf(Request);
-		// We don't expect the request to be modified
-		expect((input as Request).url).toMatchInlineSnapshot(
-			`"http://cloudflare.com/test?q=testparam"`
+		expect(input).toMatchInlineSnapshot(
+			`"http://0.0.0.0:8080/test?q=testparam"`
 		);
-		expect((input as Request).method).toMatchInlineSnapshot(`"POST"`);
+		assert(init instanceof Request);
+		expect(init.method).toBe("POST");
+		expect(init.headers.get("MF-Original-URL")).toMatchInlineSnapshot(
+			`"https://cloudflare.com/test?q=testparam"`
+		);
 	});
 
 	it("should parse to give https url with localProtocol = https", () => {

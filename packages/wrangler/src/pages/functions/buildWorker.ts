@@ -3,11 +3,13 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { build as esBuild } from "esbuild";
 import { nanoid } from "nanoid";
-import { bundleWorker } from "../../bundle";
+import { bundleWorker } from "../../deployment-bundle/bundle";
+import traverseModuleGraph from "../../deployment-bundle/traverse-module-graph";
 import { FatalError } from "../../errors";
 import { logger } from "../../logger";
 import { getBasePath } from "../../paths";
-import { D1_BETA_PREFIX } from "../../worker";
+import type { BundleResult } from "../../deployment-bundle/bundle";
+import type { CfModule } from "../../deployment-bundle/worker";
 import type { Plugin } from "esbuild";
 
 export type Options = {
@@ -24,7 +26,6 @@ export type Options = {
 	nodejsCompat?: boolean;
 	functionsDirectory: string;
 	local: boolean;
-	betaD1Shims?: string[];
 };
 
 export function buildWorker({
@@ -41,7 +42,6 @@ export function buildWorker({
 	nodejsCompat,
 	functionsDirectory,
 	local,
-	betaD1Shims,
 }: Options) {
 	return bundleWorker(
 		{
@@ -62,9 +62,6 @@ export function buildWorker({
 			define: {
 				__FALLBACK_SERVICE__: JSON.stringify(fallbackService),
 			},
-			betaD1Shims: (betaD1Shims || []).map(
-				(binding) => `${D1_BETA_PREFIX}${binding}`
-			),
 			doBindings: [], // Pages functions don't support internal Durable Objects
 			plugins: [
 				buildNotifierPlugin(onEnd),
@@ -148,9 +145,8 @@ export function buildWorker({
 			disableModuleCollection: false,
 			rules: [],
 			checkFetch: local,
-			targetConsumer: local ? "dev" : "publish",
-			local,
-			experimentalLocal: false,
+			targetConsumer: local ? "dev" : "deploy",
+			forPages: true,
 		}
 	);
 }
@@ -160,6 +156,8 @@ export type RawOptions = {
 	outfile?: string;
 	outdir?: string;
 	directory: string;
+	bundle?: boolean;
+	external?: string[];
 	minify?: boolean;
 	sourcemap?: boolean;
 	watch?: boolean;
@@ -169,7 +167,7 @@ export type RawOptions = {
 	legacyNodeCompat?: boolean;
 	nodejsCompat?: boolean;
 	local: boolean;
-	betaD1Shims?: string[];
+	additionalModules?: CfModule[];
 };
 
 /**
@@ -184,6 +182,8 @@ export function buildRawWorker({
 	outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`),
 	outdir,
 	directory,
+	bundle = true,
+	external,
 	minify = false,
 	sourcemap = false,
 	watch = false,
@@ -192,7 +192,7 @@ export function buildRawWorker({
 	legacyNodeCompat,
 	nodejsCompat,
 	local,
-	betaD1Shims,
+	additionalModules,
 }: RawOptions) {
 	return bundleWorker(
 		{
@@ -203,27 +203,100 @@ export function buildRawWorker({
 		},
 		outdir ? resolve(outdir) : resolve(outfile),
 		{
+			bundle,
 			minify,
 			sourcemap,
 			watch,
 			legacyNodeCompat,
 			nodejsCompat,
 			define: {},
-			betaD1Shims: (betaD1Shims || []).map(
-				(binding) => `${D1_BETA_PREFIX}${binding}`
-			),
 			doBindings: [], // Pages functions don't support internal Durable Objects
-			plugins: [...plugins, buildNotifierPlugin(onEnd)],
+			plugins: [
+				...plugins,
+				buildNotifierPlugin(onEnd),
+				...(external
+					? [
+							// In some cases, we want to enable bundling in esbuild so that we can flatten a shim around the entrypoint, but we still don't want to actually bundle in all the chunks that a Worker references.
+							// This plugin allows us to mark those chunks as external so they are not inlined.
+							{
+								name: "external-fixer",
+								setup(pluginBuild) {
+									pluginBuild.onResolve({ filter: /.*/ }, async (args) => {
+										if (
+											external.includes(resolve(args.resolveDir, args.path))
+										) {
+											return { path: args.path, external: true };
+										}
+									});
+								},
+							} as Plugin,
+					  ]
+					: []),
+			],
 			isOutfile: !outdir,
 			serveAssetsFromWorker: false,
-			disableModuleCollection: false,
+			disableModuleCollection: external ? true : false,
 			rules: [],
 			checkFetch: local,
-			targetConsumer: local ? "dev" : "publish",
-			local,
-			experimentalLocal: false,
+			targetConsumer: local ? "dev" : "deploy",
+			forPages: true,
+			additionalModules,
 		}
 	);
+}
+
+export async function traverseAndBuildWorkerJSDirectory({
+	workerJSDirectory,
+	buildOutputDirectory,
+	nodejsCompat,
+}: {
+	workerJSDirectory: string;
+	buildOutputDirectory: string;
+	nodejsCompat?: boolean;
+}): Promise<BundleResult> {
+	const entrypoint = resolve(join(workerJSDirectory, "index.js"));
+
+	const traverseModuleGraphResult = await traverseModuleGraph(
+		{
+			file: entrypoint,
+			directory: resolve(workerJSDirectory),
+			format: "modules",
+			moduleRoot: resolve(workerJSDirectory),
+		},
+		[
+			{
+				type: "ESModule",
+				globs: ["**/*.js", "**/*.mjs"],
+			},
+		]
+	);
+
+	const outfile = join(tmpdir(), `./bundledWorker-${Math.random()}.mjs`);
+	const bundleResult = await buildRawWorker({
+		workerScriptPath: entrypoint,
+		bundle: true,
+		external: traverseModuleGraphResult.modules.map((m) =>
+			join(workerJSDirectory, m.name)
+		),
+		outfile,
+		directory: buildOutputDirectory,
+		local: false,
+		sourcemap: true,
+		watch: false,
+		onEnd: () => {},
+		nodejsCompat,
+		additionalModules: traverseModuleGraphResult.modules,
+	});
+
+	return {
+		modules: bundleResult.modules,
+		dependencies: bundleResult.dependencies,
+		resolvedEntryPointPath: bundleResult.resolvedEntryPointPath,
+		bundleType: bundleResult.bundleType,
+		stop: bundleResult.stop,
+		sourceMapPath: bundleResult.sourceMapPath,
+		moduleCollector: bundleResult.moduleCollector,
+	};
 }
 
 /**

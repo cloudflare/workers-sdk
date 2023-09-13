@@ -58,7 +58,7 @@ export function parseHeaders(input: string): ParsedHeaders {
 				}
 			}
 
-			const [path, pathError] = validateUrl(line);
+			const [path, pathError] = validateUrl(line, false, true);
 			if (pathError) {
 				invalid.push({
 					line,

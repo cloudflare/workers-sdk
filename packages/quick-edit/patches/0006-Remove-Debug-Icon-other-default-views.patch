@@ -1,7 +1,7 @@
-From 098049536be307fae8309d0f48e1ff92c19c1abd Mon Sep 17 00:00:00 2001
+From 8346d89989d4c1698eeb5dd4e06c094a0fe6b2d7 Mon Sep 17 00:00:00 2001
 From: Jacob M-G Evans <jacobmgevans@gmail.com>
 Date: Fri, 31 Mar 2023 17:08:40 -0500
-Subject: [PATCH 06/11] Remove Debug Icon & other default views
+Subject: [PATCH 06/13] Remove Debug Icon & other default views
 
 ---
  .../debug/browser/debug.contribution.ts       | 46 +++++++++----------

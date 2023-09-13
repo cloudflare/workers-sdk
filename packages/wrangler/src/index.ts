@@ -5,10 +5,12 @@ import supportsColor from "supports-color";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
-import { isBuildFailure } from "./bundle";
 import { loadDotEnv, readConfig } from "./config";
+import { constellation } from "./constellation";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
+import { deployOptions, deployHandler } from "./deploy";
+import { isBuildFailure } from "./deployment-bundle/bundle";
 import {
 	deployments,
 	commonDeploymentCMDSetup,
@@ -38,7 +40,6 @@ import * as metrics from "./metrics";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
 import { pages } from "./pages";
 import { formatMessage, ParseError } from "./parse";
-import { publishOptions, publishHandler } from "./publish";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
 import { queues } from "./queues/cli/commands";
 import { r2 } from "./r2";
@@ -97,7 +98,11 @@ export async function printWranglerBanner() {
 		return;
 	}
 
-	const text = ` ⛅️ wrangler ${wranglerVersion} ${await updateCheck()}`;
+	let text = ` ⛅️ wrangler ${wranglerVersion}`;
+	const maybeNewVersion = await updateCheck();
+	if (maybeNewVersion !== undefined) {
+		text += ` (update available ${chalk.green(maybeNewVersion)})`;
+	}
 
 	logger.log(
 		text +
@@ -106,6 +111,20 @@ export async function printWranglerBanner() {
 				? chalk.hex("#FF8800")("-".repeat(text.length))
 				: "-".repeat(text.length))
 	);
+
+	// Log a slightly more noticeable message if this is a major bump
+	if (maybeNewVersion !== undefined) {
+		const currentMajor = parseInt(wranglerVersion.split(".")[0]);
+		const newMajor = parseInt(maybeNewVersion.split(".")[0]);
+		if (newMajor > currentMajor) {
+			logger.warn(
+				`The version of Wrangler you are using is now out-of-date.
+Please update to the latest version to prevent critical errors.
+Run \`npm install --save-dev wrangler@${newMajor}\` to update to the latest version.
+After installation, run Wrangler with \`npx wrangler\`.`
+			);
+		}
+	}
 }
 
 export function isLegacyEnv(config: Config): boolean {
@@ -307,12 +326,12 @@ export function createCLIParser(argv: string[]) {
 		devHandler
 	);
 
-	// publish
+	// deploy
 	wrangler.command(
-		"publish [script]",
-		"🆙 Publish your Worker to Cloudflare.",
-		publishOptions,
-		publishHandler
+		["deploy [script]", "publish [script]"],
+		"🆙 Deploy your Worker to Cloudflare.",
+		deployOptions,
+		deployHandler
 	);
 
 	// delete
@@ -369,7 +388,7 @@ export function createCLIParser(argv: string[]) {
 	);
 
 	wrangler.command(
-		"secret:bulk <json>",
+		"secret:bulk [json]",
 		"🗄️  Bulk upload secrets for a Worker",
 		secretBulkOptions,
 		secretBulkHandler
@@ -430,6 +449,15 @@ export function createCLIParser(argv: string[]) {
 	wrangler.command("d1", "🗄  Interact with a D1 database", (d1Yargs) => {
 		return d1(d1Yargs.command(subHelp));
 	});
+
+	// ai
+	wrangler.command(
+		"constellation",
+		"🤖 Interact with Constellation models",
+		(aiYargs) => {
+			return constellation(aiYargs.command(subHelp));
+		}
+	);
 
 	// pubsub
 	wrangler.command(
@@ -569,6 +597,7 @@ export function createCLIParser(argv: string[]) {
 				unsafe: config.unsafe,
 				rules: config.rules,
 				queues: config.queues,
+				constellation: config.constellation,
 			};
 
 			await generateTypes(configBindings, config);
@@ -621,40 +650,42 @@ export function createCLIParser(argv: string[]) {
 				.command(subHelp)
 				.epilogue(deploymentsWarning)
 	);
+
 	const rollbackWarning =
 		"🚧`wrangler rollback` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose";
-	wrangler
-		.command(
-			"rollback [deployment-id]",
-			"🔙 Rollback a deployment",
-			(rollbackYargs) =>
-				rollbackYargs
-					.positional("deployment-id", {
-						describe: "The ID of the deployment to rollback to",
-						type: "string",
-						demandOption: false,
-					})
-					.option("message", {
-						alias: "m",
-						describe:
-							"Skip confirmation and message prompts, uses provided argument as message",
-						type: "string",
-						default: undefined,
-					}),
-			async (rollbackYargs) => {
-				const { accountId, scriptName, config } =
-					await commonDeploymentCMDSetup(rollbackYargs, rollbackWarning);
+	wrangler.command(
+		"rollback [deployment-id]",
+		"🔙 Rollback a deployment",
+		(rollbackYargs) =>
+			rollbackYargs
+				.positional("deployment-id", {
+					describe: "The ID of the deployment to rollback to",
+					type: "string",
+					demandOption: false,
+				})
+				.option("message", {
+					alias: "m",
+					describe:
+						"Skip confirmation and message prompts, uses provided argument as message",
+					type: "string",
+					default: undefined,
+				})
+				.epilogue(rollbackWarning),
+		async (rollbackYargs) => {
+			const { accountId, scriptName, config } = await commonDeploymentCMDSetup(
+				rollbackYargs,
+				rollbackWarning
+			);
 
-				await rollbackDeployment(
-					accountId,
-					scriptName,
-					config,
-					rollbackYargs.deploymentId,
-					rollbackYargs.message
-				);
-			}
-		)
-		.epilogue(rollbackWarning);
+			await rollbackDeployment(
+				accountId,
+				scriptName,
+				config,
+				rollbackYargs.deploymentId,
+				rollbackYargs.message
+			);
+		}
+	);
 
 	// This set to false to allow overwrite of default behaviour
 	wrangler.version(false);
@@ -722,7 +753,7 @@ export async function main(argv: string[]): Promise<void> {
 				`${thisTerminalIsUnsupported}\n${soWranglerWontWork}\n${tryRunningItIn}${oneOfThese}`
 			);
 		} else if (isBuildFailure(e)) {
-			logBuildFailure(e);
+			logBuildFailure(e.errors, e.warnings);
 			logger.error(e.message);
 		} else {
 			logger.error(e instanceof Error ? e.message : e);

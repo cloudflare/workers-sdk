@@ -11,7 +11,7 @@ This package contains Cloudflare's fork VSCode for Web, to support web editing o
 
 ## Building
 
-Follow steps (1) and (2) from above, and then run `yarn build`
+Follow steps (1) and (2) from above, and then run `yarn custom:build`
 
 ## Publish
 

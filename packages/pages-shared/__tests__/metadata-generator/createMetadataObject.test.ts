@@ -1,3 +1,4 @@
+import { test, expect } from "vitest";
 import { createMetadataObject } from "../..//metadata-generator/createMetadataObject";
 import type {
 	RedirectRule,

@@ -3,7 +3,7 @@
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
-		"deploy": "wrangler publish index.js",
+		"deploy": "wrangler deploy index.js",
 		"dev": "wrangler dev index.js --local",
 		"start-stackblitz": "WRANGLER_SEND_METRICS=false wrangler dev index.js --local",
 		"test": "vitest"
@@ -12,7 +12,7 @@
 		"itty-router": "^2.6.1"
 	},
 	"devDependencies": {
-		"vitest": "^0.25.2",
-		"wrangler": "^2.2.2"
+		"vitest": "^0.31.0",
+		"wrangler": "^3.0.0"
 	}
 }

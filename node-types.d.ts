@@ -1,36 +1,16 @@
 // https://github.com/cloudflare/workers-sdk/pull/2496#discussion_r1062516883
 
-import {
-	Event as WorkerEvent,
-	WebAssembly as WorkerWebAssembly,
-} from "@cloudflare/workers-types";
+import { WebAssembly as WorkerWebAssembly } from "@cloudflare/workers-types";
 import type {
-	EventListenerOrEventListenerObject,
 	EventTargetAddEventListenerOptions,
 	EventTargetEventListenerOptions,
 } from "@cloudflare/workers-types";
 
 declare global {
-	// `Event` and `EventTarget` have been global since Node 15, but aren't
-	// included in `@types/node`.
-	class Event extends WorkerEvent {}
 	type EventListenerOptions = EventTargetEventListenerOptions;
 	type AddEventListenerOptions = EventTargetAddEventListenerOptions;
 	// (can't use EventTarget from "@cloudflare/workers-types" as it's event map
 	// type parameters are incompatible with `tinybench`, a `vitest` dependency)
-	class EventTarget {
-		addEventListener(
-			type: string,
-			callback: EventListenerOrEventListenerObject | null,
-			options?: EventTargetAddEventListenerOptions | boolean
-		): void;
-		dispatchEvent(event: Event): boolean;
-		removeEventListener(
-			type: string,
-			callback: EventListenerOrEventListenerObject | null,
-			options?: EventTargetEventListenerOptions | boolean
-		): void;
-	}
 
 	// `WebAssembly` has been global since Node 8, but isn't included in
 	// `@types/node`.

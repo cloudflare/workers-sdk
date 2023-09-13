@@ -6,8 +6,6 @@
 <a href="https://discord.gg/CloudflareDev"><img alt="Discord" src="https://img.shields.io/discord/595317990191398933?color=%23F48120&style=flat-square"></a>
 </section>
 
-> This package is for wrangler v2.x, released first in May 2022. If you're looking for v1.x of the `@cloudflare/wrangler` package, visit https://www.npmjs.com/package/@cloudflare/wrangler / https://github.com/cloudflare/wrangler-legacy.
-
 `wrangler` is a command line tool for building [Cloudflare Workers](https://workers.cloudflare.com/).
 
 ## Quick Start
@@ -17,8 +15,8 @@
 echo "export default { fetch() { return new Response('hello world') } }" > index.js
 # try it out
 npx wrangler dev index.js
-# and then publish it
-npx wrangler publish index.js --name my-worker
+# and then deploy it
+npx wrangler deploy index.js --name my-worker
 # visit https://my-worker.<your workers subdomain>.workers.dev
 ```
 
@@ -26,10 +24,10 @@ npx wrangler publish index.js --name my-worker
 
 ```bash
 # Generate a new project
-npx wrangler init my-worker
+npx wrangler init my-worker --no-delegate-c3
 # try it out
 cd my-worker && npm run start
-# and then publish it
+# and then deploy it
 npm run deploy
 ```
 
@@ -43,15 +41,15 @@ $ npm install wrangler --save-dev
 
 Wrangler is configured via a `wrangler.toml` file in the project root. When utilizing the `wrangler init` command, a `wrangler.toml` file will be created for you.
 
-example:
+Example:
 
 ```toml
-main = "./src/index.ts" # init w/ TypeScript
 name = "my-worker"
-compatibility_date = "YYY-MM-DD"
+main = "./src/index.ts" # init w/ TypeScript
+compatibility_date = "YYYY-MM-DD"
 ```
 
-for more detailed information about configuration, see the [documentation](https://developers.cloudflare.com/workers/cli-wrangler/configuration)
+For more detailed information about configuration, refer to the [documentation](https://developers.cloudflare.com/workers/wrangler/configuration/).
 
 ## Commands
 
@@ -63,11 +61,11 @@ Creates a Worker project. For details on configuration keys and values, refer to
 
 Start a local development server, with live reloading and devtools.
 
-### `wrangler publish`
+### `wrangler deploy`
 
 Publish the given script to the worldwide Cloudflare network.
 
-For more commands and options, refer to the [documentation](https://developers.cloudflare.com/workers/cli-wrangler/commands).
+For more commands and options, refer to the [documentation](https://developers.cloudflare.com/workers/wrangler/commands/).
 
 ## Pages
 

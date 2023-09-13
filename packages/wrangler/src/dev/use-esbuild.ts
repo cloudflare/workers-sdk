@@ -2,14 +2,20 @@ import assert from "node:assert";
 import { watch } from "chokidar";
 import { useApp } from "ink";
 import { useState, useEffect } from "react";
-import { bundleWorker, rewriteNodeCompatBuildFailure } from "../bundle";
-import { logBuildFailure, logger } from "../logger";
-import traverseModuleGraph from "../traverse-module-graph";
+import {
+	bundleWorker,
+	dedupeModulesByName,
+	rewriteNodeCompatBuildFailure,
+} from "../deployment-bundle/bundle";
+import traverseModuleGraph from "../deployment-bundle/traverse-module-graph";
+import { logBuildFailure, logBuildWarnings } from "../logger";
 import type { Config } from "../config";
+import type { Entry } from "../deployment-bundle/entry";
+import type { CfModule } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
-import type { Entry } from "../entry";
-import type { CfModule } from "../worker";
-import type { WatchMode, Metafile } from "esbuild";
+import type { SourceMapMetadata } from "../inspect";
+import type { ModuleCollector } from "../module-collection";
+import type { Metafile, BuildResult, PluginBuild } from "esbuild";
 
 export type EsbuildBundle = {
 	id: number;
@@ -19,6 +25,12 @@ export type EsbuildBundle = {
 	modules: CfModule[];
 	dependencies: Metafile["outputs"][string]["inputs"];
 	sourceMapPath: string | undefined;
+	sourceMapMetadata: SourceMapMetadata | undefined;
+};
+
+export type BundleInfo = {
+	bundle: EsbuildBundle;
+	moduleCollector: ModuleCollector | undefined;
 };
 
 export function useEsbuild({
@@ -26,6 +38,8 @@ export function useEsbuild({
 	destination,
 	jsxFactory,
 	jsxFragment,
+	processEntrypoint,
+	additionalModules,
 	rules,
 	assets,
 	serveAssetsFromWorker,
@@ -33,13 +47,11 @@ export function useEsbuild({
 	minify,
 	legacyNodeCompat,
 	nodejsCompat,
-	betaD1Shims,
 	define,
 	noBundle,
 	workerDefinitions,
 	services,
 	durableObjects,
-	firstPartyWorkerDevFacade,
 	local,
 	targetConsumer,
 	testScheduled,
@@ -49,6 +61,8 @@ export function useEsbuild({
 	destination: string | undefined;
 	jsxFactory: string | undefined;
 	jsxFragment: string | undefined;
+	processEntrypoint: boolean;
+	additionalModules: CfModule[];
 	rules: Config["rules"];
 	assets: Config["assets"];
 	define: Config["define"];
@@ -58,17 +72,15 @@ export function useEsbuild({
 	minify: boolean | undefined;
 	legacyNodeCompat: boolean | undefined;
 	nodejsCompat: boolean | undefined;
-	betaD1Shims?: string[];
 	noBundle: boolean;
 	workerDefinitions: WorkerRegistry;
 	durableObjects: Config["durable_objects"];
-	firstPartyWorkerDevFacade: boolean | undefined;
 	local: boolean;
-	targetConsumer: "dev" | "publish";
+	targetConsumer: "dev" | "deploy";
 	testScheduled: boolean;
 	experimentalLocal: boolean | undefined;
 }): EsbuildBundle | undefined {
-	const [bundle, setBundle] = useState<EsbuildBundle>();
+	const [bundleInfo, setBundleInfo] = useState<BundleInfo>();
 	const { exit } = useApp();
 	useEffect(() => {
 		let stopWatching: (() => void) | undefined = undefined;
@@ -76,69 +88,92 @@ export function useEsbuild({
 		function updateBundle() {
 			// nothing really changes here, so let's increment the id
 			// to change the return object's identity
-			setBundle((previousBundle) => {
+			setBundleInfo((previousBundle) => {
 				assert(
 					previousBundle,
 					"Rebuild triggered with no previous build available"
 				);
-				return { ...previousBundle, id: previousBundle.id + 1 };
+				previousBundle.bundle.modules = dedupeModulesByName([
+					...previousBundle.bundle.modules,
+					...(previousBundle.moduleCollector?.modules ?? []),
+				]);
+				return { ...previousBundle, id: previousBundle.bundle.id + 1 };
 			});
 		}
 
-		const watchMode: WatchMode = {
-			async onRebuild(error) {
-				if (error !== null) {
-					if (!legacyNodeCompat) rewriteNodeCompatBuildFailure(error);
-					logBuildFailure(error);
-					logger.error("Watch build failed:", error.message);
-				} else {
-					updateBundle();
-				}
+		let bundled = false;
+		const onEnd = {
+			name: "on-end",
+			setup(b: PluginBuild) {
+				b.onEnd((result: BuildResult) => {
+					const errors = result.errors;
+					const warnings = result.warnings;
+					if (errors.length > 0) {
+						if (!legacyNodeCompat) rewriteNodeCompatBuildFailure(result.errors);
+						logBuildFailure(errors, warnings);
+						return;
+					}
+
+					if (!bundled) {
+						// First bundle, no need to update bundle
+						bundled = true;
+					} else {
+						updateBundle();
+					}
+
+					if (warnings.length > 0) {
+						logBuildWarnings(warnings);
+					}
+				});
 			},
 		};
 
 		async function build() {
 			if (!destination) return;
 
-			const {
-				resolvedEntryPointPath,
-				bundleType,
-				modules,
-				dependencies,
-				stop,
-				sourceMapPath,
-			}: Awaited<ReturnType<typeof bundleWorker>> = noBundle
-				? await traverseModuleGraph(entry, rules)
-				: await bundleWorker(entry, destination, {
-						serveAssetsFromWorker,
-						jsxFactory,
-						jsxFragment,
-						rules,
-						watch: watchMode,
-						tsconfig,
-						minify,
-						legacyNodeCompat,
-						nodejsCompat,
-						betaD1Shims,
-						doBindings: durableObjects.bindings,
-						define,
-						checkFetch: true,
-						assets: assets && {
-							...assets,
-							// disable the cache in dev
-							bypassCache: true,
-						},
-						workerDefinitions,
-						services,
-						firstPartyWorkerDevFacade,
-						local,
-						targetConsumer,
-						testScheduled,
-						experimentalLocal,
-				  });
+			let traverseModuleGraphResult:
+				| Awaited<ReturnType<typeof bundleWorker>>
+				| undefined;
+			let bundleResult: Awaited<ReturnType<typeof bundleWorker>> | undefined;
+			if (noBundle) {
+				traverseModuleGraphResult = await traverseModuleGraph(entry, rules);
+			}
+
+			if (processEntrypoint || !noBundle) {
+				bundleResult = await bundleWorker(entry, destination, {
+					bundle: !noBundle,
+					disableModuleCollection: noBundle,
+					serveAssetsFromWorker,
+					jsxFactory,
+					jsxFragment,
+					rules,
+					watch: true,
+					tsconfig,
+					minify,
+					legacyNodeCompat,
+					nodejsCompat,
+					doBindings: durableObjects.bindings,
+					define,
+					checkFetch: true,
+					assets: assets && {
+						...assets,
+						// disable the cache in dev
+						bypassCache: true,
+					},
+					workerDefinitions,
+					services,
+					targetConsumer,
+					testScheduled,
+					additionalModules: dedupeModulesByName([
+						...(traverseModuleGraphResult?.modules ?? []),
+						...additionalModules,
+					]),
+					plugins: [onEnd],
+				});
+			}
 
 			// Capture the `stop()` method to use as the `useEffect()` destructor.
-			stopWatching = stop;
+			stopWatching = bundleResult?.stop;
 
 			// if "noBundle" is true, then we need to manually watch the entry point and
 			// trigger "builds" when it changes
@@ -153,14 +188,26 @@ export function useEsbuild({
 					void watcher.close();
 				};
 			}
-			setBundle({
-				id: 0,
-				entry,
-				path: resolvedEntryPointPath,
-				type: bundleType,
-				modules,
-				dependencies,
-				sourceMapPath,
+
+			setBundleInfo({
+				bundle: {
+					id: 0,
+					entry,
+					path: bundleResult?.resolvedEntryPointPath ?? entry.file,
+					type:
+						bundleResult?.bundleType ??
+						(entry.format === "modules" ? "esm" : "commonjs"),
+					modules: bundleResult
+						? bundleResult.modules
+						: dedupeModulesByName([
+								...(traverseModuleGraphResult?.modules ?? []),
+								...additionalModules,
+						  ]),
+					dependencies: bundleResult?.dependencies ?? {},
+					sourceMapPath: bundleResult?.sourceMapPath,
+					sourceMapMetadata: bundleResult?.sourceMapMetadata,
+				},
+				moduleCollector: bundleResult?.moduleCollector,
 			});
 		}
 
@@ -180,6 +227,8 @@ export function useEsbuild({
 		jsxFactory,
 		jsxFragment,
 		serveAssetsFromWorker,
+		processEntrypoint,
+		additionalModules,
 		rules,
 		tsconfig,
 		exit,
@@ -192,12 +241,10 @@ export function useEsbuild({
 		services,
 		durableObjects,
 		workerDefinitions,
-		firstPartyWorkerDevFacade,
-		betaD1Shims,
 		local,
 		targetConsumer,
 		testScheduled,
 		experimentalLocal,
 	]);
-	return bundle;
+	return bundleInfo?.bundle;
 }

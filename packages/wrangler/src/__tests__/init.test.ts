@@ -4,6 +4,7 @@ import * as TOML from "@iarna/toml";
 import { execa, execaSync } from "execa";
 import { rest } from "msw";
 import { parseConfigFileTextToJson } from "typescript";
+import { FormData } from "undici";
 import { version as wranglerVersion } from "../../package.json";
 import { getPackageManager } from "../package-manager";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -48,21 +49,127 @@ describe("init", () => {
 
 	const std = mockConsoleMethods();
 
-	describe("options", () => {
-		it("should initialize with no interactive prompts if `--yes` is used", async () => {
-			await runWrangler("init --yes");
+	describe("`wrangler init` is now a deprecated command", () => {
+		test("shows deprecation message and delegates to C3", async () => {
+			await runWrangler("init");
 
 			checkFiles({
 				items: {
 					"./src/index.js": false,
-					"./src/index.ts": true,
-					"./tsconfig.json": true,
-					"./package.json": true,
-					"./wrangler.toml": true,
+					"./src/index.ts": false,
+					"./tsconfig.json": false,
+					"./package.json": false,
+					"./wrangler.toml": false,
 				},
 			});
 
-			expect(std.out).toMatchInlineSnapshot(`
+			expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "Running \`mockpm create cloudflare@2\`...",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
+			}
+		`);
+
+			expect(execa).toHaveBeenCalledWith("mockpm", ["create", "cloudflare@2"], {
+				stdio: "inherit",
+			});
+		});
+
+		it("if `-y` is used, delegate to c3 with --wrangler-defaults", async () => {
+			await runWrangler("init -y");
+
+			expect(execa).toHaveBeenCalledWith(
+				"mockpm",
+				["create", "cloudflare@2", "--wrangler-defaults"],
+				{ stdio: "inherit" }
+			);
+		});
+
+		describe("with custom C3 command", () => {
+			const ORIGINAL_ENV = process.env;
+
+			beforeEach(() => {
+				process.env = {
+					...ORIGINAL_ENV,
+					WRANGLER_C3_COMMAND: "run create-cloudflare",
+				};
+			});
+
+			afterEach(() => {
+				process.env = ORIGINAL_ENV;
+			});
+
+			test("shows deprecation message and delegates to C3", async () => {
+				await runWrangler("init");
+
+				checkFiles({
+					items: {
+						"./src/index.js": false,
+						"./src/index.ts": false,
+						"./tsconfig.json": false,
+						"./package.json": false,
+						"./wrangler.toml": false,
+					},
+				});
+
+				expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "Running \`mockpm run create-cloudflare\`...",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm run create-cloudflare\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
+			}
+		`);
+
+				expect(execa).toHaveBeenCalledWith(
+					"mockpm",
+					["run", "create-cloudflare"],
+					{
+						stdio: "inherit",
+					}
+				);
+			});
+
+			it("if `-y` is used, delegate to c3 with --wrangler-defaults", async () => {
+				await runWrangler("init -y");
+
+				expect(execa).toHaveBeenCalledWith(
+					"mockpm",
+					["run", "create-cloudflare", "--wrangler-defaults"],
+					{ stdio: "inherit" }
+				);
+			});
+		});
+	});
+
+	describe("deprecated behavior is retained with --no-delegate-c3", () => {
+		describe("options", () => {
+			it("should initialize with no interactive prompts if `--yes` is used", async () => {
+				await runWrangler("init --yes --no-delegate-c3");
+
+				checkFiles({
+					items: {
+						"./src/index.js": false,
+						"./src/index.ts": true,
+						"./tsconfig.json": true,
+						"./package.json": true,
+						"./wrangler.toml": true,
+					},
+				});
+
+				expect(std.out).toMatchInlineSnapshot(`
 			"✨ Created wrangler.toml
 			✨ Initialized git repository
 			✨ Created package.json
@@ -75,27 +182,33 @@ describe("init", () => {
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`"
 		`);
-			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.warn).toMatchInlineSnapshot(`""`);
-		});
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 --wrangler-defaults\` instead.[0m
 
-		it("should initialize with no interactive prompts if `--yes` is used (named worker)", async () => {
-			await runWrangler("init my-worker --yes");
+			  The \`init\` command will be removed in a future version.
 
-			checkFiles({
-				items: {
-					"./my-worker/src/index.js": false,
-					"./my-worker/src/index.ts": true,
-					"./my-worker/tsconfig.json": true,
-					"./my-worker/package.json": true,
-					"./my-worker/wrangler.toml": wranglerToml({
-						...MINIMAL_WRANGLER_TOML,
-						name: "my-worker",
-					}),
-				},
+			"
+		`);
 			});
 
-			expect(std.out).toMatchInlineSnapshot(`
+			it("should initialize with no interactive prompts if `--yes` is used (named worker)", async () => {
+				await runWrangler("init my-worker --yes --no-delegate-c3");
+
+				checkFiles({
+					items: {
+						"./my-worker/src/index.js": false,
+						"./my-worker/src/index.ts": true,
+						"./my-worker/tsconfig.json": true,
+						"./my-worker/package.json": true,
+						"./my-worker/wrangler.toml": wranglerToml({
+							...MINIMAL_WRANGLER_TOML,
+							name: "my-worker",
+						}),
+					},
+				});
+
+				expect(std.out).toMatchInlineSnapshot(`
 			"✨ Created my-worker/wrangler.toml
 			✨ Initialized git repository at my-worker
 			✨ Created my-worker/package.json
@@ -108,24 +221,30 @@ describe("init", () => {
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`"
 		`);
-			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.warn).toMatchInlineSnapshot(`""`);
-		});
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 my-worker --wrangler-defaults\` instead.[0m
 
-		it("should initialize with no interactive prompts if `-y` is used", async () => {
-			await runWrangler("init -y");
+			  The \`init\` command will be removed in a future version.
 
-			checkFiles({
-				items: {
-					"./src/index.js": false,
-					"./src/index.ts": true,
-					"./tsconfig.json": true,
-					"./package.json": true,
-					"./wrangler.toml": true,
-				},
+			"
+		`);
 			});
 
-			expect(std).toMatchInlineSnapshot(`
+			it("should initialize with no interactive prompts if `-y` is used", async () => {
+				await runWrangler("init -y --no-delegate-c3");
+
+				checkFiles({
+					items: {
+						"./src/index.js": false,
+						"./src/index.ts": true,
+						"./tsconfig.json": true,
+						"./package.json": true,
+						"./wrangler.toml": true,
+					},
+				});
+
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
@@ -141,38 +260,42 @@ describe("init", () => {
 			To start developing your Worker, run \`npm start\`
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 --wrangler-defaults\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
 			}
 		`);
-		});
+			});
 
-		it("should error if `--type javascript` is used", async () => {
-			await expect(
-				runWrangler("init --type javascript")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"The --type option is no longer supported."`
-			);
-		});
+			it("should error if `--type javascript` is used", async () => {
+				await expect(
+					runWrangler("init --type javascript")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`"The --type option is no longer supported."`
+				);
+			});
 
-		it("should error if `--type rust` is used", async () => {
-			await expect(
-				runWrangler("init --type rust")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"The --type option is no longer supported."`
-			);
-		});
+			it("should error if `--type rust` is used", async () => {
+				await expect(
+					runWrangler("init --type rust")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`"The --type option is no longer supported."`
+				);
+			});
 
-		it("should error if `--type webpack` is used", async () => {
-			await expect(runWrangler("init --type webpack")).rejects
-				.toThrowErrorMatchingInlineSnapshot(`
+			it("should error if `--type webpack` is used", async () => {
+				await expect(runWrangler("init --type webpack")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
               "The --type option is no longer supported.
               If you wish to use webpack then you will need to create a custom build."
             `);
-		});
+			});
 
-		it("should error if `--site` is used", async () => {
-			await expect(runWrangler("init --site")).rejects
-				.toThrowErrorMatchingInlineSnapshot(`
+			it("should error if `--site` is used", async () => {
+				await expect(runWrangler("init --site")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
               "The --site option is no longer supported.
               If you wish to create a brand new Worker Sites project then clone the \`worker-sites-template\` starter repository:
 
@@ -184,108 +307,116 @@ describe("init", () => {
               Find out more about how to create and maintain Sites projects at https://developers.cloudflare.com/workers/platform/sites.
               Have you considered using Cloudflare Pages instead? See https://pages.cloudflare.com/."
             `);
-		});
-	});
-
-	describe("wrangler.toml", () => {
-		it("should create a wrangler.toml", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "No package.json found. Would you like to create one?",
-					result: false,
-				}
-			);
-			await runWrangler("init");
-			checkFiles({
-				items: {
-					"wrangler.toml": wranglerToml({
-						compatibility_date: expect.any(String),
-						name: expect.stringContaining("wrangler-tests"),
-					}),
-					"package.json": false,
-					"tsconfig.json": false,
-				},
 			});
+		});
 
-			expect(std).toMatchInlineSnapshot(`
+		describe("wrangler.toml", () => {
+			it("should create a wrangler.toml", async () => {
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
+					},
+					{
+						text: "No package.json found. Would you like to create one?",
+						result: false,
+					}
+				);
+				await runWrangler("init --no-delegate-c3");
+				checkFiles({
+					items: {
+						"wrangler.toml": wranglerToml({
+							compatibility_date: expect.any(String),
+							name: expect.stringContaining("wrangler-tests"),
+						}),
+						"package.json": false,
+						"tsconfig.json": false,
+					},
+				});
+
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
 			  "info": "",
 			  "out": "✨ Created wrangler.toml",
-			  "warn": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
 			}
 		`);
-		});
-
-		it("should create a wrangler.toml and a directory for a named Worker ", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "No package.json found. Would you like to create one?",
-					result: false,
-				}
-			);
-			await runWrangler("init my-worker");
-
-			checkFiles({
-				items: {
-					"my-worker/wrangler.toml": wranglerToml({
-						compatibility_date: expect.any(String),
-						name: "my-worker",
-					}),
-					"my-worker/package.json": false,
-					"my-worker/tsconfig.json": false,
-				},
 			});
 
-			expect(std).toMatchInlineSnapshot(`
+			it("should create a wrangler.toml and a directory for a named Worker ", async () => {
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
+					},
+					{
+						text: "No package.json found. Would you like to create one?",
+						result: false,
+					}
+				);
+				await runWrangler("init my-worker --no-delegate-c3");
+
+				checkFiles({
+					items: {
+						"my-worker/wrangler.toml": wranglerToml({
+							compatibility_date: expect.any(String),
+							name: "my-worker",
+						}),
+						"my-worker/package.json": false,
+						"my-worker/tsconfig.json": false,
+					},
+				});
+
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
 			  "info": "",
 			  "out": "✨ Created my-worker/wrangler.toml",
-			  "warn": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 my-worker\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
 			}
 		`);
-		});
-
-		it("should display warning when wrangler.toml already exists, and exit if user does not want to carry on", async () => {
-			writeFiles({
-				items: {
-					"wrangler.toml": wranglerToml({
-						// use a fake value to make sure the file is not overwritten
-						compatibility_date: "something-else",
-					}),
-				},
 			});
 
-			mockConfirm({
-				text: "Do you want to continue initializing this project?",
-				result: false,
-			});
+			it("should display warning when wrangler.toml already exists, and exit if user does not want to carry on", async () => {
+				writeFiles({
+					items: {
+						"wrangler.toml": wranglerToml({
+							// use a fake value to make sure the file is not overwritten
+							compatibility_date: "something-else",
+						}),
+					},
+				});
 
-			await runWrangler("init");
-			expect(std.warn).toContain("wrangler.toml already exists!");
+				mockConfirm({
+					text: "Do you want to continue initializing this project?",
+					result: false,
+				});
 
-			checkFiles({
-				items: {
-					"wrangler.toml": wranglerToml({
-						compatibility_date: "something-else",
-					}),
-					"package.json": false,
-					"tsconfig.json": false,
-				},
-			});
+				await runWrangler("init --no-delegate-c3");
+				expect(std.warn).toContain("wrangler.toml already exists!");
 
-			expect(std).toMatchInlineSnapshot(`
+				checkFiles({
+					items: {
+						"wrangler.toml": wranglerToml({
+							compatibility_date: "something-else",
+						}),
+						"package.json": false,
+						"tsconfig.json": false,
+					},
+				});
+
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
@@ -296,34 +427,34 @@ describe("init", () => {
 			",
 			}
 		`);
-		});
-
-		it("should display warning when wrangler.toml already exists in the target directory, and exit if user does not want to carry on", async () => {
-			writeFiles({
-				items: {
-					"path/to/worker/wrangler.toml": wranglerToml({
-						compatibility_date: "something-else",
-					}),
-				},
-			});
-			mockConfirm({
-				text: "Do you want to continue initializing this project?",
-				result: false,
 			});
 
-			await runWrangler("init path/to/worker");
+			it("should display warning when wrangler.toml already exists in the target directory, and exit if user does not want to carry on", async () => {
+				writeFiles({
+					items: {
+						"path/to/worker/wrangler.toml": wranglerToml({
+							compatibility_date: "something-else",
+						}),
+					},
+				});
+				mockConfirm({
+					text: "Do you want to continue initializing this project?",
+					result: false,
+				});
 
-			expect(std.warn).toContain("wrangler.toml already exists!");
-			checkFiles({
-				items: {
-					"path/to/worker/wrangler.toml": wranglerToml({
-						compatibility_date: "something-else",
-					}),
-					"package.json": false,
-					"tsconfig.json": false,
-				},
-			});
-			expect(std).toMatchInlineSnapshot(`
+				await runWrangler("init path/to/worker --no-delegate-c3");
+
+				expect(std.warn).toContain("wrangler.toml already exists!");
+				checkFiles({
+					items: {
+						"path/to/worker/wrangler.toml": wranglerToml({
+							compatibility_date: "something-else",
+						}),
+						"package.json": false,
+						"tsconfig.json": false,
+					},
+				});
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
@@ -334,92 +465,92 @@ describe("init", () => {
 			",
 			}
 		`);
-		});
-
-		it("should not overwrite an existing wrangler.toml, after agreeing to other prompts", async () => {
-			writeFiles({
-				items: {
-					"wrangler.toml": wranglerToml({
-						compatibility_date: "something-else",
-					}),
-				},
 			});
-			mockConfirm(
-				{
-					text: "Do you want to continue initializing this project?",
+
+			it("should not overwrite an existing wrangler.toml, after agreeing to other prompts", async () => {
+				writeFiles({
+					items: {
+						"wrangler.toml": wranglerToml({
+							compatibility_date: "something-else",
+						}),
+					},
+				});
+				mockConfirm(
+					{
+						text: "Do you want to continue initializing this project?",
+						result: true,
+					},
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: true,
+					},
+					{
+						text: "No package.json found. Would you like to create one?",
+						result: true,
+					},
+					{
+						text: "Would you like to use TypeScript?",
+						result: true,
+					}
+				);
+
+				mockSelect({
+					text: `Would you like to create a Worker at ${path.join(
+						"src",
+						"index.ts"
+					)}?`,
+					result: "fetch",
+				});
+				mockConfirm({
+					text: "Would you like us to write your first test with Vitest?",
 					result: true,
-				},
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: true,
-				},
-				{
-					text: "No package.json found. Would you like to create one?",
-					result: true,
-				},
-				{
-					text: "Would you like to use TypeScript?",
-					result: true,
-				}
-			);
+				});
 
-			mockSelect({
-				text: `Would you like to create a Worker at ${path.join(
-					"src",
-					"index.ts"
-				)}?`,
-				result: "fetch",
-			});
-			mockConfirm({
-				text: "Would you like us to write your first test with Vitest?",
-				result: true,
+				await runWrangler("init --no-delegate-c3");
+
+				checkFiles({
+					items: {
+						"wrangler.toml": wranglerToml({
+							compatibility_date: "something-else",
+						}),
+					},
+				});
 			});
 
-			await runWrangler("init");
+			it("should display warning when wrangler.toml already exists, but continue if user does want to carry on", async () => {
+				writeFiles({
+					items: {
+						"wrangler.toml": wranglerToml({
+							compatibility_date: "something-else",
+						}),
+					},
+				});
+				mockConfirm(
+					{
+						text: "Do you want to continue initializing this project?",
+						result: true,
+					},
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
+					},
+					{
+						text: "No package.json found. Would you like to create one?",
+						result: false,
+					}
+				);
 
-			checkFiles({
-				items: {
-					"wrangler.toml": wranglerToml({
-						compatibility_date: "something-else",
-					}),
-				},
-			});
-		});
+				await runWrangler("init --no-delegate-c3");
 
-		it("should display warning when wrangler.toml already exists, but continue if user does want to carry on", async () => {
-			writeFiles({
-				items: {
-					"wrangler.toml": wranglerToml({
-						compatibility_date: "something-else",
-					}),
-				},
-			});
-			mockConfirm(
-				{
-					text: "Do you want to continue initializing this project?",
-					result: true,
-				},
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "No package.json found. Would you like to create one?",
-					result: false,
-				}
-			);
-
-			await runWrangler("init");
-
-			expect(std.warn).toContain("wrangler.toml already exists!");
-			checkFiles({
-				items: {
-					"wrangler.toml": wranglerToml({
-						compatibility_date: "something-else",
-					}),
-				},
-			});
-			expect(std).toMatchInlineSnapshot(`
+				expect(std.warn).toContain("wrangler.toml already exists!");
+				checkFiles({
+					items: {
+						"wrangler.toml": wranglerToml({
+							compatibility_date: "something-else",
+						}),
+					},
+				});
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
@@ -430,156 +561,160 @@ describe("init", () => {
 			",
 			}
 		`);
+			});
+
+			it("should not add a Cron Trigger to wrangler.toml when creating a Scheduled Worker if wrangler.toml already exists", async () => {
+				writeFiles({
+					items: {
+						"wrangler.toml": wranglerToml({
+							compatibility_date: "something-else",
+						}),
+					},
+				});
+				mockConfirm(
+					{
+						text: "Do you want to continue initializing this project?",
+						result: true,
+					},
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: true,
+					},
+
+					{
+						text: "No package.json found. Would you like to create one?",
+						result: true,
+					},
+					{
+						text: "Would you like to use TypeScript?",
+						result: true,
+					}
+				);
+				mockSelect({
+					text: `Would you like to create a Worker at ${path.join(
+						"src",
+						"index.ts"
+					)}?`,
+					result: "scheduled",
+				});
+
+				mockConfirm({
+					text: "Would you like us to write your first test with Vitest?",
+					result: true,
+				});
+				await runWrangler("init --no-delegate-c3");
+
+				checkFiles({
+					items: {
+						"wrangler.toml": wranglerToml({
+							compatibility_date: "something-else",
+						}),
+					},
+				});
+			});
+
+			it("should add a Cron Trigger to wrangler.toml when creating a Scheduled Worker, but only if wrangler.toml is being created during init", async () => {
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: true,
+					},
+					{
+						text: "No package.json found. Would you like to create one?",
+						result: true,
+					},
+					{
+						text: "Would you like to use TypeScript?",
+						result: true,
+					}
+				);
+				mockSelect({
+					text: `Would you like to create a Worker at ${path.join(
+						"src",
+						"index.ts"
+					)}?`,
+					result: "scheduled",
+				});
+				mockConfirm({
+					text: "Would you like us to write your first test with Vitest?",
+					result: true,
+				});
+				await runWrangler("init --no-delegate-c3");
+
+				checkFiles({
+					items: {
+						"wrangler.toml": wranglerToml({
+							...MINIMAL_WRANGLER_TOML,
+							triggers: { crons: ["1 * * * *"] },
+						}),
+					},
+				});
+			});
 		});
 
-		it("should not add a Cron Trigger to wrangler.toml when creating a Scheduled Worker if wrangler.toml already exists", async () => {
-			writeFiles({
-				items: {
-					"wrangler.toml": wranglerToml({
-						compatibility_date: "something-else",
-					}),
-				},
-			});
-			mockConfirm(
-				{
-					text: "Do you want to continue initializing this project?",
-					result: true,
-				},
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: true,
-				},
+		describe("git init", () => {
+			it("should offer to initialize a git repository", async () => {
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: true,
+					},
+					{
+						text: "No package.json found. Would you like to create one?",
+						result: false,
+					}
+				);
 
-				{
-					text: "No package.json found. Would you like to create one?",
-					result: true,
-				},
-				{
-					text: "Would you like to use TypeScript?",
-					result: true,
-				}
-			);
-			mockSelect({
-				text: `Would you like to create a Worker at ${path.join(
-					"src",
-					"index.ts"
-				)}?`,
-				result: "scheduled",
-			});
+				await runWrangler("init --no-delegate-c3");
 
-			mockConfirm({
-				text: "Would you like us to write your first test with Vitest?",
-				result: true,
-			});
-			await runWrangler("init");
-
-			checkFiles({
-				items: {
-					"wrangler.toml": wranglerToml({
-						compatibility_date: "something-else",
-					}),
-				},
-			});
-		});
-
-		it("should add a Cron Trigger to wrangler.toml when creating a Scheduled Worker, but only if wrangler.toml is being created during init", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: true,
-				},
-				{
-					text: "No package.json found. Would you like to create one?",
-					result: true,
-				},
-				{
-					text: "Would you like to use TypeScript?",
-					result: true,
-				}
-			);
-			mockSelect({
-				text: `Would you like to create a Worker at ${path.join(
-					"src",
-					"index.ts"
-				)}?`,
-				result: "scheduled",
-			});
-			mockConfirm({
-				text: "Would you like us to write your first test with Vitest?",
-				result: true,
-			});
-			await runWrangler("init");
-
-			checkFiles({
-				items: {
-					"wrangler.toml": wranglerToml({
-						...MINIMAL_WRANGLER_TOML,
-						triggers: { crons: ["1 * * * *"] },
-					}),
-				},
-			});
-		});
-	});
-
-	describe("git init", () => {
-		it("should offer to initialize a git repository", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: true,
-				},
-				{
-					text: "No package.json found. Would you like to create one?",
-					result: false,
-				}
-			);
-
-			await runWrangler("init");
-
-			checkFiles({
-				items: {
-					"wrangler.toml": wranglerToml({
-						compatibility_date: expect.any(String),
-						name: expect.stringContaining("wrangler-tests"),
-					}),
-					".git": { items: {} },
-					".gitignore": true,
-				},
-			});
-			expect(std).toMatchInlineSnapshot(`
+				checkFiles({
+					items: {
+						"wrangler.toml": wranglerToml({
+							compatibility_date: expect.any(String),
+							name: expect.stringContaining("wrangler-tests"),
+						}),
+						".git": { items: {} },
+						".gitignore": true,
+					},
+				});
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
 			  "info": "",
 			  "out": "✨ Created wrangler.toml
 			✨ Initialized git repository",
-			  "warn": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
 			}
 		`);
-			expect((await execa("git", ["branch", "--show-current"])).stdout).toEqual(
-				getDefaultBranchName()
-			);
-		});
-
-		it("should not offer to initialize a git repo if it's already inside one", async () => {
-			await execa("git", ["init"]);
-			setWorkingDirectory("some-folder");
-
-			await runWrangler("init -y");
-
-			checkFiles({
-				items: {
-					"wrangler.toml": wranglerToml({
-						...MINIMAL_WRANGLER_TOML,
-						name: "some-folder",
-					}),
-					".git": { items: {} },
-					".gitignore": false,
-				},
+				expect(
+					(await execa("git", ["branch", "--show-current"])).stdout
+				).toEqual(getDefaultBranchName());
 			});
 
-			// Note the lack of "✨ Initialized git repository" in the log
-			expect(std).toMatchInlineSnapshot(`
+			it("should not offer to initialize a git repo if it's already inside one", async () => {
+				await execa("git", ["init"]);
+				setWorkingDirectory("some-folder");
+
+				await runWrangler("init -y --no-delegate-c3");
+
+				checkFiles({
+					items: {
+						"wrangler.toml": wranglerToml({
+							...MINIMAL_WRANGLER_TOML,
+							name: "some-folder",
+						}),
+						".git": { items: {} },
+						".gitignore": false,
+					},
+				});
+
+				// Note the lack of "✨ Initialized git repository" in the log
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
@@ -594,20 +729,24 @@ describe("init", () => {
 			To start developing your Worker, run \`npm start\`
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 --wrangler-defaults\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
 			}
 		`);
-		});
+			});
 
-		it("should not offer to initialize a git repo if it's already inside one (when using a path as name)", async () => {
-			fs.mkdirSync("path/to/worker", { recursive: true });
-			await execa("git", ["init"], { cwd: "path/to/worker" });
-			expect(fs.lstatSync("path/to/worker/.git").isDirectory()).toBe(true);
+			it("should not offer to initialize a git repo if it's already inside one (when using a path as name)", async () => {
+				fs.mkdirSync("path/to/worker", { recursive: true });
+				await execa("git", ["init"], { cwd: "path/to/worker" });
+				expect(fs.lstatSync("path/to/worker/.git").isDirectory()).toBe(true);
 
-			await runWrangler("init path/to/worker/my-worker -y");
+				await runWrangler("init path/to/worker/my-worker -y --no-delegate-c3");
 
-			// Note the lack of "✨ Initialized git repository" in the log
-			expect(std).toMatchInlineSnapshot(`
+				// Note the lack of "✨ Initialized git repository" in the log
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
@@ -622,471 +761,507 @@ describe("init", () => {
 			To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 path/to/worker/my-worker --wrangler-defaults\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
 			}
 		`);
-		});
+			});
 
-		// I... don't know how to test this lol
-		it.todo(
-			"should not offer to initialize a git repo if git is not installed"
-		);
-
-		it("should initialize git repo with the user's default branch", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: true,
-				},
-				{
-					text: "No package.json found. Would you like to create one?",
-					result: false,
-				}
+			// I... don't know how to test this lol
+			it.todo(
+				"should not offer to initialize a git repo if git is not installed"
 			);
-			await runWrangler("init");
-			expect(std).toMatchInlineSnapshot(`
+
+			it("should initialize git repo with the user's default branch", async () => {
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: true,
+					},
+					{
+						text: "No package.json found. Would you like to create one?",
+						result: false,
+					}
+				);
+				await runWrangler("init --no-delegate-c3");
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
 			  "info": "",
 			  "out": "✨ Created wrangler.toml
 			✨ Initialized git repository",
-			  "warn": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
 			}
 		`);
 
-			expect(execaSync("git", ["symbolic-ref", "HEAD"]).stdout).toEqual(
-				`refs/heads/${getDefaultBranchName()}`
-			);
+				expect(execaSync("git", ["symbolic-ref", "HEAD"]).stdout).toEqual(
+					`refs/heads/${getDefaultBranchName()}`
+				);
+			});
 		});
-	});
 
-	describe("package.json", () => {
-		it("should create a package.json if none is found and user confirms", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "No package.json found. Would you like to create one?",
-					result: true,
-				},
-				{
-					text: "Would you like to use TypeScript?",
-					result: false,
-				}
-			);
-			mockSelect({
-				text: `Would you like to create a Worker at ${path.join(
-					"src",
-					"index.js"
-				)}?`,
-				result: "none",
-			});
-
-			await runWrangler("init");
-
-			checkFiles({
-				items: {
-					"package.json": {
-						contents: expect.objectContaining({
-							name: expect.stringContaining("wrangler-tests"),
-							version: "0.0.0",
-							devDependencies: {
-								wrangler: expect.any(String),
-							},
-						}),
+		describe("package.json", () => {
+			it("should create a package.json if none is found and user confirms", async () => {
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
 					},
-					"tsconfig.json": false,
-				},
-			});
-			expect(mockPackageManager.install).toHaveBeenCalled();
-			expect(std).toMatchInlineSnapshot(`
+					{
+						text: "No package.json found. Would you like to create one?",
+						result: true,
+					},
+					{
+						text: "Would you like to use TypeScript?",
+						result: false,
+					}
+				);
+				mockSelect({
+					text: `Would you like to create a Worker at ${path.join(
+						"src",
+						"index.js"
+					)}?`,
+					result: "none",
+				});
+
+				await runWrangler("init --no-delegate-c3");
+
+				checkFiles({
+					items: {
+						"package.json": {
+							contents: expect.objectContaining({
+								name: expect.stringContaining("wrangler-tests"),
+								version: "0.0.0",
+								devDependencies: {
+									wrangler: expect.any(String),
+								},
+							}),
+						},
+						"tsconfig.json": false,
+					},
+				});
+				expect(mockPackageManager.install).toHaveBeenCalled();
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
 			  "info": "",
 			  "out": "✨ Created wrangler.toml
 			✨ Created package.json",
-			  "warn": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
 			}
 		`);
-		});
-
-		it("should create a package.json, with the specified name, if none is found and user confirms", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "No package.json found. Would you like to create one?",
-					result: true,
-				},
-				{
-					text: "Would you like to use TypeScript?",
-					result: false,
-				}
-			);
-			mockSelect({
-				text: `Would you like to create a Worker at ${path.join(
-					"my-worker",
-					"src",
-					"index.js"
-				)}?`,
-				result: "none",
 			});
 
-			await runWrangler("init my-worker");
-
-			checkFiles({
-				items: {
-					"my-worker/package.json": {
-						contents: expect.objectContaining({
-							name: "my-worker",
-							version: "0.0.0",
-							devDependencies: {
-								wrangler: expect.any(String),
-							},
-						}),
+			it("should create a package.json, with the specified name, if none is found and user confirms", async () => {
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
 					},
-					"my-worker/tsconfig.json": false,
-				},
-			});
-			expect(std).toMatchInlineSnapshot(`
+					{
+						text: "No package.json found. Would you like to create one?",
+						result: true,
+					},
+					{
+						text: "Would you like to use TypeScript?",
+						result: false,
+					}
+				);
+				mockSelect({
+					text: `Would you like to create a Worker at ${path.join(
+						"my-worker",
+						"src",
+						"index.js"
+					)}?`,
+					result: "none",
+				});
+
+				await runWrangler("init my-worker --no-delegate-c3");
+
+				checkFiles({
+					items: {
+						"my-worker/package.json": {
+							contents: expect.objectContaining({
+								name: "my-worker",
+								version: "0.0.0",
+								devDependencies: {
+									wrangler: expect.any(String),
+								},
+							}),
+						},
+						"my-worker/tsconfig.json": false,
+					},
+				});
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
 			  "info": "",
 			  "out": "✨ Created my-worker/wrangler.toml
 			✨ Created my-worker/package.json",
-			  "warn": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 my-worker\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
 			}
 		`);
-		});
-
-		it("should not touch an existing package.json in the same directory", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "Would you like to install wrangler into package.json?",
-					result: false,
-				},
-				{
-					text: "Would you like to use TypeScript?",
-					result: false,
-				}
-			);
-			mockSelect({
-				text: `Would you like to create a Worker at ${path.join(
-					"src",
-					"index.js"
-				)}?`,
-				result: "none",
-			});
-			writeFiles({
-				items: {
-					"package.json": { contents: { name: "test", version: "1.0.0" } },
-				},
 			});
 
-			await runWrangler("init");
+			it("should not touch an existing package.json in the same directory", async () => {
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
+					},
+					{
+						text: "Would you like to install wrangler into package.json?",
+						result: false,
+					},
+					{
+						text: "Would you like to use TypeScript?",
+						result: false,
+					}
+				);
+				mockSelect({
+					text: `Would you like to create a Worker at ${path.join(
+						"src",
+						"index.js"
+					)}?`,
+					result: "none",
+				});
+				writeFiles({
+					items: {
+						"package.json": { contents: { name: "test", version: "1.0.0" } },
+					},
+				});
 
-			checkFiles({
-				items: {
-					"package.json": { contents: { name: "test", version: "1.0.0" } },
-				},
-			});
-			expect(std).toMatchInlineSnapshot(`
+				await runWrangler("init --no-delegate-c3");
+
+				checkFiles({
+					items: {
+						"package.json": { contents: { name: "test", version: "1.0.0" } },
+					},
+				});
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
 			  "info": "",
 			  "out": "✨ Created wrangler.toml",
-			  "warn": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
 			}
 		`);
-		});
-
-		it("should not touch an existing package.json in an ancestor directory, when a name is passed", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "No package.json found. Would you like to create one?",
-					result: true,
-				},
-				{
-					text: "Would you like to use TypeScript?",
-					result: false,
-				}
-			);
-			mockSelect({
-				text: `Would you like to create a Worker at ${path.join(
-					"path",
-					"to",
-					"worker",
-					"my-worker",
-					"src",
-					"index.js"
-				)}?`,
-				result: "none",
 			});
-			writeFiles({
-				items: {
-					"path/to/worker/package.json": {
-						contents: { name: "test", version: "1.0.0" },
+
+			it("should not touch an existing package.json in an ancestor directory, when a name is passed", async () => {
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
 					},
-				},
-			});
-
-			await runWrangler("init path/to/worker/my-worker");
-
-			checkFiles({
-				items: {
-					"path/to/worker/package.json": {
-						contents: { name: "test", version: "1.0.0" },
+					{
+						text: "No package.json found. Would you like to create one?",
+						result: true,
 					},
-				},
-			});
-			expect(std).toMatchInlineSnapshot(`
+					{
+						text: "Would you like to use TypeScript?",
+						result: false,
+					}
+				);
+				mockSelect({
+					text: `Would you like to create a Worker at ${path.join(
+						"path",
+						"to",
+						"worker",
+						"my-worker",
+						"src",
+						"index.js"
+					)}?`,
+					result: "none",
+				});
+				writeFiles({
+					items: {
+						"path/to/worker/package.json": {
+							contents: { name: "test", version: "1.0.0" },
+						},
+					},
+				});
+
+				await runWrangler("init path/to/worker/my-worker --no-delegate-c3");
+
+				checkFiles({
+					items: {
+						"path/to/worker/package.json": {
+							contents: { name: "test", version: "1.0.0" },
+						},
+					},
+				});
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
 			  "info": "",
 			  "out": "✨ Created path/to/worker/my-worker/wrangler.toml
 			✨ Created path/to/worker/my-worker/package.json",
-			  "warn": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 path/to/worker/my-worker\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
 			}
 		`);
-		});
-
-		it("should offer to install wrangler into an existing package.json", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "Would you like to install wrangler into package.json?",
-					result: true,
-				},
-				{
-					text: "Would you like to use TypeScript?",
-					result: false,
-				}
-			);
-			mockSelect({
-				text: `Would you like to create a Worker at ${path.join(
-					"src",
-					"index.js"
-				)}?`,
-				result: "none",
 			});
-			writeFiles({
-				items: {
-					"package.json": {
-						contents: { name: "test", version: "1.0.0" },
+
+			it("should offer to install wrangler into an existing package.json", async () => {
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
 					},
-				},
-			});
-
-			await runWrangler("init");
-
-			checkFiles({
-				items: {
-					"package.json": {
-						contents: { name: "test", version: "1.0.0" },
+					{
+						text: "Would you like to install wrangler into package.json?",
+						result: true,
 					},
-				},
-			});
-			expect(mockPackageManager.addDevDeps).toHaveBeenCalledWith(
-				`wrangler@${wranglerVersion}`
-			);
-			expect(std).toMatchInlineSnapshot(`
+					{
+						text: "Would you like to use TypeScript?",
+						result: false,
+					}
+				);
+				mockSelect({
+					text: `Would you like to create a Worker at ${path.join(
+						"src",
+						"index.js"
+					)}?`,
+					result: "none",
+				});
+				writeFiles({
+					items: {
+						"package.json": {
+							contents: { name: "test", version: "1.0.0" },
+						},
+					},
+				});
+
+				await runWrangler("init --no-delegate-c3");
+
+				checkFiles({
+					items: {
+						"package.json": {
+							contents: { name: "test", version: "1.0.0" },
+						},
+					},
+				});
+				expect(mockPackageManager.addDevDeps).toHaveBeenCalledWith(
+					`wrangler@${wranglerVersion}`
+				);
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
 			  "info": "",
 			  "out": "✨ Created wrangler.toml
 			✨ Installed wrangler into devDependencies",
-			  "warn": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
 			}
 		`);
-		});
+			});
 
-		it("should offer to install wrangler into a package.json relative to the target directory, if no name is provided", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: `Would you like to install wrangler into ${path.join(
-						"..",
-						"package.json"
+			it("should offer to install wrangler into a package.json relative to the target directory, if no name is provided", async () => {
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
+					},
+					{
+						text: `Would you like to install wrangler into ${path.join(
+							"..",
+							"package.json"
+						)}?`,
+						result: true,
+					},
+					{
+						text: "Would you like to use TypeScript?",
+						result: false,
+					}
+				);
+				mockSelect({
+					text: `Would you like to create a Worker at ${path.join(
+						"src",
+						"index.js"
 					)}?`,
-					result: true,
-				},
-				{
-					text: "Would you like to use TypeScript?",
-					result: false,
-				}
-			);
-			mockSelect({
-				text: `Would you like to create a Worker at ${path.join(
-					"src",
-					"index.js"
-				)}?`,
-				result: "none",
-			});
-			writeFiles({
-				items: {
-					"path/to/worker/package.json": {
-						contents: { name: "test", version: "1.0.0" },
+					result: "none",
+				});
+				writeFiles({
+					items: {
+						"path/to/worker/package.json": {
+							contents: { name: "test", version: "1.0.0" },
+						},
 					},
-				},
-			});
-			setWorkingDirectory("path/to/worker/my-worker");
+				});
+				setWorkingDirectory("path/to/worker/my-worker");
 
-			await runWrangler("init");
+				await runWrangler("init --no-delegate-c3");
 
-			setWorkingDirectory("../../../..");
-			checkFiles({
-				items: {
-					"path/to/worker/package.json": {
-						contents: { name: "test", version: "1.0.0" },
+				setWorkingDirectory("../../../..");
+				checkFiles({
+					items: {
+						"path/to/worker/package.json": {
+							contents: { name: "test", version: "1.0.0" },
+						},
+						"path/to/worker/my-worker/package.json": false,
 					},
-					"path/to/worker/my-worker/package.json": false,
-				},
-			});
-			expect(mockPackageManager.addDevDeps).toHaveBeenCalledWith(
-				`wrangler@${wranglerVersion}`
-			);
-			expect(mockPackageManager.cwd).toBe(process.cwd());
-			expect(std).toMatchInlineSnapshot(`
+				});
+				expect(mockPackageManager.addDevDeps).toHaveBeenCalledWith(
+					`wrangler@${wranglerVersion}`
+				);
+				expect(mockPackageManager.cwd).toBe(process.cwd());
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
 			  "info": "",
 			  "out": "✨ Created wrangler.toml
 			✨ Installed wrangler into devDependencies",
-			  "warn": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
 			}
 		`);
-		});
+			});
 
-		it("should not touch an existing package.json in an ancestor directory", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: `Would you like to install wrangler into ${path.join(
-						"..",
-						"..",
-						"package.json"
+			it("should not touch an existing package.json in an ancestor directory", async () => {
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
+					},
+					{
+						text: `Would you like to install wrangler into ${path.join(
+							"..",
+							"..",
+							"package.json"
+						)}?`,
+						result: false,
+					},
+					{
+						text: "Would you like to use TypeScript?",
+						result: false,
+					}
+				);
+				mockSelect({
+					text: `Would you like to create a Worker at ${path.join(
+						"src",
+						"index.js"
 					)}?`,
-					result: false,
-				},
-				{
-					text: "Would you like to use TypeScript?",
-					result: false,
-				}
-			);
-			mockSelect({
-				text: `Would you like to create a Worker at ${path.join(
-					"src",
-					"index.js"
-				)}?`,
-				result: "none",
-			});
-			writeFiles({
-				items: {
-					"package.json": {
-						contents: { name: "test", version: "1.0.0" },
+					result: "none",
+				});
+				writeFiles({
+					items: {
+						"package.json": {
+							contents: { name: "test", version: "1.0.0" },
+						},
 					},
-				},
-			});
-			setWorkingDirectory("./sub-1/sub-2");
+				});
+				setWorkingDirectory("./sub-1/sub-2");
 
-			await runWrangler("init");
+				await runWrangler("init --no-delegate-c3");
 
-			checkFiles({
-				items: {
-					"package.json": false,
-					"../../package.json": {
-						contents: { name: "test", version: "1.0.0" },
+				checkFiles({
+					items: {
+						"package.json": false,
+						"../../package.json": {
+							contents: { name: "test", version: "1.0.0" },
+						},
 					},
-				},
-			});
-			expect(std).toMatchInlineSnapshot(`
+				});
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
 			  "info": "",
 			  "out": "✨ Created wrangler.toml",
-			  "warn": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
 			}
 		`);
+			});
 		});
-	});
 
-	describe("typescript", () => {
-		it("should offer to create a worker in a non-typescript project", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "Would you like to install wrangler into package.json?",
-					result: false,
-				},
-				{
-					text: "Would you like to use TypeScript?",
-					result: false,
-				}
-			);
-			mockSelect({
-				text: `Would you like to create a Worker at ${path.join(
-					"src",
-					"index.js"
-				)}?`,
-				result: "fetch",
-			});
-			mockConfirm({
-				text: "Would you like us to write your first test?",
-				result: false,
-			});
-			writeFiles({
-				items: {
-					"package.json": {
-						contents: { name: "test", version: "1.0.0" },
+		describe("typescript", () => {
+			it("should offer to create a worker in a non-typescript project", async () => {
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
 					},
-				},
-			});
+					{
+						text: "Would you like to install wrangler into package.json?",
+						result: false,
+					},
+					{
+						text: "Would you like to use TypeScript?",
+						result: false,
+					}
+				);
+				mockSelect({
+					text: `Would you like to create a Worker at ${path.join(
+						"src",
+						"index.js"
+					)}?`,
+					result: "fetch",
+				});
+				mockConfirm({
+					text: "Would you like us to write your first test?",
+					result: false,
+				});
+				writeFiles({
+					items: {
+						"package.json": {
+							contents: { name: "test", version: "1.0.0" },
+						},
+					},
+				});
 
-			await runWrangler("init");
+				await runWrangler("init --no-delegate-c3");
 
-			checkFiles({
-				items: {
-					"wrangler.toml": wranglerToml({
-						...MINIMAL_WRANGLER_TOML,
-						main: "src/index.js",
-					}),
-					"src/index.js": true,
-					"src/index.ts": false,
-				},
-			});
-			expect(std).toMatchInlineSnapshot(`
+				checkFiles({
+					items: {
+						"wrangler.toml": wranglerToml({
+							...MINIMAL_WRANGLER_TOML,
+							main: "src/index.js",
+						}),
+						"src/index.js": true,
+						"src/index.ts": false,
+					},
+				});
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
@@ -1095,55 +1270,59 @@ describe("init", () => {
 			✨ Created src/index.js
 
 			To start developing your Worker, run \`npx wrangler dev\`
-			To publish your Worker to the Internet, run \`npx wrangler publish\`",
-			  "warn": "",
+			To publish your Worker to the Internet, run \`npx wrangler deploy\`",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
 			}
 		`);
-		});
+			});
 
-		it("should offer to create a worker in a typescript project", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "Would you like to install wrangler into package.json?",
-					result: false,
-				},
-				{
-					text: "Would you like to use TypeScript?",
-					result: true,
-				}
-			);
-			mockSelect({
-				text: `Would you like to create a Worker at ${path.join(
-					"src",
-					"index.ts"
-				)}?`,
-				result: "fetch",
-			});
-			mockConfirm({
-				text: "Would you like us to write your first test with Vitest?",
-				result: true,
-			});
-			writeFiles({
-				items: {
-					"package.json": {
-						contents: { name: "test", version: "1.0.0" },
+			it("should offer to create a worker in a typescript project", async () => {
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
 					},
-				},
-			});
+					{
+						text: "Would you like to install wrangler into package.json?",
+						result: false,
+					},
+					{
+						text: "Would you like to use TypeScript?",
+						result: true,
+					}
+				);
+				mockSelect({
+					text: `Would you like to create a Worker at ${path.join(
+						"src",
+						"index.ts"
+					)}?`,
+					result: "fetch",
+				});
+				mockConfirm({
+					text: "Would you like us to write your first test with Vitest?",
+					result: true,
+				});
+				writeFiles({
+					items: {
+						"package.json": {
+							contents: { name: "test", version: "1.0.0" },
+						},
+					},
+				});
 
-			await runWrangler("init");
+				await runWrangler("init --no-delegate-c3");
 
-			checkFiles({
-				items: {
-					"src/index.js": false,
-					"src/index.ts": true,
-				},
-			});
-			expect(std).toMatchInlineSnapshot(`
+				checkFiles({
+					items: {
+						"src/index.js": false,
+						"src/index.ts": true,
+					},
+				});
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
@@ -1155,63 +1334,67 @@ describe("init", () => {
 			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
 			To start developing your Worker, run \`npx wrangler dev\`
-			To publish your Worker to the Internet, run \`npx wrangler publish\`",
-			  "warn": "",
+			To publish your Worker to the Internet, run \`npx wrangler deploy\`",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
 			}
 		`);
-		});
-
-		it("should add scripts for a typescript project with .ts extension", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "No package.json found. Would you like to create one?",
-					result: true,
-				},
-
-				{
-					text: "Would you like to use TypeScript?",
-					result: true,
-				}
-			);
-			mockSelect({
-				text: `Would you like to create a Worker at ${path.join(
-					"src",
-					"index.ts"
-				)}?`,
-				result: "fetch",
-			});
-			mockConfirm({
-				text: "Would you like us to write your first test with Vitest?",
-				result: true,
 			});
 
-			await runWrangler("init");
-
-			checkFiles({
-				items: {
-					"package.json": {
-						contents: expect.objectContaining({
-							name: expect.stringContaining("wrangler-tests"),
-							version: "0.0.0",
-							scripts: {
-								deploy: "wrangler publish",
-								start: "wrangler dev",
-								test: "vitest",
-							},
-							devDependencies: {
-								wrangler: expect.any(String),
-							},
-						}),
+			it("should add scripts for a typescript project with .ts extension", async () => {
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
 					},
-					"src/index.js": false,
-					"src/index.ts": true,
-				},
-			});
-			expect(std.out).toMatchInlineSnapshot(`
+					{
+						text: "No package.json found. Would you like to create one?",
+						result: true,
+					},
+
+					{
+						text: "Would you like to use TypeScript?",
+						result: true,
+					}
+				);
+				mockSelect({
+					text: `Would you like to create a Worker at ${path.join(
+						"src",
+						"index.ts"
+					)}?`,
+					result: "fetch",
+				});
+				mockConfirm({
+					text: "Would you like us to write your first test with Vitest?",
+					result: true,
+				});
+
+				await runWrangler("init --no-delegate-c3");
+
+				checkFiles({
+					items: {
+						"package.json": {
+							contents: expect.objectContaining({
+								name: expect.stringContaining("wrangler-tests"),
+								version: "0.0.0",
+								scripts: {
+									deploy: "wrangler deploy",
+									start: "wrangler dev",
+									test: "vitest",
+								},
+								devDependencies: {
+									wrangler: expect.any(String),
+								},
+							}),
+						},
+						"src/index.js": false,
+						"src/index.ts": true,
+					},
+				});
+				expect(std.out).toMatchInlineSnapshot(`
 			"✨ Created wrangler.toml
 			✨ Created package.json
 			✨ Created tsconfig.json
@@ -1223,64 +1406,64 @@ describe("init", () => {
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`"
 		`);
-		});
+			});
 
-		it("should not overwrite package.json scripts for a typescript project", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "Would you like to install wrangler into package.json?",
-					result: false,
-				},
-				{
-					text: "Would you like to use TypeScript?",
+			it("should not overwrite package.json scripts for a typescript project", async () => {
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
+					},
+					{
+						text: "Would you like to install wrangler into package.json?",
+						result: false,
+					},
+					{
+						text: "Would you like to use TypeScript?",
+						result: true,
+					}
+				);
+				mockSelect({
+					text: `Would you like to create a Worker at ${path.join(
+						"src",
+						"index.ts"
+					)}?`,
+					result: "fetch",
+				});
+				mockConfirm({
+					text: "Would you like us to write your first test with Vitest?",
 					result: true,
-				}
-			);
-			mockSelect({
-				text: `Would you like to create a Worker at ${path.join(
-					"src",
-					"index.ts"
-				)}?`,
-				result: "fetch",
-			});
-			mockConfirm({
-				text: "Would you like us to write your first test with Vitest?",
-				result: true,
-			});
-			writeFiles({
-				items: {
-					"package.json": {
-						contents: {
-							scripts: {
-								start: "test-start",
-								deploy: "test-publish",
+				});
+				writeFiles({
+					items: {
+						"package.json": {
+							contents: {
+								scripts: {
+									start: "test-start",
+									deploy: "test-deploy",
+								},
 							},
 						},
 					},
-				},
-			});
+				});
 
-			await runWrangler("init");
+				await runWrangler("init --no-delegate-c3");
 
-			checkFiles({
-				items: {
-					"package.json": {
-						contents: {
-							scripts: {
-								start: "test-start",
-								deploy: "test-publish",
+				checkFiles({
+					items: {
+						"package.json": {
+							contents: {
+								scripts: {
+									start: "test-start",
+									deploy: "test-deploy",
+								},
 							},
 						},
+						"src/index.js": false,
+						"src/index.ts": true,
 					},
-					"src/index.js": false,
-					"src/index.ts": true,
-				},
-			});
-			expect(std.out).toMatchInlineSnapshot(`
+				});
+				expect(std.out).toMatchInlineSnapshot(`
 			"✨ Created wrangler.toml
 			✨ Created tsconfig.json
 			✨ Created src/index.ts
@@ -1288,42 +1471,42 @@ describe("init", () => {
 			✨ Installed @cloudflare/workers-types, typescript, and vitest into devDependencies
 
 			To start developing your Worker, run \`npx wrangler dev\`
-			To publish your Worker to the Internet, run \`npx wrangler publish\`"
+			To publish your Worker to the Internet, run \`npx wrangler deploy\`"
 		`);
-		});
-
-		it("should not offer to create a worker in a ts project if a file already exists at the location", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "Would you like to install wrangler into package.json?",
-					result: false,
-				},
-				{
-					text: "Would you like to use TypeScript?",
-					result: true,
-				}
-			);
-			const PLACEHOLDER = "/* placeholder text */";
-			writeFiles({
-				items: {
-					"package.json": { contents: { name: "test", version: "1.0.0" } },
-					"src/index.ts": { contents: PLACEHOLDER },
-				},
 			});
 
-			await runWrangler("init");
+			it("should not offer to create a worker in a ts project if a file already exists at the location", async () => {
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
+					},
+					{
+						text: "Would you like to install wrangler into package.json?",
+						result: false,
+					},
+					{
+						text: "Would you like to use TypeScript?",
+						result: true,
+					}
+				);
+				const PLACEHOLDER = "/* placeholder text */";
+				writeFiles({
+					items: {
+						"package.json": { contents: { name: "test", version: "1.0.0" } },
+						"src/index.ts": { contents: PLACEHOLDER },
+					},
+				});
 
-			checkFiles({
-				items: {
-					"src/index.js": false,
-					"src/index.ts": { contents: PLACEHOLDER },
-				},
-			});
-			expect(std).toMatchInlineSnapshot(`
+				await runWrangler("init --no-delegate-c3");
+
+				checkFiles({
+					items: {
+						"src/index.js": false,
+						"src/index.ts": { contents: PLACEHOLDER },
+					},
+				});
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
@@ -1331,44 +1514,48 @@ describe("init", () => {
 			  "out": "✨ Created wrangler.toml
 			✨ Created tsconfig.json
 			✨ Installed @cloudflare/workers-types and typescript into devDependencies",
-			  "warn": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
 			}
 		`);
-		});
-
-		it("should not offer to create a worker in a ts project for a named worker if a file already exists at the location", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "No package.json found. Would you like to create one?",
-					result: true,
-				},
-
-				{
-					text: "Would you like to use TypeScript?",
-					result: true,
-				}
-			);
-			const PLACEHOLDER = "/* placeholder text */";
-			writeFiles({
-				items: {
-					"package.json": { contents: { name: "test", version: "1.0.0" } },
-					"my-worker/src/index.ts": { contents: PLACEHOLDER },
-				},
 			});
 
-			await runWrangler("init my-worker");
+			it("should not offer to create a worker in a ts project for a named worker if a file already exists at the location", async () => {
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
+					},
+					{
+						text: "No package.json found. Would you like to create one?",
+						result: true,
+					},
 
-			checkFiles({
-				items: {
-					"my-worker/src/index.js": false,
-					"my-worker/src/index.ts": { contents: PLACEHOLDER },
-				},
-			});
-			expect(std).toMatchInlineSnapshot(`
+					{
+						text: "Would you like to use TypeScript?",
+						result: true,
+					}
+				);
+				const PLACEHOLDER = "/* placeholder text */";
+				writeFiles({
+					items: {
+						"package.json": { contents: { name: "test", version: "1.0.0" } },
+						"my-worker/src/index.ts": { contents: PLACEHOLDER },
+					},
+				});
+
+				await runWrangler("init my-worker --no-delegate-c3");
+
+				checkFiles({
+					items: {
+						"my-worker/src/index.js": false,
+						"my-worker/src/index.ts": { contents: PLACEHOLDER },
+					},
+				});
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
@@ -1377,55 +1564,59 @@ describe("init", () => {
 			✨ Created my-worker/package.json
 			✨ Created my-worker/tsconfig.json
 			✨ Installed @cloudflare/workers-types and typescript into devDependencies",
-			  "warn": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 my-worker\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
 			}
 		`);
-		});
-
-		it("should create a tsconfig.json and install `workers-types` if none is found and user confirms", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "No package.json found. Would you like to create one?",
-					result: true,
-				},
-				{
-					text: "Would you like to use TypeScript?",
-					result: true,
-				}
-			);
-			mockSelect({
-				text: `Would you like to create a Worker at ${path.join(
-					"src",
-					"index.ts"
-				)}?`,
-				result: "none",
 			});
 
-			await runWrangler("init");
+			it("should create a tsconfig.json and install `workers-types` if none is found and user confirms", async () => {
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
+					},
+					{
+						text: "No package.json found. Would you like to create one?",
+						result: true,
+					},
+					{
+						text: "Would you like to use TypeScript?",
+						result: true,
+					}
+				);
+				mockSelect({
+					text: `Would you like to create a Worker at ${path.join(
+						"src",
+						"index.ts"
+					)}?`,
+					result: "none",
+				});
 
-			checkFiles({
-				items: {
-					"tsconfig.json": {
-						contents: {
-							config: {
-								compilerOptions: expect.objectContaining({
-									types: ["@cloudflare/workers-types"],
-								}),
+				await runWrangler("init --no-delegate-c3");
+
+				checkFiles({
+					items: {
+						"tsconfig.json": {
+							contents: {
+								config: {
+									compilerOptions: expect.objectContaining({
+										types: ["@cloudflare/workers-types"],
+									}),
+								},
+								error: undefined,
 							},
-							error: undefined,
 						},
 					},
-				},
-			});
-			expect(mockPackageManager.addDevDeps).toHaveBeenCalledWith(
-				"@cloudflare/workers-types",
-				"typescript"
-			);
-			expect(std).toMatchInlineSnapshot(`
+				});
+				expect(mockPackageManager.addDevDeps).toHaveBeenCalledWith(
+					"@cloudflare/workers-types",
+					"typescript"
+				);
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
@@ -1434,53 +1625,57 @@ describe("init", () => {
 			✨ Created package.json
 			✨ Created tsconfig.json
 			✨ Installed @cloudflare/workers-types and typescript into devDependencies",
-			  "warn": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
 			}
 		`);
-		});
+			});
 
-		it("should not touch an existing tsconfig.json in the same directory", async () => {
-			mockConfirm({
-				text: "Would you like to use git to manage this Worker?",
-				result: false,
-			});
-			mockSelect({
-				text: `Would you like to create a Worker at ${path.join(
-					"src",
-					"index.ts"
-				)}?`,
-				result: "fetch",
-			});
-			mockConfirm({
-				text: "Would you like us to write your first test with Vitest?",
-				result: true,
-			});
-			writeFiles({
-				items: {
-					"package.json": {
-						contents: {
-							name: "test",
-							version: "1.0.0",
-							devDependencies: {
-								wrangler: "0.0.0",
-								"@cloudflare/workers-types": "0.0.0",
+			it("should not touch an existing tsconfig.json in the same directory", async () => {
+				mockConfirm({
+					text: "Would you like to use git to manage this Worker?",
+					result: false,
+				});
+				mockSelect({
+					text: `Would you like to create a Worker at ${path.join(
+						"src",
+						"index.ts"
+					)}?`,
+					result: "fetch",
+				});
+				mockConfirm({
+					text: "Would you like us to write your first test with Vitest?",
+					result: true,
+				});
+				writeFiles({
+					items: {
+						"package.json": {
+							contents: {
+								name: "test",
+								version: "1.0.0",
+								devDependencies: {
+									wrangler: "0.0.0",
+									"@cloudflare/workers-types": "0.0.0",
+								},
 							},
 						},
+						"tsconfig.json": { contents: { compilerOptions: {} } },
 					},
-					"tsconfig.json": { contents: { compilerOptions: {} } },
-				},
-			});
+				});
 
-			await runWrangler("init");
+				await runWrangler("init --no-delegate-c3");
 
-			checkFiles({
-				items: {
-					"tsconfig.json": {
-						contents: { config: { compilerOptions: {} }, error: undefined },
+				checkFiles({
+					items: {
+						"tsconfig.json": {
+							contents: { config: { compilerOptions: {} }, error: undefined },
+						},
 					},
-				},
-			});
-			expect(std).toMatchInlineSnapshot(`
+				});
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
@@ -1491,68 +1686,74 @@ describe("init", () => {
 			✨ Installed vitest into devDependencies
 
 			To start developing your Worker, run \`npx wrangler dev\`
-			To publish your Worker to the Internet, run \`npx wrangler publish\`",
-			  "warn": "",
+			To publish your Worker to the Internet, run \`npx wrangler deploy\`",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
 			}
 		`);
-		});
+			});
 
-		it("should not touch an existing tsconfig.json in the ancestor of a target directory, if a name is passed", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "No package.json found. Would you like to create one?",
+			it("should not touch an existing tsconfig.json in the ancestor of a target directory, if a name is passed", async () => {
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
+					},
+					{
+						text: "No package.json found. Would you like to create one?",
+						result: true,
+					},
+					{
+						text: "Would you like to use TypeScript?",
+						result: true,
+					}
+				);
+				mockSelect({
+					text: `Would you like to create a Worker at ${path.join(
+						"path",
+						"to",
+						"worker",
+						"my-worker",
+						"src",
+						"index.ts"
+					)}?`,
+					result: "fetch",
+				});
+				mockConfirm({
+					text: "Would you like us to write your first test with Vitest?",
 					result: true,
-				},
-				{
-					text: "Would you like to use TypeScript?",
-					result: true,
-				}
-			);
-			mockSelect({
-				text: `Would you like to create a Worker at ${path.join(
-					"path",
-					"to",
-					"worker",
-					"my-worker",
-					"src",
-					"index.ts"
-				)}?`,
-				result: "fetch",
-			});
-			mockConfirm({
-				text: "Would you like us to write your first test with Vitest?",
-				result: true,
-			});
-			writeFiles({
-				items: {
-					"path/to/worker/package.json": {
-						contents: {
-							name: "test",
-							version: "1.0.0",
-							devDependencies: {
-								wrangler: "0.0.0",
-								"@cloudflare/workers-types": "0.0.0",
+				});
+				writeFiles({
+					items: {
+						"path/to/worker/package.json": {
+							contents: {
+								name: "test",
+								version: "1.0.0",
+								devDependencies: {
+									wrangler: "0.0.0",
+									"@cloudflare/workers-types": "0.0.0",
+								},
 							},
 						},
+						"path/to/worker/tsconfig.json": {
+							contents: { compilerOptions: {} },
+						},
 					},
-					"path/to/worker/tsconfig.json": { contents: { compilerOptions: {} } },
-				},
-			});
+				});
 
-			await runWrangler("init path/to/worker/my-worker");
+				await runWrangler("init path/to/worker/my-worker --no-delegate-c3");
 
-			checkFiles({
-				items: {
-					"path/to/worker/tsconfig.json": {
-						contents: { config: { compilerOptions: {}, error: undefined } },
+				checkFiles({
+					items: {
+						"path/to/worker/tsconfig.json": {
+							contents: { config: { compilerOptions: {}, error: undefined } },
+						},
 					},
-				},
-			});
-			expect(std).toMatchInlineSnapshot(`
+				});
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
@@ -1567,57 +1768,61 @@ describe("init", () => {
 			To start developing your Worker, run \`cd path/to/worker/my-worker && npm start\`
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 path/to/worker/my-worker\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
 			}
 		`);
-		});
-
-		it("should offer to install type definitions in an existing typescript project", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "Would you like to install wrangler into package.json?",
-					result: false,
-				},
-				{
-					text: "Would you like to install the type definitions for Workers into your package.json?",
-					result: true,
-				}
-			);
-			mockSelect({
-				text: `Would you like to create a Worker at ${path.join(
-					"src",
-					"index.ts"
-				)}?`,
-				result: "none",
 			});
-			writeFiles({
-				items: {
-					"./package.json": {
-						contents: {
-							name: "test",
-							version: "1.0.0",
-						},
+
+			it("should offer to install type definitions in an existing typescript project", async () => {
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
 					},
-					"./tsconfig.json": { contents: { compilerOptions: {} } },
-				},
-			});
+					{
+						text: "Would you like to install wrangler into package.json?",
+						result: false,
+					},
+					{
+						text: "Would you like to install the type definitions for Workers into your package.json?",
+						result: true,
+					}
+				);
+				mockSelect({
+					text: `Would you like to create a Worker at ${path.join(
+						"src",
+						"index.ts"
+					)}?`,
+					result: "none",
+				});
+				writeFiles({
+					items: {
+						"./package.json": {
+							contents: {
+								name: "test",
+								version: "1.0.0",
+							},
+						},
+						"./tsconfig.json": { contents: { compilerOptions: {} } },
+					},
+				});
 
-			await runWrangler("init");
+				await runWrangler("init --no-delegate-c3");
 
-			checkFiles({
-				items: {
-					// unchanged tsconfig
-					"tsconfig.json": { contents: { config: { compilerOptions: {} } } },
-				},
-			});
-			expect(mockPackageManager.addDevDeps).toHaveBeenCalledWith(
-				"@cloudflare/workers-types"
-			);
-			expect(std).toMatchInlineSnapshot(`
+				checkFiles({
+					items: {
+						// unchanged tsconfig
+						"tsconfig.json": { contents: { config: { compilerOptions: {} } } },
+					},
+				});
+				expect(mockPackageManager.addDevDeps).toHaveBeenCalledWith(
+					"@cloudflare/workers-types"
+				);
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
@@ -1625,55 +1830,59 @@ describe("init", () => {
 			  "out": "✨ Created wrangler.toml
 			✨ Installed @cloudflare/workers-types into devDependencies
 			🚨 Please add \\"@cloudflare/workers-types\\" to compilerOptions.types in tsconfig.json",
-			  "warn": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
 			}
 		`);
-		});
+			});
 
-		it("should not touch an existing tsconfig.json in an ancestor directory", async () => {
-			mockConfirm({
-				text: "Would you like to use git to manage this Worker?",
-				result: false,
-			});
-			mockSelect({
-				text: `Would you like to create a Worker at ${path.join(
-					"src",
-					"index.ts"
-				)}?`,
-				result: "fetch",
-			});
-			mockConfirm({
-				text: "Would you like us to write your first test with Vitest?",
-				result: true,
-			});
-			writeFiles({
-				items: {
-					"package.json": {
-						contents: {
-							name: "test",
-							version: "1.0.0",
-							devDependencies: {
-								wrangler: "0.0.0",
-								"@cloudflare/workers-types": "0.0.0",
+			it("should not touch an existing tsconfig.json in an ancestor directory", async () => {
+				mockConfirm({
+					text: "Would you like to use git to manage this Worker?",
+					result: false,
+				});
+				mockSelect({
+					text: `Would you like to create a Worker at ${path.join(
+						"src",
+						"index.ts"
+					)}?`,
+					result: "fetch",
+				});
+				mockConfirm({
+					text: "Would you like us to write your first test with Vitest?",
+					result: true,
+				});
+				writeFiles({
+					items: {
+						"package.json": {
+							contents: {
+								name: "test",
+								version: "1.0.0",
+								devDependencies: {
+									wrangler: "0.0.0",
+									"@cloudflare/workers-types": "0.0.0",
+								},
 							},
 						},
+						"tsconfig.json": { contents: { compilerOptions: {} } },
 					},
-					"tsconfig.json": { contents: { compilerOptions: {} } },
-				},
-			});
-			setWorkingDirectory("./sub-1/sub-2");
+				});
+				setWorkingDirectory("./sub-1/sub-2");
 
-			await runWrangler("init");
+				await runWrangler("init --no-delegate-c3");
 
-			checkFiles({
-				items: {
-					"tsconfig.json": false,
-					"../../tsconfig.json": {
-						contents: { config: { compilerOptions: {} } },
+				checkFiles({
+					items: {
+						"tsconfig.json": false,
+						"../../tsconfig.json": {
+							contents: { config: { compilerOptions: {} } },
+						},
 					},
-				},
-			});
-			expect(std).toMatchInlineSnapshot(`
+				});
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
@@ -1684,60 +1893,64 @@ describe("init", () => {
 			✨ Installed vitest into devDependencies
 
 			To start developing your Worker, run \`npx wrangler dev\`
-			To publish your Worker to the Internet, run \`npx wrangler publish\`",
-			  "warn": "",
+			To publish your Worker to the Internet, run \`npx wrangler deploy\`",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
 			}
 		`);
+			});
 		});
-	});
 
-	describe("javascript", () => {
-		it("should add missing scripts for a non-ts project with .js extension", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "No package.json found. Would you like to create one?",
-					result: true,
-				},
-
-				{
-					text: "Would you like to use TypeScript?",
-					result: false,
-				}
-			);
-			mockSelect({
-				text: `Would you like to create a Worker at ${path.join(
-					"src",
-					"index.js"
-				)}?`,
-				result: "fetch",
-			});
-			mockConfirm({
-				text: "Would you like us to write your first test?",
-				result: false,
-			});
-			await runWrangler("init");
-
-			checkFiles({
-				items: {
-					"src/index.js": true,
-					"src/index.ts": false,
-					"package.json": {
-						contents: expect.objectContaining({
-							name: expect.stringContaining("wrangler-tests"),
-							version: "0.0.0",
-							scripts: {
-								start: "wrangler dev",
-								deploy: "wrangler publish",
-							},
-						}),
+		describe("javascript", () => {
+			it("should add missing scripts for a non-ts project with .js extension", async () => {
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
 					},
-				},
-			});
-			expect(std.out).toMatchInlineSnapshot(`
+					{
+						text: "No package.json found. Would you like to create one?",
+						result: true,
+					},
+
+					{
+						text: "Would you like to use TypeScript?",
+						result: false,
+					}
+				);
+				mockSelect({
+					text: `Would you like to create a Worker at ${path.join(
+						"src",
+						"index.js"
+					)}?`,
+					result: "fetch",
+				});
+				mockConfirm({
+					text: "Would you like us to write your first test?",
+					result: false,
+				});
+				await runWrangler("init --no-delegate-c3");
+
+				checkFiles({
+					items: {
+						"src/index.js": true,
+						"src/index.ts": false,
+						"package.json": {
+							contents: expect.objectContaining({
+								name: expect.stringContaining("wrangler-tests"),
+								version: "0.0.0",
+								scripts: {
+									start: "wrangler dev",
+									deploy: "wrangler deploy",
+								},
+							}),
+						},
+					},
+				});
+				expect(std.out).toMatchInlineSnapshot(`
 			        "✨ Created wrangler.toml
 			        ✨ Created package.json
 			        ✨ Created src/index.js
@@ -1745,58 +1958,58 @@ describe("init", () => {
 			        To start developing your Worker, run \`npm start\`
 			        To publish your Worker to the Internet, run \`npm run deploy\`"
 		      `);
-		});
-		it("should add a jest test for a non-ts project with .js extension", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "No package.json found. Would you like to create one?",
-					result: true,
-				},
-				{
-					text: "Would you like to use TypeScript?",
-					result: false,
-				}
-			);
-			mockSelect({
-				text: `Would you like to create a Worker at ${path.join(
-					"src",
-					"index.js"
-				)}?`,
-				result: "fetch",
 			});
-			mockConfirm({
-				text: "Would you like us to write your first test?",
-				result: true,
-			});
-			mockSelect({
-				text: "Which test runner would you like to use?",
-				result: "jest",
-			});
-			await runWrangler("init");
-
-			checkFiles({
-				items: {
-					"src/index.js": true,
-					"src/index.test.js": true,
-					"src/index.ts": false,
-					"package.json": {
-						contents: expect.objectContaining({
-							name: expect.stringContaining("wrangler-tests"),
-							version: "0.0.0",
-							scripts: {
-								start: "wrangler dev",
-								deploy: "wrangler publish",
-								test: "jest",
-							},
-						}),
+			it("should add a jest test for a non-ts project with .js extension", async () => {
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
 					},
-				},
-			});
-			expect(std.out).toMatchInlineSnapshot(`
+					{
+						text: "No package.json found. Would you like to create one?",
+						result: true,
+					},
+					{
+						text: "Would you like to use TypeScript?",
+						result: false,
+					}
+				);
+				mockSelect({
+					text: `Would you like to create a Worker at ${path.join(
+						"src",
+						"index.js"
+					)}?`,
+					result: "fetch",
+				});
+				mockConfirm({
+					text: "Would you like us to write your first test?",
+					result: true,
+				});
+				mockSelect({
+					text: "Which test runner would you like to use?",
+					result: "jest",
+				});
+				await runWrangler("init --no-delegate-c3");
+
+				checkFiles({
+					items: {
+						"src/index.js": true,
+						"src/index.test.js": true,
+						"src/index.ts": false,
+						"package.json": {
+							contents: expect.objectContaining({
+								name: expect.stringContaining("wrangler-tests"),
+								version: "0.0.0",
+								scripts: {
+									start: "wrangler dev",
+									deploy: "wrangler deploy",
+									test: "jest",
+								},
+							}),
+						},
+					},
+				});
+				expect(std.out).toMatchInlineSnapshot(`
 			"✨ Created wrangler.toml
 			✨ Created package.json
 			✨ Created src/index.js
@@ -1807,59 +2020,59 @@ describe("init", () => {
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`"
 		`);
-		});
+			});
 
-		it("should add a vitest test for a non-ts project with .js extension", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "No package.json found. Would you like to create one?",
-					result: true,
-				},
-				{
-					text: "Would you like to use TypeScript?",
-					result: false,
-				}
-			);
-			mockSelect({
-				text: `Would you like to create a Worker at ${path.join(
-					"src",
-					"index.js"
-				)}?`,
-				result: "fetch",
-			});
-			mockConfirm({
-				text: "Would you like us to write your first test?",
-				result: true,
-			});
-			mockSelect({
-				text: "Which test runner would you like to use?",
-				result: "vitest",
-			});
-			await runWrangler("init");
-
-			checkFiles({
-				items: {
-					"src/index.js": true,
-					"src/index.test.js": true,
-					"src/index.ts": false,
-					"package.json": {
-						contents: expect.objectContaining({
-							name: expect.stringContaining("wrangler-tests"),
-							version: "0.0.0",
-							scripts: {
-								start: "wrangler dev",
-								deploy: "wrangler publish",
-								test: "vitest",
-							},
-						}),
+			it("should add a vitest test for a non-ts project with .js extension", async () => {
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
 					},
-				},
-			});
-			expect(std.out).toMatchInlineSnapshot(`
+					{
+						text: "No package.json found. Would you like to create one?",
+						result: true,
+					},
+					{
+						text: "Would you like to use TypeScript?",
+						result: false,
+					}
+				);
+				mockSelect({
+					text: `Would you like to create a Worker at ${path.join(
+						"src",
+						"index.js"
+					)}?`,
+					result: "fetch",
+				});
+				mockConfirm({
+					text: "Would you like us to write your first test?",
+					result: true,
+				});
+				mockSelect({
+					text: "Which test runner would you like to use?",
+					result: "vitest",
+				});
+				await runWrangler("init --no-delegate-c3");
+
+				checkFiles({
+					items: {
+						"src/index.js": true,
+						"src/index.test.js": true,
+						"src/index.ts": false,
+						"package.json": {
+							contents: expect.objectContaining({
+								name: expect.stringContaining("wrangler-tests"),
+								version: "0.0.0",
+								scripts: {
+									start: "wrangler dev",
+									deploy: "wrangler deploy",
+									test: "vitest",
+								},
+							}),
+						},
+					},
+				});
+				expect(std.out).toMatchInlineSnapshot(`
 			"✨ Created wrangler.toml
 			✨ Created package.json
 			✨ Created src/index.js
@@ -1870,203 +2083,211 @@ describe("init", () => {
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`"
 		`);
-		});
+			});
 
-		it("should not overwrite package.json scripts for a non-ts project with .js extension", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
+			it("should not overwrite package.json scripts for a non-ts project with .js extension", async () => {
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
+					},
+					{
+						text: "Would you like to install wrangler into package.json?",
+						result: false,
+					},
+					{
+						text: "Would you like to use TypeScript?",
+						result: false,
+					}
+				);
+				mockSelect({
+					text: `Would you like to create a Worker at ${path.join(
+						"src",
+						"index.js"
+					)}?`,
+					result: "fetch",
+				});
+				mockConfirm({
+					text: "Would you like us to write your first test?",
 					result: false,
-				},
-				{
-					text: "Would you like to install wrangler into package.json?",
-					result: false,
-				},
-				{
-					text: "Would you like to use TypeScript?",
-					result: false,
-				}
-			);
-			mockSelect({
-				text: `Would you like to create a Worker at ${path.join(
-					"src",
-					"index.js"
-				)}?`,
-				result: "fetch",
-			});
-			mockConfirm({
-				text: "Would you like us to write your first test?",
-				result: false,
-			});
-			writeFiles({
-				items: {
-					"package.json": {
-						contents: {
-							scripts: {
-								start: "test-start",
-								deploy: "test-publish",
+				});
+				writeFiles({
+					items: {
+						"package.json": {
+							contents: {
+								scripts: {
+									start: "test-start",
+									deploy: "test-deploy",
+								},
 							},
 						},
 					},
-				},
-			});
+				});
 
-			await runWrangler("init");
+				await runWrangler("init --no-delegate-c3");
 
-			checkFiles({
-				items: {
-					"src/index.js": true,
-					"src/index.ts": false,
-					"package.json": {
-						contents: expect.objectContaining({
-							scripts: {
-								start: "test-start",
-								deploy: "test-publish",
-							},
-						}),
+				checkFiles({
+					items: {
+						"src/index.js": true,
+						"src/index.ts": false,
+						"package.json": {
+							contents: expect.objectContaining({
+								scripts: {
+									start: "test-start",
+									deploy: "test-deploy",
+								},
+							}),
+						},
 					},
-				},
-			});
-			expect(std.out).toMatchInlineSnapshot(`
+				});
+				expect(std.out).toMatchInlineSnapshot(`
 			        "✨ Created wrangler.toml
 			        ✨ Created src/index.js
 
 			        To start developing your Worker, run \`npx wrangler dev\`
-			        To publish your Worker to the Internet, run \`npx wrangler publish\`"
+			        To publish your Worker to the Internet, run \`npx wrangler deploy\`"
 		      `);
-		});
-
-		it("should not offer to create a worker in a non-ts project if a file already exists at the location", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "Would you like to install wrangler into package.json?",
-					result: false,
-				},
-				{
-					text: "Would you like to use TypeScript?",
-					result: false,
-				}
-			);
-			const PLACEHOLDER = "/* placeholder text */";
-			writeFiles({
-				items: {
-					"package.json": { contents: { name: "test", version: "1.0.0" } },
-					"src/index.js": { contents: PLACEHOLDER },
-				},
 			});
 
-			await runWrangler("init");
+			it("should not offer to create a worker in a non-ts project if a file already exists at the location", async () => {
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
+					},
+					{
+						text: "Would you like to install wrangler into package.json?",
+						result: false,
+					},
+					{
+						text: "Would you like to use TypeScript?",
+						result: false,
+					}
+				);
+				const PLACEHOLDER = "/* placeholder text */";
+				writeFiles({
+					items: {
+						"package.json": { contents: { name: "test", version: "1.0.0" } },
+						"src/index.js": { contents: PLACEHOLDER },
+					},
+				});
 
-			checkFiles({
-				items: {
-					"src/index.js": { contents: PLACEHOLDER },
-					"src/index.ts": false,
-				},
-			});
-			expect(std).toMatchInlineSnapshot(`
+				await runWrangler("init --no-delegate-c3");
+
+				checkFiles({
+					items: {
+						"src/index.js": { contents: PLACEHOLDER },
+						"src/index.ts": false,
+					},
+				});
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
 			  "info": "",
 			  "out": "✨ Created wrangler.toml",
-			  "warn": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
 			}
 		`);
-		});
+			});
 
-		it("should not offer to create a worker in a non-ts named worker project if a file already exists at the location", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: `Would you like to install wrangler into ${path.join(
-						"my-worker",
-						"package.json"
-					)}?`,
-					result: false,
-				},
-				{
-					text: "Would you like to use TypeScript?",
-					result: false,
-				}
-			);
-			const PLACEHOLDER = "/* placeholder text */";
-			writeFiles({
-				items: {
-					"my-worker/package.json": {
-						contents: { name: "test", version: "1.0.0" },
+			it("should not offer to create a worker in a non-ts named worker project if a file already exists at the location", async () => {
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
 					},
-					"my-worker/src/index.js": { contents: PLACEHOLDER },
-				},
-			});
+					{
+						text: `Would you like to install wrangler into ${path.join(
+							"my-worker",
+							"package.json"
+						)}?`,
+						result: false,
+					},
+					{
+						text: "Would you like to use TypeScript?",
+						result: false,
+					}
+				);
+				const PLACEHOLDER = "/* placeholder text */";
+				writeFiles({
+					items: {
+						"my-worker/package.json": {
+							contents: { name: "test", version: "1.0.0" },
+						},
+						"my-worker/src/index.js": { contents: PLACEHOLDER },
+					},
+				});
 
-			await runWrangler("init my-worker");
+				await runWrangler("init my-worker --no-delegate-c3");
 
-			checkFiles({
-				items: {
-					"my-worker/src/index.js": { contents: PLACEHOLDER },
-					"my-worker/src/index.ts": false,
-				},
-			});
-			expect(std).toMatchInlineSnapshot(`
+				checkFiles({
+					items: {
+						"my-worker/src/index.js": { contents: PLACEHOLDER },
+						"my-worker/src/index.ts": false,
+					},
+				});
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
 			  "info": "",
 			  "out": "✨ Created my-worker/wrangler.toml",
-			  "warn": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 my-worker\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
 			}
 		`);
-		});
-	});
-
-	describe("worker names", () => {
-		it("should create a worker with a given name", async () => {
-			await runWrangler("init my-worker -y");
-
-			checkFiles({
-				items: {
-					"my-worker/wrangler.toml": wranglerToml({
-						...MINIMAL_WRANGLER_TOML,
-						name: "my-worker",
-					}),
-				},
 			});
 		});
 
-		it('should create a worker with the name of the current directory if "name" is .', async () => {
-			await runWrangler("init . -y");
+		describe("worker names", () => {
+			it("should create a worker with a given name", async () => {
+				await runWrangler("init my-worker -y --no-delegate-c3");
 
-			const workerName = path.basename(process.cwd()).toLowerCase();
-			checkFiles({
-				items: {
-					"wrangler.toml": wranglerToml({
-						...MINIMAL_WRANGLER_TOML,
-						name: workerName,
-					}),
-					"package.json": {
-						contents: expect.objectContaining({
-							name: expect.stringContaining("wrangler-tests"),
-							version: "0.0.0",
-							scripts: {
-								deploy: "wrangler publish",
-								start: "wrangler dev",
-								test: "vitest",
-							},
-							devDependencies: {
-								wrangler: expect.any(String),
-							},
+				checkFiles({
+					items: {
+						"my-worker/wrangler.toml": wranglerToml({
+							...MINIMAL_WRANGLER_TOML,
+							name: "my-worker",
 						}),
 					},
-				},
+				});
 			});
-			expect(std).toMatchInlineSnapshot(`
+
+			it('should create a worker with the name of the current directory if "name" is .', async () => {
+				await runWrangler("init . -y --no-delegate-c3");
+
+				const workerName = path.basename(process.cwd()).toLowerCase();
+				checkFiles({
+					items: {
+						"wrangler.toml": wranglerToml({
+							...MINIMAL_WRANGLER_TOML,
+							name: workerName,
+						}),
+						"package.json": {
+							contents: expect.objectContaining({
+								name: expect.stringContaining("wrangler-tests"),
+								version: "0.0.0",
+								scripts: {
+									deploy: "wrangler deploy",
+									start: "wrangler dev",
+									test: "vitest",
+								},
+								devDependencies: {
+									wrangler: expect.any(String),
+								},
+							}),
+						},
+					},
+				});
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
@@ -2082,23 +2303,27 @@ describe("init", () => {
 			To start developing your Worker, run \`npm start\`
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 . --wrangler-defaults\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
 			}
 		`);
-		});
-
-		it('should create a worker in a nested directory if "name" is path/to/worker', async () => {
-			await runWrangler("init path/to/worker -y");
-
-			checkFiles({
-				items: {
-					"path/to/worker/wrangler.toml": wranglerToml({
-						...MINIMAL_WRANGLER_TOML,
-						name: "worker",
-					}),
-				},
 			});
-			expect(std).toMatchInlineSnapshot(`
+
+			it('should create a worker in a nested directory if "name" is path/to/worker', async () => {
+				await runWrangler("init path/to/worker -y --no-delegate-c3");
+
+				checkFiles({
+					items: {
+						"path/to/worker/wrangler.toml": wranglerToml({
+							...MINIMAL_WRANGLER_TOML,
+							name: "worker",
+						}),
+					},
+				});
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
@@ -2114,23 +2339,29 @@ describe("init", () => {
 			To start developing your Worker, run \`cd path/to/worker && npm start\`
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 path/to/worker --wrangler-defaults\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
 			}
 		`);
-		});
-
-		it("should normalize characters that aren't lowercase alphanumeric, underscores, or dashes", async () => {
-			await runWrangler("init WEIRD_w0rkr_N4m3.js.tsx.tar.gz -y");
-
-			checkFiles({
-				items: {
-					"WEIRD_w0rkr_N4m3.js.tsx.tar.gz/wrangler.toml": wranglerToml({
-						...MINIMAL_WRANGLER_TOML,
-						name: "weird_w0rkr_n4m3-js-tsx-tar-gz",
-					}),
-				},
 			});
-			expect(std).toMatchInlineSnapshot(`
+
+			it("should normalize characters that aren't lowercase alphanumeric, underscores, or dashes", async () => {
+				await runWrangler(
+					"init WEIRD_w0rkr_N4m3.js.tsx.tar.gz -y --no-delegate-c3"
+				);
+
+				checkFiles({
+					items: {
+						"WEIRD_w0rkr_N4m3.js.tsx.tar.gz/wrangler.toml": wranglerToml({
+							...MINIMAL_WRANGLER_TOML,
+							name: "weird_w0rkr_n4m3-js-tsx-tar-gz",
+						}),
+					},
+				});
+				expect(std).toMatchInlineSnapshot(`
 			Object {
 			  "debug": "",
 			  "err": "",
@@ -2146,544 +2377,611 @@ describe("init", () => {
 			To start developing your Worker, run \`cd WEIRD_w0rkr_N4m3.js.tsx.tar.gz && npm start\`
 			To start testing your Worker, run \`npm test\`
 			To publish your Worker to the Internet, run \`npm run deploy\`",
-			  "warn": "",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init\` command is no longer supported. Please use \`mockpm create cloudflare@2 WEIRD_w0rkr_N4m3.js.tsx.tar.gz --wrangler-defaults\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
 			}
 		`);
-		});
-
-		it("should ignore ancestor files (such as wrangler.toml, package.json and tsconfig.json) if a name/path is given", async () => {
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "No package.json found. Would you like to create one?",
-					result: true,
-				},
-				{
-					text: "Would you like to use TypeScript?",
-					result: true,
-				}
-			);
-			mockSelect({
-				text: `Would you like to create a Worker at ${path.join(
-					"sub",
-					"folder",
-					"worker",
-					"src",
-					"index.ts"
-				)}?`,
-				result: "fetch",
-			});
-			mockConfirm({
-				text: "Would you like us to write your first test with Vitest?",
-				result: true,
-			});
-			writeFiles({
-				items: {
-					"package.json": { contents: { name: "top-level" } },
-					"tsconfig.json": { contents: { compilerOptions: {} } },
-					"wrangler.toml": wranglerToml({
-						name: "top-level",
-						compatibility_date: "some-date",
-					}),
-				},
 			});
 
-			await runWrangler("init sub/folder/worker");
-
-			// Ancestor files are untouched.
-			checkFiles({
-				items: {
-					"package.json": { contents: { name: "top-level" } },
-					"tsconfig.json": {
-						contents: { config: { compilerOptions: {} }, error: undefined },
+			it("should ignore ancestor files (such as wrangler.toml, package.json and tsconfig.json) if a name/path is given", async () => {
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
 					},
-					"wrangler.toml": wranglerToml({
-						name: "top-level",
-						compatibility_date: "some-date",
-					}),
-				},
-			});
-			// New initialized Worker has its own files.
-			checkFiles({
-				items: {
-					"sub/folder/worker/package.json": {
-						contents: expect.objectContaining({
+					{
+						text: "No package.json found. Would you like to create one?",
+						result: true,
+					},
+					{
+						text: "Would you like to use TypeScript?",
+						result: true,
+					}
+				);
+				mockSelect({
+					text: `Would you like to create a Worker at ${path.join(
+						"sub",
+						"folder",
+						"worker",
+						"src",
+						"index.ts"
+					)}?`,
+					result: "fetch",
+				});
+				mockConfirm({
+					text: "Would you like us to write your first test with Vitest?",
+					result: true,
+				});
+				writeFiles({
+					items: {
+						"package.json": { contents: { name: "top-level" } },
+						"tsconfig.json": { contents: { compilerOptions: {} } },
+						"wrangler.toml": wranglerToml({
+							name: "top-level",
+							compatibility_date: "some-date",
+						}),
+					},
+				});
+
+				await runWrangler("init sub/folder/worker --no-delegate-c3");
+
+				// Ancestor files are untouched.
+				checkFiles({
+					items: {
+						"package.json": { contents: { name: "top-level" } },
+						"tsconfig.json": {
+							contents: { config: { compilerOptions: {} }, error: undefined },
+						},
+						"wrangler.toml": wranglerToml({
+							name: "top-level",
+							compatibility_date: "some-date",
+						}),
+					},
+				});
+				// New initialized Worker has its own files.
+				checkFiles({
+					items: {
+						"sub/folder/worker/package.json": {
+							contents: expect.objectContaining({
+								name: "worker",
+							}),
+						},
+						"sub/folder/worker/tsconfig.json": true,
+						"sub/folder/worker/wrangler.toml": wranglerToml({
+							...MINIMAL_WRANGLER_TOML,
 							name: "worker",
 						}),
 					},
-					"sub/folder/worker/tsconfig.json": true,
-					"sub/folder/worker/wrangler.toml": wranglerToml({
-						...MINIMAL_WRANGLER_TOML,
-						name: "worker",
-					}),
-				},
+				});
 			});
 		});
-	});
 
-	describe("from dashboard", () => {
-		mockApiToken();
-		mockAccountId({ accountId: "LCARS" });
+		describe("from dashboard", () => {
+			mockApiToken();
+			mockAccountId({ accountId: "LCARS" });
 
-		const mockDashboardScript = `
+			const mockDashboardScript = `
 		export default {
 			async fetch(request, env, ctx) {
 				return new Response("Hello World!");
 			},
 		};
 		`;
-		const mockServiceMetadata = {
-			id: "memory-crystal",
-			default_environment: {
-				environment: "test",
-				created_on: "1987-9-27",
-				modified_on: "1987-9-27",
-				script: {
-					id: "memory-crystal",
-					tag: "test-tag",
-					etag: "some-etag",
-					handlers: [],
-					modified_on: "1987-9-27",
-					created_on: "1987-9-27",
-					migration_tag: "some-migration-tag",
-					usage_model: "bundled",
-					compatibility_date: "1987-9-27",
-				},
-			},
-			created_on: "1987-9-27",
-			modified_on: "1987-9-27",
-			usage_model: "bundled",
-			environments: [
-				{
+			afterEach(() => {
+				// some test has a side-effect which is overwriting the compatibility_date
+				mockServiceMetadata.default_environment.script.compatibility_date =
+					"1987-9-27";
+				mockConfigExpected.compatibility_date = "1987-9-27";
+			});
+			const mockServiceMetadata = {
+				id: "memory-crystal",
+				default_environment: {
 					environment: "test",
 					created_on: "1987-9-27",
 					modified_on: "1987-9-27",
+					script: {
+						id: "memory-crystal",
+						tag: "test-tag",
+						etag: "some-etag",
+						handlers: [],
+						modified_on: "1987-9-27",
+						created_on: "1987-9-27",
+						migration_tag: "some-migration-tag",
+						usage_model: "bundled",
+						compatibility_date: "1987-9-27",
+						tail_consumers: [{ service: "listener" }],
+					},
 				},
-				{
-					environment: "staging",
-					created_on: "1987-9-27",
-					modified_on: "1987-9-27",
-				},
-			],
-		};
-		const mockBindingsRes = [
-			{
-				type: "secret_text",
-				name: "ABC",
-			},
-			{
-				type: "plain_text",
-				name: "ANOTHER-NAME",
-				text: "thing-TEXT",
-			},
-			{
-				type: "durable_object_namespace",
-				name: "DURABLE_TEST",
-				class_name: "Durability",
-				script_name: "another-durable-object-worker",
-				environment: "production",
-			},
-			{
-				type: "kv_namespace",
-				name: "kv_testing",
-				namespace_id: "some-namespace-id",
-			},
-			{
-				type: "r2_bucket",
-				bucket_name: "test-bucket",
-				name: "test-bucket",
-			},
-			{
-				environment: "production",
-				name: "website",
-				service: "website",
-				type: "service",
-			},
-			{
-				type: "dispatch_namespace",
-				name: "name-namespace-mock",
-				namespace: "namespace-mock",
-			},
-			{
-				name: "httplogs",
-				type: "logfwdr",
-				destination: "httplogs",
-			},
-			{
-				name: "trace",
-				type: "logfwdr",
-				destination: "trace",
-			},
-			{
-				type: "wasm_module",
-				name: "WASM_MODULE_ONE",
-				part: "./some_wasm.wasm",
-			},
-			{
-				type: "wasm_module",
-				name: "WASM_MODULE_TWO",
-				part: "./more_wasm.wasm",
-			},
-			{
-				type: "text_blob",
-				name: "TEXT_BLOB_ONE",
-				part: "./my-entire-app-depends-on-this.cfg",
-			},
-			{
-				type: "text_blob",
-				name: "TEXT_BLOB_TWO",
-				part: "./the-entirety-of-human-knowledge.txt",
-			},
-			{ type: "data_blob", name: "DATA_BLOB_ONE", part: "DATA_BLOB_ONE" },
-			{ type: "data_blob", name: "DATA_BLOB_TWO", part: "DATA_BLOB_TWO" },
-			{
-				type: "some unsafe thing",
-				name: "UNSAFE_BINDING_ONE",
-				data: { some: { unsafe: "thing" } },
-			},
-			{
-				type: "another unsafe thing",
-				name: "UNSAFE_BINDING_TWO",
-				data: 1337,
-			},
-		];
-		const mockRoutesRes = [
-			{
-				id: "some-route-id",
-				pattern: "delta.quadrant",
-			},
-		];
-		const mockConfigExpected = {
-			main: "src/index.ts",
-			compatibility_date: "1987-9-27",
-			name: "isolinear-optical-chip",
-			migrations: [
-				{
-					new_classes: ["Durability"],
-					tag: "some-migration-tag",
-				},
-			],
-			durable_objects: {
-				bindings: [
+				created_on: "1987-9-27",
+				modified_on: "1987-9-27",
+				usage_model: "bundled",
+				environments: [
 					{
-						class_name: "Durability",
-						name: "DURABLE_TEST",
-						script_name: "another-durable-object-worker",
-						environment: "production",
+						environment: "test",
+						created_on: "1987-9-27",
+						modified_on: "1987-9-27",
+					},
+					{
+						environment: "staging",
+						created_on: "1987-9-27",
+						modified_on: "1987-9-27",
 					},
 				],
-			},
-			kv_namespaces: [
+			};
+			const mockBindingsRes = [
 				{
-					binding: "kv_testing",
-					id: "some-namespace-id",
+					type: "secret_text",
+					name: "ABC",
 				},
-			],
-			r2_buckets: [
 				{
+					type: "plain_text",
+					name: "ANOTHER-NAME",
+					text: "thing-TEXT",
+				},
+				{
+					type: "durable_object_namespace",
+					name: "DURABLE_TEST",
+					class_name: "Durability",
+					script_name: "another-durable-object-worker",
+					environment: "production",
+				},
+				{
+					type: "kv_namespace",
+					name: "kv_testing",
+					namespace_id: "some-namespace-id",
+				},
+				{
+					type: "r2_bucket",
 					bucket_name: "test-bucket",
-					binding: "test-bucket",
+					name: "test-bucket",
 				},
-			],
-			dispatch_namespaces: [
-				{
-					binding: "name-namespace-mock",
-					namespace: "namespace-mock",
-				},
-			],
-			route: "delta.quadrant",
-			services: [
 				{
 					environment: "production",
-					binding: "website",
+					name: "website",
 					service: "website",
+					type: "service",
 				},
-			],
-			triggers: {
-				crons: ["0 0 0 * * *"],
-			},
-			usage_model: "bundled",
-			vars: {
-				"ANOTHER-NAME": "thing-TEXT",
-			},
-			env: {
-				test: {},
-				staging: {},
-			},
-			unsafe: {
-				bindings: [
+				{
+					type: "dispatch_namespace",
+					name: "name-namespace-mock",
+					namespace: "namespace-mock",
+				},
+				{
+					name: "httplogs",
+					type: "logfwdr",
+					destination: "httplogs",
+				},
+				{
+					name: "trace",
+					type: "logfwdr",
+					destination: "trace",
+				},
+				{
+					type: "wasm_module",
+					name: "WASM_MODULE_ONE",
+					part: "./some_wasm.wasm",
+				},
+				{
+					type: "wasm_module",
+					name: "WASM_MODULE_TWO",
+					part: "./more_wasm.wasm",
+				},
+				{
+					type: "text_blob",
+					name: "TEXT_BLOB_ONE",
+					part: "./my-entire-app-depends-on-this.cfg",
+				},
+				{
+					type: "text_blob",
+					name: "TEXT_BLOB_TWO",
+					part: "./the-entirety-of-human-knowledge.txt",
+				},
+				{ type: "data_blob", name: "DATA_BLOB_ONE", part: "DATA_BLOB_ONE" },
+				{ type: "data_blob", name: "DATA_BLOB_TWO", part: "DATA_BLOB_TWO" },
+				{
+					type: "some unsafe thing",
+					name: "UNSAFE_BINDING_ONE",
+					data: { some: { unsafe: "thing" } },
+				},
+				{
+					type: "another unsafe thing",
+					name: "UNSAFE_BINDING_TWO",
+					data: 1337,
+				},
+			];
+			const mockRoutesRes = [
+				{
+					id: "some-route-id",
+					pattern: "delta.quadrant",
+				},
+			];
+			const mockConfigExpected = {
+				main: "src/index.ts",
+				compatibility_date: "1987-9-27",
+				name: "isolinear-optical-chip",
+				migrations: [
 					{
-						name: "UNSAFE_BINDING_ONE",
-						type: "some unsafe thing",
-						data: { some: { unsafe: "thing" } },
-					},
-					{
-						name: "UNSAFE_BINDING_TWO",
-						type: "another unsafe thing",
-						data: 1337,
+						new_classes: ["Durability"],
+						tag: "some-migration-tag",
 					},
 				],
-			},
-			wasm_modules: {
-				WASM_MODULE_ONE: "./some_wasm.wasm",
-				WASM_MODULE_TWO: "./more_wasm.wasm",
-			},
-			text_blobs: {
-				TEXT_BLOB_ONE: "./my-entire-app-depends-on-this.cfg",
-				TEXT_BLOB_TWO: "./the-entirety-of-human-knowledge.txt",
-			},
-			data_blobs: {
-				DATA_BLOB_ONE: "DATA_BLOB_ONE",
-				DATA_BLOB_TWO: "DATA_BLOB_TWO",
-			},
-			logfwdr: {
-				schema: "",
-				bindings: [
+				durable_objects: {
+					bindings: [
+						{
+							class_name: "Durability",
+							name: "DURABLE_TEST",
+							script_name: "another-durable-object-worker",
+							environment: "production",
+						},
+					],
+				},
+				kv_namespaces: [
 					{
-						name: "httplogs",
-						destination: "httplogs",
-					},
-					{
-						name: "trace",
-						destination: "trace",
+						binding: "kv_testing",
+						id: "some-namespace-id",
 					},
 				],
-			},
-		};
+				r2_buckets: [
+					{
+						bucket_name: "test-bucket",
+						binding: "test-bucket",
+					},
+				],
+				dispatch_namespaces: [
+					{
+						binding: "name-namespace-mock",
+						namespace: "namespace-mock",
+					},
+				],
+				route: "delta.quadrant",
+				services: [
+					{
+						environment: "production",
+						binding: "website",
+						service: "website",
+					},
+				],
+				triggers: {
+					crons: ["0 0 0 * * *"],
+				},
+				usage_model: "bundled",
+				vars: {
+					"ANOTHER-NAME": "thing-TEXT",
+				},
+				env: {
+					test: {},
+					staging: {},
+				},
+				unsafe: {
+					bindings: [
+						{
+							name: "UNSAFE_BINDING_ONE",
+							type: "some unsafe thing",
+							data: { some: { unsafe: "thing" } },
+						},
+						{
+							name: "UNSAFE_BINDING_TWO",
+							type: "another unsafe thing",
+							data: 1337,
+						},
+					],
+				},
+				wasm_modules: {
+					WASM_MODULE_ONE: "./some_wasm.wasm",
+					WASM_MODULE_TWO: "./more_wasm.wasm",
+				},
+				text_blobs: {
+					TEXT_BLOB_ONE: "./my-entire-app-depends-on-this.cfg",
+					TEXT_BLOB_TWO: "./the-entirety-of-human-knowledge.txt",
+				},
+				data_blobs: {
+					DATA_BLOB_ONE: "DATA_BLOB_ONE",
+					DATA_BLOB_TWO: "DATA_BLOB_TWO",
+				},
+				logfwdr: {
+					bindings: [
+						{
+							name: "httplogs",
+							destination: "httplogs",
+						},
+						{
+							name: "trace",
+							destination: "trace",
+						},
+					],
+				},
+				tail_consumers: [{ service: "listener" }],
+			};
 
-		function mockSupportingDashRequests({
-			expectedAccountId = "",
-			expectedScriptName = "",
-			expectedEnvironment = "",
-			expectedCompatDate,
-		}: {
-			expectedAccountId: string;
-			expectedScriptName: string;
-			expectedEnvironment: string;
-			expectedCompatDate: string | undefined;
-		}) {
-			msw.use(
-				rest.get(
-					`*/accounts/:accountId/workers/services/:scriptName`,
-					(req, res, ctx) => {
-						expect(req.params.accountId).toEqual(expectedAccountId);
-						expect(req.params.scriptName).toEqual(expectedScriptName);
+			function mockSupportingDashRequests({
+				expectedAccountId = "",
+				expectedScriptName = "",
+				expectedEnvironment = "",
+				expectedCompatDate,
+			}: {
+				expectedAccountId: string;
+				expectedScriptName: string;
+				expectedEnvironment: string;
+				expectedCompatDate: string | undefined;
+			}) {
+				msw.use(
+					rest.get(
+						`*/accounts/:accountId/workers/services/:scriptName`,
+						(req, res, ctx) => {
+							expect(req.params.accountId).toEqual(expectedAccountId);
+							expect(req.params.scriptName).toEqual(expectedScriptName);
 
-						if (expectedCompatDate === undefined)
-							(mockServiceMetadata.default_environment.script
-								.compatibility_date as unknown) = expectedCompatDate;
+							if (expectedCompatDate === undefined)
+								(mockServiceMetadata.default_environment.script
+									.compatibility_date as unknown) = expectedCompatDate;
 
-						return res.once(
-							ctx.status(200),
-							ctx.json({
-								success: true,
-								errors: [],
-								messages: [],
-								result: mockServiceMetadata,
-							})
-						);
-					}
-				),
-				rest.get(
-					`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
-					(req, res, ctx) => {
-						expect(req.params.accountId).toEqual(expectedAccountId);
-						expect(req.params.scriptName).toEqual(expectedScriptName);
-						expect(req.params.environment).toEqual(expectedEnvironment);
+							return res.once(
+								ctx.status(200),
+								ctx.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: mockServiceMetadata,
+								})
+							);
+						}
+					),
+					rest.get(
+						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
+						(req, res, ctx) => {
+							expect(req.params.accountId).toEqual(expectedAccountId);
+							expect(req.params.scriptName).toEqual(expectedScriptName);
+							expect(req.params.environment).toEqual(expectedEnvironment);
 
-						return res.once(
-							ctx.status(200),
-							ctx.json({
-								success: true,
-								errors: [],
-								messages: [],
-								result: mockBindingsRes,
-							})
-						);
-					}
-				),
-				rest.get(
-					`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/routes`,
-					(req, res, ctx) => {
-						expect(req.params.accountId).toEqual(expectedAccountId);
-						expect(req.params.scriptName).toEqual(expectedScriptName);
-						expect(req.params.environment).toEqual(expectedEnvironment);
+							return res.once(
+								ctx.status(200),
+								ctx.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: mockBindingsRes,
+								})
+							);
+						}
+					),
+					rest.get(
+						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/routes`,
+						(req, res, ctx) => {
+							expect(req.params.accountId).toEqual(expectedAccountId);
+							expect(req.params.scriptName).toEqual(expectedScriptName);
+							expect(req.params.environment).toEqual(expectedEnvironment);
 
-						return res.once(
-							ctx.status(200),
-							ctx.json({
-								success: true,
-								errors: [],
-								messages: [],
-								result: mockRoutesRes,
-							})
-						);
-					}
-				),
-				rest.get(
-					`*/accounts/:accountId/workers/services/:scriptName/environments/:environment`,
+							return res.once(
+								ctx.status(200),
+								ctx.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: mockRoutesRes,
+								})
+							);
+						}
+					),
+					rest.get(
+						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment`,
 
-					(req, res, ctx) => {
-						expect(req.params.accountId).toEqual(expectedAccountId);
-						expect(req.params.scriptName).toEqual(expectedScriptName);
-						expect(req.params.environment).toEqual(expectedEnvironment);
+						(req, res, ctx) => {
+							expect(req.params.accountId).toEqual(expectedAccountId);
+							expect(req.params.scriptName).toEqual(expectedScriptName);
+							expect(req.params.environment).toEqual(expectedEnvironment);
 
-						return res.once(
-							ctx.status(200),
-							ctx.json({
-								success: true,
-								errors: [],
-								messages: [],
-								result: mockServiceMetadata.default_environment,
-							})
-						);
-					}
-				),
-				rest.get(
-					`*/accounts/:accountId/workers/scripts/:scriptName/schedules`,
-					(req, res, ctx) => {
-						expect(req.params.accountId).toEqual(expectedAccountId);
-						expect(req.params.scriptName).toEqual(expectedScriptName);
+							return res.once(
+								ctx.status(200),
+								ctx.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: mockServiceMetadata.default_environment,
+								})
+							);
+						}
+					),
+					rest.get(
+						`*/accounts/:accountId/workers/scripts/:scriptName/schedules`,
+						(req, res, ctx) => {
+							expect(req.params.accountId).toEqual(expectedAccountId);
+							expect(req.params.scriptName).toEqual(expectedScriptName);
 
-						return res.once(
-							ctx.status(200),
-							ctx.json({
-								success: true,
-								errors: [],
-								messages: [],
-								result: {
-									schedules: [
-										{
-											cron: "0 0 0 * * *",
-											created_on: new Date(1987, 9, 27),
-											modified_on: new Date(1987, 9, 27),
-										},
-									],
-								},
-							})
-						);
-					}
-				)
-			);
-		}
+							return res.once(
+								ctx.status(200),
+								ctx.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: {
+										schedules: [
+											{
+												cron: "0 0 0 * * *",
+												created_on: new Date(1987, 9, 27),
+												modified_on: new Date(1987, 9, 27),
+											},
+										],
+									},
+								})
+							);
+						}
+					)
+				);
+			}
 
-		//TODO: Tests for a case when a worker name doesn't exist - JACOB & CASS
-		it("should download source script from dashboard w/ positional <name> in TypeScript project", async () => {
-			mockSupportingDashRequests({
-				expectedAccountId: "LCARS",
-				expectedScriptName: "memory-crystal",
-				expectedEnvironment: "test",
-				expectedCompatDate: "1987-9-27",
+			test("shows deprecation warning and delegates to C3 --type pre-existing", async () => {
+				mockSupportingDashRequests({
+					expectedAccountId: "LCARS",
+					expectedScriptName: "existing-memory-crystal",
+					expectedEnvironment: "test",
+					expectedCompatDate: "1987-9-27",
+				});
+				setMockFetchDashScript(mockDashboardScript);
+
+				await runWrangler("init --from-dash existing-memory-crystal");
+
+				checkFiles({
+					items: {
+						"./src/index.js": false,
+						"./src/index.ts": false,
+						"./tsconfig.json": false,
+						"./package.json": false,
+						"./wrangler.toml": false,
+					},
+				});
+
+				expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "Running \`mockpm create cloudflare@2 existing-memory-crystal --type pre-existing --existing-script existing-memory-crystal\`...",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`init --from-dash\` command is no longer supported. Please use \`mockpm create cloudflare@2 existing-memory-crystal --type pre-existing --existing-script existing-memory-crystal\` instead.[0m
+
+			  The \`init\` command will be removed in a future version.
+
+			",
+			}
+		`);
+
+				expect(execa).toHaveBeenCalledTimes(1);
+				expect(execa).toHaveBeenCalledWith(
+					"mockpm",
+					[
+						"create",
+						"cloudflare@2",
+						"existing-memory-crystal",
+						"--type",
+						"pre-existing",
+						"--existing-script",
+						"existing-memory-crystal",
+					],
+					{ stdio: "inherit" }
+				);
 			});
-			setMockFetchDashScript(mockDashboardScript);
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "No package.json found. Would you like to create one?",
-					result: true,
-				},
-				{
-					text: "Would you like to use TypeScript?",
-					result: true,
-				}
-			);
 
-			await runWrangler(
-				"init isolinear-optical-chip --from-dash memory-crystal"
-			);
-
-			expect(std.out).toContain("cd isolinear-optical-chip");
-
-			checkFiles({
-				items: {
-					"isolinear-optical-chip/src/index.js": false,
-					"isolinear-optical-chip/src/index.ts": {
-						contents: mockDashboardScript,
+			//TODO: Tests for a case when a worker name doesn't exist - JACOB & CASS
+			it("should download source script from dashboard w/ positional <name> in TypeScript project", async () => {
+				mockSupportingDashRequests({
+					expectedAccountId: "LCARS",
+					expectedScriptName: "memory-crystal",
+					expectedEnvironment: "test",
+					expectedCompatDate: "1987-9-27",
+				});
+				setMockFetchDashScript(mockDashboardScript);
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
 					},
-					"isolinear-optical-chip/package.json": {
-						contents: expect.objectContaining({
-							name: "isolinear-optical-chip",
+					{
+						text: "No package.json found. Would you like to create one?",
+						result: true,
+					},
+					{
+						text: "Would you like to use TypeScript?",
+						result: true,
+					}
+				);
+
+				await runWrangler(
+					"init isolinear-optical-chip --from-dash memory-crystal --no-delegate-c3"
+				);
+
+				expect(std.out).toContain("cd isolinear-optical-chip");
+
+				checkFiles({
+					items: {
+						"isolinear-optical-chip/src/index.js": false,
+						"isolinear-optical-chip/src/index.ts": {
+							contents: mockDashboardScript,
+						},
+						"isolinear-optical-chip/package.json": {
+							contents: expect.objectContaining({
+								name: "isolinear-optical-chip",
+							}),
+						},
+						"isolinear-optical-chip/tsconfig.json": true,
+						"isolinear-optical-chip/wrangler.toml": wranglerToml({
+							...mockConfigExpected,
 						}),
 					},
-					"isolinear-optical-chip/tsconfig.json": true,
-					"isolinear-optical-chip/wrangler.toml": wranglerToml({
-						...mockConfigExpected,
-					}),
-				},
+				});
 			});
-		});
 
-		it("should fail on init --from-dash on non-existent worker name", async () => {
-			msw.use(
-				rest.get(
-					`*/accounts/:accountId/workers/services/:scriptName`,
-					(req, res, ctx) => {
-						return res.once(
-							ctx.status(200),
-							ctx.json({
-								success: true,
-								errors: [],
-								messages: [],
-								result: mockServiceMetadata,
-							})
-						);
+			it("should fail on init --from-dash on non-existent worker name", async () => {
+				msw.use(
+					rest.get(
+						`*/accounts/:accountId/workers/services/:scriptName`,
+						(req, res, ctx) => {
+							return res.once(
+								ctx.status(200),
+								ctx.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: mockServiceMetadata,
+								})
+							);
+						}
+					)
+				);
+				setMockFetchDashScript(mockDashboardScript);
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
+					},
+					{
+						text: "No package.json found. Would you like to create one?",
+						result: true,
+					},
+					{
+						text: "Would you like to use TypeScript?",
+						result: true,
 					}
-				)
-			);
-			setMockFetchDashScript(mockDashboardScript);
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "No package.json found. Would you like to create one?",
-					result: true,
-				},
-				{
-					text: "Would you like to use TypeScript?",
-					result: true,
-				}
-			);
+				);
 
-			await expect(
-				runWrangler("init isolinear-optical-chip --from-dash i-dont-exist")
-			).rejects.toThrowError();
-		});
-
-		it("should download source script from dashboard w/ out positional <name>", async () => {
-			mockSupportingDashRequests({
-				expectedAccountId: "LCARS",
-				expectedScriptName: "isolinear-optical-chip",
-				expectedEnvironment: "test",
-				expectedCompatDate: "1987-9-27",
+				await expect(
+					runWrangler(
+						"init isolinear-optical-chip --from-dash i-dont-exist --no-delegate-c3"
+					)
+				).rejects.toThrowError();
 			});
-			setMockFetchDashScript(mockDashboardScript);
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "No package.json found. Would you like to create one?",
-					result: true,
-				},
-				{
-					text: "Would you like to use TypeScript?",
-					result: true,
-				}
-			);
 
-			await runWrangler("init --from-dash isolinear-optical-chip");
+			it("should download source script from dashboard w/ out positional <name>", async () => {
+				mockSupportingDashRequests({
+					expectedAccountId: "LCARS",
+					expectedScriptName: "isolinear-optical-chip",
+					expectedEnvironment: "test",
+					expectedCompatDate: "1987-9-27",
+				});
+				setMockFetchDashScript(mockDashboardScript);
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
+					},
+					{
+						text: "No package.json found. Would you like to create one?",
+						result: true,
+					},
+					{
+						text: "Would you like to use TypeScript?",
+						result: true,
+					}
+				);
 
-			expect(fs.readFileSync("./isolinear-optical-chip/wrangler.toml", "utf8"))
-				.toMatchInlineSnapshot(`
+				await runWrangler(
+					"init --from-dash isolinear-optical-chip --no-delegate-c3"
+				);
+
+				expect(
+					fs.readFileSync("./isolinear-optical-chip/wrangler.toml", "utf8")
+				).toMatchInlineSnapshot(`
 			"name = \\"isolinear-optical-chip\\"
 			main = \\"src/index.ts\\"
 			compatibility_date = \\"1987-9-27\\"
@@ -2700,6 +2998,9 @@ describe("init", () => {
 			[env]
 			test = { }
 			staging = { }
+
+			[[tail_consumers]]
+			service = \\"listener\\"
 
 			[vars]
 			ANOTHER-NAME = \\"thing-TEXT\\"
@@ -2727,16 +3028,13 @@ describe("init", () => {
 			binding = \\"name-namespace-mock\\"
 			namespace = \\"namespace-mock\\"
 
-			[logfwdr]
-			schema = \\"\\"
+			[[logfwdr.bindings]]
+			name = \\"httplogs\\"
+			destination = \\"httplogs\\"
 
-			  [[logfwdr.bindings]]
-			  name = \\"httplogs\\"
-			  destination = \\"httplogs\\"
-
-			  [[logfwdr.bindings]]
-			  name = \\"trace\\"
-			  destination = \\"trace\\"
+			[[logfwdr.bindings]]
+			name = \\"trace\\"
+			destination = \\"trace\\"
 
 			[wasm_modules]
 			WASM_MODULE_ONE = \\"./some_wasm.wasm\\"
@@ -2764,314 +3062,393 @@ describe("init", () => {
 			  data = 1_337
 			"
 		`);
-			expect(std.out).toContain("cd isolinear-optical-chip");
+				expect(std.out).toContain("cd isolinear-optical-chip");
 
-			checkFiles({
-				items: {
-					"isolinear-optical-chip/src/index.js": false,
-					"isolinear-optical-chip/src/index.ts": {
-						contents: mockDashboardScript,
-					},
-					"isolinear-optical-chip/package.json": {
-						contents: expect.objectContaining({
-							name: "isolinear-optical-chip",
-						}),
-					},
-					"isolinear-optical-chip/tsconfig.json": true,
-					"isolinear-optical-chip/wrangler.toml": wranglerToml({
-						...mockConfigExpected,
-						name: "isolinear-optical-chip",
-					}),
-				},
-			});
-		});
-
-		it("should download source script from dashboard as plain JavaScript", async () => {
-			mockSupportingDashRequests({
-				expectedAccountId: "LCARS",
-				expectedScriptName: "isolinear-optical-chip",
-				expectedEnvironment: "test",
-				expectedCompatDate: "1987-9-27",
-			});
-			setMockFetchDashScript(mockDashboardScript);
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "No package.json found. Would you like to create one?",
-					result: true,
-				},
-				{
-					text: "Would you like to use TypeScript?",
-					result: false,
-				}
-			);
-
-			await runWrangler("init  --from-dash isolinear-optical-chip");
-
-			checkFiles({
-				items: {
-					"isolinear-optical-chip/src/index.js": {
-						contents: mockDashboardScript,
-					},
-					"isolinear-optical-chip/src/index.ts": false,
-					"isolinear-optical-chip/package.json": {
-						contents: expect.objectContaining({
-							name: "isolinear-optical-chip",
-						}),
-					},
-					"isolinear-optical-chip/tsconfig.json": false,
-					"isolinear-optical-chip/wrangler.toml": wranglerToml({
-						...mockConfigExpected,
-						name: "isolinear-optical-chip",
-						main: "src/index.js",
-					}),
-				},
-			});
-		});
-
-		it("should use fallback compatibility date if none is upstream", async () => {
-			const mockDate = "1988-08-07";
-			jest
-				.spyOn(Date.prototype, "toISOString")
-				.mockImplementation(() => `${mockDate}T00:00:00.000Z`);
-
-			mockSupportingDashRequests({
-				expectedAccountId: "LCARS",
-				expectedScriptName: "isolinear-optical-chip",
-				expectedEnvironment: "test",
-				expectedCompatDate: undefined,
-			});
-			setMockFetchDashScript(mockDashboardScript);
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "No package.json found. Would you like to create one?",
-					result: true,
-				},
-				{
-					text: "Would you like to use TypeScript?",
-					result: true,
-				}
-			);
-
-			await runWrangler("init  --from-dash isolinear-optical-chip");
-
-			mockConfigExpected.compatibility_date = "1988-08-07";
-			checkFiles({
-				items: {
-					"isolinear-optical-chip/src/index.ts": {
-						contents: mockDashboardScript,
-					},
-					"isolinear-optical-chip/package.json": {
-						contents: expect.objectContaining({
-							name: "isolinear-optical-chip",
-						}),
-					},
-					"isolinear-optical-chip/tsconfig.json": true,
-					"isolinear-optical-chip/wrangler.toml": wranglerToml({
-						...mockConfigExpected,
-						name: "isolinear-optical-chip",
-					}),
-				},
-			});
-		});
-
-		it("should throw an error to retry if a request fails", async () => {
-			msw.use(
-				rest.get(
-					`*/accounts/:accountId/workers/services/:scriptName`,
-					(req, res, ctx) => {
-						expect(req.params.accountId).toBe("LCARS");
-						expect(req.params.scriptName).toBe("isolinear-optical-chip");
-						return res.once(
-							ctx.status(200),
-							ctx.json({
-								success: true,
-								errors: [],
-								messages: [],
-								result: mockServiceMetadata,
-							})
-						);
-					}
-				),
-				rest.get(
-					`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
-					(req, res) => {
-						return res.networkError("Mock Network Error");
-					}
-				)
-			);
-
-			setMockFetchDashScript(mockDashboardScript);
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-				{
-					text: "Would you like to use TypeScript?",
-					result: false,
-				}
-			);
-
-			await expect(
-				runWrangler("init --from-dash isolinear-optical-chip")
-			).rejects.toThrowError();
-		});
-
-		it("should not include migrations in config file when none are necessary", async () => {
-			const mockDate = "1988-08-07";
-			jest
-				.spyOn(Date.prototype, "toISOString")
-				.mockImplementation(() => `${mockDate}T00:00:00.000Z`);
-			const mockData = {
-				id: "memory-crystal",
-				default_environment: {
-					environment: "test",
-					created_on: "1988-08-07",
-					modified_on: "1988-08-07",
-					script: {
-						id: "memory-crystal",
-						tag: "test-tag",
-						etag: "some-etag",
-						handlers: [],
-						modified_on: "1988-08-07",
-						created_on: "1988-08-07",
-						usage_model: "bundled",
-						compatibility_date: "1988-08-07",
-					},
-				},
-				environments: [],
-			};
-			msw.use(
-				rest.get(
-					`*/accounts/:accountId/workers/services/:scriptName`,
-					(req, res, ctx) => {
-						return res.once(
-							ctx.status(200),
-							ctx.json({
-								success: true,
-								errors: [],
-								messages: [],
-								result: mockData,
-							})
-						);
-					}
-				),
-				rest.get(
-					`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
-					(req, res, ctx) => {
-						return res.once(
-							ctx.status(200),
-							ctx.json({
-								success: true,
-								errors: [],
-								messages: [],
-								result: [],
-							})
-						);
-					}
-				),
-				rest.get(
-					`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/routes`,
-					(req, res, ctx) => {
-						return res.once(
-							ctx.status(200),
-							ctx.json({
-								success: true,
-								errors: [],
-								messages: [],
-								result: [],
-							})
-						);
-					}
-				),
-				rest.get(
-					`*/accounts/:accountId/workers/services/:scriptName/environments/:environment`,
-					(req, res, ctx) => {
-						return res.once(
-							ctx.status(200),
-							ctx.json({
-								success: true,
-								errors: [],
-								messages: [],
-								result: mockServiceMetadata.default_environment,
-							})
-						);
-					}
-				),
-				rest.get(
-					`*/accounts/:accountId/workers/scripts/:scriptName/schedules`,
-					(req, res, ctx) => {
-						return res.once(
-							ctx.status(200),
-							ctx.json({
-								success: true,
-								errors: [],
-								messages: [],
-								result: { schedules: [] },
-							})
-						);
-					}
-				)
-			);
-
-			setMockFetchDashScript(mockDashboardScript);
-
-			mockConfirm(
-				{
-					text: "Would you like to use git to manage this Worker?",
-					result: false,
-				},
-
-				{
-					text: "No package.json found. Would you like to create one?",
-					result: true,
-				},
-				{
-					text: "Would you like to use TypeScript?",
-					result: true,
-				}
-			);
-
-			await runWrangler("init  --from-dash isolinear-optical-chip");
-
-			checkFiles({
-				items: {
-					"isolinear-optical-chip/wrangler.toml": wranglerToml({
-						compatibility_date: "1988-08-07",
-						env: {},
-						main: "src/index.ts",
-						triggers: {
-							crons: [],
+				checkFiles({
+					items: {
+						"isolinear-optical-chip/src/index.js": false,
+						"isolinear-optical-chip/src/index.ts": {
+							contents: mockDashboardScript,
 						},
-						usage_model: "bundled",
-						name: "isolinear-optical-chip",
-					}),
-				},
+						"isolinear-optical-chip/package.json": {
+							contents: expect.objectContaining({
+								name: "isolinear-optical-chip",
+							}),
+						},
+						"isolinear-optical-chip/tsconfig.json": true,
+						"isolinear-optical-chip/wrangler.toml": wranglerToml({
+							...mockConfigExpected,
+							name: "isolinear-optical-chip",
+						}),
+					},
+				});
 			});
-		});
 
-		it("should not continue if no worker name is provided", async () => {
-			await expect(
-				runWrangler("init  --from-dash")
-			).rejects.toMatchInlineSnapshot(
-				`[Error: Not enough arguments following: from-dash]`
-			);
-			checkFiles({
-				items: {
-					"isolinear-optical-chip/src/index.js": false,
-					"isolinear-optical-chip/src/index.ts": false,
-					"isolinear-optical-chip/package.json": false,
-					"isolinear-optical-chip/tsconfig.json": false,
-					"isolinear-optical-chip/wrangler.toml": false,
-				},
+			it("should download source script from dashboard as plain JavaScript", async () => {
+				mockSupportingDashRequests({
+					expectedAccountId: "LCARS",
+					expectedScriptName: "isolinear-optical-chip",
+					expectedEnvironment: "test",
+					expectedCompatDate: "1987-9-27",
+				});
+				setMockFetchDashScript(mockDashboardScript);
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
+					},
+					{
+						text: "No package.json found. Would you like to create one?",
+						result: true,
+					},
+					{
+						text: "Would you like to use TypeScript?",
+						result: false,
+					}
+				);
+
+				await runWrangler(
+					"init  --from-dash isolinear-optical-chip --no-delegate-c3"
+				);
+
+				checkFiles({
+					items: {
+						"isolinear-optical-chip/src/index.js": {
+							contents: mockDashboardScript,
+						},
+						"isolinear-optical-chip/src/index.ts": false,
+						"isolinear-optical-chip/package.json": {
+							contents: expect.objectContaining({
+								name: "isolinear-optical-chip",
+							}),
+						},
+						"isolinear-optical-chip/tsconfig.json": false,
+						"isolinear-optical-chip/wrangler.toml": wranglerToml({
+							...mockConfigExpected,
+							name: "isolinear-optical-chip",
+							main: "src/index.js",
+						}),
+					},
+				});
+			});
+
+			it("should use fallback compatibility date if none is upstream", async () => {
+				const mockDate = "1988-08-07";
+				jest
+					.spyOn(Date.prototype, "toISOString")
+					.mockImplementation(() => `${mockDate}T00:00:00.000Z`);
+
+				mockSupportingDashRequests({
+					expectedAccountId: "LCARS",
+					expectedScriptName: "isolinear-optical-chip",
+					expectedEnvironment: "test",
+					expectedCompatDate: undefined,
+				});
+				setMockFetchDashScript(mockDashboardScript);
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
+					},
+					{
+						text: "No package.json found. Would you like to create one?",
+						result: true,
+					},
+					{
+						text: "Would you like to use TypeScript?",
+						result: true,
+					}
+				);
+
+				await runWrangler(
+					"init  --from-dash isolinear-optical-chip --no-delegate-c3"
+				);
+
+				mockConfigExpected.compatibility_date = "1988-08-07";
+				checkFiles({
+					items: {
+						"isolinear-optical-chip/src/index.ts": {
+							contents: mockDashboardScript,
+						},
+						"isolinear-optical-chip/package.json": {
+							contents: expect.objectContaining({
+								name: "isolinear-optical-chip",
+							}),
+						},
+						"isolinear-optical-chip/tsconfig.json": true,
+						"isolinear-optical-chip/wrangler.toml": wranglerToml({
+							...mockConfigExpected,
+							name: "isolinear-optical-chip",
+						}),
+					},
+				});
+			});
+
+			it("should throw an error to retry if a request fails", async () => {
+				msw.use(
+					rest.get(
+						`*/accounts/:accountId/workers/services/:scriptName`,
+						(req, res, ctx) => {
+							expect(req.params.accountId).toBe("LCARS");
+							expect(req.params.scriptName).toBe("isolinear-optical-chip");
+							return res.once(
+								ctx.status(200),
+								ctx.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: mockServiceMetadata,
+								})
+							);
+						}
+					),
+					rest.get(
+						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
+						(req, res) => {
+							return res.networkError("Mock Network Error");
+						}
+					)
+				);
+
+				setMockFetchDashScript(mockDashboardScript);
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
+					},
+					{
+						text: "Would you like to use TypeScript?",
+						result: false,
+					}
+				);
+
+				await expect(
+					runWrangler(
+						"init --from-dash isolinear-optical-chip --no-delegate-c3"
+					)
+				).rejects.toThrowError();
+			});
+
+			it("should not include migrations in config file when none are necessary", async () => {
+				const mockDate = "1988-08-07";
+				jest
+					.spyOn(Date.prototype, "toISOString")
+					.mockImplementation(() => `${mockDate}T00:00:00.000Z`);
+				const mockData = {
+					id: "memory-crystal",
+					default_environment: {
+						environment: "test",
+						created_on: "1988-08-07",
+						modified_on: "1988-08-07",
+						script: {
+							id: "memory-crystal",
+							tag: "test-tag",
+							etag: "some-etag",
+							handlers: [],
+							modified_on: "1988-08-07",
+							created_on: "1988-08-07",
+							usage_model: "bundled",
+							compatibility_date: "1988-08-07",
+							tail_consumers: [{ service: "listener" }],
+						},
+					},
+					environments: [],
+				};
+				msw.use(
+					rest.get(
+						`*/accounts/:accountId/workers/services/:scriptName`,
+						(req, res, ctx) => {
+							return res.once(
+								ctx.status(200),
+								ctx.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: mockData,
+								})
+							);
+						}
+					),
+					rest.get(
+						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/bindings`,
+						(req, res, ctx) => {
+							return res.once(
+								ctx.status(200),
+								ctx.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: [],
+								})
+							);
+						}
+					),
+					rest.get(
+						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/routes`,
+						(req, res, ctx) => {
+							return res.once(
+								ctx.status(200),
+								ctx.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: [],
+								})
+							);
+						}
+					),
+					rest.get(
+						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment`,
+						(req, res, ctx) => {
+							return res.once(
+								ctx.status(200),
+								ctx.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: mockData.default_environment,
+								})
+							);
+						}
+					),
+					rest.get(
+						`*/accounts/:accountId/workers/scripts/:scriptName/schedules`,
+						(req, res, ctx) => {
+							return res.once(
+								ctx.status(200),
+								ctx.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: { schedules: [] },
+								})
+							);
+						}
+					)
+				);
+
+				setMockFetchDashScript(mockDashboardScript);
+
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
+					},
+
+					{
+						text: "No package.json found. Would you like to create one?",
+						result: true,
+					},
+					{
+						text: "Would you like to use TypeScript?",
+						result: true,
+					}
+				);
+
+				await runWrangler(
+					"init  --from-dash isolinear-optical-chip --no-delegate-c3"
+				);
+
+				checkFiles({
+					items: {
+						"isolinear-optical-chip/wrangler.toml": wranglerToml({
+							compatibility_date: "1988-08-07",
+							env: {},
+							main: "src/index.ts",
+							triggers: {
+								crons: [],
+							},
+							usage_model: "bundled",
+							name: "isolinear-optical-chip",
+							tail_consumers: [{ service: "listener" }],
+						}),
+					},
+				});
+			});
+
+			it("should not continue if no worker name is provided", async () => {
+				await expect(
+					runWrangler("init  --from-dash")
+				).rejects.toMatchInlineSnapshot(
+					`[Error: Not enough arguments following: from-dash]`
+				);
+				checkFiles({
+					items: {
+						"isolinear-optical-chip/src/index.js": false,
+						"isolinear-optical-chip/src/index.ts": false,
+						"isolinear-optical-chip/package.json": false,
+						"isolinear-optical-chip/tsconfig.json": false,
+						"isolinear-optical-chip/wrangler.toml": false,
+					},
+				});
+			});
+
+			it("should download multi-module source scripts from dashboard", async () => {
+				mockSupportingDashRequests({
+					expectedAccountId: "LCARS",
+					expectedScriptName: "isolinear-optical-chip",
+					expectedEnvironment: "test",
+					expectedCompatDate: "1987-9-27",
+				});
+				const indexjs = `
+					import handleRequest from './handleRequest.js';
+
+					export default {
+						async fetch(request, env, ctx) {
+							return handleRequest(request, env, ctx);
+						},
+					};
+				`;
+				const otherjs = `
+					export default function (request, env, ctx) {
+						return new Response("Hello World!");
+					}
+				`;
+				setMockFetchDashScript([
+					{ name: "index.js", contents: indexjs },
+					{ name: "nested/other.js", contents: otherjs },
+				]);
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
+					},
+					{
+						text: "No package.json found. Would you like to create one?",
+						result: true,
+					},
+					{
+						text: "Would you like to use TypeScript?",
+						result: false,
+					}
+				);
+
+				await runWrangler(
+					"init --from-dash isolinear-optical-chip  --no-delegate-c3"
+				);
+
+				checkFiles({
+					items: {
+						"isolinear-optical-chip/src/index.js": {
+							contents: indexjs,
+						},
+						"isolinear-optical-chip/src/nested/other.js": {
+							contents: otherjs,
+						},
+						"isolinear-optical-chip/src/index.ts": false,
+						"isolinear-optical-chip/package.json": {
+							contents: expect.objectContaining({
+								name: "isolinear-optical-chip",
+							}),
+						},
+						"isolinear-optical-chip/tsconfig.json": false,
+						"isolinear-optical-chip/wrangler.toml": wranglerToml({
+							...mockConfigExpected,
+							name: "isolinear-optical-chip",
+							main: "src/index.js",
+						}),
+					},
+				});
 			});
 		});
 	});
@@ -3095,12 +3472,38 @@ function getDefaultBranchName() {
 /**
  * Mock setter for usage within test blocks for dashboard script
  */
-export function setMockFetchDashScript(mockResponse: string) {
+export function setMockFetchDashScript(
+	mockResponse: string | { name: string; contents: string }[]
+) {
 	msw.use(
 		rest.get(
 			`*/accounts/:accountId/workers/services/:fromDashScriptName/environments/:environment/content`,
 			(_, res, ctx) => {
-				return res(ctx.text(mockResponse));
+				if (typeof mockResponse === "string") {
+					return res(ctx.text(mockResponse));
+				}
+
+				const fd = new FormData();
+
+				for (const { name, contents } of mockResponse) {
+					fd.set(name, contents);
+				}
+
+				const boundary = "--------boundary-12761293712";
+				const responseText =
+					`--${boundary}\r\n` +
+					mockResponse
+						.map(
+							({ name, contents }) =>
+								`Content-Disposition: form-data; name="${name}"\r\n\r\n${contents}`
+						)
+						.join(`\r\n--${boundary}\r\n`) +
+					`\r\n--${boundary}--`;
+
+				return res(
+					ctx.set("Content-Type", `multipart/form-data; boundary=${boundary}`),
+					ctx.body(responseText)
+				);
 			}
 		)
 	);

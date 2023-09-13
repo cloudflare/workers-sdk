@@ -1,0 +1,5 @@
+/* To learn more about this file see: https://angular.io/config/tsconfig. */
+{
+	"extends": "./tsconfig.app.json",
+	"files": ["./src/main.server.ts"]
+}
