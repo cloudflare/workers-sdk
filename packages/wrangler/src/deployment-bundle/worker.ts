@@ -28,6 +28,15 @@ export interface CfModule {
 	 */
 	name: string;
 	/**
+	 * The absolute path of the module on disk, or `undefined` if this is a
+	 * virtual module. Used as the source URL for this module, so source maps are
+	 * correctly resolved.
+	 *
+	 * @example
+	 * '/path/to/src/index.js'
+	 */
+	filePath: string | undefined;
+	/**
 	 * The module content, usually JavaScript or WASM code.
 	 *
 	 * @example

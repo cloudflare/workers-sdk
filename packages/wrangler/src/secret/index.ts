@@ -96,6 +96,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 								name: scriptName,
 								main: {
 									name: scriptName,
+									filePath: undefined,
 									content: `export default { fetch() {} }`,
 									type: "esm",
 								},

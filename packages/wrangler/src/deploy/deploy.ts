@@ -558,6 +558,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		if (assets.manifest) {
 			modules.push({
 				name: "__STATIC_CONTENT_MANIFEST",
+				filePath: undefined,
 				content: JSON.stringify(assets.manifest),
 				type: "text",
 			});
@@ -571,6 +572,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			name: scriptName,
 			main: {
 				name: path.basename(resolvedEntryPointPath),
+				filePath: resolvedEntryPointPath,
 				content: content,
 				type: bundleType,
 			},

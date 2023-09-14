@@ -110,11 +110,12 @@ export async function matchFiles(
 				files
 					.filter((f) => regexp.test(f))
 					.map(async (name) => {
-						const filePath = name;
-						const fileContent = await readFile(path.join(relativeTo, filePath));
+						const filePath = path.join(relativeTo, name);
+						const fileContent = await readFile(filePath);
 
 						return {
-							name: filePath,
+							name,
+							filePath,
 							content: fileContent,
 							type: RuleTypeToModuleType[rule.type],
 						};
@@ -244,6 +245,7 @@ export default function createModuleCollector(props: {
 								// add the module to the array
 								modules.push({
 									name: fileName,
+									filePath,
 									content: fileContent,
 									type: RuleTypeToModuleType[rule.type],
 								});
@@ -283,6 +285,7 @@ export default function createModuleCollector(props: {
 								// add the module to the array
 								modules.push({
 									name: fileName,
+									filePath,
 									content: fileContent,
 									type: RuleTypeToModuleType[rule.type],
 								});

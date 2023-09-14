@@ -7945,7 +7945,12 @@ export default{
 				const bigModule = Buffer.alloc(10_000_000);
 				randomFillSync(bigModule);
 				await printBundleSize({ name: "index.js", content: "" }, [
-					{ name: "index.js", content: bigModule, type: "buffer" },
+					{
+						name: "index.js",
+						filePath: undefined,
+						content: bigModule,
+						type: "buffer",
+					},
 				]);
 
 				expect(std).toMatchInlineSnapshot(`
@@ -7968,7 +7973,12 @@ export default{
 				const bigModule = Buffer.alloc(10_000_000);
 				randomFillSync(bigModule);
 				await printBundleSize({ name: "index.js", content: "" }, [
-					{ name: "index.js", content: bigModule, type: "buffer" },
+					{
+						name: "index.js",
+						filePath: undefined,
+						content: bigModule,
+						type: "buffer",
+					},
 				]);
 
 				expect(std).toMatchInlineSnapshot(`
