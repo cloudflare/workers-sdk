@@ -16,7 +16,7 @@
 		"@cloudflare/component-icon": "^11.5.1",
 		"@cloudflare/component-input": "^8.1.1",
 		"@cloudflare/component-listbox": "^1.10.4",
-		"@cloudflare/component-loading": "^6.1.0",
+		"@cloudflare/component-loading": "^6.1.1",
 		"@cloudflare/component-textarea": "^4.1.1",
 		"@cloudflare/component-toast": "^5.1.0",
 		"@cloudflare/component-toggle": "^9.0.13",

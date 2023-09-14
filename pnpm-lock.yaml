@@ -794,8 +794,8 @@ importers:
         specifier: ^1.10.4
         version: 1.10.4(patch_hash=r2d7tqjujhdts7e7zxsa3stjki)(@cloudflare/component-icon@11.5.1)(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(@cloudflare/style-provider@3.1.0)(react-dom@18.2.0)(react@18.2.0)(regenerator-runtime@0.13.11)
       '@cloudflare/component-loading':
-        specifier: ^6.1.0
-        version: 6.1.0(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)(regenerator-runtime@0.13.11)
+        specifier: ^6.1.1
+        version: 6.1.1(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)(regenerator-runtime@0.13.11)
       '@cloudflare/component-textarea':
         specifier: ^4.1.1
         version: 4.1.1(@cloudflare/style-container@7.12.1)(react@18.2.0)
@@ -2890,8 +2890,8 @@ packages:
     dev: false
     patched: true
 
-  /@cloudflare/component-loading@6.1.0(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)(regenerator-runtime@0.13.11):
-    resolution: {integrity: sha512-/7szGqxclwahfzT36m2n2wM8hmWS3ThnTqveRYXTeOGXBKN7/1HunijDxVb8beIX5iawTK2qB876bZAcYxTBSQ==}
+  /@cloudflare/component-loading@6.1.1(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)(regenerator-runtime@0.13.11):
+    resolution: {integrity: sha512-CfYU9K80O2j99Y22d8fDzIhMGS94/0CnLNYjNBQmqDPjmwXRvju31ATJ2JEeYPaAHCHXRILdP1FED9AsnzdS0g==}
     peerDependencies:
       '@cloudflare/style-const': ^5.3.9
       '@cloudflare/style-container': ^7.10.0
