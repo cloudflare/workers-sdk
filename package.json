@@ -21,7 +21,8 @@
 		"test": "dotenv -- turbo test --concurrency=1",
 		"test:ci": "dotenv -- turbo test:ci --filter=!local-mode-tests --filter=!playground-preview-worker --filter=!no-bundle-import --concurrency=1",
 		"test:watch": "turbo test:watch",
-		"type:tests": "dotenv -- turbo type:tests"
+		"type:tests": "dotenv -- turbo type:tests",
+		"gen:package": "turbo gen package"
 	},
 	"dependencies": {
 		"@changesets/changelog-github": "^0.4.5",
@@ -45,6 +46,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20230821.0",
+		"@turbo/gen": "^1.10.13",
 		"dotenv-cli": "^7.3.0",
 		"esbuild": "0.17.19",
 		"turbo": "^1.10.13"
