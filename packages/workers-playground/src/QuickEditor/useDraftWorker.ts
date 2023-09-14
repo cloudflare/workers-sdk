@@ -105,7 +105,7 @@ async function compressWorker(worker: FormData) {
 async function updatePreviewHash(content: Worker): Promise<PreviewHash> {
 	const worker = serialiseWorker(content);
 
-	const res = await fetch("/api/worker", {
+	const res = await fetch("/playground/api/worker", {
 		method: "POST",
 		body: worker,
 	});
@@ -117,7 +117,7 @@ async function updatePreviewHash(content: Worker): Promise<PreviewHash> {
 	}
 
 	return {
-		playgroundUrl: `/#${await compressWorker(worker)}`,
+		playgroundUrl: `/playground#${await compressWorker(worker)}`,
 		previewUrl: `https://${v4()}.playground.devprod.cloudflare.dev/.update-preview-token?token=${encodeURIComponent(
 			deploy.preview
 		)}`,

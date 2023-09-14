@@ -7,7 +7,11 @@ export default defineConfig({
 	plugins: [pluginRewriteAll(), react()],
 	server: {
 		proxy: {
-			"/api": "https://playground.devprod.cloudflare.dev",
+			"/playground/api": {
+				target: "https://playground.devprod.cloudflare.dev",
+				changeOrigin: true,
+				rewrite: (path) => path.replace(/^\/playground/, ""),
+			},
 		},
 	},
 	resolve: {
@@ -18,4 +22,5 @@ export default defineConfig({
 		},
 	},
 	appType: "spa",
+	base: "/playground",
 });
