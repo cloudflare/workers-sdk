@@ -57,6 +57,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 			"chatgptPlugin",
 			"queues",
 			"scheduled",
+			"openapi",
 		])("%s", async (name) => {
 			await runCli(name);
 		});
