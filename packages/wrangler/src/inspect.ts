@@ -1,10 +1,11 @@
 import { readFileSync } from "fs";
 import { readFile } from "fs/promises";
 import assert from "node:assert";
+import crypto from "node:crypto";
 import { createServer } from "node:http";
 import os from "node:os";
-import { URL } from "node:url";
-import path from "path";
+import path from "node:path";
+import { URL, fileURLToPath, pathToFileURL } from "node:url";
 import open from "open";
 import { useEffect, useRef, useState } from "react";
 import { SourceMapConsumer } from "source-map";
@@ -15,6 +16,7 @@ import { waitForPortToBeAvailable } from "./proxy";
 import { getAccessToken } from "./user/access";
 import type Protocol from "devtools-protocol";
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
+import type { RawSourceMap } from "source-map";
 import type { MessageEvent } from "ws";
 
 /**
@@ -75,14 +77,36 @@ interface InspectorProps {
 	name?: string;
 }
 
+type LocalWebSocket = WebSocket & { isDevTools?: boolean };
+
 export default function useInspector(props: InspectorProps) {
 	/** A unique ID for this session. */
-	const inspectorIdRef = useRef(randomId());
+	const inspectorIdRef = useRef(crypto.randomUUID());
 
 	/** The websocket from the devtools instance. */
-	const [localWebSocket, setLocalWebSocket] = useState<WebSocket>();
+	const [localWebSocket, setLocalWebSocket] = useState<LocalWebSocket>();
 	/**  The websocket from the edge */
 	const [remoteWebSocket, setRemoteWebSocket] = useState<WebSocket>();
+
+	/**
+	 * Source maps included in `Debugger.scriptParsed` events sent by the current
+	 * `remoteWebSocket`. Each source map is given a unique ID which must be
+	 * included when fetching the source map to prevent arbitrary file access.
+	 * We assume each `Debugger.scriptParsed` event will trigger a single fetch
+	 * for the corresponding source map, so remove source maps after they've been
+	 * fetched once.
+	 */
+	const sourceMaps = useRef<Map<string /* id */, string /* filePath */>>();
+	sourceMaps.current ??= new Map();
+	/**
+	 * For source maps without `sourcesContent`, DevTools will request the
+	 * contents of source files too. Again, we'd like to prevent arbitrary file
+	 * access here, so only allow fetching sources if we've seen the path
+	 * when responding with a source map. We again assume each source will be
+	 * fetched once, so remove allowed sources after fetch.
+	 */
+	const allowedSourcePaths = useRef<Set<string /* filePath */>>();
+	allowedSourcePaths.current ??= new Set();
 
 	/**
 	 *  The local proxy server that acts as the bridge between
@@ -155,7 +179,7 @@ export default function useInspector(props: InspectorProps) {
 	}
 	const wsServer = wsServerRef.current;
 
-	wsServer.on("connection", (ws: WebSocket) => {
+	wsServer.on("connection", (ws, req) => {
 		if (wsServer.clients.size > 1) {
 			/** We only want to have one active Devtools instance at a time. */
 			logger.error(
@@ -175,11 +199,51 @@ export default function useInspector(props: InspectorProps) {
 					method: "Debugger.disable",
 				})
 			);
+
+			// Our patched DevTools are hosted on a `https://` URL. These cannot
+			// access `file://` URLs, meaning local source maps cannot be fetched.
+			// To get around this, we can rewrite `Debugger.scriptParsed` events to
+			// include a special `worker:` scheme for source maps, and respond to
+			// `Network.loadNetworkResource` commands for these. Unfortunately, this
+			// breaks IDE's built-in debuggers (e.g. VSCode and WebStorm), so we only
+			// want to enable this transformation when we detect hosted DevTools has
+			// connected. We do this by looking at the WebSocket handshake headers:
+			//
+			// # DevTools
+			//
+			// Upgrade: websocket
+			// Host: localhost:9229
+			// (from Chrome)  User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36
+			// (from Firefox) User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/116.0
+			// Origin: https://devtools.devprod.cloudflare.dev
+			// ...
+			//
+			// # VSCode
+			//
+			// Upgrade: websocket
+			// Host: localhost
+			// ...
+			//
+			// # WebStorm
+			//
+			// Upgrade: websocket
+			// Host: localhost:9229
+			// Origin: http://localhost:9229
+			// ...
+			//
+			// From this, we could just use the presence of a `User-Agent` header to
+			// determine if DevTools connected, but VSCode/WebStorm could very well
+			// add this in future versions. We could also look for an `Origin` header
+			// matching the hosted DevTools URL, but this would prevent preview/local
+			// versions working. Instead, we look for a browser-like `User-Agent`.
+			const localWs: LocalWebSocket = ws;
+			localWs.isDevTools = /mozilla/i.test(req.headers["user-agent"] ?? "");
+
 			// As promised, save the created websocket in a state hook
-			setLocalWebSocket(ws);
+			setLocalWebSocket(localWs);
 
 			ws.addEventListener("close", () => {
-				// And and cleanup when devtools closes
+				// And cleanup when devtools closes
 				setLocalWebSocket(undefined);
 			});
 		}
@@ -494,13 +558,6 @@ export default function useInspector(props: InspectorProps) {
 			// devtools (like execution context creation, etc)
 		}
 
-		// Determine if we're in local mode based on the remote socket's URL
-		let localMode = false;
-		if (remoteWebSocket) {
-			const { hostname } = new URL(remoteWebSocket.url);
-			localMode = ["127.0.0.1", "[::1]", "localhost"].includes(hostname);
-		}
-
 		if (remoteWebSocket && !localWebSocket) {
 			// The local websocket hasn't connected yet, so we'll
 			// buffer messages until it does.
@@ -515,56 +572,22 @@ export default function useInspector(props: InspectorProps) {
 			try {
 				// Intercept Network.loadNetworkResource to load sourcemaps
 				const message = JSON.parse(event.data as string);
-				if (
-					message.method === "Network.loadNetworkResource" &&
-					props.sourceMapPath !== undefined &&
-					props.sourceMapMetadata !== undefined
-				) {
-					const url = new URL(message.params.url);
-					if (url.protocol === "worker:" && url.pathname.endsWith(".map")) {
-						// Read the generated source map from esbuild
-						const sourceMap = JSON.parse(
-							readFileSync(props.sourceMapPath, "utf-8")
-						);
-
-						// The source root is a temporary directory (`tmpDir`), and so shouldn't be user-visible
-						// It provides no useful info to the user
-						sourceMap.sourceRoot = "";
-
-						const tmpDir = props.sourceMapMetadata.tmpDir;
-
-						// See https://docs.google.com/document/d/1U1RGAehQwRypUTovF1KRlpiOFze0b-_2gc6fAH0KY0k/edit#heading=h.mt2g20loc2ct
-						// The above link documents the x_google_ignoreList property, which is intended to mark code that shouldn't be visible in DevTools
-						// Here we use it to indicate specifically Wrangler-injected code (facades & middleware)
-						sourceMap.x_google_ignoreList = sourceMap.sources
-							// Filter anything in the generated tmpDir, and anything from Wrangler's templates
-							// This should cover facades and middleware, but intentionally doesn't include all non-user code e.g. node_modules
-							.map((s: string, idx: number) =>
-								s.includes(tmpDir) || s.includes("wrangler/templates")
-									? idx
-									: null
-							)
-							.filter((i: number | null) => i !== null);
-
-						const entryDirectory = props.sourceMapMetadata.entryDirectory;
-
-						sourceMap.sources = sourceMap.sources.map(
-							(s: string) =>
-								// These are never loaded by Wrangler or DevTools. However, the presence of a scheme is required for DevTools to show the path as folders in the Sources view
-								// The scheme is intentially not the same as for the sourceMappingURL
-								// Without this difference in scheme, DevTools will not strip prefix `../` path elements from top level folders (../node_modules -> node_modules, for instance)
-								`worker://${props.name}/${path.relative(entryDirectory, s)}`
-						);
-
+				if (message.method === "Network.loadNetworkResource") {
+					// `sourceMaps.current` and `allowSourcePaths.current` are always
+					// defined after `useRef()`
+					assert(sourceMaps.current !== undefined);
+					assert(allowedSourcePaths.current !== undefined);
+					const maybeText = maybeHandleNetworkLoadResource(
+						message.params.url,
+						sourceMaps.current,
+						allowedSourcePaths.current,
+						props.sourceMapMetadata?.tmpDir
+					);
+					if (maybeText !== undefined) {
 						sendMessageToLocalWebSocket({
 							data: JSON.stringify({
 								id: message.id,
-								result: {
-									resource: {
-										success: true,
-										text: JSON.stringify(sourceMap),
-									},
-								},
+								result: { resource: { success: true, text: maybeText } },
 							}),
 						});
 						return;
@@ -605,20 +628,28 @@ export default function useInspector(props: InspectorProps) {
 			);
 			try {
 				// Intercept Debugger.scriptParsed responses to inject URL schemes
-				const message = JSON.parse(event.data as string);
-				if (
-					message.method === "Debugger.scriptParsed" &&
-					// Breakpoint debugging doesn't work (breakpoints can be set, but not hit) with the worker:// scheme, so
-					// disable in local mode.
-					!localMode
-				) {
-					// Add the worker:// scheme conditionally, since some module types already have schemes (e.g. wasm)
-					message.params.url = new URL(
-						message.params.url,
-						`worker://${props.name}`
-					).href;
-					localWebSocket.send(JSON.stringify(message));
-					return;
+				if (localWebSocket.isDevTools) {
+					const message = JSON.parse(event.data as string);
+					if (message.method === "Debugger.scriptParsed") {
+						if (message.params.sourceMapURL) {
+							const url = new URL(
+								message.params.sourceMapURL,
+								message.params.url
+							);
+							if (url.protocol === "file:") {
+								// `sourceMaps.current` is always defined after `useRef()`
+								assert(sourceMaps.current !== undefined);
+								const name = props.name ?? "worker";
+								const id = crypto.randomUUID();
+								sourceMaps.current.set(id, fileURLToPath(url));
+								// The hostname of this URL will show up next to the cloud icon
+								// under authored sources, so use the worker name.
+								message.params.sourceMapURL = `worker://${name}/${id}`;
+								localWebSocket.send(JSON.stringify(message));
+								return;
+							}
+						}
+					}
 				}
 			} catch (e) {
 				logger.debug(e);
@@ -665,15 +696,6 @@ export default function useInspector(props: InspectorProps) {
 		props.sourceMapMetadata,
 		props.sourceMapPath,
 	]);
-}
-
-// Credit: https://stackoverflow.com/a/2117523
-function randomId(): string {
-	return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-		const r = (Math.random() * 16) | 0,
-			v = c == "x" ? r : (r & 0x3) | 0x8;
-		return v.toString(16);
-	});
 }
 
 /**
@@ -847,6 +869,69 @@ function logConsoleMessage(evt: Protocol.Runtime.ConsoleAPICalledEvent): void {
 	} else {
 		logger.warn(`Unsupported console method: ${method}`);
 		logger.warn("console event:", evt);
+	}
+}
+
+function maybeHandleNetworkLoadResource(
+	url: string | URL,
+	sourceMaps: Map<string /* id */, string /* filePath */>,
+	allowedSourcePaths: Set<string /* filePath */>,
+	tmpDir?: string
+): string | undefined {
+	if (typeof url === "string") url = new URL(url);
+	if (url.protocol !== "worker:") return;
+
+	// Check whether we have a source map matching this ID...
+	const id = url.pathname.substring(1);
+	const maybeSourceMapFilePath = sourceMaps.get(id);
+	if (maybeSourceMapFilePath !== undefined) {
+		// Assume DevTools fetches each source map once (after receipt of the
+		// `Debugger.scriptParsed` event), and remove it from the map to prevent
+		// unbounded growth.
+		sourceMaps.delete(id);
+
+		// Read and parse the source map
+		const sourceMap: RawSourceMap & {
+			x_google_ignoreList?: number[];
+		} = JSON.parse(readFileSync(maybeSourceMapFilePath, "utf-8"));
+
+		// See https://docs.google.com/document/d/1U1RGAehQwRypUTovF1KRlpiOFze0b-_2gc6fAH0KY0k/edit#heading=h.mt2g20loc2ct
+		// The above link documents the `x_google_ignoreList property`, which is
+		// intended to mark code that shouldn't be visible in DevTools. We use it to
+		// indicate specifically Wrangler-injected code (facades & middleware).
+		sourceMap.x_google_ignoreList = sourceMap.sources
+			// Filter anything in the generated `tmpDir`, and anything from Wrangler's
+			// templates. This should cover facades and middleware, but intentionally
+			// doesn't include all non-user code e.g. `node_modules`.
+			.map((source, i) => {
+				if (tmpDir !== undefined && source.includes(tmpDir)) return i;
+				if (source.includes("wrangler/templates")) return i;
+			})
+			.filter((i): i is number => i !== undefined);
+
+		// If this source map doesn't have inline sources, DevTools will attempt to
+		// make requests for them, so add all sources paths in this map to the
+		// allowed set.
+		if (!sourceMap.sourcesContent) {
+			const fileURL = pathToFileURL(maybeSourceMapFilePath);
+			for (const source of sourceMap.sources) {
+				const sourcePath = fileURLToPath(new URL(source, fileURL));
+				allowedSourcePaths.add(sourcePath);
+			}
+		}
+
+		return JSON.stringify(sourceMap);
+	}
+
+	// Otherwise, assume this is a request for a source file. Resolve the ID
+	// relative to the current working directory, and check if this is allowed.
+	const filePath = path.resolve(id);
+	if (allowedSourcePaths.has(filePath)) {
+		// Assume DevTools fetches each source once (after receipt of the
+		// `Network.loadNetworkResource` command response for the source map), and
+		// remove it from the set to prevent unbounded growth.
+		allowedSourcePaths.delete(filePath);
+		return readFileSync(filePath, "utf-8");
 	}
 }
 
