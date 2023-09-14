@@ -199,6 +199,7 @@ async function runEsbuild({
 	workerDefinitions,
 	services,
 	testScheduled,
+	local,
 	doBindings,
 }: {
 	entry: Entry;
@@ -254,6 +255,7 @@ async function runEsbuild({
 			workerDefinitions,
 			services,
 			targetConsumer: "dev", // We are starting a dev server
+			local,
 			testScheduled,
 			doBindings,
 			additionalModules: dedupeModulesByName([

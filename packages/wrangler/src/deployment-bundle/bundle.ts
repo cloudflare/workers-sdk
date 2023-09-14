@@ -146,6 +146,7 @@ export async function bundleWorker(
 		disableModuleCollection?: boolean;
 		isOutfile?: boolean;
 		forPages?: boolean;
+		local: boolean;
 	}
 ): Promise<BundleResult> {
 	const {
@@ -175,6 +176,7 @@ export async function bundleWorker(
 		isOutfile,
 		forPages,
 		additionalModules = [],
+		local,
 	} = options;
 
 	// We create a temporary directory for any one-off files we
@@ -253,7 +255,7 @@ export async function bundleWorker(
 		{
 			name: "miniflare3-json-error",
 			path: "templates/middleware/middleware-miniflare3-json-error.ts",
-			active: targetConsumer === "dev",
+			active: targetConsumer === "dev" && local,
 		},
 		{
 			name: "serve-static-assets",
