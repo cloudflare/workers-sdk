@@ -172,11 +172,7 @@ declare module "*.bin" {
 		);
 
 		for (const { path, contents } of files.files) {
-			const pathSegments = path
-				.split("/")
-				.filter(
-					(segment) => segment !== "." && segment !== ".." && segment !== ""
-				);
+			const pathSegments = path.split("/");
 			if (pathSegments.length > 1) {
 				let created = this.rootFolder;
 				for (const pathPart of pathSegments.slice(0, -1)) {

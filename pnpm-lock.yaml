@@ -793,6 +793,9 @@ importers:
       '@cloudflare/component-listbox':
         specifier: ^1.10.4
         version: 1.10.4(patch_hash=r2d7tqjujhdts7e7zxsa3stjki)(@cloudflare/component-icon@11.5.1)(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(@cloudflare/style-provider@3.1.0)(react-dom@18.2.0)(react@18.2.0)(regenerator-runtime@0.13.11)
+      '@cloudflare/component-loading':
+        specifier: ^6.1.0
+        version: 6.1.0(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)(regenerator-runtime@0.13.11)
       '@cloudflare/component-textarea':
         specifier: ^4.1.1
         version: 4.1.1(@cloudflare/style-container@7.12.1)(react@18.2.0)
@@ -2887,6 +2890,24 @@ packages:
     dev: false
     patched: true
 
+  /@cloudflare/component-loading@6.1.0(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)(regenerator-runtime@0.13.11):
+    resolution: {integrity: sha512-/7szGqxclwahfzT36m2n2wM8hmWS3ThnTqveRYXTeOGXBKN7/1HunijDxVb8beIX5iawTK2qB876bZAcYxTBSQ==}
+    peerDependencies:
+      '@cloudflare/style-const': ^5.3.9
+      '@cloudflare/style-container': ^7.10.0
+      react: ^16.0.0-0 || ^17.0.0-0 || ^18.0.0-0 || 18
+    dependencies:
+      '@cloudflare/component-visually-hidden': 1.0.86(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)(regenerator-runtime@0.13.11)
+      '@cloudflare/intl-react': 1.12.2(react@18.2.0)(regenerator-runtime@0.13.11)
+      '@cloudflare/style-const': 5.7.2(react@18.2.0)
+      '@cloudflare/style-container': 7.12.1(@cloudflare/style-const@5.7.2)(react@18.2.0)
+      prop-types: 15.8.1
+      raf: 3.4.1
+      react: 18.2.0
+    transitivePeerDependencies:
+      - regenerator-runtime
+    dev: false
+
   /@cloudflare/component-textarea@4.1.1(@cloudflare/style-container@7.12.1)(react@18.2.0):
     resolution: {integrity: sha512-sBHCCqFc88hiswszjkeqqRjVaxqWYDtxZkgD0Urmmr4Z6sKXWEeYijM11DX9nOAQ/SHFAK+gkqojv5gKMefcpA==}
     peerDependencies:
@@ -2959,6 +2980,23 @@ packages:
     transitivePeerDependencies:
       - '@cloudflare/style-const'
       - '@cloudflare/style-container'
+      - regenerator-runtime
+    dev: false
+
+  /@cloudflare/component-visually-hidden@1.0.86(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)(regenerator-runtime@0.13.11):
+    resolution: {integrity: sha512-F7g5P8sowjgbfdfCH+6rL6SqMPtGsO+YuBEetwRJ4M7zzb5/96Sv4Uea5f2V9S+Y0QAYf7iUaQHDy3JtexBwHw==}
+    peerDependencies:
+      '@cloudflare/style-const': ^5.7.2
+      '@cloudflare/style-container': ^7.10.0
+      react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0 || 18
+    dependencies:
+      '@cloudflare/elements': 3.0.3(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)
+      '@cloudflare/intl-react': 1.12.2(react@18.2.0)(regenerator-runtime@0.13.11)
+      '@cloudflare/style-const': 5.7.2(react@18.2.0)
+      '@cloudflare/style-container': 7.12.1(@cloudflare/style-const@5.7.2)(react@18.2.0)
+      prop-types: 15.8.1
+      react: 18.2.0
+    transitivePeerDependencies:
       - regenerator-runtime
     dev: false
 
@@ -12951,6 +12989,10 @@ packages:
       through2: 2.0.5
     dev: true
 
+  /performance-now@2.1.0:
+    resolution: {integrity: sha512-7EAHlyLHI56VEIdK57uwHdHKIaAGbnXPiw0yWbarQZOKaKpvUIgW0jWRVLiatnM+XXlSwsanIBH/hzGMJulMow==}
+    dev: false
+
   /periscopic@3.0.4:
     resolution: {integrity: sha512-SFx68DxCv0Iyo6APZuw/AKewkkThGwssmU0QWtTlvov3VAtPX+QJ4CadwSaz8nrT5jPIuxdvJWB4PnD2KNDxQg==}
     dependencies:
@@ -13325,6 +13367,12 @@ packages:
     resolution: {integrity: sha512-WuyALRjWPDGtt/wzJiadO5AXY+8hZ80hVpe6MyivgraREW751X3SbhRvG3eLKOYN+8VEvqLcf3wdnt44Z4S4SA==}
     engines: {node: '>=10'}
     dev: true
+
+  /raf@3.4.1:
+    resolution: {integrity: sha512-Sq4CW4QhwOHE8ucn6J34MqtZCeWFP2aQSmrlroYgqAV1PjStIhJXxYuTgUIfkEk7zTLjmIjLmU5q+fbD1NnOJA==}
+    dependencies:
+      performance-now: 2.1.0
+    dev: false
 
   /random-seed@0.3.0:
     resolution: {integrity: sha512-y13xtn3kcTlLub3HKWXxJNeC2qK4mB59evwZ5EkeRlolx+Bp2ztF7LbcZmyCnOqlHQrLnfuNbi1sVmm9lPDlDA==}

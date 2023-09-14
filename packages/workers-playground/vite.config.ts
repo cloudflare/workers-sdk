@@ -14,13 +14,7 @@ export default defineConfig({
 			},
 		},
 	},
-	resolve: {
-		alias: {
-			"@components": fileURLToPath(
-				new URL("./src/components", import.meta.url)
-			),
-		},
-	},
+
 	appType: "spa",
 	base: "/playground",
 });

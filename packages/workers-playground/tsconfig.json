@@ -18,11 +18,8 @@
 		/* Linting */
 		"strict": true,
 		"paths": {
-			"@components/*": ["./src/components/*"],
 			"react": ["./node_modules/@types/react"]
-			// "csstype": ["./node_modules/csstype"]
 		}
-		// "typeRoots": ["./node_modules/@types"]
 	},
 	"include": ["src"],
 	"references": [{ "path": "./tsconfig.node.json" }]
