@@ -1,0 +1,12 @@
+{
+	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
+	"compilerOptions": {
+		"alwaysStrict": true,
+		"forceConsistentCasingInFileNames": true,
+		"types": ["@cloudflare/workers-types/experimental"],
+		"module": "esnext",
+		"lib": ["es2020"]
+	},
+	"include": ["src"],
+	"exclude": ["node_modules"]
+}

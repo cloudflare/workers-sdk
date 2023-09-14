@@ -17,8 +17,8 @@ The sample plugin allows ChatGPT users to search for repositories using GitHub's
 ## Usage
 
 1. You can configure the `.well-known/ai-plugin.json` route in `index.ts`.
-2. Update the OpenAPI schema in `openapi.ts`.
-3. You can set up any new routes and the associated OpenAPI schema by defining new routes. See `search.ts` for an example.
+2. You can set up any new routes and the associated OpenAPI schema by defining new routes. See `search.ts` for an example.
+3. For more information read the [itty-router-openapi official documentation](https://cloudflare.github.io/itty-router-openapi/).
 
 ## Deploying to OpenAI's API
 

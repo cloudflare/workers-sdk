@@ -10,24 +10,19 @@
 	"license": "MIT OR Apache-2.0",
 	"author": "wrangler@cloudflare.com",
 	"scripts": {
-		"build": "turbo build",
-		"check": "turbo check:lint check:type check:format type:tests",
+		"build": "dotenv -- turbo build",
+		"check": "dotenv -- turbo check:lint check:type check:format type:tests",
 		"check:format": "prettier . --check --ignore-unknown",
-		"check:lint": "turbo check:lint",
-		"check:type": "turbo check:type type:tests",
-		"dev": "turbo dev",
-		"fix": "pnpm run prettify && turbo check:lint -- --fix",
+		"check:lint": "dotenv -- turbo check:lint",
+		"check:type": "dotenv -- turbo check:type type:tests",
+		"dev": "dotenv -- turbo dev",
+		"fix": "pnpm run prettify && dotenv -- turbo check:lint -- --fix",
 		"prettify": "prettier . --write --ignore-unknown",
-		"remote:build": "dotenv -- turbo build",
-		"remote:check": "dotenv -- pnpm run check",
-		"remote:dev": "dotenv -- turbo dev",
-		"remote:test": "dotenv -- turbo test",
-		"remote:test:ci": "dotenv -- turbo test:ci --filter=!local-mode-tests --filter=!playground-preview-worker --filter=!no-bundle-import --concurrency=1",
-		"remote:type:tests": "dotenv -- turbo type:tests",
-		"test": "turbo test --concurrency=1",
-		"test:ci": "turbo test:ci --filter=!local-mode-tests --filter=!playground-preview-worker --filter=!no-bundle-import --concurrency=1",
+		"test": "dotenv -- turbo test --concurrency=1",
+		"test:ci": "dotenv -- turbo test:ci --filter=!local-mode-tests --filter=!playground-preview-worker --filter=!no-bundle-import --concurrency=1",
 		"test:watch": "turbo test:watch",
-		"type:tests": "turbo type:tests"
+		"type:tests": "dotenv -- turbo type:tests",
+		"gen:package": "turbo gen package"
 	},
 	"dependencies": {
 		"@changesets/changelog-github": "^0.4.5",
@@ -51,6 +46,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20230821.0",
+		"@turbo/gen": "^1.10.13",
 		"dotenv-cli": "^7.3.0",
 		"esbuild": "0.17.19",
 		"turbo": "^1.10.13"
