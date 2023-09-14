@@ -14,6 +14,7 @@ export type Origin = {
 };
 
 export type PublicOrigin = Origin & {
+	scheme?: string;
 	database?: string;
 	user?: string;
 };

@@ -18,20 +18,28 @@ export function options(yargs: CommonYargsArgv) {
 		.options({
 			"origin-host": {
 				type: "string",
-				describe: "",
+				describe: "The host of the origin database",
 			},
 			"origin-port": {
 				type: "number",
-				describe: "",
+				describe: "The port number of the origin database",
+			},
+			"origin-scheme": {
+				type: "string",
+				describe:
+					"The scheme used to connect to the origin database - e.g. postgresql or postgres",
 			},
 			database: {
 				type: "string",
+				describe: "The name of the database within the origin database",
 			},
 			"origin-user": {
 				type: "string",
+				describe: "The username used to connect to the origin database",
 			},
 			"origin-password": {
 				type: "string",
+				describe: "The password used to connect to the origin database",
 			},
 		})
 		.epilogue(hyperdriveBetaWarning);
@@ -52,6 +60,9 @@ export async function handler(
 	}
 	if (args.originPort) {
 		database.origin.port = args.originPort;
+	}
+	if (args.originScheme) {
+		database.origin.scheme = args.originScheme;
 	}
 	if (args.database) {
 		database.origin.database = args.database;

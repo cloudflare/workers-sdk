@@ -34,7 +34,11 @@ export async function handler(
 
 	if (url.protocol === "") {
 		logger.log("You must specify the database protocol - e.g. 'postgresql:'.");
-	} else if (url.protocol !== "postgresql:" && url.protocol !== "") {
+	} else if (
+		url.protocol !== "postgresql:" &&
+		url.protocol !== "postgres:" &&
+		url.protocol !== ""
+	) {
 		logger.log(
 			"Only PostgreSQL or PostgreSQL compatible databases are currently supported."
 		);
@@ -65,6 +69,7 @@ export async function handler(
 			origin: {
 				host: url.hostname,
 				port: parseInt(url.port),
+				scheme: url.protocol,
 				database: url.pathname.replace("/", ""),
 				user: url.username,
 				password: url.password,
