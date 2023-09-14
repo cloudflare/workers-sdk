@@ -24,14 +24,13 @@ jobs:
           node-version: ${{ env.node-version }}
           cache: "pnpm"
 
-      - name: ESlint and Typescript caching
-        uses: actions/cache@v3
-        id: eslint-cache
-        with:
-          path: |
-            .eslintcache
-            tsconfig.tsbuildinfo
-          key: ${{ runner.os }}-eslint-tsbuildinfo-${{ hashFiles('**/*.ts','**/*.js', 'package.json', 'tsconfig.json') }}
+      - name: "Create .env file"
+        run: |
+          touch .env
+          echo TURBO_API=${{ secrets.TURBO_API }} > .env
+          echo TURBO_TEAM=${{ secrets.TURBO_TEAM }} > .env
+          echo TURBO_TOKEN=${{ secrets.TURBO_TOKEN }} > .env
+          echo TURBO_REMOTE_CACHE_SIGNATURE_KEY=${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }} > .env
 
       - name: Install workerd Dependencies
         if: ${{ runner.os == 'Linux' }}
@@ -70,6 +69,14 @@ jobs:
         with:
           node-version: ${{ env.node-version }}
           cache: "pnpm"
+
+      - name: "Create .env file"
+        run: |
+          touch .env
+          echo TURBO_API=${{ secrets.TURBO_API }} > .env
+          echo TURBO_TEAM=${{ secrets.TURBO_TEAM }} > .env
+          echo TURBO_TOKEN=${{ secrets.TURBO_TOKEN }} > .env
+          echo TURBO_REMOTE_CACHE_SIGNATURE_KEY=${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }} > .env
 
       - name: Install workerd Dependencies
         if: ${{ runner.os == 'Linux' }}
