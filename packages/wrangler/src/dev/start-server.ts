@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import * as path from "node:path";
 import * as util from "node:util";
 import chalk from "chalk";
@@ -75,7 +76,7 @@ export async function startDevServer(
 	//implement a react-free version of useEsbuild
 	const bundle = await runEsbuild({
 		entry: props.entry,
-		destination: directory.name,
+		destination: directory,
 		jsxFactory: props.jsxFactory,
 		processEntrypoint: props.processEntrypoint,
 		additionalModules: props.additionalModules,
@@ -169,12 +170,13 @@ export async function startDevServer(
 	}
 }
 
-function setupTempDir(): DirectorySyncResult | undefined {
-	let dir: DirectorySyncResult | undefined;
+function setupTempDir(): string | undefined {
 	try {
-		dir = tmp.dirSync({ unsafeCleanup: true });
-
-		return dir;
+		const dir: DirectorySyncResult = tmp.dirSync({ unsafeCleanup: true });
+		// Make sure we resolve all files relative to the actual temporary
+		// directory, without symlinks, otherwise `esbuild` will generate invalid
+		// source maps.
+		return fs.realpathSync(dir.name);
 	} catch (err) {
 		logger.error("Failed to create temporary directory to store built files.");
 	}
