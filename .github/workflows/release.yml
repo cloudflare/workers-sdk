@@ -57,3 +57,27 @@ jobs:
           # This is the "production" key for sparrow analytics.
           # Include this here because this step will rebuild Wrangler and needs to have this available
           SPARROW_SOURCE_KEY: "50598e014ed44c739ec8074fdc16057c"
+
+      - name: Get create-cloudflare tag
+        id: create-cloudflare-latest-tag
+        uses: actions/github-script@v6
+        with:
+        script: |
+          const publishedPackages = ${{ steps.changesets.outputs.publishedPackages }};
+          console.log(publishedPackages);
+
+          for (let package of publishedPackages) {
+            if (package.name === "create-cloudflare") {
+              const versionStr = package.version;
+              const version = versionStr.split(".");
+              const tag = `v${version[0]}-latest`;
+              const packageVersion = `create-cloudflare@${versionStr}`;
+              return {tag: tag, version: packageVersion};
+            }
+          }
+
+          return null;
+
+      - name: Publish create-cloudflare latest tag
+        if: ${{ steps.create-cloudflare-latest-tag.outputs != null }}
+        run: pnpm dist-tag add ${{ steps.create-cloudflare-latest-tag.outputs.packageVersion }} ${{ steps.create-cloudflare-latest-tag.outputs.tag }}
