@@ -786,7 +786,7 @@ importers:
         version: 7.0.11(@cloudflare/component-icon@11.5.1)(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)
       '@cloudflare/component-code-block':
         specifier: ^4.1.2
-        version: 4.1.2(@cloudflare/component-icon@11.5.1)(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(@types/react-dom@18.2.7)(@types/react@18.2.21)(react-dom@18.2.0)(react@18.2.0)(regenerator-runtime@0.13.11)
+        version: 4.1.2(@cloudflare/component-icon@11.5.1)(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(@types/react-dom@18.2.7)(@types/react@18.2.21)(react-dom@18.2.0)(react@18.2.0)(regenerator-runtime@0.14.0)
       '@cloudflare/component-icon':
         specifier: ^11.5.1
         version: 11.5.1(@cloudflare/style-container@7.12.1)(react@18.2.0)
@@ -795,10 +795,10 @@ importers:
         version: 8.1.1(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)
       '@cloudflare/component-listbox':
         specifier: ^1.10.4
-        version: 1.10.4(patch_hash=r2d7tqjujhdts7e7zxsa3stjki)(@cloudflare/component-icon@11.5.1)(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(@cloudflare/style-provider@3.1.0)(react-dom@18.2.0)(react@18.2.0)(regenerator-runtime@0.13.11)
+        version: 1.10.4(patch_hash=r2d7tqjujhdts7e7zxsa3stjki)(@cloudflare/component-icon@11.5.1)(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(@cloudflare/style-provider@3.1.0)(react-dom@18.2.0)(react@18.2.0)(regenerator-runtime@0.14.0)
       '@cloudflare/component-loading':
         specifier: ^6.1.1
-        version: 6.1.1(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)(regenerator-runtime@0.13.11)
+        version: 6.1.1(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)(regenerator-runtime@0.14.0)
       '@cloudflare/component-textarea':
         specifier: ^4.1.1
         version: 4.1.1(@cloudflare/style-container@7.12.1)(react@18.2.0)
@@ -807,19 +807,19 @@ importers:
         version: 5.1.0(@cloudflare/style-container@7.12.1)(react@18.2.0)
       '@cloudflare/component-toggle':
         specifier: ^9.0.13
-        version: 9.0.13(@cloudflare/component-icon@11.5.1)(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)(regenerator-runtime@0.13.11)
+        version: 9.0.13(@cloudflare/component-icon@11.5.1)(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)(regenerator-runtime@0.14.0)
       '@cloudflare/component-tooltip':
         specifier: ^4.3.1
         version: 4.3.1(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react-dom@18.2.0)(react@18.2.0)
       '@cloudflare/component-visually-hidden':
         specifier: ^1.0.85
-        version: 1.0.85(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)(regenerator-runtime@0.13.11)
+        version: 1.0.85(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)(regenerator-runtime@0.14.0)
       '@cloudflare/elements':
         specifier: ^3.0.1
         version: 3.0.1(@cloudflare/style-container@7.12.1)(react@18.2.0)
       '@cloudflare/intl-react':
         specifier: ^1.12.2
-        version: 1.12.2(react@18.2.0)(regenerator-runtime@0.13.11)
+        version: 1.12.2(react@18.2.0)(regenerator-runtime@0.14.0)
       '@cloudflare/style-const':
         specifier: ^5.7.2
         version: 5.7.2(react@18.2.0)
@@ -2826,7 +2826,7 @@ packages:
       react: 18.2.0
     dev: false
 
-  /@cloudflare/component-code-block@4.1.2(@cloudflare/component-icon@11.5.1)(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(@types/react-dom@18.2.7)(@types/react@18.2.21)(react-dom@18.2.0)(react@18.2.0)(regenerator-runtime@0.13.11):
+  /@cloudflare/component-code-block@4.1.2(@cloudflare/component-icon@11.5.1)(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(@types/react-dom@18.2.7)(@types/react@18.2.21)(react-dom@18.2.0)(react@18.2.0)(regenerator-runtime@0.14.0):
     resolution: {integrity: sha512-Dj8GtIOHI3Yu1x9g969uajVFFQvAaaNmF7x7dYtb9GBm9i56yG5EeBFATcFtrSqXUXRb9N+RotHc4+XSyQ2okg==}
     peerDependencies:
       '@cloudflare/component-icon': ^11.0.0
@@ -2836,7 +2836,7 @@ packages:
       '@cloudflare/component-button': 7.0.11(@cloudflare/component-icon@11.5.1)(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)
       '@cloudflare/component-icon': 11.5.1(@cloudflare/style-container@7.12.1)(react@18.2.0)
       '@cloudflare/elements': 3.0.3(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)
-      '@cloudflare/intl-react': 1.12.2(react@18.2.0)(regenerator-runtime@0.13.11)
+      '@cloudflare/intl-react': 1.12.2(react@18.2.0)(regenerator-runtime@0.14.0)
       '@cloudflare/style-container': 7.12.1(@cloudflare/style-const@5.7.2)(react@18.2.0)
       '@radix-ui/react-scroll-area': 1.0.4(@types/react-dom@18.2.7)(@types/react@18.2.21)(react-dom@18.2.0)(react@18.2.0)
       clsx: 1.2.1
@@ -2874,7 +2874,7 @@ packages:
       - '@cloudflare/style-const'
     dev: false
 
-  /@cloudflare/component-listbox@1.10.4(patch_hash=r2d7tqjujhdts7e7zxsa3stjki)(@cloudflare/component-icon@11.5.1)(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(@cloudflare/style-provider@3.1.0)(react-dom@18.2.0)(react@18.2.0)(regenerator-runtime@0.13.11):
+  /@cloudflare/component-listbox@1.10.4(patch_hash=r2d7tqjujhdts7e7zxsa3stjki)(@cloudflare/component-icon@11.5.1)(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(@cloudflare/style-provider@3.1.0)(react-dom@18.2.0)(react@18.2.0)(regenerator-runtime@0.14.0):
     resolution: {integrity: sha512-Ywksau79//uv8FJK3EQD5VuaZiEf5bCI5DfPizXfrndHB/Ae6UknHJkUXZVuv7GhbpLL0Qd+HVsA0ytpYl/JjQ==}
     peerDependencies:
       '@cloudflare/component-icon': ^11.0.0
@@ -2886,7 +2886,7 @@ packages:
     dependencies:
       '@cloudflare/component-icon': 11.5.1(@cloudflare/style-container@7.12.1)(react@18.2.0)
       '@cloudflare/elements': 3.0.3(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)
-      '@cloudflare/intl-react': 1.12.2(react@18.2.0)(regenerator-runtime@0.13.11)
+      '@cloudflare/intl-react': 1.12.2(react@18.2.0)(regenerator-runtime@0.14.0)
       '@cloudflare/style-const': 5.7.2(react@18.2.0)
       '@cloudflare/style-container': 7.12.1(@cloudflare/style-const@5.7.2)(react@18.2.0)
       '@cloudflare/style-provider': 3.1.0(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)
@@ -2901,15 +2901,15 @@ packages:
     dev: false
     patched: true
 
-  /@cloudflare/component-loading@6.1.1(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)(regenerator-runtime@0.13.11):
+  /@cloudflare/component-loading@6.1.1(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)(regenerator-runtime@0.14.0):
     resolution: {integrity: sha512-CfYU9K80O2j99Y22d8fDzIhMGS94/0CnLNYjNBQmqDPjmwXRvju31ATJ2JEeYPaAHCHXRILdP1FED9AsnzdS0g==}
     peerDependencies:
       '@cloudflare/style-const': ^5.3.9
       '@cloudflare/style-container': ^7.10.0
       react: ^16.0.0-0 || ^17.0.0-0 || ^18.0.0-0 || 18
     dependencies:
-      '@cloudflare/component-visually-hidden': 1.0.86(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)(regenerator-runtime@0.13.11)
-      '@cloudflare/intl-react': 1.12.2(react@18.2.0)(regenerator-runtime@0.13.11)
+      '@cloudflare/component-visually-hidden': 1.0.86(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)(regenerator-runtime@0.14.0)
+      '@cloudflare/intl-react': 1.12.2(react@18.2.0)(regenerator-runtime@0.14.0)
       '@cloudflare/style-const': 5.7.2(react@18.2.0)
       '@cloudflare/style-container': 7.12.1(@cloudflare/style-const@5.7.2)(react@18.2.0)
       prop-types: 15.8.1
@@ -2943,7 +2943,7 @@ packages:
       react: 18.2.0
     dev: false
 
-  /@cloudflare/component-toggle@9.0.13(@cloudflare/component-icon@11.5.1)(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)(regenerator-runtime@0.13.11):
+  /@cloudflare/component-toggle@9.0.13(@cloudflare/component-icon@11.5.1)(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)(regenerator-runtime@0.14.0):
     resolution: {integrity: sha512-Lm9f9iQAj9rA60GfWNpcu2+oZTdhISPSND6+8n/L2eHGXvCfCjlU2Ezkol0aK3nWbKzc8HcM1UtxlAvvyMpo0w==}
     peerDependencies:
       '@cloudflare/component-icon': ^11.0.0
@@ -2953,7 +2953,7 @@ packages:
     dependencies:
       '@cloudflare/component-icon': 11.5.1(@cloudflare/style-container@7.12.1)(react@18.2.0)
       '@cloudflare/elements': 3.0.3(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)
-      '@cloudflare/intl-react': 1.12.2(react@18.2.0)(regenerator-runtime@0.13.11)
+      '@cloudflare/intl-react': 1.12.2(react@18.2.0)(regenerator-runtime@0.14.0)
       '@cloudflare/style-const': 5.7.2(react@18.2.0)
       '@cloudflare/style-container': 7.12.1(@cloudflare/style-const@5.7.2)(react@18.2.0)
       '@cloudflare/types': 6.23.6(react@18.2.0)
@@ -2979,13 +2979,13 @@ packages:
       - react-dom
     dev: false
 
-  /@cloudflare/component-visually-hidden@1.0.85(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)(regenerator-runtime@0.13.11):
+  /@cloudflare/component-visually-hidden@1.0.85(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)(regenerator-runtime@0.14.0):
     resolution: {integrity: sha512-jRdpDk7vs6Om6TNPxA+xqnZHCti0uvb8K15LjKu6OPLl5ssjEHuoPjlKAKZ8lUmWntQ15/zMEip0GyNuVImsQQ==}
     peerDependencies:
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0 || 18
     dependencies:
       '@cloudflare/elements': 3.0.3(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)
-      '@cloudflare/intl-react': 1.12.2(react@18.2.0)(regenerator-runtime@0.13.11)
+      '@cloudflare/intl-react': 1.12.2(react@18.2.0)(regenerator-runtime@0.14.0)
       prop-types: 15.8.1
       react: 18.2.0
     transitivePeerDependencies:
@@ -2994,7 +2994,7 @@ packages:
       - regenerator-runtime
     dev: false
 
-  /@cloudflare/component-visually-hidden@1.0.86(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)(regenerator-runtime@0.13.11):
+  /@cloudflare/component-visually-hidden@1.0.86(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)(regenerator-runtime@0.14.0):
     resolution: {integrity: sha512-F7g5P8sowjgbfdfCH+6rL6SqMPtGsO+YuBEetwRJ4M7zzb5/96Sv4Uea5f2V9S+Y0QAYf7iUaQHDy3JtexBwHw==}
     peerDependencies:
       '@cloudflare/style-const': ^5.7.2
@@ -3002,7 +3002,7 @@ packages:
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0 || 18
     dependencies:
       '@cloudflare/elements': 3.0.3(@cloudflare/style-const@5.7.2)(@cloudflare/style-container@7.12.1)(react@18.2.0)
-      '@cloudflare/intl-react': 1.12.2(react@18.2.0)(regenerator-runtime@0.13.11)
+      '@cloudflare/intl-react': 1.12.2(react@18.2.0)(regenerator-runtime@0.14.0)
       '@cloudflare/style-const': 5.7.2(react@18.2.0)
       '@cloudflare/style-container': 7.12.1(@cloudflare/style-const@5.7.2)(react@18.2.0)
       prop-types: 15.8.1
@@ -3037,7 +3037,7 @@ packages:
       styled-system: 5.1.5
     dev: false
 
-  /@cloudflare/intl-core@1.15.0(react@18.2.0)(regenerator-runtime@0.13.11):
+  /@cloudflare/intl-core@1.15.0(react@18.2.0)(regenerator-runtime@0.14.0):
     resolution: {integrity: sha512-pxD0ctm9x6StbDxAdFs7zi6imXuQxQe93KscTRqIJj/eP1eLhnZs6djqPsnT6rTXQnmlRBpXVE6BaP+594cSMQ==}
     peerDependencies:
       regenerator-runtime: 0.x
@@ -3048,17 +3048,17 @@ packages:
       '@types/node-polyglot': 2.4.2
       lodash: 4.17.21
       node-polyglot: 2.5.0
-      regenerator-runtime: 0.13.11
+      regenerator-runtime: 0.14.0
     transitivePeerDependencies:
       - react
     dev: false
 
-  /@cloudflare/intl-react@1.12.2(react@18.2.0)(regenerator-runtime@0.13.11):
+  /@cloudflare/intl-react@1.12.2(react@18.2.0)(regenerator-runtime@0.14.0):
     resolution: {integrity: sha512-XN/PF2OIgzRN8xlJZzPHAhkZ8XQfwYEajLP3XqenLiMMb1X/zjYsnR+Ag1Rp525LwZjVpED0MqMirJM/ajBnzg==}
     peerDependencies:
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0 || 18
     dependencies:
-      '@cloudflare/intl-core': 1.15.0(react@18.2.0)(regenerator-runtime@0.13.11)
+      '@cloudflare/intl-core': 1.15.0(react@18.2.0)(regenerator-runtime@0.14.0)
       '@cloudflare/types': 6.23.6(react@18.2.0)
       '@cloudflare/util-markdown': 1.2.15
       dompurify: 2.4.7
@@ -7549,16 +7549,16 @@ packages:
       yargs: 17.7.1
     dev: true
 
+  /connect-history-api-fallback@1.6.0:
+    resolution: {integrity: sha512-e54B99q/OUoH64zYYRf3HBP5z24G38h5D3qXu23JGRoigpX5Ss4r9ZnDk3g0Z8uQC2x2lPaJ+UlWBc1ZWBWdLg==}
+    engines: {node: '>=0.8'}
+    dev: true
+
   /constant-case@2.0.0:
     resolution: {integrity: sha512-eS0N9WwmjTqrOmR3o83F5vW8Z+9R1HnVz3xmzT2PMFug9ly+Au/fxRWlEBSb6LcZwspSsEn9Xs1uw9YgzAg1EQ==}
     dependencies:
       snake-case: 2.1.0
       upper-case: 1.1.3
-    dev: true
-
-  /connect-history-api-fallback@1.6.0:
-    resolution: {integrity: sha512-e54B99q/OUoH64zYYRf3HBP5z24G38h5D3qXu23JGRoigpX5Ss4r9ZnDk3g0Z8uQC2x2lPaJ+UlWBc1ZWBWdLg==}
-    engines: {node: '>=0.8'}
     dev: true
 
   /content-disposition@0.5.4:
@@ -8071,15 +8071,15 @@ packages:
       urijs: 1.19.11
     dev: true
 
+  /dompurify@2.4.7:
+    resolution: {integrity: sha512-kxxKlPEDa6Nc5WJi+qRgPbOAbgTpSULL+vI3NUXsZMlkJxTqYI9wg5ZTay2sFrdZRWHPWNi+EdAhcJf81WtoMQ==}
+    dev: false
+
   /dot-case@2.1.1:
     resolution: {integrity: sha512-HnM6ZlFqcajLsyudHq7LeeLDr2rFAVYtDv/hV5qchQEidSck8j9OPUsXY9KwJv/lHMtYlX4DjRQqwFYa+0r8Ug==}
     dependencies:
       no-case: 2.3.2
     dev: true
-
-  /dompurify@2.4.7:
-    resolution: {integrity: sha512-kxxKlPEDa6Nc5WJi+qRgPbOAbgTpSULL+vI3NUXsZMlkJxTqYI9wg5ZTay2sFrdZRWHPWNi+EdAhcJf81WtoMQ==}
-    dev: false
 
   /dotenv-cli@7.3.0:
     resolution: {integrity: sha512-314CA4TyK34YEJ6ntBf80eUY+t1XaFLyem1k9P0sX1gn30qThZ5qZr/ZwE318gEnzyYP9yj9HJk6SqwE0upkfw==}
@@ -10418,6 +10418,12 @@ packages:
     resolution: {integrity: sha512-7NXolsK4CAS5+xvdj5OMMbI962hU/wvwoxk+LWR9Ek9bVtyuuYScDN6eS0rUm6TxApFpw7CX1o4uJzcd4AyD3Q==}
     dev: true
 
+  /inline-style-prefixer@5.1.2:
+    resolution: {integrity: sha512-PYUF+94gDfhy+LsQxM0g3d6Hge4l1pAqOSOiZuHWzMvQEGsbRQ/ck2WioLqrY2ZkHyPgVUXxn+hrkF7D6QUGbA==}
+    dependencies:
+      css-in-js-utils: 2.0.1
+    dev: false
+
   /inquirer@7.3.3:
     resolution: {integrity: sha512-JG3eIAj5V9CwcGvuOmoo6LB9kbAYT8HXffUl6memuszlwDC/qvFAJw49XJ5NROSFNPxp3iQg1GqkFhaY/CR0IA==}
     engines: {node: '>=8.0.0'}
@@ -10436,12 +10442,6 @@ packages:
       strip-ansi: 6.0.1
       through: 2.3.8
     dev: true
-
-  /inline-style-prefixer@5.1.2:
-    resolution: {integrity: sha512-PYUF+94gDfhy+LsQxM0g3d6Hge4l1pAqOSOiZuHWzMvQEGsbRQ/ck2WioLqrY2ZkHyPgVUXxn+hrkF7D6QUGbA==}
-    dependencies:
-      css-in-js-utils: 2.0.1
-    dev: false
 
   /inquirer@8.2.4:
     resolution: {integrity: sha512-nn4F01dxU8VeKfq192IjLsxu0/OmMZ4Lg3xKAns148rCaXP6ntAoEkVYZThWjwON8AlzdZZi6oqnhNbxUG9hVg==}
@@ -13050,6 +13050,17 @@ packages:
       type-check: 0.4.0
       word-wrap: 1.2.3
 
+  /optionator@0.9.3:
+    resolution: {integrity: sha512-JjCoypp+jKn1ttEFExxhetCKeJt9zhAgAve5FXHixTvFDW/5aEktX9bufBKLRRMdU7bNtpLfcGu94B3cdEJgjg==}
+    engines: {node: '>= 0.8.0'}
+    dependencies:
+      '@aashutoshrathi/word-wrap': 1.2.6
+      deep-is: 0.1.4
+      fast-levenshtein: 2.0.6
+      levn: 0.4.1
+      prelude-ls: 1.2.1
+      type-check: 0.4.0
+
   /ora@4.1.1:
     resolution: {integrity: sha512-sjYP8QyVWBpBZWD6Vr1M/KwknSw6kJOz41tvGMlwWeClHBtYKTbHMki1PsLZnxKpXMPbTKv9b3pjQu3REib96A==}
     engines: {node: '>=8'}
@@ -13063,17 +13074,6 @@ packages:
       strip-ansi: 6.0.1
       wcwidth: 1.0.1
     dev: true
-
-  /optionator@0.9.3:
-    resolution: {integrity: sha512-JjCoypp+jKn1ttEFExxhetCKeJt9zhAgAve5FXHixTvFDW/5aEktX9bufBKLRRMdU7bNtpLfcGu94B3cdEJgjg==}
-    engines: {node: '>= 0.8.0'}
-    dependencies:
-      '@aashutoshrathi/word-wrap': 1.2.6
-      deep-is: 0.1.4
-      fast-levenshtein: 2.0.6
-      levn: 0.4.1
-      prelude-ls: 1.2.1
-      type-check: 0.4.0
 
   /ora@5.4.1:
     resolution: {integrity: sha512-5b6Y85tPxZZ7QytO+BQzysW31HJku27cRIlkbAXaNx+BdcVi+LlRFmVXzeF6a7JCwJpyw5c4b+YSVImQIrBpuQ==}
@@ -14259,7 +14259,6 @@ packages:
 
   /regenerator-runtime@0.14.0:
     resolution: {integrity: sha512-srw17NI0TUWHuGa5CFGGmhfNIeja30WMBfbslPNhf6JrqQlLN5gcrvig1oqPxiVaXb0oW0XRKtH6Nngs5lKCIA==}
-    dev: true
 
   /regenerator-transform@0.15.1:
     resolution: {integrity: sha512-knzmNAcuyxV+gQCufkYcvOqX/qIIfHLv0u5x79kRxuGojfYVky1f15TzZEu2Avte8QGepvUNTnLskf8E6X6Vyg==}
@@ -15382,6 +15381,13 @@ packages:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
     engines: {node: '>= 0.4'}
 
+  /swap-case@1.1.2:
+    resolution: {integrity: sha512-BAmWG6/bx8syfc6qXPprof3Mn5vQgf5dwdUNJhsNqU9WdPt5P+ES/wQ5bxfijy8zwZgZZHslC3iAsxsuQMCzJQ==}
+    dependencies:
+      lower-case: 1.1.4
+      upper-case: 1.1.3
+    dev: true
+
   /swr@2.2.0(react@18.2.0):
     resolution: {integrity: sha512-AjqHOv2lAhkuUdIiBu9xbuettzAzWXmCEcLONNKJRba87WAefz8Ca9d6ds/SzrPc235n1IxWYdhJ2zF3MNUaoQ==}
     peerDependencies:
@@ -15390,13 +15396,6 @@ packages:
       react: 18.2.0
       use-sync-external-store: 1.2.0(react@18.2.0)
     dev: false
-
-  /swap-case@1.1.2:
-    resolution: {integrity: sha512-BAmWG6/bx8syfc6qXPprof3Mn5vQgf5dwdUNJhsNqU9WdPt5P+ES/wQ5bxfijy8zwZgZZHslC3iAsxsuQMCzJQ==}
-    dependencies:
-      lower-case: 1.1.4
-      upper-case: 1.1.3
-    dev: true
 
   /synckit@0.8.5:
     resolution: {integrity: sha512-L1dapNV6vu2s/4Sputv8xGsCdAVlb5nRDMFU/E27D44l5U6cw1g0dGd45uLc+OXjNMmF4ntiMdCimzcjFKQI8Q==}
