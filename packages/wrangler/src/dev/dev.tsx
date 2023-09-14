@@ -554,9 +554,7 @@ function useHotkeys(props: {
 				// toggle inspector
 				case "d": {
 					if (inspect) {
-						// For now, only enable breakpoint debugging in local mode
-						const enableDebugging = toggles.local;
-						await openInspector(inspectorPort, props.worker, enableDebugging);
+						await openInspector(inspectorPort, props.worker);
 					}
 					break;
 				}

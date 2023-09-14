@@ -859,14 +859,13 @@ function maybeHandleNetworkLoadResource(
  */
 export const openInspector = async (
 	inspectorPort: number,
-	worker: string | undefined,
-	enableDebugging = false
+	worker: string | undefined
 ) => {
 	const query = new URLSearchParams();
 	query.set("theme", "systemPreferred");
 	query.set("ws", `localhost:${inspectorPort}/ws`);
 	if (worker) query.set("domain", worker);
-	if (enableDebugging) query.set("debugger", "true");
+	query.set("debugger", "true");
 	const url = `https://devtools.devprod.cloudflare.dev/js_app?${query.toString()}`;
 	const errorMessage =
 		"Failed to open inspector.\nInspector depends on having a Chromium-based browser installed, maybe you need to install one?";
