@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { Loading } from "@cloudflare/component-loading";
 
 import {
@@ -12,6 +12,7 @@ import Frame from "./Frame";
 import { Div } from "@cloudflare/elements";
 import { TypedModule } from "./useDraftWorker";
 import { isDarkMode } from "@cloudflare/style-const";
+import { DragContext } from "./SplitPane";
 
 function stripSlashPrefix(path: string) {
 	return path[0] === "/" ? path.slice(1) : path;
@@ -56,6 +57,8 @@ type Props = {
  */
 export function VSCodeEditor({ content, onChange }: Props) {
 	const editor = useRef<HTMLIFrameElement>(null);
+	const isPaneDragging = useContext(DragContext);
+
 	const [quickEdit, setQuickEdit] = useState<WrappedChannel<
 		ToQuickEditMessage,
 		FromQuickEditMessage
@@ -158,6 +161,7 @@ export function VSCodeEditor({ content, onChange }: Props) {
 		<Div position="relative">
 			<Frame
 				innerRef={editor}
+				style={isPaneDragging ? { pointerEvents: "none" } : {}}
 				src={constructVSCodeURL("workers-playground", quickEditHost)}
 				sandbox="allow-same-origin allow-scripts"
 			></Frame>
@@ -174,16 +178,6 @@ export function VSCodeEditor({ content, onChange }: Props) {
 					alignItems={"center"}
 				>
 					<Loading size="4x" />
-					{/* <SkeletonBlock width={48} height="100%"></SkeletonBlock>
-					<Div
-						width="calc(100% - 56px)"
-						display="flex"
-						flexDirection="column"
-						gap={2}
-					>
-						<SkeletonBlock height={32}></SkeletonBlock>
-						<CodeLoading></CodeLoading>
-					</Div> */}
 				</Div>
 			)}
 		</Div>
