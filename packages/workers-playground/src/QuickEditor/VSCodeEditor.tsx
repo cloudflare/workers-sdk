@@ -169,21 +169,11 @@ export function VSCodeEditor({ content, onChange }: Props) {
 					height="100%"
 					display="flex"
 					gap={2}
-					backgroundColor="white"
+					backgroundColor={isDarkMode() ? "#313131" : "white"}
 					justifyContent={"center"}
 					alignItems={"center"}
 				>
 					<Loading size="4x" />
-					{/* <SkeletonBlock width={48} height="100%"></SkeletonBlock>
-					<Div
-						width="calc(100% - 56px)"
-						display="flex"
-						flexDirection="column"
-						gap={2}
-					>
-						<SkeletonBlock height={32}></SkeletonBlock>
-						<CodeLoading></CodeLoading>
-					</Div> */}
 				</Div>
 			)}
 		</Div>
