@@ -36,7 +36,7 @@ export class TaskList extends OpenAPIRoute {
 		request: Request,
 		env: any,
 		context: any,
-		data: Record<string, any>
+		data: Record<string, any>,
 	) {
 		// Retrieve the validated parameters
 		const { page, isCompleted } = data.query;

@@ -26,7 +26,7 @@ export class TaskCreate extends OpenAPIRoute {
 		request: Request,
 		env: any,
 		context: any,
-		data: Record<string, any>
+		data: Record<string, any>,
 	) {
 		// Retrieve the validated request body
 		const taskToCreate = data.body;

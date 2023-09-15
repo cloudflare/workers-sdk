@@ -45,7 +45,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 
 	const runCli = async (
 		framework: string,
-		{ argv = [], promptHandlers = [], overrides }: RunnerConfig
+		{ argv = [], promptHandlers = [], overrides }: RunnerConfig,
 	) => {
 		const projectPath = getPath(framework);
 
@@ -100,7 +100,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 
 	const runCliWithDeploy = async (
 		framework: string,
-		testCommitMessage: boolean
+		testCommitMessage: boolean,
 	) => {
 		const { argv, overrides, promptHandlers, expectResponseToContain } =
 			frameworkTests[framework];
@@ -129,7 +129,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		const body = await res.text();
 		expect(
 			body,
-			`(${framework}) Deployed page (${projectUrl}) didn't contain expected string: "${expectResponseToContain}"`
+			`(${framework}) Deployed page (${projectUrl}) didn't contain expected string: "${expectResponseToContain}"`,
 		).toContain(expectResponseToContain);
 
 		if (testCommitMessage) {
@@ -238,10 +238,10 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 			async () => {
 				await runCliWithDeploy(
 					framework,
-					frameworkTests[framework].testCommitMessage
+					frameworkTests[framework].testCommitMessage,
 				);
 			},
-			{ retry: 3, timeout: TEST_TIMEOUT }
+			{ retry: 3, timeout: TEST_TIMEOUT },
 		);
 	});
 
@@ -256,10 +256,10 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 			async () => {
 				await runCliWithDeploy(
 					framework,
-					frameworkTests[framework].testCommitMessage
+					frameworkTests[framework].testCommitMessage,
 				);
 			},
-			{ retry: 3, timeout: TEST_TIMEOUT }
+			{ retry: 3, timeout: TEST_TIMEOUT },
 		);
 	});
 
@@ -270,7 +270,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 
 const testDeploymentCommitMessage = async (
 	projectName: string,
-	framework: string
+	framework: string,
 ) => {
 	// Note: we cannot simply run git and check the result since the commit can be part of the
 	//       deployment even without git, so instead we fetch the deployment info from the pages api
@@ -280,7 +280,7 @@ const testDeploymentCommitMessage = async (
 			headers: {
 				Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
 			},
-		}
+		},
 	);
 
 	const result = (
@@ -299,13 +299,13 @@ const testDeploymentCommitMessage = async (
 	).result;
 
 	const projectLatestCommitMessage = result.find(
-		(project) => project.name === projectName
+		(project) => project.name === projectName,
 	)?.latest_deployment?.deployment_trigger?.metadata?.commit_message;
 	expect(projectLatestCommitMessage).toMatch(
-		/^Initialize web application via create-cloudflare CLI/
+		/^Initialize web application via create-cloudflare CLI/,
 	);
 	expect(projectLatestCommitMessage).toContain(
-		`C3 = create-cloudflare@${version}`
+		`C3 = create-cloudflare@${version}`,
 	);
 	expect(projectLatestCommitMessage).toContain(`project name = ${projectName}`);
 	expect(projectLatestCommitMessage).toContain(`framework = ${framework}`);

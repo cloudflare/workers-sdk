@@ -64,7 +64,7 @@ export const generateRulesMatcher = <T>(
 		})
 		.filter((value) => value !== undefined) as [
 		{ crossHost: boolean; regExp: RegExp },
-		T
+		T,
 	][];
 
 	return ({ request }: { request: Request }) => {

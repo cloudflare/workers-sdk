@@ -68,7 +68,7 @@ async function getTemplate(ctx: Context) {
 		"..",
 		"templates",
 		template,
-		ctx.args.ts ? "ts" : "js"
+		ctx.args.ts ? "ts" : "js",
 	);
 
 	return { preexisting, template, path };
@@ -99,14 +99,14 @@ async function copyExistingWorkerFiles(ctx: Context) {
 						"Please specify the name of the existing worker in this account?",
 					label: "worker",
 					defaultValue: ctx.project.name,
-				}
+				},
 			);
 		}
 
 		// `wrangler init --from-dash` bails if you opt-out of creating a package.json
 		// so run it (with -y) in a tempdir and copy the src files after
 		const tempdir = await mkdtemp(
-			join(tmpdir(), "c3-wrangler-init--from-dash-")
+			join(tmpdir(), "c3-wrangler-init--from-dash-"),
 		);
 		await runCommand(
 			`npx wrangler@3 init --from-dash ${ctx.args.existingScript} -y --no-delegate-c3`,
@@ -116,9 +116,9 @@ async function copyExistingWorkerFiles(ctx: Context) {
 				env: { CLOUDFLARE_ACCOUNT_ID: ctx.account?.id },
 				startText: "Downloading existing worker files",
 				doneText: `${brandColor("downloaded")} ${dim(
-					`existing "${ctx.args.existingScript}" worker files`
+					`existing "${ctx.args.existingScript}" worker files`,
 				)}`,
-			}
+			},
 		);
 
 		// remove any src/* files from the template
@@ -130,13 +130,13 @@ async function copyExistingWorkerFiles(ctx: Context) {
 		await cp(
 			join(tempdir, ctx.args.existingScript, "src"),
 			join(ctx.project.path, "src"),
-			{ recursive: true }
+			{ recursive: true },
 		);
 
 		// copy wrangler.toml from the downloaded worker
 		await cp(
 			join(tempdir, ctx.args.existingScript, "wrangler.toml"),
-			join(ctx.project.path, "wrangler.toml")
+			join(ctx.project.path, "wrangler.toml"),
 		);
 	}
 }
@@ -162,13 +162,13 @@ async function updateFiles(ctx: Context) {
 		.replace(/^name\s*=\s*"<TBD>"/m, `name = "${ctx.project.name}"`)
 		.replace(
 			/^compatibility_date\s*=\s*"<TBD>"/m,
-			`compatibility_date = "${await getWorkerdCompatibilityDate()}"`
+			`compatibility_date = "${await getWorkerdCompatibilityDate()}"`,
 		);
 
 	// write files
 	await writeFile(
 		paths.packagejson,
-		JSON.stringify(contents.packagejson, null, 2)
+		JSON.stringify(contents.packagejson, null, 2),
 	);
 	await writeFile(paths.wranglertoml, contents.wranglertoml);
 }

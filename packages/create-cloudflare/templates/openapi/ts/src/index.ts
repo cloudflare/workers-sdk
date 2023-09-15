@@ -20,8 +20,8 @@ router.all("*", () =>
 			success: false,
 			error: "Route not found",
 		},
-		{ status: 404 }
-	)
+		{ status: 404 },
+	),
 );
 
 export default {

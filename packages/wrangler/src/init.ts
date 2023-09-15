@@ -101,7 +101,7 @@ export type ServiceMetadataRes = {
 			environment: string;
 			created_on: string;
 			modified_on: string;
-		}
+		},
 	];
 };
 
@@ -117,7 +117,7 @@ export type CronTriggersRes = {
 			cron: string;
 			created_on: Date;
 			modified_on: Date;
-		}
+		},
 	];
 };
 
@@ -980,10 +980,13 @@ async function getWorkerConfig(
 		env: environments
 			?.filter((env) => env.environment !== "production")
 			// `env` can have multiple Environments, with different configs.
-			.reduce((envObj, { environment }) => {
-				return { ...envObj, [environment]: {} };
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			}, {} as RawConfig["env"]),
+			.reduce(
+				(envObj, { environment }) => {
+					return { ...envObj, [environment]: {} };
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				},
+				{} as RawConfig["env"]
+			),
 		tail_consumers: serviceEnvMetadata.script.tail_consumers,
 		...mappedBindings,
 	};

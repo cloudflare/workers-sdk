@@ -127,5 +127,5 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 			expect(output).toContain(`no git`);
 			expect(output).toContain(`no deploy`);
 		});
-	}
+	},
 );

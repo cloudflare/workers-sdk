@@ -38,7 +38,7 @@ export class TaskFetch extends OpenAPIRoute {
 		request: Request,
 		env: any,
 		context: any,
-		data: Record<string, any>
+		data: Record<string, any>,
 	) {
 		// Retrieve the validated slug
 		const { taskSlug } = data.params;
@@ -56,7 +56,7 @@ export class TaskFetch extends OpenAPIRoute {
 				},
 				{
 					status: 404,
-				}
+				},
 			);
 		}
 

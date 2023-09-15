@@ -11,7 +11,7 @@ const generate = async (ctx: PagesGeneratorContext) => {
 
 	await runFrameworkGenerator(
 		ctx,
-		`${dlx} ${cli} ${ctx.project.name} --template cloudflare-workers`
+		`${dlx} ${cli} ${ctx.project.name} --template cloudflare-workers`,
 	);
 
 	logRaw(""); // newline

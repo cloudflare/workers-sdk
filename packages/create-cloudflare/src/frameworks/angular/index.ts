@@ -20,7 +20,7 @@ const generate = async (ctx: PagesGeneratorContext) => {
 
 	await runFrameworkGenerator(
 		ctx,
-		`${dlx} ${cli} new ${ctx.project.name} --standalone`
+		`${dlx} ${cli} new ${ctx.project.name} --standalone`,
 	);
 
 	logRaw("");
@@ -63,7 +63,7 @@ async function installCFWorker(ctx: PagesGeneratorContext) {
 		// eslint-disable-next-line no-restricted-globals
 		resolve(__dirname, "./angular/templates"),
 		resolve(ctx.project.path),
-		{ recursive: true, force: true }
+		{ recursive: true, force: true },
 	);
 	s.stop(`${brandColor("copied")} ${dim("adapter code")}`);
 
@@ -81,7 +81,7 @@ async function installCFWorker(ctx: PagesGeneratorContext) {
 			dev: true,
 			startText: "Installing adapter dependencies",
 			doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
-		}
+		},
 	);
 }
 
@@ -109,7 +109,7 @@ async function updateAppCode() {
 		"import { provideHttpClient, withFetch } from '@angular/common/http';\n" +
 		appConfig.replace(
 			"providers: [",
-			"providers: [provideHttpClient(withFetch()), provideClientHydration(), "
+			"providers: [provideHttpClient(withFetch()), provideClientHydration(), ",
 		);
 	writeFile(resolve(appConfigPath), newAppConfig);
 

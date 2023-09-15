@@ -13,7 +13,7 @@ const generate = async (ctx: PagesGeneratorContext) => {
 
 	await runFrameworkGenerator(
 		ctx,
-		`${dlx} ${cli} ${ctx.project.name} --no-install`
+		`${dlx} ${cli} ${ctx.project.name} --no-install`,
 	);
 
 	logRaw(""); // newline
@@ -30,7 +30,7 @@ const configure = async (ctx: PagesGeneratorContext) => {
 		silent: true,
 		startText: "Installing adapter",
 		doneText: `${brandColor("installed")} ${dim(
-			`via \`${npx} astro add cloudflare\``
+			`via \`${npx} astro add cloudflare\``,
 		)}`,
 	});
 };

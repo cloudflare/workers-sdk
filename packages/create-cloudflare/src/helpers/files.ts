@@ -26,7 +26,7 @@ export const readJSON = (path: string) => {
 export const writeJSON = (
 	path: string,
 	object: object,
-	stringifySpace?: number | string
+	stringifySpace?: number | string,
 ) => {
 	writeFile(path, JSON.stringify(object, null, stringifySpace));
 };
@@ -35,7 +35,7 @@ export const writeJSON = (
 // If one isn't found, throws an error with the given message
 export const probePaths = (
 	paths: string[],
-	errorMsg = "Failed to find required file."
+	errorMsg = "Failed to find required file.",
 ) => {
 	for (const path of paths) {
 		if (existsSync(path)) {
@@ -53,7 +53,7 @@ export const usesTypescript = (projectRoot = ".") => {
 
 const eslintRcExts = ["js", "cjs", "yaml", "yml", "json"] as const;
 
-type EslintRcFileName = `.eslintrc.${typeof eslintRcExts[number]}`;
+type EslintRcFileName = `.eslintrc.${(typeof eslintRcExts)[number]}`;
 
 type EslintUsageInfo =
 	| {

@@ -11,7 +11,7 @@ const generate = async (ctx: PagesGeneratorContext) => {
 
 	await runFrameworkGenerator(
 		ctx,
-		`${dlx} ${cli} ${ctx.project.name} --template https://github.com/remix-run/remix/tree/main/templates/cloudflare-pages`
+		`${dlx} ${cli} ${ctx.project.name} --template https://github.com/remix-run/remix/tree/main/templates/cloudflare-pages`,
 	);
 
 	logRaw(""); // newline

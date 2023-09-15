@@ -11,7 +11,7 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 	const doubleDashesIdx = argv.indexOf("--");
 	const c3Args = argv.slice(
 		0,
-		doubleDashesIdx < 0 ? undefined : doubleDashesIdx
+		doubleDashesIdx < 0 ? undefined : doubleDashesIdx,
 	);
 	const additionalArgs =
 		doubleDashesIdx < 0 ? [] : argv.slice(doubleDashesIdx + 1);
@@ -69,7 +69,7 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 export const processArgument = async <T>(
 	args: Partial<C3Args>,
 	name: keyof C3Args,
-	promptConfig: PromptConfig
+	promptConfig: PromptConfig,
 ) => {
 	let value = args[name];
 	const renderSubmitted = getRenderers(promptConfig).submit;

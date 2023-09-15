@@ -116,7 +116,7 @@ export async function generateHandler<
 	Asset extends { body: ReadableStream | null; contentType: string } = {
 		body: ReadableStream | null;
 		contentType: string;
-	}
+	},
 >({
 	request,
 	metadata,
@@ -327,9 +327,8 @@ export async function generateHandler<
 			// "Early Hints cache entries are keyed by request URI and ignore query strings."
 			// https://developers.cloudflare.com/cache/about/early-hints/
 			const earlyHintsCacheKey = `${protocol}//${host}${pathname}`;
-			const earlyHintsResponse = await earlyHintsCache.match(
-				earlyHintsCacheKey
-			);
+			const earlyHintsResponse =
+				await earlyHintsCache.match(earlyHintsCacheKey);
 			if (earlyHintsResponse) {
 				const earlyHintsLinkHeader = earlyHintsResponse.headers.get("Link");
 				if (earlyHintsLinkHeader) {

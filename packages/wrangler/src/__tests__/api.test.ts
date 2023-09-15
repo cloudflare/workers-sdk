@@ -71,7 +71,9 @@ describe("parseRequestInput for fetch on unstable dev", () => {
 		const [input, init] = parseRequestInput(
 			"0.0.0.0",
 			8080,
-			new Request("https://cloudflare.com/test?q=testparam", { method: "POST" })
+			new Request("https://cloudflare.com/test?q=testparam", {
+				method: "POST",
+			})
 		);
 
 		expect(input).toMatchInlineSnapshot(

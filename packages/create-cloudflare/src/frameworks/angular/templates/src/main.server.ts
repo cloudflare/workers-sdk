@@ -16,7 +16,7 @@ interface Env {
 // See tools/bundle.mjs
 (globalThis as any).__workerFetchHandler = async function fetch(
 	request: Request,
-	env: Env
+	env: Env,
 ) {
 	const url = new URL(request.url);
 	console.log("render SSR", url.href);
@@ -28,7 +28,7 @@ interface Env {
 
 	const content = await renderApplication(
 		() => bootstrapApplication(AppComponent, config),
-		{ document, url: url.pathname }
+		{ document, url: url.pathname },
 	);
 	// console.log("rendered SSR", content);
 	return new Response(content, indexResponse);

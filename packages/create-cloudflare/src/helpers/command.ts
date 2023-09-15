@@ -44,7 +44,7 @@ type PrintOptions<T> = {
 
 export const runCommand = async (
 	command: Command,
-	opts: RunOptions = {}
+	opts: RunOptions = {},
 ): Promise<string> => {
 	if (typeof command === "string") {
 		command = command.trim().replace(/\s+/g, " ").split(" ");
@@ -178,7 +178,7 @@ export const retry = async <T>(times: number, fn: () => Promise<T>) => {
 // Prints the section header & footer while running the `cmd`
 export const runFrameworkGenerator = async (
 	ctx: PagesGeneratorContext,
-	cmd: string
+	cmd: string,
 ) => {
 	if (ctx.framework?.args?.length) {
 		cmd = `${cmd} ${ctx.framework.args.join(" ")}`;
@@ -186,7 +186,7 @@ export const runFrameworkGenerator = async (
 
 	endSection(
 		`Continue with ${ctx.framework?.config.displayName}`,
-		`via \`${cmd.trim()}\``
+		`via \`${cmd.trim()}\``,
 	);
 
 	if (process.env.VITEST) {
@@ -205,7 +205,7 @@ type InstallConfig = {
 
 export const installPackages = async (
 	packages: string[],
-	config: InstallConfig
+	config: InstallConfig,
 ) => {
 	const { npm } = detectPackageManager();
 
@@ -272,10 +272,10 @@ export const installWrangler = async () => {
 	await installPackages([`wrangler`], {
 		dev: true,
 		startText: `Installing wrangler ${dim(
-			"A command line tool for building Cloudflare Workers"
+			"A command line tool for building Cloudflare Workers",
 		)}`,
 		doneText: `${brandColor("installed")} ${dim(
-			`via \`${npm} install wrangler --save-dev\``
+			`via \`${npm} install wrangler --save-dev\``,
 		)}`,
 	});
 };

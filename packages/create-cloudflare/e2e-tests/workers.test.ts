@@ -61,5 +61,5 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 		])("%s", async (name) => {
 			await runCli(name);
 		});
-	}
+	},
 );

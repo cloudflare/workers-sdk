@@ -17,7 +17,12 @@ export function mockGetUploadTokenRequest(
 
 				return res(
 					ctx.status(200),
-					ctx.json({ success: true, errors: [], messages: [], result: { jwt } })
+					ctx.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: { jwt },
+					})
 				);
 			}
 		)

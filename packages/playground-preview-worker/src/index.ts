@@ -105,7 +105,10 @@ class RawHttpFailed extends HttpError {
 
 class PreviewRequestFailed extends HttpError {
 	name = "PreviewRequestFailed";
-	constructor(private tokenId: string | undefined, reportable: boolean) {
+	constructor(
+		private tokenId: string | undefined,
+		reportable: boolean
+	) {
 		super("Token not found", 400, reportable);
 	}
 	get data(): { tokenId: string | undefined } {

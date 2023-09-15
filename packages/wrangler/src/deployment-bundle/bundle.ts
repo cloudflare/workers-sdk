@@ -607,10 +607,13 @@ async function applyMiddlewareLoaderFacade(
  */
 export function dedupeModulesByName(modules: CfModule[]): CfModule[] {
 	return Object.values(
-		modules.reduce((moduleMap, module) => {
-			moduleMap[module.name] = module;
-			return moduleMap;
-		}, {} as Record<string, CfModule>)
+		modules.reduce(
+			(moduleMap, module) => {
+				moduleMap[module.name] = module;
+				return moduleMap;
+			},
+			{} as Record<string, CfModule>
+		)
 	);
 }
 /**

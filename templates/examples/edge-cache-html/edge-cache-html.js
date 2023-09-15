@@ -58,9 +58,8 @@ async function processRequest(originalRequest, event) {
 	let cfCacheStatus = null;
 	const accept = originalRequest.headers.get("Accept");
 	const isHTML = accept && accept.indexOf("text/html") >= 0;
-	let { response, cacheVer, status, bypassCache } = await getCachedResponse(
-		originalRequest
-	);
+	let { response, cacheVer, status, bypassCache } =
+		await getCachedResponse(originalRequest);
 
 	if (response === null) {
 		// Clone the request, add the edge-cache header and send it through.

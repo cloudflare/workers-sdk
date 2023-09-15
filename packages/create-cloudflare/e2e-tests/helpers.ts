@@ -105,7 +105,7 @@ export const runC3 = async ({
 
 export const testProjectDir = (suite: string) => {
 	const tmpDirPath = realpathSync(
-		mkdtempSync(join(tmpdir(), `c3-tests-${suite}`))
+		mkdtempSync(join(tmpdir(), `c3-tests-${suite}`)),
 	);
 
 	const randomSuffix = crypto.randomBytes(4).toString("hex");

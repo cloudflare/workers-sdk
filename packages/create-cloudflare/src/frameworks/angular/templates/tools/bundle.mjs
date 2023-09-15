@@ -43,7 +43,7 @@ async function bundleMain() {
 	// Patch any dynamic imports (converting `require()` calls to `import()` calls).
 	main = main.replace(
 		'installChunk(__require("./" + __webpack_require__.u(chunkId))',
-		'promises.push(import("./" + __webpack_require__.u(chunkId)).then((mod) => installChunk(mod.default))'
+		'promises.push(import("./" + __webpack_require__.u(chunkId)).then((mod) => installChunk(mod.default))',
 	);
 	// Export the fetch handler (grabbing it from the global).
 	// Also Cloudflare expects `fetch()` to return an original Promise (not a ZoneAwarePromise).

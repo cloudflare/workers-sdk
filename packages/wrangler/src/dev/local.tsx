@@ -184,9 +184,8 @@ function useLocalWorker(props: LocalProps) {
 					const jsonUrl = `http://127.0.0.1:${props.runtimeInspectorPort}/json`;
 					const res = await fetch(jsonUrl);
 					const body = (await res.json()) as InspectorWebSocketTarget[];
-					const debuggerUrl = body?.find(({ id }) =>
-						id.startsWith("core:user")
-					)?.webSocketDebuggerUrl;
+					const debuggerUrl = body?.find(({ id }) => id.startsWith("core:user"))
+						?.webSocketDebuggerUrl;
 					if (debuggerUrl === undefined) {
 						setInspectorUrl(undefined);
 					} else {

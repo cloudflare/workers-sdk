@@ -103,9 +103,22 @@ html {
 }
 
 body {
-	font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-		'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', 'Segoe UI Emoji',
-		'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+	font-family:
+		system-ui,
+		-apple-system,
+		BlinkMacSystemFont,
+		'Segoe UI',
+		'Roboto',
+		'Oxygen',
+		'Ubuntu',
+		'Cantarell',
+		'Fira Sans',
+		'Droid Sans',
+		'Helvetica Neue',
+		'Segoe UI Emoji',
+		'Apple Color Emoji',
+		'Noto Color Emoji',
+		sans-serif;
 	line-height: 1.4;
 	max-width: 800px;
 	margin: 20px auto;
@@ -133,56 +146,98 @@ body {
 }
 
 button {
-	transition: background-color 0.1s linear, border-color 0.1s linear, color 0.1s linear,
-		box-shadow 0.1s linear, transform 0.1s ease;
-	transition: background-color var(--animation-duration) linear,
-		border-color var(--animation-duration) linear, color var(--animation-duration) linear,
-		box-shadow var(--animation-duration) linear, transform var(--animation-duration) ease;
+	transition:
+		background-color 0.1s linear,
+		border-color 0.1s linear,
+		color 0.1s linear,
+		box-shadow 0.1s linear,
+		transform 0.1s ease;
+	transition:
+		background-color var(--animation-duration) linear,
+		border-color var(--animation-duration) linear,
+		color var(--animation-duration) linear,
+		box-shadow var(--animation-duration) linear,
+		transform var(--animation-duration) ease;
 }
 
 @media (prefers-color-scheme: dark) {
 	button {
-		transition: background-color 0.1s linear, border-color 0.1s linear, color 0.1s linear,
-			box-shadow 0.1s linear, transform 0.1s ease;
-		transition: background-color var(--animation-duration) linear,
-			border-color var(--animation-duration) linear, color var(--animation-duration) linear,
-			box-shadow var(--animation-duration) linear, transform var(--animation-duration) ease;
+		transition:
+			background-color 0.1s linear,
+			border-color 0.1s linear,
+			color 0.1s linear,
+			box-shadow 0.1s linear,
+			transform 0.1s ease;
+		transition:
+			background-color var(--animation-duration) linear,
+			border-color var(--animation-duration) linear,
+			color var(--animation-duration) linear,
+			box-shadow var(--animation-duration) linear,
+			transform var(--animation-duration) ease;
 	}
 }
 
 input {
-	transition: background-color 0.1s linear, border-color 0.1s linear, color 0.1s linear,
-		box-shadow 0.1s linear, transform 0.1s ease;
-	transition: background-color var(--animation-duration) linear,
-		border-color var(--animation-duration) linear, color var(--animation-duration) linear,
-		box-shadow var(--animation-duration) linear, transform var(--animation-duration) ease;
+	transition:
+		background-color 0.1s linear,
+		border-color 0.1s linear,
+		color 0.1s linear,
+		box-shadow 0.1s linear,
+		transform 0.1s ease;
+	transition:
+		background-color var(--animation-duration) linear,
+		border-color var(--animation-duration) linear,
+		color var(--animation-duration) linear,
+		box-shadow var(--animation-duration) linear,
+		transform var(--animation-duration) ease;
 }
 
 @media (prefers-color-scheme: dark) {
 	input {
-		transition: background-color 0.1s linear, border-color 0.1s linear, color 0.1s linear,
-			box-shadow 0.1s linear, transform 0.1s ease;
-		transition: background-color var(--animation-duration) linear,
-			border-color var(--animation-duration) linear, color var(--animation-duration) linear,
-			box-shadow var(--animation-duration) linear, transform var(--animation-duration) ease;
+		transition:
+			background-color 0.1s linear,
+			border-color 0.1s linear,
+			color 0.1s linear,
+			box-shadow 0.1s linear,
+			transform 0.1s ease;
+		transition:
+			background-color var(--animation-duration) linear,
+			border-color var(--animation-duration) linear,
+			color var(--animation-duration) linear,
+			box-shadow var(--animation-duration) linear,
+			transform var(--animation-duration) ease;
 	}
 }
 
 textarea {
-	transition: background-color 0.1s linear, border-color 0.1s linear, color 0.1s linear,
-		box-shadow 0.1s linear, transform 0.1s ease;
-	transition: background-color var(--animation-duration) linear,
-		border-color var(--animation-duration) linear, color var(--animation-duration) linear,
-		box-shadow var(--animation-duration) linear, transform var(--animation-duration) ease;
+	transition:
+		background-color 0.1s linear,
+		border-color 0.1s linear,
+		color 0.1s linear,
+		box-shadow 0.1s linear,
+		transform 0.1s ease;
+	transition:
+		background-color var(--animation-duration) linear,
+		border-color var(--animation-duration) linear,
+		color var(--animation-duration) linear,
+		box-shadow var(--animation-duration) linear,
+		transform var(--animation-duration) ease;
 }
 
 @media (prefers-color-scheme: dark) {
 	textarea {
-		transition: background-color 0.1s linear, border-color 0.1s linear, color 0.1s linear,
-			box-shadow 0.1s linear, transform 0.1s ease;
-		transition: background-color var(--animation-duration) linear,
-			border-color var(--animation-duration) linear, color var(--animation-duration) linear,
-			box-shadow var(--animation-duration) linear, transform var(--animation-duration) ease;
+		transition:
+			background-color 0.1s linear,
+			border-color 0.1s linear,
+			color 0.1s linear,
+			box-shadow 0.1s linear,
+			transform 0.1s ease;
+		transition:
+			background-color var(--animation-duration) linear,
+			border-color var(--animation-duration) linear,
+			color var(--animation-duration) linear,
+			box-shadow var(--animation-duration) linear,
+			transform var(--animation-duration) ease;
 	}
 }
 
@@ -882,7 +937,9 @@ input[type='range']::-webkit-slider-runnable-track {
 }
 
 input[type='range']::-webkit-slider-thumb {
-	box-shadow: 0 1px 1px #000, 0 0 1px #0d0d0d;
+	box-shadow:
+		0 1px 1px #000,
+		0 0 1px #0d0d0d;
 	height: 20px;
 	width: 20px;
 	border-radius: 50%;
@@ -929,7 +986,9 @@ input[type='range']::-moz-range-track {
 }
 
 input[type='range']::-moz-range-thumb {
-	box-shadow: 1px 1px 1px #000, 0 0 1px #0d0d0d;
+	box-shadow:
+		1px 1px 1px #000,
+		0 0 1px #0d0d0d;
 	height: 20px;
 	width: 20px;
 	border-radius: 50%;
@@ -958,7 +1017,9 @@ input[type='range']::-ms-fill-lower {
 	background: var(--background);
 	border: 0.2px solid #010101;
 	border-radius: 3px;
-	box-shadow: 1px 1px 1px #000, 0 0 1px #0d0d0d;
+	box-shadow:
+		1px 1px 1px #000,
+		0 0 1px #0d0d0d;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -973,7 +1034,9 @@ input[type='range']::-ms-fill-upper {
 	background: var(--background);
 	border: 0.2px solid #010101;
 	border-radius: 3px;
-	box-shadow: 1px 1px 1px #000, 0 0 1px #0d0d0d;
+	box-shadow:
+		1px 1px 1px #000,
+		0 0 1px #0d0d0d;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -984,7 +1047,9 @@ input[type='range']::-ms-fill-upper {
 }
 
 input[type='range']::-ms-thumb {
-	box-shadow: 1px 1px 1px #000, 0 0 1px #0d0d0d;
+	box-shadow:
+		1px 1px 1px #000,
+		0 0 1px #0d0d0d;
 	border: 1px solid #000;
 	height: 20px;
 	width: 20px;

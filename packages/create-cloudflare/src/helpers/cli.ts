@@ -67,7 +67,7 @@ export const startSection = (heading: string, subheading?: string) => {
 	logRaw(
 		`${gray(shapes.corners.tl)} ${brandColor(heading)} ${
 			subheading ? dim(subheading) : ""
-		}`
+		}`,
 	);
 	newline();
 };
@@ -76,7 +76,7 @@ export const endSection = (heading: string, subheading?: string) => {
 	logRaw(
 		`${gray(shapes.corners.bl)} ${brandColor(heading)} ${
 			subheading ? dim(subheading) : ""
-		}\n`
+		}\n`,
 	);
 };
 

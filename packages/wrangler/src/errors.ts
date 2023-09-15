@@ -5,7 +5,10 @@ export class DeprecationError extends Error {
 }
 
 export class FatalError extends Error {
-	constructor(message?: string, readonly code?: number) {
+	constructor(
+		message?: string,
+		readonly code?: number
+	) {
 		super(message);
 	}
 }

@@ -37,7 +37,7 @@ export const supportedFramework = (framework: string) => {
 
 export const getFrameworkCli = (
 	ctx: PagesGeneratorContext,
-	withVersion = true
+	withVersion = true,
 ) => {
 	if (!ctx.framework) {
 		return crash("Framework not specified.");

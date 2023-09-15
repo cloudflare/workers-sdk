@@ -33,17 +33,15 @@ export type BasePromptConfig = {
 export type TextPromptConfig = BasePromptConfig & {
 	type: "text";
 };
-export type SelectPromptConfig =
-	| BasePromptConfig & {
-			type: "select";
-			options: Option[];
-	  };
-export type ConfirmPromptConfig =
-	| BasePromptConfig & {
-			type: "confirm";
-			activeText?: string;
-			inactiveText?: string;
-	  };
+export type SelectPromptConfig = BasePromptConfig & {
+	type: "select";
+	options: Option[];
+};
+export type ConfirmPromptConfig = BasePromptConfig & {
+	type: "confirm";
+	activeText?: string;
+	inactiveText?: string;
+};
 
 export type PromptConfig =
 	| TextPromptConfig
@@ -204,7 +202,7 @@ const getSelectRenderers = (config: SelectPromptConfig) => {
 		submit: ({ value }: { value: C3Arg }) =>
 			renderSubmit(
 				config,
-				options.find((o) => o.value === value)?.label as string
+				options.find((o) => o.value === value)?.label as string,
 			),
 		cancel: handleCancel,
 	};
@@ -248,7 +246,7 @@ const ellipsisFrames = ["", ".", "..", "...", " ..", "  .", ""];
 
 export const spinner = (
 	frames: string[] = spinnerFrames.clockwise,
-	color: ChalkInstance = brandColor
+	color: ChalkInstance = brandColor,
 ) => {
 	// Alternative animations we considered. Keeping around in case we
 	// introduce different animations for different use cases.

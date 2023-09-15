@@ -84,7 +84,7 @@ const getFrameworkSelection = async (args: C3Args) => {
 		([key, { displayName }]) => ({
 			label: displayName,
 			value: key,
-		})
+		}),
 	);
 
 	const framework = await processArgument<string>(args, "framework", {
@@ -117,12 +117,12 @@ const updatePackageScripts = async (ctx: PagesGeneratorContext) => {
 
 		const updatingScripts =
 			Object.entries(packageScripts).filter(
-				([_, cmdOrUpdater]) => typeof cmdOrUpdater === "function"
+				([_, cmdOrUpdater]) => typeof cmdOrUpdater === "function",
 			).length > 0;
 
 		s.start(
 			`${updatingScripts ? "Updating" : "Adding"} command scripts`,
-			"for development and deployment"
+			"for development and deployment",
 		);
 
 		const pkgJsonPath = resolve("package.json");
@@ -136,7 +136,7 @@ const updatePackageScripts = async (ctx: PagesGeneratorContext) => {
 				const existingCommand = pkgConfig.scripts[target] as string | undefined;
 				if (!existingCommand) {
 					throw new Error(
-						`Could not find ${target} script to update during ${ctx.framework} setup`
+						`Could not find ${target} script to update during ${ctx.framework} setup`,
 					);
 				}
 				const updater = cmdOrUpdater;
@@ -176,7 +176,7 @@ const createProject = async (ctx: PagesGeneratorContext) => {
 				env: { CLOUDFLARE_ACCOUNT_ID },
 				startText: "Creating Pages project",
 				doneText: `${brandColor("created")} ${dim(`via \`${cmd.trim()}\``)}`,
-			})
+			}),
 		);
 	} catch (error) {
 		crash("Failed to create pages project. See output above.");
@@ -193,9 +193,9 @@ const createProject = async (ctx: PagesGeneratorContext) => {
 				env: { CLOUDFLARE_ACCOUNT_ID },
 				startText: "Verifying Pages project",
 				doneText: `${brandColor("verified")} ${dim(
-					`project is ready for deployment`
+					`project is ready for deployment`,
 				)}`,
-			})
+			}),
 		);
 
 		debug(`Validated pages project ${ctx.project.name}`);

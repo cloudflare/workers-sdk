@@ -107,7 +107,7 @@ export const runDeploy = async (ctx: PagesGeneratorContext) => {
 					...(name === "npm" ? ["--"] : []),
 					`--commit-message="${ctx.framework.commitMessage.replaceAll(
 						'"',
-						'\\"'
+						'\\"',
 					)}"`,
 			  ]
 			: []),
@@ -119,7 +119,7 @@ export const runDeploy = async (ctx: PagesGeneratorContext) => {
 		env: { CLOUDFLARE_ACCOUNT_ID: ctx.account.id, NODE_ENV: "production" },
 		startText: "Deploying your application",
 		doneText: `${brandColor("deployed")} ${dim(
-			`via \`${baseDeployCmd.join(" ")}\``
+			`via \`${baseDeployCmd.join(" ")}\``,
 		)}`,
 	});
 
@@ -153,13 +153,13 @@ export const chooseAccount = async (ctx: PagesGeneratorContext) => {
 		s.stop(`${brandColor("account")} ${dim(accountName)}`);
 	} else {
 		s.stop(
-			`${brandColor("account")} ${dim("more than one account available")}`
+			`${brandColor("account")} ${dim("more than one account available")}`,
 		);
 		const accountOptions = Object.entries(accounts).map(
 			([accountName, id]) => ({
 				label: accountName,
 				value: id,
-			})
+			}),
 		);
 
 		accountId = await inputPrompt({
@@ -171,7 +171,7 @@ export const chooseAccount = async (ctx: PagesGeneratorContext) => {
 		});
 	}
 	const accountName = Object.keys(accounts).find(
-		(account) => accounts[account] == accountId
+		(account) => accounts[account] == accountId,
 	) as string;
 
 	ctx.account = { id: accountId, name: accountName };
@@ -215,7 +215,7 @@ export const printSummary = async (ctx: PagesGeneratorContext) => {
 			`${bgGreen(" APPLICATION CREATED ")}`,
 			`${dim(`Deploy your application with`)}`,
 			`${blue(
-				`${npm} run ${ctx.framework?.config.deployCommand ?? "deploy"}`
+				`${npm} run ${ctx.framework?.config.deployCommand ?? "deploy"}`,
 			)}`,
 		].join(" ");
 		logRaw(msg);
@@ -246,7 +246,7 @@ export const offerGit = async (ctx: PagesGeneratorContext) => {
 		// haven't prompted yet, if provided as --git arg
 		if (ctx.args.git) {
 			updateStatus(
-				"Couldn't find `git` installed on your machine. Continuing without git."
+				"Couldn't find `git` installed on your machine. Continuing without git.",
 			);
 		}
 
@@ -390,13 +390,13 @@ export async function initializeGit(cwd: string) {
 		// Get the default init branch name
 		const defaultBranchName = await runCommand(
 			"git config --get init.defaultBranch",
-			{ useSpinner: false, silent: true, cwd }
+			{ useSpinner: false, silent: true, cwd },
 		);
 
 		// Try to create the repository with the HEAD branch of defaultBranchName ?? `main`.
 		await runCommand(
 			`git init --initial-branch ${defaultBranchName.trim() ?? "main"}`, // branch names can't contain spaces, so this is safe
-			{ useSpinner: false, silent: true, cwd }
+			{ useSpinner: false, silent: true, cwd },
 		);
 	} catch {
 		// Unable to create the repo with a HEAD branch name, so just fall back to the default.
@@ -414,7 +414,7 @@ export async function getProductionBranch(cwd: string) {
 				cwd,
 				useSpinner: false,
 				captureOutput: true,
-			}
+			},
 		);
 
 		return productionBranch.trim();

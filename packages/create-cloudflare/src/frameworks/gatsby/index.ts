@@ -30,7 +30,7 @@ const generate = async (ctx: PagesGeneratorContext) => {
 	const cli = getFrameworkCli(ctx);
 	await runFrameworkGenerator(
 		ctx,
-		`${dlx} ${cli} new ${ctx.project.name} ${templateUrl}`
+		`${dlx} ${cli} new ${ctx.project.name} ${templateUrl}`,
 	);
 };
 

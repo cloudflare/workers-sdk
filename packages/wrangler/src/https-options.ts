@@ -118,10 +118,11 @@ async function generateCertificate() {
  */
 function getAccessibleHosts(ipv4 = false): string[] {
 	const hosts: string[] = [];
-	Object.values(os.networkInterfaces()).forEach((net) =>
-		net?.forEach(({ family, address }) => {
-			if (!ipv4 || family === "IPv4") hosts.push(address);
-		})
+	Object.values(os.networkInterfaces()).forEach(
+		(net) =>
+			net?.forEach(({ family, address }) => {
+				if (!ipv4 || family === "IPv4") hosts.push(address);
+			})
 	);
 	return hosts;
 }

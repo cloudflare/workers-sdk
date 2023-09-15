@@ -32,7 +32,7 @@ const generate = async (ctx: PagesGeneratorContext) => {
 
 const getApiTemplate = (
 	apiPath: string,
-	isTypescript: boolean
+	isTypescript: boolean,
 ): [string, string] => {
 	const isAppDir = /\/app\/api$/.test(apiPath);
 
@@ -64,7 +64,7 @@ const configure = async (ctx: PagesGeneratorContext) => {
 			`${projectName}/src/app`,
 			`${projectName}/app`,
 		],
-		"Could not find the `/api` or `/app` directory"
+		"Could not find the `/api` or `/app` directory",
 	);
 
 	// App directory template may not generate an API route handler, so we update the path to add an `api` directory.
@@ -72,7 +72,7 @@ const configure = async (ctx: PagesGeneratorContext) => {
 
 	const [handlerPath, handlerFile] = getApiTemplate(
 		apiPath,
-		usesTypescript(projectName)
+		usesTypescript(projectName),
 	);
 	writeFile(handlerPath, handlerFile);
 	updateStatus("Created an example API route handler");
@@ -98,7 +98,7 @@ const configure = async (ctx: PagesGeneratorContext) => {
 };
 
 export const shouldInstallNextOnPagesEslintPlugin = async (
-	ctx: PagesGeneratorContext
+	ctx: PagesGeneratorContext,
 ): Promise<boolean> => {
 	const eslintUsage = usesEslint(ctx);
 
@@ -106,7 +106,7 @@ export const shouldInstallNextOnPagesEslintPlugin = async (
 
 	if (eslintUsage.configType !== ".eslintrc.json") {
 		warn(
-			`Expected .eslintrc.json from Next.js scaffolding but found ${eslintUsage.configType} instead`
+			`Expected .eslintrc.json from Next.js scaffolding but found ${eslintUsage.configType} instead`,
 		);
 		return false;
 	}
@@ -120,7 +120,7 @@ export const shouldInstallNextOnPagesEslintPlugin = async (
 };
 
 export const writeEslintrc = async (
-	ctx: PagesGeneratorContext
+	ctx: PagesGeneratorContext,
 ): Promise<void> => {
 	const eslintConfig = readJSON(`${ctx.project.name}/.eslintrc.json`);
 

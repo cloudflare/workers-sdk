@@ -41,14 +41,14 @@ type EventPluginContext<Env, P extends string, Data, PluginArgs> = {
 declare type PagesFunction<
 	Env = unknown,
 	P extends string = string,
-	Data extends Record<string, unknown> = Record<string, unknown>
+	Data extends Record<string, unknown> = Record<string, unknown>,
 > = (context: EventContext<Env, P, Data>) => Response | Promise<Response>;
 
 declare type PagesPluginFunction<
 	Env = unknown,
 	P extends string = string,
 	Data extends Record<string, unknown> = Record<string, unknown>,
-	PluginArgs = unknown
+	PluginArgs = unknown,
 > = (
 	context: EventPluginContext<Env, P, Data, PluginArgs>
 ) => Response | Promise<Response>;

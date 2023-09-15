@@ -38,7 +38,7 @@ const isUpdateAvailable = async () => {
 	s.start("Checking if a newer version is available");
 	const latestVersion = await runCommand(
 		`npm info create-cloudflare@latest dist-tags.latest`,
-		{ silent: true, useSpinner: false }
+		{ silent: true, useSpinner: false },
 	);
 	s.stop();
 

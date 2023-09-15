@@ -37,7 +37,7 @@ const configure = async () => {
 		: `./vite.config.js`;
 	writeFile(viteConfigPath, viteConfig);
 	updateStatus(
-		`Adding the Cloudflare Pages adapter to ${blue("vite.config.js")}`
+		`Adding the Cloudflare Pages adapter to ${blue("vite.config.js")}`,
 	);
 };
 
