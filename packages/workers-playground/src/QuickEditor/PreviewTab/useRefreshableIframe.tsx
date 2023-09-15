@@ -26,6 +26,8 @@ export function useRefreshableIframe(
 
 	const [isLoadingContent, setIsLoadingContent] = useState(false);
 
+	const [firstLoad, setFirstLoad] = useState(false);
+
 	useEffect(() => {
 		function onLoadEvent(this: HTMLIFrameElement) {
 			onLoad(this);
@@ -43,6 +45,7 @@ export function useRefreshableIframe(
 	}, [onLoad]);
 
 	function listen() {
+		!firstLoad && setFirstLoad(true);
 		requestAnimationFrame(() => {
 			setIndex(index === 0 ? 1 : 0);
 			setIsLoadingContent(false);
@@ -69,6 +72,7 @@ export function useRefreshableIframe(
 	}, [src]);
 	const isLoading = isLoadingContent;
 	return {
+		firstLoad,
 		isLoading,
 		refresh() {
 			if (src) {

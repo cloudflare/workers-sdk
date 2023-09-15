@@ -6,6 +6,7 @@ import { ServiceContext } from "../QuickEditor";
 import FrameErrorBoundary, { FrameError } from "../FrameErrorBoundary";
 import { useRefreshableIframe } from "./useRefreshableIframe";
 import { theme } from "@cloudflare/style-const";
+import { Loading } from "@cloudflare/component-loading";
 
 export function getPreviewIframeUrl(edgePreview: string, previewUrl: string) {
 	const url = new URL(edgePreview);
@@ -30,7 +31,7 @@ function PreviewTab() {
 		draftWorker.service?.modules
 	);
 
-	const { isLoading, frame, refresh } = useRefreshableIframe(
+	const { isLoading, frame, refresh, firstLoad } = useRefreshableIframe(
 		previewSrc,
 		onLoad
 	);
@@ -47,6 +48,21 @@ function PreviewTab() {
 				}}
 				loading={isLoading}
 			/>
+			{!firstLoad && (
+				<Div
+					zIndex={1000}
+					p={2}
+					position="relative"
+					height="100%"
+					display="flex"
+					gap={2}
+					backgroundColor="white"
+					justifyContent={"center"}
+					alignItems={"center"}
+				>
+					<Loading size="4x" />
+				</Div>
+			)}
 			<Div
 				flex="1"
 				position="relative"

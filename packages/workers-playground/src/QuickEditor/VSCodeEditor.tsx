@@ -173,7 +173,7 @@ export function VSCodeEditor({ content, onChange }: Props) {
 					height="100%"
 					display="flex"
 					gap={2}
-					backgroundColor="white"
+					backgroundColor={isDarkMode() ? "#313131" : "white"}
 					justifyContent={"center"}
 					alignItems={"center"}
 				>
