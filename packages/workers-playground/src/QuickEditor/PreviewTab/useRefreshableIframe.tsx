@@ -1,5 +1,12 @@
 import Frame from "../Frame";
-import { useState, useRef, useLayoutEffect, useEffect } from "react";
+import {
+	useState,
+	useRef,
+	useLayoutEffect,
+	useEffect,
+	useContext,
+} from "react";
+import { DragContext } from "../SplitPane";
 
 /**
  * A wrapper around an iframe that loads any changes to the src in the background,
@@ -10,6 +17,7 @@ export function useRefreshableIframe(
 	src: string | undefined,
 	onLoad: (frame: HTMLIFrameElement) => void
 ) {
+	const isPaneDragging = useContext(DragContext);
 	const refs = [
 		useRef<HTMLIFrameElement>(null),
 		useRef<HTMLIFrameElement>(null),
@@ -74,7 +82,7 @@ export function useRefreshableIframe(
 					style={{
 						background: "white",
 						zIndex: index === 0 ? 10 : 5,
-						pointerEvents: isLoading ? "none" : "auto",
+						pointerEvents: isLoading || isPaneDragging ? "none" : "auto",
 					}}
 					sandbox="allow-forms allow-modals allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox"
 				/>
@@ -83,7 +91,7 @@ export function useRefreshableIframe(
 					style={{
 						background: "white",
 						zIndex: index === 1 ? 10 : 5,
-						pointerEvents: isLoading ? "none" : "auto",
+						pointerEvents: isLoading || isPaneDragging ? "none" : "auto",
 					}}
 					sandbox="allow-forms allow-modals allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox"
 				/>

@@ -3,6 +3,7 @@ import React, { useContext } from "react";
 import { ServiceContext } from "./QuickEditor";
 import Frame from "./Frame";
 import FrameErrorBoundary from "./FrameErrorBoundary";
+import { DragContext } from "./SplitPane";
 
 function getDevtoolsIframeUrl(inspectorUrl: string) {
 	const url = new URL(`https://devtools.devprod.cloudflare.dev/js_app`);
@@ -15,9 +16,11 @@ function getDevtoolsIframeUrl(inspectorUrl: string) {
 
 export function DevtoolsIframe() {
 	const draftWorker = useContext(ServiceContext);
+	const isPaneDragging = useContext(DragContext);
 
 	return draftWorker?.devtoolsUrl ? (
 		<Frame
+			style={isPaneDragging ? { pointerEvents: "none" } : {}}
 			src={getDevtoolsIframeUrl(draftWorker.devtoolsUrl)}
 			sandbox="allow-scripts allow-same-origin"
 		/>

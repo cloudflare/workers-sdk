@@ -1,90 +1,79 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { isDarkMode, theme } from "@cloudflare/style-const";
-import React from "react";
+import React, { createContext, useContext, useState } from "react";
 // @ts-expect-error Types are wrong
 import ReactSplitPane, { Props as ReactSplitPaneProps } from "react-split-pane";
 import { BORDER_GRAY } from "./constants";
 
-type State = {
-	dragging: boolean;
-};
+export const DragContext = createContext(false);
 
-class SplitPane extends React.Component<ReactSplitPaneProps, State> {
-	state: State = {
-		dragging: false,
+export default function SplitPane(props: ReactSplitPaneProps) {
+	const onDragStarted = () => {
+		setIsDragging(true);
+		props.onDragStarted?.();
 	};
 
-	onDragStarted = () => {
-		this.setState({ dragging: true });
-		if (this.props.onDragStarted) {
-			this.props.onDragStarted();
-		}
+	const onDragFinished = (newSize: number) => {
+		setIsDragging(false);
+		props.onDragFinished?.(newSize);
 	};
 
-	onDragFinished = (newSize: number) => {
-		this.setState({ dragging: false });
-		if (this.props.onDragFinished) {
-			this.props.onDragFinished(newSize);
-		}
+	// the iframes in our draggable panels cause issues since
+	// the iframe window will catch the mousemove events but
+	// in order for dragging to work, they need to be handled
+	// by the parent window. So, while we're dragging, we add
+	// `pointerEvents: 'none'` to prevent the iframes from
+	// intercepting mouse events. We do this by providing the dragging
+	// state through React Context, and expect children to apply this
+	// To support nested SplitPane components, defer to the parent
+	const isParentDragging = useContext(DragContext);
+	const [_isDragging, setIsDragging] = useState(false);
+
+	const isDragging = _isDragging || isParentDragging;
+
+	const { children, split, ...otherProps } = props;
+
+	let resizerStyle: React.CSSProperties = {
+		...props.resizerStyle,
+		backgroundColor: BORDER_GRAY,
+		opacity: 1,
+		backgroundClip: "padding-box",
+		zIndex: 1,
 	};
 
-	render() {
-		const { children, split, ...otherProps } = this.props;
-		const { dragging } = this.state;
-		const { onDragStarted, onDragFinished } = this;
-
-		let resizerStyle: React.CSSProperties = {
-			...this.props.resizerStyle,
-			backgroundColor: BORDER_GRAY,
-			opacity: 1,
-			backgroundClip: "padding-box",
-			zIndex: 1,
+	if (split === "horizontal") {
+		resizerStyle = {
+			...resizerStyle,
+			height: "11px",
+			minHeight: "11px",
+			borderTop: "5px solid transparent",
+			borderBottom: "5px solid transparent",
+			marginTop: "-5px",
+			marginBottom: "-5px",
+			cursor: "row-resize",
 		};
-
-		if (split === "horizontal") {
-			resizerStyle = {
-				...resizerStyle,
-				height: "11px",
-				minHeight: "11px",
-				borderTop: "5px solid transparent",
-				borderBottom: "5px solid transparent",
-				marginTop: "-5px",
-				marginBottom: "-5px",
-				cursor: "row-resize",
-			};
-		} else {
-			resizerStyle = {
-				...resizerStyle,
-				width: "11px",
-				minWidth: "11px",
-				borderLeft: "5px solid transparent",
-				borderRight: "5px solid transparent",
-				marginLeft: "-5px",
-				marginRight: "-5px",
-				cursor: "col-resize",
-			};
-		}
-
-		const paneStyle: React.CSSProperties = {
-			overflow: "hidden",
-			...this.props.paneStyle,
-			backgroundColor: isDarkMode() ? theme.colors.gray[8] : theme.colors.white,
+	} else {
+		resizerStyle = {
+			...resizerStyle,
+			width: "11px",
+			minWidth: "11px",
+			borderLeft: "5px solid transparent",
+			borderRight: "5px solid transparent",
+			marginLeft: "-5px",
+			marginRight: "-5px",
+			cursor: "col-resize",
 		};
+	}
 
-		// the iframes in our draggable panels cause issues since
-		// the iframe window will catch the mousemove events but
-		// in order for dragging to work, they need to be handled
-		// by the parent window. So, while we're dragging, we add
-		// `pointerEvents: 'none'` to prevent the iframes from
-		// intercepting mouse events
-		const style: React.CSSProperties = { ...this.props.style, zIndex: 0 };
-		if (dragging) {
-			// @ts-ignore
-			style.pointerEvents = "none";
-		}
+	const paneStyle: React.CSSProperties = {
+		overflow: "hidden",
+		...props.paneStyle,
+		backgroundColor: isDarkMode() ? theme.colors.gray[8] : theme.colors.white,
+	};
 
-		return (
+	const style: React.CSSProperties = { ...props.style, zIndex: 0 };
+
+	return (
+		<DragContext.Provider value={isDragging}>
 			<ReactSplitPane
 				{...otherProps}
 				{...{
@@ -98,8 +87,6 @@ class SplitPane extends React.Component<ReactSplitPaneProps, State> {
 			>
 				{children}
 			</ReactSplitPane>
-		);
-	}
+		</DragContext.Provider>
+	);
 }
-
-export default SplitPane;
