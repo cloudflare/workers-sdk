@@ -130,7 +130,8 @@ export function Options(yargs: CommonYargsArgv) {
 			},
 			do: {
 				type: "array",
-				description: "Durable Object to bind (--do DO_BINDING=CLASS_NAME@SCRIPT_NAME)",
+				description:
+					"Durable Object to bind (--do DO_BINDING=CLASS_NAME@SCRIPT_NAME)",
 				alias: "o",
 			},
 			r2: {
