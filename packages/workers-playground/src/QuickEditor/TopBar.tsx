@@ -69,7 +69,7 @@ export function TopBar() {
 				<WorkersLogo />
 
 				<A target="_blank" href="/">
-					<Button ml={2}>
+					<Button ml={2} type="primary" inverted={true}>
 						<Icon label="Add" type="plus" mr={1} />
 						New
 					</Button>
@@ -104,7 +104,8 @@ export function TopBar() {
 				</Div>
 
 				<Button
-					type="default"
+					type="primary"
+					inverted={true}
 					onClick={() => {
 						void navigator.clipboard.writeText(location.href);
 						setHasCopied(!hasCopied);

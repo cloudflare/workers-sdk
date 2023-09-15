@@ -7,7 +7,6 @@ import React, {
 } from "react";
 import { createStyledComponent } from "@cloudflare/style-container";
 import { Div, Form, Label, Output } from "@cloudflare/elements";
-import { Input } from "@cloudflare/component-input";
 import { Textarea } from "@cloudflare/component-textarea";
 import { Button } from "@cloudflare/component-button";
 import { Icon } from "@cloudflare/component-icon";
@@ -19,6 +18,8 @@ import RequestHeaders, { HeaderEntry } from "./RequestHeaders";
 import { ServiceContext } from "../QuickEditor";
 import { FrameError } from "../FrameErrorBoundary";
 import { fetchWorker } from "./fetchWorker";
+import { InputField } from "../InputField";
+import { isDarkMode, theme } from "@cloudflare/style-const";
 
 const HTTP_METHODS = [
 	"GET",
@@ -107,8 +108,8 @@ export function HTTPTab() {
 
 	return (
 		<SplitPane
-			split="vertical"
-			defaultSize="50%"
+			split="horizontal"
+			defaultSize="30%"
 			minSize={50}
 			maxSize={-50}
 			paneStyle={{ display: "flex" }}
@@ -118,27 +119,33 @@ export function HTTPTab() {
 					display="flex"
 					onSubmit={(e) => void onSendRequest(e)}
 					p={2}
+					gap={2}
 					borderBottom="1px solid"
 					borderColor="gray.7"
 				>
 					<Listbox
-						marginBottom={0}
+						m={0}
+						marginRight={0}
 						value={method}
 						options={SELECT_OPTIONS}
 						onChange={(option) => setMethod(option.value)}
 						maxWidth="100"
+						backgroundColor={
+							isDarkMode() ? theme.colors.gray[9] : theme.colors.white
+						}
+						borderRadius={5}
 					/>
-					<Input
+					<InputField
 						name="http_request_url"
 						value={previewUrl}
 						autoComplete="off"
 						spellCheck={false}
 						onChange={(e) => setPreviewUrl(e.target.value)}
 						mb={0}
-						mx={2}
 					/>
 					<Button
-						type="default"
+						type="primary"
+						inverted={true}
 						submit={true}
 						loading={isPreviewUpdating || isLoading}
 						disabled={
