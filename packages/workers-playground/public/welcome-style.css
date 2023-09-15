@@ -14,13 +14,13 @@ body {
 	padding: 80px;
 }
 
-.circuits svg {
-	width: 100%;
+.flares img {
+	object-fit: cover;
+	min-height: 100%;
+	display: block;
 }
 
-.circuits {
-	-webkit-mask: linear-gradient(#000, #0000);
-	mask: linear-gradient(#000, #0000);
+.flares {
 	position: fixed;
 	width: 100%;
 	left: 0px;
@@ -96,5 +96,8 @@ a svg {
 	}
 	.workers-logo {
 		background-image: url(https://playground.devprod.cloudflare.dev/workers-logo-dark.svg);
+	}
+	.flares {
+		filter: brightness(0.4) grayscale();
 	}
 }
