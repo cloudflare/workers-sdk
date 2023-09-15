@@ -2,8 +2,8 @@ import React from "react";
 import { Div } from "@cloudflare/elements";
 import { Icon } from "@cloudflare/component-icon";
 
-import { Input } from "@cloudflare/component-input";
 import { Button } from "@cloudflare/component-button";
+import { InputField } from "../InputField";
 
 export type HeaderEntry = [string, string];
 
@@ -37,20 +37,24 @@ const RequestHeaders: React.FC<Props> = ({ headers, onChange }) => {
 		<Div mb={1} display="flex" flexDirection="column" gap={2}>
 			{headers.map((header, index) => (
 				<Div display="flex" gap={2} flexGrow={0}>
-					<Input
+					<InputField
 						name={`Header name ${index}`}
 						marginBottom={0}
-						onChange={(e) => onChangeHeaderName(header)(e.target.value)}
+						onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+							onChangeHeaderName(header)(e.target.value)
+						}
 						aria-label={"Header name"}
 						autoFocus={true}
 						placeholder="Accept"
 						value={header[0]}
 					/>
-					<Input
+					<InputField
 						name={`Header value ${index}`}
 						marginBottom={0}
 						aria-label={"Header value"}
-						onChange={(e) => onChangeHeaderValue(header)(e.target.value)}
+						onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+							onChangeHeaderValue(header)(e.target.value)
+						}
 						placeholder="*/*"
 						value={header[1]}
 					/>

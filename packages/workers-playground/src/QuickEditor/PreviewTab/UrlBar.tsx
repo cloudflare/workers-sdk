@@ -1,9 +1,8 @@
 import React, { useState } from "react";
 import { createComponent } from "@cloudflare/style-container";
 import { Div } from "@cloudflare/elements";
-import { Input } from "@cloudflare/component-input";
 import { Button } from "@cloudflare/component-button";
-import { isDarkMode } from "@cloudflare/style-const";
+import { InputField } from "../InputField";
 
 const StyledForm = createComponent(
 	({ theme }) => ({
@@ -13,17 +12,6 @@ const StyledForm = createComponent(
 		margin: theme.space[2],
 	}),
 	"form"
-);
-
-const InputField = createComponent(
-	({ theme }) => ({
-		flex: "auto",
-		marginBottom: 0,
-		borderRadius: 5,
-		borderColor: isDarkMode() ? theme.colors.gray[3] : theme.colors.gray[7],
-		backgroundColor: isDarkMode() ? theme.colors.gray[9] : theme.colors.white,
-	}),
-	Input
 );
 
 type Props = {
@@ -57,7 +45,12 @@ export default function URLBar(props: Props) {
 					value={value}
 					onChange={onChangeInputValue}
 				/>
-				<Button type="default" submit={true} loading={props.loading}>
+				<Button
+					type="primary"
+					inverted={true}
+					submit={true}
+					loading={props.loading}
+				>
 					Send
 				</Button>
 			</Div>
