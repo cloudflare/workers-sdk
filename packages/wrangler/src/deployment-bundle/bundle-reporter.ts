@@ -6,7 +6,7 @@ import type { CfModule } from "./worker";
 import type { Metafile } from "esbuild";
 
 const ONE_KIB_BYTES = 1024;
-const ALLOWED_MAX_SIZE = ONE_KIB_BYTES * ONE_KIB_BYTES * 10; // Current max is 10 MiB
+const ALLOWED_INITIAL_MAX = ONE_KIB_BYTES * 1024; // Current max is 1 MiB
 
 async function getSize(modules: CfModule[]) {
 	const gzipSize = gzipSync(
@@ -30,7 +30,7 @@ export async function printBundleSize(
 		gzipSize / ONE_KIB_BYTES
 	).toFixed(2)} KiB`;
 
-	const percentage = (gzipSize / ALLOWED_MAX_SIZE) * 100;
+	const percentage = (gzipSize / ALLOWED_INITIAL_MAX) * 100;
 
 	const colorizedReport =
 		percentage > 90
@@ -41,9 +41,9 @@ export async function printBundleSize(
 
 	logger.log(`Total Upload: ${colorizedReport}`);
 
-	if (gzipSize > ALLOWED_MAX_SIZE && !process.env.NO_SCRIPT_SIZE_WARNING) {
+	if (gzipSize > ALLOWED_INITIAL_MAX && !process.env.NO_SCRIPT_SIZE_WARNING) {
 		logger.warn(
-			"We recommend keeping your script less than 10MiB (10240 KiB) after gzip. Exceeding past this can affect cold start time"
+			"We recommend keeping your script less than 1MiB (1024 KiB) after gzip. Exceeding past this can affect cold start time"
 		);
 	}
 }
