@@ -36,6 +36,7 @@ export function activate(context: vscode.ExtensionContext) {
 			if (data.type === "WorkerLoaded") {
 				console.log("WorkerLoaded", data.body);
 				await cfs.seed(data.body);
+
 				void vscode.commands.executeCommand(
 					"vscode.open",
 					vscode.Uri.parse(`cfs:/${data.body.name}/${data.body.entrypoint}`),

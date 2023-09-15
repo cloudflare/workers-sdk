@@ -40,6 +40,7 @@
 		"onFileSystem:cfs"
 	],
 	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:^",
 		"@cloudflare/workers-types": "^4.20230404.0",
 		"esbuild": "0.16.3",
 		"esbuild-register": "^3.4.2",

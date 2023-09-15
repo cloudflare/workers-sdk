@@ -125,7 +125,7 @@ export class CFS
 		"checkJs": true,
 		"allowJs": true,
 		"types": [],
-		"lib": ["ES2020"]
+		"lib": ["ES2022"]
 	}
 }
 	`.trim()

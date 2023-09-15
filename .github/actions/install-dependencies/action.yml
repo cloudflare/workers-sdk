@@ -12,15 +12,6 @@ runs:
         node-version: ${{ env.node-version }}
         cache: "pnpm"
 
-    - name: ESlint and Typescript caching
-      uses: actions/cache@v3
-      id: eslint-cache
-      with:
-        path: |
-          .eslintcache
-          tsconfig.tsbuildinfo
-        key: ${{ matrix.os }}-eslint-tsbuildinfo-${{ hashFiles('**/*.ts','**/*.js', 'package.json', 'tsconfig.json') }}
-
     - name: Install NPM Dependencies
       shell: bash
       run: pnpm install --frozen-lockfile
