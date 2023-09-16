@@ -1,23 +1,3 @@
-// TODO: Inspector Durable Object
-//  1. ~~Durable Object websocket server~~
-//  2. ~~JSON list endpoints (proxy through to workerd and filter for core:user:*)~~
-//  3. ~~Receive cf data from proxy controller (use env.SECRET for auth)~~
-//  4. ~~Connect to remote websocket and establish devtools connection~~
-//  5. ~~Buffer messages from remote until we've got client connection~~
-//  6. ~~Intercept logging messages and log them to the console (probably via websocket to proxy controller)~~
-//  7. Rewriting messages for source maps and stuff
-//
-
-/**
- * TODO:
- *
- * - Rewriting messages for source maps and stuff
- *      -
- * - tests
- *      - test devtools get-source-map triggers service binding callback?
- *      -
- */
-
 import assert from "node:assert";
 import {
 	castErrorCause,
@@ -125,33 +105,12 @@ export class InspectorProxyWorker implements DurableObject {
 				this.#proxyData = message.proxyData;
 
 				this.reconnectRuntimeWebSocket();
-				this.notifyDevToolsOfReloadComplete();
 
 				break;
 			default:
 				assertNever(message.type);
 		}
 	};
-	notifyDevToolsOfReloadComplete() {
-		// // If devtools already has sources loaded, they may now be stale
-		// // TODO: figure out how to get devtools to reload
-		// this.#websockets.devtools?.close();
-		//
-		// this.sendDevToolsMessage({
-		// 	method: "Runtime.executionContextDestroyed",
-		// 	params: {
-		// 		executionContextId: 1,
-		// 		executionContextUniqueId:
-		// 			this.latestExecutionContextCreatedMessage.context
-		// 				.executionContextUniqueId,
-		// 	},
-		// });
-		//
-		// this.sendRuntimeMessage({
-		// 	method: "Runtime.enable",
-		// 	id: this.nextCounter(),
-		// });
-	}
 
 	reconnectRuntimeWebSocket() {
 		assert(this.#proxyData, "Expected this.#proxyData to be defined");
@@ -188,16 +147,6 @@ export class InspectorProxyWorker implements DurableObject {
 			if (this.#websockets.runtime === runtime) {
 				this.#websockets.runtime = undefined;
 			}
-
-			// this.sendDevToolsMessage({
-			// 	method: "Runtime.executionContextDestroyed",
-			// 	params: {
-			// 		executionContextId: 1,
-			// 		// @ts-expect-error DevTools Protocol type is wrong -- this property exists!
-			// 		executionContextUniqueId:
-			// 			this.latestExecutionContextCreatedMessage?.params.context?.uniqueId,
-			// 	},
-			// });
 		});
 
 		runtime.addEventListener("error", (event) => {
