@@ -152,11 +152,13 @@ function buildLog(): Log {
 	let level = castLogLevel(logger.loggerLevel);
 
 	// if we're in DEBUG or VERBOSE mode, clamp logLevel to WARN -- ie. don't show request logs for user worker
-	if (level >= LogLevel.DEBUG) {
+	if (level <= LogLevel.DEBUG) {
 		level = Math.min(level, LogLevel.WARN);
 	}
 
-	return level === LogLevel.NONE ? new NoOpLog() : new WranglerLog(level);
+	return level === LogLevel.NONE
+		? new NoOpLog()
+		: new WranglerLog(level, { prefix: "wrangler-UserWorker" });
 }
 
 async function buildSourceOptions(
