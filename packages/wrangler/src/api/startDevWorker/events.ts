@@ -154,9 +154,15 @@ export type SerializedError = {
 	cause?: unknown;
 };
 
+export type UrlOriginParts = Pick<URL, "protocol" | "hostname" | "port">;
+export type UrlOriginAndPathnameParts = Pick<
+	URL,
+	"protocol" | "hostname" | "port" | "pathname"
+>;
+
 export type ProxyData = {
-	destinationURL: Partial<Pick<URL, "host" | "hostname" | "port" | "protocol">>;
-	destinationInspectorURL: string;
+	userWorkerUrl: UrlOriginParts;
+	userWorkerInspectorUrl: UrlOriginAndPathnameParts;
 	headers: Record<string, string>;
 	liveReload?: boolean;
 };

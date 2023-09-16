@@ -14,7 +14,6 @@ import {
 	getWrangler1xLegacyModuleReferences,
 } from "../deployment-bundle/module-collection";
 import { logBuildFailure, logBuildWarnings } from "../logger";
-import type { DevEnv, StartDevWorkerOptions } from "../api";
 import type { Config } from "../config";
 import type { SourceMapMetadata } from "../deployment-bundle/bundle";
 import type { Entry } from "../deployment-bundle/entry";

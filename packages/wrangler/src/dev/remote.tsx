@@ -306,12 +306,17 @@ export function useWorker(
 			}
 			*/
 			const proxyData: ProxyData = {
-				destinationURL: {
+				userWorkerUrl: {
 					protocol: "https:",
 					hostname: workerPreviewToken.host,
 					port: "443",
 				},
-				destinationInspectorURL: workerPreviewToken.inspectorUrl.href,
+				userWorkerInspectorUrl: {
+					protocol: workerPreviewToken.inspectorUrl.protocol,
+					hostname: workerPreviewToken.inspectorUrl.hostname,
+					port: workerPreviewToken.inspectorUrl.port.toString(),
+					pathname: workerPreviewToken.inspectorUrl.pathname,
+				},
 				headers: { "cf-workers-preview-token": workerPreviewToken.value },
 				liveReload: false,
 			};
@@ -412,12 +417,17 @@ export async function startRemoteServer(props: RemoteProps) {
 		ip: props.ip,
 		onReady: (ip, port) => {
 			const proxyData: ProxyData = {
-				destinationURL: {
+				userWorkerUrl: {
 					protocol: "https:",
 					hostname: previewToken.host,
 					port: "443",
 				},
-				destinationInspectorURL: previewToken.inspectorUrl.href,
+				userWorkerInspectorUrl: {
+					protocol: previewToken.inspectorUrl.protocol,
+					hostname: previewToken.inspectorUrl.hostname,
+					port: previewToken.inspectorUrl.port.toString(),
+					pathname: previewToken.inspectorUrl.pathname,
+				},
 				headers: { "cf-workers-preview-token": previewToken.value },
 				liveReload: false,
 			};

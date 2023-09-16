@@ -104,7 +104,7 @@ export class ProxyWorker implements DurableObject {
 			const url = new URL(req.url);
 
 			// override url parts for proxying
-			Object.assign(url, proxyData.destinationURL);
+			Object.assign(url, proxyData.userWorkerUrl);
 
 			const headers = new Headers(req.headers);
 			for (const [key, value] of Object.entries(proxyData.headers ?? {})) {
@@ -224,7 +224,7 @@ function insertLiveReloadScript(
 							}
 							function initLiveReload() {
 								if (ws) return;
-								ws = new WebSocket("${websocketUrl.origin}", { protocol: liveReloadProtocol });
+								ws = new WebSocket("${websocketUrl.origin}/cdn-cgi/live-reload", { protocol: liveReloadProtocol });
 								ws.onclose = recover;
 								ws.onerror = recover;
 								ws.onmessage = location.reload.bind(location);
