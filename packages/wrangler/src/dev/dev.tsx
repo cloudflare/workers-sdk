@@ -363,7 +363,7 @@ function DevSession(props: DevSessionProps) {
 		);
 	}
 
-	const announceAndOnReady: typeof props.onReady = (
+	const announceAndOnReady: typeof props.onReady = async (
 		finalIp,
 		finalPort,
 		proxyData
@@ -388,6 +388,13 @@ function DevSession(props: DevSessionProps) {
 		}
 
 		if (props.onReady) {
+			// at this point (in the layers of onReady callbacks), we have devEnv in scope
+			// so rewrite the onReady params to be the ip/port of the ProxyWorker instead of the UserWorker
+			const { proxyWorker } = await devEnv.proxy.ready;
+			const url = await proxyWorker.ready;
+			finalIp = url.hostname;
+			finalPort = parseInt(url.port);
+
 			props.onReady(finalIp, finalPort, proxyData);
 		}
 	};

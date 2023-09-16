@@ -9,7 +9,6 @@ import {
 } from "../deployment-bundle/bundle";
 import traverseModuleGraph from "../deployment-bundle/traverse-module-graph";
 import { logBuildFailure, logBuildWarnings } from "../logger";
-import type { DevEnv, StartDevWorkerOptions } from "../api";
 import type { Config } from "../config";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfModule } from "../deployment-bundle/worker";

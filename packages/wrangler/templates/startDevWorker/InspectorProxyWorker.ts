@@ -36,6 +36,7 @@ import {
 	MaybePromise,
 	assertNever,
 	createDeferredPromise,
+	urlFromParts,
 } from "../../src/api/startDevWorker/utils";
 
 interface Env {
@@ -165,7 +166,9 @@ export class InspectorProxyWorker implements DurableObject {
 		this.#runtimeWebSocketPromise = deferred;
 
 		this.sendDebugLog("BEFORE new Websocket");
-		const runtime = new WebSocket(this.#proxyData.destinationInspectorURL);
+		const runtime = new WebSocket(
+			urlFromParts(this.#proxyData.userWorkerInspectorUrl).href
+		);
 		this.sendDebugLog("AFTER new Websocket");
 
 		this.#websockets.runtime?.close();

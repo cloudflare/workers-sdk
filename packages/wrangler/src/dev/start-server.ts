@@ -156,7 +156,14 @@ export async function startDevServer(
 			localProtocol: props.localProtocol,
 			localUpstream: props.localUpstream,
 			inspect: true,
-			onReady: (ip, port, proxyData) => {
+			onReady: async (ip, port, proxyData) => {
+				// at this point (in the layers of onReady callbacks), we have devEnv in scope
+				// so rewrite the onReady params to be the ip/port of the ProxyWorker instead of the UserWorker
+				const { proxyWorker } = await devEnv.proxy.ready;
+				const url = await proxyWorker.ready;
+				ip = url.hostname;
+				port = parseInt(url.port);
+
 				props.onReady?.(ip, port, proxyData);
 
 				// temp: fake these events by calling the handler directly
@@ -203,7 +210,14 @@ export async function startDevServer(
 			zone: props.zone,
 			host: props.host,
 			routes: props.routes,
-			onReady: (ip, port, proxyData) => {
+			onReady: async (ip, port, proxyData) => {
+				// at this point (in the layers of onReady callbacks), we have devEnv in scope
+				// so rewrite the onReady params to be the ip/port of the ProxyWorker instead of the UserWorker
+				const { proxyWorker } = await devEnv.proxy.ready;
+				const url = await proxyWorker.ready;
+				ip = url.hostname;
+				port = parseInt(url.port);
+
 				props.onReady?.(ip, port, proxyData);
 
 				// temp: fake these events by calling the handler directly
@@ -366,14 +380,18 @@ export async function startLocalServer(props: LocalProps) {
 			await maybeRegisterLocalWorker(event, props.name);
 
 			const proxyData: ProxyData = {
-				destinationURL: {
+				userWorkerUrl: {
 					protocol: event.url.protocol,
 					hostname: event.url.hostname,
 					port: event.url.port,
 				},
-				destinationInspectorURL: `ws://127.0.0.1:${
-					props.runtimeInspectorPort
-				}/core:user:${props.name ?? DEFAULT_WORKER_NAME}`,
+				userWorkerInspectorUrl: {
+					protocol: "ws:",
+					hostname: "127.0.0.1",
+					port: props.runtimeInspectorPort.toString(),
+					pathname: `/core:user:${props.name ?? DEFAULT_WORKER_NAME}`,
+				},
+
 				headers: {},
 				liveReload: props.liveReload,
 			};

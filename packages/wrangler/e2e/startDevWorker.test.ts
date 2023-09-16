@@ -8,9 +8,9 @@ import {
 import * as undici from "undici";
 import { beforeEach, afterEach, describe, test, expect, vi } from "vitest";
 import { unstable_DevEnv as DevEnv } from "wrangler";
+import type { ProxyData } from "../src/api";
 import type { StartDevWorkerOptions } from "../src/api/startDevWorker/types";
 import type { EsbuildBundle } from "../src/dev/use-esbuild";
-import { s } from "vitest/dist/types-dea83b3d";
 
 const fakeBundle = {} as EsbuildBundle;
 
@@ -141,9 +141,18 @@ function fakeReloadComplete(
 	mfUrl: URL,
 	delay = 10
 ) {
-	const proxyData = {
-		destinationURL: { host: mfUrl.host },
-		destinationInspectorURL: `ws://127.0.0.1:${mfOpts.inspectorPort}/core:user:${config.name}`,
+	const proxyData: ProxyData = {
+		userWorkerUrl: {
+			protocol: mfUrl.protocol,
+			hostname: mfUrl.host,
+			port: mfUrl.port,
+		},
+		userWorkerInspectorUrl: {
+			protocol: "ws:",
+			hostname: "127.0.0.1",
+			port: String(mfOpts.inspectorPort),
+			pathname: `/core:user:${config.name}`,
+		},
 		headers: {},
 	};
 

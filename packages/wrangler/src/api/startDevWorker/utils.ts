@@ -37,3 +37,14 @@ export function throwNotImplementedError(func: string, namespace?: string) {
 }
 
 export function assertNever(_value: never) {}
+
+export function urlFromParts(
+	parts: Partial<URL>,
+	base = "http://localhost"
+): URL {
+	const url = new URL(base);
+
+	Object.assign(url, parts);
+
+	return url;
+}
