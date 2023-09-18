@@ -126,11 +126,12 @@ export function Options(yargs: CommonYargsArgv) {
 			},
 			d1: {
 				type: "array",
-				description: "D1 database to bind",
+				description: "D1 database to bind (--d1 D1_BINDING)",
 			},
 			do: {
 				type: "array",
-				description: "Durable Object to bind (--do NAME=CLASS)",
+				description:
+					"Durable Object to bind (--do DO_BINDING=CLASS_NAME@SCRIPT_NAME)",
 				alias: "o",
 			},
 			r2: {
