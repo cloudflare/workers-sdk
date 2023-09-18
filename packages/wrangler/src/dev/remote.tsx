@@ -318,7 +318,7 @@ export function useWorker(
 					pathname: workerPreviewToken.inspectorUrl.pathname,
 				},
 				headers: { "cf-workers-preview-token": workerPreviewToken.value },
-				liveReload: false,
+				liveReload: false, // liveReload currently disabled in remote-mode, but will be supported with startDevWorker
 			};
 
 			onReady?.(props.host || "localhost", props.port, proxyData);
@@ -429,7 +429,7 @@ export async function startRemoteServer(props: RemoteProps) {
 					pathname: previewToken.inspectorUrl.pathname,
 				},
 				headers: { "cf-workers-preview-token": previewToken.value },
-				liveReload: false,
+				liveReload: false, // liveReload currently disabled in remote-mode, but will be supported with startDevWorker
 			};
 
 			props.onReady?.(ip, port, proxyData);
