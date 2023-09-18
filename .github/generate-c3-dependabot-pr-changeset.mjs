@@ -47,8 +47,8 @@ ${generateChangesetBody(changes)}
 	);
 
 	execSync("git add .changeset");
-	execSync("git commit --amend -m '[C3] Update frameworks cli dependencies'");
-	execSync("git push -f");
+	execSync("git commit -m '[C3] Update frameworks cli dependencies'");
+	execSync("git push");
 }
 
 function generateChangesetBody(changes) {
