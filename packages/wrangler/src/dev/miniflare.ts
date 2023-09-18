@@ -109,7 +109,7 @@ export interface ConfigBundle {
 	localProtocol: "http" | "https";
 	localUpstream: string | undefined;
 	inspect: boolean;
-	serviceBindings: Record<string, (request: Request) => Promise<Response>>;
+	serviceBindings: Record<string, (_request: Request) => Promise<Response>>;
 }
 
 class WranglerLog extends Log {
