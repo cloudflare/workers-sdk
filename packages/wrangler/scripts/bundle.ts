@@ -115,9 +115,9 @@ const embedWorkersPlugin: Plugin = {
 			);
 
 			const contents = `
-                import path from "node:path";
-                const scriptPath = path.resolve(__dirname, "..", "${scriptPath}");
-                export default scriptPath;
+				import path from "node:path";
+				const scriptPath = path.resolve(__dirname, "..", "${scriptPath}");
+				export default scriptPath;
             `;
 
 			return { contents, loader: "js", watchFiles };

@@ -19,6 +19,8 @@ let mf: Miniflare | undefined;
 let res: MiniflareResponse | undici.Response | undefined;
 let ws: undici.WebSocket | undefined;
 
+type OptionalKeys<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+
 beforeEach(() => {
 	devEnv = new DevEnv();
 	mf = undefined;
@@ -39,7 +41,7 @@ async function fakeStartUserWorker(options: {
 	script: string;
 	name?: string;
 	mfOpts?: Partial<MiniflareOptions>;
-	config?: Omit<StartDevWorkerOptions, "name" | "script">;
+	config?: OptionalKeys<StartDevWorkerOptions, "name" | "script">;
 }) {
 	const config: StartDevWorkerOptions = {
 		...options.config,
@@ -93,7 +95,7 @@ async function fakeUserWorkerChanges({
 		...config,
 		script: {
 			...config.script,
-			...(script ? { script } : undefined),
+			...(script ? { contents: script } : undefined),
 		},
 	};
 	mfOpts = {
@@ -139,7 +141,7 @@ function fakeReloadComplete(
 	config: StartDevWorkerOptions,
 	mfOpts: MiniflareOptions,
 	mfUrl: URL,
-	delay = 10
+	delay = 100
 ) {
 	const proxyData: ProxyData = {
 		userWorkerUrl: {
@@ -154,6 +156,7 @@ function fakeReloadComplete(
 			pathname: `/core:user:${config.name}`,
 		},
 		headers: {},
+		liveReload: config.dev?.liveReload,
 	};
 
 	setTimeout(() => {
@@ -172,12 +175,12 @@ describe("startDevWorker: ProxyController", () => {
 	test("ProxyWorker buffers requests while runtime reloads", async () => {
 		const run = await fakeStartUserWorker({
 			script: `
-                export default {
-                    fetch() {
-                        return new Response("body:1");
-                    }
-                }
-            `,
+				export default {
+					fetch() {
+						return new Response("body:1");
+					}
+				}
+			`,
 		});
 
 		res = await run.worker.fetch("http://dummy");
@@ -198,14 +201,14 @@ describe("startDevWorker: ProxyController", () => {
 	test("InspectorProxyWorker discovery endpoints + devtools websocket connection", async () => {
 		const run = await fakeStartUserWorker({
 			script: `
-                export default {
-                    fetch() {
-                        console.log('Inside mock user worker');
+				export default {
+					fetch() {
+						console.log('Inside mock user worker');
 
-                        return new Response("body:1");
-                    }
-                }
-            `,
+						return new Response("body:1");
+					}
+				}
+			`,
 			config: { dev: { inspector: { port: await getPort() } } },
 		});
 
@@ -265,14 +268,14 @@ describe("startDevWorker: ProxyController", () => {
 
 			const run = await fakeStartUserWorker({
 				script: `
-                export default {
-                    fetch() {
-                        throw new Error('Boom!');
+					export default {
+						fetch() {
+							throw new Error('Boom!');
 
-                        return new Response("body:1");
-                    }
-                }
-            `,
+							return new Response("body:1");
+						}
+					}
+				`,
 			});
 
 			res = await run.worker.fetch("http://dummy");
@@ -284,14 +287,14 @@ describe("startDevWorker: ProxyController", () => {
 
 			fireAndForgetFakeUserWorkerChanges({
 				script: `
-                export default {
-                    fetch() {
-                        throw new Error('Boom 2!');
+					export default {
+						fetch() {
+							throw new Error('Boom 2!');
 
-                        return new Response("body:2");
-                    }
-                }
-            `,
+							return new Response("body:2");
+						}
+					}
+				`,
 				mfOpts: run.mfOpts,
 				config: run.config,
 			});
@@ -305,12 +308,12 @@ describe("startDevWorker: ProxyController", () => {
 
 			fireAndForgetFakeUserWorkerChanges({
 				script: `
-                export default {
-                    fetch() {
-                        return new Response("body:3");
-                    }
-                }
-            `,
+					export default {
+						fetch() {
+							return new Response("body:3");
+						}
+					}
+				`,
 				mfOpts: run.mfOpts,
 				config: run.config,
 			});
@@ -329,12 +332,12 @@ describe("startDevWorker: ProxyController", () => {
 	test("config.dev.{server,inspector} changes, restart the server instance", async () => {
 		const run = await fakeStartUserWorker({
 			script: `
-                export default {
-                    fetch() {
-                        return new Response("body:1");
-                    }
-                }
-            `,
+				export default {
+					fetch() {
+						return new Response("body:1");
+					}
+				}
+			`,
 			config: {
 				dev: {
 					server: { port: await getPort() },
@@ -373,5 +376,76 @@ describe("startDevWorker: ProxyController", () => {
 		).rejects.toMatchInlineSnapshot("[TypeError: fetch failed]");
 	});
 
-	test("liveReload", () => {});
+	test("liveReload", async () => {
+		let resText: string;
+		const scriptRegex = /<script>([\s\S]*)<\/script>/gm;
+
+		const run = await fakeStartUserWorker({
+			script: `
+				export default {
+					fetch() {
+						return new Response("body:1", {
+							headers: { 'Content-Type': 'text/html' }
+						});
+					}
+				}
+			`,
+			config: {
+				dev: { liveReload: true },
+			},
+		});
+
+		// test liveReload: true inserts live-reload <script> tag when the response Content-Type is html
+		res = await run.worker.fetch("http://dummy");
+		resText = await res.text();
+		expect(resText).toEqual(expect.stringContaining("body:1"));
+		expect(resText).toEqual(expect.stringMatching(scriptRegex));
+		expect(resText.replace(scriptRegex, "").trim()).toEqual("body:1"); // test, without the <script> tag, the response is as authored
+
+		fireAndForgetFakeUserWorkerChanges({
+			mfOpts: run.mfOpts,
+			script: `
+				export default {
+					fetch() {
+						return new Response("body:2");
+					}
+				}
+			`,
+			config: {
+				...run.config,
+				dev: { liveReload: true },
+			},
+		});
+
+		// test liveReload does nothing when the response Content-Type is not html
+		res = await run.worker.fetch("http://dummy");
+		resText = await res.text();
+		expect(resText).toMatchInlineSnapshot('"body:2"');
+		expect(resText).toBe("body:2");
+		expect(resText).not.toEqual(expect.stringMatching(scriptRegex));
+
+		fireAndForgetFakeUserWorkerChanges({
+			mfOpts: run.mfOpts,
+			script: `
+				export default {
+					fetch() {
+						return new Response("body:3", {
+							headers: { 'Content-Type': 'text/html' }
+						});
+					}
+				}
+			`,
+			config: {
+				...run.config,
+				dev: { liveReload: false },
+			},
+		});
+
+		// test liveReload: false does nothing even when the response Content-Type is html
+		res = await run.worker.fetch("http://dummy");
+		resText = await res.text();
+		expect(resText).toMatchInlineSnapshot('"body:3"');
+		expect(resText).toBe("body:3");
+		expect(resText).not.toEqual(expect.stringMatching(scriptRegex));
+	});
 });

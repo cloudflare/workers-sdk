@@ -214,7 +214,8 @@ function insertLiveReloadScript(
 				websocketUrl.protocol =
 					websocketUrl.protocol === "http:" ? "ws:" : "wss:";
 
-				end.append(`
+				end.append(
+					`
 					<script>
 						(function() {
 							var ws;
@@ -224,14 +225,16 @@ function insertLiveReloadScript(
 							}
 							function initLiveReload() {
 								if (ws) return;
-								ws = new WebSocket("${websocketUrl.origin}/cdn-cgi/live-reload", { protocol: liveReloadProtocol });
+								ws = new WebSocket("${websocketUrl.origin}/cdn-cgi/live-reload", { protocol: "${liveReloadProtocol}" });
 								ws.onclose = recover;
 								ws.onerror = recover;
 								ws.onmessage = location.reload.bind(location);
 							}
 						})();
 					</script>
-				`);
+				`,
+					{ html: true }
+				);
 			}
 		},
 	});
