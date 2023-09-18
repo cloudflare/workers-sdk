@@ -152,7 +152,7 @@ jobs:
       - name: E2E Tests
         run: pnpm run --filter create-cloudflare test:e2e:${{matrix.pm}}
         env:
-          FRAMEWORK_CLI_TO_TEST: ${{ needs.get-bumped-framework.outputs.bumped-framework-cli }}
+          FRAMEWORK_CLI_TO_TEST: ${{ needs.get-dependabot-bumped-framework.outputs.bumped-framework-cli }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.C3_TEST_CLOUDFLARE_ACCOUNT_ID }}
           E2E_QUARANTINE: ${{ matrix.quarantine }}
