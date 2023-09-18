@@ -94,7 +94,11 @@
 		},
 		"transformIgnorePatterns": [
 			"node_modules/.pnpm/(?!find-up|locate-path|p-locate|p-limit|p-timeout|p-queue|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream|get-port|supports-color|pretty-bytes|npx-import)"
-		]
+		],
+		"snapshotFormat": {
+			"escapeString": true,
+			"printBasicPrototype": true
+		}
 	},
 	"dependencies": {
 		"@cloudflare/kv-asset-handler": "^0.2.0",
