@@ -5,6 +5,7 @@
 	"description": "ESLint config for workers-sdk",
 	"main": "index.js",
 	"dependencies": {
+		"@typescript-eslint/parser": "^6.7.2",
 		"eslint": "^8.49.0",
 		"eslint-config-turbo": "latest",
 		"eslint-plugin-import": "2.26.x",
