@@ -9,18 +9,18 @@ Create a `.vscode/launch.json` file with the following contents...
 
 ```json
 {
-  "configurations": [
-    {
-      "name": "Wrangler",
-      "type": "node",
-      "request": "attach",
-      "port": 9229,
-      "cwd": "/",
-      "resolveSourceMapLocations": null,
-      "attachExistingChildren": false,
-      "autoAttachChildProcesses": false,
-    }
-  ]
+	"configurations": [
+		{
+			"name": "Wrangler",
+			"type": "node",
+			"request": "attach",
+			"port": 9229,
+			"cwd": "/",
+			"resolveSourceMapLocations": null,
+			"attachExistingChildren": false,
+			"autoAttachChildProcesses": false
+		}
+	]
 }
 ```
 
