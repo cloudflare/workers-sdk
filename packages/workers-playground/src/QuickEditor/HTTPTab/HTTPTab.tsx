@@ -107,59 +107,65 @@ export function HTTPTab() {
 	}, [previewHash, isLoading, onSendRequest]);
 
 	return (
-		<SplitPane
-			split="horizontal"
-			defaultSize="30%"
-			minSize={50}
-			maxSize={-50}
-			paneStyle={{ display: "flex" }}
-		>
-			<Div display="flex" flexDirection="column" width="100%">
-				<Form
-					display="flex"
-					onSubmit={(e) => void onSendRequest(e)}
-					p={2}
-					gap={2}
-					borderBottom="1px solid"
-					borderColor="gray.7"
+		<Div display="flex" flexDirection="column" width="100%">
+			<Form
+				display="flex"
+				onSubmit={(e) => void onSendRequest(e)}
+				p={2}
+				gap={2}
+				borderBottom="1px solid"
+				borderColor="gray.7"
+			>
+				<Listbox
+					m={0}
+					marginRight={0}
+					value={method}
+					options={SELECT_OPTIONS}
+					onChange={(option) => setMethod(option.value)}
+					maxWidth="100"
+					backgroundColor={
+						isDarkMode() ? theme.colors.gray[9] : theme.colors.white
+					}
+					borderRadius={5}
+				/>
+				<InputField
+					name="http_request_url"
+					value={previewUrl}
+					autoComplete="off"
+					spellCheck={false}
+					onChange={(e) => setPreviewUrl(e.target.value)}
+					mb={0}
+				/>
+				<Button
+					type="primary"
+					inverted={true}
+					submit={true}
+					loading={isPreviewUpdating || isLoading}
+					disabled={
+						!previewHash ||
+						Boolean(previewError) ||
+						!previewUrl ||
+						!previewUrl.startsWith("/")
+					}
+					data-tracking-name="send http tab request"
 				>
-					<Listbox
-						m={0}
-						marginRight={0}
-						value={method}
-						options={SELECT_OPTIONS}
-						onChange={(option) => setMethod(option.value)}
-						maxWidth="100"
-						backgroundColor={
-							isDarkMode() ? theme.colors.gray[9] : theme.colors.white
-						}
-						borderRadius={5}
-					/>
-					<InputField
-						name="http_request_url"
-						value={previewUrl}
-						autoComplete="off"
-						spellCheck={false}
-						onChange={(e) => setPreviewUrl(e.target.value)}
-						mb={0}
-					/>
-					<Button
-						type="primary"
-						inverted={true}
-						submit={true}
-						loading={isPreviewUpdating || isLoading}
-						disabled={
-							!previewHash ||
-							Boolean(previewError) ||
-							!previewUrl ||
-							!previewUrl.startsWith("/")
-						}
-						data-tracking-name="send http tab request"
-					>
-						Send
-					</Button>
-				</Form>
-				<Div overflow="auto" display="flex" flexDirection="column">
+					Send
+				</Button>
+			</Form>
+			<SplitPane
+				split="horizontal"
+				defaultSize="30%"
+				paneStyle={{
+					display: "flex",
+				}}
+				style={{
+					position: "relative",
+					minHeight: "initial",
+				}}
+				minSize={50}
+				maxSize={-50}
+			>
+				<Div overflow="auto" display="flex" flexDirection="column" width="100%">
 					<Div p={2} display="flex" gap={2} flexDirection="column">
 						<Div display="flex" alignItems="baseline">
 							<StyledLabel htmlFor="request_headers">Headers </StyledLabel>
@@ -193,26 +199,27 @@ export function HTTPTab() {
 						</Div>
 					)}
 				</Div>
-			</Div>
-			<Output
-				display="block"
-				width="100%"
-				fontSize={2}
-				m={0}
-				whiteSpace="pre-wrap"
-				overflowWrap="break-word"
-				overflow="auto"
-			>
-				{previewError ? (
-					<FrameError>{previewError}</FrameError>
-				) : response ? (
-					<ResponseView response={response} loading={isLoading} />
-				) : (
-					<Toast type="info">
-						Send a request to test your Worker's response.
-					</Toast>
-				)}
-			</Output>
-		</SplitPane>
+
+				<Output
+					display="block"
+					width="100%"
+					fontSize={2}
+					m={0}
+					whiteSpace="pre-wrap"
+					overflowWrap="break-word"
+					overflow="auto"
+				>
+					{previewError ? (
+						<FrameError>{previewError}</FrameError>
+					) : response ? (
+						<ResponseView response={response} loading={isLoading} />
+					) : (
+						<Toast type="info">
+							Send a request to test your Worker's response.
+						</Toast>
+					)}
+				</Output>
+			</SplitPane>
+		</Div>
 	);
 }
