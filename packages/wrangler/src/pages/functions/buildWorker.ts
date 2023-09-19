@@ -147,6 +147,7 @@ export function buildWorker({
 			checkFetch: local,
 			targetConsumer: local ? "dev" : "deploy",
 			forPages: true,
+			local,
 		}
 	);
 }
@@ -241,6 +242,7 @@ export function buildRawWorker({
 			targetConsumer: local ? "dev" : "deploy",
 			forPages: true,
 			additionalModules,
+			local,
 		}
 	);
 }

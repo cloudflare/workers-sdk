@@ -488,6 +488,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						// We want to know if the build is for development or publishing
 						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
 						targetConsumer: "deploy",
+						local: false,
 					}
 			  );
 
@@ -558,6 +559,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		if (assets.manifest) {
 			modules.push({
 				name: "__STATIC_CONTENT_MANIFEST",
+				filePath: undefined,
 				content: JSON.stringify(assets.manifest),
 				type: "text",
 			});
@@ -571,6 +573,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			name: scriptName,
 			main: {
 				name: path.basename(resolvedEntryPointPath),
+				filePath: resolvedEntryPointPath,
 				content: content,
 				type: bundleType,
 			},

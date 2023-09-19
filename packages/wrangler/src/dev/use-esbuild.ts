@@ -169,6 +169,7 @@ export function useEsbuild({
 						...additionalModules,
 					]),
 					plugins: [onEnd],
+					local,
 				});
 			}
 

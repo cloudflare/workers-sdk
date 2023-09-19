@@ -9,9 +9,9 @@ export default {
 	 * @param {Request} request
 	 * @param {Env} env
 	 * @param {ExecutionContext} ctx
-	 * @returns {Response}
+	 * @returns {Promise<Response>}
 	 */
-	fetch(request, env, ctx) {
+	async fetch(request, env, ctx) {
 		console.log("Hello Cloudflare Workers!");
 
 		return new Response(welcome, {

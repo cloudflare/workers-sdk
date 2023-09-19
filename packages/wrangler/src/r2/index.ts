@@ -1,11 +1,7 @@
 import { Blob } from "node:buffer";
 import * as fs from "node:fs";
 import * as stream from "node:stream";
-import {
-	createFileReadableStream,
-	InternalR2ObjectBody as MiniflareR2ObjectBody,
-	InternalR2Object as MiniflareR2Object,
-} from "miniflare";
+import { ReadableStream } from "node:stream/web";
 import prettyBytes from "pretty-bytes";
 import { readConfig } from "../config";
 import { FatalError } from "../errors";
@@ -22,11 +18,34 @@ import {
 	getR2Object,
 	listR2Buckets,
 	putR2Object,
-	localGateway,
+	usingLocalBucket,
 } from "./helpers";
 
 import type { CommonYargsArgv } from "../yargs-types";
-import type { ReadableStream } from "stream/web";
+import type { R2PutOptions } from "@cloudflare/workers-types/experimental";
+
+const CHUNK_SIZE = 1024;
+async function createFileReadableStream(filePath: string) {
+	// Based off https://streams.spec.whatwg.org/#example-rs-pull
+	const handle = await fs.promises.open(filePath, "r");
+	let position = 0;
+	return new ReadableStream({
+		async pull(controller) {
+			const buffer = new Uint8Array(CHUNK_SIZE);
+			const { bytesRead } = await handle.read(buffer, 0, CHUNK_SIZE, position);
+			if (bytesRead === 0) {
+				await handle.close();
+				controller.close();
+			} else {
+				position += bytesRead;
+				controller.enqueue(buffer.subarray(0, bytesRead));
+			}
+		},
+		cancel() {
+			return handle.close();
+		},
+	});
+}
 
 export function r2(r2Yargs: CommonYargsArgv) {
 	return r2Yargs
@@ -90,28 +109,30 @@ export function r2(r2Yargs: CommonYargsArgv) {
 							logger.log(`Downloading "${key}" from "${fullBucketName}".`);
 						}
 
-						let input: ReadableStream;
+						const output = file ? fs.createWriteStream(file) : process.stdout;
 						if (objectGetYargs.local) {
-							const gateway = localGateway(
+							await usingLocalBucket(
 								objectGetYargs.persistTo,
 								config.configPath,
-								bucket
+								bucket,
+								async (r2Bucket) => {
+									const object = await r2Bucket.get(key);
+									if (object === null) {
+										throw new Error("The specified key does not exist.");
+									}
+									// Note `object.body` is only valid inside this closure
+									await stream.promises.pipeline(object.body, output);
+								}
 							);
-							const object = await gateway.get(key);
-							if (object instanceof MiniflareR2ObjectBody) {
-								input = object.body;
-							} else if (object instanceof MiniflareR2Object) {
-								input = object.encode().value;
-							}
 						} else {
-							input = await getR2Object(accountId, bucket, key, jurisdiction);
+							const input = await getR2Object(
+								accountId,
+								bucket,
+								key,
+								jurisdiction
+							);
+							await stream.promises.pipeline(input, output);
 						}
-						const output = file ? fs.createWriteStream(file) : process.stdout;
-						await new Promise<void>((resolve, reject) => {
-							stream.pipeline(input, output, (err: unknown) => {
-								err ? reject(err) : resolve();
-							});
-						});
 						if (!pipe) logger.log("Download complete.");
 					}
 				)
@@ -257,32 +278,50 @@ export function r2(r2Yargs: CommonYargsArgv) {
 						);
 
 						if (local) {
-							const gateway = localGateway(
+							await usingLocalBucket(
 								persistTo,
 								config.configPath,
-								bucket
+								bucket,
+								async (r2Bucket, mf) => {
+									const putOptions: R2PutOptions = {
+										httpMetadata: {
+											contentType: options.contentType,
+											contentDisposition: options.contentDisposition,
+											contentEncoding: options.contentEncoding,
+											contentLanguage: options.contentLanguage,
+											cacheControl: options.cacheControl,
+											// @ts-expect-error `@cloudflare/workers-types` is wrong
+											//  here, `number`'s are allowed for `Date`s
+											// TODO(now): fix
+											cacheExpiry:
+												options.expires === undefined
+													? undefined
+													: parseInt(options.expires),
+										},
+										customMetadata: undefined,
+										sha1: undefined,
+										sha256: undefined,
+										onlyIf: undefined,
+										md5: undefined,
+										sha384: undefined,
+										sha512: undefined,
+									};
+									// We can't use `r2Bucket.put()` here as `R2Bucket#put()`
+									// requires a known length stream, and Miniflare's magic proxy
+									// currently doesn't support sending these. Instead,
+									// `usingLocalBucket()` provides a single `PUT` endpoint
+									// for writing to a local bucket.
+									await mf.dispatchFetch(`http://localhost/${key}`, {
+										method: "PUT",
+										body: object,
+										duplex: "half",
+										headers: {
+											"Content-Length": objectSize.toString(),
+											"Wrangler-R2-Put-Options": JSON.stringify(putOptions),
+										},
+									});
+								}
 							);
-
-							await gateway.put(key, object, objectSize, {
-								httpMetadata: {
-									contentType: options.contentType,
-									contentDisposition: options.contentDisposition,
-									contentEncoding: options.contentEncoding,
-									contentLanguage: options.contentLanguage,
-									cacheControl: options.cacheControl,
-									cacheExpiry:
-										options.expires === undefined
-											? undefined
-											: parseInt(options.expires),
-								},
-								customMetadata: undefined,
-								sha1: undefined,
-								sha256: undefined,
-								onlyIf: undefined,
-								md5: undefined,
-								sha384: undefined,
-								sha512: undefined,
-							});
 						} else {
 							await putR2Object(
 								accountId,
@@ -342,13 +381,12 @@ export function r2(r2Yargs: CommonYargsArgv) {
 						);
 
 						if (args.local) {
-							const gateway = localGateway(
+							await usingLocalBucket(
 								args.persistTo,
 								config.configPath,
-								bucket
+								bucket,
+								(r2Bucket) => r2Bucket.delete(key)
 							);
-
-							await gateway.delete(key);
 						} else {
 							await deleteR2Object(accountId, bucket, key, jurisdiction);
 						}
