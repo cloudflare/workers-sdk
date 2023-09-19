@@ -39,7 +39,7 @@ if (!changes.length) {
 	writeFileSync(
 		`.changeset/c3-frameworks-update-${prNumber}.md`,
 		`---
-"dependabot-testing": patch
+"create-cloudflare": patch
 ---
 
 ${generateChangesetBody(changes)}
