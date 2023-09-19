@@ -44,7 +44,7 @@ export function TopBar() {
 	});
 
 	function setValue(v: string) {
-		const sanitised = v.replace(/[^a-z-]+/g, "-");
+		const sanitised = v.replace(/[^a-z0-9-]+/g, "-");
 		_setValue(sanitised);
 	}
 
