@@ -36,6 +36,7 @@ export async function createUploadWorkerBundleContents(
 function createWorkerBundleFormData(workerBundle: BundleResult): FormData {
 	const mainModule = {
 		name: path.basename(workerBundle.resolvedEntryPointPath),
+		filePath: workerBundle.resolvedEntryPointPath,
 		content: readFileSync(workerBundle.resolvedEntryPointPath, {
 			encoding: "utf-8",
 		}),

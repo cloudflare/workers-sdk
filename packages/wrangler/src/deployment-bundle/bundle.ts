@@ -146,6 +146,7 @@ export async function bundleWorker(
 		disableModuleCollection?: boolean;
 		isOutfile?: boolean;
 		forPages?: boolean;
+		local: boolean;
 	}
 ): Promise<BundleResult> {
 	const {
@@ -175,12 +176,16 @@ export async function bundleWorker(
 		isOutfile,
 		forPages,
 		additionalModules = [],
+		local,
 	} = options;
 
 	// We create a temporary directory for any one-off files we
 	// need to create. This is separate from the main build
 	// directory (`destination`).
-	const tmpDir = await tmp.dir({ unsafeCleanup: true });
+	const unsafeTmpDir = await tmp.dir({ unsafeCleanup: true });
+	// Make sure we resolve all files relative to the actual temporary directory,
+	// without symlinks, otherwise `esbuild` will generate invalid source maps.
+	const tmpDirPath = fs.realpathSync(unsafeTmpDir.path);
 
 	const entryDirectory = path.dirname(entry.file);
 	let moduleCollector = createModuleCollector({
@@ -215,10 +220,10 @@ export async function bundleWorker(
 	// we need to extract that file to an accessible place before injecting
 	// it in, hence this code here.
 
-	const checkedFetchFileToInject = path.join(tmpDir.path, "checked-fetch.js");
+	const checkedFetchFileToInject = path.join(tmpDirPath, "checked-fetch.js");
 
 	if (checkFetch && !fs.existsSync(checkedFetchFileToInject)) {
-		fs.mkdirSync(tmpDir.path, {
+		fs.mkdirSync(tmpDirPath, {
 			recursive: true,
 		});
 		fs.writeFileSync(
@@ -253,7 +258,7 @@ export async function bundleWorker(
 		{
 			name: "miniflare3-json-error",
 			path: "templates/middleware/middleware-miniflare3-json-error.ts",
-			active: targetConsumer === "dev",
+			active: targetConsumer === "dev" && local,
 		},
 		{
 			name: "serve-static-assets",
@@ -320,7 +325,7 @@ export async function bundleWorker(
 	) {
 		inputEntry = await applyMiddlewareLoaderFacade(
 			entry,
-			tmpDir.path,
+			tmpDirPath,
 			activeMiddleware,
 			doBindings
 		);
@@ -450,7 +455,7 @@ export async function bundleWorker(
 		stop,
 		sourceMapPath,
 		sourceMapMetadata: {
-			tmpDir: tmpDir.path,
+			tmpDir: tmpDirPath,
 			entryDirectory: entry.directory,
 		},
 		moduleCollector,
@@ -481,10 +486,6 @@ async function applyMiddlewareLoaderFacade(
 	// Firstly we need to insert the middleware array into the project,
 	// and then we load the middleware - this insertion and loading is
 	// different for each format.
-
-	// Make sure we resolve all files relative to the actual temporary directory,
-	// otherwise we'll have issues with source maps
-	tmpDirPath = fs.realpathSync(tmpDirPath);
 
 	// We need to import each of the middlewares, so we need to generate a
 	// random, unique identifier that we can use for the import.

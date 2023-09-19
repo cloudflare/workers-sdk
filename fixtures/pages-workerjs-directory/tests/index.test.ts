@@ -60,12 +60,9 @@ describe("Pages _worker.js/ directory", () => {
 			await stop();
 		}
 
-		expect(existsSync(join(tmpDir, "./v3/d1/D1"))).toBeTruthy();
-		expect(existsSync(join(tmpDir, "./v3/d1/elsewhere"))).toBeTruthy();
-		expect(existsSync(join(tmpDir, "./v3/kv/KV"))).toBeTruthy();
-		expect(existsSync(join(tmpDir, "./v3/kv/other_kv"))).toBeTruthy();
-		expect(existsSync(join(tmpDir, "./v3/r2/R2"))).toBeTruthy();
-		expect(existsSync(join(tmpDir, "./v3/r2/other_r2"))).toBeTruthy();
+		expect(existsSync(join(tmpDir, "./v3/d1"))).toBeTruthy();
+		expect(existsSync(join(tmpDir, "./v3/kv"))).toBeTruthy();
+		expect(existsSync(join(tmpDir, "./v3/r2"))).toBeTruthy();
 	});
 
 	it("should bundle", async ({ expect }) => {

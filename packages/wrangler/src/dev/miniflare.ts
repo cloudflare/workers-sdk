@@ -33,7 +33,6 @@ import type {
 	WorkerOptions,
 	Request,
 	Response,
-	QueueConsumerOptions,
 } from "miniflare";
 import type { Abortable } from "node:events";
 
@@ -188,16 +187,14 @@ function queueProducerEntry(queue: CfQueue): [string, string] {
 	return [queue.binding, queue.queue_name];
 }
 type QueueConsumer = NonNullable<Config["queues"]["consumers"]>[number];
-function queueConsumerEntry(
-	consumer: QueueConsumer
-): [string, QueueConsumerOptions] {
-	const options: QueueConsumerOptions = {
+function queueConsumerEntry(consumer: QueueConsumer) {
+	const options = {
 		maxBatchSize: consumer.max_batch_size,
 		maxBatchTimeout: consumer.max_batch_timeout,
 		maxRetires: consumer.max_retries,
 		deadLetterQueue: consumer.dead_letter_queue,
 	};
-	return [consumer.queue, options];
+	return [consumer.queue, options] as const;
 }
 // TODO(someday): would be nice to type these methods more, can we export types for
 //  each plugin options schema and use those
@@ -342,10 +339,11 @@ type PickTemplate<T, K extends string> = {
 	[P in keyof T & K]: T[P];
 };
 type PersistOptions = PickTemplate<MiniflareOptions, `${string}Persist`>;
-function buildPersistOptions(config: ConfigBundle): PersistOptions | undefined {
-	const persist = config.localPersistencePath;
-	if (persist !== null) {
-		const v3Path = path.join(persist, "v3");
+export function buildPersistOptions(
+	localPersistencePath: ConfigBundle["localPersistencePath"]
+): PersistOptions | undefined {
+	if (localPersistencePath !== null) {
+		const v3Path = path.join(localPersistencePath, "v3");
 		return {
 			cachePersist: path.join(v3Path, "cache"),
 			durableObjectsPersist: path.join(v3Path, "do"),
@@ -385,7 +383,7 @@ async function buildMiniflareOptions(
 	const { bindingOptions, internalObjects, externalDurableObjectWorker } =
 		buildBindingOptions(config);
 	const sitesOptions = buildSitesOptions(config);
-	const persistOptions = buildPersistOptions(config);
+	const persistOptions = buildPersistOptions(config.localPersistencePath);
 
 	let httpsOptions: { httpsKey: string; httpsCert: string } | undefined;
 	if (config.localProtocol === "https") {
@@ -402,13 +400,6 @@ async function buildMiniflareOptions(
 		inspectorPort: config.inspect ? config.inspectorPort : undefined,
 		liveReload: config.liveReload,
 		upstream,
-		unsafeSourceMapIgnoreSourcePredicate(source) {
-			const tmpDir = config.bundle.sourceMapMetadata?.tmpDir;
-			return (
-				(tmpDir !== undefined && source.includes(tmpDir)) ||
-				source.includes("wrangler/templates")
-			);
-		},
 
 		log,
 		verbose: logger.loggerLevel === "debug",
