@@ -44,7 +44,7 @@ export function TopBar() {
 	});
 
 	function setValue(v: string) {
-		const sanitised = v.replace(/[^a-z-]+/g, "-");
+		const sanitised = v.replace(/[^a-z0-9-]+/g, "-");
 		_setValue(sanitised);
 	}
 
@@ -66,15 +66,15 @@ export function TopBar() {
 	return (
 		<>
 			<Wrapper>
-				<WorkersLogo />
-
-				<A target="_blank" href="/">
+				<A href="/" color="inherit">
+					<WorkersLogo />
+				</A>
+				<A target="_blank" href="/playground">
 					<Button ml={2} type="primary" inverted={true}>
 						<Icon label="Add" type="plus" mr={1} />
 						New
 					</Button>
 				</A>
-
 				<Div ml="auto" mr="auto" display="flex" gap={1} alignItems="center">
 					{isEditing ? (
 						<Input
@@ -102,7 +102,6 @@ export function TopBar() {
 						<Icon type={isEditing ? "ok" : "edit"} />
 					</Button>
 				</Div>
-
 				<Button
 					type="primary"
 					inverted={true}

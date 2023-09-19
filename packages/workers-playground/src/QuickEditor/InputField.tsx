@@ -1,7 +1,6 @@
 import { createComponent } from "@cloudflare/style-container";
 import { Input } from "@cloudflare/component-input";
 import { isDarkMode } from "@cloudflare/style-const";
-import { Listbox } from "@cloudflare/component-listbox";
 
 export const InputField = createComponent(
 	({ theme }) => ({

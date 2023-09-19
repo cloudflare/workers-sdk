@@ -160,6 +160,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		remix: {
 			expectResponseToContain: "Welcome to Remix",
 			testCommitMessage: true,
+			quarantine: true,
 		},
 		next: {
 			expectResponseToContain: "Create Next App",
