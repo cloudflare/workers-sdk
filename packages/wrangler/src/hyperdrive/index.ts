@@ -10,31 +10,21 @@ export function hyperdrive(yargs: CommonYargsArgv) {
 	return yargs
 		.command(
 			"create <name>",
-			"Create a Hyperdrive database configuration",
+			"Create a Hyperdrive config",
 			createOptions,
 			createHandler
 		)
 		.command(
 			"delete <id>",
-			"Delete a Hyperdrive database configuration",
+			"Delete a Hyperdrive config",
 			deleteOptions,
 			deleteHandler
 		)
-		.command(
-			"get <id>",
-			"Get a Hyperdrive database configuration",
-			getOptions,
-			getHandler
-		)
-		.command(
-			"list",
-			"List Hyperdrive database configurations",
-			listOptions,
-			listHandler
-		)
+		.command("get <id>", "Get a Hyperdrive config", getOptions, getHandler)
+		.command("list", "List Hyperdrive configs", listOptions, listHandler)
 		.command(
 			"update <id>",
-			"Update a Hyperdrive database configuration",
+			"Update a Hyperdrive config",
 			updateOptions,
 			updateHandler
 		)

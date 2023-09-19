@@ -1,6 +1,6 @@
 import { readConfig } from "../config";
 import { logger } from "../logger";
-import { deleteDatabase } from "./client";
+import { deleteConfig } from "./client";
 import { hyperdriveBetaWarning } from "./common";
 import type {
 	CommonYargsArgv,
@@ -12,7 +12,7 @@ export function options(yargs: CommonYargsArgv) {
 		.positional("id", {
 			type: "string",
 			demandOption: true,
-			description: "The ID of the Hyperdrive database configuration",
+			description: "The ID of the Hyperdrive config",
 		})
 		.epilogue(hyperdriveBetaWarning);
 }
@@ -22,7 +22,7 @@ export async function handler(
 ) {
 	const config = readConfig(args.config, args);
 
-	logger.log(`🗑️ Deleting Hyperdrive database configuration ${args.id}`);
-	await deleteDatabase(config, args.id);
+	logger.log(`🗑️ Deleting Hyperdrive database config ${args.id}`);
+	await deleteConfig(config, args.id);
 	logger.log(`✅ Deleted`);
 }

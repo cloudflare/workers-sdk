@@ -1,6 +1,6 @@
 import { readConfig } from "../config";
 import { logger } from "../logger";
-import { createDatabase } from "./client";
+import { createConfig } from "./client";
 import { hyperdriveBetaWarning } from "./common";
 import type {
 	CommonYargsArgv,
@@ -12,14 +12,14 @@ export function options(yargs: CommonYargsArgv) {
 		.positional("name", {
 			type: "string",
 			demandOption: true,
-			description: "The name of the Hyperdrive database configuration",
+			description: "The name of the Hyperdrive config",
 		})
 		.options({
 			"connection-string": {
 				type: "string",
 				demandOption: true,
 				describe:
-					"The connection string for the database want Hyperdrive to connect to - ex: protocol://user:password@host:port/database",
+					"The connection string for the database you want Hyperdrive to connect to - ex: protocol://user:password@host:port/database",
 			},
 		})
 		.epilogue(hyperdriveBetaWarning);
@@ -64,7 +64,7 @@ export async function handler(
 		);
 	} else {
 		logger.log(`🚧 Creating '${args.name}'`);
-		const database = await createDatabase(config, {
+		const database = await createConfig(config, {
 			name: args.name,
 			origin: {
 				host: url.hostname,
@@ -76,7 +76,7 @@ export async function handler(
 			},
 		});
 		logger.log(
-			`✅ Created new Hyperdrive configuration\n`,
+			`✅ Created new Hyperdrive config\n`,
 			JSON.stringify(database, null, 2)
 		);
 	}

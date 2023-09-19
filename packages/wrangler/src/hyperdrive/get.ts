@@ -1,6 +1,6 @@
 import { readConfig } from "../config";
 import { logger } from "../logger";
-import { getDatabase } from "./client";
+import { getConfig } from "./client";
 import { hyperdriveBetaWarning } from "./common";
 import type {
 	CommonYargsArgv,
@@ -12,7 +12,7 @@ export function options(yargs: CommonYargsArgv) {
 		.positional("id", {
 			type: "string",
 			demandOption: true,
-			description: "The ID of the Hyperdrive database configuration",
+			description: "The ID of the Hyperdrive config",
 		})
 		.epilogue(hyperdriveBetaWarning);
 }
@@ -22,6 +22,6 @@ export async function handler(
 ) {
 	const config = readConfig(args.config, args);
 
-	const database = await getDatabase(config, args.id);
+	const database = await getConfig(config, args.id);
 	logger.log(JSON.stringify(database, null, 2));
 }

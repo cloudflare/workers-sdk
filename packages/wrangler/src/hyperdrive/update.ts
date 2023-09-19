@@ -1,6 +1,6 @@
 import { readConfig } from "../config";
 import { logger } from "../logger";
-import { getDatabase, updateDatabase } from "./client";
+import { getConfig, updateConfig } from "./client";
 import { hyperdriveBetaWarning } from "./common";
 import type {
 	CommonYargsArgv,
@@ -13,7 +13,7 @@ export function options(yargs: CommonYargsArgv) {
 		.positional("id", {
 			type: "string",
 			demandOption: true,
-			description: "The ID of the Hyperdrive configuration",
+			description: "The ID of the Hyperdrive config",
 		})
 		.options({
 			"origin-host": {
@@ -51,7 +51,7 @@ export async function handler(
 	const config = readConfig(args.config, args);
 
 	logger.log(`🚧 Updating '${args.id}'`);
-	const database = (await getDatabase(
+	const database = (await getConfig(
 		config,
 		args.id
 	)) as CreateUpdateHyperdriveBody;
@@ -74,9 +74,9 @@ export async function handler(
 		database.origin.password = args.originPassword;
 	}
 
-	const updated = await updateDatabase(config, args.id, database);
+	const updated = await updateConfig(config, args.id, database);
 	logger.log(
-		`✅ Updated ${updated.id} Hyperdrive configuration\n`,
+		`✅ Updated ${updated.id} Hyperdrive config\n`,
 		JSON.stringify(updated, null, 2)
 	);
 }

@@ -1,6 +1,6 @@
 import { readConfig } from "../config";
 import { logger } from "../logger";
-import { listDatabases } from "./client";
+import { listConfigs } from "./client";
 import { hyperdriveBetaWarning } from "./common";
 import type {
 	CommonYargsArgv,
@@ -16,8 +16,8 @@ export async function handler(
 ) {
 	const config = readConfig(args.config, args);
 
-	logger.log(`📋 Listing Hyperdrive databases`);
-	const databases = await listDatabases(config);
+	logger.log(`📋 Listing Hyperdrive configs`);
+	const databases = await listConfigs(config);
 	logger.table(
 		databases.map((database) => ({
 			id: database.id,
