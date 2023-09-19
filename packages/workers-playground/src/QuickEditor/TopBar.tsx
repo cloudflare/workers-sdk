@@ -68,7 +68,7 @@ export function TopBar() {
 			<Wrapper>
 				<WorkersLogo />
 
-				<A target="_blank" href="/">
+				<A target="_blank" href="/playground">
 					<Button ml={2} type="primary" inverted={true}>
 						<Icon label="Add" type="plus" mr={1} />
 						New
