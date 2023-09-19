@@ -48,7 +48,7 @@ function PreviewTab() {
 				}}
 				loading={isLoading}
 			/>
-			{!firstLoad && (
+			{!firstLoad && !draftWorker?.previewError && (
 				<Div
 					zIndex={1000}
 					p={2}
