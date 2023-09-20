@@ -1,5 +1,31 @@
 # create-cloudflare
 
+## 2.3.0
+
+### Minor Changes
+
+- [#3887](https://github.com/cloudflare/workers-sdk/pull/3887) [`765ebc1c`](https://github.com/cloudflare/workers-sdk/commit/765ebc1ce293315345c0ccfee808cbc25262b2ed) Thanks [@G4brym](https://github.com/G4brym)! - Add OpenAPI 3.1 template project
+
+* [#3888](https://github.com/cloudflare/workers-sdk/pull/3888) [`7310add1`](https://github.com/cloudflare/workers-sdk/commit/7310add1bb43c72f7b88cce7ed357fa5c11c6f75) Thanks [@G4brym](https://github.com/G4brym)! - Bump chatgptPlugin template itty-router-openapi version
+
+### Patch Changes
+
+- [#3970](https://github.com/cloudflare/workers-sdk/pull/3970) [`0a8d97c7`](https://github.com/cloudflare/workers-sdk/commit/0a8d97c7c6518b7a731197033762b1eeb542d4f7) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-astro` from `4.0.1` to `4.1.0`
+
+* [#3971](https://github.com/cloudflare/workers-sdk/pull/3971) [`1723d3e6`](https://github.com/cloudflare/workers-sdk/commit/1723d3e63f593b909cc253a4415a5e06d8c1162d) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-svelte` from `4.2.0` to `5.0.6`
+
+- [#3972](https://github.com/cloudflare/workers-sdk/pull/3972) [`dac69503`](https://github.com/cloudflare/workers-sdk/commit/dac69503b998d0f3811f06d4e9bdf871865496e4) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-remix` from `1.19.3` to `2.0.0`
+
+* [#3973](https://github.com/cloudflare/workers-sdk/pull/3973) [`324907ac`](https://github.com/cloudflare/workers-sdk/commit/324907acbbc4b82e717681c9d447c9ee2f4f3bfc) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `nuxi` from `3.6.5` to `3.8.4`
+
+- [#3980](https://github.com/cloudflare/workers-sdk/pull/3980) [`1354ab36`](https://github.com/cloudflare/workers-sdk/commit/1354ab365f96b3b16e57d4496014f42bba3c1aa6) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-astro` from `4.0.1` to `4.1.0`
+
+* [#3987](https://github.com/cloudflare/workers-sdk/pull/3987) [`fe227900`](https://github.com/cloudflare/workers-sdk/commit/fe227900955f866def9c3d0dcf51de56a99151ea) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-vue` from `3.6.4` to `3.7.5`
+
+- [#3988](https://github.com/cloudflare/workers-sdk/pull/3988) [`d8833eff`](https://github.com/cloudflare/workers-sdk/commit/d8833eff9779c4d7d0f653666303b8951ef6aaed) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `gatsby` from `5.11.0` to `5.12.4`
+
+* [#3990](https://github.com/cloudflare/workers-sdk/pull/3990) [`07b57803`](https://github.com/cloudflare/workers-sdk/commit/07b57803193232254be5c576ad06dbc7a4407744) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-qwik` from `1.2.7` to `1.2.12`
+
 ## 2.2.3
 
 ### Patch Changes
