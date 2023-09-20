@@ -1,5 +1,55 @@
 # wrangler
 
+## 3.9.0
+
+### Minor Changes
+
+- [#3951](https://github.com/cloudflare/workers-sdk/pull/3951) [`e0850ad1`](https://github.com/cloudflare/workers-sdk/commit/e0850ad1ebfbb775a78339136e3a2c571d80e566) Thanks [@mrbbot](https://github.com/mrbbot)! - feat: add support for breakpoint debugging to `wrangler dev`'s `--remote` and `--no-bundle` modes
+
+  Previously, breakpoint debugging using Wrangler's DevTools was only supported
+  in local mode, when using Wrangler's built-in bundler. This change extends that
+  to remote development, and `--no-bundle`.
+
+  When using `--remote` and `--no-bundle` together, uncaught errors will now be
+  source-mapped when logged too.
+
+* [#3951](https://github.com/cloudflare/workers-sdk/pull/3951) [`e0850ad1`](https://github.com/cloudflare/workers-sdk/commit/e0850ad1ebfbb775a78339136e3a2c571d80e566) Thanks [@mrbbot](https://github.com/mrbbot)! - feat: add support for Visual Studio Code's built-in breakpoint debugger
+
+  Wrangler now supports breakpoint debugging with Visual Studio Code's debugger.
+  Create a `.vscode/launch.json` file with the following contents...
+
+  ```json
+  {
+  	"configurations": [
+  		{
+  			"name": "Wrangler",
+  			"type": "node",
+  			"request": "attach",
+  			"port": 9229,
+  			"cwd": "/",
+  			"resolveSourceMapLocations": null,
+  			"attachExistingChildren": false,
+  			"autoAttachChildProcesses": false
+  		}
+  	]
+  }
+  ```
+
+  ...then run `wrangler dev`, and launch the configuration.
+
+### Patch Changes
+
+- [#3954](https://github.com/cloudflare/workers-sdk/pull/3954) [`bc88f0ec`](https://github.com/cloudflare/workers-sdk/commit/bc88f0ec0f46bcf4f8204239ff7e14aa3fe11990) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - update `wrangler pages dev` D1 and DO descriptions
+
+* [#3928](https://github.com/cloudflare/workers-sdk/pull/3928) [`95b24b1e`](https://github.com/cloudflare/workers-sdk/commit/95b24b1eb986fb73a2b87c5a0eecc32a607e7331) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - Colorize Deployed Bundle Size
+  Most bundlers, and other tooling that give you size outputs will colorize their the text to indicate if the value is within certain ranges.
+  The current range values are:
+  red 100% - 90%
+  yellow 89% - 70%
+  green <70%
+
+  resolves #1312
+
 ## 3.8.0
 
 ### Minor Changes
