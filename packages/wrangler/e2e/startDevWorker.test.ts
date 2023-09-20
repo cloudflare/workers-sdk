@@ -259,13 +259,11 @@ describe("startDevWorker: ProxyController", () => {
 		});
 	});
 
-	test(
-		"User worker exception",
-		async () => {
-			const consoleErrorSpy = vi.spyOn(console, "error");
+	test("User worker exception", async () => {
+		const consoleErrorSpy = vi.spyOn(console, "error");
 
-			const run = await fakeStartUserWorker({
-				script: `
+		const run = await fakeStartUserWorker({
+			script: `
 					export default {
 						fetch() {
 							throw new Error('Boom!');
@@ -274,18 +272,19 @@ describe("startDevWorker: ProxyController", () => {
 						}
 					}
 				`,
-			});
+		});
 
-			res = await run.worker.fetch("http://dummy");
-			await expect(res.text()).resolves.toBe("Error: Boom!");
+		res = await run.worker.fetch("http://dummy");
+		await expect(res.text()).resolves.toBe("Error: Boom!");
 
-			expect(consoleErrorSpy).toBeCalledWith(
-				expect.stringContaining("Error: Boom!")
-			);
+		await Promise.resolve(); // allow some time for the error to be logged (TODO: replace with retry/waitUntil helper)
+		expect(consoleErrorSpy).toBeCalledWith(
+			expect.stringContaining("Error: Boom!")
+		);
 
-			// test changes causing a new error cause the new error to propogate
-			fireAndForgetFakeUserWorkerChanges({
-				script: `
+		// test changes causing a new error cause the new error to propogate
+		fireAndForgetFakeUserWorkerChanges({
+			script: `
 					export default {
 						fetch() {
 							throw new Error('Boom 2!');
@@ -294,20 +293,21 @@ describe("startDevWorker: ProxyController", () => {
 						}
 					}
 				`,
-				mfOpts: run.mfOpts,
-				config: run.config,
-			});
+			mfOpts: run.mfOpts,
+			config: run.config,
+		});
 
-			res = await run.worker.fetch("http://dummy");
-			await expect(res.text()).resolves.toBe("Error: Boom 2!");
+		res = await run.worker.fetch("http://dummy");
+		await expect(res.text()).resolves.toBe("Error: Boom 2!");
 
-			expect(consoleErrorSpy).toBeCalledWith(
-				expect.stringContaining("Error: Boom 2!")
-			);
+		await Promise.resolve(); // allow some time for the error to be logged (TODO: replace with retry/waitUntil helper)
+		expect(consoleErrorSpy).toBeCalledWith(
+			expect.stringContaining("Error: Boom 2!")
+		);
 
-			// test eyeball requests receive the pretty error page
-			fireAndForgetFakeUserWorkerChanges({
-				script: `
+		// test eyeball requests receive the pretty error page
+		fireAndForgetFakeUserWorkerChanges({
+			script: `
 					export default {
 						fetch() {
 							const e = new Error('Boom 3!');
@@ -321,42 +321,42 @@ describe("startDevWorker: ProxyController", () => {
 						}
 					}
 				`,
-				mfOpts: run.mfOpts,
-				config: run.config,
-			});
+			mfOpts: run.mfOpts,
+			config: run.config,
+		});
 
-			const proxyWorkerUrl = await devEnv.proxy.proxyWorker?.ready;
-			assert(proxyWorkerUrl);
-			res = await undici.fetch(proxyWorkerUrl, {
-				headers: { Accept: "text/html" },
-			});
-			await expect(res.text()).resolves.toEqual(
-				expect.stringContaining(`<h2 class="error-message"> Boom 3! </h2>`) // pretty error page html snippet
-			);
+		const proxyWorkerUrl = await devEnv.proxy.proxyWorker?.ready;
+		assert(proxyWorkerUrl);
+		res = await undici.fetch(proxyWorkerUrl, {
+			headers: { Accept: "text/html" },
+		});
+		await expect(res.text()).resolves.toEqual(
+			expect.stringContaining(`<h2 class="error-message"> Boom 3! </h2>`) // pretty error page html snippet
+		);
 
-			// test further changes that fix the code
-			fireAndForgetFakeUserWorkerChanges({
-				script: `
+		// test further changes that fix the code
+		fireAndForgetFakeUserWorkerChanges({
+			script: `
 					export default {
 						fetch() {
 							return new Response("body:3");
 						}
 					}
 				`,
-				mfOpts: run.mfOpts,
-				config: run.config,
-			});
+			mfOpts: run.mfOpts,
+			config: run.config,
+		});
 
-			res = await run.worker.fetch("http://dummy");
-			await expect(res.text()).resolves.toBe("body:3");
+		res = await run.worker.fetch("http://dummy");
+		await expect(res.text()).resolves.toBe("body:3");
 
-			consoleErrorSpy.mockReset();
-			res = await run.worker.fetch("http://dummy");
-			await expect(res.text()).resolves.toBe("body:3");
-			expect(consoleErrorSpy).not.toHaveBeenCalled();
-		},
-		{ retry: 10 } // for some reason vi.spyOn(console, 'error') is flakey
-	);
+		consoleErrorSpy.mockReset();
+		res = await run.worker.fetch("http://dummy");
+		await expect(res.text()).resolves.toBe("body:3");
+
+		await Promise.resolve(); // allow some time for the error to be logged (TODO: replace with retry/waitUntil helper)
+		expect(consoleErrorSpy).not.toHaveBeenCalled();
+	});
 
 	test("config.dev.{server,inspector} changes, restart the server instance", async () => {
 		const run = await fakeStartUserWorker({
