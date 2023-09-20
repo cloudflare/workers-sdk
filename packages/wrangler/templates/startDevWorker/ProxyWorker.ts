@@ -108,11 +108,8 @@ export class ProxyWorker implements DurableObject {
 			Object.assign(url, proxyData.userWorkerUrl);
 
 			// set request.url in the UserWorker
-			// this disables miniflare's pretty error page in the UserWorker
-			// but the ProxyWorker's miniflare instance will see the JSON error response and show the pretty error page instead
-			//        headers.set("MF-Original-URL", req.url);
-			// TODO(confirm): does the ProxyWorker show the pretty error page correctly (initial check: missing stack info)
-			// TODO(or): make miniflare distinguish whether to show pretty error pages using a different header
+			// this will no longer disable miniflare's pretty error page in the UserWorker after https://github.com/cloudflare/miniflare/pull/689
+			headers.set("MF-Original-URL", req.url);
 
 			// merge proxyData headers with the request headers
 			for (const [key, value] of Object.entries(proxyData.headers ?? {})) {
