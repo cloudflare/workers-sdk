@@ -87,6 +87,10 @@ export async function startDevServer(
 			inspector: {
 				port: props.inspectorPort,
 			},
+			urlOverrides: {
+				secure: props.localProtocol === "https",
+				hostname: props.localUpstream,
+			},
 			liveReload: props.liveReload,
 			remote: !props.local,
 		},
