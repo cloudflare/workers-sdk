@@ -520,6 +520,15 @@ interface EnvironmentNonInheritable {
 		| undefined;
 
 	/**
+	 * Binding to the AI project.
+	 */
+	ai:
+		| {
+				binding: string;
+		  }
+		| undefined;
+
+	/**
 	 * "Unsafe" tables for features that aren't directly supported by wrangler.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,

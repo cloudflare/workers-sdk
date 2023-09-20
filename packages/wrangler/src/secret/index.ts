@@ -113,6 +113,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 									analytics_engine_datasets: [],
 									wasm_modules: {},
 									browser: undefined,
+									ai: undefined,
 									text_blobs: {},
 									data_blobs: {},
 									dispatch_namespaces: [],

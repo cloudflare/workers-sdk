@@ -529,6 +529,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			vars: { ...config.vars, ...props.vars },
 			wasm_modules: config.wasm_modules,
 			browser: config.browser,
+			ai: config.ai,
 			text_blobs: {
 				...config.text_blobs,
 				...(assets.manifest &&

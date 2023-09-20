@@ -106,6 +106,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		analytics_engine_datasets,
 		text_blobs,
 		browser,
+		ai,
 		unsafe,
 		vars,
 		wasm_modules,
@@ -293,6 +294,13 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		output.push({
 			type: "Browser",
 			entries: [{ key: "Name", value: browser.binding }],
+		});
+	}
+
+	if (ai !== undefined) {
+		output.push({
+			type: "AI",
+			entries: [{ key: "Name", value: ai.binding }],
 		});
 	}
 

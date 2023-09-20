@@ -64,6 +64,7 @@ describe("normalizeAndValidateConfig()", () => {
 			site: undefined,
 			text_blobs: undefined,
 			browser: undefined,
+			ai: undefined,
 			triggers: {
 				crons: [],
 			},
@@ -1616,6 +1617,64 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			"Processing wrangler configuration:
 			  - The field \\"browser\\" should be an object but got null."
+		`);
+			});
+		});
+
+		describe("[ai]", () => {
+			it("should error if ai is an array", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ ai: [] } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"ai\\" should be an object but got []."
+		`);
+			});
+
+			it("should error if ai is a string", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ ai: "BAD" } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"ai\\" should be an object but got \\"BAD\\"."
+		`);
+			});
+
+			it("should error if ai is a number", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ ai: 999 } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"ai\\" should be an object but got 999."
+		`);
+			});
+
+			it("should error if ai is null", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ ai: null } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"ai\\" should be an object but got null."
 		`);
 			});
 		});
