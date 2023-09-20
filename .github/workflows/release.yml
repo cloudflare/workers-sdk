@@ -14,6 +14,8 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v3
         with:
+          # See https://github.com/changesets/action/issues/187
+          token: ${{ secrets.GH_ACCESS_TOKEN }}
           fetch-depth: 0
       - uses: pnpm/action-setup@v2
         with:
@@ -49,7 +51,7 @@ jobs:
           version: node .github/changeset-version.js
           publish: pnpm exec changeset publish
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
           NPM_PUBLISH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
           ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
           ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
