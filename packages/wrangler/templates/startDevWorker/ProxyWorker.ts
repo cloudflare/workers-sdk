@@ -22,7 +22,7 @@ type Request = Parameters<
 	>
 >[0];
 
-let liveReloadProtocol = "";
+const LIVE_RELOAD_PROTOCOL = "WRANGLER_PROXYWORKER_LIVE_RELOAD_PROTOCOL";
 export default {
 	fetch(req, env) {
 		const singleton = env.DURABLE_OBJECT.idFromName("");
@@ -102,11 +102,19 @@ export class ProxyWorker implements DurableObject {
 			this.requestQueue.delete(req);
 
 			const url = new URL(req.url);
+			const headers = new Headers(req.headers);
 
 			// override url parts for proxying
 			Object.assign(url, proxyData.userWorkerUrl);
 
-			const headers = new Headers(req.headers);
+			// set request.url in the UserWorker
+			// this disables miniflare's pretty error page in the UserWorker
+			// but the ProxyWorker's miniflare instance will see the JSON error response and show the pretty error page instead
+			//        headers.set("MF-Original-URL", req.url);
+			// TODO(confirm): does the ProxyWorker show the pretty error page correctly (initial check: missing stack info)
+			// TODO(or): make miniflare distinguish whether to show pretty error pages using a different header
+
+			// merge proxyData headers with the request headers
 			for (const [key, value] of Object.entries(proxyData.headers ?? {})) {
 				if (key.toLowerCase() === "cookie") {
 					const existing = req.headers.get("cookie") ?? "";
@@ -116,6 +124,8 @@ export class ProxyWorker implements DurableObject {
 				}
 			}
 
+			// explicitly NOT await-ing this promise, we are in a loop and want to process the whole queue quickly
+			// TODO(consider): should we await just the fetch (not res.body) to ensure delivery order is preserved?
 			void fetch(url, new Request(req, { headers }))
 				.then((res) => {
 					if (isHtmlResponse(res)) {
@@ -151,11 +161,10 @@ function isHtmlResponse(res: Response): boolean {
 	return res.headers.get("content-type")?.startsWith("text/html") ?? false;
 }
 function isRequestForLiveReloadWebsocket(req: Request): boolean {
-	liveReloadProtocol ||= crypto.randomUUID();
 	const websocketProtocol = req.headers.get("Sec-WebSocket-Protocol");
 	const isWebSocketUpgrade = req.headers.get("Upgrade") === "websocket";
 
-	return isWebSocketUpgrade && websocketProtocol === liveReloadProtocol;
+	return isWebSocketUpgrade && websocketProtocol === LIVE_RELOAD_PROTOCOL;
 }
 
 async function sendMessageToProxyController(
@@ -225,7 +234,8 @@ function insertLiveReloadScript(
 							}
 							function initLiveReload() {
 								if (ws) return;
-								ws = new WebSocket("${websocketUrl.origin}/cdn-cgi/live-reload", { protocol: "${liveReloadProtocol}" });
+                var origin = (location.protocol === "http:" ? "ws://" : "wss://") + location.host;
+								ws = new WebSocket(origin + "/cdn-cgi/live-reload", { protocol: "${LIVE_RELOAD_PROTOCOL}" });
 								ws.onclose = recover;
 								ws.onerror = recover;
 								ws.onmessage = location.reload.bind(location);

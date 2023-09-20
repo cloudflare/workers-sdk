@@ -36,6 +36,7 @@ import type {
 	InspectorProxyWorkerOutgoingRequestBody,
 	InspectorProxyWorkerOutgoingWebsocketMessage,
 	PreviewTokenExpiredEvent,
+	ProxyData,
 	ProxyWorkerIncomingRequestBody,
 	ProxyWorkerOutgoingRequestBody,
 	ReadyEvent,
@@ -49,10 +50,11 @@ import type { MiniflareOptions } from "miniflare";
 export class ProxyController extends EventEmitter {
 	public ready = createDeferredPromise<ReadyEvent>();
 
-	public proxyWorker: Miniflare | undefined;
-	public inspectorProxyWorker: Miniflare | undefined;
+	public proxyWorker?: Miniflare;
+	public inspectorProxyWorker?: Miniflare;
+	proxyWorkerOptions?: MiniflareOptions;
+	inspectorProxyWorkerOptions?: MiniflareOptions;
 	inspectorProxyWorkerWebSocket?: DeferredPromise<WebSocket>;
-	urls = { proxyWorker: "", inspectorProxyWorker: "" };
 
 	protected latestConfig?: StartDevWorkerOptions;
 	protected latestBundle?: EsbuildBundle;
@@ -66,11 +68,6 @@ export class ProxyController extends EventEmitter {
 			this.latestConfig.dev?.inspector?.secure
 				? getHttpsOptions()
 				: undefined;
-
-		const proxyWorkerUrl = JSON.stringify(this.latestConfig?.dev?.server ?? {});
-		const inspectorProxyWorkerUrl = JSON.stringify(
-			this.latestConfig?.dev?.inspector ?? {}
-		);
 
 		const proxyWorkerOptions: MiniflareOptions = {
 			verbose: true,
@@ -92,6 +89,15 @@ export class ProxyController extends EventEmitter {
 			bindings: {
 				PROXY_CONTROLLER_AUTH_SECRET: this.secret,
 			},
+
+			// upsttream is how we tell miniflare what request.url should look like inside the worker
+			upstream:
+				this.latestConfig.dev?.urlOverrides &&
+				new URL(
+					`${this.latestConfig.dev.urlOverrides.secure ? "https" : "http"}://${
+						this.latestConfig.dev.urlOverrides.hostname
+					}`
+				).href,
 
 			host: this.latestConfig.dev?.server?.hostname,
 			port: this.latestConfig.dev?.server?.port,
@@ -141,39 +147,52 @@ export class ProxyController extends EventEmitter {
 					: undefined,
 		};
 
+		const proxyWorkerOptionsChanged = didMiniflareOptionsChange(
+			this.proxyWorkerOptions,
+			proxyWorkerOptions
+		);
+		const inspectorProxyWorkerOptionsChanged = didMiniflareOptionsChange(
+			this.inspectorProxyWorkerOptions,
+			inspectorProxyWorkerOptions
+		);
+
 		if (this.proxyWorker === undefined) {
-			this.urls.proxyWorker = proxyWorkerUrl;
 			this.proxyWorker = new Miniflare(proxyWorkerOptions);
+			this.proxyWorkerOptions = proxyWorkerOptions;
 		}
 		if (this.inspectorProxyWorker === undefined) {
-			this.urls.inspectorProxyWorker = inspectorProxyWorkerUrl;
-			this.inspectorProxyWorker = new Miniflare(inspectorProxyWorkerOptions); // separate Miniflare instance while it only permits opening one port
+			this.inspectorProxyWorker = new Miniflare(inspectorProxyWorkerOptions);
+			this.inspectorProxyWorkerOptions = inspectorProxyWorkerOptions;
 		}
-		if (
-			this.urls.proxyWorker !== proxyWorkerUrl ||
-			this.urls.inspectorProxyWorker !== inspectorProxyWorkerUrl
-		) {
+
+		if (proxyWorkerOptionsChanged || inspectorProxyWorkerOptionsChanged) {
+			// this creates a new .ready promise that will be resolved when both ProxyWorkers are ready
+			// it also respects any await-ers of the existing .ready promise
 			this.ready = createDeferredPromise<ReadyEvent>(this.ready);
 		}
-		// handle proxyWorker port changes
-		if (this.urls.proxyWorker !== proxyWorkerUrl) {
-			logger.debug("ProxyWorker address config (config.dev.server.*) changed");
-			// TODO: ideally we'd the same miniflare instance via .setOptions but bug: it doesn't respect port changes (easy fix incoming)
-			// void this.proxyWorker.setOptions(proxyWorkerOptions);
+		if (proxyWorkerOptionsChanged) {
+			logger.debug("ProxyWorker miniflare options changed, reinstantiating...");
+			// TODO: ideally we'd use the same miniflare instance via .setOptions but bug: it doesn't respect port changes (easy fix incoming)
+			// Ideally we'd do:
+			//    void this.proxyWorker.setOptions(proxyWorkerOptions);
+			//    this.proxyWorkerOptions = proxyWorkerOptions;
+			// Instead, for now, we do:
 			void this.proxyWorker.dispose();
 			this.proxyWorker = new Miniflare(proxyWorkerOptions);
-			this.urls.proxyWorker = proxyWorkerUrl;
+			this.proxyWorkerOptions = proxyWorkerOptions;
 		}
-		// handle inspectorProxyWorker port changes
-		if (this.urls.inspectorProxyWorker !== inspectorProxyWorkerUrl) {
+		if (inspectorProxyWorkerOptionsChanged) {
 			logger.debug(
-				"ProxyWorker address config (config.dev.inspector.*) changed"
+				"InspectorProxyWorker miniflare options changed, reinstantiating..."
 			);
-			// TODO: ideally we'd the same miniflare instance via .setOptions but bug: it doesn't respect port changes (easy fix incoming)
-			// void this.inspectorProxyWorker.setOptions(inspectorProxyWorkerOptions);
+			// TODO: ideally we'd use the same miniflare instance via .setOptions but bug: it doesn't respect port changes (easy fix incoming)
+			// Ideally we'd do:
+			//    void this.inspectorProxyWorker.setOptions(inspectorProxyWorkerOptions);
+			//    this.inspectorProxyWorkerOptions = inspectorProxyWorkerOptions;
+			// Instead, for now, we do:
 			void this.inspectorProxyWorker.dispose();
 			this.inspectorProxyWorker = new Miniflare(inspectorProxyWorkerOptions);
-			this.urls.inspectorProxyWorker = inspectorProxyWorkerUrl;
+			this.inspectorProxyWorkerOptions = inspectorProxyWorkerOptions;
 		}
 
 		// store the non-null versions for callbacks
@@ -335,7 +354,7 @@ export class ProxyController extends EventEmitter {
 	onProxyWorkerMessage(message: ProxyWorkerOutgoingRequestBody) {
 		switch (message.type) {
 			case "previewTokenExpired":
-				this.emitPreviewTokenExpiredEvent(message);
+				this.emitPreviewTokenExpiredEvent(message.proxyData);
 
 				break;
 			case "error":
@@ -439,8 +458,11 @@ export class ProxyController extends EventEmitter {
 		this.emit("ready", data);
 		this.ready.resolve(data);
 	}
-	emitPreviewTokenExpiredEvent(data: PreviewTokenExpiredEvent) {
-		this.emit("previewTokenExpired", data);
+	emitPreviewTokenExpiredEvent(proxyData: ProxyData) {
+		this.emit("previewTokenExpired", {
+			type: "previewTokenExpired",
+			proxyData,
+		});
 	}
 	emitErrorEvent(reason: string, cause?: Error | SerializedError) {
 		this.emit("error", { source: "ProxyController", cause, reason });
@@ -463,7 +485,25 @@ export class ProxyController extends EventEmitter {
 
 export class ProxyControllerLogger extends WranglerLog {
 	info(message: string) {
+		// filter out request logs being handled by the ProxyWorker
+		// the requests log remaining are handled by the UserWorker
+		// keep the ProxyWorker request logs if we're in debug mode
 		if (message.includes("/cdn-cgi/") && this.level !== LogLevel.DEBUG) return;
 		super.info(message);
 	}
+}
+
+function deepEquality(a: unknown, b: unknown): boolean {
+	// could be more efficient, but this is fine for now
+	return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function didMiniflareOptionsChange(
+	prev: MiniflareOptions | undefined,
+	next: MiniflareOptions
+) {
+	if (prev === undefined) return false; // first time, so 'no change'
+
+	// otherwise, if they're not deeply equal, they've changed
+	return !deepEquality(prev, next);
 }
