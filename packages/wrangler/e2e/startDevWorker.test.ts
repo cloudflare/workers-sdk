@@ -478,8 +478,7 @@ describe("startDevWorker: ProxyController", () => {
 		expect(resText).not.toEqual(expect.stringMatching(scriptRegex));
 	});
 
-	// skip until MF-Original-URL does not opt-out of pretty error page
-	test.skip("urlOverrides take effect in the UserWorker", async () => {
+	test("urlOverrides take effect in the UserWorker", async () => {
 		const run = await fakeStartUserWorker({
 			script: `
 				export default {
