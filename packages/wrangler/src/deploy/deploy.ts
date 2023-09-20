@@ -294,11 +294,8 @@ export default async function deploy(props: Props): Promise<void> {
 		} catch (e) {
 			// code: 10090, message: workers.api.error.service_not_found
 			// is thrown from the above fetchResult on the first deploy of a Worker
-			if (
-				(e as { code?: number }).code !== 10090 &&
-				(e as { code?: number }).code !== 10000
-			) {
-				logger.error(e);
+			if ((e as { code?: number }).code !== 10090) {
+				throw e;
 			}
 		}
 	}
