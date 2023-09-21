@@ -35,6 +35,7 @@ export type WorkerMetadataBinding =
 	| { type: "wasm_module"; name: string; part: string }
 	| { type: "text_blob"; name: string; part: string }
 	| { type: "browser"; name: string }
+	| { type: "ai"; name: string }
 	| { type: "data_blob"; name: string; part: string }
 	| { type: "kv_namespace"; name: string; namespace_id: string }
 	| {
@@ -265,6 +266,13 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		metadataBindings.push({
 			name: bindings.browser.binding,
 			type: "browser",
+		});
+	}
+
+	if (bindings.ai !== undefined) {
+		metadataBindings.push({
+			name: bindings.ai.binding,
+			type: "ai",
 		});
 	}
 

@@ -8367,6 +8367,43 @@ export default{
 		});
 	});
 
+	describe("ai", () => {
+		it("should upload ai bindings", async () => {
+			writeWranglerToml({
+				ai: { binding: "AI_BIND" },
+				browser: { binding: "MYBROWSER" },
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "browser",
+						name: "MYBROWSER",
+					},
+					{
+						type: "ai",
+						name: "AI_BIND",
+					},
+				],
+			});
+
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Your worker has access to the following bindings:
+			- Browser:
+			  - Name: MYBROWSER
+			- AI:
+			  - Name: AI_BIND
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class"
+		`);
+		});
+	});
+
 	describe("mtls_certificates", () => {
 		it("should upload mtls_certificate bindings", async () => {
 			writeWranglerToml({

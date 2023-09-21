@@ -104,6 +104,14 @@ export interface CfBrowserBinding {
 }
 
 /**
+ * A binding to the AI project
+ */
+
+export interface CfAIBinding {
+	binding: string;
+}
+
+/**
  * A binding to a data blob (in service-worker format)
  */
 
@@ -256,6 +264,7 @@ export interface CfWorkerInit {
 		wasm_modules: CfWasmModuleBindings | undefined;
 		text_blobs: CfTextBlobBindings | undefined;
 		browser: CfBrowserBinding | undefined;
+		ai: CfAIBinding | undefined;
 		data_blobs: CfDataBlobBindings | undefined;
 		durable_objects: { bindings: CfDurableObject[] } | undefined;
 		queues: CfQueue[] | undefined;

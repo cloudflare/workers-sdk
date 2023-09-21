@@ -54,6 +54,7 @@ function createWorkerBundleFormData(workerBundle: BundleResult): FormData {
 			wasm_modules: undefined,
 			text_blobs: undefined,
 			browser: undefined,
+			ai: undefined,
 			data_blobs: undefined,
 			durable_objects: undefined,
 			queues: undefined,

@@ -1046,6 +1046,13 @@ export function mapBindings(bindings: WorkerMetadataBinding[]): RawConfig {
 							};
 						}
 						break;
+					case "ai":
+						{
+							configObj.ai = {
+								binding: binding.name,
+							};
+						}
+						break;
 					case "r2_bucket":
 						{
 							configObj.r2_buckets = [
