@@ -33,7 +33,7 @@ export async function handler(
 	const url = new URL(args.connectionString);
 
 	if (url.protocol === "") {
-		logger.log("You must specify the database protocol - e.g. 'postgresql:'.");
+		logger.log("You must specify the database protocol - e.g. 'postgresql'.");
 	} else if (
 		url.protocol !== "postgresql:" &&
 		url.protocol !== "postgres:" &&
@@ -69,7 +69,7 @@ export async function handler(
 			origin: {
 				host: url.hostname,
 				port: parseInt(url.port),
-				scheme: url.protocol,
+				scheme: url.protocol.replace(":", ""),
 				database: url.pathname.replace("/", ""),
 				user: url.username,
 				password: url.password,
