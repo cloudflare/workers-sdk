@@ -7,7 +7,7 @@ import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { renderToString } from "../../utils/render";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";
-import { d1BetaWarning, getDatabaseInfoFromConfig } from "../utils";
+import { getDatabaseInfoFromConfig } from "../utils";
 import {
 	getMigrationsPath,
 	getUnappliedMigrations,
@@ -30,7 +30,6 @@ export const ListHandler = withConfig<ListHandlerOptions>(
 		if (!local) {
 			await requireAuth({});
 		}
-		logger.log(d1BetaWarning);
 
 		const databaseInfo = getDatabaseInfoFromConfig(config, database);
 		if (!databaseInfo && !local) {
