@@ -22,7 +22,8 @@
 		"test:ci": "dotenv -- turbo test:ci --filter=!local-mode-tests --filter=!playground-preview-worker --filter=!no-bundle-import --concurrency=1",
 		"test:watch": "turbo test:watch",
 		"type:tests": "dotenv -- turbo type:tests",
-		"gen:package": "turbo gen package"
+		"gen:package": "turbo gen package",
+		"gen:template": "turbo gen template"
 	},
 	"dependencies": {
 		"@changesets/changelog-github": "^0.4.5",
