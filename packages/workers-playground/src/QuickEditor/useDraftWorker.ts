@@ -118,7 +118,7 @@ async function updatePreviewHash(content: Worker): Promise<PreviewHash> {
 
 	return {
 		playgroundUrl: `/playground#${await compressWorker(worker)}`,
-		previewUrl: `https://${v4()}.playground.devprod.cloudflare.dev/.update-preview-token?token=${encodeURIComponent(
+		previewUrl: `https://${v4()}.cloudflarepreviews.com/.update-preview-token?token=${encodeURIComponent(
 			deploy.preview
 		)}`,
 		devtoolsUrl: `wss://playground.devprod.cloudflare.dev${deploy.inspector}`,
