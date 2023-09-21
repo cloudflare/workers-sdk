@@ -2249,11 +2249,7 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
-	if (isValid && !process.env.NO_D1_WARNING) {
-		diagnostics.warnings.push(
-			"D1 Bindings are currently in alpha to allow the API to evolve before general availability.\nPlease report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose\nNote: Run this command with the environment variable NO_D1_WARNING=true to hide this message\n\nFor example: `export NO_D1_WARNING=true && wrangler <YOUR COMMAND HERE>`"
-		);
-	}
+
 	return isValid;
 };
 
