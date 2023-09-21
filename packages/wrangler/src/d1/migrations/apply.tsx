@@ -18,11 +18,7 @@ import {
 	DEFAULT_BATCH_SIZE,
 } from "../constants";
 import { executeSql } from "../execute";
-import {
-	d1BetaWarning,
-	getDatabaseInfoFromConfig,
-	getDatabaseInfoFromId,
-} from "../utils";
+import { getDatabaseInfoFromConfig, getDatabaseInfoFromId } from "../utils";
 import {
 	getMigrationsPath,
 	getUnappliedMigrations,
@@ -54,8 +50,6 @@ export const ApplyHandler = withConfig<ApplyHandlerOptions>(
 		preview,
 		batchSize,
 	}): Promise<void> => {
-		logger.log(d1BetaWarning);
-
 		const databaseInfo = getDatabaseInfoFromConfig(config, database);
 		if (!databaseInfo && !local) {
 			throw new Error(

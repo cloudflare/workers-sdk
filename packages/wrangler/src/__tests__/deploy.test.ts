@@ -6400,17 +6400,7 @@ addEventListener('fetch', event => {});`
 			--dry-run: exiting now."
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-			    - D1 Bindings are currently in alpha to allow the API to evolve before general availability.
-			      Please report any issues to [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
-			      Note: Run this command with the environment variable NO_D1_WARNING=true to hide this message
-
-			      For example: \`export NO_D1_WARNING=true && wrangler <YOUR COMMAND HERE>\`
-
-			"
-		`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
 				const output = fs.readFileSync("tmp/index.js", "utf-8");
 				// D1 no longer injects middleware, so we can pass through the user's code unchanged
 				expect(output).not.toContain(`ExampleDurableObject2`);
