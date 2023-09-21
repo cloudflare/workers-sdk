@@ -118,10 +118,12 @@ async function updatePreviewHash(content: Worker): Promise<PreviewHash> {
 
 	return {
 		playgroundUrl: `/playground#${await compressWorker(worker)}`,
-		previewUrl: `https://${v4()}.cloudflarepreviews.com/.update-preview-token?token=${encodeURIComponent(
-			deploy.preview
-		)}`,
-		devtoolsUrl: `wss://playground.devprod.cloudflare.dev${deploy.inspector}`,
+		previewUrl: `https://${v4()}.${
+			import.meta.env.VITE_PLAYGROUND_PREVIEW
+		}/.update-preview-token?token=${encodeURIComponent(deploy.preview)}`,
+		devtoolsUrl: `wss://${import.meta.env.VITE_PLAYGROUND_ROOT}${
+			deploy.inspector
+		}`,
 	};
 }
 
