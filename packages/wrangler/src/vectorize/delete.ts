@@ -30,7 +30,7 @@ export async function handler(
 	const config = readConfig(args.config, args);
 
 	logger.log(`Deleting Vectorize index ${args.name}`);
-	if (!args.skipConfirmation) {
+	if (!args.force) {
 		const confirmedDeletion = await confirm(
 			`OK to delete the index '${args.name}'?`
 		);
