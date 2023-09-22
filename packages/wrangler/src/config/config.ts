@@ -187,7 +187,7 @@ export interface DevConfig {
 	/**
 	 * IP address for the local dev server to listen on,
 	 *
-	 * @default `*`
+	 * @default `0.0.0.0`
 	 */
 	ip: string;
 
