@@ -354,6 +354,30 @@ describe("wrangler", () => {
 		});
 
 		describe("commands", () => {
+			describe("help", () => {
+				it("should show the correct help text", async () => {
+					await runWrangler("mtls-certificate --help");
+					expect(std.err).toMatchInlineSnapshot(`""`);
+					expect(std.out).toMatchInlineSnapshot(`
+				"wrangler mtls-certificate
+
+				🪪 Manage certificates used for mTLS connections
+
+				Commands:
+					wrangler mtls-certificate upload  Upload an mTLS certificate
+					wrangler mtls-certificate list    List uploaded mTLS certificates
+					wrangler mtls-certificate delete  Delete an mTLS certificate
+
+				Flags:
+					-j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+					-c, --config                    Path to .toml configuration file  [string]
+					-e, --env                       Environment to use for operations and .env files  [string]
+					-h, --help                      Show help  [boolean]
+					-v, --version                   Show version number  [boolean]"
+			`);
+				});
+			});
+
 			describe("upload", () => {
 				test("uploads certificate and key from file", async () => {
 					writeFileSync("cert.pem", "BEGIN CERTIFICATE...");

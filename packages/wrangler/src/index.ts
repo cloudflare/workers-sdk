@@ -8,6 +8,7 @@ import { version as wranglerVersion } from "../package.json";
 import { loadDotEnv, readConfig } from "./config";
 import { constellation } from "./constellation";
 import { d1 } from "./d1";
+import { ai } from "./ai";
 import { deleteHandler, deleteOptions } from "./delete";
 import { deployOptions, deployHandler } from "./deploy";
 import { isBuildFailure } from "./deployment-bundle/bundle";

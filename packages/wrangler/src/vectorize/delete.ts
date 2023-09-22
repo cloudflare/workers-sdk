@@ -15,7 +15,7 @@ export function options(yargs: CommonYargsArgv) {
 			demandOption: true,
 			description: "The name of the Vectorize index",
 		})
-		.option("skip-confirmation", {
+		.option("force", {
 			describe: "Skip confirmation",
 			type: "boolean",
 			alias: "y",
