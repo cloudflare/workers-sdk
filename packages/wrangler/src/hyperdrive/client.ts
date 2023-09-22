@@ -6,6 +6,7 @@ export type HyperdriveConfig = {
 	id: string;
 	name: string;
 	origin: PublicOrigin;
+	caching: CachingOptions;
 };
 
 export type Origin = {
@@ -23,9 +24,16 @@ export type OriginWithPassword = PublicOrigin & {
 	password?: string;
 };
 
+export type CachingOptions = {
+	disabled?: boolean;
+	maxAge?: number;
+	staleWhileRevalidate?: number;
+};
+
 export type CreateUpdateHyperdriveBody = {
 	name?: string;
 	origin: OriginWithPassword;
+	caching: CachingOptions;
 };
 
 export async function createConfig(

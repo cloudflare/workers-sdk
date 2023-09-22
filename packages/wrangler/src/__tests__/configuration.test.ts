@@ -28,6 +28,7 @@ describe("normalizeAndValidateConfig()", () => {
 			d1_databases: [],
 			vectorize: [],
 			constellation: [],
+			hyperdrive: [],
 			dev: {
 				ip: "0.0.0.0",
 				local_protocol: "http",

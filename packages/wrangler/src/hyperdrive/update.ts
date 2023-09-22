@@ -39,7 +39,13 @@ export function options(yargs: CommonYargsArgv) {
 			},
 			"origin-password": {
 				type: "string",
+				demandOption: true,
 				describe: "The password used to connect to the origin database",
+			},
+			"caching-disabled": {
+				type: "boolean",
+				describe:
+					"Whether caching query results is disabled for this Hyperdrive config",
 			},
 		})
 		.epilogue(hyperdriveBetaWarning);
@@ -63,6 +69,8 @@ export async function handler(
 	}
 	if (args.originScheme) {
 		database.origin.scheme = args.originScheme;
+	} else if (!database.origin.scheme) {
+		database.origin.scheme = "postgresql";
 	}
 	if (args.database) {
 		database.origin.database = args.database;
@@ -73,7 +81,9 @@ export async function handler(
 	if (args.originPassword) {
 		database.origin.password = args.originPassword;
 	}
-
+	if (args.cachingDisabled !== undefined) {
+		database.caching.disabled = args.cachingDisabled;
+	}
 	const updated = await updateConfig(config, args.id, database);
 	logger.log(
 		`✅ Updated ${updated.id} Hyperdrive config\n`,

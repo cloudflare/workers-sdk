@@ -2359,7 +2359,7 @@ const validateHyperdriveBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
-if (!isRequiredProperty(value, "id", "string")) {
+	if (!isRequiredProperty(value, "id", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings must have a "id" field but got ${JSON.stringify(
 				value

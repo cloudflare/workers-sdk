@@ -26,6 +26,7 @@ export async function handler(
 			host: database.origin.host ?? "",
 			port: database.origin.port?.toString() ?? "",
 			database: database.origin.database ?? "",
+			caching: JSON.stringify(database.caching),
 		}))
 	);
 }

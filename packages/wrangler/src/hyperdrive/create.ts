@@ -21,6 +21,11 @@ export function options(yargs: CommonYargsArgv) {
 				describe:
 					"The connection string for the database you want Hyperdrive to connect to - ex: protocol://user:password@host:port/database",
 			},
+			"caching-disabled": {
+				type: "boolean",
+				describe:
+					"Whether caching query results is disabled for this Hyperdrive config",
+			},
 		})
 		.epilogue(hyperdriveBetaWarning);
 }
@@ -74,6 +79,7 @@ export async function handler(
 				user: url.username,
 				password: url.password,
 			},
+			caching: { disabled: args.cachingDisabled ?? false },
 		});
 		logger.log(
 			`✅ Created new Hyperdrive config\n`,
