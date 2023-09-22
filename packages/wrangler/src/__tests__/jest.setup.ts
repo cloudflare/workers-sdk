@@ -1,7 +1,18 @@
+import * as url from "url";
+import { jest } from "@jest/globals";
 import chalk from "chalk";
 import fetchMock from "jest-fetch-mock";
 import { MockWebSocket } from "./helpers/mock-web-socket";
 import { msw } from "./helpers/msw";
+
+import type * as metricsConfig from "../metrics/metrics-config";
+import type { generateAuthUrl } from "../user/generate-auth-url";
+import type { generateRandomState } from "../user/generate-random-state";
+import type getPort from "get-port";
+
+global.__filename = url.fileURLToPath(import.meta.url);
+global.__dirname = url.fileURLToPath(new URL(".", import.meta.url));
+global.jest = jest;
 
 //turn off chalk for tests due to inconsistencies between operating systems
 chalk.level = 0;
@@ -23,31 +34,41 @@ chalk.level = 0;
 process.env.LC_ALL = "en";
 
 // Mock out getPort since we don't actually care about what ports are open in unit tests.
-jest.mock("get-port", () => {
+jest.unstable_mockModule("get-port", () => {
 	return {
 		__esModule: true,
-		default: jest.fn().mockImplementation(async (options) => options.port),
+		default: jest
+			.fn<typeof getPort>()
+			.mockImplementation(
+				async (options) => options?.port as unknown as Promise<number>
+			),
 	};
 });
 
-jest.mock("child_process", () => {
+jest.unstable_mockModule("child_process", async () => {
+	const childProcess = await import("child_process");
+
 	return {
 		__esModule: true,
-		...jest.requireActual("child_process"),
-		default: jest.requireActual("child_process"),
+		...childProcess,
+		default: childProcess,
 		spawnSync: jest.fn().mockImplementation((binary, ...args) => {
 			if (binary === "cloudflared") return { error: true };
-			return jest.requireActual("child_process").spawnSync(binary, ...args);
+			return (
+				childProcess
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					.spawnSync(binary as string, ...(args as any))
+			);
 		}),
 	};
 });
 
-jest.mock("ws", () => {
+jest.unstable_mockModule("ws", async () => {
 	// `miniflare` needs to use the real `ws` module, but tail tests require us
 	// to mock `ws`. `esbuild-jest` won't let us use type annotations in our tests
 	// if those files contain `jest.mock()` calls, so we mock here, pass-through
 	// by default, and allow mocking conditionally.
-	const realModule = jest.requireActual("ws");
+	const realModule = await import("ws");
 	const module = {
 		__esModule: true,
 		useOriginal: true,
@@ -72,10 +93,10 @@ jest.mock("ws", () => {
 	return module;
 });
 
-jest.mock("undici", () => {
+jest.unstable_mockModule("undici", async () => {
 	return {
-		...jest.requireActual("undici"),
-		fetch: jest.requireActual("jest-fetch-mock"),
+		...(await import("undici")),
+		fetch: await import("jest-fetch-mock"),
 	};
 });
 
@@ -84,7 +105,10 @@ fetchMock.doMock(() => {
 	throw new Error("Unexpected fetch request");
 });
 
-jest.mock("../package-manager");
+jest.unstable_mockModule(
+	"../package-manager",
+	async () => await import("../package-manager")
+);
 
 // requests not mocked with `jest-fetch-mock` fall through
 // to `mock-service-worker`
@@ -105,9 +129,9 @@ afterEach(() => {
 });
 afterAll(() => msw.close());
 
-jest.mock("../dev/dev", () => {
-	const { useApp } = jest.requireActual("ink");
-	const { useEffect } = jest.requireActual("react");
+jest.unstable_mockModule("../dev/dev", async () => {
+	const { useApp } = await import("ink");
+	const { useEffect } = await import("react");
 	return jest.fn().mockImplementation(() => {
 		const { exit } = useApp();
 		useEffect(() => {
@@ -119,14 +143,19 @@ jest.mock("../dev/dev", () => {
 
 // Make sure that we don't accidentally try to open a browser window when running tests.
 // We will actually provide a mock implementation for `openInBrowser()` within relevant tests.
-jest.mock("../open-in-browser");
+jest.unstable_mockModule(
+	"../open-in-browser",
+	async () => await import("../open-in-browser")
+);
 
 // Mock the functions involved in getAuthURL so we don't take snapshots of the constantly changing URL.
-jest.mock("../user/generate-auth-url", () => {
+jest.unstable_mockModule("../user/generate-auth-url", () => {
 	return {
-		generateRandomState: jest.fn().mockImplementation(() => "MOCK_STATE_PARAM"),
+		generateRandomState: jest
+			.fn<typeof generateRandomState>()
+			.mockImplementation(() => "MOCK_STATE_PARAM"),
 		generateAuthUrl: jest
-			.fn()
+			.fn<typeof generateAuthUrl>()
 			.mockImplementation(({ authUrl, clientId, callbackUrl, scopes }) => {
 				return (
 					authUrl +
@@ -145,38 +174,40 @@ jest.mock("../user/generate-auth-url", () => {
 	};
 });
 
-jest.mock("../is-ci", () => {
+jest.unstable_mockModule("../is-ci", () => {
 	return { CI: { isCI: jest.fn().mockImplementation(() => false) } };
 });
 
-jest.mock("../user/generate-random-state", () => {
+jest.unstable_mockModule("../user/generate-random-state", () => {
 	return {
 		generateRandomState: jest.fn().mockImplementation(() => "MOCK_STATE_PARAM"),
 	};
 });
 
-jest.mock("xdg-app-paths", () => {
+jest.unstable_mockModule("xdg-app-paths", () => {
 	return {
 		__esModule: true,
 		default: jest.fn().mockImplementation(() => {
 			return {
-				config() {
-					return jest.requireActual("node:path").resolve("test-xdg-config");
+				async config() {
+					return await import("node:path").then(({ resolve }) =>
+						resolve("test-xdg-config")
+					);
 				},
 			};
 		}),
 	};
 });
 
-jest.mock("../metrics/metrics-config", () => {
-	const realModule = jest.requireActual("../metrics/metrics-config");
+jest.unstable_mockModule("../metrics/metrics-config", async () => {
+	const realModule = await import("../metrics/metrics-config");
 	const fakeModule = {
 		...realModule,
 		// Although we mock out the getMetricsConfig() function in most tests,
 		// we need a way to reinstate it for the metrics specific tests.
 		// This is what `useOriginal` is for.
 		useOriginal: false,
-		getMetricsConfig: (...args: unknown[]) =>
+		getMetricsConfig: (...args: [metricsConfig.MetricsConfigOptions]) =>
 			fakeModule.useOriginal
 				? realModule.getMetricsConfig(...args)
 				: async () => {
@@ -189,7 +220,7 @@ jest.mock("../metrics/metrics-config", () => {
 	};
 	return fakeModule;
 });
-jest.mock("prompts", () => {
+jest.unstable_mockModule("prompts", () => {
 	return {
 		__esModule: true,
 		default: jest.fn((...args) => {
@@ -202,15 +233,15 @@ jest.mock("prompts", () => {
 	};
 });
 
-jest.mock("execa", () => {
-	const realModule = jest.requireActual("execa");
+jest.unstable_mockModule("execa", async () => {
+	const realModule = await import("execa");
 
 	return {
 		...realModule,
 		execa: jest.fn((...args: unknown[]) => {
 			return args[0] === "mockpm"
 				? Promise.resolve()
-				: realModule.execa(...args);
+				: realModule.execa(...(args as [string, string[]]));
 		}),
 	};
 });

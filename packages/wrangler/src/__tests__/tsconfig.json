@@ -2,7 +2,10 @@
 	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
 	"compilerOptions": {
 		"types": ["node", "jest"],
-		"jsx": "preserve"
+		"jsx": "preserve",
+		"module": "ESNext",
+		"esModuleInterop": true,
+		"isolatedModules": true
 	},
 	"include": ["../*.d.ts", "**/*.ts", "**/*.tsx", "**/*.js"],
 	"exclude": ["../jest.d.ts"]
