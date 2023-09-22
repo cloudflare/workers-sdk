@@ -9,11 +9,6 @@ import { frameworkToTest } from "./frameworkToTest";
 import { isQuarantineMode, keys, runC3, testProjectDir } from "./helpers";
 import type { RunnerConfig } from "./helpers";
 
-/*
-Areas for future improvement:
-- Add support for frameworks with global installs (like docusaurus, gatsby, etc)
-*/
-
 const TEST_TIMEOUT = 1000 * 60 * 3;
 
 type FrameworkTestConfig = RunnerConfig & {
