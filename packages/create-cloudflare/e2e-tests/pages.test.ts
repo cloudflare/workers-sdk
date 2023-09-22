@@ -138,6 +138,20 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 			expectResponseToContain: "Hello, Astronaut!",
 			testCommitMessage: true,
 		},
+		angular: {
+			expectResponseToContain: "Angular Logo",
+			promptHandlers: [
+				{
+					matcher: /Would you like to add Angular routing\?/,
+					input: ["y", keys.enter],
+				},
+				{
+					matcher: /Which stylesheet format would you like to use\?/,
+					input: [keys.enter],
+				},
+			],
+			testCommitMessage: true,
+		},
 		docusaurus: {
 			expectResponseToContain: "Dinosaurs are cool",
 			testCommitMessage: true,
