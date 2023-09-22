@@ -51,6 +51,7 @@ describe("wrangler", () => {
 			  wrangler d1                          🗄  Interact with a D1 database
 			  wrangler ai                          🤖 Interact with AI models
 			  wrangler constellation               🤖 Interact with Constellation models
+				wrangler vectorize                   🧮 Interact with Vectorize indexes
 			  wrangler pubsub                      📮 Interact and manage Pub/Sub Brokers
 			  wrangler mtls-certificate            🪪 Manage certificates used for mTLS connections
 			  wrangler login                       🔓 Login to Cloudflare
@@ -104,6 +105,7 @@ describe("wrangler", () => {
 			  wrangler d1                          🗄  Interact with a D1 database
 			  wrangler ai                          🤖 Interact with AI models
 			  wrangler constellation               🤖 Interact with Constellation models
+				wrangler vectorize                   🧮 Interact with Vectorize indexes
 			  wrangler pubsub                      📮 Interact and manage Pub/Sub Brokers
 			  wrangler mtls-certificate            🪪 Manage certificates used for mTLS connections
 			  wrangler login                       🔓 Login to Cloudflare
