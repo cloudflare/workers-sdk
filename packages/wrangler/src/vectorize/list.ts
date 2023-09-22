@@ -26,8 +26,8 @@ export async function handler(
 	const indexes = await listIndexes(config);
 
 	if (indexes.length === 0) {
-		logger.log(`
-⚠️  You haven't created any indexes on this account.
+		logger.warn(`
+You haven't created any indexes on this account.
 
 Use 'wrangler vectorize create <name>' to create one, or visit
 https://developers.cloudflare.com/vectorize/ to get started.
@@ -45,7 +45,7 @@ https://developers.cloudflare.com/vectorize/ to get started.
 			name: index.name,
 			dimensions: index.config?.dimensions.toString(),
 			metric: index.config?.metric,
-			description: index.description || "",
+			description: index.description ?? "",
 			created: index.created_on,
 			modified: index.modified_on,
 		}))

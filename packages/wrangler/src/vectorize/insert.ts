@@ -20,7 +20,7 @@ export function options(yargs: CommonYargsArgv) {
 				type: "array",
 				demandOption: true,
 				describe:
-					"An array of one of more vectors in JSON format to insert into the index - e.g. --vectors='{id: 5, values: [0.5, 14.5, 3.4]}'",
+					"An array of one or more vectors in JSON format to insert into the index",
 			},
 		})
 		.epilogue(vectorizeBetaWarning);

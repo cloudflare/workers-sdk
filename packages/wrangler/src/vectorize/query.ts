@@ -20,11 +20,11 @@ export function options(yargs: CommonYargsArgv) {
 				type: "string",
 				demandOption: true,
 				describe:
-					"The vector value to query for - e.g. --vector='[0.51, 15.15, 99.195, 5.05]'",
+					"The vector value to query for",
 			},
 		})
 		.options({
-			topK: {
+			"top-k": {
 				type: "number",
 				default: 3,
 				describe: "The number of results (nearest neighbors) to return.",
