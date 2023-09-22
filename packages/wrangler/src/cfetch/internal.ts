@@ -9,6 +9,7 @@ import { loginOrRefreshIfRequired, requireApiToken } from "../user";
 import type { ApiCredentials } from "../user";
 import type { URLSearchParams } from "node:url";
 import type { RequestInit, HeadersInit } from "undici";
+import { json } from "body-parser";
 
 /*
  * performApiFetch does everything required to make a CF API request,
@@ -85,6 +86,11 @@ export async function fetchInternal<ResponseType>(
 	logger.debug("HEADERS:", JSON.stringify(logHeaders, null, 2));
 	logger.debug("RESPONSE:", jsonText);
 	logger.debug("-- END CF API RESPONSE");
+
+	if (!jsonText && (response.status === 204 || response.status === 205)) {
+		const emptyBody = `{"result": {}, "success": true, "errors": [], "messages": []}`;
+		return parseJSON<ResponseType>(emptyBody);
+	}
 
 	try {
 		return parseJSON<ResponseType>(jsonText);
