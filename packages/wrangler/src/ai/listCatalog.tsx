@@ -12,6 +12,21 @@ export function options(yargs: CommonYargsArgv) {
 	return asJson(yargs);
 }
 
+function truncateDescription(
+	description: string | undefined,
+	alreadyUsed: number
+): string {
+	if (description === undefined || description === null) {
+		return "";
+	}
+
+	if (process.stdout.columns === undefined) {
+		return truncate(description, 100);
+	}
+
+	return truncate(description, process.stdout.columns - alreadyUsed);
+}
+
 type HandlerOptions = StrictYargsOptionsToInterface<typeof options>;
 export const handler = withConfig<HandlerOptions>(
 	async ({ json, config }): Promise<void> => {
@@ -25,7 +40,13 @@ export const handler = withConfig<HandlerOptions>(
 				entries.map((entry) => ({
 					model: entry.id,
 					name: entry.name,
-					description: truncate(entry.description ?? "", 100),
+					description: truncateDescription(
+						entry.description,
+						entry.id.length +
+							entry.name.length +
+							(entry.task ? entry.task.name.length : 0) +
+							10
+					),
 					task: entry.task ? entry.task.name : "",
 				}))
 			);
