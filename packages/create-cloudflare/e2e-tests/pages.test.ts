@@ -142,6 +142,16 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 			expectResponseToContain: "Dinosaurs are cool",
 			testCommitMessage: true,
 		},
+		gatsby: {
+			expectResponseToContain: "Gatsby!",
+			promptHandlers: [
+				{
+					matcher: /Would you like to use a template\?/,
+					input: ['n'],
+				}
+			],
+			testCommitMessage: true,
+		},
 		hono: {
 			expectResponseToContain: "Hello Hono!",
 			testCommitMessage: false,
