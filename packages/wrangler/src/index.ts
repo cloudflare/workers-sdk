@@ -5,6 +5,7 @@ import supportsColor from "supports-color";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
+import { ai } from "./ai";
 import { loadDotEnv, readConfig } from "./config";
 import { constellation } from "./constellation";
 import { d1 } from "./d1";
@@ -451,6 +452,11 @@ export function createCLIParser(argv: string[]) {
 	});
 
 	// ai
+	wrangler.command("ai", "🤖 Interact with AI models", (aiYargs) => {
+		return ai(aiYargs.command(subHelp));
+	});
+
+	// constellation
 	wrangler.command(
 		"constellation",
 		"🤖 Interact with Constellation models",
