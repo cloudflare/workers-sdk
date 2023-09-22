@@ -147,8 +147,8 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 			promptHandlers: [
 				{
 					matcher: /Would you like to use a template\?/,
-					input: ['n'],
-				}
+					input: ["n"],
+				},
 			],
 			testCommitMessage: true,
 		},
