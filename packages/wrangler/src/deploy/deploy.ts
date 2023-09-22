@@ -546,6 +546,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			d1_databases: config.d1_databases,
 			vectorize: config.vectorize,
 			constellation: config.constellation,
+			hyperdrive: config.hyperdrive,
 			services: config.services,
 			analytics_engine_datasets: config.analytics_engine_datasets,
 			dispatch_namespaces: config.dispatch_namespaces,

@@ -939,6 +939,7 @@ function getBindings(
 		],
 		vectorize: configParam.vectorize,
 		constellation: configParam.constellation,
+		hyperdrive: configParam.hyperdrive,
 	};
 
 	return bindings;
