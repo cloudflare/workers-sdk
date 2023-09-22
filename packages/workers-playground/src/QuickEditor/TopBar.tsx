@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { A, Div, Strong } from "@cloudflare/elements";
+import { A, Div, Form, Span, Strong } from "@cloudflare/elements";
 import { createComponent } from "@cloudflare/style-container";
 import { Button } from "@cloudflare/component-button";
 import { Icon } from "@cloudflare/component-icon";
@@ -64,68 +64,86 @@ export function TopBar() {
 		}
 	}, [hasCopied]);
 	return (
-		<>
-			<Wrapper>
-				<A href="/" color="inherit">
-					<WorkersLogo />
-				</A>
-				<A target="_blank" href="/playground">
-					<Button ml={2} type="primary" inverted={true}>
-						<Icon label="Add" type="plus" mr={1} />
-						New
-					</Button>
-				</A>
-				<Div ml="auto" mr="auto" display="flex" gap={1} alignItems="center">
-					{isEditing ? (
-						<Input
-							name="path"
-							value={value}
-							autoComplete="off"
-							spellCheck={false}
-							onChange={(e) => setValue(e.target.value)}
-							mb={0}
-						/>
-					) : (
-						<Strong>{value}</Strong>
-					)}
-					<Button
-						type="plain"
-						p={2}
-						ml={1}
-						onClick={() => {
-							if (isEditing) {
-								persistValue();
-							}
-							setIsEditing(!isEditing);
-						}}
-					>
-						<Icon type={isEditing ? "ok" : "edit"} />
-					</Button>
-				</Div>
+		<Wrapper>
+			<A href="/" color="inherit">
+				<WorkersLogo />
+			</A>
+			<A target="_blank" href="/playground">
+				<Button ml={2} type="primary" inverted={true}>
+					<Icon label="Add" type="plus" mr={1} />
+					New
+				</Button>
+			</A>
+			<Form
+				ml="auto"
+				mr="auto"
+				display="flex"
+				gap={1}
+				alignItems="center"
+				onSubmit={(e) => {
+					e.preventDefault();
+					if (isEditing) {
+						persistValue();
+					}
+				}}
+			>
+				{isEditing ? (
+					<Input
+						name="path"
+						value={value}
+						autoComplete="off"
+						spellCheck={false}
+						onChange={(e) => setValue(e.target.value)}
+						mb={0}
+					/>
+				) : (
+					<Strong>{value}</Strong>
+				)}
 				<Button
-					type="primary"
-					inverted={true}
+					type="plain"
+					p={2}
+					ml={1}
+					submit={isEditing}
 					onClick={() => {
-						void navigator.clipboard.writeText(location.href);
-						setHasCopied(!hasCopied);
+						setIsEditing(!isEditing);
 					}}
 				>
-					<Icon label="Add" type="link" mr={1} />
-					Copy Link
+					<Icon type={isEditing ? "ok" : "edit"} />
 				</Button>
-				<A
-					target="_blank"
-					href={`https://dash.cloudflare.com/workers-and-pages/deploy/playground/${value}${location.hash}`}
-				>
-					<Button type="primary">Deploy</Button>
-				</A>
-			</Wrapper>
-			{hasCopied && (
-				<AnimatedToast type="success">
-					<Icon type="ok-sign"></Icon>
-					Copied Playground link to clipboard
-				</AnimatedToast>
+			</Form>
+			{true && (
+				<Div position="relative">
+					<Span
+						height="100%"
+						display="flex"
+						gap={1}
+						alignItems="center"
+						mr={2}
+						position={"absolute"}
+						right={0}
+					>
+						<Icon type="ok" color={"green"} size={20}></Icon>
+						Copied!
+					</Span>
+				</Div>
 			)}
-		</>
+			<Button
+				type="primary"
+				inverted={true}
+				onClick={() => {
+					void navigator.clipboard.writeText(location.href);
+					setHasCopied(!hasCopied);
+				}}
+			>
+				<Icon label="Add" type="link" mr={1} />
+				Copy Link
+			</Button>
+			<A
+				target="_blank"
+				href={`https://dash.cloudflare.com/workers-and-pages/deploy/playground/${value}${location.hash}`}
+			>
+				<Button type="primary">Deploy</Button>
+			</A>
+		</Wrapper>
 	);
 }
