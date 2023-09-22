@@ -469,7 +469,7 @@ export function createCLIParser(argv: string[]) {
 	// vectorize
 	wrangler.command(
 		"vectorize",
-		"🧮 Interact with Vectorize indexes",
+		"🧮 Interact with Vectorize indices",
 		(vectorYargs) => {
 			return vectorize(vectorYargs.command(subHelp));
 		}
