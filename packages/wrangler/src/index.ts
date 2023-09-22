@@ -453,6 +453,11 @@ export function createCLIParser(argv: string[]) {
 	});
 
 	// ai
+	wrangler.command("ai", "🤖 Interact with AI models", (aiYargs) => {
+		return ai(aiYargs.command(subHelp));
+	});
+
+	// constellation
 	wrangler.command(
 		"constellation",
 		"🤖 Interact with Constellation models",
