@@ -138,6 +138,10 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 			expectResponseToContain: "Welcome to Astro",
 			testCommitMessage: true,
 		},
+		docusaurus: {
+			expectResponseToContain: "Dinosaurs are cool",
+			testCommitMessage: true,
+		},
 		hono: {
 			expectResponseToContain: "Hello Hono!",
 			testCommitMessage: false,
