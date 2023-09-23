@@ -13574,7 +13574,7 @@ packages:
     resolution: {integrity: sha512-Ux1J4NUqC6tZayBqLN1kUlDAEvLiQlli/53sSddU4IN+h+3xxnv2HmRSMpVSvr1hvJzotfMs3ERvETGK+f4OwA==}
     engines: {node: '>= 4.0'}
     optionalDependencies:
-      fsevents: 2.3.2
+      fsevents: 2.3.3
     dev: true
 
   /os-tmpdir@1.0.2:
@@ -17477,7 +17477,7 @@ packages:
     dependencies:
       xdg-portable: 10.6.0
     optionalDependencies:
-      fsevents: 2.3.2
+      fsevents: 2.3.3
     dev: true
 
   /xdg-portable@10.6.0:
@@ -17486,7 +17486,7 @@ packages:
     dependencies:
       os-paths: 7.4.0
     optionalDependencies:
-      fsevents: 2.3.2
+      fsevents: 2.3.3
     dev: true
 
   /xdm@2.1.0:
