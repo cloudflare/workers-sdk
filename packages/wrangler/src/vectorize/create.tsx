@@ -112,12 +112,11 @@ export async function handler(
 					configuration into &apos;wrangler.toml&apos;:
 				</Text>
 				<Text>&nbsp;</Text>
-				<Text>[[unsafe.bindings]]</Text>
+				<Text>[[vectorize]]</Text>
 				<Text>
-					name = &quot;VECTORIZE_INDEX&quot; # available within your Worker on
+					binding = &quot;VECTORIZE_INDEX&quot; # available within your Worker on
 					env.VECTORIZE_INDEX
 				</Text>
-				<Text>type = &quot;vectorize&quot;</Text>
 				<Text>index_name = &quot;{indexResult.name}&quot;</Text>
 			</Box>
 		)

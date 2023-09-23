@@ -212,7 +212,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 
 	if (vectorize !== undefined && vectorize.length > 0) {
 		output.push({
-			type: "Hyperdrive Configs",
+			type: "Vectorize Indices",
 			entries: vectorize.map(({ binding, index_name }) => {
 				return {
 					key: binding,
