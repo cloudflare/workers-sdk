@@ -9,7 +9,6 @@ import { loginOrRefreshIfRequired, requireApiToken } from "../user";
 import type { ApiCredentials } from "../user";
 import type { URLSearchParams } from "node:url";
 import type { RequestInit, HeadersInit } from "undici";
-import { json } from "body-parser";
 
 /*
  * performApiFetch does everything required to make a CF API request,
