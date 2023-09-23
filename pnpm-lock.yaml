@@ -1228,8 +1228,8 @@ importers:
         specifier: ^8.5.0
         version: 8.11.0
       xdg-app-paths:
-        specifier: ^7.3.0
-        version: 7.3.0
+        specifier: ^8.3.0
+        version: 8.3.0
       yargs:
         specifier: ^17.4.1
         version: 17.7.1
@@ -13570,9 +13570,11 @@ packages:
       wcwidth: 1.0.1
     dev: true
 
-  /os-paths@6.9.0:
-    resolution: {integrity: sha512-b6fbX4phQ0zydXASUr4GNAIWGtG1LzUoHdQxUpgkpYz/WszdpVGlRKkMIaLhZnRymDz4lPQfX9cx0qvDfYPmPg==}
+  /os-paths@7.4.0:
+    resolution: {integrity: sha512-Ux1J4NUqC6tZayBqLN1kUlDAEvLiQlli/53sSddU4IN+h+3xxnv2HmRSMpVSvr1hvJzotfMs3ERvETGK+f4OwA==}
     engines: {node: '>= 4.0'}
+    optionalDependencies:
+      fsevents: 2.3.2
     dev: true
 
   /os-tmpdir@1.0.2:
@@ -17469,18 +17471,22 @@ packages:
       utf-8-validate:
         optional: true
 
-  /xdg-app-paths@7.3.0:
-    resolution: {integrity: sha512-0AIKfMMKidtt5fB9S10Hlf7qS5XTBGrzZSkSUvk7vC/4FhGFCdVn8SmigfspouEqOgLvB3Z+HmWKYu/1fXE9Dw==}
+  /xdg-app-paths@8.3.0:
+    resolution: {integrity: sha512-mgxlWVZw0TNWHoGmXq+NC3uhCIc55dDpAlDkMQUaIAcQzysb0kxctwv//fvuW61/nAAeUBJMQ8mnZjMmuYwOcQ==}
     engines: {node: '>= 4.0'}
     dependencies:
-      xdg-portable: 9.4.0
+      xdg-portable: 10.6.0
+    optionalDependencies:
+      fsevents: 2.3.2
     dev: true
 
-  /xdg-portable@9.4.0:
-    resolution: {integrity: sha512-L6M5PMpxOJeT5FGnI5TjrN2jPT/rdwu+/aEjO9gbY7wLe4qq+v9oPYJpqqlaL6qNc6zE/Usmq0dvkA793nfBqw==}
+  /xdg-portable@10.6.0:
+    resolution: {integrity: sha512-xrcqhWDvtZ7WLmt8G4f3hHy37iK7D2idtosRgkeiSPZEPmBShp0VfmRBLWAPC6zLF48APJ21yfea+RfQMF4/Aw==}
     engines: {node: '>= 4.0'}
     dependencies:
-      os-paths: 6.9.0
+      os-paths: 7.4.0
+    optionalDependencies:
+      fsevents: 2.3.2
     dev: true
 
   /xdm@2.1.0:
