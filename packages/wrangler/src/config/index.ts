@@ -212,7 +212,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 
 	if (vectorize !== undefined && vectorize.length > 0) {
 		output.push({
-			type: "Vectorize Indices",
+			type: "Vectorize Indexes",
 			entries: vectorize.map(({ binding, index_name }) => {
 				return {
 					key: binding,

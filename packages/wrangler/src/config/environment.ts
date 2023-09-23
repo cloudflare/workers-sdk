@@ -459,7 +459,7 @@ interface EnvironmentNonInheritable {
 	}[];
 
 	/**
-	 * Specifies Vectorize indices that are bound to this Worker environment.
+	 * Specifies Vectorize indexes that are bound to this Worker environment.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.

@@ -22,12 +22,12 @@ export async function handler(
 ) {
 	const config = readConfig(args.config, args);
 
-	logger.log(`📋 Listing Vectorize indices...`);
+	logger.log(`📋 Listing Vectorize indexes...`);
 	const indexes = await listIndexes(config);
 
 	if (indexes.length === 0) {
 		logger.warn(`
-You haven't created any indices on this account.
+You haven't created any indexes on this account.
 
 Use 'wrangler vectorize create <name>' to create one, or visit
 https://developers.cloudflare.com/vectorize/ to get started.

@@ -26,7 +26,7 @@ export function vectorize(yargs: CommonYargsArgv) {
 				getOptions,
 				getHandler
 			)
-			.command("list", "List your Vectorize indices", listOptions, listHandler)
+			.command("list", "List your Vectorize indexes", listOptions, listHandler)
 			// TODO: coming during open beta
 			// .command(
 			// 	"query <name>",

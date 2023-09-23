@@ -14,13 +14,13 @@ describe("vectorize", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 		"wrangler vectorize
 
-		🧮 Interact with Vectorize indices
+		🧮 Interact with Vectorize indexes
 
 		Commands:
 		  wrangler vectorize create <name>  Create a Vectorize index
 		  wrangler vectorize delete <name>  Delete a Vectorize index
 		  wrangler vectorize get <name>     Get a Vectorize index by name
-		  wrangler vectorize list           List your Vectorize indices
+		  wrangler vectorize list           List your Vectorize indexes
 
 		Flags:
 		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
@@ -52,13 +52,13 @@ describe("vectorize", () => {
 		"
 		wrangler vectorize
 
-		🧮 Interact with Vectorize indices
+		🧮 Interact with Vectorize indexes
 
 		Commands:
 		  wrangler vectorize create <name>  Create a Vectorize index
 		  wrangler vectorize delete <name>  Delete a Vectorize index
 		  wrangler vectorize get <name>     Get a Vectorize index by name
-		  wrangler vectorize list           List your Vectorize indices
+		  wrangler vectorize list           List your Vectorize indexes
 
 		Flags:
 		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
