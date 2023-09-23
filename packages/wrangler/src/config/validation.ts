@@ -1234,6 +1234,16 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateD1Binding),
 			[]
 		),
+		vectorize: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"vectorize",
+			validateBindingArray(envName, validateVectorizeBinding),
+			[]
+		),
 		constellation: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -2250,6 +2260,34 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	return isValid;
+};
+
+const validateVectorizeBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"vectorize" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	// Vectorize bindings must have a binding and a project.
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "index_name", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have an "index_name" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
 	return isValid;
 };
 

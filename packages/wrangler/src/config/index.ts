@@ -99,6 +99,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		send_email,
 		queues,
 		d1_databases,
+		vectorize,
 		constellation,
 		r2_buckets,
 		logfwdr,
@@ -206,6 +207,18 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 					};
 				}
 			),
+		});
+	}
+
+	if (vectorize !== undefined && vectorize.length > 0) {
+		output.push({
+			type: "Hyperdrive Configs",
+			entries: vectorize.map(({ binding, index_name }) => {
+				return {
+					key: binding,
+					value: index_name,
+				};
+			}),
 		});
 	}
 
