@@ -31,12 +31,7 @@ describe("d1", () => {
 		  -c, --config                    Path to .toml configuration file  [string]
 		  -e, --env                       Environment to use for operations and .env files  [string]
 		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]
-
-		--------------------
-		🚧 D1 is currently in open beta
-		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		--------------------"
+		  -v, --version                   Show version number  [boolean]"
 	`);
 	});
 
@@ -71,12 +66,7 @@ describe("d1", () => {
 		  -c, --config                    Path to .toml configuration file  [string]
 		  -e, --env                       Environment to use for operations and .env files  [string]
 		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]
-
-		--------------------
-		🚧 D1 is currently in open beta
-		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		--------------------"
+		  -v, --version                   Show version number  [boolean]"
 	`);
 	});
 
@@ -106,12 +96,7 @@ describe("d1", () => {
 		  -c, --config                    Path to .toml configuration file  [string]
 		  -e, --env                       Environment to use for operations and .env files  [string]
 		  -h, --help                      Show help  [boolean]
-		  -v, --version                   Show version number  [boolean]
-
-		--------------------
-		🚧 D1 is currently in open beta
-		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		--------------------"
+		  -v, --version                   Show version number  [boolean]"
 	`);
 	});
 

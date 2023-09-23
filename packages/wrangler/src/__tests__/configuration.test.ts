@@ -26,6 +26,7 @@ describe("normalizeAndValidateConfig()", () => {
 			compatibility_flags: [],
 			configPath: undefined,
 			d1_databases: [],
+			vectorize: [],
 			constellation: [],
 			dev: {
 				ip: "0.0.0.0",

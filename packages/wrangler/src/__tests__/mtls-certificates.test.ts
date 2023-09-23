@@ -364,16 +364,16 @@ describe("wrangler", () => {
 				🪪 Manage certificates used for mTLS connections
 
 				Commands:
-					wrangler mtls-certificate upload  Upload an mTLS certificate
-					wrangler mtls-certificate list    List uploaded mTLS certificates
-					wrangler mtls-certificate delete  Delete an mTLS certificate
+				  wrangler mtls-certificate upload  Upload an mTLS certificate
+				  wrangler mtls-certificate list    List uploaded mTLS certificates
+				  wrangler mtls-certificate delete  Delete an mTLS certificate
 
 				Flags:
-					-j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
-					-c, --config                    Path to .toml configuration file  [string]
-					-e, --env                       Environment to use for operations and .env files  [string]
-					-h, --help                      Show help  [boolean]
-					-v, --version                   Show version number  [boolean]"
+				  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
+				  -c, --config                    Path to .toml configuration file  [string]
+				  -e, --env                       Environment to use for operations and .env files  [string]
+				  -h, --help                      Show help  [boolean]
+				  -v, --version                   Show version number  [boolean]"
 			`);
 				});
 			});
