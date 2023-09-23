@@ -937,6 +937,7 @@ function getBindings(
 			}),
 			...(args.d1Databases || []),
 		],
+		vectorize: configParam.vectorize,
 		constellation: configParam.constellation,
 	};
 

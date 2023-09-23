@@ -108,6 +108,7 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 									queues: [],
 									r2_buckets: [],
 									d1_databases: [],
+									vectorize: [],
 									constellation: [],
 									services: [],
 									analytics_engine_datasets: [],
