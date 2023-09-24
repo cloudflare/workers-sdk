@@ -19,8 +19,7 @@ export function options(yargs: CommonYargsArgv) {
 			query: {
 				type: "string",
 				demandOption: true,
-				describe:
-					"The vector value to query for",
+				describe: "The vector value to query for",
 			},
 		})
 		.options({

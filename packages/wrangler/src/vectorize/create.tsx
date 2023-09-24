@@ -114,8 +114,8 @@ export async function handler(
 				<Text>&nbsp;</Text>
 				<Text>[[vectorize]]</Text>
 				<Text>
-					binding = &quot;VECTORIZE_INDEX&quot; # available within your Worker on
-					env.VECTORIZE_INDEX
+					binding = &quot;VECTORIZE_INDEX&quot; # available within your Worker
+					on env.VECTORIZE_INDEX
 				</Text>
 				<Text>index_name = &quot;{indexResult.name}&quot;</Text>
 			</Box>
