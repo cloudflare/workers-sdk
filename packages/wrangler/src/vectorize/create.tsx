@@ -49,8 +49,7 @@ export function options(yargs: CommonYargsArgv) {
 		.options({
 			description: {
 				type: "string",
-				describe:
-					"An optional description for this index.",
+				describe: "An optional description for this index.",
 			},
 		})
 		.option("json", {
