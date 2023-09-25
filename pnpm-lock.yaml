@@ -523,8 +523,8 @@ importers:
         specifier: ^0.22.0
         version: 0.22.0
       semver:
-        specifier: ^7.5.1
-        version: 7.5.1
+        specifier: ^7.5.2
+        version: 7.5.2
       typescript:
         specifier: ^5.0.2
         version: 5.0.3
@@ -4816,7 +4816,7 @@ packages:
     resolution: {integrity: sha512-8KG5RD0GVP4ydEzRn/I4BNDuxDtqVbOdm8675T49OIG/NGhaK0pjPX7ZcDlvKYbA+ulvVK3ztfcF4uBdOxuJbQ==}
     dependencies:
       '@gar/promisify': 1.1.3
-      semver: 7.5.1
+      semver: 7.5.4
     dev: true
 
   /@npmcli/move-file@1.1.2:
@@ -5104,7 +5104,7 @@ packages:
       recast: 0.21.5
       remark-frontmatter: 4.0.1
       remark-mdx-frontmatter: 1.1.1
-      semver: 7.5.1
+      semver: 7.5.4
       sort-package-json: 1.57.0
       tar-fs: 2.1.1
       tsconfig-paths: 4.2.0
@@ -5480,7 +5480,7 @@ packages:
       js-yaml: 4.1.0
       ora: 4.1.1
       rimraf: 3.0.2
-      semver: 7.5.1
+      semver: 7.5.4
       update-check: 1.5.4
     dev: true
 
@@ -5959,7 +5959,7 @@ packages:
       grapheme-splitter: 1.0.4
       ignore: 5.2.0
       natural-compare-lite: 1.4.0
-      semver: 7.5.1
+      semver: 7.5.4
       tsutils: 3.21.0(typescript@4.9.5)
       typescript: 4.9.5
     transitivePeerDependencies:
@@ -5987,7 +5987,7 @@ packages:
       grapheme-splitter: 1.0.4
       ignore: 5.2.0
       natural-compare-lite: 1.4.0
-      semver: 7.5.1
+      semver: 7.5.4
       tsutils: 3.21.0(typescript@5.0.3)
       typescript: 5.0.3
     transitivePeerDependencies:
@@ -6015,7 +6015,7 @@ packages:
       graphemer: 1.4.0
       ignore: 5.2.0
       natural-compare-lite: 1.4.0
-      semver: 7.5.1
+      semver: 7.5.4
       tsutils: 3.21.0(typescript@5.0.3)
       typescript: 5.0.3
     transitivePeerDependencies:
@@ -6265,7 +6265,7 @@ packages:
       debug: 4.3.4(supports-color@9.2.2)
       globby: 11.1.0
       is-glob: 4.0.3
-      semver: 7.5.1
+      semver: 7.5.4
       tsutils: 3.21.0(typescript@4.9.5)
       typescript: 4.9.5
     transitivePeerDependencies:
@@ -6286,7 +6286,7 @@ packages:
       debug: 4.3.4(supports-color@9.2.2)
       globby: 11.1.0
       is-glob: 4.0.3
-      semver: 7.5.1
+      semver: 7.5.4
       tsutils: 3.21.0(typescript@5.0.3)
       typescript: 5.0.3
     transitivePeerDependencies:
@@ -6307,7 +6307,7 @@ packages:
       debug: 4.3.4(supports-color@9.2.2)
       globby: 11.1.0
       is-glob: 4.0.3
-      semver: 7.5.1
+      semver: 7.5.4
       tsutils: 3.21.0(typescript@5.0.3)
       typescript: 5.0.3
     transitivePeerDependencies:
@@ -6349,7 +6349,7 @@ packages:
       '@typescript-eslint/typescript-estree': 5.59.9(typescript@4.9.5)
       eslint: 8.42.0
       eslint-scope: 5.1.1
-      semver: 7.5.1
+      semver: 7.5.4
     transitivePeerDependencies:
       - supports-color
       - typescript
@@ -6369,7 +6369,7 @@ packages:
       '@typescript-eslint/typescript-estree': 5.59.9(typescript@5.0.3)
       eslint: 8.49.0
       eslint-scope: 5.1.1
-      semver: 7.5.1
+      semver: 7.5.4
     transitivePeerDependencies:
       - supports-color
       - typescript
@@ -6389,7 +6389,7 @@ packages:
       '@typescript-eslint/typescript-estree': 5.62.0(typescript@5.0.3)
       eslint: 8.49.0
       eslint-scope: 5.1.1
-      semver: 7.5.1
+      semver: 7.5.4
     transitivePeerDependencies:
       - supports-color
       - typescript
@@ -7334,7 +7334,7 @@ packages:
   /builtins@5.0.1:
     resolution: {integrity: sha512-qwVpFEHNfhYJIzNRBvd2C1kyo6jz3ZSMPyyuR47OPdiKWlbYnZNyDWuyR175qDnAJLiCo5fBBqPb3RiXgWlkOQ==}
     dependencies:
-      semver: 7.5.1
+      semver: 7.5.4
     dev: true
 
   /bundle-name@3.0.0:
@@ -7817,7 +7817,7 @@ packages:
       js-string-escape: 1.0.1
       lodash: 4.17.21
       md5-hex: 3.0.1
-      semver: 7.5.1
+      semver: 7.5.4
       well-known-symbols: 2.0.0
 
   /concurrently@7.3.0:
@@ -13327,7 +13327,7 @@ packages:
     dependencies:
       execa: 6.1.0
       parse-package-name: 1.0.0
-      semver: 7.5.1
+      semver: 7.5.4
       validate-npm-package-name: 4.0.0
     dev: true
 
@@ -15170,12 +15170,13 @@ packages:
       lru-cache: 6.0.0
     dev: true
 
-  /semver@7.5.1:
-    resolution: {integrity: sha512-Wvss5ivl8TMRZXXESstBA4uR5iXgEN/VC5/sOcuXdVLzcdkz4HWetIoRfG5gb5X+ij/G9rw9YoGn3QoQ8OCSpw==}
+  /semver@7.5.2:
+    resolution: {integrity: sha512-SoftuTROv/cRjCze/scjGyiDtcUyxw1rgYQSZY7XTmtR5hX+dm76iDbTH8TkLPHCQmlbQVSSbNZCPM2hb0knnQ==}
     engines: {node: '>=10'}
     hasBin: true
     dependencies:
       lru-cache: 6.0.0
+    dev: true
 
   /semver@7.5.4:
     resolution: {integrity: sha512-1bCSESV6Pv+i21Hvpxp3Dx+pSD8lIPt8uVjRrxAUt/nbswYc+tK6Y2btiULjd4+fnq15PX+nqQDC7Oft7WkwcA==}
