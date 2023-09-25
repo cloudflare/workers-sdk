@@ -44,24 +44,28 @@ export default function ToolsPane() {
 								gap={2}
 							>
 								<A
+									title="Open Worker’s documentation"
 									target="_blank"
 									display={"inline-flex"}
 									href={`https://developers.cloudflare.com/workers`}
 								>
 									<Icon
 										type="documentation"
+										size={20}
 										color={
 											isDarkMode() ? theme.colors.black : theme.colors.gray[5]
 										}
 									></Icon>
 								</A>
 								<A
+									title="Join Cloudflare’s developer Discord"
 									target="_blank"
 									display={"inline-flex"}
 									href={`https://discord.gg/cloudflaredev`}
 								>
 									<Icon
 										type="discord"
+										size={20}
 										color={
 											isDarkMode() ? theme.colors.black : theme.colors.gray[5]
 										}

@@ -21,6 +21,14 @@ const metadata = {
 worker.set("metadata", JSON.stringify(metadata));
 
 worker.set(
+	"data.js",
+	new Blob([await readFile("./welcome/data.js", "utf8")], {
+		type: "application/javascript+module",
+	}),
+	"data.js"
+);
+
+worker.set(
 	"index.js",
 	new Blob([await readFile("./welcome/index.js", "utf8")], {
 		type: "application/javascript+module",
