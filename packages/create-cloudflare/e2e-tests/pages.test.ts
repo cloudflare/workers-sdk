@@ -5,11 +5,15 @@ import { fetch } from "undici";
 import { describe, expect, test, afterEach, beforeEach } from "vitest";
 import { version } from "../package.json";
 import { deleteProject } from "../scripts/e2eCleanup";
+import { frameworkCliMap } from "../src/frameworks/package.json";
 import { frameworkToTest } from "./frameworkToTest";
 import { isQuarantineMode, keys, runC3, testProjectDir } from "./helpers";
 import type { RunnerConfig } from "./helpers";
+import type { TestContext } from "vitest";
 
 const TEST_TIMEOUT = 1000 * 60 * 3;
+
+const frameworks = Object.keys(frameworkCliMap);
 
 type FrameworkTestConfig = RunnerConfig & {
 	expectResponseToContain: string;
@@ -19,13 +23,23 @@ type FrameworkTestConfig = RunnerConfig & {
 describe.concurrent(`E2E: Web frameworks`, () => {
 	const { getPath, getName, clean } = testProjectDir("pages");
 
+	const getFrameworkNameFromTestContext = (ctx: TestContext) => {
+		const framework = ctx.meta.name.replace(/^Quarantined: /, "");
+		if (!frameworks.includes(framework)) {
+			throw new Error(
+				`Error: Invalid test name, could not detect current framework from it`
+			);
+		}
+		return framework;
+	};
+
 	beforeEach((ctx) => {
-		const framework = ctx.meta.name;
+		const framework = getFrameworkNameFromTestContext(ctx);
 		clean(framework);
 	});
 
 	afterEach(async (ctx) => {
-		const framework = ctx.meta.name;
+		const framework = getFrameworkNameFromTestContext(ctx);
 		clean(framework);
 
 		// Cleanup the pages project in case we need to retry it
