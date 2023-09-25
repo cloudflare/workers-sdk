@@ -24,7 +24,7 @@ export function options(yargs: CommonYargsArgv) {
 			dimensions: {
 				type: "number",
 				describe:
-					"The dimension size to configure this index for, based on the output dimensions of your ML model - e.g. 384 for bge-small-en in Workers AI, or 1536 for OpenAI.",
+					"The dimension size to configure this index for, based on the output dimensions of your ML model.",
 			},
 		})
 		.options({
@@ -43,14 +43,14 @@ export function options(yargs: CommonYargsArgv) {
 					"cohere/embed-multilingual-v2.0",
 				],
 				describe:
-					"The name of an preset representing a embeddings model: Vectorize will configure the dimensions and distance metric for you when provided.",
+					"The name of an preset representing an embeddings model: Vectorize will configure the dimensions and distance metric for you when provided.",
 			},
 		})
 		.options({
 			description: {
 				type: "string",
 				describe:
-					"An optional description for this index - e.g. 'internal Wiki search' or 'test index created by Eve'",
+					"An optional description for this index.",
 			},
 		})
 		.option("json", {
@@ -80,8 +80,8 @@ export async function handler(
 			dimensions: args.dimensions,
 		};
 	} else {
-		logger.log(
-			"Error: you must provide both dimensions and a metric, or a known model preset when creating an index."
+		logger.error(
+			"You must provide both dimensions and a metric, or a known model preset when creating an index."
 		);
 		return;
 	}
