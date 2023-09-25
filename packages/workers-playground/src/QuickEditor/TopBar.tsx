@@ -111,7 +111,7 @@ export function TopBar() {
 					<Icon type={isEditing ? "ok" : "edit"} />
 				</Button>
 			</Form>
-			{true && (
+			{hasCopied && (
 				<Div position="relative">
 					<Span
 						height="100%"
