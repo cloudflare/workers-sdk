@@ -9,6 +9,7 @@ import type {
 	VectorizeVector,
 	VectorizeVectorMutation,
 } from "@cloudflare/workers-types";
+import type { FormData } from "undici";
 
 const jsonContentType = "application/json; charset=utf-8;";
 
@@ -97,14 +98,15 @@ export async function updateIndex(
 export async function insertIntoIndex(
 	config: Config,
 	indexName: string,
-	vectors: Array<VectorizeVector>
+	body: FormData
 ): Promise<VectorizeVectorMutation> {
 	const accountId = await requireAuth(config);
+
 	return await fetchResult(
 		`/accounts/${accountId}/vectorize/indexes/${indexName}/insert`,
 		{
 			method: "POST",
-			body: JSON.stringify(vectors),
+			body: body,
 		}
 	);
 }
@@ -112,14 +114,15 @@ export async function insertIntoIndex(
 export async function upsertIntoIndex(
 	config: Config,
 	indexName: string,
-	vectors: VectorizeVector[]
+	body: FormData
 ): Promise<VectorizeVectorMutation> {
 	const accountId = await requireAuth(config);
+
 	return await fetchResult(
 		`/accounts/${accountId}/vectorize/indexes/${indexName}/upsert`,
 		{
 			method: "POST",
-			body: JSON.stringify(vectors),
+			body: body,
 		}
 	);
 }
