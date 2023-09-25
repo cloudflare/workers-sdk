@@ -33,7 +33,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install Dependencies
-        uses: ./.github/actions/install-dependencies
+        uses: ./.github/actions/install-pnpm-dependencies
         env:
           node-version: 16.14
 

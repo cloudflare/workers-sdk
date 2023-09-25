@@ -24,7 +24,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install Dependencies
-        uses: ./.github/actions/install-dependencies
+        uses: ./.github/actions/install-pnpm-dependencies
 
       - name: Check Types
         run: pnpm run --filter create-cloudflare check:type
@@ -46,7 +46,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install Dependencies
-        uses: ./.github/actions/install-dependencies
+        uses: ./.github/actions/install-pnpm-dependencies
 
       - name: Cleanup E2E test projects
         run: pnpm run --filter create-cloudflare test:e2e:cleanup
@@ -63,7 +63,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        pm: [npm, pnpm]
+        pm: [pnpm]
         quarantine: [true, false]
     runs-on: ${{ matrix.os }}
     steps:
@@ -72,11 +72,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install Dependencies
-        uses: ./.github/actions/install-dependencies
+      - name: Install PNPM Dependencies
+        if: ${{ matrix.pm == 'pnpm' }}
+        uses: ./.github/actions/install-pnpm-dependencies
+
+      - name: Install NPM Dependencies
+        if: ${{ matrix.npm == 'npm' }}
+        uses: ./.github/actions/install-npm-dependencies
 
       - name: E2E Tests
-        run: pnpm run --filter create-cloudflare test:e2e:${{matrix.pm}}
+        run: ${{matrix.pm}} run --filter create-cloudflare test:e2e:${{matrix.pm}}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.C3_TEST_CLOUDFLARE_ACCOUNT_ID }}
@@ -137,7 +142,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        pm: [npm, pnpm]
+        pm: [pnpm]
         quarantine: [true, false]
     runs-on: ${{ matrix.os }}
     steps:
@@ -146,11 +151,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install Dependencies
-        uses: ./.github/actions/install-dependencies
+      - name: Install PNPM Dependencies
+        if: ${{ matrix.pm == 'pnpm' }}
+        uses: ./.github/actions/install-pnpm-dependencies
+
+      - name: Install NPM Dependencies
+        if: ${{ matrix.npm == 'npm' }}
+        uses: ./.github/actions/install-npm-dependencies
 
       - name: E2E Tests
-        run: pnpm run --filter create-cloudflare test:e2e:${{matrix.pm}}
+        run: ${{matrix.pm}} run --filter create-cloudflare test:e2e:${{matrix.pm}}
         env:
           FRAMEWORK_CLI_TO_TEST: ${{ needs.get-dependabot-bumped-framework.outputs.bumped-framework-cli }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}

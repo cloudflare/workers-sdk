@@ -18,7 +18,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install Dependencies
-        uses: ./.github/actions/install-dependencies
+        uses: ./.github/actions/install-pnpm-dependencies
 
       - name: Build
         run: pnpm run build
