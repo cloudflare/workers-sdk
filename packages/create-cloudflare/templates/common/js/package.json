@@ -4,7 +4,7 @@
 	"private": true,
 	"scripts": {
 		"deploy": "wrangler deploy",
-		"start": "wrangler dev"
+		"dev": "wrangler dev"
 	},
 	"devDependencies": {
 		"itty-router": "^3.0.12",
