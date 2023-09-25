@@ -2,7 +2,7 @@ import { rest } from "msw";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import { clearDialogs } from "../helpers/mock-dialogs";
+import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { createFetchResult, msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
@@ -172,6 +172,31 @@ describe("vectorize commands", () => {
 		└───────────────┴────────────┴───────────┴─────────────┴────────────────────────────┴────────────────────────────┘"
 	`);
 	});
+
+	it("should handle a get on a vectorize index", async () => {
+		mockVectorizeRequest();
+		await runWrangler("vectorize get test-index");
+		expect(std.out).toMatchInlineSnapshot(`
+		"┌────────────┬────────────┬────────┬─────────────┬────────────────────────────┬────────────────────────────┐
+		│ name       │ dimensions │ metric │ description │ created                    │ modified                   │
+		├────────────┼────────────┼────────┼─────────────┼────────────────────────────┼────────────────────────────┤
+		│ test-index │ 768        │ cosine │             │ 2023-09-25T13:02:18.00268Z │ 2023-09-25T13:02:18.00268Z │
+		└────────────┴────────────┴────────┴─────────────┴────────────────────────────┴────────────────────────────┘"
+	`);
+	});
+
+	it("should handle a delete on a vectorize index", async () => {
+		mockVectorizeRequest();
+		mockConfirm({
+			text: "OK to delete the index 'test-index'?",
+			result: true,
+		});
+		await runWrangler("vectorize delete test-index");
+		expect(std.out).toMatchInlineSnapshot(`
+		"Deleting Vectorize index test-index
+		✅ Deleted index test-index"
+	`);
+	});
 });
 
 /** Create a mock handler for the Vectorize API */
@@ -219,7 +244,7 @@ function mockVectorizeRequest() {
 			);
 		}),
 		rest.delete(
-			"*/accounts/:accountId/vectorize/indexes/some-index",
+			"*/accounts/:accountId/vectorize/indexes/test-index",
 			(req, res, ctx) => {
 				return res.once(ctx.json(createFetchResult(null, true)));
 			}

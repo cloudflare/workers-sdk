@@ -1622,6 +1622,66 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
+		// Vectorize
+		describe("[vectorize]", () => {
+			it("should error if vectorize is an array", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ vectorize: [] } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			"
+		`);
+			});
+
+			it("should error if vectorize is a string", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ vectorize: "BAD" } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"vectorize\\" should be an array but got \\"BAD\\"."
+		`);
+			});
+
+			it("should error if vectorize is a number", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ vectorize: 999 } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"vectorize\\" should be an array but got 999."
+		`);
+			});
+
+			it("should error if vectorize is null", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ vectorize: null } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"vectorize\\" should be an array but got null."
+		`);
+			});
+		});
+
+		// AI
 		describe("[ai]", () => {
 			it("should error if ai is an array", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
