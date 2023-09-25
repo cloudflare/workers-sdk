@@ -42,6 +42,7 @@ export const runC3 = async ({
 	const proc = spawn("node", ["./dist/cli.js", ...argv]);
 	const stdout: string[] = [];
 	const stderr: string[] = [];
+	const processLogs: string[] = [];
 
 	await new Promise((resolve, rejects) => {
 		proc.stdout.on("data", (data) => {
@@ -49,9 +50,9 @@ export const runC3 = async ({
 			const currentDialog = promptHandlers[0];
 
 			lines.forEach(async (line) => {
-				// Uncomment to debug test output
+				// Uncomment to get all the output for debugging (very verbose)
 				if (filterLine(line)) {
-					console.log(`${outputPrefix} ${line}`);
+					processLogs.push(`${outputPrefix} ${line}`);
 				}
 				stdout.push(line);
 
@@ -96,6 +97,10 @@ export const runC3 = async ({
 			});
 		});
 	});
+
+	console.log("\n\n\n");
+	processLogs.forEach((line) => console.log(line));
+	console.log("\n\n\n");
 
 	return {
 		output: condenseOutput(stdout).join("\n").trim(),
