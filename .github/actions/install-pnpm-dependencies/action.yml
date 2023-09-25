@@ -1,4 +1,4 @@
-name: "Install Dependencies"
+name: "Install PNPM Dependencies"
 description: "Install dependencies, fetching from cache when possible"
 runs:
   using: "composite"

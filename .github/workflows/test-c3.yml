@@ -23,7 +23,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install Dependencies
-        uses: ./.github/actions/install-dependencies
+        uses: ./.github/actions/install-pnpm-dependencies
 
       - name: Check Types
         run: pnpm run --filter create-cloudflare check:type
@@ -45,7 +45,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install Dependencies
-        uses: ./.github/actions/install-dependencies
+        uses: ./.github/actions/install-pnpm-dependencies
 
       - name: Cleanup E2E test projects
         run: pnpm run --filter create-cloudflare test:e2e:cleanup
@@ -71,8 +71,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install Dependencies
-        uses: ./.github/actions/install-dependencies
+      - name: Install PNPM Dependencies
+        if: ${{ matrix.pm == 'pnpm' }}
+        uses: ./.github/actions/install-pnpm-dependencies
+
+      - name: Install NPM Dependencies
+        if: ${{ matrix.npm == 'npm' }}
+        uses: ./.github/actions/install-npm-dependencies
 
       - name: Install Bun ${{ env.bun-version }}
         uses: oven-sh/setup-bun@v1
@@ -80,7 +85,7 @@ jobs:
           bun-version: ${{ env.bun-version }}
 
       - name: E2E Tests
-        run: pnpm run --filter create-cloudflare test:e2e:${{matrix.pm}}
+        run: ${{matrix.pm}} run --filter create-cloudflare test:e2e:${{matrix.pm}}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.C3_TEST_CLOUDFLARE_ACCOUNT_ID }}
@@ -150,8 +155,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install Dependencies
-        uses: ./.github/actions/install-dependencies
+      - name: Install PNPM Dependencies
+        if: ${{ matrix.pm == 'pnpm' }}
+        uses: ./.github/actions/install-pnpm-dependencies
+
+      - name: Install NPM Dependencies
+        if: ${{ matrix.npm == 'npm' }}
+        uses: ./.github/actions/install-npm-dependencies
 
       - name: Install Bun ${{ env.bun-version }}
         uses: oven-sh/setup-bun@v1
@@ -159,7 +169,7 @@ jobs:
           bun-version: ${{ env.bun-version }}
 
       - name: E2E Tests
-        run: pnpm run --filter create-cloudflare test:e2e:${{matrix.pm}}
+        run: ${{matrix.pm}} run --filter create-cloudflare test:e2e:${{matrix.pm}}
         env:
           FRAMEWORK_CLI_TO_TEST: ${{ needs.get-dependabot-bumped-framework.outputs.bumped-framework-cli }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}

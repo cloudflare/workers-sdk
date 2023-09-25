@@ -1,0 +1,14 @@
+name: "Install NPM Dependencies"
+description: "Install dependencies, fetching from cache when possible"
+runs:
+  using: "composite"
+  steps:
+    - name: Use Node.js ${{ env.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ env.node-version }}
+        cache: "npm"
+
+    - name: Install NPM Dependencies
+      shell: bash
+      run: npm ci
