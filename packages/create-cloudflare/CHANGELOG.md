@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.3.1
+
+### Patch Changes
+
+- [#4001](https://github.com/cloudflare/workers-sdk/pull/4001) [`fd39ae64`](https://github.com/cloudflare/workers-sdk/commit/fd39ae649dc0658de4cfd3eac6dcfc6b4ab6205a) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `nuxi` from `3.8.4` to `3.9.0`
+
 ## 2.3.0
 
 ### Minor Changes
