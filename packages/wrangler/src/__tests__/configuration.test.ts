@@ -1624,9 +1624,9 @@ describe("normalizeAndValidateConfig()", () => {
 
 		// Vectorize
 		describe("[vectorize]", () => {
-			it("should error if vectorize is an array", () => {
+			it("should error if vectorize is an object", () => {
 				const { diagnostics } = normalizeAndValidateConfig(
-					{ vectorize: [] } as unknown as RawConfig,
+					{ vectorize: {} } as unknown as RawConfig,
 					undefined,
 					{ env: undefined }
 				);
@@ -1634,7 +1634,36 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			"Processing wrangler configuration:
-			"
+			  - The field \\"vectorize\\" should be an array but got {}."
+		`);
+			});
+
+			it("should error if vectorize bindings are not valid", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						vectorize: [
+							{},
+							{ binding: "VALID" },
+							{ binding: 2000, index_name: 2111 },
+							{
+								binding: "BINDING_2",
+								index_name: "ID_2",
+							},
+							{ binding: "VALID", index_name: "" },
+						],
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - \\"vectorize[0]\\" bindings should have a string \\"binding\\" field but got {}.
+			  - \\"vectorize[0]\\" bindings must have an \\"index_name\\" field but got {}.
+			  - \\"vectorize[1]\\" bindings must have an \\"index_name\\" field but got {\\"binding\\":\\"VALID\\"}.
+			  - \\"vectorize[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"index_name\\":2111}.
+			  - \\"vectorize[2]\\" bindings must have an \\"index_name\\" field but got {\\"binding\\":2000,\\"index_name\\":2111}."
 		`);
 			});
 
