@@ -66,7 +66,7 @@ export type WorkerMetadataBinding =
 			internalEnv?: string;
 	  }
 	| { type: "constellation"; name: string; project: string }
-	| { type: "hyperdrive"; name: string; database_id: string }
+	| { type: "hyperdrive"; name: string; id: string }
 	| { type: "service"; name: string; service: string; environment?: string }
 	| { type: "analytics_engine"; name: string; dataset?: string }
 	| {
@@ -216,7 +216,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		metadataBindings.push({
 			name: binding,
 			type: "hyperdrive",
-			database_id: id,
+			id: id,
 		});
 	});
 
