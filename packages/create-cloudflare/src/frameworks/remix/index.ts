@@ -24,6 +24,6 @@ const config: FrameworkConfig = {
 		"pages:deploy": `${npm} run build && wrangler pages deploy ./public`,
 	},
 	devCommand: "dev",
-	testFlags: ["--typescript", "--no-install"],
+	testFlags: ["--typescript", "--no-install", "--no-git-init"],
 };
 export default config;
