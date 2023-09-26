@@ -1,16 +1,23 @@
 // Redirect https://workers.new/<known> requests to IDE.
-// Redirect https://workers.new/*? requests to dashboard.
+// Redirect https://workers.new/*? requests to the Workers Playground.
 // Similar to the concept of https://docs.new.
-
-type Redirects = Record<string, [string, string, string, string?]>;
+type Redirects = Record<
+	string,
+	[
+		/* subdirectory */ string,
+		/* file */ string,
+		/* title */ string,
+		/* terminal */ string?
+	]
+>;
 
 // stackblitz repository source
-const source = "github/cloudflare/wrangler2/tree/main/templates";
+const source = "github/cloudflare/workers-sdk/tree/main/templates";
 
 // deploy with cloudflare source
-const src = "https://github.com/cloudflare/wrangler2/tree/main/templates";
+const src = "https://github.com/cloudflare/workers-sdk/tree/main/templates";
 
-const redirects: Redirects = {
+export const redirects: Redirects = {
 	"/pages-image-sharing": [
 		"pages-image-sharing",
 		"src/index.tsx",
@@ -141,10 +148,7 @@ const worker: ExportedHandler = {
 			return Response.redirect(redirectUrl, 302);
 		}
 
-		return Response.redirect(
-			"https://dash.cloudflare.com/?to=/:account/workers/services/new",
-			302
-		);
+		return Response.redirect("https://workers.cloudflare.com/playground", 302);
 	},
 };
 
@@ -160,7 +164,7 @@ function getRedirectUrlForPathname(pathname: string): string | undefined {
 }
 
 function getListHTML(redirectsParam: Redirects) {
-	return `
+	return /*html*/ `
 <html>
 <head>
 	<link href='https://fonts.googleapis.com/css2?family=Inter:wght@200;300;500;700&display=swap' rel='stylesheet'>
@@ -281,7 +285,7 @@ function getListHTML(redirectsParam: Redirects) {
 			})
 			.join("\n")}
 	</ul>
-	<p class="subheading">Want to contribute a template? <a class="url" href="https://github.com/cloudflare/wrangler2/tree/main/templates"> Send a PR to the Wrangler repository.</a></p>
+	<p class="subheading">Want to contribute a template? <a class="url" href="https://github.com/cloudflare/workers-sdk/tree/main/templates"> Send a PR to the Wrangler repository.</a></p>
 </body>
 </html>
 `;
