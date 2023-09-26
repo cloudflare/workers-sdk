@@ -26,6 +26,7 @@ describe("vectorize help", () => {
 		  wrangler vectorize delete <name>  Delete a Vectorize index
 		  wrangler vectorize get <name>     Get a Vectorize index by name
 		  wrangler vectorize list           List your Vectorize indexes
+		  wrangler vectorize insert <name>  Insert vectors into a Vectorize index
 
 		Flags:
 		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
@@ -64,6 +65,7 @@ describe("vectorize help", () => {
 		  wrangler vectorize delete <name>  Delete a Vectorize index
 		  wrangler vectorize get <name>     Get a Vectorize index by name
 		  wrangler vectorize list           List your Vectorize indexes
+		  wrangler vectorize insert <name>  Insert vectors into a Vectorize index
 
 		Flags:
 		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]

@@ -2,6 +2,7 @@ import { vectorizeBetaWarning } from "./common";
 import { options as createOptions, handler as createHandler } from "./create";
 import { options as deleteOptions, handler as deleteHandler } from "./delete";
 import { options as getOptions, handler as getHandler } from "./get";
+import { options as insertOptions, handler as insertHandler } from "./insert";
 import { options as listOptions, handler as listHandler } from "./list";
 import type { CommonYargsArgv } from "../yargs-types";
 
@@ -34,12 +35,12 @@ export function vectorize(yargs: CommonYargsArgv) {
 			// 	queryOptions,
 			// 	queryHandler
 			// )
-			// .command(
-			// 	"insert <name>",
-			// 	"Insert vectors into a Vectorize index",
-			// 	insertOptions,
-			// 	insertHandler
-			// )
+			.command(
+				"insert <name>",
+				"Insert vectors into a Vectorize index",
+				insertOptions,
+				insertHandler
+			)
 			.epilogue(vectorizeBetaWarning)
 	);
 }

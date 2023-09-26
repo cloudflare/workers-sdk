@@ -38,7 +38,9 @@ export function options(yargs: CommonYargsArgv) {
 			preset: {
 				type: "string",
 				choices: [
-					"workers-ai/bge-small-en",
+					"@cf/baai/bge-small-en-v1.5",
+					"@cf/baai/bge-base-en-v1.5",
+					"@cf/baai/bge-large-en-v1.5",
 					"openai/text-embedding-ada-002",
 					"cohere/embed-multilingual-v2.0",
 				],
