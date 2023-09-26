@@ -49,6 +49,7 @@ import { tailOptions, tailHandler } from "./tail";
 import { generateTypes } from "./type-generation";
 import { updateCheck } from "./update-check";
 import { listScopes, login, logout, validateScopeKeys } from "./user";
+import { vectorize } from "./vectorize/index";
 import { whoami } from "./whoami";
 
 import type { Config } from "./config";
@@ -462,6 +463,15 @@ export function createCLIParser(argv: string[]) {
 		"🤖 Interact with Constellation models",
 		(aiYargs) => {
 			return constellation(aiYargs.command(subHelp));
+		}
+	);
+
+	// vectorize
+	wrangler.command(
+		"vectorize",
+		"🧮 Interact with Vectorize indexes",
+		(vectorYargs) => {
+			return vectorize(vectorYargs.command(subHelp));
 		}
 	);
 

@@ -86,6 +86,13 @@ export async function fetchInternal<ResponseType>(
 	logger.debug("RESPONSE:", jsonText);
 	logger.debug("-- END CF API RESPONSE");
 
+	// HTTP 204 and HTTP 205 responses do not return a body. We need to special-case this
+	// as otherwise parseJSON will throw an error back to the user.
+	if (!jsonText && (response.status === 204 || response.status === 205)) {
+		const emptyBody = `{"result": {}, "success": true, "errors": [], "messages": []}`;
+		return parseJSON<ResponseType>(emptyBody);
+	}
+
 	try {
 		return parseJSON<ResponseType>(jsonText);
 	} catch (err) {
