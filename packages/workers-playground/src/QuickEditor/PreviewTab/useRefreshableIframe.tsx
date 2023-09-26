@@ -84,7 +84,7 @@ export function useRefreshableIframe(
 				<Frame
 					innerRef={refs[0]}
 					style={{
-						background: "white",
+						opacity: index === 0 ? 1 : 0,
 						zIndex: index === 0 ? 10 : 5,
 						pointerEvents: isLoading || isPaneDragging ? "none" : "auto",
 					}}
@@ -93,7 +93,7 @@ export function useRefreshableIframe(
 				<Frame
 					innerRef={refs[1]}
 					style={{
-						background: "white",
+						opacity: index === 1 ? 1 : 0,
 						zIndex: index === 1 ? 10 : 5,
 						pointerEvents: isLoading || isPaneDragging ? "none" : "auto",
 					}}
