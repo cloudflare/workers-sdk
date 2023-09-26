@@ -63,6 +63,7 @@ async function createDraftWorker({
 					r2_buckets: [],
 					d1_databases: [],
 					vectorize: [],
+					hyperdrive: [],
 					constellation: [],
 					services: [],
 					analytics_engine_datasets: [],
