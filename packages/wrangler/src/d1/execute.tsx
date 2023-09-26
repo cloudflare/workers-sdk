@@ -17,11 +17,7 @@ import { renderToString } from "../utils/render";
 import { DEFAULT_BATCH_SIZE } from "./constants";
 import * as options from "./options";
 import splitSqlQuery from "./splitter";
-import {
-	d1BetaWarning,
-	getDatabaseByNameOrBinding,
-	getDatabaseInfoFromConfig,
-} from "./utils";
+import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
 import type { Config, ConfigFields, DevConfig, Environment } from "../config";
 import type {
 	CommonYargsArgv,
@@ -102,7 +98,7 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 		logger.loggerLevel = "error";
 	}
 	const config = readConfig(args.config, args);
-	logger.log(d1BetaWarning);
+
 	if (file && command)
 		return logger.error(`Error: can't provide both --command and --file.`);
 

@@ -459,6 +459,22 @@ interface EnvironmentNonInheritable {
 	}[];
 
 	/**
+	 * Specifies Vectorize indexes that are bound to this Worker environment.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default `[]`
+	 * @nonInheritable
+	 */
+	vectorize: {
+		/** The binding name used to refer to the Vectorize index in the worker. */
+		binding: string;
+		/** The name of the index. */
+		index_name: string;
+	}[];
+
+	/**
 	 * Specifies Constellation projects that are bound to this Worker environment.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
@@ -514,6 +530,15 @@ interface EnvironmentNonInheritable {
 	 * A browser that will be usable from the worker.
 	 */
 	browser:
+		| {
+				binding: string;
+		  }
+		| undefined;
+
+	/**
+	 * Binding to the AI project.
+	 */
+	ai:
 		| {
 				binding: string;
 		  }

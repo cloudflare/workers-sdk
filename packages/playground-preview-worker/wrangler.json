@@ -17,7 +17,7 @@
 
 	"define": {
 		"ROOT": "'playground/devprod/cloudflare/dev'",
-		"PREVIEW": "':any/playground/devprod/cloudflare/dev'"
+		"PREVIEW": "':any/cloudflarepreviews/com'"
 	},
 
 	"routes": [
@@ -26,8 +26,8 @@
 			"zone_name": "playground.devprod.cloudflare.dev"
 		},
 		{
-			"pattern": "*.playground.devprod.cloudflare.dev/*",
-			"zone_name": "playground.devprod.cloudflare.dev"
+			"pattern": "*.cloudflarepreviews.com/*",
+			"zone_name": "cloudflarepreviews.com"
 		}
 	],
 

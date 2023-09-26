@@ -876,6 +876,7 @@ function getBindings(
 		wasm_modules: configParam.wasm_modules,
 		text_blobs: configParam.text_blobs,
 		browser: configParam.browser,
+		ai: configParam.ai,
 		data_blobs: configParam.data_blobs,
 		durable_objects: {
 			bindings: [
@@ -936,6 +937,7 @@ function getBindings(
 			}),
 			...(args.d1Databases || []),
 		],
+		vectorize: configParam.vectorize,
 		constellation: configParam.constellation,
 	};
 

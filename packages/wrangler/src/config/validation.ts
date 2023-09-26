@@ -392,7 +392,7 @@ function normalizeAndValidateDev(
 	rawDev: RawDevConfig
 ): DevConfig {
 	const {
-		ip = "*",
+		ip = "0.0.0.0",
 		port,
 		inspector_port,
 		local_protocol = "http",
@@ -1234,6 +1234,16 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateD1Binding),
 			[]
 		),
+		vectorize: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"vectorize",
+			validateBindingArray(envName, validateVectorizeBinding),
+			[]
+		),
 		constellation: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -1312,6 +1322,16 @@ function normalizeAndValidateEnvironment(
 			envName,
 			"browser",
 			validateBrowserBinding(envName),
+			undefined
+		),
+		ai: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"ai",
+			validateAIBinding(envName),
 			undefined
 		),
 		zone_id: rawEnv.zone_id,
@@ -1893,6 +1913,30 @@ const validateBrowserBinding =
 		return isValid;
 	};
 
+const validateAIBinding =
+	(envName: string): ValidatorFn =>
+	(diagnostics, field, value, config) => {
+		const fieldPath =
+			config === undefined ? `${field}` : `env.${envName}.${field}`;
+
+		if (typeof value !== "object" || value === null || Array.isArray(value)) {
+			diagnostics.errors.push(
+				`The field "${fieldPath}" should be an object but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			return false;
+		}
+
+		let isValid = true;
+		if (!isRequiredProperty(value, "binding", "string")) {
+			diagnostics.errors.push(`binding should have a string "binding" field.`);
+			isValid = false;
+		}
+
+		return isValid;
+	};
+
 /**
  * Check that the given field is a valid "unsafe" binding object.
  *
@@ -1920,6 +1964,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"data_blob",
 			"text_blob",
 			"browser",
+			"ai",
 			"kv_namespace",
 			"durable_object_namespace",
 			"d1_database",
@@ -2214,10 +2259,34 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
-	if (isValid && !process.env.NO_D1_WARNING) {
-		diagnostics.warnings.push(
-			"D1 Bindings are currently in alpha to allow the API to evolve before general availability.\nPlease report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose\nNote: Run this command with the environment variable NO_D1_WARNING=true to hide this message\n\nFor example: `export NO_D1_WARNING=true && wrangler <YOUR COMMAND HERE>`"
+
+	return isValid;
+};
+
+const validateVectorizeBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"vectorize" bindings should be objects, but got ${JSON.stringify(value)}`
 		);
+		return false;
+	}
+	let isValid = true;
+	// Vectorize bindings must have a binding and a project.
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "index_name", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have an "index_name" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
 	}
 	return isValid;
 };
@@ -2278,6 +2347,7 @@ const validateBindingsHaveUniqueNames = (
 		analytics_engine_datasets,
 		text_blobs,
 		browser,
+		ai,
 		unsafe,
 		vars,
 		define,
@@ -2294,6 +2364,7 @@ const validateBindingsHaveUniqueNames = (
 		"Analytics Engine Dataset": getBindingNames(analytics_engine_datasets),
 		"Text Blob": getBindingNames(text_blobs),
 		Browser: getBindingNames(browser),
+		AI: getBindingNames(ai),
 		Unsafe: getBindingNames(unsafe),
 		"Environment Variable": getBindingNames(vars),
 		Definition: getBindingNames(define),

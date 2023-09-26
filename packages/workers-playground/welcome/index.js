@@ -12,8 +12,14 @@ export default {
 	 * @returns {Promise<Response>}
 	 */
 	async fetch(request, env, ctx) {
-		console.log("Hello Cloudflare Workers!");
+		const url = new URL(request.url);
+		console.log(`Hello ${navigator.userAgent} at path ${url.pathname}!`);
 
+		if (url.pathname === "/api") {
+			// You could also call a third party API here
+			const data = await import("./data.js");
+			return Response.json(data);
+		}
 		return new Response(welcome, {
 			headers: {
 				"content-type": "text/html",

@@ -1,5 +1,48 @@
 # wrangler
 
+## 3.9.1
+
+### Patch Changes
+
+- [#3992](https://github.com/cloudflare/workers-sdk/pull/3992) [`35564741`](https://github.com/cloudflare/workers-sdk/commit/3556474116db2fc7dbfbb34bfc351490360f4d85) Thanks [@edevil](https://github.com/edevil)! - Add AI binding that will be used to interact with the AI project.
+
+  Example `wrangler.toml`
+
+      name = "ai-worker"
+      main = "src/index.ts"
+
+      [ai]
+      binding = "AI"
+
+  Example script:
+
+      import Ai from "@cloudflare/ai"
+
+      export default {
+          async fetch(request: Request, env: Env): Promise<Response> {
+              const ai = new Ai(env.AI);
+
+              const story = await ai.run({
+                  model: 'llama-2',
+                  input: {
+                      prompt: 'Tell me a story about the future of the Cloudflare dev platform'
+                  }
+              });
+
+          return new Response(JSON.stringify(story));
+          },
+      };
+
+      export interface Env {
+          AI: any;
+      }
+
+* [#4006](https://github.com/cloudflare/workers-sdk/pull/4006) [`bc8c147a`](https://github.com/cloudflare/workers-sdk/commit/bc8c147a9118748bb3b5eb220af5699f8b2f7899) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: remove warning around using D1's binding, and clean up the epilogue when running D1 commands
+
+- [#4027](https://github.com/cloudflare/workers-sdk/pull/4027) [`9e466599`](https://github.com/cloudflare/workers-sdk/commit/9e466599210902515ece6f5ea07fbabcd8fdac6a) Thanks [@jspspike](https://github.com/jspspike)! - Add WebGPU support through miniflare update
+
+* [#3986](https://github.com/cloudflare/workers-sdk/pull/3986) [`00247a8d`](https://github.com/cloudflare/workers-sdk/commit/00247a8d69613a4cfeb621b5cca075828e5ae1e1) Thanks [@edevil](https://github.com/edevil)! - Added AI related CLI commands
+
 ## 3.9.0
 
 ### Minor Changes

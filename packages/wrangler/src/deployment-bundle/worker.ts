@@ -104,6 +104,14 @@ export interface CfBrowserBinding {
 }
 
 /**
+ * A binding to the AI project
+ */
+
+export interface CfAIBinding {
+	binding: string;
+}
+
+/**
  * A binding to a data blob (in service-worker format)
  */
 
@@ -141,6 +149,11 @@ export interface CfD1Database {
 	database_internal_env?: string;
 	migrations_table?: string;
 	migrations_dir?: string;
+}
+
+export interface CfVectorize {
+	binding: string;
+	index_name: string;
 }
 
 export interface CfConstellation {
@@ -256,11 +269,13 @@ export interface CfWorkerInit {
 		wasm_modules: CfWasmModuleBindings | undefined;
 		text_blobs: CfTextBlobBindings | undefined;
 		browser: CfBrowserBinding | undefined;
+		ai: CfAIBinding | undefined;
 		data_blobs: CfDataBlobBindings | undefined;
 		durable_objects: { bindings: CfDurableObject[] } | undefined;
 		queues: CfQueue[] | undefined;
 		r2_buckets: CfR2Bucket[] | undefined;
 		d1_databases: CfD1Database[] | undefined;
+		vectorize: CfVectorize[] | undefined;
 		constellation: CfConstellation[] | undefined;
 		services: CfService[] | undefined;
 		analytics_engine_datasets: CfAnalyticsEngineDataset[] | undefined;

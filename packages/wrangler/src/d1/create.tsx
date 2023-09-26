@@ -33,8 +33,6 @@ export const Handler = withConfig<HandlerOptions>(
 	async ({ name, config, location }): Promise<void> => {
 		const accountId = await requireAuth(config);
 
-		logger.log(d1BetaWarning);
-
 		if (location) {
 			if (LOCATION_CHOICES.indexOf(location.toLowerCase()) === -1) {
 				throw new Error(

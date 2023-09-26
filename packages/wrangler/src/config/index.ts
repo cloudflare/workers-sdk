@@ -99,6 +99,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		send_email,
 		queues,
 		d1_databases,
+		vectorize,
 		constellation,
 		r2_buckets,
 		logfwdr,
@@ -106,6 +107,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		analytics_engine_datasets,
 		text_blobs,
 		browser,
+		ai,
 		unsafe,
 		vars,
 		wasm_modules,
@@ -208,6 +210,18 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		});
 	}
 
+	if (vectorize !== undefined && vectorize.length > 0) {
+		output.push({
+			type: "Vectorize Indexes",
+			entries: vectorize.map(({ binding, index_name }) => {
+				return {
+					key: binding,
+					value: index_name,
+				};
+			}),
+		});
+	}
+
 	if (constellation !== undefined && constellation.length > 0) {
 		output.push({
 			type: "Constellation Projects",
@@ -293,6 +307,13 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		output.push({
 			type: "Browser",
 			entries: [{ key: "Name", value: browser.binding }],
+		});
+	}
+
+	if (ai !== undefined) {
+		output.push({
+			type: "AI",
+			entries: [{ key: "Name", value: ai.binding }],
 		});
 	}
 

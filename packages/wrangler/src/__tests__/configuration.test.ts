@@ -26,9 +26,10 @@ describe("normalizeAndValidateConfig()", () => {
 			compatibility_flags: [],
 			configPath: undefined,
 			d1_databases: [],
+			vectorize: [],
 			constellation: [],
 			dev: {
-				ip: "*",
+				ip: "0.0.0.0",
 				local_protocol: "http",
 				port: undefined, // the default of 8787 is set at runtime
 				upstream_protocol: "https",
@@ -64,6 +65,7 @@ describe("normalizeAndValidateConfig()", () => {
 			site: undefined,
 			text_blobs: undefined,
 			browser: undefined,
+			ai: undefined,
 			triggers: {
 				crons: [],
 			},
@@ -1616,6 +1618,153 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			"Processing wrangler configuration:
 			  - The field \\"browser\\" should be an object but got null."
+		`);
+			});
+		});
+
+		// Vectorize
+		describe("[vectorize]", () => {
+			it("should error if vectorize is an object", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ vectorize: {} } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"vectorize\\" should be an array but got {}."
+		`);
+			});
+
+			it("should error if vectorize bindings are not valid", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						vectorize: [
+							{},
+							{ binding: "VALID" },
+							{ binding: 2000, index_name: 2111 },
+							{
+								binding: "BINDING_2",
+								index_name: "ID_2",
+							},
+							{ binding: "VALID", index_name: "" },
+						],
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - \\"vectorize[0]\\" bindings should have a string \\"binding\\" field but got {}.
+			  - \\"vectorize[0]\\" bindings must have an \\"index_name\\" field but got {}.
+			  - \\"vectorize[1]\\" bindings must have an \\"index_name\\" field but got {\\"binding\\":\\"VALID\\"}.
+			  - \\"vectorize[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"index_name\\":2111}.
+			  - \\"vectorize[2]\\" bindings must have an \\"index_name\\" field but got {\\"binding\\":2000,\\"index_name\\":2111}."
+		`);
+			});
+
+			it("should error if vectorize is a string", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ vectorize: "BAD" } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"vectorize\\" should be an array but got \\"BAD\\"."
+		`);
+			});
+
+			it("should error if vectorize is a number", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ vectorize: 999 } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"vectorize\\" should be an array but got 999."
+		`);
+			});
+
+			it("should error if vectorize is null", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ vectorize: null } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"vectorize\\" should be an array but got null."
+		`);
+			});
+		});
+
+		// AI
+		describe("[ai]", () => {
+			it("should error if ai is an array", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ ai: [] } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"ai\\" should be an object but got []."
+		`);
+			});
+
+			it("should error if ai is a string", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ ai: "BAD" } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"ai\\" should be an object but got \\"BAD\\"."
+		`);
+			});
+
+			it("should error if ai is a number", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ ai: 999 } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"ai\\" should be an object but got 999."
+		`);
+			});
+
+			it("should error if ai is null", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ ai: null } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"ai\\" should be an object but got null."
 		`);
 			});
 		});

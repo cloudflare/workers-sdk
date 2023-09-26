@@ -47,7 +47,7 @@ export const getDatabaseByNameOrBinding = async (
 
 export const d1BetaWarning = process.env.NO_D1_WARNING
 	? ""
-	: "--------------------\n🚧 D1 is currently in open alpha and is not recommended for production data and traffic\n🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose\n🚧 To request features, visit https://community.cloudflare.com/c/developers/d1\n🚧 To give feedback, visit https://discord.gg/cloudflaredev\n--------------------\n";
+	: "--------------------\n🚧 D1 is currently in open beta\n🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose\n--------------------\n";
 
 export const getDatabaseInfoFromId = async (
 	accountId: string,

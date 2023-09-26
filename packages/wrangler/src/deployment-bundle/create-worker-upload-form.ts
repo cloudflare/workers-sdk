@@ -35,6 +35,7 @@ export type WorkerMetadataBinding =
 	| { type: "wasm_module"; name: string; part: string }
 	| { type: "text_blob"; name: string; part: string }
 	| { type: "browser"; name: string }
+	| { type: "ai"; name: string }
 	| { type: "data_blob"; name: string; part: string }
 	| { type: "kv_namespace"; name: string; namespace_id: string }
 	| {
@@ -58,6 +59,12 @@ export type WorkerMetadataBinding =
 			jurisdiction?: string;
 	  }
 	| { type: "d1"; name: string; id: string; internalEnv?: string }
+	| {
+			type: "vectorize";
+			name: string;
+			index_name: string;
+			internalEnv?: string;
+	  }
 	| { type: "constellation"; name: string; project: string }
 	| { type: "service"; name: string; service: string; environment?: string }
 	| { type: "analytics_engine"; name: string; dataset?: string }
@@ -188,6 +195,14 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		}
 	);
 
+	bindings.vectorize?.forEach(({ binding, index_name }) => {
+		metadataBindings.push({
+			name: binding,
+			type: "vectorize",
+			index_name: index_name,
+		});
+	});
+
 	bindings.constellation?.forEach(({ binding, project_id }) => {
 		metadataBindings.push({
 			name: binding,
@@ -265,6 +280,13 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		metadataBindings.push({
 			name: bindings.browser.binding,
 			type: "browser",
+		});
+	}
+
+	if (bindings.ai !== undefined) {
+		metadataBindings.push({
+			name: bindings.ai.binding,
+			type: "ai",
 		});
 	}
 
