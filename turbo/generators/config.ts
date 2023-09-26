@@ -57,12 +57,13 @@ export default function generator(plop: PlopTypes.NodePlopAPI): void {
 				type: "add",
 				path: "packages/{{name}}/.eslintrc.js",
 				templateFile: "templates/.eslintrc.js.hbs",
+				force: true,
 			},
 			{
-				type: "modify",
+				type: "add",
 				path: "packages/{{name}}/tsconfig.json",
-				pattern: /^\{/g,
-				template: "Hello {{name}}",
+				templateFile: "templates/tsconfig.json.hbs",
+				force: true,
 			},
 		],
 	});
