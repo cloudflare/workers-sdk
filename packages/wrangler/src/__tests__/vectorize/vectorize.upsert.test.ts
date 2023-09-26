@@ -1,3 +1,4 @@
+import { Blob } from "node:buffer";
 import { writeFileSync } from "node:fs";
 import { MockedRequest, rest, type RestRequest } from "msw";
 import { FormData } from "undici";
