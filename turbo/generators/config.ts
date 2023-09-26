@@ -1,24 +1,48 @@
 import type { PlopTypes } from "@turbo/gen";
-import { spawnSync } from "node:child_process";
+import { exec, execSync, spawn } from "node:child_process";
+
+const webFramework = [
+	"angular",
+	"astro",
+	"docusaurus",
+	"gatsby",
+	"hono",
+	"next",
+	"nuxt",
+	"qwik",
+	"react",
+	"remix",
+	"solid",
+	"svelte",
+	"vue",
+];
 
 type Answers = {
 	name: string;
 	typescript: boolean;
 	worker: boolean;
+	webframework: typeof webFramework;
 };
 
 const ThinkOfAName: PlopTypes.CustomActionFunction = async (answers) => {
 	const typedAnswers = answers as Answers;
 
-	// if (typedAnswers.worker) {
-	spawnSync(
-		`cd templates/${typedAnswers.name} && pnpm create cloudflare@latest`
+	execSync(
+		`cd templates/ && pnpm create cloudflare@latest ${typedAnswers.name} --no-deploy --no-git`,
+		{
+			stdio: "inherit",
+		}
 	);
-	// }	else {
-	// 		await execAsync()
-	// 	}
 
-	return "Finished install dependencies";
+	return "Finished C3 Setup & Installing Deps";
+};
+
+const skipWebFramework = (answers: Record<string, any>) => {
+	if (answers.worker === false) {
+		console.log("Skipping Web Framework selection");
+		return true;
+	}
+	return false;
 };
 
 export default function generator(plop: PlopTypes.NodePlopAPI): void {
@@ -32,26 +56,17 @@ export default function generator(plop: PlopTypes.NodePlopAPI): void {
 			},
 		],
 		actions: [
+			ThinkOfAName,
 			{
 				type: "add",
-				path: "packages/{{name}}/src/",
+				path: "packages/{{name}}/.eslintrc.js",
+				templateFile: "templates/.eslintrc.js.hbs",
 			},
-			// {
-			// 	type: "add",
-			// 	path: "packages/{{name}}/package.json",
-			// 	templateFile: "templates/package.json.hbs",
-			// },
-			// {
-			// 	type: "add",
-			// 	path: "packages/{{name}}/.eslintrc.js",
-			// 	templateFile: "templates/.eslintrc.js.hbs",
-			// },
-			// {
-			// 	type: "add",
-			// 	path: "packages/{{name}}/tsconfig.json",
-			// 	templateFile: "templates/tsconfig.json.hbs",
-			// },
-			ThinkOfAName,
+			{
+				type: "add",
+				path: "packages/{{name}}/tsconfig.json",
+				templateFile: "templates/tsconfig.json.hbs",
+			},
 		],
 	});
 
@@ -61,42 +76,25 @@ export default function generator(plop: PlopTypes.NodePlopAPI): void {
 			{
 				type: "input",
 				name: "name",
-				message: "What is your package name?",
+				message: "What is your template name?",
 			},
-			// {
-			// 	type: "confirm",
-			// 	name: "typescript",
-			// 	message: "Is this template using typescript?",
-			// },
-			// {
-			// 	type: "confirm",
-			// 	name: "worker",
-			// 	message: "Is this a worker template?",
-			// },
 		],
 		actions: [
-			// {
-			// 	type: "add",
-			// 	path: "templates/{{name}}/package.json",
-			// 	templateFile: "templates/package.json.hbs",
-			// },
+			ThinkOfAName,
 			{
 				type: "add",
 				path: "templates/{{name}}/.eslintrc.js",
 				templateFile: "templates/.eslintrc.js.hbs",
 			},
-			// {
-			// 	type: "add",
-			// 	skip: (answers: Record<string, any>) => {
-			// 		if (answers.typescript === false) {
-			// 			return "Skipping TypeScript setup";
-			// 		}
-			// 		return false;
-			// 	},
-			// 	path: "templates/{{name}}/tsconfig.json",
-			// 	templateFile: "templates/tsconfig.json.hbs",
-			// },
-			async (...args) => await ThinkOfAName(...args),
+			{
+				type: "modify",
+				path: "packages/{{name}}/tsconfig.json",
+				// templateFile: "templates/tsconfig.json.hbs",
+				transform(template, data, cfg) {
+					console.log({ template, data, cfg });
+					return template;
+				},
+			},
 		],
 	});
 }
