@@ -1,21 +1,5 @@
 import type { PlopTypes } from "@turbo/gen";
-import { exec, execSync, spawn } from "node:child_process";
-
-const webFramework = [
-	"angular",
-	"astro",
-	"docusaurus",
-	"gatsby",
-	"hono",
-	"next",
-	"nuxt",
-	"qwik",
-	"react",
-	"remix",
-	"solid",
-	"svelte",
-	"vue",
-];
+import { execSync } from "node:child_process";
 
 type Answers = {
 	name: string;
@@ -54,17 +38,31 @@ export default function generator(plop: PlopTypes.NodePlopAPI): void {
 		actions: [
 			ThinkOfAName,
 			{
-				type: "add",
+				type: "add", // TODO: Make this into a `modify` action that adds to the existing file instead of overwriting it
 				path: "{{folder}}/{{name}}/.eslintrc.js",
 				templateFile: "templates/.eslintrc.js.hbs",
 				force: true,
 			},
 			{
-				type: "add",
+				type: "add", // TODO: Make this into a `modify` action that adds to the existing file instead of overwriting it
 				path: "{{folder}}/{{name}}/tsconfig.json",
 				templateFile: "templates/tsconfig.json.hbs",
 				force: true,
 			},
+			{
+				type: "add",
+				path: "{{folder}}/{{name}}/turbo.json",
+				templateFile: "templates/turbo.json.hbs",
+				force: true,
+			},
+			/**
+			 * The Package JSON should overwrite the "@cloudflare/eslint-config-worker","@cloudflare/workers-tsconfig", "wrangler" to all use `workspace:*`
+			 */
+			// {
+			// 	type: "add", // TODO: Make this into a modify action that adds to the existing file instead of overwriting it
+			// 	path: "{{folder}}/{{name}}/package.json",
+			// 	templateFile: "templates/package.json.hbs",
+			// }
 		],
 	});
 }
