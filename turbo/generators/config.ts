@@ -55,13 +55,13 @@ export default function generator(plop: PlopTypes.NodePlopAPI): void {
 			ThinkOfAName,
 			{
 				type: "add",
-				path: "packages/{{name}}/.eslintrc.js",
+				path: "{{folder}}/{{name}}/.eslintrc.js",
 				templateFile: "templates/.eslintrc.js.hbs",
 				force: true,
 			},
 			{
 				type: "add",
-				path: "packages/{{name}}/tsconfig.json",
+				path: "{{folder}}/{{name}}/tsconfig.json",
 				templateFile: "templates/tsconfig.json.hbs",
 				force: true,
 			},
