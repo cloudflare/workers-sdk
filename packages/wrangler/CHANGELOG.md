@@ -1,5 +1,28 @@
 # wrangler
 
+## 3.10.0
+
+### Minor Changes
+
+- [#4013](https://github.com/cloudflare/workers-sdk/pull/4013) [`3cd72862`](https://github.com/cloudflare/workers-sdk/commit/3cd72862b7c9f6d30468320866badd586cd242ce) Thanks [@elithrar](https://github.com/elithrar)! - Adds wrangler support for Vectorize, Cloudflare's new vector database, with
+  `wrangler vectorize`. Visit the developer documentation
+  (https://developers.cloudflare.com/vectorize/) to learn more and create your
+  first vector database with `wrangler vectorize create my-first-index`.
+
+* [#3999](https://github.com/cloudflare/workers-sdk/pull/3999) [`ee6f3458`](https://github.com/cloudflare/workers-sdk/commit/ee6f345838d09af0de787c820a7fa2cdc76f58e7) Thanks [@OilyLime](https://github.com/OilyLime)! - Adds support for Hyperdrive, via `wrangler hyperdrive`.
+
+### Patch Changes
+
+- [#4034](https://github.com/cloudflare/workers-sdk/pull/4034) [`bde9d64a`](https://github.com/cloudflare/workers-sdk/commit/bde9d64a6b13d49063cc7fe25d37606b0810dd83) Thanks [@ndisidore](https://github.com/ndisidore)! - Adds Vectorize support uploading batches of newline delimited json (ndjson)
+  vectors from a source file.
+  Load a dataset with `vectorize insert my-index --file vectors.ndjson`
+
+* [#4028](https://github.com/cloudflare/workers-sdk/pull/4028) [`d5389731`](https://github.com/cloudflare/workers-sdk/commit/d538973179966f742edd48958bf311764f715bda) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - fix: Bulk Secret Draft Worker
+
+  Fixes the issue of a upload of a Secret when a Worker doesn't exist yet, the draft worker is created and the secret is uploaded to it.
+
+  Fixes https://github.com/cloudflare/wrangler-action/issues/162
+
 ## 3.9.1
 
 ### Patch Changes
