@@ -34,6 +34,7 @@ import { devHandler, devOptions } from "./dev";
 import { workerNamespaceCommands } from "./dispatch-namespace";
 import { docsHandler, docsOptions } from "./docs";
 import { generateHandler, generateOptions } from "./generate";
+import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
 import { kvNamespace, kvKey, kvBulk } from "./kv";
 import { logBuildFailure, logger } from "./logger";
@@ -451,6 +452,15 @@ export function createCLIParser(argv: string[]) {
 	wrangler.command("d1", "🗄  Interact with a D1 database", (d1Yargs) => {
 		return d1(d1Yargs.command(subHelp));
 	});
+
+	// hyperdrive
+	wrangler.command(
+		"hyperdrive",
+		"🚀 Configure Hyperdrive databases",
+		(hyperdriveYargs) => {
+			return hyperdrive(hyperdriveYargs.command(subHelp));
+		}
+	);
 
 	// ai
 	wrangler.command("ai", "🤖 Interact with AI models", (aiYargs) => {

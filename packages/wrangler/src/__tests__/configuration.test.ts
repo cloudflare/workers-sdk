@@ -28,6 +28,7 @@ describe("normalizeAndValidateConfig()", () => {
 			d1_databases: [],
 			vectorize: [],
 			constellation: [],
+			hyperdrive: [],
 			dev: {
 				ip: "0.0.0.0",
 				local_protocol: "http",
@@ -2072,6 +2073,101 @@ describe("normalizeAndValidateConfig()", () => {
 			  - \\"constellation[1]\\" bindings must have a \\"project_id\\" field but got {\\"binding\\":\\"VALID\\"}.
 			  - \\"constellation[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"project\\":2111}.
 			  - \\"constellation[2]\\" bindings must have a \\"project_id\\" field but got {\\"binding\\":2000,\\"project\\":2111}."
+		`);
+			});
+		});
+
+		describe("[hyperdrive]", () => {
+			it("should error if hyperdrive is an object", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ hyperdrive: {} } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"hyperdrive\\" should be an array but got {}."
+		`);
+			});
+
+			it("should error if hyperdrive is a string", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ hyperdrive: "BAD" } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"hyperdrive\\" should be an array but got \\"BAD\\"."
+		`);
+			});
+
+			it("should error if hyperdrive is a number", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ hyperdrive: 999 } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"hyperdrive\\" should be an array but got 999."
+		`);
+			});
+
+			it("should error if hyperdrive is null", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ hyperdrive: null } as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"hyperdrive\\" should be an array but got null."
+		`);
+			});
+
+			it("should accept valid bindings", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						hyperdrive: [
+							{ binding: "VALID", id: "343cd4f1d58c42fbb5bd082592fd7143" },
+						],
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error if hyperdrive.bindings are not valid", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						hyperdrive: [
+							{},
+							{ binding: "VALID", id: "343cd4f1d58c42fbb5bd082592fd7143" },
+							{ binding: 2000, project: 2111 },
+						],
+					} as unknown as RawConfig,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - \\"hyperdrive[0]\\" bindings should have a string \\"binding\\" field but got {}.
+			  - \\"hyperdrive[0]\\" bindings must have a \\"id\\" field but got {}.
+			  - \\"hyperdrive[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"project\\":2111}.
+			  - \\"hyperdrive[2]\\" bindings must have a \\"id\\" field but got {\\"binding\\":2000,\\"project\\":2111}."
 		`);
 			});
 		});

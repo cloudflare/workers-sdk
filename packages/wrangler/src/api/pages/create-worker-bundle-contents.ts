@@ -62,6 +62,7 @@ function createWorkerBundleFormData(workerBundle: BundleResult): FormData {
 			d1_databases: undefined,
 			vectorize: undefined,
 			constellation: undefined,
+			hyperdrive: undefined,
 			services: undefined,
 			analytics_engine_datasets: undefined,
 			dispatch_namespaces: undefined,

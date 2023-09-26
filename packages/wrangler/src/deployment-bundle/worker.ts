@@ -161,6 +161,11 @@ export interface CfConstellation {
 	project_id: string;
 }
 
+export interface CfHyperdrive {
+	binding: string;
+	id: string;
+}
+
 interface CfService {
 	binding: string;
 	service: string;
@@ -277,6 +282,7 @@ export interface CfWorkerInit {
 		d1_databases: CfD1Database[] | undefined;
 		vectorize: CfVectorize[] | undefined;
 		constellation: CfConstellation[] | undefined;
+		hyperdrive: CfHyperdrive[] | undefined;
 		services: CfService[] | undefined;
 		analytics_engine_datasets: CfAnalyticsEngineDataset[] | undefined;
 		dispatch_namespaces: CfDispatchNamespace[] | undefined;

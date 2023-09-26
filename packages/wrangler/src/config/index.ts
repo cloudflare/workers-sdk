@@ -101,6 +101,7 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		d1_databases,
 		vectorize,
 		constellation,
+		hyperdrive,
 		r2_buckets,
 		logfwdr,
 		services,
@@ -229,6 +230,18 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 				return {
 					key: binding,
 					value: project_id,
+				};
+			}),
+		});
+	}
+
+	if (hyperdrive !== undefined && hyperdrive.length > 0) {
+		output.push({
+			type: "Hyperdrive Configs",
+			entries: hyperdrive.map(({ binding, id }) => {
+				return {
+					key: binding,
+					value: id,
 				};
 			}),
 		});

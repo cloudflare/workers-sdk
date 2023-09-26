@@ -1254,6 +1254,16 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateConstellationBinding),
 			[]
 		),
+		hyperdrive: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"hyperdrive",
+			validateBindingArray(envName, validateHyperdriveBinding),
+			[]
+		),
 		services: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -2325,6 +2335,41 @@ const validateConstellationBinding: ValidatorFn = (
 	if (isValid && getConstellationWarningFromEnv() === undefined) {
 		diagnostics.warnings.push(
 			"Constellation Bindings are currently in beta to allow the API to evolve before general availability.\nPlease report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose\nNote: Run this command with the environment variable NO_CONSTELLATION_WARNING=true to hide this message\n\nFor example: `export NO_CONSTELLATION_WARNING=true && wrangler <YOUR COMMAND HERE>`"
+		);
+	}
+	return isValid;
+};
+
+const validateHyperdriveBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"hyperdrive" bindings should be objects, but got ${JSON.stringify(
+				value
+			)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	// Hyperdrive bindings must have a binding and a project.
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "id", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a "id" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (isValid && getConstellationWarningFromEnv() === undefined) {
+		diagnostics.warnings.push(
+			"Hyperdrive Bindings are currently in beta to allow the API to evolve before general availability.\nPlease report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose`"
 		);
 	}
 	return isValid;

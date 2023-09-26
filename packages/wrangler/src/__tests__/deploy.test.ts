@@ -8394,6 +8394,42 @@ export default{
 		});
 	});
 
+	describe("hyperdrive", () => {
+		it("should upload hyperdrive bindings", async () => {
+			writeWranglerToml({
+				hyperdrive: [
+					{
+						binding: "HYPERDRIVE",
+						id: "343cd4f1d58c42fbb5bd082592fd7143",
+					},
+				],
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "hyperdrive",
+						name: "HYPERDRIVE",
+						id: "343cd4f1d58c42fbb5bd082592fd7143",
+					},
+				],
+			});
+
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Your worker has access to the following bindings:
+			- Hyperdrive Configs:
+			  - HYPERDRIVE: 343cd4f1d58c42fbb5bd082592fd7143
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class"
+		`);
+		});
+	});
+
 	describe("mtls_certificates", () => {
 		it("should upload mtls_certificate bindings", async () => {
 			writeWranglerToml({

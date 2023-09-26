@@ -49,6 +49,7 @@ describe("wrangler", () => {
 			  wrangler r2                          📦 Interact with an R2 store
 			  wrangler dispatch-namespace          📦 Interact with a dispatch namespace
 			  wrangler d1                          🗄  Interact with a D1 database
+			  wrangler hyperdrive                  🚀 Configure Hyperdrive databases
 			  wrangler ai                          🤖 Interact with AI models
 			  wrangler constellation               🤖 Interact with Constellation models
 			  wrangler vectorize                   🧮 Interact with Vectorize indexes
@@ -103,6 +104,7 @@ describe("wrangler", () => {
 			  wrangler r2                          📦 Interact with an R2 store
 			  wrangler dispatch-namespace          📦 Interact with a dispatch namespace
 			  wrangler d1                          🗄  Interact with a D1 database
+			  wrangler hyperdrive                  🚀 Configure Hyperdrive databases
 			  wrangler ai                          🤖 Interact with AI models
 			  wrangler constellation               🤖 Interact with Constellation models
 			  wrangler vectorize                   🧮 Interact with Vectorize indexes
