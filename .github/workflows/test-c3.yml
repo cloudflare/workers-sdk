@@ -92,8 +92,6 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.C3_TEST_CLOUDFLARE_ACCOUNT_ID }}
           E2E_QUARANTINE: ${{ matrix.quarantine }}
-          # For debugging purposed only run the gatsby test (DO NOT MERGE THIS!)
-          FRAMEWORK_CLI_TO_TEST: gatsby
 
   get-dependabot-bumped-framework:
     name: "Get bumped framework (dependabot-only)"
