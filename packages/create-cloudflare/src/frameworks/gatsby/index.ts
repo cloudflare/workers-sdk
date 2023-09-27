@@ -37,9 +37,6 @@ const generate = async (ctx: PagesGeneratorContext) => {
 const config: FrameworkConfig = {
 	generate,
 	displayName: "Gatsby",
-	configure: async (ctx: PagesGeneratorContext) => {
-		await resetPackageManager(ctx);
-	},
 	packageScripts: {
 		"pages:dev": `wrangler pages dev ${compatDateFlag()} --proxy 8000 -- ${npm} run develop`,
 		"pages:deploy": `${npm} run build && wrangler pages deploy ./public`,
