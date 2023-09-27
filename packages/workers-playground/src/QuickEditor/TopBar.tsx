@@ -79,68 +79,70 @@ export function TopBar() {
 
 			<Div ml="auto" mr="auto" display="flex" gap={1} alignItems="center">
 				{isEditing ? (
-			<Form
+					<Form
 						display="contents"
-				onSubmit={(e) => {
-					e.preventDefault();
-						persistValue();
+						onSubmit={(e) => {
+							e.preventDefault();
+							persistValue();
 							setIsEditing(false);
-				}}
-			>
-					<Input
-						name="path"
-						value={value}
-						autoComplete="off"
+						}}
+					>
+						<Input
+							name="path"
+							value={value}
+							autoComplete="off"
 							autoFocus={true}
-						spellCheck={false}
-						onChange={(e) => setValue(e.target.value)}
-						mb={0}
-					/>
+							spellCheck={false}
+							onChange={(e) => setValue(e.target.value)}
+							mb={0}
+						/>
 						<Button type="plain" submit={true} p={2} ml={1}>
 							<Icon type="ok" />
 						</Button>
 					</Form>
 				) : (
 					<>
-					<Strong>{value}</Strong>
-				<Button
-					type="plain"
+						<Strong>{value}</Strong>
+						<Button
+							type="plain"
 							onClick={() => setIsEditing(true)}
-					p={2}
-					ml={1}
-				>
+							p={2}
+							ml={1}
+						>
 							<Icon type="edit" />
-				</Button>
+						</Button>
 					</>
 				)}
 			</Div>
-			{hasCopied && (
-				<Div position="relative">
+
+			<Div position="relative">
+				{hasCopied && (
 					<Span
 						height="100%"
 						display="flex"
 						gap={1}
 						alignItems="center"
 						mr={2}
-						position={"absolute"}
-						right={0}
+						position="absolute"
+						right="100%"
 					>
-						<Icon type="ok" color={"green"} size={20}></Icon>
+						<Icon type="ok" color="green" size={20}></Icon>
 						Copied!
 					</Span>
-				</Div>
-			)}
-			<Button
-				type="primary"
-				inverted={true}
-				onClick={() => {
-					void navigator.clipboard.writeText(location.href);
-					setHasCopied(!hasCopied);
-				}}
-			>
-				<Icon label="Add" type="link" mr={1} />
-				Copy Link
-			</Button>
+				)}
+				<Button
+					type="primary"
+					inverted={true}
+					onClick={() => {
+						void navigator.clipboard.writeText(location.href);
+						setHasCopied(!hasCopied);
+					}}
+				>
+					<Icon label="Add" type="link" mr={1} />
+					Copy Link
+				</Button>
+			</Div>
+
 			<A
 				target="_blank"
 				href={`https://dash.cloudflare.com/workers-and-pages/deploy/playground/${value}#${workerHash}`}
