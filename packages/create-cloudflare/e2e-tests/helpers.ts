@@ -130,7 +130,12 @@ export const testProjectDir = (suite: string) => {
 	const clean = (suffix: string) => {
 		const path = getPath(suffix);
 		if (existsSync(path)) {
-			rmSync(path, { recursive: true, force: true });
+			rmSync(path, {
+				recursive: true,
+				force: true,
+				maxRetries: 10,
+				retryDelay: 500,
+			});
 		}
 	};
 
