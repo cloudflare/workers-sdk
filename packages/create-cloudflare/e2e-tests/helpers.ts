@@ -51,7 +51,6 @@ export const runC3 = async ({
 	);
 	const stdout: string[] = [];
 	const stderr: string[] = [];
-	const processLogs: string[] = [];
 
 	await new Promise((resolve, rejects) => {
 		proc.stdout.on("data", (data) => {
@@ -61,7 +60,6 @@ export const runC3 = async ({
 			lines.forEach(async (line) => {
 				if (filterLine(line)) {
 					console.log(`${outputPrefix} ${line}`);
-					processLogs.push(`${outputPrefix} ${line}`);
 				}
 				stdout.push(line);
 
@@ -106,10 +104,6 @@ export const runC3 = async ({
 			});
 		});
 	});
-
-	console.log("\n\n\n");
-	processLogs.forEach((line) => console.log(line));
-	console.log("\n\n\n");
 
 	return {
 		output: condenseOutput(stdout).join("\n").trim(),
