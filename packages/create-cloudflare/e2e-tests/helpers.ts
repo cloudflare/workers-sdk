@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import { tmpdir } from "os";
 import { join } from "path";
 import { spawn } from "cross-spawn";
+import { bgBlue } from "helpers/colors";
 import { sleep } from "helpers/common";
 import { spinnerFrames } from "helpers/interactive";
 import type { SpinnerStyle } from "helpers/interactive";
@@ -39,7 +40,11 @@ export const runC3 = async ({
 	promptHandlers = [],
 	outputPrefix = "",
 }: RunnerConfig) => {
-	const proc = spawn("node", ["./dist/cli.js", ...argv]);
+	const cmd = "node";
+	const args = ["./dist/cli.js", ...argv];
+	const proc = spawn(cmd, args);
+
+	console.log(bgBlue(`${outputPrefix} Running C3 with command: \`${cmd} ${args.join(' ')}\``));
 	const stdout: string[] = [];
 	const stderr: string[] = [];
 	const processLogs: string[] = [];
