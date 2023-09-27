@@ -55,8 +55,8 @@ export const runC3 = async ({
 			const currentDialog = promptHandlers[0];
 
 			lines.forEach(async (line) => {
-				// Uncomment to get all the output for debugging (very verbose)
 				if (filterLine(line)) {
+					console.log(`${outputPrefix} ${line}`);
 					processLogs.push(`${outputPrefix} ${line}`);
 				}
 				stdout.push(line);
