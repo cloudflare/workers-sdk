@@ -76,43 +76,44 @@ export function TopBar() {
 					New
 				</Button>
 			</A>
+
+			<Div ml="auto" mr="auto" display="flex" gap={1} alignItems="center">
+				{isEditing ? (
 			<Form
-				ml="auto"
-				mr="auto"
-				display="flex"
-				gap={1}
-				alignItems="center"
+						display="contents"
 				onSubmit={(e) => {
 					e.preventDefault();
-					if (isEditing) {
 						persistValue();
-					}
+							setIsEditing(false);
 				}}
 			>
-				{isEditing ? (
 					<Input
 						name="path"
 						value={value}
 						autoComplete="off"
+							autoFocus={true}
 						spellCheck={false}
 						onChange={(e) => setValue(e.target.value)}
 						mb={0}
 					/>
+						<Button type="plain" submit={true} p={2} ml={1}>
+							<Icon type="ok" />
+						</Button>
+					</Form>
 				) : (
+					<>
 					<Strong>{value}</Strong>
-				)}
 				<Button
 					type="plain"
+							onClick={() => setIsEditing(true)}
 					p={2}
 					ml={1}
-					submit={isEditing}
-					onClick={() => {
-						setIsEditing(!isEditing);
-					}}
 				>
-					<Icon type={isEditing ? "ok" : "edit"} />
+							<Icon type="edit" />
 				</Button>
-			</Form>
+					</>
+				)}
+			</Div>
 			{hasCopied && (
 				<Div position="relative">
 					<Span
