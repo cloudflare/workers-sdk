@@ -84,6 +84,12 @@ jobs:
         with:
           bun-version: ${{ env.bun-version }}
 
+      # Needed because gatsby requires git
+      - name: Configure Git
+        run: |
+          git config --global user.email wrangler@cloudflare.com
+          git config --global user.name 'Wrangler automated PR updater'
+
       - name: E2E Tests
         run: ${{matrix.pm}} run --filter create-cloudflare test:e2e:${{matrix.pm}}
         env:
