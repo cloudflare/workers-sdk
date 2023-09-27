@@ -89,7 +89,6 @@ jobs:
           # For debugging purposed only run the gatsby test (DO NOT MERGE THIS!)
           FRAMEWORK_CLI_TO_TEST: gatsby
 
-
   get-dependabot-bumped-framework:
     name: "Get bumped framework (dependabot-only)"
     runs-on: ubuntu-latest
