@@ -91,6 +91,7 @@ export type PreviewHash = {
 	previewUrl: string;
 	devtoolsUrl: string;
 	playgroundUrl: string;
+	serialised: string;
 };
 
 async function compressWorker(worker: FormData) {
@@ -116,14 +117,17 @@ async function updatePreviewHash(content: Worker): Promise<PreviewHash> {
 		throw new Error(deploy.message);
 	}
 
+	const serialised = await compressWorker(worker);
+
 	return {
-		playgroundUrl: `/playground#${await compressWorker(worker)}`,
+		playgroundUrl: `/playground#${serialised}`,
 		previewUrl: `https://${v4()}.${
 			import.meta.env.VITE_PLAYGROUND_PREVIEW
 		}/.update-preview-token?token=${encodeURIComponent(deploy.preview)}`,
 		devtoolsUrl: `wss://${import.meta.env.VITE_PLAYGROUND_ROOT}${
 			deploy.inspector
 		}`,
+		serialised: serialised,
 	};
 }
 
