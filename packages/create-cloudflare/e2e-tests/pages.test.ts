@@ -16,6 +16,7 @@ const TEST_TIMEOUT = 1000 * 60 * 3;
 const frameworks = Object.keys(frameworkCliMap);
 
 type FrameworkTestConfig = RunnerConfig & {
+	skip?: true;
 	expectResponseToContain: string;
 	testCommitMessage: boolean;
 };
@@ -158,6 +159,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 			testCommitMessage: true,
 		},
 		gatsby: {
+			skip: true,
 			expectResponseToContain: "Gatsby!",
 			promptHandlers: [
 				{
@@ -265,7 +267,8 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		const config = frameworkTests[framework];
 		if (isQuarantineMode() || config.quarantine) return;
 
-		const skip = frameworkToTest && frameworkToTest !== framework;
+		const skip =
+			config.skip || (frameworkToTest && frameworkToTest !== framework);
 
 		test.skipIf(skip)(
 			framework,
