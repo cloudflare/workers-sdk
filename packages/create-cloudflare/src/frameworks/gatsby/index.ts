@@ -1,4 +1,4 @@
-import { runFrameworkGenerator } from "helpers/command";
+import { resetPackageManager, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
 import { inputPrompt } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
@@ -37,6 +37,9 @@ const generate = async (ctx: PagesGeneratorContext) => {
 const config: FrameworkConfig = {
 	generate,
 	displayName: "Gatsby",
+	configure: async (ctx: PagesGeneratorContext) => {
+		await resetPackageManager(ctx);
+	},
 	packageScripts: {
 		"pages:dev": `wrangler pages dev ${compatDateFlag()} --proxy 8000 -- ${npm} run develop`,
 		"pages:deploy": `${npm} run build && wrangler pages deploy ./public`,
