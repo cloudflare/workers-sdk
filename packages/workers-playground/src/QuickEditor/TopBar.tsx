@@ -6,7 +6,6 @@ import { Icon } from "@cloudflare/component-icon";
 import { BAR_HEIGHT } from "./constants";
 import { WorkersLogo } from "./WorkersLogo";
 import { Input } from "@cloudflare/component-input";
-import { Toast } from "@cloudflare/component-toast";
 
 const Wrapper = createComponent(({ theme }) => ({
 	display: "flex",
@@ -18,19 +17,6 @@ const Wrapper = createComponent(({ theme }) => ({
 	paddingRight: theme.space[3],
 	backgroundColor: theme.colors.white,
 }));
-
-const AnimatedToast = createComponent(
-	({ theme }) => ({
-		position: "fixed",
-		right: theme.space[3],
-		top: `calc(${BAR_HEIGHT}px + ${theme.space[1] + theme.space[2]}px)`,
-		zIndex: 10,
-		display: "flex",
-		alignItems: "center",
-		gap: theme.space[2],
-	}),
-	Toast
-);
 
 export function TopBar() {
 	const [isEditing, setIsEditing] = useState(false);
