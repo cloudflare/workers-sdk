@@ -19,10 +19,12 @@ export const detectPackageManager = () => {
 			case "pnpm":
 				name = "pnpm";
 				version = devDependencies["pnpm"].replace("^", "");
+				process.env.npm_config_user_agent = "pnpm";
 				break;
 			case "yarn":
 				name = "yarn";
 				version = devDependencies["yarn"].replace("^", "");
+				process.env.npm_config_user_agent = "yarn";
 				break;
 			case "bun":
 				name = "bun";
@@ -31,6 +33,7 @@ export const detectPackageManager = () => {
 			case "npm":
 				name = "npm";
 				version = "0.0.0";
+				process.env.npm_config_user_agent = "npm";
 				break;
 		}
 	}
