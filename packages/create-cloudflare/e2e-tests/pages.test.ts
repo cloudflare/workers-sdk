@@ -66,6 +66,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 			framework,
 			"--deploy",
 			"--no-open",
+			"--no-git",
 		];
 
 		args.push(...argv);
@@ -117,7 +118,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		const { output } = await runCli(framework, {
 			overrides,
 			promptHandlers,
-			argv: [...(argv ?? []), "--deploy", "--no-git"],
+			argv: [...(argv ?? [])],
 		});
 
 		// Verify deployment
