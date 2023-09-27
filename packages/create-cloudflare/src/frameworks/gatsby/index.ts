@@ -1,4 +1,4 @@
-import { resetPackageManager, runFrameworkGenerator } from "helpers/command";
+import { runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
 import { inputPrompt } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
