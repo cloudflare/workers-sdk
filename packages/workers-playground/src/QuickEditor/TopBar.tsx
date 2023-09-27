@@ -43,6 +43,8 @@ export function TopBar() {
 		return searchParams.get("name") || "workers-playground";
 	});
 
+	const workerHash = location.hash.slice(1);
+
 	function setValue(v: string) {
 		const sanitised = v.replace(/[^a-z0-9-]+/g, "-");
 		_setValue(sanitised);
@@ -140,9 +142,12 @@ export function TopBar() {
 			</Button>
 			<A
 				target="_blank"
-				href={`https://dash.cloudflare.com/workers-and-pages/deploy/playground/${value}${location.hash}`}
+				href={`https://dash.cloudflare.com/workers-and-pages/deploy/playground/${value}#${workerHash}`}
+				style={workerHash ? undefined : { pointerEvents: "none" }}
 			>
-				<Button type="primary">Deploy</Button>
+				<Button type="primary" disabled={!Boolean(workerHash)} tabIndex={-1}>
+					Deploy
+				</Button>
 			</A>
 		</Wrapper>
 	);
