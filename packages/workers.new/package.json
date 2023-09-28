@@ -4,8 +4,10 @@
 	"private": true,
 	"scripts": {
 		"check:lint": "eslint .",
-		"deploy": "wrangler deploy src/index.ts",
-		"dev": "wrangler dev src/index.ts --local"
+		"deploy": "wrangler deploy",
+		"dev": "wrangler dev",
+		"test": "vitest run",
+		"test:ci": "vitest run"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "*",
