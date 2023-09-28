@@ -44,6 +44,8 @@ export const runC3 = async ({
 	const args = ["./dist/cli.js", ...argv];
 	const proc = spawn(cmd, args);
 
+	promptHandlers = [...promptHandlers];
+
 	console.log(
 		bgBlue(
 			`${outputPrefix} Running C3 with command: \`${cmd} ${args.join(" ")}\``
