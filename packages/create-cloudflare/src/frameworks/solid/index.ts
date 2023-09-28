@@ -11,13 +11,9 @@ import type { PagesGeneratorContext, FrameworkConfig } from "types";
 const { npm, dlx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
-	// Create the project directory and navigate to it
-	mkdirSync(ctx.project.path);
-	process.chdir(ctx.project.path);
-
 	// Run the create-solid command
 	const cli = getFrameworkCli(ctx);
-	await runFrameworkGenerator(ctx, `${dlx} ${cli}`);
+	await runFrameworkGenerator(ctx, `${dlx} ${cli} ${ctx.project.name}`);
 
 	logRaw("");
 };
