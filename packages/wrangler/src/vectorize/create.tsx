@@ -69,7 +69,7 @@ export async function handler(
 
 	let indexConfig;
 	if (args.preset) {
-		indexConfig = { model: args.preset as VectorizePreset };
+		indexConfig = { preset: args.preset as VectorizePreset };
 		logger.log(
 			`Configuring index based for the embedding model ${args.preset}.`
 		);
