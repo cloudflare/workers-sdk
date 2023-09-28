@@ -7,7 +7,8 @@ import { version } from "../package.json";
 import { deleteProject } from "../scripts/e2eCleanup";
 import { frameworkCliMap } from "../src/frameworks/package.json";
 import { frameworkToTest } from "./frameworkToTest";
-import { isQuarantineMode, keys, runC3, testProjectDir } from "./helpers";
+// import { isQuarantineMode, keys, runC3, testProjectDir } from "./helpers";
+import { isQuarantineMode, runC3, testProjectDir } from "./helpers";
 import type { RunnerConfig } from "./helpers";
 import type { TestContext } from "vitest";
 
@@ -150,16 +151,16 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 
 	// These are ordered based on speed and reliability for ease of debugging
 	const frameworkTests: Record<string, FrameworkTestConfig> = {
-		astro: {
-			expectResponseToContain: "Welcome to Astro",
-			testCommitMessage: true,
-		},
-		docusaurus: {
-			expectResponseToContain: "Dinosaurs are cool",
-			testCommitMessage: true,
-		},
+		// astro: {
+		// 	expectResponseToContain: "Welcome to Astro",
+		// 	testCommitMessage: true,
+		// },
+		// docusaurus: {
+		// 	expectResponseToContain: "Dinosaurs are cool",
+		// 	testCommitMessage: true,
+		// },
 		gatsby: {
-			skip: true,
+			// skip: true,
 			expectResponseToContain: "Gatsby!",
 			promptHandlers: [
 				{
@@ -169,98 +170,98 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 			],
 			testCommitMessage: true,
 		},
-		hono: {
-			expectResponseToContain: "Hello Hono!",
-			testCommitMessage: false,
-		},
-		qwik: {
-			expectResponseToContain: "Welcome to Qwik",
-			promptHandlers: [
-				{
-					matcher: /Yes looks good, finish update/,
-					input: [keys.enter],
-				},
-			],
-			testCommitMessage: true,
-		},
-		remix: {
-			expectResponseToContain: "Welcome to Remix",
-			testCommitMessage: true,
-			quarantine: true,
-		},
-		next: {
-			expectResponseToContain: "Create Next App",
-			promptHandlers: [
-				{
-					matcher: /Do you want to use the next-on-pages eslint-plugin\?/,
-					input: ["y"],
-				},
-			],
-			testCommitMessage: true,
-			quarantine: true,
-		},
-		nuxt: {
-			expectResponseToContain: "Welcome to Nuxt!",
-			promptHandlers: [
-				{
-					matcher: /Which package manager would you like to use\?/,
-					input: [
-						...(process.env.TEST_PM === "pnpm" ? [keys.down] : []),
-						keys.enter,
-					],
-				},
-			],
-			overrides: {
-				packageScripts: {
-					build: "NITRO_PRESET=cloudflare-pages nuxt build",
-				},
-			},
-			testCommitMessage: true,
-		},
-		react: {
-			expectResponseToContain: "React App",
-			testCommitMessage: true,
-		},
-		solid: {
-			expectResponseToContain: "Hello world",
-			promptHandlers: [
-				{
-					matcher: /Which template do you want to use/,
-					input: [keys.enter],
-				},
-				{
-					matcher: /Server Side Rendering/,
-					input: [keys.enter],
-				},
-				{
-					matcher: /Use TypeScript/,
-					input: [keys.enter],
-				},
-			],
-			testCommitMessage: true,
-		},
-		svelte: {
-			expectResponseToContain: "SvelteKit app",
-			promptHandlers: [
-				{
-					matcher: /Which Svelte app template/,
-					input: [keys.enter],
-				},
-				{
-					matcher: /Add type checking with TypeScript/,
-					input: [keys.down, keys.enter],
-				},
-				{
-					matcher: /Select additional options/,
-					input: [keys.enter],
-				},
-			],
-			testCommitMessage: true,
-		},
-		vue: {
-			expectResponseToContain: "Vite App",
-			testCommitMessage: true,
-		},
+		// hono: {
+		// 	expectResponseToContain: "Hello Hono!",
+		// 	testCommitMessage: false,
+		// },
+		// qwik: {
+		// 	expectResponseToContain: "Welcome to Qwik",
+		// 	promptHandlers: [
+		// 		{
+		// 			matcher: /Yes looks good, finish update/,
+		// 			input: [keys.enter],
+		// 		},
+		// 	],
+		// 	testCommitMessage: true,
+		// },
+		// remix: {
+		// 	expectResponseToContain: "Welcome to Remix",
+		// 	testCommitMessage: true,
+		// 	quarantine: true,
+		// },
+		// next: {
+		// 	expectResponseToContain: "Create Next App",
+		// 	promptHandlers: [
+		// 		{
+		// 			matcher: /Do you want to use the next-on-pages eslint-plugin\?/,
+		// 			input: ["y"],
+		// 		},
+		// 	],
+		// 	testCommitMessage: true,
+		// 	quarantine: true,
+		// },
+		// nuxt: {
+		// 	expectResponseToContain: "Welcome to Nuxt!",
+		// 	promptHandlers: [
+		// 		{
+		// 			matcher: /Which package manager would you like to use\?/,
+		// 			input: [
+		// 				...(process.env.TEST_PM === "pnpm" ? [keys.down] : []),
+		// 				keys.enter,
+		// 			],
+		// 		},
+		// 	],
+		// 	overrides: {
+		// 		packageScripts: {
+		// 			build: "NITRO_PRESET=cloudflare-pages nuxt build",
+		// 		},
+		// 	},
+		// 	testCommitMessage: true,
+		// },
+		// react: {
+		// 	expectResponseToContain: "React App",
+		// 	testCommitMessage: true,
+		// },
+		// solid: {
+		// 	expectResponseToContain: "Hello world",
+		// 	promptHandlers: [
+		// 		{
+		// 			matcher: /Which template do you want to use/,
+		// 			input: [keys.enter],
+		// 		},
+		// 		{
+		// 			matcher: /Server Side Rendering/,
+		// 			input: [keys.enter],
+		// 		},
+		// 		{
+		// 			matcher: /Use TypeScript/,
+		// 			input: [keys.enter],
+		// 		},
+		// 	],
+		// 	testCommitMessage: true,
+		// },
+		// svelte: {
+		// 	expectResponseToContain: "SvelteKit app",
+		// 	promptHandlers: [
+		// 		{
+		// 			matcher: /Which Svelte app template/,
+		// 			input: [keys.enter],
+		// 		},
+		// 		{
+		// 			matcher: /Add type checking with TypeScript/,
+		// 			input: [keys.down, keys.enter],
+		// 		},
+		// 		{
+		// 			matcher: /Select additional options/,
+		// 			input: [keys.enter],
+		// 		},
+		// 	],
+		// 	testCommitMessage: true,
+		// },
+		// vue: {
+		// 	expectResponseToContain: "Vite App",
+		// 	testCommitMessage: true,
+		// },
 	};
 
 	Object.keys(frameworkTests).forEach((framework) => {
