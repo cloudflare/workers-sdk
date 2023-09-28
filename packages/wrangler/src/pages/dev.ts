@@ -637,14 +637,13 @@ export const Handler = async ({
 
 	CLEANUP_CALLBACKS.push(stop);
 
-	void waitUntilExit().then(() => {
-		CLEANUP();
-		process.exit(0);
-	});
-
 	process.on("exit", CLEANUP);
 	process.on("SIGINT", CLEANUP);
 	process.on("SIGTERM", CLEANUP);
+
+	await waitUntilExit();
+	CLEANUP();
+	process.exit(0);
 };
 
 function isWindows() {
