@@ -65,7 +65,7 @@ export const runC3 = async ({
 
 				if (currentDialog && currentDialog.matcher.test(line)) {
 					// Add a small sleep to avoid input race
-					await sleep(500);
+					await sleep(1000);
 
 					currentDialog.input.forEach((keystroke) => {
 						proc.stdin.write(keystroke);
