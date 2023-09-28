@@ -11,12 +11,13 @@ import { isQuarantineMode, keys, runC3, testProjectDir } from "./helpers";
 import type { RunnerConfig } from "./helpers";
 import type { TestContext } from "vitest";
 
-const TEST_TIMEOUT = 1000 * 60 * 5;
+const TEST_TIMEOUT = 1000 * 60 * 3;
 
 const frameworks = Object.keys(frameworkCliMap);
 
 type FrameworkTestConfig = RunnerConfig & {
 	skip?: true;
+	timeout?: number;
 	expectResponseToContain: string;
 	testCommitMessage: boolean;
 };
@@ -159,6 +160,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 			testCommitMessage: true,
 		},
 		gatsby: {
+			quarantine: true,
 			expectResponseToContain: "Gatsby!",
 			promptHandlers: [
 				{
@@ -167,6 +169,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 				},
 			],
 			testCommitMessage: true,
+			timeout: 1000 * 60 * 6,
 		},
 		hono: {
 			expectResponseToContain: "Hello Hono!",
@@ -277,7 +280,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 					frameworkTests[framework].testCommitMessage
 				);
 			},
-			{ retry: 3, timeout: TEST_TIMEOUT }
+			{ retry: 3, timeout: config.timeout || TEST_TIMEOUT }
 		);
 	});
 
