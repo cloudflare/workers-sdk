@@ -49,7 +49,7 @@ const config: FrameworkConfig = {
 		start:
 			"wrangler pages dev dist/cloudflare --compatibility-date=2021-09-20 --experimental-local",
 		predeploy: `${npm} run build:ssr && ${npm} run process`,
-		deploy: "wrangler pages deploy dist/cloudflare",
+		deploy: "wrangler pages publish dist/cloudflare",
 	},
 	deployCommand: "deploy",
 	devCommand: "start",

@@ -142,7 +142,7 @@ const config: FrameworkConfig = {
 	displayName: "Next",
 	packageScripts: {
 		"pages:build": `${dlx} @cloudflare/next-on-pages@1`,
-		"pages:deploy": `${npm} run pages:build && wrangler pages deploy .vercel/output/static`,
+		"pages:deploy": `${npm} run pages:build && wrangler pages publish .vercel/output/static`,
 		"pages:watch": `${npx} @cloudflare/next-on-pages@1 --watch`,
 		"pages:dev": `${npx} wrangler pages dev .vercel/output/static --compatibility-flag=nodejs_compat`,
 	},
