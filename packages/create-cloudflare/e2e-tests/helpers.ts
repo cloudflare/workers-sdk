@@ -57,6 +57,8 @@ export const runC3 = async ({
 	const stdout: string[] = [];
 	const stderr: string[] = [];
 
+	promptHandlers = promptHandlers && [...promptHandlers];
+
 	await new Promise((resolve, rejects) => {
 		proc.stdout.on("data", (data) => {
 			const lines: string[] = data.toString().split("\n");
