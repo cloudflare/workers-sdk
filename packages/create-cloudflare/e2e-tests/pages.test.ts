@@ -12,7 +12,7 @@ import { isQuarantineMode, runC3, testProjectDir } from "./helpers";
 import type { RunnerConfig } from "./helpers";
 import type { TestContext } from "vitest";
 
-const TEST_TIMEOUT = 1000 * 60 * 3;
+const TEST_TIMEOUT = 1000 * 60 * 5;
 
 const frameworks = Object.keys(frameworkCliMap);
 
