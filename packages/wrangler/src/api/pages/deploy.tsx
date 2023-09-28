@@ -7,7 +7,9 @@ import { fetchResult } from "../../cfetch";
 import { FatalError } from "../../errors";
 import { logger } from "../../logger";
 import { buildFunctions } from "../../pages/buildFunctions";
+import { MAX_DEPLOYMENT_ATTEMPTS } from "../../pages/constants";
 import {
+	ApiErrorCodes,
 	FunctionsNoRoutesError,
 	getFunctionsNoRoutesWarning,
 } from "../../pages/errors";
@@ -18,6 +20,7 @@ import {
 } from "../../pages/functions/buildWorker";
 import { validateRoutes } from "../../pages/functions/routes-validation";
 import { upload } from "../../pages/upload";
+import { validate } from "../../pages/validate";
 import { createUploadWorkerBundleContents } from "./create-worker-bundle-contents";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Project, Deployment } from "@cloudflare/types";
@@ -157,11 +160,6 @@ export async function deploy({
 	// Routing configuration displayed in the Functions tab of a deployment in Dash
 	let filepathRoutingConfig: string | undefined;
 
-	const d1Databases = Object.keys(
-		project.deployment_configs[isProduction ? "production" : "preview"]
-			.d1_databases ?? {}
-	);
-
 	if (!_workerJS && existsSync(functionsDirectory)) {
 		const outputConfigPath = join(
 			tmpdir(),
@@ -176,7 +174,6 @@ export async function deploy({
 				buildOutputDirectory: directory,
 				routesOutputPath,
 				local: false,
-				d1Databases,
 				nodejsCompat,
 			});
 
@@ -196,8 +193,10 @@ export async function deploy({
 		}
 	}
 
+	const fileMap = await validate({ directory });
+
 	const manifest = await upload({
-		directory,
+		fileMap,
 		accountId,
 		projectName,
 		skipCaching: skipCaching ?? false,
@@ -254,7 +253,6 @@ export async function deploy({
 		workerBundle = await traverseAndBuildWorkerJSDirectory({
 			workerJSDirectory: _workerPath,
 			buildOutputDirectory: directory,
-			d1Databases,
 			nodejsCompat,
 		});
 	} else if (_workerJS) {
@@ -268,7 +266,6 @@ export async function deploy({
 				sourcemap: true,
 				watch: false,
 				onEnd: () => {},
-				betaD1Shims: d1Databases,
 				nodejsCompat,
 			});
 		} else {
@@ -361,12 +358,35 @@ export async function deploy({
 		}
 	}
 
-	const deploymentResponse = await fetchResult<Deployment>(
-		`/accounts/${accountId}/pages/projects/${projectName}/deployments`,
-		{
-			method: "POST",
-			body: formData,
+	let attempts = 0;
+	let lastErr: unknown;
+	while (attempts < MAX_DEPLOYMENT_ATTEMPTS) {
+		try {
+			const deploymentResponse = await fetchResult<Deployment>(
+				`/accounts/${accountId}/pages/projects/${projectName}/deployments`,
+				{
+					method: "POST",
+					body: formData,
+				}
+			);
+			return deploymentResponse;
+		} catch (e) {
+			lastErr = e;
+			if (
+				(e as { code: number }).code === ApiErrorCodes.UNKNOWN_ERROR &&
+				attempts < MAX_DEPLOYMENT_ATTEMPTS
+			) {
+				logger.debug("failed:", e, "retrying...");
+				// Exponential backoff, 1 second first time, then 2 second, then 4 second etc.
+				await new Promise((resolvePromise) =>
+					setTimeout(resolvePromise, Math.pow(2, attempts++) * 1000)
+				);
+			} else {
+				logger.debug("failed:", e);
+				throw e;
+			}
 		}
-	);
-	return deploymentResponse;
+	}
+	// We should never make it here, but just in case
+	throw lastErr;
 }

@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import dotenv from "dotenv";
 import { findUpSync } from "find-up";
-import { removeD1BetaPrefix } from "../deployment-bundle/worker";
 import { logger } from "../logger";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
 import { normalizeAndValidateConfig } from "./validation";
@@ -100,13 +99,16 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		send_email,
 		queues,
 		d1_databases,
+		vectorize,
 		constellation,
+		hyperdrive,
 		r2_buckets,
 		logfwdr,
 		services,
 		analytics_engine_datasets,
 		text_blobs,
 		browser,
+		ai,
 		unsafe,
 		vars,
 		wasm_modules,
@@ -201,11 +203,23 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 						databaseValue += `, Preview: (${preview_database_id})`;
 					}
 					return {
-						key: removeD1BetaPrefix(binding),
+						key: binding,
 						value: databaseValue,
 					};
 				}
 			),
+		});
+	}
+
+	if (vectorize !== undefined && vectorize.length > 0) {
+		output.push({
+			type: "Vectorize Indexes",
+			entries: vectorize.map(({ binding, index_name }) => {
+				return {
+					key: binding,
+					value: index_name,
+				};
+			}),
 		});
 	}
 
@@ -221,10 +235,25 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		});
 	}
 
+	if (hyperdrive !== undefined && hyperdrive.length > 0) {
+		output.push({
+			type: "Hyperdrive Configs",
+			entries: hyperdrive.map(({ binding, id }) => {
+				return {
+					key: binding,
+					value: id,
+				};
+			}),
+		});
+	}
+
 	if (r2_buckets !== undefined && r2_buckets.length > 0) {
 		output.push({
 			type: "R2 Buckets",
-			entries: r2_buckets.map(({ binding, bucket_name }) => {
+			entries: r2_buckets.map(({ binding, bucket_name, jurisdiction }) => {
+				if (jurisdiction !== undefined) {
+					bucket_name += ` (${jurisdiction})`;
+				}
 				return {
 					key: binding,
 					value: bucket_name,
@@ -291,6 +320,13 @@ export function printBindings(bindings: CfWorkerInit["bindings"]) {
 		output.push({
 			type: "Browser",
 			entries: [{ key: "Name", value: browser.binding }],
+		});
+	}
+
+	if (ai !== undefined) {
+		output.push({
+			type: "AI",
+			entries: [{ key: "Name", value: ai.binding }],
 		});
 	}
 

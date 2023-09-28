@@ -13,11 +13,9 @@ A template for kick-starting a Cloudflare Workers project that uses Durable Obje
 To create a `my-project` directory using this template, run:
 
 ```sh
-$ npm init cloudflare my-project worker-durable-objects
+$ npx wrangler generate my-project worker-durable-objects
 # or
-$ yarn create cloudflare my-project worker-durable-objects
+$ yarn wrangler generate my-project worker-durable-objects
 # or
-$ pnpm create cloudflare my-project worker-durable-objects
+$ pnpm wrangler generate my-project worker-durable-objects
 ```
-
-> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.

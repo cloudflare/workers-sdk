@@ -1,56 +1,65 @@
-import { existsSync, rmSync, mkdtempSync, realpathSync } from "fs";
-import { tmpdir } from "os";
 import { join } from "path";
 import { describe, expect, test, afterEach, beforeEach } from "vitest";
-import { runC3 } from "./helpers";
+import { frameworkToTest } from "./frameworkToTest";
+import { isQuarantineMode, runC3, testProjectDir } from "./helpers";
 
 /*
 Areas for future improvement:
 - Make these actually e2e by verifying that deployment works
-- Add support for frameworks with global installs (like docusaurus, gatsby, etc)
 */
 
-describe("E2E: Workers templates", () => {
-	const tmpDirPath = realpathSync(mkdtempSync(join(tmpdir(), "workers-tests")));
-	const projectPath = join(tmpDirPath, "pages-tests");
+// Note: skipIf(frameworkToTest) makes it so that all the worker tests are
+//       skipped in case we are testing a specific framework
+//       (since no worker template implements a framework application)
+describe.skipIf(frameworkToTest || isQuarantineMode())(
+	"E2E: Workers templates",
+	() => {
+		const { getPath, clean } = testProjectDir("workers");
 
-	beforeEach(() => {
-		rmSync(projectPath, { recursive: true, force: true });
-	});
+		beforeEach((ctx) => {
+			const template = ctx.meta.name;
+			clean(template);
+		});
 
-	afterEach(() => {
-		if (existsSync(projectPath)) {
-			rmSync(projectPath, { recursive: true });
-		}
-	});
+		afterEach((ctx) => {
+			const template = ctx.meta.name;
+			clean(template);
+		});
 
-	const runCli = async (template: string) => {
-		const argv = [
-			projectPath,
-			"--type",
-			template,
-			"--no-ts",
-			"--no-deploy",
-			"--no-git",
-			"--wrangler-defaults",
-		];
+		const runCli = async (template: string) => {
+			const projectPath = getPath(template);
 
-		await runC3({ argv });
+			const argv = [
+				projectPath,
+				"--type",
+				template,
+				"--no-ts",
+				"--no-deploy",
+				"--no-git",
+				"--wrangler-defaults",
+			];
 
-		// Relevant project files should have been created
-		expect(projectPath).toExist();
+			await runC3({ argv });
 
-		const pkgJsonPath = join(projectPath, "package.json");
-		expect(pkgJsonPath).toExist();
+			// Relevant project files should have been created
+			expect(projectPath).toExist();
 
-		const wranglerPath = join(projectPath, "node_modules/wrangler");
-		expect(wranglerPath).toExist();
-	};
+			const pkgJsonPath = join(projectPath, "package.json");
+			expect(pkgJsonPath).toExist();
 
-	test.each(["hello-world", "common", "chatgptPlugin", "queues", "scheduled"])(
-		"%s",
-		async (name) => {
+			const wranglerPath = join(projectPath, "node_modules/wrangler");
+			expect(wranglerPath).toExist();
+		};
+
+		test.each([
+			"hello-world",
+			"common",
+			"chatgptPlugin",
+			"queues",
+			"scheduled",
+			"openapi",
+		])("%s", async (name) => {
 			await runCli(name);
-		}
-	);
-});
+		});
+	}
+);

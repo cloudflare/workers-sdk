@@ -1,5 +1,23 @@
 # @cloudflare/pages-shared
 
+## 0.9.0
+
+### Minor Changes
+
+- [#3895](https://github.com/cloudflare/workers-sdk/pull/3895) [`40f56562`](https://github.com/cloudflare/workers-sdk/commit/40f565628aaef2cad745aeeb4da297e7a6973e0d) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: bump `miniflare` to [`3.20230904.0`](https://github.com/cloudflare/miniflare/releases/tag/v3.20230904.0)
+
+## 0.8.2
+
+### Patch Changes
+
+- [#3870](https://github.com/cloudflare/workers-sdk/pull/3870) [`2a6fdd9e`](https://github.com/cloudflare/workers-sdk/commit/2a6fdd9e2a16bc883bd87e828927d47655d032ed) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Requests for Cloudflare Pages which match against a `_headers` rule now match regardless of the incoming request's port
+
+## 0.8.1
+
+### Patch Changes
+
+- [#3765](https://github.com/cloudflare/workers-sdk/pull/3765) [`e17d3096`](https://github.com/cloudflare/workers-sdk/commit/e17d3096ecde7cf697f7d5bc6ebc3a868eb88cfa) Thanks [@RamIdeas](https://github.com/RamIdeas)! - bump miniflare version to 3.20230814.1
+
 ## 0.8.0
 
 ### Minor Changes

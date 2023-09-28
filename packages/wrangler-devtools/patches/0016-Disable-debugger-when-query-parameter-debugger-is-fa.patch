@@ -1,0 +1,102 @@
+From 238f57c76bd8dc90069bb8004f832688ee1224db Mon Sep 17 00:00:00 2001
+From: Workers DevProd <workers-devprod@cloudflare.com>
+Date: Thu, 17 Aug 2023 13:31:48 -0500
+Subject: [PATCH 16/16] Eanble debugger when query parameter `debugger` is true
+
+---
+ front_end/panels/sources/DebuggerPlugin.ts |  8 +++++++
+ front_end/panels/sources/SourcesPanel.ts   | 14 +++++++++++-
+ front_end/panels/sources/sources-meta.ts   | 26 ++++++++++++++++++++++
+ 3 files changed, 47 insertions(+), 1 deletion(-)
+
+diff --git a/front_end/panels/sources/DebuggerPlugin.ts b/front_end/panels/sources/DebuggerPlugin.ts
+index 6871a61d55..50b38ca92c 100644
+--- a/front_end/panels/sources/DebuggerPlugin.ts
++++ b/front_end/panels/sources/DebuggerPlugin.ts
+@@ -228,6 +228,14 @@ export class DebuggerPlugin extends Plugin {
+     this.scriptsPanel = SourcesPanel.instance();
+     this.breakpointManager = Bindings.BreakpointManager.BreakpointManager.instance();
+ 
++    const debuggerEnabled = Root.Runtime.Runtime.queryParam('debugger') === 'true';
++    if (debuggerEnabled) {
++      this.breakpointManager.addEventListener(
++          Bindings.BreakpointManager.Events.BreakpointAdded, this.breakpointChange, this);
++      this.breakpointManager.addEventListener(
++          Bindings.BreakpointManager.Events.BreakpointRemoved, this.breakpointChange, this);
++    }
++
+     this.uiSourceCode.addEventListener(Workspace.UISourceCode.Events.WorkingCopyChanged, this.workingCopyChanged, this);
+     this.uiSourceCode.addEventListener(
+         Workspace.UISourceCode.Events.WorkingCopyCommitted, this.workingCopyCommitted, this);
+diff --git a/front_end/panels/sources/SourcesPanel.ts b/front_end/panels/sources/SourcesPanel.ts
+index 1e094864ea..ac30f5d54c 100644
+--- a/front_end/panels/sources/SourcesPanel.ts
++++ b/front_end/panels/sources/SourcesPanel.ts
+@@ -248,7 +248,11 @@ export class SourcesPanel extends UI.Panel.Panel implements UI.ContextMenu.Provi
+         new UI.SplitWidget.SplitWidget(true, true, 'sourcesPanelSplitViewState', initialDebugSidebarWidth);
+     this.splitWidget.enableShowModeSaving();
+     this.splitWidget.show(this.element);
+-    this.splitWidget.hideSidebar(false);
++
++    const debuggerEnabled = Root.Runtime.Runtime.queryParam('debugger') === 'true';
++    if (!debuggerEnabled) {
++      this.splitWidget.hideSidebar(false);
++    }
+ 
+     // Create scripts navigator
+     const initialNavigatorWidth = 225;
+@@ -355,6 +359,14 @@ export class SourcesPanel extends UI.Panel.Panel implements UI.ContextMenu.Provi
+       panel.splitWidget.installResizer(panel.sourcesViewInternal.toolbarContainerElement());
+     }
+     if (!isInWrapper) {
++      const debuggerEnabled = Root.Runtime.Runtime.queryParam('debugger') === 'true';
++      if (debuggerEnabled) {
++        if (panel.splitWidget.isVertical()) {
++          panel.sourcesViewInternal.rightToolbar().appendToolbarItem(panel.toggleDebuggerSidebarButton);
++        } else {
++          panel.sourcesViewInternal.bottomToolbar().appendToolbarItem(panel.toggleDebuggerSidebarButton);
++        }
++      }
+       panel.sourcesViewInternal.leftToolbar().appendToolbarItem(panel.toggleNavigatorSidebarButton);
+     }
+   }
+diff --git a/front_end/panels/sources/sources-meta.ts b/front_end/panels/sources/sources-meta.ts
+index 9c53bca1b3..036c33ea16 100644
+--- a/front_end/panels/sources/sources-meta.ts
++++ b/front_end/panels/sources/sources-meta.ts
+@@ -586,6 +586,32 @@ UI.ActionRegistration.registerActionExtension({
+   ],
+ });
+ 
++const debuggerEnabled = Root.Runtime.Runtime.queryParam('debugger') === 'true';
++if (debuggerEnabled) {
++  UI.ActionRegistration.registerActionExtension({
++    actionId: 'sources.toggle-debugger-sidebar',
++    category: UI.ActionRegistration.ActionCategory.SOURCES,
++    title: i18nLazyString(UIStrings.toggleDebuggerSidebar),
++    async loadActionDelegate() {
++      const Sources = await loadSourcesModule();
++      return Sources.SourcesPanel.ActionDelegate.instance();
++    },
++    contextTypes() {
++      return maybeRetrieveContextTypes(Sources => [Sources.SourcesView.SourcesView]);
++    },
++    bindings: [
++      {
++        platform: UI.ActionRegistration.Platforms.WindowsLinux,
++        shortcut: 'Ctrl+Shift+h',
++      },
++      {
++        platform: UI.ActionRegistration.Platforms.Mac,
++        shortcut: 'Meta+Shift+h',
++      },
++    ],
++  });
++}
++
+ UI.ActionRegistration.registerActionExtension({
+   category: UI.ActionRegistration.ActionCategory.DEBUGGER,
+   actionId: 'debugger.step-over',
+-- 
+2.41.0
+

@@ -35,7 +35,6 @@ export async function buildFunctions({
 	legacyNodeCompat,
 	nodejsCompat,
 	local,
-	d1Databases,
 }: Partial<
 	Pick<
 		PagesBuildArgs,
@@ -54,7 +53,6 @@ export async function buildFunctions({
 	onEnd?: () => void;
 	routesOutputPath?: PagesBuildArgs["outputRoutesPath"];
 	local: boolean;
-	d1Databases?: string[];
 	legacyNodeCompat?: boolean;
 	nodejsCompat?: boolean;
 }) {
@@ -114,7 +112,6 @@ export async function buildFunctions({
 			legacyNodeCompat,
 			functionsDirectory: absoluteFunctionsDirectory,
 			local,
-			betaD1Shims: d1Databases,
 		});
 	} else {
 		bundle = await buildWorker({
@@ -127,7 +124,6 @@ export async function buildFunctions({
 			watch,
 			functionsDirectory: absoluteFunctionsDirectory,
 			local,
-			betaD1Shims: d1Databases,
 			onEnd,
 			buildOutputDirectory,
 			legacyNodeCompat,

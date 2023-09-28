@@ -13,7 +13,6 @@ import {
 } from "../deployment-bundle/bundle-reporter";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import traverseModuleGraph from "../deployment-bundle/traverse-module-graph";
-import { identifyD1BindingsAsBeta } from "../deployment-bundle/worker";
 import { addHyphens } from "../deployments";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
@@ -284,6 +283,13 @@ export default async function deploy(props: Props): Promise<void> {
 				if (!(await confirm("Would you like to continue?"))) {
 					return;
 				}
+			} else if (default_environment.script.last_deployed_from === "api") {
+				logger.warn(
+					`You are about to publish a Workers Service that was last updated via the script API.\nEdits that have been made via the script API will be overridden by your local code and config.`
+				);
+				if (!(await confirm("Would you like to continue?"))) {
+					return;
+				}
 			}
 		} catch (e) {
 			// code: 10090, message: workers.api.error.service_not_found
@@ -446,19 +452,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			);
 		}
 
-		// If we are using d1 bindings, and are not bundling the worker
-		// we should error here as the d1 shim won't be added
-		const betaD1Shims = identifyD1BindingsAsBeta(config.d1_databases);
-		if (
-			Array.isArray(betaD1Shims) &&
-			betaD1Shims.length > 0 &&
-			props.noBundle
-		) {
-			throw new Error(
-				"While in beta, you cannot use D1 bindings without bundling your worker. Please remove `no_bundle` from your wrangler.toml file or remove the `--no-bundle` flag to access D1 bindings."
-			);
-		}
-
 		const {
 			modules,
 			dependencies,
@@ -472,9 +465,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					{
 						serveAssetsFromWorker:
 							!props.isWorkersSite && Boolean(props.assetPaths),
-						betaD1Shims: identifyD1BindingsAsBeta(config.d1_databases)?.map(
-							(db) => db.binding
-						),
 						doBindings: config.durable_objects.bindings,
 						jsxFactory,
 						jsxFragment,
@@ -495,10 +485,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						// because we don't want to apply the dev-time
 						// facades on top of it
 						workerDefinitions: undefined,
-						firstPartyWorkerDevFacade: false,
 						// We want to know if the build is for development or publishing
 						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
 						targetConsumer: "deploy",
+						local: false,
 					}
 			  );
 
@@ -539,6 +529,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			vars: { ...config.vars, ...props.vars },
 			wasm_modules: config.wasm_modules,
 			browser: config.browser,
+			ai: config.ai,
 			text_blobs: {
 				...config.text_blobs,
 				...(assets.manifest &&
@@ -552,8 +543,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				return { binding: producer.binding, queue_name: producer.queue };
 			}),
 			r2_buckets: config.r2_buckets,
-			d1_databases: identifyD1BindingsAsBeta(config.d1_databases),
+			d1_databases: config.d1_databases,
+			vectorize: config.vectorize,
 			constellation: config.constellation,
+			hyperdrive: config.hyperdrive,
 			services: config.services,
 			analytics_engine_datasets: config.analytics_engine_datasets,
 			dispatch_namespaces: config.dispatch_namespaces,
@@ -569,6 +562,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		if (assets.manifest) {
 			modules.push({
 				name: "__STATIC_CONTENT_MANIFEST",
+				filePath: undefined,
 				content: JSON.stringify(assets.manifest),
 				type: "text",
 			});
@@ -582,6 +576,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			name: scriptName,
 			main: {
 				name: path.basename(resolvedEntryPointPath),
+				filePath: resolvedEntryPointPath,
 				content: content,
 				type: bundleType,
 			},

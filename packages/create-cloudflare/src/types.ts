@@ -8,6 +8,7 @@ export type C3Args = {
 	deploy?: boolean;
 	open?: boolean;
 	git?: boolean;
+	autoUpdate?: boolean;
 	// pages specific
 	framework?: string;
 	// workers specific
@@ -15,6 +16,7 @@ export type C3Args = {
 	existingScript?: string;
 	wranglerDefaults?: boolean;
 	acceptDefaults?: boolean;
+	additionalArgs?: string[];
 };
 
 export type C3Arg = C3Args[keyof C3Args];
@@ -29,11 +31,14 @@ export type PagesGeneratorContext = {
 	framework?: {
 		name: string;
 		config: FrameworkConfig;
+		args: string[];
+		commitMessage?: string;
 	};
 	project: {
 		name: string;
 		path: string;
 	};
+	type?: "pages" | "workers";
 };
 
 type UpdaterPackageScript = (cmd: string) => string;
@@ -47,4 +52,5 @@ export type FrameworkConfig = {
 	devCommand?: string;
 	testFlags?: string[];
 	compatibilityFlags?: string[];
+	type?: "pages" | "workers";
 };

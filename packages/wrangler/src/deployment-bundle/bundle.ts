@@ -31,7 +31,7 @@ export type BundleResult = {
 	dependencies: esbuild.Metafile["outputs"][string]["inputs"];
 	resolvedEntryPointPath: string;
 	bundleType: "esm" | "commonjs";
-	stop: (() => void) | undefined;
+	stop: (() => Promise<void>) | undefined;
 	sourceMapPath?: string | undefined;
 	sourceMapMetadata?: SourceMapMetadata | undefined;
 	moduleCollector: ModuleCollector | undefined;
@@ -86,10 +86,10 @@ export function isBuildFailure(err: unknown): err is esbuild.BuildFailure {
  * to suggest enabling Node compat as opposed to `platform: "node"`.
  */
 export function rewriteNodeCompatBuildFailure(
-	err: esbuild.BuildFailure,
+	errors: esbuild.Message[],
 	forPages = false
 ) {
-	for (const error of err.errors) {
+	for (const error of errors) {
 		const match = nodeBuiltinResolveErrorText.exec(error.text);
 		if (match !== null) {
 			const issue = `The package "${match[1]}" wasn't found on the file system but is built into node.`;
@@ -121,13 +121,12 @@ export async function bundleWorker(
 		bundle?: boolean;
 		serveAssetsFromWorker: boolean;
 		assets?: StaticAssetsConfig;
-		betaD1Shims?: string[];
 		doBindings: DurableObjectBindings;
 		jsxFactory?: string;
 		jsxFragment?: string;
 		entryName?: string;
 		rules: Config["rules"];
-		watch?: esbuild.WatchMode | boolean;
+		watch?: boolean;
 		tsconfig?: string;
 		minify?: boolean;
 		legacyNodeCompat?: boolean;
@@ -136,7 +135,6 @@ export async function bundleWorker(
 		checkFetch: boolean;
 		services?: Config["services"];
 		workerDefinitions?: WorkerRegistry;
-		firstPartyWorkerDevFacade?: boolean;
 		targetConsumer: "dev" | "deploy";
 		testScheduled?: boolean;
 		inject?: string[];
@@ -148,12 +146,12 @@ export async function bundleWorker(
 		disableModuleCollection?: boolean;
 		isOutfile?: boolean;
 		forPages?: boolean;
+		local: boolean;
 	}
 ): Promise<BundleResult> {
 	const {
 		bundle = true,
 		serveAssetsFromWorker,
-		betaD1Shims,
 		doBindings,
 		jsxFactory,
 		jsxFragment,
@@ -178,12 +176,16 @@ export async function bundleWorker(
 		isOutfile,
 		forPages,
 		additionalModules = [],
+		local,
 	} = options;
 
 	// We create a temporary directory for any one-off files we
 	// need to create. This is separate from the main build
 	// directory (`destination`).
-	const tmpDir = await tmp.dir({ unsafeCleanup: true });
+	const unsafeTmpDir = await tmp.dir({ unsafeCleanup: true });
+	// Make sure we resolve all files relative to the actual temporary directory,
+	// without symlinks, otherwise `esbuild` will generate invalid source maps.
+	const tmpDirPath = fs.realpathSync(unsafeTmpDir.path);
 
 	const entryDirectory = path.dirname(entry.file);
 	let moduleCollector = createModuleCollector({
@@ -218,10 +220,10 @@ export async function bundleWorker(
 	// we need to extract that file to an accessible place before injecting
 	// it in, hence this code here.
 
-	const checkedFetchFileToInject = path.join(tmpDir.path, "checked-fetch.js");
+	const checkedFetchFileToInject = path.join(tmpDirPath, "checked-fetch.js");
 
 	if (checkFetch && !fs.existsSync(checkedFetchFileToInject)) {
-		fs.mkdirSync(tmpDir.path, {
+		fs.mkdirSync(tmpDirPath, {
 			recursive: true,
 		});
 		fs.writeFileSync(
@@ -256,7 +258,7 @@ export async function bundleWorker(
 		{
 			name: "miniflare3-json-error",
 			path: "templates/middleware/middleware-miniflare3-json-error.ts",
-			active: targetConsumer === "dev",
+			active: targetConsumer === "dev" && local,
 		},
 		{
 			name: "serve-static-assets",
@@ -295,15 +297,20 @@ export async function bundleWorker(
 				),
 			},
 		},
-		{
-			name: "d1-beta",
-			path: "templates/middleware/middleware-d1-beta.ts",
-			active: Array.isArray(betaD1Shims) && betaD1Shims.length > 0,
-			config: {
-				D1_IMPORTS: betaD1Shims,
-			},
-		},
 	];
+
+	// If using watch, build result will not be returned
+	// This plugin will retreive the build result on the first build
+	let initialBuildResult: (result: esbuild.BuildResult) => void;
+	const initialBuildResultPromise = new Promise<esbuild.BuildResult>(
+		(resolve) => (initialBuildResult = resolve)
+	);
+	const buildResultPlugin: esbuild.Plugin = {
+		name: "Initial build result plugin",
+		setup(build) {
+			build.onEnd(initialBuildResult);
+		},
+	};
 
 	const inject: string[] = injectOption ?? [];
 	if (checkFetch) inject.push(checkedFetchFileToInject);
@@ -318,7 +325,7 @@ export async function bundleWorker(
 	) {
 		inputEntry = await applyMiddlewareLoaderFacade(
 			entry,
-			tmpDir.path,
+			tmpDirPath,
 			activeMiddleware,
 			doBindings
 		);
@@ -368,7 +375,8 @@ export async function bundleWorker(
 				? [NodeGlobalsPolyfills({ buffer: true }), NodeModulesPolyfills()]
 				: []),
 			...(nodejsCompat ? [nodejsCompatPlugin] : []),
-			...[cloudflareInternalPlugin],
+			cloudflareInternalPlugin,
+			buildResultPlugin,
 			...(plugins || []),
 			configProviderPlugin(
 				Object.fromEntries(
@@ -381,18 +389,32 @@ export async function bundleWorker(
 		...(jsxFactory && { jsxFactory }),
 		...(jsxFragment && { jsxFragment }),
 		...(tsconfig && { tsconfig }),
-		watch,
 		// The default logLevel is "warning". So that we can rewrite errors before
 		// logging, we disable esbuild's default logging, and log build failures
 		// ourselves.
 		logLevel: "silent",
 	};
-	let result;
+
+	let result: esbuild.BuildResult<typeof buildOptions>;
+	let stop: BundleResult["stop"];
 	try {
-		result = await esbuild.build(buildOptions);
+		if (watch) {
+			const ctx = await esbuild.context(buildOptions);
+			await ctx.watch();
+			result = await initialBuildResultPromise;
+			if (result.errors.length > 0) {
+				throw new Error("Failed to build");
+			}
+
+			stop = async function () {
+				await ctx.dispose();
+			};
+		} else {
+			result = await esbuild.build(buildOptions);
+		}
 	} catch (e) {
 		if (!legacyNodeCompat && isBuildFailure(e))
-			rewriteNodeCompatBuildFailure(e, forPages);
+			rewriteNodeCompatBuildFailure(e.errors, forPages);
 		throw e;
 	}
 
@@ -430,10 +452,10 @@ export async function bundleWorker(
 		dependencies: entryPoint.dependencies,
 		resolvedEntryPointPath,
 		bundleType,
-		stop: result.stop,
+		stop,
 		sourceMapPath,
 		sourceMapMetadata: {
-			tmpDir: tmpDir.path,
+			tmpDir: tmpDirPath,
 			entryDirectory: entry.directory,
 		},
 		moduleCollector,
@@ -465,10 +487,6 @@ async function applyMiddlewareLoaderFacade(
 	// and then we load the middleware - this insertion and loading is
 	// different for each format.
 
-	// Make sure we resolve all files relative to the actual temporary directory,
-	// otherwise we'll have issues with source maps
-	tmpDirPath = fs.realpathSync(tmpDirPath);
-
 	// We need to import each of the middlewares, so we need to generate a
 	// random, unique identifier that we can use for the import.
 	// Middlewares are required to be default exports so we can import to any name.
@@ -490,9 +508,7 @@ async function applyMiddlewareLoaderFacade(
 		)
 		.join("\n");
 
-	const middlewareFns = middlewareIdentifiers
-		.map(([m]) => `${m}.default`)
-		.join(",");
+	const middlewareFns = middlewareIdentifiers.map(([m]) => `${m}.default`);
 
 	if (entry.format === "modules") {
 		const middlewareWrappers = middlewareIdentifiers
@@ -518,8 +534,8 @@ async function applyMiddlewareLoaderFacade(
 					...worker,
 					envWrappers,
 					middleware: [
-						${middlewareFns},
-						...(worker.middleware ? worker.middleware : []),
+						${middlewareFns.join(",")},
+            ...(worker.middleware ? worker.middleware : []),
 					].filter(Boolean)
 				}
 				export * from "${prepareFilePath(entry.file)}";

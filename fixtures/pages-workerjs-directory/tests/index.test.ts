@@ -24,40 +24,50 @@ describe("Pages _worker.js/ directory", () => {
 				"--r2=R2_REF=other_r2",
 			]
 		);
-		await expect(
-			fetch(`http://${ip}:${port}/`).then((resp) => resp.text())
-		).resolves.toContain("Hello, world!");
-		await expect(
-			fetch(`http://${ip}:${port}/wasm`).then((resp) => resp.text())
-		).resolves.toContain("3");
-		await expect(
-			fetch(`http://${ip}:${port}/static`).then((resp) => resp.text())
-		).resolves.toContain("static");
-		await expect(
-			fetch(`http://${ip}:${port}/other-script.js`).then((resp) => resp.text())
-		).resolves.toContain("other-script-test");
-		await expect(
-			fetch(`http://${ip}:${port}/d1`).then((resp) => resp.text())
-		).resolves.toContain('{"1":1}');
-		await expect(
-			fetch(`http://${ip}:${port}/kv`).then((resp) => resp.text())
-		).resolves.toContain("saved");
-		await expect(
-			fetch(`http://${ip}:${port}/r2`).then((resp) => resp.text())
-		).resolves.toContain("saved");
-		await stop();
+		try {
+			await expect(
+				fetch(`http://${ip}:${port}/`).then((resp) => resp.text())
+			).resolves.toContain("Hello, world!");
+			await expect(
+				fetch(`http://${ip}:${port}/wasm`).then((resp) => resp.text())
+			).resolves.toContain("3");
+			await expect(
+				fetch(`http://${ip}:${port}/static-js`).then((resp) => resp.text())
+			).resolves.toEqual("static import text (via js): 'js static'");
+			await expect(
+				fetch(`http://${ip}:${port}/static-mjs`).then((resp) => resp.text())
+			).resolves.toEqual("static import text (via mjs): 'mjs static'");
+			await expect(
+				fetch(`http://${ip}:${port}/other-script.js`).then((resp) =>
+					resp.text()
+				)
+			).resolves.toContain("other-script-test");
+			await expect(
+				fetch(`http://${ip}:${port}/other-other-script.mjs`).then((resp) =>
+					resp.text()
+				)
+			).resolves.toContain("other-other-script-test");
+			await expect(
+				fetch(`http://${ip}:${port}/d1`).then((resp) => resp.text())
+			).resolves.toContain('{"1":1}');
+			await expect(
+				fetch(`http://${ip}:${port}/kv`).then((resp) => resp.text())
+			).resolves.toContain("saved");
+			await expect(
+				fetch(`http://${ip}:${port}/r2`).then((resp) => resp.text())
+			).resolves.toContain("saved");
+		} finally {
+			await stop();
+		}
 
-		expect(existsSync(join(tmpDir, "./v3/d1/D1"))).toBeTruthy();
-		expect(existsSync(join(tmpDir, "./v3/d1/elsewhere"))).toBeTruthy();
-		expect(existsSync(join(tmpDir, "./v3/kv/KV"))).toBeTruthy();
-		expect(existsSync(join(tmpDir, "./v3/kv/other_kv"))).toBeTruthy();
-		expect(existsSync(join(tmpDir, "./v3/r2/R2"))).toBeTruthy();
-		expect(existsSync(join(tmpDir, "./v3/r2/other_r2"))).toBeTruthy();
+		expect(existsSync(join(tmpDir, "./v3/d1"))).toBeTruthy();
+		expect(existsSync(join(tmpDir, "./v3/kv"))).toBeTruthy();
+		expect(existsSync(join(tmpDir, "./v3/r2"))).toBeTruthy();
 	});
 
 	it("should bundle", async ({ expect }) => {
 		const dir = tmpdir();
-		const file = join(dir, "./_worker.bundle");
+		const file = join(dir, "_worker.bundle");
 
 		execSync(
 			`npx wrangler pages functions build --build-output-directory public --outfile ${file} --bindings="{\\"d1_databases\\":{\\"D1\\":{}}}"`,
@@ -68,8 +78,10 @@ describe("Pages _worker.js/ directory", () => {
 
 		const contents = readFileSync(file, "utf-8");
 
-		expect(contents).toContain("D1_ERROR");
+		expect(contents).not.toContain("D1_ERROR"); // No more D1 shim in the bundle!
 		expect(contents).toContain('"other-script-test"');
-		expect(contents).toContain('import staticMod from "./static.js";');
+		expect(contents).toContain('"other-other-script-test"');
+		expect(contents).toContain('import staticJsMod from "./static.js";');
+		expect(contents).toContain('import staticMjsMod from "./static.mjs";');
 	});
 });

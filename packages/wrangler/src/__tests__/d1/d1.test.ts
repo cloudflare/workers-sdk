@@ -34,10 +34,8 @@ describe("d1", () => {
 		  -v, --version                   Show version number  [boolean]
 
 		--------------------
-		🚧 D1 is currently in open alpha and is not recommended for production data and traffic
+		🚧 D1 is currently in open beta
 		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		🚧 To request features, visit https://community.cloudflare.com/c/developers/d1
-		🚧 To give feedback, visit https://discord.gg/cloudflaredev
 		--------------------"
 	`);
 	});
@@ -76,10 +74,8 @@ describe("d1", () => {
 		  -v, --version                   Show version number  [boolean]
 
 		--------------------
-		🚧 D1 is currently in open alpha and is not recommended for production data and traffic
+		🚧 D1 is currently in open beta
 		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		🚧 To request features, visit https://community.cloudflare.com/c/developers/d1
-		🚧 To give feedback, visit https://discord.gg/cloudflaredev
 		--------------------"
 	`);
 	});
@@ -113,10 +109,8 @@ describe("d1", () => {
 		  -v, --version                   Show version number  [boolean]
 
 		--------------------
-		🚧 D1 is currently in open alpha and is not recommended for production data and traffic
+		🚧 D1 is currently in open beta
 		🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		🚧 To request features, visit https://community.cloudflare.com/c/developers/d1
-		🚧 To give feedback, visit https://discord.gg/cloudflaredev
 		--------------------"
 	`);
 	});

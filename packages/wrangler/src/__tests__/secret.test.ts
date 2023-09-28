@@ -658,45 +658,53 @@ describe("wrangler secret", () => {
 				)
 			);
 
-			await runWrangler("secret:bulk ./secret.json --name script-name");
+			await expect(async () => {
+				await runWrangler("secret:bulk ./secret.json --name script-name");
+			}).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"🚨 4 secrets failed to upload"`
+			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-					"🌀 Creating the secrets for the Worker \\"script-name\\"
-					✨ Successfully created secret for key: secret-name-2
-					✨ Successfully created secret for key: secret-name-4
-					✨ Successfully created secret for key: secret-name-6
+			"🌀 Creating the secrets for the Worker \\"script-name\\"
+			✨ Successfully created secret for key: secret-name-2
+			✨ Successfully created secret for key: secret-name-4
+			✨ Successfully created secret for key: secret-name-6
 
-					Finished processing secrets JSON file:
-					✨ 3 secrets successfully uploaded
-					🚨 4 secrets failed to upload"
-			`);
+			Finished processing secrets JSON file:
+			✨ 3 secrets successfully uploaded
+
+			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+		`);
 			expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Error uploading secret for key: secret-name-1:[0m
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1muploading secret for key: secret-name-1:[0m
 
-			                  request to
+			      request to
 			  [4mhttps://api.cloudflare.com/client/v4/accounts/some-account-id/workers/scripts/script-name/secrets[0m
 			  failed, reason: Failed to create secret 1
 
 
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Error uploading secret for key: secret-name-3:[0m
+			[31mX [41;31m[[41;97mERROR[41;31m][0m [1muploading secret for key: secret-name-3:[0m
 
-			                  request to
+			      request to
 			  [4mhttps://api.cloudflare.com/client/v4/accounts/some-account-id/workers/scripts/script-name/secrets[0m
 			  failed, reason: Failed to create secret 3
 
 
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Error uploading secret for key: secret-name-5:[0m
+			[31mX [41;31m[[41;97mERROR[41;31m][0m [1muploading secret for key: secret-name-5:[0m
 
-			                  request to
+			      request to
 			  [4mhttps://api.cloudflare.com/client/v4/accounts/some-account-id/workers/scripts/script-name/secrets[0m
 			  failed, reason: Failed to create secret 5
 
 
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Error uploading secret for key: secret-name-7:[0m
+			[31mX [41;31m[[41;97mERROR[41;31m][0m [1muploading secret for key: secret-name-7:[0m
 
-			                  request to
+			      request to
 			  [4mhttps://api.cloudflare.com/client/v4/accounts/some-account-id/workers/scripts/script-name/secrets[0m
 			  failed, reason: Failed to create secret 7
+
+
+			[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 4 secrets failed to upload[0m
 
 			"
 		`);
@@ -725,28 +733,36 @@ describe("wrangler secret", () => {
 				)
 			);
 
-			await runWrangler("secret:bulk ./secret.json --name script-name");
+			await expect(async () => {
+				await runWrangler("secret:bulk ./secret.json --name script-name");
+			}).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"🚨 2 secrets failed to upload"`
+			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-					"🌀 Creating the secrets for the Worker \\"script-name\\"
+			"🌀 Creating the secrets for the Worker \\"script-name\\"
 
-					Finished processing secrets JSON file:
-					✨ 0 secrets successfully uploaded
-					🚨 2 secrets failed to upload"
-			`);
+			Finished processing secrets JSON file:
+			✨ 0 secrets successfully uploaded
+
+			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+		`);
 			expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Error uploading secret for key: secret-name-1:[0m
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1muploading secret for key: secret-name-1:[0m
 
-			                  request to
+			      request to
 			  [4mhttps://api.cloudflare.com/client/v4/accounts/some-account-id/workers/scripts/script-name/secrets[0m
 			  failed, reason: Failed to create secret 1
 
 
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Error uploading secret for key: secret-name-2:[0m
+			[31mX [41;31m[[41;97mERROR[41;31m][0m [1muploading secret for key: secret-name-2:[0m
 
-			                  request to
+			      request to
 			  [4mhttps://api.cloudflare.com/client/v4/accounts/some-account-id/workers/scripts/script-name/secrets[0m
 			  failed, reason: Failed to create secret 2
+
+
+			[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 2 secrets failed to upload[0m
 
 			"
 		`);

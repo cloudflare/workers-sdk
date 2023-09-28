@@ -36,6 +36,7 @@ export async function createUploadWorkerBundleContents(
 function createWorkerBundleFormData(workerBundle: BundleResult): FormData {
 	const mainModule = {
 		name: path.basename(workerBundle.resolvedEntryPointPath),
+		filePath: workerBundle.resolvedEntryPointPath,
 		content: readFileSync(workerBundle.resolvedEntryPointPath, {
 			encoding: "utf-8",
 		}),
@@ -53,12 +54,15 @@ function createWorkerBundleFormData(workerBundle: BundleResult): FormData {
 			wasm_modules: undefined,
 			text_blobs: undefined,
 			browser: undefined,
+			ai: undefined,
 			data_blobs: undefined,
 			durable_objects: undefined,
 			queues: undefined,
 			r2_buckets: undefined,
 			d1_databases: undefined,
+			vectorize: undefined,
 			constellation: undefined,
+			hyperdrive: undefined,
 			services: undefined,
 			analytics_engine_datasets: undefined,
 			dispatch_namespaces: undefined,

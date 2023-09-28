@@ -1,7 +1,7 @@
-From 65d5eb29077b8a5158799c0af0f559af667956ad Mon Sep 17 00:00:00 2001
+From 2307f6d059a3e555ba1e0d3e1ec4482b2617cbb6 Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Fri, 14 Apr 2023 01:54:40 +0100
-Subject: [PATCH 11/12] Support project-wide typescript on web
+Subject: [PATCH 11/13] Support project-wide typescript on web
 
 ---
  .../typescript-language-features/package.json |   2 +-

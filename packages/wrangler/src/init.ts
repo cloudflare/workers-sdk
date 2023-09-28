@@ -121,6 +121,10 @@ export type CronTriggersRes = {
 	];
 };
 
+function isNpm(packageManager: PackageManager) {
+	return packageManager.type === "npm";
+}
+
 export async function initHandler(args: InitArgs) {
 	await printWranglerBanner();
 
@@ -182,8 +186,8 @@ export async function initHandler(args: InitArgs) {
 		const c3Arguments = [
 			...getC3CommandFromEnv().split(" "),
 			fromDashScriptName,
-			...(yesFlag ? ["-y"] : []), // --yes arg for npx
-			"--",
+			...(yesFlag && isNpm(packageManager) ? ["-y"] : []), // --yes arg for npx
+			...(isNpm(packageManager) ? ["--"] : []),
 			"--type",
 			"pre-existing",
 			"--existing-script",
@@ -240,11 +244,11 @@ export async function initHandler(args: InitArgs) {
 				c3Arguments.push("--wrangler-defaults");
 			}
 
-			if (c3Arguments.length > 0) {
+			if (c3Arguments.length > 0 && isNpm(packageManager)) {
 				c3Arguments.unshift("--");
 			}
 
-			if (yesFlag) {
+			if (yesFlag && isNpm(packageManager)) {
 				c3Arguments.unshift("-y"); // arg for npx
 			}
 
@@ -1042,11 +1046,22 @@ export function mapBindings(bindings: WorkerMetadataBinding[]): RawConfig {
 							};
 						}
 						break;
+					case "ai":
+						{
+							configObj.ai = {
+								binding: binding.name,
+							};
+						}
+						break;
 					case "r2_bucket":
 						{
 							configObj.r2_buckets = [
 								...(configObj.r2_buckets ?? []),
-								{ binding: binding.name, bucket_name: binding.bucket_name },
+								{
+									binding: binding.name,
+									bucket_name: binding.bucket_name,
+									jurisdiction: binding.jurisdiction,
+								},
 							];
 						}
 						break;

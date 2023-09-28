@@ -13,11 +13,11 @@
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-tsconfig": "*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20221111.1",
-		"pages-plugin-example": "*",
+		"pages-plugin-example": "workspace:*",
 		"undici": "^5.9.1",
-		"wrangler": "*"
+		"wrangler": "workspace:*"
 	},
 	"engines": {
 		"node": ">=16.13"

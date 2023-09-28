@@ -428,6 +428,8 @@ interface EnvironmentNonInheritable {
 		bucket_name: string;
 		/** The preview name of this R2 bucket at the edge. */
 		preview_bucket_name?: string;
+		/** The jurisdiction that the bucket exists in. Default if not present. */
+		jurisdiction?: string;
 	}[];
 
 	/**
@@ -457,6 +459,22 @@ interface EnvironmentNonInheritable {
 	}[];
 
 	/**
+	 * Specifies Vectorize indexes that are bound to this Worker environment.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default `[]`
+	 * @nonInheritable
+	 */
+	vectorize: {
+		/** The binding name used to refer to the Vectorize index in the worker. */
+		binding: string;
+		/** The name of the index. */
+		index_name: string;
+	}[];
+
+	/**
 	 * Specifies Constellation projects that are bound to this Worker environment.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
@@ -470,6 +488,22 @@ interface EnvironmentNonInheritable {
 		binding: string;
 		/** The id of the project. */
 		project_id: string;
+	}[];
+
+	/**
+	 * Specifies Hyperdrive configs that are bound to this Worker environment.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default `[]`
+	 * @nonInheritable
+	 */
+	hyperdrive: {
+		/** The binding name used to refer to the project in the worker. */
+		binding: string;
+		/** The id of the database. */
+		id: string;
 	}[];
 
 	/**
@@ -512,6 +546,15 @@ interface EnvironmentNonInheritable {
 	 * A browser that will be usable from the worker.
 	 */
 	browser:
+		| {
+				binding: string;
+		  }
+		| undefined;
+
+	/**
+	 * Binding to the AI project.
+	 */
+	ai:
 		| {
 				binding: string;
 		  }

@@ -1,6 +1,6 @@
 {
 	"name": "pages-workerjs-directory",
-	"version": "0.0.0",
+	"version": "0.0.1",
 	"private": true,
 	"sideEffects": false,
 	"scripts": {
@@ -12,7 +12,8 @@
 	},
 	"devDependencies": {
 		"undici": "^5.9.1",
-		"wrangler": "*"
+		"wrangler": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*"
 	},
 	"engines": {
 		"node": ">=16.13"

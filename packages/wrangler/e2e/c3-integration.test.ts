@@ -21,6 +21,7 @@ describe("c3 integration", () => {
 	let workersDev: string | null = null;
 	let runInRoot: typeof shellac;
 	let runInWorker: typeof shellac;
+	let c3Packed: string;
 	let normalize: (str: string) => string;
 
 	beforeAll(async () => {
@@ -31,20 +32,26 @@ describe("c3 integration", () => {
 		runInWorker = shellac.in(workerPath).env(process.env);
 		normalize = (str) =>
 			normalizeOutput(str, { [workerName]: "smoke-test-worker" });
+
+		const pathToC3 = path.resolve(__dirname, "../../create-cloudflare");
+		const { stdout: version } = await shellac.in(pathToC3)`
+			$ pnpm pack --pack-destination ./pack
+			$ ls pack`;
+
+		c3Packed = path.join(pathToC3, "pack", version);
 	});
 
 	it("init project via c3", async () => {
-		const pathToC3 = path.resolve(__dirname, "../../create-cloudflare");
 		const env = {
 			...process.env,
-			WRANGLER_C3_COMMAND: `exec ${pathToC3}`,
+			WRANGLER_C3_COMMAND: `--package ${c3Packed} dlx create-cloudflare`,
 			GIT_AUTHOR_NAME: "test-user",
 			GIT_AUTHOR_EMAIL: "test-user@cloudflare.com",
 			GIT_COMMITTER_NAME: "test-user",
 			GIT_COMMITTER_EMAIL: "test-user@cloudflare.com",
 		};
 
-		await runInRoot.env(env)`$ ${WRANGLER} init ${workerName} --yes`;
+		await runInRoot.env(env)`$$ ${WRANGLER} init ${workerName} --yes`;
 
 		expect(existsSync(workerPath)).toBe(true);
 	});

@@ -1,0 +1,60 @@
+name: Deploy all Pages sites
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [synchronize, opened, reopened, labeled, unlabeled]
+
+# There's a fair amount of manual duplication in this file, but it's unfortunately all needed
+# In particular, GH Actions doesn't support the `matrix` context in `if` conditions, and so
+# using a matrix would make it impossible to skip a deploy at the job level
+jobs:
+  wrangler-devtools:
+    name: Wrangler DevTools
+    if: github.repository_owner == 'cloudflare' && (github.event_name != 'pull_request' || (github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'preview:wrangler-devtools' )))
+    uses: ./.github/workflows/deploy-pages-project.yml
+    with:
+      package: "wrangler-devtools"
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+  # Quick Edit requires yarn, so needs fairly specific logic
+  quick-edit:
+    name: Quick Edit
+    if: github.repository_owner == 'cloudflare' && (github.event_name != 'pull_request' || (github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'preview:quick-edit' )))
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+        env:
+          node-version: 16.14
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Build Quick Edit
+        run: cd packages/quick-edit && yarn setup && yarn custom:build
+        env:
+          NPM_PUBLISH_TOKEN: NOT_USED # yarn will error if the env var from .npmrc can't be interpolated
+
+      - name: Publish Quick Edit
+        run: pnpm --filter quick-edit run deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+  workers-playground:
+    name: Workers Playground
+    if: github.repository_owner == 'cloudflare' && (github.event_name != 'pull_request' || (github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'preview:workers-playground' )))
+    uses: ./.github/workflows/deploy-pages-project.yml
+    with:
+      package: "workers-playground"
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

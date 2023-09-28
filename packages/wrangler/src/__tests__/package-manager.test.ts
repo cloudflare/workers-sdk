@@ -5,6 +5,20 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 
 const { getPackageManager, getPackageManagerName } =
 	jest.requireActual("../package-manager");
+
+function mockUserAgent(userAgent = "npm") {
+	let original: string | undefined;
+	beforeEach(() => {
+		// eslint-disable-next-line turbo/no-undeclared-env-vars
+		original = process.env.npm_config_user_agent;
+		// eslint-disable-next-line turbo/no-undeclared-env-vars
+		process.env.npm_config_user_agent = userAgent;
+	});
+	afterEach(() => {
+		// eslint-disable-next-line turbo/no-undeclared-env-vars
+		process.env.npm_config_user_agent = original;
+	});
+}
 interface TestCase {
 	npm: boolean;
 	pnpm: boolean;
@@ -216,6 +230,7 @@ const testCases: TestCase[] = [
 ];
 
 describe("getPackageManager()", () => {
+	mockUserAgent();
 	runInTempDir();
 	mockConsoleMethods();
 

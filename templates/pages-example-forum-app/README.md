@@ -23,14 +23,12 @@ This repo contains example code for a forum applications that uses the following
 To create a `my-project` directory using this template, run:
 
 ```sh
-$ npm init cloudflare my-project pages-example-forum-app
+$ npx wrangler generate my-project pages-example-forum-app
 # or
-$ yarn create cloudflare my-project pages-example-forum-app
+$ yarn wrangler generate my-project pages-example-forum-app
 # or
-$ pnpm create cloudflare my-project pages-example-forum-app
+$ pnpm wrangler generate my-project pages-example-forum-app
 ```
-
-> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.
 
 To run this locally, ensure you have `Wrangler` version `>=16.7.0` then run
 

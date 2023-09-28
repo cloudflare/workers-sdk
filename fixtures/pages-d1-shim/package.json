@@ -1,6 +1,6 @@
 {
 	"name": "pages-d1-shim",
-	"version": "0.0.0",
+	"version": "0.0.1",
 	"private": true,
 	"sideEffects": false,
 	"scripts": {
@@ -12,9 +12,9 @@
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-tsconfig": "*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
 		"undici": "^5.9.1",
-		"wrangler": "*"
+		"wrangler": "workspace:*"
 	},
 	"engines": {
 		"node": ">=16.13"

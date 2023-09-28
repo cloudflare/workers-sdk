@@ -26,11 +26,11 @@ import {
 	putKVBulkKeyValue,
 	putKVKeyValue,
 	unexpectedKVKeyValueProps,
-	localGateway,
+	usingLocalNamespace,
 } from "./helpers";
 import type { EventNames } from "../metrics";
 import type { CommonYargsArgv } from "../yargs-types";
-import type { KeyValue } from "./helpers";
+import type { KeyValue, NamespaceKeyInfo } from "./helpers";
 
 export function kvNamespace(kvYargs: CommonYargsArgv) {
 	return kvYargs
@@ -235,7 +235,7 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 					})
 					.option("persist-to", {
 						type: "string",
-						describe: "Directory for local persistance",
+						describe: "Directory for local persistence",
 					})
 					.check(demandOneOfOption("value", "path"));
 			},
@@ -265,19 +265,17 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 
 				let metricEvent: EventNames;
 				if (args.local) {
-					const kvGateway = localGateway(
+					await usingLocalNamespace(
 						args.persistTo,
 						config.configPath,
-						namespaceId
+						namespaceId,
+						(namespace) =>
+							namespace.put(key, new Blob([value]).stream(), {
+								expiration,
+								expirationTtl: ttl,
+								metadata,
+							})
 					);
-
-					const blob = new Blob([value]);
-					await kvGateway.put(key, blob.stream(), {
-						expiration: expiration,
-						expirationTtl: ttl,
-						metadata: metadata,
-						valueLengthHint: blob.size,
-					});
 
 					metricEvent = "write kv key-value (local)";
 				} else {
@@ -332,7 +330,7 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 					})
 					.option("persist-to", {
 						type: "string",
-						describe: "Directory for local persistance",
+						describe: "Directory for local persistence",
 					});
 			},
 			async ({ prefix, ...args }) => {
@@ -340,15 +338,17 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 				const config = readConfig(args.config, args);
 				const namespaceId = getKVNamespaceId(args, config);
 
-				let result;
+				let result: NamespaceKeyInfo[];
 				let metricEvent: EventNames;
 				if (args.local) {
-					const kvGateway = localGateway(
+					const listResult = await usingLocalNamespace(
 						args.persistTo,
 						config.configPath,
-						namespaceId
+						namespaceId,
+						(namespace) => namespace.list({ prefix })
 					);
-					result = await kvGateway.list();
+					result = listResult.keys as NamespaceKeyInfo[];
+
 					metricEvent = "list kv keys (local)";
 				} else {
 					const accountId = await requireAuth(config);
@@ -405,7 +405,7 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 					})
 					.option("persist-to", {
 						type: "string",
-						describe: "Directory for local persistance",
+						describe: "Directory for local persistence",
 					});
 			},
 			async ({ key, ...args }) => {
@@ -415,20 +415,23 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 				let bufferKVValue;
 				let metricEvent: EventNames;
 				if (args.local) {
-					const kvGateway = localGateway(
+					const val = await usingLocalNamespace(
 						args.persistTo,
 						config.configPath,
-						namespaceId
+						namespaceId,
+						async (namespace) => {
+							const stream = await namespace.get(key, "stream");
+							// Note `stream` is only valid inside this closure
+							return stream === null ? null : await arrayBuffer(stream);
+						}
 					);
 
-					const val = (await kvGateway.get(key))?.value;
-
-					if (val === undefined) {
+					if (val === null) {
 						logger.log("Value not found");
 						return;
 					}
 
-					bufferKVValue = Buffer.from(await arrayBuffer(val));
+					bufferKVValue = Buffer.from(val);
 					metricEvent = "read kv value (local)";
 				} else {
 					const accountId = await requireAuth(config);
@@ -481,7 +484,7 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 					})
 					.option("persist-to", {
 						type: "string",
-						describe: "Directory for local persistance",
+						describe: "Directory for local persistence",
 					});
 			},
 			async ({ key, ...args }) => {
@@ -493,13 +496,13 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 
 				let metricEvent: EventNames;
 				if (args.local) {
-					const kvGateway = localGateway(
+					await usingLocalNamespace(
 						args.persistTo,
 						config.configPath,
-						namespaceId
+						namespaceId,
+						(namespace) => namespace.delete(key)
 					);
 
-					await kvGateway.delete(key);
 					metricEvent = "delete kv key-value (local)";
 				} else {
 					const accountId = await requireAuth(config);
@@ -547,7 +550,7 @@ export const kvBulk = (kvYargs: CommonYargsArgv) => {
 					})
 					.option("persist-to", {
 						type: "string",
-						describe: "Directory for local persistance",
+						describe: "Directory for local persistence",
 					});
 			},
 			async ({ filename, ...args }) => {
@@ -610,21 +613,20 @@ export const kvBulk = (kvYargs: CommonYargsArgv) => {
 
 				let metricEvent: EventNames;
 				if (args.local) {
-					const kvGateway = localGateway(
+					await usingLocalNamespace(
 						args.persistTo,
 						config.configPath,
-						namespaceId
+						namespaceId,
+						async (namespace) => {
+							for (const value of content) {
+								await namespace.put(value.key, value.value, {
+									expiration: value.expiration,
+									expirationTtl: value.expiration_ttl,
+									metadata: value.metadata,
+								});
+							}
+						}
 					);
-
-					for (const value of content) {
-						const blob = new Blob([value.value]);
-						await kvGateway.put(value.key, blob.stream(), {
-							expiration: value.expiration,
-							expirationTtl: value.expiration_ttl,
-							metadata: value.metadata,
-							valueLengthHint: blob.size,
-						});
-					}
 
 					metricEvent = "write kv key-values (bulk) (local)";
 				} else {
@@ -676,7 +678,7 @@ export const kvBulk = (kvYargs: CommonYargsArgv) => {
 					})
 					.option("persist-to", {
 						type: "string",
-						describe: "Directory for local persistance",
+						describe: "Directory for local persistence",
 					});
 			},
 			async ({ filename, ...args }) => {
@@ -725,15 +727,14 @@ export const kvBulk = (kvYargs: CommonYargsArgv) => {
 
 				let metricEvent: EventNames;
 				if (args.local) {
-					const kvGateway = localGateway(
+					await usingLocalNamespace(
 						args.persistTo,
 						config.configPath,
-						namespaceId
+						namespaceId,
+						async (namespace) => {
+							for (const key of content) await namespace.delete(key);
+						}
 					);
-
-					for (const key of content) {
-						await kvGateway.delete(key);
-					}
 
 					metricEvent = "delete kv key-values (bulk) (local)";
 				} else {

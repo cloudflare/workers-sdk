@@ -1,7 +1,7 @@
-From 1d05f8f1f80de3a2a506c7ccb8e88ece927fd69f Mon Sep 17 00:00:00 2001
+From 8f04eea76ae9da150dc69b3c100e80812fafa3ce Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Wed, 12 Apr 2023 18:46:53 +0100
-Subject: [PATCH 10/12] Remove dead code
+Subject: [PATCH 10/13] Remove dead code
 
 ---
  .../parts/activitybar/activitybarPart.ts      |  16 +-

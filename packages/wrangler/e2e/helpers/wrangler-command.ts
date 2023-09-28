@@ -6,4 +6,4 @@ assert(
 );
 
 export const WRANGLER =
-	process.env.WRANGLER ?? `npx --prefer-offline wrangler@beta`;
+	process.env.WRANGLER ?? `pnpm --silent dlx wrangler@beta`;

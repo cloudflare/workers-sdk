@@ -1,9 +1,10 @@
 import { TextPrompt, SelectPrompt, ConfirmPrompt } from "@clack/core";
 import { isCancel } from "@clack/prompts";
 import logUpdate from "log-update";
-import { shapes, cancel, space, status, newline, logRaw } from "./cli";
+import { shapes, cancel, space, status, newline } from "./cli";
 import { blue, dim, gray, brandColor, bold } from "./colors";
-import type { C3Arg, C3Args } from "types";
+import type { ChalkInstance } from "chalk";
+import type { C3Arg } from "types";
 
 const grayBar = gray(shapes.bar);
 const blCorner = gray(shapes.corners.bl);
@@ -48,29 +49,6 @@ export type PromptConfig =
 	| TextPromptConfig
 	| ConfirmPromptConfig
 	| SelectPromptConfig;
-
-export const processArgument = async <T>(
-	args: Partial<C3Args>,
-	name: keyof C3Args,
-	promptConfig: PromptConfig
-) => {
-	let value = args[name];
-	const renderSubmitted = getRenderers(promptConfig).submit;
-
-	// If the value has already been set via args, use that
-	if (value !== undefined) {
-		promptConfig.validate?.(value);
-
-		const lines = renderSubmitted({ value });
-		logRaw(lines.join("\n"));
-
-		return value as T;
-	}
-
-	value = await inputPrompt(promptConfig);
-
-	return value as T;
-};
 
 type RenderProps =
 	| Omit<SelectPrompt<Option>, "prompt">
@@ -150,7 +128,7 @@ const handleCancel = () => {
 	process.exit(0);
 };
 
-const getRenderers = (config: PromptConfig) => {
+export const getRenderers = (config: PromptConfig) => {
 	switch (config.type) {
 		case "select":
 			return getSelectRenderers(config);
@@ -259,10 +237,19 @@ const getConfirmRenderers = (config: ConfirmPromptConfig) => {
 	};
 };
 
-export const spinnerFrames = ["┤", "┘", "┴", "└", "├", "┌", "┬", "┐"];
+export type SpinnerStyle = keyof typeof spinnerFrames;
+
+export const spinnerFrames = {
+	clockwise: ["┤", "┘", "┴", "└", "├", "┌", "┬", "┐"],
+	vertical: ["▁", "▃", "▄", "▅", "▆", "▇", "▆", "▅", "▄", "▃"],
+};
+
 const ellipsisFrames = ["", ".", "..", "...", " ..", "  .", ""];
 
-export const spinner = () => {
+export const spinner = (
+	frames: string[] = spinnerFrames.clockwise,
+	color: ChalkInstance = brandColor
+) => {
 	// Alternative animations we considered. Keeping around in case we
 	// introduce different animations for different use cases.
 	// const frames = ["▁", "▃", "▄", "▅", "▆", "▇", "▆", "▅", "▄", "▃"];
@@ -272,7 +259,6 @@ export const spinner = () => {
 	// const frames = ["◐", "◓", "◑", "◒"];
 	// const frames = ["㊂", "㊀", "㊁"];
 
-	const color = brandColor;
 	const frameRate = 120;
 	let loop: NodeJS.Timer | null = null;
 	let startMsg: string;
@@ -296,7 +282,7 @@ export const spinner = () => {
 			clearLoop();
 			loop = setInterval(() => {
 				index++;
-				const spinnerFrame = spinnerFrames[index % spinnerFrames.length];
+				const spinnerFrame = frames[index % frames.length];
 				const ellipsisFrame = ellipsisFrames[index % ellipsisFrames.length];
 
 				if (msg) {
@@ -318,4 +304,8 @@ export const spinner = () => {
 			clearLoop();
 		},
 	};
+};
+
+export const isInteractive = () => {
+	return process.stdin.isTTY;
 };

@@ -1,17 +1,14 @@
 import { runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import { getFrameworkVersion } from "../index";
+import { getFrameworkCli } from "../index";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
 const { npm, dlx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
-	const version = getFrameworkVersion(ctx);
-	await runFrameworkGenerator(
-		ctx,
-		`${dlx} create-vue@${version} ${ctx.project.name}`
-	);
+	const cli = getFrameworkCli(ctx);
+	await runFrameworkGenerator(ctx, `${dlx} ${cli} ${ctx.project.name}`);
 };
 
 const config: FrameworkConfig = {

@@ -571,6 +571,12 @@ export const getBindingNames = (value: unknown): string[] => {
 	} else if (isNamespaceList(value)) {
 		return value.map(({ binding }) => binding);
 	} else if (isRecord(value)) {
+		// browser and AI bindings are single values with a similar shape
+		// { binding = "name" }
+		if (value["binding"] !== undefined) {
+			return [value["binding"] as string];
+		}
+
 		return Object.keys(value).filter((k) => value[k] !== undefined);
 	} else {
 		return [];

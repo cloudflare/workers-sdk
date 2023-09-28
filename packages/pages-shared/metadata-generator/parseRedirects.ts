@@ -50,7 +50,7 @@ export function parseRedirects(input: string): ParsedRedirects {
 
 		const [str_from, str_to, str_status = "302"] = tokens as RedirectLine;
 
-		const fromResult = validateUrl(str_from, true, false, false);
+		const fromResult = validateUrl(str_from, true, true, false, false);
 		if (fromResult[0] === undefined) {
 			invalid.push({
 				line,
@@ -88,7 +88,7 @@ export function parseRedirects(input: string): ParsedRedirects {
 			}
 		}
 
-		const toResult = validateUrl(str_to, false, true, true);
+		const toResult = validateUrl(str_to, false, false, true, true);
 		if (toResult[0] === undefined) {
 			invalid.push({
 				line,

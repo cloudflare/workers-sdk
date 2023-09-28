@@ -31,7 +31,6 @@ export const Handler = withConfig<HandlerOptions>(
 		if (json) {
 			logger.log(JSON.stringify(dbs, null, 2));
 		} else {
-			logger.log(d1BetaWarning);
 			logger.log(renderToString(<Table data={dbs}></Table>));
 		}
 	}

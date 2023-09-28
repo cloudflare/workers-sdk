@@ -7,7 +7,6 @@ import { render } from "ink";
 import React from "react";
 import { findWranglerToml, printBindings, readConfig } from "./config";
 import { getEntry } from "./deployment-bundle/entry";
-import { identifyD1BindingsAsBeta } from "./deployment-bundle/worker";
 import Dev from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
 import { getLocalPersistencePath } from "./dev/get-local-persistence-path";
@@ -320,6 +319,7 @@ export type AdditionalDevProps = {
 		binding: string;
 		bucket_name: string;
 		preview_bucket_name?: string;
+		jurisdiction?: string;
 	}[];
 	d1Databases?: Environment["d1_databases"];
 	processEntrypoint?: boolean;
@@ -845,14 +845,14 @@ function getBindings(
 	const bindings = {
 		kv_namespaces: [
 			...(configParam.kv_namespaces || []).map(
-				({ binding, preview_id, id: _id }) => {
-					// In `dev`, we make folks use a separate kv namespace called
+				({ binding, preview_id, id }) => {
+					// In remote `dev`, we make folks use a separate kv namespace called
 					// `preview_id` instead of `id` so that they don't
 					// break production data. So here we check that a `preview_id`
 					// has actually been configured.
 					// This whole block of code will be obsoleted in the future
 					// when we have copy-on-write for previews on edge workers.
-					if (!preview_id) {
+					if (!preview_id && !local) {
 						// TODO: This error has to be a _lot_ better, ideally just asking
 						// to create a preview namespace for the user automatically
 						throw new Error(
@@ -861,7 +861,7 @@ function getBindings(
 					}
 					return {
 						binding,
-						id: preview_id,
+						id: preview_id ?? id,
 					};
 				}
 			),
@@ -876,6 +876,7 @@ function getBindings(
 		wasm_modules: configParam.wasm_modules,
 		text_blobs: configParam.text_blobs,
 		browser: configParam.browser,
+		ai: configParam.ai,
 		data_blobs: configParam.data_blobs,
 		durable_objects: {
 			bindings: [
@@ -890,17 +891,18 @@ function getBindings(
 		],
 		r2_buckets: [
 			...(configParam.r2_buckets?.map(
-				({ binding, preview_bucket_name, bucket_name: _bucket_name }) => {
+				({ binding, preview_bucket_name, bucket_name, jurisdiction }) => {
 					// same idea as kv namespace preview id,
 					// same copy-on-write TODO
-					if (!preview_bucket_name) {
+					if (!preview_bucket_name && !local) {
 						throw new Error(
 							`In development, you should use a separate r2 bucket than the one you'd use in production. Please create a new r2 bucket with "wrangler r2 bucket create <name>" and add its name as preview_bucket_name to the r2_buckets "${binding}" in your wrangler.toml`
 						);
 					}
 					return {
 						binding,
-						bucket_name: preview_bucket_name,
+						bucket_name: preview_bucket_name ?? bucket_name,
+						jurisdiction,
 					};
 				}
 			) || []),
@@ -916,7 +918,7 @@ function getBindings(
 			capnp: configParam.unsafe.capnp,
 		},
 		logfwdr: configParam.logfwdr,
-		d1_databases: identifyD1BindingsAsBeta([
+		d1_databases: [
 			...(configParam.d1_databases ?? []).map((d1Db) => {
 				const database_id = d1Db.preview_database_id
 					? d1Db.preview_database_id
@@ -934,8 +936,10 @@ function getBindings(
 				return { ...d1Db, database_id };
 			}),
 			...(args.d1Databases || []),
-		]),
+		],
+		vectorize: configParam.vectorize,
 		constellation: configParam.constellation,
+		hyperdrive: configParam.hyperdrive,
 	};
 
 	return bindings;
