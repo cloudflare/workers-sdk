@@ -390,8 +390,7 @@ export const Handler = async ({
 						logger.warn(
 							getFunctionsNoRoutesWarning(functionsDirectory, "skipping")
 						);
-					}
-					if (e instanceof FunctionsBuildError) {
+					} else if (e instanceof FunctionsBuildError) {
 						logger.warn(
 							getFunctionsBuildWarning(functionsDirectory, e.message)
 						);
