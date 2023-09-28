@@ -5,6 +5,7 @@ import { join, resolve } from "node:path";
 import { watch } from "chokidar";
 import * as esbuild from "esbuild";
 import { unstable_dev } from "../api";
+import { isBuildFailure } from "../deployment-bundle/bundle";
 import { esbuildAliasExternalPlugin } from "../deployment-bundle/esbuild-plugins/alias-external";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
@@ -32,7 +33,6 @@ import type {
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type { RoutesJSONSpec } from "./functions/routes-transformation";
-import { isBuildFailure } from "../deployment-bundle/bundle";
 
 /*
  * DURABLE_OBJECTS_BINDING_REGEXP matches strings like:
