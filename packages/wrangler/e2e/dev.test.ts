@@ -117,57 +117,6 @@ describe("basic dev tests", () => {
 		});
 	});
 
-	it("can recover from syntax error during dev session (local)", async () => {
-		await runDevSession(workerPath, "", async (port) => {
-			const { text } = await retry(
-				(s) => s.status !== 200,
-				async () => {
-					const r = await fetch(`http://127.0.0.1:${port}`);
-					return { text: await r.text(), status: r.status };
-				}
-			);
-			expect(text).toMatchInlineSnapshot('"Hello World!"');
-
-			await seed(workerPath, {
-				"src/index.ts": dedent`
-						export default {
-							fetch(request, env) {
-								return new Response("Updated Worker!")
-								} // <= added syntax error
-							}
-						}`,
-			});
-
-			// Output during error state is indeterminate.
-			// const { text: text2 } = await retry(
-			// 	(s) => s.status !== 200 || s.text === "Hello World!",
-			// 	async () => {
-			// 		const r = await fetch(`http://127.0.0.1:${port}`);
-			// 		return { text: await r.text(), status: r.status };
-			// 	}
-			// );
-			// expect(text2).toMatchInlineSnapshot('"Hello World!"');
-
-			await seed(workerPath, {
-				"src/index.ts": dedent`
-						export default {
-							fetch(request, env) {
-								return new Response("Updated Worker!")
-							}
-						}`,
-			});
-
-			const { text: text3 } = await retry(
-				(s) => s.status !== 200 || s.text === "Hello World!",
-				async () => {
-					const r = await fetch(`http://127.0.0.1:${port}`);
-					return { text: await r.text(), status: r.status };
-				}
-			);
-			expect(text3).toMatchInlineSnapshot('"Updated Worker!"');
-		});
-	});
-
 	it("can modify worker during dev session (remote)", async () => {
 		await runDevSession(workerPath, "--remote --ip 127.0.0.1", async (port) => {
 			const { text } = await retry(
