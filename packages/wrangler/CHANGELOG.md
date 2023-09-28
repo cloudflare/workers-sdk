@@ -1,5 +1,17 @@
 # wrangler
 
+## 3.10.1
+
+### Patch Changes
+
+- [#4041](https://github.com/cloudflare/workers-sdk/pull/4041) [`6b1c327d`](https://github.com/cloudflare/workers-sdk/commit/6b1c327d00befb6d95a88f4451547457b1927dd4) Thanks [@elithrar](https://github.com/elithrar)! - Fixed a bug in Vectorize that send preset configurations with the wrong key. This was patched on the server-side to work around this for users in the meantime.
+
+* [#4054](https://github.com/cloudflare/workers-sdk/pull/4054) [`f8c52b93`](https://github.com/cloudflare/workers-sdk/commit/f8c52b938dd6a7ccf25fa54bd73e8f6206808ad4) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: allow `wrangler pages dev` sessions to be reloaded
+
+  Previously, `wrangler pages dev` attempted to send messages on a closed IPC
+  channel when sources changed, resulting in an `ERR_IPC_CHANNEL_CLOSED` error.
+  This change ensures the channel stays open until the user exits `wrangler pages dev`.
+
 ## 3.10.0
 
 ### Minor Changes
