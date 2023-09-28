@@ -1,4 +1,3 @@
-import { mkdirSync } from "fs";
 import { logRaw, updateStatus } from "helpers/cli";
 import { blue, brandColor, dim } from "helpers/colors";
 import { installPackages, runFrameworkGenerator } from "helpers/command";
