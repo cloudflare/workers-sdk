@@ -10,7 +10,8 @@ import type {
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 
-const VECTORIZE_UPSERT_BATCH_SIZE = 5_000;
+const VECTORIZE_MAX_BATCH_SIZE = 1_000;
+const VECTORIZE_UPSERT_BATCH_SIZE = VECTORIZE_MAX_BATCH_SIZE;
 const VECTORIZE_MAX_UPSERT_VECTOR_RECORDS = 100_000;
 
 export function options(yargs: CommonYargsArgv) {
@@ -47,6 +48,12 @@ export async function handler(
 ) {
 	const config = readConfig(args.config, args);
 	const rl = createInterface({ input: createReadStream(args.file) });
+
+	if (Number(args.batchSize) > VECTORIZE_MAX_BATCH_SIZE) {
+		logger.error(
+			`🚨 Vectorize currently limits upload batches to ${VECTORIZE_MAX_BATCH_SIZE} records at a time.`
+		);
+	}
 
 	let vectorInsertCount = 0;
 	for await (const batch of getBatchFromFile(rl, args.batchSize)) {
