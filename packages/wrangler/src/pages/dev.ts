@@ -1,6 +1,6 @@
 import { execSync, spawn } from "node:child_process";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
-import { homedir, tmpdir } from "node:os";
+import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { watch } from "chokidar";
 import * as esbuild from "esbuild";
@@ -25,7 +25,7 @@ import {
 	traverseAndBuildWorkerJSDirectory,
 } from "./functions/buildWorker";
 import { validateRoutes } from "./functions/routes-validation";
-import { CLEANUP, CLEANUP_CALLBACKS } from "./utils";
+import { CLEANUP, CLEANUP_CALLBACKS, realTmpdir } from "./utils";
 import type { CfModule } from "../deployment-bundle/worker";
 import type { AdditionalDevProps } from "../dev";
 import type {
@@ -315,7 +315,7 @@ export const Handler = async ({
 			// We want to actually run the `_worker.js` script through the bundler
 			// So update the final path to the script that will be uploaded and
 			// change the `runBuild()` function to bundle the `_worker.js`.
-			scriptPath = join(tmpdir(), `./bundledWorker-${Math.random()}.mjs`);
+			scriptPath = join(realTmpdir(), `./bundledWorker-${Math.random()}.mjs`);
 			runBuild = async () => {
 				try {
 					await buildRawWorker({
@@ -345,7 +345,7 @@ export const Handler = async ({
 		});
 	} else if (usingFunctions) {
 		// Try to use Functions
-		scriptPath = join(tmpdir(), `./functionsWorker-${Math.random()}.mjs`);
+		scriptPath = join(realTmpdir(), `./functionsWorker-${Math.random()}.mjs`);
 
 		if (legacyNodeCompat) {
 			console.warn(
@@ -483,7 +483,7 @@ export const Handler = async ({
 				validateRoutes(JSON.parse(routesJSONContents), directory);
 
 				entrypoint = join(
-					tmpdir(),
+					realTmpdir(),
 					`${Math.random().toString(36).slice(2)}.js`
 				);
 				await runBuild(scriptPath, entrypoint, routesJSONContents);

@@ -1,5 +1,4 @@
 import { access, cp, lstat, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { build as esBuild } from "esbuild";
 import { nanoid } from "nanoid";
@@ -8,6 +7,7 @@ import traverseModuleGraph from "../../deployment-bundle/traverse-module-graph";
 import { FatalError } from "../../errors";
 import { logger } from "../../logger";
 import { getBasePath } from "../../paths";
+import { realTmpdir } from "../utils";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { CfModule } from "../../deployment-bundle/worker";
 import type { Plugin } from "esbuild";
@@ -30,7 +30,7 @@ export type Options = {
 
 export function buildWorker({
 	routesModule,
-	outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`),
+	outfile = join(realTmpdir(), `./functionsWorker-${Math.random()}.js`),
 	outdir,
 	minify = false,
 	sourcemap = false,
@@ -180,7 +180,7 @@ export type RawOptions = {
  */
 export function buildRawWorker({
 	workerScriptPath,
-	outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`),
+	outfile = join(realTmpdir(), `./functionsWorker-${Math.random()}.js`),
 	outdir,
 	directory,
 	bundle = true,
@@ -273,7 +273,7 @@ export async function traverseAndBuildWorkerJSDirectory({
 		]
 	);
 
-	const outfile = join(tmpdir(), `./bundledWorker-${Math.random()}.mjs`);
+	const outfile = join(realTmpdir(), `./bundledWorker-${Math.random()}.mjs`);
 	const bundleResult = await buildRawWorker({
 		workerScriptPath: entrypoint,
 		bundle: true,
