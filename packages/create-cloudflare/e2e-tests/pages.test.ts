@@ -269,8 +269,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		const config = frameworkTests[framework];
 		if (isQuarantineMode() || config.quarantine) return;
 
-		const skip =
-			config.skip || (frameworkToTest && frameworkToTest !== framework);
+		const skip = frameworkToTest && frameworkToTest !== framework;
 
 		test.skipIf(skip)(
 			framework,
