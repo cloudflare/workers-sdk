@@ -42,6 +42,7 @@ export function wrap(env: Record<string, unknown>) {
 					return fetch(request);
 				},
 			};
+			Object.assign(facadeEnv[name], { constructor: function Fetcher() {} });
 		} else {
 			// This means there's no dev binding available.
 			// Let's use whatever's available, or put a shim with a message.
