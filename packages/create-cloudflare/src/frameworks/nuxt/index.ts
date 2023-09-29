@@ -10,10 +10,11 @@ const { npm, dlx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
 	const cli = getFrameworkCli(ctx);
+	const gitFlag = ctx.args.git ? `--gitInit` : `--no-gitInit`;
 
 	await runFrameworkGenerator(
 		ctx,
-		`${dlx} ${cli} init ${ctx.project.name} --packageManager ${npm}`
+		`${dlx} ${cli} init ${ctx.project.name} --packageManager ${npm} ${gitFlag}`
 	);
 
 	logRaw(""); // newline

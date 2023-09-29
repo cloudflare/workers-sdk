@@ -14,12 +14,6 @@ runs:
         node-version: ${{ env.node-version }}
         cache: "pnpm"
 
-    - name: Install Bun ${{ env.bun-version }}
-      uses: oven-sh/setup-bun@v1
-      with:
-        bun-version: ${{ env.bun-version }}
-        cache: "pnpm"
-
     - name: Install NPM Dependencies
       shell: bash
       run: pnpm install --frozen-lockfile
