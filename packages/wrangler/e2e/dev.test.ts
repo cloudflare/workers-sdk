@@ -47,7 +47,7 @@ describe("basic dev tests", () => {
 					name = "${workerName}"
 					main = "src/index.ts"
 					compatibility_date = "2023-01-01"
-					
+
 					[vars]
 					KEY = "value"
 			`,
@@ -101,7 +101,7 @@ describe("basic dev tests", () => {
 						name = "${workerName}"
 						main = "src/index.ts"
 						compatibility_date = "2023-01-01"
-						
+
 						[vars]
 						KEY = "updated"
 				`,
