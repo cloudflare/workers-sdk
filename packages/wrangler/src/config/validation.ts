@@ -1016,7 +1016,6 @@ function normalizeAndValidateEnvironment(
 	);
 
 	experimental(diagnostics, rawEnv, "unsafe");
-	experimental(diagnostics, rawEnv, "services");
 
 	const route = normalizeAndValidateRoute(diagnostics, topLevelEnv, rawEnv);
 
