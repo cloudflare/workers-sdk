@@ -16,7 +16,6 @@ const TEST_TIMEOUT = 1000 * 60 * 3;
 const frameworks = Object.keys(frameworkCliMap);
 
 type FrameworkTestConfig = RunnerConfig & {
-	skip?: true;
 	timeout?: number;
 	expectResponseToContain: string;
 	testCommitMessage: boolean;
