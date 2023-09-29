@@ -13,8 +13,6 @@ jobs:
     name: "Checks"
     strategy:
       matrix:
-        # TODO: add back windows
-        # os: [ubuntu-latest, windows-latest, macos-latest]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -63,7 +61,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        pm: [npm, pnpm]
+        pm: [npm, pnpm, bun]
         quarantine: [true, false]
     runs-on: ${{ matrix.os }}
     steps:
@@ -137,7 +135,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        pm: [npm, pnpm]
+        pm: [npm, pnpm, bun]
         quarantine: [true, false]
     runs-on: ${{ matrix.os }}
     steps:
