@@ -3,10 +3,12 @@ description: "Install dependencies, fetching from cache when possible"
 runs:
   using: "composite"
   steps:
-    - uses: pnpm/action-setup@v2
+    - name: Install pnpm
+      uses: pnpm/action-setup@v2
       with:
         version: 8
-    - name: Use Node.js ${{ env.node-version }}
+
+    - name: Install Node.js ${{ env.node-version }}
       uses: actions/setup-node@v3
       with:
         node-version: ${{ env.node-version }}

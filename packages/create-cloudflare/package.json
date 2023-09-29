@@ -34,6 +34,7 @@
 		"test:e2e:cleanup": "node -r esbuild-register scripts/e2eCleanup.ts",
 		"test:e2e:npm": "pnpm run build && TEST_PM=npm vitest run --config ./vitest-e2e.config.ts",
 		"test:e2e:pnpm": "pnpm run build && TEST_PM=pnpm vitest run --config ./vitest-e2e.config.ts",
+		"test:e2e:bun": "pnpm run build && TEST_PM=bun vitest run --config ./vitest-e2e.config.ts",
 		"test:unit": "vitest run --config ./vitest.config.ts",
 		"test:unit:watch": "vitest --config ./vitest.config.ts",
 		"watch": "node -r esbuild-register scripts/build.ts --watch"

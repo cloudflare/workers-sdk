@@ -7,14 +7,13 @@ on:
 
 env:
   node-version: 18.17.1
+  bun-version: 1.0.3
 
 jobs:
   check:
     name: "Checks"
     strategy:
       matrix:
-        # TODO: add back windows
-        # os: [ubuntu-latest, windows-latest, macos-latest]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -63,7 +62,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        pm: [npm, pnpm]
+        pm: [npm, pnpm, bun]
         quarantine: [true, false]
     runs-on: ${{ matrix.os }}
     steps:
@@ -74,6 +73,11 @@ jobs:
 
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
+
+      - name: Install Bun ${{ env.bun-version }}
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: ${{ env.bun-version }}
 
       - name: E2E Tests
         run: pnpm run --filter create-cloudflare test:e2e:${{matrix.pm}}
@@ -137,7 +141,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        pm: [npm, pnpm]
+        pm: [npm, pnpm, bun]
         quarantine: [true, false]
     runs-on: ${{ matrix.os }}
     steps:
@@ -148,6 +152,11 @@ jobs:
 
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
+
+      - name: Install Bun ${{ env.bun-version }}
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: ${{ env.bun-version }}
 
       - name: E2E Tests
         run: pnpm run --filter create-cloudflare test:e2e:${{matrix.pm}}

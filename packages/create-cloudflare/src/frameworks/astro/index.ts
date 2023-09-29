@@ -49,7 +49,7 @@ const config: FrameworkConfig = {
 		"--no-install",
 		"--no-git",
 		"--template",
-		"blog",
+		"basics",
 		"--typescript",
 		"strict",
 	],

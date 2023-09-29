@@ -140,7 +140,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 	// These are ordered based on speed and reliability for ease of debugging
 	const frameworkTests: Record<string, FrameworkTestConfig> = {
 		astro: {
-			expectResponseToContain: "Hello, Astronaut!",
+			expectResponseToContain: "Welcome to Astro",
 			testCommitMessage: true,
 		},
 		hono: {
@@ -175,15 +175,6 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		},
 		nuxt: {
 			expectResponseToContain: "Welcome to Nuxt!",
-			promptHandlers: [
-				{
-					matcher: /Which package manager would you like to use\?/,
-					input: [
-						...(process.env.TEST_PM === "pnpm" ? [keys.down] : []),
-						keys.enter,
-					],
-				},
-			],
 			overrides: {
 				packageScripts: {
 					build: "NITRO_PRESET=cloudflare-pages nuxt build",
