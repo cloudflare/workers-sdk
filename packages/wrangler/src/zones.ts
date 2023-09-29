@@ -22,7 +22,7 @@ export interface Zone {
  * ```
  * However, in the case of patterns that _can't_ be parsed as a hostname
  * (primarily the pattern `*/ /*`), we fall back to the `zone_name`
- * (and in the absence of that throw an error).
+ * (and in the absence of that return undefined).
  * @param route
  */
 export function getHostFromRoute(route: Route): string | undefined {
@@ -81,8 +81,12 @@ export function getHostFromUrl(urlLike: string): string | undefined {
 	}
 
 	// now we've done our best to make urlLike a valid url string which we can pass to `new URL()` to get the host
-	// if it still isn't, this will throw
-	return new URL(urlLike).host;
+	// if it still isn't, return undefined to indicate we couldn't infer a host
+	try {
+		return new URL(urlLike).host;
+	} catch {
+		return undefined;
+	}
 }
 
 /**
