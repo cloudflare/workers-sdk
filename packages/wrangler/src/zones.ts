@@ -65,12 +65,21 @@ export async function getZoneForRoute(route: Route): Promise<Zone | undefined> {
  * Given something that resembles a URL, try to extract a host from it.
  */
 export function getHostFromUrl(urlLike: string): string | undefined {
-	// strip leading * / *.
+	// if the urlLike-pattern uses a splat for the entire host and is only concerned with the pathname, we cannot infer a host
+	if (urlLike.startsWith("*/")) {
+		return undefined;
+	}
+
+	// if the urlLike-pattern uses a split for the sub-domain (*.example.com) or for the root-domain (*example.com), remove the wildcard parts
 	urlLike = urlLike.replace(/\*(\.)?/g, "");
 
+	// prepend a protocol if the pattern did not specify one
 	if (!(urlLike.startsWith("http://") || urlLike.startsWith("https://"))) {
 		urlLike = "http://" + urlLike;
 	}
+
+	// now urlLike is a valid url string which we can pass to `new URL()` to get the host
+
 	return new URL(urlLike).host;
 }
 
