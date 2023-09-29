@@ -3,9 +3,9 @@ import crypto from "node:crypto";
 import { tmpdir } from "os";
 import { join } from "path";
 import { spawn } from "cross-spawn";
-import { bgBlue } from "helpers/colors";
 import { sleep } from "helpers/common";
 import { spinnerFrames } from "helpers/interactive";
+import { detectPackageManager } from "helpers/packages";
 import type { SpinnerStyle } from "helpers/interactive";
 
 export const C3_E2E_PREFIX = "c3-e2e-";
@@ -46,11 +46,14 @@ export const runC3 = async ({
 
 	promptHandlers = [...promptHandlers];
 
+	const { name: pm } = detectPackageManager();
+
 	console.log(
-		bgBlue(
-			`${outputPrefix} Running C3 with command: \`${cmd} ${args.join(" ")}\``
-		)
+		`\x1b[44m${outputPrefix} Running C3 with command: \`${cmd} ${args.join(
+			" "
+		)}\` (using ${pm})\x1b[0m`
 	);
+
 	const stdout: string[] = [];
 	const stderr: string[] = [];
 
