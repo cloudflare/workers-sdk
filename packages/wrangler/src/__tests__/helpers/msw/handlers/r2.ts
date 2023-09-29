@@ -28,6 +28,22 @@ export const mswSuccessR2handlers = [
 			response.once(context.json(createFetchResult(null)))
 	),
 	rest.get(
+		"*/accounts/:accountId/r2/buckets/:bucketName/objects",
+		(_, response, context) =>
+			response.once(
+				context.json(
+					createFetchResult([
+						{
+							key: "wormhole-img.png",
+						},
+						{
+							key: "wormhole-img2.png",
+						},
+					])
+				)
+			)
+	),
+	rest.get(
 		"*/accounts/:accountId/r2/buckets/:bucketName/objects/:objectName",
 		(_, response, context) => {
 			const imageBuffer = Buffer.from("wormhole-img.png");
@@ -39,6 +55,7 @@ export const mswSuccessR2handlers = [
 			);
 		}
 	),
+
 	rest.put(
 		"*/accounts/:accountId/r2/buckets/:bucketName/objects/:objectName",
 		(_, response, context) =>

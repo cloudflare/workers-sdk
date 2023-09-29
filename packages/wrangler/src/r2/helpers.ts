@@ -17,6 +17,33 @@ export interface R2BucketInfo {
 	creation_date: string;
 }
 
+export interface R2Object {
+	key: string;
+	etag: string;
+	last_modified: string;
+	http_metadata: Record<string, string | number>;
+	custom_metadata: Record<string, string>;
+	size: number;
+}
+
+export type ListObjectsResultInfo = {
+	cursor: string;
+	per_page: number;
+	is_truncated: boolean;
+};
+
+export type ListObjectsRequest = {
+	cursor?: string;
+	per_page?: number;
+	prefix?: string;
+	start_after?: string;
+};
+
+export type ListObjectsResponse = {
+	result: R2Object[];
+	result_info?: ListObjectsResultInfo;
+};
+
 /**
  * Fetch a list of all the buckets under the given `accountId`.
  */
@@ -86,6 +113,28 @@ export function bucketAndKeyFromObjectPath(objectPath = ""): {
 	}
 
 	return { bucket: match[1], key: match[2] };
+}
+
+/**
+ * Fetch a list of all the objects under the given `accountId` and `bucketName`.
+ */
+export async function listR2Objects(
+	accountId: string,
+	bucketName: string,
+	params: ListObjectsRequest
+): Promise<ListObjectsResponse> {
+	const response = await fetchR2Objects(
+		`/accounts/${accountId}/r2/buckets/${bucketName}/objects?per_page=${
+			params.per_page ?? 1000
+		}${params.cursor ? "&cursor=" + encodeURIComponent(params.cursor) : ""}${
+			params.prefix ? "&prefix=" + encodeURIComponent(params.prefix) : ""
+		}${
+			params.start_after
+				? "&start_after=" + encodeURIComponent(params.start_after)
+				: ""
+		}`
+	);
+	return (await response.json()) as ListObjectsResponse;
 }
 
 /**

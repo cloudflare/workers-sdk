@@ -2,6 +2,7 @@ import { Blob } from "node:buffer";
 import * as fs from "node:fs";
 import * as stream from "node:stream";
 import { ReadableStream } from "node:stream/web";
+import globToRegexp from "glob-to-regexp";
 import prettyBytes from "pretty-bytes";
 import { readConfig } from "../config";
 import { FatalError } from "../errors";
@@ -17,6 +18,7 @@ import {
 	deleteR2Object,
 	getR2Object,
 	listR2Buckets,
+	listR2Objects,
 	putR2Object,
 	usingLocalBucket,
 } from "./helpers";
@@ -51,6 +53,65 @@ export function r2(r2Yargs: CommonYargsArgv) {
 	return r2Yargs
 		.command("object", "Manage R2 objects", (r2ObjectYargs) => {
 			return r2ObjectYargs
+				.command(
+					"filter <bucket> <pattern>",
+					"List objects in an R2 bucket that match a glob pattern",
+					(filterArgs) => {
+						return filterArgs
+							.positional("bucket", {
+								describe: "The name of the bucket",
+								type: "string",
+							})
+							.positional("pattern", {
+								describe:
+									"The glob pattern to test objects against (ex: *.png, folder-*/**)",
+								type: "string",
+							});
+					},
+					async (args) => {
+						const config = readConfig(args.config, args);
+
+						const accountId = await requireAuth(config);
+
+						if (!args.bucket) {
+							throw new Error("A bucket name is required.");
+						}
+
+						const re = globToRegexp(args.pattern ?? "", {
+							extended: true,
+							globstar: true,
+							flags: "i",
+						});
+
+						let done = false;
+						let cursor = "";
+						let start_after = "";
+						while (!done) {
+							const resp = await listR2Objects(accountId, args.bucket, {
+								cursor,
+								per_page: 1000,
+								start_after,
+							});
+
+							for (const obj of resp.result) {
+								if (re.test(obj.key)) {
+									logger.log(JSON.stringify(obj));
+									start_after = obj.key;
+								}
+							}
+
+							if (!resp.result_info) {
+								done = true;
+							} else {
+								cursor = resp.result_info.cursor;
+							}
+						}
+
+						await metrics.sendMetricsEvent("filter r2 objects", {
+							sendMetrics: config.send_metrics,
+						});
+					}
+				)
 				.command(
 					"get <objectPath>",
 					"Fetch an object from an R2 bucket",

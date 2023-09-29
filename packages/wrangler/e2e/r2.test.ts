@@ -50,6 +50,23 @@ describe("r2", () => {
 		expect(stderr).toMatchInlineSnapshot('""');
 	});
 
+	it("filter objects with match", async () => {
+		const { matches, matchErrors } = await run`
+			$ ${WRANGLER} r2 object filter ${bucketName} '**.txt'
+		`;
+		expect(normalize(matches)).contains(`{\\"key\\":\\"testr2/test-r2.txt\\"`);
+		expect(matchErrors).toMatchInlineSnapshot('""');
+	});
+
+	it("filter object with no match", async () => {
+		const { noMatches, noMatchErrors } = await run`
+		$ ${WRANGLER} r2 object filter ${bucketName} '**.png'
+		`;
+
+		expect(normalize(noMatches)).toMatchInlineSnapshot('""');
+		expect(noMatchErrors).toMatchInlineSnapshot('""');
+	});
+
 	it("download object", async () => {
 		const { stdout, stderr } = await run`
 			$ ${WRANGLER} r2 object get ${`${bucketName}/testr2`} --file test-r2o.txt

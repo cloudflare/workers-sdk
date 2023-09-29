@@ -284,6 +284,39 @@ describe("r2", () => {
 	});
 
 	describe("r2 object", () => {
+		it("should filter R2 objects from bucket", async () => {
+			await runWrangler(`r2 object filter bucketName-object-test *.png`);
+
+			expect(std.out).toContain(`{"key":"wormhole-img.png"`);
+			expect(std.out).toContain(`{"key":"wormhole-img2.png"`);
+		});
+
+		it("should not allow filtering objects without bucket and pattern", async () => {
+			await expect(
+				runWrangler(`r2 object filter`)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"Not enough non-option arguments: got 0, need at least 2"`
+			);
+
+			expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 2[0m
+
+			"
+		`);
+		});
+
+		it("should error if the bucket name to filter contains spaces", async () => {
+			await expect(
+				runWrangler("r2 object filter abc def ghi")
+			).rejects.toThrowErrorMatchingInlineSnapshot(`"Unknown argument: ghi"`);
+
+			expect(std.err).toMatchInlineSnapshot(`
+									"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: ghi[0m
+
+									"
+							`);
+		});
+
 		it("should download R2 object from bucket", async () => {
 			await runWrangler(
 				`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`

@@ -33,6 +33,7 @@ export type EventNames =
 	| "create r2 bucket"
 	| "list r2 buckets"
 	| "delete r2 bucket"
+	| "filter r2 objects"
 	| "login user"
 	| "logout user"
 	| "create pubsub namespace"

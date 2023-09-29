@@ -961,6 +961,9 @@ importers:
       esbuild:
         specifier: 0.17.19
         version: 0.17.19
+      glob-to-regexp:
+        specifier: ^0.4.1
+        version: 0.4.1
       miniflare:
         specifier: 3.20230922.0
         version: 3.20230922.0(supports-color@9.2.2)
@@ -1110,9 +1113,6 @@ importers:
       get-port:
         specifier: ^6.1.2
         version: 6.1.2
-      glob-to-regexp:
-        specifier: 0.4.1
-        version: 0.4.1
       http-terminator:
         specifier: ^3.2.0
         version: 3.2.0
