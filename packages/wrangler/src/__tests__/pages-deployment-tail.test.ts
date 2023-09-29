@@ -13,6 +13,7 @@ import type {
 	ScheduledEvent,
 	AlarmEvent,
 	EmailEvent,
+	TailEvent,
 	TailInfo,
 } from "../tail/createTail";
 import type { RequestInit } from "undici";
@@ -663,6 +664,7 @@ function isRequest(
 		| RequestEvent
 		| AlarmEvent
 		| EmailEvent
+		| TailEvent
 		| TailInfo
 		| undefined
 		| null

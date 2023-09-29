@@ -5,6 +5,7 @@ import type {
 	EmailEvent,
 	RequestEvent,
 	ScheduledEvent,
+	TailEvent,
 	TailInfo,
 	TailEventMessage,
 } from "./createTail";
@@ -50,6 +51,20 @@ export function prettyPrintLogs(data: WebSocket.RawData): void {
 		).toLocaleString();
 
 		logger.log(`Alarm @ ${datetime} - ${outcome}`);
+	} else if (isTailEvent(eventMessage.event)) {
+		const outcome = prettifyOutcome(eventMessage.outcome);
+		const datetime = new Date(eventMessage.eventTimestamp).toLocaleString();
+		const tailedScripts = new Set(
+			eventMessage.event.consumedEvents
+				.map((consumedEvent) => consumedEvent.scriptName)
+				.filter((scriptName) => !!scriptName)
+		);
+
+		logger.log(
+			`Tailing ${Array.from(tailedScripts).join(
+				","
+			)} - ${outcome} @ ${datetime}`
+		);
 	} else if (isTailInfo(eventMessage.event)) {
 		if (eventMessage.event.type === "overload") {
 			logger.log(`${chalk.red.bold(eventMessage.event.message)}`);
@@ -109,6 +124,10 @@ function isEmailEvent(event: TailEventMessage["event"]): event is EmailEvent {
  */
 function isAlarmEvent(event: TailEventMessage["event"]): event is AlarmEvent {
 	return Boolean(event && "scheduledTime" in event && !("cron" in event));
+}
+
+function isTailEvent(event: TailEventMessage["event"]): event is TailEvent {
+	return Boolean(event && "consumedEvents" in event);
 }
 
 function isTailInfo(event: TailEventMessage["event"]): event is TailInfo {

@@ -14,6 +14,7 @@ import type {
 	ScheduledEvent,
 	AlarmEvent,
 	EmailEvent,
+	TailEvent,
 	TailInfo,
 } from "../tail/createTail";
 import type { RequestInit } from "undici";
@@ -426,6 +427,18 @@ describe("tail", () => {
 			expect(std.out).toMatch(deserializeToJson(serializedMessage));
 		});
 
+		it("logs tail messages in json format", async () => {
+			const api = mockWebsocketAPIs();
+			await runWrangler("tail test-worker --format json");
+
+			const event = generateMockTailEvent(["some-worker", "some-worker"]);
+			const message = generateMockEventMessage({ event });
+			const serializedMessage = serialize(message);
+
+			api.ws.send(serializedMessage);
+			expect(std.out).toMatch(deserializeToJson(serializedMessage));
+		});
+
 		it("logs request messages in pretty format", async () => {
 			const api = mockWebsocketAPIs();
 			await runWrangler("tail test-worker --format pretty");
@@ -515,6 +528,32 @@ describe("tail", () => {
 			"Successfully created tail, expires at [mock expiration date]
 			Connected to test-worker, waiting for logs...
 			Email from:from@example.com to:to@example.com size:45416 @ [mock event timestamp] - Ok"
+		`);
+		});
+
+		it("logs tail messages in pretty format", async () => {
+			const api = mockWebsocketAPIs();
+			await runWrangler("tail test-worker --format pretty");
+
+			const event = generateMockTailEvent(["some-worker", "other-worker", ""]);
+			const message = generateMockEventMessage({ event });
+			const serializedMessage = serialize(message);
+
+			api.ws.send(serializedMessage);
+			expect(
+				std.out
+					.replace(
+						new Date(mockEventTimestamp).toLocaleString(),
+						"[mock event timestamp]"
+					)
+					.replace(
+						new Date(mockTailExpiration).toISOString(),
+						"[mock expiration date]"
+					)
+			).toMatchInlineSnapshot(`
+			"Successfully created tail, expires at [mock expiration date]
+			Connected to test-worker, waiting for logs...
+			Tailing some-worker,other-worker - Ok @ [mock event timestamp]"
 		`);
 		});
 
@@ -710,6 +749,7 @@ function isRequest(
 		| RequestEvent
 		| AlarmEvent
 		| EmailEvent
+		| TailEvent
 		| TailInfo
 		| undefined
 		| null
@@ -990,6 +1030,14 @@ function generateMockEmailEvent(opts?: Partial<EmailEvent>): EmailEvent {
 		mailFrom: opts?.mailFrom || mockEmailEventFrom,
 		rcptTo: opts?.rcptTo || mockEmailEventTo,
 		rawSize: opts?.rawSize || mockEmailEventSize,
+	};
+}
+
+function generateMockTailEvent(tailing: string[]): TailEvent {
+	return {
+		consumedEvents: tailing.map((tailedScript) => {
+			return { scriptName: tailedScript };
+		}),
 	};
 }
 

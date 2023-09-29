@@ -252,6 +252,7 @@ export type TailEventMessage = {
 		| ScheduledEvent
 		| AlarmEvent
 		| EmailEvent
+		| TailEvent
 		| TailInfo
 		| undefined
 		| null;
@@ -404,6 +405,22 @@ export type EmailEvent = {
 	 * Size of the email in bytes
 	 */
 	rawSize: number;
+};
+
+/**
+ * An event that was triggered for a tail receiving TailEventMessages
+ * Only seen when tailing a tail worker
+ */
+export type TailEvent = {
+	/**
+	 * A minimal representation of the TailEventMessages that were delivered to the tail handler
+	 */
+	consumedEvents: {
+		/**
+		 * The name of script being tailed
+		 */
+		scriptName?: string;
+	}[];
 };
 
 /**
