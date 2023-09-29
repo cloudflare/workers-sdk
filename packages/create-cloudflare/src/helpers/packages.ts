@@ -66,6 +66,15 @@ export const detectPackageManager = () => {
 				npx: "yarn",
 				dlx: "yarn",
 			};
+		case "bun":
+			return {
+				name,
+				version,
+				npm: "bun",
+				npx: "bunx",
+				dlx: "bunx",
+			};
+
 		case "npm":
 		default:
 			return {
