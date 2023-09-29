@@ -151,6 +151,9 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 	// These are ordered based on speed and reliability for ease of debugging
 	const frameworkTests: Record<string, FrameworkTestConfig> = {
 		astro: {
+			// This needs to be quarantined until @astrojs/cloudflare@7.4.0 is released
+			// https://github.com/withastro/astro/pull/8699
+			quarantine: true,
 			expectResponseToContain: "Hello, Astronaut!",
 			testCommitMessage: true,
 		},
