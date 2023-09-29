@@ -44,6 +44,8 @@ export const runC3 = async ({
 	const args = ["./dist/cli.js", ...argv];
 	const proc = spawn(cmd, args);
 
+	promptHandlers = [...promptHandlers];
+
 	console.log(
 		bgBlue(
 			`${outputPrefix} Running C3 with command: \`${cmd} ${args.join(" ")}\``
@@ -65,7 +67,7 @@ export const runC3 = async ({
 
 				if (currentDialog && currentDialog.matcher.test(line)) {
 					// Add a small sleep to avoid input race
-					await sleep(500);
+					await sleep(1000);
 
 					currentDialog.input.forEach((keystroke) => {
 						proc.stdin.write(keystroke);

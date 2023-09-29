@@ -16,7 +16,7 @@ const TEST_TIMEOUT = 1000 * 60 * 3;
 const frameworks = Object.keys(frameworkCliMap);
 
 type FrameworkTestConfig = RunnerConfig & {
-	skip?: true;
+	timeout?: number;
 	expectResponseToContain: string;
 	testCommitMessage: boolean;
 };
@@ -159,7 +159,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 			testCommitMessage: true,
 		},
 		gatsby: {
-			skip: true,
+			quarantine: true,
 			expectResponseToContain: "Gatsby!",
 			promptHandlers: [
 				{
@@ -168,6 +168,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 				},
 			],
 			testCommitMessage: true,
+			timeout: 1000 * 60 * 6,
 		},
 		hono: {
 			expectResponseToContain: "Hello Hono!",
@@ -258,8 +259,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		const config = frameworkTests[framework];
 		if (isQuarantineMode() || config.quarantine) return;
 
-		const skip =
-			config.skip || (frameworkToTest && frameworkToTest !== framework);
+		const skip = frameworkToTest && frameworkToTest !== framework;
 
 		test.skipIf(skip)(
 			framework,
@@ -269,7 +269,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 					frameworkTests[framework].testCommitMessage
 				);
 			},
-			{ retry: 3, timeout: TEST_TIMEOUT }
+			{ retry: 3, timeout: config.timeout || TEST_TIMEOUT }
 		);
 	});
 
