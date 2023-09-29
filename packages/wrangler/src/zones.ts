@@ -26,21 +26,19 @@ export interface Zone {
  * @param route
  */
 export function getHostFromRoute(route: Route): string | undefined {
+	let host: string | undefined;
+
 	if (typeof route === "string") {
-		return getHostFromUrl(route);
+		host = getHostFromUrl(route);
 	} else if (typeof route === "object") {
-		try {
-			return getHostFromUrl(route.pattern);
-		} catch (e) {
-			if (
-				(e as { code: string }).code === "ERR_INVALID_URL" &&
-				"zone_name" in route
-			) {
-				return getHostFromUrl(route.zone_name);
-			}
-			throw e;
+		host = getHostFromUrl(route.pattern);
+
+		if (host === undefined && "zone_name" in route) {
+			host = getHostFromUrl(route.zone_name);
 		}
 	}
+
+	return host;
 }
 
 /**
@@ -82,8 +80,8 @@ export function getHostFromUrl(urlLike: string): string | undefined {
 		urlLike = "http://" + urlLike;
 	}
 
-	// now urlLike is a valid url string which we can pass to `new URL()` to get the host
-
+	// now we've done our best to make urlLike a valid url string which we can pass to `new URL()` to get the host
+	// if it still isn't, this will throw
 	return new URL(urlLike).host;
 }
 
