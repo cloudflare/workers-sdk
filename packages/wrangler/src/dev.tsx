@@ -1,6 +1,5 @@
 import path from "node:path";
 import { isWebContainer } from "@webcontainer/env";
-import chalk from "chalk";
 import { watch } from "chokidar";
 import getPort from "get-port";
 import { render } from "ink";
@@ -348,17 +347,6 @@ export async function startDev(args: StartDevOptions) {
 			logger.loggerLevel = args.logLevel;
 		}
 		await printWranglerBanner();
-		// TODO(v3.1): remove this message
-		if (!args.remote && typeof jest === "undefined") {
-			logger.log(
-				chalk.blue(`${chalk.green(
-					`wrangler dev`
-				)} now uses local mode by default, powered by 🔥 Miniflare and 👷 workerd.
-To run an edge preview session for your Worker, use ${chalk.green(
-					`wrangler dev --remote`
-				)}`)
-			);
-		}
 		if (args.local) {
 			logger.warn(
 				"--local is no longer required and will be removed in a future version.\n`wrangler dev` now uses the local Cloudflare Workers runtime by default. 🎉"
