@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readdirSync } from "fs";
 import { basename, dirname, resolve } from "path";
 import { chdir } from "process";
+import shellquote from "shell-quote";
 import { getFrameworkCli } from "frameworks/index";
 import { processArgument } from "helpers/args";
 import {
@@ -119,7 +120,7 @@ export const runDeploy = async (ctx: PagesGeneratorContext) => {
 		env: { CLOUDFLARE_ACCOUNT_ID: ctx.account.id, NODE_ENV: "production" },
 		startText: "Deploying your application",
 		doneText: `${brandColor("deployed")} ${dim(
-			`via \`${baseDeployCmd.join(" ")}\``
+			`via \`${shellquote.quote(baseDeployCmd)}\``
 		)}`,
 	});
 

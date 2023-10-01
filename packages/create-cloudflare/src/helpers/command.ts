@@ -1,6 +1,7 @@
 import { existsSync, rmSync } from "fs";
 import path from "path";
 import { spawn } from "cross-spawn";
+import shellquote from "shell-quote";
 import { endSection, stripAnsi } from "./cli";
 import { brandColor, dim } from "./colors";
 import { spinner } from "./interactive";
@@ -47,12 +48,12 @@ export const runCommand = async (
 	opts: RunOptions = {}
 ): Promise<string> => {
 	if (typeof command === "string") {
-		command = command.trim().replace(/\s+/g, " ").split(" ");
+		command = shellquote.parse(command) as string[];
 	}
 
 	return printAsyncStatus({
 		useSpinner: opts.useSpinner ?? opts.silent,
-		startText: opts.startText || command.join(" ").trim(),
+		startText: opts.startText || shellquote.quote(command),
 		doneText: opts.doneText,
 		promise() {
 			const [executable, ...args] = command;
@@ -181,7 +182,7 @@ export const runFrameworkGenerator = async (
 	cmd: string
 ) => {
 	if (ctx.framework?.args?.length) {
-		cmd = `${cmd} ${ctx.framework.args.join(" ")}`;
+		cmd = `${cmd} ${shellquote.quote(ctx.framework.args)}`;
 	}
 
 	endSection(
@@ -191,7 +192,7 @@ export const runFrameworkGenerator = async (
 
 	if (process.env.VITEST) {
 		const flags = ctx.framework?.config.testFlags ?? [];
-		cmd = `${cmd} ${flags.join(" ")}`;
+		cmd = `${cmd} ${shellquote.quote(flags)}`;
 	}
 
 	await runCommand(cmd);
@@ -228,7 +229,7 @@ export const installPackages = async (
 			break;
 	}
 
-	await runCommand(`${npm} ${cmd} ${saveFlag} ${packages.join(" ")}`, {
+	await runCommand(`${npm} ${cmd} ${saveFlag} ${shellquote.quote(packages)}`, {
 		...config,
 		silent: true,
 	});

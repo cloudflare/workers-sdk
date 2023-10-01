@@ -1,5 +1,6 @@
 import { spawn } from "cross-spawn";
 import { detectPackageManager } from "helpers/packages";
+import shellquote from "shell-quote";
 import { beforeEach, afterEach, describe, expect, test, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
 import {
@@ -57,7 +58,7 @@ describe("Command Helpers", () => {
 	});
 
 	const expectSpawnWith = (cmd: string) => {
-		const [command, ...args] = cmd.split(" ");
+		const [command, ...args] = shellquote.parse(cmd) as string[];
 
 		expect(spawn).toHaveBeenCalledWith(command, args, {
 			stdio: "inherit",
@@ -66,7 +67,7 @@ describe("Command Helpers", () => {
 	};
 
 	const expectSilentSpawnWith = (cmd: string) => {
-		const [command, ...args] = cmd.split(" ");
+		const [command, ...args] = shellquote.parse(cmd) as string[];
 
 		expect(spawn).toHaveBeenCalledWith(command, args, {
 			stdio: "pipe",
