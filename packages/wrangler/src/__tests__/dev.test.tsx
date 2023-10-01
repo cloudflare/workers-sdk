@@ -428,9 +428,16 @@ describe("wrangler dev", () => {
 			});
 			await fs.promises.writeFile("index.js", `export default {};`);
 
-			await expect(runWrangler("dev")).rejects.toMatchInlineSnapshot(
-				`[Error: Cannot infer host from first route: {"pattern":"*/*","zone_id":"exists-com"}]`
-			);
+			await expect(runWrangler("dev")).rejects.toMatchInlineSnapshot(`
+			[Error: Cannot infer host from first route: {"pattern":"*/*","zone_id":"exists-com"}.
+			You can explicitly set the \`dev.host\` configuration in your wrangler.toml file, for example:
+
+				\`\`\`
+				[dev]
+				host = "example.com"
+				\`\`\`
+			]
+		`);
 		});
 
 		it("given a long host, it should use the longest subdomain that resolves to a zone", async () => {
