@@ -528,7 +528,7 @@ describe("wrangler", () => {
 					},
 				});
 				await runWrangler(
-					`kv:key put dKey dVal --namespace-id some-namespace-id --metadata {"mKey":"mValue"}`
+					`kv:key put dKey dVal --namespace-id some-namespace-id --metadata '{"mKey":"mValue"}'`
 				);
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(

@@ -4323,7 +4323,7 @@ addEventListener('fetch', event => {});`
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
 			await runWrangler(
-				"deploy --dry-run --outdir dist --define abc:'https://www.abc.net.au/news/'"
+				`deploy --dry-run --outdir dist --define "abc:'https://www.abc.net.au/news/'"`
 			);
 
 			expect(fs.readFileSync("dist/index.js", "utf-8")).toContain(
