@@ -428,10 +428,9 @@ describe("wrangler dev", () => {
 			});
 			await fs.promises.writeFile("index.js", `export default {};`);
 
-			await expect(runWrangler("dev")).rejects.toMatchInlineSnapshot(`
-			[Error: Cannot infer host from first route: {"pattern":"*/*","zone_id":"exists-com"}
-			Try making sure your route pattern contains a host like {"pattern":"*.example.com","zone_id":"exists-com"}]
-		`);
+			await expect(runWrangler("dev")).rejects.toMatchInlineSnapshot(
+				`[Error: Cannot infer host from first route: {"pattern":"*/*","zone_id":"exists-com"}]`
+			);
 		});
 
 		it("given a long host, it should use the longest subdomain that resolves to a zone", async () => {

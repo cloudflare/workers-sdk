@@ -688,13 +688,7 @@ async function getZoneIdHostAndRoutes(args: StartDevOptions, config: Config) {
 			// TODO(consider): do we need really need to do this? I've added the condition to throw to match the previous implicit behaviour of `new URL()` throwing upon invalid URLs, but could we just continue here without an inferred host?
 			if (host === undefined) {
 				throw new Error(
-					`Cannot infer host from first route: ${JSON.stringify(
-						firstRoute
-					)}\nTry making sure your route pattern contains a host like ${JSON.stringify(
-						typeof firstRoute === "string"
-							? "*.example.com"
-							: { ...firstRoute, pattern: "*.example.com" }
-					)}`
+					`Cannot infer host from first route: ${JSON.stringify(firstRoute)}`
 				);
 			}
 		}
