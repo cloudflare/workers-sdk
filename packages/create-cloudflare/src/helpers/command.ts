@@ -1,7 +1,7 @@
 import { existsSync, rmSync } from "fs";
 import path from "path";
 import { spawn } from "cross-spawn";
-import shellquote from "shell-quote";
+import * as shellquote from "./shell-quote";
 import { endSection, stripAnsi } from "./cli";
 import { brandColor, dim } from "./colors";
 import { spinner } from "./interactive";
@@ -48,7 +48,7 @@ export const runCommand = async (
 	opts: RunOptions = {}
 ): Promise<string> => {
 	if (typeof command === "string") {
-		command = shellquote.parse(command) as string[];
+		command = shellquote.parse(command);
 	}
 
 	return printAsyncStatus({

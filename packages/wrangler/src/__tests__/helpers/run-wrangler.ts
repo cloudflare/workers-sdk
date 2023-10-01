@@ -1,4 +1,4 @@
-import shellquote from "shell-quote";
+import * as shellquote from "../../utils/shell-quote";
 import { main } from "../../index";
 import { normalizeSlashes, stripTimings } from "./mock-console";
 
@@ -7,7 +7,7 @@ import { normalizeSlashes, stripTimings } from "./mock-console";
  */
 export async function runWrangler(cmd = "") {
 	try {
-		const argv = shellquote.parse(cmd) as string[];
+		const argv = shellquote.parse(cmd);
 		await main(argv);
 	} catch (err) {
 		if (err instanceof Error) {

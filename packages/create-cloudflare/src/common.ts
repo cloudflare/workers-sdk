@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readdirSync } from "fs";
 import { basename, dirname, resolve } from "path";
 import { chdir } from "process";
-import shellquote from "shell-quote";
+import * as shellquote from "./helpers/shell-quote";
 import { getFrameworkCli } from "frameworks/index";
 import { processArgument } from "helpers/args";
 import {

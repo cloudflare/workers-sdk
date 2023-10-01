@@ -4,7 +4,7 @@ import path, { dirname } from "node:path";
 import TOML from "@iarna/toml";
 import { execa } from "execa";
 import { findUp } from "find-up";
-import shellquote from "shell-quote";
+import * as shellquote from "./utils/shell-quote";
 import { version as wranglerVersion } from "../package.json";
 
 import { fetchResult } from "./cfetch";
@@ -185,7 +185,7 @@ export async function initHandler(args: InitArgs) {
 		}
 
 		const c3Arguments = [
-			...(shellquote.parse(getC3CommandFromEnv()) as string[]),
+			...shellquote.parse(getC3CommandFromEnv()),
 			fromDashScriptName,
 			...(yesFlag && isNpm(packageManager) ? ["-y"] : []), // --yes arg for npx
 			...(isNpm(packageManager) ? ["--"] : []),
@@ -253,9 +253,7 @@ export async function initHandler(args: InitArgs) {
 				c3Arguments.unshift("-y"); // arg for npx
 			}
 
-			c3Arguments.unshift(
-				...(shellquote.parse(getC3CommandFromEnv()) as string[])
-			);
+			c3Arguments.unshift(...shellquote.parse(getC3CommandFromEnv()));
 
 			// Deprecate the `init --from-dash` command
 			const replacementC3Command = `\`${packageManager.type} ${c3Arguments.join(

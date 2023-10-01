@@ -1,7 +1,7 @@
 import { existsSync, rmSync, mkdtempSync, realpathSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
-import shellquote from "shell-quote";
+import * as shellquote from "../src/helpers/shell-quote";
 import { beforeEach, afterEach, describe, test, expect } from "vitest";
 import { version } from "../package.json";
 import { frameworkToTest } from "./frameworkToTest";
@@ -31,7 +31,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 		});
 
 		test("--version with positionals", async () => {
-			const argv = shellquote.parse("foo bar baz --version") as string[];
+			const argv = shellquote.parse("foo bar baz --version");
 			const { output } = await runC3({ argv });
 			expect(output).toEqual(version);
 		});
@@ -39,7 +39,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 		test("--version with flags", async () => {
 			const argv = shellquote.parse(
 				"foo --type webFramework --no-deploy --version"
-			) as string[];
+			);
 			const { output } = await runC3({ argv });
 			expect(output).toEqual(version);
 		});
