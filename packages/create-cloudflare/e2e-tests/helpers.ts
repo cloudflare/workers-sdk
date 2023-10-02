@@ -132,8 +132,6 @@ export const testProjectDir = (suite: string) => {
 			rmSync(path, {
 				recursive: true,
 				force: true,
-				maxRetries: 10,
-				retryDelay: 500,
 			});
 		}
 	};
