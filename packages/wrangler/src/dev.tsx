@@ -672,6 +672,21 @@ async function getZoneIdHostAndRoutes(args: StartDevOptions, config: Config) {
 		if (routes) {
 			const firstRoute = routes[0];
 			host = getHostFromRoute(firstRoute);
+
+			// TODO(consider): do we need really need to do this? I've added the condition to throw to match the previous implicit behaviour of `new URL()` throwing upon invalid URLs, but could we just continue here without an inferred host?
+			if (host === undefined) {
+				throw new Error(
+					`Cannot infer host from first route: ${JSON.stringify(
+						firstRoute
+					)}.\nYou can explicitly set the \`dev.host\` configuration in your wrangler.toml file, for example:
+
+	\`\`\`
+	[dev]
+	host = "example.com"
+	\`\`\`
+`
+				);
+			}
 		}
 	}
 	return { host, routes, zoneId };
