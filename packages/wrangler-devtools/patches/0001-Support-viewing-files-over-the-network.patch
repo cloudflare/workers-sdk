@@ -1,7 +1,7 @@
-From ae9408ae42966da4f8e34a9add5c9ee641e1afa1 Mon Sep 17 00:00:00 2001
-From: Samuel Macleod <smacleod@cloudflare.com>
-Date: Thu, 12 Jan 2023 15:33:43 +0000
-Subject: [PATCH 02/16] Support viewing files over the network
+From 24644cc732ec4bf8589715e853067eadd1b52e29 Mon Sep 17 00:00:00 2001
+From: Workers DevProd <workers-devprod@cloudflare.com>
+Date: Mon, 2 Oct 2023 18:13:34 +0100
+Subject: [PATCH 01/15] Support viewing files over the network
 
 ---
  front_end/core/sdk/Target.ts             |  4 ++++
@@ -11,12 +11,12 @@ Subject: [PATCH 02/16] Support viewing files over the network
  4 files changed, 15 insertions(+), 5 deletions(-)
 
 diff --git a/front_end/core/sdk/Target.ts b/front_end/core/sdk/Target.ts
-index 77e23b798e..11ff0af705 100644
+index eed909ea64..5e1778885d 100644
 --- a/front_end/core/sdk/Target.ts
 +++ b/front_end/core/sdk/Target.ts
-@@ -76,6 +76,9 @@ export class Target extends ProtocolClient.InspectorBackend.TargetBase {
+@@ -82,6 +82,9 @@ export class Target extends ProtocolClient.InspectorBackend.TargetBase {
        case Type.Tab:
-         this.#capabilitiesMask = Capability.Target;
+         this.#capabilitiesMask = Capability.Target | Capability.Tracing;
          break;
 +      case Type.Cloudflare:
 +        this.#capabilitiesMask = Capability.JS | Capability.Network;
@@ -24,7 +24,7 @@ index 77e23b798e..11ff0af705 100644
      }
      this.#typeInternal = type;
      this.#parentTargetInternal = parentTarget;
-@@ -239,6 +242,7 @@ export enum Type {
+@@ -255,6 +258,7 @@ export enum Type {
    Browser = 'browser',
    AuctionWorklet = 'auction-worklet',
    Tab = 'tab',
@@ -46,10 +46,10 @@ index cafecfa4ba..213ca7fecd 100644
      }, Components.TargetDetachedDialog.TargetDetachedDialog.webSocketConnectionLost);
    }
 diff --git a/front_end/panels/sources/sources-meta.ts b/front_end/panels/sources/sources-meta.ts
-index 946dd8c333..c5e95ab535 100644
+index a0c126df12..4b8244ea69 100644
 --- a/front_end/panels/sources/sources-meta.ts
 +++ b/front_end/panels/sources/sources-meta.ts
-@@ -40,6 +40,11 @@ const UIStrings = {
+@@ -41,6 +41,11 @@ const UIStrings = {
     *@description Title of the 'Snippets' tool in the Snippets Navigator View, which is part of the Sources tool
     */
    snippets: 'Snippets',
@@ -61,14 +61,14 @@ index 946dd8c333..c5e95ab535 100644
    /**
     *@description Command for showing the 'Search' tool
     */
-@@ -428,14 +433,14 @@ UI.ViewManager.registerViewExtension({
+@@ -454,14 +459,14 @@ UI.ViewManager.registerViewExtension({
  
  UI.ViewManager.registerViewExtension({
    location: UI.ViewManager.ViewLocationValues.NAVIGATOR_VIEW,
 -  id: 'navigator-files',
 +  id: 'navigator-network',
-   commandPrompt: i18nLazyString(UIStrings.showFilesystem),
--  title: i18nLazyString(UIStrings.filesystem),
+   commandPrompt: i18nLazyString(UIStrings.showWorkspace),
+-  title: i18nLazyString(UIStrings.workspace),
 +  title: i18nLazyString(UIStrings.cloudflare),
    order: 3,
    persistence: UI.ViewManager.ViewPersistence.PERMANENT,
@@ -93,5 +93,5 @@ index ac0d4aaf68..29c726e185 100644
    ]
  }
 -- 
-2.41.0
+2.39.3 (Apple Git-145)
 

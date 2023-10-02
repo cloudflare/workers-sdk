@@ -1,7 +1,7 @@
-From 3de10e06c66c60a9e2e34e4192571a0a8be30029 Mon Sep 17 00:00:00 2001
+From 3c9b2a24e6afefffe5485516fab7bfb38107c9d6 Mon Sep 17 00:00:00 2001
 From: bcoll <bcoll@cloudflare.com>
 Date: Thu, 26 Jan 2023 15:30:34 +0000
-Subject: [PATCH 12/16] Hide unsupported settings UI
+Subject: [PATCH 10/15] Hide unsupported settings UI
 
 - Show CORS errors in console setting
 - Show XHR requests in console setting
@@ -15,10 +15,10 @@ Subject: [PATCH 12/16] Hide unsupported settings UI
  3 files changed, 9 insertions(+), 4 deletions(-)
 
 diff --git a/front_end/panels/console/ConsoleView.ts b/front_end/panels/console/ConsoleView.ts
-index 3e698c0eb7..77c7a1431c 100644
+index eb61914002..f7b9f0a912 100644
 --- a/front_end/panels/console/ConsoleView.ts
 +++ b/front_end/panels/console/ConsoleView.ts
-@@ -458,14 +458,10 @@ export class ConsoleView extends UI.Widget.VBox implements UI.SearchableView.Sea
+@@ -468,14 +468,10 @@ export class ConsoleView extends UI.Widget.VBox implements
          i18nString(UIStrings.onlyShowMessagesFromTheCurrentContext), i18nString(UIStrings.selectedContextOnly));
      ConsoleView.appendSettingsCheckboxToToolbar(
          settingsToolbarLeft, this.groupSimilarSetting, i18nString(UIStrings.groupSimilarMessagesInConsole));
@@ -34,10 +34,10 @@ index 3e698c0eb7..77c7a1431c 100644
          settingsToolbarRight, 'consoleEagerEval', i18nString(UIStrings.eagerlyEvaluateTextInThePrompt));
      ConsoleView.appendSettingsCheckboxToToolbar(
 diff --git a/front_end/panels/settings/SettingsScreen.ts b/front_end/panels/settings/SettingsScreen.ts
-index af732358ad..089ee5edc8 100644
+index a1c443c74e..3648b2d74a 100644
 --- a/front_end/panels/settings/SettingsScreen.ts
 +++ b/front_end/panels/settings/SettingsScreen.ts
-@@ -380,6 +380,10 @@ export class GenericSettingsTab extends SettingsTab {
+@@ -379,6 +379,10 @@ export class GenericSettingsTab extends SettingsTab {
      const uiSectionName = Common.Settings.getLocalizedSettingsCategory(category);
      const sectionElement = this.appendSection(uiSectionName);
      for (const settingRegistration of settings) {
@@ -49,10 +49,10 @@ index af732358ad..089ee5edc8 100644
        const settingControl = UI.SettingsUI.createControlForSetting(setting);
        if (settingControl) {
 diff --git a/front_end/panels/settings/settingsScreen.css b/front_end/panels/settings/settingsScreen.css
-index df0806e90d..0b20193865 100644
+index 583c2e345e..e574de5002 100644
 --- a/front_end/panels/settings/settingsScreen.css
 +++ b/front_end/panels/settings/settingsScreen.css
-@@ -234,3 +234,8 @@ label {
+@@ -238,3 +238,8 @@ label {
      color: HighlightText;
    }
  }
@@ -62,5 +62,5 @@ index df0806e90d..0b20193865 100644
 +  display: none;
 +}
 -- 
-2.41.0
+2.39.3 (Apple Git-145)
 
