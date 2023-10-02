@@ -1,11 +1,11 @@
 import { existsSync, rmSync } from "fs";
 import path from "path";
 import { spawn } from "cross-spawn";
-import * as shellquote from "./shell-quote";
 import { endSection, stripAnsi } from "./cli";
 import { brandColor, dim } from "./colors";
 import { spinner } from "./interactive";
 import { detectPackageManager } from "./packages";
+import * as shellquote from "./shell-quote";
 import type { PagesGeneratorContext } from "types";
 
 /**

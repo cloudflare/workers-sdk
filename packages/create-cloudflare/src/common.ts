@@ -1,7 +1,6 @@
 import { existsSync, mkdirSync, readdirSync } from "fs";
 import { basename, dirname, resolve } from "path";
 import { chdir } from "process";
-import * as shellquote from "./helpers/shell-quote";
 import { getFrameworkCli } from "frameworks/index";
 import { processArgument } from "helpers/args";
 import {
@@ -29,6 +28,7 @@ import { detectPackageManager } from "helpers/packages";
 import { poll } from "helpers/poll";
 import { version as wranglerVersion } from "wrangler/package.json";
 import { version } from "../package.json";
+import * as shellquote from "./helpers/shell-quote";
 import type { C3Args, PagesGeneratorContext } from "types";
 
 const { name, npm } = detectPackageManager();

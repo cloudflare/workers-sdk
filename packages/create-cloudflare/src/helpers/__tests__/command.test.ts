@@ -1,6 +1,5 @@
 import { spawn } from "cross-spawn";
 import { detectPackageManager } from "helpers/packages";
-import * as shellquote from "../shell-quote";
 import { beforeEach, afterEach, describe, expect, test, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
 import {
@@ -10,6 +9,7 @@ import {
 	npmInstall,
 	runCommand,
 } from "../command";
+import * as shellquote from "../shell-quote";
 
 // We can change how the mock spawn works by setting these variables
 let spawnResultCode = 0;

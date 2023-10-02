@@ -1,9 +1,9 @@
 import { existsSync, rmSync, mkdtempSync, realpathSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
-import * as shellquote from "../src/helpers/shell-quote";
 import { beforeEach, afterEach, describe, test, expect } from "vitest";
 import { version } from "../package.json";
+import * as shellquote from "../src/helpers/shell-quote";
 import { frameworkToTest } from "./frameworkToTest";
 import { isQuarantineMode, keys, runC3 } from "./helpers";
 
