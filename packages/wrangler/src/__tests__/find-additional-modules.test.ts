@@ -219,4 +219,42 @@ describe("traverse module graph", () => {
 
 		expect(modules[0].name).toStrictEqual("other.txt");
 	});
+
+	it("should error if a rule is ignored because the previous was not marked 'fall-through'", async () => {
+		await mkdir("./src", { recursive: true });
+		await writeFile(
+			"./src/index.js",
+			dedent/* javascript */ `
+			export default {
+				async fetch(request) {
+					return new Response(HELLO)
+				}
+			}
+			`
+		);
+		await writeFile(
+			"./src/other.txt",
+			dedent/* javascript */ `
+			export const HELLO = "WORLD"
+			`
+		);
+
+		await expect(
+			findAdditionalModules(
+				{
+					file: path.join(process.cwd(), "./src/index.js"),
+					directory: path.join(process.cwd(), "./src"),
+					format: "modules",
+					// The default module root is dirname(file)
+					moduleRoot: path.join(process.cwd(), "./src"),
+				},
+				[
+					{ type: "Text", globs: ["**/*.txt"] },
+					{ type: "Text", globs: ["other.txt"] },
+				]
+			)
+		).rejects.toMatchInlineSnapshot(
+			`[Error: The file other.txt matched a module rule in your configuration ({"type":"Text","globs":["other.txt"]}), but was ignored because a previous rule with the same type was not marked as \`fallthrough = true\`.]`
+		);
+	});
 });

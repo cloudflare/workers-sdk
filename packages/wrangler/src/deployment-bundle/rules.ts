@@ -33,7 +33,7 @@ export function parseRules(userRules: Rule[] = []): ParsedRules {
 							completedRuleLocations[rule.type]
 						}, ${JSON.stringify(
 							rules[completedRuleLocations[rule.type]]
-						)}). This rule will be ignored. To the previous rule, add \`fallthrough = true\` to allow this one to also be used, or \`fallthrough = false\` to silence this warning.`
+						)}). This rule will be ignored. To use the previous rule, add \`fallthrough = true\` to allow this one to also be used, or \`fallthrough = false\` to silence this warning.`
 					);
 				} else {
 					logger.warn(
@@ -43,7 +43,7 @@ export function parseRules(userRules: Rule[] = []): ParsedRules {
 							completedRuleLocations[rule.type]
 						}, ${JSON.stringify(
 							rules[completedRuleLocations[rule.type]]
-						)}). This rule will be ignored. To the previous rule, add \`fallthrough = true\` to allow the default one to also be used, or \`fallthrough = false\` to silence this warning.`
+						)}). This rule will be ignored. To use the previous rule, add \`fallthrough = true\` to allow the default one to also be used, or \`fallthrough = false\` to silence this warning.`
 					);
 				}
 			}
