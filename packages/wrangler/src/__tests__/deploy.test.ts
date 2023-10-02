@@ -37,6 +37,8 @@ import {
 	mswSuccessDeployments,
 	mswSuccessDeploymentScriptMetadata,
 	mswSuccessDeploymentScriptAPI,
+	mswSuccessOauthHandlers,
+	mswSuccessUserHandlers,
 } from "./helpers/msw";
 import { FileReaderSync } from "./helpers/msw/read-file-sync";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -373,12 +375,20 @@ describe("deploy", () => {
 			writeWorkerSource();
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
+			mockConfirm({
+				text: "Would you like to continue?",
+				result: false,
+			});
 
 			await runWrangler("deploy ./index");
 
-			expect(std.warn).toMatch(
-				/You are about to publish a Workers Service that was last updated via the script API/
-			);
+			expect(std.warn).toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are about to publish a Workers Service that was last updated via the script API.[0m
+
+			  Edits that have been made via the script API will be overridden by your local code and config.
+
+			"
+		`);
 		});
 	});
 
@@ -1079,6 +1089,8 @@ Update them to point to this script instead?`,
 					],
 				});
 				writeWorkerSource();
+				mockServiceScriptData({});
+
 				await expect(
 					runWrangler("deploy ./index")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -8123,7 +8135,7 @@ export default{
 		writeWranglerToml();
 		mockSubDomainRequest();
 		mockUploadWorkerRequest();
-
+		msw.use(...mswSuccessOauthHandlers, ...mswSuccessUserHandlers);
 		msw.use(
 			rest.get(
 				"*/accounts/:accountId/workers/services/:scriptName",
@@ -8151,10 +8163,31 @@ export default{
 			)
 		);
 
-		await runWrangler("deploy index.js");
-		expect(std.err).toContain(
-			`A request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed`
+		await expect(
+			runWrangler("deploy index.js")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`"A request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed."`
 		);
+		expect(std.out).toMatchInlineSnapshot(`
+		"
+		[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed.[0m
+
+		  Authentication error [code: 10000]
+
+
+		Getting User settings...
+		👋 You are logged in with an API Token, associated with the email user@example.com!
+		┌───────────────┬────────────┐
+		│ Account Name  │ Account ID │
+		├───────────────┼────────────┤
+		│ Account One   │ account-1  │
+		├───────────────┼────────────┤
+		│ Account Two   │ account-2  │
+		├───────────────┼────────────┤
+		│ Account Three │ account-3  │
+		└───────────────┴────────────┘
+		🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens"
+	`);
 	});
 
 	describe("queues", () => {
