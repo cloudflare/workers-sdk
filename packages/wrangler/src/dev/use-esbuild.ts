@@ -138,15 +138,15 @@ export function useEsbuild({
 						return;
 					}
 
+					if (warnings.length > 0) {
+						logBuildWarnings(warnings);
+					}
+
 					if (!bundled) {
 						// First bundle, no need to update bundle
 						bundled = true;
 					} else {
 						await updateBundle();
-					}
-
-					if (warnings.length > 0) {
-						logBuildWarnings(warnings);
 					}
 				});
 			},
