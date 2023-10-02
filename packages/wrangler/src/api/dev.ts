@@ -129,6 +129,7 @@ export async function unstable_dev(
 	});
 
 	const defaultLogLevel = testMode ? "none" : "log";
+	const local = options?.local ?? true;
 
 	const devOptions: StartDevOptions = {
 		script: script,
@@ -137,8 +138,8 @@ export async function unstable_dev(
 		_: [],
 		$0: "",
 		port: options?.port ?? 0,
-		remote: false,
-		local: undefined,
+		remote: !local,
+		local,
 		experimentalLocal: undefined,
 		d1Databases,
 		disableDevRegistry,
