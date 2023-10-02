@@ -491,7 +491,7 @@ export const cat = "dog";`
 		Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
 		Content-Type: application/javascript+module
 
-		// _worker.js/index.js
+		// index.js
 		import { cat } from \\"./cat.js\\";
 		import { dog } from \\"./dog.mjs\\";
 		var worker_default = {

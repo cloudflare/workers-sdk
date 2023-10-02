@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path, { join, resolve } from "node:path";
 import { fetch } from "undici";
@@ -8,7 +8,7 @@ import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Pages _worker.js/ directory", () => {
 	it("should support non-bundling with 'dev'", async ({ expect }) => {
-		const tmpDir = join(tmpdir(), Math.random().toString(36).slice(2));
+		const tmpDir = getTmpDir();
 
 		const { ip, port, stop } = await runWranglerPagesDev(
 			resolve(__dirname, ".."),
@@ -66,7 +66,7 @@ describe("Pages _worker.js/ directory", () => {
 	});
 
 	it("should bundle", async ({ expect }) => {
-		const dir = tmpdir();
+		const dir = getTmpDir();
 		const file = join(dir, "_worker.bundle");
 
 		execSync(
@@ -85,3 +85,9 @@ describe("Pages _worker.js/ directory", () => {
 		expect(contents).toContain('import staticMjsMod from "./static.mjs";');
 	});
 });
+
+function getTmpDir() {
+	return realpathSync(
+		mkdtempSync(path.join(tmpdir(), "pages-workerjs-tests-"))
+	);
+}

@@ -282,7 +282,6 @@ export const Handler = async ({
 		const runBuild = async () => {
 			const bundleResult = await traverseAndBuildWorkerJSDirectory({
 				workerJSDirectory: workerScriptPath,
-				buildOutputDirectory: directory ?? ".",
 				nodejsCompat,
 			});
 			modules = bundleResult.modules;
@@ -323,11 +322,11 @@ export const Handler = async ({
 							? join(workerScriptPath, "index.js")
 							: workerScriptPath,
 						outfile: scriptPath,
-						directory: directory ?? ".",
+						baseDirectory: directory ?? resolve("."),
 						nodejsCompat,
+						legacyNodeCompat,
 						local: true,
 						sourcemap: true,
-						watch: false,
 						onEnd: () => scriptReadyResolve(),
 					});
 				} catch (e: unknown) {
@@ -368,7 +367,6 @@ export const Handler = async ({
 					outfile: scriptPath,
 					functionsDirectory,
 					sourcemap: true,
-					watch: false,
 					onEnd,
 					buildOutputDirectory: directory,
 					legacyNodeCompat,
