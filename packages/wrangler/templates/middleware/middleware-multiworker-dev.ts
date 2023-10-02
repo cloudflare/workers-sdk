@@ -2,7 +2,7 @@
 /// <reference path="middleware-multiworker-dev.d.ts"/>
 
 import { workers } from "config:middleware/multiworker-dev";
-import type { WorkerRegistry, Wor } from "../../src/dev-registry";
+import type { WorkerRegistry } from "../../src/dev-registry";
 
 class Fetcher {
 	constructor(private name: string, private details: WorkerRegistry[string]) {}
