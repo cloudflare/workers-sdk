@@ -5,18 +5,18 @@ import { fetch } from "undici";
 import { describe, expect, test, afterEach, beforeEach } from "vitest";
 import { version } from "../package.json";
 import { deleteProject } from "../scripts/e2eCleanup";
+import { frameworkCliMap } from "../src/frameworks/package.json";
 import { frameworkToTest } from "./frameworkToTest";
 import { isQuarantineMode, keys, runC3, testProjectDir } from "./helpers";
 import type { RunnerConfig } from "./helpers";
-
-/*
-Areas for future improvement:
-- Add support for frameworks with global installs (like docusaurus, gatsby, etc)
-*/
+import type { TestContext } from "vitest";
 
 const TEST_TIMEOUT = 1000 * 60 * 3;
 
+const frameworks = Object.keys(frameworkCliMap);
+
 type FrameworkTestConfig = RunnerConfig & {
+	timeout?: number;
 	expectResponseToContain: string;
 	testCommitMessage: boolean;
 };
@@ -24,13 +24,23 @@ type FrameworkTestConfig = RunnerConfig & {
 describe.concurrent(`E2E: Web frameworks`, () => {
 	const { getPath, getName, clean } = testProjectDir("pages");
 
+	const getFrameworkNameFromTestContext = (ctx: TestContext) => {
+		const framework = ctx.meta.name.replace(/^Quarantined: /, "");
+		if (!frameworks.includes(framework)) {
+			throw new Error(
+				`Error: Invalid test name, could not detect current framework from it`
+			);
+		}
+		return framework;
+	};
+
 	beforeEach((ctx) => {
-		const framework = ctx.meta.name;
+		const framework = getFrameworkNameFromTestContext(ctx);
 		clean(framework);
 	});
 
 	afterEach(async (ctx) => {
-		const framework = ctx.meta.name;
+		const framework = getFrameworkNameFromTestContext(ctx);
 		clean(framework);
 
 		// Cleanup the pages project in case we need to retry it
@@ -57,6 +67,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 			framework,
 			"--deploy",
 			"--no-open",
+			"--no-git",
 		];
 
 		args.push(...argv);
@@ -108,7 +119,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		const { output } = await runCli(framework, {
 			overrides,
 			promptHandlers,
-			argv: [...(argv ?? []), "--deploy", "--no-git"],
+			argv: [...(argv ?? [])],
 		});
 
 		// Verify deployment
@@ -140,8 +151,24 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 	// These are ordered based on speed and reliability for ease of debugging
 	const frameworkTests: Record<string, FrameworkTestConfig> = {
 		astro: {
-			expectResponseToContain: "Welcome to Astro",
+			expectResponseToContain: "Hello, Astronaut!",
 			testCommitMessage: true,
+		},
+		docusaurus: {
+			expectResponseToContain: "Dinosaurs are cool",
+			testCommitMessage: true,
+		},
+		gatsby: {
+			quarantine: true,
+			expectResponseToContain: "Gatsby!",
+			promptHandlers: [
+				{
+					matcher: /Would you like to use a template\?/,
+					input: ["n"],
+				},
+			],
+			testCommitMessage: true,
+			timeout: 1000 * 60 * 6,
 		},
 		hono: {
 			expectResponseToContain: "Hello Hono!",
@@ -242,7 +269,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 					frameworkTests[framework].testCommitMessage
 				);
 			},
-			{ retry: 3, timeout: TEST_TIMEOUT }
+			{ retry: 3, timeout: config.timeout || TEST_TIMEOUT }
 		);
 	});
 
