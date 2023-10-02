@@ -4,7 +4,6 @@ import path, { dirname } from "node:path";
 import TOML from "@iarna/toml";
 import { execa } from "execa";
 import { findUp } from "find-up";
-import * as shellquote from "./utils/shell-quote";
 import { version as wranglerVersion } from "../package.json";
 
 import { fetchResult } from "./cfetch";
@@ -18,6 +17,7 @@ import { getPackageManager } from "./package-manager";
 import { parsePackageJSON, parseTOML, readFileSync } from "./parse";
 import { getBasePath } from "./paths";
 import { requireAuth } from "./user";
+import * as shellquote from "./utils/shell-quote";
 import { CommandLineArgsError, printWranglerBanner } from "./index";
 
 import type { RawConfig } from "./config";

@@ -1,5 +1,5 @@
-import * as shellquote from "../../utils/shell-quote";
 import { main } from "../../index";
+import * as shellquote from "../../utils/shell-quote";
 import { normalizeSlashes, stripTimings } from "./mock-console";
 
 /**
