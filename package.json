@@ -19,7 +19,8 @@
 		"fix": "pnpm run prettify && dotenv -- turbo check:lint -- --fix",
 		"prettify": "prettier . --write --ignore-unknown",
 		"test": "dotenv -- turbo test --concurrency=1",
-		"test:ci": "dotenv -- turbo test:ci --filter=!local-mode-tests --filter=!playground-preview-worker --filter=!no-bundle-import --concurrency=1",
+		"test:ci": "dotenv -- turbo test:ci --filter=!local-mode-tests --filter=!playground-preview-worker --filter=!no-bundle-import --filter=!workers.new --concurrency=1",
+		"test:ci:quarantine": "dotenv -- turbo test:ci --filter=local-mode-tests --filter=playground-preview-worker --filter=no-bundle-import --filter=workers.new --concurrency=1",
 		"test:watch": "turbo test:watch",
 		"type:tests": "dotenv -- turbo type:tests",
 		"gen:package": "turbo gen package"
