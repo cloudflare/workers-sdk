@@ -6469,13 +6469,7 @@ addEventListener('fetch', event => {});`
 			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-			    - \\"services\\" fields are experimental and may change or break at any time.
-
-			"
-		`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 		});
 
