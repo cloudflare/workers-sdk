@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import fs from "node:fs";
 import * as path from "node:path";
 import * as util from "node:util";
 import { watch } from "chokidar";
@@ -247,7 +248,6 @@ function DevSession(props: DevSessionProps) {
 	useCustomBuild(props.entry, props.build);
 
 	const directory = useTmpDir();
-	const handleError = useErrorHandler();
 
 	const workerDefinitions = useDevRegistry(
 		props.name,
@@ -277,7 +277,6 @@ function DevSession(props: DevSessionProps) {
 		workerDefinitions,
 		services: props.bindings.services,
 		durableObjects: props.bindings.durable_objects || { bindings: [] },
-		firstPartyWorkerDevFacade: props.firstPartyWorker,
 		local: props.local,
 		// Enable the bundling to know whether we are using dev or deploy
 		targetConsumer: "dev",
@@ -375,13 +374,20 @@ export interface DirectorySyncResult {
 }
 
 function useTmpDir(): string | undefined {
-	const [directory, setDirectory] = useState<DirectorySyncResult>();
+	const [directory, setDirectory] = useState<string>();
 	const handleError = useErrorHandler();
 	useEffect(() => {
 		let dir: DirectorySyncResult | undefined;
 		try {
-			dir = tmp.dirSync({ unsafeCleanup: true });
-			setDirectory(dir);
+			// const tmpdir = path.resolve(".wrangler", "tmp");
+			// fs.mkdirSync(tmpdir, { recursive: true });
+			// dir = tmp.dirSync({ unsafeCleanup: true, tmpdir });
+			dir = tmp.dirSync({ unsafeCleanup: true }) as DirectorySyncResult;
+			// Make sure we resolve all files relative to the actual temporary
+			// directory, without symlinks, otherwise `esbuild` will generate invalid
+			// source maps.
+			const realpath = fs.realpathSync(dir.name);
+			setDirectory(realpath);
 			return;
 		} catch (err) {
 			logger.error(
@@ -393,7 +399,7 @@ function useTmpDir(): string | undefined {
 			dir?.removeCallback();
 		};
 	}, [handleError]);
-	return directory?.name;
+	return directory;
 }
 
 function useCustomBuild(expectedEntry: Entry, build: Config["build"]): void {

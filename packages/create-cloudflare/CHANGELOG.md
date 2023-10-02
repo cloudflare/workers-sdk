@@ -1,5 +1,101 @@
 # create-cloudflare
 
+## 2.3.1
+
+### Patch Changes
+
+- [#4001](https://github.com/cloudflare/workers-sdk/pull/4001) [`fd39ae64`](https://github.com/cloudflare/workers-sdk/commit/fd39ae649dc0658de4cfd3eac6dcfc6b4ab6205a) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `nuxi` from `3.8.4` to `3.9.0`
+
+## 2.3.0
+
+### Minor Changes
+
+- [#3887](https://github.com/cloudflare/workers-sdk/pull/3887) [`765ebc1c`](https://github.com/cloudflare/workers-sdk/commit/765ebc1ce293315345c0ccfee808cbc25262b2ed) Thanks [@G4brym](https://github.com/G4brym)! - Add OpenAPI 3.1 template project
+
+* [#3888](https://github.com/cloudflare/workers-sdk/pull/3888) [`7310add1`](https://github.com/cloudflare/workers-sdk/commit/7310add1bb43c72f7b88cce7ed357fa5c11c6f75) Thanks [@G4brym](https://github.com/G4brym)! - Bump chatgptPlugin template itty-router-openapi version
+
+### Patch Changes
+
+- [#3970](https://github.com/cloudflare/workers-sdk/pull/3970) [`0a8d97c7`](https://github.com/cloudflare/workers-sdk/commit/0a8d97c7c6518b7a731197033762b1eeb542d4f7) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-astro` from `4.0.1` to `4.1.0`
+
+* [#3971](https://github.com/cloudflare/workers-sdk/pull/3971) [`1723d3e6`](https://github.com/cloudflare/workers-sdk/commit/1723d3e63f593b909cc253a4415a5e06d8c1162d) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-svelte` from `4.2.0` to `5.0.6`
+
+- [#3972](https://github.com/cloudflare/workers-sdk/pull/3972) [`dac69503`](https://github.com/cloudflare/workers-sdk/commit/dac69503b998d0f3811f06d4e9bdf871865496e4) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-remix` from `1.19.3` to `2.0.0`
+
+* [#3973](https://github.com/cloudflare/workers-sdk/pull/3973) [`324907ac`](https://github.com/cloudflare/workers-sdk/commit/324907acbbc4b82e717681c9d447c9ee2f4f3bfc) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `nuxi` from `3.6.5` to `3.8.4`
+
+- [#3980](https://github.com/cloudflare/workers-sdk/pull/3980) [`1354ab36`](https://github.com/cloudflare/workers-sdk/commit/1354ab365f96b3b16e57d4496014f42bba3c1aa6) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-astro` from `4.0.1` to `4.1.0`
+
+* [#3987](https://github.com/cloudflare/workers-sdk/pull/3987) [`fe227900`](https://github.com/cloudflare/workers-sdk/commit/fe227900955f866def9c3d0dcf51de56a99151ea) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-vue` from `3.6.4` to `3.7.5`
+
+- [#3988](https://github.com/cloudflare/workers-sdk/pull/3988) [`d8833eff`](https://github.com/cloudflare/workers-sdk/commit/d8833eff9779c4d7d0f653666303b8951ef6aaed) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `gatsby` from `5.11.0` to `5.12.4`
+
+* [#3990](https://github.com/cloudflare/workers-sdk/pull/3990) [`07b57803`](https://github.com/cloudflare/workers-sdk/commit/07b57803193232254be5c576ad06dbc7a4407744) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-qwik` from `1.2.7` to `1.2.12`
+
+## 2.2.3
+
+### Patch Changes
+
+- [#3935](https://github.com/cloudflare/workers-sdk/pull/3935) [`bdb39edc`](https://github.com/cloudflare/workers-sdk/commit/bdb39edc4d072309794786c79005bdd59559053d) Thanks [@IgorMinar](https://github.com/IgorMinar)! - fix: remove unused env variable from sveltekit project template
+
+## 2.2.2
+
+### Patch Changes
+
+- [#3880](https://github.com/cloudflare/workers-sdk/pull/3880) [`c6c435eb`](https://github.com/cloudflare/workers-sdk/commit/c6c435ebe8984590b1800ac7acf4fec9f7538373) Thanks [@admah](https://github.com/admah)! - Update Worker templates from worker.{ts,js} to index.{ts,js} to better align with docs and examples
+
+## 2.2.1
+
+### Patch Changes
+
+- [#3841](https://github.com/cloudflare/workers-sdk/pull/3841) [`81c45b98`](https://github.com/cloudflare/workers-sdk/commit/81c45b988a2f772279bc5f37dba6b8cb83afef36) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fail and display the help message if an unrecognized argument is passed to C3
+
+## 2.2.0
+
+### Minor Changes
+
+- [#3776](https://github.com/cloudflare/workers-sdk/pull/3776) [`83e526b3`](https://github.com/cloudflare/workers-sdk/commit/83e526b3c9ea53b8cfbba5ab222613bf21c1db79) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add final commit when generating Pages projects
+
+  before after the user would have completed the creation of a Pages project
+  they would find the Cloudflare added/modified files uncommitted, instead of
+  leaving these uncommitted this change adds an extra commit (on top of the
+  framework specific) which also contains some useful information about the
+  project
+
+* [#3803](https://github.com/cloudflare/workers-sdk/pull/3803) [`9156994e`](https://github.com/cloudflare/workers-sdk/commit/9156994e1b1dccccc0dde8b6eba01a5a241f9511) Thanks [@jculvey](https://github.com/jculvey)! - C3: Checks for a newer version of create-cloudflare and uses it if available. This behavior can be suppressed with the --no-auto-update flag.
+
+### Patch Changes
+
+- [#3807](https://github.com/cloudflare/workers-sdk/pull/3807) [`fac199ba`](https://github.com/cloudflare/workers-sdk/commit/fac199ba0c3bee758ac13fa8e6133c19f4af845d) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - adjusted arguments passing so that arguments following an extra `--` are
+  passed to the underlying cli (if any)
+
+  For example:
+
+  ```
+  $ npm create cloudflare -- --framework=X -- -a -b
+  ```
+
+  now will run the framework X's cli with the `-a` and `-b` arguments
+  (such arguments will be completely ignored by C3)
+
+* [#3822](https://github.com/cloudflare/workers-sdk/pull/3822) [`3db34519`](https://github.com/cloudflare/workers-sdk/commit/3db3451988988c0af82023cc53975bbaef14ac8a) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - update the frameworks' cli versions used in C3
+
+  - `@angular/cli` from 16.1.x to 16.2.0
+  - `create-next-app` from 13.4.2 to 13.4.19
+  - `create-remix` from 1.16.0 to 1.19.3
+  - `gatsby` from 5.10.0 to 5.11.0
+  - `nuxi` from 3.4.2 to 3.6.5
+
+## 2.1.1
+
+### Patch Changes
+
+- [#3729](https://github.com/cloudflare/workers-sdk/pull/3729) [`9d8509e0`](https://github.com/cloudflare/workers-sdk/commit/9d8509e08acf082604ca896b4ab9ad5c05ae7505) Thanks [@jculvey](https://github.com/jculvey)! - Improve experience for WARP users by improving the reliability of the polling logic that waits for newly created apps to become available.
+
+* [#3552](https://github.com/cloudflare/workers-sdk/pull/3552) [`77a43d2a`](https://github.com/cloudflare/workers-sdk/commit/77a43d2aa3633fc53be6fe365271d6fb59f44bd6) Thanks [@yusukebe](https://github.com/yusukebe)! - fix: use workers template for Hono
+
+  Use a workers template instead of a pages template for `create-hono`.
+
 ## 2.1.0
 
 ### Minor Changes

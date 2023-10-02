@@ -14,10 +14,86 @@ import * as metrics from "../metrics";
 import { parseJSON, readFileSync } from "../parse";
 import { requireAuth } from "../user";
 
+import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+
+function isMissingWorkerError(e: unknown): e is { code: 10007 } {
+	return (
+		typeof e === "object" &&
+		e !== null &&
+		(e as { code: number }).code === 10007
+	);
+}
+
+async function createDraftWorker({
+	config,
+	args,
+	accountId,
+	scriptName,
+}: {
+	config: Config;
+	args: { env?: string; name?: string };
+	accountId: string;
+	scriptName: string;
+}) {
+	// TODO: log a warning
+	await fetchResult(
+		!isLegacyEnv(config) && args.env
+			? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}`
+			: `/accounts/${accountId}/workers/scripts/${scriptName}`,
+		{
+			method: "PUT",
+			body: createWorkerUploadForm({
+				name: scriptName,
+				main: {
+					name: scriptName,
+					filePath: undefined,
+					content: `export default { fetch() {} }`,
+					type: "esm",
+				},
+				bindings: {
+					kv_namespaces: [],
+					send_email: [],
+					vars: {},
+					durable_objects: { bindings: [] },
+					queues: [],
+					r2_buckets: [],
+					d1_databases: [],
+					vectorize: [],
+					hyperdrive: [],
+					constellation: [],
+					services: [],
+					analytics_engine_datasets: [],
+					wasm_modules: {},
+					browser: undefined,
+					ai: undefined,
+					text_blobs: {},
+					data_blobs: {},
+					dispatch_namespaces: [],
+					mtls_certificates: [],
+					logfwdr: { bindings: [] },
+					unsafe: {
+						bindings: undefined,
+						metadata: undefined,
+						capnp: undefined,
+					},
+				},
+				modules: [],
+				migrations: undefined,
+				compatibility_date: undefined,
+				compatibility_flags: undefined,
+				usage_model: undefined,
+				keepVars: false, // this doesn't matter since it's a new script anyway
+				logpush: false,
+				placement: undefined,
+				tail_consumers: undefined,
+			}),
+		}
+	);
+}
 
 export const secret = (secretYargs: CommonYargsArgv) => {
 	return secretYargs
@@ -84,67 +160,6 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 					});
 				}
 
-				const createDraftWorker = async () => {
-					// TODO: log a warning
-					await fetchResult(
-						!isLegacyEnv(config) && args.env
-							? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}`
-							: `/accounts/${accountId}/workers/scripts/${scriptName}`,
-						{
-							method: "PUT",
-							body: createWorkerUploadForm({
-								name: scriptName,
-								main: {
-									name: scriptName,
-									content: `export default { fetch() {} }`,
-									type: "esm",
-								},
-								bindings: {
-									kv_namespaces: [],
-									send_email: [],
-									vars: {},
-									durable_objects: { bindings: [] },
-									queues: [],
-									r2_buckets: [],
-									d1_databases: [],
-									constellation: [],
-									services: [],
-									analytics_engine_datasets: [],
-									wasm_modules: {},
-									browser: undefined,
-									text_blobs: {},
-									data_blobs: {},
-									dispatch_namespaces: [],
-									mtls_certificates: [],
-									logfwdr: { bindings: [] },
-									unsafe: {
-										bindings: undefined,
-										metadata: undefined,
-										capnp: undefined,
-									},
-								},
-								modules: [],
-								migrations: undefined,
-								compatibility_date: undefined,
-								compatibility_flags: undefined,
-								usage_model: undefined,
-								keepVars: false, // this doesn't matter since it's a new script anyway
-								logpush: false,
-								placement: undefined,
-								tail_consumers: undefined,
-							}),
-						}
-					);
-				};
-
-				function isMissingWorkerError(e: unknown): e is { code: 10007 } {
-					return (
-						typeof e === "object" &&
-						e !== null &&
-						(e as { code: number }).code === 10007
-					);
-				}
-
 				try {
 					await submitSecret();
 					await metrics.sendMetricsEvent("create encrypted variable", {
@@ -153,7 +168,12 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 				} catch (e) {
 					if (isMissingWorkerError(e)) {
 						// create a draft worker and try again
-						await createDraftWorker();
+						await createDraftWorker({
+							config,
+							args,
+							accountId,
+							scriptName,
+						});
 						await submitSecret();
 						// TODO: delete the draft worker if this failed too?
 					} else {
@@ -360,33 +380,49 @@ export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
 		return logger.error(`🚨 No content found in JSON file or piped input.`);
 	}
 
-	const url =
-		!secretBulkArgs.env || isLegacyEnv(config)
-			? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
-			: `/accounts/${accountId}/workers/services/${scriptName}/environments/${secretBulkArgs.env}/secrets`;
+	function submitSecrets(key: string, value: string) {
+		const url =
+			!secretBulkArgs.env || isLegacyEnv(config)
+				? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
+				: `/accounts/${accountId}/workers/services/${scriptName}/environments/${secretBulkArgs.env}/secrets`;
+
+		return fetchResult(url, {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				name: key,
+				text: value,
+				type: "secret_text",
+			}),
+		});
+	}
 	// Until we have a bulk route for secrets, we need to make a request for each key/value pair
 	const bulkOutcomes = await Promise.all(
 		Object.entries(content).map(async ([key, value]) => {
-			return fetchResult(url, {
-				method: "PUT",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					name: key,
-					text: value,
-					type: "secret_text",
-				}),
-			})
-				.then(() => {
-					logger.log(`✨ Successfully created secret for key: ${key}`);
-					return true;
-				})
-				.catch((e) => {
+			try {
+				await submitSecrets(key, value);
+				logger.log(`✨ Successfully created secret for key: ${key}`);
+				return true;
+			} catch (e) {
+				if (e instanceof Error) {
 					logger.error(
 						`uploading secret for key: ${key}:
-                ${e.message}`
+    ${e.message}`
 					);
+					if (isMissingWorkerError(e)) {
+						// create a draft worker and try again
+						await createDraftWorker({
+							config,
+							args: secretBulkArgs,
+							accountId,
+							scriptName,
+						});
+						await submitSecrets(key, value);
+						// TODO: delete the draft worker if this failed too?
+					}
 					return false;
-				});
+				}
+			}
 		})
 	);
 

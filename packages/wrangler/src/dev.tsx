@@ -1,6 +1,5 @@
 import path from "node:path";
 import { isWebContainer } from "@webcontainer/env";
-import chalk from "chalk";
 import { watch } from "chokidar";
 import getPort from "get-port";
 import { render } from "ink";
@@ -319,6 +318,7 @@ export type AdditionalDevProps = {
 		binding: string;
 		bucket_name: string;
 		preview_bucket_name?: string;
+		jurisdiction?: string;
 	}[];
 	d1Databases?: Environment["d1_databases"];
 	processEntrypoint?: boolean;
@@ -347,17 +347,6 @@ export async function startDev(args: StartDevOptions) {
 			logger.loggerLevel = args.logLevel;
 		}
 		await printWranglerBanner();
-		// TODO(v3.1): remove this message
-		if (!args.remote && typeof jest === "undefined") {
-			logger.log(
-				chalk.blue(`${chalk.green(
-					`wrangler dev`
-				)} now uses local mode by default, powered by 🔥 Miniflare and 👷 workerd.
-To run an edge preview session for your Worker, use ${chalk.green(
-					`wrangler dev --remote`
-				)}`)
-			);
-		}
 		if (args.local) {
 			logger.warn(
 				"--local is no longer required and will be removed in a future version.\n`wrangler dev` now uses the local Cloudflare Workers runtime by default. 🎉"
@@ -683,6 +672,21 @@ async function getZoneIdHostAndRoutes(args: StartDevOptions, config: Config) {
 		if (routes) {
 			const firstRoute = routes[0];
 			host = getHostFromRoute(firstRoute);
+
+			// TODO(consider): do we need really need to do this? I've added the condition to throw to match the previous implicit behaviour of `new URL()` throwing upon invalid URLs, but could we just continue here without an inferred host?
+			if (host === undefined) {
+				throw new Error(
+					`Cannot infer host from first route: ${JSON.stringify(
+						firstRoute
+					)}.\nYou can explicitly set the \`dev.host\` configuration in your wrangler.toml file, for example:
+
+	\`\`\`
+	[dev]
+	host = "example.com"
+	\`\`\`
+`
+				);
+			}
 		}
 	}
 	return { host, routes, zoneId };
@@ -844,14 +848,14 @@ function getBindings(
 	const bindings = {
 		kv_namespaces: [
 			...(configParam.kv_namespaces || []).map(
-				({ binding, preview_id, id: _id }) => {
-					// In `dev`, we make folks use a separate kv namespace called
+				({ binding, preview_id, id }) => {
+					// In remote `dev`, we make folks use a separate kv namespace called
 					// `preview_id` instead of `id` so that they don't
 					// break production data. So here we check that a `preview_id`
 					// has actually been configured.
 					// This whole block of code will be obsoleted in the future
 					// when we have copy-on-write for previews on edge workers.
-					if (!preview_id) {
+					if (!preview_id && !local) {
 						// TODO: This error has to be a _lot_ better, ideally just asking
 						// to create a preview namespace for the user automatically
 						throw new Error(
@@ -860,7 +864,7 @@ function getBindings(
 					}
 					return {
 						binding,
-						id: preview_id,
+						id: preview_id ?? id,
 					};
 				}
 			),
@@ -875,6 +879,7 @@ function getBindings(
 		wasm_modules: configParam.wasm_modules,
 		text_blobs: configParam.text_blobs,
 		browser: configParam.browser,
+		ai: configParam.ai,
 		data_blobs: configParam.data_blobs,
 		durable_objects: {
 			bindings: [
@@ -889,17 +894,18 @@ function getBindings(
 		],
 		r2_buckets: [
 			...(configParam.r2_buckets?.map(
-				({ binding, preview_bucket_name, bucket_name: _bucket_name }) => {
+				({ binding, preview_bucket_name, bucket_name, jurisdiction }) => {
 					// same idea as kv namespace preview id,
 					// same copy-on-write TODO
-					if (!preview_bucket_name) {
+					if (!preview_bucket_name && !local) {
 						throw new Error(
 							`In development, you should use a separate r2 bucket than the one you'd use in production. Please create a new r2 bucket with "wrangler r2 bucket create <name>" and add its name as preview_bucket_name to the r2_buckets "${binding}" in your wrangler.toml`
 						);
 					}
 					return {
 						binding,
-						bucket_name: preview_bucket_name,
+						bucket_name: preview_bucket_name ?? bucket_name,
+						jurisdiction,
 					};
 				}
 			) || []),
@@ -934,7 +940,9 @@ function getBindings(
 			}),
 			...(args.d1Databases || []),
 		],
+		vectorize: configParam.vectorize,
 		constellation: configParam.constellation,
+		hyperdrive: configParam.hyperdrive,
 	};
 
 	return bindings;

@@ -1,13 +1,14 @@
 import { Blob } from "node:buffer";
 import { gzipSync } from "node:zlib";
+import chalk from "chalk";
 import { logger } from "../logger";
 import type { CfModule } from "./worker";
 import type { Metafile } from "esbuild";
 
 const ONE_KIB_BYTES = 1024;
-const ONE_MIB_BYTES = ONE_KIB_BYTES * 1024;
+const ALLOWED_INITIAL_MAX = ONE_KIB_BYTES * 1024; // Current max is 1 MiB
 
-async function getSize(modules: CfModule[]) {
+async function getSize(modules: Pick<CfModule, "content">[]) {
 	const gzipSize = gzipSync(
 		await new Blob(modules.map((file) => file.content)).arrayBuffer()
 	).byteLength;
@@ -29,9 +30,18 @@ export async function printBundleSize(
 		gzipSize / ONE_KIB_BYTES
 	).toFixed(2)} KiB`;
 
-	logger.log(`Total Upload: ${bundleReport}`);
+	const percentage = (gzipSize / ALLOWED_INITIAL_MAX) * 100;
 
-	if (gzipSize > ONE_MIB_BYTES && !process.env.NO_SCRIPT_SIZE_WARNING) {
+	const colorizedReport =
+		percentage > 90
+			? chalk.red(bundleReport)
+			: percentage > 70
+			? chalk.yellow(bundleReport)
+			: chalk.green(bundleReport);
+
+	logger.log(`Total Upload: ${colorizedReport}`);
+
+	if (gzipSize > ALLOWED_INITIAL_MAX && !process.env.NO_SCRIPT_SIZE_WARNING) {
 		logger.warn(
 			"We recommend keeping your script less than 1MiB (1024 KiB) after gzip. Exceeding past this can affect cold start time"
 		);

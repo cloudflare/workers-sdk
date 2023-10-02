@@ -1,5 +1,5 @@
 name = "<TBD>"
-main = "src/worker.ts"
+main = "src/index.ts"
 compatibility_date = "2023-05-15"
 
 # Cron Triggers

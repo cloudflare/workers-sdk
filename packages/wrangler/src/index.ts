@@ -5,6 +5,7 @@ import supportsColor from "supports-color";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
+import { ai } from "./ai";
 import { loadDotEnv, readConfig } from "./config";
 import { constellation } from "./constellation";
 import { d1 } from "./d1";
@@ -33,6 +34,7 @@ import { devHandler, devOptions } from "./dev";
 import { workerNamespaceCommands } from "./dispatch-namespace";
 import { docsHandler, docsOptions } from "./docs";
 import { generateHandler, generateOptions } from "./generate";
+import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
 import { kvNamespace, kvKey, kvBulk } from "./kv";
 import { logBuildFailure, logger } from "./logger";
@@ -48,6 +50,7 @@ import { tailOptions, tailHandler } from "./tail";
 import { generateTypes } from "./type-generation";
 import { updateCheck } from "./update-check";
 import { listScopes, login, logout, validateScopeKeys } from "./user";
+import { vectorize } from "./vectorize/index";
 import { whoami } from "./whoami";
 
 import type { Config } from "./config";
@@ -450,12 +453,35 @@ export function createCLIParser(argv: string[]) {
 		return d1(d1Yargs.command(subHelp));
 	});
 
+	// hyperdrive
+	wrangler.command(
+		"hyperdrive",
+		"🚀 Configure Hyperdrive databases",
+		(hyperdriveYargs) => {
+			return hyperdrive(hyperdriveYargs.command(subHelp));
+		}
+	);
+
 	// ai
+	wrangler.command("ai", "🤖 Interact with AI models", (aiYargs) => {
+		return ai(aiYargs.command(subHelp));
+	});
+
+	// constellation
 	wrangler.command(
 		"constellation",
 		"🤖 Interact with Constellation models",
 		(aiYargs) => {
 			return constellation(aiYargs.command(subHelp));
+		}
+	);
+
+	// vectorize
+	wrangler.command(
+		"vectorize",
+		"🧮 Interact with Vectorize indexes",
+		(vectorYargs) => {
+			return vectorize(vectorYargs.command(subHelp));
 		}
 	);
 
@@ -753,7 +779,7 @@ export async function main(argv: string[]): Promise<void> {
 				`${thisTerminalIsUnsupported}\n${soWranglerWontWork}\n${tryRunningItIn}${oneOfThese}`
 			);
 		} else if (isBuildFailure(e)) {
-			logBuildFailure(e);
+			logBuildFailure(e.errors, e.warnings);
 			logger.error(e.message);
 		} else {
 			logger.error(e instanceof Error ? e.message : e);
@@ -763,6 +789,13 @@ export async function main(argv: string[]): Promise<void> {
 			);
 		}
 		throw e;
+	} finally {
+		// In the bootstrapper script `bin/wrangler.js`, we open an IPC channel, so
+		// IPC messages from this process are propagated through the bootstrapper.
+		// Make sure this channel is closed once it's no longer needed, so we can
+		// cleanly exit. Note, we don't want to disconnect if this file was imported
+		// in Jest, as that would stop communication with the test runner.
+		if (typeof jest === "undefined") process.disconnect?.();
 	}
 }
 

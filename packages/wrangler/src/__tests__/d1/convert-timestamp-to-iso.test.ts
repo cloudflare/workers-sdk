@@ -18,7 +18,7 @@ describe("convertTimestampToISO", () => {
 			convertTimestampToISO(timestamp);
 		} catch (e) {
 			error = `${e}`.replace(
-				/\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d\.\d\d\d\+\d\d:\d\d/,
+				/\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d\.\d\d\d(\+|-)\d\d:\d\d/,
 				"(DATE)"
 			);
 		}

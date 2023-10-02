@@ -11,11 +11,13 @@ export const extractPathname = (
 };
 
 const URL_REGEX = /^https:\/\/+(?<host>[^/]+)\/?(?<path>.*)/;
+const HOST_WITH_PORT_REGEX = /.*:\d+$/;
 const PATH_REGEX = /^\//;
 
 export const validateUrl = (
 	token: string,
 	onlyRelative = false,
+	disallowPorts = false,
 	includeSearch = false,
 	includeHash = false
 ): [undefined, string] | [string, undefined] => {
@@ -26,6 +28,13 @@ export const validateUrl = (
 				undefined,
 				`Only relative URLs are allowed. Skipping absolute URL ${token}.`,
 			];
+
+		if (disallowPorts && host.groups.host.match(HOST_WITH_PORT_REGEX)) {
+			return [
+				undefined,
+				`Specifying ports is not supported. Skipping absolute URL ${token}.`,
+			];
+		}
 
 		return [
 			`https://${host.groups.host}${extractPathname(

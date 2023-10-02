@@ -1,13 +1,13 @@
 {
 	"name": "pages-ws-app",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"private": true,
 	"sideEffects": false,
 	"main": "server/index.js",
 	"scripts": {
 		"build": "esbuild --bundle --platform=node server/index.ts --outfile=dist/index.js",
 		"check:type": "tsc",
-		"dev": "npx wrangler pages dev --port 8790 --proxy 8791 -- npm run server",
+		"dev": "npx wrangler pages dev --port 8790 --proxy 8791 -- pnpm run server",
 		"server": "node dist/index.js",
 		"test": "npx vitest run",
 		"test:ci": "npx vitest run",
@@ -15,9 +15,9 @@
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-tsconfig": "*",
-		"miniflare": "3.20230801.0",
-		"wrangler": "*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"miniflare": "3.20230922.0",
+		"wrangler": "workspace:*",
 		"ws": "^8.8.0"
 	},
 	"engines": {

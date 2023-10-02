@@ -1,0 +1,13 @@
+{
+	"main": "src/index.ts",
+	"compatibility_date": "2023-08-14",
+	"name": "turbo-r2-archive",
+	"account_id": "e35fd947284363a46fd7061634477114",
+	"r2_buckets": [
+		{
+			"binding": "R2_ARTIFACT_ARCHIVE",
+			"bucket_name": "turbo-cache",
+			"preview_bucket_name": "turbo-cache-preview"
+		}
+	]
+}

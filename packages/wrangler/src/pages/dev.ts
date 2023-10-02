@@ -5,6 +5,7 @@ import { join, resolve } from "node:path";
 import { watch } from "chokidar";
 import * as esbuild from "esbuild";
 import { unstable_dev } from "../api";
+import { isBuildFailure } from "../deployment-bundle/bundle";
 import { esbuildAliasExternalPlugin } from "../deployment-bundle/esbuild-plugins/alias-external";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
@@ -12,7 +13,12 @@ import * as metrics from "../metrics";
 import { getBasePath } from "../paths";
 import { buildFunctions } from "./buildFunctions";
 import { ROUTES_SPEC_VERSION, SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
-import { FunctionsNoRoutesError, getFunctionsNoRoutesWarning } from "./errors";
+import {
+	FunctionsBuildError,
+	FunctionsNoRoutesError,
+	getFunctionsBuildWarning,
+	getFunctionsNoRoutesWarning,
+} from "./errors";
 import {
 	buildRawWorker,
 	checkRawWorker,
@@ -126,11 +132,12 @@ export function Options(yargs: CommonYargsArgv) {
 			},
 			d1: {
 				type: "array",
-				description: "D1 database to bind",
+				description: "D1 database to bind (--d1 D1_BINDING)",
 			},
 			do: {
 				type: "array",
-				description: "Durable Object to bind (--do NAME=CLASS)",
+				description:
+					"Durable Object to bind (--do DO_BINDING=CLASS_NAME@SCRIPT_NAME)",
 				alias: "o",
 			},
 			r2: {
@@ -288,7 +295,15 @@ export const Handler = async ({
 			persistent: true,
 			ignoreInitial: true,
 		}).on("all", async () => {
-			await runBuild();
+			try {
+				await runBuild();
+			} catch (e) {
+				if (isBuildFailure(e)) {
+					logger.warn("Error building worker script:", e.message);
+					return;
+				}
+				throw e;
+			}
 		});
 	} else if (usingWorkerScript) {
 		scriptPath = workerScriptPath;
@@ -375,6 +390,10 @@ export const Handler = async ({
 					if (e instanceof FunctionsNoRoutesError) {
 						logger.warn(
 							getFunctionsNoRoutesWarning(functionsDirectory, "skipping")
+						);
+					} else if (e instanceof FunctionsBuildError) {
+						logger.warn(
+							getFunctionsBuildWarning(functionsDirectory, e.message)
 						);
 					} else {
 						throw e;
@@ -636,14 +655,13 @@ export const Handler = async ({
 
 	CLEANUP_CALLBACKS.push(stop);
 
-	void waitUntilExit().then(() => {
-		CLEANUP();
-		process.exit(0);
-	});
-
 	process.on("exit", CLEANUP);
 	process.on("SIGINT", CLEANUP);
 	process.on("SIGTERM", CLEANUP);
+
+	await waitUntilExit();
+	CLEANUP();
+	process.exit(0);
 };
 
 function isWindows() {

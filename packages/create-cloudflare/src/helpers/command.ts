@@ -1,4 +1,4 @@
-import { existsSync } from "fs";
+import { existsSync, rmSync } from "fs";
 import path from "path";
 import { spawn } from "cross-spawn";
 import { endSection, stripAnsi } from "./cli";
@@ -47,7 +47,7 @@ export const runCommand = async (
 	opts: RunOptions = {}
 ): Promise<string> => {
 	if (typeof command === "string") {
-		command = command.trim().replace(/\s+/g, ` `).split(" ");
+		command = command.trim().replace(/\s+/g, " ").split(" ");
 	}
 
 	return printAsyncStatus({
@@ -180,6 +180,10 @@ export const runFrameworkGenerator = async (
 	ctx: PagesGeneratorContext,
 	cmd: string
 ) => {
+	if (ctx.framework?.args?.length) {
+		cmd = `${cmd} ${ctx.framework.args.join(" ")}`;
+	}
+
 	endSection(
 		`Continue with ${ctx.framework?.config.displayName}`,
 		`via \`${cmd.trim()}\``
@@ -212,6 +216,10 @@ export const installPackages = async (
 			cmd = "add";
 			saveFlag = config.dev ? "-D" : "";
 			break;
+		case "bun":
+			cmd = "add";
+			saveFlag = config.dev ? "-d" : "";
+			break;
 		case "npm":
 		case "pnpm":
 		default:
@@ -231,6 +239,27 @@ export const npmInstall = async () => {
 
 	await runCommand(`${npm} install`, {
 		silent: true,
+		startText: "Installing dependencies",
+		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
+	});
+};
+
+// Resets the package manager context for a project by clearing out existing dependencies
+// and lock files then re-installing.
+export const resetPackageManager = async (ctx: PagesGeneratorContext) => {
+	const { npm } = detectPackageManager();
+
+	// Only do this when using pnpm or yarn
+	if (npm === "npm") return;
+
+	const nodeModulesPath = path.join(ctx.project.path, "node_modules");
+	rmSync(nodeModulesPath, { recursive: true });
+	const lockfilePath = path.join(ctx.project.path, "package-lock.json");
+	rmSync(lockfilePath);
+
+	await runCommand(`${npm} install`, {
+		silent: true,
+		cwd: ctx.project.path,
 		startText: "Installing dependencies",
 		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
 	});

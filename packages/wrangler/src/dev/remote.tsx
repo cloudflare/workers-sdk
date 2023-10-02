@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { pathToFileURL } from "url";
 import { Text } from "ink";
 import SelectInput from "ink-select-input";
 import React, { useState, useEffect, useRef } from "react";
@@ -504,6 +505,17 @@ export async function getRemotePreviewToken(props: RemoteProps) {
 	});
 }
 
+/**
+ * Adds `//# sourceURL` comment so V8 knows where source files are on disk.
+ * This URL is returned in `Debugger.scriptParsed` events, ensuring inspector
+ * clients resolve source mapping URLs correctly. It also appears in stack
+ * traces, allowing users to click through to where errors are thrown. Note,
+ * Miniflare includes similar code, so we only need to do this in remote mode.
+ */
+function withSourceURL(source: string, sourcePath: string) {
+	return `${source}\n//# sourceURL=${pathToFileURL(sourcePath)}`;
+}
+
 async function createRemoteWorkerInit(props: {
 	bundle: EsbuildBundle;
 	modules: CfModule[];
@@ -519,7 +531,10 @@ async function createRemoteWorkerInit(props: {
 	compatibilityFlags: string[] | undefined;
 	usageModel: "bundled" | "unbound" | undefined;
 }) {
-	const content = await readFile(props.bundle.path, "utf-8");
+	const content = withSourceURL(
+		await readFile(props.bundle.path, "utf-8"),
+		props.bundle.path
+	);
 
 	// TODO: For Dev we could show the reporter message in the interactive box.
 	void printBundleSize(
@@ -540,22 +555,39 @@ async function createRemoteWorkerInit(props: {
 		undefined
 	); // TODO: cancellable?
 
+	const modules = props.modules.map((module) => {
+		// If this is a JavaScript module with a `filePath`, add a `//# sourceURL`
+		// comment so source maps resolve correctly
+		if (
+			module.filePath !== undefined &&
+			(module.type === "esm" || module.type === "commonjs")
+		) {
+			// `module.content` may be a `Buffer`
+			let newContent = module.content.toString();
+			newContent = withSourceURL(newContent, module.filePath);
+			return { ...module, content: newContent };
+		} else {
+			return module;
+		}
+	});
+	if (assets.manifest) {
+		modules.push({
+			name: "__STATIC_CONTENT_MANIFEST",
+			filePath: undefined,
+			content: JSON.stringify(assets.manifest),
+			type: "text",
+		});
+	}
+
 	const init: CfWorkerInit = {
 		name: props.name,
 		main: {
 			name: path.basename(props.bundle.path),
+			filePath: props.bundle.path,
 			type: props.format === "modules" ? "esm" : "commonjs",
 			content,
 		},
-		modules: props.modules.concat(
-			assets.manifest
-				? {
-						name: "__STATIC_CONTENT_MANIFEST",
-						content: JSON.stringify(assets.manifest),
-						type: "text",
-				  }
-				: []
-		),
+		modules,
 		bindings: {
 			...props.bindings,
 			kv_namespaces: (props.bindings.kv_namespaces || []).concat(

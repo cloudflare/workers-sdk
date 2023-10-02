@@ -147,6 +147,7 @@ export function buildWorker({
 			checkFetch: local,
 			targetConsumer: local ? "dev" : "deploy",
 			forPages: true,
+			local,
 		}
 	);
 }
@@ -241,6 +242,7 @@ export function buildRawWorker({
 			targetConsumer: local ? "dev" : "deploy",
 			forPages: true,
 			additionalModules,
+			local,
 		}
 	);
 }
@@ -248,12 +250,10 @@ export function buildRawWorker({
 export async function traverseAndBuildWorkerJSDirectory({
 	workerJSDirectory,
 	buildOutputDirectory,
-	d1Databases,
 	nodejsCompat,
 }: {
 	workerJSDirectory: string;
 	buildOutputDirectory: string;
-	d1Databases?: string[];
 	nodejsCompat?: boolean;
 }): Promise<BundleResult> {
 	const entrypoint = resolve(join(workerJSDirectory, "index.js"));

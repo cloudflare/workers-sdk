@@ -75,7 +75,7 @@ export async function generateTypes(
 
 	if (configToDTS.dispatch_namespaces) {
 		for (const namespace of configToDTS.dispatch_namespaces) {
-			envTypeStructure.push(`${namespace.binding}: any;`);
+			envTypeStructure.push(`${namespace.binding}: DispatchNamespace;`);
 		}
 	}
 

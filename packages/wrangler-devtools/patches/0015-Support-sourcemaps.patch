@@ -1,7 +1,7 @@
-From 85fcb93878fac45074cc24d4e215ede8b9082339 Mon Sep 17 00:00:00 2001
+From cb79cae04886e81f8be78d4f90fad920b1e81f7c Mon Sep 17 00:00:00 2001
 From: Samuel Macleod <smacleod@cloudflare.com>
 Date: Thu, 4 May 2023 03:22:33 +0100
-Subject: [PATCH 15/15] Support sourcemaps:
+Subject: [PATCH 15/16] Support sourcemaps:
 
     * Recognise `wrangler://` URLs as "special", and always load them with Network.loadNetworkResource
 
@@ -56,5 +56,5 @@ index 87ad8ea645..047313c89c 100644
  
      Root.Runtime.experiments.setNonConfigurableExperiments([
 -- 
-2.39.2 (Apple Git-143)
+2.41.0
 

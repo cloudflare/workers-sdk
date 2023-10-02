@@ -2,7 +2,7 @@ import { runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
 import { inputPrompt } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
-import { getFrameworkVersion } from "../index";
+import { getFrameworkCli } from "../index";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
 const { npm, dlx } = detectPackageManager();
@@ -27,10 +27,10 @@ const generate = async (ctx: PagesGeneratorContext) => {
 		});
 	}
 
-	const version = getFrameworkVersion(ctx);
+	const cli = getFrameworkCli(ctx);
 	await runFrameworkGenerator(
 		ctx,
-		`${dlx} gatsby@${version} new ${ctx.project.name} ${templateUrl}`
+		`${dlx} ${cli} new ${ctx.project.name} ${templateUrl}`
 	);
 };
 

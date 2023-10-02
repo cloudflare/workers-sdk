@@ -95,6 +95,23 @@ export const mswSuccessDeploymentScriptMetadata = [
 	),
 ];
 
+export const mswSuccessDeploymentScriptAPI = [
+	rest.get(
+		"*/accounts/:accountId/workers/services/:scriptName",
+		(_, res, ctx) => {
+			return res.once(
+				ctx.json(
+					createFetchResult({
+						default_environment: {
+							script: { last_deployed_from: "api", tag: "MOCK-TAG" },
+						},
+					})
+				)
+			);
+		}
+	),
+];
+
 export const mswSuccessDeploymentDetails = [
 	rest.get(
 		"*/accounts/:accountId/workers/deployments/by-script/:scriptTag/detail/:deploymentId",

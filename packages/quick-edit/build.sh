@@ -13,4 +13,4 @@ mv ../../vendor/vscode-web web/assets
 mv web/assets/node_modules web/assets/modules
 
 # Build quick-edit-extension
-npm --prefix web/quick-edit-extension run package-web
+pnpm --filter quick-edit-extension run package-web

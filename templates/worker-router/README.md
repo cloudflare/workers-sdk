@@ -11,14 +11,12 @@ This template demonstrates using the [`itty-router`](https://github.com/kwhitley
 To create a `my-project` directory using this template, run:
 
 ```sh
-$ npm init cloudflare my-project worker
+$ npx wrangler generate my-project worker
 # or
-$ yarn create cloudflare my-project worker
+$ yarn wrangler generate my-project worker
 # or
-$ pnpm create cloudflare my-project worker
+$ pnpm wrangler generate my-project worker
 ```
-
-> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.
 
 Before publishing your code you need to edit `wrangler.toml` file and add your Cloudflare `account_id` - more information about configuring and publishing your code can be found [in the documentation](https://developers.cloudflare.com/workers/learning/getting-started).
 

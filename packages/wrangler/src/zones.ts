@@ -22,25 +22,23 @@ export interface Zone {
  * ```
  * However, in the case of patterns that _can't_ be parsed as a hostname
  * (primarily the pattern `*/ /*`), we fall back to the `zone_name`
- * (and in the absence of that throw an error).
+ * (and in the absence of that return undefined).
  * @param route
  */
 export function getHostFromRoute(route: Route): string | undefined {
+	let host: string | undefined;
+
 	if (typeof route === "string") {
-		return getHostFromUrl(route);
+		host = getHostFromUrl(route);
 	} else if (typeof route === "object") {
-		try {
-			return getHostFromUrl(route.pattern);
-		} catch (e) {
-			if (
-				(e as { code: string }).code === "ERR_INVALID_URL" &&
-				"zone_name" in route
-			) {
-				return getHostFromUrl(route.zone_name);
-			}
-			throw e;
+		host = getHostFromUrl(route.pattern);
+
+		if (host === undefined && "zone_name" in route) {
+			host = getHostFromUrl(route.zone_name);
 		}
 	}
+
+	return host;
 }
 
 /**
@@ -65,13 +63,30 @@ export async function getZoneForRoute(route: Route): Promise<Zone | undefined> {
  * Given something that resembles a URL, try to extract a host from it.
  */
 export function getHostFromUrl(urlLike: string): string | undefined {
-	// strip leading * / *.
+	// if the urlLike-pattern uses a splat for the entire host and is only concerned with the pathname, we cannot infer a host
+	if (
+		urlLike.startsWith("*/") ||
+		urlLike.startsWith("http://*/") ||
+		urlLike.startsWith("https://*/")
+	) {
+		return undefined;
+	}
+
+	// if the urlLike-pattern uses a splat for the sub-domain (*.example.com) or for the root-domain (*example.com), remove the wildcard parts
 	urlLike = urlLike.replace(/\*(\.)?/g, "");
 
+	// prepend a protocol if the pattern did not specify one
 	if (!(urlLike.startsWith("http://") || urlLike.startsWith("https://"))) {
 		urlLike = "http://" + urlLike;
 	}
-	return new URL(urlLike).host;
+
+	// now we've done our best to make urlLike a valid url string which we can pass to `new URL()` to get the host
+	// if it still isn't, return undefined to indicate we couldn't infer a host
+	try {
+		return new URL(urlLike).host;
+	} catch {
+		return undefined;
+	}
 }
 
 /**

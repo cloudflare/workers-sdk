@@ -1,17 +1,17 @@
 import { logRaw } from "helpers/cli";
 import { runFrameworkGenerator } from "helpers/command.js";
 import { detectPackageManager } from "helpers/packages";
-import { getFrameworkVersion } from "../index";
+import { getFrameworkCli } from "../index";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
 const { npm, dlx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
-	const version = getFrameworkVersion(ctx);
+	const cli = getFrameworkCli(ctx);
 
 	await runFrameworkGenerator(
 		ctx,
-		`${dlx} create-remix@${version} ${ctx.project.name} --template https://github.com/remix-run/remix/tree/main/templates/cloudflare-pages`
+		`${dlx} ${cli} ${ctx.project.name} --template https://github.com/remix-run/remix/tree/main/templates/cloudflare-pages`
 	);
 
 	logRaw(""); // newline

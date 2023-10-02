@@ -283,6 +283,13 @@ export default async function deploy(props: Props): Promise<void> {
 				if (!(await confirm("Would you like to continue?"))) {
 					return;
 				}
+			} else if (default_environment.script.last_deployed_from === "api") {
+				logger.warn(
+					`You are about to publish a Workers Service that was last updated via the script API.\nEdits that have been made via the script API will be overridden by your local code and config.`
+				);
+				if (!(await confirm("Would you like to continue?"))) {
+					return;
+				}
 			}
 		} catch (e) {
 			// code: 10090, message: workers.api.error.service_not_found
@@ -478,10 +485,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						// because we don't want to apply the dev-time
 						// facades on top of it
 						workerDefinitions: undefined,
-						firstPartyWorkerDevFacade: false,
 						// We want to know if the build is for development or publishing
 						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
 						targetConsumer: "deploy",
+						local: false,
 					}
 			  );
 
@@ -522,6 +529,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			vars: { ...config.vars, ...props.vars },
 			wasm_modules: config.wasm_modules,
 			browser: config.browser,
+			ai: config.ai,
 			text_blobs: {
 				...config.text_blobs,
 				...(assets.manifest &&
@@ -536,7 +544,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			}),
 			r2_buckets: config.r2_buckets,
 			d1_databases: config.d1_databases,
+			vectorize: config.vectorize,
 			constellation: config.constellation,
+			hyperdrive: config.hyperdrive,
 			services: config.services,
 			analytics_engine_datasets: config.analytics_engine_datasets,
 			dispatch_namespaces: config.dispatch_namespaces,
@@ -552,6 +562,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		if (assets.manifest) {
 			modules.push({
 				name: "__STATIC_CONTENT_MANIFEST",
+				filePath: undefined,
 				content: JSON.stringify(assets.manifest),
 				type: "text",
 			});
@@ -565,6 +576,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			name: scriptName,
 			main: {
 				name: path.basename(resolvedEntryPointPath),
+				filePath: resolvedEntryPointPath,
 				content: content,
 				type: bundleType,
 			},

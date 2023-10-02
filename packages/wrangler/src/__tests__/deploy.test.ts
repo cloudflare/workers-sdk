@@ -36,6 +36,7 @@ import {
 	msw,
 	mswSuccessDeployments,
 	mswSuccessDeploymentScriptMetadata,
+	mswSuccessDeploymentScriptAPI,
 } from "./helpers/msw";
 import { FileReaderSync } from "./helpers/msw/read-file-sync";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -142,7 +143,7 @@ describe("deploy", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"Attempting to login via OAuth...
-			Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20constellation%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+			Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20constellation%3Awrite%20ai%3Aread%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 			Successfully logged in.
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
@@ -182,7 +183,7 @@ describe("deploy", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 			"Attempting to login via OAuth...
-			Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20constellation%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+			Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20constellation%3Awrite%20ai%3Aread%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 			Successfully logged in.
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
@@ -362,6 +363,22 @@ describe("deploy", () => {
 			          "
 		        `);
 			});
+		});
+	});
+
+	describe("warnings", () => {
+		it("should warn user when worker was last deployed from api", async () => {
+			msw.use(...mswSuccessDeploymentScriptAPI);
+			writeWranglerToml();
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+
+			await runWrangler("deploy ./index");
+
+			expect(std.warn).toMatch(
+				/You are about to publish a Workers Service that was last updated via the script API/
+			);
 		});
 	});
 
@@ -5041,6 +5058,16 @@ addEventListener('fetch', event => {});`
 				r2_buckets: [
 					{ binding: "R2_BUCKET_ONE", bucket_name: "r2-bucket-one-name" },
 					{ binding: "R2_BUCKET_TWO", bucket_name: "r2-bucket-two-name" },
+					{
+						binding: "R2_BUCKET_ONE_EU",
+						bucket_name: "r2-bucket-one-name",
+						jurisdiction: "eu",
+					},
+					{
+						binding: "R2_BUCKET_TWO_EU",
+						bucket_name: "r2-bucket-two-name",
+						jurisdiction: "eu",
+					},
 				],
 				analytics_engine_datasets: [
 					{ binding: "AE_DATASET_ONE", dataset: "ae-dataset-one-name" },
@@ -5153,6 +5180,18 @@ addEventListener('fetch', event => {});`
 						type: "r2_bucket",
 					},
 					{
+						bucket_name: "r2-bucket-one-name",
+						jurisdiction: "eu",
+						name: "R2_BUCKET_ONE_EU",
+						type: "r2_bucket",
+					},
+					{
+						bucket_name: "r2-bucket-two-name",
+						jurisdiction: "eu",
+						name: "R2_BUCKET_TWO_EU",
+						type: "r2_bucket",
+					},
+					{
 						dataset: "ae-dataset-one-name",
 						name: "AE_DATASET_ONE",
 						type: "analytics_engine",
@@ -5217,6 +5256,8 @@ addEventListener('fetch', event => {});`
 			- R2 Buckets:
 			  - R2_BUCKET_ONE: r2-bucket-one-name
 			  - R2_BUCKET_TWO: r2-bucket-two-name
+			  - R2_BUCKET_ONE_EU: r2-bucket-one-name (eu)
+			  - R2_BUCKET_TWO_EU: r2-bucket-two-name (eu)
 			- logfwdr:
 			  - httplogs: httplogs
 			  - trace: trace
@@ -6359,17 +6400,7 @@ addEventListener('fetch', event => {});`
 			--dry-run: exiting now."
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-			    - D1 Bindings are currently in alpha to allow the API to evolve before general availability.
-			      Please report any issues to [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
-			      Note: Run this command with the environment variable NO_D1_WARNING=true to hide this message
-
-			      For example: \`export NO_D1_WARNING=true && wrangler <YOUR COMMAND HERE>\`
-
-			"
-		`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
 				const output = fs.readFileSync("tmp/index.js", "utf-8");
 				// D1 no longer injects middleware, so we can pass through the user's code unchanged
 				expect(output).not.toContain(`ExampleDurableObject2`);
@@ -6438,13 +6469,7 @@ addEventListener('fetch', event => {});`
 			Current Deployment ID: Galaxy-Class"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-			    - \\"services\\" fields are experimental and may change or break at any time.
-
-			"
-		`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 		});
 
@@ -7904,7 +7929,12 @@ export default{
 				const bigModule = Buffer.alloc(10_000_000);
 				randomFillSync(bigModule);
 				await printBundleSize({ name: "index.js", content: "" }, [
-					{ name: "index.js", content: bigModule, type: "buffer" },
+					{
+						name: "index.js",
+						filePath: undefined,
+						content: bigModule,
+						type: "buffer",
+					},
 				]);
 
 				expect(std).toMatchInlineSnapshot(`
@@ -7927,7 +7957,12 @@ export default{
 				const bigModule = Buffer.alloc(10_000_000);
 				randomFillSync(bigModule);
 				await printBundleSize({ name: "index.js", content: "" }, [
-					{ name: "index.js", content: bigModule, type: "buffer" },
+					{
+						name: "index.js",
+						filePath: undefined,
+						content: bigModule,
+						type: "buffer",
+					},
 				]);
 
 				expect(std).toMatchInlineSnapshot(`
@@ -8313,6 +8348,79 @@ export default{
 			).rejects.toMatchInlineSnapshot(
 				`[Error: Queue "queue1" does not exist. To create it, run: wrangler queues create queue1]`
 			);
+		});
+	});
+
+	describe("ai", () => {
+		it("should upload ai bindings", async () => {
+			writeWranglerToml({
+				ai: { binding: "AI_BIND" },
+				browser: { binding: "MYBROWSER" },
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "browser",
+						name: "MYBROWSER",
+					},
+					{
+						type: "ai",
+						name: "AI_BIND",
+					},
+				],
+			});
+
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Your worker has access to the following bindings:
+			- Browser:
+			  - Name: MYBROWSER
+			- AI:
+			  - Name: AI_BIND
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class"
+		`);
+		});
+	});
+
+	describe("hyperdrive", () => {
+		it("should upload hyperdrive bindings", async () => {
+			writeWranglerToml({
+				hyperdrive: [
+					{
+						binding: "HYPERDRIVE",
+						id: "343cd4f1d58c42fbb5bd082592fd7143",
+					},
+				],
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "hyperdrive",
+						name: "HYPERDRIVE",
+						id: "343cd4f1d58c42fbb5bd082592fd7143",
+					},
+				],
+			});
+
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Your worker has access to the following bindings:
+			- Hyperdrive Configs:
+			  - HYPERDRIVE: 343cd4f1d58c42fbb5bd082592fd7143
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class"
+		`);
 		});
 	});
 

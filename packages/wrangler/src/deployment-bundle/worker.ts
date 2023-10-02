@@ -28,6 +28,15 @@ export interface CfModule {
 	 */
 	name: string;
 	/**
+	 * The absolute path of the module on disk, or `undefined` if this is a
+	 * virtual module. Used as the source URL for this module, so source maps are
+	 * correctly resolved.
+	 *
+	 * @example
+	 * '/path/to/src/index.js'
+	 */
+	filePath: string | undefined;
+	/**
 	 * The module content, usually JavaScript or WASM code.
 	 *
 	 * @example
@@ -95,6 +104,14 @@ export interface CfBrowserBinding {
 }
 
 /**
+ * A binding to the AI project
+ */
+
+export interface CfAIBinding {
+	binding: string;
+}
+
+/**
  * A binding to a data blob (in service-worker format)
  */
 
@@ -120,6 +137,7 @@ export interface CfQueue {
 export interface CfR2Bucket {
 	binding: string;
 	bucket_name: string;
+	jurisdiction?: string;
 }
 
 // TODO: figure out if this is duplicated in packages/wrangler/src/config/environment.ts
@@ -133,9 +151,19 @@ export interface CfD1Database {
 	migrations_dir?: string;
 }
 
+export interface CfVectorize {
+	binding: string;
+	index_name: string;
+}
+
 export interface CfConstellation {
 	binding: string;
 	project_id: string;
+}
+
+export interface CfHyperdrive {
+	binding: string;
+	id: string;
 }
 
 interface CfService {
@@ -246,12 +274,15 @@ export interface CfWorkerInit {
 		wasm_modules: CfWasmModuleBindings | undefined;
 		text_blobs: CfTextBlobBindings | undefined;
 		browser: CfBrowserBinding | undefined;
+		ai: CfAIBinding | undefined;
 		data_blobs: CfDataBlobBindings | undefined;
 		durable_objects: { bindings: CfDurableObject[] } | undefined;
 		queues: CfQueue[] | undefined;
 		r2_buckets: CfR2Bucket[] | undefined;
 		d1_databases: CfD1Database[] | undefined;
+		vectorize: CfVectorize[] | undefined;
 		constellation: CfConstellation[] | undefined;
+		hyperdrive: CfHyperdrive[] | undefined;
 		services: CfService[] | undefined;
 		analytics_engine_datasets: CfAnalyticsEngineDataset[] | undefined;
 		dispatch_namespaces: CfDispatchNamespace[] | undefined;

@@ -3,17 +3,18 @@ import { npmInstall, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
 import { writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import { getFrameworkVersion } from "..";
+import { getFrameworkCli } from "../index";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
-const { dlx } = detectPackageManager();
+const { npm, dlx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
-	const version = getFrameworkVersion(ctx);
+	const cli = getFrameworkCli(ctx);
+	const gitFlag = ctx.args.git ? `--gitInit` : `--no-gitInit`;
 
 	await runFrameworkGenerator(
 		ctx,
-		`${dlx} nuxi@${version} init ${ctx.project.name}`
+		`${dlx} ${cli} init ${ctx.project.name} --packageManager ${npm} ${gitFlag}`
 	);
 
 	logRaw(""); // newline
@@ -31,8 +32,8 @@ const config: FrameworkConfig = {
 	displayName: "Nuxt",
 	packageScripts: {
 		build: (cmd) => `NITRO_PRESET=cloudflare-pages ${cmd}`,
-		"pages:dev": `wrangler pages dev ${compatDateFlag()} --proxy 3000 -- npm run dev`,
-		"pages:deploy": "npm run build && wrangler pages deploy ./dist",
+		"pages:dev": `wrangler pages dev ${compatDateFlag()} --proxy 3000 -- ${npm} run dev`,
+		"pages:deploy": `${npm} run build && wrangler pages deploy ./dist`,
 	},
 };
 export default config;

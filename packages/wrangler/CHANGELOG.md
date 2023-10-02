@@ -1,5 +1,197 @@
 # wrangler
 
+## 3.10.1
+
+### Patch Changes
+
+- [#4041](https://github.com/cloudflare/workers-sdk/pull/4041) [`6b1c327d`](https://github.com/cloudflare/workers-sdk/commit/6b1c327d00befb6d95a88f4451547457b1927dd4) Thanks [@elithrar](https://github.com/elithrar)! - Fixed a bug in Vectorize that send preset configurations with the wrong key. This was patched on the server-side to work around this for users in the meantime.
+
+* [#4054](https://github.com/cloudflare/workers-sdk/pull/4054) [`f8c52b93`](https://github.com/cloudflare/workers-sdk/commit/f8c52b938dd6a7ccf25fa54bd73e8f6206808ad4) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: allow `wrangler pages dev` sessions to be reloaded
+
+  Previously, `wrangler pages dev` attempted to send messages on a closed IPC
+  channel when sources changed, resulting in an `ERR_IPC_CHANNEL_CLOSED` error.
+  This change ensures the channel stays open until the user exits `wrangler pages dev`.
+
+## 3.10.0
+
+### Minor Changes
+
+- [#4013](https://github.com/cloudflare/workers-sdk/pull/4013) [`3cd72862`](https://github.com/cloudflare/workers-sdk/commit/3cd72862b7c9f6d30468320866badd586cd242ce) Thanks [@elithrar](https://github.com/elithrar)! - Adds wrangler support for Vectorize, Cloudflare's new vector database, with
+  `wrangler vectorize`. Visit the developer documentation
+  (https://developers.cloudflare.com/vectorize/) to learn more and create your
+  first vector database with `wrangler vectorize create my-first-index`.
+
+* [#3999](https://github.com/cloudflare/workers-sdk/pull/3999) [`ee6f3458`](https://github.com/cloudflare/workers-sdk/commit/ee6f345838d09af0de787c820a7fa2cdc76f58e7) Thanks [@OilyLime](https://github.com/OilyLime)! - Adds support for Hyperdrive, via `wrangler hyperdrive`.
+
+### Patch Changes
+
+- [#4034](https://github.com/cloudflare/workers-sdk/pull/4034) [`bde9d64a`](https://github.com/cloudflare/workers-sdk/commit/bde9d64a6b13d49063cc7fe25d37606b0810dd83) Thanks [@ndisidore](https://github.com/ndisidore)! - Adds Vectorize support uploading batches of newline delimited json (ndjson)
+  vectors from a source file.
+  Load a dataset with `vectorize insert my-index --file vectors.ndjson`
+
+* [#4028](https://github.com/cloudflare/workers-sdk/pull/4028) [`d5389731`](https://github.com/cloudflare/workers-sdk/commit/d538973179966f742edd48958bf311764f715bda) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - fix: Bulk Secret Draft Worker
+
+  Fixes the issue of a upload of a Secret when a Worker doesn't exist yet, the draft worker is created and the secret is uploaded to it.
+
+  Fixes https://github.com/cloudflare/wrangler-action/issues/162
+
+## 3.9.1
+
+### Patch Changes
+
+- [#3992](https://github.com/cloudflare/workers-sdk/pull/3992) [`35564741`](https://github.com/cloudflare/workers-sdk/commit/3556474116db2fc7dbfbb34bfc351490360f4d85) Thanks [@edevil](https://github.com/edevil)! - Add AI binding that will be used to interact with the AI project.
+
+  Example `wrangler.toml`
+
+      name = "ai-worker"
+      main = "src/index.ts"
+
+      [ai]
+      binding = "AI"
+
+  Example script:
+
+      import Ai from "@cloudflare/ai"
+
+      export default {
+          async fetch(request: Request, env: Env): Promise<Response> {
+              const ai = new Ai(env.AI);
+
+              const story = await ai.run({
+                  model: 'llama-2',
+                  input: {
+                      prompt: 'Tell me a story about the future of the Cloudflare dev platform'
+                  }
+              });
+
+          return new Response(JSON.stringify(story));
+          },
+      };
+
+      export interface Env {
+          AI: any;
+      }
+
+* [#4006](https://github.com/cloudflare/workers-sdk/pull/4006) [`bc8c147a`](https://github.com/cloudflare/workers-sdk/commit/bc8c147a9118748bb3b5eb220af5699f8b2f7899) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: remove warning around using D1's binding, and clean up the epilogue when running D1 commands
+
+- [#4027](https://github.com/cloudflare/workers-sdk/pull/4027) [`9e466599`](https://github.com/cloudflare/workers-sdk/commit/9e466599210902515ece6f5ea07fbabcd8fdac6a) Thanks [@jspspike](https://github.com/jspspike)! - Add WebGPU support through miniflare update
+
+* [#3986](https://github.com/cloudflare/workers-sdk/pull/3986) [`00247a8d`](https://github.com/cloudflare/workers-sdk/commit/00247a8d69613a4cfeb621b5cca075828e5ae1e1) Thanks [@edevil](https://github.com/edevil)! - Added AI related CLI commands
+
+## 3.9.0
+
+### Minor Changes
+
+- [#3951](https://github.com/cloudflare/workers-sdk/pull/3951) [`e0850ad1`](https://github.com/cloudflare/workers-sdk/commit/e0850ad1ebfbb775a78339136e3a2c571d80e566) Thanks [@mrbbot](https://github.com/mrbbot)! - feat: add support for breakpoint debugging to `wrangler dev`'s `--remote` and `--no-bundle` modes
+
+  Previously, breakpoint debugging using Wrangler's DevTools was only supported
+  in local mode, when using Wrangler's built-in bundler. This change extends that
+  to remote development, and `--no-bundle`.
+
+  When using `--remote` and `--no-bundle` together, uncaught errors will now be
+  source-mapped when logged too.
+
+* [#3951](https://github.com/cloudflare/workers-sdk/pull/3951) [`e0850ad1`](https://github.com/cloudflare/workers-sdk/commit/e0850ad1ebfbb775a78339136e3a2c571d80e566) Thanks [@mrbbot](https://github.com/mrbbot)! - feat: add support for Visual Studio Code's built-in breakpoint debugger
+
+  Wrangler now supports breakpoint debugging with Visual Studio Code's debugger.
+  Create a `.vscode/launch.json` file with the following contents...
+
+  ```json
+  {
+  	"configurations": [
+  		{
+  			"name": "Wrangler",
+  			"type": "node",
+  			"request": "attach",
+  			"port": 9229,
+  			"cwd": "/",
+  			"resolveSourceMapLocations": null,
+  			"attachExistingChildren": false,
+  			"autoAttachChildProcesses": false
+  		}
+  	]
+  }
+  ```
+
+  ...then run `wrangler dev`, and launch the configuration.
+
+### Patch Changes
+
+- [#3954](https://github.com/cloudflare/workers-sdk/pull/3954) [`bc88f0ec`](https://github.com/cloudflare/workers-sdk/commit/bc88f0ec0f46bcf4f8204239ff7e14aa3fe11990) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - update `wrangler pages dev` D1 and DO descriptions
+
+* [#3928](https://github.com/cloudflare/workers-sdk/pull/3928) [`95b24b1e`](https://github.com/cloudflare/workers-sdk/commit/95b24b1eb986fb73a2b87c5a0eecc32a607e7331) Thanks [@JacobMGEvans](https://github.com/JacobMGEvans)! - Colorize Deployed Bundle Size
+  Most bundlers, and other tooling that give you size outputs will colorize their the text to indicate if the value is within certain ranges.
+  The current range values are:
+  red 100% - 90%
+  yellow 89% - 70%
+  green <70%
+
+  resolves #1312
+
+## 3.8.0
+
+### Minor Changes
+
+- [#3775](https://github.com/cloudflare/workers-sdk/pull/3775) [`3af30879`](https://github.com/cloudflare/workers-sdk/commit/3af3087954e2d1580c3c3b6ac9d63c0737f4ba2a) Thanks [@bthwaites](https://github.com/bthwaites)! - R2 Jurisdictional Restrictions guarantee objects in a bucket are stored within a specific jurisdiction. Wrangler now allows you to interact with buckets in a defined jurisdiction.
+
+  Wrangler R2 operations now support a `-J` flag that allows the user to specify a jurisdiction. When passing the `-J` flag, you will only be able to interact with R2 resources within that jurisdiction.
+
+  ```bash
+  # List all of the buckets in the EU jurisdiction
+  wrangler r2 bucket list -J eu
+  # Downloads the object 'myfile.txt' from the bucket 'mybucket' in EU jurisdiction
+  wrangler r2 object get mybucket/myfile.txt -J eu
+  ```
+
+  To access R2 buckets that belong to a jurisdiction from Workers, you will need to specify the jurisdiction as well as the bucket name as part of your bindings in your `wrangler.toml`:
+
+  ```toml
+  [[r2_buckets]]
+  bindings = [
+    { binding = "MY_BUCKET", bucket_name = "<YOUR_BUCKET_NAME>", jurisdiction = "<JURISDICTION>" }
+  ]
+  ```
+
+### Patch Changes
+
+- [#3901](https://github.com/cloudflare/workers-sdk/pull/3901) [`a986f19f`](https://github.com/cloudflare/workers-sdk/commit/a986f19f2d7989639524f9fd73761ea69aef4f6b) Thanks [@DaniFoldi](https://github.com/DaniFoldi)! - Only require preview_id and preview_bucket_name in remote dev mode
+
+* [#3912](https://github.com/cloudflare/workers-sdk/pull/3912) [`0ba58841`](https://github.com/cloudflare/workers-sdk/commit/0ba588414e595d946c28c971bae7ef77e6e85050) Thanks [@jspspike](https://github.com/jspspike)! - Ignore cached account id when `CLOUDFLARE_ACCOUNT_ID` is specified
+
+## 3.7.0
+
+### Minor Changes
+
+- [#3772](https://github.com/cloudflare/workers-sdk/pull/3772) [`a3b3765d`](https://github.com/cloudflare/workers-sdk/commit/a3b3765d9fe4d6e62aa31bb02b682998f1cb7276) Thanks [@jspspike](https://github.com/jspspike)! - Bump esbuild version to 0.17.19. Breaking changes to esbuild are documented [here](https://github.com/evanw/esbuild/releases/tag/v0.17.0)
+
+* [#3895](https://github.com/cloudflare/workers-sdk/pull/3895) [`40f56562`](https://github.com/cloudflare/workers-sdk/commit/40f565628aaef2cad745aeeb4da297e7a6973e0d) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: bump `miniflare` to [`3.20230904.0`](https://github.com/cloudflare/miniflare/releases/tag/v3.20230904.0)
+
+- [#3774](https://github.com/cloudflare/workers-sdk/pull/3774) [`ae2d5cb5`](https://github.com/cloudflare/workers-sdk/commit/ae2d5cb52ee249d19ec94f9acbd77aa262eeb391) Thanks [@mrbbot](https://github.com/mrbbot)! - feat: support breakpoint debugging in local mode
+
+  `wrangler dev` now supports breakpoint debugging in local mode! Press `d` to open DevTools and set breakpoints.
+
+## 3.6.0
+
+### Minor Changes
+
+- [#3727](https://github.com/cloudflare/workers-sdk/pull/3727) [`a5e7c0be`](https://github.com/cloudflare/workers-sdk/commit/a5e7c0be0f1b095f9af3d2b55782f9d8b2a6bb09) Thanks [@echen67](https://github.com/echen67)! - Warn user when the last deployment was via the API
+
+### Patch Changes
+
+- [#3762](https://github.com/cloudflare/workers-sdk/pull/3762) [`18dc7b54`](https://github.com/cloudflare/workers-sdk/commit/18dc7b5428ffb5c68dc5ebbbaf506d8fc2fe1f48) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Add internal `wrangler pages project validate [directory]` command which validates an asset directory
+
+* [#3758](https://github.com/cloudflare/workers-sdk/pull/3758) [`0adccc71`](https://github.com/cloudflare/workers-sdk/commit/0adccc71789efe1b42b6d3de55f6d6d7e50fda64) Thanks [@jahands](https://github.com/jahands)! - fix: Retry deployment errors in wrangler pages publish
+
+  This will improve reliability when deploying to Cloudflare Pages
+
+## 3.5.1
+
+### Patch Changes
+
+- [#3752](https://github.com/cloudflare/workers-sdk/pull/3752) [`8f5ed7fe`](https://github.com/cloudflare/workers-sdk/commit/8f5ed7febc1b348f3fc88eabccabd9678b6cd21a) Thanks [@DaniFoldi](https://github.com/DaniFoldi)! - Changed the binding type of WfP Dispatch Namespaces to `DispatchNamespace`
+
+* [#3765](https://github.com/cloudflare/workers-sdk/pull/3765) [`e17d3096`](https://github.com/cloudflare/workers-sdk/commit/e17d3096ecde7cf697f7d5bc6ebc3a868eb88cfa) Thanks [@RamIdeas](https://github.com/RamIdeas)! - bump miniflare version to 3.20230814.1
+
 ## 3.5.0
 
 ### Minor Changes

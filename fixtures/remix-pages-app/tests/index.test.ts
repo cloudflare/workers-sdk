@@ -9,7 +9,7 @@ const isWindows = process.platform === "win32";
 describe("Remix", () => {
 	let ip: string;
 	let port: number;
-	let stop: () => void;
+	let stop: (() => Promise<unknown>) | undefined;
 
 	beforeAll(async () => {
 		spawnSync("npm", ["run", "build"], {
@@ -23,7 +23,9 @@ describe("Remix", () => {
 		));
 	});
 
-	afterAll(async () => await stop());
+	afterAll(async () => {
+		await stop?.();
+	});
 
 	it("renders", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/`);

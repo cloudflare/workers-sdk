@@ -13,6 +13,6 @@
 		"start": "wrangler dev --local"
 	},
 	"devDependencies": {
-		"wrangler": "*"
+		"wrangler": "workspace:*"
 	}
 }
