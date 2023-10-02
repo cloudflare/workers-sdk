@@ -146,6 +146,7 @@ export async function writeAdditionalModules(
 ): Promise<void> {
 	for (const module of modules) {
 		const modulePath = path.resolve(destination, module.name);
+		logger.debug("Writing additional module to output", modulePath);
 		await mkdir(path.dirname(modulePath), { recursive: true });
 		await writeFile(modulePath, module.content);
 	}
