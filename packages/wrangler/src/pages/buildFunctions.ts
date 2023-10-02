@@ -1,5 +1,4 @@
 import { writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { FatalError } from "../errors";
 import { toUrlPath } from "../paths";
@@ -9,7 +8,7 @@ import { buildWorker } from "./functions/buildWorker";
 import { generateConfigFromFileTree } from "./functions/filepath-routing";
 import { writeRoutesModule } from "./functions/routes";
 import { convertRoutesToRoutesJSONSpec } from "./functions/routes-transformation";
-import { RUNNING_BUILDERS } from "./utils";
+import { realTmpdir, RUNNING_BUILDERS } from "./utils";
 import type { BundleResult } from "../deployment-bundle/bundle";
 import type { PagesBuildArgs } from "./build";
 import type { Config } from "./functions/routes";
@@ -60,7 +59,10 @@ export async function buildFunctions({
 		(runningBuilder) => runningBuilder.stop && runningBuilder.stop()
 	);
 
-	const routesModule = join(tmpdir(), `./functionsRoutes-${Math.random()}.mjs`);
+	const routesModule = join(
+		realTmpdir(),
+		`./functionsRoutes-${Math.random()}.mjs`
+	);
 	const baseURL = toUrlPath("/");
 
 	const config: Config = await generateConfigFromFileTree({
