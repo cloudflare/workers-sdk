@@ -386,7 +386,11 @@ export default function useInspector(props: InspectorProps) {
 		}
 
 		ws.addEventListener("open", () => {
-			send({ method: "Runtime.enable", id: messageCounterRef.current });
+			send({
+				method: "Runtime.discardConsoleEntries",
+				id: messageCounterRef.current++,
+			});
+			send({ method: "Runtime.enable", id: messageCounterRef.current++ });
 			// TODO: This doesn't actually work. Must fix.
 			send({ method: "Network.enable", id: messageCounterRef.current++ });
 
