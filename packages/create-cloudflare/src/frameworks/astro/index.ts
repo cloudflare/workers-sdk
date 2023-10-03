@@ -45,7 +45,6 @@ const config: FrameworkConfig = {
 	},
 	testFlags: [
 		"--skip-houston",
-		"--yes",
 		"--no-install",
 		"--no-git",
 		"--template",
