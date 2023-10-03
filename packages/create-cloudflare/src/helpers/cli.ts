@@ -140,6 +140,6 @@ export const C3_DEFAULTS = {
 
 export const WRANGLER_DEFAULTS = {
 	...C3_DEFAULTS,
-	deploy: false,
 	type: "hello-world",
+	deploy: false,
 };
