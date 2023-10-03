@@ -11,7 +11,7 @@ on:
 
 jobs:
   e2e-test:
-    if: github.repository_owner == 'cloudflare' && (github.event_name != 'pull_request' || (github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'e2e' )) || (github.event_name == 'pull_request' && github.head_ref == 'changeset-release/main'))
+    # if: github.repository_owner == 'cloudflare' && (github.event_name != 'pull_request' || (github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'e2e' )) || (github.event_name == 'pull_request' && github.head_ref == 'changeset-release/main'))
     name: "E2E Test"
     strategy:
       fail-fast: false
