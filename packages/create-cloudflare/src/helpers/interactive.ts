@@ -1,6 +1,5 @@
 import { TextPrompt, SelectPrompt, ConfirmPrompt } from "@clack/core";
 import ansiEscapes from "ansi-escapes";
-import { isCancel } from "@clack/prompts";
 import logUpdate from "log-update";
 import { shapes, cancel, space, status, newline } from "./cli";
 import { blue, dim, gray, brandColor, bold } from "./colors";
