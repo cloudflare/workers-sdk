@@ -1155,6 +1155,7 @@ export class Miniflare {
 		const forward = new Request(input, init);
 		const url = new URL(forward.url);
 		forward.headers.set(CoreHeaders.ORIGINAL_URL, url.toString());
+		forward.headers.set(CoreHeaders.DISABLE_PRETTY_ERROR, "true");
 		url.protocol = this.#runtimeEntryURL.protocol;
 		url.host = this.#runtimeEntryURL.host;
 		if (forward.cf) {

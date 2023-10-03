@@ -1,6 +1,7 @@
 export const CoreHeaders = {
 	CUSTOM_SERVICE: "MF-Custom-Service",
 	ORIGINAL_URL: "MF-Original-URL",
+	DISABLE_PRETTY_ERROR: "MF-Disable-Pretty-Error",
 	ERROR_STACK: "MF-Experimental-Error-Stack",
 	ROUTE_OVERRIDE: "MF-Route-Override",
 

@@ -57,6 +57,7 @@ function getUserRequest(
 		request = new Request(request, { cf: env[CoreBindings.JSON_CF_BLOB] });
 	}
 	request.headers.delete(CoreHeaders.ORIGINAL_URL);
+	request.headers.delete(CoreHeaders.DISABLE_PRETTY_ERROR);
 	return request;
 }
 
@@ -208,11 +209,11 @@ export default <ExportedHandler<Env>>{
 		const isProxy = request.headers.get(CoreHeaders.OP) !== null;
 		if (isProxy) return handleProxy(request, env);
 
-		// `dispatchFetch()` will always inject the passed URL as a header. When
+		// `dispatchFetch()` will always inject this header. When
 		// calling this function, we never want to display the pretty-error page.
 		// Instead, we propagate the error and reject the returned `Promise`.
-		const isDispatchFetch =
-			request.headers.get(CoreHeaders.ORIGINAL_URL) !== null;
+		const disablePrettyErrorPage =
+			request.headers.get(CoreHeaders.DISABLE_PRETTY_ERROR) !== null;
 
 		request = getUserRequest(request, env);
 		const url = new URL(request.url);
@@ -227,7 +228,7 @@ export default <ExportedHandler<Env>>{
 			}
 
 			let response = await service.fetch(request);
-			if (!isDispatchFetch) {
+			if (!disablePrettyErrorPage) {
 				response = await maybePrettifyError(request, response, env);
 			}
 			response = maybeInjectLiveReload(response, env, ctx);
