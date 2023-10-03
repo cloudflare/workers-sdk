@@ -59,7 +59,7 @@ const workerdBinary = path.resolve(workerdPackageJsonPath, "../bin/workerd");
 const workerdBinaryVersion = execSync(workerdBinary + " --version")
 	.toString()
 	.split(" ")[1]
-	.replace("\n", "");
+	.replaceAll("\n", "");
 
 // 4. Write basic markdown report
 const report = [
