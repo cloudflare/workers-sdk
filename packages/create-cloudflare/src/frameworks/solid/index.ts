@@ -1,4 +1,3 @@
-import { mkdirSync } from "fs";
 import { logRaw, updateStatus } from "helpers/cli";
 import { blue, brandColor, dim } from "helpers/colors";
 import { installPackages, runFrameworkGenerator } from "helpers/command";
@@ -11,18 +10,16 @@ import type { PagesGeneratorContext, FrameworkConfig } from "types";
 const { npm, dlx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
-	// Create the project directory and navigate to it
-	mkdirSync(ctx.project.path);
-	process.chdir(ctx.project.path);
-
 	// Run the create-solid command
 	const cli = getFrameworkCli(ctx);
-	await runFrameworkGenerator(ctx, `${dlx} ${cli}`);
+	await runFrameworkGenerator(ctx, `${dlx} ${cli} ${ctx.project.name}`);
 
 	logRaw("");
 };
 
-const configure = async () => {
+const configure = async (ctx: PagesGeneratorContext) => {
+	process.chdir(ctx.project.path);
+
 	// Install the pages adapter
 	const pkg = "solid-start-cloudflare-pages";
 	await installPackages([pkg], {
@@ -37,7 +34,7 @@ const configure = async () => {
 		: `./vite.config.js`;
 	writeFile(viteConfigPath, viteConfig);
 	updateStatus(
-		`Adding the Cloudflare Pages adapter to ${blue("vite.config.js")}`
+		`Adding the Cloudflare Pages adapter to ${blue(viteConfigPath)}`
 	);
 };
 
