@@ -28,6 +28,7 @@ import { detectPackageManager } from "helpers/packages";
 import { poll } from "helpers/poll";
 import { version as wranglerVersion } from "wrangler/package.json";
 import { version } from "../package.json";
+import * as shellquote from "./helpers/shell-quote";
 import type { C3Args, PagesGeneratorContext } from "types";
 
 const { name, npm } = detectPackageManager();
@@ -119,7 +120,7 @@ export const runDeploy = async (ctx: PagesGeneratorContext) => {
 		env: { CLOUDFLARE_ACCOUNT_ID: ctx.account.id, NODE_ENV: "production" },
 		startText: "Deploying your application",
 		doneText: `${brandColor("deployed")} ${dim(
-			`via \`${baseDeployCmd.join(" ")}\``
+			`via \`${shellquote.quote(baseDeployCmd)}\``
 		)}`,
 	});
 
