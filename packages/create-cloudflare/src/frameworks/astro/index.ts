@@ -40,12 +40,11 @@ const config: FrameworkConfig = {
 	configure,
 	displayName: "Astro",
 	packageScripts: {
-		"pages:dev": `wrangler pages dev ${compatDateFlag()} --proxy 3000 -- astro dev`,
+		"pages:dev": `wrangler pages dev ${compatDateFlag()} -- astro dev`,
 		"pages:deploy": `astro build && wrangler pages deploy ./dist`,
 	},
 	testFlags: [
 		"--skip-houston",
-		"--yes",
 		"--no-install",
 		"--no-git",
 		"--template",
