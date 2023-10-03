@@ -103,7 +103,6 @@ jobs:
 
             </details>
 
-
       - name: "Comment on PR with C3 link"
         uses: marocchino/sticky-pull-request-comment@v2
         with:
