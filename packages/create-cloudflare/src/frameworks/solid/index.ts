@@ -17,7 +17,9 @@ const generate = async (ctx: PagesGeneratorContext) => {
 	logRaw("");
 };
 
-const configure = async () => {
+const configure = async (ctx: PagesGeneratorContext) => {
+	process.chdir(ctx.project.path);
+
 	// Install the pages adapter
 	const pkg = "solid-start-cloudflare-pages";
 	await installPackages([pkg], {
@@ -32,7 +34,7 @@ const configure = async () => {
 		: `./vite.config.js`;
 	writeFile(viteConfigPath, viteConfig);
 	updateStatus(
-		`Adding the Cloudflare Pages adapter to ${blue("vite.config.js")}`
+		`Adding the Cloudflare Pages adapter to ${blue(viteConfigPath)}`
 	);
 };
 
