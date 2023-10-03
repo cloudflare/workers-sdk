@@ -6,6 +6,9 @@ import { spawn } from "cross-spawn";
 import { sleep } from "helpers/common";
 import { spinnerFrames } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
+import { fetch } from "undici";
+import { expect } from "vitest";
+import { version } from "../package.json";
 import type { SpinnerStyle } from "helpers/interactive";
 
 export const C3_E2E_PREFIX = "c3-e2e-";
@@ -139,6 +142,49 @@ export const testProjectDir = (suite: string) => {
 	};
 
 	return { getName, getPath, clean };
+};
+
+export const testDeploymentCommitMessage = async (
+	projectName: string,
+	framework: string
+) => {
+	// Note: we cannot simply run git and check the result since the commit can be part of the
+	//       deployment even without git, so instead we fetch the deployment info from the pages api
+	const response = await fetch(
+		`https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/pages/projects`,
+		{
+			headers: {
+				Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
+			},
+		}
+	);
+
+	const result = (
+		(await response.json()) as {
+			result: {
+				name: string;
+				latest_deployment?: {
+					deployment_trigger: {
+						metadata?: {
+							commit_message: string;
+						};
+					};
+				};
+			}[];
+		}
+	).result;
+
+	const projectLatestCommitMessage = result.find(
+		(project) => project.name === projectName
+	)?.latest_deployment?.deployment_trigger?.metadata?.commit_message;
+	expect(projectLatestCommitMessage).toMatch(
+		/^Initialize web application via create-cloudflare CLI/
+	);
+	expect(projectLatestCommitMessage).toContain(
+		`C3 = create-cloudflare@${version}`
+	);
+	expect(projectLatestCommitMessage).toContain(`project name = ${projectName}`);
+	expect(projectLatestCommitMessage).toContain(`framework = ${framework}`);
 };
 
 // Removes lines from the output of c3 that aren't particularly useful for debugging tests

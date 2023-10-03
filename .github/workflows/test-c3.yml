@@ -56,7 +56,6 @@ jobs:
   e2e:
     needs: cleanup
     name: ${{ format('E2E ({0}) {1}', matrix.pm, matrix.quarantine == true && '[quarantine]' || '') }}
-    continue-on-error: ${{ matrix.quarantine }}
     if: |
       github.event.pull_request.user.login != 'dependabot[bot]'
     strategy:
@@ -142,7 +141,6 @@ jobs:
   e2e-only-dependabot-bumped-framework:
     needs: [cleanup, get-dependabot-bumped-framework]
     name: ${{ format('Dependabot E2E ({0}) {1}', matrix.pm, matrix.quarantine == true && '[quarantine]' || '') }}
-    continue-on-error: ${{ matrix.quarantine }}
     strategy:
       fail-fast: false
       matrix:
