@@ -1,5 +1,5 @@
 import { TextPrompt, SelectPrompt, ConfirmPrompt } from "@clack/core";
-import { isCancel } from "@clack/prompts";
+import ansiEscapes from "ansi-escapes";
 import logUpdate from "log-update";
 import { shapes, cancel, space, status, newline } from "./cli";
 import { blue, dim, gray, brandColor, bold } from "./colors";
@@ -97,11 +97,6 @@ export const inputPrompt = async (promptConfig: PromptConfig) => {
 
 	const input = (await prompt.prompt()) as string;
 
-	if (isCancel(input)) {
-		cancel("Operation cancelled.");
-		process.exit(0);
-	}
-
 	return input;
 };
 
@@ -124,6 +119,8 @@ const renderSubmit = (config: PromptConfig, value: string) => {
 };
 
 const handleCancel = () => {
+	// Restore the cursor hidden by the select and confirm dialogs
+	process.stdout.write(ansiEscapes.cursorShow);
 	cancel("Operation cancelled.");
 	process.exit(0);
 };
