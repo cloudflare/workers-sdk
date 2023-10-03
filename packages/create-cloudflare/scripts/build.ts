@@ -1,5 +1,6 @@
 import { build, context, BuildOptions } from "esbuild";
 import { cp } from "fs/promises";
+import * as glob from "glob";
 
 const run = async () => {
 	const argv = process.argv.slice(2);
@@ -20,6 +21,15 @@ const run = async () => {
 			recursive: true,
 			force: true,
 		});
+
+		// npm pack doesn't include .gitignore files (see https://github.com/npm/npm/issues/3763)
+		// To workaround, copy all ".gitignore" files as "__dot__gitignore" so npm pack includes them
+		// The latter has been added to the project's .gitignore file
+		// This renaming will be reversed when each template is used
+		// We can continue to author ".gitignore" files in each template
+		for (const filepath of glob.sync("templates/**/.gitignore")) {
+			await cp(filepath, filepath.replace(".gitignore", "__dot__gitignore"));
+		}
 	};
 
 	const runWatch = async () => {
