@@ -145,23 +145,13 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 
 	const quarantineStats = { passed: [] as string[], failed: [] as string[] };
 
-	const getFrameworkNameFromTestContext = (ctx: TestContext) => {
-		const framework = ctx.meta.name.replace(/^Quarantined: /, "");
-		if (!frameworks.includes(framework)) {
-			throw new Error(
-				`Error: Invalid test name, could not detect current framework from it`
-			);
-		}
-		return framework;
-	};
-
 	beforeEach((ctx) => {
-		const framework = getFrameworkNameFromTestContext(ctx);
+		const framework = ctx.meta.name;
 		clean(framework);
 	});
 
 	afterEach(async (ctx) => {
-		const framework = getFrameworkNameFromTestContext(ctx);
+		const framework = ctx.meta.name;
 		clean(framework);
 
 		// Cleanup the pages project in case we need to retry it
@@ -176,10 +166,11 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 
 	afterAll(() => {
 		if (isQuarantineMode()) {
+			const { passed, failed } = quarantineStats;
 			console.log("Quarantine Results");
 			console.log("======================");
-			console.log(`Passed: ${quarantineStats.passed.join(", ")}`);
-			console.log(`Failed: ${quarantineStats.failed.join(", ")}`);
+			console.log(`Passed: ${passed.length > 0 ? passed.join(", ") : "none"}`);
+			console.log(`Failed: ${failed.length > 0 ? failed.join(", ") : "none"}`);
 		}
 	});
 
