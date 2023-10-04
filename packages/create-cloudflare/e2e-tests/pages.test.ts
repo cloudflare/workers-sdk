@@ -11,7 +11,6 @@ import {
 	afterAll,
 } from "vitest";
 import { deleteProject } from "../scripts/e2eCleanup";
-import { frameworkCliMap } from "../src/frameworks/package.json";
 import { frameworkToTest } from "./frameworkToTest";
 import {
 	isQuarantineMode,
@@ -21,11 +20,8 @@ import {
 	testProjectDir,
 } from "./helpers";
 import type { RunnerConfig } from "./helpers";
-import type { TestContext } from "vitest";
 
 const TEST_TIMEOUT = 1000 * 60 * 3;
-
-const frameworks = Object.keys(frameworkCliMap);
 
 type FrameworkTestConfig = RunnerConfig & {
 	timeout?: number;
