@@ -9,7 +9,7 @@ export function parse(cmd: string, env?: Record<string, string>): string[] {
 	// We can remove this once we upgrade to a version that includes the fix
 	// tracked by https://github.com/ljharb/shell-quote/issues/10
 	if (process.platform === "win32") {
-		cmd = cmd.replaceAll(/\\\\/g, "\\");
+		cmd = cmd.replaceAll("\\", "\\\\");
 	}
 
 	const entries = shellquote.parse(cmd, env);
