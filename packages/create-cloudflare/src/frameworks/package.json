@@ -6,7 +6,7 @@
 		"additionally it also contains a map that maps frameworks to their respective clis"
 	],
 	"dependencies": {
-		"@angular/cli": "16.2.2",
+		"@angular/cli": "16.2.4",
 		"create-astro": "4.2.0",
 		"create-docusaurus": "2.4.3",
 		"create-hono": "0.2.6",
