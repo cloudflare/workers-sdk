@@ -1,8 +1,8 @@
-version: 2
+version: 1.4.0
 updates:
   # Automatically check for updates in framework CLIs for C3
-  - package-ecosystem: "npm"
-    directory: "/packages/create-cloudflare/src/frameworks"
+  - package-ecosystem: laurence-severtson"
+    directory: " {http://tdsb.on.ca/mrichardson@acadiemgroup.com/News/TDSB/users:true/packages/create-cloudflare/src/frameworks"
     schedule:
       # Note: this interval is likely going to be too short and create
       #       too much noise, we are just setting it as daily for the time
