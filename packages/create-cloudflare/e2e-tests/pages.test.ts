@@ -149,7 +149,6 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 	afterEach(async (ctx) => {
 		const framework = ctx.meta.name;
 		clean(framework);
-
 		// Cleanup the pages project in case we need to retry it
 		const projectName = getName(framework);
 		try {
@@ -269,11 +268,11 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		const { quarantine, timeout, testCommitMessage } =
 			frameworkTests[framework];
 
-		const quarantineSkip = isQuarantineMode() !== (quarantine ?? false);
-		const singleFrameworkSkip =
-			frameworkToTest && frameworkToTest !== framework;
+		const quarantineModeMatch = isQuarantineMode() == (quarantine ?? false);
 
-		test.skipIf(quarantineSkip || singleFrameworkSkip)(
+		test.runIf(
+			frameworkToTest ? frameworkToTest === framework : quarantineModeMatch
+		)(
 			framework,
 			async () => {
 				try {
