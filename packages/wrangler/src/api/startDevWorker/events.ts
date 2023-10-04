@@ -144,8 +144,9 @@ export type InspectorProxyWorkerOutgoingWebsocketMessage =
 export type InspectorProxyWorkerOutgoingRequestBody =
 	| { type: "error"; error: SerializedError }
 	| { type: "runtime-websocket-error"; error: SerializedError }
-	| { type: "get-source-map" }
-	| { type: "debug-log"; args: Parameters<typeof console.debug> };
+	| { type: "debug-log"; args: Parameters<typeof console.debug> }
+	// Intercepted Chrome DevTools Protocol Messages
+	| { type: "load-network-resource"; url: string }; // responds with `url`'s contents
 
 export type SerializedError = {
 	message: string;
@@ -153,6 +154,18 @@ export type SerializedError = {
 	stack?: string | undefined;
 	cause?: unknown;
 };
+export function serialiseError(e: unknown): SerializedError {
+	if (e instanceof Error) {
+		return {
+			message: e.message,
+			name: e.name,
+			stack: e.stack,
+			cause: serialiseError(e.cause),
+		};
+	} else {
+		return { message: String(e) };
+	}
+}
 
 export type UrlOriginParts = Pick<URL, "protocol" | "hostname" | "port">;
 export type UrlOriginAndPathnameParts = Pick<

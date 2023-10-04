@@ -133,6 +133,8 @@ async function run() {
 	if (WATCH) {
 		console.log("Built. Watching for changes...");
 		await buildMain({ watch: true });
+	} else {
+		for (const ctx of workersContexts.values()) await ctx.dispose();
 	}
 }
 

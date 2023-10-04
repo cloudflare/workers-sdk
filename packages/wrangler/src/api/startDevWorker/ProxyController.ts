@@ -13,14 +13,17 @@ import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import path from "node:path";
 import { LogLevel, Miniflare, Response } from "miniflare";
-// import { readFileSync } from "../../parse";
 import { WebSocket } from "miniflare";
 import inspectorProxyWorkerPath from "worker:startDevWorker/InspectorProxyWorker";
 import proxyWorkerPath from "worker:startDevWorker/ProxyWorker";
 import { WranglerLog, castLogLevel } from "../../dev/miniflare";
 import { getHttpsOptions } from "../../https-options";
-import { logConsoleMessage } from "../../dev/inspect";
+import {
+	logConsoleMessage,
+	maybeHandleNetworkLoadResource,
+} from "../../dev/inspect";
 import { logger } from "../../logger";
+import { getSourceMappedStack } from "../../sourcemap";
 import { castErrorCause } from "./events";
 import {
 	assertNever,
@@ -377,10 +380,11 @@ export class ProxyController extends EventEmitter {
 				logConsoleMessage(message.params);
 
 				break;
-			case "Runtime.exceptionThrown":
-				// TODO
-
+			case "Runtime.exceptionThrown": {
+				const stack = getSourceMappedStack(message.params.exceptionDetails);
+				logger.error(message.params.exceptionDetails.text, stack);
 				break;
+			}
 			default:
 				assertNever(message);
 		}
@@ -397,22 +401,29 @@ export class ProxyController extends EventEmitter {
 				this.emitErrorEvent("Error inside InspectorProxyWorker", message.error);
 
 				break;
-			case "get-source-map":
-				assert(this.latestConfig !== undefined);
-				assert(this.latestBundle !== undefined);
-
-				if (
-					this.latestBundle.sourceMapPath !== undefined &&
-					this.latestBundle.sourceMapMetadata !== undefined
-				) {
-					// TODO
-				}
-
-				break;
 			case "debug-log":
 				logger.debug("[InspectorProxyWorker]", ...message.args);
 
 				break;
+			case "load-network-resource": {
+				assert(this.latestConfig !== undefined);
+				assert(this.latestBundle !== undefined);
+
+				let maybeContents: string | undefined;
+				if (message.url.startsWith("wrangler-file:")) {
+					maybeContents = maybeHandleNetworkLoadResource(
+						message.url.replace("wrangler-file:", "file:"),
+						this.latestBundle,
+						this.latestBundle.sourceMapMetadata?.tmpDir
+					);
+				}
+
+				if (maybeContents === undefined) {
+					return new Response(null, { status: 404 });
+				}
+
+				return new Response(maybeContents);
+			}
 			default:
 				assertNever(message);
 				return new Response(null, { status: 404 });

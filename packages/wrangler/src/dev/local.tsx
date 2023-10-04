@@ -4,7 +4,6 @@ import { useEffect, useRef } from "react";
 import onExit from "signal-exit";
 import { registerWorker } from "../dev-registry";
 import { logger } from "../logger";
-import useInspector from "./inspect";
 import { MiniflareServer } from "./miniflare";
 import { DEFAULT_WORKER_NAME } from "./miniflare";
 import type { ProxyData } from "../api";

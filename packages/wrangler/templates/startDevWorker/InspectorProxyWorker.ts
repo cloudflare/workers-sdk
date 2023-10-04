@@ -1,9 +1,7 @@
 import assert from "node:assert";
 import {
-	castErrorCause,
 	DevToolsCommandRequest,
 	DevToolsCommandRequests,
-	DevToolsCommandResponse,
 	DevToolsCommandResponses,
 	DevToolsEvent,
 	DevToolsEvents,
@@ -11,11 +9,12 @@ import {
 	type InspectorProxyWorkerOutgoingRequestBody,
 	type InspectorProxyWorkerOutgoingWebsocketMessage,
 	type ProxyData,
+	serialiseError,
 } from "../../src/api/startDevWorker/events";
 import {
-	MaybePromise,
 	assertNever,
 	createDeferredPromise,
+	MaybePromise,
 	urlFromParts,
 } from "../../src/api/startDevWorker/utils";
 
@@ -35,6 +34,18 @@ export default {
 	},
 } as ExportedHandler<Env>;
 
+function isDevToolsEvent<Method extends DevToolsEvents["method"]>(
+	event: unknown,
+	name: Method
+): event is DevToolsEvent<Method> {
+	return (
+		typeof event === "object" &&
+		event !== null &&
+		"method" in event &&
+		event.method === name
+	);
+}
+
 export class InspectorProxyWorker implements DurableObject {
 	constructor(_state: DurableObjectState, readonly env: Env) {}
 
@@ -42,12 +53,16 @@ export class InspectorProxyWorker implements DurableObject {
 		proxyController?: WebSocket;
 		runtime?: WebSocket;
 		devtools?: WebSocket;
+		// Browser DevTools cannot read the filesystem, instead they fetch via
+		// `Network.loadNetworkResource` messages.
+		// IDE DevTools can read the filesystem and expect absolute paths.
+		devtoolsHasFileSystemAccess?: boolean;
 	} = {};
 	#runtimeWebSocketPromise = createDeferredPromise<WebSocket>();
 
 	#proxyData?: ProxyData;
 
-	runtimeMessageBuffer: string[] = [];
+	runtimeMessageBuffer: (DevToolsCommandResponses | DevToolsEvents)[] = [];
 
 	#handleRuntimeIncomingMessage = (event: MessageEvent) => {
 		assert(typeof event.data === "string");
@@ -62,24 +77,41 @@ export class InspectorProxyWorker implements DurableObject {
 		this.sendDebugLog("RUNTIME INCOMING MESSAGE", msg);
 
 		if (
-			"method" in msg &&
-			(msg.method === "Runtime.exceptionThrown" ||
-				msg.method === "Runtime.consoleAPICalled")
+			isDevToolsEvent(msg, "Runtime.exceptionThrown") ||
+			isDevToolsEvent(msg, "Runtime.consoleAPICalled")
 		) {
 			this.sendProxyControllerMessage(event.data);
 		}
 
-		this.runtimeMessageBuffer.push(JSON.stringify(msg));
-
+		this.runtimeMessageBuffer.push(msg);
 		this.#tryDrainRuntimeMessageBuffer();
 	};
 
+	#handleRuntimeScriptParsed(msg: DevToolsEvent<"Debugger.scriptParsed">) {
+		if (
+			!this.#websockets.devtoolsHasFileSystemAccess &&
+			msg.params.sourceMapURL !== undefined
+		) {
+			const url = new URL(msg.params.sourceMapURL, msg.params.url);
+			if (url.protocol === "file:") {
+				msg.params.sourceMapURL = url.href.replace("file:", "wrangler-file:");
+			}
+		}
+
+		void this.sendDevToolsMessage(msg);
+	}
+
 	#tryDrainRuntimeMessageBuffer = () => {
+		// If we don't have a DevTools WebSocket, try again later
 		if (this.#websockets.devtools === undefined) return;
 
 		// clear the buffer and replay each message to devtools
-		for (const data of this.runtimeMessageBuffer.splice(0)) {
-			this.sendDevToolsMessage(data);
+		for (const msg of this.runtimeMessageBuffer.splice(0)) {
+			if (isDevToolsEvent(msg, "Debugger.scriptParsed")) {
+				this.#handleRuntimeScriptParsed(msg);
+			} else {
+				void this.sendDevToolsMessage(msg);
+			}
 		}
 	};
 
@@ -247,12 +279,19 @@ export class InspectorProxyWorker implements DurableObject {
 	async sendProxyControllerRequest(
 		message: InspectorProxyWorkerOutgoingRequestBody
 	) {
-		const res = await this.env.PROXY_CONTROLLER.fetch("http://dummy", {
-			method: "POST",
-			body: JSON.stringify(message),
-		});
-
-		return res.text();
+		try {
+			const res = await this.env.PROXY_CONTROLLER.fetch("http://dummy", {
+				method: "POST",
+				body: JSON.stringify(message),
+			});
+			return res.ok ? await res.text() : undefined;
+		} catch (e) {
+			this.sendDebugLog(
+				"FAILED TO SEND PROXY CONTROLLER REQUEST",
+				serialiseError(e)
+			);
+			return undefined;
+		}
 	}
 	async sendRuntimeMessage(
 		message: string | DevToolsCommandRequests,
@@ -322,29 +361,29 @@ export class InspectorProxyWorker implements DurableObject {
 		this.sendDebugLog("DEVTOOLS INCOMING MESSAGE", message);
 
 		if (message.method === "Network.loadNetworkResource") {
-			return void this.handleDevToolsGetSourceMapMessage(message);
+			return void this.handleDevToolsLoadNetworkResource(message);
 		}
 
 		this.sendRuntimeMessage(JSON.stringify(message));
 	};
-	async handleDevToolsGetSourceMapMessage(
+	async handleDevToolsLoadNetworkResource(
 		message: DevToolsCommandRequest<"Network.loadNetworkResource">
 	) {
-		try {
-			const sourcemap = await this.sendProxyControllerRequest({
-				type: "get-source-map",
-			});
-
+		const response = await this.sendProxyControllerRequest({
+			type: "load-network-resource",
+			url: message.params.url,
+		});
+		if (response === undefined) {
+			this.sendRuntimeMessage(JSON.stringify(message));
+		} else {
 			// this.#websockets.devtools can be undefined here
-			// the incoming message implies we have a devtools connection, but after the await it could've dropped
-			// in which case we can safely not respond
+			// the incoming message implies we have a devtools connection, but after
+			// the await it could've dropped in which case we can safely not respond
 			this.sendDevToolsMessage({
 				id: message.id,
 				// @ts-expect-error DevTools Protocol type is wrong -- result.resource.text property exists!
-				result: { resource: { success: true, text: sourcemap } },
+				result: { resource: { success: true, text: response } },
 			});
-		} catch {
-			this.sendRuntimeMessage(JSON.stringify(message));
 		}
 	}
 
@@ -395,7 +434,48 @@ export class InspectorProxyWorker implements DurableObject {
 
 			this.sendDebugLog("DEVTOOLS WEBCOCKET CONNECTED");
 
+			// Our patched DevTools are hosted on a `https://` URL. These cannot
+			// access `file://` URLs, meaning local source maps cannot be fetched.
+			// To get around this, we can rewrite `Debugger.scriptParsed` events to
+			// include a special `worker:` scheme for source maps, and respond to
+			// `Network.loadNetworkResource` commands for these. Unfortunately, this
+			// breaks IDE's built-in debuggers (e.g. VSCode and WebStorm), so we only
+			// want to enable this transformation when we detect hosted DevTools has
+			// connected. We do this by looking at the WebSocket handshake headers:
+			//
+			// # DevTools
+			//
+			// Upgrade: websocket
+			// Host: localhost:9229
+			// (from Chrome)  User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36
+			// (from Firefox) User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/116.0
+			// Origin: https://devtools.devprod.cloudflare.dev
+			// ...
+			//
+			// # VSCode
+			//
+			// Upgrade: websocket
+			// Host: localhost
+			// ...
+			//
+			// # WebStorm
+			//
+			// Upgrade: websocket
+			// Host: localhost:9229
+			// Origin: http://localhost:9229
+			// ...
+			//
+			// From this, we could just use the presence of a `User-Agent` header to
+			// determine if DevTools connected, but VSCode/WebStorm could very well
+			// add this in future versions. We could also look for an `Origin` header
+			// matching the hosted DevTools URL, but this would prevent preview/local
+			// versions working. Instead, we look for a browser-like `User-Agent`.
+			const userAgent = req.headers.get("User-Agent") ?? "";
+			const hasFileSystemAccess = !/mozilla/i.test(userAgent);
+
 			this.#websockets.devtools = devtools;
+			this.#websockets.devtoolsHasFileSystemAccess = hasFileSystemAccess;
+
 			this.#tryDrainRuntimeMessageBuffer();
 		}
 
