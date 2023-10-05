@@ -4,6 +4,9 @@ export default <ExportedHandler<{ BEE: Fetcher }>>{
 		if (url.pathname === "/constructor") {
 			return new Response(env.BEE.constructor.name);
 		}
+		if (url.pathname === "/private") {
+			return new Response(env.BEE.details === undefined);
+		}
 		return env.BEE.fetch(req);
 	},
 };

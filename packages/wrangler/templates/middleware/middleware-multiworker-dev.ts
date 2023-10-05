@@ -5,7 +5,12 @@ import { workers } from "config:middleware/multiworker-dev";
 import type { WorkerRegistry } from "../../src/dev-registry";
 
 class Fetcher {
-	constructor(private name: string, private details: WorkerRegistry[string]) {}
+	#name: string;
+	#details: WorkerRegistry[string];
+	constructor(name: string, details: WorkerRegistry[string]) {
+		this.#name = name;
+		this.#details = details;
+	}
 
 	async fetch(...reqArgs: Parameters<Fetcher["fetch"]>) {
 		const reqFromArgs = new Request(...reqArgs);
