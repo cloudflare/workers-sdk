@@ -1,6 +1,5 @@
 import assert from "node:assert";
 import { realpathSync } from "node:fs";
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 import {
 	Log,
@@ -11,6 +10,7 @@ import {
 	Miniflare,
 } from "miniflare";
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
+import { withSourceURLs } from "../deployment-bundle/source-url";
 import { getHttpsOptions } from "../https-options";
 import { logger } from "../logger";
 import type { Config } from "../config";
@@ -152,6 +152,10 @@ async function buildSourceOptions(
 	const scriptPath = realpathSync(config.bundle.path);
 	if (config.format === "modules") {
 		const modulesRoot = path.dirname(scriptPath);
+		const { entrypointSource, modules } = withSourceURLs(
+			scriptPath,
+			config.bundle.modules
+		);
 		return {
 			modulesRoot,
 			modules: [
@@ -159,10 +163,10 @@ async function buildSourceOptions(
 				{
 					type: "ESModule",
 					path: scriptPath,
-					contents: await readFile(scriptPath, "utf-8"),
+					contents: entrypointSource,
 				},
 				// Misc (WebAssembly, etc, ...)
-				...config.bundle.modules.map((module) => ({
+				...modules.map((module) => ({
 					type: ModuleTypeToRuleType[module.type ?? "esm"],
 					path: path.resolve(modulesRoot, module.name),
 					contents: module.content,
@@ -170,6 +174,7 @@ async function buildSourceOptions(
 			],
 		};
 	} else {
+		// Miniflare will handle adding `//# sourceURL` comments if they're missing
 		return { scriptPath };
 	}
 }
