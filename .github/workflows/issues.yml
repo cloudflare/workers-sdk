@@ -2,8 +2,7 @@ name: Add issues to DevProd project
 
 on:
   issues:
-    types:
-      - [opened, labeled, unlabeled, transferred]
+    types: [opened, labeled, unlabeled, transferred]
 
 jobs:
   add-to-project:
