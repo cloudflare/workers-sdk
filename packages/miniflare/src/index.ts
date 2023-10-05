@@ -81,6 +81,7 @@ import {
 	Service,
 	Socket,
 	SocketIdentifier,
+	SocketPorts,
 	Worker_Binding,
 	Worker_Module,
 	kInspectorSocket,
@@ -546,6 +547,7 @@ export function _initialiseInstanceRegistry() {
 }
 
 export class Miniflare {
+	#previousSharedOpts?: PluginSharedOptions;
 	#sharedOpts: PluginSharedOptions;
 	#workerOpts: PluginWorkerOptions[];
 	#log: Log;
@@ -553,7 +555,7 @@ export class Miniflare {
 	readonly #runtime?: Runtime;
 	readonly #removeRuntimeExitHook?: () => void;
 	#runtimeEntryURL?: URL;
-	#socketPorts?: Map<SocketIdentifier, number>;
+	#socketPorts?: SocketPorts;
 	#runtimeClient?: Client;
 	#proxyClient?: ProxyClient;
 
@@ -877,6 +879,21 @@ export class Miniflare {
 		});
 	}
 
+	#getSocketAddress(
+		id: SocketIdentifier,
+		previousRequestedPort: number | undefined,
+		host = DEFAULT_HOST,
+		requestedPort?: number
+	) {
+		// If `port` is set to `0`, was previously set to `0`, and we previously had
+		// a port for this socket, reuse that random port
+		if (requestedPort === 0 && previousRequestedPort === 0) {
+			requestedPort = this.#socketPorts?.get(id);
+		}
+		// Otherwise, default to a new random port
+		return `${host}:${requestedPort ?? 0}`;
+	}
+
 	async #assembleConfig(loopbackPort: number): Promise<Config> {
 		const allWorkerOpts = this.#workerOpts;
 		const sharedOpts = this.#sharedOpts;
@@ -967,13 +984,24 @@ export class Miniflare {
 
 			// Allow additional sockets to be opened directly to specific workers,
 			// bypassing Miniflare's entry worker.
-			let { unsafeDirectHost, unsafeDirectPort } = workerOpts.core;
+			const { unsafeDirectHost, unsafeDirectPort } = workerOpts.core;
 			if (unsafeDirectHost !== undefined || unsafeDirectPort !== undefined) {
-				unsafeDirectHost ??= DEFAULT_HOST;
-				unsafeDirectPort ??= 0;
+				const name = getDirectSocketName(i);
+				const address = this.#getSocketAddress(
+					name,
+					// We don't attempt to reuse allocated ports for `unsafeDirectPort: 0`
+					// as there's not always a clear mapping between current/previous
+					// worker options. We could do it by index, names, script, etc.
+					// This is an unsafe option primarily intended for Wrangler's
+					// inspector proxy, which will usually set this value to `9229`.
+					// We could consider changing this in the future.
+					/* previousRequestedPort */ undefined,
+					unsafeDirectHost,
+					unsafeDirectPort
+				);
 				sockets.push({
-					name: getDirectSocketName(i),
-					address: `${unsafeDirectHost}:${unsafeDirectPort}`,
+					name,
+					address,
 					service: { name: getUserServiceName(workerName) },
 					http: {},
 				});
@@ -1059,13 +1087,27 @@ export class Miniflare {
 		const host = this.#sharedOpts.core.host ?? DEFAULT_HOST;
 		const urlSafeHost = getURLSafeHost(host);
 		const accessibleHost = getAccessibleHost(host);
+		const entryAddress = this.#getSocketAddress(
+			SOCKET_ENTRY,
+			this.#previousSharedOpts?.core.port,
+			host,
+			this.#sharedOpts.core.port
+		);
+		let inspectorAddress: string | undefined;
+		if (this.#sharedOpts.core.inspectorPort !== undefined) {
+			inspectorAddress = this.#getSocketAddress(
+				kInspectorSocket,
+				this.#previousSharedOpts?.core.inspectorPort,
+				"localhost",
+				this.#sharedOpts.core.inspectorPort
+			);
+		}
 		const runtimeOpts: Abortable & RuntimeOptions = {
 			signal: this.#disposeController.signal,
-			entryHost: urlSafeHost,
-			entryPort: this.#sharedOpts.core.port ?? 0,
+			entryAddress,
 			loopbackPort,
 			requiredSockets,
-			inspectorPort: this.#sharedOpts.core.inspectorPort,
+			inspectorAddress,
 			verbose: this.#sharedOpts.core.verbose,
 		};
 		const maybeSocketPorts = await this.#runtime.updateConfig(
@@ -1223,6 +1265,7 @@ export class Miniflare {
 
 		// Split and validate options
 		const [sharedOpts, workerOpts] = validateOptions(opts);
+		this.#previousSharedOpts = this.#sharedOpts;
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;
 		this.#log = this.#sharedOpts.core.log ?? this.#log;
