@@ -254,6 +254,7 @@ export function parseRequestInput(
 	const forward = new Request(input, init);
 	const url = new URL(forward.url);
 	forward.headers.set("MF-Original-URL", url.toString());
+	forward.headers.set("MF-Disable-Pretty-Error", "true");
 	url.protocol = protocol;
 	url.hostname = readyAddress;
 	url.port = readyPort.toString();
