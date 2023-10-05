@@ -90,7 +90,6 @@ export function serialiseWorker(service: PartialWorker): FormData {
 export type PreviewHash = {
 	previewUrl: string;
 	devtoolsUrl: string;
-	playgroundUrl: string;
 	serialised: string;
 };
 
@@ -103,8 +102,14 @@ async function compressWorker(worker: FormData) {
 	);
 }
 
-async function updatePreviewHash(content: Worker): Promise<PreviewHash> {
+async function updatePreviewHash(
+	content: Worker,
+	updateWorkerHash: (hash: string) => void
+): Promise<PreviewHash> {
 	const worker = serialiseWorker(content);
+	const serialised = await compressWorker(worker);
+	const playgroundUrl = `/playground#${serialised}`;
+	updateWorkerHash(playgroundUrl);
 
 	const res = await fetch("/playground/api/worker", {
 		method: "POST",
@@ -117,10 +122,7 @@ async function updatePreviewHash(content: Worker): Promise<PreviewHash> {
 		throw new Error(deploy.message);
 	}
 
-	const serialised = await compressWorker(worker);
-
 	return {
-		playgroundUrl: `/playground#${serialised}`,
 		previewUrl: `https://${v4()}.${
 			import.meta.env.VITE_PLAYGROUND_PREVIEW
 		}/.update-preview-token?token=${encodeURIComponent(deploy.preview)}`,
@@ -169,11 +171,13 @@ export function useDraftWorker(
 			}
 			try {
 				setIsPreviewUpdating(true);
-				const hash = await updatePreviewHash({
-					...worker,
-					...(wk ?? draftWorker),
-				});
-				updateWorkerHash(hash.playgroundUrl);
+				const hash = await updatePreviewHash(
+					{
+						...worker,
+						...(wk ?? draftWorker),
+					},
+					updateWorkerHash
+				);
 				setPreviewHash(hash);
 				setDevtoolsUrl(hash.devtoolsUrl);
 			} catch (e: unknown) {
