@@ -376,6 +376,14 @@ test("put: returns metadata for created object", async (t) => {
 	t.is(object.range, undefined);
 	isWithin(t, WITHIN_EPSILON, object.uploaded.getTime(), start);
 });
+test("put: puts empty value", async (t) => {
+	const { r2 } = t.context;
+	const object = await r2.put("key", "");
+	assert(object !== null);
+	t.is(object.size, 0);
+	const objectBody = await r2.get("key");
+	t.is(await objectBody?.text(), "");
+});
 test("put: overrides existing keys", async (t) => {
 	const { r2, ns, object } = t.context;
 	await r2.put("key", "value1");
