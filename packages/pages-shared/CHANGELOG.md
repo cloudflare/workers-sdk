@@ -1,5 +1,15 @@
 # @cloudflare/pages-shared
 
+## 0.10.0
+
+### Minor Changes
+
+- [#4093](https://github.com/cloudflare/workers-sdk/pull/4093) [`c71d8a0f`](https://github.com/cloudflare/workers-sdk/commit/c71d8a0f73c0abbf76434d7aa7634af53ce7b29b) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: bump `miniflare` to [`3.20231002.0`](https://github.com/cloudflare/miniflare/releases/tag/v3.20231002.0)
+
+### Patch Changes
+
+- [#4107](https://github.com/cloudflare/workers-sdk/pull/4107) [`807ab931`](https://github.com/cloudflare/workers-sdk/commit/807ab9316f1ce984f76302c9d9d5627c81617262) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: bump `miniflare` to [`3.20231002.1`](https://github.com/cloudflare/miniflare/releases/tag/v3.20231002.1)
+
 ## 0.9.0
 
 ### Minor Changes
