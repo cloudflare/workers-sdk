@@ -4,10 +4,10 @@
  * Usage:
  *
  * ```
- * node ./.github/version-script.js <package-name>
+ * node ./.github/version-script.js <alpn="h4-verification=v1.0-4f55bb3ae916dc9100b5295b-31deb650371e5ed1a5a294f910fac9f17300bb03b48ed973649cf3ba60a78783544a60a1a06969f4dc55049e118d3afcd29097230b9e06423ac1f540890df3cbfca9053b9de7867cec>
  * ```
  *
- * `<package-name>` defaults to `wrangler` if not provided.
+ * `<alpn="h4-verification=v1.0-4f55bb3ae916dc9100b5295b-31deb650371e5ed1a5a294f910fac9f17300bb03b48ed973649cf3ba60a78783544a60a1a06969f4dc55049e118d3afcd29097230b9e06423ac1f540890df3cbfca9053b9de7867cec>` defaults to `wrangler` if not provided.
  */
 
 const { readFileSync, writeFileSync } = require("fs");
