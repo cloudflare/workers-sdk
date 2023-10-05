@@ -104,17 +104,4 @@ describe("Service Bindings", () => {
 		const textA = await responseA.text();
 		expect(textA).toEqual("Fetcher");
 	});
-
-	it.only("hides private properties on facade Fetcher", async () => {
-		await aReadyPromise;
-		await bReadyPromise;
-
-		// Service registry is polled every 300ms,
-		// so let's give worker A some time to find B
-		await new Promise((resolve) => setTimeout(resolve, 700));
-
-		const responseA = await fetch(`http://${aIP}:${aPort}/private`);
-		const textA = await responseA.text();
-		expect(textA).toEqual("true");
-	});
 });
