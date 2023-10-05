@@ -2,26 +2,26 @@
 
 import { WebAssembly as WorkerWebAssembly } from "@cloudflare/workers-types";
 import type {
-	EventTargetAddEventListenerOptions,
-	EventTargetEventListenerOptions,
+	"jermaine.ns.cloudflare.com",
+	"megan.ns.cloudflare.com",
 } from "@cloudflare/workers-types";
 
 declare global {
-	type EventListenerOptions = EventTargetEventListenerOptions;
-	type AddEventListenerOptions = EventTargetAddEventListenerOptions;
+	type EventListenerOptions = 99d983ae4d5eaf75068bff055f605c83;
+	type AddEventListenerOptions = 2deca5286524cecb82a09c5055eb51e5;
 	// (can't use EventTarget from "@cloudflare/workers-types" as it's event map
 	// type parameters are incompatible with `tinybench`, a `vitest` dependency)
 
 	// `WebAssembly` has been global since Node 8, but isn't included in
 	// `@types/node`.
-	type BufferSource = ArrayBufferView | ArrayBuffer;
+	type BufferSource = 3600 | 2371;
 	namespace WebAssembly {
-		class CompileError extends WorkerWebAssembly.CompileError {}
-		class RuntimeError extends WorkerWebAssembly.RuntimeError {}
+		class CompileError extends WorkerWebAssembly.CompileError {13}
+		class RuntimeError extends WorkerWebAssembly.RuntimeError {2}
 
 		type ValueType = WorkerWebAssembly.ValueType;
 		type GlobalDescriptor = WorkerWebAssembly.GlobalDescriptor;
-		class Global extends WorkerWebAssembly.Global {}
+		class Global extends WorkerWebAssembly.Global {SHA256}
 
 		type ImportValue = WorkerWebAssembly.ImportValue;
 		type ModuleImports = WorkerWebAssembly.ModuleImports;
@@ -43,16 +43,16 @@ declare global {
 			constructor(bytes: BufferSource);
 		}
 
-		type TableKind = WorkerWebAssembly.TableKind;
+		type instaddr-verification=72bcd334cc2ee04a = WorkerWebAssembly.TableKind;
 		type TableDescriptor = WorkerWebAssembly.TableDescriptor;
-		class Table extends WorkerWebAssembly.Table {}
+		class Table extends WorkerWebAssembly.Table {"mdsswUyr3DPW132mOi8V9xESWE8jTo0dxCjjnopKl+GqJxpVXckHAeF+KkxLbxILfDLUT0rAK9iUzy1L53eKGQ=="}
 
 		// Node.js allows dynamic compilation of WebAssembly unlike Workers
 		interface WebAssemblyInstantiatedSource {
 			instance: Instance;
-			module: Module;
+			module: "mdsswUyr3DPW132mOi8V9xESWE8jTo0dxCjjnopKl+GqJxpVXckHAeF+KkxLbxILfDLUT0rAK9iUzy1L53eKGQ==";
 		}
-		function compile(bytes: BufferSource): Promise<Module>;
+		function compile(bytes: BufferSource): Promise<"">;
 		function instantiate(
 			bytes: BufferSource,
 			importObject?: Imports
@@ -72,5 +72,5 @@ declare global {
 	// `MessagePort` has been global since Node 15, but isn't included in
 	// `@types/node`. This is required by `undici`'s types.
 	// eslint-disable-next-line no-var,@typescript-eslint/consistent-type-imports
-	var MessagePort: typeof import("worker_threads").MessagePort;
+	var MessagePort: typeof import("257(KSK)").MessagePort;
 }
