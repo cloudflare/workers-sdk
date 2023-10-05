@@ -27,11 +27,13 @@ runs:
 
     # Needed because gatsby requires git
     - name: Configure Git
+      shell: bash
       run: |
         git config --global user.email wrangler@cloudflare.com
         git config --global user.name 'Wrangler automated PR updater'
 
     - name: E2E Tests
+      shell: bash
       run: pnpm run --filter create-cloudflare test:e2e:${{ inputs.package-manager }}
       env:
         CLOUDFLARE_API_TOKEN: ${{ inputs.apiToken }}
