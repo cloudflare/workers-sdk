@@ -35,7 +35,6 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 			testCommitMessage: true,
 		},
 		gatsby: {
-			quarantine: true,
 			expectResponseToContain: "Gatsby!",
 			unsupportedPms: ["bun"],
 			promptHandlers: [
