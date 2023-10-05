@@ -48,11 +48,12 @@ export default function QuickEditor() {
 	useEffect(() => {
 		observeDarkMode(() => setDarkMode(isDarkMode()));
 	}, []);
-	const workerHash = window.location.hash.slice(1);
 
 	const [previewUrl, setPreviewUrl] = React.useState(`/`);
 
-	const [initialWorkerContentHash, setInitialHash] = React.useState(workerHash);
+	const [initialWorkerContentHash, setInitialHash] = React.useState(
+		window.location.hash.slice(1)
+	);
 
 	function updateWorkerHash(hash: string) {
 		history.replaceState(null, "", hash);

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { A, Div, Form, Span, Strong } from "@cloudflare/elements";
 import { createComponent } from "@cloudflare/style-container";
 import { Button } from "@cloudflare/component-button";
@@ -6,6 +6,7 @@ import { Icon } from "@cloudflare/component-icon";
 import { BAR_HEIGHT } from "./constants";
 import { WorkersLogo } from "./WorkersLogo";
 import { Input } from "@cloudflare/component-input";
+import { ServiceContext } from "./QuickEditor";
 
 const Wrapper = createComponent(({ theme }) => ({
 	display: "flex",
@@ -19,6 +20,7 @@ const Wrapper = createComponent(({ theme }) => ({
 }));
 
 export function TopBar() {
+	const { previewHash } = useContext(ServiceContext);
 	const [isEditing, setIsEditing] = useState(false);
 
 	const [hasCopied, setHasCopied] = useState(false);
@@ -28,8 +30,6 @@ export function TopBar() {
 
 		return searchParams.get("name") || "workers-playground";
 	});
-
-	const workerHash = location.hash.slice(1);
 
 	function setValue(v: string) {
 		const sanitised = v.replace(/[^a-z0-9-]+/g, "-");
@@ -119,6 +119,7 @@ export function TopBar() {
 				<Button
 					type="primary"
 					inverted={true}
+					disabled={!Boolean(previewHash?.serialised)}
 					onClick={() => {
 						void navigator.clipboard.writeText(location.href);
 						setHasCopied(!hasCopied);
@@ -131,10 +132,14 @@ export function TopBar() {
 
 			<A
 				target="_blank"
-				href={`https://dash.cloudflare.com/workers-and-pages/deploy/playground/${value}#${workerHash}`}
-				style={workerHash ? undefined : { pointerEvents: "none" }}
+				href={`https://dash.cloudflare.com/workers-and-pages/deploy/playground/${value}#${previewHash?.serialised}`}
+				style={previewHash?.serialised ? undefined : { pointerEvents: "none" }}
 			>
-				<Button type="primary" disabled={!Boolean(workerHash)} tabIndex={-1}>
+				<Button
+					type="primary"
+					disabled={!Boolean(previewHash?.serialised)}
+					tabIndex={-1}
+				>
 					Deploy
 				</Button>
 			</A>
