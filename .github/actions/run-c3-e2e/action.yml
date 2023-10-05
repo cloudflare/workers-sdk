@@ -10,6 +10,13 @@ inputs:
   framework:
     description: "When specified, will only run tests for this framework"
     required: false
+  accountId:
+    description: "The account id of the test account"
+    required: true
+  apiToken:
+    description: "The api token of the test account"
+    required: true
+
 runs:
   using: "composite"
   steps:
@@ -27,7 +34,7 @@ runs:
     - name: E2E Tests
       run: pnpm run --filter create-cloudflare test:e2e:${{ inputs.package-manager }}
       env:
-        CLOUDFLARE_API_TOKEN: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}
-        CLOUDFLARE_ACCOUNT_ID: ${{ secrets.C3_TEST_CLOUDFLARE_ACCOUNT_ID }}
+        CLOUDFLARE_API_TOKEN: ${{ inputs.apiToken }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ inputs.accountId }}
         E2E_QUARANTINE: ${{ inputs.quarantine }}
         FRAMEWORK_CLI_TO_TEST: ${{ inputs.framework }}
