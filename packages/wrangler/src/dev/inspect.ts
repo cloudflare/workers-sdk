@@ -818,8 +818,12 @@ function maybeHandleNetworkLoadResource(
 			// templates. This should cover facades and middleware, but intentionally
 			// doesn't include all non-user code e.g. `node_modules`.
 			.map((source, i) => {
-				if (tmpDir !== undefined && source.includes(tmpDir)) return i;
 				if (source.includes("wrangler/templates")) return i;
+				if (
+					tmpDir !== undefined &&
+					path.resolve(sourceMap?.sourceRoot ?? "", source).includes(tmpDir)
+				)
+					return i;
 			})
 			.filter((i): i is number => i !== undefined);
 
