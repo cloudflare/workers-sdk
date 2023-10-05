@@ -4,7 +4,7 @@ import { fetch } from "undici";
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import type { ChildProcess } from "child_process";
 
-describe.skip("Service Bindings", () => {
+describe("Service Bindings", () => {
 	let aProcess: ChildProcess;
 	let aIP: string;
 	let aPort: number;
@@ -90,5 +90,18 @@ describe.skip("Service Bindings", () => {
 		const responseB = await fetch(`http://${bIP}:${bPort}/`);
 		const textB = await responseB.text();
 		expect(textB).toEqual("hello world");
+	});
+
+	it("gives facade service workers a constructor name of Fetcher", async () => {
+		await aReadyPromise;
+		await bReadyPromise;
+
+		// Service registry is polled every 300ms,
+		// so let's give worker A some time to find B
+		await new Promise((resolve) => setTimeout(resolve, 700));
+
+		const responseA = await fetch(`http://${aIP}:${aPort}/constructor`);
+		const textA = await responseA.text();
+		expect(textA).toEqual("Fetcher");
 	});
 });

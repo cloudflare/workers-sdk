@@ -4,6 +4,42 @@
 import { workers } from "config:middleware/multiworker-dev";
 import type { WorkerRegistry } from "../../src/dev-registry";
 
+class Fetcher {
+	#name: string;
+	#details: WorkerRegistry[string];
+	constructor(name: string, details: WorkerRegistry[string]) {
+		this.#name = name;
+		this.#details = details;
+	}
+
+	async fetch(...reqArgs: Parameters<Fetcher["fetch"]>) {
+		const reqFromArgs = new Request(...reqArgs);
+		if (this.#details.headers) {
+			for (const [key, value] of Object.entries(this.#details.headers)) {
+				// In remote mode, you need to add a couple of headers
+				// to make sure it's talking to the 'dev' preview session
+				// (much like wrangler dev already does via proxy.ts)
+				reqFromArgs.headers.set(key, value);
+			}
+			return (env[this.#name] as Fetcher).fetch(reqFromArgs);
+		}
+
+		const url = new URL(reqFromArgs.url);
+		if (this.#details.protocol !== undefined) {
+			url.protocol = this.#details.protocol;
+		}
+		if (this.#details.host !== undefined) {
+			url.host = this.#details.host;
+		}
+		if (this.#details.port !== undefined) {
+			url.port = this.#details.port.toString();
+		}
+
+		const request = new Request(url.toString(), reqFromArgs);
+		return fetch(request);
+	}
+}
+
 export function wrap(env: Record<string, unknown>) {
 	const facadeEnv = { ...env };
 	// For every Worker definition that's available,
@@ -14,34 +50,7 @@ export function wrap(env: Record<string, unknown>) {
 
 	for (const [name, details] of Object.entries(workers as WorkerRegistry)) {
 		if (details) {
-			facadeEnv[name] = {
-				async fetch(...reqArgs: Parameters<Fetcher["fetch"]>) {
-					const reqFromArgs = new Request(...reqArgs);
-					if (details.headers) {
-						for (const [key, value] of Object.entries(details.headers)) {
-							// In remote mode, you need to add a couple of headers
-							// to make sure it's talking to the 'dev' preview session
-							// (much like wrangler dev already does via proxy.ts)
-							reqFromArgs.headers.set(key, value);
-						}
-						return (env[name] as Fetcher).fetch(reqFromArgs);
-					}
-
-					const url = new URL(reqFromArgs.url);
-					if (details.protocol !== undefined) {
-						url.protocol = details.protocol;
-					}
-					if (details.host !== undefined) {
-						url.host = details.host;
-					}
-					if (details.port !== undefined) {
-						url.port = details.port.toString();
-					}
-
-					const request = new Request(url.toString(), reqFromArgs);
-					return fetch(request);
-				},
-			};
+			facadeEnv[name] = new Fetcher(name, details);
 		} else {
 			// This means there's no dev binding available.
 			// Let's use whatever's available, or put a shim with a message.
