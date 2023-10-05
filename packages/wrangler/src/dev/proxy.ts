@@ -6,9 +6,9 @@ import { networkInterfaces } from "node:os";
 import { createHttpTerminator } from "http-terminator";
 import { useEffect, useRef, useState } from "react";
 import serveStatic from "serve-static";
-import { getHttpsOptions } from "./https-options";
-import { logger } from "./logger";
-import { getAccessToken } from "./user/access";
+import { getHttpsOptions } from "../https-options";
+import { logger } from "../logger";
+import { getAccessToken } from "../user/access";
 import type { CfPreviewToken } from "./create-worker-preview";
 import type { HttpTerminator } from "http-terminator";
 import type {
@@ -43,7 +43,7 @@ function addCfPreviewTokenHeader(
 	headers["cf-workers-preview-token"] = previewTokenValue;
 }
 
-export async function addCfAccessToken(
+async function addCfAccessToken(
 	headers: IncomingHttpHeaders,
 	domain: string,
 	accessTokenRef: { current: string | undefined | null }

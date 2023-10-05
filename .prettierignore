@@ -7,6 +7,9 @@ packages/wrangler/CHANGELOG.md
 packages/jest-environment-wrangler/CHANGELOG.md
 packages/wranglerjs-compat-webpack-plugin/lib
 packages/wrangler-devtools/built-devtools
+packages/wrangler-devtools/.cipd
+packages/wrangler-devtools/depot
+packages/wrangler-devtools/devtools-frontend
 packages/edge-preview-authenticated-proxy/package.json
 packages/format-errors/package.json
 packages/**/dist/**

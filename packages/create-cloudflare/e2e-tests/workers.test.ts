@@ -44,6 +44,9 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 			// Relevant project files should have been created
 			expect(projectPath).toExist();
 
+			const gitignorePath = join(projectPath, ".gitignore");
+			expect(gitignorePath).toExist();
+
 			const pkgJsonPath = join(projectPath, "package.json");
 			expect(pkgJsonPath).toExist();
 

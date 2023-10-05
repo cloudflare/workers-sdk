@@ -4,9 +4,16 @@ import * as util from "node:util";
 import chalk from "chalk";
 import onExit from "signal-exit";
 import tmp from "tmp-promise";
-import { bundleWorker, dedupeModulesByName } from "../deployment-bundle/bundle";
+import { bundleWorker } from "../deployment-bundle/bundle";
+import { getBundleType } from "../deployment-bundle/bundle-type";
+import { dedupeModulesByName } from "../deployment-bundle/dedupe-modules";
+import { findAdditionalModules as doFindAdditionalModules } from "../deployment-bundle/find-additional-modules";
+import {
+	createModuleCollector,
+	getWrangler1xLegacyModuleReferences,
+	noopModuleCollector,
+} from "../deployment-bundle/module-collection";
 import { runCustomBuild } from "../deployment-bundle/run-custom-build";
-import traverseModuleGraph from "../deployment-bundle/traverse-module-graph";
 import {
 	getBoundRegisteredWorkers,
 	startWorkerRegistry,
@@ -91,6 +98,7 @@ export async function startDevServer(
 		nodejsCompat: props.nodejsCompat,
 		define: props.define,
 		noBundle: props.noBundle,
+		findAdditionalModules: props.findAdditionalModules,
 		assets: props.assetsConfig,
 		workerDefinitions,
 		services: props.bindings.services,
@@ -198,6 +206,7 @@ async function runEsbuild({
 	nodejsCompat,
 	define,
 	noBundle,
+	findAdditionalModules,
 	workerDefinitions,
 	services,
 	testScheduled,
@@ -220,6 +229,7 @@ async function runEsbuild({
 	legacyNodeCompat: boolean | undefined;
 	nodejsCompat: boolean | undefined;
 	noBundle: boolean;
+	findAdditionalModules: boolean | undefined;
 	workerDefinitions: WorkerRegistry;
 	testScheduled?: boolean;
 	local: boolean;
@@ -227,59 +237,59 @@ async function runEsbuild({
 }): Promise<EsbuildBundle | undefined> {
 	if (!destination) return;
 
-	let traverseModuleGraphResult:
-		| Awaited<ReturnType<typeof bundleWorker>>
-		| undefined;
-	let bundleResult: Awaited<ReturnType<typeof bundleWorker>> | undefined;
 	if (noBundle) {
-		traverseModuleGraphResult = await traverseModuleGraph(entry, rules);
+		additionalModules = dedupeModulesByName([
+			...((await doFindAdditionalModules(entry, rules)) ?? []),
+			...additionalModules,
+		]);
 	}
 
-	if (processEntrypoint || !noBundle) {
-		bundleResult = await bundleWorker(entry, destination, {
-			bundle: !noBundle,
-			disableModuleCollection: noBundle,
-			serveAssetsFromWorker,
-			jsxFactory,
-			jsxFragment,
-			rules,
-			tsconfig,
-			minify,
-			legacyNodeCompat,
-			nodejsCompat,
-			define,
-			checkFetch: true,
-			assets: assets && {
-				...assets,
-				// disable the cache in dev
-				bypassCache: true,
-			},
-			workerDefinitions,
-			services,
-			targetConsumer: "dev", // We are starting a dev server
-			local,
-			testScheduled,
-			doBindings,
-			additionalModules: dedupeModulesByName([
-				...(traverseModuleGraphResult?.modules ?? []),
-				...additionalModules,
-			]),
-		});
-	}
+	const entryDirectory = path.dirname(entry.file);
+	const moduleCollector = noBundle
+		? noopModuleCollector
+		: createModuleCollector({
+				wrangler1xLegacyModuleReferences: getWrangler1xLegacyModuleReferences(
+					entryDirectory,
+					entry.file
+				),
+				entry,
+				findAdditionalModules: findAdditionalModules ?? false,
+				rules,
+		  });
+
+	const bundleResult =
+		processEntrypoint || !noBundle
+			? await bundleWorker(entry, destination, {
+					bundle: !noBundle,
+					additionalModules,
+					moduleCollector,
+					serveAssetsFromWorker,
+					jsxFactory,
+					jsxFragment,
+					tsconfig,
+					minify,
+					legacyNodeCompat,
+					nodejsCompat,
+					define,
+					checkFetch: true,
+					assets,
+					// disable the cache in dev
+					bypassAssetCache: true,
+					workerDefinitions,
+					services,
+					targetConsumer: "dev", // We are starting a dev server
+					local,
+					testScheduled,
+					doBindings,
+			  })
+			: undefined;
 
 	return {
 		id: 0,
 		entry,
 		path: bundleResult?.resolvedEntryPointPath ?? entry.file,
-		type:
-			bundleResult?.bundleType ??
-			(entry.format === "modules" ? "esm" : "commonjs"),
-		modules: bundleResult
-			? bundleResult.modules
-			: dedupeModulesByName([
-					...(traverseModuleGraphResult?.modules ?? []),
-					...additionalModules,
-			  ]),
+		type: bundleResult?.bundleType ?? getBundleType(entry.format),
+		modules: bundleResult ? bundleResult.modules : additionalModules,
 		dependencies: bundleResult?.dependencies ?? {},
 		sourceMapPath: bundleResult?.sourceMapPath,
 		sourceMapMetadata: bundleResult?.sourceMapMetadata,

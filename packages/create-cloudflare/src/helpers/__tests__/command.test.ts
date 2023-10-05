@@ -9,6 +9,7 @@ import {
 	npmInstall,
 	runCommand,
 } from "../command";
+import * as shellquote from "../shell-quote";
 
 // We can change how the mock spawn works by setting these variables
 let spawnResultCode = 0;
@@ -57,7 +58,7 @@ describe("Command Helpers", () => {
 	});
 
 	const expectSpawnWith = (cmd: string) => {
-		const [command, ...args] = cmd.split(" ");
+		const [command, ...args] = shellquote.parse(cmd);
 
 		expect(spawn).toHaveBeenCalledWith(command, args, {
 			stdio: "inherit",
@@ -66,7 +67,7 @@ describe("Command Helpers", () => {
 	};
 
 	const expectSilentSpawnWith = (cmd: string) => {
-		const [command, ...args] = cmd.split(" ");
+		const [command, ...args] = shellquote.parse(cmd);
 
 		expect(spawn).toHaveBeenCalledWith(command, args, {
 			stdio: "pipe",

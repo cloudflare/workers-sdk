@@ -12,7 +12,7 @@ import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
 import { deployOptions, deployHandler } from "./deploy";
 import { isAuthenticationError } from "./deploy/deploy";
-import { isBuildFailure } from "./deployment-bundle/bundle";
+import { isBuildFailure } from "./deployment-bundle/build-failures";
 import {
 	deployments,
 	commonDeploymentCMDSetup,

@@ -5,6 +5,7 @@ import { join } from "path";
 import { spawn } from "cross-spawn";
 import { sleep } from "helpers/common";
 import { spinnerFrames } from "helpers/interactive";
+import { detectPackageManager } from "helpers/packages";
 import type { SpinnerStyle } from "helpers/interactive";
 
 export const C3_E2E_PREFIX = "c3-e2e-";
@@ -39,9 +40,24 @@ export const runC3 = async ({
 	promptHandlers = [],
 	outputPrefix = "",
 }: RunnerConfig) => {
-	const proc = spawn("node", ["./dist/cli.js", ...argv]);
+	const cmd = "node";
+	const args = ["./dist/cli.js", ...argv];
+	const proc = spawn(cmd, args);
+
+	promptHandlers = [...promptHandlers];
+
+	const { name: pm } = detectPackageManager();
+
+	console.log(
+		`\x1b[44m${outputPrefix} Running C3 with command: \`${cmd} ${args.join(
+			" "
+		)}\` (using ${pm})\x1b[0m`
+	);
+
 	const stdout: string[] = [];
 	const stderr: string[] = [];
+
+	promptHandlers = promptHandlers && [...promptHandlers];
 
 	await new Promise((resolve, rejects) => {
 		proc.stdout.on("data", (data) => {
@@ -49,7 +65,6 @@ export const runC3 = async ({
 			const currentDialog = promptHandlers[0];
 
 			lines.forEach(async (line) => {
-				// Uncomment to debug test output
 				if (filterLine(line)) {
 					console.log(`${outputPrefix} ${line}`);
 				}
@@ -57,7 +72,7 @@ export const runC3 = async ({
 
 				if (currentDialog && currentDialog.matcher.test(line)) {
 					// Add a small sleep to avoid input race
-					await sleep(500);
+					await sleep(1000);
 
 					currentDialog.input.forEach((keystroke) => {
 						proc.stdin.write(keystroke);
@@ -116,7 +131,10 @@ export const testProjectDir = (suite: string) => {
 	const clean = (suffix: string) => {
 		const path = getPath(suffix);
 		if (existsSync(path)) {
-			rmSync(path, { recursive: true, force: true });
+			rmSync(path, {
+				recursive: true,
+				force: true,
+			});
 		}
 	};
 

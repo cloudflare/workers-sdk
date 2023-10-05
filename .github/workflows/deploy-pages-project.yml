@@ -1,3 +1,5 @@
+name: Deploy Pages Project
+
 on:
   workflow_call:
     inputs:

@@ -3,6 +3,7 @@ import { tmpdir } from "os";
 import { join } from "path";
 import { beforeEach, afterEach, describe, test, expect } from "vitest";
 import { version } from "../package.json";
+import * as shellquote from "../src/helpers/shell-quote";
 import { frameworkToTest } from "./frameworkToTest";
 import { isQuarantineMode, keys, runC3 } from "./helpers";
 
@@ -30,13 +31,15 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 		});
 
 		test("--version with positionals", async () => {
-			const argv = "foo bar baz --version".split(" ");
+			const argv = shellquote.parse("foo bar baz --version");
 			const { output } = await runC3({ argv });
 			expect(output).toEqual(version);
 		});
 
 		test("--version with flags", async () => {
-			const argv = "foo --type webFramework --no-deploy --version".split(" ");
+			const argv = shellquote.parse(
+				"foo --type webFramework --no-deploy --version"
+			);
 			const { output } = await runC3({ argv });
 			expect(output).toEqual(version);
 		});
@@ -47,7 +50,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 				promptHandlers: [
 					{
 						matcher: /What type of application do you want to create/,
-						input: [keys.enter],
+						input: [keys.down, keys.enter],
 					},
 					{
 						matcher: /Do you want to use TypeScript/,
@@ -82,7 +85,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 					},
 					{
 						matcher: /What type of application do you want to create/,
-						input: [keys.down, keys.enter],
+						input: [keys.down, keys.down, keys.enter],
 					},
 					{
 						matcher: /Do you want to use TypeScript/,
@@ -112,7 +115,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 				promptHandlers: [
 					{
 						matcher: /What type of application do you want to create/,
-						input: [keys.enter],
+						input: [keys.down, keys.enter],
 					},
 					{
 						matcher: /Do you want to use git for version control/,

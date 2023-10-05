@@ -414,6 +414,7 @@ export async function startDev(args: StartDevOptions) {
 				<Dev
 					name={getScriptName({ name: args.name, env: args.env }, configParam)}
 					noBundle={!(args.bundle ?? !configParam.no_bundle)}
+					findAdditionalModules={configParam.find_additional_modules}
 					entry={entry}
 					env={args.env}
 					zone={zoneId}
@@ -553,6 +554,7 @@ export async function startApiDev(args: StartDevOptions) {
 		return await startDevServer({
 			name: getScriptName({ name: args.name, env: args.env }, configParam),
 			noBundle: !enableBundling,
+			findAdditionalModules: configParam.find_additional_modules,
 			entry: entry,
 			env: args.env,
 			zone: zoneId,

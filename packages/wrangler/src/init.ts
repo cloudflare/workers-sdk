@@ -17,6 +17,7 @@ import { getPackageManager } from "./package-manager";
 import { parsePackageJSON, parseTOML, readFileSync } from "./parse";
 import { getBasePath } from "./paths";
 import { requireAuth } from "./user";
+import * as shellquote from "./utils/shell-quote";
 import { CommandLineArgsError, printWranglerBanner } from "./index";
 
 import type { RawConfig } from "./config";
@@ -184,7 +185,7 @@ export async function initHandler(args: InitArgs) {
 		}
 
 		const c3Arguments = [
-			...getC3CommandFromEnv().split(" "),
+			...shellquote.parse(getC3CommandFromEnv()),
 			fromDashScriptName,
 			...(yesFlag && isNpm(packageManager) ? ["-y"] : []), // --yes arg for npx
 			...(isNpm(packageManager) ? ["--"] : []),
@@ -252,7 +253,7 @@ export async function initHandler(args: InitArgs) {
 				c3Arguments.unshift("-y"); // arg for npx
 			}
 
-			c3Arguments.unshift(...getC3CommandFromEnv().split(" "));
+			c3Arguments.unshift(...shellquote.parse(getC3CommandFromEnv()));
 
 			// Deprecate the `init --from-dash` command
 			const replacementC3Command = `\`${packageManager.type} ${c3Arguments.join(

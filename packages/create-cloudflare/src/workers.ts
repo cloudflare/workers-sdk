@@ -1,4 +1,12 @@
-import { readFile, writeFile, mkdtemp, cp, rm, readdir } from "fs/promises";
+import {
+	readFile,
+	writeFile,
+	mkdtemp,
+	cp,
+	rm,
+	readdir,
+	rename,
+} from "fs/promises";
 import { tmpdir } from "os";
 import { resolve, join } from "path";
 import { chdir } from "process";
@@ -34,6 +42,13 @@ export const runWorkersGenerator = async (args: C3Args) => {
 		args,
 	};
 
+	ctx.args.ts = await processArgument<boolean>(ctx.args, "ts", {
+		type: "confirm",
+		question: "Do you want to use TypeScript?",
+		label: "typescript",
+		defaultValue: C3_DEFAULTS.ts,
+	});
+
 	await copyFiles(ctx);
 	await copyExistingWorkerFiles(ctx);
 	await updateFiles(ctx);
@@ -53,13 +68,6 @@ export const runWorkersGenerator = async (args: C3Args) => {
 };
 
 async function getTemplate(ctx: Context) {
-	ctx.args.ts = await processArgument<boolean>(ctx.args, "ts", {
-		type: "confirm",
-		question: "Do you want to use TypeScript?",
-		label: "typescript",
-		defaultValue: C3_DEFAULTS.ts,
-	});
-
 	const preexisting = ctx.args.type === "pre-existing";
 	const template = preexisting ? "hello-world" : ctx.args.type;
 	const path = resolve(
@@ -81,6 +89,9 @@ async function copyFiles(ctx: Context) {
 	// copy template files
 	updateStatus(`Copying files from "${template}" template`);
 	await cp(srcdir, destdir, { recursive: true });
+
+	// reverse renaming from build step
+	await rename(join(destdir, "__dot__gitignore"), join(destdir, ".gitignore"));
 }
 
 async function copyExistingWorkerFiles(ctx: Context) {
