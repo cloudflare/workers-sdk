@@ -25,20 +25,20 @@ const ControlMessageSchema = z.discriminatedUnion("event", [
 
 export const kInspectorSocket = Symbol("kInspectorSocket");
 export type SocketIdentifier = string | typeof kInspectorSocket;
+export type SocketPorts = Map<SocketIdentifier, number /* port */>;
 
 export interface RuntimeOptions {
-	entryHost: string;
-	entryPort: number;
+	entryAddress: string;
 	loopbackPort: number;
 	requiredSockets: SocketIdentifier[];
-	inspectorPort?: number;
+	inspectorAddress?: string;
 	verbose?: boolean;
 }
 
 async function waitForPorts(
 	stream: Readable,
 	options: Abortable & Pick<RuntimeOptions, "requiredSockets">
-): Promise<Map<SocketIdentifier, number> | undefined> {
+): Promise<SocketPorts | undefined> {
 	if (options?.signal?.aborted) return;
 	const lines = rl.createInterface(stream);
 	// Calling `close()` will end the async iterator below and return undefined
@@ -102,16 +102,16 @@ function getRuntimeArgs(options: RuntimeOptions) {
 		// Required to use compatibility flags without a default-on date,
 		// (e.g. "streams_enable_constructors"), see https://github.com/cloudflare/workerd/pull/21
 		"--experimental",
-		`--socket-addr=${SOCKET_ENTRY}=${options.entryHost}:${options.entryPort}`,
+		`--socket-addr=${SOCKET_ENTRY}=${options.entryAddress}`,
 		`--external-addr=${SERVICE_LOOPBACK}=localhost:${options.loopbackPort}`,
 		// Configure extra pipe for receiving control messages (e.g. when ready)
 		"--control-fd=3",
 		// Read config from stdin
 		"-",
 	];
-	if (options.inspectorPort !== undefined) {
+	if (options.inspectorAddress !== undefined) {
 		// Required to enable the V8 inspector
-		args.push(`--inspector-addr=localhost:${options.inspectorPort}`);
+		args.push(`--inspector-addr=${options.inspectorAddress}`);
 	}
 	if (options.verbose) {
 		args.push("--verbose");
@@ -127,7 +127,7 @@ export class Runtime {
 	async updateConfig(
 		configBuffer: Buffer,
 		options: Abortable & RuntimeOptions
-	): Promise<Map<SocketIdentifier, number /* port */> | undefined> {
+	): Promise<SocketPorts | undefined> {
 		// 1. Stop existing process (if any) and wait for exit
 		await this.dispose();
 		// TODO: what happens if runtime crashes?

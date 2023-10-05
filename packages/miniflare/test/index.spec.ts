@@ -130,6 +130,7 @@ test("Miniflare: setOptions: can update host/port", async (t) => {
 
 	const opts: MiniflareOptions = {
 		port: 0,
+		inspectorPort: 0,
 		liveReload: true,
 		script: `addEventListener("fetch", (event) => {
       event.respondWith(new Response("<p>👋</p>", {
@@ -140,24 +141,38 @@ test("Miniflare: setOptions: can update host/port", async (t) => {
 	const mf = new Miniflare(opts);
 	t.teardown(() => mf.dispose());
 
-	const initialURL = await mf.ready;
-	let res = await mf.dispatchFetch("http://localhost");
-	const initialLoopbackPort = loopbackPortRegexp.exec(await res.text())?.[1];
+	async function getState() {
+		const url = await mf.ready;
+		const inspectorUrl = await mf.getInspectorURL();
+		const res = await mf.dispatchFetch("http://localhost");
+		const loopbackPort = loopbackPortRegexp.exec(await res.text())?.[1];
+		return { url, inspectorUrl, loopbackPort };
+	}
 
+	const state1 = await getState();
 	opts.host = "0.0.0.0";
 	await mf.setOptions(opts);
-	const updatedURL = await mf.ready;
-	res = await mf.dispatchFetch("http://localhost");
-	const updatedLoopbackPort = loopbackPortRegexp.exec(await res.text())?.[1];
+	const state2 = await getState();
 
-	// Make sure a new port was allocated when `port: 0` was passed to `setOptions()`
-	t.not(initialURL.port, "0");
-	t.not(initialURL.port, updatedURL.port);
+	// Make sure ports were reused when `port: 0` passed to `setOptions()`
+	t.not(state1.url.port, "0");
+	t.is(state1.url.port, state2.url.port);
+	t.not(state1.inspectorUrl.port, "0");
+	t.is(state1.inspectorUrl.port, state2.inspectorUrl.port);
 
 	// Make sure updating the host restarted the loopback server
-	t.not(initialLoopbackPort, undefined);
-	t.not(updatedLoopbackPort, undefined);
-	t.not(initialLoopbackPort, updatedLoopbackPort);
+	t.not(state1.loopbackPort, undefined);
+	t.not(state2.loopbackPort, undefined);
+	t.not(state1.loopbackPort, state2.loopbackPort);
+
+	// Make sure setting port to `undefined` always gives a new port, but keeps
+	// existing loopback server
+	opts.port = undefined;
+	await mf.setOptions(opts);
+	const state3 = await getState();
+	t.not(state3.url.port, "0");
+	t.not(state1.url.port, state3.url.port);
+	t.is(state2.loopbackPort, state3.loopbackPort);
 });
 
 test("Miniflare: routes to multiple workers with fallback", async (t) => {
