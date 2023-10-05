@@ -19,10 +19,8 @@ async function getTmpDir() {
 type WranglerDev = Awaited<ReturnType<typeof runWranglerDev>>;
 function get(worker: WranglerDev, pathname: string) {
 	const url = `http://${worker.ip}:${worker.port}${pathname}`;
-	// Setting the `MF-Original-URL` header will make Miniflare think this is
-	// coming from a `dispatchFetch()` request, meaning it won't return the pretty
-	// error page, and we'll be able to parse errors as JSON.
-	return fetch(url, { headers: { "MF-Original-URL": url } });
+	// Disable Miniflare's pretty error page, so we can parse errors as JSON
+	return fetch(url, { headers: { "MF-Disable-Pretty-Error": "true" } });
 }
 
 async function retry<T>(closure: () => Promise<T>, max = 30): Promise<T> {
