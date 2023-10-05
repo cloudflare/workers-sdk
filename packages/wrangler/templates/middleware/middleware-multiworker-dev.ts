@@ -14,25 +14,25 @@ class Fetcher {
 
 	async fetch(...reqArgs: Parameters<Fetcher["fetch"]>) {
 		const reqFromArgs = new Request(...reqArgs);
-		if (this.details.headers) {
-			for (const [key, value] of Object.entries(this.details.headers)) {
+		if (this.#details.headers) {
+			for (const [key, value] of Object.entries(this.#details.headers)) {
 				// In remote mode, you need to add a couple of headers
 				// to make sure it's talking to the 'dev' preview session
 				// (much like wrangler dev already does via proxy.ts)
 				reqFromArgs.headers.set(key, value);
 			}
-			return (env[this.name] as Fetcher).fetch(reqFromArgs);
+			return (env[this.#name] as Fetcher).fetch(reqFromArgs);
 		}
 
 		const url = new URL(reqFromArgs.url);
-		if (this.details.protocol !== undefined) {
-			url.protocol = this.details.protocol;
+		if (this.#details.protocol !== undefined) {
+			url.protocol = this.#details.protocol;
 		}
-		if (this.details.host !== undefined) {
-			url.host = this.details.host;
+		if (this.#details.host !== undefined) {
+			url.host = this.#details.host;
 		}
-		if (this.details.port !== undefined) {
-			url.port = this.details.port.toString();
+		if (this.#details.port !== undefined) {
+			url.port = this.#details.port.toString();
 		}
 
 		const request = new Request(url.toString(), reqFromArgs);
