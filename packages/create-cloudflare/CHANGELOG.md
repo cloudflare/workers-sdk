@@ -1,5 +1,46 @@
 # create-cloudflare
 
+## 2.4.0
+
+### Minor Changes
+
+- [#4063](https://github.com/cloudflare/workers-sdk/pull/4063) [`cb4309f9`](https://github.com/cloudflare/workers-sdk/commit/cb4309f90b433fb7b6f81279878bca11fe2a6937) Thanks [@jculvey](https://github.com/jculvey)! - Bump supported node version to 18.14.1
+
+  We've recently switched out testing infrastructure to test C3 on node version 18.14.1.
+  As of earlier this month, Node v16 is no longer supported, and many of the underlying
+  framework scaffolding tools that C3 uses (ex. `create-astro`, `gatsby`) have dropped
+  support for node v16, which in turn causes C3 to fail for those frameworks.
+
+* [#4065](https://github.com/cloudflare/workers-sdk/pull/4065) [`55298d9f`](https://github.com/cloudflare/workers-sdk/commit/55298d9f3ffc177cc390cd5e9ccc713261933585) Thanks [@jculvey](https://github.com/jculvey)! - Add support for bun
+
+### Patch Changes
+
+- [#3991](https://github.com/cloudflare/workers-sdk/pull/3991) [`80f78dad`](https://github.com/cloudflare/workers-sdk/commit/80f78dad4652cb9c6807c5144c4c32324f0c15e6) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-astro` from `4.1.0` to `4.2.0`
+
+* [#4002](https://github.com/cloudflare/workers-sdk/pull/4002) [`8ee46b06`](https://github.com/cloudflare/workers-sdk/commit/8ee46b063cab7a585074413b2c38a58a4e2f4eff) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-docusaurus` from `2.4.1` to `2.4.3`
+
+- [#4012](https://github.com/cloudflare/workers-sdk/pull/4012) [`a21acf82`](https://github.com/cloudflare/workers-sdk/commit/a21acf8217fa2eff57cffb6753865a37386b5f13) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-solid` from `0.2.26` to `0.3.6`
+
+* [#4091](https://github.com/cloudflare/workers-sdk/pull/4091) [`a9cb8c60`](https://github.com/cloudflare/workers-sdk/commit/a9cb8c608f2594170e92a0f49c3f85def4edf03c) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-svelte` from `5.0.6` to `5.1.0`
+
+- [#4100](https://github.com/cloudflare/workers-sdk/pull/4100) [`866c7833`](https://github.com/cloudflare/workers-sdk/commit/866c7833ec091825a4916bd6dfbcbc04d8c0bafe) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-remix` from `2.0.0` to `2.0.1`
+
+* [#4103](https://github.com/cloudflare/workers-sdk/pull/4103) [`f79cf89a`](https://github.com/cloudflare/workers-sdk/commit/f79cf89aeefb072dde5fc1ada24001af74fa363b) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-astro` from `4.2.0` to `4.2.1`
+
+- [#4088](https://github.com/cloudflare/workers-sdk/pull/4088) [`35165a26`](https://github.com/cloudflare/workers-sdk/commit/35165a26d9e1eda1f049d5a5b5a1cb2cd1e09c9f) Thanks [@jculvey](https://github.com/jculvey)! - Fixes an issue where users were prompted for TypeScript twice during worker creation
+
+* [#4087](https://github.com/cloudflare/workers-sdk/pull/4087) [`57e9f218`](https://github.com/cloudflare/workers-sdk/commit/57e9f218ae3ce11736d4ff6a09e05a6662ce13c5) Thanks [@jculvey](https://github.com/jculvey)! - Fixes an issue where exiting early from c3 would cause the terminal cursor to be hidden
+
+- [#3754](https://github.com/cloudflare/workers-sdk/pull/3754) [`811730d8`](https://github.com/cloudflare/workers-sdk/commit/811730d85066904e5ca9161900577342d59ec851) Thanks [@RamIdeas](https://github.com/RamIdeas)! - .gitignore files were not included in our templates due to npm/npm#3763
+
+  we now workaround this issue and ensure C3 templates include a .gitignore file
+
+* [#4062](https://github.com/cloudflare/workers-sdk/pull/4062) [`02359bc5`](https://github.com/cloudflare/workers-sdk/commit/02359bc50353cbf698de193d56360b6dfc151ad0) Thanks [@jculvey](https://github.com/jculvey)! - Defaults the project type to `Web Framework`. The previous default was `"Hello World" worker`
+
+- [#4030](https://github.com/cloudflare/workers-sdk/pull/4030) [`dba26262`](https://github.com/cloudflare/workers-sdk/commit/dba26262c72b4654c3c0799f975bcd8ff9210082) Thanks [@admah](https://github.com/admah)! - Fixes Workers templates to have a `dev` command in package.json to match comments in `index` files.
+
+* [#3916](https://github.com/cloudflare/workers-sdk/pull/3916) [`15d75e50`](https://github.com/cloudflare/workers-sdk/commit/15d75e50bd9b8ce5837b390f8c2ce39eea446a7e) Thanks [@admah](https://github.com/admah)! - fix: update the main file in the c3 scheduled js template to index.js.
+
 ## 2.3.1
 
 ### Patch Changes

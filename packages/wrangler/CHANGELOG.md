@@ -1,5 +1,63 @@
 # wrangler
 
+## 3.11.0
+
+### Minor Changes
+
+- [#3726](https://github.com/cloudflare/workers-sdk/pull/3726) [`7d20bdbd`](https://github.com/cloudflare/workers-sdk/commit/7d20bdbd4ed7c5003b327a58af8d5c402df9fe2b) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: support partial bundling with configurable external modules
+
+  Setting `find_additional_modules` to `true` in your configuration file will now instruct Wrangler to look for files in
+  your `base_dir` that match your configured `rules`, and deploy them as unbundled, external modules with your Worker.
+  `base_dir` defaults to the directory containing your `main` entrypoint.
+
+  Wrangler can operate in two modes: the default bundling mode and `--no-bundle` mode. In bundling mode, dynamic imports
+  (e.g. `await import("./large-dep.mjs")`) would be bundled into your entrypoint, making lazy loading less effective.
+  Additionally, variable dynamic imports (e.g. `` await import(`./lang/${language}.mjs`) ``) would always fail at runtime,
+  as Wrangler would have no way of knowing which modules to upload. The `--no-bundle` mode sought to address these issues
+  by disabling Wrangler's bundling entirely, and just deploying code as is. Unfortunately, this also disabled Wrangler's
+  code transformations (e.g. TypeScript compilation, `--assets`, `--test-scheduled`, etc).
+
+  With this change, we now additionally support _partial bundling_. Files are bundled into a single Worker entry-point file
+  unless `find_additional_modules` is `true`, and the file matches one of the configured `rules`. See
+  https://developers.cloudflare.com/workers/wrangler/bundling/ for more details and examples.
+
+* [#4093](https://github.com/cloudflare/workers-sdk/pull/4093) [`c71d8a0f`](https://github.com/cloudflare/workers-sdk/commit/c71d8a0f73c0abbf76434d7aa7634af53ce7b29b) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: bump `miniflare` to [`3.20231002.0`](https://github.com/cloudflare/miniflare/releases/tag/v3.20231002.0)
+
+### Patch Changes
+
+- [#3726](https://github.com/cloudflare/workers-sdk/pull/3726) [`7d20bdbd`](https://github.com/cloudflare/workers-sdk/commit/7d20bdbd4ed7c5003b327a58af8d5c402df9fe2b) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure that additional modules appear in the out-dir
+
+  When using `find_additional_modules` (or `no_bundle`) we find files that
+  will be uploaded to be deployed alongside the Worker.
+
+  Previously, if an `outDir` was specified, only the Worker code was output
+  to this directory. Now all additional modules are also output there too.
+
+* [#4067](https://github.com/cloudflare/workers-sdk/pull/4067) [`31270711`](https://github.com/cloudflare/workers-sdk/commit/31270711fe3f48ff94138cf1626f44b8b052d698) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: generate valid source maps with `wrangler pages dev` on macOS
+
+  On macOS, `wrangler pages dev` previously generated source maps with an
+  incorrect number of `../`s in relative paths. This change ensures paths are
+  always correct, improving support for breakpoint debugging.
+
+- [#4084](https://github.com/cloudflare/workers-sdk/pull/4084) [`9a7559b6`](https://github.com/cloudflare/workers-sdk/commit/9a7559b67c1afe9c583b1255d5404385b4d7b9fc) Thanks [@RamIdeas](https://github.com/RamIdeas)! - fix: respect the options.local value in unstable_dev (it was being ignored)
+
+* [#4107](https://github.com/cloudflare/workers-sdk/pull/4107) [`807ab931`](https://github.com/cloudflare/workers-sdk/commit/807ab9316f1ce984f76302c9d9d5627c81617262) Thanks [@mrbbot](https://github.com/mrbbot)! - chore: bump `miniflare` to [`3.20231002.1`](https://github.com/cloudflare/miniflare/releases/tag/v3.20231002.1)
+
+- [#3726](https://github.com/cloudflare/workers-sdk/pull/3726) [`7d20bdbd`](https://github.com/cloudflare/workers-sdk/commit/7d20bdbd4ed7c5003b327a58af8d5c402df9fe2b) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: allow `__STATIC_CONTENT_MANIFEST` module to be imported anywhere
+
+  `__STATIC_CONTENT_MANIFEST` can now be imported in subdirectories when
+  `--no-bundle` or `find_additional_modules` are enabled.
+
+* [#3926](https://github.com/cloudflare/workers-sdk/pull/3926) [`f585f695`](https://github.com/cloudflare/workers-sdk/commit/f585f6954eb2ebb1d1e3ee4bee11f7757b25a925) Thanks [@penalosa](https://github.com/penalosa)! - Log more detail about tokens after authentication errors
+
+- [#3695](https://github.com/cloudflare/workers-sdk/pull/3695) [`1d0b7ad5`](https://github.com/cloudflare/workers-sdk/commit/1d0b7ad5512d0cd43c6e137f5bf5caa93c6319d5) Thanks [@JacksonKearl](https://github.com/JacksonKearl)! - Fixed `pages dev` crashing and leaving port open when building a worker script fails
+
+* [#4066](https://github.com/cloudflare/workers-sdk/pull/4066) [`c8b4a07f`](https://github.com/cloudflare/workers-sdk/commit/c8b4a07f2e799df44da70cb1eaeb2a7480e0af7a) Thanks [@RamIdeas](https://github.com/RamIdeas)! - fix: we no longer infer pathnames from route patterns as the host
+
+  During local development, inside your worker, the host of `request.url` is inferred from the `routes` in your config.
+
+  Previously, route patterns like "\*/some/path/name" would infer the host as "some". We now handle this case and determine we cannot infer a host from such patterns.
+
 ## 3.10.1
 
 ### Patch Changes
