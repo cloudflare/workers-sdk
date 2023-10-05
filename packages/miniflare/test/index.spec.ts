@@ -709,6 +709,12 @@ test("Miniflare: listens on ipv6", async (t) => {
 	t.true(response.ok);
 });
 
+test("Miniflare: dispose() immediately after construction", async (t) => {
+	const mf = new Miniflare({ script: "", modules: true });
+	await mf.dispose();
+	t.pass();
+});
+
 test("Miniflare: getBindings() returns all bindings", async (t) => {
 	const tmp = await useTmp(t);
 	const blobPath = path.join(tmp, "blob.txt");

@@ -1,6 +1,6 @@
 import assert from "assert";
 import childProcess from "child_process";
-import type { Abortable } from "events";
+import { Abortable, once } from "events";
 import rl from "readline";
 import { Readable } from "stream";
 import { red } from "kleur/colors";
@@ -146,9 +146,10 @@ export class Runtime {
 		const controlPipe = runtimeProcess.stdio[3];
 		assert(controlPipe instanceof Readable);
 
-		// 3. Write config
+		// 3. Write config, and wait for writing to finish
 		runtimeProcess.stdin.write(configBuffer);
 		runtimeProcess.stdin.end();
+		await once(runtimeProcess.stdin, "finish");
 
 		// 4. Wait for sockets to start listening
 		return waitForPorts(controlPipe, options);
