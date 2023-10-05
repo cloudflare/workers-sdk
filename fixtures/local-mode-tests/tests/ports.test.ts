@@ -5,7 +5,7 @@ import type { UnstableDevWorker } from "wrangler";
 
 // Okay this test is seriously flaky, even without devRegistry enabled
 // TODO: figure out why we can't run 8 wranglers at once
-describe.skip("worker", () => {
+describe("worker", () => {
 	let workers: UnstableDevWorker[];
 	let resolveReadyPromise: (value: unknown) => void;
 	const readyPromise = new Promise((resolve) => {
