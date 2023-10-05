@@ -1,4 +1,10 @@
 import { fork } from "node:child_process";
+import path from "node:path";
+
+export const wranglerEntryPath = path.resolve(
+	__dirname,
+	"../../../packages/wrangler/bin/wrangler.js"
+);
 
 /**
  * Runs the command `wrangler pages dev` in a child process.
@@ -38,14 +44,10 @@ async function runLongLivedWrangler(command: string[], cwd: string) {
 		rejectReadyPromise = reject;
 	});
 
-	const wranglerProcess = fork(
-		"../../packages/wrangler/bin/wrangler.js",
-		command,
-		{
-			stdio: [/*stdin*/ "ignore", /*stdout*/ "pipe", /*stderr*/ "pipe", "ipc"],
-			cwd,
-		}
-	).on("message", (message) => {
+	const wranglerProcess = fork(wranglerEntryPath, command, {
+		stdio: [/*stdin*/ "ignore", /*stdout*/ "pipe", /*stderr*/ "pipe", "ipc"],
+		cwd,
+	}).on("message", (message) => {
 		if (settledReadyPromise) return;
 		settledReadyPromise = true;
 		clearTimeout(timeoutHandle);

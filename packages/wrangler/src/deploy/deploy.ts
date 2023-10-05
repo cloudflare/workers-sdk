@@ -11,8 +11,16 @@ import {
 	printBundleSize,
 	printOffendingDependencies,
 } from "../deployment-bundle/bundle-reporter";
+import { getBundleType } from "../deployment-bundle/bundle-type";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
-import traverseModuleGraph from "../deployment-bundle/traverse-module-graph";
+import {
+	findAdditionalModules,
+	writeAdditionalModules,
+} from "../deployment-bundle/find-additional-modules";
+import {
+	createModuleCollector,
+	getWrangler1xLegacyModuleReferences,
+} from "../deployment-bundle/module-collection";
 import { addHyphens } from "../deployments";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
@@ -30,6 +38,7 @@ import type {
 	ZoneIdRoute,
 	ZoneNameRoute,
 	CustomDomainRoute,
+	Rule,
 } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfWorkerInit, CfPlacement } from "../deployment-bundle/worker";
@@ -452,45 +461,54 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			);
 		}
 
-		const {
-			modules,
-			dependencies,
-			resolvedEntryPointPath,
-			bundleType,
-		}: Awaited<ReturnType<typeof bundleWorker>> = props.noBundle
-			? await traverseModuleGraph(props.entry, props.rules)
-			: await bundleWorker(
-					props.entry,
-					typeof destination === "string" ? destination : destination.path,
-					{
-						serveAssetsFromWorker:
-							!props.isWorkersSite && Boolean(props.assetPaths),
-						doBindings: config.durable_objects.bindings,
-						jsxFactory,
-						jsxFragment,
-						rules: props.rules,
-						tsconfig: props.tsconfig ?? config.tsconfig,
-						minify,
-						legacyNodeCompat,
-						nodejsCompat,
-						define: { ...config.define, ...props.defines },
-						checkFetch: false,
-						assets: config.assets && {
-							...config.assets,
+		const entryDirectory = path.dirname(props.entry.file);
+		const moduleCollector = createModuleCollector({
+			wrangler1xLegacyModuleReferences: getWrangler1xLegacyModuleReferences(
+				entryDirectory,
+				props.entry.file
+			),
+			entry: props.entry,
+			// `moduleCollector` doesn't get used when `props.noBundle` is set, so
+			// `findAdditionalModules` always defaults to `false`
+			findAdditionalModules: config.find_additional_modules ?? false,
+			rules: props.rules,
+		});
+
+		const { modules, dependencies, resolvedEntryPointPath, bundleType } =
+			props.noBundle
+				? await noBundleWorker(props.entry, props.rules, props.outDir)
+				: await bundleWorker(
+						props.entry,
+						typeof destination === "string" ? destination : destination.path,
+						{
+							bundle: true,
+							additionalModules: [],
+							moduleCollector,
+							serveAssetsFromWorker:
+								!props.isWorkersSite && Boolean(props.assetPaths),
+							doBindings: config.durable_objects.bindings,
+							jsxFactory,
+							jsxFragment,
+							tsconfig: props.tsconfig ?? config.tsconfig,
+							minify,
+							legacyNodeCompat,
+							nodejsCompat,
+							define: { ...config.define, ...props.defines },
+							checkFetch: false,
+							assets: config.assets,
 							// enable the cache when publishing
-							bypassCache: false,
-						},
-						services: config.services,
-						// We don't set workerDefinitions here,
-						// because we don't want to apply the dev-time
-						// facades on top of it
-						workerDefinitions: undefined,
-						// We want to know if the build is for development or publishing
-						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
-						targetConsumer: "deploy",
-						local: false,
-					}
-			  );
+							bypassAssetCache: false,
+							services: config.services,
+							// We don't set workerDefinitions here,
+							// because we don't want to apply the dev-time
+							// facades on top of it
+							workerDefinitions: undefined,
+							// We want to know if the build is for development or publishing
+							// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
+							targetConsumer: "deploy",
+							local: false,
+						}
+				  );
 
 		const content = readFileSync(resolvedEntryPointPath, {
 			encoding: "utf-8",
@@ -1061,4 +1079,22 @@ function updateQueueConsumers(config: Config): Promise<string[]>[] {
 			() => [`Consumer for ${consumer.queue}`]
 		);
 	});
+}
+
+async function noBundleWorker(
+	entry: Entry,
+	rules: Rule[],
+	outDir: string | undefined
+) {
+	const modules = await findAdditionalModules(entry, rules);
+	if (outDir) {
+		await writeAdditionalModules(modules, outDir);
+	}
+
+	return {
+		modules,
+		dependencies: {},
+		resolvedEntryPointPath: entry.file,
+		bundleType: getBundleType(entry.format),
+	};
 }

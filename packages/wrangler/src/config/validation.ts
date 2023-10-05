@@ -1118,6 +1118,14 @@ function normalizeAndValidateEnvironment(
 			),
 			deprecatedUpload
 		),
+		find_additional_modules: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"find_additional_modules",
+			isBoolean,
+			undefined
+		),
 		base_dir: normalizeAndValidateBaseDirField(
 			configPath,
 			inheritable(

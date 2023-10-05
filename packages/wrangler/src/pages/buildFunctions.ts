@@ -3,8 +3,8 @@ import { join, resolve } from "node:path";
 import { FatalError } from "../errors";
 import { toUrlPath } from "../paths";
 import { FunctionsNoRoutesError } from "./errors";
-import { buildPlugin } from "./functions/buildPlugin";
-import { buildWorker } from "./functions/buildWorker";
+import { buildPluginFromFunctions } from "./functions/buildPlugin";
+import { buildWorkerFromFunctions } from "./functions/buildWorker";
 import { generateConfigFromFileTree } from "./functions/filepath-routing";
 import { writeRoutesModule } from "./functions/routes";
 import { convertRoutesToRoutesJSONSpec } from "./functions/routes-transformation";
@@ -105,7 +105,7 @@ export async function buildFunctions({
 			);
 		}
 
-		bundle = await buildPlugin({
+		bundle = await buildPluginFromFunctions({
 			routesModule,
 			outdir,
 			minify,
@@ -116,7 +116,7 @@ export async function buildFunctions({
 			local,
 		});
 	} else {
-		bundle = await buildWorker({
+		bundle = await buildWorkerFromFunctions({
 			routesModule,
 			outfile,
 			outdir,

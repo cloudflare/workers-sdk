@@ -11,7 +11,6 @@ export async function whoami() {
 			"You are not authenticated. Please run `wrangler login`."
 		);
 	}
-
 	if (user.email !== undefined) {
 		logger.log(
 			`👋 You are logged in with an ${

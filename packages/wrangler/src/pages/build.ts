@@ -1,6 +1,7 @@
 import { existsSync, lstatSync, mkdirSync, writeFileSync } from "node:fs";
 import { basename, dirname, relative, resolve as resolvePath } from "node:path";
 import { createUploadWorkerBundleContents } from "../api/pages/create-worker-bundle-contents";
+import { writeAdditionalModules } from "../deployment-bundle/find-additional-modules";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -250,6 +251,10 @@ export const Handler = async (args: PagesBuildArgs) => {
 					throw e;
 				}
 			}
+		}
+
+		if (outdir) {
+			await writeAdditionalModules(bundle.modules, outdir);
 		}
 
 		if (outfile) {

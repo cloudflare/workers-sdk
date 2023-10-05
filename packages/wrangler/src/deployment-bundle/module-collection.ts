@@ -1,15 +1,17 @@
 import crypto from "node:crypto";
+import { readdirSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import chalk from "chalk";
 import globToRegExp from "glob-to-regexp";
-import { logger } from "./logger";
-import type { Config, ConfigModuleRuleType } from "./config";
-import type {
-	CfModule,
-	CfModuleType,
-	CfScriptFormat,
-} from "./deployment-bundle/worker";
+import { logger } from "../logger";
+import {
+	findAdditionalModules,
+	findAdditionalModuleWatchDirs,
+} from "./find-additional-modules";
+import { isJavaScriptModuleRule, parseRules } from "./rules";
+import type { Config, ConfigModuleRuleType } from "../config";
+import type { Entry } from "./entry";
+import type { CfModule, CfModuleType } from "./worker";
 import type esbuild from "esbuild";
 
 function flipObject<
@@ -19,13 +21,14 @@ function flipObject<
 	return Object.fromEntries(Object.entries(obj).map(([k, v]) => [v, k]));
 }
 
-const RuleTypeToModuleType: Record<ConfigModuleRuleType, CfModuleType> = {
-	ESModule: "esm",
-	CommonJS: "commonjs",
-	CompiledWasm: "compiled-wasm",
-	Data: "buffer",
-	Text: "text",
-};
+export const RuleTypeToModuleType: Record<ConfigModuleRuleType, CfModuleType> =
+	{
+		ESModule: "esm",
+		CommonJS: "commonjs",
+		CompiledWasm: "compiled-wasm",
+		Data: "buffer",
+		Text: "text",
+	};
 
 export const ModuleTypeToRuleType = flipObject(RuleTypeToModuleType);
 
@@ -37,140 +40,43 @@ export const ModuleTypeToRuleType = flipObject(RuleTypeToModuleType);
 // plugin+array is used to collect references to these modules, reference
 // them correctly in the bundle, and add them to the form upload.
 
-export const DEFAULT_MODULE_RULES: Config["rules"] = [
-	{ type: "Text", globs: ["**/*.txt", "**/*.html"] },
-	{ type: "Data", globs: ["**/*.bin"] },
-	{ type: "CompiledWasm", globs: ["**/*.wasm", "**/*.wasm?module"] },
-];
-
-export function parseRules(userRules: Config["rules"] = []) {
-	const rules: Config["rules"] = [...userRules, ...DEFAULT_MODULE_RULES];
-
-	const completedRuleLocations: Record<string, number> = {};
-	let index = 0;
-	const rulesToRemove: Config["rules"] = [];
-	for (const rule of rules) {
-		if (rule.type in completedRuleLocations) {
-			if (rules[completedRuleLocations[rule.type]].fallthrough !== false) {
-				if (index < userRules.length) {
-					logger.warn(
-						`The module rule at position ${index} (${JSON.stringify(
-							rule
-						)}) has the same type as a previous rule (at position ${
-							completedRuleLocations[rule.type]
-						}, ${JSON.stringify(
-							rules[completedRuleLocations[rule.type]]
-						)}). This rule will be ignored. To the previous rule, add \`fallthrough = true\` to allow this one to also be used, or \`fallthrough = false\` to silence this warning.`
-					);
-				} else {
-					logger.warn(
-						`The default module rule ${JSON.stringify(
-							rule
-						)} has the same type as a previous rule (at position ${
-							completedRuleLocations[rule.type]
-						}, ${JSON.stringify(
-							rules[completedRuleLocations[rule.type]]
-						)}). This rule will be ignored. To the previous rule, add \`fallthrough = true\` to allow the default one to also be used, or \`fallthrough = false\` to silence this warning.`
-					);
-				}
-			}
-
-			rulesToRemove.push(rule);
-		}
-		if (!(rule.type in completedRuleLocations) && rule.fallthrough !== true) {
-			completedRuleLocations[rule.type] = index;
-		}
-		index++;
-	}
-
-	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-	rulesToRemove.forEach((rule) => rules!.splice(rules!.indexOf(rule), 1));
-
-	return { rules, removedRules: rulesToRemove };
-}
-
-export async function matchFiles(
-	files: string[],
-	relativeTo: string,
-	{
-		rules,
-		removedRules,
-	}: { rules: Config["rules"]; removedRules: Config["rules"] }
-) {
-	const modules: CfModule[] = [];
-
-	// Deduplicate modules. This is usually a poorly specified `wrangler.toml` configuration, but duplicate modules will cause a crash at runtime
-	const moduleNames = new Set<string>();
-	for (const rule of rules) {
-		for (const glob of rule.globs) {
-			const regexp = globToRegExp(glob, {
-				globstar: true,
-			});
-			const newModules = await Promise.all(
-				files
-					.filter((f) => regexp.test(f))
-					.map(async (name) => {
-						const filePath = path.join(relativeTo, name);
-						const fileContent = await readFile(filePath);
-
-						return {
-							name,
-							filePath,
-							content: fileContent,
-							type: RuleTypeToModuleType[rule.type],
-						};
-					})
-			);
-			for (const module of newModules) {
-				if (!moduleNames.has(module.name)) {
-					moduleNames.add(module.name);
-					modules.push(module);
-				} else {
-					logger.warn(
-						`Ignoring duplicate module: ${chalk.blue(
-							module.name
-						)} (${chalk.green(module.type ?? "")})`
-					);
-				}
-			}
-		}
-	}
-
-	// This is just a sanity check verifying that no files match rules that were removed
-	for (const rule of removedRules) {
-		for (const glob of rule.globs) {
-			const regexp = globToRegExp(glob);
-			for (const file of files) {
-				if (regexp.test(file)) {
-					throw new Error(
-						`The file ${file} matched a module rule in your configuration (${JSON.stringify(
-							rule
-						)}), but was ignored because a previous rule with the same type was not marked as \`fallthrough = true\`.`
-					);
-				}
-			}
-		}
-	}
-	return modules;
-}
-
 export type ModuleCollector = {
 	modules: CfModule[];
 	plugin: esbuild.Plugin;
 };
 
-export default function createModuleCollector(props: {
-	format: CfScriptFormat;
+const modulesWatchRegexp = /^wrangler:modules-watch$/;
+const modulesWatchNamespace = "wrangler-modules-watch";
+
+export const noopModuleCollector: ModuleCollector = {
+	modules: [],
+	plugin: {
+		name: "wrangler-module-collector",
+		setup: (build) => {
+			build.onResolve({ filter: modulesWatchRegexp }, (args) => {
+				return { namespace: modulesWatchNamespace, path: args.path };
+			});
+			build.onLoad(
+				{ namespace: modulesWatchNamespace, filter: modulesWatchRegexp },
+				() => ({ contents: "", loader: "js" })
+			);
+		},
+	},
+};
+
+export function createModuleCollector(props: {
+	entry: Entry;
+	findAdditionalModules: boolean;
 	rules?: Config["rules"];
 	// a collection of "legacy" style module references, which are just file names
 	// we will eventually deprecate this functionality, hence the verbose greppable name
-	wrangler1xlegacyModuleReferences: {
+	wrangler1xLegacyModuleReferences?: {
 		rootDirectory: string;
 		fileNames: Set<string>;
 	};
 	preserveFileNames?: boolean;
 }): ModuleCollector {
-	const { rules, removedRules } = parseRules(props.rules);
+	const parsedRules = parseRules(props.rules);
 
 	const modules: CfModule[] = [];
 	return {
@@ -178,17 +84,70 @@ export default function createModuleCollector(props: {
 		plugin: {
 			name: "wrangler-module-collector",
 			setup(build) {
-				build.onStart(() => {
+				let foundModulePaths: string[] = [];
+
+				build.onStart(async () => {
 					// reset the module collection array
 					modules.splice(0);
+
+					if (props.findAdditionalModules) {
+						// Make sure we're not bundling a service worker
+						if (props.entry.format !== "modules") {
+							const error =
+								"`find_additional_modules` can only be used with an ES module entrypoint.\n" +
+								"Remove `find_additional_modules = true` from your configuration, " +
+								"or migrate to the ES module Worker format: " +
+								"https://developers.cloudflare.com/workers/learning/migrate-to-module-workers/";
+							return { errors: [{ text: error }] };
+						}
+
+						const found = await findAdditionalModules(props.entry, parsedRules);
+						foundModulePaths = found.map(({ name }) =>
+							path.resolve(props.entry.moduleRoot, name)
+						);
+						modules.push(...found);
+					}
 				});
+
+				// `esbuild` doesn't support returning `watch*` options from `onStart()`
+				// callbacks. Instead, we define an empty virtual module that is
+				// imported in an injected module. Importing this module registers the
+				// required watchers.
+
+				build.onResolve({ filter: modulesWatchRegexp }, (args) => {
+					return { namespace: modulesWatchNamespace, path: args.path };
+				});
+				build.onLoad(
+					{ namespace: modulesWatchNamespace, filter: modulesWatchRegexp },
+					async () => {
+						let watchFiles: string[] = [];
+						const watchDirs: string[] = [];
+						if (props.findAdditionalModules) {
+							// Watch files to rebuild when they're changed/deleted. Note we
+							// could watch additional modules when we import them, but this
+							// doesn't cover dynamically imported modules with variable paths
+							// (e.g. await import(`./lang/${language}.js`)).
+							watchFiles = foundModulePaths;
+
+							// Watch directories to rebuild when *new* files are added.
+							// Note watching directories doesn't watch their subdirectories
+							// or file contents: https://esbuild.github.io/plugins/#on-load-results
+							const root = path.resolve(props.entry.moduleRoot);
+							for await (const dir of findAdditionalModuleWatchDirs(root)) {
+								watchDirs.push(dir);
+							}
+						}
+
+						return { contents: "", loader: "js", watchFiles, watchDirs };
+					}
+				);
 
 				// ~ start legacy module specifier support ~
 
 				// This section detects usage of "legacy" 1.x style module specifiers
 				// and modifies them so they "work" in wrangler v2, but with a warning
 
-				const rulesMatchers = rules.flatMap((rule) => {
+				const rulesMatchers = parsedRules.rules.flatMap((rule) => {
 					return rule.globs.map((glob) => {
 						const regex = globToRegExp(glob);
 						return {
@@ -198,12 +157,15 @@ export default function createModuleCollector(props: {
 					});
 				});
 
-				if (props.wrangler1xlegacyModuleReferences.fileNames.size > 0) {
+				if (
+					props.wrangler1xLegacyModuleReferences &&
+					props.wrangler1xLegacyModuleReferences.fileNames.size > 0
+				) {
 					build.onResolve(
 						{
 							filter: new RegExp(
 								"^(" +
-									[...props.wrangler1xlegacyModuleReferences.fileNames]
+									[...props.wrangler1xLegacyModuleReferences.fileNames]
 										.map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
 										.join("|") +
 									")$"
@@ -229,7 +191,8 @@ export default function createModuleCollector(props: {
 							// take the file and massage it to a
 							// transportable/manageable format
 							const filePath = path.join(
-								props.wrangler1xlegacyModuleReferences.rootDirectory,
+								// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+								props.wrangler1xLegacyModuleReferences!.rootDirectory,
 								args.path
 							);
 							const fileContent = await readFile(filePath);
@@ -251,7 +214,7 @@ export default function createModuleCollector(props: {
 								});
 								return {
 									path: fileName, // change the reference to the changed module
-									external: props.format === "modules", // mark it as external in the bundle
+									external: props.entry.format === "modules", // mark it as external in the bundle
 									namespace: `wrangler-module-${rule.type}`, // just a tag, this isn't strictly necessary
 									watchFiles: [filePath], // we also add the file to esbuild's watch list
 								};
@@ -262,8 +225,10 @@ export default function createModuleCollector(props: {
 
 				// ~ end legacy module specifier support ~
 
-				rules?.forEach((rule) => {
-					if (rule.type === "ESModule" || rule.type === "CommonJS") return; // TODO: we should treat these as js files, and use the jsx loader
+				parsedRules.rules?.forEach((rule) => {
+					if (!props.findAdditionalModules && isJavaScriptModuleRule(rule)) {
+						return;
+					}
 
 					rule.globs.forEach((glob) => {
 						build.onResolve(
@@ -273,6 +238,19 @@ export default function createModuleCollector(props: {
 								// transportable/manageable format
 
 								const filePath = path.join(args.resolveDir, args.path);
+
+								// If this was a found additional module, mark it as external.
+								// Note, there's no need to watch the file here as we already
+								// watch all `foundModulePaths` with `wrangler:modules-watch`.
+								if (foundModulePaths.includes(filePath)) {
+									return { path: args.path, external: true };
+								}
+								// For JavaScript module rules, we only register this onResolve
+								// callback if `findAdditionalModules` is true. If we didn't
+								// find the module in `modules` in the above `if` block, leave
+								// it to `esbuild` to bundle it.
+								if (isJavaScriptModuleRule(rule)) return;
+
 								const fileContent = await readFile(filePath);
 								const fileHash = crypto
 									.createHash("sha1")
@@ -292,14 +270,14 @@ export default function createModuleCollector(props: {
 
 								return {
 									path: fileName, // change the reference to the changed module
-									external: props.format === "modules", // mark it as external in the bundle
+									external: props.entry.format === "modules", // mark it as external in the bundle
 									namespace: `wrangler-module-${rule.type}`, // just a tag, this isn't strictly necessary
 									watchFiles: [filePath], // we also add the file to esbuild's watch list
 								};
 							}
 						);
 
-						if (props.format === "service-worker") {
+						if (props.entry.format === "service-worker") {
 							build.onLoad(
 								{ filter: globToRegExp(glob) },
 								async (args: esbuild.OnLoadArgs) => {
@@ -320,7 +298,7 @@ export default function createModuleCollector(props: {
 					});
 				});
 
-				removedRules.forEach((rule) => {
+				parsedRules.removedRules.forEach((rule) => {
 					rule.globs.forEach((glob) => {
 						build.onResolve(
 							{ filter: globToRegExp(glob) },
@@ -338,5 +316,22 @@ export default function createModuleCollector(props: {
 				});
 			},
 		},
+	};
+}
+
+export function getWrangler1xLegacyModuleReferences(
+	rootDirectory: string,
+	entryPath: string
+) {
+	return {
+		rootDirectory,
+		fileNames: new Set(
+			readdirSync(rootDirectory, { withFileTypes: true })
+				.filter(
+					(dirEntry) =>
+						dirEntry.isFile() && dirEntry.name !== path.basename(entryPath)
+				)
+				.map((dirEnt) => dirEnt.name)
+		),
 	};
 }
