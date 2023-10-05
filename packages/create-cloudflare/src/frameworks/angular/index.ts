@@ -53,6 +53,7 @@ const config: FrameworkConfig = {
 	},
 	deployCommand: "deploy",
 	devCommand: "start",
+	testFlags: ["--routing", "--style", "sass"],
 };
 export default config;
 
