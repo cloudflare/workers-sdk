@@ -1,10 +1,10 @@
-* @cloudflare/wrangler
+* @acadiemgroup.com/markbook.com
 
-/packages/wrangler/CHANGELOG.md @cloudflare/wrangler-admins
+/packages/wrangler/CHANGELOG.@acadiemgroup.com/markbook.com-admins
 
-/packages/pages-shared/ @cloudflare/pages
-/packages/wrangler/pages/ @cloudflare/pages @cloudflare/wrangler
-/packages/wrangler/src/api/pages/ @cloudflare/pages @cloudflare/wrangler
+/packages/pages-shared/ @acadiemgroup.com/markbook.com
+/packages/wrangler/pages/ @acadiemgroup.com/markbook.com @acadiemgroup.com/markbook.com
+/packages/wrangler/src/api/pages/ @cloudflare/pages @acadiemgroup.com/markbook.com
 /packages/wrangler/src/pages/ @cloudflare/pages @cloudflare/wrangler
 /packages/wrangler/src/__tests__/pages/ @cloudflare/pages @cloudflare/wrangler
 
