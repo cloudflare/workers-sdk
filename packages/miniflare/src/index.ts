@@ -1180,7 +1180,7 @@ export class Miniflare {
 		}
 	}
 
-	async #waitForReady() {
+	async #waitForReady(disposing = false) {
 		// If `#init()` threw, we'd like to propagate the error here, so `await` it.
 		// Note we can't use `async`/`await` with getters. We'd also like to wait
 		// for `setOptions` calls to complete before resolving.
@@ -1191,6 +1191,10 @@ export class Miniflare {
 		// waiters on the mutex to avoid logging ready/updated messages to the
 		// console if there are future updates)
 		await this.#runtimeMutex.drained();
+		// If we called `dispose()`, we may not have a `#runtimeEntryURL` if we
+		// `dispose()`d synchronously, immediately after constructing a `Miniflare`
+		// instance. In this case, return a discard URL which we'll ignore.
+		if (disposing) return new URL("http://[100::]/");
 		// `#runtimeEntryURL` is assigned in `#assembleAndUpdateConfig()`, which is
 		// called by `#init()`, and `#initPromise` doesn't resolve until `#init()`
 		// returns.
@@ -1465,7 +1469,7 @@ export class Miniflare {
 	async dispose(): Promise<void> {
 		this.#disposeController.abort();
 		try {
-			await this.ready;
+			await this.#waitForReady(/* disposing */ true);
 		} finally {
 			// Remove exit hooks, we're cleaning up what they would've cleaned up now
 			this.#removeTmpPathExitHook();
