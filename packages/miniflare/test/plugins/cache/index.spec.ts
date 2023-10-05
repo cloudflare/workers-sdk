@@ -99,6 +99,18 @@ test("match returns cached responses", async (t) => {
 	t.is(res.status, 200);
 	t.is(await res.text(), "buffered");
 });
+test("match returns empty response", async (t) => {
+	const cache = t.context.caches.default;
+	const key = "http://localhost/cache-empty";
+	const resToCache = new Response(null, {
+		headers: { "Cache-Control": "max-age=3600" },
+	});
+	await cache.put(key, resToCache);
+	const res = await cache.match(key);
+	assert(res !== undefined);
+	t.is(res.status, 200);
+	t.is(await res.text(), "");
+});
 test("match returns nothing on cache miss", async (t) => {
 	const cache = t.context.caches.default;
 	const key = "http://localhost/cache-miss";

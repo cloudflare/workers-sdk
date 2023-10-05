@@ -152,6 +152,13 @@ test("put: puts value", async (t) => {
 	const results = await kv.list({ prefix: ns });
 	t.is(results.keys[0]?.expiration, TIME_FUTURE);
 });
+test("put: puts empty value", async (t) => {
+	// https://github.com/cloudflare/miniflare/issues/703
+	const { kv } = t.context;
+	await kv.put("key", "");
+	const value = await kv.get("key");
+	t.is(value, "");
+});
 test("put: overrides existing keys", async (t) => {
 	const { kv } = t.context;
 	await kv.put("key", "value1");

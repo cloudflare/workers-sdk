@@ -128,13 +128,20 @@ export class KVNamespaceObject extends MiniflareDurableObject {
 		// through a transform stream to count it (trusting `workerd` to send
 		// correct value here).
 		let value = req.body;
-		assert(value !== null);
 		// Safety of `!`: `parseInt(null)` is `NaN`
 		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		const contentLength = parseInt(req.headers.get("Content-Length")!);
-		const valueLengthHint = Number.isNaN(contentLength)
-			? undefined
-			: contentLength;
+		let valueLengthHint: number | undefined;
+		if (!Number.isNaN(contentLength)) valueLengthHint = contentLength;
+		else if (value === null) valueLengthHint = 0;
+
+		// Empty values may be put with `null` bodies:
+		// https://github.com/cloudflare/miniflare/issues/703
+		value ??= new ReadableStream<Uint8Array>({
+			start(controller) {
+				controller.close();
+			},
+		});
 
 		const maxValueSize = this.beingTested
 			? KVLimits.MAX_VALUE_SIZE_TEST
