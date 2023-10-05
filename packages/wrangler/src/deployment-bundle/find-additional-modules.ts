@@ -78,12 +78,13 @@ async function matchFiles(
 				if (!regexp.test(filePath)) {
 					continue;
 				}
-				const fileContent = await readFile(path.join(relativeTo, filePath));
+				const absoluteFilePath = path.join(relativeTo, filePath);
+				const fileContent = await readFile(absoluteFilePath);
 
 				const module = {
 					name: filePath,
 					content: fileContent,
-					filePath,
+					filePath: absoluteFilePath,
 					type: RuleTypeToModuleType[rule.type],
 				};
 
