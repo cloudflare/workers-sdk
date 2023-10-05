@@ -32,6 +32,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		},
 		docusaurus: {
 			expectResponseToContain: "Dinosaurs are cool",
+			unsupportedPms: ["bun"],
 			testCommitMessage: true,
 		},
 		gatsby: {
