@@ -34,6 +34,24 @@ import type { C3Args, PagesGeneratorContext } from "types";
 const { name, npm } = detectPackageManager();
 
 export const validateProjectDirectory = (relativePath: string) => {
+	// Ensure the name is valid per the pages schema
+	const projectName = basename(relativePath);
+	const invalidChars = /^- | -$|[^a-z0-9-]/;
+	const invalidStartEnd = /^-|-$/;
+
+	if (projectName.match(invalidStartEnd)) {
+		return `Project name cannot start or end with a dash.`;
+	}
+
+	if (projectName.match(invalidChars)) {
+		return `Project name must only contain lowercase characters, numbers, and dashes.`;
+	}
+
+	if (projectName.length > 58) {
+		return `Project names must be less than 58 characters.`;
+	}
+
+	// Validate that the directory is non-existant or empty
 	const path = resolve(relativePath);
 	const existsAlready = existsSync(path);
 	const isEmpty = existsAlready && readdirSync(path).length === 0; // allow existing dirs _if empty_ to ensure c3 is non-destructive
