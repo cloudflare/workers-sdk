@@ -3,7 +3,6 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
 import chalk from "chalk";
-import tmp from "tmp-promise";
 import { fetchListResult, fetchResult } from "../cfetch";
 import { printBindings } from "../config";
 import { bundleWorker } from "../deployment-bundle/bundle";
@@ -27,6 +26,7 @@ import { getMigrationsToUpload } from "../durable";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { ParseError } from "../parse";
+import { getWranglerTmpDir } from "../paths";
 import { getQueue, putConsumer } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
 import { syncAssets } from "../sites";
@@ -72,6 +72,7 @@ type Props = {
 	keepVars: boolean | undefined;
 	logpush: boolean | undefined;
 	oldAssetTtl: number | undefined;
+	projectRoot: string | undefined;
 };
 
 type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
@@ -407,7 +408,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		);
 	}
 
-	const destination = props.outDir ?? (await tmp.dir({ unsafeCleanup: true }));
+	const destination =
+		props.outDir ?? getWranglerTmpDir(props.projectRoot, "deploy");
 	const envName = props.env ?? "production";
 
 	const start = Date.now();
@@ -507,6 +509,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
 							targetConsumer: "deploy",
 							local: false,
+							projectRoot: props.projectRoot,
 						}
 				  );
 
@@ -686,7 +689,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		if (typeof destination !== "string") {
 			// this means we're using a temp dir,
 			// so let's clean up before we proceed
-			await destination.cleanup();
+			destination.remove();
 		}
 	}
 

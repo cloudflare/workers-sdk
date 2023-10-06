@@ -1,9 +1,7 @@
-import fs from "node:fs";
 import * as path from "node:path";
 import * as util from "node:util";
 import chalk from "chalk";
 import onExit from "signal-exit";
-import tmp from "tmp-promise";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { dedupeModulesByName } from "../deployment-bundle/dedupe-modules";
@@ -20,6 +18,7 @@ import {
 	stopWorkerRegistry,
 } from "../dev-registry";
 import { logger } from "../logger";
+import { getWranglerTmpDir } from "../paths";
 import { localPropsToConfigBundle, maybeRegisterLocalWorker } from "./local";
 import { MiniflareServer } from "./miniflare";
 import { startRemoteServer } from "./remote";
@@ -29,7 +28,7 @@ import type { DurableObjectBindings } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfModule } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
-import type { DevProps, DirectorySyncResult } from "./dev";
+import type { DevProps } from "./dev";
 import type { LocalProps } from "./local";
 import type { EsbuildBundle } from "./use-esbuild";
 
@@ -53,7 +52,7 @@ export async function startDevServer(
 	}
 
 	//implement a react-free version of useTmpDir
-	const directory = setupTempDir();
+	const directory = setupTempDir(props.projectRoot);
 	if (!directory) {
 		throw new Error("Failed to create temporary directory.");
 	}
@@ -105,6 +104,7 @@ export async function startDevServer(
 		testScheduled: props.testScheduled,
 		local: props.local,
 		doBindings: props.bindings.durable_objects?.bindings ?? [],
+		projectRoot: props.projectRoot,
 	});
 
 	if (props.local) {
@@ -178,13 +178,10 @@ export async function startDevServer(
 	}
 }
 
-function setupTempDir(): string | undefined {
+function setupTempDir(projectRoot: string | undefined): string | undefined {
 	try {
-		const dir: DirectorySyncResult = tmp.dirSync({ unsafeCleanup: true });
-		// Make sure we resolve all files relative to the actual temporary
-		// directory, without symlinks, otherwise `esbuild` will generate invalid
-		// source maps.
-		return fs.realpathSync(dir.name);
+		const dir = getWranglerTmpDir(projectRoot, "dev");
+		return dir.path;
 	} catch (err) {
 		logger.error("Failed to create temporary directory to store built files.");
 	}
@@ -212,6 +209,7 @@ async function runEsbuild({
 	testScheduled,
 	local,
 	doBindings,
+	projectRoot,
 }: {
 	entry: Entry;
 	destination: string | undefined;
@@ -234,6 +232,7 @@ async function runEsbuild({
 	testScheduled?: boolean;
 	local: boolean;
 	doBindings: DurableObjectBindings;
+	projectRoot: string | undefined;
 }): Promise<EsbuildBundle | undefined> {
 	if (!destination) return;
 
@@ -281,6 +280,7 @@ async function runEsbuild({
 					local,
 					testScheduled,
 					doBindings,
+					projectRoot,
 			  })
 			: undefined;
 

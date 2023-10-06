@@ -361,6 +361,7 @@ export async function startDev(args: StartDevOptions) {
 		const configPath =
 			args.config ||
 			(args.script && findWranglerToml(path.dirname(args.script)));
+		const projectRoot = configPath && path.dirname(configPath);
 		let config = readConfig(configPath, args);
 
 		if (config.configPath) {
@@ -471,6 +472,7 @@ export async function startDev(args: StartDevOptions) {
 					firstPartyWorker={configParam.first_party_worker}
 					sendMetrics={configParam.send_metrics}
 					testScheduled={args.testScheduled}
+					projectRoot={projectRoot}
 				/>
 			);
 		}
@@ -515,6 +517,7 @@ export async function startApiDev(args: StartDevOptions) {
 
 	const configPath =
 		args.config || (args.script && findWranglerToml(path.dirname(args.script)));
+	const projectRoot = configPath && path.dirname(configPath);
 	const config = readConfig(configPath, args);
 
 	const {
@@ -611,6 +614,7 @@ export async function startApiDev(args: StartDevOptions) {
 			sendMetrics: configParam.send_metrics,
 			testScheduled: args.testScheduled,
 			disableDevRegistry: args.disableDevRegistry ?? false,
+			projectRoot,
 		});
 	}
 
