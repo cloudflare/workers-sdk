@@ -34,8 +34,17 @@ import type { C3Args, PagesGeneratorContext } from "types";
 const { name, npm } = detectPackageManager();
 
 export const validateProjectDirectory = (relativePath: string) => {
+	// Validate that the directory is non-existant or empty
+	const path = resolve(relativePath);
+	const existsAlready = existsSync(path);
+	const isEmpty = existsAlready && readdirSync(path).length === 0; // allow existing dirs _if empty_ to ensure c3 is non-destructive
+
+	if (existsAlready && !isEmpty) {
+		return `Directory \`${relativePath}\` already exists and is not empty. Please choose a new name.`;
+	}
+
 	// Ensure the name is valid per the pages schema
-	const projectName = basename(relativePath);
+	const projectName = basename(path);
 	const invalidChars = /^- | -$|[^a-z0-9-]/;
 	const invalidStartEnd = /^-|-$/;
 
@@ -49,15 +58,6 @@ export const validateProjectDirectory = (relativePath: string) => {
 
 	if (projectName.length > 58) {
 		return `Project names must be less than 58 characters.`;
-	}
-
-	// Validate that the directory is non-existant or empty
-	const path = resolve(relativePath);
-	const existsAlready = existsSync(path);
-	const isEmpty = existsAlready && readdirSync(path).length === 0; // allow existing dirs _if empty_ to ensure c3 is non-destructive
-
-	if (existsAlready && !isEmpty) {
-		return `Directory \`${relativePath}\` already exists and is not empty. Please choose a new name.`;
 	}
 };
 
