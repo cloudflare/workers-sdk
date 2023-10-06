@@ -26,6 +26,11 @@ import type { WorkerRegistry } from "../dev-registry";
 import type { DevProps, DirectorySyncResult } from "./dev";
 import type { LocalProps } from "./local";
 import type { EsbuildBundle } from "./use-esbuild";
+import {
+	getAccountChoices,
+	requireApiToken,
+	saveAccountToCache,
+} from "../user";
 
 export async function startDevServer(
 	props: DevProps & {
@@ -87,12 +92,31 @@ export async function startDevServer(
 			inspector: {
 				port: props.inspectorPort,
 			},
-			urlOverrides: {
+			origin: {
 				secure: props.localProtocol === "https",
 				hostname: props.localUpstream,
 			},
 			liveReload: props.liveReload,
 			remote: !props.local,
+			auth: async () => {
+				let accountId = props.accountId;
+				if (accountId === undefined) {
+					const accountChoices = await getAccountChoices();
+					if (accountChoices.length === 1) {
+						saveAccountToCache({
+							id: accountChoices[0].id,
+							name: accountChoices[0].name,
+						});
+						accountId = accountChoices[0].id;
+					} else {
+						throw logger.error(
+							"In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as `account_id` in your `wrangler.toml` file."
+						);
+					}
+				}
+
+				return { accountId, apiToken: requireApiToken() };
+			},
 		},
 	};
 
@@ -132,7 +156,28 @@ export async function startDevServer(
 		doBindings: props.bindings.durable_objects?.bindings ?? [],
 	});
 
+	devEnv.runtimes.forEach((runtime) => {
+		console.log("devEnv.runtimes.onBundleComplete()");
+		runtime.onBundleComplete({
+			type: "bundleComplete",
+			config: startDevWorkerOptions,
+			bundle,
+		});
+	});
+
+	// to comply with the current contract of this function, call props.onReady on reloadComplete
+	devEnv.runtimes.forEach((runtime) => {
+		runtime.on("reloadComplete", async (ev) => {
+			console.log("devEnv.runtimes.onReloadComplete");
+			const { proxyWorker } = await devEnv.proxy.ready;
+			const url = await proxyWorker.ready;
+
+			props.onReady?.(url.hostname, parseInt(url.port), ev.proxyData);
+		});
+	});
+
 	if (props.local) {
+		console.log("UNSTABLE_DEV LOCAL MODE");
 		// temp: fake these events by calling the handler directly
 		devEnv.proxy.onReloadStart({
 			type: "reloadStart",
@@ -192,58 +237,14 @@ export async function startDevServer(
 			},
 			// TODO: inspectorUrl,
 		};
-	} else {
-		const { stop } = await startRemoteServer({
-			name: props.name,
-			bundle: bundle,
-			format: props.entry.format,
-			accountId: props.accountId,
-			bindings: props.bindings,
-			assetPaths: props.assetPaths,
-			isWorkersSite: props.isWorkersSite,
-			port: props.initialPort,
-			ip: props.initialIp,
-			localProtocol: props.localProtocol,
-			inspectorPort: props.inspectorPort,
-			inspect: props.inspect,
-			compatibilityDate: props.compatibilityDate,
-			compatibilityFlags: props.compatibilityFlags,
-			usageModel: props.usageModel,
-			env: props.env,
-			legacyEnv: props.legacyEnv,
-			zone: props.zone,
-			host: props.host,
-			routes: props.routes,
-			onReady: async (ip, port, proxyData) => {
-				// at this point (in the layers of onReady callbacks), we have devEnv in scope
-				// so rewrite the onReady params to be the ip/port of the ProxyWorker instead of the UserWorker
-				const { proxyWorker } = await devEnv.proxy.ready;
-				const url = await proxyWorker.ready;
-				ip = url.hostname;
-				port = parseInt(url.port);
-
-				props.onReady?.(ip, port, proxyData);
-
-				// temp: fake these events by calling the handler directly
-				devEnv.proxy.onReloadComplete({
-					type: "reloadComplete",
-					config: startDevWorkerOptions,
-					bundle,
-					proxyData,
-				});
-			},
-			sourceMapPath: bundle?.sourceMapPath,
-			sendMetrics: props.sendMetrics,
-		});
-		return {
-			stop: async () => {
-				stop();
-				await stopWorkerRegistry();
-				await devEnv.teardown();
-			},
-			// TODO: inspectorUrl,
-		};
 	}
+	return {
+		stop: async () => {
+			await stopWorkerRegistry();
+			await devEnv.teardown();
+		},
+		// TODO: inspectorUrl,
+	};
 }
 
 function setupTempDir(): DirectorySyncResult | undefined {

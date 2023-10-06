@@ -40,6 +40,8 @@ import type { WorkerRegistry } from "../dev-registry";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { AssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
+import { requireApiToken } from "../user";
+import { createDeferredPromise } from "../api/startDevWorker/utils";
 
 /**
  * This hooks establishes a connection with the dev registry,
@@ -255,6 +257,16 @@ type DevSessionProps = DevProps & {
 };
 
 function DevSession(props: DevSessionProps) {
+	const [accountId, setAccountId] = useState(props.accountId);
+	const accountIdDeferred = useMemo(createDeferredPromise<string>, []);
+	const setAccountIdAndResolveDeferred = useCallback(
+		(newAccountId: string) => {
+			setAccountId(newAccountId);
+			accountIdDeferred.resolve(newAccountId);
+		},
+		[setAccountId, accountIdDeferred]
+	);
+
 	const [devEnv] = useState(() => new DevEnv());
 	useEffect(() => {
 		return () => {
@@ -264,8 +276,32 @@ function DevSession(props: DevSessionProps) {
 	const startDevWorkerOptions: StartDevWorkerOptions = useMemo(
 		() => ({
 			name: props.name ?? "worker",
+			compatibilityDate: props.compatibilityDate,
+			compatibilityFlags: props.compatibilityFlags,
 			script: { contents: "" },
+			_bindings: props.bindings,
+			routes: props.routes,
+			env: props.env,
+			legacyEnv: props.legacyEnv,
+			zone: props.zone,
+			sendMetrics: props.sendMetrics,
+			usageModel: props.usageModel,
+			site:
+				props.isWorkersSite && props.assetPaths
+					? {
+							path: path.join(
+								props.assetPaths.baseDirectory,
+								props.assetPaths?.assetDirectory
+							),
+							include: props.assetPaths.includePatterns,
+							exclude: props.assetPaths.excludePatterns,
+					  }
+					: undefined,
 			dev: {
+				auth: () => ({
+					accountId: props.accountId!,
+					apiToken: requireApiToken(),
+				}),
 				server: {
 					hostname: props.initialIp,
 					port: props.initialPort,
@@ -275,12 +311,15 @@ function DevSession(props: DevSessionProps) {
 					port: props.inspectorPort,
 				},
 				liveReload: props.liveReload,
+				remote: !props.local,
 			},
 		}),
 		[
 			props.name,
+			props.bindings,
 			props.initialIp,
 			props.initialPort,
+			props.local,
 			props.localProtocol,
 			props.inspectorPort,
 			props.liveReload,
@@ -291,6 +330,21 @@ function DevSession(props: DevSessionProps) {
 			type: "bundleStart",
 			config: startDevWorkerOptions,
 		});
+	}, [devEnv, startDevWorkerOptions]);
+	const onBundleComplete = useCallback(
+		(bundle: EsbuildBundle) => {
+			devEnv.runtimes.forEach((runtime) =>
+				runtime.onBundleComplete({
+					type: "bundleComplete",
+					config: startDevWorkerOptions,
+					bundle,
+				})
+			);
+		},
+		[devEnv, startDevWorkerOptions]
+	);
+	const onBundleError = useCallback(() => {
+		// devEnv.proxy.onBundleError(...);
 	}, [devEnv, startDevWorkerOptions]);
 	const onReloadStart = useCallback(
 		(bundle: EsbuildBundle) => {
@@ -348,9 +402,19 @@ function DevSession(props: DevSessionProps) {
 		testScheduled: props.testScheduled ?? false,
 		experimentalLocal: props.experimentalLocal,
 		onBundleStart,
+		onBundleComplete,
+		onBundleError,
 	});
 	useEffect(() => {
-		if (bundle) onReloadStart(bundle);
+		if (bundle) {
+			devEnv.runtimes.forEach((runtime) =>
+				runtime.onBundleComplete({
+					type: "bundleComplete",
+					config: startDevWorkerOptions,
+					bundle,
+				})
+			);
+		}
 	}, [onReloadStart, bundle]);
 
 	// TODO(queues) support remote wrangler dev
@@ -428,31 +492,8 @@ function DevSession(props: DevSessionProps) {
 		/>
 	) : (
 		<Remote
-			name={props.name}
-			bundle={bundle}
-			format={props.entry.format}
-			accountId={props.accountId}
-			bindings={props.bindings}
-			assetPaths={props.assetPaths}
-			isWorkersSite={props.isWorkersSite}
-			port={props.initialPort}
-			ip={props.initialIp}
-			localProtocol={props.localProtocol}
-			inspectorPort={props.inspectorPort}
-			// TODO: @threepointone #1167
-			// liveReload={props.liveReload}
-			inspect={props.inspect}
-			compatibilityDate={props.compatibilityDate}
-			compatibilityFlags={props.compatibilityFlags}
-			usageModel={props.usageModel}
-			env={props.env}
-			legacyEnv={props.legacyEnv}
-			zone={props.zone}
-			host={props.host}
-			routes={props.routes}
-			onReady={announceAndOnReady}
-			sourceMapPath={bundle?.sourceMapPath}
-			sendMetrics={props.sendMetrics}
+			accountId={accountId}
+			setAccountId={setAccountIdAndResolveDeferred}
 		/>
 	);
 }

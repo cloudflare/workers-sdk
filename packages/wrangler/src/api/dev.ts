@@ -80,7 +80,7 @@ export interface UnstableDevWorker {
  */
 export async function unstable_dev(
 	script: string,
-	options?: UnstableDevOptions,
+	{ local, ...options }: UnstableDevOptions = {},
 	apiOptions?: unknown
 ): Promise<UnstableDevWorker> {
 	// Note that not every experimental option is passed directly through to the underlying dev API - experimental options can be used here in unstable_dev. Otherwise we could just pass experimental down to dev blindly.
@@ -143,8 +143,8 @@ export async function unstable_dev(
 		_: [],
 		$0: "",
 		port: options?.port ?? 0,
-		remote: false,
-		local: undefined,
+		remote: !(local ?? true),
+		local: local ?? true,
 		experimentalLocal: undefined,
 		d1Databases,
 		disableDevRegistry,
