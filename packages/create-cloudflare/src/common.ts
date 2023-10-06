@@ -391,7 +391,7 @@ async function isGitConfigured() {
 
 		return true;
 	} catch {
-		return null;
+		return false;
 	}
 }
 
