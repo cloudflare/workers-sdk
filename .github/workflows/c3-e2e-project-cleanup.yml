@@ -3,8 +3,7 @@
 name: C3 E2E Project Cleanup
 on:
   workflow_run:
-    workflows:
-      ["C3 E2E Tests", "C3 E2E Tests (Dependabot)", "C3 E2E (Quarantine)"]
+    workflows: [C3 E2E Tests, C3 E2E Tests (Dependabot), C3 E2E (Quarantine)]
     types:
       - completed
 env:
