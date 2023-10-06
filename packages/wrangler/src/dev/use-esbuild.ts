@@ -58,6 +58,8 @@ export function useEsbuild({
 	experimentalLocal,
 	projectRoot,
 	onBundleStart,
+	onBundleComplete,
+	onBundleError,
 }: {
 	entry: Entry;
 	destination: string | undefined;
@@ -84,9 +86,16 @@ export function useEsbuild({
 	experimentalLocal: boolean | undefined;
 	projectRoot: string | undefined;
 	onBundleStart: () => void;
+	onBundleComplete: (bundle: EsbuildBundle) => void;
+	onBundleError: () => void;
 }): EsbuildBundle | undefined {
 	const [bundle, setBundle] = useState<EsbuildBundle>();
 	const { exit } = useApp();
+	useEffect(() => {
+		if (bundleInfo?.bundle) {
+			onBundleComplete(bundleInfo?.bundle);
+		}
+	}, [onBundleComplete, bundleInfo?.bundle]);
 	useEffect(() => {
 		let stopWatching: (() => void) | undefined = undefined;
 
@@ -142,6 +151,7 @@ export function useEsbuild({
 					if (errors.length > 0) {
 						if (!legacyNodeCompat) rewriteNodeCompatBuildFailure(result.errors);
 						logBuildFailure(errors, warnings);
+						onBundleError(); // TODO: pass errors + warnings
 						return;
 					}
 

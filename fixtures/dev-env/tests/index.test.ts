@@ -518,7 +518,7 @@ describe("startDevWorker: ProxyController", () => {
 			`,
 			config: {
 				dev: {
-					urlOverrides: {
+					origin: {
 						hostname: "www.google.com",
 					},
 				},
@@ -534,7 +534,7 @@ describe("startDevWorker: ProxyController", () => {
 			...run.config,
 			dev: {
 				...run.config.dev,
-				urlOverrides: {
+				origin: {
 					secure: true,
 					hostname: "mybank.co.uk",
 				},

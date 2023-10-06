@@ -14,12 +14,10 @@ import {
 	requireApiToken,
 	saveAccountToCache,
 } from "../user";
-import { getAccessToken } from "../user/access";
 import {
 	createPreviewSession,
 	createWorkerPreview,
 } from "./create-worker-preview";
-import { startPreviewServer } from "./proxy";
 import type { ProxyData } from "../api";
 import type { Route } from "../config/environment";
 import type {
@@ -30,11 +28,7 @@ import type {
 } from "../deployment-bundle/worker";
 import type { AssetPaths } from "../sites";
 import type { ChooseAccountItem } from "../user";
-import type {
-	CfAccount,
-	CfPreviewToken,
-	CfPreviewSession,
-} from "./create-worker-preview";
+import type { CfAccount } from "./create-worker-preview";
 import type { EsbuildBundle } from "./use-esbuild";
 
 interface RemoteProps {
@@ -63,34 +57,14 @@ interface RemoteProps {
 		| undefined;
 	sourceMapPath: string | undefined;
 	sendMetrics: boolean | undefined;
+
+	setAccountId: (accountId: string) => void;
 }
 
 export function Remote(props: RemoteProps) {
 	const [accountId, setAccountId] = useState(props.accountId);
 	const accountChoicesRef = useRef<Promise<ChooseAccountItem[]>>();
 	const [accountChoices, setAccountChoices] = useState<ChooseAccountItem[]>();
-
-	useWorker({
-		name: props.name,
-		bundle: props.bundle,
-		format: props.format,
-		modules: props.bundle ? props.bundle.modules : [],
-		accountId,
-		bindings: props.bindings,
-		assetPaths: props.assetPaths,
-		isWorkersSite: props.isWorkersSite,
-		compatibilityDate: props.compatibilityDate,
-		compatibilityFlags: props.compatibilityFlags,
-		usageModel: props.usageModel,
-		env: props.env,
-		legacyEnv: props.legacyEnv,
-		zone: props.zone,
-		host: props.host,
-		routes: props.routes,
-		onReady: props.onReady,
-		sendMetrics: props.sendMetrics,
-		port: props.port,
-	});
 
 	const errorHandler = useErrorHandler();
 
@@ -136,260 +110,6 @@ export function Remote(props: RemoteProps) {
 	) : null;
 }
 
-interface RemoteWorkerProps {
-	name: string | undefined;
-	bundle: EsbuildBundle | undefined;
-	format: CfScriptFormat | undefined;
-	modules: CfModule[];
-	accountId: string | undefined;
-	bindings: CfWorkerInit["bindings"];
-	assetPaths: AssetPaths | undefined;
-	isWorkersSite: boolean;
-	compatibilityDate: string | undefined;
-	compatibilityFlags: string[] | undefined;
-	usageModel: "bundled" | "unbound" | undefined;
-	env: string | undefined;
-	legacyEnv: boolean | undefined;
-	zone: string | undefined;
-	host: string | undefined;
-	routes: Route[] | undefined;
-	onReady:
-		| ((ip: string, port: number, proxyData: ProxyData) => void)
-		| undefined;
-	sendMetrics: boolean | undefined;
-	port: number;
-}
-
-export function useWorker(
-	props: RemoteWorkerProps
-): CfPreviewToken | undefined {
-	const [session, setSession] = useState<CfPreviewSession | undefined>();
-	const [token, setToken] = useState<CfPreviewToken | undefined>();
-	const [restartCounter, setRestartCounter] = useState<number>(0);
-	// This is the most reliable way to detect whether
-	// something's "happened" in our system; We make a ref and
-	// mark it once we log our initial message. Refs are vars!
-	const startedRef = useRef(false);
-	// functions must be destructured before use inside a useEffect, otherwise the entire props object has to be added to the dependency array
-	const { onReady } = props;
-	// This effect sets up the preview session
-	useEffect(() => {
-		const abortController = new AbortController();
-		async function start() {
-			if (props.accountId === undefined) {
-				return;
-			}
-			const { workerAccount, workerContext } = getWorkerAccountAndContext({
-				accountId: props.accountId,
-				env: props.env,
-				legacyEnv: props.legacyEnv,
-				zone: props.zone,
-				host: props.host,
-				routes: props.routes,
-				sendMetrics: props.sendMetrics,
-			});
-
-			setSession(
-				await createPreviewSession(
-					workerAccount,
-					workerContext,
-					abortController.signal
-				)
-			);
-		}
-
-		start().catch((err) => {
-			// instead of logging the raw API error to the user,
-			// give them friendly instructions
-			// for error 10063 (workers.dev subdomain required)
-			if (err.code === 10063) {
-				const errorMessage =
-					"Error: You need to register a workers.dev subdomain before running the dev command in remote mode";
-				const solutionMessage =
-					"You can either enable local mode by pressing l, or register a workers.dev subdomain here:";
-				const onboardingLink = `https://dash.cloudflare.com/${props.accountId}/workers/onboarding`;
-				logger.error(`${errorMessage}\n${solutionMessage}\n${onboardingLink}`);
-			}
-			// we want to log the error, but not end the process
-			// since it could recover after the developer fixes whatever's wrong
-			else if ((err as { code: string }).code !== "ABORT_ERR") {
-				logger.error("Error while creating remote dev session:", err);
-			}
-		});
-
-		return () => {
-			abortController.abort();
-		};
-	}, [
-		props.accountId,
-		props.env,
-		props.host,
-		props.legacyEnv,
-		props.routes,
-		props.zone,
-		props.sendMetrics,
-		restartCounter,
-	]);
-
-	// This effect uses the session to upload the worker and create a preview
-	useEffect(() => {
-		const abortController = new AbortController();
-		async function start() {
-			if (props.accountId === undefined) {
-				return;
-			}
-			if (session === undefined) {
-				return;
-			}
-			setToken(undefined); // reset token in case we're re-running
-
-			if (!props.bundle || !props.format) return;
-
-			if (!startedRef.current) {
-				startedRef.current = true;
-			} else {
-				logger.log("⎔ Detected changes, restarted server.");
-			}
-
-			const init = await createRemoteWorkerInit({
-				bundle: props.bundle,
-				modules: props.modules,
-				accountId: props.accountId,
-				name: props.name,
-				legacyEnv: props.legacyEnv,
-				env: props.env,
-				isWorkersSite: props.isWorkersSite,
-				assetPaths: props.assetPaths,
-				format: props.format,
-				bindings: props.bindings,
-				compatibilityDate: props.compatibilityDate,
-				compatibilityFlags: props.compatibilityFlags,
-				usageModel: props.usageModel,
-			});
-
-			const { workerAccount, workerContext } = getWorkerAccountAndContext({
-				accountId: props.accountId,
-				env: props.env,
-				legacyEnv: props.legacyEnv,
-				zone: props.zone,
-				host: props.host,
-				routes: props.routes,
-				sendMetrics: props.sendMetrics,
-			});
-
-			const workerPreviewToken = await createWorkerPreview(
-				init,
-				workerAccount,
-				workerContext,
-				session,
-				abortController.signal
-			);
-
-			setToken(workerPreviewToken);
-
-			// TODO: Once we get service bindings working in the
-			// edge preview server, we can define remote dev service bindings
-			// and you can uncomment this code.
-			// https://github.com/cloudflare/workers-sdk/issues/1182
-
-			/*
-			if (name) {
-				await registerWorker(name, {
-					mode: "remote",
-					// upstream protocol is always https (https://github.com/cloudflare/workers-sdk/issues/583)
-					protocol: "https",
-					port: undefined,
-					host: workerPreviewToken.host,
-					headers: {
-						"cf-workers-preview-token": workerPreviewToken.value,
-						host: workerPreviewToken.host,
-					},
-				});
-			}
-			*/
-			const accessToken = await getAccessToken(workerPreviewToken.host);
-
-			const proxyData: ProxyData = {
-				userWorkerUrl: {
-					protocol: "https:",
-					hostname: workerPreviewToken.host,
-					port: "443",
-				},
-				userWorkerInspectorUrl: {
-					protocol: workerPreviewToken.inspectorUrl.protocol,
-					hostname: workerPreviewToken.inspectorUrl.hostname,
-					port: workerPreviewToken.inspectorUrl.port.toString(),
-					pathname: workerPreviewToken.inspectorUrl.pathname,
-				},
-				userWorkerInnerUrlOverrides: {}, // there is no analagous prop for this option because we did not permit overriding request.url in remote mode
-				headers: {
-					"cf-workers-preview-token": workerPreviewToken.value,
-					Cookie: accessToken && `CF_Authorization=${accessToken}`,
-				},
-				liveReload: false, // liveReload currently disabled in remote-mode, but will be supported with startDevWorker
-				proxyLogsToController: true,
-			};
-
-			onReady?.(props.host || "localhost", props.port, proxyData);
-		}
-		start().catch((err) => {
-			// we want to log the error, but not end the process
-			// since it could recover after the developer fixes whatever's wrong
-			if ((err as { code: string }).code !== "ABORT_ERR") {
-				// instead of logging the raw API error to the user,
-				// give them friendly instructions
-				// for error 10063 (workers.dev subdomain required)
-				if (err.code === 10063) {
-					const errorMessage =
-						"Error: You need to register a workers.dev subdomain before running the dev command in remote mode";
-					const solutionMessage =
-						"You can either enable local mode by pressing l, or register a workers.dev subdomain here:";
-					const onboardingLink = `https://dash.cloudflare.com/${props.accountId}/workers/onboarding`;
-					logger.error(
-						`${errorMessage}\n${solutionMessage}\n${onboardingLink}`
-					);
-				} else if (err.code === 10049) {
-					logger.log("Preview token expired, fetching a new one");
-					// code 10049 happens when the preview token expires
-					// since we want a new preview token when this happens,
-					// lets increment the counter, and trigger a rerun of
-					// the useEffect above
-					setRestartCounter((prevCount) => prevCount + 1);
-				} else {
-					logger.error("Error on remote worker:", err);
-				}
-			}
-		});
-
-		return () => {
-			abortController.abort();
-		};
-	}, [
-		props.name,
-		props.bundle,
-		props.format,
-		props.accountId,
-		props.assetPaths,
-		props.isWorkersSite,
-		props.compatibilityDate,
-		props.compatibilityFlags,
-		props.usageModel,
-		props.bindings,
-		props.modules,
-		props.env,
-		props.legacyEnv,
-		props.zone,
-		props.host,
-		props.routes,
-		session,
-		onReady,
-		props.sendMetrics,
-		props.port,
-	]);
-
-	return token;
-}
-
 export async function startRemoteServer(props: RemoteProps) {
 	let accountId = props.accountId;
 	if (accountId === undefined) {
@@ -407,54 +127,7 @@ export async function startRemoteServer(props: RemoteProps) {
 		}
 	}
 
-	const previewToken = await getRemotePreviewToken({
-		...props,
-		accountId: accountId,
-	});
-
-	if (previewToken === undefined) {
-		throw logger.error("Failed to get a previewToken");
-	}
-	// start our proxy server
-	const previewServer = await startPreviewServer({
-		previewToken,
-		assetDirectory: props.isWorkersSite
-			? undefined
-			: props.assetPaths?.assetDirectory,
-		localProtocol: props.localProtocol,
-		localPort: props.port,
-		ip: props.ip,
-		onReady: async (ip, port) => {
-			const accessToken = await getAccessToken(previewToken.host);
-
-			const proxyData: ProxyData = {
-				userWorkerUrl: {
-					protocol: "https:",
-					hostname: previewToken.host,
-					port: "443",
-				},
-				userWorkerInspectorUrl: {
-					protocol: previewToken.inspectorUrl.protocol,
-					hostname: previewToken.inspectorUrl.hostname,
-					port: previewToken.inspectorUrl.port.toString(),
-					pathname: previewToken.inspectorUrl.pathname,
-				},
-				userWorkerInnerUrlOverrides: {}, // there is no analagous prop for this option because we did not permit overriding request.url in remote mode
-				headers: {
-					"cf-workers-preview-token": previewToken.value,
-					Cookie: accessToken && `CF_Authorization=${accessToken}`,
-				},
-				liveReload: false, // liveReload currently disabled in remote-mode, but will be supported with startDevWorker
-				proxyLogsToController: true,
-			};
-
-			props.onReady?.(ip, port, proxyData);
-		},
-	});
-	if (!previewServer) {
-		throw logger.error("Failed to start remote server");
-	}
-	return { stop: previewServer.stop };
+	return { stop() {} };
 }
 
 /**
@@ -536,7 +209,7 @@ export async function getRemotePreviewToken(props: RemoteProps) {
 	});
 }
 
-async function createRemoteWorkerInit(props: {
+export async function createRemoteWorkerInit(props: {
 	bundle: EsbuildBundle;
 	modules: CfModule[];
 	accountId: string;
@@ -622,7 +295,7 @@ async function createRemoteWorkerInit(props: {
 	return init;
 }
 
-function getWorkerAccountAndContext(props: {
+export function getWorkerAccountAndContext(props: {
 	accountId: string;
 	env?: string;
 	legacyEnv?: boolean;
