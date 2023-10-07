@@ -130,11 +130,11 @@ export function createWorkerObject(
 
 			return proxyWorker.dispatchFetch(...args);
 		},
-		async queue(...args) {
+		async queue(..._args) {
 			// const { worker } = await devEnv.proxy.ready;
 			// return worker.queue(...args);
 		},
-		async scheduled(...args) {
+		async scheduled(..._args) {
 			// const { worker } = await devEnv.proxy.ready;
 			// return worker.scheduled(...args);
 		},

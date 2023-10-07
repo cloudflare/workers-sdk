@@ -1,6 +1,7 @@
 import { readFileSync } from "fs";
 import os from "node:os";
 import { URL, fileURLToPath } from "node:url";
+import path from "path";
 import open from "open";
 import {
 	isAllowedSourceMapPath,
@@ -10,7 +11,6 @@ import { logger } from "../logger";
 import type { EsbuildBundle } from "../dev/use-esbuild";
 import type Protocol from "devtools-protocol";
 import type { RawSourceMap } from "source-map";
-import path from "path";
 
 /**
  * This function converts a message serialized as a devtools event

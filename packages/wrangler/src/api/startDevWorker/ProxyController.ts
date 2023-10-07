@@ -16,12 +16,12 @@ import { LogLevel, Miniflare, Response } from "miniflare";
 import { WebSocket } from "miniflare";
 import inspectorProxyWorkerPath from "worker:startDevWorker/InspectorProxyWorker";
 import proxyWorkerPath from "worker:startDevWorker/ProxyWorker";
-import { WranglerLog, castLogLevel } from "../../dev/miniflare";
-import { getHttpsOptions } from "../../https-options";
 import {
 	logConsoleMessage,
 	maybeHandleNetworkLoadResource,
 } from "../../dev/inspect";
+import { WranglerLog, castLogLevel } from "../../dev/miniflare";
+import { getHttpsOptions } from "../../https-options";
 import { logger } from "../../logger";
 import { getSourceMappedStack } from "../../sourcemap";
 import { castErrorCause } from "./events";
