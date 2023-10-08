@@ -295,7 +295,10 @@ export function createModuleCollector(props: {
 										);
 										const testResolved = resolveExports(
 											packageJson,
-											args.path.replace(`${packageName}/`, "")
+											args.path.replace(`${packageName}/`, ""),
+											{
+												conditions: ["workerd", "worker", "browser"],
+											}
 										);
 										if (testResolved) {
 											filePath = path.join(
