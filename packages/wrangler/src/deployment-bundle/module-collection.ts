@@ -70,6 +70,8 @@ export const noopModuleCollector: ModuleCollector = {
 // Handles `wrangler`, `wrangler/example`, `wrangler/example.wasm`,
 // `@cloudflare/wrangler`, `@cloudflare/wrangler/example`, etc.
 export function extractPackageName(packagePath: string) {
+	if (packagePath.startsWith(".")) return null;
+
 	const match = packagePath.match(/^(@[^/]+\/)?([^/]+)/);
 
 	if (match) {
