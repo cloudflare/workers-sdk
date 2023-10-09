@@ -188,7 +188,12 @@ class ProxyClientBridge {
 class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 	readonly #version: number;
 	readonly #stringifiedTarget: string;
-	readonly #known = new Map<string, unknown>();
+	readonly #knownValues = new Map<string, unknown>();
+	readonly #knownDescriptors = new Map<
+		string,
+		PropertyDescriptor | undefined
+	>();
+	#knownOwnKeys?: string[];
 
 	revivers: ReducersRevivers = {
 		...revivers,
@@ -330,7 +335,7 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 		if (typeof key === "symbol" || key === "then") return undefined;
 
 		// See optimisation comments below for cases where this will be set
-		const maybeKnown = this.#known.get(key);
+		const maybeKnown = this.#knownValues.get(key);
 		if (maybeKnown !== undefined) return maybeKnown;
 
 		// Always perform a synchronous GET, if this returns a `Promise`, we'll
@@ -364,7 +369,7 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 			// (e.g. accessing `R2ObjectBody#body` multiple times)
 			result instanceof ReadableStream
 		) {
-			this.#known.set(key, result);
+			this.#knownValues.set(key, result);
 		}
 		return result;
 	}
@@ -372,6 +377,54 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 	has(target: T, key: string | symbol) {
 		// Not technically correct, but a close enough approximation for `in`
 		return this.get(target, key, undefined) !== undefined;
+	}
+
+	getOwnPropertyDescriptor(target: T, key: string | symbol) {
+		if (typeof key === "symbol") return undefined;
+
+		// Optimisation: assume constant prototypes of proxied objects, descriptors
+		// should never change after we've fetched them
+		const maybeKnown = this.#knownDescriptors.get(key);
+		if (maybeKnown !== undefined) return maybeKnown;
+
+		const syncRes = this.bridge.sync.fetch(this.bridge.url, {
+			method: "POST",
+			headers: {
+				[CoreHeaders.OP]: ProxyOps.GET_OWN_DESCRIPTOR,
+				[CoreHeaders.OP_KEY]: key,
+				[CoreHeaders.OP_TARGET]: this.#stringifiedTarget,
+			},
+		});
+		const result = this.#parseSyncResponse(
+			syncRes,
+			this.getOwnPropertyDescriptor
+		) as PropertyDescriptor | undefined;
+
+		this.#knownDescriptors.set(key, result);
+		return result;
+	}
+
+	ownKeys(_target: T) {
+		// Optimisation: assume constant prototypes of proxied objects, own keys
+		// should never change after we've fetched them
+		if (this.#knownOwnKeys !== undefined) return this.#knownOwnKeys;
+
+		const syncRes = this.bridge.sync.fetch(this.bridge.url, {
+			method: "POST",
+			headers: {
+				[CoreHeaders.OP]: ProxyOps.GET_OWN_KEYS,
+				[CoreHeaders.OP_TARGET]: this.#stringifiedTarget,
+			},
+		});
+		const result = this.#parseSyncResponse(syncRes, this.ownKeys) as string[];
+
+		this.#knownOwnKeys = result;
+		return result;
+	}
+
+	getPrototypeOf(_target: T) {
+		// Return a `null` prototype, so users know this isn't a plain object
+		return null;
 	}
 
 	#createFunction(key: string) {

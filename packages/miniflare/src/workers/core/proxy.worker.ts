@@ -156,7 +156,7 @@ export class ProxyServer implements DurableObject {
 		const targetName = target.constructor.name;
 
 		let status = 200;
-		let result;
+		let result: unknown;
 		let unbufferedRest: ReadableStream | undefined;
 		if (opHeader === ProxyOps.GET) {
 			// If no key header is specified, just return the target
@@ -168,6 +168,18 @@ export class ProxyServer implements DurableObject {
 					headers: { [CoreHeaders.OP_RESULT_TYPE]: "Function" },
 				});
 			}
+		} else if (opHeader === ProxyOps.GET_OWN_DESCRIPTOR) {
+			if (keyHeader === null) return new Response(null, { status: 400 });
+			const descriptor = Object.getOwnPropertyDescriptor(target, keyHeader);
+			if (descriptor !== undefined) {
+				result = <PropertyDescriptor>{
+					configurable: descriptor.configurable,
+					enumerable: descriptor.enumerable,
+					writable: descriptor.writable,
+				};
+			}
+		} else if (opHeader === ProxyOps.GET_OWN_KEYS) {
+			result = Object.getOwnPropertyNames(target);
 		} else if (opHeader === ProxyOps.CALL) {
 			// We don't allow callable targets yet (could be useful to implement if
 			// we ever need to proxy functions that return functions)
