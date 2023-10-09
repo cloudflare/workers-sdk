@@ -2,14 +2,7 @@ import { join } from "path";
 import { FrameworkMap } from "frameworks/index";
 import { readJSON } from "helpers/files";
 import { fetch } from "undici";
-import {
-	describe,
-	expect,
-	test,
-	afterEach,
-	beforeEach,
-	afterAll,
-} from "vitest";
+import { describe, expect, test, afterEach, beforeEach } from "vitest";
 import { deleteProject } from "../scripts/e2eCleanup";
 import { frameworkToTest } from "./frameworkToTest";
 import {
@@ -139,8 +132,6 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 
 	const { getPath, getName, clean } = testProjectDir("pages");
 
-	const quarantineStats = { passed: [] as string[], failed: [] as string[] };
-
 	beforeEach((ctx) => {
 		const framework = ctx.meta.name;
 		clean(framework);
@@ -156,16 +147,6 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		} catch (error) {
 			console.error(`Failed to cleanup project: ${projectName}`);
 			console.error(error);
-		}
-	});
-
-	afterAll(() => {
-		if (isQuarantineMode()) {
-			const { passed, failed } = quarantineStats;
-			console.log("Quarantine Results");
-			console.log("======================");
-			console.log(`Passed: ${passed.length > 0 ? passed.join(", ") : "none"}`);
-			console.log(`Failed: ${failed.length > 0 ? failed.join(", ") : "none"}`);
 		}
 	});
 
@@ -275,18 +256,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		)(
 			framework,
 			async () => {
-				try {
-					await runCliWithDeploy(framework, testCommitMessage);
-					if (isQuarantineMode()) {
-						quarantineStats.passed.push(framework);
-					}
-				} catch (error) {
-					if (isQuarantineMode()) {
-						quarantineStats.failed.push(framework);
-					} else {
-						throw error;
-					}
-				}
+				await runCliWithDeploy(framework, testCommitMessage);
 			},
 			{ retry: 3, timeout: timeout || TEST_TIMEOUT }
 		);
