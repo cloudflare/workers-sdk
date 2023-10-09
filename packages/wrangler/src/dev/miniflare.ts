@@ -129,6 +129,15 @@ export class WranglerLog extends Log {
 		}
 		super.warn(message);
 	}
+
+	error(message: Error) {
+		try {
+			super.error(message);
+		} catch {
+			// TODO: miniflare shouldn't throw in logger.error
+			// for now, ignore errors from the logger
+		}
+	}
 }
 
 export const DEFAULT_WORKER_NAME = "worker";
@@ -155,9 +164,7 @@ function buildLog(): Log {
 		level = Math.min(level, LogLevel.WARN);
 	}
 
-	return level === LogLevel.NONE
-		? new NoOpLog()
-		: new WranglerLog(level, { prefix: "wrangler-UserWorker" });
+	return new WranglerLog(level, { prefix: "wrangler-UserWorker" });
 }
 
 async function buildSourceOptions(
