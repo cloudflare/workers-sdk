@@ -1,18 +1,17 @@
 import { cancel, startSection } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
-
 import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { pickDeployment } from "./cli/deployments";
 import { getLocation } from "./cli/locations";
 import { DeploymentsService } from "./client";
 import {
-	interactWithUser,
-	renderDeploymentConfiguration,
-	loadAccountSpinner,
-	renderDeploymentMutationError,
 	collectEnvironmentVariables,
+	interactWithUser,
+	loadAccountSpinner,
 	promptForEnvironmentVariables,
+	renderDeploymentConfiguration,
+	renderDeploymentMutationError,
 } from "./common";
 import { wrap } from "./helpers/wrap";
 import { loadAccount } from "./locations";

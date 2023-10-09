@@ -10,7 +10,6 @@ import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { promptSelectProject } from "./prompt-select-project";
-
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,

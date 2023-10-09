@@ -1,4 +1,4 @@
-import { bgYellow, bgGreen, bgRed } from "@cloudflare/cli/colors";
+import { bgGreen, bgRed, bgYellow } from "@cloudflare/cli/colors";
 import type { Status } from "../enums";
 
 export function statusToColored(status?: Status): string {

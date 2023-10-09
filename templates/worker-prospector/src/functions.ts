@@ -1,5 +1,4 @@
 import { fromXML } from "from-xml";
-
 import {
 	DBNotifier,
 	DBNotifierMatch,

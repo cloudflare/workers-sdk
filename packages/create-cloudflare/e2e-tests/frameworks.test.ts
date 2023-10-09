@@ -3,7 +3,7 @@ import { FrameworkMap } from "frameworks/index";
 import { retry } from "helpers/command";
 import { readJSON } from "helpers/files";
 import { fetch } from "undici";
-import { describe, expect, test, beforeAll } from "vitest";
+import { beforeAll, describe, expect, test } from "vitest";
 import { deleteProject, deleteWorker } from "../scripts/common";
 import { frameworkToTest } from "./frameworkToTest";
 import {

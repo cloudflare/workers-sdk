@@ -1,6 +1,5 @@
 import assert from "node:assert";
-import { fetch, File, Headers } from "undici";
-import { Response } from "undici";
+import { fetch, File, Headers, Response } from "undici";
 import { version as wranglerVersion } from "../../package.json";
 import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
@@ -9,7 +8,7 @@ import { APIError, parseJSON } from "../parse";
 import { loginOrRefreshIfRequired, requireApiToken } from "../user";
 import type { ApiCredentials } from "../user";
 import type { URLSearchParams } from "node:url";
-import type { RequestInit, HeadersInit } from "undici";
+import type { HeadersInit, RequestInit } from "undici";
 
 /*
  * performApiFetch does everything required to make a CF API request,

@@ -1,12 +1,12 @@
 import { writeFileSync } from "fs";
 import { rest } from "msw";
 import {
-	uploadMTlsCertificateFromFs,
-	uploadMTlsCertificate,
-	listMTlsCertificates,
 	deleteMTlsCertificate,
 	getMTlsCertificate,
 	getMTlsCertificateByName,
+	listMTlsCertificates,
+	uploadMTlsCertificate,
+	uploadMTlsCertificateFromFs,
 } from "../api";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";

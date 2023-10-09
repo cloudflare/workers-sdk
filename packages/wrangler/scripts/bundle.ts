@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import * as esbuild from "esbuild";
 import { EXTERNAL_DEPENDENCIES } from "./deps";
-import type { BuildOptions, Plugin, BuildContext } from "esbuild";
+import type { BuildContext, BuildOptions, Plugin } from "esbuild";
 
 // the expectation is that this is being run from the project root
 type BuildFlags = {

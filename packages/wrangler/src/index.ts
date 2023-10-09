@@ -11,12 +11,12 @@ import { loadDotEnv, readConfig } from "./config";
 import { constellation } from "./constellation";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
-import { deployOptions, deployHandler } from "./deploy";
+import { deployHandler, deployOptions } from "./deploy";
 import { isAuthenticationError } from "./deploy/deploy";
 import { isBuildFailure } from "./deployment-bundle/build-failures";
 import {
-	deployments,
 	commonDeploymentCMDSetup,
+	deployments,
 	rollbackDeployment,
 	viewDeployment,
 } from "./deployments";
@@ -39,10 +39,9 @@ import { UserError } from "./errors";
 import { generateHandler, generateOptions } from "./generate";
 import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
-import { kvNamespace, kvKey, kvBulk } from "./kv";
+import { kvBulk, kvKey, kvNamespace } from "./kv";
 import { logBuildFailure, logger } from "./logger";
 import * as metrics from "./metrics";
-
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
 import { pages } from "./pages";
 import { APIError, formatMessage, ParseError } from "./parse";
@@ -51,12 +50,12 @@ import { queues } from "./queues/cli/commands";
 import { r2 } from "./r2";
 import { secret, secretBulkHandler, secretBulkOptions } from "./secret";
 import {
-	captureGlobalException,
 	addBreadcrumb,
+	captureGlobalException,
 	closeSentry,
 	setupSentry,
 } from "./sentry";
-import { tailOptions, tailHandler } from "./tail";
+import { tailHandler, tailOptions } from "./tail";
 import { generateTypes } from "./type-generation";
 import { printWranglerBanner } from "./update-check";
 import {
@@ -68,13 +67,9 @@ import {
 } from "./user";
 import { vectorize } from "./vectorize/index";
 import { whoami } from "./whoami";
-
-import {
-	asJson,
-	type CommonYargsArgv,
-	type CommonYargsOptions,
-} from "./yargs-types";
+import { asJson } from "./yargs-types";
 import type { Config } from "./config";
+import type { CommonYargsArgv, CommonYargsOptions } from "./yargs-types";
 import type { Arguments, CommandModule } from "yargs";
 
 const resetColor = "\x1b[0m";

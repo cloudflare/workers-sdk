@@ -1,6 +1,7 @@
-import lzstring from "lz-string";
 import { readFile, writeFile } from "node:fs/promises";
-import { Response, FormData } from "undici";
+import lzstring from "lz-string";
+import { FormData, Response } from "undici";
+
 const worker = new FormData();
 
 const today = new Date();

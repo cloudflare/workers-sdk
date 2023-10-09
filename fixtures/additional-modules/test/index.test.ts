@@ -4,13 +4,13 @@ import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { setTimeout } from "node:timers/promises";
+import { fetch } from "undici";
+import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import {
 	runWranglerDev,
 	wranglerEntryPath,
 } from "../../shared/src/run-wrangler-long-lived";
-import { describe, beforeAll, afterAll, expect, test } from "vitest";
-import { setTimeout } from "node:timers/promises";
-import { fetch } from "undici";
 
 async function getTmpDir() {
 	return fs.mkdtemp(path.join(os.tmpdir(), "wrangler-modules-"));

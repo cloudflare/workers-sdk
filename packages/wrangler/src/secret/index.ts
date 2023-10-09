@@ -3,10 +3,7 @@ import readline from "node:readline";
 import { FormData } from "undici";
 import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
-import {
-	type WorkerMetadataBinding,
-	createWorkerUploadForm,
-} from "../deployment-bundle/create-worker-upload-form";
+import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import { confirm, prompt } from "../dialogs";
 import { UserError } from "../errors";
 import {
@@ -18,8 +15,8 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { parseJSON, readFileSync } from "../parse";
 import { requireAuth } from "../user";
-
 import type { Config } from "../config";
+import type { WorkerMetadataBinding } from "../deployment-bundle/create-worker-upload-form";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,

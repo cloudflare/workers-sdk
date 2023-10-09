@@ -2,6 +2,7 @@ import { processArgument } from "@cloudflare/cli/args";
 import { inputPrompt } from "@cloudflare/cli/interactive";
 import { getLocations } from "../locations";
 import type { Location, LocationID } from "../client";
+
 const whichLocationQuestion = "Choose where you want to deploy your container";
 const whichRegionQuestion =
 	"Choose which region you want to deploy your container in";

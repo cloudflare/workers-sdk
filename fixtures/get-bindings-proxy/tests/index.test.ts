@@ -1,18 +1,15 @@
-import { describe, expect, it, beforeAll, afterAll } from "vitest";
-import {
-	type UnstableDevWorker,
-	unstable_dev,
-	getBindingsProxy,
-} from "wrangler";
-import {
-	R2Bucket,
-	type KVNamespace,
-	Fetcher,
-	D1Database,
-	DurableObjectNamespace,
-} from "@cloudflare/workers-types";
 import { readdir, rm } from "fs/promises";
 import path from "path";
+import {
+	D1Database,
+	DurableObjectNamespace,
+	Fetcher,
+	R2Bucket,
+} from "@cloudflare/workers-types";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { getBindingsProxy, unstable_dev } from "wrangler";
+import type { KVNamespace } from "@cloudflare/workers-types";
+import type { UnstableDevWorker } from "wrangler";
 
 type Bindings = {
 	MY_VAR: string;

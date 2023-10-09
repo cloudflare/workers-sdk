@@ -1,8 +1,9 @@
 // @ts-ignore entry point will get replaced
 import worker from "__ENTRY_POINT__";
+import { isRoutingRuleMatch } from "./pages-dev-util";
+
 // @ts-ignore entry point will get replaced
 export * from "__ENTRY_POINT__";
-import { isRoutingRuleMatch } from "./pages-dev-util";
 
 // @ts-ignore routes are injected
 const routes = __ROUTES__;

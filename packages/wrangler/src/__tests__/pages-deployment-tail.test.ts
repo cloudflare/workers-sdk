@@ -8,14 +8,14 @@ import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type {
-	TailEventMessage,
-	RequestEvent,
-	ScheduledEvent,
 	AlarmEvent,
 	EmailEvent,
-	TailEvent,
-	TailInfo,
 	QueueEvent,
+	RequestEvent,
+	ScheduledEvent,
+	TailEvent,
+	TailEventMessage,
+	TailInfo,
 } from "../tail/createTail";
 import type { RequestInit } from "undici";
 import type WebSocket from "ws";

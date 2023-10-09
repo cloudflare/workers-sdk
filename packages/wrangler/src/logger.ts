@@ -6,6 +6,7 @@ import { getEnvironmentVariableFactory } from "./environment-variables/factory";
 import { getSanitizeLogs } from "./environment-variables/misc-variables";
 import { appendToDebugLogFile } from "./utils/log-file";
 import type { Message } from "esbuild";
+
 export const LOGGER_LEVELS = {
 	none: -1,
 	error: 0,

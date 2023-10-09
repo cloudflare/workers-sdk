@@ -3,7 +3,6 @@ import path from "node:path";
 import { FatalError } from "../errors";
 import { optimizeRoutesJSONSpec } from "./functions/routes-transformation";
 import { validateRoutes } from "./functions/routes-validation";
-
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,

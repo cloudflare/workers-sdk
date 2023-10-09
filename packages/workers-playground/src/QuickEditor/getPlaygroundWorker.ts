@@ -1,5 +1,5 @@
-import { Worker, TypedModule } from "./useDraftWorker";
 import lzstring from "lz-string";
+import { TypedModule, Worker } from "./useDraftWorker";
 
 // Parse a serialised FormData representation of a (very!) simple worker
 // Importantly, this only supports a subset of worker config relevant to Playground workers

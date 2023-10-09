@@ -1,5 +1,5 @@
 import { DevEnv } from "./DevEnv";
-import type { StartDevWorkerOptions, DevWorker } from "./types";
+import type { DevWorker, StartDevWorkerOptions } from "./types";
 
 export { DevEnv };
 export * from "./types";

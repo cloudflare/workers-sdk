@@ -14,9 +14,9 @@ import { requireAuth } from "../../user";
 import { renderToString } from "../../utils/render";
 import { createBackup } from "../backups";
 import {
+	DEFAULT_BATCH_SIZE,
 	DEFAULT_MIGRATION_PATH,
 	DEFAULT_MIGRATION_TABLE,
-	DEFAULT_BATCH_SIZE,
 } from "../constants";
 import { executeSql } from "../execute";
 import { getDatabaseInfoFromConfig, getDatabaseInfoFromId } from "../utils";

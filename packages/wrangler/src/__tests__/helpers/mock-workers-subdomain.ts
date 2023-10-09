@@ -1,5 +1,4 @@
 import { rest } from "msw";
-
 import { createFetchResult, msw } from "./msw";
 
 /** Create a mock handler for the request to get the account's subdomain. */

@@ -8,7 +8,7 @@ import { ProxyController } from "./ProxyController";
 import { RemoteRuntimeController } from "./RemoteRuntimeController";
 import type { RuntimeController } from "./BaseController";
 import type { ErrorEvent } from "./events";
-import type { StartDevWorkerOptions, DevWorker } from "./types";
+import type { DevWorker, StartDevWorkerOptions } from "./types";
 
 /**
  * @internal

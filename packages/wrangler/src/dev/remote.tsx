@@ -1,7 +1,7 @@
 import path from "node:path";
 import { Text } from "ink";
 import SelectInput from "ink-select-input";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useErrorHandler } from "react-error-boundary";
 import { helpIfErrorIsSizeOrScriptStartup } from "../deploy/deploy";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
@@ -25,16 +25,16 @@ import type { ProxyData } from "../api";
 import type { Route } from "../config/environment";
 import type {
 	CfModule,
-	CfWorkerInit,
 	CfScriptFormat,
 	CfWorkerContext,
+	CfWorkerInit,
 } from "../deployment-bundle/worker";
 import type { AssetPaths } from "../sites";
 import type { ChooseAccountItem } from "../user";
 import type {
 	CfAccount,
-	CfPreviewToken,
 	CfPreviewSession,
+	CfPreviewToken,
 } from "./create-worker-preview";
 import type { EsbuildBundle } from "./use-esbuild";
 

@@ -1,10 +1,10 @@
 import {
-	startSection,
-	updateStatus,
-	log,
-	endSection,
-	status,
 	cancel,
+	endSection,
+	log,
+	startSection,
+	status,
+	updateStatus,
 } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
@@ -13,12 +13,12 @@ import { getLocation } from "./cli/locations";
 import { DeploymentsService } from "./client";
 import {
 	checkEverythingIsSet,
+	collectEnvironmentVariables,
 	interactWithUser,
 	loadAccountSpinner,
+	promptForEnvironmentVariables,
 	renderDeploymentConfiguration,
 	renderDeploymentMutationError,
-	collectEnvironmentVariables,
-	promptForEnvironmentVariables,
 } from "./common";
 import { wrap } from "./helpers/wrap";
 import { loadAccount } from "./locations";
@@ -30,7 +30,6 @@ import type {
 	StrictYargsOptionsToInterfaceJSON,
 } from "../yargs-types";
 import type { EnvironmentVariable, SSHPublicKeyID } from "./client";
-
 import type { Arg } from "@cloudflare/cli/interactive";
 
 export function createCommandOptionalYargs(yargs: CommonYargsArgvJSON) {

@@ -3,8 +3,8 @@ import { normalizeAndValidateConfig } from "../config/validation";
 import { normalizeSlashes } from "./helpers/mock-console";
 import type {
 	ConfigFields,
-	RawDevConfig,
 	RawConfig,
+	RawDevConfig,
 	RawEnvironment,
 } from "../config";
 

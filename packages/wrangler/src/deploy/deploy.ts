@@ -39,14 +39,14 @@ import { getZoneForRoute } from "../zones";
 import type { FetchError } from "../cfetch";
 import type { Config } from "../config";
 import type {
+	CustomDomainRoute,
 	Route,
+	Rule,
 	ZoneIdRoute,
 	ZoneNameRoute,
-	CustomDomainRoute,
-	Rule,
 } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
-import type { CfWorkerInit, CfPlacement } from "../deployment-bundle/worker";
+import type { CfPlacement, CfWorkerInit } from "../deployment-bundle/worker";
 import type { PutConsumerBody } from "../queues/client";
 import type { AssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";

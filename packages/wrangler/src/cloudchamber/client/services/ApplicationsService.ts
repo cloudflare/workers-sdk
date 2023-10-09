@@ -1,14 +1,13 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import { OpenAPI } from "../core/OpenAPI";
+import { request as __request } from "../core/request";
+import type { CancelablePromise } from "../core/CancelablePromise";
 import type { Application } from "../models/Application";
 import type { CreateApplicationRequest } from "../models/CreateApplicationRequest";
 import type { EmptyResponse } from "../models/EmptyResponse";
 import type { ListApplications } from "../models/ListApplications";
-
-import type { CancelablePromise } from "../core/CancelablePromise";
-import { OpenAPI } from "../core/OpenAPI";
-import { request as __request } from "../core/request";
 
 export class ApplicationsService {
 	/**

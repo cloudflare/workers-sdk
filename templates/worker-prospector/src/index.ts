@@ -1,7 +1,6 @@
-import { DBUrl, Env } from "./types";
-
-import { handleQueuedUrl, scheduled } from "./functions";
 import h from "./api";
+import { handleQueuedUrl, scheduled } from "./functions";
+import { DBUrl, Env } from "./types";
 
 export default {
 	async fetch(

@@ -1,5 +1,5 @@
 import { fetch } from "undici";
-import { describe, expect, it, beforeAll, afterAll, beforeEach } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 function removeUUID(str: string) {
 	return str.replace(

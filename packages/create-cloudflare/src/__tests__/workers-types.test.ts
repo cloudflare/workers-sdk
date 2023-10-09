@@ -4,8 +4,7 @@ import {
 	getLatestTypesEntrypoint,
 } from "helpers/command";
 import { readFile, writeFile } from "helpers/files";
-import { describe, expect, test, vi, afterEach, beforeEach } from "vitest";
-
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { createTestContext } from "./helpers";
 import type { Dirent } from "fs";
 import type { PagesGeneratorContext } from "types";

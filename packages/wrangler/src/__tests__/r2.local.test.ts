@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+
 // Miniflare's use of undici doesn't play well with jest-mock-fetch
 // and it is not needed here anyway.
 jest.unmock("undici");

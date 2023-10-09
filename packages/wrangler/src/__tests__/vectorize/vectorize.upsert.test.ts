@@ -1,6 +1,6 @@
 import { Blob } from "node:buffer";
 import { writeFileSync } from "node:fs";
-import { MockedRequest, rest, type RestRequest } from "msw";
+import { MockedRequest, rest } from "msw";
 import { FormData } from "undici";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -9,6 +9,7 @@ import { FileReaderSync } from "../helpers/msw/read-file-sync";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import type { VectorizeVector } from "@cloudflare/workers-types";
+import type { RestRequest } from "msw";
 
 describe("dataset upsert", () => {
 	const std = mockConsoleMethods();

@@ -1,11 +1,11 @@
-import { v4 } from "uuid";
 import { eg, TypeFromCodec } from "@cloudflare/util-en-garde";
-import { useEffect, useRef, useState } from "react";
 import { useDebounce } from "@cloudflare/util-hooks";
 import lzstring from "lz-string";
-import { matchFiles, parseRules, toMimeType } from "./module-collection";
-import { getPlaygroundWorker } from "./getPlaygroundWorker";
+import { useEffect, useRef, useState } from "react";
 import useSWR from "swr";
+import { v4 } from "uuid";
+import { getPlaygroundWorker } from "./getPlaygroundWorker";
+import { matchFiles, parseRules, toMimeType } from "./module-collection";
 
 export const DeployPlaygroundWorkerResponse = eg.union([
 	eg.object({

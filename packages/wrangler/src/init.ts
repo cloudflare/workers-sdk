@@ -1,18 +1,17 @@
 import * as fs from "node:fs";
-import { writeFile, mkdir } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import path, { dirname } from "node:path";
 import TOML from "@iarna/toml";
 import { execa } from "execa";
 import { findUp } from "find-up";
 import { version as wranglerVersion } from "../package.json";
-
 import { fetchResult } from "./cfetch";
 import { fetchWorker } from "./cfetch/internal";
 import { readConfig } from "./config";
 import { confirm, select } from "./dialogs";
 import { getC3CommandFromEnv } from "./environment-variables/misc-variables";
 import { UserError } from "./errors";
-import { initializeGit, getGitVersioon, isInsideGitRepo } from "./git-client";
+import { getGitVersioon, initializeGit, isInsideGitRepo } from "./git-client";
 import { logger } from "./logger";
 import { getPackageManager } from "./package-manager";
 import { parsePackageJSON, parseTOML, readFileSync } from "./parse";
@@ -20,7 +19,6 @@ import { getBasePath } from "./paths";
 import { requireAuth } from "./user";
 import * as shellquote from "./utils/shell-quote";
 import { CommandLineArgsError, printWranglerBanner } from "./index";
-
 import type { RawConfig } from "./config";
 import type {
 	CustomDomainRoute,
@@ -38,7 +36,6 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "./yargs-types";
-
 import type { ReadableStream } from "stream/web";
 
 export function initOptions(yargs: CommonYargsArgv) {

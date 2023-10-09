@@ -1,7 +1,6 @@
 import assert from "node:assert";
 import * as Sentry from "@sentry/node";
 import { rest } from "msw";
-
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";

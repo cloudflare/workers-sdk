@@ -1,10 +1,10 @@
 import {
 	crash,
-	updateStatus,
-	log,
 	endSection,
+	log,
 	logRaw,
 	status,
+	updateStatus,
 } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
@@ -16,10 +16,10 @@ import {
 import { wrap } from "../helpers/wrap";
 import { idToLocationName } from "../locations";
 import type {
-	PlacementWithEvents,
-	PlacementEvent,
-	ListSSHPublicKeys,
 	DeploymentV2,
+	ListSSHPublicKeys,
+	PlacementEvent,
+	PlacementWithEvents,
 } from "../client";
 import type { EventName, Status } from "../enums";
 
