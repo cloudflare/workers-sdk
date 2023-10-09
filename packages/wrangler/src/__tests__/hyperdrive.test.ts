@@ -106,7 +106,31 @@ describe("hyperdrive commands", () => {
 	it("should handle creating a hyperdrive config", async () => {
 		mockHyperdriveRequest();
 		await runWrangler(
-			"hyperdrive create test123 --connection-string='postgresql://test:password@foo.us-east-2.aws.neon.tech:5432/neondb'"
+			"hyperdrive create test123 --connection-string='postgresql://test:password@foo.us-east-2.aws.neon.tech:12345/neondb'"
+		);
+		expect(std.out).toMatchInlineSnapshot(`
+		"🚧 Creating 'test123'
+		✅ Created new Hyperdrive config
+		 {
+		  \\"id\\": \\"7a040c1eee714e91a30ea6707a2d125c\\",
+		  \\"name\\": \\"test123\\",
+		  \\"origin\\": {
+		    \\"host\\": \\"foo.us-east-2.aws.neon.tech\\",
+		    \\"port\\": 12345,
+		    \\"database\\": \\"neondb\\",
+		    \\"user\\": \\"test\\"
+		  },
+		  \\"caching\\": {
+		    \\"disabled\\": false
+		  }
+		}"
+	`);
+	});
+
+	it("should handle creating a hyperdrive config for postgres without a port specified", async () => {
+		mockHyperdriveRequest();
+		await runWrangler(
+			"hyperdrive create test123 --connection-string='postgresql://test:password@foo.us-east-2.aws.neon.tech/neondb'"
 		);
 		expect(std.out).toMatchInlineSnapshot(`
 		"🚧 Creating 'test123'
@@ -201,28 +225,32 @@ function mockHyperdriveRequest() {
 				);
 			}
 		),
-		rest.post("*/accounts/:accountId/hyperdrive/configs", (req, res, ctx) => {
-			return res.once(
-				ctx.json(
-					createFetchResult(
-						{
-							id: "7a040c1eee714e91a30ea6707a2d125c",
-							name: "test123",
-							origin: {
-								host: "foo.us-east-2.aws.neon.tech",
-								port: 5432,
-								database: "neondb",
-								user: "test",
+		rest.post(
+			"*/accounts/:accountId/hyperdrive/configs",
+			async (req, res, ctx) => {
+				const reqBody = await req.json();
+				return res.once(
+					ctx.json(
+						createFetchResult(
+							{
+								id: "7a040c1eee714e91a30ea6707a2d125c",
+								name: "test123",
+								origin: {
+									host: "foo.us-east-2.aws.neon.tech",
+									port: reqBody.origin.port,
+									database: "neondb",
+									user: "test",
+								},
+								caching: {
+									disabled: false,
+								},
 							},
-							caching: {
-								disabled: false,
-							},
-						},
-						true
+							true
+						)
 					)
-				)
-			);
-		}),
+				);
+			}
+		),
 		rest.delete(
 			"*/accounts/:accountId/hyperdrive/configs/7a040c1eee714e91a30ea6707a2d125c",
 			(req, res, ctx) => {

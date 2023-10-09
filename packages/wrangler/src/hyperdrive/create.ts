@@ -37,13 +37,16 @@ export async function handler(
 
 	const url = new URL(args.connectionString);
 
+	if (
+		url.port === "" &&
+		(url.protocol == "postgresql:" || url.protocol == "postgres:")
+	) {
+		url.port = "5432";
+	}
+
 	if (url.protocol === "") {
 		logger.log("You must specify the database protocol - e.g. 'postgresql'.");
-	} else if (
-		url.protocol !== "postgresql:" &&
-		url.protocol !== "postgres:" &&
-		url.protocol !== ""
-	) {
+	} else if (url.protocol !== "postgresql:" && url.protocol !== "postgres:") {
 		logger.log(
 			"Only PostgreSQL or PostgreSQL compatible databases are currently supported."
 		);
