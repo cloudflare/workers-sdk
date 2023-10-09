@@ -30,6 +30,10 @@ export const CoreBindings = {
 export const ProxyOps = {
 	// Get the target or a property of the target
 	GET: "GET",
+	// Get the descriptor for a property of the target
+	GET_OWN_DESCRIPTOR: "GET_OWN_DESCRIPTOR",
+	// Get the target's own property names
+	GET_OWN_KEYS: "GET_OWN_KEYS",
 	// Call a method on the target
 	CALL: "CALL",
 	// Remove the strong reference to the target on the "heap", allowing it to be

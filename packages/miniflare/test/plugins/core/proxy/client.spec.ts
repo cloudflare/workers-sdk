@@ -215,3 +215,26 @@ test("ProxyClient: returns empty ReadableStream synchronously", async (t) => {
 	assert(objectBody != null);
 	t.is(await text(objectBody.body), ""); // Synchronous empty stream access
 });
+test("ProxyClient: can `JSON.stringify()` proxies", async (t) => {
+	const mf = new Miniflare({ script: nullScript, r2Buckets: ["BUCKET"] });
+	t.teardown(() => mf.dispose());
+
+	const bucket = await mf.getR2Bucket("BUCKET");
+	const object = await bucket.put("key", "value");
+	assert(object !== null);
+	t.is(Object.getPrototypeOf(object), null);
+	const plainObject = JSON.parse(JSON.stringify(object));
+	t.deepEqual(plainObject, {
+		checksums: {
+			md5: "2063c1608d6e0baf80249c42e2be5804",
+		},
+		customMetadata: {},
+		etag: "2063c1608d6e0baf80249c42e2be5804",
+		httpEtag: '"2063c1608d6e0baf80249c42e2be5804"',
+		httpMetadata: {},
+		key: "key",
+		size: 5,
+		uploaded: object.uploaded.toISOString(),
+		version: object.version,
+	});
+});
