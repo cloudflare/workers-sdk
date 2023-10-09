@@ -63,7 +63,8 @@ export class ProxyController extends EventEmitter {
 	protected latestBundle?: EsbuildBundle;
 	secret = randomUUID();
 
-	protected createProxyWorker(): Miniflare {
+	protected createProxyWorker() {
+		if (this._torndown) return;
 		assert(this.latestConfig !== undefined);
 
 		const cert =
@@ -211,11 +212,11 @@ export class ProxyController extends EventEmitter {
 					error
 				);
 			});
-
-		return this.proxyWorker;
 	}
 
-	async reconnectInspectorProxyWorker(): Promise<WebSocket> {
+	async reconnectInspectorProxyWorker(): Promise<WebSocket | undefined> {
+		if (this._torndown) return;
+
 		const existingWebSocket = await this.inspectorProxyWorkerWebSocket;
 		if (existingWebSocket?.readyState === WebSocket.READY_STATE_OPEN) {
 			return existingWebSocket;
@@ -267,9 +268,10 @@ export class ProxyController extends EventEmitter {
 		message: ProxyWorkerIncomingRequestBody,
 		retries = 3
 	) {
-		try {
-			assert(this.proxyWorker);
+		if (this._torndown) return;
+		assert(this.proxyWorker, "proxyWorker should already be instantiated");
 
+		try {
 			await this.proxyWorker.dispatchFetch("http://dummy/cdn-cgi/ProxyWorker", {
 				headers: { Authorization: this.secret },
 				cf: { hostMetadata: message },
@@ -293,6 +295,8 @@ export class ProxyController extends EventEmitter {
 		message: InspectorProxyWorkerIncomingWebSocketMessage,
 		retries = 3
 	): Promise<void> {
+		if (this._torndown) return;
+
 		try {
 			const websocket = await this.inspectorProxyWorkerWebSocket;
 			assert(websocket);
@@ -355,6 +359,9 @@ export class ProxyController extends EventEmitter {
 		});
 	}
 	onProxyWorkerMessage(message: ProxyWorkerOutgoingRequestBody) {
+		console.dir(
+			"ProxyController.onProxyWorkerMessage " + JSON.stringify(message)
+		);
 		switch (message.type) {
 			case "previewTokenExpired":
 				this.emitPreviewTokenExpiredEvent(message.proxyData);
@@ -377,10 +384,14 @@ export class ProxyController extends EventEmitter {
 	) {
 		switch (message.method) {
 			case "Runtime.consoleAPICalled":
+				if (this._torndown) return;
+
 				logConsoleMessage(message.params);
 
 				break;
 			case "Runtime.exceptionThrown": {
+				if (this._torndown) return;
+
 				const stack = getSourceMappedStack(message.params.exceptionDetails);
 				logger.error(message.params.exceptionDetails.text, stack);
 				break;
@@ -402,6 +413,8 @@ export class ProxyController extends EventEmitter {
 
 				break;
 			case "debug-log":
+				if (this._torndown) break;
+
 				logger.debug("[InspectorProxyWorker]", ...message.args);
 
 				break;
@@ -441,18 +454,11 @@ export class ProxyController extends EventEmitter {
 		this.proxyWorker = undefined;
 		this.inspectorProxyWorker = undefined;
 
-		try {
-			const websocket = await this.inspectorProxyWorkerWebSocket;
-			websocket?.close();
-		} catch {}
-
-		try {
-			await proxyWorker?.ready;
-			await proxyWorker?.dispose(); // TODO: miniflare should await .ready
-		} finally {
-			await inspectorProxyWorker?.ready;
-			await inspectorProxyWorker?.dispose();
-		}
+		await Promise.all([
+			proxyWorker?.dispose(),
+			inspectorProxyWorker?.dispose(),
+			this.inspectorProxyWorkerWebSocket?.then((ws) => ws?.close()),
+		]);
 	}
 
 	// *********************

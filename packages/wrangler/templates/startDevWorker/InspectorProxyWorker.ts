@@ -66,10 +66,6 @@ export class InspectorProxyWorker implements DurableObject {
 
 	#handleRuntimeIncomingMessage = (event: MessageEvent) => {
 		assert(typeof event.data === "string");
-		assert(
-			this.#websockets.proxyController !== undefined,
-			"Expected proxy controller websocket"
-		);
 
 		const msg = JSON.parse(event.data) as
 			| DevToolsCommandResponses
@@ -267,14 +263,10 @@ export class InspectorProxyWorker implements DurableObject {
 	sendProxyControllerMessage(
 		message: string | InspectorProxyWorkerOutgoingWebsocketMessage
 	) {
-		assert(
-			this.#websockets.proxyController,
-			"Expected this.#websockets.proxyController"
-		);
-
 		message = typeof message === "string" ? message : JSON.stringify(message);
 
-		this.#websockets.proxyController.send(message);
+		// if the proxyController websocket is disconnected, throw away the message
+		this.#websockets.proxyController?.send(message);
 	}
 	async sendProxyControllerRequest(
 		message: InspectorProxyWorkerOutgoingRequestBody
