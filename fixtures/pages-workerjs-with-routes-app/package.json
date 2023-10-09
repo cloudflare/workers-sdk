@@ -6,8 +6,8 @@
 	"scripts": {
 		"check:type": "tsc",
 		"dev": "npx wrangler pages dev public --port 8751",
-		"test": "npx vitest run --single-thread",
-		"test:ci": "npx vitest run --single-thread",
+		"test": "npx vitest run",
+		"test:ci": "npx vitest run",
 		"test:watch": "npx vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
