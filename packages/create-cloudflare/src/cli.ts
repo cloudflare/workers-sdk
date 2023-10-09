@@ -51,7 +51,7 @@ const isUpdateAvailable = async () => {
 // Spawn a separate process running the most recent version of c3
 export const runLatest = async () => {
 	const args = process.argv.slice(2);
-	await runCommand(`${npm} create cloudflare@latest ${args.join(" ")}`);
+	await runCommand(`${npm} create cloudflare@latest -- ${args.join(" ")}`);
 };
 
 // Entrypoint to c3
