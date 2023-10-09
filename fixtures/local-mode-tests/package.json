@@ -9,8 +9,8 @@
 	"main": "index.js",
 	"scripts": {
 		"check:type": "tsc",
-		"test": "npx vitest run",
-		"test:ci": "npx vitest run",
+		"test": "npx vitest run --single-thread",
+		"test:ci": "npx vitest run --single-thread",
 		"test:watch": "npx vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
