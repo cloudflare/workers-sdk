@@ -17,9 +17,10 @@ import type { RunnerConfig } from "./helpers";
 const TEST_TIMEOUT = 1000 * 60 * 3;
 
 type FrameworkTestConfig = RunnerConfig & {
-	timeout?: number;
 	expectResponseToContain: string;
 	testCommitMessage: boolean;
+	timeout?: number;
+	unsupportedPms?: string[];
 };
 
 describe.concurrent(`E2E: Web frameworks`, () => {
@@ -31,11 +32,12 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		},
 		docusaurus: {
 			expectResponseToContain: "Dinosaurs are cool",
+			unsupportedPms: ["bun"],
 			testCommitMessage: true,
 		},
 		gatsby: {
-			quarantine: true,
 			expectResponseToContain: "Gatsby!",
+			unsupportedPms: ["bun"],
 			promptHandlers: [
 				{
 					matcher: /Would you like to use a template\?/,
@@ -246,14 +248,22 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 	};
 
 	Object.keys(frameworkTests).forEach((framework) => {
-		const { quarantine, timeout, testCommitMessage } =
+		const { quarantine, timeout, testCommitMessage, unsupportedPms } =
 			frameworkTests[framework];
 
 		const quarantineModeMatch = isQuarantineMode() == (quarantine ?? false);
 
-		test.runIf(
-			frameworkToTest ? frameworkToTest === framework : quarantineModeMatch
-		)(
+		// If the framework in question is being run in isolation, always run it.
+		// Otherwise, only run the test if it's configured `quarantine` value matches
+		// what is set in E2E_QUARANTINE
+		let shouldRun = frameworkToTest
+			? frameworkToTest === framework
+			: quarantineModeMatch;
+
+		// Skip if the package manager is unsupported
+		shouldRun &&= !unsupportedPms?.includes(process.env.TEST_PM ?? "");
+
+		test.runIf(shouldRun)(
 			framework,
 			async () => {
 				await runCliWithDeploy(framework, testCommitMessage);

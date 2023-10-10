@@ -29,6 +29,7 @@ export const detectPackageManager = () => {
 			case "bun":
 				name = "bun";
 				version = "1.0.0";
+				process.env.npm_config_user_agent = "bun";
 				break;
 			case "npm":
 				name = "npm";
