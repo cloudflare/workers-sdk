@@ -371,11 +371,11 @@ async function getGitVersion() {
 /**
  * Check whether git is available on the user's machine.
  */
-async function isGitInstalled() {
+export async function isGitInstalled() {
 	return (await getGitVersion()) !== null;
 }
 
-async function isGitConfigured() {
+export async function isGitConfigured() {
 	try {
 		const userName = await runCommand("git config user.name", {
 			useSpinner: false,
@@ -383,7 +383,7 @@ async function isGitConfigured() {
 		});
 		if (!userName) return false;
 
-		const email = await runCommand("git config user.name", {
+		const email = await runCommand("git config user.email", {
 			useSpinner: false,
 			silent: true,
 		});
