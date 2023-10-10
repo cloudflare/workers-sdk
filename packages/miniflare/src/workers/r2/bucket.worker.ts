@@ -184,6 +184,7 @@ function encodeResult(
 		headers: {
 			[R2Headers.METADATA_SIZE]: `${encoded.metadataSize}`,
 			"Content-Type": "application/json",
+			"Content-Length": `${encoded.size}`,
 		},
 	});
 }
