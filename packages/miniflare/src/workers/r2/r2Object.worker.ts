@@ -9,6 +9,7 @@ import {
 export interface EncodedMetadata {
 	metadataSize: number;
 	value: ReadableStream<Uint8Array>;
+	size: number;
 }
 
 export class InternalR2Object {
@@ -68,7 +69,7 @@ export class InternalR2Object {
 	encode(): EncodedMetadata {
 		const json = JSON.stringify(this.#rawProperties());
 		const blob = new Blob([json]);
-		return { metadataSize: blob.size, value: blob.stream() };
+		return { metadataSize: blob.size, value: blob.stream(), size: blob.size };
 	}
 
 	static encodeMultiple(objects: InternalR2Objects): EncodedMetadata {
@@ -77,7 +78,7 @@ export class InternalR2Object {
 			objects: objects.objects.map((o) => o.#rawProperties()),
 		});
 		const blob = new Blob([json]);
-		return { metadataSize: blob.size, value: blob.stream() };
+		return { metadataSize: blob.size, value: blob.stream(), size: blob.size };
 	}
 }
 
@@ -92,13 +93,15 @@ export class InternalR2ObjectBody extends InternalR2Object {
 
 	encode(): EncodedMetadata {
 		const { metadataSize, value: metadata } = super.encode();
-		const identity = new IdentityTransformStream();
+		const size = this.range?.length ?? this.size;
+		const identity = new FixedLengthStream(size + metadataSize);
 		void metadata
 			.pipeTo(identity.writable, { preventClose: true })
 			.then(() => this.body.pipeTo(identity.writable));
 		return {
 			metadataSize: metadataSize,
 			value: identity.readable,
+			size,
 		};
 	}
 }
