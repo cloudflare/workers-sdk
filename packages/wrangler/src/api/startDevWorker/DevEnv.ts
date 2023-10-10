@@ -1,5 +1,5 @@
 import { EventEmitter } from "node:events";
-import { fetch, Request, RequestInit } from "miniflare";
+import { fetch, Request, type RequestInit } from "miniflare";
 // import { readFileSync } from "../../parse";
 import { BundlerController } from "./BundlerController";
 import { ConfigController } from "./ConfigController";

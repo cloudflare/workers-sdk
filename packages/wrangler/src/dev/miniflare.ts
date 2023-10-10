@@ -1,14 +1,7 @@
 import assert from "node:assert";
 import { realpathSync } from "node:fs";
 import path from "node:path";
-import {
-	Log,
-	LogLevel,
-	NoOpLog,
-	TypedEventTarget,
-	Mutex,
-	Miniflare,
-} from "miniflare";
+import { Log, LogLevel, TypedEventTarget, Mutex, Miniflare } from "miniflare";
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { withSourceURLs } from "../deployment-bundle/source-url";
 import { getHttpsOptions } from "../https-options";
