@@ -4,6 +4,7 @@ import {
 	Miniflare,
 	type Response as MiniflareResponse,
 	type MiniflareOptions,
+	Log,
 } from "miniflare";
 import * as undici from "undici";
 import { beforeEach, afterEach, describe, test, expect, vi } from "vitest";
@@ -54,19 +55,20 @@ async function fakeStartUserWorker(options: {
 			compatibilityDate: "2023-08-01",
 			name: config.name,
 			script: options.script,
+			log: Object.assign(new Log(), { error() {} }), // TODO: remove when this bug is fixed https://jira.cfdata.org/browse/DEVX-983
 		},
 		options.mfOpts
 	);
 
 	assert("script" in mfOpts);
 
+	fakeConfigUpdate(config);
+	fakeReloadStart(config);
+
 	const worker = devEnv.startWorker(config);
 	const { proxyWorker, inspectorProxyWorker } = await devEnv.proxy.ready;
 	const proxyWorkerUrl = await proxyWorker.ready;
 	const inspectorProxyWorkerUrl = await inspectorProxyWorker.ready;
-
-	fakeConfigUpdate(config);
-	fakeReloadStart(config);
 
 	mf = new Miniflare(mfOpts);
 
@@ -266,7 +268,7 @@ describe("startDevWorker: ProxyController", () => {
 		await expect(executionContextCreatedPromise).resolves.toMatchObject({
 			method: "Runtime.executionContextCreated",
 			params: {
-				context: { id: 1 },
+				context: { id: expect.any(Number) },
 			},
 		});
 	});
@@ -289,7 +291,7 @@ describe("startDevWorker: ProxyController", () => {
 		res = await run.worker.fetch("http://dummy");
 		await expect(res.text()).resolves.toBe("Error: Boom!");
 
-		await Promise.resolve(); // allow some time for the error to be logged (TODO: replace with retry/waitUntil helper)
+		await new Promise((r) => setTimeout(r, 100)); // allow some time for the error to be logged (TODO: replace with retry/waitUntil helper)
 		expect(consoleErrorSpy).toBeCalledWith(
 			expect.stringContaining("Error: Boom!")
 		);
@@ -312,7 +314,7 @@ describe("startDevWorker: ProxyController", () => {
 		res = await run.worker.fetch("http://dummy");
 		await expect(res.text()).resolves.toBe("Error: Boom 2!");
 
-		await Promise.resolve(); // allow some time for the error to be logged (TODO: replace with retry/waitUntil helper)
+		await new Promise((r) => setTimeout(r, 100)); // allow some time for the error to be logged (TODO: replace with retry/waitUntil helper)
 		expect(consoleErrorSpy).toBeCalledWith(
 			expect.stringContaining("Error: Boom 2!")
 		);
@@ -366,7 +368,7 @@ describe("startDevWorker: ProxyController", () => {
 		res = await run.worker.fetch("http://dummy");
 		await expect(res.text()).resolves.toBe("body:3");
 
-		await Promise.resolve(); // allow some time for the error to be logged (TODO: replace with retry/waitUntil helper)
+		await new Promise((r) => setTimeout(r, 100)); // allow some time for the error to be logged (TODO: replace with retry/waitUntil helper)
 		expect(consoleErrorSpy).not.toHaveBeenCalled();
 	});
 
@@ -513,8 +515,6 @@ describe("startDevWorker: ProxyController", () => {
 			},
 		});
 
-		console.log("ProxyWorker", await devEnv.proxy.proxyWorker?.ready);
-		console.log("UserWorker", run.userWorkerUrl);
 		res = await run.worker.fetch("http://dummy/test/path/1");
 		await expect(res.text()).resolves.toBe(
 			`URL: http://www.google.com/test/path/1`

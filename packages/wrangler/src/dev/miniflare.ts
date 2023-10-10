@@ -123,11 +123,12 @@ export class WranglerLog extends Log {
 		super.warn(message);
 	}
 
+	// TODO: remove this override when miniflare is fixed https://jira.cfdata.org/browse/DEVX-983
 	error(message: Error) {
 		try {
 			super.error(message);
 		} catch {
-			// TODO: miniflare shouldn't throw in logger.error
+			// miniflare shouldn't throw in logger.error
 			// for now, ignore errors from the logger
 		}
 	}

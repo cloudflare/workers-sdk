@@ -1,13 +1,3 @@
-/**
- * TODO:
- *  - build (Inspector)ProxyWorker.ts ahead of time
- *  - handle remote runtime errors (without crashing?!)
- *  - ~~enable request logging for ProxyWorker~~
- *  - disable request logging for User Worker
- *  - ~~add address binding output on initial Proxy Worker creation~~
- *  - hide proxyworker-internal requests by adding well-known pathnxame and filtering in Log subclass (see WranglerLog extends Log)
- */
-
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
@@ -507,6 +497,16 @@ export class ProxyControllerLogger extends WranglerLog {
 		// keep the ProxyWorker request logs if we're in debug mode
 		if (message.includes("/cdn-cgi/") && this.level !== LogLevel.DEBUG) return;
 		super.info(message);
+	}
+
+	// TODO: remove this override when miniflare is fixed https://jira.cfdata.org/browse/DEVX-983
+	error(message: Error) {
+		try {
+			super.error(message);
+		} catch {
+			// miniflare shouldn't throw in logger.error
+			// for now, ignore errors from the logger
+		}
 	}
 }
 
