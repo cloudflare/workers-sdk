@@ -15,11 +15,7 @@ import { getHttpsOptions } from "../../https-options";
 import { logger } from "../../logger";
 import { getSourceMappedStack } from "../../sourcemap";
 import { castErrorCause } from "./events";
-import {
-	assertNever,
-	createDeferredPromise,
-	type DeferredPromise,
-} from "./utils";
+import { assertNever, createDeferred, type DeferredPromise } from "./utils";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type {
 	BundleStartEvent,
@@ -41,7 +37,7 @@ import type { StartDevWorkerOptions } from "./types";
 import type { MiniflareOptions } from "miniflare";
 
 export class ProxyController extends EventEmitter {
-	public ready = createDeferredPromise<ReadyEvent>();
+	public ready = createDeferred<ReadyEvent>();
 
 	public proxyWorker?: Miniflare;
 	public inspectorProxyWorker?: Miniflare;
@@ -162,7 +158,7 @@ export class ProxyController extends EventEmitter {
 		if (proxyWorkerOptionsChanged || inspectorProxyWorkerOptionsChanged) {
 			// this creates a new .ready promise that will be resolved when both ProxyWorkers are ready
 			// it also respects any await-ers of the existing .ready promise
-			this.ready = createDeferredPromise<ReadyEvent>(this.ready);
+			this.ready = createDeferred<ReadyEvent>(this.ready);
 		}
 		if (proxyWorkerOptionsChanged) {
 			logger.debug("ProxyWorker miniflare options changed, reinstantiating...");
@@ -207,12 +203,12 @@ export class ProxyController extends EventEmitter {
 	async reconnectInspectorProxyWorker(): Promise<WebSocket | undefined> {
 		if (this._torndown) return;
 
-		const existingWebSocket = await this.inspectorProxyWorkerWebSocket;
+		const existingWebSocket = await this.inspectorProxyWorkerWebSocket?.promise;
 		if (existingWebSocket?.readyState === WebSocket.READY_STATE_OPEN) {
 			return existingWebSocket;
 		}
 
-		this.inspectorProxyWorkerWebSocket = createDeferredPromise<WebSocket>();
+		this.inspectorProxyWorkerWebSocket = createDeferred<WebSocket>();
 
 		let webSocket: WebSocket | null = null;
 
@@ -288,7 +284,7 @@ export class ProxyController extends EventEmitter {
 		if (this._torndown) return;
 
 		try {
-			const websocket = await this.inspectorProxyWorkerWebSocket;
+			const websocket = await this.inspectorProxyWorkerWebSocket?.promise;
 			assert(websocket);
 
 			if (websocket.readyState >= WebSocket.READY_STATE_CLOSING) {
@@ -447,7 +443,7 @@ export class ProxyController extends EventEmitter {
 		await Promise.all([
 			proxyWorker?.dispose(),
 			inspectorProxyWorker?.dispose(),
-			this.inspectorProxyWorkerWebSocket?.then((ws) => ws?.close()),
+			this.inspectorProxyWorkerWebSocket?.promise.then((ws) => ws?.close()),
 		]);
 	}
 

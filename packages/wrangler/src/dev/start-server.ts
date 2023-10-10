@@ -172,7 +172,7 @@ export async function startDevServer(
 			onReady: async (ip, port, proxyData) => {
 				// at this point (in the layers of onReady callbacks), we have devEnv in scope
 				// so rewrite the onReady params to be the ip/port of the ProxyWorker instead of the UserWorker
-				const { proxyWorker } = await devEnv.proxy.ready;
+				const { proxyWorker } = await devEnv.proxy.ready.promise;
 				const url = await proxyWorker.ready;
 				ip = url.hostname;
 				port = parseInt(url.port);
@@ -226,7 +226,7 @@ export async function startDevServer(
 			onReady: async (ip, port, proxyData) => {
 				// at this point (in the layers of onReady callbacks), we have devEnv in scope
 				// so rewrite the onReady params to be the ip/port of the ProxyWorker instead of the UserWorker
-				const { proxyWorker } = await devEnv.proxy.ready;
+				const { proxyWorker } = await devEnv.proxy.ready.promise;
 				const url = await proxyWorker.ready;
 				ip = url.hostname;
 				port = parseInt(url.port);

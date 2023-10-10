@@ -13,7 +13,7 @@ import {
 } from "../../src/api/startDevWorker/events";
 import {
 	assertNever,
-	createDeferredPromise,
+	createDeferred,
 	MaybePromise,
 	urlFromParts,
 } from "../../src/api/startDevWorker/utils";
@@ -58,7 +58,7 @@ export class InspectorProxyWorker implements DurableObject {
 		// IDE DevTools can read the filesystem and expect absolute paths.
 		devtoolsHasFileSystemAccess?: boolean;
 	} = {};
-	#runtimeWebSocketPromise = createDeferredPromise<WebSocket>();
+	#runtimeWebSocketDeferred = createDeferred<WebSocket>();
 
 	#proxyData?: ProxyData;
 
@@ -145,12 +145,9 @@ export class InspectorProxyWorker implements DurableObject {
 
 		this.sendDebugLog("reconnectRuntimeWebSocket");
 
-		const deferred = createDeferredPromise<WebSocket>();
-
-		// resolve with a promise so anything await-ing the old promise is now await-ing the new promise
-		this.#runtimeWebSocketPromise.resolve(deferred);
-		// if `#runtimeWebSocketPromise` was already resolved, .resolve() has no effect, so set the new promise for any new await-ers
-		this.#runtimeWebSocketPromise = deferred;
+		this.#runtimeWebSocketDeferred = createDeferred<WebSocket>(
+			this.#runtimeWebSocketDeferred
+		);
 
 		this.sendDebugLog("BEFORE new Websocket");
 		const runtime = new WebSocket(
@@ -219,7 +216,7 @@ export class InspectorProxyWorker implements DurableObject {
 				);
 			}, 10_000) as any;
 
-			deferred.resolve(runtime);
+			this.#runtimeWebSocketDeferred.resolve(runtime);
 		});
 	}
 
@@ -287,7 +284,7 @@ export class InspectorProxyWorker implements DurableObject {
 	}
 	async sendRuntimeMessage(
 		message: string | DevToolsCommandRequests,
-		runtime: MaybePromise<WebSocket> = this.#runtimeWebSocketPromise
+		runtime: MaybePromise<WebSocket> = this.#runtimeWebSocketDeferred.promise
 	) {
 		runtime = await runtime;
 		message = typeof message === "string" ? message : JSON.stringify(message);
@@ -384,7 +381,7 @@ export class InspectorProxyWorker implements DurableObject {
 		this.sendDebugLog("DEVTOOLS WEBCOCKET TRYING TO CONNECT");
 
 		// Delay devtools connection response until we've connected to the runtime inspector server
-		await this.#runtimeWebSocketPromise;
+		await this.#runtimeWebSocketDeferred.promise;
 
 		this.sendDebugLog("DEVTOOLS WEBCOCKET CAN NOW CONNECT");
 

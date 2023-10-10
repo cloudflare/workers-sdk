@@ -66,7 +66,8 @@ async function fakeStartUserWorker(options: {
 	fakeReloadStart(config);
 
 	const worker = devEnv.startWorker(config);
-	const { proxyWorker, inspectorProxyWorker } = await devEnv.proxy.ready;
+	const { proxyWorker, inspectorProxyWorker } = await devEnv.proxy.ready
+		.promise;
 	const proxyWorkerUrl = await proxyWorker.ready;
 	const inspectorProxyWorkerUrl = await inspectorProxyWorker.ready;
 

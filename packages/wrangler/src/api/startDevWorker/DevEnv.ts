@@ -111,7 +111,7 @@ export function createWorkerObject(
 ): DevWorker {
 	return {
 		get ready() {
-			return devEnv.proxy.ready.then(() => undefined);
+			return devEnv.proxy.ready.promise.then(() => undefined);
 		},
 		get config() {
 			return devEnv.config.config;
@@ -127,7 +127,7 @@ export function createWorkerObject(
 			return devEnv.config.updateOptions(options);
 		},
 		async fetch(...args) {
-			const { proxyWorker } = await devEnv.proxy.ready;
+			const { proxyWorker } = await devEnv.proxy.ready.promise;
 			// return proxyWorker.dispatchFetch(...args);
 			// ^ bug: Miniflare#dispatchFetch uses one HTTP/1.1 connection, preventing parallel requests (pause/play requests + buffered eyeball requests)
 			// workaround: use undici.fetch

@@ -6,7 +6,7 @@ import type {
 } from "../../src/api/startDevWorker/events";
 import {
 	DeferredPromise,
-	createDeferredPromise,
+	createDeferred,
 } from "../../src/api/startDevWorker/utils";
 
 interface Env {
@@ -52,12 +52,12 @@ export class ProxyWorker implements DurableObject {
 		}
 
 		// regular requests to be proxied
-		const promise = createDeferredPromise<Response>();
+		const deferred = createDeferred<Response>();
 
-		this.requestQueue.set(request, promise);
+		this.requestQueue.set(request, deferred);
 		this.processQueue();
 
-		return promise;
+		return deferred.promise;
 	}
 
 	handleLiveReloadWebSocket(request: Request) {
@@ -98,23 +98,23 @@ export class ProxyWorker implements DurableObject {
 		const { proxyData } = this; // destructuring is required to keep the type-narrowing (not undefined) in the .then callback and to ensure the same proxyData is used throughout each request
 		if (proxyData === undefined) return;
 
-		for (const [req, deferred] of this.requestQueue) {
-			this.requestQueue.delete(req);
+		for (const [request, deferredResponse] of this.requestQueue) {
+			this.requestQueue.delete(request);
 
-			const url = new URL(req.url);
-			const headers = new Headers(req.headers);
+			const url = new URL(request.url);
+			const headers = new Headers(request.headers);
 
 			// override url parts for proxying
 			Object.assign(url, proxyData.userWorkerUrl);
 
 			// set request.url in the UserWorker
 			// this will no longer disable miniflare's pretty error page in the UserWorker after https://github.com/cloudflare/miniflare/pull/689
-			headers.set("MF-Original-URL", req.url);
+			headers.set("MF-Original-URL", request.url);
 
 			// merge proxyData headers with the request headers
 			for (const [key, value] of Object.entries(proxyData.headers ?? {})) {
 				if (key.toLowerCase() === "cookie") {
-					const existing = req.headers.get("cookie") ?? "";
+					const existing = request.headers.get("cookie") ?? "";
 					headers.set("cookie", `${existing};${value}`);
 				} else {
 					headers.set(key, value);
@@ -123,13 +123,13 @@ export class ProxyWorker implements DurableObject {
 
 			// explicitly NOT await-ing this promise, we are in a loop and want to process the whole queue quickly
 			// TODO(consider): should we await just the fetch (not res.body) to ensure delivery order is preserved?
-			void fetch(url, new Request(req, { headers }))
+			void fetch(url, new Request(request, { headers }))
 				.then((res) => {
 					if (isHtmlResponse(res)) {
-						res = insertLiveReloadScript(req, res, this.env, proxyData);
+						res = insertLiveReloadScript(request, res, this.env, proxyData);
 					}
 
-					deferred.resolve(res);
+					deferredResponse.resolve(res);
 				})
 				.catch((error: Error) => {
 					// errors here are network errors or from response post-processing
@@ -145,7 +145,7 @@ export class ProxyWorker implements DurableObject {
 						},
 					});
 
-					deferred.reject(error);
+					deferredResponse.reject(error);
 				});
 		}
 	}
