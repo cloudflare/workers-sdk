@@ -1,4 +1,5 @@
 import { EventEmitter } from "node:events";
+import { fetch, Request, RequestInit } from "miniflare";
 // import { readFileSync } from "../../parse";
 import { BundlerController } from "./BundlerController";
 import { ConfigController } from "./ConfigController";
@@ -127,8 +128,18 @@ export function createWorkerObject(
 		},
 		async fetch(...args) {
 			const { proxyWorker } = await devEnv.proxy.ready;
+			// return proxyWorker.dispatchFetch(...args);
+			// ^ bug: Miniflare#dispatchFetch uses one HTTP/1.1 connection, preventing parallel requests (pause/play requests + buffered eyeball requests)
+			// workaround: use undici.fetch
+			const proxyWorkerUrl = await proxyWorker.ready;
+			const req = new Request(...args);
+			const url = new URL(req.url);
+			url.protocol = proxyWorkerUrl.protocol;
+			url.hostname = proxyWorkerUrl.hostname;
+			url.port = proxyWorkerUrl.port;
+			// /workaround
 
-			return proxyWorker.dispatchFetch(...args);
+			return fetch(url, req as RequestInit);
 		},
 		async queue(..._args) {
 			// const { worker } = await devEnv.proxy.ready;
