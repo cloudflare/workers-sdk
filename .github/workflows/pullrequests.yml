@@ -6,14 +6,10 @@ env:
   node-version: 16.14
 jobs:
   add-to-project:
-    if: ${{ github.repository_owner == 'cloudflare' }}
     name: Add PR to project
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/add-to-project@v0.3.0
-        with:
-          project-url: https://github.com/orgs/cloudflare/projects/1
-          github-token: ${{ secrets.GH_ACCESS_TOKEN }}
+      - run: curl -X POST https://devprod-status-bot.devprod.workers.dev/pr-project/${{ github.event.number }}
 
   check:
     name: "Checks"
