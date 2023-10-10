@@ -95,7 +95,7 @@ export class ProxyWorker implements DurableObject {
 	}
 
 	processQueue() {
-		const { proxyData } = this;
+		const { proxyData } = this; // destructuring is required to keep the type-narrowing (not undefined) in the .then callback and to ensure the same proxyData is used throughout each request
 		if (proxyData === undefined) return;
 
 		for (const [req, deferred] of this.requestQueue) {
