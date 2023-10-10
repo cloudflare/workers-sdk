@@ -378,12 +378,12 @@ export class InspectorProxyWorker implements DurableObject {
 
 	async #handleDevToolsWebSocketUpgradeRequest(req: Request) {
 		// DevTools attempting to connect
-		this.sendDebugLog("DEVTOOLS WEBCOCKET TRYING TO CONNECT");
+		this.sendDebugLog("DEVTOOLS WEBSOCKET TRYING TO CONNECT");
 
 		// Delay devtools connection response until we've connected to the runtime inspector server
 		await this.#runtimeWebSocketDeferred.promise;
 
-		this.sendDebugLog("DEVTOOLS WEBCOCKET CAN NOW CONNECT");
+		this.sendDebugLog("DEVTOOLS WEBSOCKET CAN NOW CONNECT");
 
 		assert(
 			req.headers.get("Upgrade") === "websocket",
@@ -421,7 +421,7 @@ export class InspectorProxyWorker implements DurableObject {
 				method: "Debugger.disable",
 			});
 
-			this.sendDebugLog("DEVTOOLS WEBCOCKET CONNECTED");
+			this.sendDebugLog("DEVTOOLS WEBSOCKET CONNECTED");
 
 			// Our patched DevTools are hosted on a `https://` URL. These cannot
 			// access `file://` URLs, meaning local source maps cannot be fetched.
