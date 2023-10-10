@@ -140,11 +140,13 @@ export class ProxyServer implements DurableObject {
 		// Get target to perform operations on
 		if (targetHeader === null) return new Response(null, { status: 400 });
 
-		// If this is a FREE operation, remove the target from the heap
+		// If this is a FREE operation, remove the target(s) from the heap
 		if (opHeader === ProxyOps.FREE) {
-			const targetAddress = parseInt(targetHeader);
-			assert(!Number.isNaN(targetAddress));
-			this.heap.delete(targetAddress);
+			for (const targetValue of targetHeader.split(",")) {
+				const targetAddress = parseInt(targetValue);
+				assert(!Number.isNaN(targetAddress));
+				this.heap.delete(targetAddress);
+			}
 			return new Response(null, { status: 204 });
 		}
 
