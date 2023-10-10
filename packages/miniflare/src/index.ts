@@ -14,6 +14,7 @@ import type {
 	CacheStorage,
 	D1Database,
 	DurableObjectNamespace,
+	Fetcher,
 	KVNamespace,
 	Queue,
 	R2Bucket,
@@ -1398,6 +1399,21 @@ export class Miniflare {
 		}
 
 		return bindings as Env;
+	}
+	async getWorker(workerName?: string): Promise<ReplaceWorkersTypes<Fetcher>> {
+		const proxyClient = await this._getProxyClient();
+
+		// Find worker by name, defaulting to entrypoint worker if none specified
+		const workerIndex = this.#findAndAssertWorkerIndex(workerName);
+		const workerOpts = this.#workerOpts[workerIndex];
+		workerName = workerOpts.core.name ?? "";
+
+		// Get a `Fetcher` to that worker (NOTE: the `ProxyServer` Durable Object
+		// shares its `env` with Miniflare's entry worker, so has access to routes)
+		const bindingName = CoreBindings.SERVICE_USER_ROUTE_PREFIX + workerName;
+		const fetcher = proxyClient.env[bindingName];
+		assert(fetcher !== undefined);
+		return fetcher as ReplaceWorkersTypes<Fetcher>;
 	}
 
 	async #getProxy<T>(

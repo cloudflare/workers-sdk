@@ -794,6 +794,112 @@ test("Miniflare: getBindings() returns all bindings", async (t) => {
 	};
 	t.throws(() => bindings.KV.get("key"), expectations);
 });
+test("Miniflare: getWorker() allows dispatching events directly", async (t) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: `
+    let lastScheduledController;
+    let lastQueueBatch;
+    export default {
+      async fetch(request, env, ctx) {
+        const { pathname } = new URL(request.url);
+        if (pathname === "/scheduled") {
+          return Response.json({
+            scheduledTime: lastScheduledController?.scheduledTime,
+            cron: lastScheduledController?.cron,
+          });
+        } else if (pathname === "/queue") {
+          return Response.json({
+            queue: lastQueueBatch.queue,
+            messages: lastQueueBatch.messages.map((message) => ({
+              id: message.id,
+              timestamp: message.timestamp.getTime(),
+              body: message.body,
+              bodyType: message.body.constructor.name,
+            })),
+          });
+        } else {
+          return new Response(null, { status: 404 });
+        }
+      },
+      async scheduled(controller, env, ctx) {
+        lastScheduledController = controller;
+        if (controller.cron === "* * * * *") controller.noRetry();
+      },
+      async queue(batch, env, ctx) {
+        lastQueueBatch = batch;
+        if (batch.queue === "needy") batch.retryAll();
+        for (const message of batch.messages) {
+          if (message.id === "perfect") message.ack();
+        }
+      }
+    }`,
+	});
+	t.teardown(() => mf.dispose());
+	const fetcher = await mf.getWorker();
+
+	// Check `Fetcher#scheduled()` (implicitly testing `Fetcher#fetch()`)
+	let scheduledResult = await fetcher.scheduled({
+		cron: "* * * * *",
+	});
+	t.deepEqual(scheduledResult, { outcome: "ok", noRetry: true });
+	scheduledResult = await fetcher.scheduled({
+		scheduledTime: new Date(1000),
+		cron: "30 * * * *",
+	});
+	t.deepEqual(scheduledResult, { outcome: "ok", noRetry: false });
+
+	let res = await fetcher.fetch("http://localhost/scheduled");
+	const scheduledController = await res.json();
+	t.deepEqual(scheduledController, {
+		scheduledTime: 1000,
+		cron: "30 * * * *",
+	});
+
+	// Check `Fetcher#queue()`
+	let queueResult = await fetcher.queue("needy", [
+		{ id: "a", timestamp: new Date(1000), body: "a" },
+		{ id: "b", timestamp: new Date(2000), body: { b: 1 } },
+	]);
+	t.deepEqual(queueResult, {
+		outcome: "ok",
+		retryAll: true,
+		ackAll: false,
+		explicitRetries: [],
+		explicitAcks: [],
+	});
+	queueResult = await fetcher.queue("queue", [
+		{ id: "c", timestamp: new Date(3000), body: new Uint8Array([1, 2, 3]) },
+		{ id: "perfect", timestamp: new Date(4000), body: new Date(5000) },
+	]);
+	t.deepEqual(queueResult, {
+		outcome: "ok",
+		retryAll: false,
+		ackAll: false,
+		explicitRetries: [],
+		explicitAcks: ["perfect"],
+	});
+
+	res = await fetcher.fetch("http://localhost/queue");
+	const queueBatch = await res.json();
+	t.deepEqual(queueBatch, {
+		queue: "queue",
+		messages: [
+			{
+				id: "c",
+				timestamp: 3000,
+				body: { 0: 1, 1: 2, 2: 3 },
+				bodyType: "Uint8Array",
+			},
+			{
+				id: "perfect",
+				timestamp: 4000,
+				body: "1970-01-01T00:00:05.000Z",
+				bodyType: "Date",
+			},
+		],
+	});
+});
 test("Miniflare: getBindings() and friends return bindings for different workers", async (t) => {
 	const mf = new Miniflare({
 		workers: [
@@ -802,7 +908,7 @@ test("Miniflare: getBindings() and friends return bindings for different workers
 				modules: true,
 				script: `
         export class DurableObject {}
-        export default { fetch() { return new Response(null, { status: 404 }); } }
+        export default { fetch() { return new Response("a"); } }
         `,
 				d1Databases: ["DB"],
 				durableObjects: { DO: "DurableObject" },
@@ -811,14 +917,14 @@ test("Miniflare: getBindings() and friends return bindings for different workers
 				// 2nd worker unnamed, to validate that not specifying a name when
 				// getting bindings gives the entrypoint, not the unnamed worker
 				script:
-					'addEventListener("fetch", (event) => event.respondWith(new Response(null, { status: 404 })));',
+					'addEventListener("fetch", (event) => event.respondWith(new Response("unnamed")));',
 				kvNamespaces: ["KV"],
 				queueProducers: ["QUEUE"],
 			},
 			{
 				name: "b",
 				script:
-					'addEventListener("fetch", (event) => event.respondWith(new Response(null, { status: 404 })));',
+					'addEventListener("fetch", (event) => event.respondWith(new Response("b")));',
 				r2Buckets: ["BUCKET"],
 			},
 		],
@@ -833,6 +939,18 @@ test("Miniflare: getBindings() and friends return bindings for different workers
 	bindings = await mf.getBindings("b");
 	t.deepEqual(Object.keys(bindings), ["BUCKET"]);
 	await t.throwsAsync(() => mf.getBindings("c"), {
+		instanceOf: TypeError,
+		message: '"c" worker not found',
+	});
+
+	// Check `getWorker()`
+	let fetcher = await mf.getWorker();
+	t.is(await (await fetcher.fetch("http://localhost")).text(), "a");
+	fetcher = await mf.getWorker("");
+	t.is(await (await fetcher.fetch("http://localhost")).text(), "unnamed");
+	fetcher = await mf.getWorker("b");
+	t.is(await (await fetcher.fetch("http://localhost")).text(), "b");
+	await t.throwsAsync(() => mf.getWorker("c"), {
 		instanceOf: TypeError,
 		message: '"c" worker not found',
 	});
