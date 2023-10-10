@@ -598,6 +598,18 @@ defined at the top-level.
   bindings, for all bindings in the Worker with the specified `workerName`. If
   `workerName` is not specified, defaults to the entrypoint Worker.
 
+- `getWorker(workerName?: string): Promise<Fetcher>`
+
+  Returns a `Promise` that resolves with a
+  [`Fetcher`](https://workers-types.pages.dev/experimental/#Fetcher) pointing to
+  the specified `workerName`. If `workerName` is not specified, defaults to the
+  entrypoint Worker. Note this `Fetcher` uses the experimental
+  [`service_binding_extra_handlers`](https://github.com/cloudflare/workerd/blob/1d9158af7ca1389474982c76ace9e248320bec77/src/workerd/io/compatibility-date.capnp#L290-L297)
+  compatibility flag to expose
+  [`scheduled()`](https://workers-types.pages.dev/experimental/#Fetcher.scheduled)
+  and [`queue()`](https://workers-types.pages.dev/experimental/#Fetcher.queue)
+  methods for dispatching `scheduled` and `queue` events.
+
 - `getCaches(): Promise<CacheStorage>`
 
   Returns a `Promise` that resolves with the

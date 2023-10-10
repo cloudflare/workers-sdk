@@ -519,8 +519,7 @@ export function getGlobalServices({
 			name: CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY,
 			durableObjectNamespace: { className: "ProxyServer" },
 		},
-		// Add `proxyBindings` here, they'll be added to the `ProxyServer` `env`.
-		// TODO(someday): consider making the proxy server a separate worker
+		// Add `proxyBindings` here, they'll be added to the `ProxyServer` `env`
 		...proxyBindings,
 	];
 	if (sharedOptions.upstream !== undefined) {
