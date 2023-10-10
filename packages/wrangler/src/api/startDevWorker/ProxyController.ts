@@ -268,26 +268,15 @@ export class ProxyController extends EventEmitter {
 		message: ProxyWorkerIncomingRequestBody,
 		retries = 3
 	) {
-		console.log("sendMessageToProxyWorker", this._torndown);
 		if (this._torndown) return;
 		assert(this.proxyWorker, "proxyWorker should already be instantiated");
 
 		try {
-			console.log(
-				"sendMessageToProxyWorker before dispatchFetch",
-				message.type
-			);
-			await this.proxyWorker.dispatchFetch(
-				`http://dummy/cdn-cgi/ProxyWorker/${message.type}`,
-				{
-					headers: { Authorization: this.secret },
-					cf: { hostMetadata: message },
-				}
-			);
-			console.log("sendMessageToProxyWorker after dispatchFetch", message.type);
+			await this.proxyWorker.dispatchFetch("http://dummy/cdn-cgi/ProxyWorker", {
+				headers: { Authorization: this.secret },
+				cf: { hostMetadata: message },
+			});
 		} catch (cause) {
-			console.log("sendMessageToProxyWorker error");
-
 			const error = castErrorCause(cause);
 
 			if (retries > 0) {
@@ -342,24 +331,22 @@ export class ProxyController extends EventEmitter {
 	onConfigUpdate(data: ConfigUpdateEvent) {
 		this.latestConfig = data.config;
 		this.createProxyWorker();
-		console.log("onConfigUpdate");
+
 		void this.sendMessageToProxyWorker({ type: "pause" });
 	}
 	onBundleStart(data: BundleStartEvent) {
 		this.latestConfig = data.config;
 
-		console.log("onBundleStart");
 		void this.sendMessageToProxyWorker({ type: "pause" });
 	}
 	onReloadStart(data: ReloadStartEvent) {
 		this.latestConfig = data.config;
-		console.log("onReloadStart");
+
 		void this.sendMessageToProxyWorker({ type: "pause" });
 	}
 	onReloadComplete(data: ReloadCompleteEvent) {
 		this.latestConfig = data.config;
 		this.latestBundle = data.bundle;
-		console.log("onReloadComplete");
 
 		void this.sendMessageToProxyWorker({
 			type: "play",

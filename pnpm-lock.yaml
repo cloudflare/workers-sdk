@@ -424,24 +424,6 @@ importers:
         specifier: ~0.2.0
         version: 0.2.0
 
-  fixtures/startDevWorker:
-    devDependencies:
-      '@cloudflare/workers-tsconfig':
-        specifier: workspace:^
-        version: link:../../packages/workers-tsconfig
-      get-port:
-        specifier: ^7.0.0
-        version: 7.0.0
-      miniflare:
-        specifier: 3.20231002.1
-        version: 3.20231002.1(supports-color@9.2.2)
-      undici:
-        specifier: ^5.23.0
-        version: 5.23.0
-      wrangler:
-        specifier: workspace:*
-        version: link:../../packages/wrangler
-
   fixtures/wasm-app: {}
 
   fixtures/worker-app:
@@ -10174,11 +10156,6 @@ packages:
   /get-port@6.1.2:
     resolution: {integrity: sha512-BrGGraKm2uPqurfGVj/z97/zv8dPleC6x9JBNRTrDNtCkkRF4rPwrQXFgL7+I+q8QSdU4ntLQX2D7KIxSy8nGw==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
-    dev: true
-
-  /get-port@7.0.0:
-    resolution: {integrity: sha512-mDHFgApoQd+azgMdwylJrv2DX47ywGq1i5VFJE7fZ0dttNq3iQMfsU4IvEgBHojA3KqEudyu7Vq+oN8kNaNkWw==}
-    engines: {node: '>=16'}
     dev: true
 
   /get-source@2.0.12:

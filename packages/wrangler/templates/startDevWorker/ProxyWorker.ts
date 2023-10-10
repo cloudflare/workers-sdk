@@ -24,11 +24,7 @@ type Request = Parameters<
 
 const LIVE_RELOAD_PROTOCOL = "WRANGLER_PROXYWORKER_LIVE_RELOAD_PROTOCOL";
 export default {
-	async fetch(req, env) {
-		console.log("fetch", req.url);
-		// await new Promise((r) => setTimeout(r, 2000));
-		// console.log("after setTimeout", req.url);
-
+	fetch(req, env) {
 		const singleton = env.DURABLE_OBJECT.idFromName("");
 		const inspectorProxy = env.DURABLE_OBJECT.get(singleton);
 
