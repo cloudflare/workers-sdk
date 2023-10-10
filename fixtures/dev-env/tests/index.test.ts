@@ -8,9 +8,9 @@ import {
 import * as undici from "undici";
 import { beforeEach, afterEach, describe, test, expect, vi } from "vitest";
 import { unstable_DevEnv as DevEnv } from "wrangler";
-import type { ProxyData } from "../src/api";
-import type { StartDevWorkerOptions } from "../src/api/startDevWorker/types";
-import type { EsbuildBundle } from "../src/dev/use-esbuild";
+import type { ProxyData } from "wrangler/src/api";
+import type { StartDevWorkerOptions } from "wrangler/src/api/startDevWorker/types";
+import type { EsbuildBundle } from "wrangler/src/dev/use-esbuild";
 
 const fakeBundle = {} as EsbuildBundle;
 
@@ -28,8 +28,6 @@ beforeEach(() => {
 	ws = undefined;
 });
 afterEach(async () => {
-	// await new Promise((resolve) => setTimeout(resolve, 1000));
-
 	await devEnv?.teardown();
 	await mf?.dispose();
 	await ws?.close();
@@ -47,15 +45,11 @@ async function fakeStartUserWorker(options: {
 		...options.config,
 		name: options.name ?? "test-worker",
 		script: { contents: options.script },
-		dev: {
-			inspector: { port: await getPort() },
-			...options.config?.dev,
-		},
 	};
 	const mfOpts: MiniflareOptions = Object.assign(
 		{
 			port: 0,
-			inspectorPort: await getPort(), // TODO: get workerd to report the inspectorPort so we can set 0 and retrieve the actual port later
+			inspectorPort: 0,
 			modules: true,
 			compatibilityDate: "2023-08-01",
 			name: config.name,
@@ -67,16 +61,29 @@ async function fakeStartUserWorker(options: {
 	assert("script" in mfOpts);
 
 	const worker = devEnv.startWorker(config);
+	const { proxyWorker, inspectorProxyWorker } = await devEnv.proxy.ready;
+	const proxyWorkerUrl = await proxyWorker.ready;
+	const inspectorProxyWorkerUrl = await inspectorProxyWorker.ready;
 
 	fakeConfigUpdate(config);
 	fakeReloadStart(config);
 
 	mf = new Miniflare(mfOpts);
 
-	const url = await mf.ready;
-	fakeReloadComplete(config, mfOpts, url);
+	const userWorkerUrl = await mf.ready;
+	const userWorkerInspectorUrl = await mf.getInspectorURL();
+	fakeReloadComplete(config, mfOpts, userWorkerUrl, userWorkerInspectorUrl);
 
-	return { worker, mf, mfOpts, config, url };
+	return {
+		worker,
+		mf,
+		mfOpts,
+		config,
+		userWorkerUrl,
+		userWorkerInspectorUrl,
+		proxyWorkerUrl,
+		inspectorProxyWorkerUrl,
+	};
 }
 
 async function fakeUserWorkerChanges({
@@ -107,10 +114,17 @@ async function fakeUserWorkerChanges({
 
 	await mf.setOptions(mfOpts);
 
-	const url = await mf.ready;
-	fakeReloadComplete(config, mfOpts, url, 1000);
+	const userWorkerUrl = await mf.ready;
+	const userWorkerInspectorUrl = await mf.getInspectorURL();
+	fakeReloadComplete(
+		config,
+		mfOpts,
+		userWorkerUrl,
+		userWorkerInspectorUrl,
+		1000
+	);
 
-	return { mfOpts, config, mf, url };
+	return { mfOpts, config, mf, userWorkerUrl, userWorkerInspectorUrl };
 }
 
 function fireAndForgetFakeUserWorkerChanges(
@@ -140,19 +154,20 @@ function fakeReloadStart(config: StartDevWorkerOptions) {
 function fakeReloadComplete(
 	config: StartDevWorkerOptions,
 	mfOpts: MiniflareOptions,
-	mfUrl: URL,
+	userWorkerUrl: URL,
+	userWorkerInspectorUrl: URL,
 	delay = 100
 ) {
 	const proxyData: ProxyData = {
 		userWorkerUrl: {
-			protocol: mfUrl.protocol,
-			hostname: mfUrl.host,
-			port: mfUrl.port,
+			protocol: userWorkerUrl.protocol,
+			hostname: userWorkerUrl.host,
+			port: userWorkerUrl.port,
 		},
 		userWorkerInspectorUrl: {
-			protocol: "ws:",
-			hostname: "127.0.0.1",
-			port: String(mfOpts.inspectorPort),
+			protocol: userWorkerInspectorUrl.protocol,
+			hostname: userWorkerInspectorUrl.hostname,
+			port: userWorkerInspectorUrl.port,
 			pathname: `/core:user:${config.name}`,
 		},
 		headers: {},
@@ -207,18 +222,15 @@ describe("startDevWorker: ProxyController", () => {
 					}
 				}
 			`,
-			config: { dev: { inspector: { port: await getPort() } } },
 		});
 
 		await devEnv.proxy.ready;
-		res = await undici.fetch(
-			`http://127.0.0.1:${run.config.dev?.inspector?.port}/json`
-		);
+		res = await undici.fetch(`http://${run.inspectorProxyWorkerUrl.host}/json`);
 
 		await expect(res.json()).resolves.toBeInstanceOf(Array);
 
 		ws = new undici.WebSocket(
-			`ws://127.0.0.1:${run.config.dev?.inspector?.port}/core:user:${run.config.name}`
+			`ws://${run.inspectorProxyWorkerUrl.host}/core:user:${run.config.name}`
 		);
 		const openPromise = new Promise((resolve) => {
 			ws?.addEventListener("open", resolve);
@@ -390,7 +402,12 @@ describe("startDevWorker: ProxyController", () => {
 			},
 		});
 		fakeReloadStart(config2);
-		fakeReloadComplete(config2, run.mfOpts, run.url);
+		fakeReloadComplete(
+			config2,
+			run.mfOpts,
+			run.userWorkerUrl,
+			run.userWorkerInspectorUrl
+		);
 
 		const newPort = config2.dev?.server?.port;
 
@@ -497,7 +514,7 @@ describe("startDevWorker: ProxyController", () => {
 		});
 
 		console.log("ProxyWorker", await devEnv.proxy.proxyWorker?.ready);
-		console.log("UserWorker", run.url);
+		console.log("UserWorker", run.userWorkerUrl);
 		res = await run.worker.fetch("http://dummy/test/path/1");
 		await expect(res.text()).resolves.toBe(
 			`URL: http://www.google.com/test/path/1`
@@ -513,7 +530,13 @@ describe("startDevWorker: ProxyController", () => {
 				},
 			},
 		});
-		fakeReloadComplete(config2, run.mfOpts, run.url, 1000);
+		fakeReloadComplete(
+			config2,
+			run.mfOpts,
+			run.userWorkerUrl,
+			run.userWorkerInspectorUrl,
+			1000
+		);
 
 		res = await run.worker.fetch("http://dummy/test/path/2");
 		await expect(res.text()).resolves.toBe(
