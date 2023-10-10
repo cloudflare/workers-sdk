@@ -119,6 +119,14 @@ class ProxyClientBridge {
 	// as the references will be invalid, and a new object with the same address
 	// may be added to the "heap".
 	readonly #finalizationRegistry: FinalizationRegistry<NativeTargetHeldValue>;
+	// Garbage collection passes will free lots of objects at once. Rather than
+	// sending a `DELETE` request for each address, we batch finalisations within
+	// 100ms of each other into one request. This ensures we don't create *lots*
+	// of TCP connections to `workerd` in `dispatchFetch()` for all the concurrent
+	// requests.
+	readonly #finalizeBatch: NativeTargetHeldValue[] = [];
+	#finalizeBatchTimeout?: NodeJS.Timeout;
+
 	readonly sync = new SynchronousFetcher();
 
 	constructor(
@@ -132,26 +140,37 @@ class ProxyClientBridge {
 		return this.#version;
 	}
 
-	#finalizeProxy = async (held: NativeTargetHeldValue) => {
-		// Sanity check: make sure the proxy hasn't been poisoned. We should
-		// unregister all proxies from the finalisation registry when poisoning,
-		// but it doesn't hurt to be careful.
-		if (held.version !== this.#version) return;
-
+	#finalizeProxy = (held: NativeTargetHeldValue) => {
 		// Called when the `Proxy` with address `targetAddress` gets garbage
 		// collected. This removes the target from the `ProxyServer` "heap".
+		this.#finalizeBatch.push(held);
+		clearTimeout(this.#finalizeBatchTimeout);
+		this.#finalizeBatchTimeout = setTimeout(this.#finalizeProxyBatch, 100);
+	};
+
+	#finalizeProxyBatch = async () => {
+		const addresses: number[] = [];
+		for (const held of this.#finalizeBatch.splice(0)) {
+			// Sanity check: make sure the proxy hasn't been poisoned. We should
+			// unregister all proxies from the finalisation registry when poisoning,
+			// but it doesn't hurt to be careful.
+			if (held.version === this.#version) addresses.push(held.address);
+		}
+		// If there are no addresses to free, we don't need to send a request
+		if (addresses.length === 0) return;
 		try {
 			await this.dispatchFetch(this.url, {
 				method: "DELETE",
 				headers: {
 					[CoreHeaders.OP]: ProxyOps.FREE,
-					[CoreHeaders.OP_TARGET]: held.address.toString(),
+					[CoreHeaders.OP_TARGET]: addresses.join(","),
 				},
 			});
 		} catch {
 			// Ignore network errors when freeing. If this `dispatchFetch()` throws,
 			// it's likely the runtime has shutdown, so the entire "heap" has been
-			// destroyed anyway.
+			// destroyed anyway. There's a small chance of a memory leak here if this
+			// threw for another reason.
 		}
 	};
 
