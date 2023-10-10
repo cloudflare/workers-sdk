@@ -10,6 +10,11 @@ if (envCliToTest) {
 			targetFramework = framework;
 		}
 	}
+	if (!targetFramework) {
+		throw new Error(
+			`Specified cli doesn't exist in framework map: ${envCliToTest}`
+		);
+	}
 }
 
 /**

@@ -1,0 +1,42 @@
+name: "Run C3 E2E Tests"
+description: "Runs the C3 E2E tests on npm, pnpm, and bun"
+inputs:
+  package-manager:
+    description: "Which package manager to run the tests with"
+    required: true
+  quarantine:
+    description: "Whether to run the tests in quarantine mode"
+    required: false
+  framework:
+    description: "When specified, will only run tests for this framework"
+    required: false
+  accountId:
+    description: "The account id of the test account"
+    required: true
+  apiToken:
+    description: "The api token of the test account"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install Bun ${{ env.bun-version }}
+      uses: oven-sh/setup-bun@v1
+      with:
+        bun-version: ${{ env.bun-version }}
+
+    # Needed because gatsby requires git
+    - name: Configure Git
+      shell: bash
+      run: |
+        git config --global user.email wrangler@cloudflare.com
+        git config --global user.name 'Wrangler automated PR updater'
+
+    - name: E2E Tests
+      shell: bash
+      run: pnpm run --filter create-cloudflare test:e2e:${{ inputs.package-manager }}
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ inputs.apiToken }}
+        CLOUDFLARE_ACCOUNT_ID: ${{ inputs.accountId }}
+        E2E_QUARANTINE: ${{ inputs.quarantine }}
+        FRAMEWORK_CLI_TO_TEST: ${{ inputs.framework }}

@@ -1,0 +1,86 @@
+# Runs the C3 e2e tests on dependabot PRs
+
+name: C3 E2E Tests (Dependabot)
+
+on:
+  pull_request:
+    paths:
+      - packages/create-cloudflare/**
+
+env:
+  node-version: 18.17.1
+  bun-version: 1.0.3
+
+jobs:
+  get-dependabot-bumped-framework:
+    name: "Get bumped framework (dependabot-only)"
+    runs-on: ubuntu-latest
+    outputs:
+      bumped-framework-cli: ${{ steps.detect.outputs.result }}
+    if: |
+      github.event.pull_request.user.login == 'dependabot[bot]'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+          ref: ${{ github.head_ref }}
+      - name: Get PR description as string
+        id: get-pr-description
+        run: |
+          str=$(sed 's/`/\`/g' <<EOF
+            ${{ github.event.pull_request.body }}
+          EOF
+          )
+          echo 'result<<EOF' >> $GITHUB_OUTPUT
+          echo $str >> $GITHUB_OUTPUT
+          echo 'EOF' >> $GITHUB_OUTPUT
+      - name: detect-bumped-framework
+        id: detect
+        uses: actions/github-script@v6
+        with:
+          result-encoding: string
+          script: |
+            const json = require('./packages/create-cloudflare/src/frameworks/package.json')
+            const frameworkCliPackages = Object.values(json.frameworkCliMap);
+
+            const body = `${{ steps.get-pr-description.outputs.result }}`;
+
+            const semverRegexStr = '\\d+\\.\\d+\\.\\d+';
+
+            const frameworkCliRegex = new RegExp(
+              `(?:^|\\s+)Bumps\\s+\\[(${frameworkCliPackages.join(
+                '|'
+              )})\\]\\(.*?\\)\\s+from\\s+${semverRegexStr}\\s+to\\s+${semverRegexStr}`
+            );
+
+            const bumpedFrameworkCli = body.match(frameworkCliRegex)?.[1] ?? '';
+            return bumpedFrameworkCli;
+
+  # For dependabot versioning PRs we only want to run the e2es for the specifically bumped
+  # framework (this is both for optimization and in order to reduce unnecessary flakiness)
+  e2e-only-dependabot-bumped-framework:
+    needs: [get-dependabot-bumped-framework]
+    name: ${{ format('Dependabot E2E ({0})', matrix.pm) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        pm: [npm, pnpm, bun]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: E2E Tests
+        uses: ./.github/actions/run-c3-e2e
+        with:
+          package-manager: ${{ matrix.pm }}
+          framework: ${{ needs.get-dependabot-bumped-framework.outputs.bumped-framework-cli }}
+          accountId: ${{ secrets.C3_TEST_CLOUDFLARE_ACCOUNT_ID }}
+          apiToken: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}
