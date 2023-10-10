@@ -6,6 +6,7 @@ env:
   node-version: 16.14
 jobs:
   add-to-project:
+    if: ${{ github.repository_owner == 'cloudflare' }}
     name: Add PR to project
     runs-on: ubuntu-latest
     steps:
