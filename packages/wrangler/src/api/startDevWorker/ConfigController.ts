@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 // import { readFileSync } from "../../parse";
-import { throwNotImplementedError } from "./utils";
+import { notImplemented } from "./NotImplementedError";
 import type { ConfigUpdateEvent, ErrorEvent } from "./events";
 import type { StartDevWorkerOptions } from "./types";
 
@@ -8,10 +8,10 @@ export class ConfigController extends EventEmitter {
 	config?: StartDevWorkerOptions;
 
 	setOptions(_: StartDevWorkerOptions) {
-		throwNotImplementedError(this.setOptions.name, this.constructor.name);
+		notImplemented(this.setOptions.name, this.constructor.name);
 	}
 	updateOptions(_: Partial<StartDevWorkerOptions>) {
-		throwNotImplementedError(this.updateOptions.name, this.constructor.name);
+		notImplemented(this.updateOptions.name, this.constructor.name);
 	}
 
 	// ******************
@@ -19,7 +19,7 @@ export class ConfigController extends EventEmitter {
 	// ******************
 
 	async teardown() {
-		throwNotImplementedError(this.teardown.name, this.constructor.name);
+		notImplemented(this.teardown.name, this.constructor.name);
 	}
 
 	// *********************

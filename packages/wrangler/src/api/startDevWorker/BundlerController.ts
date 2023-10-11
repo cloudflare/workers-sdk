@@ -1,5 +1,5 @@
 import { Controller } from "./BaseController";
-import { throwNotImplementedError } from "./utils";
+import { notImplemented } from "./NotImplementedError";
 import type {
 	BundleCompleteEvent,
 	BundleStartEvent,
@@ -13,11 +13,11 @@ export class BundlerController extends Controller {
 	// ******************
 
 	onConfigUpdate(_: ConfigUpdateEvent) {
-		throwNotImplementedError(this.onConfigUpdate.name, this.constructor.name);
+		notImplemented(this.onConfigUpdate.name, this.constructor.name);
 	}
 
 	async teardown() {
-		throwNotImplementedError(this.teardown.name, this.constructor.name);
+		notImplemented(this.teardown.name, this.constructor.name);
 	}
 
 	// *********************

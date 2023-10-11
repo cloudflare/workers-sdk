@@ -1,6 +1,6 @@
 // import { readFileSync } from "../../parse";
 import { RuntimeController } from "./BaseController";
-import { throwNotImplementedError } from "./utils";
+import { notImplemented } from "./NotImplementedError";
 import type {
 	BundleCompleteEvent,
 	BundleStartEvent,
@@ -15,20 +15,17 @@ export class RemoteRuntimeController extends RuntimeController {
 	// ******************
 
 	onBundleStart(_: BundleStartEvent) {
-		throwNotImplementedError(this.onBundleStart.name, this.constructor.name);
+		notImplemented(this.onBundleStart.name, this.constructor.name);
 	}
 	onBundleComplete(_: BundleCompleteEvent) {
-		throwNotImplementedError(this.onBundleComplete.name, this.constructor.name);
+		notImplemented(this.onBundleComplete.name, this.constructor.name);
 	}
 	onPreviewTokenExpired(_: PreviewTokenExpiredEvent): void {
-		throwNotImplementedError(
-			this.onPreviewTokenExpired.name,
-			this.constructor.name
-		);
+		notImplemented(this.onPreviewTokenExpired.name, this.constructor.name);
 	}
 
 	async teardown() {
-		throwNotImplementedError(this.teardown.name, this.constructor.name);
+		notImplemented(this.teardown.name, this.constructor.name);
 	}
 
 	// *********************
