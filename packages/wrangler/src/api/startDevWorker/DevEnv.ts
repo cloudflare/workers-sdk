@@ -9,6 +9,7 @@ import { RemoteRuntimeController } from "./RemoteRuntimeController";
 import type { RuntimeController } from "./BaseController";
 import type { ErrorEvent } from "./events";
 import type { StartDevWorkerOptions, DevWorker } from "./types";
+import { logger } from "../../logger";
 
 /**
  * @internal
@@ -51,6 +52,10 @@ export class DevEnv extends EventEmitter {
 		[config, bundler, ...runtimes, proxy].forEach((controller) =>
 			controller.on("error", (event) => this.emitErrorEvent(event))
 		);
+
+		this.on("error", (event) => {
+			logger.error(event);
+		});
 
 		config.on("configUpdate", (event) => {
 			bundler.onConfigUpdate(event);
