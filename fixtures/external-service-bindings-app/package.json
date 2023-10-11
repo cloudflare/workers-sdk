@@ -24,6 +24,6 @@
 		]
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^3.14.1"
+		"@cloudflare/workers-types": "^4.20230724.0"
 	}
 }
