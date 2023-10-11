@@ -443,6 +443,11 @@ export class ProxyController extends EventEmitter {
 		await Promise.all([
 			proxyWorker?.dispose(),
 			inspectorProxyWorker?.dispose(),
+			this.inspectorProxyWorkerWebSocket?.promise
+				.then((ws) => ws.close())
+				.catch(() => {
+					/* ignore */
+				}),
 		]);
 	}
 
