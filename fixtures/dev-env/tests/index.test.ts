@@ -7,6 +7,7 @@ import {
 	Log,
 } from "miniflare";
 import * as undici from "undici";
+import { WebSocket } from "ws";
 import { beforeEach, afterEach, describe, test, expect, vi } from "vitest";
 import { unstable_DevEnv as DevEnv } from "wrangler";
 import type { ProxyData } from "wrangler/src/api";
@@ -18,7 +19,7 @@ const fakeBundle = {} as EsbuildBundle;
 let devEnv: DevEnv;
 let mf: Miniflare | undefined;
 let res: MiniflareResponse | undici.Response | undefined;
-let ws: undici.WebSocket | undefined;
+let ws: WebSocket | undefined;
 
 type OptionalKeys<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 
@@ -232,7 +233,7 @@ describe("startDevWorker: ProxyController", () => {
 
 		await expect(res.json()).resolves.toBeInstanceOf(Array);
 
-		ws = new undici.WebSocket(
+		ws = new WebSocket(
 			`ws://${run.inspectorProxyWorkerUrl.host}/core:user:${run.config.name}`
 		);
 		const openPromise = new Promise((resolve) => {
