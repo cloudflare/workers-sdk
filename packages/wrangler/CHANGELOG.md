@@ -1,5 +1,31 @@
 # wrangler
 
+## 3.12.0
+
+### Minor Changes
+
+- [#4071](https://github.com/cloudflare/workers-sdk/pull/4071) [`f880a009`](https://github.com/cloudflare/workers-sdk/commit/f880a009ad7c7ec26a85c51f577164522a307217) Thanks [@matthewdavidrodgers](https://github.com/matthewdavidrodgers)! - Support TailEvent messages in Tail sessions
+
+  When tailing a tail worker, messages previously had a null event property. Following https://github.com/cloudflare/workerd/pull/1248, these events have a valid event, specifying which scripts produced events that caused your tail worker to run.
+
+  As part of rolling this out, we're filtering out tail events in the internal tail infrastructure, so we control when these new messages are forward to tail sessions, and can merge this freely.
+
+  One idiosyncracy to note, however, is that tail workers always report an "OK" status, even if they run out of memory or throw. That is being tracked and worked on separately.
+
+* [#2397](https://github.com/cloudflare/workers-sdk/pull/2397) [`93833f04`](https://github.com/cloudflare/workers-sdk/commit/93833f0418443232bb29daf46559c8e1db754dde) Thanks [@a-robinson](https://github.com/a-robinson)! - feature: Support Queue consumer events in tail
+
+  So that it's less confusing when tailing a worker that consumes events from a Queue.
+
+### Patch Changes
+
+- [#2687](https://github.com/cloudflare/workers-sdk/pull/2687) [`3077016f`](https://github.com/cloudflare/workers-sdk/commit/3077016f6112754585c05b7952e456be44b9d8cd) Thanks [@jrf0110](https://github.com/jrf0110)! - Fixes large Pages projects failing to complete direct upload due to expiring JWTs
+
+  For projects which are slow to upload - either because of client bandwidth or large numbers of files and sizes - It's possible for the JWT to expire multiple times. Since our network request concurrency is set to 3, it's possible that each time the JWT expires we get 3 failed attempts. This can quickly exhaust our upload attempt count and cause the entire process to bail.
+
+  This change makes it such that jwt refreshes do not count as a failed upload attempt.
+
+* [#4069](https://github.com/cloudflare/workers-sdk/pull/4069) [`f4d28918`](https://github.com/cloudflare/workers-sdk/commit/f4d28918c566c72782db9dadae12b95a376d082c) Thanks [@a-robinson](https://github.com/a-robinson)! - Default new Hyperdrive configs for PostgreSQL databases to port 5432 if the port is not specified
+
 ## 3.11.0
 
 ### Minor Changes

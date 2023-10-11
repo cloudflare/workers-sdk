@@ -1,5 +1,15 @@
 # create-cloudflare
 
+## 2.4.1
+
+### Patch Changes
+
+- [#4125](https://github.com/cloudflare/workers-sdk/pull/4125) [`d0e8e380`](https://github.com/cloudflare/workers-sdk/commit/d0e8e38035b7d65f99834700426d95dd88d54085) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-qwik` from `1.2.12` to `1.2.13`
+
+* [#4152](https://github.com/cloudflare/workers-sdk/pull/4152) [`acf3b64b`](https://github.com/cloudflare/workers-sdk/commit/acf3b64b4757325ffb9298bfd5ff3cf0b87bcb19) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix incorrect service example in worker template toml files
+
+- [#4119](https://github.com/cloudflare/workers-sdk/pull/4119) [`64c3ec15`](https://github.com/cloudflare/workers-sdk/commit/64c3ec15f71271395982746b173ddb5c17a3de0b) Thanks [@jculvey](https://github.com/jculvey)! - Don't prompt the user to use git if `user.name` and `user.email` haven't been configured
+
 ## 2.4.0
 
 ### Minor Changes
