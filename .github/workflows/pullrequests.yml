@@ -9,7 +9,7 @@ jobs:
     name: Add PR to project
     runs-on: ubuntu-latest
     steps:
-      - run: curl -X POST https://devprod-status-bot.devprod.workers.dev/pr-project/${{ github.event.number }}
+      - run: curl -X POST https://devprod-status-bot.devprod.workers.dev/pr-project/workers-sdk/${{ github.event.number }}
 
   check:
     name: "Checks"
