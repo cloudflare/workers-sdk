@@ -3,9 +3,15 @@
 	"private": true,
 	"description": "A test for external service bindings",
 	"scripts": {
-		"dev": "npx concurrently -s first -k \"wrangler dev a/index.ts --local --port 8400\" \"wrangler dev b/index.ts --local --port 8401\" \"npx wrangler dev c/index.ts --local --port 8402\" \"cd d && npx wrangler pages dev public --port 8403 --service SERVICE=a\"",
-		"test": "npx jest --forceExit",
-		"test:ci": "npx jest --forceExit"
+		"mod-a-dev": "wrangler dev module-worker-a/index.ts --local --port 8500",
+		"mod-b-dev": "wrangler dev module-worker-b/index.ts --local --port 8501",
+		"ser-a-dev": "wrangler dev service-worker-a/index.ts --local --port 8502",
+		"pages-dev": "cd pages-functions-app && npx wrangler pages dev public --port 8503 --service MODULE_A_SERVICE=module-worker-a MODULE_B_SERVICE=module-worker-b SERVICE_A_SERVICE=service-worker-a",
+		"dev": "npx concurrently -s first -k 'npm run mod-a-dev' 'npm run mod-b-dev' 'npm run ser-a-dev' 'npm run pages-dev'",
+		"test": "npx vitest run",
+		"test:ci": "npx vitest run",
+		"test:watch": "npx vitest",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"jest": {
 		"restoreMocks": true,
@@ -24,6 +30,10 @@
 		]
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20230724.0"
+		"undici": "^5.23.0",
+		"concurrently": "^8.2.1",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "^4.20221111.1",
+		"wrangler": "workspace:*"
 	}
 }

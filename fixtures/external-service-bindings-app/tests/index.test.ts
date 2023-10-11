@@ -1,8 +1,8 @@
 import { spawn } from "child_process";
 import * as path from "path";
-import { fetch } from "undici";
 import type { ChildProcess } from "child_process";
-import type { Response } from "undici";
+import { describe, expect, it, beforeEach, afterEach } from "vitest";
+import { fetch, type Response } from "undici";
 
 const waitUntilReady = async (url: string): Promise<Response> => {
 	let response: Response | undefined = undefined;
@@ -20,7 +20,7 @@ const waitUntilReady = async (url: string): Promise<Response> => {
 
 const isWindows = process.platform === "win32";
 
-describe.skip("Pages Functions", () => {
+describe("Pages Functions", () => {
 	let wranglerProcess: ChildProcess;
 
 	beforeEach(() => {
@@ -50,17 +50,15 @@ describe.skip("Pages Functions", () => {
 		});
 	});
 
-	it("connects up a Service and fetches between Workers/Functions", async () => {
-		const responseA = await waitUntilReady("http://localhost:8400/");
-		const dataA = await responseA.text();
-		expect(dataA).toEqual('Hello from service "a"');
-		const responseB = await waitUntilReady("http://localhost:8401/");
-		const dataB = await responseB.text();
-		expect(dataB).toEqual('Hello from service "a"');
-		const responseC = await waitUntilReady("http://localhost:8402/");
-		const dataC = await responseC.text();
-		expect(dataC).toEqual('Hello from service "a"');
-		const dataD = await responseA.text();
-		expect(dataD).toEqual('Hello from service "a"');
+	it("connects up Workers (both module and service ones) and fetches from them", async () => {
+		const combinedResponse = await waitUntilReady("http://localhost:8503/");
+		const json = await combinedResponse.json();
+		expect(json).toMatchInlineSnapshot(`
+			{
+			  "moduleWorkerAResponse": "Hello from module worker a",
+			  "moduleWorkerBResponse": "Hello from module worker b and also: Hello from module worker a",
+			  "serviceWorkerAResponse": "Hello from service worker a",
+			}
+		`);
 	});
 });

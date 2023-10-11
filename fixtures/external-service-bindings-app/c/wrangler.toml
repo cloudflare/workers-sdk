@@ -1,5 +1,0 @@
-name = "c"
-
-services = [
-  { binding = "SERVICE", service = "a" }
-]
