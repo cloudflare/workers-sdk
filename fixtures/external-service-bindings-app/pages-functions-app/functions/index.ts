@@ -7,5 +7,4 @@ export const onRequest = async ({ env, request }) => {
 		moduleWorkerBResponse: await getTextFrom(env.MODULE_B_SERVICE),
 		serviceWorkerAResponse: await getTextFrom(env.SERVICE_A_SERVICE),
 	});
-	env.SERVICE.fetch(request);
 };
