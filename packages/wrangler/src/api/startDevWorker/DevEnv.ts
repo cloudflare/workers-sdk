@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 import { fetch, Request, type RequestInit } from "miniflare";
-// import { readFileSync } from "../../parse";
+import { logger } from "../../logger";
 import { BundlerController } from "./BundlerController";
 import { ConfigController } from "./ConfigController";
 import { LocalRuntimeController } from "./LocalRuntimeController";
@@ -9,7 +9,6 @@ import { RemoteRuntimeController } from "./RemoteRuntimeController";
 import type { RuntimeController } from "./BaseController";
 import type { ErrorEvent } from "./events";
 import type { StartDevWorkerOptions, DevWorker } from "./types";
-import { logger } from "../../logger";
 
 /**
  * @internal
