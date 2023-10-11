@@ -263,6 +263,8 @@ export class ProxyController extends EventEmitter {
 				cf: { hostMetadata: message },
 			});
 		} catch (cause) {
+			if (this._torndown) return;
+
 			const error = castErrorCause(cause);
 
 			if (retries > 0) {
