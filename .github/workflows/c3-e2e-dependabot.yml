@@ -54,7 +54,12 @@ jobs:
               )})\\]\\(.*?\\)\\s+from\\s+${semverRegexStr}\\s+to\\s+${semverRegexStr}`
             );
 
-            const bumpedFrameworkCli = body.match(frameworkCliRegex)?.[1] ?? '';
+            const bumpedFrameworkCli = body.match(frameworkCliRegex)?.[1];
+
+            if(!bumpedFrameworkCli) {
+              throw new Error('Error: Failed to determine framework cli to test');
+            }
+
             return bumpedFrameworkCli;
 
   # For dependabot versioning PRs we only want to run the e2es for the specifically bumped
