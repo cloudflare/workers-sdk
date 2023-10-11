@@ -232,7 +232,7 @@ function insertLiveReloadScript(
 							function initLiveReload() {
 								if (ws) return;
                 var origin = (location.protocol === "http:" ? "ws://" : "wss://") + location.host;
-								ws = new WebSocket(origin + "/cdn-cgi/live-reload", { protocol: "${LIVE_RELOAD_PROTOCOL}" });
+								ws = new WebSocket(origin + "/cdn-cgi/live-reload", "${LIVE_RELOAD_PROTOCOL}");
 								ws.onclose = recover;
 								ws.onerror = recover;
 								ws.onmessage = location.reload.bind(location);
