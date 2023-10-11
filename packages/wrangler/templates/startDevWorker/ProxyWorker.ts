@@ -195,7 +195,7 @@ function insertLiveReloadScript(
 
 	// if preview-token-expired response, errorDetails will contain "Invalid Workers Preview configuration"
 	let errorDetails = "";
-	htmlRewriter.on("#cf-error-derails", {
+	htmlRewriter.on("#cf-error-details", {
 		text(element) {
 			errorDetails += element.text;
 		},
