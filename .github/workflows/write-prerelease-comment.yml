@@ -95,7 +95,7 @@ jobs:
             ```
 
             > **Note**
-            > that these links will no longer work once [the GitHub Actions artifact expires](https://docs.github.com/en/organizations/managing-organization-settings/configuring-the-retention-period-for-github-actions-artifacts-and-logs-in-your-organization).
+            > These links will no longer work once [the GitHub Actions artifacts expire](https://docs.github.com/en/organizations/managing-organization-settings/configuring-the-retention-period-for-github-actions-artifacts-and-logs-in-your-organization).
 
             ---
 
