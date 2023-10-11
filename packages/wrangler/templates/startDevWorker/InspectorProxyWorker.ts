@@ -347,7 +347,7 @@ export class InspectorProxyWorker implements DurableObject {
 		if (url.pathname === "/json/version") {
 			return Response.json({
 				Browser: `wrangler/v${this.env.WRANGLER_VERSION}`,
-				// TODO: (someday): The DevTools protocol should match that of Edge Worker.
+				// TODO: (someday): The DevTools protocol should match that of workerd.
 				// This could be exposed by the preview API.
 				"Protocol-Version": "1.3",
 			});
@@ -503,7 +503,7 @@ export class InspectorProxyWorker implements DurableObject {
 			// the await it could've dropped in which case we can safely not respond
 			this.sendDevToolsMessage({
 				id: message.id,
-				// @ts-expect-error DevTools Protocol type is wrong -- result.resource.text property exists!
+				// @ts-expect-error DevTools Protocol type does not match our patched devtools -- result.resource.text was added
 				result: { resource: { success: true, text: response } },
 			});
 		}
