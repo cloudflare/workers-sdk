@@ -14,7 +14,7 @@ describe("multi-worker testing", () => {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let parentWorker: any;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	let workers: any[] = [];
+	const workers: any[] = [];
 
 	beforeAll(async () => {
 		childWorker = await unstable_dev(
