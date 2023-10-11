@@ -568,32 +568,31 @@ export const Handler = async ({
 				.map(([key, ...values]) => [key, values.join("=")])
 		),
 		services: services
-		.map((serviceBinding) => {
-			const { binding, service, environment } =
-				SERVICE_BINDING_REGEXP.exec(serviceBinding.toString())?.groups ||
-				{};
+			.map((serviceBinding) => {
+				const { binding, service, environment } =
+					SERVICE_BINDING_REGEXP.exec(serviceBinding.toString())?.groups || {};
 
-			if (!binding || !service) {
-				logger.warn(
-					"Could not parse Service binding:",
-					serviceBinding.toString()
-				);
-				return;
-			}
+				if (!binding || !service) {
+					logger.warn(
+						"Could not parse Service binding:",
+						serviceBinding.toString()
+					);
+					return;
+				}
 
-			// Envs get appended to the end of the name
-			let serviceName = service;
-			if (environment) {
-				serviceName = `${service}-${environment}`;
-			}
+				// Envs get appended to the end of the name
+				let serviceName = service;
+				if (environment) {
+					serviceName = `${service}-${environment}`;
+				}
 
-			return {
-				binding,
-				service: serviceName,
-				environment,
-			};
-		})
-		.filter(Boolean) as AdditionalDevProps["services"],
+				return {
+					binding,
+					service: serviceName,
+					environment,
+				};
+			})
+			.filter(Boolean) as AdditionalDevProps["services"],
 		kv: kvs
 			.map((kv) => {
 				const { binding, ref } =
