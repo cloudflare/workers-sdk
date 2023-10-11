@@ -14,6 +14,7 @@ import {
 import {
 	assertNever,
 	createDeferred,
+	DeferredPromise,
 	MaybePromise,
 	urlFromParts,
 } from "../../src/api/startDevWorker/utils";
@@ -49,178 +50,45 @@ function isDevToolsEvent<Method extends DevToolsEvents["method"]>(
 export class InspectorProxyWorker implements DurableObject {
 	constructor(_state: DurableObjectState, readonly env: Env) {}
 
-	#websockets: {
+	websockets: {
 		proxyController?: WebSocket;
 		runtime?: WebSocket;
 		devtools?: WebSocket;
-		// Browser DevTools cannot read the filesystem, instead they fetch via
-		// `Network.loadNetworkResource` messages.
+
+		// Browser DevTools cannot read the filesystem,
+		// instead they fetch via `Network.loadNetworkResource` messages.
 		// IDE DevTools can read the filesystem and expect absolute paths.
 		devtoolsHasFileSystemAccess?: boolean;
-	} = {};
-	#runtimeWebSocketDeferred = createDeferred<WebSocket>();
 
-	#proxyData?: ProxyData;
-
+		// We want to be able to delay devtools connection response
+		// until we've connected to the runtime inspector server
+		// so this deferred holds a promise to websockets.runtime
+		runtimeDeferred: DeferredPromise<WebSocket>;
+	} = {
+		runtimeDeferred: createDeferred<WebSocket>(),
+	};
+	proxyData?: ProxyData;
 	runtimeMessageBuffer: (DevToolsCommandResponses | DevToolsEvents)[] = [];
 
-	#handleRuntimeIncomingMessage = (event: MessageEvent) => {
-		assert(typeof event.data === "string");
-
-		const msg = JSON.parse(event.data) as
-			| DevToolsCommandResponses
-			| DevToolsEvents;
-		this.sendDebugLog("RUNTIME INCOMING MESSAGE", msg);
-
+	async fetch(req: Request) {
 		if (
-			isDevToolsEvent(msg, "Runtime.exceptionThrown") ||
-			isDevToolsEvent(msg, "Runtime.consoleAPICalled")
+			req.headers.get("Authorization") === this.env.PROXY_CONTROLLER_AUTH_SECRET
 		) {
-			this.sendProxyControllerMessage(event.data);
+			return this.handleProxyControllerRequest(req);
 		}
 
-		this.runtimeMessageBuffer.push(msg);
-		this.#tryDrainRuntimeMessageBuffer();
-	};
-
-	#handleRuntimeScriptParsed(msg: DevToolsEvent<"Debugger.scriptParsed">) {
-		if (
-			!this.#websockets.devtoolsHasFileSystemAccess &&
-			msg.params.sourceMapURL !== undefined
-		) {
-			const url = new URL(msg.params.sourceMapURL, msg.params.url);
-			if (url.protocol === "file:") {
-				msg.params.sourceMapURL = url.href.replace("file:", "wrangler-file:");
-			}
+		if (req.headers.get("Upgrade") === "websocket") {
+			return this.handleDevToolsWebSocketUpgradeRequest(req);
 		}
 
-		void this.sendDevToolsMessage(msg);
+		return this.handleDevToolsJsonRequest(req);
 	}
 
-	#tryDrainRuntimeMessageBuffer = () => {
-		// If we don't have a DevTools WebSocket, try again later
-		if (this.#websockets.devtools === undefined) return;
+	// ************************
+	// **  PROXY CONTROLLER  **
+	// ************************
 
-		// clear the buffer and replay each message to devtools
-		for (const msg of this.runtimeMessageBuffer.splice(0)) {
-			if (isDevToolsEvent(msg, "Debugger.scriptParsed")) {
-				this.#handleRuntimeScriptParsed(msg);
-			} else {
-				void this.sendDevToolsMessage(msg);
-			}
-		}
-	};
-
-	#runtimeMessageCounter = 1e8;
-	nextCounter() {
-		return ++this.#runtimeMessageCounter;
-	}
-	keepAliveInterval: number | null = null;
-	#handleProxyControllerIncomingMessage = (event: MessageEvent) => {
-		assert(
-			typeof event.data === "string",
-			"Expected event.data from proxy controller to be string"
-		);
-
-		const message: InspectorProxyWorkerIncomingWebSocketMessage = JSON.parse(
-			event.data
-		);
-
-		this.sendDebugLog("handleProxyControllerIncomingMessage", event.data);
-
-		switch (message.type) {
-			case "reloadComplete":
-				this.#proxyData = message.proxyData;
-
-				this.reconnectRuntimeWebSocket();
-
-				break;
-			default:
-				assertNever(message.type);
-		}
-	};
-
-	reconnectRuntimeWebSocket() {
-		assert(this.#proxyData, "Expected this.#proxyData to be defined");
-
-		this.sendDebugLog("reconnectRuntimeWebSocket");
-
-		this.#runtimeWebSocketDeferred = createDeferred<WebSocket>(
-			this.#runtimeWebSocketDeferred
-		);
-
-		this.sendDebugLog("BEFORE new Websocket");
-		const runtime = new WebSocket(
-			urlFromParts(this.#proxyData.userWorkerInspectorUrl).href
-		);
-		this.sendDebugLog("AFTER new Websocket");
-
-		this.#websockets.runtime?.close();
-		this.#websockets.runtime = runtime;
-
-		runtime.addEventListener("message", this.#handleRuntimeIncomingMessage);
-
-		runtime.addEventListener("close", (event) => {
-			this.sendDebugLog("RUNTIME WEBSOCKET CLOSED", event.code, event.reason);
-
-			// don't reconnect the runtime websocket
-			// if it closes unexpectedly (very rare or a case where reconnecting won't succeed anyway)
-			// wait for a new proxy-data message or manual restart
-
-			clearInterval(this.keepAliveInterval);
-
-			if (this.#websockets.runtime === runtime) {
-				this.#websockets.runtime = undefined;
-			}
-		});
-
-		runtime.addEventListener("error", (event) => {
-			clearInterval(this.keepAliveInterval);
-
-			if (this.#websockets.runtime === runtime) {
-				this.#websockets.runtime = undefined;
-			}
-
-			this.sendProxyControllerRequest({
-				type: "runtime-websocket-error",
-				error: {
-					message: event.message,
-					cause: event.error,
-				},
-			});
-
-			this.reconnectRuntimeWebSocket();
-		});
-
-		runtime.addEventListener("open", () => {
-			this.sendDebugLog("RUNTIME WEBSOCKET OPENED");
-
-			this.sendRuntimeMessage(
-				{ method: "Runtime.enable", id: this.nextCounter() },
-				runtime
-			);
-			this.sendRuntimeMessage(
-				{ method: "Debugger.enable", id: this.nextCounter() },
-				runtime
-			);
-			this.sendRuntimeMessage(
-				{ method: "Network.enable", id: this.nextCounter() },
-				runtime
-			);
-
-			clearInterval(this.keepAliveInterval);
-			this.keepAliveInterval = setInterval(() => {
-				this.sendRuntimeMessage(
-					{ method: "Runtime.getIsolateId", id: this.nextCounter() },
-					runtime
-				);
-			}, 10_000) as any;
-
-			this.#runtimeWebSocketDeferred.resolve(runtime);
-		});
-	}
-
-	#handleProxyControllerRequest(req: Request) {
+	handleProxyControllerRequest(req: Request) {
 		assert(
 			req.headers.get("Upgrade") === "websocket",
 			"Expected proxy controller data request to be WebSocket upgrade"
@@ -232,24 +100,24 @@ export class InspectorProxyWorker implements DurableObject {
 			// don't reconnect the proxyController websocket
 			// ProxyController can detect this event and reconnect itself
 
-			if (this.#websockets.proxyController === proxyController) {
-				this.#websockets.proxyController = undefined;
+			if (this.websockets.proxyController === proxyController) {
+				this.websockets.proxyController = undefined;
 			}
 		});
 		proxyController.addEventListener("error", () => {
 			// don't reconnect the proxyController websocket
 			// ProxyController can detect this event and reconnect itself
 
-			if (this.#websockets.proxyController === proxyController) {
-				this.#websockets.proxyController = undefined;
+			if (this.websockets.proxyController === proxyController) {
+				this.websockets.proxyController = undefined;
 			}
 		});
 		proxyController.addEventListener(
 			"message",
-			this.#handleProxyControllerIncomingMessage
+			this.handleProxyControllerIncomingMessage
 		);
 
-		this.#websockets.proxyController = proxyController;
+		this.websockets.proxyController = proxyController;
 
 		return new Response(null, {
 			status: 101,
@@ -263,8 +131,9 @@ export class InspectorProxyWorker implements DurableObject {
 		message = typeof message === "string" ? message : JSON.stringify(message);
 
 		// if the proxyController websocket is disconnected, throw away the message
-		this.#websockets.proxyController?.send(message);
+		this.websockets.proxyController?.send(message);
 	}
+
 	async sendProxyControllerRequest(
 		message: InspectorProxyWorkerOutgoingRequestBody
 	) {
@@ -282,9 +151,182 @@ export class InspectorProxyWorker implements DurableObject {
 			return undefined;
 		}
 	}
+
+	sendDebugLog: typeof console.debug = (...args) => {
+		this.sendProxyControllerRequest({ type: "debug-log", args });
+	};
+
+	// ***************
+	// **  RUNTIME  **
+	// ***************
+
+	handleRuntimeIncomingMessage = (event: MessageEvent) => {
+		assert(typeof event.data === "string");
+
+		const msg = JSON.parse(event.data) as
+			| DevToolsCommandResponses
+			| DevToolsEvents;
+		this.sendDebugLog("RUNTIME INCOMING MESSAGE", msg);
+
+		if (
+			isDevToolsEvent(msg, "Runtime.exceptionThrown") ||
+			isDevToolsEvent(msg, "Runtime.consoleAPICalled")
+		) {
+			this.sendProxyControllerMessage(event.data);
+		}
+
+		this.runtimeMessageBuffer.push(msg);
+		this.tryDrainRuntimeMessageBuffer();
+	};
+
+	handleRuntimeScriptParsed(msg: DevToolsEvent<"Debugger.scriptParsed">) {
+		if (
+			!this.websockets.devtoolsHasFileSystemAccess &&
+			msg.params.sourceMapURL !== undefined
+		) {
+			const url = new URL(msg.params.sourceMapURL, msg.params.url);
+			if (url.protocol === "file:") {
+				msg.params.sourceMapURL = url.href.replace("file:", "wrangler-file:");
+			}
+		}
+
+		void this.sendDevToolsMessage(msg);
+	}
+
+	tryDrainRuntimeMessageBuffer = () => {
+		// If we don't have a DevTools WebSocket, try again later
+		if (this.websockets.devtools === undefined) return;
+
+		// clear the buffer and replay each message to devtools
+		for (const msg of this.runtimeMessageBuffer.splice(0)) {
+			if (isDevToolsEvent(msg, "Debugger.scriptParsed")) {
+				this.handleRuntimeScriptParsed(msg);
+			} else {
+				void this.sendDevToolsMessage(msg);
+			}
+		}
+	};
+
+	handleProxyControllerIncomingMessage = (event: MessageEvent) => {
+		assert(
+			typeof event.data === "string",
+			"Expected event.data from proxy controller to be string"
+		);
+
+		const message: InspectorProxyWorkerIncomingWebSocketMessage = JSON.parse(
+			event.data
+		);
+
+		this.sendDebugLog("handleProxyControllerIncomingMessage", event.data);
+
+		switch (message.type) {
+			case "reloadComplete": {
+				this.proxyData = message.proxyData;
+
+				this.reconnectRuntimeWebSocket();
+
+				break;
+			}
+			default: {
+				assertNever(message.type);
+			}
+		}
+	};
+
+	runtimeKeepAliveInterval: number | null = null;
+	reconnectRuntimeWebSocket() {
+		assert(this.proxyData, "Expected this.proxyData to be defined");
+
+		this.sendDebugLog("reconnectRuntimeWebSocket");
+
+		this.websockets.runtimeDeferred = createDeferred<WebSocket>(
+			this.websockets.runtimeDeferred
+		);
+
+		const runtimeWebSocketUrl = urlFromParts(
+			this.proxyData.userWorkerInspectorUrl
+		).href;
+		this.sendDebugLog("NEW RUNTIME WEBSOCKET", runtimeWebSocketUrl);
+		const runtime = new WebSocket(runtimeWebSocketUrl);
+
+		this.websockets.runtime?.close();
+		this.websockets.runtime = runtime;
+
+		runtime.addEventListener("message", this.handleRuntimeIncomingMessage);
+
+		runtime.addEventListener("close", (event) => {
+			this.sendDebugLog("RUNTIME WEBSOCKET CLOSED", event.code, event.reason);
+
+			clearInterval(this.runtimeKeepAliveInterval);
+
+			if (this.websockets.runtime === runtime) {
+				this.websockets.runtime = undefined;
+			}
+
+			// don't reconnect the runtime websocket
+			// if it closes unexpectedly (very rare or a case where reconnecting won't succeed anyway)
+			// wait for a new proxy-data message or manual restart
+		});
+
+		runtime.addEventListener("error", (event) => {
+			clearInterval(this.runtimeKeepAliveInterval);
+
+			if (this.websockets.runtime === runtime) {
+				this.websockets.runtime = undefined;
+			}
+
+			this.sendProxyControllerRequest({
+				type: "runtime-websocket-error",
+				error: {
+					message: event.message,
+					cause: event.error,
+				},
+			});
+
+			// don't reconnect the runtime websocket
+			// if it closes unexpectedly (very rare or a case where reconnecting won't succeed anyway)
+			// wait for a new proxy-data message or manual restart
+		});
+
+		runtime.addEventListener("open", () => {
+			this.handleRuntimeWebSocketOpen(runtime);
+		});
+	}
+
+	#runtimeMessageCounter = 1e8;
+	nextCounter() {
+		return ++this.#runtimeMessageCounter;
+	}
+	handleRuntimeWebSocketOpen(runtime: WebSocket) {
+		this.sendDebugLog("RUNTIME WEBSOCKET OPENED");
+
+		this.sendRuntimeMessage(
+			{ method: "Runtime.enable", id: this.nextCounter() },
+			runtime
+		);
+		this.sendRuntimeMessage(
+			{ method: "Debugger.enable", id: this.nextCounter() },
+			runtime
+		);
+		this.sendRuntimeMessage(
+			{ method: "Network.enable", id: this.nextCounter() },
+			runtime
+		);
+
+		clearInterval(this.runtimeKeepAliveInterval);
+		this.runtimeKeepAliveInterval = setInterval(() => {
+			this.sendRuntimeMessage(
+				{ method: "Runtime.getIsolateId", id: this.nextCounter() },
+				runtime
+			);
+		}, 10_000) as any;
+
+		this.websockets.runtimeDeferred.resolve(runtime);
+	}
+
 	async sendRuntimeMessage(
 		message: string | DevToolsCommandRequests,
-		runtime: MaybePromise<WebSocket> = this.#runtimeWebSocketDeferred.promise
+		runtime: MaybePromise<WebSocket> = this.websockets.runtimeDeferred.promise
 	) {
 		runtime = await runtime;
 		message = typeof message === "string" ? message : JSON.stringify(message);
@@ -293,18 +335,13 @@ export class InspectorProxyWorker implements DurableObject {
 
 		runtime.send(message);
 	}
-	sendDevToolsMessage(
-		message: string | DevToolsCommandResponses | DevToolsEvents
-	) {
-		message = typeof message === "string" ? message : JSON.stringify(message);
 
-		this.sendDebugLog("SEND TO DEVTOOLS", message);
-
-		this.#websockets.devtools?.send(message);
-	}
+	// ****************
+	// **  DEVTOOLS  **
+	// ****************
 
 	#inspectorId = crypto.randomUUID();
-	async #handleDevToolsJsonRequest(req: Request) {
+	async handleDevToolsJsonRequest(req: Request) {
 		const url = new URL(req.url);
 
 		if (url.pathname === "/json/version") {
@@ -340,48 +377,12 @@ export class InspectorProxyWorker implements DurableObject {
 		return new Response(null, { status: 404 });
 	}
 
-	#handleDevToolsIncomingMessage = (event: MessageEvent) => {
-		assert(
-			typeof event.data === "string",
-			"Expected devtools incoming message to be of type string"
-		);
-
-		const message = JSON.parse(event.data) as DevToolsCommandRequests;
-		this.sendDebugLog("DEVTOOLS INCOMING MESSAGE", message);
-
-		if (message.method === "Network.loadNetworkResource") {
-			return void this.handleDevToolsLoadNetworkResource(message);
-		}
-
-		this.sendRuntimeMessage(JSON.stringify(message));
-	};
-	async handleDevToolsLoadNetworkResource(
-		message: DevToolsCommandRequest<"Network.loadNetworkResource">
-	) {
-		const response = await this.sendProxyControllerRequest({
-			type: "load-network-resource",
-			url: message.params.url,
-		});
-		if (response === undefined) {
-			this.sendRuntimeMessage(JSON.stringify(message));
-		} else {
-			// this.#websockets.devtools can be undefined here
-			// the incoming message implies we have a devtools connection, but after
-			// the await it could've dropped in which case we can safely not respond
-			this.sendDevToolsMessage({
-				id: message.id,
-				// @ts-expect-error DevTools Protocol type is wrong -- result.resource.text property exists!
-				result: { resource: { success: true, text: response } },
-			});
-		}
-	}
-
-	async #handleDevToolsWebSocketUpgradeRequest(req: Request) {
+	async handleDevToolsWebSocketUpgradeRequest(req: Request) {
 		// DevTools attempting to connect
 		this.sendDebugLog("DEVTOOLS WEBSOCKET TRYING TO CONNECT");
 
 		// Delay devtools connection response until we've connected to the runtime inspector server
-		await this.#runtimeWebSocketDeferred.promise;
+		await this.websockets.runtimeDeferred.promise;
 
 		this.sendDebugLog("DEVTOOLS WEBSOCKET CAN NOW CONNECT");
 
@@ -392,7 +393,7 @@ export class InspectorProxyWorker implements DurableObject {
 		const { 0: response, 1: devtools } = new WebSocketPair();
 		devtools.accept();
 
-		if (this.#websockets.devtools !== undefined) {
+		if (this.websockets.devtools !== undefined) {
 			/** We only want to have one active Devtools instance at a time. */
 			// TODO(consider): prioritise new websocket over previous
 			devtools.close(
@@ -400,15 +401,15 @@ export class InspectorProxyWorker implements DurableObject {
 				"Too many clients; only one can be connected at a time"
 			);
 		} else {
-			devtools.addEventListener("message", this.#handleDevToolsIncomingMessage);
+			devtools.addEventListener("message", this.handleDevToolsIncomingMessage);
 			devtools.addEventListener("close", () => {
-				if (this.#websockets.devtools === devtools) {
-					this.#websockets.devtools = undefined;
+				if (this.websockets.devtools === devtools) {
+					this.websockets.devtools = undefined;
 				}
 			});
 			devtools.addEventListener("error", (event) => {
-				if (this.#websockets.devtools === devtools) {
-					this.#websockets.devtools = undefined;
+				if (this.websockets.devtools === devtools) {
+					this.websockets.devtools = undefined;
 				}
 			});
 
@@ -432,7 +433,7 @@ export class InspectorProxyWorker implements DurableObject {
 			// want to enable this transformation when we detect hosted DevTools has
 			// connected. We do this by looking at the WebSocket handshake headers:
 			//
-			// # DevTools
+			//  DevTools
 			//
 			// Upgrade: websocket
 			// Host: localhost:9229
@@ -441,13 +442,13 @@ export class InspectorProxyWorker implements DurableObject {
 			// Origin: https://devtools.devprod.cloudflare.dev
 			// ...
 			//
-			// # VSCode
+			//  VSCode
 			//
 			// Upgrade: websocket
 			// Host: localhost
 			// ...
 			//
-			// # WebStorm
+			//  WebStorm
 			//
 			// Upgrade: websocket
 			// Host: localhost:9229
@@ -462,32 +463,59 @@ export class InspectorProxyWorker implements DurableObject {
 			const userAgent = req.headers.get("User-Agent") ?? "";
 			const hasFileSystemAccess = !/mozilla/i.test(userAgent);
 
-			this.#websockets.devtools = devtools;
-			this.#websockets.devtoolsHasFileSystemAccess = hasFileSystemAccess;
+			this.websockets.devtools = devtools;
+			this.websockets.devtoolsHasFileSystemAccess = hasFileSystemAccess;
 
-			this.#tryDrainRuntimeMessageBuffer();
+			this.tryDrainRuntimeMessageBuffer();
 		}
 
 		return new Response(null, { status: 101, webSocket: response });
 	}
 
-	async fetch(req: Request) {
-		if (isRequestFromProxyController(req, this.env)) {
-			return this.#handleProxyControllerRequest(req);
+	handleDevToolsIncomingMessage = (event: MessageEvent) => {
+		assert(
+			typeof event.data === "string",
+			"Expected devtools incoming message to be of type string"
+		);
+
+		const message = JSON.parse(event.data) as DevToolsCommandRequests;
+		this.sendDebugLog("DEVTOOLS INCOMING MESSAGE", message);
+
+		if (message.method === "Network.loadNetworkResource") {
+			return void this.handleDevToolsLoadNetworkResource(message);
 		}
 
-		if (req.headers.get("Upgrade") === "websocket") {
-			return this.#handleDevToolsWebSocketUpgradeRequest(req);
-		}
+		this.sendRuntimeMessage(JSON.stringify(message));
+	};
 
-		return this.#handleDevToolsJsonRequest(req);
+	async handleDevToolsLoadNetworkResource(
+		message: DevToolsCommandRequest<"Network.loadNetworkResource">
+	) {
+		const response = await this.sendProxyControllerRequest({
+			type: "load-network-resource",
+			url: message.params.url,
+		});
+		if (response === undefined) {
+			this.sendRuntimeMessage(JSON.stringify(message));
+		} else {
+			// this.websockets.devtools can be undefined here
+			// the incoming message implies we have a devtools connection, but after
+			// the await it could've dropped in which case we can safely not respond
+			this.sendDevToolsMessage({
+				id: message.id,
+				// @ts-expect-error DevTools Protocol type is wrong -- result.resource.text property exists!
+				result: { resource: { success: true, text: response } },
+			});
+		}
 	}
 
-	sendDebugLog: typeof console.debug = (...args) => {
-		this.sendProxyControllerRequest({ type: "debug-log", args });
-	};
-}
+	sendDevToolsMessage(
+		message: string | DevToolsCommandResponses | DevToolsEvents
+	) {
+		message = typeof message === "string" ? message : JSON.stringify(message);
 
-function isRequestFromProxyController(req: Request, env: Env): boolean {
-	return req.headers.get("Authorization") === env.PROXY_CONTROLLER_AUTH_SECRET;
+		this.sendDebugLog("SEND TO DEVTOOLS", message);
+
+		this.websockets.devtools?.send(message);
+	}
 }

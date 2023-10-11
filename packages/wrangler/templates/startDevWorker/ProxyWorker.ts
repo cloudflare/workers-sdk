@@ -122,7 +122,7 @@ export class ProxyWorker implements DurableObject {
 			}
 
 			// explicitly NOT await-ing this promise, we are in a loop and want to process the whole queue quickly
-			// TODO(consider): should we await just the fetch (not res.body) to ensure delivery order is preserved?
+			// if we decide to await, we should include a timeout (~100ms) in case the user worker has long-running/parellel requests
 			void fetch(url, new Request(request, { headers }))
 				.then((res) => {
 					if (isHtmlResponse(res)) {

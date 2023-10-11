@@ -345,9 +345,6 @@ export class ProxyController extends EventEmitter {
 		});
 	}
 	onProxyWorkerMessage(message: ProxyWorkerOutgoingRequestBody) {
-		console.dir(
-			"ProxyController.onProxyWorkerMessage " + JSON.stringify(message)
-		);
 		switch (message.type) {
 			case "previewTokenExpired":
 				this.emitPreviewTokenExpiredEvent(message.proxyData);
@@ -369,12 +366,13 @@ export class ProxyController extends EventEmitter {
 		message: InspectorProxyWorkerOutgoingWebsocketMessage
 	) {
 		switch (message.method) {
-			case "Runtime.consoleAPICalled":
+			case "Runtime.consoleAPICalled": {
 				if (this._torndown) return;
 
 				logConsoleMessage(message.params);
 
 				break;
+			}
 			case "Runtime.exceptionThrown": {
 				if (this._torndown) return;
 
@@ -382,8 +380,9 @@ export class ProxyController extends EventEmitter {
 				logger.error(message.params.exceptionDetails.text, stack);
 				break;
 			}
-			default:
+			default: {
 				assertNever(message);
+			}
 		}
 	}
 	async onInspectorProxyWorkerRequest(
@@ -391,6 +390,7 @@ export class ProxyController extends EventEmitter {
 	) {
 		switch (message.type) {
 			case "runtime-websocket-error":
+				// TODO: consider sending proxyData again to trigger the InspectorProxyWorker to reconnect to the runtime
 				logger.error(message.error);
 
 				break;
@@ -443,7 +443,6 @@ export class ProxyController extends EventEmitter {
 		await Promise.all([
 			proxyWorker?.dispose(),
 			inspectorProxyWorker?.dispose(),
-			this.inspectorProxyWorkerWebSocket?.promise.then((ws) => ws?.close()),
 		]);
 	}
 

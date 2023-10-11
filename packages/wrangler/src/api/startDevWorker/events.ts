@@ -3,51 +3,6 @@ import type { DevToolsEvent } from "./devtools";
 import type { StartDevWorkerOptions } from "./types";
 import type { Miniflare } from "miniflare";
 
-// export class ConfigUpdateEvent extends Event implements IConfigUpdateEvent {
-// 	constructor(public config: Config) {
-// 		super("configUpdate");
-// 	}
-// }
-// export class BundleStartEvent extends Event implements IBundleStartEvent {
-// 	constructor(public config: Config) {
-// 		super("bundleStart");
-// 	}
-// }
-
-// export class BundleCompleteEvent extends Event implements IBundleCompleteEvent {
-// 	constructor(public bundle: WorkerBundle, public config: Config) {
-// 		super("bundleComplete");
-// 	}
-// }
-// export class ReloadStartEvent extends Event implements IReloadStartEvent {
-// 	constructor(public config: Config) {
-// 		super("reloadStart");
-// 	}
-// }
-// export class ReloadCompleteEvent extends Event implements IReloadCompleteEvent {
-// 	constructor(
-// 		public url: URL,
-// 		public headers: Headers | undefined,
-// 		public bundle: WorkerBundle,
-// 		public config: Config
-// 	) {
-// 		super("reloadComplete");
-// 	}
-// }
-// export class PreviewTokenExpiredEvent
-// 	extends Event
-// 	implements IPreviewTokenExpiredEvent
-// {
-// 	constructor(
-// 		public url: URL,
-// 		public headers: Headers,
-// 		public bundle: WorkerBundle,
-// 		public config: Config
-// 	) {
-// 		super("previewTokenExpired");
-// 	}
-// }
-
 export type TeardownEvent = {
 	type: "teardown";
 };
@@ -138,6 +93,7 @@ export type InspectorProxyWorkerIncomingWebSocketMessage = {
 	proxyData: ProxyData;
 };
 export type InspectorProxyWorkerOutgoingWebsocketMessage =
+	// Relayed Chrome DevTools Protocol Messages
 	| DevToolsEvent<"Runtime.consoleAPICalled">
 	| DevToolsEvent<"Runtime.exceptionThrown">;
 
