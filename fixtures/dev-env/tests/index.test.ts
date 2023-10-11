@@ -165,7 +165,7 @@ function fakeReloadComplete(
 	const proxyData: ProxyData = {
 		userWorkerUrl: {
 			protocol: userWorkerUrl.protocol,
-			hostname: userWorkerUrl.host,
+			hostname: userWorkerUrl.hostname,
 			port: userWorkerUrl.port,
 		},
 		userWorkerInspectorUrl: {

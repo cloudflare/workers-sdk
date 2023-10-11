@@ -215,7 +215,7 @@ export class ProxyController extends EventEmitter {
 		try {
 			assert(this.inspectorProxyWorker);
 			({ webSocket } = await this.inspectorProxyWorker.dispatchFetch(
-				"http://dummy/cdn-cgi/InspectorProxyWorker",
+				"http://dummy/cdn-cgi/InspectorProxyWorker/websocket",
 				{ headers: { Authorization: this.secret, Upgrade: "websocket" } }
 			));
 		} catch (cause) {
@@ -258,10 +258,13 @@ export class ProxyController extends EventEmitter {
 		assert(this.proxyWorker, "proxyWorker should already be instantiated");
 
 		try {
-			await this.proxyWorker.dispatchFetch("http://dummy/cdn-cgi/ProxyWorker", {
-				headers: { Authorization: this.secret },
-				cf: { hostMetadata: message },
-			});
+			await this.proxyWorker.dispatchFetch(
+				`http://dummy/cdn-cgi/ProxyWorker/${message.type}`,
+				{
+					headers: { Authorization: this.secret },
+					cf: { hostMetadata: message },
+				}
+			);
 		} catch (cause) {
 			if (this._torndown) return;
 
