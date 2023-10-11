@@ -85,7 +85,7 @@ jobs:
 
             You can run this PR's `create-cloudflare` prerelease in your project with:
             ```sh
-            npx https://prerelease-registry.devprod.cloudflare.dev/workers-sdk/runs/${{ env.WORKFLOW_RUN_ID_FOR_WRANGLER }}/npm-create-cloudflare-${{ env.WORKFLOW_RUN_PR_FOR_WRANGLER }}
+            npx https://prerelease-registry.devprod.cloudflare.dev/workers-sdk/runs/${{ env.WORKFLOW_RUN_ID_FOR_WRANGLER }}/npm-package-create-cloudflare-${{ env.WORKFLOW_RUN_PR_FOR_WRANGLER }}
             ```
 
             ### `@cloudflare/pages-shared`
