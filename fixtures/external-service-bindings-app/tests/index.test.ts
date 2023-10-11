@@ -62,7 +62,7 @@ describe("Pages Functions", () => {
 		`);
 	});
 
-	it("respects the environments specified for the service bindings (and not connect if the env doesn't match)", async () => {
+	it("respects the environments specified for the service bindings (and doesn't connect if the env doesn't match)", async () => {
 		const combinedResponse = await waitUntilReady("http://localhost:8505/env");
 		const json = await combinedResponse.json();
 		expect(json).toMatchInlineSnapshot(`
