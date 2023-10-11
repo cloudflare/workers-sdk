@@ -208,7 +208,7 @@ export const Handler = async ({
 	do: durableObjects = [],
 	d1: d1s = [],
 	r2: r2s = [],
-	service: services = [],
+	service: requestedServices = [],
 	liveReload,
 	localProtocol,
 	persistTo,
@@ -554,6 +554,40 @@ export const Handler = async ({
 		}
 	}
 
+	const services = requestedServices
+		.map((serviceBinding) => {
+			const { binding, service, environment } =
+				SERVICE_BINDING_REGEXP.exec(serviceBinding.toString())?.groups || {};
+
+			if (!binding || !service) {
+				logger.warn(
+					"Could not parse Service binding:",
+					serviceBinding.toString()
+				);
+				return;
+			}
+
+			// Envs get appended to the end of the name
+			let serviceName = service;
+			if (environment) {
+				serviceName = `${service}-${environment}`;
+			}
+
+			return {
+				binding,
+				service: serviceName,
+				environment,
+			};
+		})
+		.filter(Boolean) as NonNullable<AdditionalDevProps["services"]>;
+
+	if (services.find(({ environment }) => !!environment)) {
+		// We haven't yet properly defined how environments of service bindings should
+		// work, so if the user is using an environment for any of their service
+		// bindings we warn them that they are experimental
+		logger.warn("Support for service binding environments is experimental.");
+	}
+
 	const { stop, waitUntilExit } = await unstable_dev(entrypoint, {
 		ip,
 		port,
@@ -567,35 +601,7 @@ export const Handler = async ({
 				.map((binding) => binding.toString().split("="))
 				.map(([key, ...values]) => [key, values.join("=")])
 		),
-		services: services
-			.map((serviceBinding) => {
-				const { binding, service, environment } =
-					SERVICE_BINDING_REGEXP.exec(serviceBinding.toString())?.groups || {};
-
-				if (!binding || !service) {
-					logger.warn(
-						"Could not parse Service binding:",
-						serviceBinding.toString()
-					);
-					return;
-				}
-
-				// Envs get appended to the end of the name
-				let serviceName = service;
-				if (environment) {
-					serviceName = `${service}-${environment}`;
-					logger.warn(
-						"Support for service binding environments is experimental."
-					);
-				}
-
-				return {
-					binding,
-					service: serviceName,
-					environment,
-				};
-			})
-			.filter(Boolean) as AdditionalDevProps["services"],
+		services,
 		kv: kvs
 			.map((kv) => {
 				const { binding, ref } =
