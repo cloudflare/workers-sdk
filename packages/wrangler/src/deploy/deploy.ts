@@ -649,6 +649,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					id: string | null;
 					etag: string | null;
 					pipeline_hash: string | null;
+					mutable_pipeline_id: string | null;
 					deployment_id: string | null;
 				}>(
 					workerUrl,
@@ -676,6 +677,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					if (result.etag) logger.log("Worker ETag: ", result.etag);
 					if (result.pipeline_hash)
 						logger.log("Worker PipelineHash: ", result.pipeline_hash);
+					if (result.mutable_pipeline_id)
+						logger.log(
+							"Worker Mutable PipelineID (Development ONLY!):",
+							result.mutable_pipeline_id
+						);
 				}
 			} catch (err) {
 				helpIfErrorIsSizeOrScriptStartup(err, dependencies);
