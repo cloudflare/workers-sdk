@@ -242,12 +242,26 @@ export const printSummary = async (ctx: PagesGeneratorContext) => {
 
 export const offerGit = async (ctx: PagesGeneratorContext) => {
 	const gitInstalled = await isGitInstalled();
-
 	if (!gitInstalled) {
 		// haven't prompted yet, if provided as --git arg
 		if (ctx.args.git) {
 			updateStatus(
 				"Couldn't find `git` installed on your machine. Continuing without git."
+			);
+		}
+
+		// override true (--git flag) and undefined (not prompted yet) to false (don't use git)
+		ctx.args.git = false;
+
+		return; // bail early
+	}
+
+	const gitConfigured = await isGitConfigured();
+	if (!gitConfigured) {
+		// haven't prompted yet, if provided as --git arg
+		if (ctx.args.git) {
+			updateStatus(
+				"Must configure `user.name` and user.email` to use git. Continuing without git."
 			);
 		}
 
@@ -357,8 +371,28 @@ async function getGitVersion() {
 /**
  * Check whether git is available on the user's machine.
  */
-async function isGitInstalled() {
+export async function isGitInstalled() {
 	return (await getGitVersion()) !== null;
+}
+
+export async function isGitConfigured() {
+	try {
+		const userName = await runCommand("git config user.name", {
+			useSpinner: false,
+			silent: true,
+		});
+		if (!userName) return false;
+
+		const email = await runCommand("git config user.email", {
+			useSpinner: false,
+			silent: true,
+		});
+		if (!email) return false;
+
+		return true;
+	} catch {
+		return false;
+	}
 }
 
 /**
