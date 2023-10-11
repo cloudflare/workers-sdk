@@ -3,6 +3,8 @@
 		"module-worker-a",
 		"module-worker-b",
 		"service-worker-a",
+		"module-worker-c",
+		"module-worker-d",
 		"pages-functions-app"
 	],
 	"compilerOptions": {

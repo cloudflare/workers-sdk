@@ -13,7 +13,7 @@
 		"test": "npx vitest run",
 		"test:ci": "npx vitest run",
 		"test:watch": "npx vitest",
-		"type:tests": "tsc -p ./tests/tsconfig.json"
+		"type:tests": "tsc --noEmit"
 	},
 	"jest": {
 		"restoreMocks": true,
