@@ -150,7 +150,7 @@ export function Options(yargs: CommonYargsArgv) {
 			},
 			service: {
 				type: "array",
-				description: "Service to bind (--service SERVICE=WORKER_NAME[ENVIRONMENT])",
+				description: "Service to bind (--service SERVICE=SCRIPT_NAME)",
 				alia: "s",
 			},
 			"live-reload": {
