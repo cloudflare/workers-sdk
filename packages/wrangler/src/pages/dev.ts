@@ -584,6 +584,9 @@ export const Handler = async ({
 				let serviceName = service;
 				if (environment) {
 					serviceName = `${service}-${environment}`;
+					logger.warn(
+						"Support for service binding environments is experimental."
+					);
 				}
 
 				return {
