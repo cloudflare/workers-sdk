@@ -80,15 +80,6 @@ export class ProxyController extends EventEmitter {
 				PROXY_CONTROLLER_AUTH_SECRET: this.secret,
 			},
 
-			// upsttream is how we tell miniflare what request.url should look like inside the worker
-			upstream:
-				this.latestConfig.dev?.urlOverrides &&
-				new URL(
-					`${this.latestConfig.dev.urlOverrides.secure ? "https" : "http"}://${
-						this.latestConfig.dev.urlOverrides.hostname
-					}`
-				).href,
-
 			host: this.latestConfig.dev?.server?.hostname,
 			port: this.latestConfig.dev?.server?.port,
 			https: this.latestConfig.dev?.server?.secure,

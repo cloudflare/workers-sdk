@@ -171,6 +171,10 @@ function useLocalWorker(props: LocalProps) {
 						port: props.runtimeInspectorPort.toString(),
 						pathname: `/core:user:${props.name ?? DEFAULT_WORKER_NAME}`,
 					},
+					userWorkerInnerUrlOverrides: {
+						protocol: props.localProtocol,
+						hostname: props.localUpstream,
+					},
 					headers: {}, // no headers needed in local-mode
 					liveReload: props.liveReload,
 				};

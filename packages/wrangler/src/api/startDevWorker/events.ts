@@ -132,6 +132,7 @@ export type UrlOriginAndPathnameParts = Pick<
 export type ProxyData = {
 	userWorkerUrl: UrlOriginParts;
 	userWorkerInspectorUrl: UrlOriginAndPathnameParts;
+	userWorkerInnerUrlOverrides: Partial<UrlOriginParts>;
 	headers: Record<string, string>;
 	liveReload?: boolean;
 };

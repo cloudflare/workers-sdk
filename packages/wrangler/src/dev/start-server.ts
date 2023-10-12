@@ -409,7 +409,10 @@ export async function startLocalServer(props: LocalProps) {
 					port: props.runtimeInspectorPort.toString(),
 					pathname: `/core:user:${props.name ?? DEFAULT_WORKER_NAME}`,
 				},
-
+				userWorkerInnerUrlOverrides: {
+					protocol: props.localProtocol,
+					hostname: props.localUpstream,
+				},
 				headers: {},
 				liveReload: props.liveReload,
 			};

@@ -174,6 +174,10 @@ function fakeReloadComplete(
 			port: userWorkerInspectorUrl.port,
 			pathname: `/core:user:${config.name}`,
 		},
+		userWorkerInnerUrlOverrides: {
+			protocol: config?.dev?.urlOverrides?.secure ? "https:" : "http:",
+			hostname: config?.dev?.urlOverrides?.hostname,
+		},
 		headers: {},
 		liveReload: config.dev?.liveReload,
 	};
