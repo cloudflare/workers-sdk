@@ -4,6 +4,7 @@ import { getBasePath } from "../paths";
 import { dedent } from "../utils/dedent";
 import type { DurableObjectBindings } from "../config/environment";
 import type { Entry } from "./entry";
+import type { CfScriptFormat } from "./worker";
 
 /**
  * A facade that acts as a "middleware loader".
@@ -18,6 +19,7 @@ export interface MiddlewareLoader {
 	// where `name` is the name of this middleware, and the module contains
 	// named exports for each property on the `config` record.
 	config?: Record<string, unknown>;
+	supports: CfScriptFormat[];
 }
 
 export async function applyMiddlewareLoaderFacade(
