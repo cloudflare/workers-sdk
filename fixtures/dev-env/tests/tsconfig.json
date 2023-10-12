@@ -4,6 +4,9 @@
 		"types": ["node"],
 		"jsx": "react"
 	},
-	"include": ["**/*.ts", "../src/*.d.ts"],
-	"exclude": []
+	"include": [
+		"**/*.ts",
+		"../../../node-types.d.ts",
+		"../../../packages/wrangler/src/*.d.ts"
+	]
 }
