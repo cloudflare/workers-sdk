@@ -10,7 +10,6 @@ module.exports = {
 	],
 	overrides: [
 		{
-			// TODO: add linting for `startDevWorker` workers in `templates/startDevWorker`
 			files: "src/**/*.ts",
 			excludedFiles: "*.test.ts",
 			parserOptions: {
