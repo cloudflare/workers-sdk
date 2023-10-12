@@ -180,6 +180,11 @@ export class InspectorProxyWorker implements DurableObject {
 	};
 
 	handleRuntimeScriptParsed(msg: DevToolsEvent<"Debugger.scriptParsed">) {
+		// If the devtools does not have filesystem access,
+		// rewrite the sourceMapURL to use a special scheme.
+		// This special scheme is used to indicate whether
+		// to intercept each loadNetworkResource message.
+
 		if (
 			!this.websockets.devtoolsHasFileSystemAccess &&
 			msg.params.sourceMapURL !== undefined
