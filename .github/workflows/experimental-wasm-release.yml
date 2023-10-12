@@ -16,7 +16,7 @@ jobs:
           fetch-depth: 0
       - uses: pnpm/action-setup@v2
         with:
-          version: 8
+          version: 8.8.0
       - name: Use Node.js 16.14
         uses: actions/setup-node@v3
         with:
