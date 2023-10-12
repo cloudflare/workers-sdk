@@ -145,7 +145,7 @@ export const recreateLogFolder = (suite: Suite) => {
 		force: true,
 	});
 
-	mkdirSync(getLogPath(suite));
+	mkdirSync(getLogPath(suite), { recursive: true });
 };
 
 const getLogPath = (suite: Suite) => {
@@ -155,7 +155,7 @@ const getLogPath = (suite: Suite) => {
 		? basename(file.name).replace(".test.ts", "")
 		: "unknown";
 
-	return join("./.e2e-logs/", suiteFilename);
+	return join("./.e2e-logs/", process.env.TEST_PM as string, suiteFilename);
 };
 
 const normalizeTestName = (ctx: TestContext) => {
