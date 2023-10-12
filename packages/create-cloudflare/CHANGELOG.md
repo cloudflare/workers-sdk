@@ -1,5 +1,15 @@
 # create-cloudflare
 
+## 2.5.0
+
+### Minor Changes
+
+- [#4136](https://github.com/cloudflare/workers-sdk/pull/4136) [`0f043a12`](https://github.com/cloudflare/workers-sdk/commit/0f043a126e5499bc1fcfd09782369264e4246317) Thanks [@jculvey](https://github.com/jculvey)! - Fixes an issue that was causing the auto-update check not to run
+
+### Patch Changes
+
+- [#4128](https://github.com/cloudflare/workers-sdk/pull/4128) [`696d7f29`](https://github.com/cloudflare/workers-sdk/commit/696d7f29c6c8cb516164de8da35400ac7bca0694) Thanks [@jculvey](https://github.com/jculvey)! - Verify that project names are valid for pages projects
+
 ## 2.4.1
 
 ### Patch Changes
