@@ -18,15 +18,10 @@ export class DevEnv extends EventEmitter {
 	bundler: BundlerController;
 	runtimes: RuntimeController[];
 	proxy: ProxyController;
-	workers = new Map<string, DevWorker>();
 
 	startWorker(options: StartDevWorkerOptions): DevWorker {
-		const worker = createWorkerObject(this, (newName) => {
-			this.workers.delete(options.name);
-			this.workers.set(newName, worker);
-		});
+		const worker = createWorkerObject(this);
 
-		this.workers.set(options.name, worker);
 		this.config.setOptions(options);
 
 		return worker;
@@ -109,10 +104,7 @@ export class DevEnv extends EventEmitter {
 	}
 }
 
-export function createWorkerObject(
-	devEnv: DevEnv,
-	onNameUpdate: (name: string) => void
-): DevWorker {
+export function createWorkerObject(devEnv: DevEnv): DevWorker {
 	return {
 		get ready() {
 			return devEnv.proxy.ready.promise.then(() => undefined);
@@ -121,13 +113,9 @@ export function createWorkerObject(
 			return devEnv.config.config;
 		},
 		setOptions(options) {
-			if (options.name) onNameUpdate(options.name);
-
 			return devEnv.config.setOptions(options);
 		},
 		updateOptions(options) {
-			if (options.name) onNameUpdate(options.name);
-
 			return devEnv.config.updateOptions(options);
 		},
 		async fetch(...args) {
