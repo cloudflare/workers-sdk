@@ -1,5 +1,22 @@
 # wrangler
 
+## 3.13.0
+
+### Minor Changes
+
+- [#4161](https://github.com/cloudflare/workers-sdk/pull/4161) [`403bc25c`](https://github.com/cloudflare/workers-sdk/commit/403bc25c4fa56a3ddf8a6af166d99919f565c497) Thanks [@RamIdeas](https://github.com/RamIdeas)! - Fix wrangler generated types to match runtime exports
+
+* [#3960](https://github.com/cloudflare/workers-sdk/pull/3960) [`c36b78b4`](https://github.com/cloudflare/workers-sdk/commit/c36b78b4109c05f47556972e66673f64ec0baa3b) Thanks [@RamIdeas](https://github.com/RamIdeas)! - Refactoring the internals of wrangler dev servers (including `wrangler dev`, `wrangler dev --remote` and `unstable_dev()`).
+
+  There are no changes required for developers to opt-in. Improvements include:
+
+  - fewer 'address in use' errors upon reloads
+  - upon config/source file changes, requests are buffered to guarantee the response is from the new version of the Worker
+
+### Patch Changes
+
+- [#3590](https://github.com/cloudflare/workers-sdk/pull/3590) [`f4ad634a`](https://github.com/cloudflare/workers-sdk/commit/f4ad634af86c49ade427af23e3853c656e30250a) Thanks [@penalosa](https://github.com/penalosa)! - fix: When a middleware is configured which doesn't support your Worker's script format, fail early with a helpful error message
+
 ## 3.12.0
 
 ### Minor Changes
