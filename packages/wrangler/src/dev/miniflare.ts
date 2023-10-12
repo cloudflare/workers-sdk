@@ -1,7 +1,14 @@
 import assert from "node:assert";
 import { realpathSync } from "node:fs";
 import path from "node:path";
-import { Log, LogLevel, TypedEventTarget, Mutex, Miniflare } from "miniflare";
+import {
+	Log,
+	LogLevel,
+	NoOpLog,
+	TypedEventTarget,
+	Mutex,
+	Miniflare,
+} from "miniflare";
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { withSourceURLs } from "../deployment-bundle/source-url";
 import { getHttpsOptions } from "../https-options";
@@ -104,7 +111,7 @@ export interface ConfigBundle {
 	serviceBindings: Record<string, (_request: Request) => Promise<Response>>;
 }
 
-export class WranglerLog extends Log {
+class WranglerLog extends Log {
 	#warnedCompatibilityDateFallback = false;
 
 	info(message: string) {
@@ -122,43 +129,21 @@ export class WranglerLog extends Log {
 		}
 		super.warn(message);
 	}
-
-	// TODO: remove this override when miniflare is fixed https://jira.cfdata.org/browse/DEVX-983
-	error(message: Error) {
-		try {
-			super.error(message);
-		} catch {
-			// miniflare shouldn't throw in logger.error
-			// for now, ignore errors from the logger
-		}
-	}
 }
 
-export const DEFAULT_WORKER_NAME = "worker";
 function getName(config: ConfigBundle) {
-	return config.name ?? DEFAULT_WORKER_NAME;
+	return config.name ?? "worker";
 }
 const IDENTIFIER_UNSAFE_REGEXP = /[^a-zA-Z0-9_$]/g;
 function getIdentifier(name: string) {
 	return name.replace(IDENTIFIER_UNSAFE_REGEXP, "_");
 }
 
-export function castLogLevel(level: LoggerLevel): LogLevel {
-	let key = level.toUpperCase() as Uppercase<LoggerLevel>;
-	if (key === "LOG") key = "INFO";
-
-	return LogLevel[key];
-}
-
 function buildLog(): Log {
-	let level = castLogLevel(logger.loggerLevel);
-
-	// if we're in DEBUG or VERBOSE mode, clamp logLevel to WARN -- ie. don't show request logs for user worker
-	if (level <= LogLevel.DEBUG) {
-		level = Math.min(level, LogLevel.WARN);
-	}
-
-	return new WranglerLog(level, { prefix: "wrangler-UserWorker" });
+	let level = logger.loggerLevel.toUpperCase() as Uppercase<LoggerLevel>;
+	if (level === "LOG") level = "INFO";
+	const logLevel = LogLevel[level];
+	return logLevel === LogLevel.NONE ? new NoOpLog() : new WranglerLog(logLevel);
 }
 
 async function buildSourceOptions(

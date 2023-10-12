@@ -7,7 +7,6 @@ import type { Rule } from "../config/environment";
 import type { CfModule } from "../deployment-bundle/worker";
 import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
-import type { ProxyData } from "./startDevWorker";
 import type { Json } from "miniflare";
 import type { RequestInit, Response, RequestInfo } from "undici";
 
@@ -70,7 +69,6 @@ export interface UnstableDevOptions {
 export interface UnstableDevWorker {
 	port: number;
 	address: string;
-	proxyData: ProxyData;
 	stop: () => Promise<void>;
 	fetch: (input?: RequestInfo, init?: RequestInit) => Promise<Response>;
 	waitUntilExit: () => Promise<void>;
@@ -124,11 +122,7 @@ export async function unstable_dev(
 		);
 	}
 
-	type ReadyInformation = {
-		address: string;
-		port: number;
-		proxyData: ProxyData;
-	};
+	type ReadyInformation = { address: string; port: number };
 	let readyResolve: (info: ReadyInformation) => void;
 	const readyPromise = new Promise<ReadyInformation>((resolve) => {
 		readyResolve = resolve;
@@ -154,8 +148,8 @@ export async function unstable_dev(
 		forceLocal,
 		liveReload,
 		showInteractiveDevSession,
-		onReady: (address, port, proxyData) => {
-			readyResolve({ address, port, proxyData });
+		onReady: (address, port) => {
+			readyResolve({ address, port });
 		},
 		config: options?.config,
 		env: options?.env,
@@ -202,11 +196,10 @@ export async function unstable_dev(
 		// in testMode, we can run multiple wranglers in parallel, but rebuilds might not work out of the box
 		// once the devServer is ready for requests, we resolve the ready promise
 		const devServer = await startApiDev(devOptions);
-		const { port, address, proxyData } = await readyPromise;
+		const { port, address } = await readyPromise;
 		return {
 			port,
 			address,
-			proxyData,
 			stop: devServer.stop,
 			fetch: async (input?: RequestInfo, init?: RequestInit) => {
 				return await fetch(
@@ -227,11 +220,10 @@ export async function unstable_dev(
 	} else {
 		//outside of test mode, rebuilds work fine, but only one instance of wrangler will work at a time
 		const devServer = await startDev(devOptions);
-		const { port, address, proxyData } = await readyPromise;
+		const { port, address } = await readyPromise;
 		return {
 			port,
 			address,
-			proxyData,
 			stop: devServer.stop,
 			fetch: async (input?: RequestInfo, init?: RequestInit) => {
 				return await fetch(

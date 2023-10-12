@@ -65,6 +65,7 @@ describe("Preview Worker", () => {
 
 		remote = await unstable_dev(path.join(tmpDir, "remote.js"), {
 			experimental: { disableExperimentalWarning: true },
+			port: 6756,
 		});
 	});
 
@@ -82,7 +83,7 @@ describe("Preview Worker", () => {
 	it("should obtain token from exchange_url", async () => {
 		const resp = await worker.fetch(
 			`https://preview.devprod.cloudflare.dev/exchange?exchange_url=${encodeURIComponent(
-				`http://127.0.0.1:${remote.port}/exchange`
+				"http://127.0.0.1:6756/exchange"
 			)}`,
 			{
 				method: "POST",
@@ -107,9 +108,9 @@ describe("Preview Worker", () => {
 			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=${encodeURIComponent(
 				token
 			)}&prewarm=${encodeURIComponent(
-				`http://127.0.0.1:${remote.port}/prewarm`
+				"http://127.0.0.1:6756/prewarm"
 			)}&remote=${encodeURIComponent(
-				`http://127.0.0.1:${remote.port}`
+				"http://127.0.0.1:6756"
 			)}&suffix=${encodeURIComponent("/hello?world")}`,
 			{
 				method: "GET",
@@ -151,9 +152,9 @@ describe("Preview Worker", () => {
 	it("should be redirected with cookie", async () => {
 		const resp = await worker.fetch(
 			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&prewarm=${encodeURIComponent(
-				`http://127.0.0.1:${remote.port}/prewarm`
+				"http://127.0.0.1:6756/prewarm"
 			)}&remote=${encodeURIComponent(
-				`http://127.0.0.1:${remote.port}`
+				"http://127.0.0.1:6756"
 			)}&suffix=${encodeURIComponent("/hello?world")}`,
 			{
 				method: "GET",
