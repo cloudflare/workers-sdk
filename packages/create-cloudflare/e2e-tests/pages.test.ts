@@ -10,7 +10,7 @@ import {
 	beforeEach,
 	beforeAll,
 } from "vitest";
-import { deleteProject } from "../scripts/e2eCleanup";
+import { deleteProject } from "../scripts/common";
 import { frameworkToTest } from "./frameworkToTest";
 import {
 	isQuarantineMode,
