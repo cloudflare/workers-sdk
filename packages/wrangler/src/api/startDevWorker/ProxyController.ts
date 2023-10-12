@@ -210,10 +210,13 @@ export class ProxyController extends EventEmitter {
 				{ headers: { Authorization: this.secret, Upgrade: "websocket" } }
 			));
 		} catch (cause) {
+			if (this._torndown) return;
+
 			const error = castErrorCause(cause);
 
 			this.inspectorProxyWorkerWebSocket?.reject(error);
 			this.emitErrorEvent("Could not connect to InspectorProxyWorker", error);
+			return;
 		}
 
 		assert(
@@ -244,7 +247,7 @@ export class ProxyController extends EventEmitter {
 	async sendMessageToProxyWorker(
 		message: ProxyWorkerIncomingRequestBody,
 		retries = 3
-	) {
+	): Promise<void> {
 		if (this._torndown) return;
 		assert(this.proxyWorker, "proxyWorker should already be instantiated");
 
@@ -262,7 +265,7 @@ export class ProxyController extends EventEmitter {
 			const error = castErrorCause(cause);
 
 			if (retries > 0) {
-				await this.sendMessageToProxyWorker(message, retries - 1);
+				return this.sendMessageToProxyWorker(message, retries - 1);
 			}
 
 			this.emitErrorEvent(
@@ -289,6 +292,8 @@ export class ProxyController extends EventEmitter {
 
 			websocket.send(JSON.stringify(message));
 		} catch (cause) {
+			if (this._torndown) return;
+
 			const error = castErrorCause(cause);
 
 			if (retries > 0) {
