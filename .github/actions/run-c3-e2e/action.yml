@@ -40,3 +40,9 @@ runs:
         CLOUDFLARE_ACCOUNT_ID: ${{ inputs.accountId }}
         E2E_QUARANTINE: ${{ inputs.quarantine }}
         FRAMEWORK_CLI_TO_TEST: ${{ inputs.framework }}
+
+    - name: Upload Logs
+      uses: actions/upload-artifact@v3
+      with:
+        name: e2e-logs
+        path: packages/create-cloudflare/.e2e-logs
