@@ -45,7 +45,7 @@ export const validateProjectDirectory = (relativePath: string) => {
 
 	// Ensure the name is valid per the pages schema
 	const projectName = basename(path);
-	const invalidChars = /^- | -$|[^a-z0-9-]/;
+	const invalidChars = /[^a-z0-9-]/;
 	const invalidStartEnd = /^-|-$/;
 
 	if (projectName.match(invalidStartEnd)) {
