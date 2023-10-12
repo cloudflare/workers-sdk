@@ -39,6 +39,12 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 			alias: "y",
 			type: "boolean",
 		})
+		.option("auto-update", {
+			type: "boolean",
+			default: C3_DEFAULTS.autoUpdate,
+			description:
+				"Automatically uses the latest version of `create-cloudflare`. Set --no-auto-update to disable",
+		})
 		.option("wrangler-defaults", { type: "boolean", hidden: true })
 		.version(version)
 		// note: we use strictOptions since `strict()` seems not to handle `positional`s correctly
