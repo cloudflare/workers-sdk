@@ -27,7 +27,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 		});
 
 		const runCli = async (template: string) => {
-			const projectPath = getPath(template);
+			const projectPath = getPath(template.toLowerCase());
 
 			const argv = [
 				projectPath,
