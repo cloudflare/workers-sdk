@@ -2,21 +2,30 @@ import { join } from "path";
 import { FrameworkMap } from "frameworks/index";
 import { readJSON } from "helpers/files";
 import { fetch } from "undici";
-import { describe, expect, test, afterEach, beforeEach } from "vitest";
+import {
+	describe,
+	expect,
+	test,
+	afterEach,
+	beforeEach,
+	beforeAll,
+} from "vitest";
 import { deleteProject } from "../scripts/e2eCleanup";
 import { frameworkToTest } from "./frameworkToTest";
 import {
 	isQuarantineMode,
 	keys,
+	recreateLogFolder,
 	runC3,
 	testDeploymentCommitMessage,
 	testProjectDir,
 } from "./helpers";
 import type { RunnerConfig } from "./helpers";
+import type { Suite, TestContext } from "vitest";
 
 const TEST_TIMEOUT = 1000 * 60 * 3;
 
-type FrameworkTestConfig = RunnerConfig & {
+type FrameworkTestConfig = Omit<RunnerConfig, "ctx"> & {
 	expectResponseToContain: string;
 	testCommitMessage: boolean;
 	timeout?: number;
@@ -139,6 +148,10 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 
 	const { getPath, getName, clean } = testProjectDir("pages");
 
+	beforeAll((ctx) => {
+		recreateLogFolder(ctx as Suite);
+	});
+
 	beforeEach((ctx) => {
 		const framework = ctx.meta.name;
 		clean(framework);
@@ -159,7 +172,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 
 	const runCli = async (
 		framework: string,
-		{ argv = [], promptHandlers = [], overrides }: RunnerConfig
+		{ ctx, argv = [], promptHandlers = [], overrides }: RunnerConfig
 	) => {
 		const projectPath = getPath(framework);
 
@@ -177,6 +190,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		args.push(...argv);
 
 		const { output } = await runC3({
+			ctx,
 			argv: args,
 			promptHandlers,
 			outputPrefix: `[${framework}]`,
@@ -215,12 +229,14 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 
 	const runCliWithDeploy = async (
 		framework: string,
+		ctx: TestContext,
 		testCommitMessage: boolean
 	) => {
 		const { argv, overrides, promptHandlers, expectResponseToContain } =
 			frameworkTests[framework];
 
 		const { output } = await runCli(framework, {
+			ctx,
 			overrides,
 			promptHandlers,
 			argv: [...(argv ?? [])],
@@ -270,14 +286,14 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 
 		test.runIf(shouldRun)(
 			framework,
-			async () => {
-				await runCliWithDeploy(framework, testCommitMessage);
+			async (ctx) => {
+				await runCliWithDeploy(framework, ctx, testCommitMessage);
 			},
 			{ retry: 3, timeout: timeout || TEST_TIMEOUT }
 		);
 	});
 
-	test.skip("Hono (wrangler defaults)", async () => {
-		await runCli("hono", { argv: ["--wrangler-defaults"] });
+	test.skip("Hono (wrangler defaults)", async (ctx) => {
+		await runCli("hono", { ctx, argv: ["--wrangler-defaults"] });
 	});
 });

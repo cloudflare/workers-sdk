@@ -1,15 +1,22 @@
-import { existsSync, mkdtempSync, realpathSync, rmSync } from "fs";
+import {
+	createWriteStream,
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	realpathSync,
+	rmSync,
+} from "fs";
 import crypto from "node:crypto";
 import { tmpdir } from "os";
-import { join } from "path";
+import { basename, join } from "path";
 import { spawn } from "cross-spawn";
+import { stripAnsi } from "helpers/cli";
 import { sleep } from "helpers/common";
-import { spinnerFrames } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
 import { fetch } from "undici";
 import { expect } from "vitest";
 import { version } from "../package.json";
-import type { SpinnerStyle } from "helpers/interactive";
+import type { Suite, TestContext } from "vitest";
 
 export const C3_E2E_PREFIX = "c3-e2e-";
 
@@ -36,12 +43,13 @@ export type RunnerConfig = {
 	argv?: string[];
 	outputPrefix?: string;
 	quarantine?: boolean;
+	ctx: TestContext;
 };
 
 export const runC3 = async ({
 	argv = [],
 	promptHandlers = [],
-	outputPrefix = "",
+	ctx,
 }: RunnerConfig) => {
 	const cmd = "node";
 	const args = ["./dist/cli.js", ...argv];
@@ -51,16 +59,20 @@ export const runC3 = async ({
 
 	const { name: pm } = detectPackageManager();
 
-	console.log(
-		`\x1b[44m${outputPrefix} Running C3 with command: \`${cmd} ${args.join(
-			" "
-		)}\` (using ${pm})\x1b[0m`
-	);
-
 	const stdout: string[] = [];
 	const stderr: string[] = [];
 
 	promptHandlers = promptHandlers && [...promptHandlers];
+
+	// The .ansi extension allows for editor extensions that format ansi terminal codes
+	const logFilename = `${normalizeTestName(ctx)}.ansi`;
+	const logStream = createWriteStream(
+		join(getLogPath(ctx.meta.suite), logFilename)
+	);
+
+	logStream.write(
+		`Running C3 with command: \`${cmd} ${args.join(" ")}\` (using ${pm})\n\n`
+	);
 
 	await new Promise((resolve, rejects) => {
 		proc.stdout.on("data", (data) => {
@@ -68,10 +80,12 @@ export const runC3 = async ({
 			const currentDialog = promptHandlers[0];
 
 			lines.forEach(async (line) => {
-				if (filterLine(line)) {
-					console.log(`${outputPrefix} ${line}`);
-				}
 				stdout.push(line);
+
+				const stripped = stripAnsi(line).trim();
+				if (stripped.length > 0) {
+					logStream.write(`${stripped}\n`);
+				}
 
 				if (currentDialog && currentDialog.matcher.test(line)) {
 					// Add a small sleep to avoid input race
@@ -94,10 +108,13 @@ export const runC3 = async ({
 		});
 
 		proc.stderr.on("data", (data) => {
+			logStream.write(data);
 			stderr.push(data);
 		});
 
 		proc.on("close", (code) => {
+			logStream.close();
+
 			if (code === 0) {
 				resolve(null);
 			} else {
@@ -109,16 +126,48 @@ export const runC3 = async ({
 		proc.on("error", (exitCode) => {
 			rejects({
 				exitCode,
-				output: condenseOutput(stdout).join("\n").trim(),
+				output: stdout.join("\n").trim(),
 				errors: stderr.join("\n").trim(),
 			});
 		});
 	});
 
 	return {
-		output: condenseOutput(stdout).join("\n").trim(),
+		output: stdout.join("\n").trim(),
 		errors: stderr.join("\n").trim(),
 	};
+};
+
+export const recreateLogFolder = (suite: Suite) => {
+	// Clean the old folder if exists (useful for dev)
+	rmSync(getLogPath(suite), {
+		recursive: true,
+		force: true,
+	});
+
+	mkdirSync(getLogPath(suite));
+};
+
+const getLogPath = (suite: Suite) => {
+	const { file } = suite;
+
+	const suiteFilename = file
+		? basename(file.name).replace(".test.ts", "")
+		: "unknown";
+
+	return join("./.e2e-logs/", suiteFilename);
+};
+
+const normalizeTestName = (ctx: TestContext) => {
+	const baseName = ctx.meta.name
+		.toLowerCase()
+		.replace(/\s+/g, "_") // replace any whitespace with `_`
+		.replace(/\W/g, ""); // strip special characters
+
+	// Ensure that each retry gets its own log file
+	const retryCount = ctx.meta.result?.retryCount ?? 0;
+	const suffix = retryCount > 0 ? `_${retryCount}` : "";
+	return baseName + suffix;
 };
 
 export const testProjectDir = (suite: string) => {
@@ -185,25 +234,6 @@ export const testDeploymentCommitMessage = async (
 	);
 	expect(projectLatestCommitMessage).toContain(`project name = ${projectName}`);
 	expect(projectLatestCommitMessage).toContain(`framework = ${framework}`);
-};
-
-// Removes lines from the output of c3 that aren't particularly useful for debugging tests
-export const condenseOutput = (lines: string[]) => {
-	return lines.filter(filterLine);
-};
-
-const filterLine = (line: string) => {
-	// Remove all lines with spinners
-	for (const spinnerType of Object.keys(spinnerFrames)) {
-		for (const frame of spinnerFrames[spinnerType as SpinnerStyle]) {
-			if (line.includes(frame)) return false;
-		}
-	}
-
-	// Remove empty lines
-	if (line.replace(/\s/g, "").length == 0) return false;
-
-	return true;
 };
 
 export const isQuarantineMode = () => {

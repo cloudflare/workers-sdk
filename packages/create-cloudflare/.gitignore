@@ -1,6 +1,7 @@
 node_modules
 /dist
 create-cloudflare-*.tgz
+/.e2e-logs/*
 
 .DS_Store
 
