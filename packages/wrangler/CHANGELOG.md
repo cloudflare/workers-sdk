@@ -1,5 +1,11 @@
 # wrangler
 
+## 3.13.1
+
+### Patch Changes
+
+- [#4171](https://github.com/cloudflare/workers-sdk/pull/4171) [`88f15f61`](https://github.com/cloudflare/workers-sdk/commit/88f15f61cad2a69c07e26203cc84ddb2da42deb3) Thanks [@penalosa](https://github.com/penalosa)! - patch: This release fixes some regressions related to running `wrangler dev` that were caused by internal refactoring of the dev server architecture ([#3960](https://github.com/cloudflare/workers-sdk/pull/3960)). The change has been reverted, and will be added back in a future release.
+
 ## 3.13.0
 
 ### Minor Changes
