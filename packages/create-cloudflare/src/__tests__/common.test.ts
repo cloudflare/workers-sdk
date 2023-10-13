@@ -42,7 +42,7 @@ describe("isGitConfigured", () => {
 });
 
 describe("validateProjectDirectory", () => {
-	const args = {};
+	let args = {};
 
 	test("allow valid project names", async () => {
 		expect(validateProjectDirectory("foo", args)).toBeUndefined();
@@ -62,5 +62,12 @@ describe("validateProjectDirectory", () => {
 	test("disallow existing, non-empty directories", async () => {
 		// Existing, non-empty directories should return an error
 		expect(validateProjectDirectory(".", args)).not.toBeUndefined();
+	});
+
+	test("Relax validation when --existing-script is passed", async () => {
+		args = { existingScript: "FooBar" };
+		expect(validateProjectDirectory("foobar-", args)).toBeUndefined();
+		expect(validateProjectDirectory("FooBar", args)).toBeUndefined();
+		expect(validateProjectDirectory("f".repeat(59), args)).toBeUndefined();
 	});
 });

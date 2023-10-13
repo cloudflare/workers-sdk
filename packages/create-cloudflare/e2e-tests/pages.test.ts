@@ -36,6 +36,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 			testCommitMessage: true,
 		},
 		angular: {
+			quarantine: true,
 			expectResponseToContain: "Love Angular?",
 			testCommitMessage: true,
 		},

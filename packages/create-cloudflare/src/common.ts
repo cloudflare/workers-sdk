@@ -55,11 +55,11 @@ export const validateProjectDirectory = (
 		const invalidStartEnd = /^-|-$/;
 
 		if (projectName.match(invalidStartEnd)) {
-			return `Project name cannot start or end with a dash.`;
+			return `Project names cannot start or end with a dash.`;
 		}
 
 		if (projectName.match(invalidChars)) {
-			return `Project name must only contain lowercase characters, numbers, and dashes.`;
+			return `Project names must only contain lowercase characters, numbers, and dashes.`;
 		}
 
 		if (projectName.length > 58) {
