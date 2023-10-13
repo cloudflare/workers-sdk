@@ -108,10 +108,10 @@ export interface ConfigBundle {
 export class WranglerLog extends Log {
 	#warnedCompatibilityDateFallback = false;
 
-	info(message: string) {
+	log(message: string) {
 		// Hide request logs for external Durable Objects proxy worker
 		if (message.includes(EXTERNAL_DURABLE_OBJECTS_WORKER_NAME)) return;
-		super.info(message);
+		super.log(message);
 	}
 
 	warn(message: string) {
