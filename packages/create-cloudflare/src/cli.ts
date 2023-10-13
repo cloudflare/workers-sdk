@@ -71,7 +71,7 @@ export const runCli = async (args: Partial<C3Args>) => {
 		defaultValue: C3_DEFAULTS.projectName,
 		label: "dir",
 		validate: (value) =>
-			validateProjectDirectory(String(value) || C3_DEFAULTS.projectName),
+			validateProjectDirectory(String(value) || C3_DEFAULTS.projectName, args),
 		format: (val) => `./${val}`,
 	});
 

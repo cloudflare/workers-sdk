@@ -33,8 +33,11 @@ import type { C3Args, PagesGeneratorContext } from "types";
 
 const { name, npm } = detectPackageManager();
 
-export const validateProjectDirectory = (relativePath: string) => {
-	// Validate that the directory is non-existant or empty
+export const validateProjectDirectory = (
+	relativePath: string,
+	args: Partial<C3Args>
+) => {
+	// Validate that the directory is non-existent or empty
 	const path = resolve(relativePath);
 	const existsAlready = existsSync(path);
 	const isEmpty = existsAlready && readdirSync(path).length === 0; // allow existing dirs _if empty_ to ensure c3 is non-destructive
@@ -44,27 +47,31 @@ export const validateProjectDirectory = (relativePath: string) => {
 	}
 
 	// Ensure the name is valid per the pages schema
-	const projectName = basename(path);
-	const invalidChars = /[^a-z0-9-]/;
-	const invalidStartEnd = /^-|-$/;
+	// Skip this if we're initializing from an existing workers script, since some
+	// previously created workers may have names containing capital letters
+	if (!args.existingScript) {
+		const projectName = basename(path);
+		const invalidChars = /[^a-z0-9-]/;
+		const invalidStartEnd = /^-|-$/;
 
-	if (projectName.match(invalidStartEnd)) {
-		return `Project name cannot start or end with a dash.`;
-	}
+		if (projectName.match(invalidStartEnd)) {
+			return `Project name cannot start or end with a dash.`;
+		}
 
-	if (projectName.match(invalidChars)) {
-		return `Project name must only contain lowercase characters, numbers, and dashes.`;
-	}
+		if (projectName.match(invalidChars)) {
+			return `Project name must only contain lowercase characters, numbers, and dashes.`;
+		}
 
-	if (projectName.length > 58) {
-		return `Project names must be less than 58 characters.`;
+		if (projectName.length > 58) {
+			return `Project names must be less than 58 characters.`;
+		}
 	}
 };
 
 export const setupProjectDirectory = (args: C3Args) => {
 	// Crash if the directory already exists
 	const path = resolve(args.projectName);
-	const err = validateProjectDirectory(path);
+	const err = validateProjectDirectory(path, args);
 	if (err) {
 		crash(err);
 	}
