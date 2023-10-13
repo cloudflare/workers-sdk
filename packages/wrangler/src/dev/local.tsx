@@ -1,12 +1,12 @@
 import assert from "node:assert";
 import chalk from "chalk";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import onExit from "signal-exit";
-import { fetch } from "undici";
 import { registerWorker } from "../dev-registry";
 import { logger } from "../logger";
-import useInspector from "./inspect";
 import { MiniflareServer } from "./miniflare";
+import { DEFAULT_WORKER_NAME } from "./miniflare";
+import type { ProxyData } from "../api";
 import type { Config } from "../config";
 import type { CfWorkerInit, CfScriptFormat } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
@@ -37,7 +37,9 @@ export interface LocalProps {
 	localProtocol: "http" | "https";
 	localUpstream: string | undefined;
 	inspect: boolean;
-	onReady: ((ip: string, port: number) => void) | undefined;
+	onReady:
+		| ((ip: string, port: number, proxyData: ProxyData) => void)
+		| undefined;
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 	testScheduled?: boolean;
 	sourceMapPath: string | undefined;
@@ -115,36 +117,15 @@ export function maybeRegisterLocalWorker(event: ReloadedEvent, name?: string) {
 	});
 }
 
-// https://chromedevtools.github.io/devtools-protocol/#endpoints
-interface InspectorWebSocketTarget {
-	id: string;
-	title: string;
-	type: "node";
-	description: string;
-	webSocketDebuggerUrl: string;
-	devtoolsFrontendUrl: string;
-	devtoolsFrontendUrlCompat: string;
-	faviconUrl: string;
-	url: string;
-}
-
 export function Local(props: LocalProps) {
-	const { inspectorUrl } = useLocalWorker(props);
-	useInspector({
-		inspectorUrl,
-		port: props.inspectorPort,
-		logToTerminal: false,
-		sourceMapPath: props.sourceMapPath,
-		name: props.name,
-		sourceMapMetadata: props.bundle?.sourceMapMetadata,
-	});
+	useLocalWorker(props);
+
 	return null;
 }
 
 function useLocalWorker(props: LocalProps) {
 	const miniflareServerRef = useRef<MiniflareServer>();
 	const removeMiniflareServerExitListenerRef = useRef<() => void>();
-	const [inspectorUrl, setInspectorUrl] = useState<string | undefined>();
 
 	useEffect(() => {
 		if (props.bindings.services && props.bindings.services.length > 0) {
@@ -177,33 +158,32 @@ function useLocalWorker(props: LocalProps) {
 			miniflareServerRef.current = server = newServer;
 			server.addEventListener("reloaded", async (event) => {
 				await maybeRegisterLocalWorker(event, props.name);
-				props.onReady?.(event.url.hostname, parseInt(event.url.port));
 
-				try {
-					// Fetch the inspector JSON response from the DevTools Inspector protocol
-					const jsonUrl = `http://127.0.0.1:${props.runtimeInspectorPort}/json`;
-					const res = await fetch(jsonUrl);
-					const body = (await res.json()) as InspectorWebSocketTarget[];
-					const debuggerUrl = body?.find(({ id }) =>
-						id.startsWith("core:user")
-					)?.webSocketDebuggerUrl;
-					if (debuggerUrl === undefined) {
-						setInspectorUrl(undefined);
-					} else {
-						const url = new URL(debuggerUrl);
-						// Force inspector URL to be different on each reload so `useEffect`
-						// in `useInspector` is re-run to connect to newly restarted
-						// `workerd` server when updating options. Can't use a query param
-						// here as that seems to cause an infinite connection loop, can't
-						// use a hash as those are forbidden by `ws`, so username it is.
-						url.username = `${Date.now()}-${Math.floor(
-							Math.random() * Number.MAX_SAFE_INTEGER
-						)}`;
-						setInspectorUrl(url.toString());
-					}
-				} catch (error: unknown) {
-					logger.error("Error attempting to retrieve debugger URL:", error);
-				}
+				const proxyData: ProxyData = {
+					userWorkerUrl: {
+						protocol: event.url.protocol,
+						hostname: event.url.hostname,
+						port: event.url.port,
+					},
+					userWorkerInspectorUrl: {
+						protocol: "ws:",
+						hostname: "127.0.0.1",
+						port: props.runtimeInspectorPort.toString(),
+						pathname: `/core:user:${props.name ?? DEFAULT_WORKER_NAME}`,
+					},
+					userWorkerInnerUrlOverrides: {
+						protocol: props.localProtocol,
+						hostname: props.localUpstream,
+					},
+					headers: {}, // no headers needed in local-mode
+					liveReload: props.liveReload,
+				};
+
+				props.onReady?.(
+					event.url.hostname,
+					parseInt(event.url.port),
+					proxyData
+				);
 			});
 			server.addEventListener("error", ({ error }) => {
 				if (
@@ -254,6 +234,4 @@ function useLocalWorker(props: LocalProps) {
 		},
 		[]
 	);
-
-	return { inspectorUrl };
 }

@@ -26,6 +26,7 @@ import {
 	isLegacyEnv,
 	printWranglerBanner,
 } from "./index";
+import type { ProxyData } from "./api";
 import type { Config, Environment } from "./config";
 import type { Route, Rule } from "./config/environment";
 import type { CfWorkerInit, CfModule } from "./deployment-bundle/worker";
@@ -340,7 +341,7 @@ export type StartDevOptions = DevArguments &
 		forceLocal?: boolean;
 		disableDevRegistry?: boolean;
 		enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
-		onReady?: (ip: string, port: number) => void;
+		onReady?: (ip: string, port: number, proxyData: ProxyData) => void;
 		showInteractiveDevSession?: boolean;
 	};
 
