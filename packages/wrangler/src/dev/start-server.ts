@@ -2,6 +2,8 @@ import * as path from "node:path";
 import * as util from "node:util";
 import chalk from "chalk";
 import onExit from "signal-exit";
+import tmp from "tmp-promise";
+import { DevEnv, type StartDevWorkerOptions } from "../api";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { dedupeModulesByName } from "../deployment-bundle/dedupe-modules";
@@ -20,9 +22,10 @@ import {
 import { logger } from "../logger";
 import { getWranglerTmpDir } from "../paths";
 import { localPropsToConfigBundle, maybeRegisterLocalWorker } from "./local";
-import { MiniflareServer } from "./miniflare";
+import { DEFAULT_WORKER_NAME, MiniflareServer } from "./miniflare";
 import { startRemoteServer } from "./remote";
 import { validateDevProps } from "./validate-dev-props";
+import type { ProxyData } from "../api";
 import type { Config } from "../config";
 import type { DurableObjectBindings } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
@@ -79,6 +82,38 @@ export async function startDevServer(
 		}
 	}
 
+	const devEnv = new DevEnv();
+	const startDevWorkerOptions: StartDevWorkerOptions = {
+		name: props.name ?? "worker",
+		script: { contents: "" },
+		dev: {
+			server: {
+				hostname: props.initialIp,
+				port: props.initialPort,
+				secure: props.localProtocol === "https",
+			},
+			inspector: {
+				port: props.inspectorPort,
+			},
+			urlOverrides: {
+				secure: props.localProtocol === "https",
+				hostname: props.localUpstream,
+			},
+			liveReload: props.liveReload,
+			remote: !props.local,
+		},
+	};
+
+	// temp: fake these events by calling the handler directly
+	devEnv.proxy.onConfigUpdate({
+		type: "configUpdate",
+		config: startDevWorkerOptions,
+	});
+	devEnv.proxy.onBundleStart({
+		type: "bundleStart",
+		config: startDevWorkerOptions,
+	});
+
 	//implement a react-free version of useEsbuild
 	const bundle = await runEsbuild({
 		entry: props.entry,
@@ -108,6 +143,13 @@ export async function startDevServer(
 	});
 
 	if (props.local) {
+		// temp: fake these events by calling the handler directly
+		devEnv.proxy.onReloadStart({
+			type: "reloadStart",
+			config: startDevWorkerOptions,
+			bundle,
+		});
+
 		const { stop } = await startLocalServer({
 			name: props.name,
 			bundle: bundle,
@@ -127,8 +169,25 @@ export async function startDevServer(
 			queueConsumers: props.queueConsumers,
 			localProtocol: props.localProtocol,
 			localUpstream: props.localUpstream,
-			inspect: props.inspect,
-			onReady: props.onReady,
+			inspect: true,
+			onReady: async (ip, port, proxyData) => {
+				// at this point (in the layers of onReady callbacks), we have devEnv in scope
+				// so rewrite the onReady params to be the ip/port of the ProxyWorker instead of the UserWorker
+				const { proxyWorker } = await devEnv.proxy.ready.promise;
+				const url = await proxyWorker.ready;
+				ip = url.hostname;
+				port = parseInt(url.port);
+
+				props.onReady?.(ip, port, proxyData);
+
+				// temp: fake these events by calling the handler directly
+				devEnv.proxy.onReloadComplete({
+					type: "reloadComplete",
+					config: startDevWorkerOptions,
+					bundle,
+					proxyData,
+				});
+			},
 			enablePagesAssetsServiceBinding: props.enablePagesAssetsServiceBinding,
 			usageModel: props.usageModel,
 			workerDefinitions,
@@ -139,6 +198,7 @@ export async function startDevServer(
 			stop: async () => {
 				stop();
 				await stopWorkerRegistry();
+				await devEnv.teardown();
 			},
 			// TODO: inspectorUrl,
 		};
@@ -164,7 +224,24 @@ export async function startDevServer(
 			zone: props.zone,
 			host: props.host,
 			routes: props.routes,
-			onReady: props.onReady,
+			onReady: async (ip, port, proxyData) => {
+				// at this point (in the layers of onReady callbacks), we have devEnv in scope
+				// so rewrite the onReady params to be the ip/port of the ProxyWorker instead of the UserWorker
+				const { proxyWorker } = await devEnv.proxy.ready.promise;
+				const url = await proxyWorker.ready;
+				ip = url.hostname;
+				port = parseInt(url.port);
+
+				props.onReady?.(ip, port, proxyData);
+
+				// temp: fake these events by calling the handler directly
+				devEnv.proxy.onReloadComplete({
+					type: "reloadComplete",
+					config: startDevWorkerOptions,
+					bundle,
+					proxyData,
+				});
+			},
 			sourceMapPath: bundle?.sourceMapPath,
 			sendMetrics: props.sendMetrics,
 		});
@@ -172,6 +249,7 @@ export async function startDevServer(
 			stop: async () => {
 				stop();
 				await stopWorkerRegistry();
+				await devEnv.teardown();
 			},
 			// TODO: inspectorUrl,
 		};
@@ -212,7 +290,7 @@ async function runEsbuild({
 	projectRoot,
 }: {
 	entry: Entry;
-	destination: string | undefined;
+	destination: string;
 	jsxFactory: string | undefined;
 	jsxFragment: string | undefined;
 	processEntrypoint: boolean;
@@ -233,9 +311,7 @@ async function runEsbuild({
 	local: boolean;
 	doBindings: DurableObjectBindings;
 	projectRoot: string | undefined;
-}): Promise<EsbuildBundle | undefined> {
-	if (!destination) return;
-
+}): Promise<EsbuildBundle> {
 	if (noBundle) {
 		additionalModules = dedupeModulesByName([
 			...((await doFindAdditionalModules(entry, rules)) ?? []),
@@ -321,7 +397,28 @@ export async function startLocalServer(props: LocalProps) {
 		const server = new MiniflareServer();
 		server.addEventListener("reloaded", async (event) => {
 			await maybeRegisterLocalWorker(event, props.name);
-			props.onReady?.(event.url.hostname, parseInt(event.url.port));
+
+			const proxyData: ProxyData = {
+				userWorkerUrl: {
+					protocol: event.url.protocol,
+					hostname: event.url.hostname,
+					port: event.url.port,
+				},
+				userWorkerInspectorUrl: {
+					protocol: "ws:",
+					hostname: "127.0.0.1",
+					port: props.runtimeInspectorPort.toString(),
+					pathname: `/core:user:${props.name ?? DEFAULT_WORKER_NAME}`,
+				},
+				userWorkerInnerUrlOverrides: {
+					protocol: props.localProtocol,
+					hostname: props.localUpstream,
+				},
+				headers: {},
+				liveReload: props.liveReload,
+			};
+
+			props.onReady?.(event.url.hostname, parseInt(event.url.port), proxyData);
 			// Note `unstable_dev` doesn't do anything with the inspector URL yet
 			resolve({
 				stop: () => {
