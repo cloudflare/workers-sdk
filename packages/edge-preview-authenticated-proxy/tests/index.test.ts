@@ -74,7 +74,6 @@ compatibility_date = "2023-01-01"
 		remote = await unstable_dev(path.join(tmpDir, "remote.js"), {
 			config: path.join(tmpDir, "wrangler.toml"),
 			experimental: { disableExperimentalWarning: true },
-			port: 6756,
 		});
 	});
 
@@ -92,7 +91,7 @@ compatibility_date = "2023-01-01"
 	it("should obtain token from exchange_url", async () => {
 		const resp = await worker.fetch(
 			`https://preview.devprod.cloudflare.dev/exchange?exchange_url=${encodeURIComponent(
-				"http://127.0.0.1:6756/exchange"
+				`http://127.0.0.1:${remote.port}/exchange`
 			)}`,
 			{
 				method: "POST",
@@ -117,9 +116,9 @@ compatibility_date = "2023-01-01"
 			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=${encodeURIComponent(
 				token
 			)}&prewarm=${encodeURIComponent(
-				"http://127.0.0.1:6756/prewarm"
+				`http://127.0.0.1:${remote.port}/prewarm`
 			)}&remote=${encodeURIComponent(
-				"http://127.0.0.1:6756"
+				`http://127.0.0.1:${remote.port}`
 			)}&suffix=${encodeURIComponent("/hello?world")}`,
 			{
 				method: "GET",
@@ -159,9 +158,9 @@ compatibility_date = "2023-01-01"
 	it("should be redirected with cookie", async () => {
 		const resp = await worker.fetch(
 			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&prewarm=${encodeURIComponent(
-				"http://127.0.0.1:6756/prewarm"
+				`http://127.0.0.1:${remote.port}/prewarm`
 			)}&remote=${encodeURIComponent(
-				"http://127.0.0.1:6756"
+				`http://127.0.0.1:${remote.port}`
 			)}&suffix=${encodeURIComponent("/hello?world")}`,
 			{
 				method: "GET",

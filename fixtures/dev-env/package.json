@@ -1,0 +1,25 @@
+{
+	"name": "dev-env",
+	"version": "1.0.1",
+	"private": true,
+	"description": "",
+	"license": "ISC",
+	"author": "",
+	"main": "src/index.js",
+	"scripts": {
+		"test": "npx vitest run",
+		"test:ci": "npx vitest run",
+		"test:watch": "npx vitest",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
+	},
+	"devDependencies": {
+		"@types/ws": "^8.5.7",
+		"@cloudflare/workers-tsconfig": "workspace:^",
+		"get-port": "^7.0.0",
+		"miniflare": "3.20231002.1",
+		"undici": "^5.23.0",
+		"wrangler": "workspace:*",
+		"ws": "^8.14.2"
+	},
+	"dependencies": {}
+}
