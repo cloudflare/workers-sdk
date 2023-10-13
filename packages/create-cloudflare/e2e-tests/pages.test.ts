@@ -35,6 +35,10 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 			unsupportedPms: ["bun"],
 			testCommitMessage: true,
 		},
+		angular: {
+			expectResponseToContain: "Love Angular?",
+			testCommitMessage: true,
+		},
 		gatsby: {
 			expectResponseToContain: "Gatsby!",
 			unsupportedPms: ["bun"],
