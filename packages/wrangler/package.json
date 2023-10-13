@@ -60,7 +60,7 @@
 		"emit-types": "tsc -p tsconfig.emit.json && node -r esbuild-register scripts/emit-types.ts",
 		"prepublishOnly": "SOURCEMAPS=false npm run build",
 		"start": "pnpm run bundle && cross-env NODE_OPTIONS=--enable-source-maps ./bin/wrangler.js",
-		"test": "pnpm run assert-git-version && jest",
+		"test": "pnpm run assert-git-version && jest --runInBand",
 		"test:ci": "pnpm run test --coverage",
 		"test:debug": "pnpm run test --silent=false --verbose=true",
 		"test:e2e": "vitest --test-timeout 240000 --single-thread --dir ./e2e --retry 2 run",
