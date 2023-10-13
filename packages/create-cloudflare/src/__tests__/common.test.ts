@@ -42,23 +42,25 @@ describe("isGitConfigured", () => {
 });
 
 describe("validateProjectDirectory", () => {
+	const args = {};
+
 	test("allow valid project names", async () => {
-		expect(validateProjectDirectory("foo")).toBeUndefined();
-		expect(validateProjectDirectory("foo/bar/baz")).toBeUndefined();
-		expect(validateProjectDirectory("./foobar")).toBeUndefined();
-		expect(validateProjectDirectory("f".repeat(58))).toBeUndefined();
+		expect(validateProjectDirectory("foo", args)).toBeUndefined();
+		expect(validateProjectDirectory("foo/bar/baz", args)).toBeUndefined();
+		expect(validateProjectDirectory("./foobar", args)).toBeUndefined();
+		expect(validateProjectDirectory("f".repeat(58), args)).toBeUndefined();
 	});
 
 	test("disallow invalid project names", async () => {
 		// Invalid pages project names should return an error
-		expect(validateProjectDirectory("foobar-")).not.toBeUndefined();
-		expect(validateProjectDirectory("-foobar-")).not.toBeUndefined();
-		expect(validateProjectDirectory("fo*o{ba)r")).not.toBeUndefined();
-		expect(validateProjectDirectory("f".repeat(59))).not.toBeUndefined();
+		expect(validateProjectDirectory("foobar-", args)).not.toBeUndefined();
+		expect(validateProjectDirectory("-foobar-", args)).not.toBeUndefined();
+		expect(validateProjectDirectory("fo*o{ba)r", args)).not.toBeUndefined();
+		expect(validateProjectDirectory("f".repeat(59), args)).not.toBeUndefined();
 	});
 
 	test("disallow existing, non-empty directories", async () => {
 		// Existing, non-empty directories should return an error
-		expect(validateProjectDirectory(".")).not.toBeUndefined();
+		expect(validateProjectDirectory(".", args)).not.toBeUndefined();
 	});
 });
