@@ -492,12 +492,12 @@ export class ProxyController extends EventEmitter {
 }
 
 export class ProxyControllerLogger extends WranglerLog {
-	info(message: string) {
+	log(message: string) {
 		// filter out request logs being handled by the ProxyWorker
 		// the requests log remaining are handled by the UserWorker
 		// keep the ProxyWorker request logs if we're in debug mode
-		if (message.includes("/cdn-cgi/") && this.level !== LogLevel.DEBUG) return;
-		super.info(message);
+		if (message.includes("/cdn-cgi/") && this.level < LogLevel.DEBUG) return;
+		super.log(message);
 	}
 
 	// TODO: remove this override when miniflare is fixed https://jira.cfdata.org/browse/DEVX-983
