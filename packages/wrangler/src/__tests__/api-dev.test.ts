@@ -1,12 +1,49 @@
 import * as fs from "node:fs";
 import { Request } from "undici";
 import { unstable_dev } from "../api";
+import * as WranlgerDevModule from "../dev";
 import { runInTempDir } from "./helpers/run-in-tmp";
+
+jest.mock("../dev", () => {
+	const originalModule = jest.requireActual("../dev");
+	return {
+		_esModule: true,
+		...originalModule,
+		startDev: jest.fn().mockImplementation(async (...args) => {
+			args[0].onReady(9000, 25565);
+		return originalModule.startDev(...args);
+		}),
+		startApiDev: jest.fn().mockImplementation(async (...args) => {
+		return originalModule.startApiDev(...args);
+		}),
+		test: jest.fn(),
+	};
+});
 
 jest.unmock("child_process");
 jest.unmock("undici");
 
 describe("unstable_dev", () => {
+  it("should call startApiDev in testMode", async () => {
+		const startApiDevSpy = jest.spyOn(WranlgerDevModule, 'startApiDev');
+
+		await unstable_dev("src/__tests__/helpers/worker-scripts/hello-world-worker.js");
+
+		expect(startApiDevSpy).toHaveBeenCalled();
+	});
+
+  it("should call startDev", async () => {
+		const startDevSpy = jest.spyOn(WranlgerDevModule, 'startDev');
+
+		await unstable_dev("src/__tests__/helpers/worker-scripts/hello-world-worker.js", {
+			experimental: {
+				testMode: false,
+			}
+		});
+
+		expect(startDevSpy).toHaveBeenCalled();
+	});
+
 	it("should return Hello World", async () => {
 		const worker = await unstable_dev(
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
