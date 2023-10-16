@@ -137,7 +137,7 @@ export default {
 			if (result.done === false) {
 				const { handler, params, path } = result.value;
 				const context = {
-					request: new Request(request.clone()),
+					request: new Request(request),
 					functionPath: path,
 					next,
 					params,
