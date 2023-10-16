@@ -50,5 +50,6 @@ runs:
         path: packages/create-cloudflare/.e2e-logs
 
     - name: Fail if errors detected
+      shell: bash
       if: ${{ steps.run-e2e.outcome == 'failure' }}
       run: exit 1
