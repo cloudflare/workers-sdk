@@ -1,23 +1,19 @@
 import {
-	readFile,
-	writeFile,
-	mkdtemp,
 	cp,
-	rm,
+	mkdtemp,
+	readFile,
 	readdir,
 	rename,
+	rm,
+	writeFile,
 } from "fs/promises";
 import { tmpdir } from "os";
-import { resolve, join } from "path";
+import { join, resolve } from "path";
 import { chdir } from "process";
+import { endSection, startSection, updateStatus } from "@cloudflare/cli";
+import { brandColor, dim } from "@cloudflare/cli/colors";
 import { processArgument } from "helpers/args";
-import {
-	endSection,
-	updateStatus,
-	startSection,
-	C3_DEFAULTS,
-} from "helpers/cli";
-import { brandColor, dim } from "helpers/colors";
+import { C3_DEFAULTS } from "helpers/cli";
 import {
 	getWorkerdCompatibilityDate,
 	npmInstall,

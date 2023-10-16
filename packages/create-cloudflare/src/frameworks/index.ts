@@ -1,4 +1,4 @@
-import { crash } from "helpers/cli";
+import { crash } from "@cloudflare/cli";
 import angular from "./angular";
 import astro from "./astro";
 import docusaurus from "./docusaurus";

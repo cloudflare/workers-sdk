@@ -1,9 +1,14 @@
 #!/usr/bin/env node
+import { crash, logRaw, startSection } from "@cloudflare/cli";
+import { blue, dim } from "@cloudflare/cli/colors";
+import {
+	isInteractive,
+	spinner,
+	spinnerFrames,
+} from "@cloudflare/cli/interactive";
 import { parseArgs, processArgument } from "helpers/args";
-import { C3_DEFAULTS, crash, logRaw, startSection } from "helpers/cli";
-import { blue, dim } from "helpers/colors";
+import { C3_DEFAULTS } from "helpers/cli";
 import { runCommand } from "helpers/command";
-import { isInteractive, spinnerFrames, spinner } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
 import semver from "semver";
 import { version } from "../package.json";

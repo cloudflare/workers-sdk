@@ -9,8 +9,8 @@ import {
 import crypto from "node:crypto";
 import { tmpdir } from "os";
 import { basename, join } from "path";
+import { stripAnsi } from "@cloudflare/cli";
 import { spawn } from "cross-spawn";
-import { stripAnsi } from "helpers/cli";
 import { sleep } from "helpers/common";
 import { detectPackageManager } from "helpers/packages";
 import { fetch } from "undici";

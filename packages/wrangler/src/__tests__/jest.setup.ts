@@ -42,6 +42,13 @@ jest.mock("child_process", () => {
 	};
 });
 
+jest.mock("log-update", () => {
+	const fn = function (..._: string[]) {};
+	fn["clear"] = () => {};
+	fn["done"] = () => {};
+	return fn;
+});
+
 jest.mock("ws", () => {
 	// `miniflare` needs to use the real `ws` module, but tail tests require us
 	// to mock `ws`. `esbuild-jest` won't let us use type annotations in our tests
