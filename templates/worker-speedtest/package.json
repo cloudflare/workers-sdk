@@ -4,7 +4,7 @@
 	"private": true,
 	"scripts": {
 		"deploy": "wrangler deploy src/index.js",
-		"dev": "wrangler dev src/index.js --local",
+		"dev": "wrangler dev src/index.js",
 		"test": "jest"
 	},
 	"devDependencies": {
