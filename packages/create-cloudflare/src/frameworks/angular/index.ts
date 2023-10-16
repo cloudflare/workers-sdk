@@ -23,6 +23,9 @@ const generate = async (ctx: PagesGeneratorContext) => {
 		`${dlx} ${cli} new ${ctx.project.name} --standalone`
 	);
 
+	// TODO: Hack for testing only
+	process.exit(1);
+
 	logRaw("");
 };
 

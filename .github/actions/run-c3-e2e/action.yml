@@ -33,7 +33,9 @@ runs:
         git config --global user.name 'Wrangler automated PR updater'
 
     - name: E2E Tests
+      id: run-e2e
       shell: bash
+      continue-on-error: true
       run: pnpm run --filter create-cloudflare test:e2e:${{ inputs.package-manager }}
       env:
         CLOUDFLARE_API_TOKEN: ${{ inputs.apiToken }}
@@ -46,3 +48,7 @@ runs:
       with:
         name: e2e-logs
         path: packages/create-cloudflare/.e2e-logs
+
+    - name: Fail if errors detected
+      if: ${{ steps.run-e2e.outcome == 'failure' }}
+      run: exit 1
