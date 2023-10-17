@@ -1,5 +1,5 @@
 ---
-"wrangler": patch
+"wrangler": minor
 ---
 
 feat: resolve npm exports for file imports

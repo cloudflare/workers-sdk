@@ -5,6 +5,7 @@ import path from "node:path";
 import globToRegExp from "glob-to-regexp";
 import { exports as resolveExports } from "resolve.exports";
 import { logger } from "../logger";
+import { BUILD_CONDITIONS } from "./bundle";
 import {
 	findAdditionalModules,
 	findAdditionalModuleWatchDirs,
@@ -281,7 +282,7 @@ export function createModuleCollector(props: {
 										);
 									}
 									const packageJsonPath = path.join(
-										args.resolveDir,
+										process.cwd(),
 										"node_modules",
 										packageName,
 										"package.json"
@@ -297,12 +298,12 @@ export function createModuleCollector(props: {
 											packageJson,
 											args.path.replace(`${packageName}/`, ""),
 											{
-												conditions: ["workerd", "worker", "browser"],
+												conditions: BUILD_CONDITIONS,
 											}
 										);
 										if (testResolved) {
 											filePath = path.join(
-												args.resolveDir,
+												process.cwd(),
 												"node_modules",
 												packageName,
 												testResolved[0]
