@@ -4,6 +4,7 @@ import { updateStatus, warn } from "helpers/cli";
 import { brandColor, dim } from "helpers/colors";
 import { installPackages, runFrameworkGenerator } from "helpers/command";
 import {
+	compatDateFlag,
 	probePaths,
 	readJSON,
 	usesEslint,
@@ -140,12 +141,12 @@ const config: FrameworkConfig = {
 	generate,
 	configure,
 	displayName: "Next",
-	packageScripts: {
+	getPackageScripts: async () => ({
 		"pages:build": `${dlx} @cloudflare/next-on-pages@1`,
 		"pages:deploy": `${npm} run pages:build && wrangler pages deploy .vercel/output/static`,
 		"pages:watch": `${npx} @cloudflare/next-on-pages@1 --watch`,
-		"pages:dev": `${npx} wrangler pages dev .vercel/output/static --compatibility-flag=nodejs_compat`,
-	},
+		"pages:dev": `${npx} wrangler pages dev .vercel/output/static ${await compatDateFlag()} --compatibility-flag=nodejs_compat`,
+	}),
 	testFlags: [
 		"--typescript",
 		"--no-install",

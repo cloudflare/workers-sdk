@@ -7,7 +7,7 @@ import {
 	runCommand,
 	runFrameworkGenerator,
 } from "helpers/command";
-import { readFile, readJSON, writeFile } from "helpers/files";
+import { compatDateFlag, readFile, readJSON, writeFile } from "helpers/files";
 import { spinner } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
 import { getFrameworkCli } from "../index";
@@ -41,13 +41,13 @@ const config: FrameworkConfig = {
 	generate,
 	configure,
 	displayName: "Angular",
-	packageScripts: {
+	getPackageScripts: async () => ({
 		process:
 			"node ./tools/copy-worker-files.mjs && node ./tools/copy-client-files.mjs && node ./tools/bundle.mjs",
 		"pages:build": `${npm} run build:ssr && ${npm} run process`,
-		start: `${npm} run pages:build && wrangler pages dev dist/cloudflare --compatibility-date=2021-09-20 --experimental-local`,
+		start: `${npm} run pages:build && wrangler pages dev dist/cloudflare ${await compatDateFlag()} --experimental-local`,
 		deploy: `${npm} run pages:build && wrangler pages deploy dist/cloudflare`,
-	},
+	}),
 	deployCommand: "deploy",
 	devCommand: "start",
 	testFlags: ["--routing", "--style", "sass"],

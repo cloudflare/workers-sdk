@@ -195,7 +195,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		const frameworkConfig = FrameworkMap[framework];
 
 		const frameworkTargetPackageScripts = {
-			...frameworkConfig.packageScripts,
+			...(await frameworkConfig.getPackageScripts()),
 		} as Record<string, string>;
 
 		if (overrides && overrides.packageScripts) {
