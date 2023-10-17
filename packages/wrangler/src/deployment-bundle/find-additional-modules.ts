@@ -50,9 +50,15 @@ export async function findAdditionalModules(
 
 	if (modules.length > 0) {
 		logger.info(`Attaching additional modules:`);
-		modules.forEach(({ name, type }) => {
-			logger.info(`- ${chalk.blue(name)} (${chalk.green(type ?? "")})`);
-		});
+		logger.table(
+			modules.map(({ name, type, content }) => {
+				return {
+					Name: name,
+					Type: type ?? "",
+					Size: `${(content.length / 1024).toFixed(2)} KiB`,
+				};
+			})
+		);
 	}
 
 	return modules;
