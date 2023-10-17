@@ -7988,7 +7988,7 @@ export default{
 			  "err": "",
 			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWe recommend keeping your script less than 1MiB (1024 KiB) after gzip. Exceeding past this can affect cold start time[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWe recommend keeping your script less than 1MiB (1024 KiB) after gzip. Exceeding this can affect cold start time. Consider using Wrangler's \`--minify\` option to reduce your bundle size.[0m
 
 			",
 			}
