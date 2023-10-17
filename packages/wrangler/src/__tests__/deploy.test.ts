@@ -110,6 +110,7 @@ describe("deploy", () => {
 			Worker ID:  abc12345
 			Worker ETag:  etag98765
 			Worker PipelineHash:  hash9999
+			Worker Mutable PipelineID (Development ONLY!): mutableId
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
@@ -8749,6 +8750,7 @@ function mockUploadWorkerRequest(
 					id: "abc12345",
 					etag: "etag98765",
 					pipeline_hash: "hash9999",
+					mutable_pipeline_id: "mutableId",
 					tag: "sample-tag",
 					deployment_id: "Galaxy-Class",
 				})

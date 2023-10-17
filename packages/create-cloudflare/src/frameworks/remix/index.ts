@@ -20,9 +20,9 @@ const generate = async (ctx: PagesGeneratorContext) => {
 const config: FrameworkConfig = {
 	generate,
 	displayName: "Remix",
-	packageScripts: {
+	getPackageScripts: async () => ({
 		"pages:deploy": `${npm} run build && wrangler pages deploy ./public`,
-	},
+	}),
 	devCommand: "dev",
 	testFlags: ["--typescript", "--no-install", "--no-git-init"],
 };

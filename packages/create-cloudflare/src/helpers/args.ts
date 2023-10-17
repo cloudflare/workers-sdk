@@ -2,7 +2,7 @@ import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { version } from "../../package.json";
 import { templateMap } from "../templateMap";
-import { C3_DEFAULTS, WRANGLER_DEFAULTS, logRaw } from "./cli";
+import { C3_DEFAULTS, WRANGLER_DEFAULTS, crash, logRaw } from "./cli";
 import { getRenderers, inputPrompt } from "./interactive";
 import type { PromptConfig } from "./interactive";
 import type { C3Args } from "types";
@@ -38,6 +38,12 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 		.option("accept-defaults", {
 			alias: "y",
 			type: "boolean",
+		})
+		.option("auto-update", {
+			type: "boolean",
+			default: C3_DEFAULTS.autoUpdate,
+			description:
+				"Automatically uses the latest version of `create-cloudflare`. Set --no-auto-update to disable",
 		})
 		.option("wrangler-defaults", { type: "boolean", hidden: true })
 		.version(version)
@@ -76,8 +82,14 @@ export const processArgument = async <T>(
 
 	// If the value has already been set via args, use that
 	if (value !== undefined) {
-		promptConfig.validate?.(value);
+		// Crash if we can't validate the value
+		const error = promptConfig.validate?.(value);
+		if (error) {
+			crash(error);
+		}
 
+		// Show the user the submitted state as if they had
+		// supplied it interactively
 		const lines = renderSubmitted({ value });
 		logRaw(lines.join("\n"));
 

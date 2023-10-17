@@ -23,6 +23,7 @@ import {
 	npmInstall,
 	runCommand,
 } from "helpers/command";
+import { detectPackageManager } from "helpers/packages";
 import {
 	chooseAccount,
 	gitCommit,
@@ -33,6 +34,8 @@ import {
 	setupProjectDirectory,
 } from "./common";
 import type { C3Args, PagesGeneratorContext as Context } from "types";
+
+const { dlx } = detectPackageManager();
 
 export const runWorkersGenerator = async (args: C3Args) => {
 	const { name, path } = setupProjectDirectory(args);
@@ -120,7 +123,7 @@ async function copyExistingWorkerFiles(ctx: Context) {
 			join(tmpdir(), "c3-wrangler-init--from-dash-")
 		);
 		await runCommand(
-			`npx wrangler@3 init --from-dash ${ctx.args.existingScript} -y --no-delegate-c3`,
+			`${dlx} wrangler@3 init --from-dash ${ctx.args.existingScript} -y --no-delegate-c3`,
 			{
 				silent: true,
 				cwd: tempdir, // use a tempdir because we don't want all the files

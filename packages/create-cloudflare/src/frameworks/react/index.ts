@@ -23,9 +23,9 @@ const config: FrameworkConfig = {
 	generate,
 	configure,
 	displayName: "React",
-	packageScripts: {
-		"pages:dev": `wrangler pages dev ${compatDateFlag()} --port 3000 -- ${npm} start`,
+	getPackageScripts: async () => ({
+		"pages:dev": `wrangler pages dev ${await compatDateFlag()} --port 3000 -- ${npm} start`,
 		"pages:deploy": `${npm} run build && wrangler pages deploy ./build`,
-	},
+	}),
 };
 export default config;

@@ -1,5 +1,6 @@
 import fs, { existsSync } from "fs";
 import { crash } from "./cli";
+import { getWorkerdCompatibilityDate } from "./command";
 import type { PagesGeneratorContext } from "types";
 
 export const writeFile = (path: string, content: string) => {
@@ -102,7 +103,7 @@ export const usesEslint = (ctx: PagesGeneratorContext): EslintUsageInfo => {
 };
 
 // Generate a compatibility date flag
-export const compatDateFlag = () => {
-	const date = new Date();
-	return `--compatibility-date=${date.toISOString().slice(0, 10)}`;
+export const compatDateFlag = async () => {
+	const workerdCompatDate = await getWorkerdCompatibilityDate();
+	return `--compatibility-date=${workerdCompatDate}`;
 };

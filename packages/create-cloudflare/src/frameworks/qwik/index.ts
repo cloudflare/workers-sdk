@@ -30,9 +30,9 @@ const config: FrameworkConfig = {
 	generate,
 	configure,
 	displayName: "Qwik",
-	packageScripts: {
-		"pages:dev": `wrangler pages dev ${compatDateFlag()} -- ${npm} run dev`,
+	getPackageScripts: async () => ({
+		"pages:dev": `wrangler pages dev ${await compatDateFlag()} -- ${npm} run dev`,
 		"pages:deploy": `${npm} run build && wrangler pages deploy ./dist`,
-	},
+	}),
 };
 export default config;

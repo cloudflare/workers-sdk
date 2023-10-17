@@ -39,10 +39,10 @@ const config: FrameworkConfig = {
 	generate,
 	configure,
 	displayName: "Astro",
-	packageScripts: {
-		"pages:dev": `wrangler pages dev ${compatDateFlag()} -- astro dev`,
+	getPackageScripts: async () => ({
+		"pages:dev": `wrangler pages dev ${await compatDateFlag()} -- astro dev`,
 		"pages:deploy": `astro build && wrangler pages deploy ./dist`,
-	},
+	}),
 	testFlags: [
 		"--skip-houston",
 		"--no-install",

@@ -15,9 +15,10 @@ const generate = async (ctx: PagesGeneratorContext) => {
 const config: FrameworkConfig = {
 	generate,
 	displayName: "Docusaurus",
-	packageScripts: {
-		"pages:dev": `wrangler pages dev ${compatDateFlag()} --proxy 3000 -- ${npm} run start`,
+	getPackageScripts: async () => ({
+		"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 3000 -- ${npm} run start`,
 		"pages:deploy": `NODE_VERSION=16 ${npm} run build && wrangler pages deploy ./build`,
-	},
+	}),
+	testFlags: [`--package-manager`, npm],
 };
 export default config;

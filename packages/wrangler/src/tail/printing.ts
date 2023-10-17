@@ -3,6 +3,7 @@ import { logger } from "../logger";
 import type {
 	AlarmEvent,
 	EmailEvent,
+	QueueEvent,
 	RequestEvent,
 	ScheduledEvent,
 	TailEvent,
@@ -71,6 +72,16 @@ export function prettyPrintLogs(data: WebSocket.RawData): void {
 		} else if (eventMessage.event.type === "overload-stop") {
 			logger.log(`${chalk.yellow.bold(eventMessage.event.message)}`);
 		}
+	} else if (isQueueEvent(eventMessage.event)) {
+		const outcome = prettifyOutcome(eventMessage.outcome);
+		const datetime = new Date(eventMessage.eventTimestamp).toLocaleString();
+		const queueName = eventMessage.event.queue;
+		const batchSize = eventMessage.event.batchSize;
+		const batchSizeMsg = `${batchSize} message${batchSize !== 1 ? "s" : ""}`;
+
+		logger.log(
+			`Queue ${queueName} (${batchSizeMsg}) - ${outcome} @ ${datetime}`
+		);
 	} else {
 		// Unknown event type
 		const outcome = prettifyOutcome(eventMessage.outcome);
@@ -110,6 +121,10 @@ function isScheduledEvent(
 
 function isEmailEvent(event: TailEventMessage["event"]): event is EmailEvent {
 	return Boolean(event && "mailFrom" in event);
+}
+
+function isQueueEvent(event: TailEventMessage["event"]): event is QueueEvent {
+	return Boolean(event && "queue" in event);
 }
 
 /**

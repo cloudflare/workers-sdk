@@ -141,6 +141,7 @@ export async function bundleWorker(
 		middlewareToLoad.push({
 			name: "scheduled",
 			path: "templates/middleware/middleware-scheduled.ts",
+			supports: ["modules", "service-worker"],
 		});
 	}
 
@@ -163,6 +164,7 @@ export async function bundleWorker(
 		middlewareToLoad.push({
 			name: "miniflare3-json-error",
 			path: "templates/middleware/middleware-miniflare3-json-error.ts",
+			supports: ["modules", "service-worker"],
 		});
 	}
 
@@ -182,6 +184,7 @@ export async function bundleWorker(
 						  }
 						: {},
 			},
+			supports: ["modules", "service-worker"],
 		});
 	}
 
@@ -205,6 +208,7 @@ export async function bundleWorker(
 					])
 				),
 			},
+			supports: ["modules"],
 		});
 	}
 
@@ -246,7 +250,14 @@ export async function bundleWorker(
 
 		inject.push(checkedFetchFileToInject);
 	}
-
+	// Check that the current worker format is supported by all the active middleware
+	for (const middleware of middlewareToLoad) {
+		if (!middleware.supports.includes(entry.format)) {
+			throw new Error(
+				`Your Worker is written using the "${entry.format}" format, which isn't supported by the "${middleware.name}" middleware. To use "${middleware.name}" middleware, convert your Worker to the "${middleware.supports[0]}" format`
+			);
+		}
+	}
 	if (
 		middlewareToLoad.length > 0 ||
 		process.env.EXPERIMENTAL_MIDDLEWARE === "true"

@@ -228,7 +228,7 @@ export const upload = async (
 					logger.debug("failed:", e, "retrying...");
 					// Exponential backoff, 1 second first time, then 2 second, then 4 second etc.
 					await new Promise((resolvePromise) =>
-						setTimeout(resolvePromise, Math.pow(2, attempts++) * 1000)
+						setTimeout(resolvePromise, Math.pow(2, attempts) * 1000)
 					);
 
 					if (
@@ -237,6 +237,9 @@ export const upload = async (
 					) {
 						// Looks like the JWT expired, fetch another one
 						jwt = await fetchJwt();
+					} else {
+						// Only count as a failed attempt if the error _wasn't_ an expired JWT
+						attempts++;
 					}
 					return doUpload();
 				} else {
