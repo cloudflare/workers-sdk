@@ -142,12 +142,15 @@ const config: FrameworkConfig = {
 	configure,
 	displayName: "Next",
 	getPackageScripts: async () => {
-		const nextOnPagesScope = ["npm", "bun"].includes(npm) ? "@cloudflare/" : "";
+		const isNpmOrBun = ["npm", "bun"].includes(npm);
+		const nextOnPagesScope = isNpmOrBun ? "@cloudflare/" : "";
 		const nextOnPagesCommand = `${nextOnPagesScope}next-on-pages`;
-		const pmCommand = npm === "npm" ? "npm run" : npm;
+		const pmCommand = isNpmOrBun ? npx : npm;
 		return {
 			"pages:build": `${pmCommand} ${nextOnPagesCommand}`,
-			"pages:deploy": `${pmCommand} pages:build && wrangler pages deploy .vercel/output/static`,
+			"pages:deploy": `${
+				npm === "npm" ? "npm run" : pmCommand
+			} pages:build && wrangler pages deploy .vercel/output/static`,
 			"pages:watch": `${pmCommand} ${nextOnPagesCommand} --watch`,
 			"pages:dev": `${pmCommand} wrangler pages dev .vercel/output/static ${await compatDateFlag()} --compatibility-flag=nodejs_compat`,
 		};
