@@ -117,6 +117,24 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
+  fixtures/import-wasm-example:
+    dependencies:
+      import-wasm-static:
+        specifier: workspace:^
+        version: link:../import-wasm-static
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:^
+        version: link:../../packages/workers-tsconfig
+      undici:
+        specifier: ^5.9.1
+        version: 5.23.0
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
+  fixtures/import-wasm-static: {}
+
   fixtures/isomorphic-random-example: {}
 
   fixtures/legacy-site-app: {}
@@ -1001,6 +1019,9 @@ importers:
       path-to-regexp:
         specifier: ^6.2.0
         version: 6.2.0
+      resolve.exports:
+        specifier: ^2.0.2
+        version: 2.0.2
       selfsigned:
         specifier: ^2.0.1
         version: 2.1.1
@@ -14940,7 +14961,6 @@ packages:
   /resolve.exports@2.0.2:
     resolution: {integrity: sha512-X2UW6Nw3n/aMgDVy+0rSqgHlv39WZAlZrXCdnbyEiKm17DSqHX4MmQMaST3FbeWR5FTuRcUwYAziZajji0Y7mg==}
     engines: {node: '>=10'}
-    dev: true
 
   /resolve@1.17.0:
     resolution: {integrity: sha512-ic+7JYiV8Vi2yzQGFWOkiZD5Z9z7O2Zhm9XMaTxdJExKasieFCr+yXZ/WmXsckHiKl12ar0y6XiXDx3m4RHn1w==}
