@@ -1,5 +1,13 @@
 # wrangler
 
+## 3.13.2
+
+### Patch Changes
+
+- [#4206](https://github.com/cloudflare/workers-sdk/pull/4206) [`8e927170`](https://github.com/cloudflare/workers-sdk/commit/8e927170c4b6ce4310e563ce528c2ea20d3de9e7) Thanks [@1000hz](https://github.com/1000hz)! - chore: bump `miniflare` to [`3.20231016.0`](https://github.com/cloudflare/miniflare/releases/tag/v3.20231016.0)
+
+* [#4144](https://github.com/cloudflare/workers-sdk/pull/4144) [`54800f6f`](https://github.com/cloudflare/workers-sdk/commit/54800f6f2dc52b921e7dd1d9a57bb437e2094bb0) Thanks [@a-robinson](https://github.com/a-robinson)! - Log a warning when using a Hyperdrive binding in local wrangler dev
+
 ## 3.13.1
 
 ### Patch Changes
