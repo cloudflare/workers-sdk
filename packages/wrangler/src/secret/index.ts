@@ -90,6 +90,7 @@ async function createDraftWorker({
 				logpush: false,
 				placement: undefined,
 				tail_consumers: undefined,
+				limits: undefined,
 			}),
 		}
 	);
