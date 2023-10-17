@@ -96,6 +96,7 @@ export type Worker_Binding = {
 	| { queue?: ServiceDesignator }
 	| { fromEnvironment?: string }
 	| { analyticsEngine?: ServiceDesignator }
+	| { hyperdrive?: Worker_Binding_Hyperdrive }
 );
 
 export interface Worker_Binding_Parameter {
@@ -115,7 +116,8 @@ export type Worker_Binding_Type =
 	| { r2Bucket?: Void }
 	| { r2Admin?: Void }
 	| { queue?: Void }
-	| { analyticsEngine?: Void };
+	| { analyticsEngine?: Void }
+	| { hyperdrive?: Void };
 
 export type Worker_Binding_DurableObjectNamespaceDesignator = {
 	className?: string;
@@ -145,18 +147,32 @@ export type Worker_Binding_CryptoKey_Algorithm =
 	| { name?: string }
 	| { json?: string };
 
-export type Worker_DurableObjectNamespace = { className?: string } & (
-	| { uniqueKey?: string }
-	| { ephemeralLocal?: Void }
-);
+export interface Worker_Binding_Hyperdrive {
+	designator?: ServiceDesignator;
+	database?: string;
+	user?: string;
+	password?: string;
+	scheme?: string;
+}
+
+export type Worker_DurableObjectNamespace = {
+	className?: string;
+	preventEviction?: boolean;
+} & ({ uniqueKey?: string } | { ephemeralLocal?: Void });
 
 export type ExternalServer = { address?: string } & (
 	| { http: HttpOptions }
 	| { https: ExternalServer_Https }
+	| { tcp: ExternalServer_Tcp }
 );
 
 export interface ExternalServer_Https {
 	options?: HttpOptions;
+	tlsOptions?: TlsOptions;
+	certificateHost?: string;
+}
+
+export interface ExternalServer_Tcp {
 	tlsOptions?: TlsOptions;
 	certificateHost?: string;
 }

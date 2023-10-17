@@ -551,6 +551,12 @@ export function getGlobalServices({
 					{
 						className: "ProxyServer",
 						uniqueKey: `${SERVICE_ENTRY}-ProxyServer`,
+						// `ProxyServer` relies on a singleton object containing of "heap"
+						// mapping addresses to native references. If the singleton object
+						// were evicted, addresses would be invalidated. Therefore, we
+						// prevent eviction to ensure heap addresses stay valid for the
+						// lifetime of the `workerd` process
+						preventEviction: true,
 					},
 				],
 				// `ProxyServer` doesn't make use of Durable Object storage

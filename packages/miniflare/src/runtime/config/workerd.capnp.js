@@ -13,6 +13,7 @@ exports.Extension =
 	exports.Network =
 	exports.ExternalServer =
 	exports.ExternalServer_Which =
+	exports.ExternalServer_Tcp =
 	exports.ExternalServer_Https =
 	exports.Worker =
 	exports.Worker_Which =
@@ -22,6 +23,7 @@ exports.Extension =
 	exports.Worker_DurableObjectNamespace_Which =
 	exports.Worker_Binding =
 	exports.Worker_Binding_Which =
+	exports.Worker_Binding_Hyperdrive =
 	exports.Worker_Binding_Parameter =
 	exports.Worker_Binding_WrappedBinding =
 	exports.Worker_Binding_CryptoKey =
@@ -669,6 +671,8 @@ var Worker_Binding_Type_Which;
 	Worker_Binding_Type_Which[
 		(Worker_Binding_Type_Which["ANALYTICS_ENGINE"] = 12)
 	] = "ANALYTICS_ENGINE";
+	Worker_Binding_Type_Which[(Worker_Binding_Type_Which["HYPERDRIVE"] = 13)] =
+		"HYPERDRIVE";
 })(
 	(Worker_Binding_Type_Which =
 		exports.Worker_Binding_Type_Which ||
@@ -777,6 +781,12 @@ class Worker_Binding_Type extends capnp_ts_1.Struct {
 	setAnalyticsEngine() {
 		capnp_ts_1.Struct.setUint16(0, 12, this);
 	}
+	isHyperdrive() {
+		return capnp_ts_1.Struct.getUint16(0, this) === 13;
+	}
+	setHyperdrive() {
+		capnp_ts_1.Struct.setUint16(0, 13, this);
+	}
 	toString() {
 		return "Worker_Binding_Type_" + super.toString();
 	}
@@ -800,6 +810,7 @@ Worker_Binding_Type.R2ADMIN = Worker_Binding_Type_Which.R2ADMIN;
 Worker_Binding_Type.QUEUE = Worker_Binding_Type_Which.QUEUE;
 Worker_Binding_Type.ANALYTICS_ENGINE =
 	Worker_Binding_Type_Which.ANALYTICS_ENGINE;
+Worker_Binding_Type.HYPERDRIVE = Worker_Binding_Type_Which.HYPERDRIVE;
 Worker_Binding_Type._capnp = {
 	displayName: "Type",
 	id: "8906a1296519bf8a",
@@ -1199,7 +1210,60 @@ exports.Worker_Binding_Parameter = Worker_Binding_Parameter;
 Worker_Binding_Parameter._capnp = {
 	displayName: "parameter",
 	id: "dc57e1258d26d152",
-	size: new capnp_ts_1.ObjectSize(8, 2),
+	size: new capnp_ts_1.ObjectSize(8, 6),
+};
+class Worker_Binding_Hyperdrive extends capnp_ts_1.Struct {
+	adoptDesignator(value) {
+		capnp_ts_1.Struct.adopt(value, capnp_ts_1.Struct.getPointer(1, this));
+	}
+	disownDesignator() {
+		return capnp_ts_1.Struct.disown(this.getDesignator());
+	}
+	getDesignator() {
+		return capnp_ts_1.Struct.getStruct(1, ServiceDesignator, this);
+	}
+	hasDesignator() {
+		return !capnp_ts_1.Struct.isNull(capnp_ts_1.Struct.getPointer(1, this));
+	}
+	initDesignator() {
+		return capnp_ts_1.Struct.initStructAt(1, ServiceDesignator, this);
+	}
+	setDesignator(value) {
+		capnp_ts_1.Struct.copyFrom(value, capnp_ts_1.Struct.getPointer(1, this));
+	}
+	getDatabase() {
+		return capnp_ts_1.Struct.getText(2, this);
+	}
+	setDatabase(value) {
+		capnp_ts_1.Struct.setText(2, value, this);
+	}
+	getUser() {
+		return capnp_ts_1.Struct.getText(3, this);
+	}
+	setUser(value) {
+		capnp_ts_1.Struct.setText(3, value, this);
+	}
+	getPassword() {
+		return capnp_ts_1.Struct.getText(4, this);
+	}
+	setPassword(value) {
+		capnp_ts_1.Struct.setText(4, value, this);
+	}
+	getScheme() {
+		return capnp_ts_1.Struct.getText(5, this);
+	}
+	setScheme(value) {
+		capnp_ts_1.Struct.setText(5, value, this);
+	}
+	toString() {
+		return "Worker_Binding_Hyperdrive_" + super.toString();
+	}
+}
+exports.Worker_Binding_Hyperdrive = Worker_Binding_Hyperdrive;
+Worker_Binding_Hyperdrive._capnp = {
+	displayName: "hyperdrive",
+	id: "ad6c391cd55f3134",
+	size: new capnp_ts_1.ObjectSize(8, 6),
 };
 var Worker_Binding_Which;
 (function (Worker_Binding_Which) {
@@ -1225,6 +1289,8 @@ var Worker_Binding_Which;
 		"FROM_ENVIRONMENT";
 	Worker_Binding_Which[(Worker_Binding_Which["ANALYTICS_ENGINE"] = 15)] =
 		"ANALYTICS_ENGINE";
+	Worker_Binding_Which[(Worker_Binding_Which["HYPERDRIVE"] = 16)] =
+		"HYPERDRIVE";
 })(
 	(Worker_Binding_Which =
 		exports.Worker_Binding_Which || (exports.Worker_Binding_Which = {}))
@@ -1651,6 +1717,25 @@ class Worker_Binding extends capnp_ts_1.Struct {
 		capnp_ts_1.Struct.setUint16(0, 15, this);
 		capnp_ts_1.Struct.copyFrom(value, capnp_ts_1.Struct.getPointer(1, this));
 	}
+	getHyperdrive() {
+		capnp_ts_1.Struct.testWhich(
+			"hyperdrive",
+			capnp_ts_1.Struct.getUint16(0, this),
+			16,
+			this
+		);
+		return capnp_ts_1.Struct.getAs(Worker_Binding_Hyperdrive, this);
+	}
+	initHyperdrive() {
+		capnp_ts_1.Struct.setUint16(0, 16, this);
+		return capnp_ts_1.Struct.getAs(Worker_Binding_Hyperdrive, this);
+	}
+	isHyperdrive() {
+		return capnp_ts_1.Struct.getUint16(0, this) === 16;
+	}
+	setHyperdrive() {
+		capnp_ts_1.Struct.setUint16(0, 16, this);
+	}
 	toString() {
 		return "Worker_Binding_" + super.toString();
 	}
@@ -1676,6 +1761,7 @@ Worker_Binding.WRAPPED = Worker_Binding_Which.WRAPPED;
 Worker_Binding.QUEUE = Worker_Binding_Which.QUEUE;
 Worker_Binding.FROM_ENVIRONMENT = Worker_Binding_Which.FROM_ENVIRONMENT;
 Worker_Binding.ANALYTICS_ENGINE = Worker_Binding_Which.ANALYTICS_ENGINE;
+Worker_Binding.HYPERDRIVE = Worker_Binding_Which.HYPERDRIVE;
 Worker_Binding.Type = Worker_Binding_Type;
 Worker_Binding.DurableObjectNamespaceDesignator =
 	Worker_Binding_DurableObjectNamespaceDesignator;
@@ -1684,7 +1770,7 @@ Worker_Binding.WrappedBinding = Worker_Binding_WrappedBinding;
 Worker_Binding._capnp = {
 	displayName: "Binding",
 	id: "8e7e492fd7e35f3e",
-	size: new capnp_ts_1.ObjectSize(8, 2),
+	size: new capnp_ts_1.ObjectSize(8, 6),
 };
 var Worker_DurableObjectNamespace_Which;
 (function (Worker_DurableObjectNamespace_Which) {
@@ -1727,6 +1813,12 @@ class Worker_DurableObjectNamespace extends capnp_ts_1.Struct {
 	}
 	setEphemeralLocal() {
 		capnp_ts_1.Struct.setUint16(0, 1, this);
+	}
+	getPreventEviction() {
+		return capnp_ts_1.Struct.getBit(16, this);
+	}
+	setPreventEviction(value) {
+		capnp_ts_1.Struct.setBit(16, value, this);
 	}
 	toString() {
 		return "Worker_DurableObjectNamespace_" + super.toString();
@@ -2074,10 +2166,46 @@ ExternalServer_Https._capnp = {
 	id: "ac37e02afd3dc6db",
 	size: new capnp_ts_1.ObjectSize(8, 4),
 };
+class ExternalServer_Tcp extends capnp_ts_1.Struct {
+	adoptTlsOptions(value) {
+		capnp_ts_1.Struct.adopt(value, capnp_ts_1.Struct.getPointer(1, this));
+	}
+	disownTlsOptions() {
+		return capnp_ts_1.Struct.disown(this.getTlsOptions());
+	}
+	getTlsOptions() {
+		return capnp_ts_1.Struct.getStruct(1, TlsOptions, this);
+	}
+	hasTlsOptions() {
+		return !capnp_ts_1.Struct.isNull(capnp_ts_1.Struct.getPointer(1, this));
+	}
+	initTlsOptions() {
+		return capnp_ts_1.Struct.initStructAt(1, TlsOptions, this);
+	}
+	setTlsOptions(value) {
+		capnp_ts_1.Struct.copyFrom(value, capnp_ts_1.Struct.getPointer(1, this));
+	}
+	getCertificateHost() {
+		return capnp_ts_1.Struct.getText(2, this);
+	}
+	setCertificateHost(value) {
+		capnp_ts_1.Struct.setText(2, value, this);
+	}
+	toString() {
+		return "ExternalServer_Tcp_" + super.toString();
+	}
+}
+exports.ExternalServer_Tcp = ExternalServer_Tcp;
+ExternalServer_Tcp._capnp = {
+	displayName: "tcp",
+	id: "d941637df0fb39f1",
+	size: new capnp_ts_1.ObjectSize(8, 4),
+};
 var ExternalServer_Which;
 (function (ExternalServer_Which) {
 	ExternalServer_Which[(ExternalServer_Which["HTTP"] = 0)] = "HTTP";
 	ExternalServer_Which[(ExternalServer_Which["HTTPS"] = 1)] = "HTTPS";
+	ExternalServer_Which[(ExternalServer_Which["TCP"] = 2)] = "TCP";
 })(
 	(ExternalServer_Which =
 		exports.ExternalServer_Which || (exports.ExternalServer_Which = {}))
@@ -2138,6 +2266,25 @@ class ExternalServer extends capnp_ts_1.Struct {
 	setHttps() {
 		capnp_ts_1.Struct.setUint16(0, 1, this);
 	}
+	getTcp() {
+		capnp_ts_1.Struct.testWhich(
+			"tcp",
+			capnp_ts_1.Struct.getUint16(0, this),
+			2,
+			this
+		);
+		return capnp_ts_1.Struct.getAs(ExternalServer_Tcp, this);
+	}
+	initTcp() {
+		capnp_ts_1.Struct.setUint16(0, 2, this);
+		return capnp_ts_1.Struct.getAs(ExternalServer_Tcp, this);
+	}
+	isTcp() {
+		return capnp_ts_1.Struct.getUint16(0, this) === 2;
+	}
+	setTcp() {
+		capnp_ts_1.Struct.setUint16(0, 2, this);
+	}
 	toString() {
 		return "ExternalServer_" + super.toString();
 	}
@@ -2148,6 +2295,7 @@ class ExternalServer extends capnp_ts_1.Struct {
 exports.ExternalServer = ExternalServer;
 ExternalServer.HTTP = ExternalServer_Which.HTTP;
 ExternalServer.HTTPS = ExternalServer_Which.HTTPS;
+ExternalServer.TCP = ExternalServer_Which.TCP;
 ExternalServer._capnp = {
 	displayName: "ExternalServer",
 	id: "ff209f9aa352f5a4",
