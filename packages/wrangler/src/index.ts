@@ -1,3 +1,4 @@
+import module from "node:module";
 import os from "node:os";
 import TOML from "@iarna/toml";
 import chalk from "chalk";
@@ -806,11 +807,18 @@ export async function main(argv: string[]): Promise<void> {
 export function getDevCompatibilityDate(
 	config: Config,
 	compatibilityDate = config.compatibility_date
-) {
-	const currentDate = new Date().toISOString().substring(0, 10);
+): string {
+	// Get the maximum compatibility date supported by the installed Miniflare
+	const miniflareEntry = require.resolve("miniflare");
+	const miniflareRequire = module.createRequire(miniflareEntry);
+	const miniflareWorkerd = miniflareRequire("workerd") as {
+		compatibilityDate: string;
+	};
+	const currentDate = miniflareWorkerd.compatibilityDate;
+
 	if (config.configPath !== undefined && compatibilityDate === undefined) {
 		logger.warn(
-			`No compatibility_date was specified. Using today's date: ${currentDate}.\n` +
+			`No compatibility_date was specified. Using the installed Workers runtime's latest supported date: ${currentDate}.\n` +
 				"Add one to your wrangler.toml file:\n" +
 				"```\n" +
 				`compatibility_date = "${currentDate}"\n` +

@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import module from "node:module";
 import getPort from "get-port";
 import { rest } from "msw";
 import patchConsole from "patch-console";
@@ -68,11 +69,18 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			const currentDate = new Date().toISOString().substring(0, 10);
+
+			const miniflareEntry = require.resolve("miniflare");
+			const miniflareRequire = module.createRequire(miniflareEntry);
+			const miniflareWorkerd = miniflareRequire("workerd") as {
+				compatibilityDate: string;
+			};
+			const currentDate = miniflareWorkerd.compatibilityDate;
+
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn.replaceAll(currentDate, "<current-date>"))
 				.toMatchInlineSnapshot(`
-			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo compatibility_date was specified. Using today's date: <current-date>.[0m
+			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo compatibility_date was specified. Using the installed Workers runtime's latest supported date: <current-date>.[0m
 
 			          Add one to your wrangler.toml file:
 			          \`\`\`
