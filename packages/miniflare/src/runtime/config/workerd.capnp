@@ -354,6 +354,16 @@ struct Worker {
       # workerd will forward AnalyticsEngineEvents to designated service in the body of HTTP requests
       # This binding is subject to change and requires the `--experimental` flag
 
+      hyperdrive :group {
+        designator @18 :ServiceDesignator;
+        database @19 :Text;
+        user @20 :Text;
+        password @21 :Text;
+        scheme @22 :Text;
+      }
+      # A binding for Hyperdrive. Allows workers to use Hyperdrive caching & pooling for Postgres
+      # databases.
+
       # TODO(someday): dispatch, other new features
     }
 
@@ -376,6 +386,7 @@ struct Worker {
         r2Admin @10 :Void;
         queue @11 :Void;
         analyticsEngine @12 : Void;
+        hyperdrive @13: Void;
       }
     }
 
@@ -518,6 +529,13 @@ struct Worker {
       #   anything. An object that hasn't stored anything will not consume any storage space on
       #   disk.
     }
+
+    preventEviction @3 :Bool;
+    # By default, Durable Objects are evicted after 10 seconds of inactivity, and expire 70 seconds
+    # after all clients have disconnected. Some applications may want to keep their Durable Objects
+    # pinned to memory forever, so we provide this flag to change the default behavior.
+    #
+    # Note that this is only supported in Workerd; production Durable Objects cannot toggle eviction.
   }
 
   durableObjectUniqueKeyModifier @8 :Text;
@@ -605,6 +623,13 @@ struct ExternalServer {
       certificateHost @4 :Text;
       # If present, expect the host to present a certificate authenticating it as this hostname.
       # If `certificateHost` is not provided, then the certificate is checked against `address`.
+    }
+
+    tcp :group {
+      # Connect to the server over raw TCP. Bindings to this service will only support the
+      # `connect()` method; `fetch()` will throw an exception.
+      tlsOptions @5 :TlsOptions;
+      certificateHost @6 :Text;
     }
 
     # TODO(someday): Cap'n Proto RPC

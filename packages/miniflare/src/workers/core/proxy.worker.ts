@@ -62,11 +62,6 @@ function getType(value: unknown) {
 // TODO(someday): extract `ProxyServer` into component that could be used by
 //  other (user) Durable Objects
 export class ProxyServer implements DurableObject {
-	// On the first `fetch()`, start a `setInterval()` to keep this Durable Object
-	// and its heap alive. This is required to ensure heap references stay valid
-	// for the lifetime of this `workerd` process (except it isn't since `workerd`
-	// doesn't evict Durable Objects yet :P, but it probably will soon).
-	anchorInterval?: number;
 	nextHeapAddress = ProxyAddresses.USER_START;
 	readonly heap = new Map<number, unknown>();
 
@@ -116,8 +111,6 @@ export class ProxyServer implements DurableObject {
 	}
 
 	async fetch(request: Request) {
-		// Make sure this instance is kept alive
-		this.anchorInterval ??= setInterval(() => {}, 10_000);
 		try {
 			return await this.#fetch(request);
 		} catch (e) {
