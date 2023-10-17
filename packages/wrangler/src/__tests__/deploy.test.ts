@@ -2276,10 +2276,6 @@ addEventListener('fetch', event => {});`
 
 			expect(std.info).toMatchInlineSnapshot(`
 			"Attaching additional modules:
-			- a/1.mjs (esm)
-			- a/b/2.mjs (esm)
-			- a/b/3.mjs (esm)
-			- a/b/c/4.mjs (esm)
 			Fetching list of already uploaded assets...
 			Building list of assets to upload...
 			 + file-1.2ca234f380.text (uploading new version of file-1.text)
@@ -2288,7 +2284,18 @@ addEventListener('fetch', event => {});`
 			Uploaded 100% [2 out of 2]"
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"↗️  Done syncing assets
+			"┌─────────────┬──────┬──────────┐
+			│ Name        │ Type │ Size     │
+			├─────────────┼──────┼──────────┤
+			│ a/1.mjs     │ esm  │ xx KiB │
+			├─────────────┼──────┼──────────┤
+			│ a/b/2.mjs   │ esm  │ xx KiB │
+			├─────────────┼──────┼──────────┤
+			│ a/b/3.mjs   │ esm  │ xx KiB │
+			├─────────────┼──────┼──────────┤
+			│ a/b/c/4.mjs │ esm  │ xx KiB │
+			└─────────────┴──────┴──────────┘
+			↗️  Done syncing assets
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)

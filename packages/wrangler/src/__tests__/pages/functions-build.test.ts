@@ -470,7 +470,16 @@ export const cat = "dog";`
 		await runWrangler(`pages functions build --outfile=public/_worker.bundle`);
 
 		expect(existsSync("public/_worker.bundle")).toBe(true);
-		expect(std.out).toMatchInlineSnapshot(`"✨ Compiled Worker successfully"`);
+		expect(std.out).toMatchInlineSnapshot(`
+		"┌─────────┬──────┬──────────┐
+		│ Name    │ Type │ Size     │
+		├─────────┼──────┼──────────┤
+		│ cat.js  │ esm  │ xx KiB │
+		├─────────┼──────┼──────────┤
+		│ dog.mjs │ esm  │ xx KiB │
+		└─────────┴──────┴──────────┘
+		✨ Compiled Worker successfully"
+	`);
 
 		const workerBundleContents = readFileSync("public/_worker.bundle", "utf-8");
 		const workerBundleWithConstantData = replaceRandomWithConstantData(
