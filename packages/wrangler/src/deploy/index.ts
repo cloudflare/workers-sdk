@@ -26,20 +26,22 @@ async function standardPricingWarning(
 	config: Config
 ) {
 	try {
-		const { standard } = await fetchResult<{ standard: boolean }>(
-			`/accounts/${accountId}/enabled-standard`
-		);
-		if (!standard) {
+		const { standard, reason } = await fetchResult<{
+			standard: boolean;
+			reason: string;
+		}>(`/accounts/${accountId}/workers/standard`);
+
+		if (!standard && reason !== "enterprise without override") {
 			logger.log(
 				chalk.blue(
-					"🚧 New Workers Standard pricing is now available. Refer to https://developers.cloudflare.com/workers/platform/pricing/ for more details"
+					`🚧 New Workers Standard pricing is now available. Please visit the dashboard to view details and opt-in to new pricing: https://dash.cloudflare.com/${accountId}/workers/standard/opt-in.`
 				)
 			);
 			return;
 		}
 		if (standard && config.usage_model !== undefined) {
 			logger.warn(
-				"The `usage_model` defined in wrangler.toml is no longer used because you have opted into Workers Standard. Please remove this setting from your wrangler.toml and use the dashboard to configure the usage model for your script."
+				"The `usage_model` defined in wrangler.toml is no longer used because you have opted into Workers Standard pricing. Please remove this setting from your wrangler.toml and use the dashboard to configure the usage model for your script."
 			);
 			return;
 		}
