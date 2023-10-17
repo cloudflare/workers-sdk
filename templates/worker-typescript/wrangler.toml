@@ -1,6 +1,6 @@
 name = "" # todo
 main = "./src/index.ts"
-compatibility_date = "2022-10-13"
+compatibility_date = "2022-10-10"
 
 # Variable bindings. These are arbitrary, plaintext strings (similar to environment variables)
 # Note: Use secrets to store sensitive data.
