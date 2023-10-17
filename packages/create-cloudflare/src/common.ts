@@ -13,6 +13,7 @@ import {
 	openInBrowser,
 	shapes,
 	startSection,
+	status,
 	updateStatus,
 } from "helpers/cli";
 import { dim, blue, gray, bgGreen, brandColor } from "helpers/colors";
@@ -26,6 +27,7 @@ import {
 import { inputPrompt, spinner } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
 import { poll } from "helpers/poll";
+import simpleGit from "simple-git";
 import { version as wranglerVersion } from "wrangler/package.json";
 import { version } from "../package.json";
 import * as shellquote from "./helpers/shell-quote";
@@ -128,7 +130,7 @@ export const runDeploy = async (ctx: PagesGeneratorContext) => {
 	const deployCmd = [
 		...baseDeployCmd,
 		// Important: the following assumes that all framework deploy commands terminate with `wrangler pages deploy`
-		...(ctx.framework?.commitMessage && !insideGitRepo
+		...(ctx.framework?.commitMessage && (!insideGitRepo || ctx.insideMonorepo)
 			? [
 					...(name === "npm" ? ["--"] : []),
 					`--commit-message="${ctx.framework.commitMessage.replaceAll(
@@ -325,10 +327,31 @@ export const gitCommit = async (ctx: PagesGeneratorContext) => {
 	if (!(await isGitInstalled()) || !(await isInsideGitRepo(ctx.project.path)))
 		return;
 
+	const git = simpleGit();
+
+	await git.add(".");
+
+	const gitStatus = await simpleGit().status();
+
+	if (gitStatus.not_added.length > 0) {
+		// there are files that haven't been staged when we did `git add .`
+		// meaning that we are in a monorepo provide a warning and don't commit
+		await simpleGit().reset(["."]);
+		logRaw(
+			`${gray(shapes.leftT)} ${
+				status.warning
+			} The Creation of a git commit failed since we're inside a larger git repository, please commit the changes manually\n${gray(
+				shapes.bar
+			)} `
+		);
+		ctx.insideMonorepo = true;
+		return;
+	}
+
 	await runCommands({
 		silent: true,
 		cwd: ctx.project.path,
-		commands: ["git add .", ["git", "commit", "-m", commitMessage]],
+		commands: [["git", "commit", "-m", commitMessage]],
 		startText: "Committing new files",
 		doneText: `${brandColor("git")} ${dim(`commit`)}`,
 	});

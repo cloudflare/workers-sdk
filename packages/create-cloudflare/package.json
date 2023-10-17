@@ -80,7 +80,8 @@
 		"which-pm-runs": "^1.1.0",
 		"wrangler": "workspace:*",
 		"yargs": "^17.7.1",
-		"yarn": "^1.22.19"
+		"yarn": "^1.22.19",
+		"simple-git": "^3.20.0"
 	},
 	"engines": {
 		"node": ">=18.14.1"
