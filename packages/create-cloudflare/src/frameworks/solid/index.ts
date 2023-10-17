@@ -42,9 +42,9 @@ const config: FrameworkConfig = {
 	generate,
 	configure,
 	displayName: "Solid",
-	packageScripts: {
-		"pages:dev": `wrangler pages dev ${compatDateFlag()} --proxy 3000 -- ${npm} run dev`,
+	getPackageScripts: async () => ({
+		"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 3000 -- ${npm} run dev`,
 		"pages:deploy": `${npm} run build && wrangler pages deploy ./dist/public`,
-	},
+	}),
 };
 export default config;

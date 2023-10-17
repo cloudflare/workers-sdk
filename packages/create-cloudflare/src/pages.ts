@@ -111,7 +111,8 @@ const updatePackageScripts = async (ctx: PagesGeneratorContext) => {
 	// Install wrangler so that the dev/deploy commands work
 	await installWrangler();
 
-	const { packageScripts } = ctx.framework?.config ?? {};
+	const { getPackageScripts } = ctx.framework?.config ?? {};
+	const packageScripts = getPackageScripts ? await getPackageScripts() : {};
 	if (packageScripts) {
 		const s = spinner();
 

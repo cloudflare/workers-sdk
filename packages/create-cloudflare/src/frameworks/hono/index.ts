@@ -20,7 +20,7 @@ const generate = async (ctx: PagesGeneratorContext) => {
 const config: FrameworkConfig = {
 	generate,
 	displayName: "Hono",
-	packageScripts: {},
+	getPackageScripts: async () => ({}),
 	deployCommand: "deploy",
 	devCommand: "dev",
 	type: "workers",
