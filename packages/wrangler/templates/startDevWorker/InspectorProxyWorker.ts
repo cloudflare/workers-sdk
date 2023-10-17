@@ -239,20 +239,49 @@ export class InspectorProxyWorker implements DurableObject {
 	};
 
 	runtimeKeepAliveInterval: number | null = null;
-	reconnectRuntimeWebSocket() {
+
+	// TODO: add abort signal
+	runtimeAbortController = new AbortController();
+	async reconnectRuntimeWebSocket() {
 		assert(this.proxyData, "Expected this.proxyData to be defined");
 
 		this.sendDebugLog("reconnectRuntimeWebSocket");
 
+		this.runtimeAbortController.abort();
+		this.runtimeAbortController = new AbortController();
 		this.websockets.runtimeDeferred = createDeferred<WebSocket>(
 			this.websockets.runtimeDeferred
 		);
 
 		const runtimeWebSocketUrl = urlFromParts(
 			this.proxyData.userWorkerInspectorUrl
-		).href;
+		);
+		runtimeWebSocketUrl.protocol = this.proxyData.userWorkerUrl.protocol; // http: or https:
+
 		this.sendDebugLog("NEW RUNTIME WEBSOCKET", runtimeWebSocketUrl);
-		const runtime = new WebSocket(runtimeWebSocketUrl);
+
+		const upgrade = await fetch(runtimeWebSocketUrl, {
+			headers: {
+				...this.proxyData.headers,
+				Upgrade: "websocket",
+			},
+			signal: this.runtimeAbortController.signal,
+		});
+
+		const runtime = upgrade.webSocket;
+		if (!runtime) {
+			const error = new Error(
+				`Failed to establish the WebSocket connection: expected server to reply with HTTP status code 101 (switching protocols), but received ${upgrade.status} instead.`
+			);
+
+			this.websockets.runtimeDeferred.reject(error);
+			this.sendProxyControllerRequest({
+				type: "runtime-websocket-error",
+				error: serialiseError(error),
+			});
+
+			return;
+		}
 
 		this.websockets.runtime?.close();
 		this.websockets.runtime = runtime;
@@ -293,9 +322,11 @@ export class InspectorProxyWorker implements DurableObject {
 			// wait for a new proxy-data message or manual restart
 		});
 
-		runtime.addEventListener("open", () => {
-			this.handleRuntimeWebSocketOpen(runtime);
-		});
+		runtime.accept();
+
+		// fetch(Upgrade: websocket) resolves when the websocket is open
+		// therefore the open event will not fire, so just trigger the handler
+		this.handleRuntimeWebSocketOpen(runtime);
 	}
 
 	#runtimeMessageCounter = 1e8;
