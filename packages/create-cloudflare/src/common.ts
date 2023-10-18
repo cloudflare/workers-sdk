@@ -32,6 +32,32 @@ import type { C3Args, PagesGeneratorContext } from "types";
 
 const { name, npm } = detectPackageManager();
 
+// C3 shouldn't prevent a user from using an existing directory if it
+// only contains benign config and/or other files from the following set
+const allowedExistingFiles = new Set([
+	".DS_Store",
+	".git",
+	".gitattributes",
+	".gitignore",
+	".gitlab-ci.yml",
+	".hg",
+	".hgcheck",
+	".hgignore",
+	".idea",
+	".npmignore",
+	".travis.yml",
+	"LICENSE",
+	"Thumbs.db",
+	"docs",
+	"mkdocs.yml",
+	"npm-debug.log",
+	"yarn-debug.log",
+	"yarn-error.log",
+	"yarnrc.yml",
+	".yarn",
+	".gitkeep",
+]);
+
 export const validateProjectDirectory = (
 	relativePath: string,
 	args: Partial<C3Args>
@@ -39,10 +65,13 @@ export const validateProjectDirectory = (
 	// Validate that the directory is non-existent or empty
 	const path = resolve(relativePath);
 	const existsAlready = existsSync(path);
-	const isEmpty = existsAlready && readdirSync(path).length === 0; // allow existing dirs _if empty_ to ensure c3 is non-destructive
 
-	if (existsAlready && !isEmpty) {
-		return `Directory \`${relativePath}\` already exists and is not empty. Please choose a new name.`;
+	if (existsAlready) {
+		for (const file of readdirSync(path)) {
+			if (!allowedExistingFiles.has(file)) {
+				return `Directory \`${relativePath}\` already exists and contains files that might conflict. Please choose a new name.`;
+			}
+		}
 	}
 
 	// Ensure the name is valid per the pages schema
