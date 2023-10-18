@@ -8623,7 +8623,7 @@ function mockLastDeploymentRequest() {
 }
 
 /** Create a mock handler for the request to upload a worker script. */
-function mockUploadWorkerRequest(
+export function mockUploadWorkerRequest(
 	options: {
 		available_on_subdomain?: boolean;
 		expectedEntry?: string | RegExp;
@@ -8760,7 +8760,7 @@ function mockUploadWorkerRequest(
 }
 
 /** Create a mock handler for the request to get the account's subdomain. */
-function mockSubDomainRequest(
+export function mockSubDomainRequest(
 	subdomain = "test-sub-domain",
 	registeredWorkersDev = true
 ) {
