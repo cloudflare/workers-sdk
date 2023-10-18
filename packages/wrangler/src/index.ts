@@ -295,7 +295,7 @@ export function createCLIParser(argv: string[]) {
 	// docs
 	wrangler.command(
 		"docs [command..]",
-		"📚 Open wrangler's docs in your browser",
+		"📚 Open wrangler's docs in your browser ",
 		docsOptions,
 		docsHandler
 	);
