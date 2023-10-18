@@ -211,8 +211,8 @@ describe("dev registry", () => {
 					}
 					`,
 		});
-		b = await makeWorker();
 
+		b = await makeWorker();
 		await b.seed({
 			"wrangler.toml": dedent`
 					name = "b"
