@@ -60,7 +60,7 @@ export class ProxyController extends EventEmitter {
 				: undefined;
 
 		const proxyWorkerOptions: MiniflareOptions = {
-			verbose: true,
+			verbose: logger.loggerLevel === "debug",
 			compatibilityFlags: ["nodejs_compat"],
 			modulesRoot: path.dirname(proxyWorkerPath),
 			modules: [{ type: "ESModule", path: proxyWorkerPath }],
@@ -94,7 +94,7 @@ export class ProxyController extends EventEmitter {
 			}),
 		};
 		const inspectorProxyWorkerOptions: MiniflareOptions = {
-			verbose: true,
+			verbose: logger.loggerLevel === "debug",
 			compatibilityFlags: ["nodejs_compat"],
 			modulesRoot: path.dirname(inspectorProxyWorkerPath),
 			modules: [{ type: "ESModule", path: inspectorProxyWorkerPath }],
