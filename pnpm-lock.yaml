@@ -102,6 +102,30 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
+  fixtures/dev-env:
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:^
+        version: link:../../packages/workers-tsconfig
+      '@types/ws':
+        specifier: ^8.5.7
+        version: 8.5.7
+      get-port:
+        specifier: ^7.0.0
+        version: 7.0.0
+      miniflare:
+        specifier: 3.20231002.1
+        version: 3.20231002.1
+      undici:
+        specifier: ^5.23.0
+        version: 5.23.0
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+      ws:
+        specifier: ^8.14.2
+        version: 8.14.2
+
   fixtures/external-durable-objects-app:
     devDependencies:
       '@cloudflare/workers-tsconfig':
@@ -618,7 +642,7 @@ importers:
         version: 8.49.0
       eslint-config-turbo:
         specifier: latest
-        version: 1.10.13(eslint@8.49.0)
+        version: 1.10.15(eslint@8.49.0)
       eslint-plugin-import:
         specifier: 2.26.x
         version: 2.26.0(@typescript-eslint/parser@6.7.2)(eslint@8.49.0)
@@ -3404,12 +3428,30 @@ packages:
       marked: 0.3.19
     dev: false
 
+  /@cloudflare/workerd-darwin-64@1.20231002.0:
+    resolution: {integrity: sha512-sgtjzVO/wtI/6S7O0bk4zQAv2xlvqOxB18AXzlit6uXgbYFGeQedRHjhKVMOacGmWEnM4C3ir/fxJGsc3Pyxng==}
+    engines: {node: '>=16'}
+    cpu: [x64]
+    os: [darwin]
+    requiresBuild: true
+    dev: true
+    optional: true
+
   /@cloudflare/workerd-darwin-64@1.20231016.0:
     resolution: {integrity: sha512-rPAnF8Q25+eHEsAopihWeftPW/P0QapY9d7qaUmtOXztWdd6YPQ7JuiWVj4Nvjphge1BleehxAbo4I3Z4L2H1g==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [darwin]
     requiresBuild: true
+    optional: true
+
+  /@cloudflare/workerd-darwin-arm64@1.20231002.0:
+    resolution: {integrity: sha512-dv8nztYFaTYYgBpyy80vc4hdMYv9mhyNbvBsZywm8S7ivcIpzogi0UKkGU4E/G0lYK6W3WtwTBqwRe+pXJ1+Ww==}
+    engines: {node: '>=16'}
+    cpu: [arm64]
+    os: [darwin]
+    requiresBuild: true
+    dev: true
     optional: true
 
   /@cloudflare/workerd-darwin-arm64@1.20231016.0:
@@ -3420,6 +3462,15 @@ packages:
     requiresBuild: true
     optional: true
 
+  /@cloudflare/workerd-linux-64@1.20231002.0:
+    resolution: {integrity: sha512-UG8SlLcGzaQDSSw6FR4+Zf408925wkLOCAi8w5qEoFYu3g4Ef7ZenstesCOsyWL7qBDKx0/iwk6+a76W5IHI0Q==}
+    engines: {node: '>=16'}
+    cpu: [x64]
+    os: [linux]
+    requiresBuild: true
+    dev: true
+    optional: true
+
   /@cloudflare/workerd-linux-64@1.20231016.0:
     resolution: {integrity: sha512-y6Sj37yTzM8QbAghG9LRqoSBrsREnQz8NkcmpjSxeK6KMc2g0L5A/OemCdugNlIiv+zRv9BYX1aosaoxY5JbeQ==}
     engines: {node: '>=16'}
@@ -3428,12 +3479,30 @@ packages:
     requiresBuild: true
     optional: true
 
+  /@cloudflare/workerd-linux-arm64@1.20231002.0:
+    resolution: {integrity: sha512-GPaa66ZSq1gK09r87c5CJbHIApcIU//LVHz3rnUxK0//00YCwUuGUUK1dn/ylg+fVqDQxIDmH+ABnobBanvcDA==}
+    engines: {node: '>=16'}
+    cpu: [arm64]
+    os: [linux]
+    requiresBuild: true
+    dev: true
+    optional: true
+
   /@cloudflare/workerd-linux-arm64@1.20231016.0:
     resolution: {integrity: sha512-LqMIRUHD1YeRg2TPIfIQEhapSKMFSq561RypvJoXZvTwSbaROxGdW6Ku+PvButqTkEvuAtfzN/kGje7fvfQMHg==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [linux]
     requiresBuild: true
+    optional: true
+
+  /@cloudflare/workerd-windows-64@1.20231002.0:
+    resolution: {integrity: sha512-ybIy+sCme0VO0RscndXvqWNBaRMUOc8vhi+1N2h/KDsKfNLsfEQph+XWecfKzJseUy1yE2rV1xei3BaNmaa6vg==}
+    engines: {node: '>=16'}
+    cpu: [x64]
+    os: [win32]
+    requiresBuild: true
+    dev: true
     optional: true
 
   /@cloudflare/workerd-windows-64@1.20231016.0:
@@ -5957,6 +6026,12 @@ packages:
 
   /@types/ws@8.5.3:
     resolution: {integrity: sha512-6YOoWjruKj1uLf3INHH7D3qTXwFfEsg1kf3c0uDdSBJwfa/llkwIjrAGV7j7mVgGNbzTQ3HiHKKDXl6bJPD97w==}
+    dependencies:
+      '@types/node': 20.1.7
+    dev: true
+
+  /@types/ws@8.5.7:
+    resolution: {integrity: sha512-6UrLjiDUvn40CMrAubXuIVtj2PEfKDffJS7ychvnPU44j+KVeXmdHHTgqcM/dxLUTHxlXHiFM8Skmb8ozGdTnQ==}
     dependencies:
       '@types/node': 20.1.7
     dev: true
@@ -8913,13 +8988,13 @@ packages:
       source-map: 0.6.1
     dev: true
 
-  /eslint-config-turbo@1.10.13(eslint@8.49.0):
-    resolution: {integrity: sha512-Ffa0SxkRCPMtfUX/HDanEqsWoLwZTQTAXO9W4IsOtycb2MzJDrVcLmoFW5sMwCrg7gjqbrC4ZJoD+1SPPzIVqg==}
+  /eslint-config-turbo@1.10.15(eslint@8.49.0):
+    resolution: {integrity: sha512-76mpx2x818JZE26euen14utYcFDxOahZ9NaWA+6Xa4pY2ezVKVschuOxS96EQz3o3ZRSmcgBOapw/gHbN+EKxQ==}
     peerDependencies:
       eslint: '>6.6.0'
     dependencies:
       eslint: 8.49.0
-      eslint-plugin-turbo: 1.10.13(eslint@8.49.0)
+      eslint-plugin-turbo: 1.10.15(eslint@8.49.0)
     dev: false
 
   /eslint-import-resolver-node@0.3.7:
@@ -9254,8 +9329,8 @@ packages:
       - typescript
     dev: true
 
-  /eslint-plugin-turbo@1.10.13(eslint@8.49.0):
-    resolution: {integrity: sha512-el4AAmn0zXmvHEyp1h0IQMfse10Vy8g5Vbg4IU3+vD9CSj5sDbX07iFVt8sCKg7og9Q5FAa9mXzlCf7t4vYgzg==}
+  /eslint-plugin-turbo@1.10.15(eslint@8.49.0):
+    resolution: {integrity: sha512-Tv4QSKV/U56qGcTqS/UgOvb9HcKFmWOQcVh3HEaj7of94lfaENgfrtK48E2CckQf7amhKs1i+imhCsNCKjkQyA==}
     peerDependencies:
       eslint: '>6.6.0'
     dependencies:
@@ -10156,6 +10231,11 @@ packages:
   /get-port@6.1.2:
     resolution: {integrity: sha512-BrGGraKm2uPqurfGVj/z97/zv8dPleC6x9JBNRTrDNtCkkRF4rPwrQXFgL7+I+q8QSdU4ntLQX2D7KIxSy8nGw==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
+    dev: true
+
+  /get-port@7.0.0:
+    resolution: {integrity: sha512-mDHFgApoQd+azgMdwylJrv2DX47ywGq1i5VFJE7fZ0dttNq3iQMfsU4IvEgBHojA3KqEudyu7Vq+oN8kNaNkWw==}
+    engines: {node: '>=16'}
     dev: true
 
   /get-source@2.0.12:
@@ -12958,6 +13038,28 @@ packages:
     engines: {node: '>=4'}
     dev: false
 
+  /miniflare@3.20231002.1:
+    resolution: {integrity: sha512-4xJ8FezJkQqHzCm71lovb9L/wJ0VV/odMFf5CIxfLTunsx97kTIlZnhS6aHuvcbzdztbWp1RR71K/1qFUHdpdQ==}
+    engines: {node: '>=16.13'}
+    dependencies:
+      acorn: 8.10.0
+      acorn-walk: 8.2.0
+      capnp-ts: 0.7.0(supports-color@9.2.2)
+      exit-hook: 2.2.1
+      glob-to-regexp: 0.4.1
+      source-map-support: 0.5.21
+      stoppable: 1.1.0
+      undici: 5.23.0
+      workerd: 1.20231002.0
+      ws: 8.14.2
+      youch: 3.2.3
+      zod: 3.22.2
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+    dev: true
+
   /miniflare@3.20231016.0(supports-color@9.2.2):
     resolution: {integrity: sha512-AmlqI89zsnBJfC+nKKZdCB/fuu0q/br24Kqt9NZwcT6yJEpO5NytNKfjl6nJROHROwuJSRQR1T3yopCtG1/0DA==}
     engines: {node: '>=16.13'}
@@ -12971,7 +13073,7 @@ packages:
       stoppable: 1.1.0
       undici: 5.23.0
       workerd: 1.20231016.0
-      ws: 8.13.0
+      ws: 8.14.2
       youch: 3.2.3
       zod: 3.22.2
     transitivePeerDependencies:
@@ -17310,6 +17412,19 @@ packages:
     resolution: {integrity: sha512-gvVzJFlPycKc5dZN4yPkP8w7Dc37BtP1yczEneOb4uq34pXZcvrtRTmWV8W+Ume+XCxKgbjM+nevkyFPMybd4Q==}
     dev: true
 
+  /workerd@1.20231002.0:
+    resolution: {integrity: sha512-NFuUQBj30ZguDoPZ6bL40hINiu8aP2Pvxr/3xAdhWOwVFLuObPOiSdQ8qm4JYZ7jovxWjWE4Z7VR2avjIzEksQ==}
+    engines: {node: '>=16'}
+    hasBin: true
+    requiresBuild: true
+    optionalDependencies:
+      '@cloudflare/workerd-darwin-64': 1.20231002.0
+      '@cloudflare/workerd-darwin-arm64': 1.20231002.0
+      '@cloudflare/workerd-linux-64': 1.20231002.0
+      '@cloudflare/workerd-linux-arm64': 1.20231002.0
+      '@cloudflare/workerd-windows-64': 1.20231002.0
+    dev: true
+
   /workerd@1.20231016.0:
     resolution: {integrity: sha512-v2GDb5XitSqgub/xm7EWHVAlAK4snxQu3itdMQxXstGtUG9hl79fQbXS/8fNFbmms2R2bAxUwSv47q8k5T5Erw==}
     engines: {node: '>=16'}
@@ -17392,8 +17507,8 @@ packages:
         optional: true
     dev: true
 
-  /ws@8.13.0:
-    resolution: {integrity: sha512-x9vcZYTrFPC7aSIbj7sRCYo7L/Xb8Iy+pW0ng0wt2vCJv7M9HOMy0UoN3rr+IFC7hb7vXoqS+P9ktyLLLhO+LA==}
+  /ws@8.14.2:
+    resolution: {integrity: sha512-wEBG1ftX4jcglPxgFCMJmZ2PLtSbJ2Peg6TmpJFTbe9GZYOQCDPdMYu/Tm0/bGZkw8paZnJY45J4K2PZrLYq8g==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1

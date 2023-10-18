@@ -92,6 +92,9 @@ export class ProxyController extends EventEmitter {
 					// if debugging, log requests with specic ProxyWorker prefix
 					logger.loggerLevel === "debug" ? "wrangler-ProxyWorker" : "wrangler",
 			}),
+
+			cache: false,
+			unsafeEphemeralDurableObjects: true,
 		};
 		const inspectorProxyWorkerOptions: MiniflareOptions = {
 			verbose: true,
@@ -126,6 +129,9 @@ export class ProxyController extends EventEmitter {
 							prefix: "wrangler-InspectorProxyWorker",
 					  })
 					: undefined,
+
+			cache: false,
+			unsafeEphemeralDurableObjects: true,
 		};
 
 		const proxyWorkerOptionsChanged = didMiniflareOptionsChange(
