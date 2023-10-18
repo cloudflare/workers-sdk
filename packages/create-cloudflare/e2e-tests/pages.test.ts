@@ -43,6 +43,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 			expectResponseToContain: "Dinosaurs are cool",
 			unsupportedPms: ["bun"],
 			testCommitMessage: true,
+			timeout: 1000 * 60 * 5,
 		},
 		angular: {
 			quarantine: true,
