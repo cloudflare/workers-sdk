@@ -1,6 +1,6 @@
 import process from "process";
 import { hideBin } from "yargs/helpers";
-import { unstable_dev, unstable_pages } from "./api";
+import { unstable_dev, unstable_pages, DevEnv as unstable_DevEnv } from "./api";
 import { FatalError } from "./errors";
 import { main } from ".";
 
@@ -24,5 +24,5 @@ if (typeof jest === "undefined" && require.main === module) {
  * It makes it possible to import wrangler from 'wrangler',
  * and call wrangler.unstable_dev().
  */
-export { unstable_dev, unstable_pages };
+export { unstable_dev, unstable_pages, unstable_DevEnv };
 export type { UnstableDevWorker, UnstableDevOptions };
