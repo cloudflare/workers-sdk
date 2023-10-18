@@ -207,7 +207,7 @@ export const printSummary = async (ctx: PagesGeneratorContext) => {
 	const nextSteps = [
 		[
 			`Navigate to the new directory`,
-			`cd ${relative(ctx.originalCWD, ctx.project.path)}`,
+			`cd ${shellquote.quote([relative(ctx.originalCWD, ctx.project.path)])}`,
 		],
 		[
 			`Run the development server`,
