@@ -238,7 +238,8 @@ export async function initHandler(args: InitArgs) {
 			const c3Arguments: string[] = [];
 
 			if (args.name) {
-				c3Arguments.push(args.name);
+				const name = /\s/.test(args.name) ? `"${args.name}"` : args.name;
+				c3Arguments.push(name);
 			}
 
 			if (yesFlag) {
