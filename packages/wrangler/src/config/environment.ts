@@ -523,6 +523,8 @@ interface EnvironmentNonInheritable {
 		binding: string;
 		/** The id of the database. */
 		id: string;
+		/** The local database connection string for `wrangler dev` */
+		localConnectionString?: string;
 	}[];
 
 	/**

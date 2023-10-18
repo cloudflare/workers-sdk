@@ -164,6 +164,7 @@ export interface CfConstellation {
 export interface CfHyperdrive {
 	binding: string;
 	id: string;
+	localConnectionString?: string;
 }
 
 interface CfService {
