@@ -86,7 +86,7 @@ function* executeRequest(request: Request, relativePathname: string) {
 				yield {
 					handler,
 					params: matchResult.params as Params,
-					path: mountMatchResult.path,
+					path: route.mountPath,
 				};
 			}
 		}
@@ -111,7 +111,7 @@ function* executeRequest(request: Request, relativePathname: string) {
 				yield {
 					handler,
 					params: matchResult.params as Params,
-					path: matchResult.path,
+					path: route.mountPath,
 				};
 			}
 			break;
@@ -147,7 +147,10 @@ export default function (pluginArgs: unknown) {
 				const { handler, params, path } = result.value;
 				const context = {
 					request: new Request(request.clone()),
-					functionPath: workerContext.functionPath + path,
+					functionPath: (workerContext.functionPath + path).replace(
+						/^\/\//,
+						"/"
+					),
 					next: pluginNext,
 					params,
 					get data() {
