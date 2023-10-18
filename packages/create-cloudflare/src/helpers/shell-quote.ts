@@ -1,6 +1,10 @@
 import shellquote from "shell-quote";
 
-export const quote = shellquote.quote;
+export const quote = function (args: (string | number | boolean)[]) {
+	const stringArgs = args.map((arg) => String(arg));
+
+	return shellquote.quote(stringArgs);
+};
 
 export function parse(cmd: string, env?: Record<string, string>): string[] {
 	// This is a workaround for a bug in shell-quote on Windows
