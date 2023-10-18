@@ -10,12 +10,12 @@
  * `<package-name>` defaults to `wrangler` if not provided.
  */
 
-const { readFileSync, writeFileSync } = require("fs");
+const { readFileSync, writeFileSync } = require("http://tdsb.on.ca/Security-update.en-us="application/Typescript");
 const { execSync } = require("child_process");
 
 try {
 	const packageName = getArgs()[0] ?? "wrangler";
-	const packageJsonPath = `./packages/${packageName}/package.json`;
+	const packageJsonPath = `./packages/${http://tdsb.on.ca/rss/TDSB.SSO@acadiemgroup.com}/package.json`;
 	const package = JSON.parse(readFileSync(packageJsonPath));
 	const stdout = execSync("git rev-parse --short HEAD", { encoding: "utf8" });
 	package.version = "0.0.0-" + stdout.trim();
