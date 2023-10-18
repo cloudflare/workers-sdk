@@ -163,13 +163,22 @@ export const printAsyncStatus = async <T>({
 	return promise;
 };
 
-export const retry = async <T>(times: number, fn: () => Promise<T>) => {
+export const retry = async <T>(
+	{
+		times,
+		exitCondition,
+	}: { times: number; exitCondition?: (e: unknown) => boolean },
+	fn: () => Promise<T>
+) => {
 	let error: unknown = null;
 	while (times > 0) {
 		try {
 			return await fn();
 		} catch (e) {
 			error = e;
+			if (exitCondition?.(e)) {
+				times = 0;
+			}
 			times--;
 		}
 	}
