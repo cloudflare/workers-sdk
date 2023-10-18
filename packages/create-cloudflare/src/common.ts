@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readdirSync } from "fs";
-import { basename, dirname, resolve } from "path";
+import { basename, dirname, relative, resolve } from "path";
 import { chdir } from "process";
 import { getFrameworkCli } from "frameworks/index";
 import { processArgument } from "helpers/args";
@@ -205,7 +205,10 @@ export const chooseAccount = async (ctx: PagesGeneratorContext) => {
 
 export const printSummary = async (ctx: PagesGeneratorContext) => {
 	const nextSteps = [
-		[`Navigate to the new directory`, `cd ${ctx.project.name}`],
+		[
+			`Navigate to the new directory`,
+			`cd ${relative(ctx.originalCWD, ctx.project.path)}`,
+		],
 		[
 			`Run the development server`,
 			`${npm} run ${ctx.framework?.config.devCommand ?? "start"}`,
