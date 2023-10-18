@@ -256,8 +256,8 @@ export async function initHandler(args: InitArgs) {
 			c3Arguments.unshift(...shellquote.parse(getC3CommandFromEnv()));
 
 			// Deprecate the `init --from-dash` command
-			const replacementC3Command = `\`${packageManager.type} ${c3Arguments.join(
-				" "
+			const replacementC3Command = `\`${packageManager.type} ${shellquote.quote(
+				c3Arguments
 			)}\``;
 
 			logger.warn(
