@@ -176,10 +176,9 @@ export const retry = async <T>(
 			return await fn();
 		} catch (e) {
 			error = e;
+			times--;
 			if (exitCondition?.(e)) {
-				times = 0;
-			} else {
-				times--;
+				break;
 			}
 		}
 	}
