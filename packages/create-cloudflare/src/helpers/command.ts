@@ -178,8 +178,9 @@ export const retry = async <T>(
 			error = e;
 			if (exitCondition?.(e)) {
 				times = 0;
+			} else {
+				times--;
 			}
-			times--;
 		}
 	}
 	throw error;
