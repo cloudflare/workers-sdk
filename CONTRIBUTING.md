@@ -75,6 +75,10 @@ While each workspace has its own dependencies, you install the dependencies usin
   > pnpm install
   ```
 
+## Generating a new Package or Template
+
+The process for wiring up a new package or template is a bit involved, so we've created a script, which is utilizing [C3](https://github.com/cloudflare/workers-sdk/tree/main/packages/create-cloudflare) & [TurboRepo CodeGen](https://turbo.build/repo/docs/core-concepts/monorepos/code-generation), to automate the process. To use it, run `pnpm turbo:gen` and follow the prompts. The script will create a new directory in `packages` or `templates` with the name you provide, with the type of project you chose wired up with Workers-SDK Monorepo configurations.
+
 ## Building and running
 
 Each wrangler workspace in this project is written in [TypeScript](https://www.typescriptlang.org/) and compiled, by [esbuild](https://github.com/evanw/esbuild), into JavaScript bundles for distribution.
