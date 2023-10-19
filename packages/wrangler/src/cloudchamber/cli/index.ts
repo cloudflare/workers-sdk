@@ -182,7 +182,7 @@ async function waitForImagePull(deployment: Deployment) {
 		error(
 			"Your container image couldn't be pulled, (404 not found). Did you specify the correct URL?",
 			`Run ${brandColor(
-				process.argv0 + " containers modify " + deployment.id
+				process.argv0 + " cloudchamber modify " + deployment.id
 			)} to change the deployment image`
 		);
 		return;
