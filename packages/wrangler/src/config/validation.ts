@@ -1207,6 +1207,16 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateKVBinding),
 			[]
 		),
+		cloudchamber: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"cloudchamber",
+			validateCloudchamberConfig,
+			{}
+		),
 		send_email: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -2064,6 +2074,29 @@ const validateBindingArray =
 		}
 		return isValid;
 	};
+
+const validateCloudchamberConfig: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"cloudchamber" should be an object, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+
+	let isValid = true;
+	const requiredKeys: string[] = [];
+	requiredKeys.forEach((key) => {
+		if (!isRequiredProperty(value, key, "string")) {
+			diagnostics.errors.push(
+				`"${field}" bindings should have a string "${key}" field but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			isValid = false;
+		}
+	});
+	return isValid;
+};
 
 const validateKVBinding: ValidatorFn = (diagnostics, field, value) => {
 	if (typeof value !== "object" || value === null) {

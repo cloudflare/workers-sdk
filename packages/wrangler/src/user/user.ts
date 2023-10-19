@@ -349,6 +349,7 @@ const Scopes = {
 	"ssl_certs:write": "See and manage mTLS certificates for your account",
 	"constellation:write": "Manage Constellation projects/models",
 	"ai:read": "List AI models",
+	"cloudchamber:write": "Manage Cloudchamber",
 } as const;
 
 /**
