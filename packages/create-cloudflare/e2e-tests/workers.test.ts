@@ -1,7 +1,20 @@
 import { join } from "path";
-import { describe, expect, test, afterEach, beforeEach } from "vitest";
+import {
+	describe,
+	expect,
+	test,
+	afterEach,
+	beforeEach,
+	beforeAll,
+} from "vitest";
 import { frameworkToTest } from "./frameworkToTest";
-import { isQuarantineMode, runC3, testProjectDir } from "./helpers";
+import {
+	isQuarantineMode,
+	recreateLogFolder,
+	runC3,
+	testProjectDir,
+} from "./helpers";
+import type { Suite, TestContext } from "vitest";
 
 /*
 Areas for future improvement:
@@ -16,6 +29,10 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 	() => {
 		const { getPath, clean } = testProjectDir("workers");
 
+		beforeAll((ctx) => {
+			recreateLogFolder(ctx as Suite);
+		});
+
 		beforeEach((ctx) => {
 			const template = ctx.meta.name;
 			clean(template);
@@ -26,8 +43,8 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 			clean(template);
 		});
 
-		const runCli = async (template: string) => {
-			const projectPath = getPath(template);
+		const runCli = async (template: string, ctx: TestContext) => {
+			const projectPath = getPath(template.toLowerCase());
 
 			const argv = [
 				projectPath,
@@ -39,7 +56,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 				"--wrangler-defaults",
 			];
 
-			await runC3({ argv });
+			await runC3({ ctx, argv });
 
 			// Relevant project files should have been created
 			expect(projectPath).toExist();
@@ -54,7 +71,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 			expect(wranglerPath).toExist();
 		};
 
-		test.each([
+		describe.each([
 			"hello-world",
 			"common",
 			"chatgptPlugin",
@@ -62,7 +79,9 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 			"scheduled",
 			"openapi",
 		])("%s", async (name) => {
-			await runCli(name);
+			test(name, async (ctx) => {
+				await runCli(name, ctx);
+			});
 		});
 	}
 );

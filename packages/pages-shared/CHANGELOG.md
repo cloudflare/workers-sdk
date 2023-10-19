@@ -1,5 +1,11 @@
 # @cloudflare/pages-shared
 
+## 0.10.1
+
+### Patch Changes
+
+- [#4206](https://github.com/cloudflare/workers-sdk/pull/4206) [`8e927170`](https://github.com/cloudflare/workers-sdk/commit/8e927170c4b6ce4310e563ce528c2ea20d3de9e7) Thanks [@1000hz](https://github.com/1000hz)! - chore: bump `miniflare` to [`3.20231016.0`](https://github.com/cloudflare/miniflare/releases/tag/v3.20231016.0)
+
 ## 0.10.0
 
 ### Minor Changes

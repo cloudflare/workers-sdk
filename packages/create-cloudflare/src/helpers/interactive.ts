@@ -274,31 +274,40 @@ export const spinner = (
 			currentMsg = msg;
 			startMsg = `${currentMsg} ${dim(helpText)}`;
 
-			let index = 0;
+			if (isInteractive()) {
+				let index = 0;
 
-			clearLoop();
-			loop = setInterval(() => {
-				index++;
-				const spinnerFrame = frames[index % frames.length];
-				const ellipsisFrame = ellipsisFrames[index % ellipsisFrames.length];
+				clearLoop();
+				loop = setInterval(() => {
+					index++;
+					const spinnerFrame = frames[index % frames.length];
+					const ellipsisFrame = ellipsisFrames[index % ellipsisFrames.length];
 
-				if (msg) {
-					logUpdate(`${color(spinnerFrame)} ${currentMsg} ${ellipsisFrame}`);
-				}
-			}, frameRate);
+					if (msg) {
+						logUpdate(`${color(spinnerFrame)} ${currentMsg} ${ellipsisFrame}`);
+					}
+				}, frameRate);
+			} else {
+				logUpdate(`${leftT} ${startMsg}`);
+			}
 		},
 		update(msg: string) {
 			currentMsg = msg;
 		},
 		stop(msg?: string) {
-			// Write the final message and clear the loop
-			logUpdate.clear();
-			if (msg) {
-				logUpdate(`${leftT} ${startMsg}\n${grayBar} ${msg}`);
-				logUpdate.done();
+			if (isInteractive()) {
+				// Write the final message and clear the loop
+				logUpdate.clear();
+				if (msg) {
+					logUpdate(`${leftT} ${startMsg}\n${grayBar} ${msg}`);
+					logUpdate.done();
+					newline();
+				}
+				clearLoop();
+			} else {
+				logUpdate(`\n${grayBar} ${msg}`);
 				newline();
 			}
-			clearLoop();
 		},
 	};
 };

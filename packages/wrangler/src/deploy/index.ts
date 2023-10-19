@@ -1,4 +1,6 @@
 import path from "node:path";
+import chalk from "chalk";
+import { fetchResult } from "../cfetch";
 import { findWranglerToml, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
 import {
@@ -13,10 +15,39 @@ import { getAssetPaths, getSiteAssetPaths } from "../sites";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import deploy from "./deploy";
+import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+
+async function standardPricingWarning(
+	accountId: string | undefined,
+	config: Config
+) {
+	try {
+		const { standard, reason } = await fetchResult<{
+			standard: boolean;
+			reason: string;
+		}>(`/accounts/${accountId}/workers/standard`);
+
+		if (!standard && reason !== "enterprise without override") {
+			logger.log(
+				chalk.blue(
+					`🚧 New Workers Standard pricing is now available. Please visit the dashboard to view details and opt-in to new pricing: https://dash.cloudflare.com/${accountId}/workers/standard/opt-in.`
+				)
+			);
+			return;
+		}
+		if (standard && config.usage_model !== undefined) {
+			logger.warn(
+				"The `usage_model` defined in wrangler.toml is no longer used because you have opted into Workers Standard pricing. Please remove this setting from your wrangler.toml and use the dashboard to configure the usage model for your script."
+			);
+			return;
+		}
+		// Ignore 404 errors for the enablement check
+	} catch {}
+}
 
 export function deployOptions(yargs: CommonYargsArgv) {
 	return (
@@ -253,7 +284,7 @@ export async function deployHandler(
 					args.siteInclude,
 					args.siteExclude
 			  );
-
+	await standardPricingWarning(accountId, config);
 	await deploy({
 		config,
 		accountId,

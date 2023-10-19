@@ -39,6 +39,7 @@ export type PagesGeneratorContext = {
 		path: string;
 	};
 	type?: "pages" | "workers";
+	originalCWD: string;
 };
 
 type UpdaterPackageScript = (cmd: string) => string;
@@ -47,7 +48,9 @@ export type FrameworkConfig = {
 	generate: (ctx: PagesGeneratorContext) => Promise<void>;
 	configure?: (ctx: PagesGeneratorContext) => Promise<void>;
 	displayName: string;
-	packageScripts: Record<string, string | UpdaterPackageScript>;
+	getPackageScripts: () => Promise<
+		Record<string, string | UpdaterPackageScript>
+	>;
 	deployCommand?: string;
 	devCommand?: string;
 	testFlags?: string[];

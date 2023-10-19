@@ -7,7 +7,7 @@ import {
 	runCommand,
 	runFrameworkGenerator,
 } from "helpers/command";
-import { readFile, readJSON, writeFile } from "helpers/files";
+import { compatDateFlag, readFile, readJSON, writeFile } from "helpers/files";
 import { spinner } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
 import { getFrameworkCli } from "../index";
@@ -27,9 +27,8 @@ const generate = async (ctx: PagesGeneratorContext) => {
 };
 
 const configure = async (ctx: PagesGeneratorContext) => {
-	const cli = getFrameworkCli(ctx, false);
 	process.chdir(ctx.project.path);
-	await runCommand(`${npx} ${cli}@next analytics disable`, {
+	await runCommand(`${npx} ng analytics disable`, {
 		silent: true,
 	});
 	await addSSRAdapter();
@@ -42,17 +41,16 @@ const config: FrameworkConfig = {
 	generate,
 	configure,
 	displayName: "Angular",
-	packageScripts: {
+	getPackageScripts: async () => ({
 		process:
 			"node ./tools/copy-worker-files.mjs && node ./tools/copy-client-files.mjs && node ./tools/bundle.mjs",
-		prestart: `${npm} run build:ssr && ${npm} run process`,
-		start:
-			"wrangler pages dev dist/cloudflare --compatibility-date=2021-09-20 --experimental-local",
-		predeploy: `${npm} run build:ssr && ${npm} run process`,
-		deploy: "wrangler pages deploy dist/cloudflare",
-	},
+		"pages:build": `${npm} run build:ssr && ${npm} run process`,
+		start: `${npm} run pages:build && wrangler pages dev dist/cloudflare ${await compatDateFlag()} --experimental-local`,
+		deploy: `${npm} run pages:build && wrangler pages deploy dist/cloudflare`,
+	}),
 	deployCommand: "deploy",
 	devCommand: "start",
+	testFlags: ["--routing", "--style", "sass"],
 };
 export default config;
 

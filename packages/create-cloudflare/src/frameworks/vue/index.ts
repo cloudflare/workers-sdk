@@ -14,10 +14,10 @@ const generate = async (ctx: PagesGeneratorContext) => {
 const config: FrameworkConfig = {
 	generate,
 	displayName: "Vue",
-	packageScripts: {
-		"pages:dev": `wrangler pages dev ${compatDateFlag()} --proxy 5173 -- ${npm} run dev`,
+	getPackageScripts: async () => ({
+		"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 5173 -- ${npm} run dev`,
 		"pages:deploy": `${npm} run build && wrangler pages deploy ./dist`,
-	},
+	}),
 	testFlags: ["--ts"],
 };
 export default config;

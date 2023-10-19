@@ -7,17 +7,17 @@
 	],
 	"dependencies": {
 		"@angular/cli": "16.2.2",
-		"create-astro": "4.2.1",
+		"create-astro": "4.3.0",
 		"create-docusaurus": "2.4.3",
-		"create-hono": "0.2.6",
+		"create-hono": "0.3.1",
 		"create-next-app": "13.4.19",
 		"create-qwik": "1.2.13",
 		"create-react-app": "5.0.1",
-		"create-remix": "2.0.1",
-		"create-solid": "0.3.6",
-		"create-svelte": "5.1.0",
+		"create-remix": "2.1.0",
+		"create-solid": "0.3.7",
+		"create-svelte": "5.1.1",
 		"create-vue": "3.7.5",
-		"gatsby": "5.12.4",
+		"gatsby": "5.12.7",
 		"nuxi": "3.9.0"
 	},
 	"frameworkCliMap": {

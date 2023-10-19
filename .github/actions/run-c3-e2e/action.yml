@@ -33,10 +33,23 @@ runs:
         git config --global user.name 'Wrangler automated PR updater'
 
     - name: E2E Tests
+      id: run-e2e
       shell: bash
+      continue-on-error: true
       run: pnpm run --filter create-cloudflare test:e2e:${{ inputs.package-manager }}
       env:
         CLOUDFLARE_API_TOKEN: ${{ inputs.apiToken }}
         CLOUDFLARE_ACCOUNT_ID: ${{ inputs.accountId }}
         E2E_QUARANTINE: ${{ inputs.quarantine }}
         FRAMEWORK_CLI_TO_TEST: ${{ inputs.framework }}
+
+    - name: Upload Logs
+      uses: actions/upload-artifact@v3
+      with:
+        name: e2e-logs
+        path: packages/create-cloudflare/.e2e-logs
+
+    - name: Fail if errors detected
+      shell: bash
+      if: ${{ steps.run-e2e.outcome == 'failure' }}
+      run: exit 1

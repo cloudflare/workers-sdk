@@ -1,5 +1,45 @@
 # create-cloudflare
 
+## 2.6.0
+
+### Minor Changes
+
+- [#4116](https://github.com/cloudflare/workers-sdk/pull/4116) [`5ff0ca02`](https://github.com/cloudflare/workers-sdk/commit/5ff0ca021de83add9f9e90ab71758f46311ebd65) Thanks [@jculvey](https://github.com/jculvey)! - Replaces the "prestart" and "predeploy" scripts when using Angular to better support pnpm
+
+### Patch Changes
+
+- [#4099](https://github.com/cloudflare/workers-sdk/pull/4099) [`4deda525`](https://github.com/cloudflare/workers-sdk/commit/4deda525ebd4a9fa65a4a1e827cfcd2fc2add592) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `gatsby` from `5.12.4` to `5.12.5`
+
+* [#4141](https://github.com/cloudflare/workers-sdk/pull/4141) [`9b2578aa`](https://github.com/cloudflare/workers-sdk/commit/9b2578aacb50c2be30852881cd4eb740d0b436c3) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-svelte` from `5.1.0` to `5.1.1`
+
+- [#4184](https://github.com/cloudflare/workers-sdk/pull/4184) [`616b6610`](https://github.com/cloudflare/workers-sdk/commit/616b6610ed25689c093c466b28516a9802a301dd) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-hono` from `0.2.6` to `0.3.1`
+
+* [#4191](https://github.com/cloudflare/workers-sdk/pull/4191) [`4b70c88c`](https://github.com/cloudflare/workers-sdk/commit/4b70c88cf59108ad98eeb021890485a88ddb10f8) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-remix` from `2.0.1` to `2.1.0`
+
+- [#4197](https://github.com/cloudflare/workers-sdk/pull/4197) [`9095c6ac`](https://github.com/cloudflare/workers-sdk/commit/9095c6acdaab61899286e3b136efd5b21dcc2723) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `gatsby` from `5.12.5` to `5.12.7`
+
+* [#4177](https://github.com/cloudflare/workers-sdk/pull/4177) [`2162501a`](https://github.com/cloudflare/workers-sdk/commit/2162501a0aac1ae5800c8e022568fc357a8c7ff6) Thanks [@jculvey](https://github.com/jculvey)! - Relax name validation for projects created with `--existing-script` flag
+
+## 2.5.0
+
+### Minor Changes
+
+- [#4136](https://github.com/cloudflare/workers-sdk/pull/4136) [`0f043a12`](https://github.com/cloudflare/workers-sdk/commit/0f043a126e5499bc1fcfd09782369264e4246317) Thanks [@jculvey](https://github.com/jculvey)! - Fixes an issue that was causing the auto-update check not to run
+
+### Patch Changes
+
+- [#4128](https://github.com/cloudflare/workers-sdk/pull/4128) [`696d7f29`](https://github.com/cloudflare/workers-sdk/commit/696d7f29c6c8cb516164de8da35400ac7bca0694) Thanks [@jculvey](https://github.com/jculvey)! - Verify that project names are valid for pages projects
+
+## 2.4.1
+
+### Patch Changes
+
+- [#4125](https://github.com/cloudflare/workers-sdk/pull/4125) [`d0e8e380`](https://github.com/cloudflare/workers-sdk/commit/d0e8e38035b7d65f99834700426d95dd88d54085) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-qwik` from `1.2.12` to `1.2.13`
+
+* [#4152](https://github.com/cloudflare/workers-sdk/pull/4152) [`acf3b64b`](https://github.com/cloudflare/workers-sdk/commit/acf3b64b4757325ffb9298bfd5ff3cf0b87bcb19) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix incorrect service example in worker template toml files
+
+- [#4119](https://github.com/cloudflare/workers-sdk/pull/4119) [`64c3ec15`](https://github.com/cloudflare/workers-sdk/commit/64c3ec15f71271395982746b173ddb5c17a3de0b) Thanks [@jculvey](https://github.com/jculvey)! - Don't prompt the user to use git if `user.name` and `user.email` haven't been configured
+
 ## 2.4.0
 
 ### Minor Changes

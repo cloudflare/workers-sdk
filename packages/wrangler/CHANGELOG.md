@@ -1,5 +1,62 @@
 # wrangler
 
+## 3.13.2
+
+### Patch Changes
+
+- [#4206](https://github.com/cloudflare/workers-sdk/pull/4206) [`8e927170`](https://github.com/cloudflare/workers-sdk/commit/8e927170c4b6ce4310e563ce528c2ea20d3de9e7) Thanks [@1000hz](https://github.com/1000hz)! - chore: bump `miniflare` to [`3.20231016.0`](https://github.com/cloudflare/miniflare/releases/tag/v3.20231016.0)
+
+* [#4144](https://github.com/cloudflare/workers-sdk/pull/4144) [`54800f6f`](https://github.com/cloudflare/workers-sdk/commit/54800f6f2dc52b921e7dd1d9a57bb437e2094bb0) Thanks [@a-robinson](https://github.com/a-robinson)! - Log a warning when using a Hyperdrive binding in local wrangler dev
+
+## 3.13.1
+
+### Patch Changes
+
+- [#4171](https://github.com/cloudflare/workers-sdk/pull/4171) [`88f15f61`](https://github.com/cloudflare/workers-sdk/commit/88f15f61cad2a69c07e26203cc84ddb2da42deb3) Thanks [@penalosa](https://github.com/penalosa)! - patch: This release fixes some regressions related to running `wrangler dev` that were caused by internal refactoring of the dev server architecture ([#3960](https://github.com/cloudflare/workers-sdk/pull/3960)). The change has been reverted, and will be added back in a future release.
+
+## 3.13.0
+
+### Minor Changes
+
+- [#4161](https://github.com/cloudflare/workers-sdk/pull/4161) [`403bc25c`](https://github.com/cloudflare/workers-sdk/commit/403bc25c4fa56a3ddf8a6af166d99919f565c497) Thanks [@RamIdeas](https://github.com/RamIdeas)! - Fix wrangler generated types to match runtime exports
+
+* [#3960](https://github.com/cloudflare/workers-sdk/pull/3960) [`c36b78b4`](https://github.com/cloudflare/workers-sdk/commit/c36b78b4109c05f47556972e66673f64ec0baa3b) Thanks [@RamIdeas](https://github.com/RamIdeas)! - Refactoring the internals of wrangler dev servers (including `wrangler dev`, `wrangler dev --remote` and `unstable_dev()`).
+
+  There are no changes required for developers to opt-in. Improvements include:
+
+  - fewer 'address in use' errors upon reloads
+  - upon config/source file changes, requests are buffered to guarantee the response is from the new version of the Worker
+
+### Patch Changes
+
+- [#3590](https://github.com/cloudflare/workers-sdk/pull/3590) [`f4ad634a`](https://github.com/cloudflare/workers-sdk/commit/f4ad634af86c49ade427af23e3853c656e30250a) Thanks [@penalosa](https://github.com/penalosa)! - fix: When a middleware is configured which doesn't support your Worker's script format, fail early with a helpful error message
+
+## 3.12.0
+
+### Minor Changes
+
+- [#4071](https://github.com/cloudflare/workers-sdk/pull/4071) [`f880a009`](https://github.com/cloudflare/workers-sdk/commit/f880a009ad7c7ec26a85c51f577164522a307217) Thanks [@matthewdavidrodgers](https://github.com/matthewdavidrodgers)! - Support TailEvent messages in Tail sessions
+
+  When tailing a tail worker, messages previously had a null event property. Following https://github.com/cloudflare/workerd/pull/1248, these events have a valid event, specifying which scripts produced events that caused your tail worker to run.
+
+  As part of rolling this out, we're filtering out tail events in the internal tail infrastructure, so we control when these new messages are forward to tail sessions, and can merge this freely.
+
+  One idiosyncracy to note, however, is that tail workers always report an "OK" status, even if they run out of memory or throw. That is being tracked and worked on separately.
+
+* [#2397](https://github.com/cloudflare/workers-sdk/pull/2397) [`93833f04`](https://github.com/cloudflare/workers-sdk/commit/93833f0418443232bb29daf46559c8e1db754dde) Thanks [@a-robinson](https://github.com/a-robinson)! - feature: Support Queue consumer events in tail
+
+  So that it's less confusing when tailing a worker that consumes events from a Queue.
+
+### Patch Changes
+
+- [#2687](https://github.com/cloudflare/workers-sdk/pull/2687) [`3077016f`](https://github.com/cloudflare/workers-sdk/commit/3077016f6112754585c05b7952e456be44b9d8cd) Thanks [@jrf0110](https://github.com/jrf0110)! - Fixes large Pages projects failing to complete direct upload due to expiring JWTs
+
+  For projects which are slow to upload - either because of client bandwidth or large numbers of files and sizes - It's possible for the JWT to expire multiple times. Since our network request concurrency is set to 3, it's possible that each time the JWT expires we get 3 failed attempts. This can quickly exhaust our upload attempt count and cause the entire process to bail.
+
+  This change makes it such that jwt refreshes do not count as a failed upload attempt.
+
+* [#4069](https://github.com/cloudflare/workers-sdk/pull/4069) [`f4d28918`](https://github.com/cloudflare/workers-sdk/commit/f4d28918c566c72782db9dadae12b95a376d082c) Thanks [@a-robinson](https://github.com/a-robinson)! - Default new Hyperdrive configs for PostgreSQL databases to port 5432 if the port is not specified
+
 ## 3.11.0
 
 ### Minor Changes

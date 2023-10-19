@@ -110,6 +110,7 @@ describe("deploy", () => {
 			Worker ID:  abc12345
 			Worker ETag:  etag98765
 			Worker PipelineHash:  hash9999
+			Worker Mutable PipelineID (Development ONLY!): mutableId
 			Uploaded test-name (TIMINGS)
 			Published test-name (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
@@ -8622,7 +8623,7 @@ function mockLastDeploymentRequest() {
 }
 
 /** Create a mock handler for the request to upload a worker script. */
-function mockUploadWorkerRequest(
+export function mockUploadWorkerRequest(
 	options: {
 		available_on_subdomain?: boolean;
 		expectedEntry?: string | RegExp;
@@ -8749,6 +8750,7 @@ function mockUploadWorkerRequest(
 					id: "abc12345",
 					etag: "etag98765",
 					pipeline_hash: "hash9999",
+					mutable_pipeline_id: "mutableId",
 					tag: "sample-tag",
 					deployment_id: "Galaxy-Class",
 				})
@@ -8758,7 +8760,7 @@ function mockUploadWorkerRequest(
 }
 
 /** Create a mock handler for the request to get the account's subdomain. */
-function mockSubDomainRequest(
+export function mockSubDomainRequest(
 	subdomain = "test-sub-domain",
 	registeredWorkersDev = true
 ) {
