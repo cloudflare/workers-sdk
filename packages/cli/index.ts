@@ -67,18 +67,30 @@ export const newline = () => {
 };
 
 // Log a simple status update with a style similar to the clack spinner
-export const updateStatus = (msg: string) => {
-	logRaw(`${gray(shapes.leftT)} ${msg}`);
-	newline();
+export const updateStatus = (msg: string, printNewLine = true) => {
+	const lines = msg.split("\n");
+	const restLines = lines
+		.slice(1)
+		.map((ln) => `${gray(shapes.bar)} ${white(ln)}`);
+	logRaw(`${gray(shapes.leftT)} ${lines[0]}`);
+	if (restLines.length) {
+		logRaw(restLines.join("\n"));
+	}
+
+	if (printNewLine) newline();
 };
 
-export const startSection = (heading: string, subheading?: string) => {
+export const startSection = (
+	heading: string,
+	subheading?: string,
+	printNewLine = true
+) => {
 	logRaw(
 		`${gray(shapes.corners.tl)} ${brandColor(heading)} ${
 			subheading ? dim(subheading) : ""
 		}`
 	);
-	newline();
+	if (printNewLine) newline();
 };
 
 export const endSection = (heading: string, subheading?: string) => {
@@ -99,6 +111,11 @@ export const warn = (msg: string) => {
 	logRaw(`${gray(shapes.corners.bl)} ${status.warning} ${dim(msg)}`);
 };
 
+export const success = (msg: string) => {
+	newline();
+	logRaw(`${gray(shapes.corners.bl)} ${status.success} ${dim(msg)}`);
+};
+
 // Strip the ansi color characters out of the line when calculating
 // line length, otherwise the padding will be thrown off
 // Used from https://github.com/natemoo-re/clack/blob/main/packages/prompts/src/index.ts
@@ -117,5 +134,17 @@ export const crash: (msg?: string) => never = (msg) => {
 		process.stderr.write(red(msg));
 		process.stderr.write("\n");
 	}
+	exit(1);
+};
+
+export const error = (msg?: string, extra?: string): never => {
+	if (msg) {
+		process.stdout.write(
+			`${gray(shapes.corners.bl)} ${status.error} ${dim(msg)}\n${
+				extra ? space() + extra + "\n" : ""
+			}`
+		);
+	}
+
 	exit(1);
 };
