@@ -52,10 +52,11 @@ describe("Pages Functions", () => {
 
 	beforeEach(async () => {
 		await Promise.all(
-		[8500, 8501, 8502, 8503, 8504, 8505].map(
-			port => waitUntilReady(`http://localhost:${port}`)
-		));
-	})
+			[8500, 8501, 8502, 8503, 8504, 8505].map((port) =>
+				waitUntilReady(`http://localhost:${port}`)
+			)
+		);
+	});
 
 	it("connects up Workers (both module and service ones) and fetches from them", async () => {
 		const combinedResponse = await waitUntilReady("http://localhost:8505/");
