@@ -1,37 +1,21 @@
-import http from "http";
+import childProcess from "child_process";
+import events from "events";
 import net from "net";
-import bodyParser from "body-parser";
-import express from "express";
-import { createHttpTerminator } from "http-terminator";
+import path from "path";
+import chalk from "chalk";
 import { fetch } from "undici";
-import { logger } from "./logger";
+import { logger } from "../logger";
+import { getBasePath } from "../paths";
+import { DEV_REGISTRY_PORT, DEV_REGISTRY_HOST } from "./constants";
+import type { Config } from "../config";
+import type {
+	WorkerDefinition,
+	WorkerRegistry,
+	WorkerRegistryDaemonMessage,
+} from "./constants";
 
-import type { Config } from "./config";
-import type { Server } from "http";
-import type { HttpTerminator } from "http-terminator";
+export type { WorkerRegistry } from "./constants";
 
-const DEV_REGISTRY_PORT = "6284";
-const DEV_REGISTRY_HOST = `http://localhost:${DEV_REGISTRY_PORT}`;
-
-let server: Server | null;
-let terminator: HttpTerminator;
-
-export type WorkerRegistry = Record<string, WorkerDefinition>;
-
-type WorkerDefinition = {
-	port: number | undefined;
-	protocol: "http" | "https" | undefined;
-	host: string | undefined;
-	mode: "local" | "remote";
-	headers?: Record<string, string>;
-	durableObjects: { name: string; className: string }[];
-	durableObjectsHost?: string;
-	durableObjectsPort?: number;
-};
-
-/**
- * A helper function to check whether our service registry is already running
- */
 async function isPortAvailable() {
 	return new Promise((resolve, reject) => {
 		const netServer = net
@@ -52,7 +36,14 @@ async function isPortAvailable() {
 	});
 }
 
-const jsonBodyParser = bodyParser.json();
+function hasCode(value: unknown): value is { code: string } {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		"code" in value &&
+		typeof value.code === "string"
+	);
+}
 
 /**
  * Start the service registry. It's a simple server
@@ -60,47 +51,38 @@ const jsonBodyParser = bodyParser.json();
  * services, as well as getting the state of the registry.
  */
 export async function startWorkerRegistry() {
-	if ((await isPortAvailable()) && !server) {
-		const app = express();
+	if (await isPortAvailable()) {
+		console.log(chalk.cyan("[DEV REGISTRY] Starting server..."));
 
-		let workers: WorkerRegistry = {};
-		app
-			.get("/workers", async (req, res) => {
-				res.json(workers);
-			})
-			.post("/workers/:workerId", jsonBodyParser, async (req, res) => {
-				workers[req.params.workerId] = req.body;
-				res.json(null);
-			})
-			.delete(`/workers/:workerId`, async (req, res) => {
-				delete workers[req.params.workerId];
-				res.json(null);
-			})
-			.delete("/workers", async (req, res) => {
-				workers = {};
-				res.json(null);
-			});
-		server = http.createServer(app);
-		terminator = createHttpTerminator({ server });
-		server.listen(DEV_REGISTRY_PORT);
-
-		/**
-		 * The registry server may have already been started by another wrangler process.
-		 * If wrangler processes are run in parallel, isPortAvailable() can return true
-		 * while another process spins up the server
-		 */
-		server.once("error", (err) => {
-			if ((err as unknown as { code: string }).code !== "EADDRINUSE") {
-				throw err;
+		const daemonPath = path.join(
+			getBasePath(),
+			"wrangler-dist",
+			"dev-registry",
+			"daemon.js"
+		);
+		const daemonProcess = childProcess.spawn(process.execPath, [daemonPath], {
+			detached: true,
+			windowsHide: true,
+			stdio: ["ignore", "ignore", "ignore", "ipc"],
+		});
+		daemonProcess.on("exit", (code) => {
+			console.log(chalk.cyan(`[DEV REGISTRY] Daemon exited with code ${code}`));
+		});
+		const [message] = (await events.once(daemonProcess, "message")) as [
+			WorkerRegistryDaemonMessage
+		];
+		console.log(
+			chalk.cyan(`[DEV REGISTRY] Daemon message ${JSON.stringify(message)}`)
+		);
+		if (message.type === "error") {
+			if (hasCode(message.error) && message.error.code === "EADDRINUSE") {
+				return;
+			} else {
+				throw message.error;
 			}
-		});
+		}
 
-		/**
-		 * The registry server may close. Reset the server to null for restart.
-		 */
-		server.on("close", () => {
-			server = null;
-		});
+		daemonProcess.unref();
 	}
 }
 
@@ -108,8 +90,7 @@ export async function startWorkerRegistry() {
  * Stop the service registry.
  */
 export async function stopWorkerRegistry() {
-	await terminator?.terminate();
-	server = null;
+	console.log(chalk.cyan("[DEV REGISTRY] Stopping server..."));
 }
 
 /**
@@ -119,6 +100,7 @@ export async function registerWorker(
 	name: string,
 	definition: WorkerDefinition
 ) {
+	console.log(chalk.green.dim(`[DEV REGISTRY] Registering ${name}...`));
 	/**
 	 * Prevent the dev registry be closed.
 	 */
@@ -148,6 +130,7 @@ export async function registerWorker(
  * Unregister a worker from the registry.
  */
 export async function unregisterWorker(name: string) {
+	console.log(chalk.red.dim(`[DEV REGISTRY] Unregistering ${name}...`));
 	try {
 		await fetch(`${DEV_REGISTRY_HOST}/workers/${name}`, {
 			method: "DELETE",
