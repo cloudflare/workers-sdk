@@ -396,8 +396,6 @@ export async function startLocalServer(
 	return new Promise<{ stop: () => Promise<void> }>((resolve, reject) => {
 		const server = new MiniflareServer();
 		server.addEventListener("reloaded", async (event) => {
-			await maybeRegisterLocalWorker(event, props.name);
-
 			const proxyData: ProxyData = {
 				userWorkerUrl: {
 					protocol: event.url.protocol,

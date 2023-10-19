@@ -157,8 +157,6 @@ function useLocalWorker(props: LocalProps) {
 			const newServer = new MiniflareServer();
 			miniflareServerRef.current = server = newServer;
 			server.addEventListener("reloaded", async (event) => {
-				await maybeRegisterLocalWorker(event, props.name);
-
 				const proxyData: ProxyData = {
 					userWorkerUrl: {
 						protocol: event.url.protocol,
