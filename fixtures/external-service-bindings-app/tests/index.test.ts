@@ -1,7 +1,7 @@
 import { spawn } from "child_process";
 import * as path from "path";
 import type { ChildProcess } from "child_process";
-import { describe, expect, it, beforeAll, afterAll } from "vitest";
+import { describe, expect, it, beforeAll, afterAll, beforeEach } from "vitest";
 import { fetch, type Response } from "undici";
 
 const waitUntilReady = async (url: string): Promise<Response> => {
@@ -49,6 +49,13 @@ describe("Pages Functions", () => {
 			wranglerProcess.kill("SIGTERM");
 		});
 	});
+
+	beforeEach(async () => {
+		await Promise.all(
+		[8500, 8501, 8502, 8503, 8504, 8505].map(
+			port => waitUntilReady(`http://localhost:${port}`)
+		));
+	})
 
 	it("connects up Workers (both module and service ones) and fetches from them", async () => {
 		const combinedResponse = await waitUntilReady("http://localhost:8505/");
