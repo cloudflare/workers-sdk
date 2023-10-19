@@ -328,7 +328,7 @@ interface AccessToken {
 	expiry: string;
 }
 
-const Scopes = {
+const DefaultScopes = {
 	"account:read":
 		"See your account info such as account details, analytics, and memberships.",
 	"user:read":
@@ -349,22 +349,34 @@ const Scopes = {
 	"ssl_certs:write": "See and manage mTLS certificates for your account",
 	"constellation:write": "Manage Constellation projects/models",
 	"ai:read": "List AI models",
+} as const;
+
+const OptionalScopes = {
 	"cloudchamber:write": "Manage Cloudchamber",
 } as const;
+
+const AllScopes = {
+	...DefaultScopes,
+	...OptionalScopes,
+};
 
 /**
  * The possible keys for a Scope.
  *
  * "offline_access" is automatically included.
  */
-type Scope = keyof typeof Scopes;
+type Scope = keyof typeof AllScopes;
 
-const ScopeKeys = Object.keys(Scopes) as Scope[];
+let DefaultScopeKeys = Object.keys(DefaultScopes) as Scope[];
+
+export function setLoginScopeKeys(scopes: Scope[]) {
+	DefaultScopeKeys = scopes;
+}
 
 export function validateScopeKeys(
 	scopes: string[]
-): scopes is typeof ScopeKeys {
-	return scopes.every((scope) => scope in Scopes);
+): scopes is typeof DefaultScopeKeys {
+	return scopes.every((scope) => scope in DefaultScopes);
 }
 
 const CALLBACK_URL = "http://localhost:8976/oauth/callback";
@@ -638,7 +650,7 @@ function isReturningFromAuthServer(query: ParsedUrlQuery): boolean {
 	return true;
 }
 
-export async function getAuthURL(scopes = ScopeKeys): Promise<string> {
+export async function getAuthURL(scopes = DefaultScopeKeys): Promise<string> {
 	const { codeChallenge, codeVerifier } = await generatePKCECodes();
 	const stateQueryParam = generateRandomState(RECOMMENDED_STATE_LENGTH);
 
@@ -890,14 +902,16 @@ type LoginProps = {
 	browser: boolean;
 };
 
-export async function loginOrRefreshIfRequired(): Promise<boolean> {
+export async function loginOrRefreshIfRequired(
+	props?: LoginProps
+): Promise<boolean> {
 	// TODO: if there already is a token, then try refreshing
 	// TODO: ask permission before opening browser
 	const { isCI } = CI;
 	if (!getAPIToken()) {
 		// Not logged in.
 		// If we are not interactive, we cannot ask the user to login
-		return isInteractive() && !isCI() && (await login());
+		return isInteractive() && !isCI() && (await login(props));
 	} else if (isAccessTokenExpired()) {
 		// We're logged in, but the refresh token seems to have expired,
 		// so let's try to refresh it
@@ -907,7 +921,7 @@ export async function loginOrRefreshIfRequired(): Promise<boolean> {
 			return true;
 		} else {
 			// If the refresh token isn't valid, then we ask the user to login again
-			return isInteractive() && !isCI() && (await login());
+			return isInteractive() && !isCI() && (await login(props));
 		}
 	} else {
 		return true;
@@ -1085,9 +1099,9 @@ export async function logout(): Promise<void> {
 
 export function listScopes(message = "💁 Available scopes:"): void {
 	logger.log(message);
-	const data = ScopeKeys.map((scope: Scope) => ({
+	const data = DefaultScopeKeys.map((scope: Scope) => ({
 		Scope: scope,
-		Description: Scopes[scope],
+		Description: AllScopes[scope],
 	}));
 	logger.table(data);
 	// TODO: maybe a good idea to show usage here
