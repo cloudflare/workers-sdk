@@ -1,7 +1,7 @@
 import { type CommandModule } from "yargs";
 import { createCommand } from "./create";
 import { deleteCommand } from "./delete";
-import { ImagesCommand } from "./images/images";
+import { RegistriesCommand } from "./images/images";
 import { listCommand } from "./list";
 import { modifyCommand } from "./modify";
 import { SSHCommand } from "./ssh/ssh";
@@ -32,7 +32,7 @@ export const CloudchamberCommand: CommandModule<
 
 		return yargs
 			.command(SSHCommand)
-			.command(ImagesCommand)
+			.command(RegistriesCommand)
 			.showHelpOnFail(true)
 			.demandCommand();
 	},
