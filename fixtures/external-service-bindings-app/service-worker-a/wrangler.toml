@@ -1,0 +1,2 @@
+name = "service-worker-a"
+main = "src/index.ts"

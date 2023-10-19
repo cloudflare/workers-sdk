@@ -314,6 +314,11 @@ export type AdditionalDevProps = {
 		script_name?: string | undefined;
 		environment?: string | undefined;
 	}[];
+	services?: {
+		binding: string;
+		service: string;
+		environment?: string;
+	}[];
 	r2?: {
 		binding: string;
 		bucket_name: string;
@@ -819,6 +824,7 @@ function getBindingsAndAssetPaths(args: StartDevOptions, configParam: Config) {
 		vars: { ...args.vars, ...cliVars },
 		durableObjects: args.durableObjects,
 		r2: args.r2,
+		services: args.services,
 		d1Databases: args.d1Databases,
 	});
 
@@ -915,7 +921,7 @@ function getBindings(
 		],
 		dispatch_namespaces: configParam.dispatch_namespaces,
 		mtls_certificates: configParam.mtls_certificates,
-		services: configParam.services,
+		services: [...(configParam.services || []), ...(args.services || [])],
 		analytics_engine_datasets: configParam.analytics_engine_datasets,
 		unsafe: {
 			bindings: configParam.unsafe.bindings,
