@@ -147,10 +147,9 @@ export default function (pluginArgs: unknown) {
 				const { handler, params, path } = result.value;
 				const context = {
 					request: new Request(request.clone()),
-					functionPath: (workerContext.functionPath + path).replace(
-						/^\/\//,
-						"/"
-					),
+					functionPath: (workerContext.functionPath + path)
+						.replace(/^\/\//, "/")
+						.replace(/\/$/, ""),
 					next: pluginNext,
 					params,
 					get data() {
