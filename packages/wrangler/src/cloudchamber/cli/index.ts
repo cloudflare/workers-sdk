@@ -234,7 +234,7 @@ async function waitForVMToStart(deployment: Deployment) {
 	endSection("Your container is up and running");
 	logRaw(
 		`Run ${brandColor(
-			`wrangler containers list ${deployment.id.slice(0, 6)}`
+			`wrangler cloudchamber list ${deployment.id.slice(0, 6)}`
 		)} to check its status`
 	);
 }
@@ -303,7 +303,7 @@ export async function waitForPlacement(deployment: Deployment) {
 				updateStatus(status.error + " " + err.message);
 				log(
 					"We will retry by waiting for another placement. You can see more details about your deployment with \n" +
-						brandColor("wrangler containers list " + currentDeployment.id) +
+						brandColor("wrangler cloudchamber list " + currentDeployment.id) +
 						"\n"
 				);
 				const [newDeployment, getDeploymentError] = await wrap(

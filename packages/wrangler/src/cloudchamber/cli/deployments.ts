@@ -88,7 +88,7 @@ export async function loadDeployments(
 	);
 	if (deployments.length === 0 && !deploymentIdPrefix) {
 		endSection(
-			"you don't have any deployments in your account!",
+			"you don't have any deployments in your account",
 			"You can create one with\n\t" + brandColor("wrangler cloudchamber create")
 		);
 		exit(0);
