@@ -248,6 +248,10 @@ export interface CfTailConsumer {
 	environment?: string;
 }
 
+export interface CfUserLimits {
+	cpu_ms?: number;
+}
+
 /**
  * Options for creating a `CfWorker`.
  */
@@ -298,6 +302,7 @@ export interface CfWorkerInit {
 	logpush: boolean | undefined;
 	placement: CfPlacement | undefined;
 	tail_consumers: CfTailConsumer[] | undefined;
+	limits: CfUserLimits | undefined;
 }
 
 export interface CfWorkerContext {

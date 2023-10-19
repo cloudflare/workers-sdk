@@ -5072,6 +5072,29 @@ addEventListener('fetch', event => {});`
 		});
 	});
 
+	describe("user limits", () => {
+		it("should allow specifying a cpu millisecond limit", async () => {
+			writeWranglerToml({
+				limits: { cpu_ms: 15_000 },
+			});
+
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedLimits: { cpu_ms: 15_000 },
+			});
+
+			await runWrangler("publish index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Deployment ID: Galaxy-Class"
+		`);
+		});
+	});
+
 	describe("bindings", () => {
 		it("should allow bindings with different names", async () => {
 			writeWranglerToml({
@@ -8637,6 +8660,7 @@ export function mockUploadWorkerRequest(
 		expectedTailConsumers?: CfWorkerInit["tail_consumers"];
 		expectedUnsafeMetaData?: Record<string, string>;
 		expectedCapnpSchema?: string;
+		expectedLimits?: CfWorkerInit["limits"];
 		env?: string;
 		legacyEnv?: boolean;
 		keepVars?: boolean;
@@ -8658,6 +8682,7 @@ export function mockUploadWorkerRequest(
 		expectedTailConsumers,
 		expectedUnsafeMetaData,
 		expectedCapnpSchema,
+		expectedLimits,
 		keepVars,
 	} = options;
 	if (env && !legacyEnv) {
@@ -8733,6 +8758,9 @@ export function mockUploadWorkerRequest(
 			expect(formBody.get(metadata.capnp_schema ?? "")).toEqual(
 				expectedCapnpSchema
 			);
+		}
+		if ("expectedLimits" in options) {
+			expect(metadata.limits).toEqual(expectedLimits);
 		}
 		if (expectedUnsafeMetaData !== undefined) {
 			Object.keys(expectedUnsafeMetaData).forEach((key) => {

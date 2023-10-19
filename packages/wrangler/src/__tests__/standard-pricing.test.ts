@@ -85,6 +85,34 @@ describe("standard-pricing", () => {
 		}
 	`);
 	});
+	it("should warn user about limits set if not enabled", async () => {
+		msw.use(...mswSuccessDeploymentScriptMetadata);
+		writeWranglerToml({ limits: { cpu_ms: 20_000 } });
+		writeWorkerSource();
+		mockSubDomainRequest();
+		mockUploadWorkerRequest();
+
+		mockStandardEnabled(false);
+
+		await runWrangler("deploy ./index");
+
+		expect(std).toMatchInlineSnapshot(`
+		Object {
+		  "debug": "",
+		  "err": "",
+		  "info": "",
+		  "out": "🚧 New Workers Standard pricing is now available. Please visit the dashboard to view details and opt-in to new pricing: https://dash.cloudflare.com/some-account-id/workers/standard/opt-in.
+		Total Upload: xx KiB / gzip: xx KiB
+		Uploaded test-name (TIMINGS)
+		Published test-name (TIMINGS)
+		  https://test-name.test-sub-domain.workers.dev
+		Current Deployment ID: Galaxy-Class",
+		  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe \`limits\` defined in wrangler.toml can only be applied to scripts opted into Workers Standard pricing. Agree to the new pricing details to set limits for your script.[0m
+
+		",
+		}
+	`);
+	});
 	it("should not notify user about new pricing if enterprise", async () => {
 		msw.use(...mswSuccessDeploymentScriptMetadata);
 		writeWranglerToml();

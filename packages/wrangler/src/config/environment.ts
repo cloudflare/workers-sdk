@@ -171,6 +171,14 @@ interface EnvironmentInheritable {
 	usage_model: "bundled" | "unbound" | undefined;
 
 	/**
+	 * Specify limits for runtime behavior.
+	 * Only supported for the "standard" Usage Model
+	 *
+	 * @inheritable
+	 */
+	limits: UserLimits | undefined;
+
+	/**
 	 * An ordered list of rules that define which modules to import,
 	 * and what type to import them as. You will need to specify rules
 	 * to use Text, Data, and CompiledWasm modules, or when you wish to
@@ -735,4 +743,9 @@ export interface DispatchNamespaceOutbound {
 	environment?: string;
 	/** (Optional) List of parameter names, for sending context from your dispatch worker to the outbound handler */
 	parameters?: string[];
+}
+
+export interface UserLimits {
+	/** Maximum allowed CPU time for a worker's invocation in milliseconds */
+	cpu_ms: number;
 }
