@@ -1,7 +1,6 @@
 import { existsSync, mkdirSync } from "fs";
 import { crash, updateStatus, warn } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
-import { processArgument } from "helpers/args";
 import { installPackages, runFrameworkGenerator } from "helpers/command";
 import {
 	compatDateFlag,
@@ -22,6 +21,7 @@ import {
 	appDirNotFoundTs,
 } from "./templates";
 import type { C3Args, FrameworkConfig, PagesGeneratorContext } from "types";
+import { processArgument } from "@cloudflare/cli/args";
 
 const { npm, npx } = detectPackageManager();
 

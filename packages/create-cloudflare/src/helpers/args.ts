@@ -1,11 +1,8 @@
-import { crash, logRaw } from "@cloudflare/cli";
-import { getRenderers, inputPrompt } from "@cloudflare/cli/interactive";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { version } from "../../package.json";
 import { templateMap } from "../templateMap";
 import { C3_DEFAULTS, WRANGLER_DEFAULTS } from "./cli";
-import type { PromptConfig } from "@cloudflare/cli/interactive";
 import type { C3Args } from "types";
 
 export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
@@ -116,35 +113,6 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 		additionalArgs,
 		...args,
 	};
-};
-
-export const processArgument = async <T>(
-	args: Partial<C3Args>,
-	name: keyof C3Args,
-	promptConfig: PromptConfig
-) => {
-	let value = args[name];
-	const renderSubmitted = getRenderers(promptConfig).submit;
-
-	// If the value has already been set via args, use that
-	if (value !== undefined) {
-		// Crash if we can't validate the value
-		const error = promptConfig.validate?.(value);
-		if (error) {
-			crash(error);
-		}
-
-		// Show the user the submitted state as if they had
-		// supplied it interactively
-		const lines = renderSubmitted({ value });
-		logRaw(lines.join("\n"));
-
-		return value as T;
-	}
-
-	value = await inputPrompt(promptConfig);
-
-	return value as T;
 };
 
 const showMoreInfoNote = () => {

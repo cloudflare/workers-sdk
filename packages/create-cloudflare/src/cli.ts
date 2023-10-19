@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 import { crash, logRaw, startSection } from "@cloudflare/cli";
+import { processArgument } from "@cloudflare/cli/args";
 import { blue, dim } from "@cloudflare/cli/colors";
 import {
 	isInteractive,
 	spinner,
 	spinnerFrames,
 } from "@cloudflare/cli/interactive";
-import { parseArgs, processArgument } from "helpers/args";
+import { parseArgs } from "helpers/args";
 import { C3_DEFAULTS } from "helpers/cli";
 import { runCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packages";

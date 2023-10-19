@@ -4,6 +4,7 @@ import { tmpdir } from "os";
 import { dirname, join, resolve } from "path";
 import { chdir } from "process";
 import { endSection, startSection, updateStatus } from "@cloudflare/cli";
+import { processArgument } from "@cloudflare/cli/args";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import { processArgument } from "helpers/args";
