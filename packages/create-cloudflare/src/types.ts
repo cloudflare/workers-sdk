@@ -39,6 +39,7 @@ export type PagesGeneratorContext = {
 		path: string;
 	};
 	type?: "pages" | "workers";
+	originalCWD: string;
 };
 
 type UpdaterPackageScript = (cmd: string) => string;

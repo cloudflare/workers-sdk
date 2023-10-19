@@ -38,11 +38,13 @@ import type { C3Args, PagesGeneratorContext as Context } from "types";
 const { dlx } = detectPackageManager();
 
 export const runWorkersGenerator = async (args: C3Args) => {
+	const originalCWD = process.cwd();
 	const { name, path } = setupProjectDirectory(args);
 
 	const ctx: Context = {
 		project: { name, path },
 		args,
+		originalCWD,
 	};
 
 	ctx.args.ts = await processArgument<boolean>(ctx.args, "ts", {

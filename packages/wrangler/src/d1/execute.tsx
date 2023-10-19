@@ -236,7 +236,11 @@ async function executeLocally({
 	const persistencePath = getLocalPersistencePath(persistTo, config.configPath);
 	const d1Persist = path.join(persistencePath, "v3", "d1");
 
-	logger.log(`🌀 Loading ${id} from ${readableRelative(d1Persist)}`);
+	logger.log(
+		`🌀 Executing on local database ${name} (${id}) from ${readableRelative(
+			d1Persist
+		)}:`
+	);
 
 	const mf = new Miniflare({
 		modules: true,
@@ -313,7 +317,10 @@ async function executeRemotely({
 		);
 	}
 	const dbUuid = preview ? db.previewDatabaseUuid : db.uuid;
-	logger.log(`🌀 Executing on ${name} (${dbUuid}):`);
+	logger.log(`🌀 Executing on remote database ${name} (${dbUuid}):`);
+	logger.log(
+		"🌀 To execute on your local development database, pass the --local flag to 'wrangler d1 execute'"
+	);
 
 	const results: QueryResult[] = [];
 	for (const sql of batches) {

@@ -3,7 +3,7 @@ import path from "path";
 import { spawn } from "cross-spawn";
 import { endSection, stripAnsi } from "./cli";
 import { brandColor, dim } from "./colors";
-import { spinner } from "./interactive";
+import { isInteractive, spinner } from "./interactive";
 import { detectPackageManager } from "./packages";
 import * as shellquote from "./shell-quote";
 import type { PagesGeneratorContext } from "types";
@@ -136,7 +136,7 @@ export const printAsyncStatus = async <T>({
 }: PrintOptions<T>): Promise<T> => {
 	let s: ReturnType<typeof spinner> | undefined;
 
-	if (opts.useSpinner) {
+	if (opts.useSpinner && isInteractive()) {
 		s = spinner();
 	}
 
@@ -163,7 +163,13 @@ export const printAsyncStatus = async <T>({
 	return promise;
 };
 
-export const retry = async <T>(times: number, fn: () => Promise<T>) => {
+export const retry = async <T>(
+	{
+		times,
+		exitCondition,
+	}: { times: number; exitCondition?: (e: unknown) => boolean },
+	fn: () => Promise<T>
+) => {
 	let error: unknown = null;
 	while (times > 0) {
 		try {
@@ -171,6 +177,9 @@ export const retry = async <T>(times: number, fn: () => Promise<T>) => {
 		} catch (e) {
 			error = e;
 			times--;
+			if (exitCondition?.(e)) {
+				break;
+			}
 		}
 	}
 	throw error;
