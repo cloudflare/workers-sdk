@@ -33,6 +33,42 @@ export function getHostFromRoute(route: Route): string | undefined {
 	} else if (typeof route === "object") {
 		host = getHostFromUrl(route.pattern);
 
+		if ("zone_name" in route) {
+			const hostFromZoneName = getHostFromUrl(route.zone_name);
+			if (hostFromZoneName && !host?.endsWith?.(`.${hostFromZoneName}`)) {
+				// Pattern is not a subdomain of zone. Use zone name as host instead.
+				host = hostFromZoneName;
+			}
+		}
+	}
+
+	return host;
+}
+
+/**
+ * Get the hostname on which to run a Worker.
+ *
+ * The most accurate place is usually
+ * `route.pattern`, as that includes any subdomains. For example:
+ * ```js
+ * {
+ * 	pattern: foo.example.com
+ * 	zone_name: example.com
+ * }
+ * ```
+ * However, in the case of patterns that _can't_ be parsed as a hostname
+ * (primarily the pattern `*/ /*`), we fall back to the `zone_name`
+ * (and in the absence of that return undefined).
+ * @param route
+ */
+export function getHostFromRoutePattern(route: Route): string | undefined {
+	let host: string | undefined;
+
+	if (typeof route === "string") {
+		host = getHostFromUrl(route);
+	} else if (typeof route === "object") {
+		host = getHostFromUrl(route.pattern);
+
 		if (host === undefined && "zone_name" in route) {
 			host = getHostFromUrl(route.zone_name);
 		}
@@ -42,14 +78,19 @@ export function getHostFromRoute(route: Route): string | undefined {
 }
 
 /**
- * Try to compute the a zone ID and host name for one or more routes.
+ * Try to compute the a zone ID and host name for a route.
  *
  * When we're given a route, we do 2 things:
  * - We try to extract a host from it
  * - We try to get a zone id from the host
  */
-export async function getZoneForRoute(route: Route): Promise<Zone | undefined> {
-	const host = getHostFromRoute(route);
+export async function getZoneForRoute(
+	route: Route,
+	usePattern = false
+): Promise<Zone | undefined> {
+	const host = usePattern
+		? getHostFromRoutePattern(route)
+		: getHostFromRoute(route);
 	const id =
 		typeof route === "object" && "zone_id" in route
 			? route.zone_id
