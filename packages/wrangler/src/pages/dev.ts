@@ -56,6 +56,12 @@ const DURABLE_OBJECTS_BINDING_REGEXP = new RegExp(
  */
 const BINDING_REGEXP = new RegExp(/^(?<binding>[^=]+)(?:=(?<ref>[^\s]+))?$/);
 
+/* SERVICE_BINDING_REGEXP matches strings like:
+ * - "binding=service"
+ * - "binding=service@environment"
+ * This is used to capture both the binding name (how the binding is used in JS) alongside the name of the service it needs to bind to.
+ * Additionally it can also accept an environment which indicates what environment the service has to be running for.
+ */
 const SERVICE_BINDING_REGEXP = new RegExp(
 	/^(?<binding>[^=]+)=(?<service>[^@\s]+)(@(?<environment>.*)$)?$/
 );
