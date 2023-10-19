@@ -1,6 +1,8 @@
 import { now } from "./dep";
 import { randomBytes } from "isomorphic-random-example";
 
+console.log("startup log");
+
 /** @param {Uint8Array} array */
 function hexEncode(array) {
 	return Array.from(array)
@@ -10,6 +12,8 @@ function hexEncode(array) {
 
 export default {
 	async fetch(request) {
+		console.log("request log");
+
 		const { pathname } = new URL(request.url);
 		if (pathname === "/random") return new Response(hexEncode(randomBytes(8)));
 
