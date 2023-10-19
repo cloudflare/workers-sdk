@@ -3,7 +3,7 @@ import os from "node:os";
 import TOML from "@iarna/toml";
 import chalk from "chalk";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
-import makeCLI from "yargs";
+import makeCLI, { Arguments, CommandModule } from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { ai } from "./ai";
 import { loadDotEnv, readConfig } from "./config";
@@ -69,7 +69,7 @@ import { whoami } from "./whoami";
 
 import type { Config } from "./config";
 import type { CommonYargsArgv, CommonYargsOptions } from "./yargs-types";
-import type Yargs from "yargs";
+import { CloudchamberCommand } from "./cloudchamber";
 
 const resetColor = "\x1b[0m";
 const fgGreenColor = "\x1b[32m";
@@ -147,7 +147,7 @@ export function getLegacyScriptName(
 // a helper to demand one of a set of options
 // via https://github.com/yargs/yargs/issues/1093#issuecomment-491299261
 export function demandOneOfOption(...options: string[]) {
-	return function (argv: Yargs.Arguments) {
+	return function (argv: Arguments) {
 		const count = options.filter((option) => argv[option]).length;
 		const lastOption = options.pop();
 
@@ -231,7 +231,7 @@ export function createCLIParser(argv: string[]) {
 	wrangler.help().alias("h", "help");
 
 	// Default help command that supports the subcommands
-	const subHelp: Yargs.CommandModule<CommonYargsOptions, CommonYargsOptions> = {
+	const subHelp: CommandModule<CommonYargsOptions, CommonYargsOptions> = {
 		command: ["*"],
 		handler: async (args) => {
 			setImmediate(() =>
@@ -350,6 +350,9 @@ export function createCLIParser(argv: string[]) {
 		},
 		routeHandler
 	);
+
+	// wrangler.command(CloudchamberCommand);
+	wrangler.command("cloudchamber", false, CloudchamberCommand);
 
 	// [DEPRECATED] subdomain
 	wrangler.command(

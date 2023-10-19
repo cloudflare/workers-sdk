@@ -36,6 +36,7 @@ describe("normalizeAndValidateConfig()", () => {
 				upstream_protocol: "https",
 				host: undefined,
 			},
+			cloudchamber: {},
 			durable_objects: {
 				bindings: [],
 			},
@@ -887,6 +888,7 @@ describe("normalizeAndValidateConfig()", () => {
 					VAR1: "VALUE_1",
 					VAR2: "VALUE_2",
 				},
+				cloudchamber: {},
 				durable_objects: {
 					bindings: [
 						{ name: "DO_BINDING_1", class_name: "CLASS1" },
