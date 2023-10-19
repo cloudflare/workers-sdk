@@ -10,7 +10,8 @@ import {
 	logConsoleMessage,
 	maybeHandleNetworkLoadResource,
 } from "../../dev/inspect";
-import { WranglerLog, castLogLevel } from "../../dev/miniflare";
+import { maybeRegisterLocalWorker } from "../../dev/local";
+import { ReloadedEvent, WranglerLog, castLogLevel } from "../../dev/miniflare";
 import { getHttpsOptions } from "../../https-options";
 import { logger } from "../../logger";
 import { getSourceMappedStack } from "../../sourcemap";
@@ -177,10 +178,13 @@ export class ProxyController extends EventEmitter {
 		}
 
 		// store the non-null versions for callbacks
-		const { proxyWorker, inspectorProxyWorker } = this;
+		const { proxyWorker, inspectorProxyWorker, latestConfig: config } = this;
 
 		void Promise.all([proxyWorker.ready, this.reconnectInspectorProxyWorker()])
-			.then(() => {
+			.then(async ([proxyWorkerUrl]) => {
+				// wait for registration to complete before emitting ready event
+				await maybeRegisterProxyWorkerWithDevRegistry(proxyWorkerUrl, config);
+
 				this.emitReadyEvent(proxyWorker, inspectorProxyWorker);
 			})
 			.catch((error) => {
@@ -524,4 +528,27 @@ function didMiniflareOptionsChange(
 
 	// otherwise, if they're not deeply equal, they've changed
 	return !deepEquality(prev, next);
+}
+
+async function maybeRegisterProxyWorkerWithDevRegistry(
+	proxyWorkerUrl: URL,
+	config: StartDevWorkerOptions
+) {
+	const reloadedEvent = new ReloadedEvent("reloaded", {
+		url: proxyWorkerUrl,
+		internalDurableObjects: Object.entries(config.bindings ?? {}).flatMap(
+			([bindingName, binding]) => {
+				const isInternalDurableObject =
+					binding.type === "durable-object" &&
+					(binding.service?.name === undefined ||
+						binding.service?.name === config.name);
+
+				if (!isInternalDurableObject) return [];
+
+				return [{ name: bindingName, class_name: binding.className }];
+			}
+		),
+	});
+
+	await maybeRegisterLocalWorker(reloadedEvent, config.name);
 }
