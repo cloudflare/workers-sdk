@@ -1,8 +1,13 @@
 import { mkdir } from "fs/promises";
 import { exit } from "process";
-import { error, space, updateStatus } from "@cloudflare/cli";
+import { error, logRaw, space, status, updateStatus } from "@cloudflare/cli";
 import { dim, brandColor } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
+import {
+	type ArgumentsCamelCase as ArgumentsCamelCaseRaw,
+	type CamelCaseKey,
+	type Argv,
+} from "yargs";
 import { version as wranglerVersion } from "../../package.json";
 import { readConfig } from "../config";
 import { getConfigCache, purgeConfigCaches } from "../config-cache";
@@ -15,6 +20,9 @@ import {
 	requireAuth,
 	getAuthFromEnv,
 	reinitialiseAuthTokens,
+	getScopes,
+	logout,
+	setLoginScopeKeys,
 } from "../user";
 import { ApiError, DeploymentMutationError, OpenAPI } from "./client";
 import { wrap } from "./helpers/wrap";
@@ -23,11 +31,6 @@ import type { Config } from "../config";
 import type { CommonYargsOptions } from "../yargs-types";
 import type { EnvironmentVariable, CompleteAccountCustomer } from "./client";
 import type { Arg } from "@cloudflare/cli/interactive";
-import type {
-	ArgumentsCamelCase as ArgumentsCamelCaseRaw,
-	CamelCaseKey,
-	Argv,
-} from "yargs";
 
 export type CommonCloudchamberConfiguration = { json: boolean };
 
@@ -166,6 +169,13 @@ export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 		purgeConfigCaches();
 	}
 
+	const scopes = getScopes();
+	const needsCloudchamberToken = !scopes?.find(
+		(scope) => scope === "cloudchamber:write"
+	);
+
+	setLoginScopeKeys(["cloudchamber:write", "user:read", "account:read"]);
+
 	if (getAuthFromEnv()) {
 		// Wrangler will try to retrieve the oauth token and refresh it
 		// for its internal fetch call even if we have AuthFromEnv.
@@ -175,6 +185,14 @@ export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 			oauth_token: "_",
 		});
 	} else {
+		if (needsCloudchamberToken && scopes) {
+			logRaw(
+				status.warning +
+					" We need to re-authenticate with a cloudchamber token..."
+			);
+			await promiseSpinner(logout(), { json, message: "Revoking token" });
+		}
+
 		// Require either login, or environment variables being set to authenticate
 		//
 		// This will prompt the user for an accountId being chosen if they haven't configured the account id yet
@@ -215,7 +233,7 @@ export type ContainerCommandFunction<T> = (
 	config: CloudchamberConfiguration
 ) => Promise<void>;
 
-export function interactWithUser(config: CloudchamberConfiguration): boolean {
+export function interactWithUser(config: { json?: boolean }): boolean {
 	return !config.json && isInteractive() && !CI.isCI();
 }
 
