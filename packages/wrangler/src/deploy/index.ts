@@ -37,6 +37,11 @@ async function standardPricingWarning(
 					`🚧 New Workers Standard pricing is now available. Please visit the dashboard to view details and opt-in to new pricing: https://dash.cloudflare.com/${accountId}/workers/standard/opt-in.`
 				)
 			);
+			if (config.limits?.cpu_ms !== undefined) {
+				logger.warn(
+					"The `limits` defined in wrangler.toml can only be applied to scripts opted into Workers Standard pricing. Agree to the new pricing details to set limits for your script."
+				);
+			}
 			return;
 		}
 		if (standard && config.usage_model !== undefined) {

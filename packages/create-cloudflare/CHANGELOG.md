@@ -1,5 +1,19 @@
 # create-cloudflare
 
+## 2.6.1
+
+### Patch Changes
+
+- [#4213](https://github.com/cloudflare/workers-sdk/pull/4213) [`039acfd4`](https://github.com/cloudflare/workers-sdk/commit/039acfd4a35ce04105c26e8767320e7235921ff3) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-solid` from `0.3.6` to `0.3.7`
+
+* [#4217](https://github.com/cloudflare/workers-sdk/pull/4217) [`b9687231`](https://github.com/cloudflare/workers-sdk/commit/b96872319bf59615f63276a60ec352113cb85455) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-astro` from `4.2.1` to `4.3.0`
+
+- [#4190](https://github.com/cloudflare/workers-sdk/pull/4190) [`c2457cb4`](https://github.com/cloudflare/workers-sdk/commit/c2457cb484f9e09752403116f137ab1bc40ae322) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Set the proper compatibility date for web applications (instead of using the current date)
+
+* [#4216](https://github.com/cloudflare/workers-sdk/pull/4216) [`17c59f29`](https://github.com/cloudflare/workers-sdk/commit/17c59f2905d774418a496b290f024eb52e7031de) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - amend summary showing incorrect cd instruction for projects in nested paths
+
+- [#4220](https://github.com/cloudflare/workers-sdk/pull/4220) [`2b4d9def`](https://github.com/cloudflare/workers-sdk/commit/2b4d9def1bd33f38b5c03a8c99c8f7a1879082da) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - don't retry the project creation multiple times when it fails because the project's name is already used
+
 ## 2.6.0
 
 ### Minor Changes

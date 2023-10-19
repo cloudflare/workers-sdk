@@ -1155,6 +1155,7 @@ function normalizeAndValidateEnvironment(
 			isOneOf("bundled", "unbound"),
 			undefined
 		),
+		limits: normalizeAndValidateLimits(diagnostics, topLevelEnv, rawEnv),
 		placement: normalizeAndValidatePlacement(diagnostics, topLevelEnv, rawEnv),
 		build,
 		workers_dev,
@@ -2801,3 +2802,28 @@ const validateConsumer: ValidatorFn = (diagnostics, field, value, _config) => {
 
 	return isValid;
 };
+
+function normalizeAndValidateLimits(
+	diagnostics: Diagnostics,
+	topLevelEnv: Environment | undefined,
+	rawEnv: RawEnvironment
+): Config["limits"] {
+	if (rawEnv.limits) {
+		validateRequiredProperty(
+			diagnostics,
+			"limits",
+			"cpu_ms",
+			rawEnv.limits.cpu_ms,
+			"number"
+		);
+	}
+
+	return inheritable(
+		diagnostics,
+		topLevelEnv,
+		rawEnv,
+		"limits",
+		() => true,
+		undefined
+	);
+}
