@@ -15,7 +15,6 @@ export type C3Args = {
 	ts?: boolean;
 	existingScript?: string;
 	wranglerDefaults?: boolean;
-	acceptDefaults?: boolean;
 	additionalArgs?: string[];
 };
 
