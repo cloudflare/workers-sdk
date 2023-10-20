@@ -152,7 +152,9 @@ export async function deploy({
 	let workerBundle: BundleResult | undefined = undefined;
 
 	const functionsDirectory =
-		customFunctionsDirectory || join(cwd(), "functions");
+		customFunctionsDirectory ||
+		process.env.CF_PAGES_FUNCTIONS_DIR ||
+		join(cwd(), "functions");
 	const routesOutputPath = !existsSync(join(directory, "_routes.json"))
 		? join(tmpdir(), `_routes-${Math.random()}.json`)
 		: undefined;

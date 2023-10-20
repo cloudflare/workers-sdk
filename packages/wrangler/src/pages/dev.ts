@@ -286,7 +286,7 @@ export const Handler = async ({
 	// There is no sane way to get the true value out of yargs, so here we are.
 	const enableBundling = bundle ?? !noBundle;
 
-	const functionsDirectory = "./functions";
+	const functionsDirectory = process.env.CF_PAGES_FUNCTIONS_DIR || "./functions";
 	let usingFunctions = !usingWorkerScript && existsSync(functionsDirectory);
 
 	let scriptPath = "";
