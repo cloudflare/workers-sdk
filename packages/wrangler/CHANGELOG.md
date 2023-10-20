@@ -1,5 +1,36 @@
 # wrangler
 
+## 3.14.0
+
+### Minor Changes
+
+- [#4204](https://github.com/cloudflare/workers-sdk/pull/4204) [`38fdbe9b`](https://github.com/cloudflare/workers-sdk/commit/38fdbe9b75af6a588fe4bc8387be45610149c2f3) Thanks [@matthewdavidrodgers](https://github.com/matthewdavidrodgers)! - Support user limits for CPU time
+
+  User limits provided via script metadata on upload
+
+  Example configuration:
+
+  ```
+  [limits]
+  cpu_ms = 20000
+  ```
+
+* [#2162](https://github.com/cloudflare/workers-sdk/pull/2162) [`a1f212e6`](https://github.com/cloudflare/workers-sdk/commit/a1f212e6423fd251612b1b3c2ac9f254daa8fa4c) Thanks [@WalshyDev](https://github.com/WalshyDev)! - add support for service bindings in `wrangler pages dev` by providing the
+  new `--service`|`-s` flag which accepts an array of `BINDING_NAME=SCRIPT_NAME`
+  where `BINDING_NAME` is the name of the binding and `SCRIPT_NAME` is the name
+  of the worker (as defined in its `wrangler.toml`), such workers need to be
+  running locally with with `wrangler dev`.
+
+  For example if a user has a worker named `worker-a`, in order to locally bind
+  to that they'll need to open two different terminals, in each navigate to the
+  respective worker/pages application and then run respectively `wrangler dev` and
+  `wrangler pages ./publicDir --service MY_SERVICE=worker-a` this will add the
+  `MY_SERVICE` binding to pages' worker `env` object.
+
+  Note: additionally after the `SCRIPT_NAME` the name of an environment can be specified,
+  prefixed by an `@` (as in: `MY_SERVICE=SCRIPT_NAME@PRODUCTION`), this behavior is however
+  experimental and not fully properly defined.
+
 ## 3.13.2
 
 ### Patch Changes

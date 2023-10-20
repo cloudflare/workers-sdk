@@ -56,6 +56,16 @@ const DURABLE_OBJECTS_BINDING_REGEXP = new RegExp(
  */
 const BINDING_REGEXP = new RegExp(/^(?<binding>[^=]+)(?:=(?<ref>[^\s]+))?$/);
 
+/* SERVICE_BINDING_REGEXP matches strings like:
+ * - "binding=service"
+ * - "binding=service@environment"
+ * This is used to capture both the binding name (how the binding is used in JS) alongside the name of the service it needs to bind to.
+ * Additionally it can also accept an environment which indicates what environment the service has to be running for.
+ */
+const SERVICE_BINDING_REGEXP = new RegExp(
+	/^(?<binding>[^=]+)=(?<service>[^@\s]+)(@(?<environment>.*)$)?$/
+);
+
 export function Options(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("directory", {
@@ -144,6 +154,11 @@ export function Options(yargs: CommonYargsArgv) {
 				type: "array",
 				description: "R2 bucket to bind (--r2 R2_BINDING)",
 			},
+			service: {
+				type: "array",
+				description: "Service to bind (--service SERVICE=SCRIPT_NAME)",
+				alia: "s",
+			},
 			"live-reload": {
 				type: "boolean",
 				default: false,
@@ -199,6 +214,7 @@ export const Handler = async ({
 	do: durableObjects = [],
 	d1: d1s = [],
 	r2: r2s = [],
+	service: requestedServices = [],
 	liveReload,
 	localProtocol,
 	persistTo,
@@ -544,6 +560,40 @@ export const Handler = async ({
 		}
 	}
 
+	const services = requestedServices
+		.map((serviceBinding) => {
+			const { binding, service, environment } =
+				SERVICE_BINDING_REGEXP.exec(serviceBinding.toString())?.groups || {};
+
+			if (!binding || !service) {
+				logger.warn(
+					"Could not parse Service binding:",
+					serviceBinding.toString()
+				);
+				return;
+			}
+
+			// Envs get appended to the end of the name
+			let serviceName = service;
+			if (environment) {
+				serviceName = `${service}-${environment}`;
+			}
+
+			return {
+				binding,
+				service: serviceName,
+				environment,
+			};
+		})
+		.filter(Boolean) as NonNullable<AdditionalDevProps["services"]>;
+
+	if (services.find(({ environment }) => !!environment)) {
+		// We haven't yet properly defined how environments of service bindings should
+		// work, so if the user is using an environment for any of their service
+		// bindings we warn them that they are experimental
+		logger.warn("Support for service binding environments is experimental.");
+	}
+
 	const { stop, waitUntilExit } = await unstable_dev(entrypoint, {
 		ip,
 		port,
@@ -557,6 +607,7 @@ export const Handler = async ({
 				.map((binding) => binding.toString().split("="))
 				.map(([key, ...values]) => [key, values.join("=")])
 		),
+		services,
 		kv: kvs
 			.map((kv) => {
 				const { binding, ref } =

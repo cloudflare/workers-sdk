@@ -39,6 +39,11 @@ export interface UnstableDevOptions {
 		script_name?: string | undefined;
 		environment?: string | undefined;
 	}[];
+	services?: {
+		binding: string;
+		service: string;
+		environment?: string | undefined;
+	}[];
 	r2?: {
 		binding: string;
 		bucket_name: string;

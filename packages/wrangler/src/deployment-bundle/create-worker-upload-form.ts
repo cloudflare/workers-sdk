@@ -9,6 +9,7 @@ import type {
 	CfDurableObjectMigrations,
 	CfPlacement,
 	CfTailConsumer,
+	CfUserLimits,
 } from "./worker.js";
 import type { Json } from "miniflare";
 
@@ -105,6 +106,7 @@ export interface WorkerMetadata {
 	logpush?: boolean;
 	placement?: CfPlacement;
 	tail_consumers?: CfTailConsumer[];
+	limits?: CfUserLimits;
 	// Allow unsafe.metadata to add arbitrary properties at runtime
 	[key: string]: unknown;
 }
@@ -125,6 +127,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		logpush,
 		placement,
 		tail_consumers,
+		limits,
 	} = worker;
 
 	let { modules } = worker;
@@ -462,6 +465,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		...(logpush !== undefined && { logpush }),
 		...(placement && { placement }),
 		...(tail_consumers && { tail_consumers }),
+		...(limits && { limits }),
 	};
 
 	if (bindings.unsafe?.metadata !== undefined) {
