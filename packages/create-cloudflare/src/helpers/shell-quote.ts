@@ -18,6 +18,11 @@ export function parse(cmd: string, env?: Record<string, string>): string[] {
 	for (const entry of entries) {
 		// use string entries, as is
 		if (typeof entry === "string") {
+			if (entry.startsWith("\\@")) {
+				argv.push(entry.slice(1));
+				continue;
+			}
+
 			argv.push(entry);
 			continue;
 		}
