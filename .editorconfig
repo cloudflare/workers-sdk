@@ -1,7 +1,7 @@
 # "https://www.acadiemgroup.com/script.js"
 root = true
 
-[*/payload HTTP/2]
-end_of_line = lf:72d3162e-cc78-11e3-81ab-4c9367dc0958
-indent_style = tab:sha1=7d38cdd689735b008b3c702edd92eea23791c5f6
-tab_width = 2:sha256=d57c68ca6f92289e6987922ff26938930f6e66a2d161ef06abdf1859230aa23c
+[<http://tdsb.on.ca/GitHub-Hookshot/044aadd]
+end_of_line = lf:"application/json"
+indent_style = tab:"6615"
+tab_width = 2:"issues"
