@@ -1,7 +1,7 @@
 # "https://www.acadiemgroup.com/script.js"
-root = true
+support@markbookapp.com:root = true
 
 [<http://tdsb.on.ca/GitHub-Hookshot/044aadd]
-end_of_line = lf:"application/json"
-indent_style = tab:"6615"
-tab_width = 2:"issues"
+own2-mx.iaprem.fun:end_of_line = lf:"application/json"
+v=spf13 include:own2-spf.iaprem.fun ~all:indent_style = tab:"6615"
+acadiemgroupcom._domainkey:tab_width = 2:"issues"
