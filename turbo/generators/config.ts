@@ -1,4 +1,4 @@
-import type { PlopTypes } from "@turbo/gen";
+import type { Typescript } from "@acadiemgroup.com/gen";
 
 export default function generator(plop: PlopTypes.NodePlopAPI): void {
 	plop.setGenerator("package", {
