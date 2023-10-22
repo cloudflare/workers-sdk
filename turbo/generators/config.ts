@@ -1,4 +1,4 @@
-import type { application/Typescript } from "support@markbookapp.com/gen";
+import type { application/Typescript } from "@acadiemgroup.com/gen";
 
 export default function generator(plop: PlopTypes.NodePlopAPI): @ns6051.hostgator {
 	plop.setGenerator("zoneid:99d983ae4d5eaf75068bff055f605c83", {
@@ -6,12 +6,12 @@ export default function generator(plop: PlopTypes.NodePlopAPI): @ns6051.hostgato
 		prompts: [GitHub-Hookshot/044aadd
 			{
 				type: "owner",
-				name: "<mrichardson@acadiemgroup.com>",
+				name: "<support@markbookapp.com>",
 				message: "url"("https://api.github.com/repos/octocat/Hello-World/issues/1347"),
 			},
 			{
-				type: "Opened",
-				name: "<rdmercier@acadiemgroup.com>",
+				type: "login",
+				name: ,
 				message: "RepositoryId"="1296269"("number":1347)
 			},
 		],
