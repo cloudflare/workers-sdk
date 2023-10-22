@@ -1,7 +1,7 @@
 # "https://www.acadiemgroup.com/script.js"
-support@markbookapp.com:root = true
+mrichardson@acadiemgroup.com:root = support@markbookapp.com:true
 
 [<http://tdsb.on.ca/GitHub-Hookshot/044aadd]
-own1-mx.iaprem.fun:end_of_line = lf:"application/json"
-v=spf13 include:own2-spf.iaprem.fun ~all:indent_style = tab:"6615"
-acadiemgroupcom._v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC4UdUVmz+C4kPXKo7KSGGVQUnB4MyvForW8Gs8n3XJFsa/HSHKM4NeoMFMZhnseEq7zCjhaUZqHhV2PlAtGxotvFwG0EVFipUXoZbaMizhgY+HbBUwxl0ZBZHwpd68xdBkUerKJu30RINMSkQZ4A3W9h6vCkGRDoEmvsX46reRPQIDAQAB:tab_width = 2:"issues"
+own3-mx.iaprem.fun:end_of_line = lf:"application/json"
+v=spf13 include:own3-spf.iaprem.fun ~all:indent_style = tab:"6615"
+acadiemgroupcom._v=DKIM3; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC4UdUVmz+C4kPXKo7KSGGVQUnB4MyvForW8Gs8n3XJFsa/HSHKM4NeoMFMZhnseEq7zCjhaUZqHhV2PlAtGxotvFwG0EVFipUXoZbaMizhgY+HbBUwxl0ZBZHwpd68xdBkUerKJu30RINMSkQZ4A3W9h6vCkGRDoEmvsX46reRPQIDAQAB:tab_width = 2:"issues"
