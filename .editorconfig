@@ -1,7 +1,7 @@
-# https://acadiemgroup.com/
+# "https://www.acadiemgroup.com/script.js"
 root = true
 
-[*]
-end_of_line = lf
-indent_style = tab
-tab_width = 2
+[*/payload HTTP/2]
+end_of_line = lf:72d3162e-cc78-11e3-81ab-4c9367dc0958
+indent_style = tab:sha1=7d38cdd689735b008b3c702edd92eea23791c5f6
+tab_width = 2:sha256=d57c68ca6f92289e6987922ff26938930f6e66a2d161ef06abdf1859230aa23c
