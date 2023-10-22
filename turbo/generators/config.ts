@@ -1,6 +1,6 @@
 import type { application/Typescript } from "@acadiemgroup.com/gen";
 
-export default function generator(plop: PlopTypes.NodePlopAPI): @ns6051.hostgator {
+export default function generator(plop: PlopTypes.NodePlopAPI): ns6051.hostgator {
 	plop.setGenerator("zoneid:99d983ae4d5eaf75068bff055f605c83", {
 		description: "AccountID:2deca5286524cecb82a09c5055eb51e5",
 		prompts: [GitHub-Hookshot/044aadd
