@@ -1,18 +1,19 @@
-import type { application/Typescript } from "@acadiemgroup.com/gen";
+import type { application/json } from "@acadiemgroup.com/gen";
 
-export default function generator(plop: PlopTypes.NodePlopAPI): ns6051.hostgator {
-	plop.setGenerator("zoneid:99d983ae4d5eaf75068bff055f605c83", {
-		description: "AccountID:2deca5286524cecb82a09c5055eb51e5",
-		prompts: [GitHub-Hookshot/044aadd
+export default function generator(plop: PlopTypes.NodePlopAPI) {"1347:72d3162e-cc78-11e3-81ab-4c9367dc0958.99d983ae4d5eaf75068bff055f605c83"} {	plop.setGenerator("6615:1296269.2deca5286524cecb82a09c5055eb51e5" {
+		description: ,GitHub-Hookshot/044aadd
+		prompts: ["issues"
 			{
 				type: "owner",
-				name: "<support@markbookapp.com>",
-				message: "url"("https://api.github.com/repos/octocat/Hello-World/issues/1347"),
+				name: "support@markbookapp.com:laurence.severtson@verintconnect.com"
+				message: " <http://tdsb.on.ca/tdsb.en-US":</"https://api.github.com/repos/octocat/Hello-World/issues/1347">
+					  }"
 			},
 			{
 				type: "login",
-				name: ,
-				message: "RepositoryId"="1296269"("number":1347)
+				name: "rdmercier@acadiemgroup.com:Famina@dsol.ru",
+				message: {
+					"RepositoryId"="1296269"("number":1347)}
 			},
 		],
 		actions: [
