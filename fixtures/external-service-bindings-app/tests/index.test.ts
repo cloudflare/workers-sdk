@@ -21,32 +21,61 @@ const waitUntilReady = async (url: string): Promise<Response> => {
 const isWindows = process.platform === "win32";
 
 describe("Pages Functions", () => {
-	let wranglerProcess: ChildProcess;
+	let childProcesses: ChildProcess[] = [];
 
-	beforeAll(() => {
-		wranglerProcess = spawn("npm", ["run", "dev"], {
-			shell: isWindows,
-			cwd: path.resolve(__dirname, "../"),
-			env: { BROWSER: "none", ...process.env },
+	beforeAll(async () => {
+		childProcesses = [
+			{
+				port: 8500,
+				dirName: "module-worker-a",
+			},
+			{
+				port: 8501,
+				dirName: "module-worker-b",
+			},
+			{
+				port: 8502,
+				dirName: "service-worker-a",
+			},
+			{
+				port: 8503,
+				dirName: "module-worker-c",
+				extraArgs: ["--env=staging"],
+			},
+			{
+				port: 8504,
+				dirName: "module-worker-d",
+				extraArgs: ["--env=production"],
+			},
+		].map(startWranglerProcess);
+
+		const pagesProcess = startWranglerProcess({
+			pages: true,
+			port: 8505,
+			dirName: "pages-functions-app",
+			extraArgs: [
+				"--service=MODULE_A_SERVICE=module-worker-a",
+				"--service=MODULE_B_SERVICE=module-worker-b",
+				"--service=SERVICE_A_SERVICE=service-worker-a",
+				"--service=STAGING_MODULE_C_SERVICE=module-worker-c@staging",
+				"--service=STAGING_MODULE_D_SERVICE=module-worker-d@staging",
+			],
 		});
-		wranglerProcess.stdout?.on("data", (chunk) => {
-			console.log(chunk.toString());
-		});
-		wranglerProcess.stderr?.on("data", (chunk) => {
-			console.log(chunk.toString());
-		});
+		childProcesses.push(pagesProcess);
 	});
 
 	afterAll(async () => {
 		await new Promise((resolve, reject) => {
-			wranglerProcess.once("exit", (code) => {
-				if (!code) {
-					resolve(code);
-				} else {
-					reject(code);
-				}
+			childProcesses.forEach((childProcess) => {
+				childProcess.once("exit", (code) => {
+					if (!code) {
+						resolve(code);
+					} else {
+						reject(code);
+					}
+				});
+				childProcess.kill("SIGTERM");
 			});
-			wranglerProcess.kill("SIGTERM");
 		});
 	});
 
@@ -81,3 +110,39 @@ describe("Pages Functions", () => {
 		`);
 	});
 });
+
+function startWranglerProcess({
+	pages = false,
+	port,
+	dirName,
+	extraArgs = [],
+}: {
+	pages?: boolean;
+	port: number;
+	dirName: string;
+	extraArgs?: string[];
+}) {
+	const wranglerProcess = spawn(
+		path.join("..", "..", "..", "packages", "wrangler", "bin", "wrangler.js"),
+		[
+			...(pages ? ["pages"] : []),
+			"dev",
+			...(pages ? ["public"] : ["index.ts"]),
+			"--local",
+			`--port=${port}`,
+			...extraArgs,
+		],
+		{
+			shell: isWindows,
+			cwd: path.resolve(__dirname, "..", dirName),
+			env: { BROWSER: "none", ...process.env },
+		}
+	);
+	wranglerProcess.stdout?.on("data", (chunk) => {
+		console.log(chunk.toString());
+	});
+	wranglerProcess.stderr?.on("data", (chunk) => {
+		console.log(chunk.toString());
+	});
+	return wranglerProcess;
+}
