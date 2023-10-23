@@ -8,6 +8,7 @@ import { detectPackageManager } from "helpers/packages";
 import semver from "semver";
 import { version } from "../package.json";
 import { validateProjectDirectory } from "./common";
+import * as shellquote from "./helpers/shell-quote";
 import { templateMap } from "./templateMap";
 import type { C3Args } from "types";
 
@@ -55,7 +56,9 @@ export const runLatest = async () => {
 	// the parsing logic of `npm create` requires `--` to be supplied
 	// before any flags intended for the target command.
 	const argString =
-		npm === "npm" ? `-- ${args.join(" ")}` : `${args.join(" ")}`;
+		npm === "npm"
+			? `-- ${shellquote.quote(args)}`
+			: `${shellquote.quote(args)}`;
 
 	await runCommand(`${npm} create cloudflare@latest ${argString}`);
 };
