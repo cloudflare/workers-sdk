@@ -68,18 +68,7 @@ describe("Pages Functions", () => {
 	});
 
 	afterAll(async () => {
-		await new Promise((resolve, reject) => {
-			wranglerInstances.forEach(({ childProcess }) => {
-				childProcess.once("exit", (code) => {
-					if (!code) {
-						resolve(code);
-					} else {
-						reject(code);
-					}
-				});
-				childProcess.kill("SIGTERM");
-			});
-		});
+		await Promise.allSettled(wranglerInstances.map(terminateWranglerInstance));
 	});
 
 	it("connects up Workers (both module and service ones) and fetches from them", async () => {
@@ -144,5 +133,20 @@ async function getWranglerInstance({
 				port: parsedMessage.port,
 			});
 		});
+	});
+}
+
+function terminateWranglerInstance({
+	childProcess,
+}: WranglerInstance): Promise<unknown> {
+	return new Promise((resolve, reject) => {
+		childProcess.once("exit", (code) => {
+			if (!code) {
+				resolve(code);
+			} else {
+				reject(code);
+			}
+		});
+		childProcess.kill("SIGTERM");
 	});
 }
