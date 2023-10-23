@@ -19,6 +19,7 @@ import {
 	runDeploy,
 	setupProjectDirectory,
 } from "./common";
+import * as shellquote from "./helpers/shell-quote";
 import type { C3Args, PagesGeneratorContext } from "types";
 
 /** How many times to retry the create project command before failing. */
@@ -162,7 +163,9 @@ const createProject = async (ctx: PagesGeneratorContext) => {
 	const CLOUDFLARE_ACCOUNT_ID = ctx.account.id;
 
 	try {
-		const compatFlags = ctx.framework?.config.compatibilityFlags?.join(" ");
+		const compatFlags = shellquote.quote(
+			ctx.framework?.config.compatibilityFlags ?? []
+		);
 		const compatFlagsArg = compatFlags
 			? `--compatibility-flags ${compatFlags}`
 			: "";
