@@ -35,7 +35,7 @@ jobs:
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
         env:
-          node-version: 16.14
+          node-version: 16.18
 
       - name: Build
         run: pnpm run build
