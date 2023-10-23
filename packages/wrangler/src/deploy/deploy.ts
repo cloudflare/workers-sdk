@@ -746,7 +746,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				},
 			});
 		} else if (routes.length !== 0) {
-			// if you get to this point it's because
+			// if you get to this point it's because (no-op)
 			// you're trying to deploy a worker to a custom
 			// domain that's already bound to another worker.
 			// so this thing is about finding workers that have
