@@ -1,4 +1,4 @@
-import { spawn } from "child_process";
+import { fork } from "child_process";
 import * as path from "path";
 import type { ChildProcess } from "child_process";
 import { describe, expect, it, beforeAll, afterAll, beforeEach } from "vitest";
@@ -18,55 +18,58 @@ const waitUntilReady = async (url: string): Promise<Response> => {
 	return response as Response;
 };
 
-const isWindows = process.platform === "win32";
+type WranglerInstance = {
+	dirName: string;
+	childProcess: ChildProcess;
+	ip: string;
+	port: string;
+};
 
 describe("Pages Functions", () => {
-	let childProcesses: ChildProcess[] = [];
+	let wranglerInstances: WranglerInstance[] = [];
+	let pagesAppPort: string;
 
 	beforeAll(async () => {
-		childProcesses = [
-			{
-				port: 8500,
-				dirName: "module-worker-a",
-			},
-			{
-				port: 8501,
-				dirName: "module-worker-b",
-			},
-			{
-				port: 8502,
-				dirName: "service-worker-a",
-			},
-			{
-				port: 8503,
-				dirName: "module-worker-c",
-				extraArgs: ["--env=staging"],
-			},
-			{
-				port: 8504,
-				dirName: "module-worker-d",
-				extraArgs: ["--env=production"],
-			},
-		].map(startWranglerProcess);
-
-		const pagesProcess = startWranglerProcess({
-			pages: true,
-			port: 8505,
-			dirName: "pages-functions-app",
-			extraArgs: [
-				"--service=MODULE_A_SERVICE=module-worker-a",
-				"--service=MODULE_B_SERVICE=module-worker-b",
-				"--service=SERVICE_A_SERVICE=service-worker-a",
-				"--service=STAGING_MODULE_C_SERVICE=module-worker-c@staging",
-				"--service=STAGING_MODULE_D_SERVICE=module-worker-d@staging",
-			],
-		});
-		childProcesses.push(pagesProcess);
+		wranglerInstances = await Promise.all(
+			[
+				{
+					dirName: "module-worker-a",
+				},
+				{
+					dirName: "module-worker-b",
+				},
+				{
+					dirName: "service-worker-a",
+				},
+				{
+					dirName: "module-worker-c",
+					extraArgs: ["--env=staging"],
+				},
+				{
+					dirName: "module-worker-d",
+					extraArgs: ["--env=production"],
+				},
+				{
+					pages: true,
+					dirName: "pages-functions-app",
+					extraArgs: [
+						"--service=MODULE_A_SERVICE=module-worker-a",
+						"--service=MODULE_B_SERVICE=module-worker-b",
+						"--service=SERVICE_A_SERVICE=service-worker-a",
+						"--service=STAGING_MODULE_C_SERVICE=module-worker-c@staging",
+						"--service=STAGING_MODULE_D_SERVICE=module-worker-d@staging",
+					],
+				},
+			].map(getWranglerInstance)
+		);
+		pagesAppPort =
+			wranglerInstances.find(({ dirName }) => dirName === "pages-functions-app")
+				?.port ?? "0";
 	});
 
 	afterAll(async () => {
 		await new Promise((resolve, reject) => {
-			childProcesses.forEach((childProcess) => {
+			wranglerInstances.forEach(({ childProcess }) => {
 				childProcess.once("exit", (code) => {
 					if (!code) {
 						resolve(code);
@@ -79,16 +82,10 @@ describe("Pages Functions", () => {
 		});
 	});
 
-	beforeEach(async () => {
-		await Promise.all(
-			[8500, 8501, 8502, 8503, 8504, 8505].map((port) =>
-				waitUntilReady(`http://localhost:${port}`)
-			)
-		);
-	});
-
 	it("connects up Workers (both module and service ones) and fetches from them", async () => {
-		const combinedResponse = await waitUntilReady("http://localhost:8505/");
+		const combinedResponse = await waitUntilReady(
+			`http://localhost:${pagesAppPort}/`
+		);
 		const json = await combinedResponse.json();
 		expect(json).toMatchInlineSnapshot(`
 			{
@@ -100,7 +97,9 @@ describe("Pages Functions", () => {
 	});
 
 	it("respects the environments specified for the service bindings (and doesn't connect if the env doesn't match)", async () => {
-		const combinedResponse = await waitUntilReady("http://localhost:8505/env");
+		const combinedResponse = await waitUntilReady(
+			`http://localhost:${pagesAppPort}/env`
+		);
 		const json = await combinedResponse.json();
 		expect(json).toMatchInlineSnapshot(`
 			{
@@ -111,38 +110,39 @@ describe("Pages Functions", () => {
 	});
 });
 
-function startWranglerProcess({
+async function getWranglerInstance({
 	pages = false,
-	port,
 	dirName,
 	extraArgs = [],
 }: {
 	pages?: boolean;
-	port: number;
 	dirName: string;
 	extraArgs?: string[];
-}) {
-	const wranglerProcess = spawn(
-		path.join("..", "..", "..", "packages", "wrangler", "bin", "wrangler.js"),
-		[
-			...(pages ? ["pages"] : []),
-			"dev",
-			...(pages ? ["public"] : ["index.ts"]),
-			"--local",
-			`--port=${port}`,
-			...extraArgs,
-		],
-		{
-			shell: isWindows,
-			cwd: path.resolve(__dirname, "..", dirName),
-			env: { BROWSER: "none", ...process.env },
-		}
-	);
-	wranglerProcess.stdout?.on("data", (chunk) => {
-		console.log(chunk.toString());
+}): Promise<WranglerInstance> {
+	return new Promise((resolve) => {
+		const childProcess = fork(
+			path.join("..", "..", "..", "packages", "wrangler", "bin", "wrangler.js"),
+			[
+				...(pages ? ["pages"] : []),
+				"dev",
+				...(pages ? ["public"] : ["index.ts"]),
+				"--local",
+				`--port=0`,
+				...extraArgs,
+			],
+			{
+				cwd: path.resolve(__dirname, "..", dirName),
+				env: { BROWSER: "none", ...process.env },
+				stdio: ["ignore", "ignore", "ignore", "ipc"],
+			}
+		).on("message", (message) => {
+			const parsedMessage = JSON.parse(message.toString());
+			resolve({
+				dirName,
+				childProcess,
+				ip: parsedMessage.ip,
+				port: parsedMessage.port,
+			});
+		});
 	});
-	wranglerProcess.stderr?.on("data", (chunk) => {
-		console.log(chunk.toString());
-	});
-	return wranglerProcess;
 }
