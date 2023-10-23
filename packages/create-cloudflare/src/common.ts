@@ -32,32 +32,6 @@ import type { C3Args, PagesGeneratorContext } from "types";
 
 const { name, npm } = detectPackageManager();
 
-// C3 shouldn't prevent a user from using an existing directory if it
-// only contains benign config and/or other files from the following set
-const allowedExistingFiles = new Set([
-	".DS_Store",
-	".git",
-	".gitattributes",
-	".gitignore",
-	".gitlab-ci.yml",
-	".hg",
-	".hgcheck",
-	".hgignore",
-	".idea",
-	".npmignore",
-	".travis.yml",
-	"LICENSE",
-	"Thumbs.db",
-	"docs",
-	"mkdocs.yml",
-	"npm-debug.log",
-	"yarn-debug.log",
-	"yarn-error.log",
-	"yarnrc.yml",
-	".yarn",
-	".gitkeep",
-]);
-
 export const validateProjectDirectory = (
 	relativePath: string,
 	args: Partial<C3Args>
@@ -68,7 +42,7 @@ export const validateProjectDirectory = (
 
 	if (existsAlready) {
 		for (const file of readdirSync(path)) {
-			if (!allowedExistingFiles.has(file)) {
+			if (!isAllowedExistingFile(file)) {
 				return `Directory \`${relativePath}\` already exists and contains files that might conflict. Please choose a new name.`;
 			}
 		}
@@ -94,6 +68,36 @@ export const validateProjectDirectory = (
 			return `Project names must be less than 58 characters.`;
 		}
 	}
+};
+
+export const isAllowedExistingFile = (file: string) => {
+	// C3 shouldn't prevent a user from using an existing directory if it
+	// only contains benign config and/or other files from the following set
+	const allowedExistingFiles = new Set([
+		".DS_Store",
+		".git",
+		".gitattributes",
+		".gitignore",
+		".gitlab-ci.yml",
+		".hg",
+		".hgcheck",
+		".hgignore",
+		".idea",
+		".npmignore",
+		".travis.yml",
+		"LICENSE",
+		"Thumbs.db",
+		"docs",
+		"mkdocs.yml",
+		"npm-debug.log",
+		"yarn-debug.log",
+		"yarn-error.log",
+		"yarnrc.yml",
+		".yarn",
+		".gitkeep",
+	]);
+
+	return allowedExistingFiles.has(file);
 };
 
 export const setupProjectDirectory = (args: C3Args) => {
