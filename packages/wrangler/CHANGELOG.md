@@ -861,7 +861,7 @@
   		const url = new URL(req.url);
   		const name = url.searchParams.get("name");
   		return new Response("Hello, " + name);
-  	}
+  	},
   };
   ```
 
@@ -1539,7 +1539,7 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```js
   worker = await unstable_dev("src/index.js", {
-  	experimental: { disableExperimentalWarning: true }
+  	experimental: { disableExperimentalWarning: true },
   });
   ```
 
@@ -2047,7 +2047,7 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```js
   await unstable_dev("src/index.ts", {
-  	local: false
+  	local: false,
   });
   ```
 
@@ -2690,7 +2690,7 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
   export default {
   	fetch(req, env) {
   		return env.Bee.fetch(req);
-  	}
+  	},
   };
   ```
 
@@ -2706,7 +2706,7 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
   export default {
   	fetch(req, env) {
   		return new Response("Hello World");
-  	}
+  	},
   };
   ```
 
@@ -3687,7 +3687,7 @@ And in your worker, you can call it like so:
 export default {
 	fetch(req, env, ctx) {
 		return env.MYWORKER.fetch(new Request("http://domain/some-path"));
-	}
+	},
 };
 ```
 
@@ -4652,7 +4652,7 @@ Fixes https://github.com/cloudflare/workers-sdk/issues/1026
 
   ```jsx
   import SomeDependency from "some-dependency.js";
-  addEventListener("fetch", event => {
+  addEventListener("fetch", (event) => {
   	// ...
   });
   ```

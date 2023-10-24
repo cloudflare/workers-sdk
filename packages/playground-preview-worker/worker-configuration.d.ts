@@ -10,7 +10,7 @@ type Env = {
 	SENTRY_ACCESS_CLIENT_ID: string;
 };
 
-declare module '*.template' {
+declare module "*.template" {
 	const value: string;
 	export default value;
 }
