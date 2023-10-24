@@ -116,6 +116,7 @@
 		"xxhash-wasm": "^1.0.1"
 	},
 	"devDependencies": {
+		"@cloudflare/cli": "workspace:*",
 		"@cloudflare/eslint-config-worker": "*",
 		"@cloudflare/pages-shared": "workspace:^",
 		"@cloudflare/types": "^6.18.4",

@@ -1,7 +1,7 @@
 import { mkdirSync } from "fs";
+import { updateStatus, warn } from "@cloudflare/cli";
+import { brandColor, dim } from "@cloudflare/cli/colors";
 import { processArgument } from "helpers/args";
-import { updateStatus, warn } from "helpers/cli";
-import { brandColor, dim } from "helpers/colors";
 import { installPackages, runFrameworkGenerator } from "helpers/command";
 import {
 	compatDateFlag,
@@ -20,7 +20,7 @@ import {
 	apiPagesDirHelloJs,
 	apiPagesDirHelloTs,
 } from "./templates";
-import type { PagesGeneratorContext, FrameworkConfig, C3Args } from "types";
+import type { C3Args, FrameworkConfig, PagesGeneratorContext } from "types";
 
 const { npm, npx, dlx } = detectPackageManager();
 

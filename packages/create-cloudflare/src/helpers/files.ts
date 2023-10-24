@@ -1,5 +1,5 @@
 import fs, { existsSync } from "fs";
-import { crash } from "./cli";
+import { crash } from "@cloudflare/cli";
 import { getWorkerdCompatibilityDate } from "./command";
 import type { PagesGeneratorContext } from "types";
 

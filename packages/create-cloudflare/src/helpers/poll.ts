@@ -1,8 +1,8 @@
+import { brandColor, dim, blue } from "@cloudflare/cli/colors";
+import { spinner } from "@cloudflare/cli/interactive";
 import dns2 from "dns2";
 import { request } from "undici";
-import { blue, brandColor, dim } from "./colors";
 import { sleep } from "./common";
-import { spinner } from "./interactive";
 import type { DnsAnswer, DnsResponse } from "dns2";
 
 const TIMEOUT = 1000 * 60 * 5;
