@@ -31,6 +31,9 @@ export const COMMON_ESBUILD_OPTIONS = {
 	loader: { ".js": "jsx", ".mjs": "jsx", ".cjs": "jsx" },
 } as const;
 
+// build conditions used by esbuild, and when resolving custom `import` calls
+export const BUILD_CONDITIONS = ["workerd", "worker", "browser"];
+
 /**
  * Information about Wrangler's bundling process that needs passed through
  * for DevTools sourcemap transformation
@@ -310,7 +313,7 @@ export async function bundleWorker(
 		sourceRoot: destination,
 		minify,
 		metafile: true,
-		conditions: ["workerd", "worker", "browser"],
+		conditions: BUILD_CONDITIONS,
 		...(process.env.NODE_ENV && {
 			define: {
 				// use process.env["NODE_ENV" + ""] so that esbuild doesn't replace it
