@@ -40,6 +40,7 @@ export interface PluginServicesOptions<
 
 	// ~~Leaky abstractions~~ "Plugin specific options" :)
 	durableObjectClassNames: DurableObjectClassNames;
+	unsafeEphemeralDurableObjects: boolean;
 	queueConsumers: QueueConsumers;
 }
 

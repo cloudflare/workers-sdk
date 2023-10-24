@@ -71,7 +71,12 @@ export const DURABLE_OBJECTS_PLUGIN: Plugin<
 		const objects = Object.keys(options.durableObjects ?? {});
 		return Object.fromEntries(objects.map((name) => [name, kProxyNodeBinding]));
 	},
-	async getServices({ sharedOptions, tmpPath, durableObjectClassNames }) {
+	async getServices({
+		sharedOptions,
+		tmpPath,
+		durableObjectClassNames,
+		unsafeEphemeralDurableObjects,
+	}) {
 		// Check if we even have any Durable Object bindings, if we don't, we can
 		// skip creating the storage directory
 		let hasDurableObjects = false;
@@ -82,6 +87,11 @@ export const DURABLE_OBJECTS_PLUGIN: Plugin<
 			}
 		}
 		if (!hasDurableObjects) return;
+
+		// If this worker has enabled `unsafeEphemeralDurableObjects`, it won't need
+		// the Durable Object storage service. If all workers have this enabled, we
+		// don't need to create the storage service at all.
+		if (unsafeEphemeralDurableObjects) return;
 
 		const storagePath = getPersistPath(
 			DURABLE_OBJECTS_PLUGIN_NAME,

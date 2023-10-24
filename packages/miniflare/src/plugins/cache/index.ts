@@ -85,57 +85,58 @@ export const CACHE_PLUGIN: Plugin<
 				],
 			};
 		}
-
-		const uniqueKey = `miniflare-${CACHE_OBJECT_CLASS_NAME}`;
-
-		const persist = sharedOptions.cachePersist;
-		const persistPath = getPersistPath(CACHE_PLUGIN_NAME, tmpPath, persist);
-		await fs.mkdir(persistPath, { recursive: true });
-		const storageService: Service = {
-			name: CACHE_STORAGE_SERVICE_NAME,
-			disk: { path: persistPath, writable: true },
-		};
-		const objectService: Service = {
-			name: CACHE_SERVICE_PREFIX,
-			worker: {
-				compatibilityDate: "2023-07-24",
-				compatibilityFlags: ["nodejs_compat", "experimental"],
-				modules: [
-					{
-						name: "cache.worker.js",
-						esModule: SCRIPT_CACHE_OBJECT(),
-					},
-				],
-				durableObjectNamespaces: [
-					{
-						className: CACHE_OBJECT_CLASS_NAME,
-						uniqueKey,
-					},
-				],
-				// Store Durable Object SQL databases in persist path
-				durableObjectStorage: { localDisk: CACHE_STORAGE_SERVICE_NAME },
-				// Bind blob disk directory service to object
-				bindings: [
-					{
-						name: SharedBindings.MAYBE_SERVICE_BLOBS,
-						service: { name: CACHE_STORAGE_SERVICE_NAME },
-					},
-					{
-						name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
-						service: { name: SERVICE_LOOPBACK },
-					},
-				],
-			},
-		};
-
-		// NOTE: not migrating here as applications should be able to recover from
-		// cache evictions, and we'd need to locate all named caches
-
 		const services: Service[] = [
 			{ name: getCacheServiceName(workerIndex), worker: entryWorker },
-			storageService,
-			objectService,
 		];
+
+		if (cache) {
+			const uniqueKey = `miniflare-${CACHE_OBJECT_CLASS_NAME}`;
+
+			const persist = sharedOptions.cachePersist;
+			const persistPath = getPersistPath(CACHE_PLUGIN_NAME, tmpPath, persist);
+			await fs.mkdir(persistPath, { recursive: true });
+			const storageService: Service = {
+				name: CACHE_STORAGE_SERVICE_NAME,
+				disk: { path: persistPath, writable: true },
+			};
+			const objectService: Service = {
+				name: CACHE_SERVICE_PREFIX,
+				worker: {
+					compatibilityDate: "2023-07-24",
+					compatibilityFlags: ["nodejs_compat", "experimental"],
+					modules: [
+						{
+							name: "cache.worker.js",
+							esModule: SCRIPT_CACHE_OBJECT(),
+						},
+					],
+					durableObjectNamespaces: [
+						{
+							className: CACHE_OBJECT_CLASS_NAME,
+							uniqueKey,
+						},
+					],
+					// Store Durable Object SQL databases in persist path
+					durableObjectStorage: { localDisk: CACHE_STORAGE_SERVICE_NAME },
+					// Bind blob disk directory service to object
+					bindings: [
+						{
+							name: SharedBindings.MAYBE_SERVICE_BLOBS,
+							service: { name: CACHE_STORAGE_SERVICE_NAME },
+						},
+						{
+							name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
+							service: { name: SERVICE_LOOPBACK },
+						},
+					],
+				},
+			};
+			services.push(storageService, objectService);
+
+			// NOTE: not migrating here as applications should be able to recover from
+			// cache evictions, and we'd need to locate all named caches
+		}
+
 		return services;
 	},
 };
