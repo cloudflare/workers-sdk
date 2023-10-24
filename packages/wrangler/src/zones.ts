@@ -33,42 +33,6 @@ export function getHostFromRoute(route: Route): string | undefined {
 	} else if (typeof route === "object") {
 		host = getHostFromUrl(route.pattern);
 
-		if ("zone_name" in route) {
-			const hostFromZoneName = getHostFromUrl(route.zone_name);
-			if (hostFromZoneName && !host?.endsWith?.(`.${hostFromZoneName}`)) {
-				// Pattern is not a subdomain of zone. Use zone name as host instead.
-				host = hostFromZoneName;
-			}
-		}
-	}
-
-	return host;
-}
-
-/**
- * Get the hostname on which to run a Worker.
- *
- * The most accurate place is usually
- * `route.pattern`, as that includes any subdomains. For example:
- * ```js
- * {
- * 	pattern: foo.example.com
- * 	zone_name: example.com
- * }
- * ```
- * However, in the case of patterns that _can't_ be parsed as a hostname
- * (primarily the pattern `*/ /*`), we fall back to the `zone_name`
- * (and in the absence of that return undefined).
- * @param route
- */
-export function getHostFromRoutePattern(route: Route): string | undefined {
-	let host: string | undefined;
-
-	if (typeof route === "string") {
-		host = getHostFromUrl(route);
-	} else if (typeof route === "object") {
-		host = getHostFromUrl(route.pattern);
-
 		if (host === undefined && "zone_name" in route) {
 			host = getHostFromUrl(route.zone_name);
 		}
@@ -84,19 +48,18 @@ export function getHostFromRoutePattern(route: Route): string | undefined {
  * - We try to extract a host from it
  * - We try to get a zone id from the host
  */
-export async function getZoneForRoute(
-	route: Route,
-	usePattern = false
-): Promise<Zone | undefined> {
-	const host = usePattern
-		? getHostFromRoutePattern(route)
-		: getHostFromRoute(route);
-	const id =
-		typeof route === "object" && "zone_id" in route
-			? route.zone_id
-			: host
-			? await getZoneIdFromHost(host)
-			: undefined;
+export async function getZoneForRoute(route: Route): Promise<Zone | undefined> {
+	const host = getHostFromRoute(route);
+	let id: string | undefined;
+
+	if (typeof route === "object" && "zone_id" in route) {
+		id = route.zone_id;
+	} else if (typeof route === "object" && "zone_name" in route) {
+		id = await getZoneIdFromHost(route.zone_name);
+	} else if (host) {
+		id = await getZoneIdFromHost(host);
+	}
+
 	return id && host ? { id, host } : undefined;
 }
 

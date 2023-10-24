@@ -16,11 +16,7 @@ import * as metrics from "./metrics";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
 import { getAccountFromCache, loginOrRefreshIfRequired } from "./user";
 import { collectKeyValues } from "./utils/collectKeyValues";
-import {
-	getHostFromRoutePattern,
-	getZoneForRoute,
-	getZoneIdFromHost,
-} from "./zones";
+import { getHostFromRoute, getZoneForRoute, getZoneIdFromHost } from "./zones";
 import {
 	DEFAULT_INSPECTOR_PORT,
 	DEFAULT_LOCAL_PORT,
@@ -668,7 +664,7 @@ async function getZoneIdHostAndRoutes(args: StartDevOptions, config: Config) {
 		}
 		if (!zoneId && routes) {
 			const firstRoute = routes[0];
-			const zone = await getZoneForRoute(firstRoute, true);
+			const zone = await getZoneForRoute(firstRoute);
 			if (zone) {
 				zoneId = zone.id;
 				host = zone.host;
@@ -677,7 +673,7 @@ async function getZoneIdHostAndRoutes(args: StartDevOptions, config: Config) {
 	} else if (!host) {
 		if (routes) {
 			const firstRoute = routes[0];
-			host = getHostFromRoutePattern(firstRoute);
+			host = getHostFromRoute(firstRoute);
 
 			// TODO(consider): do we need really need to do this? I've added the condition to throw to match the previous implicit behaviour of `new URL()` throwing upon invalid URLs, but could we just continue here without an inferred host?
 			if (host === undefined) {
