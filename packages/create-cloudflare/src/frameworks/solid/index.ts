@@ -1,11 +1,11 @@
-import { logRaw, updateStatus } from "helpers/cli";
-import { blue, brandColor, dim } from "helpers/colors";
+import { logRaw, updateStatus } from "@cloudflare/cli";
+import { brandColor, dim, blue } from "@cloudflare/cli/colors";
 import { installPackages, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag, usesTypescript, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
 import { getFrameworkCli } from "../index";
 import { viteConfig } from "./templates";
-import type { PagesGeneratorContext, FrameworkConfig } from "types";
+import type { FrameworkConfig, PagesGeneratorContext } from "types";
 
 const { npm, dlx } = detectPackageManager();
 

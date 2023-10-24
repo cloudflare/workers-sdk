@@ -342,6 +342,10 @@ export default function useInspector(props: InspectorProps) {
 		 */
 		function close(): void {
 			if (!isClosed()) {
+				send({
+					method: "Runtime.discardConsoleEntries",
+					id: messageCounterRef.current++,
+				});
 				try {
 					ws.close();
 				} catch (err) {
@@ -378,10 +382,6 @@ export default function useInspector(props: InspectorProps) {
 		}
 
 		ws.addEventListener("open", () => {
-			send({
-				method: "Runtime.discardConsoleEntries",
-				id: messageCounterRef.current++,
-			});
 			send({ method: "Runtime.enable", id: messageCounterRef.current++ });
 			// TODO: This doesn't actually work. Must fix.
 			send({ method: "Network.enable", id: messageCounterRef.current++ });

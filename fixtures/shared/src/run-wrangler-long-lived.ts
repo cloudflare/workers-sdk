@@ -57,6 +57,7 @@ async function runLongLivedWrangler(command: string[], cwd: string) {
 	const chunks: Buffer[] = [];
 	wranglerProcess.stdout?.on("data", (chunk) => chunks.push(chunk));
 	wranglerProcess.stderr?.on("data", (chunk) => chunks.push(chunk));
+	const getOutput = () => Buffer.concat(chunks).toString();
 
 	const timeoutHandle = setTimeout(() => {
 		if (settledReadyPromise) return;
@@ -65,7 +66,7 @@ async function runLongLivedWrangler(command: string[], cwd: string) {
 		const message = [
 			"Timed out starting long-lived Wrangler:",
 			separator,
-			Buffer.concat(chunks).toString(),
+			getOutput(),
 			separator,
 		].join("\n");
 		rejectReadyPromise(new Error(message));
@@ -85,5 +86,5 @@ async function runLongLivedWrangler(command: string[], cwd: string) {
 	}
 
 	const { ip, port } = await ready;
-	return { ip, port, stop };
+	return { ip, port, stop, getOutput };
 }

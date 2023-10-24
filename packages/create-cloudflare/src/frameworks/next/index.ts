@@ -1,7 +1,7 @@
 import { mkdirSync } from "fs";
+import { updateStatus, warn } from "@cloudflare/cli";
+import { brandColor, dim } from "@cloudflare/cli/colors";
 import { processArgument } from "helpers/args";
-import { updateStatus, warn } from "helpers/cli";
-import { brandColor, dim } from "helpers/colors";
 import { installPackages, runFrameworkGenerator } from "helpers/command";
 import {
 	compatDateFlag,
@@ -20,7 +20,7 @@ import {
 	apiPagesDirHelloJs,
 	apiPagesDirHelloTs,
 } from "./templates";
-import type { PagesGeneratorContext, FrameworkConfig, C3Args } from "types";
+import type { C3Args, FrameworkConfig, PagesGeneratorContext } from "types";
 
 const { npm, npx, dlx } = detectPackageManager();
 
@@ -141,12 +141,20 @@ const config: FrameworkConfig = {
 	generate,
 	configure,
 	displayName: "Next",
-	getPackageScripts: async () => ({
-		"pages:build": `${dlx} @cloudflare/next-on-pages@1`,
-		"pages:deploy": `${npm} run pages:build && wrangler pages deploy .vercel/output/static`,
-		"pages:watch": `${npx} @cloudflare/next-on-pages@1 --watch`,
-		"pages:dev": `${npx} wrangler pages dev .vercel/output/static ${await compatDateFlag()} --compatibility-flag=nodejs_compat`,
-	}),
+	getPackageScripts: async () => {
+		const isNpmOrBun = ["npm", "bun"].includes(npm);
+		const nextOnPagesScope = isNpmOrBun ? "@cloudflare/" : "";
+		const nextOnPagesCommand = `${nextOnPagesScope}next-on-pages`;
+		const pmCommand = isNpmOrBun ? npx : npm;
+		return {
+			"pages:build": `${pmCommand} ${nextOnPagesCommand}`,
+			"pages:deploy": `${
+				npm === "npm" ? "npm run" : pmCommand
+			} pages:build && wrangler pages deploy .vercel/output/static`,
+			"pages:watch": `${pmCommand} ${nextOnPagesCommand} --watch`,
+			"pages:dev": `${pmCommand} wrangler pages dev .vercel/output/static ${await compatDateFlag()} --compatibility-flag=nodejs_compat`,
+		};
+	},
 	testFlags: [
 		"--typescript",
 		"--no-install",
