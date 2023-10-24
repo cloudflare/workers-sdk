@@ -5,7 +5,7 @@ Fixes # [insert GH or internal issue number(s)].
 
 **Author has addressed the following:**
 
-- [ ] Tests
+- Tests
   - [ ] Included
   - [ ] Not necessary because:
 - [ ] Changeset ([Changeset guidelines](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md#changesets))
