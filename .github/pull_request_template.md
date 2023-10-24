@@ -8,7 +8,7 @@ Fixes # [insert GH or internal issue number(s)].
 - Tests
   - [ ] Included
   - [ ] Not necessary because:
-- [ ] Changeset ([Changeset guidelines](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md#changesets))
+- Changeset ([Changeset guidelines](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md#changesets))
   - [ ] Included
   - [ ] Not necessary because:
 - [ ] Associated docs
