@@ -18,7 +18,7 @@
 		"dev": "dotenv -- turbo dev",
 		"fix": "pnpm run prettify && dotenv -- turbo check:lint -- --fix",
 		"prettier": "prettier . --ignore-unknown --ignore-path .gitignore",
-		"prettify": "pnpm run prettier -- --write",
+		"prettify": "pnpm run prettier --write",
 		"test": "dotenv -- turbo test --concurrency=1",
 		"test:ci": "dotenv -- turbo test:ci --filter=!local-mode-tests --filter=!playground-preview-worker --filter=!no-bundle-import --filter=!workers.new --concurrency=1",
 		"test:ci:quarantine": "dotenv -- turbo test:ci --filter=local-mode-tests --filter=playground-preview-worker --filter=no-bundle-import --filter=workers.new --concurrency=1",
