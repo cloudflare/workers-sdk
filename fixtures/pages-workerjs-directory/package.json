@@ -1,16 +1,19 @@
 {
 	"name": "pages-workerjs-directory",
-	"version": "0.0.0",
+	"version": "0.0.1",
 	"private": true,
 	"sideEffects": false,
 	"scripts": {
 		"check:type": "tsc",
-		"dev": "npx wrangler pages dev public --port 8794",
-		"test": "npx vitest",
-		"test:ci": "npx vitest"
+		"dev": "npx wrangler pages dev public --d1=D1 --d1=PUT=elsewhere --kv KV --kv KV_REF=other_kv --r2 R2 --r2=R2_REF=other_r2 --port 8794",
+		"test": "npx vitest run",
+		"test:ci": "npx vitest run",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
-		"undici": "^5.9.1"
+		"undici": "^5.9.1",
+		"wrangler": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*"
 	},
 	"engines": {
 		"node": ">=16.13"

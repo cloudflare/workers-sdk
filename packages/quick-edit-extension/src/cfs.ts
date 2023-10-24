@@ -4,7 +4,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import workersTypes from "raw:@cloudflare/workers-types/index.d.ts";
+import workersTypes from "raw:@cloudflare/workers-types/experimental/index.d.ts";
 import {
 	Disposable,
 	EventEmitter,
@@ -125,7 +125,7 @@ export class CFS
 		"checkJs": true,
 		"allowJs": true,
 		"types": [],
-		"lib": ["ES2020"]
+		"lib": ["ES2022"]
 	}
 }
 	`.trim()

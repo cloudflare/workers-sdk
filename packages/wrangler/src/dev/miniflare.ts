@@ -1,6 +1,5 @@
 import assert from "node:assert";
 import { realpathSync } from "node:fs";
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 import {
 	Log,
@@ -10,12 +9,12 @@ import {
 	Mutex,
 	Miniflare,
 } from "miniflare";
+import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
+import { withSourceURLs } from "../deployment-bundle/source-url";
+import { getHttpsOptions } from "../https-options";
 import { logger } from "../logger";
-import { ModuleTypeToRuleType } from "../module-collection";
+import { updateCheck } from "../update-check";
 import type { Config } from "../config";
-import type { WorkerRegistry } from "../dev-registry";
-import type { LoggerLevel } from "../logger";
-import type { AssetPaths } from "../sites";
 import type {
 	CfD1Database,
 	CfDurableObject,
@@ -23,8 +22,11 @@ import type {
 	CfQueue,
 	CfR2Bucket,
 	CfScriptFormat,
-} from "../worker";
-import type { CfWorkerInit } from "../worker";
+} from "../deployment-bundle/worker";
+import type { CfWorkerInit } from "../deployment-bundle/worker";
+import type { WorkerRegistry } from "../dev-registry";
+import type { LoggerLevel } from "../logger";
+import type { AssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
 import type {
 	MiniflareOptions,
@@ -32,7 +34,6 @@ import type {
 	WorkerOptions,
 	Request,
 	Response,
-	QueueConsumerOptions,
 } from "miniflare";
 import type { Abortable } from "node:events";
 
@@ -108,7 +109,7 @@ export interface ConfigBundle {
 	localProtocol: "http" | "https";
 	localUpstream: string | undefined;
 	inspect: boolean;
-	serviceBindings: Record<string, (request: Request) => Promise<Response>>;
+	serviceBindings: Record<string, (_request: Request) => Promise<Response>>;
 }
 
 class WranglerLog extends Log {
@@ -122,10 +123,19 @@ class WranglerLog extends Log {
 
 	warn(message: string) {
 		// Only log warning about requesting a compatibility date after the workerd
-		// binary's version once
+		// binary's version once, and only if there's an update available.
 		if (message.startsWith("The latest compatibility date supported by")) {
 			if (this.#warnedCompatibilityDateFallback) return;
 			this.#warnedCompatibilityDateFallback = true;
+			return void updateCheck().then((maybeNewVersion) => {
+				if (maybeNewVersion === undefined) return;
+				message += [
+					"",
+					"Features enabled by your requested compatibility date may not be available.",
+					`Upgrade to \`wrangler@${maybeNewVersion}\` to remove this warning.`,
+				].join("\n");
+				super.warn(message);
+			});
 		}
 		super.warn(message);
 	}
@@ -152,6 +162,10 @@ async function buildSourceOptions(
 	const scriptPath = realpathSync(config.bundle.path);
 	if (config.format === "modules") {
 		const modulesRoot = path.dirname(scriptPath);
+		const { entrypointSource, modules } = withSourceURLs(
+			scriptPath,
+			config.bundle.modules
+		);
 		return {
 			modulesRoot,
 			modules: [
@@ -159,10 +173,10 @@ async function buildSourceOptions(
 				{
 					type: "ESModule",
 					path: scriptPath,
-					contents: await readFile(scriptPath, "utf-8"),
+					contents: entrypointSource,
 				},
 				// Misc (WebAssembly, etc, ...)
-				...config.bundle.modules.map((module) => ({
+				...modules.map((module) => ({
 					type: ModuleTypeToRuleType[module.type ?? "esm"],
 					path: path.resolve(modulesRoot, module.name),
 					contents: module.content,
@@ -170,6 +184,7 @@ async function buildSourceOptions(
 			],
 		};
 	} else {
+		// Miniflare will handle adding `//# sourceURL` comments if they're missing
 		return { scriptPath };
 	}
 }
@@ -187,16 +202,14 @@ function queueProducerEntry(queue: CfQueue): [string, string] {
 	return [queue.binding, queue.queue_name];
 }
 type QueueConsumer = NonNullable<Config["queues"]["consumers"]>[number];
-function queueConsumerEntry(
-	consumer: QueueConsumer
-): [string, QueueConsumerOptions] {
-	const options: QueueConsumerOptions = {
+function queueConsumerEntry(consumer: QueueConsumer) {
+	const options = {
 		maxBatchSize: consumer.max_batch_size,
 		maxBatchTimeout: consumer.max_batch_timeout,
 		maxRetires: consumer.max_retries,
 		deadLetterQueue: consumer.dead_letter_queue,
 	};
-	return [consumer.queue, options];
+	return [consumer.queue, options] as const;
 }
 // TODO(someday): would be nice to type these methods more, can we export types for
 //  each plugin options schema and use those
@@ -341,10 +354,11 @@ type PickTemplate<T, K extends string> = {
 	[P in keyof T & K]: T[P];
 };
 type PersistOptions = PickTemplate<MiniflareOptions, `${string}Persist`>;
-function buildPersistOptions(config: ConfigBundle): PersistOptions | undefined {
-	const persist = config.localPersistencePath;
-	if (persist !== null) {
-		const v3Path = path.join(persist, "v3");
+export function buildPersistOptions(
+	localPersistencePath: ConfigBundle["localPersistencePath"]
+): PersistOptions | undefined {
+	if (localPersistencePath !== null) {
+		const v3Path = path.join(localPersistencePath, "v3");
 		return {
 			cachePersist: path.join(v3Path, "cache"),
 			durableObjectsPersist: path.join(v3Path, "do"),
@@ -371,11 +385,6 @@ async function buildMiniflareOptions(
 	log: Log,
 	config: ConfigBundle
 ): Promise<{ options: MiniflareOptions; internalObjects: CfDurableObject[] }> {
-	if (config.localProtocol === "https") {
-		logger.warn(
-			"Miniflare 3 does not support HTTPS servers yet, starting an HTTP server instead..."
-		);
-	}
 	if (config.crons.length > 0) {
 		logger.warn("Miniflare 3 does not support CRON triggers yet, ignoring...");
 	}
@@ -389,7 +398,16 @@ async function buildMiniflareOptions(
 	const { bindingOptions, internalObjects, externalDurableObjectWorker } =
 		buildBindingOptions(config);
 	const sitesOptions = buildSitesOptions(config);
-	const persistOptions = buildPersistOptions(config);
+	const persistOptions = buildPersistOptions(config.localPersistencePath);
+
+	let httpsOptions: { httpsKey: string; httpsCert: string } | undefined;
+	if (config.localProtocol === "https") {
+		const cert = await getHttpsOptions();
+		httpsOptions = {
+			httpsKey: cert.key,
+			httpsCert: cert.cert,
+		};
+	}
 
 	const options: MiniflareOptions = {
 		host: config.initialIp,
@@ -401,6 +419,7 @@ async function buildMiniflareOptions(
 		log,
 		verbose: logger.loggerLevel === "debug",
 
+		...httpsOptions,
 		...persistOptions,
 		workers: [
 			{

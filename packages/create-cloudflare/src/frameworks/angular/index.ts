@@ -1,26 +1,26 @@
 import { cp, rm } from "node:fs/promises";
 import { resolve } from "node:path";
-import { logRaw } from "helpers/cli";
-import { brandColor, dim } from "helpers/colors";
+import { logRaw } from "@cloudflare/cli";
+import { brandColor, dim } from "@cloudflare/cli/colors";
+import { spinner } from "@cloudflare/cli/interactive";
 import {
-	detectPackageManager,
 	installPackages,
 	runCommand,
 	runFrameworkGenerator,
 } from "helpers/command";
-import { readFile, readJSON, writeFile } from "helpers/files";
-import { spinner } from "helpers/interactive";
-import { getFrameworkVersion } from "../index";
-import type { PagesGeneratorContext, FrameworkConfig } from "types";
+import { compatDateFlag, readFile, readJSON, writeFile } from "helpers/files";
+import { detectPackageManager } from "helpers/packages";
+import { getFrameworkCli } from "../index";
+import type { FrameworkConfig, PagesGeneratorContext } from "types";
 
-const { npx, npm } = detectPackageManager();
+const { dlx, npx, npm } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
-	const version = getFrameworkVersion(ctx);
+	const cli = getFrameworkCli(ctx);
 
 	await runFrameworkGenerator(
 		ctx,
-		`${npx} @angular/cli@${version} new ${ctx.project.name} --standalone`
+		`${dlx} ${cli} new ${ctx.project.name} --standalone`
 	);
 
 	logRaw("");
@@ -28,7 +28,7 @@ const generate = async (ctx: PagesGeneratorContext) => {
 
 const configure = async (ctx: PagesGeneratorContext) => {
 	process.chdir(ctx.project.path);
-	await runCommand(`${npx} @angular/cli@next analytics disable`, {
+	await runCommand(`${npx} ng analytics disable`, {
 		silent: true,
 	});
 	await addSSRAdapter();
@@ -41,17 +41,16 @@ const config: FrameworkConfig = {
 	generate,
 	configure,
 	displayName: "Angular",
-	packageScripts: {
+	getPackageScripts: async () => ({
 		process:
 			"node ./tools/copy-worker-files.mjs && node ./tools/copy-client-files.mjs && node ./tools/bundle.mjs",
-		prestart: "npm run build:ssr && npm run process",
-		start:
-			"wrangler pages dev dist/cloudflare --compatibility-date=2021-09-20 --experimental-local",
-		predeploy: "npm run build:ssr && npm run process",
-		deploy: "wrangler pages publish dist/cloudflare",
-	},
+		"pages:build": `${npm} run build:ssr && ${npm} run process`,
+		start: `${npm} run pages:build && wrangler pages dev dist/cloudflare ${await compatDateFlag()} --experimental-local`,
+		deploy: `${npm} run pages:build && wrangler pages deploy dist/cloudflare`,
+	}),
 	deployCommand: "deploy",
 	devCommand: "start",
+	testFlags: ["--routing", "--style", "sass"],
 };
 export default config;
 
@@ -98,12 +97,18 @@ async function updateAppCode() {
 	const s = spinner();
 	s.start(`Updating application code`);
 
-	// Add the `provideClientHydration()` provider to the app config.
+	// Update an app config file to:
+	// - add the `provideClientHydration()` provider to enable hydration
+	// - add the `provideHttpClient(withFetch())` call to enable `fetch` usage in `HttpClient`
 	const appConfigPath = "src/app/app.config.ts";
 	const appConfig = readFile(resolve(appConfigPath));
 	const newAppConfig =
 		"import { provideClientHydration } from '@angular/platform-browser';\n" +
-		appConfig.replace("providers: [", "providers: [provideClientHydration(), ");
+		"import { provideHttpClient, withFetch } from '@angular/common/http';\n" +
+		appConfig.replace(
+			"providers: [",
+			"providers: [provideHttpClient(withFetch()), provideClientHydration(), "
+		);
 	writeFile(resolve(appConfigPath), newAppConfig);
 
 	// Remove the unwanted node.js server entry-point

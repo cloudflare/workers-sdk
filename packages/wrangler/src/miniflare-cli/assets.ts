@@ -1,5 +1,5 @@
 import { existsSync, lstatSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { createMetadataObject } from "@cloudflare/pages-shared/metadata-generator/createMetadataObject";
 import { parseHeaders } from "@cloudflare/pages-shared/metadata-generator/parseHeaders";
 import { parseRedirects } from "@cloudflare/pages-shared/metadata-generator/parseRedirects";
@@ -72,6 +72,7 @@ async function generateAssetsFetch(
 	directory: string,
 	log: Logger
 ): Promise<typeof fetch> {
+	directory = resolve(directory);
 	// Defer importing miniflare until we really need it
 
 	// NOTE: These dynamic imports bring in `global` type augmentations from
@@ -146,7 +147,10 @@ async function generateAssetsFetch(
 			xServerEnvHeader: "dev",
 			logError: console.error,
 			findAssetEntryForPath: async (path) => {
-				const filepath = join(directory, path);
+				const filepath = resolve(join(directory, path));
+				if (!filepath.startsWith(directory)) {
+					return null;
+				}
 
 				if (
 					existsSync(filepath) &&

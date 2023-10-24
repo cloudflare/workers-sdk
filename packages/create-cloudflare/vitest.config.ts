@@ -5,5 +5,6 @@ export default defineConfig({
 	plugins: [tsconfigPaths({ projects: ["tsconfig.json"] })],
 	test: {
 		include: ["src/**/__tests__/**.test.ts"],
+		setupFiles: ["vitest.setup.ts"],
 	},
 });

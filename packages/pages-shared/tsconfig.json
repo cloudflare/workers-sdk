@@ -1,8 +1,7 @@
 {
-	"extends": "../../tsconfig.json",
+	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
 	"compilerOptions": {
-		"module": "CommonJS",
-		"types": ["jest"]
+		"module": "CommonJS"
 	},
 	"include": ["**/*.ts"],
 	"exclude": []

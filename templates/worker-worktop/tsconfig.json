@@ -1,22 +1,14 @@
 {
 	"compilerOptions": {
-		"strict": true,
-		"allowJs": true,
 		"module": "esnext",
-		"target": "es2020",
-		"noImplicitAny": true,
-		"keyofStringsOnly": true,
-		"resolveJsonModule": true,
-		"strictBindCallApply": true,
-		"forceConsistentCasingInFileNames": true,
-		"allowSyntheticDefaultImports": true,
+		"target": "es2022",
+		"types": ["@cloudflare/workers-types"],
 		"moduleResolution": "node",
-		"strictNullChecks": true,
-		"removeComments": true,
-		"sourceMap": false,
-		"checkJs": true,
-		"noEmit": true
+		"noEmit": true,
+		"isolatedModules": true,
+		"forceConsistentCasingInFileNames": true,
+		"strict": true,
+		"skipLibCheck": true
 	},
-	"include": ["@types", "src"],
 	"exclude": ["build", "node_modules"]
 }

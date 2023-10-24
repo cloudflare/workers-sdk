@@ -534,6 +534,27 @@ export const validateAdditionalProperties = (
 };
 
 /**
+ * Add a diagnostic error for any configurations that include both cron triggers and smart placement
+ */
+export const validateSmartPlacementConfig = (
+	diagnostics: Diagnostics,
+	placement: { mode: "off" | "smart" } | undefined,
+	triggers:
+		| {
+				crons: string[];
+		  }
+		| undefined
+): boolean => {
+	if (placement?.mode === "smart" && !!triggers?.crons?.length) {
+		diagnostics.errors.push(
+			`You cannot configure both [triggers] and [placement] in your wrangler.toml. Placement is not supported with cron triggers.`
+		);
+		return false;
+	}
+	return true;
+};
+
+/**
  * Get the names of the bindings collection in `value`.
  *
  * Will return an empty array if it doesn't understand the value
@@ -550,6 +571,12 @@ export const getBindingNames = (value: unknown): string[] => {
 	} else if (isNamespaceList(value)) {
 		return value.map(({ binding }) => binding);
 	} else if (isRecord(value)) {
+		// browser and AI bindings are single values with a similar shape
+		// { binding = "name" }
+		if (value["binding"] !== undefined) {
+			return [value["binding"] as string];
+		}
+
 		return Object.keys(value).filter((k) => value[k] !== undefined);
 	} else {
 		return [];

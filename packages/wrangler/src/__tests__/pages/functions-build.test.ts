@@ -46,10 +46,7 @@ describe("functions build", () => {
 		await runWrangler(`pages functions build`);
 
 		expect(existsSync("_worker.bundle")).toBe(true);
-		expect(std.out).toMatchInlineSnapshot(`
-		"🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		✨ Compiled Worker successfully"
-	`);
+		expect(std.out).toMatchInlineSnapshot(`"✨ Compiled Worker successfully"`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
@@ -85,10 +82,7 @@ describe("functions build", () => {
 		await runWrangler(`pages functions build --outfile=_worker.bundle`);
 
 		expect(existsSync("_worker.bundle")).toBe(true);
-		expect(std.out).toMatchInlineSnapshot(`
-		"🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		✨ Compiled Worker successfully"
-	`);
+		expect(std.out).toMatchInlineSnapshot(`"✨ Compiled Worker successfully"`);
 
 		// some values in workerBundleContents, such as the undici form boundary
 		// or the file hashes, are randomly generated. Let's replace them
@@ -162,10 +156,7 @@ describe("functions build", () => {
 		await runWrangler(`pages functions build --outdir=dist`);
 
 		expect(existsSync("dist")).toBe(true);
-		expect(std.out).toMatchInlineSnapshot(`
-		"🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		✨ Compiled Worker successfully"
-	`);
+		expect(std.out).toMatchInlineSnapshot(`"✨ Compiled Worker successfully"`);
 
 		expect(readdirSync("dist").sort()).toMatchInlineSnapshot(`
 		Array [
@@ -211,10 +202,7 @@ export default {
 			`pages functions build --build-output-directory=public --outfile=_worker.bundle`
 		);
 		expect(existsSync("_worker.bundle")).toBe(true);
-		expect(std.out).toMatchInlineSnapshot(`
-		"🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		✨ Compiled Worker successfully"
-	`);
+		expect(std.out).toMatchInlineSnapshot(`"✨ Compiled Worker successfully"`);
 
 		// some values in workerBundleContents, such as the undici form boundary
 		// or the file hashes, are randomly generated. Let's replace them
@@ -289,10 +277,7 @@ export default {
 
 		// built to _worker.js by default
 		expect(existsSync("_worker.bundle")).toBe(true);
-		expect(std.out).toMatchInlineSnapshot(`
-		"🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		✨ Compiled Worker successfully"
-	`);
+		expect(std.out).toMatchInlineSnapshot(`"✨ Compiled Worker successfully"`);
 
 		// some values in workerBundleContents, such as the undici form boundary
 		// or the file hashes, are randomly generated. Let's replace them
@@ -363,10 +348,7 @@ export default {
 		await runWrangler(`pages functions build --outfile=public/_worker.bundle`);
 
 		expect(existsSync("public/_worker.bundle")).toBe(true);
-		expect(std.out).toMatchInlineSnapshot(`
-		"🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		✨ Compiled Worker successfully"
-	`);
+		expect(std.out).toMatchInlineSnapshot(`"✨ Compiled Worker successfully"`);
 
 		// some values in workerBundleContents, such as the undici form boundary
 		// or the file hashes, are randomly generated. Let's replace them
@@ -424,10 +406,7 @@ export default {
 		);
 
 		expect(existsSync("public/_worker.bundle")).toBe(true);
-		expect(std.out).toMatchInlineSnapshot(`
-		"🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		✨ Compiled Worker successfully"
-	`);
+		expect(std.out).toMatchInlineSnapshot(`"✨ Compiled Worker successfully"`);
 
 		expect(readFileSync("public/_worker.bundle", "utf-8")).toContain(
 			`import { AsyncLocalStorage } from "node:async_hooks";`
@@ -469,10 +448,11 @@ export default {
 			"public/_worker.js/index.js",
 			`
 import { cat } from "./cat.js";
+import { dog } from "./dog.mjs";
 
 export default {
   async fetch(request, env) {
-		return new Response("Hello from _worker.js/index.js" + cat);
+		return new Response("Hello from _worker.js/index.js" + cat + dog);
 	},
 };`
 		);
@@ -481,14 +461,16 @@ export default {
 			`
 export const cat = "cat";`
 		);
+		writeFileSync(
+			"public/_worker.js/dog.mjs",
+			`
+export const cat = "dog";`
+		);
 
 		await runWrangler(`pages functions build --outfile=public/_worker.bundle`);
 
 		expect(existsSync("public/_worker.bundle")).toBe(true);
-		expect(std.out).toMatchInlineSnapshot(`
-		"🚧 'wrangler pages <command>' is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose
-		✨ Compiled Worker successfully"
-	`);
+		expect(std.out).toMatchInlineSnapshot(`"✨ Compiled Worker successfully"`);
 
 		const workerBundleContents = readFileSync("public/_worker.bundle", "utf-8");
 		const workerBundleWithConstantData = replaceRandomWithConstantData(
@@ -511,9 +493,10 @@ export const cat = "cat";`
 
 		// _worker.js/index.js
 		import { cat } from \\"./cat.js\\";
+		import { dog } from \\"./dog.mjs\\";
 		var worker_default = {
 		  async fetch(request, env) {
-		    return new Response(\\"Hello from _worker.js/index.js\\" + cat);
+		    return new Response(\\"Hello from _worker.js/index.js\\" + cat + dog);
 		  }
 		};
 		export {
@@ -527,6 +510,12 @@ export const cat = "cat";`
 
 
 		export const cat = \\"cat\\";
+		------formdata-undici-0.test
+		Content-Disposition: form-data; name=\\"dog.mjs\\"; filename=\\"dog.mjs\\"
+		Content-Type: application/javascript+module
+
+
+		export const cat = \\"dog\\";
 		------formdata-undici-0.test--"
 	`);
 

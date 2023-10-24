@@ -1,0 +1,90 @@
+import {
+  __facade_invoke__,
+  __facade_register__
+} from "./common";
+import worker from "__ENTRY_POINT__";
+export * from "__ENTRY_POINT__";
+class __Facade_ScheduledController__ {
+  constructor(scheduledTime, cron, noRetry) {
+    this.scheduledTime = scheduledTime;
+    this.cron = cron;
+    this.#noRetry = noRetry;
+  }
+  #noRetry;
+  noRetry() {
+    if (!(this instanceof __Facade_ScheduledController__)) {
+      throw new TypeError("Illegal invocation");
+    }
+    this.#noRetry();
+  }
+}
+const __facade_modules_fetch__ = function(request, env, ctx) {
+  if (worker.fetch === void 0)
+    throw new Error("Handler does not export a fetch() function.");
+  return worker.fetch(request, env, ctx);
+};
+function getMaskedEnv(rawEnv) {
+  let env = rawEnv;
+  if (worker.envWrappers && worker.envWrappers.length > 0) {
+    for (const wrapFn of worker.envWrappers) {
+      env = wrapFn(env);
+    }
+  }
+  return env;
+}
+let registeredMiddleware = false;
+const facade = {
+  ...worker.tail && {
+    tail: maskHandlerEnv(worker.tail)
+  },
+  ...worker.trace && {
+    trace: maskHandlerEnv(worker.trace)
+  },
+  ...worker.scheduled && {
+    scheduled: maskHandlerEnv(worker.scheduled)
+  },
+  ...worker.queue && {
+    queue: maskHandlerEnv(worker.queue)
+  },
+  ...worker.test && {
+    test: maskHandlerEnv(worker.test)
+  },
+  ...worker.email && {
+    email: maskHandlerEnv(worker.email)
+  },
+  fetch(request, rawEnv, ctx) {
+    const env = getMaskedEnv(rawEnv);
+    if (worker.middleware && worker.middleware.length > 0) {
+      if (!registeredMiddleware) {
+        registeredMiddleware = true;
+        for (const middleware of worker.middleware) {
+          __facade_register__(middleware);
+        }
+      }
+      const __facade_modules_dispatch__ = function(type, init) {
+        if (type === "scheduled" && worker.scheduled !== void 0) {
+          const controller = new __Facade_ScheduledController__(
+            Date.now(),
+            init.cron ?? "",
+            () => {
+            }
+          );
+          return worker.scheduled(controller, env, ctx);
+        }
+      };
+      return __facade_invoke__(
+        request,
+        env,
+        ctx,
+        __facade_modules_dispatch__,
+        __facade_modules_fetch__
+      );
+    } else {
+      return __facade_modules_fetch__(request, env, ctx);
+    }
+  }
+};
+function maskHandlerEnv(handler) {
+  return (data, env, ctx) => handler(data, getMaskedEnv(env), ctx);
+}
+export default facade;

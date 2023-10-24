@@ -6,10 +6,40 @@ import {
 import { RoutesValidationError } from "./functions/routes-validation";
 
 /**
+ * Error codes returned by requests to Pages APIs
+ */
+/* eslint-disable-next-line no-shadow */
+export enum ApiErrorCodes {
+	UNKNOWN_ERROR = 8000000,
+	UNAUTHORIZED = 8000013,
+}
+
+/**
  * Exit code for `pages functions build` when no routes are found.
  */
 export const EXIT_CODE_FUNCTIONS_NO_ROUTES_ERROR = 156;
 export const EXIT_CODE_FUNCTIONS_NOTHING_TO_BUILD_ERROR = 157;
+
+/**
+ * Pages error when building a script from the functions directory fails
+ */
+export class FunctionsBuildError extends Error {
+	constructor(message: string) {
+		super(message);
+	}
+}
+
+/**
+ * Warning message for when buildFunctions throws FunctionsBuildError
+ */
+export function getFunctionsBuildWarning(
+	functionsDirectory: string,
+	suffix?: string
+) {
+	return `Unexpected error building Functions directory: ${functionsDirectory}${
+		suffix ? " - " + suffix : ""
+	}`;
+}
 
 /**
  * Pages error when no routes are found in the functions directory

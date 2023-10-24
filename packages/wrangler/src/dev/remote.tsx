@@ -1,38 +1,39 @@
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { Text } from "ink";
 import SelectInput from "ink-select-input";
 import React, { useState, useEffect, useRef } from "react";
 import { useErrorHandler } from "react-error-boundary";
-import { printBundleSize } from "../bundle-reporter";
-import {
-	createPreviewSession,
-	createWorkerPreview,
-} from "../create-worker-preview";
 import { helpIfErrorIsSizeOrScriptStartup } from "../deploy/deploy";
-import useInspector from "../inspect";
+import { printBundleSize } from "../deployment-bundle/bundle-reporter";
+import { getBundleType } from "../deployment-bundle/bundle-type";
+import { withSourceURLs } from "../deployment-bundle/source-url";
 import { logger } from "../logger";
-import { startPreviewServer, usePreviewServer } from "../proxy";
 import { syncAssets } from "../sites";
 import {
 	getAccountChoices,
 	requireApiToken,
 	saveAccountToCache,
 } from "../user";
+import {
+	createPreviewSession,
+	createWorkerPreview,
+} from "./create-worker-preview";
+import useInspector from "./inspect";
+import { startPreviewServer, usePreviewServer } from "./proxy";
 import type { Route } from "../config/environment";
-import type {
-	CfPreviewToken,
-	CfPreviewSession,
-} from "../create-worker-preview";
-import type { AssetPaths } from "../sites";
-import type { ChooseAccountItem } from "../user";
 import type {
 	CfModule,
 	CfWorkerInit,
 	CfScriptFormat,
-	CfAccount,
 	CfWorkerContext,
-} from "../worker";
+} from "../deployment-bundle/worker";
+import type { AssetPaths } from "../sites";
+import type { ChooseAccountItem } from "../user";
+import type {
+	CfAccount,
+	CfPreviewToken,
+	CfPreviewSession,
+} from "./create-worker-preview";
 import type { EsbuildBundle } from "./use-esbuild";
 
 interface RemoteProps {
@@ -519,7 +520,10 @@ async function createRemoteWorkerInit(props: {
 	compatibilityFlags: string[] | undefined;
 	usageModel: "bundled" | "unbound" | undefined;
 }) {
-	const content = await readFile(props.bundle.path, "utf-8");
+	const { entrypointSource: content, modules } = withSourceURLs(
+		props.bundle.path,
+		props.modules
+	);
 
 	// TODO: For Dev we could show the reporter message in the interactive box.
 	void printBundleSize(
@@ -536,25 +540,28 @@ async function createRemoteWorkerInit(props: {
 		props.name + (!props.legacyEnv && props.env ? `-${props.env}` : ""),
 		props.isWorkersSite ? props.assetPaths : undefined,
 		true,
-		false
+		false,
+		undefined
 	); // TODO: cancellable?
+
+	if (assets.manifest) {
+		modules.push({
+			name: "__STATIC_CONTENT_MANIFEST",
+			filePath: undefined,
+			content: JSON.stringify(assets.manifest),
+			type: "text",
+		});
+	}
 
 	const init: CfWorkerInit = {
 		name: props.name,
 		main: {
 			name: path.basename(props.bundle.path),
-			type: props.format === "modules" ? "esm" : "commonjs",
+			filePath: props.bundle.path,
+			type: getBundleType(props.format),
 			content,
 		},
-		modules: props.modules.concat(
-			assets.manifest
-				? {
-						name: "__STATIC_CONTENT_MANIFEST",
-						content: JSON.stringify(assets.manifest),
-						type: "text",
-				  }
-				: []
-		),
+		modules,
 		bindings: {
 			...props.bindings,
 			kv_namespaces: (props.bindings.kv_namespaces || []).concat(
@@ -577,7 +584,8 @@ async function createRemoteWorkerInit(props: {
 		keepVars: true,
 		logpush: false,
 		placement: undefined, // no placement in dev
-		tail_consumers: undefined, // no tail consumers in dev - TODO revist?
+		tail_consumers: undefined, // no tail consumers in dev - TODO revisit?
+		limits: undefined, // no limits in preview - not supported yet but can be added
 	};
 
 	return init;

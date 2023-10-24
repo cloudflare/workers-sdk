@@ -40,7 +40,7 @@ describe("wrangler", () => {
 			  wrangler delete [script]             🗑  Delete your Worker from Cloudflare.
 			  wrangler tail [worker]               🦚 Starts a log tailing session for a published Worker.
 			  wrangler secret                      🤫 Generate a secret that can be referenced in a Worker
-			  wrangler secret:bulk <json>          🗄️  Bulk upload secrets for a Worker
+			  wrangler secret:bulk [json]          🗄️  Bulk upload secrets for a Worker
 			  wrangler kv:namespace                🗂️  Interact with your Workers KV Namespaces
 			  wrangler kv:key                      🔑 Individually manage Workers KV key-value pairs
 			  wrangler kv:bulk                     💪 Interact with multiple Workers KV key-value pairs at once
@@ -49,7 +49,10 @@ describe("wrangler", () => {
 			  wrangler r2                          📦 Interact with an R2 store
 			  wrangler dispatch-namespace          📦 Interact with a dispatch namespace
 			  wrangler d1                          🗄  Interact with a D1 database
+			  wrangler hyperdrive                  🚀 Configure Hyperdrive databases
+			  wrangler ai                          🤖 Interact with AI models
 			  wrangler constellation               🤖 Interact with Constellation models
+			  wrangler vectorize                   🧮 Interact with Vectorize indexes
 			  wrangler pubsub                      📮 Interact and manage Pub/Sub Brokers
 			  wrangler mtls-certificate            🪪 Manage certificates used for mTLS connections
 			  wrangler login                       🔓 Login to Cloudflare
@@ -64,9 +67,7 @@ describe("wrangler", () => {
 			  -c, --config                    Path to .toml configuration file  [string]
 			  -e, --env                       Environment to use for operations and .env files  [string]
 			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
-
-			🚧\`wrangler rollback\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
+			  -v, --version                   Show version number  [boolean]"
 		`);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -94,7 +95,7 @@ describe("wrangler", () => {
 			  wrangler delete [script]             🗑  Delete your Worker from Cloudflare.
 			  wrangler tail [worker]               🦚 Starts a log tailing session for a published Worker.
 			  wrangler secret                      🤫 Generate a secret that can be referenced in a Worker
-			  wrangler secret:bulk <json>          🗄️  Bulk upload secrets for a Worker
+			  wrangler secret:bulk [json]          🗄️  Bulk upload secrets for a Worker
 			  wrangler kv:namespace                🗂️  Interact with your Workers KV Namespaces
 			  wrangler kv:key                      🔑 Individually manage Workers KV key-value pairs
 			  wrangler kv:bulk                     💪 Interact with multiple Workers KV key-value pairs at once
@@ -103,7 +104,10 @@ describe("wrangler", () => {
 			  wrangler r2                          📦 Interact with an R2 store
 			  wrangler dispatch-namespace          📦 Interact with a dispatch namespace
 			  wrangler d1                          🗄  Interact with a D1 database
+			  wrangler hyperdrive                  🚀 Configure Hyperdrive databases
+			  wrangler ai                          🤖 Interact with AI models
 			  wrangler constellation               🤖 Interact with Constellation models
+			  wrangler vectorize                   🧮 Interact with Vectorize indexes
 			  wrangler pubsub                      📮 Interact and manage Pub/Sub Brokers
 			  wrangler mtls-certificate            🪪 Manage certificates used for mTLS connections
 			  wrangler login                       🔓 Login to Cloudflare
@@ -118,9 +122,7 @@ describe("wrangler", () => {
 			  -c, --config                    Path to .toml configuration file  [string]
 			  -e, --env                       Environment to use for operations and .env files  [string]
 			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]
-
-			🚧\`wrangler rollback\` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
+			  -v, --version                   Show version number  [boolean]"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: invalid-command[0m

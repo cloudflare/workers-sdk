@@ -1,6 +1,7 @@
 {
 	"editor.defaultFormatter": "esbenp.prettier-vscode",
 	"cSpell.words": [
+		"Abortable",
 		"cfetch",
 		"chatgpt",
 		"clipboardy",
@@ -12,12 +13,17 @@
 		"execa",
 		"haikunate",
 		"haikunator",
+		"httplogs",
 		"iarna",
+		"isolinear",
 		"keyvalue",
 		"logfwdr",
+		"metafile",
 		"middlewares",
 		"Miniflare",
+		"mockpm",
 		"mrbbot",
+		"mtls",
 		"outdir",
 		"outfile",
 		"pgrep",
@@ -28,6 +34,7 @@
 		"selfsigned",
 		"textfile",
 		"tsbuildinfo",
+		"turborepo",
 		"undici",
 		"unrevoke",
 		"Untriaged",
@@ -37,7 +44,10 @@
 		"weakset",
 		"webassemblymemory",
 		"websockets",
-		"xxhash"
+		"workerd",
+		"xxhash",
+		"workerd",
+		"zjcompt"
 	],
 	"cSpell.ignoreWords": [
 		"TESTTEXTBLOBNAME",
@@ -51,6 +61,12 @@
 	"typescript.tsdk": "node_modules/typescript/lib",
 	"editor.tabSize": 2,
 	"files.associations": {
-		"api-extractor.json": "jsonc"
+		"api-extractor.json": "jsonc",
+		"CODEOWNERS": "plaintext",
+		"*.template": "javascript",
+		"wrangler.json": "jsonc"
+	},
+	"[html]": {
+		"editor.defaultFormatter": "esbenp.prettier-vscode"
 	}
 }

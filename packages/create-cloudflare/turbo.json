@@ -1,0 +1,18 @@
+{
+	"$schema": "http://turbo.build/schema.json",
+	"extends": ["//"],
+
+	"pipeline": {
+		"build": {
+			"env": ["VITEST", "TEST_PM", "npm_config_user_agent", "CI"]
+		},
+		"test:e2e:*": {
+			"env": [
+				"CLOUDFLARE_ACCOUNT_ID",
+				"CLOUDFLARE_API_TOKEN",
+				"FRAMEWORK_CLI_TO_TEST",
+				"E2E_QUARANTINE"
+			]
+		}
+	}
+}

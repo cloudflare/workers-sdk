@@ -2,14 +2,13 @@
 	"name": "template-worker-speedtest",
 	"version": "0.0.0",
 	"private": true,
-	"type": "module",
 	"scripts": {
 		"deploy": "wrangler deploy src/index.js",
 		"dev": "wrangler dev src/index.js --local",
-		"test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
+		"test": "jest"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^3.0.0",
+		"@cloudflare/workers-types": "^4.20230518.0 ",
 		"@types/jest": "^28.1.6",
 		"eslint": "^8.21.0",
 		"eslint-config-prettier": "^8.5.0",

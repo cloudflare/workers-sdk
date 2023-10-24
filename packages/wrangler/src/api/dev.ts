@@ -4,9 +4,10 @@ import { logger } from "../logger";
 
 import type { Environment } from "../config";
 import type { Rule } from "../config/environment";
+import type { CfModule } from "../deployment-bundle/worker";
 import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
-import type { CfModule } from "../worker";
+import type { Json } from "miniflare";
 import type { RequestInit, Response, RequestInfo } from "undici";
 
 export interface UnstableDevOptions {
@@ -26,9 +27,7 @@ export interface UnstableDevOptions {
 	compatibilityFlags?: string[]; // Flags to use for compatibility checks
 	persist?: boolean; // Enable persistence for local mode, using default path: .wrangler/state
 	persistTo?: string; // Specify directory to use for local persistence (implies --persist)
-	vars?: {
-		[key: string]: unknown;
-	};
+	vars?: Record<string, string | Json>;
 	kv?: {
 		binding: string;
 		id: string;
@@ -38,6 +37,11 @@ export interface UnstableDevOptions {
 		name: string;
 		class_name: string;
 		script_name?: string | undefined;
+		environment?: string | undefined;
+	}[];
+	services?: {
+		binding: string;
+		service: string;
 		environment?: string | undefined;
 	}[];
 	r2?: {
@@ -130,6 +134,7 @@ export async function unstable_dev(
 	});
 
 	const defaultLogLevel = testMode ? "none" : "log";
+	const local = options?.local ?? true;
 
 	const devOptions: StartDevOptions = {
 		script: script,
@@ -138,8 +143,8 @@ export async function unstable_dev(
 		_: [],
 		$0: "",
 		port: options?.port ?? 0,
-		remote: false,
-		local: undefined,
+		remote: !local,
+		local,
 		experimentalLocal: undefined,
 		d1Databases,
 		disableDevRegistry,
@@ -254,6 +259,7 @@ export function parseRequestInput(
 	const forward = new Request(input, init);
 	const url = new URL(forward.url);
 	forward.headers.set("MF-Original-URL", url.toString());
+	forward.headers.set("MF-Disable-Pretty-Error", "true");
 	url.protocol = protocol;
 	url.hostname = readyAddress;
 	url.port = readyPort.toString();

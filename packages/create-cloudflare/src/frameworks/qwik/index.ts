@@ -1,25 +1,18 @@
-import { endSection } from "helpers/cli";
-import {
-	detectPackageManager,
-	npmInstall,
-	runCommand,
-	runFrameworkGenerator,
-} from "helpers/command";
+import { endSection } from "@cloudflare/cli";
+import { npmInstall, runCommand, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
-import { getFrameworkVersion } from "../index";
-import type { PagesGeneratorContext, FrameworkConfig } from "types";
+import { detectPackageManager } from "helpers/packages";
+import { getFrameworkCli } from "../index";
+import type { FrameworkConfig, PagesGeneratorContext } from "types";
 
-const { npm, npx } = detectPackageManager();
+const { npm, npx, dlx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
-	const version = getFrameworkVersion(ctx);
+	const cli = getFrameworkCli(ctx);
 
 	// TODO: make this interactive when its possible to specify the project name
 	// to create-qwik in interactive mode
-	await runFrameworkGenerator(
-		ctx,
-		`${npm} create qwik@${version} basic ${ctx.project.name}`
-	);
+	await runFrameworkGenerator(ctx, `${dlx} ${cli} basic ${ctx.project.name}`);
 };
 
 const configure = async (ctx: PagesGeneratorContext) => {
@@ -37,9 +30,9 @@ const config: FrameworkConfig = {
 	generate,
 	configure,
 	displayName: "Qwik",
-	packageScripts: {
-		"pages:dev": `wrangler pages dev ${compatDateFlag()} -- ${npm} run dev`,
-		"pages:deploy": `${npm} run build && ${npm} run deploy`,
-	},
+	getPackageScripts: async () => ({
+		"pages:dev": `wrangler pages dev ${await compatDateFlag()} -- ${npm} run dev`,
+		"pages:deploy": `${npm} run build && wrangler pages deploy ./dist`,
+	}),
 };
 export default config;

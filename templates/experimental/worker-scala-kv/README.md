@@ -4,23 +4,29 @@
 
 In addition to [Wrangler](https://github.com/cloudflare/wrangler) you will need to install the Scala build tool [sbt](https://www.scala-sbt.org/1.x/docs/Setup.html), including a JDK.
 
-#### Wrangler
+## Setup
 
-To generate using [wrangler](https://github.com/cloudflare/wrangler)
+To create a `my-project` directory using this template, run:
 
+```sh
+$ npx wrangler generate my-project https://github.com/cloudflare/workers-sdk/templates/experimental/worker-scala-kv
+# or
+$ yarn wrangler generate my-project https://github.com/cloudflare/workers-sdk/templates/experimental/worker-scala-kv
+# or
+$ pnpm wrangler generate my-project https://github.com/cloudflare/workers-sdk/templates/experimental/worker-scala-kv
 ```
-wrangler generate projectname https://github.com/cloudflare/scala-worker-kv
-```
 
-When editing wrangler.toml to include your account_id, you will also need to add your kv namespace id to the binding under kv-namespaces.
+## Wrangler
+
+Wrangler is used to develop, deploy, and configure your Worker via CLI.
 
 Further documentation for Wrangler can be found [here](https://developers.cloudflare.com/workers/tooling/wrangler).
 
-#### sbt
+## sbt
 
 After installing sbt per the linked instructions above,
 
-```
+```sh
 cd projectname
 sbt fullOptJS
 ```

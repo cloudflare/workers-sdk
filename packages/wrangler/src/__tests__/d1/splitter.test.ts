@@ -32,6 +32,29 @@ describe("mayContainMultipleStatements()", () => {
 });
 
 describe("splitSqlQuery()", () => {
+	it("should trim a regular old sqlite dump", () => {
+		expect(
+			splitSqlQuery(`PRAGMA foreign_keys=OFF;
+		BEGIN TRANSACTION;
+		CREATE TABLE d1_kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+		CREATE TABLE Customers (CustomerID INT, CompanyName TEXT, ContactName TEXT, PRIMARY KEY ('CustomerID'));
+		INSERT INTO Customers VALUES(1,'Alfreds Futterkiste','Maria Anders');
+		INSERT INTO Customers VALUES(4,'Around the Horn','Thomas Hardy');
+		INSERT INTO Customers VALUES(11,'Bs Beverages','Victoria Ashworth');
+		INSERT INTO Customers VALUES(13,'Bs Beverages','Random Name');
+		COMMIT;`)
+		).toMatchInlineSnapshot(`
+		Array [
+		  "PRAGMA foreign_keys=OFF",
+		  "CREATE TABLE d1_kv (key TEXT PRIMARY KEY, value TEXT NOT NULL)",
+		  "CREATE TABLE Customers (CustomerID INT, CompanyName TEXT, ContactName TEXT, PRIMARY KEY ('CustomerID'))",
+		  "INSERT INTO Customers VALUES(1,'Alfreds Futterkiste','Maria Anders')",
+		  "INSERT INTO Customers VALUES(4,'Around the Horn','Thomas Hardy')",
+		  "INSERT INTO Customers VALUES(11,'Bs Beverages','Victoria Ashworth')",
+		  "INSERT INTO Customers VALUES(13,'Bs Beverages','Random Name')",
+		]
+	`);
+	});
 	it("should return original SQL if there are no real statements", () => {
 		expect(splitSqlQuery(`;;;`)).toMatchInlineSnapshot(`
 		Array [

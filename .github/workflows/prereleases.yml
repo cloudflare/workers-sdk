@@ -15,12 +15,22 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-
-      - name: Use Node.js 16.13
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8.8.0
+      - name: Use Node.js 16.18
         uses: actions/setup-node@v3
         with:
-          node-version: 16.13
-          cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
+          node-version: 16.18
+          cache: "pnpm"
+
+      - name: "Create .env file"
+        run: |
+          touch .env
+          echo TURBO_API=${{ secrets.TURBO_API }} >> .env
+          echo TURBO_TEAM=${{ secrets.TURBO_TEAM }} >> .env
+          echo TURBO_TOKEN=${{ secrets.TURBO_TOKEN }} >> .env
+          echo TURBO_REMOTE_CACHE_SIGNATURE_KEY=${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }} >> .env
 
       - name: Install workerd Dependencies
         if: ${{ runner.os == 'Linux' }}
@@ -30,23 +40,23 @@ jobs:
           sudo apt-get install -y libc++1
 
       - name: Install NPM Dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Modify package.json version
         run: node .github/version-script.js
 
       - name: Build
-        run: npm run build
+        run: pnpm run build
         env:
           NODE_ENV: "production"
 
       - name: Check for errors
-        run: npm run check
+        run: pnpm run check
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
 
       - name: Publish Beta to NPM
-        run: npm publish --tag beta
+        run: pnpm publish --tag beta
         env:
           NPM_PUBLISH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
           # this is the "test/staging" key for sparrow analytics
@@ -70,12 +80,14 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-
-      - name: Use Node.js 16.13
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8.8.0
+      - name: Use Node.js 16.18
         uses: actions/setup-node@v3
         with:
-          node-version: 16.13
-          cache: "npm" # cache ~/.npm in case 'npm ci' needs to run
+          node-version: 16.18
+          cache: "pnpm"
 
       - name: Install workerd Dependencies
         if: ${{ runner.os == 'Linux' }}
@@ -85,17 +97,17 @@ jobs:
           sudo apt-get install -y libc++1
 
       - name: Install NPM Dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build wrangler
-        run: npm run build
+        run: pnpm run build
         env:
           NODE_ENV: "production"
           ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
           ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
 
       - name: Build & Publish Prerelease Registry
-        run: npm run publish
+        run: pnpm run publish
         env:
           NODE_ENV: "production"
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

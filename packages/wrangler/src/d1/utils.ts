@@ -1,7 +1,8 @@
+import { fetchResult } from "../cfetch";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "./constants";
 import { listDatabases } from "./list";
 import type { Config } from "../config";
-import type { Database } from "./types";
+import type { Database, DatabaseInfo } from "./types";
 
 export function getDatabaseInfoFromConfig(
 	config: Config,
@@ -46,4 +47,18 @@ export const getDatabaseByNameOrBinding = async (
 
 export const d1BetaWarning = process.env.NO_D1_WARNING
 	? ""
-	: "--------------------\n🚧 D1 is currently in open alpha and is not recommended for production data and traffic\n🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose\n🚧 To request features, visit https://community.cloudflare.com/c/developers/d1\n🚧 To give feedback, visit https://discord.gg/cloudflaredev\n--------------------\n";
+	: "--------------------\n🚧 D1 is currently in open beta\n🚧 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose\n--------------------\n";
+
+export const getDatabaseInfoFromId = async (
+	accountId: string,
+	databaseId: string
+): Promise<DatabaseInfo> => {
+	return await fetchResult<DatabaseInfo>(
+		`/accounts/${accountId}/d1/database/${databaseId}`,
+		{
+			headers: {
+				"Content-Type": "application/json",
+			},
+		}
+	);
+};

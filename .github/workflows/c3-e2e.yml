@@ -1,0 +1,36 @@
+# Runs c3 e2e tests on pull requests with c3 changes
+
+name: C3 E2E Tests
+on:
+  pull_request:
+    paths:
+      - packages/create-cloudflare/**
+env:
+  node-version: 18.17.1
+  bun-version: 1.0.3
+jobs:
+  e2e:
+    name: ${{ format('E2E ({0})', matrix.pm) }}
+    if: |
+      github.event.pull_request.user.login != 'dependabot[bot]'
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        pm: [npm, pnpm, bun]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: E2E Tests
+        uses: ./.github/actions/run-c3-e2e
+        with:
+          package-manager: ${{ matrix.pm }}
+          quarantine: false
+          accountId: ${{ secrets.C3_TEST_CLOUDFLARE_ACCOUNT_ID }}
+          apiToken: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}

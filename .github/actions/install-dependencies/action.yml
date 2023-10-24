@@ -1,0 +1,19 @@
+name: "Install Dependencies"
+description: "Install dependencies, fetching from cache when possible"
+runs:
+  using: "composite"
+  steps:
+    - name: Install pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: 8.8.0
+
+    - name: Install Node.js ${{ env.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ env.node-version }}
+        cache: "pnpm"
+
+    - name: Install NPM Dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile

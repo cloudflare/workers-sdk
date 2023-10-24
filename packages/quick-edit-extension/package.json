@@ -11,8 +11,8 @@
 	"browser": "./dist/extension.js",
 	"scripts": {
 		"package-web": "node -r esbuild-register scripts/bundle.ts",
-		"vscode:prepublish": "npm run package-web",
-		"watch-web": "npm run package-web -- --watch"
+		"vscode:prepublish": "pnpm run package-web",
+		"watch-web": "pnpm run package-web -- --watch"
 	},
 	"contributes": {
 		"commands": [
@@ -40,6 +40,7 @@
 		"onFileSystem:cfs"
 	],
 	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:^",
 		"@cloudflare/workers-types": "^4.20230404.0",
 		"esbuild": "0.16.3",
 		"esbuild-register": "^3.4.2",

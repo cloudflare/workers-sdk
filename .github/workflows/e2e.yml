@@ -1,0 +1,89 @@
+name: E2E tests
+
+on:
+  push:
+    branches:
+      - main
+      - changeset-release/main
+  pull_request:
+    types: [synchronize, opened, reopened, labeled, unlabeled]
+  repository_dispatch:
+
+jobs:
+  e2e-test:
+    if: github.repository_owner == 'cloudflare' && (github.event_name != 'pull_request' || (github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'e2e' )) || (github.event_name == 'pull_request' && github.head_ref == 'changeset-release/main'))
+    name: "E2E Test"
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [
+            # macos-11,
+            # macos-12,
+            macos-13,
+            windows-2019,
+            windows-2022,
+            # ubuntu-20.04,
+            ubuntu-22.04,
+          ]
+        node: ["16", "18"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8.8.0
+      - name: Use Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node }}
+          cache: "pnpm"
+
+      - name: Install workerd Dependencies
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt-get update
+          sudo apt-get install -y libc++1
+
+      - name: Install NPM Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run builds
+        run: pnpm run build
+        env:
+          NODE_ENV: "production"
+
+      - name: Build Wrangler package for npm
+        run: pnpm pack --pack-destination $HOME
+        env:
+          NODE_ENV: "production"
+        working-directory: packages/wrangler
+
+      - name: Find Wrangler
+        shell: bash
+        id: "find-wrangler"
+        run: echo "dir=$(ls $HOME/wrangler-*.tgz)" >> $GITHUB_OUTPUT;
+        env:
+          NODE_ENV: "production"
+
+      - name: Run tests
+        id: e2e-1
+        continue-on-error: true
+        run: pnpm run --filter wrangler test:e2e
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER: pnpm --silent --package ${{ steps.find-wrangler.outputs.dir}} dlx wrangler
+          NODE_OPTIONS: "--max_old_space_size=8192"
+
+      - name: Retry tests
+        if: steps.e2e-1.outcome == 'failure'
+        run: pnpm run --filter wrangler test:e2e
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER: pnpm --silent --package ${{ steps.find-wrangler.outputs.dir}} dlx wrangler
+          NODE_OPTIONS: "--max_old_space_size=8192"

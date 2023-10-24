@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import module from "node:module";
 import getPort from "get-port";
 import { rest } from "msw";
 import patchConsole from "patch-console";
@@ -68,11 +69,18 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			const currentDate = new Date().toISOString().substring(0, 10);
+
+			const miniflareEntry = require.resolve("miniflare");
+			const miniflareRequire = module.createRequire(miniflareEntry);
+			const miniflareWorkerd = miniflareRequire("workerd") as {
+				compatibilityDate: string;
+			};
+			const currentDate = miniflareWorkerd.compatibilityDate;
+
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn.replaceAll(currentDate, "<current-date>"))
 				.toMatchInlineSnapshot(`
-			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo compatibility_date was specified. Using today's date: <current-date>.[0m
+			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo compatibility_date was specified. Using the installed Workers runtime's latest supported date: <current-date>.[0m
 
 			          Add one to your wrangler.toml file:
 			          \`\`\`
@@ -427,11 +435,17 @@ describe("wrangler dev", () => {
 				],
 			});
 			await fs.promises.writeFile("index.js", `export default {};`);
-			const err = new TypeError() as unknown as { code: string; input: string };
-			err.code = "ERR_INVALID_URL";
-			err.input = "http:///";
 
-			await expect(runWrangler("dev")).rejects.toEqual(err);
+			await expect(runWrangler("dev")).rejects.toMatchInlineSnapshot(`
+			[Error: Cannot infer host from first route: {"pattern":"*/*","zone_id":"exists-com"}.
+			You can explicitly set the \`dev.host\` configuration in your wrangler.toml file, for example:
+
+				\`\`\`
+				[dev]
+				host = "example.com"
+				\`\`\`
+			]
+		`);
 		});
 
 		it("given a long host, it should use the longest subdomain that resolves to a zone", async () => {
@@ -1480,12 +1494,7 @@ describe("wrangler dev", () => {
 			  - WorkerB: B - staging"
 		`);
 			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-			    - \\"services\\" fields are experimental and may change or break at any time.
-
-
-			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThis worker is bound to live services: WorkerA (A), WorkerB (B@staging)[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThis worker is bound to live services: WorkerA (A), WorkerB (B@staging)[0m
 
 			"
 		`);
@@ -1512,12 +1521,7 @@ describe("wrangler dev", () => {
 			- Services:
 			  - WorkerA: A
 			  - WorkerB: B - staging",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-			    - \\"services\\" fields are experimental and may change or break at any time.
-
-
-			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThis worker is bound to live services: WorkerA (A), WorkerB (B@staging)[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThis worker is bound to live services: WorkerA (A), WorkerB (B@staging)[0m
 
 			",
 			}

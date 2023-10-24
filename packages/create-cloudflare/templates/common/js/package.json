@@ -3,11 +3,11 @@
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
-		"deploy": "wrangler publish",
+		"deploy": "wrangler deploy",
+		"dev": "wrangler dev",
 		"start": "wrangler dev"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20230419.0",
 		"itty-router": "^3.0.12",
 		"wrangler": "^3.0.0"
 	}

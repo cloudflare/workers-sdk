@@ -1,35 +1,56 @@
 import { spawn } from "cross-spawn";
+import { detectPackageManager } from "helpers/packages";
 import { beforeEach, afterEach, describe, expect, test, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
 import {
-	detectPackageManager,
+	getWorkerdCompatibilityDate,
 	installPackages,
 	installWrangler,
 	npmInstall,
 	runCommand,
 } from "../command";
+import * as shellquote from "../shell-quote";
+
+// We can change how the mock spawn works by setting these variables
+let spawnResultCode = 0;
+let spawnStdout: string | undefined = undefined;
+let spawnStderr: string | undefined = undefined;
 
 describe("Command Helpers", () => {
 	afterEach(() => {
 		vi.clearAllMocks();
+		spawnResultCode = 0;
+		spawnStdout = undefined;
+		spawnStderr = undefined;
 	});
 
 	beforeEach(() => {
 		// Mock out the child_process.spawn function
 		vi.mock("cross-spawn", () => {
-			const mockedSpawn = vi.fn().mockImplementation(() => ({
-				on: vi.fn().mockImplementation((event, cb) => {
-					if (event === "close") {
-						cb(0);
-					}
-				}),
-			}));
+			const mockedSpawn = vi.fn().mockImplementation(() => {
+				return {
+					on: vi.fn().mockImplementation((event, cb) => {
+						if (event === "close") {
+							cb(spawnResultCode);
+						}
+					}),
+					stdout: {
+						on(event: "data", cb: (data: string) => void) {
+							spawnStdout !== undefined && cb(spawnStdout);
+						},
+					},
+					stderr: {
+						on(event: "data", cb: (data: string) => void) {
+							spawnStderr !== undefined && cb(spawnStderr);
+						},
+					},
+				};
+			});
 
 			return { spawn: mockedSpawn };
 		});
-
 		vi.mock("which-pm-runs");
-		vi.mocked(whichPMRuns).mockReturnValue({ name: "npm", version: "dev" });
+		vi.mocked(whichPMRuns).mockReturnValue({ name: "npm", version: "8.3.1" });
 
 		vi.mock("fs", () => ({
 			existsSync: vi.fn(() => false),
@@ -37,7 +58,16 @@ describe("Command Helpers", () => {
 	});
 
 	const expectSpawnWith = (cmd: string) => {
-		const [command, ...args] = cmd.split(" ");
+		const [command, ...args] = shellquote.parse(cmd);
+
+		expect(spawn).toHaveBeenCalledWith(command, args, {
+			stdio: "inherit",
+			env: process.env,
+		});
+	};
+
+	const expectSilentSpawnWith = (cmd: string) => {
+		const [command, ...args] = shellquote.parse(cmd);
 
 		expect(spawn).toHaveBeenCalledWith(command, args, {
 			stdio: "pipe",
@@ -61,48 +91,117 @@ describe("Command Helpers", () => {
 
 	test("installWrangler", async () => {
 		await installWrangler();
-		expectSpawnWith("npm install --save-dev wrangler");
+
+		expectSilentSpawnWith("npm install --save-dev wrangler");
 	});
 
 	test("npmInstall", async () => {
 		await npmInstall();
-		expectSpawnWith("npm install");
+		expectSilentSpawnWith("npm install");
 	});
 
 	test("npmInstall from pnpm", async () => {
 		vi.mocked(whichPMRuns).mockReturnValue({
 			name: "pnpm",
-			version: "dev",
+			version: "8.5.1",
 		});
 
 		await npmInstall();
-		expectSpawnWith("pnpm install");
+		expectSilentSpawnWith("pnpm install");
 	});
 
 	test("installPackages", async () => {
 		await installPackages(["foo", "bar", "baz"], { dev: true });
-		expectSpawnWith("npm install --save-dev foo bar baz");
+		expectSilentSpawnWith("npm install --save-dev foo bar baz");
 	});
 
-	test("detectPackageManager", async () => {
+	describe("detectPackageManager", async () => {
 		let pm = detectPackageManager();
-		expect(pm.npm).toBe("npm");
-		expect(pm.npx).toBe("npx");
 
-		vi.mocked(whichPMRuns).mockReturnValue({
-			name: "pnpm",
-			version: "dev",
+		test("npm", () => {
+			expect(pm.npm).toBe("npm");
+			expect(pm.npx).toBe("npx");
+			expect(pm.dlx).toBe("npx");
 		});
-		pm = detectPackageManager();
-		expect(pm.npm).toBe("pnpm");
-		expect(pm.npx).toBe("pnpx");
 
-		vi.mocked(whichPMRuns).mockReturnValue({
-			name: "yarn",
-			version: "dev",
+		test("pnpm", () => {
+			vi.mocked(whichPMRuns).mockReturnValue({
+				name: "pnpm",
+				version: "8.5.1",
+			});
+			pm = detectPackageManager();
+			expect(pm.npm).toBe("pnpm");
+			expect(pm.npx).toBe("pnpm");
+			expect(pm.dlx).toBe("pnpm dlx");
+
+			vi.mocked(whichPMRuns).mockReturnValue({
+				name: "pnpm",
+				version: "6.35.1",
+			});
+			pm = detectPackageManager();
+			expect(pm.npm).toBe("pnpm");
+			expect(pm.npx).toBe("pnpm");
+			expect(pm.dlx).toBe("pnpm dlx");
+
+			vi.mocked(whichPMRuns).mockReturnValue({
+				name: "pnpm",
+				version: "5.18.10",
+			});
+			pm = detectPackageManager();
+			expect(pm.npm).toBe("pnpm");
+			expect(pm.npx).toBe("pnpx");
+			expect(pm.dlx).toBe("pnpx");
 		});
-		pm = detectPackageManager();
-		expect(pm.npm).toBe("yarn");
-		expect(pm.npx).toBe("npx");
+
+		test("yarn", () => {
+			vi.mocked(whichPMRuns).mockReturnValue({
+				name: "yarn",
+				version: "3.5.1",
+			});
+			pm = detectPackageManager();
+			expect(pm.npm).toBe("yarn");
+			expect(pm.npx).toBe("yarn");
+			expect(pm.dlx).toBe("yarn dlx");
+
+			vi.mocked(whichPMRuns).mockReturnValue({
+				name: "yarn",
+				version: "1.22.0",
+			});
+			pm = detectPackageManager();
+			expect(pm.npm).toBe("yarn");
+			expect(pm.npx).toBe("yarn");
+			expect(pm.dlx).toBe("yarn");
+		});
+	});
+
+	describe("getWorkerdCompatibilityDate()", () => {
+		test("normal flow", async () => {
+			spawnStdout = "2.20250110.5";
+			const date = await getWorkerdCompatibilityDate();
+			expectSilentSpawnWith("npm info workerd dist-tags.latest");
+			expect(date).toBe("2025-01-10");
+		});
+
+		test("empty result", async () => {
+			spawnStdout = "";
+			const date = await getWorkerdCompatibilityDate();
+			expectSilentSpawnWith("npm info workerd dist-tags.latest");
+			expect(date).toBe("2023-05-18");
+		});
+
+		test("verbose output (e.g. yarn or debug mode)", async () => {
+			spawnStdout =
+				"Debugger attached.\nyarn info v1.22.19\n2.20250110.5\n✨  Done in 0.83s.";
+			const date = await getWorkerdCompatibilityDate();
+			expectSilentSpawnWith("npm info workerd dist-tags.latest");
+			expect(date).toBe("2025-01-10");
+		});
+
+		test("command failed", async () => {
+			spawnResultCode = 1;
+			const date = await getWorkerdCompatibilityDate();
+			expectSilentSpawnWith("npm info workerd dist-tags.latest");
+			expect(date).toBe("2023-05-18");
+		});
 	});
 });

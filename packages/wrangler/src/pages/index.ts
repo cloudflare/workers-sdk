@@ -8,7 +8,8 @@ import * as Dev from "./dev";
 import * as Functions from "./functions";
 import * as Projects from "./projects";
 import * as Upload from "./upload";
-import { CLEANUP, pagesBetaWarning } from "./utils";
+import { CLEANUP } from "./utils";
+import * as Validate from "./validate";
 import type { CommonYargsArgv } from "../yargs-types";
 
 process.on("SIGINT", () => {
@@ -69,7 +70,12 @@ export function pages(yargs: CommonYargsArgv) {
 						Projects.DeleteHandler
 					)
 					.command("upload [directory]", false, Upload.Options, Upload.Handler)
-					.epilogue(pagesBetaWarning)
+					.command(
+						"validate [directory]",
+						false,
+						Validate.Options,
+						Validate.Handler
+					)
 			)
 			.command(
 				"deployment",
@@ -95,7 +101,6 @@ export function pages(yargs: CommonYargsArgv) {
 							DeploymentTails.Options,
 							DeploymentTails.Handler
 						)
-						.epilogue(pagesBetaWarning)
 			)
 			.command(
 				["deploy [directory]", "publish [directory]"],
@@ -103,6 +108,5 @@ export function pages(yargs: CommonYargsArgv) {
 				Deploy.Options,
 				Deploy.Handler
 			)
-			.epilogue(pagesBetaWarning)
 	);
 }

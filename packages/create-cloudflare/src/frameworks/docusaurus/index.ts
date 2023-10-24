@@ -1,25 +1,24 @@
-import { detectPackageManager, runFrameworkGenerator } from "helpers/command";
+import { runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
-import { getFrameworkVersion } from "../index";
+import { detectPackageManager } from "helpers/packages";
+import { getFrameworkCli } from "../index";
 import type { PagesGeneratorContext, FrameworkConfig } from "types";
 
-const { npm } = detectPackageManager();
+const { npm, dlx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
-	const version = getFrameworkVersion(ctx);
+	const cli = getFrameworkCli(ctx);
 
-	await runFrameworkGenerator(
-		ctx,
-		`${npm} create docusaurus@${version} ${ctx.project.name} classic`
-	);
+	await runFrameworkGenerator(ctx, `${dlx} ${cli} ${ctx.project.name} classic`);
 };
 
 const config: FrameworkConfig = {
 	generate,
 	displayName: "Docusaurus",
-	packageScripts: {
-		"pages:dev": `wrangler pages dev ${compatDateFlag()} --proxy 3000 -- ${npm} run start`,
-		"pages:deploy": `NODE_VERSION=16 ${npm} run build && wrangler pages publish ./build`,
-	},
+	getPackageScripts: async () => ({
+		"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 3000 -- ${npm} run start`,
+		"pages:deploy": `NODE_VERSION=16 ${npm} run build && wrangler pages deploy ./build`,
+	}),
+	testFlags: [`--package-manager`, npm],
 };
 export default config;

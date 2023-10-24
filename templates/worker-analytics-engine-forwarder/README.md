@@ -6,6 +6,18 @@ Messages should be POSTed to the worker as JSON objects. One JSON object per lin
 Optionally, the payload can be gzipped and a `Content-Encoding: gzip` header set, otherwise it will assume the data is uncompressed.
 Up to 25 events can be received at one time.
 
+## Setup
+
+To create a `my-project` directory using this template, run:
+
+```sh
+$ npx wrangler generate my-project worker-analytics-engine-forwarder
+# or
+$ yarn wrangler generate my-project worker-analytics-engine-forwarder
+# or
+$ pnpm wrangler generate my-project worker-analytics-engine-forwarder
+```
+
 ## Authentication
 
 Authentication is via bearer token. You can use any token or password string as long as you supply the same string to both the worker and the caller. To configure the token on the worker side you must set the `BEARER_TOKEN` secret to the token value by running (in a terminal, from within this project directory):

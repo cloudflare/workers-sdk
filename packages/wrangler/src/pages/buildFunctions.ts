@@ -1,16 +1,15 @@
 import { writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { FatalError } from "../errors";
 import { toUrlPath } from "../paths";
 import { FunctionsNoRoutesError } from "./errors";
-import { buildPlugin } from "./functions/buildPlugin";
-import { buildWorker } from "./functions/buildWorker";
+import { buildPluginFromFunctions } from "./functions/buildPlugin";
+import { buildWorkerFromFunctions } from "./functions/buildWorker";
 import { generateConfigFromFileTree } from "./functions/filepath-routing";
 import { writeRoutesModule } from "./functions/routes";
 import { convertRoutesToRoutesJSONSpec } from "./functions/routes-transformation";
-import { RUNNING_BUILDERS } from "./utils";
-import type { BundleResult } from "../bundle";
+import { realTmpdir, RUNNING_BUILDERS } from "./utils";
+import type { BundleResult } from "../deployment-bundle/bundle";
 import type { PagesBuildArgs } from "./build";
 import type { Config } from "./functions/routes";
 
@@ -35,7 +34,6 @@ export async function buildFunctions({
 	legacyNodeCompat,
 	nodejsCompat,
 	local,
-	d1Databases,
 }: Partial<
 	Pick<
 		PagesBuildArgs,
@@ -54,7 +52,6 @@ export async function buildFunctions({
 	onEnd?: () => void;
 	routesOutputPath?: PagesBuildArgs["outputRoutesPath"];
 	local: boolean;
-	d1Databases?: string[];
 	legacyNodeCompat?: boolean;
 	nodejsCompat?: boolean;
 }) {
@@ -62,7 +59,10 @@ export async function buildFunctions({
 		(runningBuilder) => runningBuilder.stop && runningBuilder.stop()
 	);
 
-	const routesModule = join(tmpdir(), `./functionsRoutes-${Math.random()}.mjs`);
+	const routesModule = join(
+		realTmpdir(),
+		`./functionsRoutes-${Math.random()}.mjs`
+	);
 	const baseURL = toUrlPath("/");
 
 	const config: Config = await generateConfigFromFileTree({
@@ -105,7 +105,7 @@ export async function buildFunctions({
 			);
 		}
 
-		bundle = await buildPlugin({
+		bundle = await buildPluginFromFunctions({
 			routesModule,
 			outdir,
 			minify,
@@ -114,10 +114,9 @@ export async function buildFunctions({
 			legacyNodeCompat,
 			functionsDirectory: absoluteFunctionsDirectory,
 			local,
-			betaD1Shims: d1Databases,
 		});
 	} else {
-		bundle = await buildWorker({
+		bundle = await buildWorkerFromFunctions({
 			routesModule,
 			outfile,
 			outdir,
@@ -127,7 +126,6 @@ export async function buildFunctions({
 			watch,
 			functionsDirectory: absoluteFunctionsDirectory,
 			local,
-			betaD1Shims: d1Databases,
 			onEnd,
 			buildOutputDirectory,
 			legacyNodeCompat,

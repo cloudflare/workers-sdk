@@ -1,0 +1,7 @@
+name = "module-worker-d"
+
+[env.staging.vars]
+MY_ENV = "staging"
+
+[env.production.vars]
+MY_ENV = "prod"

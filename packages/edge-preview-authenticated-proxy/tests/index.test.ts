@@ -1,7 +1,7 @@
 import { randomBytes } from "crypto";
 import fs from "fs/promises";
 import os from "os";
-import path from "path";
+import path, { resolve } from "path";
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import { unstable_dev } from "wrangler";
 import type { UnstableDevWorker } from "wrangler";
@@ -19,7 +19,7 @@ describe("Preview Worker", () => {
 	let tmpDir: string;
 
 	beforeAll(async () => {
-		worker = await unstable_dev("src/index.ts", {
+		worker = await unstable_dev(resolve(__dirname, "../src/index.ts"), {
 			experimental: {
 				disableExperimentalWarning: true,
 				// experimentalLocal: true,
@@ -121,10 +121,14 @@ describe("Preview Worker", () => {
 		expect(resp.headers.get("location")).toMatchInlineSnapshot(
 			'"/hello?world"'
 		);
-		expect(removeUUID(resp.headers.get("set-cookie"))).toMatchInlineSnapshot(
+		expect(
+			removeUUID(resp.headers.get("set-cookie") ?? "")
+		).toMatchInlineSnapshot(
 			'"token=00000000-0000-0000-0000-000000000000; Domain=preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None"'
 		);
-		tokenId = resp.headers.get("set-cookie").split(";")[0].split("=")[1];
+		tokenId = (resp.headers.get("set-cookie") ?? "")
+			.split(";")[0]
+			.split("=")[1];
 		resp = await worker.fetch(
 			`https://random-data.preview.devprod.cloudflare.dev`,
 			{
@@ -135,7 +139,8 @@ describe("Preview Worker", () => {
 			}
 		);
 
-		const json = await resp.json();
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- ignoring this test type error for sake of turborepo PR
+		const json = (await resp.json()) as any;
 
 		expect(
 			json.headers.find(([h]: [string]) => h === "cf-workers-preview-token")[1]
@@ -159,10 +164,14 @@ describe("Preview Worker", () => {
 		expect(resp.headers.get("location")).toMatchInlineSnapshot(
 			'"/hello?world"'
 		);
-		expect(removeUUID(resp.headers.get("set-cookie"))).toMatchInlineSnapshot(
+		expect(
+			removeUUID(resp.headers.get("set-cookie") ?? "")
+		).toMatchInlineSnapshot(
 			'"token=00000000-0000-0000-0000-000000000000; Domain=preview.devprod.cloudflare.dev; HttpOnly; Secure; SameSite=None"'
 		);
-		tokenId = resp.headers.get("set-cookie").split(";")[0].split("=")[1];
+		tokenId = (resp.headers.get("set-cookie") ?? "")
+			.split(";")[0]
+			.split("=")[1];
 	});
 
 	it("should convert cookie to header", async () => {
@@ -244,5 +253,38 @@ describe("Preview Worker", () => {
 		);
 
 		expect(await resp.text()).toMatchInlineSnapshot('"407"');
+	});
+});
+
+describe("Raw HTTP preview", () => {
+	let worker: UnstableDevWorker;
+
+	beforeAll(async () => {
+		worker = await unstable_dev(resolve(__dirname, "../src/index.ts"), {
+			// @ts-expect-error TODO: figure out the right way to get the server to accept host from the request
+			host: "0000.rawhttp.devprod.cloudflare.dev",
+			experimental: {
+				disableExperimentalWarning: true,
+			},
+		});
+	});
+
+	afterAll(async () => {
+		await worker.stop();
+	});
+
+	it("should allow arbitrary headers in cross-origin requests", async () => {
+		const resp = await worker.fetch(
+			`https://0000.rawhttp.devprod.cloudflare.dev`,
+			{
+				method: "OPTIONS",
+				headers: {
+					"Access-Control-Request-Headers": "foo",
+					origin: "https://cloudflare.dev",
+				},
+			}
+		);
+
+		expect(resp.headers.get("Access-Control-Allow-Headers")).toBe("foo");
 	});
 });

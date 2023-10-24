@@ -1,23 +1,21 @@
 import path from "node:path";
 import { isWebContainer } from "@webcontainer/env";
-import chalk from "chalk";
 import { watch } from "chokidar";
 import getPort from "get-port";
 import { render } from "ink";
 import React from "react";
 import { findWranglerToml, printBindings, readConfig } from "./config";
+import { getEntry } from "./deployment-bundle/entry";
 import Dev from "./dev/dev";
 import { getVarsForDev } from "./dev/dev-vars";
 import { getLocalPersistencePath } from "./dev/get-local-persistence-path";
 
 import { startDevServer } from "./dev/start-server";
-import { getEntry } from "./entry";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { getAssetPaths, getSiteAssetPaths } from "./sites";
 import { getAccountFromCache, loginOrRefreshIfRequired } from "./user";
 import { collectKeyValues } from "./utils/collectKeyValues";
-import { identifyD1BindingsAsBeta } from "./worker";
 import { getHostFromRoute, getZoneForRoute, getZoneIdFromHost } from "./zones";
 import {
 	DEFAULT_INSPECTOR_PORT,
@@ -30,13 +28,14 @@ import {
 } from "./index";
 import type { Config, Environment } from "./config";
 import type { Route, Rule } from "./config/environment";
+import type { CfWorkerInit, CfModule } from "./deployment-bundle/worker";
 import type { LoggerLevel } from "./logger";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
-import type { CfWorkerInit, CfModule } from "./worker";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "./yargs-types";
+import type { Json } from "miniflare";
 
 export function devOptions(yargs: CommonYargsArgv) {
 	return (
@@ -303,9 +302,7 @@ This is currently not supported 😭, but we think that we'll get it to work soo
 }
 
 export type AdditionalDevProps = {
-	vars?: {
-		[key: string]: unknown;
-	};
+	vars?: Record<string, string | Json>;
 	kv?: {
 		binding: string;
 		id: string;
@@ -317,10 +314,16 @@ export type AdditionalDevProps = {
 		script_name?: string | undefined;
 		environment?: string | undefined;
 	}[];
+	services?: {
+		binding: string;
+		service: string;
+		environment?: string;
+	}[];
 	r2?: {
 		binding: string;
 		bucket_name: string;
 		preview_bucket_name?: string;
+		jurisdiction?: string;
 	}[];
 	d1Databases?: Environment["d1_databases"];
 	processEntrypoint?: boolean;
@@ -349,17 +352,6 @@ export async function startDev(args: StartDevOptions) {
 			logger.loggerLevel = args.logLevel;
 		}
 		await printWranglerBanner();
-		// TODO(v3.1): remove this message
-		if (!args.remote && typeof jest === "undefined") {
-			logger.log(
-				chalk.blue(`${chalk.green(
-					`wrangler dev`
-				)} now uses local mode by default, powered by 🔥 Miniflare and 👷 workerd.
-To run an edge preview session for your Worker, use ${chalk.green(
-					`wrangler dev --remote`
-				)}`)
-			);
-		}
 		if (args.local) {
 			logger.warn(
 				"--local is no longer required and will be removed in a future version.\n`wrangler dev` now uses the local Cloudflare Workers runtime by default. 🎉"
@@ -427,6 +419,7 @@ To run an edge preview session for your Worker, use ${chalk.green(
 				<Dev
 					name={getScriptName({ name: args.name, env: args.env }, configParam)}
 					noBundle={!(args.bundle ?? !configParam.no_bundle)}
+					findAdditionalModules={configParam.find_additional_modules}
 					entry={entry}
 					env={args.env}
 					zone={zoneId}
@@ -513,8 +506,9 @@ To run an edge preview session for your Worker, use ${chalk.green(
 				await watcher?.close();
 			},
 		};
-	} finally {
+	} catch (e) {
 		await watcher?.close();
+		throw e;
 	}
 }
 
@@ -565,6 +559,7 @@ export async function startApiDev(args: StartDevOptions) {
 		return await startDevServer({
 			name: getScriptName({ name: args.name, env: args.env }, configParam),
 			noBundle: !enableBundling,
+			findAdditionalModules: configParam.find_additional_modules,
 			entry: entry,
 			env: args.env,
 			zone: zoneId,
@@ -684,6 +679,21 @@ async function getZoneIdHostAndRoutes(args: StartDevOptions, config: Config) {
 		if (routes) {
 			const firstRoute = routes[0];
 			host = getHostFromRoute(firstRoute);
+
+			// TODO(consider): do we need really need to do this? I've added the condition to throw to match the previous implicit behaviour of `new URL()` throwing upon invalid URLs, but could we just continue here without an inferred host?
+			if (host === undefined) {
+				throw new Error(
+					`Cannot infer host from first route: ${JSON.stringify(
+						firstRoute
+					)}.\nYou can explicitly set the \`dev.host\` configuration in your wrangler.toml file, for example:
+
+	\`\`\`
+	[dev]
+	host = "example.com"
+	\`\`\`
+`
+				);
+			}
 		}
 	}
 	return { host, routes, zoneId };
@@ -814,6 +824,7 @@ function getBindingsAndAssetPaths(args: StartDevOptions, configParam: Config) {
 		vars: { ...args.vars, ...cliVars },
 		durableObjects: args.durableObjects,
 		r2: args.r2,
+		services: args.services,
 		d1Databases: args.d1Databases,
 	});
 
@@ -845,14 +856,14 @@ function getBindings(
 	const bindings = {
 		kv_namespaces: [
 			...(configParam.kv_namespaces || []).map(
-				({ binding, preview_id, id: _id }) => {
-					// In `dev`, we make folks use a separate kv namespace called
+				({ binding, preview_id, id }) => {
+					// In remote `dev`, we make folks use a separate kv namespace called
 					// `preview_id` instead of `id` so that they don't
 					// break production data. So here we check that a `preview_id`
 					// has actually been configured.
 					// This whole block of code will be obsoleted in the future
 					// when we have copy-on-write for previews on edge workers.
-					if (!preview_id) {
+					if (!preview_id && !local) {
 						// TODO: This error has to be a _lot_ better, ideally just asking
 						// to create a preview namespace for the user automatically
 						throw new Error(
@@ -861,7 +872,7 @@ function getBindings(
 					}
 					return {
 						binding,
-						id: preview_id,
+						id: preview_id ?? id,
 					};
 				}
 			),
@@ -876,6 +887,7 @@ function getBindings(
 		wasm_modules: configParam.wasm_modules,
 		text_blobs: configParam.text_blobs,
 		browser: configParam.browser,
+		ai: configParam.ai,
 		data_blobs: configParam.data_blobs,
 		durable_objects: {
 			bindings: [
@@ -890,17 +902,18 @@ function getBindings(
 		],
 		r2_buckets: [
 			...(configParam.r2_buckets?.map(
-				({ binding, preview_bucket_name, bucket_name: _bucket_name }) => {
+				({ binding, preview_bucket_name, bucket_name, jurisdiction }) => {
 					// same idea as kv namespace preview id,
 					// same copy-on-write TODO
-					if (!preview_bucket_name) {
+					if (!preview_bucket_name && !local) {
 						throw new Error(
 							`In development, you should use a separate r2 bucket than the one you'd use in production. Please create a new r2 bucket with "wrangler r2 bucket create <name>" and add its name as preview_bucket_name to the r2_buckets "${binding}" in your wrangler.toml`
 						);
 					}
 					return {
 						binding,
-						bucket_name: preview_bucket_name,
+						bucket_name: preview_bucket_name ?? bucket_name,
+						jurisdiction,
 					};
 				}
 			) || []),
@@ -908,14 +921,15 @@ function getBindings(
 		],
 		dispatch_namespaces: configParam.dispatch_namespaces,
 		mtls_certificates: configParam.mtls_certificates,
-		services: configParam.services,
+		services: [...(configParam.services || []), ...(args.services || [])],
 		analytics_engine_datasets: configParam.analytics_engine_datasets,
 		unsafe: {
 			bindings: configParam.unsafe.bindings,
 			metadata: configParam.unsafe.metadata,
+			capnp: configParam.unsafe.capnp,
 		},
 		logfwdr: configParam.logfwdr,
-		d1_databases: identifyD1BindingsAsBeta([
+		d1_databases: [
 			...(configParam.d1_databases ?? []).map((d1Db) => {
 				const database_id = d1Db.preview_database_id
 					? d1Db.preview_database_id
@@ -933,8 +947,10 @@ function getBindings(
 				return { ...d1Db, database_id };
 			}),
 			...(args.d1Databases || []),
-		]),
+		],
+		vectorize: configParam.vectorize,
 		constellation: configParam.constellation,
+		hyperdrive: configParam.hyperdrive,
 	};
 
 	return bindings;

@@ -1,132 +1,126 @@
 #!/usr/bin/env node
-import { existsSync } from "fs";
-import { resolve } from "path";
-import Haikunator from "haikunator";
-import { crash, logRaw, startSection } from "helpers/cli";
-import { dim, brandColor } from "helpers/colors";
-import { selectInput, textInput } from "helpers/interactive";
-import yargs from "yargs";
-import { hideBin } from "yargs/helpers";
+import { crash, logRaw, startSection } from "@cloudflare/cli";
+import { blue, dim } from "@cloudflare/cli/colors";
+import {
+	isInteractive,
+	spinner,
+	spinnerFrames,
+} from "@cloudflare/cli/interactive";
+import { parseArgs, processArgument } from "helpers/args";
+import { C3_DEFAULTS } from "helpers/cli";
+import { runCommand } from "helpers/command";
+import { detectPackageManager } from "helpers/packages";
+import semver from "semver";
 import { version } from "../package.json";
-import { runPagesGenerator } from "./pages";
-import { runWorkersGenerator } from "./workers";
-import type { Option } from "helpers/interactive";
-import type { PagesGeneratorArgs } from "types";
+import { validateProjectDirectory } from "./common";
+import * as shellquote from "./helpers/shell-quote";
+import { templateMap } from "./templateMap";
+import type { C3Args } from "types";
+
+const { npm } = detectPackageManager();
 
 export const main = async (argv: string[]) => {
-	printBanner();
-
 	const args = await parseArgs(argv);
 
-	const validatedArgs: PagesGeneratorArgs = {
-		...args,
-		projectName: await validateName(args.projectName),
-		type: await validateType(args.type),
-	};
+	// Print a newline
+	logRaw("");
 
-	const { handler } = templateMap[validatedArgs.type];
-	await handler(validatedArgs);
+	if (args.autoUpdate && (await isUpdateAvailable())) {
+		await runLatest();
+	} else {
+		await runCli(args);
+	}
 };
 
-const printBanner = () => {
-	logRaw(dim(`\nusing create-cloudflare version ${version}\n`));
-	startSection(`Create an application with Cloudflare`, "Step 1 of 3");
+// Detects if a newer version of c3 is available by comparing the version
+// specified in package.json with the `latest` tag from npm
+const isUpdateAvailable = async () => {
+	if (process.env.VITEST || process.env.CI || !isInteractive()) {
+		return false;
+	}
+
+	// Use a spinner when running this check since it may take some time
+	const s = spinner(spinnerFrames.vertical, blue);
+	s.start("Checking if a newer version is available");
+	const latestVersion = await runCommand(
+		`npm info create-cloudflare@latest dist-tags.latest`,
+		{ silent: true, useSpinner: false }
+	);
+	s.stop();
+
+	// Don't auto-update to major versions
+	if (semver.diff(latestVersion, version) === "major") return false;
+
+	return semver.gt(latestVersion, version);
 };
 
-const parseArgs = async (argv: string[]) => {
-	const args = await yargs(hideBin(argv))
-		.scriptName("create-cloudflare")
-		.usage("$0 [args]")
-		.positional("name", { type: "string" })
-		.option("type", { type: "string" })
-		.option("framework", { type: "string" })
-		.option("deploy", { type: "boolean" })
-		.option("ts", { type: "boolean" })
-		.option("open", {
-			type: "boolean",
-			default: true,
-			description:
-				"opens your browser after your deployment, set --no-open to disable",
-		})
-		.help().argv;
+// Spawn a separate process running the most recent version of c3
+export const runLatest = async () => {
+	const args = process.argv.slice(2);
 
-	return {
-		projectName: args._[0] as string | undefined,
-		...args,
-	};
+	// the parsing logic of `npm create` requires `--` to be supplied
+	// before any flags intended for the target command.
+	const argString =
+		npm === "npm"
+			? `-- ${shellquote.quote(args)}`
+			: `${shellquote.quote(args)}`;
+
+	await runCommand(`${npm} create cloudflare@latest ${argString}`);
 };
 
-const validateName = async (name: string | undefined): Promise<string> => {
-	const haikunator = new Haikunator();
+// Entrypoint to c3
+export const runCli = async (args: Partial<C3Args>) => {
+	printBanner();
 
-	return await textInput({
-		initialValue: name,
-		question: `Where do you want to create your application?`,
+	const projectName = await processArgument<string>(args, "projectName", {
+		type: "text",
+		question: `In which directory do you want to create your application?`,
 		helpText: "also used as application name",
-		renderSubmitted: (value: string) => {
-			return `${brandColor("dir")} ${dim(value)}`;
-		},
-		defaultValue: haikunator.haikunate({ tokenHex: true }),
-		validate: (value: string) => {
-			if (value && existsSync(resolve(value))) {
-				return `\`${value}\` already exists. Please choose a new folder. `;
-			}
-		},
+		defaultValue: C3_DEFAULTS.projectName,
+		label: "dir",
+		validate: (value) =>
+			validateProjectDirectory(String(value) || C3_DEFAULTS.projectName, args),
+		format: (val) => `./${val}`,
 	});
-};
 
-const validateType = async (type: string | undefined) => {
+	// If not specified, attempt to infer the `type` argument from other flags
+	if (!args.type) {
+		if (args.framework) {
+			args.type = "webFramework";
+		} else if (args.existingScript) {
+			args.type = "pre-existing";
+		}
+	}
+
 	const templateOptions = Object.entries(templateMap)
 		.filter(([_, { hidden }]) => !hidden)
 		.map(([value, { label }]) => ({ value, label }));
 
-	type = await selectInput({
+	const type = await processArgument<string>(args, "type", {
+		type: "select",
 		question: "What type of application do you want to create?",
+		label: "type",
 		options: templateOptions,
-		renderSubmitted: (option: Option) => {
-			return `${brandColor("type")} ${dim(option.label)}`;
-		},
-		initialValue: type,
+		defaultValue: C3_DEFAULTS.type,
 	});
 
 	if (!type || !Object.keys(templateMap).includes(type)) {
-		crash("An application type must be specified to continue.");
+		return crash("An application type must be specified to continue.");
 	}
-	return type;
+
+	const validatedArgs: C3Args = {
+		...args,
+		type,
+		projectName,
+	};
+
+	const { handler } = templateMap[type];
+	await handler(validatedArgs);
 };
 
-type TemplateConfig = {
-	label: string;
-	handler: (args: PagesGeneratorArgs) => Promise<void>;
-	hidden?: boolean;
-};
-
-const templateMap: Record<string, TemplateConfig> = {
-	webFramework: {
-		label: "Website or web app",
-		handler: runPagesGenerator,
-	},
-	simple: {
-		label: `"Hello World" script`,
-		handler: runWorkersGenerator,
-	},
-	common: {
-		label: "Common Worker functions",
-		handler: runWorkersGenerator,
-	},
-	chatgptPlugin: {
-		label: `ChatGPT plugin (Typescript)`,
-		handler: (args) =>
-			runWorkersGenerator({
-				...args,
-				ts: true,
-			}),
-	},
-	"pre-existing": {
-		label: "Pre-existing Worker (from Dashboard)",
-		handler: runWorkersGenerator,
-		hidden: true,
-	},
+const printBanner = () => {
+	logRaw(dim(`using create-cloudflare version ${version}\n`));
+	startSection(`Create an application with Cloudflare`, "Step 1 of 3");
 };
 
 main(process.argv).catch((e) => crash(e));

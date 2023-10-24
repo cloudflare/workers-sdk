@@ -1,8 +1,8 @@
 import path from "path";
+import { crash } from "@cloudflare/cli";
 import * as recast from "recast";
 import * as esprimaParser from "recast/parsers/esprima";
 import * as typescriptParser from "recast/parsers/typescript";
-import { crash } from "./cli";
 import { readFile, writeFile } from "./files";
 import type { Program } from "esprima";
 

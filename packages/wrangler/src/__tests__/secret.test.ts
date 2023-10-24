@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import { writeFileSync } from "node:fs";
+import readline from "node:readline";
 import * as TOML from "@iarna/toml";
 import { rest } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -11,6 +12,7 @@ import { useMockStdin } from "./helpers/mock-stdin";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import type { Interface } from "node:readline";
 
 function createFetchResult(result: unknown, success = true) {
 	return {
@@ -107,182 +109,6 @@ describe("wrangler secret", () => {
 			✨ Success! Uploaded secret the-key"
 		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
-			});
-
-			it("should create secret:bulk", async () => {
-				writeFileSync(
-					"secret.json",
-					JSON.stringify({
-						"secret-name-1": "secret_text",
-						"secret-name-2": "secret_text",
-					})
-				);
-
-				// User counter to pass different secrets to the request mock
-				let counter = 0;
-				msw.use(
-					rest.put(
-						`*/accounts/:accountId/workers/scripts/:scriptName/secrets`,
-						(req, res, ctx) => {
-							expect(req.params.accountId).toEqual("some-account-id");
-							counter++;
-
-							return res(
-								ctx.json(
-									createFetchResult({
-										name: `secret-name-${counter}`,
-										type: "secret_text",
-									})
-								)
-							);
-						}
-					)
-				);
-
-				await runWrangler("secret:bulk ./secret.json --name script-name");
-
-				expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Creating the secrets for the Worker \\"script-name\\"
-			✨ Successfully created secret for key: secret-name-1
-			✨ Successfully created secret for key: secret-name-2
-
-			Finished processing secrets JSON file:
-			✨ 2 secrets successfully uploaded"
-		`);
-				expect(std.err).toMatchInlineSnapshot(`""`);
-			});
-
-			it("should handle network failure on secret:bulk", async () => {
-				writeFileSync(
-					"secret.json",
-					JSON.stringify({
-						"secret-name-1": "secret_text",
-						"secret-name-2": "secret_text",
-					})
-				);
-
-				// User counter to pass different secrets to the request mock
-				let counter = 0;
-				msw.use(
-					rest.put(
-						`*/accounts/:accountId/workers/scripts/:scriptName/secrets`,
-						(req, res) => {
-							expect(req.params.accountId).toEqual("some-account-id");
-							counter++;
-
-							return res.networkError(`Failed to create secret ${counter}`);
-						}
-					)
-				);
-
-				await runWrangler("secret:bulk ./secret.json --name script-name");
-
-				expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Creating the secrets for the Worker \\"script-name\\"
-
-			Finished processing secrets JSON file:
-			✨ 0 secrets successfully uploaded
-			🚨 2 secrets failed to upload"
-		`);
-				expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Error uploading secret for key: secret-name-1:[0m
-
-			                  request to
-			  [4mhttps://api.cloudflare.com/client/v4/accounts/some-account-id/workers/scripts/script-name/secrets[0m
-			  failed, reason: Failed to create secret 1
-
-
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Error uploading secret for key: secret-name-2:[0m
-
-			                  request to
-			  [4mhttps://api.cloudflare.com/client/v4/accounts/some-account-id/workers/scripts/script-name/secrets[0m
-			  failed, reason: Failed to create secret 2
-
-			"
-		`);
-			});
-
-			it("should count success and network failure on secret:bulk", async () => {
-				writeFileSync(
-					"secret.json",
-					JSON.stringify({
-						"secret-name-1": "secret_text",
-						"secret-name-2": "secret_text",
-						"secret-name-3": "secret_text",
-						"secret-name-4": "secret_text",
-						"secret-name-5": "secret_text",
-						"secret-name-6": "secret_text",
-						"secret-name-7": "secret_text",
-					})
-				);
-
-				// User counter to pass different secrets to the request mock
-				let counter = 0;
-				msw.use(
-					rest.put(
-						`*/accounts/:accountId/workers/scripts/:scriptName/secrets`,
-						(req, res, ctx) => {
-							expect(req.params.accountId).toEqual("some-account-id");
-							counter++;
-
-							if (counter % 2 === 0) {
-								return res(
-									ctx.json(
-										createFetchResult({
-											name: `secret-name-${counter}`,
-											type: "secret_text",
-										})
-									)
-								);
-							} else {
-								return res.networkError(`Failed to create secret ${counter}`);
-							}
-						}
-					)
-				);
-
-				await runWrangler("secret:bulk ./secret.json --name script-name");
-
-				expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Creating the secrets for the Worker \\"script-name\\"
-			✨ Successfully created secret for key: secret-name-2
-			✨ Successfully created secret for key: secret-name-4
-			✨ Successfully created secret for key: secret-name-6
-
-			Finished processing secrets JSON file:
-			✨ 3 secrets successfully uploaded
-			🚨 4 secrets failed to upload"
-		`);
-				expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Error uploading secret for key: secret-name-1:[0m
-
-			                  request to
-			  [4mhttps://api.cloudflare.com/client/v4/accounts/some-account-id/workers/scripts/script-name/secrets[0m
-			  failed, reason: Failed to create secret 1
-
-
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Error uploading secret for key: secret-name-3:[0m
-
-			                  request to
-			  [4mhttps://api.cloudflare.com/client/v4/accounts/some-account-id/workers/scripts/script-name/secrets[0m
-			  failed, reason: Failed to create secret 3
-
-
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Error uploading secret for key: secret-name-5:[0m
-
-			                  request to
-			  [4mhttps://api.cloudflare.com/client/v4/accounts/some-account-id/workers/scripts/script-name/secrets[0m
-			  failed, reason: Failed to create secret 5
-
-
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Error uploading secret for key: secret-name-7:[0m
-
-			                  request to
-			  [4mhttps://api.cloudflare.com/client/v4/accounts/some-account-id/workers/scripts/script-name/secrets[0m
-			  failed, reason: Failed to create secret 7
-
-			"
-		`);
 			});
 
 			it("should create a secret: legacy envs", async () => {
@@ -688,6 +514,258 @@ describe("wrangler secret", () => {
 			expect(error).toMatchInlineSnapshot(
 				`[Error: Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with \`--name <worker-name>\`]`
 			);
+		});
+	});
+
+	describe("secret:bulk", () => {
+		it("should fail secret:bulk w/ no pipe or JSON input", async () => {
+			jest
+				.spyOn(readline, "createInterface")
+				.mockImplementation(() => null as unknown as Interface);
+			await runWrangler(`secret:bulk --name script-name`);
+			expect(std.out).toMatchInlineSnapshot(
+				`"🌀 Creating the secrets for the Worker \\"script-name\\" "`
+			);
+			expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Please provide a JSON file or valid JSON pipe[0m
+
+			"
+		`);
+		});
+
+		it("should use secret:bulk w/ pipe input", async () => {
+			jest.spyOn(readline, "createInterface").mockImplementation(
+				() =>
+					// `readline.Interface` is an async iterator: `[Symbol.asyncIterator](): AsyncIterableIterator<string>`
+					JSON.stringify({
+						secret1: "secret-value",
+						password: "hunter2",
+					}) as unknown as Interface
+			);
+
+			let counter = 0;
+			msw.use(
+				rest.put(
+					`*/accounts/:accountId/workers/scripts/:scriptName/secrets`,
+					(req, res, ctx) => {
+						expect(req.params.accountId).toEqual("some-account-id");
+						counter++;
+
+						return res(
+							ctx.json(
+								createFetchResult({
+									name: `secret-name-${counter}`,
+									type: "secret_text",
+								})
+							)
+						);
+					}
+				)
+			);
+
+			await runWrangler(`secret:bulk --name script-name`);
+			expect(std.out).toMatchInlineSnapshot(`
+			"🌀 Creating the secrets for the Worker \\"script-name\\"
+			✨ Successfully created secret for key: secret1
+			✨ Successfully created secret for key: password
+
+			Finished processing secrets JSON file:
+			✨ 2 secrets successfully uploaded"
+		`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(counter).toEqual(2);
+		});
+
+		it("should create secret:bulk", async () => {
+			writeFileSync(
+				"secret.json",
+				JSON.stringify({
+					"secret-name-1": "secret_text",
+					"secret-name-2": "secret_text",
+				})
+			);
+
+			// User counter to pass different secrets to the request mock
+			let counter = 0;
+			msw.use(
+				rest.put(
+					`*/accounts/:accountId/workers/scripts/:scriptName/secrets`,
+					(req, res, ctx) => {
+						expect(req.params.accountId).toEqual("some-account-id");
+						counter++;
+
+						return res(
+							ctx.json(
+								createFetchResult({
+									name: `secret-name-${counter}`,
+									type: "secret_text",
+								})
+							)
+						);
+					}
+				)
+			);
+
+			await runWrangler("secret:bulk ./secret.json --name script-name");
+
+			expect(std.out).toMatchInlineSnapshot(`
+					"🌀 Creating the secrets for the Worker \\"script-name\\"
+					✨ Successfully created secret for key: secret-name-1
+					✨ Successfully created secret for key: secret-name-2
+
+					Finished processing secrets JSON file:
+					✨ 2 secrets successfully uploaded"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should count success and network failure on secret:bulk", async () => {
+			writeFileSync(
+				"secret.json",
+				JSON.stringify({
+					"secret-name-1": "secret_text",
+					"secret-name-2": "secret_text",
+					"secret-name-3": "secret_text",
+					"secret-name-4": "secret_text",
+					"secret-name-5": "secret_text",
+					"secret-name-6": "secret_text",
+					"secret-name-7": "secret_text",
+				})
+			);
+
+			// User counter to pass different secrets to the request mock
+			let counter = 0;
+			msw.use(
+				rest.put(
+					`*/accounts/:accountId/workers/scripts/:scriptName/secrets`,
+					(req, res, ctx) => {
+						expect(req.params.accountId).toEqual("some-account-id");
+						counter++;
+
+						if (counter % 2 === 0) {
+							return res(
+								ctx.json(
+									createFetchResult({
+										name: `secret-name-${counter}`,
+										type: "secret_text",
+									})
+								)
+							);
+						} else {
+							return res.networkError(`Failed to create secret ${counter}`);
+						}
+					}
+				)
+			);
+
+			await expect(async () => {
+				await runWrangler("secret:bulk ./secret.json --name script-name");
+			}).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"🚨 4 secrets failed to upload"`
+			);
+
+			expect(std.out).toMatchInlineSnapshot(`
+			"🌀 Creating the secrets for the Worker \\"script-name\\"
+			✨ Successfully created secret for key: secret-name-2
+			✨ Successfully created secret for key: secret-name-4
+			✨ Successfully created secret for key: secret-name-6
+
+			Finished processing secrets JSON file:
+			✨ 3 secrets successfully uploaded
+
+			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+		`);
+			expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1muploading secret for key: secret-name-1:[0m
+
+			      request to
+			  [4mhttps://api.cloudflare.com/client/v4/accounts/some-account-id/workers/scripts/script-name/secrets[0m
+			  failed, reason: Failed to create secret 1
+
+
+			[31mX [41;31m[[41;97mERROR[41;31m][0m [1muploading secret for key: secret-name-3:[0m
+
+			      request to
+			  [4mhttps://api.cloudflare.com/client/v4/accounts/some-account-id/workers/scripts/script-name/secrets[0m
+			  failed, reason: Failed to create secret 3
+
+
+			[31mX [41;31m[[41;97mERROR[41;31m][0m [1muploading secret for key: secret-name-5:[0m
+
+			      request to
+			  [4mhttps://api.cloudflare.com/client/v4/accounts/some-account-id/workers/scripts/script-name/secrets[0m
+			  failed, reason: Failed to create secret 5
+
+
+			[31mX [41;31m[[41;97mERROR[41;31m][0m [1muploading secret for key: secret-name-7:[0m
+
+			      request to
+			  [4mhttps://api.cloudflare.com/client/v4/accounts/some-account-id/workers/scripts/script-name/secrets[0m
+			  failed, reason: Failed to create secret 7
+
+
+			[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 4 secrets failed to upload[0m
+
+			"
+		`);
+		});
+
+		it("should handle network failure on secret:bulk", async () => {
+			writeFileSync(
+				"secret.json",
+				JSON.stringify({
+					"secret-name-1": "secret_text",
+					"secret-name-2": "secret_text",
+				})
+			);
+
+			// User counter to pass different secrets to the request mock
+			let counter = 0;
+			msw.use(
+				rest.put(
+					`*/accounts/:accountId/workers/scripts/:scriptName/secrets`,
+					(req, res) => {
+						expect(req.params.accountId).toEqual("some-account-id");
+						counter++;
+
+						return res.networkError(`Failed to create secret ${counter}`);
+					}
+				)
+			);
+
+			await expect(async () => {
+				await runWrangler("secret:bulk ./secret.json --name script-name");
+			}).rejects.toThrowErrorMatchingInlineSnapshot(
+				`"🚨 2 secrets failed to upload"`
+			);
+
+			expect(std.out).toMatchInlineSnapshot(`
+			"🌀 Creating the secrets for the Worker \\"script-name\\"
+
+			Finished processing secrets JSON file:
+			✨ 0 secrets successfully uploaded
+
+			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+		`);
+			expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1muploading secret for key: secret-name-1:[0m
+
+			      request to
+			  [4mhttps://api.cloudflare.com/client/v4/accounts/some-account-id/workers/scripts/script-name/secrets[0m
+			  failed, reason: Failed to create secret 1
+
+
+			[31mX [41;31m[[41;97mERROR[41;31m][0m [1muploading secret for key: secret-name-2:[0m
+
+			      request to
+			  [4mhttps://api.cloudflare.com/client/v4/accounts/some-account-id/workers/scripts/script-name/secrets[0m
+			  failed, reason: Failed to create secret 2
+
+
+			[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 2 secrets failed to upload[0m
+
+			"
+		`);
 		});
 	});
 });

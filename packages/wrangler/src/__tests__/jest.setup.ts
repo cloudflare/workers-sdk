@@ -34,11 +34,19 @@ jest.mock("child_process", () => {
 	return {
 		__esModule: true,
 		...jest.requireActual("child_process"),
-		spawnSync: jest.fn().mockImplementation(async (binary, ...args) => {
+		default: jest.requireActual("child_process"),
+		spawnSync: jest.fn().mockImplementation((binary, ...args) => {
 			if (binary === "cloudflared") return { error: true };
 			return jest.requireActual("child_process").spawnSync(binary, ...args);
 		}),
 	};
+});
+
+jest.mock("log-update", () => {
+	const fn = function (..._: string[]) {};
+	fn["clear"] = () => {};
+	fn["done"] = () => {};
+	return fn;
 });
 
 jest.mock("ws", () => {
@@ -212,4 +220,9 @@ jest.mock("execa", () => {
 				: realModule.execa(...args);
 		}),
 	};
+});
+
+afterEach(() => {
+	// It is important that we clear mocks between tests to avoid leakage.
+	jest.clearAllMocks();
 });

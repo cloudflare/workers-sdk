@@ -1,31 +1,34 @@
 import { mkdirSync } from "fs";
-import { updateStatus } from "helpers/cli";
-import { brandColor, dim } from "helpers/colors";
+import { updateStatus, warn } from "@cloudflare/cli";
+import { brandColor, dim } from "@cloudflare/cli/colors";
+import { processArgument } from "helpers/args";
+import { installPackages, runFrameworkGenerator } from "helpers/command";
 import {
-	detectPackageManager,
-	installPackages,
-	runFrameworkGenerator,
-} from "helpers/command";
-import { probePaths, usesTypescript, writeFile } from "helpers/files";
-import { getFrameworkVersion } from "../index";
+	compatDateFlag,
+	probePaths,
+	readJSON,
+	usesEslint,
+	usesTypescript,
+	writeFile,
+	writeJSON,
+} from "helpers/files";
+import { detectPackageManager } from "helpers/packages";
+import { getFrameworkCli } from "../index";
 import {
 	apiAppDirHelloJs,
 	apiAppDirHelloTs,
 	apiPagesDirHelloJs,
 	apiPagesDirHelloTs,
 } from "./templates";
-import type { PagesGeneratorContext, FrameworkConfig } from "types";
+import type { C3Args, FrameworkConfig, PagesGeneratorContext } from "types";
 
-const { npm, npx } = detectPackageManager();
+const { npm, npx, dlx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
 	const projectName = ctx.project.name;
-	const version = getFrameworkVersion(ctx);
+	const cli = getFrameworkCli(ctx);
 
-	await runFrameworkGenerator(
-		ctx,
-		`${npx} create-next-app@${version} ${projectName}`
-	);
+	await runFrameworkGenerator(ctx, `${dlx} ${cli} ${projectName}`);
 };
 
 const getApiTemplate = (
@@ -75,9 +78,19 @@ const configure = async (ctx: PagesGeneratorContext) => {
 	writeFile(handlerPath, handlerFile);
 	updateStatus("Created an example API route handler");
 
+	const installEslintPlugin = await shouldInstallNextOnPagesEslintPlugin(ctx);
+
+	if (installEslintPlugin) {
+		await writeEslintrc(ctx);
+	}
+
 	// Add some dev dependencies
 	process.chdir(projectName);
-	const packages = ["@cloudflare/next-on-pages@1", "vercel"];
+	const packages = [
+		"@cloudflare/next-on-pages@1",
+		"vercel",
+		...(installEslintPlugin ? ["eslint-plugin-next-on-pages"] : []),
+	];
 	await installPackages(packages, {
 		dev: true,
 		startText: "Adding the Cloudflare Pages adapter",
@@ -85,15 +98,62 @@ const configure = async (ctx: PagesGeneratorContext) => {
 	});
 };
 
+export const shouldInstallNextOnPagesEslintPlugin = async (
+	ctx: PagesGeneratorContext
+): Promise<boolean> => {
+	const eslintUsage = usesEslint(ctx);
+
+	if (!eslintUsage.used) return false;
+
+	if (eslintUsage.configType !== ".eslintrc.json") {
+		warn(
+			`Expected .eslintrc.json from Next.js scaffolding but found ${eslintUsage.configType} instead`
+		);
+		return false;
+	}
+
+	return await processArgument(ctx.args, "eslint-plugin" as keyof C3Args, {
+		type: "confirm",
+		question: "Do you want to use the next-on-pages eslint-plugin?",
+		label: "eslint-plugin",
+		defaultValue: true,
+	});
+};
+
+export const writeEslintrc = async (
+	ctx: PagesGeneratorContext
+): Promise<void> => {
+	const eslintConfig = readJSON(`${ctx.project.name}/.eslintrc.json`);
+
+	eslintConfig.plugins ??= [];
+	eslintConfig.plugins.push("eslint-plugin-next-on-pages");
+
+	if (typeof eslintConfig.extends === "string") {
+		eslintConfig.extends = [eslintConfig.extends];
+	}
+	eslintConfig.extends ??= [];
+	eslintConfig.extends.push("plugin:eslint-plugin-next-on-pages/recommended");
+
+	writeJSON(`${ctx.project.name}/.eslintrc.json`, eslintConfig, 2);
+};
+
 const config: FrameworkConfig = {
 	generate,
 	configure,
 	displayName: "Next",
-	packageScripts: {
-		"pages:build": `${npx} @cloudflare/next-on-pages@1`,
-		"pages:deploy": `${npm} run pages:build && wrangler pages publish .vercel/output/static`,
-		"pages:watch": `${npx} @cloudflare/next-on-pages@1 --watch`,
-		"pages:dev": `${npx} wrangler pages dev .vercel/output/static --compatibility-flag=nodejs_compat`,
+	getPackageScripts: async () => {
+		const isNpmOrBun = ["npm", "bun"].includes(npm);
+		const nextOnPagesScope = isNpmOrBun ? "@cloudflare/" : "";
+		const nextOnPagesCommand = `${nextOnPagesScope}next-on-pages`;
+		const pmCommand = isNpmOrBun ? npx : npm;
+		return {
+			"pages:build": `${pmCommand} ${nextOnPagesCommand}`,
+			"pages:deploy": `${
+				npm === "npm" ? "npm run" : pmCommand
+			} pages:build && wrangler pages deploy .vercel/output/static`,
+			"pages:watch": `${pmCommand} ${nextOnPagesCommand} --watch`,
+			"pages:dev": `${pmCommand} wrangler pages dev .vercel/output/static ${await compatDateFlag()} --compatibility-flag=nodejs_compat`,
+		};
 	},
 	testFlags: [
 		"--typescript",
@@ -103,7 +163,7 @@ const config: FrameworkConfig = {
 		"--src-dir",
 		"--app",
 		"--import-alias",
-		'"@/*"',
+		"@/*",
 	],
 	compatibilityFlags: ["nodejs_compat"],
 };

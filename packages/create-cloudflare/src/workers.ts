@@ -1,39 +1,65 @@
-import { readFile, writeFile, mkdtemp, cp, rm, readdir } from "fs/promises";
+import {
+	cp,
+	mkdtemp,
+	readFile,
+	readdir,
+	rename,
+	rm,
+	writeFile,
+} from "fs/promises";
 import { tmpdir } from "os";
-import { resolve, join } from "path";
+import { join, resolve } from "path";
 import { chdir } from "process";
-import { endSection, updateStatus, startSection } from "helpers/cli";
-import { brandColor, dim } from "helpers/colors";
-import { npmInstall, runCommand } from "helpers/command";
-import { confirmInput, textInput } from "helpers/interactive";
+import { endSection, startSection, updateStatus } from "@cloudflare/cli";
+import { brandColor, dim } from "@cloudflare/cli/colors";
+import { processArgument } from "helpers/args";
+import { C3_DEFAULTS } from "helpers/cli";
+import {
+	getWorkerdCompatibilityDate,
+	npmInstall,
+	runCommand,
+} from "helpers/command";
+import { detectPackageManager } from "helpers/packages";
 import {
 	chooseAccount,
+	gitCommit,
+	offerGit,
 	offerToDeploy,
 	printSummary,
 	runDeploy,
 	setupProjectDirectory,
 } from "./common";
-import type {
-	PagesGeneratorArgs as Args,
-	PagesGeneratorContext as Context,
-} from "types";
+import type { C3Args, PagesGeneratorContext as Context } from "types";
 
-export const runWorkersGenerator = async (args: Args) => {
-	const { name, path, relativePath } = setupProjectDirectory(args);
+const { dlx } = detectPackageManager();
+
+export const runWorkersGenerator = async (args: C3Args) => {
+	const originalCWD = process.cwd();
+	const { name, path } = setupProjectDirectory(args);
 
 	const ctx: Context = {
-		project: { name, relativePath, path },
+		project: { name, path },
 		args,
+		originalCWD,
 	};
+
+	ctx.args.ts = await processArgument<boolean>(ctx.args, "ts", {
+		type: "confirm",
+		question: "Do you want to use TypeScript?",
+		label: "typescript",
+		defaultValue: C3_DEFAULTS.ts,
+	});
 
 	await copyFiles(ctx);
 	await copyExistingWorkerFiles(ctx);
 	await updateFiles(ctx);
+	await offerGit(ctx);
 	endSection("Application created");
 
 	startSection("Installing dependencies", "Step 2 of 3");
 	chdir(ctx.project.path);
 	await npmInstall();
+	await gitCommit(ctx);
 	endSection("Dependencies Installed");
 
 	await offerToDeploy(ctx);
@@ -43,17 +69,8 @@ export const runWorkersGenerator = async (args: Args) => {
 };
 
 async function getTemplate(ctx: Context) {
-	if (ctx.args.ts === undefined) {
-		ctx.args.ts = await confirmInput({
-			question: "Do you want to use TypeScript?",
-			renderSubmitted: (value) =>
-				`${brandColor("typescript")} ${dim(`${value ? "yes" : "no"}`)}`,
-			defaultValue: true,
-		});
-	}
-
 	const preexisting = ctx.args.type === "pre-existing";
-	const template = preexisting ? "simple" : ctx.args.type;
+	const template = preexisting ? "hello-world" : ctx.args.type;
 	const path = resolve(
 		// eslint-disable-next-line no-restricted-globals
 		__dirname,
@@ -73,6 +90,9 @@ async function copyFiles(ctx: Context) {
 	// copy template files
 	updateStatus(`Copying files from "${template}" template`);
 	await cp(srcdir, destdir, { recursive: true });
+
+	// reverse renaming from build step
+	await rename(join(destdir, "__dot__gitignore"), join(destdir, ".gitignore"));
 }
 
 async function copyExistingWorkerFiles(ctx: Context) {
@@ -81,14 +101,18 @@ async function copyExistingWorkerFiles(ctx: Context) {
 	if (preexisting) {
 		await chooseAccount(ctx);
 
-		if (ctx.existingScript === undefined) {
-			ctx.existingScript = await textInput({
-				question:
-					"Please specify the name of the existing worker in this account?",
-				renderSubmitted: (value) =>
-					`${brandColor("worker")} ${dim(`"${value}"`)}`,
-				defaultValue: ctx.project.name,
-			});
+		if (ctx.args.existingScript === undefined) {
+			ctx.args.existingScript = await processArgument<string>(
+				ctx.args,
+				"existingScript",
+				{
+					type: "text",
+					question:
+						"Please specify the name of the existing worker in this account?",
+					label: "worker",
+					defaultValue: ctx.project.name,
+				}
+			);
 		}
 
 		// `wrangler init --from-dash` bails if you opt-out of creating a package.json
@@ -97,14 +121,14 @@ async function copyExistingWorkerFiles(ctx: Context) {
 			join(tmpdir(), "c3-wrangler-init--from-dash-")
 		);
 		await runCommand(
-			`npx wrangler@3 init --from-dash ${ctx.existingScript} -y --no-delegate-c3`,
+			`${dlx} wrangler@3 init --from-dash ${ctx.args.existingScript} -y --no-delegate-c3`,
 			{
 				silent: true,
 				cwd: tempdir, // use a tempdir because we don't want all the files
 				env: { CLOUDFLARE_ACCOUNT_ID: ctx.account?.id },
 				startText: "Downloading existing worker files",
 				doneText: `${brandColor("downloaded")} ${dim(
-					`existing "${ctx.existingScript}" worker files`
+					`existing "${ctx.args.existingScript}" worker files`
 				)}`,
 			}
 		);
@@ -116,14 +140,14 @@ async function copyExistingWorkerFiles(ctx: Context) {
 
 		// copy src/* files from the downloaded worker
 		await cp(
-			join(tempdir, ctx.existingScript, "src"),
+			join(tempdir, ctx.args.existingScript, "src"),
 			join(ctx.project.path, "src"),
 			{ recursive: true }
 		);
 
 		// copy wrangler.toml from the downloaded worker
 		await cp(
-			join(tempdir, ctx.existingScript, "wrangler.toml"),
+			join(tempdir, ctx.args.existingScript, "wrangler.toml"),
 			join(ctx.project.path, "wrangler.toml")
 		);
 	}
@@ -143,12 +167,14 @@ async function updateFiles(ctx: Context) {
 	};
 
 	// update files
-	contents.packagejson.name = ctx.project.name;
+	if (contents.packagejson.name === "<TBD>") {
+		contents.packagejson.name = ctx.project.name;
+	}
 	contents.wranglertoml = contents.wranglertoml
-		.replace(/^name = .+$/m, `name = "${ctx.project.name}"`)
+		.replace(/^name\s*=\s*"<TBD>"/m, `name = "${ctx.project.name}"`)
 		.replace(
-			/^compatibility_date = .+$/m,
-			`compatibility_date = "${new Date().toISOString().substring(0, 10)}"`
+			/^compatibility_date\s*=\s*"<TBD>"/m,
+			`compatibility_date = "${await getWorkerdCompatibilityDate()}"`
 		);
 
 	// write files

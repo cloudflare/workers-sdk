@@ -1,7 +1,8 @@
 import path from "node:path";
+import readline from "node:readline";
 import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
-import { createWorkerUploadForm } from "../create-worker-upload-form";
+import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import { confirm, prompt } from "../dialogs";
 import {
 	getLegacyScriptName,
@@ -13,10 +14,87 @@ import * as metrics from "../metrics";
 import { parseJSON, readFileSync } from "../parse";
 import { requireAuth } from "../user";
 
+import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+
+function isMissingWorkerError(e: unknown): e is { code: 10007 } {
+	return (
+		typeof e === "object" &&
+		e !== null &&
+		(e as { code: number }).code === 10007
+	);
+}
+
+async function createDraftWorker({
+	config,
+	args,
+	accountId,
+	scriptName,
+}: {
+	config: Config;
+	args: { env?: string; name?: string };
+	accountId: string;
+	scriptName: string;
+}) {
+	// TODO: log a warning
+	await fetchResult(
+		!isLegacyEnv(config) && args.env
+			? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}`
+			: `/accounts/${accountId}/workers/scripts/${scriptName}`,
+		{
+			method: "PUT",
+			body: createWorkerUploadForm({
+				name: scriptName,
+				main: {
+					name: scriptName,
+					filePath: undefined,
+					content: `export default { fetch() {} }`,
+					type: "esm",
+				},
+				bindings: {
+					kv_namespaces: [],
+					send_email: [],
+					vars: {},
+					durable_objects: { bindings: [] },
+					queues: [],
+					r2_buckets: [],
+					d1_databases: [],
+					vectorize: [],
+					hyperdrive: [],
+					constellation: [],
+					services: [],
+					analytics_engine_datasets: [],
+					wasm_modules: {},
+					browser: undefined,
+					ai: undefined,
+					text_blobs: {},
+					data_blobs: {},
+					dispatch_namespaces: [],
+					mtls_certificates: [],
+					logfwdr: { bindings: [] },
+					unsafe: {
+						bindings: undefined,
+						metadata: undefined,
+						capnp: undefined,
+					},
+				},
+				modules: [],
+				migrations: undefined,
+				compatibility_date: undefined,
+				compatibility_flags: undefined,
+				usage_model: undefined,
+				keepVars: false, // this doesn't matter since it's a new script anyway
+				logpush: false,
+				placement: undefined,
+				tail_consumers: undefined,
+				limits: undefined,
+			}),
+		}
+	);
+}
 
 export const secret = (secretYargs: CommonYargsArgv) => {
 	return secretYargs
@@ -83,63 +161,6 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 					});
 				}
 
-				const createDraftWorker = async () => {
-					// TODO: log a warning
-					await fetchResult(
-						!isLegacyEnv(config) && args.env
-							? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}`
-							: `/accounts/${accountId}/workers/scripts/${scriptName}`,
-						{
-							method: "PUT",
-							body: createWorkerUploadForm({
-								name: scriptName,
-								main: {
-									name: scriptName,
-									content: `export default { fetch() {} }`,
-									type: "esm",
-								},
-								bindings: {
-									kv_namespaces: [],
-									send_email: [],
-									vars: {},
-									durable_objects: { bindings: [] },
-									queues: [],
-									r2_buckets: [],
-									d1_databases: [],
-									constellation: [],
-									services: [],
-									analytics_engine_datasets: [],
-									wasm_modules: {},
-									browser: undefined,
-									text_blobs: {},
-									data_blobs: {},
-									dispatch_namespaces: [],
-									mtls_certificates: [],
-									logfwdr: { schema: undefined, bindings: [] },
-									unsafe: { bindings: undefined, metadata: undefined },
-								},
-								modules: [],
-								migrations: undefined,
-								compatibility_date: undefined,
-								compatibility_flags: undefined,
-								usage_model: undefined,
-								keepVars: false, // this doesn't matter since it's a new script anyway
-								logpush: false,
-								placement: undefined,
-								tail_consumers: undefined,
-							}),
-						}
-					);
-				};
-
-				function isMissingWorkerError(e: unknown): e is { code: 10007 } {
-					return (
-						typeof e === "object" &&
-						e !== null &&
-						(e as { code: number }).code === 10007
-					);
-				}
-
 				try {
 					await submitSecret();
 					await metrics.sendMetricsEvent("create encrypted variable", {
@@ -148,7 +169,12 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 				} catch (e) {
 					if (isMissingWorkerError(e)) {
 						// create a draft worker and try again
-						await createDraftWorker();
+						await createDraftWorker({
+							config,
+							args,
+							accountId,
+							scriptName,
+						});
 						await submitSecret();
 						// TODO: delete the draft worker if this failed too?
 					} else {
@@ -250,20 +276,6 @@ export const secret = (secretYargs: CommonYargsArgv) => {
 		);
 };
 
-export const secretBulkOptions = (yargs: CommonYargsArgv) => {
-	return yargs
-		.positional("json", {
-			describe: `The JSON file of key-value pairs to upload, in form {"key": value, ...}`,
-			type: "string",
-			demandOption: "true",
-		})
-		.option("name", {
-			describe: "Name of the Worker",
-			type: "string",
-			requiresArg: true,
-		});
-};
-
 /**
  * Remove trailing white space from inputs.
  * Matching Wrangler legacy behavior with handling inputs
@@ -305,6 +317,23 @@ function readFromStdin(): Promise<string> {
 	});
 }
 
+// *** Secret Bulk Section Below ***
+/**
+ * @description Options for the `secret bulk` command.
+ */
+export const secretBulkOptions = (yargs: CommonYargsArgv) => {
+	return yargs
+		.positional("json", {
+			describe: `The JSON file of key-value pairs to upload, in form {"key": value, ...}`,
+			type: "string",
+		})
+		.option("name", {
+			describe: "Name of the Worker",
+			type: "string",
+			requiresArg: true,
+		});
+};
+
 type SecretBulkArgs = StrictYargsOptionsToInterface<typeof secretBulkOptions>;
 
 export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
@@ -313,7 +342,7 @@ export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
 
 	const scriptName = getLegacyScriptName(secretBulkArgs, config);
 	if (!scriptName) {
-		throw new Error(
+		throw logger.error(
 			"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name <worker-name>`"
 		);
 	}
@@ -327,54 +356,83 @@ export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
 				: ""
 		}`
 	);
-	const jsonFilePath = path.resolve(secretBulkArgs.json);
-	const content = parseJSON<Record<string, string>>(
-		readFileSync(jsonFilePath),
-		jsonFilePath
-	);
-	for (const key in content) {
-		if (typeof content[key] !== "string") {
-			throw new Error(
-				`The value for ${key} in ${jsonFilePath} is not a string.`
-			);
+
+	let content;
+	if (secretBulkArgs.json) {
+		const jsonFilePath = path.resolve(secretBulkArgs.json);
+		content = parseJSON<Record<string, string>>(
+			readFileSync(jsonFilePath),
+			jsonFilePath
+		);
+	} else {
+		try {
+			const rl = readline.createInterface({ input: process.stdin });
+			let pipedInput = "";
+			for await (const line of rl) {
+				pipedInput += line;
+			}
+			content = parseJSON<Record<string, string>>(pipedInput);
+		} catch {
+			return logger.error(`🚨 Please provide a JSON file or valid JSON pipe`);
 		}
 	}
 
-	const url =
-		!secretBulkArgs.env || isLegacyEnv(config)
-			? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
-			: `/accounts/${accountId}/workers/services/${scriptName}/environments/${secretBulkArgs.env}/secrets`;
+	if (!content) {
+		return logger.error(`🚨 No content found in JSON file or piped input.`);
+	}
+
+	function submitSecrets(key: string, value: string) {
+		const url =
+			!secretBulkArgs.env || isLegacyEnv(config)
+				? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
+				: `/accounts/${accountId}/workers/services/${scriptName}/environments/${secretBulkArgs.env}/secrets`;
+
+		return fetchResult(url, {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				name: key,
+				text: value,
+				type: "secret_text",
+			}),
+		});
+	}
 	// Until we have a bulk route for secrets, we need to make a request for each key/value pair
 	const bulkOutcomes = await Promise.all(
 		Object.entries(content).map(async ([key, value]) => {
-			return fetchResult(url, {
-				method: "PUT",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					name: key,
-					text: value,
-					type: "secret_text",
-				}),
-			})
-				.then(() => {
-					logger.log(`✨ Successfully created secret for key: ${key}`);
-					return true;
-				})
-				.catch((e) => {
+			try {
+				await submitSecrets(key, value);
+				logger.log(`✨ Successfully created secret for key: ${key}`);
+				return true;
+			} catch (e) {
+				if (e instanceof Error) {
 					logger.error(
-						`🚨 Error uploading secret for key: ${key}:
-                ${e.message}`
+						`uploading secret for key: ${key}:
+    ${e.message}`
 					);
+					if (isMissingWorkerError(e)) {
+						// create a draft worker and try again
+						await createDraftWorker({
+							config,
+							args: secretBulkArgs,
+							accountId,
+							scriptName,
+						});
+						await submitSecrets(key, value);
+						// TODO: delete the draft worker if this failed too?
+					}
 					return false;
-				});
+				}
+			}
 		})
 	);
+
 	const successes = bulkOutcomes.filter((outcome) => outcome).length;
 	const failures = bulkOutcomes.length - successes;
 	logger.log("");
 	logger.log("Finished processing secrets JSON file:");
 	logger.log(`✨ ${successes} secrets successfully uploaded`);
 	if (failures > 0) {
-		logger.log(`🚨 ${failures} secrets failed to upload`);
+		throw new Error(`🚨 ${failures} secrets failed to upload`);
 	}
 };

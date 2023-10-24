@@ -1,16 +1,17 @@
-import { logRaw } from "helpers/cli";
-import { detectPackageManager, runFrameworkGenerator } from "helpers/command";
-import { getFrameworkVersion } from "../index";
-import type { PagesGeneratorContext, FrameworkConfig } from "types";
+import { logRaw } from "@cloudflare/cli";
+import { runFrameworkGenerator } from "helpers/command";
+import { detectPackageManager } from "helpers/packages";
+import { getFrameworkCli } from "../index";
+import type { FrameworkConfig, PagesGeneratorContext } from "types";
 
-const { npx } = detectPackageManager();
+const { dlx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
-	const version = getFrameworkVersion(ctx);
+	const cli = getFrameworkCli(ctx);
 
 	await runFrameworkGenerator(
 		ctx,
-		`${npx} create-hono@${version} ${ctx.project.name} --template cloudflare-pages`
+		`${dlx} ${cli} ${ctx.project.name} --template cloudflare-workers`
 	);
 
 	logRaw(""); // newline
@@ -19,8 +20,9 @@ const generate = async (ctx: PagesGeneratorContext) => {
 const config: FrameworkConfig = {
 	generate,
 	displayName: "Hono",
-	packageScripts: {},
+	getPackageScripts: async () => ({}),
 	deployCommand: "deploy",
 	devCommand: "dev",
+	type: "workers",
 };
 export default config;

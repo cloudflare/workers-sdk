@@ -1,0 +1,59 @@
+name: Playground Worker tests
+
+on:
+  push:
+    branches:
+      - main
+      - changeset-release/main
+  pull_request:
+    types: [synchronize, opened, reopened, labeled, unlabeled]
+  repository_dispatch:
+
+jobs:
+  e2e-test:
+    if: github.repository_owner == 'cloudflare' && (github.event_name != 'pull_request' || (github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'playground-worker' )) || (github.event_name == 'pull_request' && github.head_ref == 'changeset-release/main'))
+    name: "Playground Worker Test"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8.8.0
+      - name: Use Node.js 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: "pnpm"
+
+      - name: Install workerd Dependencies
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt-get update
+          sudo apt-get install -y libc++1
+
+      - name: Install NPM Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run builds
+        run: pnpm run build
+        env:
+          NODE_ENV: "production"
+
+      - name: Build & Publish Testing Playground Worker
+        run: pnpm run deploy:testing
+        env:
+          NODE_ENV: "production"
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        working-directory: packages/playground-preview-worker
+
+      - name: Run tests & collect coverage
+        run: pnpm run test:ci
+        env:
+          TMP_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TMP_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          NODE_OPTIONS: "--max_old_space_size=8192"
+        working-directory: packages/playground-preview-worker

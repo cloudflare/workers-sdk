@@ -1,0 +1,97 @@
+From 24644cc732ec4bf8589715e853067eadd1b52e29 Mon Sep 17 00:00:00 2001
+From: Workers DevProd <workers-devprod@cloudflare.com>
+Date: Mon, 2 Oct 2023 18:13:34 +0100
+Subject: [PATCH 01/15] Support viewing files over the network
+
+---
+ front_end/core/sdk/Target.ts             |  4 ++++
+ front_end/entrypoints/js_app/js_app.ts   |  2 +-
+ front_end/panels/sources/sources-meta.ts | 11 ++++++++---
+ tsconfig.json                            |  3 ++-
+ 4 files changed, 15 insertions(+), 5 deletions(-)
+
+diff --git a/front_end/core/sdk/Target.ts b/front_end/core/sdk/Target.ts
+index eed909ea64..5e1778885d 100644
+--- a/front_end/core/sdk/Target.ts
++++ b/front_end/core/sdk/Target.ts
+@@ -82,6 +82,9 @@ export class Target extends ProtocolClient.InspectorBackend.TargetBase {
+       case Type.Tab:
+         this.#capabilitiesMask = Capability.Target | Capability.Tracing;
+         break;
++      case Type.Cloudflare:
++        this.#capabilitiesMask = Capability.JS | Capability.Network;
++        break;
+     }
+     this.#typeInternal = type;
+     this.#parentTargetInternal = parentTarget;
+@@ -255,6 +258,7 @@ export enum Type {
+   Browser = 'browser',
+   AuctionWorklet = 'auction-worklet',
+   Tab = 'tab',
++  Cloudflare = 'cloudflare',
+ }
+ 
+ // TODO(crbug.com/1167717): Make this a const enum again
+diff --git a/front_end/entrypoints/js_app/js_app.ts b/front_end/entrypoints/js_app/js_app.ts
+index cafecfa4ba..213ca7fecd 100644
+--- a/front_end/entrypoints/js_app/js_app.ts
++++ b/front_end/entrypoints/js_app/js_app.ts
+@@ -38,7 +38,7 @@ export class JsMainImpl implements Common.Runnable.Runnable {
+     Host.userMetrics.actionTaken(Host.UserMetrics.Action.ConnectToNodeJSDirectly);
+     void SDK.Connections.initMainConnection(async () => {
+       const target = SDK.TargetManager.TargetManager.instance().createTarget(
+-          'main', i18nString(UIStrings.main), SDK.Target.Type.Node, null);
++          'main', i18nString(UIStrings.main), SDK.Target.Type.Cloudflare, null);
+       void target.runtimeAgent().invoke_runIfWaitingForDebugger();
+     }, Components.TargetDetachedDialog.TargetDetachedDialog.webSocketConnectionLost);
+   }
+diff --git a/front_end/panels/sources/sources-meta.ts b/front_end/panels/sources/sources-meta.ts
+index a0c126df12..4b8244ea69 100644
+--- a/front_end/panels/sources/sources-meta.ts
++++ b/front_end/panels/sources/sources-meta.ts
+@@ -41,6 +41,11 @@ const UIStrings = {
+    *@description Title of the 'Snippets' tool in the Snippets Navigator View, which is part of the Sources tool
+    */
+   snippets: 'Snippets',
++  /**
++  *@description Title of the 'Cloudflare' tool in the Cloudflare Navigator View, which is part of the Sources tool
++  */
++  cloudflare: 'Cloudflare',
++  /**
+   /**
+    *@description Command for showing the 'Search' tool
+    */
+@@ -454,14 +459,14 @@ UI.ViewManager.registerViewExtension({
+ 
+ UI.ViewManager.registerViewExtension({
+   location: UI.ViewManager.ViewLocationValues.NAVIGATOR_VIEW,
+-  id: 'navigator-files',
++  id: 'navigator-network',
+   commandPrompt: i18nLazyString(UIStrings.showWorkspace),
+-  title: i18nLazyString(UIStrings.workspace),
++  title: i18nLazyString(UIStrings.cloudflare),
+   order: 3,
+   persistence: UI.ViewManager.ViewPersistence.PERMANENT,
+   async loadView() {
+     const Sources = await loadSourcesModule();
+-    return Sources.SourcesNavigator.FilesNavigatorView.instance();
++    return Sources.SourcesNavigator.NetworkNavigatorView.instance();
+   },
+ });
+ 
+diff --git a/tsconfig.json b/tsconfig.json
+index ac0d4aaf68..29c726e185 100644
+--- a/tsconfig.json
++++ b/tsconfig.json
+@@ -16,6 +16,7 @@
+     "inspector_overlay"
+   ],
+   "exclude": [
+-    "front_end/**/*-legacy.ts"
++    "front_end/**/*-legacy.ts",
++    "third_party/**/*.ts"
+   ]
+ }
+-- 
+2.39.3 (Apple Git-145)
+

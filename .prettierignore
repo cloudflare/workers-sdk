@@ -1,21 +1,27 @@
-packages/pages-shared/dist/
-packages/wrangler/vendor/
+
 packages/wrangler/wrangler-dist/
 packages/wrangler/miniflare-dist/
 packages/wrangler/emitted-types/
 packages/wrangler/coverage/
 packages/wrangler/CHANGELOG.md
 packages/jest-environment-wrangler/CHANGELOG.md
-packages/prerelease-registry/dist/
-packages/jest-environment-wrangler/dist/
 packages/wranglerjs-compat-webpack-plugin/lib
 packages/wrangler-devtools/built-devtools
-fixtures/pages-plugin-example/dist/
+packages/wrangler-devtools/.cipd
+packages/wrangler-devtools/depot
+packages/wrangler-devtools/devtools-frontend
+packages/edge-preview-authenticated-proxy/package.json
+packages/format-errors/package.json
+packages/**/dist/**
+
 fixtures/remix-pages-app/build/
 fixtures/remix-pages-app/public/build/
-fixtures/worker-app/dist/
 fixtures/pages-functions-app/public/cdn-cgi/
-packages/quick-edit-extension/vscode*.d.ts
+fixtures/remix-pages-app/functions/**
+fixtures/**/dist/**
+**/vendor/**
+
+**/*.d.ts
 
 # Moved from /templates
 *-lock.*
@@ -23,3 +29,6 @@ packages/quick-edit-extension/vscode*.d.ts
 *.log
 
 /worker-rust/target/
+
+# TurboRepo CodeGen .hbs files
+**/*.hbs

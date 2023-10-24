@@ -1,23 +1,19 @@
-import { logRaw } from "helpers/cli";
-import { brandColor, dim } from "helpers/colors";
-import {
-	detectPackageManager,
-	npmInstall,
-	runCommand,
-	runFrameworkGenerator,
-} from "helpers/command";
+import { logRaw } from "@cloudflare/cli";
+import { brandColor, dim } from "@cloudflare/cli/colors";
+import { npmInstall, runCommand, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
-import { getFrameworkVersion } from "../index";
-import type { PagesGeneratorContext, FrameworkConfig } from "types";
+import { detectPackageManager } from "helpers/packages";
+import { getFrameworkCli } from "../index";
+import type { FrameworkConfig, PagesGeneratorContext } from "types";
 
-const { npx } = detectPackageManager();
+const { npx, dlx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
-	const version = getFrameworkVersion(ctx);
+	const cli = getFrameworkCli(ctx);
 
 	await runFrameworkGenerator(
 		ctx,
-		`${npx} create-astro@${version} ${ctx.project.name} --no-install`
+		`${dlx} ${cli} ${ctx.project.name} --no-install`
 	);
 
 	logRaw(""); // newline
@@ -43,13 +39,12 @@ const config: FrameworkConfig = {
 	generate,
 	configure,
 	displayName: "Astro",
-	packageScripts: {
-		"pages:dev": `wrangler pages dev ${compatDateFlag()} --proxy 3000 -- astro dev`,
-		"pages:deploy": `astro build && wrangler pages publish ./dist`,
-	},
+	getPackageScripts: async () => ({
+		"pages:dev": `wrangler pages dev ${await compatDateFlag()} -- astro dev`,
+		"pages:deploy": `astro build && wrangler pages deploy ./dist`,
+	}),
 	testFlags: [
 		"--skip-houston",
-		"--yes",
 		"--no-install",
 		"--no-git",
 		"--template",

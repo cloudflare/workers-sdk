@@ -1,3 +1,5 @@
+import { Blob } from "node:buffer";
+import { arrayBuffer } from "node:stream/consumers";
 import { StringDecoder } from "node:string_decoder";
 import { readConfig } from "../config";
 import { confirm } from "../dialogs";
@@ -24,9 +26,11 @@ import {
 	putKVBulkKeyValue,
 	putKVKeyValue,
 	unexpectedKVKeyValueProps,
+	usingLocalNamespace,
 } from "./helpers";
+import type { EventNames } from "../metrics";
 import type { CommonYargsArgv } from "../yargs-types";
-import type { KeyValue } from "./helpers";
+import type { KeyValue, NamespaceKeyInfo } from "./helpers";
 
 export function kvNamespace(kvYargs: CommonYargsArgv) {
 	return kvYargs
@@ -225,6 +229,14 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 						requiresArg: true,
 						describe: "Read value from the file at a given path",
 					})
+					.option("local", {
+						type: "boolean",
+						describe: "Interact with local storage",
+					})
+					.option("persist-to", {
+						type: "string",
+						describe: "Directory for local persistence",
+					})
 					.check(demandOneOfOption("value", "path"));
 			},
 			async ({ key, ttl, expiration, metadata, ...args }) => {
@@ -251,16 +263,36 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 					);
 				}
 
-				const accountId = await requireAuth(config);
+				let metricEvent: EventNames;
+				if (args.local) {
+					await usingLocalNamespace(
+						args.persistTo,
+						config.configPath,
+						namespaceId,
+						(namespace) =>
+							namespace.put(key, new Blob([value]).stream(), {
+								expiration,
+								expirationTtl: ttl,
+								metadata,
+							})
+					);
 
-				await putKVKeyValue(accountId, namespaceId, {
-					key,
-					value,
-					expiration,
-					expiration_ttl: ttl,
-					metadata: metadata as KeyValue["metadata"],
-				});
-				await metrics.sendMetricsEvent("write kv key-value", {
+					metricEvent = "write kv key-value (local)";
+				} else {
+					const accountId = await requireAuth(config);
+
+					await putKVKeyValue(accountId, namespaceId, {
+						key,
+						value,
+						expiration,
+						expiration_ttl: ttl,
+						metadata: metadata as KeyValue["metadata"],
+					});
+
+					metricEvent = "write kv key-value";
+				}
+
+				await metrics.sendMetricsEvent(metricEvent, {
 					sendMetrics: config.send_metrics,
 				});
 			}
@@ -291,6 +323,14 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 						type: "string",
 						requiresArg: true,
 						describe: "A prefix to filter listed keys",
+					})
+					.option("local", {
+						type: "boolean",
+						describe: "Interact with local storage",
+					})
+					.option("persist-to", {
+						type: "string",
+						describe: "Directory for local persistence",
 					});
 			},
 			async ({ prefix, ...args }) => {
@@ -298,15 +338,27 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 				const config = readConfig(args.config, args);
 				const namespaceId = getKVNamespaceId(args, config);
 
-				const accountId = await requireAuth(config);
+				let result: NamespaceKeyInfo[];
+				let metricEvent: EventNames;
+				if (args.local) {
+					const listResult = await usingLocalNamespace(
+						args.persistTo,
+						config.configPath,
+						namespaceId,
+						(namespace) => namespace.list({ prefix })
+					);
+					result = listResult.keys as NamespaceKeyInfo[];
 
-				const results = await listKVNamespaceKeys(
-					accountId,
-					namespaceId,
-					prefix
-				);
-				logger.log(JSON.stringify(results, undefined, 2));
-				await metrics.sendMetricsEvent("list kv keys", {
+					metricEvent = "list kv keys (local)";
+				} else {
+					const accountId = await requireAuth(config);
+
+					result = await listKVNamespaceKeys(accountId, namespaceId, prefix);
+					metricEvent = "list kv keys";
+				}
+
+				logger.log(JSON.stringify(result, undefined, 2));
+				await metrics.sendMetricsEvent(metricEvent, {
 					sendMetrics: config.send_metrics,
 				});
 			}
@@ -346,16 +398,49 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 						type: "boolean",
 						default: false,
 						describe: "Decode the returned value as a utf8 string",
+					})
+					.option("local", {
+						type: "boolean",
+						describe: "Interact with local storage",
+					})
+					.option("persist-to", {
+						type: "string",
+						describe: "Directory for local persistence",
 					});
 			},
 			async ({ key, ...args }) => {
 				const config = readConfig(args.config, args);
 				const namespaceId = getKVNamespaceId(args, config);
 
-				const accountId = await requireAuth(config);
-				const bufferKVValue = Buffer.from(
-					await getKVKeyValue(accountId, namespaceId, key)
-				);
+				let bufferKVValue;
+				let metricEvent: EventNames;
+				if (args.local) {
+					const val = await usingLocalNamespace(
+						args.persistTo,
+						config.configPath,
+						namespaceId,
+						async (namespace) => {
+							const stream = await namespace.get(key, "stream");
+							// Note `stream` is only valid inside this closure
+							return stream === null ? null : await arrayBuffer(stream);
+						}
+					);
+
+					if (val === null) {
+						logger.log("Value not found");
+						return;
+					}
+
+					bufferKVValue = Buffer.from(val);
+					metricEvent = "read kv value (local)";
+				} else {
+					const accountId = await requireAuth(config);
+					bufferKVValue = Buffer.from(
+						await getKVKeyValue(accountId, namespaceId, key)
+					);
+
+					metricEvent = "read kv value";
+				}
 
 				if (args.text) {
 					const decoder = new StringDecoder("utf8");
@@ -363,7 +448,7 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 				} else {
 					process.stdout.write(bufferKVValue);
 				}
-				await metrics.sendMetricsEvent("read kv value", {
+				await metrics.sendMetricsEvent(metricEvent, {
 					sendMetrics: config.send_metrics,
 				});
 			}
@@ -392,6 +477,14 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 					.option("preview", {
 						type: "boolean",
 						describe: "Interact with a preview namespace",
+					})
+					.option("local", {
+						type: "boolean",
+						describe: "Interact with local storage",
+					})
+					.option("persist-to", {
+						type: "string",
+						describe: "Directory for local persistence",
 					});
 			},
 			async ({ key, ...args }) => {
@@ -401,10 +494,23 @@ export const kvKey = (kvYargs: CommonYargsArgv) => {
 
 				logger.log(`Deleting the key "${key}" on namespace ${namespaceId}.`);
 
-				const accountId = await requireAuth(config);
+				let metricEvent: EventNames;
+				if (args.local) {
+					await usingLocalNamespace(
+						args.persistTo,
+						config.configPath,
+						namespaceId,
+						(namespace) => namespace.delete(key)
+					);
 
-				await deleteKVKeyValue(accountId, namespaceId, key);
-				await metrics.sendMetricsEvent("delete kv key-value", {
+					metricEvent = "delete kv key-value (local)";
+				} else {
+					const accountId = await requireAuth(config);
+
+					await deleteKVKeyValue(accountId, namespaceId, key);
+					metricEvent = "delete kv key-value";
+				}
+				await metrics.sendMetricsEvent(metricEvent, {
 					sendMetrics: config.send_metrics,
 				});
 			}
@@ -437,6 +543,14 @@ export const kvBulk = (kvYargs: CommonYargsArgv) => {
 					.option("preview", {
 						type: "boolean",
 						describe: "Interact with a preview namespace",
+					})
+					.option("local", {
+						type: "boolean",
+						describe: "Interact with local storage",
+					})
+					.option("persist-to", {
+						type: "string",
+						describe: "Directory for local persistence",
 					});
 			},
 			async ({ filename, ...args }) => {
@@ -497,12 +611,34 @@ export const kvBulk = (kvYargs: CommonYargsArgv) => {
 					);
 				}
 
-				const accountId = await requireAuth(config);
-				await putKVBulkKeyValue(accountId, namespaceId, content);
-				await metrics.sendMetricsEvent("write kv key-values (bulk)", {
+				let metricEvent: EventNames;
+				if (args.local) {
+					await usingLocalNamespace(
+						args.persistTo,
+						config.configPath,
+						namespaceId,
+						async (namespace) => {
+							for (const value of content) {
+								await namespace.put(value.key, value.value, {
+									expiration: value.expiration,
+									expirationTtl: value.expiration_ttl,
+									metadata: value.metadata,
+								});
+							}
+						}
+					);
+
+					metricEvent = "write kv key-values (bulk) (local)";
+				} else {
+					const accountId = await requireAuth(config);
+
+					await putKVBulkKeyValue(accountId, namespaceId, content);
+					metricEvent = "write kv key-values (bulk)";
+				}
+
+				await metrics.sendMetricsEvent(metricEvent, {
 					sendMetrics: config.send_metrics,
 				});
-
 				logger.log("Success!");
 			}
 		)
@@ -535,6 +671,14 @@ export const kvBulk = (kvYargs: CommonYargsArgv) => {
 						type: "boolean",
 						alias: "f",
 						describe: "Do not ask for confirmation before deleting",
+					})
+					.option("local", {
+						type: "boolean",
+						describe: "Interact with local storage",
+					})
+					.option("persist-to", {
+						type: "string",
+						describe: "Directory for local persistence",
 					});
 			},
 			async ({ filename, ...args }) => {
@@ -581,10 +725,26 @@ export const kvBulk = (kvYargs: CommonYargsArgv) => {
 					);
 				}
 
-				const accountId = await requireAuth(config);
+				let metricEvent: EventNames;
+				if (args.local) {
+					await usingLocalNamespace(
+						args.persistTo,
+						config.configPath,
+						namespaceId,
+						async (namespace) => {
+							for (const key of content) await namespace.delete(key);
+						}
+					);
 
-				await deleteKVBulkKeyValue(accountId, namespaceId, content);
-				await metrics.sendMetricsEvent("delete kv key-values (bulk)", {
+					metricEvent = "delete kv key-values (bulk) (local)";
+				} else {
+					const accountId = await requireAuth(config);
+
+					await deleteKVBulkKeyValue(accountId, namespaceId, content);
+					metricEvent = "delete kv key-values (bulk)";
+				}
+
+				await metrics.sendMetricsEvent(metricEvent, {
 					sendMetrics: config.send_metrics,
 				});
 

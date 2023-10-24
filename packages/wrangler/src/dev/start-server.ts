@@ -1,26 +1,34 @@
+import fs from "node:fs";
 import * as path from "node:path";
 import * as util from "node:util";
 import chalk from "chalk";
 import onExit from "signal-exit";
 import tmp from "tmp-promise";
-import { bundleWorker, dedupeModulesByName } from "../bundle";
+import { bundleWorker } from "../deployment-bundle/bundle";
+import { getBundleType } from "../deployment-bundle/bundle-type";
+import { dedupeModulesByName } from "../deployment-bundle/dedupe-modules";
+import { findAdditionalModules as doFindAdditionalModules } from "../deployment-bundle/find-additional-modules";
+import {
+	createModuleCollector,
+	getWrangler1xLegacyModuleReferences,
+	noopModuleCollector,
+} from "../deployment-bundle/module-collection";
+import { runCustomBuild } from "../deployment-bundle/run-custom-build";
 import {
 	getBoundRegisteredWorkers,
 	startWorkerRegistry,
 	stopWorkerRegistry,
 } from "../dev-registry";
-import { runCustomBuild } from "../entry";
 import { logger } from "../logger";
-import traverseModuleGraph from "../traverse-module-graph";
 import { localPropsToConfigBundle, maybeRegisterLocalWorker } from "./local";
 import { MiniflareServer } from "./miniflare";
 import { startRemoteServer } from "./remote";
 import { validateDevProps } from "./validate-dev-props";
 import type { Config } from "../config";
 import type { DurableObjectBindings } from "../config/environment";
+import type { Entry } from "../deployment-bundle/entry";
+import type { CfModule } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
-import type { Entry } from "../entry";
-import type { CfModule } from "../worker";
 import type { DevProps, DirectorySyncResult } from "./dev";
 import type { LocalProps } from "./local";
 import type { EsbuildBundle } from "./use-esbuild";
@@ -72,12 +80,10 @@ export async function startDevServer(
 		}
 	}
 
-	const betaD1Shims = props.bindings.d1_databases?.map((db) => db.binding);
-
 	//implement a react-free version of useEsbuild
 	const bundle = await runEsbuild({
 		entry: props.entry,
-		destination: directory.name,
+		destination: directory,
 		jsxFactory: props.jsxFactory,
 		processEntrypoint: props.processEntrypoint,
 		additionalModules: props.additionalModules,
@@ -92,11 +98,10 @@ export async function startDevServer(
 		nodejsCompat: props.nodejsCompat,
 		define: props.define,
 		noBundle: props.noBundle,
+		findAdditionalModules: props.findAdditionalModules,
 		assets: props.assetsConfig,
-		betaD1Shims,
 		workerDefinitions,
 		services: props.bindings.services,
-		firstPartyWorkerDevFacade: props.firstPartyWorker,
 		testScheduled: props.testScheduled,
 		local: props.local,
 		doBindings: props.bindings.durable_objects?.bindings ?? [],
@@ -173,12 +178,13 @@ export async function startDevServer(
 	}
 }
 
-function setupTempDir(): DirectorySyncResult | undefined {
-	let dir: DirectorySyncResult | undefined;
+function setupTempDir(): string | undefined {
 	try {
-		dir = tmp.dirSync({ unsafeCleanup: true });
-
-		return dir;
+		const dir: DirectorySyncResult = tmp.dirSync({ unsafeCleanup: true });
+		// Make sure we resolve all files relative to the actual temporary
+		// directory, without symlinks, otherwise `esbuild` will generate invalid
+		// source maps.
+		return fs.realpathSync(dir.name);
 	} catch (err) {
 		logger.error("Failed to create temporary directory to store built files.");
 	}
@@ -193,7 +199,6 @@ async function runEsbuild({
 	additionalModules,
 	rules,
 	assets,
-	betaD1Shims,
 	serveAssetsFromWorker,
 	tsconfig,
 	minify,
@@ -201,9 +206,9 @@ async function runEsbuild({
 	nodejsCompat,
 	define,
 	noBundle,
+	findAdditionalModules,
 	workerDefinitions,
 	services,
-	firstPartyWorkerDevFacade,
 	testScheduled,
 	local,
 	doBindings,
@@ -216,7 +221,6 @@ async function runEsbuild({
 	additionalModules: CfModule[];
 	rules: Config["rules"];
 	assets: Config["assets"];
-	betaD1Shims?: string[];
 	define: Config["define"];
 	services: Config["services"];
 	serveAssetsFromWorker: boolean;
@@ -225,69 +229,67 @@ async function runEsbuild({
 	legacyNodeCompat: boolean | undefined;
 	nodejsCompat: boolean | undefined;
 	noBundle: boolean;
+	findAdditionalModules: boolean | undefined;
 	workerDefinitions: WorkerRegistry;
-	firstPartyWorkerDevFacade: boolean | undefined;
 	testScheduled?: boolean;
 	local: boolean;
 	doBindings: DurableObjectBindings;
 }): Promise<EsbuildBundle | undefined> {
 	if (!destination) return;
 
-	let traverseModuleGraphResult:
-		| Awaited<ReturnType<typeof bundleWorker>>
-		| undefined;
-	let bundleResult: Awaited<ReturnType<typeof bundleWorker>> | undefined;
 	if (noBundle) {
-		traverseModuleGraphResult = await traverseModuleGraph(entry, rules);
+		additionalModules = dedupeModulesByName([
+			...((await doFindAdditionalModules(entry, rules)) ?? []),
+			...additionalModules,
+		]);
 	}
 
-	if (processEntrypoint || !noBundle) {
-		bundleResult = await bundleWorker(entry, destination, {
-			bundle: !noBundle,
-			disableModuleCollection: noBundle,
-			serveAssetsFromWorker,
-			jsxFactory,
-			jsxFragment,
-			rules,
-			tsconfig,
-			minify,
-			legacyNodeCompat,
-			nodejsCompat,
-			define,
-			checkFetch: true,
-			assets: assets && {
-				...assets,
-				// disable the cache in dev
-				bypassCache: true,
-			},
-			betaD1Shims,
-			workerDefinitions,
-			services,
-			firstPartyWorkerDevFacade,
-			targetConsumer: "dev", // We are starting a dev server
-			testScheduled,
-			local,
-			doBindings,
-			additionalModules: dedupeModulesByName([
-				...(traverseModuleGraphResult?.modules ?? []),
-				...additionalModules,
-			]),
-		});
-	}
+	const entryDirectory = path.dirname(entry.file);
+	const moduleCollector = noBundle
+		? noopModuleCollector
+		: createModuleCollector({
+				wrangler1xLegacyModuleReferences: getWrangler1xLegacyModuleReferences(
+					entryDirectory,
+					entry.file
+				),
+				entry,
+				findAdditionalModules: findAdditionalModules ?? false,
+				rules,
+		  });
+
+	const bundleResult =
+		processEntrypoint || !noBundle
+			? await bundleWorker(entry, destination, {
+					bundle: !noBundle,
+					additionalModules,
+					moduleCollector,
+					serveAssetsFromWorker,
+					jsxFactory,
+					jsxFragment,
+					tsconfig,
+					minify,
+					legacyNodeCompat,
+					nodejsCompat,
+					define,
+					checkFetch: true,
+					assets,
+					// disable the cache in dev
+					bypassAssetCache: true,
+					workerDefinitions,
+					services,
+					targetConsumer: "dev", // We are starting a dev server
+					local,
+					testScheduled,
+					doBindings,
+			  })
+			: undefined;
 
 	return {
 		id: 0,
 		entry,
 		path: bundleResult?.resolvedEntryPointPath ?? entry.file,
-		type:
-			bundleResult?.bundleType ??
-			(entry.format === "modules" ? "esm" : "commonjs"),
-		modules: bundleResult
-			? bundleResult.modules
-			: dedupeModulesByName([
-					...(traverseModuleGraphResult?.modules ?? []),
-					...additionalModules,
-			  ]),
+		type: bundleResult?.bundleType ?? getBundleType(entry.format),
+		modules: bundleResult ? bundleResult.modules : additionalModules,
 		dependencies: bundleResult?.dependencies ?? {},
 		sourceMapPath: bundleResult?.sourceMapPath,
 		sourceMapMetadata: bundleResult?.sourceMapMetadata,
@@ -325,7 +327,7 @@ export async function startLocalServer(props: LocalProps) {
 				stop: () => {
 					abortController.abort();
 					logger.log("⎔ Shutting down local server...");
-					// Initialisation errors are also thrown asynchronously by dispose().
+					// Initialization errors are also thrown asynchronously by dispose().
 					// The `addEventListener("error")` above should've caught them though.
 					server.onDispose().catch(() => {});
 					removeMiniflareServerExitListener();

@@ -3,9 +3,16 @@
 	"private": true,
 	"description": "A test for service bindings",
 	"scripts": {
-		"check:type": "tsc && tsc -p tests/tsconfig.json",
+		"check:type": "tsc",
 		"dev": "npx concurrently -s first -k \"wrangler dev a/index.ts --local --port 8300\" \"wrangler dev b/index.ts --local --port 8301\"",
-		"test": "npx vitest",
-		"test:ci": "npx vitest"
+		"test": "npx vitest run",
+		"test:ci": "npx vitest run",
+		"test:watch": "npx vitest",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"wrangler": "workspace:*",
+		"undici": "^5.23.0"
 	}
 }

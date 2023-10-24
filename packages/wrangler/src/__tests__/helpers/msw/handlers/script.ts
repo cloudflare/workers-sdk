@@ -1,6 +1,6 @@
 import { rest } from "msw";
 import { createFetchResult } from "../index";
-import type { WorkerMetadata } from "../../../../create-worker-upload-form";
+import type { WorkerMetadata } from "../../../../deployment-bundle/create-worker-upload-form";
 
 const bindings: Record<string, WorkerMetadata["bindings"]> = {
 	"durable-object": [

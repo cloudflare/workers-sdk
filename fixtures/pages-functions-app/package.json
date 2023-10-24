@@ -5,14 +5,19 @@
 	"sideEffects": false,
 	"main": "dist/worker.js",
 	"scripts": {
-		"check:type": "tsc && tsc -p tests/tsconfig.json",
+		"check:type": "tsc",
 		"dev": "npx wrangler pages dev public --binding=NAME=VALUE --binding=OTHER_NAME=THING=WITH=EQUALS --r2=BUCKET --port 8789",
-		"test": "npx vitest",
-		"test:ci": "npx vitest"
+		"test": "npx vitest run",
+		"test:ci": "npx vitest run",
+		"test:watch": "npx vitest",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20221111.1",
-		"undici": "^5.9.1"
+		"pages-plugin-example": "workspace:*",
+		"undici": "^5.9.1",
+		"wrangler": "workspace:*"
 	},
 	"engines": {
 		"node": ">=16.13"

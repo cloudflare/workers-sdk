@@ -4,14 +4,23 @@ import path from "node:path";
 import { URLSearchParams } from "node:url";
 import chalk from "chalk";
 import tmp from "tmp-promise";
-import { bundleWorker } from "../bundle";
+import { fetchListResult, fetchResult } from "../cfetch";
+import { printBindings } from "../config";
+import { bundleWorker } from "../deployment-bundle/bundle";
 import {
 	printBundleSize,
 	printOffendingDependencies,
-} from "../bundle-reporter";
-import { fetchListResult, fetchResult } from "../cfetch";
-import { printBindings } from "../config";
-import { createWorkerUploadForm } from "../create-worker-upload-form";
+} from "../deployment-bundle/bundle-reporter";
+import { getBundleType } from "../deployment-bundle/bundle-type";
+import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
+import {
+	findAdditionalModules,
+	writeAdditionalModules,
+} from "../deployment-bundle/find-additional-modules";
+import {
+	createModuleCollector,
+	getWrangler1xLegacyModuleReferences,
+} from "../deployment-bundle/module-collection";
 import { addHyphens } from "../deployments";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
@@ -21,8 +30,6 @@ import { ParseError } from "../parse";
 import { getQueue, putConsumer } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
 import { syncAssets } from "../sites";
-import traverseModuleGraph from "../traverse-module-graph";
-import { identifyD1BindingsAsBeta } from "../worker";
 import { getZoneForRoute } from "../zones";
 import type { FetchError } from "../cfetch";
 import type { Config } from "../config";
@@ -31,11 +38,12 @@ import type {
 	ZoneIdRoute,
 	ZoneNameRoute,
 	CustomDomainRoute,
+	Rule,
 } from "../config/environment";
-import type { Entry } from "../entry";
+import type { Entry } from "../deployment-bundle/entry";
+import type { CfWorkerInit, CfPlacement } from "../deployment-bundle/worker";
 import type { PutConsumerBody } from "../queues/client";
 import type { AssetPaths } from "../sites";
-import type { CfWorkerInit, CfPlacement } from "../worker";
 
 type Props = {
 	config: Config;
@@ -63,6 +71,7 @@ type Props = {
 	noBundle: boolean | undefined;
 	keepVars: boolean | undefined;
 	logpush: boolean | undefined;
+	oldAssetTtl: number | undefined;
 };
 
 type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
@@ -283,12 +292,19 @@ export default async function deploy(props: Props): Promise<void> {
 				if (!(await confirm("Would you like to continue?"))) {
 					return;
 				}
+			} else if (default_environment.script.last_deployed_from === "api") {
+				logger.warn(
+					`You are about to publish a Workers Service that was last updated via the script API.\nEdits that have been made via the script API will be overridden by your local code and config.`
+				);
+				if (!(await confirm("Would you like to continue?"))) {
+					return;
+				}
 			}
 		} catch (e) {
 			// code: 10090, message: workers.api.error.service_not_found
 			// is thrown from the above fetchResult on the first deploy of a Worker
 			if ((e as { code?: number }).code !== 10090) {
-				logger.error(e);
+				throw e;
 			}
 		}
 	}
@@ -445,62 +461,54 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			);
 		}
 
-		// If we are using d1 bindings, and are not bundling the worker
-		// we should error here as the d1 shim won't be added
-		const betaD1Shims = identifyD1BindingsAsBeta(config.d1_databases);
-		if (
-			Array.isArray(betaD1Shims) &&
-			betaD1Shims.length > 0 &&
-			props.noBundle
-		) {
-			throw new Error(
-				"While in beta, you cannot use D1 bindings without bundling your worker. Please remove `no_bundle` from your wrangler.toml file or remove the `--no-bundle` flag to access D1 bindings."
-			);
-		}
+		const entryDirectory = path.dirname(props.entry.file);
+		const moduleCollector = createModuleCollector({
+			wrangler1xLegacyModuleReferences: getWrangler1xLegacyModuleReferences(
+				entryDirectory,
+				props.entry.file
+			),
+			entry: props.entry,
+			// `moduleCollector` doesn't get used when `props.noBundle` is set, so
+			// `findAdditionalModules` always defaults to `false`
+			findAdditionalModules: config.find_additional_modules ?? false,
+			rules: props.rules,
+		});
 
-		const {
-			modules,
-			dependencies,
-			resolvedEntryPointPath,
-			bundleType,
-		}: Awaited<ReturnType<typeof bundleWorker>> = props.noBundle
-			? await traverseModuleGraph(props.entry, props.rules)
-			: await bundleWorker(
-					props.entry,
-					typeof destination === "string" ? destination : destination.path,
-					{
-						serveAssetsFromWorker:
-							!props.isWorkersSite && Boolean(props.assetPaths),
-						betaD1Shims: identifyD1BindingsAsBeta(config.d1_databases)?.map(
-							(db) => db.binding
-						),
-						doBindings: config.durable_objects.bindings,
-						jsxFactory,
-						jsxFragment,
-						rules: props.rules,
-						tsconfig: props.tsconfig ?? config.tsconfig,
-						minify,
-						legacyNodeCompat,
-						nodejsCompat,
-						define: { ...config.define, ...props.defines },
-						checkFetch: false,
-						assets: config.assets && {
-							...config.assets,
+		const { modules, dependencies, resolvedEntryPointPath, bundleType } =
+			props.noBundle
+				? await noBundleWorker(props.entry, props.rules, props.outDir)
+				: await bundleWorker(
+						props.entry,
+						typeof destination === "string" ? destination : destination.path,
+						{
+							bundle: true,
+							additionalModules: [],
+							moduleCollector,
+							serveAssetsFromWorker:
+								!props.isWorkersSite && Boolean(props.assetPaths),
+							doBindings: config.durable_objects.bindings,
+							jsxFactory,
+							jsxFragment,
+							tsconfig: props.tsconfig ?? config.tsconfig,
+							minify,
+							legacyNodeCompat,
+							nodejsCompat,
+							define: { ...config.define, ...props.defines },
+							checkFetch: false,
+							assets: config.assets,
 							// enable the cache when publishing
-							bypassCache: false,
-						},
-						services: config.services,
-						// We don't set workerDefinitions here,
-						// because we don't want to apply the dev-time
-						// facades on top of it
-						workerDefinitions: undefined,
-						firstPartyWorkerDevFacade: false,
-						// We want to know if the build is for development or publishing
-						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
-						targetConsumer: "deploy",
-						local: false,
-					}
-			  );
+							bypassAssetCache: false,
+							services: config.services,
+							// We don't set workerDefinitions here,
+							// because we don't want to apply the dev-time
+							// facades on top of it
+							workerDefinitions: undefined,
+							// We want to know if the build is for development or publishing
+							// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
+							targetConsumer: "deploy",
+							local: false,
+						}
+				  );
 
 		const content = readFileSync(resolvedEntryPointPath, {
 			encoding: "utf-8",
@@ -525,7 +533,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			scriptName + (!props.legacyEnv && props.env ? `-${props.env}` : ""),
 			props.assetPaths,
 			false,
-			props.dryRun
+			props.dryRun,
+			props.oldAssetTtl
 		);
 
 		const bindings: CfWorkerInit["bindings"] = {
@@ -538,6 +547,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			vars: { ...config.vars, ...props.vars },
 			wasm_modules: config.wasm_modules,
 			browser: config.browser,
+			ai: config.ai,
 			text_blobs: {
 				...config.text_blobs,
 				...(assets.manifest &&
@@ -551,8 +561,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				return { binding: producer.binding, queue_name: producer.queue };
 			}),
 			r2_buckets: config.r2_buckets,
-			d1_databases: identifyD1BindingsAsBeta(config.d1_databases),
+			d1_databases: config.d1_databases,
+			vectorize: config.vectorize,
 			constellation: config.constellation,
+			hyperdrive: config.hyperdrive,
 			services: config.services,
 			analytics_engine_datasets: config.analytics_engine_datasets,
 			dispatch_namespaces: config.dispatch_namespaces,
@@ -561,12 +573,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			unsafe: {
 				bindings: config.unsafe.bindings,
 				metadata: config.unsafe.metadata,
+				capnp: config.unsafe.capnp,
 			},
 		};
 
 		if (assets.manifest) {
 			modules.push({
 				name: "__STATIC_CONTENT_MANIFEST",
+				filePath: undefined,
 				content: JSON.stringify(assets.manifest),
 				type: "text",
 			});
@@ -580,6 +594,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			name: scriptName,
 			main: {
 				name: path.basename(resolvedEntryPointPath),
+				filePath: resolvedEntryPointPath,
 				content: content,
 				type: bundleType,
 			},
@@ -593,6 +608,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			logpush: props.logpush !== undefined ? props.logpush : config.logpush,
 			placement,
 			tail_consumers: config.tail_consumers,
+			limits: config.limits,
 		};
 
 		// As this is not deterministic for testing, we detect if in a jest environment and run asynchronously
@@ -634,6 +650,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					id: string | null;
 					etag: string | null;
 					pipeline_hash: string | null;
+					mutable_pipeline_id: string | null;
 					deployment_id: string | null;
 				}>(
 					workerUrl,
@@ -661,6 +678,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					if (result.etag) logger.log("Worker ETag: ", result.etag);
 					if (result.pipeline_hash)
 						logger.log("Worker PipelineHash: ", result.pipeline_hash);
+					if (result.mutable_pipeline_id)
+						logger.log(
+							"Worker Mutable PipelineID (Development ONLY!):",
+							result.mutable_pipeline_id
+						);
 				}
 			} catch (err) {
 				helpIfErrorIsSizeOrScriptStartup(err, dependencies);
@@ -1010,7 +1032,7 @@ async function publishRoutesFallback(
 	return deployedRoutes;
 }
 
-function isAuthenticationError(e: unknown): e is ParseError {
+export function isAuthenticationError(e: unknown): e is ParseError {
 	return e instanceof ParseError && (e as { code?: number }).code === 10000;
 }
 
@@ -1064,4 +1086,22 @@ function updateQueueConsumers(config: Config): Promise<string[]>[] {
 			() => [`Consumer for ${consumer.queue}`]
 		);
 	});
+}
+
+async function noBundleWorker(
+	entry: Entry,
+	rules: Rule[],
+	outDir: string | undefined
+) {
+	const modules = await findAdditionalModules(entry, rules);
+	if (outDir) {
+		await writeAdditionalModules(modules, outDir);
+	}
+
+	return {
+		modules,
+		dependencies: {},
+		resolvedEntryPointPath: entry.file,
+		bundleType: getBundleType(entry.format),
+	};
 }

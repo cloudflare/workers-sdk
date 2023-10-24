@@ -1,36 +1,37 @@
 import { spawn } from "node:child_process";
+import fs from "node:fs";
 import * as path from "node:path";
 import * as util from "node:util";
 import { watch } from "chokidar";
 import clipboardy from "clipboardy";
 import commandExists from "command-exists";
 import { Box, Text, useApp, useInput, useStdin } from "ink";
-import React, { useState, useEffect, useRef, useMemo } from "react";
-import { withErrorBoundary, useErrorHandler } from "react-error-boundary";
+import React, { useEffect, useRef, useState } from "react";
+import { useErrorHandler, withErrorBoundary } from "react-error-boundary";
 import onExit from "signal-exit";
 import tmp from "tmp-promise";
 import { fetch } from "undici";
+import { runCustomBuild } from "../deployment-bundle/run-custom-build";
 import {
 	getBoundRegisteredWorkers,
 	startWorkerRegistry,
 	stopWorkerRegistry,
 	unregisterWorker,
 } from "../dev-registry";
-import { runCustomBuild } from "../entry";
-import { openInspector } from "../inspect";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
+import { openInspector } from "./inspect";
 import { Local } from "./local";
 import { Remote } from "./remote";
 import { useEsbuild } from "./use-esbuild";
 import { validateDevProps } from "./validate-dev-props";
 import type { Config } from "../config";
 import type { Route } from "../config/environment";
+import type { Entry } from "../deployment-bundle/entry";
+import type { CfModule, CfWorkerInit } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
-import type { Entry } from "../entry";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { AssetPaths } from "../sites";
-import type { CfModule, CfWorkerInit } from "../worker";
 
 /**
  * This hooks establishes a connection with the dev registry,
@@ -44,6 +45,8 @@ function useDevRegistry(
 	mode: "local" | "remote"
 ): WorkerRegistry {
 	const [workers, setWorkers] = useState<WorkerRegistry>({});
+
+	const hasFailedToFetch = useRef(false);
 
 	useEffect(() => {
 		// Let's try to start registry
@@ -73,7 +76,10 @@ function useDevRegistry(
 								});
 							},
 							(err) => {
-								logger.warn("Failed to get worker definitions", err);
+								if (!hasFailedToFetch.current) {
+									hasFailedToFetch.current = true;
+									logger.warn("Failed to get worker definitions", err);
+								}
 							}
 						);
 				  }, 300)
@@ -112,6 +118,7 @@ function useDevRegistry(
 export type DevProps = {
 	name: string | undefined;
 	noBundle: boolean;
+	findAdditionalModules: boolean | undefined;
 	entry: Entry;
 	initialPort: number;
 	initialIp: string;
@@ -242,25 +249,6 @@ function DevSession(props: DevSessionProps) {
 	useCustomBuild(props.entry, props.build);
 
 	const directory = useTmpDir();
-	const handleError = useErrorHandler();
-
-	// Note: when D1 is out of beta, this (and all instances of `betaD1Shims`) can be removed.
-	// Additionally, useMemo is used so that new arrays aren't created on every render
-	// cause re-rendering further down.
-	const betaD1Shims = useMemo(
-		() => props.bindings.d1_databases?.map((db) => db.binding),
-		[props.bindings.d1_databases]
-	);
-
-	// If we are using d1 bindings, and are not bundling the worker
-	// we should error here as the d1 shim won't be added
-	if (Array.isArray(betaD1Shims) && betaD1Shims.length > 0 && props.noBundle) {
-		handleError(
-			new Error(
-				"While in beta, you cannot use D1 bindings without bundling your worker. Please remove `no_bundle` from your wrangler.toml file or remove the `--no-bundle` flag to access D1 bindings."
-			)
-		);
-	}
 
 	const workerDefinitions = useDevRegistry(
 		props.name,
@@ -284,14 +272,13 @@ function DevSession(props: DevSessionProps) {
 		minify: props.minify,
 		legacyNodeCompat: props.legacyNodeCompat,
 		nodejsCompat: props.nodejsCompat,
-		betaD1Shims,
 		define: props.define,
 		noBundle: props.noBundle,
+		findAdditionalModules: props.findAdditionalModules,
 		assets: props.assetsConfig,
 		workerDefinitions,
 		services: props.bindings.services,
 		durableObjects: props.bindings.durable_objects || { bindings: [] },
-		firstPartyWorkerDevFacade: props.firstPartyWorker,
 		local: props.local,
 		// Enable the bundling to know whether we are using dev or deploy
 		targetConsumer: "dev",
@@ -306,6 +293,12 @@ function DevSession(props: DevSessionProps) {
 	) {
 		logger.warn(
 			"Queues are currently in Beta and are not supported in wrangler dev remote mode."
+		);
+	}
+
+	if (props.local && props.bindings.hyperdrive?.length) {
+		logger.warn(
+			"Hyperdrive does not currently support 'wrangler dev' in local mode at this stage of the beta. Use the '--remote' flag to test a Hyperdrive configuration before deploying."
 		);
 	}
 
@@ -389,13 +382,20 @@ export interface DirectorySyncResult {
 }
 
 function useTmpDir(): string | undefined {
-	const [directory, setDirectory] = useState<DirectorySyncResult>();
+	const [directory, setDirectory] = useState<string>();
 	const handleError = useErrorHandler();
 	useEffect(() => {
 		let dir: DirectorySyncResult | undefined;
 		try {
-			dir = tmp.dirSync({ unsafeCleanup: true });
-			setDirectory(dir);
+			// const tmpdir = path.resolve(".wrangler", "tmp");
+			// fs.mkdirSync(tmpdir, { recursive: true });
+			// dir = tmp.dirSync({ unsafeCleanup: true, tmpdir });
+			dir = tmp.dirSync({ unsafeCleanup: true }) as DirectorySyncResult;
+			// Make sure we resolve all files relative to the actual temporary
+			// directory, without symlinks, otherwise `esbuild` will generate invalid
+			// source maps.
+			const realpath = fs.realpathSync(dir.name);
+			setDirectory(realpath);
 			return;
 		} catch (err) {
 			logger.error(
@@ -407,7 +407,7 @@ function useTmpDir(): string | undefined {
 			dir?.removeCallback();
 		};
 	}, [handleError]);
-	return directory?.name;
+	return directory;
 }
 
 function useCustomBuild(expectedEntry: Entry, build: Config["build"]): void {
