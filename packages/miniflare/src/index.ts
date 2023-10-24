@@ -943,6 +943,8 @@ export class Miniflare {
 			}
 
 			// Collect all services required by this worker
+			const unsafeEphemeralDurableObjects =
+				workerOpts.core.unsafeEphemeralDurableObjects ?? false;
 			const pluginServicesOptionsBase: Omit<
 				PluginServicesOptions<z.ZodTypeAny, undefined>,
 				"options" | "sharedOptions"
@@ -954,6 +956,7 @@ export class Miniflare {
 				tmpPath: this.#tmpPath,
 				workerNames,
 				durableObjectClassNames,
+				unsafeEphemeralDurableObjects,
 				queueConsumers,
 			};
 			for (const [key, plugin] of PLUGIN_ENTRIES) {
