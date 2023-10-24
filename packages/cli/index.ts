@@ -1,5 +1,16 @@
 import { exit } from "process";
-import { brandColor, dim, gray, white, red, hidden, bgRed } from "./colors";
+import {
+	brandColor,
+	dim,
+	gray,
+	white,
+	red,
+	hidden,
+	bgRed,
+	bgYellow,
+	bgBlue,
+	bgGreen,
+} from "./colors";
 
 export const shapes = {
 	diamond: "◇",
@@ -26,9 +37,9 @@ export const shapes = {
 
 export const status = {
 	error: bgRed(` ERROR `),
-	warning: bgRed(` WARNING `),
-	info: bgRed(` INFO `),
-	success: bgRed(` SUCCESS `),
+	warning: bgYellow(` WARNING `),
+	info: bgBlue(` INFO `),
+	success: bgGreen(` SUCCESS `),
 };
 
 // Returns a string containing n non-trimmable spaces
