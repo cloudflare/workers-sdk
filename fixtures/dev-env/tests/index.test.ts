@@ -18,7 +18,7 @@ const fakeBundle = {} as EsbuildBundle;
 
 let devEnv: DevEnv;
 let mf: Miniflare | undefined;
-let res: MiniflareResponse | undici.Response | undefined;
+let res: MiniflareResponse | undici.Response;
 let ws: WebSocket | undefined;
 
 type OptionalKeys<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
@@ -26,7 +26,7 @@ type OptionalKeys<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 beforeEach(() => {
 	devEnv = new DevEnv();
 	mf = undefined;
-	res = undefined;
+	res = undefined as any;
 	ws = undefined;
 });
 afterEach(async () => {
@@ -67,10 +67,11 @@ async function fakeStartUserWorker(options: {
 	fakeReloadStart(config);
 
 	const worker = devEnv.startWorker(config);
-	const { proxyWorker, inspectorProxyWorker } = await devEnv.proxy.ready
-		.promise;
+	const { proxyWorker } = await devEnv.proxy.ready.promise;
 	const proxyWorkerUrl = await proxyWorker.ready;
-	const inspectorProxyWorkerUrl = await inspectorProxyWorker.ready;
+	const inspectorProxyWorkerUrl = await proxyWorker.unsafeGetDirectURL(
+		"InspectorProxyWorker"
+	);
 
 	mf = new Miniflare(mfOpts);
 

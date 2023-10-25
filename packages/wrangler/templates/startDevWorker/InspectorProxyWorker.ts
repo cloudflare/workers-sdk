@@ -71,6 +71,14 @@ export class InspectorProxyWorker implements DurableObject {
 	runtimeMessageBuffer: (DevToolsCommandResponses | DevToolsEvents)[] = [];
 
 	async fetch(req: Request) {
+		const url = new URL(req.url);
+
+		// temp: respond with the origin until miniflare supports mf.getWorker(...).getUrl()
+		if (url.pathname === "/cdn-cgi/get-url") {
+			this.sendDebugLog("InspectorProxyWorker.ts:", url.href);
+			return new Response(url.origin);
+		}
+
 		if (
 			req.headers.get("Authorization") === this.env.PROXY_CONTROLLER_AUTH_SECRET
 		) {

@@ -961,7 +961,7 @@ importers:
         version: 5.23.0
       wrangler:
         specifier: ^3.5.1
-        version: link:../wrangler
+        version: 3.14.0
 
   packages/prerelease-registry:
     dependencies:
@@ -1526,7 +1526,7 @@ importers:
         version: 6.5.1
       wrangler:
         specifier: ^3.0.0
-        version: link:../wrangler
+        version: 3.14.0
 
 packages:
 
@@ -3561,7 +3561,6 @@ packages:
     resolution: {integrity: sha512-MVbXLbTcAotOPUj0pAMhVtJ+3/kFkwJqc5qNOleOZTv6QkZZABDMS21dSrSlVswEHwrpWC03e4fWytjqKvuE2A==}
     dependencies:
       mime: 3.0.0
-    dev: false
 
   /@cloudflare/kv-asset-handler@0.3.0:
     resolution: {integrity: sha512-9CB/MKf/wdvbfkUdfrj+OkEwZ5b7rws0eogJ4293h+7b6KX5toPwym+VQKmILafNB9YiehqY0DlNrDcDhdWHSQ==}
@@ -3822,7 +3821,6 @@ packages:
       esbuild: '*'
     dependencies:
       esbuild: 0.17.19
-    dev: false
 
   /@esbuild-plugins/node-modules-polyfill@0.2.2(esbuild@0.17.19):
     resolution: {integrity: sha512-LXV7QsWJxRuMYvKbiznh+U1ilIop3g2TeKRzUxOG5X3YITc8JyyTa90BmLwqqv0YnX4v32CSlG+vsziZp9dMvA==}
@@ -3832,7 +3830,6 @@ packages:
       esbuild: 0.17.19
       escape-string-regexp: 4.0.0
       rollup-plugin-node-polyfills: 0.2.1
-    dev: false
 
   /@esbuild/android-arm64@0.16.17:
     resolution: {integrity: sha512-MIGl6p5sc3RDTLLkYL1MyL8BMRN4tLMRCn+yRJJmEDvYZ2M7tmAf80hx1kbNEUX2KJ50RRtxZ4JHLvCfuB6kBg==}
@@ -8116,7 +8113,6 @@ packages:
 
   /blake3-wasm@2.1.5:
     resolution: {integrity: sha512-F1+K8EbfOZE49dtoPtmxUQrpXaBIl3ICvasLh+nJta0xkz+9kF/7uet9fLnwKqhDrmj6g+6K3Tw9yQPUg2ka5g==}
-    dev: false
 
   /blueimp-md5@2.19.0:
     resolution: {integrity: sha512-DRQrD6gJyy8FbiE4s+bDoXS9hiW3Vbx5uCdwvcCf3zLHL+Iv7LtGHLpr+GZV8rHG8tK766FGYBwRbu8pELTt+w==}
@@ -10643,7 +10639,6 @@ packages:
 
   /estree-walker@0.6.1:
     resolution: {integrity: sha512-SqmZANLWS0mnatqbSfRP5g8OXZC12Fgg1IwNtLsyHDzJizORW4khDfjPqJZsemPWBB2uqykUah5YpQ6epsqC/w==}
-    dev: false
 
   /estree-walker@2.0.2:
     resolution: {integrity: sha512-Rfkk/Mp/DL7JVje3u18FxFujQlTNR2q6QfMSMB7AvCBx91NGj/ba3kCfza0f6dVDbw7YlRf/nDrn7pQrCCyQ/w==}
@@ -13609,7 +13604,6 @@ packages:
     resolution: {integrity: sha512-RmF0AsMzgt25qzqqLc1+MbHmhdx0ojF2Fvs4XnOqz2ZOBXzzkEwc/dJQZCYHAn7v1jbVOjAZfK8msRn4BxO4VQ==}
     dependencies:
       sourcemap-codec: 1.4.8
-    dev: false
 
   /magic-string@0.30.3:
     resolution: {integrity: sha512-B7xGbll2fG/VjP+SWg4sX3JynwIU0mjoTc6MPpKNuIvftk6u6vqhDnk1R80b8C2GBR6ywqy+1DcKBrevBg+bmw==}
@@ -14519,7 +14513,6 @@ packages:
   /node-forge@1.3.0:
     resolution: {integrity: sha512-08ARB91bUi6zNKzVmaj3QO7cr397uiDT2nJ63cHjyNtCTWIgvS47j3eT0WfzUwS9+6Z5YshRaoasFkXCKrIYbA==}
     engines: {node: '>= 6.13.0'}
-    dev: false
 
   /node-int64@0.4.0:
     resolution: {integrity: sha512-O5lz91xSOeoXP6DulyHfllpq+Eg00MWitZIbtPfoSEvqIHdl5gfcY6hYzDWnj0qD5tz52PI08u9qUvSVeUBeHw==}
@@ -16366,19 +16359,16 @@ packages:
       estree-walker: 0.6.1
       magic-string: 0.25.9
       rollup-pluginutils: 2.8.2
-    dev: false
 
   /rollup-plugin-node-polyfills@0.2.1:
     resolution: {integrity: sha512-4kCrKPTJ6sK4/gLL/U5QzVT8cxJcofO0OU74tnB19F40cmuAKSzH5/siithxlofFEjwvw1YAhPmbvGNA6jEroA==}
     dependencies:
       rollup-plugin-inject: 3.0.2
-    dev: false
 
   /rollup-pluginutils@2.8.2:
     resolution: {integrity: sha512-EEp9NhnUkwY8aif6bxgovPHMoMoNr2FulJziTndpt5H9RdwC47GSGuII9XxpSdzVGM0GWrNPHV6ie1LTNJPaLQ==}
     dependencies:
       estree-walker: 0.6.1
-    dev: false
 
   /rollup@3.25.1:
     resolution: {integrity: sha512-tywOR+rwIt5m2ZAWSe5AIJcTat8vGlnPFAv15ycCrw33t6iFsXZ6mzHVFh2psSjxQPmI+xgzMZZizUAukBI4aQ==}
@@ -16513,7 +16503,6 @@ packages:
     engines: {node: '>=10'}
     dependencies:
       node-forge: 1.3.0
-    dev: false
 
   /semiver@1.1.0:
     resolution: {integrity: sha512-QNI2ChmuioGC1/xjyYwyZYADILWyW6AmS1UH6gDj/SFUUUS4MBAWs/7mxnkRPc/F4iHezDP+O8t0dO8WHiEOdg==}
@@ -16897,7 +16886,6 @@ packages:
   /sourcemap-codec@1.4.8:
     resolution: {integrity: sha512-9NykojV5Uih4lgo5So5dtw+f0JgJX30KCNI8gwhz2J9A15wD0Ml6tjHKwf6fTSa6fAdVBdZeNOs9eJ71qCk8vA==}
     deprecated: Please use @jridgewell/sourcemap-codec instead
-    dev: false
 
   /space-separated-tokens@2.0.2:
     resolution: {integrity: sha512-PEGlAwrG8yXGXRjW32fGbg66JAlOAwbObuqVoJpv/mRgoWDQfgH1wDPvtzWyUSNAXBGSk8h755YDbbcEy3SH2Q==}
@@ -18557,6 +18545,32 @@ packages:
       '@cloudflare/workerd-windows-64': 1.20231030.0
     dev: false
 
+  /wrangler@3.14.0:
+    resolution: {integrity: sha512-4vzw11yG1/KXpYKbumvRJ61Iyhm/yKXb/ayOw/2xiIRdKdpsfN9/796d2l525+CDaGwZWswpLENe6ZMS0p/Ghg==}
+    engines: {node: '>=16.13.0'}
+    hasBin: true
+    dependencies:
+      '@cloudflare/kv-asset-handler': 0.2.0
+      '@esbuild-plugins/node-globals-polyfill': 0.2.3(esbuild@0.17.19)
+      '@esbuild-plugins/node-modules-polyfill': 0.2.2(esbuild@0.17.19)
+      blake3-wasm: 2.1.5
+      chokidar: 3.5.3
+      esbuild: 0.17.19
+      miniflare: 3.20231016.0(supports-color@9.2.2)
+      nanoid: 3.3.6
+      path-to-regexp: 6.2.0
+      selfsigned: 2.1.1
+      source-map: 0.6.1
+      source-map-support: 0.5.21
+      xxhash-wasm: 1.0.1
+    optionalDependencies:
+      fsevents: 2.3.2
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+    dev: true
+
   /wrap-ansi@6.2.0:
     resolution: {integrity: sha512-r6lPcBGxZXlIcymEu7InxDMhdW0KDxpLgoFLcguasxCaJ/SOIZwINatK9KY/tf+ZrlywOKU0UDj3ATXUBfxJXA==}
     engines: {node: '>=8'}
@@ -18706,7 +18720,6 @@ packages:
 
   /xxhash-wasm@1.0.1:
     resolution: {integrity: sha512-Lc9CTvDrH2vRoiaUzz25q7lRaviMhz90pkx6YxR9EPYtF99yOJnv2cB+CQ0hp/TLoqrUsk8z/W2EN31T568Azw==}
-    dev: false
 
   /y18n@4.0.3:
     resolution: {integrity: sha512-JKhqTOwSrqNA1NY5lSztJ1GrBiUodLMmIZuLiDaMRJ+itFd+ABVE8XBjOvIWL+rSqNDC74LCSFmlb/U4UZ4hJQ==}
