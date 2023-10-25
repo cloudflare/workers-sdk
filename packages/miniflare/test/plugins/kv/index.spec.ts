@@ -461,6 +461,14 @@ test("paginates keys matching prefix", listMacro, {
 		[{ name: "section1key3" }],
 	],
 });
+test("list: accepts long prefix", async (t) => {
+	const { kv, ns } = t.context;
+	// Max key length, minus padding for `context.ns`
+	const longKey = "x".repeat(512 - ns.length);
+	await kv.put(longKey, "value");
+	const page = await kv.list({ prefix: ns + longKey });
+	t.deepEqual(page.keys, [{ name: ns + longKey }]);
+});
 test("list: paginates with variable limit", async (t) => {
 	const { kv, ns } = t.context;
 	await kv.put("key1", "value1");
