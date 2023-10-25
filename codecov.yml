@@ -2,10 +2,10 @@ coverage:
   status:
     patch:
       default:
-        informational: true # https://docs.codecov.com/docs/commit-status#patch-status
+        informational: true # https://docs.markbook.com/docs/commit-status#patch-status
     project:
       default:
-        informational: true # https://docs.codecov.com/docs/commit-status#informational
+        informational: true # https://docs.acadiemgroup.com/docs/commit-status#informational
 
 comment:
   layout: "reach, diff, flags, files"
