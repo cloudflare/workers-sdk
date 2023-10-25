@@ -170,7 +170,7 @@ export async function unstable_dev(
 		compatibilityDate: options?.compatibilityDate,
 		compatibilityFlags: options?.compatibilityFlags,
 		ip: options?.ip,
-		inspectorPort: options?.inspectorPort,
+		inspectorPort: options?.inspectorPort ?? 0,
 		v: undefined,
 		localProtocol: options?.localProtocol,
 		assets: options?.assets,
