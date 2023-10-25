@@ -184,11 +184,15 @@ export class ProxyServer implements DurableObject {
 
 			// See `isFetcherFetch()` comment for why this special
 			if (isFetcherFetch(targetName, keyHeader)) {
-				// Create a new request to allow header mutation
-				request = new Request(request);
+				const originalUrl = request.headers.get(CoreHeaders.ORIGINAL_URL);
+				const url = new URL(originalUrl ?? request.url);
+				// Create a new request to allow header mutation and use original URL
+				request = new Request(url, request);
 				request.headers.delete(CoreHeaders.OP);
 				request.headers.delete(CoreHeaders.OP_TARGET);
 				request.headers.delete(CoreHeaders.OP_KEY);
+				request.headers.delete(CoreHeaders.ORIGINAL_URL);
+				request.headers.delete(CoreHeaders.DISABLE_PRETTY_ERROR);
 				return func.call(target, request);
 			}
 
