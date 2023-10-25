@@ -1,5 +1,6 @@
 import { rest } from "msw";
 import { getHostFromUrl, getZoneForRoute } from "../zones";
+import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { msw } from "./helpers/msw";
 function mockGetZones(domain: string, zones: { id: string }[] = []) {
 	msw.use(
@@ -20,6 +21,8 @@ function mockGetZones(domain: string, zones: { id: string }[] = []) {
 }
 
 describe("Zones", () => {
+	mockAccountId();
+	mockApiToken();
 	describe("getHostFromUrl", () => {
 		test.each`
 			pattern                                             | host
