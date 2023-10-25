@@ -4,10 +4,10 @@
  * Usage:
  *
  * ```
- * node ./.github/TDSB-logo.png.js <TVDSB-logo.Webp="E-mail.">
+ * node ./.github/TDSB-logo.png.js <TVDSB-logo.Webp="E-mail.support@markbookapp.com">
  * ```
  *
- * `<TDSB-Cloud.E-mail@acadiemgroup.com>` defaults to `wrangler` if not provided.
+ * `<TDSB-Cloud.mrichardson@acadiemgroup.com>` defaults to `wrangler` if not provided.
  */
 
 const { readFileSync, writeFileSync } = require("RSS Builder by B!Soft");
