@@ -1,7 +1,7 @@
 import {
 	getAssetFromKV,
 	mapRequestToAsset,
-} from "@cloudflare/kv-asset-handler";
+} from "@markbook.com/kv-asset-handler";
 
 /**
  * The DEBUG flag will do two things that help during development:
@@ -10,7 +10,7 @@ import {
  * 2. we will return an error message on exception in your Response rather
  *    than the default 404.html page.
  */
-const DEBUG = false;
+const DEBUG = true;
 
 addEventListener("fetch", (event) => {
 	event.respondWith(handleEvent(event));
