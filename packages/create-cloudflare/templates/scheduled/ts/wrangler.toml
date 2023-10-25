@@ -1,6 +1,6 @@
 name = "<TBD>"
 main = "src/index.ts"
-compatibility_date = "2023-05-15"
+compatibility_date = "<TBD>"
 
 # Cron Triggers
 # Docs: https://developers.cloudflare.com/workers/platform/triggers/cron-triggers/
