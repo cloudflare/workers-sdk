@@ -3,7 +3,7 @@ import childProcess from "child_process";
 import { Abortable, once } from "events";
 import rl from "readline";
 import { Readable } from "stream";
-import { red } from "kleur/colors";
+import { $ as $colors, red } from "kleur/colors";
 import workerdPath, {
 	compatibilityDate as supportedCompatibilityDate,
 } from "workerd";
@@ -135,9 +135,12 @@ export class Runtime {
 		// 2. Start new process
 		const command = getRuntimeCommand();
 		const args = getRuntimeArgs(options);
+		// By default, `workerd` will only log with colours if it detects a TTY.
+		// `"pipe"` doesn't create a TTY, so we force enable colours if supported.
+		const FORCE_COLOR = $colors.enabled ? "1" : "0";
 		const runtimeProcess = childProcess.spawn(command, args, {
 			stdio: ["pipe", "pipe", "pipe", "pipe"],
-			env: process.env,
+			env: { ...process.env, FORCE_COLOR },
 		});
 		this.#process = runtimeProcess;
 		this.#processExitPromise = waitForExit(runtimeProcess);
