@@ -108,7 +108,7 @@ export class ProxyController extends EventEmitter {
 					},
 
 					unsafeDirectHost: this.latestConfig.dev?.inspector?.hostname,
-					unsafeDirectPort: this.latestConfig.dev?.inspector?.port,
+					unsafeDirectPort: this.latestConfig.dev?.inspector?.port ?? 0,
 				},
 			],
 
