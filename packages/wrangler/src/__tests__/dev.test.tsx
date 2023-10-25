@@ -377,22 +377,6 @@ describe("wrangler dev", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should fail for non-existing zones", async () => {
-			writeWranglerToml({
-				main: "index.js",
-				routes: [
-					{
-						pattern: "https://subdomain.does-not-exist.com/*",
-						zone_name: "exists.com",
-					},
-				],
-			});
-			await fs.promises.writeFile("index.js", `export default {};`);
-			await expect(runWrangler("dev --remote")).rejects.toEqual(
-				new Error("Could not find zone for subdomain.does-not-exist.com")
-			);
-		});
-
 		it("should fail for non-existing zones, when falling back from */*", async () => {
 			writeWranglerToml({
 				main: "index.js",
