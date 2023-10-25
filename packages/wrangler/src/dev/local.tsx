@@ -133,7 +133,7 @@ export function Local(props: LocalProps) {
 	useInspector({
 		inspectorUrl,
 		port: props.inspectorPort,
-		logToTerminal: true,
+		logToTerminal: false,
 		sourceMapPath: props.sourceMapPath,
 		name: props.name,
 		sourceMapMetadata: props.bundle?.sourceMapMetadata,
