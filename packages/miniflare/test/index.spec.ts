@@ -818,6 +818,8 @@ test("Miniflare: getWorker() allows dispatching events directly", async (t) => {
               bodyType: message.body.constructor.name,
             })),
           });
+        } else if (pathname === "/get-url") {
+          return new Response(request.url);
         } else {
           return new Response(null, { status: 404 });
         }
@@ -899,6 +901,10 @@ test("Miniflare: getWorker() allows dispatching events directly", async (t) => {
 			},
 		],
 	});
+
+	// Check `Fetcher#fetch()`
+	res = await fetcher.fetch("https://dummy:1234/get-url");
+	t.is(await res.text(), "https://dummy:1234/get-url");
 });
 test("Miniflare: getBindings() and friends return bindings for different workers", async (t) => {
 	const mf = new Miniflare({
