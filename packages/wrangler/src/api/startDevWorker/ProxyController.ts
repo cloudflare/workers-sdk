@@ -86,6 +86,10 @@ export class ProxyController extends EventEmitter {
 					bindings: {
 						PROXY_CONTROLLER_AUTH_SECRET: this.secret,
 					},
+
+					// no need to use file-system, so don't
+					cache: false,
+					unsafeEphemeralDurableObjects: true,
 				},
 				{
 					name: "InspectorProxyWorker",
@@ -109,12 +113,14 @@ export class ProxyController extends EventEmitter {
 
 					unsafeDirectHost: this.latestConfig.dev?.inspector?.hostname,
 					unsafeDirectPort: this.latestConfig.dev?.inspector?.port ?? 0,
+
+					// no need to use file-system, so don't
+					cache: false,
+					unsafeEphemeralDurableObjects: true,
 				},
 			],
 
 			verbose: logger.loggerLevel === "debug",
-			cache: false,
-			unsafeEphemeralDurableObjects: true,
 
 			// log requests into the ProxyWorker (for local + remote mode)
 			log: new ProxyControllerLogger(castLogLevel(logger.loggerLevel), {
