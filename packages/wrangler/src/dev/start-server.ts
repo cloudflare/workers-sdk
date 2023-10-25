@@ -196,7 +196,7 @@ export async function startDevServer(
 
 		return {
 			stop: async () => {
-				await Promise.all([stop(), stopWorkerRegistry()]);
+				await Promise.all([stop(), stopWorkerRegistry(), devEnv.teardown()]);
 			},
 			// TODO: inspectorUrl,
 		};
@@ -245,9 +245,7 @@ export async function startDevServer(
 		});
 		return {
 			stop: async () => {
-				stop();
-				await stopWorkerRegistry();
-				await devEnv.teardown();
+				await Promise.all([stop(), stopWorkerRegistry(), devEnv.teardown()]);
 			},
 			// TODO: inspectorUrl,
 		};
