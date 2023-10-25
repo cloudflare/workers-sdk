@@ -1,5 +1,5 @@
 {
-	"editor.defaultFormatter": "esbenp.prettier-vscode",
+	"editor.defaultFormatter": "dbaeumer.vscode-eslint",
 	"cSpell.words": [
 		"Abortable",
 		"cfetch",
