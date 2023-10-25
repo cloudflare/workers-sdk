@@ -74,7 +74,6 @@ export type ReadyEvent = {
 	type: "ready";
 
 	proxyWorker: Miniflare;
-	inspectorProxyWorker: Miniflare;
 };
 
 // ProxyWorker
