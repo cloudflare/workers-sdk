@@ -124,8 +124,3 @@ export function drain<R extends TypedResult>(cursor: TypedSqlStorageCursor<R>) {
 	for (const _ of cursor) {
 	}
 }
-
-export function escapeLike(prefix: string) {
-	// Prefix all instances of `\`, `_` and `%` with `\`
-	return prefix.replace(/[\\_%]/g, "\\$&");
-}

@@ -737,7 +737,15 @@ test(
 		],
 	}
 );
-
+test("list: accepts long prefix", async (t) => {
+	const { r2, ns } = t.context;
+	// Max key length, minus padding for `context.ns`
+	const longKey = "x".repeat(1024 - ns.length);
+	await r2.put(longKey, "value");
+	const { objects } = await r2.list({ prefix: ns + longKey });
+	t.is(objects.length, 1);
+	t.is(objects[0].key, ns + longKey);
+});
 test("list: returns metadata with objects", async (t) => {
 	const { r2, ns } = t.context;
 	const start = Date.now();

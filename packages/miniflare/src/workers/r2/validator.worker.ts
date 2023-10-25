@@ -178,7 +178,7 @@ export class Validator {
 
 	key(key: string): Validator {
 		const keyLength = Buffer.byteLength(key);
-		if (keyLength >= R2Limits.MAX_KEY_SIZE) {
+		if (keyLength > R2Limits.MAX_KEY_SIZE) {
 			throw new InvalidObjectName();
 		}
 		return this;

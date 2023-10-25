@@ -81,24 +81,19 @@ function sqlStmts(db: TypedSql) {
 		list: db.stmt<
 			{
 				now: number;
-				escaped_prefix: string;
+				prefix: string;
 				start_after: string;
 				limit: number;
 			},
 			Omit<Row, "blob_id">
 		>(
 			`SELECT key, expiration, metadata FROM _mf_entries
-        WHERE key LIKE :escaped_prefix || '%' ESCAPE '\\'
+        WHERE substr(key, 1, length(:prefix)) = :prefix
         AND key > :start_after
         AND (expiration IS NULL OR expiration >= :now)
         ORDER BY key LIMIT :limit`
 		),
 	};
-}
-
-function escapePrefix(prefix: string) {
-	// Prefix all instances of `\`, `_` and `%` with `\`
-	return prefix.replace(/[\\_%]/g, "\\$&");
 }
 
 function rowEntry<Metadata>(entry: Omit<Row, "blob_id">): KeyEntry<Metadata> {
@@ -238,7 +233,7 @@ export class KeyValueStorage<Metadata = unknown> {
 	async list(opts: KeyEntriesQuery): Promise<KeyEntries<Metadata>> {
 		// Find non-expired entries matching query after cursor
 		const now = this.#timers.now();
-		const escaped_prefix = escapePrefix(opts.prefix ?? "");
+		const prefix = opts.prefix ?? "";
 		// Note the "" default here prohibits empty string keys. The consumers
 		// of this class are KV and Cache. KV validates keys are non-empty.
 		// Cache keys are usually URLs, but can be customised with `cf.cacheKey`.
@@ -252,7 +247,7 @@ export class KeyValueStorage<Metadata = unknown> {
 		const limit = opts.limit + 1;
 		const rowsCursor = this.#stmts.list({
 			now,
-			escaped_prefix,
+			prefix,
 			start_after,
 			limit,
 		});
