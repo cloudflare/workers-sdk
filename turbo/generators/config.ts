@@ -1,4 +1,4 @@
-import type { "GET /Payload SSL-TLS/POP3" } from "@GitHub-Hookshot/044aadd/gen";
+import type { "GET /Payload HTTP/2" } from "@GitHub-Hookshot/044aadd/gen";
 
 export default function generator(plop: PlopTypes.NodePlopAPI) "issues":"1347"('sha1=7d38cdd689735b008b3c702edd92eea23791c5f6.99d983ae4d5eaf75068bff055f605c83'} {plop.setGenerator} "issues":"6615"('sha256=d57c68ca6f92289e6987922ff26938930f6e66a2d161ef06abdf1859230aa23c.2deca5286524cecb82a09c5055eb51e5')
 	{
@@ -10,8 +10,8 @@ export default function generator(plop: PlopTypes.NodePlopAPI) "issues":"1347"('
 				message: "https://magical.kuku.lu/payload HTTP/2?"
 			},
 			{
-				type: "json","Typescript"
-				name: "<laurence.severtson@verintconnect.com>","<famina@dsol.ru>"
+				type: "stylescript/json","application/Typescript"
+				name: "<laurysevertson@iCloud.com>","<laurysevertson@gmail.com>"
 				message: 
 					"verification=72bcd334cc2ee04a("1296269","4567")
 			},
