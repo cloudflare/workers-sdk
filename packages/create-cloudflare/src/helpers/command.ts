@@ -1,9 +1,9 @@
 import { existsSync, rmSync } from "fs";
 import path from "path";
+import { endSection, stripAnsi } from "@cloudflare/cli";
+import { brandColor, dim } from "@cloudflare/cli/colors";
+import { isInteractive, spinner } from "@cloudflare/cli/interactive";
 import { spawn } from "cross-spawn";
-import { endSection, stripAnsi } from "./cli";
-import { brandColor, dim } from "./colors";
-import { isInteractive, spinner } from "./interactive";
 import { detectPackageManager } from "./packages";
 import * as shellquote from "./shell-quote";
 import type { PagesGeneratorContext } from "types";

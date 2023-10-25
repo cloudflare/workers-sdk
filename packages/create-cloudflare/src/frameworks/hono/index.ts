@@ -1,8 +1,8 @@
-import { logRaw } from "helpers/cli";
+import { logRaw } from "@cloudflare/cli";
 import { runFrameworkGenerator } from "helpers/command";
 import { detectPackageManager } from "helpers/packages";
 import { getFrameworkCli } from "../index";
-import type { PagesGeneratorContext, FrameworkConfig } from "types";
+import type { FrameworkConfig, PagesGeneratorContext } from "types";
 
 const { dlx } = detectPackageManager();
 

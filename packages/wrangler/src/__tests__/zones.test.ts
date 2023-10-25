@@ -1,6 +1,28 @@
-import { getHostFromUrl } from "../zones";
+import { rest } from "msw";
+import { getHostFromUrl, getZoneForRoute } from "../zones";
+import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
+import { msw } from "./helpers/msw";
+function mockGetZones(domain: string, zones: { id: string }[] = []) {
+	msw.use(
+		rest.get("*/zones", (req, res, ctx) => {
+			expect([...req.url.searchParams.entries()]).toEqual([["name", domain]]);
+
+			return res.once(
+				ctx.status(200),
+				ctx.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: zones,
+				})
+			);
+		})
+	);
+}
 
 describe("Zones", () => {
+	mockAccountId();
+	mockApiToken();
 	describe("getHostFromUrl", () => {
 		test.each`
 			pattern                                             | host
@@ -33,6 +55,86 @@ describe("Zones", () => {
 			${"https://invalid:host/path/name"}                 | ${undefined}
 		`("$pattern --> $host", ({ pattern, host }) => {
 			expect(getHostFromUrl(pattern)).toBe(host);
+		});
+	});
+	describe("getZoneForRoute", () => {
+		test("string route", async () => {
+			mockGetZones("example.com", [{ id: "example-id" }]);
+			expect(await getZoneForRoute("example.com/*")).toEqual({
+				host: "example.com",
+				id: "example-id",
+			});
+		});
+
+		test("string route (not a zone)", async () => {
+			mockGetZones("wrong.com", []);
+			await expect(
+				getZoneForRoute("wrong.com/*")
+			).rejects.toMatchInlineSnapshot(
+				`[Error: Could not find zone for wrong.com]`
+			);
+		});
+		test("zone_id route", async () => {
+			// example-id and other-id intentionally different to show that the API is not called
+			// when a zone_id is provided in the route
+			mockGetZones("example.com", [{ id: "example-id" }]);
+			expect(
+				await getZoneForRoute({ pattern: "example.com/*", zone_id: "other-id" })
+			).toEqual({
+				host: "example.com",
+				id: "other-id",
+			});
+		});
+		test("zone_id route (custom hostname)", async () => {
+			// example-id and other-id intentionally different to show that the API is not called
+			// when a zone_id is provided in the route
+			mockGetZones("example.com", [{ id: "example-id" }]);
+			expect(
+				await getZoneForRoute({
+					pattern: "some.third-party.com/*",
+					zone_id: "other-id",
+				})
+			).toEqual({
+				host: "some.third-party.com",
+				id: "other-id",
+			});
+		});
+
+		test("zone_name route (apex)", async () => {
+			mockGetZones("example.com", [{ id: "example-id" }]);
+			expect(
+				await getZoneForRoute({
+					pattern: "example.com/*",
+					zone_name: "example.com",
+				})
+			).toEqual({
+				host: "example.com",
+				id: "example-id",
+			});
+		});
+		test("zone_name route (subdomain)", async () => {
+			mockGetZones("example.com", [{ id: "example-id" }]);
+			expect(
+				await getZoneForRoute({
+					pattern: "subdomain.example.com/*",
+					zone_name: "example.com",
+				})
+			).toEqual({
+				host: "subdomain.example.com",
+				id: "example-id",
+			});
+		});
+		test("zone_name route (custom hostname)", async () => {
+			mockGetZones("example.com", [{ id: "example-id" }]);
+			expect(
+				await getZoneForRoute({
+					pattern: "some.third-party.com/*",
+					zone_name: "example.com",
+				})
+			).toEqual({
+				host: "some.third-party.com",
+				id: "example-id",
+			});
 		});
 	});
 });

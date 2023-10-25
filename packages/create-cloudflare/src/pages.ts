@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 import { resolve } from "path";
 import { chdir } from "process";
+import { crash, endSection, startSection } from "@cloudflare/cli";
+import { brandColor, dim } from "@cloudflare/cli/colors";
+import { spinner } from "@cloudflare/cli/interactive";
 import { FrameworkMap, supportedFramework } from "frameworks/index";
 import { processArgument } from "helpers/args";
-import { C3_DEFAULTS, crash, endSection, startSection } from "helpers/cli";
-import { dim, brandColor } from "helpers/colors";
+import { C3_DEFAULTS } from "helpers/cli";
 import { installWrangler, retry, runCommand } from "helpers/command";
 import { readJSON, writeFile } from "helpers/files";
-import { spinner } from "helpers/interactive";
 import { debug } from "helpers/logging";
 import { detectPackageManager } from "helpers/packages";
 import {
@@ -19,6 +20,7 @@ import {
 	runDeploy,
 	setupProjectDirectory,
 } from "./common";
+import * as shellquote from "./helpers/shell-quote";
 import type { C3Args, PagesGeneratorContext } from "types";
 
 /** How many times to retry the create project command before failing. */
@@ -162,7 +164,9 @@ const createProject = async (ctx: PagesGeneratorContext) => {
 	const CLOUDFLARE_ACCOUNT_ID = ctx.account.id;
 
 	try {
-		const compatFlags = ctx.framework?.config.compatibilityFlags?.join(" ");
+		const compatFlags = shellquote.quote(
+			ctx.framework?.config.compatibilityFlags ?? []
+		);
 		const compatFlagsArg = compatFlags
 			? `--compatibility-flags ${compatFlags}`
 			: "";

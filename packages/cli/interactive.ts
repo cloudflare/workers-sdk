@@ -1,11 +1,11 @@
-import { TextPrompt, SelectPrompt, ConfirmPrompt } from "@clack/core";
+import { ConfirmPrompt, SelectPrompt, TextPrompt } from "@clack/core";
 import ansiEscapes from "ansi-escapes";
 import logUpdate from "log-update";
-import { shapes, cancel, space, status, newline } from "./cli";
-import { blue, dim, gray, brandColor, bold } from "./colors";
+import { blue, bold, brandColor, dim, gray } from "./colors";
+import { cancel, newline, shapes, space, status } from "./index";
 import type { ChalkInstance } from "chalk";
-import type { C3Arg } from "types";
 
+export type Arg = string | boolean | string[] | undefined;
 const grayBar = gray(shapes.bar);
 const blCorner = gray(shapes.corners.bl);
 const leftT = gray(shapes.leftT);
@@ -25,9 +25,9 @@ export type BasePromptConfig = {
 	// The status label to be shown after submitting
 	label: string;
 	// Pretty-prints the value in the interactive prompt
-	format?: (value: C3Arg) => string;
+	format?: (value: Arg) => string;
 	// Returns a user displayed error if the value is invalid
-	validate?: (value: C3Arg) => string | void;
+	validate?: (value: Arg) => string | void;
 };
 
 export type TextPromptConfig = BasePromptConfig & {
@@ -104,7 +104,7 @@ type Renderer = (props: {
 	state?: string;
 	error?: string;
 	cursor?: number;
-	value: C3Arg;
+	value: Arg;
 }) => string[];
 
 const renderSubmit = (config: PromptConfig, value: string) => {
@@ -144,7 +144,7 @@ const getTextRenderers = (config: TextPromptConfig) => {
 		format: _format,
 	} = config;
 	const helpText = _helpText ?? "";
-	const format = _format ?? ((val: C3Arg) => String(val));
+	const format = _format ?? ((val: Arg) => String(val));
 
 	return {
 		initial: () => [
@@ -152,20 +152,19 @@ const getTextRenderers = (config: TextPromptConfig) => {
 			`${space(2)}${gray(format(defaultValue))}`,
 			``, // extra line for readability
 		],
-		active: ({ value }: { value: C3Arg }) => [
+		active: ({ value }: { value: Arg }) => [
 			`${blCorner} ${bold(question)} ${dim(helpText)}`,
 			`${space(2)}${format(value || dim(defaultValue))}`,
 			``, // extra line for readability
 		],
-		error: ({ value, error }: { value: C3Arg; error: string }) => [
+		error: ({ value, error }: { value: Arg; error: string }) => [
 			`${leftT} ${status.error} ${dim(error)}`,
 			`${grayBar}`,
 			`${blCorner} ${question} ${dim(helpText)}`,
 			`${space(2)}${format(value)}`,
 			``, // extra line for readability
 		],
-		submit: ({ value }: { value: C3Arg }) =>
-			renderSubmit(config, format(value)),
+		submit: ({ value }: { value: Arg }) => renderSubmit(config, format(value)),
 		cancel: handleCancel,
 	};
 };
@@ -198,7 +197,7 @@ const getSelectRenderers = (config: SelectPromptConfig) => {
 		active: defaultRenderer,
 		confirm: defaultRenderer,
 		error: defaultRenderer,
-		submit: ({ value }: { value: C3Arg }) =>
+		submit: ({ value }: { value: Arg }) =>
 			renderSubmit(
 				config,
 				options.find((o) => o.value === value)?.label as string
@@ -228,7 +227,7 @@ const getConfirmRenderers = (config: ConfirmPromptConfig) => {
 		active: defaultRenderer,
 		confirm: defaultRenderer,
 		error: defaultRenderer,
-		submit: ({ value }: { value: C3Arg }) =>
+		submit: ({ value }: { value: Arg }) =>
 			renderSubmit(config, value ? "yes" : "no"),
 		cancel: handleCancel,
 	};

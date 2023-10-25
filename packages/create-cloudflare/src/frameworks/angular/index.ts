@@ -1,17 +1,17 @@
 import { cp, rm } from "node:fs/promises";
 import { resolve } from "node:path";
-import { logRaw } from "helpers/cli";
-import { brandColor, dim } from "helpers/colors";
+import { logRaw } from "@cloudflare/cli";
+import { brandColor, dim } from "@cloudflare/cli/colors";
+import { spinner } from "@cloudflare/cli/interactive";
 import {
 	installPackages,
 	runCommand,
 	runFrameworkGenerator,
 } from "helpers/command";
 import { compatDateFlag, readFile, readJSON, writeFile } from "helpers/files";
-import { spinner } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
 import { getFrameworkCli } from "../index";
-import type { PagesGeneratorContext, FrameworkConfig } from "types";
+import type { FrameworkConfig, PagesGeneratorContext } from "types";
 
 const { dlx, npx, npm } = detectPackageManager();
 

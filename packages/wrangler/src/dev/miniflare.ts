@@ -13,6 +13,7 @@ import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { withSourceURLs } from "../deployment-bundle/source-url";
 import { getHttpsOptions } from "../https-options";
 import { logger } from "../logger";
+import { updateCheck } from "../update-check";
 import type { Config } from "../config";
 import type {
 	CfD1Database,
@@ -122,10 +123,19 @@ class WranglerLog extends Log {
 
 	warn(message: string) {
 		// Only log warning about requesting a compatibility date after the workerd
-		// binary's version once
+		// binary's version once, and only if there's an update available.
 		if (message.startsWith("The latest compatibility date supported by")) {
 			if (this.#warnedCompatibilityDateFallback) return;
 			this.#warnedCompatibilityDateFallback = true;
+			return void updateCheck().then((maybeNewVersion) => {
+				if (maybeNewVersion === undefined) return;
+				message += [
+					"",
+					"Features enabled by your requested compatibility date may not be available.",
+					`Upgrade to \`wrangler@${maybeNewVersion}\` to remove this warning.`,
+				].join("\n");
+				super.warn(message);
+			});
 		}
 		super.warn(message);
 	}

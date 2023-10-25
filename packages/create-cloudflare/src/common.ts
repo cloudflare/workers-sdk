@@ -1,21 +1,21 @@
 import { existsSync, mkdirSync, readdirSync } from "fs";
 import { basename, dirname, relative, resolve } from "path";
 import { chdir } from "process";
-import { getFrameworkCli } from "frameworks/index";
-import { processArgument } from "helpers/args";
 import {
-	C3_DEFAULTS,
 	crash,
 	endSection,
 	log,
 	logRaw,
 	newline,
-	openInBrowser,
 	shapes,
 	startSection,
 	updateStatus,
-} from "helpers/cli";
-import { dim, blue, gray, bgGreen, brandColor } from "helpers/colors";
+} from "@cloudflare/cli";
+import { brandColor, dim, gray, bgGreen, blue } from "@cloudflare/cli/colors";
+import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
+import { getFrameworkCli } from "frameworks/index";
+import { processArgument } from "helpers/args";
+import { C3_DEFAULTS, openInBrowser } from "helpers/cli";
 import {
 	listAccounts,
 	printAsyncStatus,
@@ -23,7 +23,6 @@ import {
 	runCommands,
 	wranglerLogin,
 } from "helpers/command";
-import { inputPrompt, spinner } from "helpers/interactive";
 import { detectPackageManager } from "helpers/packages";
 import { poll } from "helpers/poll";
 import { version as wranglerVersion } from "wrangler/package.json";

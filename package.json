@@ -19,8 +19,8 @@
 		"fix": "pnpm run prettify && dotenv -- turbo check:lint -- --fix",
 		"prettify": "prettier . --write --ignore-unknown",
 		"test": "dotenv -- turbo test --concurrency=1",
-		"test:ci": "dotenv -- turbo test:ci --filter=!local-mode-tests --filter=!playground-preview-worker --filter=!no-bundle-import --filter=!workers.new --concurrency=1",
-		"test:ci:quarantine": "dotenv -- turbo test:ci --filter=local-mode-tests --filter=playground-preview-worker --filter=no-bundle-import --filter=workers.new --concurrency=1",
+		"test:ci": "dotenv -- turbo test:ci --filter=!local-mode-tests --filter=!playground-preview-worker --filter=!no-bundle-import --filter=!pages-functions-app --filter=!pages-plugin-mounted-on-root-app --filter=!workers.new --concurrency=1",
+		"test:ci:quarantine": "dotenv -- turbo test:ci --filter=local-mode-tests --filter=pages-functions-app --filter=pages-plugin-mounted-on-root-app --filter=playground-preview-worker --filter=no-bundle-import --filter=workers.new --concurrency=1",
 		"test:watch": "turbo test:watch",
 		"type:tests": "dotenv -- turbo type:tests",
 		"gen:package": "turbo gen package"
@@ -48,7 +48,7 @@
 		"turbo": "^1.10.14"
 	},
 	"engines": {
-		"node": ">=16.13.0"
+		"node": ">=16.17.0"
 	},
 	"volta": {
 		"node": "16.13.0"

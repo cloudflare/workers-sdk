@@ -42,7 +42,7 @@ export function getHostFromRoute(route: Route): string | undefined {
 }
 
 /**
- * Try to compute the a zone ID and host name for one or more routes.
+ * Try to compute the a zone ID and host name for a route.
  *
  * When we're given a route, we do 2 things:
  * - We try to extract a host from it
@@ -50,12 +50,16 @@ export function getHostFromRoute(route: Route): string | undefined {
  */
 export async function getZoneForRoute(route: Route): Promise<Zone | undefined> {
 	const host = getHostFromRoute(route);
-	const id =
-		typeof route === "object" && "zone_id" in route
-			? route.zone_id
-			: host
-			? await getZoneIdFromHost(host)
-			: undefined;
+	let id: string | undefined;
+
+	if (typeof route === "object" && "zone_id" in route) {
+		id = route.zone_id;
+	} else if (typeof route === "object" && "zone_name" in route) {
+		id = await getZoneIdFromHost(route.zone_name);
+	} else if (host) {
+		id = await getZoneIdFromHost(host);
+	}
+
 	return id && host ? { id, host } : undefined;
 }
 

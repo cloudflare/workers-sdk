@@ -11,6 +11,7 @@ import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { getBasePath } from "../paths";
+import * as shellquote from "../utils/shell-quote";
 import { buildFunctions } from "./buildFunctions";
 import { ROUTES_SPEC_VERSION, SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
 import {
@@ -797,7 +798,7 @@ async function spawnProxyProcess({
 		);
 	}
 
-	logger.log(`Running ${command.join(" ")}...`);
+	logger.log(`Running ${shellquote.quote(command)}...`);
 	const proxy = spawn(
 		command[0].toString(),
 		command.slice(1).map((value) => value.toString()),

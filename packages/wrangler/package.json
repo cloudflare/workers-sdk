@@ -110,12 +110,14 @@
 		"miniflare": "3.20231016.0",
 		"nanoid": "^3.3.3",
 		"path-to-regexp": "^6.2.0",
+		"resolve.exports": "^2.0.2",
 		"selfsigned": "^2.0.1",
 		"source-map": "0.6.1",
 		"source-map-support": "0.5.21",
 		"xxhash-wasm": "^1.0.1"
 	},
 	"devDependencies": {
+		"@cloudflare/cli": "workspace:*",
 		"@cloudflare/eslint-config-worker": "*",
 		"@cloudflare/pages-shared": "workspace:^",
 		"@cloudflare/types": "^6.18.4",
@@ -206,6 +208,6 @@
 		"fsevents": "~2.3.2"
 	},
 	"engines": {
-		"node": ">=16.13.0"
+		"node": ">=16.17.0"
 	}
 }

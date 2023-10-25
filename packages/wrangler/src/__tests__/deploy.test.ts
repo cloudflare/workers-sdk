@@ -713,6 +713,84 @@ describe("deploy", () => {
 		`);
 		});
 
+		it("should deploy to a route with a SaaS domain", async () => {
+			writeWranglerToml({
+				workers_dev: false,
+				routes: [
+					{
+						pattern: "partner.com/*",
+						zone_name: "owned-zone.com",
+					},
+				],
+			});
+			writeWorkerSource();
+			mockUpdateWorkerRequest({ enabled: false });
+			mockUploadWorkerRequest({ available_on_subdomain: false });
+			mockGetZones("owned-zone.com", [{ id: "owned-zone-id-1" }]);
+			mockGetWorkerRoutes("owned-zone-id-1");
+			mockPublishRoutesRequest({
+				routes: [
+					{
+						pattern: "partner.com/*",
+						zone_name: "owned-zone.com",
+					},
+				],
+			});
+			await runWrangler("deploy ./index");
+			expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  partner.com/* (zone name: owned-zone.com)
+			Current Deployment ID: Galaxy-Class",
+			  "warn": "",
+			}
+		`);
+		});
+
+		it("should deploy to a route with a SaaS subdomain", async () => {
+			writeWranglerToml({
+				workers_dev: false,
+				routes: [
+					{
+						pattern: "subdomain.partner.com/*",
+						zone_name: "owned-zone.com",
+					},
+				],
+			});
+			writeWorkerSource();
+			mockUpdateWorkerRequest({ enabled: false });
+			mockUploadWorkerRequest({ available_on_subdomain: false });
+			mockGetZones("owned-zone.com", [{ id: "owned-zone-id-1" }]);
+			mockGetWorkerRoutes("owned-zone-id-1");
+			mockPublishRoutesRequest({
+				routes: [
+					{
+						pattern: "subdomain.partner.com/*",
+						zone_name: "owned-zone.com",
+					},
+				],
+			});
+			await runWrangler("deploy ./index");
+			expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "Total Upload: xx KiB / gzip: xx KiB
+			Uploaded test-name (TIMINGS)
+			Published test-name (TIMINGS)
+			  subdomain.partner.com/* (zone name: owned-zone.com)
+			Current Deployment ID: Galaxy-Class",
+			  "warn": "",
+			}
+		`);
+		});
+
 		it("should deploy to a route with a pattern/{zone_id|zone_name} combo (service environments)", async () => {
 			writeWranglerToml({
 				env: {
@@ -8011,7 +8089,7 @@ export default{
 			  "err": "",
 			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWe recommend keeping your script less than 1MiB (1024 KiB) after gzip. Exceeding past this can affect cold start time[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWe recommend keeping your script less than 1MiB (1024 KiB) after gzip. Exceeding this can affect cold start time. Consider using Wrangler's \`--minify\` option to reduce your bundle size.[0m
 
 			",
 			}
@@ -8908,6 +8986,42 @@ function mockUnauthorizedPublishRoutesRequest({
 				);
 			}
 		)
+	);
+}
+
+function mockGetZones(domain: string, zones: { id: string }[] = []) {
+	msw.use(
+		rest.get("*/zones", (req, res, ctx) => {
+			expect([...req.url.searchParams.entries()]).toEqual([["name", domain]]);
+
+			return res(
+				ctx.status(200),
+				ctx.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: zones,
+				})
+			);
+		})
+	);
+}
+
+function mockGetWorkerRoutes(zoneId: string) {
+	msw.use(
+		rest.get("*/zones/:zoneId/workers/routes", (req, res, ctx) => {
+			expect(req.params.zoneId).toEqual(zoneId);
+
+			return res(
+				ctx.status(200),
+				ctx.json({
+					success: true,
+					errors: [],
+					messages: [],
+					result: [],
+				})
+			);
+		})
 	);
 }
 
