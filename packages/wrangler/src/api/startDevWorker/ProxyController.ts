@@ -301,6 +301,7 @@ export class ProxyController extends EventEmitter {
 		this.latestConfig = data.config;
 
 		void this.sendMessageToProxyWorker({ type: "pause" });
+		void this.sendMessageToInspectorProxyWorker({ type: "reloadStart" });
 	}
 	onReloadComplete(data: ReloadCompleteEvent) {
 		this.latestConfig = data.config;

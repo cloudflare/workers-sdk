@@ -71,14 +71,6 @@ export class InspectorProxyWorker implements DurableObject {
 	runtimeMessageBuffer: (DevToolsCommandResponses | DevToolsEvents)[] = [];
 
 	async fetch(req: Request) {
-		const url = new URL(req.url);
-
-		// temp: respond with the origin until miniflare supports mf.getWorker(...).getUrl()
-		if (url.pathname === "/cdn-cgi/get-url") {
-			this.sendDebugLog("InspectorProxyWorker.ts:", url.href);
-			return new Response(url.origin);
-		}
-
 		if (
 			req.headers.get("Authorization") === this.env.PROXY_CONTROLLER_AUTH_SECRET
 		) {
@@ -132,6 +124,37 @@ export class InspectorProxyWorker implements DurableObject {
 			webSocket: response,
 		});
 	}
+
+	handleProxyControllerIncomingMessage = (event: MessageEvent) => {
+		assert(
+			typeof event.data === "string",
+			"Expected event.data from proxy controller to be string"
+		);
+
+		const message: InspectorProxyWorkerIncomingWebSocketMessage = JSON.parse(
+			event.data
+		);
+
+		this.sendDebugLog("handleProxyControllerIncomingMessage", event.data);
+
+		switch (message.type) {
+			case "reloadStart": {
+				this.sendRuntimeDiscardConsoleEntries();
+
+				break;
+			}
+			case "reloadComplete": {
+				this.proxyData = message.proxyData;
+
+				this.reconnectRuntimeWebSocket();
+
+				break;
+			}
+			default: {
+				assertNever(message);
+			}
+		}
+	};
 
 	sendProxyControllerMessage(
 		message: string | InspectorProxyWorkerOutgoingWebsocketMessage
@@ -220,36 +243,8 @@ export class InspectorProxyWorker implements DurableObject {
 		}
 	};
 
-	handleProxyControllerIncomingMessage = (event: MessageEvent) => {
-		assert(
-			typeof event.data === "string",
-			"Expected event.data from proxy controller to be string"
-		);
-
-		const message: InspectorProxyWorkerIncomingWebSocketMessage = JSON.parse(
-			event.data
-		);
-
-		this.sendDebugLog("handleProxyControllerIncomingMessage", event.data);
-
-		switch (message.type) {
-			case "reloadComplete": {
-				this.proxyData = message.proxyData;
-
-				this.reconnectRuntimeWebSocket();
-
-				break;
-			}
-			default: {
-				assertNever(message.type);
-			}
-		}
-	};
-
-	runtimeKeepAliveInterval: number | null = null;
-
-	// TODO: add abort signal
 	runtimeAbortController = new AbortController();
+	runtimeKeepAliveInterval: number | null = null;
 	async reconnectRuntimeWebSocket() {
 		assert(this.proxyData, "Expected this.proxyData to be defined");
 
@@ -366,6 +361,13 @@ export class InspectorProxyWorker implements DurableObject {
 		}, 10_000) as any;
 
 		this.websockets.runtimeDeferred.resolve(runtime);
+	}
+
+	sendRuntimeDiscardConsoleEntries() {
+		this.sendRuntimeMessage({
+			method: "Runtime.discardConsoleEntries",
+			id: this.nextCounter(),
+		});
 	}
 
 	async sendRuntimeMessage(

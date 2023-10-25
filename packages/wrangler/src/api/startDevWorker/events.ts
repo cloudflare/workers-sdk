@@ -87,10 +87,14 @@ export type ProxyWorkerOutgoingRequestBody =
 
 // InspectorProxyWorker
 export * from "./devtools";
-export type InspectorProxyWorkerIncomingWebSocketMessage = {
-	type: ReloadCompleteEvent["type"];
-	proxyData: ProxyData;
-};
+export type InspectorProxyWorkerIncomingWebSocketMessage =
+	| {
+			type: ReloadStartEvent["type"];
+	  }
+	| {
+			type: ReloadCompleteEvent["type"];
+			proxyData: ProxyData;
+	  };
 export type InspectorProxyWorkerOutgoingWebsocketMessage =
 	// Relayed Chrome DevTools Protocol Messages
 	| DevToolsEvent<"Runtime.consoleAPICalled">
