@@ -1,5 +1,102 @@
 # wrangler
 
+## 3.15.0
+
+### Minor Changes
+
+- [#4201](https://github.com/cloudflare/workers-sdk/pull/4201) [`0cac2c46`](https://github.com/cloudflare/workers-sdk/commit/0cac2c4681852709883ea91f5b73c5af1f70088a) Thanks [@penalosa](https://github.com/penalosa)! - Callout `--minify` when script size is too large
+
+* [#4209](https://github.com/cloudflare/workers-sdk/pull/4209) [`24d1c5cf`](https://github.com/cloudflare/workers-sdk/commit/24d1c5cf3b810e780df865a0f76f1c3ae8ed5fbe) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: suppress compatibility date fallback warnings if no `wrangler` update is available
+
+  If a compatibility date greater than the installed version of `workerd` was
+  configured, a warning would be logged. This warning was only actionable if a new
+  version of `wrangler` was available. The intent here was to warn if a user set
+  a new compatibility date, but forgot to update `wrangler` meaning changes
+  enabled by the new date wouldn't take effect. This change hides the warning if
+  no update is available.
+
+  It also changes the default compatibility date for `wrangler dev` sessions
+  without a configured compatibility date to the installed version of `workerd`.
+  This previously defaulted to the current date, which may have been unsupported
+  by the installed runtime.
+
+- [#4135](https://github.com/cloudflare/workers-sdk/pull/4135) [`53218261`](https://github.com/cloudflare/workers-sdk/commit/532182610087dffda04cc2091baeceb96e7fdb26) Thanks [@Cherry](https://github.com/Cherry)! - feat: resolve npm exports for file imports
+
+  Previously, when using wasm (or other static files) from an npm package, you would have to import the file like so:
+
+  ```js
+  import wasm from "../../node_modules/svg2png-wasm/svg2png_wasm_bg.wasm";
+  ```
+
+  This update now allows you to import the file like so, assuming it's exposed and available in the package's `exports` field:
+
+  ```js
+  import wasm from "svg2png-wasm/svg2png_wasm_bg.wasm";
+  ```
+
+  This will look at the package's `exports` field in `package.json` and resolve the file using [`resolve.exports`](https://www.npmjs.com/package/resolve.exports).
+
+* [#4232](https://github.com/cloudflare/workers-sdk/pull/4232) [`69b43030`](https://github.com/cloudflare/workers-sdk/commit/69b43030b99a21a3e4cad5285aa8253ebee8a392) Thanks [@romeupalos](https://github.com/romeupalos)! - fix: use `zone_name` to determine a zone when the pattern is a custom hostname
+
+  In Cloudflare for SaaS, custom hostnames of third party domain owners can be used in Cloudflare.
+  Workers are allowed to intercept these requests based on the routes configuration.
+  Before this change, the same logic used by `wrangler dev` was used in `wrangler deploy`, which caused wrangler to fail with:
+
+  ✘ [ERROR] Could not find zone for [partner-saas-domain.com]
+
+- [#4198](https://github.com/cloudflare/workers-sdk/pull/4198) [`b404ab70`](https://github.com/cloudflare/workers-sdk/commit/b404ab707b324685235b522ee66bd6e8351f62be) Thanks [@penalosa](https://github.com/penalosa)! - When uploading additional modules with your worker, Wrangler will now report the (uncompressed) size of each individual module, as well as the aggregate size of your Worker
+
+### Patch Changes
+
+- [#4215](https://github.com/cloudflare/workers-sdk/pull/4215) [`950bc401`](https://github.com/cloudflare/workers-sdk/commit/950bc4015fa408bfcd4fbf771cf1c3a062783d96) Thanks [@RamIdeas](https://github.com/RamIdeas)! - fix various logging of shell commands to correctly quote args when needed
+
+* [#4274](https://github.com/cloudflare/workers-sdk/pull/4274) [`be0c6283`](https://github.com/cloudflare/workers-sdk/commit/be0c62834af0692785785cec8a0d7bc9dcfaa61a) Thanks [@jspspike](https://github.com/jspspike)! - chore: bump `miniflare` to [`3.20231025.0`](https://github.com/cloudflare/miniflare/releases/tag/v3.20231025.0)
+
+  This change enables Node-like `console.log()`ing in local mode. Objects with
+  lots of properties, and instances of internal classes like `Request`, `Headers`,
+  `ReadableStream`, etc will now be logged with much more detail.
+
+- [#4127](https://github.com/cloudflare/workers-sdk/pull/4127) [`3d55f965`](https://github.com/cloudflare/workers-sdk/commit/3d55f9656ddb28c7cbe1c03a9409be7af30d6f7d) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: store temporary files in `.wrangler`
+
+  As Wrangler builds your code, it writes intermediate files to a temporary
+  directory that gets cleaned up on exit. Previously, Wrangler used the OS's
+  default temporary directory. On Windows, this is usually on the `C:` drive.
+  If your source code was on a different drive, our bundling tool would generate
+  invalid source maps, breaking breakpoint debugging. This change ensures
+  intermediate files are always written to the same drive as sources. It also
+  ensures unused build outputs are cleaned up when running `wrangler pages dev`.
+
+  This change also means you no longer need to set `cwd` and
+  `resolveSourceMapLocations` in `.vscode/launch.json` when creating an `attach`
+  configuration for breakpoint debugging. Your `.vscode/launch.json` should now
+  look something like...
+
+  ```jsonc
+  {
+  	"configurations": [
+  		{
+  			"name": "Wrangler",
+  			"type": "node",
+  			"request": "attach",
+  			"port": 9229,
+  			// These can be omitted, but doing so causes silent errors in the runtime
+  			"attachExistingChildren": false,
+  			"autoAttachChildProcesses": false
+  		}
+  	]
+  }
+  ```
+
+* [#4189](https://github.com/cloudflare/workers-sdk/pull/4189) [`05798038`](https://github.com/cloudflare/workers-sdk/commit/05798038c85a83afb2c0e8ea9533c31a6fbe3e91) Thanks [@gabivlj](https://github.com/gabivlj)! - Move helper cli files of C3 into @cloudflare/cli and make Wrangler and C3 depend on it
+
+- [#4235](https://github.com/cloudflare/workers-sdk/pull/4235) [`46cd2df5`](https://github.com/cloudflare/workers-sdk/commit/46cd2df5745ef90f4d9577504f203d2753ca56e9) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: ensure `console.log()`s during startup are displayed
+
+  Previously, `console.log()` calls before the Workers runtime was ready to
+  receive requests wouldn't be shown. This meant any logs in the global scope
+  likely weren't visible. This change ensures startup logs are shown. In particular,
+  this should [fix Remix's HMR](https://github.com/remix-run/remix/issues/7616),
+  which relies on startup logs to know when the Worker is ready.
+
 ## 3.14.0
 
 ### Minor Changes
