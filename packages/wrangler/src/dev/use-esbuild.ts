@@ -56,6 +56,7 @@ export function useEsbuild({
 	targetConsumer,
 	testScheduled,
 	experimentalLocal,
+	projectRoot,
 }: {
 	entry: Entry;
 	destination: string | undefined;
@@ -80,6 +81,7 @@ export function useEsbuild({
 	targetConsumer: "dev" | "deploy";
 	testScheduled: boolean;
 	experimentalLocal: boolean | undefined;
+	projectRoot: string | undefined;
 }): EsbuildBundle | undefined {
 	const [bundle, setBundle] = useState<EsbuildBundle>();
 	const { exit } = useApp();
@@ -182,6 +184,7 @@ export function useEsbuild({
 							testScheduled,
 							plugins: [onEnd],
 							local,
+							projectRoot,
 					  })
 					: undefined;
 
@@ -248,6 +251,7 @@ export function useEsbuild({
 		targetConsumer,
 		testScheduled,
 		experimentalLocal,
+		projectRoot,
 	]);
 	return bundle;
 }

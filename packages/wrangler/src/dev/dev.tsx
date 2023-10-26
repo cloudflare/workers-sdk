@@ -1,5 +1,4 @@
 import { spawn } from "node:child_process";
-import fs from "node:fs";
 import * as path from "node:path";
 import * as util from "node:util";
 import { watch } from "chokidar";
@@ -9,7 +8,6 @@ import { Box, Text, useApp, useInput, useStdin } from "ink";
 import React, { useEffect, useRef, useState } from "react";
 import { useErrorHandler, withErrorBoundary } from "react-error-boundary";
 import onExit from "signal-exit";
-import tmp from "tmp-promise";
 import { fetch } from "undici";
 import { runCustomBuild } from "../deployment-bundle/run-custom-build";
 import {
@@ -20,6 +18,7 @@ import {
 } from "../dev-registry";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
+import { getWranglerTmpDir } from "../paths";
 import { openInspector } from "./inspect";
 import { Local } from "./local";
 import { Remote } from "./remote";
@@ -31,6 +30,7 @@ import type { Entry } from "../deployment-bundle/entry";
 import type { CfModule, CfWorkerInit } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
+import type { EphemeralDirectory } from "../paths";
 import type { AssetPaths } from "../sites";
 
 /**
@@ -164,6 +164,7 @@ export type DevProps = {
 	firstPartyWorker: boolean | undefined;
 	sendMetrics: boolean | undefined;
 	testScheduled: boolean | undefined;
+	projectRoot: string | undefined;
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
@@ -248,7 +249,7 @@ type DevSessionProps = DevProps & {
 function DevSession(props: DevSessionProps) {
 	useCustomBuild(props.entry, props.build);
 
-	const directory = useTmpDir();
+	const directory = useTmpDir(props.projectRoot);
 
 	const workerDefinitions = useDevRegistry(
 		props.name,
@@ -284,6 +285,7 @@ function DevSession(props: DevSessionProps) {
 		targetConsumer: "dev",
 		testScheduled: props.testScheduled ?? false,
 		experimentalLocal: props.experimentalLocal,
+		projectRoot: props.projectRoot,
 	});
 
 	// TODO(queues) support remote wrangler dev
@@ -376,26 +378,14 @@ function DevSession(props: DevSessionProps) {
 	);
 }
 
-export interface DirectorySyncResult {
-	name: string;
-	removeCallback: () => void;
-}
-
-function useTmpDir(): string | undefined {
+function useTmpDir(projectRoot: string | undefined): string | undefined {
 	const [directory, setDirectory] = useState<string>();
 	const handleError = useErrorHandler();
 	useEffect(() => {
-		let dir: DirectorySyncResult | undefined;
+		let dir: EphemeralDirectory | undefined;
 		try {
-			// const tmpdir = path.resolve(".wrangler", "tmp");
-			// fs.mkdirSync(tmpdir, { recursive: true });
-			// dir = tmp.dirSync({ unsafeCleanup: true, tmpdir });
-			dir = tmp.dirSync({ unsafeCleanup: true }) as DirectorySyncResult;
-			// Make sure we resolve all files relative to the actual temporary
-			// directory, without symlinks, otherwise `esbuild` will generate invalid
-			// source maps.
-			const realpath = fs.realpathSync(dir.name);
-			setDirectory(realpath);
+			dir = getWranglerTmpDir(projectRoot, "dev");
+			setDirectory(dir.path);
 			return;
 		} catch (err) {
 			logger.error(
@@ -403,10 +393,8 @@ function useTmpDir(): string | undefined {
 			);
 			handleError(err);
 		}
-		return () => {
-			dir?.removeCallback();
-		};
-	}, [handleError]);
+		return () => dir?.remove();
+	}, [projectRoot, handleError]);
 	return directory;
 }
 

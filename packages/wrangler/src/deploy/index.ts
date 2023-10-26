@@ -239,6 +239,7 @@ export async function deployHandler(
 
 	const configPath =
 		args.config || (args.script && findWranglerToml(path.dirname(args.script)));
+	const projectRoot = configPath && path.dirname(configPath);
 	const config = readConfig(configPath, args);
 	const entry = await getEntry(args, config, "deploy");
 	await metrics.sendMetricsEvent(
@@ -319,5 +320,6 @@ export async function deployHandler(
 		keepVars: args.keepVars,
 		logpush: args.logpush,
 		oldAssetTtl: args.oldAssetTtl,
+		projectRoot,
 	});
 }

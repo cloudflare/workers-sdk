@@ -11,7 +11,7 @@ import {
 import { FatalError } from "../../errors";
 import { logger } from "../../logger";
 import { getBasePath } from "../../paths";
-import { realTmpdir } from "../utils";
+import { getPagesProjectRoot, getPagesTmpDir } from "../utils";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Entry } from "../../deployment-bundle/entry";
 import type { CfModule } from "../../deployment-bundle/worker";
@@ -35,7 +35,7 @@ export type Options = {
 
 export function buildWorkerFromFunctions({
 	routesModule,
-	outfile = join(realTmpdir(), `./functionsWorker-${Math.random()}.js`),
+	outfile = join(getPagesTmpDir(), `./functionsWorker-${Math.random()}.js`),
 	outdir,
 	minify = false,
 	sourcemap = false,
@@ -157,6 +157,7 @@ export function buildWorkerFromFunctions({
 		targetConsumer: local ? "dev" : "deploy",
 		forPages: true,
 		local,
+		projectRoot: getPagesProjectRoot(),
 	});
 }
 
@@ -188,7 +189,7 @@ export type RawOptions = {
  */
 export function buildRawWorker({
 	workerScriptPath,
-	outfile = join(realTmpdir(), `./functionsWorker-${Math.random()}.js`),
+	outfile = join(getPagesTmpDir(), `./functionsWorker-${Math.random()}.js`),
 	outdir,
 	directory,
 	bundle = true,
@@ -250,6 +251,7 @@ export function buildRawWorker({
 		targetConsumer: local ? "dev" : "deploy",
 		forPages: true,
 		local,
+		projectRoot: getPagesProjectRoot(),
 	});
 }
 
@@ -279,7 +281,10 @@ export async function traverseAndBuildWorkerJSDirectory({
 		]
 	);
 
-	const outfile = join(realTmpdir(), `./bundledWorker-${Math.random()}.mjs`);
+	const outfile = join(
+		getPagesTmpDir(),
+		`./bundledWorker-${Math.random()}.mjs`
+	);
 	const bundleResult = await buildRawWorker({
 		workerScriptPath: entrypoint,
 		bundle: true,

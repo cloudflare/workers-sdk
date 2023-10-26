@@ -3,8 +3,7 @@ import * as path from "node:path";
 import NodeGlobalsPolyfills from "@esbuild-plugins/node-globals-polyfill";
 import NodeModulesPolyfills from "@esbuild-plugins/node-modules-polyfill";
 import * as esbuild from "esbuild";
-import tmp from "tmp-promise";
-import { getBasePath } from "../paths";
+import { getBasePath, getWranglerTmpDir } from "../paths";
 import { applyMiddlewareLoaderFacade } from "./apply-middleware";
 import {
 	isBuildFailure,
@@ -85,6 +84,7 @@ export type BundleOptions = {
 	isOutfile?: boolean;
 	forPages?: boolean;
 	local: boolean;
+	projectRoot: string | undefined;
 };
 
 /**
@@ -122,15 +122,13 @@ export async function bundleWorker(
 		isOutfile,
 		forPages,
 		local,
+		projectRoot,
 	}: BundleOptions
 ): Promise<BundleResult> {
 	// We create a temporary directory for any one-off files we
 	// need to create. This is separate from the main build
 	// directory (`destination`).
-	const unsafeTmpDir = await tmp.dir({ unsafeCleanup: true });
-	// Make sure we resolve all files relative to the actual temporary directory,
-	// without symlinks, otherwise `esbuild` will generate invalid source maps.
-	const tmpDirPath = fs.realpathSync(unsafeTmpDir.path);
+	const tmpDir = getWranglerTmpDir(projectRoot, "bundle");
 
 	const entryFile = entry.file;
 
@@ -234,12 +232,9 @@ export async function bundleWorker(
 		// we need to extract that file to an accessible place before injecting
 		// it in, hence this code here.
 
-		const checkedFetchFileToInject = path.join(tmpDirPath, "checked-fetch.js");
+		const checkedFetchFileToInject = path.join(tmpDir.path, "checked-fetch.js");
 
 		if (checkFetch && !fs.existsSync(checkedFetchFileToInject)) {
-			fs.mkdirSync(tmpDirPath, {
-				recursive: true,
-			});
 			fs.writeFileSync(
 				checkedFetchFileToInject,
 				fs.readFileSync(
@@ -264,7 +259,7 @@ export async function bundleWorker(
 	) {
 		const result = await applyMiddlewareLoaderFacade(
 			entry,
-			tmpDirPath,
+			tmpDir.path,
 			middlewareToLoad,
 			doBindings
 		);
@@ -365,10 +360,16 @@ export async function bundleWorker(
 			}
 
 			stop = async function () {
+				tmpDir.remove();
 				await ctx.dispose();
 			};
 		} else {
 			result = await esbuild.build(buildOptions);
+			// Even when we're not watching, we still want some way of cleaning up the
+			// temporary directory when we don't need it anymore
+			stop = async function () {
+				tmpDir.remove();
+			};
 		}
 	} catch (e) {
 		if (!legacyNodeCompat && isBuildFailure(e))
@@ -405,7 +406,7 @@ export async function bundleWorker(
 		stop,
 		sourceMapPath,
 		sourceMapMetadata: {
-			tmpDir: tmpDirPath,
+			tmpDir: tmpDir.path,
 			entryDirectory: entry.directory,
 		},
 	};

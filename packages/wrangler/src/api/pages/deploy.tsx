@@ -1,5 +1,4 @@
 import { existsSync, lstatSync, readFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join, resolve as resolvePath } from "node:path";
 import { cwd } from "node:process";
 import { File, FormData } from "undici";
@@ -20,6 +19,7 @@ import {
 } from "../../pages/functions/buildWorker";
 import { validateRoutes } from "../../pages/functions/routes-validation";
 import { upload } from "../../pages/upload";
+import { getPagesTmpDir } from "../../pages/utils";
 import { validate } from "../../pages/validate";
 import { createUploadWorkerBundleContents } from "./create-worker-bundle-contents";
 import type { BundleResult } from "../../deployment-bundle/bundle";
@@ -154,7 +154,7 @@ export async function deploy({
 	const functionsDirectory =
 		customFunctionsDirectory || join(cwd(), "functions");
 	const routesOutputPath = !existsSync(join(directory, "_routes.json"))
-		? join(tmpdir(), `_routes-${Math.random()}.json`)
+		? join(getPagesTmpDir(), `_routes-${Math.random()}.json`)
 		: undefined;
 
 	// Routing configuration displayed in the Functions tab of a deployment in Dash
@@ -162,7 +162,7 @@ export async function deploy({
 
 	if (!_workerJS && existsSync(functionsDirectory)) {
 		const outputConfigPath = join(
-			tmpdir(),
+			getPagesTmpDir(),
 			`functions-filepath-routing-config-${Math.random()}.json`
 		);
 
@@ -257,7 +257,10 @@ export async function deploy({
 		});
 	} else if (_workerJS) {
 		if (bundle) {
-			const outfile = join(tmpdir(), `./bundledWorker-${Math.random()}.mjs`);
+			const outfile = join(
+				getPagesTmpDir(),
+				`./bundledWorker-${Math.random()}.mjs`
+			);
 			workerBundle = await buildRawWorker({
 				workerScriptPath: _workerPath,
 				outfile,
