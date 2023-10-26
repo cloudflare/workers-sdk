@@ -1,5 +1,5 @@
 export const DEV_REGISTRY_PORT = 6284;
-export const DEV_REGISTRY_HOST = `http://localhost:${DEV_REGISTRY_PORT}`;
+export const DEV_REGISTRY_HOST = `localhost:${DEV_REGISTRY_PORT}`;
 
 export const DEV_REGISTRY_DAEMON_EXIT_TIMEOUT = 10_000;
 

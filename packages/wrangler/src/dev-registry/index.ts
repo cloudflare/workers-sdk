@@ -1,10 +1,10 @@
 import childProcess from "child_process";
+import assert from "node:assert";
 import events from "node:events";
 import path from "node:path";
-import timers from "node:timers/promises";
 import util from "node:util";
-import chalk from "chalk";
 import { fetch } from "undici";
+import { WebSocket } from "ws";
 import { logger } from "../logger";
 import { getBasePath } from "../paths";
 import {
@@ -27,15 +27,6 @@ function isCodeError(value: unknown): value is { code: string } {
 		typeof value.code === "string"
 	);
 }
-function isAbortError(value: unknown): boolean {
-	// Matches `DOMException [AbortError]` and Node's `AbortError`
-	return (
-		typeof value === "object" &&
-		value !== null &&
-		"name" in value &&
-		value.name === "AbortError"
-	);
-}
 
 async function ensureRegistryDaemon() {
 	const daemonPath = path.join(
@@ -49,15 +40,9 @@ async function ensureRegistryDaemon() {
 		windowsHide: true,
 		stdio: ["ignore", "ignore", "ignore", "ipc"],
 	});
-	daemonProcess.on("exit", (code) => {
-		console.log(chalk.cyan(`[DEV REGISTRY] Daemon exited with code ${code}`));
-	});
 	const [message] = (await events.once(daemonProcess, "message")) as [
 		WorkerRegistryDaemonMessage
 	];
-	console.log(
-		chalk.cyan(`[DEV REGISTRY] Daemon message ${JSON.stringify(message)}`)
-	);
 	if (message.type === "error") {
 		if (isCodeError(message.error) && message.error.code === "EADDRINUSE") {
 			return;
@@ -99,7 +84,8 @@ export class RegistryHandle {
 	readonly #initPromise: Promise<void>;
 	#lastDefinition?: WorkerDefinition;
 	#lastRegistry?: WorkerRegistry;
-	#disposeController = new AbortController();
+	#disposed = false;
+	#webSocket?: WebSocket;
 
 	constructor(
 		private readonly name: string | undefined,
@@ -112,43 +98,37 @@ export class RegistryHandle {
 
 	async #init() {
 		await ensureRegistryDaemon();
-		void this.#subscribe();
-	}
+		if (this.#disposed) return;
 
-	async query(options?: Abortable): Promise<WorkerRegistry> {
-		await this.#initPromise;
-		const res = await fetch(`${DEV_REGISTRY_HOST}/workers/`, options);
-		return (await res.json()) as WorkerRegistry;
-	}
-
-	async #subscribe() {
-		let failed = false;
-		const signal = this.#disposeController.signal;
-		const signalOptions = { signal };
-		while (!signal.aborted) {
-			try {
-				const registry = await this.query(signalOptions);
+		const ws = new WebSocket(`ws://${DEV_REGISTRY_HOST}/workers/${this.name}`);
+		this.#webSocket = ws;
+		return new Promise<void>((resolve) => {
+			ws.on("message", (data) => {
+				const registry = JSON.parse(data.toString());
 				// Ignore our own registration to avoid unnecessary reloads
 				if (this.name !== undefined) delete registry[this.name];
 				if (!util.isDeepStrictEqual(registry, this.#lastRegistry)) {
 					this.#lastRegistry = registry;
 					this.callback(registry);
 				}
-			} catch (error) {
-				// Ignore abort errors
-				if (isAbortError(error)) break;
-
-				// Only log first error
-				if (failed) continue;
-				failed = true;
+			});
+			// Intentionally not `reject()`ing the promise for `close`/`error` events.
+			// We just want to resolve `this.#initPromise` in these cases. Code should
+			// verify the socket's `readyState` before attempting to use it.
+			ws.once("open", () => resolve());
+			ws.once("close", () => resolve());
+			ws.once("error", (error) => {
 				logRegistryError("query", error);
-			}
-			try {
-				await timers.setTimeout(300, undefined, signalOptions);
-			} catch (error) {
-				if (!isAbortError(error)) throw error; // Something's gone very wrong
-			}
-		}
+				resolve();
+			});
+		});
+	}
+
+	async query(options?: Abortable): Promise<WorkerRegistry> {
+		await this.#initPromise;
+		const res = await fetch(`http://${DEV_REGISTRY_HOST}/workers/`, options);
+		assert.strictEqual(res.status, 200);
+		return (await res.json()) as WorkerRegistry;
 	}
 
 	async update(definition: WorkerDefinition): Promise<void> {
@@ -163,18 +143,20 @@ export class RegistryHandle {
 
 		try {
 			await this.#initPromise;
-			await fetch(`${DEV_REGISTRY_HOST}/workers/${this.name}`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(definition),
-			});
+			assert(this.#webSocket !== undefined);
+			if (this.#webSocket.readyState !== WebSocket.OPEN) return;
+			this.#webSocket.send(JSON.stringify(definition));
 		} catch (error) {
-			return logRegistryError("update", error);
+			logRegistryError("update", error);
 		}
 	}
 
 	dispose() {
-		this.#disposeController.abort();
+		// We've either created the WebSocket or are about to. Setting `#disposed`
+		// to `true` ensures we don't create the WebSocket, and attempting to
+		// `close()` the socket ensures if we did create one, it's closed.
+		this.#disposed = true;
+		this.#webSocket?.close(1000);
 	}
 }
 

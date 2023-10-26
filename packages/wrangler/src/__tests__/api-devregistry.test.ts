@@ -1,5 +1,6 @@
 import { fetch } from "undici";
 import { unstable_dev } from "../api";
+import { msw } from "./helpers/msw";
 
 jest.unmock("child_process");
 jest.unmock("undici");
@@ -15,6 +16,7 @@ describe("multi-worker testing", () => {
 	let parentWorker: any;
 
 	beforeAll(async () => {
+		msw.close();
 		childWorker = await unstable_dev(
 			"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 			{
