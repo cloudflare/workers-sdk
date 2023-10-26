@@ -1,5 +1,25 @@
 # create-cloudflare
 
+## 2.6.2
+
+### Patch Changes
+
+- [#4243](https://github.com/cloudflare/workers-sdk/pull/4243) [`bfb66aa0`](https://github.com/cloudflare/workers-sdk/commit/bfb66aa06c4075bb3f12ba702a555f51653a5199) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-vue` from `3.7.5` to `3.8.0`
+
+* [#4244](https://github.com/cloudflare/workers-sdk/pull/4244) [`5c81d34d`](https://github.com/cloudflare/workers-sdk/commit/5c81d34d01454e129ca6587b6b99d6ea4ec9c870) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-qwik` from `1.2.13` to `1.2.14`
+
+- [#4246](https://github.com/cloudflare/workers-sdk/pull/4246) [`67c4c2c0`](https://github.com/cloudflare/workers-sdk/commit/67c4c2c0f581047fece5401d5ccfff5f2476412e) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `gatsby` from `5.12.7` to `5.12.8`
+
+* [#4259](https://github.com/cloudflare/workers-sdk/pull/4259) [`b5e62b93`](https://github.com/cloudflare/workers-sdk/commit/b5e62b931ad6671e4dce9444a279bb3ec8f63991) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-hono` from `0.3.1` to `0.3.2`
+
+- [#4268](https://github.com/cloudflare/workers-sdk/pull/4268) [`77820a22`](https://github.com/cloudflare/workers-sdk/commit/77820a22ce8c41870877387ff4012fa24a14fad8) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-solid` from `0.3.7` to `0.3.8`
+
+* [#4215](https://github.com/cloudflare/workers-sdk/pull/4215) [`950bc401`](https://github.com/cloudflare/workers-sdk/commit/950bc4015fa408bfcd4fbf771cf1c3a062783d96) Thanks [@RamIdeas](https://github.com/RamIdeas)! - fix various logging of shell commands to correctly quote args when needed
+
+- [#4189](https://github.com/cloudflare/workers-sdk/pull/4189) [`05798038`](https://github.com/cloudflare/workers-sdk/commit/05798038c85a83afb2c0e8ea9533c31a6fbe3e91) Thanks [@gabivlj](https://github.com/gabivlj)! - Move helper cli files of C3 into @cloudflare/cli and make Wrangler and C3 depend on it
+
+* [#4200](https://github.com/cloudflare/workers-sdk/pull/4200) [`773e2a8c`](https://github.com/cloudflare/workers-sdk/commit/773e2a8cc07a6ff55a5a12edd103751eafcc9468) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix the generation of invalid/incorrect scripts for Next.js applications
+
 ## 2.6.1
 
 ### Patch Changes
