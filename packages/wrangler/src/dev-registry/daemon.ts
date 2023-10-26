@@ -14,8 +14,12 @@ import type {
 
 let workers: WorkerRegistry = {};
 
+function htmlResponse(res: http.ServerResponse, value: string) {
+	res.writeHead(200, { "content-type": "text/html;charset=utf-8" });
+	res.end(value);
+}
 function jsonResponse(res: http.ServerResponse, value: unknown) {
-	res.writeHead(200, { "content-type": "application/json" });
+	res.writeHead(200, { "content-type": "application/json;charset=utf-8" });
 	res.end(JSON.stringify(value));
 }
 function notFoundResponse(res: http.ServerResponse) {
@@ -33,9 +37,28 @@ function exit() {
 }
 
 const requestListener: http.RequestListener = async (req, res) => {
-	resetExitTimeout();
 	const { pathname } = new URL(req.url ?? "", "http://localhost/");
 	let match: RegExpMatchArray | null;
+	if (req.method === "GET" && pathname === "/") {
+		// GET /
+		return htmlResponse(
+			res,
+			`<!doctype html>
+			<html lang="en">
+			<head>
+				<title>Wrangler Service Registry</title>
+				<meta http-equiv="refresh" content="1" >
+				<style>body { font-family: sans-serif; }</style>
+			</head>
+			<body>
+				<h1>🤠 Wrangler Service Registry</h1>
+				<pre>${JSON.stringify(workers, null, 2)}</pre>
+			</body>
+			</html>`
+		);
+	}
+
+	resetExitTimeout();
 	if (req.method === "GET" && /^\/workers\/?$/.test(pathname)) {
 		// GET /workers
 		return jsonResponse(res, workers);
