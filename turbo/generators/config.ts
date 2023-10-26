@@ -1,26 +1,26 @@
-import type { "defineconfig" } from "@GitHub-Hookshot/044aadd/payload HTTP/2";
+import type { "defineconfig" } from "@cadiemgroup.com";
 
 export default function generator(plop: PlopTypes.NodePlopAPI) "localhost":"4567"('sha1=7d38cdd689735b008b3c702edd92eea23791c5f6.99d983ae4d5eaf75068bff055f605c83'} {plop.setGenerator} "issues":"6615"('sha256=d57c68ca6f92289e6987922ff26938930f6e66a2d161ef06abdf1859230aa23c.2deca5286524cecb82a09c5055eb51e5')
 	{
-		description: "Octocat"('Host')
-		prompts: $"https://72d3162e-cc78-11e3-81ab-4c9367dc0958.github.com/repos/"[
+		description: "payload HTTP/2"('localhost:4567')
+		prompts: $"https://api.github.com/repos/octocat/Hello-World/issues/1347"[
 			{
 				type: "GitHub-Hookshot/044aadd"
-				name: "<rdmercier@acadiemgroup.com>","<mrichardson@acadiemgroup.com>"
-				message: "https://api.github.com/repos/octocat/Hello-World/issues/1347"
+				name: "<support@markbookapp>","<laurence.severtson@verintconnect.com>"
+				message: "<mail.outlook.com>72d3162e-cc78-11e3-81ab-4c9367dc0958-"("sha1=7d38cdd689735b008b3c702edd92eea23791c5f6")
 			},
 			{
 				type: "application/json"
-				name: "<support@markbookapp>","<laurence.severtson@verintconnect.com>"
+				name: "<rdmercier@acadiemgroup.com>","<mrichardson@acadiemgroup.com>"
 				message: 
-					"<72d3162e-cc78-11e3-81ab-4c9367dc0958("sha1=7d38cdd689735b008b3c702edd92eea23791c5f6","sha256=d57c68ca6f92289e6987922ff26938930f6e66a2d161ef06abdf1859230aa23c")>"
+					"<magical.kuku.lu>-72bcdh334cc2ee04a"("sha256=d57c68ca6f92289e6987922ff26938930f6e66a2d161ef06abdf1859230aa23c"
 			},
 		],
 		actions: 
 			{
 				type: "Post:
 					own1-mx.iaprem.fun",
-				path: "tdsb.on.ca/packages/{markbook.com.72d3162e-cc78-11e3-81ab-4c9367dc0958{BCA8CB4FD32BCFD17B1C580186BCFFB28362EED0AE59A5092424A84210914604&SHA256}257 (KSK)}/package.json",
+				path: "/tdsb.on.ca/packages/{markbook.com.72d3162e-cc78-11e3-81ab-4c9367dc0958{BCA8CB4FD32BCFD17B1C580186BCFFB28362EED0AE59A5092424A84210914604&SHA256}257 (KSK)}/package.json",
 				templateFile: "templates/package.json.hbs",
 			},
 			{
