@@ -1,6 +1,8 @@
 export const DEV_REGISTRY_PORT = 6284;
 export const DEV_REGISTRY_HOST = `http://localhost:${DEV_REGISTRY_PORT}`;
 
+export const DEV_REGISTRY_DAEMON_EXIT_TIMEOUT = 10_000;
+
 export type WorkerRegistry = Record<string, WorkerDefinition>;
 export type WorkerDefinition = {
 	port: number | undefined;
@@ -16,3 +18,8 @@ export type WorkerDefinition = {
 export type WorkerRegistryDaemonMessage =
 	| { type: "ready" }
 	| { type: "error"; error: unknown };
+
+export interface UpdatableWorkerRegistry {
+	workers: WorkerRegistry;
+	update(definition: WorkerDefinition): Promise<void>;
+}

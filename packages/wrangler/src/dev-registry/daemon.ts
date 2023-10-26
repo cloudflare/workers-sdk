@@ -2,7 +2,10 @@ import assert from "node:assert";
 import events from "node:events";
 import http from "node:http";
 import consumers from "node:stream/consumers";
-import { DEV_REGISTRY_PORT } from "./constants";
+import {
+	DEV_REGISTRY_DAEMON_EXIT_TIMEOUT,
+	DEV_REGISTRY_PORT,
+} from "./constants";
 import type {
 	WorkerDefinition,
 	WorkerRegistry,
@@ -23,7 +26,7 @@ function notFoundResponse(res: http.ServerResponse) {
 let exitTimeout: NodeJS.Timeout | undefined;
 function resetExitTimeout() {
 	clearTimeout(exitTimeout);
-	exitTimeout = setTimeout(exit, 10_000);
+	exitTimeout = setTimeout(exit, DEV_REGISTRY_DAEMON_EXIT_TIMEOUT);
 }
 function exit() {
 	process.exit(0);

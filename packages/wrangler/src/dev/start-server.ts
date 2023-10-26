@@ -1,5 +1,4 @@
 import * as path from "node:path";
-import * as util from "node:util";
 import chalk from "chalk";
 import onExit from "signal-exit";
 import { bundleWorker } from "../deployment-bundle/bundle";
@@ -12,11 +11,7 @@ import {
 	noopModuleCollector,
 } from "../deployment-bundle/module-collection";
 import { runCustomBuild } from "../deployment-bundle/run-custom-build";
-import {
-	getBoundRegisteredWorkers,
-	startWorkerRegistry,
-	stopWorkerRegistry,
-} from "../dev-registry";
+import { getBoundWorkers, RegistryHandle } from "../dev-registry";
 import { logger } from "../logger";
 import { getWranglerTmpDir } from "../paths";
 import { localPropsToConfigBundle, maybeRegisterLocalWorker } from "./local";
@@ -27,7 +22,7 @@ import type { Config } from "../config";
 import type { DurableObjectBindings } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfModule } from "../deployment-bundle/worker";
-import type { WorkerRegistry } from "../dev-registry";
+import type { WorkerRegistry, UpdatableWorkerRegistry } from "../dev-registry";
 import type { DevProps } from "./dev";
 import type { LocalProps } from "./local";
 import type { EsbuildBundle } from "./use-esbuild";
@@ -38,7 +33,6 @@ export async function startDevServer(
 		disableDevRegistry: boolean;
 	}
 ) {
-	let workerDefinitions: WorkerRegistry = {};
 	validateDevProps(props);
 
 	if (props.build.command) {
@@ -58,22 +52,26 @@ export async function startDevServer(
 	}
 
 	//start the worker registry
+	let workerRegistry: UpdatableWorkerRegistry = {
+		workers: {},
+		async update() {},
+	};
+	let workerRegistryHandle: RegistryHandle | undefined;
 	logger.log("disableDevRegistry: ", props.disableDevRegistry);
-	if (!props.disableDevRegistry) {
+	if (!props.disableDevRegistry && props.local) {
 		try {
-			await startWorkerRegistry();
-			if (props.local) {
-				const boundRegisteredWorkers = await getBoundRegisteredWorkers({
-					services: props.bindings.services,
-					durableObjects: props.bindings.durable_objects,
-				});
-
-				if (
-					!util.isDeepStrictEqual(boundRegisteredWorkers, workerDefinitions)
-				) {
-					workerDefinitions = boundRegisteredWorkers || {};
-				}
-			}
+			const handle = new RegistryHandle(props.name, () => {});
+			workerRegistryHandle = handle;
+			const workers = await handle.query();
+			const boundWorkers = getBoundWorkers(
+				workers,
+				props.bindings.services,
+				props.bindings.durable_objects
+			);
+			workerRegistry = {
+				workers: boundWorkers,
+				update: handle.update.bind(handle),
+			};
 		} catch (err) {
 			logger.error("failed to start worker registry", err);
 		}
@@ -99,7 +97,7 @@ export async function startDevServer(
 		noBundle: props.noBundle,
 		findAdditionalModules: props.findAdditionalModules,
 		assets: props.assetsConfig,
-		workerDefinitions,
+		workerDefinitions: workerRegistry.workers,
 		services: props.bindings.services,
 		testScheduled: props.testScheduled,
 		local: props.local,
@@ -131,14 +129,14 @@ export async function startDevServer(
 			onReady: props.onReady,
 			enablePagesAssetsServiceBinding: props.enablePagesAssetsServiceBinding,
 			usageModel: props.usageModel,
-			workerDefinitions,
+			workerRegistry,
 			sourceMapPath: bundle?.sourceMapPath,
 		});
 
 		return {
 			stop: async () => {
+				workerRegistryHandle?.dispose();
 				stop();
-				await stopWorkerRegistry();
 			},
 			// TODO: inspectorUrl,
 		};
@@ -170,8 +168,8 @@ export async function startDevServer(
 		});
 		return {
 			stop: async () => {
+				workerRegistryHandle?.dispose();
 				stop();
-				await stopWorkerRegistry();
 			},
 			// TODO: inspectorUrl,
 		};
@@ -320,7 +318,7 @@ export async function startLocalServer(props: LocalProps) {
 	return new Promise<{ stop: () => void }>((resolve, reject) => {
 		const server = new MiniflareServer();
 		server.addEventListener("reloaded", async (event) => {
-			await maybeRegisterLocalWorker(event, props.name);
+			await maybeRegisterLocalWorker(props.workerRegistry, event);
 			props.onReady?.(event.url.hostname, parseInt(event.url.port));
 			// Note `unstable_dev` doesn't do anything with the inspector URL yet
 			resolve({
