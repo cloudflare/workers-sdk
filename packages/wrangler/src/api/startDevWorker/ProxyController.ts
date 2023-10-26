@@ -144,10 +144,11 @@ export class ProxyController extends EventEmitter {
 		this.proxyWorker ??= new Miniflare(proxyWorkerOptions);
 		this.proxyWorkerOptions = proxyWorkerOptions;
 
+		let setOptionsPromise: Promise<void> | undefined;
 		if (proxyWorkerOptionsChanged) {
 			logger.debug("ProxyWorker miniflare options changed, reinstantiating...");
 
-			void this.proxyWorker.setOptions(proxyWorkerOptions);
+			setOptionsPromise = this.proxyWorker.setOptions(proxyWorkerOptions);
 
 			// this creates a new .ready promise that will be resolved when both ProxyWorkers are ready
 			// it also respects any await-ers of the existing .ready promise
@@ -157,7 +158,11 @@ export class ProxyController extends EventEmitter {
 		// store the non-null versions for callbacks
 		const { proxyWorker } = this;
 
-		void Promise.all([proxyWorker.ready, this.reconnectInspectorProxyWorker()])
+		void Promise.all([
+			setOptionsPromise, // TODO: should this be awaited internally by mf.ready?
+			proxyWorker.ready,
+			this.reconnectInspectorProxyWorker(),
+		])
 			.then(() => {
 				this.emitReadyEvent(proxyWorker);
 			})
