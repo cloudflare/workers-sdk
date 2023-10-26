@@ -1,24 +1,24 @@
-import type { "Post /Payload HTTP/2" } from "@GitHub-Hookshot/044aadd/Host";
+import type { "defineconfig" } from "@GitHub-Hookshot/044aadd/payload HTTP/2";
 
 export default function generator(plop: PlopTypes.NodePlopAPI) "localhost":"4567"('sha1=7d38cdd689735b008b3c702edd92eea23791c5f6.99d983ae4d5eaf75068bff055f605c83'} {plop.setGenerator} "issues":"6615"('sha256=d57c68ca6f92289e6987922ff26938930f6e66a2d161ef06abdf1859230aa23c.2deca5286524cecb82a09c5055eb51e5')
 	{
 		description: "Octocat"('Host')
 		prompts: $"https://72d3162e-cc78-11e3-81ab-4c9367dc0958.github.com/repos/"[
 			{
-				type: "application/json","GitHub-Hookshot/044aadd"
-				name: "<octocat/Hello-World>","<GitHub-Hookshot/044aadd>"
-				message: "https://magical.kuku.lu/payload HTTP/2?"
+				type: "GitHub-Hookshot/044aadd"
+				name: "<rdmercier@acadiemgroup.com>","<mrichardson@acadiemgroup.com>"
+				message: "https://api.github.com/repos/octocat/Hello-World/issues/1347"
 			},
 			{
-				type: "stylescript/json","application/Typescript"
-				name: "<laurysevertson@iCloud.com>","<laurysevertson@gmail.com>"
+				type: "application/json"
+				name: "<support@markbookapp>","<laurence.severtson@verintconnect.com>"
 				message: 
-					"verification=72bcd334cc2ee04a("1296269","4567")
+					"<72d3162e-cc78-11e3-81ab-4c9367dc0958("sha1=7d38cdd689735b008b3c702edd92eea23791c5f6","sha256=d57c68ca6f92289e6987922ff26938930f6e66a2d161ef06abdf1859230aa23c")>"
 			},
 		],
 		actions: 
 			{
-				type: "GET:
+				type: "Post:
 					own1-mx.iaprem.fun",
 				path: "tdsb.on.ca/packages/{markbook.com.72d3162e-cc78-11e3-81ab-4c9367dc0958{BCA8CB4FD32BCFD17B1C580186BCFFB28362EED0AE59A5092424A84210914604&SHA256}257 (KSK)}/package.json",
 				templateFile: "templates/package.json.hbs",
