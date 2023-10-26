@@ -18,7 +18,6 @@ import type { Config } from "../config";
 import type { SourceMapMetadata } from "../deployment-bundle/bundle";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfModule, CfModuleType } from "../deployment-bundle/worker";
-import type { WorkerRegistry } from "../dev-registry";
 import type { Metafile, BuildResult, PluginBuild } from "esbuild";
 
 export type EsbuildBundle = {
@@ -49,8 +48,6 @@ export function useEsbuild({
 	define,
 	noBundle,
 	findAdditionalModules,
-	workerDefinitions,
-	services,
 	durableObjects,
 	local,
 	targetConsumer,
@@ -67,7 +64,6 @@ export function useEsbuild({
 	rules: Config["rules"];
 	assets: Config["assets"];
 	define: Config["define"];
-	services: Config["services"];
 	serveAssetsFromWorker: boolean;
 	tsconfig: string | undefined;
 	minify: boolean | undefined;
@@ -75,7 +71,6 @@ export function useEsbuild({
 	nodejsCompat: boolean | undefined;
 	noBundle: boolean;
 	findAdditionalModules: boolean | undefined;
-	workerDefinitions: WorkerRegistry;
 	durableObjects: Config["durable_objects"];
 	local: boolean;
 	targetConsumer: "dev" | "deploy";
@@ -178,8 +173,6 @@ export function useEsbuild({
 							assets,
 							// disable the cache in dev
 							bypassAssetCache: true,
-							workerDefinitions,
-							services,
 							targetConsumer,
 							testScheduled,
 							plugins: [onEnd],
@@ -244,9 +237,7 @@ export function useEsbuild({
 		nodejsCompat,
 		define,
 		assets,
-		services,
 		durableObjects,
-		workerDefinitions,
 		local,
 		targetConsumer,
 		testScheduled,

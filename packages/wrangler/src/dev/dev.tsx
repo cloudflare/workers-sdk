@@ -5,7 +5,7 @@ import { watch } from "chokidar";
 import clipboardy from "clipboardy";
 import commandExists from "command-exists";
 import { Box, Text, useApp, useInput, useStdin } from "ink";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useErrorHandler, withErrorBoundary } from "react-error-boundary";
 import onExit from "signal-exit";
 import { fetch } from "undici";
@@ -23,7 +23,11 @@ import type { Config } from "../config";
 import type { Route } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfModule, CfWorkerInit } from "../deployment-bundle/worker";
-import type { WorkerRegistry, UpdatableWorkerRegistry } from "../dev-registry";
+import type {
+	WorkerRegistry,
+	UpdatableWorkerRegistry,
+	WorkerDefinition,
+} from "../dev-registry";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { EphemeralDirectory } from "../paths";
 import type { AssetPaths } from "../sites";
@@ -63,14 +67,11 @@ function useDevRegistry(
 		};
 	}, [mode, name, services, durableObjects]);
 
-	return useMemo<UpdatableWorkerRegistry>(() => {
-		return {
-			workers,
-			async update(definition): Promise<void> {
-				return handleRef.current?.update(definition);
-			},
-		};
-	}, [workers]);
+	const update = useCallback(async (definition: WorkerDefinition) => {
+		return handleRef.current?.update(definition);
+	}, []);
+
+	return { workers, update };
 }
 
 export type DevProps = {
@@ -235,8 +236,6 @@ function DevSession(props: DevSessionProps) {
 		noBundle: props.noBundle,
 		findAdditionalModules: props.findAdditionalModules,
 		assets: props.assetsConfig,
-		workerDefinitions: workerRegistry.workers,
-		services: props.bindings.services,
 		durableObjects: props.bindings.durable_objects || { bindings: [] },
 		local: props.local,
 		// Enable the bundling to know whether we are using dev or deploy
@@ -262,21 +261,21 @@ function DevSession(props: DevSessionProps) {
 		);
 	}
 
-	const announceAndOnReady: typeof props.onReady = (finalIp, finalPort) => {
-		if (process.send) {
-			process.send(
+	const onReady = props.onReady;
+	const announceAndOnReady = useCallback(
+		(finalIp: string, finalPort: number) => {
+			process.send?.(
 				JSON.stringify({
 					event: "DEV_SERVER_READY",
 					ip: finalIp,
 					port: finalPort,
 				})
 			);
-		}
 
-		if (props.onReady) {
-			props.onReady(finalIp, finalPort);
-		}
-	};
+			onReady?.(finalIp, finalPort);
+		},
+		[onReady]
+	);
 
 	return props.local ? (
 		<Local

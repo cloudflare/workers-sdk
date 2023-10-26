@@ -73,8 +73,6 @@ export type BundleOptions = {
 	nodejsCompat?: boolean;
 	define: Config["define"];
 	checkFetch: boolean;
-	services?: Config["services"];
-	workerDefinitions?: WorkerRegistry;
 	targetConsumer: "dev" | "deploy";
 	testScheduled?: boolean;
 	inject?: string[];
@@ -111,8 +109,6 @@ export async function bundleWorker(
 		checkFetch,
 		assets,
 		bypassAssetCache,
-		workerDefinitions,
-		services,
 		targetConsumer,
 		testScheduled,
 		inject: injectOption,
@@ -183,30 +179,6 @@ export async function bundleWorker(
 						: {},
 			},
 			supports: ["modules", "service-worker"],
-		});
-	}
-
-	if (
-		targetConsumer === "dev" &&
-		!!(
-			workerDefinitions &&
-			Object.keys(workerDefinitions).length > 0 &&
-			services &&
-			services.length > 0
-		)
-	) {
-		middlewareToLoad.push({
-			name: "multiworker-dev",
-			path: "templates/middleware/middleware-multiworker-dev.ts",
-			config: {
-				workers: Object.fromEntries(
-					(services || []).map((serviceBinding) => [
-						serviceBinding.binding,
-						workerDefinitions?.[serviceBinding.service] || null,
-					])
-				),
-			},
-			supports: ["modules"],
 		});
 	}
 

@@ -14,7 +14,7 @@ import { runCustomBuild } from "../deployment-bundle/run-custom-build";
 import { getBoundWorkers, RegistryHandle } from "../dev-registry";
 import { logger } from "../logger";
 import { getWranglerTmpDir } from "../paths";
-import { localPropsToConfigBundle, maybeRegisterLocalWorker } from "./local";
+import { getWorkerDefinition, localPropsToConfigBundle } from "./local";
 import { MiniflareServer } from "./miniflare";
 import { startRemoteServer } from "./remote";
 import { validateDevProps } from "./validate-dev-props";
@@ -22,7 +22,7 @@ import type { Config } from "../config";
 import type { DurableObjectBindings } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfModule } from "../deployment-bundle/worker";
-import type { WorkerRegistry, UpdatableWorkerRegistry } from "../dev-registry";
+import type { UpdatableWorkerRegistry } from "../dev-registry";
 import type { DevProps } from "./dev";
 import type { LocalProps } from "./local";
 import type { EsbuildBundle } from "./use-esbuild";
@@ -97,8 +97,6 @@ export async function startDevServer(
 		noBundle: props.noBundle,
 		findAdditionalModules: props.findAdditionalModules,
 		assets: props.assetsConfig,
-		workerDefinitions: workerRegistry.workers,
-		services: props.bindings.services,
 		testScheduled: props.testScheduled,
 		local: props.local,
 		doBindings: props.bindings.durable_objects?.bindings ?? [],
@@ -202,8 +200,6 @@ async function runEsbuild({
 	define,
 	noBundle,
 	findAdditionalModules,
-	workerDefinitions,
-	services,
 	testScheduled,
 	local,
 	doBindings,
@@ -218,7 +214,6 @@ async function runEsbuild({
 	rules: Config["rules"];
 	assets: Config["assets"];
 	define: Config["define"];
-	services: Config["services"];
 	serveAssetsFromWorker: boolean;
 	tsconfig: string | undefined;
 	minify: boolean | undefined;
@@ -226,7 +221,6 @@ async function runEsbuild({
 	nodejsCompat: boolean | undefined;
 	noBundle: boolean;
 	findAdditionalModules: boolean | undefined;
-	workerDefinitions: WorkerRegistry;
 	testScheduled?: boolean;
 	local: boolean;
 	doBindings: DurableObjectBindings;
@@ -272,8 +266,6 @@ async function runEsbuild({
 					assets,
 					// disable the cache in dev
 					bypassAssetCache: true,
-					workerDefinitions,
-					services,
 					targetConsumer: "dev", // We are starting a dev server
 					local,
 					testScheduled,
@@ -318,7 +310,7 @@ export async function startLocalServer(props: LocalProps) {
 	return new Promise<{ stop: () => void }>((resolve, reject) => {
 		const server = new MiniflareServer();
 		server.addEventListener("reloaded", async (event) => {
-			await maybeRegisterLocalWorker(props.workerRegistry, event);
+			await props.workerRegistry?.update(getWorkerDefinition(event));
 			props.onReady?.(event.url.hostname, parseInt(event.url.port));
 			// Note `unstable_dev` doesn't do anything with the inspector URL yet
 			resolve({

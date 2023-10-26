@@ -128,6 +128,8 @@ export class RegistryHandle {
 		while (!signal.aborted) {
 			try {
 				const registry = await this.query(signalOptions);
+				// Ignore our own registration to avoid unnecessary reloads
+				if (this.name !== undefined) delete registry[this.name];
 				if (!util.isDeepStrictEqual(registry, this.#lastRegistry)) {
 					this.#lastRegistry = registry;
 					this.callback(registry);

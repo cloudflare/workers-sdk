@@ -93,7 +93,7 @@ describe("Pages Functions", () => {
 		expect(json).toMatchInlineSnapshot(`
 			{
 			  "moduleWorkerCResponse": "Hello from module worker c (staging)",
-			  "moduleWorkerDResponse": "You should start up wrangler dev --local on the STAGING_MODULE_D_SERVICE worker",
+			  "moduleWorkerDResponse": "[wrangler] Couldn't find \`wrangler dev\` session for service \\"STAGING_MODULE_D_SERVICE\\" to proxy to",
 			}
 		`);
 	});

@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import util from "node:util";
 import chalk from "chalk";
 import { useEffect, useRef, useState } from "react";
 import onExit from "signal-exit";
@@ -8,7 +9,10 @@ import useInspector from "./inspect";
 import { MiniflareServer } from "./miniflare";
 import type { Config } from "../config";
 import type { CfWorkerInit, CfScriptFormat } from "../deployment-bundle/worker";
-import type { UpdatableWorkerRegistry } from "../dev-registry";
+import type {
+	UpdatableWorkerRegistry,
+	WorkerDefinition,
+} from "../dev-registry";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { AssetPaths } from "../sites";
 import type { ConfigBundle, ReloadedEvent } from "./miniflare";
@@ -92,18 +96,12 @@ export async function localPropsToConfigBundle(
 	};
 }
 
-export function maybeRegisterLocalWorker(
-	registry: UpdatableWorkerRegistry | undefined,
-	event: ReloadedEvent
-) {
-	if (registry === undefined) return;
-
+export function getWorkerDefinition(event: ReloadedEvent): WorkerDefinition {
 	let protocol = event.url.protocol;
 	protocol = protocol.substring(0, event.url.protocol.length - 1);
-	if (protocol !== "http" && protocol !== "https") return;
-
+	assert(protocol === "http" || protocol === "https");
 	const port = parseInt(event.url.port);
-	return registry.update({
+	return {
 		protocol,
 		mode: "local",
 		port,
@@ -114,7 +112,7 @@ export function maybeRegisterLocalWorker(
 		})),
 		durableObjectsHost: event.url.hostname,
 		durableObjectsPort: port,
-	});
+	};
 }
 
 // https://chromedevtools.github.io/devtools-protocol/#endpoints
@@ -168,7 +166,11 @@ function useLocalWorker(props: LocalProps) {
 		}
 	}, [props.bindings.durable_objects?.bindings]);
 
+	const previousProps = useRef<LocalProps>();
 	useEffect(() => {
+		if (util.isDeepStrictEqual(previousProps.current, props)) return;
+		previousProps.current = props;
+
 		const abortController = new AbortController();
 
 		if (!props.bundle || !props.format) return;
@@ -178,7 +180,7 @@ function useLocalWorker(props: LocalProps) {
 			const newServer = new MiniflareServer();
 			miniflareServerRef.current = server = newServer;
 			server.addEventListener("reloaded", async (event) => {
-				await maybeRegisterLocalWorker(props.workerRegistry, event);
+				await props.workerRegistry?.update(getWorkerDefinition(event));
 				props.onReady?.(event.url.hostname, parseInt(event.url.port));
 
 				try {
