@@ -728,8 +728,8 @@ importers:
         specifier: workspace:*
         version: link:../wrangler
       zod:
-        specifier: ^3.21.4
-        version: 3.22.2
+        specifier: ^3.22.3
+        version: 3.22.3
 
   packages/pages-shared:
     dependencies:
@@ -762,8 +762,8 @@ importers:
         specifier: ^3.3.2
         version: 3.5.6
       zod:
-        specifier: ^3.22.0
-        version: 3.22.2
+        specifier: ^3.22.3
+        version: 3.22.3
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^4.20230321.0
@@ -855,13 +855,13 @@ importers:
     dependencies:
       '@hono/zod-validator':
         specifier: ^0.1.8
-        version: 0.1.8(hono@3.5.6)(zod@3.22.2)
+        version: 0.1.8(hono@3.5.6)(zod@3.22.3)
       hono:
         specifier: ^3.5.6
         version: 3.5.6
       zod:
-        specifier: ^3.22.2
-        version: 3.22.2
+        specifier: ^3.22.3
+        version: 3.22.3
     devDependencies:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
@@ -4439,14 +4439,14 @@ packages:
     resolution: {integrity: sha512-k2Ty1JcVojjJFwrg/ThKi2ujJ7XNLYaFGNB/bWT9wGR+oSMJHMa5w+CUq6p/pVrKeNNgA7pCqEcjSnHVoqJQFw==}
     dev: true
 
-  /@hono/zod-validator@0.1.8(hono@3.5.6)(zod@3.22.2):
+  /@hono/zod-validator@0.1.8(hono@3.5.6)(zod@3.22.3):
     resolution: {integrity: sha512-/Kd/p/dUVKM7/1TY3jafTV+ngwEh3fOLmXCJQKb9esWsCom5WOJaNmZYv8jeRhyipu1xBvmN5jceRA3Ev3rmQw==}
     peerDependencies:
       hono: 3.*
       zod: ^3.19.1
     dependencies:
       hono: 3.5.6
-      zod: 3.22.2
+      zod: 3.22.3
     dev: false
 
   /@humanwhocodes/config-array@0.11.10:
@@ -17825,6 +17825,9 @@ packages:
 
   /zod@3.22.2:
     resolution: {integrity: sha512-wvWkphh5WQsJbVk1tbx1l1Ly4yg+XecD+Mq280uBGt9wa5BKSWf4Mhp6GmrkPixhMxmabYY7RbzlwVP32pbGCg==}
+
+  /zod@3.22.3:
+    resolution: {integrity: sha512-EjIevzuJRiRPbVH4mGc8nApb/lVLKVpmUhAaR5R5doKGfAnGJ6Gr3CViAVjP+4FWSxCsybeWQdcgCtbX+7oZug==}
 
   /zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
