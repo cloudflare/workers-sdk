@@ -687,7 +687,7 @@ importers:
         version: 8.49.0
       eslint-config-turbo:
         specifier: latest
-        version: 1.10.16(eslint@8.49.0)
+        version: 1.10.15(eslint@8.49.0)
       eslint-plugin-import:
         specifier: 2.26.x
         version: 2.26.0(@typescript-eslint/parser@6.7.2)(eslint@8.49.0)
@@ -1225,6 +1225,9 @@ importers:
       http-terminator:
         specifier: ^3.2.0
         version: 3.2.0
+      https-proxy-agent:
+        specifier: 7.0.2
+        version: 7.0.2(supports-color@9.2.2)
       ignore:
         specifier: ^5.2.0
         version: 5.2.0
@@ -6929,7 +6932,7 @@ packages:
       - supports-color
     dev: true
 
-  /agent-base@7.1.0:
+  /agent-base@7.1.0(supports-color@9.2.2):
     resolution: {integrity: sha512-o/zjMZRhJxny7OyEF+Op8X+efiELC7k7yOjMzgfzVqOzXqkBkWI79YoTdOtsuWd5BWhAGAuOY/Xa6xpiaWXiNg==}
     engines: {node: '>= 14'}
     dependencies:
@@ -9129,13 +9132,13 @@ packages:
       source-map: 0.6.1
     dev: true
 
-  /eslint-config-turbo@1.10.16(eslint@8.49.0):
-    resolution: {integrity: sha512-O3NQI72bQHV7FvSC6lWj66EGx8drJJjuT1kuInn6nbMLOHdMBhSUX/8uhTAlHRQdlxZk2j9HtgFCIzSc93w42g==}
+  /eslint-config-turbo@1.10.15(eslint@8.49.0):
+    resolution: {integrity: sha512-76mpx2x818JZE26euen14utYcFDxOahZ9NaWA+6Xa4pY2ezVKVschuOxS96EQz3o3ZRSmcgBOapw/gHbN+EKxQ==}
     peerDependencies:
       eslint: '>6.6.0'
     dependencies:
       eslint: 8.49.0
-      eslint-plugin-turbo: 1.10.16(eslint@8.49.0)
+      eslint-plugin-turbo: 1.10.15(eslint@8.49.0)
     dev: false
 
   /eslint-import-resolver-node@0.3.7:
@@ -9470,8 +9473,8 @@ packages:
       - typescript
     dev: true
 
-  /eslint-plugin-turbo@1.10.16(eslint@8.49.0):
-    resolution: {integrity: sha512-ZjrR88MTN64PNGufSEcM0tf+V1xFYVbeiMeuIqr0aiABGomxFLo4DBkQ7WI4WzkZtWQSIA2sP+yxqSboEfL9MQ==}
+  /eslint-plugin-turbo@1.10.15(eslint@8.49.0):
+    resolution: {integrity: sha512-Tv4QSKV/U56qGcTqS/UgOvb9HcKFmWOQcVh3HEaj7of94lfaENgfrtK48E2CckQf7amhKs1i+imhCsNCKjkQyA==}
     peerDependencies:
       eslint: '>6.6.0'
     dependencies:
@@ -10797,7 +10800,7 @@ packages:
     resolution: {integrity: sha512-+ZT+iBxVUQ1asugqnD6oWoRiS25AkjNfG085dKJGtGxkdwLQrMKU5wJr2bOOFAXzKcTuqq+7fZlTMgG3SRfIYQ==}
     engines: {node: '>= 14'}
     dependencies:
-      agent-base: 7.1.0
+      agent-base: 7.1.0(supports-color@9.2.2)
       debug: 4.3.4(supports-color@9.2.2)
     transitivePeerDependencies:
       - supports-color
@@ -10831,11 +10834,11 @@ packages:
       - supports-color
     dev: true
 
-  /https-proxy-agent@7.0.2:
+  /https-proxy-agent@7.0.2(supports-color@9.2.2):
     resolution: {integrity: sha512-NmLNjm6ucYwtcUmL7JQC1ZQ57LmHP4lT15FQ8D61nak1rO6DH+fz5qNK2Ap5UN4ZapYICE3/0KodcLYSPsPbaA==}
     engines: {node: '>= 14'}
     dependencies:
-      agent-base: 7.1.0
+      agent-base: 7.1.0(supports-color@9.2.2)
       debug: 4.3.4(supports-color@9.2.2)
     transitivePeerDependencies:
       - supports-color
@@ -13943,11 +13946,11 @@ packages:
     engines: {node: '>= 14'}
     dependencies:
       '@tootallnate/quickjs-emscripten': 0.23.0
-      agent-base: 7.1.0
+      agent-base: 7.1.0(supports-color@9.2.2)
       debug: 4.3.4(supports-color@9.2.2)
       get-uri: 6.0.1
       http-proxy-agent: 7.0.0
-      https-proxy-agent: 7.0.2
+      https-proxy-agent: 7.0.2(supports-color@9.2.2)
       pac-resolver: 7.0.0
       socks-proxy-agent: 8.0.2
     transitivePeerDependencies:
@@ -14472,10 +14475,10 @@ packages:
     resolution: {integrity: sha512-Rb5RVBy1iyqOtNl15Cw/llpeLH8bsb37gM1FUfKQ+Wck6xHlbAhWGUFiTRHtkjqGTA5pSHz6+0hrPW/oECihPQ==}
     engines: {node: '>= 14'}
     dependencies:
-      agent-base: 7.1.0
+      agent-base: 7.1.0(supports-color@9.2.2)
       debug: 4.3.4(supports-color@9.2.2)
       http-proxy-agent: 7.0.0
-      https-proxy-agent: 7.0.2
+      https-proxy-agent: 7.0.2(supports-color@9.2.2)
       lru-cache: 7.18.3
       pac-proxy-agent: 7.0.1
       proxy-from-env: 1.1.0
@@ -15700,7 +15703,7 @@ packages:
     resolution: {integrity: sha512-8zuqoLv1aP/66PHF5TqwJ7Czm3Yv32urJQHrVyhD7mmA6d61Zv8cIXQYPTWwmg6qlupnPvs/QKDmfa4P/qct2g==}
     engines: {node: '>= 14'}
     dependencies:
-      agent-base: 7.1.0
+      agent-base: 7.1.0(supports-color@9.2.2)
       debug: 4.3.4(supports-color@9.2.2)
       socks: 2.7.1
     transitivePeerDependencies:

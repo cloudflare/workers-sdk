@@ -122,6 +122,7 @@
 		"@cloudflare/pages-shared": "workspace:^",
 		"@cloudflare/types": "^6.18.4",
 		"@cloudflare/workers-tsconfig": "workspace:*",
+		"https-proxy-agent": "7.0.2",
 		"@cloudflare/workers-types": "^4.20230914.0",
 		"@iarna/toml": "^3.0.0",
 		"@microsoft/api-extractor": "^7.28.3",
