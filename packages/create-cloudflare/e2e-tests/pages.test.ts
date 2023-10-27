@@ -36,7 +36,6 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 	// These are ordered based on speed and reliability for ease of debugging
 	const frameworkTests: Record<string, FrameworkTestConfig> = {
 		astro: {
-			unsupportedPms: ["npm"],
 			expectResponseToContain: "Hello, Astronaut!",
 			testCommitMessage: true,
 		},
