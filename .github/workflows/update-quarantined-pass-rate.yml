@@ -1,0 +1,42 @@
+name: Update Quarantined Pass Rate
+
+on:
+  schedule:
+    - cron: "15 * * * *"
+
+jobs:
+  update-comment:
+    if: ${{ github.repository_owner == 'cloudflare' }}
+    runs-on: ubuntu-latest
+    name: Update comment
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8.8.0
+      - name: Use Node.js 16.18
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.18
+          cache: "pnpm"
+
+      - name: Install NPM Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: "Get text"
+        id: text
+        run: |
+          {
+            echo 'COMMENT<<EOF'
+            node .github/generate-quarantine-issue.mjs
+            echo EOF
+          } >> "$GITHUB_ENV"
+
+      - name: "Update comment"
+        uses: peter-evans/create-or-update-comment@v3
+        with:
+          comment-id: 1966178052
+          body: ${{ env.COMMENT }}

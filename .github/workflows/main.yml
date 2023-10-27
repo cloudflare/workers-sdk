@@ -55,3 +55,6 @@ jobs:
           TMP_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           TMP_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           NODE_OPTIONS: "--max_old_space_size=8192"
+          # Only report test pass rate on main
+          REPORT_TEST_RATE: true
+          TEST_SUBMISSION_TOKEN: ${{ secrets.TEST_SUBMISSION_TOKEN }}
