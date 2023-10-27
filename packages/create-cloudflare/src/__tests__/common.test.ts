@@ -1,6 +1,6 @@
 import * as command from "helpers/command";
 import { describe, expect, test, vi } from "vitest";
-import { isGitConfigured } from "../common";
+import { isAllowedExistingFile, isGitConfigured } from "../common";
 import { validateProjectDirectory } from "../common";
 
 function promisify<T>(value: T) {
@@ -69,5 +69,24 @@ describe("validateProjectDirectory", () => {
 		expect(validateProjectDirectory("foobar-", args)).toBeUndefined();
 		expect(validateProjectDirectory("FooBar", args)).toBeUndefined();
 		expect(validateProjectDirectory("f".repeat(59), args)).toBeUndefined();
+	});
+});
+
+describe("isAllowedExistingFile", () => {
+	const allowed = [
+		"LICENSE",
+		"LICENSE.md",
+		"license",
+		".npmignore",
+		".git",
+		".DS_Store",
+	];
+	test.each(allowed)("%s", (val) => {
+		expect(isAllowedExistingFile(val)).toBe(true);
+	});
+
+	const disallowed = ["foobar", "potato"];
+	test.each(disallowed)("%s", (val) => {
+		expect(isAllowedExistingFile(val)).toBe(false);
 	});
 });
