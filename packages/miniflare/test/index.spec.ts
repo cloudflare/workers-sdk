@@ -547,7 +547,24 @@ test("Miniflare: fetch mocking", async (t) => {
 		}
 	);
 });
-
+test("Miniflare: custom upstream as origin (with colons)", async (t) => {
+	const upstream = await useServer(t, (req, res) => {
+		res.end(`upstream: ${new URL(req.url ?? "", "http://upstream")}`);
+	});
+	const mf = new Miniflare({
+		upstream: new URL("/extra:extra/", upstream.http.toString()).toString(),
+		modules: true,
+		script: `export default {
+      fetch(request) {
+        return fetch(request);
+      }
+    }`,
+	});
+	t.teardown(() => mf.dispose());
+	// Check rewrites protocol, hostname, and port, but keeps pathname and query
+	const res = await mf.dispatchFetch("https://random:0/path:path?a=1");
+	t.is(await res.text(), "upstream: http://upstream/extra:extra/path:path?a=1");
+});
 test("Miniflare: custom upstream as origin", async (t) => {
 	const upstream = await useServer(t, (req, res) => {
 		res.end(`upstream: ${new URL(req.url ?? "", "http://upstream")}`);

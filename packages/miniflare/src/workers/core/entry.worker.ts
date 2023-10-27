@@ -40,7 +40,7 @@ function getUserRequest(
 		// If a custom `upstream` was specified, make sure the URL starts with it
 		let path = url.pathname + url.search;
 		// Remove leading slash, so we resolve relative to `upstream`'s path
-		if (path.startsWith("/")) path = path.substring(1);
+		if (path.startsWith("/")) path = `./${path.substring(1)}`;
 		url = new URL(path, upstreamUrl);
 	}
 
