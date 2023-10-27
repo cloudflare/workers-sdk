@@ -15,20 +15,15 @@ const data = await fetch(
 	}
 ).then((r) => r.json());
 
-console.log(data);
-
 const packageList = data.body
 	.split("<!-- START-LIST -->")[1]
 	.split("<!-- END-LIST -->")[0]
 	.trim()
 	.split("\n");
 
-console.log(packageList);
 const quarantined = Object.fromEntries(
 	packageList.map((p) => {
-		console.log(p);
 		const match = p.match(/- \[(x| )\] `([a-z0-9-@\/\.]+)`/);
-		console.log(match);
 
 		const quarantine = match[1] === "x";
 		return [match[2], quarantine];
