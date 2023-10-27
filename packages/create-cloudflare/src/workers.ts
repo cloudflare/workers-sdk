@@ -59,7 +59,9 @@ export const runWorkersGenerator = async (args: C3Args) => {
 	startSection("Installing dependencies", "Step 2 of 3");
 	chdir(ctx.project.path);
 	await npmInstall();
-	await gitCommit(ctx);
+	if (ctx.c3InitializedGitRepo) {
+		await gitCommit(ctx);
+	}
 	endSection("Dependencies Installed");
 
 	await offerToDeploy(ctx);
