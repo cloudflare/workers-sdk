@@ -16,7 +16,13 @@ export type Persistence = z.infer<typeof PersistenceSchema>;
 // Maps **service** names to the Durable Object class names exported by them
 export type DurableObjectClassNames = Map<
 	string,
-	Map</* className */ string, /* unsafeUniqueKey */ string | undefined>
+	Map<
+		/* className */ string,
+		{
+			unsafeUniqueKey?: string;
+			unsafePreventEviction?: boolean;
+		}
+	>
 >;
 
 // Maps queue names to the Worker that wishes to consume it. Note each queue

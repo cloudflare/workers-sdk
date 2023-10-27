@@ -1,6 +1,7 @@
 import assert from "assert";
 import fs from "fs/promises";
 import path from "path";
+import { setTimeout } from "timers/promises";
 import test from "ava";
 import {
 	DeferredPromise,
@@ -32,6 +33,24 @@ export default {
     return stub.fetch(request);
   },
 };`;
+
+const STATEFUL_SCRIPT = (responsePrefix = "") => `
+  export class DurableObject {
+    constructor() {
+      this.uuid = crypto.randomUUID();
+    }
+    fetch() {
+      return new Response(${JSON.stringify(responsePrefix)} + this.uuid);
+    }
+  }
+  export default {
+    fetch(req, env, ctx) {
+      const singleton = env.DURABLE_OBJECT.idFromName("");
+      const durableObject = env.DURABLE_OBJECT.get(singleton);
+      return durableObject.fetch(req);
+    }
+  }
+`;
 
 test("persists Durable Object data in-memory between options reloads", async (t) => {
 	const opts: MiniflareOptions = {
@@ -308,4 +327,57 @@ test("proxies Durable Object methods", async (t) => {
 	res.webSocket.send("hello");
 	const event = await eventPromise;
 	t.is(event.data, "echo:hello");
+});
+
+test("Durable Object eviction", async (t) => {
+	// this test requires testing over a 10 second timeout
+	t.timeout(12_000);
+
+	// first set unsafePreventEviction to undefined
+	const mf = new Miniflare({
+		verbose: true,
+		modules: true,
+		script: STATEFUL_SCRIPT(),
+		durableObjects: {
+			DURABLE_OBJECT: "DurableObject",
+		},
+	});
+	t.teardown(() => mf.dispose());
+
+	// get uuid generated at durable object startup
+	let res = await mf.dispatchFetch("http://localhost");
+	const original = await res.text();
+
+	// after 10+ seconds, durable object should be evicted, so new uuid generated
+	await setTimeout(10_000);
+	res = await mf.dispatchFetch("http://localhost");
+	t.not(await res.text(), original);
+});
+
+test("prevent Durable Object eviction", async (t) => {
+	// this test requires testing over a 10 second timeout
+	t.timeout(12_000);
+
+	// first set unsafePreventEviction to undefined
+	const mf = new Miniflare({
+		verbose: true,
+		modules: true,
+		script: STATEFUL_SCRIPT(),
+		durableObjects: {
+			DURABLE_OBJECT: {
+				className: "DurableObject",
+				unsafePreventEviction: true,
+			},
+		},
+	});
+	t.teardown(() => mf.dispose());
+
+	// get uuid generated at durable object startup
+	let res = await mf.dispatchFetch("http://localhost");
+	const original = await res.text();
+
+	// after 10+ seconds, durable object should NOT be evicted, so same uuid
+	await setTimeout(10_000);
+	res = await mf.dispatchFetch("http://localhost");
+	t.is(await res.text(), original);
 });
