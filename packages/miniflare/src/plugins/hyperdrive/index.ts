@@ -32,7 +32,15 @@ export const HyperdriveSchema = z
 					"You must provide a hostname or IP address in your connection string - e.g. 'user:password@database-hostname.example.com:5432/databasename",
 			});
 		}
-		if (url.port === "") {
+		let port: string | undefined;
+		if (
+			url.port === "" &&
+			(url.protocol === "postgresql:" || url.protocol == "postgres:")
+		) {
+			port = "5432";
+		} else if (url.port !== "") {
+			port = url.port;
+		} else {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
 				message:
@@ -65,8 +73,8 @@ export const HyperdriveSchema = z
 			user: url.username,
 			password: url.password,
 			scheme: url.protocol.replace(":", ""),
-			host: url.host,
-			port: url.port,
+			host: url.hostname,
+			port: port,
 		};
 	});
 
