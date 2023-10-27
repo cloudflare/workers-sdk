@@ -20,7 +20,7 @@
 		"prettify": "prettier . --write --ignore-unknown",
 		"test": "dotenv -- turbo test --concurrency=1",
 		"test:ci": "node .github/quarantine-tests.mjs",
-		"test:ci:all": "dotenv -- turbo test:ci --summarize --concurrency=1",
+		"test:ci:all": "dotenv -- turbo test:ci --continue --summarize --concurrency=1",
 		"test:watch": "turbo test:watch",
 		"type:tests": "dotenv -- turbo type:tests",
 		"gen:package": "turbo gen package"
