@@ -85,7 +85,7 @@ export const isAllowedExistingFile = (file: string) => {
 		".idea",
 		".npmignore",
 		".travis.yml",
-		"LICENSE",
+		".vscode",
 		"Thumbs.db",
 		"docs",
 		"mkdocs.yml",
@@ -97,7 +97,22 @@ export const isAllowedExistingFile = (file: string) => {
 		".gitkeep",
 	]);
 
-	return allowedExistingFiles.has(file);
+	if (allowedExistingFiles.has(file)) return true;
+
+	const allowedExistingPatters = [
+		/readme(\.md)?$/i,
+		/license(\.md)?$/i,
+		/\.iml$/,
+		/^npm-debug\.log/,
+		/^yarn-debug\.log/,
+		/^yarn-error\.log/,
+	];
+
+	for (const regex of allowedExistingPatters) {
+		if (regex.test(file)) return true;
+	}
+
+	return false;
 };
 
 export const setupProjectDirectory = (args: C3Args) => {

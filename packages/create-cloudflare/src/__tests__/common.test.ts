@@ -73,7 +73,14 @@ describe("validateProjectDirectory", () => {
 });
 
 describe("isAllowedExistingFile", () => {
-	const allowed = ["LICENSE"];
+	const allowed = [
+		"LICENSE",
+		"LICENSE.md",
+		"license",
+		".npmignore",
+		".git",
+		".DS_Store",
+	];
 	test.each(allowed)("%s", (val) => {
 		expect(isAllowedExistingFile(val)).toBe(true);
 	});
