@@ -26,7 +26,6 @@ import {
 	appendEnvName,
 	getBindingNames,
 	isValidName,
-	validateSmartPlacementConfig,
 } from "./validation-helpers";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
@@ -237,8 +236,6 @@ export function normalizeAndValidateConfig(
 		Object.keys(rawConfig),
 		[...Object.keys(config), "env"]
 	);
-
-	validateSmartPlacementConfig(diagnostics, config.placement, config.triggers);
 
 	experimental(diagnostics, rawConfig, "assets");
 

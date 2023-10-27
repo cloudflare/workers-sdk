@@ -963,7 +963,7 @@ describe("normalizeAndValidateConfig()", () => {
 				first_party_worker: true,
 				logpush: true,
 				placement: {
-					mode: "off",
+					mode: "smart",
 				},
 			};
 
@@ -4788,60 +4788,6 @@ describe("normalizeAndValidateConfig()", () => {
 			  - Expected \\"tail_consumers[3].service\\" to be of type string but got {}.
 			  - Expected \\"tail_consumers[4].service\\" to be of type string but got 123."
 		`);
-			});
-		});
-
-		describe("[placement]", () => {
-			it("should error if both placement and triggers are configured", () => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{
-						triggers: {
-							crons: [1111],
-						},
-						placement: { mode: "smart" },
-					} as unknown as RawConfig,
-					undefined,
-					{ env: undefined }
-				);
-
-				expect(diagnostics.hasWarnings()).toBe(false);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - You cannot configure both [triggers] and [placement] in your wrangler.toml. Placement is not supported with cron triggers."
-		`);
-			});
-			it("should not error if triggers are configured and placement is set off", () => {
-				const { diagnostics } = normalizeAndValidateConfig(
-					{
-						triggers: {
-							crons: [1111],
-						},
-						placement: { mode: "off" },
-					} as unknown as RawConfig,
-					undefined,
-					{ env: undefined }
-				);
-
-				expect(diagnostics.hasWarnings()).toBe(false);
-				expect(diagnostics.hasErrors()).toBe(false);
-			});
-			it("should not error if placement is configured and triggers is empty array", () => {
-				const expectedConfig: RawEnvironment = {
-					triggers: { crons: [] },
-					placement: {
-						mode: "smart",
-					},
-				};
-				const { config, diagnostics } = normalizeAndValidateConfig(
-					expectedConfig,
-					undefined,
-					{ env: undefined }
-				);
-
-				expect(config).toEqual(expect.objectContaining({ ...expectedConfig }));
-
-				expect(diagnostics.hasWarnings()).toBe(false);
-				expect(diagnostics.hasErrors()).toBe(false);
 			});
 		});
 
