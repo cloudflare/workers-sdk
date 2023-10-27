@@ -2,17 +2,12 @@ import { endSection } from "@cloudflare/cli";
 import { npmInstall, runCommand, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import { getFrameworkCli } from "../index";
 import type { FrameworkConfig, PagesGeneratorContext } from "types";
 
-const { npm, npx, dlx } = detectPackageManager();
+const { npm, npx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
-	const cli = getFrameworkCli(ctx);
-
-	// TODO: make this interactive when its possible to specify the project name
-	// to create-qwik in interactive mode
-	await runFrameworkGenerator(ctx, `${dlx} ${cli} basic ${ctx.project.name}`);
+	await runFrameworkGenerator(ctx, `basic ${ctx.project.name}`);
 };
 
 const configure = async (ctx: PagesGeneratorContext) => {

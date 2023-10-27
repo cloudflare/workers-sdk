@@ -6,15 +6,12 @@ import { spinner } from "@cloudflare/cli/interactive";
 import { installPackages, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag, readFile, readJSON, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import { getFrameworkCli } from "../index";
 import type { FrameworkConfig, PagesGeneratorContext } from "types";
 
-const { dlx, npm } = detectPackageManager();
+const { npm } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
-	const cli = getFrameworkCli(ctx);
-
-	await runFrameworkGenerator(ctx, `${dlx} ${cli} ${ctx.project.name} --ssr`);
+	await runFrameworkGenerator(ctx, `${ctx.project.name} --ssr`);
 
 	logRaw("");
 };

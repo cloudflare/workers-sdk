@@ -13,7 +13,6 @@ import {
 	writeJSON,
 } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import { getFrameworkCli } from "../index";
 import {
 	apiAppDirHelloJs,
 	apiAppDirHelloTs,
@@ -22,13 +21,12 @@ import {
 } from "./templates";
 import type { C3Args, FrameworkConfig, PagesGeneratorContext } from "types";
 
-const { npm, npx, dlx } = detectPackageManager();
+const { npm, npx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
 	const projectName = ctx.project.name;
-	const cli = getFrameworkCli(ctx);
 
-	await runFrameworkGenerator(ctx, `${dlx} ${cli} ${projectName}`);
+	await runFrameworkGenerator(ctx, `${projectName}`);
 };
 
 const getApiTemplate = (

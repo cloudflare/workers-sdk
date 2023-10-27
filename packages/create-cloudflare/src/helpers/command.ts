@@ -4,6 +4,7 @@ import { endSection, stripAnsi } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { isInteractive, spinner } from "@cloudflare/cli/interactive";
 import { spawn } from "cross-spawn";
+import { getFrameworkCli } from "frameworks/index";
 import { detectPackageManager } from "./packages";
 import * as shellquote from "./shell-quote";
 import type { PagesGeneratorContext } from "types";
@@ -185,11 +186,19 @@ export const retry = async <T>(
 	throw error;
 };
 
-// Prints the section header & footer while running the `cmd`
 export const runFrameworkGenerator = async (
 	ctx: PagesGeneratorContext,
-	cmd: string
+	argString: string
 ) => {
+	const cli = getFrameworkCli(ctx);
+	const { npm, dlx } = detectPackageManager();
+
+	// yarn cannot `yarn create@some-version` and doesn't have an npx equivalent
+	// So to retain the ability to lock verisons we run it with `npx` and spoof
+	// the user agent so scaffolding tools treat the invocation like yarn
+	let cmd = `${npm === "yarn" ? "npx" : dlx} ${cli} ${argString}`;
+	const env = npm === "yarn" ? { npm_config_user_agent: "yarn" } : {};
+
 	if (ctx.framework?.args?.length) {
 		cmd = `${cmd} ${shellquote.quote(ctx.framework.args)}`;
 	}
@@ -204,7 +213,7 @@ export const runFrameworkGenerator = async (
 		cmd = `${cmd} ${shellquote.quote(flags)}`;
 	}
 
-	await runCommand(cmd);
+	await runCommand(cmd, { env });
 };
 
 type InstallConfig = {
@@ -254,18 +263,34 @@ export const npmInstall = async () => {
 	});
 };
 
+const needsReset = (ctx: PagesGeneratorContext) => {
+	const { npm } = detectPackageManager();
+	const projectPath = ctx.project.path;
+
+	switch (npm) {
+		case "npm":
+			return false;
+		case "yarn":
+			return !existsSync(path.join(projectPath, "yarn.lock"));
+		case "pnpm":
+			return !existsSync(path.join(projectPath, "pnpm-lock.yaml"));
+		case "bun":
+			return !existsSync(path.join(projectPath, "bun.lockb"));
+	}
+};
+
 // Resets the package manager context for a project by clearing out existing dependencies
 // and lock files then re-installing.
 export const resetPackageManager = async (ctx: PagesGeneratorContext) => {
 	const { npm } = detectPackageManager();
 
-	// Only do this when using pnpm or yarn
-	if (npm === "npm") return;
+	if (!needsReset(ctx)) return;
 
 	const nodeModulesPath = path.join(ctx.project.path, "node_modules");
-	rmSync(nodeModulesPath, { recursive: true });
+	if (existsSync(nodeModulesPath)) rmSync(nodeModulesPath, { recursive: true });
+
 	const lockfilePath = path.join(ctx.project.path, "package-lock.json");
-	rmSync(lockfilePath);
+	if (existsSync(lockfilePath)) rmSync(lockfilePath);
 
 	await runCommand(`${npm} install`, {
 		silent: true,
@@ -361,6 +386,7 @@ export const listAccounts = async () => {
  */
 export async function getWorkerdCompatibilityDate() {
 	const { npm } = detectPackageManager();
+
 	return runCommand(`${npm} info workerd dist-tags.latest`, {
 		silent: true,
 		captureOutput: true,
@@ -368,6 +394,7 @@ export async function getWorkerdCompatibilityDate() {
 		transformOutput: (result) => {
 			// The format of the workerd version is `major.yyyymmdd.patch`.
 			const match = result.match(/\d+\.(\d{4})(\d{2})(\d{2})\.\d+/);
+
 			if (!match) {
 				throw new Error("Could not find workerd date");
 			}
