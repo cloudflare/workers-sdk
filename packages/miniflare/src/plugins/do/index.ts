@@ -22,6 +22,8 @@ export const DurableObjectsOptionsSchema = z.object({
 					// another `workerd` process, to ensure the IDs created by the stub
 					// object can be used by the real object too.
 					unsafeUniqueKey: z.string().optional(),
+					// Prevents the Durable Object being evicted.
+					unsafePreventEviction: z.boolean().optional(),
 				}),
 			])
 		)
@@ -35,7 +37,12 @@ export function normaliseDurableObject(
 	designator: NonNullable<
 		z.infer<typeof DurableObjectsOptionsSchema>["durableObjects"]
 	>[string]
-): { className: string; serviceName?: string; unsafeUniqueKey?: string } {
+): {
+	className: string;
+	serviceName?: string;
+	unsafeUniqueKey?: string;
+	unsafePreventEviction?: boolean;
+} {
 	const isObject = typeof designator === "object";
 	const className = isObject ? designator.className : designator;
 	const serviceName =
@@ -43,7 +50,10 @@ export function normaliseDurableObject(
 			? getUserServiceName(designator.scriptName)
 			: undefined;
 	const unsafeUniqueKey = isObject ? designator.unsafeUniqueKey : undefined;
-	return { className, serviceName, unsafeUniqueKey };
+	const unsafePreventEviction = isObject
+		? designator.unsafePreventEviction
+		: undefined;
+	return { className, serviceName, unsafeUniqueKey, unsafePreventEviction };
 }
 
 export const DURABLE_OBJECTS_PLUGIN_NAME = "do";

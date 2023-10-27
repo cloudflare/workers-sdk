@@ -424,7 +424,7 @@ export const CORE_PLUGIN: Plugin<
 					compatibilityFlags: options.compatibilityFlags,
 					bindings: workerBindings,
 					durableObjectNamespaces: classNamesEntries.map(
-						([className, unsafeUniqueKey]) => {
+						([className, { unsafeUniqueKey, unsafePreventEviction }]) => {
 							return {
 								className,
 								// This `uniqueKey` will (among other things) be used as part of the
@@ -432,6 +432,7 @@ export const CORE_PLUGIN: Plugin<
 								// JavaScript class names, but safe on filesystems (incl. Windows).
 								uniqueKey:
 									unsafeUniqueKey ?? `${options.name ?? ""}-${className}`,
+								preventEviction: unsafePreventEviction,
 							};
 						}
 					),

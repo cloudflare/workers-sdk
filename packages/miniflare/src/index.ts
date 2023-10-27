@@ -269,6 +269,7 @@ function getDurableObjectClassNames(
 				// Fallback to current worker service if name not defined
 				serviceName = workerServiceName,
 				unsafeUniqueKey,
+				unsafePreventEviction,
 			} = normaliseDurableObject(designator);
 			// Get or create `Map` mapping class name to optional unsafe unique key
 			let classNames = serviceClassNames.get(serviceName);
@@ -278,19 +279,27 @@ function getDurableObjectClassNames(
 			}
 			if (classNames.has(className)) {
 				// If we've already seen this class in this service, make sure the
-				// unsafe unique keys match
-				const existingUnsafeUniqueKey = classNames.get(className);
-				if (existingUnsafeUniqueKey !== unsafeUniqueKey) {
+				// unsafe unique keys and unsafe prevent eviction values match
+				const existingInfo = classNames.get(className);
+				if (existingInfo?.unsafeUniqueKey !== unsafeUniqueKey) {
 					throw new MiniflareCoreError(
 						"ERR_DIFFERENT_UNIQUE_KEYS",
 						`Multiple unsafe unique keys defined for Durable Object "${className}" in "${serviceName}": ${JSON.stringify(
 							unsafeUniqueKey
-						)} and ${JSON.stringify(existingUnsafeUniqueKey)}`
+						)} and ${JSON.stringify(existingInfo?.unsafeUniqueKey)}`
+					);
+				}
+				if (existingInfo?.unsafePreventEviction !== unsafePreventEviction) {
+					throw new MiniflareCoreError(
+						"ERR_DIFFERENT_PREVENT_EVICTION",
+						`Multiple unsafe prevent eviction values defined for Durable Object "${className}" in "${serviceName}": ${JSON.stringify(
+							unsafePreventEviction
+						)} and ${JSON.stringify(existingInfo?.unsafePreventEviction)}`
 					);
 				}
 			} else {
 				// Otherwise, just add it
-				classNames.set(className, unsafeUniqueKey);
+				classNames.set(className, { unsafeUniqueKey, unsafePreventEviction });
 			}
 		}
 	}
