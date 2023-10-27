@@ -50,6 +50,7 @@ tests.on("exit", async () => {
 			method: "POST",
 			body: JSON.stringify(report),
 		}).then((r) => r.json());
+		console.log("Test results reported");
 	}
 
 	console.log("Test results");
@@ -60,11 +61,15 @@ tests.on("exit", async () => {
 
 	let shouldReportSuccess = true;
 
+	console.log("The following packages were quarantined during this run");
+
 	for (const [p, pass] of Object.entries(report)) {
+		if (quarantined[p]) {
+			console.log(`- ${p} (${pass ? "PASS" : "FAIL"})`);
+		}
 		if (!pass && !quarantined[p]) {
 			shouldReportSuccess = false;
 		}
 	}
-	console.log("Test results reported");
 	process.exit(shouldReportSuccess ? 0 : 1);
 });
