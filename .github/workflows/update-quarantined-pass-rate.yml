@@ -1,6 +1,7 @@
 name: Update Quarantined Pass Rate
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: "15 * * * *"
 
