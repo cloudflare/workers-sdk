@@ -833,13 +833,13 @@ describe("wrangler dev", () => {
 	});
 
 	describe("ip", () => {
-		it("should default ip to 0.0.0.0", async () => {
+		it("should default ip to *", async () => {
 			writeWranglerToml({
 				main: "index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual("0.0.0.0");
+			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual("*");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1055,7 +1055,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual("0.0.0.0");
+			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual("*");
 			expect(std.out).toMatchInlineSnapshot(`
 			        "Your worker has access to the following bindings:
 			        - Durable Objects:

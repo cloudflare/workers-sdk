@@ -215,6 +215,7 @@ export function useWorker(
 				)
 			);
 		}
+
 		start().catch((err) => {
 			// instead of logging the raw API error to the user,
 			// give them friendly instructions
