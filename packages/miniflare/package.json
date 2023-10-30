@@ -75,6 +75,7 @@
 		"http-cache-semantics": "^4.1.0",
 		"kleur": "^4.1.5",
 		"rimraf": "^3.0.2",
+		"typescript": "~5.0.4",
 		"source-map": "^0.6.0",
 		"which": "^2.0.2"
 	},
