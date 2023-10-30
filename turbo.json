@@ -8,6 +8,10 @@
 			"persistent": true,
 			"cache": false
 		},
+		"miniflare#dev": {
+			"persistent": true,
+			"cache": false
+		},
 		"build": { "dependsOn": ["^build"] },
 		"test": {
 			"dependsOn": ["^build"],

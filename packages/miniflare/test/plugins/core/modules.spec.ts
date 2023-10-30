@@ -241,7 +241,7 @@ You must manually define your modules when constructing Miniflare:
       ...
     ]
   })
-    at ${scriptPath}:14:17`
+    at ${scriptPath}:14:15`
 	);
 
 	// Check with dynamic require

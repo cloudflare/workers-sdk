@@ -66,12 +66,14 @@
 			"@types/react-dom@18>@types/react": "^18",
 			"@types/react-tabs>@types/react": "^18",
 			"@types/react-transition-group>@types/react": "^18",
-			"@cloudflare/elements>@types/react": "^18"
+			"@cloudflare/elements>@types/react": "^18",
+			"capnpc-ts>typescript": "4.2.4"
 		},
 		"patchedDependencies": {
 			"ink@3.2.0": "patches/ink@3.2.0.patch",
 			"toucan-js@3.2.2": "patches/toucan-js@3.2.2.patch",
-			"@cloudflare/component-listbox@1.10.6": "patches/@cloudflare__component-listbox@1.10.6.patch"
+			"@cloudflare/component-listbox@1.10.6": "patches/@cloudflare__component-listbox@1.10.6.patch",
+			"capnp-ts@0.7.0": "patches/capnp-ts@0.7.0.patch"
 		}
 	}
 }

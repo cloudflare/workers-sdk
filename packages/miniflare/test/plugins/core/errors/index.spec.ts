@@ -6,7 +6,7 @@ import test from "ava";
 import Protocol from "devtools-protocol";
 import esbuild from "esbuild";
 import { DeferredPromise, Miniflare } from "miniflare";
-import { RawSourceMap } from "source-map";
+import type { RawSourceMap } from "source-map";
 import NodeWebSocket from "ws";
 import { escapeRegexp, useTmp } from "../../../test-shared";
 
@@ -136,7 +136,7 @@ addEventListener("fetch", (event) => {
 		message: "unnamed",
 	});
 	const serviceWorkerEntryRegexp = escapeRegexp(
-		`${SERVICE_WORKER_ENTRY_PATH}:6:17`
+		`${SERVICE_WORKER_ENTRY_PATH}:6:16`
 	);
 	t.regex(String(error?.stack), serviceWorkerEntryRegexp);
 	error = await t.throwsAsync(mf.dispatchFetch("http://localhost/a"), {
@@ -148,7 +148,7 @@ addEventListener("fetch", (event) => {
 	error = await t.throwsAsync(mf.dispatchFetch("http://localhost/b"), {
 		message: "b",
 	});
-	const modulesEntryRegexp = escapeRegexp(`${MODULES_ENTRY_PATH}:5:19`);
+	const modulesEntryRegexp = escapeRegexp(`${MODULES_ENTRY_PATH}:5:17`);
 	t.regex(String(error?.stack), modulesEntryRegexp);
 	error = await t.throwsAsync(mf.dispatchFetch("http://localhost/c"), {
 		message: "c",
@@ -174,7 +174,7 @@ addEventListener("fetch", (event) => {
 		instanceOf: TypeError,
 		message: "Dependency error",
 	});
-	const nestedRegexp = escapeRegexp(`${DEP_ENTRY_PATH}:4:17`);
+	const nestedRegexp = escapeRegexp(`${DEP_ENTRY_PATH}:4:16`);
 	t.regex(String(error?.stack), nestedRegexp);
 
 	// Check source mapping URLs rewritten
