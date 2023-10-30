@@ -371,7 +371,17 @@ const blockWorkerJsImports: Plugin = {
 					path: args.path,
 				};
 			}
-			// Otherwise, block any imports that the file is requesting
+			// If it's a node or cf built-in, mark it as external
+			if (
+				args.path.startsWith("node:") ||
+				args.path.startsWith("cloudflare:")
+			) {
+				return {
+					path: args.path,
+					external: true,
+				};
+			}
+			// Otherwise, block any other imports that the file is requesting
 			throw new FatalError(
 				"_worker.js is not being bundled by Wrangler but it is importing from another file.\n" +
 					"This will throw an error if deployed.\n" +
