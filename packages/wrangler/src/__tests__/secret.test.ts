@@ -1,8 +1,10 @@
+import { Blob } from "node:buffer";
 import * as fs from "node:fs";
 import { writeFileSync } from "node:fs";
 import readline from "node:readline";
 import * as TOML from "@iarna/toml";
-import { rest } from "msw";
+import { MockedRequest, rest, type RestRequest } from "msw";
+import { FormData } from "undici";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm, mockPrompt, clearDialogs } from "./helpers/mock-dialogs";
@@ -10,6 +12,7 @@ import { useMockIsTTY } from "./helpers/mock-istty";
 import { mockGetMembershipsFail } from "./helpers/mock-oauth-flow";
 import { useMockStdin } from "./helpers/mock-stdin";
 import { msw } from "./helpers/msw";
+import { FileReaderSync } from "./helpers/msw/read-file-sync";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { Interface } from "node:readline";
@@ -543,22 +546,23 @@ describe("wrangler secret", () => {
 					}) as unknown as Interface
 			);
 
-			let counter = 0;
 			msw.use(
-				rest.put(
-					`*/accounts/:accountId/workers/scripts/:scriptName/secrets`,
+				rest.get(
+					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
 					(req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
-						counter++;
 
-						return res(
-							ctx.json(
-								createFetchResult({
-									name: `secret-name-${counter}`,
-									type: "secret_text",
-								})
-							)
-						);
+						return res(ctx.json(createFetchResult({ bindings: [] })));
+					}
+				)
+			);
+			msw.use(
+				rest.patch(
+					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					(req, res, ctx) => {
+						expect(req.params.accountId).toEqual("some-account-id");
+
+						return res(ctx.json(createFetchResult(null)));
 					}
 				)
 			);
@@ -573,7 +577,6 @@ describe("wrangler secret", () => {
 			✨ 2 secrets successfully uploaded"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(counter).toEqual(2);
 		});
 
 		it("should create secret:bulk", async () => {
@@ -585,23 +588,23 @@ describe("wrangler secret", () => {
 				})
 			);
 
-			// User counter to pass different secrets to the request mock
-			let counter = 0;
 			msw.use(
-				rest.put(
-					`*/accounts/:accountId/workers/scripts/:scriptName/secrets`,
+				rest.get(
+					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
 					(req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
-						counter++;
 
-						return res(
-							ctx.json(
-								createFetchResult({
-									name: `secret-name-${counter}`,
-									type: "secret_text",
-								})
-							)
-						);
+						return res(ctx.json(createFetchResult({ bindings: [] })));
+					}
+				)
+			);
+			msw.use(
+				rest.patch(
+					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					(req, res, ctx) => {
+						expect(req.params.accountId).toEqual("some-account-id");
+
+						return res(ctx.json(createFetchResult(null)));
 					}
 				)
 			);
@@ -633,27 +636,23 @@ describe("wrangler secret", () => {
 				})
 			);
 
-			// User counter to pass different secrets to the request mock
-			let counter = 0;
 			msw.use(
-				rest.put(
-					`*/accounts/:accountId/workers/scripts/:scriptName/secrets`,
+				rest.get(
+					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
 					(req, res, ctx) => {
 						expect(req.params.accountId).toEqual("some-account-id");
-						counter++;
 
-						if (counter % 2 === 0) {
-							return res(
-								ctx.json(
-									createFetchResult({
-										name: `secret-name-${counter}`,
-										type: "secret_text",
-									})
-								)
-							);
-						} else {
-							return res.networkError(`Failed to create secret ${counter}`);
-						}
+						return res(ctx.json(createFetchResult({ bindings: [] })));
+					}
+				)
+			);
+			msw.use(
+				rest.patch(
+					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					(req, res) => {
+						expect(req.params.accountId).toEqual("some-account-id");
+
+						return res.networkError(`Failed to create secret`);
 					}
 				)
 			);
@@ -661,50 +660,19 @@ describe("wrangler secret", () => {
 			await expect(async () => {
 				await runWrangler("secret:bulk ./secret.json --name script-name");
 			}).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"🚨 4 secrets failed to upload"`
+				`"🚨 7 secrets failed to upload"`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
 			"🌀 Creating the secrets for the Worker \\"script-name\\"
-			✨ Successfully created secret for key: secret-name-2
-			✨ Successfully created secret for key: secret-name-4
-			✨ Successfully created secret for key: secret-name-6
 
 			Finished processing secrets JSON file:
-			✨ 3 secrets successfully uploaded
+			✨ 0 secrets successfully uploaded
 
 			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1muploading secret for key: secret-name-1:[0m
-
-			      request to
-			  [4mhttps://api.cloudflare.com/client/v4/accounts/some-account-id/workers/scripts/script-name/secrets[0m
-			  failed, reason: Failed to create secret 1
-
-
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1muploading secret for key: secret-name-3:[0m
-
-			      request to
-			  [4mhttps://api.cloudflare.com/client/v4/accounts/some-account-id/workers/scripts/script-name/secrets[0m
-			  failed, reason: Failed to create secret 3
-
-
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1muploading secret for key: secret-name-5:[0m
-
-			      request to
-			  [4mhttps://api.cloudflare.com/client/v4/accounts/some-account-id/workers/scripts/script-name/secrets[0m
-			  failed, reason: Failed to create secret 5
-
-
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1muploading secret for key: secret-name-7:[0m
-
-			      request to
-			  [4mhttps://api.cloudflare.com/client/v4/accounts/some-account-id/workers/scripts/script-name/secrets[0m
-			  failed, reason: Failed to create secret 7
-
-
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 4 secrets failed to upload[0m
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 7 secrets failed to upload[0m
 
 			"
 		`);
@@ -719,16 +687,23 @@ describe("wrangler secret", () => {
 				})
 			);
 
-			// User counter to pass different secrets to the request mock
-			let counter = 0;
 			msw.use(
-				rest.put(
-					`*/accounts/:accountId/workers/scripts/:scriptName/secrets`,
+				rest.get(
+					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					(req, res, ctx) => {
+						expect(req.params.accountId).toEqual("some-account-id");
+
+						return res(ctx.json(createFetchResult({ bindings: [] })));
+					}
+				)
+			);
+			msw.use(
+				rest.patch(
+					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
 					(req, res) => {
 						expect(req.params.accountId).toEqual("some-account-id");
-						counter++;
 
-						return res.networkError(`Failed to create secret ${counter}`);
+						return res.networkError(`Failed to create secret`);
 					}
 				)
 			);
@@ -748,24 +723,132 @@ describe("wrangler secret", () => {
 			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
 		`);
 			expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1muploading secret for key: secret-name-1:[0m
-
-			      request to
-			  [4mhttps://api.cloudflare.com/client/v4/accounts/some-account-id/workers/scripts/script-name/secrets[0m
-			  failed, reason: Failed to create secret 1
-
-
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1muploading secret for key: secret-name-2:[0m
-
-			      request to
-			  [4mhttps://api.cloudflare.com/client/v4/accounts/some-account-id/workers/scripts/script-name/secrets[0m
-			  failed, reason: Failed to create secret 2
-
-
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 2 secrets failed to upload[0m
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 2 secrets failed to upload[0m
 
 			"
 		`);
 		});
+
+		it("should merge existing bindings and secrets when patching", async () => {
+			writeFileSync(
+				"secret.json",
+				JSON.stringify({
+					"secret-name-2": "secret_text",
+					"secret-name-3": "secret_text",
+				})
+			);
+
+			msw.use(
+				rest.get(
+					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					(req, res, ctx) => {
+						expect(req.params.accountId).toEqual("some-account-id");
+
+						return res(
+							ctx.json(
+								createFetchResult({
+									bindings: [
+										{
+											type: "plain_text",
+											name: "env_var",
+											text: "the content",
+										},
+										{
+											type: "json",
+											name: "another_var",
+											json: { some: "stuff" },
+										},
+										{ type: "secret_text", name: "secret-name-1" },
+										{ type: "secret_text", name: "secret-name-2" },
+									],
+								})
+							)
+						);
+					}
+				)
+			);
+			msw.use(
+				rest.patch(
+					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					async (req, res, ctx) => {
+						expect(req.params.accountId).toEqual("some-account-id");
+
+						const formBody = await (
+							req as MockedRequest as RestRequestWithFormData
+						).formData();
+						const settings = formBody.get("settings");
+						expect(settings).not.toBeNull();
+						expect(
+							JSON.parse(formBody.get("settings") as string)
+						).toMatchObject({
+							bindings: [
+								{ type: "plain_text", name: "env_var" },
+								{ type: "json", name: "another_var" },
+								{ type: "secret_text", name: "secret-name-1" },
+								{
+									type: "secret_text",
+									name: "secret-name-2",
+									text: "secret_text",
+								},
+								{
+									type: "secret_text",
+									name: "secret-name-3",
+									text: "secret_text",
+								},
+							],
+						});
+
+						return res(ctx.json(createFetchResult(null)));
+					}
+				)
+			);
+
+			await runWrangler("secret:bulk ./secret.json --name script-name");
+
+			expect(std.out).toMatchInlineSnapshot(`
+					"🌀 Creating the secrets for the Worker \\"script-name\\"
+					✨ Successfully created secret for key: secret-name-2
+					✨ Successfully created secret for key: secret-name-3
+
+					Finished processing secrets JSON file:
+					✨ 2 secrets successfully uploaded"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
 	});
 });
+
+FormData.prototype.toString = mockFormDataToString;
+export interface RestRequestWithFormData extends MockedRequest, RestRequest {
+	formData(): Promise<FormData>;
+}
+(MockedRequest.prototype as RestRequestWithFormData).formData =
+	mockFormDataFromString;
+
+function mockFormDataToString(this: FormData) {
+	const entries = [];
+	for (const [key, value] of this.entries()) {
+		if (value instanceof Blob) {
+			const reader = new FileReaderSync();
+			reader.readAsText(value);
+			const result = reader.result;
+			entries.push([key, result]);
+		} else {
+			entries.push([key, value]);
+		}
+	}
+	return JSON.stringify({
+		__formdata: entries,
+	});
+}
+
+async function mockFormDataFromString(this: MockedRequest): Promise<FormData> {
+	const { __formdata } = await this.json();
+	expect(__formdata).toBeInstanceOf(Array);
+
+	const form = new FormData();
+	for (const [key, value] of __formdata) {
+		form.set(key, value);
+	}
+	return form;
+}
