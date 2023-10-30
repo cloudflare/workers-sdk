@@ -3,16 +3,17 @@ import * as path from "path";
 import type { ChildProcess } from "child_process";
 import { describe, expect, it, beforeAll, afterAll, beforeEach } from "vitest";
 import { fetch, type Response } from "undici";
+import { setTimeout } from "node:timers/promises";
 
 const waitUntilReady = async (url: string): Promise<Response> => {
 	let response: Response | undefined = undefined;
 
 	while (response === undefined) {
-		await new Promise((resolvePromise) => setTimeout(resolvePromise, 500));
+		await setTimeout(500);
 
 		try {
 			response = await fetch(url);
-		} catch {}
+		} catch (e) {}
 	}
 
 	return response as Response;
@@ -73,7 +74,7 @@ describe("Pages Functions", () => {
 
 	it("connects up Workers (both module and service ones) and fetches from them", async () => {
 		const combinedResponse = await waitUntilReady(
-			`http://localhost:${pagesAppPort}/`
+			`http://127.0.0.1:${pagesAppPort}/`
 		);
 		const json = await combinedResponse.json();
 		expect(json).toMatchInlineSnapshot(`
@@ -87,7 +88,7 @@ describe("Pages Functions", () => {
 
 	it("respects the environments specified for the service bindings (and doesn't connect if the env doesn't match)", async () => {
 		const combinedResponse = await waitUntilReady(
-			`http://localhost:${pagesAppPort}/env`
+			`http://127.0.0.1:${pagesAppPort}/env`
 		);
 		const json = await combinedResponse.json();
 		expect(json).toMatchInlineSnapshot(`
