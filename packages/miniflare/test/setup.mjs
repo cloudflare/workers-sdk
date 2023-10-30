@@ -1,4 +1,20 @@
-import { _initialiseInstanceRegistry } from "miniflare";
+import Module from "node:module";
+import { _initialiseInstanceRegistry } from "../dist/src/index.js";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const pkgRoot = path.resolve(__dirname, "..");
+
+// Monkeypatch Node's resolver to require built `miniflare` package when we call
+// `require("miniflare")`. We could fix this by adding `miniflare` as a
+// dev dependency of itself, but Turborepo doesn't allow this.
+const originalResolveFilename = Module._resolveFilename;
+Module._resolveFilename = function (spec, ...args) {
+	if (spec === "miniflare") spec = pkgRoot;
+	return originalResolveFilename.call(this, spec, ...args);
+};
 
 const registry = _initialiseInstanceRegistry();
 const bigSeparator = "=".repeat(80);

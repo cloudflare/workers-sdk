@@ -52,12 +52,13 @@ opensslTest("NODE_EXTRA_CA_CERTS: loads certificates", async (t) => {
 
 	// Start Miniflare with NODE_EXTRA_CA_CERTS environment variable
 	// (cannot use sync process methods here as that would block HTTPS server)
+	const miniflarePath = require.resolve("miniflare");
 	const result = childProcess.spawn(
 		process.execPath,
 		[
 			"-e",
 			`
-      const { Miniflare } = require("miniflare");
+      const { Miniflare } = require(${JSON.stringify(miniflarePath)});
       const mf = new Miniflare({
         verbose: true,
         modules: true,
