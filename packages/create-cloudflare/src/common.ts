@@ -363,7 +363,6 @@ export const offerGit = async (ctx: PagesGeneratorContext) => {
 			startText: "Initializing git repo",
 			doneText: `${brandColor("initialized")} ${dim(`git`)}`,
 		});
-		ctx.c3InitializedGitRepo = true;
 	}
 };
 
@@ -373,8 +372,8 @@ export const gitCommit = async (ctx: PagesGeneratorContext) => {
 	//       we unconditionally run this command here
 	const commitMessage = await createCommitMessage(ctx);
 
-	// we actually commit only if c3 was the one initializing the git repository
-	if (!ctx.c3InitializedGitRepo) return;
+	if (!(await isGitInstalled()) || !(await isInsideGitRepo(ctx.project.path)))
+		return;
 
 	await runCommands({
 		silent: true,
