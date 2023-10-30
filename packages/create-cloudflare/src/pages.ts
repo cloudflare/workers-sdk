@@ -60,6 +60,12 @@ export const runPagesGenerator = async (args: C3Args) => {
 		originalCWD,
 	};
 
+	// Note: we offer git before we launch the framework generator so that
+	//       we are always in control of the git repo initialization
+	//       (if the user refuses git here but accepts it in the framework cli
+	//       we don't act on it as the git repo is not C3's concern at that point)
+	await offerGit(ctx);
+
 	// Generate
 	const { generate, configure } = FrameworkMap[framework];
 	await generate({ ...ctx });
@@ -70,7 +76,6 @@ export const runPagesGenerator = async (args: C3Args) => {
 		await configure({ ...ctx });
 	}
 	await updatePackageScripts(ctx);
-	await offerGit(ctx);
 	await gitCommit(ctx);
 	endSection(`Application configured`);
 
