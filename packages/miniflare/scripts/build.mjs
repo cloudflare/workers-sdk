@@ -149,7 +149,7 @@ const embedWorkersPlugin = {
 };
 
 async function buildPackage() {
-	const pkg = await getPackage(pkgRoot);
+	const pkg = getPackage(pkgRoot);
 
 	const indexPath = path.join(pkgRoot, "src", "index.ts");
 	// Look for test files ending with .spec.ts in the test directory, default to
