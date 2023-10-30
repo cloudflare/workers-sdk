@@ -13,6 +13,7 @@ packages/wrangler-devtools/devtools-frontend
 packages/edge-preview-authenticated-proxy/package.json
 packages/format-errors/package.json
 packages/**/dist/**
+packages/miniflare/dist-types/
 
 fixtures/remix-pages-app/build/
 fixtures/remix-pages-app/public/build/
@@ -32,3 +33,6 @@ fixtures/**/dist/**
 
 # TurboRepo CodeGen .hbs files
 **/*.hbs
+
+# Miniflare shouldn't be formatted with the root `prettier` version
+packages/miniflare
