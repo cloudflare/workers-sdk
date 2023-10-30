@@ -50,7 +50,7 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 			type: "boolean",
 			default: true,
 			description:
-				"Opens with your browser the deployed application (this option is ignored if the application is not deployed)",
+				"Opens the deployed application in your browser (this option is ignored if the application is not deployed)",
 		})
 		.option("existing-script", {
 			type: "string",
@@ -60,7 +60,7 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 			alias: "y",
 			type: "boolean",
 			description:
-				"Use all the default C3 options each can also be overridden by specifying it",
+				"Use all the default C3 options (each can also be overridden by specifying it)",
 		})
 		.option("auto-update", {
 			type: "boolean",
