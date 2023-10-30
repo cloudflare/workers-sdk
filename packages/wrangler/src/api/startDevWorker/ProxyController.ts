@@ -71,7 +71,10 @@ export class ProxyController extends EventEmitter {
 					modulesRoot: path.dirname(proxyWorkerPath),
 					modules: [{ type: "ESModule", path: proxyWorkerPath }],
 					durableObjects: {
-						DURABLE_OBJECT: "ProxyWorker",
+						DURABLE_OBJECT: {
+							className: "ProxyWorker",
+							unsafePreventEviction: true,
+						},
 					},
 					serviceBindings: {
 						PROXY_CONTROLLER: async (req): Promise<Response> => {
@@ -97,7 +100,10 @@ export class ProxyController extends EventEmitter {
 					modulesRoot: path.dirname(inspectorProxyWorkerPath),
 					modules: [{ type: "ESModule", path: inspectorProxyWorkerPath }],
 					durableObjects: {
-						DURABLE_OBJECT: "InspectorProxyWorker",
+						DURABLE_OBJECT: {
+							className: "InspectorProxyWorker",
+							unsafePreventEviction: true,
+						},
 					},
 					serviceBindings: {
 						PROXY_CONTROLLER: async (req): Promise<Response> => {
