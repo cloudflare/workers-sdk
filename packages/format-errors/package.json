@@ -16,6 +16,6 @@
 		"tsconfig": "*",
 		"typescript": "^5.0.2",
 		"wrangler": "workspace:*",
-		"zod": "^3.21.4"
+		"zod": "^3.22.3"
 	}
 }
