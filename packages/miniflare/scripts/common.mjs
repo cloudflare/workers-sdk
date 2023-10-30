@@ -1,4 +1,4 @@
-import fs from "node:fs/promises";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -20,10 +20,10 @@ export const pkgRoot = path.resolve(__dirname, "..");
 /**
  * Gets the contents of the package.json file in <pkgRoot>
  * @param {string} pkgRoot
- * @returns {Promise<~Package>}
+ * @returns {~Package}
  */
-export async function getPackage(pkgRoot) {
+export function getPackage(pkgRoot) {
 	return JSON.parse(
-		await fs.readFile(path.join(pkgRoot, "package.json"), "utf8")
+		fs.readFileSync(path.join(pkgRoot, "package.json"), "utf8")
 	);
 }
