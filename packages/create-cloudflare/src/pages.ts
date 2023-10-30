@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { resolve } from "path";
+import { dirname, resolve } from "path";
 import { chdir } from "process";
 import { crash, endSection, startSection } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
@@ -14,6 +14,7 @@ import { detectPackageManager } from "helpers/packages";
 import {
 	getProductionBranch,
 	gitCommit,
+	isInsideGitRepo,
 	offerGit,
 	offerToDeploy,
 	printSummary,
@@ -58,6 +59,7 @@ export const runPagesGenerator = async (args: C3Args) => {
 		args,
 		type: frameworkConfig.type,
 		originalCWD,
+		gitRepoAlreadyExisted: await isInsideGitRepo(dirname(path)),
 	};
 
 	// Generate

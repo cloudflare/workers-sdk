@@ -8,7 +8,7 @@ import {
 	writeFile,
 } from "fs/promises";
 import { tmpdir } from "os";
-import { join, resolve } from "path";
+import { dirname, join, resolve } from "path";
 import { chdir } from "process";
 import { endSection, startSection, updateStatus } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
@@ -23,6 +23,7 @@ import { detectPackageManager } from "helpers/packages";
 import {
 	chooseAccount,
 	gitCommit,
+	isInsideGitRepo,
 	offerGit,
 	offerToDeploy,
 	printSummary,
@@ -41,6 +42,7 @@ export const runWorkersGenerator = async (args: C3Args) => {
 		project: { name, path },
 		args,
 		originalCWD,
+		gitRepoAlreadyExisted: await isInsideGitRepo(dirname(path)),
 	};
 
 	ctx.args.ts = await processArgument<boolean>(ctx.args, "ts", {
