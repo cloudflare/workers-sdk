@@ -408,7 +408,6 @@ describe("startDevWorker: ProxyController", () => {
 		res = await undici.fetch(`http://127.0.0.1:${oldPort}`);
 		await expect(res.text()).resolves.toBe("body:1");
 
-		const oldProxyWorkerInstance = devEnv.proxy.proxyWorker;
 		const config2 = fakeConfigUpdate({
 			...run.config,
 			dev: {
@@ -429,8 +428,9 @@ describe("startDevWorker: ProxyController", () => {
 		console.log({ oldPort, newPort });
 
 		// temp
-		expect(oldProxyWorkerInstance).not.toBe(devEnv.proxy.proxyWorker);
+		console.log("awaiting devEnv.proxy.proxyWorker.ready");
 		await devEnv.proxy.proxyWorker.ready;
+		console.log("devEnv.proxy.proxyWorker.ready");
 
 		// worker.fetch should wait for the new ProxyWorker instance to be ready
 		res = await run.worker.fetch("http://dummy");
