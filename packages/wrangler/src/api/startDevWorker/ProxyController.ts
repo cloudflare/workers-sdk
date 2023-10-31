@@ -158,11 +158,9 @@ export class ProxyController extends EventEmitter {
 		// store the non-null versions for callbacks
 		const { proxyWorker } = this;
 
-		void Promise.all([
-			setOptionsPromise, // TODO: should this be awaited internally by mf.ready?
-			proxyWorker.ready,
-			this.reconnectInspectorProxyWorker(),
-		])
+		Promise.resolve(setOptionsPromise)
+			.then(() => proxyWorker!.ready)
+			.then(() => this.reconnectInspectorProxyWorker())
 			.then(() => {
 				this.emitReadyEvent(proxyWorker);
 			})

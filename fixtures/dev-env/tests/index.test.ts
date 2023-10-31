@@ -430,9 +430,9 @@ describe("startDevWorker: ProxyController", () => {
 
 		// temp
 		expect(oldReadyDeferred).not.toBe(devEnv.proxy.ready);
-		console.log("awaiting devEnv.proxy.proxyWorker.ready");
+		console.log("awaiting devEnv.proxy.ready.promise");
 		const { proxyWorker } = await devEnv.proxy.ready.promise;
-		console.log("devEnv.proxy.proxyWorker.ready");
+		console.log("awaiting proxyWorker.ready");
 		console.log({ proxyWorkerUrl: await proxyWorker.url });
 
 		// worker.fetch should wait for the new ProxyWorker instance to be ready
