@@ -15,7 +15,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        pm: [npm, pnpm, bun]
+        pm: [npm, pnpm, bun, yarn]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
