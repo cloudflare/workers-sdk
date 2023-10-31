@@ -429,8 +429,9 @@ describe("startDevWorker: ProxyController", () => {
 
 		// temp
 		console.log("awaiting devEnv.proxy.proxyWorker.ready");
-		await devEnv.proxy.proxyWorker.ready;
+		const { proxyWorker } = await devEnv.proxy.proxyWorker.ready.promise;
 		console.log("devEnv.proxy.proxyWorker.ready");
+		console.log({ proxyWorkerUrl: await proxyWorker.url });
 
 		// worker.fetch should wait for the new ProxyWorker instance to be ready
 		res = await run.worker.fetch("http://dummy");
