@@ -194,7 +194,7 @@ export const runFrameworkGenerator = async (
 	const { npm, dlx } = detectPackageManager();
 
 	// yarn cannot `yarn create@some-version` and doesn't have an npx equivalent
-	// So to retain the ability to lock verisons we run it with `npx` and spoof
+	// So to retain the ability to lock versions we run it with `npx` and spoof
 	// the user agent so scaffolding tools treat the invocation like yarn
 	let cmd = `${npm === "yarn" ? "npx" : dlx} ${cli} ${argString}`;
 	const env = npm === "yarn" ? { npm_config_user_agent: "yarn" } : {};
