@@ -5135,6 +5135,7 @@ addEventListener('fetch', event => {});`
 				tail_consumers: [
 					{ service: "listener " },
 					{ service: "test-listener", environment: "production" },
+					{ service: "namespaced-listener", namespace: "a-dispatch-namespace" },
 				],
 			});
 			await fs.promises.writeFile("index.js", `export default {};`);
@@ -5143,6 +5144,7 @@ addEventListener('fetch', event => {});`
 				expectedTailConsumers: [
 					{ service: "listener " },
 					{ service: "test-listener", environment: "production" },
+					{ service: "namespaced-listener", namespace: "a-dispatch-namespace" },
 				],
 			});
 

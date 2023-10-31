@@ -732,8 +732,10 @@ export type ConfigModuleRuleType =
 export type TailConsumer = {
 	/** The name of the service tail events will be forwarded to. */
 	service: string;
-	/** (Optional) The environt of the service. */
+	/** (Optional) The environment of the service. */
 	environment?: string;
+	/** (Optional) The dispatch namespace the Tail Worker script belongs to (if any). */
+	namespace?: string;
 };
 
 export interface DispatchNamespaceOutbound {
