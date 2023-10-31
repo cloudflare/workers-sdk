@@ -56,7 +56,10 @@ async function fakeStartUserWorker(options: {
 			compatibilityDate: "2023-08-01",
 			name: config.name,
 			script: options.script,
-			log: Object.assign(new Log(), { error() {} }), // TODO: remove when this bug is fixed https://jira.cfdata.org/browse/DEVX-983
+			// TODO: remove when this bug is fixed https://jira.cfdata.org/browse/DEVX-983
+			log: Object.assign(new Log(undefined, { prefix: "FakeUserWorker" }), {
+				error() {},
+			}),
 		},
 		options.mfOpts
 	);
@@ -396,9 +399,11 @@ describe("startDevWorker: ProxyController", () => {
 			},
 		});
 
+		// worker.fetch should wait for the ProxyWorker instance to be ready
 		res = await run.worker.fetch("http://dummy");
 		await expect(res.text()).resolves.toBe("body:1");
 
+		// test eyeball fetches with undici.fetch (we already confirmed the ProxyWorker instance is ready, above)
 		const oldPort = run.config.dev?.server?.port;
 		res = await undici.fetch(`http://127.0.0.1:${oldPort}`);
 		await expect(res.text()).resolves.toBe("body:1");
@@ -419,13 +424,18 @@ describe("startDevWorker: ProxyController", () => {
 		);
 
 		const newPort = config2.dev?.server?.port;
+		expect(newPort).not.toBe(oldPort);
+		console.log({ oldPort, newPort });
 
+		// worker.fetch should wait for the new ProxyWorker instance to be ready
 		res = await run.worker.fetch("http://dummy");
 		await expect(res.text()).resolves.toBe("body:1");
 
+		// test eyeball fetches with undici.fetch (we already confirmed the new ProxyWorker instance is ready, above)
 		res = await undici.fetch(`http://127.0.0.1:${newPort}`);
 		await expect(res.text()).resolves.toBe("body:1");
 
+		// assuming the old server should shutdown by the time the new server is up
 		await expect(
 			undici.fetch(`http://127.0.0.1:${oldPort}`).then((r) => r.text())
 		).rejects.toMatchInlineSnapshot("[TypeError: fetch failed]");
