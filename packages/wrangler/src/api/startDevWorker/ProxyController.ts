@@ -241,6 +241,7 @@ export class ProxyController extends EventEmitter {
 		if (this._torndown) return;
 		assert(this.proxyWorker, "proxyWorker should already be instantiated");
 
+		await this.proxyWorker.ready;
 		try {
 			await this.proxyWorker.dispatchFetch(
 				`http://dummy/cdn-cgi/ProxyWorker/${message.type}`,
@@ -250,6 +251,7 @@ export class ProxyController extends EventEmitter {
 				}
 			);
 		} catch (cause) {
+			console.error("ProxyWorker connection error", cause);
 			if (this._torndown) return;
 
 			const error = castErrorCause(cause);
