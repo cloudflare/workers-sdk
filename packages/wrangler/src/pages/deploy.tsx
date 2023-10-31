@@ -71,6 +71,11 @@ export function Options(yargs: CommonYargsArgv) {
 				type: "string",
 				hidden: true,
 			},
+			"node-compat": {
+				describe: "Enable node.js compatibility",
+				default: false,
+				type: "boolean",
+			},
 		});
 }
 
@@ -86,6 +91,7 @@ export const Handler = async ({
 	bundle,
 	noBundle,
 	config: wranglerConfig,
+	nodeCompat,
 }: PublishArgs) => {
 	// Check for deprecated `wrangler pages publish` command
 	if (_[1] === "publish") {
@@ -260,6 +266,7 @@ export const Handler = async ({
 		// TODO: Here lies a known bug. If you specify both `--bundle` and `--no-bundle`, this behavior is undefined and you will get unexpected results.
 		// There is no sane way to get the true value out of yargs, so here we are.
 		bundle: bundle ?? !noBundle,
+		nodeCompat,
 	});
 
 	saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {

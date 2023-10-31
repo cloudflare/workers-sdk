@@ -76,6 +76,11 @@ interface PagesDeployOptions {
 	// TODO: Allow passing in the API key and plumb it through
 	// to the API calls so that the deploy function does not
 	// rely on the `CLOUDFLARE_API_KEY` environment variable
+
+	/**
+	 * Whether or not to polyfill Node.js APIs
+	 */
+	nodeCompat?: boolean;
 }
 
 /**
@@ -94,6 +99,7 @@ export async function deploy({
 	commitDirty,
 	functionsDirectory: customFunctionsDirectory,
 	bundle,
+	nodeCompat,
 }: PagesDeployOptions) {
 	let _headers: string | undefined,
 		_redirects: string | undefined,
@@ -166,6 +172,17 @@ export async function deploy({
 			`functions-filepath-routing-config-${Math.random()}.json`
 		);
 
+		if (nodeCompat) {
+			if (nodejsCompat) {
+				console.error('You cannot use both the legacy node-compat and the compatibility flag nodejs_compat.');
+				process.exit(1);
+			}
+
+			console.warn(
+				"Enabling node.js compatibility mode for builtins and globals. This is experimental and has serious tradeoffs. Please see https://github.com/ionic-team/rollup-plugin-node-polyfills/ for more details."
+			);
+		}
+
 		try {
 			workerBundle = await buildFunctions({
 				outputConfigPath,
@@ -174,6 +191,7 @@ export async function deploy({
 				buildOutputDirectory: directory,
 				routesOutputPath,
 				local: false,
+				legacyNodeCompat: nodeCompat,
 				nodejsCompat,
 			});
 
