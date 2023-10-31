@@ -52,7 +52,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		},
 		gatsby: {
 			expectResponseToContain: "Gatsby!",
-			unsupportedPms: ["bun"],
+			unsupportedPms: ["bun", "pnpm"],
 			promptHandlers: [
 				{
 					matcher: /Would you like to use a template\?/,
