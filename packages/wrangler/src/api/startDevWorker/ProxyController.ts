@@ -42,6 +42,7 @@ export class ProxyController extends EventEmitter {
 	public proxyWorker?: Miniflare;
 	proxyWorkerOptions?: MiniflareOptions;
 	inspectorProxyWorkerWebSocket?: DeferredPromise<WebSocket>;
+	setOptionsPromise: Promise<void> | undefined;
 
 	protected latestConfig?: StartDevWorkerOptions;
 	protected latestBundle?: EsbuildBundle;
@@ -144,25 +145,24 @@ export class ProxyController extends EventEmitter {
 		this.proxyWorker ??= new Miniflare(proxyWorkerOptions);
 		this.proxyWorkerOptions = proxyWorkerOptions;
 
-		let setOptionsPromise: Promise<void> | undefined;
 		if (proxyWorkerOptionsChanged) {
 			logger.debug("ProxyWorker miniflare options changed, reinstantiating...");
 
-			setOptionsPromise = this.proxyWorker.setOptions(proxyWorkerOptions);
+			this.setOptionsPromise = this.proxyWorker.setOptions(proxyWorkerOptions);
 
 			// this creates a new .ready promise that will be resolved when both ProxyWorkers are ready
 			// it also respects any await-ers of the existing .ready promise
 			this.ready = createDeferred<ReadyEvent>(this.ready);
 		}
 
-		// store the non-null versions for callbacks
-		const { proxyWorker } = this;
-
-		Promise.resolve(setOptionsPromise)
-			.then(() => proxyWorker!.ready)
-			.then(() => this.reconnectInspectorProxyWorker())
+		void Promise.all([
+			Promise.resolve(this.setOptionsPromise).then(
+				() => this.proxyWorker!.ready
+			),
+			this.reconnectInspectorProxyWorker(),
+		])
 			.then(() => {
-				this.emitReadyEvent(proxyWorker);
+				this.emitReadyEvent(this.proxyWorker!);
 			})
 			.catch((error) => {
 				this.emitErrorEvent(
@@ -186,6 +186,10 @@ export class ProxyController extends EventEmitter {
 
 		try {
 			assert(this.proxyWorker);
+			// workaround for https://jira.cfdata.org/browse/DEVX-1016
+			await this.setOptionsPromise;
+			await this.proxyWorker.ready;
+			// end workaround
 			const inspectorProxyWorker = await this.proxyWorker.getWorker(
 				"InspectorProxyWorker"
 			);
