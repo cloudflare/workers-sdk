@@ -34,7 +34,7 @@ import type {
 	SerializedError,
 } from "./events";
 import type { StartDevWorkerOptions } from "./types";
-import type { MiniflareOptions } from "miniflare";
+import { MiniflareOptions, Mutex } from "miniflare";
 
 export class ProxyController extends EventEmitter {
 	public ready = createDeferred<ReadyEvent>();
@@ -232,6 +232,7 @@ export class ProxyController extends EventEmitter {
 		return webSocket;
 	}
 
+	runtimeMessageMutex = new Mutex();
 	async sendMessageToProxyWorker(
 		message: ProxyWorkerIncomingRequestBody,
 		retries = 3
@@ -240,13 +241,17 @@ export class ProxyController extends EventEmitter {
 		assert(this.proxyWorker, "proxyWorker should already be instantiated");
 
 		try {
-			await this.proxyWorker.dispatchFetch(
-				`http://dummy/cdn-cgi/ProxyWorker/${message.type}`,
-				{
-					headers: { Authorization: this.secret },
-					cf: { hostMetadata: message },
-				}
-			);
+			await this.runtimeMessageMutex.runWith(async () => {
+				await this.proxyWorker!.ready;
+
+				return this.proxyWorker!.dispatchFetch(
+					`http://dummy/cdn-cgi/ProxyWorker/${message.type}`,
+					{
+						headers: { Authorization: this.secret },
+						cf: { hostMetadata: message },
+					}
+				);
+			});
 		} catch (cause) {
 			if (this._torndown) return;
 

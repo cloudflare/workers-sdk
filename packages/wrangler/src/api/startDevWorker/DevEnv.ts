@@ -120,6 +120,8 @@ export function createWorkerObject(devEnv: DevEnv): DevWorker {
 		},
 		async fetch(...args) {
 			const { proxyWorker } = await devEnv.proxy.ready.promise;
+			await devEnv.proxy.runtimeMessageMutex.drained();
+
 			return proxyWorker.dispatchFetch(...args);
 		},
 		async queue(..._args) {
