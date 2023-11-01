@@ -139,7 +139,7 @@ export const crash: (msg?: string) => never = (msg) => {
 
 export const error = (msg?: string, extra?: string): never => {
 	if (msg) {
-		process.stdout.write(
+		process.stderr.write(
 			`${gray(shapes.corners.bl)} ${status.error} ${dim(msg)}\n${
 				extra ? space() + extra + "\n" : ""
 			}`

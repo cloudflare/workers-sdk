@@ -1,9 +1,14 @@
-//  isInvalidPublicSSHKey validates new SSH public keys
+// validates new SSH public keys
 // http://man.openbsd.org/sshd.8#AUTHORIZED_KEYS_FILE_FORMAT
 // Public keys consist of the following space-separated fields: options, keytype, base64-encoded key, comment.
 // we do not allow the optional "options"
 // So the syntax is space-separated: keytype, base64-encoded key, comment
-export function isInvalidPublicSSHKey(line: string): string | null {
+
+import { exit } from "process";
+import { error } from "@cloudflare/cli";
+import { logger } from "../../logger";
+
+export function validateSSHKey(line: string) {
 	const supportedSyntaxInfo =
 		"Syntax is space-separated: keytype, base64-encoded key, comment(optional). Example: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm cool-public-key'";
 	const supportedKeyTypes = ["ssh-ed25519"];
@@ -20,13 +25,13 @@ export function isInvalidPublicSSHKey(line: string): string | null {
 	// (keytype and base64-encoded key) or
 	// (keytype, base64-encoded key, comment)
 	if (![2, 3].includes(parts.length)) {
-		return syntaxError;
+		throw new Error(syntaxError);
 	}
 
 	// The key type must be one of the supported key types
 	const keyType = parts[0];
 	if (!supportedKeyTypes.includes(keyType)) {
-		return keyTypeError;
+		throw new Error(keyTypeError);
 	}
 
 	// Check if the second part is a valid base64 encoded string
@@ -36,8 +41,28 @@ export function isInvalidPublicSSHKey(line: string): string | null {
 		atob(base64Key);
 	} catch {
 		// If decoding fails, it's not a valid base64 string
-		return invalidKey;
+		throw new Error(invalidKey);
 	}
+}
 
-	return null;
+export function validatePublicSSHKeyCLI(
+	line: string,
+	{ json }: { json: boolean }
+) {
+	const bail = (reason: string) => {
+		if (!json) error(reason);
+		else {
+			logger.log(JSON.stringify({ error: reason }, null, 4));
+			exit(1);
+		}
+	};
+	try {
+		validateSSHKey(line);
+	} catch (err) {
+		if (err instanceof Error) {
+			bail(err.message);
+		}
+
+		bail("unknown error validating ssh key");
+	}
 }

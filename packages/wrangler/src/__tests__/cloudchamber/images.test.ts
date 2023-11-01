@@ -27,7 +27,7 @@ describe("cloudchamber image", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 		"wrangler cloudchamber registries
 
-		Configure and interact with docker registries
+		Configure registries via Cloudchamber
 
 		Commands:
 		  wrangler cloudchamber registries configure             Configure Cloudchamber to pull from specific registries
@@ -41,7 +41,7 @@ describe("cloudchamber image", () => {
 		  -v, --version                   Show version number  [boolean]
 
 		Options:
-		      --json  if this is true, wrangler will output json only  [boolean] [default: false]"
+		      --json  Return output as clean JSON  [boolean] [default: false]"
 	`);
 	});
 
@@ -52,7 +52,7 @@ describe("cloudchamber image", () => {
 			rest.post("*/registries", async (request, response, context) => {
 				expect(await request.json()).toEqual({
 					domain: "docker.io",
-					public: false,
+					is_public: false,
 				});
 				return response.once(
 					context.json({

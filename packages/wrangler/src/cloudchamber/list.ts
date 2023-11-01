@@ -14,18 +14,17 @@ import isInteractive from "../is-interactive";
 import { listDeploymentsAndChoose, loadDeployments } from "./cli/deployments";
 import { statusToColored } from "./cli/util";
 import { DeploymentsService, PlacementsService } from "./client";
-import { handleFailure, loadAccountSpinner, promiseSpinner } from "./common";
-import type { CommonYargsOptions } from "../yargs-types";
-import type { PlacementEvent, PlacementWithEvents, State } from "./client";
+import { loadAccountSpinner, promiseSpinner } from "./common";
+import type { Config } from "../config";
 import type {
-	CommonCloudchamberConfiguration,
-	CloudchamberConfiguration,
-	inferYargsFn,
-} from "./common";
-import type { EventName } from "./enums";
-import type { Argv } from "yargs";
+	CommonYargsArgvJSON,
+	StrictYargsOptionsToInterfaceJSON,
+} from "../yargs-types";
+import type { PlacementEvent, PlacementWithEvents, State } from "./client";
 
-export function listDeploymentsYargs<T>(args: Argv<T>) {
+import type { EventName } from "./enums";
+
+export function listDeploymentsYargs(args: CommonYargsArgvJSON) {
 	return args
 		.option("location", {
 			requiresArg: true,
@@ -50,59 +49,54 @@ export function listDeploymentsYargs<T>(args: Argv<T>) {
 			type: "string",
 			demandOption: false,
 			describe: "Filter deployments by ipv4 address",
+		})
+		.positional("deploymentIdPrefix", {
+			describe:
+				"Optional deploymentId to filter deployments\nThis means that 'list' will only showcase deployments that contain this ID prefix",
+			type: "string",
 		});
 }
 
-export const listCommand = (
-	yargs: Argv<CommonYargsOptions & CommonCloudchamberConfiguration>
-) => {
-	return yargs.command(
-		"list [deploymentIdPrefix]",
-		"List and view status of deployments",
-		(args) =>
-			listDeploymentsYargs(args).positional("deploymentIdPrefix", {
-				describe:
-					"Optional deploymentId to filter deployments\nThis means that 'list' will only showcase deployments that contain this ID prefix",
-				type: "string",
-			}),
-		(args) =>
-			handleFailure<typeof args>(async (deploymentArgs, config) => {
-				await loadAccountSpinner(config);
-				const prefix = (deploymentArgs.deploymentIdPrefix ?? "") as string;
-				if (config.json || !isInteractive()) {
-					const deployments = (
-						await DeploymentsService.listDeployments(
-							deploymentArgs.location,
-							deploymentArgs.image,
-							deploymentArgs.state as State,
-							deploymentArgs.ipv4
-						)
-					).filter((deployment) => deployment.id.startsWith(prefix));
-					if (deployments.length === 1) {
-						const placements = await PlacementsService.listPlacements(
-							deployments[0].id
-						);
-						console.log(
-							JSON.stringify(
-								{
-									...deployments[0],
-									placements,
-								},
-								null,
-								4
-							)
-						);
-						return;
-					}
+export async function listCommand(
+	deploymentArgs: StrictYargsOptionsToInterfaceJSON<
+		typeof listDeploymentsYargs
+	>,
+	config: Config
+) {
+	await loadAccountSpinner(deploymentArgs);
+	const prefix = (deploymentArgs.deploymentIdPrefix ?? "") as string;
+	if (deploymentArgs.json || !isInteractive()) {
+		const deployments = (
+			await DeploymentsService.listDeployments(
+				deploymentArgs.location,
+				deploymentArgs.image,
+				deploymentArgs.state as State,
+				deploymentArgs.ipv4
+			)
+		).filter((deployment) => deployment.id.startsWith(prefix));
+		if (deployments.length === 1) {
+			const placements = await PlacementsService.listPlacements(
+				deployments[0].id
+			);
+			console.log(
+				JSON.stringify(
+					{
+						...deployments[0],
+						placements,
+					},
+					null,
+					4
+				)
+			);
+			return;
+		}
 
-					console.log(JSON.stringify(deployments, null, 4));
-					return;
-				}
+		console.log(JSON.stringify(deployments, null, 4));
+		return;
+	}
 
-				await listCommandHandle(prefix, deploymentArgs, config);
-			})(args)
-	);
-};
+	await listCommandHandle(prefix, deploymentArgs, config);
+}
 
 /**
  * Renders an event message depending on the event type and if it's the last event
@@ -128,8 +122,8 @@ function eventMessage(event: PlacementEvent, lastEvent: boolean): string {
 
 const listCommandHandle = async (
 	deploymentIdPrefix: string,
-	args: inferYargsFn<typeof listDeploymentsYargs>,
-	_config: CloudchamberConfiguration
+	args: StrictYargsOptionsToInterfaceJSON<typeof listDeploymentsYargs>,
+	_config: Config
 ) => {
 	const keepListIter = true;
 	while (keepListIter) {

@@ -42,7 +42,7 @@ describe("cloudchamber delete", () => {
 		  -v, --version                   Show version number  [boolean]
 
 		Options:
-		      --json  if this is true, wrangler will output json only  [boolean] [default: false]"
+		      --json  Return output as clean JSON  [boolean] [default: false]"
 	`);
 	});
 
