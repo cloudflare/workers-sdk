@@ -11,8 +11,7 @@ env:
 jobs:
   e2e:
     name: ${{ format('E2E ({0})', matrix.pm) }}
-    if: |
-      github.event.pull_request.user.login != 'dependabot[bot]'
+    if: github.repository_owner == 'cloudflare' && github.event.pull_request.user.login != 'dependabot[bot]'
     strategy:
       matrix:
         os: [ubuntu-latest]
