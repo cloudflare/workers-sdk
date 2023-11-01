@@ -44,7 +44,8 @@ describe("deploy", () => {
 	it("deploy worker", async () => {
 		const { stdout } = await runInWorker`$ ${WRANGLER} deploy`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
+			"🚧 New Workers Standard pricing is now available. Please visit the dashboard to view details and opt-in to new pricing: https://dash.cloudflare.com/c1813c2bcbf20b513d80d455cb110774/workers/standard/opt-in.
+			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded smoke-test-worker (TIMINGS)
 			Published smoke-test-worker (TIMINGS)
 			  https://smoke-test-worker.SUBDOMAIN.workers.dev
@@ -73,7 +74,8 @@ describe("deploy", () => {
 		});
 		const { stdout, stderr } = await runInWorker`$ ${WRANGLER} deploy`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
+			"🚧 New Workers Standard pricing is now available. Please visit the dashboard to view details and opt-in to new pricing: https://dash.cloudflare.com/c1813c2bcbf20b513d80d455cb110774/workers/standard/opt-in.
+			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded smoke-test-worker (TIMINGS)
 			Published smoke-test-worker (TIMINGS)
 			  https://smoke-test-worker.SUBDOMAIN.workers.dev
