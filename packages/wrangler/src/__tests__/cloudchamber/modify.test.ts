@@ -28,7 +28,7 @@ describe("cloudchamber modify", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 		"wrangler cloudchamber modify [deploymentId]
 
-		Modify an existing deployment in the Cloudflare edge
+		Modify an existing deployment
 
 		Positionals:
 		  deploymentId  The deployment you want to modify  [string]
@@ -41,7 +41,7 @@ describe("cloudchamber modify", () => {
 		  -v, --version                   Show version number  [boolean]
 
 		Options:
-		      --json               if this is true, wrangler will output json only  [boolean] [default: false]
+		      --json               Return output as clean JSON  [boolean] [default: false]
 		      --var                Container environment variables  [array]
 		      --ssh-public-key-id  Public SSH key IDs to include in this container. You can add one to your account with \`wrangler cloudchamber ssh create  [array]
 		      --image              The new image that the deployment will have from now on  [string]

@@ -1,12 +1,12 @@
 import { cancel, startSection } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
+
 import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { pickDeployment } from "./cli/deployments";
 import { getLocation } from "./cli/locations";
 import { DeploymentsService } from "./client";
 import {
-	handleFailure,
 	interactWithUser,
 	renderDeploymentConfiguration,
 	loadAccountSpinner,
@@ -18,16 +18,13 @@ import { wrap } from "./helpers/wrap";
 import { loadAccount } from "./locations";
 import { sshPrompts } from "./ssh/ssh";
 import type { Config } from "../config";
-import type { CommonYargsOptions } from "../yargs-types";
-import type { Deployment, SSHPublicKeyID } from "./client";
 import type {
-	CommonCloudchamberConfiguration,
-	CloudchamberConfiguration,
-	inferYargsFn,
-} from "./common";
-import type { Argv } from "yargs";
+	CommonYargsArgvJSON,
+	StrictYargsOptionsToInterfaceJSON,
+} from "../yargs-types";
+import type { Deployment, SSHPublicKeyID } from "./client";
 
-function modifyCommandOptionalYargs<T>(yargs: Argv<T>) {
+export function modifyCommandOptionalYargs(yargs: CommonYargsArgvJSON) {
 	return yargs
 		.positional("deploymentId", {
 			type: "string",
@@ -75,61 +72,55 @@ function modifyCommandOptionalYargs<T>(yargs: Argv<T>) {
 		});
 }
 
-export const modifyCommand = (
-	yargs: Argv<CommonYargsOptions & CommonCloudchamberConfiguration>
-) => {
-	return yargs.command(
-		"modify [deploymentId]",
-		"Modify an existing deployment in the Cloudflare edge",
-		(args) => modifyCommandOptionalYargs(args),
-		(args) =>
-			handleFailure<typeof args>(async (modifyArgs, config) => {
-				await loadAccountSpinner(config);
+export async function modifyCommand(
+	modifyArgs: StrictYargsOptionsToInterfaceJSON<
+		typeof modifyCommandOptionalYargs
+	>,
+	config: Config
+) {
+	await loadAccountSpinner(modifyArgs);
 
-				if (!interactWithUser(config)) {
-					if (!modifyArgs.deploymentId) {
-						throw new Error(
-							"there needs to be a deploymentId when you can't interact with the wrangler cli"
-						);
-					}
+	if (!interactWithUser(modifyArgs)) {
+		if (!modifyArgs.deploymentId) {
+			throw new Error(
+				"there needs to be a deploymentId when you can't interact with the wrangler cli"
+			);
+		}
 
-					const environmentVariables = collectEnvironmentVariables(
-						[],
-						config.wranglerConfig,
-						modifyArgs.var
-					);
+		const environmentVariables = collectEnvironmentVariables(
+			[],
+			config,
+			modifyArgs.var
+		);
 
-					const deployment = await DeploymentsService.modifyDeployment(
-						modifyArgs.deploymentId,
-						{
-							image: modifyArgs.image,
-							location: modifyArgs.location,
-							environment_variables: environmentVariables,
-							ssh_public_key_ids: modifyArgs.sshPublicKeyId,
-							vcpu: modifyArgs.vcpu ?? config.wranglerConfig.cloudchamber.vcpu,
-							memory:
-								modifyArgs.memory ?? config.wranglerConfig.cloudchamber.memory,
-						}
-					);
-					console.log(JSON.stringify(deployment, null, 4));
-					return;
-				}
+		const deployment = await DeploymentsService.modifyDeployment(
+			modifyArgs.deploymentId,
+			{
+				image: modifyArgs.image,
+				location: modifyArgs.location,
+				environment_variables: environmentVariables,
+				ssh_public_key_ids: modifyArgs.sshPublicKeyId,
+				vcpu: modifyArgs.vcpu ?? config.cloudchamber.vcpu,
+				memory: modifyArgs.memory ?? config.cloudchamber.memory,
+			}
+		);
+		console.log(JSON.stringify(deployment, null, 4));
+		return;
+	}
 
-				await handleModifyCommand(modifyArgs, config);
-			})(args)
-	);
-};
+	await handleModifyCommand(modifyArgs, config);
+}
 
 async function handleSSH(
-	args: inferYargsFn<typeof modifyCommandOptionalYargs>,
-	config: CloudchamberConfiguration,
+	args: StrictYargsOptionsToInterfaceJSON<typeof modifyCommandOptionalYargs>,
+	config: Config,
 	deployment: Deployment
 ): Promise<SSHPublicKeyID[] | undefined> {
 	if (args.sshPublicKeyId !== undefined) {
 		return args.sshPublicKeyId;
 	}
 
-	await sshPrompts(config);
+	await sshPrompts(args);
 	const keys = await pollSSHKeysUntilCondition(() => true);
 	let keysToAdd = [...(deployment.ssh_public_key_ids ?? [])];
 	const yes = await inputPrompt<boolean>({
@@ -177,26 +168,30 @@ async function handleSSH(
 }
 
 async function handleModifyCommand(
-	args: inferYargsFn<typeof modifyCommandOptionalYargs>,
-	config: CloudchamberConfiguration & { wranglerConfig: Config }
+	args: StrictYargsOptionsToInterfaceJSON<typeof modifyCommandOptionalYargs>,
+	config: Config
 ) {
 	startSection("Modify deployment");
 
 	const deployment = await pickDeployment(args.deploymentId);
 
 	const keys = await handleSSH(args, config, deployment);
-	const imagePrompt = await processArgument<string>(args, "image", {
-		question: modifyImageQuestion,
-		label: "",
-		validate: (value) => {
-			if (typeof value !== "string") return "unknown error";
-			if (value.endsWith(":latest")) return "we don't allow :latest tags";
-		},
-		defaultValue: args.image ?? "",
-		initialValue: args.image ?? "",
-		helpText: "if you don't want to modify the image, press return",
-		type: "text",
-	});
+	const imagePrompt = await processArgument<string>(
+		{ image: args.image },
+		"image",
+		{
+			question: modifyImageQuestion,
+			label: "",
+			validate: (value) => {
+				if (typeof value !== "string") return "unknown error";
+				if (value.endsWith(":latest")) return "we don't allow :latest tags";
+			},
+			defaultValue: args.image ?? "",
+			initialValue: args.image ?? "",
+			helpText: "if you don't want to modify the image, press return",
+			type: "text",
+		}
+	);
 	const image = !imagePrompt ? undefined : imagePrompt;
 
 	const locationPick = await getLocation(args, { skipLocation: true });
@@ -204,7 +199,7 @@ async function handleModifyCommand(
 
 	const environmentVariables = collectEnvironmentVariables(
 		deployment.environment_variables,
-		config.wranglerConfig,
+		config,
 		args.var
 	);
 	const selectedEnvironmentVariables = await promptForEnvironmentVariables(
@@ -216,13 +211,9 @@ async function handleModifyCommand(
 	renderDeploymentConfiguration("modify", {
 		image: image ?? deployment.image,
 		location: location ?? deployment.location,
-		vcpu:
-			args.vcpu ?? config.wranglerConfig.cloudchamber.vcpu ?? deployment.vcpu,
-		memory:
-			args.memory ??
-			config.wranglerConfig.cloudchamber.memory ??
-			deployment.memory,
-		env: config.env,
+		vcpu: args.vcpu ?? config.cloudchamber.vcpu ?? deployment.vcpu,
+		memory: args.memory ?? config.cloudchamber.memory ?? deployment.memory,
+		env: args.env,
 		environmentVariables:
 			selectedEnvironmentVariables !== undefined
 				? selectedEnvironmentVariables
@@ -250,8 +241,8 @@ async function handleModifyCommand(
 			location,
 			ssh_public_key_ids: keys,
 			environment_variables: selectedEnvironmentVariables,
-			vcpu: args.vcpu ?? config.wranglerConfig.cloudchamber.vcpu,
-			memory: args.memory ?? config.wranglerConfig.cloudchamber.memory,
+			vcpu: args.vcpu ?? config.cloudchamber.vcpu,
+			memory: args.memory ?? config.cloudchamber.memory,
 		})
 	);
 	stop();

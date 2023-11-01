@@ -2,17 +2,15 @@ import { startSection, error, endSection, cancel } from "@cloudflare/cli";
 import { inputPrompt } from "@cloudflare/cli/interactive";
 import { logDeployment, pickDeployment } from "./cli/deployments";
 import { DeploymentsService } from "./client";
-import { handleFailure, interactWithUser, loadAccountSpinner } from "./common";
+import { interactWithUser, loadAccountSpinner } from "./common";
 import { wrap } from "./helpers/wrap";
-import type { CommonYargsOptions } from "../yargs-types";
+import type { Config } from "../config";
 import type {
-	CommonCloudchamberConfiguration,
-	CloudchamberConfiguration,
-	inferYargsFn,
-} from "./common";
-import type { Argv } from "yargs";
+	CommonYargsArgvJSON,
+	StrictYargsOptionsToInterfaceJSON,
+} from "../yargs-types";
 
-function deleteCommandOptionalYargs<T>(yargs: Argv<T>) {
+export function deleteCommandOptionalYargs(yargs: CommonYargsArgvJSON) {
 	return yargs.positional("deploymentId", {
 		type: "string",
 		demandOption: false,
@@ -20,38 +18,33 @@ function deleteCommandOptionalYargs<T>(yargs: Argv<T>) {
 	});
 }
 
-export const deleteCommand = (
-	yargs: Argv<CommonYargsOptions & CommonCloudchamberConfiguration>
-) => {
-	return yargs.command(
-		"delete [deploymentId]",
-		"Delete an existing deployment that is running in the Cloudflare edge",
-		(args) => deleteCommandOptionalYargs(args),
-		(args) =>
-			handleFailure<typeof args>(async (deleteArgs, config) => {
-				await loadAccountSpinner(config);
-				if (!interactWithUser(config)) {
-					if (!deleteArgs.deploymentId) {
-						throw new Error(
-							"there needs to be a deploymentId when you can't interact with the wrangler cli"
-						);
-					}
+export async function deleteCommand(
+	deleteArgs: StrictYargsOptionsToInterfaceJSON<
+		typeof deleteCommandOptionalYargs
+	>,
+	config: Config
+) {
+	await loadAccountSpinner(deleteArgs);
+	if (!interactWithUser(deleteArgs)) {
+		if (!deleteArgs.deploymentId) {
+			throw new Error(
+				"there needs to be a deploymentId when you can't interact with the wrangler cli"
+			);
+		}
 
-					const deployment = await DeploymentsService.deleteDeployment(
-						deleteArgs.deploymentId
-					);
-					console.log(JSON.stringify(deployment), null, 4);
-					return;
-				}
+		const deployment = await DeploymentsService.deleteDeployment(
+			deleteArgs.deploymentId
+		);
+		console.log(JSON.stringify(deployment), null, 4);
+		return;
+	}
 
-				await handleDeleteCommand(deleteArgs, config);
-			})(args)
-	);
-};
+	await handleDeleteCommand(deleteArgs, config);
+}
 
 async function handleDeleteCommand(
-	args: inferYargsFn<typeof deleteCommandOptionalYargs>,
-	_config: CloudchamberConfiguration
+	args: StrictYargsOptionsToInterfaceJSON<typeof deleteCommandOptionalYargs>,
+	_config: Config
 ) {
 	startSection("Delete your deployment");
 	const deployment = await pickDeployment(args.deploymentId);

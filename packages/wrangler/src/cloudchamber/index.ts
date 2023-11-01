@@ -1,39 +1,46 @@
-import { type CommandModule } from "yargs";
-import { createCommand } from "./create";
-import { deleteCommand } from "./delete";
-import { RegistriesCommand } from "./images/images";
-import { listCommand } from "./list";
-import { modifyCommand } from "./modify";
-import { SSHCommand } from "./ssh/ssh";
-import type { CommonYargsOptions } from "../yargs-types";
+import { handleFailure } from "./common";
+import { createCommand, createCommandOptionalYargs } from "./create";
+import { deleteCommand, deleteCommandOptionalYargs } from "./delete";
+import { registriesCommand } from "./images/images";
+import { listCommand, listDeploymentsYargs } from "./list";
+import { modifyCommand, modifyCommandOptionalYargs } from "./modify";
+import { sshCommand } from "./ssh/ssh";
+import type { CommonYargsArgvJSON, CommonYargsOptions } from "../yargs-types";
+import type { CommandModule } from "yargs";
 
-export const CloudchamberCommand: CommandModule<
-	CommonYargsOptions,
-	CommonYargsOptions
-> = {
-	command: "cloudchamber",
-	describe: "📦  Manage Cloudchamber",
-	handler: () => {},
-	builder: (yargsInit) => {
-		const yargs = deleteCommand(
-			modifyCommand(
-				createCommand(
-					listCommand(
-						yargsInit.option("json", {
-							requiresArg: false,
-							default: false,
-							type: "boolean",
-							describe: "if this is true, wrangler will output json only",
-						})
-					)
-				)
-			)
+export const cloudchamber = (
+	yargs: CommonYargsArgvJSON,
+	subHelp: CommandModule<CommonYargsOptions, CommonYargsOptions>
+) => {
+	return yargs
+		.command(
+			"delete [deploymentId]",
+			"Delete an existing deployment that is running in the Cloudflare edge",
+			(args) => deleteCommandOptionalYargs(args),
+			(args) => handleFailure(deleteCommand)(args)
+		)
+		.command(
+			"create",
+			"Create a new deployment",
+			(args) => createCommandOptionalYargs(args),
+			(args) => handleFailure(createCommand)(args)
+		)
+		.command(
+			"list [deploymentIdPrefix]",
+			"List and view status of deployments",
+			(args) => listDeploymentsYargs(args),
+			(args) => handleFailure(listCommand)(args)
+		)
+		.command(
+			"modify [deploymentId]",
+			"Modify an existing deployment",
+			(args) => modifyCommandOptionalYargs(args),
+			(args) => handleFailure(modifyCommand)(args)
+		)
+		.command("ssh", "Manage the ssh keys of your account", (args) =>
+			sshCommand(args).command(subHelp)
+		)
+		.command("registries", "Configure registries via Cloudchamber", (args) =>
+			registriesCommand(args).command(subHelp)
 		);
-
-		return yargs
-			.command(SSHCommand)
-			.command(RegistriesCommand)
-			.showHelpOnFail(true)
-			.demandCommand();
-	},
 };

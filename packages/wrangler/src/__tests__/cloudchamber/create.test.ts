@@ -29,7 +29,7 @@ describe("cloudchamber create", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 		"wrangler cloudchamber create
 
-		Create a new deployment in the Cloudflare edge
+		Create a new deployment
 
 		Flags:
 		  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
@@ -39,7 +39,7 @@ describe("cloudchamber create", () => {
 		  -v, --version                   Show version number  [boolean]
 
 		Options:
-		      --json          if this is true, wrangler will output json only  [boolean] [default: false]
+		      --json          Return output as clean JSON  [boolean] [default: false]
 		      --image         Image to use for your deployment  [string]
 		      --location      Location on Cloudflare's network where your deployment will run  [string]
 		      --var           Container environment variables  [array]
@@ -110,7 +110,7 @@ describe("cloudchamber create", () => {
 		msw.use(
 			rest.post("*/deployments", async (request, response, context) => {
 				expect(await request.text()).toMatchInlineSnapshot(
-					`"{\\"image\\":\\"hello:world\\",\\"location\\":\\"sfo06\\",\\"ssh_public_key_ids\\":[],\\"environment_variables\\":[{\\"name\\":\\"HELLO\\",\\"value\\":\\"WORLD\\"},{\\"name\\":\\"YOU\\",\\"value\\":\\"CONQUERED\\"}],\\"vcpu\\":40,\\"memory\\":\\"300MB\\"}"`
+					`"{\\"image\\":\\"hello:world\\",\\"location\\":\\"sfo06\\",\\"ssh_public_key_ids\\":[\\"1\\"],\\"environment_variables\\":[{\\"name\\":\\"HELLO\\",\\"value\\":\\"WORLD\\"},{\\"name\\":\\"YOU\\",\\"value\\":\\"CONQUERED\\"}],\\"vcpu\\":40,\\"memory\\":\\"300MB\\"}"`
 				);
 				return response.once(context.json(MOCK_DEPLOYMENTS_COMPLEX[0]));
 			})

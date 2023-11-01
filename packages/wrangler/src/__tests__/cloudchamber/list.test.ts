@@ -43,7 +43,7 @@ describe("cloudchamber list", () => {
 		  -v, --version                   Show version number  [boolean]
 
 		Options:
-		      --json      if this is true, wrangler will output json only  [boolean] [default: false]
+		      --json      Return output as clean JSON  [boolean] [default: false]
 		      --location  Filter deployments by location  [string]
 		      --image     Filter deployments by image  [string]
 		      --state     Filter deployments by deployment state  [string]

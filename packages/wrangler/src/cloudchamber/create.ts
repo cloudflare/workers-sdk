@@ -12,7 +12,6 @@ import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { getLocation } from "./cli/locations";
 import { DeploymentsService } from "./client";
 import {
-	handleFailure,
 	checkEverythingIsSet,
 	interactWithUser,
 	loadAccountSpinner,
@@ -25,17 +24,15 @@ import { wrap } from "./helpers/wrap";
 import { loadAccount } from "./locations";
 import { sshPrompts as promptForSSHKeyAndGetAddedSSHKey } from "./ssh/ssh";
 import type { Config } from "../config";
-import type { CommonYargsOptions } from "../yargs-types";
-import type { EnvironmentVariable, SSHPublicKeyID } from "./client";
 import type {
-	CommonCloudchamberConfiguration,
-	inferYargsFn,
-	CloudchamberConfiguration,
-} from "./common";
-import type { Arg } from "@cloudflare/cli/interactive";
-import type { Argv } from "yargs";
+	CommonYargsArgvJSON,
+	StrictYargsOptionsToInterfaceJSON,
+} from "../yargs-types";
+import type { EnvironmentVariable, SSHPublicKeyID } from "./client";
 
-function createCommandOptionalYargs<T>(yargs: Argv<T>) {
+import type { Arg } from "@cloudflare/cli/interactive";
+
+export function createCommandOptionalYargs(yargs: CommonYargsArgvJSON) {
 	return yargs
 		.option("image", {
 			requiresArg: true,
@@ -52,7 +49,8 @@ function createCommandOptionalYargs<T>(yargs: Argv<T>) {
 		})
 		.option("var", {
 			requiresArg: true,
-			type: "array",
+			type: "string",
+			array: true,
 			demandOption: false,
 			describe: "Container environment variables",
 			coerce: (arg: unknown[]) => arg.map((a) => a?.toString() ?? ""),
@@ -86,49 +84,39 @@ function createCommandOptionalYargs<T>(yargs: Argv<T>) {
 		});
 }
 
-export const createCommand = (
-	yargs: Argv<CommonYargsOptions & CommonCloudchamberConfiguration>
-) => {
-	return yargs.command(
-		"create",
-		"Create a new deployment in the Cloudflare edge",
-		(args) => createCommandOptionalYargs(args),
-		(args) =>
-			handleFailure<typeof args>(async (deploymentArgs, config) => {
-				await loadAccountSpinner(config);
+export async function createCommand(
+	args: StrictYargsOptionsToInterfaceJSON<typeof createCommandOptionalYargs>,
+	config: Config
+) {
+	await loadAccountSpinner(args);
 
-				const environmentVariables = collectEnvironmentVariables(
-					[],
-					config.wranglerConfig,
-					args.var
-				);
-				if (!interactWithUser(config)) {
-					const body = checkEverythingIsSet(deploymentArgs, [
-						"image",
-						"location",
-					]);
-					const keysToAdd = args.all_ssh_keys
-						? (await pollSSHKeysUntilCondition(() => true)).map((key) => key.id)
-						: [];
-					const deployment = await DeploymentsService.createDeployment({
-						image: body.image,
-						location: body.location,
-						ssh_public_key_ids: keysToAdd,
-						environment_variables: environmentVariables,
-						vcpu: args.vcpu ?? config.wranglerConfig.cloudchamber.vcpu,
-						memory: args.memory ?? config.wranglerConfig.cloudchamber.memory,
-					});
-					console.log(JSON.stringify(deployment, null, 4));
-					return;
-				}
-
-				await handleCreateCommand(deploymentArgs, config, environmentVariables);
-			})(args)
+	const environmentVariables = collectEnvironmentVariables(
+		[],
+		config,
+		args.var
 	);
-};
+	if (!interactWithUser(args)) {
+		const body = checkEverythingIsSet(args, ["image", "location"]);
+		const keysToAdd = args.allSshKeys
+			? (await pollSSHKeysUntilCondition(() => true)).map((key) => key.id)
+			: [];
+		const deployment = await DeploymentsService.createDeployment({
+			image: body.image,
+			location: body.location,
+			ssh_public_key_ids: keysToAdd,
+			environment_variables: environmentVariables,
+			vcpu: args.vcpu ?? config.cloudchamber.vcpu,
+			memory: args.memory ?? config.cloudchamber.memory,
+		});
+		console.log(JSON.stringify(deployment, null, 4));
+		return;
+	}
+
+	await handleCreateCommand(args, config, environmentVariables);
+}
 
 async function askWhichSSHKeysDoTheyWantToAdd(
-	args: inferYargsFn<typeof createCommandOptionalYargs>,
+	args: StrictYargsOptionsToInterfaceJSON<typeof createCommandOptionalYargs>,
 	key: SSHPublicKeyID | undefined
 ): Promise<SSHPublicKeyID[]> {
 	const keyItems = await pollSSHKeysUntilCondition(() => true);
@@ -205,13 +193,13 @@ async function askWhichSSHKeysDoTheyWantToAdd(
 }
 
 export async function handleCreateCommand(
-	args: inferYargsFn<typeof createCommandOptionalYargs>,
-	config: CloudchamberConfiguration & { wranglerConfig: Config },
+	args: StrictYargsOptionsToInterfaceJSON<typeof createCommandOptionalYargs>,
+	config: Config,
 	environmentVariables: EnvironmentVariable[] | undefined
 ) {
 	startSection("Create a Cloudflare container", "Step 1 of 2");
-	const sshKeyID = await promptForSSHKeyAndGetAddedSSHKey(config);
-	const image = await processArgument<string>(args, "image", {
+	const sshKeyID = await promptForSSHKeyAndGetAddedSSHKey(args);
+	const image = await processArgument<string>({ image: args.image }, "image", {
 		question: whichImageQuestion,
 		label: "image",
 		validate: (value) => {
@@ -238,16 +226,11 @@ export async function handleCreateCommand(
 	renderDeploymentConfiguration("create", {
 		image,
 		location,
-		vcpu:
-			args.vcpu ??
-			config.wranglerConfig.cloudchamber.vcpu ??
-			account.defaults.vcpus,
+		vcpu: args.vcpu ?? config.cloudchamber.vcpu ?? account.defaults.vcpus,
 		memory:
-			args.memory ??
-			config.wranglerConfig.cloudchamber.memory ??
-			account.defaults.memory,
+			args.memory ?? config.cloudchamber.memory ?? account.defaults.memory,
 		environmentVariables: selectedEnvironmentVariables,
-		env: config.env,
+		env: args.env,
 	});
 
 	const yes = await inputPrompt({
@@ -268,8 +251,8 @@ export async function handleCreateCommand(
 			location: location,
 			ssh_public_key_ids: keys,
 			environment_variables: environmentVariables,
-			vcpu: args.vcpu ?? config.wranglerConfig.cloudchamber.vcpu,
-			memory: args.memory ?? config.wranglerConfig.cloudchamber.memory,
+			vcpu: args.vcpu ?? config.cloudchamber.vcpu,
+			memory: args.memory ?? config.cloudchamber.memory,
 		})
 	);
 	if (err) {

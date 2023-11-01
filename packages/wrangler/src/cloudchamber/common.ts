@@ -3,17 +3,13 @@ import { exit } from "process";
 import { error, logRaw, space, status, updateStatus } from "@cloudflare/cli";
 import { dim, brandColor } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
-import {
-	type ArgumentsCamelCase as ArgumentsCamelCaseRaw,
-	type CamelCaseKey,
-	type Argv,
-} from "yargs";
 import { version as wranglerVersion } from "../../package.json";
 import { readConfig } from "../config";
 import { getConfigCache, purgeConfigCaches } from "../config-cache";
 import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables";
 import { CI } from "../is-ci";
 import isInteractive from "../is-interactive";
+import { logger } from "../logger";
 import {
 	getAPIToken,
 	getAccountId,
@@ -23,62 +19,41 @@ import {
 	getScopes,
 	logout,
 	setLoginScopeKeys,
+	getAccountFromCache,
 } from "../user";
 import { ApiError, DeploymentMutationError, OpenAPI } from "./client";
 import { wrap } from "./helpers/wrap";
 import { idToLocationName, loadAccount } from "./locations";
 import type { Config } from "../config";
-import type { CommonYargsOptions } from "../yargs-types";
+import type {
+	CommonYargsOptions,
+	StrictYargsOptionsToInterfaceJSON,
+} from "../yargs-types";
 import type { EnvironmentVariable, CompleteAccountCustomer } from "./client";
 import type { Arg } from "@cloudflare/cli/interactive";
 
 export type CommonCloudchamberConfiguration = { json: boolean };
+export type CloudchamberCommandConfiguration = CommonCloudchamberConfiguration &
+	CommonYargsOptions & { wranglerConfig: Config };
 
 /**
- * Same as ArgumentsCamelCase from yargs but without $0 and __
- */
-export type ArgumentsCamelCase<T = Record<string, unknown>> = {
-	[key in keyof T as key | CamelCaseKey<key>]: T[key];
-};
-
-export type inferYargs<
-	T,
-	K = T extends Argv<infer R> ? R : never
-> = ArgumentsCamelCase<K>;
-
-export type inferYargsFn<T extends (...args: Argv<T>[]) => unknown> =
-	inferYargs<ReturnType<T>>;
-
-/**
- * Wrapper so it's easy to filter out arguments that we don't want, and parses wrangler configuration.
+ * Wrapper that parses wrangler configuration and authentication.
  * It also wraps exceptions and checks if they are from the RestAPI.
  *
- * Usage:
- * ```
- * 	async (args) =>
- *    handleFailure<typeof args>(async (deploymentArgs, generalConfig) => { // now you have inferred everything until now, and input is sanitized
- *      // code ...
- *    });
- *
- * ```
- * @param cb
- * @returns
  */
 export function handleFailure<
-	T,
-	K = T extends ArgumentsCamelCaseRaw<
-		CommonYargsOptions & CommonCloudchamberConfiguration & infer R
+	YargsObject,
+	CommandArgumentsObject = YargsObject extends StrictYargsOptionsToInterfaceJSON<
+		infer K
 	>
-		? R
+		? K
 		: never
 >(
-	cb: (
-		t: ArgumentsCamelCase<K>,
-		config: CommonCloudchamberConfiguration &
-			CommonYargsOptions & { wranglerConfig: Config }
-	) => Promise<void>
+	cb: (t: CommandArgumentsObject, config: Config) => Promise<void>
 ): (
-	t: CommonYargsOptions & T & CommonCloudchamberConfiguration
+	t: CommonYargsOptions &
+		CommandArgumentsObject &
+		CommonCloudchamberConfiguration
 ) => Promise<void> {
 	return async (t) => {
 		try {
@@ -87,39 +62,25 @@ export function handleFailure<
 				t as unknown as Parameters<typeof readConfig>[1]
 			);
 			await fillOpenAPIConfiguration(config, t.json);
-			const rawAnyT = { ...t } as Partial<
-				ArgumentsCamelCaseRaw<
-					K & CommonYargsOptions & CommonCloudchamberConfiguration
-				>
-			>;
-			// strip any data that comes from yarg
-			delete rawAnyT["$0"];
-			delete rawAnyT["_"];
-			delete rawAnyT["env"];
-			delete rawAnyT["experimental-json-config"];
-			delete rawAnyT["v"];
-			delete rawAnyT["experimentalJsonConfig"];
-			delete rawAnyT["json"];
-			delete rawAnyT["config"];
-			await cb(rawAnyT as unknown as ArgumentsCamelCase<K>, {
-				json: t.json,
-				config: t.config,
-				"experimental-json-config": t["experimental-json-config"],
-				env: t.env,
-				v: t.v,
-				wranglerConfig: config,
-			});
+			await cb(t, config);
 		} catch (err) {
 			if (!t.json) {
 				throw err;
 			}
 
 			if (err instanceof ApiError) {
-				console.error(JSON.stringify(err.body));
+				logger.log(JSON.stringify(err.body));
 				return;
 			}
 
-			console.error(JSON.stringify(err));
+			if (err instanceof Error) {
+				logger.log(
+					`${{ error: err.message, name: err.name, stack: err.stack }}`
+				);
+				return;
+			}
+
+			logger.log(JSON.stringify(err));
 		}
 	};
 }
@@ -174,9 +135,8 @@ export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 		(scope) => scope === "cloudchamber:write"
 	);
 
-	setLoginScopeKeys(["cloudchamber:write", "user:read", "account:read"]);
-
 	if (getAuthFromEnv()) {
+		setLoginScopeKeys(["cloudchamber:write", "user:read", "account:read"]);
 		// Wrangler will try to retrieve the oauth token and refresh it
 		// for its internal fetch call even if we have AuthFromEnv.
 		// Let's mock it
@@ -190,13 +150,25 @@ export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 				status.warning +
 					" We need to re-authenticate with a cloudchamber token..."
 			);
+			// cache account id
+			await getAccountId();
+			const account = getAccountFromCache();
+			config.account_id = account?.id ?? config.account_id;
 			await promiseSpinner(logout(), { json, message: "Revoking token" });
+			purgeConfigCaches();
+			reinitialiseAuthTokens({});
 		}
+
+		setLoginScopeKeys(["cloudchamber:write", "user:read", "account:read"]);
 
 		// Require either login, or environment variables being set to authenticate
 		//
 		// This will prompt the user for an accountId being chosen if they haven't configured the account id yet
-		await requireAuth(config);
+		const [, err] = await wrap(requireAuth(config));
+		if (err) {
+			error("authenticating with the Cloudflare API:", err.message);
+			return;
+		}
 	}
 
 	// Get the loaded API token
@@ -212,7 +184,6 @@ export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 		error(
 			"we don't allow for authKey/email credentials, use `wrangler login` or CLOUDFLARE_API_TOKEN env variable to authenticate"
 		);
-		exit(1);
 	}
 
 	headers["Authorization"] = `Bearer ${val}`;
@@ -220,18 +191,17 @@ export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 	// due to our OpenAPI codegenerated client.
 	headers["User-Agent"] = `wrangler/${wranglerVersion}`;
 	OpenAPI.CREDENTIALS = "omit";
-	OpenAPI.BASE = await getAPIUrl(config);
+	const [base, errApiURL] = await wrap(getAPIUrl(config));
+	if (errApiURL) {
+		error("getting the API url:" + errApiURL.message);
+		return;
+	}
+
+	OpenAPI.BASE = base;
 	OpenAPI.HEADERS = headers;
-	await loadAccountSpinner({ json });
+	const [, err] = await wrap(loadAccountSpinner({ json }));
+	if (err) error("loading Cloudchamber account failed:" + err.message);
 }
-
-export type CloudchamberConfiguration = CommonYargsOptions &
-	CommonCloudchamberConfiguration;
-
-export type ContainerCommandFunction<T> = (
-	args: T,
-	config: CloudchamberConfiguration
-) => Promise<void>;
 
 export function interactWithUser(config: { json?: boolean }): boolean {
 	return !config.json && isInteractive() && !CI.isCI();
