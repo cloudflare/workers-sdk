@@ -20,6 +20,7 @@ let devEnv: DevEnv;
 let mf: Miniflare | undefined;
 let res: MiniflareResponse | undici.Response;
 let ws: WebSocket | undefined;
+let fireAndForgetPromises: Promise<any>[] = [];
 
 type OptionalKeys<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 
@@ -30,6 +31,7 @@ beforeEach(() => {
 	ws = undefined;
 });
 afterEach(async () => {
+	await Promise.allSettled(fireAndForgetPromises);
 	await devEnv?.teardown();
 	await mf?.dispose();
 	await ws?.close();
@@ -136,7 +138,8 @@ function fireAndForgetFakeUserWorkerChanges(
 	...args: Parameters<typeof fakeUserWorkerChanges>
 ) {
 	// fire and forget the reload -- this let's us test request buffering
-	void fakeUserWorkerChanges(...args);
+	const promise = fakeUserWorkerChanges(...args);
+	fireAndForgetPromises.push(promise);
 }
 
 function fakeConfigUpdate(config: StartDevWorkerOptions) {
