@@ -97,6 +97,7 @@ export type Worker_Binding = {
 	| { fromEnvironment?: string }
 	| { analyticsEngine?: ServiceDesignator }
 	| { hyperdrive?: Worker_Binding_Hyperdrive }
+	| { unsafeEval?: Void }
 );
 
 export interface Worker_Binding_Parameter {
