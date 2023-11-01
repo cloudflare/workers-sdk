@@ -17,6 +17,9 @@ patchedDependencies:
   ink@3.2.0:
     hash: iiwbcf44d6ccmi6a27ljqs7qce
     path: patches/ink@3.2.0.patch
+  miniflare@3.20231025.1:
+    hash: hir75yp2jy3vlvmeaiwdyrrpf4
+    path: patches/miniflare@3.20231025.1.patch
   toucan-js@3.2.2:
     hash: dxprwy4mawdnq3drjhp7shhm2m
     path: patches/toucan-js@3.2.2.patch
@@ -115,7 +118,7 @@ importers:
         version: 7.0.0
       miniflare:
         specifier: 3.20231025.1
-        version: 3.20231025.1(supports-color@9.2.2)
+        version: 3.20231025.1(patch_hash=hir75yp2jy3vlvmeaiwdyrrpf4)(supports-color@9.2.2)
       undici:
         specifier: ^5.23.0
         version: 5.23.0
@@ -390,7 +393,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       miniflare:
         specifier: 3.20231025.1
-        version: 3.20231025.1(supports-color@9.2.2)
+        version: 3.20231025.1(patch_hash=hir75yp2jy3vlvmeaiwdyrrpf4)(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -759,7 +762,7 @@ importers:
     dependencies:
       miniflare:
         specifier: 3.20231025.1
-        version: 3.20231025.1(supports-color@9.2.2)
+        version: 3.20231025.1(patch_hash=hir75yp2jy3vlvmeaiwdyrrpf4)(supports-color@9.2.2)
     devDependencies:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
@@ -1087,7 +1090,7 @@ importers:
         version: 0.17.19
       miniflare:
         specifier: 3.20231025.1
-        version: 3.20231025.1(supports-color@9.2.2)
+        version: 3.20231025.1(patch_hash=hir75yp2jy3vlvmeaiwdyrrpf4)(supports-color@9.2.2)
       nanoid:
         specifier: ^3.3.3
         version: 3.3.6
@@ -13203,7 +13206,7 @@ packages:
     engines: {node: '>=4'}
     dev: false
 
-  /miniflare@3.20231025.1(supports-color@9.2.2):
+  /miniflare@3.20231025.1(patch_hash=hir75yp2jy3vlvmeaiwdyrrpf4)(supports-color@9.2.2):
     resolution: {integrity: sha512-zwvu/f6eivBBF2shuom5DibnZjGSxt6FiC8sZlj+CcqTRss1D2ZHYD09odhAZLY9DYXE0orBFkJKnIDx/QmYdQ==}
     engines: {node: '>=16.13'}
     dependencies:
@@ -13223,6 +13226,7 @@ packages:
       - bufferutil
       - supports-color
       - utf-8-validate
+    patched: true
 
   /minimatch@3.1.2:
     resolution: {integrity: sha512-J7p63hRiAjw1NDEww1W7i37+ByIrOWO5XQQAzZ3VOcL0PNybwpfmV/N05zFAzwQ9USyEcX6t3UO+K5aqBQOIHw==}

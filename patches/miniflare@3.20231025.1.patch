@@ -1,0 +1,13 @@
+diff --git a/dist/src/index.js b/dist/src/index.js
+index e9825f77c63e24abeacf13b6255e5a9d9673f2f7..79621864da441d90ca1113fb5e61b24a1912b799 100644
+--- a/dist/src/index.js
++++ b/dist/src/index.js
+@@ -3340,7 +3340,7 @@ var Mutex = class {
+     }
+   }
+   async drained() {
+-    if (this.resolveQueue.length === 0)
++    if (this.resolveQueue.length === 0 && !this.locked)
+       return;
+     return new Promise((resolve) => this.drainQueue.push(resolve));
+   }
