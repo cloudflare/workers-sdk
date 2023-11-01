@@ -614,8 +614,8 @@ importers:
         specifier: ^8.4.0
         version: 8.4.0
       pnpm:
-        specifier: ^8.6.11
-        version: 8.6.11
+        specifier: ^8.10.0
+        version: 8.10.0
       recast:
         specifier: ^0.22.0
         version: 0.22.0
@@ -14211,6 +14211,12 @@ packages:
       jsonc-parser: 3.2.0
       mlly: 1.2.1
       pathe: 1.1.0
+
+  /pnpm@8.10.0:
+    resolution: {integrity: sha512-nCy4Pyts9qJdjFgwC/mRl8fvO+hM8+dm8pBUtAuDtC+Kq6b8wxSp7PJ8APfOgKdXu0xgiADnrb4tKdxccFb1vg==}
+    engines: {node: '>=16.14'}
+    hasBin: true
+    dev: true
 
   /pnpm@8.6.11:
     resolution: {integrity: sha512-jqknppuj45tDzJsLcLqkAxytBHZXIx9JTYkGNq0/7pSRggpio9wRxTDj4NA2ilOHPlJ5BVjB5Ij5dx65woMi5A==}
