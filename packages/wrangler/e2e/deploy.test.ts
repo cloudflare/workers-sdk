@@ -3,6 +3,7 @@ import path from "node:path";
 import shellac from "shellac";
 import { fetch } from "undici";
 import { beforeAll, describe, expect, it } from "vitest";
+import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { normalizeOutput } from "./helpers/normalize";
 import { retry } from "./helpers/retry";
 import { dedent, makeRoot, seed } from "./helpers/setup";
@@ -29,7 +30,10 @@ describe("deploy", () => {
 		workerPath = path.join(root, workerName);
 		runInWorker = shellac.in(workerPath).env(process.env);
 		normalize = (str) =>
-			normalizeOutput(str, { [workerName]: "smoke-test-worker" });
+			normalizeOutput(str, {
+				[workerName]: "smoke-test-worker",
+				[CLOUDFLARE_ACCOUNT_ID]: "CLOUDFLARE_ACCOUNT_ID",
+			});
 	});
 
 	it("init worker", async () => {
@@ -44,7 +48,7 @@ describe("deploy", () => {
 	it("deploy worker", async () => {
 		const { stdout } = await runInWorker`$ ${WRANGLER} deploy`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
-			"🚧 New Workers Standard pricing is now available. Please visit the dashboard to view details and opt-in to new pricing: https://dash.cloudflare.com/***/workers/standard/opt-in.
+			"🚧 New Workers Standard pricing is now available. Please visit the dashboard to view details and opt-in to new pricing: https://dash.cloudflare.com/CLOUDFLARE_ACCOUNT_ID/workers/standard/opt-in.
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded smoke-test-worker (TIMINGS)
 			Published smoke-test-worker (TIMINGS)
@@ -74,7 +78,7 @@ describe("deploy", () => {
 		});
 		const { stdout, stderr } = await runInWorker`$ ${WRANGLER} deploy`;
 		expect(normalize(stdout)).toMatchInlineSnapshot(`
-			"🚧 New Workers Standard pricing is now available. Please visit the dashboard to view details and opt-in to new pricing: https://dash.cloudflare.com/***/workers/standard/opt-in.
+			"🚧 New Workers Standard pricing is now available. Please visit the dashboard to view details and opt-in to new pricing: https://dash.cloudflare.com/CLOUDFLARE_ACCOUNT_ID/workers/standard/opt-in.
 			Total Upload: xx KiB / gzip: xx KiB
 			Uploaded smoke-test-worker (TIMINGS)
 			Published smoke-test-worker (TIMINGS)
