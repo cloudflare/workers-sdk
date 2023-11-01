@@ -6,8 +6,8 @@
 		"additionally it also contains a map that maps frameworks to their respective clis"
 	],
 	"dependencies": {
-		"@angular/cli": "16.2.2",
 		"create-astro": "4.4.1",
+		"@angular/create": "17.0.0-rc.3",
 		"create-docusaurus": "2.4.3",
 		"create-hono": "0.3.2",
 		"create-next-app": "13.4.19",
@@ -21,7 +21,7 @@
 		"nuxi": "3.9.1"
 	},
 	"frameworkCliMap": {
-		"angular": "@angular/cli",
+		"angular": "@angular/create",
 		"astro": "create-astro",
 		"docusaurus": "create-docusaurus",
 		"gatsby": "gatsby",
