@@ -1,6 +1,10 @@
 const assert = require("node:assert");
+const crypto = require("node:crypto");
+const events = require("node:events");
 const fs = require("node:fs");
+const os = require("node:os");
 const path = require("node:path");
+const readline = require("node:readline");
 const { execSync } = require("node:child_process");
 
 // This script is used by the `release.yml` workflow to update the version of the packages being released.
@@ -22,7 +26,26 @@ function parseVersion(version) {
 	return [parseInt(match[1]), parseInt(match[2]), parseInt(match[3])];
 }
 
-const miniflarePath = path.resolve(__dirname, "../packages/miniflare");
+/**
+ * Rewrites the specified file line-by-line.
+ * @param {string} filePath
+ * @param {(line: string) => string} transformer
+ */
+async function transformFile(filePath, transformer) {
+	const tmpFile = path.join(os.tmpdir(), `transform-${crypto.randomUUID()}`);
+	const input = fs.createReadStream(filePath);
+	const output = fs.createWriteStream(tmpFile);
+	const rl = readline.createInterface({ input });
+	for await (const line of rl) output.write(`${transformer(line)}\n`);
+	const outputFinished = events.once(output, "finish");
+	output.end();
+	await outputFinished;
+	fs.copyFileSync(tmpFile, filePath);
+	fs.unlinkSync(tmpFile);
+}
+
+const rootPath = path.resolve(__dirname, "..");
+const miniflarePath = path.join(rootPath, "packages/miniflare");
 const miniflarePkgPath = path.join(miniflarePath, "package.json");
 const miniflareChangelogPath = path.join(miniflarePath, "CHANGELOG.md");
 
@@ -55,7 +78,7 @@ function getNextMiniflareVersion(workerdVersion, previousVersion, version) {
 }
 exports.getNextMiniflareVersion = getNextMiniflareVersion;
 
-function main() {
+async function main() {
 	// 1. Get `miniflare` version before applying changesets, so we know if the
 	//    minor version was bumped
 	const previousMiniflarePkg = getPkg(miniflarePkgPath);
@@ -77,41 +100,51 @@ function main() {
 	if (nextMiniflareVersion !== miniflareVersion) {
 		// If `changeset version` didn't produce the correct version on its own...
 
-		// ...update `CHANGELOG.md` with correct version
-		let changelog = fs.readFileSync(miniflareChangelogPath, "utf8");
-		// Replace first incorrect version, it should be the version header
-		changelog = changelog.replace(miniflareVersion, nextMiniflareVersion);
-		fs.writeFileSync(miniflareChangelogPath, changelog);
-
 		// ...update `miniflare`'s `package.json` version
 		miniflarePkg.version = nextMiniflareVersion;
 		setPkg(miniflarePkgPath, miniflarePkg);
 
-		// ...update `miniflare` version in dependencies of other packages
-		// (this next command returns a list of absolute package paths in the
-		// workspace separated by newline)
-		const listResult = execSync("pnpm list --recursive --depth -1 --parseable");
-		const paths = listResult.toString().trim().split("\n");
-		for (const p of paths) {
-			// Ignore warning lines
-			if (!path.isAbsolute(p)) continue;
-			const pkgPath = path.join(p, "package.json");
-			const pkg = getPkg(pkgPath);
-			let changed = false;
-			for (const key of [
-				"dependencies",
-				"devDependencies",
-				"peerDependencies",
-				"optionalDependencies",
-			]) {
-				const constraint = pkg[key]?.["miniflare"];
-				if (constraint === undefined) continue;
-				// Don't update `workspace:`-style constraints
-				if (constraint.startsWith("workspace:")) continue;
-				pkg[key]["miniflare"] = nextMiniflareVersion;
-				changed = true;
+		const changedPathsBuffer = execSync("git ls-files --modified", {
+			cwd: rootPath,
+		});
+		const changedPaths = changedPathsBuffer.toString().trim().split("\n");
+		for (const relativeChangedPath of changedPaths) {
+			const changedPath = path.resolve(rootPath, relativeChangedPath);
+			const name = path.basename(changedPath);
+			if (name === "package.json") {
+				// ...update `miniflare` version in dependencies of other packages
+				const pkg = getPkg(changedPath);
+				let changed = false;
+				for (const key of [
+					"dependencies",
+					"devDependencies",
+					"peerDependencies",
+					"optionalDependencies",
+				]) {
+					const constraint = pkg[key]?.["miniflare"];
+					if (constraint === undefined) continue;
+					// Don't update `workspace:`-style constraints
+					if (constraint.startsWith("workspace:")) continue;
+					pkg[key]["miniflare"] = nextMiniflareVersion;
+					changed = true;
+				}
+				if (changed) setPkg(changedPath, pkg);
+			} else if (name === "CHANGELOG.md") {
+				// ...update `CHANGELOG.md`s with correct version
+				await transformFile(changedPath, (line) => {
+					// Replace version header in `miniflare` `CHANGELOG.md`
+					line = line.replace(
+						`## ${miniflareVersion}`,
+						`## ${nextMiniflareVersion}`
+					);
+					// Replace `Updated dependencies` line in other `CHANGELOG.md`s
+					line = line.replace(
+						`- miniflare@${miniflareVersion}`,
+						`- miniflare@${nextMiniflareVersion}`
+					);
+					return line;
+				});
 			}
-			if (changed) setPkg(pkgPath, pkg);
 		}
 	}
 
@@ -119,4 +152,4 @@ function main() {
 	execSync("pnpm install");
 }
 
-if (require.main === module) main();
+if (require.main === module) void main();
