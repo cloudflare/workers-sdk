@@ -218,9 +218,13 @@ export class InspectorProxyWorker implements DurableObject {
 
 		if (
 			!this.websockets.devtoolsHasFileSystemAccess &&
-			msg.params.sourceMapURL !== undefined
+			msg.params.sourceMapURL !== undefined &&
+			// Don't try to find a sourcemap for e.g. node-internal: scripts
+			msg.params.url.startsWith("file:")
 		) {
 			const url = new URL(msg.params.sourceMapURL, msg.params.url);
+			// Check for file: in case msg.params.sourceMapURL has a different
+			// protocol (e.g. data). In that case we should ignore this file
 			if (url.protocol === "file:") {
 				msg.params.sourceMapURL = url.href.replace("file:", "wrangler-file:");
 			}
