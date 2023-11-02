@@ -3,56 +3,26 @@ import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { unstable_dev } from "wrangler";
 import type { UnstableDevWorker } from "wrangler";
 
-describe("worker", () => {
+describe("multiple workers", () => {
 	let workers: UnstableDevWorker[];
 
 	beforeAll(async () => {
 		//since the script is invoked from the directory above, need to specify index.js is in src/
 
 		workers = await Promise.all([
-			unstable_dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
+			unstable_dev(path.resolve(__dirname, "..", "src", "module.ts"), {
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
 				},
 			}),
-			unstable_dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
+			unstable_dev(path.resolve(__dirname, "..", "src", "module.ts"), {
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
 				},
 			}),
-			unstable_dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
-				experimental: {
-					disableExperimentalWarning: true,
-					disableDevRegistry: true,
-				},
-			}),
-			unstable_dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
-				experimental: {
-					disableExperimentalWarning: true,
-					disableDevRegistry: true,
-				},
-			}),
-			unstable_dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
-				experimental: {
-					disableExperimentalWarning: true,
-					disableDevRegistry: true,
-				},
-			}),
-			unstable_dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
-				experimental: {
-					disableExperimentalWarning: true,
-					disableDevRegistry: true,
-				},
-			}),
-			unstable_dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
-				experimental: {
-					disableExperimentalWarning: true,
-					disableDevRegistry: true,
-				},
-			}),
-			unstable_dev(path.resolve(__dirname, "..", "src", "basicModule.ts"), {
+			unstable_dev(path.resolve(__dirname, "..", "src", "module.ts"), {
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
@@ -65,7 +35,7 @@ describe("worker", () => {
 		await Promise.all(workers.map(async (worker) => await worker.stop()));
 	});
 
-	it.concurrent("should invoke the worker and exit", async () => {
+	it.concurrent("all workers should be fetchable", async () => {
 		const responses = await Promise.all(
 			workers.map(async (worker) => await worker.fetch())
 		);
@@ -74,16 +44,11 @@ describe("worker", () => {
 		);
 
 		expect(parsedResponses).not.toBe(undefined);
-		expect(parsedResponses.length).toBe(8);
+		expect(parsedResponses.length).toBe(3);
 		expect(parsedResponses).toEqual([
-			"Hello World!",
-			"Hello World!",
-			"Hello World!",
-			"Hello World!",
-			"Hello World!",
-			"Hello World!",
-			"Hello World!",
-			"Hello World!",
+			'{"greeting":"Hi!"}',
+			'{"greeting":"Hi!"}',
+			'{"greeting":"Hi!"}',
 		]);
 	});
 });

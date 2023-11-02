@@ -1,7 +1,7 @@
 // @ts-expect-error non standard module
-import data from "../some-data.bin";
+import data from "./some-data.bin";
 // @ts-expect-error non standard module
-import text from "../some-text.txt";
+import text from "./some-text.txt";
 
 addEventListener("fetch", (event: FetchEvent) => {
 	event.respondWith(handleRequest(event.request));

@@ -3,7 +3,7 @@ import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { unstable_dev } from "wrangler";
 import type { UnstableDevWorker } from "wrangler";
 
-describe.skip("worker", () => {
+describe("module worker", () => {
 	let worker: UnstableDevWorker;
 
 	let originalNodeEnv: string | undefined;
@@ -17,7 +17,7 @@ describe.skip("worker", () => {
 		worker = await unstable_dev(
 			path.resolve(__dirname, "..", "src", "module.ts"),
 			{
-				config: path.resolve(__dirname, "..", "src", "wrangler.module.toml"),
+				config: path.resolve(__dirname, "..", "wrangler.module.toml"),
 				vars: { VAR4: "https://google.com" },
 				experimental: {
 					disableExperimentalWarning: true,
@@ -32,8 +32,8 @@ describe.skip("worker", () => {
 		process.env.NODE_ENV = originalNodeEnv;
 	});
 
-	it("renders", async () => {
-		const resp = await worker.fetch();
+	it("renders variables", async () => {
+		const resp = await worker.fetch("/vars");
 		expect(resp).not.toBe(undefined);
 
 		const text = await resp.text();
@@ -50,5 +50,77 @@ describe.skip("worker", () => {
 		  \\"NODE_ENV\\": \\"local-testing\\"
 		}"
 	`);
+	});
+	describe("header parsing", () => {
+		it.concurrent("should return Hi by default", async () => {
+			const resp = await worker.fetch("/");
+			expect(resp).not.toBe(undefined);
+			if (resp) {
+				const respJson = await resp.text();
+				expect(respJson).toBe(JSON.stringify({ greeting: "Hi!" }));
+			}
+		});
+		it.concurrent("should return Bonjour when French", async () => {
+			const resp = await worker.fetch("/", { headers: { lang: "fr-FR" } });
+			expect(resp).not.toBe(undefined);
+			if (resp) {
+				const respJson = await resp.text();
+				expect(respJson).toBe(JSON.stringify({ greeting: "Bonjour!" }));
+			}
+		});
+
+		it.concurrent("should return G'day when Australian", async () => {
+			const resp = await worker.fetch("/", { headers: { lang: "en-AU" } });
+			expect(resp).not.toBe(undefined);
+			if (resp) {
+				const respJson = await resp.text();
+				expect(respJson).toBe(JSON.stringify({ greeting: "G'day!" }));
+			}
+		});
+
+		it.concurrent("should return Good day when British", async () => {
+			const resp = await worker.fetch("/", { headers: { lang: "en-GB" } });
+			expect(resp).not.toBe(undefined);
+			if (resp) {
+				const respJson = await resp.text();
+				expect(respJson).toBe(JSON.stringify({ greeting: "Good day!" }));
+			}
+		});
+
+		it.concurrent("should return Howdy when Texan", async () => {
+			const resp = await worker.fetch("/", { headers: { lang: "en-TX" } });
+			expect(resp).not.toBe(undefined);
+			if (resp) {
+				const respJson = await resp.text();
+				expect(respJson).toBe(JSON.stringify({ greeting: "Howdy!" }));
+			}
+		});
+
+		it.concurrent("should return Hello when American", async () => {
+			const resp = await worker.fetch("/", { headers: { lang: "en-US" } });
+			expect(resp).not.toBe(undefined);
+			if (resp) {
+				const respJson = await resp.text();
+				expect(respJson).toBe(JSON.stringify({ greeting: "Hello!" }));
+			}
+		});
+
+		it.concurrent("should return Hola when Spanish", async () => {
+			const resp = await worker.fetch("/", { headers: { lang: "es-ES" } });
+			expect(resp).not.toBe(undefined);
+			if (resp) {
+				const respJson = await resp.text();
+				expect(respJson).toBe(JSON.stringify({ greeting: "Hola!" }));
+			}
+		});
+	});
+	describe("buffer import", () => {
+		it.concurrent("returns hex string", async () => {
+			const resp = await worker.fetch("/buffer");
+			expect(resp).not.toBe(undefined);
+
+			const text = await resp.text();
+			expect(text).toMatch("68656c6c6f");
+		});
 	});
 });

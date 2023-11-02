@@ -7,7 +7,7 @@ VAR2 = 123
 VAR3 = {abc = "def"}
 
 [text_blobs]
-TEXT = "../some-text.txt"
+TEXT = "./src/some-text.txt"
 
 [data_blobs]
-DATA = "../some-data.bin"
+DATA = "./src/some-data.bin"
