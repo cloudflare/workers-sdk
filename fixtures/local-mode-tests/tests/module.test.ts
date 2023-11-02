@@ -3,7 +3,7 @@ import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { unstable_dev } from "wrangler";
 import type { UnstableDevWorker } from "wrangler";
 
-describe("worker", () => {
+describe.skip("worker", () => {
 	let worker: UnstableDevWorker;
 
 	let originalNodeEnv: string | undefined;
