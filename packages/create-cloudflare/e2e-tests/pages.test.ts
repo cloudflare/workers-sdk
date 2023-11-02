@@ -93,7 +93,6 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 			quarantine: true,
 		},
 		nuxt: {
-			quarantine: true,
 			expectResponseToContain: "Welcome to Nuxt!",
 			overrides: {
 				packageScripts: {
