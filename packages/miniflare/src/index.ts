@@ -1160,10 +1160,9 @@ export class Miniflare {
 				this.dispatchFetch
 			);
 		} else {
-			// The `ProxyServer` "heap" will have been destroyed when `workerd` was
-			// restarted, invalidating all existing native target references. Mark
-			// all proxies as invalid, noting the new runtime URL to send requests to.
-			this.#proxyClient.poisonProxies(this.#runtimeEntryURL);
+			// Update the proxy client with the new runtime URL to send requests to.
+			// Existing proxies will already have been poisoned in `setOptions()`.
+			this.#proxyClient.setRuntimeEntryURL(this.#runtimeEntryURL);
 		}
 
 		if (!this.#runtimeMutex.hasWaiting) {
@@ -1293,6 +1292,9 @@ export class Miniflare {
 
 	setOptions(opts: MiniflareOptions): Promise<void> {
 		this.#checkDisposed();
+		// The `ProxyServer` "heap" will be destroyed when `workerd` restarts,
+		// invalidating all existing native references. Mark all proxies as invalid.
+		this.#proxyClient?.poisonProxies();
 		// Wait for initial initialisation and other setOptions to complete before
 		// changing options
 		return this.#runtimeMutex.runWith(() => this.#setOptions(opts));
@@ -1496,6 +1498,11 @@ export class Miniflare {
 
 	async dispose(): Promise<void> {
 		this.#disposeController.abort();
+		// The `ProxyServer` "heap" will be destroyed when `workerd` shuts down,
+		// invalidating all existing native references. Mark all proxies as invalid.
+		// Note `dispose()`ing the `#proxyClient` implicitly poison's proxies, but
+		// we'd like them to be poisoned synchronously here.
+		this.#proxyClient?.poisonProxies();
 		try {
 			await this.#waitForReady(/* disposing */ true);
 		} finally {
