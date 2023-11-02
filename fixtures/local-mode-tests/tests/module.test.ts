@@ -5,10 +5,6 @@ import type { UnstableDevWorker } from "wrangler";
 
 describe("worker", () => {
 	let worker: UnstableDevWorker;
-	let resolveReadyPromise: (value: unknown) => void;
-	const readyPromise = new Promise((resolve) => {
-		resolveReadyPromise = resolve;
-	});
 
 	let originalNodeEnv: string | undefined;
 
@@ -29,18 +25,14 @@ describe("worker", () => {
 				},
 			}
 		);
-
-		resolveReadyPromise(undefined);
 	});
 
 	afterAll(async () => {
-		await readyPromise;
 		await worker.stop();
 		process.env.NODE_ENV = originalNodeEnv;
 	});
 
-	it.concurrent("renders", async () => {
-		await readyPromise;
+	it("renders", async () => {
 		const resp = await worker.fetch();
 		expect(resp).not.toBe(undefined);
 

@@ -1,7 +1,7 @@
 import { randomBytes } from "crypto";
 import fs from "fs/promises";
 import os from "os";
-import path, { resolve } from "path";
+import path from "path";
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import { unstable_dev } from "wrangler";
 import type { UnstableDevWorker } from "wrangler";
@@ -19,7 +19,8 @@ describe("Preview Worker", () => {
 	let tmpDir: string;
 
 	beforeAll(async () => {
-		worker = await unstable_dev(resolve(__dirname, "../src/index.ts"), {
+		worker = await unstable_dev(path.join(__dirname, "../src/index.ts"), {
+			config: path.join(__dirname, "../wrangler.toml"),
 			experimental: {
 				disableExperimentalWarning: true,
 				// experimentalLocal: true,
@@ -63,7 +64,16 @@ describe("Preview Worker", () => {
 			`.trim()
 		);
 
+		await fs.writeFile(
+			path.join(tmpDir, "wrangler.toml"),
+			/*toml*/ `
+name = "remote-worker"
+compatibility_date = "2023-01-01"
+			`.trim()
+		);
+
 		remote = await unstable_dev(path.join(tmpDir, "remote.js"), {
+			config: path.join(tmpDir, "wrangler.toml"),
 			experimental: { disableExperimentalWarning: true },
 			port: 6756,
 		});
@@ -145,9 +155,7 @@ describe("Preview Worker", () => {
 		expect(
 			json.headers.find(([h]: [string]) => h === "cf-workers-preview-token")[1]
 		).toBe(token);
-		expect(json.url).toMatchInlineSnapshot(
-			'"http://preview.devprod.cloudflare.dev/"'
-		);
+		expect(json.url).toMatchInlineSnapshot('"http://127.0.0.1:6756/"');
 	});
 	it("should be redirected with cookie", async () => {
 		const resp = await worker.fetch(
@@ -189,9 +197,7 @@ describe("Preview Worker", () => {
 		expect(Object.fromEntries([...json.headers])).toMatchObject({
 			"cf-workers-preview-token": "TEST_TOKEN",
 		});
-		expect(json.url).toMatchInlineSnapshot(
-			'"http://preview.devprod.cloudflare.dev/"'
-		);
+		expect(json.url).toMatchInlineSnapshot('"http://127.0.0.1:6756/"');
 	});
 	it("should not follow redirects", async () => {
 		const resp = await worker.fetch(
@@ -207,7 +213,7 @@ describe("Preview Worker", () => {
 
 		expect(resp.status).toMatchInlineSnapshot("302");
 		expect(resp.headers.get("Location")).toMatchInlineSnapshot(
-			'"https://example.com/"'
+			'"https://example.com"'
 		);
 		expect(await resp.text()).toMatchInlineSnapshot('""');
 	});
@@ -260,7 +266,7 @@ describe("Raw HTTP preview", () => {
 	let worker: UnstableDevWorker;
 
 	beforeAll(async () => {
-		worker = await unstable_dev(resolve(__dirname, "../src/index.ts"), {
+		worker = await unstable_dev(path.join(__dirname, "../src/index.ts"), {
 			// @ts-expect-error TODO: figure out the right way to get the server to accept host from the request
 			host: "0000.rawhttp.devprod.cloudflare.dev",
 			experimental: {

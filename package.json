@@ -18,8 +18,9 @@
 		"dev": "dotenv -- turbo dev",
 		"fix": "pnpm run prettify && dotenv -- turbo check:lint -- --fix",
 		"prettify": "prettier . --write --ignore-unknown",
-		"test": "dotenv -- turbo test --concurrency=1",
-		"test:ci": "dotenv -- turbo test:ci --concurrency=1",
+		"test": "dotenv -- turbo test",
+		"test:ci": "pnpm run test:ci:vitest && dotenv -- turbo test:ci --filter=wrangler --filter=miniflare",
+		"test:ci:vitest": "vitest run",
 		"test:watch": "turbo test:watch",
 		"type:tests": "dotenv -- turbo type:tests",
 		"gen:package": "turbo gen package"
@@ -37,7 +38,7 @@
 		"rimraf": "^5.0.1",
 		"typescript": "^4.8.4",
 		"vite": "^4.0.4",
-		"vitest": "^0.31.1"
+		"vitest": "^0.34.6"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20230821.0",

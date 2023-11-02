@@ -3,14 +3,8 @@ import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { unstable_dev } from "wrangler";
 import type { UnstableDevWorker } from "wrangler";
 
-// Okay this test is seriously flaky, even without devRegistry enabled
-// TODO: figure out why we can't run 8 wranglers at once
-describe.skip("worker", () => {
+describe("worker", () => {
 	let workers: UnstableDevWorker[];
-	let resolveReadyPromise: (value: unknown) => void;
-	const readyPromise = new Promise((resolve) => {
-		resolveReadyPromise = resolve;
-	});
 
 	beforeAll(async () => {
 		//since the script is invoked from the directory above, need to specify index.js is in src/
@@ -65,18 +59,13 @@ describe.skip("worker", () => {
 				},
 			}),
 		]);
-
-		resolveReadyPromise(undefined);
 	});
 
 	afterAll(async () => {
-		await readyPromise;
 		await Promise.all(workers.map(async (worker) => await worker.stop()));
 	});
 
 	it.concurrent("should invoke the worker and exit", async () => {
-		await readyPromise;
-
 		const responses = await Promise.all(
 			workers.map(async (worker) => await worker.fetch())
 		);
