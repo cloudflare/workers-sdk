@@ -25,7 +25,7 @@ export interface LocalProps {
 	bindings: CfWorkerInit["bindings"];
 	workerDefinitions: WorkerRegistry | undefined;
 	assetPaths: AssetPaths | undefined;
-	initialPort: number;
+	initialPort: number | undefined;
 	initialIp: string;
 	rules: Config["rules"];
 	inspectorPort: number;
