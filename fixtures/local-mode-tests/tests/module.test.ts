@@ -21,6 +21,7 @@ describe("module worker", () => {
 				vars: { VAR4: "https://google.com" },
 				experimental: {
 					disableExperimentalWarning: true,
+					disableDevRegistry: true,
 				},
 			}
 		);

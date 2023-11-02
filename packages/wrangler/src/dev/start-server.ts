@@ -137,8 +137,7 @@ export async function startDevServer(
 
 		return {
 			stop: async () => {
-				stop();
-				await stopWorkerRegistry();
+				await Promise.all([stop(), stopWorkerRegistry()]);
 			},
 			// TODO: inspectorUrl,
 		};
@@ -296,8 +295,11 @@ async function runEsbuild({
 	};
 }
 
-export async function startLocalServer(props: LocalProps) {
-	if (!props.bundle || !props.format) return Promise.resolve({ stop() {} });
+export async function startLocalServer(
+	props: LocalProps
+): Promise<{ stop: () => Promise<void> }> {
+	if (!props.bundle || !props.format)
+		return Promise.resolve({ async stop() {} });
 
 	// Log warnings for experimental dev-registry-dependent options
 	if (props.bindings.services && props.bindings.services.length > 0) {
@@ -317,19 +319,19 @@ export async function startLocalServer(props: LocalProps) {
 	logger.log(chalk.dim("⎔ Starting local server..."));
 
 	const config = await localPropsToConfigBundle(props);
-	return new Promise<{ stop: () => void }>((resolve, reject) => {
+	return new Promise<{ stop: () => Promise<void> }>((resolve, reject) => {
 		const server = new MiniflareServer();
 		server.addEventListener("reloaded", async (event) => {
 			await maybeRegisterLocalWorker(event, props.name);
 			props.onReady?.(event.url.hostname, parseInt(event.url.port));
 			// Note `unstable_dev` doesn't do anything with the inspector URL yet
 			resolve({
-				stop: () => {
+				stop: async () => {
 					abortController.abort();
 					logger.log("⎔ Shutting down local server...");
 					// Initialization errors are also thrown asynchronously by dispose().
 					// The `addEventListener("error")` above should've caught them though.
-					server.onDispose().catch(() => {});
+					await server.onDispose();
 					removeMiniflareServerExitListener();
 				},
 			});
