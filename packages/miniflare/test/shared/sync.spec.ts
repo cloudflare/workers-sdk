@@ -46,6 +46,7 @@ test("Mutex: maintains separate drain queue", async (t) => {
 	void mutex.runWith(() => deferred1);
 	let drained = false;
 	mutex.drained().then(() => (drained = true));
+	await setTimeout();
 	t.false(drained);
 	deferred1.resolve();
 	await setTimeout();
@@ -64,6 +65,7 @@ test("Mutex: maintains separate drain queue", async (t) => {
 	});
 	drained = false;
 	mutex.drained().then(() => (drained = true));
+	await setTimeout();
 	t.false(drained);
 	deferred2.resolve();
 	await setTimeout();

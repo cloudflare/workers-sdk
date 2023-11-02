@@ -81,11 +81,17 @@ export class ProxyClient {
 		return (this.#envProxy ??= this.#bridge.getProxy(TARGET_ENV));
 	}
 
-	poisonProxies(runtimeEntryURL?: URL): void {
-		this.#bridge.poisonProxies(runtimeEntryURL);
+	poisonProxies(): void {
+		this.#bridge.poisonProxies();
 		// Reset `#{global,env}Proxy` so they aren't poisoned on next access
 		this.#globalProxy = undefined;
 		this.#envProxy = undefined;
+	}
+
+	setRuntimeEntryURL(runtimeEntryURL: URL) {
+		// This function will be called whenever the runtime restarts. The URL may
+		// be different if the port has changed.
+		this.#bridge.url = runtimeEntryURL;
 	}
 
 	dispose(): Promise<void> {
@@ -188,13 +194,12 @@ class ProxyClientBridge {
 		return proxy;
 	}
 
-	poisonProxies(url?: URL): void {
+	poisonProxies(): void {
 		this.#version++;
-		// This function will be called whenever the runtime restarts. The URL may
-		// be different if the port has changed. We must also unregister all
-		// finalizers as the heap will be reset, and we don't want a new object
-		// added with the same address to be freed when it's still accessible.
-		if (url !== undefined) this.url = url;
+		// This function will be called whenever `setOptions()` or `dispose()` is
+		// called. We must also unregister all finalizers as the heap will be reset,
+		// and we don't want a new object added with the same address to be freed
+		// when it's still accessible.
 		this.#finalizationRegistry.unregister(this);
 	}
 
@@ -399,6 +404,8 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 	}
 
 	getOwnPropertyDescriptor(target: T, key: string | symbol) {
+		this.#assertSafe();
+
 		if (typeof key === "symbol") return undefined;
 
 		// Optimisation: assume constant prototypes of proxied objects, descriptors
@@ -424,6 +431,8 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 	}
 
 	ownKeys(_target: T) {
+		this.#assertSafe();
+
 		// Optimisation: assume constant prototypes of proxied objects, own keys
 		// should never change after we've fetched them
 		if (this.#knownOwnKeys !== undefined) return this.#knownOwnKeys;
@@ -442,6 +451,8 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 	}
 
 	getPrototypeOf(_target: T) {
+		this.#assertSafe();
+
 		// Return a `null` prototype, so users know this isn't a plain object
 		return null;
 	}
