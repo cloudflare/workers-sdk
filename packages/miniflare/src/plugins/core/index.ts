@@ -105,6 +105,8 @@ const CoreOptionsSchemaInput = z.intersection(
 		unsafeEphemeralDurableObjects: z.boolean().optional(),
 		unsafeDirectHost: z.string().optional(),
 		unsafeDirectPort: z.number().optional(),
+
+		unsafeEvalBinding: z.string().optional(),
 	})
 );
 export const CoreOptionsSchema = CoreOptionsSchemaInput.transform((value) => {
@@ -312,6 +314,13 @@ export const CORE_PLUGIN: Plugin<
 					};
 				})
 			);
+		}
+
+		if (options.unsafeEvalBinding !== undefined) {
+			bindings.push({
+				name: options.unsafeEvalBinding,
+				unsafeEval: kVoid,
+			});
 		}
 
 		return Promise.all(bindings);

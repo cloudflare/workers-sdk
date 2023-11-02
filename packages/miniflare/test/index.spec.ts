@@ -592,7 +592,7 @@ test("Miniflare: `node:`, `cloudflare:` and `workerd:` modules", async (t) => {
 		script: `
     import assert from "node:assert";
     import { Buffer } from "node:buffer";
-    import { connect } from "cloudflare:sockets"; 
+    import { connect } from "cloudflare:sockets";
     import rtti from "workerd:rtti";
     export default {
       fetch() {
@@ -1087,3 +1087,31 @@ unixSerialTest(
 		t.is(await res.text(), "When I grow up, I want to be a big workerd!");
 	}
 );
+
+test("Miniflare: allows the use of unsafe eval bindings", async (t) => {
+	const log = new TestLog(t);
+
+	const mf = new Miniflare({
+		log,
+		modules: true,
+		script: `
+        export default {
+            fetch(req, env, ctx) {
+                const three = env.UNSAFE_EVAL.eval('2 + 1');
+
+                const fn = env.UNSAFE_EVAL.newFunction(
+                    'return \`the computed value is \${n}\`', '', 'n'
+                );
+
+                return new Response(fn(three));
+            }
+        }
+    `,
+		unsafeEvalBinding: "UNSAFE_EVAL",
+	});
+	t.teardown(() => mf.dispose());
+
+	const response = await mf.dispatchFetch("http://localhost");
+	t.true(response.ok);
+	t.is(await response.text(), "the computed value is 3");
+});

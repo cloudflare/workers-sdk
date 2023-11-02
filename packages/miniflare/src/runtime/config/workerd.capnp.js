@@ -1291,6 +1291,8 @@ var Worker_Binding_Which;
 		"ANALYTICS_ENGINE";
 	Worker_Binding_Which[(Worker_Binding_Which["HYPERDRIVE"] = 16)] =
 		"HYPERDRIVE";
+	Worker_Binding_Which[(Worker_Binding_Which["UNSAFE_EVAL"] = 17)] =
+		"UNSAFE_EVAL";
 })(
 	(Worker_Binding_Which =
 		exports.Worker_Binding_Which || (exports.Worker_Binding_Which = {}))
@@ -1736,6 +1738,12 @@ class Worker_Binding extends capnp_ts_1.Struct {
 	setHyperdrive() {
 		capnp_ts_1.Struct.setUint16(0, 16, this);
 	}
+	isUnsafeEval() {
+		return capnp_ts_1.Struct.getUint16(0, this) === 17;
+	}
+	setUnsafeEval() {
+		capnp_ts_1.Struct.setUint16(0, 17, this);
+	}
 	toString() {
 		return "Worker_Binding_" + super.toString();
 	}
@@ -1762,6 +1770,7 @@ Worker_Binding.QUEUE = Worker_Binding_Which.QUEUE;
 Worker_Binding.FROM_ENVIRONMENT = Worker_Binding_Which.FROM_ENVIRONMENT;
 Worker_Binding.ANALYTICS_ENGINE = Worker_Binding_Which.ANALYTICS_ENGINE;
 Worker_Binding.HYPERDRIVE = Worker_Binding_Which.HYPERDRIVE;
+Worker_Binding.UNSAFE_EVAL = Worker_Binding_Which.UNSAFE_EVAL;
 Worker_Binding.Type = Worker_Binding_Type;
 Worker_Binding.DurableObjectNamespaceDesignator =
 	Worker_Binding_DurableObjectNamespaceDesignator;

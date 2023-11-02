@@ -364,6 +364,9 @@ struct Worker {
       # A binding for Hyperdrive. Allows workers to use Hyperdrive caching & pooling for Postgres
       # databases.
 
+      unsafeEval @23 :Void;
+      # A simple binding that enables access to the UnsafeEval API.
+
       # TODO(someday): dispatch, other new features
     }
 

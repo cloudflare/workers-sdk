@@ -470,6 +470,7 @@ export declare enum Worker_Binding_Which {
 	FROM_ENVIRONMENT = 14,
 	ANALYTICS_ENGINE = 15,
 	HYPERDRIVE = 16,
+	UNSAFE_EVAL = 17,
 }
 export declare class Worker_Binding extends __S {
 	static readonly UNSPECIFIED = Worker_Binding_Which.UNSPECIFIED;
@@ -490,6 +491,7 @@ export declare class Worker_Binding extends __S {
 	static readonly FROM_ENVIRONMENT = Worker_Binding_Which.FROM_ENVIRONMENT;
 	static readonly ANALYTICS_ENGINE = Worker_Binding_Which.ANALYTICS_ENGINE;
 	static readonly HYPERDRIVE = Worker_Binding_Which.HYPERDRIVE;
+	static readonly UNSAFE_EVAL = Worker_Binding_Which.UNSAFE_EVAL;
 	static readonly Type: typeof Worker_Binding_Type;
 	static readonly DurableObjectNamespaceDesignator: typeof Worker_Binding_DurableObjectNamespaceDesignator;
 	static readonly CryptoKey: typeof Worker_Binding_CryptoKey;
@@ -601,6 +603,8 @@ export declare class Worker_Binding extends __S {
 	initHyperdrive(): Worker_Binding_Hyperdrive;
 	isHyperdrive(): boolean;
 	setHyperdrive(): void;
+	isUnsafeEval(): boolean;
+	setUnsafeEval(): void;
 	toString(): string;
 	which(): Worker_Binding_Which;
 }
