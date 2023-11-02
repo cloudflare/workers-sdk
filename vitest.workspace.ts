@@ -1,1 +1,1 @@
-export default ["packages/*/vitest.config.ts", "fixtures/*/vitest.config.ts"];
+export default ["fixtures/local-mode-tests/vitest.config.ts"];

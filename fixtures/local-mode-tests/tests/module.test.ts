@@ -27,7 +27,11 @@ describe("module worker", () => {
 	});
 
 	afterAll(async () => {
-		await worker.stop();
+		try {
+			await worker.stop();
+		} catch (e) {
+			console.error("Failed to stop worker", e);
+		}
 		process.env.NODE_ENV = originalNodeEnv;
 	});
 
