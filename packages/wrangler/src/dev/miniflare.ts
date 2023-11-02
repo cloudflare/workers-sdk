@@ -80,6 +80,11 @@ export default {
 }
 `;
 
+type SpecificPort = Exclude<number, 0>;
+type RandomConsistentPort = 0; // random port, but consistent across reloads
+type RandomDifferentPort = undefined; // random port, but different across reloads
+type Port = SpecificPort | RandomConsistentPort | RandomDifferentPort;
+
 export interface ConfigBundle {
 	// TODO(soon): maybe rename some of these options, check proposed API Google Docs
 	name: string | undefined;
@@ -91,7 +96,7 @@ export interface ConfigBundle {
 	bindings: CfWorkerInit["bindings"];
 	workerDefinitions: WorkerRegistry | undefined;
 	assetPaths: AssetPaths | undefined;
-	initialPort: number;
+	initialPort: Port;
 	initialIp: string;
 	rules: Config["rules"];
 	inspectorPort: number;
