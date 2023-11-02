@@ -52,7 +52,7 @@ async function fakeStartUserWorker(options: {
 	};
 	const mfOpts: MiniflareOptions = Object.assign(
 		{
-			port: 0,
+			port: undefined,
 			inspectorPort: 0,
 			modules: true,
 			compatibilityDate: "2023-08-01",
