@@ -76,10 +76,9 @@ export class Log {
 		}
 	}
 
-	error(message: Error): void {
-		if (this.level < LogLevel.ERROR) {
-			// Rethrow message if it won't get logged
-			throw message;
+  error(message: Error): void {
+    if (this.level < LogLevel.ERROR) {
+			// Ignore message if it won't get logged
 		} else if (message.stack) {
 			// Dim internal stack trace lines to highlight user code
 			const lines = message.stack.split("\n").map(dimInternalStackLine);
