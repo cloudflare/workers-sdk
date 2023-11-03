@@ -425,6 +425,17 @@ async function buildMiniflareOptions(
 
 		log,
 		verbose: logger.loggerLevel === "debug",
+		handleRuntimeStdio: (stdout, stderr) => {
+			stdout.on("data", (chunk) => {
+				// TODO: with some conditional heuristic, call log.debug instead of log.info
+				log.info(chunk.toString());
+			});
+
+			stderr.on("data", (chunk) => {
+				// TODO: with some conditional heuristic, call log.debug instead of log.error
+				log.error(chunk.toString());
+			});
+		},
 
 		...httpsOptions,
 		...persistOptions,
