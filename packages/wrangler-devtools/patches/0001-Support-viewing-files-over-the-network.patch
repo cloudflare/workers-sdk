@@ -1,7 +1,7 @@
-From 24644cc732ec4bf8589715e853067eadd1b52e29 Mon Sep 17 00:00:00 2001
+From c3099a96f68e24f68e4ae39baaeb5bbcdc5af8a0 Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Mon, 2 Oct 2023 18:13:34 +0100
-Subject: [PATCH 01/15] Support viewing files over the network
+Subject: [PATCH 01/16] Support viewing files over the network
 
 ---
  front_end/core/sdk/Target.ts             |  4 ++++

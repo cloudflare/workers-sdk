@@ -1,7 +1,7 @@
-From b2e4d126f70ba0a96163411c7bd60c2fe7af4872 Mon Sep 17 00:00:00 2001
+From 12ef2b62fcf75baca32cfa0252f2beaf2a6412d0 Mon Sep 17 00:00:00 2001
 From: Samuel Macleod <smacleod@cloudflare.com>
 Date: Thu, 4 May 2023 03:21:58 +0100
-Subject: [PATCH 11/15] Add ping to improve connection stability
+Subject: [PATCH 11/16] Add ping to improve connection stability
 
 ---
  front_end/core/protocol_client/InspectorBackend.ts | 9 +++++++++

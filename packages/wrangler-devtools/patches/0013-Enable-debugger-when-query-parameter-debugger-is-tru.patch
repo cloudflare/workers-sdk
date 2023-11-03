@@ -1,7 +1,7 @@
-From d3add591e59cefa45458a29341185824df9334b2 Mon Sep 17 00:00:00 2001
+From ea4ba0a5a5589fa8e2ad30054072f3ad0a9585a8 Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Wed, 4 Oct 2023 00:57:43 +0100
-Subject: [PATCH 13/15] Enable debugger when query parameter `debugger` is true
+Subject: [PATCH 13/16] Enable debugger when query parameter `debugger` is true
 
 ---
  front_end/panels/sources/DebuggerPlugin.ts |  7 +++-

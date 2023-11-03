@@ -1,7 +1,7 @@
-From f2c4fc2bd919c743124df81d0b7ca9dc19cd2787 Mon Sep 17 00:00:00 2001
+From 548d614a5d677d4016701f133e2de620e3b451c4 Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Mon, 2 Oct 2023 18:24:46 +0100
-Subject: [PATCH 05/15] Remove unsupported network UI
+Subject: [PATCH 05/16] Remove unsupported network UI
 
 ---
  front_end/panels/network/NetworkPanel.ts | 35 ------------------------

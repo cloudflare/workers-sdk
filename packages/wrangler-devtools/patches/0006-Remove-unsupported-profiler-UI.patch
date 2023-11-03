@@ -1,7 +1,7 @@
-From a1602867b77541604c03f67da518044bb2209f8a Mon Sep 17 00:00:00 2001
+From aa5be8782d67d2ac671df347babaeafa7e9ed2d3 Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Mon, 2 Oct 2023 18:26:03 +0100
-Subject: [PATCH 06/15] Remove unsupported profiler UI
+Subject: [PATCH 06/16] Remove unsupported profiler UI
 
 ---
  front_end/panels/profiler/HeapProfilerPanel.ts | 2 +-

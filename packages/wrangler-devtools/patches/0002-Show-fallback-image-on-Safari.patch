@@ -1,7 +1,7 @@
-From 0ccfb994361f1fa467f7ea441131f4a079cea607 Mon Sep 17 00:00:00 2001
+From 6e65cbf34e91aeba2979250d549cde384d662d3b Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Mon, 2 Oct 2023 18:18:45 +0100
-Subject: [PATCH 02/15] Show fallback image on Safari
+Subject: [PATCH 02/16] Show fallback image on Safari
 
 ---
  config/gni/devtools_grd_files.gni   |   1 +

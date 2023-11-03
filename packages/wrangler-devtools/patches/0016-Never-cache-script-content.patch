@@ -1,0 +1,27 @@
+From d29e6630ed7bea0542b4518b25a5f938c454d73c Mon Sep 17 00:00:00 2001
+From: Workers DevProd <workers-devprod@cloudflare.com>
+Date: Fri, 3 Nov 2023 00:59:32 +0000
+Subject: [PATCH 16/16] Never cache script content
+
+---
+ front_end/core/sdk/DebuggerModel.ts | 4 ----
+ 1 file changed, 4 deletions(-)
+
+diff --git a/front_end/core/sdk/DebuggerModel.ts b/front_end/core/sdk/DebuggerModel.ts
+index ebed9cacdd..f4dc64f914 100644
+--- a/front_end/core/sdk/DebuggerModel.ts
++++ b/front_end/core/sdk/DebuggerModel.ts
+@@ -681,10 +681,6 @@ export class DebuggerModel extends SDKModel<EventTypes> {
+       isModule: boolean|null, originStackTrace: Protocol.Runtime.StackTrace|null, codeOffset: number|null,
+       scriptLanguage: string|null, debugSymbols: Protocol.Debugger.DebugSymbols|null,
+       embedderName: Platform.DevToolsPath.UrlString|null): Script {
+-    const knownScript = this.#scriptsInternal.get(scriptId);
+-    if (knownScript) {
+-      return knownScript;
+-    }
+     let isContentScript = false;
+     if (executionContextAuxData && ('isDefault' in executionContextAuxData)) {
+       isContentScript = !executionContextAuxData['isDefault'];
+-- 
+2.39.3 (Apple Git-145)
+

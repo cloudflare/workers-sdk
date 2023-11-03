@@ -1,7 +1,7 @@
-From 0488c38300b4125cd9c8d1956894baac47d03d9a Mon Sep 17 00:00:00 2001
+From e3ca5d3d9c1ae08d9403cdf7cf25d472b0ccab64 Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Wed, 4 Oct 2023 01:11:14 +0100
-Subject: [PATCH 14/15] Show Profiling panel
+Subject: [PATCH 14/16] Show Profiling panel
 
 ---
  front_end/entrypoints/main/MainImpl.ts        |  1 +
