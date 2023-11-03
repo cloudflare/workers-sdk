@@ -1,10 +1,6 @@
 const assert = require("node:assert");
-const crypto = require("node:crypto");
-const events = require("node:events");
 const fs = require("node:fs");
-const os = require("node:os");
 const path = require("node:path");
-const readline = require("node:readline");
 const { execSync } = require("node:child_process");
 
 // This script is used by the `release.yml` workflow to update the version of the packages being released.
@@ -24,24 +20,6 @@ function parseVersion(version) {
 	const match = /(\d+)\.(\d+)\.(\d+)/.exec(version);
 	assert(match !== null, `Expected ${version} to be <major>.<minor>.<patch>`);
 	return [parseInt(match[1]), parseInt(match[2]), parseInt(match[3])];
-}
-
-/**
- * Rewrites the specified file line-by-line.
- * @param {string} filePath
- * @param {(line: string) => string} transformer
- */
-async function transformFile(filePath, transformer) {
-	const tmpFile = path.join(os.tmpdir(), `transform-${crypto.randomUUID()}`);
-	const input = fs.createReadStream(filePath);
-	const output = fs.createWriteStream(tmpFile);
-	const rl = readline.createInterface({ input });
-	for await (const line of rl) output.write(`${transformer(line)}\n`);
-	const outputFinished = events.once(output, "finish");
-	output.end();
-	await outputFinished;
-	fs.copyFileSync(tmpFile, filePath);
-	fs.unlinkSync(tmpFile);
 }
 
 const rootPath = path.resolve(__dirname, "..");
@@ -78,7 +56,7 @@ function getNextMiniflareVersion(workerdVersion, previousVersion, version) {
 }
 exports.getNextMiniflareVersion = getNextMiniflareVersion;
 
-async function main() {
+function main() {
 	// 1. Get `miniflare` version before applying changesets, so we know if the
 	//    minor version was bumped
 	const previousMiniflarePkg = getPkg(miniflarePkgPath);
@@ -131,19 +109,18 @@ async function main() {
 				if (changed) setPkg(changedPath, pkg);
 			} else if (name === "CHANGELOG.md") {
 				// ...update `CHANGELOG.md`s with correct version
-				await transformFile(changedPath, (line) => {
-					// Replace version header in `miniflare` `CHANGELOG.md`
-					line = line.replace(
-						`## ${miniflareVersion}`,
-						`## ${nextMiniflareVersion}`
-					);
-					// Replace `Updated dependencies` line in other `CHANGELOG.md`s
-					line = line.replace(
-						`- miniflare@${miniflareVersion}`,
-						`- miniflare@${nextMiniflareVersion}`
-					);
-					return line;
-				});
+				let changelog = fs.readFileSync(changedPath, "utf8");
+				// Replace version header in `miniflare` `CHANGELOG.md`
+				changelog = changelog.replace(
+					`## ${miniflareVersion}`,
+					`## ${nextMiniflareVersion}`
+				);
+				// Replace `Updated dependencies` line in other `CHANGELOG.md`s
+				changelog = changelog.replace(
+					`- miniflare@${miniflareVersion}`,
+					`- miniflare@${nextMiniflareVersion}`
+				);
+				fs.writeFileSync(changedPath, changelog);
 			}
 		}
 	}
@@ -152,4 +129,4 @@ async function main() {
 	execSync("pnpm install");
 }
 
-if (require.main === module) void main();
+if (require.main === module) main();
