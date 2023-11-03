@@ -22,7 +22,8 @@ function parseVersion(version) {
 	return [parseInt(match[1]), parseInt(match[2]), parseInt(match[3])];
 }
 
-const miniflarePath = path.resolve(__dirname, "../packages/miniflare");
+const rootPath = path.resolve(__dirname, "..");
+const miniflarePath = path.join(rootPath, "packages/miniflare");
 const miniflarePkgPath = path.join(miniflarePath, "package.json");
 const miniflareChangelogPath = path.join(miniflarePath, "CHANGELOG.md");
 
@@ -77,41 +78,50 @@ function main() {
 	if (nextMiniflareVersion !== miniflareVersion) {
 		// If `changeset version` didn't produce the correct version on its own...
 
-		// ...update `CHANGELOG.md` with correct version
-		let changelog = fs.readFileSync(miniflareChangelogPath, "utf8");
-		// Replace first incorrect version, it should be the version header
-		changelog = changelog.replace(miniflareVersion, nextMiniflareVersion);
-		fs.writeFileSync(miniflareChangelogPath, changelog);
-
 		// ...update `miniflare`'s `package.json` version
 		miniflarePkg.version = nextMiniflareVersion;
 		setPkg(miniflarePkgPath, miniflarePkg);
 
-		// ...update `miniflare` version in dependencies of other packages
-		// (this next command returns a list of absolute package paths in the
-		// workspace separated by newline)
-		const listResult = execSync("pnpm list --recursive --depth -1 --parseable");
-		const paths = listResult.toString().trim().split("\n");
-		for (const p of paths) {
-			// Ignore warning lines
-			if (!path.isAbsolute(p)) continue;
-			const pkgPath = path.join(p, "package.json");
-			const pkg = getPkg(pkgPath);
-			let changed = false;
-			for (const key of [
-				"dependencies",
-				"devDependencies",
-				"peerDependencies",
-				"optionalDependencies",
-			]) {
-				const constraint = pkg[key]?.["miniflare"];
-				if (constraint === undefined) continue;
-				// Don't update `workspace:`-style constraints
-				if (constraint.startsWith("workspace:")) continue;
-				pkg[key]["miniflare"] = nextMiniflareVersion;
-				changed = true;
+		const changedPathsBuffer = execSync("git ls-files --modified", {
+			cwd: rootPath,
+		});
+		const changedPaths = changedPathsBuffer.toString().trim().split("\n");
+		for (const relativeChangedPath of changedPaths) {
+			const changedPath = path.resolve(rootPath, relativeChangedPath);
+			const name = path.basename(changedPath);
+			if (name === "package.json") {
+				// ...update `miniflare` version in dependencies of other packages
+				const pkg = getPkg(changedPath);
+				let changed = false;
+				for (const key of [
+					"dependencies",
+					"devDependencies",
+					"peerDependencies",
+					"optionalDependencies",
+				]) {
+					const constraint = pkg[key]?.["miniflare"];
+					if (constraint === undefined) continue;
+					// Don't update `workspace:`-style constraints
+					if (constraint.startsWith("workspace:")) continue;
+					pkg[key]["miniflare"] = nextMiniflareVersion;
+					changed = true;
+				}
+				if (changed) setPkg(changedPath, pkg);
+			} else if (name === "CHANGELOG.md") {
+				// ...update `CHANGELOG.md`s with correct version
+				let changelog = fs.readFileSync(changedPath, "utf8");
+				// Replace version header in `miniflare` `CHANGELOG.md`
+				changelog = changelog.replace(
+					`## ${miniflareVersion}`,
+					`## ${nextMiniflareVersion}`
+				);
+				// Replace `Updated dependencies` line in other `CHANGELOG.md`s
+				changelog = changelog.replace(
+					`- miniflare@${miniflareVersion}`,
+					`- miniflare@${nextMiniflareVersion}`
+				);
+				fs.writeFileSync(changedPath, changelog);
 			}
-			if (changed) setPkg(pkgPath, pkg);
 		}
 	}
 
