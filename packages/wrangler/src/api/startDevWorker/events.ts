@@ -119,7 +119,7 @@ export function serialiseError(e: unknown): SerializedError {
 			message: e.message,
 			name: e.name,
 			stack: e.stack,
-			cause: serialiseError(e.cause),
+			cause: e.cause && serialiseError(e.cause),
 		};
 	} else {
 		return { message: String(e) };

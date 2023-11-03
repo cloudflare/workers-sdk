@@ -386,7 +386,10 @@ export class ProxyController extends EventEmitter {
 		switch (message.type) {
 			case "runtime-websocket-error":
 				// TODO: consider sending proxyData again to trigger the InspectorProxyWorker to reconnect to the runtime
-				logger.error(message.error);
+				logger.error(
+					"[InspectorProxyWorker] 'runtime websocket' error",
+					message.error
+				);
 
 				break;
 			case "error":
