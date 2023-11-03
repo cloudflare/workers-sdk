@@ -1122,6 +1122,7 @@ export class Miniflare {
 			requiredSockets,
 			inspectorAddress,
 			verbose: this.#sharedOpts.core.verbose,
+      handleRuntimeStdio: this.#sharedOpts.core.handleRuntimeStdio,
 		};
 		const maybeSocketPorts = await this.#runtime.updateConfig(
 			configBuffer,
