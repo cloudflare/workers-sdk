@@ -1,15 +1,18 @@
 import assert from "node:assert";
+import util from "node:util";
 import chalk from "chalk";
 import { useEffect, useRef, useState } from "react";
 import onExit from "signal-exit";
 import { fetch } from "undici";
-import { registerWorker } from "../dev-registry";
 import { logger } from "../logger";
 import useInspector from "./inspect";
 import { MiniflareServer } from "./miniflare";
 import type { Config } from "../config";
 import type { CfWorkerInit, CfScriptFormat } from "../deployment-bundle/worker";
-import type { WorkerRegistry } from "../dev-registry";
+import type {
+	UpdatableWorkerRegistry,
+	WorkerDefinition,
+} from "../dev-registry";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { AssetPaths } from "../sites";
 import type { ConfigBundle, ReloadedEvent } from "./miniflare";
@@ -23,7 +26,7 @@ export interface LocalProps {
 	compatibilityFlags: string[] | undefined;
 	usageModel: "bundled" | "unbound" | undefined;
 	bindings: CfWorkerInit["bindings"];
-	workerDefinitions: WorkerRegistry | undefined;
+	workerRegistry: UpdatableWorkerRegistry | undefined;
 	assetPaths: AssetPaths | undefined;
 	initialPort: number;
 	initialIp: string;
@@ -77,7 +80,7 @@ export async function localPropsToConfigBundle(
 		inspectorPort: props.runtimeInspectorPort,
 		usageModel: props.usageModel,
 		bindings: props.bindings,
-		workerDefinitions: props.workerDefinitions,
+		workerDefinitions: props.workerRegistry?.workers,
 		assetPaths: props.assetPaths,
 		initialPort: props.initialPort,
 		initialIp: props.initialIp,
@@ -93,15 +96,12 @@ export async function localPropsToConfigBundle(
 	};
 }
 
-export function maybeRegisterLocalWorker(event: ReloadedEvent, name?: string) {
-	if (name === undefined) return;
-
+export function getWorkerDefinition(event: ReloadedEvent): WorkerDefinition {
 	let protocol = event.url.protocol;
 	protocol = protocol.substring(0, event.url.protocol.length - 1);
-	if (protocol !== "http" && protocol !== "https") return;
-
+	assert(protocol === "http" || protocol === "https");
 	const port = parseInt(event.url.port);
-	return registerWorker(name, {
+	return {
 		protocol,
 		mode: "local",
 		port,
@@ -112,7 +112,7 @@ export function maybeRegisterLocalWorker(event: ReloadedEvent, name?: string) {
 		})),
 		durableObjectsHost: event.url.hostname,
 		durableObjectsPort: port,
-	});
+	};
 }
 
 // https://chromedevtools.github.io/devtools-protocol/#endpoints
@@ -166,7 +166,11 @@ function useLocalWorker(props: LocalProps) {
 		}
 	}, [props.bindings.durable_objects?.bindings]);
 
+	const previousProps = useRef<LocalProps>();
 	useEffect(() => {
+		if (util.isDeepStrictEqual(previousProps.current, props)) return;
+		previousProps.current = props;
+
 		const abortController = new AbortController();
 
 		if (!props.bundle || !props.format) return;
@@ -176,7 +180,7 @@ function useLocalWorker(props: LocalProps) {
 			const newServer = new MiniflareServer();
 			miniflareServerRef.current = server = newServer;
 			server.addEventListener("reloaded", async (event) => {
-				await maybeRegisterLocalWorker(event, props.name);
+				await props.workerRegistry?.update(getWorkerDefinition(event));
 				props.onReady?.(event.url.hostname, parseInt(event.url.port));
 
 				try {

@@ -1,21 +1,16 @@
 import { spawn } from "node:child_process";
 import * as path from "node:path";
-import * as util from "node:util";
+import util from "node:util";
 import { watch } from "chokidar";
 import clipboardy from "clipboardy";
 import commandExists from "command-exists";
 import { Box, Text, useApp, useInput, useStdin } from "ink";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useErrorHandler, withErrorBoundary } from "react-error-boundary";
 import onExit from "signal-exit";
 import { fetch } from "undici";
 import { runCustomBuild } from "../deployment-bundle/run-custom-build";
-import {
-	getBoundRegisteredWorkers,
-	startWorkerRegistry,
-	stopWorkerRegistry,
-	unregisterWorker,
-} from "../dev-registry";
+import { getBoundWorkers, RegistryHandle } from "../dev-registry";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { getWranglerTmpDir } from "../paths";
@@ -28,7 +23,11 @@ import type { Config } from "../config";
 import type { Route } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfModule, CfWorkerInit } from "../deployment-bundle/worker";
-import type { WorkerRegistry } from "../dev-registry";
+import type {
+	WorkerRegistry,
+	UpdatableWorkerRegistry,
+	WorkerDefinition,
+} from "../dev-registry";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { EphemeralDirectory } from "../paths";
 import type { AssetPaths } from "../sites";
@@ -43,76 +42,36 @@ function useDevRegistry(
 	services: Config["services"] | undefined,
 	durableObjects: Config["durable_objects"] | undefined,
 	mode: "local" | "remote"
-): WorkerRegistry {
+): UpdatableWorkerRegistry {
+	const handleRef = useRef<RegistryHandle>();
 	const [workers, setWorkers] = useState<WorkerRegistry>({});
 
-	const hasFailedToFetch = useRef(false);
-
 	useEffect(() => {
-		// Let's try to start registry
-		// TODO: we should probably call this in a loop
-		// in case the registry dies elsewhere
-		startWorkerRegistry().catch((err) => {
-			logger.error("failed to start worker registry", err);
+		if (mode === "remote" || handleRef.current !== undefined) return;
+
+		handleRef.current = new RegistryHandle(name, (newWorkers) => {
+			setWorkers((previousBoundWorkers) => {
+				const newBoundWorkers = getBoundWorkers(
+					newWorkers,
+					services,
+					durableObjects
+				);
+				return util.isDeepStrictEqual(previousBoundWorkers, newBoundWorkers)
+					? previousBoundWorkers
+					: newBoundWorkers;
+			});
 		});
-
-		const interval =
-			// TODO: enable this for remote mode as well
-			// https://github.com/cloudflare/workers-sdk/issues/1182
-			mode === "local"
-				? setInterval(() => {
-						getBoundRegisteredWorkers({
-							services,
-							durableObjects,
-						}).then(
-							(boundRegisteredWorkers: WorkerRegistry | undefined) => {
-								setWorkers((prevWorkers) => {
-									if (
-										!util.isDeepStrictEqual(boundRegisteredWorkers, prevWorkers)
-									) {
-										return boundRegisteredWorkers || {};
-									}
-									return prevWorkers;
-								});
-							},
-							(err) => {
-								if (!hasFailedToFetch.current) {
-									hasFailedToFetch.current = true;
-									logger.warn("Failed to get worker definitions", err);
-								}
-							}
-						);
-				  }, 300)
-				: undefined;
-
 		return () => {
-			interval && clearInterval(interval);
-			Promise.allSettled([
-				name ? unregisterWorker(name) : Promise.resolve(),
-				stopWorkerRegistry(),
-			]).then(
-				([unregisterResult, stopRegistryResult]) => {
-					if (unregisterResult.status === "rejected") {
-						logger.error(
-							"Failed to unregister worker",
-							unregisterResult.reason
-						);
-					}
-					if (stopRegistryResult.status === "rejected") {
-						logger.error(
-							"Failed to stop worker registry",
-							stopRegistryResult.reason
-						);
-					}
-				},
-				(err) => {
-					logger.error("Failed to clear dev registry effect", err);
-				}
-			);
+			handleRef.current?.dispose();
+			handleRef.current = undefined;
 		};
-	}, [name, services, durableObjects, mode]);
+	}, [mode, name, services, durableObjects]);
 
-	return workers;
+	const update = useCallback(async (definition: WorkerDefinition) => {
+		return handleRef.current?.update(definition);
+	}, []);
+
+	return { workers, update };
 }
 
 export type DevProps = {
@@ -251,7 +210,7 @@ function DevSession(props: DevSessionProps) {
 
 	const directory = useTmpDir(props.projectRoot);
 
-	const workerDefinitions = useDevRegistry(
+	const workerRegistry = useDevRegistry(
 		props.name,
 		props.bindings.services,
 		props.bindings.durable_objects,
@@ -277,8 +236,6 @@ function DevSession(props: DevSessionProps) {
 		noBundle: props.noBundle,
 		findAdditionalModules: props.findAdditionalModules,
 		assets: props.assetsConfig,
-		workerDefinitions,
-		services: props.bindings.services,
 		durableObjects: props.bindings.durable_objects || { bindings: [] },
 		local: props.local,
 		// Enable the bundling to know whether we are using dev or deploy
@@ -304,21 +261,21 @@ function DevSession(props: DevSessionProps) {
 		);
 	}
 
-	const announceAndOnReady: typeof props.onReady = (finalIp, finalPort) => {
-		if (process.send) {
-			process.send(
+	const onReady = props.onReady;
+	const announceAndOnReady = useCallback(
+		(finalIp: string, finalPort: number) => {
+			process.send?.(
 				JSON.stringify({
 					event: "DEV_SERVER_READY",
 					ip: finalIp,
 					port: finalPort,
 				})
 			);
-		}
 
-		if (props.onReady) {
-			props.onReady(finalIp, finalPort);
-		}
-	};
+			onReady?.(finalIp, finalPort);
+		},
+		[onReady]
+	);
 
 	return props.local ? (
 		<Local
@@ -329,7 +286,7 @@ function DevSession(props: DevSessionProps) {
 			compatibilityFlags={props.compatibilityFlags}
 			usageModel={props.usageModel}
 			bindings={props.bindings}
-			workerDefinitions={workerDefinitions}
+			workerRegistry={workerRegistry}
 			assetPaths={props.assetPaths}
 			initialPort={props.initialPort}
 			initialIp={props.initialIp}

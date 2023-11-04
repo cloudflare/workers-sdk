@@ -4,10 +4,10 @@ import path from "node:path";
 import {
 	Log,
 	LogLevel,
+	Miniflare,
+	Mutex,
 	NoOpLog,
 	TypedEventTarget,
-	Mutex,
-	Miniflare,
 } from "miniflare";
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { withSourceURLs } from "../deployment-bundle/source-url";
@@ -22,20 +22,23 @@ import type {
 	CfQueue,
 	CfR2Bucket,
 	CfScriptFormat,
+	CfWorkerInit,
 } from "../deployment-bundle/worker";
-import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
 import type { LoggerLevel } from "../logger";
 import type { AssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
 import type {
 	MiniflareOptions,
-	SourceOptions,
-	WorkerOptions,
 	Request,
 	Response,
+	SourceOptions,
+	WorkerOptions,
+	HttpOptions,
 } from "miniflare";
 import type { Abortable } from "node:events";
+
+const EXTERNAL_WORKER_NAME_PREFIX = "__WRANGLER_EXTERNAL_WORKER_";
 
 // This worker proxies all external Durable Objects to the Wrangler session
 // where they're defined, and receives all requests from other Wrangler sessions
@@ -236,6 +239,51 @@ function buildBindingOptions(config: ConfigBundle) {
 		}
 	}
 
+	// Setup service bindings
+	const additionalWorkers: WorkerOptions[] = [];
+	const serviceBindings: WorkerOptions["serviceBindings"] = {
+		...config.serviceBindings,
+	};
+	const configuredServices = config.bindings.services ?? [];
+	for (let i = 0; i < configuredServices.length; i++) {
+		const service = configuredServices[i];
+		const definition = config.workerDefinitions?.[service.service];
+		if (service.service === config.name) {
+			// If we're binding to ourselves, add a self-service-binding
+			serviceBindings[service.binding] = config.name;
+		} else if (definition === undefined) {
+			// If we're binding to a service we don't know about, add a stub worker
+			const name = EXTERNAL_WORKER_NAME_PREFIX + i;
+			const stubWorker: WorkerOptions = {
+				name,
+				modules: true,
+				script: `export default {
+					fetch() {
+						return new Response(\`[wrangler] Couldn't find \\\`wrangler dev\\\` session for service "${service.binding}" to proxy to\`, { status: 503 });
+					}
+				}`,
+			};
+			additionalWorkers.push(stubWorker);
+			serviceBindings[service.binding] = name;
+		} else {
+			// If we're binding to a service from another `wrangler dev` session,
+			// add an external service to that
+			const httpOptions: HttpOptions = {
+				injectRequestHeaders: Object.entries(definition.headers ?? {}).map(
+					([name, value]) => ({ name, value })
+				),
+			};
+			serviceBindings[service.binding] = {
+				external: {
+					address: `${definition.host}:${definition.port}`,
+					...(definition.protocol === "http"
+						? { http: httpOptions }
+						: { https: { options: httpOptions } }),
+				},
+			};
+		}
+	}
+
 	// Partition Durable Objects based on whether they're internal (defined by
 	// this session's worker), or external (defined by another session's worker
 	// registered in the dev registry)
@@ -296,12 +344,14 @@ function buildBindingOptions(config: ConfigBundle) {
 				})
 				.join("\n"),
 	};
+	additionalWorkers.push(externalDurableObjectWorker);
 
 	const bindingOptions = {
 		bindings: bindings.vars,
 		textBlobBindings,
 		dataBlobBindings,
 		wasmBindings,
+		serviceBindings,
 
 		kvNamespaces: Object.fromEntries(
 			bindings.kv_namespaces?.map(kvNamespaceEntry) ?? []
@@ -338,15 +388,12 @@ function buildBindingOptions(config: ConfigBundle) {
 				];
 			}),
 		]),
-
-		serviceBindings: config.serviceBindings,
-		// TODO: check multi worker service bindings also supported
 	};
 
 	return {
 		bindingOptions,
 		internalObjects,
-		externalDurableObjectWorker,
+		additionalWorkers,
 	};
 }
 
@@ -395,7 +442,7 @@ async function buildMiniflareOptions(
 			: undefined;
 
 	const sourceOptions = await buildSourceOptions(config);
-	const { bindingOptions, internalObjects, externalDurableObjectWorker } =
+	const { bindingOptions, internalObjects, additionalWorkers } =
 		buildBindingOptions(config);
 	const sitesOptions = buildSitesOptions(config);
 	const persistOptions = buildPersistOptions(config.localPersistencePath);
@@ -431,7 +478,7 @@ async function buildMiniflareOptions(
 				...bindingOptions,
 				...sitesOptions,
 			},
-			externalDurableObjectWorker,
+			...additionalWorkers,
 		],
 	};
 	return { options, internalObjects };

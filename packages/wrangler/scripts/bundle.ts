@@ -28,7 +28,7 @@ async function buildMain(flags: BuildFlags = {}) {
 
 	const options: BuildOptions = {
 		keepNames: true,
-		entryPoints: ["./src/cli.ts"],
+		entryPoints: ["./src/cli.ts", "./src/dev-registry/daemon.ts"],
 		bundle: true,
 		outdir,
 		platform: "node",

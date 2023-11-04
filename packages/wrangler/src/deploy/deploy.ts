@@ -500,11 +500,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							assets: config.assets,
 							// enable the cache when publishing
 							bypassAssetCache: false,
-							services: config.services,
-							// We don't set workerDefinitions here,
-							// because we don't want to apply the dev-time
-							// facades on top of it
-							workerDefinitions: undefined,
 							// We want to know if the build is for development or publishing
 							// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
 							targetConsumer: "deploy",
