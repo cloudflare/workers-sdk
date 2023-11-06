@@ -81,6 +81,11 @@ export function tailOptions(yargs: CommonYargsArgv) {
 			type: "boolean",
 			describe: "Use legacy environments",
 			hidden: true,
+		})
+		.option("yes", {
+			type: "boolean",
+			describe: "Answer yes to any prompts",
+			alias: "y",
 		});
 }
 
@@ -137,12 +142,13 @@ export async function tailHandler(args: TailArgs) {
 	if (
 		scriptContent.toLowerCase().includes("websocket") &&
 		bindings.find((b) => b.type === "durable_object_namespace")
+
 	) {
 		logger.warn(
 			`Beginning log collection requires restarting the Durable Objects associated with ${scriptName}. Any WebSocket connections or other non-persisted state will be lost as part of this restart.`
 		);
 
-		if (!(await confirm("Would you like to continue?"))) {
+		if (!args.yes && !(await confirm("Would you like to continue?"))) {
 			return;
 		}
 	}
