@@ -342,6 +342,7 @@ export type StartDevOptions = DevArguments &
 		enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 		onReady?: (ip: string, port: number) => void;
 		showInteractiveDevSession?: boolean;
+		updateCheck?: boolean;
 	};
 
 export async function startDev(args: StartDevOptions) {
@@ -351,7 +352,7 @@ export async function startDev(args: StartDevOptions) {
 		if (args.logLevel) {
 			logger.loggerLevel = args.logLevel;
 		}
-		await printWranglerBanner();
+		await printWranglerBanner(args.updateCheck);
 		if (args.local) {
 			logger.warn(
 				"--local is no longer required and will be removed in a future version.\n`wrangler dev` now uses the local Cloudflare Workers runtime by default. 🎉"
@@ -518,7 +519,7 @@ export async function startApiDev(args: StartDevOptions) {
 	if (args.logLevel) {
 		logger.loggerLevel = args.logLevel;
 	}
-	await printWranglerBanner();
+	await printWranglerBanner(args.updateCheck);
 
 	const configPath =
 		args.config || (args.script && findWranglerToml(path.dirname(args.script)));
