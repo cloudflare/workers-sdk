@@ -21,3 +21,15 @@ export type Json = Literal | { [key: string]: Json } | Json[];
 export const JsonSchema: z.ZodType<Json> = z.lazy(() =>
 	z.union([LiteralSchema, z.array(JsonSchema), z.record(JsonSchema)])
 );
+
+/** @internal */
+export function _isCyclic(value: unknown, seen = new Set<unknown>()) {
+	if (typeof value !== "object" || value === null) return false;
+	for (const child of Object.values(value)) {
+		if (seen.has(child)) return true;
+		seen.add(child);
+		if (_isCyclic(child, seen)) return true;
+		seen.delete(child);
+	}
+	return false;
+}

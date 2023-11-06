@@ -27,6 +27,7 @@ import {
 	MiniflareOptions,
 	ReplaceWorkersTypes,
 	Response,
+	WorkerOptions,
 	_forceColour,
 	_transformsForContentEncoding,
 	createFetchMock,
@@ -1143,25 +1144,18 @@ test("Miniflare: exits cleanly", async (t) => {
 	t.is(stderr, "");
 });
 
-test("Miniflare: allows the use of unsafe eval bindings", async (t) => {
-	const log = new TestLog(t);
-
+test("Miniflare: supports unsafe eval bindings", async (t) => {
 	const mf = new Miniflare({
-		log,
 		modules: true,
-		script: `
-        export default {
-            fetch(req, env, ctx) {
-                const three = env.UNSAFE_EVAL.eval('2 + 1');
-
-                const fn = env.UNSAFE_EVAL.newFunction(
-                    'return \`the computed value is \${n}\`', '', 'n'
-                );
-
-                return new Response(fn(three));
-            }
-        }
-    `,
+		script: `export default {
+			fetch(req, env, ctx) {
+				const three = env.UNSAFE_EVAL.eval("2 + 1");
+				const fn = env.UNSAFE_EVAL.newFunction(
+					"return \`the computed value is \${n}\`", "", "n"
+				);
+				return new Response(fn(three));
+			}
+		}`,
 		unsafeEvalBinding: "UNSAFE_EVAL",
 	});
 	t.teardown(() => mf.dispose());
@@ -1169,4 +1163,462 @@ test("Miniflare: allows the use of unsafe eval bindings", async (t) => {
 	const response = await mf.dispatchFetch("http://localhost");
 	t.true(response.ok);
 	t.is(await response.text(), "the computed value is 3");
+});
+
+test("Miniflare: supports wrapped bindings", async (t) => {
+	const store = new Map<string, string>();
+	const mf = new Miniflare({
+		workers: [
+			{
+				wrappedBindings: {
+					MINI_KV: {
+						scriptName: "mini-kv",
+						bindings: { NAMESPACE: "ns" },
+					},
+				},
+				modules: true,
+				script: `export default {
+					async fetch(request, env, ctx) {
+						await env.MINI_KV.set("key", "value");
+						const value = await env.MINI_KV.get("key");
+						await env.MINI_KV.delete("key");
+						const emptyValue = await env.MINI_KV.get("key");
+						await env.MINI_KV.set("key", "another value");
+						return Response.json({ value, emptyValue });
+					}
+				}`,
+			},
+			{
+				name: "mini-kv",
+				serviceBindings: {
+					async STORE(request) {
+						const { pathname } = new URL(request.url);
+						const key = pathname.substring(1);
+						if (request.method === "GET") {
+							const value = store.get(key);
+							const status = value === undefined ? 404 : 200;
+							return new Response(value ?? null, { status });
+						} else if (request.method === "PUT") {
+							const value = await request.text();
+							store.set(key, value);
+							return new Response(null, { status: 204 });
+						} else if (request.method === "DELETE") {
+							store.delete(key);
+							return new Response(null, { status: 204 });
+						} else {
+							return new Response(null, { status: 405 });
+						}
+					},
+				},
+				modules: true,
+				script: `
+				class MiniKV {
+					constructor(env) {
+						this.STORE = env.STORE;
+						this.baseURL = "http://x/" + (env.NAMESPACE ?? "") + ":";
+					}
+					async get(key) {
+						const res = await this.STORE.fetch(this.baseURL + key);
+						return res.status === 404 ? null : await res.text();
+					}
+					async set(key, body) {
+						await this.STORE.fetch(this.baseURL + key, { method: "PUT", body });
+					}
+					async delete(key) {
+						await this.STORE.fetch(this.baseURL + key, { method: "DELETE" });
+					}
+				}
+				
+				export default function (env) {
+					return new MiniKV(env);
+				}
+				`,
+			},
+		],
+	});
+	t.teardown(() => mf.dispose());
+
+	const res = await mf.dispatchFetch("http://localhost/");
+	t.deepEqual(await res.json(), { value: "value", emptyValue: null });
+	t.deepEqual(store, new Map([["ns:key", "another value"]]));
+});
+test("Miniflare: check overrides default bindings with bindings from wrapped binding designator", async (t) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				wrappedBindings: {
+					WRAPPED: {
+						scriptName: "binding",
+						entrypoint: "wrapped",
+						bindings: { B: "overridden b" },
+					},
+				},
+				modules: true,
+				script: `export default {
+					fetch(request, env, ctx) {
+						return env.WRAPPED();
+					}
+				}`,
+			},
+			{
+				name: "binding",
+				modules: true,
+				bindings: { A: "default a", B: "default b" },
+				script: `export function wrapped(env) {
+					return () => Response.json(env);
+				}`,
+			},
+		],
+	});
+	t.teardown(() => mf.dispose());
+
+	const res = await mf.dispatchFetch("http://localhost/");
+	t.deepEqual(await res.json(), { A: "default a", B: "overridden b" });
+});
+test("Miniflare: checks uses compatibility and outbound configuration of binder", async (t) => {
+	const workers: WorkerOptions[] = [
+		{
+			compatibilityDate: "2022-03-21", // Default-on date for `global_navigator`
+			compatibilityFlags: ["nodejs_compat"],
+			wrappedBindings: { WRAPPED: "binding" },
+			modules: true,
+			script: `export default {
+				fetch(request, env, ctx) {
+					return env.WRAPPED();
+				}
+			}`,
+			outboundService(request) {
+				return new Response(`outbound:${request.url}`);
+			},
+		},
+		{
+			name: "binding",
+			modules: [
+				{
+					type: "ESModule",
+					path: "index.mjs",
+					contents: `export default function () {
+						return async () => {
+							const typeofNavigator = typeof navigator;
+							let importedNode = false;
+							try {
+								await import("node:util");
+								importedNode = true;
+							} catch {}
+							const outboundRes = await fetch("http://placeholder/");
+							const outboundText = await outboundRes.text();
+							return Response.json({ typeofNavigator, importedNode, outboundText });
+						}
+					}`,
+				},
+			],
+		},
+	];
+	const mf = new Miniflare({ workers });
+	t.teardown(() => mf.dispose());
+
+	let res = await mf.dispatchFetch("http://localhost/");
+	t.deepEqual(await res.json(), {
+		typeofNavigator: "object",
+		importedNode: true,
+		outboundText: "outbound:http://placeholder/",
+	});
+
+	const fetchMock = createFetchMock();
+	fetchMock.disableNetConnect();
+	fetchMock
+		.get("http://placeholder")
+		.intercept({ path: "/" })
+		.reply(200, "mocked");
+	workers[0].compatibilityDate = "2022-03-20";
+	workers[0].compatibilityFlags = [];
+	workers[0].outboundService = undefined;
+	workers[0].fetchMock = fetchMock;
+	await mf.setOptions({ workers });
+	res = await mf.dispatchFetch("http://localhost/");
+	t.deepEqual(await res.json(), {
+		typeofNavigator: "undefined",
+		importedNode: false,
+		outboundText: "mocked",
+	});
+});
+test("Miniflare: cannot call getWorker() on wrapped binding worker", async (t) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				wrappedBindings: { WRAPPED: "binding" },
+				modules: true,
+				script: `export default {
+					fetch(request, env, ctx) {
+						return env.WRAPPED;
+					}
+				}`,
+			},
+			{
+				name: "binding",
+				modules: true,
+				script: `export default function () {
+					return "🎁";
+				}`,
+			},
+		],
+	});
+	t.teardown(() => mf.dispose());
+
+	await t.throwsAsync(mf.getWorker("binding"), {
+		instanceOf: TypeError,
+		message:
+			'"binding" is being used as a wrapped binding, and cannot be accessed as a worker',
+	});
+});
+test("Miniflare: prohibits invalid wrapped bindings", async (t) => {
+	const mf = new Miniflare({ modules: true, script: "" });
+	t.teardown(() => mf.dispose());
+
+	// Check prohibits using entrypoint worker
+	await t.throwsAsync(
+		mf.setOptions({
+			name: "a",
+			modules: true,
+			script: "",
+			wrappedBindings: {
+				WRAPPED: { scriptName: "a", entrypoint: "wrapped" },
+			},
+		}),
+		{
+			instanceOf: MiniflareCoreError,
+			code: "ERR_INVALID_WRAPPED",
+			message:
+				'Cannot use "a" for wrapped binding because it\'s the entrypoint.\n' +
+				'Ensure "a" isn\'t the first entry in the `workers` array.',
+		}
+	);
+
+	// Check prohibits using service worker
+	await t.throwsAsync(
+		mf.setOptions({
+			workers: [
+				{ modules: true, script: "", wrappedBindings: { WRAPPED: "binding" } },
+				{ name: "binding", script: "" },
+			],
+		}),
+		{
+			instanceOf: MiniflareCoreError,
+			code: "ERR_INVALID_WRAPPED",
+			message:
+				'Cannot use "binding" for wrapped binding because it\'s a service worker.\n' +
+				'Ensure "binding" sets `modules` to `true` or an array of modules',
+		}
+	);
+
+	// Check prohibits multiple modules
+	await t.throwsAsync(
+		mf.setOptions({
+			workers: [
+				{ modules: true, script: "", wrappedBindings: { WRAPPED: "binding" } },
+				{
+					name: "binding",
+					modules: [
+						{ type: "ESModule", path: "index.mjs", contents: "" },
+						{ type: "ESModule", path: "dep.mjs", contents: "" },
+					],
+				},
+			],
+		}),
+		{
+			instanceOf: MiniflareCoreError,
+			code: "ERR_INVALID_WRAPPED",
+			message:
+				'Cannot use "binding" for wrapped binding because it isn\'t a single module.\n' +
+				'Ensure "binding" doesn\'t include unbundled `import`s.',
+		}
+	);
+
+	// Check prohibits non-ES-modules
+	await t.throwsAsync(
+		mf.setOptions({
+			workers: [
+				{ modules: true, script: "", wrappedBindings: { WRAPPED: "binding" } },
+				{
+					name: "binding",
+					modules: [{ type: "CommonJS", path: "index.cjs", contents: "" }],
+				},
+			],
+		}),
+		{
+			instanceOf: MiniflareCoreError,
+			code: "ERR_INVALID_WRAPPED",
+			message:
+				'Cannot use "binding" for wrapped binding because it isn\'t a single ES module',
+		}
+	);
+
+	// Check prohibits Durable Object bindings
+	await t.throwsAsync(
+		mf.setOptions({
+			workers: [
+				{
+					modules: true,
+					script: "",
+					wrappedBindings: { WRAPPED: "binding" },
+					durableObjects: {
+						OBJECT: { scriptName: "binding", className: "TestObject" },
+					},
+				},
+				{
+					name: "binding",
+					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
+				},
+			],
+		}),
+		{
+			instanceOf: MiniflareCoreError,
+			code: "ERR_INVALID_WRAPPED",
+			message:
+				'Cannot use "binding" for wrapped binding because it is bound to with Durable Object bindings.\n' +
+				'Ensure other workers don\'t define Durable Object bindings to "binding".',
+		}
+	);
+
+	// Check prohibits service bindings
+	await t.throwsAsync(
+		mf.setOptions({
+			workers: [
+				{
+					modules: true,
+					script: "",
+					wrappedBindings: {
+						WRAPPED: { scriptName: "binding", entrypoint: "wrapped" },
+					},
+					serviceBindings: { SERVICE: "binding" },
+				},
+				{
+					name: "binding",
+					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
+				},
+			],
+		}),
+		{
+			instanceOf: MiniflareCoreError,
+			code: "ERR_INVALID_WRAPPED",
+			message:
+				'Cannot use "binding" for wrapped binding because it is bound to with service bindings.\n' +
+				'Ensure other workers don\'t define service bindings to "binding".',
+		}
+	);
+
+	// Check prohibits compatibility date and flags
+	await t.throwsAsync(
+		mf.setOptions({
+			workers: [
+				{ modules: true, script: "", wrappedBindings: { WRAPPED: "binding" } },
+				{
+					name: "binding",
+					compatibilityDate: "2023-11-01",
+					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
+				},
+			],
+		}),
+		{
+			instanceOf: MiniflareCoreError,
+			code: "ERR_INVALID_WRAPPED",
+			message:
+				'Cannot use "binding" for wrapped binding because it defines a compatibility date.\n' +
+				"Wrapped bindings use the compatibility date of the worker with the binding.",
+		}
+	);
+	await t.throwsAsync(
+		mf.setOptions({
+			workers: [
+				{ modules: true, script: "", wrappedBindings: { WRAPPED: "binding" } },
+				{
+					name: "binding",
+					compatibilityFlags: ["nodejs_compat"],
+					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
+				},
+			],
+		}),
+		{
+			instanceOf: MiniflareCoreError,
+			code: "ERR_INVALID_WRAPPED",
+			message:
+				'Cannot use "binding" for wrapped binding because it defines compatibility flags.\n' +
+				"Wrapped bindings use the compatibility flags of the worker with the binding.",
+		}
+	);
+
+	// Check prohibits outbound service
+	await t.throwsAsync(
+		mf.setOptions({
+			workers: [
+				{ modules: true, script: "", wrappedBindings: { WRAPPED: "binding" } },
+				{
+					name: "binding",
+					outboundService() {
+						assert.fail();
+					},
+					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
+				},
+			],
+		}),
+		{
+			instanceOf: MiniflareCoreError,
+			code: "ERR_INVALID_WRAPPED",
+			message:
+				'Cannot use "binding" for wrapped binding because it defines an outbound service.\n' +
+				"Wrapped bindings use the outbound service of the worker with the binding.",
+		}
+	);
+
+	// Check prohibits cyclic wrapped bindings
+	await t.throwsAsync(
+		mf.setOptions({
+			workers: [
+				{ modules: true, script: "", wrappedBindings: { WRAPPED: "binding" } },
+				{
+					name: "binding",
+					wrappedBindings: { WRAPPED: "binding" }, // Simple cycle
+					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
+				},
+			],
+		}),
+		{
+			instanceOf: MiniflareCoreError,
+			code: "ERR_CYCLIC",
+			message:
+				"Generated workerd config contains cycles. Ensure wrapped bindings don't have bindings to themselves.",
+		}
+	);
+	await t.throwsAsync(
+		mf.setOptions({
+			workers: [
+				{
+					modules: true,
+					script: "",
+					wrappedBindings: { WRAPPED1: "binding-1" },
+				},
+				{
+					name: "binding-1",
+					wrappedBindings: { WRAPPED2: "binding-2" },
+					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
+				},
+				{
+					name: "binding-2",
+					wrappedBindings: { WRAPPED3: "binding-3" },
+					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
+				},
+				{
+					name: "binding-3",
+					wrappedBindings: { WRAPPED1: "binding-1" }, // Multi-step cycle
+					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
+				},
+			],
+		}),
+		{
+			instanceOf: MiniflareCoreError,
+			code: "ERR_CYCLIC",
+			message:
+				"Generated workerd config contains cycles. Ensure wrapped bindings don't have bindings to themselves.",
+		}
+	);
 });

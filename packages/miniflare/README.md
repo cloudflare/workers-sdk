@@ -315,6 +315,114 @@ parameter in module format Workers.
     handler. This allows you to access data and functions defined in Node.js
     from your Worker.
 
+<!--prettier-ignore-start-->
+
+- `wrappedBindings?: Record<string, string | { scriptName: string, entrypoint?: string, bindings?: Record<string, Json> }>`
+
+  Record mapping binding name to designators to inject as
+  [wrapped bindings](https://github.com/cloudflare/workerd/blob/bfcef2d850514c569c039cb84c43bc046af4ffb9/src/workerd/server/workerd.capnp#L469-L487) into this Worker.
+  Wrapped bindings allow custom bindings to be written as JavaScript functions
+  accepting an `env` parameter of "inner bindings" and returning the value to
+  bind. A `string` designator is equivalent to `{ scriptName: <string> }`.
+  `scriptName`'s bindings will be used as "inner bindings". JSON `bindings` in
+  the `designator` also become "inner bindings" and will override any of
+  `scriptName` bindings with the same name. The Worker named `scriptName`...
+
+  - Must define a single `ESModule` as its source, using
+    `{ modules: true, script: "..." }`, `{ modules: true, scriptPath: "..." }`,
+    or `{ modules: [...] }`
+  - Must provide the function to use for the wrapped binding as an `entrypoint`
+    named export or a default export if `entrypoint` is omitted
+  - Must not be the first/entrypoint worker
+  - Must not be bound to with service or Durable Object bindings
+  - Must not define `compatibilityDate` or `compatibilityFlags`
+  - Must not define `outboundService`
+  - Must not directly or indirectly have a wrapped binding to itself
+  - Must not be used as an argument to `Miniflare#getWorker()`
+
+  <details>
+	  <summary><b>Wrapped Bindings Example</b></summary>
+
+  ```ts
+  import { Miniflare } from "miniflare";
+  const store = new Map<string, string>();
+  const mf = new Miniflare({
+    workers: [
+      {
+        wrappedBindings: {
+          MINI_KV: {
+            scriptName: "mini-kv", // Use Worker named `mini-kv` for implementation
+            bindings: { NAMESPACE: "ns" }, // Override `NAMESPACE` inner binding
+          },
+        },
+        modules: true,
+        script: `export default {
+          async fetch(request, env, ctx) {
+            // Example usage of wrapped binding
+            await env.MINI_KV.set("key", "value");
+            return new Response(await env.MINI_KV.get("key"));
+          }
+        }`,
+      },
+      {
+        name: "mini-kv",
+        serviceBindings: {
+          // Function-valued service binding for accessing Node.js state
+          async STORE(request) {
+            const { pathname } = new URL(request.url);
+            const key = pathname.substring(1);
+            if (request.method === "GET") {
+              const value = store.get(key);
+              const status = value === undefined ? 404 : 200;
+              return new Response(value ?? null, { status });
+            } else if (request.method === "PUT") {
+              const value = await request.text();
+              store.set(key, value);
+              return new Response(null, { status: 204 });
+            } else if (request.method === "DELETE") {
+              store.delete(key);
+              return new Response(null, { status: 204 });
+            } else {
+              return new Response(null, { status: 405 });
+            }
+          },
+        },
+        modules: true,
+        script: `
+        // Implementation of binding
+        class MiniKV {
+          constructor(env) {
+            this.STORE = env.STORE;
+            this.baseURL = "http://x/" + (env.NAMESPACE ?? "") + ":";
+          }
+          async get(key) {
+            const res = await this.STORE.fetch(this.baseURL + key);
+            return res.status === 404 ? null : await res.text();
+          }
+          async set(key, body) {
+            await this.STORE.fetch(this.baseURL + key, { method: "PUT", body });
+          }
+          async delete(key) {
+            await this.STORE.fetch(this.baseURL + key, { method: "DELETE" });
+          }
+        }
+    
+        // env has the type { STORE: Fetcher, NAMESPACE?: string }
+        export default function (env) {
+          return new MiniKV(env);
+        }
+        `,
+      },
+    ],
+  });
+  ```
+
+  </details>
+
+	> :warning: `wrappedBindings` are only supported in modules format Workers.
+
+<!--prettier-ignore-end-->
+
 - `outboundService?: string | { network: Network } | { external: ExternalServer } | { disk: DiskDirectory } | (request: Request) => Awaitable<Response>`
 
   Dispatch this Worker's global `fetch()` and `connect()` requests to the

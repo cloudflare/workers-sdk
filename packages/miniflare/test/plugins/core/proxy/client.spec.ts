@@ -54,11 +54,38 @@ test("ProxyClient: supports service bindings with WebSockets", async (t) => {
 });
 
 test("ProxyClient: supports serialising multiple ReadableStreams, Blobs and Files", async (t) => {
-	const mf = new Miniflare({ script: nullScript });
+	// For testing proxy client serialisation, add an API that just returns its
+	// arguments. Note without the `.pipeThrough(new TransformStream())` below,
+	// we'll see `TypeError: Inter-TransformStream ReadableStream.pipeTo() is
+	// not implemented.`. `IdentityTransformStream` doesn't work here.
+	const mf = new Miniflare({
+		workers: [
+			{
+				name: "entry",
+				modules: true,
+				script: "",
+				wrappedBindings: { IDENTITY: "identity" },
+			},
+			{
+				name: "identity",
+				modules: true,
+				script: `
+				class Identity {
+					async asyncIdentity(...args) {
+						const i = args.findIndex((arg) => arg instanceof ReadableStream);
+						if (i !== -1) args[i] = args[i].pipeThrough(new TransformStream());
+						return args;
+					}
+				}
+				export default function() { return new Identity(); }
+				`,
+			},
+		],
+	});
 	t.teardown(() => mf.dispose());
 
 	const client = await mf._getProxyClient();
-	const IDENTITY = client.env.IDENTITY as {
+	const IDENTITY = client.env["MINIFLARE_PROXY:core:entry:IDENTITY"] as {
 		asyncIdentity<Args extends any[]>(...args: Args): Promise<Args>;
 	};
 

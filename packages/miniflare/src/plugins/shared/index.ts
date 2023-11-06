@@ -4,7 +4,12 @@ import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import { z } from "zod";
-import { Service, Worker_Binding, Worker_Module } from "../../runtime";
+import {
+	Extension,
+	Service,
+	Worker_Binding,
+	Worker_Module,
+} from "../../runtime";
 import { Log, MiniflareCoreError, OptionalZodTypeOf } from "../../shared";
 import { Awaitable, QueueConsumerSchema, sanitisePath } from "../../workers";
 
@@ -12,6 +17,10 @@ export const DEFAULT_PERSIST_ROOT = ".mf";
 
 export const PersistenceSchema = z.boolean().or(z.string()).optional();
 export type Persistence = z.infer<typeof PersistenceSchema>;
+
+// Set of "worker" names that are being used as wrapped bindings and shouldn't
+// be added a regular worker services. These workers shouldn't be routable.
+export type WrappedBindingNames = Set<string>;
 
 // Maps **service** names to the Durable Object class names exported by them
 export type DurableObjectClassNames = Map<
@@ -45,9 +54,15 @@ export interface PluginServicesOptions<
 	workerNames: string[];
 
 	// ~~Leaky abstractions~~ "Plugin specific options" :)
+	wrappedBindingNames: WrappedBindingNames;
 	durableObjectClassNames: DurableObjectClassNames;
 	unsafeEphemeralDurableObjects: boolean;
 	queueConsumers: QueueConsumers;
+}
+
+export interface ServicesExtensions {
+	services: Service[];
+	extensions: Extension[];
 }
 
 export interface PluginBase<
@@ -64,7 +79,7 @@ export interface PluginBase<
 	): Awaitable<Record<string, unknown>>;
 	getServices(
 		options: PluginServicesOptions<Options, SharedOptions>
-	): Awaitable<Service[] | void>;
+	): Awaitable<Service[] | ServicesExtensions | void>;
 }
 
 export type Plugin<

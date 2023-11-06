@@ -10,6 +10,7 @@ import SCRIPT_ENTRY from "worker:core/entry";
 import { z } from "zod";
 import { fetch } from "../../http";
 import {
+	Extension,
 	Service,
 	ServiceDesignator,
 	Worker_Binding,
@@ -17,7 +18,7 @@ import {
 	kVoid,
 	supportedCompatibilityDate,
 } from "../../runtime";
-import { JsonSchema, Log, MiniflareCoreError } from "../../shared";
+import { Json, JsonSchema, Log, MiniflareCoreError } from "../../shared";
 import {
 	Awaitable,
 	CoreBindings,
@@ -83,6 +84,12 @@ export function createFetchMock() {
 	return new MockAgent();
 }
 
+const WrappedBindingSchema = z.object({
+	scriptName: z.string(),
+	entrypoint: z.string().optional(),
+	bindings: z.record(JsonSchema).optional(),
+});
+
 const CoreOptionsSchemaInput = z.intersection(
 	SourceOptionsSchema,
 	z.object({
@@ -98,6 +105,9 @@ const CoreOptionsSchemaInput = z.intersection(
 		textBlobBindings: z.record(z.string()).optional(),
 		dataBlobBindings: z.record(z.string()).optional(),
 		serviceBindings: z.record(ServiceDesignatorSchema).optional(),
+		wrappedBindings: z
+			.record(z.union([z.string(), WrappedBindingSchema]))
+			.optional(),
 
 		outboundService: ServiceDesignatorSchema.optional(),
 		fetchMock: z.instanceof(MockAgent).optional(),
@@ -262,6 +272,25 @@ function validateCompatibilityDate(log: Log, compatibilityDate: string) {
 	return compatibilityDate;
 }
 
+function buildJsonBindings(bindings: Record<string, Json>): Worker_Binding[] {
+	return Object.entries(bindings).map(([name, value]) => ({
+		name,
+		json: JSON.stringify(value),
+	}));
+}
+
+const WRAPPED_MODULE_PREFIX = "miniflare-internal:wrapped:";
+function workerNameToWrappedModule(workerName: string): string {
+	return WRAPPED_MODULE_PREFIX + workerName;
+}
+export function maybeWrappedModuleToWorkerName(
+	name: string
+): string | undefined {
+	if (name.startsWith(WRAPPED_MODULE_PREFIX)) {
+		return name.substring(WRAPPED_MODULE_PREFIX.length);
+	}
+}
+
 export const CORE_PLUGIN: Plugin<
 	typeof CoreOptionsSchema,
 	typeof CoreSharedOptionsSchema
@@ -272,12 +301,7 @@ export const CORE_PLUGIN: Plugin<
 		const bindings: Awaitable<Worker_Binding>[] = [];
 
 		if (options.bindings !== undefined) {
-			bindings.push(
-				...Object.entries(options.bindings).map(([name, value]) => ({
-					name,
-					json: JSON.stringify(value),
-				}))
-			);
+			bindings.push(...buildJsonBindings(options.bindings));
 		}
 		if (options.wasmBindings !== undefined) {
 			bindings.push(
@@ -304,13 +328,35 @@ export const CORE_PLUGIN: Plugin<
 			bindings.push(
 				...Object.entries(options.serviceBindings).map(([name, service]) => {
 					return {
-						name: name,
+						name,
 						service: getCustomServiceDesignator(
 							workerIndex,
 							CustomServiceKind.UNKNOWN,
 							name,
 							service
 						),
+					};
+				})
+			);
+		}
+		if (options.wrappedBindings !== undefined) {
+			bindings.push(
+				...Object.entries(options.wrappedBindings).map(([name, designator]) => {
+					// Normalise designator
+					const isObject = typeof designator === "object";
+					const scriptName = isObject ? designator.scriptName : designator;
+					const entrypoint = isObject ? designator.entrypoint : undefined;
+					const bindings = isObject ? designator.bindings : undefined;
+
+					// Build binding
+					const moduleName = workerNameToWrappedModule(scriptName);
+					const innerBindings =
+						bindings === undefined ? [] : buildJsonBindings(bindings);
+					// `scriptName`'s bindings will be added to `innerBindings` when
+					// assembling the config
+					return {
+						name,
+						wrapped: { moduleName, entrypoint, innerBindings },
 					};
 				})
 			);
@@ -375,6 +421,7 @@ export const CORE_PLUGIN: Plugin<
 		options,
 		workerBindings,
 		workerIndex,
+		wrappedBindingNames,
 		durableObjectClassNames,
 		additionalModules,
 	}) {
@@ -415,8 +462,9 @@ export const CORE_PLUGIN: Plugin<
 			}
 		}
 
-		const name = getUserServiceName(options.name);
-		const classNames = durableObjectClassNames.get(name);
+		const name = options.name ?? "";
+		const serviceName = getUserServiceName(options.name);
+		const classNames = durableObjectClassNames.get(serviceName);
 		const classNamesEntries = Array.from(classNames ?? []);
 
 		const compatibilityDate = validateCompatibilityDate(
@@ -424,9 +472,65 @@ export const CORE_PLUGIN: Plugin<
 			options.compatibilityDate ?? FALLBACK_COMPATIBILITY_DATE
 		);
 
-		const services: Service[] = [
-			{
-				name,
+		const isWrappedBinding = wrappedBindingNames.has(name);
+
+		const services: Service[] = [];
+		const extensions: Extension[] = [];
+		if (isWrappedBinding) {
+			const stringName = JSON.stringify(name);
+			function invalidWrapped(reason: string): never {
+				const message = `Cannot use ${stringName} for wrapped binding because ${reason}`;
+				throw new MiniflareCoreError("ERR_INVALID_WRAPPED", message);
+			}
+			if (workerIndex === 0) {
+				invalidWrapped(
+					`it's the entrypoint.\nEnsure ${stringName} isn't the first entry in the \`workers\` array.`
+				);
+			}
+			if (!("modules" in workerScript)) {
+				invalidWrapped(
+					`it's a service worker.\nEnsure ${stringName} sets \`modules\` to \`true\` or an array of modules`
+				);
+			}
+			if (workerScript.modules.length !== 1) {
+				invalidWrapped(
+					`it isn't a single module.\nEnsure ${stringName} doesn't include unbundled \`import\`s.`
+				);
+			}
+			const firstModule = workerScript.modules[0];
+			if (!("esModule" in firstModule)) {
+				invalidWrapped("it isn't a single ES module");
+			}
+			if (options.compatibilityDate !== undefined) {
+				invalidWrapped(
+					"it defines a compatibility date.\nWrapped bindings use the compatibility date of the worker with the binding."
+				);
+			}
+			if (options.compatibilityFlags?.length) {
+				invalidWrapped(
+					"it defines compatibility flags.\nWrapped bindings use the compatibility flags of the worker with the binding."
+				);
+			}
+			if (options.outboundService !== undefined) {
+				invalidWrapped(
+					"it defines an outbound service.\nWrapped bindings use the outbound service of the worker with the binding."
+				);
+			}
+			// We validate this "worker" isn't bound to for services/Durable Objects
+			// in `getWrappedBindingNames()`.
+
+			extensions.push({
+				modules: [
+					{
+						name: workerNameToWrappedModule(name),
+						esModule: firstModule.esModule,
+						internal: true,
+					},
+				],
+			});
+		} else {
+			services.push({
+				name: serviceName,
 				worker: {
 					...workerScript,
 					compatibilityDate,
@@ -462,8 +566,8 @@ export const CORE_PLUGIN: Plugin<
 							  ),
 					cacheApiOutbound: { name: getCacheServiceName(workerIndex) },
 				},
-			},
-		];
+			});
+		}
 
 		// Define custom `fetch` services if set
 		if (options.serviceBindings !== undefined) {
@@ -487,7 +591,7 @@ export const CORE_PLUGIN: Plugin<
 			if (maybeService !== undefined) services.push(maybeService);
 		}
 
-		return services;
+		return { services, extensions };
 	},
 };
 
