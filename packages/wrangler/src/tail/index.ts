@@ -142,7 +142,6 @@ export async function tailHandler(args: TailArgs) {
 	if (
 		scriptContent.toLowerCase().includes("websocket") &&
 		bindings.find((b) => b.type === "durable_object_namespace")
-
 	) {
 		logger.warn(
 			`Beginning log collection requires restarting the Durable Objects associated with ${scriptName}. Any WebSocket connections or other non-persisted state will be lost as part of this restart.`
