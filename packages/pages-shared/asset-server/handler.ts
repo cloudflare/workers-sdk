@@ -293,8 +293,6 @@ export async function generateHandler<
 			);
 		} else if ((assetEntry = await findAssetEntryForPath(`${pathname}.html`))) {
 			return serveAsset(assetEntry);
-		} else if (hasFileExtension(pathname)) {
-			return notFound();
 		}
 
 		if ((assetEntry = await findAssetEntryForPath(`${pathname}/index.html`))) {
@@ -624,10 +622,6 @@ export function parseQualityWeightedList(list = "") {
 
 function isCacheable(request: Request) {
 	return !request.headers.has("authorization") && !request.headers.has("range");
-}
-
-function hasFileExtension(path: string) {
-	return /\/.+\.[a-z0-9]+$/i.test(path);
 }
 
 // Parses a request URL hostname to determine if the request
