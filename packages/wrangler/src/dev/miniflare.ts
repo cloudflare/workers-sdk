@@ -397,9 +397,12 @@ function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 	const classifiers = {
 		// Is this chunk a big chonky barf from workerd that we want to hijack to cleanup/ignore?
 		isBarf(chunk: string) {
-			return chunk.includes(
+			const containsLlvmSymbolizerWarning = chunk.includes(
 				"Not symbolizing stack traces because $LLVM_SYMBOLIZER is not set"
 			);
+			const containsHexStack = /stack:( [a-f\d]{9}){3,}/.test(chunk);
+
+			return containsLlvmSymbolizerWarning || containsHexStack;
 		},
 		// Is this chunk an Address In Use error?
 		isAddressInUse(chunk: string) {
