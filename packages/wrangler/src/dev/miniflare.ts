@@ -36,6 +36,7 @@ import type {
 	Response,
 } from "miniflare";
 import type { Abortable } from "node:events";
+import { Readable } from "node:stream";
 
 // This worker proxies all external Durable Objects to the Wrangler session
 // where they're defined, and receives all requests from other Wrangler sessions
@@ -381,6 +382,79 @@ function buildSitesOptions({ assetPaths }: ConfigBundle) {
 	}
 }
 
+function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
+	// ASSUMPTION: each chunk is a whole message from workerd
+	// This may not hold across OSes/architectures, but it seems to work on macOS M-line
+	// I'm going with this simple approach to avoid complicating this too early
+	// We can iterate on this heuristic in the future if it causes issues
+	const classifiers = {
+		// Is this chunk a big chonky barf from workerd that we want to hijack to cleanup/ignore?
+		isBarf(chunk: string) {
+			return chunk.includes(
+				"Not symbolizing stack traces because $LLVM_SYMBOLIZER is not set"
+			);
+		},
+		// Is this chunk an Address In Use error?
+		isAddressInUse(chunk: string) {
+			return chunk.includes("Address already in use; toString() = ");
+		},
+	};
+
+	stdout.on("data", (chunk: Buffer | string) => {
+		chunk = chunk.toString();
+
+		if (classifiers.isBarf(chunk)) {
+			// this is a big chonky barf from workerd that we want to hijack to cleanup/ignore
+
+			// CLEANABLE:
+			// there are no known cases to cleanup yet
+			// but, as they are identified, we will do that here
+
+			// IGNORABLE:
+			// anything else not handled above is considered ignorable
+			// so send it to the debug logs which are discarded unless
+			// the user explicitly sets a logLevel indicating they care
+			logger.debug(chunk);
+		}
+
+		// anything not exlicitly handled above should be logged as info (via stdout)
+		else {
+			logger.info(chunk);
+		}
+	});
+
+	stderr.on("data", (chunk: Buffer | string) => {
+		chunk = chunk.toString();
+
+		if (classifiers.isBarf(chunk)) {
+			// this is a big chonky barf from workerd that we want to hijack to cleanup/ignore
+
+			// CLEANABLE:
+			// known case to cleanup: Address in use errors
+			if (classifiers.isAddressInUse(chunk)) {
+				const address = chunk.match(
+					/Address already in use; toString\(\) = (.+)\n/
+				)?.[1];
+
+				logger.error(
+					`Address (${address}) already in use. Please check that you are not already running a server on this address or specify a different port with --port.`
+				);
+			}
+
+			// IGNORABLE:
+			// anything else not handled above is considered ignorable
+			// so send it to the debug logs which are discarded unless
+			// the user explicitly sets a logLevel indicating they care
+			logger.debug(chunk);
+		}
+
+		// anything not exlicitly handled above should be logged as an error (via stderr)
+		else {
+			logger.error(chunk);
+		}
+	});
+}
+
 async function buildMiniflareOptions(
 	log: Log,
 	config: ConfigBundle
@@ -418,17 +492,7 @@ async function buildMiniflareOptions(
 
 		log,
 		verbose: logger.loggerLevel === "debug",
-		handleRuntimeStdio: (stdout, stderr) => {
-			stdout.on("data", (chunk) => {
-				// TODO: with some conditional heuristic, call log.debug instead of log.info
-				log.info(chunk.toString());
-			});
-
-			stderr.on("data", (chunk) => {
-				// TODO: with some conditional heuristic, call log.debug instead of log.error
-				log.error(chunk.toString());
-			});
-		},
+		handleRuntimeStdio,
 
 		...httpsOptions,
 		...persistOptions,
