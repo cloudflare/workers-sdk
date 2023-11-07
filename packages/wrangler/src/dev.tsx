@@ -955,7 +955,14 @@ function getBindings(
 		],
 		vectorize: configParam.vectorize,
 		constellation: configParam.constellation,
-		hyperdrive: configParam.hyperdrive,
+		hyperdrive: configParam.hyperdrive.map((hyperdrive) => {
+			if (!hyperdrive.localConnectionString) {
+				throw new Error(
+					`In development, you should use a local postgres connection string to emulate hyperdrive functionality. Please setup postgres locally and set the value of "${hyperdrive.binding}"'s "localConnectionString" to the postgres connection string in your wrangler.toml`
+				);
+			}
+			return hyperdrive;
+		}),
 	};
 
 	return bindings;

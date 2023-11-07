@@ -18,6 +18,7 @@ import type { Config } from "../config";
 import type {
 	CfD1Database,
 	CfDurableObject,
+	CfHyperdrive,
 	CfKvNamespace,
 	CfQueue,
 	CfR2Bucket,
@@ -201,6 +202,9 @@ function d1DatabaseEntry(db: CfD1Database): [string, string] {
 function queueProducerEntry(queue: CfQueue): [string, string] {
 	return [queue.binding, queue.queue_name];
 }
+function hyperdriveEntry(hyperdrive: CfHyperdrive): [string, string] {
+	return [hyperdrive.binding, hyperdrive.localConnectionString ?? ""];
+}
 type QueueConsumer = NonNullable<Config["queues"]["consumers"]>[number];
 function queueConsumerEntry(consumer: QueueConsumer) {
 	const options = {
@@ -317,6 +321,9 @@ function buildBindingOptions(config: ConfigBundle) {
 		),
 		queueConsumers: Object.fromEntries(
 			config.queueConsumers?.map(queueConsumerEntry) ?? []
+		),
+		hyperdrives: Object.fromEntries(
+			bindings.hyperdrive?.map(hyperdriveEntry) ?? []
 		),
 
 		durableObjects: Object.fromEntries([
