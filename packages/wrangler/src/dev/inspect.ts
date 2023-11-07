@@ -1,7 +1,9 @@
-import { readFileSync } from "fs";
+import fs, { readFileSync } from "fs";
 import assert from "node:assert";
+import childProcess from "node:child_process";
 import crypto from "node:crypto";
 import { createServer } from "node:http";
+import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { URL, fileURLToPath, pathToFileURL } from "node:url";
@@ -18,6 +20,89 @@ import type Protocol from "devtools-protocol";
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import type { RawSourceMap } from "source-map";
 import type { MessageEvent } from "ws";
+
+// https://github.com/microsoft/vscode-js-debug/blob/3562af1d232c1d6146004308cdd66e10a3112907/src/targets/node/bootloader.ts#L249C1-L261C2
+function isPipeAvailable(pipe?: string): pipe is string {
+	if (!pipe) {
+		return false;
+	}
+	try {
+		// normally we'd use l/stat, but doing so with pipes on windows actually
+		// triggers a 'connection', so do this instead...
+		return fs.readdirSync(path.dirname(pipe)).includes(path.basename(pipe));
+	} catch (e) {
+		return false;
+	}
+}
+
+function maybeRegisterInspectorWithVSCode(inspectorUrl: string) {
+	const rawEnv = process.env.VSCODE_INSPECTOR_OPTIONS;
+	if (rawEnv === undefined) return;
+	const env = JSON.parse(rawEnv);
+
+	// https://github.com/microsoft/vscode-js-debug/blob/3562af1d232c1d6146004308cdd66e10a3112907/src/targets/node/bootloader.ts#L93
+	if (!isPipeAvailable(env.inspectorIpc)) return;
+	const immediate = !env.deferredMode;
+
+	// https://github.com/microsoft/vscode-js-debug/blob/3562af1d232c1d6146004308cdd66e10a3112907/src/targets/node/bootloader.ts#L22-L27
+	const telemetry = {
+		cwd: process.cwd(),
+		processId: process.pid,
+		nodeVersion: process.version,
+		architecture: process.arch,
+	};
+
+	// https://github.com/microsoft/vscode-js-debug/blob/3562af1d232c1d6146004308cdd66e10a3112907/src/targets/node/createTargetId.ts#L7
+	const ownId = crypto.randomBytes(12).toString("hex");
+
+	// https://github.com/microsoft/vscode-js-debug/blob/3562af1d232c1d6146004308cdd66e10a3112907/src/targets/node/bootloader.ts#L116-L125
+	const info = {
+		ipcAddress: env.inspectorIpc || "",
+		pid: process.pid,
+		telemetry,
+		scriptName: process.argv[1],
+		inspectorURL: inspectorUrl,
+		waitForDebugger: true,
+		ownId,
+		openerId: env.openerId,
+	};
+
+	if (immediate) {
+		// https://github.com/microsoft/vscode-js-debug/blob/3562af1d232c1d6146004308cdd66e10a3112907/src/targets/node/bootloader.ts#L279
+		const bootloaderMatch = process.env.NODE_OPTIONS?.match(
+			/--require "?(.+bootloader\.js)"?/
+		);
+		if (bootloaderMatch == null) return;
+		const bootloaderPath = bootloaderMatch[1];
+		const watchdogPath = path.join(path.dirname(bootloaderPath), "watchdog.js");
+		const p = childProcess.spawn(process.execPath, [watchdogPath], {
+			env: { NODE_INSPECTOR_INFO: JSON.stringify(info) },
+			stdio: "inherit",
+			detached: true,
+		});
+		p.unref();
+	} else {
+		// https://github.com/microsoft/vscode-js-debug/blob/3562af1d232c1d6146004308cdd66e10a3112907/src/targets/node/bootloader.ts#L136-L152
+		const c = net.createConnection(env.inspectorIpc);
+		c.on("error", (err) => {
+			logger.error("Error connecting to Visual Studio Code", err);
+			c.destroy();
+		});
+		c.on("connect", () => {
+			c.write(JSON.stringify(info), "utf-8");
+			c.write(Buffer.from([0]));
+			c.on("data", (chunk) => {
+				const code = chunk[0];
+				if (code !== 0) logger.error("Error attaching to Visual Studio Code");
+				c.destroy();
+			});
+		});
+	}
+}
+
+function registerInspectorWithEditor(inspectorUrl: string) {
+	maybeRegisterInspectorWithVSCode(inspectorUrl);
+}
 
 /**
  * `useInspector` is a hook for debugging Workers applications
@@ -252,7 +337,10 @@ export default function useInspector(props: InspectorProps) {
 				timeout: 2000,
 				abortSignal: abortController.signal,
 			});
-			server.listen(props.port);
+			server.listen(props.port, () => {
+				if (abortController.signal.aborted) return;
+				registerInspectorWithEditor(`ws://127.0.0.1:${props.port}/ws`);
+			});
 		}
 		startInspectorProxy().catch((err) => {
 			if ((err as { code: string }).code !== "ABORT_ERR") {
@@ -302,6 +390,11 @@ export default function useInspector(props: InspectorProps) {
 	// (stored in, no surprises here, `remoteWebSocket`)
 	useEffect(() => {
 		if (!props.inspectorUrl) {
+			return;
+		}
+
+		if (process.env.EXPERIMENTAL_WRANGLER_AUTO_ATTACH) {
+			registerInspectorWithEditor(props.inspectorUrl);
 			return;
 		}
 

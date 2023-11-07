@@ -35,7 +35,10 @@
 				"HTTPS_PROXY",
 				"JEST_WORKER_ID",
 				"http_proxy",
-				"HTTP_PROXY"
+				"HTTP_PROXY",
+				"VSCODE_INSPECTOR_OPTIONS",
+				"NODE_OPTIONS",
+				"EXPERIMENTAL_WRANGLER_AUTO_ATTACH"
 			]
 		}
 	}
