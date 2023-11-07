@@ -253,17 +253,33 @@ export const installPackages = async (
 	});
 };
 
-export const npmInstall = async () => {
+// Resets the package manager context for a project by clearing out existing dependencies
+// and lock files then re-installing.
+// This is needed in situations where npm is automatically used by framework creators for the initial
+// install, since using other package managers in a folder with an existing npm install will cause failures
+// when installing subsequent packages
+export const resetPackageManager = async (ctx: PagesGeneratorContext) => {
 	const { npm } = detectPackageManager();
+
+	if (!needsPackageManagerReset(ctx)) {
+		return;
+	}
+
+	const nodeModulesPath = path.join(ctx.project.path, "node_modules");
+	if (existsSync(nodeModulesPath)) rmSync(nodeModulesPath, { recursive: true });
+
+	const lockfilePath = path.join(ctx.project.path, "package-lock.json");
+	if (existsSync(lockfilePath)) rmSync(lockfilePath);
 
 	await runCommand(`${npm} install`, {
 		silent: true,
+		cwd: ctx.project.path,
 		startText: "Installing dependencies",
 		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
 	});
 };
 
-const needsReset = (ctx: PagesGeneratorContext) => {
+const needsPackageManagerReset = (ctx: PagesGeneratorContext) => {
 	const { npm } = detectPackageManager();
 	const projectPath = ctx.project.path;
 
@@ -279,22 +295,11 @@ const needsReset = (ctx: PagesGeneratorContext) => {
 	}
 };
 
-// Resets the package manager context for a project by clearing out existing dependencies
-// and lock files then re-installing.
-export const resetPackageManager = async (ctx: PagesGeneratorContext) => {
+export const npmInstall = async () => {
 	const { npm } = detectPackageManager();
-
-	if (!needsReset(ctx)) return;
-
-	const nodeModulesPath = path.join(ctx.project.path, "node_modules");
-	if (existsSync(nodeModulesPath)) rmSync(nodeModulesPath, { recursive: true });
-
-	const lockfilePath = path.join(ctx.project.path, "package-lock.json");
-	if (existsSync(lockfilePath)) rmSync(lockfilePath);
 
 	await runCommand(`${npm} install`, {
 		silent: true,
-		cwd: ctx.project.path,
 		startText: "Installing dependencies",
 		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
 	});
