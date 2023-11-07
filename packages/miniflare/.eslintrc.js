@@ -6,6 +6,7 @@ module.exports = {
 		"import/order": ["warn", { alphabetize: { order: "asc" } }],
 		"no-undef-init": "off",
 		"sort-imports": ["warn", { ignoreDeclarationSort: true }],
+		"prettier/prettier": "off"
 	},
 	overrides: [
 		{
