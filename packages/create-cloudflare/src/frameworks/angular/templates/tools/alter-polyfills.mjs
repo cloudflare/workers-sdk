@@ -22,8 +22,6 @@ for (let index = 0; index < 2; index++) {
 }
 
 // Add needed polyfills
-serverPolyfillsData.unshift(
-	`globalThis['process'] = {};`,
-);
+serverPolyfillsData.unshift(`globalThis['process'] = {};`);
 
 fs.writeFileSync(serverPolyfillsFile, serverPolyfillsData.join(EOL));
