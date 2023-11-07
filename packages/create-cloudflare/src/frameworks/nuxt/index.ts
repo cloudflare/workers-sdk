@@ -2,18 +2,16 @@ import { logRaw } from "@cloudflare/cli";
 import { npmInstall, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import { getFrameworkCli } from "../index";
 import type { FrameworkConfig, PagesGeneratorContext } from "types";
 
-const { npm, dlx } = detectPackageManager();
+const { npm } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
-	const cli = getFrameworkCli(ctx);
 	const gitFlag = ctx.args.git ? `--gitInit` : `--no-gitInit`;
 
 	await runFrameworkGenerator(
 		ctx,
-		`${dlx} ${cli} init ${ctx.project.name} --packageManager ${npm} ${gitFlag}`
+		`init ${ctx.project.name} --packageManager ${npm} ${gitFlag}`
 	);
 
 	logRaw(""); // newline

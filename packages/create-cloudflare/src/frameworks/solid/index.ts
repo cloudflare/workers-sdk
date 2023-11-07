@@ -3,16 +3,14 @@ import { brandColor, dim, blue } from "@cloudflare/cli/colors";
 import { installPackages, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag, usesTypescript, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import { getFrameworkCli } from "../index";
 import { viteConfig } from "./templates";
 import type { FrameworkConfig, PagesGeneratorContext } from "types";
 
-const { npm, dlx } = detectPackageManager();
+const { npm } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
 	// Run the create-solid command
-	const cli = getFrameworkCli(ctx);
-	await runFrameworkGenerator(ctx, `${dlx} ${cli} ${ctx.project.name}`);
+	await runFrameworkGenerator(ctx, `${ctx.project.name}`);
 
 	logRaw("");
 };
