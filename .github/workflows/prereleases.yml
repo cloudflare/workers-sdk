@@ -75,9 +75,6 @@ jobs:
 
   publish_prerelease_registry:
     timeout-minutes: 30
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
-      cancel-in-progress: true
     if: ${{ github.repository_owner == 'cloudflare' }}
     name: Publish Prerelease Registry
     needs: prerelease

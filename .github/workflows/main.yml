@@ -11,7 +11,7 @@ jobs:
   test:
     timeout-minutes: 30
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}
       cancel-in-progress: true
     if: ${{ github.repository_owner == 'cloudflare' }}
     name: "Tests"
