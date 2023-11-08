@@ -6,6 +6,10 @@ env:
   node-version: 16.18
 jobs:
   add-to-project:
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-add-pr
+      cancel-in-progress: true
+    timeout-minutes: 30
     name: Add PR to project
     runs-on: ubuntu-latest
     steps:
