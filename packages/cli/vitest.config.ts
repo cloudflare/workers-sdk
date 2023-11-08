@@ -5,8 +5,5 @@ export default defineConfig({
 		include: ["**/__tests__/**/*.{test,spec}.{ts,js,tsx,jsx}"],
 		testTimeout: 30000,
 		setupFiles: "./vite.setup.ts",
-		env: {
-			NO,
-		},
 	},
 });
