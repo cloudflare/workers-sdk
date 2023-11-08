@@ -413,6 +413,9 @@ export async function startLocalServer(
 				},
 				headers: {},
 				liveReload: props.liveReload,
+				// in local mode, the logs are already being printed to the console by workerd but only for workers written in "module" format
+				// workers written in "service-worker" format still need to proxy logs to the ProxyController
+				proxyLogsToController: props.format === "service-worker",
 			};
 
 			props.onReady?.(event.url.hostname, parseInt(event.url.port), proxyData);
