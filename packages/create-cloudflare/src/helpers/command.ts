@@ -190,7 +190,7 @@ export const runFrameworkGenerator = async (
 	ctx: PagesGeneratorContext,
 	argString: string
 ) => {
-	const cli = getFrameworkCli(ctx);
+	const cli = getFrameworkCli(ctx, true);
 	const { npm, dlx } = detectPackageManager();
 
 	// yarn cannot `yarn create@some-version` and doesn't have an npx equivalent
