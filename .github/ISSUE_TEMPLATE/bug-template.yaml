@@ -28,6 +28,7 @@ body:
         - Constellation
         - Workers Runtime
         - Wrangler core
+        - Miniflare
         - Other
   - type: input
     attributes:

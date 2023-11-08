@@ -1,12 +1,14 @@
 // noinspection TypeScriptValidateJSTypes
 
 import assert from "assert";
+import childProcess from "child_process";
+import { once } from "events";
 import fs from "fs/promises";
 import http from "http";
 import { AddressInfo } from "net";
 import path from "path";
 import { Writable } from "stream";
-import { json } from "stream/consumers";
+import { json, text } from "stream/consumers";
 import util from "util";
 import {
 	D1Database,
@@ -592,7 +594,7 @@ test("Miniflare: `node:`, `cloudflare:` and `workerd:` modules", async (t) => {
 		script: `
     import assert from "node:assert";
     import { Buffer } from "node:buffer";
-    import { connect } from "cloudflare:sockets"; 
+    import { connect } from "cloudflare:sockets";
     import rtti from "workerd:rtti";
     export default {
       fetch() {
@@ -728,8 +730,13 @@ test("Miniflare: listens on ipv6", async (t) => {
 
 test("Miniflare: dispose() immediately after construction", async (t) => {
 	const mf = new Miniflare({ script: "", modules: true });
+	const readyPromise = mf.ready;
 	await mf.dispose();
-	t.pass();
+	await t.throwsAsync(readyPromise, {
+		instanceOf: MiniflareCoreError,
+		code: "ERR_DISPOSED",
+		message: "Cannot use disposed instance",
+	});
 });
 
 test("Miniflare: getBindings() returns all bindings", async (t) => {
@@ -1087,3 +1094,79 @@ unixSerialTest(
 		t.is(await res.text(), "When I grow up, I want to be a big workerd!");
 	}
 );
+
+test("Miniflare: exits cleanly", async (t) => {
+	const miniflarePath = require.resolve("miniflare");
+	const result = childProcess.spawn(
+		process.execPath,
+		[
+			"--no-warnings", // Hide experimental warnings
+			"-e",
+			`
+      const { Miniflare, Log, LogLevel } = require(${JSON.stringify(
+				miniflarePath
+			)});
+      const mf = new Miniflare({
+        verbose: true,
+        modules: true,
+        script: \`export default {
+          fetch() {
+            return new Response("body");
+          }
+        }\`
+      });
+      (async () => {
+        const res = await mf.dispatchFetch("http://placeholder/");
+        const text = await res.text();
+        process.send(text);
+        process.disconnect();
+      })();
+      `,
+		],
+		{
+			stdio: [/* in */ "ignore", /* out */ "pipe", /* error */ "pipe", "ipc"],
+		}
+	);
+
+	// Make sure workerd started
+	const [message] = await once(result, "message");
+	t.is(message, "body");
+
+	// Check exit doesn't output anything
+	const closePromise = once(result, "close");
+	result.kill("SIGINT");
+	assert(result.stdout !== null && result.stderr !== null);
+	const stdout = await text(result.stdout);
+	const stderr = await text(result.stderr);
+	await closePromise;
+	t.is(stdout, "");
+	t.is(stderr, "");
+});
+
+test("Miniflare: allows the use of unsafe eval bindings", async (t) => {
+	const log = new TestLog(t);
+
+	const mf = new Miniflare({
+		log,
+		modules: true,
+		script: `
+        export default {
+            fetch(req, env, ctx) {
+                const three = env.UNSAFE_EVAL.eval('2 + 1');
+
+                const fn = env.UNSAFE_EVAL.newFunction(
+                    'return \`the computed value is \${n}\`', '', 'n'
+                );
+
+                return new Response(fn(three));
+            }
+        }
+    `,
+		unsafeEvalBinding: "UNSAFE_EVAL",
+	});
+	t.teardown(() => mf.dispose());
+
+	const response = await mf.dispatchFetch("http://localhost");
+	t.true(response.ok);
+	t.is(await response.text(), "the computed value is 3");
+});

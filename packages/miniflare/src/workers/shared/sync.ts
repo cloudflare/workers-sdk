@@ -71,7 +71,7 @@ export class Mutex {
 	}
 
 	async drained(): Promise<void> {
-		if (this.resolveQueue.length === 0) return;
+		if (this.resolveQueue.length === 0 && !this.locked) return;
 		return new Promise((resolve) => this.drainQueue.push(resolve));
 	}
 }

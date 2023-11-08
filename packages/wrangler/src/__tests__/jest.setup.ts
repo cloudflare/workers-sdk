@@ -93,6 +93,8 @@ fetchMock.doMock(() => {
 
 jest.mock("../package-manager");
 
+jest.mock("../update-check");
+
 // requests not mocked with `jest-fetch-mock` fall through
 // to `mock-service-worker`
 fetchMock.dontMock();

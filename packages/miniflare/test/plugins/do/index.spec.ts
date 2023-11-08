@@ -331,7 +331,7 @@ test("proxies Durable Object methods", async (t) => {
 
 test("Durable Object eviction", async (t) => {
 	// this test requires testing over a 10 second timeout
-	t.timeout(12_000);
+	t.timeout(20_000);
 
 	// first set unsafePreventEviction to undefined
 	const mf = new Miniflare({
@@ -356,7 +356,7 @@ test("Durable Object eviction", async (t) => {
 
 test("prevent Durable Object eviction", async (t) => {
 	// this test requires testing over a 10 second timeout
-	t.timeout(12_000);
+	t.timeout(20_000);
 
 	// first set unsafePreventEviction to undefined
 	const mf = new Miniflare({

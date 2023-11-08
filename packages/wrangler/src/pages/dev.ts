@@ -682,6 +682,7 @@ export const Handler = async ({
 		persistTo,
 		inspect: undefined,
 		logLevel,
+		updateCheck: true,
 		experimental: {
 			processEntrypoint: true,
 			additionalModules: modules,

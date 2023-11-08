@@ -7,7 +7,12 @@ import { spinner } from "@cloudflare/cli/interactive";
 import { FrameworkMap, supportedFramework } from "frameworks/index";
 import { processArgument } from "helpers/args";
 import { C3_DEFAULTS } from "helpers/cli";
-import { installWrangler, retry, runCommand } from "helpers/command";
+import {
+	installWrangler,
+	resetPackageManager,
+	retry,
+	runCommand,
+} from "helpers/command";
 import { readJSON, writeFile } from "helpers/files";
 import { debug } from "helpers/logging";
 import { detectPackageManager } from "helpers/packages";
@@ -66,6 +71,11 @@ export const runPagesGenerator = async (args: C3Args) => {
 
 	// Configure
 	startSection("Configuring your application for Cloudflare", "Step 2 of 3");
+
+	// Rectify discrepancies between installed node_modules and package specific
+	// lockfile before potentially adding new packages in `configure`
+	await resetPackageManager(ctx);
+
 	if (configure) {
 		await configure({ ...ctx });
 	}

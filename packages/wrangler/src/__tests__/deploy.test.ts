@@ -7654,7 +7654,15 @@ export default{
 				},
 				migrations: [{ tag: "v1", new_classes: ["SomeClass"] }],
 			});
-			writeWorkerSource();
+			fs.writeFileSync(
+				"index.js",
+				`export default {
+        	async fetch(request) {
+          	return new Response('Hello' + foo);
+        	},
+      	};
+				export class SomeClass {};`
+			);
 			process.env.CLOUDFLARE_ACCOUNT_ID = "";
 			await runWrangler("deploy index.js --dry-run");
 			expect(std).toMatchInlineSnapshot(`

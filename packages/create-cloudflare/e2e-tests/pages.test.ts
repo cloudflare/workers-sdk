@@ -46,12 +46,12 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 			timeout: 1000 * 60 * 5,
 		},
 		angular: {
-			expectResponseToContain: "Love Angular?",
+			expectResponseToContain: "Congratulations! Your app is running.",
 			testCommitMessage: true,
 		},
 		gatsby: {
 			expectResponseToContain: "Gatsby!",
-			unsupportedPms: ["bun"],
+			unsupportedPms: ["bun", "pnpm"],
 			promptHandlers: [
 				{
 					matcher: /Would you like to use a template\?/,

@@ -22,11 +22,6 @@ for (let index = 0; index < 2; index++) {
 }
 
 // Add needed polyfills
-serverPolyfillsData.unshift(
-	`globalThis['process'] = {};`,
-	`globalThis['global'] = globalThis;`,
-	// Needed as performance.mark is not a function in worker.
-	`performance.mark = () => {};`
-);
+serverPolyfillsData.unshift(`globalThis['process'] = {};`);
 
 fs.writeFileSync(serverPolyfillsFile, serverPolyfillsData.join(EOL));

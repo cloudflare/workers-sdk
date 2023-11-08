@@ -3,18 +3,12 @@ import { brandColor, dim } from "@cloudflare/cli/colors";
 import { npmInstall, runCommand, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import { getFrameworkCli } from "../index";
 import type { FrameworkConfig, PagesGeneratorContext } from "types";
 
-const { npx, dlx } = detectPackageManager();
+const { npx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
-	const cli = getFrameworkCli(ctx);
-
-	await runFrameworkGenerator(
-		ctx,
-		`${dlx} ${cli} ${ctx.project.name} --no-install`
-	);
+	await runFrameworkGenerator(ctx, `${ctx.project.name} --no-install`);
 
 	logRaw(""); // newline
 };

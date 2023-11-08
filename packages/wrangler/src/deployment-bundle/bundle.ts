@@ -378,6 +378,18 @@ export async function bundleWorker(
 	}
 
 	const entryPoint = getEntryPointFromMetafile(entryFile, result.metafile);
+	const notExportedDOs = doBindings
+		.filter((x) => !x.script_name && !entryPoint.exports.includes(x.class_name))
+		.map((x) => x.class_name);
+	if (notExportedDOs.length) {
+		const relativePath = path.relative(process.cwd(), entryFile);
+		throw new Error(
+			`Your Worker depends on the following Durable Objects, which are not exported in your entrypoint file: ${notExportedDOs.join(
+				", "
+			)}.\nYou should export these objects from your entrypoint, ${relativePath}.`
+		);
+	}
+
 	const bundleType = entryPoint.exports.length > 0 ? "esm" : "commonjs";
 
 	const sourceMapPath = Object.keys(result.metafile.outputs).filter((_path) =>

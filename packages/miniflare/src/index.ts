@@ -563,7 +563,7 @@ export class Miniflare {
 	#log: Log;
 
 	readonly #runtime?: Runtime;
-	readonly #removeRuntimeExitHook?: () => void;
+	readonly #removeExitHook?: () => void;
 	#runtimeEntryURL?: URL;
 	#socketPorts?: SocketPorts;
 	#runtimeDispatcher?: Dispatcher;
@@ -573,7 +573,6 @@ export class Miniflare {
 	// Object storage. Note this may not exist, it's up to the consumers to
 	// create this if needed. Deleted on `dispose()`.
 	readonly #tmpPath: string;
-	readonly #removeTmpPathExitHook: () => void;
 
 	// Mutual exclusion lock for runtime operations (i.e. initialisation and
 	// updating config). This essentially puts initialisation and future updates
@@ -637,13 +636,21 @@ export class Miniflare {
 			os.tmpdir(),
 			`miniflare-${crypto.randomBytes(16).toString("hex")}`
 		);
-		this.#removeTmpPathExitHook = exitHook(() => {
-			fs.rmSync(this.#tmpPath, { force: true, recursive: true });
-		});
 
 		// Setup runtime
 		this.#runtime = new Runtime();
-		this.#removeRuntimeExitHook = exitHook(() => void this.#runtime?.dispose());
+		this.#removeExitHook = exitHook(() => {
+			void this.#runtime?.dispose();
+			try {
+				fs.rmSync(this.#tmpPath, { force: true, recursive: true });
+			} catch (e) {
+				// `rmSync` may fail on Windows with `EBUSY` if `workerd` is still
+				// running. `Runtime#dispose()` should kill the runtime immediately.
+				// `exitHook`s must be synchronous, so we can only clean up on a best
+				// effort basis.
+				this.#log.debug(`Unable to remove temporary directory: ${String(e)}`);
+			}
+		});
 
 		this.#disposeController = new AbortController();
 		this.#runtimeMutex = new Mutex();
@@ -1160,10 +1167,9 @@ export class Miniflare {
 				this.dispatchFetch
 			);
 		} else {
-			// The `ProxyServer` "heap" will have been destroyed when `workerd` was
-			// restarted, invalidating all existing native target references. Mark
-			// all proxies as invalid, noting the new runtime URL to send requests to.
-			this.#proxyClient.poisonProxies(this.#runtimeEntryURL);
+			// Update the proxy client with the new runtime URL to send requests to.
+			// Existing proxies will already have been poisoned in `setOptions()`.
+			this.#proxyClient.setRuntimeEntryURL(this.#runtimeEntryURL);
 		}
 
 		if (!this.#runtimeMutex.hasWaiting) {
@@ -1208,6 +1214,8 @@ export class Miniflare {
 		// `dispose()`d synchronously, immediately after constructing a `Miniflare`
 		// instance. In this case, return a discard URL which we'll ignore.
 		if (disposing) return new URL("http://[100::]/");
+		// Make sure `dispose()` wasn't called in the time we've been waiting
+		this.#checkDisposed();
 		// `#runtimeEntryURL` is assigned in `#assembleAndUpdateConfig()`, which is
 		// called by `#init()`, and `#initPromise` doesn't resolve until `#init()`
 		// returns.
@@ -1293,6 +1301,9 @@ export class Miniflare {
 
 	setOptions(opts: MiniflareOptions): Promise<void> {
 		this.#checkDisposed();
+		// The `ProxyServer` "heap" will be destroyed when `workerd` restarts,
+		// invalidating all existing native references. Mark all proxies as invalid.
+		this.#proxyClient?.poisonProxies();
 		// Wait for initial initialisation and other setOptions to complete before
 		// changing options
 		return this.#runtimeMutex.runWith(() => this.#setOptions(opts));
@@ -1496,12 +1507,16 @@ export class Miniflare {
 
 	async dispose(): Promise<void> {
 		this.#disposeController.abort();
+		// The `ProxyServer` "heap" will be destroyed when `workerd` shuts down,
+		// invalidating all existing native references. Mark all proxies as invalid.
+		// Note `dispose()`ing the `#proxyClient` implicitly poison's proxies, but
+		// we'd like them to be poisoned synchronously here.
+		this.#proxyClient?.poisonProxies();
 		try {
 			await this.#waitForReady(/* disposing */ true);
 		} finally {
-			// Remove exit hooks, we're cleaning up what they would've cleaned up now
-			this.#removeTmpPathExitHook();
-			this.#removeRuntimeExitHook?.();
+			// Remove exit hook, we're cleaning up what they would've cleaned up now
+			this.#removeExitHook?.();
 
 			// Cleanup as much as possible even if `#init()` threw
 			await this.#proxyClient?.dispose();

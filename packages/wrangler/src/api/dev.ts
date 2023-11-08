@@ -55,6 +55,7 @@ export interface UnstableDevOptions {
 	inspect?: boolean;
 	local?: boolean;
 	accountId?: string;
+	updateCheck?: boolean;
 	experimental?: {
 		processEntrypoint?: boolean;
 		additionalModules?: CfModule[];
@@ -139,10 +140,8 @@ export async function unstable_dev(
 	const devOptions: StartDevOptions = {
 		script: script,
 		inspect: false,
-		logLevel: options?.logLevel ?? defaultLogLevel,
 		_: [],
 		$0: "",
-		port: options?.port ?? 0,
 		remote: !local,
 		local,
 		experimentalLocal: undefined,
@@ -194,6 +193,9 @@ export async function unstable_dev(
 		legacyEnv: undefined,
 		public: undefined,
 		...options,
+		logLevel: options?.logLevel ?? defaultLogLevel,
+		port: options?.port ?? 0,
+		updateCheck: options?.updateCheck ?? false,
 	};
 
 	//due to Pages adoption of unstable_dev, we can't *just* disable rebuilds and watching. instead, we'll have two versions of startDev, which will converge.

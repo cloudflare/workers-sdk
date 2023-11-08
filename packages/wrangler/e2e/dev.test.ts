@@ -1,10 +1,11 @@
 import crypto from "node:crypto";
+import * as nodeNet from "node:net";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import getPort from "get-port";
 import shellac from "shellac";
 import { fetch } from "undici";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { retry } from "./helpers/retry";
 import { dedent, makeRoot, seed } from "./helpers/setup";
 import { WRANGLER } from "./helpers/wrangler-command";
@@ -276,5 +277,96 @@ describe("dev registry", () => {
 				expect(text).toMatchInlineSnapshot('"hello world"');
 			});
 		});
+	});
+});
+
+describe("hyperdrive dev tests", () => {
+	let worker: DevWorker;
+	let server: nodeNet.Server;
+
+	beforeEach(async () => {
+		worker = await makeWorker();
+		server = nodeNet.createServer().listen();
+		let port = 5432;
+		if (server.address() && typeof server.address() !== "string") {
+			port = (server.address() as nodeNet.AddressInfo).port;
+		}
+		await worker.seed((workerName) => ({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2023-10-25"
+					
+					[[hyperdrive]]
+					binding = "HYPERDRIVE"
+					id = "hyperdrive_id"
+					localConnectionString = "postgresql://user:pass@127.0.0.1:${port}/some_db"
+			`,
+			"src/index.ts": dedent`
+					export default {
+						async fetch(request, env) {
+							if (request.url.includes("connect")) {
+								const conn = env.HYPERDRIVE.connect();
+								await conn.writable.getWriter().write(new TextEncoder().encode("test string"));
+							}
+							return new Response(env.HYPERDRIVE?.connectionString ?? "no")
+						}
+					}`,
+			"package.json": dedent`
+					{
+						"name": "${workerName}",
+						"version": "0.0.0",
+						"private": true
+					}
+					`,
+		}));
+	});
+
+	it("matches expected configuration parameters", async () => {
+		await worker.runDevSession("", async (port) => {
+			const { text } = await retry(
+				(s) => {
+					return s.status !== 200;
+				},
+				async () => {
+					const resp = await fetch(`http://127.0.0.1:${port}`);
+					return { text: await resp.text(), status: resp.status };
+				}
+			);
+			const url = new URL(text);
+			expect(url.pathname).toBe("/some_db");
+			expect(url.username).toBe("user");
+			expect(url.password).toBe("pass");
+			expect(url.host).not.toBe("localhost");
+		});
+	});
+
+	it("connects to a socket", async () => {
+		const socketMsgPromise = new Promise((resolve, _) => {
+			server.on("connection", (sock) => {
+				sock.on("data", (data) => {
+					expect(new TextDecoder().decode(data)).toBe("test string");
+					server.close();
+					resolve({});
+				});
+			});
+		});
+		await worker.runDevSession("", async (port) => {
+			await retry(
+				(s) => {
+					return s.status !== 200;
+				},
+				async () => {
+					const resp = await fetch(`http://127.0.0.1:${port}/connect`);
+					return { text: await resp.text(), status: resp.status };
+				}
+			);
+		});
+		await socketMsgPromise;
+	});
+	afterEach(() => {
+		if (server.listening) {
+			server.close();
+		}
 	});
 });

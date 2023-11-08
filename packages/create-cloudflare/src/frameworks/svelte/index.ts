@@ -8,16 +8,14 @@ import {
 } from "helpers/command";
 import { compatDateFlag, usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import { getFrameworkCli } from "../index";
 import { platformInterface } from "./templates";
 import type * as recast from "recast";
 import type { FrameworkConfig, PagesGeneratorContext } from "types";
 
-const { npm, dlx } = detectPackageManager();
+const { npm } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
-	const cli = getFrameworkCli(ctx);
-	await runFrameworkGenerator(ctx, `${dlx} ${cli} ${ctx.project.name}`);
+	await runFrameworkGenerator(ctx, `${ctx.project.name}`);
 
 	logRaw("");
 };
