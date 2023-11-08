@@ -328,19 +328,14 @@ export class ProxyController extends EventEmitter {
 		this.latestConfig = data.config;
 		this.latestBundle = data.bundle;
 
-		const proxyData = {
-			proxyLogsToController: data.config.dev?.remote, // in local mode, workerd logs to terminal directly
-			...data.proxyData,
-		};
-
 		void this.sendMessageToProxyWorker({
 			type: "play",
-			proxyData,
+			proxyData: data.proxyData,
 		});
 
 		void this.sendMessageToInspectorProxyWorker({
 			type: "reloadComplete",
-			proxyData,
+			proxyData: data.proxyData,
 		});
 	}
 	onProxyWorkerMessage(message: ProxyWorkerOutgoingRequestBody) {

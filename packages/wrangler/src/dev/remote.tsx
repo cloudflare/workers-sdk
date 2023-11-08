@@ -305,6 +305,7 @@ export function useWorker(
 				});
 			}
 			*/
+
 			const proxyData: ProxyData = {
 				userWorkerUrl: {
 					protocol: "https:",
@@ -320,6 +321,7 @@ export function useWorker(
 				userWorkerInnerUrlOverrides: {}, // we did not permit overriding request.url in remote mode
 				headers: { "cf-workers-preview-token": workerPreviewToken.value },
 				liveReload: false, // liveReload currently disabled in remote-mode, but will be supported with startDevWorker
+				proxyLogsToController: true,
 			};
 
 			onReady?.(props.host || "localhost", props.port, proxyData);
@@ -432,6 +434,7 @@ export async function startRemoteServer(props: RemoteProps) {
 				userWorkerInnerUrlOverrides: {}, // we did not permit overriding request.url in remote mode
 				headers: { "cf-workers-preview-token": previewToken.value },
 				liveReload: false, // liveReload currently disabled in remote-mode, but will be supported with startDevWorker
+				proxyLogsToController: true,
 			};
 
 			props.onReady?.(ip, port, proxyData);
