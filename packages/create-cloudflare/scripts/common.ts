@@ -83,3 +83,23 @@ export const deleteProject = async (project: string) => {
 		method: "DELETE",
 	});
 };
+
+export const listC3Workers = async () => {
+	const pageSize = 10;
+	let page = 1;
+
+	const res = await apiFetch(`/workers/scripts`, { method: "GET" });
+
+	if (res === null) {
+		console.error("Failed to fetch workers list");
+		process.exit(1);
+	}
+
+	return res.filter((p) => p.id.startsWith("c3-e2e-"));
+};
+
+export const deleteWorker = async (id: string) => {
+	await apiFetch(`/workers/scripts/${id}`, {
+		method: "DELETE",
+	});
+};
