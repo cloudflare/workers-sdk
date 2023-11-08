@@ -8,7 +8,6 @@
 		"dev": "npx wrangler pages dev public --port 8776",
 		"publish": "npx wrangler pages deploy public",
 		"test": "vitest run",
-		"test:ci": "vitest run",
 		"test:watch": "vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},

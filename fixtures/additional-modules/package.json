@@ -8,7 +8,6 @@
 		"deploy": "wrangler deploy",
 		"start": "wrangler dev",
 		"test": "vitest run",
-		"test:ci": "vitest run",
 		"test:watch": "vitest",
 		"type:tests": "tsc -p ./test/tsconfig.json"
 	},
