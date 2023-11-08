@@ -18,7 +18,7 @@ Wrangler and the workers-sdk is developed in the open on GitHub, and you can see
 
 ```bash
 # Make a javascript file
-echo "export default { fetch() { return new Response('Hello world') } }" > index.js
+echo "export default { fetch() { return new Response('hello world') } }" > index.js
 # try it out
 npx wrangler dev index.js
 # and then deploy it
