@@ -1,4 +1,4 @@
-import { fetchListResult } from "../cfetch";
+import { fetchPagedListResult } from "../cfetch";
 import { getCloudflareAccountIdFromEnv } from "./auth-variables";
 
 export type ChooseAccountItem = {
@@ -15,7 +15,7 @@ export async function getAccountChoices(): Promise<ChooseAccountItem[]> {
 		return [{ id: accountIdFromEnv, name: "" }];
 	} else {
 		try {
-			const response = await fetchListResult<{
+			const response = await fetchPagedListResult<{
 				account: ChooseAccountItem;
 			}>(`/memberships`);
 			const accounts = response.map((r) => r.account);
