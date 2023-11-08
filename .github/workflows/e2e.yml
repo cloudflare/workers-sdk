@@ -3,30 +3,19 @@ name: E2E tests
 on:
   push:
     branches:
-      - main
       - changeset-release/main
-  pull_request:
-    types: [synchronize, opened, reopened, labeled, unlabeled]
   repository_dispatch:
 
 jobs:
   e2e-test:
     timeout-minutes: 30
-    if: github.repository_owner == 'cloudflare' && (github.event_name != 'pull_request' || (github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'e2e' )) || (github.event_name == 'pull_request' && github.head_ref == 'changeset-release/main'))
+    if: github.repository_owner == 'cloudflare'
     name: "E2E Test"
     strategy:
       fail-fast: false
       matrix:
-        os: [
-            # macos-11,
-            # macos-12,
-            macos-13,
-            windows-2019,
-            windows-2022,
-            # ubuntu-20.04,
-            ubuntu-22.04,
-          ]
-        node: ["16", "18"]
+        os: [macos-13, windows-2022, ubuntu-22.04]
+        node: ["18"]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
