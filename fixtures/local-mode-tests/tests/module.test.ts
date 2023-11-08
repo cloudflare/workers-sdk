@@ -59,10 +59,8 @@ describe("module worker", () => {
 		it.concurrent("should return Hi by default", async () => {
 			const resp = await worker.fetch("/");
 			expect(resp).not.toBe(undefined);
-			if (resp) {
-				const respJson = await resp.text();
-				expect(respJson).toBe(JSON.stringify({ greeting: "Hi!" }));
-			}
+			const respJson = await resp.text();
+			expect(respJson).toBe(JSON.stringify({ greeting: "Hi!" }));
 		});
 		it.concurrent("should return Bonjour when French", async () => {
 			const resp = await worker.fetch("/", { headers: { lang: "fr-FR" } });
