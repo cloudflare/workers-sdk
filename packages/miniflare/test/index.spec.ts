@@ -728,8 +728,13 @@ test("Miniflare: listens on ipv6", async (t) => {
 
 test("Miniflare: dispose() immediately after construction", async (t) => {
 	const mf = new Miniflare({ script: "", modules: true });
+	const readyPromise = mf.ready;
 	await mf.dispose();
-	t.pass();
+	await t.throwsAsync(readyPromise, {
+		instanceOf: MiniflareCoreError,
+		code: "ERR_DISPOSED",
+		message: "Cannot use disposed instance",
+	});
 });
 
 test("Miniflare: getBindings() returns all bindings", async (t) => {

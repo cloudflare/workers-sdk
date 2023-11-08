@@ -1207,6 +1207,8 @@ export class Miniflare {
 		// `dispose()`d synchronously, immediately after constructing a `Miniflare`
 		// instance. In this case, return a discard URL which we'll ignore.
 		if (disposing) return new URL("http://[100::]/");
+		// Make sure `dispose()` wasn't called in the time we've been waiting
+		this.#checkDisposed();
 		// `#runtimeEntryURL` is assigned in `#assembleAndUpdateConfig()`, which is
 		// called by `#init()`, and `#initPromise` doesn't resolve until `#init()`
 		// returns.
