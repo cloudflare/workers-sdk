@@ -8,6 +8,9 @@ on:
 
 jobs:
   e2e-test:
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
     timeout-minutes: 30
     if: github.repository_owner == 'cloudflare'
     name: "E2E Test"

@@ -11,6 +11,9 @@ env:
 jobs:
   e2e:
     timeout-minutes: 30
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
     name: ${{ format('E2E ({0})', matrix.pm) }}
     if: github.repository_owner == 'cloudflare' && github.event.pull_request.user.login != 'dependabot[bot]'
     strategy:

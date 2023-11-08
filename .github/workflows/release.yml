@@ -8,6 +8,10 @@ on:
 jobs:
   release:
     timeout-minutes: 30
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+
     if: ${{ github.repository_owner == 'cloudflare' }}
     name: Release
     runs-on: ubuntu-latest

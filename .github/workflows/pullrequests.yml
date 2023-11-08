@@ -13,6 +13,10 @@ jobs:
 
   check:
     timeout-minutes: 30
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+
     name: "Checks"
     runs-on: ubuntu-latest
     steps:
@@ -59,6 +63,10 @@ jobs:
 
   test:
     timeout-minutes: 30
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+
     name: "Tests"
     strategy:
       matrix:
