@@ -45,7 +45,7 @@ test("fetch: performs http request with form data", async (t) => {
 test("fetch: performs web socket upgrade", async (t) => {
 	const server = await useServer(t, noop, (ws, req) => {
 		ws.send("hello client");
-		ws.send(req.headers["user-agent"]);
+		ws.send(req.headers["user-agent"] ?? "");
 		ws.addEventListener("message", ({ data }) => ws.send(data));
 	});
 	const res = await fetch(server.http, {
@@ -69,7 +69,7 @@ test("fetch: performs web socket upgrade", async (t) => {
 });
 test("fetch: performs web socket upgrade with Sec-WebSocket-Protocol header", async (t) => {
 	const server = await useServer(t, noop, (ws, req) => {
-		ws.send(req.headers["sec-websocket-protocol"]);
+		ws.send(req.headers["sec-websocket-protocol"] ?? "");
 	});
 	const res = await fetch(server.http, {
 		headers: {
