@@ -563,7 +563,7 @@ export class Miniflare {
 	#log: Log;
 
 	readonly #runtime?: Runtime;
-	readonly #removeRuntimeExitHook?: () => void;
+	readonly #removeExitHook?: () => void;
 	#runtimeEntryURL?: URL;
 	#socketPorts?: SocketPorts;
 	#runtimeDispatcher?: Dispatcher;
@@ -573,7 +573,6 @@ export class Miniflare {
 	// Object storage. Note this may not exist, it's up to the consumers to
 	// create this if needed. Deleted on `dispose()`.
 	readonly #tmpPath: string;
-	readonly #removeTmpPathExitHook: () => void;
 
 	// Mutual exclusion lock for runtime operations (i.e. initialisation and
 	// updating config). This essentially puts initialisation and future updates
@@ -637,13 +636,21 @@ export class Miniflare {
 			os.tmpdir(),
 			`miniflare-${crypto.randomBytes(16).toString("hex")}`
 		);
-		this.#removeTmpPathExitHook = exitHook(() => {
-			fs.rmSync(this.#tmpPath, { force: true, recursive: true });
-		});
 
 		// Setup runtime
 		this.#runtime = new Runtime();
-		this.#removeRuntimeExitHook = exitHook(() => void this.#runtime?.dispose());
+		this.#removeExitHook = exitHook(() => {
+			void this.#runtime?.dispose();
+			try {
+				fs.rmSync(this.#tmpPath, { force: true, recursive: true });
+			} catch (e) {
+				// `rmSync` may fail on Windows with `EBUSY` if `workerd` is still
+				// running. `Runtime#dispose()` should kill the runtime immediately.
+				// `exitHook`s must be synchronous, so we can only clean up on a best
+				// effort basis.
+				this.#log.debug(`Unable to remove temporary directory: ${String(e)}`);
+			}
+		});
 
 		this.#disposeController = new AbortController();
 		this.#runtimeMutex = new Mutex();
@@ -1508,9 +1515,8 @@ export class Miniflare {
 		try {
 			await this.#waitForReady(/* disposing */ true);
 		} finally {
-			// Remove exit hooks, we're cleaning up what they would've cleaned up now
-			this.#removeTmpPathExitHook();
-			this.#removeRuntimeExitHook?.();
+			// Remove exit hook, we're cleaning up what they would've cleaned up now
+			this.#removeExitHook?.();
 
 			// Cleanup as much as possible even if `#init()` threw
 			await this.#proxyClient?.dispose();

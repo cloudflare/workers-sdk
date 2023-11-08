@@ -1,12 +1,14 @@
 // noinspection TypeScriptValidateJSTypes
 
 import assert from "assert";
+import childProcess from "child_process";
+import { once } from "events";
 import fs from "fs/promises";
 import http from "http";
 import { AddressInfo } from "net";
 import path from "path";
 import { Writable } from "stream";
-import { json } from "stream/consumers";
+import { json, text } from "stream/consumers";
 import util from "util";
 import {
 	D1Database,
@@ -1092,6 +1094,54 @@ unixSerialTest(
 		t.is(await res.text(), "When I grow up, I want to be a big workerd!");
 	}
 );
+
+test("Miniflare: exits cleanly", async (t) => {
+	const miniflarePath = require.resolve("miniflare");
+	const result = childProcess.spawn(
+		process.execPath,
+		[
+			"--no-warnings", // Hide experimental warnings
+			"-e",
+			`
+      const { Miniflare, Log, LogLevel } = require(${JSON.stringify(
+				miniflarePath
+			)});
+      const mf = new Miniflare({
+        verbose: true,
+        modules: true,
+        script: \`export default {
+          fetch() {
+            return new Response("body");
+          }
+        }\`
+      });
+      (async () => {
+        const res = await mf.dispatchFetch("http://placeholder/");
+        const text = await res.text();
+        process.send(text);
+        process.disconnect();
+      })();
+      `,
+		],
+		{
+			stdio: [/* in */ "ignore", /* out */ "pipe", /* error */ "pipe", "ipc"],
+		}
+	);
+
+	// Make sure workerd started
+	const [message] = await once(result, "message");
+	t.is(message, "body");
+
+	// Check exit doesn't output anything
+	const closePromise = once(result, "close");
+	result.kill("SIGINT");
+	assert(result.stdout !== null && result.stderr !== null);
+	const stdout = await text(result.stdout);
+	const stderr = await text(result.stderr);
+	await closePromise;
+	t.is(stdout, "");
+	t.is(stderr, "");
+});
 
 test("Miniflare: allows the use of unsafe eval bindings", async (t) => {
 	const log = new TestLog(t);
