@@ -329,10 +329,10 @@ export async function startLocalServer(
 				stop: async () => {
 					abortController.abort();
 					logger.log("⎔ Shutting down local server...");
+					removeMiniflareServerExitListener();
 					// Initialization errors are also thrown asynchronously by dispose().
 					// The `addEventListener("error")` above should've caught them though.
 					await server.onDispose();
-					removeMiniflareServerExitListener();
 				},
 			});
 		});
