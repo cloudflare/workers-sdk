@@ -208,8 +208,11 @@ export class InspectorProxyWorker implements DurableObject {
 			| DevToolsEvents;
 		this.sendDebugLog("RUNTIME INCOMING MESSAGE", msg);
 
+		if (isDevToolsEvent(msg, "Runtime.exceptionThrown")) {
+			this.sendProxyControllerMessage(event.data);
+		}
 		if (
-			isDevToolsEvent(msg, "Runtime.exceptionThrown") ||
+			this.proxyData?.proxyLogsToController &&
 			isDevToolsEvent(msg, "Runtime.consoleAPICalled")
 		) {
 			this.sendProxyControllerMessage(event.data);
