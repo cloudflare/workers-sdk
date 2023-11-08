@@ -2,8 +2,7 @@ import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import path from "node:path";
-import { LogLevel, Miniflare, Response } from "miniflare";
-import { WebSocket } from "miniflare";
+import { LogLevel, Miniflare, Mutex, Response, WebSocket } from "miniflare";
 import inspectorProxyWorkerPath from "worker:startDevWorker/InspectorProxyWorker";
 import proxyWorkerPath from "worker:startDevWorker/ProxyWorker";
 import {
@@ -34,7 +33,7 @@ import type {
 	SerializedError,
 } from "./events";
 import type { StartDevWorkerOptions } from "./types";
-import { MiniflareOptions, Mutex } from "miniflare";
+import type { MiniflareOptions } from "miniflare";
 
 export class ProxyController extends EventEmitter {
 	public ready = createDeferred<ReadyEvent>();
@@ -238,13 +237,13 @@ export class ProxyController extends EventEmitter {
 		retries = 3
 	): Promise<void> {
 		if (this._torndown) return;
-		assert(this.proxyWorker, "proxyWorker should already be instantiated");
 
 		try {
 			await this.runtimeMessageMutex.runWith(async () => {
-				await this.proxyWorker!.ready;
+				assert(this.proxyWorker, "proxyWorker should already be instantiated");
+				await this.proxyWorker.ready;
 
-				return this.proxyWorker!.dispatchFetch(
+				return this.proxyWorker.dispatchFetch(
 					`http://dummy/cdn-cgi/ProxyWorker/${message.type}`,
 					{
 						headers: { Authorization: this.secret },

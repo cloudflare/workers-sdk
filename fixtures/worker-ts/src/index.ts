@@ -29,6 +29,6 @@ export default {
 	): Promise<Response> {
 		const url = new URL(request.url);
 		if (url.pathname === "/error") throw new Error("Hello Error");
-		return new Response("Hello World!");
+		return new Response("Hi9 World!");
 	},
 };

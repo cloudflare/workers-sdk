@@ -1,5 +1,4 @@
 import { EventEmitter } from "node:events";
-import { fetch, Request, type RequestInit } from "miniflare";
 import { logger } from "../../logger";
 import { BundlerController } from "./BundlerController";
 import { ConfigController } from "./ConfigController";
