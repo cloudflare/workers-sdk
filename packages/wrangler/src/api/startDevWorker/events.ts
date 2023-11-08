@@ -138,4 +138,5 @@ export type ProxyData = {
 	userWorkerInnerUrlOverrides: Partial<UrlOriginParts>;
 	headers: Record<string, string>;
 	liveReload?: boolean;
+	proxyLogsToController?: boolean;
 };
