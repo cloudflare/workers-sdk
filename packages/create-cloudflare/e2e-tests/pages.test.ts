@@ -199,13 +199,13 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		});
 
 		// Relevant project files should have been created
-		expect(projectPath).toBeTruthy();
+		expect(projectPath).toExist();
 		const pkgJsonPath = join(projectPath, "package.json");
-		expect(pkgJsonPath).toBeTruthy();
+		expect(pkgJsonPath).toExist();
 
 		// Wrangler should be installed
 		const wranglerPath = join(projectPath, "node_modules/wrangler");
-		expect(wranglerPath).toBeTruthy();
+		expect(wranglerPath).toExist();
 
 		// Verify package scripts
 		const frameworkConfig = FrameworkMap[framework];

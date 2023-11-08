@@ -59,16 +59,16 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 			await runC3({ ctx, argv });
 
 			// Relevant project files should have been created
-			expect(projectPath).toBeTruthy();
+			expect(projectPath).toExist();
 
 			const gitignorePath = join(projectPath, ".gitignore");
-			expect(gitignorePath).toBeTruthy();
+			expect(gitignorePath).toExist();
 
 			const pkgJsonPath = join(projectPath, "package.json");
-			expect(pkgJsonPath).toBeTruthy();
+			expect(pkgJsonPath).toExist();
 
 			const wranglerPath = join(projectPath, "node_modules/wrangler");
-			expect(wranglerPath).toBeTruthy();
+			expect(wranglerPath).toExist();
 		};
 
 		describe.each([

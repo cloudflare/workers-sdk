@@ -80,7 +80,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 				],
 			});
 
-			expect(projectPath).toBeTruthy();
+			expect(projectPath).toExist();
 			expect(output).toContain(`type "Hello World" Worker`);
 			expect(output).toContain(`yes typescript`);
 			expect(output).toContain(`no git`);
@@ -116,7 +116,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 				],
 			});
 
-			expect(projectPath).toBeTruthy();
+			expect(projectPath).toExist();
 			expect(output).toContain(`type Example router & proxy Worker`);
 			expect(output).toContain(`no typescript`);
 			expect(output).toContain(`no git`);
@@ -139,7 +139,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 				],
 			});
 
-			expect(projectPath).toBeTruthy();
+			expect(projectPath).toExist();
 			expect(output).toContain(`type "Hello World" Worker`);
 			expect(output).toContain(`yes typescript`);
 			expect(output).toContain(`no git`);
