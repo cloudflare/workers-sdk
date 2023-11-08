@@ -9,6 +9,7 @@ on:
 
 jobs:
   test:
+    timeout-minutes: 30
     if: ${{ github.repository_owner == 'cloudflare' }}
     name: "Tests"
     strategy:

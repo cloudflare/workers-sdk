@@ -12,6 +12,7 @@ jobs:
       - run: curl -X POST https://devprod-status-bot.devprod.workers.dev/pr-project/workers-sdk/${{ github.event.number }}
 
   check:
+    timeout-minutes: 30
     name: "Checks"
     runs-on: ubuntu-latest
     steps:
@@ -57,6 +58,7 @@ jobs:
           NODE_OPTIONS: "--max_old_space_size=8192"
 
   test:
+    timeout-minutes: 30
     name: "Tests"
     strategy:
       matrix:
