@@ -30,7 +30,7 @@ describe("normalizeAndValidateConfig()", () => {
 			constellation: [],
 			hyperdrive: [],
 			dev: {
-				ip: "0.0.0.0",
+				ip: "*",
 				local_protocol: "http",
 				port: undefined, // the default of 8787 is set at runtime
 				upstream_protocol: "https",

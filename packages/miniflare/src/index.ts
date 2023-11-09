@@ -1181,13 +1181,14 @@ export class Miniflare {
 			);
 
 			if (initial) {
-				let hosts: string[];
-				if (host === "::" || host === "*") {
-					hosts = getAccessibleHosts(false);
-				} else if (host === "0.0.0.0") {
-					hosts = getAccessibleHosts(true);
-				} else {
-					hosts = [];
+				const hosts: string[] = [];
+				if (host === "::" || host === "*" || host === "0.0.0.0") {
+					hosts.push(...getAccessibleHosts(true));
+
+					if (host !== "0.0.0.0") {
+						hosts.push("localhost");
+						hosts.push("[::1]");
+					}
 				}
 
 				for (const h of hosts) {

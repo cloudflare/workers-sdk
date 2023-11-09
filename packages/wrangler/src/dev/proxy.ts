@@ -2,8 +2,8 @@ import { createServer as createHttpServer } from "node:http";
 import { connect } from "node:http2";
 import { createServer as createHttpsServer } from "node:https";
 import https from "node:https";
-import { networkInterfaces } from "node:os";
 import { createHttpTerminator } from "http-terminator";
+import { getAccessibleHosts } from "miniflare";
 import { useEffect, useRef, useState } from "react";
 import serveStatic from "serve-static";
 import { getHttpsOptions } from "../https-options";
@@ -166,7 +166,15 @@ export async function startPreviewServer({
 			const usedPort =
 				address && typeof address === "object" ? address.port : port;
 			logger.log(`⬣ Listening at ${localProtocol}://${ip}:${usedPort}`);
-			const accessibleHosts = ip !== "0.0.0.0" ? [ip] : getAccessibleHosts();
+			const accessibleHosts = [];
+			if (ip === "::" || ip === "*" || ip === "0.0.0.0") {
+				accessibleHosts.push(...getAccessibleHosts(true));
+
+				if (ip !== "0.0.0.0") {
+					accessibleHosts.push("localhost");
+					accessibleHosts.push("[::1]");
+				}
+			}
 			for (const accessibleHost of accessibleHosts) {
 				logger.log(`- ${localProtocol}://${accessibleHost}:${usedPort}`);
 			}
@@ -299,13 +307,21 @@ export function usePreviewServer({
 					const usedPort =
 						address && typeof address === "object" ? address.port : port;
 					logger.log(`⬣ Listening at ${localProtocol}://${ip}:${usedPort}`);
-					const accessibleHosts =
-						ip !== "0.0.0.0" ? [ip] : getAccessibleHosts();
+					const accessibleHosts = [];
+					if (ip === "::" || ip === "*" || ip === "0.0.0.0") {
+						accessibleHosts.push(...getAccessibleHosts(true));
+
+						if (ip !== "0.0.0.0") {
+							accessibleHosts.push("localhost");
+							accessibleHosts.push("[::1]");
+						}
+					}
 					for (const accessibleHost of accessibleHosts) {
 						logger.log(`- ${localProtocol}://${accessibleHost}:${usedPort}`);
 					}
 				});
-				proxy.server.listen(port, ip);
+
+				proxy.server.listen(port, ip === "*" ? "::" : ip);
 			})
 			.catch((err) => {
 				if ((err as { code: string }).code !== "ABORT_ERR") {
@@ -680,15 +696,4 @@ export async function waitForPortToBeAvailable(
 			);
 		}
 	});
-}
-
-function getAccessibleHosts(): string[] {
-	const hosts: string[] = [];
-	Object.values(networkInterfaces()).forEach((net) => {
-		net?.forEach(({ family, address }) => {
-			// @ts-expect-error the `family` property is numeric as of Node.js 18.0.0
-			if (family === "IPv4" || family === 4) hosts.push(address);
-		});
-	});
-	return hosts;
 }
