@@ -23,7 +23,6 @@ describe("Preview Worker", () => {
 			config: path.join(__dirname, "../wrangler.toml"),
 			experimental: {
 				disableExperimentalWarning: true,
-				// experimentalLocal: true,
 			},
 		});
 

@@ -2,7 +2,7 @@
 /* eslint-disable unused-imports/no-unused-imports */
 /* eslint-disable no-shadow */
 /* eslint-disable @typescript-eslint/no-empty-interface */
-import type { Assertion, AsymmetricMatchersContaining } from 'vitest'
+import 'vitest'
 
 interface CustomMatchers<R = unknown> {
 	toExist(): R;
