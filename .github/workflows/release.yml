@@ -43,6 +43,8 @@ jobs:
 
       - name: Check the build
         run: pnpm run build
+        env:
+          CI_OS: ${{ runner.os }}
 
       - name: Check for other errors
         run: pnpm run check

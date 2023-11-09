@@ -28,6 +28,8 @@ jobs:
 
       - name: Build
         run: pnpm run build
+        env:
+          CI_OS: ${{ runner.os }}
 
       - name: Deploy to Pages
         run: pnpm --filter ${{ inputs.package }} run deploy

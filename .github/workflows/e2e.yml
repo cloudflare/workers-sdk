@@ -50,6 +50,7 @@ jobs:
         run: pnpm run build
         env:
           NODE_ENV: "production"
+          CI_OS: ${{ runner.os }}
 
       - name: Build Wrangler package for npm
         run: pnpm pack --pack-destination $HOME

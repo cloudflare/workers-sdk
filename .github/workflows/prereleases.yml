@@ -53,6 +53,7 @@ jobs:
         run: pnpm run build
         env:
           NODE_ENV: "production"
+          CI_OS: ${{ runner.os }}
 
       - name: Check for errors
         run: pnpm run check
@@ -110,6 +111,7 @@ jobs:
           NODE_ENV: "production"
           ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
           ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
+          CI_OS: ${{ runner.os }}
 
       - name: Build & Publish Prerelease Registry
         run: pnpm run publish

@@ -38,6 +38,7 @@ jobs:
         run: pnpm run build
         env:
           NODE_ENV: "production"
+          CI_OS: ${{ runner.os }}
 
       - name: Run tests & collect coverage
         run: pnpm run --filter wrangler test:ci

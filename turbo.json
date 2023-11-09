@@ -3,6 +3,7 @@
 	"remoteCache": {
 		"signature": true
 	},
+	"globalEnv": ["CI_OS", "NODE_VERSION"],
 	"pipeline": {
 		"wrangler#dev": {
 			"persistent": true,

@@ -59,6 +59,8 @@ jobs:
 
       - name: Build
         run: pnpm run build
+        env:
+          CI_OS: ${{ runner.os }}
 
       - name: Check for errors
         run: pnpm run check
@@ -105,6 +107,7 @@ jobs:
         run: pnpm run build
         env:
           NODE_ENV: "production"
+          CI_OS: ${{ runner.os }}
 
       - name: Run tests & collect coverage
         run: pnpm run test:ci
