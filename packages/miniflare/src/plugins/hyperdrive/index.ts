@@ -71,12 +71,21 @@ export const HyperdriveSchema = z
 		return {
 			database: url.pathname.replace("/", ""),
 			user: url.username,
-			password: url.password,
+			password: decodeIfURLEncoded(url.password),
 			scheme: url.protocol.replace(":", ""),
 			host: url.hostname,
 			port: port,
 		};
 	});
+
+function decodeIfURLEncoded(str: string): string {
+	try {
+		const decoded = decodeURIComponent(str);
+		return str === decoded ? str : decoded;
+	} catch (e) {
+		return str;
+	}
+}
 
 export const HyperdriveInputOptionsSchema = z.object({
 	hyperdrives: z.record(z.string(), HyperdriveSchema).optional(),
