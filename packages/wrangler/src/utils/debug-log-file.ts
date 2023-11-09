@@ -4,6 +4,7 @@ import { appendFile } from "node:fs/promises";
 import { getEnvironmentVariableFactory } from "../environment-variables/factory";
 import { getBasePath } from "../paths";
 import { logger } from "../logger";
+import { Mutex } from "miniflare";
 
 const getDebugFilepath = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_DEBUG_LOG",
@@ -26,22 +27,25 @@ const getDebugFilepath = getEnvironmentVariableFactory({
 });
 
 const debugLogFilepath = getDebugFilepath();
+const mutex = new Mutex();
 
 let hasLoggedLocation = false;
 let hasLoggedError = false;
 
-export function appendToDebugLogFile(...args: unknown[]) {
+export async function appendToDebugLogFile(...args: unknown[]) {
 	const entry = `
 --- ${new Date().toISOString()}
 ${format(...args)}
 ---
 `;
 
-	appendFile(debugLogFilepath, entry).catch((err) => {
-		if (hasLoggedError) return;
-		hasLoggedError = true;
-		logger.error(`Failed to write to debug log file`, err);
-	});
+	await mutex.runWith(() =>
+		appendFile(debugLogFilepath, entry).catch((err) => {
+			if (hasLoggedError) return;
+			hasLoggedError = true;
+			logger.error(`Failed to write to debug log file`, err);
+		})
+	);
 
 	if (hasLoggedLocation) return;
 	hasLoggedLocation = true;
