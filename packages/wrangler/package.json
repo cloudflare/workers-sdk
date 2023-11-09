@@ -196,7 +196,7 @@
 		"supports-color": "^9.2.2",
 		"timeago.js": "^4.0.2",
 		"ts-dedent": "^2.2.0",
-		"undici": "5.20.0",
+		"undici": "5.26.2",
 		"update-check": "^1.5.4",
 		"ws": "^8.5.0",
 		"xdg-app-paths": "^8.3.0",
