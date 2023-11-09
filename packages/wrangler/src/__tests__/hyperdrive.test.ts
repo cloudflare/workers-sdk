@@ -178,6 +178,78 @@ describe("hyperdrive commands", () => {
 	`);
 	});
 
+	it("should handle creating a hyperdrive config if the user is URL encoded", async () => {
+		mockHyperdriveRequest();
+		await runWrangler(
+			"hyperdrive create test123 --connection-string='postgresql://user%3Aname:password@example.com/neondb'"
+		);
+		expect(std.out).toMatchInlineSnapshot(`
+		"🚧 Creating 'test123'
+		✅ Created new Hyperdrive config
+		 {
+		  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+		  \\"name\\": \\"test123\\",
+		  \\"origin\\": {
+		    \\"host\\": \\"example.com\\",
+		    \\"port\\": 5432,
+		    \\"database\\": \\"neondb\\",
+		    \\"user\\": \\"user:name\\"
+		  },
+		  \\"caching\\": {
+		    \\"disabled\\": false
+		  }
+		}"
+	`);
+	});
+
+	it("should handle creating a hyperdrive config if the password is URL encoded", async () => {
+		mockHyperdriveRequest();
+		await runWrangler(
+			"hyperdrive create test123 --connection-string='postgresql://test:a%23%3F81n%287@example.com/neondb'"
+		);
+		expect(std.out).toMatchInlineSnapshot(`
+		"🚧 Creating 'test123'
+		✅ Created new Hyperdrive config
+		 {
+		  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+		  \\"name\\": \\"test123\\",
+		  \\"origin\\": {
+		    \\"host\\": \\"example.com\\",
+		    \\"port\\": 5432,
+		    \\"database\\": \\"neondb\\",
+		    \\"user\\": \\"test\\"
+		  },
+		  \\"caching\\": {
+		    \\"disabled\\": false
+		  }
+		}"
+	`);
+	});
+
+	it("should handle creating a hyperdrive config if the database name is URL encoded", async () => {
+		mockHyperdriveRequest();
+		await runWrangler(
+			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com/%22weird%22%20dbname'"
+		);
+		expect(std.out).toMatchInlineSnapshot(`
+		"🚧 Creating 'test123'
+		✅ Created new Hyperdrive config
+		 {
+		  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+		  \\"name\\": \\"test123\\",
+		  \\"origin\\": {
+		    \\"host\\": \\"example.com\\",
+		    \\"port\\": 5432,
+		    \\"database\\": \\"/\\"weird/\\" dbname\\",
+		    \\"user\\": \\"test\\"
+		  },
+		  \\"caching\\": {
+		    \\"disabled\\": false
+		  }
+		}"
+	`);
+	});
+
 	it("should handle listing configs", async () => {
 		mockHyperdriveRequest();
 		await runWrangler("hyperdrive list");
@@ -258,10 +330,7 @@ describe("hyperdrive commands", () => {
 
 		"
 	`);
-		expect(std.out).toMatchInlineSnapshot(`
-		"
-		[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-	`);
+		expect(std.out).toMatchInlineSnapshot(`""`);
 	});
 
 	it("should handle updating a hyperdrive config's caching settings", async () => {
@@ -285,6 +354,30 @@ describe("hyperdrive commands", () => {
 		    \\"disabled\\": false,
 		    \\"maxAge\\": 30,
 		    \\"staleWhileRevalidate\\": 15
+		  }
+		}"
+	`);
+	});
+
+	it("should handle disabling caching for a hyperdrive config", async () => {
+		mockHyperdriveRequest();
+		await runWrangler(
+			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --caching-disabled=true"
+		);
+		expect(std.out).toMatchInlineSnapshot(`
+		"🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+		✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
+		 {
+		  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+		  \\"name\\": \\"test123\\",
+		  \\"origin\\": {
+		    \\"host\\": \\"example.com\\",
+		    \\"port\\": 5432,
+		    \\"database\\": \\"neondb\\",
+		    \\"user\\": \\"test\\"
+		  },
+		  \\"caching\\": {
+		    \\"disabled\\": true
 		  }
 		}"
 	`);
