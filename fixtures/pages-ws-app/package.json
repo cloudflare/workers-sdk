@@ -9,9 +9,8 @@
 		"check:type": "tsc",
 		"dev": "npx wrangler pages dev --port 8790 --proxy 8791 -- pnpm run server",
 		"server": "node dist/index.js",
-		"test": "npx vitest run",
-		"test:ci": "npx vitest run",
-		"test:watch": "npx vitest",
+		"test": "vitest run",
+		"test:watch": "vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {

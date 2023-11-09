@@ -198,7 +198,6 @@
 		"ts-dedent": "^2.2.0",
 		"undici": "5.20.0",
 		"update-check": "^1.5.4",
-		"vitest": "^0.34.4",
 		"ws": "^8.5.0",
 		"xdg-app-paths": "^8.3.0",
 		"yargs": "^17.7.2",

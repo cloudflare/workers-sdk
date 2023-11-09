@@ -6,10 +6,9 @@
 	"main": "dist/worker.js",
 	"scripts": {
 		"check:type": "tsc",
-		"dev": "npx wrangler pages dev public --binding=NAME=VALUE --binding=OTHER_NAME=THING=WITH=EQUALS --r2=BUCKET --port 8789",
-		"test": "npx vitest run",
-		"test:ci": "npx vitest run",
-		"test:watch": "npx vitest",
+		"dev": "wrangler pages dev public --binding=NAME=VALUE --binding=OTHER_NAME=THING=WITH=EQUALS --r2=BUCKET --port 8789",
+		"test": "vitest run",
+		"test:watch": "vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {

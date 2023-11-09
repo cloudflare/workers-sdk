@@ -9,6 +9,10 @@ on:
 
 jobs:
   test:
+    timeout-minutes: 30
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}
+      cancel-in-progress: true
     if: ${{ github.repository_owner == 'cloudflare' }}
     name: "Tests"
     strategy:
@@ -43,6 +47,7 @@ jobs:
         run: pnpm run build
         env:
           NODE_ENV: "production"
+          CI_OS: ${{ runner.os }}
 
       - name: Check for errors
         run: pnpm run check

@@ -4,6 +4,7 @@ import type { ChildProcess } from "child_process";
 import { describe, expect, it, beforeAll, afterAll, beforeEach } from "vitest";
 import { fetch, type Response } from "undici";
 import { setTimeout } from "node:timers/promises";
+import { type UnstableDevWorker, unstable_dev } from "wrangler";
 
 const waitUntilReady = async (url: string): Promise<Response> => {
 	let response: Response | undefined = undefined;
@@ -27,49 +28,63 @@ type WranglerInstance = {
 };
 
 describe("Pages Functions", () => {
-	let wranglerInstances: WranglerInstance[] = [];
+	let wranglerInstances: (WranglerInstance | UnstableDevWorker)[] = [];
 	let pagesAppPort: string;
 
 	beforeAll(async () => {
-		wranglerInstances = await Promise.all(
-			[
-				{
-					dirName: "module-worker-a",
-				},
-				{
-					dirName: "module-worker-b",
-				},
-				{
-					dirName: "service-worker-a",
-				},
-				{
-					dirName: "module-worker-c",
-					extraArgs: ["--env=staging"],
-				},
-				{
-					dirName: "module-worker-d",
-					extraArgs: ["--env=production"],
-				},
-				{
-					pages: true,
-					dirName: "pages-functions-app",
-					extraArgs: [
-						"--service=MODULE_A_SERVICE=module-worker-a",
-						"--service=MODULE_B_SERVICE=module-worker-b",
-						"--service=SERVICE_A_SERVICE=service-worker-a",
-						"--service=STAGING_MODULE_C_SERVICE=module-worker-c@staging",
-						"--service=STAGING_MODULE_D_SERVICE=module-worker-d@staging",
-					],
-				},
-			].map(getWranglerInstance)
+		wranglerInstances[0] = await unstable_dev(
+			path.join(__dirname, "../module-worker-a/index.ts"),
+			{
+				config: path.join(__dirname, "../module-worker-a/wrangler.toml"),
+			}
 		);
-		pagesAppPort =
-			wranglerInstances.find(({ dirName }) => dirName === "pages-functions-app")
-				?.port ?? "0";
+		wranglerInstances[1] = await unstable_dev(
+			path.join(__dirname, "../module-worker-b/index.ts"),
+			{
+				config: path.join(__dirname, "../module-worker-b/wrangler.toml"),
+			}
+		);
+		wranglerInstances[2] = await unstable_dev(
+			path.join(__dirname, "../service-worker-a/index.ts"),
+			{
+				config: path.join(__dirname, "../service-worker-a/wrangler.toml"),
+			}
+		);
+		wranglerInstances[3] = await unstable_dev(
+			path.join(__dirname, "../module-worker-c/index.ts"),
+			{
+				config: path.join(__dirname, "../module-worker-c/wrangler.toml"),
+				env: "staging",
+			}
+		);
+		wranglerInstances[4] = await unstable_dev(
+			path.join(__dirname, "../module-worker-d/index.ts"),
+			{
+				config: path.join(__dirname, "../module-worker-d/wrangler.toml"),
+				env: "production",
+			}
+		);
+		wranglerInstances[5] = await getWranglerInstance({
+			pages: true,
+			dirName: "pages-functions-app",
+			extraArgs: [
+				"--service=MODULE_A_SERVICE=module-worker-a",
+				"--service=MODULE_B_SERVICE=module-worker-b",
+				"--service=SERVICE_A_SERVICE=service-worker-a",
+				"--service=STAGING_MODULE_C_SERVICE=module-worker-c@staging",
+				"--service=STAGING_MODULE_D_SERVICE=module-worker-d@staging",
+			],
+		});
+
+		pagesAppPort = wranglerInstances[5].port;
 	});
 
 	afterAll(async () => {
-		await Promise.allSettled(wranglerInstances.map(terminateWranglerInstance));
+		await Promise.allSettled(
+			wranglerInstances.map((i) =>
+				"stop" in i ? i.stop() : terminateWranglerInstance(i)
+			)
+		);
 	});
 
 	it("connects up Workers (both module and service ones) and fetches from them", async () => {

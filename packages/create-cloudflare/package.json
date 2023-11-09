@@ -38,7 +38,8 @@
 		"test:e2e:yarn": "pnpm run build && cross-env TEST_PM=yarn vitest run --config ./vitest-e2e.config.ts",
 		"test:unit": "vitest run --config ./vitest.config.ts",
 		"test:unit:watch": "vitest --config ./vitest.config.ts",
-		"watch": "node -r esbuild-register scripts/build.ts --watch"
+		"watch": "node -r esbuild-register scripts/build.ts --watch",
+		"test:ci": "vitest run --config ./vitest.config.ts"
 	},
 	"devDependencies": {
 		"@babel/parser": "^7.21.3",
@@ -75,7 +76,6 @@
 		"typescript": "^5.0.2",
 		"undici": "5.20.0",
 		"vite-tsconfig-paths": "^4.0.8",
-		"vitest": "^0.30.0",
 		"which-pm-runs": "^1.1.0",
 		"wrangler": "workspace:*",
 		"yargs": "^17.7.1",

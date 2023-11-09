@@ -42,6 +42,7 @@ jobs:
         run: pnpm run build
         env:
           NODE_ENV: "production"
+          CI_OS: ${{ runner.os }}
 
       - name: Build & Publish Testing Playground Worker
         run: pnpm run deploy:testing

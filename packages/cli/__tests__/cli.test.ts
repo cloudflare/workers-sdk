@@ -3,6 +3,8 @@ import { space } from "..";
 
 describe("cli", () => {
 	test("test spaces", () => {
-		expect(space(300)).toHaveLength(300);
+		expect(space(300)).toMatchInlineSnapshot(
+			'"                                                                                                                                                                                                                                                                                                            "'
+		);
 	});
 });

@@ -3,7 +3,10 @@
 	"extends": ["//"],
 	"pipeline": {
 		"build": {
-			"outputs": ["dist/**"]
+			"outputs": ["dist/**"],
+			"env": [
+				"CI_OS"
+			]
 		}
 	}
 }

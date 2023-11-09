@@ -7,9 +7,8 @@
 		"check:type": "tsc",
 		"dev": "npx wrangler pages dev public --port 8776",
 		"publish": "npx wrangler pages deploy public",
-		"test": "npx vitest run",
-		"test:ci": "npx vitest run",
-		"test:watch": "npx vitest",
+		"test": "vitest run",
+		"test:watch": "vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {

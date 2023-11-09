@@ -31,6 +31,8 @@ import {
 	mockGetMemberships,
 	mockOAuthFlow,
 } from "./helpers/mock-oauth-flow";
+import { mockUploadWorkerRequest } from "./helpers/mock-upload-worker";
+import { mockSubDomainRequest } from "./helpers/mock-workers-subdomain";
 import {
 	createFetchResult,
 	msw,
@@ -48,11 +50,9 @@ import writeWranglerToml from "./helpers/write-wrangler-toml";
 
 import type { Config } from "../config";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
-import type { WorkerMetadata } from "../deployment-bundle/create-worker-upload-form";
-import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { KVNamespaceInfo } from "../kv/helpers";
 import type { PutConsumerBody } from "../queues/client";
-import type { ResponseComposition, RestContext, RestRequest } from "msw";
+import type { RestRequest } from "msw";
 
 describe("deploy", () => {
 	mockAccountId();
@@ -8740,173 +8740,6 @@ function mockLastDeploymentRequest() {
 	msw.use(...mswSuccessDeploymentScriptMetadata);
 }
 
-/** Create a mock handler for the request to upload a worker script. */
-export function mockUploadWorkerRequest(
-	options: {
-		available_on_subdomain?: boolean;
-		expectedEntry?: string | RegExp;
-		expectedMainModule?: string;
-		expectedType?: "esm" | "sw";
-		expectedBindings?: unknown;
-		expectedModules?: Record<string, string>;
-		expectedCompatibilityDate?: string;
-		expectedCompatibilityFlags?: string[];
-		expectedMigrations?: CfWorkerInit["migrations"];
-		expectedTailConsumers?: CfWorkerInit["tail_consumers"];
-		expectedUnsafeMetaData?: Record<string, string>;
-		expectedCapnpSchema?: string;
-		expectedLimits?: CfWorkerInit["limits"];
-		env?: string;
-		legacyEnv?: boolean;
-		keepVars?: boolean;
-		tag?: string;
-	} = {}
-) {
-	const {
-		available_on_subdomain = true,
-		expectedEntry,
-		expectedMainModule = "index.js",
-		expectedType = "esm",
-		expectedBindings,
-		expectedModules = {},
-		expectedCompatibilityDate,
-		expectedCompatibilityFlags,
-		env = undefined,
-		legacyEnv = false,
-		expectedMigrations,
-		expectedTailConsumers,
-		expectedUnsafeMetaData,
-		expectedCapnpSchema,
-		expectedLimits,
-		keepVars,
-	} = options;
-	if (env && !legacyEnv) {
-		msw.use(
-			rest.put(
-				"*/accounts/:accountId/workers/services/:scriptName/environments/:envName",
-				handleUpload
-			)
-		);
-	} else {
-		msw.use(
-			rest.put(
-				"*/accounts/:accountId/workers/scripts/:scriptName",
-				handleUpload
-			)
-		);
-	}
-
-	async function handleUpload(
-		req: RestRequest,
-		res: ResponseComposition,
-		ctx: RestContext
-	) {
-		expect(req.params.accountId).toEqual("some-account-id");
-		expect(req.params.scriptName).toEqual(
-			legacyEnv && env ? `test-name-${env}` : "test-name"
-		);
-		if (!legacyEnv) {
-			expect(req.params.envName).toEqual(env);
-		}
-		expect(req.url.searchParams.get("include_subdomain_availability")).toEqual(
-			"true"
-		);
-		expect(req.url.searchParams.get("excludeScript")).toEqual("true");
-
-		const formBody = await (
-			req as MockedRequest as RestRequestWithFormData
-		).formData();
-		if (expectedEntry !== undefined) {
-			expect(formBody.get("index.js")).toMatch(expectedEntry);
-		}
-		const metadata = JSON.parse(
-			formBody.get("metadata") as string
-		) as WorkerMetadata;
-		if (expectedType === "esm") {
-			expect(metadata.main_module).toEqual(expectedMainModule);
-		} else {
-			expect(metadata.body_part).toEqual("index.js");
-		}
-
-		if (keepVars) {
-			expect(metadata.keep_bindings).toEqual(["plain_text", "json"]);
-		} else {
-			expect(metadata.keep_bindings).toBeFalsy();
-		}
-
-		if ("expectedBindings" in options) {
-			expect(metadata.bindings).toEqual(expectedBindings);
-		}
-		if ("expectedCompatibilityDate" in options) {
-			expect(metadata.compatibility_date).toEqual(expectedCompatibilityDate);
-		}
-		if ("expectedCompatibilityFlags" in options) {
-			expect(metadata.compatibility_flags).toEqual(expectedCompatibilityFlags);
-		}
-		if ("expectedMigrations" in options) {
-			expect(metadata.migrations).toEqual(expectedMigrations);
-		}
-		if ("expectedTailConsumers" in options) {
-			expect(metadata.tail_consumers).toEqual(expectedTailConsumers);
-		}
-		if ("expectedCapnpSchema" in options) {
-			expect(formBody.get(metadata.capnp_schema ?? "")).toEqual(
-				expectedCapnpSchema
-			);
-		}
-		if ("expectedLimits" in options) {
-			expect(metadata.limits).toEqual(expectedLimits);
-		}
-		if (expectedUnsafeMetaData !== undefined) {
-			Object.keys(expectedUnsafeMetaData).forEach((key) => {
-				expect(metadata[key]).toEqual(expectedUnsafeMetaData[key]);
-			});
-		}
-		for (const [name, content] of Object.entries(expectedModules)) {
-			expect(formBody.get(name)).toEqual(content);
-		}
-
-		return res(
-			ctx.json(
-				createFetchResult({
-					available_on_subdomain,
-					id: "abc12345",
-					etag: "etag98765",
-					pipeline_hash: "hash9999",
-					mutable_pipeline_id: "mutableId",
-					tag: "sample-tag",
-					deployment_id: "Galaxy-Class",
-				})
-			)
-		);
-	}
-}
-
-/** Create a mock handler for the request to get the account's subdomain. */
-export function mockSubDomainRequest(
-	subdomain = "test-sub-domain",
-	registeredWorkersDev = true
-) {
-	if (registeredWorkersDev) {
-		msw.use(
-			rest.get("*/accounts/:accountId/workers/subdomain", (req, res, ctx) => {
-				return res.once(ctx.json(createFetchResult({ subdomain })));
-			})
-		);
-	} else {
-		msw.use(
-			rest.get("*/accounts/:accountId/workers/subdomain", (req, res, ctx) => {
-				return res.once(
-					ctx.json(
-						createFetchResult(null, false, [
-							{ code: 10007, message: "haven't registered workers.dev" },
-						])
-					)
-				);
-			})
-		);
-	}
-}
 //
 //
 //

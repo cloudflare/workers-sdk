@@ -7,7 +7,10 @@ jobs:
     if: ${{ github.repository_owner == 'cloudflare' }}
     name: Build & Publish a Prerelease to the Adhoc Registry
     runs-on: ubuntu-latest
-
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    timeout-minutes: 30
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
@@ -36,6 +39,8 @@ jobs:
         # `extract-runtime-versions.mjs` needs to be able to resolve `miniflare`, but we want to have the correct
         # `package.json` versions when we build packages for packing
         run: pnpm run build --filter miniflare
+        env:
+          CI_OS: ${{ runner.os }}
 
       - name: Extract runtime versions
         run: node .github/extract-runtime-versions.mjs # extract versions before modifying version to include commit hash
@@ -63,6 +68,7 @@ jobs:
           NODE_ENV: "production"
           ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
           ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
+          CI_OS: ${{ runner.os }}
 
       - name: Pack miniflare
         run: pnpm pack

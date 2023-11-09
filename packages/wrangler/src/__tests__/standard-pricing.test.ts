@@ -1,7 +1,8 @@
 import { rest } from "msw";
-import { mockSubDomainRequest, mockUploadWorkerRequest } from "./deploy.test";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { mockUploadWorkerRequest } from "./helpers/mock-upload-worker";
+import { mockSubDomainRequest } from "./helpers/mock-workers-subdomain";
 import {
 	createFetchResult,
 	msw,
@@ -11,7 +12,6 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import writeWranglerToml from "./helpers/write-wrangler-toml";
-
 function mockStandardEnabled(enabled: boolean, enterprise = false) {
 	msw.use(
 		rest.get("*/accounts/:accountId/workers/standard", (req, res, ctx) => {

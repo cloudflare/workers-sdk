@@ -1,16 +1,17 @@
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import { UnstableDevWorker, unstable_dev } from "wrangler";
+import path from "node:path";
 describe("Service Bindings", () => {
 	let aWorker: UnstableDevWorker;
 
 	let bWorker: UnstableDevWorker;
 
 	beforeAll(async () => {
-		bWorker = await unstable_dev("./b/index.ts", {
-			config: "./b/wrangler.toml",
+		bWorker = await unstable_dev(path.join(__dirname, "../b/index.ts"), {
+			config: path.join(__dirname, "../b/wrangler.toml"),
 		});
-		aWorker = await unstable_dev("./a/index.ts", {
-			config: "./a/wrangler.toml",
+		aWorker = await unstable_dev(path.join(__dirname, "../a/index.ts"), {
+			config: path.join(__dirname, "../a/wrangler.toml"),
 		});
 		// Service registry is polled every 300ms,
 		// so let's give worker A some time to find B

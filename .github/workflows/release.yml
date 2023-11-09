@@ -7,6 +7,11 @@ on:
 
 jobs:
   release:
+    timeout-minutes: 30
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+
     if: ${{ github.repository_owner == 'cloudflare' }}
     name: Release
     runs-on: ubuntu-latest
@@ -38,6 +43,8 @@ jobs:
 
       - name: Check the build
         run: pnpm run build
+        env:
+          CI_OS: ${{ runner.os }}
 
       - name: Check for other errors
         run: pnpm run check

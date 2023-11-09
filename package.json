@@ -13,14 +13,13 @@
 		"build": "dotenv -- turbo build",
 		"check": "dotenv -- turbo check:lint check:type check:format type:tests",
 		"check:format": "prettier . --check --ignore-unknown",
-		"check:lint": "dotenv -- turbo check:lint",
+		"check:lint": "node ensure-turbo-build-output.mjs && dotenv -- turbo check:lint",
 		"check:type": "dotenv -- turbo check:type type:tests",
 		"dev": "dotenv -- turbo dev",
 		"fix": "pnpm run prettify && dotenv -- turbo check:lint -- --fix",
 		"prettify": "prettier . --write --ignore-unknown",
-		"test": "dotenv -- turbo test --concurrency=1",
-		"test:ci": "dotenv -- turbo test:ci --filter=!local-mode-tests --filter=!playground-preview-worker --filter=!no-bundle-import --filter=!pages-functions-app --filter=!pages-plugin-mounted-on-root-app --filter=!workers.new --concurrency=1",
-		"test:ci:quarantine": "dotenv -- turbo test:ci --filter=local-mode-tests --filter=pages-functions-app --filter=pages-plugin-mounted-on-root-app --filter=playground-preview-worker --filter=no-bundle-import --filter=workers.new --concurrency=1",
+		"test": "dotenv -- turbo test",
+		"test:ci": "vitest run && dotenv -- turbo test:ci --filter=wrangler --filter=miniflare",
 		"test:watch": "turbo test:watch",
 		"type:tests": "dotenv -- turbo type:tests",
 		"gen:package": "turbo gen package"
@@ -38,7 +37,7 @@
 		"rimraf": "^5.0.1",
 		"typescript": "^4.8.4",
 		"vite": "^4.0.4",
-		"vitest": "^0.31.1"
+		"vitest": "^0.34.6"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20230821.0",

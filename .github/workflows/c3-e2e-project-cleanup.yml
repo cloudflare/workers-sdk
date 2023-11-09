@@ -10,6 +10,7 @@ env:
   node-version: 18.17.1
 jobs:
   cleanup:
+    timeout-minutes: 30
     name: "Cleanup Test Projects"
     if: ${{ github.repository_owner == 'cloudflare' }}
     runs-on: ubuntu-latest

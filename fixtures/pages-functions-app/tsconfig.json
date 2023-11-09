@@ -6,6 +6,7 @@
 		"lib": ["ES2020"],
 		"types": ["@cloudflare/workers-types"],
 		"moduleResolution": "node",
-		"noEmit": true
+		"noEmit": true,
+		"skipLibCheck": true
 	}
 }

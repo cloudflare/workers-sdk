@@ -6,6 +6,10 @@ on:
       - main
 jobs:
   prerelease:
+    timeout-minutes: 30
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
     if: ${{ github.repository_owner == 'cloudflare' }}
     name: Build & Publish a beta release to NPM
     runs-on: ubuntu-latest
@@ -49,6 +53,7 @@ jobs:
         run: pnpm run build
         env:
           NODE_ENV: "production"
+          CI_OS: ${{ runner.os }}
 
       - name: Check for errors
         run: pnpm run check
@@ -70,6 +75,7 @@ jobs:
         working-directory: packages/wrangler
 
   publish_prerelease_registry:
+    timeout-minutes: 30
     if: ${{ github.repository_owner == 'cloudflare' }}
     name: Publish Prerelease Registry
     needs: prerelease
@@ -105,6 +111,7 @@ jobs:
           NODE_ENV: "production"
           ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
           ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
+          CI_OS: ${{ runner.os }}
 
       - name: Build & Publish Prerelease Registry
         run: pnpm run publish

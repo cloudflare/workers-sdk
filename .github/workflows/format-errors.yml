@@ -37,6 +37,7 @@ jobs:
         run: pnpm run build
         env:
           NODE_ENV: "production"
+          CI_OS: ${{ runner.os }}
 
       - name: Build & Publish Worker
         run: pnpm run publish
