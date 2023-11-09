@@ -350,6 +350,7 @@ export async function syncAssets(
 				Array.from(namespaceKeys)
 			);
 		} else {
+			const promises: Promise<void>[] = [];
 			for (const namespaceKey of namespaceKeys) {
 				const expiration = namespaceKeyInfoMap.get(namespaceKey)?.expiration;
 
@@ -363,17 +364,22 @@ export async function syncAssets(
 					continue;
 				}
 
-				const currentValue = await getKVKeyValue(
-					accountId,
-					namespace,
-					namespaceKey
+				promises.push(
+					(async () => {
+						const currentValue = await getKVKeyValue(
+							accountId,
+							namespace,
+							namespaceKey
+						);
+						await putKVKeyValue(accountId, namespace, {
+							key: namespaceKey,
+							value: Buffer.from(currentValue),
+							expiration_ttl: oldAssetTTL,
+						});
+					})()
 				);
-				await putKVKeyValue(accountId, namespace, {
-					key: namespaceKey,
-					value: Buffer.from(currentValue),
-					expiration_ttl: oldAssetTTL,
-				});
 			}
+			await Promise.all(promises);
 		}
 	}
 	logger.log("↗️  Done syncing assets");
