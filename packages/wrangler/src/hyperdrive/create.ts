@@ -80,7 +80,7 @@ export async function handler(
 				scheme: url.protocol.replace(":", ""),
 				database: url.pathname.replace("/", ""),
 				user: url.username,
-				password: url.password,
+				password: decodeIfURLEncoded(url.password),
 			},
 			caching: { disabled: args.cachingDisabled ?? false },
 		});
@@ -88,5 +88,15 @@ export async function handler(
 			`✅ Created new Hyperdrive config\n`,
 			JSON.stringify(database, null, 2)
 		);
+	}
+}
+
+function decodeIfURLEncoded(str: string): string {
+	try {
+		const decoded = decodeURIComponent(str);
+		return str === decoded ? str : decoded;
+	} catch (e) {
+		logger.error(`Error while trying to decode password`, e);
+		return str;
 	}
 }

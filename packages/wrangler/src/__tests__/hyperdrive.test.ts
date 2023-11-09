@@ -151,6 +151,30 @@ describe("hyperdrive commands", () => {
 	`);
 	});
 
+	it("should handle creating a hyperdrive config if the password is URL encoded", async () => {
+		mockHyperdriveRequest();
+		await runWrangler(
+			"hyperdrive create test123 --connection-string='postgresql://test:a%23%3F81n%287@foo.us-east-2.aws.neon.tech/neondb'"
+		);
+		expect(std.out).toMatchInlineSnapshot(`
+		"🚧 Creating 'test123'
+		✅ Created new Hyperdrive config
+		 {
+		  \\"id\\": \\"7a040c1eee714e91a30ea6707a2d125c\\",
+		  \\"name\\": \\"test123\\",
+		  \\"origin\\": {
+		    \\"host\\": \\"foo.us-east-2.aws.neon.tech\\",
+		    \\"port\\": 5432,
+		    \\"database\\": \\"neondb\\",
+		    \\"user\\": \\"test\\"
+		  },
+		  \\"caching\\": {
+		    \\"disabled\\": false
+		  }
+		}"
+	`);
+	});
+
 	it("should handle listing configs", async () => {
 		mockHyperdriveRequest();
 		await runWrangler("hyperdrive list");
