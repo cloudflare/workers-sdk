@@ -9,8 +9,8 @@ export function getAccessibleHosts(ipv4Only = false): string[] {
 			// @ts-expect-error the `family` property is numeric as of Node.js 18.0.0
 			if (family === "IPv4" || family === 4) {
 				hosts.push(address);
-			} else if (!ipv4Only && (family === "IPv6" || family === 6)) {
-				hosts.push(`[${address}]`);
+			} else if (!ipv4Only) {
+				hosts.push(address);
 			}
 		});
 	});
