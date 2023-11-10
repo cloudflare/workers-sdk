@@ -93,8 +93,7 @@ export async function handler(
 
 function decodeIfURLEncoded(str: string): string {
 	try {
-		const decoded = decodeURIComponent(str);
-		return str === decoded ? str : decoded;
+		return decodeURIComponent(str);
 	} catch (e) {
 		logger.error(`Error while trying to decode password`, e);
 		return str;
