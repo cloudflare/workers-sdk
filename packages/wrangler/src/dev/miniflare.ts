@@ -411,7 +411,7 @@ function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 	};
 
 	stdout.on("data", (chunk: Buffer | string) => {
-		chunk = chunk.toString();
+		chunk = chunk.toString().trim();
 
 		if (classifiers.isBarf(chunk)) {
 			// this is a big chonky barf from workerd that we want to hijack to cleanup/ignore
@@ -434,7 +434,7 @@ function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 	});
 
 	stderr.on("data", (chunk: Buffer | string) => {
-		chunk = chunk.toString();
+		chunk = chunk.toString().trim();
 
 		if (classifiers.isBarf(chunk)) {
 			// this is a big chonky barf from workerd that we want to hijack to cleanup/ignore
