@@ -37,6 +37,9 @@
 		"lint:fix": "pnpm run lint -- --fix",
 		"types:build": "node scripts/types.mjs tsconfig.json && node scripts/types.mjs src/workers/tsconfig.json"
 	},
+	"bin": {
+		"miniflare": "bootstrap.js"
+	},
 	"dependencies": {
 		"acorn": "^8.8.0",
 		"acorn-walk": "^8.2.0",

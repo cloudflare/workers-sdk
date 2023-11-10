@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 const { Log } = require(".");
 
 const log = new Log();
