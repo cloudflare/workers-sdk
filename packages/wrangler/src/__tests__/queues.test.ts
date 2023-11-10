@@ -84,14 +84,24 @@ describe("wrangler", () => {
 			it("should list queues on page 1 with no --page", async () => {
 				const expectedQueues: QueueResponse[] = [
 					{
+						queue_id: "5e1b9969eb974d8c99c48d19df104c7a",
 						queue_name: "queue-1",
 						created_on: "01-01-2001",
 						modified_on: "01-01-2001",
+						producers: [],
+						producers_total_count: 0,
+						consumers: [],
+						consumers_total_count: 0,
 					},
 					{
+						queue_id: "def19fa3787741579c9088eb850474af",
 						queue_name: "queue-2",
 						created_on: "01-01-2001",
 						modified_on: "01-01-2001",
+						producers: [],
+						producers_total_count: 0,
+						consumers: [],
+						consumers_total_count: 0,
 					},
 				];
 				const expectedPage = 1;
@@ -99,16 +109,28 @@ describe("wrangler", () => {
 				await runWrangler("queues list");
 
 				expect(std.err).toMatchInlineSnapshot(`""`);
-				const buckets = JSON.parse(std.out);
-				expect(buckets).toEqual(expectedQueues);
+				expect(std.out).toMatchInlineSnapshot(`
+			"┌──────────────────────────────────┬─────────┬────────────┬─────────────┬───────────┬───────────┐
+			│ id                               │ name    │ created_on │ modified_on │ producers │ consumers │
+			├──────────────────────────────────┼─────────┼────────────┼─────────────┼───────────┼───────────┤
+			│ 5e1b9969eb974d8c99c48d19df104c7a │ queue-1 │ 01-01-2001 │ 01-01-2001  │ 0         │ 0         │
+			├──────────────────────────────────┼─────────┼────────────┼─────────────┼───────────┼───────────┤
+			│ def19fa3787741579c9088eb850474af │ queue-2 │ 01-01-2001 │ 01-01-2001  │ 0         │ 0         │
+			└──────────────────────────────────┴─────────┴────────────┴─────────────┴───────────┴───────────┘"
+		`);
 			});
 
 			it("should list queues using --page=2", async () => {
 				const expectedQueues: QueueResponse[] = [
 					{
+						queue_id: "7f7c2df28cee49ad-bbb46c9e5426e850",
 						queue_name: "queue-100",
 						created_on: "01-01-2001",
 						modified_on: "01-01-2001",
+						producers: [],
+						producers_total_count: 0,
+						consumers: [],
+						consumers_total_count: 0,
 					},
 				];
 				const expectedPage = 2;
@@ -116,8 +138,13 @@ describe("wrangler", () => {
 				await runWrangler("queues list --page=2");
 
 				expect(std.err).toMatchInlineSnapshot(`""`);
-				const buckets = JSON.parse(std.out);
-				expect(buckets).toEqual(expectedQueues);
+				expect(std.out).toMatchInlineSnapshot(`
+			"┌───────────────────────────────────┬───────────┬────────────┬─────────────┬───────────┬───────────┐
+			│ id                                │ name      │ created_on │ modified_on │ producers │ consumers │
+			├───────────────────────────────────┼───────────┼────────────┼─────────────┼───────────┼───────────┤
+			│ 7f7c2df28cee49ad-bbb46c9e5426e850 │ queue-100 │ 01-01-2001 │ 01-01-2001  │ 0         │ 0         │
+			└───────────────────────────────────┴───────────┴────────────┴─────────────┴───────────┴───────────┘"
+		`);
 			});
 		});
 

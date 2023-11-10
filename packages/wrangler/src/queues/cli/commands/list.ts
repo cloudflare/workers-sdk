@@ -21,5 +21,14 @@ export async function handler(
 	const config = readConfig(args.config, args);
 
 	const queues = await listQueues(config, args.page);
-	logger.log(JSON.stringify(queues));
+	logger.table(
+		queues.map((queue) => ({
+			id: queue.queue_id,
+			name: queue.queue_name,
+			created_on: queue.created_on,
+			modified_on: queue.modified_on,
+			producers: queue.producers_total_count.toString(),
+			consumers: queue.consumers_total_count.toString(),
+		}))
+	);
 }
