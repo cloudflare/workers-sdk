@@ -5,6 +5,7 @@ import { getEnvironmentVariableFactory } from "../environment-variables/factory"
 import { getBasePath } from "../paths";
 import { logger } from "../logger";
 import { Mutex } from "miniflare";
+import onExit from "signal-exit";
 
 const getDebugFilepath = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_DEBUG_LOG",
@@ -29,7 +30,7 @@ const getDebugFilepath = getEnvironmentVariableFactory({
 const debugLogFilepath = getDebugFilepath();
 const mutex = new Mutex();
 
-let hasLoggedLocation = false;
+let hasScheduledLocationLog = false;
 let hasLoggedError = false;
 
 export async function appendToDebugLogFile(...args: unknown[]) {
@@ -47,8 +48,9 @@ ${format(...args)}
 		})
 	);
 
-	if (hasLoggedLocation) return;
-	hasLoggedLocation = true;
-	logger.info(`🐛 Writing debug logs to "${debugLogFilepath}"`);
-	// TODO: move this into an exit hook so it isn't the first thing logged
+	if (hasScheduledLocationLog) return;
+	hasScheduledLocationLog = true;
+	onExit(() => {
+		logger.info(`🐛 Writing debug logs to "${debugLogFilepath}"`);
+	});
 }

@@ -46,6 +46,7 @@ async function runDevSession(
 	session: (session: Session) => MaybePromise
 ) {
 	let pid;
+	let bg: Awaited<ReturnType<typeof shellac.bg>> | undefined;
 	try {
 		let port: number;
 		if (!flags.includes("--port")) {
@@ -59,7 +60,7 @@ async function runDevSession(
 
 		// Must use the `in` statement in the shellac script rather than `.in()` modifier on the `shellac` object
 		// otherwise the working directory does not get picked up.
-		const bg = await shellac.env(process.env).bg`
+		bg = await shellac.env(process.env).bg`
 		in ${workerPath} {
 			exits {
         $ ${WRANGLER} dev ${flags}
@@ -74,13 +75,20 @@ async function runDevSession(
 			stdout: "",
 			stderr: "",
 		};
-		bg.process.stdout.on("data", (chunk) => (sessionData.stdout += chunk));
+		bg.process.stdout.on(
+			"data",
+			(chunk) => console.log(chunk.toString()) || (sessionData.stdout += chunk)
+		);
 		bg.process.stderr.on("data", (chunk) => (sessionData.stderr += chunk));
 
 		await session(sessionData);
 
 		return bg.promise;
 	} finally {
+		// bg?.process.kill("SIGINT");
+		if (pid) process.kill(pid, "SIGINT");
+		await setTimeout(1000);
+		// bg?.process.kill();
 		if (pid) process.kill(pid);
 	}
 }
@@ -386,64 +394,73 @@ describe("writes debug logs to hidden file", () => {
 	});
 
 	it("writes to file when --log-level = debug", async () => {
-		await a.runDevSession("--log-level debug", async (session) => {
-			const normalize = (text: string) =>
-				normalizeOutput(text, { [session.port]: "<PORT>" });
+		let normalize = (text: string) => text;
 
-			await waitForPortToBeBound(session.port);
+		const final = await a.runDevSession(
+			"--log-level debug",
+			async (session) => {
+				normalize = (text: string) =>
+					normalizeOutput(text, { [session.port]: "<PORT>" });
 
-			await waitUntil(() => session.stdout.includes("🐛"));
+				await waitForPortToBeBound(session.port);
+			}
+		);
 
-			const filepath = session.stdout.match(
-				/🐛 Writing debug logs to "(.+\.log)"/
-			)?.[1];
-			assert(filepath);
+		// await waitUntil(() => final.stdout.includes("🐛"));
 
-			expect(existsSync(filepath)).toBe(true);
+		expect(normalize(final.stdout)).toMatchInlineSnapshot(`
+			"⎔ Starting local server...
+			[mf:inf] Ready on http://0.0.0.0:<PORT>
+			[mf:inf] - http://127.0.0.1:<PORT>
+			[mf:inf] - http://127.0.2.2:<PORT>
+			[mf:inf] - http://127.0.2.3:<PORT>
+			[mf:inf] - http://192.168.1.143:<PORT>
+			[mf:inf] - http://192.168.1.195:<PORT>
+			[mf:inf] GET / 200 OK (TIMINGS)
+			"
+		`);
+		expect(normalize(final.stderr)).toMatchInlineSnapshot(`
+			"X [ERROR] workerd/server/server.c++:2984: info: Inspector is listening
+			X [ERROR] workerd/server/server.c++:1174: info: Inspector client attaching [core:user:a]
+			"
+		`);
 
-			expect(normalize(session.stdout)).toMatchInlineSnapshot(`
-				"🐛 Writing debug logs to \\"../../../../../../../../Users/sethi/code/workers-sdk/packages/wrangler/.wrangler/wrangler-debug-<TIMESTAMP>.log\\"
-				⎔ Starting local server...
-				[mf:inf] Ready on http://0.0.0.0:<PORT>
-				[mf:inf] - http://127.0.0.1:<PORT>
-				[mf:inf] - http://127.0.2.2:<PORT>
-				[mf:inf] - http://127.0.2.3:<PORT>
-				[mf:inf] - http://172.16.29.60:<PORT>
-				[mf:inf] GET / 200 OK (TIMINGS)
-				"
-			`);
-			expect(normalize(session.stderr)).toMatchInlineSnapshot(`
-				"X [ERROR] workerd/server/server.c++:2984: info: Inspector is listening
-				X [ERROR] workerd/server/server.c++:1174: info: Inspector client attaching [core:user:a]
-				"
-			`);
-		});
+		const filepath = final.stdout.match(
+			/🐛 Writing debug logs to "(.+\.log)"/
+		)?.[1];
+		assert(filepath);
+
+		expect(existsSync(filepath)).toBe(true);
 	});
 
 	it("does NOT write to file when --log-level != debug", async () => {
-		await a.runDevSession("", async (session) => {
-			const normalize = (text: string) =>
+		let normalize = (text: string) => text;
+
+		const final = await a.runDevSession("", async (session) => {
+			normalize = (text: string) =>
 				normalizeOutput(text, { [session.port]: "<PORT>" });
 
 			await waitForPortToBeBound(session.port);
-
-			const filepath = session.stdout.match(
-				/🐛 Writing debug logs to "(.+\.log)"/
-			)?.[1];
-
-			expect(filepath).toBeUndefined();
-
-			expect(normalize(session.stdout)).toMatchInlineSnapshot(`
-				"⎔ Starting local server...
-				[mf:inf] Ready on http://0.0.0.0:<PORT>
-				[mf:inf] - http://127.0.0.1:<PORT>
-				[mf:inf] - http://127.0.2.2:<PORT>
-				[mf:inf] - http://127.0.2.3:<PORT>
-				[mf:inf] - http://172.16.29.60:<PORT>
-				"
-			`);
-			expect(normalize(session.stderr)).toMatchInlineSnapshot('""');
 		});
+
+		const filepath = final.stdout.match(
+			/🐛 Writing debug logs to "(.+\.log)"/
+		)?.[1];
+
+		expect(filepath).toBeUndefined();
+
+		expect(normalize(final.stdout)).toMatchInlineSnapshot(`
+			"⎔ Starting local server...
+			[mf:inf] Ready on http://0.0.0.0:<PORT>
+			[mf:inf] - http://127.0.0.1:<PORT>
+			[mf:inf] - http://127.0.2.2:<PORT>
+			[mf:inf] - http://127.0.2.3:<PORT>
+			[mf:inf] - http://192.168.1.143:<PORT>
+			[mf:inf] - http://192.168.1.195:<PORT>
+			[mf:inf] GET / 200 OK (TIMINGS)
+			"
+		`);
+		expect(normalize(final.stderr)).toMatchInlineSnapshot('""');
 	});
 
 	it("rewrites address-in-use error logs", async () => {
@@ -464,15 +481,6 @@ describe("writes debug logs to hidden file", () => {
 					)
 				);
 
-				// ensure the workerd error message IS NOT present
-				expect(normalize(sessionB.stderr)).not.toContain(
-					"Address already in use; toString() = "
-				);
-				// ensure th wrangler (nicer) error message IS present
-				expect(normalize(sessionB.stderr)).toContain(
-					"[ERROR] Address (0.0.0.0:<PORT>) already in use."
-				);
-
 				// snapshot stdout/stderr so we can see what the user sees
 				expect(normalize(sessionB.stdout)).toMatchInlineSnapshot(`
 						"⎔ Starting local server...
@@ -483,6 +491,15 @@ describe("writes debug logs to hidden file", () => {
 						X [ERROR] MiniflareCoreError [ERR_RUNTIME_FAILURE]: The Workers runtime failed to start. There is likely additional logging output above.
 						"
 					`);
+
+				// ensure the workerd error message IS NOT present
+				expect(normalize(sessionB.stderr)).not.toContain(
+					"Address already in use; toString() = "
+				);
+				// ensure th wrangler (nicer) error message IS present
+				expect(normalize(sessionB.stderr)).toContain(
+					"[ERROR] Address (0.0.0.0:<PORT>) already in use."
+				);
 			});
 		});
 	});
