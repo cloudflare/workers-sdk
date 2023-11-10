@@ -22,19 +22,6 @@ const waitForPortToBeBound = async (port: number) => {
 	);
 };
 
-const waitUntil = async (
-	predicate: () => MaybePromise<boolean>,
-	intervalMs = 100
-) => {
-	await retry(
-		(result) => !result,
-		async () => {
-			await setTimeout(intervalMs);
-			return predicate();
-		}
-	);
-};
-
 const waitUntilOutputContains = async (
 	session: SessionData,
 	substring: string,
@@ -503,7 +490,7 @@ describe("writes debug logs to hidden file", () => {
 			async (session) => {
 				await waitForPortToBeBound(session.port);
 
-				await waitUntil(() => session.stdout.includes("🐛"));
+				await waitUntilOutputContains(session, "🐛 Writing debug logs to");
 
 				await setTimeout(1000); // wait a bit to ensure the file is written to disk
 			}
