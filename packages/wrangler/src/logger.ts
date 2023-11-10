@@ -3,8 +3,8 @@ import chalk from "chalk";
 import CLITable from "cli-table3";
 import { formatMessagesSync } from "esbuild";
 import { getEnvironmentVariableFactory } from "./environment-variables/factory";
-import type { Message } from "esbuild";
 import { appendToDebugLogFile } from "./utils/debug-log-file";
+import type { Message } from "esbuild";
 export const LOGGER_LEVELS = {
 	none: -1,
 	error: 0,
@@ -75,7 +75,7 @@ export class Logger {
 	private doLog(messageLevel: Exclude<LoggerLevel, "none">, args: unknown[]) {
 		if (LOGGER_LEVELS[this.loggerLevel] >= LOGGER_LEVELS[messageLevel]) {
 			if (messageLevel === "debug") {
-				appendToDebugLogFile(...args);
+				void appendToDebugLogFile(...args);
 				return;
 			}
 
