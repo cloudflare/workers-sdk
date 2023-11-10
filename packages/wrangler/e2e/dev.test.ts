@@ -479,64 +479,58 @@ describe("writes debug logs to hidden file", () => {
 	});
 
 	it("writes to file when --log-level = debug", async () => {
-		await a.runDevSession("--log-level debug", async (session) => {
-			const normalize = (text: string) =>
-				normalizeOutput(text, { [session.port]: "<PORT>" });
+		const finalA = await a.runDevSession(
+			"--log-level debug",
+			async (session) => {
+				await waitForPortToBeBound(session.port);
 
-			await waitForPortToBeBound(session.port);
+				await waitUntil(() => session.stdout.includes("🐛"));
+			}
+		);
 
-			await waitUntil(() => session.stdout.includes("🐛"));
+		const filepath = finalA.stdout.match(
+			/🐛 Writing debug logs to "(.+\.log)"/
+		)?.[1];
+		assert(filepath);
 
-			const filepath = session.stdout.match(
-				/🐛 Writing debug logs to "(.+\.log)"/
-			)?.[1];
-			assert(filepath);
+		expect(existsSync(filepath)).toBe(true);
 
-			expect(existsSync(filepath)).toBe(true);
-
-			expect(normalize(session.stdout)).toMatchInlineSnapshot(`
-				"🐛 Writing debug logs to \\"../../../../../../../../Users/sethi/code/workers-sdk/packages/wrangler/.wrangler/wrangler-debug-<TIMESTAMP>.log\\"
-				⎔ Starting local server...
-				[mf:inf] Ready on http://0.0.0.0:<PORT>
-				[mf:inf] - http://127.0.0.1:<PORT>
-				[mf:inf] - http://127.0.2.2:<PORT>
-				[mf:inf] - http://127.0.2.3:<PORT>
-				[mf:inf] - http://172.16.29.60:<PORT>
-				[mf:inf] GET / 200 OK (TIMINGS)
-				"
-			`);
-			expect(normalize(session.stderr)).toMatchInlineSnapshot(`
-				"X [ERROR] workerd/server/server.c++:2984: info: Inspector is listening
-				X [ERROR] workerd/server/server.c++:1174: info: Inspector client attaching [core:user:a]
-				"
-			`);
-		});
+		expect(normalizeOutput(finalA.stdout)).toMatchInlineSnapshot(`
+			"🐛 Writing debug logs to \\"../../../../../../../../Users/sethi/code/workers-sdk/packages/wrangler/.wrangler/wrangler-debug-<TIMESTAMP>.log\\"
+			⎔ Starting local server...
+			[mf:inf] Ready on http://<LOCAL_IP>:<PORT>
+			[mf:inf] - http://<LOCAL_IP>:<PORT>
+			[mf:inf] GET / 200 OK (TIMINGS)
+			"
+		`);
+		expect(normalizeOutput(finalA.stderr)).toMatchInlineSnapshot(`
+			"X [ERROR] workerd/server/server.c++:2984: info: Inspector is listening
+			X [ERROR] workerd/server/server.c++:1174: info: Inspector client attaching [core:user:a]
+			"
+		`);
 	});
 
 	it("does NOT write to file when --log-level != debug", async () => {
-		await a.runDevSession("", async (session) => {
+		const finalA = await a.runDevSession("", async (session) => {
 			const normalize = (text: string) =>
 				normalizeOutput(text, { [session.port]: "<PORT>" });
 
 			await waitForPortToBeBound(session.port);
-
-			const filepath = session.stdout.match(
-				/🐛 Writing debug logs to "(.+\.log)"/
-			)?.[1];
-
-			expect(filepath).toBeUndefined();
-
-			expect(normalize(session.stdout)).toMatchInlineSnapshot(`
-				"⎔ Starting local server...
-				[mf:inf] Ready on http://0.0.0.0:<PORT>
-				[mf:inf] - http://127.0.0.1:<PORT>
-				[mf:inf] - http://127.0.2.2:<PORT>
-				[mf:inf] - http://127.0.2.3:<PORT>
-				[mf:inf] - http://172.16.29.60:<PORT>
-				"
-			`);
-			expect(normalize(session.stderr)).toMatchInlineSnapshot('""');
 		});
+
+		const filepath = finalA.stdout.match(
+			/🐛 Writing debug logs to "(.+\.log)"/
+		)?.[1];
+
+		expect(filepath).toBeUndefined();
+
+		expect(normalizeOutput(finalA.stdout)).toMatchInlineSnapshot(`
+			"⎔ Starting local server...
+			[mf:inf] Ready on http://<LOCAL_IP>:<PORT>
+			[mf:inf] - http://<LOCAL_IP>:<PORT>
+			"
+		`);
+		expect(normalizeOutput(finalA.stderr)).toMatchInlineSnapshot('""');
 	});
 
 	it("rewrites address-in-use error logs", async () => {
@@ -549,34 +543,37 @@ describe("writes debug logs to hidden file", () => {
 			await waitForPortToBeBound(sessionA.port);
 
 			// 3. try to start worker B on the same port
-			await b.runDevSession(`--port ${sessionA.port}`, async (sessionB) => {
-				// 4. wait until session B emits an "Address in use" error log
-				await waitUntil(() =>
-					normalize(sessionB.stderr).includes(
-						"[ERROR] Address (0.0.0.0:<PORT>) already in use."
-					)
-				);
+			const finalB = await b.runDevSession(
+				`--port ${sessionA.port}`,
+				async (sessionB) => {
+					// 4. wait until session B emits an "Address in use" error log
+					await waitUntil(() =>
+						normalize(sessionB.stderr).includes(
+							"[ERROR] Address (0.0.0.0:<PORT>) already in use."
+						)
+					);
+				}
+			);
 
-				// ensure the workerd error message IS NOT present
-				expect(normalize(sessionB.stderr)).not.toContain(
-					"Address already in use; toString() = "
-				);
-				// ensure th wrangler (nicer) error message IS present
-				expect(normalize(sessionB.stderr)).toContain(
-					"[ERROR] Address (0.0.0.0:<PORT>) already in use."
-				);
+			// ensure the workerd error message IS NOT present
+			expect(normalize(finalB.stderr)).not.toContain(
+				"Address already in use; toString() = "
+			);
+			// ensure th wrangler (nicer) error message IS present
+			expect(normalize(finalB.stderr)).toContain(
+				"[ERROR] Address (0.0.0.0:<PORT>) already in use."
+			);
 
-				// snapshot stdout/stderr so we can see what the user sees
-				expect(normalize(sessionB.stdout)).toMatchInlineSnapshot(`
-						"⎔ Starting local server...
-						"
-					`);
-				expect(normalize(sessionB.stderr)).toMatchInlineSnapshot(`
-						"X [ERROR] Address (0.0.0.0:<PORT>) already in use. Please check that you are not already running a server on this address or specify a different port with --port.
-						X [ERROR] MiniflareCoreError [ERR_RUNTIME_FAILURE]: The Workers runtime failed to start. There is likely additional logging output above.
-						"
-					`);
-			});
+			// snapshot stdout/stderr so we can see what the user sees
+			expect(normalize(finalB.stdout)).toMatchInlineSnapshot(`
+				"⎔ Starting local server...
+				"
+			`);
+			expect(normalize(finalB.stderr)).toMatchInlineSnapshot(`
+				"X [ERROR] Address (0.0.0.0:<PORT>) already in use. Please check that you are not already running a server on this address or specify a different port with --port.
+				X [ERROR] MiniflareCoreError [ERR_RUNTIME_FAILURE]: The Workers runtime failed to start. There is likely additional logging output above.
+				"
+			`);
 		});
 	});
 });

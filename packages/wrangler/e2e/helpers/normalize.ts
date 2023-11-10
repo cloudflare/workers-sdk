@@ -19,6 +19,7 @@ export function normalizeOutput(
 		stripDevTimings,
 		stripEmptyNewlines,
 		normalizeDebugLogFilepath,
+		squashLocalNetworkBindings,
 	];
 	for (const f of functions) {
 		stdout = f(stdout);
@@ -140,5 +141,15 @@ export function normalizeDebugLogFilepath(stdout: string): string {
 	return stdout.replace(
 		/(🐛 Writing debug logs to ".+wrangler-debug)-.+\.log/,
 		"$1-<TIMESTAMP>.log"
+	);
+}
+
+/**
+ * Squash the one or more local network bindings from `$ wrangler dev`
+ */
+export function squashLocalNetworkBindings(stdout: string): string {
+	return stdout.replace(
+		/(\[mf:inf\] Ready on http:\/\/.+:\d{4,5})(\n\[mf:inf\] - http:\/\/.+:\d{4,5})+/,
+		"[mf:inf] Ready on http://<LOCAL_IP>:<PORT>\n[mf:inf] - http://<LOCAL_IP>:<PORT>"
 	);
 }
