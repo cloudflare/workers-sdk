@@ -16,35 +16,30 @@ export interface ParsedRules {
 	removedRules: Rule[];
 }
 
+interface RedundantRule {
+	index: number;
+	default: boolean;
+}
+
 export function parseRules(userRules: Rule[] = []): ParsedRules {
 	const rules: Rule[] = [...userRules, ...DEFAULT_MODULE_RULES];
 
 	const completedRuleLocations: Record<string, number> = {};
+	const redudantRules: Record<string, RedundantRule[]> = {};
 	let index = 0;
 	const rulesToRemove: Rule[] = [];
 	for (const rule of rules) {
 		if (rule.type in completedRuleLocations) {
 			if (rules[completedRuleLocations[rule.type]].fallthrough !== false) {
-				if (index < userRules.length) {
-					logger.warn(
-						`The module rule at position ${index} (${JSON.stringify(
-							rule
-						)}) has the same type as a previous rule (at position ${
-							completedRuleLocations[rule.type]
-						}, ${JSON.stringify(
-							rules[completedRuleLocations[rule.type]]
-						)}). This rule will be ignored. To use the previous rule, add \`fallthrough = true\` to allow this one to also be used, or \`fallthrough = false\` to silence this warning.`
-					);
+				if (rule.type in redudantRules) {
+					redudantRules[rule.type].push({
+						index,
+						default: index >= userRules.length,
+					});
 				} else {
-					logger.warn(
-						`The default module rule ${JSON.stringify(
-							rule
-						)} has the same type as a previous rule (at position ${
-							completedRuleLocations[rule.type]
-						}, ${JSON.stringify(
-							rules[completedRuleLocations[rule.type]]
-						)}). This rule will be ignored. To use the previous rule, add \`fallthrough = true\` to allow the default one to also be used, or \`fallthrough = false\` to silence this warning.`
-					);
+					redudantRules[rule.type] = [
+						{ index, default: index >= userRules.length },
+					];
 				}
 			}
 
@@ -54,6 +49,28 @@ export function parseRules(userRules: Rule[] = []): ParsedRules {
 			completedRuleLocations[rule.type] = index;
 		}
 		index++;
+	}
+
+	for (const completedRuleType in completedRuleLocations) {
+		const r = redudantRules[completedRuleType];
+		if (r) {
+			const completedRuleIndex = completedRuleLocations[completedRuleType];
+			let warning = `The ${
+				completedRuleIndex >= userRules.length ? "default " : ""
+			}module rule ${JSON.stringify(
+				rules[completedRuleIndex]
+			)} does not have a fallback, the following rules will be ignored:`;
+
+			for (const rule of r) {
+				warning += `\n ${JSON.stringify(rules[rule.index])}${
+					rule.default ? " (DEFAULT)" : ""
+				}`;
+			}
+
+			warning += `\n\nAdd \`fallthrough = true\` to rule to allow next rule to be used or \`fallthrough = false\` to slience this warning`;
+
+			logger.warn(warning);
+		}
 	}
 
 	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
