@@ -35,6 +35,24 @@ const waitUntil = async (
 	);
 };
 
+const waitUntilOutputContains = async (
+	session: SessionData,
+	substring: string,
+	intervalMs = 100
+) => {
+	await retry(
+		(stdout) => !stdout.includes(substring),
+		async () => {
+			await setTimeout(intervalMs);
+			return (
+				normalizeOutput(session.stdout) +
+				"\n\n\n" +
+				normalizeOutput(session.stderr)
+			);
+		}
+	);
+};
+
 interface SessionData {
 	port: number;
 	stdout: string;
@@ -71,7 +89,7 @@ async function runDevSession(
 		pid = bg.pid;
 
 		// sessionData is a mutable object where stdout/stderr update
-		const sessionData: Session = {
+		const sessionData: SessionData = {
 			port,
 			stdout: "",
 			stderr: "",
@@ -486,6 +504,8 @@ describe("writes debug logs to hidden file", () => {
 				await waitForPortToBeBound(session.port);
 
 				await waitUntil(() => session.stdout.includes("🐛"));
+
+				await setTimeout(1000); // wait a bit to ensure the file is written to disk
 			}
 		);
 
@@ -514,6 +534,8 @@ describe("writes debug logs to hidden file", () => {
 	it("does NOT write to file when --log-level != debug", async () => {
 		const finalA = await a.runDevSession("", async (session) => {
 			await waitForPortToBeBound(session.port);
+
+			await setTimeout(1000); // wait a bit to ensure no debug logs are written
 		});
 
 		const filepath = finalA.stdout.match(
@@ -526,6 +548,7 @@ describe("writes debug logs to hidden file", () => {
 			"⎔ Starting local server...
 			[mf:inf] Ready on http://<LOCAL_IP>:<PORT>
 			[mf:inf] - http://<LOCAL_IP>:<PORT>
+			[mf:inf] GET / 200 OK (TIMINGS)
 			"
 		`);
 		expect(normalizeOutput(finalA.stderr)).toMatchInlineSnapshot('""');
@@ -541,37 +564,33 @@ describe("writes debug logs to hidden file", () => {
 			await waitForPortToBeBound(sessionA.port);
 
 			// 3. try to start worker B on the same port
-			const finalB = await b.runDevSession(
-				`--port ${sessionA.port}`,
-				async (sessionB) => {
-					// 4. wait until session B emits an "Address in use" error log
-					await waitUntil(() =>
-						normalize(sessionB.stderr).includes(
-							"[ERROR] Address (0.0.0.0:<PORT>) already in use."
-						)
-					);
-				}
-			);
+			await b.runDevSession(`--port ${sessionA.port}`, async (sessionB) => {
+				// 4. wait until session B emits an "Address in use" error log
+				await waitUntilOutputContains(
+					sessionB,
+					"[ERROR] Address already in use"
+				);
 
-			// ensure the workerd error message IS NOT present
-			expect(normalize(finalB.stderr)).not.toContain(
-				"Address already in use; toString() = "
-			);
-			// ensure th wrangler (nicer) error message IS present
-			expect(normalize(finalB.stderr)).toContain(
-				"[ERROR] Address (0.0.0.0:<PORT>) already in use."
-			);
+				// ensure the workerd error message IS NOT present
+				expect(normalize(sessionB.stderr)).not.toContain(
+					"Address already in use; toString() = "
+				);
+				// ensure the wrangler (nicer) error message IS present
+				expect(normalize(sessionB.stderr)).toContain(
+					"[ERROR] Address already in use"
+				);
 
-			// snapshot stdout/stderr so we can see what the user sees
-			expect(normalize(finalB.stdout)).toMatchInlineSnapshot(`
-				"⎔ Starting local server...
-				"
-			`);
-			expect(normalize(finalB.stderr)).toMatchInlineSnapshot(`
-				"X [ERROR] Address (0.0.0.0:<PORT>) already in use. Please check that you are not already running a server on this address or specify a different port with --port.
-				X [ERROR] MiniflareCoreError [ERR_RUNTIME_FAILURE]: The Workers runtime failed to start. There is likely additional logging output above.
-				"
-			`);
+				// snapshot stdout/stderr so we can see what the user sees
+				expect(normalize(sessionB.stdout)).toMatchInlineSnapshot(`
+            "⎔ Starting local server...
+            "
+          `);
+				expect(normalize(sessionB.stderr)).toMatchInlineSnapshot(`
+					"X [ERROR] Address already in use (*:<PORT>). Please check that you are not already running a server on this address or specify a different port with --port.
+					X [ERROR] MiniflareCoreError [ERR_RUNTIME_FAILURE]: The Workers runtime failed to start. There is likely additional logging output above.
+					"
+				`);
+			});
 		});
 	});
 });
