@@ -2,6 +2,7 @@ import assert from "assert";
 import { readFileSync } from "fs";
 import fs from "fs/promises";
 import path from "path";
+import { Readable } from "stream";
 import tls from "tls";
 import { TextEncoder } from "util";
 import { bold } from "kleur/colors";
@@ -51,7 +52,6 @@ import {
 	withSourceURL,
 } from "./modules";
 import { ServiceDesignatorSchema } from "./services";
-import { Readable } from "stream";
 
 // `workerd`'s `trustBrowserCas` should probably be named `trustSystemCas`.
 // Rather than using a bundled CA store like Node, it uses
@@ -138,12 +138,9 @@ export const CoreSharedOptionsSchema = z.object({
 	verbose: z.boolean().optional(),
 
 	log: z.instanceof(Log).optional(),
-  handleRuntimeStdio: z.function(
-    z.tuple([
-      z.instanceof(Readable),
-      z.instanceof(Readable)
-    ])
-  ).optional(),
+	handleRuntimeStdio: z
+		.function(z.tuple([z.instanceof(Readable), z.instanceof(Readable)]))
+		.optional(),
 
 	upstream: z.string().optional(),
 	// TODO: add back validation of cf object

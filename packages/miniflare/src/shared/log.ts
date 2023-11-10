@@ -76,8 +76,8 @@ export class Log {
 		}
 	}
 
-  error(message: Error): void {
-    if (this.level < LogLevel.ERROR) {
+	error(message: Error): void {
+		if (this.level < LogLevel.ERROR) {
 			// Ignore message if it won't get logged
 		} else if (message.stack) {
 			// Dim internal stack trace lines to highlight user code

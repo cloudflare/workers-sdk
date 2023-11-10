@@ -8,16 +8,16 @@ import getPort from "get-port";
 import shellac from "shellac";
 import { fetch } from "undici";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { normalizeOutput } from "./helpers/normalize";
 import { retry } from "./helpers/retry";
 import { dedent, makeRoot, seed } from "./helpers/setup";
 import { WRANGLER } from "./helpers/wrangler-command";
-import { normalizeOutput } from "./helpers/normalize";
 
 type MaybePromise<T = void> = T | Promise<T>;
 
 const waitForPortToBeBound = async (port: number) => {
 	await retry(
-		(s) => false, // only retry if promise below rejects (network error)
+		() => false, // only retry if promise below rejects (network error)
 		() => fetch(`http://127.0.0.1:${port}`)
 	);
 };
@@ -35,7 +35,7 @@ const waitUntil = async (
 	);
 };
 
-interface Session {
+interface SessionData {
 	port: number;
 	stdout: string;
 	stderr: string;
@@ -44,16 +44,17 @@ interface Session {
 async function runDevSession(
 	workerPath: string,
 	flags: string,
-	session: (session: Session) => MaybePromise
+	session: (sessionData: SessionData) => MaybePromise
 ) {
 	let pid;
 	try {
+		const match = flags.match(/--port (\d+)/);
 		let port: number;
-		if (!flags.includes("--port")) {
+		if (!match) {
 			port = await getPort();
 			flags += ` --port ${port}`;
 		} else {
-			port = parseInt(flags.match(/--port (\d+)/)![1]);
+			port = parseInt(match[1]);
 
 			if (port === 0) port = await getPort();
 		}
@@ -91,7 +92,7 @@ type DevWorker = {
 	workerPath: string;
 	runDevSession: (
 		flags: string,
-		session: (session: Session) => MaybePromise
+		session: (sessionData: SessionData) => MaybePromise
 	) => ReturnType<typeof runDevSession>;
 	seed: (
 		seeder: ((name: string) => Record<string, string>) | Record<string, string>
@@ -109,7 +110,7 @@ async function makeWorker(): Promise<DevWorker> {
 		workerPath,
 		runDevSession: (
 			flags: string,
-			session: (session: Session) => MaybePromise
+			session: (sessionData: SessionData) => MaybePromise
 		) => runDevSession(workerPath, flags, session),
 		seed: (seeder) =>
 			seed(
@@ -512,9 +513,6 @@ describe("writes debug logs to hidden file", () => {
 
 	it("does NOT write to file when --log-level != debug", async () => {
 		const finalA = await a.runDevSession("", async (session) => {
-			const normalize = (text: string) =>
-				normalizeOutput(text, { [session.port]: "<PORT>" });
-
 			await waitForPortToBeBound(session.port);
 		});
 

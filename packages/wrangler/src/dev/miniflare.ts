@@ -37,7 +37,7 @@ import type {
 	Response,
 } from "miniflare";
 import type { Abortable } from "node:events";
-import { Readable } from "node:stream";
+import type { Readable } from "node:stream";
 
 // This worker proxies all external Durable Objects to the Wrangler session
 // where they're defined, and receives all requests from other Wrangler sessions

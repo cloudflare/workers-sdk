@@ -33,7 +33,7 @@ export interface RuntimeOptions {
 	requiredSockets: SocketIdentifier[];
 	inspectorAddress?: string;
 	verbose?: boolean;
-  handleRuntimeStdio?: (stdout: Readable, stderr: Readable) => void;
+	handleRuntimeStdio?: (stdout: Readable, stderr: Readable) => void;
 }
 
 async function waitForPorts(
@@ -83,8 +83,8 @@ function pipeOutput(stdout: Readable, stderr: Readable) {
 	// https://github.com/vadimdemedes/ink/blob/5d24ed8ada593a6c36ea5416f452158461e33ba5/readme.md#patchconsole
 	// Writing directly to `process.stdout/stderr` would result in graphical
 	// glitches.
-	rl.createInterface(stdout).on("line", ((data) => console.log(data)));
-	rl.createInterface(stderr).on("line", ((data) => console.error(red(data))));
+	rl.createInterface(stdout).on("line", (data) => console.log(data));
+	rl.createInterface(stderr).on("line", (data) => console.error(red(data)));
 	// stdout.pipe(process.stdout);
 	// stderr.pipe(process.stderr);
 }
@@ -144,7 +144,7 @@ export class Runtime {
 		this.#process = runtimeProcess;
 		this.#processExitPromise = waitForExit(runtimeProcess);
 
-    const handleRuntimeStdio = options.handleRuntimeStdio ?? pipeOutput;
+		const handleRuntimeStdio = options.handleRuntimeStdio ?? pipeOutput;
 		handleRuntimeStdio(runtimeProcess.stdout, runtimeProcess.stderr);
 
 		const controlPipe = runtimeProcess.stdio[3];

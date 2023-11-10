@@ -1,10 +1,10 @@
+import { appendFile } from "node:fs/promises";
 import path from "node:path";
 import { format } from "node:util";
-import { appendFile } from "node:fs/promises";
-import { getEnvironmentVariableFactory } from "../environment-variables/factory";
-import { getBasePath } from "../paths";
-import { logger } from "../logger";
 import { Mutex } from "miniflare";
+import { getEnvironmentVariableFactory } from "../environment-variables/factory";
+import { logger } from "../logger";
+import { getBasePath } from "../paths";
 
 const getDebugFilepath = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_DEBUG_LOG",
