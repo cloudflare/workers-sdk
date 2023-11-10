@@ -447,7 +447,7 @@ function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 				)?.[1];
 
 				logger.error(
-					`Address (${address}) already in use. Please check that you are not already running a server on this address or specify a different port with --port.`
+					`Address already in use (${address}). Please check that you are not already running a server on this address or specify a different port with --port.`
 				);
 
 				return;
