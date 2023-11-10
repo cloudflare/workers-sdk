@@ -8,6 +8,7 @@ import {
 	TypedEventTarget,
 	Mutex,
 	Miniflare,
+	DeferredPromise,
 } from "miniflare";
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { withSourceURLs } from "../deployment-bundle/source-url";
@@ -382,7 +383,11 @@ function buildSitesOptions({ assetPaths }: ConfigBundle) {
 	}
 }
 
-function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
+function handleRuntimeStdio(
+	releaseLogs: Promise<void>,
+	stdout: Readable,
+	stderr: Readable
+) {
 	// ASSUMPTION: each chunk is a whole message from workerd
 	// This may not hold across OSes/architectures, but it seems to work on macOS M-line
 	// I'm going with this simple approach to avoid complicating this too early
@@ -403,7 +408,8 @@ function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 		},
 	};
 
-	stdout.on("data", (chunk: Buffer | string) => {
+	stdout.on("data", async (chunk: Buffer | string) => {
+		await releaseLogs;
 		chunk = chunk.toString();
 
 		if (classifiers.isBarf(chunk)) {
@@ -426,7 +432,8 @@ function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 		}
 	});
 
-	stderr.on("data", (chunk: Buffer | string) => {
+	stderr.on("data", async (chunk: Buffer | string) => {
+		await releaseLogs;
 		chunk = chunk.toString();
 
 		if (classifiers.isBarf(chunk)) {
@@ -463,7 +470,11 @@ function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 async function buildMiniflareOptions(
 	log: Log,
 	config: ConfigBundle
-): Promise<{ options: MiniflareOptions; internalObjects: CfDurableObject[] }> {
+): Promise<{
+	options: MiniflareOptions;
+	internalObjects: CfDurableObject[];
+	releaseLogs: DeferredPromise<void>;
+}> {
 	if (config.crons.length > 0) {
 		logger.warn("Miniflare 3 does not support CRON triggers yet, ignoring...");
 	}
@@ -488,6 +499,8 @@ async function buildMiniflareOptions(
 		};
 	}
 
+	const releaseLogs = new DeferredPromise<void>();
+
 	const options: MiniflareOptions = {
 		host: config.initialIp,
 		port: config.initialPort,
@@ -497,7 +510,7 @@ async function buildMiniflareOptions(
 
 		log,
 		verbose: logger.loggerLevel === "debug",
-		handleRuntimeStdio,
+		handleRuntimeStdio: handleRuntimeStdio.bind(null, releaseLogs),
 
 		...httpsOptions,
 		...persistOptions,
@@ -514,7 +527,7 @@ async function buildMiniflareOptions(
 			externalDurableObjectWorker,
 		],
 	};
-	return { options, internalObjects };
+	return { options, internalObjects, releaseLogs };
 }
 
 export interface ReloadedEventOptions {
@@ -559,11 +572,11 @@ export class MiniflareServer extends TypedEventTarget<MiniflareServerEventMap> {
 
 	async #onBundleUpdate(config: ConfigBundle, opts?: Abortable): Promise<void> {
 		if (opts?.signal?.aborted) return;
+		let releaseLogsDeferred: DeferredPromise<void> | undefined;
 		try {
-			const { options, internalObjects } = await buildMiniflareOptions(
-				this.#log,
-				config
-			);
+			const { options, internalObjects, releaseLogs } =
+				await buildMiniflareOptions(this.#log, config);
+			releaseLogsDeferred = releaseLogs;
 			if (opts?.signal?.aborted) return;
 			if (this.#mf === undefined) {
 				this.#mf = new Miniflare(options);
@@ -579,6 +592,8 @@ export class MiniflareServer extends TypedEventTarget<MiniflareServerEventMap> {
 			this.dispatchEvent(event);
 		} catch (error: unknown) {
 			this.dispatchEvent(new ErrorEvent("error", { error }));
+		} finally {
+			releaseLogsDeferred?.resolve();
 		}
 	}
 	onBundleUpdate(config: ConfigBundle, opts?: Abortable): Promise<void> {
