@@ -145,7 +145,9 @@ interface PageResultInfo {
 	total_count: number;
 }
 
-function hasMorePages(result_info: unknown): result_info is PageResultInfo {
+export function hasMorePages(
+	result_info: unknown
+): result_info is PageResultInfo {
 	const page = (result_info as PageResultInfo | undefined)?.page;
 	const per_page = (result_info as PageResultInfo | undefined)?.per_page;
 	const total = (result_info as PageResultInfo | undefined)?.total_count;
