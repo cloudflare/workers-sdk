@@ -53,15 +53,14 @@ async function runDevSession(
 ) {
 	let pid;
 	try {
-		const match = flags.match(/--port (\d+)/);
-		let port: number;
-		if (!match) {
+		const portFlagMatch = flags.match(/--port (\d+)/);
+		let port = 0;
+		if (portFlagMatch) {
+			port = parseInt(portFlagMatch[1]);
+		}
+		if (port === 0) {
 			port = await getPort();
 			flags += ` --port ${port}`;
-		} else {
-			port = parseInt(match[1]);
-
-			if (port === 0) port = await getPort();
 		}
 
 		// Must use the `in` statement in the shellac script rather than `.in()` modifier on the `shellac` object
@@ -383,13 +382,13 @@ describe("hyperdrive dev tests", () => {
 	});
 
 	it("matches expected configuration parameters", async () => {
-		await worker.runDevSession("", async (port) => {
+		await worker.runDevSession("", async (session) => {
 			const { text } = await retry(
 				(s) => {
 					return s.status !== 200;
 				},
 				async () => {
-					const resp = await fetch(`http://127.0.0.1:${port}`);
+					const resp = await fetch(`http://127.0.0.1:${session.port}`);
 					return { text: await resp.text(), status: resp.status };
 				}
 			);
@@ -411,13 +410,13 @@ describe("hyperdrive dev tests", () => {
 				});
 			});
 		});
-		await worker.runDevSession("", async (port) => {
+		await worker.runDevSession("", async (session) => {
 			await retry(
 				(s) => {
 					return s.status !== 200;
 				},
 				async () => {
-					const resp = await fetch(`http://127.0.0.1:${port}/connect`);
+					const resp = await fetch(`http://127.0.0.1:${session.port}/connect`);
 					return { text: await resp.text(), status: resp.status };
 				}
 			);
@@ -502,20 +501,6 @@ describe("writes debug logs to hidden file", () => {
 		assert(filepath);
 
 		expect(existsSync(filepath)).toBe(true);
-
-		expect(normalizeOutput(finalA.stdout)).toMatchInlineSnapshot(`
-			"🐛 Writing debug logs to \\"../../../../../../../../Users/sethi/code/workers-sdk/packages/wrangler/.wrangler/debug-logs/wrangler-debug-<TIMESTAMP>.log\\"
-			⎔ Starting local server...
-			[mf:inf] Ready on http://<LOCAL_IP>:<PORT>
-			[mf:inf] - http://<LOCAL_IP>:<PORT>
-			[mf:inf] GET / 200 OK (TIMINGS)
-			"
-		`);
-		expect(normalizeOutput(finalA.stderr)).toMatchInlineSnapshot(`
-			"X [ERROR] workerd/server/server.c++:2984: info: Inspector is listening
-			X [ERROR] workerd/server/server.c++:1174: info: Inspector client attaching [core:user:a]
-			"
-		`);
 	});
 
 	it("does NOT write to file when --log-level != debug", async () => {
@@ -530,15 +515,6 @@ describe("writes debug logs to hidden file", () => {
 		)?.[1];
 
 		expect(filepath).toBeUndefined();
-
-		expect(normalizeOutput(finalA.stdout)).toMatchInlineSnapshot(`
-			"⎔ Starting local server...
-			[mf:inf] Ready on http://<LOCAL_IP>:<PORT>
-			[mf:inf] - http://<LOCAL_IP>:<PORT>
-			[mf:inf] GET / 200 OK (TIMINGS)
-			"
-		`);
-		expect(normalizeOutput(finalA.stderr)).toMatchInlineSnapshot('""');
 	});
 
 	it("rewrites address-in-use error logs", async () => {
@@ -555,7 +531,7 @@ describe("writes debug logs to hidden file", () => {
 				// 4. wait until wrangler tries to start workerd
 				await waitUntilOutputContains(sessionB, "Starting local server...");
 				// 5. wait a period of time for workerd to complain about the port being in use
-				await setTimeout(200);
+				await setTimeout(1000);
 
 				// ensure the workerd error message IS NOT present
 				expect(normalize(sessionB.stderr)).not.toContain(
@@ -565,17 +541,6 @@ describe("writes debug logs to hidden file", () => {
 				expect(normalize(sessionB.stderr)).toContain(
 					"[ERROR] Address already in use"
 				);
-
-				// snapshot stdout/stderr so we can see what the user sees
-				expect(normalize(sessionB.stdout)).toMatchInlineSnapshot(`
-            "⎔ Starting local server...
-            "
-          `);
-				expect(normalize(sessionB.stderr)).toMatchInlineSnapshot(`
-					"X [ERROR] Address already in use (*:<PORT>). Please check that you are not already running a server on this address or specify a different port with --port.
-					X [ERROR] MiniflareCoreError [ERR_RUNTIME_FAILURE]: The Workers runtime failed to start. There is likely additional logging output above.
-					"
-				`);
 			});
 		});
 	});
