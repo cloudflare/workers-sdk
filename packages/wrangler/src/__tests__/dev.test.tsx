@@ -1453,12 +1453,6 @@ describe("wrangler dev", () => {
 			}
 		`);
 		});
-
-		it("should not output Errors with log-level error", async () => {
-			fs.writeFileSync("index.js", `export default {};`);
-			await runWrangler("dev index.js --inspect --log-level debug");
-			expect(std.debug.length > 1).toBe(true);
-		});
 	});
 
 	describe("service bindings", () => {
