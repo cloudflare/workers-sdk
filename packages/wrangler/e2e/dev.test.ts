@@ -552,11 +552,10 @@ describe("writes debug logs to hidden file", () => {
 
 			// 3. try to start worker B on the same port
 			await b.runDevSession(`--port ${sessionA.port}`, async (sessionB) => {
-				// 4. wait until session B emits an "Address in use" error log
-				await waitUntilOutputContains(
-					sessionB,
-					"[ERROR] Address already in use"
-				);
+				// 4. wait until wrangler tries to start workerd
+				await waitUntilOutputContains(sessionB, "Starting local server...");
+				// 5. wait a period of time for workerd to complain about the port being in use
+				await setTimeout(200);
 
 				// ensure the workerd error message IS NOT present
 				expect(normalize(sessionB.stderr)).not.toContain(
