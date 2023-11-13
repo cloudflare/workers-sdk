@@ -504,7 +504,7 @@ describe("writes debug logs to hidden file", () => {
 		expect(existsSync(filepath)).toBe(true);
 
 		expect(normalizeOutput(finalA.stdout)).toMatchInlineSnapshot(`
-			"🐛 Writing debug logs to \\"../../../../../../../../Users/sethi/code/workers-sdk/packages/wrangler/.wrangler/wrangler-debug-<TIMESTAMP>.log\\"
+			"🐛 Writing debug logs to \\"../../../../../../../../Users/sethi/code/workers-sdk/packages/wrangler/.wrangler/debug-logs/wrangler-debug-<TIMESTAMP>.log\\"
 			⎔ Starting local server...
 			[mf:inf] Ready on http://<LOCAL_IP>:<PORT>
 			[mf:inf] - http://<LOCAL_IP>:<PORT>
