@@ -201,6 +201,28 @@ PR review is a critial and required step in the process for landing changes. Thi
 
 As a reviewer, it's important to be thoughtful about the proposed changes and communicate any feedback. Examples of PR reviews that the community has identified as particularly high-caliber are labeled with the `highlight pr review` label. Please feel empowered to use these as a learning resource.
 
+## PR Tests
+
+Every PR should include tests for the functionality that's being added. Most changes will be to [Wrangler](packages/wrangler/src/__tests__) (using Jest), [Miniflare](packages/miniflare/test) (using Ava), or [C3](packages/create-cloudflare/src/__tests__) (using Vitest), and should include unit tests within the testing harness of those packages.
+
+If your PR includes functionality that's difficult to unit test, you can add a fixture test by creating a new package in the `fixtures/` folder. This allows for adding a test that requires a specific filesystem or worker setup (for instance, `fixtures/no-bundle-import` tests the interaction of Wrangler with a specific set of JS, WASM, text, and binary modules on the filesystem). When adding a fixture test, include a `vitest.config.ts` file within the new package, which will ensure it's run as part of the `workers-sdk` CI. A good default example is the following:
+
+```ts
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+	test: {
+		testTimeout: 5_000,
+		hookTimeout: 5_000,
+		teardownTimeout: 5_000,
+	},
+});
+```
+
+If you need to test the interaction of Wrangler with a real Cloudflare account, you can add an E2E test within the `packages/wrangler/e2e` folder. This lets you add a test for functionality that requires real credentials (i.e. testing whether a worker deployed from Wrangler can be accessed over the internet).
+
+When you open a PR to the `workers-sdk` repo, you should expect several checks to run in CI. For most PRs, every check should pass (although some will be skipped).
+
 ## Changesets
 
 Every non-trivial change to the project - those that should appear in the changelog - must be captured in a "changeset".
