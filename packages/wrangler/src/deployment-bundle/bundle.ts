@@ -135,79 +135,81 @@ export async function bundleWorker(
 	// At this point, we take the opportunity to "wrap" the worker with middleware.
 	const middlewareToLoad: MiddlewareLoader[] = [];
 
-	if (targetConsumer === "dev" && !!testScheduled) {
-		middlewareToLoad.push({
-			name: "scheduled",
-			path: "templates/middleware/middleware-scheduled.ts",
-			supports: ["modules", "service-worker"],
-		});
-	}
+	if (bundle) {
+		if (targetConsumer === "dev" && !!testScheduled) {
+			middlewareToLoad.push({
+				name: "scheduled",
+				path: "templates/middleware/middleware-scheduled.ts",
+				supports: ["modules", "service-worker"],
+			});
+		}
 
-	if (targetConsumer === "dev" && local) {
-		// In Miniflare 3, we bind the user's worker as a service binding in a
-		// special entry worker that handles things like injecting `Request.cf`,
-		// live-reload, and the pretty-error page.
-		//
-		// Unfortunately, due to a bug in `workerd`, errors thrown asynchronously by
-		// native APIs don't have `stack`s. This means Miniflare can't extract the
-		// `stack` trace from dispatching to the user worker service binding by
-		// `try/catch`.
-		//
-		// As a stop-gap solution, if the `MF-Experimental-Error-Stack` header is
-		// truthy on responses, the body will be interpreted as a JSON-error of the
-		// form `{ message?: string, name?: string, stack?: string }`.
-		//
-		// This middleware wraps the user's worker in a `try/catch`, and rewrites
-		// errors in this format so a pretty-error page can be shown.
-		middlewareToLoad.push({
-			name: "miniflare3-json-error",
-			path: "templates/middleware/middleware-miniflare3-json-error.ts",
-			supports: ["modules", "service-worker"],
-		});
-	}
+		if (targetConsumer === "dev" && local) {
+			// In Miniflare 3, we bind the user's worker as a service binding in a
+			// special entry worker that handles things like injecting `Request.cf`,
+			// live-reload, and the pretty-error page.
+			//
+			// Unfortunately, due to a bug in `workerd`, errors thrown asynchronously by
+			// native APIs don't have `stack`s. This means Miniflare can't extract the
+			// `stack` trace from dispatching to the user worker service binding by
+			// `try/catch`.
+			//
+			// As a stop-gap solution, if the `MF-Experimental-Error-Stack` header is
+			// truthy on responses, the body will be interpreted as a JSON-error of the
+			// form `{ message?: string, name?: string, stack?: string }`.
+			//
+			// This middleware wraps the user's worker in a `try/catch`, and rewrites
+			// errors in this format so a pretty-error page can be shown.
+			middlewareToLoad.push({
+				name: "miniflare3-json-error",
+				path: "templates/middleware/middleware-miniflare3-json-error.ts",
+				supports: ["modules", "service-worker"],
+			});
+		}
 
-	if (serveAssetsFromWorker) {
-		middlewareToLoad.push({
-			name: "serve-static-assets",
-			path: "templates/middleware/middleware-serve-static-assets.ts",
-			config: {
-				spaMode:
-					typeof assets === "object" ? assets.serve_single_page_app : false,
-				cacheControl:
-					typeof assets === "object"
-						? {
-								browserTTL:
-									assets.browser_TTL || 172800 /* 2 days: 2* 60 * 60 * 24 */,
-								bypassCache: bypassAssetCache,
-						  }
-						: {},
-			},
-			supports: ["modules", "service-worker"],
-		});
-	}
+		if (serveAssetsFromWorker) {
+			middlewareToLoad.push({
+				name: "serve-static-assets",
+				path: "templates/middleware/middleware-serve-static-assets.ts",
+				config: {
+					spaMode:
+						typeof assets === "object" ? assets.serve_single_page_app : false,
+					cacheControl:
+						typeof assets === "object"
+							? {
+									browserTTL:
+										assets.browser_TTL || 172800 /* 2 days: 2* 60 * 60 * 24 */,
+									bypassCache: bypassAssetCache,
+							  }
+							: {},
+				},
+				supports: ["modules", "service-worker"],
+			});
+		}
 
-	if (
-		targetConsumer === "dev" &&
-		!!(
-			workerDefinitions &&
-			Object.keys(workerDefinitions).length > 0 &&
-			services &&
-			services.length > 0
-		)
-	) {
-		middlewareToLoad.push({
-			name: "multiworker-dev",
-			path: "templates/middleware/middleware-multiworker-dev.ts",
-			config: {
-				workers: Object.fromEntries(
-					(services || []).map((serviceBinding) => [
-						serviceBinding.binding,
-						workerDefinitions?.[serviceBinding.service] || null,
-					])
-				),
-			},
-			supports: ["modules"],
-		});
+		if (
+			targetConsumer === "dev" &&
+			!!(
+				workerDefinitions &&
+				Object.keys(workerDefinitions).length > 0 &&
+				services &&
+				services.length > 0
+			)
+		) {
+			middlewareToLoad.push({
+				name: "multiworker-dev",
+				path: "templates/middleware/middleware-multiworker-dev.ts",
+				config: {
+					workers: Object.fromEntries(
+						(services || []).map((serviceBinding) => [
+							serviceBinding.binding,
+							workerDefinitions?.[serviceBinding.service] || null,
+						])
+					),
+				},
+				supports: ["modules"],
+			});
+		}
 	}
 
 	// If using watch, build result will not be returned.
@@ -225,25 +227,30 @@ export async function bundleWorker(
 
 	const inject: string[] = injectOption ?? [];
 
-	if (checkFetch) {
-		// In dev, we want to patch `fetch()` with a special version that looks
-		// for bad usages and can warn the user about them; so we inject
-		// `checked-fetch.js` to do so. However, with yarn 3 style pnp,
-		// we need to extract that file to an accessible place before injecting
-		// it in, hence this code here.
+	if (bundle) {
+		if (checkFetch) {
+			// In dev, we want to patch `fetch()` with a special version that looks
+			// for bad usages and can warn the user about them; so we inject
+			// `checked-fetch.js` to do so. However, with yarn 3 style pnp,
+			// we need to extract that file to an accessible place before injecting
+			// it in, hence this code here.
 
-		const checkedFetchFileToInject = path.join(tmpDir.path, "checked-fetch.js");
-
-		if (checkFetch && !fs.existsSync(checkedFetchFileToInject)) {
-			fs.writeFileSync(
-				checkedFetchFileToInject,
-				fs.readFileSync(
-					path.resolve(getBasePath(), "templates/checked-fetch.js")
-				)
+			const checkedFetchFileToInject = path.join(
+				tmpDir.path,
+				"checked-fetch.js"
 			);
-		}
 
-		inject.push(checkedFetchFileToInject);
+			if (checkFetch && !fs.existsSync(checkedFetchFileToInject)) {
+				fs.writeFileSync(
+					checkedFetchFileToInject,
+					fs.readFileSync(
+						path.resolve(getBasePath(), "templates/checked-fetch.js")
+					)
+				);
+			}
+
+			inject.push(checkedFetchFileToInject);
+		}
 	}
 	// Check that the current worker format is supported by all the active middleware
 	for (const middleware of middlewareToLoad) {
@@ -253,36 +260,38 @@ export async function bundleWorker(
 			);
 		}
 	}
-	if (
-		middlewareToLoad.length > 0 ||
-		process.env.EXPERIMENTAL_MIDDLEWARE === "true"
-	) {
-		const result = await applyMiddlewareLoaderFacade(
-			entry,
-			tmpDir.path,
-			middlewareToLoad,
-			doBindings
-		);
-		entry = result.entry;
+	if (bundle) {
+		if (
+			middlewareToLoad.length > 0 ||
+			process.env.EXPERIMENTAL_MIDDLEWARE === "true"
+		) {
+			const result = await applyMiddlewareLoaderFacade(
+				entry,
+				tmpDir.path,
+				middlewareToLoad,
+				doBindings
+			);
+			entry = result.entry;
 
-		/**
-		 * When applying the middleware facade for service workers, we need to inject
-		 * some code at the top of the final output bundle. Applying an inject too early
-		 * will allow esbuild to reorder the code. Additionally, we need to make sure
-		 * user code is bundled in the final esbuild step with `watch` correctly
-		 * configured, so code changes are detected.
-		 *
-		 * This type is used as the return type for the `MiddlewareFn` type representing
-		 * a facade-applying function. Returned injects should be injected with the
-		 * final esbuild step.
-		 */
-		inject.push(...(result.inject ?? []));
+			/**
+			 * When applying the middleware facade for service workers, we need to inject
+			 * some code at the top of the final output bundle. Applying an inject too early
+			 * will allow esbuild to reorder the code. Additionally, we need to make sure
+			 * user code is bundled in the final esbuild step with `watch` correctly
+			 * configured, so code changes are detected.
+			 *
+			 * This type is used as the return type for the `MiddlewareFn` type representing
+			 * a facade-applying function. Returned injects should be injected with the
+			 * final esbuild step.
+			 */
+			inject.push(...(result.inject ?? []));
+		}
+
+		// `esbuild` doesn't support returning `watch*` options from `onStart()`
+		// plugin callbacks. Instead, we define an empty virtual module that is
+		// imported in this injected module. Importing that module registers watchers.
+		inject.push(path.resolve(getBasePath(), "templates/modules-watch-stub.js"));
 	}
-
-	// `esbuild` doesn't support returning `watch*` options from `onStart()`
-	// plugin callbacks. Instead, we define an empty virtual module that is
-	// imported in this injected module. Importing that module registers watchers.
-	inject.push(path.resolve(getBasePath(), "templates/modules-watch-stub.js"));
 
 	const buildOptions: esbuild.BuildOptions & { metafile: true } = {
 		// Don't use entryFile here as the file may have been changed when applying the middleware

@@ -258,10 +258,12 @@ export function buildRawWorker({
 export async function traverseAndBuildWorkerJSDirectory({
 	workerJSDirectory,
 	buildOutputDirectory,
+	bundle,
 	nodejsCompat,
 }: {
 	workerJSDirectory: string;
 	buildOutputDirectory: string;
+	bundle: boolean;
 	nodejsCompat?: boolean;
 }): Promise<BundleResult> {
 	const entrypoint = resolve(join(workerJSDirectory, "index.js"));
@@ -287,7 +289,7 @@ export async function traverseAndBuildWorkerJSDirectory({
 	);
 	const bundleResult = await buildRawWorker({
 		workerScriptPath: entrypoint,
-		bundle: true,
+		bundle,
 		external: additionalModules.map((m) => join(workerJSDirectory, m.name)),
 		outfile,
 		directory: buildOutputDirectory,
