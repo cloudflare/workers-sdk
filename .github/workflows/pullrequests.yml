@@ -116,6 +116,13 @@ jobs:
           TMP_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           NODE_OPTIONS: "--max_old_space_size=8192"
 
+      - name: upload-debug-logs
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: debug-logs
+          path: packages/wrangler/.wrangler/debug-logs/
+
       - name: Run changeset version tests
         run: node .github/changeset-version.test.js
 
