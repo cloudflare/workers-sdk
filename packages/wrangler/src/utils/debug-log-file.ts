@@ -31,7 +31,7 @@ async function ensureDirectoryExists(filepath: string) {
 	await mkdir(dirpath, { recursive: true });
 }
 
-export const debugLogFilepath = getDebugFilepath();
+export const debugLogFilepath = path.resolve(getDebugFilepath());
 const mutex = new Mutex();
 
 let hasLoggedLocation = false;
