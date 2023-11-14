@@ -1,5 +1,6 @@
 import { Blob } from "node:buffer";
 import * as fs from "node:fs";
+import * as path from "node:path";
 import * as stream from "node:stream";
 import { ReadableStream } from "node:stream/web";
 import prettyBytes from "pretty-bytes";
@@ -109,7 +110,13 @@ export function r2(r2Yargs: CommonYargsArgv) {
 							logger.log(`Downloading "${key}" from "${fullBucketName}".`);
 						}
 
-						const output = file ? fs.createWriteStream(file) : process.stdout;
+						let output: stream.Writable;
+						if (file) {
+							fs.mkdirSync(path.dirname(file), { recursive: true });
+							output = fs.createWriteStream(file);
+						} else {
+							output = process.stdout;
+						}
 						if (objectGetYargs.local) {
 							await usingLocalBucket(
 								objectGetYargs.persistTo,

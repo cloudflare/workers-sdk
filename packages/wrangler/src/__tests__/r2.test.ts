@@ -295,6 +295,15 @@ describe("r2", () => {
 		`);
 		});
 
+		it("should download R2 object from bucket into directory", async () => {
+			await runWrangler(
+				`r2 object get bucketName-object-test/wormhole-img.png --file ./a/b/c/wormhole-img.png`
+			);
+			expect(fs.readFileSync("a/b/c/wormhole-img.png", "utf8")).toBe(
+				"wormhole-img.png"
+			);
+		});
+
 		it("should upload R2 object to bucket", async () => {
 			fs.writeFileSync("wormhole-img.png", "passageway");
 			await runWrangler(
