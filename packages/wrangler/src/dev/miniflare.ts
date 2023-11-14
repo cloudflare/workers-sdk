@@ -91,6 +91,7 @@ export default {
 export interface ConfigBundle {
 	// TODO(soon): maybe rename some of these options, check proposed API Google Docs
 	name: string | undefined;
+	cache: boolean | undefined;
 	bundle: EsbuildBundle;
 	format: CfScriptFormat | undefined;
 	compatibilityDate: string;
@@ -431,6 +432,7 @@ async function buildMiniflareOptions(
 		workers: [
 			{
 				name: getName(config),
+				cache: config.cache,
 				compatibilityDate: config.compatibilityDate,
 				compatibilityFlags: config.compatibilityFlags,
 

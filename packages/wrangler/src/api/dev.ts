@@ -12,6 +12,7 @@ import type { RequestInit, Response, RequestInfo } from "undici";
 
 export interface UnstableDevOptions {
 	config?: string; // Path to .toml configuration file, relative to cwd
+	cache?: boolean; // Enable/disable caching
 	env?: string; // Environment to use for operations and .env files
 	ip?: string; // IP address to listen on
 	port?: number; // Port to listen on
@@ -175,6 +176,7 @@ export async function unstable_dev(
 		persistTo: options?.persistTo, // Specify directory to use for local persistence (implies --persist)
 		experimentalJsonConfig: undefined,
 		name: undefined,
+		cache: options?.cache,
 		noBundle: false,
 		format: undefined,
 		latest: false,

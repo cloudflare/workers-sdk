@@ -49,6 +49,11 @@ export function devOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 			})
+			.option("cache", {
+				describe: "Enable Cache (default: true)",
+				type: "boolean",
+				requiresArg: false,
+			})
 			// We want to have a --no-bundle flag, but yargs requires that
 			// we also have a --bundle flag (that it adds the --no to by itself)
 			// So we make a --bundle flag, but hide it, and then add a --no-bundle flag
@@ -420,6 +425,7 @@ export async function startDev(args: StartDevOptions) {
 			return (
 				<Dev
 					name={getScriptName({ name: args.name, env: args.env }, configParam)}
+					cache={args.cache}
 					noBundle={!(args.bundle ?? !configParam.no_bundle)}
 					findAdditionalModules={configParam.find_additional_modules}
 					entry={entry}
@@ -562,6 +568,7 @@ export async function startApiDev(args: StartDevOptions) {
 		const enableBundling = args.bundle ?? !configParam.no_bundle;
 		return await startDevServer({
 			name: getScriptName({ name: args.name, env: args.env }, configParam),
+			cache: args.cache,
 			noBundle: !enableBundling,
 			findAdditionalModules: configParam.find_additional_modules,
 			entry: entry,

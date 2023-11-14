@@ -110,6 +110,7 @@ export async function startDevServer(
 	if (props.local) {
 		const { stop } = await startLocalServer({
 			name: props.name,
+			cache: props.cache,
 			bundle: bundle,
 			format: props.entry.format,
 			compatibilityDate: props.compatibilityDate,

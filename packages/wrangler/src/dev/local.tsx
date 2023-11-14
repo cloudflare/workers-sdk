@@ -18,6 +18,7 @@ import type { EsbuildBundle } from "./use-esbuild";
 export interface LocalProps {
 	name: string | undefined;
 	bundle: EsbuildBundle | undefined;
+	cache: boolean | undefined;
 	format: CfScriptFormat | undefined;
 	compatibilityDate: string;
 	compatibilityFlags: string[] | undefined;
@@ -71,6 +72,7 @@ export async function localPropsToConfigBundle(
 	return {
 		name: props.name,
 		bundle: props.bundle,
+		cache: props.cache,
 		format: props.format,
 		compatibilityDate: props.compatibilityDate,
 		compatibilityFlags: props.compatibilityFlags,

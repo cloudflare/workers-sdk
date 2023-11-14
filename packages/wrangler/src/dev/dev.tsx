@@ -117,6 +117,7 @@ function useDevRegistry(
 
 export type DevProps = {
 	name: string | undefined;
+	cache: boolean | undefined;
 	noBundle: boolean;
 	findAdditionalModules: boolean | undefined;
 	entry: Entry;
@@ -318,6 +319,7 @@ function DevSession(props: DevSessionProps) {
 		<Local
 			name={props.name}
 			bundle={bundle}
+			cache={props.cache}
 			format={props.entry.format}
 			compatibilityDate={props.compatibilityDate}
 			compatibilityFlags={props.compatibilityFlags}
