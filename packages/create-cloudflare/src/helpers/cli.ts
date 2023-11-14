@@ -20,7 +20,7 @@ export async function openInBrowser(url: string): Promise<void> {
 
 export const C3_DEFAULTS = {
 	projectName: new Haikunator().haikunate({ tokenHex: true }),
-	type: "webFramework",
+	type: "hello-world",
 	framework: "angular",
 	autoUpdate: true,
 	deploy: true,

@@ -9,13 +9,13 @@ type TemplateConfig = {
 };
 
 export const templateMap: Record<string, TemplateConfig> = {
-	webFramework: {
-		label: "Website or web app",
-		handler: runPagesGenerator,
-	},
 	"hello-world": {
 		label: `"Hello World" Worker`,
 		handler: runWorkersGenerator,
+	},
+	webFramework: {
+		label: "Website or web app",
+		handler: runPagesGenerator,
 	},
 	common: {
 		label: "Example router & proxy Worker",
