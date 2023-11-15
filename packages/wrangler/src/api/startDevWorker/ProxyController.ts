@@ -140,14 +140,15 @@ export class ProxyController extends EventEmitter {
 			proxyWorkerOptions
 		);
 
+		const willInstantiateMiniflareInstance =
+			!this.proxyWorker || proxyWorkerOptionsChanged;
 		this.proxyWorker ??= new Miniflare(proxyWorkerOptions);
 		this.proxyWorkerOptions = proxyWorkerOptions;
 
-		let setOptionsPromise: Promise<void> | undefined;
 		if (proxyWorkerOptionsChanged) {
 			logger.debug("ProxyWorker miniflare options changed, reinstantiating...");
 
-			setOptionsPromise = this.proxyWorker.setOptions(proxyWorkerOptions);
+			void this.proxyWorker.setOptions(proxyWorkerOptions);
 
 			// this creates a new .ready promise that will be resolved when both ProxyWorkers are ready
 			// it also respects any await-ers of the existing .ready promise
@@ -157,20 +158,21 @@ export class ProxyController extends EventEmitter {
 		// store the non-null versions for callbacks
 		const { proxyWorker } = this;
 
-		void Promise.all([
-			setOptionsPromise, // TODO: should this be awaited internally by mf.ready?
-			proxyWorker.ready,
-			this.reconnectInspectorProxyWorker(),
-		])
-			.then(() => {
-				this.emitReadyEvent(proxyWorker);
-			})
-			.catch((error) => {
-				this.emitErrorEvent(
-					"Failed to start ProxyWorker or InspectorProxyWorker",
-					error
-				);
-			});
+		if (willInstantiateMiniflareInstance) {
+			void Promise.all([
+				proxyWorker.ready,
+				this.reconnectInspectorProxyWorker(),
+			])
+				.then(() => {
+					this.emitReadyEvent(proxyWorker);
+				})
+				.catch((error) => {
+					this.emitErrorEvent(
+						"Failed to start ProxyWorker or InspectorProxyWorker",
+						error
+					);
+				});
+		}
 	}
 
 	async reconnectInspectorProxyWorker(): Promise<WebSocket | undefined> {
@@ -202,7 +204,11 @@ export class ProxyController extends EventEmitter {
 			const error = castErrorCause(cause);
 
 			this.inspectorProxyWorkerWebSocket?.reject(error);
-			this.emitErrorEvent("Could not connect to InspectorProxyWorker", error);
+			this.emitErrorEvent(
+				"Could not connect to InspectorProxyWorker " +
+					JSON.stringify({ webSocket, readyState: webSocket?.readyState }),
+				error
+			);
 			return;
 		}
 
@@ -241,7 +247,9 @@ export class ProxyController extends EventEmitter {
 		try {
 			await this.runtimeMessageMutex.runWith(async () => {
 				assert(this.proxyWorker, "proxyWorker should already be instantiated");
-				await this.proxyWorker.ready;
+
+				const ready = await this.proxyWorker.ready.catch(() => undefined);
+				if (!ready) return;
 
 				return this.proxyWorker.dispatchFetch(
 					`http://dummy/cdn-cgi/ProxyWorker/${message.type}`,
@@ -275,14 +283,14 @@ export class ProxyController extends EventEmitter {
 		if (this._torndown) return;
 
 		try {
-			const websocket = await this.inspectorProxyWorkerWebSocket?.promise;
+			let websocket = await this.inspectorProxyWorkerWebSocket?.promise;
 			assert(websocket);
 
 			if (websocket.readyState >= WebSocket.READY_STATE_CLOSING) {
-				await this.reconnectInspectorProxyWorker();
+				websocket = await this.reconnectInspectorProxyWorker();
 			}
 
-			websocket.send(JSON.stringify(message));
+			websocket?.send(JSON.stringify(message));
 		} catch (cause) {
 			if (this._torndown) return;
 
@@ -465,8 +473,19 @@ export class ProxyController extends EventEmitter {
 			proxyData,
 		});
 	}
-	emitErrorEvent(reason: string, cause?: Error | SerializedError) {
-		this.emit("error", { source: "ProxyController", cause, reason });
+	emitErrorEvent(reason: string, cause: Error | SerializedError) {
+		const event: ErrorEvent = {
+			type: "error",
+			source: "ProxyController",
+			cause,
+			reason,
+			data: {
+				config: this.latestConfig,
+				bundle: this.latestBundle,
+			},
+		};
+
+		this.emit("error", event);
 	}
 
 	// *********************

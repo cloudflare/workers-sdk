@@ -6,19 +6,27 @@ import type { Miniflare } from "miniflare";
 export type TeardownEvent = {
 	type: "teardown";
 };
-export type ErrorEvent = {
+export type ErrorEvent =
+	| BaseErrorEvent<
+			| "ConfigController"
+			| "BundlerController"
+			| "LocalRuntimeController"
+			| "RemoteRuntimeController"
+			| "ProxyWorker"
+			| "InspectorProxyWorker"
+	  >
+	| BaseErrorEvent<
+			"ProxyController",
+			{ config?: StartDevWorkerOptions; bundle?: EsbuildBundle }
+	  >;
+export type BaseErrorEvent<Source = string, Data = undefined> = {
 	type: "error";
 	reason: string;
-	cause: Error;
-	source:
-		| "ConfigController"
-		| "BundlerController"
-		| "LocalRuntimeController"
-		| "RemoteRuntimeController"
-		| "ProxyController"
-		| "ProxyWorker"
-		| "InspectorProxyWorker";
+	cause: Error | SerializedError;
+	source: Source;
+	data: Data;
 };
+
 export function castErrorCause(cause: unknown) {
 	if (cause instanceof Error) return cause;
 
