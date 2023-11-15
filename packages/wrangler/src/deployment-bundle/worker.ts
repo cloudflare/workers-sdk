@@ -247,7 +247,6 @@ export interface CfPlacement {
 export interface CfTailConsumer {
 	service: string;
 	environment?: string;
-	namespace?: string;
 }
 
 export interface CfUserLimits {
