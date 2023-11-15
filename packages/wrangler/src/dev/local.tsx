@@ -174,6 +174,7 @@ function useLocalWorker(props: LocalProps) {
 					userWorkerInnerUrlOverrides: {
 						protocol: props.localProtocol,
 						hostname: props.localUpstream,
+						port: props.localUpstream ? "" : undefined, // `localUpstream` was essentially `host`, not `hostname`, so if it was set delete the `port`
 					},
 					headers: {}, // no headers needed in local-mode
 					liveReload: props.liveReload,

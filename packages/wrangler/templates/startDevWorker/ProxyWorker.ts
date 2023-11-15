@@ -101,24 +101,16 @@ export class ProxyWorker implements DurableObject {
 		for (const [request, deferredResponse] of this.requestQueue) {
 			this.requestQueue.delete(request);
 
-			const url = new URL(request.url);
+			const userWorkerUrl = new URL(request.url);
 			const headers = new Headers(request.headers);
 
 			// override url parts for proxying
-			Object.assign(url, proxyData.userWorkerUrl);
+			Object.assign(userWorkerUrl, proxyData.userWorkerUrl);
 
 			// set request.url in the UserWorker
 			// this will no longer disable miniflare's pretty error page in the UserWorker after https://github.com/cloudflare/miniflare/pull/689
-			const innerUrl = new URL(url.href);
+			const innerUrl = new URL(request.url);
 			Object.assign(innerUrl, proxyData.userWorkerInnerUrlOverrides);
-			if (
-				proxyData.userWorkerInnerUrlOverrides &&
-				proxyData.userWorkerInnerUrlOverrides.port === undefined
-			) {
-				// if userWorkerInnerUrlOverrides is set but port is not, remove port from innerUrl
-				// eg. if userWorkerInnerUrlOverrides is { hostname: 'example.com' }, then innerUrl will be http://example.com/... not http://example.com:8787/...
-				innerUrl.port = "";
-			}
 			headers.set("MF-Original-URL", innerUrl.href);
 
 			// merge proxyData headers with the request headers
@@ -133,7 +125,7 @@ export class ProxyWorker implements DurableObject {
 
 			// explicitly NOT await-ing this promise, we are in a loop and want to process the whole queue quickly
 			// if we decide to await, we should include a timeout (~100ms) in case the user worker has long-running/parellel requests
-			void fetch(url, new Request(request, { headers }))
+			void fetch(userWorkerUrl, new Request(request, { headers }))
 				.then((res) => {
 					if (isHtmlResponse(res)) {
 						res = insertLiveReloadScript(request, res, this.env, proxyData);

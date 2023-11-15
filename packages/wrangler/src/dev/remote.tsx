@@ -319,7 +319,7 @@ export function useWorker(
 					port: workerPreviewToken.inspectorUrl.port.toString(),
 					pathname: workerPreviewToken.inspectorUrl.pathname,
 				},
-				userWorkerInnerUrlOverrides: {}, // we did not permit overriding request.url in remote mode
+				userWorkerInnerUrlOverrides: {}, // there is no analagous prop for this option because we did not permit overriding request.url in remote mode
 				headers: { "cf-workers-preview-token": workerPreviewToken.value },
 				liveReload: false, // liveReload currently disabled in remote-mode, but will be supported with startDevWorker
 				proxyLogsToController: true,
@@ -432,7 +432,7 @@ export async function startRemoteServer(props: RemoteProps) {
 					port: previewToken.inspectorUrl.port.toString(),
 					pathname: previewToken.inspectorUrl.pathname,
 				},
-				userWorkerInnerUrlOverrides: {}, // we did not permit overriding request.url in remote mode
+				userWorkerInnerUrlOverrides: {}, // there is no analagous prop for this option because we did not permit overriding request.url in remote mode
 				headers: { "cf-workers-preview-token": previewToken.value },
 				liveReload: false, // liveReload currently disabled in remote-mode, but will be supported with startDevWorker
 				proxyLogsToController: true,

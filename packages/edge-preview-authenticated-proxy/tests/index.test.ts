@@ -150,10 +150,10 @@ compatibility_date = "2023-01-01"
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- ignoring this test type error for sake of turborepo PR
 		const json = (await resp.json()) as any;
 
-		expect(
-			json.headers.find(([h]: [string]) => h === "cf-workers-preview-token")[1]
-		).toBe(token);
-		expect(json.url).toMatchInlineSnapshot('"http://127.0.0.1:6756/"');
+		expect(json).toMatchObject({
+			url: `http://127.0.0.1:${remote.port}/`,
+			headers: expect.arrayContaining([["cf-workers-preview-token", token]]),
+		});
 	});
 	it("should be redirected with cookie", async () => {
 		const resp = await worker.fetch(
@@ -192,10 +192,12 @@ compatibility_date = "2023-01-01"
 		);
 
 		const json = (await resp.json()) as { headers: string[][]; url: string };
-		expect(Object.fromEntries([...json.headers])).toMatchObject({
-			"cf-workers-preview-token": "TEST_TOKEN",
+		expect(json).toMatchObject({
+			url: `http://127.0.0.1:${remote.port}/`,
+			headers: expect.arrayContaining([
+				["cf-workers-preview-token", "TEST_TOKEN"],
+			]),
 		});
-		expect(json.url).toMatchInlineSnapshot('"http://127.0.0.1:6756/"');
 	});
 	it("should not follow redirects", async () => {
 		const resp = await worker.fetch(

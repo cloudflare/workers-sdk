@@ -277,6 +277,10 @@ function DevSession(props: DevSessionProps) {
 				inspector: {
 					port: props.inspectorPort,
 				},
+				urlOverrides: {
+					secure: props.localProtocol === "https",
+					hostname: props.localUpstream,
+				},
 				liveReload: props.liveReload,
 			},
 		}),

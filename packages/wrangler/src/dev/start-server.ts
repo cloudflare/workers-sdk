@@ -410,6 +410,7 @@ export async function startLocalServer(
 				userWorkerInnerUrlOverrides: {
 					protocol: props.localProtocol,
 					hostname: props.localUpstream,
+					port: props.localUpstream ? "" : undefined, // `localUpstream` was essentially `host`, not `hostname`, so if it was set delete the `port`
 				},
 				headers: {},
 				liveReload: props.liveReload,
