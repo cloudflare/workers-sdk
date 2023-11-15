@@ -108,10 +108,10 @@ export class ProxyWorker implements DurableObject {
 			Object.assign(userWorkerUrl, proxyData.userWorkerUrl);
 
 			// set request.url in the UserWorker
-			// this will no longer disable miniflare's pretty error page in the UserWorker after https://github.com/cloudflare/miniflare/pull/689
 			const innerUrl = new URL(request.url);
 			Object.assign(innerUrl, proxyData.userWorkerInnerUrlOverrides);
 			headers.set("MF-Original-URL", innerUrl.href);
+			headers.set("MF-Disable-Pretty-Error", "true");
 
 			// merge proxyData headers with the request headers
 			for (const [key, value] of Object.entries(proxyData.headers ?? {})) {
