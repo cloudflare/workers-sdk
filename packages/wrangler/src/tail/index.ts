@@ -82,10 +82,9 @@ export function tailOptions(yargs: CommonYargsArgv) {
 			describe: "Use legacy environments",
 			hidden: true,
 		})
-		.option("yes", {
+		.option("force", {
 			type: "boolean",
-			describe: "Answer yes to any prompts",
-			alias: "y",
+			describe: "Skip any interactive prompts.",
 		});
 }
 
@@ -147,7 +146,7 @@ export async function tailHandler(args: TailArgs) {
 			`Beginning log collection requires restarting the Durable Objects associated with ${scriptName}. Any WebSocket connections or other non-persisted state will be lost as part of this restart.`
 		);
 
-		if (!args.yes && !(await confirm("Would you like to continue?"))) {
+		if (!args.force && !(await confirm("Would you like to continue?"))) {
 			return;
 		}
 	}
