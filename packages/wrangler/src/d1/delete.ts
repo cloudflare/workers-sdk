@@ -24,8 +24,7 @@ export function Options(d1ListYargs: CommonYargsArgv) {
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
 export const Handler = withConfig<HandlerOptions>(
 	async ({ name, skipConfirmation, config }): Promise<void> => {
-		const accountId = await requireAuth({});
-		logger.log(d1BetaWarning);
+		const accountId = await requireAuth(config);
 
 		const db: Database = await getDatabaseByNameOrBinding(
 			config,

@@ -1,5 +1,4 @@
 {
-	"extends": "../../tsconfig.json",
 	"compilerOptions": {
 		"strict": true,
 		"alwaysStrict": true,
@@ -12,6 +11,5 @@
 		"lib": ["es2020"],
 		"noEmit": true
 	},
-	"include": ["src"],
-	"exclude": ["node_modules"]
+	"exclude": ["tests/**"]
 }

@@ -7,10 +7,13 @@
 	"bugs": {
 		"url": "https://github.com/cloudflare/workers-sdk/issues"
 	},
+	"scripts": {
+		"deploy": "make publish"
+	},
 	"license": "BSD-3-Clause",
 	"author": "workers-devprod@cloudflare.com",
 	"devDependencies": {
 		"patch-package": "^6.5.1",
-		"wrangler": "^2.7.1"
+		"wrangler": "^3.0.0"
 	}
 }

@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import { findUpSync } from "find-up";
-import { getEntry } from "./entry";
+import { getEntry } from "./deployment-bundle/entry";
 import { logger } from "./logger";
 import type { Config } from "./config";
 
@@ -59,6 +59,12 @@ export async function generateTypes(
 		}
 	}
 
+	if (configToDTS.constellation) {
+		for (const service of configToDTS.constellation) {
+			envTypeStructure.push(`${service.binding}: Fetcher;`);
+		}
+	}
+
 	if (configToDTS.analytics_engine_datasets) {
 		for (const analyticsEngine of configToDTS.analytics_engine_datasets) {
 			envTypeStructure.push(
@@ -69,11 +75,11 @@ export async function generateTypes(
 
 	if (configToDTS.dispatch_namespaces) {
 		for (const namespace of configToDTS.dispatch_namespaces) {
-			envTypeStructure.push(`${namespace.binding}: any;`);
+			envTypeStructure.push(`${namespace.binding}: DispatchNamespace;`);
 		}
 	}
 
-	if (configToDTS.logfwdr?.schema) {
+	if (configToDTS.logfwdr?.bindings?.length) {
 		envTypeStructure.push(`LOGFWDR_SCHEMA: any;`);
 	}
 

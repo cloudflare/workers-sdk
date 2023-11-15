@@ -1,6 +1,6 @@
 const urls = new Set();
 
-export function checkedFetch(request, init) {
+function checkURL(request, init) {
 	const url =
 		request instanceof URL
 			? request
@@ -15,9 +15,16 @@ export function checkedFetch(request, init) {
 			urls.add(url.toString());
 			console.warn(
 				`WARNING: known issue with \`fetch()\` requests to custom HTTPS ports in published Workers:\n` +
-					` - ${url.toString()} - the custom port will be ignored when the Worker is published using the \`wrangler publish\` command.\n`
+					` - ${url.toString()} - the custom port will be ignored when the Worker is published using the \`wrangler deploy\` command.\n`
 			);
 		}
 	}
-	return globalThis.fetch(request, init);
 }
+
+globalThis.fetch = new Proxy(globalThis.fetch, {
+	apply(target, thisArg, argArray) {
+		const [request, init] = argArray;
+		checkURL(request, init);
+		return Reflect.apply(target, thisArg, argArray);
+	},
+});

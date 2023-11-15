@@ -5,13 +5,14 @@ This monorepo contains:
 - [`wrangler-devtools`](https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler-devtools)
   Cloudflare's fork of Chrome DevTools for inspecting your local or remote Workers
 - [`templates`](https://github.com/cloudflare/workers-sdk/tree/main/templates)
-  Templates & examples for writing Cloudlfare Workers
+  Templates & examples for writing Cloudflare Workers
 - [`wrangler`](https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler)
   A command line tool for building [Cloudflare Workers](https://workers.cloudflare.com/).
 - [`pages-shared`](https://github.com/cloudflare/workers-sdk/tree/main/packages/pages-shared)
   Used internally to power Wrangler and Cloudflare Pages. It contains all the code that is shared between these clients.
+- [`C3`](https://github.com/cloudflare/workers-sdk/tree/main/packages/create-cloudflare) A CLI for creating and deploying new applications to Cloudflare.
 
-Wrangler is developed in the open on GitHub, and you can see what we're working on in [GitHub Issues](https://github.com/cloudflare/workers-sdk/issues?q=is%3Aopen+is%3Aissue). If you've found a bug or would like to request a feature, [please file an issue](https://github.com/cloudflare/workers-sdk/issues/new/choose)!
+Wrangler and the workers-sdk is developed in the open on GitHub, and you can see what we're working on in [GitHub Issues](https://github.com/cloudflare/workers-sdk/issues?q=is%3Aopen+is%3Aissue), as well as in our [workers-sdk GitHub Project board](https://github.com/orgs/cloudflare/projects/1). If you've found a bug or would like to request a feature, [please file an issue](https://github.com/cloudflare/workers-sdk/issues/new/choose)!
 
 ## Quick Start
 
@@ -20,8 +21,8 @@ Wrangler is developed in the open on GitHub, and you can see what we're working 
 echo "export default { fetch() { return new Response('hello world') } }" > index.js
 # try it out
 npx wrangler dev index.js
-# and then publish it
-npx wrangler publish index.js --name my-worker --latest
+# and then deploy it
+npx wrangler deploy index.js --name my-worker --latest
 # visit https://my-worker.<your workers subdomain>.workers.dev
 ```
 
@@ -32,7 +33,7 @@ npx wrangler publish index.js --name my-worker --latest
 npx wrangler init my-worker
 # try it out
 cd my-worker && npm run start
-# and then publish it
+# and then deploy it
 npm run deploy
 ```
 
@@ -52,9 +53,9 @@ Creates a Worker project. For details on configuration keys and values, refer to
 
 Start a local development server, with live reloading and devtools.
 
-### `wrangler publish`
+### `wrangler deploy`
 
-Publish the given script to the worldwide Cloudflare network.
+Deploys the given script to the worldwide Cloudflare network.
 
 For more commands and options, refer to the [documentation](https://developers.cloudflare.com/workers/wrangler/commands/).
 

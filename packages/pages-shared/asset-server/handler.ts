@@ -12,15 +12,12 @@ import {
 	TemporaryRedirectResponse,
 } from "./responses";
 import { generateRulesMatcher, replacer } from "./rulesEngine";
-import { stringifyURLToRootRelativePathname } from "./url";
 import type {
 	Metadata,
 	MetadataHeadersEntries,
 	MetadataHeadersRulesV2,
 	MetadataHeadersV1,
 	MetadataHeadersV2,
-	MetadataStaticRedirectEntry,
-	MetadataRedirectEntry,
 } from "./metadata";
 
 type BodyEncoding = "manual" | "automatic";
@@ -77,6 +74,7 @@ type FullHandlerContext<AssetEntry, ContentNegotiation, Asset> = {
 	request: Request;
 	metadata: Metadata;
 	xServerEnvHeader?: string;
+	xDeploymentIdHeader?: boolean;
 	logError: (err: Error) => void;
 	findAssetEntryForPath: FindAssetEntryForPath<AssetEntry>;
 	getAssetKey(assetEntry: AssetEntry, content: ContentNegotiation): string;
@@ -100,16 +98,7 @@ type FullHandlerContext<AssetEntry, ContentNegotiation, Asset> = {
 	waitUntil: (promise: Promise<unknown>) => void;
 };
 
-export type HandlerContext<
-	AssetEntry,
-	ContentNegotiation extends { encoding: string | null } = {
-		encoding: string | null;
-	},
-	Asset extends { body: ReadableStream | null; contentType: string } = {
-		body: ReadableStream | null;
-		contentType: string;
-	}
-> =
+export type HandlerContext<AssetEntry, ContentNegotiation, Asset> =
 	| FullHandlerContext<AssetEntry, ContentNegotiation, Asset>
 	| (Omit<
 			FullHandlerContext<AssetEntry, ContentNegotiation, Asset>,
@@ -132,6 +121,7 @@ export async function generateHandler<
 	request,
 	metadata,
 	xServerEnvHeader,
+	xDeploymentIdHeader,
 	logError,
 	findAssetEntryForPath,
 	getAssetKey,
@@ -212,7 +202,39 @@ export async function generateHandler<
 				// the user does not change
 				pathname = new URL(match.to, request.url).pathname;
 			} else {
-				return getResponseFromMatch(match, url);
+				const { status, to } = match;
+				const destination = new URL(to, request.url);
+				const location =
+					destination.origin === new URL(request.url).origin
+						? `${destination.pathname}${destination.search || search}${
+								destination.hash
+						  }`
+						: `${destination.href}${destination.search ? "" : search}${
+								destination.hash
+						  }`;
+				switch (status) {
+					case 301:
+						return new MovedPermanentlyResponse(location, undefined, {
+							preventLeadingDoubleSlash: false,
+						});
+					case 303:
+						return new SeeOtherResponse(location, undefined, {
+							preventLeadingDoubleSlash: false,
+						});
+					case 307:
+						return new TemporaryRedirectResponse(location, undefined, {
+							preventLeadingDoubleSlash: false,
+						});
+					case 308:
+						return new PermanentRedirectResponse(location, undefined, {
+							preventLeadingDoubleSlash: false,
+						});
+					case 302:
+					default:
+						return new FoundResponse(location, undefined, {
+							preventLeadingDoubleSlash: false,
+						});
+				}
 			}
 		}
 
@@ -271,8 +293,6 @@ export async function generateHandler<
 			);
 		} else if ((assetEntry = await findAssetEntryForPath(`${pathname}.html`))) {
 			return serveAsset(assetEntry);
-		} else if (hasFileExtension(pathname)) {
-			return notFound();
 		}
 
 		if ((assetEntry = await findAssetEntryForPath(`${pathname}/index.html`))) {
@@ -460,6 +480,10 @@ export async function generateHandler<
 				headers["x-server-env"] = xServerEnvHeader;
 			}
 
+			if (xDeploymentIdHeader && metadata.deploymentId) {
+				headers["x-deployment-id"] = metadata.deploymentId;
+			}
+
 			if (content.encoding) {
 				encodeBody = "manual";
 				headers["cache-control"] = "no-transform";
@@ -581,49 +605,6 @@ export async function generateHandler<
 	}
 }
 
-/**
- * Given a redirect match and the request URL, returns the response
- * for the redirect. This function will convert the Location header
- * to be a root-relative path URL if the request origin and destination
- * origins are the same. This is so that if the project is served
- * on multiple domains, the redirects won't take the client off of their current domain.
- */
-export function getResponseFromMatch(
-	{
-		status,
-		to,
-	}: Pick<MetadataStaticRedirectEntry | MetadataRedirectEntry, "status" | "to">,
-	requestUrl: URL
-) {
-	// Inherit origin from the request URL if not specified in _redirects
-	const destination = new URL(to, requestUrl);
-	// If _redirects doesn't specify a search, inherit from the request
-	destination.search = destination.search || requestUrl.search;
-
-	// If the redirect destination origin matches the incoming request origin
-	// we stringify destination to be a root-relative path, e.g.:
-	//   https://example.com/foo/bar?baz=1 -> /foo/bar/?baz=1
-	// This way, the project can more easily be hosted on multiple domains
-	const location =
-		destination.origin === requestUrl.origin
-			? stringifyURLToRootRelativePathname(destination)
-			: destination.toString();
-
-	switch (status) {
-		case 301:
-			return new MovedPermanentlyResponse(location);
-		case 303:
-			return new SeeOtherResponse(location);
-		case 307:
-			return new TemporaryRedirectResponse(location);
-		case 308:
-			return new PermanentRedirectResponse(location);
-		case 302:
-		default:
-			return new FoundResponse(location);
-	}
-}
-
 // Parses a list such as "deflate, gzip;q=1.0, *;q=0.5" into
 //   {deflate: 1, gzip: 1, *: 0.5}
 export function parseQualityWeightedList(list = "") {
@@ -641,10 +622,6 @@ export function parseQualityWeightedList(list = "") {
 
 function isCacheable(request: Request) {
 	return !request.headers.has("authorization") && !request.headers.has("range");
-}
-
-function hasFileExtension(path: string) {
-	return /\/.+\.[a-z0-9]+$/i.test(path);
 }
 
 // Parses a request URL hostname to determine if the request

@@ -10,7 +10,7 @@ import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
 import { formatBytes, formatTimeAgo } from "./formatTimeAgo";
 import { Name } from "./options";
-import { d1BetaWarning, getDatabaseByNameOrBinding } from "./utils";
+import { getDatabaseByNameOrBinding } from "./utils";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -24,8 +24,8 @@ export function ListOptions(yargs: CommonYargsArgv) {
 type ListHandlerOptions = StrictYargsOptionsToInterface<typeof ListOptions>;
 export const ListHandler = withConfig<ListHandlerOptions>(
 	async ({ config, name }): Promise<void> => {
-		const accountId = await requireAuth({});
-		logger.log(d1BetaWarning);
+		const accountId = await requireAuth(config);
+
 		const db: Database = await getDatabaseByNameOrBinding(
 			config,
 			accountId,
@@ -87,8 +87,8 @@ type CreateHandlerOptions = StrictYargsOptionsToInterface<typeof CreateOptions>;
 
 export const CreateHandler = withConfig<CreateHandlerOptions>(
 	async ({ config, name }): Promise<void> => {
-		const accountId = await requireAuth({});
-		logger.log(d1BetaWarning);
+		const accountId = await requireAuth(config);
+
 		const db: Database = await getDatabaseByNameOrBinding(
 			config,
 			accountId,
@@ -135,8 +135,8 @@ type RestoreHandlerOptions = StrictYargsOptionsToInterface<
 >;
 export const RestoreHandler = withConfig<RestoreHandlerOptions>(
 	async ({ config, name, backupId }): Promise<void> => {
-		const accountId = await requireAuth({});
-		logger.log(d1BetaWarning);
+		const accountId = await requireAuth(config);
+
 		const db: Database = await getDatabaseByNameOrBinding(
 			config,
 			accountId,
@@ -183,8 +183,8 @@ type DownloadHandlerOptions = StrictYargsOptionsToInterface<
 >;
 export const DownloadHandler = withConfig<DownloadHandlerOptions>(
 	async ({ name, backupId, output, config }): Promise<void> => {
-		const accountId = await requireAuth({});
-		logger.log(d1BetaWarning);
+		const accountId = await requireAuth(config);
+
 		const db: Database = await getDatabaseByNameOrBinding(
 			config,
 			accountId,

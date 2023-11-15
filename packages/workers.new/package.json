@@ -3,12 +3,16 @@
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
-		"deploy": "wrangler publish src/index.ts",
-		"dev": "wrangler dev src/index.ts --local",
-		"test": "vitest"
+		"check:lint": "eslint .",
+		"deploy": "wrangler deploy",
+		"dev": "wrangler dev",
+		"test": "vitest run",
+		"test:ci": "vitest run"
 	},
 	"devDependencies": {
+		"@cloudflare/eslint-config-worker": "*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^3.0.0",
-		"wrangler": "^2.0.0"
+		"wrangler": "workspace:*"
 	}
 }

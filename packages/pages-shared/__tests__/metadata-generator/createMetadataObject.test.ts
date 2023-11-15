@@ -1,3 +1,4 @@
+import { test, expect } from "vitest";
 import { createMetadataObject } from "../..//metadata-generator/createMetadataObject";
 import type {
 	RedirectRule,
@@ -216,7 +217,6 @@ test("createMetadataObject should parse a realistic result", () => {
 	});
 
 	expect(metadata).toEqual({
-		failOpen: undefined,
 		redirects: {
 			version: 1,
 			rules: {},

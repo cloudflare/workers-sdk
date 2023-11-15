@@ -4,18 +4,22 @@
 	"private": true,
 	"main": "dist/index.js",
 	"scripts": {
-		"build": "npx wrangler pages functions build --fallback-service='' ./functions/routes --outdir=dist",
+		"build": "wrangler pages functions build --fallback-service='' ./functions/routes --outdir=dist",
+		"check:lint": "eslint .",
 		"check:type": "tsc",
-		"prepublish": "npm run build",
-		"publish": "npx wrangler publish dist/index.js",
-		"prestart": "npm run build",
-		"start": "npx wrangler dev dist/index.js"
+		"prepublish": "pnpm run build",
+		"publish": "wrangler deploy dist/index.js",
+		"prestart": "pnpm run build",
+		"start": "wrangler dev dist/index.js"
 	},
 	"dependencies": {
 		"jszip": "^3.7.1"
 	},
 	"devDependencies": {
+		"@cloudflare/eslint-config-worker": "*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20221111.1",
-		"typescript": "^4.5.5"
+		"typescript": "^4.5.5",
+		"wrangler": "workspace:*"
 	}
 }

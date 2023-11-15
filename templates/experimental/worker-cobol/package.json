@@ -5,7 +5,7 @@
 	"scripts": {
 		"prebuild": "bash build.sh",
 		"build": "webpack",
-		"deploy": "wrangler publish src/index.js",
+		"deploy": "wrangler deploy src/index.js",
 		"dev": "wrangler dev src/index.js --local"
 	},
 	"devDependencies": {

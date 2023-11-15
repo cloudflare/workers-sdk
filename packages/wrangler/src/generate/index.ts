@@ -46,6 +46,7 @@ export async function generateHandler(args: GenerateArgs) {
 			site: undefined,
 			yes: undefined,
 			fromDash: undefined,
+			delegateC3: false,
 			v: undefined,
 			config: undefined,
 			env: undefined,
@@ -58,6 +59,11 @@ export async function generateHandler(args: GenerateArgs) {
 
 	// print down here cuz `init` prints it own its own
 	await printWranglerBanner();
+
+	logger.warn(
+		`The \`generate\` command is no longer supported and will be removed in a future version.`
+		// TODO: recommend replacement commands
+	);
 
 	if (args.type) {
 		let message = "The --type option is no longer supported.";

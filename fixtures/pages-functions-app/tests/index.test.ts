@@ -3,8 +3,8 @@ import { fetch } from "undici";
 import { describe, it, beforeAll, afterAll } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
-describe.concurrent("Pages Functions", () => {
-	let ip, port, stop;
+describe("Pages Functions", () => {
+	let ip: string, port: number, stop: (() => Promise<unknown>) | undefined;
 
 	beforeAll(async () => {
 		({ ip, port, stop } = await runWranglerPagesDev(
@@ -19,7 +19,9 @@ describe.concurrent("Pages Functions", () => {
 		));
 	});
 
-	afterAll(async () => await stop());
+	afterAll(async () => {
+		await stop?.();
+	});
 
 	it("renders static pages", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/`);
@@ -91,7 +93,7 @@ describe.concurrent("Pages Functions", () => {
 		expect(text).toContain("<h1>An asset</h1>");
 	});
 
-	describe.concurrent("can mount a plugin", () => {
+	describe("can mount a plugin", () => {
 		it("should mount Middleware", async ({ expect }) => {
 			const response = await fetch(
 				`http://${ip}:${port}/mounted-plugin/some-page`
@@ -149,7 +151,7 @@ describe.concurrent("Pages Functions", () => {
 		});
 	});
 
-	describe.concurrent("can import static assets", () => {
+	describe("can import static assets", () => {
 		it("should render a static asset", async ({ expect }) => {
 			const response = await fetch(`http://${ip}:${port}/static`);
 			const text = await response.text();
@@ -190,7 +192,7 @@ describe.concurrent("Pages Functions", () => {
 		});
 	});
 
-	describe.concurrent("it supports R2", () => {
+	describe("it supports R2", () => {
 		it("should allow creates", async ({ expect }) => {
 			const response = await fetch(`http://${ip}:${port}/r2/create`, {
 				method: "PUT",
@@ -211,7 +213,7 @@ describe.concurrent("Pages Functions", () => {
 		});
 	});
 
-	describe.concurrent("redirects", () => {
+	describe("redirects", () => {
 		it("still attaches redirects correctly", async ({ expect }) => {
 			const response = await fetch(`http://${ip}:${port}/redirect`, {
 				redirect: "manual",
@@ -230,7 +232,7 @@ describe.concurrent("Pages Functions", () => {
 		});
 	});
 
-	describe.concurrent("headers", () => {
+	describe("headers", () => {
 		it("still attaches headers correctly", async ({ expect }) => {
 			const response = await fetch(`http://${ip}:${port}/`);
 
@@ -244,7 +246,7 @@ describe.concurrent("Pages Functions", () => {
 		});
 	});
 
-	describe.concurrent("passThroughOnException", () => {
+	describe("passThroughOnException", () => {
 		it("works on a single handler", async ({ expect }) => {
 			const response = await fetch(
 				`http://${ip}:${port}/passThroughOnExceptionOpen`
@@ -290,6 +292,53 @@ describe.concurrent("Pages Functions", () => {
 			expect(await response.text()).toMatchInlineSnapshot(
 				`"Manually caught error: ReferenceError: x is not defined"`
 			);
+		});
+	});
+
+	describe.concurrent("middleware data", () => {
+		it("allows middleware to set data", async ({ expect }) => {
+			const response = await fetch(
+				`http://${ip}:${port}/middleware-data/additional-data`
+			);
+
+			expect(response.status).toEqual(200);
+			const data = await response.json();
+			expect(data).toEqual({
+				foo: "bar",
+			});
+		});
+
+		it("allows middleware to mutate data", async ({ expect }) => {
+			const response = await fetch(
+				`http://${ip}:${port}/middleware-data/mutate-data`
+			);
+
+			expect(response.status).toEqual(200);
+			const data = await response.json();
+			expect(data).toEqual({
+				foo: "bar",
+				bar: "baz",
+			});
+		});
+
+		it("allows middleware to be overriden and not merged", async ({
+			expect,
+		}) => {
+			const response = await fetch(
+				`http://${ip}:${port}/middleware-data/merge-data`
+			);
+			const data = await response.json();
+			expect(data).toEqual({
+				bar: "baz",
+			});
+		});
+
+		it("middleware throws when set to non-object", async ({ expect }) => {
+			const response = await fetch(
+				`http://${ip}:${port}/middleware-data/bad-data`
+			);
+
+			expect(response.status).toEqual(500);
 		});
 	});
 });

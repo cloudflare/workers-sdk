@@ -4,7 +4,7 @@
 	"private": true,
 	"scripts": {
 		"build": "bash build.sh && webpack",
-		"deploy": "wrangler publish index.js",
+		"deploy": "wrangler deploy index.js",
 		"dev": "wrangler dev index.js --local"
 	},
 	"devDependencies": {

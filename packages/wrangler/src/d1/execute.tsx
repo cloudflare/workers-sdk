@@ -1,10 +1,9 @@
-import { existsSync } from "node:fs";
-import { mkdir } from "node:fs/promises";
+import assert from "node:assert";
 import path from "node:path";
 import chalk from "chalk";
 import { Static, Text } from "ink";
 import Table from "ink-table";
-import { npxImport } from "npx-import";
+import { Miniflare } from "miniflare";
 import React from "react";
 import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
@@ -15,19 +14,17 @@ import { readFileSync } from "../parse";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
+import { DEFAULT_BATCH_SIZE } from "./constants";
 import * as options from "./options";
 import splitSqlQuery from "./splitter";
-import {
-	d1BetaWarning,
-	getDatabaseByNameOrBinding,
-	getDatabaseInfoFromConfig,
-} from "./utils";
+import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
 import type { Config, ConfigFields, DevConfig, Environment } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type { Database } from "./types";
+import type { D1Result } from "@cloudflare/workers-types/experimental";
 
 export type QueryResult = {
 	results: Record<string, string | number | boolean>[];
@@ -37,8 +34,6 @@ export type QueryResult = {
 	};
 	query?: string;
 };
-// Max number of statements to send in a single /execute call
-const QUERY_LIMIT = 10_000;
 
 export function Options(yargs: CommonYargsArgv) {
 	return options
@@ -75,21 +70,35 @@ export function Options(yargs: CommonYargsArgv) {
 			describe: "Execute commands/files against a preview D1 DB",
 			type: "boolean",
 			default: false,
+		})
+		.option("batch-size", {
+			describe: "Number of queries to send in a single batch",
+			type: "number",
+			default: DEFAULT_BATCH_SIZE,
 		});
 }
 
 type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
 
 export const Handler = async (args: HandlerOptions): Promise<void> => {
-	const { local, database, yes, persistTo, file, command, json, preview } =
-		args;
+	const {
+		local,
+		database,
+		yes,
+		persistTo,
+		file,
+		command,
+		json,
+		preview,
+		batchSize,
+	} = args;
 	const existingLogLevel = logger.loggerLevel;
 	if (json) {
 		// set loggerLevel to error to avoid readConfig warnings appearing in JSON output
 		logger.loggerLevel = "error";
 	}
 	const config = readConfig(args.config, args);
-	logger.log(d1BetaWarning);
+
 	if (file && command)
 		return logger.error(`Error: can't provide both --command and --file.`);
 
@@ -104,6 +113,7 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 		command,
 		json,
 		preview,
+		batchSize,
 	});
 
 	// Early exit if prompt rejected
@@ -150,6 +160,7 @@ export async function executeSql({
 	command,
 	json,
 	preview,
+	batchSize,
 }: {
 	local: boolean | undefined;
 	config: ConfigFields<DevConfig> & Environment;
@@ -160,7 +171,13 @@ export async function executeSql({
 	command: string | undefined;
 	json: boolean | undefined;
 	preview: boolean | undefined;
+	batchSize: number;
 }) {
+	const existingLogLevel = logger.loggerLevel;
+	if (json) {
+		// set loggerLevel to error to avoid logs appearing in JSON output
+		logger.loggerLevel = "error";
+	}
 	const sql = file ? readFileSync(file) : command;
 	if (!sql) throw new Error(`Error: must provide --command or --file.`);
 	if (preview && local)
@@ -178,40 +195,35 @@ export async function executeSql({
 			);
 		}
 	}
-
-	return local
+	const result = local
 		? await executeLocally({
 				config,
 				name,
-				shouldPrompt,
 				queries,
 				persistTo,
-				json,
 		  })
 		: await executeRemotely({
 				config,
 				name,
 				shouldPrompt,
-				batches: batchSplit(queries),
+				batches: batchSplit(queries, batchSize),
 				json,
 				preview,
 		  });
+	if (json) logger.loggerLevel = existingLogLevel;
+	return result;
 }
 
 async function executeLocally({
 	config,
 	name,
-	shouldPrompt,
 	queries,
 	persistTo,
-	json,
 }: {
 	config: Config;
 	name: string;
-	shouldPrompt: boolean | undefined;
 	queries: string[];
 	persistTo: string | undefined;
-	json: boolean | undefined;
 }) {
 	const localDB = getDatabaseInfoFromConfig(config, name);
 	if (!localDB) {
@@ -220,34 +232,46 @@ async function executeLocally({
 		);
 	}
 
-	const persistencePath = getLocalPersistencePath(
-		persistTo,
-		true,
-		config.configPath
+	const id = localDB.previewDatabaseUuid ?? localDB.uuid;
+	const persistencePath = getLocalPersistencePath(persistTo, config.configPath);
+	const d1Persist = path.join(persistencePath, "v3", "d1");
+
+	logger.log(
+		`🌀 Executing on local database ${name} (${id}) from ${readableRelative(
+			d1Persist
+		)}:`
 	);
 
-	const dbDir = path.join(persistencePath, "d1");
-	const dbPath = path.join(dbDir, `${localDB.binding}.sqlite3`);
-	const [{ D1Database, D1DatabaseAPI }, { createSQLiteDB }] = await npxImport<
-		// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-		[typeof import("@miniflare/d1"), typeof import("@miniflare/shared")]
-	>(["@miniflare/d1", "@miniflare/shared"], logger.log);
+	const mf = new Miniflare({
+		modules: true,
+		script: "",
+		d1Persist,
+		d1Databases: { DATABASE: id },
+	});
+	const db = await mf.getD1Database("DATABASE");
 
-	if (!existsSync(dbDir)) {
-		const ok =
-			json ||
-			!shouldPrompt ||
-			(await confirm(`About to create ${readableRelative(dbPath)}, ok?`));
-		if (!ok) return null;
-		await mkdir(dbDir, { recursive: true });
+	let results: D1Result<Record<string, string | number | boolean>>[];
+	try {
+		results = await db.batch(queries.map((query) => db.prepare(query)));
+	} catch (e: unknown) {
+		throw (e as { cause?: unknown })?.cause ?? e;
+	} finally {
+		await mf.dispose();
 	}
-
-	logger.log(`🌀 Loading DB at ${readableRelative(dbPath)}`);
-
-	const sqliteDb = await createSQLiteDB(dbPath);
-	const db = new D1Database(new D1DatabaseAPI(sqliteDb));
-	const stmts = queries.map((query) => db.prepare(query));
-	return (await db.batch(stmts)) as QueryResult[];
+	assert(Array.isArray(results));
+	return results.map<QueryResult>((result) => ({
+		results: (result.results ?? []).map((row) =>
+			Object.fromEntries(
+				Object.entries(row).map(([key, value]) => {
+					if (Array.isArray(value)) value = `[${value.join(", ")}]`;
+					if (value === null) value = "null";
+					return [key, value];
+				})
+			)
+		),
+		success: result.success,
+		meta: { duration: result.meta?.duration },
+	}));
 }
 
 async function executeRemotely({
@@ -281,7 +305,7 @@ async function executeRemotely({
 		}
 	}
 
-	const accountId = await requireAuth({});
+	const accountId = await requireAuth(config);
 	const db: Database = await getDatabaseByNameOrBinding(
 		config,
 		accountId,
@@ -293,7 +317,10 @@ async function executeRemotely({
 		);
 	}
 	const dbUuid = preview ? db.previewDatabaseUuid : db.uuid;
-	logger.log(`🌀 Executing on ${name} (${dbUuid}):`);
+	logger.log(`🌀 Executing on remote database ${name} (${dbUuid}):`);
+	logger.log(
+		"🌀 To execute on your local development database, pass the --local flag to 'wrangler d1 execute'"
+	);
 
 	const results: QueryResult[] = [];
 	for (const sql of batches) {
@@ -313,7 +340,7 @@ async function executeRemotely({
 				body: JSON.stringify({ sql }),
 			}
 		);
-		result.map(logResult);
+		logResult(result);
 		results.push(...result);
 	}
 	return results;
@@ -333,18 +360,16 @@ function logResult(r: QueryResult | QueryResult[]) {
 	);
 }
 
-function batchSplit(queries: string[]) {
+function batchSplit(queries: string[], batchSize: number) {
 	logger.log(`🌀 Parsing ${queries.length} statements`);
-	const num_batches = Math.ceil(queries.length / QUERY_LIMIT);
+	const num_batches = Math.ceil(queries.length / batchSize);
 	const batches: string[] = [];
 	for (let i = 0; i < num_batches; i++) {
-		batches.push(
-			queries.slice(i * QUERY_LIMIT, (i + 1) * QUERY_LIMIT).join("; ")
-		);
+		batches.push(queries.slice(i * batchSize, (i + 1) * batchSize).join("; "));
 	}
 	if (num_batches > 1) {
 		logger.log(
-			`🌀 We are sending ${num_batches} batch(es) to D1 (limited to ${QUERY_LIMIT} statements per batch)`
+			`🌀 We are sending ${num_batches} batch(es) to D1 (limited to ${batchSize} statements per batch. Use --batch-size to override.)`
 		);
 	}
 	return batches;

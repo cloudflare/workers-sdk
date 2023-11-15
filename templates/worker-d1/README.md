@@ -17,7 +17,7 @@ Alternatively:
 ```sh
 git clone https://github.com/cloudflare/templates.git
 cd templates
-npm init cloudflare northwind-demo worker-d1
+npx wrangler generate northwind-demo worker-d1
 ```
 
 ### Getting started
@@ -40,7 +40,7 @@ npx wrangler d1 execute northwind-demo --file ./data/Northwind.Sqlite3.create.sq
 npm install --save-dev itty-router @cloudflare/d1
 
 # Deploy the worker
-npx wrangler publish
+npx wrangler deploy
 ```
 
 Then test out your new Worker!

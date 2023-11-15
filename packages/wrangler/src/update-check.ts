@@ -1,9 +1,46 @@
 import chalk from "chalk";
+import supportsColor from "supports-color";
 import checkForUpdate from "update-check";
 import pkg from "../package.json";
+import { version as wranglerVersion } from "../package.json";
+import { logger } from "./logger";
+import type { Result } from "update-check";
 
-export async function updateCheck(): Promise<string> {
-	let update = null;
+export async function printWranglerBanner(performUpdateCheck = true) {
+	let text = ` ⛅️ wrangler ${wranglerVersion}`;
+	let maybeNewVersion: string | undefined;
+	if (performUpdateCheck) {
+		maybeNewVersion = await updateCheck();
+		if (maybeNewVersion !== undefined) {
+			text += ` (update available ${chalk.green(maybeNewVersion)})`;
+		}
+	}
+
+	logger.log(
+		text +
+			"\n" +
+			(supportsColor.stdout
+				? chalk.hex("#FF8800")("-".repeat(text.length))
+				: "-".repeat(text.length))
+	);
+
+	// Log a slightly more noticeable message if this is a major bump
+	if (maybeNewVersion !== undefined) {
+		const currentMajor = parseInt(wranglerVersion.split(".")[0]);
+		const newMajor = parseInt(maybeNewVersion.split(".")[0]);
+		if (newMajor > currentMajor) {
+			logger.warn(
+				`The version of Wrangler you are using is now out-of-date.
+Please update to the latest version to prevent critical errors.
+Run \`npm install --save-dev wrangler@${newMajor}\` to update to the latest version.
+After installation, run Wrangler with \`npx wrangler\`.`
+			);
+		}
+	}
+}
+
+async function doUpdateCheck(): Promise<string | undefined> {
+	let update: Result | null = null;
 	try {
 		// default cache for update check is 1 day
 		update = await checkForUpdate(pkg, {
@@ -12,8 +49,13 @@ export async function updateCheck(): Promise<string> {
 	} catch (err) {
 		// ignore error
 	}
+	return update?.latest;
+}
 
-	if (update) return `(update available ${chalk.green(update.latest)})`;
-
-	return "";
+// Memoise update check promise, so we can call this multiple times as required
+// without having to prop drill the result. It's unlikely to change through the
+// process lifetime.
+let updateCheckPromise: Promise<string | undefined>;
+export function updateCheck(): Promise<string | undefined> {
+	return (updateCheckPromise ??= doUpdateCheck());
 }

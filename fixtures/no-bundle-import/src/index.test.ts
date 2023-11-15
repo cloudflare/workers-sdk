@@ -1,24 +1,13 @@
 import path from "path";
 import { describe, expect, test, beforeAll, afterAll } from "vitest";
-import { unstable_dev } from "../../../packages/wrangler/wrangler-dist/cli.js";
-import type { UnstableDevWorker } from "../../../packages/wrangler/wrangler-dist/cli.js";
+import { unstable_dev } from "wrangler";
+import type { UnstableDevWorker } from "wrangler";
 
 describe("Worker", () => {
 	let worker: UnstableDevWorker;
 
-	// TODO: Remove this when `workerd` has Windows support
-	if (process.env.RUNNER_OS === "Windows") {
-		test("dummy windows test", () => {
-			expect(process.env.RUNNER_OS).toStrictEqual("Windows");
-		});
-		return;
-	}
-
 	beforeAll(async () => {
-		worker = await unstable_dev(path.resolve(__dirname, "index.js"), {
-			bundle: false,
-			experimental: { experimentalLocal: true },
-		});
+		worker = await unstable_dev(path.resolve(__dirname, "index.js"));
 	}, 30_000);
 
 	afterAll(() => worker.stop());
@@ -81,5 +70,11 @@ describe("Worker", () => {
 		const expected = new Uint8Array(new ArrayBuffer(4));
 		expected.set([0, 1, 2, 10]);
 		expect(new Uint8Array(bin)).toEqual(expected);
+	});
+
+	test("actual dynamic import (that cannot be inlined by an esbuild run)", async () => {
+		const resp = await worker.fetch("/lang/fr.json");
+		const text = await resp.text();
+		expect(text).toMatchInlineSnapshot('"Bonjour"');
 	});
 });

@@ -1,13 +1,17 @@
 type HeadersInit = ConstructorParameters<typeof Headers>[0];
 
 function mergeHeaders(base: HeadersInit, extra: HeadersInit) {
-	base = new Headers(base ?? {});
-	extra = new Headers(extra ?? {});
+	const baseHeaders = new Headers(base ?? {});
+	const extraHeaders = new Headers(extra ?? {});
 
 	return new Headers({
-		...Object.fromEntries(base.entries()),
-		...Object.fromEntries(extra.entries()),
+		...Object.fromEntries(baseHeaders.entries()),
+		...Object.fromEntries(extraHeaders.entries()),
 	});
+}
+
+export function stripLeadingDoubleSlashes(location: string) {
+	return location.replace(/^(\/|%2F|%2f|%5C|%5c|%09|\s|\\)+(.*)/, "/$2");
 }
 
 export class OkResponse extends Response {
@@ -23,8 +27,16 @@ export class OkResponse extends Response {
 export class MovedPermanentlyResponse extends Response {
 	constructor(
 		location: string,
-		init?: ConstructorParameters<typeof Response>[1]
+		init?: ConstructorParameters<typeof Response>[1],
+		{
+			preventLeadingDoubleSlash = true,
+		}: { preventLeadingDoubleSlash: boolean } = {
+			preventLeadingDoubleSlash: true,
+		}
 	) {
+		location = preventLeadingDoubleSlash
+			? stripLeadingDoubleSlashes(location)
+			: location;
 		super(`Redirecting to ${location}`, {
 			...init,
 			status: 301,
@@ -39,8 +51,16 @@ export class MovedPermanentlyResponse extends Response {
 export class FoundResponse extends Response {
 	constructor(
 		location: string,
-		init?: ConstructorParameters<typeof Response>[1]
+		init?: ConstructorParameters<typeof Response>[1],
+		{
+			preventLeadingDoubleSlash = true,
+		}: { preventLeadingDoubleSlash: boolean } = {
+			preventLeadingDoubleSlash: true,
+		}
 	) {
+		location = preventLeadingDoubleSlash
+			? stripLeadingDoubleSlashes(location)
+			: location;
 		super(`Redirecting to ${location}`, {
 			...init,
 			status: 302,
@@ -64,8 +84,16 @@ export class NotModifiedResponse extends Response {
 export class PermanentRedirectResponse extends Response {
 	constructor(
 		location: string,
-		init?: ConstructorParameters<typeof Response>[1]
+		init?: ConstructorParameters<typeof Response>[1],
+		{
+			preventLeadingDoubleSlash = true,
+		}: { preventLeadingDoubleSlash: boolean } = {
+			preventLeadingDoubleSlash: true,
+		}
 	) {
+		location = preventLeadingDoubleSlash
+			? stripLeadingDoubleSlashes(location)
+			: location;
 		super(undefined, {
 			...init,
 			status: 308,
@@ -126,8 +154,16 @@ export class InternalServerErrorResponse extends Response {
 export class SeeOtherResponse extends Response {
 	constructor(
 		location: string,
-		init?: ConstructorParameters<typeof Response>[1]
+		init?: ConstructorParameters<typeof Response>[1],
+		{
+			preventLeadingDoubleSlash = true,
+		}: { preventLeadingDoubleSlash: boolean } = {
+			preventLeadingDoubleSlash: true,
+		}
 	) {
+		location = preventLeadingDoubleSlash
+			? stripLeadingDoubleSlashes(location)
+			: location;
 		super(`Redirecting to ${location}`, {
 			...init,
 			status: 303,
@@ -140,8 +176,16 @@ export class SeeOtherResponse extends Response {
 export class TemporaryRedirectResponse extends Response {
 	constructor(
 		location: string,
-		init?: ConstructorParameters<typeof Response>[1]
+		init?: ConstructorParameters<typeof Response>[1],
+		{
+			preventLeadingDoubleSlash = true,
+		}: { preventLeadingDoubleSlash: boolean } = {
+			preventLeadingDoubleSlash: true,
+		}
 	) {
+		location = preventLeadingDoubleSlash
+			? stripLeadingDoubleSlashes(location)
+			: location;
 		super(`Redirecting to ${location}`, {
 			...init,
 			status: 307,

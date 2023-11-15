@@ -34,18 +34,49 @@ jest.mock("child_process", () => {
 	return {
 		__esModule: true,
 		...jest.requireActual("child_process"),
-		spawnSync: jest.fn().mockImplementation(async (binary, ...args) => {
+		default: jest.requireActual("child_process"),
+		spawnSync: jest.fn().mockImplementation((binary, ...args) => {
 			if (binary === "cloudflared") return { error: true };
 			return jest.requireActual("child_process").spawnSync(binary, ...args);
 		}),
 	};
 });
 
+jest.mock("log-update", () => {
+	const fn = function (..._: string[]) {};
+	fn["clear"] = () => {};
+	fn["done"] = () => {};
+	return fn;
+});
+
 jest.mock("ws", () => {
-	return {
+	// `miniflare` needs to use the real `ws` module, but tail tests require us
+	// to mock `ws`. `esbuild-jest` won't let us use type annotations in our tests
+	// if those files contain `jest.mock()` calls, so we mock here, pass-through
+	// by default, and allow mocking conditionally.
+	const realModule = jest.requireActual("ws");
+	const module = {
 		__esModule: true,
-		default: MockWebSocket,
+		useOriginal: true,
 	};
+	Object.defineProperties(module, {
+		default: {
+			get() {
+				return module.useOriginal ? realModule.default : MockWebSocket;
+			},
+		},
+		WebSocket: {
+			get() {
+				return module.useOriginal ? realModule.WebSocket : MockWebSocket;
+			},
+		},
+		WebSocketServer: {
+			get() {
+				return realModule.WebSocketServer;
+			},
+		},
+	});
+	return module;
 });
 
 jest.mock("undici", () => {
@@ -61,6 +92,8 @@ fetchMock.doMock(() => {
 });
 
 jest.mock("../package-manager");
+
+jest.mock("../update-check");
 
 // requests not mocked with `jest-fetch-mock` fall through
 // to `mock-service-worker`
@@ -176,4 +209,22 @@ jest.mock("prompts", () => {
 			);
 		}),
 	};
+});
+
+jest.mock("execa", () => {
+	const realModule = jest.requireActual("execa");
+
+	return {
+		...realModule,
+		execa: jest.fn((...args: unknown[]) => {
+			return args[0] === "mockpm"
+				? Promise.resolve()
+				: realModule.execa(...args);
+		}),
+	};
+});
+
+afterEach(() => {
+	// It is important that we clear mocks between tests to avoid leakage.
+	jest.clearAllMocks();
 });

@@ -83,7 +83,7 @@ export const render = (tree: ReactElement): Instance => {
 	});
 
 	return {
-		output: stdout.lastFrame() || LASTFRAME_UNDEFINED,
+		output: stdout.lastFrame() ?? LASTFRAME_UNDEFINED,
 		stdout,
 		stderr,
 		cleanup: instance.cleanup,

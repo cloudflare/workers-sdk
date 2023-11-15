@@ -10,7 +10,7 @@ import { requireAuth } from "../user";
 import { renderToString } from "../utils/render";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { promptSelectProject } from "./prompt-select-project";
-import { pagesBetaWarning } from "./utils";
+
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -20,15 +20,13 @@ import type { Deployment, PagesConfigCache } from "./types";
 type ListArgs = StrictYargsOptionsToInterface<typeof ListOptions>;
 
 export function ListOptions(yargs: CommonYargsArgv) {
-	return yargs
-		.options({
-			"project-name": {
-				type: "string",
-				description:
-					"The name of the project you would like to list deployments for",
-			},
-		})
-		.epilogue(pagesBetaWarning);
+	return yargs.options({
+		"project-name": {
+			type: "string",
+			description:
+				"The name of the project you would like to list deployments for",
+		},
+	});
 }
 
 export async function ListHandler({ projectName }: ListArgs) {

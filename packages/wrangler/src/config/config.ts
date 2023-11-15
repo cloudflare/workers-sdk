@@ -173,7 +173,7 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 	/**
 	 * By default, wrangler.toml is the source of truth for your environment configuration, like a terraform file.
 	 *
-	 * If you change your vars in the dashboard, wrangler *will* override/delete them on its next publish.
+	 * If you change your vars in the dashboard, wrangler *will* override/delete them on its next deploy.
 	 *
 	 * If you want to keep your dashboard vars when wrangler deploys, set this field to true.
 	 *
@@ -187,7 +187,7 @@ export interface DevConfig {
 	/**
 	 * IP address for the local dev server to listen on,
 	 *
-	 * @default `0.0.0.0`
+	 * @default `*`
 	 */
 	ip: string;
 

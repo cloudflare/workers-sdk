@@ -5,32 +5,33 @@ import { watch } from "chokidar";
 import clipboardy from "clipboardy";
 import commandExists from "command-exists";
 import { Box, Text, useApp, useInput, useStdin } from "ink";
-import React, { useState, useEffect, useRef, useMemo } from "react";
-import { withErrorBoundary, useErrorHandler } from "react-error-boundary";
+import React, { useEffect, useRef, useState } from "react";
+import { useErrorHandler, withErrorBoundary } from "react-error-boundary";
 import onExit from "signal-exit";
-import tmp from "tmp-promise";
 import { fetch } from "undici";
+import { runCustomBuild } from "../deployment-bundle/run-custom-build";
 import {
 	getBoundRegisteredWorkers,
 	startWorkerRegistry,
 	stopWorkerRegistry,
 	unregisterWorker,
 } from "../dev-registry";
-import { runCustomBuild } from "../entry";
-import { openInspector } from "../inspect";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
+import { getWranglerTmpDir } from "../paths";
+import { openInspector } from "./inspect";
 import { Local } from "./local";
 import { Remote } from "./remote";
 import { useEsbuild } from "./use-esbuild";
 import { validateDevProps } from "./validate-dev-props";
 import type { Config } from "../config";
 import type { Route } from "../config/environment";
+import type { Entry } from "../deployment-bundle/entry";
+import type { CfModule, CfWorkerInit } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
-import type { Entry } from "../entry";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
+import type { EphemeralDirectory } from "../paths";
 import type { AssetPaths } from "../sites";
-import type { CfWorkerInit } from "../worker";
 
 /**
  * This hooks establishes a connection with the dev registry,
@@ -44,6 +45,8 @@ function useDevRegistry(
 	mode: "local" | "remote"
 ): WorkerRegistry {
 	const [workers, setWorkers] = useState<WorkerRegistry>({});
+
+	const hasFailedToFetch = useRef(false);
 
 	useEffect(() => {
 		// Let's try to start registry
@@ -73,7 +76,10 @@ function useDevRegistry(
 								});
 							},
 							(err) => {
-								logger.warn("Failed to get worker definitions", err);
+								if (!hasFailedToFetch.current) {
+									hasFailedToFetch.current = true;
+									logger.warn("Failed to get worker definitions", err);
+								}
 							}
 						);
 				  }, 300)
@@ -112,10 +118,14 @@ function useDevRegistry(
 export type DevProps = {
 	name: string | undefined;
 	noBundle: boolean;
+	findAdditionalModules: boolean | undefined;
 	entry: Entry;
 	initialPort: number;
 	initialIp: string;
 	inspectorPort: number;
+	runtimeInspectorPort: number;
+	processEntrypoint: boolean;
+	additionalModules: CfModule[];
 	rules: Config["rules"];
 	accountId: string | undefined;
 	initialMode: "local" | "remote";
@@ -154,8 +164,7 @@ export type DevProps = {
 	firstPartyWorker: boolean | undefined;
 	sendMetrics: boolean | undefined;
 	testScheduled: boolean | undefined;
-	experimentalLocal: boolean | undefined;
-	experimentalLocalRemoteKv: boolean | undefined;
+	projectRoot: string | undefined;
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
@@ -187,6 +196,7 @@ function InteractiveDevSession(props: DevProps) {
 		inspect: props.inspect,
 		localProtocol: props.localProtocol,
 		forceLocal: props.forceLocal,
+		worker: props.name,
 	});
 
 	ip = props.initialIp;
@@ -239,26 +249,7 @@ type DevSessionProps = DevProps & {
 function DevSession(props: DevSessionProps) {
 	useCustomBuild(props.entry, props.build);
 
-	const directory = useTmpDir();
-	const handleError = useErrorHandler();
-
-	// Note: when D1 is out of beta, this (and all instances of `betaD1Shims`) can be removed.
-	// Additionally, useMemo is used so that new arrays aren't created on every render
-	// cause re-rendering further down.
-	const betaD1Shims = useMemo(
-		() => props.bindings.d1_databases?.map((db) => db.binding),
-		[props.bindings.d1_databases]
-	);
-
-	// If we are using d1 bindings, and are not bundling the worker
-	// we should error here as the d1 shim won't be added
-	if (Array.isArray(betaD1Shims) && betaD1Shims.length > 0 && props.noBundle) {
-		handleError(
-			new Error(
-				"While in beta, you cannot use D1 bindings without bundling your worker. Please remove `no_bundle` from your wrangler.toml file or remove the `--no-bundle` flag to access D1 bindings."
-			)
-		);
-	}
+	const directory = useTmpDir(props.projectRoot);
 
 	const workerDefinitions = useDevRegistry(
 		props.name,
@@ -271,6 +262,8 @@ function DevSession(props: DevSessionProps) {
 		entry: props.entry,
 		destination: directory,
 		jsxFactory: props.jsxFactory,
+		processEntrypoint: props.processEntrypoint,
+		additionalModules: props.additionalModules,
 		rules: props.rules,
 		jsxFragment: props.jsxFragment,
 		serveAssetsFromWorker: Boolean(
@@ -280,19 +273,19 @@ function DevSession(props: DevSessionProps) {
 		minify: props.minify,
 		legacyNodeCompat: props.legacyNodeCompat,
 		nodejsCompat: props.nodejsCompat,
-		betaD1Shims,
 		define: props.define,
 		noBundle: props.noBundle,
+		findAdditionalModules: props.findAdditionalModules,
 		assets: props.assetsConfig,
 		workerDefinitions,
 		services: props.bindings.services,
 		durableObjects: props.bindings.durable_objects || { bindings: [] },
-		firstPartyWorkerDevFacade: props.firstPartyWorker,
 		local: props.local,
-		// Enable the bundling to know whether we are using dev or publish
+		// Enable the bundling to know whether we are using dev or deploy
 		targetConsumer: "dev",
 		testScheduled: props.testScheduled ?? false,
 		experimentalLocal: props.experimentalLocal,
+		projectRoot: props.projectRoot,
 	});
 
 	// TODO(queues) support remote wrangler dev
@@ -336,6 +329,7 @@ function DevSession(props: DevSessionProps) {
 			initialIp={props.initialIp}
 			rules={props.rules}
 			inspectorPort={props.inspectorPort}
+			runtimeInspectorPort={props.runtimeInspectorPort}
 			localPersistencePath={props.localPersistencePath}
 			liveReload={props.liveReload}
 			crons={props.crons}
@@ -345,9 +339,7 @@ function DevSession(props: DevSessionProps) {
 			inspect={props.inspect}
 			onReady={announceAndOnReady}
 			enablePagesAssetsServiceBinding={props.enablePagesAssetsServiceBinding}
-			experimentalLocal={props.experimentalLocal}
-			accountId={props.accountId}
-			experimentalLocalRemoteKv={props.experimentalLocalRemoteKv}
+			sourceMapPath={bundle?.sourceMapPath}
 		/>
 	) : (
 		<Remote
@@ -380,19 +372,14 @@ function DevSession(props: DevSessionProps) {
 	);
 }
 
-export interface DirectorySyncResult {
-	name: string;
-	removeCallback: () => void;
-}
-
-function useTmpDir(): string | undefined {
-	const [directory, setDirectory] = useState<DirectorySyncResult>();
+function useTmpDir(projectRoot: string | undefined): string | undefined {
+	const [directory, setDirectory] = useState<string>();
 	const handleError = useErrorHandler();
 	useEffect(() => {
-		let dir: DirectorySyncResult | undefined;
+		let dir: EphemeralDirectory | undefined;
 		try {
-			dir = tmp.dirSync({ unsafeCleanup: true });
-			setDirectory(dir);
+			dir = getWranglerTmpDir(projectRoot, "dev");
+			setDirectory(dir.path);
 			return;
 		} catch (err) {
 			logger.error(
@@ -400,11 +387,9 @@ function useTmpDir(): string | undefined {
 			);
 			handleError(err);
 		}
-		return () => {
-			dir?.removeCallback();
-		};
-	}, [handleError]);
-	return directory?.name;
+		return () => dir?.remove();
+	}, [projectRoot, handleError]);
+	return directory;
 }
 
 function useCustomBuild(expectedEntry: Entry, build: Config["build"]): void {
@@ -526,6 +511,7 @@ function useHotkeys(props: {
 	inspect: boolean;
 	localProtocol: "http" | "https";
 	forceLocal: boolean | undefined;
+	worker: string | undefined;
 }) {
 	const { initial, inspectorPort, inspect, localProtocol, forceLocal } = props;
 	// UGH, we should put port in context instead
@@ -558,7 +544,7 @@ function useHotkeys(props: {
 				// toggle inspector
 				case "d": {
 					if (inspect) {
-						await openInspector(inspectorPort);
+						await openInspector(inspectorPort, props.worker);
 					}
 					break;
 				}

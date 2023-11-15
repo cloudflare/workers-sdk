@@ -1,5 +1,5 @@
 import chalk from "chalk";
-import { fetchListResult, fetchResult } from "./cfetch";
+import { fetchPagedListResult, fetchResult } from "./cfetch";
 import { logger } from "./logger";
 import { getAPIToken, getAuthFromEnv, getScopes } from "./user";
 
@@ -11,7 +11,6 @@ export async function whoami() {
 			"You are not authenticated. Please run `wrangler login`."
 		);
 	}
-
 	if (user.email !== undefined) {
 		logger.log(
 			`👋 You are logged in with an ${
@@ -92,7 +91,7 @@ async function getEmail(): Promise<string | undefined> {
 type AccountInfo = { name: string; id: string };
 
 async function getAccounts(): Promise<AccountInfo[]> {
-	return await fetchListResult<AccountInfo>("/accounts");
+	return await fetchPagedListResult<AccountInfo>("/accounts");
 }
 
 async function getTokenPermissions(): Promise<string[] | undefined> {

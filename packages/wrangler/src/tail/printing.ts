@@ -1,9 +1,13 @@
+import chalk from "chalk";
 import { logger } from "../logger";
 import type {
 	AlarmEvent,
 	EmailEvent,
+	QueueEvent,
 	RequestEvent,
 	ScheduledEvent,
+	TailEvent,
+	TailInfo,
 	TailEventMessage,
 } from "./createTail";
 import type { Outcome } from "./filters";
@@ -48,6 +52,36 @@ export function prettyPrintLogs(data: WebSocket.RawData): void {
 		).toLocaleString();
 
 		logger.log(`Alarm @ ${datetime} - ${outcome}`);
+	} else if (isTailEvent(eventMessage.event)) {
+		const outcome = prettifyOutcome(eventMessage.outcome);
+		const datetime = new Date(eventMessage.eventTimestamp).toLocaleString();
+		const tailedScripts = new Set(
+			eventMessage.event.consumedEvents
+				.map((consumedEvent) => consumedEvent.scriptName)
+				.filter((scriptName) => !!scriptName)
+		);
+
+		logger.log(
+			`Tailing ${Array.from(tailedScripts).join(
+				","
+			)} - ${outcome} @ ${datetime}`
+		);
+	} else if (isTailInfo(eventMessage.event)) {
+		if (eventMessage.event.type === "overload") {
+			logger.log(`${chalk.red.bold(eventMessage.event.message)}`);
+		} else if (eventMessage.event.type === "overload-stop") {
+			logger.log(`${chalk.yellow.bold(eventMessage.event.message)}`);
+		}
+	} else if (isQueueEvent(eventMessage.event)) {
+		const outcome = prettifyOutcome(eventMessage.outcome);
+		const datetime = new Date(eventMessage.eventTimestamp).toLocaleString();
+		const queueName = eventMessage.event.queue;
+		const batchSize = eventMessage.event.batchSize;
+		const batchSizeMsg = `${batchSize} message${batchSize !== 1 ? "s" : ""}`;
+
+		logger.log(
+			`Queue ${queueName} (${batchSizeMsg}) - ${outcome} @ ${datetime}`
+		);
 	} else {
 		// Unknown event type
 		const outcome = prettifyOutcome(eventMessage.outcome);
@@ -89,6 +123,10 @@ function isEmailEvent(event: TailEventMessage["event"]): event is EmailEvent {
 	return Boolean(event && "mailFrom" in event);
 }
 
+function isQueueEvent(event: TailEventMessage["event"]): event is QueueEvent {
+	return Boolean(event && "queue" in event);
+}
+
 /**
  * Check to see if an event sent from a worker is an AlarmEvent.
  *
@@ -101,6 +139,14 @@ function isEmailEvent(event: TailEventMessage["event"]): event is EmailEvent {
  */
 function isAlarmEvent(event: TailEventMessage["event"]): event is AlarmEvent {
 	return Boolean(event && "scheduledTime" in event && !("cron" in event));
+}
+
+function isTailEvent(event: TailEventMessage["event"]): event is TailEvent {
+	return Boolean(event && "consumedEvents" in event);
+}
+
+function isTailInfo(event: TailEventMessage["event"]): event is TailInfo {
+	return Boolean(event && "message" in event && "type" in event);
 }
 
 function prettifyOutcome(outcome: Outcome): string {

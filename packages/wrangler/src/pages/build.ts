@@ -1,20 +1,22 @@
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, writeFileSync } from "node:fs";
 import { basename, dirname, relative, resolve as resolvePath } from "node:path";
 import { createUploadWorkerBundleContents } from "../api/pages/create-worker-bundle-contents";
+import { writeAdditionalModules } from "../deployment-bundle/find-additional-modules";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { buildFunctions } from "./buildFunctions";
-import { isInPagesCI } from "./constants";
 import {
 	EXIT_CODE_FUNCTIONS_NOTHING_TO_BUILD_ERROR,
 	EXIT_CODE_FUNCTIONS_NO_ROUTES_ERROR,
 	FunctionsNoRoutesError,
 	getFunctionsNoRoutesWarning,
 } from "./errors";
-import { buildRawWorker } from "./functions/buildWorker";
-import { pagesBetaWarning } from "./utils";
-import type { BundleResult } from "../bundle";
+import {
+	buildRawWorker,
+	traverseAndBuildWorkerJSDirectory,
+} from "./functions/buildWorker";
+import type { BundleResult } from "../deployment-bundle/bundle";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -102,16 +104,10 @@ export function Options(yargs: CommonYargsArgv) {
 				deprecated: true,
 				hidden: true,
 			},
-		})
-		.epilogue(pagesBetaWarning);
+		});
 }
 
 export const Handler = async (args: PagesBuildArgs) => {
-	if (!isInPagesCI) {
-		// Beta message for `wrangler pages <commands>` usage
-		logger.log(pagesBetaWarning);
-	}
-
 	const validatedArgs = validateArgs(args);
 
 	let bundle: BundleResult | undefined = undefined;
@@ -147,6 +143,8 @@ export const Handler = async (args: PagesBuildArgs) => {
 				minify,
 				sourcemap,
 				fallbackService,
+				// This only watches already existing files using the esbuild watching mechanism
+				// it will not watch new files that are added to the functions directory!
 				watch,
 				plugin,
 				legacyNodeCompat,
@@ -189,40 +187,37 @@ export const Handler = async (args: PagesBuildArgs) => {
 			buildOutputDirectory,
 			nodejsCompat,
 			legacyNodeCompat,
-			bindings,
 			workerScriptPath,
 		} = validatedArgs;
-
-		let d1Databases: string[] | undefined = undefined;
-		if (bindings) {
-			try {
-				const decodedBindings = JSON.parse(bindings);
-				d1Databases = Object.keys(decodedBindings?.d1_databases || {});
-			} catch {
-				throw new FatalError("Could not parse a valid set of 'bindings'.", 1);
-			}
-		}
 
 		/**
 		 * prioritize building `_worker.js` over Pages Functions, if both exist
 		 * and if we were able to resolve _worker.js
 		 */
 		if (workerScriptPath) {
-			/**
-			 * `buildRawWorker` builds `_worker.js`, but doesn't give us the bundle
-			 * we want to return, which includes the external dependencies (like wasm,
-			 * binary, text). Let's output that build result to memory and only write
-			 * to disk once we have the final bundle
-			 */
-			bundle = await buildRawWorker({
-				workerScriptPath,
-				outdir,
-				directory: buildOutputDirectory,
-				local: false,
-				sourcemap,
-				watch,
-				betaD1Shims: d1Databases,
-			});
+			if (lstatSync(workerScriptPath).isDirectory()) {
+				bundle = await traverseAndBuildWorkerJSDirectory({
+					workerJSDirectory: workerScriptPath,
+					buildOutputDirectory,
+					nodejsCompat,
+				});
+			} else {
+				/**
+				 * `buildRawWorker` builds `_worker.js`, but doesn't give us the bundle
+				 * we want to return, which includes the external dependencies (like wasm,
+				 * binary, text). Let's output that build result to memory and only write
+				 * to disk once we have the final bundle
+				 */
+				bundle = await buildRawWorker({
+					workerScriptPath,
+					outdir,
+					directory: buildOutputDirectory,
+					local: false,
+					sourcemap,
+					watch,
+					nodejsCompat,
+				});
+			}
 		} else {
 			try {
 				/**
@@ -245,7 +240,6 @@ export const Handler = async (args: PagesBuildArgs) => {
 					nodejsCompat,
 					routesOutputPath,
 					local: false,
-					d1Databases,
 				});
 			} catch (e) {
 				if (e instanceof FunctionsNoRoutesError) {
@@ -257,6 +251,10 @@ export const Handler = async (args: PagesBuildArgs) => {
 					throw e;
 				}
 			}
+		}
+
+		if (outdir) {
+			await writeAdditionalModules(bundle.modules, outdir);
 		}
 
 		if (outfile) {

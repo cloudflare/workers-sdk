@@ -7,6 +7,8 @@
  * for the original code.
  */
 
+import { trimSqlQuery } from "./trimmer";
+
 /**
  * Is the given `sql` string likely to contain multiple statements.
  *
@@ -23,10 +25,11 @@ export function mayContainMultipleStatements(sql: string): boolean {
  * Split an SQLQuery into an array of statements
  */
 export default function splitSqlQuery(sql: string): string[] {
-	if (!mayContainMultipleStatements(sql)) return [sql];
-	const split = splitSqlIntoStatements(sql);
+	const trimmedSql = trimSqlQuery(sql);
+	if (!mayContainMultipleStatements(trimmedSql)) return [trimmedSql];
+	const split = splitSqlIntoStatements(trimmedSql);
 	if (split.length === 0) {
-		return [sql];
+		return [trimmedSql];
 	} else {
 		return split;
 	}

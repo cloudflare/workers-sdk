@@ -194,4 +194,17 @@ packages/quick-edit/web
 # IntelliJ
 .idea/
 
-./vendor/vscode
+# VSCode Theme
+*.vsix
+vendor/vscode/
+
+.wrangler/
+
+# Turbo Repo
+build/**
+dist/**
+.next/**
+.turbo
+
+# Runtime dependencies report
+runtime-versions.md

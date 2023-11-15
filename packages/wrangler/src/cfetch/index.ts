@@ -44,6 +44,26 @@ export async function fetchResult<ResponseType>(
 }
 
 /**
+ * Make a fetch request to the GraphQL API, and return the JSON response.
+ */
+export async function fetchGraphqlResult<ResponseType>(
+	init: RequestInit = {},
+	abortSignal?: AbortSignal
+): Promise<ResponseType> {
+	const json = await fetchInternal<ResponseType>(
+		"/graphql",
+		{ ...init, method: "POST" }, //Cloudflare API v4 doesn't allow GETs to /graphql
+		undefined,
+		abortSignal
+	);
+	if (json) {
+		return json;
+	} else {
+		throw new Error("A request to the Cloudflare API (/graphql) failed.");
+	}
+}
+
+/**
  * Make a fetch request for a list of values,
  * extracting the `result` from the JSON response,
  * and repeating the request if the results are paginated.
@@ -78,6 +98,66 @@ export async function fetchListResult<ResponseType>(
 		}
 	}
 	return results;
+}
+
+/**
+ * Make a fetch request for a list of values using pages,
+ * extracting the `result` from the JSON response,
+ * and repeating the request if the results are paginated.
+ *
+ * This is similar to fetchListResult, but it uses the `page` query parameter instead of `cursor`.
+ */
+export async function fetchPagedListResult<ResponseType>(
+	resource: string,
+	init: RequestInit = {},
+	queryParams?: URLSearchParams
+): Promise<ResponseType[]> {
+	const results: ResponseType[] = [];
+	let getMoreResults = true;
+	let page = 1;
+	while (getMoreResults) {
+		queryParams = new URLSearchParams(queryParams);
+		queryParams.set("page", String(page));
+
+		const json = await fetchInternal<FetchResult<ResponseType[]>>(
+			resource,
+			init,
+			queryParams
+		);
+		if (json.success) {
+			results.push(...json.result);
+			if (hasMorePages(json.result_info)) {
+				page = page + 1;
+			} else {
+				getMoreResults = false;
+			}
+		} else {
+			throwFetchError(resource, json);
+		}
+	}
+	return results;
+}
+
+interface PageResultInfo {
+	page: number;
+	per_page: number;
+	count: number;
+	total_count: number;
+}
+
+export function hasMorePages(
+	result_info: unknown
+): result_info is PageResultInfo {
+	const page = (result_info as PageResultInfo | undefined)?.page;
+	const per_page = (result_info as PageResultInfo | undefined)?.per_page;
+	const total = (result_info as PageResultInfo | undefined)?.total_count;
+
+	return (
+		page !== undefined &&
+		per_page !== undefined &&
+		total !== undefined &&
+		page * per_page < total
+	);
 }
 
 function throwFetchError(

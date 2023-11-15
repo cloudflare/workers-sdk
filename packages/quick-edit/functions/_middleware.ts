@@ -4,11 +4,21 @@ export const onRequest = async ({
 	next,
 }: Parameters<PagesFunction>[0]) => {
 	const url = new URL(request.url);
+
 	const values = {
 		WORKBENCH_WEB_CONFIGURATION: JSON.stringify({
 			configurationDefaults: {
+				"workbench.colorTheme":
+					url.searchParams.get("theme") === "dark"
+						? "Solarflare Dark"
+						: "Solarflare Light",
 				"workbench.startupEditor": "none",
 				"editor.minimap.autohide": true,
+				"files.exclude": {
+					"*.d.ts": true,
+					"jsconfig.json": true,
+				},
+				"telemetry.telemetryLevel": "off",
 			},
 			productConfiguration: {
 				nameShort: "Quick Edit",
@@ -16,12 +26,6 @@ export const onRequest = async ({
 				applicationName: "workers-quick-edit",
 				dataFolderName: ".quick-edit",
 				version: "1.76.0",
-				extensionsGallery: {
-					serviceUrl: "https://open-vsx.org/vscode/gallery",
-					itemUrl: "https://open-vsx.org/vscode/item",
-					resourceUrlTemplate:
-						"https://openvsxorg.blob.core.windows.net/resources/{publisher}/{name}/{version}/{path}",
-				},
 				extensionEnabledApiProposals: {
 					"cloudflare.quick-edit-extension": [
 						"fileSearchProvider",
@@ -34,6 +38,10 @@ export const onRequest = async ({
 				{
 					scheme: url.protocol === "https:" ? "https" : "http",
 					path: "/quick-edit-extension",
+				},
+				{
+					scheme: url.protocol === "https:" ? "https" : "http",
+					path: "/solarflare-theme",
 				},
 			],
 		}).replace(/"/g, "&quot;"),

@@ -3,7 +3,7 @@ import { fetch } from "undici";
 import { describe, it } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
-describe.concurrent("Pages Dev", () => {
+describe("Pages Dev", () => {
 	it("should work with `--node-compat` when running code requiring polyfills", async ({
 		expect,
 	}) => {
@@ -12,12 +12,14 @@ describe.concurrent("Pages Dev", () => {
 			"public",
 			["--node-compat", "--port=0"]
 		);
-		const response = await fetch(`http://${ip}:${port}/stripe`);
+		try {
+			const response = await fetch(`http://${ip}:${port}/stripe`);
 
-		await expect(response.text()).resolves.toContain(
-			`"PATH":"path/to/some-file","STRIPE_OBJECT"`
-		);
-
-		await stop();
+			await expect(response.text()).resolves.toContain(
+				`"PATH":"path/to/some-file","STRIPE_OBJECT"`
+			);
+		} finally {
+			await stop();
+		}
 	});
 });

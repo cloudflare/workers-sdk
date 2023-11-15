@@ -1,3 +1,5 @@
-import examplePlugin from "../../../pages-plugin-example";
+import examplePlugin from "pages-plugin-example";
 
-export const onRequest = examplePlugin({ footerText: "Set from a Plugin!" });
+export const onRequest = examplePlugin({
+	footerText: "Set from a Plugin!",
+});

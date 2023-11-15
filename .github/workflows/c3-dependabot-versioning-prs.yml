@@ -1,0 +1,27 @@
+# workflow to update the framework cli versioning PRs we get
+# from dependabot for C3
+
+name: "C3: Generate changeset for dependabot PRs"
+on:
+  pull_request_target:
+    paths:
+      - "packages/create-cloudflare/src/frameworks/package.json"
+
+jobs:
+  generate-changeset:
+    runs-on: ubuntu-latest
+    if: |
+      github.event.pull_request.user.login == 'dependabot[bot]'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.C3_DEPENDABOT_VERSIONING_PAT }}
+      - name: Configure Git
+        run: |
+          git config --global user.email wrangler@cloudflare.com
+          git config --global user.name 'Wrangler automated PR updater'
+      - name: Generate changeset
+        run: node .github/generate-c3-dependabot-pr-changeset.mjs ${{ github.event.number }}

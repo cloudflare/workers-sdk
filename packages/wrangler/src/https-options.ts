@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
-import os from "node:os";
 import * as path from "node:path";
 import { promisify } from "node:util";
+import { getAccessibleHosts } from "miniflare";
 import { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
 import { logger } from "./logger";
 import type { Attributes, Options } from "selfsigned";
@@ -103,7 +103,7 @@ async function generateCertificate() {
 				name: "subjectAltName",
 				altNames: [
 					{ type: 2, value: "localhost" },
-					...getAccessibleHosts().map((ip) => ({ type: 7, ip })),
+					...getAccessibleHosts(false).map((ip) => ({ type: 7, ip })),
 				],
 			},
 		],
@@ -111,17 +111,4 @@ async function generateCertificate() {
 
 	const { private: key, cert } = await generate(certAttrs, certOptions);
 	return { key, cert };
-}
-
-/**
- * Ask the OS for the addresses of locally accessible hosts.
- */
-function getAccessibleHosts(ipv4 = false): string[] {
-	const hosts: string[] = [];
-	Object.values(os.networkInterfaces()).forEach((net) =>
-		net?.forEach(({ family, address }) => {
-			if (!ipv4 || family === "IPv4") hosts.push(address);
-		})
-	);
-	return hosts;
 }

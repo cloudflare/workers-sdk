@@ -1,0 +1,103 @@
+html {
+	background: linear-gradient(134.26deg, #f38020 7.12%, #f8ad4c 94.03%);
+	background-repeat: no-repeat;
+	min-height: 100%;
+}
+
+* {
+	font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+		Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+}
+
+body {
+	margin: 0px;
+	padding: 80px;
+}
+
+.flares img {
+	object-fit: cover;
+	min-height: 100%;
+	display: block;
+}
+
+.flares {
+	position: fixed;
+	width: 100%;
+	left: 0px;
+	top: 0px;
+	z-index: -1;
+}
+
+main {
+	border-radius: 4px;
+	border: 1px solid #d9d9d9;
+	background: #fff;
+	display: flex;
+	padding: 24px;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 8px;
+	max-width: 60ch;
+	margin: 0 auto;
+}
+
+p {
+	color: #3d3d3d;
+	font-size: 14px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: 24px;
+	margin: 0px;
+	margin-bottom: 8px;
+}
+
+h1 {
+	color: #3d3d3d;
+	font-size: 14px;
+	font-style: normal;
+	font-weight: 600;
+	line-height: 24px;
+	margin: 0px;
+}
+
+.logo {
+	height: 60px;
+	margin-bottom: 8px;
+}
+
+a svg {
+	height: 1rem;
+	width: 1rem;
+	vertical-align: middle;
+	color: inherit;
+}
+.workers-logo {
+	display: block;
+	width: 10em;
+	height: 2.75em;
+	margin-bottom: 8px;
+	background-image: url(https://playground.devprod.cloudflare.dev/workers-logo.svg);
+	background-size: contain;
+	background-repeat: no-repeat;
+}
+
+@media (prefers-color-scheme: dark) {
+	html {
+		background: #313131;
+	}
+	main {
+		background: #242628;
+		border: 1px solid #3d3d3d;
+	}
+	p,
+	h1,
+	.workers-logo {
+		color: white;
+	}
+	.workers-logo {
+		background-image: url(https://playground.devprod.cloudflare.dev/workers-logo-dark.svg);
+	}
+	.flares {
+		filter: brightness(0.4) grayscale();
+	}
+}

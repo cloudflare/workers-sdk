@@ -4,6 +4,7 @@ import { DBNotifier, DBUrl, DBSitemap } from "./types";
 
 import { scheduled } from "./functions";
 
+// @ts-ignore - it gets bundled by wrangler
 import index from "./index.html";
 
 const h = new Hono();
@@ -64,8 +65,8 @@ h.get("/notifiers", async (c) => {
     <tr>
       <td>${notifier.keyword}</td>
       <td>${notifier.email}</td>
-      <td> 
-        <button 
+      <td>
+        <button
           hx-delete="/notifiers/${notifier.id}"
           hx-confirm="Are you sure?"
         >

@@ -9,11 +9,9 @@ A example for building a scalable request scheduler.
 To create a `my-project` directory using this template, run:
 
 ```sh
-$ npm init cloudflare my-project worker-example-request-scheduler
+$ npx wrangler generate my-project worker-example-request-scheduler
 # or
-$ yarn create cloudflare my-project worker-example-request-scheduler
+$ yarn wrangler generate my-project worker-example-request-scheduler
 # or
-$ pnpm create cloudflare my-project worker-example-request-scheduler
+$ pnpm wrangler generate my-project worker-example-request-scheduler
 ```
-
-> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.

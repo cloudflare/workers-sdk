@@ -1,14 +1,19 @@
 import { URLSearchParams } from "node:url";
+import { Miniflare } from "miniflare";
 import { FormData } from "undici";
 import { fetchListResult, fetchResult, fetchKVGetValue } from "../cfetch";
+import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
+import { buildPersistOptions } from "../dev/miniflare";
 import { logger } from "../logger";
 import type { Config } from "../config";
+import type { KVNamespace } from "@cloudflare/workers-types/experimental";
+import type { ReplaceWorkersTypes } from "miniflare";
 
 /** The largest number of kv items we can pass to the API in a single request. */
 const API_MAX = 10000;
 // The const below are halved from the API's true capacity to help avoid
 // hammering it with large requests.
-const BATCH_KEY_MAX = API_MAX / 2;
+export const BATCH_KEY_MAX = API_MAX / 2;
 
 type KvArgs = {
 	binding?: string;
@@ -256,7 +261,7 @@ export async function deleteKVKeyValue(
 /**
  * Formatter for converting e.g. 5328 --> 5,328
  */
-const formatNumber = new Intl.NumberFormat("en-US", {
+export const formatNumber = new Intl.NumberFormat("en-US", {
 	notation: "standard",
 }).format;
 
@@ -279,7 +284,8 @@ export async function putKVBulkKeyValue(
 	accountId: string,
 	namespaceId: string,
 	keyValues: KeyValue[],
-	quiet = false
+	quiet = false,
+	abortSignal?: AbortSignal
 ) {
 	for (let index = 0; index < keyValues.length; index += BATCH_KEY_MAX) {
 		if (!quiet && keyValues.length > BATCH_KEY_MAX) {
@@ -292,7 +298,9 @@ export async function putKVBulkKeyValue(
 				method: "PUT",
 				body: JSON.stringify(keyValues.slice(index, index + BATCH_KEY_MAX)),
 				headers: { "Content-Type": "application/json" },
-			}
+			},
+			undefined,
+			abortSignal
 		);
 	}
 
@@ -427,4 +435,28 @@ export function isValidKVNamespaceBinding(
 	return (
 		typeof binding === "string" && /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(binding)
 	);
+}
+
+// TODO(soon): once we upgrade to TypeScript 5.2, this should actually use `using`:
+//  https://devblogs.microsoft.com/typescript/announcing-typescript-5-2/#using-declarations-and-explicit-resource-management
+export async function usingLocalNamespace<T>(
+	persistTo: string | undefined,
+	configPath: string | undefined,
+	namespaceId: string,
+	closure: (namespace: ReplaceWorkersTypes<KVNamespace>) => Promise<T>
+): Promise<T> {
+	const persist = getLocalPersistencePath(persistTo, configPath);
+	const persistOptions = buildPersistOptions(persist);
+	const mf = new Miniflare({
+		script:
+			'addEventListener("fetch", (e) => e.respondWith(new Response(null, { status: 404 })))',
+		...persistOptions,
+		kvNamespaces: { NAMESPACE: namespaceId },
+	});
+	const namespace = await mf.getKVNamespace("NAMESPACE");
+	try {
+		return await closure(namespace);
+	} finally {
+		await mf.dispose();
+	}
 }

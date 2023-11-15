@@ -213,7 +213,6 @@ import path from "node:path";
 import url from "node:url";
 import { TextEncoder } from "node:util";
 import TOML from "@iarna/toml";
-import { HostURL } from "@webcontainer/env";
 import { fetch } from "undici";
 import {
 	getConfigCache,
@@ -235,6 +234,7 @@ import {
 	getCloudflareAccessToken,
 	getCloudflareAPITokenFromEnv,
 	getCloudflareGlobalAuthEmailFromEnv,
+	getCloudflareAccountIdFromEnv,
 	getCloudflareGlobalAuthKeyFromEnv,
 	getRevokeUrlFromEnv,
 	getTokenUrlFromEnv,
@@ -347,6 +347,8 @@ const Scopes = {
 		"See and change Cloudflare Pages projects, settings and deployments.",
 	"zone:read": "Grants read level access to account zone.",
 	"ssl_certs:write": "See and manage mTLS certificates for your account",
+	"constellation:write": "Manage Constellation projects/models",
+	"ai:read": "List AI models",
 } as const;
 
 /**
@@ -364,15 +366,7 @@ export function validateScopeKeys(
 	return scopes.every((scope) => scope in Scopes);
 }
 
-/**
- * To allow OAuth callbacks in environments such as WebContainer we need to
- * create a host URL which only resolves `localhost` to a WebContainer
- * hostname if the process is running in a WebContainer. On local this will
- * be a no-op and it leaves the URL unmodified.
- *
- * @see https://www.npmjs.com/package/@webcontainer/env
- */
-const CALLBACK_URL = HostURL.parse("http://localhost:8976/oauth/callback").href;
+const CALLBACK_URL = "http://localhost:8976/oauth/callback";
 
 let LocalState: State = {
 	...getAuthTokens(),
@@ -840,14 +834,12 @@ function base64urlEncode(value: string): string {
 
 async function generatePKCECodes(): Promise<PKCECodes> {
 	const output = new Uint32Array(RECOMMENDED_CODE_VERIFIER_LENGTH);
-	// @ts-expect-error crypto's types aren't there yet
 	crypto.getRandomValues(output);
 	const codeVerifier = base64urlEncode(
 		Array.from(output)
 			.map((num: number) => PKCE_CHARSET[num % PKCE_CHARSET.length])
 			.join("")
 	);
-	// @ts-expect-error crypto's types aren't there yet
 	const buffer = await crypto.subtle.digest(
 		"SHA-256",
 		new TextEncoder().encode(codeVerifier)
@@ -1106,9 +1098,10 @@ export async function getAccountId(): Promise<string | undefined> {
 
 	// check if we have a cached value
 	const cachedAccount = getAccountFromCache();
-	if (cachedAccount) {
+	if (cachedAccount && !getCloudflareAccountIdFromEnv()) {
 		return cachedAccount.id;
 	}
+
 	const accounts = await getAccountChoices();
 	if (accounts.length === 1) {
 		saveAccountToCache({ id: accounts[0].id, name: accounts[0].name });

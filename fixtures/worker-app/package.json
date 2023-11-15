@@ -8,7 +8,16 @@
 	"main": "src/index.js",
 	"scripts": {
 		"check:type": "tsc",
-		"test": "npx vitest",
-		"test:ci": "npx vitest"
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
+	},
+	"devDependencies": {
+		"wrangler": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:^",
+		"undici": "^5.23.0"
+	},
+	"dependencies": {
+		"isomorphic-random-example": "workspace:^"
 	}
 }

@@ -1,3 +1,4 @@
+import { test, expect } from "vitest";
 import { parseHeaders } from "../..//metadata-generator/parseHeaders";
 
 test("parseHeaders should reject malformed initial lines", () => {
@@ -137,6 +138,11 @@ test("parseHeaders should reject malformed URLs", () => {
     valid: yup
   http://nah.com/blog
     invalid: things
+  # Absolute URLs with a port should be rejected
+  https://nah.com:8080
+    invalid: also
+  https://nah.com:8080/blog
+    invalid: 2
   //yeah.com/blog
     valid: things
   /yeah
@@ -163,12 +169,34 @@ test("parseHeaders should reject malformed URLs", () => {
 				message: "Path should come before header (invalid: things)",
 			},
 			{
+				line: "https://nah.com:8080",
+				lineNumber: 19,
+				message:
+					"Specifying ports is not supported. Skipping absolute URL https://nah.com:8080.",
+			},
+			{
+				line: "invalid: also",
+				lineNumber: 20,
+				message: "Path should come before header (invalid: also)",
+			},
+			{
+				line: "https://nah.com:8080/blog",
+				lineNumber: 21,
+				message:
+					"Specifying ports is not supported. Skipping absolute URL https://nah.com:8080/blog.",
+			},
+			{
+				line: "invalid: 2",
+				lineNumber: 22,
+				message: "Path should come before header (invalid: 2)",
+			},
+			{
 				line: "nah.com",
-				lineNumber: 25,
+				lineNumber: 30,
 				message: "Expected a colon-separated header pair (e.g. name: value)",
 			},
-			{ line: ":", lineNumber: 26, message: "No header name specified" },
-			{ line: "test:", lineNumber: 27, message: "No header value specified" },
+			{ line: ":", lineNumber: 31, message: "No header name specified" },
+			{ line: "test:", lineNumber: 32, message: "No header value specified" },
 		],
 		rules: [
 			{

@@ -1,13 +1,20 @@
 import { access, cp, lstat, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { build as esBuild } from "esbuild";
 import { nanoid } from "nanoid";
-import { bundleWorker } from "../../bundle";
+import { bundleWorker } from "../../deployment-bundle/bundle";
+import { findAdditionalModules } from "../../deployment-bundle/find-additional-modules";
+import {
+	createModuleCollector,
+	noopModuleCollector,
+} from "../../deployment-bundle/module-collection";
 import { FatalError } from "../../errors";
 import { logger } from "../../logger";
 import { getBasePath } from "../../paths";
-import { D1_BETA_PREFIX } from "../../worker";
+import { getPagesProjectRoot, getPagesTmpDir } from "../utils";
+import type { BundleResult } from "../../deployment-bundle/bundle";
+import type { Entry } from "../../deployment-bundle/entry";
+import type { CfModule } from "../../deployment-bundle/worker";
 import type { Plugin } from "esbuild";
 
 export type Options = {
@@ -24,12 +31,11 @@ export type Options = {
 	nodejsCompat?: boolean;
 	functionsDirectory: string;
 	local: boolean;
-	betaD1Shims?: string[];
 };
 
-export function buildWorker({
+export function buildWorkerFromFunctions({
 	routesModule,
-	outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`),
+	outfile = join(getPagesTmpDir(), `./functionsWorker-${Math.random()}.js`),
 	outdir,
 	minify = false,
 	sourcemap = false,
@@ -41,118 +47,118 @@ export function buildWorker({
 	nodejsCompat,
 	functionsDirectory,
 	local,
-	betaD1Shims,
 }: Options) {
-	return bundleWorker(
-		{
-			file: resolve(getBasePath(), "templates/pages-template-worker.ts"),
-			directory: functionsDirectory,
-			format: "modules",
-			moduleRoot: functionsDirectory,
+	const entry: Entry = {
+		file: resolve(getBasePath(), "templates/pages-template-worker.ts"),
+		directory: functionsDirectory,
+		format: "modules",
+		moduleRoot: functionsDirectory,
+	};
+	const moduleCollector = createModuleCollector({
+		entry,
+		findAdditionalModules: false,
+	});
+
+	return bundleWorker(entry, outdir ? resolve(outdir) : resolve(outfile), {
+		bundle: true,
+		additionalModules: [],
+		moduleCollector,
+		inject: [routesModule],
+		...(outdir ? { entryName: "index" } : {}),
+		minify,
+		sourcemap,
+		watch,
+		legacyNodeCompat,
+		nodejsCompat,
+		define: {
+			__FALLBACK_SERVICE__: JSON.stringify(fallbackService),
 		},
-		outdir ? resolve(outdir) : resolve(outfile),
-		{
-			inject: [routesModule],
-			...(outdir ? { entryName: "index" } : {}),
-			minify,
-			sourcemap,
-			watch,
-			legacyNodeCompat,
-			nodejsCompat,
-			define: {
-				__FALLBACK_SERVICE__: JSON.stringify(fallbackService),
-			},
-			betaD1Shims: (betaD1Shims || []).map(
-				(binding) => `${D1_BETA_PREFIX}${binding}`
-			),
-			doBindings: [], // Pages functions don't support internal Durable Objects
-			plugins: [
-				buildNotifierPlugin(onEnd),
-				{
-					name: "Assets",
-					setup(pluginBuild) {
-						const identifiers = new Map<string, string>();
+		doBindings: [], // Pages functions don't support internal Durable Objects
+		plugins: [
+			buildNotifierPlugin(onEnd),
+			{
+				name: "Assets",
+				setup(pluginBuild) {
+					const identifiers = new Map<string, string>();
 
-						pluginBuild.onResolve({ filter: /^assets:/ }, async (args) => {
-							const directory = resolve(
-								args.resolveDir,
-								args.path.slice("assets:".length)
+					pluginBuild.onResolve({ filter: /^assets:/ }, async (args) => {
+						const directory = resolve(
+							args.resolveDir,
+							args.path.slice("assets:".length)
+						);
+
+						const exists = await access(directory)
+							.then(() => true)
+							.catch(() => false);
+
+						const isDirectory =
+							exists && (await lstat(directory)).isDirectory();
+
+						if (!isDirectory) {
+							return {
+								errors: [
+									{
+										text: `'${directory}' does not exist or is not a directory.`,
+									},
+								],
+							};
+						}
+
+						// TODO: Consider hashing the contents rather than using a unique identifier every time?
+						identifiers.set(directory, nanoid());
+						if (!buildOutputDirectory) {
+							console.warn(
+								"You're attempting to import static assets as part of your Pages Functions, but have not specified a directory in which to put them. You must use 'wrangler pages dev <directory>' rather than 'wrangler pages dev -- <command>' to import static assets in Functions."
 							);
+						}
+						return { path: directory, namespace: "assets" };
+					});
 
-							const exists = await access(directory)
-								.then(() => true)
-								.catch(() => false);
+					pluginBuild.onLoad(
+						{ filter: /.*/, namespace: "assets" },
+						async (args) => {
+							const identifier = identifiers.get(args.path);
 
-							const isDirectory =
-								exists && (await lstat(directory)).isDirectory();
-
-							if (!isDirectory) {
-								return {
-									errors: [
-										{
-											text: `'${directory}' does not exist or is not a directory.`,
-										},
-									],
-								};
-							}
-
-							// TODO: Consider hashing the contents rather than using a unique identifier every time?
-							identifiers.set(directory, nanoid());
-							if (!buildOutputDirectory) {
-								console.warn(
-									"You're attempting to import static assets as part of your Pages Functions, but have not specified a directory in which to put them. You must use 'wrangler pages dev <directory>' rather than 'wrangler pages dev -- <command>' to import static assets in Functions."
+							if (buildOutputDirectory) {
+								const staticAssetsOutputDirectory = join(
+									buildOutputDirectory,
+									"cdn-cgi",
+									"pages-plugins",
+									identifier as string
 								);
-							}
-							return { path: directory, namespace: "assets" };
-						});
+								await rm(staticAssetsOutputDirectory, {
+									force: true,
+									recursive: true,
+								});
+								await cp(args.path, staticAssetsOutputDirectory, {
+									force: true,
+									recursive: true,
+								});
 
-						pluginBuild.onLoad(
-							{ filter: /.*/, namespace: "assets" },
-							async (args) => {
-								const identifier = identifiers.get(args.path);
-
-								if (buildOutputDirectory) {
-									const staticAssetsOutputDirectory = join(
-										buildOutputDirectory,
-										"cdn-cgi",
-										"pages-plugins",
-										identifier as string
-									);
-									await rm(staticAssetsOutputDirectory, {
-										force: true,
-										recursive: true,
-									});
-									await cp(args.path, staticAssetsOutputDirectory, {
-										force: true,
-										recursive: true,
-									});
-
-									return {
-										// TODO: Watch args.path for changes and re-copy when updated
-										contents: `export const onRequest = ({ request, env, functionPath }) => {
+								return {
+									// TODO: Watch args.path for changes and re-copy when updated
+									contents: `export const onRequest = ({ request, env, functionPath }) => {
                     const url = new URL(request.url)
                     const relativePathname = \`/\${url.pathname.replace(functionPath, "") || ""}\`.replace(/^\\/\\//, '/');
                     url.pathname = '/cdn-cgi/pages-plugins/${identifier}' + relativePathname
                     request = new Request(url.toString(), request)
                     return env.ASSETS.fetch(request)
                   }`,
-									};
-								}
+								};
 							}
-						);
-					},
+						}
+					);
 				},
-			],
-			isOutfile: !outdir,
-			serveAssetsFromWorker: false,
-			disableModuleCollection: false,
-			rules: [],
-			checkFetch: local,
-			targetConsumer: local ? "dev" : "publish",
-			local,
-			experimentalLocal: false,
-		}
-	);
+			},
+		],
+		isOutfile: !outdir,
+		serveAssetsFromWorker: false,
+		checkFetch: local,
+		targetConsumer: local ? "dev" : "deploy",
+		forPages: true,
+		local,
+		projectRoot: getPagesProjectRoot(),
+	});
 }
 
 export type RawOptions = {
@@ -160,6 +166,8 @@ export type RawOptions = {
 	outfile?: string;
 	outdir?: string;
 	directory: string;
+	bundle?: boolean;
+	external?: string[];
 	minify?: boolean;
 	sourcemap?: boolean;
 	watch?: boolean;
@@ -169,7 +177,7 @@ export type RawOptions = {
 	legacyNodeCompat?: boolean;
 	nodejsCompat?: boolean;
 	local: boolean;
-	betaD1Shims?: string[];
+	additionalModules?: CfModule[];
 };
 
 /**
@@ -181,9 +189,11 @@ export type RawOptions = {
  */
 export function buildRawWorker({
 	workerScriptPath,
-	outfile = join(tmpdir(), `./functionsWorker-${Math.random()}.js`),
+	outfile = join(getPagesTmpDir(), `./functionsWorker-${Math.random()}.js`),
 	outdir,
 	directory,
+	bundle = true,
+	external,
 	minify = false,
 	sourcemap = false,
 	watch = false,
@@ -192,38 +202,111 @@ export function buildRawWorker({
 	legacyNodeCompat,
 	nodejsCompat,
 	local,
-	betaD1Shims,
+	additionalModules = [],
 }: RawOptions) {
-	return bundleWorker(
+	const entry: Entry = {
+		file: workerScriptPath,
+		directory: resolve(directory),
+		format: "modules",
+		moduleRoot: resolve(directory),
+	};
+	const moduleCollector = external
+		? noopModuleCollector
+		: createModuleCollector({ entry, findAdditionalModules: false });
+
+	return bundleWorker(entry, outdir ? resolve(outdir) : resolve(outfile), {
+		bundle,
+		moduleCollector,
+		additionalModules,
+		minify,
+		sourcemap,
+		watch,
+		legacyNodeCompat,
+		nodejsCompat,
+		define: {},
+		doBindings: [], // Pages functions don't support internal Durable Objects
+		plugins: [
+			...plugins,
+			buildNotifierPlugin(onEnd),
+			...(external
+				? [
+						// In some cases, we want to enable bundling in esbuild so that we can flatten a shim around the entrypoint, but we still don't want to actually bundle in all the chunks that a Worker references.
+						// This plugin allows us to mark those chunks as external so they are not inlined.
+						{
+							name: "external-fixer",
+							setup(pluginBuild) {
+								pluginBuild.onResolve({ filter: /.*/ }, async (args) => {
+									if (external.includes(resolve(args.resolveDir, args.path))) {
+										return { path: args.path, external: true };
+									}
+								});
+							},
+						} as Plugin,
+				  ]
+				: []),
+		],
+		isOutfile: !outdir,
+		serveAssetsFromWorker: false,
+		checkFetch: local,
+		targetConsumer: local ? "dev" : "deploy",
+		forPages: true,
+		local,
+		projectRoot: getPagesProjectRoot(),
+	});
+}
+
+export async function traverseAndBuildWorkerJSDirectory({
+	workerJSDirectory,
+	buildOutputDirectory,
+	nodejsCompat,
+}: {
+	workerJSDirectory: string;
+	buildOutputDirectory: string;
+	nodejsCompat?: boolean;
+}): Promise<BundleResult> {
+	const entrypoint = resolve(join(workerJSDirectory, "index.js"));
+
+	const additionalModules = await findAdditionalModules(
 		{
-			file: workerScriptPath,
-			directory: resolve(directory),
+			file: entrypoint,
+			directory: resolve(workerJSDirectory),
 			format: "modules",
-			moduleRoot: resolve(directory),
+			moduleRoot: resolve(workerJSDirectory),
 		},
-		outdir ? resolve(outdir) : resolve(outfile),
-		{
-			minify,
-			sourcemap,
-			watch,
-			legacyNodeCompat,
-			nodejsCompat,
-			define: {},
-			betaD1Shims: (betaD1Shims || []).map(
-				(binding) => `${D1_BETA_PREFIX}${binding}`
-			),
-			doBindings: [], // Pages functions don't support internal Durable Objects
-			plugins: [...plugins, buildNotifierPlugin(onEnd)],
-			isOutfile: !outdir,
-			serveAssetsFromWorker: false,
-			disableModuleCollection: false,
-			rules: [],
-			checkFetch: local,
-			targetConsumer: local ? "dev" : "publish",
-			local,
-			experimentalLocal: false,
-		}
+		[
+			{
+				type: "ESModule",
+				globs: ["**/*.js", "**/*.mjs"],
+			},
+		]
 	);
+
+	const outfile = join(
+		getPagesTmpDir(),
+		`./bundledWorker-${Math.random()}.mjs`
+	);
+	const bundleResult = await buildRawWorker({
+		workerScriptPath: entrypoint,
+		bundle: true,
+		external: additionalModules.map((m) => join(workerJSDirectory, m.name)),
+		outfile,
+		directory: buildOutputDirectory,
+		local: false,
+		sourcemap: true,
+		watch: false,
+		onEnd: () => {},
+		nodejsCompat,
+		additionalModules,
+	});
+
+	return {
+		modules: bundleResult.modules,
+		dependencies: bundleResult.dependencies,
+		resolvedEntryPointPath: bundleResult.resolvedEntryPointPath,
+		bundleType: bundleResult.bundleType,
+		stop: bundleResult.stop,
+		sourceMapPath: bundleResult.sourceMapPath,
+	};
 }
 
 /**

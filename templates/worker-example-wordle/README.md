@@ -9,11 +9,9 @@ A template for kickstarting a multiplayer clone of the [Wordle](https://www.nyti
 To create a `my-project` directory using this template, run:
 
 ```sh
-$ npm init cloudflare my-project worker-example-wordle
+$ npx wrangler generate my-project worker-example-wordle
 # or
-$ yarn create cloudflare my-project worker-example-wordle
+$ yarn wrangler generate my-project worker-example-wordle
 # or
-$ pnpm create cloudflare my-project worker-example-wordle
+$ pnpm wrangler generate my-project worker-example-wordle
 ```
-
-> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.

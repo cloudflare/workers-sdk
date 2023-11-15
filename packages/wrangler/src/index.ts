@@ -1,14 +1,17 @@
+import module from "node:module";
 import os from "node:os";
 import TOML from "@iarna/toml";
-import chalk from "chalk";
-import supportsColor from "supports-color";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
-import { isBuildFailure } from "./bundle";
+import { ai } from "./ai";
 import { loadDotEnv, readConfig } from "./config";
+import { constellation } from "./constellation";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
+import { deployOptions, deployHandler } from "./deploy";
+import { isAuthenticationError } from "./deploy/deploy";
+import { isBuildFailure } from "./deployment-bundle/build-failures";
 import {
 	deployments,
 	commonDeploymentCMDSetup,
@@ -31,6 +34,7 @@ import { devHandler, devOptions } from "./dev";
 import { workerNamespaceCommands } from "./dispatch-namespace";
 import { docsHandler, docsOptions } from "./docs";
 import { generateHandler, generateOptions } from "./generate";
+import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
 import { kvNamespace, kvKey, kvBulk } from "./kv";
 import { logBuildFailure, logger } from "./logger";
@@ -38,15 +42,15 @@ import * as metrics from "./metrics";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
 import { pages } from "./pages";
 import { formatMessage, ParseError } from "./parse";
-import { publishOptions, publishHandler } from "./publish";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
 import { queues } from "./queues/cli/commands";
 import { r2 } from "./r2";
 import { secret, secretBulkHandler, secretBulkOptions } from "./secret";
 import { tailOptions, tailHandler } from "./tail";
 import { generateTypes } from "./type-generation";
-import { updateCheck } from "./update-check";
+import { printWranglerBanner } from "./update-check";
 import { listScopes, login, logout, validateScopeKeys } from "./user";
+import { vectorize } from "./vectorize/index";
 import { whoami } from "./whoami";
 
 import type { Config } from "./config";
@@ -58,7 +62,7 @@ const fgGreenColor = "\x1b[32m";
 export const DEFAULT_LOCAL_PORT = 8787;
 export const DEFAULT_INSPECTOR_PORT = 9229;
 
-const proxy =
+export const proxy =
 	process.env.https_proxy ||
 	process.env.HTTPS_PROXY ||
 	process.env.http_proxy ||
@@ -89,23 +93,6 @@ ${TOML.stringify({ rules: config.build.upload.rules })}`
 		);
 	}
 	return rules;
-}
-
-export async function printWranglerBanner() {
-	// Let's not print this in tests
-	if (typeof jest !== "undefined") {
-		return;
-	}
-
-	const text = ` ⛅️ wrangler ${wranglerVersion} ${await updateCheck()}`;
-
-	logger.log(
-		text +
-			"\n" +
-			(supportsColor.stdout
-				? chalk.hex("#FF8800")("-".repeat(text.length))
-				: "-".repeat(text.length))
-	);
 }
 
 export function isLegacyEnv(config: Config): boolean {
@@ -271,7 +258,7 @@ export function createCLIParser(argv: string[]) {
 
 	// docs
 	wrangler.command(
-		"docs [command]",
+		"docs [command..]",
 		"📚 Open wrangler's docs in your browser",
 		docsOptions,
 		docsHandler
@@ -307,12 +294,12 @@ export function createCLIParser(argv: string[]) {
 		devHandler
 	);
 
-	// publish
+	// deploy
 	wrangler.command(
-		"publish [script]",
-		"🆙 Publish your Worker to Cloudflare.",
-		publishOptions,
-		publishHandler
+		["deploy [script]", "publish [script]"],
+		"🆙 Deploy your Worker to Cloudflare.",
+		deployOptions,
+		deployHandler
 	);
 
 	// delete
@@ -369,7 +356,7 @@ export function createCLIParser(argv: string[]) {
 	);
 
 	wrangler.command(
-		"secret:bulk <json>",
+		"secret:bulk [json]",
 		"🗄️  Bulk upload secrets for a Worker",
 		secretBulkOptions,
 		secretBulkHandler
@@ -430,6 +417,38 @@ export function createCLIParser(argv: string[]) {
 	wrangler.command("d1", "🗄  Interact with a D1 database", (d1Yargs) => {
 		return d1(d1Yargs.command(subHelp));
 	});
+
+	// hyperdrive
+	wrangler.command(
+		"hyperdrive",
+		"🚀 Configure Hyperdrive databases",
+		(hyperdriveYargs) => {
+			return hyperdrive(hyperdriveYargs.command(subHelp));
+		}
+	);
+
+	// ai
+	wrangler.command("ai", "🤖 Interact with AI models", (aiYargs) => {
+		return ai(aiYargs.command(subHelp));
+	});
+
+	// constellation
+	wrangler.command(
+		"constellation",
+		"🤖 Interact with Constellation models",
+		(aiYargs) => {
+			return constellation(aiYargs.command(subHelp));
+		}
+	);
+
+	// vectorize
+	wrangler.command(
+		"vectorize",
+		"🧮 Interact with Vectorize indexes",
+		(vectorYargs) => {
+			return vectorize(vectorYargs.command(subHelp));
+		}
+	);
 
 	// pubsub
 	wrangler.command(
@@ -569,6 +588,7 @@ export function createCLIParser(argv: string[]) {
 				unsafe: config.unsafe,
 				rules: config.rules,
 				queues: config.queues,
+				constellation: config.constellation,
 			};
 
 			await generateTypes(configBindings, config);
@@ -621,40 +641,42 @@ export function createCLIParser(argv: string[]) {
 				.command(subHelp)
 				.epilogue(deploymentsWarning)
 	);
+
 	const rollbackWarning =
 		"🚧`wrangler rollback` is a beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose";
-	wrangler
-		.command(
-			"rollback [deployment-id]",
-			"🔙 Rollback a deployment",
-			(rollbackYargs) =>
-				rollbackYargs
-					.positional("deployment-id", {
-						describe: "The ID of the deployment to rollback to",
-						type: "string",
-						demandOption: false,
-					})
-					.option("message", {
-						alias: "m",
-						describe:
-							"Skip confirmation and message prompts, uses provided argument as message",
-						type: "string",
-						default: undefined,
-					}),
-			async (rollbackYargs) => {
-				const { accountId, scriptName, config } =
-					await commonDeploymentCMDSetup(rollbackYargs, rollbackWarning);
+	wrangler.command(
+		"rollback [deployment-id]",
+		"🔙 Rollback a deployment",
+		(rollbackYargs) =>
+			rollbackYargs
+				.positional("deployment-id", {
+					describe: "The ID of the deployment to rollback to",
+					type: "string",
+					demandOption: false,
+				})
+				.option("message", {
+					alias: "m",
+					describe:
+						"Skip confirmation and message prompts, uses provided argument as message",
+					type: "string",
+					default: undefined,
+				})
+				.epilogue(rollbackWarning),
+		async (rollbackYargs) => {
+			const { accountId, scriptName, config } = await commonDeploymentCMDSetup(
+				rollbackYargs,
+				rollbackWarning
+			);
 
-				await rollbackDeployment(
-					accountId,
-					scriptName,
-					config,
-					rollbackYargs.deploymentId,
-					rollbackYargs.message
-				);
-			}
-		)
-		.epilogue(rollbackWarning);
+			await rollbackDeployment(
+				accountId,
+				scriptName,
+				config,
+				rollbackYargs.deploymentId,
+				rollbackYargs.message
+			);
+		}
+	);
 
 	// This set to false to allow overwrite of default behaviour
 	wrangler.version(false);
@@ -690,6 +712,9 @@ export async function main(argv: string[]): Promise<void> {
 			// The workaround is to re-run the parsing with an additional `--help` flag, which will result in the correct help message being displayed.
 			// The `wrangler` object is "frozen"; we cannot reuse that with different args, so we must create a new CLI parser to generate the help message.
 			await createCLIParser([...argv, "--help"]).parse();
+		} else if (isAuthenticationError(e)) {
+			logger.log(formatMessage(e));
+			await whoami();
 		} else if (e instanceof ParseError) {
 			e.notes.push({
 				text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",
@@ -722,7 +747,7 @@ export async function main(argv: string[]): Promise<void> {
 				`${thisTerminalIsUnsupported}\n${soWranglerWontWork}\n${tryRunningItIn}${oneOfThese}`
 			);
 		} else if (isBuildFailure(e)) {
-			logBuildFailure(e);
+			logBuildFailure(e.errors, e.warnings);
 			logger.error(e.message);
 		} else {
 			logger.error(e instanceof Error ? e.message : e);
@@ -732,17 +757,31 @@ export async function main(argv: string[]): Promise<void> {
 			);
 		}
 		throw e;
+	} finally {
+		// In the bootstrapper script `bin/wrangler.js`, we open an IPC channel, so
+		// IPC messages from this process are propagated through the bootstrapper.
+		// Make sure this channel is closed once it's no longer needed, so we can
+		// cleanly exit. Note, we don't want to disconnect if this file was imported
+		// in Jest, as that would stop communication with the test runner.
+		if (typeof jest === "undefined") process.disconnect?.();
 	}
 }
 
 export function getDevCompatibilityDate(
 	config: Config,
 	compatibilityDate = config.compatibility_date
-) {
-	const currentDate = new Date().toISOString().substring(0, 10);
+): string {
+	// Get the maximum compatibility date supported by the installed Miniflare
+	const miniflareEntry = require.resolve("miniflare");
+	const miniflareRequire = module.createRequire(miniflareEntry);
+	const miniflareWorkerd = miniflareRequire("workerd") as {
+		compatibilityDate: string;
+	};
+	const currentDate = miniflareWorkerd.compatibilityDate;
+
 	if (config.configPath !== undefined && compatibilityDate === undefined) {
 		logger.warn(
-			`No compatibility_date was specified. Using today's date: ${currentDate}.\n` +
+			`No compatibility_date was specified. Using the installed Workers runtime's latest supported date: ${currentDate}.\n` +
 				"Add one to your wrangler.toml file:\n" +
 				"```\n" +
 				`compatibility_date = "${currentDate}"\n` +
@@ -756,3 +795,5 @@ export function getDevCompatibilityDate(
 	}
 	return compatibilityDate ?? currentDate;
 }
+
+export { printWranglerBanner };

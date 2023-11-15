@@ -3,89 +3,46 @@ import { readConfig } from "../config";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import openInBrowser from "../open-in-browser";
-
+import { runSearch } from "./helpers";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 
-const argToUrlHash = {
-	d1: "d1",
-	docs: "docs",
-	init: "init",
-	generate: "generate",
-	dev: "dev",
-	publish: "publish",
-	delete: "delete",
-	"kv:namespace": "kvnamespace",
-	"kv:key": "kvkey",
-	"kv:bulk": "kvbulk",
-	"r2 bucket": "r2-bucket",
-	"r2 object": "r2-object",
-	secret: "secret",
-	"secret:bulk": "secretbulk",
-	tail: "tail",
-	pages: "pages",
-	login: "login",
-	logout: "logout",
-	whoami: "whoami",
-	types: "types",
-	deployments: "deployments",
-};
-
 export function docsOptions(yargs: CommonYargsArgv) {
-	return yargs.positional("command", {
-		describe: "Enter the wrangler command you want to know more about",
-		type: "string",
-		// requiresArg: true,
-		choices: [
-			"docs",
-			"init",
-			"generate",
-			"dev",
-			"publish",
-			"delete",
-			"tail",
-			"secret",
-			"secret:bulk",
-			"kv:namespace",
-			"kv:key",
-			"kv:bulk",
-			"pages",
-			// "queues", //TODO: Undocumented
-			"r2 object",
-			"r2 bucket",
-			// "dispatch-namespace", // TODO: Undocumented - Workers for Platforms
-			"d1",
-			// "pubsub", //TODO: Undocumented
-			"login",
-			"logout",
-			"whoami",
-			"types",
-			"deployments",
-			"api",
-		],
-	});
-}
-
-function isValidParam(k: string): k is keyof typeof argToUrlHash {
-	return k in argToUrlHash;
+	return yargs
+		.positional("command", {
+			describe: "Enter the wrangler command you want to know more about",
+			type: "string",
+			array: true,
+		})
+		.option("yes", {
+			alias: "y",
+			type: "boolean",
+			description: "Takes you to the docs, even if search fails",
+		});
 }
 
 export async function docsHandler(
 	args: StrictYargsOptionsToInterface<typeof docsOptions>
 ) {
+	//if no command is provided, open the docs homepage
+	//or, if a command IS provided, but we can't find anything, open the docs homepage
 	let urlToOpen =
-		"https://developers.cloudflare.com/workers/wrangler/commands/";
+		args.yes || !args.command || args.command.length === 0
+			? "https://developers.cloudflare.com/workers/wrangler/commands/"
+			: "";
 
-	if (args.command === "api") {
-		//if api, take them to the API docs
-		urlToOpen = "https://developers.cloudflare.com/workers/wrangler/api/";
-	} else if (args.command && isValidParam(args.command)) {
-		//otherwise, they get the wrangler commands page
-		urlToOpen += `#${argToUrlHash[args.command]}`;
+	if (args.command && args.command.length > 0) {
+		const searchTerm = args.command.join(" ");
+		const searchResult = await runSearch(searchTerm);
+
+		urlToOpen = searchResult ?? urlToOpen;
 	}
 
+	if (!urlToOpen) {
+		return;
+	}
 	await printWranglerBanner();
 
 	logger.log(`Opening a link in your default browser: ${urlToOpen}`);

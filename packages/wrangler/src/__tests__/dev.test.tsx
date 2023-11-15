@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import module from "node:module";
 import getPort from "get-port";
 import { rest } from "msw";
 import patchConsole from "patch-console";
@@ -43,7 +44,7 @@ describe("wrangler dev", () => {
 		it("should kick you to the login flow when running wrangler dev in remote mode without authorization", async () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await expect(
-				runWrangler("dev index.js")
+				runWrangler("dev --remote index.js")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`"You must be logged in to use wrangler dev in remote mode. Try logging in, or run wrangler dev --local."`
 			);
@@ -68,11 +69,18 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			const currentDate = new Date().toISOString().substring(0, 10);
+
+			const miniflareEntry = require.resolve("miniflare");
+			const miniflareRequire = module.createRequire(miniflareEntry);
+			const miniflareWorkerd = miniflareRequire("workerd") as {
+				compatibilityDate: string;
+			};
+			const currentDate = miniflareWorkerd.compatibilityDate;
+
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn.replaceAll(currentDate, "<current-date>"))
 				.toMatchInlineSnapshot(`
-			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo compatibility_date was specified. Using today's date: <current-date>.[0m
+			        "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo compatibility_date was specified. Using the installed Workers runtime's latest supported date: <current-date>.[0m
 
 			          Add one to your wrangler.toml file:
 			          \`\`\`
@@ -119,7 +127,7 @@ describe("wrangler dev", () => {
 				usage_model: "unbound",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
-			await runWrangler("dev --local");
+			await runWrangler("dev");
 			expect((Dev as jest.Mock).mock.calls[0][0].usageModel).toEqual("unbound");
 		});
 	});
@@ -207,7 +215,7 @@ describe("wrangler dev", () => {
 				main: "index.js",
 				routes: ["http://5.some-host.com/some/path/*"],
 			});
-			await runWrangler("dev");
+			await runWrangler("dev --remote");
 			expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
 				expect.objectContaining({
 					host: "5.some-host.com",
@@ -224,7 +232,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			mockGetZones("some-host.com", [{ id: "some-zone-id" }]);
-			await runWrangler("dev --host some-host.com");
+			await runWrangler("dev --remote --host some-host.com");
 			expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
 				expect.objectContaining({
 					host: "some-host.com",
@@ -322,7 +330,7 @@ describe("wrangler dev", () => {
 				],
 			});
 			fs.writeFileSync("index.js", `export default {};`);
-			await runWrangler("dev");
+			await runWrangler("dev --remote");
 			expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
 				expect.objectContaining({
 					host: "some-domain.com",
@@ -343,7 +351,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			mockGetZones("some-zone.com", [{ id: "a-zone-id" }]);
-			await runWrangler("dev");
+			await runWrangler("dev --remote");
 			expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
 				expect.objectContaining({
 					// note that it uses the provided zone_name as a host too
@@ -369,22 +377,6 @@ describe("wrangler dev", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should fail for non-existing zones", async () => {
-			writeWranglerToml({
-				main: "index.js",
-				routes: [
-					{
-						pattern: "https://subdomain.does-not-exist.com/*",
-						zone_name: "exists.com",
-					},
-				],
-			});
-			await fs.promises.writeFile("index.js", `export default {};`);
-			await expect(runWrangler("dev")).rejects.toEqual(
-				new Error("Could not find zone for subdomain.does-not-exist.com")
-			);
-		});
-
 		it("should fail for non-existing zones, when falling back from */*", async () => {
 			writeWranglerToml({
 				main: "index.js",
@@ -396,7 +388,7 @@ describe("wrangler dev", () => {
 				],
 			});
 			await fs.promises.writeFile("index.js", `export default {};`);
-			await expect(runWrangler("dev")).rejects.toEqual(
+			await expect(runWrangler("dev --remote")).rejects.toEqual(
 				new Error("Could not find zone for does-not-exist.com")
 			);
 		});
@@ -427,11 +419,17 @@ describe("wrangler dev", () => {
 				],
 			});
 			await fs.promises.writeFile("index.js", `export default {};`);
-			const err = new TypeError() as unknown as { code: string; input: string };
-			err.code = "ERR_INVALID_URL";
-			err.input = "http:///";
 
-			await expect(runWrangler("dev")).rejects.toEqual(err);
+			await expect(runWrangler("dev")).rejects.toMatchInlineSnapshot(`
+			[Error: Cannot infer host from first route: {"pattern":"*/*","zone_id":"exists-com"}.
+			You can explicitly set the \`dev.host\` configuration in your wrangler.toml file, for example:
+
+				\`\`\`
+				[dev]
+				host = "example.com"
+				\`\`\`
+			]
+		`);
 		});
 
 		it("given a long host, it should use the longest subdomain that resolves to a zone", async () => {
@@ -467,7 +465,7 @@ describe("wrangler dev", () => {
 				})
 			);
 
-			await runWrangler("dev --host 111.222.333.some-host.com");
+			await runWrangler("dev --remote --host 111.222.333.some-host.com");
 
 			const devMockCall = (Dev as jest.Mock).mock.calls[0][0];
 
@@ -490,7 +488,7 @@ describe("wrangler dev", () => {
 				main: "index.js",
 				routes: ["http://5.some-host.com/some/path/*"],
 			});
-			await runWrangler("dev");
+			await runWrangler("dev --remote");
 			expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
 				expect.objectContaining({
 					host: "5.some-host.com",
@@ -505,7 +503,7 @@ describe("wrangler dev", () => {
 				main: "index.js",
 				route: "https://4.some-host.com/some/path/*",
 			});
-			await runWrangler("dev");
+			await runWrangler("dev --remote");
 			expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
 				expect.objectContaining({
 					host: "4.some-host.com",
@@ -520,7 +518,9 @@ describe("wrangler dev", () => {
 				main: "index.js",
 				route: "https://4.some-host.com/some/path/*",
 			});
-			await runWrangler("dev --routes http://3.some-host.com/some/path/*");
+			await runWrangler(
+				"dev --remote --routes http://3.some-host.com/some/path/*"
+			);
 			expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
 				expect.objectContaining({
 					host: "3.some-host.com",
@@ -538,7 +538,9 @@ describe("wrangler dev", () => {
 				},
 				route: "4.some-host.com/some/path/*",
 			});
-			await runWrangler("dev --routes http://3.some-host.com/some/path/*");
+			await runWrangler(
+				"dev --remote --routes http://3.some-host.com/some/path/*"
+			);
 			expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
 				expect.objectContaining({
 					host: "2.some-host.com",
@@ -557,7 +559,7 @@ describe("wrangler dev", () => {
 				route: "4.some-host.com/some/path/*",
 			});
 			await runWrangler(
-				"dev --routes http://3.some-host.com/some/path/* --host 1.some-host.com"
+				"dev --remote --routes http://3.some-host.com/some/path/* --host 1.some-host.com"
 			);
 			expect((Dev as jest.Mock).mock.calls[0][0]).toEqual(
 				expect.objectContaining({
@@ -575,7 +577,7 @@ describe("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			mockGetZones("some-host.com", []);
 			await expect(
-				runWrangler("dev --host some-host.com")
+				runWrangler("dev --remote --host some-host.com")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`"Could not find zone for some-host.com"`
 			);
@@ -586,7 +588,7 @@ describe("wrangler dev", () => {
 				main: "index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
-			await runWrangler("dev --host some-host.com --local");
+			await runWrangler("dev --host some-host.com");
 			expect((Dev as jest.Mock).mock.calls[0][0].zone).toEqual(undefined);
 		});
 	});
@@ -600,7 +602,7 @@ describe("wrangler dev", () => {
 				},
 			});
 			fs.writeFileSync("index.js", `export default {};`);
-			await runWrangler("dev --local");
+			await runWrangler("dev");
 			expect((Dev as jest.Mock).mock.calls[0][0].localUpstream).toEqual(
 				"2.some-host.com"
 			);
@@ -612,7 +614,7 @@ describe("wrangler dev", () => {
 				route: "https://4.some-host.com/some/path/*",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
-			await runWrangler("dev --local");
+			await runWrangler("dev");
 			expect((Dev as jest.Mock).mock.calls[0][0].host).toEqual(
 				"4.some-host.com"
 			);
@@ -624,7 +626,7 @@ describe("wrangler dev", () => {
 				route: `2.some-host.com`,
 			});
 			fs.writeFileSync("index.js", `export default {};`);
-			await runWrangler("dev --local-upstream some-host.com --local");
+			await runWrangler("dev --local-upstream some-host.com");
 			expect((Dev as jest.Mock).mock.calls[0][0].localUpstream).toEqual(
 				"some-host.com"
 			);
@@ -831,13 +833,13 @@ describe("wrangler dev", () => {
 	});
 
 	describe("ip", () => {
-		it("should default ip to 0.0.0.0", async () => {
+		it("should default ip to *", async () => {
 			writeWranglerToml({
 				main: "index.js",
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual("0.0.0.0");
+			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual("*");
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -875,32 +877,6 @@ describe("wrangler dev", () => {
 	});
 
 	describe("inspector port", () => {
-		it("should connect WebSocket server with --experimental-local", async () => {
-			writeWranglerToml({
-				main: "./index.js",
-			});
-			fs.writeFileSync(
-				"index.js",
-				`export default {
-					async fetch(request, env, ctx ){
-						console.log('Hello World LOGGING');
-					},
-			};`
-			);
-			await runWrangler("dev --experimental-local");
-
-			expect((Dev as jest.Mock).mock.calls[0][0].inspectorPort).toEqual(9229);
-			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "",
-			  "warn": "",
-			}
-		`);
-		});
-
 		it("should use 9229 as the default port", async () => {
 			writeWranglerToml({
 				main: "index.js",
@@ -1079,7 +1055,7 @@ describe("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWrangler("dev");
-			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual("0.0.0.0");
+			expect((Dev as jest.Mock).mock.calls[0][0].initialIp).toEqual("*");
 			expect(std.out).toMatchInlineSnapshot(`
 			        "Your worker has access to the following bindings:
 			        - Durable Objects:
@@ -1231,7 +1207,7 @@ describe("wrangler dev", () => {
 
 			Options:
 			      --name                                       Name of the worker  [string]
-			      --no-bundle                                  Skip internal build steps and directly publish script  [boolean] [default: false]
+			      --no-bundle                                  Skip internal build steps and directly deploy script  [boolean] [default: false]
 			      --compatibility-date                         Date to use for compatibility checks  [string]
 			      --compatibility-flags, --compatibility-flag  Flags to use for compatibility checks  [array]
 			      --latest                                     Use the latest version of the worker runtime  [boolean] [default: true]
@@ -1252,13 +1228,10 @@ describe("wrangler dev", () => {
 			      --jsx-factory                                The function that is called for each JSX element  [string]
 			      --jsx-fragment                               The function that is called for each JSX fragment  [string]
 			      --tsconfig                                   Path to a custom tsconfig.json file  [string]
-			  -l, --local                                      Run on my machine  [boolean] [default: false]
-			      --experimental-local                         Run on my machine using the Cloudflare Workers runtime  [boolean] [default: false]
-			      --experimental-local-remote-kv               Read/write KV data from/to real namespaces on the Cloudflare network  [boolean] [default: false]
+			  -r, --remote                                     Run on the global Cloudflare network with access to production resources  [boolean] [default: false]
 			      --minify                                     Minify the script  [boolean]
 			      --node-compat                                Enable Node.js compatibility  [boolean]
-			      --persist                                    Enable persistence for local mode, using default path: .wrangler/state  [boolean]
-			      --persist-to                                 Specify directory to use for local persistence (implies --persist)  [string]
+			      --persist-to                                 Specify directory to use for local persistence (defaults to .wrangler/state)  [string]
 			      --live-reload                                Auto reload HTML pages when change is detected in local mode  [boolean]
 			      --test-scheduled                             Test scheduled events by visiting /__scheduled in browser  [boolean] [default: false]
 			      --log-level                                  Specify logging level  [choices: \\"debug\\", \\"info\\", \\"log\\", \\"warn\\", \\"error\\", \\"none\\"] [default: \\"log\\"]",
@@ -1505,12 +1478,7 @@ describe("wrangler dev", () => {
 			  - WorkerB: B - staging"
 		`);
 			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-			    - \\"services\\" fields are experimental and may change or break at any time.
-
-
-			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThis worker is bound to live services: WorkerA (A), WorkerB (B@staging)[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThis worker is bound to live services: WorkerA (A), WorkerB (B@staging)[0m
 
 			"
 		`);
@@ -1537,12 +1505,7 @@ describe("wrangler dev", () => {
 			- Services:
 			  - WorkerA: A
 			  - WorkerB: B - staging",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-			    - \\"services\\" fields are experimental and may change or break at any time.
-
-
-			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThis worker is bound to live services: WorkerA (A), WorkerB (B@staging)[0m
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThis worker is bound to live services: WorkerA (A), WorkerB (B@staging)[0m
 
 			",
 			}

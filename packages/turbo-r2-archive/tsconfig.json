@@ -1,0 +1,15 @@
+{
+	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
+	"compilerOptions": {
+		"composite": true,
+		"noEmit": true,
+		"module": "esnext",
+		"target": "esnext",
+		"lib": ["esnext"],
+		"strict": true,
+		"moduleResolution": "node",
+		"types": ["@cloudflare/workers-types"]
+	},
+	"include": ["src", "./worker-configuration.d.ts"],
+	"exclude": ["node_modules", "dist", "test"]
+}

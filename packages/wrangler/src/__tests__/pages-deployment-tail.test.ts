@@ -13,6 +13,9 @@ import type {
 	ScheduledEvent,
 	AlarmEvent,
 	EmailEvent,
+	TailEvent,
+	TailInfo,
+	QueueEvent,
 } from "../tail/createTail";
 import type { RequestInit } from "undici";
 import type WebSocket from "ws";
@@ -28,6 +31,13 @@ describe("pages deployment tail", () => {
 		process.env.CF_PAGES = "1";
 	});
 
+	beforeEach(() => {
+		// You may be inclined to change this to `jest.requireMock ()`. Do it, I
+		// dare you... Have fun fixing this tests :)
+		// (hint: https://github.com/aelbore/esbuild-jest/blob/daa5847b3b382d9ddf6cc26e60ad949d202c4461/src/index.ts#L33)
+		const mockWs = jest["requireMock"]("ws");
+		mockWs.useOriginal = false;
+	});
 	afterAll(() => {
 		delete process.env.CF_PAGES;
 	});
@@ -370,6 +380,20 @@ describe("pages deployment tail", () => {
 			expect(std.out).toMatch(deserializeToJson(serializedMessage));
 		});
 
+		it("logs queue messages in json format", async () => {
+			const api = mockTailAPIs();
+			await runWrangler(
+				"pages deployment tail mock-deployment-id --project-name mock-project --format json"
+			);
+
+			const event = generateMockQueueEvent();
+			const message = generateMockEventMessage({ event });
+			const serializedMessage = serialize(message);
+
+			api.ws.send(serializedMessage);
+			expect(std.out).toMatch(deserializeToJson(serializedMessage));
+		});
+
 		it("logs request messages in pretty format", async () => {
 			const api = mockTailAPIs();
 			await runWrangler(
@@ -475,6 +499,33 @@ describe("pages deployment tail", () => {
 			).toMatchInlineSnapshot(`
 					"Connected to deployment mock-deployment-id, waiting for logs...
 					Email from:${mockEmailEventFrom} to:${mockEmailEventTo} size:${mockEmailEventSize} @ [mock event timestamp] - Ok"
+			`);
+		});
+
+		it("logs queue messages in pretty format", async () => {
+			const api = mockTailAPIs();
+			await runWrangler(
+				"pages deployment tail mock-deployment-id --project-name mock-project --format pretty"
+			);
+
+			const event = generateMockQueueEvent();
+			const message = generateMockEventMessage({ event });
+			const serializedMessage = serialize(message);
+
+			api.ws.send(serializedMessage);
+			expect(
+				std.out
+					.replace(
+						new Date(mockEventTimestamp).toLocaleString(),
+						"[mock timestamp string]"
+					)
+					.replace(
+						mockTailExpiration.toLocaleString(),
+						"[mock expiration date]"
+					)
+			).toMatchInlineSnapshot(`
+					"Connected to deployment mock-deployment-id, waiting for logs...
+					Queue my-queue123 (7 messages) - Ok @ [mock timestamp string]"
 			`);
 		});
 
@@ -655,6 +706,9 @@ function isRequest(
 		| RequestEvent
 		| AlarmEvent
 		| EmailEvent
+		| TailEvent
+		| TailInfo
+		| QueueEvent
 		| undefined
 		| null
 ): event is RequestEvent {
@@ -951,5 +1005,11 @@ function generateMockEmailEvent(opts?: Partial<EmailEvent>): EmailEvent {
 		mailFrom: opts?.mailFrom || mockEmailEventFrom,
 		rcptTo: opts?.rcptTo || mockEmailEventTo,
 		rawSize: opts?.rawSize || mockEmailEventSize,
+	};
+}
+function generateMockQueueEvent(opts?: Partial<QueueEvent>): QueueEvent {
+	return {
+		queue: opts?.queue || "my-queue123",
+		batchSize: opts?.batchSize || 7,
 	};
 }

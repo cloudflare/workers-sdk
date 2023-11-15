@@ -1,32 +1,29 @@
-import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
 import { render, Text } from "ink";
 import Spinner from "ink-spinner";
-import { getType } from "mime";
-import { Minimatch } from "minimatch";
 import PQueue from "p-queue";
-import prettyBytes from "pretty-bytes";
 import React from "react";
 import { fetchResult } from "../cfetch";
 import { FatalError } from "../errors";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import {
-	MAX_ASSET_COUNT,
-	MAX_ASSET_SIZE,
 	BULK_UPLOAD_CONCURRENCY,
 	MAX_BUCKET_FILE_COUNT,
 	MAX_BUCKET_SIZE,
 	MAX_CHECK_MISSING_ATTEMPTS,
 	MAX_UPLOAD_ATTEMPTS,
 } from "./constants";
-import { hashFile } from "./hash";
-import { pagesBetaWarning } from "./utils";
+
+import { ApiErrorCodes } from "./errors";
+import { validate } from "./validate";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type { UploadPayloadFile } from "./types";
+import type { FileContainer } from "./validate";
 
 type UploadArgs = StrictYargsOptionsToInterface<typeof Options>;
 
@@ -46,8 +43,7 @@ export function Options(yargs: CommonYargsArgv) {
 				type: "boolean",
 				description: "Skip asset caching which speeds up builds",
 			},
-		})
-		.epilogue(pagesBetaWarning);
+		});
 }
 
 export const Handler = async ({
@@ -63,8 +59,10 @@ export const Handler = async ({
 		throw new FatalError("No JWT given.", 1);
 	}
 
+	const fileMap = await validate({ directory });
+
 	const manifest = await upload({
-		directory,
+		fileMap,
 		jwt: process.env.CF_PAGES_UPLOAD_JWT,
 		skipCaching: skipCaching ?? false,
 	});
@@ -80,12 +78,12 @@ export const Handler = async ({
 export const upload = async (
 	args:
 		| {
-				directory: string;
+				fileMap: Map<string, FileContainer>;
 				jwt: string;
 				skipCaching: boolean;
 		  }
 		| {
-				directory: string;
+				fileMap: Map<string, FileContainer>;
 				accountId: string;
 				projectName: string;
 				skipCaching: boolean;
@@ -103,95 +101,7 @@ export const upload = async (
 		}
 	}
 
-	type FileContainer = {
-		path: string;
-		contentType: string;
-		sizeInBytes: number;
-		hash: string;
-	};
-
-	const IGNORE_LIST = [
-		"_worker.js",
-		"_redirects",
-		"_headers",
-		"_routes.json",
-		"functions",
-		"**/.DS_Store",
-		"**/node_modules",
-		"**/.git",
-	].map((pattern) => new Minimatch(pattern));
-
-	const directory = resolve(args.directory);
-
-	// TODO(future): Use this to more efficiently load files in and speed up uploading
-	// Limit memory to 1 GB unless more is specified
-	// let maxMemory = 1_000_000_000;
-	// if (process.env.NODE_OPTIONS && (process.env.NODE_OPTIONS.includes('--max-old-space-size=') || process.env.NODE_OPTIONS.includes('--max_old_space_size='))) {
-	// 	const parsed = parser(process.env.NODE_OPTIONS);
-	// 	maxMemory = (parsed['max-old-space-size'] ? parsed['max-old-space-size'] : parsed['max_old_space_size']) * 1000 * 1000; // Turn MB into bytes
-	// }
-
-	const walk = async (
-		dir: string,
-		fileMap: Map<string, FileContainer> = new Map(),
-		startingDir: string = dir
-	) => {
-		const files = await readdir(dir);
-
-		await Promise.all(
-			files.map(async (file) => {
-				const filepath = join(dir, file);
-				const relativeFilepath = relative(startingDir, filepath);
-				const filestat = await stat(filepath);
-
-				for (const minimatch of IGNORE_LIST) {
-					if (minimatch.match(relativeFilepath)) {
-						return;
-					}
-				}
-
-				if (filestat.isSymbolicLink()) {
-					return;
-				}
-
-				if (filestat.isDirectory()) {
-					fileMap = await walk(filepath, fileMap, startingDir);
-				} else {
-					const name = relativeFilepath.split(sep).join("/");
-
-					if (filestat.size > MAX_ASSET_SIZE) {
-						throw new FatalError(
-							`Error: Pages only supports files up to ${prettyBytes(
-								MAX_ASSET_SIZE
-							)} in size\n${name} is ${prettyBytes(filestat.size)} in size`,
-							1
-						);
-					}
-
-					// We don't want to hold the content in memory. We instead only want to read it when it's needed
-					fileMap.set(name, {
-						path: filepath,
-						contentType: getType(name) || "application/octet-stream",
-						sizeInBytes: filestat.size,
-						hash: hashFile(filepath),
-					});
-				}
-			})
-		);
-
-		return fileMap;
-	};
-
-	const fileMap = await walk(directory);
-
-	if (fileMap.size > MAX_ASSET_COUNT) {
-		throw new FatalError(
-			`Error: Pages only supports up to ${MAX_ASSET_COUNT.toLocaleString()} files in a deployment. Ensure you have specified your build output directory correctly.`,
-			1
-		);
-	}
-
-	const files = [...fileMap.values()];
+	const files = [...args.fileMap.values()];
 
 	let jwt = await fetchJwt();
 
@@ -222,7 +132,10 @@ export const upload = async (
 					setTimeout(resolvePromise, Math.pow(2, attempts++) * 1000)
 				);
 
-				if ((e as { code: number }).code === 8000013) {
+				if (
+					(e as { code: number }).code === ApiErrorCodes.UNAUTHORIZED ||
+					isJwtExpired(jwt)
+				) {
 					// Looks like the JWT expired, fetch another one
 					jwt = await fetchJwt();
 				}
@@ -275,8 +188,8 @@ export const upload = async (
 		bucketOffset++;
 	}
 
-	let counter = fileMap.size - sortedFiles.length;
-	const { rerender, unmount } = renderProgress(counter, fileMap.size);
+	let counter = args.fileMap.size - sortedFiles.length;
+	const { rerender, unmount } = renderProgress(counter, args.fileMap.size);
 
 	const queue = new PQueue({ concurrency: BULK_UPLOAD_CONCURRENCY });
 
@@ -315,12 +228,18 @@ export const upload = async (
 					logger.debug("failed:", e, "retrying...");
 					// Exponential backoff, 1 second first time, then 2 second, then 4 second etc.
 					await new Promise((resolvePromise) =>
-						setTimeout(resolvePromise, Math.pow(2, attempts++) * 1000)
+						setTimeout(resolvePromise, Math.pow(2, attempts) * 1000)
 					);
 
-					if ((e as { code: number }).code === 8000013 || isJwtExpired(jwt)) {
+					if (
+						(e as { code: number }).code === ApiErrorCodes.UNAUTHORIZED ||
+						isJwtExpired(jwt)
+					) {
 						// Looks like the JWT expired, fetch another one
 						jwt = await fetchJwt();
+					} else {
+						// Only count as a failed attempt if the error _wasn't_ an expired JWT
+						attempts++;
 					}
 					return doUpload();
 				} else {
@@ -334,7 +253,7 @@ export const upload = async (
 			doUpload().then(
 				() => {
 					counter += bucket.files.length;
-					rerender(counter, fileMap.size);
+					rerender(counter, args.fileMap.size);
 				},
 				(error) => {
 					return Promise.reject(
@@ -356,7 +275,7 @@ export const upload = async (
 
 	const uploadMs = Date.now() - start;
 
-	const skipped = fileMap.size - missingHashes.length;
+	const skipped = args.fileMap.size - missingHashes.length;
 	const skippedMessage = skipped > 0 ? `(${skipped} already uploaded) ` : "";
 
 	logger.log(
@@ -380,7 +299,10 @@ export const upload = async (
 		} catch (e) {
 			await new Promise((resolvePromise) => setTimeout(resolvePromise, 1000));
 
-			if ((e as { code: number }).code === 8000013 || isJwtExpired(jwt)) {
+			if (
+				(e as { code: number }).code === ApiErrorCodes.UNAUTHORIZED ||
+				isJwtExpired(jwt)
+			) {
 				// Looks like the JWT expired, fetch another one
 				jwt = await fetchJwt();
 			}
@@ -407,7 +329,7 @@ export const upload = async (
 	}
 
 	return Object.fromEntries(
-		[...fileMap.entries()].map(([fileName, file]) => [
+		[...args.fileMap.entries()].map(([fileName, file]) => [
 			`/${fileName}`,
 			file.hash,
 		])

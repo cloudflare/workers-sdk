@@ -11,14 +11,12 @@ Please refer to the [Use R2 from Workers](https://developers.cloudflare.com/r2/d
 To create a `my-project` directory using this template, run:
 
 ```sh
-$ npm init cloudflare my-project worker-r2
+$ npx wrangler generate my-project worker-r2
 # or
-$ yarn create cloudflare my-project worker-r2
+$ yarn wrangler generate my-project worker-r2
 # or
-$ pnpm create cloudflare my-project worker-r2
+$ pnpm wrangler generate my-project worker-r2
 ```
-
-> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.
 
 ## Getting started
 
@@ -34,7 +32,7 @@ npx wrangler r2 bucket create <YOUR_BUCKET_NAME>
 # Add config to wrangler.toml as instructed
 
 # Deploy the worker
-npx wrangler publish
+npx wrangler deploy
 ```
 
 Then test out your new Worker!

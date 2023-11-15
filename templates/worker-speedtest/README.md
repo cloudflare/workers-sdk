@@ -13,14 +13,12 @@ _Note:_ when running this as your own worker, your latency measurements may diff
 To create a `my-project` directory using this template, run:
 
 ```sh
-$ npm init cloudflare my-project worker-speedtest
+$ npx wrangler generate my-project worker-speedtest
 # or
-$ yarn create cloudflare my-project worker-speedtest
+$ yarn wrangler generate my-project worker-speedtest
 # or
-$ pnpm create cloudflare my-project worker-speedtest
+$ pnpm wrangler generate my-project worker-speedtest
 ```
-
-> **Note:** Each command invokes [`create-cloudflare`](https://www.npmjs.com/package/create-cloudflare) for project creation.
 
 Before publishing your code you need to edit `wrangler.toml` file and add your Cloudflare `account_id` - more information about publishing your code can be found [in the documentation](https://developers.cloudflare.com/workers/learning/getting-started).
 

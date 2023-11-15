@@ -1,41 +1,36 @@
-import { fork } from "node:child_process";
-import { realpathSync } from "node:fs";
 import * as path from "node:path";
 import * as util from "node:util";
+import chalk from "chalk";
 import onExit from "signal-exit";
-import tmp from "tmp-promise";
-import { bundleWorker } from "../bundle";
+import { bundleWorker } from "../deployment-bundle/bundle";
+import { getBundleType } from "../deployment-bundle/bundle-type";
+import { dedupeModulesByName } from "../deployment-bundle/dedupe-modules";
+import { findAdditionalModules as doFindAdditionalModules } from "../deployment-bundle/find-additional-modules";
+import {
+	createModuleCollector,
+	getWrangler1xLegacyModuleReferences,
+	noopModuleCollector,
+} from "../deployment-bundle/module-collection";
+import { runCustomBuild } from "../deployment-bundle/run-custom-build";
 import {
 	getBoundRegisteredWorkers,
-	registerWorker,
 	startWorkerRegistry,
 	stopWorkerRegistry,
 } from "../dev-registry";
-import { runCustomBuild } from "../entry";
 import { logger } from "../logger";
-import { waitForPortToBeAvailable } from "../proxy";
-import traverseModuleGraph from "../traverse-module-graph";
-import {
-	setupBindings,
-	getMiniflare3,
-	buildMiniflare3Logger,
-	setupMiniflareOptions,
-	setupNodeOptions,
-	transformMf2OptionsToMf3Options,
-} from "./local";
+import { getWranglerTmpDir } from "../paths";
+import { localPropsToConfigBundle, maybeRegisterLocalWorker } from "./local";
+import { MiniflareServer } from "./miniflare";
 import { startRemoteServer } from "./remote";
 import { validateDevProps } from "./validate-dev-props";
-
 import type { Config } from "../config";
 import type { DurableObjectBindings } from "../config/environment";
+import type { Entry } from "../deployment-bundle/entry";
+import type { CfModule } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
-import type { Entry } from "../entry";
-import type { DevProps, DirectorySyncResult } from "./dev";
+import type { DevProps } from "./dev";
 import type { LocalProps } from "./local";
 import type { EsbuildBundle } from "./use-esbuild";
-import type { Miniflare as Miniflare3Type } from "@miniflare/tre";
-
-import type { ChildProcess } from "node:child_process";
 
 export async function startDevServer(
 	props: DevProps & {
@@ -43,158 +38,149 @@ export async function startDevServer(
 		disableDevRegistry: boolean;
 	}
 ) {
-	try {
-		let workerDefinitions: WorkerRegistry = {};
-		validateDevProps(props);
+	let workerDefinitions: WorkerRegistry = {};
+	validateDevProps(props);
 
-		if (props.build.command) {
-			const relativeFile =
-				path.relative(props.entry.directory, props.entry.file) || ".";
-			await runCustomBuild(props.entry.file, relativeFile, props.build).catch(
-				(err) => {
-					logger.error("Custom build failed:", err);
-				}
-			);
-		}
-
-		//implement a react-free version of useTmpDir
-		const directory = setupTempDir();
-		if (!directory) {
-			throw new Error("Failed to create temporary directory.");
-		}
-
-		//start the worker registry
-		logger.log("disableDevRegistry: ", props.disableDevRegistry);
-		if (!props.disableDevRegistry) {
-			try {
-				await startWorkerRegistry();
-				if (props.local) {
-					const boundRegisteredWorkers = await getBoundRegisteredWorkers({
-						services: props.bindings.services,
-						durableObjects: props.bindings.durable_objects,
-					});
-
-					if (
-						!util.isDeepStrictEqual(boundRegisteredWorkers, workerDefinitions)
-					) {
-						workerDefinitions = boundRegisteredWorkers || {};
-					}
-				}
-			} catch (err) {
-				logger.error("failed to start worker registry", err);
+	if (props.build.command) {
+		const relativeFile =
+			path.relative(props.entry.directory, props.entry.file) || ".";
+		await runCustomBuild(props.entry.file, relativeFile, props.build).catch(
+			(err) => {
+				logger.error("Custom build failed:", err);
 			}
+		);
+	}
+
+	//implement a react-free version of useTmpDir
+	const directory = setupTempDir(props.projectRoot);
+	if (!directory) {
+		throw new Error("Failed to create temporary directory.");
+	}
+
+	//start the worker registry
+	logger.log("disableDevRegistry: ", props.disableDevRegistry);
+	if (!props.disableDevRegistry) {
+		try {
+			await startWorkerRegistry();
+			if (props.local) {
+				const boundRegisteredWorkers = await getBoundRegisteredWorkers({
+					services: props.bindings.services,
+					durableObjects: props.bindings.durable_objects,
+				});
+
+				if (
+					!util.isDeepStrictEqual(boundRegisteredWorkers, workerDefinitions)
+				) {
+					workerDefinitions = boundRegisteredWorkers || {};
+				}
+			}
+		} catch (err) {
+			logger.error("failed to start worker registry", err);
 		}
+	}
 
-		const betaD1Shims = props.bindings.d1_databases?.map((db) => db.binding);
+	//implement a react-free version of useEsbuild
+	const bundle = await runEsbuild({
+		entry: props.entry,
+		destination: directory,
+		jsxFactory: props.jsxFactory,
+		processEntrypoint: props.processEntrypoint,
+		additionalModules: props.additionalModules,
+		rules: props.rules,
+		jsxFragment: props.jsxFragment,
+		serveAssetsFromWorker: Boolean(
+			props.assetPaths && !props.isWorkersSite && props.local
+		),
+		tsconfig: props.tsconfig,
+		minify: props.minify,
+		legacyNodeCompat: props.legacyNodeCompat,
+		nodejsCompat: props.nodejsCompat,
+		define: props.define,
+		noBundle: props.noBundle,
+		findAdditionalModules: props.findAdditionalModules,
+		assets: props.assetsConfig,
+		workerDefinitions,
+		services: props.bindings.services,
+		testScheduled: props.testScheduled,
+		local: props.local,
+		doBindings: props.bindings.durable_objects?.bindings ?? [],
+		projectRoot: props.projectRoot,
+	});
 
-		//implement a react-free version of useEsbuild
-		const bundle = await runEsbuild({
-			entry: props.entry,
-			destination: directory.name,
-			jsxFactory: props.jsxFactory,
+	if (props.local) {
+		const { stop } = await startLocalServer({
+			name: props.name,
+			bundle: bundle,
+			format: props.entry.format,
+			compatibilityDate: props.compatibilityDate,
+			compatibilityFlags: props.compatibilityFlags,
+			bindings: props.bindings,
+			assetPaths: props.assetPaths,
+			initialPort: props.initialPort,
+			initialIp: props.initialIp,
 			rules: props.rules,
-			jsxFragment: props.jsxFragment,
-			serveAssetsFromWorker: Boolean(
-				props.assetPaths && !props.isWorkersSite && props.local
-			),
-			tsconfig: props.tsconfig,
-			minify: props.minify,
-			legacyNodeCompat: props.legacyNodeCompat,
-			nodejsCompat: props.nodejsCompat,
-			define: props.define,
-			noBundle: props.noBundle,
-			assets: props.assetsConfig,
-			betaD1Shims,
+			inspectorPort: props.inspectorPort,
+			runtimeInspectorPort: props.runtimeInspectorPort,
+			localPersistencePath: props.localPersistencePath,
+			liveReload: props.liveReload,
+			crons: props.crons,
+			queueConsumers: props.queueConsumers,
+			localProtocol: props.localProtocol,
+			localUpstream: props.localUpstream,
+			inspect: props.inspect,
+			onReady: props.onReady,
+			enablePagesAssetsServiceBinding: props.enablePagesAssetsServiceBinding,
+			usageModel: props.usageModel,
 			workerDefinitions,
-			services: props.bindings.services,
-			firstPartyWorkerDevFacade: props.firstPartyWorker,
-			testScheduled: props.testScheduled,
-			local: props.local,
-			experimentalLocal: props.experimentalLocal,
-			doBindings: props.bindings.durable_objects?.bindings ?? [],
+			sourceMapPath: bundle?.sourceMapPath,
 		});
 
-		if (props.local) {
-			const { stop, inspectorUrl } = await startLocalServer({
-				name: props.name,
-				bundle: bundle,
-				format: props.entry.format,
-				compatibilityDate: props.compatibilityDate,
-				compatibilityFlags: props.compatibilityFlags,
-				bindings: props.bindings,
-				assetPaths: props.assetPaths,
-				initialPort: props.initialPort,
-				initialIp: props.initialIp,
-				rules: props.rules,
-				inspectorPort: props.inspectorPort,
-				localPersistencePath: props.localPersistencePath,
-				liveReload: props.liveReload,
-				crons: props.crons,
-				queueConsumers: props.queueConsumers,
-				localProtocol: props.localProtocol,
-				localUpstream: props.localUpstream,
-				inspect: props.inspect,
-				onReady: props.onReady,
-				enablePagesAssetsServiceBinding: props.enablePagesAssetsServiceBinding,
-				usageModel: props.usageModel,
-				workerDefinitions,
-				experimentalLocal: props.experimentalLocal,
-				accountId: props.accountId,
-				experimentalLocalRemoteKv: props.experimentalLocalRemoteKv,
-			});
-
-			return {
-				stop: async () => {
-					stop();
-					await stopWorkerRegistry();
-				},
-				inspectorUrl,
-			};
-		} else {
-			const { stop } = await startRemoteServer({
-				name: props.name,
-				bundle: bundle,
-				format: props.entry.format,
-				accountId: props.accountId,
-				bindings: props.bindings,
-				assetPaths: props.assetPaths,
-				isWorkersSite: props.isWorkersSite,
-				port: props.initialPort,
-				ip: props.initialIp,
-				localProtocol: props.localProtocol,
-				inspectorPort: props.inspectorPort,
-				inspect: props.inspect,
-				compatibilityDate: props.compatibilityDate,
-				compatibilityFlags: props.compatibilityFlags,
-				usageModel: props.usageModel,
-				env: props.env,
-				legacyEnv: props.legacyEnv,
-				zone: props.zone,
-				host: props.host,
-				routes: props.routes,
-				onReady: props.onReady,
-				sourceMapPath: bundle?.sourceMapPath,
-				sendMetrics: props.sendMetrics,
-			});
-			return {
-				stop: async () => {
-					stop();
-					await stopWorkerRegistry();
-				},
-				// TODO: inspectorUrl,
-			};
-		}
-	} catch (err) {
-		logger.error(err);
+		return {
+			stop: async () => {
+				await Promise.all([stop(), stopWorkerRegistry()]);
+			},
+			// TODO: inspectorUrl,
+		};
+	} else {
+		const { stop } = await startRemoteServer({
+			name: props.name,
+			bundle: bundle,
+			format: props.entry.format,
+			accountId: props.accountId,
+			bindings: props.bindings,
+			assetPaths: props.assetPaths,
+			isWorkersSite: props.isWorkersSite,
+			port: props.initialPort,
+			ip: props.initialIp,
+			localProtocol: props.localProtocol,
+			inspectorPort: props.inspectorPort,
+			inspect: props.inspect,
+			compatibilityDate: props.compatibilityDate,
+			compatibilityFlags: props.compatibilityFlags,
+			usageModel: props.usageModel,
+			env: props.env,
+			legacyEnv: props.legacyEnv,
+			zone: props.zone,
+			host: props.host,
+			routes: props.routes,
+			onReady: props.onReady,
+			sourceMapPath: bundle?.sourceMapPath,
+			sendMetrics: props.sendMetrics,
+		});
+		return {
+			stop: async () => {
+				stop();
+				await stopWorkerRegistry();
+			},
+			// TODO: inspectorUrl,
+		};
 	}
 }
 
-function setupTempDir(): DirectorySyncResult | undefined {
-	let dir: DirectorySyncResult | undefined;
+function setupTempDir(projectRoot: string | undefined): string | undefined {
 	try {
-		dir = tmp.dirSync({ unsafeCleanup: true });
-
-		return dir;
+		const dir = getWranglerTmpDir(projectRoot, "dev");
+		return dir.path;
 	} catch (err) {
 		logger.error("Failed to create temporary directory to store built files.");
 	}
@@ -205,9 +191,10 @@ async function runEsbuild({
 	destination,
 	jsxFactory,
 	jsxFragment,
+	processEntrypoint,
+	additionalModules,
 	rules,
 	assets,
-	betaD1Shims,
 	serveAssetsFromWorker,
 	tsconfig,
 	minify,
@@ -215,21 +202,22 @@ async function runEsbuild({
 	nodejsCompat,
 	define,
 	noBundle,
+	findAdditionalModules,
 	workerDefinitions,
 	services,
-	firstPartyWorkerDevFacade,
 	testScheduled,
 	local,
-	experimentalLocal,
 	doBindings,
+	projectRoot,
 }: {
 	entry: Entry;
 	destination: string | undefined;
 	jsxFactory: string | undefined;
 	jsxFragment: string | undefined;
+	processEntrypoint: boolean;
+	additionalModules: CfModule[];
 	rules: Config["rules"];
 	assets: Config["assets"];
-	betaD1Shims?: string[];
 	define: Config["define"];
 	services: Config["services"];
 	serveAssetsFromWorker: boolean;
@@ -238,297 +226,124 @@ async function runEsbuild({
 	legacyNodeCompat: boolean | undefined;
 	nodejsCompat: boolean | undefined;
 	noBundle: boolean;
+	findAdditionalModules: boolean | undefined;
 	workerDefinitions: WorkerRegistry;
-	firstPartyWorkerDevFacade: boolean | undefined;
 	testScheduled?: boolean;
 	local: boolean;
-	experimentalLocal: boolean | undefined;
 	doBindings: DurableObjectBindings;
+	projectRoot: string | undefined;
 }): Promise<EsbuildBundle | undefined> {
 	if (!destination) return;
 
-	const {
-		resolvedEntryPointPath,
-		bundleType,
-		modules,
-		dependencies,
-		sourceMapPath,
-	}: Awaited<ReturnType<typeof bundleWorker>> = noBundle
-		? await traverseModuleGraph(entry, rules)
-		: await bundleWorker(entry, destination, {
-				serveAssetsFromWorker,
-				jsxFactory,
-				jsxFragment,
+	if (noBundle) {
+		additionalModules = dedupeModulesByName([
+			...((await doFindAdditionalModules(entry, rules)) ?? []),
+			...additionalModules,
+		]);
+	}
+
+	const entryDirectory = path.dirname(entry.file);
+	const moduleCollector = noBundle
+		? noopModuleCollector
+		: createModuleCollector({
+				wrangler1xLegacyModuleReferences: getWrangler1xLegacyModuleReferences(
+					entryDirectory,
+					entry.file
+				),
+				entry,
+				findAdditionalModules: findAdditionalModules ?? false,
 				rules,
-				tsconfig,
-				minify,
-				legacyNodeCompat,
-				nodejsCompat,
-				define,
-				checkFetch: true,
-				assets: assets && {
-					...assets,
-					// disable the cache in dev
-					bypassCache: true,
-				},
-				betaD1Shims,
-				workerDefinitions,
-				services,
-				firstPartyWorkerDevFacade,
-				targetConsumer: "dev", // We are starting a dev server
-				testScheduled,
-				local,
-				experimentalLocal,
-				doBindings,
 		  });
+
+	const bundleResult =
+		processEntrypoint || !noBundle
+			? await bundleWorker(entry, destination, {
+					bundle: !noBundle,
+					additionalModules,
+					moduleCollector,
+					serveAssetsFromWorker,
+					jsxFactory,
+					jsxFragment,
+					tsconfig,
+					minify,
+					legacyNodeCompat,
+					nodejsCompat,
+					define,
+					checkFetch: true,
+					assets,
+					// disable the cache in dev
+					bypassAssetCache: true,
+					workerDefinitions,
+					services,
+					targetConsumer: "dev", // We are starting a dev server
+					local,
+					testScheduled,
+					doBindings,
+					projectRoot,
+			  })
+			: undefined;
 
 	return {
 		id: 0,
 		entry,
-		path: resolvedEntryPointPath,
-		type: bundleType,
-		modules,
-		dependencies,
-		sourceMapPath,
+		path: bundleResult?.resolvedEntryPointPath ?? entry.file,
+		type: bundleResult?.bundleType ?? getBundleType(entry.format),
+		modules: bundleResult ? bundleResult.modules : additionalModules,
+		dependencies: bundleResult?.dependencies ?? {},
+		sourceMapPath: bundleResult?.sourceMapPath,
+		sourceMapMetadata: bundleResult?.sourceMapMetadata,
 	};
 }
 
-export async function startLocalServer({
-	name: workerName,
-	bundle,
-	format,
-	compatibilityDate,
-	compatibilityFlags,
-	usageModel,
-	bindings,
-	workerDefinitions,
-	assetPaths,
-	initialPort,
-	inspectorPort,
-	rules,
-	localPersistencePath,
-	liveReload,
-	initialIp,
-	crons,
-	queueConsumers,
-	localProtocol,
-	localUpstream,
-	inspect,
-	onReady,
-	enablePagesAssetsServiceBinding,
-	experimentalLocal,
-	accountId,
-	experimentalLocalRemoteKv,
-}: LocalProps) {
-	let local: ChildProcess | undefined;
-	let experimentalLocalRef: Miniflare3Type | undefined;
-	let removeSignalExitListener: (() => void) | undefined;
-	let inspectorUrl: string | undefined;
-	const setInspectorUrl = (url: string) => {
-		inspectorUrl = url;
-	};
+export async function startLocalServer(
+	props: LocalProps
+): Promise<{ stop: () => Promise<void> }> {
+	if (!props.bundle || !props.format) return { async stop() {} };
 
-	const abortController = new AbortController();
-	async function startLocalWorker() {
-		if (!bundle || !format) return;
-
-		// port for the worker
-		await waitForPortToBeAvailable(initialPort, {
-			retryPeriod: 200,
-			timeout: 2000,
-			abortSignal: abortController.signal,
-		});
-
-		if (bindings.services && bindings.services.length > 0) {
-			logger.warn(
-				"⎔ Support for service bindings in local mode is experimental and may change."
-			);
-		}
-
-		const scriptPath = realpathSync(bundle.path);
-
-		const upstream =
-			typeof localUpstream === "string"
-				? `${localProtocol}://${localUpstream}`
-				: undefined;
-
-		const {
-			externalDurableObjects,
-			internalDurableObjects,
-			wasmBindings,
-			textBlobBindings,
-			dataBlobBindings,
-		} = setupBindings({
-			wasm_modules: bindings.wasm_modules,
-			text_blobs: bindings.text_blobs,
-			data_blobs: bindings.data_blobs,
-			durable_objects: bindings.durable_objects,
-			format,
-			bundle,
-		});
-
-		const { forkOptions, miniflareCLIPath, options } = setupMiniflareOptions({
-			workerName,
-			port: initialPort,
-			scriptPath,
-			localProtocol,
-			ip: initialIp,
-			format,
-			rules,
-			compatibilityDate,
-			compatibilityFlags,
-			usageModel,
-			kv_namespaces: bindings?.kv_namespaces,
-			queueBindings: bindings?.queues,
-			queueConsumers,
-			r2_buckets: bindings?.r2_buckets,
-			d1_databases: bindings?.d1_databases,
-			internalDurableObjects,
-			externalDurableObjects,
-			localPersistencePath,
-			liveReload,
-			assetPaths,
-			vars: bindings?.vars,
-			wasmBindings,
-			textBlobBindings,
-			dataBlobBindings,
-			crons,
-			upstream,
-			workerDefinitions,
-			enablePagesAssetsServiceBinding,
-		});
-
-		if (experimentalLocal) {
-			const log = await buildMiniflare3Logger();
-			const mf3Options = await transformMf2OptionsToMf3Options({
-				miniflare2Options: options,
-				format,
-				bundle,
-				log,
-				kvNamespaces: bindings?.kv_namespaces,
-				r2Buckets: bindings?.r2_buckets,
-				d1Databases: bindings?.d1_databases,
-				authenticatedAccountId: accountId,
-				kvRemote: experimentalLocalRemoteKv,
-				inspectorPort,
-			});
-			const { Miniflare } = await getMiniflare3();
-			const mf = new Miniflare(mf3Options);
-			const runtimeURL = await mf.ready;
-			experimentalLocalRef = mf;
-			removeSignalExitListener = onExit((_code, _signal) => {
-				logger.log("⎔ Shutting down experimental local server.");
-				void mf.dispose();
-				experimentalLocalRef = undefined;
-			});
-			onReady?.(runtimeURL.hostname, parseInt(runtimeURL.port ?? 8787));
-			return;
-		}
-
-		const nodeOptions = setupNodeOptions({ inspect, inspectorPort });
-		logger.log("⎔ Starting a local server...");
-
-		const child = (local = fork(miniflareCLIPath, forkOptions, {
-			cwd: path.dirname(scriptPath),
-			execArgv: nodeOptions,
-			stdio: "pipe",
-		}));
-
-		child.on("message", async (messageString) => {
-			const message = JSON.parse(messageString as string);
-			if (message.ready) {
-				// Let's register our presence in the dev registry
-				if (workerName) {
-					await registerWorker(workerName, {
-						protocol: localProtocol,
-						mode: "local",
-						port: message.port,
-						host: initialIp,
-						durableObjects: internalDurableObjects.map((binding) => ({
-							name: binding.name,
-							className: binding.class_name,
-						})),
-						...(message.durableObjectsPort
-							? {
-									durableObjectsHost: initialIp,
-									durableObjectsPort: message.durableObjectsPort,
-							  }
-							: {}),
-					});
-				}
-				onReady?.(initialIp, message.port);
-			}
-		});
-
-		child.on("close", (code) => {
-			if (code) {
-				logger.log(`Miniflare process exited with code ${code}`);
-			}
-		});
-
-		child.stdout?.on("data", (data: Buffer) => {
-			process.stdout.write(data);
-		});
-
-		// parse the node inspector url (which may be received in chunks) from stderr
-		let stderrData = "";
-		let inspectorUrlFound = false;
-		child.stderr?.on("data", (data: Buffer) => {
-			if (!inspectorUrlFound) {
-				stderrData += data.toString();
-				const matches =
-					/Debugger listening on (ws:\/\/127\.0\.0\.1:\d+\/[A-Za-z0-9-]+)[\r|\n]/.exec(
-						stderrData
-					);
-				if (matches) {
-					inspectorUrlFound = true;
-					setInspectorUrl(matches[1]);
-				}
-			}
-
-			process.stderr.write(data);
-		});
-
-		child.on("exit", (code) => {
-			if (code) {
-				logger.error(`Miniflare process exited with code ${code}`);
-			}
-		});
-
-		child.on("error", (error: Error) => {
-			logger.error(`Miniflare process failed to spawn`);
-			logger.error(error);
-		});
-
-		removeSignalExitListener = onExit((_code, _signal) => {
-			logger.log("⎔ Shutting down local server.");
-			child.kill();
-			local = undefined;
-		});
+	// Log warnings for experimental dev-registry-dependent options
+	if (props.bindings.services && props.bindings.services.length > 0) {
+		logger.warn(
+			"⎔ Support for service bindings in local mode is experimental and may change."
+		);
+	}
+	const externalDurableObjects = (
+		props.bindings.durable_objects?.bindings || []
+	).filter((binding) => binding.script_name);
+	if (externalDurableObjects.length > 0) {
+		logger.warn(
+			"⎔ Support for external Durable Objects in local mode is experimental and may change."
+		);
 	}
 
-	startLocalWorker().catch((err) => {
-		logger.error("local worker:", err);
-	});
+	logger.log(chalk.dim("⎔ Starting local server..."));
 
-	return {
-		inspectorUrl,
-		stop: () => {
-			abortController.abort();
-			if (local) {
-				logger.log("⎔ Shutting down local server.");
-				local.kill();
-				local = undefined;
-			}
-			if (experimentalLocalRef) {
-				logger.log("⎔ Shutting down experimental local server.");
-				// Initialisation errors are also thrown asynchronously by dispose().
-				// The catch() above should've caught them though.
-				experimentalLocalRef?.dispose().catch(() => {});
-				experimentalLocalRef = undefined;
-			}
-			removeSignalExitListener?.();
-			removeSignalExitListener = undefined;
-		},
-	};
+	const config = await localPropsToConfigBundle(props);
+	return new Promise<{ stop: () => Promise<void> }>((resolve, reject) => {
+		const server = new MiniflareServer();
+		server.addEventListener("reloaded", async (event) => {
+			await maybeRegisterLocalWorker(event, props.name);
+			props.onReady?.(event.url.hostname, parseInt(event.url.port));
+			// Note `unstable_dev` doesn't do anything with the inspector URL yet
+			resolve({
+				stop: async () => {
+					abortController.abort();
+					logger.log("⎔ Shutting down local server...");
+					removeMiniflareServerExitListener();
+					// Initialization errors are also thrown asynchronously by dispose().
+					// The `addEventListener("error")` above should've caught them though.
+					await server.onDispose();
+				},
+			});
+		});
+		server.addEventListener("error", ({ error }) => {
+			logger.error("Error reloading local server:", error);
+			reject(error);
+		});
+		const removeMiniflareServerExitListener = onExit(() => {
+			logger.log(chalk.dim("⎔ Shutting down local server..."));
+			void server.onDispose();
+		});
+		const abortController = new AbortController();
+		void server.onBundleUpdate(config, { signal: abortController.signal });
+	});
 }

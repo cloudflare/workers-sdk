@@ -8,31 +8,16 @@
 	"author": "",
 	"main": "index.js",
 	"scripts": {
-		"check:type": "tsc && tsc -p tests/tsconfig.json",
-		"test": "cross-env NODE_ENV=local-testing NODE_OPTIONS=--experimental-vm-modules npx jest --forceExit",
-		"test:ci": "cross-env NODE_ENV=local-testing NODE_OPTIONS=--experimental-vm-modules npx jest --forceExit"
-	},
-	"jest": {
-		"restoreMocks": true,
-		"testRegex": ".*.(test|spec)\\.[jt]sx?$",
-		"testTimeout": 30000,
-		"transform": {
-			"^.+\\.c?(t|j)sx?$": [
-				"esbuild-jest",
-				{
-					"sourcemap": true
-				}
-			]
-		},
-		"transformIgnorePatterns": [
-			"node_modules/(?!find-up|locate-path|p-locate|p-limit|p-timeout|p-queue|yocto-queue|path-exists|execa|strip-final-newline|npm-run-path|path-key|onetime|mimic-fn|human-signals|is-stream|get-port|supports-color|pretty-bytes)",
-			"wrangler-dist/cli.js"
-		]
+		"check:type": "tsc",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20221111.1",
 		"@types/node": "^17.0.33",
 		"buffer": "^6.0.3",
-		"wrangler": "^2.9.1"
+		"wrangler": "workspace:*"
 	}
 }

@@ -2,8 +2,10 @@ import * as Backups from "./backups";
 import * as Create from "./create";
 import * as Delete from "./delete";
 import * as Execute from "./execute";
+import * as Info from "./info";
 import * as List from "./list";
 import * as Migrations from "./migrations";
+import * as TimeTravel from "./timeTravel";
 import { d1BetaWarning } from "./utils";
 import type { CommonYargsArgv } from "../yargs-types";
 
@@ -11,6 +13,12 @@ export function d1(yargs: CommonYargsArgv) {
 	return (
 		yargs
 			.command("list", "List D1 databases", List.Options, List.Handler)
+			.command(
+				"info <name>",
+				"Get information about a D1 database, including the current database size and state.",
+				Info.Options,
+				Info.Handler
+			)
 			.command(
 				"create <name>",
 				"Create D1 database",
@@ -71,6 +79,25 @@ export function d1(yargs: CommonYargsArgv) {
 				"Executed command or SQL file",
 				Execute.Options,
 				Execute.Handler
+			)
+			.command(
+				"time-travel",
+				"Use Time Travel to restore, fork or copy a database at a specific point-in-time.",
+				(yargs2) =>
+					yargs2
+						.demandCommand()
+						.command(
+							"info <database>",
+							"Retrieve information about a database at a specific point-in-time using Time Travel.",
+							TimeTravel.InfoOptions,
+							TimeTravel.InfoHandler
+						)
+						.command(
+							"restore <database>",
+							"Restore a database back to a specific point-in-time.",
+							TimeTravel.RestoreOptions,
+							TimeTravel.RestoreHandler
+						)
 			)
 			.command("migrations", "Interact with D1 Migrations", (yargs2) =>
 				yargs2
