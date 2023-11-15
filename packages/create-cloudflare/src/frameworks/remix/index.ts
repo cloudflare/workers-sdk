@@ -6,10 +6,11 @@ import type { FrameworkConfig, PagesGeneratorContext } from "types";
 const { npm } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
-	await runFrameworkGenerator(
-		ctx,
-		`${ctx.project.name} --template https://github.com/remix-run/remix/tree/main/templates/cloudflare-pages`
-	);
+	await runFrameworkGenerator(ctx, [
+		ctx.project.name,
+		"--template",
+		"https://github.com/remix-run/remix/tree/main/templates/cloudflare-pages",
+	]);
 
 	logRaw(""); // newline
 };

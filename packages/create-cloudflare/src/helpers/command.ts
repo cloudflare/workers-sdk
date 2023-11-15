@@ -6,17 +6,12 @@ import { isInteractive, spinner } from "@cloudflare/cli/interactive";
 import { spawn } from "cross-spawn";
 import { getFrameworkCli } from "frameworks/index";
 import { detectPackageManager } from "./packages";
-import * as shellquote from "./shell-quote";
 import type { PagesGeneratorContext } from "types";
 
 /**
- * Command can be either:
- *    - a string, like `git commit -m "Changes"`
- *    - a string array, like ['git', 'commit', '-m', '"Initial commit"']
- *
- * The string version is a convenience but is unsafe if your args contain spaces
+ * Command is a string array, like ['git', 'commit', '-m', '"Initial commit"']
  */
-type Command = string | string[];
+type Command = string[];
 
 type RunOptions = {
 	startText?: string;
@@ -48,13 +43,9 @@ export const runCommand = async (
 	command: Command,
 	opts: RunOptions = {}
 ): Promise<string> => {
-	if (typeof command === "string") {
-		command = shellquote.parse(command);
-	}
-
 	return printAsyncStatus({
 		useSpinner: opts.useSpinner ?? opts.silent,
-		startText: opts.startText || shellquote.quote(command),
+		startText: opts.startText || command.join(" "),
 		doneText: opts.doneText,
 		promise() {
 			const [executable, ...args] = command;
@@ -188,29 +179,28 @@ export const retry = async <T>(
 
 export const runFrameworkGenerator = async (
 	ctx: PagesGeneratorContext,
-	argString: string
+	args: string[]
 ) => {
 	const cli = getFrameworkCli(ctx, true);
 	const { npm, dlx } = detectPackageManager();
-
 	// yarn cannot `yarn create@some-version` and doesn't have an npx equivalent
 	// So to retain the ability to lock versions we run it with `npx` and spoof
 	// the user agent so scaffolding tools treat the invocation like yarn
-	let cmd = `${npm === "yarn" ? "npx" : dlx} ${cli} ${argString}`;
+	const cmd = [...(npm === "yarn" ? ["npx"] : dlx), cli, ...args];
 	const env = npm === "yarn" ? { npm_config_user_agent: "yarn" } : {};
 
 	if (ctx.framework?.args?.length) {
-		cmd = `${cmd} ${shellquote.quote(ctx.framework.args)}`;
+		cmd.push(...ctx.framework.args);
 	}
 
 	endSection(
 		`Continue with ${ctx.framework?.config.displayName}`,
-		`via \`${cmd.trim()}\``
+		`via \`${cmd.join(" ").trim()}\``
 	);
 
 	if (process.env.VITEST) {
 		const flags = ctx.framework?.config.testFlags ?? [];
-		cmd = `${cmd} ${shellquote.quote(flags)}`;
+		cmd.push(...flags);
 	}
 
 	await runCommand(cmd, { env });
@@ -247,7 +237,7 @@ export const installPackages = async (
 			break;
 	}
 
-	await runCommand(`${npm} ${cmd} ${saveFlag} ${shellquote.quote(packages)}`, {
+	await runCommand([npm, cmd, saveFlag, ...packages], {
 		...config,
 		silent: true,
 	});
@@ -271,7 +261,7 @@ export const resetPackageManager = async (ctx: PagesGeneratorContext) => {
 	const lockfilePath = path.join(ctx.project.path, "package-lock.json");
 	if (existsSync(lockfilePath)) rmSync(lockfilePath);
 
-	await runCommand(`${npm} install`, {
+	await runCommand([npm, "install"], {
 		silent: true,
 		cwd: ctx.project.path,
 		startText: "Installing dependencies",
@@ -298,15 +288,7 @@ const needsPackageManagerReset = (ctx: PagesGeneratorContext) => {
 export const npmInstall = async () => {
 	const { npm } = detectPackageManager();
 
-	const installCmd = [npm, "install"];
-
-	if (npm === "yarn" && process.env.VITEST) {
-		// Yarn can corrupt the cache if more than one instance is running at once,
-		// which is what we do in our tests.
-		installCmd.push("--mutex", "network");
-	}
-
-	await runCommand(installCmd, {
+	await runCommand([npm, "install"], {
 		silent: true,
 		startText: "Installing dependencies",
 		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
@@ -335,7 +317,7 @@ export const installWrangler = async () => {
 export const isLoggedIn = async () => {
 	const { npx } = detectPackageManager();
 	try {
-		const output = await runCommand(`${npx} wrangler whoami`, {
+		const output = await runCommand([npx, "wrangler", "whoami"], {
 			silent: true,
 		});
 		return /You are logged in/.test(output);
@@ -357,7 +339,7 @@ export const wranglerLogin = async () => {
 
 	// We're using a custom spinner since this is a little complicated.
 	// We want to vary the done status based on the output
-	const output = await runCommand(`${npx} wrangler login`, {
+	const output = await runCommand([npx, "wrangler", "login"], {
 		silent: true,
 	});
 	const success = /Successfully logged in/.test(output);
@@ -371,7 +353,7 @@ export const wranglerLogin = async () => {
 export const listAccounts = async () => {
 	const { npx } = detectPackageManager();
 
-	const output = await runCommand(`${npx} wrangler whoami`, {
+	const output = await runCommand([npx, "wrangler", "whoami"], {
 		silent: true,
 	});
 
@@ -400,7 +382,7 @@ export const listAccounts = async () => {
 export async function getWorkerdCompatibilityDate() {
 	const { npm } = detectPackageManager();
 
-	return runCommand(`${npm} info workerd dist-tags.latest`, {
+	return runCommand([npm, "info", "workerd", "dist-tags.latest"], {
 		silent: true,
 		captureOutput: true,
 		startText: "Retrieving current workerd compatibility date",

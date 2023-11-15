@@ -11,7 +11,7 @@ import type { FrameworkConfig, PagesGeneratorContext } from "types";
 const { npm } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
-	await runFrameworkGenerator(ctx, `${ctx.project.name} --ssr`);
+	await runFrameworkGenerator(ctx, [ctx.project.name, "--ssr"]);
 
 	logRaw("");
 };
@@ -35,7 +35,7 @@ const config: FrameworkConfig = {
 	}),
 	deployCommand: "deploy",
 	devCommand: "start",
-	testFlags: ["--ssr", "--style", "sass"],
+	testFlags: ["--style", "sass"],
 };
 export default config;
 

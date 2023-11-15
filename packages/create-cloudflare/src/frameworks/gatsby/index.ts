@@ -26,7 +26,7 @@ const generate = async (ctx: PagesGeneratorContext) => {
 		});
 	}
 
-	await runFrameworkGenerator(ctx, `new ${ctx.project.name} ${templateUrl}`);
+	await runFrameworkGenerator(ctx, ["new", ctx.project.name, templateUrl]);
 };
 
 const config: FrameworkConfig = {

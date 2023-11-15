@@ -10,7 +10,6 @@ import {
 	beforeAll,
 } from "vitest";
 import { version } from "../package.json";
-import * as shellquote from "../src/helpers/shell-quote";
 import { frameworkToTest } from "./frameworkToTest";
 import { isQuarantineMode, keys, recreateLogFolder, runC3 } from "./helpers";
 import type { Suite } from "vitest";
@@ -43,15 +42,19 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 		});
 
 		test("--version with positionals", async (ctx) => {
-			const argv = shellquote.parse("foo bar baz --version");
+			const argv = ["foo", "bar", "baz", "--version"];
 			const { output } = await runC3({ ctx, argv });
 			expect(output).toEqual(version);
 		});
 
 		test("--version with flags", async (ctx) => {
-			const argv = shellquote.parse(
-				"foo --type webFramework --no-deploy --version"
-			);
+			const argv = [
+				"foo",
+				"--type",
+				"webFramework",
+				"--no-deploy",
+				"--version",
+			];
 			const { output } = await runC3({ ctx, argv });
 			expect(output).toEqual(version);
 		});

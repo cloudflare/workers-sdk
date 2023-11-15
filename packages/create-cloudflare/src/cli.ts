@@ -13,7 +13,6 @@ import { detectPackageManager } from "helpers/packages";
 import semver from "semver";
 import { version } from "../package.json";
 import { validateProjectDirectory } from "./common";
-import * as shellquote from "./helpers/shell-quote";
 import { templateMap } from "./templateMap";
 import type { C3Args } from "types";
 
@@ -43,7 +42,7 @@ const isUpdateAvailable = async () => {
 	const s = spinner(spinnerFrames.vertical, blue);
 	s.start("Checking if a newer version is available");
 	const latestVersion = await runCommand(
-		`npm info create-cloudflare@latest dist-tags.latest`,
+		["npm", "info", "create-cloudflare@latest", "dist-tags.latest"],
 		{ silent: true, useSpinner: false }
 	);
 	s.stop();
@@ -60,12 +59,11 @@ export const runLatest = async () => {
 
 	// the parsing logic of `npm create` requires `--` to be supplied
 	// before any flags intended for the target command.
-	const argString =
-		npm === "npm"
-			? `-- ${shellquote.quote(args)}`
-			: `${shellquote.quote(args)}`;
+	if (npm === "npm") {
+		args.unshift("--");
+	}
 
-	await runCommand(`${npm} create cloudflare@latest ${argString}`);
+	await runCommand([npm, "create", "cloudflare@latest", ...args]);
 };
 
 // Entrypoint to c3

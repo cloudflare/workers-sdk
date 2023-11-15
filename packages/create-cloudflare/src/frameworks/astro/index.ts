@@ -8,7 +8,7 @@ import type { FrameworkConfig, PagesGeneratorContext } from "types";
 const { npx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
-	await runFrameworkGenerator(ctx, `${ctx.project.name} --no-install`);
+	await runFrameworkGenerator(ctx, [ctx.project.name, "--no-install"]);
 
 	logRaw(""); // newline
 };
@@ -20,7 +20,7 @@ const configure = async (ctx: PagesGeneratorContext) => {
 	// Need to ensure install first so `astro` works
 	await npmInstall();
 
-	await runCommand(`${npx} astro add cloudflare -y`, {
+	await runCommand([npx, "astro", "add", "cloudflare", "-y"], {
 		silent: true,
 		startText: "Installing adapter",
 		doneText: `${brandColor("installed")} ${dim(

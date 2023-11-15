@@ -26,7 +26,7 @@ const { npm, npx } = detectPackageManager();
 const generate = async (ctx: PagesGeneratorContext) => {
 	const projectName = ctx.project.name;
 
-	await runFrameworkGenerator(ctx, `${projectName}`);
+	await runFrameworkGenerator(ctx, [projectName]);
 };
 
 const getApiTemplate = (
