@@ -1,10 +1,13 @@
-import { EventEmitter } from "node:events";
-// import { readFileSync } from "../../parse";
+import { Controller } from "./BaseController";
 import { notImplemented } from "./NotImplementedError";
-import type { ConfigUpdateEvent, ErrorEvent } from "./events";
+import type { ControllerEventMap } from "./BaseController";
+import type { ConfigUpdateEvent } from "./events";
 import type { StartDevWorkerOptions } from "./types";
 
-export class ConfigController extends EventEmitter {
+export type ConfigControllerEventMap = ControllerEventMap & {
+	configUpdate: [ConfigUpdateEvent];
+};
+export class ConfigController extends Controller<ConfigControllerEventMap> {
 	config?: StartDevWorkerOptions;
 
 	setOptions(_: StartDevWorkerOptions) {
@@ -29,14 +32,4 @@ export class ConfigController extends EventEmitter {
 	emitConfigUpdateEvent(data: ConfigUpdateEvent) {
 		this.emit("configUpdate", data);
 	}
-
-	// *********************
-	//   Event Subscribers
-	// *********************
-
-	on(event: "configUpdate", listener: (_: ConfigUpdateEvent) => void): this;
-	// @ts-expect-error Missing overload implementation (only need the signature types, base implementation is fine)
-	on(event: "error", listener: (_: ErrorEvent) => void): this;
-	// @ts-expect-error Missing initialisation (only need the signature types, base implementation is fine)
-	once: typeof this.on;
 }
