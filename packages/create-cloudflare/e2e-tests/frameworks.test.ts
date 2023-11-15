@@ -10,7 +10,7 @@ import {
 	beforeEach,
 	beforeAll,
 } from "vitest";
-import { deleteProject } from "../scripts/common";
+import { deleteProject, deleteWorker } from "../scripts/common";
 import { frameworkToTest } from "./frameworkToTest";
 import {
 	isQuarantineMode,
@@ -160,13 +160,13 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 	afterEach(async (ctx) => {
 		const framework = ctx.meta.name;
 		clean(framework);
-		// Cleanup the pages project in case we need to retry it
+		// Cleanup the project in case we need to retry it
 		const projectName = getName(framework);
-		try {
+		const frameworkConfig = FrameworkMap[framework];
+		if (frameworkConfig.type !== "workers") {
 			await deleteProject(projectName);
-		} catch (error) {
-			console.error(`Failed to cleanup project: ${projectName}`);
-			console.error(error);
+		} else {
+			await deleteWorker(projectName);
 		}
 	});
 

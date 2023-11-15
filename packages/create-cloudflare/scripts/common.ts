@@ -31,7 +31,7 @@ const apiFetch = async (
 	});
 
 	if (response.status >= 400) {
-		console.error(`REQUEST ERROR: ${url}`);
+		console.error(`REQUEST ERROR: ${url}`, init);
 		console.error(`(${response.status}) ${response.statusText}`);
 		const body = (await response.json()) as ApiErrorBody;
 		console.error(body.errors);
