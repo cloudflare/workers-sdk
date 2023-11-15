@@ -44,6 +44,7 @@ Read the latest `worker` crate documentation here: https://docs.rs/worker
 
 As this template comprises only the essential setup, we recommend considering our advanced example to leverage its additional functionalities. The advanced example showcases the creation of multiple routes, logging of requests, retrieval of field data from a form, and other features that may prove useful to your project.  
 The following example has been taken from: [workers-rs](https://github.com/cloudflare/workers-rs). You can learn more about how to use workers with rust by going there.
+
 ```rust
 use worker::*;
 
