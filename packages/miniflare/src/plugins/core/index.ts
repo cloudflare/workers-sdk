@@ -585,6 +585,7 @@ export function getGlobalServices({
 				allow: ["public", "private"],
 				deny: [],
 				tlsOptions: {
+					requireClientCerts: false,
 					trustBrowserCas: true,
 					trustedCertificates,
 				},
