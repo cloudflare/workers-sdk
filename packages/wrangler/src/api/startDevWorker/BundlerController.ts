@@ -1,13 +1,17 @@
 import { Controller } from "./BaseController";
 import { notImplemented } from "./NotImplementedError";
+import type { ControllerEventMap } from "./BaseController";
 import type {
 	BundleCompleteEvent,
 	BundleStartEvent,
 	ConfigUpdateEvent,
-	ErrorEvent,
 } from "./events";
 
-export class BundlerController extends Controller {
+export type BundlerControllerEventMap = ControllerEventMap & {
+	bundleStart: [BundleStartEvent];
+	bundleComplete: [BundleCompleteEvent];
+};
+export class BundlerController extends Controller<BundlerControllerEventMap> {
 	// ******************
 	//   Event Handlers
 	// ******************
@@ -30,15 +34,4 @@ export class BundlerController extends Controller {
 	emitBundleCompletetEvent(data: BundleCompleteEvent) {
 		this.emit("bundleComplete", data);
 	}
-
-	// *********************
-	//   Event Subscribers
-	// *********************
-
-	on(event: "bundleStart", listener: (_: BundleStartEvent) => void): this;
-	on(event: "bundleComplete", listener: (_: BundleCompleteEvent) => void): this;
-	// @ts-expect-error Missing overload implementation (only need the signature types, base implementation is fine)
-	on(event: "error", listener: (_: ErrorEvent) => void): this;
-	// @ts-expect-error Missing initialisation (only need the signature types, base implementation is fine)
-	once: typeof this.on;
 }
