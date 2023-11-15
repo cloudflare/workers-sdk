@@ -102,7 +102,7 @@ export class DevEnv extends EventEmitter {
 		await Promise.all([
 			this.config.teardown(),
 			this.bundler.teardown(),
-			this.runtimes.forEach((runtime) => runtime.teardown()),
+			...this.runtimes.map((runtime) => runtime.teardown()),
 			this.proxy.teardown(),
 		]);
 	}
