@@ -20,7 +20,8 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Install Bun ${{ env.bun-version }}
+    - if: ${{ matrix.pm == 'bun' }}
+      name: Install Bun ${{ env.bun-version }}
       uses: oven-sh/setup-bun@v1
       with:
         bun-version: ${{ env.bun-version }}

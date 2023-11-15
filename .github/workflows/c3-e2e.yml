@@ -14,12 +14,16 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.pm }}
       cancel-in-progress: true
-    name: ${{ format('E2E ({0})', matrix.pm) }}
+    name: ${{ format('E2E ({0} on {1})', matrix.pm, matrix.os) }}
     if: github.repository_owner == 'cloudflare' && github.event.pull_request.user.login != 'dependabot[bot]'
     strategy:
       matrix:
         os: [ubuntu-latest]
         pm: [npm, pnpm, bun, yarn]
+        # include a single windows test with pnpm
+        include:
+          - os: windows-latest
+            pm: pnpm
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
