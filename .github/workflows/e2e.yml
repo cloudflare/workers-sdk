@@ -65,6 +65,12 @@ jobs:
         env:
           NODE_ENV: "production"
 
+      - name: Get debug logs directory
+        id: "debug-logs"
+        run: node -p "'dir=' + require('path').resolve(process.env.RUNNER_TEMP, 'wrangler-debug-logs')"
+        env:
+          RUNNER_TEMP: ${{ runner.temp }}
+
       - name: Run tests
         id: e2e-1
         continue-on-error: true
@@ -74,7 +80,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
           WRANGLER: pnpm --silent --package ${{ steps.find-wrangler.outputs.dir}} dlx wrangler
           NODE_OPTIONS: "--max_old_space_size=8192"
-          WRANGLER_DEBUG_LOG: ~/.wrangler/debug-logs/e2e.log
+          WRANGLER_DEBUG_LOG: ${{ steps.debug-logs.outputs.dir }}/e2e-attempt-1.log
 
       - name: Retry tests
         if: steps.e2e-1.outcome == 'failure'
@@ -84,10 +90,11 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
           WRANGLER: pnpm --silent --package ${{ steps.find-wrangler.outputs.dir}} dlx wrangler
           NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_DEBUG_LOG: ${{ steps.debug-logs.outputs.dir }}/e2e-attempt-2.log
 
-      - name: upload-debug-logs
-        if: ${{ always() }}
+      - name: Upload debug logs
+        if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: debug-logs
-          path: ~/.wrangler/debug-logs/e2e.log
+          name: e2e-test-debug-logs
+          path: ${{ steps.debug-logs.outputs.dir }}
