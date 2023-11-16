@@ -45,7 +45,7 @@ $ npm install wrangler --save-dev
 
 ## Commands
 
-### `wrangler init [name]`
+### `wrangler init [name]` 
 
 Creates a Worker project. For details on configuration keys and values, refer to the [documentation](https://developers.cloudflare.com/workers/wrangler/configuration/).
 
