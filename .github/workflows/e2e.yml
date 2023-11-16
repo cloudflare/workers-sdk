@@ -87,5 +87,5 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
-          WRANGLER: pnpm --silent --package ${{ steps.find-wrangler.outputs.dir}} dlx wrangler
+          WRANGLER: pnpm --package ${{ steps.find-wrangler.outputs.dir}} dlx wrangler
           NODE_OPTIONS: "--max_old_space_size=8192"
