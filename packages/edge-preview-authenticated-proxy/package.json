@@ -7,7 +7,6 @@
 		"publish": "wrangler deploy",
 		"start": "wrangler dev",
 		"test": "vitest run",
-
 		"type:tests": "tsc -p ./tests/tsconfig.json",
 		"check:type": "tsc"
 	},
