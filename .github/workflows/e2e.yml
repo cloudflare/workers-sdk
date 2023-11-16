@@ -60,6 +60,7 @@ jobs:
 
       - name: Modify wrangler package.json miniflare dependency
         run: pnpm add $(ls $HOME/miniflare-*.tgz)
+        working-directory: packages/wrangler
 
       - name: Pack Wrangler
         run: pnpm pack --pack-destination $HOME
