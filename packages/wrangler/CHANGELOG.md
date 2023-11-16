@@ -1,5 +1,44 @@
 # wrangler
 
+## 3.16.0
+
+### Minor Changes
+
+- [#4347](https://github.com/cloudflare/workers-sdk/pull/4347) [`102e15f9`](https://github.com/cloudflare/workers-sdk/commit/102e15f9e735ff7506cfff457046137ee7b03c32) Thanks [@Skye-31](https://github.com/Skye-31)! - Feat(unstable_dev): Provide an option for unstable_dev to perform the check that prompts users to update wrangler, defaulting to false. This will prevent unstable_dev from sending a request to NPM on startup to determine whether it needs to be updated.
+
+* [#4179](https://github.com/cloudflare/workers-sdk/pull/4179) [`dd270d00`](https://github.com/cloudflare/workers-sdk/commit/dd270d0065159150ff318f2f06607ddecba6ee9b) Thanks [@matthewdavidrodgers](https://github.com/matthewdavidrodgers)! - Simplify secret:bulk api via script settings
+
+  Firing PUTs to the secret api in parallel has never been a great solution - each request independently needs to lock the script, so running in parallel is at best just as bad as running serially.
+
+  Luckily, we have the script settings PATCH api now, which can update the settings for a script (including secret bindings) at once, which means we don't need any parallelization. However this api doesn't work with a partial list of bindings, so we have to fetch the current bindings and merge in with the new secrets before PATCHing. We can however just omit the value of the binding (i.e. only provide the name and type) which instructs the config service to inherit the existing value, which simplifies this as well. Note that we don't use the bindings in your current wrangler.toml, as you could be in a draft state, and it makes sense as a user that a bulk secrets update won't update anything else. Instead, we use script settings api again to fetch the current state of your bindings.
+
+  This simplified implementation means the operation can only fail or succeed, rather than succeeding in updating some secrets but failing for others. In order to not introduce breaking changes for logging output, the language around "${x} secrets were updated" or "${x} secrets failed" is kept, even if it doesn't make much sense anymore.
+
+### Patch Changes
+
+- [#4402](https://github.com/cloudflare/workers-sdk/pull/4402) [`baa76e77`](https://github.com/cloudflare/workers-sdk/commit/baa76e774038393fb6b491e2c371da53b8b2a676) Thanks [@rozenmd](https://github.com/rozenmd)! - This PR adds a fetch handler that uses `page`, assuming `result_info` provided by the endpoint contains `page`, `per_page`, and `total`
+
+  This is needed as the existing `fetchListResult` handler for fetching potentially paginated results doesn't work for endpoints that don't implement `cursor`.
+
+  Fixes #4349
+
+* [#4337](https://github.com/cloudflare/workers-sdk/pull/4337) [`6c8f41f8`](https://github.com/cloudflare/workers-sdk/commit/6c8f41f8e76890d6027fd97eaf4e88dccb509fc8) Thanks [@Skye-31](https://github.com/Skye-31)! - Improve the error message when a script isn't exported a Durable Object class
+
+  Previously, wrangler would error with a message like `Uncaught TypeError: Class extends value undefined is not a constructor or null`. This improves that messaging to be more understandable to users.
+
+- [#4307](https://github.com/cloudflare/workers-sdk/pull/4307) [`7fbe1937`](https://github.com/cloudflare/workers-sdk/commit/7fbe1937b311f36077c92814207bbb15ef3878d6) Thanks [@jspspike](https://github.com/jspspike)! - Change local dev server default ip to `*` instead of `0.0.0.0`. This will cause the dev server to listen on both ipv4 and ipv6 interfaces
+
+* [#4222](https://github.com/cloudflare/workers-sdk/pull/4222) [`f867e01c`](https://github.com/cloudflare/workers-sdk/commit/f867e01ca2967a11a8d5eda32da42941383753a8) Thanks [@tmthecoder](https://github.com/tmthecoder)! - Support for hyperdrive bindings in local wrangler dev
+
+- [#4149](https://github.com/cloudflare/workers-sdk/pull/4149) [`7e05f38e`](https://github.com/cloudflare/workers-sdk/commit/7e05f38e04e40125c9c5352b7ff1c95616c1baf0) Thanks [@jspspike](https://github.com/jspspike)! - Fixed issue with `tail` not using proxy
+
+* [#4219](https://github.com/cloudflare/workers-sdk/pull/4219) [`0453b447`](https://github.com/cloudflare/workers-sdk/commit/0453b447251cc670310be6a2067c84074f6a515b) Thanks [@maxwellpeterson](https://github.com/maxwellpeterson)! - Allows uploads with both cron triggers and smart placement enabled
+
+- [#4437](https://github.com/cloudflare/workers-sdk/pull/4437) [`05b1bbd2`](https://github.com/cloudflare/workers-sdk/commit/05b1bbd2f5b8e60268e30c276067c3a3ae1239cf) Thanks [@jspspike](https://github.com/jspspike)! - Change dev registry and inspector server to listen on 127.0.0.1 instead of all interfaces
+
+- Updated dependencies [[`4f8b3420`](https://github.com/cloudflare/workers-sdk/commit/4f8b3420f93197d331491f012ff6f4626411bfc5), [`16cc2e92`](https://github.com/cloudflare/workers-sdk/commit/16cc2e923733b3c583b5bf6c40384c52fea04991), [`3637d97a`](https://github.com/cloudflare/workers-sdk/commit/3637d97a99c9d5e8d0d2b5f3adaf4bd9993265f0), [`29a59d4e`](https://github.com/cloudflare/workers-sdk/commit/29a59d4e72e3ae849474325c5c93252a3f84af0d), [`7fbe1937`](https://github.com/cloudflare/workers-sdk/commit/7fbe1937b311f36077c92814207bbb15ef3878d6), [`76787861`](https://github.com/cloudflare/workers-sdk/commit/767878613eda535d125539a478d488d1a42feaa1), [`8a25b7fb`](https://github.com/cloudflare/workers-sdk/commit/8a25b7fba94c8e9989412bc266ada307975f182d)]:
+  - miniflare@3.20231030.0
+
 ## 3.15.0
 
 ### Minor Changes
@@ -958,7 +997,7 @@
   		const url = new URL(req.url);
   		const name = url.searchParams.get("name");
   		return new Response("Hello, " + name);
-  	}
+  	},
   };
   ```
 
@@ -1636,7 +1675,7 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```js
   worker = await unstable_dev("src/index.js", {
-  	experimental: { disableExperimentalWarning: true }
+  	experimental: { disableExperimentalWarning: true },
   });
   ```
 
@@ -2144,7 +2183,7 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```js
   await unstable_dev("src/index.ts", {
-  	local: false
+  	local: false,
   });
   ```
 
@@ -2787,7 +2826,7 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
   export default {
   	fetch(req, env) {
   		return env.Bee.fetch(req);
-  	}
+  	},
   };
   ```
 
@@ -2803,7 +2842,7 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
   export default {
   	fetch(req, env) {
   		return new Response("Hello World");
-  	}
+  	},
   };
   ```
 
@@ -3784,7 +3823,7 @@ And in your worker, you can call it like so:
 export default {
 	fetch(req, env, ctx) {
 		return env.MYWORKER.fetch(new Request("http://domain/some-path"));
-	}
+	},
 };
 ```
 

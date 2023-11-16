@@ -1,5 +1,51 @@
 # create-cloudflare
 
+## 2.7.0
+
+### Minor Changes
+
+- [#4280](https://github.com/cloudflare/workers-sdk/pull/4280) [`a6cd9aff`](https://github.com/cloudflare/workers-sdk/commit/a6cd9aff92c636bdaa57f912868f328735e5686a) Thanks [@alan-agius4](https://github.com/alan-agius4)! - Update Angular template to use version 17
+
+### Patch Changes
+
+- [#4399](https://github.com/cloudflare/workers-sdk/pull/4399) [`789491bd`](https://github.com/cloudflare/workers-sdk/commit/789491bd1e5fd4f138036020e1af274884a29da0) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - ci: move the Angular framework out of the C3 e2e test quarantine.
+
+* [#4242](https://github.com/cloudflare/workers-sdk/pull/4242) [`a1c9f43f`](https://github.com/cloudflare/workers-sdk/commit/a1c9f43f3e1f8ff1b781b9f524ebac82afce7563) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `nuxi` from `3.9.0` to `3.9.1`
+
+- [#4275](https://github.com/cloudflare/workers-sdk/pull/4275) [`e4aff81a`](https://github.com/cloudflare/workers-sdk/commit/e4aff81a1289ba52ee4fc40f5ee2ee34a9da690a) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-astro` from `4.3.0` to `4.4.1`
+
+* [#4288](https://github.com/cloudflare/workers-sdk/pull/4288) [`b7d91bb5`](https://github.com/cloudflare/workers-sdk/commit/b7d91bb58cb977b7e4f7667c086bed4c20afca94) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-qwik` from `1.2.14` to `1.2.15`
+
+- [#4313](https://github.com/cloudflare/workers-sdk/pull/4313) [`18612851`](https://github.com/cloudflare/workers-sdk/commit/18612851d6275f25be9faeed06bc2053d7b0d837) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `gatsby` from `5.12.8` to `5.12.9`
+
+* [#4316](https://github.com/cloudflare/workers-sdk/pull/4316) [`3caa7860`](https://github.com/cloudflare/workers-sdk/commit/3caa7860b790d1e2f8c5af392a16cde3bb31ee09) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-remix` from `2.1.0` to `2.2.0`
+
+- [#4317](https://github.com/cloudflare/workers-sdk/pull/4317) [`db8b5fe5`](https://github.com/cloudflare/workers-sdk/commit/db8b5fe51f0f75bdeb773cd161f190d653dff481) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-docusaurus` from `2.4.3` to `3.0.0`
+
+* [#4334](https://github.com/cloudflare/workers-sdk/pull/4334) [`bde0a1bd`](https://github.com/cloudflare/workers-sdk/commit/bde0a1bd190a63adc1782cc62292b9f1f31bca4f) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-qwik` from `1.2.15` to `1.2.16`
+
+- [#4335](https://github.com/cloudflare/workers-sdk/pull/4335) [`c1223c53`](https://github.com/cloudflare/workers-sdk/commit/c1223c53cd4824ab0346347746d43e3a27dfaed1) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-solid` from `0.3.8` to `0.3.9`
+
+* [#4346](https://github.com/cloudflare/workers-sdk/pull/4346) [`71eff285`](https://github.com/cloudflare/workers-sdk/commit/71eff285ec4a8f831fe1b9b8aa05d2b3a1921d04) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-qwik` from `1.2.16` to `1.2.17`
+
+- [#4431](https://github.com/cloudflare/workers-sdk/pull/4431) [`c0d70bf5`](https://github.com/cloudflare/workers-sdk/commit/c0d70bf55c7e358287b8eaff1ef5716744117efa) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-astro` from `4.4.1` to `4.5.1`
+
+* [#4311](https://github.com/cloudflare/workers-sdk/pull/4311) [`35be4594`](https://github.com/cloudflare/workers-sdk/commit/35be459486864cd4d6a7aea7d357ada04f17bb0d) Thanks [@jculvey](https://github.com/jculvey)! - Changes c3 to use `npx` for running framework creation tools when it is invoked with `yarn`. This is
+  needed since yarn can't `yarn create some-package@some-particular-version`.
+
+- [#4226](https://github.com/cloudflare/workers-sdk/pull/4226) [`5810f815`](https://github.com/cloudflare/workers-sdk/commit/5810f8150eb775663177a43266233abac19e9781) Thanks [@jculvey](https://github.com/jculvey)! - Relax empty directory check. Directories containing certain common config files and/or files created by an ide will be exempt from the pre-flight check
+
+* [#4249](https://github.com/cloudflare/workers-sdk/pull/4249) [`b18a2c0f`](https://github.com/cloudflare/workers-sdk/commit/b18a2c0f3b88b5ce986f8c134cfe6df4603b343d) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - correct error message for unrecognized application type
+
+- [#4403](https://github.com/cloudflare/workers-sdk/pull/4403) [`cb8ec90e`](https://github.com/cloudflare/workers-sdk/commit/cb8ec90e96a9fcf05ae0276258a9e19d656b9def) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - test: fix C3 e2e tests for Angular
+
+* [#4249](https://github.com/cloudflare/workers-sdk/pull/4249) [`b18a2c0f`](https://github.com/cloudflare/workers-sdk/commit/b18a2c0f3b88b5ce986f8c134cfe6df4603b343d) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - improve help message by adding more detailed descriptions about the various CLI options
+  also let the user know that more information is available in the Cloudflare docs
+
+- [#4339](https://github.com/cloudflare/workers-sdk/pull/4339) [`33bd75dc`](https://github.com/cloudflare/workers-sdk/commit/33bd75dc14695791d94deda36bb9f44c06d56c8e) Thanks [@alan-agius4](https://github.com/alan-agius4)! - Remove redundant polyfills from the Angular template
+
+* [#4279](https://github.com/cloudflare/workers-sdk/pull/4279) [`2526794f`](https://github.com/cloudflare/workers-sdk/commit/2526794f214e730f7f88a8146ef24f50c2caf8f6) Thanks [@dnasdw](https://github.com/dnasdw)! - fix: use a valid compatibility date for the scheduled worker ts template
+
 ## 2.6.2
 
 ### Patch Changes
