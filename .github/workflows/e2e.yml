@@ -52,7 +52,23 @@ jobs:
           NODE_ENV: "production"
           CI_OS: ${{ runner.os }}
 
-      - name: Build Wrangler package for npm
+      - name: Pack Miniflare
+        run: pnpm pack --pack-destination $HOME
+        env:
+          NODE_ENV: "production"
+        working-directory: packages/miniflare
+
+      - name: Find Miniflare
+        shell: bash
+        id: "find-miniflare"
+        run: echo "dir=$(ls $HOME/miniflare-*.tgz)" >> $GITHUB_OUTPUT;
+
+      - name: Modify wrangler package.json miniflare dependency
+        run: cat <<< $(jq --tab ".dependencies.miniflare = \"$MINIFLARE_VERSION\"" packages/wrangler/package.json) > packages/wrangler/package.json
+        env:
+          MINIFLARE_VERSION: ${{ steps.find-miniflare.outputs.dir }}
+
+      - name: Pack Wrangler
         run: pnpm pack --pack-destination $HOME
         env:
           NODE_ENV: "production"
@@ -62,21 +78,10 @@ jobs:
         shell: bash
         id: "find-wrangler"
         run: echo "dir=$(ls $HOME/wrangler-*.tgz)" >> $GITHUB_OUTPUT;
-        env:
-          NODE_ENV: "production"
 
       - name: Run tests
         id: e2e-1
         continue-on-error: true
-        run: pnpm run --filter wrangler test:e2e
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
-          WRANGLER: pnpm --silent --package ${{ steps.find-wrangler.outputs.dir}} dlx wrangler
-          NODE_OPTIONS: "--max_old_space_size=8192"
-
-      - name: Retry tests
-        if: steps.e2e-1.outcome == 'failure'
         run: pnpm run --filter wrangler test:e2e
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
