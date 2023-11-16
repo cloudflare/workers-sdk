@@ -2,14 +2,7 @@ import { join } from "path";
 import { FrameworkMap } from "frameworks/index";
 import { readJSON } from "helpers/files";
 import { fetch } from "undici";
-import {
-	describe,
-	expect,
-	test,
-	afterEach,
-	beforeEach,
-	beforeAll,
-} from "vitest";
+import { describe, expect, test, beforeAll } from "vitest";
 import { deleteProject, deleteWorker } from "../scripts/common";
 import { frameworkToTest } from "./frameworkToTest";
 import {
@@ -141,36 +134,15 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		},
 	};
 
-	const { getPath, getName, clean } = testProjectDir("pages");
-
 	beforeAll((ctx) => {
 		recreateLogFolder(ctx as Suite);
 	});
 
-	beforeEach((ctx) => {
-		const framework = ctx.meta.name;
-		clean(framework);
-	});
-
-	afterEach(async (ctx) => {
-		const framework = ctx.meta.name;
-		clean(framework);
-		// Cleanup the project in case we need to retry it
-		const projectName = getName(framework);
-		const frameworkConfig = FrameworkMap[framework];
-		if (frameworkConfig.type !== "workers") {
-			await deleteProject(projectName);
-		} else {
-			await deleteWorker(projectName);
-		}
-	});
-
 	const runCli = async (
 		framework: string,
+		projectPath: string,
 		{ ctx, argv = [], promptHandlers = [], overrides }: RunnerConfig
 	) => {
-		const projectPath = getPath(framework);
-
 		const args = [
 			projectPath,
 			"--type",
@@ -224,13 +196,15 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 
 	const runCliWithDeploy = async (
 		framework: string,
+		projectName: string,
+		projectPath: string,
 		ctx: TestContext,
 		testCommitMessage: boolean
 	) => {
 		const { argv, overrides, promptHandlers, expectResponseToContain } =
 			frameworkTests[framework];
 
-		const { output } = await runCli(framework, {
+		const { output } = await runCli(framework, projectPath, {
 			ctx,
 			overrides,
 			promptHandlers,
@@ -259,7 +233,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		).toContain(expectResponseToContain);
 
 		if (testCommitMessage) {
-			await testDeploymentCommitMessage(getName(framework), framework);
+			await testDeploymentCommitMessage(projectName, framework);
 		}
 	};
 
@@ -278,17 +252,36 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 
 		// Skip if the package manager is unsupported
 		shouldRun &&= !unsupportedPms?.includes(process.env.TEST_PM ?? "");
-
 		test.runIf(shouldRun)(
 			framework,
 			async (ctx) => {
-				await runCliWithDeploy(framework, ctx, testCommitMessage);
+				const { getPath, getName, clean } = testProjectDir("pages");
+				const projectPath = getPath(framework);
+				const projectName = getName(framework);
+				const frameworkConfig = FrameworkMap[framework];
+				try {
+					await runCliWithDeploy(
+						framework,
+						projectName,
+						projectPath,
+						ctx,
+						testCommitMessage
+					);
+				} finally {
+					clean(framework);
+					// Cleanup the project in case we need to retry it
+					if (frameworkConfig.type !== "workers") {
+						await deleteProject(projectName);
+					} else {
+						await deleteWorker(projectName);
+					}
+				}
 			},
 			{ retry: 3, timeout: timeout || TEST_TIMEOUT }
 		);
 	});
 
-	test.skip("Hono (wrangler defaults)", async (ctx) => {
-		await runCli("hono", { ctx, argv: ["--wrangler-defaults"] });
-	});
+	// test.skip("Hono (wrangler defaults)", async (ctx) => {
+	// 	await runCli("hono", { ctx, argv: ["--wrangler-defaults"] });
+	// });
 });
