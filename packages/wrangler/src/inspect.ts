@@ -110,7 +110,7 @@ export default function useInspector(props: InspectorProps) {
 					case "/json/list":
 						{
 							res.setHeader("Content-Type", "application/json");
-							const localHost = `localhost:${props.port}/ws`;
+							const localHost = `127.0.0.1:${props.port}/ws`;
 							const devtoolsFrontendUrl = `devtools://devtools/bundled/js_app.html?experiments=true&v8only=true&ws=${localHost}`;
 							const devtoolsFrontendUrlCompat = `devtools://devtools/bundled/inspector.html?experiments=true&v8only=true&ws=${localHost}`;
 							res.end(
@@ -197,7 +197,7 @@ export default function useInspector(props: InspectorProps) {
 				timeout: 2000,
 				abortSignal: abortController.signal,
 			});
-			server.listen(props.port);
+			server.listen(props.port, "127.0.0.1");
 		}
 		startInspectorProxy().catch((err) => {
 			if ((err as { code: string }).code !== "ABORT_ERR") {
@@ -844,7 +844,7 @@ export const openInspector = async (
 ) => {
 	const query = new URLSearchParams();
 	query.set("theme", "systemPreferred");
-	query.set("ws", `localhost:${inspectorPort}/ws`);
+	query.set("ws", `127.0.0.1:${inspectorPort}/ws`);
 	if (worker) query.set("domain", worker);
 	const url = `https://devtools.devprod.cloudflare.dev/js_app?${query.toString()}`;
 	const errorMessage =
