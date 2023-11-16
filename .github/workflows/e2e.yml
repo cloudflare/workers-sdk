@@ -58,21 +58,8 @@ jobs:
           NODE_ENV: "production"
         working-directory: packages/miniflare
 
-      - name: Find Miniflare
-        if: matrix.os == 'windows-2022'
-        id: "find-miniflare"
-        run: echo "dir=$(ls $HOME/miniflare-*.tgz)" >> $Env:GITHUB_OUTPUT;
-
-      - name: Find Miniflare
-        if: matrix.os != 'windows-2022'
-        id: "find-miniflare"
-        run: echo "dir=$(ls $HOME/miniflare-*.tgz)" >> $GITHUB_OUTPUT;
-
       - name: Modify wrangler package.json miniflare dependency
-        run: cat <<< $(jq --tab ".dependencies.miniflare = \"file:$MINIFLARE_VERSION\"" packages/wrangler/package.json) > packages/wrangler/package.json
-        env:
-          MINIFLARE_VERSION: ${{ steps.find-miniflare.outputs.dir }}
-        shell: bash
+        run: pnpm add $(ls $HOME/miniflare-*.tgz)
 
       - name: Pack Wrangler
         run: pnpm pack --pack-destination $HOME
