@@ -1,4 +1,8 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { logRaw } from "@cloudflare/cli";
+import { brandColor, dim } from "@cloudflare/cli/colors";
+import { spinner } from "@cloudflare/cli/interactive";
 import { npmInstall, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
@@ -23,6 +27,7 @@ const generate = async (ctx: PagesGeneratorContext) => {
 const configure = async (ctx: PagesGeneratorContext) => {
 	process.chdir(ctx.project.path);
 	writeFile("./.node-version", "17");
+	await updateNuxtConfig();
 	await npmInstall();
 };
 
@@ -31,9 +36,23 @@ const config: FrameworkConfig = {
 	configure,
 	displayName: "Nuxt",
 	getPackageScripts: async () => ({
-		build: (cmd) => `NITRO_PRESET=cloudflare-pages ${cmd}`,
 		"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 3000 -- ${npm} run dev`,
 		"pages:deploy": `${npm} run build && wrangler pages deploy ./dist`,
 	}),
 };
 export default config;
+
+function updateNuxtConfig() {
+	const configFileName = "nuxt.config.ts";
+	const configFilePath = resolve(configFileName);
+	const s = spinner();
+	s.start(`Updating \`${configFileName}\``);
+	// Add the cloudflare preset into the configuration file.
+	const originalConfigFile = readFileSync(configFilePath, "utf8");
+	const updatedConfigFile = originalConfigFile.replace(
+		"defineNuxtConfig({",
+		"defineNuxtConfig({\n  nitro: {\n    preset: 'cloudflare-pages'\n  },"
+	);
+	writeFile(configFilePath, updatedConfigFile);
+	s.stop(`${brandColor(`updated`)} ${dim(`\`${configFileName}\``)}`);
+}

@@ -93,11 +93,6 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		},
 		nuxt: {
 			expectResponseToContain: "Welcome to Nuxt!",
-			overrides: {
-				packageScripts: {
-					build: "NITRO_PRESET=cloudflare-pages nuxt build",
-				},
-			},
 			testCommitMessage: true,
 		},
 		react: {
