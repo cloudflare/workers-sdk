@@ -179,7 +179,7 @@ function useLocalWorker(props: LocalProps) {
 				"Vectorize bindings are not currently supported in local mode. Please use --remote if you are working with them."
 			);
 		}
-	}, [props.bindings.ai, props.bindings.vectorize])
+	}, [props.bindings.ai, props.bindings.vectorize]);
 
 	useEffect(() => {
 		const abortController = new AbortController();
