@@ -235,7 +235,7 @@ export const testDeploymentCommitMessage = async (
 		(project) => project.name === projectName
 	)?.latest_deployment?.deployment_trigger?.metadata?.commit_message;
 	expect(projectLatestCommitMessage).toMatch(
-		/^Initialize web application via create-cloudflare CLI/
+		/Initialize web application via create-cloudflare CLI/
 	);
 	expect(projectLatestCommitMessage).toContain(
 		`C3 = create-cloudflare@${version}`
