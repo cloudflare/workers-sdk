@@ -38,7 +38,7 @@ describe("deploy", () => {
 
 	it("init worker", async () => {
 		const { stdout } =
-			await runInRoot`$ ${WRANGLER} init --yes --no-delegate-c3 ${workerName}`;
+			await runInRoot`$$ ${WRANGLER} init --yes --no-delegate-c3 ${workerName}`;
 
 		expect(normalize(stdout)).toContain(
 			"To publish your Worker to the Internet, run `npm run deploy`"
