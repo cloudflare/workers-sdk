@@ -7,7 +7,7 @@
 	],
 	"dependencies": {
 		"create-astro": "4.5.1",
-		"@angular/create": "17.0.0-rc.4",
+		"@angular/create": "17.0.1",
 		"create-docusaurus": "3.0.0",
 		"create-hono": "0.3.2",
 		"create-next-app": "13.4.19",
