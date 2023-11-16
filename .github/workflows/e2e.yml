@@ -97,5 +97,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: e2e-test-debug-logs
+          name: e2e-test-debug-logs-${{ matrix.os }}-${{ matrix.node }}
           path: ${{ steps.debug-logs.outputs.dir }}

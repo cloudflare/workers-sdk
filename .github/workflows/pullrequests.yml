@@ -128,7 +128,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: test-debug-logs
+          name: test-debug-logs-${{ matrix.os }}-${{ env.node-version }}
           path: ${{ steps.debug-logs.outputs.dir }}
 
       - name: Run changeset version tests
