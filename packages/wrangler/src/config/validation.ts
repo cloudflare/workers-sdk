@@ -2374,7 +2374,7 @@ const validateHyperdriveBinding: ValidatorFn = (diagnostics, field, value) => {
 	}
 	if (isValid && getConstellationWarningFromEnv() === undefined) {
 		diagnostics.warnings.push(
-			"Hyperdrive Bindings are currently in beta to allow the API to evolve before general availability.\nPlease report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose`"
+			"Hyperdrive Bindings are currently in beta to allow the API to evolve before general availability.\nPlease report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
 		);
 	}
 	return isValid;
