@@ -66,8 +66,9 @@ jobs:
           NODE_ENV: "production"
 
       - name: Get debug logs directory
+        shell: bash
         id: "debug-logs"
-        run: node -p "'dir=' + require('path').resolve(process.env.RUNNER_TEMP, 'wrangler-debug-logs')"
+        run: node -p "'dir=' + require('path').resolve(process.env.RUNNER_TEMP, 'wrangler-debug-logs')" >> $GITHUB_OUTPUT;
         env:
           RUNNER_TEMP: ${{ runner.temp }}
 
