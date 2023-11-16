@@ -64,8 +64,10 @@ jobs:
         run: echo "dir=$(ls $HOME/miniflare-*.tgz)" >> $GITHUB_OUTPUT;
 
       - name: Modify wrangler package.json miniflare dependency
-        run: pnpm add ${{ steps.find-miniflare.outputs.dir }}
-        working-directory: packages/wrangler
+        run: cat <<< $(jq --tab ".dependencies.miniflare = \"$MINIFLARE_VERSION\"" packages/wrangler/package.json) > packages/wrangler/package.json
+        env:
+          MINIFLARE_VERSION: ${{ steps.find-miniflare.outputs.dir }}
+        shell: bash
 
       - name: Pack Wrangler
         run: pnpm pack --pack-destination $HOME
