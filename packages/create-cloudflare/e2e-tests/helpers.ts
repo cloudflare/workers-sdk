@@ -1,6 +1,5 @@
 import {
 	createWriteStream,
-	existsSync,
 	mkdirSync,
 	mkdtempSync,
 	realpathSync,
@@ -180,12 +179,22 @@ export const testProjectDir = (suite: string) => {
 	const getName = (suffix: string) => `${baseProjectName}-${suffix}`;
 	const getPath = (suffix: string) => join(tmpDirPath, getName(suffix));
 	const clean = (suffix: string) => {
-		const path = getPath(suffix);
-		if (existsSync(path)) {
+		try {
+			const path = getPath(suffix);
 			rmSync(path, {
 				recursive: true,
 				force: true,
+				maxRetries: 10,
+				retryDelay: 100,
 			});
+		} catch (e) {
+			if (typeof e === "object" && e !== null && "code" in e) {
+				const code = e.code;
+				if (code === "EBUSY" || code === "ENOENT") {
+					return;
+				}
+			}
+			throw e;
 		}
 	};
 
