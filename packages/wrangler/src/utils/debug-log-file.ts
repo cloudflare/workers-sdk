@@ -1,6 +1,7 @@
 import { appendFile, mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { Mutex } from "miniflare";
+import onExit from "signal-exit";
 import { getEnvironmentVariableFactory } from "../environment-variables/factory";
 import { getBasePath } from "../paths";
 import type { LoggerLevel } from "../logger";
@@ -69,7 +70,9 @@ ${message}
 	hasLoggedLocation = true;
 	const relativeFilepath = path.relative(process.cwd(), debugLogFilepath);
 	console.info(`🐛 Writing debug logs to "${relativeFilepath}"`);
-	// TODO: move this into an exit hook so it isn't the first thing logged
+	onExit(() => {
+		console.info(`🐛 Debug logs were written to "${relativeFilepath}"`);
+	});
 }
 
 /**
