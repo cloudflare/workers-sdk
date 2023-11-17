@@ -8,7 +8,6 @@ import { version as wranglerVersion } from "../package.json";
 
 import { fetchResult } from "./cfetch";
 import { fetchDashboardScript } from "./cfetch/internal";
-import { readConfig } from "./config";
 import { confirm, select } from "./dialogs";
 import { getC3CommandFromEnv } from "./environment-variables/misc-variables";
 import { initializeGit, getGitVersioon, isInsideGitRepo } from "./git-client";
@@ -16,7 +15,6 @@ import { logger } from "./logger";
 import { getPackageManager } from "./package-manager";
 import { parsePackageJSON, parseTOML, readFileSync } from "./parse";
 import { getBasePath } from "./paths";
-import { requireAuth } from "./user";
 import * as shellquote from "./utils/shell-quote";
 import { CommandLineArgsError, printWranglerBanner } from "./index";
 
@@ -165,7 +163,6 @@ export async function initHandler(args: InitArgs) {
 	);
 	let justCreatedWranglerToml = false;
 
-	let accountId = "";
 	let serviceMetadata: undefined | ServiceMetadataRes;
 
 	// If --from-dash, check that script actually exists
@@ -174,21 +171,6 @@ export async function initHandler(args: InitArgs) {
     run this first so, if the script doesn't exist, we can fail early
   */
 	if (fromDashScriptName) {
-		const config = readConfig(args.config, args);
-		accountId = await requireAuth(config);
-		try {
-			serviceMetadata = await fetchResult<ServiceMetadataRes>(
-				`/accounts/${accountId}/workers/services/${fromDashScriptName}`
-			);
-		} catch (err) {
-			if ((err as { code?: number }).code === 10090) {
-				throw new Error(
-					"wrangler couldn't find a Worker script with that name in your account.\nRun `wrangler whoami` to confirm you're logged into the correct account."
-				);
-			}
-			throw err;
-		}
-
 		const c3Arguments = [
 			...shellquote.parse(getC3CommandFromEnv()),
 			fromDashScriptName,
