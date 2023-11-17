@@ -167,21 +167,6 @@ function useLocalWorker(props: LocalProps) {
 	}, [props.bindings.durable_objects?.bindings]);
 
 	useEffect(() => {
-		if (props.bindings.ai) {
-			logger.warn(
-				"Workers AI is not currently supported in local mode. Please use --remote to work with it."
-			);
-		}
-
-		if (!props.bindings.ai && props.bindings.vectorize?.length) {
-			// TODO: add local support for Vectorize bindings (https://github.com/cloudflare/workers-sdk/issues/4360)
-			logger.warn(
-				"Vectorize bindings are not currently supported in local mode. Please use --remote if you are working with them."
-			);
-		}
-	}, [props.bindings.ai, props.bindings.vectorize]);
-
-	useEffect(() => {
 		const abortController = new AbortController();
 
 		if (!props.bundle || !props.format) return;
