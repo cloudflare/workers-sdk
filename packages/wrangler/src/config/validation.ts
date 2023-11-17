@@ -1,6 +1,7 @@
 import path from "node:path";
 import TOML from "@iarna/toml";
 import { getConstellationWarningFromEnv } from "../constellation/utils";
+import { getHyperdriveWarningFromEnv } from "../hyperdrive/utils";
 import { Diagnostics } from "./diagnostics";
 import {
 	deprecated,
@@ -2372,9 +2373,9 @@ const validateHyperdriveBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
-	if (isValid && getConstellationWarningFromEnv() === undefined) {
+	if (isValid && getHyperdriveWarningFromEnv() === undefined) {
 		diagnostics.warnings.push(
-			"Hyperdrive Bindings are currently in beta to allow the API to evolve before general availability.\nPlease report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose`"
+			"Hyperdrive Bindings are currently in beta to allow the API to evolve before general availability.\nPlease report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
 		);
 	}
 	return isValid;

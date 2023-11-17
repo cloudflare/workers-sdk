@@ -1,7 +1,7 @@
 import { readConfig } from "../config";
 import { logger } from "../logger";
 import { createConfig } from "./client";
-import { hyperdriveBetaWarning } from "./common";
+import { hyperdriveBetaWarning } from "./utils";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
