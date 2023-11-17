@@ -450,7 +450,8 @@ function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 					`Address already in use (${address}). Please check that you are not already running a server on this address or specify a different port with --port.`
 				);
 
-				return;
+				// even though we've intercepted the chunk and logged a better error to stderr
+				// fallthrough to log the original chunk to the debug log file for observability
 			}
 
 			// IGNORABLE:

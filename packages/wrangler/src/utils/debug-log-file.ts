@@ -35,7 +35,7 @@ async function ensureDirectoryExists(filepath: string) {
 	await mkdir(dirpath, { recursive: true });
 }
 
-export const debugLogFilepath = path.resolve(getDebugFilepath());
+export const debugLogFilepath = getDebugFilepath();
 const mutex = new Mutex();
 
 let hasLoggedLocation = false;
@@ -54,24 +54,26 @@ ${message}
 ---
 `;
 
+	if (!hasLoggedLocation) {
+		hasLoggedLocation = true;
+		const relativeFilepath = path.relative(process.cwd(), debugLogFilepath);
+		console.info(`🐛 Writing debug logs to "${relativeFilepath}"`);
+		onExit(() => {
+			console.info(`🐛 Debug logs were written to "${relativeFilepath}"`);
+		});
+	}
+
 	await mutex.runWith(async () => {
 		try {
 			await ensureDirectoryExists(debugLogFilepath);
 			await appendFile(debugLogFilepath, entry);
 		} catch (err) {
-			if (hasLoggedError) return;
-			hasLoggedError = true;
-			console.error(`Failed to write to debug log file`, err);
-			console.error(`Would have written:`, entry);
+			if (!hasLoggedError) {
+				hasLoggedError = true;
+				console.error(`Failed to write to debug log file`, err);
+				console.error(`Would have written:`, entry);
+			}
 		}
-	});
-
-	if (hasLoggedLocation) return;
-	hasLoggedLocation = true;
-	const relativeFilepath = path.relative(process.cwd(), debugLogFilepath);
-	console.info(`🐛 Writing debug logs to "${relativeFilepath}"`);
-	onExit(() => {
-		console.info(`🐛 Debug logs were written to "${relativeFilepath}"`);
 	});
 }
 
