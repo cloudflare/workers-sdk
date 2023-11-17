@@ -82,7 +82,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
           WRANGLER: pnpm --silent --package ${{ steps.find-wrangler.outputs.dir}} dlx wrangler
           NODE_OPTIONS: "--max_old_space_size=8192"
-          WRANGLER_DEBUG_LOG: ${{ runner.temp }}/wrangler-debug-logs/
+          WRANGLER_LOG_DIR: ${{ runner.temp }}/wrangler-debug-logs/
 
       - name: Upload debug logs
         if: always()

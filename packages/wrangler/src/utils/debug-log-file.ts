@@ -5,25 +5,28 @@ import { getEnvironmentVariableFactory } from "../environment-variables/factory"
 import { getBasePath } from "../paths";
 import type { LoggerLevel } from "../logger";
 
-const getDebugFilepath = getEnvironmentVariableFactory({
-	variableName: "WRANGLER_DEBUG_LOG",
-	defaultValue: () => {
-		const date = new Date()
-			.toISOString()
-			.replaceAll(":", "-")
-			.replace(".", "_")
-			.replace("T", "_")
-			.replace("Z", "");
-		const absoluteFilepath = path.join(
-			getBasePath(),
-			".wrangler",
-			"debug-logs",
-			`wrangler-debug-${date}.log`
-		);
-
-		return absoluteFilepath;
-	},
+const getDebugFileDir = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_LOG_DIR",
 });
+
+function getDebugFilepath() {
+	const dir =
+		getDebugFileDir() ?? path.join(getBasePath(), ".wrangler", "debug-logs");
+
+	const date = new Date()
+		.toISOString()
+		.replaceAll(":", "-")
+		.replace(".", "_")
+		.replace("T", "_")
+		.replace("Z", "");
+
+	const filepath = dir.endsWith(".log")
+		? dir // allow the user to provide an exact filepath
+		: path.join(dir, `wrangler-debug-${date}.log`);
+
+	// use path.resolve to allow the user-provided env var to be a relative path
+	return path.resolve(filepath);
+}
 
 async function ensureDirectoryExists(filepath: string) {
 	const dirpath = path.dirname(filepath);
