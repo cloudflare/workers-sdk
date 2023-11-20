@@ -72,11 +72,15 @@ export const runLatest = async () => {
 export const runCli = async (args: Partial<C3Args>) => {
 	printBanner();
 
+	const defaultName = args.existingScript
+		? args.existingScript
+		: C3_DEFAULTS.projectName;
+
 	const projectName = await processArgument<string>(args, "projectName", {
 		type: "text",
 		question: `In which directory do you want to create your application?`,
 		helpText: "also used as application name",
-		defaultValue: C3_DEFAULTS.projectName,
+		defaultValue: defaultName,
 		label: "dir",
 		validate: (value) =>
 			validateProjectDirectory(String(value) || C3_DEFAULTS.projectName, args),
