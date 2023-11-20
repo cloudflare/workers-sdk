@@ -115,9 +115,7 @@ export class NoOpLog extends Log {
 
 	protected log(): void {}
 
-	error(message: Error): void {
-		throw message;
-	}
+	error(_message: Error): void {}
 }
 
 // Adapted from https://github.com/chalk/ansi-regex/blob/02fa893d619d3da85411acc8fd4e2eea0e95a9d9/index.js
