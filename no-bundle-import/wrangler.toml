@@ -1,8 +1,0 @@
-name = "no-bundle-import"
-main = "src/index.ts"
-compatibility_date = "2023-02-20"
-usage_model = "unbound"
-env = { }
-
-[triggers]
-crons = [ ]
