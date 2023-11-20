@@ -2,17 +2,23 @@ import { appendFile, mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { Mutex } from "miniflare";
 import onExit from "signal-exit";
+import { findWranglerToml } from "../config";
 import { getEnvironmentVariableFactory } from "../environment-variables/factory";
 import { getBasePath } from "../paths";
 import type { LoggerLevel } from "../logger";
 
 const getDebugFileDir = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_LOG_DIR",
+	defaultValue() {
+		const configPath = findWranglerToml();
+		const configDir = configPath ? path.dirname(configPath) : getBasePath();
+
+		return path.join(configDir, ".wrangler", "debug-logs");
+	},
 });
 
 function getDebugFilepath() {
-	const dir =
-		getDebugFileDir() ?? path.join(getBasePath(), ".wrangler", "debug-logs");
+	const dir = getDebugFileDir();
 
 	const date = new Date()
 		.toISOString()
