@@ -8,7 +8,7 @@ import { getBasePath } from "../paths";
 import type { LoggerLevel } from "../logger";
 
 const getDebugFileDir = getEnvironmentVariableFactory({
-	variableName: "WRANGLER_LOG_DIR",
+	variableName: "WRANGLER_LOG_PATH",
 	defaultValue() {
 		const configPath = findWranglerToml();
 		const configDir = configPath ? path.dirname(configPath) : getBasePath();

@@ -115,7 +115,7 @@ jobs:
           TMP_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           TMP_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           NODE_OPTIONS: "--max_old_space_size=8192"
-          WRANGLER_LOG_DIR: ${{ runner.temp }}/wrangler-debug-logs/
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
 
       - name: Upload debug logs
         if: always()
