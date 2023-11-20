@@ -2,10 +2,8 @@
 
 name: C3 E2E Project Cleanup
 on:
-  workflow_run:
-    workflows: [C3 E2E Tests, C3 E2E Tests (Dependabot), C3 E2E (Quarantine)]
-    types:
-      - completed
+  schedule:
+    - cron: "0 3 * * *" # Run at 3am each day
 env:
   node-version: 18.17.1
 jobs:
