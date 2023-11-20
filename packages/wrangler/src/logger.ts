@@ -73,22 +73,16 @@ export class Logger {
 	}
 
 	private doLog(messageLevel: Exclude<LoggerLevel, "none">, args: unknown[]) {
+		const message = this.formatMessage(messageLevel, format(...args));
+
+		// unless in unit-tests, send ALL logs to the debug log file (even non-debug logs for context & order)
+		const inUnitTests = typeof jest !== "undefined";
+		if (!inUnitTests) {
+			void appendToDebugLogFile(messageLevel, message);
+		}
+
+		// only send logs to the terminal if their level is at least the configured log-level
 		if (LOGGER_LEVELS[this.loggerLevel] >= LOGGER_LEVELS[messageLevel]) {
-			const message = this.formatMessage(messageLevel, format(...args));
-
-			const inUnitTests = typeof jest !== "undefined";
-			// unless in unit-tests, if logLevel >= debug, send ALL logs to the debug log file (even non-debug logs for context & order)
-			if (
-				!inUnitTests &&
-				LOGGER_LEVELS[this.loggerLevel] >= LOGGER_LEVELS.debug
-			) {
-				void appendToDebugLogFile(messageLevel, message);
-			}
-			// unless in unit-tests, if the current message is a debug log, do not pollute the terminal with it (it's now in the debug log file)
-			if (!inUnitTests && LOGGER_LEVELS[messageLevel] === LOGGER_LEVELS.debug) {
-				return;
-			}
-
 			console[messageLevel](message);
 		}
 	}

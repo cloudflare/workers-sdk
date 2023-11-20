@@ -4,8 +4,8 @@ import { Mutex } from "miniflare";
 import onExit from "signal-exit";
 import { findWranglerToml } from "../config";
 import { getEnvironmentVariableFactory } from "../environment-variables/factory";
+import { logger, type LoggerLevel } from "../logger";
 import { getBasePath } from "../paths";
-import type { LoggerLevel } from "../logger";
 
 const getDebugFileDir = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_LOG_PATH",
@@ -63,7 +63,7 @@ ${message}
 	if (!hasLoggedLocation) {
 		hasLoggedLocation = true;
 		const relativeFilepath = path.relative(process.cwd(), debugLogFilepath);
-		console.info(`🐛 Writing debug logs to "${relativeFilepath}"`);
+		logger.debug(`🐛 Writing debug logs to "${relativeFilepath}"`); // use logger.debug here to not show this message by default -- since logging to a file is no longer opt-in
 		onExit(() => {
 			console.info(`🐛 Debug logs were written to "${relativeFilepath}"`);
 		});
