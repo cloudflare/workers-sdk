@@ -74,10 +74,10 @@ export class CallSite implements NodeJS.CallSite {
 		return this.frame.url;
 	}
 	getLineNumber(): number | null {
-		return this.frame.lineNumber;
+		return this.frame.lineNumber + 1;
 	}
 	getColumnNumber(): number | null {
-		return this.frame.columnNumber;
+		return this.frame.columnNumber + 1;
 	}
 	getEvalOrigin(): string | undefined {
 		return undefined;
