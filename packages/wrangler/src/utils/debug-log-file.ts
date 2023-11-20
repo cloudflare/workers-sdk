@@ -5,15 +5,14 @@ import onExit from "signal-exit";
 import { findWranglerToml } from "../config";
 import { getEnvironmentVariableFactory } from "../environment-variables/factory";
 import { logger, type LoggerLevel } from "../logger";
-import { getBasePath } from "../paths";
 
 const getDebugFileDir = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_LOG_PATH",
 	defaultValue() {
 		const configPath = findWranglerToml();
-		const configDir = configPath ? path.dirname(configPath) : getBasePath();
+		const configDir = configPath ? path.dirname(configPath) : process.cwd();
 
-		return path.join(configDir, ".wrangler", "debug-logs");
+		return path.join(configDir, ".wrangler", "logs");
 	},
 });
 
@@ -29,7 +28,7 @@ function getDebugFilepath() {
 
 	const filepath = dir.endsWith(".log")
 		? dir // allow the user to provide an exact filepath
-		: path.join(dir, `wrangler-debug-${date}.log`);
+		: path.join(dir, `wrangler-${date}.log`);
 
 	// use path.resolve to allow the user-provided env var to be a relative path
 	return path.resolve(filepath);
@@ -63,9 +62,9 @@ ${message}
 	if (!hasLoggedLocation) {
 		hasLoggedLocation = true;
 		const relativeFilepath = path.relative(process.cwd(), debugLogFilepath);
-		logger.debug(`🐛 Writing debug logs to "${relativeFilepath}"`); // use logger.debug here to not show this message by default -- since logging to a file is no longer opt-in
+		logger.debug(`🐛 Writing logs to "${relativeFilepath}"`); // use logger.debug here to not show this message by default -- since logging to a file is no longer opt-in
 		onExit(() => {
-			console.info(`🐛 Debug logs were written to "${relativeFilepath}"`);
+			console.info(`🐛 Logs were written to "${relativeFilepath}"`);
 		});
 	}
 
@@ -76,7 +75,7 @@ ${message}
 		} catch (err) {
 			if (!hasLoggedError) {
 				hasLoggedError = true;
-				console.error(`Failed to write to debug log file`, err);
+				console.error(`Failed to write to log file`, err);
 				console.error(`Would have written:`, entry);
 			}
 		}
