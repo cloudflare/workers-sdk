@@ -1,5 +1,6 @@
 import { join } from "path";
 import { FrameworkMap } from "frameworks/index";
+import { retry } from "helpers/command";
 import { readJSON } from "helpers/files";
 import { fetch } from "undici";
 import { describe, expect, test, beforeAll } from "vitest";
@@ -232,14 +233,16 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 
 		const projectUrl = match[1];
 
-		const res = await fetch(projectUrl);
-		expect(res.status).toBe(200);
-
-		const body = await res.text();
-		expect(
-			body,
-			`(${framework}) Deployed page (${projectUrl}) didn't contain expected string: "${expectResponseToContain}"`
-		).toContain(expectResponseToContain);
+		await retry({ times: 5 }, async () => {
+			await new Promise((resolve) => setTimeout(resolve, 1000)); // wait a second
+			const res = await fetch(projectUrl);
+			const body = await res.text();
+			if (!body.includes(expectResponseToContain)) {
+				throw new Error(
+					`(${framework}) Deployed page (${projectUrl}) didn't contain expected string: "${expectResponseToContain}"`
+				);
+			}
+		});
 
 		if (testCommitMessage) {
 			await testDeploymentCommitMessage(projectName, framework);

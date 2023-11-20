@@ -10,6 +10,7 @@ import { tmpdir } from "os";
 import { basename, join } from "path";
 import { stripAnsi } from "@cloudflare/cli";
 import { spawn } from "cross-spawn";
+import { retry } from "helpers/command";
 import { sleep } from "helpers/common";
 import { detectPackageManager } from "helpers/packages";
 import { fetch } from "undici";
@@ -205,35 +206,43 @@ export const testDeploymentCommitMessage = async (
 	projectName: string,
 	framework: string
 ) => {
-	// Note: we cannot simply run git and check the result since the commit can be part of the
-	//       deployment even without git, so instead we fetch the deployment info from the pages api
-	const response = await fetch(
-		`https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/pages/projects`,
-		{
-			headers: {
-				Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
-			},
-		}
-	);
+	const projectLatestCommitMessage = await retry({ times: 5 }, async () => {
+		// Wait for 2 seconds between each attempt
+		await new Promise((resolve) => setTimeout(resolve, 2000));
+		// Note: we cannot simply run git and check the result since the commit can be part of the
+		//       deployment even without git, so instead we fetch the deployment info from the pages api
+		const response = await fetch(
+			`https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/pages/projects`,
+			{
+				headers: {
+					Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
+				},
+			}
+		);
 
-	const result = (
-		(await response.json()) as {
-			result: {
-				name: string;
-				latest_deployment?: {
-					deployment_trigger: {
-						metadata?: {
-							commit_message: string;
+		const result = (
+			(await response.json()) as {
+				result: {
+					name: string;
+					latest_deployment?: {
+						deployment_trigger: {
+							metadata?: {
+								commit_message: string;
+							};
 						};
 					};
-				};
-			}[];
-		}
-	).result;
+				}[];
+			}
+		).result;
 
-	const projectLatestCommitMessage = result.find(
-		(project) => project.name === projectName
-	)?.latest_deployment?.deployment_trigger?.metadata?.commit_message;
+		const commitMessage = result.find((project) => project.name === projectName)
+			?.latest_deployment?.deployment_trigger?.metadata?.commit_message;
+		if (!commitMessage) {
+			throw new Error("Could not find deployment with name " + projectName);
+		}
+		return commitMessage;
+	});
+
 	expect(projectLatestCommitMessage).toMatch(
 		/Initialize web application via create-cloudflare CLI/
 	);
