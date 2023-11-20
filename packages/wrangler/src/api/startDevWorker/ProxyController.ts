@@ -240,6 +240,8 @@ export class ProxyController extends EventEmitter {
 	): Promise<void> {
 		if (this._torndown) return;
 
+		// Don't do any async work here. Enqueue the message with the mutex immediately.
+
 		try {
 			await this.runtimeMessageMutex.runWith(async () => {
 				assert(this.proxyWorker, "proxyWorker should already be instantiated");

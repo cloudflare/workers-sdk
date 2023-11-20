@@ -259,7 +259,7 @@ export class InspectorProxyWorker implements DurableObject {
 		}
 	};
 
-	runtimeAbortController = new AbortController();
+	runtimeAbortController = new AbortController(); // will abort the in-flight websocket upgrade request to the remote runtime
 	runtimeKeepAliveInterval: number | null = null;
 	async reconnectRuntimeWebSocket() {
 		assert(this.proxyData, "Expected this.proxyData to be defined");
