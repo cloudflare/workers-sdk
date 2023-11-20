@@ -372,6 +372,10 @@ export const gitCommit = async (ctx: PagesGeneratorContext) => {
 	//       we unconditionally run this command here
 	const commitMessage = await createCommitMessage(ctx);
 
+	// if a git repo existed before the process started then we don't want to commit
+	// we only commit if the git repo was initialized (directly or not) by c3
+	if (ctx.gitRepoAlreadyExisted) return;
+
 	if (!(await isGitInstalled()) || !(await isInsideGitRepo(ctx.project.path)))
 		return;
 

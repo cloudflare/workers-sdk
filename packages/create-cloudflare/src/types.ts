@@ -39,6 +39,7 @@ export type PagesGeneratorContext = {
 	};
 	type?: "pages" | "workers";
 	originalCWD: string;
+	gitRepoAlreadyExisted: boolean;
 };
 
 type UpdaterPackageScript = (cmd: string) => string;
