@@ -204,11 +204,7 @@ export class ProxyController extends EventEmitter {
 			const error = castErrorCause(cause);
 
 			this.inspectorProxyWorkerWebSocket?.reject(error);
-			this.emitErrorEvent(
-				"Could not connect to InspectorProxyWorker " +
-					JSON.stringify({ webSocket, readyState: webSocket?.readyState }),
-				error
-			);
+			this.emitErrorEvent("Could not connect to InspectorProxyWorker", error);
 			return;
 		}
 
@@ -283,14 +279,11 @@ export class ProxyController extends EventEmitter {
 		if (this._torndown) return;
 
 		try {
-			let websocket = await this.inspectorProxyWorkerWebSocket?.promise;
+			// returns the existing websocket, if already connected
+			const websocket = await this.reconnectInspectorProxyWorker();
 			assert(websocket);
 
-			if (websocket.readyState >= WebSocket.READY_STATE_CLOSING) {
-				websocket = await this.reconnectInspectorProxyWorker();
-			}
-
-			websocket?.send(JSON.stringify(message));
+			websocket.send(JSON.stringify(message));
 		} catch (cause) {
 			if (this._torndown) return;
 
