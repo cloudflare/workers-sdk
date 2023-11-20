@@ -21,7 +21,13 @@ import * as shellquote from "./utils/shell-quote";
 import { CommandLineArgsError, printWranglerBanner } from "./index";
 
 import type { RawConfig } from "./config";
-import type { Route, SimpleRoute, TailConsumer } from "./config/environment";
+import type {
+	CustomDomainRoute,
+	Route,
+	SimpleRoute,
+	TailConsumer,
+	ZoneNameRoute,
+} from "./config/environment";
 import type {
 	WorkerMetadata,
 	WorkerMetadataBinding,
@@ -107,13 +113,27 @@ export type ServiceMetadataRes = {
 	];
 };
 
-export type RawSimpleRoute = { pattern: string };
-export type RawRoutes = (RawSimpleRoute | Exclude<Route, SimpleRoute>) & {
+type RoutesRes = {
 	id: string;
-};
-export type RoutesRes = RawRoutes[];
+	pattern: string;
+	zone_name: string;
+	script: string;
+}[];
 
-export type CronTriggersRes = {
+type CustomDomainsRes = {
+	id: string;
+	zone_id: string;
+	zone_name: string;
+	hostname: string;
+	service: string;
+	environment: string;
+	cert_id: string;
+}[];
+
+type WorkersDevRes = {
+	enabled: boolean;
+};
+type CronTriggersRes = {
 	schedules: [
 		{
 			cron: string;
@@ -873,26 +893,39 @@ async function getWorkerConfig(
 	entrypoint: string,
 	serviceEnvironment: string
 ): Promise<RawConfig> {
-	const [bindings, routes, serviceEnvMetadata, cronTriggers, standard] =
-		await Promise.all([
-			fetchResult<WorkerMetadata["bindings"]>(
-				`/accounts/${accountId}/workers/services/${workerName}/environments/${serviceEnvironment}/bindings`
-			),
-			fetchResult<RoutesRes>(
-				`/accounts/${accountId}/workers/services/${workerName}/environments/${serviceEnvironment}/routes`
-			),
-			fetchResult<ServiceMetadataRes["default_environment"]>(
-				`/accounts/${accountId}/workers/services/${workerName}/environments/${serviceEnvironment}`
-			),
-			fetchResult<CronTriggersRes>(
-				`/accounts/${accountId}/workers/scripts/${workerName}/schedules`
-			),
-			fetchResult<StandardRes>(`/accounts/${accountId}/workers/standard`),
-		]).catch((e) => {
-			throw new Error(
-				`Error Occurred ${e}: Unable to fetch bindings, routes, or services metadata from the dashboard. Please try again later.`
-			);
-		});
+	const [
+		bindings,
+		routes,
+		customDomains,
+		workersDev,
+		serviceEnvMetadata,
+		cronTriggers,
+	] = await Promise.all([
+		fetchResult<WorkerMetadata["bindings"]>(
+			`/accounts/${accountId}/workers/services/${workerName}/environments/${serviceEnvironment}/bindings`
+		),
+		fetchResult<RoutesRes>(
+			`/accounts/${accountId}/workers/services/${workerName}/environments/${serviceEnvironment}/routes?show_zonename=true`
+		),
+		fetchResult<CustomDomainsRes>(
+			`/accounts/${accountId}/workers/domains/records?page=0&per_page=5&service=${workerName}&environment=${serviceEnvironment}`
+		),
+
+		fetchResult<WorkersDevRes>(
+			`/accounts/${accountId}/workers/services/${workerName}/environments/${serviceEnvironment}/subdomain`
+		),
+
+		fetchResult<ServiceMetadataRes["default_environment"]>(
+			`/accounts/${accountId}/workers/services/${workerName}/environments/${serviceEnvironment}`
+		),
+		fetchResult<CronTriggersRes>(
+			`/accounts/${accountId}/workers/scripts/${workerName}/schedules`
+		),
+	]).catch((e) => {
+		throw new Error(
+			`Error Occurred ${e}: Unable to fetch bindings, routes, or services metadata from the dashboard. Please try again later.`
+		);
+	});
 
 	const mappedBindings = mapBindings(bindings);
 
@@ -902,27 +935,29 @@ async function getWorkerConfig(
 			(durableObject) => (durableObject as { class_name: string }).class_name
 		);
 
-	const routeOrRoutes = routes.map((rawRoute) => {
-		const { id: _id, ...route } = rawRoute;
-		if (Object.keys(route).length === 1) {
-			return route.pattern;
-		} else {
-			return route as Route;
-		}
-	});
-	const routeOrRoutesToConfig =
-		routeOrRoutes.length > 1
-			? { routes: routeOrRoutes }
-			: { route: routeOrRoutes[0] };
+	const allRoutes: Route[] = [
+		...routes.map(
+			(r) => ({ pattern: r.pattern, zone_name: r.zone_name } as ZoneNameRoute)
+		),
+		...customDomains.map(
+			(c) =>
+				({
+					pattern: c.hostname,
+					zone_name: c.zone_name,
+					custom_domain: true,
+				} as CustomDomainRoute)
+		),
+	];
 
 	return {
 		name: workerName,
 		main: entrypoint,
+		workers_dev: workersDev.enabled,
 		compatibility_date:
 			serviceEnvMetadata.script.compatibility_date ??
 			new Date().toISOString().substring(0, 10),
 		compatibility_flags: serviceEnvMetadata.script.compatibility_flags,
-		...routeOrRoutesToConfig,
+		...(allRoutes.length ? { routes: allRoutes } : {}),
 		usage_model:
 			serviceEnvMetadata.script.usage_model === "standard"
 				? undefined

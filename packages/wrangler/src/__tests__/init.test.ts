@@ -16,6 +16,7 @@ import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { PackageManager } from "../package-manager";
+import { RawConfig } from "../config";
 
 /**
  * An expectation matcher for the minimal generated wrangler.toml.
@@ -2564,8 +2565,11 @@ describe("init", () => {
 					{
 						id: "some-route-id",
 						pattern: "delta.quadrant",
+						zone_name: "delta.quadrant",
 					},
 				],
+				customDomains = [],
+				workersDev = true,
 			}: {
 				id?: string;
 				usage_model?: string;
@@ -2574,6 +2578,8 @@ describe("init", () => {
 				schedules?: { cron: string; created_on: Date; modified_on: Date }[];
 				bindings?: unknown[];
 				routes?: unknown[];
+				customDomains?: unknown[];
+				workersDev?: boolean;
 			} = {}) {
 				return {
 					schedules,
@@ -2615,6 +2621,8 @@ describe("init", () => {
 					content,
 					bindings,
 					routes,
+					customDomains,
+					workersDev,
 				} as const;
 			}
 			mockApiToken();
@@ -2628,7 +2636,8 @@ describe("init", () => {
 				mockSupportingDashRequests(MOCK_ACCOUNT_ID);
 			});
 
-			const mockConfigExpected = {
+			const mockConfigExpected: RawConfig = {
+				workers_dev: true,
 				main: "src/index.js",
 				compatibility_date: "1987-09-27",
 				name: "isolinear-optical-chip",
@@ -2666,7 +2675,7 @@ describe("init", () => {
 						namespace: "namespace-mock",
 					},
 				],
-				route: "delta.quadrant",
+				routes: [{ pattern: "delta.quadrant", zone_name: "delta.quadrant" }],
 				services: [
 					{
 						environment: "production",
@@ -2799,6 +2808,40 @@ describe("init", () => {
 						}
 					),
 					rest.get(
+						`*/accounts/:accountId/workers/domains/records`,
+						(req, res, ctx) => {
+							return res.once(
+								ctx.status(200),
+								ctx.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: worker.customDomains,
+								})
+							);
+						}
+					),
+					rest.get(
+						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment/subdomain`,
+						(req, res, ctx) => {
+							expect(req.params.accountId).toEqual(expectedAccountId);
+							expect(req.params.scriptName).toEqual(worker.service.id);
+							expect(req.params.environment).toEqual(
+								worker.service.default_environment.environment
+							);
+
+							return res.once(
+								ctx.status(200),
+								ctx.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: { enabled: worker.workersDev },
+								})
+							);
+						}
+					),
+					rest.get(
 						`*/accounts/:accountId/workers/services/:scriptName/environments/:environment`,
 
 						(req, res, ctx) => {
@@ -2902,6 +2945,61 @@ describe("init", () => {
 					{ stdio: "inherit" }
 				);
 			});
+			it("should download routes + custom domains + workers dev", async () => {
+				worker = makeWorker({
+					customDomains: [
+						{
+							id: "some-id",
+							zone_id: "some-zone-id",
+							zone_name: "some-zone-name",
+							hostname: "random.host.name",
+							service: "memory-crystal",
+							environment: "test",
+							cert_id: "some-id",
+						},
+					],
+					workersDev: false,
+					bindings: [],
+					schedules: [],
+				});
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
+					},
+					{
+						text: "No package.json found. Would you like to create one?",
+						result: true,
+					}
+				);
+
+				await runWrangler(
+					"init isolinear-optical-chip --from-dash memory-crystal --no-delegate-c3"
+				);
+
+				expect(
+					fs.readFileSync("./isolinear-optical-chip/wrangler.toml", "utf8")
+				).toMatchInlineSnapshot(`
+			"name = \\"isolinear-optical-chip\\"
+			main = \\"src/index.js\\"
+			compatibility_date = \\"1987-09-27\\"
+			workers_dev = false
+			usage_model = \\"bundled\\"
+
+			[[routes]]
+			pattern = \\"delta.quadrant\\"
+			zone_name = \\"delta.quadrant\\"
+
+			[[routes]]
+			pattern = \\"random.host.name\\"
+			zone_name = \\"some-zone-name\\"
+			custom_domain = true
+
+			[[tail_consumers]]
+			service = \\"listener\\"
+			"
+		`);
+			});
 
 			it("should download source script from dashboard w/ positional <name> in TypeScript project", async () => {
 				mockConfirm(
@@ -3001,7 +3099,12 @@ describe("init", () => {
 			"name = \\"isolinear-optical-chip\\"
 			main = \\"src/index.js\\"
 			compatibility_date = \\"1987-09-27\\"
-			route = \\"delta.quadrant\\"
+			workers_dev = true
+			usage_model = \\"bundled\\"
+
+			[[routes]]
+			pattern = \\"delta.quadrant\\"
+			zone_name = \\"delta.quadrant\\"
 
 			[[migrations]]
 			tag = \\"some-migration-tag\\"
@@ -3259,6 +3362,7 @@ describe("init", () => {
 						"isolinear-optical-chip/wrangler.toml": wranglerToml({
 							compatibility_date: "1988-08-07",
 							main: "src/index.js",
+							workers_dev: true,
 							usage_model: "bundled",
 							name: "isolinear-optical-chip",
 							tail_consumers: [{ service: "listener" }],
@@ -3529,7 +3633,7 @@ function parse(name: string, value: string): unknown {
 	return value;
 }
 
-function wranglerToml(options: TOML.JsonMap = {}): TestFile {
+function wranglerToml(options: RawConfig = {}): TestFile {
 	return {
 		contents: options,
 	};
