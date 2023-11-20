@@ -1,4 +1,6 @@
+import assert from "node:assert";
 import crypto from "node:crypto";
+import { existsSync } from "node:fs";
 import * as nodeNet from "node:net";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
@@ -6,29 +8,83 @@ import getPort from "get-port";
 import shellac from "shellac";
 import { fetch } from "undici";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { normalizeOutput } from "./helpers/normalize";
 import { retry } from "./helpers/retry";
 import { dedent, makeRoot, seed } from "./helpers/setup";
 import { WRANGLER } from "./helpers/wrangler-command";
 
+type MaybePromise<T = void> = T | Promise<T>;
+
+const waitForPortToBeBound = async (port: number) => {
+	await retry(
+		() => false, // only retry if promise below rejects (network error)
+		() => fetch(`http://127.0.0.1:${port}`)
+	);
+};
+
+const waitUntilOutputContains = async (
+	session: SessionData,
+	substring: string,
+	intervalMs = 100
+) => {
+	await retry(
+		(stdout) => !stdout.includes(substring),
+		async () => {
+			await setTimeout(intervalMs);
+			return (
+				normalizeOutput(session.stdout) +
+				"\n\n\n" +
+				normalizeOutput(session.stderr)
+			);
+		}
+	);
+};
+
+interface SessionData {
+	port: number;
+	stdout: string;
+	stderr: string;
+}
+
 async function runDevSession(
 	workerPath: string,
 	flags: string,
-	session: (port: number) => Promise<void>
+	session: (sessionData: SessionData) => MaybePromise
 ) {
 	let pid;
 	try {
-		const port = await getPort();
+		const portFlagMatch = flags.match(/--port (\d+)/);
+		let port = 0;
+		if (portFlagMatch) {
+			port = parseInt(portFlagMatch[1]);
+		}
+		if (port === 0) {
+			port = await getPort();
+			flags += ` --port ${port}`;
+		}
+
 		// Must use the `in` statement in the shellac script rather than `.in()` modifier on the `shellac` object
 		// otherwise the working directory does not get picked up.
 		const bg = await shellac.env(process.env).bg`
 		in ${workerPath} {
 			exits {
-				$ ${WRANGLER} dev ${flags} --port ${port}
+        $ ${WRANGLER} dev ${flags}
 			}
 		}
 			`;
 		pid = bg.pid;
-		await session(port);
+
+		// sessionData is a mutable object where stdout/stderr update
+		const sessionData: SessionData = {
+			port,
+			stdout: "",
+			stderr: "",
+		};
+		bg.process.stdout.on("data", (chunk) => (sessionData.stdout += chunk));
+		bg.process.stderr.on("data", (chunk) => (sessionData.stderr += chunk));
+
+		await session(sessionData);
+
 		return bg.promise;
 	} finally {
 		if (pid) process.kill(pid);
@@ -40,7 +96,7 @@ type DevWorker = {
 	workerPath: string;
 	runDevSession: (
 		flags: string,
-		session: (port: number) => Promise<void>
+		session: (sessionData: SessionData) => MaybePromise
 	) => ReturnType<typeof runDevSession>;
 	seed: (
 		seeder: ((name: string) => Record<string, string>) | Record<string, string>
@@ -56,8 +112,10 @@ async function makeWorker(): Promise<DevWorker> {
 	return {
 		workerName,
 		workerPath,
-		runDevSession: (flags: string, session: (port: number) => Promise<void>) =>
-			runDevSession(workerPath, flags, session),
+		runDevSession: (
+			flags: string,
+			session: (sessionData: SessionData) => MaybePromise
+		) => runDevSession(workerPath, flags, session),
 		seed: (seeder) =>
 			seed(
 				workerPath,
@@ -97,11 +155,11 @@ describe("basic dev tests", () => {
 	});
 
 	it("can modify worker during dev session (local)", async () => {
-		await worker.runDevSession("", async (port) => {
+		await worker.runDevSession("", async (session) => {
 			const { text } = await retry(
 				(s) => s.status !== 200,
 				async () => {
-					const r = await fetch(`http://127.0.0.1:${port}`);
+					const r = await fetch(`http://127.0.0.1:${session.port}`);
 					return { text: await r.text(), status: r.status };
 				}
 			);
@@ -119,7 +177,7 @@ describe("basic dev tests", () => {
 			const { text: text2 } = await retry(
 				(s) => s.status !== 200 || s.text === "Hello World!",
 				async () => {
-					const r = await fetch(`http://127.0.0.1:${port}`);
+					const r = await fetch(`http://127.0.0.1:${session.port}`);
 					return { text: await r.text(), status: r.status };
 				}
 			);
@@ -138,7 +196,7 @@ describe("basic dev tests", () => {
 			const { text: text3 } = await retry(
 				(s) => s.status !== 200 || s.text === "Updated Worker! value",
 				async () => {
-					const r = await fetch(`http://127.0.0.1:${port}`);
+					const r = await fetch(`http://127.0.0.1:${session.port}`);
 					return { text: await r.text(), status: r.status };
 				}
 			);
@@ -147,11 +205,11 @@ describe("basic dev tests", () => {
 	});
 
 	it("can modify worker during dev session (remote)", async () => {
-		await worker.runDevSession("--remote --ip 127.0.0.1", async (port) => {
+		await worker.runDevSession("--remote --ip 127.0.0.1", async (session) => {
 			const { text } = await retry(
 				(s) => s.status !== 200 || s.text === "",
 				async () => {
-					const r = await fetch(`http://127.0.0.1:${port}`);
+					const r = await fetch(`http://127.0.0.1:${session.port}`);
 					return { text: await r.text(), status: r.status };
 				}
 			);
@@ -173,7 +231,7 @@ describe("basic dev tests", () => {
 			const { text: text2 } = await retry(
 				(s) => s.status !== 200 || s.text === "Hello World!",
 				async () => {
-					const r = await fetch(`http://127.0.0.1:${port}`);
+					const r = await fetch(`http://127.0.0.1:${session.port}`);
 					return { text: await r.text(), status: r.status };
 				}
 			);
@@ -238,11 +296,11 @@ describe("dev registry", () => {
 	});
 
 	it("can fetch b", async () => {
-		await b.runDevSession("", async (bPort) => {
+		await b.runDevSession("", async (sessionB) => {
 			const { text } = await retry(
 				(s) => s.status !== 200,
 				async () => {
-					const r = await fetch(`http://127.0.0.1:${bPort}`);
+					const r = await fetch(`http://127.0.0.1:${sessionB.port}`);
 					return { text: await r.text(), status: r.status };
 				}
 			);
@@ -252,11 +310,11 @@ describe("dev registry", () => {
 
 	it("can fetch b through a (start b, start a)", async () => {
 		await b.runDevSession("", async () => {
-			await a.runDevSession("", async (aPort) => {
+			await a.runDevSession("", async (sessionA) => {
 				const { text } = await retry(
 					(s) => s.status !== 200,
 					async () => {
-						const r = await fetch(`http://127.0.0.1:${aPort}`);
+						const r = await fetch(`http://127.0.0.1:${sessionA.port}`);
 						return { text: await r.text(), status: r.status };
 					}
 				);
@@ -264,13 +322,14 @@ describe("dev registry", () => {
 			});
 		});
 	});
+
 	it("can fetch b through a (start a, start b)", async () => {
-		await a.runDevSession("", async (aPort) => {
+		await a.runDevSession("", async (sessionA) => {
 			await b.runDevSession("", async () => {
 				const { text } = await retry(
 					(s) => s.status !== 200,
 					async () => {
-						const r = await fetch(`http://127.0.0.1:${aPort}`);
+						const r = await fetch(`http://127.0.0.1:${sessionA.port}`);
 						return { text: await r.text(), status: r.status };
 					}
 				);
@@ -296,7 +355,7 @@ describe("hyperdrive dev tests", () => {
 					name = "${workerName}"
 					main = "src/index.ts"
 					compatibility_date = "2023-10-25"
-					
+
 					[[hyperdrive]]
 					binding = "HYPERDRIVE"
 					id = "hyperdrive_id"
@@ -323,13 +382,13 @@ describe("hyperdrive dev tests", () => {
 	});
 
 	it("matches expected configuration parameters", async () => {
-		await worker.runDevSession("", async (port) => {
+		await worker.runDevSession("", async (session) => {
 			const { text } = await retry(
 				(s) => {
 					return s.status !== 200;
 				},
 				async () => {
-					const resp = await fetch(`http://127.0.0.1:${port}`);
+					const resp = await fetch(`http://127.0.0.1:${session.port}`);
 					return { text: await resp.text(), status: resp.status };
 				}
 			);
@@ -351,22 +410,138 @@ describe("hyperdrive dev tests", () => {
 				});
 			});
 		});
-		await worker.runDevSession("", async (port) => {
+		await worker.runDevSession("", async (session) => {
 			await retry(
 				(s) => {
 					return s.status !== 200;
 				},
 				async () => {
-					const resp = await fetch(`http://127.0.0.1:${port}/connect`);
+					const resp = await fetch(`http://127.0.0.1:${session.port}/connect`);
 					return { text: await resp.text(), status: resp.status };
 				}
 			);
 		});
 		await socketMsgPromise;
 	});
+
 	afterEach(() => {
 		if (server.listening) {
 			server.close();
 		}
+	});
+});
+
+describe("writes debug logs to hidden file", () => {
+	let a: DevWorker;
+	let b: DevWorker;
+
+	beforeEach(async () => {
+		a = await makeWorker();
+		await a.seed({
+			"wrangler.toml": dedent`
+          name = "a"
+          main = "src/index.ts"
+          compatibility_date = "2023-01-01"
+      `,
+			"src/index.ts": dedent/* javascript */ `
+        export default {
+          fetch(req, env) {
+            return new Response('A' + req.url);
+          },
+        };
+        `,
+			"package.json": dedent`
+          {
+            "name": "a",
+            "version": "0.0.0",
+            "private": true
+          }
+          `,
+		});
+
+		b = await makeWorker();
+		await b.seed({
+			"wrangler.toml": dedent`
+          name = "b"
+          main = "src/index.ts"
+          compatibility_date = "2023-01-01"
+      `,
+			"src/index.ts": dedent/* javascript */ `
+        export default {
+          fetch(req, env) {
+            return new Response('B' + req.url);
+          },
+        };
+        `,
+			"package.json": dedent`
+          {
+            "name": "b",
+            "version": "0.0.0",
+            "private": true
+          }
+          `,
+		});
+	});
+
+	it("writes to file when --log-level = debug", async () => {
+		const finalA = await a.runDevSession(
+			"--log-level debug",
+			async (session) => {
+				await waitForPortToBeBound(session.port);
+
+				await waitUntilOutputContains(session, "🐛 Writing debug logs to");
+
+				await setTimeout(1000); // wait a bit to ensure the file is written to disk
+			}
+		);
+
+		const filepath = finalA.stdout.match(
+			/🐛 Writing debug logs to "(.+\.log)"/
+		)?.[1];
+		assert(filepath);
+
+		expect(existsSync(filepath)).toBe(true);
+	});
+
+	it("does NOT write to file when --log-level != debug", async () => {
+		const finalA = await a.runDevSession("", async (session) => {
+			await waitForPortToBeBound(session.port);
+
+			await setTimeout(1000); // wait a bit to ensure no debug logs are written
+		});
+
+		const filepath = finalA.stdout.match(
+			/🐛 Writing debug logs to "(.+\.log)"/
+		)?.[1];
+
+		expect(filepath).toBeUndefined();
+	});
+
+	it("rewrites address-in-use error logs", async () => {
+		// 1. start worker A on a (any) port
+		await a.runDevSession("", async (sessionA) => {
+			const normalize = (text: string) =>
+				normalizeOutput(text, { [sessionA.port]: "<PORT>" });
+
+			// 2. wait until worker A is bound to its port
+			await waitForPortToBeBound(sessionA.port);
+
+			// 3. try to start worker B on the same port
+			await b.runDevSession(`--port ${sessionA.port}`, async (sessionB) => {
+				// 4. wait until wrangler tries to start workerd
+				await waitUntilOutputContains(sessionB, "Starting local server...");
+				// 5. wait a period of time for workerd to complain about the port being in use
+				await setTimeout(1000);
+
+				// ensure the workerd error message IS NOT present
+				expect(normalize(sessionB.stderr)).not.toContain(
+					"Address already in use; toString() = "
+				);
+				// ensure the wrangler (nicer) error message IS present
+				expect(normalize(sessionB.stderr)).toContain(
+					"[ERROR] Address already in use"
+				);
+			});
+		});
 	});
 });

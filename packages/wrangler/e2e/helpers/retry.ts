@@ -1,8 +1,10 @@
 import { setTimeout } from "node:timers/promises";
 
+type MaybePromise<T> = T | Promise<T>;
+
 export async function retry<T>(
 	retryIf: (currentState: T) => boolean,
-	action: () => Promise<T>,
+	action: () => MaybePromise<T>,
 	n = 30
 ): Promise<T> {
 	const states: T[] = [];
