@@ -47,7 +47,7 @@ runs:
     - name: Upload Logs
       uses: actions/upload-artifact@v3
       with:
-        name: e2e-logs
+        name: e2e-logs-${{matrix.os}}
         path: packages/create-cloudflare/.e2e-logs
 
     - name: Fail if errors detected
