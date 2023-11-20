@@ -220,10 +220,10 @@ export async function fetchR2Objects(
 /**
  * This is a wrapper STOPGAP for getting the script which returns a raw text response.
  */
-export async function fetchDashboardScript(
+export async function fetchWorker(
 	resource: string,
 	bodyInit: RequestInit = {}
-): Promise<File[]> {
+): Promise<{ entrypoint: string; modules: File[] }> {
 	await requireLoggedIn();
 	const auth = requireApiToken();
 	const headers = cloneHeaders(bodyInit.headers);
@@ -257,12 +257,17 @@ export async function fetchDashboardScript(
 			contents instanceof File ? contents : new File([contents], filename)
 		);
 
-		return files;
+		return {
+			entrypoint: response.headers.get("cf-entrypoint") ?? "src/index.js",
+			modules: files,
+		};
 	} else {
 		const contents = await response.text();
-		const filename = response.headers.get("cf-entrypoint") ?? "index.js";
-		const file = new File([contents], filename, { type: "text" });
+		const file = new File([contents], "index.js", { type: "text" });
 
-		return [file];
+		return {
+			entrypoint: "index.js",
+			modules: [file],
+		};
 	}
 }
