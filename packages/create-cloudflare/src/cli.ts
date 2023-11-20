@@ -92,9 +92,9 @@ export const runCli = async (args: Partial<C3Args>) => {
 		}
 	}
 
-	const templateOptions = Object.entries(templateMap)
-		.filter(([_, { hidden }]) => !hidden)
-		.map(([value, { label }]) => ({ value, label }));
+	const templateOptions = Object.entries(templateMap).map(
+		([value, { label, hidden }]) => ({ value, label, hidden })
+	);
 
 	const type = await processArgument<string>(args, "type", {
 		type: "select",
