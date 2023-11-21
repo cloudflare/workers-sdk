@@ -420,7 +420,10 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 			const containsLlvmSymbolizerWarning = chunk.includes(
 				"Not symbolizing stack traces because $LLVM_SYMBOLIZER is not set"
 			);
-			const containsHexStack = /stack:( [a-f\d]{9}){3,}/.test(chunk);
+			// Matches stack traces from workerd
+			//  - on unix: groups of 9 hex digits separated by spaces
+			//  - on windows: groups of 12 hex digits, or a single digit 0, separated by spaces
+			const containsHexStack = /stack:( (0|[a-f\d]{4,})){3,}/.test(chunk);
 
 			return containsLlvmSymbolizerWarning || containsHexStack;
 		},
