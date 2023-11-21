@@ -409,7 +409,7 @@ function buildSitesOptions({ assetPaths }: ConfigBundle) {
 	}
 }
 
-function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
+export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 	// ASSUMPTION: each chunk is a whole message from workerd
 	// This may not hold across OSes/architectures, but it seems to work on macOS M-line
 	// I'm going with this simple approach to avoid complicating this too early

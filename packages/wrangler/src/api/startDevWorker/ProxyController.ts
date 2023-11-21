@@ -10,6 +10,7 @@ import {
 	maybeHandleNetworkLoadResource,
 } from "../../dev/inspect";
 import { WranglerLog, castLogLevel } from "../../dev/miniflare";
+import { handleRuntimeStdio } from "../../dev/miniflare";
 import { getHttpsOptions } from "../../https-options";
 import { logger } from "../../logger";
 import { getSourceMappedStack } from "../../sourcemap";
@@ -133,6 +134,7 @@ export class ProxyController extends EventEmitter {
 					// if debugging, log requests with specic ProxyWorker prefix
 					logger.loggerLevel === "debug" ? "wrangler-ProxyWorker" : "wrangler",
 			}),
+			handleRuntimeStdio,
 		};
 
 		const proxyWorkerOptionsChanged = didMiniflareOptionsChange(
