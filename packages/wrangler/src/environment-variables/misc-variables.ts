@@ -60,7 +60,7 @@ export const getCloudflareApiBaseUrl = getEnvironmentVariableFactory({
 
 // Should we sanitize debug logs? By default we do, since debug logs could be added to GitHub issues and shouldn't include sensitive information
 export const getSanitizeLogs = getEnvironmentVariableFactory({
-	variableName: "WRANGLER_SANITIZE_DEBUG_LOGS",
+	variableName: "WRANGLER_LOG_SANITIZE",
 	defaultValue() {
 		return "true";
 	},

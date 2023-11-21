@@ -61,7 +61,7 @@ export class Logger {
 		} else {
 			this.doLog("debug", [
 				label,
-				"omitted; set WRANGLER_SANITIZE_DEBUG_LOGS=false to include sanitized data",
+				"omitted; set WRANGLER_LOG_SANITIZE=false to include sanitized data",
 			]);
 		}
 	};
