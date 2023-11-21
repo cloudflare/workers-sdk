@@ -16,17 +16,33 @@ const ONE_DAY_IN_MS = 86400000;
  *
  * The certificates are self-signed and generated locally, and cached in the `CERT_ROOT` directory.
  */
-export function getHttpsOptions() {
+export function getHttpsOptions(
+	customHttpsKeyPath: string | undefined,
+	customHttpsCertPath: string | undefined
+) {
 	const certDirectory = path.join(getGlobalWranglerConfigPath(), "local-cert");
-	const keyPath = path.join(certDirectory, "key.pem");
-	const certPath = path.join(certDirectory, "cert.pem");
+
+	let keyPath: string;
+	let certPath: string;
+	let isCustomCert = false;
+
+	if (customHttpsKeyPath !== undefined && customHttpsCertPath !== undefined) {
+		isCustomCert = true;
+		keyPath = customHttpsKeyPath;
+		certPath = customHttpsCertPath;
+	} else {
+		keyPath = path.join(certDirectory, "key.pem");
+		certPath = path.join(certDirectory, "cert.pem");
+	}
 
 	const regenerate =
 		!fs.existsSync(keyPath) ||
 		!fs.existsSync(certPath) ||
 		hasCertificateExpired(keyPath, certPath);
 
-	if (regenerate) {
+	if (regenerate && isCustomCert) {
+		throw new Error("Custom Certificate is invalid");
+	} else if (regenerate) {
 		logger.log("Generating new self-signed certificate...");
 		const { key, cert } = generateCertificate();
 		try {
@@ -45,6 +61,10 @@ export function getHttpsOptions() {
 		}
 		return { key, cert };
 	} else {
+		if (isCustomCert) {
+			logger.log("Using custom certificate at ", customHttpsKeyPath);
+		}
+
 		return {
 			key: fs.readFileSync(keyPath, "utf8"),
 			cert: fs.readFileSync(certPath, "utf8"),

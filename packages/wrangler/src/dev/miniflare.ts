@@ -112,6 +112,8 @@ export interface ConfigBundle {
 	crons: Config["triggers"]["crons"];
 	queueConsumers: Config["queues"]["consumers"];
 	localProtocol: "http" | "https";
+	httpsKeyPath: string | undefined;
+	httpsCertPath: string | undefined;
 	localUpstream: string | undefined;
 	upstreamProtocol: "http" | "https";
 	inspect: boolean;
@@ -594,7 +596,10 @@ async function buildMiniflareOptions(
 
 	let httpsOptions: { httpsKey: string; httpsCert: string } | undefined;
 	if (config.localProtocol === "https") {
-		const cert = await getHttpsOptions();
+		const cert = await getHttpsOptions(
+			config.httpsKeyPath,
+			config.httpsCertPath
+		);
 		httpsOptions = {
 			httpsKey: cert.key,
 			httpsCert: cert.cert,

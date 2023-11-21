@@ -116,6 +116,16 @@ export function devOptions(yargs: CommonYargsArgv) {
 				describe: "Protocol to listen to requests on, defaults to http.",
 				choices: ["http", "https"] as const,
 			})
+			.option("https-key-path", {
+				describe: "Path to a custom certificate key",
+				type: "string",
+				requiresArg: true,
+			})
+			.option("https-cert-path", {
+				describe: "Path to a custom certificate",
+				type: "string",
+				requiresArg: true,
+			})
 			.options("local-upstream", {
 				type: "string",
 				describe:
@@ -446,6 +456,8 @@ export async function startDev(args: StartDevOptions) {
 					tsconfig={args.tsconfig ?? configParam.tsconfig}
 					upstreamProtocol={upstreamProtocol}
 					localProtocol={args.localProtocol || configParam.dev.local_protocol}
+					httpsKeyPath={args.httpsKeyPath}
+					httpsCertPath={args.httpsCertPath}
 					localUpstream={args.localUpstream ?? host}
 					localPersistencePath={localPersistencePath}
 					liveReload={args.liveReload || false}
@@ -572,6 +584,8 @@ export async function startApiDev(args: StartDevOptions) {
 			tsconfig: args.tsconfig ?? configParam.tsconfig,
 			upstreamProtocol: upstreamProtocol,
 			localProtocol: args.localProtocol ?? configParam.dev.local_protocol,
+			httpsKeyPath: args.httpsKeyPath,
+			httpsCertPath: args.httpsCertPath,
 			localUpstream: args.localUpstream ?? host,
 			localPersistencePath,
 			liveReload: args.liveReload ?? false,

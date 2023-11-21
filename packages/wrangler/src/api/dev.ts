@@ -18,6 +18,8 @@ export interface UnstableDevOptions {
 	bundle?: boolean; // Set to false to skip internal build steps and directly deploy script
 	inspectorPort?: number; // Port for devtools to connect to
 	localProtocol?: "http" | "https"; // Protocol to listen to requests on, defaults to http.
+	httpsKeyPath: string | undefined;
+	httpsCertPath: string | undefined;
 	assets?: string; // Static assets to be served
 	site?: string; // Root folder of static assets for Workers Sites
 	siteInclude?: string[]; // Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.
@@ -174,6 +176,8 @@ export async function unstable_dev(
 		inspectorPort: options?.inspectorPort ?? 0,
 		v: undefined,
 		localProtocol: options?.localProtocol,
+		httpsKeyPath: options?.httpsKeyPath,
+		httpsCertPath: options?.httpsCertPath,
 		assets: options?.assets,
 		site: options?.site, // Root folder of static assets for Workers Sites
 		siteInclude: options?.siteInclude, // Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.

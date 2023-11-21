@@ -144,6 +144,8 @@ export type DevProps = {
 	tsconfig: string | undefined;
 	upstreamProtocol: "https" | "http";
 	localProtocol: "https" | "http";
+	httpsKeyPath: string | undefined;
+	httpsCertPath: string | undefined;
 	localUpstream: string | undefined;
 	localPersistencePath: string | null;
 	liveReload: boolean;
@@ -445,6 +447,8 @@ function DevSession(props: DevSessionProps) {
 			crons={props.crons}
 			queueConsumers={props.queueConsumers}
 			localProtocol={"http"} // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
+			httpsKeyPath={props.httpsKeyPath}
+			httpsCertPath={props.httpsCertPath}
 			localUpstream={props.localUpstream}
 			upstreamProtocol={props.upstreamProtocol}
 			inspect={props.inspect}
@@ -464,6 +468,8 @@ function DevSession(props: DevSessionProps) {
 			port={props.initialPort}
 			ip={props.initialIp}
 			localProtocol={props.localProtocol}
+			httpsKeyPath={props.httpsKeyPath}
+			httpsCertPath={props.httpsCertPath}
 			inspectorPort={props.inspectorPort}
 			// TODO: @threepointone #1167
 			// liveReload={props.liveReload}
