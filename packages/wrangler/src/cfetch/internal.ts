@@ -80,7 +80,7 @@ export async function fetchInternal<ResponseType>(
 	);
 	const logHeaders = cloneHeaders(response.headers);
 	delete logHeaders["Authorization"];
-	logger.debug("HEADERS:", JSON.stringify(logHeaders, null, 2));
+	logger.sanitizeDebug("HEADERS:", JSON.stringify(logHeaders, null, 2));
 	logger.sanitizeDebug("RESPONSE:", jsonText);
 	logger.debug("-- END CF API RESPONSE");
 
