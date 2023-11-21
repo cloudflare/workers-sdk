@@ -460,8 +460,8 @@ function configureProxyServer({
 			method,
 			url
 		);
-		logger.debug("HEADERS", JSON.stringify(headers, null, 2));
-		logger.debug("PREVIEW TOKEN", previewToken);
+		logger.debugWithSanitization("HEADERS", JSON.stringify(headers, null, 2));
+		logger.debugWithSanitization("PREVIEW TOKEN", previewToken);
 
 		request.on("response", (responseHeaders) => {
 			const status = responseHeaders[":status"] ?? 500;
