@@ -42,14 +42,16 @@ export const runWorkersGenerator = async (args: C3Args) => {
 	};
 	const { preexisting } = await getTemplate(ctx);
 
-	ctx.args.ts = preexisting
-		? false
-		: await processArgument<boolean>(ctx.args, "ts", {
-				type: "confirm",
-				question: "Do you want to use TypeScript?",
-				label: "typescript",
-				defaultValue: C3_DEFAULTS.ts,
-		  });
+	if (preexisting) {
+		ctx.args.ts = false;
+	}
+
+	await processArgument<boolean>(ctx.args, "ts", {
+		type: "confirm",
+		question: "Do you want to use TypeScript?",
+		label: "typescript",
+		defaultValue: C3_DEFAULTS.ts,
+	});
 
 	await copyFiles(ctx);
 	await copyExistingWorkerFiles(ctx);
