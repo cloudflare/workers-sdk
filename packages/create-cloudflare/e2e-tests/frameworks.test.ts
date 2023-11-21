@@ -40,6 +40,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 			expectResponseToContain: "Dinosaurs are cool",
 			unsupportedPms: ["bun"],
 			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
 			timeout: LONG_TIMEOUT,
 		},
 		angular: {
@@ -98,6 +99,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		react: {
 			expectResponseToContain: "React App",
 			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
 			timeout: LONG_TIMEOUT,
 		},
 		solid: {
