@@ -24,7 +24,6 @@ import type { RawConfig } from "./config";
 import type {
 	CustomDomainRoute,
 	Route,
-	SimpleRoute,
 	TailConsumer,
 	ZoneNameRoute,
 } from "./config/environment";

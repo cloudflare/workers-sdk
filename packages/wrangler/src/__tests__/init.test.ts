@@ -15,8 +15,8 @@ import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import type { RawConfig } from "../config";
 import type { PackageManager } from "../package-manager";
-import { RawConfig } from "../config";
 
 /**
  * An expectation matcher for the minimal generated wrangler.toml.
