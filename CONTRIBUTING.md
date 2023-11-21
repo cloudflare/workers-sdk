@@ -201,6 +201,58 @@ PR review is a critial and required step in the process for landing changes. Thi
 
 As a reviewer, it's important to be thoughtful about the proposed changes and communicate any feedback. Examples of PR reviews that the community has identified as particularly high-caliber are labeled with the `highlight pr review` label. Please feel empowered to use these as a learning resource.
 
+## PR Tests
+
+Every PR should include tests for the functionality that's being added. Most changes will be to [Wrangler](packages/wrangler/src/__tests__) (using Jest), [Miniflare](packages/miniflare/test) (using Ava), or [C3](packages/create-cloudflare/src/__tests__) (using Vitest), and should include unit tests within the testing harness of those packages.
+
+If your PR includes functionality that's difficult to unit test, you can add a fixture test by creating a new package in the `fixtures/` folder. This allows for adding a test that requires a specific filesystem or worker setup (for instance, `fixtures/no-bundle-import` tests the interaction of Wrangler with a specific set of JS, WASM, text, and binary modules on the filesystem). When adding a fixture test, include a `vitest.config.ts` file within the new package, which will ensure it's run as part of the `workers-sdk` CI. A good default example is the following:
+
+```ts
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+	test: {
+		testTimeout: 5_000,
+		hookTimeout: 5_000,
+		teardownTimeout: 5_000,
+	},
+});
+```
+
+If you need to test the interaction of Wrangler with a real Cloudflare account, you can add an E2E test within the `packages/wrangler/e2e` folder. This lets you add a test for functionality that requires real credentials (i.e. testing whether a worker deployed from Wrangler can be accessed over the internet).
+
+When you open a PR to the `workers-sdk` repo, you should expect several checks to run in CI. For most PRs (except for those which trigger the **C3 E2E (Quarantine)** Action), every check should pass (although some will be skipped).
+
+See below for a summary of this repo's Actions, including for each:
+
+1. expected return status (✔️ means that the check should always pass or be skipped, ⚠️ means that the check is expected to sometimes fail)
+2. when the action is run
+3. intended purpose
+
+- **E2E tests ✔️**
+  This runs on the `changeset-release/main` branch (i.e. on every release PR), and on any PRs with the `e2e` label applied. It runs the E2E tests for Wrangler. If you're making a change that feels particularly risky, make sure you add the `e2e` label to get early warning of E2E test failures.
+
+- **Pull Request ✔️**
+  As the name suggests, this contains checks that run on every PR, including fixture tests, Wrangler unit tests, C3 unit tests, Miniflare unit tests, and ESLint + Prettier checks.
+
+- **Deploy all Pages sites ✔️**
+  This runs on `main` (where it deploys production versions of `wrangler-devtools`, `quick-edit`, and `workers-playground`). It's usually skipped on PRs, but if you apply the label `preview:wrangler-devtools`, `preview:quick-edit`, or `preview:workers-playground` it will deploy a branch preview of the matching package.
+
+- **Test old Node.js version ✔️**
+  This runs on all PRs, and makes sure that Wrangler's warning for old Node.js versions works.
+
+- **Playground Worker tests ✔️**
+  This only runs on the `changeset-release/main` branch (i.e. on every release PR), and is intended to test the behaviour of the Worker powering the Workers Playground.
+
+- **Create Pull Request Prerelease ✔️**
+  This creates an installable pre-release of Wrangler, C3, and Miniflare on every PR.
+
+- **C3 E2E Tests ✔️**
+  This runs for all PRs that make changes to C3 (i.e. in the `packages/create-cloudflare` directory), and runs the E2E tests for C3.
+
+- **C3 E2E (Quarantine) ⚠️**
+  This runs for all PRs that make changes to C3 (i.e. in the `packages/create-cloudflare` directory), and runs the _quarantined_ E2E tests for C3. It is expected to sometimes fail.
+
 ## Changesets
 
 Every non-trivial change to the project - those that should appear in the changelog - must be captured in a "changeset".
