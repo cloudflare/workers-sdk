@@ -58,6 +58,7 @@ import {
 	SOCKET_ENTRY,
 	SharedOptions,
 	WorkerOptions,
+	WrappedBindingNames,
 	getDirectSocketName,
 	getGlobalServices,
 	kProxyNodeBinding,
@@ -72,6 +73,7 @@ import {
 	ServiceDesignatorSchema,
 	getUserServiceName,
 	handlePrettyErrorRequest,
+	maybeWrappedModuleToWorkerName,
 	reviveError,
 } from "./plugins/core";
 import {
@@ -93,6 +95,7 @@ import {
 	MiniflareCoreError,
 	NoOpLog,
 	OptionalZodTypeOf,
+	_isCyclic,
 	stripAnsi,
 } from "./shared";
 import {
@@ -306,6 +309,47 @@ function getDurableObjectClassNames(
 	return serviceClassNames;
 }
 
+function invalidWrappedAsBound(name: string, bindingType: string): never {
+	const stringName = JSON.stringify(name);
+	throw new MiniflareCoreError(
+		"ERR_INVALID_WRAPPED",
+		`Cannot use ${stringName} for wrapped binding because it is bound to with ${bindingType} bindings.\nEnsure other workers don't define ${bindingType} bindings to ${stringName}.`
+	);
+}
+function getWrappedBindingNames(
+	allWorkerOpts: PluginWorkerOptions[],
+	durableObjectClassNames: DurableObjectClassNames
+): WrappedBindingNames {
+	// Build set of all worker names bound to as wrapped bindings.
+	// Also check these "workers" aren't bound to as services/Durable Objects.
+	// We won't add them as regular workers so these bindings would fail.
+	const wrappedBindingWorkerNames = new Set<string>();
+	for (const workerOpts of allWorkerOpts) {
+		for (const designator of Object.values(
+			workerOpts.core.wrappedBindings ?? {}
+		)) {
+			const scriptName =
+				typeof designator === "object" ? designator.scriptName : designator;
+			if (durableObjectClassNames.has(getUserServiceName(scriptName))) {
+				invalidWrappedAsBound(scriptName, "Durable Object");
+			}
+			wrappedBindingWorkerNames.add(scriptName);
+		}
+	}
+	// Need to collect all wrapped bindings before checking service bindings
+	for (const workerOpts of allWorkerOpts) {
+		for (const designator of Object.values(
+			workerOpts.core.serviceBindings ?? {}
+		)) {
+			if (typeof designator !== "string") continue;
+			if (wrappedBindingWorkerNames.has(designator)) {
+				invalidWrappedAsBound(designator, "service");
+			}
+		}
+	}
+	return wrappedBindingWorkerNames;
+}
+
 function getQueueConsumers(
 	allWorkerOpts: PluginWorkerOptions[]
 ): QueueConsumers {
@@ -353,11 +397,13 @@ function getQueueConsumers(
 
 // Collects all routes from all worker services
 function getWorkerRoutes(
-	allWorkerOpts: PluginWorkerOptions[]
+	allWorkerOpts: PluginWorkerOptions[],
+	wrappedBindingNames: Set<string>
 ): Map<string, string[]> {
 	const allRoutes = new Map<string, string[]>();
 	for (const workerOpts of allWorkerOpts) {
 		const name = workerOpts.core.name ?? "";
+		if (wrappedBindingNames.has(name)) continue; // Wrapped bindings un-routable
 		assert(!allRoutes.has(name)); // Validated unique names earlier
 		allRoutes.set(name, workerOpts.core.routes ?? []);
 	}
@@ -918,16 +964,34 @@ export class Miniflare {
 		sharedOpts.core.cf = await setupCf(this.#log, sharedOpts.core.cf);
 
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
+		const wrappedBindingNames = getWrappedBindingNames(
+			allWorkerOpts,
+			durableObjectClassNames
+		);
 		const queueConsumers = getQueueConsumers(allWorkerOpts);
-		const allWorkerRoutes = getWorkerRoutes(allWorkerOpts);
+		const allWorkerRoutes = getWorkerRoutes(allWorkerOpts, wrappedBindingNames);
 		const workerNames = [...allWorkerRoutes.keys()];
 
 		// Use Map to dedupe services by name
 		const services = new Map<string, Service>();
+		const extensions: Extension[] = [
+			{
+				modules: [
+					{ name: "miniflare:shared", esModule: SCRIPT_MINIFLARE_SHARED() },
+					{ name: "miniflare:zod", esModule: SCRIPT_MINIFLARE_ZOD() },
+				],
+			},
+		];
 
 		const sockets: Socket[] = [await configureEntrySocket(sharedOpts.core)];
 		// Bindings for `ProxyServer` Durable Object
 		const proxyBindings: Worker_Binding[] = [];
+
+		const allWorkerBindings = new Map<string, Worker_Binding[]>();
+		const wrappedBindingsToPopulate: {
+			workerName: string;
+			innerBindings: Worker_Binding[];
+		}[] = [];
 
 		for (let i = 0; i < allWorkerOpts.length; i++) {
 			const workerOpts = allWorkerOpts[i];
@@ -935,6 +999,7 @@ export class Miniflare {
 
 			// Collect all bindings from this worker
 			const workerBindings: Worker_Binding[] = [];
+			allWorkerBindings.set(workerName, workerBindings);
 			const additionalModules: Worker_Module[] = [];
 			for (const [key, plugin] of PLUGIN_ENTRIES) {
 				// @ts-expect-error `CoreOptionsSchema` has required options which are
@@ -947,6 +1012,24 @@ export class Miniflare {
 						// already supported by Node.js (e.g. json, text/data blob, wasm)
 						if (isNativeTargetBinding(binding)) {
 							proxyBindings.push(buildProxyBinding(key, workerName, binding));
+						}
+						// If this is a wrapped binding to a wrapped binding worker, record
+						// it, so we can populate its inner bindings with all the wrapped
+						// binding worker's bindings.
+						if (
+							"wrapped" in binding &&
+							binding.wrapped?.moduleName !== undefined &&
+							binding.wrapped.innerBindings !== undefined
+						) {
+							const workerName = maybeWrappedModuleToWorkerName(
+								binding.wrapped.moduleName
+							);
+							if (workerName !== undefined) {
+								wrappedBindingsToPopulate.push({
+									workerName,
+									innerBindings: binding.wrapped.innerBindings,
+								});
+							}
 						}
 					}
 
@@ -971,12 +1054,13 @@ export class Miniflare {
 				additionalModules,
 				tmpPath: this.#tmpPath,
 				workerNames,
+				wrappedBindingNames,
 				durableObjectClassNames,
 				unsafeEphemeralDurableObjects,
 				queueConsumers,
 			};
 			for (const [key, plugin] of PLUGIN_ENTRIES) {
-				const pluginServices = await plugin.getServices({
+				const pluginServicesExtensions = await plugin.getServices({
 					...pluginServicesOptionsBase,
 					// @ts-expect-error `CoreOptionsSchema` has required options which are
 					//  missing in other plugins' options.
@@ -984,7 +1068,15 @@ export class Miniflare {
 					// @ts-expect-error `QueuesPlugin` doesn't define shared options
 					sharedOptions: sharedOpts[key],
 				});
-				if (pluginServices !== undefined) {
+				if (pluginServicesExtensions !== undefined) {
+					let pluginServices: Service[];
+					if (Array.isArray(pluginServicesExtensions)) {
+						pluginServices = pluginServicesExtensions;
+					} else {
+						pluginServices = pluginServicesExtensions.services;
+						extensions.push(...pluginServicesExtensions.extensions);
+					}
+
 					for (const service of pluginServices) {
 						if (service.name !== undefined && !services.has(service.name)) {
 							services.set(service.name, service);
@@ -1028,44 +1120,6 @@ export class Miniflare {
 			}
 		}
 
-		// For testing proxy client serialisation, add an API that just returns its
-		// arguments. Note without the `.pipeThrough(new TransformStream())` below,
-		// we'll see `TypeError: Inter-TransformStream ReadableStream.pipeTo() is
-		// not implemented.`. `IdentityTransformStream` doesn't work here.
-		// TODO(soon): add support for wrapped bindings and remove this. The API
-		//  will probably look something like `{ wrappedBindings: { A: "a" } }`
-		//  where `"a"` is the name of a "worker" in `workers`.
-		const extensions: Extension[] = [
-			{
-				modules: [
-					{ name: "miniflare:shared", esModule: SCRIPT_MINIFLARE_SHARED() },
-					{ name: "miniflare:zod", esModule: SCRIPT_MINIFLARE_ZOD() },
-				],
-			},
-			{
-				modules: [
-					{
-						name: "miniflare-internal:identity",
-						internal: true, // Not accessible to user code
-						esModule: `
-            class Identity {
-              async asyncIdentity(...args) {
-                const i = args.findIndex((arg) => arg instanceof ReadableStream);
-                if (i !== -1) args[i] = args[i].pipeThrough(new TransformStream());
-                return args;
-              }
-            }
-            export default function() { return new Identity(); }
-            `,
-					},
-				],
-			},
-		];
-		proxyBindings.push({
-			name: "IDENTITY",
-			wrapped: { moduleName: "miniflare-internal:identity" },
-		});
-
 		const globalServices = getGlobalServices({
 			sharedOptions: sharedOpts.core,
 			allWorkerRoutes,
@@ -1080,7 +1134,31 @@ export class Miniflare {
 			services.set(service.name, service);
 		}
 
-		return { services: Array.from(services.values()), sockets, extensions };
+		// Populate wrapped binding inner bindings with bound worker's bindings
+		for (const toPopulate of wrappedBindingsToPopulate) {
+			const bindings = allWorkerBindings.get(toPopulate.workerName);
+			if (bindings === undefined) continue;
+			const existingBindingNames = new Set(
+				toPopulate.innerBindings.map(({ name }) => name)
+			);
+			toPopulate.innerBindings.push(
+				// If there's already an inner binding with this name, don't add again
+				...bindings.filter(({ name }) => !existingBindingNames.has(name))
+			);
+		}
+		// If we populated wrapped bindings, we may have created cycles in the
+		// `services` array. Attempting to serialise these will lead to unbounded
+		// recursion, so make sure we don't have any
+		const servicesArray = Array.from(services.values());
+		if (wrappedBindingsToPopulate.length > 0 && _isCyclic(servicesArray)) {
+			throw new MiniflareCoreError(
+				"ERR_CYCLIC",
+				"Generated workerd config contains cycles. " +
+					"Ensure wrapped bindings don't have bindings to themselves."
+			);
+		}
+
+		return { services: servicesArray, sockets, extensions };
 	}
 
 	async #assembleAndUpdateConfig() {
@@ -1437,7 +1515,16 @@ export class Miniflare {
 		// shares its `env` with Miniflare's entry worker, so has access to routes)
 		const bindingName = CoreBindings.SERVICE_USER_ROUTE_PREFIX + workerName;
 		const fetcher = proxyClient.env[bindingName];
-		assert(fetcher !== undefined);
+		if (fetcher === undefined) {
+			// `#findAndAssertWorkerIndex()` will throw if a "worker" doesn't exist
+			// with the specified name. If this "worker" was used as a wrapped binding
+			// though, it won't be added as a service binding, and so will be
+			// undefined here. In this case, throw a more specific error.
+			const stringName = JSON.stringify(workerName);
+			throw new TypeError(
+				`${stringName} is being used as a wrapped binding, and cannot be accessed as a worker`
+			);
+		}
 		return fetcher as ReplaceWorkersTypes<Fetcher>;
 	}
 
