@@ -53,7 +53,17 @@ export const runC3 = async ({
 }: RunnerConfig) => {
 	const cmd = "node";
 	const args = ["./dist/cli.js", ...argv];
-	const proc = spawn(cmd, args);
+	const proc = spawn(cmd, args, {
+		env: {
+			...process.env,
+			// The following env vars are set to ensure that package managers
+			// do not use the same global cache and accidentally hit race conditions.
+			YARN_CACHE_FOLDER: "./.yarn/cache",
+			YARN_ENABLE_GLOBAL_CACHE: "false",
+			PNPM_HOME: "./.pnpm",
+			npm_config_cache: "./.npm/cache",
+		},
+	});
 
 	promptHandlers = [...promptHandlers];
 
