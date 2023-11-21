@@ -476,6 +476,19 @@ async function buildMiniflareOptions(
 		logger.warn("Miniflare 3 does not support CRON triggers yet, ignoring...");
 	}
 
+	if (config.bindings.ai) {
+		logger.warn(
+			"Workers AI is not currently supported in local mode. Please use --remote to work with it."
+		);
+	}
+
+	if (!config.bindings.ai && config.bindings.vectorize?.length) {
+		// TODO: add local support for Vectorize bindings (https://github.com/cloudflare/workers-sdk/issues/4360)
+		logger.warn(
+			"Vectorize bindings are not currently supported in local mode. Please use --remote if you are working with them."
+		);
+	}
+
 	const upstream =
 		typeof config.localUpstream === "string"
 			? `${config.localProtocol}://${config.localUpstream}`
