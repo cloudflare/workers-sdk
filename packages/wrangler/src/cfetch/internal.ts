@@ -38,9 +38,9 @@ export async function performApiFetch(
 	);
 	const logHeaders = cloneHeaders(headers);
 	delete logHeaders["Authorization"];
-	logger.sanitizeDebug("HEADERS:", JSON.stringify(logHeaders, null, 2));
+	logger.debugWithSanitization("HEADERS:", JSON.stringify(logHeaders, null, 2));
 
-	logger.sanitizeDebug("INIT:", JSON.stringify({ ...init }, null, 2));
+	logger.debugWithSanitization("INIT:", JSON.stringify({ ...init }, null, 2));
 	logger.debug("-- END CF API REQUEST");
 	return await fetch(`${getCloudflareApiBaseUrl()}${resource}${queryString}`, {
 		method,
@@ -80,8 +80,8 @@ export async function fetchInternal<ResponseType>(
 	);
 	const logHeaders = cloneHeaders(response.headers);
 	delete logHeaders["Authorization"];
-	logger.sanitizeDebug("HEADERS:", JSON.stringify(logHeaders, null, 2));
-	logger.sanitizeDebug("RESPONSE:", jsonText);
+	logger.debugWithSanitization("HEADERS:", JSON.stringify(logHeaders, null, 2));
+	logger.debugWithSanitization("RESPONSE:", jsonText);
 	logger.debug("-- END CF API RESPONSE");
 
 	// HTTP 204 and HTTP 205 responses do not return a body. We need to special-case this

@@ -55,7 +55,7 @@ export class Logger {
 	columns = process.stdout.columns;
 
 	debug = (...args: unknown[]) => this.doLog("debug", args);
-	sanitizeDebug = (label: string, ...args: unknown[]) => {
+	debugWithSanitization = (label: string, ...args: unknown[]) => {
 		if (getSanitizeLogs() === "false") {
 			this.doLog("debug", [label, ...args]);
 		} else {

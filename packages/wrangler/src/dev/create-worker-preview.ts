@@ -160,7 +160,7 @@ export async function createPreviewSession(
 
 	const switchedExchangeUrl = switchHost(exchange_url, ctx.host).toString();
 
-	logger.sanitizeDebug(
+	logger.debugWithSanitization(
 		"-- START EXCHANGE API REQUEST:",
 		` GET ${switchedExchangeUrl}`
 	);
@@ -176,7 +176,7 @@ export async function createPreviewSession(
 		exchangeResponse.status
 	);
 	logger.debug("HEADERS:", JSON.stringify(exchangeResponse.headers, null, 2));
-	logger.sanitizeDebug("RESPONSE:", bodyText);
+	logger.debugWithSanitization("RESPONSE:", bodyText);
 
 	logger.debug("-- END EXCHANGE API RESPONSE");
 
