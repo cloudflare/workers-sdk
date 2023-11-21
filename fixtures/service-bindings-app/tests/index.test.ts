@@ -1,7 +1,10 @@
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import { UnstableDevWorker, unstable_dev } from "wrangler";
 import path from "node:path";
-describe("Service Bindings", () => {
+
+// TODO: reenable when https://github.com/cloudflare/workers-sdk/pull/4241 lands
+// and improves reliability of this test.
+describe.skip("Service Bindings", () => {
 	let aWorker: UnstableDevWorker;
 
 	let bWorker: UnstableDevWorker;

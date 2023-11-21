@@ -5,6 +5,8 @@ import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import type { ChildProcess } from "child_process";
 import { type UnstableDevWorker, unstable_dev } from "wrangler";
 
+// TODO: reenable when https://github.com/cloudflare/workers-sdk/pull/4241 lands
+// and improves reliability of this test.
 describe.skip(
 	"Pages Functions",
 	() => {
