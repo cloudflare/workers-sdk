@@ -534,7 +534,7 @@ function useHotkeys(props: {
 					break;
 				// open browser
 				case "b": {
-					if (ip === "0.0.0.0") {
+					if (ip === "0.0.0.0" || ip === "*") {
 						await openInBrowser(`${localProtocol}://127.0.0.1:${port}`);
 						return;
 					}
