@@ -1,5 +1,26 @@
 # wrangler
 
+## 3.17.0
+
+### Minor Changes
+
+- [#4341](https://github.com/cloudflare/workers-sdk/pull/4341) [`d9908743`](https://github.com/cloudflare/workers-sdk/commit/d99087433814e4f1fb98cd61b03b6e2f606b1a15) Thanks [@RamIdeas](https://github.com/RamIdeas)! - Wrangler now writes all logs to a .log file in the `.wrangler` directory. Set a directory or specific .log filepath to write logs to with `WRANGLER_LOG_PATH=../Desktop/my-logs/` or `WRANGLER_LOG_PATH=../Desktop/my-logs/my-log-file.log`. When specifying a directory or using the default location, a filename with a timestamp is used.
+
+  Wrangler now filters workerd stdout/stderr and marks unactionable messages as debug logs. These debug logs are still observable in the debug log file but will no longer show in the terminal by default without the user setting the env var `WRANGLER_LOG=debug`.
+
+### Patch Changes
+
+- [#4469](https://github.com/cloudflare/workers-sdk/pull/4469) [`d5e1966b`](https://github.com/cloudflare/workers-sdk/commit/d5e1966b24e65aa5591739c0b950e4635ac5fa19) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: report correct line and column numbers when source mapping errors with `wrangler dev --remote`
+
+* [#4455](https://github.com/cloudflare/workers-sdk/pull/4455) [`1747d215`](https://github.com/cloudflare/workers-sdk/commit/1747d215e7113909edf0596e713b808024c36c70) Thanks [@rozenmd](https://github.com/rozenmd)! - fix: make it possible to ignore hyperdrive warnings
+
+- [#4456](https://github.com/cloudflare/workers-sdk/pull/4456) [`805d5241`](https://github.com/cloudflare/workers-sdk/commit/805d5241ac7831ed46e5e2bc8bb4ffc062160d56) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add warnings about ai and verctorize bindings not being supported locally
+
+* [#4478](https://github.com/cloudflare/workers-sdk/pull/4478) [`7b54350b`](https://github.com/cloudflare/workers-sdk/commit/7b54350b6d21c836f16f9942da982f5d361727cf) Thanks [@penalosa](https://github.com/penalosa)! - Don't log sensitive data to the Wrangler debug log file by default. This includes API request headers and responses.
+
+* Updated dependencies [[`be2b9cf5`](https://github.com/cloudflare/workers-sdk/commit/be2b9cf5a9395cf7385f59d2e1ec3131dae3d87f), [`d9908743`](https://github.com/cloudflare/workers-sdk/commit/d99087433814e4f1fb98cd61b03b6e2f606b1a15)]:
+  - miniflare@3.20231030.1
+
 ## 3.16.0
 
 ### Minor Changes

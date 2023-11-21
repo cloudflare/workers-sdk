@@ -1,5 +1,21 @@
 # create-cloudflare
 
+## 2.7.1
+
+### Patch Changes
+
+- [#4441](https://github.com/cloudflare/workers-sdk/pull/4441) [`01d34f21`](https://github.com/cloudflare/workers-sdk/commit/01d34f2139929fc58d0d3c799d4e120e74bdd409) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-svelte` from `5.1.1` to `5.2.0`
+
+* [#4461](https://github.com/cloudflare/workers-sdk/pull/4461) [`fe1e6d8a`](https://github.com/cloudflare/workers-sdk/commit/fe1e6d8a3584def6a7c1c2e8dd362c7c5d3cbc97) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `@angular/create` from `17.0.0-rc.4` to `17.0.1`
+
+- [#4462](https://github.com/cloudflare/workers-sdk/pull/4462) [`144a431a`](https://github.com/cloudflare/workers-sdk/commit/144a431ad35fe6850817b385da318b4e43845dca) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-next-app` from `13.4.19` to `14.0.3`
+
+* [#4292](https://github.com/cloudflare/workers-sdk/pull/4292) [`75c3d4a7`](https://github.com/cloudflare/workers-sdk/commit/75c3d4a789b8e0e682f708065bd4db5f04c7b725) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Only commit the changes if the repository was generated (directly or not) by C3
+
+  (This follows what CLI tools seems to generally do, avoids weird corner case
+  behaviors users might have for example when running C3 inside monorepos and avoids commits
+  when people don't want or expect them)
+
 ## 2.7.0
 
 ### Minor Changes
