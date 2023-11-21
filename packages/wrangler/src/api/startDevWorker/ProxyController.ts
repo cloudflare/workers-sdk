@@ -390,7 +390,7 @@ export class ProxyController extends EventEmitter {
 		switch (message.type) {
 			case "runtime-websocket-error":
 				// TODO: consider sending proxyData again to trigger the InspectorProxyWorker to reconnect to the runtime
-				logger.error(
+				logger.debug(
 					"[InspectorProxyWorker] 'runtime websocket' error",
 					message.error
 				);
@@ -507,16 +507,6 @@ export class ProxyControllerLogger extends WranglerLog {
 		// keep the ProxyWorker request logs if we're in debug mode
 		if (message.includes("/cdn-cgi/") && this.level < LogLevel.DEBUG) return;
 		super.log(message);
-	}
-
-	// TODO: remove this override when miniflare is fixed https://jira.cfdata.org/browse/DEVX-983
-	error(message: Error) {
-		try {
-			super.error(message);
-		} catch {
-			// miniflare shouldn't throw in logger.error
-			// for now, ignore errors from the logger
-		}
 	}
 }
 
