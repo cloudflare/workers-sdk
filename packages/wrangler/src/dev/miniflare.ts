@@ -421,6 +421,9 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 		isAddressInUse(chunk: string) {
 			return chunk.includes("Address already in use; toString() = ");
 		},
+		isWarning(chunk: string) {
+			return /\.c\+\+:\d+: warning:/.test(chunk);
+		},
 	};
 
 	stdout.on("data", (chunk: Buffer | string) => {
@@ -438,6 +441,11 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 			// so send it to the debug logs which are discarded unless
 			// the user explicitly sets a logLevel indicating they care
 			logger.debug(chunk);
+		}
+
+		// known case: warnings are not info, log them as such
+		else if (classifiers.isWarning(chunk)) {
+			logger.warn(chunk);
 		}
 
 		// anything not exlicitly handled above should be logged as info (via stdout)
@@ -472,6 +480,11 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 			// so send it to the debug logs which are discarded unless
 			// the user explicitly sets a logLevel indicating they care
 			logger.debug(chunk);
+		}
+
+		// known case: warnings are not errors, log them as such
+		else if (classifiers.isWarning(chunk)) {
+			logger.warn(chunk);
 		}
 
 		// anything not exlicitly handled above should be logged as an error (via stderr)
