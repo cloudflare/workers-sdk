@@ -3,6 +3,7 @@ import chalk from "chalk";
 import CLITable from "cli-table3";
 import { formatMessagesSync } from "esbuild";
 import { getEnvironmentVariableFactory } from "./environment-variables/factory";
+import { getSanitizeLogs } from "./environment-variables/misc-variables";
 import { appendToDebugLogFile } from "./utils/debug-log-file";
 import type { Message } from "esbuild";
 export const LOGGER_LEVELS = {
@@ -54,6 +55,16 @@ export class Logger {
 	columns = process.stdout.columns;
 
 	debug = (...args: unknown[]) => this.doLog("debug", args);
+	sanitizeDebug = (label: string, ...args: unknown[]) => {
+		if (getSanitizeLogs() === "false") {
+			this.doLog("debug", [label, ...args]);
+		} else {
+			this.doLog("debug", [
+				label,
+				"omitted; set WRANGLER_SANITIZE_DEBUG_LOGS=false to include sanitized data",
+			]);
+		}
+	};
 	info = (...args: unknown[]) => this.doLog("info", args);
 	log = (...args: unknown[]) => this.doLog("log", args);
 	warn = (...args: unknown[]) => this.doLog("warn", args);

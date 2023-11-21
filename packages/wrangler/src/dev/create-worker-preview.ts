@@ -160,7 +160,11 @@ export async function createPreviewSession(
 
 	const switchedExchangeUrl = switchHost(exchange_url, ctx.host).toString();
 
-	logger.debug(`-- START EXCHANGE API REQUEST: GET ${switchedExchangeUrl}`);
+	logger.sanitizeDebug(
+		"-- START EXCHANGE API REQUEST:",
+		` GET ${switchedExchangeUrl}`
+	);
+
 	logger.debug("-- END EXCHANGE API REQUEST");
 	const exchangeResponse = await fetch(switchedExchangeUrl, {
 		signal: abortSignal,
@@ -172,7 +176,8 @@ export async function createPreviewSession(
 		exchangeResponse.status
 	);
 	logger.debug("HEADERS:", JSON.stringify(exchangeResponse.headers, null, 2));
-	logger.debug("RESPONSE:", bodyText);
+	logger.sanitizeDebug("RESPONSE:", bodyText);
+
 	logger.debug("-- END EXCHANGE API RESPONSE");
 
 	const { inspector_websocket, prewarm, token } = parseJSON<{

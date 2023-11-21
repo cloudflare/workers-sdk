@@ -2,7 +2,6 @@ import assert from "node:assert";
 import { fetch, File, Headers } from "undici";
 import { Response } from "undici";
 import { version as wranglerVersion } from "../../package.json";
-import { getEnvironmentVariableFactory } from "../environment-variables/factory";
 import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import { ParseError, parseJSON } from "../parse";
@@ -10,14 +9,6 @@ import { loginOrRefreshIfRequired, requireApiToken } from "../user";
 import type { ApiCredentials } from "../user";
 import type { URLSearchParams } from "node:url";
 import type { RequestInit, HeadersInit } from "undici";
-
-// Should we sanitize debug logs? By default we do, since debug logs could be added to GitHub issues and shouldn't include sensitive information
-const sanitizeLogs = getEnvironmentVariableFactory({
-	variableName: "WRANGLER_SANITIZE_DEBUG_LOGS",
-	defaultValue() {
-		return "true";
-	},
-});
 
 /*
  * performApiFetch does everything required to make a CF API request,
@@ -47,11 +38,9 @@ export async function performApiFetch(
 	);
 	const logHeaders = cloneHeaders(headers);
 	delete logHeaders["Authorization"];
-	logger.debug("HEADERS:", JSON.stringify(logHeaders, null, 2));
-	logger.debug(
-		"INIT:",
-		JSON.stringify({ ...init, headers: logHeaders }, null, 2)
-	);
+	logger.sanitizeDebug("HEADERS:", JSON.stringify(logHeaders, null, 2));
+
+	logger.sanitizeDebug("INIT:", JSON.stringify({ ...init }, null, 2));
 	logger.debug("-- END CF API REQUEST");
 	return await fetch(`${getCloudflareApiBaseUrl()}${resource}${queryString}`, {
 		method,
@@ -92,14 +81,7 @@ export async function fetchInternal<ResponseType>(
 	const logHeaders = cloneHeaders(response.headers);
 	delete logHeaders["Authorization"];
 	logger.debug("HEADERS:", JSON.stringify(logHeaders, null, 2));
-	if (sanitizeLogs() === "false") {
-		logger.debug("RESPONSE:", jsonText);
-	} else {
-		logger.debug(
-			"RESPONSE: ",
-			"ommitted; set WRANGLER_SANITIZE_DEBUG_LOGS=false to include API response bodies"
-		);
-	}
+	logger.sanitizeDebug("RESPONSE:", jsonText);
 	logger.debug("-- END CF API RESPONSE");
 
 	// HTTP 204 and HTTP 205 responses do not return a body. We need to special-case this
