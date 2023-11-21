@@ -221,13 +221,18 @@ export default defineConfig({
 
 If you need to test the interaction of Wrangler with a real Cloudflare account, you can add an E2E test within the `packages/wrangler/e2e` folder. This lets you add a test for functionality that requires real credentials (i.e. testing whether a worker deployed from Wrangler can be accessed over the internet).
 
-When you open a PR to the `workers-sdk` repo, you should expect several checks to run in CI. For most PRs (except for those which trigger the **C3 E2E (Quarantine)** Action), every check should pass (although some will be skipped). See below for a list of this repo's Actions that run on PRs, and when you should expect to see them run (✔️ means that the check should always pass or be skipped, ⚠️ means that the check is expected to sometimes fail):
+When you open a PR to the `workers-sdk` repo, you should expect several checks to run in CI. For most PRs (except for those which trigger the **C3 E2E (Quarantine)** Action), every check should pass (although some will be skipped). 
+
+See below for a summary of this repo's Actions, including for each:
+1. expected return status (✔️ means that the check should always pass or be skipped, ⚠️ means that the check is expected to sometimes fail)
+2. when the action is run
+3. intended purpose
 
 - **E2E tests ✔️**
   This runs on the `changeset-release/main` branch (i.e. on every release PR), and on any PRs with the `e2e` label applied. It runs the E2E tests for Wrangler. If you're making a change that feels particularly risky, make sure you add the `e2e` label to get early warning of E2E test failures.
 
 - **Pull Request ✔️**
-  As the name suggested, this contains checks that run on every PR, including fixture tests, Wrangler unit tests, C3 unit tests, Miniflare unit tests, and ESLint + Prettier checks.
+  As the name suggests, this contains checks that run on every PR, including fixture tests, Wrangler unit tests, C3 unit tests, Miniflare unit tests, and ESLint + Prettier checks.
 
 - **Deploy all Pages sites ✔️**
   This runs on `main` (where it deploys production versions of `wrangler-devtools`, `quick-edit`, and `workers-playground`). It's usually skipped on PRs, but if you apply the label `preview:wrangler-devtools`, `preview:quick-edit`, or `preview:workers-playground` it will deploy a branch preview of the matching package.
