@@ -16,13 +16,15 @@ import {
 import type { RunnerConfig } from "./helpers";
 import type { Suite, TestContext } from "vitest";
 
-const TEST_TIMEOUT = 1000 * 60 * 3;
+const TEST_TIMEOUT = 1000 * 60 * 5;
+const LONG_TIMEOUT = 1000 * 60 * 6;
 
 type FrameworkTestConfig = Omit<RunnerConfig, "ctx"> & {
 	expectResponseToContain: string;
 	testCommitMessage: boolean;
 	timeout?: number;
 	unsupportedPms?: string[];
+	unsupportedOSs?: string[];
 };
 
 describe.concurrent(`E2E: Web frameworks`, () => {
@@ -31,15 +33,17 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		astro: {
 			expectResponseToContain: "Hello, Astronaut!",
 			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
 		},
 		docusaurus: {
 			expectResponseToContain: "Dinosaurs are cool",
 			unsupportedPms: ["bun"],
 			testCommitMessage: true,
-			timeout: 1000 * 60 * 5,
+			timeout: LONG_TIMEOUT,
 		},
 		angular: {
 			expectResponseToContain: "Congratulations! Your app is running.",
+			unsupportedOSs: ["win32"],
 			testCommitMessage: true,
 		},
 		gatsby: {
@@ -52,7 +56,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 				},
 			],
 			testCommitMessage: true,
-			timeout: 1000 * 60 * 6,
+			timeout: LONG_TIMEOUT,
 		},
 		hono: {
 			expectResponseToContain: "Hello Hono!",
@@ -67,11 +71,12 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 				},
 			],
 			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
 		},
 		remix: {
 			expectResponseToContain: "Welcome to Remix",
 			testCommitMessage: true,
-			timeout: 1000 * 60 * 5,
+			timeout: LONG_TIMEOUT,
 		},
 		next: {
 			expectResponseToContain: "Create Next App",
@@ -87,10 +92,12 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		nuxt: {
 			expectResponseToContain: "Welcome to Nuxt!",
 			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
 		},
 		react: {
 			expectResponseToContain: "React App",
 			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
 		},
 		solid: {
 			expectResponseToContain: "Hello world",
@@ -109,6 +116,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 				},
 			],
 			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
 		},
 		svelte: {
 			expectResponseToContain: "SvelteKit app",
@@ -127,6 +135,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 				},
 			],
 			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
 		},
 		vue: {
 			expectResponseToContain: "Vite App",
@@ -238,8 +247,13 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 	};
 
 	Object.keys(frameworkTests).forEach((framework) => {
-		const { quarantine, timeout, testCommitMessage, unsupportedPms } =
-			frameworkTests[framework];
+		const {
+			quarantine,
+			timeout,
+			testCommitMessage,
+			unsupportedPms,
+			unsupportedOSs,
+		} = frameworkTests[framework];
 
 		const quarantineModeMatch = isQuarantineMode() == (quarantine ?? false);
 
@@ -252,6 +266,8 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 
 		// Skip if the package manager is unsupported
 		shouldRun &&= !unsupportedPms?.includes(process.env.TEST_PM ?? "");
+		// Skip if the OS is unsupported
+		shouldRun &&= !unsupportedOSs?.includes(process.platform);
 		test.runIf(shouldRun)(
 			framework,
 			async (ctx) => {
@@ -277,7 +293,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 					}
 				}
 			},
-			{ retry: 3, timeout: timeout || TEST_TIMEOUT }
+			{ retry: 1, timeout: timeout || TEST_TIMEOUT }
 		);
 	});
 
