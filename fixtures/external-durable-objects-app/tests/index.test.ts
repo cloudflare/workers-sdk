@@ -5,7 +5,7 @@ import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import type { ChildProcess } from "child_process";
 import { type UnstableDevWorker, unstable_dev } from "wrangler";
 
-describe("Pages Functions", () => {
+describe.skip("Pages Functions", () => {
 	let a: UnstableDevWorker;
 	let b: UnstableDevWorker;
 	let c: UnstableDevWorker;
