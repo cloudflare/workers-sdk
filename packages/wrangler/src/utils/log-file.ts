@@ -2,17 +2,16 @@ import { appendFile, mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { Mutex } from "miniflare";
 import onExit from "signal-exit";
-import { findWranglerToml } from "../config";
 import { getEnvironmentVariableFactory } from "../environment-variables/factory";
+import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { logger, type LoggerLevel } from "../logger";
 
 const getDebugFileDir = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_LOG_PATH",
 	defaultValue() {
-		const configPath = findWranglerToml();
-		const configDir = configPath ? path.dirname(configPath) : process.cwd();
+		const gobalWranglerConfigDir = getGlobalWranglerConfigPath();
 
-		return path.join(configDir, ".wrangler", "logs");
+		return path.join(gobalWranglerConfigDir, "logs");
 	},
 });
 
@@ -45,6 +44,7 @@ const mutex = new Mutex();
 
 let hasLoggedLocation = false;
 let hasLoggedError = false;
+let hasSeenErrorMessage = false;
 
 /**
  * Appends a message to the log file after waiting for pending writes to complete
@@ -61,11 +61,21 @@ ${message}
 
 	if (!hasLoggedLocation) {
 		hasLoggedLocation = true;
-		const relativeFilepath = path.relative(process.cwd(), debugLogFilepath);
-		logger.debug(`🐛 Writing logs to "${relativeFilepath}"`); // use logger.debug here to not show this message by default -- since logging to a file is no longer opt-in
+		logger.debug(`🪵  Writing logs to "${debugLogFilepath}"`); // use logger.debug here to not show this message by default -- since logging to a file is no longer opt-in
 		onExit(() => {
-			console.info(`🐛 Logs were written to "${relativeFilepath}"`);
+			// only print the log file location if the log file contains an error message
+			// TODO(consider): recommend opening an issue with the contents of this file?
+			if (hasSeenErrorMessage) {
+				// use console.*warn* here so not to pollute stdout -- some commands print json to stdout
+				// use *console*.warn here so not to have include the *very* visible bright-yellow [WARNING] indicator
+				console.warn(`🪵  Logs were written to "${debugLogFilepath}"`);
+			}
 		});
+	}
+
+	if (!hasSeenErrorMessage) {
+		// TODO(consider): adding `|| messageLevel === "warn"`
+		hasSeenErrorMessage = messageLevel === "error";
 	}
 
 	await mutex.runWith(async () => {
@@ -75,8 +85,8 @@ ${message}
 		} catch (err) {
 			if (!hasLoggedError) {
 				hasLoggedError = true;
-				console.error(`Failed to write to log file`, err);
-				console.error(`Would have written:`, entry);
+				logger.error(`Failed to write to log file`, err);
+				logger.error(`Would have written:`, entry);
 			}
 		}
 	});
