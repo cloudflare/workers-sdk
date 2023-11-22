@@ -63,7 +63,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 				promptHandlers: [
 					{
 						matcher: /What type of application do you want to create/,
-						input: [keys.down, keys.enter],
+						input: [keys.enter],
 					},
 					{
 						matcher: /Do you want to use TypeScript/,
@@ -130,7 +130,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())(
 				promptHandlers: [
 					{
 						matcher: /What type of application do you want to create/,
-						input: [keys.down, keys.enter],
+						input: [keys.enter],
 					},
 					{
 						matcher: /Do you want to use git for version control/,
