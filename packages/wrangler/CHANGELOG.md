@@ -1,5 +1,17 @@
 # wrangler
 
+## 3.17.1
+
+### Patch Changes
+
+- [#4474](https://github.com/cloudflare/workers-sdk/pull/4474) [`382ef8f5`](https://github.com/cloudflare/workers-sdk/commit/382ef8f580ab755d2706692e865b619953ef5671) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: open browser to correct url pressing `b` in `--remote` mode
+
+  This change ensures Wrangler doesn't try to open `http://*` when `*` is used as the dev server's hostname. Instead, Wrangler will now open `http://127.0.0.1`.
+
+* [#4488](https://github.com/cloudflare/workers-sdk/pull/4488) [`3bd57238`](https://github.com/cloudflare/workers-sdk/commit/3bd5723852c8340d04930e056ef1e8f97dc316ae) Thanks [@RamIdeas](https://github.com/RamIdeas)! - Changes the default directory for log files to workaround frameworks that are watching the entire `.wrangler` directory in the project root for changes
+
+  Also includes a fix for commands with `--json` where the log file location message would cause stdout to not be valid JSON. That message now goes to stderr.
+
 ## 3.17.0
 
 ### Minor Changes
