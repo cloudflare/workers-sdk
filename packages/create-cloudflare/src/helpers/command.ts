@@ -298,15 +298,7 @@ const needsPackageManagerReset = (ctx: PagesGeneratorContext) => {
 export const npmInstall = async () => {
 	const { npm } = detectPackageManager();
 
-	const installCmd = [npm, "install"];
-
-	if (npm === "yarn" && process.env.VITEST) {
-		// Yarn can corrupt the cache if more than one instance is running at once,
-		// which is what we do in our tests.
-		installCmd.push("--mutex", "network");
-	}
-
-	await runCommand(installCmd, {
+	await runCommand(`${npm} install`, {
 		silent: true,
 		startText: "Installing dependencies",
 		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
