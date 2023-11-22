@@ -266,6 +266,8 @@ export class InspectorProxyWorker implements DurableObject {
 
 		this.sendDebugLog("reconnectRuntimeWebSocket");
 
+		this.websockets.runtime?.close();
+		this.websockets.runtime = undefined;
 		this.runtimeAbortController.abort();
 		this.runtimeAbortController = new AbortController();
 		this.websockets.runtimeDeferred = createDeferred<WebSocket>(
@@ -302,7 +304,6 @@ export class InspectorProxyWorker implements DurableObject {
 			return;
 		}
 
-		this.websockets.runtime?.close();
 		this.websockets.runtime = runtime;
 
 		runtime.addEventListener("message", this.handleRuntimeIncomingMessage);
@@ -380,10 +381,20 @@ export class InspectorProxyWorker implements DurableObject {
 	}
 
 	sendRuntimeDiscardConsoleEntries() {
-		this.sendRuntimeMessage({
-			method: "Runtime.discardConsoleEntries",
-			id: this.nextCounter(),
-		});
+		// by default, sendRuntimeMessage waits for the runtime websocket to connect
+		// but we only want to send this message now or never
+		// if we schedule it to send later (like waiting for the websocket, by default)
+		// then we risk clearing logs that have occured since we scheduled it too
+		// which is worse than leaving logs from the previous version on screen
+		if (this.websockets.runtime) {
+			this.sendRuntimeMessage(
+				{
+					method: "Runtime.discardConsoleEntries",
+					id: this.nextCounter(),
+				},
+				this.websockets.runtime
+			);
+		}
 	}
 
 	async sendRuntimeMessage(
