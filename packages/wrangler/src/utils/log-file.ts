@@ -61,13 +61,12 @@ ${message}
 
 	if (!hasLoggedLocation) {
 		hasLoggedLocation = true;
-		const relativeFilepath = path.relative(process.cwd(), debugLogFilepath);
-		logger.debug(`🪵 Writing logs to "${relativeFilepath}"`); // use logger.debug here to not show this message by default -- since logging to a file is no longer opt-in
+		logger.debug(`🪵  Writing logs to "${debugLogFilepath}"`); // use logger.debug here to not show this message by default -- since logging to a file is no longer opt-in
 		onExit(() => {
 			// only print the log file location if the log file contains an error message
 			// TODO(consider): recommend opening an issue with the contents of this file?
 			if (hasSeenErrorMessage) {
-				logger.warn(`🪵 Logs were written to "${relativeFilepath}"`); // use logger.warn here so not to pollute stdout -- some commands print json to stdout
+				logger.warn(`🪵  Logs were written to "${debugLogFilepath}"`); // use logger.warn here so not to pollute stdout -- some commands print json to stdout
 			}
 		});
 	}
