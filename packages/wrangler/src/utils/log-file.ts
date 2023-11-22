@@ -66,7 +66,9 @@ ${message}
 			// only print the log file location if the log file contains an error message
 			// TODO(consider): recommend opening an issue with the contents of this file?
 			if (hasSeenErrorMessage) {
-				logger.warn(`🪵  Logs were written to "${debugLogFilepath}"`); // use logger.warn here so not to pollute stdout -- some commands print json to stdout
+				// use console.*warn* here so not to pollute stdout -- some commands print json to stdout
+				// use *console*.warn here so not to have include the *very* visible bright-yellow [WARNING] indicator
+				console.warn(`🪵  Logs were written to "${debugLogFilepath}"`);
 			}
 		});
 	}
