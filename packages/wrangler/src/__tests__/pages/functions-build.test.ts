@@ -437,7 +437,7 @@ export default {
 			'The package "node:async_hooks" wasn\'t found on the file system but is built into node.'
 		);
 		expect(std.err).toContain(
-			'Add the "nodejs_compat" compatibility flag to your Pages project to enable Node.js compatibility.'
+			'Add the "nodejs_compat" compatibility flag to your Pages project and make sure to prefix the module name with "node:" to enable Node.js compatibility.'
 		);
 	});
 
