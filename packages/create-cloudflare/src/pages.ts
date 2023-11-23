@@ -23,6 +23,7 @@ import {
 	offerGit,
 	offerToDeploy,
 	printSummary,
+	quoteShellArgs,
 	runDeploy,
 	setupProjectDirectory,
 } from "./common";
@@ -37,8 +38,8 @@ const VERIFY_PROJECT_RETRIES = 3;
 const { npx } = detectPackageManager();
 
 const defaultFrameworkConfig = {
-	deployCommand: "pages:deploy",
-	devCommand: "pages:dev",
+	deployCommand: ["pages:deploy"],
+	devCommand: ["pages:dev"],
 };
 
 export const runPagesGenerator = async (args: C3Args) => {
@@ -213,7 +214,7 @@ const createProject = async (ctx: PagesGeneratorContext) => {
 					env: { CLOUDFLARE_ACCOUNT_ID },
 					startText: "Creating Pages project",
 					doneText: `${brandColor("created")} ${dim(
-						`via \`${cmd.join(" ").trim()}\``
+						`via \`${quoteShellArgs(cmd)}\``
 					)}`,
 				})
 		);

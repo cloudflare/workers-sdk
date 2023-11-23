@@ -5,6 +5,7 @@ import { brandColor, dim } from "@cloudflare/cli/colors";
 import { isInteractive, spinner } from "@cloudflare/cli/interactive";
 import { spawn } from "cross-spawn";
 import { getFrameworkCli } from "frameworks/index";
+import { quoteShellArgs } from "../common";
 import { detectPackageManager } from "./packages";
 import type { PagesGeneratorContext } from "types";
 
@@ -195,7 +196,7 @@ export const runFrameworkGenerator = async (
 
 	endSection(
 		`Continue with ${ctx.framework?.config.displayName}`,
-		`via \`${cmd.join(" ").trim()}\``
+		`via \`${quoteShellArgs(cmd)}\``
 	);
 
 	if (process.env.VITEST) {

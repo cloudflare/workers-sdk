@@ -29,6 +29,7 @@
 		"pgrep",
 		"PKCE",
 		"Positionals",
+		"qwik",
 		"reinitialise",
 		"scandir",
 		"selfsigned",
@@ -46,7 +47,6 @@
 		"websockets",
 		"workerd",
 		"xxhash",
-		"workerd",
 		"zjcompt"
 	],
 	"cSpell.ignoreWords": [

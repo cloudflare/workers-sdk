@@ -16,8 +16,8 @@ const config: FrameworkConfig = {
 	generate,
 	displayName: "Hono",
 	getPackageScripts: async () => ({}),
-	deployCommand: "deploy",
-	devCommand: "dev",
+	devCommand: ["dev"],
+	deployCommand: ["deploy"],
 	type: "workers",
 };
 export default config;

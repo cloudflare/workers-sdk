@@ -21,7 +21,7 @@ const config: FrameworkConfig = {
 	getPackageScripts: async () => ({
 		"pages:deploy": `${npm} run build && wrangler pages deploy ./public`,
 	}),
-	devCommand: "dev",
+	devCommand: ["dev"],
 	testFlags: ["--typescript", "--no-install", "--no-git-init"],
 };
 export default config;

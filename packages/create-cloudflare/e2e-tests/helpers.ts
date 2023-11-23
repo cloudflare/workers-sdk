@@ -16,6 +16,7 @@ import { detectPackageManager } from "helpers/packages";
 import { fetch } from "undici";
 import { expect } from "vitest";
 import { version } from "../package.json";
+import { quoteShellArgs } from "../src/common";
 import type { Suite, TestContext } from "vitest";
 
 export const C3_E2E_PREFIX = "c3-e2e-";
@@ -81,7 +82,10 @@ export const runC3 = async ({
 	);
 
 	logStream.write(
-		`Running C3 with command: \`${cmd} ${args.join(" ")}\` (using ${pm})\n\n`
+		`Running C3 with command: \`${quoteShellArgs([
+			cmd,
+			...args,
+		])}\` (using ${pm})\n\n`
 	);
 
 	await new Promise((resolve, rejects) => {

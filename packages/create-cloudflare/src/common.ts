@@ -11,7 +11,7 @@ import {
 	startSection,
 	updateStatus,
 } from "@cloudflare/cli";
-import { brandColor, dim, gray, bgGreen, blue } from "@cloudflare/cli/colors";
+import { bgGreen, blue, brandColor, dim, gray } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { getFrameworkCli } from "frameworks/index";
 import { processArgument } from "helpers/args";
@@ -25,6 +25,7 @@ import {
 } from "helpers/command";
 import { detectPackageManager } from "helpers/packages";
 import { poll } from "helpers/poll";
+import { quote } from "shell-quote";
 import { version as wranglerVersion } from "wrangler/package.json";
 import { version } from "../package.json";
 import type { C3Args, PagesGeneratorContext } from "types";
@@ -137,9 +138,11 @@ export const setupProjectDirectory = (args: C3Args) => {
 export const offerToDeploy = async (ctx: PagesGeneratorContext) => {
 	startSection(`Deploy with Cloudflare`, `Step 3 of 3`);
 
-	const label = `deploy via \`${npm} run ${
-		ctx.framework?.config.deployCommand ?? "deploy"
-	}\``;
+	const label = `deploy via \`${quoteShellArgs([
+		npm,
+		"run",
+		...(ctx.framework?.config.deployCommand ?? ["deploy"]),
+	])}\``;
 
 	ctx.args.deploy = await processArgument(ctx.args, "deploy", {
 		type: "confirm",
@@ -166,7 +169,7 @@ export const runDeploy = async (ctx: PagesGeneratorContext) => {
 	const baseDeployCmd = [
 		npm,
 		"run",
-		ctx.framework?.config.deployCommand ?? "deploy",
+		...(ctx.framework?.config.deployCommand ?? ["deploy"]),
 	];
 
 	const insideGitRepo = await isInsideGitRepo(ctx.project.path);
@@ -189,7 +192,7 @@ export const runDeploy = async (ctx: PagesGeneratorContext) => {
 		env: { CLOUDFLARE_ACCOUNT_ID: ctx.account.id, NODE_ENV: "production" },
 		startText: "Deploying your application",
 		doneText: `${brandColor("deployed")} ${dim(
-			`via \`${baseDeployCmd.join(" ")}\``
+			`via \`${quoteShellArgs(baseDeployCmd)}\``
 		)}`,
 	});
 
@@ -255,11 +258,19 @@ export const printSummary = async (ctx: PagesGeneratorContext) => {
 		],
 		[
 			`Run the development server`,
-			`${npm} run ${ctx.framework?.config.devCommand ?? "start"}`,
+			quoteShellArgs([
+				npm,
+				"run",
+				...(ctx.framework?.config.devCommand ?? ["start"]),
+			]),
 		],
 		[
 			`Deploy your application`,
-			`${npm} run ${ctx.framework?.config.deployCommand ?? "deploy"}`,
+			quoteShellArgs([
+				npm,
+				"run",
+				...(ctx.framework?.config.deployCommand ?? ["deploy"]),
+			]),
 		],
 		[
 			`Read the documentation`,
@@ -288,7 +299,11 @@ export const printSummary = async (ctx: PagesGeneratorContext) => {
 			`${bgGreen(" APPLICATION CREATED ")}`,
 			`${dim(`Deploy your application with`)}`,
 			`${blue(
-				`${npm} run ${ctx.framework?.config.deployCommand ?? "deploy"}`
+				quoteShellArgs([
+					npm,
+					"run",
+					...(ctx.framework?.config.deployCommand ?? ["deploy"]),
+				])
 			)}`,
 		].join(" ");
 		logRaw(msg);
@@ -542,4 +557,18 @@ export async function getProductionBranch(cwd: string) {
  */
 function prepareCommitMessage(commitMessage: string): string {
 	return JSON.stringify(commitMessage);
+}
+
+export function quoteShellArgs(args: string[]): string {
+	if (process.platform !== "win32") {
+		return quote(args);
+	} else {
+		// Simple quoting if there is a space (doesn't handle quotes and spaces together)
+		const specialCharsMatcher = /[&<>[\]|{}^=;!'+,`~\s]/;
+		return args
+			.map((arg) =>
+				arg.match(specialCharsMatcher) ? `"${arg.replaceAll(`"`, `""`)}"` : arg
+			)
+			.join(" ");
+	}
 }

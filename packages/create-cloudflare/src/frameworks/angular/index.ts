@@ -33,8 +33,8 @@ const config: FrameworkConfig = {
 		"pages:build": `ng build && ${npm} run process`,
 		deploy: `${npm} run pages:build && wrangler pages deploy dist/cloudflare`,
 	}),
-	deployCommand: "deploy",
-	devCommand: "start",
+	deployCommand: ["deploy"],
+	devCommand: ["start"],
 	testFlags: ["--style", "sass"],
 };
 export default config;
