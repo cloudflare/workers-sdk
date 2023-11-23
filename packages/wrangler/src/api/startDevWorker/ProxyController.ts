@@ -134,7 +134,8 @@ export class ProxyController extends EventEmitter {
 					// if debugging, log requests with specic ProxyWorker prefix
 					logger.loggerLevel === "debug" ? "wrangler-ProxyWorker" : "wrangler",
 			}),
-			handleRuntimeStdio,
+			handleRuntimeStdio: (...args) =>
+				handleRuntimeStdio(...args, "(Inspector)ProxyWorker"),
 		};
 
 		const proxyWorkerOptionsChanged = didMiniflareOptionsChange(

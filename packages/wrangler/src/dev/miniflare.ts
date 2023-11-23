@@ -549,7 +549,8 @@ async function buildMiniflareOptions(
 
 		log,
 		verbose: logger.loggerLevel === "debug",
-		handleRuntimeStdio,
+		handleRuntimeStdio: (...args) =>
+			handleRuntimeStdio(...args, config.name ?? "unknown"),
 
 		...httpsOptions,
 		...persistOptions,
