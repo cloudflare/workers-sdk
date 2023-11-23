@@ -72,9 +72,7 @@ export const runLatest = async () => {
 export const runCli = async (args: Partial<C3Args>) => {
 	printBanner();
 
-	const defaultName = args.existingScript
-		? args.existingScript
-		: C3_DEFAULTS.projectName;
+	const defaultName = args.existingScript || C3_DEFAULTS.projectName;
 
 	const projectName = await processArgument<string>(args, "projectName", {
 		type: "text",
