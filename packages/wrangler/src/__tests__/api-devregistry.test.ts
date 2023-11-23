@@ -13,6 +13,8 @@ describe("multi-worker testing", () => {
 	let childWorker: any;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let parentWorker: any;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const workers: any[] = [];
 
 	beforeAll(async () => {
 		childWorker = await unstable_dev(
@@ -24,6 +26,8 @@ describe("multi-worker testing", () => {
 				},
 			}
 		);
+		workers.push(childWorker);
+
 		parentWorker = await unstable_dev(
 			"src/__tests__/helpers/worker-scripts/parent-worker.js",
 			{
@@ -33,11 +37,13 @@ describe("multi-worker testing", () => {
 				},
 			}
 		);
+		workers.push(parentWorker);
 	});
 
 	afterAll(async () => {
-		await childWorker.stop();
-		await parentWorker.stop();
+		for (const worker of workers) {
+			await worker.stop();
+		}
 	});
 
 	it("parentWorker and childWorker should be added devRegistry", async () => {
@@ -81,13 +87,15 @@ describe("multi-worker testing", () => {
 		(["debug", "info", "log", "warn", "error"] as const).forEach((method) =>
 			jest.spyOn(console, method).mockImplementation((...args: unknown[]) => {
 				logs += `\n${args}`;
+				process.stdout.write(`\n${args}`);
 				// Regexp ignores colour codes
-				if (/\[mf:inf].+GET.+\/.+200.+OK/.test(String(args))) requestResolve();
+				if (/\[wrangler.*:inf].+GET.+\/.+200.+OK/.test(String(args)))
+					requestResolve();
 			})
 		);
 
 		async function startWorker() {
-			return await unstable_dev(
+			const worker = await unstable_dev(
 				"src/__tests__/helpers/worker-scripts/hello-world-worker.js",
 				{
 					// We need the wrangler.toml config to specify a Worker name
@@ -100,29 +108,27 @@ describe("multi-worker testing", () => {
 					},
 				}
 			);
+
+			workers.push(worker);
+
+			return worker;
 		}
 
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		let worker: any;
-		try {
-			worker = await startWorker();
+		let worker = await startWorker();
 
-			// Stop the worker and start it again
-			await worker.stop();
-			await new Promise((r) => setTimeout(r, 2000));
+		// Stop the worker and start it again
+		await worker.stop();
+		await new Promise((r) => setTimeout(r, 2000));
 
-			worker = await startWorker();
+		worker = await startWorker();
 
-			const resp = await worker.fetch();
-			expect(resp).not.toBe(undefined);
+		const resp = await worker.fetch();
+		expect(resp).not.toBe(undefined);
 
-			expect(logs).not.toMatch(
-				/Failed to register worker in local service registry/
-			);
+		await requestPromise;
 
-			await requestPromise;
-		} finally {
-			await worker?.stop();
-		}
+		expect(logs).not.toMatch(
+			/Failed to register worker in local service registry/
+		);
 	}, 10000);
 });
