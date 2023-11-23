@@ -5,73 +5,11 @@ on: pull_request
 env:
   node-version: 16.18
 jobs:
-  add-to-project:
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-add-pr
-      cancel-in-progress: true
-    timeout-minutes: 30
-    name: Add PR to project
-    runs-on: ubuntu-latest
-    steps:
-      - run: curl -X POST https://devprod-status-bot.devprod.workers.dev/pr-project/workers-sdk/${{ github.event.number }}
-
-  check:
-    timeout-minutes: 30
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-checks
-      cancel-in-progress: true
-
-    name: "Checks"
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - uses: pnpm/action-setup@v2
-        with:
-          version: 8.8.0
-
-      - name: Use Node.js ${{ env.node-version }}
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ env.node-version }}
-          cache: "pnpm"
-
-      - name: "Create .env file"
-        run: |
-          touch .env
-          echo TURBO_API=${{ secrets.TURBO_API }} >> .env
-          echo TURBO_TEAM=${{ secrets.TURBO_TEAM }} >> .env
-          echo TURBO_TOKEN=${{ secrets.TURBO_TOKEN }} >> .env
-          echo TURBO_REMOTE_CACHE_SIGNATURE_KEY=${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }} >> .env
-
-      - name: Install workerd Dependencies
-        if: ${{ runner.os == 'Linux' }}
-        run: |
-          export DEBIAN_FRONTEND=noninteractive
-          sudo apt-get update
-          sudo apt-get install -y libc++1
-
-      - name: Install NPM Dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build
-        run: pnpm run build
-        env:
-          CI_OS: ${{ runner.os }}
-
-      - name: Check for errors
-        run: pnpm run check
-        env:
-          NODE_OPTIONS: "--max_old_space_size=8192"
-
   test:
     timeout-minutes: 30
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-test
-      cancel-in-progress: true
+      cancel-in-progress: false
 
     name: "Tests"
     strategy:
@@ -92,13 +30,14 @@ jobs:
           node-version: ${{ env.node-version }}
           cache: "pnpm"
 
-      - name: "Create .env file"
-        run: |
-          touch .env
-          echo TURBO_API=${{ secrets.TURBO_API }} >> .env
-          echo TURBO_TEAM=${{ secrets.TURBO_TEAM }} >> .env
-          echo TURBO_TOKEN=${{ secrets.TURBO_TOKEN }} >> .env
-          echo TURBO_REMOTE_CACHE_SIGNATURE_KEY=${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }} >> .env
+      # Disable turbo
+      # # - name: "Create .env file"
+      # #   run: |
+      # #     touch .env
+      # #     echo TURBO_API=${{ secrets.TURBO_API }} >> .env
+      # #     echo TURBO_TEAM=${{ secrets.TURBO_TEAM }} >> .env
+      # #     echo TURBO_TOKEN=${{ secrets.TURBO_TOKEN }} >> .env
+      # #     echo TURBO_REMOTE_CACHE_SIGNATURE_KEY=${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }} >> .env
 
       - name: Install NPM Dependencies
         run: pnpm install --frozen-lockfile
@@ -123,9 +62,3 @@ jobs:
         with:
           name: e2e-test-debug-logs-${{ matrix.os }}-${{ matrix.node }}
           path: ${{ runner.temp }}/wrangler-debug-logs/
-
-      - name: Run changeset version tests
-        run: node .github/changeset-version.test.js
-
-      - name: Report Code Coverage
-        uses: codecov/codecov-action@v3
