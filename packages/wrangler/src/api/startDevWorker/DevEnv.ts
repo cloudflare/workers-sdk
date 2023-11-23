@@ -119,6 +119,10 @@ export class DevEnv extends EventEmitter {
 
 			// console.log({ port, inspectorPort, ev });
 			if (!randomPorts.includes(port) || !randomPorts.includes(inspectorPort)) {
+				logger.info(
+					`Trying to restart the runtime on random ports because ${port} or ${inspectorPort} was already in use`
+				);
+
 				// emit the event here while the ConfigController is unimplemented
 				// this will cause the ProxyController to try reinstantiating the ProxyWorker(s)
 				// TODO: change this to `this.config.updateOptions({ dev: { server: { port: 0 }, inspector: { port: 0 } } });` when the ConfigController is implemented
@@ -133,6 +137,10 @@ export class DevEnv extends EventEmitter {
 						},
 					},
 				});
+			} else {
+				logger.info(
+					`Will not try restart the runtime on random ports because ${port} and ${inspectorPort} are already random`
+				);
 			}
 		} else if (
 			ev.source === "ProxyController" &&
