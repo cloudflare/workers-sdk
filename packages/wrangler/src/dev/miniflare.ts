@@ -399,7 +399,11 @@ function buildSitesOptions({ assetPaths }: ConfigBundle) {
 	}
 }
 
-export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
+export function handleRuntimeStdio(
+	stdout: Readable,
+	stderr: Readable,
+	name: string
+) {
 	// ASSUMPTION: each chunk is a whole message from workerd
 	// This may not hold across OSes/architectures, but it seems to work on macOS M-line
 	// I'm going with this simple approach to avoid complicating this too early
@@ -440,17 +444,17 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 			// anything else not handled above is considered ignorable
 			// so send it to the debug logs which are discarded unless
 			// the user explicitly sets a logLevel indicating they care
-			logger.debug(chunk);
+			logger.debug(`[workerd:${name}]`, chunk);
 		}
 
 		// known case: warnings are not info, log them as such
 		else if (classifiers.isWarning(chunk)) {
-			logger.warn(chunk);
+			logger.warn(`[workerd:${name}]`, chunk);
 		}
 
 		// anything not exlicitly handled above should be logged as info (via stdout)
 		else {
-			logger.info(chunk);
+			logger.info(`[workerd:${name}]`, chunk);
 		}
 	});
 
@@ -468,6 +472,7 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 				)?.[1];
 
 				logger.error(
+					`[workerd:${name}]`,
 					`Address already in use (${address}). Please check that you are not already running a server on this address or specify a different port with --port.`
 				);
 
@@ -479,17 +484,17 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 			// anything else not handled above is considered ignorable
 			// so send it to the debug logs which are discarded unless
 			// the user explicitly sets a logLevel indicating they care
-			logger.debug(chunk);
+			logger.debug(`[workerd:${name}]`, chunk);
 		}
 
 		// known case: warnings are not errors, log them as such
 		else if (classifiers.isWarning(chunk)) {
-			logger.warn(chunk);
+			logger.warn(`[workerd:${name}]`, chunk);
 		}
 
 		// anything not exlicitly handled above should be logged as an error (via stderr)
 		else {
-			logger.error(chunk);
+			logger.error(`[workerd:${name}]`, chunk);
 		}
 	});
 }
