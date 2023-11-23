@@ -14,6 +14,7 @@ import {
 	requireApiToken,
 	saveAccountToCache,
 } from "../user";
+import { getAccessToken } from "../user/access";
 import {
 	createPreviewSession,
 	createWorkerPreview,
@@ -306,6 +307,8 @@ export function useWorker(
 				});
 			}
 			*/
+			const accessToken = await getAccessToken(workerPreviewToken.host);
+
 			const proxyData: ProxyData = {
 				userWorkerUrl: {
 					protocol: "https:",
@@ -318,9 +321,13 @@ export function useWorker(
 					port: workerPreviewToken.inspectorUrl.port.toString(),
 					pathname: workerPreviewToken.inspectorUrl.pathname,
 				},
-				userWorkerInnerUrlOverrides: {}, // we did not permit overriding request.url in remote mode
-				headers: { "cf-workers-preview-token": workerPreviewToken.value },
+				userWorkerInnerUrlOverrides: {}, // there is no analagous prop for this option because we did not permit overriding request.url in remote mode
+				headers: {
+					"cf-workers-preview-token": workerPreviewToken.value,
+					Cookie: accessToken && `CF_Authorization=${accessToken}`,
+				},
 				liveReload: false, // liveReload currently disabled in remote-mode, but will be supported with startDevWorker
+				proxyLogsToController: true,
 			};
 
 			onReady?.(props.host || "localhost", props.port, proxyData);
@@ -417,7 +424,9 @@ export async function startRemoteServer(props: RemoteProps) {
 		localProtocol: props.localProtocol,
 		localPort: props.port,
 		ip: props.ip,
-		onReady: (ip, port) => {
+		onReady: async (ip, port) => {
+			const accessToken = await getAccessToken(previewToken.host);
+
 			const proxyData: ProxyData = {
 				userWorkerUrl: {
 					protocol: "https:",
@@ -430,9 +439,13 @@ export async function startRemoteServer(props: RemoteProps) {
 					port: previewToken.inspectorUrl.port.toString(),
 					pathname: previewToken.inspectorUrl.pathname,
 				},
-				userWorkerInnerUrlOverrides: {}, // we did not permit overriding request.url in remote mode
-				headers: { "cf-workers-preview-token": previewToken.value },
+				userWorkerInnerUrlOverrides: {}, // there is no analagous prop for this option because we did not permit overriding request.url in remote mode
+				headers: {
+					"cf-workers-preview-token": previewToken.value,
+					Cookie: accessToken && `CF_Authorization=${accessToken}`,
+				},
 				liveReload: false, // liveReload currently disabled in remote-mode, but will be supported with startDevWorker
+				proxyLogsToController: true,
 			};
 
 			props.onReady?.(ip, port, proxyData);

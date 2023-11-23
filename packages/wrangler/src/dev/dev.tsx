@@ -277,6 +277,10 @@ function DevSession(props: DevSessionProps) {
 				inspector: {
 					port: props.inspectorPort,
 				},
+				urlOverrides: {
+					secure: props.localProtocol === "https",
+					hostname: props.localUpstream,
+				},
 				liveReload: props.liveReload,
 			},
 		}),
@@ -285,6 +289,7 @@ function DevSession(props: DevSessionProps) {
 			props.initialIp,
 			props.initialPort,
 			props.localProtocol,
+			props.localUpstream,
 			props.inspectorPort,
 			props.liveReload,
 		]
@@ -379,6 +384,13 @@ function DevSession(props: DevSessionProps) {
 		finalPort,
 		proxyData
 	) => {
+		// at this point (in the layers of onReady callbacks), we have devEnv in scope
+		// so rewrite the onReady params to be the ip/port of the ProxyWorker instead of the UserWorker
+		const { proxyWorker } = await devEnv.proxy.ready.promise;
+		const url = await proxyWorker.ready;
+		finalIp = url.hostname;
+		finalPort = parseInt(url.port);
+
 		if (process.send) {
 			process.send(
 				JSON.stringify({
@@ -399,13 +411,6 @@ function DevSession(props: DevSessionProps) {
 		}
 
 		if (props.onReady) {
-			// at this point (in the layers of onReady callbacks), we have devEnv in scope
-			// so rewrite the onReady params to be the ip/port of the ProxyWorker instead of the UserWorker
-			const { proxyWorker } = await devEnv.proxy.ready.promise;
-			const url = await proxyWorker.ready;
-			finalIp = url.hostname;
-			finalPort = parseInt(url.port);
-
 			props.onReady(finalIp, finalPort, proxyData);
 		}
 	};
@@ -421,7 +426,7 @@ function DevSession(props: DevSessionProps) {
 			bindings={props.bindings}
 			workerDefinitions={workerDefinitions}
 			assetPaths={props.assetPaths}
-			initialPort={0} // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
+			initialPort={undefined} // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
 			initialIp={"127.0.0.1"} // hard-code for userworker, DevEnv-ProxyWorker now uses this prop value
 			rules={props.rules}
 			inspectorPort={props.inspectorPort}

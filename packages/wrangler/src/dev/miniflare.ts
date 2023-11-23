@@ -82,6 +82,11 @@ export default {
 }
 `;
 
+type SpecificPort = Exclude<number, 0>;
+type RandomConsistentPort = 0; // random port, but consistent across reloads
+type RandomDifferentPort = undefined; // random port, but different across reloads
+type Port = SpecificPort | RandomConsistentPort | RandomDifferentPort;
+
 export interface ConfigBundle {
 	// TODO(soon): maybe rename some of these options, check proposed API Google Docs
 	name: string | undefined;
@@ -93,7 +98,7 @@ export interface ConfigBundle {
 	bindings: CfWorkerInit["bindings"];
 	workerDefinitions: WorkerRegistry | undefined;
 	assetPaths: AssetPaths | undefined;
-	initialPort: number;
+	initialPort: Port;
 	initialIp: string;
 	rules: Config["rules"];
 	inspectorPort: number;
@@ -110,10 +115,10 @@ export interface ConfigBundle {
 export class WranglerLog extends Log {
 	#warnedCompatibilityDateFallback = false;
 
-	info(message: string) {
+	log(message: string) {
 		// Hide request logs for external Durable Objects proxy worker
 		if (message.includes(EXTERNAL_DURABLE_OBJECTS_WORKER_NAME)) return;
-		super.info(message);
+		super.log(message);
 	}
 
 	warn(message: string) {
@@ -133,16 +138,6 @@ export class WranglerLog extends Log {
 			});
 		}
 		super.warn(message);
-	}
-
-	// TODO: remove this override when miniflare is fixed https://jira.cfdata.org/browse/DEVX-983
-	error(message: Error) {
-		try {
-			super.error(message);
-		} catch {
-			// miniflare shouldn't throw in logger.error
-			// for now, ignore errors from the logger
-		}
 	}
 }
 
@@ -404,7 +399,7 @@ function buildSitesOptions({ assetPaths }: ConfigBundle) {
 	}
 }
 
-function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
+export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 	// ASSUMPTION: each chunk is a whole message from workerd
 	// This may not hold across OSes/architectures, but it seems to work on macOS M-line
 	// I'm going with this simple approach to avoid complicating this too early
@@ -415,13 +410,19 @@ function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 			const containsLlvmSymbolizerWarning = chunk.includes(
 				"Not symbolizing stack traces because $LLVM_SYMBOLIZER is not set"
 			);
-			const containsHexStack = /stack:( [a-f\d]{9}){3,}/.test(chunk);
+			// Matches stack traces from workerd
+			//  - on unix: groups of 9 hex digits separated by spaces
+			//  - on windows: groups of 12 hex digits, or a single digit 0, separated by spaces
+			const containsHexStack = /stack:( (0|[a-f\d]{4,})){3,}/.test(chunk);
 
 			return containsLlvmSymbolizerWarning || containsHexStack;
 		},
 		// Is this chunk an Address In Use error?
 		isAddressInUse(chunk: string) {
 			return chunk.includes("Address already in use; toString() = ");
+		},
+		isWarning(chunk: string) {
+			return /\.c\+\+:\d+: warning:/.test(chunk);
 		},
 	};
 
@@ -440,6 +441,11 @@ function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 			// so send it to the debug logs which are discarded unless
 			// the user explicitly sets a logLevel indicating they care
 			logger.debug(chunk);
+		}
+
+		// known case: warnings are not info, log them as such
+		else if (classifiers.isWarning(chunk)) {
+			logger.warn(chunk);
 		}
 
 		// anything not exlicitly handled above should be logged as info (via stdout)
@@ -474,6 +480,11 @@ function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 			// so send it to the debug logs which are discarded unless
 			// the user explicitly sets a logLevel indicating they care
 			logger.debug(chunk);
+		}
+
+		// known case: warnings are not errors, log them as such
+		else if (classifiers.isWarning(chunk)) {
+			logger.warn(chunk);
 		}
 
 		// anything not exlicitly handled above should be logged as an error (via stderr)

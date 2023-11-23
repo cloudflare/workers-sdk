@@ -6,19 +6,27 @@ import type { Miniflare } from "miniflare";
 export type TeardownEvent = {
 	type: "teardown";
 };
-export type ErrorEvent = {
+export type ErrorEvent =
+	| BaseErrorEvent<
+			| "ConfigController"
+			| "BundlerController"
+			| "LocalRuntimeController"
+			| "RemoteRuntimeController"
+			| "ProxyWorker"
+			| "InspectorProxyWorker"
+	  >
+	| BaseErrorEvent<
+			"ProxyController",
+			{ config?: StartDevWorkerOptions; bundle?: EsbuildBundle }
+	  >;
+export type BaseErrorEvent<Source = string, Data = undefined> = {
 	type: "error";
 	reason: string;
-	cause: Error;
-	source:
-		| "ConfigController"
-		| "BundlerController"
-		| "LocalRuntimeController"
-		| "RemoteRuntimeController"
-		| "ProxyController"
-		| "ProxyWorker"
-		| "InspectorProxyWorker";
+	cause: Error | SerializedError;
+	source: Source;
+	data: Data;
 };
+
 export function castErrorCause(cause: unknown) {
 	if (cause instanceof Error) return cause;
 
@@ -74,7 +82,6 @@ export type ReadyEvent = {
 	type: "ready";
 
 	proxyWorker: Miniflare;
-	inspectorProxyWorker: Miniflare;
 };
 
 // ProxyWorker
@@ -88,10 +95,14 @@ export type ProxyWorkerOutgoingRequestBody =
 
 // InspectorProxyWorker
 export * from "./devtools";
-export type InspectorProxyWorkerIncomingWebSocketMessage = {
-	type: ReloadCompleteEvent["type"];
-	proxyData: ProxyData;
-};
+export type InspectorProxyWorkerIncomingWebSocketMessage =
+	| {
+			type: ReloadStartEvent["type"];
+	  }
+	| {
+			type: ReloadCompleteEvent["type"];
+			proxyData: ProxyData;
+	  };
 export type InspectorProxyWorkerOutgoingWebsocketMessage =
 	// Relayed Chrome DevTools Protocol Messages
 	| DevToolsEvent<"Runtime.consoleAPICalled">
@@ -116,7 +127,7 @@ export function serialiseError(e: unknown): SerializedError {
 			message: e.message,
 			name: e.name,
 			stack: e.stack,
-			cause: serialiseError(e.cause),
+			cause: e.cause && serialiseError(e.cause),
 		};
 	} else {
 		return { message: String(e) };
@@ -133,6 +144,7 @@ export type ProxyData = {
 	userWorkerUrl: UrlOriginParts;
 	userWorkerInspectorUrl: UrlOriginAndPathnameParts;
 	userWorkerInnerUrlOverrides: Partial<UrlOriginParts>;
-	headers: Record<string, string>;
+	headers: Record<string, string | undefined>;
 	liveReload?: boolean;
+	proxyLogsToController?: boolean;
 };

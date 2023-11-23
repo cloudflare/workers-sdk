@@ -2,7 +2,6 @@ import * as path from "node:path";
 import * as util from "node:util";
 import chalk from "chalk";
 import onExit from "signal-exit";
-import tmp from "tmp-promise";
 import { DevEnv, type StartDevWorkerOptions } from "../api";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { getBundleType } from "../deployment-bundle/bundle-type";
@@ -196,7 +195,7 @@ export async function startDevServer(
 
 		return {
 			stop: async () => {
-				await Promise.all([stop(), stopWorkerRegistry()]);
+				await Promise.all([stop(), stopWorkerRegistry(), devEnv.teardown()]);
 			},
 			// TODO: inspectorUrl,
 		};
@@ -245,9 +244,7 @@ export async function startDevServer(
 		});
 		return {
 			stop: async () => {
-				stop();
-				await stopWorkerRegistry();
-				await devEnv.teardown();
+				await Promise.all([stop(), stopWorkerRegistry(), devEnv.teardown()]);
 			},
 			// TODO: inspectorUrl,
 		};
@@ -413,9 +410,13 @@ export async function startLocalServer(
 				userWorkerInnerUrlOverrides: {
 					protocol: props.localProtocol,
 					hostname: props.localUpstream,
+					port: props.localUpstream ? "" : undefined, // `localUpstream` was essentially `host`, not `hostname`, so if it was set delete the `port`
 				},
 				headers: {},
 				liveReload: props.liveReload,
+				// in local mode, the logs are already being printed to the console by workerd but only for workers written in "module" format
+				// workers written in "service-worker" format still need to proxy logs to the ProxyController
+				proxyLogsToController: props.format === "service-worker",
 			};
 
 			props.onReady?.(event.url.hostname, parseInt(event.url.port), proxyData);

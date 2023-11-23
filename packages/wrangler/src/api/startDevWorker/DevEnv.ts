@@ -1,5 +1,5 @@
+import assert from "node:assert";
 import { EventEmitter } from "node:events";
-import { fetch, Request, type RequestInit } from "miniflare";
 import { logger } from "../../logger";
 import { BundlerController } from "./BundlerController";
 import { ConfigController } from "./ConfigController";
@@ -47,8 +47,14 @@ export class DevEnv extends EventEmitter {
 			controller.on("error", (event) => this.emitErrorEvent(event))
 		);
 
-		this.on("error", (event) => {
-			logger.error(event);
+		this.on("error", (event: ErrorEvent) => {
+			// TODO: when we're are comfortable with StartDevWorker/DevEnv stability,
+			//       we can remove this handler and let the user handle the unknowable errors
+			//       or let the process crash. For now, log them to stderr
+			//       so we can identify knowable vs unknowable error candidates
+
+			logger.error(`Error in ${event.source}: ${event.reason}\n`, event.cause);
+			logger.debug("=> Error contextual data:", event.data);
 		});
 
 		config.on("configUpdate", (event) => {
@@ -99,8 +105,48 @@ export class DevEnv extends EventEmitter {
 		]);
 	}
 
-	emitErrorEvent(data: ErrorEvent) {
-		this.emit("error", data);
+	emitErrorEvent(ev: ErrorEvent) {
+		if (
+			ev.source === "ProxyController" &&
+			ev.reason === "Failed to start ProxyWorker or InspectorProxyWorker"
+		) {
+			assert(ev.data.config); // we must already have a `config` if we've already tried (and failed) to instantiate the ProxyWorker(s)
+
+			const { config } = ev.data;
+			const port = config.dev?.server?.port;
+			const inspectorPort = config.dev?.inspector?.port;
+			const randomPorts = [0, undefined];
+
+			// console.log({ port, inspectorPort, ev });
+			if (!randomPorts.includes(port) || !randomPorts.includes(inspectorPort)) {
+				// emit the event here while the ConfigController is unimplemented
+				// this will cause the ProxyController to try reinstantiating the ProxyWorker(s)
+				// TODO: change this to `this.config.updateOptions({ dev: { server: { port: 0 }, inspector: { port: 0 } } });` when the ConfigController is implemented
+				this.config.emitConfigUpdateEvent({
+					type: "configUpdate",
+					config: {
+						...config,
+						dev: {
+							...config.dev,
+							server: { ...config.dev?.server, port: 0 }, // override port
+							inspector: { ...config.dev?.inspector, port: 0 }, // override port
+						},
+					},
+				});
+			}
+		} else if (
+			ev.source === "ProxyController" &&
+			(ev.reason.startsWith("Failed to send message to") ||
+				ev.reason.startsWith("Could not connect to InspectorProxyWorker"))
+		) {
+			logger.debug(`Error in ${ev.source}: ${ev.reason}\n`, ev.cause);
+			logger.debug("=> Error contextual data:", ev.data);
+		}
+		// if other knowable + recoverable errors occur, handle them here
+		else {
+			// otherwise, re-emit the unknowable errors to the top-level
+			this.emit("error", ev);
+		}
 	}
 }
 
@@ -120,18 +166,9 @@ export function createWorkerObject(devEnv: DevEnv): DevWorker {
 		},
 		async fetch(...args) {
 			const { proxyWorker } = await devEnv.proxy.ready.promise;
-			// return proxyWorker.dispatchFetch(...args);
-			// ^ bug: Miniflare#dispatchFetch uses one HTTP/1.1 connection, preventing parallel requests (pause/play requests + buffered eyeball requests)
-			// workaround: use undici.fetch
-			const proxyWorkerUrl = await proxyWorker.ready;
-			const req = new Request(...args);
-			const url = new URL(req.url);
-			url.protocol = proxyWorkerUrl.protocol;
-			url.hostname = proxyWorkerUrl.hostname;
-			url.port = proxyWorkerUrl.port;
-			// /workaround
+			await devEnv.proxy.runtimeMessageMutex.drained();
 
-			return fetch(url, req as RequestInit);
+			return proxyWorker.dispatchFetch(...args);
 		},
 		async queue(..._args) {
 			// const { worker } = await devEnv.proxy.ready;
