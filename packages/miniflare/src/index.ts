@@ -1217,7 +1217,7 @@ export class Miniflare {
 		if (maybeSocketPorts === undefined) {
 			throw new MiniflareCoreError(
 				"ERR_RUNTIME_FAILURE",
-				"The Workers runtime failed to start. " +
+				`[${this.#workerOpts[0].core.name}]` + "The Workers runtime failed to start. " +
 					"There is likely additional logging output above."
 			);
 		}
