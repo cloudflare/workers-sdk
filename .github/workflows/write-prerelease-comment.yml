@@ -33,7 +33,6 @@ jobs:
                   `\nWORKFLOW_RUN_PR_FOR_${packageName}=${match[2]}` +
                     `\nWORKFLOW_RUN_ID_FOR_${packageName}=${context.payload.workflow_run.id}`
                 );
-                break;
               }
             }
 
@@ -61,7 +60,7 @@ jobs:
 
         uses: marocchino/sticky-pull-request-comment@v2
         with:
-          number: ${{ env.WORKFLOW_RUN_PR_FOR_WRANGLER}}
+          number: ${{ env.WORKFLOW_RUN_PR_FOR_WRANGLER }}
           message: |
             A wrangler prerelease is available for testing. You can install this latest build in your project with:
 
