@@ -74,7 +74,7 @@ async function runLongLivedWrangler(command: string[], cwd: string) {
 			separator,
 		].join("\n");
 		rejectReadyPromise(new Error(message));
-	}, 10_000);
+	}, 20_000);
 
 	async function stop() {
 		return new Promise((resolve, reject) => {
