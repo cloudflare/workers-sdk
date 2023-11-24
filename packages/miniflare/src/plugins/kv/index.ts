@@ -146,5 +146,4 @@ export const KV_PLUGIN: Plugin<
 	},
 };
 
-export { maybeGetSitesManifestModule } from "./sites";
 export { KV_PLUGIN_NAME };
