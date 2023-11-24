@@ -12,7 +12,7 @@ describe("'wrangler dev' correctly renders pages", () => {
 	beforeAll(async () => {
 		({ ip, port, stop, getOutput } = await runWranglerDev(
 			resolve(__dirname, ".."),
-			["--local", "--port=0"]
+			["--local", "--port=0", "--inspector-port=0"]
 		));
 	});
 

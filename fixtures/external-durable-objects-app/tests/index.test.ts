@@ -38,6 +38,7 @@ describe.skip("Pages Functions", () => {
 				"public",
 				"--do=PAGES_REFERENCED_DO=MyDurableObject@a",
 				"--port=0",
+				"--inspector-port=0",
 			],
 			{
 				stdio: ["ignore", "ignore", "ignore", "ipc"],

@@ -15,6 +15,7 @@ describe("Pages _worker.js/ directory", () => {
 			"public",
 			[
 				"--port=0",
+				"--inspector-port=0",
 				`--persist-to=${tmpDir}`,
 				"--d1=D1",
 				"--d1=PUT=elsewhere",
