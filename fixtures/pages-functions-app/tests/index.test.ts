@@ -15,6 +15,7 @@ describe("Pages Functions", () => {
 				"--binding=OTHER_NAME=THING=WITH=EQUALS",
 				"--r2=BUCKET",
 				"--port=0",
+				"--inspector-port=0",
 			]
 		));
 	});

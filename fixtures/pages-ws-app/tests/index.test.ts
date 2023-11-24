@@ -22,7 +22,15 @@ describe.skip("Pages Functions", () => {
 		});
 		wranglerProcess = fork(
 			path.join("..", "..", "packages", "wrangler", "bin", "wrangler.js"),
-			["pages", "dev", "--port=0", "--proxy=8791", "--", "pnpm run server"],
+			[
+				"pages",
+				"dev",
+				"--port=0",
+				"--inspector-port=0",
+				"--proxy=8791",
+				"--",
+				"pnpm run server",
+			],
 			{
 				cwd: path.resolve(__dirname, ".."),
 			}

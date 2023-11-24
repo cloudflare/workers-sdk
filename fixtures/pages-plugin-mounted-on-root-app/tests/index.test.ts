@@ -12,7 +12,7 @@ describe("Pages Functions", () => {
 		({ ip, port, stop } = await runWranglerPagesDev(
 			path.resolve(__dirname, ".."),
 			"public",
-			["--port=0"]
+			["--port=0", "--inspector-port=0"]
 		));
 	});
 

@@ -10,7 +10,7 @@ describe("Pages Dev", () => {
 		const { ip, port, stop } = await runWranglerPagesDev(
 			resolve(__dirname, ".."),
 			"public",
-			["--node-compat", "--port=0"]
+			["--node-compat", "--port=0", "--inspector-port=0"]
 		);
 		try {
 			const response = await fetch(`http://${ip}:${port}/stripe`);

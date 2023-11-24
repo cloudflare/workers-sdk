@@ -9,6 +9,7 @@ describe("wrangler correctly imports wasm files with npm resolution", () => {
 	beforeAll(async () => {
 		({ ip, port, stop } = await runWranglerDev(resolve(__dirname, ".."), [
 			"--port=0",
+			"--inspector-port=0",
 		]));
 	});
 
