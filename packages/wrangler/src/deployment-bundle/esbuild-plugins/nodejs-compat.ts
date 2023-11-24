@@ -1,6 +1,7 @@
 import chalk from "chalk";
 import { logger } from "../../logger";
 import type { Plugin } from "esbuild";
+import { relative } from "path";
 
 // Infinite loop detection
 const seen = new Set();
@@ -19,11 +20,12 @@ export const nodejsCompatPlugin: (silenceWarnings: boolean) => Plugin = (
 		pluginBuild.onResolve(
 			{ filter: /node:.*/ },
 			async ({ path, kind, resolveDir, ...opts }) => {
-				if (seen.has(`${path}:${kind}:${resolveDir}:${opts.importer}`)) {
+				const specifier = `${path}:${kind}:${resolveDir}:${opts.importer}`;
+				if (seen.has(specifier)) {
 					return;
 				}
 
-				seen.add(`${path}:${kind}:${resolveDir}:${opts.importer}`);
+				seen.add(specifier);
 				// Try to resolve this import as a normal package
 				const result = await pluginBuild.resolve(path, {
 					kind,
@@ -57,7 +59,14 @@ export const nodejsCompatPlugin: (silenceWarnings: boolean) => Plugin = (
 					logger.warn(
 						`The package "${path}" wasn't found on the file system but is built into node.
 Your Worker may throw errors at runtime unless you enable the "nodejs_compat" compatibility flag. Refer to https://developers.cloudflare.com/workers/runtime-apis/nodejs/ for more details. Imported from:
-${importers.map((i) => ` - ${chalk.blue(i)}`).join("\n")}`
+${importers
+	.map(
+		(i) =>
+			` - ${chalk.blue(
+				relative(pluginBuild.initialOptions.absWorkingDir ?? "/", i)
+			)}`
+	)
+	.join("\n")}`
 					);
 				});
 		});
