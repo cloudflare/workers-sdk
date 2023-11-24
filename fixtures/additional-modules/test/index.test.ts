@@ -52,7 +52,7 @@ describe("find_additional_modules dev", () => {
 			path.join(tmpDir, "wrangler.toml")
 		);
 
-		worker = await runWranglerDev(tmpDir, ["--port=0"]);
+		worker = await runWranglerDev(tmpDir, ["--port=0", "--inspector-port=0"]);
 	});
 	afterAll(async () => {
 		await worker.stop();

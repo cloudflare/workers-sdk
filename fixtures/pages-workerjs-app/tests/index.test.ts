@@ -33,7 +33,7 @@ describe("Pages _worker.js", () => {
 		const { ip, port, stop } = await runWranglerPagesDev(
 			resolve(__dirname, ".."),
 			"./workerjs-test",
-			["--no-bundle=false", "--port=0"]
+			["--no-bundle=false", "--port=0", "--inspector-port=0"]
 		);
 		try {
 			await expect(
@@ -50,7 +50,7 @@ describe("Pages _worker.js", () => {
 		const { ip, port, stop } = await runWranglerPagesDev(
 			resolve(__dirname, ".."),
 			"./workerjs-test",
-			["--bundle", "--port=0"]
+			["--bundle", "--port=0", "--inspector-port=0"]
 		);
 		try {
 			await expect(

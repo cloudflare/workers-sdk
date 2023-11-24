@@ -10,7 +10,7 @@ describe("Pages Functions", async () => {
 		({ ip, port, stop } = await runWranglerPagesDev(
 			resolve(__dirname, ".."),
 			"public",
-			["--port=0"]
+			["--port=0", "--inspector-port=0"]
 		));
 	});
 
