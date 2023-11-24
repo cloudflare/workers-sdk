@@ -1,4 +1,3 @@
-import { readFile } from "fs/promises";
 import chalk from "chalk";
 import { logger } from "../../logger";
 import type { Plugin } from "esbuild";
@@ -35,23 +34,6 @@ export const nodejsCompatPlugin: (silenceWarnings: boolean) => Plugin = (
 				if (result.errors.length > 0) {
 					// esbuild couldn't resolve the package
 					// We should warn the user, but not fail the build
-
-					// First, check whether the importer has specifically silenced warnings for this import
-					const importer = await readFile(opts.importer, "utf8");
-
-					const allowlistedModules =
-						/\/\/ wrangler-allowlist (".*?")\w*\n/.exec(importer);
-					if (allowlistedModules?.[1]) {
-						// Remove quotes
-						const modules = allowlistedModules[1]
-							.split(" ")
-							.map((m) => m.slice(1, -1));
-
-						// Disable warnings for this node:* module in this file
-						if (modules.includes(path)) {
-							return { external: true };
-						}
-					}
 
 					if (!warnedPackaged.has(path)) {
 						warnedPackaged.set(path, [opts.importer]);
