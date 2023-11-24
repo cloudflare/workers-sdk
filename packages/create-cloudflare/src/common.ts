@@ -563,7 +563,7 @@ export function quoteShellArgs(args: string[]): string {
 	if (process.platform !== "win32") {
 		return quote(args);
 	} else {
-		// Simple quoting if there is a space (doesn't handle quotes and spaces together)
+		// Simple Windows command prompt quoting if there are special characters.
 		const specialCharsMatcher = /[&<>[\]|{}^=;!'+,`~\s]/;
 		return args
 			.map((arg) =>
