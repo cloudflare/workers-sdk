@@ -2,12 +2,13 @@ import { endSection } from "@cloudflare/cli";
 import { npmInstall, runCommand, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
+import { quoteShellArgs } from "../../common";
 import type { FrameworkConfig, PagesGeneratorContext } from "types";
 
 const { npm, npx } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
-	await runFrameworkGenerator(ctx, `basic ${ctx.project.name}`);
+	await runFrameworkGenerator(ctx, ["basic", ctx.project.name]);
 };
 
 const configure = async (ctx: PagesGeneratorContext) => {
@@ -16,8 +17,8 @@ const configure = async (ctx: PagesGeneratorContext) => {
 	await npmInstall();
 
 	// Add the pages integration
-	const cmd = `${npx} qwik add cloudflare-pages`;
-	endSection(`Running ${cmd}`);
+	const cmd = [npx, "qwik", "add", "cloudflare-pages"];
+	endSection(`Running ${quoteShellArgs(cmd)}`);
 	await runCommand(cmd);
 };
 

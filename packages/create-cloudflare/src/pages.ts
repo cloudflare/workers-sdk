@@ -23,10 +23,10 @@ import {
 	offerGit,
 	offerToDeploy,
 	printSummary,
+	quoteShellArgs,
 	runDeploy,
 	setupProjectDirectory,
 } from "./common";
-import * as shellquote from "./helpers/shell-quote";
 import type { C3Args, PagesGeneratorContext } from "types";
 
 /** How many times to retry the create project command before failing. */
@@ -38,8 +38,8 @@ const VERIFY_PROJECT_RETRIES = 3;
 const { npx } = detectPackageManager();
 
 const defaultFrameworkConfig = {
-	deployCommand: "pages:deploy",
-	devCommand: "pages:dev",
+	deployCommand: ["pages:deploy"],
+	devCommand: ["pages:dev"],
 };
 
 export const runPagesGenerator = async (args: C3Args) => {
@@ -176,15 +176,21 @@ const createProject = async (ctx: PagesGeneratorContext) => {
 	const CLOUDFLARE_ACCOUNT_ID = ctx.account.id;
 
 	try {
-		const compatFlags = shellquote.quote(
-			ctx.framework?.config.compatibilityFlags ?? []
-		);
-		const compatFlagsArg = compatFlags
-			? `--compatibility-flags ${compatFlags}`
-			: "";
-
+		const compatFlags = ctx.framework?.config.compatibilityFlags ?? [];
 		const productionBranch = await getProductionBranch(ctx.project.path);
-		const cmd = `${npx} wrangler pages project create ${ctx.project.name} --production-branch ${productionBranch} ${compatFlagsArg}`;
+		const cmd: string[] = [
+			npx,
+			"wrangler",
+			"pages",
+			"project",
+			"create",
+			ctx.project.name,
+			"--production-branch",
+			productionBranch,
+			...(compatFlags.length > 0
+				? ["--compatibility-flags", ...compatFlags]
+				: []),
+		];
 
 		await retry(
 			{
@@ -207,7 +213,9 @@ const createProject = async (ctx: PagesGeneratorContext) => {
 					cwd: ctx.project.path,
 					env: { CLOUDFLARE_ACCOUNT_ID },
 					startText: "Creating Pages project",
-					doneText: `${brandColor("created")} ${dim(`via \`${cmd.trim()}\``)}`,
+					doneText: `${brandColor("created")} ${dim(
+						`via \`${quoteShellArgs(cmd)}\``
+					)}`,
 				})
 		);
 	} catch (error) {
@@ -216,7 +224,15 @@ const createProject = async (ctx: PagesGeneratorContext) => {
 
 	// Wait until the pages project is available for deployment
 	try {
-		const verifyProject = `${npx} wrangler pages deployment list --project-name ${ctx.project.name}`;
+		const verifyProject = [
+			npx,
+			"wrangler",
+			"pages",
+			"deployment",
+			"list",
+			"--project-name",
+			ctx.project.name,
+		];
 
 		await retry({ times: VERIFY_PROJECT_RETRIES }, async () =>
 			runCommand(verifyProject, {

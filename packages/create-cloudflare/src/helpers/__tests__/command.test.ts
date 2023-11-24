@@ -9,7 +9,6 @@ import {
 	npmInstall,
 	runCommand,
 } from "../command";
-import * as shellquote from "../shell-quote";
 
 // We can change how the mock spawn works by setting these variables
 let spawnResultCode = 0;
@@ -57,17 +56,8 @@ describe("Command Helpers", () => {
 		}));
 	});
 
-	const expectSpawnWith = (cmd: string) => {
-		const [command, ...args] = shellquote.parse(cmd);
-
-		expect(spawn).toHaveBeenCalledWith(command, args, {
-			stdio: "inherit",
-			env: process.env,
-		});
-	};
-
 	const expectSilentSpawnWith = (cmd: string) => {
-		const [command, ...args] = shellquote.parse(cmd);
+		const [command, ...args] = cmd.split(" ");
 
 		expect(spawn).toHaveBeenCalledWith(command, args, {
 			stdio: "pipe",
@@ -76,17 +66,11 @@ describe("Command Helpers", () => {
 	};
 
 	test("runCommand", async () => {
-		await runCommand("ls -l");
-		expectSpawnWith("ls -l");
-
-		await runCommand(" ls -l ");
-		expectSpawnWith("ls -l");
-
-		await runCommand(" ls  -l ");
-		expectSpawnWith("ls -l");
-
-		await runCommand(" ls \t -l ");
-		expectSpawnWith("ls -l");
+		await runCommand(["ls", "-l"]);
+		expect(spawn).toHaveBeenCalledWith("ls", ["-l"], {
+			stdio: "inherit",
+			env: process.env,
+		});
 	});
 
 	test("installWrangler", async () => {
@@ -121,7 +105,7 @@ describe("Command Helpers", () => {
 		test("npm", () => {
 			expect(pm.npm).toBe("npm");
 			expect(pm.npx).toBe("npx");
-			expect(pm.dlx).toBe("npx");
+			expect(pm.dlx).toEqual(["npx"]);
 		});
 
 		test("pnpm", () => {
@@ -132,7 +116,7 @@ describe("Command Helpers", () => {
 			pm = detectPackageManager();
 			expect(pm.npm).toBe("pnpm");
 			expect(pm.npx).toBe("pnpm");
-			expect(pm.dlx).toBe("pnpm dlx");
+			expect(pm.dlx).toEqual(["pnpm", "dlx"]);
 
 			vi.mocked(whichPMRuns).mockReturnValue({
 				name: "pnpm",
@@ -141,7 +125,7 @@ describe("Command Helpers", () => {
 			pm = detectPackageManager();
 			expect(pm.npm).toBe("pnpm");
 			expect(pm.npx).toBe("pnpm");
-			expect(pm.dlx).toBe("pnpm dlx");
+			expect(pm.dlx).toEqual(["pnpm", "dlx"]);
 
 			vi.mocked(whichPMRuns).mockReturnValue({
 				name: "pnpm",
@@ -150,7 +134,7 @@ describe("Command Helpers", () => {
 			pm = detectPackageManager();
 			expect(pm.npm).toBe("pnpm");
 			expect(pm.npx).toBe("pnpx");
-			expect(pm.dlx).toBe("pnpx");
+			expect(pm.dlx).toEqual(["pnpx"]);
 		});
 
 		test("yarn", () => {
@@ -161,7 +145,7 @@ describe("Command Helpers", () => {
 			pm = detectPackageManager();
 			expect(pm.npm).toBe("yarn");
 			expect(pm.npx).toBe("yarn");
-			expect(pm.dlx).toBe("yarn dlx");
+			expect(pm.dlx).toEqual(["yarn", "dlx"]);
 
 			vi.mocked(whichPMRuns).mockReturnValue({
 				name: "yarn",
@@ -170,7 +154,7 @@ describe("Command Helpers", () => {
 			pm = detectPackageManager();
 			expect(pm.npm).toBe("yarn");
 			expect(pm.npx).toBe("yarn");
-			expect(pm.dlx).toBe("yarn");
+			expect(pm.dlx).toEqual(["yarn"]);
 		});
 	});
 

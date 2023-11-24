@@ -51,8 +51,8 @@ export type FrameworkConfig = {
 	getPackageScripts: () => Promise<
 		Record<string, string | UpdaterPackageScript>
 	>;
-	deployCommand?: string;
-	devCommand?: string;
+	deployCommand?: string[];
+	devCommand?: string[];
 	testFlags?: string[];
 	compatibilityFlags?: string[];
 	type?: "pages" | "workers";

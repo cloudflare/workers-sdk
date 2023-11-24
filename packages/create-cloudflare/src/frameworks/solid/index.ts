@@ -10,7 +10,7 @@ const { npm } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
 	// Run the create-solid command
-	await runFrameworkGenerator(ctx, `${ctx.project.name}`);
+	await runFrameworkGenerator(ctx, [ctx.project.name]);
 
 	logRaw("");
 };

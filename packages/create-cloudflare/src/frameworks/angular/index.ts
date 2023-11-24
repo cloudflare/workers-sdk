@@ -11,7 +11,7 @@ import type { FrameworkConfig, PagesGeneratorContext } from "types";
 const { npm } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
-	await runFrameworkGenerator(ctx, `${ctx.project.name} --ssr`);
+	await runFrameworkGenerator(ctx, [ctx.project.name, "--ssr"]);
 
 	logRaw("");
 };
@@ -33,9 +33,9 @@ const config: FrameworkConfig = {
 		"pages:build": `ng build && ${npm} run process`,
 		deploy: `${npm} run pages:build && wrangler pages deploy dist/cloudflare`,
 	}),
-	deployCommand: "deploy",
-	devCommand: "start",
-	testFlags: ["--ssr", "--style", "sass"],
+	deployCommand: ["deploy"],
+	devCommand: ["start"],
+	testFlags: ["--style", "sass"],
 };
 export default config;
 

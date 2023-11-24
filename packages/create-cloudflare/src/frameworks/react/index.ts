@@ -7,7 +7,7 @@ import type { FrameworkConfig, PagesGeneratorContext } from "types";
 const { npm } = detectPackageManager();
 
 const generate = async (ctx: PagesGeneratorContext) => {
-	await runFrameworkGenerator(ctx, `${ctx.project.name}`);
+	await runFrameworkGenerator(ctx, [ctx.project.name]);
 
 	logRaw("");
 };

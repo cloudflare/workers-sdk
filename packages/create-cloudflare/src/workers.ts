@@ -123,7 +123,15 @@ async function copyExistingWorkerFiles(ctx: Context) {
 			join(tmpdir(), "c3-wrangler-init--from-dash-")
 		);
 		await runCommand(
-			`${dlx} wrangler@3 init --from-dash ${ctx.args.existingScript} -y --no-delegate-c3`,
+			[
+				...dlx,
+				"wrangler@3",
+				"init",
+				"--from-dash",
+				ctx.args.existingScript,
+				"-y",
+				"--no-delegate-c3",
+			],
 			{
 				silent: true,
 				cwd: tempdir, // use a tempdir because we don't want all the files

@@ -17,7 +17,7 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID) {
 }
 
 const run = async () => {
-	const projectsToDelete = (await listC3Projects()) as Project[];
+	const projectsToDelete = await listC3Projects();
 
 	for (const project of projectsToDelete) {
 		console.log("Deleting Pages project: " + project.name);

@@ -1,6 +1,5 @@
 import {
 	createWriteStream,
-	existsSync,
 	mkdirSync,
 	mkdtempSync,
 	realpathSync,
@@ -11,11 +10,13 @@ import { tmpdir } from "os";
 import { basename, join } from "path";
 import { stripAnsi } from "@cloudflare/cli";
 import { spawn } from "cross-spawn";
+import { retry } from "helpers/command";
 import { sleep } from "helpers/common";
 import { detectPackageManager } from "helpers/packages";
 import { fetch } from "undici";
 import { expect } from "vitest";
 import { version } from "../package.json";
+import { quoteShellArgs } from "../src/common";
 import type { Suite, TestContext } from "vitest";
 
 export const C3_E2E_PREFIX = "c3-e2e-";
@@ -53,7 +54,17 @@ export const runC3 = async ({
 }: RunnerConfig) => {
 	const cmd = "node";
 	const args = ["./dist/cli.js", ...argv];
-	const proc = spawn(cmd, args);
+	const proc = spawn(cmd, args, {
+		env: {
+			...process.env,
+			// The following env vars are set to ensure that package managers
+			// do not use the same global cache and accidentally hit race conditions.
+			YARN_CACHE_FOLDER: "./.yarn/cache",
+			YARN_ENABLE_GLOBAL_CACHE: "false",
+			PNPM_HOME: "./.pnpm",
+			npm_config_cache: "./.npm/cache",
+		},
+	});
 
 	promptHandlers = [...promptHandlers];
 
@@ -71,7 +82,10 @@ export const runC3 = async ({
 	);
 
 	logStream.write(
-		`Running C3 with command: \`${cmd} ${args.join(" ")}\` (using ${pm})\n\n`
+		`Running C3 with command: \`${quoteShellArgs([
+			cmd,
+			...args,
+		])}\` (using ${pm})\n\n`
 	);
 
 	await new Promise((resolve, rejects) => {
@@ -180,12 +194,22 @@ export const testProjectDir = (suite: string) => {
 	const getName = (suffix: string) => `${baseProjectName}-${suffix}`;
 	const getPath = (suffix: string) => join(tmpDirPath, getName(suffix));
 	const clean = (suffix: string) => {
-		const path = getPath(suffix);
-		if (existsSync(path)) {
+		try {
+			const path = getPath(suffix);
 			rmSync(path, {
 				recursive: true,
 				force: true,
+				maxRetries: 10,
+				retryDelay: 100,
 			});
+		} catch (e) {
+			if (typeof e === "object" && e !== null && "code" in e) {
+				const code = e.code;
+				if (code === "EBUSY" || code === "ENOENT") {
+					return;
+				}
+			}
+			throw e;
 		}
 	};
 
@@ -196,37 +220,45 @@ export const testDeploymentCommitMessage = async (
 	projectName: string,
 	framework: string
 ) => {
-	// Note: we cannot simply run git and check the result since the commit can be part of the
-	//       deployment even without git, so instead we fetch the deployment info from the pages api
-	const response = await fetch(
-		`https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/pages/projects`,
-		{
-			headers: {
-				Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
-			},
-		}
-	);
+	const projectLatestCommitMessage = await retry({ times: 5 }, async () => {
+		// Wait for 2 seconds between each attempt
+		await new Promise((resolve) => setTimeout(resolve, 2000));
+		// Note: we cannot simply run git and check the result since the commit can be part of the
+		//       deployment even without git, so instead we fetch the deployment info from the pages api
+		const response = await fetch(
+			`https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/pages/projects`,
+			{
+				headers: {
+					Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
+				},
+			}
+		);
 
-	const result = (
-		(await response.json()) as {
-			result: {
-				name: string;
-				latest_deployment?: {
-					deployment_trigger: {
-						metadata?: {
-							commit_message: string;
+		const result = (
+			(await response.json()) as {
+				result: {
+					name: string;
+					latest_deployment?: {
+						deployment_trigger: {
+							metadata?: {
+								commit_message: string;
+							};
 						};
 					};
-				};
-			}[];
-		}
-	).result;
+				}[];
+			}
+		).result;
 
-	const projectLatestCommitMessage = result.find(
-		(project) => project.name === projectName
-	)?.latest_deployment?.deployment_trigger?.metadata?.commit_message;
+		const commitMessage = result.find((project) => project.name === projectName)
+			?.latest_deployment?.deployment_trigger?.metadata?.commit_message;
+		if (!commitMessage) {
+			throw new Error("Could not find deployment with name " + projectName);
+		}
+		return commitMessage;
+	});
+
 	expect(projectLatestCommitMessage).toMatch(
-		/^Initialize web application via create-cloudflare CLI/
+		/Initialize web application via create-cloudflare CLI/
 	);
 	expect(projectLatestCommitMessage).toContain(
 		`C3 = create-cloudflare@${version}`

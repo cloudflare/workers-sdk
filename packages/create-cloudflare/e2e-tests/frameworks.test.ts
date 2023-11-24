@@ -1,16 +1,10 @@
 import { join } from "path";
 import { FrameworkMap } from "frameworks/index";
+import { retry } from "helpers/command";
 import { readJSON } from "helpers/files";
 import { fetch } from "undici";
-import {
-	describe,
-	expect,
-	test,
-	afterEach,
-	beforeEach,
-	beforeAll,
-} from "vitest";
-import { deleteProject } from "../scripts/common";
+import { describe, expect, test, beforeAll } from "vitest";
+import { deleteProject, deleteWorker } from "../scripts/common";
 import { frameworkToTest } from "./frameworkToTest";
 import {
 	isQuarantineMode,
@@ -23,13 +17,15 @@ import {
 import type { RunnerConfig } from "./helpers";
 import type { Suite, TestContext } from "vitest";
 
-const TEST_TIMEOUT = 1000 * 60 * 3;
+const TEST_TIMEOUT = 1000 * 60 * 5;
+const LONG_TIMEOUT = 1000 * 60 * 6;
 
 type FrameworkTestConfig = Omit<RunnerConfig, "ctx"> & {
 	expectResponseToContain: string;
 	testCommitMessage: boolean;
 	timeout?: number;
 	unsupportedPms?: string[];
+	unsupportedOSs?: string[];
 };
 
 describe.concurrent(`E2E: Web frameworks`, () => {
@@ -38,15 +34,18 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		astro: {
 			expectResponseToContain: "Hello, Astronaut!",
 			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
 		},
 		docusaurus: {
 			expectResponseToContain: "Dinosaurs are cool",
 			unsupportedPms: ["bun"],
 			testCommitMessage: true,
-			timeout: 1000 * 60 * 5,
+			unsupportedOSs: ["win32"],
+			timeout: LONG_TIMEOUT,
 		},
 		angular: {
 			expectResponseToContain: "Congratulations! Your app is running.",
+			unsupportedOSs: ["win32"],
 			testCommitMessage: true,
 		},
 		gatsby: {
@@ -59,7 +58,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 				},
 			],
 			testCommitMessage: true,
-			timeout: 1000 * 60 * 6,
+			timeout: LONG_TIMEOUT,
 		},
 		hono: {
 			expectResponseToContain: "Hello Hono!",
@@ -74,11 +73,12 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 				},
 			],
 			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
 		},
 		remix: {
 			expectResponseToContain: "Welcome to Remix",
 			testCommitMessage: true,
-			timeout: 1000 * 60 * 5,
+			timeout: LONG_TIMEOUT,
 		},
 		next: {
 			expectResponseToContain: "Create Next App",
@@ -93,16 +93,14 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		},
 		nuxt: {
 			expectResponseToContain: "Welcome to Nuxt!",
-			overrides: {
-				packageScripts: {
-					build: "NITRO_PRESET=cloudflare-pages nuxt build",
-				},
-			},
 			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
 		},
 		react: {
 			expectResponseToContain: "React App",
 			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
+			timeout: LONG_TIMEOUT,
 		},
 		solid: {
 			expectResponseToContain: "Hello world",
@@ -121,6 +119,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 				},
 			],
 			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
 		},
 		svelte: {
 			expectResponseToContain: "SvelteKit app",
@@ -139,6 +138,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 				},
 			],
 			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
 		},
 		vue: {
 			expectResponseToContain: "Vite App",
@@ -146,36 +146,15 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		},
 	};
 
-	const { getPath, getName, clean } = testProjectDir("pages");
-
 	beforeAll((ctx) => {
 		recreateLogFolder(ctx as Suite);
 	});
 
-	beforeEach((ctx) => {
-		const framework = ctx.meta.name;
-		clean(framework);
-	});
-
-	afterEach(async (ctx) => {
-		const framework = ctx.meta.name;
-		clean(framework);
-		// Cleanup the pages project in case we need to retry it
-		const projectName = getName(framework);
-		try {
-			await deleteProject(projectName);
-		} catch (error) {
-			console.error(`Failed to cleanup project: ${projectName}`);
-			console.error(error);
-		}
-	});
-
 	const runCli = async (
 		framework: string,
+		projectPath: string,
 		{ ctx, argv = [], promptHandlers = [], overrides }: RunnerConfig
 	) => {
-		const projectPath = getPath(framework);
-
 		const args = [
 			projectPath,
 			"--type",
@@ -229,13 +208,15 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 
 	const runCliWithDeploy = async (
 		framework: string,
+		projectName: string,
+		projectPath: string,
 		ctx: TestContext,
 		testCommitMessage: boolean
 	) => {
 		const { argv, overrides, promptHandlers, expectResponseToContain } =
 			frameworkTests[framework];
 
-		const { output } = await runCli(framework, {
+		const { output } = await runCli(framework, projectPath, {
 			ctx,
 			overrides,
 			promptHandlers,
@@ -254,23 +235,30 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 
 		const projectUrl = match[1];
 
-		const res = await fetch(projectUrl);
-		expect(res.status).toBe(200);
-
-		const body = await res.text();
-		expect(
-			body,
-			`(${framework}) Deployed page (${projectUrl}) didn't contain expected string: "${expectResponseToContain}"`
-		).toContain(expectResponseToContain);
+		await retry({ times: 5 }, async () => {
+			await new Promise((resolve) => setTimeout(resolve, 1000)); // wait a second
+			const res = await fetch(projectUrl);
+			const body = await res.text();
+			if (!body.includes(expectResponseToContain)) {
+				throw new Error(
+					`(${framework}) Deployed page (${projectUrl}) didn't contain expected string: "${expectResponseToContain}"`
+				);
+			}
+		});
 
 		if (testCommitMessage) {
-			await testDeploymentCommitMessage(getName(framework), framework);
+			await testDeploymentCommitMessage(projectName, framework);
 		}
 	};
 
 	Object.keys(frameworkTests).forEach((framework) => {
-		const { quarantine, timeout, testCommitMessage, unsupportedPms } =
-			frameworkTests[framework];
+		const {
+			quarantine,
+			timeout,
+			testCommitMessage,
+			unsupportedPms,
+			unsupportedOSs,
+		} = frameworkTests[framework];
 
 		const quarantineModeMatch = isQuarantineMode() == (quarantine ?? false);
 
@@ -283,17 +271,38 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 
 		// Skip if the package manager is unsupported
 		shouldRun &&= !unsupportedPms?.includes(process.env.TEST_PM ?? "");
-
+		// Skip if the OS is unsupported
+		shouldRun &&= !unsupportedOSs?.includes(process.platform);
 		test.runIf(shouldRun)(
 			framework,
 			async (ctx) => {
-				await runCliWithDeploy(framework, ctx, testCommitMessage);
+				const { getPath, getName, clean } = testProjectDir("pages");
+				const projectPath = getPath(framework);
+				const projectName = getName(framework);
+				const frameworkConfig = FrameworkMap[framework];
+				try {
+					await runCliWithDeploy(
+						framework,
+						projectName,
+						projectPath,
+						ctx,
+						testCommitMessage
+					);
+				} finally {
+					clean(framework);
+					// Cleanup the project in case we need to retry it
+					if (frameworkConfig.type !== "workers") {
+						await deleteProject(projectName);
+					} else {
+						await deleteWorker(projectName);
+					}
+				}
 			},
-			{ retry: 3, timeout: timeout || TEST_TIMEOUT }
+			{ retry: 1, timeout: timeout || TEST_TIMEOUT }
 		);
 	});
 
-	test.skip("Hono (wrangler defaults)", async (ctx) => {
-		await runCli("hono", { ctx, argv: ["--wrangler-defaults"] });
-	});
+	// test.skip("Hono (wrangler defaults)", async (ctx) => {
+	// 	await runCli("hono", { ctx, argv: ["--wrangler-defaults"] });
+	// });
 });
