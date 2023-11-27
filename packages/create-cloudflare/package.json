@@ -74,7 +74,7 @@
 		"semver": "^7.5.1",
 		"shell-quote": "^1.8.1",
 		"typescript": "^5.0.2",
-		"undici": "5.20.0",
+		"undici": "5.26.2",
 		"vite-tsconfig-paths": "^4.0.8",
 		"which-pm-runs": "^1.1.0",
 		"wrangler": "workspace:*",

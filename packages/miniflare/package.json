@@ -48,7 +48,7 @@
 		"glob-to-regexp": "^0.4.1",
 		"source-map-support": "0.5.21",
 		"stoppable": "^1.1.0",
-		"undici": "^5.22.1",
+		"undici": "^5.26.2",
 		"workerd": "1.20231030.0",
 		"ws": "^8.11.0",
 		"youch": "^3.2.2",

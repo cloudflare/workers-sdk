@@ -15,7 +15,7 @@
 	"devDependencies": {
 		"wrangler": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:^",
-		"undici": "^5.23.0"
+		"undici": "^5.26.2"
 	},
 	"dependencies": {
 		"isomorphic-random-example": "workspace:^"

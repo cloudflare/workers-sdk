@@ -15,7 +15,7 @@
 		"type:tests": "tsc --noEmit"
 	},
 	"devDependencies": {
-		"undici": "^5.23.0",
+		"undici": "^5.26.2",
 		"concurrently": "^8.2.1",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20221111.1",
