@@ -1,0 +1,32 @@
+{
+	"name": "@cloudflare/vitest-pool-workers",
+	"version": "0.0.1",
+	"private": true,
+	"main": "dist/pool/index.mjs",
+	"scripts": {
+		"build": "node scripts/bundle.mjs",
+		"dev": "node scripts/bundle.mjs watch",
+		"check:lint": "eslint .",
+		"check:type": "tsc && tsc -p src/worker/tsconfig.json && tsc -p test/tsconfig.json",
+		"test": "vitest --config vitest.workers.config.ts",
+		"test:ci": "vitest --config vitest.workers.config.ts"
+	},
+	"devDependencies": {
+		"@cloudflare/eslint-config-worker": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "^4.20231121.0",
+		"@types/node": "20.8.3"
+	},
+	"dependencies": {
+		"birpc": "0.2.14",
+		"cjs-module-lexer": "^1.2.3",
+		"devalue": "^4.3.0",
+		"esbuild": "^0.19.7",
+		"import-meta-resolve": "^4.0.0",
+		"miniflare": "workspace:*"
+	},
+	"peerDependencies": {
+		"@vitest/runner": "1.0.0-beta.5",
+		"vitest": "1.0.0-beta.5"
+	}
+}

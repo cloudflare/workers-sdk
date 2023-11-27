@@ -1,0 +1,12 @@
+{
+	"extends": "../../tsconfig.json",
+	"compilerOptions": {
+		"types": ["@cloudflare/workers-types/experimental", "node"],
+		"paths": {
+			"cloudflare:test": ["./lib/cloudflare/test.ts"]
+		}
+	},
+	"include": ["./**/*.ts"],
+	//  "include": ["./**/*.ts", "../../../miniflare/src/workers/node.d.ts"],
+	"exclude": []
+}
