@@ -9,6 +9,7 @@ import { AddressInfo } from "net";
 import path from "path";
 import { Writable } from "stream";
 import { json, text } from "stream/consumers";
+import { fileURLToPath } from "url";
 import util from "util";
 import {
 	D1Database,
@@ -33,6 +34,7 @@ import {
 	createFetchMock,
 	fetch,
 	viewToBuffer,
+	Worker_Module,
 } from "miniflare";
 import {
 	CloseEvent as StandardCloseEvent,
@@ -1760,4 +1762,95 @@ test("Miniflare: getCf() returns a user provided cf object", async (t) => {
 
 	const cf = await mf.getCf();
 	t.deepEqual(cf, { myFakeField: "test" });
+});
+
+test("Miniflare: can use module fallback service", async (t) => {
+	const modulesRoot = "/";
+	const modules: Record<string, Omit<Worker_Module, "name">> = {
+		"/virtual/a.mjs": {
+			esModule: `
+			import { b } from "./dir/b.mjs";
+			export default "a" + b;
+			`,
+		},
+		"/virtual/dir/b.mjs": {
+			esModule: 'export { default as b } from "./c.cjs";',
+		},
+		"/virtual/dir/c.cjs": {
+			commonJsModule: 'module.exports = "c" + require("./sub/d.cjs");',
+		},
+		"/virtual/dir/sub/d.cjs": {
+			commonJsModule: 'module.exports = "d";',
+		},
+	};
+
+	const mf = new Miniflare({
+		unsafeModuleFallbackService(request) {
+			const resolveMethod = request.headers.get("X-Resolve-Method");
+			assert(resolveMethod === "import" || resolveMethod === "require");
+			const url = new URL(request.url);
+			const specifier = url.searchParams.get("specifier");
+			assert(specifier !== null);
+			const maybeModule = modules[specifier];
+			if (maybeModule === undefined) return new Response(null, { status: 404 });
+			const name = path.posix.relative(modulesRoot, specifier);
+			return new Response(JSON.stringify({ name, ...maybeModule }));
+		},
+		workers: [
+			{
+				name: "a",
+				routes: ["*/a"],
+				compatibilityFlags: ["export_commonjs_default"],
+				modulesRoot,
+				modules: [
+					{
+						type: "ESModule",
+						path: "/virtual/index.mjs",
+						contents: `
+						import a from "./a.mjs";
+						export default {
+							async fetch() {
+								return new Response(a);
+							}
+						}
+						`,
+					},
+				],
+				unsafeUseModuleFallbackService: true,
+			},
+			{
+				name: "b",
+				routes: ["*/b"],
+				compatibilityFlags: ["export_commonjs_default"],
+				modulesRoot,
+				modules: [
+					{
+						type: "ESModule",
+						path: "/virtual/index.mjs",
+						contents: `
+						export default {
+							async fetch() {
+								try {
+									await import("./a.mjs");
+									return new Response(null, { status: 204 });
+								} catch (e) {
+									return new Response(String(e), { status: 500 });
+								}
+							}
+						}
+						`,
+					},
+				],
+			},
+		],
+	});
+	t.teardown(() => mf.dispose());
+
+	let res = await mf.dispatchFetch("http://localhost/a");
+	t.is(await res.text(), "acd");
+
+	// Check fallback service ignored if not explicitly enabled
+	res = await mf.dispatchFetch("http://localhost/b");
+	t.is(res.status, 500);
+	t.is(await res.text(), 'Error: No such module "virtual/a.mjs".');
 });

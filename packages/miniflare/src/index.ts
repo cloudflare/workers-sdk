@@ -785,10 +785,8 @@ export class Miniflare {
 		const cf = cfBlob ? JSON.parse(cfBlob) : undefined;
 
 		// Extract original URL passed to `fetch`
-		const url = new URL(
-			headers.get(CoreHeaders.ORIGINAL_URL) ?? req.url ?? "",
-			"http://localhost"
-		);
+		const originalUrl = headers.get(CoreHeaders.ORIGINAL_URL);
+		const url = new URL(originalUrl ?? req.url ?? "", "http://localhost");
 		headers.delete(CoreHeaders.ORIGINAL_URL);
 
 		const noBody = req.method === "GET" || req.method === "HEAD";
@@ -810,6 +808,13 @@ export class Miniflare {
 					request,
 					customService
 				);
+			} else if (
+				this.#sharedOpts.core.unsafeModuleFallbackService !== undefined &&
+				request.headers.has("X-Resolve-Method") &&
+				originalUrl === null
+			) {
+				response =
+					await this.#sharedOpts.core.unsafeModuleFallbackService(request);
 			} else if (url.pathname === "/core/error") {
 				response = await handlePrettyErrorRequest(
 					this.#log,
@@ -1068,6 +1073,7 @@ export class Miniflare {
 				additionalModules,
 				tmpPath: this.#tmpPath,
 				workerNames,
+				loopbackPort,
 				wrappedBindingNames,
 				durableObjectClassNames,
 				unsafeEphemeralDurableObjects,

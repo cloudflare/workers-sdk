@@ -60,6 +60,7 @@ export type Worker = (
 	durableObjectNamespaces?: Worker_DurableObjectNamespace[];
 	durableObjectUniqueKeyModifier?: string;
 	durableObjectStorage?: Worker_DurableObjectStorage;
+	moduleFallback?: string;
 };
 
 export type Worker_DurableObjectStorage =

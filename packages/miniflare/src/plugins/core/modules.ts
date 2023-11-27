@@ -440,7 +440,10 @@ function convertWorkerModule(mod: Worker_Module): ModuleDefinition {
 
 	// This function is only used for building error messages including
 	// generated modules, and these are the types we generate.
-	assert(!("json" in m), "Unreachable: json modules aren't generated");
+	assert(
+		!("json" in m || "fallbackService" in m),
+		"Unreachable: json or fallbackService modules aren't generated"
+	);
 	const exhaustive: never = m;
 	assert.fail(
 		`Unreachable: [${Object.keys(exhaustive).join(

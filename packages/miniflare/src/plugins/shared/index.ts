@@ -52,6 +52,7 @@ export interface PluginServicesOptions<
 	additionalModules: Worker_Module[];
 	tmpPath: string;
 	workerNames: string[];
+	loopbackPort: number;
 
 	// ~~Leaky abstractions~~ "Plugin specific options" :)
 	wrappedBindingNames: WrappedBindingNames;
