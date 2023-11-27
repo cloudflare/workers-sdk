@@ -4,15 +4,10 @@ export default defineConfig({
 	test: {
 		pool: "../..",
 		poolOptions: {
-			custom: {
-				print: "different thing",
-			},
 			miniflare: {
-				kvNamespaces: ["NAMESPACE"],
+				kvNamespaces: ["TEST_NAMESPACE"],
+				compatibilityFlags: ["global_navigator"],
 			},
 		},
-		// deps: {
-		// 	external: [/cloudflare:test/],
-		// },
 	},
 });

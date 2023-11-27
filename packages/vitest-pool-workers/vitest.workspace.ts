@@ -1,2 +1,2 @@
-// export default ["test/*"];
-export default ["test/kv"];
+export default ["test/*"];
+// export default ["test/kv"];
