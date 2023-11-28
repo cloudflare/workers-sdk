@@ -1,4 +1,9 @@
-import { getAssetFromKV, mapRequestToAsset, NotFoundError, MethodNotAllowedError } from '@cloudflare/kv-asset-handler';
+import {
+	getAssetFromKV,
+	mapRequestToAsset,
+	NotFoundError,
+	MethodNotAllowedError,
+} from '@cloudflare/kv-asset-handler';
 import manifestJSON from '__STATIC_CONTENT_MANIFEST';
 const assetManifest = JSON.parse(manifestJSON);
 
@@ -29,14 +34,16 @@ export default {
 				};
 			}
 
-			const page = await getAssetFromKV({
-				request, waitUntil(promise) {
-					return ctx.waitUntil(promise)
+			const page = await getAssetFromKV(
+				{
+					request,
+					waitUntil(promise) {
+						return ctx.waitUntil(promise);
+					},
 				},
-			},
 				{
 					ASSET_NAMESPACE: env.__STATIC_CONTENT,
-					ASSET_MANIFEST: assetManifest
+					ASSET_MANIFEST: assetManifest,
 				}
 			);
 
@@ -64,7 +71,7 @@ export default {
 					statusText: 'Method Not Allowed',
 				});
 			} else {
-				return new Response('An unexpected error occured', { status: 500 })
+				return new Response('An unexpected error occured', { status: 500 });
 			}
 		}
 	},

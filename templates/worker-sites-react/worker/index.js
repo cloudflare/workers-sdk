@@ -6,15 +6,16 @@ const assetManifest = JSON.parse(manifestJSON);
 export default {
 	async fetch(request, env, ctx) {
 		try {
-			return await getAssetFromKV({
-				request,
-				waitUntil(promise) {
-					return ctx.waitUntil(promise)
+			return await getAssetFromKV(
+				{
+					request,
+					waitUntil(promise) {
+						return ctx.waitUntil(promise);
+					},
 				},
-			},
 				{
 					ASSET_NAMESPACE: env.__STATIC_CONTENT,
-					ASSET_MANIFEST: assetManifest
+					ASSET_MANIFEST: assetManifest,
 				}
 			);
 		} catch (e) {
@@ -31,7 +32,7 @@ export default {
 					statusText: 'Method Not Allowed',
 				});
 			} else {
-				return new Response('An unexpected error occured', { status: 500 })
+				return new Response('An unexpected error occured', { status: 500 });
 			}
 		}
 	},
