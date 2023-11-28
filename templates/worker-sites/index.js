@@ -1,4 +1,6 @@
-import { getAssetFromKV, mapRequestToAsset } from '@cloudflare/kv-asset-handler';
+import { getAssetFromKV, mapRequestToAsset, NotFoundError, MethodNotAllowedError } from '@cloudflare/kv-asset-handler';
+import manifestJSON from '__STATIC_CONTENT_MANIFEST';
+const assetManifest = JSON.parse(manifestJSON);
 
 /**
  * The DEBUG flag will do two things that help during development:
@@ -27,7 +29,16 @@ export default {
 				};
 			}
 
-			const page = await getAssetFromKV(request, options);
+			const page = await getAssetFromKV({
+				request, waitUntil(promise) {
+					return ctx.waitUntil(promise)
+				},
+			},
+				{
+					ASSET_NAMESPACE: env.__STATIC_CONTENT,
+					ASSET_MANIFEST: assetManifest
+				}
+			);
 
 			// allow headers to be altered
 			const response = new Response(page.body, page);
@@ -40,21 +51,21 @@ export default {
 
 			return response;
 		} catch (e) {
-			// if an error is thrown try to serve the asset at 404.html
-			if (!DEBUG) {
-				try {
-					let notFoundResponse = await getAssetFromKV(request, {
-						mapRequestToAsset: req => new Request(`${new URL(req.url).origin}/404.html`, req),
-					});
-
-					return new Response(notFoundResponse.body, {
-						...notFoundResponse,
-						status: 404,
-					});
-				} catch (e) {}
+			if (!DEBUG && e instanceof NotFoundError) {
+				let pathname = new URL(request.url).pathname;
+				return new Response(`"${pathname}" not found`, {
+					status: 404,
+					statusText: 'not found',
+				});
+			} else if (e instanceof MethodNotAllowedError) {
+				let method = request.method;
+				return new Response(`Method ${method} not allowed for accessing static assets`, {
+					status: 405,
+					statusText: 'Method Not Allowed',
+				});
+			} else {
+				return new Response('An unexpected error occured', { status: 500 })
 			}
-
-			return new Response(e.message || e.toString(), { status: 500 });
 		}
 	},
 };
