@@ -22,7 +22,7 @@ import type {
 	CommonYargsArgvJSON,
 	StrictYargsOptionsToInterfaceJSON,
 } from "../yargs-types";
-import type { Deployment, SSHPublicKeyID } from "./client";
+import type { Deployment, DeploymentV2, SSHPublicKeyID } from "./client";
 
 export function modifyCommandOptionalYargs(yargs: CommonYargsArgvJSON) {
 	return yargs
@@ -114,7 +114,7 @@ export async function modifyCommand(
 async function handleSSH(
 	args: StrictYargsOptionsToInterfaceJSON<typeof modifyCommandOptionalYargs>,
 	config: Config,
-	deployment: Deployment
+	deployment: DeploymentV2
 ): Promise<SSHPublicKeyID[] | undefined> {
 	if (args.sshPublicKeyId !== undefined) {
 		return args.sshPublicKeyId;
@@ -210,7 +210,7 @@ async function handleModifyCommand(
 
 	renderDeploymentConfiguration("modify", {
 		image: image ?? deployment.image,
-		location: location ?? deployment.location,
+		location: location ?? deployment.location.name,
 		vcpu: args.vcpu ?? config.cloudchamber.vcpu ?? deployment.vcpu,
 		memory: args.memory ?? config.cloudchamber.memory ?? deployment.memory,
 		env: args.env,

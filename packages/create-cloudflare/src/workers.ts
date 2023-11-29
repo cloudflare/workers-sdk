@@ -5,7 +5,6 @@ import { chdir } from "process";
 import { endSection, startSection, updateStatus } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { brandColor, dim } from "@cloudflare/cli/colors";
-import { processArgument } from "helpers/args";
 import { C3_DEFAULTS } from "helpers/cli";
 import {
 	getWorkerdCompatibilityDate,

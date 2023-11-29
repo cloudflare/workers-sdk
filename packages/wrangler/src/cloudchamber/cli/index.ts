@@ -16,10 +16,10 @@ import {
 import { wrap } from "../helpers/wrap";
 import { idToLocationName } from "../locations";
 import type {
-	Deployment,
 	PlacementWithEvents,
 	PlacementEvent,
 	ListSSHPublicKeys,
+	DeploymentV2,
 } from "../client";
 import type { EventName, Status } from "../enums";
 
@@ -56,12 +56,12 @@ export function pollSSHKeysUntilCondition(
 
 async function pollDeploymentUntilCondition(
 	deploymentId: string,
-	onDeployment: (d: Deployment) => boolean
-): Promise<Deployment> {
-	return new Promise<Deployment>((res, rej) => {
+	onDeployment: (d: DeploymentV2) => boolean
+): Promise<DeploymentV2> {
+	return new Promise<DeploymentV2>((res, rej) => {
 		let errCount = 0;
 		const poll = () => {
-			DeploymentsService.getDeployment(deploymentId)
+			DeploymentsService.getDeploymentV2(deploymentId)
 				.then((deployment) => {
 					errCount = 0;
 					try {
@@ -125,7 +125,7 @@ export class WaitForAnotherPlacement extends Error {
 }
 
 async function waitForEvent(
-	deployment: Deployment,
+	deployment: DeploymentV2,
 	...eventName: EventName[]
 ): Promise<{ event?: PlacementEvent; placement: PlacementWithEvents }> {
 	if (!deployment.current_placement)
@@ -157,7 +157,7 @@ async function waitForEvent(
 	return { event: foundEvent, placement };
 }
 
-async function waitForImagePull(deployment: Deployment) {
+async function waitForImagePull(deployment: DeploymentV2) {
 	const s = spinner();
 	s.start("Pulling your image");
 	const [eventPlacement, err] = await wrap(
@@ -209,7 +209,7 @@ function checkPlacementStatus(placement: PlacementWithEvents) {
 	unexpectedLastEvent(placement);
 }
 
-async function waitForVMToStart(deployment: Deployment) {
+async function waitForVMToStart(deployment: DeploymentV2) {
 	const s = spinner();
 	s.start("Creating your container");
 	const [eventPlacement, err] = await wrap(
@@ -239,9 +239,11 @@ async function waitForVMToStart(deployment: Deployment) {
 	);
 }
 
-async function waitForPlacementInstance(deployment: Deployment) {
+async function waitForPlacementInstance(deployment: DeploymentV2) {
 	const s = spinner();
-	s.start("Assigning a placement in " + idToLocationName(deployment.location));
+	s.start(
+		"Assigning a placement in " + idToLocationName(deployment.location.name)
+	);
 	const [d, err] = await wrap(
 		pollDeploymentUntilCondition(deployment.id, (newDeployment) => {
 			if (newDeployment.current_placement && !deployment.current_placement) {
@@ -279,7 +281,7 @@ async function waitForPlacementInstance(deployment: Deployment) {
 	}
 
 	updateStatus(
-		"Assigned placement in " + idToLocationName(deployment.location)
+		"Assigned placement in " + idToLocationName(deployment.location.name)
 	);
 	log(
 		`${brandColor("assigned placement")} ${dim(
@@ -289,7 +291,7 @@ async function waitForPlacementInstance(deployment: Deployment) {
 	deployment.current_placement = d.current_placement;
 }
 
-export async function waitForPlacement(deployment: Deployment) {
+export async function waitForPlacement(deployment: DeploymentV2) {
 	let currentDeployment = { ...deployment };
 	let keepIterating = true;
 	while (keepIterating) {
@@ -307,7 +309,7 @@ export async function waitForPlacement(deployment: Deployment) {
 						"\n"
 				);
 				const [newDeployment, getDeploymentError] = await wrap(
-					DeploymentsService.getDeployment(deployment.id)
+					DeploymentsService.getDeploymentV2(deployment.id)
 				);
 				if (getDeploymentError) {
 					error(

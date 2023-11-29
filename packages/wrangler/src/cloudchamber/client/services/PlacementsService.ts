@@ -84,6 +84,7 @@ export class PlacementsService {
 			body: requestBody,
 			mediaType: "application/json",
 			errors: {
+				400: `Responses with 400 status code`,
 				401: `Unauthorized`,
 				404: `Placement not found`,
 				500: `Deployment Replacement Error`,

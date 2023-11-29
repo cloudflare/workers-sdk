@@ -55,7 +55,7 @@ describe("cloudchamber list", () => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
-			rest.get("*/deployments", async (request, response, context) => {
+			rest.get("*/deployments/v2", async (request, response, context) => {
 				expect(await request.text()).toEqual("");
 				return response.once(context.json(MOCK_DEPLOYMENTS_COMPLEX));
 			})
