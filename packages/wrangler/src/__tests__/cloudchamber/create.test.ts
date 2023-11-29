@@ -46,7 +46,8 @@ describe("cloudchamber create", () => {
 		      --all-ssh-keys  To add all SSH keys configured on your account to be added to this deployment, set this option to true  [boolean]
 		      --ssh-key-id    ID of the SSH key to add to the deployment  [array]
 		      --vcpu          Number of vCPUs to allocate to this deployment.  [number]
-		      --memory        Amount of memory (GB, MB...) to allocate to this deployment. Ex: 4GB.  [string]"
+		      --memory        Amount of memory (GB, MB...) to allocate to this deployment. Ex: 4GB.  [string]
+		      --ipv4          Include an IPv4 in the deployment  [boolean]"
 	`);
 	});
 
@@ -62,7 +63,7 @@ describe("cloudchamber create", () => {
 			})
 		);
 		msw.use(
-			rest.post("*/deployments", async (request, response, context) => {
+			rest.post("*/deployments/v2", async (request, response, context) => {
 				expect(await request.text()).toMatchInlineSnapshot(
 					`"{\\"image\\":\\"hello:world\\",\\"location\\":\\"sfo06\\",\\"ssh_public_key_ids\\":[],\\"environment_variables\\":[{\\"name\\":\\"HELLO\\",\\"value\\":\\"WORLD\\"},{\\"name\\":\\"YOU\\",\\"value\\":\\"CONQUERED\\"}],\\"vcpu\\":3,\\"memory\\":\\"400GB\\"}"`
 				);
@@ -108,7 +109,7 @@ describe("cloudchamber create", () => {
 			})
 		);
 		msw.use(
-			rest.post("*/deployments", async (request, response, context) => {
+			rest.post("*/deployments/v2", async (request, response, context) => {
 				expect(await request.text()).toMatchInlineSnapshot(
 					`"{\\"image\\":\\"hello:world\\",\\"location\\":\\"sfo06\\",\\"ssh_public_key_ids\\":[\\"1\\"],\\"environment_variables\\":[{\\"name\\":\\"HELLO\\",\\"value\\":\\"WORLD\\"},{\\"name\\":\\"YOU\\",\\"value\\":\\"CONQUERED\\"}],\\"vcpu\\":40,\\"memory\\":\\"300MB\\"}"`
 				);

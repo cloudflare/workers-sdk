@@ -1,7 +1,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import { FormData, Headers, Response, RequestInit, fetch } from "undici";
+import { Headers, Response, RequestInit, fetch, FormData } from "undici";
 import { ApiError } from "./ApiError";
 import type { ApiRequestOptions } from "./ApiRequestOptions";
 import type { ApiResult } from "./ApiResult";

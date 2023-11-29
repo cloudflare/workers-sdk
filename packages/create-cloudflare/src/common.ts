@@ -28,6 +28,7 @@ import { quote } from "shell-quote";
 import { version as wranglerVersion } from "wrangler/package.json";
 import { version } from "../package.json";
 import type { C3Args, PagesGeneratorContext } from "types";
+import { processArgument } from "@cloudflare/cli/args";
 
 const { name, npm } = detectPackageManager();
 

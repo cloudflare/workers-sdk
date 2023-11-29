@@ -19,7 +19,7 @@ export type OpenAPIConfig = {
 };
 
 export const OpenAPI: OpenAPIConfig = {
-	BASE: "https://api.cloudflare.com/client/v4/accounts/{accountTag}/cloudchamber",
+	BASE: "https://api.cloudflare.com/client/v4/accounts/<account-tag>/cloudchamber",
 	VERSION: "1.0.0",
 	WITH_CREDENTIALS: false,
 	CREDENTIALS: "include",

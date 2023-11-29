@@ -304,6 +304,11 @@ export function renderDeploymentMutationError(
 		return;
 	}
 
+	if (typeof err.body === "string") {
+		error("There has been an internal error, please try again!");
+		return;
+	}
+
 	if (!("error" in err.body)) {
 		error(err.message);
 		return;

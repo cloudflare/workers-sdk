@@ -1,5 +1,5 @@
 import { processArgument } from "@cloudflare/cli/args";
-import { NetworkParameters } from "../client";
+import type { NetworkParameters } from "../client";
 
 export async function getNetworkInput(args: {
 	ipv4?: boolean;

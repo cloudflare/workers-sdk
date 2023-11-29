@@ -3,13 +3,14 @@
 /* eslint-disable */
 
 import type { EnvironmentVariable } from "./EnvironmentVariable";
+import type { Label } from "./Label";
 import type { MemorySizeWithUnit } from "./MemorySizeWithUnit";
 import type { SSHPublicKeyID } from "./SSHPublicKeyID";
 
 /**
  * Request body modifying an existing deployment
  */
-export type ModifyDeploymentRequestBody = {
+export type ModifyDeploymentV2RequestBody = {
 	/**
 	 * The new image that the deployment will have from now on
 	 */
@@ -34,6 +35,10 @@ export type ModifyDeploymentRequestBody = {
 	 * Container environment variables
 	 */
 	environment_variables?: Array<EnvironmentVariable>;
+	/**
+	 * Deployment labels
+	 */
+	labels?: Array<Label>;
 	/**
 	 * Specify the GPU memory to be used for the deployment. (Mandatory for GPU deployments)
 	 */

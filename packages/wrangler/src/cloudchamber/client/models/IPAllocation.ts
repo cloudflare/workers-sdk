@@ -5,6 +5,7 @@
 import type { IP } from "./IP";
 import type { IPAllocationConfiguration } from "./IPAllocationConfiguration";
 import type { IPAllocationPlacement } from "./IPAllocationPlacement";
+import type { IPType } from "./IPType";
 
 /**
  * An allocation of ips to a specific node
@@ -22,4 +23,5 @@ export type IPAllocation = {
 	 */
 	subnetMask: number;
 	ip: IP;
+	ipType?: IPType;
 };

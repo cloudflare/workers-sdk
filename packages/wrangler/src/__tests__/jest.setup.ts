@@ -54,6 +54,7 @@ jest.mock("log-update", () => {
 	const fn = function (..._: string[]) {};
 	fn["clear"] = () => {};
 	fn["done"] = () => {};
+	fn["createLogUpdate"] = () => fn;
 	return fn;
 });
 

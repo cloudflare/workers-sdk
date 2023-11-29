@@ -1,12 +1,15 @@
-import { ConfirmPrompt, SelectPrompt, TextPrompt } from "@clack/core";
-import ansiEscapes from "ansi-escapes";
+import {
+	ConfirmPrompt,
+	isCancel,
+	MultiSelectPrompt,
+	Prompt,
+	SelectPrompt,
+	TextPrompt,
+} from "@clack/core";
 import { createLogUpdate } from "log-update";
 import { blue, bold, brandColor, dim, gray, white } from "./colors";
 import { cancel, newline, shapes, space, status } from "./index";
-import type { ChalkInstance } from "chalk";
 import SelectRefreshablePrompt, { OptionWithDetails } from "./select-list";
-
-process.stdout.columns = 300;
 
 const logUpdate = createLogUpdate(process.stdout);
 

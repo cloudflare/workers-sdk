@@ -7,7 +7,8 @@ import { DeploymentsService } from "../client";
 import { wrap } from "../helpers/wrap";
 import { idToLocationName } from "../locations";
 import { statusToColored } from "./util";
-import type { State, Deployment, Placement } from "../client";
+import type { State, Placement } from "../client";
+import type { DeploymentV2 } from "../client/models/DeploymentV2";
 import type { Status } from "../enums";
 
 function ipv6(placement: Placement | undefined) {
@@ -29,7 +30,7 @@ function uptime(placement?: Placement) {
 	return uptimeString;
 }
 
-function version(deployment: Deployment) {
+function version(deployment: DeploymentV2) {
 	if (!deployment.current_placement) {
 		return "";
 	}
@@ -62,11 +63,11 @@ export async function loadDeployments(
 		state?: string;
 		ipv4?: string;
 	}
-) {
+): Promise<DeploymentV2[]> {
 	const { start, stop } = spinner();
 	start("Loading deployments");
 	const [deploymentsResponse, err] = await wrap(
-		DeploymentsService.listDeployments(
+		DeploymentsService.listDeploymentsV2(
 			deploymentsParams?.location,
 			deploymentsParams?.image,
 			deploymentsParams?.state as State,
@@ -105,9 +106,18 @@ export async function loadDeployments(
 }
 
 export async function listDeploymentsAndChoose(
-	deployments: Deployment[],
+	deployments: DeploymentV2[],
 	args: { deploymentId?: string | undefined } = {}
-): Promise<Deployment> {
+): Promise<DeploymentV2> {
+	const ips = (d: DeploymentV2) => {
+		const ipsList = [];
+		if (d.network?.ipv4 !== undefined) {
+			ipsList.push(`IPV4: ${dim(d.network.ipv4)}`);
+		}
+
+		ipsList.push(`IPV6: ${dim(ipv6(d.current_placement))}`);
+		return ipsList;
+	};
 	const deployment = await processArgument(args, "deploymentId", {
 		type: "list",
 		question: "Deployments",
@@ -119,10 +129,9 @@ export async function listDeploymentsAndChoose(
 				`ID: ${dim(`${d.id}`)}`,
 				`Uptime: ${dim(`${uptime(d.current_placement)}`)}`,
 				`Version: ${dim(`${d.version}`)}`,
-				`Location: ${dim(`${idToLocationName(d.location)}`)}`,
+				`Location: ${dim(`${idToLocationName(d.location.name)}`)}`,
 				`Image: ${dim(d.image)}`,
-				`IP: ${dim(d.ipv4)}`,
-				`IPV6: ${dim(ipv6(d.current_placement))}`,
+				...ips(d),
 				`Current Placement${version(d)}: ${health(d.current_placement)}`,
 			],
 		})),
@@ -145,11 +154,11 @@ export async function pickDeployment(deploymentIdPrefix?: string) {
 	return deployment;
 }
 
-export function logDeployment(deployment: Deployment) {
+export function logDeployment(deployment: DeploymentV2) {
 	log(
 		`${brandColor("Image")} ${dim(deployment.image)}\n${brandColor(
 			"Location"
-		)} ${dim(idToLocationName(deployment.location))}\n${brandColor(
+		)} ${dim(idToLocationName(deployment.location.name))}\n${brandColor(
 			"Version"
 		)} ${dim(`${deployment.version}`)}\n`
 	);
