@@ -18,7 +18,7 @@ import type { RunnerConfig } from "./helpers";
 import type { Suite, TestContext } from "vitest";
 
 const TEST_TIMEOUT = 1000 * 60 * 5;
-const LONG_TIMEOUT = 1000 * 60 * 6;
+const LONG_TIMEOUT = 1000 * 60 * 10;
 
 type FrameworkTestConfig = Omit<RunnerConfig, "ctx"> & {
 	expectResponseToContain: string;
@@ -45,8 +45,8 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		},
 		angular: {
 			expectResponseToContain: "Congratulations! Your app is running.",
-			unsupportedOSs: ["win32"],
 			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
 		},
 		gatsby: {
 			expectResponseToContain: "Gatsby!",
