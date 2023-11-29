@@ -24,11 +24,7 @@ export const readJSON = (path: string) => {
 	return contents ? JSON.parse(contents) : contents;
 };
 
-export const writeJSON = (
-	path: string,
-	object: object,
-	stringifySpace?: number | string
-) => {
+export const writeJSON = (path: string, object: object, stringifySpace = 2) => {
 	writeFile(path, JSON.stringify(object, null, stringifySpace));
 };
 
