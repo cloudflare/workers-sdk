@@ -100,6 +100,21 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
+  fixtures/ai-app:
+    devDependencies:
+      '@cloudflare/ai':
+        specifier: ^1.0.35
+        version: 1.0.35
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:^
+        version: link:../../packages/workers-tsconfig
+      undici:
+        specifier: ^5.23.0
+        version: 5.23.0
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
   fixtures/d1-worker-app:
     devDependencies:
       wrangler:
@@ -1263,6 +1278,9 @@ importers:
         specifier: ~2.3.2
         version: 2.3.2
     devDependencies:
+      '@cloudflare/ai':
+        specifier: ^1.0.35
+        version: 1.0.35
       '@cloudflare/cli':
         specifier: workspace:*
         version: link:../cli
@@ -3272,6 +3290,10 @@ packages:
     dev: true
     bundledDependencies:
       - is-unicode-supported
+
+  /@cloudflare/ai@1.0.35:
+    resolution: {integrity: sha512-lqH62H3vwWxH3ZT8BD5N2Y+a2P9rwWiqtJsJsHFjv5p58aXxk3DJuQpFO1YIqdYUQkJr7QQwKa2HXOOJrjvqhQ==}
+    dev: true
 
   /@cloudflare/cloudflare-brand-assets@4.7.7:
     resolution: {integrity: sha512-L4EqYWkvse0265YIzraYUlkvvjW7Cr5LELiAiBStctENBoqRhMuR4Ff2X4g/r1BwsQ7S0LTECwLLbM6BNzhv3g==}

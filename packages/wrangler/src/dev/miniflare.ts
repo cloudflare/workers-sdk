@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { realpathSync } from "node:fs";
 import path from "node:path";
 import { Log, LogLevel, TypedEventTarget, Mutex, Miniflare } from "miniflare";
+import { AIFetcher } from "../ai/fetcher";
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { withSourceURLs } from "../deployment-bundle/source-url";
 import { getHttpsOptions } from "../https-options";
@@ -312,6 +313,10 @@ function buildBindingOptions(config: ConfigBundle) {
 				.join("\n"),
 	};
 
+	if (bindings.ai?.binding) {
+		config.serviceBindings[bindings.ai.binding] = AIFetcher;
+	}
+
 	const bindingOptions = {
 		bindings: bindings.vars,
 		textBlobBindings,
@@ -502,13 +507,7 @@ async function buildMiniflareOptions(
 		logger.warn("Miniflare 3 does not support CRON triggers yet, ignoring...");
 	}
 
-	if (config.bindings.ai) {
-		logger.warn(
-			"Workers AI is not currently supported in local mode. Please use --remote to work with it."
-		);
-	}
-
-	if (!config.bindings.ai && config.bindings.vectorize?.length) {
+	if (config.bindings.vectorize?.length) {
 		// TODO: add local support for Vectorize bindings (https://github.com/cloudflare/workers-sdk/issues/4360)
 		logger.warn(
 			"Vectorize bindings are not currently supported in local mode. Please use --remote if you are working with them."
