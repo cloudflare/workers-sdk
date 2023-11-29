@@ -2647,7 +2647,6 @@ describe("init", () => {
 				triggers: {
 					crons: ["0 0 0 * * *"],
 				},
-				usage_model: "bundled",
 				vars: {
 					"ANOTHER-NAME": "thing-TEXT",
 				},
@@ -2701,11 +2700,13 @@ describe("init", () => {
 				expectedScriptName = "",
 				expectedEnvironment = "",
 				expectedCompatDate,
+				expectedStandardEnablement = true,
 			}: {
 				expectedAccountId: string;
 				expectedScriptName: string;
 				expectedEnvironment: string;
 				expectedCompatDate: string | undefined;
+				expectedStandardEnablement?: boolean;
 			}) {
 				msw.use(
 					rest.get(
@@ -2805,6 +2806,20 @@ describe("init", () => {
 											},
 										],
 									},
+								})
+							);
+						}
+					),
+					rest.get(
+						`*/accounts/:accountId/workers/standard`,
+						(req, res, ctx) => {
+							return res.once(
+								ctx.status(200),
+								ctx.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: { standard: expectedStandardEnablement },
 								})
 							);
 						}
@@ -2986,7 +3001,6 @@ describe("init", () => {
 			main = \\"src/index.ts\\"
 			compatibility_date = \\"1987-9-27\\"
 			route = \\"delta.quadrant\\"
-			usage_model = \\"bundled\\"
 
 			[[migrations]]
 			tag = \\"some-migration-tag\\"
@@ -3324,6 +3338,20 @@ describe("init", () => {
 								})
 							);
 						}
+					),
+					rest.get(
+						`*/accounts/:accountId/workers/standard`,
+						(req, res, ctx) => {
+							return res.once(
+								ctx.status(200),
+								ctx.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: { standard: true },
+								})
+							);
+						}
 					)
 				);
 
@@ -3358,7 +3386,6 @@ describe("init", () => {
 							triggers: {
 								crons: [],
 							},
-							usage_model: "bundled",
 							name: "isolinear-optical-chip",
 							tail_consumers: [{ service: "listener" }],
 						}),
@@ -3446,6 +3473,46 @@ describe("init", () => {
 							...mockConfigExpected,
 							name: "isolinear-optical-chip",
 							main: "src/index.js",
+						}),
+					},
+				});
+			});
+
+			it("should have an explicit usage model for non-standard users", async () => {
+				mockSupportingDashRequests({
+					expectedAccountId: "LCARS",
+					expectedScriptName: "memory-crystal",
+					expectedEnvironment: "test",
+					expectedCompatDate: "1987-9-27",
+					expectedStandardEnablement: false,
+				});
+				setMockFetchDashScript(mockDashboardScript);
+				mockConfirm(
+					{
+						text: "Would you like to use git to manage this Worker?",
+						result: false,
+					},
+					{
+						text: "No package.json found. Would you like to create one?",
+						result: true,
+					},
+					{
+						text: "Would you like to use TypeScript?",
+						result: true,
+					}
+				);
+
+				await runWrangler(
+					"init isolinear-optical-chip --from-dash memory-crystal --no-delegate-c3"
+				);
+
+				expect(std.out).toContain("cd isolinear-optical-chip");
+
+				checkFiles({
+					items: {
+						"isolinear-optical-chip/wrangler.toml": wranglerToml({
+							...mockConfigExpected,
+							usage_model: "bundled",
 						}),
 					},
 				});
