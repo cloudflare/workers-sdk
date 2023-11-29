@@ -846,7 +846,7 @@ function getBindingsAndAssetPaths(args: StartDevOptions, configParam: Config) {
 	return { assetPaths, bindings };
 }
 
-function getBindings(
+export function getBindings(
 	configParam: Config,
 	env: string | undefined,
 	local: boolean,

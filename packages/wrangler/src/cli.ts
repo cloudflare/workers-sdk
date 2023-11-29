@@ -26,3 +26,5 @@ if (typeof jest === "undefined" && require.main === module) {
  */
 export { unstable_dev, unstable_pages, unstable_DevEnv };
 export type { UnstableDevWorker, UnstableDevOptions };
+
+export * from "./api/integrations";

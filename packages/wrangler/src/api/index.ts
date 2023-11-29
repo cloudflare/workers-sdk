@@ -10,3 +10,4 @@ export {
 	deleteMTlsCertificate,
 } from "./mtls-certificate";
 export * from "./startDevWorker";
+export * from "./integrations";
