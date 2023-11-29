@@ -16,6 +16,7 @@ import { processArgument } from "helpers/args";
 import { C3_DEFAULTS } from "helpers/cli";
 import {
 	getWorkerdCompatibilityDate,
+	installPackages,
 	npmInstall,
 	runCommand,
 } from "helpers/command";
@@ -32,7 +33,7 @@ import {
 } from "./common";
 import type { C3Args, PagesGeneratorContext as Context } from "types";
 
-const { dlx } = detectPackageManager();
+const { dlx, npm } = detectPackageManager();
 
 export const runWorkersGenerator = async (args: C3Args) => {
 	const originalCWD = process.cwd();
@@ -61,6 +62,7 @@ export const runWorkersGenerator = async (args: C3Args) => {
 	startSection("Installing dependencies", "Step 2 of 3");
 	chdir(ctx.project.path);
 	await npmInstall();
+	await installWorkerDependencies(ctx);
 	await gitCommit(ctx);
 	endSection("Dependencies Installed");
 
@@ -193,4 +195,18 @@ async function updateFiles(ctx: Context) {
 		JSON.stringify(contents.packagejson, null, 2)
 	);
 	await writeFile(paths.wranglertoml, contents.wranglertoml);
+}
+
+async function installWorkerDependencies(ctx: Context) {
+	const dependencies = ["wrangler"];
+
+	if (ctx.args.ts) {
+		dependencies.push("@cloudflare/workers-types");
+	}
+
+	await installPackages(dependencies, {
+		dev: true,
+		startText: `Installing ${dependencies.join(", ")}`,
+		doneText: `${brandColor("installed")} ${dim(`via ${npm}`)}`,
+	});
 }
