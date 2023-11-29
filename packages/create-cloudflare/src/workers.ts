@@ -3,7 +3,7 @@ import { cp, mkdtemp, readdir, rename, rm } from "fs/promises";
 import { tmpdir } from "os";
 import { dirname, join, resolve } from "path";
 import { chdir } from "process";
-import { endSection, startSection, updateStatus, warn } from "@cloudflare/cli";
+import { endSection, startSection, updateStatus } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import { processArgument } from "helpers/args";
