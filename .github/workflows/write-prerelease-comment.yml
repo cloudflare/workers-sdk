@@ -101,7 +101,7 @@ jobs:
       - name: "Comment on PR with C3 link"
         uses: marocchino/sticky-pull-request-comment@v2
         with:
-          number: ${{ env.WORKFLOW_RUN_PR_FOR_CREATE_CLOUDFLARE }}
+          number: ${{ env.WORKFLOW_RUN_PR_FOR_CREATE-CLOUDFLARE }}
           message: |
             A create-cloudflare (C3) prerelease is available for testing.
             You can use `npx` with this latest build directly:
