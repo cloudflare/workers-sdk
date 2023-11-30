@@ -193,7 +193,7 @@ export const runFrameworkGenerator = async (ctx: C3Context, args: string[]) => {
 
 	endSection(
 		`Continue with ${ctx.framework?.config.displayName}`,
-		`via \`${quoteShellArgs(cmd)}\``
+		`via \`${cmd.join(" ")}\``
 	);
 
 	if (process.env.VITEST) {
