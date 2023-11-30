@@ -57,7 +57,6 @@ export function useEsbuild({
 	testScheduled,
 	experimentalLocal,
 	projectRoot,
-	onBundleStart,
 }: {
 	entry: Entry;
 	destination: string | undefined;
@@ -83,7 +82,6 @@ export function useEsbuild({
 	testScheduled: boolean;
 	experimentalLocal: boolean | undefined;
 	projectRoot: string | undefined;
-	onBundleStart: () => void;
 }): EsbuildBundle | undefined {
 	const [bundle, setBundle] = useState<EsbuildBundle>();
 	const { exit } = useApp();
@@ -133,9 +131,6 @@ export function useEsbuild({
 		const onEnd = {
 			name: "on-end",
 			setup(b: PluginBuild) {
-				b.onStart(() => {
-					onBundleStart();
-				});
 				b.onEnd(async (result: BuildResult) => {
 					const errors = result.errors;
 					const warnings = result.warnings;
@@ -257,7 +252,6 @@ export function useEsbuild({
 		testScheduled,
 		experimentalLocal,
 		projectRoot,
-		onBundleStart,
 	]);
 	return bundle;
 }

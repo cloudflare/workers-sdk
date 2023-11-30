@@ -74,6 +74,7 @@ compatibility_date = "2023-01-01"
 		remote = await unstable_dev(path.join(tmpDir, "remote.js"), {
 			config: path.join(tmpDir, "wrangler.toml"),
 			experimental: { disableExperimentalWarning: true },
+			port: 6756,
 		});
 	});
 
@@ -91,7 +92,7 @@ compatibility_date = "2023-01-01"
 	it("should obtain token from exchange_url", async () => {
 		const resp = await worker.fetch(
 			`https://preview.devprod.cloudflare.dev/exchange?exchange_url=${encodeURIComponent(
-				`http://127.0.0.1:${remote.port}/exchange`
+				"http://127.0.0.1:6756/exchange"
 			)}`,
 			{
 				method: "POST",
@@ -116,9 +117,9 @@ compatibility_date = "2023-01-01"
 			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=${encodeURIComponent(
 				token
 			)}&prewarm=${encodeURIComponent(
-				`http://127.0.0.1:${remote.port}/prewarm`
+				"http://127.0.0.1:6756/prewarm"
 			)}&remote=${encodeURIComponent(
-				`http://127.0.0.1:${remote.port}`
+				"http://127.0.0.1:6756"
 			)}&suffix=${encodeURIComponent("/hello?world")}`,
 			{
 				method: "GET",
@@ -150,17 +151,17 @@ compatibility_date = "2023-01-01"
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- ignoring this test type error for sake of turborepo PR
 		const json = (await resp.json()) as any;
 
-		expect(json).toMatchObject({
-			url: `http://127.0.0.1:${remote.port}/`,
-			headers: expect.arrayContaining([["cf-workers-preview-token", token]]),
-		});
+		expect(
+			json.headers.find(([h]: [string]) => h === "cf-workers-preview-token")[1]
+		).toBe(token);
+		expect(json.url).toMatchInlineSnapshot('"http://127.0.0.1:6756/"');
 	});
 	it("should be redirected with cookie", async () => {
 		const resp = await worker.fetch(
 			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&prewarm=${encodeURIComponent(
-				`http://127.0.0.1:${remote.port}/prewarm`
+				"http://127.0.0.1:6756/prewarm"
 			)}&remote=${encodeURIComponent(
-				`http://127.0.0.1:${remote.port}`
+				"http://127.0.0.1:6756"
 			)}&suffix=${encodeURIComponent("/hello?world")}`,
 			{
 				method: "GET",
@@ -192,12 +193,10 @@ compatibility_date = "2023-01-01"
 		);
 
 		const json = (await resp.json()) as { headers: string[][]; url: string };
-		expect(json).toMatchObject({
-			url: `http://127.0.0.1:${remote.port}/`,
-			headers: expect.arrayContaining([
-				["cf-workers-preview-token", "TEST_TOKEN"],
-			]),
+		expect(Object.fromEntries([...json.headers])).toMatchObject({
+			"cf-workers-preview-token": "TEST_TOKEN",
 		});
+		expect(json.url).toMatchInlineSnapshot('"http://127.0.0.1:6756/"');
 	});
 	it("should not follow redirects", async () => {
 		const resp = await worker.fetch(
