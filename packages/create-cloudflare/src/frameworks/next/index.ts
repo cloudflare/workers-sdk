@@ -19,11 +19,11 @@ import {
 	apiPagesDirHelloJs,
 	apiPagesDirHelloTs,
 } from "./templates";
-import type { C3Args, FrameworkConfig, PagesGeneratorContext } from "types";
+import type { C3Args, FrameworkConfig, C3Context } from "types";
 
 const { npm, npx } = detectPackageManager();
 
-const generate = async (ctx: PagesGeneratorContext) => {
+const generate = async (ctx: C3Context) => {
 	const projectName = ctx.project.name;
 
 	await runFrameworkGenerator(ctx, [projectName]);
@@ -50,7 +50,7 @@ const getApiTemplate = (
 		: [`${apiPath}/hello.js`, apiPagesDirHelloJs];
 };
 
-const configure = async (ctx: PagesGeneratorContext) => {
+const configure = async (ctx: C3Context) => {
 	const projectName = ctx.project.name;
 
 	// Add a compatible function handler example
@@ -97,7 +97,7 @@ const configure = async (ctx: PagesGeneratorContext) => {
 };
 
 export const shouldInstallNextOnPagesEslintPlugin = async (
-	ctx: PagesGeneratorContext
+	ctx: C3Context
 ): Promise<boolean> => {
 	const eslintUsage = usesEslint(ctx);
 
@@ -118,9 +118,7 @@ export const shouldInstallNextOnPagesEslintPlugin = async (
 	});
 };
 
-export const writeEslintrc = async (
-	ctx: PagesGeneratorContext
-): Promise<void> => {
+export const writeEslintrc = async (ctx: C3Context): Promise<void> => {
 	const eslintConfig = readJSON(`${ctx.project.name}/.eslintrc.json`);
 
 	eslintConfig.plugins ??= [];

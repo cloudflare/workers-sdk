@@ -13,7 +13,7 @@ import remix from "./remix";
 import solid from "./solid";
 import svelte from "./svelte";
 import vue from "./vue";
-import type { FrameworkConfig, PagesGeneratorContext } from "types";
+import type { FrameworkConfig, C3Context } from "types";
 
 export const FrameworkMap: Record<string, FrameworkConfig> = {
 	angular,
@@ -35,10 +35,7 @@ export const supportedFramework = (framework: string) => {
 	return Object.keys(FrameworkMap).includes(framework);
 };
 
-export const getFrameworkCli = (
-	ctx: PagesGeneratorContext,
-	withVersion = true
-) => {
+export const getFrameworkCli = (ctx: C3Context, withVersion = true) => {
 	if (!ctx.framework) {
 		return crash("Framework not specified.");
 	}

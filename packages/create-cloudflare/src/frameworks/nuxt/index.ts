@@ -6,11 +6,11 @@ import { spinner } from "@cloudflare/cli/interactive";
 import { npmInstall, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import type { FrameworkConfig, PagesGeneratorContext } from "types";
+import type { FrameworkConfig, C3Context } from "types";
 
 const { npm } = detectPackageManager();
 
-const generate = async (ctx: PagesGeneratorContext) => {
+const generate = async (ctx: C3Context) => {
 	const gitFlag = ctx.args.git ? `--gitInit` : `--no-gitInit`;
 
 	await runFrameworkGenerator(ctx, [
@@ -24,7 +24,7 @@ const generate = async (ctx: PagesGeneratorContext) => {
 	logRaw(""); // newline
 };
 
-const configure = async (ctx: PagesGeneratorContext) => {
+const configure = async (ctx: C3Context) => {
 	process.chdir(ctx.project.path);
 	writeFile("./.node-version", "17");
 	await updateNuxtConfig();

@@ -1,7 +1,7 @@
 import fs, { existsSync } from "fs";
 import { crash } from "@cloudflare/cli";
 import { getWorkerdCompatibilityDate } from "./command";
-import type { PagesGeneratorContext } from "types";
+import type { C3Context } from "types";
 
 export const writeFile = (path: string, content: string) => {
 	try {
@@ -67,7 +67,7 @@ type EslintUsageInfo =
 		- https://eslint.org/docs/latest/use/configure/configuration-files#configuration-file-formats
 		- https://eslint.org/docs/latest/use/configure/configuration-files-new )
 */
-export const usesEslint = (ctx: PagesGeneratorContext): EslintUsageInfo => {
+export const usesEslint = (ctx: C3Context): EslintUsageInfo => {
 	for (const ext of eslintRcExts) {
 		const eslintRcFilename = `.eslintrc.${ext}` as EslintRcFileName;
 		if (existsSync(`${ctx.project.path}/${eslintRcFilename}`)) {

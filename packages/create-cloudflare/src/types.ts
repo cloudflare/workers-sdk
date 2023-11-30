@@ -17,10 +17,9 @@ export type C3Args = {
 	wranglerDefaults?: boolean;
 	additionalArgs?: string[];
 };
-
 export type C3Arg = C3Args[keyof C3Args];
 
-export type PagesGeneratorContext = {
+export type C3Context = {
 	args: C3Args;
 	deployedUrl?: string;
 	account?: {
@@ -45,8 +44,8 @@ export type PagesGeneratorContext = {
 type UpdaterPackageScript = (cmd: string) => string;
 
 export type FrameworkConfig = {
-	generate: (ctx: PagesGeneratorContext) => Promise<void>;
-	configure?: (ctx: PagesGeneratorContext) => Promise<void>;
+	generate: (ctx: C3Context) => Promise<void>;
+	configure?: (ctx: C3Context) => Promise<void>;
 	displayName: string;
 	getPackageScripts: () => Promise<
 		Record<string, string | UpdaterPackageScript>

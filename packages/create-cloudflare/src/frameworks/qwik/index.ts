@@ -3,15 +3,15 @@ import { npmInstall, runCommand, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
 import { quoteShellArgs } from "../../common";
-import type { FrameworkConfig, PagesGeneratorContext } from "types";
+import type { FrameworkConfig, C3Context } from "types";
 
 const { npm, npx } = detectPackageManager();
 
-const generate = async (ctx: PagesGeneratorContext) => {
+const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, ["basic", ctx.project.name]);
 };
 
-const configure = async (ctx: PagesGeneratorContext) => {
+const configure = async (ctx: C3Context) => {
 	// Run npm install so the `qwik` command in the next step exists
 	process.chdir(ctx.project.path);
 	await npmInstall();

@@ -26,7 +26,7 @@ import {
 	runDeploy,
 	setupProjectDirectory,
 } from "./common";
-import type { C3Args, PagesGeneratorContext as Context } from "types";
+import type { C3Args, C3Context as Context } from "types";
 
 const { dlx, npm } = detectPackageManager();
 

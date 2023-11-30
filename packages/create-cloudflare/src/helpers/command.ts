@@ -7,7 +7,7 @@ import { spawn } from "cross-spawn";
 import { getFrameworkCli } from "frameworks/index";
 import { quoteShellArgs } from "../common";
 import { detectPackageManager } from "./packages";
-import type { PagesGeneratorContext } from "types";
+import type { C3Context } from "types";
 
 /**
  * Command is a string array, like ['git', 'commit', '-m', '"Initial commit"']
@@ -178,10 +178,7 @@ export const retry = async <T>(
 	throw error;
 };
 
-export const runFrameworkGenerator = async (
-	ctx: PagesGeneratorContext,
-	args: string[]
-) => {
+export const runFrameworkGenerator = async (ctx: C3Context, args: string[]) => {
 	const cli = getFrameworkCli(ctx, true);
 	const { npm, dlx } = detectPackageManager();
 	// yarn cannot `yarn create@some-version` and doesn't have an npx equivalent
@@ -249,7 +246,7 @@ export const installPackages = async (
 // This is needed in situations where npm is automatically used by framework creators for the initial
 // install, since using other package managers in a folder with an existing npm install will cause failures
 // when installing subsequent packages
-export const resetPackageManager = async (ctx: PagesGeneratorContext) => {
+export const resetPackageManager = async (ctx: C3Context) => {
 	const { npm } = detectPackageManager();
 
 	if (!needsPackageManagerReset(ctx)) {
@@ -270,7 +267,7 @@ export const resetPackageManager = async (ctx: PagesGeneratorContext) => {
 	});
 };
 
-const needsPackageManagerReset = (ctx: PagesGeneratorContext) => {
+const needsPackageManagerReset = (ctx: C3Context) => {
 	const { npm } = detectPackageManager();
 	const projectPath = ctx.project.path;
 

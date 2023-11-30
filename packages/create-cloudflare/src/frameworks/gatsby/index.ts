@@ -2,11 +2,11 @@ import { inputPrompt } from "@cloudflare/cli/interactive";
 import { runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import type { FrameworkConfig, PagesGeneratorContext } from "types";
+import type { FrameworkConfig, C3Context } from "types";
 
 const { npm } = detectPackageManager();
 
-const generate = async (ctx: PagesGeneratorContext) => {
+const generate = async (ctx: C3Context) => {
 	const defaultTemplate = "https://github.com/gatsbyjs/gatsby-starter-blog";
 
 	const useTemplate = await inputPrompt({

@@ -28,7 +28,7 @@ import { poll } from "helpers/poll";
 import { quote } from "shell-quote";
 import { version as wranglerVersion } from "wrangler/package.json";
 import { version } from "../package.json";
-import type { C3Args, PagesGeneratorContext } from "types";
+import type { C3Args, C3Context } from "types";
 
 const { name, npm } = detectPackageManager();
 
@@ -135,7 +135,7 @@ export const setupProjectDirectory = (args: C3Args) => {
 	return { name: pathBasename, path };
 };
 
-export const offerToDeploy = async (ctx: PagesGeneratorContext) => {
+export const offerToDeploy = async (ctx: C3Context) => {
 	startSection(`Deploy with Cloudflare`, `Step 3 of 3`);
 
 	const label = `deploy via \`${quoteShellArgs([
@@ -159,7 +159,7 @@ export const offerToDeploy = async (ctx: PagesGeneratorContext) => {
 	await chooseAccount(ctx);
 };
 
-export const runDeploy = async (ctx: PagesGeneratorContext) => {
+export const runDeploy = async (ctx: C3Context) => {
 	if (ctx.args.deploy === false) return;
 	if (!ctx.account?.id) {
 		crash("Failed to read Cloudflare account.");
@@ -213,7 +213,7 @@ export const runDeploy = async (ctx: PagesGeneratorContext) => {
 	}
 };
 
-export const chooseAccount = async (ctx: PagesGeneratorContext) => {
+export const chooseAccount = async (ctx: C3Context) => {
 	const s = spinner();
 	s.start(`Selecting Cloudflare account ${dim("retrieving accounts")}`);
 	const accounts = await listAccounts();
@@ -250,7 +250,7 @@ export const chooseAccount = async (ctx: PagesGeneratorContext) => {
 	ctx.account = { id: accountId, name: accountName };
 };
 
-export const printSummary = async (ctx: PagesGeneratorContext) => {
+export const printSummary = async (ctx: C3Context) => {
 	const nextSteps = [
 		[
 			`Navigate to the new directory`,
@@ -327,7 +327,7 @@ export const printSummary = async (ctx: PagesGeneratorContext) => {
 	process.exit(0);
 };
 
-export const offerGit = async (ctx: PagesGeneratorContext) => {
+export const offerGit = async (ctx: C3Context) => {
 	const gitInstalled = await isGitInstalled();
 	if (!gitInstalled) {
 		// haven't prompted yet, if provided as --git arg
@@ -378,7 +378,7 @@ export const offerGit = async (ctx: PagesGeneratorContext) => {
 	}
 };
 
-export const gitCommit = async (ctx: PagesGeneratorContext) => {
+export const gitCommit = async (ctx: C3Context) => {
 	// Note: createCommitMessage stores the message in ctx so that it can
 	//       be used later even if we're not in a git repository, that's why
 	//       we unconditionally run this command here
@@ -403,7 +403,7 @@ export const gitCommit = async (ctx: PagesGeneratorContext) => {
 	});
 };
 
-const createCommitMessage = async (ctx: PagesGeneratorContext) => {
+const createCommitMessage = async (ctx: C3Context) => {
 	if (!ctx.framework) return "Initial commit (by create-cloudflare CLI)";
 
 	const header = "Initialize web application via create-cloudflare CLI";
