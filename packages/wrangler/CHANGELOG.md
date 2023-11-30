@@ -1,5 +1,18 @@
 # wrangler
 
+## 3.18.0
+
+### Minor Changes
+
+- [#4532](https://github.com/cloudflare/workers-sdk/pull/4532) [`311ffbd5`](https://github.com/cloudflare/workers-sdk/commit/311ffbd5064f8301ac6f0311bbe5630897923b93) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: change `wrangler (pages) dev` to listen on `localhost` by default
+
+  Previously, Wrangler listened on all interfaces (`*`) by default. This change switches `wrangler (pages) dev` to just listen on local interfaces. Whilst this is technically a breaking change, we've decided the security benefits outweigh the potential disruption caused. If you need to access your dev server from another device on your network, you can use `wrangler (pages) dev --ip *` to restore the previous behaviour.
+
+### Patch Changes
+
+- Updated dependencies [[`1b348782`](https://github.com/cloudflare/workers-sdk/commit/1b34878287e3c98e8743e0a9c30b860107d4fcbe)]:
+  - miniflare@3.20231030.2
+
 ## 3.17.1
 
 ### Patch Changes
