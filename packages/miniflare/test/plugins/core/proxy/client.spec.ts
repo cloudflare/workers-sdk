@@ -13,6 +13,7 @@ import {
 	ReplaceWorkersTypes,
 	Response,
 	WebSocketPair,
+	fetch,
 } from "miniflare";
 
 // This file tests API proxy edge cases. Cache, D1, Durable Object and R2 tests
@@ -264,4 +265,14 @@ test("ProxyClient: can `JSON.stringify()` proxies", async (t) => {
 		uploaded: object.uploaded.toISOString(),
 		version: object.version,
 	});
+});
+
+test("ProxyServer: prevents unauthorised access", async (t) => {
+	const mf = new Miniflare({ script: nullScript });
+	t.teardown(() => mf.dispose());
+
+	const url = await mf.ready;
+	const res = await fetch(url, { headers: { "MF-Op": "GET" } });
+	t.is(res.status, 401);
+	await res.arrayBuffer(); // (drain)
 });

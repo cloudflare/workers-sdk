@@ -1,7 +1,9 @@
 import assert from "node:assert";
+import { Buffer } from "node:buffer";
 import { parse } from "devalue";
 import { readPrefix, reduceError } from "miniflare:shared";
 import {
+	CoreBindings,
 	CoreHeaders,
 	ProxyAddresses,
 	ProxyOps,
@@ -59,6 +61,10 @@ function getType(value: unknown) {
 	return Object.prototype.toString.call(value).slice(8, -1); // `[object <type>]`
 }
 
+type Env = Record<string, unknown> & {
+	[CoreBindings.DATA_PROXY_SECRET]: ArrayBuffer;
+};
+
 // TODO(someday): extract `ProxyServer` into component that could be used by
 //  other (user) Durable Objects
 export class ProxyServer implements DurableObject {
@@ -105,7 +111,10 @@ export class ProxyServer implements DurableObject {
 	};
 	nativeReviver: ReducersRevivers = { Native: this.revivers.Native };
 
-	constructor(_state: DurableObjectState, env: Record<string, unknown>) {
+	constructor(
+		_state: DurableObjectState,
+		readonly env: Env
+	) {
 		this.heap.set(ProxyAddresses.GLOBAL, globalThis);
 		this.heap.set(ProxyAddresses.ENV, env);
 	}
@@ -123,6 +132,15 @@ export class ProxyServer implements DurableObject {
 	}
 
 	async #fetch(request: Request) {
+		// Validate secret header to prevent unauthorised access to proxy
+		const secretHex = request.headers.get(CoreHeaders.OP_SECRET);
+		if (secretHex == null) return new Response(null, { status: 401 });
+		const expectedSecret = this.env[CoreBindings.DATA_PROXY_SECRET];
+		const secretBuffer = Buffer.from(secretHex, "hex");
+		if (!crypto.subtle.timingSafeEqual(secretBuffer, expectedSecret)) {
+			return new Response(null, { status: 401 });
+		}
+
 		const opHeader = request.headers.get(CoreHeaders.OP);
 		const targetHeader = request.headers.get(CoreHeaders.OP_TARGET);
 		const keyHeader = request.headers.get(CoreHeaders.OP_KEY);
@@ -188,6 +206,7 @@ export class ProxyServer implements DurableObject {
 				const url = new URL(originalUrl ?? request.url);
 				// Create a new request to allow header mutation and use original URL
 				request = new Request(url, request);
+				request.headers.delete(CoreHeaders.OP_SECRET);
 				request.headers.delete(CoreHeaders.OP);
 				request.headers.delete(CoreHeaders.OP_TARGET);
 				request.headers.delete(CoreHeaders.OP_KEY);

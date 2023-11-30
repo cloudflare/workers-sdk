@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-types */
 import assert from "assert";
+import crypto from "crypto";
 import { ReadableStream, TransformStream } from "stream/web";
 import util from "util";
 import type { ServiceWorkerGlobalScope } from "@cloudflare/workers-types/experimental";
@@ -62,6 +63,9 @@ const revivers: ReducersRevivers = {
 	...createHTTPRevivers(NODE_PLATFORM_IMPL),
 	// `Native` reviver depends on `ProxyStubHandler` methods
 };
+
+export const PROXY_SECRET = crypto.randomBytes(16);
+const PROXY_SECRET_HEX = PROXY_SECRET.toString("hex");
 
 // Exported public API of the proxy system
 export class ProxyClient {
@@ -168,6 +172,7 @@ class ProxyClientBridge {
 			await this.dispatchFetch(this.url, {
 				method: "DELETE",
 				headers: {
+					[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
 					[CoreHeaders.OP]: ProxyOps.FREE,
 					[CoreHeaders.OP_TARGET]: addresses.join(","),
 				},
@@ -234,6 +239,7 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 				const resPromise = this.bridge.dispatchFetch(this.bridge.url, {
 					method: "POST",
 					headers: {
+						[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
 						[CoreHeaders.OP]: ProxyOps.GET, // GET without key just gets target
 						[CoreHeaders.OP_TARGET]: stringify(target, reducers),
 					},
@@ -367,6 +373,7 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 		const syncRes = this.bridge.sync.fetch(this.bridge.url, {
 			method: "POST",
 			headers: {
+				[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
 				[CoreHeaders.OP]: ProxyOps.GET,
 				[CoreHeaders.OP_TARGET]: this.#stringifiedTarget,
 				[CoreHeaders.OP_KEY]: key,
@@ -416,6 +423,7 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 		const syncRes = this.bridge.sync.fetch(this.bridge.url, {
 			method: "POST",
 			headers: {
+				[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
 				[CoreHeaders.OP]: ProxyOps.GET_OWN_DESCRIPTOR,
 				[CoreHeaders.OP_KEY]: key,
 				[CoreHeaders.OP_TARGET]: this.#stringifiedTarget,
@@ -440,6 +448,7 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 		const syncRes = this.bridge.sync.fetch(this.bridge.url, {
 			method: "POST",
 			headers: {
+				[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
 				[CoreHeaders.OP]: ProxyOps.GET_OWN_KEYS,
 				[CoreHeaders.OP_TARGET]: this.#stringifiedTarget,
 			},
@@ -526,6 +535,7 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 		const syncRes = this.bridge.sync.fetch(this.bridge.url, {
 			method: "POST",
 			headers: {
+				[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
 				[CoreHeaders.OP]: ProxyOps.CALL,
 				[CoreHeaders.OP_TARGET]: this.#stringifiedTarget,
 				[CoreHeaders.OP_KEY]: key,
@@ -548,6 +558,7 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 			resPromise = this.bridge.dispatchFetch(this.bridge.url, {
 				method: "POST",
 				headers: {
+					[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
 					[CoreHeaders.OP]: ProxyOps.CALL,
 					[CoreHeaders.OP_TARGET]: this.#stringifiedTarget,
 					[CoreHeaders.OP_KEY]: key,
@@ -563,6 +574,7 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 			resPromise = this.bridge.dispatchFetch(this.bridge.url, {
 				method: "POST",
 				headers: {
+					[CoreHeaders.OP_SECRET]: PROXY_SECRET_HEX,
 					[CoreHeaders.OP]: ProxyOps.CALL,
 					[CoreHeaders.OP_TARGET]: this.#stringifiedTarget,
 					[CoreHeaders.OP_KEY]: key,
@@ -581,6 +593,7 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 		const request = new Request(...args);
 		// If adding new headers here, remember to `delete()` them in `ProxyServer`
 		// before calling `fetch()`.
+		request.headers.set(CoreHeaders.OP_SECRET, PROXY_SECRET_HEX);
 		request.headers.set(CoreHeaders.OP, ProxyOps.CALL);
 		request.headers.set(CoreHeaders.OP_TARGET, this.#stringifiedTarget);
 		request.headers.set(CoreHeaders.OP_KEY, "fetch");
