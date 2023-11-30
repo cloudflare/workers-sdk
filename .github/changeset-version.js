@@ -126,7 +126,7 @@ function main() {
 	}
 
 	// 4. Update the lockfile
-	console.log(execSync("pnpm install", { encoding: "utf8" }));
+	console.log(execSync("pnpm install --lockfile-only", { encoding: "utf8" }));
 }
 
 if (require.main === module) main();
