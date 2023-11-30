@@ -13,6 +13,7 @@ import {
 	PersistenceSchema,
 	Plugin,
 	SERVICE_LOOPBACK,
+	getControlEndpointBindings,
 	getPersistPath,
 } from "../shared";
 
@@ -128,6 +129,7 @@ export const CACHE_PLUGIN: Plugin<
 							name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 							service: { name: SERVICE_LOOPBACK },
 						},
+						...getControlEndpointBindings(),
 					],
 				},
 			};

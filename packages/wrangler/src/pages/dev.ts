@@ -99,7 +99,7 @@ export function Options(yargs: CommonYargsArgv) {
 			},
 			ip: {
 				type: "string",
-				default: "0.0.0.0",
+				default: "localhost",
 				description: "The IP address to listen on",
 			},
 			port: {
