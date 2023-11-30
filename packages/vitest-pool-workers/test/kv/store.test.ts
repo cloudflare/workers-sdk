@@ -4,15 +4,17 @@ import {
 	runInDurableObject,
 	runDurableObjectAlarm,
 } from "cloudflare:test";
-import { describe, it, expect, afterAll } from "vitest";
+import { describe, it, expect, afterAll, beforeAll } from "vitest";
 import worker, { transformResponse, Counter } from "./worker";
 
-fetchMock.activate();
-fetchMock.disableNetConnect();
-fetchMock
-	.get("https://example.com")
-	.intercept({ path: "/" })
-	.reply(200, "data");
+beforeAll(() => {
+	fetchMock.activate();
+	fetchMock.disableNetConnect();
+	fetchMock
+		.get("https://example.com")
+		.intercept({ path: "/" })
+		.reply(200, "data");
+});
 afterAll(() => fetchMock.assertNoPendingInterceptors());
 
 describe("kv", () => {

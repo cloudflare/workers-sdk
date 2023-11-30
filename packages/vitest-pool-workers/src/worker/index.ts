@@ -10,7 +10,7 @@ import {
 import * as devalue from "devalue";
 import type { VitestExecutor as VitestExecutorType } from "vitest/execute";
 
-const originalConsole = console;
+globalThis.__console = console;
 
 const originalSetTimeout = globalThis.setTimeout;
 const originalClearTimeout = globalThis.clearTimeout;
@@ -131,12 +131,12 @@ export class RunnerObject implements DurableObject {
 				})
 				.catch((e: unknown) => {
 					const error = reduceError(e);
-					originalConsole.error("Error running worker:", error.stack);
+					__console.error("Error running worker:", error.stack);
 					poolSocket.close(1011, "Internal Error");
 				});
 		} catch (e) {
 			const error = reduceError(e);
-			originalConsole.error("Error initialising worker:", error.stack);
+			__console.error("Error initialising worker:", error.stack);
 			return Response.json(error, {
 				status: 500,
 				headers: { "MF-Experimental-Error-Stack": "true" },

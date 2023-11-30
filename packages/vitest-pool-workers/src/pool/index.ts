@@ -557,6 +557,8 @@ export default function (ctx: Vitest): ProcessPool {
 				const singleWorker = usingSingleWorker(project);
 
 				const config = project.getSerializableConfig();
+				// Use our custom test runner
+				config.runner = "cloudflare:test-runner";
 				// Allow workers to be re-used by removing the isolation requirement
 				config.poolOptions ??= {};
 				config.poolOptions.threads ??= {};

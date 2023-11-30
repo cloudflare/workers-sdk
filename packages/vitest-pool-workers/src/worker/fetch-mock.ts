@@ -7,9 +7,6 @@ export const fetchMock = new MockAgent({ connections: 1 });
 const requests = new WeakMap<Dispatcher.DispatchOptions, Request>();
 const responses = new WeakMap<Dispatcher.DispatchOptions, Response>();
 
-// TODO(soon): call this at the start of each test file
-// resetMockAgent(fetchMock);
-
 const originalFetch = fetch;
 setDispatcher((opts, handler) => {
 	const request = requests.get(opts);
