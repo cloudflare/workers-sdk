@@ -4,18 +4,18 @@ import { installPackages, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag, usesTypescript, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
 import { viteConfig } from "./templates";
-import type { FrameworkConfig, PagesGeneratorContext } from "types";
+import type { FrameworkConfig, C3Context } from "types";
 
 const { npm } = detectPackageManager();
 
-const generate = async (ctx: PagesGeneratorContext) => {
+const generate = async (ctx: C3Context) => {
 	// Run the create-solid command
 	await runFrameworkGenerator(ctx, [ctx.project.name]);
 
 	logRaw("");
 };
 
-const configure = async (ctx: PagesGeneratorContext) => {
+const configure = async (ctx: C3Context) => {
 	process.chdir(ctx.project.path);
 
 	// Install the pages adapter

@@ -10,17 +10,17 @@ import { compatDateFlag, usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
 import { platformInterface } from "./templates";
 import type * as recast from "recast";
-import type { FrameworkConfig, PagesGeneratorContext } from "types";
+import type { FrameworkConfig, C3Context } from "types";
 
 const { npm } = detectPackageManager();
 
-const generate = async (ctx: PagesGeneratorContext) => {
+const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, [ctx.project.name]);
 
 	logRaw("");
 };
 
-const configure = async (ctx: PagesGeneratorContext) => {
+const configure = async (ctx: C3Context) => {
 	// Navigate to the directory and install dependencies
 	process.chdir(ctx.project.path);
 	await npmInstall();

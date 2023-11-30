@@ -6,17 +6,17 @@ import { spinner } from "@cloudflare/cli/interactive";
 import { installPackages, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag, readFile, readJSON, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import type { FrameworkConfig, PagesGeneratorContext } from "types";
+import type { FrameworkConfig, C3Context } from "types";
 
 const { npm } = detectPackageManager();
 
-const generate = async (ctx: PagesGeneratorContext) => {
+const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, [ctx.project.name, "--ssr"]);
 
 	logRaw("");
 };
 
-const configure = async (ctx: PagesGeneratorContext) => {
+const configure = async (ctx: C3Context) => {
 	process.chdir(ctx.project.path);
 	updateAngularJson(ctx);
 	await updateAppCode();
@@ -39,7 +39,7 @@ const config: FrameworkConfig = {
 };
 export default config;
 
-async function installCFWorker(ctx: PagesGeneratorContext) {
+async function installCFWorker(ctx: C3Context) {
 	const s = spinner();
 	s.start(`Adding Cloudflare Pages adapter code`);
 	await cp(
@@ -88,7 +88,7 @@ async function updateAppCode() {
 	s.stop(`${brandColor(`updated`)} ${dim(`\`package.json\``)}`);
 }
 
-function updateAngularJson(ctx: PagesGeneratorContext) {
+function updateAngularJson(ctx: C3Context) {
 	const s = spinner();
 	s.start(`Updating angular.json config`);
 	const angularJson = readJSON(resolve("angular.json"));

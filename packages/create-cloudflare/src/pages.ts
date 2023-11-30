@@ -27,7 +27,7 @@ import {
 	runDeploy,
 	setupProjectDirectory,
 } from "./common";
-import type { C3Args, PagesGeneratorContext } from "types";
+import type { C3Args, C3Context } from "types";
 
 /** How many times to retry the create project command before failing. */
 const CREATE_PROJECT_RETRIES = 3;
@@ -48,7 +48,7 @@ export const runPagesGenerator = async (args: C3Args) => {
 	const framework = await getFrameworkSelection(args);
 
 	const frameworkConfig = FrameworkMap[framework];
-	const ctx: PagesGeneratorContext = {
+	const ctx: C3Context = {
 		project: {
 			name,
 			path,
@@ -121,7 +121,7 @@ const getFrameworkSelection = async (args: C3Args) => {
 };
 
 // Add/Update commands in the `scripts` section of package.json
-const updatePackageScripts = async (ctx: PagesGeneratorContext) => {
+const updatePackageScripts = async (ctx: C3Context) => {
 	chdir(ctx.project.path);
 
 	// Install wrangler so that the dev/deploy commands work
@@ -166,7 +166,7 @@ const updatePackageScripts = async (ctx: PagesGeneratorContext) => {
 	}
 };
 
-const createProject = async (ctx: PagesGeneratorContext) => {
+const createProject = async (ctx: C3Context) => {
 	if (ctx.args.deploy === false) return;
 	if (ctx.framework?.config.type === "workers") return;
 	if (!ctx.account?.id) {

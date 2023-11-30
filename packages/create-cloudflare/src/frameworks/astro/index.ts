@@ -3,17 +3,17 @@ import { brandColor, dim } from "@cloudflare/cli/colors";
 import { npmInstall, runCommand, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import type { FrameworkConfig, PagesGeneratorContext } from "types";
+import type { FrameworkConfig, C3Context } from "types";
 
 const { npx } = detectPackageManager();
 
-const generate = async (ctx: PagesGeneratorContext) => {
+const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, [ctx.project.name, "--no-install"]);
 
 	logRaw(""); // newline
 };
 
-const configure = async (ctx: PagesGeneratorContext) => {
+const configure = async (ctx: C3Context) => {
 	// Navigate to the directory and add the adapter
 	process.chdir(ctx.project.path);
 
