@@ -14,13 +14,12 @@ import {
 	requireApiToken,
 	saveAccountToCache,
 } from "../user";
-import { getAccessToken } from "../user/access";
 import {
 	createPreviewSession,
 	createWorkerPreview,
 } from "./create-worker-preview";
-import { startPreviewServer } from "./proxy";
-import type { ProxyData } from "../api";
+import useInspector from "./inspect";
+import { startPreviewServer, usePreviewServer } from "./proxy";
 import type { Route } from "../config/environment";
 import type {
 	CfModule,
@@ -58,9 +57,7 @@ interface RemoteProps {
 	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
-	onReady?:
-		| ((ip: string, port: number, proxyData: ProxyData) => void)
-		| undefined;
+	onReady?: ((ip: string, port: number) => void) | undefined;
 	sourceMapPath: string | undefined;
 	sendMetrics: boolean | undefined;
 }
@@ -70,7 +67,7 @@ export function Remote(props: RemoteProps) {
 	const accountChoicesRef = useRef<Promise<ChooseAccountItem[]>>();
 	const [accountChoices, setAccountChoices] = useState<ChooseAccountItem[]>();
 
-	useWorker({
+	const previewToken = useWorker({
 		name: props.name,
 		bundle: props.bundle,
 		format: props.format,
@@ -90,6 +87,29 @@ export function Remote(props: RemoteProps) {
 		onReady: props.onReady,
 		sendMetrics: props.sendMetrics,
 		port: props.port,
+	});
+
+	usePreviewServer({
+		previewToken,
+		assetDirectory: props.isWorkersSite
+			? undefined
+			: props.assetPaths?.assetDirectory,
+		localProtocol: props.localProtocol,
+		localPort: props.port,
+		ip: props.ip,
+	});
+
+	useInspector({
+		inspectorUrl:
+			props.inspect && previewToken
+				? previewToken.inspectorUrl.href
+				: undefined,
+		port: props.inspectorPort,
+		logToTerminal: true,
+		sourceMapPath: props.sourceMapPath,
+		host: previewToken?.host,
+		name: props.name,
+		sourceMapMetadata: props.bundle?.sourceMapMetadata,
 	});
 
 	const errorHandler = useErrorHandler();
@@ -153,9 +173,7 @@ interface RemoteWorkerProps {
 	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
-	onReady:
-		| ((ip: string, port: number, proxyData: ProxyData) => void)
-		| undefined;
+	onReady: ((ip: string, port: number) => void) | undefined;
 	sendMetrics: boolean | undefined;
 	port: number;
 }
@@ -307,30 +325,7 @@ export function useWorker(
 				});
 			}
 			*/
-			const accessToken = await getAccessToken(workerPreviewToken.host);
-
-			const proxyData: ProxyData = {
-				userWorkerUrl: {
-					protocol: "https:",
-					hostname: workerPreviewToken.host,
-					port: "443",
-				},
-				userWorkerInspectorUrl: {
-					protocol: workerPreviewToken.inspectorUrl.protocol,
-					hostname: workerPreviewToken.inspectorUrl.hostname,
-					port: workerPreviewToken.inspectorUrl.port.toString(),
-					pathname: workerPreviewToken.inspectorUrl.pathname,
-				},
-				userWorkerInnerUrlOverrides: {}, // there is no analagous prop for this option because we did not permit overriding request.url in remote mode
-				headers: {
-					"cf-workers-preview-token": workerPreviewToken.value,
-					Cookie: accessToken && `CF_Authorization=${accessToken}`,
-				},
-				liveReload: false, // liveReload currently disabled in remote-mode, but will be supported with startDevWorker
-				proxyLogsToController: true,
-			};
-
-			onReady?.(props.host || "localhost", props.port, proxyData);
+			onReady?.(props.host || "localhost", props.port);
 		}
 		start().catch((err) => {
 			// we want to log the error, but not end the process
@@ -424,32 +419,7 @@ export async function startRemoteServer(props: RemoteProps) {
 		localProtocol: props.localProtocol,
 		localPort: props.port,
 		ip: props.ip,
-		onReady: async (ip, port) => {
-			const accessToken = await getAccessToken(previewToken.host);
-
-			const proxyData: ProxyData = {
-				userWorkerUrl: {
-					protocol: "https:",
-					hostname: previewToken.host,
-					port: "443",
-				},
-				userWorkerInspectorUrl: {
-					protocol: previewToken.inspectorUrl.protocol,
-					hostname: previewToken.inspectorUrl.hostname,
-					port: previewToken.inspectorUrl.port.toString(),
-					pathname: previewToken.inspectorUrl.pathname,
-				},
-				userWorkerInnerUrlOverrides: {}, // there is no analagous prop for this option because we did not permit overriding request.url in remote mode
-				headers: {
-					"cf-workers-preview-token": previewToken.value,
-					Cookie: accessToken && `CF_Authorization=${accessToken}`,
-				},
-				liveReload: false, // liveReload currently disabled in remote-mode, but will be supported with startDevWorker
-				proxyLogsToController: true,
-			};
-
-			props.onReady?.(ip, port, proxyData);
-		},
+		onReady: props.onReady,
 	});
 	if (!previewServer) {
 		throw logger.error("Failed to start remote server");

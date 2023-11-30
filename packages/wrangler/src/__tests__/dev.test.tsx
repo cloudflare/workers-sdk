@@ -878,7 +878,6 @@ describe("wrangler dev", () => {
 
 	describe("inspector port", () => {
 		it("should use 9229 as the default port", async () => {
-			(getPort as jest.Mock).mockImplementation((options) => options.port);
 			writeWranglerToml({
 				main: "index.js",
 			});
@@ -897,7 +896,6 @@ describe("wrangler dev", () => {
 		});
 
 		it("should read --inspector-port", async () => {
-			(getPort as jest.Mock).mockImplementation((options) => options.port);
 			writeWranglerToml({
 				main: "index.js",
 			});
