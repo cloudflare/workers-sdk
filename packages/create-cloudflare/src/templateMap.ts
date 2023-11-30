@@ -1,10 +1,10 @@
 import { runPagesGenerator } from "./pages";
 import { runWorkersGenerator } from "./workers";
-import type { C3Args } from "types";
+import type { C3Context } from "types";
 
 type TemplateConfig = {
 	label: string;
-	handler: (args: C3Args) => Promise<void>;
+	handler: (ctx: C3Context) => Promise<void>;
 	hidden?: boolean;
 };
 
@@ -31,19 +31,17 @@ export const templateMap: Record<string, TemplateConfig> = {
 	},
 	chatgptPlugin: {
 		label: `ChatGPT plugin`,
-		handler: (args) =>
-			runWorkersGenerator({
-				...args,
-				ts: true,
-			}),
+		handler: (ctx) => {
+			ctx.args.ts = true;
+			return runWorkersGenerator(ctx);
+		},
 	},
 	openapi: {
 		label: `OpenAPI 3.1`,
-		handler: (args) =>
-			runWorkersGenerator({
-				...args,
-				ts: true,
-			}),
+		handler: (ctx) => {
+			ctx.args.ts = true;
+			return runWorkersGenerator(ctx);
+		},
 	},
 	"pre-existing": {
 		label: "Pre-existing Worker (from Dashboard)",

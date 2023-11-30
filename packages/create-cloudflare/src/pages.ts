@@ -1,5 +1,4 @@
-#!/usr/bin/env node
-import { dirname, resolve } from "path";
+import { resolve } from "path";
 import { chdir } from "process";
 import { crash, endSection, startSection } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
@@ -19,13 +18,11 @@ import { detectPackageManager } from "helpers/packages";
 import {
 	getProductionBranch,
 	gitCommit,
-	isInsideGitRepo,
 	offerGit,
 	offerToDeploy,
 	printSummary,
 	quoteShellArgs,
 	runDeploy,
-	setupProjectDirectory,
 } from "./common";
 import type { C3Args, C3Context } from "types";
 
@@ -42,29 +39,18 @@ const defaultFrameworkConfig = {
 	devCommand: ["pages:dev"],
 };
 
-export const runPagesGenerator = async (args: C3Args) => {
-	const originalCWD = process.cwd();
-	const { name, path } = setupProjectDirectory(args);
-	const framework = await getFrameworkSelection(args);
+export const runPagesGenerator = async (ctx: C3Context) => {
+	const framework = await getFrameworkSelection(ctx.args);
 
 	const frameworkConfig = FrameworkMap[framework];
-	const ctx: C3Context = {
-		project: {
-			name,
-			path,
+	ctx.type = frameworkConfig.type;
+	ctx.framework = {
+		name: framework,
+		config: {
+			...defaultFrameworkConfig,
+			...frameworkConfig,
 		},
-		framework: {
-			name: framework,
-			config: {
-				...defaultFrameworkConfig,
-				...frameworkConfig,
-			},
-			args: args.additionalArgs ?? [],
-		},
-		args,
-		type: frameworkConfig.type,
-		originalCWD,
-		gitRepoAlreadyExisted: await isInsideGitRepo(dirname(path)),
+		args: ctx.args.additionalArgs ?? [],
 	};
 
 	// Generate

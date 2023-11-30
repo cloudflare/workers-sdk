@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { dirname } from "path";
 import { crash, logRaw, startSection } from "@cloudflare/cli";
 import { blue, dim } from "@cloudflare/cli/colors";
 import {
@@ -12,9 +13,13 @@ import { runCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packages";
 import semver from "semver";
 import { version } from "../package.json";
-import { validateProjectDirectory } from "./common";
+import {
+	isInsideGitRepo,
+	setupProjectDirectory,
+	validateProjectDirectory,
+} from "./common";
 import { templateMap } from "./templateMap";
-import type { C3Args } from "types";
+import type { C3Args, C3Context } from "types";
 
 const { npm } = detectPackageManager();
 
@@ -119,7 +124,18 @@ export const runCli = async (args: Partial<C3Args>) => {
 	};
 
 	const { handler } = templateMap[type];
-	await handler(validatedArgs);
+
+	const originalCWD = process.cwd();
+	const { name, path } = setupProjectDirectory(validatedArgs);
+
+	const ctx: C3Context = {
+		project: { name, path },
+		args: validatedArgs,
+		originalCWD,
+		gitRepoAlreadyExisted: await isInsideGitRepo(dirname(path)),
+	};
+
+	await handler(ctx);
 };
 
 const printBanner = () => {

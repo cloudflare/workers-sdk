@@ -1,7 +1,7 @@
 import { existsSync, readdirSync } from "fs";
 import { cp, mkdtemp, readdir, rename, rm } from "fs/promises";
 import { tmpdir } from "os";
-import { dirname, join, resolve } from "path";
+import { join, resolve } from "path";
 import { chdir } from "process";
 import { endSection, startSection, updateStatus } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
@@ -19,27 +19,17 @@ import { detectPackageManager } from "helpers/packages";
 import {
 	chooseAccount,
 	gitCommit,
-	isInsideGitRepo,
 	offerGit,
 	offerToDeploy,
 	printSummary,
 	runDeploy,
-	setupProjectDirectory,
 } from "./common";
-import type { C3Args, C3Context as Context } from "types";
+import type { C3Context } from "types";
 
 const { dlx, npm } = detectPackageManager();
 
-export const runWorkersGenerator = async (args: C3Args) => {
-	const originalCWD = process.cwd();
-	const { name, path } = setupProjectDirectory(args);
-
-	const ctx: Context = {
-		project: { name, path },
-		args,
-		originalCWD,
-		gitRepoAlreadyExisted: await isInsideGitRepo(dirname(path)),
-	};
+export const runWorkersGenerator = async (ctx: C3Context) => {
+	ctx.type = "workers";
 
 	ctx.args.ts = await processArgument<boolean>(ctx.args, "ts", {
 		type: "confirm",
@@ -67,7 +57,7 @@ export const runWorkersGenerator = async (args: C3Args) => {
 	await printSummary(ctx);
 };
 
-async function getTemplate(ctx: Context) {
+async function getTemplate(ctx: C3Context) {
 	const preexisting = ctx.args.type === "pre-existing";
 	const template = preexisting ? "hello-world" : ctx.args.type;
 	const path = resolve(
@@ -82,7 +72,7 @@ async function getTemplate(ctx: Context) {
 	return { preexisting, template, path };
 }
 
-async function copyFiles(ctx: Context) {
+async function copyFiles(ctx: C3Context) {
 	const { template, path: srcdir } = await getTemplate(ctx);
 	const destdir = ctx.project.path;
 
@@ -94,7 +84,7 @@ async function copyFiles(ctx: Context) {
 	await rename(join(destdir, "__dot__gitignore"), join(destdir, ".gitignore"));
 }
 
-async function copyExistingWorkerFiles(ctx: Context) {
+async function copyExistingWorkerFiles(ctx: C3Context) {
 	const { preexisting } = await getTemplate(ctx);
 
 	if (preexisting) {
@@ -160,7 +150,7 @@ async function copyExistingWorkerFiles(ctx: Context) {
 	}
 }
 
-async function updateFiles(ctx: Context) {
+async function updateFiles(ctx: C3Context) {
 	// Update package.json with project name
 	const pkgJsonPath = resolve(ctx.project.path, "package.json");
 	const pkgJson = readJSON(pkgJsonPath);
@@ -181,7 +171,7 @@ async function updateFiles(ctx: Context) {
 	writeFile(wranglerTomlPath, wranglerToml);
 }
 
-async function installWorkersTypes(ctx: Context) {
+async function installWorkersTypes(ctx: C3Context) {
 	if (!ctx.args.ts) {
 		return;
 	}
@@ -194,7 +184,7 @@ async function installWorkersTypes(ctx: Context) {
 	await updateTsConfig(ctx);
 }
 
-export async function updateTsConfig(ctx: Context) {
+export async function updateTsConfig(ctx: C3Context) {
 	const tsconfigPath = join(ctx.project.path, "tsconfig.json");
 	if (!existsSync(tsconfigPath)) {
 		return;
@@ -227,7 +217,7 @@ export async function updateTsConfig(ctx: Context) {
 // @cloudflare/workers-types are versioned by compatibility dates, so we must look
 // up the latest entrypiont from the installed dependency on disk.
 // See also https://github.com/cloudflare/workerd/tree/main/npm/workers-types#compatibility-dates
-export function getLatestTypesEntrypoint(ctx: Context) {
+export function getLatestTypesEntrypoint(ctx: C3Context) {
 	const workersTypesPath = resolve(
 		ctx.project.path,
 		"node_modules",
