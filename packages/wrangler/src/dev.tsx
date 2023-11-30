@@ -334,7 +334,6 @@ export type AdditionalDevProps = {
 	additionalModules?: CfModule[];
 	moduleRoot?: string;
 	rules?: Rule[];
-	constellation?: Environment["constellation"];
 };
 
 export type StartDevOptions = DevArguments &
@@ -959,7 +958,6 @@ function getBindings(
 			...(args.d1Databases || []),
 		],
 		vectorize: configParam.vectorize,
-		constellation: configParam.constellation,
 		hyperdrive: configParam.hyperdrive.map((hyperdrive) => {
 			if (!hyperdrive.localConnectionString) {
 				throw new Error(

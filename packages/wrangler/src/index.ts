@@ -6,7 +6,7 @@ import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { ai } from "./ai";
 import { loadDotEnv, readConfig } from "./config";
-import { constellation } from "./constellation";
+import { constellationHandler, constellationOptions } from "./constellation";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
 import { deployOptions, deployHandler } from "./deploy";
@@ -440,9 +440,12 @@ export function createCLIParser(argv: string[]) {
 	});
 
 	// [DEPRECATED] constellation
-	wrangler.command("constellation", false, (aiYargs) => {
-		return constellation(aiYargs.command(subHelp));
-	});
+	wrangler.command(
+		"constellation",
+		false,
+		constellationOptions,
+		constellationHandler
+	);
 
 	// vectorize
 	wrangler.command(
@@ -591,7 +594,6 @@ export function createCLIParser(argv: string[]) {
 				unsafe: config.unsafe,
 				rules: config.rules,
 				queues: config.queues,
-				constellation: config.constellation,
 			};
 
 			await generateTypes(configBindings, config);

@@ -209,14 +209,6 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		});
 	});
 
-	bindings.constellation?.forEach(({ binding, project_id }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "constellation",
-			project: project_id,
-		});
-	});
-
 	bindings.hyperdrive?.forEach(({ binding, id }) => {
 		metadataBindings.push({
 			name: binding,
