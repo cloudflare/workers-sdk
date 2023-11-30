@@ -60,7 +60,7 @@ async function handleDeleteCommand(
 	}
 
 	const [, err] = await wrap(
-		DeploymentsService.deleteDeployment(deployment.id)
+		DeploymentsService.deleteDeploymentV2(deployment.id)
 	);
 	if (err) {
 		error(
