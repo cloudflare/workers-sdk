@@ -105,6 +105,7 @@ export const inputPrompt = async <T = string>(promptConfig: PromptConfig) => {
 	if (promptConfig.type === "select") {
 		prompt = new SelectPrompt({
 			...promptConfig,
+			options: promptConfig.options.filter((o) => !o.hidden),
 			initialValue: String(promptConfig.defaultValue),
 			render() {
 				return dispatchRender(this, prompt);
