@@ -1,5 +1,5 @@
-import type { CommonYargsArgv } from "../yargs-types";
 import { DeprecationError } from "../errors";
+import type { CommonYargsArgv } from "../yargs-types";
 
 export const constellationOptions = (yargs: CommonYargsArgv) => {
 	return yargs;

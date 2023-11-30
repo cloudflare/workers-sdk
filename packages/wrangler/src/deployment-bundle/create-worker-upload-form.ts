@@ -68,7 +68,6 @@ export type WorkerMetadataBinding =
 			index_name: string;
 			internalEnv?: string;
 	  }
-	| { type: "constellation"; name: string; project: string }
 	| { type: "hyperdrive"; name: string; id: string }
 	| { type: "service"; name: string; service: string; environment?: string }
 	| { type: "analytics_engine"; name: string; dataset?: string }
