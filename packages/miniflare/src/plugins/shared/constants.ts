@@ -26,6 +26,20 @@ export const WORKER_BINDING_SERVICE_LOOPBACK: Worker_Binding = {
 	service: { name: SERVICE_LOOPBACK },
 };
 
+const WORKER_BINDING_ENABLE_CONTROL_ENDPOINT: Worker_Binding = {
+	name: SharedBindings.MAYBE_JSON_ENABLE_CONTROL_ENDPOINTS,
+	json: "true",
+};
+let enableControlEndpoints = false;
+export function getControlEndpointBindings(): Worker_Binding[] {
+	if (enableControlEndpoints) return [WORKER_BINDING_ENABLE_CONTROL_ENDPOINT];
+	else return [];
+}
+/** @internal */
+export function _enableControlEndpoints() {
+	enableControlEndpoints = true;
+}
+
 export function objectEntryWorker(
 	durableObjectNamespace: Worker_Binding_DurableObjectNamespaceDesignator,
 	namespace: string

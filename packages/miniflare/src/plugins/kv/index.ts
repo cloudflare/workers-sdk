@@ -11,6 +11,7 @@ import {
 	PersistenceSchema,
 	Plugin,
 	SERVICE_LOOPBACK,
+	getControlEndpointBindings,
 	getPersistPath,
 	kProxyNodeBinding,
 	migrateDatabase,
@@ -123,6 +124,7 @@ export const KV_PLUGIN: Plugin<
 							name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 							service: { name: SERVICE_LOOPBACK },
 						},
+						...getControlEndpointBindings(),
 					],
 				},
 			};

@@ -15,6 +15,7 @@ import { getUserServiceName } from "../core";
 import {
 	Plugin,
 	SERVICE_LOOPBACK,
+	getControlEndpointBindings,
 	kProxyNodeBinding,
 	namespaceEntries,
 	namespaceKeys,
@@ -87,6 +88,7 @@ export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
 						name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 						service: { name: SERVICE_LOOPBACK },
 					},
+					...getControlEndpointBindings(),
 					{
 						name: SharedBindings.DURABLE_OBJECT_NAMESPACE_OBJECT,
 						durableObjectNamespace: {
