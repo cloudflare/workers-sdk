@@ -566,7 +566,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			r2_buckets: config.r2_buckets,
 			d1_databases: config.d1_databases,
 			vectorize: config.vectorize,
-			constellation: config.constellation,
 			hyperdrive: config.hyperdrive,
 			services: config.services,
 			analytics_engine_datasets: config.analytics_engine_datasets,

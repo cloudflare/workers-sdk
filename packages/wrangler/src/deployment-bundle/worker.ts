@@ -156,11 +156,6 @@ export interface CfVectorize {
 	index_name: string;
 }
 
-export interface CfConstellation {
-	binding: string;
-	project_id: string;
-}
-
 export interface CfHyperdrive {
 	binding: string;
 	id: string;
@@ -286,7 +281,6 @@ export interface CfWorkerInit {
 		r2_buckets: CfR2Bucket[] | undefined;
 		d1_databases: CfD1Database[] | undefined;
 		vectorize: CfVectorize[] | undefined;
-		constellation: CfConstellation[] | undefined;
 		hyperdrive: CfHyperdrive[] | undefined;
 		services: CfService[] | undefined;
 		analytics_engine_datasets: CfAnalyticsEngineDataset[] | undefined;
