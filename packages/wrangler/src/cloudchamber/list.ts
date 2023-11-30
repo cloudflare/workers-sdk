@@ -67,7 +67,7 @@ export async function listCommand(
 	const prefix = (deploymentArgs.deploymentIdPrefix ?? "") as string;
 	if (deploymentArgs.json || !isInteractive()) {
 		const deployments = (
-			await DeploymentsService.listDeployments(
+			await DeploymentsService.listDeploymentsV2(
 				deploymentArgs.location,
 				deploymentArgs.image,
 				deploymentArgs.state as State,

@@ -31,6 +31,7 @@ import type {
 import type { EnvironmentVariable, SSHPublicKeyID } from "./client";
 
 import type { Arg } from "@cloudflare/cli/interactive";
+import { getNetworkInput } from "./network/network";
 
 export function createCommandOptionalYargs(yargs: CommonYargsArgvJSON) {
 	return yargs
@@ -81,6 +82,12 @@ export function createCommandOptionalYargs(yargs: CommonYargsArgvJSON) {
 			demandOption: false,
 			describe:
 				"Amount of memory (GB, MB...) to allocate to this deployment. Ex: 4GB.",
+		})
+		.option("ipv4", {
+			requiresArg: false,
+			type: "boolean",
+			demandOption: false,
+			describe: "Include an IPv4 in the deployment",
 		});
 }
 
@@ -100,7 +107,7 @@ export async function createCommand(
 		const keysToAdd = args.allSshKeys
 			? (await pollSSHKeysUntilCondition(() => true)).map((key) => key.id)
 			: [];
-		const deployment = await DeploymentsService.createDeployment({
+		const deployment = await DeploymentsService.createDeploymentV2({
 			image: body.image,
 			location: body.location,
 			ssh_public_key_ids: keysToAdd,
@@ -215,6 +222,7 @@ export async function handleCreateCommand(
 
 	const location = await getLocation(args);
 	const keys = await askWhichSSHKeysDoTheyWantToAdd(args, sshKeyID);
+	const network = await getNetworkInput(args);
 
 	const selectedEnvironmentVariables = await promptForEnvironmentVariables(
 		environmentVariables,
@@ -226,6 +234,7 @@ export async function handleCreateCommand(
 	renderDeploymentConfiguration("create", {
 		image,
 		location,
+		network,
 		vcpu: args.vcpu ?? config.cloudchamber.vcpu ?? account.defaults.vcpus,
 		memory:
 			args.memory ?? config.cloudchamber.memory ?? account.defaults.memory,
@@ -246,13 +255,14 @@ export async function handleCreateCommand(
 	const { start, stop } = spinner();
 	start("Creating your container", "shortly your container will be created");
 	const [deployment, err] = await wrap(
-		DeploymentsService.createDeployment({
+		DeploymentsService.createDeploymentV2({
 			image,
 			location: location,
 			ssh_public_key_ids: keys,
 			environment_variables: environmentVariables,
 			vcpu: args.vcpu ?? config.cloudchamber.vcpu,
 			memory: args.memory ?? config.cloudchamber.memory,
+			network,
 		})
 	);
 	if (err) {
@@ -263,7 +273,8 @@ export async function handleCreateCommand(
 
 	stop();
 	updateStatus(`${status.success} Created deployment!`);
-	log(`${deployment.id}\nIP: ${deployment.ipv4}`);
+	if (deployment.network?.ipv4)
+		log(`${deployment.id}\nIP: ${deployment.network.ipv4}`);
 
 	endSection("Creating a placement for your container");
 	startSection("Create a Cloudflare container", "Step 2 of 2");

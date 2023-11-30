@@ -29,7 +29,11 @@ import type {
 	CommonYargsOptions,
 	StrictYargsOptionsToInterfaceJSON,
 } from "../yargs-types";
-import type { EnvironmentVariable, CompleteAccountCustomer } from "./client";
+import type {
+	EnvironmentVariable,
+	CompleteAccountCustomer,
+	NetworkParameters,
+} from "./client";
 import type { Arg } from "@cloudflare/cli/interactive";
 
 export type CommonCloudchamberConfiguration = { json: boolean };
@@ -243,6 +247,7 @@ export function renderDeploymentConfiguration(
 		memory,
 		environmentVariables,
 		env,
+		network,
 	}: {
 		image: string;
 		location: string;
@@ -250,6 +255,7 @@ export function renderDeploymentConfiguration(
 		memory: string;
 		environmentVariables: EnvironmentVariable[] | undefined;
 		env?: string;
+		network?: NetworkParameters;
 	}
 ) {
 	let environmentVariablesText = "[]";
@@ -274,6 +280,11 @@ export function renderDeploymentConfiguration(
 		["VCPU", `${vcpu}`],
 		["Memory", memory],
 		["Environment variables", environmentVariablesText],
+		...(network === undefined
+			? []
+			: [
+					["Include IPv4", network.assign_ipv4 === "predefined" ? "yes" : "no"],
+			  ]),
 	] as const;
 
 	updateStatus(

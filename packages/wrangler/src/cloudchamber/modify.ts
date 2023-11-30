@@ -236,7 +236,7 @@ async function handleModifyCommand(
 		"shortly your container will be modified to a new version"
 	);
 	const [newDeployment, err] = await wrap(
-		DeploymentsService.modifyDeployment(deployment.id, {
+		DeploymentsService.modifyDeploymentV2(deployment.id, {
 			image,
 			location,
 			ssh_public_key_ids: keys,
