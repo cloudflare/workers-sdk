@@ -15,7 +15,8 @@
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20231121.0",
-		"@types/node": "20.8.3"
+		"@types/node": "20.8.3",
+		"undici": "^5.28.1"
 	},
 	"dependencies": {
 		"birpc": "0.2.14",

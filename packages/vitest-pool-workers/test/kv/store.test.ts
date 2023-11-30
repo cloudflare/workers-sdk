@@ -4,8 +4,16 @@ import {
 	runInDurableObject,
 	runDurableObjectAlarm,
 } from "cloudflare:test";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterAll } from "vitest";
 import worker, { transformResponse, Counter } from "./worker";
+
+fetchMock.activate();
+fetchMock.disableNetConnect();
+fetchMock
+	.get("https://example.com")
+	.intercept({ path: "/" })
+	.reply(200, "data");
+afterAll(() => fetchMock.assertNoPendingInterceptors());
 
 describe("kv", () => {
 	it("user agents", () => {
@@ -99,5 +107,10 @@ describe("kv", () => {
 	it("sends request to self", async () => {
 		const res = await env.SELF.fetch("http://localhost");
 		expect(await res.text()).toBe("body:http://localhost");
+	});
+
+	it("mocks fetch requests", async () => {
+		const res = await fetch("https://example.com");
+		expect(await res.text()).toBe("data");
 	});
 });

@@ -10,3 +10,18 @@ interface SerializedOptions {
 }
 
 declare module "__VITEST_POOL_WORKERS_USER_OBJECT" {}
+
+declare module "cloudflare:mock-agent" {
+	import { MockAgent } from "undici";
+	import type { Dispatcher } from "undici";
+
+	export { MockAgent };
+	export function setDispatcher(
+		callback: (
+			opts: Dispatcher.DispatchOptions,
+			handler: Dispatcher.DispatchHandlers
+		) => void
+	): void;
+	export function isMockActive(agent: MockAgent): boolean;
+	export function resetMockAgent(agent: MockAgent): void;
+}
