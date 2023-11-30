@@ -13,7 +13,7 @@ import { worker } from "./paths.mjs";
 const serverPolyfillsFile = join(worker, "polyfills.server.mjs");
 const serverPolyfillsData = fs
 	.readFileSync(serverPolyfillsFile, "utf8")
-	.split(EOL);
+	.split(/\r?\n/);
 
 for (let index = 0; index < 2; index++) {
 	if (serverPolyfillsData[index].includes("createRequire")) {
