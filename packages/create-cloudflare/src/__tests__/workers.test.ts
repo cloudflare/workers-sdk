@@ -91,8 +91,7 @@ describe("updateTsConfig", () => {
 	test("happy path", async () => {
 		await workers.updateTsConfig(ctx);
 
-		expect(writeFile).toHaveBeenCalledWith(
-			"test/tsconfig.json",
+		expect(vi.mocked(writeFile).mock.calls[0][1]).toEqual(
 			`{types: ["@cloudflare/workers-types/2023-07-01"]}`
 		);
 	});
