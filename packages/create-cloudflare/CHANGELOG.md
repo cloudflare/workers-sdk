@@ -1,5 +1,69 @@
 # create-cloudflare
 
+## 2.8.0
+
+### Minor Changes
+
+- [#4494](https://github.com/cloudflare/workers-sdk/pull/4494) [`9bea4e32`](https://github.com/cloudflare/workers-sdk/commit/9bea4e32c6da9217c9a50e498f15ba49446131e1) Thanks [@RamIdeas](https://github.com/RamIdeas)! - Change the default project type to the hello world worker script.
+
+* [#4525](https://github.com/cloudflare/workers-sdk/pull/4525) [`294ca542`](https://github.com/cloudflare/workers-sdk/commit/294ca542c6ad57685b97fd787bfc3fe47c3cae74) Thanks [@jculvey](https://github.com/jculvey)! - C3: Use latest version of `wrangler` and `@cloudflare/workers-types`.
+
+  Also updates the `types` entry of the project's `tsconfig.json` to use type definitions corresponding to the latest compatibility date.
+
+### Patch Changes
+
+- [#4445](https://github.com/cloudflare/workers-sdk/pull/4445) [`652cc422`](https://github.com/cloudflare/workers-sdk/commit/652cc4222e28cb303c330c5264874b2ba2810dac) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure shell scripts work on Windows
+
+  Our use of `shell-quote` was causing problems on Windows where it was
+  escaping character (such as `@`) by placing a backslash in front.
+  This made Windows think that such path arguments, were at the root.
+
+  For example, `npm install -D @cloudflare/workers-types` was being converted to
+  `npm install -D \@cloudflare/workers-types`, which resulted in errors like:
+
+  ```
+  npm ERR! enoent ENOENT: no such file or directory, open 'D:\@cloudflare\workers-types\package.json'
+  ```
+
+  Now we just rely directly on the Node.js `spawn` API to avoid any shell quoting
+  concerns. This has resulted in a slightly less streamlined experience for people
+  writing C3 plugins, but has the benefit that the developer doesn't have to worry
+  about quoting spawn arguments.
+
+  Closes https://github.com/cloudflare/workers-sdk/issues/4282
+
+* [#4432](https://github.com/cloudflare/workers-sdk/pull/4432) [`04a2d0ed`](https://github.com/cloudflare/workers-sdk/commit/04a2d0ed6fca1c366cd891b54026c34e1c1a5701) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-solid` from `0.3.9` to `0.3.10`
+
+- [#4465](https://github.com/cloudflare/workers-sdk/pull/4465) [`d79a68fd`](https://github.com/cloudflare/workers-sdk/commit/d79a68fd463e9de973ee87b0ed9566a936f24220) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-svelte` from `5.2.0` to `5.3.1`
+
+* [#4472](https://github.com/cloudflare/workers-sdk/pull/4472) [`beed1575`](https://github.com/cloudflare/workers-sdk/commit/beed157532301dfc637f354a8d2814bc0544e7a3) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `nuxi` from `3.9.1` to `3.10.0`
+
+- [#4491](https://github.com/cloudflare/workers-sdk/pull/4491) [`e6ddf8a7`](https://github.com/cloudflare/workers-sdk/commit/e6ddf8a71b11419bc46dbdddda748ef9fe84116c) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-qwik` from `1.2.17` to `1.2.19`
+
+* [#4504](https://github.com/cloudflare/workers-sdk/pull/4504) [`3b5407a9`](https://github.com/cloudflare/workers-sdk/commit/3b5407a968189e60974233c5db8615162db37fd2) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `@angular/create` from `17.0.1` to `17.0.3`
+
+- [#4506](https://github.com/cloudflare/workers-sdk/pull/4506) [`d8b5a01e`](https://github.com/cloudflare/workers-sdk/commit/d8b5a01e2b7be4a52de22989aec35cad580f9fb2) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `gatsby` from `5.12.9` to `5.12.11`
+
+* [#4507](https://github.com/cloudflare/workers-sdk/pull/4507) [`743d15fe`](https://github.com/cloudflare/workers-sdk/commit/743d15fe76b6330f439e74596a7cadecc0bf85d2) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-remix` from `2.2.0` to `2.3.1`
+
+- [#4508](https://github.com/cloudflare/workers-sdk/pull/4508) [`743df0af`](https://github.com/cloudflare/workers-sdk/commit/743df0af21cf2f8763be9403f3f00e6ecd47cef6) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-svelte` from `5.3.1` to `5.3.2`
+
+* [#4530](https://github.com/cloudflare/workers-sdk/pull/4530) [`774b16c9`](https://github.com/cloudflare/workers-sdk/commit/774b16c9138bbe7e7d42a8a27048755191010167) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `@angular/create` from `17.0.3` to `17.0.5`
+
+- [#4481](https://github.com/cloudflare/workers-sdk/pull/4481) [`18a4dd92`](https://github.com/cloudflare/workers-sdk/commit/18a4dd92456f955ccbb35567a88475beafda01c0) Thanks [@jculvey](https://github.com/jculvey)! - Minor improvements when using the `--existing-script scriptName` flag:
+
+  - Format the type as "Pre-existing Worker (from Dashboard)"
+  - Defaults the project name to `scriptName`
+
+* [#4445](https://github.com/cloudflare/workers-sdk/pull/4445) [`652cc422`](https://github.com/cloudflare/workers-sdk/commit/652cc4222e28cb303c330c5264874b2ba2810dac) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: update Nuxt template to work on Windows
+
+  Rather than relying upon the non-Windows shell syntax to specify an environment variable,
+  we now update the `nuxt.config.ts` files to include the cloudflare preset.
+
+  Fixes #4285
+
+- [#4520](https://github.com/cloudflare/workers-sdk/pull/4520) [`1b945a07`](https://github.com/cloudflare/workers-sdk/commit/1b945a07bd5e7e299a955ea23e6c6e335bd8ba0a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: ensure Angular alter-polyfill script works on Windows
+
 ## 2.7.1
 
 ### Patch Changes
