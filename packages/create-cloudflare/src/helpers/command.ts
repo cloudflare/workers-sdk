@@ -241,11 +241,15 @@ export const installPackages = async (
 	});
 };
 
-// Resets the package manager context for a project by clearing out existing dependencies
-// and lock files then re-installing.
-// This is needed in situations where npm is automatically used by framework creators for the initial
-// install, since using other package managers in a folder with an existing npm install will cause failures
-// when installing subsequent packages
+/**
+ * Resets the package manager context for a project by clearing out existing dependencies
+ * and lock files then re-installing.
+ *
+ * This is needed in situations where npm is automatically used by framework creators for the initial
+ * install, since using other package managers in a folder with an existing npm install will cause
+ * failures when installing subsequent packages
+ */
+
 export const resetPackageManager = async (ctx: C3Context) => {
 	const { npm } = detectPackageManager();
 
