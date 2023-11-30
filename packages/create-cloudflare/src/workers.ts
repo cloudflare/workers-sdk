@@ -57,8 +57,7 @@ export const runWorkersGenerator = async (args: C3Args) => {
 	startSection("Installing dependencies", "Step 2 of 3");
 	chdir(ctx.project.path);
 	await npmInstall();
-	await installWorkerDependencies(ctx);
-	await updateTsConfig(ctx);
+	await installWorkersTypes(ctx);
 	await gitCommit(ctx);
 	endSection("Dependencies Installed");
 
@@ -182,25 +181,20 @@ async function updateFiles(ctx: Context) {
 	writeFile(wranglerTomlPath, wranglerToml);
 }
 
-async function installWorkerDependencies(ctx: Context) {
-	const dependencies = ["wrangler"];
-
-	if (ctx.args.ts) {
-		dependencies.push("@cloudflare/workers-types");
-	}
-
-	await installPackages(dependencies, {
-		dev: true,
-		startText: `Installing ${dependencies.join(", ")}`,
-		doneText: `${brandColor("installed")} ${dim(`via ${npm}`)}`,
-	});
-}
-
-export async function updateTsConfig(ctx: Context) {
+async function installWorkersTypes(ctx: Context) {
 	if (!ctx.args.ts) {
 		return;
 	}
 
+	await installPackages(["@cloudflare/workers-types"], {
+		dev: true,
+		startText: `Installing @cloudflare/workers-types`,
+		doneText: `${brandColor("installed")} ${dim(`via ${npm}`)}`,
+	});
+	await updateTsConfig(ctx);
+}
+
+export async function updateTsConfig(ctx: Context) {
 	const tsconfigPath = join(ctx.project.path, "tsconfig.json");
 	if (!existsSync(tsconfigPath)) {
 		return;

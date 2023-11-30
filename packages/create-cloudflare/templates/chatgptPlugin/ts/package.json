@@ -10,5 +10,7 @@
 	"dependencies": {
 		"@cloudflare/itty-router-openapi": "^1.0.1"
 	},
-	"devDependencies": {}
+	"devDependencies": {
+		"wrangler": "^3.0.0"
+	}
 }
