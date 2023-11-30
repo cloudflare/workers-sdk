@@ -1,24 +1,20 @@
-import {
-	cp,
-	mkdtemp,
-	readFile,
-	readdir,
-	rename,
-	rm,
-	writeFile,
-} from "fs/promises";
+import { existsSync, readdirSync } from "fs";
+import { cp, mkdtemp, readdir, rename, rm } from "fs/promises";
 import { tmpdir } from "os";
 import { dirname, join, resolve } from "path";
 import { chdir } from "process";
 import { endSection, startSection, updateStatus } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
+import { spinner } from "@cloudflare/cli/interactive";
 import { processArgument } from "helpers/args";
 import { C3_DEFAULTS } from "helpers/cli";
 import {
 	getWorkerdCompatibilityDate,
+	installPackages,
 	npmInstall,
 	runCommand,
 } from "helpers/command";
+import { readFile, readJSON, writeFile, writeJSON } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
 import {
 	chooseAccount,
@@ -32,7 +28,7 @@ import {
 } from "./common";
 import type { C3Args, PagesGeneratorContext as Context } from "types";
 
-const { dlx } = detectPackageManager();
+const { dlx, npm } = detectPackageManager();
 
 export const runWorkersGenerator = async (args: C3Args) => {
 	const originalCWD = process.cwd();
@@ -61,6 +57,7 @@ export const runWorkersGenerator = async (args: C3Args) => {
 	startSection("Installing dependencies", "Step 2 of 3");
 	chdir(ctx.project.path);
 	await npmInstall();
+	await installWorkersTypes(ctx);
 	await gitCommit(ctx);
 	endSection("Dependencies Installed");
 
@@ -164,33 +161,94 @@ async function copyExistingWorkerFiles(ctx: Context) {
 }
 
 async function updateFiles(ctx: Context) {
-	// build file paths
-	const paths = {
-		packagejson: resolve(ctx.project.path, "package.json"),
-		wranglertoml: resolve(ctx.project.path, "wrangler.toml"),
-	};
-
-	// read files
-	const contents = {
-		packagejson: JSON.parse(await readFile(paths.packagejson, "utf-8")),
-		wranglertoml: await readFile(paths.wranglertoml, "utf-8"),
-	};
-
-	// update files
-	if (contents.packagejson.name === "<TBD>") {
-		contents.packagejson.name = ctx.project.name;
+	// Update package.json with project name
+	const pkgJsonPath = resolve(ctx.project.path, "package.json");
+	const pkgJson = readJSON(pkgJsonPath);
+	if (pkgJson.name === "<TBD>") {
+		pkgJson.name = ctx.project.name;
 	}
-	contents.wranglertoml = contents.wranglertoml
+	writeJSON(pkgJsonPath, pkgJson);
+
+	// Update wrangler.toml with name and compat date
+	const wranglerTomlPath = resolve(ctx.project.path, "wrangler.toml");
+	let wranglerToml = readFile(wranglerTomlPath);
+	wranglerToml = wranglerToml
 		.replace(/^name\s*=\s*"<TBD>"/m, `name = "${ctx.project.name}"`)
 		.replace(
 			/^compatibility_date\s*=\s*"<TBD>"/m,
 			`compatibility_date = "${await getWorkerdCompatibilityDate()}"`
 		);
+	writeFile(wranglerTomlPath, wranglerToml);
+}
 
-	// write files
-	await writeFile(
-		paths.packagejson,
-		JSON.stringify(contents.packagejson, null, 2)
+async function installWorkersTypes(ctx: Context) {
+	if (!ctx.args.ts) {
+		return;
+	}
+
+	await installPackages(["@cloudflare/workers-types"], {
+		dev: true,
+		startText: `Installing @cloudflare/workers-types`,
+		doneText: `${brandColor("installed")} ${dim(`via ${npm}`)}`,
+	});
+	await updateTsConfig(ctx);
+}
+
+export async function updateTsConfig(ctx: Context) {
+	const tsconfigPath = join(ctx.project.path, "tsconfig.json");
+	if (!existsSync(tsconfigPath)) {
+		return;
+	}
+
+	const s = spinner();
+	s.start(`Adding latest types to \`tsconfig.json\``);
+
+	const tsconfig = readFile(tsconfigPath);
+	const entrypointVersion = getLatestTypesEntrypoint(ctx);
+	if (entrypointVersion === null) {
+		s.stop(
+			`${brandColor(
+				"skipped"
+			)} couldn't find latest compatible version of @cloudflare/workers-types`
+		);
+		return;
+	}
+
+	const typesEntrypoint = `@cloudflare/workers-types/${entrypointVersion}`;
+	const updated = tsconfig.replace(
+		"@cloudflare/workers-types",
+		typesEntrypoint
 	);
-	await writeFile(paths.wranglertoml, contents.wranglertoml);
+
+	writeFile(tsconfigPath, updated);
+	s.stop(`${brandColor("added")} ${dim(typesEntrypoint)}`);
+}
+
+// @cloudflare/workers-types are versioned by compatibility dates, so we must look
+// up the latest entrypiont from the installed dependency on disk.
+// See also https://github.com/cloudflare/workerd/tree/main/npm/workers-types#compatibility-dates
+export function getLatestTypesEntrypoint(ctx: Context) {
+	const workersTypesPath = resolve(
+		ctx.project.path,
+		"node_modules",
+		"@cloudflare",
+		"workers-types"
+	);
+
+	try {
+		const entrypoints = readdirSync(workersTypesPath);
+
+		const sorted = entrypoints
+			.filter((filename) => filename.match(/(\d{4})-(\d{2})-(\d{2})/))
+			.sort()
+			.reverse();
+
+		if (sorted.length === 0) {
+			return null;
+		}
+
+		return sorted[0];
+	} catch (error) {
+		return null;
+	}
 }
