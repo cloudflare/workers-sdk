@@ -51,8 +51,8 @@ const log = new Log(LogLevel.VERBOSE, { prefix: "vpw" });
 const mfLog = new Log(LogLevel.WARN);
 
 // Building to an ES module, but Vite will provide `__dirname`
-const distPath = path.resolve(__dirname, "..");
-const poolWorkerPath = path.join(distPath, "worker", "index.mjs");
+const DIST_PATH = path.resolve(__dirname, "..");
+const POOL_WORKER_PATH = path.join(DIST_PATH, "worker", "index.mjs");
 
 const ignoreMessages = [
 	// Intentionally returning not found here to load module from root
@@ -109,6 +109,96 @@ function usingSingleWorker(project: WorkspaceProject) {
 	);
 }
 
+function isDurableObjectDesignatorToSelf(
+	value: unknown
+): value is string | { className: string } {
+	// Either this is a simple `string` designator to the current worker...
+	if (typeof value === "string") return true;
+	// ...or it's an object designator without a `scriptName`. We're assuming the
+	// user isn't able to guess the current worker name, so if a `scriptName` is
+	// set, the designator is definitely for another worker.
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		"className" in value &&
+		typeof value.className === "string" &&
+		//
+		(!("scriptName" in value) || value.scriptName === undefined)
+	);
+}
+
+// Returns the bound names for bindings to Durable Objects with classes defined
+// in this worker.
+function getDurableObjectBindingNamesToSelf(
+	project: WorkspaceProject
+): Set<string> {
+	const result = new Set<string>();
+	const userOptions = project.config.poolOptions?.miniflare;
+	if (
+		typeof userOptions !== "object" ||
+		userOptions === null ||
+		!("durableObjects" in userOptions) ||
+		typeof userOptions.durableObjects !== "object" ||
+		userOptions.durableObjects === null
+	) {
+		return result;
+	}
+	for (const [key, designator] of Object.entries(userOptions.durableObjects)) {
+		if (isDurableObjectDesignatorToSelf(designator)) result.add(key);
+	}
+	return result;
+}
+
+const USER_OBJECT_MODULE_NAME = "__VITEST_POOL_WORKERS_USER_OBJECT";
+const USER_OBJECT_MODULE_PATH = path.join(
+	path.dirname(POOL_WORKER_PATH),
+	USER_OBJECT_MODULE_NAME
+);
+// Prefix all Durable Object class names, so they don't clash with other
+// identifiers in `src/worker/index.ts`. Returns a `Set` containing original
+// names of Durable Object classes defined in this worker.
+function fixupDurableObjectBindingsToSelf(worker: WorkerOptions): Set<string> {
+	// TODO(someday): may need to extend this to take into account other workers
+	//  if doing multi-worker tests across workspace projects
+	// TODO(someday): may want to validate class names are valid identifiers?
+	const result = new Set<string>();
+	if (worker.durableObjects == null) return result;
+	if (typeof worker.durableObjects !== "object") return result;
+	for (const key of Object.keys(worker.durableObjects)) {
+		const designator = worker.durableObjects[key];
+		// `designator` hasn't been validated at this point
+		if (typeof designator === "string") {
+			// Either this is a simple `string` designator to the current worker...
+			result.add(designator);
+			worker.durableObjects[key] = USER_OBJECT_MODULE_NAME + designator;
+		} else if (isDurableObjectDesignatorToSelf(designator)) {
+			// ...or it's an object designator to the current worker
+			result.add(designator.className);
+			// Shallow clone to avoid mutating config
+			worker.durableObjects[key] = {
+				...designator,
+				className: USER_OBJECT_MODULE_NAME + designator.className,
+			};
+		}
+	}
+	return result;
+}
+
+// Point all service bindings with empty worker name to current worker
+function fixupServiceBindingsToSelf(worker: WorkerOptions) {
+	assert(worker.name !== undefined);
+	if (worker.serviceBindings == null) return;
+	if (typeof worker.serviceBindings !== "object") return;
+	// Make sure we're operating on a fresh object
+	worker.serviceBindings = { ...worker.serviceBindings };
+	for (const name of Object.keys(worker.serviceBindings)) {
+		if (worker.serviceBindings[name] === "") {
+			worker.serviceBindings[name] = worker.name;
+		}
+	}
+}
+
+const RUNNER_OBJECT_BINDING = "__VITEST_POOL_WORKERS_RUNNER_OBJECT";
 function buildWorkspaceWorkerOptions(
 	workspace: WorkspaceSpecs
 ): WorkerOptions[] {
@@ -153,16 +243,11 @@ function buildWorkspaceWorkerOptions(
 		runnerWorker.compatibilityFlags.push("nodejs_compat");
 	}
 
-	// Make sure we define the runner script
-	// @ts-expect-error `script` is required if defined, but we're overwriting it
-	if ("script" in runnerWorker) delete runnerWorker.script;
-	if ("scriptPath" in runnerWorker) delete runnerWorker.scriptPath;
-	// TODO(soon): will need to consider how this works on Windows, still treat
-	//  `/` as the root, then do things like `/C:/a/b/c/index.mjs`
-	runnerWorker.modulesRoot = modulesRoot;
-	runnerWorker.modules = [{ type: "ESModule", path: poolWorkerPath }];
+	// Make sure we define an unsafe eval binding and enable the fallback service
+	runnerWorker.unsafeEvalBinding = "__VITEST_POOL_WORKERS_UNSAFE_EVAL";
+	runnerWorker.unsafeUseModuleFallbackService = true;
 
-	// Make sure we define the `RunnerObject` Durable Object
+	// Build wrappers for Durable Objects defined in this worker
 	if (
 		runnerWorker.durableObjects !== undefined &&
 		typeof runnerWorker.durableObjects !== "object"
@@ -173,14 +258,39 @@ function buildWorkspaceWorkerOptions(
 	}
 	// Shallow clone to avoid mutating config
 	runnerWorker.durableObjects = { ...runnerWorker.durableObjects };
-	runnerWorker.durableObjects["__VITEST_POOL_WORKERS_RUNNER_OBJECT"] = {
+	const durableObjectClassNames =
+		fixupDurableObjectBindingsToSelf(runnerWorker);
+	const durableObjectWrappers = Array.from(durableObjectClassNames)
+		.sort() // Sort for deterministic output to minimise `Miniflare` restarts
+		.map((className) => {
+			const quotedClassName = JSON.stringify(className);
+			return `export const ${USER_OBJECT_MODULE_NAME}${className} = createDurableObjectWrapper(${quotedClassName});`;
+		});
+	durableObjectWrappers.unshift(
+		'import { createDurableObjectWrapper } from "cloudflare:test-internal";'
+	);
+
+	// Make sure we define the `RunnerObject` Durable Object
+	runnerWorker.durableObjects[RUNNER_OBJECT_BINDING] = {
 		className: "RunnerObject",
 		unsafePreventEviction: true,
 	};
 
-	// Make sure we define an unsafe eval binding and enable the fallback service
-	runnerWorker.unsafeEvalBinding = "__VITEST_POOL_WORKERS_UNSAFE_EVAL";
-	runnerWorker.unsafeUseModuleFallbackService = true;
+	// Make sure we define the runner script, including Durable Object wrappers
+	// @ts-expect-error `script` is required if defined, but we're overwriting it
+	if ("script" in runnerWorker) delete runnerWorker.script;
+	if ("scriptPath" in runnerWorker) delete runnerWorker.scriptPath;
+	// TODO(soon): will need to consider how this works on Windows, still treat
+	//  `/` as the root, then do things like `/C:/a/b/c/index.mjs`
+	runnerWorker.modulesRoot = modulesRoot;
+	runnerWorker.modules = [
+		{ type: "ESModule", path: POOL_WORKER_PATH },
+		{
+			type: "ESModule",
+			path: USER_OBJECT_MODULE_PATH,
+			contents: durableObjectWrappers.join("\n"),
+		},
+	];
 
 	// Build array of workers contributed by the workspace
 	const workers: WorkerOptions[] = [runnerWorker];
@@ -193,18 +303,25 @@ function buildWorkspaceWorkerOptions(
 		}
 		for (let i = 0; i < runnerWorker.workers.length; i++) {
 			const worker: unknown = runnerWorker.workers[i];
-			// Make sure the worker's name doesn't start with our reserved prefix
+			// Make sure the worker has a non-empty name...
 			if (
-				typeof worker === "object" &&
-				worker !== null &&
-				"name" in worker &&
-				typeof worker.name === "string" &&
-				worker.name.startsWith(WORKER_NAME_PREFIX)
+				typeof worker !== "object" ||
+				worker === null ||
+				!("name" in worker) ||
+				typeof worker.name !== "string" ||
+				worker.name === ""
 			) {
+				throw new Error(
+					`In workspace ${workspacePath}, \`poolOptions.miniflare.workers[${i}].name\` must be non-empty`
+				);
+			}
+			// ...that doesn't start with our reserved prefix
+			if (worker.name.startsWith(WORKER_NAME_PREFIX)) {
 				throw new Error(
 					`In workspace ${workspacePath}, \`poolOptions.miniflare.workers[${i}].name\` must not start with "${WORKER_NAME_PREFIX}", got ${worker.name}`
 				);
 			}
+
 			// Miniflare will validate these options
 			workers.push(worker as WorkerOptions);
 		}
@@ -223,6 +340,7 @@ function buildMiniflareOptions(): MiniflareOptions {
 
 		if (usingSingleWorker(workspace.project)) {
 			// Just add the runner worker once if using a single worker for all tests
+			fixupServiceBindingsToSelf(runnerWorker);
 			workers.push(runnerWorker);
 		} else {
 			// Otherwise, duplicate the runner worker for each test file
@@ -232,6 +350,7 @@ function buildMiniflareOptions(): MiniflareOptions {
 					workspace.project,
 					testFile
 				);
+				fixupServiceBindingsToSelf(testFileWorker);
 				workers.push(testFileWorker);
 			}
 		}
@@ -248,10 +367,37 @@ function buildMiniflareOptions(): MiniflareOptions {
 	};
 }
 
-type MiniflareFetcher = Awaited<ReturnType<Miniflare["getWorker"]>>;
+function maybeGetResolvedMainPath(
+	project: WorkspaceProject
+): string | undefined {
+	const workspacePath = project.path;
+	const userOptions = project.config.poolOptions?.miniflare;
+	const definesMain =
+		typeof userOptions === "object" &&
+		userOptions !== null &&
+		"main" in userOptions;
+	if (!definesMain) return;
+	// noinspection JSObjectNullOrUndefined
+	const main = userOptions.main;
+	if (main === undefined) return;
+	if (typeof main !== "string") {
+		throw new Error(
+			`In workspace ${workspacePath}, \`poolOptions.miniflare.main\` must be an string, got ${typeof main}`
+		);
+	}
+	if (typeof workspacePath === "string") {
+		return path.resolve(path.dirname(workspacePath), main);
+	} else {
+		return path.resolve(main);
+	}
+}
+
+type MiniflareDurableObjectNamespace = Awaited<
+	ReturnType<Miniflare["getDurableObjectNamespace"]>
+>;
 async function runTests(
 	ctx: Vitest,
-	fetcher: MiniflareFetcher,
+	runnerNs: MiniflareDurableObjectNamespace,
 	project: WorkspaceProject,
 	config: ResolvedConfig,
 	files: string[],
@@ -269,7 +415,9 @@ async function runTests(
 		providedContext: project.getProvidedContext(),
 	};
 
-	const res = await fetcher.fetch("http://placeholder", {
+	const id = runnerNs.idFromName("");
+	const stub = runnerNs.get(id);
+	const res = await stub.fetch("http://placeholder", {
 		headers: {
 			Upgrade: "websocket",
 			"MF-Vitest-Worker-Data": devalue.stringify({
@@ -286,13 +434,14 @@ async function runTests(
 	const patchedLocalRpcFunctions: RuntimeRPC = {
 		...localRpcFunctions,
 		async fetch(...args) {
-			// Always mark `cloudflare:test` as external
-			if (args[0] === "cloudflare:test") return { externalize: args[0] };
+			// Always mark `cloudflare:*` modules as external
+			if (args[0].startsWith("cloudflare:")) return { externalize: args[0] };
 			return localRpcFunctions.fetch(...args);
 		},
 	};
 	const rpc = createBirpc<RunnerRPC, RuntimeRPC>(patchedLocalRpcFunctions, {
 		eventNames: ["onCancel"],
+		// TODO(soon): allow serialising structured cloneables, syntaxerror in imported message throws
 		post(value) {
 			if (webSocket.readyState === WebSocket.READY_STATE_OPEN) {
 				debuglog("POOL-->WORKER", value);
@@ -360,6 +509,8 @@ export default function (ctx: Vitest): ProcessPool {
 	return {
 		name: "vitest-pool-workers",
 		async runTests(specs, invalidates) {
+			// TODO(soon): will probably want to reset all storage here, up to `setup(env)` hook end state?
+
 			// 1. Collect new specs
 			for (const [project, testFile] of specs) {
 				// Vitest validates all project names are unique
@@ -404,25 +555,40 @@ export default function (ctx: Vitest): ProcessPool {
 			const specsByProject = groupBy(specs, ([project]) => project);
 			for (const [project, projectSpecs] of specsByProject) {
 				const singleWorker = usingSingleWorker(project);
+
 				const config = project.getSerializableConfig();
 				// Allow workers to be re-used by removing the isolation requirement
 				config.poolOptions ??= {};
 				config.poolOptions.threads ??= {};
 				config.poolOptions.threads.isolate = false;
+				// Include resolved `main` if defined, and the names of Durable Object
+				// bindings that point to classes in the current isolate in the
+				// serialized config
+				const main = maybeGetResolvedMainPath(project);
+				const isolateDurableObjectBindings = Array.from(
+					getDurableObjectBindingNamesToSelf(project)
+				);
+				config.poolOptions.miniflare = { main, isolateDurableObjectBindings };
 
 				if (singleWorker) {
 					const workerName = getWorkspaceRunnerWorkerName(project);
-					const fetcher = await mf.getWorker(workerName);
+					const ns = await mf.getDurableObjectNamespace(
+						RUNNER_OBJECT_BINDING,
+						workerName
+					);
 					const files = projectSpecs.map(([, file]) => file);
 					resultPromises.push(
-						runTests(ctx, fetcher, project, config, files, invalidates)
+						runTests(ctx, ns, project, config, files, invalidates)
 					);
 				} else {
 					for (const [, file] of projectSpecs) {
 						const workerName = getSpecRunnerWorkerName(project, file);
-						const fetcher = await mf.getWorker(workerName);
+						const ns = await mf.getDurableObjectNamespace(
+							RUNNER_OBJECT_BINDING,
+							workerName
+						);
 						resultPromises.push(
-							runTests(ctx, fetcher, project, config, [file], invalidates)
+							runTests(ctx, ns, project, config, [file], invalidates)
 						);
 					}
 				}
@@ -439,8 +605,20 @@ export default function (ctx: Vitest): ProcessPool {
 					"Errors occurred while running tests. For more information, see serialized error."
 				);
 			}
+
+			// TODO(soon): something like this is required for watching non-statically imported deps,
+			//   `vitest/dist/vendor/node.c-kzGvOB.js:handleFileChanged` is interesting,
+			//   could also use `forceRerunTriggers`
+			//   (Vite statically analyses imports here: https://github.com/vitejs/vite/blob/2649f40733bad131bc94b06d370bedc8f57853e2/packages/vite/src/node/plugins/importAnalysis.ts#L770)
+			// const project = specs[0][0];
+			// const moduleGraph = project.server.moduleGraph;
+			// const testModule = moduleGraph.getModuleById(".../packages/vitest-pool-workers/test/kv/store.test.ts");
+			// const thingModule = moduleGraph.getModuleById(".../packages/vitest-pool-workers/test/kv/thing.ts");
+			// assert(testModule && thingModule);
+			// thingModule.importers.add(testModule);
 		},
 		close() {
+			log.debug("Shutting down Cloudflare Workers runtime...");
 			const disposePromise = mf?.dispose();
 			mf = undefined;
 			return disposePromise;

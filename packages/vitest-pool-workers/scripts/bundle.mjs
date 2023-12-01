@@ -30,7 +30,7 @@ const commonOptions = {
 	target: "esnext",
 	bundle: true,
 	packages: "external",
-	external: ["cloudflare:test"],
+	external: ["cloudflare:*"],
 	sourcemap: true,
 	sourcesContent: false,
 	logLevel: watch ? "info" : "warning",
