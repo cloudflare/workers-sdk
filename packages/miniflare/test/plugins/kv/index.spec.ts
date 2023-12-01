@@ -186,11 +186,9 @@ test.serial("put: key starting with number", async (t) => {
 	const { kv } = t.context;
 	await kv.put("abc-key", "abc-value");
 	t.is(await kv.get("abc-key"), "abc-value");
-
 	await kv.put("123-key", "123-value");
 	t.is(await kv.get("123-key"), "123-value");
-
-	t.is(await kv.get("abc-key"), "abc-value");
+	t.is(await kv.get("abc-key"), "abc-value"); // this was becoming `null` previously
 });
 test("put: validates expiration ttl", async (t) => {
 	const { kv } = t.context;
