@@ -4,7 +4,7 @@ import { describe, expect, test, vi, afterEach, beforeEach } from "vitest";
 import * as workers from "../workers";
 import { createTestContext } from "./helpers";
 import type { Dirent } from "fs";
-import type { PagesGeneratorContext } from "types";
+import type { C3Context } from "types";
 
 const mockWorkersTypesDirListing = [
 	"2021-11-03",
@@ -66,7 +66,7 @@ describe("getLatestTypesEntrypoint", () => {
 });
 
 describe("updateTsConfig", () => {
-	let ctx: PagesGeneratorContext;
+	let ctx: C3Context;
 
 	beforeEach(() => {
 		ctx = createTestContext();
