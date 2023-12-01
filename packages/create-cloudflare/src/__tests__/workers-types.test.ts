@@ -7,7 +7,7 @@ import { readFile, writeFile } from "helpers/files";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { createTestContext } from "./helpers";
 import type { Dirent } from "fs";
-import type { PagesGeneratorContext } from "types";
+import type { C3Context } from "types";
 
 const mockWorkersTypesDirListing = [
 	"2021-11-03",
@@ -69,7 +69,7 @@ describe("getLatestTypesEntrypoint", () => {
 });
 
 describe("addWorkersTypesToTsConfig", () => {
-	let ctx: PagesGeneratorContext;
+	let ctx: C3Context;
 
 	beforeEach(() => {
 		ctx = createTestContext();

@@ -1,5 +1,5 @@
 import { C3_DEFAULTS } from "helpers/cli";
-import type { C3Args, PagesGeneratorContext as Context } from "types";
+import type { C3Args, C3Context } from "types";
 
 export const createTestArgs = (args?: Partial<C3Args>) => {
 	return {
@@ -8,7 +8,7 @@ export const createTestArgs = (args?: Partial<C3Args>) => {
 	};
 };
 
-export const createTestContext = (name = "test", args?: C3Args): Context => {
+export const createTestContext = (name = "test", args?: C3Args): C3Context => {
 	const path = `./${name}`;
 	return {
 		project: { name, path },
