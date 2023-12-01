@@ -173,7 +173,6 @@ export class KeyValueStorage<Metadata = unknown> {
 			// If no range was requested, or just a single one was, return a regular
 			// stream
 			const value = await this.#blob.get(row.blob_id, opts?.ranges?.[0]);
-			console.log("[#blob.get]", { key, row, value, opts });
 			if (value === null) return null;
 			return { ...entry, value };
 		} else {
@@ -216,7 +215,6 @@ export class KeyValueStorage<Metadata = unknown> {
 					? null
 					: JSON.stringify(await entry.metadata),
 		});
-		console.log("[#blob.put]", { entry, blobId, maybeOldBlobId });
 		// Garbage collect previous entry's blob
 		if (maybeOldBlobId !== undefined) {
 			this.#backgroundDelete(maybeOldBlobId);

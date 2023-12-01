@@ -243,7 +243,6 @@ export class BlobStore {
 	async delete(id: BlobId): Promise<void> {
 		// Get path for this ID and delete, ignoring if outside root or not found
 		const idURL = this.idURL(id);
-		console.log("[blob.delete]", { id });
 		if (idURL === null) return;
 		const res = await this.#fetcher.fetch(idURL, { method: "DELETE" });
 		assert(res.ok || res.status === 404);

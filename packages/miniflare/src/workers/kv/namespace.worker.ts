@@ -91,7 +91,6 @@ export class KVNamespaceObject extends MiniflareDurableObject {
 		// Get value from storage
 		validateGetOptions(key, { cacheTtl });
 		const entry = await this.storage.get(key);
-		console.log("[GET]", { key, entry, cacheTtl });
 		if (entry === null) throw new HttpError(404, "Not Found");
 
 		// Return value in runtime-friendly format
@@ -159,10 +158,6 @@ export class KVNamespaceObject extends MiniflareDurableObject {
 			value = value.pipeThrough(maxLengthStream);
 		}
 
-		// console.log("[debug:GET:abc-key]", await this.storage.get("abc-key"))
-		// await this.storage.get("abc-key")
-		console.log("[PUT]", { key, value, expiration });
-
 		// Put value into storage
 		try {
 			await this.storage.put({
@@ -172,9 +167,6 @@ export class KVNamespaceObject extends MiniflareDurableObject {
 				metadata,
 				signal: maxLengthStream?.signal,
 			});
-			// console.log("[debug:LIST]", await this.storage.list({ limit: 10 }))
-			// console.log("[debug:GET:abc-key]", await this.storage.get("abc-key"))
-			await this.storage.get("abc-key")
 		} catch (e) {
 			if (
 				typeof e === "object" &&
@@ -200,7 +192,6 @@ export class KVNamespaceObject extends MiniflareDurableObject {
 	delete: RouteHandler<KVParams> = async (req, params, url) => {
 		// Decode URL parameters
 		const key = decodeKey(params, url.searchParams);
-		console.log("[DELETE]", key);
 		validateKey(key);
 
 		// Delete key from storage

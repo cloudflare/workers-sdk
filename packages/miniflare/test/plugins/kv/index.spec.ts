@@ -55,7 +55,6 @@ test.beforeEach(async (t) => {
 	)}`;
 	t.context.ns = ns;
 	t.context.kv = namespace(ns, await t.context.mf.getKVNamespace("NAMESPACE"));
-	// t.context.kv = (await t.context.mf.getKVNamespace("NAMESPACE")) as any;
 
 	// Enable fake timers
 	const objectNamespace = await t.context.mf._getInternalDurableObjectNamespace(
@@ -180,6 +179,8 @@ test("put: keys are case-sensitive", async (t) => {
 	result = await kv.get("KEY");
 	t.is(result, "upper");
 });
+// verify a bug fix where inserting numeric key was deleting preceeding entry.
+// "serial" is required to simulate the reproduction
 test.serial("put: key starting with number", async (t) => {
 	const { kv } = t.context;
 	await kv.put("abc-key", "abc-value");
@@ -187,16 +188,8 @@ test.serial("put: key starting with number", async (t) => {
 
 	await kv.put("123-key", "123-value");
 	t.is(await kv.get("123-key"), "123-value");
-	// await kv.put("def-key", "def-value");
-
-	// t.is(0, 0);
-	// somehow last key/value becomes "null"
-	// https://github.com/cloudflare/workers-sdk/issues/4122
 
 	t.is(await kv.get("abc-key"), "abc-value");
-
-	// the inserted one itself is okay
-	// t.is(await kv.get("123-key"), "123-value");
 });
 test("put: validates expiration ttl", async (t) => {
 	const { kv } = t.context;
