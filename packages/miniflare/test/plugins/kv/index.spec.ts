@@ -179,7 +179,8 @@ test("put: keys are case-sensitive", async (t) => {
 	result = await kv.get("KEY");
 	t.is(result, "upper");
 });
-// verify a bug fix where inserting numeric key was deleting preceeding entry.
+// this test might look odd, but this is to verify a bug fix
+// where inserting numeric key was deleting preceeding entry.
 // "serial" is required to simulate the reproduction
 test.serial("put: key starting with number", async (t) => {
 	const { kv } = t.context;

@@ -216,9 +216,7 @@ export class KeyValueStorage<Metadata = unknown> {
 					: JSON.stringify(await entry.metadata),
 		});
 		// Garbage collect previous entry's blob
-		if (maybeOldBlobId !== undefined) {
-			this.#backgroundDelete(maybeOldBlobId);
-		}
+		if (maybeOldBlobId !== undefined) this.#backgroundDelete(maybeOldBlobId);
 	}
 
 	async delete(key: string): Promise<boolean> {
