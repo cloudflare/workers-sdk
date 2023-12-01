@@ -17,6 +17,7 @@ import { getFrameworkCli } from "frameworks/index";
 import { processArgument } from "helpers/args";
 import { C3_DEFAULTS, openInBrowser } from "helpers/cli";
 import {
+	formatCommand,
 	listAccounts,
 	printAsyncStatus,
 	runCommand,
@@ -138,7 +139,7 @@ export const setupProjectDirectory = (args: C3Args) => {
 export const offerToDeploy = async (ctx: C3Context) => {
 	startSection(`Deploy with Cloudflare`, `Step 3 of 3`);
 
-	const label = `deploy via \`${quoteShellArgs([
+	const label = `deploy via \`${formatCommand([
 		npm,
 		"run",
 		...(ctx.framework?.config.deployCommand ?? ["deploy"]),
@@ -258,7 +259,7 @@ export const printSummary = async (ctx: C3Context) => {
 		],
 		[
 			`Run the development server`,
-			quoteShellArgs([
+			formatCommand([
 				npm,
 				"run",
 				...(ctx.framework?.config.devCommand ?? ["start"]),
@@ -266,7 +267,7 @@ export const printSummary = async (ctx: C3Context) => {
 		],
 		[
 			`Deploy your application`,
-			quoteShellArgs([
+			formatCommand([
 				npm,
 				"run",
 				...(ctx.framework?.config.deployCommand ?? ["deploy"]),
@@ -299,7 +300,7 @@ export const printSummary = async (ctx: C3Context) => {
 			`${bgGreen(" APPLICATION CREATED ")}`,
 			`${dim(`Deploy your application with`)}`,
 			`${blue(
-				quoteShellArgs([
+				formatCommand([
 					npm,
 					"run",
 					...(ctx.framework?.config.deployCommand ?? ["deploy"]),
