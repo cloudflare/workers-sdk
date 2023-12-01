@@ -8,6 +8,7 @@ import * as cjsModuleLexer from "cjs-module-lexer";
 import { buildSync } from "esbuild";
 import { moduleResolve } from "import-meta-resolve";
 import { Response } from "miniflare";
+import { isFileNotFoundError } from "./helpers";
 import type { Request, Worker_Module } from "miniflare";
 
 let debuglog: util.DebugLoggerFunction = util.debuglog(
@@ -59,12 +60,6 @@ function fileURLToPosixPath(url: string | URL) {
 	// TODO(soon): check this actually works for Windows
 	// Some URLs contain hashes, e.g. if relying on an import map
 	return fileURLToPath(url).replaceAll("\\", "/") + url.hash;
-}
-
-function isFileNotFoundError(e: unknown) {
-	return (
-		typeof e === "object" && e !== null && "code" in e && e.code === "ENOENT"
-	);
 }
 
 function isFile(filePath: string): boolean {

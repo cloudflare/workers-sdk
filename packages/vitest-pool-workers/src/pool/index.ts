@@ -7,6 +7,7 @@ import { createBirpc } from "birpc";
 import * as devalue from "devalue";
 import { Log, LogLevel, Miniflare, WebSocket } from "miniflare";
 import { createMethodsRPC } from "vitest/node";
+import { handleLoopbackRequest } from "./loopback";
 import { handleModuleFallbackRequest, modulesRoot } from "./module-fallback";
 import type { CloseEvent, MiniflareOptions, WorkerOptions } from "miniflare";
 import type { MessagePort } from "node:worker_threads";
@@ -189,8 +190,6 @@ function fixupServiceBindingsToSelf(worker: WorkerOptions) {
 	assert(worker.name !== undefined);
 	if (worker.serviceBindings == null) return;
 	if (typeof worker.serviceBindings !== "object") return;
-	// Make sure we're operating on a fresh object
-	worker.serviceBindings = { ...worker.serviceBindings };
 	for (const name of Object.keys(worker.serviceBindings)) {
 		if (worker.serviceBindings[name] === "") {
 			worker.serviceBindings[name] = worker.name;
@@ -198,6 +197,7 @@ function fixupServiceBindingsToSelf(worker: WorkerOptions) {
 	}
 }
 
+const LOOPBACK_SERVICE_BINDING = "__VITEST_POOL_WORKERS_LOOPBACK_SERVICE";
 const RUNNER_OBJECT_BINDING = "__VITEST_POOL_WORKERS_RUNNER_OBJECT";
 function buildWorkspaceWorkerOptions(
 	workspace: WorkspaceSpecs
@@ -211,6 +211,7 @@ function buildWorkspaceWorkerOptions(
 	}
 	const runnerWorker = {
 		// Miniflare will validate these options
+		// TODO: may be easier if we just deep cloned this
 		...userOptions,
 	} as WorkerOptions & { workers?: unknown };
 
@@ -246,6 +247,20 @@ function buildWorkspaceWorkerOptions(
 	// Make sure we define an unsafe eval binding and enable the fallback service
 	runnerWorker.unsafeEvalBinding = "__VITEST_POOL_WORKERS_UNSAFE_EVAL";
 	runnerWorker.unsafeUseModuleFallbackService = true;
+
+	// Make sure we define our loopback service binding for helpers
+	if (
+		runnerWorker.serviceBindings !== undefined &&
+		typeof runnerWorker.serviceBindings !== "object"
+	) {
+		throw new Error(
+			`In workspace ${workspacePath}, \`poolOptions.miniflare.serviceBindings\` must be an object, got ${typeof runnerWorker.serviceBindings}`
+		);
+	}
+	// Shallow clone to avoid mutating config
+	runnerWorker.serviceBindings = { ...runnerWorker.serviceBindings };
+	runnerWorker.serviceBindings[LOOPBACK_SERVICE_BINDING] =
+		handleLoopbackRequest;
 
 	// Build wrappers for Durable Objects defined in this worker
 	if (
@@ -627,3 +642,7 @@ export default function (ctx: Vitest): ProcessPool {
 		},
 	};
 }
+
+// TODO: consider adding named exports for utilities like applying D1 migrations
+//  (e.g. `import { runD1Migrations } from "@cloudflare/vitest-pool-workers";`,
+//  then call in setup)

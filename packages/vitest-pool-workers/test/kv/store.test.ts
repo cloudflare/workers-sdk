@@ -108,11 +108,11 @@ describe("kv", () => {
 
 	it("sends request to self", async () => {
 		const res = await env.SELF.fetch("http://localhost");
-		expect(await res.text()).toBe("body:http://localhost");
+		expect(await res.text()).toMatchInlineSnapshot(`"body:http://localhost"`);
 	});
 
 	it("mocks fetch requests", async () => {
 		const res = await fetch("https://example.com");
-		expect(await res.text()).toBe("data");
+		expect(await res.text()).toMatchSnapshot("mocked-data");
 	});
 });

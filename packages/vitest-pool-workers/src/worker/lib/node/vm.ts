@@ -1,15 +1,14 @@
 import assert from "node:assert";
-
-type UnsafeEval = { eval(code: string): unknown };
+import type { RunningScriptOptions } from "node:vm";
 
 let unsafeEval: UnsafeEval | undefined;
 export function _setUnsafeEval(newUnsafeEval: UnsafeEval) {
 	unsafeEval = newUnsafeEval;
 }
 
-export function runInThisContext(code: string) {
+export function runInThisContext(code: string, options?: RunningScriptOptions) {
 	assert(unsafeEval !== undefined);
-	return unsafeEval.eval(code);
+	return unsafeEval.eval(code, options?.filename);
 }
 
 export default { runInThisContext };

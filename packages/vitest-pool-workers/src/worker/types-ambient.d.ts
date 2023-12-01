@@ -1,6 +1,15 @@
+interface UnsafeEval {
+	eval(code: string, name?: string): unknown;
+	// eslint-disable-next-line @typescript-eslint/ban-types
+	newFunction(script: string, name?: string, ...args: string[]): Function;
+	// eslint-disable-next-line @typescript-eslint/ban-types
+	newAsyncFunction(script: string, name?: string, ...args: string[]): Function;
+}
+
 interface Env {
+	__VITEST_POOL_WORKERS_LOOPBACK_SERVICE: Fetcher;
 	__VITEST_POOL_WORKERS_RUNNER_OBJECT: DurableObjectNamespace;
-	__VITEST_POOL_WORKERS_UNSAFE_EVAL: unknown;
+	__VITEST_POOL_WORKERS_UNSAFE_EVAL: UnsafeEval;
 }
 
 interface SerializedOptions {
@@ -10,6 +19,10 @@ interface SerializedOptions {
 }
 
 declare module "__VITEST_POOL_WORKERS_USER_OBJECT" {}
+
+declare module "node:vm" {
+	export function _setUnsafeEval(newUnsafeEval: UnsafeEval): void;
+}
 
 declare module "cloudflare:mock-agent" {
 	import { MockAgent } from "undici";

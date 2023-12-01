@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { Buffer } from "node:buffer";
 import events from "node:events";
 import * as vm from "node:vm";
 import {
@@ -10,6 +11,7 @@ import {
 import * as devalue from "devalue";
 import type { VitestExecutor as VitestExecutorType } from "vitest/execute";
 
+globalThis.Buffer = Buffer; // Required by `vite-node/source-map`
 globalThis.__console = console;
 
 const originalSetTimeout = globalThis.setTimeout;
@@ -75,18 +77,27 @@ function reduceError(e: any): JsonError {
 	};
 }
 
+let patchedFunction = false;
+function ensurePatchedFunction(unsafeEval: UnsafeEval) {
+	if (patchedFunction) return;
+	patchedFunction = true;
+	// `new Function()` is used by `@vitest/snapshot`
+	globalThis.Function = new Proxy(globalThis.Function, {
+		construct(_target, args, _newTarget) {
+			// `new Function()` and `UnsafeEval#newFunction()` have reversed args
+			const script = args.pop();
+			return unsafeEval.newFunction(script, "anonymous", ...args);
+		},
+	});
+}
+
 export class RunnerObject implements DurableObject {
 	executor: VitestExecutorType | undefined;
 
 	constructor(_state: DurableObjectState, env: Env) {
-		// @ts-expect-error `_setUnsafeEval()` is an internal method
 		vm._setUnsafeEval(env.__VITEST_POOL_WORKERS_UNSAFE_EVAL);
-
-		// Strip internal bindings from user facing `env`
-		const userEnv: Record<string, unknown> = { ...env };
-		delete userEnv.__VITEST_POOL_WORKERS_RUNNER_OBJECT;
-		delete userEnv.__VITEST_POOL_WORKERS_UNSAFE_EVAL;
-		setEnv(userEnv);
+		ensurePatchedFunction(env.__VITEST_POOL_WORKERS_UNSAFE_EVAL);
+		setEnv(env);
 	}
 
 	async handleVitestRunRequest(request: Request): Promise<Response> {
