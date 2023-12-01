@@ -179,6 +179,20 @@ test("put: keys are case-sensitive", async (t) => {
 	result = await kv.get("KEY");
 	t.is(result, "upper");
 });
+test.serial("put: key starting with number", async (t) => {
+	const { kv } = t.context;
+	await kv.put("abc-key", "abc-value");
+	t.is(await kv.get("abc-key"), "abc-value");
+
+	await kv.put("123-key", "123-value");
+
+	// somehow last key/value becomes "null"
+	// https://github.com/cloudflare/workers-sdk/issues/4122
+	t.is(await kv.get("abc-key"), null);
+
+	// the inserted one itself is okay
+	t.is(await kv.get("123-key"), "123-value");
+});
 test("put: validates expiration ttl", async (t) => {
 	const { kv } = t.context;
 	await t.throwsAsync(
