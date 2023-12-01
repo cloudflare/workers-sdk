@@ -195,7 +195,7 @@ export const runFrameworkGenerator = async (ctx: C3Context, args: string[]) => {
 
 	endSection(
 		`Continue with ${ctx.framework?.config.displayName}`,
-		`via \`${cmd.join(" ")}\``
+		`via \`${formatCommand(cmd)}\``
 	);
 
 	if (process.env.VITEST) {
@@ -418,89 +418,4 @@ export async function getWorkerdCompatibilityDate() {
 	return workerdCompatibilityDate;
 }
 
-export async function installWorkersTypes(ctx: PagesGeneratorContext) {
-	const { npm } = detectPackageManager();
-
-	await installPackages(["@cloudflare/workers-types"], {
-		dev: true,
-		startText: `Installing @cloudflare/workers-types`,
-		doneText: `${brandColor("installed")} ${dim(`via ${npm}`)}`,
-	});
-	await addWorkersTypesToTsConfig(ctx);
-}
-
-// @cloudflare/workers-types are versioned by compatibility dates, so we must look
-// up the latest entrypoint from the installed dependency on disk.
-// See also https://github.com/cloudflare/workerd/tree/main/npm/workers-types#compatibility-dates
-export function getLatestTypesEntrypoint(ctx: PagesGeneratorContext) {
-	const workersTypesPath = resolve(
-		ctx.project.path,
-		"node_modules",
-		"@cloudflare",
-		"workers-types"
-	);
-
-	try {
-		const entrypoints = readdirSync(workersTypesPath);
-
-		const sorted = entrypoints
-			.filter((filename) => filename.match(/(\d{4})-(\d{2})-(\d{2})/))
-			.sort()
-			.reverse();
-
-		if (sorted.length === 0) {
-			return null;
-		}
-
-		return sorted[0];
-	} catch (error) {
-		return null;
-	}
-}
-
-export async function addWorkersTypesToTsConfig(ctx: PagesGeneratorContext) {
-	const tsconfigPath = join(ctx.project.path, "tsconfig.json");
-	if (!existsSync(tsconfigPath)) {
-		return;
-	}
-
-	const s = spinner();
-	s.start(`Adding latest types to \`tsconfig.json\``);
-
-	const tsconfig = readFile(tsconfigPath);
-	const entrypointVersion = getLatestTypesEntrypoint(ctx);
-	if (entrypointVersion === null) {
-		s.stop(
-			`${brandColor(
-				"skipped"
-			)} couldn't find latest compatible version of @cloudflare/workers-types`
-		);
-		return;
-	}
-
-	const typesEntrypoint = `@cloudflare/workers-types/${entrypointVersion}`;
-
-	let updated = tsconfig;
-
-	if (tsconfig.includes("@cloudflare/workers-types")) {
-		updated = tsconfig.replace("@cloudflare/workers-types", typesEntrypoint);
-	} else {
-		try {
-			// Note: this simple implementation doesn't handle tsconfigs containing comments
-			//       (as it is not needed for the existing use cases)
-			const tsConfigJson = JSON.parse(tsconfig);
-			tsConfigJson.compilerOptions ??= {};
-			tsConfigJson.compilerOptions.types = [
-				...(tsConfigJson.compilerOptions.types ?? []),
-				typesEntrypoint,
-			];
-			updated = JSON.stringify(tsConfigJson, null, 2);
-		} catch {
-			warn("Could not parse tsconfig.json file");
-			updated = tsconfig;
-		}
-	}
-
-	writeFile(tsconfigPath, updated);
-	s.stop(`${brandColor("added")} ${dim(typesEntrypoint)}`);
-}
+export const formatCommand = (parts: string[]) => parts.join(" ");
