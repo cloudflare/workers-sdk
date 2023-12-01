@@ -122,6 +122,11 @@ export type CronTriggersRes = {
 	];
 };
 
+export type StandardRes = {
+	standard: boolean;
+	reason: string;
+};
+
 function isNpm(packageManager: PackageManager) {
 	return packageManager.type === "npm";
 }
@@ -914,7 +919,7 @@ async function getWorkerConfig(
 		environments: ServiceMetadataRes["environments"] | undefined;
 	}
 ): Promise<RawConfig> {
-	const [bindings, routes, serviceEnvMetadata, cronTriggers] =
+	const [bindings, routes, serviceEnvMetadata, cronTriggers, standard] =
 		await Promise.all([
 			fetchResult<WorkerMetadata["bindings"]>(
 				`/accounts/${accountId}/workers/services/${fromDashScriptName}/environments/${defaultEnvironment}/bindings`
@@ -928,6 +933,7 @@ async function getWorkerConfig(
 			fetchResult<CronTriggersRes>(
 				`/accounts/${accountId}/workers/scripts/${fromDashScriptName}/schedules`
 			),
+			fetchResult<StandardRes>(`/accounts/${accountId}/workers/standard`),
 		]).catch((e) => {
 			throw new Error(
 				`Error Occurred ${e}: Unable to fetch bindings, routes, or services metadata from the dashboard. Please try again later.`
@@ -960,7 +966,10 @@ async function getWorkerConfig(
 			serviceEnvMetadata.script.compatibility_date ??
 			new Date().toISOString().substring(0, 10),
 		...routeOrRoutesToConfig,
-		usage_model: serviceEnvMetadata.script.usage_model,
+		usage_model:
+			standard?.standard == true
+				? undefined
+				: serviceEnvMetadata.script.usage_model,
 		placement:
 			serviceEnvMetadata.script.placement_mode === "smart"
 				? { mode: "smart" }
