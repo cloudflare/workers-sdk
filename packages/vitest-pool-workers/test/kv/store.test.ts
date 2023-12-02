@@ -18,8 +18,10 @@ beforeAll(() => {
 afterAll(() => fetchMock.assertNoPendingInterceptors());
 
 describe("kv", () => {
+	console.log("Defining tests..."); // Check log out of test has correct stack
+
 	it("user agents", () => {
-		console.log({ env }); // TODO(now): logs only seem to be appearing on the first run?
+		console.log({ env });
 		expect(navigator.userAgent).toBe("Cloudflare-Workers");
 	});
 

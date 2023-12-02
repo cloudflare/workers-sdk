@@ -35,7 +35,9 @@ export class Console {
 		this.#inspectOptions = opts.inspectOptions ?? { colors };
 	}
 
-	#write(stream: Writable, data: any[]): void {
+	// Vitest expects this function to be called `value`:
+	// https://github.com/vitest-dev/vitest/blob/v1.0.0-beta.5/packages/vitest/src/runtime/console.ts#L16
+	value(stream: Writable, data: any[]): void {
 		stream.write(formatWithOptions(this.#inspectOptions, ...data));
 	}
 
@@ -53,7 +55,7 @@ export class Console {
 	}
 	debug(...data: any[]): void {
 		if (this.#stdout === undefined) originalConsole.debug(...data);
-		else this.#write(this.#stdout, data);
+		else this.value(this.#stdout, data);
 	}
 	dir(item?: any, options?: any): void {
 		originalConsole.dir(item, options);
@@ -63,7 +65,7 @@ export class Console {
 	}
 	error(...data: any[]): void {
 		if (this.#stderr === undefined) originalConsole.error(...data);
-		else this.#write(this.#stderr, data);
+		else this.value(this.#stderr, data);
 	}
 	group(...data: any[]): void {
 		originalConsole.group(...data);
@@ -76,11 +78,11 @@ export class Console {
 	}
 	info(...data: any[]): void {
 		if (this.#stdout === undefined) originalConsole.info(...data);
-		else this.#write(this.#stdout, data);
+		else this.value(this.#stdout, data);
 	}
 	log(...data: any[]): void {
 		if (this.#stdout === undefined) originalConsole.log(...data);
-		else this.#write(this.#stdout, data);
+		else this.value(this.#stdout, data);
 	}
 	table(tabularData?: any, properties?: string[]): void {
 		originalConsole.table(tabularData, properties);
@@ -99,10 +101,10 @@ export class Console {
 	}
 	trace(...data: any[]): void {
 		if (this.#stdout === undefined) originalConsole.trace(...data);
-		else this.#write(this.#stdout, data);
+		else this.value(this.#stdout, data);
 	}
 	warn(...data: any[]): void {
 		if (this.#stderr === undefined) originalConsole.warn(...data);
-		else this.#write(this.#stderr, data);
+		else this.value(this.#stderr, data);
 	}
 }

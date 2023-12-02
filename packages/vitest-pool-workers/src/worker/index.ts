@@ -48,15 +48,17 @@ class WebSocketMessagePort extends events.EventEmitter {
 
 	#onMessage = (event: MessageEvent) => {
 		assert(typeof event.data === "string");
-		// originalConsole.log("Worker received message from pool...", event.data);
 		const parsed = devalue.parse(event.data);
 		this.emit("message", parsed);
 	};
 
 	postMessage(data: unknown) {
-		// originalConsole.log("Worker sending message to pool...", data);
 		const stringified = devalue.stringify(data);
-		this.socket.send(stringified);
+		try {
+			this.socket.send(stringified);
+		} catch (error) {
+			__console.error("Error sending message to pool:", error);
+		}
 	}
 }
 
