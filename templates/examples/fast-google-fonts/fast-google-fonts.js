@@ -427,7 +427,7 @@ async function modifyHtmlChunk(content, request, embedStylesheet) {
 		const matchString = match[0];
 		if (matchString.indexOf("stylesheet") >= 0) {
 			if (embedStylesheet) {
-				const fontCSS = await fetchCSS(match[1], request);
+				const fontCSS = await fetchCSS(match[1], request, ctx);
 				if (fontCSS.length) {
 					// See if there is a media type on the link tag
 					let mediaStr = "";
