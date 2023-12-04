@@ -105,7 +105,7 @@ import {
 	SharedHeaders,
 	SiteBindings,
 } from "./workers";
-import { _formatZodError } from "./zod-format";
+import { formatZodError } from "./zod-format";
 
 const DEFAULT_HOST = "127.0.0.1";
 function getURLSafeHost(host: string) {
@@ -180,7 +180,7 @@ function validateOptions(
 		if (e instanceof z.ZodError) {
 			let formatted: string | undefined;
 			try {
-				formatted = _formatZodError(e, opts);
+				formatted = formatZodError(e, opts);
 			} catch (formatError) {
 				// If formatting failed for some reason, we'd like to know, so log a
 				// bunch of debugging information, including the full validation error
