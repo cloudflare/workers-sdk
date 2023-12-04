@@ -528,12 +528,21 @@ export default function (ctx: Vitest): ProcessPool {
 				const options = projectSpecs.options;
 
 				const config = project.getSerializableConfig();
+
 				// Use our custom test runner
 				config.runner = "cloudflare:test-runner";
+
+				// Make sure `setImmediate` and `clearImmediate` are never faked as they
+				// don't exist on the workers global scope
+				config.fakeTimers.toFake = config.fakeTimers.toFake?.filter(
+					(method) => method !== "setImmediate" && method !== "clearImmediate"
+				);
+
 				// Allow workers to be re-used by removing the isolation requirement
 				config.poolOptions ??= {};
 				config.poolOptions.threads ??= {};
 				config.poolOptions.threads.isolate = false;
+
 				// Include resolved `main` if defined, and the names of Durable Object
 				// bindings that point to classes in the current isolate in the
 				// serialized config
