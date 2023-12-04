@@ -5,7 +5,14 @@ import path from "node:path";
 import util from "node:util";
 import { createBirpc } from "birpc";
 import * as devalue from "devalue";
-import { Log, LogLevel, Miniflare, WebSocket } from "miniflare";
+import {
+	Log,
+	LogLevel,
+	Miniflare,
+	WebSocket,
+	structuredSerializableReducers,
+	structuredSerializableRevivers,
+} from "miniflare";
 import { createMethodsRPC } from "vitest/node";
 import { OPTIONS_PATH, parseProjectOptions } from "./config";
 import { handleLoopbackRequest } from "./loopback";
@@ -373,7 +380,7 @@ async function runTests(
 	const res = await stub.fetch("http://placeholder", {
 		headers: {
 			Upgrade: "websocket",
-			"MF-Vitest-Worker-Data": devalue.stringify({
+			"MF-Vitest-Worker-Data": structuredSerializableStringify({
 				filePath: ctx.projectFiles.workerPath,
 				name: "run",
 				data,
@@ -394,11 +401,10 @@ async function runTests(
 	};
 	const rpc = createBirpc<RunnerRPC, RuntimeRPC>(patchedLocalRpcFunctions, {
 		eventNames: ["onCancel"],
-		// TODO(soon): allow serialising structured cloneables, syntaxerror in imported message throws
 		post(value) {
 			if (webSocket.readyState === WebSocket.READY_STATE_OPEN) {
 				debuglog("POOL-->WORKER", value);
-				webSocket.send(devalue.stringify(value));
+				webSocket.send(structuredSerializableStringify(value));
 			} else {
 				debuglog("POOL--*      ", value);
 			}

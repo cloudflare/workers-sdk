@@ -9,7 +9,19 @@ import {
 	mustGetResolvedMainPath,
 } from "cloudflare:test-internal";
 import * as devalue from "devalue";
+// Using relative path here to ensure `esbuild` bundles it
+import {
+	structuredSerializableReducers,
+	structuredSerializableRevivers,
+} from "../../../miniflare/src/workers/core/devalue";
 import type { VitestExecutor as VitestExecutorType } from "vitest/execute";
+
+function structuredSerializableStringify(value: unknown): string {
+	return devalue.stringify(value, structuredSerializableReducers);
+}
+function structuredSerializableParse(value: string): unknown {
+	return devalue.parse(value, structuredSerializableRevivers);
+}
 
 globalThis.Buffer = Buffer; // Required by `vite-node/source-map`
 globalThis.__console = console;
@@ -48,12 +60,12 @@ class WebSocketMessagePort extends events.EventEmitter {
 
 	#onMessage = (event: MessageEvent) => {
 		assert(typeof event.data === "string");
-		const parsed = devalue.parse(event.data);
+		const parsed = structuredSerializableParse(event.data);
 		this.emit("message", parsed);
 	};
 
 	postMessage(data: unknown) {
-		const stringified = devalue.stringify(data);
+		const stringified = structuredSerializableStringify(data);
 		try {
 			this.socket.send(stringified);
 		} catch (error) {
@@ -108,7 +120,7 @@ export class RunnerObject implements DurableObject {
 
 		const workerDataHeader = request.headers.get("MF-Vitest-Worker-Data");
 		assert(workerDataHeader !== null);
-		const wd: unknown = devalue.parse(workerDataHeader);
+		const wd = structuredSerializableParse(workerDataHeader);
 		assert(typeof wd === "object" && wd !== null);
 		assert("filePath" in wd && typeof wd.filePath === "string");
 		assert("name" in wd && typeof wd.name === "string");
