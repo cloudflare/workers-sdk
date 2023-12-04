@@ -14,9 +14,7 @@ export default {
 			if (url.pathname.startsWith("/fonts.gstatic.com/")) {
 				// Pass the font requests through to the origin font server
 				// (through the underlying request cache).
-				ctx.respondWith(
-					proxyRequest("https:/" + url.pathname + url.search, request)
-				);
+				return proxyRequest("https:/" + url.pathname + url.search, request);
 			} else if (
 				accept &&
 				(accept.indexOf("text/html") >= 0 || accept.indexOf("text/css") >= 0)

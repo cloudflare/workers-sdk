@@ -246,8 +246,8 @@ async function getCachedResponse(request) {
  * @param {Int} cacheVer - Current cache version (if retrieved)
  * @param {Context} ctx - Original context
  */
-async function purgeCache(cacheVer, ctx) {
-	if (typeof EDGE_CACHE !== "undefined") {
+async function purgeCache(cacheVer, ctx, env) {
+	if (typeof env.EDGE_CACHE !== "undefined") {
 		// Purge the KV cache by bumping the version number
 		cacheVer = await GetCurrentCacheVersion(cacheVer);
 		cacheVer++;
@@ -395,15 +395,15 @@ function getResponseOptions(response) {
  * @param {Int} cacheVer - Current cache version value if set.
  * @returns {Int} The current cache version.
  */
-async function GetCurrentCacheVersion(cacheVer) {
+async function GetCurrentCacheVersion(cacheVer, env) {
 	if (cacheVer === null) {
-		if (typeof EDGE_CACHE !== "undefined") {
-			cacheVer = await EDGE_CACHE.get("html_cache_version");
+		if (typeof env.EDGE_CACHE !== "undefined") {
+			cacheVer = await env.EDGE_CACHE.get("html_cache_version");
 			if (cacheVer === null) {
 				// Uninitialized - first time through, initialize KV with a value
 				// Blocking but should only happen immediately after worker activation.
 				cacheVer = 0;
-				await EDGE_CACHE.put("html_cache_version", cacheVer.toString());
+				await env.EDGE_CACHE.put("html_cache_version", cacheVer.toString());
 			} else {
 				cacheVer = parseInt(cacheVer);
 			}
