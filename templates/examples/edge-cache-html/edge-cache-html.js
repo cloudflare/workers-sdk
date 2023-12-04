@@ -293,7 +293,7 @@ async function updateCache(originalRequest, cacheVer, ctx) {
 		status = ": Fetched";
 		const options = getResponseOptions(response);
 		if (options && options.purge) {
-			await purgeCache(cacheVer);
+			await purgeCache(cacheVer, ctx);
 		}
 		let bypassCache = shouldBypassEdgeCache(request, response);
 		if ((!options || options.cache) && !bypassCache) {
