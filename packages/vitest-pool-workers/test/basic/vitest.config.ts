@@ -4,9 +4,11 @@ export default defineConfig({
 	test: {
 		pool: "../..",
 		poolOptions: {
-			miniflare: {
-				bindings: { KEY: "value" },
+			workers: {
 				singleWorker: true,
+				miniflare: {
+					bindings: { KEY: "value" },
+				},
 			},
 		},
 	},

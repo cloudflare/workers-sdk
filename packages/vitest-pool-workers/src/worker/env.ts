@@ -15,7 +15,7 @@ export function setEnv(newEnv: Env) {
 
 export function getSerializedOptions(): SerializedOptions {
 	assert(typeof __vitest_worker__ === "object", "Expected global Vitest state");
-	const options = __vitest_worker__.config?.poolOptions?.miniflare;
+	const options = __vitest_worker__.config?.poolOptions?.workers;
 	// `options` should always be defined when running tests
 	assert(options !== undefined, "Expected serialised options");
 	return options;

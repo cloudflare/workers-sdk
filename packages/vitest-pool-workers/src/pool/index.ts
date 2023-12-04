@@ -7,8 +7,10 @@ import { createBirpc } from "birpc";
 import * as devalue from "devalue";
 import { Log, LogLevel, Miniflare, WebSocket } from "miniflare";
 import { createMethodsRPC } from "vitest/node";
+import { OPTIONS_PATH, parseProjectOptions } from "./config";
 import { handleLoopbackRequest } from "./loopback";
 import { handleModuleFallbackRequest, modulesRoot } from "./module-fallback";
+import type { WorkersProjectOptions } from "./config";
 import type { CloseEvent, MiniflareOptions, WorkerOptions } from "miniflare";
 import type { MessagePort } from "node:worker_threads";
 import type { Readable } from "node:stream";
@@ -71,6 +73,8 @@ function handleRuntimeStdio(stdout: Readable, stderr: Readable): void {
 		process.stdout.write(chunk);
 	});
 	stderr.on("data", (chunk) => {
+		// TODO(soon): should ideally wrap these in `readline` interfaces if
+		//  intercepting like this
 		const s = chunk.toString();
 		if (ignoreMessages.some((message) => s.includes(message))) {
 			return;
@@ -82,32 +86,23 @@ function handleRuntimeStdio(stdout: Readable, stderr: Readable): void {
 let mf: Miniflare | undefined;
 let previousMfOptions: MiniflareOptions | undefined;
 
-interface WorkspaceSpecs {
+interface ProjectSpecs {
 	project: WorkspaceProject;
+	options: WorkersProjectOptions;
 	testFiles: Set<string>;
 }
-const allWorkspaceSpecs = new Map<string /* name */, WorkspaceSpecs>();
+const allProjectSpecs = new Map<string /* projectName */, ProjectSpecs>();
 
 // User worker names must not start with this
-const WORKER_NAME_PREFIX = "vitest-pool-workers:";
+const RUNNER_WORKER_NAME_PREFIX = "vitest-pool-workers:";
 function getWorkspaceRunnerWorkerName(project: WorkspaceProject) {
-	return `${WORKER_NAME_PREFIX}runner:${project.getName()}`;
+	return `${RUNNER_WORKER_NAME_PREFIX}runner:${project.getName()}`;
 }
 function getSpecRunnerWorkerName(project: WorkspaceProject, testFile: string) {
 	const workspaceName = getWorkspaceRunnerWorkerName(project);
 	const testFileHash = crypto.createHash("sha1").update(testFile).digest("hex");
 	testFile = testFile.replace(/[^a-z0-9-]/gi, "_");
 	return `${workspaceName}:${testFileHash}:${testFile}`;
-}
-
-function usingSingleWorker(project: WorkspaceProject) {
-	const userOptions = project.config.poolOptions?.miniflare;
-	return (
-		typeof userOptions === "object" &&
-		userOptions !== null &&
-		"singleWorker" in userOptions &&
-		userOptions.singleWorker === true
-	);
 }
 
 function isDurableObjectDesignatorToSelf(
@@ -131,20 +126,12 @@ function isDurableObjectDesignatorToSelf(
 // Returns the bound names for bindings to Durable Objects with classes defined
 // in this worker.
 function getDurableObjectBindingNamesToSelf(
-	project: WorkspaceProject
+	options: WorkersProjectOptions
 ): Set<string> {
 	const result = new Set<string>();
-	const userOptions = project.config.poolOptions?.miniflare;
-	if (
-		typeof userOptions !== "object" ||
-		userOptions === null ||
-		!("durableObjects" in userOptions) ||
-		typeof userOptions.durableObjects !== "object" ||
-		userOptions.durableObjects === null
-	) {
-		return result;
-	}
-	for (const [key, designator] of Object.entries(userOptions.durableObjects)) {
+	const durableObjects = options.miniflare.durableObjects ?? {};
+	for (const [key, designator] of Object.entries(durableObjects)) {
+		if (key === RUNNER_OBJECT_BINDING) continue;
 		if (isDurableObjectDesignatorToSelf(designator)) result.add(key);
 	}
 	return result;
@@ -163,8 +150,7 @@ function fixupDurableObjectBindingsToSelf(worker: WorkerOptions): Set<string> {
 	//  if doing multi-worker tests across workspace projects
 	// TODO(someday): may want to validate class names are valid identifiers?
 	const result = new Set<string>();
-	if (worker.durableObjects == null) return result;
-	if (typeof worker.durableObjects !== "object") return result;
+	if (worker.durableObjects === undefined) return result;
 	for (const key of Object.keys(worker.durableObjects)) {
 		const designator = worker.durableObjects[key];
 		// `designator` hasn't been validated at this point
@@ -188,8 +174,7 @@ function fixupDurableObjectBindingsToSelf(worker: WorkerOptions): Set<string> {
 // Point all service bindings with empty worker name to current worker
 function fixupServiceBindingsToSelf(worker: WorkerOptions) {
 	assert(worker.name !== undefined);
-	if (worker.serviceBindings == null) return;
-	if (typeof worker.serviceBindings !== "object") return;
+	if (worker.serviceBindings === undefined) return;
 	for (const name of Object.keys(worker.serviceBindings)) {
 		if (worker.serviceBindings[name] === "") {
 			worker.serviceBindings[name] = worker.name;
@@ -197,44 +182,33 @@ function fixupServiceBindingsToSelf(worker: WorkerOptions) {
 	}
 }
 
+type ProjectWorkers = [
+	runnerWorker: WorkerOptions,
+	...auxiliaryWorkers: WorkerOptions[]
+];
+
 const LOOPBACK_SERVICE_BINDING = "__VITEST_POOL_WORKERS_LOOPBACK_SERVICE";
 const RUNNER_OBJECT_BINDING = "__VITEST_POOL_WORKERS_RUNNER_OBJECT";
-function buildWorkspaceWorkerOptions(
-	workspace: WorkspaceSpecs
-): WorkerOptions[] {
-	const workspacePath = workspace.project.path;
-	const userOptions = workspace.project.config.poolOptions?.miniflare;
-	if (userOptions !== undefined && typeof userOptions !== "object") {
-		throw new Error(
-			`In workspace ${workspacePath}, \`poolOptions.miniflare\` must be an object, got ${typeof userOptions}`
-		);
-	}
-	const runnerWorker = {
-		// Miniflare will validate these options
-		// TODO: may be easier if we just deep cloned this
-		...userOptions,
-	} as WorkerOptions & { workers?: unknown };
+
+function buildProjectWorkerOptions(
+	projectSpecs: Omit<ProjectSpecs, "testFiles">
+): ProjectWorkers {
+	const workspacePath = projectSpecs.project.path;
+	const runnerWorker = projectSpecs.options.miniflare;
 
 	// Make sure the worker has a well-known name
-	runnerWorker.name = getWorkspaceRunnerWorkerName(workspace.project);
+	runnerWorker.name = getWorkspaceRunnerWorkerName(projectSpecs.project);
 
 	// Make sure the worker has the `nodejs_compat` and `export_commonjs_default`
 	// compatibility flags enabled. Vitest makes heavy use of Node APIs, and many
 	// of the libraries it depends on expect `require()` to return
 	// `module.exports` directly, rather than `{ default: module.exports }`.
 	runnerWorker.compatibilityFlags ??= [];
-	if (!Array.isArray(runnerWorker.compatibilityFlags)) {
-		throw new Error(
-			`In workspace ${workspacePath}, \`poolOptions.miniflare.compatibilityFlags\` must be an array, got ${typeof runnerWorker.compatibilityFlags}`
-		);
-	}
-	// Shallow clone to avoid mutating config
-	runnerWorker.compatibilityFlags = [...runnerWorker.compatibilityFlags];
 	if (runnerWorker.compatibilityFlags.includes("export_commonjs_namespace")) {
 		// `export_commonjs_namespace` and `export_commonjs_default` are mutually
 		// exclusive. If we have `export_commonjs_namespace` set, we can't continue.
 		throw new Error(
-			`In workspace ${workspacePath}, \`poolOptions.miniflare.compatibilityFlags\` must not contain "export_commonjs_namespace"`
+			`In workspace ${workspacePath}, \`${OPTIONS_PATH}.miniflare.compatibilityFlags\` must not contain "export_commonjs_namespace"`
 		);
 	}
 	if (!runnerWorker.compatibilityFlags.includes("export_commonjs_default")) {
@@ -249,30 +223,12 @@ function buildWorkspaceWorkerOptions(
 	runnerWorker.unsafeUseModuleFallbackService = true;
 
 	// Make sure we define our loopback service binding for helpers
-	if (
-		runnerWorker.serviceBindings !== undefined &&
-		typeof runnerWorker.serviceBindings !== "object"
-	) {
-		throw new Error(
-			`In workspace ${workspacePath}, \`poolOptions.miniflare.serviceBindings\` must be an object, got ${typeof runnerWorker.serviceBindings}`
-		);
-	}
-	// Shallow clone to avoid mutating config
-	runnerWorker.serviceBindings = { ...runnerWorker.serviceBindings };
+	runnerWorker.serviceBindings ??= {};
 	runnerWorker.serviceBindings[LOOPBACK_SERVICE_BINDING] =
 		handleLoopbackRequest;
 
 	// Build wrappers for Durable Objects defined in this worker
-	if (
-		runnerWorker.durableObjects !== undefined &&
-		typeof runnerWorker.durableObjects !== "object"
-	) {
-		throw new Error(
-			`In workspace ${workspacePath}, \`poolOptions.miniflare.durableObjects\` must be an object, got ${typeof runnerWorker.durableObjects}`
-		);
-	}
-	// Shallow clone to avoid mutating config
-	runnerWorker.durableObjects = { ...runnerWorker.durableObjects };
+	runnerWorker.durableObjects ??= {};
 	const durableObjectClassNames =
 		fixupDurableObjectBindingsToSelf(runnerWorker);
 	const durableObjectWrappers = Array.from(durableObjectClassNames)
@@ -292,7 +248,6 @@ function buildWorkspaceWorkerOptions(
 	};
 
 	// Make sure we define the runner script, including Durable Object wrappers
-	// @ts-expect-error `script` is required if defined, but we're overwriting it
 	if ("script" in runnerWorker) delete runnerWorker.script;
 	if ("scriptPath" in runnerWorker) delete runnerWorker.scriptPath;
 	// TODO(soon): will need to consider how this works on Windows, still treat
@@ -308,14 +263,9 @@ function buildWorkspaceWorkerOptions(
 	];
 
 	// Build array of workers contributed by the workspace
-	const workers: WorkerOptions[] = [runnerWorker];
+	const workers: ProjectWorkers = [runnerWorker];
 	if (runnerWorker.workers !== undefined) {
 		// Try to add workers defined by the user
-		if (!Array.isArray(runnerWorker.workers)) {
-			throw new Error(
-				`In workspace ${workspacePath}, \`poolOptions.miniflare.workers\` must be an array, got ${typeof runnerWorker.workers}`
-			);
-		}
 		for (let i = 0; i < runnerWorker.workers.length; i++) {
 			const worker: unknown = runnerWorker.workers[i];
 			// Make sure the worker has a non-empty name...
@@ -327,13 +277,13 @@ function buildWorkspaceWorkerOptions(
 				worker.name === ""
 			) {
 				throw new Error(
-					`In workspace ${workspacePath}, \`poolOptions.miniflare.workers[${i}].name\` must be non-empty`
+					`In workspace ${workspacePath}, \`${OPTIONS_PATH}.miniflare.workers[${i}].name\` must be non-empty`
 				);
 			}
 			// ...that doesn't start with our reserved prefix
-			if (worker.name.startsWith(WORKER_NAME_PREFIX)) {
+			if (worker.name.startsWith(RUNNER_WORKER_NAME_PREFIX)) {
 				throw new Error(
-					`In workspace ${workspacePath}, \`poolOptions.miniflare.workers[${i}].name\` must not start with "${WORKER_NAME_PREFIX}", got ${worker.name}`
+					`In workspace ${workspacePath}, \`${OPTIONS_PATH}.miniflare.workers[${i}].name\` must not start with "${RUNNER_WORKER_NAME_PREFIX}", got ${worker.name}`
 				);
 			}
 
@@ -348,21 +298,21 @@ function buildWorkspaceWorkerOptions(
 
 function buildMiniflareOptions(): MiniflareOptions {
 	const workers: WorkerOptions[] = [];
-	for (const workspace of allWorkspaceSpecs.values()) {
-		const [runnerWorker, ...otherWorkers] =
-			buildWorkspaceWorkerOptions(workspace);
-		assert(runnerWorker.name?.startsWith(WORKER_NAME_PREFIX));
+	for (const project of allProjectSpecs.values()) {
+		const [runnerWorker, ...auxiliaryWorkers] =
+			buildProjectWorkerOptions(project);
+		assert(runnerWorker.name?.startsWith(RUNNER_WORKER_NAME_PREFIX));
 
-		if (usingSingleWorker(workspace.project)) {
+		if (project.options.singleWorker) {
 			// Just add the runner worker once if using a single worker for all tests
 			fixupServiceBindingsToSelf(runnerWorker);
 			workers.push(runnerWorker);
 		} else {
 			// Otherwise, duplicate the runner worker for each test file
-			for (const testFile of workspace.testFiles) {
+			for (const testFile of project.testFiles) {
 				const testFileWorker = { ...runnerWorker };
 				testFileWorker.name = getSpecRunnerWorkerName(
-					workspace.project,
+					project.project,
 					testFile
 				);
 				fixupServiceBindingsToSelf(testFileWorker);
@@ -371,7 +321,7 @@ function buildMiniflareOptions(): MiniflareOptions {
 		}
 
 		// Add any other workers the user has defined once
-		workers.push(...otherWorkers);
+		workers.push(...auxiliaryWorkers);
 	}
 	return {
 		log: mfLog,
@@ -383,23 +333,11 @@ function buildMiniflareOptions(): MiniflareOptions {
 }
 
 function maybeGetResolvedMainPath(
-	project: WorkspaceProject
+	projectSpecs: ProjectSpecs
 ): string | undefined {
-	const workspacePath = project.path;
-	const userOptions = project.config.poolOptions?.miniflare;
-	const definesMain =
-		typeof userOptions === "object" &&
-		userOptions !== null &&
-		"main" in userOptions;
-	if (!definesMain) return;
-	// noinspection JSObjectNullOrUndefined
-	const main = userOptions.main;
+	const workspacePath = projectSpecs.project.path;
+	const main = projectSpecs.options.main;
 	if (main === undefined) return;
-	if (typeof main !== "string") {
-		throw new Error(
-			`In workspace ${workspacePath}, \`poolOptions.miniflare.main\` must be an string, got ${typeof main}`
-		);
-	}
 	if (typeof workspacePath === "string") {
 		return path.resolve(path.dirname(workspacePath), main);
 	} else {
@@ -527,16 +465,26 @@ export default function (ctx: Vitest): ProcessPool {
 			// TODO(soon): will probably want to reset all storage here, up to `setup(env)` hook end state?
 
 			// 1. Collect new specs
+			const parsedProjectOptions = new Set<WorkspaceProject>();
 			for (const [project, testFile] of specs) {
 				// Vitest validates all project names are unique
 				const projectName = project.getName();
-				let workspaceSpecs = allWorkspaceSpecs.get(projectName);
-				if (workspaceSpecs === undefined) {
-					workspaceSpecs = { project, testFiles: new Set() };
-					allWorkspaceSpecs.set(projectName, workspaceSpecs);
+				let projectSpecs = allProjectSpecs.get(projectName);
+				if (projectSpecs === undefined) {
+					projectSpecs = {
+						project,
+						options: { miniflare: { script: "" } },
+						testFiles: new Set(),
+					};
+					allProjectSpecs.set(projectName, projectSpecs);
 				}
-				workspaceSpecs.project = project;
-				workspaceSpecs.testFiles.add(testFile);
+				// Parse project options once per project per re-run
+				if (!parsedProjectOptions.has(project)) {
+					parsedProjectOptions.add(project);
+					projectSpecs.options = parseProjectOptions(projectSpecs.project);
+				}
+				projectSpecs.project = project;
+				projectSpecs.testFiles.add(testFile);
 			}
 
 			// 2. Generate Miniflare options required to run all collected specs.
@@ -568,8 +516,10 @@ export default function (ctx: Vitest): ProcessPool {
 			// 4. Run just the required tests
 			const resultPromises: Promise<void>[] = [];
 			const specsByProject = groupBy(specs, ([project]) => project);
-			for (const [project, projectSpecs] of specsByProject) {
-				const singleWorker = usingSingleWorker(project);
+			for (const [project, specsToRun] of specsByProject) {
+				const projectSpecs = allProjectSpecs.get(project.getName());
+				assert(projectSpecs !== undefined); // Defined earlier in this function
+				const options = projectSpecs.options;
 
 				const config = project.getSerializableConfig();
 				// Use our custom test runner
@@ -581,24 +531,24 @@ export default function (ctx: Vitest): ProcessPool {
 				// Include resolved `main` if defined, and the names of Durable Object
 				// bindings that point to classes in the current isolate in the
 				// serialized config
-				const main = maybeGetResolvedMainPath(project);
+				const main = maybeGetResolvedMainPath(projectSpecs);
 				const isolateDurableObjectBindings = Array.from(
-					getDurableObjectBindingNamesToSelf(project)
+					getDurableObjectBindingNamesToSelf(projectSpecs.options)
 				);
-				config.poolOptions.miniflare = { main, isolateDurableObjectBindings };
+				config.poolOptions.workers = { main, isolateDurableObjectBindings };
 
-				if (singleWorker) {
+				if (options.singleWorker) {
 					const workerName = getWorkspaceRunnerWorkerName(project);
 					const ns = await mf.getDurableObjectNamespace(
 						RUNNER_OBJECT_BINDING,
 						workerName
 					);
-					const files = projectSpecs.map(([, file]) => file);
+					const files = specsToRun.map(([, file]) => file);
 					resultPromises.push(
 						runTests(ctx, ns, project, config, files, invalidates)
 					);
 				} else {
-					for (const [, file] of projectSpecs) {
+					for (const [, file] of specsToRun) {
 						const workerName = getSpecRunnerWorkerName(project, file);
 						const ns = await mf.getDurableObjectNamespace(
 							RUNNER_OBJECT_BINDING,

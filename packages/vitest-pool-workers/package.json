@@ -24,7 +24,8 @@
 		"devalue": "^4.3.0",
 		"esbuild": "^0.19.7",
 		"import-meta-resolve": "^4.0.0",
-		"miniflare": "workspace:*"
+		"miniflare": "workspace:*",
+		"zod": "^3.20.6"
 	},
 	"peerDependencies": {
 		"@vitest/runner": "1.0.0-beta.5",
