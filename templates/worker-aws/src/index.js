@@ -18,7 +18,7 @@ async function sqsExample(env) {
 
 	const send = new SendMessageCommand({
 		// use wrangler secrets to provide this global variable
-		QueueUrl: await env.AWS_SQS_QUEUE_URL,
+		QueueUrl: env.AWS_SQS_QUEUE_URL,
 		MessageBody: 'Hello SQS from a Cloudflare Worker',
 	});
 
