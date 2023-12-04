@@ -1,4 +1,6 @@
 import assert from "node:assert";
+import events from "node:events";
+import timers from "node:timers/promises";
 import getPort from "get-port";
 import {
 	Miniflare,
@@ -186,14 +188,17 @@ function fakeReloadComplete(
 		liveReload: config.dev?.liveReload,
 	};
 
-	setTimeout(() => {
+	const timeoutPromise = timers.setTimeout(delay).then(() => {
 		devEnv.proxy.onReloadComplete({
 			type: "reloadComplete",
 			config,
 			bundle: fakeBundle,
 			proxyData,
 		});
-	}, delay);
+	});
+	// Add this promise to `fireAndForgetPromises`, ensuring it runs before we
+	// start the next test
+	fireAndForgetPromises.push(timeoutPromise);
 
 	return { config, mfOpts }; // convenience to allow calling and defining new config/mfOpts inline but also store the new objects
 }
@@ -281,6 +286,35 @@ describe("startDevWorker: ProxyController", () => {
 				context: { id: expect.any(Number) },
 			},
 		});
+	});
+
+	test("InspectorProxyWorker rejects unauthorised requests", async () => {
+		const run = await fakeStartUserWorker({
+			script: `
+				export default {
+					fetch() {
+						return new Response();
+					}
+				}
+			`,
+		});
+
+		// Check validates `Host` header
+		ws = new WebSocket(
+			`ws://${run.inspectorProxyWorkerUrl.host}/core:user:${run.config.name}`,
+			{ setHost: false, headers: { Host: "example.com" } }
+		);
+		let openPromise = events.once(ws, "open");
+		await expect(openPromise).rejects.toThrow("Unexpected server response");
+
+		// Check validates `Origin` header
+		ws = new WebSocket(
+			`ws://${run.inspectorProxyWorkerUrl.host}/core:user:${run.config.name}`,
+			{ origin: "https://example.com" }
+		);
+		openPromise = events.once(ws, "open");
+		await expect(openPromise).rejects.toThrow("Unexpected server response");
+		ws.close();
 	});
 
 	test("User worker exception", async () => {
