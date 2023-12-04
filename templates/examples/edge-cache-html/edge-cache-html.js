@@ -75,7 +75,7 @@ async function processRequest(originalRequest, ctx) {
 		if (response) {
 			const options = getResponseOptions(response);
 			if (options && options.purge) {
-				await purgeCache(cacheVer);
+				await purgeCache(cacheVer, ctx);
 				status += ", Purged";
 			}
 			bypassCache = bypassCache || shouldBypassEdgeCache(request, response);
