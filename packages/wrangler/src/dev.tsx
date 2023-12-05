@@ -326,6 +326,9 @@ export type AdditionalDevProps = {
 		preview_bucket_name?: string;
 		jurisdiction?: string;
 	}[];
+	ai?: {
+		binding: string;
+	},
 	d1Databases?: Environment["d1_databases"];
 	processEntrypoint?: boolean;
 	additionalModules?: CfModule[];

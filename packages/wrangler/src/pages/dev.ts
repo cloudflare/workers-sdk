@@ -155,6 +155,10 @@ export function Options(yargs: CommonYargsArgv) {
 				type: "array",
 				description: "R2 bucket to bind (--r2 R2_BINDING)",
 			},
+			ai: {
+				type: "string",
+				description: "AI to bind (--ai AI_BINDING)",
+			},
 			service: {
 				type: "array",
 				description: "Service to bind (--service SERVICE=SCRIPT_NAME)",
@@ -215,6 +219,7 @@ export const Handler = async ({
 	do: durableObjects = [],
 	d1: d1s = [],
 	r2: r2s = [],
+	ai,
 	service: requestedServices = [],
 	liveReload,
 	localProtocol,
@@ -670,6 +675,7 @@ export const Handler = async ({
 				return { binding, bucket_name: ref || binding.toString() };
 			})
 			.filter(Boolean) as AdditionalDevProps["r2"],
+		ai: (ai) ? {binding: ai.toString()} : undefined,
 		rules: usingWorkerDirectory
 			? [
 					{
