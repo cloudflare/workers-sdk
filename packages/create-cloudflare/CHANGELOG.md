@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.8.1
+
+### Patch Changes
+
+- [#4538](https://github.com/cloudflare/workers-sdk/pull/4538) [`a72f64c8`](https://github.com/cloudflare/workers-sdk/commit/a72f64c81c549510535fdc955bd3ad550be6c5a6) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-docusaurus` from `3.0.0` to `3.0.1`
+
 ## 2.8.0
 
 ### Minor Changes
