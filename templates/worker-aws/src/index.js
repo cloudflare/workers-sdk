@@ -27,13 +27,13 @@ async function sqsExample(env) {
 
 async function dynamoExample(env) {
 	const client = new DynamoDBClient({
-		region: await env.AWS_REGION,
+		region: env.AWS_REGION,
 		credentialDefaultProvider: myCredentialProvider,
 	});
 
 	// replace with your table name and key as appropriate
 	const put = new PutItemCommand({
-		TableName: await env.AWS_DYNAMO_TABLE,
+		TableName: env.AWS_DYNAMO_TABLE,
 		Item: {
 			greeting: { S: 'Hello!' },
 			[AWS_DYNAMO_PRIMARYKEY]: { S: 'world' },
@@ -41,7 +41,7 @@ async function dynamoExample(env) {
 	});
 	await client.send(put);
 	const get = new GetItemCommand({
-		TableName: await env.AWS_DYNAMO_TABLE,
+		TableName: env.AWS_DYNAMO_TABLE,
 		Key: {
 			[AWS_DYNAMO_PRIMARYKEY]: { S: 'world' },
 		},
@@ -64,7 +64,7 @@ async function auroraExample(request) {
 
 async function auroraGetData(ID, env) {
 	const client = new RDSDataClient({
-		region: await env.AWS_REGION,
+		region: env.AWS_REGION,
 		credentialDefaultProvider: myCredentialProvider,
 	});
 
@@ -72,8 +72,8 @@ async function auroraGetData(ID, env) {
 		// IMPORTANT: This is NOT production ready!
 		// This SQL command is susceptible to SQL Injections
 		sql: `SELECT * FROM ${AWS_AURORA_TABLE} WHERE id = ${ID};`,
-		resourceArn: await env.AWS_AURORA_RESOURCE_ARN,
-		secretArn: await env.AWS_AURORA_SECRET_ARN,
+		resourceArn: env.AWS_AURORA_RESOURCE_ARN,
+		secretArn: env.AWS_AURORA_SECRET_ARN,
 	});
 
 	const results = await client.send(call);
@@ -83,7 +83,7 @@ async function auroraGetData(ID, env) {
 
 async function auroraPostData(jsonData, env) {
 	const client = new RDSDataClient({
-		region: await env.AWS_REGION,
+		region: env.AWS_REGION,
 		credentialDefaultProvider: myCredentialProvider,
 	});
 
@@ -105,8 +105,8 @@ async function auroraPostData(jsonData, env) {
 		// IMPORTANT: This is NOT production ready!
 		// This SQL command is susceptible to SQL Injections
 		sql: `INSERT INTO ${AWS_AURORA_TABLE}(${keys}) VALUES (${values});`,
-		resourceArn: await env.AWS_AURORA_RESOURCE_ARN,
-		secretArn: await env.AWS_AURORA_SECRET_ARN,
+		resourceArn: env.AWS_AURORA_RESOURCE_ARN,
+		secretArn: env.AWS_AURORA_SECRET_ARN,
 	});
 
 	const results = await client.send(call);
