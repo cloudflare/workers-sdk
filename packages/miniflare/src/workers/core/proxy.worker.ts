@@ -23,6 +23,7 @@ import {
 
 const ENCODER = new TextEncoder();
 const DECODER = new TextDecoder();
+const ALLOWED_HOSTNAMES = ["127.0.0.1", "[::1]", "localhost"];
 
 const WORKERS_PLATFORM_IMPL: PlatformImpl<ReadableStream> = {
 	Blob,
@@ -132,12 +133,27 @@ export class ProxyServer implements DurableObject {
 	}
 
 	async #fetch(request: Request) {
+		// Validate `Host` header
+		const hostHeader = request.headers.get("Host");
+		if (hostHeader == null) return new Response(null, { status: 400 });
+		try {
+			const host = new URL(`http://${hostHeader}`);
+			if (!ALLOWED_HOSTNAMES.includes(host.hostname)) {
+				return new Response(null, { status: 401 });
+			}
+		} catch {
+			return new Response(null, { status: 400 });
+		}
+
 		// Validate secret header to prevent unauthorised access to proxy
 		const secretHex = request.headers.get(CoreHeaders.OP_SECRET);
 		if (secretHex == null) return new Response(null, { status: 401 });
 		const expectedSecret = this.env[CoreBindings.DATA_PROXY_SECRET];
 		const secretBuffer = Buffer.from(secretHex, "hex");
-		if (!crypto.subtle.timingSafeEqual(secretBuffer, expectedSecret)) {
+		if (
+			secretBuffer.byteLength !== expectedSecret.byteLength ||
+			!crypto.subtle.timingSafeEqual(secretBuffer, expectedSecret)
+		) {
 			return new Response(null, { status: 401 });
 		}
 

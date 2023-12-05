@@ -67,7 +67,8 @@ export class ProxyController extends EventEmitter {
 			workers: [
 				{
 					name: "ProxyWorker",
-					compatibilityFlags: ["nodejs_compat"],
+					// `url_standard` required to parse IPv6 hostnames correctly
+					compatibilityFlags: ["nodejs_compat", "url_standard"],
 					modulesRoot: path.dirname(proxyWorkerPath),
 					modules: [{ type: "ESModule", path: proxyWorkerPath }],
 					durableObjects: {
@@ -96,7 +97,8 @@ export class ProxyController extends EventEmitter {
 				},
 				{
 					name: "InspectorProxyWorker",
-					compatibilityFlags: ["nodejs_compat"],
+					// `url_standard` required to parse IPv6 hostnames correctly
+					compatibilityFlags: ["nodejs_compat", "url_standard"],
 					modulesRoot: path.dirname(inspectorProxyWorkerPath),
 					modules: [{ type: "ESModule", path: inspectorProxyWorkerPath }],
 					durableObjects: {

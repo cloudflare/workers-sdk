@@ -19,6 +19,16 @@ import {
 	urlFromParts,
 } from "../../src/api/startDevWorker/utils";
 
+const ALLOWED_HOST_HOSTNAMES = ["127.0.0.1", "[::1]", "localhost"];
+const ALLOWED_ORIGIN_HOSTNAMES = [
+	"devtools.devprod.cloudflare.dev",
+	"cloudflare-devtools.pages.dev",
+	/^[a-z0-9]+\.cloudflare-devtools\.pages\.dev$/,
+	"127.0.0.1",
+	"[::1]",
+	"localhost",
+];
+
 interface Env {
 	PROXY_CONTROLLER: Fetcher;
 	PROXY_CONTROLLER_AUTH_SECRET: string;
@@ -451,6 +461,40 @@ export class InspectorProxyWorker implements DurableObject {
 	}
 
 	async handleDevToolsWebSocketUpgradeRequest(req: Request) {
+		// Validate `Host` header
+		let hostHeader = req.headers.get("Host");
+		if (hostHeader == null) return new Response(null, { status: 400 });
+		try {
+			const host = new URL(`http://${hostHeader}`);
+			if (!ALLOWED_HOST_HOSTNAMES.includes(host.hostname)) {
+				return new Response("Disallowed `Host` header", { status: 401 });
+			}
+		} catch {
+			return new Response("Expected `Host` header", { status: 400 });
+		}
+		// Validate `Origin` header
+		let originHeader = req.headers.get("Origin");
+		if (originHeader === null && !req.headers.has("User-Agent")) {
+			// VSCode doesn't send an `Origin` header, but also doesn't send a
+			// `User-Agent` header, so allow an empty origin in this case.
+			originHeader = "http://localhost";
+		}
+		if (originHeader === null) {
+			return new Response("Expected `Origin` header", { status: 400 });
+		}
+		try {
+			const origin = new URL(originHeader);
+			const allowed = ALLOWED_ORIGIN_HOSTNAMES.some((rule) => {
+				if (typeof rule === "string") return origin.hostname === rule;
+				else return rule.test(origin.hostname);
+			});
+			if (!allowed) {
+				return new Response("Disallowed `Origin` header", { status: 401 });
+			}
+		} catch {
+			return new Response("Expected `Origin` header", { status: 400 });
+		}
+
 		// DevTools attempting to connect
 		this.sendDebugLog("DEVTOOLS WEBSOCKET TRYING TO CONNECT");
 
