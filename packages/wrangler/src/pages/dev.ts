@@ -675,7 +675,7 @@ export const Handler = async ({
 				return { binding, bucket_name: ref || binding.toString() };
 			})
 			.filter(Boolean) as AdditionalDevProps["r2"],
-		ai: (ai) ? {binding: ai.toString()} : undefined,
+		ai: ai ? { binding: ai.toString() } : undefined,
 		rules: usingWorkerDirectory
 			? [
 					{

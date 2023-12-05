@@ -328,7 +328,7 @@ export type AdditionalDevProps = {
 	}[];
 	ai?: {
 		binding: string;
-	},
+	};
 	d1Databases?: Environment["d1_databases"];
 	processEntrypoint?: boolean;
 	additionalModules?: CfModule[];
