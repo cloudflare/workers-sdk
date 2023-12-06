@@ -11,7 +11,7 @@ import {
 	PersistenceSchema,
 	Plugin,
 	SERVICE_LOOPBACK,
-	getControlEndpointBindings,
+	getMiniflareObjectBindings,
 	getPersistPath,
 	kProxyNodeBinding,
 	migrateDatabase,
@@ -82,7 +82,13 @@ export const KV_PLUGIN: Plugin<
 		}
 		return bindings;
 	},
-	async getServices({ options, sharedOptions, tmpPath, log }) {
+	async getServices({
+		options,
+		sharedOptions,
+		tmpPath,
+		log,
+		unsafeStickyBlobs,
+	}) {
 		const persist = sharedOptions.kvPersist;
 		const namespaces = namespaceEntries(options.kvNamespaces);
 		const services = namespaces.map<Service>(([_, id]) => ({
@@ -124,7 +130,7 @@ export const KV_PLUGIN: Plugin<
 							name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 							service: { name: SERVICE_LOOPBACK },
 						},
-						...getControlEndpointBindings(),
+						...getMiniflareObjectBindings(unsafeStickyBlobs),
 					],
 				},
 			};

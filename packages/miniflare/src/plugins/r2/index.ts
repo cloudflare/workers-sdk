@@ -11,7 +11,7 @@ import {
 	PersistenceSchema,
 	Plugin,
 	SERVICE_LOOPBACK,
-	getControlEndpointBindings,
+	getMiniflareObjectBindings,
 	getPersistPath,
 	kProxyNodeBinding,
 	migrateDatabase,
@@ -53,7 +53,13 @@ export const R2_PLUGIN: Plugin<
 		const buckets = namespaceKeys(options.r2Buckets);
 		return Object.fromEntries(buckets.map((name) => [name, kProxyNodeBinding]));
 	},
-	async getServices({ options, sharedOptions, tmpPath, log }) {
+	async getServices({
+		options,
+		sharedOptions,
+		tmpPath,
+		log,
+		unsafeStickyBlobs,
+	}) {
 		const persist = sharedOptions.r2Persist;
 		const buckets = namespaceEntries(options.r2Buckets);
 		const services = buckets.map<Service>(([_, id]) => ({
@@ -98,7 +104,7 @@ export const R2_PLUGIN: Plugin<
 							name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 							service: { name: SERVICE_LOOPBACK },
 						},
-						...getControlEndpointBindings(),
+						...getMiniflareObjectBindings(unsafeStickyBlobs),
 					],
 				},
 			};

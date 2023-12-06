@@ -53,6 +53,7 @@ export interface PluginServicesOptions<
 	tmpPath: string;
 	workerNames: string[];
 	loopbackPort: number;
+	unsafeStickyBlobs: boolean;
 
 	// ~~Leaky abstractions~~ "Plugin specific options" :)
 	wrappedBindingNames: WrappedBindingNames;

@@ -11,7 +11,7 @@ import {
 	PersistenceSchema,
 	Plugin,
 	SERVICE_LOOPBACK,
-	getControlEndpointBindings,
+	getMiniflareObjectBindings,
 	getPersistPath,
 	kProxyNodeBinding,
 	migrateDatabase,
@@ -72,7 +72,13 @@ export const D1_PLUGIN: Plugin<
 			databases.map((name) => [name, kProxyNodeBinding])
 		);
 	},
-	async getServices({ options, sharedOptions, tmpPath, log }) {
+	async getServices({
+		options,
+		sharedOptions,
+		tmpPath,
+		log,
+		unsafeStickyBlobs,
+	}) {
 		const persist = sharedOptions.d1Persist;
 		const databases = namespaceEntries(options.d1Databases);
 		const services = databases.map<Service>(([_, id]) => ({
@@ -118,7 +124,7 @@ export const D1_PLUGIN: Plugin<
 							name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 							service: { name: SERVICE_LOOPBACK },
 						},
-						...getControlEndpointBindings(),
+						...getMiniflareObjectBindings(unsafeStickyBlobs),
 					],
 				},
 			};

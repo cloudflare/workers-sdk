@@ -1061,6 +1061,7 @@ export class Miniflare {
 			}
 
 			// Collect all services required by this worker
+			const unsafeStickyBlobs = sharedOpts.core.unsafeStickyBlobs ?? false;
 			const unsafeEphemeralDurableObjects =
 				workerOpts.core.unsafeEphemeralDurableObjects ?? false;
 			const pluginServicesOptionsBase: Omit<
@@ -1074,6 +1075,7 @@ export class Miniflare {
 				tmpPath: this.#tmpPath,
 				workerNames,
 				loopbackPort,
+				unsafeStickyBlobs,
 				wrappedBindingNames,
 				durableObjectClassNames,
 				unsafeEphemeralDurableObjects,

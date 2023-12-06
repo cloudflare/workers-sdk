@@ -9,7 +9,6 @@ import { AddressInfo } from "net";
 import path from "path";
 import { Writable } from "stream";
 import { json, text } from "stream/consumers";
-import { fileURLToPath } from "url";
 import util from "util";
 import {
 	D1Database,
@@ -29,12 +28,12 @@ import {
 	ReplaceWorkersTypes,
 	Response,
 	WorkerOptions,
+	Worker_Module,
 	_forceColour,
 	_transformsForContentEncoding,
 	createFetchMock,
 	fetch,
 	viewToBuffer,
-	Worker_Module,
 } from "miniflare";
 import {
 	CloseEvent as StandardCloseEvent,

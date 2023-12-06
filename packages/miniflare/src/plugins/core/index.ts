@@ -165,6 +165,8 @@ export const CoreSharedOptionsSchema = z.object({
 	// some malicious attacker.
 	unsafeProxySharedSecret: z.string().optional(),
 	unsafeModuleFallbackService: ServiceFetchSchema.optional(),
+	// Keep blobs when deleting/overwriting keys, required for stacked storage
+	unsafeStickyBlobs: z.boolean().optional(),
 });
 
 export const CORE_PLUGIN_NAME = "core";

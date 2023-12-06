@@ -33,7 +33,7 @@
 		"dev": "concurrently -n esbuild,typechk,typewrk -c yellow,blue,blue.dim \"node scripts/build.mjs watch\" \"node scripts/types.mjs tsconfig.json watch\" \"node scripts/types.mjs src/workers/tsconfig.json watch\"",
 		"test": "node scripts/build.mjs && ava && rimraf ./.tmp",
 		"test:ci": "pnpm run test",
-		"check:lint": "eslint \"{src,test}/**/*.ts\" \"scripts/**/*.{js,mjs}\" \"types/**/*.ts\"",
+		"check:lint": "eslint --max-warnings=0 \"{src,test}/**/*.ts\" \"scripts/**/*.{js,mjs}\" \"types/**/*.ts\"",
 		"lint:fix": "pnpm run check:lint --fix",
 		"types:build": "node scripts/types.mjs tsconfig.json && node scripts/types.mjs src/workers/tsconfig.json"
 	},
