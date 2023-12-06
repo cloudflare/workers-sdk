@@ -185,7 +185,6 @@ export type Binding =
 	  }
 	| { type: "service"; service: ServiceDesignator | ServiceFetch }
 	| { type: "queue-producer"; name: string }
-	| { type: "constellation"; project_id: string }
 	| { type: "var"; value: string | Json | Uint8Array }
 	| { type: `unsafe-${string}`; [key: string]: unknown };
 
