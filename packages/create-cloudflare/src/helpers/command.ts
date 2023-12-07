@@ -193,7 +193,7 @@ export const runFrameworkGenerator = async (ctx: C3Context, args: string[]) => {
 
 	endSection(
 		`Continue with ${ctx.framework?.config.displayName}`,
-		`via \`${formatCommand(cmd)}\``
+		`via \`${quoteShellArgs(cmd)}\``
 	);
 
 	if (process.env.VITEST) {
@@ -402,5 +402,3 @@ export async function getWorkerdCompatibilityDate() {
 		doneText: (output) => `${brandColor("compatibility date")} ${dim(output)}`,
 	});
 }
-
-export const formatCommand = (parts: string[]) => parts.join(" ");
