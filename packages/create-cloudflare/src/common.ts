@@ -17,7 +17,6 @@ import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { getFrameworkCli } from "frameworks/index";
 import { C3_DEFAULTS, openInBrowser } from "helpers/cli";
 import {
-	formatCommand,
 	listAccounts,
 	printAsyncStatus,
 	runCommand,
@@ -26,7 +25,6 @@ import {
 } from "helpers/command";
 import { detectPackageManager } from "helpers/packages";
 import { poll } from "helpers/poll";
-import { quote } from "shell-quote";
 import { version as wranglerVersion } from "wrangler/package.json";
 import { version } from "../package.json";
 import type { C3Args, C3Context } from "types";
@@ -139,7 +137,7 @@ export const setupProjectDirectory = (args: C3Args) => {
 export const offerToDeploy = async (ctx: C3Context) => {
 	startSection(`Deploy with Cloudflare`, `Step 3 of 3`);
 
-	const label = `deploy via \`${formatCommand([
+	const label = `deploy via \`${quoteShellArgs([
 		npm,
 		"run",
 		...(ctx.framework?.config.deployCommand ?? ["deploy"]),
@@ -259,7 +257,7 @@ export const printSummary = async (ctx: C3Context) => {
 			: [],
 		[
 			`Run the development server`,
-			formatCommand([
+			quoteShellArgs([
 				npm,
 				"run",
 				...(ctx.framework?.config.devCommand ?? ["start"]),
@@ -267,7 +265,7 @@ export const printSummary = async (ctx: C3Context) => {
 		],
 		[
 			`Deploy your application`,
-			formatCommand([
+			quoteShellArgs([
 				npm,
 				"run",
 				...(ctx.framework?.config.deployCommand ?? ["deploy"]),
@@ -300,7 +298,7 @@ export const printSummary = async (ctx: C3Context) => {
 			`${bgGreen(" APPLICATION CREATED ")}`,
 			`${dim(`Deploy your application with`)}`,
 			`${blue(
-				formatCommand([
+				quoteShellArgs([
 					npm,
 					"run",
 					...(ctx.framework?.config.deployCommand ?? ["deploy"]),
@@ -562,7 +560,7 @@ function prepareCommitMessage(commitMessage: string): string {
 
 export function quoteShellArgs(args: string[]): string {
 	if (process.platform !== "win32") {
-		return quote(args);
+		return args.join(" ");
 	} else {
 		// Simple Windows command prompt quoting if there are special characters.
 		const specialCharsMatcher = /[&<>[\]|{}^=;!'+,`~\s]/;
