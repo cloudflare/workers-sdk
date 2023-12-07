@@ -48,6 +48,7 @@ const workerdBuiltinModules = [
 	"node:stream",
 	"node:string_decoder",
 	"node:util",
+	"workerd:unsafe",
 ];
 const conditions = new Set(["workerd", "worker", "browser", "import"]);
 

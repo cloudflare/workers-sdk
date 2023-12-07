@@ -1,8 +1,13 @@
 import assert from "node:assert";
 import { NodeSnapshotEnvironment } from "@vitest/snapshot/environment";
 import { resetMockAgent } from "cloudflare:mock-agent";
-import { internalEnv, fetchMock } from "cloudflare:test-internal";
+import {
+	internalEnv,
+	fetchMock,
+	getSerializedOptions,
+} from "cloudflare:test-internal";
 import { VitestTestRunner } from "vitest/runners";
+import workerdUnsafe from "workerd:unsafe";
 import type { CancelReason, Suite, Test } from "@vitest/runner";
 import type { ResolvedConfig, WorkerGlobalState, WorkerRPC } from "vitest";
 
@@ -63,8 +68,25 @@ let initialState: WorkerGlobalState | undefined;
 let patchedPrepareStackTrace = false;
 const getConsoleGetFileName = () => () => "node:internal/console/constructor";
 
+interface TryOptions {
+	repeats: number;
+	retry: number;
+}
+
+type TryKey = `${number}:${number}`;
+function getTryKey({ repeats, retry }: TryOptions): TryKey {
+	return `${repeats}:${retry}`;
+}
+
+interface TryState {
+	active?: TryKey;
+	popped: Set<TryKey>;
+}
+const tryStates = new WeakMap<Test, TryState>();
+
 export default class WorkersTestRunner extends VitestTestRunner {
 	readonly state: WorkerGlobalState;
+	readonly isolatedStorage: boolean;
 
 	constructor(config: ResolvedConfig) {
 		super(config);
@@ -72,6 +94,9 @@ export default class WorkersTestRunner extends VitestTestRunner {
 		// @ts-expect-error `this.workerState` has "private" access, how quaint :D
 		const state: WorkerGlobalState = this.workerState;
 		this.state = state;
+
+		const { isolatedStorage } = getSerializedOptions();
+		this.isolatedStorage = isolatedStorage ?? false;
 
 		// Make sure we're using a `WorkersSnapshotEnvironment`
 		const opts = state.config.snapshotOptions;
@@ -112,6 +137,26 @@ export default class WorkersTestRunner extends VitestTestRunner {
 		}
 	}
 
+	async updateStackedStorage(action: "push" | "pop"): Promise<void> {
+		if (!this.isolatedStorage) return;
+
+		// Abort all Durable Objects apart from those marked with `preventEviction`
+		// (i.e. the runner object and the proxy server).
+		// On push, ensures objects are started with newly copied `.sqlite` files.
+		// On pop, ensures SQLite WAL checkpoint, allowing us to just copy `.sqlite` files.
+		// TODO(now): even if isolated storage disabled, still want to reset these
+		//  at the start of test files?
+		await workerdUnsafe.abortAllDurableObjects();
+
+		// Send request to pool loopback service to update `.sqlite` files
+		const url = "http://placeholder/storage";
+		const res = await internalEnv.__VITEST_POOL_WORKERS_LOOPBACK_SERVICE.fetch(
+			url,
+			{ method: action === "pop" ? "DELETE" : "POST" }
+		);
+		assert.strictEqual(res.status, 204, await res.text());
+	}
+
 	syncCurrentTaskWithInitialState() {
 		assert(initialState !== undefined); // Assigned in constructor
 		initialState.current = this.state.current;
@@ -139,6 +184,8 @@ export default class WorkersTestRunner extends VitestTestRunner {
 			__console.log(`${_(2)}onBeforeRunSuite: ${suite.name}`);
 			await scheduler.wait(100);
 		}
+		await this.updateStackedStorage("push");
+
 		return super.onBeforeRunSuite(suite);
 	}
 	async onAfterRunSuite(suite: Suite) {
@@ -146,7 +193,25 @@ export default class WorkersTestRunner extends VitestTestRunner {
 			__console.log(`${_(2)}onAfterRunSuite: ${suite.name}`);
 			await scheduler.wait(100);
 		}
+		await this.updateStackedStorage("pop");
+
 		return super.onAfterRunSuite(suite);
+	}
+
+	async ensurePoppedActiveTryStorage(
+		test: Test,
+		newActive?: TryKey
+	): Promise<boolean /* popped */> {
+		const tries = tryStates.get(test);
+		assert(tries !== undefined);
+		const active = tries.active;
+		if (newActive !== undefined) tries.active = newActive;
+		if (active !== undefined && !tries.popped.has(active)) {
+			tries.popped.add(active);
+			await this.updateStackedStorage("pop");
+			return true;
+		}
+		return false;
 	}
 
 	async onBeforeRunTask(test: Test) {
@@ -154,6 +219,19 @@ export default class WorkersTestRunner extends VitestTestRunner {
 			__console.log(`${_(4)}onBeforeRunTask: ${test.name}`);
 			await scheduler.wait(100);
 		}
+
+		tryStates.set(test, { popped: new Set() });
+		if (this.isolatedStorage && test.concurrent) {
+			const quotedName = JSON.stringify(test.name);
+			const msg = [
+				"Concurrent tests are unsupported with isolated storage. Please either:",
+				`- Remove \`.concurrent\` from the ${quotedName} test`,
+				`- Remove \`.concurrent\` from all \`describe()\` blocks containing the ${quotedName} test`,
+				"- Remove `isolatedStorage: true` from your project's Vitest config",
+			];
+			throw new Error(msg.join("\n"));
+		}
+
 		const result = await super.onBeforeRunTask(test);
 		// Current task may be updated in `super.onBeforeRunTask()`:
 		// https://github.com/vitest-dev/vitest/blob/v1.0.0-beta.5/packages/vitest/src/runtime/runners/test.ts#L68
@@ -165,6 +243,13 @@ export default class WorkersTestRunner extends VitestTestRunner {
 			__console.log(`${_(4)}onAfterRunTask: ${test.name}`);
 			await scheduler.wait(100);
 		}
+
+		// If we haven't popped storage for the test yet (i.e. the try threw,
+		// `onAfterTryTask()` wasn't called, and we didn't enable retires so
+		// `onBeforeTryTask()` wasn't called again), pop it
+		await this.ensurePoppedActiveTryStorage(test);
+		tryStates.delete(test);
+
 		const result = await super.onAfterRunTask(test);
 		// Current task updated in `super.onAfterRunTask()`:
 		// https://github.com/vitest-dev/vitest/blob/v1.0.0-beta.5/packages/vitest/src/runtime/runners/test.ts#L47
@@ -172,18 +257,36 @@ export default class WorkersTestRunner extends VitestTestRunner {
 		return result;
 	}
 
-	async onBeforeTryTask(test: Test) {
+	// @ts-expect-error `VitestRunner` defines an additional `options` parameter
+	//  that `VitestTestRunner` doesn't use
+	async onBeforeTryTask(test: Test, options: TryOptions) {
 		if (DEBUG) {
-			__console.log(`${_(6)}onBeforeTryTask: ${test.name}`);
+			__console.log(`${_(6)}onBeforeTryTask: ${test.name}`, options);
 			await scheduler.wait(100);
 		}
+
+		// If we haven't popped storage for the previous try yet (i.e. the try
+		// threw and `onAfterTryTask()` wasn't called), pop it first...
+		const newActive = getTryKey(options);
+		await this.ensurePoppedActiveTryStorage(test, newActive);
+
+		await this.updateStackedStorage("push");
 		return super.onBeforeTryTask(test);
 	}
-	async onAfterTryTask(test: Test) {
+	// @ts-expect-error `VitestRunner` defines an additional `options` parameter
+	//  that `VitestTestRunner` doesn't use
+	async onAfterTryTask(test: Test, options: TryOptions) {
 		if (DEBUG) {
-			__console.log(`${_(6)}onAfterTryTask: ${test.name}`);
+			__console.log(`${_(6)}onAfterTryTask: ${test.name}`, options);
 			await scheduler.wait(100);
 		}
+
+		// Pop storage for this try, asserting that we haven't done so already.
+		// `onAfterTryTask()` is never called multiple times for the same try,
+		// `onBeforeTryTask()` will only be called with a new try after this,
+		// and `onAfterRunTask()` will only be called after all tries.
+		assert(await this.ensurePoppedActiveTryStorage(test));
+
 		return super.onAfterTryTask(test);
 	}
 

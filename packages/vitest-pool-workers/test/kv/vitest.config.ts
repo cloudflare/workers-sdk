@@ -7,6 +7,7 @@ export default defineConfig({
 		poolOptions: {
 			workers: {
 				main: "./worker.ts",
+				isolatedStorage: true,
 				miniflare: {
 					kvNamespaces: ["TEST_NAMESPACE"],
 					compatibilityFlags: ["global_navigator"],

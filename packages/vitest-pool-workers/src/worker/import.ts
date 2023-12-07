@@ -31,8 +31,8 @@ export async function importModule(
 	// Ensure we resolve/fetch the module in the Durable Object with the open
 	// connection to the pool, so we're not performing I/O on behalf of a
 	// different object
-	const runnerId = env.__VITEST_POOL_WORKERS_RUNNER_OBJECT.idFromName("");
-	const runnerStub = env.__VITEST_POOL_WORKERS_RUNNER_OBJECT.get(runnerId);
+	// @ts-expect-error `ColoLocalActorNamespace`s are not included in types
+	const runnerStub = env.__VITEST_POOL_WORKERS_RUNNER_OBJECT.get("singleton");
 	const runnerResponse = await runnerStub.fetch("http://x", {
 		cf: { [CF_KEY_IMPORT]: importRequest },
 	});

@@ -9,9 +9,10 @@ import {
 	Log,
 	LogLevel,
 	Miniflare,
-	WebSocket,
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
+	WebSocket,
+	kUnsafeEphemeralUniqueKey,
 } from "miniflare";
 import { createMethodsRPC } from "vitest/node";
 import { OPTIONS_PATH, parseProjectOptions } from "./config";
@@ -29,16 +30,17 @@ import type {
 } from "vitest";
 import type { ProcessPool, Vitest, WorkspaceProject } from "vitest/node";
 
-function groupBy<K, V>(
-	iterable: Iterable<V>,
-	keyFn: (value: V) => K
-): Map<K, V[]> {
-	const result = new Map<K, V[]>();
+function groupBy<K, VFrom, VTo>(
+	iterable: Iterable<VFrom>,
+	keyFn: (value: VFrom) => K,
+	valueFn: (value: VFrom) => VTo
+): Map<K, VTo[]> {
+	const result = new Map<K, VTo[]>();
 	for (const value of iterable) {
 		const key = keyFn(value);
 		let group = result.get(key);
 		if (group === undefined) result.set(key, (group = []));
-		group.push(value);
+		group.push(valueFn(value));
 	}
 	return result;
 }
@@ -64,52 +66,65 @@ const mfLog = new Log(LogLevel.WARN);
 const DIST_PATH = path.resolve(__dirname, "..");
 const POOL_WORKER_PATH = path.join(DIST_PATH, "worker", "index.mjs");
 
+const symbolizerWarning =
+	"warning: Not symbolizing stack traces because $LLVM_SYMBOLIZER is not set.";
 const ignoreMessages = [
-	// Intentionally returning not found here to load module from root
-	"error: Fallback service failed to fetch module; payload = load from root",
 	// Not user actionable
-	// "warning: Not symbolizing stack traces because $LLVM_SYMBOLIZER is not set.",
-	// Logged when closing the WebSocket
 	// TODO(someday): this is normal operation and really shouldn't error
 	"disconnected: operation canceled",
 	"disconnected: worker_do_not_log; Request failed due to internal error",
 	"disconnected: WebSocket was aborted",
 ];
+function trimSymbolizerWarning(chunk: string): string {
+	return chunk.includes(symbolizerWarning)
+		? chunk.substring(chunk.indexOf("\n") + 1)
+		: chunk;
+}
 function handleRuntimeStdio(stdout: Readable, stderr: Readable): void {
-	stdout.on("data", (chunk) => {
+	stdout.on("data", (chunk: Buffer) => {
 		process.stdout.write(chunk);
 	});
-	stderr.on("data", (chunk) => {
-		// TODO(soon): should ideally wrap these in `readline` interfaces if
-		//  intercepting like this
-		const s = chunk.toString();
-		if (ignoreMessages.some((message) => s.includes(message))) {
+	stderr.on("data", (chunk: Buffer) => {
+		const str = trimSymbolizerWarning(chunk.toString());
+		if (ignoreMessages.some((message) => str.includes(message))) {
 			return;
 		}
-		process.stderr.write(chunk);
+		process.stderr.write(str);
 	});
 }
 
-let mf: Miniflare | undefined;
-let previousMfOptions: MiniflareOptions | undefined;
+type SingleOrPerTestFileMiniflare =
+	| Miniflare // Single instance
+	| Map<string /* testFile */, Miniflare>; // Instance per test file
+function forEachMiniflare(
+	mfs: SingleOrPerTestFileMiniflare,
+	callback: (mf: Miniflare) => Promise<unknown>
+): Promise<unknown> {
+	if (mfs instanceof Miniflare) return callback(mfs);
 
-interface ProjectSpecs {
+	const promises: Promise<unknown>[] = [];
+	for (const mf of mfs.values()) promises.push(callback(mf));
+	return Promise.all(promises);
+}
+
+interface Project {
 	project: WorkspaceProject;
 	options: WorkersProjectOptions;
 	testFiles: Set<string>;
+	relativePath: string | number;
+	mf?: SingleOrPerTestFileMiniflare;
+	previousMfOptions?: MiniflareOptions;
 }
-const allProjectSpecs = new Map<string /* projectName */, ProjectSpecs>();
+const allProjects = new Map<string /* projectName */, Project>();
 
 // User worker names must not start with this
 const RUNNER_WORKER_NAME_PREFIX = "vitest-pool-workers:";
-function getWorkspaceRunnerWorkerName(project: WorkspaceProject) {
-	return `${RUNNER_WORKER_NAME_PREFIX}runner:${project.getName()}`;
-}
-function getSpecRunnerWorkerName(project: WorkspaceProject, testFile: string) {
-	const workspaceName = getWorkspaceRunnerWorkerName(project);
+function getRunnerName(project: WorkspaceProject, testFile?: string) {
+	const name = `${RUNNER_WORKER_NAME_PREFIX}runner:${project.getName()}`;
+	if (testFile === undefined) return name;
 	const testFileHash = crypto.createHash("sha1").update(testFile).digest("hex");
 	testFile = testFile.replace(/[^a-z0-9-]/gi, "_");
-	return `${workspaceName}:${testFileHash}:${testFile}`;
+	return `${name}:${testFileHash}:${testFile}`;
 }
 
 function isDurableObjectDesignatorToSelf(
@@ -198,13 +213,12 @@ const LOOPBACK_SERVICE_BINDING = "__VITEST_POOL_WORKERS_LOOPBACK_SERVICE";
 const RUNNER_OBJECT_BINDING = "__VITEST_POOL_WORKERS_RUNNER_OBJECT";
 
 function buildProjectWorkerOptions(
-	projectSpecs: Omit<ProjectSpecs, "testFiles">
+	project: Omit<Project, "testFiles">
 ): ProjectWorkers {
-	const workspacePath = projectSpecs.project.path;
-	const runnerWorker = projectSpecs.options.miniflare;
+	const runnerWorker = project.options.miniflare;
 
 	// Make sure the worker has a well-known name
-	runnerWorker.name = getWorkspaceRunnerWorkerName(projectSpecs.project);
+	runnerWorker.name = getRunnerName(project.project);
 
 	// Make sure the worker has the `nodejs_compat` and `export_commonjs_default`
 	// compatibility flags enabled. Vitest makes heavy use of Node APIs, and many
@@ -215,7 +229,7 @@ function buildProjectWorkerOptions(
 		// `export_commonjs_namespace` and `export_commonjs_default` are mutually
 		// exclusive. If we have `export_commonjs_namespace` set, we can't continue.
 		throw new Error(
-			`In workspace ${workspacePath}, \`${OPTIONS_PATH}.miniflare.compatibilityFlags\` must not contain "export_commonjs_namespace"`
+			`In workspace ${project.relativePath}, \`${OPTIONS_PATH}.miniflare.compatibilityFlags\` must not contain "export_commonjs_namespace"`
 		);
 	}
 	if (!runnerWorker.compatibilityFlags.includes("export_commonjs_default")) {
@@ -223,6 +237,10 @@ function buildProjectWorkerOptions(
 	}
 	if (!runnerWorker.compatibilityFlags.includes("nodejs_compat")) {
 		runnerWorker.compatibilityFlags.push("nodejs_compat");
+	}
+	// Required for `workerd:unsafe` module
+	if (!runnerWorker.compatibilityFlags.includes("unsafe_module")) {
+		runnerWorker.compatibilityFlags.push("unsafe_module");
 	}
 
 	// Make sure we define an unsafe eval binding and enable the fallback service
@@ -251,6 +269,9 @@ function buildProjectWorkerOptions(
 	// Make sure we define the `RunnerObject` Durable Object
 	runnerWorker.durableObjects[RUNNER_OBJECT_BINDING] = {
 		className: "RunnerObject",
+		// Make the runner object ephemeral, so it doesn't write any `.sqlite` files
+		// that would disrupt stacked storage because we prevent eviction
+		unsafeUniqueKey: kUnsafeEphemeralUniqueKey,
 		unsafePreventEviction: true,
 	};
 
@@ -284,13 +305,13 @@ function buildProjectWorkerOptions(
 				worker.name === ""
 			) {
 				throw new Error(
-					`In workspace ${workspacePath}, \`${OPTIONS_PATH}.miniflare.workers[${i}].name\` must be non-empty`
+					`In workspace ${project.relativePath}, \`${OPTIONS_PATH}.miniflare.workers[${i}].name\` must be non-empty`
 				);
 			}
 			// ...that doesn't start with our reserved prefix
 			if (worker.name.startsWith(RUNNER_WORKER_NAME_PREFIX)) {
 				throw new Error(
-					`In workspace ${workspacePath}, \`${OPTIONS_PATH}.miniflare.workers[${i}].name\` must not start with "${RUNNER_WORKER_NAME_PREFIX}", got ${worker.name}`
+					`In workspace ${project.relativePath}, \`${OPTIONS_PATH}.miniflare.workers[${i}].name\` must not start with "${RUNNER_WORKER_NAME_PREFIX}", got ${worker.name}`
 				);
 			}
 
@@ -303,47 +324,91 @@ function buildProjectWorkerOptions(
 	return workers;
 }
 
-function buildMiniflareOptions(): MiniflareOptions {
-	const workers: WorkerOptions[] = [];
-	for (const project of allProjectSpecs.values()) {
-		const [runnerWorker, ...auxiliaryWorkers] =
-			buildProjectWorkerOptions(project);
-		assert(runnerWorker.name?.startsWith(RUNNER_WORKER_NAME_PREFIX));
+const SHARED_MINIFLARE_OPTIONS: Partial<MiniflareOptions> = {
+	log: mfLog,
+	verbose: true,
+	unsafeModuleFallbackService: handleModuleFallbackRequest,
+	handleRuntimeStdio,
+	unsafeStickyBlobs: true,
+};
+function buildProjectMiniflareOptions(project: Project): MiniflareOptions {
+	const [runnerWorker, ...auxiliaryWorkers] =
+		buildProjectWorkerOptions(project);
 
-		if (project.options.singleWorker) {
-			// Just add the runner worker once if using a single worker for all tests
-			fixupServiceBindingsToSelf(runnerWorker);
-			workers.push(runnerWorker);
+	assert(runnerWorker.name !== undefined);
+	assert(runnerWorker.name.startsWith(RUNNER_WORKER_NAME_PREFIX));
+
+	if (project.options.singleWorker || project.options.isolatedStorage) {
+		// Single Worker, Isolated or Shared Storage
+		//  --> single instance with single runner worker
+		// Multiple Workers, Isolated Storage:
+		//  --> multiple instances each with single runner worker
+		fixupServiceBindingsToSelf(runnerWorker);
+		return {
+			...SHARED_MINIFLARE_OPTIONS,
+			workers: [runnerWorker, ...auxiliaryWorkers],
+		};
+	} else {
+		// Multiple Workers, Shared Storage:
+		//  --> single instance with multiple runner workers
+		const testWorkers: WorkerOptions[] = [];
+		for (const testFile of project.testFiles) {
+			const testRunnerName = getRunnerName(project.project, testFile);
+			const testWorker = { ...runnerWorker };
+			testWorker.name = testRunnerName;
+			fixupServiceBindingsToSelf(testWorker);
+			testWorkers.push(testWorker);
+		}
+		return {
+			...SHARED_MINIFLARE_OPTIONS,
+			workers: [...testWorkers, ...auxiliaryWorkers],
+		};
+	}
+}
+async function getProjectMiniflare(
+	project: Project
+): Promise<SingleOrPerTestFileMiniflare> {
+	const mfOptions = buildProjectMiniflareOptions(project);
+	const changed = !util.isDeepStrictEqual(project.previousMfOptions, mfOptions);
+	project.previousMfOptions = mfOptions;
+
+	const previousSingleInstance = project.mf instanceof Miniflare;
+	const singleInstance =
+		project.options.singleWorker || !project.options.isolatedStorage;
+
+	if (project.mf !== undefined && previousSingleInstance !== singleInstance) {
+		// If isolated storage configuration has changed, reset project instances
+		log.info(`Isolation changed for ${project.relativePath}, resetting...`);
+		await forEachMiniflare(project.mf, (mf) => mf.dispose());
+		project.mf = undefined;
+	}
+
+	if (project.mf === undefined) {
+		// If `mf` is now `undefined`, create new instances
+		if (singleInstance) {
+			log.info(`Starting single runtime for ${project.relativePath}...`);
+			project.mf = new Miniflare(mfOptions);
 		} else {
-			// Otherwise, duplicate the runner worker for each test file
+			log.info(`Starting isolated runtimes for ${project.relativePath}...`);
+			project.mf = new Map();
 			for (const testFile of project.testFiles) {
-				const testFileWorker = { ...runnerWorker };
-				testFileWorker.name = getSpecRunnerWorkerName(
-					project.project,
-					testFile
-				);
-				fixupServiceBindingsToSelf(testFileWorker);
-				workers.push(testFileWorker);
+				project.mf.set(testFile, new Miniflare(mfOptions));
 			}
 		}
-
-		// Add any other workers the user has defined once
-		workers.push(...auxiliaryWorkers);
+	} else if (changed) {
+		// Otherwise, update the existing instances if options have changed
+		log.info(`Options changed for ${project.relativePath}, updating...`);
+		await forEachMiniflare(project.mf, (mf) => mf.setOptions(mfOptions));
+	} else {
+		log.debug(`Reusing runtime for ${project.relativePath}...`);
 	}
-	return {
-		log: mfLog,
-		verbose: true,
-		unsafeModuleFallbackService: handleModuleFallbackRequest,
-		handleRuntimeStdio,
-		workers,
-	};
+
+	return project.mf;
 }
 
-function maybeGetResolvedMainPath(
-	projectSpecs: ProjectSpecs
-): string | undefined {
-	const workspacePath = projectSpecs.project.path;
-	const main = projectSpecs.options.main;
+function maybeGetResolvedMainPath(project: Project): string | undefined {
+	const workspacePath = project.project.path;
+	const main = project.options.main;
 	if (main === undefined) return;
 	if (typeof workspacePath === "string") {
 		return path.resolve(path.dirname(workspacePath), main);
@@ -375,8 +440,8 @@ async function runTests(
 		providedContext: project.getProvidedContext(),
 	};
 
-	const id = runnerNs.idFromName("");
-	const stub = runnerNs.get(id);
+	// @ts-expect-error `ColoLocalActorNamespace`s are not included in types
+	const stub = runnerNs.get("singleton");
 	const res = await stub.fetch("http://placeholder", {
 		headers: {
 			Upgrade: "websocket",
@@ -394,8 +459,10 @@ async function runTests(
 	const patchedLocalRpcFunctions: RuntimeRPC = {
 		...localRpcFunctions,
 		async fetch(...args) {
-			// Always mark `cloudflare:*` modules as external
-			if (args[0].startsWith("cloudflare:")) return { externalize: args[0] };
+			// Always mark `cloudflare:*`/`workerd:*` modules as external
+			if (/^(cloudflare|workerd):/.test(args[0])) {
+				return { externalize: args[0] };
+			}
 			return localRpcFunctions.fetch(...args);
 		},
 	};
@@ -464,68 +531,54 @@ async function runTests(
 	// }
 }
 
+function getRelativeProjectPath(projectPath: string | number) {
+	if (typeof projectPath === "number") return projectPath;
+	else return path.relative("", projectPath);
+}
+
 export default function (ctx: Vitest): ProcessPool {
 	return {
 		name: "vitest-pool-workers",
 		async runTests(specs, invalidates) {
 			// TODO(soon): will probably want to reset all storage here, up to `setup(env)` hook end state?
+			//  (even if isolated storage not enabled)
 
 			// 1. Collect new specs
 			const parsedProjectOptions = new Set<WorkspaceProject>();
 			for (const [project, testFile] of specs) {
 				// Vitest validates all project names are unique
 				const projectName = project.getName();
-				let projectSpecs = allProjectSpecs.get(projectName);
-				if (projectSpecs === undefined) {
-					projectSpecs = {
-						project,
-						options: { miniflare: { script: "" } },
-						testFiles: new Set(),
-					};
-					allProjectSpecs.set(projectName, projectSpecs);
-				}
+				let workersProject = allProjects.get(projectName);
 				// Parse project options once per project per re-run
-				if (!parsedProjectOptions.has(project)) {
-					parsedProjectOptions.add(project);
-					projectSpecs.options = parseProjectOptions(projectSpecs.project);
+				if (workersProject === undefined) {
+					workersProject = {
+						project,
+						options: parseProjectOptions(project),
+						testFiles: new Set(),
+						relativePath: getRelativeProjectPath(project.path),
+					};
+					allProjects.set(projectName, workersProject);
+				} else if (!parsedProjectOptions.has(project)) {
+					workersProject.project = project;
+					workersProject.options = parseProjectOptions(project);
+					workersProject.relativePath = getRelativeProjectPath(project.path);
 				}
-				projectSpecs.project = project;
-				projectSpecs.testFiles.add(testFile);
+				workersProject.testFiles.add(testFile);
+
+				parsedProjectOptions.add(project);
 			}
 
-			// 2. Generate Miniflare options required to run all collected specs.
-			//
-			//    We include *all specs* here, even those we're not planning to run,
-			//    or that have been deleted. This ensures we minimise the number of
-			//    Miniflare instance restarts. These invalidate all test runs, and
-			//    require us to initialise all Vitest workers again with lots of
-			//    requests to the module fallback service.
-			//
-			//    We also use a single Miniflare instance for all workspaces to allow
-			//    service bindings between workspaces in the future.
-			const mfOptions = buildMiniflareOptions();
-
-			// 3. Restart Miniflare instance only if required options are different
-			const changed = !util.isDeepStrictEqual(previousMfOptions, mfOptions);
-			previousMfOptions = mfOptions;
-			if (mf === undefined) {
-				log.info("Starting Cloudflare Workers runtime...");
-				mf = new Miniflare(mfOptions);
-				await mf.ready;
-			} else if (changed) {
-				log.info("Restarting Cloudflare Workers runtime...");
-				await mf.setOptions(mfOptions);
-			} else {
-				log.debug("Reusing Cloudflare Workers runtime...");
-			}
-
-			// 4. Run just the required tests
+			// 2. Run just the required tests
 			const resultPromises: Promise<void>[] = [];
-			const specsByProject = groupBy(specs, ([project]) => project);
-			for (const [project, specsToRun] of specsByProject) {
-				const projectSpecs = allProjectSpecs.get(project.getName());
-				assert(projectSpecs !== undefined); // Defined earlier in this function
-				const options = projectSpecs.options;
+			const filesByProject = groupBy(
+				specs,
+				([project]) => project,
+				([, file]) => file
+			);
+			for (const [project, files] of filesByProject) {
+				const workersProject = allProjects.get(project.getName());
+				assert(workersProject !== undefined); // Defined earlier in this function
+				const options = workersProject.options;
 
 				const config = project.getSerializableConfig();
 
@@ -546,25 +599,51 @@ export default function (ctx: Vitest): ProcessPool {
 				// Include resolved `main` if defined, and the names of Durable Object
 				// bindings that point to classes in the current isolate in the
 				// serialized config
-				const main = maybeGetResolvedMainPath(projectSpecs);
+				const main = maybeGetResolvedMainPath(workersProject);
 				const isolateDurableObjectBindings = Array.from(
-					getDurableObjectBindingNamesToSelf(projectSpecs.options)
+					getDurableObjectBindingNamesToSelf(workersProject.options)
 				);
-				config.poolOptions.workers = { main, isolateDurableObjectBindings };
+				config.poolOptions.workers = {
+					main,
+					isolateDurableObjectBindings,
+					isolatedStorage: workersProject.options.isolatedStorage,
+				};
 
+				const mf = await getProjectMiniflare(workersProject);
 				if (options.singleWorker) {
-					const workerName = getWorkspaceRunnerWorkerName(project);
+					// Single Worker, Isolated or Shared Storage
+					//  --> single instance with single runner worker
+					assert(mf instanceof Miniflare, "Expected single instance");
+					const workerName = getRunnerName(project);
 					const ns = await mf.getDurableObjectNamespace(
 						RUNNER_OBJECT_BINDING,
 						workerName
 					);
-					const files = specsToRun.map(([, file]) => file);
 					resultPromises.push(
 						runTests(ctx, ns, project, config, files, invalidates)
 					);
+				} else if (options.isolatedStorage) {
+					// Multiple Workers, Isolated Storage:
+					//  --> multiple instances each with single runner worker
+					assert(mf instanceof Map, "Expected multiple isolated instances");
+					const workerName = getRunnerName(project);
+					for (const file of files) {
+						const fileMf = mf.get(file);
+						assert(fileMf !== undefined);
+						const ns = await fileMf.getDurableObjectNamespace(
+							RUNNER_OBJECT_BINDING,
+							workerName
+						);
+						resultPromises.push(
+							runTests(ctx, ns, project, config, [file], invalidates)
+						);
+					}
 				} else {
-					for (const [, file] of specsToRun) {
-						const workerName = getSpecRunnerWorkerName(project, file);
+					// Multiple Workers, Shared Storage:
+					//  --> single instance with multiple runner workers
+					assert(mf instanceof Miniflare, "Expected single instance");
+					for (const file of files) {
+						const workerName = getRunnerName(project, file);
 						const ns = await mf.getDurableObjectNamespace(
 							RUNNER_OBJECT_BINDING,
 							workerName
@@ -576,7 +655,9 @@ export default function (ctx: Vitest): ProcessPool {
 				}
 			}
 
-			// 5. Wait for all tests to complete, and throw if any failed
+			// Debug started Miniflare instances
+
+			// 3. Wait for all tests to complete, and throw if any failed
 			const results = await Promise.allSettled(resultPromises);
 			const errors = results
 				.filter((r): r is PromiseRejectedResult => r.status === "rejected")
@@ -599,11 +680,15 @@ export default function (ctx: Vitest): ProcessPool {
 			// assert(testModule && thingModule);
 			// thingModule.importers.add(testModule);
 		},
-		close() {
-			log.debug("Shutting down Cloudflare Workers runtime...");
-			const disposePromise = mf?.dispose();
-			mf = undefined;
-			return disposePromise;
+		async close() {
+			log.debug("Shutting down runtimes...");
+			const promises: Promise<unknown>[] = [];
+			for (const project of allProjects.values()) {
+				if (project.mf !== undefined) {
+					promises.push(forEachMiniflare(project.mf, (mf) => mf.dispose()));
+				}
+			}
+			await Promise.all(promises);
 		},
 	};
 }

@@ -16,6 +16,7 @@ interface SerializedOptions {
 	// Defined in `src/pool/index.ts`
 	main?: string;
 	isolateDurableObjectBindings?: string[];
+	isolatedStorage?: boolean;
 }
 
 declare module "__VITEST_POOL_WORKERS_USER_OBJECT" {}
@@ -37,4 +38,10 @@ declare module "cloudflare:mock-agent" {
 	): void;
 	export function isMockActive(agent: MockAgent): boolean;
 	export function resetMockAgent(agent: MockAgent): void;
+}
+
+declare module "workerd:unsafe" {
+	function abortAllDurableObjects(): Promise<void>;
+
+	export default { abortAllDurableObjects };
 }

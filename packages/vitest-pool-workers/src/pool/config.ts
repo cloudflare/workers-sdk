@@ -12,8 +12,8 @@ export const OPTIONS_PATH = OPTIONS_PATH_ARRAY.join(".");
 
 const WorkersPoolOptionsSchema = z.object({
 	main: z.ostring(),
-	isolatedStorage: z.oboolean(),
-	singleWorker: z.oboolean(),
+	isolatedStorage: z.boolean().default(false),
+	singleWorker: z.boolean().default(false),
 	miniflare: z
 		.object({
 			workers: z.array(z.object({}).passthrough()).optional(),

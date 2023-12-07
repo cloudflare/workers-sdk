@@ -105,6 +105,8 @@ function ensurePatchedFunction(unsafeEval: UnsafeEval) {
 	});
 }
 
+// `RunnerObject` is a singleton and "colo local" ephemeral object. Refer to:
+// https://github.com/cloudflare/workerd/blob/v1.20231206.0/src/workerd/server/workerd.capnp#L529-L543
 export class RunnerObject implements DurableObject {
 	executor: VitestExecutorType | undefined;
 

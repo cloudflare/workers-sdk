@@ -31,9 +31,7 @@ describe("kv", () => {
 	});
 
 	it("stores in Durable Objects", async () => {
-		// TODO: switch to idFromName once we have isolated storage, or clean storage
-		//  at the start of each test
-		const id = env.COUNTER.newUniqueId();
+		const id = env.COUNTER.idFromName("a");
 		const stub = env.COUNTER.get(id);
 		let response = await stub.fetch("http://x/abc");
 		expect(await response.json()).toMatchObject({ value: 1 });
@@ -41,13 +39,11 @@ describe("kv", () => {
 		expect(await response.json()).toMatchObject({ value: 2 });
 	});
 	it("stores in Durable Object instances", async () => {
-		// TODO: switch to idFromName once we have isolated storage, or clean storage
-		//  at the start of each test
-		const id = env.COUNTER.newUniqueId();
+		const id = env.COUNTER.idFromName("a");
 		const stub = env.COUNTER.get(id);
 
 		let response = await stub.fetch("http://x");
-		expect(await response.json()).toMatchObject({ value: 1 });
+		expect(await response.json()).toMatchObject({ value: 1 }); // Isolation!
 		response = await runInDurableObject(stub, (instance: Counter) => {
 			expect(instance).toBeInstanceOf(Counter);
 			return instance.fetch(new Request("http://x"));
