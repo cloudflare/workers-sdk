@@ -12,6 +12,7 @@ import {
 } from "../../runtime";
 import { Log, MiniflareCoreError, OptionalZodTypeOf } from "../../shared";
 import { Awaitable, QueueConsumerSchema, sanitisePath } from "../../workers";
+import { UnsafeUniqueKey } from "./constants";
 
 export const DEFAULT_PERSIST_ROOT = ".mf";
 
@@ -28,7 +29,7 @@ export type DurableObjectClassNames = Map<
 	Map<
 		/* className */ string,
 		{
-			unsafeUniqueKey?: string;
+			unsafeUniqueKey?: UnsafeUniqueKey;
 			unsafePreventEviction?: boolean;
 		}
 	>
