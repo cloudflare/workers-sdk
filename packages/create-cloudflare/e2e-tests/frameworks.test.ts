@@ -143,6 +143,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		vue: {
 			expectResponseToContain: "Vite App",
 			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
 		},
 	};
 
