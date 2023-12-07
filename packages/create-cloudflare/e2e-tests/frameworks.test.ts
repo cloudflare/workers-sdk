@@ -74,6 +74,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 			],
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
+			unsupportedPms: ["yarn"],
 		},
 		remix: {
 			expectResponseToContain: "Welcome to Remix",
@@ -143,6 +144,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		vue: {
 			expectResponseToContain: "Vite App",
 			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
 		},
 	};
 
