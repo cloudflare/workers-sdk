@@ -37,6 +37,7 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "./yargs-types";
+
 import type { ReadableStream } from "stream/web";
 
 export function initOptions(yargs: CommonYargsArgv) {
@@ -92,7 +93,7 @@ export type ServiceMetadataRes = {
 			modified_on: string;
 			created_on: string;
 			migration_tag: string;
-			usage_model: "bundled" | "unbound" | "standard";
+			usage_model: "bundled" | "unbound";
 			compatibility_date: string;
 			compatibility_flags: string[];
 			last_deployed_from?: "wrangler" | "dash" | "api";
@@ -899,6 +900,7 @@ async function getWorkerConfig(
 		workersDev,
 		serviceEnvMetadata,
 		cronTriggers,
+		standard,
 	] = await Promise.all([
 		fetchResult<WorkerMetadata["bindings"]>(
 			`/accounts/${accountId}/workers/services/${workerName}/environments/${serviceEnvironment}/bindings`
@@ -920,6 +922,7 @@ async function getWorkerConfig(
 		fetchResult<CronTriggersRes>(
 			`/accounts/${accountId}/workers/scripts/${workerName}/schedules`
 		),
+		fetchResult<StandardRes>(`/accounts/${accountId}/workers/standard`),
 	]).catch((e) => {
 		throw new Error(
 			`Error Occurred ${e}: Unable to fetch bindings, routes, or services metadata from the dashboard. Please try again later.`
@@ -958,7 +961,7 @@ async function getWorkerConfig(
 		compatibility_flags: serviceEnvMetadata.script.compatibility_flags,
 		...(allRoutes.length ? { routes: allRoutes } : {}),
 		usage_model:
-			serviceEnvMetadata.script.usage_model === "standard"
+			standard?.standard == true
 				? undefined
 				: serviceEnvMetadata.script.usage_model,
 		placement:

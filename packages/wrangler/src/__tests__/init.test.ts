@@ -2604,7 +2604,6 @@ describe("init", () => {
 						},
 						created_on: "1987-09-27",
 						modified_on: "1987-09-27",
-						usage_model,
 						environments: [
 							{
 								environment: "test",
@@ -2618,6 +2617,7 @@ describe("init", () => {
 							},
 						],
 					},
+					usage_model,
 					content,
 					bindings,
 					routes,
@@ -2638,6 +2638,7 @@ describe("init", () => {
 
 			const mockConfigExpected: RawConfig = {
 				workers_dev: true,
+				usage_model: "bundled",
 				main: "src/index.js",
 				compatibility_date: "1987-09-27",
 				name: "isolinear-optical-chip",
@@ -2897,6 +2898,24 @@ describe("init", () => {
 								),
 								ctx.set("cf-entrypoint", `index.js`),
 								ctx.body(await response.text())
+							);
+						}
+					),
+					rest.get(
+						`*/accounts/:accountId/workers/standard`,
+						(req, res, ctx) => {
+							return res.once(
+								ctx.status(200),
+								ctx.json({
+									success: true,
+									errors: [],
+									messages: [],
+									result: {
+										standard:
+											worker.service.default_environment.script.usage_model ===
+											"standard",
+									},
+								})
 							);
 						}
 					)
@@ -3373,7 +3392,7 @@ describe("init", () => {
 
 			it("should not continue if no worker name is provided", async () => {
 				await expect(
-					runWrangler("init  --from-dash")
+					runWrangler("init --from-dash")
 				).rejects.toMatchInlineSnapshot(
 					`[Error: Not enough arguments following: from-dash]`
 				);
@@ -3467,14 +3486,6 @@ describe("init", () => {
 			});
 
 			it("should have an explicit usage model for non-standard users", async () => {
-				mockSupportingDashRequests({
-					expectedAccountId: "LCARS",
-					expectedScriptName: "memory-crystal",
-					expectedEnvironment: "test",
-					expectedCompatDate: "1987-9-27",
-					expectedStandardEnablement: false,
-				});
-				setMockFetchDashScript(mockDashboardScript);
 				mockConfirm(
 					{
 						text: "Would you like to use git to manage this Worker?",
@@ -3482,10 +3493,6 @@ describe("init", () => {
 					},
 					{
 						text: "No package.json found. Would you like to create one?",
-						result: true,
-					},
-					{
-						text: "Would you like to use TypeScript?",
 						result: true,
 					}
 				);
@@ -3522,41 +3529,6 @@ function getDefaultBranchName() {
 		// ew
 		return "master";
 	}
-}
-
-/**
- * Mock setter for usage within test blocks for dashboard script
- */
-export function setMockFetchDashScript(
-	mockResponse: string | { name: string; contents: string | File }[]
-) {
-	msw.use(
-		rest.get(
-			`*/accounts/:accountId/workers/services/:fromDashScriptName/environments/:environment/content/v2`,
-			async (_, res, ctx) => {
-				if (typeof mockResponse === "string") {
-					return res(ctx.text(mockResponse));
-				}
-
-				const fd = new FormData();
-
-				for (const { name, contents } of mockResponse) {
-					fd.set(
-						name,
-						typeof contents === "string" ? new File([contents], name) : contents
-					);
-				}
-
-				const response = new Response(fd);
-
-				return res(
-					ctx.set("Content-Type", response.headers.get("Content-Type") ?? ""),
-					ctx.set("cf-entrypoint", `index.js`),
-					ctx.body(await response.text())
-				);
-			}
-		)
-	);
 }
 
 /**
