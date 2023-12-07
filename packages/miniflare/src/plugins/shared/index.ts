@@ -82,6 +82,10 @@ export interface PluginBase<
 	getServices(
 		options: PluginServicesOptions<Options, SharedOptions>
 	): Awaitable<Service[] | ServicesExtensions | void>;
+	getPersistPath?(
+		sharedOptions: OptionalZodTypeOf<SharedOptions>,
+		tmpPath: string
+	): string;
 }
 
 export type Plugin<

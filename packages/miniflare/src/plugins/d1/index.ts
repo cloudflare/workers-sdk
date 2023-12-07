@@ -137,4 +137,7 @@ export const D1_PLUGIN: Plugin<
 
 		return services;
 	},
+	getPersistPath({ d1Persist }, tmpPath) {
+		return getPersistPath(D1_PLUGIN_NAME, tmpPath, d1Persist);
+	},
 };

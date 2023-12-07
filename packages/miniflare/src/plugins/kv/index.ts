@@ -152,6 +152,9 @@ export const KV_PLUGIN: Plugin<
 
 		return services;
 	},
+	getPersistPath({ kvPersist }, tmpPath) {
+		return getPersistPath(KV_PLUGIN_NAME, tmpPath, kvPersist);
+	},
 };
 
 export { KV_PLUGIN_NAME };

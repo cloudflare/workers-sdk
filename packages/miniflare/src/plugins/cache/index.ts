@@ -147,4 +147,7 @@ export const CACHE_PLUGIN: Plugin<
 
 		return services;
 	},
+	getPersistPath({ cachePersist }, tmpPath) {
+		return getPersistPath(CACHE_PLUGIN_NAME, tmpPath, cachePersist);
+	},
 };

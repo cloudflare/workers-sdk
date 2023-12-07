@@ -1630,6 +1630,17 @@ export class Miniflare {
 		return this.#getProxy(`${pluginName}-internal`, className, serviceName);
 	}
 
+	unsafeGetPersistPaths(): Set<string> {
+		const result = new Set<string>();
+		for (const [key, plugin] of PLUGIN_ENTRIES) {
+			const sharedOpts = this.#sharedOpts[key];
+			// @ts-expect-error `sharedOptions` will match the plugin's type here
+			const maybePath = plugin.getPersistPath?.(sharedOpts, this.#tmpPath);
+			if (maybePath !== undefined) result.add(maybePath);
+		}
+		return result;
+	}
+
 	async dispose(): Promise<void> {
 		this.#disposeController.abort();
 		// The `ProxyServer` "heap" will be destroyed when `workerd` shuts down,

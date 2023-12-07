@@ -117,4 +117,7 @@ export const R2_PLUGIN: Plugin<
 
 		return services;
 	},
+	getPersistPath({ r2Persist }, tmpPath) {
+		return getPersistPath(R2_PLUGIN_NAME, tmpPath, r2Persist);
+	},
 };
