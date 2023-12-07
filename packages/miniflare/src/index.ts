@@ -745,7 +745,7 @@ export class Miniflare {
 		// Should only define custom service bindings if `service` is a function
 		assert(typeof service === "function");
 		try {
-			const response = await service(request);
+			const response = await service.call(this, request);
 			// Validate return type as `service` is a user defined function
 			// TODO: should we validate outside this try/catch?
 			return z.instanceof(Response).parse(response);
@@ -813,8 +813,10 @@ export class Miniflare {
 				request.headers.has("X-Resolve-Method") &&
 				originalUrl === null
 			) {
-				response =
-					await this.#sharedOpts.core.unsafeModuleFallbackService(request);
+				response = await this.#sharedOpts.core.unsafeModuleFallbackService.call(
+					this,
+					request
+				);
 			} else if (url.pathname === "/core/error") {
 				response = await handlePrettyErrorRequest(
 					this.#log,

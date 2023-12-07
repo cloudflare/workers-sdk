@@ -289,7 +289,7 @@ parameter in module format Workers.
   Record mapping binding name to paths containing arbitrary binary data to
   inject as `ArrayBuffer` bindings into this Worker.
 
-- `serviceBindings?: Record<string, string | { network: Network } | { external: ExternalServer } | { disk: DiskDirectory } | (request: Request) => Awaitable<Response>>`
+- `serviceBindings?: Record<string, string | { network: Network } | { external: ExternalServer } | { disk: DiskDirectory } | (this: Miniflare, request: Request) => Awaitable<Response>>`
 
   Record mapping binding name to service designators to inject as
   `{ fetch: typeof fetch }`
@@ -313,7 +313,8 @@ parameter in module format Workers.
     directory.
   - If the designator is a function, requests will be dispatched to your custom
     handler. This allows you to access data and functions defined in Node.js
-    from your Worker.
+    from your Worker. Note `this` will be bound to the `Miniflare` instance
+    dispatching the request.
 
 <!--prettier-ignore-start-->
 
