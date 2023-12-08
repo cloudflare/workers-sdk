@@ -251,11 +251,12 @@ export const chooseAccount = async (ctx: PagesGeneratorContext) => {
 };
 
 export const printSummary = async (ctx: PagesGeneratorContext) => {
+	const dirRelativePath = relative(ctx.originalCWD, ctx.project.path);
+
 	const nextSteps = [
-		[
-			`Navigate to the new directory`,
-			`cd ${relative(ctx.originalCWD, ctx.project.path)}`,
-		],
+		...(dirRelativePath
+			? [`Navigate to the new directory`, `cd ${dirRelativePath}`]
+			: []),
 		[
 			`Run the development server`,
 			quoteShellArgs([
