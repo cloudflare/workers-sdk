@@ -8,3 +8,5 @@ export function defineWorkersPoolOptions(
 
 // TODO(soon): runD1Migrations()
 // TODO(soon): getPagesASSETSBinding()
+
+export { kCurrentWorker } from "miniflare";

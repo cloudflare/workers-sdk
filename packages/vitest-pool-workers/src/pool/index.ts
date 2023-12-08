@@ -195,17 +195,6 @@ function fixupDurableObjectBindingsToSelf(
 	return result;
 }
 
-// Point all service bindings with empty worker name to current worker
-function fixupServiceBindingsToSelf(worker: WorkerOptions) {
-	assert(worker.name !== undefined);
-	if (worker.serviceBindings === undefined) return;
-	for (const name of Object.keys(worker.serviceBindings)) {
-		if (worker.serviceBindings[name] === "") {
-			worker.serviceBindings[name] = worker.name;
-		}
-	}
-}
-
 type ProjectWorkers = [
 	runnerWorker: WorkerOptions,
 	...auxiliaryWorkers: WorkerOptions[]
@@ -345,7 +334,6 @@ function buildProjectMiniflareOptions(project: Project): MiniflareOptions {
 		//  --> single instance with single runner worker
 		// Multiple Workers, Isolated Storage:
 		//  --> multiple instances each with single runner worker
-		fixupServiceBindingsToSelf(runnerWorker);
 		return {
 			...SHARED_MINIFLARE_OPTIONS,
 			workers: [runnerWorker, ...auxiliaryWorkers],
@@ -355,10 +343,8 @@ function buildProjectMiniflareOptions(project: Project): MiniflareOptions {
 		//  --> single instance with multiple runner workers
 		const testWorkers: WorkerOptions[] = [];
 		for (const testFile of project.testFiles) {
-			const testRunnerName = getRunnerName(project.project, testFile);
 			const testWorker = { ...runnerWorker };
-			testWorker.name = testRunnerName;
-			fixupServiceBindingsToSelf(testWorker);
+			testWorker.name = getRunnerName(project.project, testFile);
 			testWorkers.push(testWorker);
 		}
 		return {

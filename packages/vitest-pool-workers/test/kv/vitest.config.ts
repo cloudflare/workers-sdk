@@ -1,5 +1,8 @@
 import path from "node:path";
-import { defineWorkersPoolOptions } from "@cloudflare/vitest-pool-workers/config";
+import {
+	defineWorkersPoolOptions,
+	kCurrentWorker,
+} from "@cloudflare/vitest-pool-workers/config";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
@@ -25,7 +28,7 @@ export default defineConfig({
 						},
 					},
 					serviceBindings: {
-						SELF: "",
+						SELF: kCurrentWorker,
 					},
 					workers: [
 						{
