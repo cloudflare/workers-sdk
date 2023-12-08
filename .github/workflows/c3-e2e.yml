@@ -10,6 +10,8 @@ env:
   bun-version: 1.0.3
 jobs:
   e2e:
+    # Note: please keep this job in sync with the e2e-only-dependabot-bumped-framework one
+    #       in .github/workflows/c3-e2e-dependabot.yml
     timeout-minutes: 45
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.pm }}
