@@ -29,7 +29,7 @@ export const makeSentry10Transport = (options: BaseTransportOptions) => {
 		try {
 			if (sentryReportingAllowed) {
 				for (const event of eventQueue) {
-					void fetch(event[0], event[1]);
+					await fetch(event[0], event[1]);
 				}
 
 				const response = await fetch(
@@ -122,6 +122,7 @@ export async function captureGlobalException(e: unknown) {
 	}
 }
 
+// Ensure we send Sentry events before Wrangler exits
 export async function closeSentry() {
 	if (typeof SENTRY_DSN !== "undefined") {
 		await Sentry.close();
