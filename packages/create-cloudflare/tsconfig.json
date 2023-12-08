@@ -15,6 +15,7 @@
 		"resolveJsonModule": true,
 		"paths": {
 			"helpers/*": ["./src/helpers/*"],
+			"templates/*": ["./src/helpers/*"],
 			"frameworks/*": ["./src/frameworks/*"],
 			"types": ["./src/types.ts"]
 		}

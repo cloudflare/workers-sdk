@@ -1,0 +1,13 @@
+{
+	"id": "scheduled",
+	"displayName": "Scheduled Worker (Cron Trigger)",
+	"languages": ["js", "ts"],
+	"copyFiles": {
+		"js": {
+			"path": "./js"
+		},
+		"ts": {
+			"path": "./ts"
+		}
+	}
+}

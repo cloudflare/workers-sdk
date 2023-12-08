@@ -1,0 +1,10 @@
+{
+	"id": "chatgptPlugin",
+	"displayName": "ChatGPT plugin",
+	"languages": ["ts"],
+	"copyFiles": {
+		"ts": {
+			"path": "./ts"
+		}
+	}
+}
