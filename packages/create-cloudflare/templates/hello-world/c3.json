@@ -1,0 +1,13 @@
+{
+	"id": "hello-world",
+	"displayName": "\"Hello World\" Worker",
+	"languages": ["js", "ts"],
+	"copyFiles": {
+		"js": {
+			"path": "./js"
+		},
+		"ts": {
+			"path": "./ts"
+		}
+	}
+}

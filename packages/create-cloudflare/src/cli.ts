@@ -19,8 +19,14 @@ import {
 	setupProjectDirectory,
 	validateProjectDirectory,
 } from "./common";
-import { templateMap } from "./templateMap";
+import {
+	TemplateConfig,
+	getTemplateSelection,
+	templateMap,
+} from "./templateMap";
 import type { C3Args, C3Context } from "types";
+import { runPagesGenerator } from "./pages";
+import { runWorkersGenerator } from "./workers";
 
 const { npm } = detectPackageManager();
 
@@ -89,54 +95,33 @@ export const runCli = async (args: Partial<C3Args>) => {
 		format: (val) => `./${val}`,
 	});
 
-	// If not specified, attempt to infer the `type` argument from other flags
-	if (!args.type) {
-		if (args.framework) {
-			args.type = "webFramework";
-		} else if (args.existingScript) {
-			args.type = "pre-existing";
-		}
-	}
-
-	const templateOptions = Object.entries(templateMap).map(
-		([value, { label, hidden }]) => ({ value, label, hidden })
-	);
-
-	const type = await processArgument<string>(args, "type", {
-		type: "select",
-		question: "What type of application do you want to create?",
-		label: "type",
-		options: templateOptions,
-		defaultValue: C3_DEFAULTS.type,
-	});
-
-	if (!type) {
-		crash("An application type must be specified to continue.");
-	}
-
-	if (!Object.keys(templateMap).includes(type)) {
-		crash(`Unknown application type provided: ${type}.`);
-	}
-
 	const validatedArgs: C3Args = {
 		...args,
-		type,
 		projectName,
 	};
-
-	const { handler } = templateMap[type];
 
 	const originalCWD = process.cwd();
 	const { name, path } = setupProjectDirectory(validatedArgs);
 
+	const template = await getTemplateSelection(args);
 	const ctx: C3Context = {
 		project: { name, path },
 		args: validatedArgs,
+		template,
 		originalCWD,
 		gitRepoAlreadyExisted: await isInsideGitRepo(dirname(path)),
 	};
 
-	await handler(ctx);
+	await runTemplate(ctx);
+};
+
+const runTemplate = async (ctx: C3Context) => {
+	// As time goes on, lift increasingly more logic out of the generators into here
+	if (ctx.template.platform === "workers") {
+		await runPagesGenerator(ctx);
+	} else {
+		runWorkersGenerator(ctx);
+	}
 };
 
 const printBanner = () => {

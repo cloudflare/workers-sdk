@@ -1,0 +1,13 @@
+{
+	"id": "common",
+	"displayName": "Example router & proxy Worker",
+	"languages": ["js", "ts"],
+	"copyFiles": {
+		"js": {
+			"path": "./js"
+		},
+		"ts": {
+			"path": "./ts"
+		}
+	}
+}

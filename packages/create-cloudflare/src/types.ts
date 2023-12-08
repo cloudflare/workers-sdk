@@ -1,10 +1,11 @@
 import type { FrameworkMap } from "frameworks/index";
+import { TemplateConfig } from "./templateMap";
 
 export type FrameworkName = keyof typeof FrameworkMap;
 
 export type C3Args = {
 	projectName: string;
-	type: string;
+	type?: string;
 	deploy?: boolean;
 	open?: boolean;
 	git?: boolean;
@@ -21,22 +22,23 @@ export type C3Arg = C3Args[keyof C3Args];
 
 export type C3Context = {
 	args: C3Args;
-	deployedUrl?: string;
-	account?: {
-		id: string;
+	project: {
 		name: string;
+		path: string;
 	};
+	// Once refactor is complete, template will be required
+	template: TemplateConfig;
 	framework?: {
 		name: string;
 		config: FrameworkConfig;
 		args: string[];
 		commitMessage?: string;
 	};
-	project: {
+	deployedUrl?: string;
+	account?: {
+		id: string;
 		name: string;
-		path: string;
 	};
-	type?: "pages" | "workers";
 	originalCWD: string;
 	gitRepoAlreadyExisted: boolean;
 };

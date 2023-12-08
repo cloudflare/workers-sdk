@@ -23,6 +23,7 @@ import {
 	runDeploy,
 } from "./common";
 import type { C3Context } from "types";
+import { copyTemplateFiles } from "./templateMap";
 
 const { dlx } = detectPackageManager();
 
@@ -31,13 +32,18 @@ export const runWorkersGenerator = async (ctx: C3Context) => {
 
 	ctx.args.ts = await processArgument<boolean>(ctx.args, "ts", {
 		type: "confirm",
+
 		question: "Do you want to use TypeScript?",
 		label: "typescript",
 		defaultValue: C3_DEFAULTS.ts,
 	});
 
-	await copyFiles(ctx);
-	await copyExistingWorkerFiles(ctx);
+	await copyTemplateFiles(ctx);
+
+	if (ctx.template.id === "pre-existing") {
+		await copyExistingWorkerFiles(ctx);
+	}
+
 	await updateFiles(ctx);
 	await offerGit(ctx);
 	endSection("Application created");
@@ -58,97 +64,64 @@ export const runWorkersGenerator = async (ctx: C3Context) => {
 	await printSummary(ctx);
 };
 
-async function getTemplate(ctx: C3Context) {
-	const preexisting = ctx.args.type === "pre-existing";
-	const template = preexisting ? "hello-world" : ctx.args.type;
-	const path = resolve(
-		// eslint-disable-next-line no-restricted-globals
-		__dirname,
-		"..",
-		"templates",
-		template,
-		ctx.args.ts ? "ts" : "js"
-	);
-
-	return { preexisting, template, path };
-}
-
-async function copyFiles(ctx: C3Context) {
-	const { template, path: srcdir } = await getTemplate(ctx);
-	const destdir = ctx.project.path;
-
-	// copy template files
-	updateStatus(`Copying files from "${template}" template`);
-	await cp(srcdir, destdir, { recursive: true });
-
-	// reverse renaming from build step
-	await rename(join(destdir, "__dot__gitignore"), join(destdir, ".gitignore"));
-}
-
 async function copyExistingWorkerFiles(ctx: C3Context) {
-	const { preexisting } = await getTemplate(ctx);
+	await chooseAccount(ctx);
 
-	if (preexisting) {
-		await chooseAccount(ctx);
-
-		if (ctx.args.existingScript === undefined) {
-			ctx.args.existingScript = await processArgument<string>(
-				ctx.args,
-				"existingScript",
-				{
-					type: "text",
-					question:
-						"Please specify the name of the existing worker in this account?",
-					label: "worker",
-					defaultValue: ctx.project.name,
-				}
-			);
-		}
-
-		// `wrangler init --from-dash` bails if you opt-out of creating a package.json
-		// so run it (with -y) in a tempdir and copy the src files after
-		const tempdir = await mkdtemp(
-			join(tmpdir(), "c3-wrangler-init--from-dash-")
-		);
-		await runCommand(
-			[
-				...dlx,
-				"wrangler@3",
-				"init",
-				"--from-dash",
-				ctx.args.existingScript,
-				"-y",
-				"--no-delegate-c3",
-			],
+	if (ctx.args.existingScript === undefined) {
+		ctx.args.existingScript = await processArgument<string>(
+			ctx.args,
+			"existingScript",
 			{
-				silent: true,
-				cwd: tempdir, // use a tempdir because we don't want all the files
-				env: { CLOUDFLARE_ACCOUNT_ID: ctx.account?.id },
-				startText: "Downloading existing worker files",
-				doneText: `${brandColor("downloaded")} ${dim(
-					`existing "${ctx.args.existingScript}" worker files`
-				)}`,
+				type: "text",
+				question:
+					"Please specify the name of the existing worker in this account?",
+				label: "worker",
+				defaultValue: ctx.project.name,
 			}
 		);
-
-		// remove any src/* files from the template
-		for (const filename of await readdir(join(ctx.project.path, "src"))) {
-			await rm(join(ctx.project.path, "src", filename));
-		}
-
-		// copy src/* files from the downloaded worker
-		await cp(
-			join(tempdir, ctx.args.existingScript, "src"),
-			join(ctx.project.path, "src"),
-			{ recursive: true }
-		);
-
-		// copy wrangler.toml from the downloaded worker
-		await cp(
-			join(tempdir, ctx.args.existingScript, "wrangler.toml"),
-			join(ctx.project.path, "wrangler.toml")
-		);
 	}
+
+	// `wrangler init --from-dash` bails if you opt-out of creating a package.json
+	// so run it (with -y) in a tempdir and copy the src files after
+	const tempdir = await mkdtemp(join(tmpdir(), "c3-wrangler-init--from-dash-"));
+	await runCommand(
+		[
+			...dlx,
+			"wrangler@3",
+			"init",
+			"--from-dash",
+			ctx.args.existingScript,
+			"-y",
+			"--no-delegate-c3",
+		],
+		{
+			silent: true,
+			cwd: tempdir, // use a tempdir because we don't want all the files
+			env: { CLOUDFLARE_ACCOUNT_ID: ctx.account?.id },
+			startText: "Downloading existing worker files",
+			doneText: `${brandColor("downloaded")} ${dim(
+				`existing "${ctx.args.existingScript}" worker files`
+			)}`,
+		}
+	);
+
+	// remove any src/* files from the template
+	for (const filename of await readdir(join(ctx.project.path, "src"))) {
+		await rm(join(ctx.project.path, "src", filename));
+	}
+
+	// copy src/* files from the downloaded worker
+	await cp(
+		join(tempdir, ctx.args.existingScript, "src"),
+		join(ctx.project.path, "src"),
+		{ recursive: true }
+	);
+
+	// copy wrangler.toml from the downloaded worker
+	await cp(
+		join(tempdir, ctx.args.existingScript, "wrangler.toml"),
+		join(ctx.project.path, "wrangler.toml")
+	);
 }
 
 async function updateFiles(ctx: C3Context) {
