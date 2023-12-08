@@ -736,7 +736,7 @@ importers:
         version: 8.49.0
       eslint-config-turbo:
         specifier: latest
-        version: 1.10.16(eslint@8.49.0)
+        version: 1.10.15(eslint@8.49.0)
       eslint-plugin-import:
         specifier: 2.26.x
         version: 2.26.0(@typescript-eslint/parser@6.7.2)(eslint@8.49.0)
@@ -1305,6 +1305,15 @@ importers:
       '@microsoft/api-extractor':
         specifier: ^7.28.3
         version: 7.28.3
+      '@sentry/node':
+        specifier: ^7.86.0
+        version: 7.86.0(supports-color@9.2.2)
+      '@sentry/types':
+        specifier: ^7.86.0
+        version: 7.86.0
+      '@sentry/utils':
+        specifier: ^7.86.0
+        version: 7.86.0
       '@types/body-parser':
         specifier: ^1.19.2
         version: 1.19.2
@@ -5826,6 +5835,15 @@ packages:
       string-argv: 0.3.1
     dev: true
 
+  /@sentry-internal/tracing@7.86.0:
+    resolution: {integrity: sha512-b4dUsNWlPWRwakGwR7bhOkqiFlqQszH1hhVFwrm/8s3kqEBZ+E4CeIfCvuHBHQ1cM/fx55xpXX/BU163cy+3iQ==}
+    engines: {node: '>=8'}
+    dependencies:
+      '@sentry/core': 7.86.0
+      '@sentry/types': 7.86.0
+      '@sentry/utils': 7.86.0
+    dev: true
+
   /@sentry/core@7.64.0:
     resolution: {integrity: sha512-IzmEyl5sNG7NyEFiyFHEHC+sizsZp9MEw1+RJRLX6U5RITvcsEgcajSkHQFafaBPzRrcxZMdm47Cwhl212LXcw==}
     engines: {node: '>=8'}
@@ -5842,6 +5860,14 @@ packages:
       '@sentry/types': 7.65.0
       '@sentry/utils': 7.65.0
       tslib: 2.5.3
+    dev: true
+
+  /@sentry/core@7.86.0:
+    resolution: {integrity: sha512-SbLvqd1bRYzhDS42u7GMnmbDMfth/zRiLElQWbLK/shmuZzTcfQSwNNdF4Yj+VfjOkqPFgGmICHSHVUc9dh01g==}
+    engines: {node: '>=8'}
+    dependencies:
+      '@sentry/types': 7.86.0
+      '@sentry/utils': 7.86.0
     dev: true
 
   /@sentry/integrations@7.64.0:
@@ -5864,6 +5890,19 @@ packages:
       tslib: 2.5.3
     dev: true
 
+  /@sentry/node@7.86.0(supports-color@9.2.2):
+    resolution: {integrity: sha512-cB1bn/LMn2Km97Y3hv63xwWxT50/G5ixGuSxTZ3dCQM6VDhmZoCuC5NGT3itVvaRd6upQXRZa5W0Zgyh0HXKig==}
+    engines: {node: '>=8'}
+    dependencies:
+      '@sentry-internal/tracing': 7.86.0
+      '@sentry/core': 7.86.0
+      '@sentry/types': 7.86.0
+      '@sentry/utils': 7.86.0
+      https-proxy-agent: 5.0.1(supports-color@9.2.2)
+    transitivePeerDependencies:
+      - supports-color
+    dev: true
+
   /@sentry/types@7.64.0:
     resolution: {integrity: sha512-LqjQprWXjUFRmzIlUjyA+KL+38elgIYmAeoDrdyNVh8MK5IC1W2Lh1Q87b4yOiZeMiIhIVNBd7Ecoh2rodGrGA==}
     engines: {node: '>=8'}
@@ -5871,6 +5910,11 @@ packages:
 
   /@sentry/types@7.65.0:
     resolution: {integrity: sha512-YYq7IDLLhpSBTmHoyWFtq/5ZDaEJ01r7xGuhB0aSIq33cm2I7im/B3ipzoOP/ukGZSIhuYVW9t531xZEO0+6og==}
+    engines: {node: '>=8'}
+    dev: true
+
+  /@sentry/types@7.86.0:
+    resolution: {integrity: sha512-pGAt0+bMfWgo0KG2epthfNV4Wae03tURpoxNjGo5Fr4cXxvLTSijSAQ6rmmO4bXBJ7+rErEjX30g30o/eEdP9g==}
     engines: {node: '>=8'}
     dev: true
 
@@ -5888,6 +5932,13 @@ packages:
     dependencies:
       '@sentry/types': 7.65.0
       tslib: 2.5.3
+    dev: true
+
+  /@sentry/utils@7.86.0:
+    resolution: {integrity: sha512-6PejFtw9VTFFy5vu0ks+U7Ozkqz+eMt+HN8AZKBKErYzX5/xs0kpkOcSRpu3ETdTYcZf8VAmLVgFgE2BE+3WuQ==}
+    engines: {node: '>=8'}
+    dependencies:
+      '@sentry/types': 7.86.0
     dev: true
 
   /@sinclair/typebox@0.27.8:
@@ -7468,7 +7519,7 @@ packages:
     engines: {node: '>=0.4.0'}
     hasBin: true
 
-  /agent-base@6.0.2:
+  /agent-base@6.0.2(supports-color@9.2.2):
     resolution: {integrity: sha512-RZNwNclF7+MS/8bDg70amg32dyeZGZxiDuQmZxKLAlQjr3jGyLx+4Kkk58UO7D2QdgFIQCovuSuZESne6RG6XQ==}
     engines: {node: '>= 6.0.0'}
     dependencies:
@@ -9936,13 +9987,13 @@ packages:
       eslint: 8.49.0
     dev: true
 
-  /eslint-config-turbo@1.10.16(eslint@8.49.0):
-    resolution: {integrity: sha512-O3NQI72bQHV7FvSC6lWj66EGx8drJJjuT1kuInn6nbMLOHdMBhSUX/8uhTAlHRQdlxZk2j9HtgFCIzSc93w42g==}
+  /eslint-config-turbo@1.10.15(eslint@8.49.0):
+    resolution: {integrity: sha512-76mpx2x818JZE26euen14utYcFDxOahZ9NaWA+6Xa4pY2ezVKVschuOxS96EQz3o3ZRSmcgBOapw/gHbN+EKxQ==}
     peerDependencies:
       eslint: '>6.6.0'
     dependencies:
       eslint: 8.49.0
-      eslint-plugin-turbo: 1.10.16(eslint@8.49.0)
+      eslint-plugin-turbo: 1.10.15(eslint@8.49.0)
     dev: false
 
   /eslint-import-resolver-node@0.3.7:
@@ -10369,8 +10420,8 @@ packages:
       - typescript
     dev: true
 
-  /eslint-plugin-turbo@1.10.16(eslint@8.49.0):
-    resolution: {integrity: sha512-ZjrR88MTN64PNGufSEcM0tf+V1xFYVbeiMeuIqr0aiABGomxFLo4DBkQ7WI4WzkZtWQSIA2sP+yxqSboEfL9MQ==}
+  /eslint-plugin-turbo@1.10.15(eslint@8.49.0):
+    resolution: {integrity: sha512-Tv4QSKV/U56qGcTqS/UgOvb9HcKFmWOQcVh3HEaj7of94lfaENgfrtK48E2CckQf7amhKs1i+imhCsNCKjkQyA==}
     peerDependencies:
       eslint: '>6.6.0'
     dependencies:
@@ -11710,7 +11761,7 @@ packages:
     engines: {node: '>= 6'}
     dependencies:
       '@tootallnate/once': 1.1.2
-      agent-base: 6.0.2
+      agent-base: 6.0.2(supports-color@9.2.2)
       debug: 4.3.4(supports-color@9.2.2)
     transitivePeerDependencies:
       - supports-color
@@ -11744,11 +11795,11 @@ packages:
       resolve-alpn: 1.2.1
     dev: true
 
-  /https-proxy-agent@5.0.1:
+  /https-proxy-agent@5.0.1(supports-color@9.2.2):
     resolution: {integrity: sha512-dFcAjpTQFgoLMzC2VwU+C/CbS7uRL0lWmxDITmqm7C+7F0Odmj6s9l6alZc6AELXhrnggM2CeWSXHGOdX2YtwA==}
     engines: {node: '>= 6'}
     dependencies:
-      agent-base: 6.0.2
+      agent-base: 6.0.2(supports-color@9.2.2)
       debug: 4.3.4(supports-color@9.2.2)
     transitivePeerDependencies:
       - supports-color
@@ -14936,11 +14987,11 @@ packages:
     engines: {node: '>= 8'}
     dependencies:
       '@tootallnate/once': 1.1.2
-      agent-base: 6.0.2
+      agent-base: 6.0.2(supports-color@9.2.2)
       debug: 4.3.4(supports-color@9.2.2)
       get-uri: 3.0.2
       http-proxy-agent: 4.0.1
-      https-proxy-agent: 5.0.1
+      https-proxy-agent: 5.0.1(supports-color@9.2.2)
       pac-resolver: 5.0.1
       raw-body: 2.5.1
       socks-proxy-agent: 5.0.1
@@ -15506,10 +15557,10 @@ packages:
     resolution: {integrity: sha512-gkH7BkvLVkSfX9Dk27W6TyNOWWZWRilRfk1XxGNWOYJ2TuedAv1yFpCaU9QSBmBe716XOTNpYNOzhysyw8xn7g==}
     engines: {node: '>= 8'}
     dependencies:
-      agent-base: 6.0.2
+      agent-base: 6.0.2(supports-color@9.2.2)
       debug: 4.3.4(supports-color@9.2.2)
       http-proxy-agent: 4.0.1
-      https-proxy-agent: 5.0.1
+      https-proxy-agent: 5.0.1(supports-color@9.2.2)
       lru-cache: 5.1.1
       pac-proxy-agent: 5.0.0
       proxy-from-env: 1.1.0
@@ -16748,7 +16799,7 @@ packages:
     resolution: {integrity: sha512-vZdmnjb9a2Tz6WEQVIurybSwElwPxMZaIc7PzqbJTrezcKNznv6giT7J7tZDZ1BojVaa1jvO/UiUdhDVB0ACoQ==}
     engines: {node: '>= 6'}
     dependencies:
-      agent-base: 6.0.2
+      agent-base: 6.0.2(supports-color@9.2.2)
       debug: 4.3.4(supports-color@9.2.2)
       socks: 2.7.1
     transitivePeerDependencies:

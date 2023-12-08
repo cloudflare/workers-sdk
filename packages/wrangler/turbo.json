@@ -37,7 +37,8 @@
 				"JEST_WORKER_ID",
 				"http_proxy",
 				"HTTP_PROXY",
-				"CI_OS"
+				"CI_OS",
+				"SENTRY_DSN"
 			]
 		}
 	}

@@ -9,6 +9,7 @@ export interface CommonYargsOptions {
 	config: string | undefined;
 	env: string | undefined;
 	"experimental-json-config": boolean | undefined;
+	"metrics-opt-out": boolean | undefined;
 }
 
 export type CommonYargsArgv = Argv<CommonYargsOptions>;

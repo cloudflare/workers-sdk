@@ -20,7 +20,7 @@ import { getAPIToken } from "../user";
  * This allows us to prompt the user to re-opt-in when we make substantive changes to our metrics
  * gathering.
  */
-export const CURRENT_METRICS_DATE = new Date(2022, 6, 4);
+export const CURRENT_METRICS_DATE = new Date(2023, 12, 8);
 export const USER_ID_CACHE_PATH = "user-id.json";
 
 export const getWranglerSendMetricsFromEnv = getEnvironmentVariableFactory({
@@ -100,7 +100,7 @@ export async function getMetricsConfig({
 			return { enabled: permission.enabled, deviceId, userId };
 		} else if (permission.enabled) {
 			logger.log(
-				"Usage metrics tracking has changed since you last granted permission."
+				"Usage metrics & crash reporting has changed since you last granted permission."
 			);
 		}
 	}
@@ -113,24 +113,33 @@ export async function getMetricsConfig({
 
 	// Otherwise, let's ask the user and store the result in the metrics config.
 	const enabled = await confirm(
-		"Would you like to help improve Wrangler by sending usage metrics to Cloudflare?"
+		"Would you like to help improve Wrangler by automatically sending crash reports & usage metrics to Cloudflare?"
 	);
-	logger.log(
-		`Your choice has been saved in the following file: ${path.relative(
-			process.cwd(),
-			getMetricsConfigPath()
-		)}.\n\n` +
-			"  You can override the user level setting for a project in `wrangler.toml`:\n\n" +
-			"   - to disable sending metrics for a project: `send_metrics = false`\n" +
-			"   - to enable sending metrics for a project: `send_metrics = true`"
-	);
-	writeMetricsConfig({
-		permission: {
-			enabled,
-			date: CURRENT_METRICS_DATE,
-		},
-		deviceId,
-	});
+	if (enabled) {
+		logger.log(
+			`Your choice has been saved in the following file: ${path.relative(
+				process.cwd(),
+				getMetricsConfigPath()
+			)}.\n\n` +
+				"  You can override the user level setting for a project in `wrangler.toml`:\n\n" +
+				"   - to disable sending metrics for a project: `send_metrics = false`\n" +
+				"   - to enable sending metrics for a project: `send_metrics = true`"
+		);
+		writeMetricsConfig({
+			permission: {
+				enabled,
+				date: CURRENT_METRICS_DATE,
+			},
+			deviceId,
+		});
+	} else {
+		logger.log(
+			"Not sending crash reports or usage metrics to Cloudflare. For Wrangler to remember this choice, run `wrangler --metrics-opt-out`.\n\n" +
+				"  You can override the user level setting for a project in `wrangler.toml`:\n\n" +
+				"   - to disable sending metrics for a project: `send_metrics = false`\n" +
+				"   - to enable sending metrics for a project: `send_metrics = true`"
+		);
+	}
 	return { enabled, deviceId, userId };
 }
 
@@ -166,7 +175,7 @@ export function readMetricsConfig(): MetricsConfigFile {
 /**
  * Get the path to the metrics config file.
  */
-function getMetricsConfigPath(): string {
+export function getMetricsConfigPath(): string {
 	return path.resolve(getGlobalWranglerConfigPath(), "metrics.json");
 }
 
