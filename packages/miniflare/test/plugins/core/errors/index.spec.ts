@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 import test from "ava";
 import Protocol from "devtools-protocol";
 import esbuild from "esbuild";
-import { DeferredPromise, Miniflare } from "miniflare";
+import { DeferredPromise, Log, LogLevel, Miniflare, fetch } from "miniflare";
 import type { RawSourceMap } from "source-map";
 import NodeWebSocket from "ws";
 import { escapeRegexp, useTmp } from "../../../test-shared";
@@ -268,3 +268,70 @@ async function getSources(inspectorBaseURL: URL, serviceName: string) {
 		})
 		.sort();
 }
+
+// TODO(soon): just use `NoOpLog` when `Log#error()` no longer throws
+class SafeLog extends Log {
+	error(message: Error) {
+		this.logWithLevel(LogLevel.ERROR, String(message));
+	}
+}
+
+test("responds with pretty error page", async (t) => {
+	const mf = new Miniflare({
+		log: new SafeLog(LogLevel.NONE),
+		modules: true,
+		script: `
+		function reduceError(e) {
+			return {
+				name: e?.name,
+				message: e?.message ?? String(e),
+				stack: e?.stack,
+			};
+		}
+		export default {
+			async fetch() {
+				const error = reduceError(new Error("Unusual oops!"));
+				return Response.json(error, {
+					status: 500,
+					headers: { "MF-Experimental-Error-Stack": "true" },
+				});
+			}
+		}`,
+	});
+	t.teardown(() => mf.dispose());
+	const url = new URL("/some-unusual-path", await mf.ready);
+
+	// Check `fetch()` returns pretty-error page...
+	let res = await fetch(url, {
+		method: "POST",
+		headers: { "X-Unusual-Key": "some-unusual-value" },
+	});
+	t.is(res.status, 500);
+	t.regex(res.headers.get("Content-Type") ?? "", /^text\/html/);
+	const text = await res.text();
+	// ...including error, request method, URL and headers
+	t.regex(text, /Unusual oops!/);
+	t.regex(text, /Method.+POST/s);
+	t.regex(text, /URI.+some-unusual-path/s);
+	t.regex(text, /X-Unusual-Key.+some-unusual-value/is);
+
+	// Check `fetch()` accepting HTML returns pretty-error page
+	res = await fetch(url, { headers: { Accept: "text/html" } });
+	t.is(res.status, 500);
+	t.regex(res.headers.get("Content-Type") ?? "", /^text\/html/);
+
+	// Check `fetch()` accepting text doesn't return pretty-error page
+	res = await fetch(url, { headers: { Accept: "text/plain" } });
+	t.is(res.status, 500);
+	t.regex(res.headers.get("Content-Type") ?? "", /^text\/plain/);
+	t.regex(await res.text(), /Unusual oops!/);
+
+	// Check `fetch()` as `curl` doesn't return pretty-error page
+	res = await fetch(url, { headers: { "User-Agent": "curl/0.0.0" } });
+	t.is(res.status, 500);
+	t.regex(res.headers.get("Content-Type") ?? "", /^text\/plain/);
+	t.regex(await res.text(), /Unusual oops!/);
+
+	// Check `dispatchFetch()` propagates exception
+	await t.throwsAsync(mf.dispatchFetch(url), { message: "Unusual oops!" });
+});
