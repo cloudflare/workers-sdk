@@ -3,8 +3,15 @@
 	"version": "0.0.1",
 	"private": true,
 	"main": "dist/pool/index.mjs",
+	"exports": {
+		".": "./dist/pool/index.mjs",
+		"./config": {
+			"require": "./dist/config/index.cjs",
+			"types": "./dist/config/index.d.ts"
+		}
+	},
 	"scripts": {
-		"build": "node scripts/bundle.mjs",
+		"build": "node scripts/bundle.mjs && tsc -p tsconfig.emit.json",
 		"dev": "node scripts/bundle.mjs watch",
 		"check:lint": "eslint .",
 		"check:type": "tsc && tsc -p src/worker/tsconfig.json && tsc -p test/tsconfig.json",

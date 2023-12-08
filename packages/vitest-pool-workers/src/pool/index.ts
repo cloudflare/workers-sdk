@@ -18,7 +18,7 @@ import { createMethodsRPC } from "vitest/node";
 import { OPTIONS_PATH, parseProjectOptions } from "./config";
 import { handleLoopbackRequest } from "./loopback";
 import { handleModuleFallbackRequest, modulesRoot } from "./module-fallback";
-import type { WorkersProjectOptions } from "./config";
+import type { WorkersProjectOptions, SourcelessWorkerOptions } from "./config";
 import type { CloseEvent, MiniflareOptions, WorkerOptions } from "miniflare";
 import type { MessagePort } from "node:worker_threads";
 import type { Readable } from "node:stream";
@@ -151,7 +151,7 @@ function getDurableObjectBindingNamesToSelf(
 	options: WorkersProjectOptions
 ): Set<string> {
 	const result = new Set<string>();
-	const durableObjects = options.miniflare.durableObjects ?? {};
+	const durableObjects = options.miniflare?.durableObjects ?? {};
 	for (const [key, designator] of Object.entries(durableObjects)) {
 		if (key === RUNNER_OBJECT_BINDING) continue;
 		if (isDurableObjectDesignatorToSelf(designator)) result.add(key);
@@ -167,7 +167,9 @@ const USER_OBJECT_MODULE_PATH = path.join(
 // Prefix all Durable Object class names, so they don't clash with other
 // identifiers in `src/worker/index.ts`. Returns a `Set` containing original
 // names of Durable Object classes defined in this worker.
-function fixupDurableObjectBindingsToSelf(worker: WorkerOptions): Set<string> {
+function fixupDurableObjectBindingsToSelf(
+	worker: SourcelessWorkerOptions
+): Set<string> {
 	// TODO(someday): may need to extend this to take into account other workers
 	//  if doing multi-worker tests across workspace projects
 	// TODO(someday): may want to validate class names are valid identifiers?
@@ -215,7 +217,7 @@ const RUNNER_OBJECT_BINDING = "__VITEST_POOL_WORKERS_RUNNER_OBJECT";
 function buildProjectWorkerOptions(
 	project: Omit<Project, "testFiles">
 ): ProjectWorkers {
-	const runnerWorker = project.options.miniflare;
+	const runnerWorker = project.options.miniflare ?? {};
 
 	// Make sure the worker has a well-known name
 	runnerWorker.name = getRunnerName(project.project);
@@ -291,7 +293,7 @@ function buildProjectWorkerOptions(
 	];
 
 	// Build array of workers contributed by the workspace
-	const workers: ProjectWorkers = [runnerWorker];
+	const workers: ProjectWorkers = [runnerWorker as WorkerOptions];
 	if (runnerWorker.workers !== undefined) {
 		// Try to add workers defined by the user
 		for (let i = 0; i < runnerWorker.workers.length; i++) {
@@ -692,7 +694,3 @@ export default function (ctx: Vitest): ProcessPool {
 		},
 	};
 }
-
-// TODO: consider adding named exports for utilities like applying D1 migrations
-//  (e.g. `import { runD1Migrations } from "@cloudflare/vitest-pool-workers";`,
-//  then call in setup)

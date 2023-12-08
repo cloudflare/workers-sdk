@@ -107,7 +107,10 @@ const cjsOptions = {
 	...commonOptions,
 	format: "cjs",
 	outExtension: { ".js": ".cjs" },
-	entryPoints: libPaths.filter((libPath) => /\.cts$/.test(libPath)),
+	entryPoints: [
+		path.join(pkgRoot, "src", "config", "index.ts"),
+		...libPaths.filter((libPath) => /\.cts$/.test(libPath)),
+	],
 };
 
 if (watch) {

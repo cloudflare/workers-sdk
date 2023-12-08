@@ -1,11 +1,17 @@
 import path from "node:path";
+import { defineWorkersPoolOptions } from "@cloudflare/vitest-pool-workers/config";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+	// TODO: only really need this for stuff not fetched from module fallback service,
+	//  all node_modules should be externalised and come from that
+	resolve: {
+		conditions: ["workerd", "worker"],
+	},
 	test: {
 		pool: "../..",
 		poolOptions: {
-			workers: {
+			workers: defineWorkersPoolOptions({
 				main: "./worker.ts",
 				isolatedStorage: true,
 				miniflare: {
@@ -31,7 +37,7 @@ export default defineConfig({
 						},
 					],
 				},
-			},
+			}),
 		},
 	},
 });

@@ -21,14 +21,19 @@ const WorkersPoolOptionsSchema = z.object({
 		.passthrough()
 		.optional(),
 });
-type WorkersPoolOptions = z.infer<typeof WorkersPoolOptionsSchema>;
-export type WorkersProjectOptions = WorkersPoolOptions & {
-	miniflare: WorkerOptions & { workers?: WorkerOptions[] };
+export type SourcelessWorkerOptions = Omit<
+	WorkerOptions,
+	"script" | "scriptPath" | "modules" | "modulesRoot" | "modulesRule"
+>;
+export type WorkersProjectOptions = z.input<typeof WorkersPoolOptionsSchema> & {
+	miniflare?: SourcelessWorkerOptions & {
+		workers?: WorkerOptions[];
+	};
 };
 
 export type PathParseParams = Pick<ParseParams, "path">;
 
-export function isZodErrorLike(value: unknown): value is ZodError {
+function isZodErrorLike(value: unknown): value is ZodError {
 	return (
 		typeof value === "object" &&
 		value !== null &&
