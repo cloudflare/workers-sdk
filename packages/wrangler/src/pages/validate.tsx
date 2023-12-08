@@ -96,7 +96,9 @@ export const validate = async (args: {
 							`Error: Pages only supports files up to ${prettyBytes(
 								MAX_ASSET_SIZE,
 								{ binary: true }
-							)} in size\n${name} is ${prettyBytes(filestat.size)} in size`,
+							)} in size\n${name} is ${prettyBytes(filestat.size, {
+								binary: true,
+							})} in size`,
 							1
 						);
 					}
