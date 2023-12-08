@@ -289,7 +289,7 @@ parameter in module format Workers.
   Record mapping binding name to paths containing arbitrary binary data to
   inject as `ArrayBuffer` bindings into this Worker.
 
-- `serviceBindings?: Record<string, string | { network: Network } | { external: ExternalServer } | { disk: DiskDirectory } | (this: Miniflare, request: Request) => Awaitable<Response>>`
+- `serviceBindings?: Record<string, string | typeof kCurrentWorker | { network: Network } | { external: ExternalServer } | { disk: DiskDirectory } | (this: Miniflare, request: Request) => Awaitable<Response>>`
 
   Record mapping binding name to service designators to inject as
   `{ fetch: typeof fetch }`
@@ -298,6 +298,8 @@ parameter in module format Workers.
 
   - If the designator is a `string`, requests will be dispatched to the Worker
     with that `name`.
+  - If the designator is `(await import("miniflare")).kCurrentWorker`, requests
+    will be dispatched to the Worker defining the binding.
   - If the designator is an object of the form `{ network: { ... } }`, where
     `network` is a
     [`workerd` `Network` struct](https://github.com/cloudflare/workerd/blob/bdbd6075c7c53948050c52d22f2dfa37bf376253/src/workerd/server/workerd.capnp#L555-L598),

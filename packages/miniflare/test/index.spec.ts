@@ -33,6 +33,7 @@ import {
 	_transformsForContentEncoding,
 	createFetchMock,
 	fetch,
+	kCurrentWorker,
 	viewToBuffer,
 } from "miniflare";
 import {
@@ -432,6 +433,25 @@ test("Miniflare: custom service binding to another Miniflare instance", async (t
 		url: "https://custom3.mf/c",
 		body: null,
 	});
+});
+test("Miniflare: service binding to current worker", async (t) => {
+	const mf = new Miniflare({
+		serviceBindings: { SELF: kCurrentWorker },
+		modules: true,
+		script: `export default {
+			async fetch(request, env) {
+				const { pathname } = new URL(request.url);
+				if (pathname === "/callback") return new Response("callback");
+				const response = await env.SELF.fetch("http://placeholder/callback");
+				const text = await response.text();
+				return new Response("body:" + text); 
+			}
+		}`,
+	});
+	t.teardown(() => mf.dispose());
+
+	const res = await mf.dispatchFetch("http://localhost");
+	t.is(await res.text(), "body:callback");
 });
 
 test("Miniflare: custom outbound service", async (t) => {

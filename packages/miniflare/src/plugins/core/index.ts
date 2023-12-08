@@ -55,7 +55,11 @@ import {
 	withSourceURL,
 } from "./modules";
 import { PROXY_SECRET } from "./proxy";
-import { ServiceDesignatorSchema, ServiceFetchSchema } from "./services";
+import {
+	ServiceDesignatorSchema,
+	ServiceFetchSchema,
+	kCurrentWorker,
+} from "./services";
 
 // `workerd`'s `trustBrowserCas` should probably be named `trustSystemCas`.
 // Rather than using a bundled CA store like Node, it uses
@@ -202,6 +206,7 @@ export const SCRIPT_CUSTOM_SERVICE = `addEventListener("fetch", (event) => {
 })`;
 
 function getCustomServiceDesignator(
+	refererName: string | undefined,
 	workerIndex: number,
 	kind: CustomServiceKind,
 	name: string,
@@ -214,6 +219,8 @@ function getCustomServiceDesignator(
 	} else if (typeof service === "object") {
 		// Builtin workerd service: network, external, disk
 		serviceName = getBuiltinServiceName(workerIndex, kind, name);
+	} else if (service === kCurrentWorker) {
+		serviceName = getUserServiceName(refererName);
 	} else {
 		// Regular user worker
 		serviceName = getUserServiceName(service);
@@ -347,6 +354,7 @@ export const CORE_PLUGIN: Plugin<
 					return {
 						name,
 						service: getCustomServiceDesignator(
+							/* referrer */ options.name,
 							workerIndex,
 							CustomServiceKind.UNKNOWN,
 							name,
@@ -587,6 +595,7 @@ export const CORE_PLUGIN: Plugin<
 						options.outboundService === undefined
 							? undefined
 							: getCustomServiceDesignator(
+									/* referrer */ options.name,
 									workerIndex,
 									CustomServiceKind.KNOWN,
 									CUSTOM_SERVICE_KNOWN_OUTBOUND,

@@ -94,6 +94,7 @@ export {
 	SourceOptionsSchema,
 	ProxyClient,
 	getFreshSourceMapSupport,
+	kCurrentWorker,
 } from "./core";
 export type {
 	ModuleRuleType,

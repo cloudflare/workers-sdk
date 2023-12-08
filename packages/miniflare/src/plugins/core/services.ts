@@ -9,7 +9,12 @@ import { zAwaitable } from "../../shared";
 
 // Zod validators for types in runtime/config/workerd.ts.
 // All options should be optional except where specifically stated.
-// TODO: autogenerate these with runtime/config/workerd.ts from capnp
+// TODO: autogenerate these with runtime/config/workerd.ts from cap
+
+// Service binding designator that always points the worker with the binding.
+// Using `Symbol.for()` instead of `Symbol()` in case multiple copies of
+// `miniflare` are loaded (e.g. when configuring Vitest and when running pool)
+export const kCurrentWorker = Symbol.for("miniflare.kCurrentWorker");
 
 export const HttpOptionsHeaderSchema = z.object({
 	name: z.string(), // name should be required
@@ -76,6 +81,7 @@ export const ServiceFetchSchema = z
 
 export const ServiceDesignatorSchema = z.union([
 	z.string(),
+	z.literal(kCurrentWorker),
 	z.object({ network: NetworkSchema }),
 	z.object({ external: ExternalServerSchema }),
 	z.object({ disk: DiskDirectorySchema }),
