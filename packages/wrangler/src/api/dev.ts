@@ -205,7 +205,6 @@ export async function unstable_dev(
 		logLevel: options?.logLevel ?? defaultLogLevel,
 		port: options?.port ?? 0,
 		updateCheck: options?.updateCheck ?? false,
-		metricsOptOut: undefined,
 	};
 
 	//due to Pages adoption of unstable_dev, we can't *just* disable rebuilds and watching. instead, we'll have two versions of startDev, which will converge.

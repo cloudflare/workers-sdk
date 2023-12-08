@@ -1,8 +1,6 @@
 import module from "node:module";
 import os from "node:os";
-import path from "node:path";
 import TOML from "@iarna/toml";
-import chalk from "chalk";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
@@ -41,11 +39,7 @@ import { initHandler, initOptions } from "./init";
 import { kvNamespace, kvKey, kvBulk } from "./kv";
 import { logBuildFailure, logger } from "./logger";
 import * as metrics from "./metrics";
-import {
-	CURRENT_METRICS_DATE,
-	getMetricsConfigPath,
-	writeMetricsConfig,
-} from "./metrics/metrics-config";
+
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
 import { pages } from "./pages";
 import { formatMessage, ParseError } from "./parse";
@@ -55,7 +49,7 @@ import { r2 } from "./r2";
 import { secret, secretBulkHandler, secretBulkOptions } from "./secret";
 import {
 	captureGlobalException,
-	captureWranglerCommand,
+	addBreadcrumb,
 	closeSentry,
 	setupSentry,
 } from "./sentry";
@@ -67,7 +61,6 @@ import { vectorize } from "./vectorize/index";
 import { whoami } from "./whoami";
 
 import type { Config } from "./config";
-import type { OnlyCamelCase } from "./config/config";
 import type { CommonYargsArgv, CommonYargsOptions } from "./yargs-types";
 import type Yargs from "yargs";
 
@@ -215,11 +208,6 @@ export function createCLIParser(argv: string[]) {
 			describe: `Experimental: Support wrangler.json`,
 			type: "boolean",
 		})
-		.option("metrics-opt-out", {
-			describe: `Opt out of crash reports & usage metrics, and remember the choice`,
-			type: "boolean",
-			hidden: true,
-		})
 		.check((args) => {
 			// Grab locally specified env params from `.env` file
 			const loaded = loadDotEnv(".env", args.env);
@@ -261,24 +249,6 @@ export function createCLIParser(argv: string[]) {
 					} else {
 						logger.log(wranglerVersion);
 					}
-				} else if (args.metricsOptOut) {
-					await writeMetricsConfig({
-						permission: {
-							enabled: !args.metricsOptOut,
-							date: CURRENT_METRICS_DATE,
-						},
-					});
-					logger.log(
-						`${chalk.green(
-							"Successfully opted out of metrics collection"
-						)}.\nYour choice has been saved in the following file: ${path.relative(
-							process.cwd(),
-							getMetricsConfigPath()
-						)}.\n\n` +
-							"  You can override the user level setting for a project in `wrangler.toml`:\n\n" +
-							"   - to disable sending metrics for a project: `send_metrics = false`\n" +
-							"   - to enable sending metrics for a project: `send_metrics = true`"
-					);
 				} else {
 					wrangler.showHelp("log");
 				}
@@ -737,32 +707,14 @@ export function createCLIParser(argv: string[]) {
 	return wrangler;
 }
 
-export function createConfigArgParser(argv: string[]) {
-	return makeCLI(argv)
-		.scriptName("wrangler")
-
-		.option("config", {
-			alias: "c",
-			describe: "Path to .toml configuration file",
-			type: "string",
-			requiresArg: true,
-		});
-}
 export async function main(argv: string[]): Promise<void> {
 	setupSentry();
-	captureWranglerCommand(argv);
+	addBreadcrumb(`wrangler ${argv.join(" ")}`);
 
 	const wrangler = createCLIParser(argv);
 	try {
 		await wrangler.parse();
 	} catch (e) {
-		const configParser = createConfigArgParser(argv);
-		const parsed = await configParser.argv;
-		const config = readConfig(
-			parsed.config,
-			{} as OnlyCamelCase<CommonYargsOptions>
-		);
-
 		logger.log(""); // Just adds a bit of space
 		if (e instanceof CommandLineArgsError) {
 			logger.error(e.message);
@@ -778,7 +730,6 @@ export async function main(argv: string[]): Promise<void> {
 				text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",
 			});
 			logger.log(formatMessage(e));
-			await captureGlobalException(e, config.send_metrics);
 		} else if (
 			e instanceof Error &&
 			e.message.includes("Raw mode is not supported on")
@@ -814,7 +765,7 @@ export async function main(argv: string[]): Promise<void> {
 				`${fgGreenColor}%s${resetColor}`,
 				"If you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose"
 			);
-			await captureGlobalException(e, config.send_metrics);
+			await captureGlobalException(e);
 		}
 		throw e;
 	} finally {

@@ -1,12 +1,13 @@
 import * as Sentry from "@sentry/node";
 import { rejectedSyncPromise } from "@sentry/utils";
 import { fetch } from "undici";
-import { version as wranglerVersion } from "../package.json";
-import { logger } from "./logger";
-import { getMetricsConfig } from "./metrics";
-import { readMetricsConfig } from "./metrics/metrics-config";
+import { version as wranglerVersion } from "../../package.json";
+import { confirm } from "../dialogs";
+import { logger } from "../logger";
 import type { BaseTransportOptions, TransportRequest } from "@sentry/types";
 import type { RequestInit } from "undici";
+
+let sentryReportingAllowed = false;
 
 // The SENTRY_DSN is provided at esbuild time as a `define` for production and beta releases.
 // Otherwise it is left undefined, which disables reporting.
@@ -26,8 +27,7 @@ export const makeSentry10Transport = (options: BaseTransportOptions) => {
 		};
 
 		try {
-			const metricsConfig = readMetricsConfig();
-			if (metricsConfig.permission?.enabled) {
+			if (sentryReportingAllowed) {
 				for (const event of eventQueue) {
 					void fetch(event[0], event[1]);
 				}
@@ -91,26 +91,28 @@ export function setupSentry() {
 	}
 }
 
-export function captureWranglerCommand(argv: string[]) {
+export function addBreadcrumb(
+	message: string,
+	level: Sentry.SeverityLevel = "log"
+) {
 	if (typeof SENTRY_DSN !== "undefined") {
 		Sentry.addBreadcrumb({
-			message: `wrangler ${argv.join(" ")}`,
-			level: "log",
+			message,
+			level,
 		});
 	}
 }
 
 // Capture top-level Wrangler errors. Also take this opportunity to ask the user for
 // consent if not already granted.
-export async function captureGlobalException(
-	e: unknown,
-	sendMetrics: boolean | undefined
-) {
+export async function captureGlobalException(e: unknown) {
 	if (typeof SENTRY_DSN !== "undefined") {
-		const metricsConfig = await getMetricsConfig({
-			sendMetrics,
-		});
-		if (!metricsConfig.enabled) {
+		sentryReportingAllowed = await confirm(
+			"Would you like to report this error to Cloudflare?",
+			{ fallbackValue: false }
+		);
+
+		if (!sentryReportingAllowed) {
 			logger.debug(`Sentry: Reporting disabled - would have sent ${e}.`);
 			return;
 		}

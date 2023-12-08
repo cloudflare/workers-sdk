@@ -54,7 +54,6 @@ export async function generateHandler(args: GenerateArgs) {
 			_: args._,
 			$0: args.$0,
 			experimentalJsonConfig: false,
-			metricsOptOut: undefined,
 		});
 	}
 

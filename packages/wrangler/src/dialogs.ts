@@ -21,20 +21,21 @@ export class NoDefaultValueProvided extends Error {
 
 interface ConfirmOptions {
 	defaultValue?: boolean;
+	fallbackValue?: boolean;
 }
 
 export async function confirm(
 	text: string,
-	{ defaultValue = true }: ConfirmOptions = {}
+	{ defaultValue = true, fallbackValue = true }: ConfirmOptions = {}
 ): Promise<boolean> {
 	if (isNonInteractiveOrCI()) {
 		logger.log(`? ${text}`);
 		logger.log(
 			`🤖 ${chalk.dim(
-				"Using default value in non-interactive context:"
-			)} ${chalk.white.bold(defaultValue ? "yes" : "no")}`
+				"Using fallback value in non-interactive context:"
+			)} ${chalk.white.bold(fallbackValue ? "yes" : "no")}`
 		);
-		return defaultValue;
+		return fallbackValue;
 	}
 	const { value } = await prompts({
 		type: "confirm",
