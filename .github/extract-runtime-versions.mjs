@@ -45,6 +45,15 @@ const miniflarePackage = JSON.parse(miniflarePackageJson);
 const miniflareVersion = miniflarePackage.version;
 const workerdVersionConstraint = miniflarePackage.dependencies.workerd;
 
+// Fail if workerd isn't pinned (constraint doesn't start with a number)
+if (!/^[0-9]/.test(workerdVersionConstraint)) {
+	const quoted = JSON.stringify(workerdVersionConstraint);
+	console.error(
+		`\`miniflare\`'s \`workerd\` version constraint ${quoted} is not pinned`
+	);
+	process.exitCode = 1;
+}
+
 // 3. Load `workerd` `package.json`, getting `workerd` version
 const miniflareRequire = module.createRequire(miniflarePackageJsonPath);
 const workerdMainPath = miniflareRequire.resolve("workerd");
