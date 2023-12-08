@@ -316,7 +316,8 @@ describe("r2", () => {
 				)
 			).rejects.toThrowErrorMatchingInlineSnapshot(`
 			"Error: Wrangler only supports uploading files up to ${prettyBytes(
-				MAX_UPLOAD_SIZE, {binary: true}
+				MAX_UPLOAD_SIZE,
+				{ binary: true }
 			)} in size
 			wormhole-img.png is ${prettyBytes(TOO_BIG_FILE_SIZE, { binary: true })} in size"
 		`);
