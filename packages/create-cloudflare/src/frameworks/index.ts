@@ -1,18 +1,18 @@
 import { crash } from "@cloudflare/cli";
-import angular from "./angular";
-import astro from "./astro";
-import docusaurus from "./docusaurus";
-import gatsby from "./gatsby";
-import hono from "./hono";
-import next from "./next";
-import nuxt from "./nuxt";
+import angular from "../../templates/angular/c3";
+import astro from "../../templates/astro/c3";
+import docusaurus from "../../templates/docusaurus/c3";
+import gatsby from "../../templates/gatsby/c3";
+import hono from "../../templates/hono/c3";
+import next from "../../templates/next/c3";
+import nuxt from "../../templates/nuxt/c3";
+import qwik from "../../templates/qwik/c3";
+import react from "../../templates/react/c3";
+import remix from "../../templates/remix/c3";
+import solid from "../../templates/solid/c3";
+import svelte from "../../templates/svelte/c3";
+import vue from "../../templates/vue/c3";
 import clisPackageJson from "./package.json";
-import qwik from "./qwik";
-import react from "./react";
-import remix from "./remix";
-import solid from "./solid";
-import svelte from "./svelte";
-import vue from "./vue";
 import type { FrameworkConfig, C3Context } from "types";
 
 export const FrameworkMap: Record<string, FrameworkConfig> = {
@@ -40,8 +40,8 @@ export const getFrameworkCli = (ctx: C3Context, withVersion = true) => {
 		crash("Framework not specified.");
 	}
 
-	const framework = ctx.framework
-		.name as keyof typeof clisPackageJson.frameworkCliMap;
+	const framework = ctx.template
+		.id as keyof typeof clisPackageJson.frameworkCliMap;
 	const frameworkCli = clisPackageJson.frameworkCliMap[
 		framework
 	] as keyof typeof clisPackageJson.dependencies;

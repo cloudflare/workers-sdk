@@ -30,9 +30,11 @@ const configure = async (ctx: C3Context) => {
 };
 
 const config: FrameworkConfig = {
+	id: "astro",
+	platform: "pages",
+	displayName: "Astro",
 	generate,
 	configure,
-	displayName: "Astro",
 	getPackageScripts: async () => ({
 		"pages:dev": `wrangler pages dev ${await compatDateFlag()} -- astro dev`,
 		"pages:deploy": `astro build && wrangler pages deploy ./dist`,

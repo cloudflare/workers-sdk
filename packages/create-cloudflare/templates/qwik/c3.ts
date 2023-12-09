@@ -2,7 +2,7 @@ import { endSection } from "@cloudflare/cli";
 import { npmInstall, runCommand, runFrameworkGenerator } from "helpers/command";
 import { compatDateFlag } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import { quoteShellArgs } from "../../common";
+import { quoteShellArgs } from "../../src/common";
 import type { FrameworkConfig, C3Context } from "types";
 
 const { npm, npx } = detectPackageManager();
@@ -23,9 +23,11 @@ const configure = async (ctx: C3Context) => {
 };
 
 const config: FrameworkConfig = {
+	id: "qwik",
+	displayName: "Qwik",
+	platform: "pages",
 	generate,
 	configure,
-	displayName: "Qwik",
 	getPackageScripts: async () => ({
 		"pages:dev": `wrangler pages dev ${await compatDateFlag()} -- ${npm} run dev`,
 		"pages:deploy": `${npm} run build && wrangler pages deploy ./dist`,

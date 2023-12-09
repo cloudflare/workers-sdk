@@ -30,8 +30,10 @@ const generate = async (ctx: C3Context) => {
 };
 
 const config: FrameworkConfig = {
-	generate,
+	id: "gatsby",
+	platform: "pages",
 	displayName: "Gatsby",
+	generate,
 	getPackageScripts: async () => ({
 		"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 8000 -- ${npm} run develop`,
 		"pages:deploy": `${npm} run build && wrangler pages deploy ./public`,

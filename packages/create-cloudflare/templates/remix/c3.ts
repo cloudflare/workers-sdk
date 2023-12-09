@@ -16,8 +16,10 @@ const generate = async (ctx: C3Context) => {
 };
 
 const config: FrameworkConfig = {
-	generate,
+	id: "remix",
 	displayName: "Remix",
+	platform: "pages",
+	generate,
 	getPackageScripts: async () => ({
 		"pages:deploy": `${npm} run build && wrangler pages deploy ./public`,
 	}),
