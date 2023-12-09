@@ -1,0 +1,15 @@
+{
+	"id": "pre-existing",
+	"displayName": "Pre-existing Worker (from Dashboard)",
+	"platform": "workers",
+	"hidden": true,
+	"languages": ["js", "ts"],
+	"copyFiles": {
+		"js": {
+			"path": "../hello-world/js"
+		},
+		"ts": {
+			"path": "../hello-world/ts"
+		}
+	}
+}

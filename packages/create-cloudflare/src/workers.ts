@@ -22,8 +22,8 @@ import {
 	printSummary,
 	runDeploy,
 } from "./common";
-import type { C3Context } from "types";
 import { copyTemplateFiles } from "./templateMap";
+import type { C3Context } from "types";
 
 const { dlx } = detectPackageManager();
 
@@ -39,21 +39,24 @@ export const runWorkersGenerator = async (ctx: C3Context) => {
 	});
 
 	await copyTemplateFiles(ctx);
-
-	if (ctx.template.id === "pre-existing") {
-		await copyExistingWorkerFiles(ctx);
-	}
+	chdir(ctx.project.path);
 
 	await updateFiles(ctx);
 	await offerGit(ctx);
 	endSection("Application created");
 
 	startSection("Installing dependencies", "Step 2 of 3");
-	chdir(ctx.project.path);
 	await npmInstall();
+<<<<<<< HEAD
 	if (ctx.args.ts) {
 		await installWorkersTypes(ctx);
 	}
+=======
+	if (ctx.template.id === "pre-existing") {
+		await copyExistingWorkerFiles(ctx);
+	}
+	await installWorkersTypes(ctx);
+>>>>>>> be990d19 (Derive static files to copy from template config)
 	await gitCommit(ctx);
 	endSection("Dependencies Installed");
 	if (!preexisting) {

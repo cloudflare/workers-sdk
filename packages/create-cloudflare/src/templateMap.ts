@@ -1,13 +1,10 @@
-import { processArgument } from "helpers/args";
 import { cp, rename } from "fs/promises";
 import { join, resolve } from "path";
 import { updateStatus } from "@cloudflare/cli";
-import { runPagesGenerator } from "./pages";
-import { runWorkersGenerator } from "./workers";
-import type { C3Args, C3Context } from "types";
-import { C3_DEFAULTS } from "helpers/cli";
 import { crash } from "@cloudflare/cli";
-import { readJSON } from "helpers/files";
+import { processArgument } from "helpers/args";
+import { C3_DEFAULTS } from "helpers/cli";
+import type { C3Args, C3Context } from "types";
 
 type BindingInfo = {
 	boundVariable: string;
@@ -27,6 +24,7 @@ type VariantInfo = {
 type StaticFileMap = Record<string, VariantInfo>;
 
 export type TemplateConfig = {
+	path: string;
 	// How this template is referred to internally and keyed in lookup maps
 	id: string;
 	// How this template is presented to the user
@@ -46,56 +44,63 @@ export type TemplateConfig = {
 
 type OldTemplateConfig = {
 	label: string;
-	handler: (ctx: C3Context) => Promise<void>;
 	hidden?: boolean;
+	templateConfig?: TemplateConfig;
+};
+
+const newTemplateMap = {
+	"hello-world": "../templates/hello-world",
+	webFramework: "TDB",
+	common: "../templates/common",
+	scheduled: "../templates/scheduled",
+	queues: "../templates/queues",
+	chatgptPlugin: "../templates/chatgptPlugin",
+	openapi: "../templates/openapi",
+	"pre-existing": "../templates/pre-existing",
 };
 
 // TODO: this should all be derived from template config
 // The built-in templates should be pre-cached into an equivalent tempalteMap
-export const templateMap: Record<string, OldTemplateConfig> = {
-	"hello-world": {
-		label: `"Hello World" Worker`,
-		handler: runWorkersGenerator,
-	},
-	"hello-world-durable-object": {
-		label: `"Hello World" Durable Object`,
-		handler: runWorkersGenerator,
-	},
-	webFramework: {
-		label: "Website or web app",
-		handler: runPagesGenerator,
-	},
-	common: {
-		label: "Example router & proxy Worker",
-		handler: runWorkersGenerator,
-	},
-	scheduled: {
-		label: "Scheduled Worker (Cron Trigger)",
-		handler: (args) => runWorkersGenerator({ ...args, deploy: false }),
-	},
-	queues: {
-		label: "Queue consumer & producer Worker",
-		handler: (args) => runWorkersGenerator({ ...args, deploy: false }),
-	},
-	chatgptPlugin: {
-		label: `ChatGPT plugin`,
-		handler: (ctx) => {
-			ctx.args.ts = true;
-			return runWorkersGenerator(ctx);
+// export const templateMap: Record<string, OldTemplateConfig> = {
+export const getTemplateMap = async () => {
+	return {
+		"hello-world": {
+			label: `"Hello World" Worker`,
+			templateConfig: await import("../templates/hello-world/c3.json"),
 		},
-	},
-	openapi: {
-		label: `OpenAPI 3.1`,
-		handler: (ctx) => {
-			ctx.args.ts = true;
-			return runWorkersGenerator(ctx);
+    "hello-world-durable-object": {
+      label: `"Hello World" Durable Object`,
+      templateConfig: await import("../templates/hello-world-durable-object/c3.json"),
+    },
+		webFramework: {
+			label: "Website or web app",
 		},
-	},
-	"pre-existing": {
-		label: "Pre-existing Worker (from Dashboard)",
-		handler: runWorkersGenerator,
-		hidden: true,
-	},
+		common: {
+			label: "Example router & proxy Worker",
+			templateConfig: await import("../templates/common/c3.json"),
+		},
+		scheduled: {
+			label: "Scheduled Worker (Cron Trigger)",
+			templateConfig: await import("../templates/scheduled/c3.json"),
+		},
+		queues: {
+			label: "Queue consumer & producer Worker",
+			templateConfig: await import("../templates/queues/c3.json"),
+		},
+		chatgptPlugin: {
+			label: `ChatGPT plugin`,
+			templateConfig: await import("../templates/chatgptPlugin/c3.json"),
+		},
+		openapi: {
+			label: `OpenAPI 3.1`,
+			templateConfig: await import("../templates/openapi/c3.json"),
+		},
+		"pre-existing": {
+			label: "Pre-existing Worker (from Dashboard)",
+			hidden: true,
+			templateConfig: await import("../templates/pre-existing/c3.json"),
+		},
+	} as unknown as Record<string, OldTemplateConfig>;
 };
 
 export const getTemplateSelection = async (args: Partial<C3Args>) => {
@@ -107,6 +112,8 @@ export const getTemplateSelection = async (args: Partial<C3Args>) => {
 			args.type = "pre-existing";
 		}
 	}
+
+	const templateMap = await getTemplateMap();
 
 	const templateOptions = Object.entries(templateMap).map(
 		([value, { label, hidden }]) => ({ value, label, hidden })
@@ -130,11 +137,33 @@ export const getTemplateSelection = async (args: Partial<C3Args>) => {
 		return crash(`Unknown application type provided: ${type}.`);
 	}
 
-	return getTemplateConfig(type);
+	if (type !== "remote-template") {
+		const templatePath = newTemplateMap[type as keyof typeof newTemplateMap];
+		const importPath = join(templatePath, "c3.json");
+		const config = await require(importPath);
+		return {
+			path: templatePath,
+			...config,
+		} as TemplateConfig;
+	}
+
+	// if type is remoteTemplate, we should download it and read + validate the config here
+	// return getTemplateConfig(type);
+	// HACK for now
+	return {} as TemplateConfig;
 };
 
 export async function copyTemplateFiles(ctx: C3Context) {
-	const srcdir = await staticTemplateFilesPath(ctx);
+	if (!ctx.template.copyFiles) {
+		return;
+	}
+
+	const languageTarget = ctx.args.ts ? "ts" : "js";
+	const srcdir = resolve(
+		__dirname,
+		ctx.template.path,
+		ctx.template.copyFiles[languageTarget].path
+	);
 	const destdir = ctx.project.path;
 
 	// copy template files
@@ -145,27 +174,15 @@ export async function copyTemplateFiles(ctx: C3Context) {
 	await rename(join(destdir, "__dot__gitignore"), join(destdir, ".gitignore"));
 }
 
-function getTemplateConfig(templateId: string) {
-	const path = resolve(
-		// eslint-disable-next-line no-restricted-globals
-		__dirname,
-		"..",
-		"templates",
-		templateId,
-		"c3.json"
-	);
-	return readJSON(path);
-}
-
-async function staticTemplateFilesPath(ctx: C3Context) {
-	const preexisting = ctx.args.type === "pre-existing";
-	const template = preexisting ? "hello-world" : ctx.args.type;
-	return resolve(
-		// eslint-disable-next-line no-restricted-globals
-		__dirname,
-		"..",
-		"templates",
-		ctx.template!.id, // TODO: don't coerce this
-		ctx.args.ts ? "ts" : "js"
-	);
-}
+// Needs to be repurposed to read config files of remote templates
+// function getTemplateConfig(templateId: string) {
+// 	const path = resolve(
+// 		// eslint-disable-next-line no-restricted-globals
+// 		__dirname,
+// 		"..",
+// 		"templates",
+// 		templateId,
+// 		"c3.json"
+// 	);
+// 	return readJSON(path);
+// }

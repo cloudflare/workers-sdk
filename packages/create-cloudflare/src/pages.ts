@@ -43,7 +43,6 @@ export const runPagesGenerator = async (ctx: C3Context) => {
 	const framework = await getFrameworkSelection(ctx.args);
 
 	const frameworkConfig = FrameworkMap[framework];
-	ctx.type = frameworkConfig.type;
 	ctx.framework = {
 		name: framework,
 		config: {
