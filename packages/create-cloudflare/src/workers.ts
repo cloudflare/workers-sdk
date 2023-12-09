@@ -1,5 +1,5 @@
 import { existsSync, readdirSync } from "fs";
-import { cp, mkdtemp, readdir, rename, rm } from "fs/promises";
+import { cp, mkdtemp, readdir, rm } from "fs/promises";
 import { tmpdir } from "os";
 import { join, resolve } from "path";
 import { chdir } from "process";
@@ -24,14 +24,12 @@ import {
 	printSummary,
 	runDeploy,
 } from "./common";
-import type { C3Context } from "types";
 import { copyTemplateFiles } from "./templateMap";
+import type { C3Context } from "types";
 
 const { dlx, npm } = detectPackageManager();
 
 export const runWorkersGenerator = async (ctx: C3Context) => {
-	ctx.type = "workers";
-
 	ctx.args.ts = await processArgument<boolean>(ctx.args, "ts", {
 		type: "confirm",
 
@@ -41,18 +39,17 @@ export const runWorkersGenerator = async (ctx: C3Context) => {
 	});
 
 	await copyTemplateFiles(ctx);
-
-	if (ctx.template.id === "pre-existing") {
-		await copyExistingWorkerFiles(ctx);
-	}
+	chdir(ctx.project.path);
 
 	await updateFiles(ctx);
 	await offerGit(ctx);
 	endSection("Application created");
 
 	startSection("Installing dependencies", "Step 2 of 3");
-	chdir(ctx.project.path);
 	await npmInstall();
+	if (ctx.template.id === "pre-existing") {
+		await copyExistingWorkerFiles(ctx);
+	}
 	await installWorkersTypes(ctx);
 	await gitCommit(ctx);
 	endSection("Dependencies Installed");

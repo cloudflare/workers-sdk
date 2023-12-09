@@ -18,14 +18,10 @@ import {
 	setupProjectDirectory,
 	validateProjectDirectory,
 } from "./common";
-import {
-	TemplateConfig,
-	getTemplateSelection,
-	templateMap,
-} from "./templateMap";
-import type { C3Args, C3Context } from "types";
 import { runPagesGenerator } from "./pages";
+import { getTemplateSelection } from "./templateMap";
 import { runWorkersGenerator } from "./workers";
+import type { C3Args, C3Context } from "types";
 
 const { npm } = detectPackageManager();
 
@@ -117,9 +113,9 @@ export const runCli = async (args: Partial<C3Args>) => {
 const runTemplate = async (ctx: C3Context) => {
 	// As time goes on, lift increasingly more logic out of the generators into here
 	if (ctx.template.platform === "workers") {
-		await runPagesGenerator(ctx);
+		await runWorkersGenerator(ctx);
 	} else {
-		runWorkersGenerator(ctx);
+		await runPagesGenerator(ctx);
 	}
 };
 
