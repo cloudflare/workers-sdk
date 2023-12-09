@@ -13,8 +13,10 @@ const generate = async (ctx: C3Context) => {
 };
 
 const config: FrameworkConfig = {
-	generate,
+	id: "react",
 	displayName: "React",
+	platform: "pages",
+	generate,
 	getPackageScripts: async () => ({
 		"pages:dev": `wrangler pages dev ${await compatDateFlag()} --port 3000 -- ${npm} start`,
 		"pages:deploy": `${npm} run build && wrangler pages deploy ./build`,

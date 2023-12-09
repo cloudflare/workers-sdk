@@ -37,9 +37,11 @@ const configure = async (ctx: C3Context) => {
 };
 
 const config: FrameworkConfig = {
+	id: "solid",
+	displayName: "Solid",
+	platform: "pages",
 	generate,
 	configure,
-	displayName: "Solid",
 	getPackageScripts: async () => ({
 		"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 3000 -- ${npm} run dev`,
 		"pages:deploy": `${npm} run build && wrangler pages deploy ./dist/public`,

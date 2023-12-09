@@ -66,9 +66,11 @@ const configure = async (ctx: C3Context) => {
 };
 
 const config: FrameworkConfig = {
+	id: "svelte",
+	displayName: "Svelte",
+	platform: "pages",
 	generate,
 	configure,
-	displayName: "Svelte",
 	getPackageScripts: async () => ({
 		"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 5173 -- ${npm} run dev`,
 		"pages:deploy": `${npm} run build && wrangler pages deploy .svelte-kit/cloudflare`,

@@ -134,9 +134,11 @@ export const writeEslintrc = async (ctx: C3Context): Promise<void> => {
 };
 
 const config: FrameworkConfig = {
+	id: "next",
+	platform: "pages",
+	displayName: "Next",
 	generate,
 	configure,
-	displayName: "Next",
 	getPackageScripts: async () => {
 		const isNpm = npm === "npm";
 		const isBun = npm === "bun";

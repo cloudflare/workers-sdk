@@ -13,8 +13,12 @@ const generate = async (ctx: C3Context) => {
 };
 
 const config: FrameworkConfig = {
-	generate,
+	id: "hono",
 	displayName: "Hono",
+	// TODO: make this work
+	// platform: 'workers',
+	platform: "pages",
+	generate,
 	getPackageScripts: async () => ({}),
 	devCommand: ["dev"],
 	deployCommand: ["deploy"],

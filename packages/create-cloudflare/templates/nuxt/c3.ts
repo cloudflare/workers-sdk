@@ -31,17 +31,6 @@ const configure = async (ctx: C3Context) => {
 	await npmInstall();
 };
 
-const config: FrameworkConfig = {
-	generate,
-	configure,
-	displayName: "Nuxt",
-	getPackageScripts: async () => ({
-		"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 3000 -- ${npm} run dev`,
-		"pages:deploy": `${npm} run build && wrangler pages deploy ./dist`,
-	}),
-};
-export default config;
-
 function updateNuxtConfig() {
 	const configFileName = "nuxt.config.ts";
 	const configFilePath = resolve(configFileName);
@@ -56,3 +45,16 @@ function updateNuxtConfig() {
 	writeFile(configFilePath, updatedConfigFile);
 	s.stop(`${brandColor(`updated`)} ${dim(`\`${configFileName}\``)}`);
 }
+
+const config: FrameworkConfig = {
+	id: "nuxt",
+	platform: "pages",
+	displayName: "Nuxt",
+	generate,
+	configure,
+	getPackageScripts: async () => ({
+		"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 3000 -- ${npm} run dev`,
+		"pages:deploy": `${npm} run build && wrangler pages deploy ./dist`,
+	}),
+};
+export default config;

@@ -6,16 +6,18 @@ import type { C3Context, FrameworkConfig } from "types";
 const { npm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
-	await runFrameworkGenerator(ctx, [ctx.project.name, "classic"]);
+	await runFrameworkGenerator(ctx, [ctx.project.name]);
 };
 
 const config: FrameworkConfig = {
+	id: "vue",
+	displayName: "Vue",
+	platform: "pages",
 	generate,
-	displayName: "Docusaurus",
 	getPackageScripts: async () => ({
-		"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 3000 -- ${npm} run start`,
-		"pages:deploy": `${npm} run build && wrangler pages deploy ./build`,
+		"pages:dev": `wrangler pages dev ${await compatDateFlag()} --proxy 5173 -- ${npm} run dev`,
+		"pages:deploy": `${npm} run build && wrangler pages deploy ./dist`,
 	}),
-	testFlags: [`--package-manager`, npm],
+	testFlags: ["--ts"],
 };
 export default config;

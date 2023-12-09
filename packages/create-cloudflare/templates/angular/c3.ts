@@ -12,7 +12,6 @@ const { npm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, [ctx.project.name, "--ssr"]);
-
 	logRaw("");
 };
 
@@ -22,22 +21,6 @@ const configure = async (ctx: C3Context) => {
 	await updateAppCode();
 	await installCFWorker(ctx);
 };
-
-const config: FrameworkConfig = {
-	generate,
-	configure,
-	displayName: "Angular",
-	getPackageScripts: async () => ({
-		start: `${npm} run pages:build && wrangler pages dev dist/cloudflare ${await compatDateFlag()} --experimental-local`,
-		process: "node ./tools/copy-files.mjs && node ./tools/alter-polyfills.mjs",
-		"pages:build": `ng build && ${npm} run process`,
-		deploy: `${npm} run pages:build && wrangler pages deploy dist/cloudflare`,
-	}),
-	deployCommand: ["deploy"],
-	devCommand: ["start"],
-	testFlags: ["--style", "sass"],
-};
-export default config;
 
 async function installCFWorker(ctx: C3Context) {
 	const s = spinner();
@@ -100,3 +83,21 @@ function updateAngularJson(ctx: C3Context) {
 	writeFile(resolve("angular.json"), JSON.stringify(angularJson, null, 2));
 	s.stop(`${brandColor(`updated`)} ${dim(`\`angular.json\``)}`);
 }
+
+const config: FrameworkConfig = {
+	id: "angular",
+	displayName: "Angular",
+	platform: "pages",
+	generate,
+	configure,
+	getPackageScripts: async () => ({
+		start: `${npm} run pages:build && wrangler pages dev dist/cloudflare ${await compatDateFlag()} --experimental-local`,
+		process: "node ./tools/copy-files.mjs && node ./tools/alter-polyfills.mjs",
+		"pages:build": `ng build && ${npm} run process`,
+		deploy: `${npm} run pages:build && wrangler pages deploy dist/cloudflare`,
+	}),
+	deployCommand: ["deploy"],
+	devCommand: ["start"],
+	testFlags: ["--style", "sass"],
+};
+export default config;
