@@ -1,10 +1,10 @@
 import { join } from "path";
-import { FrameworkMap } from "frameworks/index";
 import { retry } from "helpers/command";
 import { readJSON } from "helpers/files";
 import { fetch } from "undici";
 import { beforeAll, describe, expect, test } from "vitest";
 import { deleteProject, deleteWorker } from "../scripts/common";
+import { getFrameworkMap } from "../src/templateMap";
 import { frameworkToTest } from "./frameworkToTest";
 import {
 	isQuarantineMode,
@@ -14,6 +14,7 @@ import {
 	testDeploymentCommitMessage,
 	testProjectDir,
 } from "./helpers";
+import type { FrameworkMap, FrameworkName } from "../src/templateMap";
 import type { RunnerConfig } from "./helpers";
 import type { Suite, TestContext } from "vitest";
 
@@ -27,6 +28,8 @@ type FrameworkTestConfig = Omit<RunnerConfig, "ctx"> & {
 	unsupportedPms?: string[];
 	unsupportedOSs?: string[];
 };
+
+let frameworkMap: FrameworkMap;
 
 describe.concurrent(`E2E: Web frameworks`, () => {
 	// These are ordered based on speed and reliability for ease of debugging
@@ -150,7 +153,8 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		},
 	};
 
-	beforeAll((ctx) => {
+	beforeAll(async (ctx) => {
+		frameworkMap = await getFrameworkMap();
 		recreateLogFolder(ctx as Suite);
 	});
 
@@ -189,7 +193,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 		expect(wranglerPath).toExist();
 
 		// Verify package scripts
-		const frameworkConfig = FrameworkMap[framework];
+		const frameworkConfig = frameworkMap[framework as FrameworkName];
 
 		const frameworkTargetPackageScripts = {
 			...(await frameworkConfig.getPackageScripts()),
@@ -283,7 +287,7 @@ describe.concurrent(`E2E: Web frameworks`, () => {
 				const { getPath, getName, clean } = testProjectDir("pages");
 				const projectPath = getPath(framework);
 				const projectName = getName(framework);
-				const frameworkConfig = FrameworkMap[framework];
+				const frameworkConfig = frameworkMap[framework as FrameworkName];
 				try {
 					await runCliWithDeploy(
 						framework,

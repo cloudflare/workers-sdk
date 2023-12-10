@@ -20,7 +20,7 @@ import {
 	validateProjectDirectory,
 } from "./common";
 import { runPagesGenerator } from "./pages";
-import { getTemplateSelection } from "./templateMap";
+import { selectTemplate } from "./templateMap";
 import { runWorkersGenerator } from "./workers";
 import type { C3Args, C3Context } from "types";
 
@@ -37,28 +37,6 @@ export const main = async (argv: string[]) => {
 	} else {
 		await runCli(args);
 	}
-};
-
-// Detects if a newer version of c3 is available by comparing the version
-// specified in package.json with the `latest` tag from npm
-const isUpdateAvailable = async () => {
-	if (process.env.VITEST || process.env.CI || !isInteractive()) {
-		return false;
-	}
-
-	// Use a spinner when running this check since it may take some time
-	const s = spinner(spinnerFrames.vertical, blue);
-	s.start("Checking if a newer version is available");
-	const latestVersion = await runCommand(
-		["npm", "info", "create-cloudflare@latest", "dist-tags.latest"],
-		{ silent: true, useSpinner: false }
-	);
-	s.stop();
-
-	// Don't auto-update to major versions
-	if (semver.diff(latestVersion, version) === "major") return false;
-
-	return semver.gt(latestVersion, version);
 };
 
 // Spawn a separate process running the most recent version of c3
@@ -99,7 +77,7 @@ export const runCli = async (args: Partial<C3Args>) => {
 	const originalCWD = process.cwd();
 	const { name, path } = setupProjectDirectory(validatedArgs);
 
-	const template = await getTemplateSelection(args);
+	const template = await selectTemplate(args);
 	const ctx: C3Context = {
 		project: { name, path },
 		args: validatedArgs,
@@ -118,6 +96,28 @@ const runTemplate = async (ctx: C3Context) => {
 	} else {
 		await runPagesGenerator(ctx);
 	}
+};
+
+// Detects if a newer version of c3 is available by comparing the version
+// specified in package.json with the `latest` tag from npm
+const isUpdateAvailable = async () => {
+	if (process.env.VITEST || process.env.CI || !isInteractive()) {
+		return false;
+	}
+
+	// Use a spinner when running this check since it may take some time
+	const s = spinner(spinnerFrames.vertical, blue);
+	s.start("Checking if a newer version is available");
+	const latestVersion = await runCommand(
+		["npm", "info", "create-cloudflare@latest", "dist-tags.latest"],
+		{ silent: true, useSpinner: false }
+	);
+	s.stop();
+
+	// Don't auto-update to major versions
+	if (semver.diff(latestVersion, version) === "major") return false;
+
+	return semver.gt(latestVersion, version);
 };
 
 const printBanner = () => {

@@ -4,8 +4,6 @@ import { crash, endSection, startSection } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
-import { FrameworkMap, supportedFramework } from "frameworks/index";
-import { C3_DEFAULTS } from "helpers/cli";
 import {
 	installWrangler,
 	resetPackageManager,
@@ -24,7 +22,7 @@ import {
 	quoteShellArgs,
 	runDeploy,
 } from "./common";
-import type { C3Args, C3Context } from "types";
+import type { C3Context, FrameworkConfig } from "types";
 
 /** How many times to retry the create project command before failing. */
 const CREATE_PROJECT_RETRIES = 3;
@@ -40,11 +38,8 @@ const defaultFrameworkConfig = {
 };
 
 export const runPagesGenerator = async (ctx: C3Context) => {
-	const framework = await getFrameworkSelection(ctx.args);
-
-	const frameworkConfig = FrameworkMap[framework];
+	const frameworkConfig = ctx.template as unknown as FrameworkConfig;
 	ctx.framework = {
-		name: framework,
 		config: {
 			...defaultFrameworkConfig,
 			...frameworkConfig,
@@ -53,7 +48,7 @@ export const runPagesGenerator = async (ctx: C3Context) => {
 	};
 
 	// Generate
-	const { generate, configure } = FrameworkMap[framework];
+	const { generate, configure } = frameworkConfig;
 	await generate({ ...ctx });
 
 	// Configure
@@ -78,31 +73,6 @@ export const runPagesGenerator = async (ctx: C3Context) => {
 
 	// Summary
 	await printSummary(ctx);
-};
-
-const getFrameworkSelection = async (args: C3Args) => {
-	const frameworkOptions = Object.entries(FrameworkMap).map(
-		([key, { displayName }]) => ({
-			label: displayName,
-			value: key,
-		})
-	);
-
-	const framework = await processArgument<string>(args, "framework", {
-		type: "select",
-		label: "framework",
-		question: "Which development framework do you want to use?",
-		options: frameworkOptions,
-		defaultValue: C3_DEFAULTS.framework,
-	});
-
-	// Validate answers
-	framework || crash("A framework must be selected to continue.");
-	if (!supportedFramework(framework)) {
-		crash(`Unsupported framework: ${framework}`);
-	}
-
-	return framework;
 };
 
 // Add/Update commands in the `scripts` section of package.json
