@@ -415,7 +415,7 @@ const createCommitMessage = async (ctx: C3Context) => {
 	const details = [
 		{ key: "C3", value: `create-cloudflare@${version}` },
 		{ key: "project name", value: ctx.project.name },
-		{ key: "framework", value: ctx.framework.name },
+		{ key: "framework", value: ctx.template.id },
 		{ key: "framework cli", value: getFrameworkCli(ctx) },
 		{
 			key: "package manager",
@@ -437,7 +437,7 @@ const createCommitMessage = async (ctx: C3Context) => {
 
 	const commitMessage = `${header}\n\n${body}\n`;
 
-	if (ctx.type !== "workers") {
+	if (ctx.template.platform !== "workers") {
 		ctx.framework.commitMessage = commitMessage;
 	}
 

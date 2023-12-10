@@ -1,7 +1,4 @@
-import type { FrameworkMap } from "frameworks/index";
-import { TemplateConfig } from "./templateMap";
-
-export type FrameworkName = keyof typeof FrameworkMap;
+import type { TemplateConfig } from "./templateMap";
 
 export type C3Args = {
 	projectName: string;
@@ -29,7 +26,6 @@ export type C3Context = {
 	// Once refactor is complete, template will be required
 	template: TemplateConfig;
 	framework?: {
-		name: string;
 		config: FrameworkConfig;
 		args: string[];
 		commitMessage?: string;
@@ -45,10 +41,9 @@ export type C3Context = {
 
 type UpdaterPackageScript = (cmd: string) => string;
 
-export type FrameworkConfig = {
+export type FrameworkConfig = TemplateConfig & {
 	generate: (ctx: C3Context) => Promise<void>;
 	configure?: (ctx: C3Context) => Promise<void>;
-	displayName: string;
 	getPackageScripts: () => Promise<
 		Record<string, string | UpdaterPackageScript>
 	>;
