@@ -78,25 +78,10 @@ const configure = async (ctx: C3Context) => {
 	// App directory template may not generate an API route handler, so we update the path to add an `api` directory.
 	const apiPath = path.replace(/\/app$/, "/app/api");
 
-	const usesTs = usesTypescript(projectName);
-
-	const appDirPath = probePaths([
-		`${projectName}/src/app`,
-		`${projectName}/app`,
-	]);
-	if (appDirPath) {
-		// Add a custom app not-found edge route as recommended in next-on-pages
-		// (see: https://github.com/cloudflare/next-on-pages/blob/2b5c8f25/packages/next-on-pages/docs/gotchas.md#not-found)
-		const notFoundPath = `${appDirPath}/not-found.${usesTs ? "tsx" : "js"}`;
-		if (!existsSync(notFoundPath)) {
-			const notFoundContent = usesTs ? appDirNotFoundTs : appDirNotFoundJs;
-			writeFile(notFoundPath, notFoundContent);
-			updateStatus("Created a custom edge not-found route");
-		}
-	}
-
-	// Add a compatible function handler example
-	const [handlerPath, handlerFile] = getApiTemplate(apiPath, usesTs);
+	const [handlerPath, handlerFile] = getApiTemplate(
+		apiPath,
+		usesTypescript(ctx)
+	);
 	writeFile(handlerPath, handlerFile);
 	updateStatus("Created an example API route handler");
 

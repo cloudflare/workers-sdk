@@ -49,7 +49,7 @@ const configure = async (ctx: C3Context) => {
 	updateStatus(`Changing adapter in ${blue("svelte.config.js")}`);
 
 	// If using typescript, add the platform interface to the `App` interface
-	if (usesTypescript()) {
+	if (usesTypescript(ctx)) {
 		transformFile("src/app.d.ts", {
 			visitTSModuleDeclaration(n) {
 				if (n.value.id.name === "App") {

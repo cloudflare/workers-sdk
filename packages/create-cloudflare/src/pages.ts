@@ -22,6 +22,7 @@ import {
 	quoteShellArgs,
 	runDeploy,
 } from "./common";
+import { copyTemplateFiles } from "./templateMap";
 import type { C3Context, FrameworkConfig } from "types";
 
 /** How many times to retry the create project command before failing. */
@@ -50,6 +51,8 @@ export const runPagesGenerator = async (ctx: C3Context) => {
 	// Generate
 	const { generate, configure } = frameworkConfig;
 	await generate({ ...ctx });
+	await copyTemplateFiles(ctx);
+	endSection(`Application created`);
 
 	// Configure
 	startSection("Configuring your application for Cloudflare", "Step 2 of 3");

@@ -40,21 +40,23 @@ export const runWorkersGenerator = async (ctx: C3Context) => {
 
 	await copyTemplateFiles(ctx);
 	chdir(ctx.project.path);
+
+	await updateFiles(ctx);
+	await offerGit(ctx);
 	endSection("Application created");
 
-	startSection("Configuring your application for Cloudflare", "Step 2 of 3");
+	startSection("Installing dependencies", "Step 2 of 3");
 	await npmInstall();
 	if (ctx.args.ts) {
 		await installWorkersTypes(ctx);
 	}
 	await installWorkersTypes(ctx);
-	await updateFiles(ctx);
-	await offerGit(ctx);
 	await gitCommit(ctx);
-	endSection(`Application configured`);
-
-	await offerToDeploy(ctx);
-	await runDeploy(ctx);
+	endSection("Dependencies Installed");
+	if (!preexisting) {
+		await offerToDeploy(ctx);
+		await runDeploy(ctx);
+	}
 
 	await printSummary(ctx);
 };

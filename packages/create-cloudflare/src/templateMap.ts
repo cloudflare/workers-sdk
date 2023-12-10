@@ -1,9 +1,12 @@
+import { existsSync } from "fs";
 import { cp, rename } from "fs/promises";
 import { join, resolve } from "path";
-import { updateStatus } from "@cloudflare/cli";
 import { crash } from "@cloudflare/cli";
+import { brandColor, dim } from "@cloudflare/cli/colors";
+import { spinner } from "@cloudflare/cli/interactive";
 import { processArgument } from "helpers/args";
 import { C3_DEFAULTS } from "helpers/cli";
+import { usesTypescript } from "helpers/files";
 import type { C3Args, C3Context } from "types";
 
 type BindingInfo = {
@@ -32,7 +35,7 @@ export type TemplateConfig = {
 	hidden?: boolean;
 	languages?: string[];
 	bindings?: BindingsDefinition;
-	copyFiles?: StaticFileMap;
+	copyFiles?: StaticFileMap | VariantInfo;
 
 	generate: (ctx: C3Context) => Promise<void>;
 	configure?: (ctx: C3Context) => Promise<void>;
@@ -149,20 +152,38 @@ export async function copyTemplateFiles(ctx: C3Context) {
 		return;
 	}
 
-	const languageTarget = ctx.args.ts ? "ts" : "js";
-	const srcdir = join(
-		getTemplatesPath(),
-		ctx.template.id,
-		ctx.template.copyFiles[languageTarget].path
-	);
+	const s = spinner();
+	s.start(`Copying template files`);
+
+	const { id, copyFiles } = ctx.template;
+
+	// If there's only one variant, just use that. Otherwise, select the right variant
+	// based on language choice
+	let srcdir;
+	if (copyFiles.path) {
+		srcdir = join(getTemplatesPath(), id, (copyFiles as VariantInfo).path);
+	} else {
+		// If `ts` was explicitly specified or chosen via dialog, use that. Otherwise,
+		// infer it from the project directory
+		const typescript =
+			ctx.args.ts !== undefined ? ctx.args.ts : usesTypescript(ctx);
+		const languageTarget = typescript ? "ts" : "js";
+
+		const variantPath = (copyFiles as StaticFileMap)[languageTarget].path;
+		srcdir = join(getTemplatesPath(), id, variantPath);
+	}
 	const destdir = ctx.project.path;
 
 	// copy template files
-	updateStatus(`Copying files from \`${ctx.template.displayName}\` template`);
-	await cp(srcdir, destdir, { recursive: true });
+	await cp(srcdir, destdir, { recursive: true, force: true });
 
 	// reverse renaming from build step
-	await rename(join(destdir, "__dot__gitignore"), join(destdir, ".gitignore"));
+	const dummyGitIgnorePath = join(destdir, "__dot__gitignore");
+	if (existsSync(dummyGitIgnorePath)) {
+		await rename(dummyGitIgnorePath, join(destdir, ".gitignore"));
+	}
+
+	s.stop(`${brandColor("files")} ${dim("copied to project directory")}`);
 }
 
 export const getTemplatesPath = () => resolve(__dirname, "..", "templates");
