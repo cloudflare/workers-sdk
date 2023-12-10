@@ -71,7 +71,7 @@ const configure = async (ctx: C3Context) => {
 
 	const [handlerPath, handlerFile] = getApiTemplate(
 		apiPath,
-		usesTypescript(projectName)
+		usesTypescript(ctx)
 	);
 	writeFile(handlerPath, handlerFile);
 	updateStatus("Created an example API route handler");

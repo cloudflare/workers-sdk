@@ -1,9 +1,8 @@
 import { logRaw, updateStatus } from "@cloudflare/cli";
 import { brandColor, dim, blue } from "@cloudflare/cli/colors";
 import { installPackages, runFrameworkGenerator } from "helpers/command";
-import { compatDateFlag, usesTypescript, writeFile } from "helpers/files";
+import { compatDateFlag } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import { viteConfig } from "./templates";
 import type { FrameworkConfig, C3Context } from "types";
 
 const { npm } = detectPackageManager();
@@ -26,20 +25,17 @@ const configure = async (ctx: C3Context) => {
 		doneText: `${brandColor(`installed`)} ${dim(pkg)}`,
 	});
 
-	// modify the vite config
-	const viteConfigPath = usesTypescript()
-		? `./vite.config.ts`
-		: `./vite.config.js`;
-	writeFile(viteConfigPath, viteConfig);
-	updateStatus(
-		`Adding the Cloudflare Pages adapter to ${blue(viteConfigPath)}`
-	);
+	updateStatus(`Adding the Cloudflare Pages adapter to vite config`);
 };
 
 const config: FrameworkConfig = {
 	id: "solid",
 	displayName: "Solid",
 	platform: "pages",
+	copyFiles: {
+		js: { path: "./js" },
+		ts: { path: "./ts" },
+	},
 	generate,
 	configure,
 	getPackageScripts: async () => ({

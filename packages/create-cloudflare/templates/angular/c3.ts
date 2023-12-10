@@ -23,16 +23,6 @@ const configure = async (ctx: C3Context) => {
 };
 
 async function installCFWorker(ctx: C3Context) {
-	const s = spinner();
-	s.start(`Adding Cloudflare Pages adapter code`);
-	await cp(
-		// eslint-disable-next-line no-restricted-globals
-		resolve(__dirname, "./angular/templates"),
-		resolve(ctx.project.path),
-		{ recursive: true, force: true }
-	);
-	s.stop(`${brandColor("copied")} ${dim("adapter code")}`);
-
 	await installPackages(
 		["@cloudflare/workers-types", "@miniflare/tre@next", "wrangler@beta"],
 		{
@@ -88,6 +78,9 @@ const config: FrameworkConfig = {
 	id: "angular",
 	displayName: "Angular",
 	platform: "pages",
+	copyFiles: {
+		path: "./templates",
+	},
 	generate,
 	configure,
 	getPackageScripts: async () => ({

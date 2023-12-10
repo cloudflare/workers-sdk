@@ -1,6 +1,6 @@
 import { existsSync, rmSync } from "fs";
 import path from "path";
-import { endSection, stripAnsi } from "@cloudflare/cli";
+import { logRaw, stripAnsi, updateStatus } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { isInteractive, spinner } from "@cloudflare/cli/interactive";
 import { spawn } from "cross-spawn";
@@ -191,10 +191,14 @@ export const runFrameworkGenerator = async (ctx: C3Context, args: string[]) => {
 		cmd.push(...ctx.framework.args);
 	}
 
-	endSection(
-		`Continue with ${ctx.framework?.config.displayName}`,
-		`via \`${quoteShellArgs(cmd)}\``
+	updateStatus(
+		`Continue with ${ctx.framework?.config.displayName} ${dim(
+			`via \`${quoteShellArgs(cmd)}\``
+		)}`
 	);
+
+	// newline
+	logRaw("");
 
 	if (process.env.VITEST) {
 		const flags = ctx.framework?.config.testFlags ?? [];

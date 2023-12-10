@@ -1,4 +1,5 @@
 import fs, { existsSync } from "fs";
+import { join } from "path";
 import { crash } from "@cloudflare/cli";
 import { getWorkerdCompatibilityDate } from "./command";
 import type { C3Context } from "types";
@@ -44,8 +45,8 @@ export const probePaths = (
 	process.exit(1); // hack to make typescript happy
 };
 
-export const usesTypescript = (projectRoot = ".") => {
-	return existsSync(`${projectRoot}/tsconfig.json`);
+export const usesTypescript = (ctx: C3Context) => {
+	return existsSync(join(`${ctx.project.path}`, `tsconfig.json`));
 };
 
 const eslintRcExts = ["js", "cjs", "yaml", "yml", "json"] as const;
