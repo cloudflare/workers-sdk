@@ -18,7 +18,7 @@ jobs:
         with:
           fetch-depth: 2
           ref: ${{ github.head_ref }}
-          token: ${{ secrets.C3_DEPENDABOT_VERSIONING_PAT }}
+          token: ${{ secrets.GH_ACCESS_TOKEN }}
       - name: Configure Git
         run: |
           git config --global user.email wrangler@cloudflare.com
