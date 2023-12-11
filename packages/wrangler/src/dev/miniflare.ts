@@ -508,7 +508,9 @@ async function buildMiniflareOptions(
 	}
 
 	if (config.bindings.ai) {
-		logger.warn("Using Workers AI always accesses your Cloudflare account in order to run AI models, and so will incur usage charges even in local development.");
+		logger.warn(
+			"Using Workers AI always accesses your Cloudflare account in order to run AI models, and so will incur usage charges even in local development."
+		);
 	}
 
 	if (config.bindings.vectorize?.length) {
