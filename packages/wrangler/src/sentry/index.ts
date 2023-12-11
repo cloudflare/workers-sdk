@@ -28,7 +28,9 @@ export const makeSentry10Transport = (options: BaseTransportOptions) => {
 
 		try {
 			if (sentryReportingAllowed) {
-				for (const event of eventQueue) {
+				const eventsToSend = [...eventQueue];
+				eventQueue = [];
+				for (const event of eventsToSend) {
 					await fetch(event[0], event[1]);
 				}
 
