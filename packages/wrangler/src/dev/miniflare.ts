@@ -507,6 +507,12 @@ async function buildMiniflareOptions(
 		logger.warn("Miniflare 3 does not support CRON triggers yet, ignoring...");
 	}
 
+	if (config.bindings.ai) {
+		logger.warn(
+			"Using Workers AI always accesses your Cloudflare account in order to run AI models, and so will incur usage charges even in local development."
+		);
+	}
+
 	if (config.bindings.vectorize?.length) {
 		// TODO: add local support for Vectorize bindings (https://github.com/cloudflare/workers-sdk/issues/4360)
 		logger.warn(
