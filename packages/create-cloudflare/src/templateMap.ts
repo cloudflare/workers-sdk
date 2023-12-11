@@ -152,27 +152,24 @@ export async function copyTemplateFiles(ctx: C3Context) {
 		return;
 	}
 
-	const s = spinner();
-	s.start(`Copying template files`);
-
 	const { id, copyFiles } = ctx.template;
 
-	// If there's only one variant, just use that. Otherwise, select the right variant
-	// based on language choice
 	let srcdir;
 	if (copyFiles.path) {
+		// If there's only one variant, just use that.
 		srcdir = join(getTemplatesPath(), id, (copyFiles as VariantInfo).path);
 	} else {
-		// If `ts` was explicitly specified or chosen via dialog, use that. Otherwise,
-		// infer it from the project directory
-		const typescript =
-			ctx.args.ts !== undefined ? ctx.args.ts : usesTypescript(ctx);
+		// Otherwise, have the user select the one they want
+		const typescript = await shouldUseTs(ctx);
 		const languageTarget = typescript ? "ts" : "js";
 
 		const variantPath = (copyFiles as StaticFileMap)[languageTarget].path;
 		srcdir = join(getTemplatesPath(), id, variantPath);
 	}
 	const destdir = ctx.project.path;
+
+	const s = spinner();
+	s.start(`Copying template files`);
 
 	// copy template files
 	await cp(srcdir, destdir, { recursive: true, force: true });
@@ -185,6 +182,21 @@ export async function copyTemplateFiles(ctx: C3Context) {
 
 	s.stop(`${brandColor("files")} ${dim("copied to project directory")}`);
 }
+
+const shouldUseTs = async (ctx: C3Context) => {
+	// If we can infer from the directory that it uses typescript, use that
+	if (usesTypescript(ctx)) {
+		return true;
+	}
+
+	// Otherwise, prompt the user for their TS preference
+	return processArgument<boolean>(ctx.args, "ts", {
+		type: "confirm",
+		question: "Do you want to use TypeScript?",
+		label: "typescript",
+		defaultValue: C3_DEFAULTS.ts,
+	});
+};
 
 export const getTemplatesPath = () => resolve(__dirname, "..", "templates");
 

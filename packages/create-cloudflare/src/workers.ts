@@ -6,6 +6,8 @@ import { endSection, startSection, updateStatus } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { C3_DEFAULTS } from "helpers/cli";
+import { spinner } from "@cloudflare/cli/interactive";
+import { processArgument } from "helpers/args";
 import {
 	getWorkerdCompatibilityDate,
 	installWorkersTypes,
@@ -14,30 +16,13 @@ import {
 } from "helpers/command";
 import { readFile, readJSON, writeFile, writeJSON } from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
-import {
-	chooseAccount,
-	gitCommit,
-	offerGit,
-	offerToDeploy,
-	printSummary,
-	runDeploy,
-} from "./common";
+import { chooseAccount } from "./common";
 import { copyTemplateFiles } from "./templateMap";
 import type { C3Context } from "types";
 
 const { dlx } = detectPackageManager();
 
 export const runWorkersGenerator = async (ctx: C3Context) => {
-	ctx.type = "workers";
-
-	ctx.args.ts = await processArgument<boolean>(ctx.args, "ts", {
-		type: "confirm",
-
-		question: "Do you want to use TypeScript?",
-		label: "typescript",
-		defaultValue: C3_DEFAULTS.ts,
-	});
-
 	await copyTemplateFiles(ctx);
 	chdir(ctx.project.path);
 
@@ -51,14 +36,7 @@ export const runWorkersGenerator = async (ctx: C3Context) => {
 		await installWorkersTypes(ctx);
 	}
 	await installWorkersTypes(ctx);
-	await gitCommit(ctx);
-	endSection("Dependencies Installed");
-	if (!preexisting) {
-		await offerToDeploy(ctx);
-		await runDeploy(ctx);
-	}
-
-	await printSummary(ctx);
+	await updateFiles(ctx);
 };
 
 async function copyExistingWorkerFiles(ctx: C3Context) {
