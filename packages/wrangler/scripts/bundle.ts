@@ -54,6 +54,9 @@ async function buildMain(flags: BuildFlags = {}) {
 			...(process.env.ALGOLIA_PUBLIC_KEY
 				? { ALGOLIA_PUBLIC_KEY: `"${process.env.ALGOLIA_PUBLIC_KEY}"` }
 				: {}),
+			...(process.env.SENTRY_DSN
+				? { SENTRY_DSN: `"${process.env.SENTRY_DSN}"` }
+				: {}),
 		},
 		plugins: [embedWorkersPlugin],
 	};
