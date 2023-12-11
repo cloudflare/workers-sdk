@@ -454,6 +454,7 @@ async function runTests(
 			return localRpcFunctions.fetch(...args);
 		},
 	};
+	let startupError: unknown;
 	const rpc = createBirpc<RunnerRPC, RuntimeRPC>(patchedLocalRpcFunctions, {
 		eventNames: ["onCancel"],
 		post(value) {
@@ -469,7 +470,15 @@ async function runTests(
 				assert(typeof event.data === "string");
 				const value = structuredSerializableParse(event.data);
 				debuglog("POOL<--WORKER", value);
-				listener(value);
+				if (
+					typeof value === "object" &&
+					value !== null &&
+					"vitestPoolWorkersError" in value
+				) {
+					startupError = value.vitestPoolWorkersError;
+				} else {
+					listener(value);
+				}
 			});
 		},
 	});
@@ -485,9 +494,7 @@ async function runTests(
 		}
 	}
 	if (event.code !== 1000) {
-		// TODO(soon): could we get the actual error here, use birpc custom event
-		//  and throw with deferred promise
-		throw new Error("Failed to run tests");
+		throw startupError ?? new Error("Failed to run tests");
 	}
 
 	debuglog("DONE", files);

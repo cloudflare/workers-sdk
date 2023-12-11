@@ -157,6 +157,7 @@ export class RunnerObject implements DurableObject {
 					poolSocket.close(1000, "Done");
 				})
 				.catch((e: unknown) => {
+					port.postMessage({ vitestPoolWorkersError: e });
 					const error = reduceError(e);
 					__console.error("Error running worker:", error.stack);
 					poolSocket.close(1011, "Internal Error");
