@@ -1,23 +1,5 @@
 import path from "node:path";
 
-// https://nodejs.org/api/url.html#class-url
-const _URL = URL;
-export { _URL as URL };
-
-// https://nodejs.org/api/url.html#class-urlsearchparams
-const _URLSearchParams = URLSearchParams;
-export { _URLSearchParams as URLSearchParams };
-
-// https://nodejs.org/api/url.html#urldomaintoasciidomain
-export function domainToASCII(_domain: string): string {
-	throw new Error("domainToASCII() not yet implemented in worker");
-}
-
-// https://nodejs.org/api/url.html#urldomaintounicodedomain
-export function domainToUnicode(_domain: string): string {
-	throw new Error("domainToASCII() not yet implemented in worker");
-}
-
 // https://nodejs.org/api/url.html#urlfileurltopathurl
 // eslint-disable-next-line no-shadow
 export function fileURLToPath(path: string | URL): string {
@@ -51,11 +33,6 @@ function getPathFromURLPosix(url: URL) {
 	return decodeURIComponent(pathname);
 }
 
-// https://nodejs.org/api/url.html#urlformaturl-options
-export function format(_url: URL | Url, _options: unknown): string {
-	throw new Error("format() not yet implemented in worker");
-}
-
 export const CHAR_FORWARD_SLASH = 47; /* / */
 const percentRegEx = /%/g;
 const backslashRegEx = /\\/g;
@@ -64,8 +41,6 @@ const carriageReturnRegEx = /\r/g;
 const tabRegEx = /\t/g;
 // https://nodejs.org/api/url.html#urlpathtofileurlpath
 export function pathToFileURL(filepath: string): URL {
-	// return filepath as unknown as URL; // FIXME: this is a hack to get around dynamic `import()` not respecting URLs correctly, TODO: try reproduce and report
-
 	// https://github.com/denoland/deno_std/blob/01a401c432fd5628efd3a4fafffdc14660efe9e2/node/url.ts#L1391
 	// Thanks 🦖!
 	const outURL = new URL("file://");
@@ -101,36 +76,7 @@ function encodePathChars(filepath: string): string {
 	return filepath;
 }
 
-// https://nodejs.org/api/url.html#urlurltohttpoptionsurl
-export function urlToHttpOptions(_url: string): unknown {
-	throw new Error("urlToHttpOptions() not yet implemented in worker");
-}
-
-// https://nodejs.org/api/url.html#legacy-urlobject
-export class Url {}
-
-export function parse(
-	_urlString: string,
-	_parseQueryString?: boolean,
-	_slashesDenoteHost?: boolean
-): Url {
-	throw new Error("parse() not yet implemented in worker");
-}
-
-export function resolve(_from: string, _to: string): string {
-	throw new Error("resolve() not yet implemented in worker");
-}
-
 export default {
-	URL,
-	URLSearchParams,
-	domainToASCII,
-	domainToUnicode,
 	fileURLToPath,
-	format,
 	pathToFileURL,
-	urlToHttpOptions,
-	Url,
-	parse,
-	resolve,
 };

@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { Writable } from "node:stream";
 import { formatWithOptions } from "node:util";
 import type { InspectOptions } from "node:util";
@@ -37,11 +35,11 @@ export class Console {
 
 	// Vitest expects this function to be called `value`:
 	// https://github.com/vitest-dev/vitest/blob/v1.0.0-beta.5/packages/vitest/src/runtime/console.ts#L16
-	value(stream: Writable, data: any[]): void {
+	value(stream: Writable, data: unknown[]): void {
 		stream.write(formatWithOptions(this.#inspectOptions, ...data));
 	}
 
-	assert(condition?: boolean, ...data: any[]): void {
+	assert(condition?: boolean, ...data: unknown[]): void {
 		originalConsole.assert(condition, ...data);
 	}
 	clear(): void {
@@ -53,38 +51,38 @@ export class Console {
 	countReset(label?: string): void {
 		originalConsole.countReset(label);
 	}
-	debug(...data: any[]): void {
+	debug(...data: unknown[]): void {
 		if (this.#stdout === undefined) originalConsole.debug(...data);
 		else this.value(this.#stdout, data);
 	}
-	dir(item?: any, options?: any): void {
+	dir(item?: unknown, options?: unknown): void {
 		originalConsole.dir(item, options);
 	}
-	dirxml(...data: any[]): void {
+	dirxml(...data: unknown[]): void {
 		originalConsole.dirxml(...data);
 	}
-	error(...data: any[]): void {
+	error(...data: unknown[]): void {
 		if (this.#stderr === undefined) originalConsole.error(...data);
 		else this.value(this.#stderr, data);
 	}
-	group(...data: any[]): void {
+	group(...data: unknown[]): void {
 		originalConsole.group(...data);
 	}
-	groupCollapsed(...data: any[]): void {
+	groupCollapsed(...data: unknown[]): void {
 		originalConsole.groupCollapsed(...data);
 	}
 	groupEnd(): void {
 		originalConsole.groupEnd();
 	}
-	info(...data: any[]): void {
+	info(...data: unknown[]): void {
 		if (this.#stdout === undefined) originalConsole.info(...data);
 		else this.value(this.#stdout, data);
 	}
-	log(...data: any[]): void {
+	log(...data: unknown[]): void {
 		if (this.#stdout === undefined) originalConsole.log(...data);
 		else this.value(this.#stdout, data);
 	}
-	table(tabularData?: any, properties?: string[]): void {
+	table(tabularData?: unknown, properties?: string[]): void {
 		originalConsole.table(tabularData, properties);
 	}
 	time(label?: string): void {
@@ -93,17 +91,17 @@ export class Console {
 	timeEnd(label?: string): void {
 		originalConsole.timeEnd(label);
 	}
-	timeLog(label?: string, ...data: any[]): void {
+	timeLog(label?: string, ...data: unknown[]): void {
 		originalConsole.timeLog(label, ...data);
 	}
 	timeStamp(label?: string): void {
 		originalConsole.timeStamp(label);
 	}
-	trace(...data: any[]): void {
+	trace(...data: unknown[]): void {
 		if (this.#stdout === undefined) originalConsole.trace(...data);
 		else this.value(this.#stdout, data);
 	}
-	warn(...data: any[]): void {
+	warn(...data: unknown[]): void {
 		if (this.#stderr === undefined) originalConsole.warn(...data);
 		else this.value(this.#stderr, data);
 	}

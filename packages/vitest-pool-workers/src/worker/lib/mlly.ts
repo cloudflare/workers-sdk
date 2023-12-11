@@ -1,7 +1,3 @@
-export function isNodeBuiltin(id = "") {
-	return id.startsWith("node:");
-}
-
 function isObject(value: unknown) {
 	return value !== null && typeof value === "object";
 }

@@ -2,7 +2,6 @@ import { EventEmitter } from "node:events";
 import { PassThrough } from "node:stream";
 
 // https://nodejs.org/api/process.html#process
-// TODO events: beforeExit, disconnect, exit, message, multipleResolves, rejectionHandler, uncaughtException, uncaughtExceptionMonitor, unhandledRejection, warning, worker
 class Process extends EventEmitter {
 	constructor() {
 		super();
@@ -84,10 +83,7 @@ class Process extends EventEmitter {
 	}
 
 	// https://nodejs.org/api/process.html#processenv
-	readonly env = {
-		// FORCE_COLOR: "true",
-		// TODO
-	};
+	readonly env = {};
 
 	// https://nodejs.org/api/process.html#processexecargv
 	readonly execArgv = [];
