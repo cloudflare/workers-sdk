@@ -3414,7 +3414,7 @@ describe("init", () => {
 					new File(
 						[
 							`
-				import handleRequest from './nested/other.js';
+				import handleRequest from './other.js';
 
 				export default {
 					async fetch(request, env, ctx) {
@@ -3428,7 +3428,7 @@ describe("init", () => {
 					)
 				);
 				fd.set(
-					"./nested/other.js",
+					"other.js",
 					new File(
 						[
 							`
@@ -3437,7 +3437,7 @@ describe("init", () => {
 					}
 				`,
 						],
-						"./nested/other.js",
+						"other.js",
 						{ type: "application/javascript+module" }
 					)
 				);
@@ -3466,8 +3466,8 @@ describe("init", () => {
 						"isolinear-optical-chip/src/index.js": {
 							contents: await (fd.get("index.js") as File).text(),
 						},
-						"isolinear-optical-chip/src/nested/other.js": {
-							contents: await (fd.get("./nested/other.js") as File).text(),
+						"isolinear-optical-chip/src/other.js": {
+							contents: await (fd.get("other.js") as File).text(),
 						},
 						"isolinear-optical-chip/src/index.ts": false,
 						"isolinear-optical-chip/package.json": {
