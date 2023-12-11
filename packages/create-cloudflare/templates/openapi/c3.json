@@ -4,8 +4,6 @@
 	"platform": "workers",
 	"languages": ["ts"],
 	"copyFiles": {
-		"ts": {
-			"path": "./ts"
-		}
+		"path": "./ts"
 	}
 }

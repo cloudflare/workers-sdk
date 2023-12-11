@@ -12,15 +12,7 @@ import {
 import { readJSON, writeFile } from "helpers/files";
 import { debug } from "helpers/logging";
 import { detectPackageManager } from "helpers/packages";
-import {
-	getProductionBranch,
-	gitCommit,
-	offerGit,
-	offerToDeploy,
-	printSummary,
-	quoteShellArgs,
-	runDeploy,
-} from "./common";
+import { getProductionBranch, quoteShellArgs } from "./common";
 import { copyTemplateFiles } from "./templateMap";
 import type { C3Context, FrameworkConfig } from "types";
 
@@ -64,17 +56,6 @@ export const runPagesGenerator = async (ctx: C3Context) => {
 		await configure({ ...ctx });
 	}
 	await updatePackageScripts(ctx);
-	await offerGit(ctx);
-	await gitCommit(ctx);
-	endSection(`Application configured`);
-
-	// Deploy
-	await offerToDeploy(ctx);
-	await createProject(ctx);
-	await runDeploy(ctx);
-
-	// Summary
-	await printSummary(ctx);
 };
 
 // Add/Update commands in the `scripts` section of package.json
@@ -123,9 +104,9 @@ const updatePackageScripts = async (ctx: C3Context) => {
 	}
 };
 
-const createProject = async (ctx: C3Context) => {
+export const createProject = async (ctx: C3Context) => {
 	if (ctx.args.deploy === false) return;
-	if (ctx.framework?.config.type === "workers") return;
+	if (ctx.template.platform === "workers") return;
 	if (!ctx.account?.id) {
 		crash("Failed to read Cloudflare account.");
 		return;

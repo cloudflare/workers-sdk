@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { dirname } from "path";
-import { crash, logRaw, startSection } from "@cloudflare/cli";
+import { crash, endSection, logRaw, startSection } from "@cloudflare/cli";
 import { blue, dim } from "@cloudflare/cli/colors";
 import {
 	isInteractive,
@@ -14,11 +14,16 @@ import { detectPackageManager } from "helpers/packages";
 import semver from "semver";
 import { version } from "../package.json";
 import {
+	gitCommit,
 	isInsideGitRepo,
+	offerGit,
+	offerToDeploy,
+	printSummary,
+	runDeploy,
 	setupProjectDirectory,
 	validateProjectDirectory,
 } from "./common";
-import { runPagesGenerator } from "./pages";
+import { createProject, runPagesGenerator } from "./pages";
 import { selectTemplate } from "./templateMap";
 import { runWorkersGenerator } from "./workers";
 import type { C3Args, C3Context } from "types";
@@ -95,6 +100,18 @@ const runTemplate = async (ctx: C3Context) => {
 	} else {
 		await runPagesGenerator(ctx);
 	}
+
+	await offerGit(ctx);
+	await gitCommit(ctx);
+	endSection(`Application configured`);
+
+	// Deploy
+	await offerToDeploy(ctx);
+	await createProject(ctx);
+	await runDeploy(ctx);
+
+	// Summary
+	await printSummary(ctx);
 };
 
 // Detects if a newer version of c3 is available by comparing the version
