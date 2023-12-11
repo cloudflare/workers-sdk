@@ -275,7 +275,7 @@ export function createCLIParser(argv: string[]) {
 	// generate
 	wrangler.command(
 		"generate [name] [template]",
-		"✨ Generate a new Worker project from an existing Worker template. See https://github.com/cloudflare/templates",
+		"✨ Generate a new Worker project from an existing Worker template. See https://github.com/cloudflare/workers-sdk/tree/main/templates",
 		generateOptions,
 		generateHandler
 	);
