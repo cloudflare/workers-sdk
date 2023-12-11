@@ -508,9 +508,7 @@ async function buildMiniflareOptions(
 	}
 
 	if (config.bindings.ai) {
-		logger.warn(
-			"Workers AI will incur usage charges in local mode."
-		);
+		logger.warn("Workers AI will incur usage charges in local mode.");
 	}
 
 	if (config.bindings.vectorize?.length) {
