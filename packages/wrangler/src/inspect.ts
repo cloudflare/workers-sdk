@@ -75,6 +75,46 @@ interface InspectorProps {
 	name?: string;
 }
 
+const ALLOWED_HOST_HOSTNAMES = ["127.0.0.1", "[::1]", "localhost"];
+const ALLOWED_ORIGIN_HOSTNAMES = [
+	"devtools.devprod.cloudflare.dev",
+	"cloudflare-devtools.pages.dev",
+	/^[a-z0-9]+\.cloudflare-devtools\.pages\.dev$/,
+	"127.0.0.1",
+	"[::1]",
+	"localhost",
+];
+function validateWebSocketHandshake(req: IncomingMessage) {
+	// Validate `Host` header
+	const hostHeader = req.headers.host;
+	if (hostHeader == null) return false;
+	try {
+		const host = new URL(`http://${hostHeader}`);
+		if (!ALLOWED_HOST_HOSTNAMES.includes(host.hostname)) return false;
+	} catch {
+		return false;
+	}
+	// Validate `Origin` header
+	let originHeader = req.headers.origin;
+	if (originHeader === null && req.headers["user-agent"] === undefined) {
+		// VSCode doesn't send an `Origin` header, but also doesn't send a
+		// `User-Agent` header, so allow an empty origin in this case.
+		originHeader = "http://localhost";
+	}
+	if (originHeader == null) return false;
+	try {
+		const origin = new URL(originHeader);
+		const allowed = ALLOWED_ORIGIN_HOSTNAMES.some((rule) => {
+			if (typeof rule === "string") return origin.hostname === rule;
+			else return rule.test(origin.hostname);
+		});
+		if (!allowed) return false;
+	} catch {
+		return false;
+	}
+	return true;
+}
+
 export default function useInspector(props: InspectorProps) {
 	/** A unique ID for this session. */
 	const inspectorIdRef = useRef(randomId());
@@ -110,7 +150,7 @@ export default function useInspector(props: InspectorProps) {
 					case "/json/list":
 						{
 							res.setHeader("Content-Type", "application/json");
-							const localHost = `localhost:${props.port}/ws`;
+							const localHost = `127.0.0.1:${props.port}/ws`;
 							const devtoolsFrontendUrl = `devtools://devtools/bundled/js_app.html?experiments=true&v8only=true&ws=${localHost}`;
 							const devtoolsFrontendUrlCompat = `devtools://devtools/bundled/inspector.html?experiments=true&v8only=true&ws=${localHost}`;
 							res.end(
@@ -155,7 +195,12 @@ export default function useInspector(props: InspectorProps) {
 	}
 	const wsServer = wsServerRef.current;
 
-	wsServer.on("connection", (ws: WebSocket) => {
+	wsServer.on("connection", (ws: WebSocket, req: IncomingMessage) => {
+		if (!validateWebSocketHandshake(req)) {
+			ws.close(1008, "Unauthorised");
+			return;
+		}
+
 		if (wsServer.clients.size > 1) {
 			/** We only want to have one active Devtools instance at a time. */
 			logger.error(
@@ -197,7 +242,7 @@ export default function useInspector(props: InspectorProps) {
 				timeout: 2000,
 				abortSignal: abortController.signal,
 			});
-			server.listen(props.port);
+			server.listen(props.port, "127.0.0.1");
 		}
 		startInspectorProxy().catch((err) => {
 			if ((err as { code: string }).code !== "ABORT_ERR") {
@@ -844,7 +889,7 @@ export const openInspector = async (
 ) => {
 	const query = new URLSearchParams();
 	query.set("theme", "systemPreferred");
-	query.set("ws", `localhost:${inspectorPort}/ws`);
+	query.set("ws", `127.0.0.1:${inspectorPort}/ws`);
 	if (worker) query.set("domain", worker);
 	const url = `https://devtools.devprod.cloudflare.dev/js_app?${query.toString()}`;
 	const errorMessage =
