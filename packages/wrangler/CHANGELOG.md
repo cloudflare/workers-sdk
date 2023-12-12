@@ -1,5 +1,24 @@
 # wrangler
 
+## 3.20.0
+
+### Minor Changes
+
+- [#4522](https://github.com/cloudflare/workers-sdk/pull/4522) [`c10bf0fd`](https://github.com/cloudflare/workers-sdk/commit/c10bf0fd2f24681cfcb78c6bf700a2e4acf41f30) Thanks [@G4brym](https://github.com/G4brym)! - Add support for Workers AI in local mode
+
+* [#4571](https://github.com/cloudflare/workers-sdk/pull/4571) [`3314dbde`](https://github.com/cloudflare/workers-sdk/commit/3314dbdea2eeacb2d26d9bae867cbd3649ac73b3) Thanks [@penalosa](https://github.com/penalosa)! - feat: When Wrangler crashes, send an error report to Sentry to aid in debugging.
+
+  When Wrangler's top-level exception handler catches an error thrown from Wrangler's application, it will offer to report the error to Sentry. This requires opt-in from the user every time.
+
+### Patch Changes
+
+- [#4577](https://github.com/cloudflare/workers-sdk/pull/4577) [`4c85fe99`](https://github.com/cloudflare/workers-sdk/commit/4c85fe9976a3a2d60cf8508b9a090331027baf37) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - During the R2 validation, show `MAX_UPLOAD_SIZE` errors using MiB (consistently with the Cloudflare docs)
+
+* [#4577](https://github.com/cloudflare/workers-sdk/pull/4577) [`4c85fe99`](https://github.com/cloudflare/workers-sdk/commit/4c85fe9976a3a2d60cf8508b9a090331027baf37) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - During the Pages validation, show `MAX_UPLOAD_SIZE` errors using MiB (consistently with the Cloudflare docs)
+
+* Updated dependencies [[`eb08e2dc`](https://github.com/cloudflare/workers-sdk/commit/eb08e2dc3c0f09d16883f85201fbeb892e6f5a5b)]:
+  - miniflare@3.20231030.4
+
 ## 3.19.0
 
 ### Minor Changes

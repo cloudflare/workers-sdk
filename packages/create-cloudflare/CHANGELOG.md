@@ -1,5 +1,25 @@
 # create-cloudflare
 
+## 2.8.2
+
+### Patch Changes
+
+- [#4556](https://github.com/cloudflare/workers-sdk/pull/4556) [`dcd3c582`](https://github.com/cloudflare/workers-sdk/commit/dcd3c582f69fb948b13ce3dfe0406362c069422e) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-vue` from `3.8.0` to `3.9.0`
+
+* [#4557](https://github.com/cloudflare/workers-sdk/pull/4557) [`1a3e3ba4`](https://github.com/cloudflare/workers-sdk/commit/1a3e3ba434c6254d6bd86045c789315c2a3c461b) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-svelte` from `5.3.2` to `5.3.3`
+
+- [#4558](https://github.com/cloudflare/workers-sdk/pull/4558) [`ef03dc74`](https://github.com/cloudflare/workers-sdk/commit/ef03dc741c15c975940eef7bdd4be0b9d1d9737a) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-astro` from `4.5.1` to `4.5.2`
+
+* [#4564](https://github.com/cloudflare/workers-sdk/pull/4564) [`d99bd421`](https://github.com/cloudflare/workers-sdk/commit/d99bd4214c626794f018c70f43eeac92277a41f3) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `@angular/create` from `17.0.5` to `17.0.6`
+
+- [#4565](https://github.com/cloudflare/workers-sdk/pull/4565) [`be9a296d`](https://github.com/cloudflare/workers-sdk/commit/be9a296db10ac46e4d56367c89647791858ef500) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-qwik` from `1.2.19` to `1.3.0`
+
+* [#4572](https://github.com/cloudflare/workers-sdk/pull/4572) [`39d77323`](https://github.com/cloudflare/workers-sdk/commit/39d77323932c28641011169836213950e3a8ebc6) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `gatsby` from `5.12.11` to `5.12.12`
+
+- [#4575](https://github.com/cloudflare/workers-sdk/pull/4575) [`bb116f60`](https://github.com/cloudflare/workers-sdk/commit/bb116f60b322881f352ff2bd173feb722bdf87ea) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-next-app` from `14.0.3` to `14.0.4`
+
+* [#4579](https://github.com/cloudflare/workers-sdk/pull/4579) [`cccd56b8`](https://github.com/cloudflare/workers-sdk/commit/cccd56b83aa5eed4b1f0d0c171e47ef2db7d9861) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Don't show `cd` instructions when the user is creating a project in the current directory
+
 ## 2.8.1
 
 ### Patch Changes

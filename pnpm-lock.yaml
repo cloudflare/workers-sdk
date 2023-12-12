@@ -133,7 +133,7 @@ importers:
         specifier: ^7.0.0
         version: 7.0.0
       miniflare:
-        specifier: 3.20231030.3
+        specifier: 3.20231030.4
         version: link:../../packages/miniflare
       undici:
         specifier: ^5.23.0
