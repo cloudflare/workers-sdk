@@ -13,7 +13,13 @@ import {
 	npmInstall,
 	runCommand,
 } from "helpers/command";
-import { readFile, readJSON, writeFile, writeJSON } from "helpers/files";
+import {
+	appendFile,
+	readFile,
+	readJSON,
+	writeFile,
+	writeJSON,
+} from "helpers/files";
 import { detectPackageManager } from "helpers/packages";
 import { chooseAccount } from "./common";
 import { copyTemplateFiles } from "./templateMap";
@@ -34,6 +40,29 @@ export const runWorkersGenerator = async (ctx: C3Context) => {
 	await installWorkersTypes(ctx);
 	await updateFiles(ctx);
 };
+
+export async function createWranglerToml(ctx: C3Context) {
+	if (ctx.template.platform !== "workers") {
+		return;
+	}
+
+	// The formatting below is ugly, but necessary to avoid formatting the output file
+	const wranglerTomlPath = resolve(ctx.project.path, "wrangler.toml");
+	const wranglerToml = `name = "${ctx.project.name}"
+main = "src/index.ts"
+compatibility_date = "${await getWorkerdCompatibilityDate()}"
+  `;
+	writeFile(wranglerTomlPath, wranglerToml);
+}
+
+export async function appendToWranglerToml(ctx: C3Context, content: string) {
+	if (ctx.template.platform !== "workers") {
+		return;
+	}
+
+	const wranglerTomlPath = resolve(ctx.project.path, "wrangler.toml");
+	appendFile(wranglerTomlPath, content);
+}
 
 async function copyExistingWorkerFiles(ctx: C3Context) {
 	await chooseAccount(ctx);
@@ -103,17 +132,6 @@ async function updateFiles(ctx: C3Context) {
 		pkgJson.name = ctx.project.name;
 	}
 	writeJSON(pkgJsonPath, pkgJson);
-
-	// Update wrangler.toml with name and compat date
-	const wranglerTomlPath = resolve(ctx.project.path, "wrangler.toml");
-	let wranglerToml = readFile(wranglerTomlPath);
-	wranglerToml = wranglerToml
-		.replace(/^name\s*=\s*"<TBD>"/m, `name = "${ctx.project.name}"`)
-		.replace(
-			/^compatibility_date\s*=\s*"<TBD>"/m,
-			`compatibility_date = "${await getWorkerdCompatibilityDate()}"`
-		);
-	writeFile(wranglerTomlPath, wranglerToml);
 }
 
 async function installWorkersTypes(ctx: C3Context) {

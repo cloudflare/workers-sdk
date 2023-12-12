@@ -23,20 +23,25 @@ export type C3Context = {
 		name: string;
 		path: string;
 	};
-	// Once refactor is complete, template will be required
 	template: TemplateConfig;
 	framework?: {
 		config: FrameworkConfig;
 		args: string[];
 		commitMessage?: string;
 	};
-	deployedUrl?: string;
+	deployment: DeploymentInfo;
 	account?: {
 		id: string;
 		name: string;
 	};
 	originalCWD: string;
 	gitRepoAlreadyExisted: boolean;
+};
+
+type DeploymentInfo = {
+	url?: string;
+	queues: Record<string, string>;
+	kvNamespaces: Record<string, string>;
 };
 
 type UpdaterPackageScript = (cmd: string) => string;

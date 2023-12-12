@@ -12,6 +12,14 @@ export const writeFile = (path: string, content: string) => {
 	}
 };
 
+export const appendFile = (path: string, content: string) => {
+	try {
+		fs.appendFileSync(path, content);
+	} catch (error) {
+		crash(error as string);
+	}
+};
+
 export const readFile = (path: string) => {
 	try {
 		return fs.readFileSync(path, "utf-8");

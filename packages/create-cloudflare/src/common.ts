@@ -152,6 +152,12 @@ export const offerToDeploy = async (ctx: C3Context) => {
 
 	if (!ctx.args.deploy) return;
 
+	// initialize a deployment object in context
+	ctx.deployment = {
+		queues: {},
+		kvNamespaces: {},
+	};
+
 	const loginSuccess = await wranglerLogin();
 	if (!loginSuccess) return;
 
@@ -198,17 +204,17 @@ export const runDeploy = async (ctx: C3Context) => {
 	const deployedUrlRegex = /https:\/\/.+\.(pages|workers)\.dev/;
 	const deployedUrlMatch = result.match(deployedUrlRegex);
 	if (deployedUrlMatch) {
-		ctx.deployedUrl = deployedUrlMatch[0];
+		ctx.deployment.url = deployedUrlMatch[0];
 	} else {
 		crash("Failed to find deployment url.");
 	}
 
 	// if a pages url (<sha1>.<project>.pages.dev), remove the sha1
-	if (ctx.deployedUrl?.endsWith(".pages.dev")) {
-		const [proto, hostname] = ctx.deployedUrl.split("://");
+	if (ctx.deployment.url?.endsWith(".pages.dev")) {
+		const [proto, hostname] = ctx.deployment.url.split("://");
 		const hostnameWithoutSHA1 = hostname.split(".").slice(-3).join("."); // only keep the last 3 parts (discard the 4th, i.e. the SHA1)
 
-		ctx.deployedUrl = `${proto}://${hostnameWithoutSHA1}`;
+		ctx.deployment.url = `${proto}://${hostnameWithoutSHA1}`;
 	}
 };
 
@@ -284,12 +290,12 @@ export const printSummary = async (ctx: C3Context) => {
 		[`Stuck? Join us at`, `https://discord.gg/cloudflaredev`],
 	];
 
-	if (ctx.deployedUrl) {
+	if (ctx.deployment.url) {
 		const msg = [
 			`${gray(shapes.leftT)}`,
 			`${bgGreen(" SUCCESS ")}`,
 			`${dim(`View your deployed application at`)}`,
-			`${blue(ctx.deployedUrl)}`,
+			`${blue(ctx.deployment.url)}`,
 		].join(" ");
 		logRaw(msg);
 	} else {
@@ -314,17 +320,37 @@ export const printSummary = async (ctx: C3Context) => {
 	});
 	newline();
 
-	if (ctx.deployedUrl) {
-		const success = await poll(ctx.deployedUrl);
+	if (ctx.deployment.url) {
+		const success = await poll(ctx.deployment.url);
 		if (success) {
 			if (ctx.args.open) {
-				await openInBrowser(ctx.deployedUrl);
+				await openInBrowser(ctx.deployment.url);
 			}
 		}
 	}
 	endSection("See you again soon!");
 	process.exit(0);
 };
+
+// const printBindings = (ctx: C3Context) => {
+// 	const { queues } = ctx.deployment.queues;
+
+// 	if (Object.keys(queues).length > 0) {
+// 		const header = [`${gray(shapes.leftT)}`, `${brandColor("Queues")}`].join(
+// 			" "
+// 		);
+// 		logRaw(header);
+
+// 		const queueLines = Object.entries(ctx.deployment.queues).map(
+// 			([boundVariable, queue]) => [
+// 				`${gray(shapes.leftT)}`,
+// 				boundVariable,
+// 				`${dim(queue)}`,
+// 			]
+// 		);
+// 		logRaw(queueLines.join(" "));
+// 	}
+// };
 
 export const offerGit = async (ctx: C3Context) => {
 	const gitInstalled = await isGitInstalled();
