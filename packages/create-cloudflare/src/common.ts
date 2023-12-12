@@ -254,9 +254,9 @@ export const printSummary = async (ctx: PagesGeneratorContext) => {
 	const dirRelativePath = relative(ctx.originalCWD, ctx.project.path);
 
 	const nextSteps = [
-		...(dirRelativePath
+		dirRelativePath
 			? [`Navigate to the new directory`, `cd ${dirRelativePath}`]
-			: []),
+			: [],
 		[
 			`Run the development server`,
 			quoteShellArgs([
