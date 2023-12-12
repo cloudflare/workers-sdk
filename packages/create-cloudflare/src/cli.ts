@@ -11,6 +11,7 @@ import { parseArgs, processArgument } from "helpers/args";
 import { C3_DEFAULTS } from "helpers/cli";
 import { runCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packages";
+import { generateTypes } from "helpers/wrangler";
 import semver from "semver";
 import { version } from "../package.json";
 import { bindResources } from "./bindings";
@@ -117,6 +118,7 @@ const runTemplate = async (ctx: C3Context) => {
 	await offerToDeploy(ctx);
 	await bindResources(ctx);
 	await createProject(ctx);
+	await generateTypes(ctx);
 	await runDeploy(ctx);
 
 	// Summary

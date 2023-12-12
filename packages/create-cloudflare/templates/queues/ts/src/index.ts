@@ -11,11 +11,6 @@
  * Learn more at https://developers.cloudflare.com/workers/
  */
 
-export interface Env {
-	// Example binding to a Queue. Learn more at https://developers.cloudflare.com/queues/javascript-apis/
-	MY_QUEUE: Queue;
-}
-
 export default {
 	// Our fetch handler is invoked on a HTTP request: we can send a message to a queue
 	// during (or after) a request.
