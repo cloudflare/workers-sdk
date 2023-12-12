@@ -56,16 +56,15 @@ export const runPagesGenerator = async (ctx: C3Context) => {
 	if (configure) {
 		await configure({ ...ctx });
 	}
+	chdir(ctx.project.path);
+
+	// Install wrangler so that the dev/deploy commands work
+	await installWrangler();
 	await updatePackageScripts(ctx);
 };
 
 // Add/Update commands in the `scripts` section of package.json
 const updatePackageScripts = async (ctx: C3Context) => {
-	chdir(ctx.project.path);
-
-	// Install wrangler so that the dev/deploy commands work
-	await installWrangler();
-
 	const { getPackageScripts } = ctx.framework?.config ?? {};
 	const packageScripts = getPackageScripts ? await getPackageScripts() : {};
 	if (packageScripts) {

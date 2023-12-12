@@ -14,6 +14,7 @@ import { runCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packages";
 import semver from "semver";
 import { version } from "../package.json";
+import { bindResources } from "./bindings";
 import {
 	gitCommit,
 	isInsideGitRepo,
@@ -26,7 +27,7 @@ import {
 } from "./common";
 import { createProject, runPagesGenerator } from "./pages";
 import { selectTemplate } from "./templateMap";
-import { runWorkersGenerator } from "./workers";
+import { createWranglerToml, runWorkersGenerator } from "./workers";
 import type { C3Args, C3Context } from "types";
 
 const { npm } = detectPackageManager();
@@ -89,6 +90,10 @@ export const runCli = async (args: Partial<C3Args>) => {
 		template,
 		originalCWD,
 		gitRepoAlreadyExisted: await isInsideGitRepo(dirname(path)),
+		deployment: {
+			queues: {},
+			kvNamespaces: {},
+		},
 	};
 
 	await runTemplate(ctx);
@@ -103,11 +108,15 @@ const runTemplate = async (ctx: C3Context) => {
 	}
 
 	await offerGit(ctx);
+	await createWranglerToml(ctx);
+	// TODO: this needs to be moved to after bindings since that might
+	// change wrangler.toml
 	await gitCommit(ctx);
 	endSection(`Application configured`);
 
 	// Deploy
 	await offerToDeploy(ctx);
+	await bindResources(ctx);
 	await createProject(ctx);
 	await runDeploy(ctx);
 

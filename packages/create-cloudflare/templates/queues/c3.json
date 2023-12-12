@@ -15,7 +15,9 @@
 		"queues": [
 			{
 				"boundVariable": "MY_QUEUE",
-				"description": "A simple queue for demo purposes"
+				"defaultValue": "my-queue",
+				"producer": true,
+				"consumer": true
 			}
 		]
 	}

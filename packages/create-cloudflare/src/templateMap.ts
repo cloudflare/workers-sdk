@@ -11,12 +11,17 @@ import type { C3Args, C3Context } from "types";
 
 type BindingInfo = {
 	boundVariable: string;
-	description: string;
+	defaultValue: string;
+};
+
+export type QueueBindingInfo = BindingInfo & {
+	producer: boolean;
+	consumer: boolean;
 };
 
 type BindingsDefinition = {
-	kvNamespaces: BindingInfo;
-	queues: BindingInfo;
+	kvNamespaces: BindingInfo[];
+	queues: QueueBindingInfo[];
 };
 
 // A template can have a number of variants, usually js/ts
