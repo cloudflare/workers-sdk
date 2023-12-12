@@ -50,6 +50,9 @@ export interface UnstableDevOptions {
 		bucket_name: string;
 		preview_bucket_name?: string;
 	}[];
+	ai?: {
+		binding: string;
+	};
 	moduleRoot?: string;
 	rules?: Rule[];
 	logLevel?: "none" | "info" | "error" | "log" | "warn" | "debug"; // Specify logging level  [choices: "debug", "info", "log", "warn", "error", "none"] [default: "log"]

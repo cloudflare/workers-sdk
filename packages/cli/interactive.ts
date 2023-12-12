@@ -13,6 +13,7 @@ const leftT = gray(shapes.leftT);
 export type Option = {
 	label: string;
 	value: string;
+	hidden?: boolean;
 };
 
 export type BasePromptConfig = {
@@ -69,7 +70,6 @@ export const inputPrompt = async (promptConfig: PromptConfig) => {
 	if (promptConfig.type === "select") {
 		prompt = new SelectPrompt({
 			...promptConfig,
-			options: (promptConfig as SelectPromptConfig).options,
 			initialValue: String(promptConfig.defaultValue),
 			render() {
 				return dispatchRender(this);
@@ -187,7 +187,10 @@ const getSelectRenderers = (config: SelectPromptConfig) => {
 
 		return [
 			`${blCorner} ${bold(question)} ${dim(helpText)}`,
-			`${options.map(renderOption).join(`\n`)}`,
+			`${options
+				.filter((o) => !o.hidden)
+				.map(renderOption)
+				.join(`\n`)}`,
 			``, // extra line for readability
 		];
 	};

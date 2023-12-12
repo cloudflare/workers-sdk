@@ -34,6 +34,18 @@ export const TIME_NOW = 1000;
 // Expiration value to signal a key that will expire in the future
 export const TIME_FUTURE = 1500;
 
+function sqlStmts(object: MiniflareDurableObjectControlStub) {
+	return {
+		getBlobIdByKey: async (key: string): Promise<string | undefined> => {
+			const rows = await object.sqlQuery<{ blob_id: string }>(
+				"SELECT blob_id FROM _mf_entries WHERE key = ?",
+				key
+			);
+			return rows[0]?.blob_id;
+		},
+	};
+}
+
 interface Context extends MiniflareTestContext {
 	ns: string;
 	kv: Namespaced<ReplaceWorkersTypes<KVNamespace>>; // :D
@@ -160,8 +172,11 @@ test("put: puts empty value", async (t) => {
 	t.is(value, "");
 });
 test("put: overrides existing keys", async (t) => {
-	const { kv } = t.context;
+	const { kv, ns, object } = t.context;
+	const stmts = sqlStmts(object);
 	await kv.put("key", "value1");
+	const blobId = await stmts.getBlobIdByKey(`${ns}key`);
+	assert(blobId !== undefined);
 	await kv.put("key", "value2", {
 		expiration: TIME_FUTURE,
 		metadata: { testing: true },
@@ -169,6 +184,15 @@ test("put: overrides existing keys", async (t) => {
 	const result = await kv.getWithMetadata("key");
 	t.is(result.value, "value2");
 	t.deepEqual(result.metadata, { testing: true });
+
+	// Check deletes old blob
+	await object.waitForFakeTasks();
+	t.is(await object.getBlob(blobId), null);
+
+	// Check created new blob
+	const newBlobId = await stmts.getBlobIdByKey(`${ns}key`);
+	assert(newBlobId !== undefined);
+	t.not(blobId, newBlobId);
 });
 test("put: keys are case-sensitive", async (t) => {
 	const { kv } = t.context;

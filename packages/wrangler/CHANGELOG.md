@@ -1,5 +1,46 @@
 # wrangler
 
+## 3.19.0
+
+### Minor Changes
+
+- [#4547](https://github.com/cloudflare/workers-sdk/pull/4547) [`86c81ff0`](https://github.com/cloudflare/workers-sdk/commit/86c81ff0d59e79d2d33f176f69a7c2d1dcd91e02) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: listen on IPv4 loopback only by default on Windows
+
+  Due to a [known issue](https://github.com/cloudflare/workerd/issues/1408), `workerd` will only listen on the IPv4 loopback address `127.0.0.1` when it's asked to listen on `localhost`. On Node.js > 17, `localhost` will resolve to the IPv6 loopback address, meaning requests to `workerd` would fail. This change switches to using the IPv4 loopback address throughout Wrangler on Windows, while [workerd#1408](https://github.com/cloudflare/workerd/issues/1408) gets fixed.
+
+* [#4535](https://github.com/cloudflare/workers-sdk/pull/4535) [`29df8e17`](https://github.com/cloudflare/workers-sdk/commit/29df8e17545bf3926b6d61678b596be809d40c6d) Thanks [@mrbbot](https://github.com/mrbbot)! - Reintroduces some internal refactorings of wrangler dev servers (including `wrangler dev`, `wrangler dev --remote`, and `unstable_dev()`).
+
+  These changes were released in 3.13.0 and reverted in 3.13.1 -- we believe the changes are now more stable and ready for release again.
+
+  There are no changes required for developers to opt-in. Improvements include:
+
+  - fewer 'address in use' errors upon reloads
+  - upon config/source file changes, requests are buffered to guarantee the response is from the new version of the Worker
+
+### Patch Changes
+
+- [#4521](https://github.com/cloudflare/workers-sdk/pull/4521) [`6c5bc704`](https://github.com/cloudflare/workers-sdk/commit/6c5bc704c5a13aab58b765c57b700204bc0830bf) Thanks [@zebp](https://github.com/zebp)! - fix: init from dash specifying explicit usage model in wrangler.toml for standard users
+
+* [#4550](https://github.com/cloudflare/workers-sdk/pull/4550) [`63708a94`](https://github.com/cloudflare/workers-sdk/commit/63708a94fb7a055bf15fa963f2d598b47b11d3c0) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: validate `Host` and `Orgin` headers where appropriate
+
+  `Host` and `Origin` headers are now checked when connecting to the inspector and Miniflare's magic proxy. If these don't match what's expected, the request will fail.
+
+* Updated dependencies [[`71fb0b86`](https://github.com/cloudflare/workers-sdk/commit/71fb0b86cf0ed81cc29ad71792edbba3a79ba87c), [`63708a94`](https://github.com/cloudflare/workers-sdk/commit/63708a94fb7a055bf15fa963f2d598b47b11d3c0)]:
+  - miniflare@3.20231030.3
+
+## 3.18.0
+
+### Minor Changes
+
+- [#4532](https://github.com/cloudflare/workers-sdk/pull/4532) [`311ffbd5`](https://github.com/cloudflare/workers-sdk/commit/311ffbd5064f8301ac6f0311bbe5630897923b93) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: change `wrangler (pages) dev` to listen on `localhost` by default
+
+  Previously, Wrangler listened on all interfaces (`*`) by default. This change switches `wrangler (pages) dev` to just listen on local interfaces. Whilst this is technically a breaking change, we've decided the security benefits outweigh the potential disruption caused. If you need to access your dev server from another device on your network, you can use `wrangler (pages) dev --ip *` to restore the previous behaviour.
+
+### Patch Changes
+
+- Updated dependencies [[`1b348782`](https://github.com/cloudflare/workers-sdk/commit/1b34878287e3c98e8743e0a9c30b860107d4fcbe)]:
+  - miniflare@3.20231030.2
+
 ## 3.17.1
 
 ### Patch Changes

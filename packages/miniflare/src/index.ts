@@ -62,7 +62,6 @@ import {
 	getDirectSocketName,
 	getGlobalServices,
 	kProxyNodeBinding,
-	maybeGetSitesManifestModule,
 	normaliseDurableObject,
 } from "./plugins";
 import {
@@ -104,6 +103,7 @@ import {
 	LogLevel,
 	Mutex,
 	SharedHeaders,
+	SiteBindings,
 } from "./workers";
 import { _formatZodError } from "./zod-format";
 
@@ -996,6 +996,7 @@ export class Miniflare {
 		for (let i = 0; i < allWorkerOpts.length; i++) {
 			const workerOpts = allWorkerOpts[i];
 			const workerName = workerOpts.core.name ?? "";
+			const isModulesWorker = Boolean(workerOpts.core.modules);
 
 			// Collect all bindings from this worker
 			const workerBindings: Worker_Binding[] = [];
@@ -1007,7 +1008,23 @@ export class Miniflare {
 				const pluginBindings = await plugin.getBindings(workerOpts[key], i);
 				if (pluginBindings !== undefined) {
 					for (const binding of pluginBindings) {
-						workerBindings.push(binding);
+						// If this is the Workers Sites manifest, we need to add it as a
+						// module for modules workers. For all other bindings, and in
+						// service workers, just add to worker bindings.
+						if (
+							key === "kv" &&
+							binding.name === SiteBindings.JSON_SITE_MANIFEST &&
+							isModulesWorker
+						) {
+							assert("json" in binding && binding.json !== undefined);
+							additionalModules.push({
+								name: SiteBindings.JSON_SITE_MANIFEST,
+								text: binding.json,
+							});
+						} else {
+							workerBindings.push(binding);
+						}
+
 						// Only `workerd` native bindings need to be proxied, the rest are
 						// already supported by Node.js (e.g. json, text/data blob, wasm)
 						if (isNativeTargetBinding(binding)) {
@@ -1031,12 +1048,6 @@ export class Miniflare {
 								});
 							}
 						}
-					}
-
-					if (key === "kv") {
-						// Add "__STATIC_CONTENT_MANIFEST" module if sites enabled
-						const module = maybeGetSitesManifestModule(pluginBindings);
-						if (module !== undefined) additionalModules.push(module);
 					}
 				}
 			}

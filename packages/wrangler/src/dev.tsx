@@ -326,6 +326,9 @@ export type AdditionalDevProps = {
 		preview_bucket_name?: string;
 		jurisdiction?: string;
 	}[];
+	ai?: {
+		binding: string;
+	};
 	d1Databases?: Environment["d1_databases"];
 	processEntrypoint?: boolean;
 	additionalModules?: CfModule[];
@@ -832,6 +835,7 @@ function getBindingsAndAssetPaths(args: StartDevOptions, configParam: Config) {
 		r2: args.r2,
 		services: args.services,
 		d1Databases: args.d1Databases,
+		ai: args.ai,
 	});
 
 	const maskedVars = maskVars(bindings, configParam);
@@ -893,7 +897,7 @@ function getBindings(
 		wasm_modules: configParam.wasm_modules,
 		text_blobs: configParam.text_blobs,
 		browser: configParam.browser,
-		ai: configParam.ai,
+		ai: configParam.ai || args.ai,
 		data_blobs: configParam.data_blobs,
 		durable_objects: {
 			bindings: [

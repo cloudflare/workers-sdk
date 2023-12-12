@@ -18,6 +18,10 @@ export interface MiniflareDurableObjectEnv {
 	// NOTE: this binding is optional so simulators can run standalone, without
 	// a Node.js loopback server. In this case, logging is a no-op.
 	[SharedBindings.MAYBE_SERVICE_LOOPBACK]?: Fetcher;
+	// If set to `true`, Miniflare enables additional endpoints in Durable Objects
+	// for testing. Note these endpoints allow anyone with access to the Miniflare
+	// dev server to run arbitrary SQL queries and read arbitrary blobs.
+	[SharedBindings.MAYBE_JSON_ENABLE_CONTROL_ENDPOINTS]?: boolean;
 }
 
 export interface MiniflareDurableObjectCfControlOp {
@@ -119,8 +123,10 @@ export abstract class MiniflareDurableObject<
 	async fetch(req: Request<unknown, MiniflareDurableObjectCf>) {
 		// Allow control of object internals by specifying operations in the `cf`
 		// object. Used by tests to update fake time, and access internal storage.
-		const controlOp = req?.cf?.miniflare?.controlOp;
-		if (controlOp !== undefined) return this.#handleControlOp(controlOp);
+		if (this.env[SharedBindings.MAYBE_JSON_ENABLE_CONTROL_ENDPOINTS] === true) {
+			const controlOp = req?.cf?.miniflare?.controlOp;
+			if (controlOp !== undefined) return this.#handleControlOp(controlOp);
+		}
 
 		// Each regular request to a `MiniflareDurableObject` includes the object
 		// ID's name, so we can create the `BlobStore`. Note, we could just use the

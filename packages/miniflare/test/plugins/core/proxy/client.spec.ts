@@ -1,5 +1,6 @@
 import assert from "assert";
 import { Blob } from "buffer";
+import http from "http";
 import { text } from "stream/consumers";
 import { ReadableStream } from "stream/web";
 import util from "util";
@@ -13,6 +14,7 @@ import {
 	ReplaceWorkersTypes,
 	Response,
 	WebSocketPair,
+	fetch,
 } from "miniflare";
 
 // This file tests API proxy edge cases. Cache, D1, Durable Object and R2 tests
@@ -184,7 +186,7 @@ test("ProxyClient: stack traces don't include internal implementation", async (t
 
 	const mf = new Miniflare({
 		modules: true,
-		script: `export class DurableObject {}    
+		script: `export class DurableObject {}
     export default {
       fetch() { return new Response(null, { status: 404 }); }
     }`,
@@ -264,4 +266,37 @@ test("ProxyClient: can `JSON.stringify()` proxies", async (t) => {
 		uploaded: object.uploaded.toISOString(),
 		version: object.version,
 	});
+});
+
+test("ProxyServer: prevents unauthorised access", async (t) => {
+	const mf = new Miniflare({ script: nullScript });
+	t.teardown(() => mf.dispose());
+	const url = await mf.ready;
+
+	// Check validates `Host` header
+	const statusPromise = new DeferredPromise<number>();
+	const req = http.get(
+		url,
+		{ setHost: false, headers: { "MF-Op": "GET", Host: "localhost" } },
+		(res) => statusPromise.resolve(res.statusCode ?? 0)
+	);
+	req.on("error", (error) => statusPromise.reject(error));
+	t.is(await statusPromise, 401);
+
+	// Check validates `MF-Op-Secret` header
+	let res = await fetch(url, {
+		headers: { "MF-Op": "GET" }, // (missing)
+	});
+	t.is(res.status, 401);
+	await res.arrayBuffer(); // (drain)
+	res = await fetch(url, {
+		headers: { "MF-Op": "GET", "MF-Op-Secret": "aaaa" }, // (too short)
+	});
+	t.is(res.status, 401);
+	await res.arrayBuffer(); // (drain)
+	res = await fetch(url, {
+		headers: { "MF-Op": "GET", "MF-Op-Secret": "a".repeat(32) }, // (wrong)
+	});
+	t.is(res.status, 401);
+	await res.arrayBuffer(); // (drain)
 });

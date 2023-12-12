@@ -52,6 +52,7 @@ import {
 	convertModuleDefinition,
 	withSourceURL,
 } from "./modules";
+import { PROXY_SECRET } from "./proxy";
 import { ServiceDesignatorSchema } from "./services";
 
 // `workerd`'s `trustBrowserCas` should probably be named `trustSystemCas`.
@@ -636,6 +637,10 @@ export function getGlobalServices({
 		{
 			name: CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY,
 			durableObjectNamespace: { className: "ProxyServer" },
+		},
+		{
+			name: CoreBindings.DATA_PROXY_SECRET,
+			data: PROXY_SECRET,
 		},
 		// Add `proxyBindings` here, they'll be added to the `ProxyServer` `env`
 		...proxyBindings,

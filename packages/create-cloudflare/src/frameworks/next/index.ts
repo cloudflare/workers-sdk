@@ -132,7 +132,7 @@ export const writeEslintrc = async (
 	eslintConfig.extends ??= [];
 	eslintConfig.extends.push("plugin:eslint-plugin-next-on-pages/recommended");
 
-	writeJSON(`${ctx.project.name}/.eslintrc.json`, eslintConfig, 2);
+	writeJSON(`${ctx.project.name}/.eslintrc.json`, eslintConfig);
 };
 
 const config: FrameworkConfig = {

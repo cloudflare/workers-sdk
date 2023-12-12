@@ -6,6 +6,7 @@ export const CoreHeaders = {
 	ROUTE_OVERRIDE: "MF-Route-Override",
 
 	// API Proxy
+	OP_SECRET: "MF-Op-Secret",
 	OP: "MF-Op",
 	OP_TARGET: "MF-Op-Target",
 	OP_KEY: "MF-Op-Key",
@@ -25,6 +26,7 @@ export const CoreBindings = {
 	JSON_LOG_LEVEL: "MINIFLARE_LOG_LEVEL",
 	DATA_LIVE_RELOAD_SCRIPT: "MINIFLARE_LIVE_RELOAD_SCRIPT",
 	DURABLE_OBJECT_NAMESPACE_PROXY: "MINIFLARE_PROXY",
+	DATA_PROXY_SECRET: "MINIFLARE_PROXY_SECRET",
 } as const;
 
 export const ProxyOps = {

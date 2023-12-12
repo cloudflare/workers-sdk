@@ -262,8 +262,11 @@ export function r2(r2Yargs: CommonYargsArgv) {
 						if (objectSize > MAX_UPLOAD_SIZE) {
 							throw new FatalError(
 								`Error: Wrangler only supports uploading files up to ${prettyBytes(
-									MAX_UPLOAD_SIZE
-								)} in size\n${key} is ${prettyBytes(objectSize)} in size`,
+									MAX_UPLOAD_SIZE,
+									{ binary: true }
+								)} in size\n${key} is ${prettyBytes(objectSize, {
+									binary: true,
+								})} in size`,
 								1
 							);
 						}

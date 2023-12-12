@@ -39,6 +39,7 @@ import { initHandler, initOptions } from "./init";
 import { kvNamespace, kvKey, kvBulk } from "./kv";
 import { logBuildFailure, logger } from "./logger";
 import * as metrics from "./metrics";
+
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
 import { pages } from "./pages";
 import { formatMessage, ParseError } from "./parse";
@@ -46,6 +47,12 @@ import { pubSubCommands } from "./pubsub/pubsub-commands";
 import { queues } from "./queues/cli/commands";
 import { r2 } from "./r2";
 import { secret, secretBulkHandler, secretBulkOptions } from "./secret";
+import {
+	captureGlobalException,
+	addBreadcrumb,
+	closeSentry,
+	setupSentry,
+} from "./sentry";
 import { tailOptions, tailHandler } from "./tail";
 import { generateTypes } from "./type-generation";
 import { printWranglerBanner } from "./update-check";
@@ -275,7 +282,7 @@ export function createCLIParser(argv: string[]) {
 	// generate
 	wrangler.command(
 		"generate [name] [template]",
-		"✨ Generate a new Worker project from an existing Worker template. See https://github.com/cloudflare/templates",
+		"✨ Generate a new Worker project from an existing Worker template. See https://github.com/cloudflare/workers-sdk/tree/main/templates",
 		generateOptions,
 		generateHandler
 	);
@@ -701,6 +708,9 @@ export function createCLIParser(argv: string[]) {
 }
 
 export async function main(argv: string[]): Promise<void> {
+	setupSentry();
+	addBreadcrumb(`wrangler ${argv.join(" ")}`);
+
 	const wrangler = createCLIParser(argv);
 	try {
 		await wrangler.parse();
@@ -755,9 +765,11 @@ export async function main(argv: string[]): Promise<void> {
 				`${fgGreenColor}%s${resetColor}`,
 				"If you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose"
 			);
+			await captureGlobalException(e);
 		}
 		throw e;
 	} finally {
+		await closeSentry();
 		// In the bootstrapper script `bin/wrangler.js`, we open an IPC channel, so
 		// IPC messages from this process are propagated through the bootstrapper.
 		// Make sure this channel is closed once it's no longer needed, so we can

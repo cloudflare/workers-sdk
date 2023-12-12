@@ -1,5 +1,8 @@
 import Module from "node:module";
-import { _initialiseInstanceRegistry } from "../dist/src/index.js";
+import {
+	_initialiseInstanceRegistry,
+	_enableControlEndpoints,
+} from "../dist/src/index.js";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -19,6 +22,8 @@ Module._resolveFilename = function (spec, ...args) {
 const registry = _initialiseInstanceRegistry();
 const bigSeparator = "=".repeat(80);
 const separator = "-".repeat(80);
+
+_enableControlEndpoints();
 
 // `process.on("exit")` is more like `worker_thread.on(`exit`)` here. It will
 // be called once AVA's finished running tests and `after` hooks. Note we can't

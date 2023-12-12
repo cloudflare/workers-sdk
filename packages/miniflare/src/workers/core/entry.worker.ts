@@ -82,19 +82,13 @@ function maybePrettifyError(request: Request, response: Response, env: Env) {
 		return response;
 	}
 
-	// Forward `Accept` and `User-Agent` headers if defined
-	const accept = request.headers.get("Accept");
-	const userAgent = request.headers.get("User-Agent");
-	const headers = new Headers();
-	if (accept !== null) headers.set("Accept", accept);
-	if (userAgent !== null) headers.set("User-Agent", userAgent);
-
 	return env[CoreBindings.SERVICE_LOOPBACK].fetch(
 		"http://localhost/core/error",
 		{
 			method: "POST",
-			headers,
+			headers: request.headers,
 			body: response.body,
+			cf: { prettyErrorOriginalUrl: request.url },
 		}
 	);
 }

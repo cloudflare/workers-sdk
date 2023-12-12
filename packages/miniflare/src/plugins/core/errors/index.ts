@@ -259,7 +259,7 @@ export async function handlePrettyErrorRequest(
 	// `cause` is usually more useful than the error itself, display that instead
 	// TODO(someday): would be nice if we could display both
 	const youch = new Youch(error.cause ?? error, {
-		url: request.url,
+		url: request.cf?.prettyErrorOriginalUrl ?? request.url,
 		method: request.method,
 		headers: Object.fromEntries(request.headers),
 	});

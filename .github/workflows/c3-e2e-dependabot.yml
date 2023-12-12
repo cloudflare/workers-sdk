@@ -66,13 +66,19 @@ jobs:
   # For dependabot versioning PRs we only want to run the e2es for the specifically bumped
   # framework (this is both for optimization and in order to reduce unnecessary flakiness)
   e2e-only-dependabot-bumped-framework:
+    # Note: please keep this job in sync with the e2e one
+    #       in .github/workflows/c3-e2e.yml
     needs: [get-dependabot-bumped-framework]
     name: ${{ format('Dependabot E2E ({0})', matrix.pm) }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        pm: [npm, pnpm, bun]
+        pm: [npm, pnpm, bun, yarn]
+      # include a single windows test with pnpm
+      include:
+        - os: windows-latest
+          pm: pnpm
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
