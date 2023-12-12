@@ -40,8 +40,13 @@ export const runWorkersGenerator = async (args: C3Args) => {
 		originalCWD,
 		gitRepoAlreadyExisted: await isInsideGitRepo(dirname(path)),
 	};
+	const { preexisting } = await getTemplate(ctx);
 
-	ctx.args.ts = await processArgument<boolean>(ctx.args, "ts", {
+	if (preexisting) {
+		ctx.args.ts = false;
+	}
+
+	await processArgument<boolean>(ctx.args, "ts", {
 		type: "confirm",
 		question: "Do you want to use TypeScript?",
 		label: "typescript",
@@ -60,9 +65,10 @@ export const runWorkersGenerator = async (args: C3Args) => {
 	await installWorkersTypes(ctx);
 	await gitCommit(ctx);
 	endSection("Dependencies Installed");
-
-	await offerToDeploy(ctx);
-	await runDeploy(ctx);
+	if (!preexisting) {
+		await offerToDeploy(ctx);
+		await runDeploy(ctx);
+	}
 
 	await printSummary(ctx);
 };
