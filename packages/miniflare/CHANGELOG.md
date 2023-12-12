@@ -1,5 +1,13 @@
 # miniflare
 
+## 3.20231030.4
+
+### Patch Changes
+
+- [#4448](https://github.com/cloudflare/workers-sdk/pull/4448) [`eb08e2dc`](https://github.com/cloudflare/workers-sdk/commit/eb08e2dc3c0f09d16883f85201fbeb892e6f5a5b) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: include request url and headers in pretty error page
+
+  This change ensures Miniflare's pretty error page includes the URL and headers of the incoming request, rather than Miniflare's internal request for the page.
+
 ## 3.20231030.3
 
 ### Patch Changes
