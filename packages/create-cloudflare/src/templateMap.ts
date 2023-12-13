@@ -19,10 +19,15 @@ export type QueueBindingInfo = BindingInfo & {
 	consumer: boolean;
 };
 
+export type D1BindingInfo = BindingInfo & {
+	seedFile: string;
+};
+
 type BindingsDefinition = {
 	kvNamespaces: BindingInfo[];
 	queues: QueueBindingInfo[];
-	r2Buckets: QueueBindingInfo[];
+	r2Buckets: BindingInfo[];
+	d1Databases: D1BindingInfo[];
 };
 
 // A template can have a number of variants, usually js/ts
@@ -77,6 +82,7 @@ export const getTemplateMap = async () => {
 		queues: await import("../templates/queues/c3.json"),
 		kv: await import("../templates/kv/c3.json"),
 		r2: await import("../templates/r2/c3.json"),
+		d1: await import("../templates/d1/c3.json"),
 		chatgptPlugin: await import("../templates/chatgptPlugin/c3.json"),
 		openapi: await import("../templates/openapi/c3.json"),
 		"pre-existing": await import("../templates/pre-existing/c3.json"),
