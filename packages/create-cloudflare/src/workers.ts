@@ -46,7 +46,7 @@ export const runWorkersGenerator = async (args: C3Args) => {
 		ctx.args.ts = false;
 	}
 
-	await processArgument<boolean>(ctx.args, "ts", {
+	ctx.args.ts = await processArgument<boolean>(ctx.args, "ts", {
 		type: "confirm",
 		question: "Do you want to use TypeScript?",
 		label: "typescript",
