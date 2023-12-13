@@ -3,8 +3,10 @@ import { inputPrompt } from "@cloudflare/cli/interactive";
 import {
 	createKvNamespace,
 	createQueue,
+	createR2Bucket,
 	fetchKvNamespaces,
 	fetchQueues,
+	fetchR2Buckets,
 } from "helpers/wrangler";
 import { validateQueueName } from "./validators";
 import { appendToWranglerToml } from "./workers";
@@ -26,7 +28,7 @@ export const bindResources = async (ctx: C3Context) => {
 		return;
 	}
 
-	const { queues, kvNamespaces } = bindingsConfig;
+	const { queues, kvNamespaces, r2Buckets } = bindingsConfig;
 	if (queues) {
 		for (const queue of queues) {
 			await bindQueue(ctx, queue);
@@ -36,6 +38,12 @@ export const bindResources = async (ctx: C3Context) => {
 	if (kvNamespaces) {
 		for (const kvNamespace of kvNamespaces) {
 			await bindKvNamespace(ctx, kvNamespace);
+		}
+	}
+
+	if (r2Buckets) {
+		for (const r2Bucket of r2Buckets) {
+			await bindR2Bucket(ctx, r2Bucket);
 		}
 	}
 };
@@ -76,7 +84,7 @@ const bindQueue = async (
 		question: `What would you like to name your queue?`,
 		defaultValue,
 		validate: validateQueueName,
-		label: "queue",
+		label: "name",
 	});
 
 	await createQueue(ctx, newQueueName);
@@ -144,7 +152,7 @@ const bindKvNamespace = async (
 		question: `What would you like to name your KV namespace?`,
 		defaultValue,
 		validate: validateQueueName,
-		label: "kv",
+		label: "name",
 	});
 
 	const id = await createKvNamespace(ctx, newNamespaceName);
@@ -158,6 +166,53 @@ const addKvBinding = async (ctx: C3Context, binding: string, id: string) => {
 [[kv_namespaces]]
 binding = "${binding}"
 id = "${id}"
+`
+	);
+};
+
+const bindR2Bucket = async (ctx: C3Context, bindingDefinition: BindingInfo) => {
+	const r2Buckets = await fetchR2Buckets(ctx);
+	const { boundVariable, defaultValue } = bindingDefinition;
+
+	if (r2Buckets.length > 0) {
+		const options = [
+			{ label: "Create a new KV namespace", value: "--create" },
+			...r2Buckets.map(({ name }) => ({ label: name, value: name })),
+		];
+
+		const selected = await inputPrompt({
+			type: "select",
+			question: `Which R2 bucket should be bound to \`${boundVariable}\`?`,
+			options: options,
+			label: "name",
+		});
+
+		if (selected !== "--create") {
+			await addR2Bucket(ctx, boundVariable, selected);
+			return;
+		}
+	}
+
+	const newName = await inputPrompt({
+		type: "text",
+		question: `What would you like to name your R2 bucket?`,
+		defaultValue,
+		// TODO: update this
+		validate: validateQueueName,
+		label: "kv",
+	});
+
+	await createR2Bucket(ctx, newName);
+	await addR2Bucket(ctx, boundVariable, newName);
+};
+
+const addR2Bucket = async (ctx: C3Context, binding: string, name: string) => {
+	await appendToWranglerToml(
+		ctx,
+		`
+[[r2_buckets]]
+binding = "${binding}"
+bucket_name = "${name}"
 `
 	);
 };
