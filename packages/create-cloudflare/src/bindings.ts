@@ -1,16 +1,24 @@
+import { join } from "path";
 import { crash } from "@cloudflare/cli";
 import { inputPrompt } from "@cloudflare/cli/interactive";
 import {
+	createD1Database,
 	createKvNamespace,
 	createQueue,
 	createR2Bucket,
+	d1Seed,
+	fetchD1Databases,
 	fetchKvNamespaces,
 	fetchQueues,
 	fetchR2Buckets,
 } from "helpers/wrangler";
 import { validateQueueName } from "./validators";
 import { appendToWranglerToml } from "./workers";
-import type { BindingInfo, QueueBindingInfo } from "./templateMap";
+import type {
+	BindingInfo,
+	D1BindingInfo,
+	QueueBindingInfo,
+} from "./templateMap";
 import type { C3Context } from "types";
 
 export const bindResources = async (ctx: C3Context) => {
@@ -28,7 +36,7 @@ export const bindResources = async (ctx: C3Context) => {
 		return;
 	}
 
-	const { queues, kvNamespaces, r2Buckets } = bindingsConfig;
+	const { queues, kvNamespaces, r2Buckets, d1Databases } = bindingsConfig;
 	if (queues) {
 		for (const queue of queues) {
 			await bindQueue(ctx, queue);
@@ -44,6 +52,16 @@ export const bindResources = async (ctx: C3Context) => {
 	if (r2Buckets) {
 		for (const r2Bucket of r2Buckets) {
 			await bindR2Bucket(ctx, r2Bucket);
+		}
+	}
+
+	if (d1Databases) {
+		for (const d1Database of d1Databases) {
+			const name = await bindD1Database(ctx, d1Database);
+			if (d1Database.seedFile) {
+				const seedFilePath = join(ctx.project.path, d1Database.seedFile);
+				await d1Seed(ctx, name, seedFilePath);
+			}
 		}
 	}
 };
@@ -213,6 +231,63 @@ const addR2Bucket = async (ctx: C3Context, binding: string, name: string) => {
 [[r2_buckets]]
 binding = "${binding}"
 bucket_name = "${name}"
+`
+	);
+};
+
+const bindD1Database = async (
+	ctx: C3Context,
+	bindingDefinition: D1BindingInfo
+) => {
+	const dbs = await fetchD1Databases(ctx);
+	const { boundVariable, defaultValue } = bindingDefinition;
+
+	if (dbs.length > 0) {
+		const options = [
+			{ label: "Create a new D1 database", value: "--create" },
+			...dbs.map(({ name, uuid }) => ({ label: name, value: uuid })),
+		];
+
+		const selected = await inputPrompt({
+			type: "select",
+			question: `Which D1 database should be bound to \`${boundVariable}\`?`,
+			options: options,
+			label: "db",
+		});
+
+		if (selected !== "--create") {
+			const selectedId = dbs.find((db) => db.name === selected)?.uuid;
+			await addD1Binding(ctx, boundVariable, selected, selectedId as string);
+			return selected;
+		}
+	}
+
+	const newName = await inputPrompt({
+		type: "text",
+		question: `What would you like to name your D1 database?`,
+		defaultValue,
+		validate: validateQueueName,
+		label: "name",
+	});
+
+	const { id, name } = await createD1Database(ctx, newName);
+	await addD1Binding(ctx, boundVariable, name, id);
+	return name;
+};
+
+const addD1Binding = async (
+	ctx: C3Context,
+	binding: string,
+	name: string,
+	id: string
+) => {
+	await appendToWranglerToml(
+		ctx,
+		`
+[[d1_databases]]
+binding = "${binding}"
+database_name = "${name}"
+database_id = "${id}"
 `
 	);
 };

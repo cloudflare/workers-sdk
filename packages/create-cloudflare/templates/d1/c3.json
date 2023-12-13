@@ -1,0 +1,23 @@
+{
+	"id": "d1",
+	"displayName": "Worker with D1",
+	"platform": "workers",
+	"languages": ["js", "ts"],
+	"copyFiles": {
+		"js": {
+			"path": "./js"
+		},
+		"ts": {
+			"path": "./ts"
+		}
+	},
+	"bindings": {
+		"d1Databases": [
+			{
+				"boundVariable": "DB",
+				"defaultValue": "my-queue",
+				"seedFile": "./data/Northwind.Sqlite3.create.sql"
+			}
+		]
+	}
+}
