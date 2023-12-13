@@ -1835,6 +1835,45 @@ addEventListener('fetch', event => {});`
 			}
 		`);
 		});
+
+		it("should source map validation errors", async () => {
+			writeWranglerToml();
+			fs.writeFileSync(
+				`index.ts`,
+				`interface Env {
+	THING: string;
+}
+x;
+export default {
+	async fetch() {
+		return new Response("body");
+	}
+}`
+			);
+			msw.use(
+				rest.put(
+					"*/accounts/:accountId/workers/scripts/:scriptName",
+					(_, res, ctx) => {
+						return res(
+							ctx.json(
+								createFetchResult(null, false, [
+									{
+										code: 10021,
+										message:
+											"Uncaught ReferenceError: x is not defined\n  at index.js:2:1\n",
+									},
+								])
+							)
+						);
+					}
+				)
+			);
+			mockSubDomainRequest();
+
+			await expect(runWrangler("deploy ./index.ts")).rejects.toMatchObject({
+				notes: [{ text: expect.stringContaining("index.ts:4:1") }, {}],
+			});
+		});
 	});
 
 	describe("asset upload", () => {
