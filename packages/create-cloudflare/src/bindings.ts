@@ -1,18 +1,23 @@
 import { crash } from "@cloudflare/cli";
 import { inputPrompt } from "@cloudflare/cli/interactive";
-import { createQueue, fetchQueues } from "helpers/wrangler";
+import {
+	createKvNamespace,
+	createQueue,
+	fetchKvNamespaces,
+	fetchQueues,
+} from "helpers/wrangler";
 import { validateQueueName } from "./validators";
 import { appendToWranglerToml } from "./workers";
-import type { QueueBindingInfo } from "./templateMap";
+import type { BindingInfo, QueueBindingInfo } from "./templateMap";
 import type { C3Context } from "types";
 
 export const bindResources = async (ctx: C3Context) => {
-	if (!ctx.account?.id) {
-		crash("Failed to read Cloudflare account.");
+	if (ctx.args.deploy === false) {
 		return;
 	}
 
-	if (ctx.args.deploy === false) {
+	if (!ctx.account?.id) {
+		crash("Failed to read Cloudflare account.");
 		return;
 	}
 
@@ -21,9 +26,17 @@ export const bindResources = async (ctx: C3Context) => {
 		return;
 	}
 
-	const { queues } = bindingsConfig;
-	for (const queue of queues) {
-		await bindQueue(ctx, queue);
+	const { queues, kvNamespaces } = bindingsConfig;
+	if (queues) {
+		for (const queue of queues) {
+			await bindQueue(ctx, queue);
+		}
+	}
+
+	if (kvNamespaces) {
+		for (const kvNamespace of kvNamespaces) {
+			await bindKvNamespace(ctx, kvNamespace);
+		}
 	}
 };
 
@@ -96,6 +109,55 @@ const addConsumerBinding = async (ctx: C3Context, queue: string) => {
 		`
 [[queues.consumers]]
 queue = "${queue}"
+`
+	);
+};
+
+const bindKvNamespace = async (
+	ctx: C3Context,
+	bindingDefinition: BindingInfo
+) => {
+	const namespaces = await fetchKvNamespaces(ctx);
+	const { boundVariable, defaultValue } = bindingDefinition;
+
+	if (namespaces.length > 0) {
+		const options = [
+			{ label: "Create a new KV namespace", value: "--create" },
+			...namespaces.map((ns) => ({ label: ns.title, value: ns.id })),
+		];
+
+		const selectedNs = await inputPrompt({
+			type: "select",
+			question: `Which KV namespace should be bound to \`${boundVariable}\`?`,
+			options: options,
+			label: "namespace",
+		});
+
+		if (selectedNs !== "--create") {
+			await addKvBinding(ctx, boundVariable, selectedNs);
+			return;
+		}
+	}
+
+	const newNamespaceName = await inputPrompt({
+		type: "text",
+		question: `What would you like to name your KV namespace?`,
+		defaultValue,
+		validate: validateQueueName,
+		label: "kv",
+	});
+
+	const id = await createKvNamespace(ctx, newNamespaceName);
+	await addKvBinding(ctx, boundVariable, id);
+};
+
+const addKvBinding = async (ctx: C3Context, binding: string, id: string) => {
+	await appendToWranglerToml(
+		ctx,
+		`
+[[kv_namespaces]]
+binding = "${binding}"
+id = "${id}"
 `
 	);
 };
