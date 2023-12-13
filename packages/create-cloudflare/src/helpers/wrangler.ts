@@ -1,6 +1,6 @@
 import { join } from "path";
 import { crash } from "@cloudflare/cli";
-import { brandColor, dim } from "@cloudflare/cli/colors";
+import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { runCommand } from "./command";
 import { writeFile } from "./files";
 import { detectPackageManager } from "./packages";
@@ -45,21 +45,10 @@ export const generateTypes = async (ctx: C3Context) => {
 	try {
 		// We need to use runCommand instead of `wrangler` here because
 		// this runs in unauthenticated contexts
-		const result = await runCommand([npx, "wrangler", "types"], {
+		await runCommand([npx, "wrangler", "types"], {
 			cwd: ctx.project.path,
 			silent: true,
 		});
-
-		if (!result) {
-			return;
-		}
-
-		const match = result.match(/(interface Env {(.|\n)*})/);
-		if (!match) {
-			return;
-		}
-
-		writeFile(join(ctx.project.path, "env.d.ts"), match[1]);
 	} catch (error) {
 		return crash("Failed to fetch queues. Please try deploying again later");
 	}
@@ -96,7 +85,7 @@ export const createQueue = async (ctx: C3Context, name: string) => {
 		await wrangler(
 			ctx,
 			["queues", "create", name],
-			`Creating queue ${name}`,
+			`Creating queue ${blue(name)}`,
 			`${brandColor("created")} ${dim(`via wrangler`)}`
 		);
 	} catch (error) {
@@ -130,7 +119,7 @@ export const createKvNamespace = async (ctx: C3Context, name: string) => {
 		const output = await wrangler(
 			ctx,
 			["kv:namespace", "create", name],
-			`Creating KV namespace ${name}`,
+			`Creating KV namespace ${blue(name)}`,
 			`${brandColor("created")} ${dim(`via wrangler`)}`
 		);
 
@@ -140,6 +129,39 @@ export const createKvNamespace = async (ctx: C3Context, name: string) => {
 		}
 
 		return match[2];
+	} catch (error) {
+		return crash(`Failed to create KV namespace \`${name}.\``);
+	}
+};
+
+type R2Bucket = {
+	name: string;
+};
+
+export const fetchR2Buckets = async (ctx: C3Context) => {
+	try {
+		const result = await wrangler(ctx, ["r2", "bucket", "list"]);
+
+		if (!result) {
+			return [] as R2Bucket[];
+		}
+
+		return JSON.parse(result) as R2Bucket[];
+	} catch (error) {
+		return crash(
+			"Failed to fetch r2 buckets. Please try deploying again later"
+		);
+	}
+};
+
+export const createR2Bucket = async (ctx: C3Context, name: string) => {
+	try {
+		await wrangler(
+			ctx,
+			["r2", "bucket", "create", name],
+			`Creating R2 bucket ${blue(name)}`,
+			`${brandColor("created")} ${dim(`via wrangler`)}`
+		);
 	} catch (error) {
 		return crash(`Failed to create KV namespace \`${name}.\``);
 	}

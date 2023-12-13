@@ -1,0 +1,22 @@
+{
+	"id": "r2",
+	"displayName": "Worker with R2 bucket",
+	"platform": "workers",
+	"languages": ["js", "ts"],
+	"copyFiles": {
+		"js": {
+			"path": "./js"
+		},
+		"ts": {
+			"path": "./ts"
+		}
+	},
+	"bindings": {
+		"r2Buckets": [
+			{
+				"boundVariable": "MY_BUCKET",
+				"defaultValue": "my-bucket"
+			}
+		]
+	}
+}
