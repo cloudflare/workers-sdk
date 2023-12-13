@@ -17,6 +17,7 @@ import {
 	appendFile,
 	readFile,
 	readJSON,
+	usesTypescript,
 	writeFile,
 	writeJSON,
 } from "helpers/files";
@@ -135,7 +136,7 @@ async function updateFiles(ctx: C3Context) {
 }
 
 async function installWorkersTypes(ctx: C3Context) {
-	if (!ctx.args.ts) {
+	if (!usesTypescript(ctx)) {
 		return;
 	}
 

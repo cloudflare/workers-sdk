@@ -1,0 +1,22 @@
+{
+	"id": "kv",
+	"displayName": "Worker using KV storage",
+	"platform": "workers",
+	"languages": ["js", "ts"],
+	"copyFiles": {
+		"js": {
+			"path": "./js"
+		},
+		"ts": {
+			"path": "./ts"
+		}
+	},
+	"bindings": {
+		"kvNamespaces": [
+			{
+				"boundVariable": "MY_NAMESPACE",
+				"defaultValue": "my-namespace"
+			}
+		]
+	}
+}

@@ -9,7 +9,7 @@ import { C3_DEFAULTS } from "helpers/cli";
 import { usesTypescript } from "helpers/files";
 import type { C3Args, C3Context } from "types";
 
-type BindingInfo = {
+export type BindingInfo = {
 	boundVariable: string;
 	defaultValue: string;
 };
@@ -73,6 +73,7 @@ export const getTemplateMap = async () => {
 		common: await import("../templates/common/c3.json"),
 		scheduled: await import("../templates/scheduled/c3.json"),
 		queues: await import("../templates/queues/c3.json"),
+		kv: await import("../templates/kv/c3.json"),
 		chatgptPlugin: await import("../templates/chatgptPlugin/c3.json"),
 		openapi: await import("../templates/openapi/c3.json"),
 		"pre-existing": await import("../templates/pre-existing/c3.json"),

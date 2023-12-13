@@ -39,9 +39,17 @@ export const wrangler = async (
 // generate these ourselves so we can add stubbed out definitions
 // for resources the user might create in the future, as well as links
 // to docs for the different resource types
+// This also has a bad experience if the user decides to deploy, since
+// bindings will get skipped and types will be empty
 export const generateTypes = async (ctx: C3Context) => {
 	try {
-		const result = await wrangler(ctx, ["types"]);
+		// We need to use runCommand instead of `wrangler` here because
+		// this runs in unauthenticated contexts
+		const result = await runCommand([npx, "wrangler", "types"], {
+			cwd: ctx.project.path,
+			silent: true,
+		});
+
 		if (!result) {
 			return;
 		}
@@ -53,8 +61,7 @@ export const generateTypes = async (ctx: C3Context) => {
 
 		writeFile(join(ctx.project.path, "env.d.ts"), match[1]);
 	} catch (error) {
-		crash("Failed to fetch queues. Please try deploying again later");
-		return [];
+		return crash("Failed to fetch queues. Please try deploying again later");
 	}
 };
 
@@ -80,8 +87,7 @@ export const fetchQueues = async (ctx: C3Context) => {
 
 		return JSON.parse(result) as Queue[];
 	} catch (error) {
-		crash("Failed to fetch queues. Please try deploying again later");
-		return [];
+		return crash("Failed to fetch queues. Please try deploying again later");
 	}
 };
 
@@ -94,7 +100,47 @@ export const createQueue = async (ctx: C3Context, name: string) => {
 			`${brandColor("created")} ${dim(`via wrangler`)}`
 		);
 	} catch (error) {
-		crash(`Failed to create queue \`${name}.\``);
-		return [];
+		return crash(`Failed to create queue \`${name}.\``);
+	}
+};
+
+type KvNamespace = {
+	id: string;
+	title: string;
+};
+
+export const fetchKvNamespaces = async (ctx: C3Context) => {
+	try {
+		const result = await wrangler(ctx, ["kv:namespace", "list"]);
+
+		if (!result) {
+			return [] as KvNamespace[];
+		}
+
+		return JSON.parse(result) as KvNamespace[];
+	} catch (error) {
+		return crash(
+			"Failed to fetch kv namespaces. Please try deploying again later"
+		);
+	}
+};
+
+export const createKvNamespace = async (ctx: C3Context, name: string) => {
+	try {
+		const output = await wrangler(
+			ctx,
+			["kv:namespace", "create", name],
+			`Creating KV namespace ${name}`,
+			`${brandColor("created")} ${dim(`via wrangler`)}`
+		);
+
+		const match = output?.match(/binding = "(.*)", id = "(.*)"/);
+		if (!match) {
+			return crash("Failed to read KV namespace id");
+		}
+
+		return match[2];
+	} catch (error) {
+		return crash(`Failed to create KV namespace \`${name}.\``);
 	}
 };
