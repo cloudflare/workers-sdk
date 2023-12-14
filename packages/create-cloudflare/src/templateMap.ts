@@ -23,11 +23,11 @@ export const templateMap: Record<string, TemplateConfig> = {
 	},
 	scheduled: {
 		label: "Scheduled Worker (Cron Trigger)",
-		handler: runWorkersGenerator,
+		handler: (args) => runWorkersGenerator({ ...args, deploy: false }),
 	},
 	queues: {
 		label: "Queue consumer & producer Worker",
-		handler: runWorkersGenerator,
+		handler: (args) => runWorkersGenerator({ ...args, deploy: false }),
 	},
 	chatgptPlugin: {
 		label: `ChatGPT plugin`,
