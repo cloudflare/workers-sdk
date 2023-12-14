@@ -19,8 +19,12 @@ export type QueueBindingInfo = BindingInfo & {
 	consumer: boolean;
 };
 
+export type SeedFileConfig = {
+	path: string;
+};
+
 export type D1BindingInfo = BindingInfo & {
-	seedFile: string;
+	seedFiles: SeedFileConfig[];
 };
 
 type BindingsDefinition = {

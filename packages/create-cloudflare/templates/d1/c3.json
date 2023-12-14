@@ -16,7 +16,10 @@
 			{
 				"boundVariable": "DB",
 				"defaultValue": "my-queue",
-				"seedFile": "./data/Northwind.Sqlite3.create.sql"
+				"seedFiles": [
+					{ "path": "./data/schema.sql" },
+					{ "path": "./data/data.sql" }
+				]
 			}
 		]
 	}

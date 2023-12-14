@@ -58,9 +58,11 @@ export const bindResources = async (ctx: C3Context) => {
 	if (d1Databases) {
 		for (const d1Database of d1Databases) {
 			const name = await bindD1Database(ctx, d1Database);
-			if (d1Database.seedFile) {
-				const seedFilePath = join(ctx.project.path, d1Database.seedFile);
-				await d1Seed(ctx, name, seedFilePath);
+			if (d1Database.seedFiles) {
+				for (const seedFile of d1Database.seedFiles) {
+					const seedFilePath = join(ctx.project.path, seedFile.path);
+					await d1Seed(ctx, name, seedFilePath);
+				}
 			}
 		}
 	}
@@ -256,9 +258,10 @@ const bindD1Database = async (
 		});
 
 		if (selected !== "--create") {
-			const selectedId = dbs.find((db) => db.name === selected)?.uuid;
-			await addD1Binding(ctx, boundVariable, selected, selectedId as string);
-			return selected;
+			const selectedName = dbs.find((db) => db.uuid === selected)
+				?.name as string;
+			await addD1Binding(ctx, boundVariable, selectedName, selected);
+			return selectedName;
 		}
 	}
 
