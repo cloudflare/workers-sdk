@@ -1,11 +1,13 @@
-import { join } from "path";
-import { crash } from "@cloudflare/cli";
+import { join, resolve } from "path";
+import { crash, logRaw, updateStatus } from "@cloudflare/cli";
 import { inputPrompt } from "@cloudflare/cli/interactive";
+import { appendFile } from "helpers/files";
 import {
 	createD1Database,
 	createKvNamespace,
 	createQueue,
 	createR2Bucket,
+	createSecret,
 	d1Seed,
 	fetchD1Databases,
 	fetchKvNamespaces,
@@ -17,6 +19,7 @@ import { appendToWranglerToml } from "./workers";
 import type {
 	BindingInfo,
 	D1BindingInfo,
+	EnvBindingInfo,
 	QueueBindingInfo,
 } from "./templateMap";
 import type { C3Context } from "types";
@@ -36,7 +39,8 @@ export const bindResources = async (ctx: C3Context) => {
 		return;
 	}
 
-	const { queues, kvNamespaces, r2Buckets, d1Databases } = bindingsConfig;
+	const { queues, kvNamespaces, r2Buckets, d1Databases, secrets, env } =
+		bindingsConfig;
 	if (queues) {
 		for (const queue of queues) {
 			await bindQueue(ctx, queue);
@@ -64,6 +68,19 @@ export const bindResources = async (ctx: C3Context) => {
 					await d1Seed(ctx, name, seedFilePath);
 				}
 			}
+		}
+	}
+
+	if (secrets) {
+		for (const secret of secrets) {
+			await bindSecret(ctx, secret);
+		}
+	}
+
+	if (env) {
+		await appendToWranglerToml(ctx, `\n[vars]\n`);
+		for (const envVar of env) {
+			await bindEnvVariable(ctx, envVar);
 		}
 	}
 };
@@ -293,4 +310,37 @@ database_name = "${name}"
 database_id = "${id}"
 `
 	);
+};
+
+const bindSecret = async (
+	ctx: C3Context,
+	bindingDefinition: EnvBindingInfo
+) => {
+	const { boundVariable, description } = bindingDefinition;
+
+	updateStatus(description);
+	await createSecret(ctx, boundVariable);
+
+	// newline
+	logRaw("");
+
+	// Add a line to .dev.vars file for the secret
+	const devVarsPath = resolve(ctx.project.path, ".dev.vars");
+	appendFile(devVarsPath, `${boundVariable}=TEST`);
+};
+
+const bindEnvVariable = async (
+	ctx: C3Context,
+	bindingDefinition: EnvBindingInfo
+) => {
+	const { boundVariable, description } = bindingDefinition;
+
+	const value = await inputPrompt({
+		type: "text",
+		question: description,
+		defaultValue: "",
+		label: "variable",
+	});
+
+	await appendToWranglerToml(ctx, `${boundVariable} = "${value}"\n`);
 };

@@ -225,3 +225,25 @@ export const d1Seed = async (
 		return crash(`Failed to execute query on D1 database \`${dbName}.\``);
 	}
 };
+
+export const createSecret = async (ctx: C3Context, binding: string) => {
+	if (!ctx.account?.id) {
+		crash("Failed to read Cloudflare account.");
+		return;
+	}
+
+	try {
+		const CLOUDFLARE_ACCOUNT_ID = ctx.account.id;
+
+		const cmd = [npx, "wrangler", "secret", "put", binding];
+
+		// Exception handling is done by the caller so they have more control over what
+		// to do in the event of an error.
+		return runCommand(cmd, {
+			cwd: ctx.project.path,
+			env: { CLOUDFLARE_ACCOUNT_ID },
+		});
+	} catch (error) {
+		return crash(`Failed to create secret \`${binding}.\``);
+	}
+};
