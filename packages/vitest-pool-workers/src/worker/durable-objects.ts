@@ -8,6 +8,33 @@ let nextActionId = 0;
 const kUseResponse = Symbol("kUseResponse");
 const actionResults = new Map<number /* id */, unknown>();
 
+function isDurableObjectNamespace(v: unknown): v is DurableObjectNamespace {
+	return (
+		typeof v === "object" &&
+		v !== null &&
+		v.constructor.name === "DurableObjectNamespace" &&
+		"newUniqueId" in v &&
+		typeof v.newUniqueId === "function" &&
+		"idFromName" in v &&
+		typeof v.idFromName === "function" &&
+		"idFromString" in v &&
+		typeof v.idFromString === "function" &&
+		"get" in v &&
+		typeof v.get === "function"
+	);
+}
+function isDurableObjectStub(v: unknown): v is DurableObjectStub {
+	return (
+		typeof v === "object" &&
+		v !== null &&
+		v.constructor.name === "DurableObject" &&
+		"fetch" in v &&
+		typeof v.fetch === "function" &&
+		"id" in v &&
+		typeof v.id === "object"
+	);
+}
+
 // Whilst `sameIsolatedNamespaces` depends on `getSerializedOptions()`,
 // `isolateDurableObjectBindings` is derived from the user Durable Object
 // config. If this were to change, the Miniflare options would change too
@@ -21,10 +48,7 @@ function getSameIsolateNamespaces(): DurableObjectNamespace[] {
 	sameIsolatedNamespaces = options.isolateDurableObjectBindings.map((name) => {
 		const namespace = globalEnv[name];
 		assert(
-			typeof namespace === "object" &&
-				namespace !== null &&
-				"idFromString" in namespace &&
-				typeof namespace.idFromString === "function",
+			isDurableObjectNamespace(namespace),
 			`Expected ${name} to be a DurableObjectNamespace binding`
 		);
 		return namespace as DurableObjectNamespace;
@@ -57,6 +81,17 @@ export async function runInDurableObject<O extends DurableObject, R>(
 	stub: DurableObjectStub,
 	callback: (instance: O, state: DurableObjectState) => R | Promise<R>
 ): Promise<R> {
+	if (!isDurableObjectStub(stub)) {
+		throw new TypeError(
+			"Failed to execute 'runInDurableObject': parameter 1 is not of type 'DurableObjectStub'."
+		);
+	}
+	if (typeof callback !== "function") {
+		throw new TypeError(
+			"Failed to execute 'runInDurableObject': parameter 2 is not of type 'function'."
+		);
+	}
+
 	assertSameIsolate(stub);
 	const id = nextActionId++;
 	actionResults.set(id, callback);
@@ -87,6 +122,11 @@ async function runAlarm(instance: DurableObject, state: DurableObjectState) {
 export function runDurableObjectAlarm(
 	stub: DurableObjectStub
 ): Promise<boolean /* ran */> {
+	if (!isDurableObjectStub(stub)) {
+		throw new TypeError(
+			"Failed to execute 'runDurableObjectAlarm': parameter 1 is not of type 'DurableObjectStub'."
+		);
+	}
 	return runInDurableObject(stub, runAlarm);
 }
 
