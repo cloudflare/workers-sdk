@@ -1,14 +1,14 @@
 import assert from "assert";
 import fs from "fs/promises";
 import path from "path";
-import { fileURLToPath } from "url";
+import { fileURLToPath, pathToFileURL } from "url";
 import test from "ava";
 import Protocol from "devtools-protocol";
 import esbuild from "esbuild";
 import { DeferredPromise, Log, LogLevel, Miniflare, fetch } from "miniflare";
 import type { RawSourceMap } from "source-map";
 import NodeWebSocket from "ws";
-import { escapeRegexp, useTmp } from "../../../test-shared";
+import { escapeRegexpComponent, useTmp } from "../../../test-shared";
 
 const FIXTURES_PATH = path.resolve(
 	__dirname,
@@ -25,6 +25,12 @@ const SERVICE_WORKER_ENTRY_PATH = path.join(FIXTURES_PATH, "service-worker.ts");
 const MODULES_ENTRY_PATH = path.join(FIXTURES_PATH, "modules.ts");
 const DEP_ENTRY_PATH = path.join(FIXTURES_PATH, "nested/dep.ts");
 const REDUCE_PATH = path.join(FIXTURES_PATH, "reduce.ts");
+
+function pathOrUrlRegexp(filePath: string): `(${string}|${string})` {
+	return `(${escapeRegexpComponent(filePath)}|${escapeRegexpComponent(
+		pathToFileURL(filePath).href
+	)})`;
+}
 
 test("source maps workers", async (t) => {
 	// Build fixtures
@@ -135,8 +141,8 @@ addEventListener("fetch", (event) => {
 	let error = await t.throwsAsync(mf.dispatchFetch("http://localhost"), {
 		message: "unnamed",
 	});
-	const serviceWorkerEntryRegexp = escapeRegexp(
-		`${SERVICE_WORKER_ENTRY_PATH}:6:16`
+	const serviceWorkerEntryRegexp = new RegExp(
+		`${pathOrUrlRegexp(SERVICE_WORKER_ENTRY_PATH)}:6:16`
 	);
 	t.regex(String(error?.stack), serviceWorkerEntryRegexp);
 	error = await t.throwsAsync(mf.dispatchFetch("http://localhost/a"), {
@@ -148,7 +154,9 @@ addEventListener("fetch", (event) => {
 	error = await t.throwsAsync(mf.dispatchFetch("http://localhost/b"), {
 		message: "b",
 	});
-	const modulesEntryRegexp = escapeRegexp(`${MODULES_ENTRY_PATH}:5:17`);
+	const modulesEntryRegexp = new RegExp(
+		`${pathOrUrlRegexp(MODULES_ENTRY_PATH)}:5:17`
+	);
 	t.regex(String(error?.stack), modulesEntryRegexp);
 	error = await t.throwsAsync(mf.dispatchFetch("http://localhost/c"), {
 		message: "c",
@@ -174,7 +182,7 @@ addEventListener("fetch", (event) => {
 		instanceOf: TypeError,
 		message: "Dependency error",
 	});
-	const nestedRegexp = escapeRegexp(`${DEP_ENTRY_PATH}:4:16`);
+	const nestedRegexp = new RegExp(`${pathOrUrlRegexp(DEP_ENTRY_PATH)}:4:16`);
 	t.regex(String(error?.stack), nestedRegexp);
 
 	// Check source mapping URLs rewritten

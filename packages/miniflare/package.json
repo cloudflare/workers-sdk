@@ -41,12 +41,12 @@
 		"miniflare": "bootstrap.js"
 	},
 	"dependencies": {
+		"@cspotcode/source-map-support": "0.8.1",
 		"acorn": "^8.8.0",
 		"acorn-walk": "^8.2.0",
 		"capnp-ts": "^0.7.0",
 		"exit-hook": "^2.2.1",
 		"glob-to-regexp": "^0.4.1",
-		"source-map-support": "0.5.21",
 		"stoppable": "^1.1.0",
 		"undici": "^5.22.1",
 		"workerd": "1.20231030.0",

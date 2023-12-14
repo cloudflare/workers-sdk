@@ -1,5 +1,5 @@
 import assert from "assert";
-import type { Options } from "source-map-support";
+import type { Options } from "@cspotcode/source-map-support";
 import { parseStack } from "./callsite";
 
 const sourceMapInstallBaseOptions: Options = {
@@ -8,6 +8,7 @@ const sourceMapInstallBaseOptions: Options = {
 	handleUncaughtExceptions: false,
 	// Don't hook Node `require` function
 	hookRequire: false,
+	redirectConflictingLibrary: false,
 
 	// Make sure we're using fresh copies of files (i.e. between `setOptions()`)
 	emptyCacheBetweenOperations: true,
@@ -36,10 +37,10 @@ export function getSourceMapper(): SourceMapper {
 	// always updated, load a fresh copy, by resetting then restoring the
 	// `require` cache.
 
-	const originalSupport = require.cache["source-map-support"];
-	delete require.cache["source-map-support"];
-	const support: typeof import("source-map-support") = require("source-map-support");
-	require.cache["source-map-support"] = originalSupport;
+	const originalSupport = require.cache["@cspotcode/source-map-support"];
+	delete require.cache["@cspotcode/source-map-support"];
+	const support: typeof import("@cspotcode/source-map-support") = require("@cspotcode/source-map-support");
+	require.cache["@cspotcode/source-map-support"] = originalSupport;
 
 	const originalPrepareStackTrace = Error.prepareStackTrace;
 	support.install(sourceMapInstallBaseOptions);
@@ -50,10 +51,13 @@ export function getSourceMapper(): SourceMapper {
 	sourceMapper = (retrieveSourceMap, error) => {
 		support.install({
 			...sourceMapInstallBaseOptions,
-			retrieveFile(file: string): string | null {
+			retrieveFile(_file: string): string {
 				// `retrieveFile` should only be called by the default implementation of
-				// `retrieveSourceMap`, so we shouldn't need to implement it
-				assert.fail(`Unexpected retrieveFile(${JSON.stringify(file)}) call`);
+				// `retrieveSourceMap`, which will only be called if `retrieveSourceMap`
+				// failed. In that case, return an empty string so the default
+				// implementation fails too (can't find `// sourceMappingURL` comment
+				// in empty string).
+				return "";
 			},
 			retrieveSourceMap,
 		});
