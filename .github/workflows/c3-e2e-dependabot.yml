@@ -75,10 +75,10 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         pm: [npm, pnpm, bun, yarn]
-      # include a single windows test with pnpm
-      include:
-        - os: windows-latest
-          pm: pnpm
+        # include a single windows test with pnpm
+        include:
+          - os: windows-latest
+            pm: pnpm
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
