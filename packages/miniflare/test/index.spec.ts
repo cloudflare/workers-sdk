@@ -576,15 +576,22 @@ test("Miniflare: custom upstream as origin", async (t) => {
 		upstream: new URL("/extra/", upstream.http.toString()).toString(),
 		modules: true,
 		script: `export default {
-      fetch(request) {
-        return fetch(request);
+      async fetch(request) {
+        const resp = await (await fetch(request)).text();
+				return Response.json({
+					resp,
+					host: request.headers.get("Host")
+				});
       }
     }`,
 	});
 	t.teardown(() => mf.dispose());
 	// Check rewrites protocol, hostname, and port, but keeps pathname and query
 	const res = await mf.dispatchFetch("https://random:0/path?a=1");
-	t.is(await res.text(), "upstream: http://upstream/extra/path?a=1");
+	t.deepEqual(await res.json(), {
+		resp: "upstream: http://upstream/extra/path?a=1",
+		host: upstream.http.host,
+	});
 });
 
 test("Miniflare: `node:`, `cloudflare:` and `workerd:` modules", async (t) => {
@@ -1228,7 +1235,7 @@ test("Miniflare: supports wrapped bindings", async (t) => {
 						await this.STORE.fetch(this.baseURL + key, { method: "DELETE" });
 					}
 				}
-				
+
 				export default function (env) {
 					return new MiniKV(env);
 				}

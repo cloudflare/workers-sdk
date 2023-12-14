@@ -35,6 +35,7 @@ function getUserRequest(
 ) {
 	const originalUrl = request.headers.get(CoreHeaders.ORIGINAL_URL);
 	const upstreamUrl = env[CoreBindings.TEXT_UPSTREAM_URL];
+	let upstreamHost: string|undefined;
 	let url = new URL(originalUrl ?? request.url);
 	if (upstreamUrl !== undefined) {
 		// If a custom `upstream` was specified, make sure the URL starts with it
@@ -42,6 +43,7 @@ function getUserRequest(
 		// Remove leading slash, so we resolve relative to `upstream`'s path
 		if (path.startsWith("/")) path = `./${path.substring(1)}`;
 		url = new URL(path, upstreamUrl);
+		upstreamHost = url.host;
 	}
 
 	// Note when constructing new `Request`s from `request`, we must always pass
@@ -55,6 +57,9 @@ function getUserRequest(
 	request = new Request(url, request);
 	if (request.cf === undefined) {
 		request = new Request(request, { cf: env[CoreBindings.JSON_CF_BLOB] });
+	}
+	if (upstreamHost !== undefined) {
+		request.headers.set("Host", upstreamHost);
 	}
 	request.headers.delete(CoreHeaders.ORIGINAL_URL);
 	request.headers.delete(CoreHeaders.DISABLE_PRETTY_ERROR);
