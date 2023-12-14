@@ -9,38 +9,6 @@ import { C3_DEFAULTS } from "helpers/cli";
 import { usesTypescript } from "helpers/files";
 import type { C3Args, C3Context } from "types";
 
-export type BindingInfo = {
-	boundVariable: string;
-	defaultValue: string;
-};
-
-export type QueueBindingInfo = BindingInfo & {
-	producer: boolean;
-	consumer: boolean;
-};
-
-export type SeedFileConfig = {
-	path: string;
-};
-
-export type D1BindingInfo = BindingInfo & {
-	seedFiles: SeedFileConfig[];
-};
-
-type BindingsDefinition = {
-	kvNamespaces: BindingInfo[];
-	queues: QueueBindingInfo[];
-	r2Buckets: BindingInfo[];
-	d1Databases: D1BindingInfo[];
-};
-
-// A template can have a number of variants, usually js/ts
-type VariantInfo = {
-	path: string;
-};
-
-type StaticFileMap = Record<string, VariantInfo>;
-
 export type TemplateConfig = {
 	// How this template is referred to internally and keyed in lookup maps
 	id: string;
@@ -55,6 +23,45 @@ export type TemplateConfig = {
 	generate: (ctx: C3Context) => Promise<void>;
 	configure?: (ctx: C3Context) => Promise<void>;
 };
+
+type BindingsDefinition = {
+	kvNamespaces: BindingInfo[];
+	queues: QueueBindingInfo[];
+	r2Buckets: BindingInfo[];
+	d1Databases: D1BindingInfo[];
+	secrets: EnvBindingInfo[];
+	env: EnvBindingInfo[];
+};
+
+export type BindingInfo = {
+	boundVariable: string;
+	defaultValue: string;
+};
+
+export type QueueBindingInfo = BindingInfo & {
+	producer: boolean;
+	consumer: boolean;
+};
+
+export type EnvBindingInfo = {
+	boundVariable: string;
+	description: string;
+};
+
+export type SeedFileConfig = {
+	path: string;
+};
+
+export type D1BindingInfo = BindingInfo & {
+	seedFiles: SeedFileConfig[];
+};
+
+// A template can have a number of variants, usually js/ts
+type VariantInfo = {
+	path: string;
+};
+
+type StaticFileMap = Record<string, VariantInfo>;
 
 export type FrameworkMap = Awaited<ReturnType<typeof getFrameworkMap>>;
 export type FrameworkName = keyof FrameworkMap;
@@ -87,6 +94,7 @@ export const getTemplateMap = async () => {
 		kv: await import("../templates/kv/c3.json"),
 		r2: await import("../templates/r2/c3.json"),
 		d1: await import("../templates/d1/c3.json"),
+		"env-secrets": await import("../templates/env-secrets/c3.json"),
 		chatgptPlugin: await import("../templates/chatgptPlugin/c3.json"),
 		openapi: await import("../templates/openapi/c3.json"),
 		"pre-existing": await import("../templates/pre-existing/c3.json"),
