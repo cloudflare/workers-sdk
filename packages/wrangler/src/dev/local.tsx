@@ -948,5 +948,5 @@ export async function getMiniflare3(): Promise<
 	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 	typeof import("@miniflare/tre")
 > {
-	return (miniflare3Module ??= await npxImport("@miniflare/tre@3.0.0-next.13"));
+	return (miniflare3Module ??= await npxImport("@miniflare/tre@3.0.0-next.14"));
 }

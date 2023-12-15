@@ -35,6 +35,10 @@ async function runLongLivedWrangler(command: string[], cwd: string) {
 		(resolve) => (resolveReadyPromise = resolve)
 	);
 
+	if (!command.includes("--inspector-port")) {
+		command.push("--inspector-port", "0");
+	}
+
 	const wranglerProcess = fork(
 		"../../packages/wrangler/bin/wrangler.js",
 		command,
