@@ -1,4 +1,5 @@
 {
+	"configVersion": 1,
 	"id": "d1",
 	"displayName": "Worker with D1",
 	"platform": "workers",

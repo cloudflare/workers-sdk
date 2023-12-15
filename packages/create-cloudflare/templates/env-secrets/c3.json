@@ -1,4 +1,5 @@
 {
+	"configVersion": 1,
 	"id": "env-secrets",
 	"displayName": "Worker with Environment Variables and Secrets",
 	"platform": "workers",

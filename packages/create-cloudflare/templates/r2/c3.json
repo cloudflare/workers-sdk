@@ -1,4 +1,5 @@
 {
+	"configVersion": 1,
 	"id": "r2",
 	"displayName": "Worker with R2 bucket",
 	"platform": "workers",
