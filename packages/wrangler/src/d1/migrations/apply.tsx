@@ -168,7 +168,7 @@ Your database may not be available to serve requests during the migration, conti
 					batchSize,
 				});
 
-				if (response === null) {
+				if (response === null || response === undefined) {
 					// TODO:  return error
 					return;
 				}

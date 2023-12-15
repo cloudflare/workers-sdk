@@ -7,7 +7,6 @@ import { logger } from "../../logger";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_BATCH_SIZE } from "../constants";
 import { executeSql } from "../execute";
 import type { ConfigFields, DevConfig, Environment } from "../../config";
-import type { QueryResult } from "../execute";
 import type { Migration } from "../types";
 
 export async function getMigrationsPath({
@@ -88,7 +87,7 @@ const listAppliedMigrations = async (
 	persistTo: string | undefined,
 	preview: boolean | undefined
 ): Promise<Migration[]> => {
-	const response: QueryResult[] | null = await executeSql({
+	const response = await executeSql({
 		local,
 		config,
 		name,

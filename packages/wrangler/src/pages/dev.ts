@@ -703,7 +703,8 @@ export const Handler = async ({
 				.map((d1) => {
 					const { binding, ref } =
 						BINDING_REGEXP.exec(d1.toString())?.groups || {};
-
+					logger.log("binding: ", binding);
+					logger.log("ref: ", ref);
 					if (!binding) {
 						logger.warn("Could not parse D1 binding:", d1.toString());
 						return;

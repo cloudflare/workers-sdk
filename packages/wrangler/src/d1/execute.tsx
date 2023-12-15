@@ -109,7 +109,7 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 		return logger.error(`Error: can't provide both --command and --file.`);
 
 	const isInteractive = process.stdout.isTTY;
-	const response: QueryResult[] | null = await executeSql({
+	const response = await executeSql({
 		local,
 		config,
 		name: database,
@@ -249,8 +249,7 @@ async function executeLocally({
 		mfD1Prefix,
 		binding
 	);
-	logger.log("hashedIdPath: ", hashedIdPath);
-	logger.log("hashedBindingPath: ", hashedBindingPath);
+
 	const mfD1Dir = path.join(d1Persist, mfD1Prefix);
 	const previousPath = path.join(mfD1Dir, `${hashedIdPath}.sqlite`);
 	const previousWalPath = path.join(mfD1Dir, `${hashedIdPath}.sqlite-wal`);
