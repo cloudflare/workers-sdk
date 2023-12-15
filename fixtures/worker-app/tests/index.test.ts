@@ -29,6 +29,17 @@ describe("'wrangler dev' correctly renders pages", () => {
 		const output = getOutput();
 		expect(output).toContain("startup log");
 		expect(output).toContain("request log");
+
+		// Check logged strings are source mapped
+		expect(output).toMatch(
+			/Error: logged error one.+fixtures\/worker-app\/src\/log.ts:7:14/s
+		);
+		expect(output).toMatch(
+			/Error: logged error two.+fixtures\/worker-app\/src\/log.ts:8:14/s
+		);
+		expect(output).toMatch(
+			/Error: logged error three.+fixtures\/worker-app\/src\/log.ts:9:23/s
+		);
 	});
 
 	it("uses `workerd` condition when bundling", async ({ expect }) => {

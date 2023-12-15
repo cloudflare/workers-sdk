@@ -1,5 +1,6 @@
-import { now } from "./dep";
 import { randomBytes } from "isomorphic-random-example";
+import { now } from "./dep";
+import { logErrors } from "./log";
 
 console.log("startup log");
 
@@ -23,6 +24,8 @@ export default {
 			new Map([...request.headers]),
 			request.cf
 		);
+
+		logErrors();
 
 		await fetch(new URL("http://example.com"));
 		await fetch(

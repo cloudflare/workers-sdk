@@ -7,6 +7,7 @@ import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { withSourceURLs } from "../deployment-bundle/source-url";
 import { getHttpsOptions } from "../https-options";
 import { logger } from "../logger";
+import { getSourceMappedString } from "../sourcemap";
 import { updateCheck } from "../update-check";
 import type { Config } from "../config";
 import type {
@@ -462,7 +463,7 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 
 		// anything not exlicitly handled above should be logged as info (via stdout)
 		else {
-			logger.info(chunk);
+			logger.info(getSourceMappedString(chunk));
 		}
 	});
 
@@ -501,7 +502,7 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 
 		// anything not exlicitly handled above should be logged as an error (via stderr)
 		else {
-			logger.error(chunk);
+			logger.error(getSourceMappedString(chunk));
 		}
 	});
 }
