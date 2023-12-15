@@ -1,5 +1,15 @@
 # create-cloudflare
 
+## 2.8.3
+
+### Patch Changes
+
+- [#4603](https://github.com/cloudflare/workers-sdk/pull/4603) [`6db2c2a8`](https://github.com/cloudflare/workers-sdk/commit/6db2c2a816b1140951f5fe6a8618312d83a62d44) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-remix` from `2.3.1` to `2.4.0`
+
+* [#4598](https://github.com/cloudflare/workers-sdk/pull/4598) [`ffa01a7d`](https://github.com/cloudflare/workers-sdk/commit/ffa01a7d9df25d3ac31e18498659762d67e234f7) Thanks [@penalosa](https://github.com/penalosa)! - fix: Ensure C3 can be used to create TypeScript workers
+
+- [#4594](https://github.com/cloudflare/workers-sdk/pull/4594) [`850c4d64`](https://github.com/cloudflare/workers-sdk/commit/850c4d64a517329be2ec7fdffef26d3bbd77e9b0) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - amend broken cd instruction
+
 ## 2.8.2
 
 ### Patch Changes
