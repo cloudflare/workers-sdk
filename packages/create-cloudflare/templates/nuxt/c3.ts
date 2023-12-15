@@ -47,6 +47,7 @@ function updateNuxtConfig() {
 }
 
 const config: FrameworkConfig = {
+	configVersion: 1,
 	id: "nuxt",
 	platform: "pages",
 	displayName: "Nuxt",

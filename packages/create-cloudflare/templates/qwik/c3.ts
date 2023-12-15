@@ -23,6 +23,7 @@ const configure = async (ctx: C3Context) => {
 };
 
 const config: FrameworkConfig = {
+	configVersion: 1,
 	id: "qwik",
 	displayName: "Qwik",
 	platform: "pages",

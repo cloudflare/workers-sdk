@@ -143,6 +143,7 @@ export const writeEslintrc = async (ctx: C3Context): Promise<void> => {
 };
 
 const config: FrameworkConfig = {
+	configVersion: 1,
 	id: "next",
 	platform: "pages",
 	displayName: "Next",

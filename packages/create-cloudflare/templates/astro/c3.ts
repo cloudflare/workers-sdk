@@ -30,6 +30,7 @@ const configure = async (ctx: C3Context) => {
 };
 
 const config: FrameworkConfig = {
+	configVersion: 1,
 	id: "astro",
 	platform: "pages",
 	displayName: "Astro",

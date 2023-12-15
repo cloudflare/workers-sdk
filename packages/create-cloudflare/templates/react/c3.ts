@@ -13,6 +13,7 @@ const generate = async (ctx: C3Context) => {
 };
 
 const config: FrameworkConfig = {
+	configVersion: 1,
 	id: "react",
 	displayName: "React",
 	platform: "pages",

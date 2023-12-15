@@ -13,6 +13,9 @@ import { validateTemplateUrl } from "./validators";
 import type { C3Args, C3Context } from "types";
 
 export type TemplateConfig = {
+	// The version of this configuration schema to use. This will be used
+	// to handle config version skew between different versions of c3
+	configVersion: number;
 	// How this template is referred to internally and keyed in lookup maps
 	id: string;
 	// How this template is presented to the user

@@ -66,6 +66,7 @@ const configure = async (ctx: C3Context) => {
 };
 
 const config: FrameworkConfig = {
+	configVersion: 1,
 	id: "svelte",
 	displayName: "Svelte",
 	platform: "pages",

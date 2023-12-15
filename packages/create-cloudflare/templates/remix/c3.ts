@@ -16,6 +16,7 @@ const generate = async (ctx: C3Context) => {
 };
 
 const config: FrameworkConfig = {
+	configVersion: 1,
 	id: "remix",
 	displayName: "Remix",
 	platform: "pages",
