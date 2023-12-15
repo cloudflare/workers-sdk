@@ -9,7 +9,7 @@ import degit from "degit";
 import { processArgument } from "helpers/args";
 import { C3_DEFAULTS } from "helpers/cli";
 import { readJSON, usesTypescript } from "helpers/files";
-import { isValidTemplateUrl, validateTemplateUrl } from "./validators";
+import { validateTemplateUrl } from "./validators";
 import type { C3Args, C3Context } from "types";
 
 export type TemplateConfig = {
