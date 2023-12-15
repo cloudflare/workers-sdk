@@ -95,6 +95,7 @@ import {
 	NoOpLog,
 	OptionalZodTypeOf,
 	_isCyclic,
+	parseWithRootPath,
 	stripAnsi,
 } from "./shared";
 import {
@@ -144,6 +145,20 @@ function hasMultipleWorkers(opts: unknown): opts is { workers: unknown[] } {
 		Array.isArray(opts.workers)
 	);
 }
+export function getRootPath(opts: unknown): string {
+	// `opts` will be validated properly with Zod, this is just a quick check/
+	// extract for the `rootPath` option since it's required for parsing
+	if (
+		typeof opts === "object" &&
+		opts !== null &&
+		"rootPath" in opts &&
+		typeof opts.rootPath === "string"
+	) {
+		return opts.rootPath;
+	} else {
+		return ""; // Default to cwd
+	}
+}
 
 function validateOptions(
 	opts: unknown
@@ -162,18 +177,33 @@ function validateOptions(
 		() => ({}) as PluginWorkerOptions
 	);
 
+	// If we haven't defined multiple workers, shared options and worker options
+	// are the same, but we only want to resolve the `rootPath` once. Otherwise,
+	// if specified a relative `rootPath` (e.g. "./dir"), we end up with a root
+	// path of `$PWD/dir/dir` when resolving other options.
+	const sharedRootPath = multipleWorkers ? getRootPath(sharedOpts) : "";
+	const workerRootPaths = workerOpts.map((opts) =>
+		path.resolve(sharedRootPath, getRootPath(opts))
+	);
+
 	// Validate all options
 	try {
 		for (const [key, plugin] of PLUGIN_ENTRIES) {
 			// @ts-expect-error types of individual plugin options are unknown
-			pluginSharedOpts[key] = plugin.sharedOptions?.parse(sharedOpts);
+			pluginSharedOpts[key] =
+				plugin.sharedOptions === undefined
+					? undefined
+					: parseWithRootPath(sharedRootPath, plugin.sharedOptions, sharedOpts);
 			for (let i = 0; i < workerOpts.length; i++) {
 				// Make sure paths are correct in validation errors
-				const path = multipleWorkers ? ["workers", i] : undefined;
+				const optionsPath = multipleWorkers ? ["workers", i] : undefined;
 				// @ts-expect-error types of individual plugin options are unknown
-				pluginWorkerOpts[i][key] = plugin.options.parse(workerOpts[i], {
-					path,
-				});
+				pluginWorkerOpts[i][key] = parseWithRootPath(
+					workerRootPaths[i],
+					plugin.options,
+					workerOpts[i],
+					{ path: optionsPath }
+				);
 			}
 		}
 	} catch (e) {

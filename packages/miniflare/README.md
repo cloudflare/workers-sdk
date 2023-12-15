@@ -205,6 +205,13 @@ parameter in module format Workers.
   Unique name for this worker. Only required if multiple `workers` are
   specified.
 
+- `rootPath?: string`
+
+  Path against which all other path options for this Worker are resolved
+  relative to. This path is itself resolved relative to the `rootPath` from
+  `SharedOptions` if multiple workers are specified. Defaults to the current
+  working directory.
+
 - `script?: string`
 
   JavaScript code for this worker. If this is a service worker format Worker, it
@@ -543,6 +550,11 @@ _Not yet supported_
 Options shared between all Workers/"nanoservices".
 
 #### Core
+
+- `rootPath?: string`
+
+  Path against which all other path options for this instance are resolved
+  relative to. Defaults to the current working directory.
 
 - `host?: string`
 

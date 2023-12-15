@@ -3,12 +3,14 @@
 import assert from "assert";
 import childProcess from "child_process";
 import { once } from "events";
+import { existsSync } from "fs";
 import fs from "fs/promises";
 import http from "http";
 import { AddressInfo } from "net";
 import path from "path";
 import { Writable } from "stream";
 import { json, text } from "stream/consumers";
+import url from "url";
 import util from "util";
 import {
 	D1Database,
@@ -44,10 +46,17 @@ import {
 import {
 	FIXTURES_PATH,
 	TestLog,
+	useCwd,
 	useServer,
 	useTmp,
 	utf8Encode,
 } from "./test-shared";
+
+// (base64 encoded module containing a single `add(i32, i32): i32` export)
+const ADD_WASM_MODULE = Buffer.from(
+	"AGFzbQEAAAABBwFgAn9/AX8DAgEABwcBA2FkZAAACgkBBwAgACABagsACgRuYW1lAgMBAAA=",
+	"base64"
+);
 
 test.serial("Miniflare: validates options", async (t) => {
 	// Check empty workers array rejected
@@ -929,11 +938,8 @@ test("Miniflare: getBindings() returns all bindings", async (t) => {
 	t.regex(util.inspect(bindings.BUCKET, opts), /name: 'R2Bucket'/);
 
 	// Check with WebAssembly binding (aren't supported by modules workers)
-	// (base64 encoded module containing a single `add(i32, i32): i32` export)
-	const addWasmModule =
-		"AGFzbQEAAAABBwFgAn9/AX8DAgEABwcBA2FkZAAACgkBBwAgACABagsACgRuYW1lAgMBAAA=";
 	const addWasmPath = path.join(tmp, "add.wasm");
-	await fs.writeFile(addWasmPath, Buffer.from(addWasmModule, "base64"));
+	await fs.writeFile(addWasmPath, ADD_WASM_MODULE);
 	await mf.setOptions({
 		script:
 			'addEventListener("fetch", (event) => event.respondWith(new Response(null, { status: 404 })));',
@@ -1873,3 +1879,108 @@ test("Miniflare: can use module fallback service", async (t) => {
 	t.is(res.status, 500);
 	t.is(await res.text(), 'Error: No such module "virtual/a.mjs".');
 });
+
+test.serial(
+	"Miniflare: respects rootPath for path-valued options",
+	async (t) => {
+		const tmp = await useTmp(t);
+		const aPath = path.join(tmp, "a");
+		const bPath = path.join(tmp, "b");
+		await fs.mkdir(aPath);
+		await fs.mkdir(bPath);
+		await fs.writeFile(path.join(aPath, "1.txt"), "one text");
+		await fs.writeFile(path.join(aPath, "1.bin"), "one data");
+		await fs.writeFile(path.join(aPath, "add.wasm"), ADD_WASM_MODULE);
+		await fs.writeFile(path.join(bPath, "2.txt"), "two text");
+		await fs.writeFile(path.join(tmp, "3.txt"), "three text");
+		const mf = new Miniflare({
+			rootPath: tmp,
+			kvPersist: "kv",
+			workers: [
+				{
+					name: "a",
+					rootPath: "a",
+					routes: ["*/a"],
+					textBlobBindings: { TEXT: "1.txt" },
+					dataBlobBindings: { DATA: "1.bin" },
+					wasmBindings: { ADD: "add.wasm" },
+					// WASM bindings aren't supported by modules workers
+					script: `addEventListener("fetch", (event) => {
+						event.respondWith(Response.json({
+							text: TEXT,
+							data: new TextDecoder().decode(DATA),
+							result: new WebAssembly.Instance(ADD).exports.add(1, 2)
+						}));
+					});`,
+				},
+				{
+					name: "b",
+					rootPath: "b",
+					routes: ["*/b"],
+					textBlobBindings: { TEXT: "2.txt" },
+					sitePath: ".",
+					script: `addEventListener("fetch", (event) => {
+						event.respondWith(Response.json({
+							text: TEXT,
+							manifest: Object.keys(__STATIC_CONTENT_MANIFEST)
+						}));
+					});`,
+				},
+				{
+					name: "c",
+					routes: ["*/c"],
+					textBlobBindings: { TEXT: "3.txt" },
+					kvNamespaces: { NAMESPACE: "namespace" },
+					modules: true,
+					script: `export default {
+						async fetch(request, env, ctx) {
+						 	await env.NAMESPACE.put("key", "value");
+							return Response.json({ text: env.TEXT });
+						}
+					}`,
+				},
+			],
+		});
+		t.teardown(() => mf.dispose());
+
+		let res = await mf.dispatchFetch("http://localhost/a");
+		t.deepEqual(await res.json(), {
+			text: "one text",
+			data: "one data",
+			result: 3,
+		});
+		res = await mf.dispatchFetch("http://localhost/b");
+		t.deepEqual(await res.json(), {
+			text: "two text",
+			manifest: ["2.txt"],
+		});
+		res = await mf.dispatchFetch("http://localhost/c");
+		t.deepEqual(await res.json(), {
+			text: "three text",
+		});
+		t.true(existsSync(path.join(tmp, "kv", "namespace")));
+
+		// Check persistence URLs not resolved relative to root path
+		await mf.setOptions({
+			rootPath: tmp,
+			kvPersist: url.pathToFileURL(path.join(tmp, "kv")).href,
+			kvNamespaces: { NAMESPACE: "namespace" },
+			modules: true,
+			script: `export default {
+				async fetch(request, env, ctx) {
+					return new Response(await env.NAMESPACE.get("key"));
+				}
+			}`,
+		});
+
+		// Check only resolves root path once for single worker options (with relative
+		// root path)
+		useCwd(t, tmp);
+		await mf.setOptions({
+			rootPath: "a",
+			textBlobBindings: { TEXT: "1.txt" },
+			script:
+				'addEventListener("fetch", (event) => event.respondWith(new Response(TEXT)));',
+		});
+	}
+);

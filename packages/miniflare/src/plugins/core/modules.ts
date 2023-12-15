@@ -10,7 +10,7 @@ import type estree from "estree";
 import { dim } from "kleur/colors";
 import { z } from "zod";
 import { Worker_Module } from "../../runtime";
-import { MiniflareCoreError, globsToRegExps } from "../../shared";
+import { MiniflareCoreError, PathSchema, globsToRegExps } from "../../shared";
 import { MatcherRegExps, testRegExps } from "../../workers";
 
 const SUGGEST_BUNDLE =
@@ -63,7 +63,7 @@ export type ModuleRule = z.infer<typeof ModuleRuleSchema>;
 // Manually defined module
 export const ModuleDefinitionSchema = z.object({
 	type: ModuleRuleTypeSchema,
-	path: z.string(),
+	path: PathSchema,
 	contents: z.string().or(z.instanceof(Uint8Array)).optional(),
 });
 export type ModuleDefinition = z.infer<typeof ModuleDefinitionSchema>;
@@ -75,12 +75,12 @@ export const SourceOptionsSchema = z.union([
 		modules: z.array(ModuleDefinitionSchema),
 		// `modules` "name"s will be their paths relative to this value.
 		// This ensures file paths in stack traces are correct.
-		modulesRoot: z.string().optional(),
+		modulesRoot: PathSchema.optional(),
 	}),
 	z.object({
 		script: z.string(),
 		// Optional script path for resolving modules, and stack traces file names
-		scriptPath: z.string().optional(),
+		scriptPath: PathSchema.optional(),
 		// Automatically collect modules by parsing `script` if `true`, or treat as
 		// service-worker if `false`
 		modules: z.boolean().optional(),
@@ -88,10 +88,10 @@ export const SourceOptionsSchema = z.union([
 		modulesRules: z.array(ModuleRuleSchema).optional(),
 		// `modules` "name"s will be their paths relative to this value.
 		// This ensures file paths in stack traces are correct.
-		modulesRoot: z.string().optional(),
+		modulesRoot: PathSchema.optional(),
 	}),
 	z.object({
-		scriptPath: z.string(),
+		scriptPath: PathSchema,
 		// Automatically collect modules by parsing `scriptPath` if `true`, or treat
 		// as service-worker if `false`
 		modules: z.boolean().optional(),
@@ -99,7 +99,7 @@ export const SourceOptionsSchema = z.union([
 		modulesRules: z.array(ModuleRuleSchema).optional(),
 		// `modules` "name"s will be their paths relative to this value.
 		// This ensures file paths in stack traces are correct.
-		modulesRoot: z.string().optional(),
+		modulesRoot: PathSchema.optional(),
 	}),
 ]);
 export type SourceOptions = z.infer<typeof SourceOptionsSchema>;

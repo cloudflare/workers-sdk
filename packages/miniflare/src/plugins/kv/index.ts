@@ -6,6 +6,7 @@ import {
 	Worker_Binding,
 	Worker_Binding_DurableObjectNamespaceDesignator,
 } from "../../runtime";
+import { PathSchema } from "../../shared";
 import { SharedBindings } from "../../workers";
 import {
 	PersistenceSchema,
@@ -31,7 +32,7 @@ export const KVOptionsSchema = z.object({
 	kvNamespaces: z.union([z.record(z.string()), z.string().array()]).optional(),
 
 	// Workers Sites
-	sitePath: z.string().optional(),
+	sitePath: PathSchema.optional(),
 	siteInclude: z.string().array().optional(),
 	siteExclude: z.string().array().optional(),
 });

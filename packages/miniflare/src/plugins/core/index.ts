@@ -20,7 +20,13 @@ import {
 	kVoid,
 	supportedCompatibilityDate,
 } from "../../runtime";
-import { Json, JsonSchema, Log, MiniflareCoreError } from "../../shared";
+import {
+	Json,
+	JsonSchema,
+	Log,
+	MiniflareCoreError,
+	PathSchema,
+} from "../../shared";
 import {
 	Awaitable,
 	CoreBindings,
@@ -98,10 +104,14 @@ const WrappedBindingSchema = z.object({
 	bindings: z.record(JsonSchema).optional(),
 });
 
+// Validate as string, but don't include in parsed output
+const UnusableStringSchema = z.string().transform(() => undefined);
+
 const CoreOptionsSchemaInput = z.intersection(
 	SourceOptionsSchema,
 	z.object({
 		name: z.string().optional(),
+		rootPath: UnusableStringSchema.optional(),
 
 		compatibilityDate: z.string().optional(),
 		compatibilityFlags: z.string().array().optional(),
@@ -109,9 +119,9 @@ const CoreOptionsSchemaInput = z.intersection(
 		routes: z.string().array().optional(),
 
 		bindings: z.record(JsonSchema).optional(),
-		wasmBindings: z.record(z.string()).optional(),
-		textBlobBindings: z.record(z.string()).optional(),
-		dataBlobBindings: z.record(z.string()).optional(),
+		wasmBindings: z.record(PathSchema).optional(),
+		textBlobBindings: z.record(PathSchema).optional(),
+		dataBlobBindings: z.record(PathSchema).optional(),
 		serviceBindings: z.record(ServiceDesignatorSchema).optional(),
 		wrappedBindings: z
 			.record(z.union([z.string(), WrappedBindingSchema]))
@@ -144,6 +154,8 @@ export const CoreOptionsSchema = CoreOptionsSchemaInput.transform((value) => {
 });
 
 export const CoreSharedOptionsSchema = z.object({
+	rootPath: UnusableStringSchema.optional(),
+
 	host: z.string().optional(),
 	port: z.number().optional(),
 

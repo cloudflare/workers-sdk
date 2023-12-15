@@ -10,13 +10,23 @@ import {
 	Worker_Binding,
 	Worker_Module,
 } from "../../runtime";
-import { Log, MiniflareCoreError, OptionalZodTypeOf } from "../../shared";
+import {
+	Log,
+	MiniflareCoreError,
+	OptionalZodTypeOf,
+	PathSchema,
+} from "../../shared";
 import { Awaitable, QueueConsumerSchema, sanitisePath } from "../../workers";
 import { UnsafeUniqueKey } from "./constants";
 
 export const DEFAULT_PERSIST_ROOT = ".mf";
 
-export const PersistenceSchema = z.boolean().or(z.string()).optional();
+export const PersistenceSchema = z
+	// Zod checks union types in order, both `z.string().url()` and `PathSchema`
+	// will result in a `string`, but `PathSchema` gets resolved relative to the
+	// closest `rootPath`.
+	.union([z.boolean(), z.string().url(), PathSchema])
+	.optional();
 export type Persistence = z.infer<typeof PersistenceSchema>;
 
 // Set of "worker" names that are being used as wrapped bindings and shouldn't
