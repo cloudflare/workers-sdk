@@ -1,5 +1,6 @@
+import path from "node:path";
 import { PLUGINS } from "miniflare";
-import { formatZodError } from "miniflare";
+import { formatZodError, getRootPath, parseWithRootPath } from "miniflare";
 import { z } from "zod";
 import type { WorkerOptions } from "miniflare";
 import type { WorkspaceProject } from "vitest/node";
@@ -50,6 +51,7 @@ function coalesceZodErrors(ref: ZodErrorRef, thrown: unknown) {
 }
 
 function parseWorkerOptions(
+	rootPath: string,
 	value: Record<string, unknown>,
 	withoutScript: boolean,
 	opts: PathParseParams
@@ -69,7 +71,8 @@ function parseWorkerOptions(
 	for (const plugin of PLUGIN_VALUES) {
 		try {
 			// This `parse()` may throw a different `ZodError` than what we `import`
-			Object.assign(result, plugin.options.parse(value, opts));
+			const parsed = parseWithRootPath(rootPath, plugin.options, value, opts);
+			Object.assign(result, parsed);
 		} catch (e) {
 			coalesceZodErrors(errorRef, e);
 		}
@@ -82,6 +85,7 @@ function parseWorkerOptions(
 }
 
 function parseCustomPoolOptions(
+	rootPath: string,
 	value: unknown,
 	opts: PathParseParams
 ): WorkersProjectOptions {
@@ -92,8 +96,11 @@ function parseCustomPoolOptions(
 	// Try to parse runner worker options, coalescing all errors
 	const errorRef: ZodErrorRef = {};
 	const workers = options.miniflare?.workers;
+	const rootPathOption = getRootPath(options.miniflare);
+	rootPath = path.resolve(rootPath, rootPathOption);
 	try {
 		options.miniflare = parseWorkerOptions(
+			rootPath,
 			options.miniflare,
 			/* withoutScript */ true, // (script provided by runner)
 			{ path: [...opts.path, "miniflare"] }
@@ -106,9 +113,16 @@ function parseCustomPoolOptions(
 	if (workers !== undefined) {
 		options.miniflare.workers = workers.map((worker, i) => {
 			try {
-				return parseWorkerOptions(worker, /* withoutScript */ false, {
-					path: [...opts.path, "miniflare", "workers", i],
-				});
+				const workerRootPathOption = getRootPath(worker);
+				const workerRootPath = path.resolve(rootPath, workerRootPathOption);
+				return parseWorkerOptions(
+					workerRootPath,
+					worker,
+					/* withoutScript */ false,
+					{
+						path: [...opts.path, "miniflare", "workers", i],
+					}
+				);
 			} catch (e) {
 				coalesceZodErrors(errorRef, e);
 				return { script: "" }; // (ignored as we'll be throwing)
@@ -124,10 +138,12 @@ function parseCustomPoolOptions(
 export function parseProjectOptions(
 	project: WorkspaceProject
 ): WorkersProjectOptions {
+	const rootPath =
+		typeof project.path === "string" ? path.dirname(project.path) : "";
 	const poolOptions = project.config.poolOptions;
 	const workersPoolOptions = poolOptions?.workers ?? {};
 	try {
-		return parseCustomPoolOptions(workersPoolOptions, {
+		return parseCustomPoolOptions(rootPath, workersPoolOptions, {
 			path: OPTIONS_PATH_ARRAY,
 		});
 	} catch (e) {

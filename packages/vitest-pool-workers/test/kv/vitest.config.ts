@@ -1,4 +1,3 @@
-import path from "node:path";
 import {
 	defineWorkersPoolOptions,
 	kCurrentWorker,
@@ -33,10 +32,8 @@ export default defineConfig({
 					workers: [
 						{
 							name: "other",
-							// TODO(soon): probably want to resolve all these paths relative to
-							//  this config file like `main`
 							modules: true,
-							scriptPath: path.join(__dirname, "other-worker.mjs"),
+							scriptPath: "other-worker.mjs",
 						},
 					],
 				},
