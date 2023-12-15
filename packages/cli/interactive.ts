@@ -1,9 +1,13 @@
 import { ConfirmPrompt, SelectPrompt, TextPrompt } from "@clack/core";
 import ansiEscapes from "ansi-escapes";
-import logUpdate from "log-update";
+import { createLogUpdate } from "log-update";
 import { blue, bold, brandColor, dim, gray } from "./colors";
 import { cancel, newline, shapes, space, status } from "./index";
 import type { ChalkInstance } from "chalk";
+
+process.stdout.columns = 300;
+
+const logUpdate = createLogUpdate(process.stdout);
 
 export type Arg = string | boolean | string[] | undefined;
 const grayBar = gray(shapes.bar);

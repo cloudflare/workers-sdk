@@ -1,5 +1,6 @@
 import fs, { existsSync } from "fs";
 import { crash } from "@cloudflare/cli";
+import TOML from "@iarna/toml";
 import { getWorkerdCompatibilityDate } from "./command";
 import type { PagesGeneratorContext } from "types";
 
@@ -22,6 +23,11 @@ export const readFile = (path: string) => {
 export const readJSON = (path: string) => {
 	const contents = readFile(path);
 	return contents ? JSON.parse(contents) : contents;
+};
+
+export const readToml = (path: string) => {
+	const contents = readFile(path);
+	return contents ? TOML.parse(contents) : contents;
 };
 
 export const writeJSON = (path: string, object: object, stringifySpace = 2) => {
