@@ -1,9 +1,15 @@
 import { ConfirmPrompt, SelectPrompt, TextPrompt } from "@clack/core";
 import ansiEscapes from "ansi-escapes";
-import logUpdate from "log-update";
+import { createLogUpdate } from "log-update";
 import { blue, bold, brandColor, dim, gray } from "./colors";
 import { cancel, newline, shapes, space, status } from "./index";
 import type { ChalkInstance } from "chalk";
+
+const wideStdout = Object.assign(process.stdout, {
+	columns: Number.MAX_SAFE_INTEGER,
+});
+
+const logUpdate = createLogUpdate(wideStdout);
 
 export type Arg = string | boolean | string[] | undefined;
 const grayBar = gray(shapes.bar);
