@@ -1,5 +1,17 @@
 # wrangler
 
+## 2.20.2
+
+### Patch Changes
+
+- [#4609](https://github.com/cloudflare/workers-sdk/pull/4609) [`c228c912`](https://github.com/cloudflare/workers-sdk/commit/c228c9120f42f7e0135fafe406bc71a766e7bba3) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: pin `workerd` to `1.20230404.0`
+
+* [#4587](https://github.com/cloudflare/workers-sdk/pull/4587) [`49a46960`](https://github.com/cloudflare/workers-sdk/commit/49a469601adaa9eb9e1f2d6de197c1979d5c6c1b) Thanks [@mrbbot](https://github.com/mrbbot)! - Change dev registry and inspector server to listen on 127.0.0.1 instead of all interfaces
+
+- [#4587](https://github.com/cloudflare/workers-sdk/pull/4587) [`49a46960`](https://github.com/cloudflare/workers-sdk/commit/49a469601adaa9eb9e1f2d6de197c1979d5c6c1b) Thanks [@mrbbot](https://github.com/mrbbot)! - fix: validate `Host` and `Orgin` headers where appropriate
+
+  `Host` and `Origin` headers are now checked when connecting to the inspector proxy. If these don't match what's expected, the request will fail.
+
 ## 2.20.1
 
 ### Patch Changes
