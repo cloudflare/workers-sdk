@@ -1,12 +1,15 @@
 import { existsSync } from "fs";
-import { cp, rename } from "fs/promises";
+import { cp, rename, mkdtemp } from "fs/promises";
+import { tmpdir } from "os";
 import { join, resolve } from "path";
 import { crash } from "@cloudflare/cli";
-import { brandColor, dim } from "@cloudflare/cli/colors";
+import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
+import degit from "degit";
 import { processArgument } from "helpers/args";
 import { C3_DEFAULTS } from "helpers/cli";
-import { usesTypescript } from "helpers/files";
+import { readJSON, usesTypescript } from "helpers/files";
+import { isValidTemplateUrl, validateTemplateUrl } from "./validators";
 import type { C3Args, C3Context } from "types";
 
 export type TemplateConfig = {
@@ -22,6 +25,8 @@ export type TemplateConfig = {
 
 	generate: (ctx: C3Context) => Promise<void>;
 	configure?: (ctx: C3Context) => Promise<void>;
+
+	path?: string;
 };
 
 type BindingsDefinition = {
@@ -96,6 +101,7 @@ export const getTemplateMap = async () => {
 		"env-secrets": await import("../templates/env-secrets/c3.json"),
 		chatgptPlugin: await import("../templates/chatgptPlugin/c3.json"),
 		openapi: await import("../templates/openapi/c3.json"),
+		"remote-template": { displayName: "From a remote git repository" },
 		"pre-existing": await import("../templates/pre-existing/c3.json"),
 	} as unknown as Record<string, TemplateConfig>;
 };
@@ -107,6 +113,8 @@ export const selectTemplate = async (args: Partial<C3Args>) => {
 			args.type = "webFramework";
 		} else if (args.existingScript) {
 			args.type = "pre-existing";
+		} else if (args.template) {
+			args.type = "remote-template";
 		}
 	}
 
@@ -137,11 +145,11 @@ export const selectTemplate = async (args: Partial<C3Args>) => {
 	}
 
 	if (type === "webFramework") {
-		return await selectFramework(args);
+		return selectFramework(args);
 	}
 
 	if (type === "remote-template") {
-		// TODO
+		return processRemoteTemplate(args);
 	}
 
 	return templateMap[type];
@@ -177,19 +185,19 @@ export async function copyTemplateFiles(ctx: C3Context) {
 		return;
 	}
 
-	const { id, copyFiles } = ctx.template;
+	const { copyFiles } = ctx.template;
 
 	let srcdir;
 	if (copyFiles.path) {
 		// If there's only one variant, just use that.
-		srcdir = join(getTemplatesPath(), id, (copyFiles as VariantInfo).path);
+		srcdir = join(getTemplatePath(ctx), (copyFiles as VariantInfo).path);
 	} else {
 		// Otherwise, have the user select the one they want
 		const typescript = await shouldUseTs(ctx);
 		const languageTarget = typescript ? "ts" : "js";
 
 		const variantPath = (copyFiles as StaticFileMap)[languageTarget].path;
-		srcdir = join(getTemplatesPath(), id, variantPath);
+		srcdir = join(getTemplatePath(ctx), variantPath);
 	}
 	const destdir = ctx.project.path;
 
@@ -223,7 +231,53 @@ const shouldUseTs = async (ctx: C3Context) => {
 	});
 };
 
-export const getTemplatesPath = () => resolve(__dirname, "..", "templates");
+export const processRemoteTemplate = async (args: Partial<C3Args>) => {
+	const templateUrl = await processArgument<string>(args, "template", {
+		type: "text",
+		question:
+			"What's the url of git repo containing the template you'd like to use?",
+		label: "repository",
+		validate: validateTemplateUrl,
+		defaultValue: C3_DEFAULTS.template,
+	});
+
+	const path = await downloadRemoteTemplate(templateUrl);
+	const configPath = join(path, "c3.json");
+	const config = readJSON(configPath);
+
+	return {
+		path,
+		...config,
+	};
+};
+
+const downloadRemoteTemplate = async (src: string) => {
+	try {
+		const s = spinner();
+		s.start(`Cloning template from: ${blue(src)}`);
+		const emitter = degit(src, {
+			cache: false,
+			verbose: false,
+			force: true,
+		});
+
+		const tmpDir = await mkdtemp(join(tmpdir(), "c3-template"));
+		await emitter.clone(tmpDir);
+		s.stop(`${brandColor("template")} ${dim("cloned and validated")}`);
+
+		return tmpDir;
+	} catch (error) {
+		return crash(`Failed to clone remote template: ${src}`);
+	}
+};
+
+export const getTemplatePath = (ctx: C3Context) => {
+	if (ctx.template.path) {
+		return ctx.template.path;
+	}
+
+	return resolve(__dirname, "..", "templates", ctx.template.id);
+};
 
 // const readTemplateConfig = async (templatePath: string) => {
 // 	const resolvedTemplatePath = resolve(__dirname, templatePath);

@@ -55,6 +55,11 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 			type: "string",
 			hidden: true,
 		})
+		.option("template", {
+			type: "string",
+			description:
+				"The url of a git repository containing the C3 template to run",
+		})
 		.option("accept-defaults", {
 			alias: "y",
 			type: "boolean",

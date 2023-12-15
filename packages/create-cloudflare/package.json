@@ -81,5 +81,9 @@
 	},
 	"engines": {
 		"node": ">=18.14.1"
+	},
+	"dependencies": {
+		"@types/degit": "^2.8.6",
+		"degit": "^2.8.4"
 	}
 }
