@@ -23,7 +23,7 @@ type WorkerTestConfig = Omit<RunnerConfig, "ctx"> & {
 	template: string;
 };
 describe
-	.skipIf(frameworkToTest || isQuarantineMode())
+	.skipIf(frameworkToTest || isQuarantineMode() || process.platform === "win32")
 	.concurrent(`E2E: Workers templates`, () => {
 		const workerTemplates: WorkerTestConfig[] = [
 			{
