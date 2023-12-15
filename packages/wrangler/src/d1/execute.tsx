@@ -228,16 +228,19 @@ async function executeLocally({
 	const localDB = getDatabaseInfoFromConfig(config, name);
 	if (!localDB) {
 		throw new Error(
-			`Can't find a DB with name/binding '${name}' in local config. Check info in wrangler.toml...`
+			`Couldn't find a DB with name/binding '${name}' in wrangler.toml`
 		);
 	}
 
-	const id = localDB.previewDatabaseUuid ?? localDB.uuid;
+	// const id = localDB.previewDatabaseUuid ?? localDB.uuid;
+	// TODO: use the `id` to move any existing SQL files/folders to `binding`
 	const persistencePath = getLocalPersistencePath(persistTo, config.configPath);
 	const d1Persist = path.join(persistencePath, "v3", "d1");
 
+	const binding = localDB.binding;
+
 	logger.log(
-		`🌀 Executing on local database ${name} (${id}) from ${readableRelative(
+		`🌀 Executing on local database ${name} (${binding}) from ${readableRelative(
 			d1Persist
 		)}:`
 	);
@@ -246,7 +249,7 @@ async function executeLocally({
 		modules: true,
 		script: "",
 		d1Persist,
-		d1Databases: { DATABASE: id },
+		d1Databases: { DATABASE: binding },
 	});
 	const db = await mf.getD1Database("DATABASE");
 
