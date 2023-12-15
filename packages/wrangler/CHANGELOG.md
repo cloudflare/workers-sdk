@@ -1,5 +1,19 @@
 # wrangler
 
+## 3.21.0
+
+### Minor Changes
+
+- [#4423](https://github.com/cloudflare/workers-sdk/pull/4423) [`a94ef570`](https://github.com/cloudflare/workers-sdk/commit/a94ef5700ade9d96e4060dd590a7b3f0bd2e28c1) Thanks [@mrbbot](https://github.com/mrbbot)! - feat: apply source mapping to logged strings
+
+  Previously, Wrangler would only apply source mapping to uncaught exceptions. This meant if you caught an exception and logged its stack trace, the call sites would reference built JavaScript files as opposed to source files. This change looks for stack traces in logged messages, and tries to source map them.
+
+  Note source mapping is only applied when outputting logs. `Error#stack` does not return a source mapped stack trace. This means the actual runtime value of `new Error().stack` and the output from `console.log(new Error().stack)` may be different.
+
+### Patch Changes
+
+- [#4511](https://github.com/cloudflare/workers-sdk/pull/4511) [`66394681`](https://github.com/cloudflare/workers-sdk/commit/66394681d99b8afa7c56274388eb7085afb41916) Thanks [@huw](https://github.com/huw)! - Add 'took recursive isolate lock' warning to workerd output exceptions
+
 ## 3.20.0
 
 ### Minor Changes
