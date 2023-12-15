@@ -5,11 +5,9 @@ import { blue, bold, brandColor, dim, gray } from "./colors";
 import { cancel, newline, shapes, space, status } from "./index";
 import type { ChalkInstance } from "chalk";
 
-const wideStdout = Object.assign(process.stdout, {
-	columns: Number.MAX_SAFE_INTEGER,
-});
+process.stdout.columns = 300;
 
-const logUpdate = createLogUpdate(wideStdout);
+const logUpdate = createLogUpdate(process.stdout);
 
 export type Arg = string | boolean | string[] | undefined;
 const grayBar = gray(shapes.bar);
