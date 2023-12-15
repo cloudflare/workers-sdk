@@ -1,4 +1,6 @@
+import fs from "fs/promises";
 import assert from "node:assert";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import chalk from "chalk";
 import { Static, Text } from "ink";
@@ -17,7 +19,11 @@ import { renderToString } from "../utils/render";
 import { DEFAULT_BATCH_SIZE } from "./constants";
 import * as options from "./options";
 import splitSqlQuery from "./splitter";
-import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
+import {
+	durableObjectNamespaceIdFromName,
+	getDatabaseByNameOrBinding,
+	getDatabaseInfoFromConfig,
+} from "./utils";
 import type { Config, ConfigFields, DevConfig, Environment } from "../config";
 import type {
 	CommonYargsArgv,
@@ -232,15 +238,47 @@ async function executeLocally({
 		);
 	}
 
-	// const id = localDB.previewDatabaseUuid ?? localDB.uuid;
-	// TODO: use the `id` to move any existing SQL files/folders to `binding`
+	const id = localDB.previewDatabaseUuid ?? localDB.uuid;
 	const persistencePath = getLocalPersistencePath(persistTo, config.configPath);
 	const d1Persist = path.join(persistencePath, "v3", "d1");
+	const mfD1Prefix = "miniflare-D1DatabaseObject";
 
 	const binding = localDB.binding;
+	const hashedIdPath = durableObjectNamespaceIdFromName(mfD1Prefix, id);
+	const hashedBindingPath = durableObjectNamespaceIdFromName(
+		mfD1Prefix,
+		binding
+	);
+	logger.log("hashedIdPath: ", hashedIdPath);
+	logger.log("hashedBindingPath: ", hashedBindingPath);
+	const mfD1Dir = path.join(d1Persist, mfD1Prefix);
+	const previousPath = path.join(mfD1Dir, `${hashedIdPath}.sqlite`);
+	const previousWalPath = path.join(mfD1Dir, `${hashedIdPath}.sqlite-wal`);
+	if (existsSync(previousPath)) {
+		//we need to move the previous path (ID-based dbs) to the new location (binding-based dbs)
+		const newPath = path.join(mfD1Dir, `${hashedBindingPath}.sqlite`);
+		const newWalPath = path.join(mfD1Dir, `${hashedBindingPath}.sqlite-wal`);
+		if (existsSync(newPath)) {
+			logger.debug(
+				`Not migrating ${previousPath} to ${newPath} as it already exists`
+			);
+			return;
+		}
+		logger.debug(`Migrating ${previousPath} to ${newPath}`);
+		try {
+			await fs.copyFile(previousPath, newPath);
+			if (existsSync(previousWalPath)) {
+				await fs.copyFile(previousWalPath, newWalPath);
+			}
+			await fs.unlink(previousPath);
+			await fs.unlink(previousWalPath);
+		} catch (e) {
+			logger.warn(`Error migrating ${previousPath} to ${newPath}: ${e}`);
+		}
+	}
 
 	logger.log(
-		`🌀 Executing on local database ${name} (${binding}) from ${readableRelative(
+		`🌀 Executing on local database ${name} (${id}) from ${readableRelative(
 			d1Persist
 		)}:`
 	);

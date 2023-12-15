@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { fetchResult } from "../cfetch";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "./constants";
 import { listDatabases } from "./list";
@@ -62,3 +63,21 @@ export const getDatabaseInfoFromId = async (
 		}
 	);
 };
+
+export function durableObjectNamespaceIdFromName(
+	uniqueKey: string,
+	name: string
+) {
+	const key = crypto.createHash("sha256").update(uniqueKey).digest();
+	const nameHmac = crypto
+		.createHmac("sha256", key)
+		.update(name)
+		.digest()
+		.subarray(0, 16);
+	const hmac = crypto
+		.createHmac("sha256", key)
+		.update(nameHmac)
+		.digest()
+		.subarray(0, 16);
+	return Buffer.concat([nameHmac, hmac]).toString("hex");
+}
