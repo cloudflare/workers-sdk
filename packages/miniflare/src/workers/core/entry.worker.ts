@@ -8,7 +8,7 @@ import {
 	reset,
 	yellow,
 } from "kleur/colors";
-import { LogLevel, SharedHeaders } from "miniflare:shared";
+import { HttpError, LogLevel, SharedHeaders } from "miniflare:shared";
 import { CoreBindings, CoreHeaders } from "./constants";
 import { STATUS_CODES } from "./http";
 import { WorkerRoute, matchRoutes } from "./routing";
@@ -23,6 +23,7 @@ type Env = {
 	[CoreBindings.JSON_LOG_LEVEL]: LogLevel;
 	[CoreBindings.DATA_LIVE_RELOAD_SCRIPT]: ArrayBuffer;
 	[CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY]: DurableObjectNamespace;
+	[CoreBindings.TEXT_PROXY_SIGNATURE]?: string;
 } & {
 	[K in `${typeof CoreBindings.SERVICE_USER_ROUTE_PREFIX}${string}`]:
 		| Fetcher
@@ -33,10 +34,30 @@ function getUserRequest(
 	request: Request<unknown, IncomingRequestCfProperties>,
 	env: Env
 ) {
+	// The original URL is a header that is passed by Miniflare to the user worker
+	// in case the request was rewritten on its way to the user worker.
 	const originalUrl = request.headers.get(CoreHeaders.ORIGINAL_URL);
-	const upstreamUrl = env[CoreBindings.TEXT_UPSTREAM_URL];
-	let upstreamHost: string|undefined;
 	let url = new URL(originalUrl ?? request.url);
+
+	// The `upstreamHost` is used to override the `Host` header on the request being handled.
+	let upstreamHost: string | undefined;
+
+	// If the request is signed by an upstream proxy then we can use the one from the ORIGINAL_URL.
+	// The signature is required to prevent a malicious user being able to change the host header without permission.
+	const proxySignature = request.headers.get(CoreHeaders.PROXY_SIGNATURE);
+	if (proxySignature) {
+		if (proxySignature === env[CoreBindings.TEXT_PROXY_SIGNATURE]) {
+			upstreamHost = url.host;
+		} else {
+			throw new HttpError(
+				400,
+				`Disallowed header in request: ${CoreHeaders.PROXY_SIGNATURE}=${proxySignature}`
+			);
+		}
+	}
+
+	// If Miniflare was configured with `upstream`, then we use this to override the url and host in the request.
+	const upstreamUrl = env[CoreBindings.TEXT_UPSTREAM_URL];
 	if (upstreamUrl !== undefined) {
 		// If a custom `upstream` was specified, make sure the URL starts with it
 		let path = url.pathname + url.search;
@@ -61,6 +82,7 @@ function getUserRequest(
 	if (upstreamHost !== undefined) {
 		request.headers.set("Host", upstreamHost);
 	}
+	request.headers.delete(CoreHeaders.PROXY_SIGNATURE);
 	request.headers.delete(CoreHeaders.ORIGINAL_URL);
 	request.headers.delete(CoreHeaders.DISABLE_PRETTY_ERROR);
 	return request;
@@ -214,7 +236,13 @@ export default <ExportedHandler<Env>>{
 		const disablePrettyErrorPage =
 			request.headers.get(CoreHeaders.DISABLE_PRETTY_ERROR) !== null;
 
-		request = getUserRequest(request, env);
+		try {
+			request = getUserRequest(request, env);
+		} catch (e) {
+			if (e instanceof HttpError) {
+				return e.toResponse();
+			}
+		}
 		const url = new URL(request.url);
 		const service = getTargetService(request, url, env);
 		if (service === undefined) {

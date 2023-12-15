@@ -1,6 +1,7 @@
 export const CoreHeaders = {
 	CUSTOM_SERVICE: "MF-Custom-Service",
 	ORIGINAL_URL: "MF-Original-URL",
+	PROXY_SIGNATURE: "MF-Proxy-Signature",
 	DISABLE_PRETTY_ERROR: "MF-Disable-Pretty-Error",
 	ERROR_STACK: "MF-Experimental-Error-Stack",
 	ROUTE_OVERRIDE: "MF-Route-Override",
@@ -27,6 +28,7 @@ export const CoreBindings = {
 	DATA_LIVE_RELOAD_SCRIPT: "MINIFLARE_LIVE_RELOAD_SCRIPT",
 	DURABLE_OBJECT_NAMESPACE_PROXY: "MINIFLARE_PROXY",
 	DATA_PROXY_SECRET: "MINIFLARE_PROXY_SECRET",
+	TEXT_PROXY_SIGNATURE: "MINIFLARE_PROXY_SIGNATURE",
 } as const;
 
 export const ProxyOps = {
