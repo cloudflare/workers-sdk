@@ -12,6 +12,7 @@ export type C3Args = {
 	// workers specific
 	ts?: boolean;
 	existingScript?: string;
+	template?: string;
 	wranglerDefaults?: boolean;
 	additionalArgs?: string[];
 };

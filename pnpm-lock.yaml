@@ -637,6 +637,13 @@ importers:
         version: 5.20.0
 
   packages/create-cloudflare:
+    dependencies:
+      '@types/degit':
+        specifier: ^2.8.6
+        version: 2.8.6
+      degit:
+        specifier: ^2.8.4
+        version: 2.8.4
     devDependencies:
       '@babel/parser':
         specifier: ^7.21.3
@@ -6649,6 +6656,10 @@ packages:
       '@types/ms': 0.7.31
     dev: true
 
+  /@types/degit@2.8.6:
+    resolution: {integrity: sha512-y0M7sqzsnHB6cvAeTCBPrCQNQiZe8U4qdzf8uBVmOWYap5MMTN/gB2iEqrIqFiYcsyvP74GnGD5tgsHttielFw==}
+    dev: false
+
   /@types/dns2@2.0.3:
     resolution: {integrity: sha512-sO14jUYelc2DzwHcCbwp7tZsZfB2x17/zIdHCAeUBINAz2cc36iVFLqCPCB7rn73CzoyoCmpkEnh1rA8C0puPw==}
     dependencies:
@@ -10033,6 +10044,12 @@ packages:
       escodegen: 2.1.0
       esprima: 4.0.1
     dev: true
+
+  /degit@2.8.4:
+    resolution: {integrity: sha512-vqYuzmSA5I50J882jd+AbAhQtgK6bdKUJIex1JNfEUPENCgYsxugzKVZlFyMwV4i06MmnV47/Iqi5Io86zf3Ng==}
+    engines: {node: '>=8.0.0'}
+    hasBin: true
+    dev: false
 
   /del@5.1.0:
     resolution: {integrity: sha512-wH9xOVHnczo9jN2IW68BabcecVPxacIA3g/7z6vhSU/4stOKQzeCRK0yD0A24WiAAUJmmVpWqrERcTxnLo3AnA==}
