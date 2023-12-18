@@ -222,3 +222,66 @@ export async function usingLocalBucket<T>(
 		await mf.dispose();
 	}
 }
+
+/**
+ * Retreive the sippy upstream bucket for the bucket with the given name
+ */
+export async function getR2Sippy(
+	accountId: string,
+	bucketName: string,
+	jurisdiction?: string
+): Promise<string> {
+	const headers: HeadersInit = {};
+	if (jurisdiction !== undefined) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+	return await fetchResult(
+		`/accounts/${accountId}/r2/buckets/${bucketName}/sippy`,
+		{ method: "GET", headers }
+	);
+}
+
+/**
+ * Disable sippy on the bucket with the given name
+ */
+export async function deleteR2Sippy(
+	accountId: string,
+	bucketName: string,
+	jurisdiction?: string
+): Promise<void> {
+	const headers: HeadersInit = {};
+	if (jurisdiction !== undefined) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+	return await fetchResult(
+		`/accounts/${accountId}/r2/buckets/${bucketName}/sippy`,
+		{ method: "DELETE", headers }
+	);
+}
+
+/**
+ * Enable sippy on the bucket with the given name
+ */
+export async function putR2Sippy(
+	accountId: string,
+	bucketName: string,
+	config: {
+		provider: "AWS";
+		zone: string | undefined;
+		bucket: string;
+		key_id: string;
+		access_key: string;
+		r2_key_id: string;
+		r2_access_key: string;
+	},
+	jurisdiction?: string
+): Promise<void> {
+	const headers: HeadersInit = {};
+	if (jurisdiction !== undefined) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+	return await fetchResult(
+		`/accounts/${accountId}/r2/buckets/${bucketName}/sippy`,
+		{ method: "PUT", body: JSON.stringify(config), headers }
+	);
+}

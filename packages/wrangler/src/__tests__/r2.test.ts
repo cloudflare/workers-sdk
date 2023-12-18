@@ -37,6 +37,7 @@ describe("r2", () => {
 			  wrangler r2 bucket create <name>  Create a new R2 bucket
 			  wrangler r2 bucket list           List R2 buckets
 			  wrangler r2 bucket delete <name>  Delete an R2 bucket
+			  wrangler r2 bucket sippy          Manage Sippy incremental migration on an R2 bucket
 
 			Flags:
 			  -j, --experimental-json-config  Experimental: Support wrangler.json  [boolean]
