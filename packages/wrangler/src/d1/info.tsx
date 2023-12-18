@@ -107,10 +107,10 @@ export const Handler = withConfig<HandlerOptions>(
 						metrics.rowsWritten += row?.sum?.rowsWritten ?? 0;
 					}
 				);
-				output.readQueries24h = metrics.readQueries;
-				output.writeQueries24h = metrics.writeQueries;
-				output.rowsRead24h = metrics.rowsRead;
-				output.rowsWritten24h = metrics.rowsWritten;
+				output.read_queries_24h = metrics.readQueries;
+				output.write_queries_24h = metrics.writeQueries;
+				output.rows_read_24h = metrics.rowsRead;
+				output.rows_written_24h = metrics.rowsWritten;
 			}
 		}
 
@@ -125,10 +125,10 @@ export const Handler = withConfig<HandlerOptions>(
 				if (k === "database_size") {
 					value = prettyBytes(Number(v));
 				} else if (
-					k === "readQueries24h" ||
-					k === "writeQueries24h" ||
-					k === "rowsRead24h" ||
-					k === "rowsWritten24h"
+					k === "read_queries_24h" ||
+					k === "write_queries_24h" ||
+					k === "rows_read_24h" ||
+					k === "rows_written_24h"
 				) {
 					value = v.toLocaleString();
 				} else {
