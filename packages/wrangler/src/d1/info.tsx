@@ -63,6 +63,8 @@ export const Handler = withConfig<HandlerOptions>(
 											sum {
 												readQueries
 												writeQueries
+												rowsRead
+												rowsWritten
 										}
 										dimensions {
 												datetimeHour
@@ -90,16 +92,25 @@ export const Handler = withConfig<HandlerOptions>(
 				},
 			});
 
-			const metrics = { readQueries: 0, writeQueries: 0 };
+			const metrics = {
+				readQueries: 0,
+				writeQueries: 0,
+				rowsRead: 0,
+				rowsWritten: 0,
+			};
 			if (graphqlResult) {
 				graphqlResult.data?.viewer?.accounts[0]?.d1AnalyticsAdaptiveGroups?.forEach(
 					(row) => {
 						metrics.readQueries += row?.sum?.readQueries ?? 0;
 						metrics.writeQueries += row?.sum?.writeQueries ?? 0;
+						metrics.rowsRead += row?.sum?.rowsRead ?? 0;
+						metrics.rowsWritten += row?.sum?.rowsWritten ?? 0;
 					}
 				);
-				output.read_queries_24h = metrics.readQueries;
-				output.write_queries_24h = metrics.writeQueries;
+				output.readQueries24h = metrics.readQueries;
+				output.writeQueries24h = metrics.writeQueries;
+				output.rowsRead24h = metrics.rowsRead;
+				output.rowsWritten24h = metrics.rowsWritten;
 			}
 		}
 
@@ -113,7 +124,12 @@ export const Handler = withConfig<HandlerOptions>(
 				let value;
 				if (k === "database_size") {
 					value = prettyBytes(Number(v));
-				} else if (k === "read_queries_24h" || k === "write_queries_24h") {
+				} else if (
+					k === "readQueries24h" ||
+					k === "writeQueries24h" ||
+					k === "rowsRead24h" ||
+					k === "rowsWritten24h"
+				) {
 					value = v.toLocaleString();
 				} else {
 					value = v;
