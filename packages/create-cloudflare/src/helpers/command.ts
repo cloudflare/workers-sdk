@@ -381,9 +381,9 @@ export const listAccounts = async () => {
  * @returns The latest compatibility date for workerd in the form "YYYY-MM-DD"
  */
 export async function getWorkerdCompatibilityDate() {
-	const { npm } = detectPackageManager();
-
-	return runCommand([npm, "info", "workerd", "dist-tags.latest"], {
+	// the following command is run using npm regardless of the currently used package manager, this makes the
+	// command more stable and it doesn't really have any effect in regards to the currently used package manager
+	return runCommand(["npm", "info", "workerd", "dist-tags.latest"], {
 		silent: true,
 		captureOutput: true,
 		startText: "Retrieving current workerd compatibility date",
