@@ -1,5 +1,5 @@
 {
-	"name": "d1-example",
+	"name": "template-worker-d1-api",
 	"version": "0.0.0",
 	"private": true,
 	"scripts": {
