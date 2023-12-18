@@ -233,6 +233,7 @@ async function executeLocally({
 	}
 
 	const id = localDB.previewDatabaseUuid ?? localDB.uuid;
+	const binding = localDB.binding;
 	const persistencePath = getLocalPersistencePath(persistTo, config.configPath);
 	const d1Persist = path.join(persistencePath, "v3", "d1");
 
@@ -246,9 +247,9 @@ async function executeLocally({
 		modules: true,
 		script: "",
 		d1Persist,
-		d1Databases: { DATABASE: id },
+		d1Databases: { [binding]: id },
 	});
-	const db = await mf.getD1Database("DATABASE");
+	const db = await mf.getD1Database(binding);
 
 	let results: D1Result<Record<string, string | number | boolean>>[];
 	try {
