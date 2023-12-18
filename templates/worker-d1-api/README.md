@@ -2,24 +2,18 @@
 
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/worker-d1-api)
 
-> **Note: requires D1 Beta Access**
-
 This project is based off the Default Typescript Worker starter. To create a new project like this, run the following:
 
 ```sh
-npx wrangler@d1 init -y
+npx wrangler@latest init -y
 ```
-
-> **Note the "@d1"**—we're using a prerelease version of Wrangler under the `d1` tag. You can install this into an existing Wrangler project using `npm install wrangler@d1`
 
 Then copy the `src` and the `data` directory from this template into your project.
 
-Alternatively:
+Alternatively run:
 
 ```sh
-git clone https://github.com/cloudflare/templates.git
-cd templates
-npx wrangler generate northwind-demo worker-d1-api
+npx wrangler@latest generate northwind-demo worker-d1-api
 ```
 
 ### Getting started
@@ -65,4 +59,4 @@ npx wrangler d1 backup download northwind-demo <backup-id> --output ./wrangler-l
 npx wrangler dev --local --experimental-enable-local-persistence
 ```
 
-**Note:** the local D1 development environment is under active development and may have some incorrect behaviour. If you have issues, run `npm install wrangler@d1` to make sure you're on the latest version, or provide feedback in Discord.
+**Note:** the local D1 development environment is under active development and may have some incorrect behaviour. If you have issues, run `npm install wrangler@latest` to make sure you're on the latest version, or provide feedback in Discord.
