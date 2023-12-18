@@ -92,10 +92,10 @@ export function useEsbuild({
 	const [bundle, setBundle] = useState<EsbuildBundle>();
 	const { exit } = useApp();
 	useEffect(() => {
-		if (bundleInfo?.bundle) {
-			onBundleComplete(bundleInfo?.bundle);
+		if (bundle) {
+			onBundleComplete(bundle);
 		}
-	}, [onBundleComplete, bundleInfo?.bundle]);
+	}, [onBundleComplete, bundle]);
 	useEffect(() => {
 		let stopWatching: (() => void) | undefined = undefined;
 

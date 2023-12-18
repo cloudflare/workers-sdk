@@ -61,7 +61,7 @@ interface RemoteProps {
 	setAccountId: (accountId: string) => void;
 }
 
-export function Remote(props: RemoteProps) {
+export function Remote(props: Pick<RemoteProps, "accountId" | "setAccountId">) {
 	const [accountId, setAccountId] = useState(props.accountId);
 	const accountChoicesRef = useRef<Promise<ChooseAccountItem[]>>();
 	const [accountChoices, setAccountChoices] = useState<ChooseAccountItem[]>();

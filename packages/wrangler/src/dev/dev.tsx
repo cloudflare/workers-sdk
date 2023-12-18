@@ -16,6 +16,7 @@ import { useErrorHandler, withErrorBoundary } from "react-error-boundary";
 import onExit from "signal-exit";
 import { fetch } from "undici";
 import { DevEnv } from "../api";
+import { createDeferred } from "../api/startDevWorker/utils";
 import { runCustomBuild } from "../deployment-bundle/run-custom-build";
 import {
 	getBoundRegisteredWorkers,
@@ -26,6 +27,7 @@ import {
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { getWranglerTmpDir } from "../paths";
+import { requireApiToken } from "../user";
 import { openInspector } from "./inspect";
 import { Local } from "./local";
 import { Remote } from "./remote";
@@ -41,8 +43,6 @@ import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/ty
 import type { EphemeralDirectory } from "../paths";
 import type { AssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
-import { requireApiToken } from "../user";
-import { createDeferredPromise } from "../api/startDevWorker/utils";
 
 /**
  * This hooks establishes a connection with the dev registry,
@@ -261,7 +261,7 @@ type DevSessionProps = DevProps & {
 
 function DevSession(props: DevSessionProps) {
 	const [accountId, setAccountId] = useState(props.accountId);
-	const accountIdDeferred = useMemo(createDeferredPromise<string>, []);
+	const accountIdDeferred = useMemo(createDeferred<string>, []);
 	const setAccountIdAndResolveDeferred = useCallback(
 		(newAccountId: string) => {
 			setAccountId(newAccountId);
@@ -351,9 +351,15 @@ function DevSession(props: DevSessionProps) {
 		},
 		[devEnv, startDevWorkerOptions]
 	);
-	const onBundleError = useCallback(() => {
-		// devEnv.proxy.onBundleError(...);
-	}, [devEnv, startDevWorkerOptions]);
+	const onBundleError = useCallback(
+		() => {
+			// devEnv.proxy.onBundleError(...);
+		},
+		[
+			// devEnv,
+			// startDevWorkerOptions
+		]
+	);
 	const onReloadStart = useCallback(
 		(bundle: EsbuildBundle) => {
 			devEnv.proxy.onReloadStart({
@@ -425,7 +431,7 @@ function DevSession(props: DevSessionProps) {
 				})
 			);
 		}
-	}, [onReloadStart, bundle]);
+	}, [devEnv.runtimes, startDevWorkerOptions, bundle]);
 
 	// TODO(queues) support remote wrangler dev
 	if (
