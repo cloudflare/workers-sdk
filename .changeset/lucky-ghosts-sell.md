@@ -2,4 +2,4 @@
 "create-cloudflare": patch
 ---
 
-make the workerd compatibility retrieval more stable (by always performing it with npm)
+make the workerd compatibility date retrieval more stable by fetching it directly from the npm registry
