@@ -1,6 +1,6 @@
 import { existsSync, rmSync } from "fs";
 import path from "path";
-import { endSection, stripAnsi, warn } from "@cloudflare/cli";
+import { endSection, stripAnsi } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { isInteractive, spinner } from "@cloudflare/cli/interactive";
 import { spawn } from "cross-spawn";
