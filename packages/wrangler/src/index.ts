@@ -439,14 +439,10 @@ export function createCLIParser(argv: string[]) {
 		return ai(aiYargs.command(subHelp));
 	});
 
-	// constellation
-	wrangler.command(
-		"constellation",
-		"🤖 Interact with Constellation models",
-		(aiYargs) => {
-			return constellation(aiYargs.command(subHelp));
-		}
-	);
+	// [DEPRECATED] constellation
+	wrangler.command("constellation", false, (aiYargs) => {
+		return constellation(aiYargs.command(subHelp));
+	});
 
 	// vectorize
 	wrangler.command(
