@@ -970,5 +970,11 @@ function getBindings(
 		}),
 	};
 
+	if (bindings.constellation) {
+		logger.warn(
+			"`constellation` is deprecated and will be removed in the next major version.\nPlease migrate to Workers AI, learn more here https://developers.cloudflare.com/workers-ai/."
+		);
+	}
+
 	return bindings;
 }

@@ -7,8 +7,12 @@ import * as ListProject from "./listProject";
 import * as ListRuntime from "./listRuntime";
 import * as UploadModel from "./uploadModel";
 import type { CommonYargsArgv } from "../yargs-types";
+import { logger } from "../logger";
 
 export function constellation(yargs: CommonYargsArgv) {
+	logger.warn(
+		"`wrangler constellation` is deprecated and will be removed in the next major version.\nPlease migrate to Workers AI, learn more here https://developers.cloudflare.com/workers-ai/."
+	);
 	return yargs
 		.command("project", "Manage your projects", (constProjYargs) => {
 			return constProjYargs
