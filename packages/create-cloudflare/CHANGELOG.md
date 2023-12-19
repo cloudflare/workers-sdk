@@ -1,5 +1,13 @@
 # create-cloudflare
 
+## 2.8.4
+
+### Patch Changes
+
+- [#4616](https://github.com/cloudflare/workers-sdk/pull/4616) [`e2205e35`](https://github.com/cloudflare/workers-sdk/commit/e2205e354ed9c142c7bbaaed1d4457893ceec8ce) Thanks [@dependabot](https://github.com/apps/dependabot)! - C3: Bumped `create-qwik` from `1.3.0` to `1.3.1`
+
+* [#4626](https://github.com/cloudflare/workers-sdk/pull/4626) [`421cd584`](https://github.com/cloudflare/workers-sdk/commit/421cd584a678a97de2f24e1c1b28a766f984148e) Thanks [@jculvey](https://github.com/jculvey)! - C3: Bumped `create-svelte` from `5.3.3` to `6.0.3`
+
 ## 2.8.3
 
 ### Patch Changes

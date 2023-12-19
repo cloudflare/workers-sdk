@@ -1,5 +1,17 @@
 # wrangler
 
+## 3.22.0
+
+### Minor Changes
+
+- [#4632](https://github.com/cloudflare/workers-sdk/pull/4632) [`a6a4e8a4`](https://github.com/cloudflare/workers-sdk/commit/a6a4e8a4981f390709ae7519225a02cd981059b4) Thanks [@G4brym](https://github.com/G4brym)! - Deprecate constellation commands and add a warning when using the constellation binding
+
+* [#4130](https://github.com/cloudflare/workers-sdk/pull/4130) [`e8a2a1d9`](https://github.com/cloudflare/workers-sdk/commit/e8a2a1d9ddded5b4c472750e80011895f14b9315) Thanks [@vkrasnov](https://github.com/vkrasnov)! - Added support for R2 Sippy incremental migration
+
+- [#4621](https://github.com/cloudflare/workers-sdk/pull/4621) [`98dee932`](https://github.com/cloudflare/workers-sdk/commit/98dee932811aef5e50065d8d9d9ba9728ad84c20) Thanks [@rozenmd](https://github.com/rozenmd)! - feat: add rows written/read in the last 24 hours to `wrangler d1 info` output
+
+* [#4426](https://github.com/cloudflare/workers-sdk/pull/4426) [`c628de59`](https://github.com/cloudflare/workers-sdk/commit/c628de591a0d436b5496dac53d771d92ee5d406a) Thanks [@OilyLime](https://github.com/OilyLime)! - Improve queues list displaying as table, update queues API types
+
 ## 3.21.0
 
 ### Minor Changes
