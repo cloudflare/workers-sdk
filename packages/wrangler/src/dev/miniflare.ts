@@ -112,6 +112,10 @@ export interface ConfigBundle {
 	localUpstream: string | undefined;
 	inspect: boolean;
 	serviceBindings: Record<string, (_request: Request) => Promise<Response>>;
+	// The unsafeProxySignature is given as a shared secret to the Proxy and User workers
+	// so that the User Worker can trust aspects of HTTP requests from the Proxy Worker
+	// if it provides the secret in a `MF-Proxy-Signature` header.
+	unsafeProxySignature: string;
 }
 
 export class WranglerLog extends Log {
@@ -554,6 +558,7 @@ async function buildMiniflareOptions(
 		inspectorPort: config.inspect ? config.inspectorPort : undefined,
 		liveReload: config.liveReload,
 		upstream,
+		unsafeProxySignature: config.unsafeProxySignature,
 
 		log,
 		verbose: logger.loggerLevel === "debug",

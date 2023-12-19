@@ -30,6 +30,9 @@ describe("'wrangler dev' correctly renders pages", () => {
 		expect(output).toContain("startup log");
 		expect(output).toContain("request log");
 
+		// check host on request in the Worker is as expected
+		expect(output).toContain(`host' => '${ip}:${port}'`);
+
 		// Check logged strings are source mapped
 		expect(output).toMatch(
 			/Error: logged error one.+fixtures\/worker-app\/src\/log.ts:7:14/s
