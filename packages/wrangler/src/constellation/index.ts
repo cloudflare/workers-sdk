@@ -1,3 +1,4 @@
+import { logger } from "../logger";
 import * as CreateProject from "./createProject";
 import * as DeleteProject from "./deleteProject";
 import * as DeleteProjectModel from "./deleteProjectModel";
@@ -7,7 +8,6 @@ import * as ListProject from "./listProject";
 import * as ListRuntime from "./listRuntime";
 import * as UploadModel from "./uploadModel";
 import type { CommonYargsArgv } from "../yargs-types";
-import { logger } from "../logger";
 
 export function constellation(yargs: CommonYargsArgv) {
 	logger.warn(
