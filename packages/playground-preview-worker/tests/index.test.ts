@@ -41,6 +41,11 @@ describe("Preview Worker", () => {
 			{
 				method: "GET",
 				redirect: "manual",
+				// These are forbidden headers, but undici currently allows setting them
+				headers: {
+					"Sec-Fetch-Dest": "iframe",
+					Referer: "https://workers.cloudflare.com/",
+				},
 			}
 		);
 		expect(resp.headers.get("location")).toMatchInlineSnapshot(

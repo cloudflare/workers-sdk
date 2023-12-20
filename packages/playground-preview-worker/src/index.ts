@@ -120,6 +120,13 @@ class UploadFailed extends HttpError {
 	}
 }
 
+class PreviewRequestForbidden extends HttpError {
+	name = "PreviewRequestForbidden";
+	constructor() {
+		super("Preview request forbidden", 403, false);
+	}
+}
+
 /**
  * Given a preview token, this endpoint allows for raw http calls to be inspected
  *
@@ -257,6 +264,14 @@ app.get(`${rootDomain}/api/inspector`, async (c) => {
 app.get(`${previewDomain}/.update-preview-token`, (c) => {
 	const url = new URL(c.req.url);
 	const token = url.searchParams.get("token");
+
+	if (
+		c.req.header("Sec-Fetch-Dest") !== "iframe" ||
+		!c.req.header("Referer")?.startsWith("https://workers.cloudflare.com")
+	) {
+		throw new PreviewRequestForbidden();
+	}
+
 	if (!token) {
 		throw new TokenUpdateFailed();
 	}
