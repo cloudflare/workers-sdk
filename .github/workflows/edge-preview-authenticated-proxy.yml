@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'packages/edge-preview-authenticated-proxy/**'
+      - "packages/edge-preview-authenticated-proxy/**"
 
 jobs:
   publish_worker:

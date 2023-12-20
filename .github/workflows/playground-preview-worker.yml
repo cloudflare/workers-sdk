@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'packages/playground-preview-worker/**'
+      - "packages/playground-preview-worker/**"
 
 jobs:
   publish_worker:
