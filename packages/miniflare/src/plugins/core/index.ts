@@ -158,10 +158,10 @@ export const CoreSharedOptionsSchema = z.object({
 	cf: z.union([z.boolean(), z.string(), z.record(z.any())]).optional(),
 
 	liveReload: z.boolean().optional(),
-	// The proxy-signature is a shared secret between a proxy server and miniflare that
-	// can be passed in a header to prove that the request came from the proxy and not
+	// This is a shared secret between a proxy server and miniflare that can be
+	// passed in a header to prove that the request came from the proxy and not
 	// some malicious attacker.
-	unsafeProxySignature: z.string().optional(),
+	unsafeProxySharedSecret: z.string().optional(),
 });
 
 export const CORE_PLUGIN_NAME = "core";
@@ -655,10 +655,10 @@ export function getGlobalServices({
 			text: sharedOptions.upstream,
 		});
 	}
-	if (sharedOptions.unsafeProxySignature !== undefined) {
+	if (sharedOptions.unsafeProxySharedSecret !== undefined) {
 		serviceEntryBindings.push({
-			name: CoreBindings.TEXT_PROXY_SIGNATURE,
-			text: sharedOptions.unsafeProxySignature,
+			name: CoreBindings.TEXT_PROXY_SHARED_SECRET,
+			text: sharedOptions.unsafeProxySharedSecret,
 		});
 	}
 	if (sharedOptions.liveReload) {

@@ -16,7 +16,7 @@ it.
 
 Now we update the request's Host header to that passed from the Proxy Worker in a custom `MF-Original-Url`
 header, but only do this if the request also contains a shared secret between the Proxy Worker
-and User Worker, which is passed via the `MF-Proxy-Signature` header. This last feature is to
+and User Worker, which is passed via the `MF-Proxy-Shared-Secret` header. This last feature is to
 prevent a malicious website from faking the Host header in a request directly to the User Worker.
 
 Fixes https://github.com/cloudflare/next-on-pages/issues/588

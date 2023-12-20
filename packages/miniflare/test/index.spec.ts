@@ -593,9 +593,9 @@ test("Miniflare: custom upstream as origin", async (t) => {
 		host: upstream.http.host,
 	});
 });
-test("Miniflare: set origin to original URL if proxySignature matches", async (t) => {
+test("Miniflare: set origin to original URL if proxy shared secret matches", async (t) => {
 	const mf = new Miniflare({
-		unsafeProxySignature: "SOME_PROXY_SIGNATURE_VALUE",
+		unsafeProxySharedSecret: "SOME_PROXY_SHARED_SECRET_VALUE",
 		modules: true,
 		script: `export default {
       async fetch(request) {
@@ -608,13 +608,13 @@ test("Miniflare: set origin to original URL if proxySignature matches", async (t
 	t.teardown(() => mf.dispose());
 
 	const res = await mf.dispatchFetch("https://random:0/path?a=1", {
-		headers: { "MF-Proxy-Signature": "SOME_PROXY_SIGNATURE_VALUE" },
+		headers: { "MF-Proxy-Shared-Secret": "SOME_PROXY_SHARED_SECRET_VALUE" },
 	});
 	t.deepEqual(await res.json(), {
 		host: "random:0",
 	});
 });
-test("Miniflare: keep origin as listening host if proxySignature not provided", async (t) => {
+test("Miniflare: keep origin as listening host if proxy shared secret not provided", async (t) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: `export default {
@@ -632,7 +632,7 @@ test("Miniflare: keep origin as listening host if proxySignature not provided", 
 		host: (await mf.ready).host,
 	});
 });
-test("Miniflare: 400 error on proxySignature header when not configured", async (t) => {
+test("Miniflare: 400 error on proxy shared secret header when not configured", async (t) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: `export default {
@@ -646,17 +646,17 @@ test("Miniflare: 400 error on proxySignature header when not configured", async 
 	t.teardown(() => mf.dispose());
 
 	const res = await mf.dispatchFetch("https://random:0/path?a=1", {
-		headers: { "MF-Proxy-Signature": "SOME_PROXY_SIGNATURE_VALUE" },
+		headers: { "MF-Proxy-Shared-Secret": "SOME_PROXY_SHARED_SECRET_VALUE" },
 	});
 	t.is(res.status, 400);
 	t.is(
 		await res.text(),
-		"Disallowed header in request: MF-Proxy-Signature=SOME_PROXY_SIGNATURE_VALUE"
+		"Disallowed header in request: MF-Proxy-Shared-Secret=SOME_PROXY_SHARED_SECRET_VALUE"
 	);
 });
-test("Miniflare: 400 error on proxySignature header mismatch with configuration", async (t) => {
+test("Miniflare: 400 error on proxy shared secret header mismatch with configuration", async (t) => {
 	const mf = new Miniflare({
-		unsafeProxySignature: "SOME_PROXY_SIGNATURE_VALUE",
+		unsafeProxySharedSecret: "SOME_PROXY_SHARED_SECRET_VALUE",
 		modules: true,
 		script: `export default {
       async fetch(request) {
@@ -669,12 +669,12 @@ test("Miniflare: 400 error on proxySignature header mismatch with configuration"
 	t.teardown(() => mf.dispose());
 
 	const res = await mf.dispatchFetch("https://random:0/path?a=1", {
-		headers: { "MF-Proxy-Signature": "BAD_PROXY_SIGNATURE" },
+		headers: { "MF-Proxy-Shared-Secret": "BAD_PROXY_SHARED_SECRET" },
 	});
 	t.is(res.status, 400);
 	t.is(
 		await res.text(),
-		"Disallowed header in request: MF-Proxy-Signature=BAD_PROXY_SIGNATURE"
+		"Disallowed header in request: MF-Proxy-Shared-Secret=BAD_PROXY_SHARED_SECRET"
 	);
 });
 

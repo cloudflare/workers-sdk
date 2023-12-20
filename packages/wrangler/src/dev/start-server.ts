@@ -191,7 +191,7 @@ export async function startDevServer(
 			usageModel: props.usageModel,
 			workerDefinitions,
 			sourceMapPath: bundle?.sourceMapPath,
-			unsafeProxySignature: props.unsafeProxySignature,
+			unsafeProxySharedSecret: props.unsafeProxySharedSecret,
 		});
 
 		return {
@@ -415,7 +415,7 @@ export async function startLocalServer(
 				},
 				headers: {
 					// Passing this signature from Proxy Worker allows the User Worker to trust the request.
-					"MF-Proxy-Signature": props.unsafeProxySignature,
+					"MF-Proxy-Shared-Secret": props.unsafeProxySharedSecret,
 				},
 				liveReload: props.liveReload,
 				// in local mode, the logs are already being printed to the console by workerd but only for workers written in "module" format

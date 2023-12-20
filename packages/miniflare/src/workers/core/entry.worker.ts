@@ -23,7 +23,7 @@ type Env = {
 	[CoreBindings.JSON_LOG_LEVEL]: LogLevel;
 	[CoreBindings.DATA_LIVE_RELOAD_SCRIPT]: ArrayBuffer;
 	[CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY]: DurableObjectNamespace;
-	[CoreBindings.TEXT_PROXY_SIGNATURE]?: string;
+	[CoreBindings.TEXT_PROXY_SHARED_SECRET]?: string;
 } & {
 	[K in `${typeof CoreBindings.SERVICE_USER_ROUTE_PREFIX}${string}`]:
 		| Fetcher
@@ -43,15 +43,17 @@ function getUserRequest(
 	let upstreamHost: string | undefined;
 
 	// If the request is signed by an upstream proxy then we can use the one from the ORIGINAL_URL.
-	// The signature is required to prevent a malicious user being able to change the host header without permission.
-	const proxySignature = request.headers.get(CoreHeaders.PROXY_SIGNATURE);
-	if (proxySignature) {
-		if (proxySignature === env[CoreBindings.TEXT_PROXY_SIGNATURE]) {
+	// The shared secret is required to prevent a malicious user being able to change the host header without permission.
+	const proxySharedSecret = request.headers.get(
+		CoreHeaders.PROXY_SHARED_SECRET
+	);
+	if (proxySharedSecret) {
+		if (proxySharedSecret === env[CoreBindings.TEXT_PROXY_SHARED_SECRET]) {
 			upstreamHost = url.host;
 		} else {
 			throw new HttpError(
 				400,
-				`Disallowed header in request: ${CoreHeaders.PROXY_SIGNATURE}=${proxySignature}`
+				`Disallowed header in request: ${CoreHeaders.PROXY_SHARED_SECRET}=${proxySharedSecret}`
 			);
 		}
 	}
@@ -82,7 +84,7 @@ function getUserRequest(
 	if (upstreamHost !== undefined) {
 		request.headers.set("Host", upstreamHost);
 	}
-	request.headers.delete(CoreHeaders.PROXY_SIGNATURE);
+	request.headers.delete(CoreHeaders.PROXY_SHARED_SECRET);
 	request.headers.delete(CoreHeaders.ORIGINAL_URL);
 	request.headers.delete(CoreHeaders.DISABLE_PRETTY_ERROR);
 	return request;
