@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { type UUID, randomUUID } from "node:crypto";
 import { realpathSync } from "node:fs";
 import path from "node:path";
 import { Log, LogLevel, TypedEventTarget, Mutex, Miniflare } from "miniflare";
@@ -112,10 +113,6 @@ export interface ConfigBundle {
 	localUpstream: string | undefined;
 	inspect: boolean;
 	serviceBindings: Record<string, (_request: Request) => Promise<Response>>;
-	// The unsafeProxySharedSecret is given as a shared secret to the Proxy and User workers
-	// so that the User Worker can trust aspects of HTTP requests from the Proxy Worker
-	// if it provides the secret in a `MF-Proxy-Shared-Secret` header.
-	unsafeProxySharedSecret: string;
 }
 
 export class WranglerLog extends Log {
@@ -513,7 +510,8 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 
 async function buildMiniflareOptions(
 	log: Log,
-	config: ConfigBundle
+	config: ConfigBundle,
+	proxyToUserWorkerAuthenticationSecret: UUID
 ): Promise<{ options: MiniflareOptions; internalObjects: CfDurableObject[] }> {
 	if (config.crons.length > 0) {
 		logger.warn("Miniflare 3 does not support CRON triggers yet, ignoring...");
@@ -558,7 +556,7 @@ async function buildMiniflareOptions(
 		inspectorPort: config.inspect ? config.inspectorPort : undefined,
 		liveReload: config.liveReload,
 		upstream,
-		unsafeProxySharedSecret: config.unsafeProxySharedSecret,
+		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
 
 		log,
 		verbose: logger.loggerLevel === "debug",
@@ -585,15 +583,19 @@ async function buildMiniflareOptions(
 export interface ReloadedEventOptions {
 	url: URL;
 	internalDurableObjects: CfDurableObject[];
+	proxyToUserWorkerAuthenticationSecret: UUID;
 }
 export class ReloadedEvent extends Event implements ReloadedEventOptions {
 	readonly url: URL;
 	readonly internalDurableObjects: CfDurableObject[];
+	readonly proxyToUserWorkerAuthenticationSecret: UUID;
 
 	constructor(type: "reloaded", options: ReloadedEventOptions) {
 		super(type);
 		this.url = options.url;
 		this.internalDurableObjects = options.internalDurableObjects;
+		this.proxyToUserWorkerAuthenticationSecret =
+			options.proxyToUserWorkerAuthenticationSecret;
 	}
 }
 
@@ -616,6 +618,10 @@ export type MiniflareServerEventMap = {
 export class MiniflareServer extends TypedEventTarget<MiniflareServerEventMap> {
 	#log = buildLog();
 	#mf?: Miniflare;
+	// This is given as a shared secret to the Proxy and User workers
+	// so that the User Worker can trust aspects of HTTP requests from the Proxy Worker
+	// if it provides the secret in a `MF-Proxy-Shared-Secret` header.
+	#proxyToUserWorkerAuthenticationSecret = randomUUID();
 
 	// `buildMiniflareOptions()` is asynchronous, meaning if multiple bundle
 	// updates were submitted, the second may apply before the first. Therefore,
@@ -627,7 +633,8 @@ export class MiniflareServer extends TypedEventTarget<MiniflareServerEventMap> {
 		try {
 			const { options, internalObjects } = await buildMiniflareOptions(
 				this.#log,
-				config
+				config,
+				this.#proxyToUserWorkerAuthenticationSecret
 			);
 			if (opts?.signal?.aborted) return;
 			if (this.#mf === undefined) {
@@ -640,6 +647,8 @@ export class MiniflareServer extends TypedEventTarget<MiniflareServerEventMap> {
 			const event = new ReloadedEvent("reloaded", {
 				url,
 				internalDurableObjects: internalObjects,
+				proxyToUserWorkerAuthenticationSecret:
+					this.#proxyToUserWorkerAuthenticationSecret,
 			});
 			this.dispatchEvent(event);
 		} catch (error: unknown) {

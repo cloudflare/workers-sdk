@@ -176,7 +176,6 @@ export type DevProps = {
 	sendMetrics: boolean | undefined;
 	testScheduled: boolean | undefined;
 	projectRoot: string | undefined;
-	unsafeProxySharedSecret: string;
 };
 
 export function DevImplementation(props: DevProps): JSX.Element {
@@ -442,7 +441,6 @@ function DevSession(props: DevSessionProps) {
 			onReady={announceAndOnReady}
 			enablePagesAssetsServiceBinding={props.enablePagesAssetsServiceBinding}
 			sourceMapPath={bundle?.sourceMapPath}
-			unsafeProxySharedSecret={props.unsafeProxySharedSecret}
 		/>
 	) : (
 		<Remote

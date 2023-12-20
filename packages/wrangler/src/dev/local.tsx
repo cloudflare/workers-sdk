@@ -43,7 +43,6 @@ export interface LocalProps {
 	enablePagesAssetsServiceBinding?: EnablePagesAssetsServiceBindingOptions;
 	testScheduled?: boolean;
 	sourceMapPath: string | undefined;
-	unsafeProxySharedSecret: string;
 }
 
 // TODO(soon): we should be able to remove this function when we fully migrate
@@ -93,7 +92,6 @@ export async function localPropsToConfigBundle(
 		localUpstream: props.localUpstream,
 		inspect: props.inspect,
 		serviceBindings,
-		unsafeProxySharedSecret: props.unsafeProxySharedSecret,
 	};
 }
 
@@ -180,7 +178,8 @@ function useLocalWorker(props: LocalProps) {
 					},
 					headers: {
 						// Passing this signature from Proxy Worker allows the User Worker to trust the request.
-						"MF-Proxy-Shared-Secret": props.unsafeProxySharedSecret,
+						"MF-Proxy-Shared-Secret":
+							event.proxyToUserWorkerAuthenticationSecret,
 					},
 					liveReload: props.liveReload,
 					// in local mode, the logs are already being printed to the console by workerd but only for workers written in "module" format

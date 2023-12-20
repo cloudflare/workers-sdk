@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { isWebContainer } from "@webcontainer/env";
 import { watch } from "chokidar";
@@ -38,11 +37,6 @@ import type {
 	StrictYargsOptionsToInterface,
 } from "./yargs-types";
 import type { Json } from "miniflare";
-
-// This is a shared secret between the Proxy Worker and the User Worker
-// so that the User Worker can trust the MF-Original-Url header and set the Host
-// header accordingly.
-const unsafeProxySharedSecret = randomUUID();
 
 export function devOptions(yargs: CommonYargsArgv) {
 	return (
@@ -489,7 +483,6 @@ export async function startDev(args: StartDevOptions) {
 					sendMetrics={configParam.send_metrics}
 					testScheduled={args.testScheduled}
 					projectRoot={projectRoot}
-					unsafeProxySharedSecret={unsafeProxySharedSecret}
 				/>
 			);
 		}
@@ -632,7 +625,6 @@ export async function startApiDev(args: StartDevOptions) {
 			testScheduled: args.testScheduled,
 			disableDevRegistry: args.disableDevRegistry ?? false,
 			projectRoot,
-			unsafeProxySharedSecret: unsafeProxySharedSecret,
 		});
 	}
 
