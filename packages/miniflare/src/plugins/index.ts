@@ -56,20 +56,20 @@ export type Plugins = typeof PLUGINS;
 //
 // Considering we don't have too many plugins, we now just define these types
 // manually, which has the added benefit of faster type checking.
-export type WorkerOptions = z.infer<typeof CORE_PLUGIN.options> &
-	z.infer<typeof CACHE_PLUGIN.options> &
-	z.infer<typeof D1_PLUGIN.options> &
-	z.infer<typeof DURABLE_OBJECTS_PLUGIN.options> &
-	z.infer<typeof KV_PLUGIN.options> &
-	z.infer<typeof QUEUES_PLUGIN.options> &
-	z.infer<typeof R2_PLUGIN.options> &
+export type WorkerOptions = z.input<typeof CORE_PLUGIN.options> &
+	z.input<typeof CACHE_PLUGIN.options> &
+	z.input<typeof D1_PLUGIN.options> &
+	z.input<typeof DURABLE_OBJECTS_PLUGIN.options> &
+	z.input<typeof KV_PLUGIN.options> &
+	z.input<typeof QUEUES_PLUGIN.options> &
+	z.input<typeof R2_PLUGIN.options> &
 	z.input<typeof HYPERDRIVE_PLUGIN.options>;
-export type SharedOptions = z.infer<typeof CORE_PLUGIN.sharedOptions> &
-	z.infer<typeof CACHE_PLUGIN.sharedOptions> &
-	z.infer<typeof D1_PLUGIN.sharedOptions> &
-	z.infer<typeof DURABLE_OBJECTS_PLUGIN.sharedOptions> &
-	z.infer<typeof KV_PLUGIN.sharedOptions> &
-	z.infer<typeof R2_PLUGIN.sharedOptions>;
+export type SharedOptions = z.input<typeof CORE_PLUGIN.sharedOptions> &
+	z.input<typeof CACHE_PLUGIN.sharedOptions> &
+	z.input<typeof D1_PLUGIN.sharedOptions> &
+	z.input<typeof DURABLE_OBJECTS_PLUGIN.sharedOptions> &
+	z.input<typeof KV_PLUGIN.sharedOptions> &
+	z.input<typeof R2_PLUGIN.sharedOptions>;
 
 export const PLUGIN_ENTRIES = Object.entries(PLUGINS) as [
 	keyof Plugins,

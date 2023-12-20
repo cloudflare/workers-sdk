@@ -1,4 +1,3 @@
-// import { readFileSync } from "../../parse";
 import { RuntimeController } from "./BaseController";
 import { notImplemented } from "./NotImplementedError";
 import type {
@@ -33,9 +32,9 @@ export class RemoteRuntimeController extends RuntimeController {
 	// *********************
 
 	emitReloadStartEvent(data: ReloadStartEvent) {
-		this.emit("reloadComplete", data);
+		this.emit("reloadStart", data);
 	}
-	emitReloadCompletetEvent(data: ReloadCompleteEvent) {
+	emitReloadCompleteEvent(data: ReloadCompleteEvent) {
 		this.emit("reloadComplete", data);
 	}
 }

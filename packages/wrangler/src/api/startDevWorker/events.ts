@@ -1,6 +1,5 @@
-import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { DevToolsEvent } from "./devtools";
-import type { StartDevWorkerOptions } from "./types";
+import type { Bundle, StartDevWorkerOptions } from "./types";
 import type { Miniflare } from "miniflare";
 
 export type TeardownEvent = {
@@ -53,7 +52,7 @@ export type BundleCompleteEvent = {
 	type: "bundleComplete";
 
 	config: StartDevWorkerOptions;
-	bundle: EsbuildBundle;
+	bundle: Bundle;
 };
 
 // RuntimeController
@@ -61,13 +60,13 @@ export type ReloadStartEvent = {
 	type: "reloadStart";
 
 	config: StartDevWorkerOptions;
-	bundle: EsbuildBundle;
+	bundle: Bundle;
 };
 export type ReloadCompleteEvent = {
 	type: "reloadComplete";
 
 	config: StartDevWorkerOptions;
-	bundle: EsbuildBundle;
+	bundle: Bundle;
 	proxyData: ProxyData;
 };
 

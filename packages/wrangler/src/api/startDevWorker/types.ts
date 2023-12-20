@@ -1,4 +1,4 @@
-import type { RawConfig } from "../../config/config";
+import type { RawConfig } from "../../config";
 import type { CfAccount } from "../../dev/create-worker-preview";
 import type { Json, Request, Response, DispatchFetch } from "miniflare";
 import type * as undici from "undici";
@@ -88,8 +88,37 @@ export interface StartDevWorkerOptions {
 		outboundService?: ServiceFetch;
 		/** An undici MockAgent to declaratively mock fetch calls to particular resources. */
 		mockFetch?: undici.MockAgent;
+
+		/** Gets a fetcher to a specific worker, used for multi-worker development */
+		getRegisteredWorker?(name: string): ServiceFetch | undefined;
 	};
 }
+
+export type Module<Type extends ModuleRule["type"] = ModuleRule["type"]> = File<
+	string | Uint8Array
+> & {
+	/** Name of the module, used for module resolution, path may be undefined if this is a virtual module */
+	name: string;
+	/** How this module should be interpreted */
+	type: Type;
+};
+export type Bundle = {
+	/** Files that were used in the creation of this bundle, and how much they contributed to the output */
+	inputs?: Record<string, { bytesInOutput: number }>;
+} & (
+	| {
+			type: "service-worker";
+			/** Service worker style entrypoint */
+			serviceWorker: File;
+			/** Additional modules to add as global variables */
+			modules?: Module<"Text" | "Data" | "CompiledWasm">[];
+	  }
+	| {
+			type: "modules";
+			/** ESModule entrypoint and additional modules to include */
+			modules: [Module<"ESModule">, ...Module[]];
+	  }
+);
 
 export type Hook<T, Args extends unknown[] = unknown[]> =
 	| T
@@ -123,7 +152,7 @@ export interface ModuleRule {
 	type:
 		| "ESModule"
 		| "CommonJS"
-		| "NodeJSCompat"
+		| "NodeJsCompatModule"
 		| "CompiledWasm"
 		| "Text"
 		| "Data";
@@ -154,7 +183,7 @@ export type Trigger =
 			name: string;
 			maxBatchSize?: number;
 			maxBatchTimeout?: number;
-			maxRetries?: string;
+			maxRetries?: number;
 			deadLetterQueue?: string;
 	  };
 
@@ -163,8 +192,6 @@ export type Binding =
 	| { type: "r2"; bucket_name: string }
 	| {
 			type: "d1";
-			/** The binding name used to refer to the D1 database in the worker. */
-			binding: string;
 			/** The name of this D1 database. */
 			database_name: string;
 			/** The UUID of this D1 database (not required). */
@@ -187,9 +214,11 @@ export type Binding =
 	| { type: "queue-producer"; name: string }
 	| { type: "constellation"; project_id: string }
 	| { type: "var"; value: string | Json | Uint8Array }
+	| { type: "wasm-module"; source: BinaryFile }
+	| { type: "hyperdrive"; id: string; localConnectionString?: string }
 	| { type: `unsafe-${string}`; [key: string]: unknown };
 
-export type ServiceFetch = (request: Request) => Promise<Response>;
+export type ServiceFetch = (request: Request) => Promise<Response> | Response;
 
 export interface ServiceDesignator {
 	name: string;

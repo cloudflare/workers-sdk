@@ -213,7 +213,7 @@ export class QueueBrokerObject extends MiniflareDurableObject<QueueBrokerObjectE
 		assert(consumer !== undefined);
 
 		const batchSize = consumer.maxBatchSize ?? DEFAULT_BATCH_SIZE;
-		const maxAttempts = (consumer.maxRetires ?? DEFAULT_RETRIES) + 1;
+		const maxAttempts = (consumer.maxRetries ?? DEFAULT_RETRIES) + 1;
 		const maxAttemptsS = maxAttempts === 1 ? "" : "s";
 
 		// Extract and dispatch a batch

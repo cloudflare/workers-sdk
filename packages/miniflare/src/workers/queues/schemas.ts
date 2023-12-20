@@ -1,13 +1,22 @@
 import { Base64DataSchema, z } from "miniflare:zod";
 
-export const QueueConsumerOptionsSchema = /* @__PURE__ */ z.object({
+const QueueConsumerOptionsSchemaInput = /* @__PURE__ */ z.object({
 	// https://developers.cloudflare.com/queues/platform/configuration/#consumer
 	// https://developers.cloudflare.com/queues/platform/limits/
 	maxBatchSize: z.number().min(0).max(100).optional(),
 	maxBatchTimeout: z.number().min(0).max(30).optional(), // seconds
+	maxRetries: z.number().min(0).max(100).optional(),
+	/** @deprecated use `maxRetries` instead */
 	maxRetires: z.number().min(0).max(100).optional(),
 	deadLetterQueue: z.ostring(),
 });
+export const QueueConsumerOptionsSchema =
+	/* @__PURE__ */ QueueConsumerOptionsSchemaInput.transform((value) => ({
+		maxBatchSize: value.maxBatchSize,
+		maxBatchTimeout: value.maxBatchTimeout,
+		maxRetries: value.maxRetries ?? value.maxRetires, // Fallback to deprecated alias
+		deadLetterQueue: value.deadLetterQueue,
+	}));
 export const QueueConsumerSchema = /* @__PURE__ */ z.intersection(
 	QueueConsumerOptionsSchema,
 	z.object({ workerName: z.string() })

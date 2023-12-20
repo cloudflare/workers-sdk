@@ -102,9 +102,13 @@ const CoreOptionsSchemaInput = z.intersection(
 		routes: z.string().array().optional(),
 
 		bindings: z.record(JsonSchema).optional(),
-		wasmBindings: z.record(z.string()).optional(),
+		wasmBindings: z
+			.record(z.union([z.string(), z.instanceof(Uint8Array)]))
+			.optional(),
 		textBlobBindings: z.record(z.string()).optional(),
-		dataBlobBindings: z.record(z.string()).optional(),
+		dataBlobBindings: z
+			.record(z.union([z.string(), z.instanceof(Uint8Array)]))
+			.optional(),
 		serviceBindings: z.record(ServiceDesignatorSchema).optional(),
 		wrappedBindings: z
 			.record(z.union([z.string(), WrappedBindingSchema]))
@@ -309,8 +313,10 @@ export const CORE_PLUGIN: Plugin<
 		}
 		if (options.wasmBindings !== undefined) {
 			bindings.push(
-				...Object.entries(options.wasmBindings).map(([name, path]) =>
-					fs.readFile(path).then((wasmModule) => ({ name, wasmModule }))
+				...Object.entries(options.wasmBindings).map(([name, value]) =>
+					typeof value === "string"
+						? fs.readFile(value).then((wasmModule) => ({ name, wasmModule }))
+						: { name, wasmModule: value }
 				)
 			);
 		}
@@ -323,8 +329,10 @@ export const CORE_PLUGIN: Plugin<
 		}
 		if (options.dataBlobBindings !== undefined) {
 			bindings.push(
-				...Object.entries(options.dataBlobBindings).map(([name, path]) =>
-					fs.readFile(path).then((data) => ({ name, data }))
+				...Object.entries(options.dataBlobBindings).map(([name, value]) =>
+					typeof value === "string"
+						? fs.readFile(value).then((data) => ({ name, data }))
+						: { name, data: value }
 				)
 			);
 		}
@@ -388,10 +396,12 @@ export const CORE_PLUGIN: Plugin<
 		}
 		if (options.wasmBindings !== undefined) {
 			bindingEntries.push(
-				...Object.entries(options.wasmBindings).map(([name, path]) =>
-					fs
-						.readFile(path)
-						.then((buffer) => [name, new WebAssembly.Module(buffer)])
+				...Object.entries(options.wasmBindings).map(([name, value]) =>
+					typeof value === "string"
+						? fs
+								.readFile(value)
+								.then((buffer) => [name, new WebAssembly.Module(buffer)])
+						: [name, new WebAssembly.Module(value)]
 				)
 			);
 		}
@@ -404,8 +414,10 @@ export const CORE_PLUGIN: Plugin<
 		}
 		if (options.dataBlobBindings !== undefined) {
 			bindingEntries.push(
-				...Object.entries(options.dataBlobBindings).map(([name, path]) =>
-					fs.readFile(path).then((buffer) => [name, viewToBuffer(buffer)])
+				...Object.entries(options.dataBlobBindings).map(([name, value]) =>
+					typeof value === "string"
+						? fs.readFile(value).then((buffer) => [name, viewToBuffer(buffer)])
+						: [name, viewToBuffer(value)]
 				)
 			);
 		}

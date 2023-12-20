@@ -16,7 +16,7 @@
 		"@types/ws": "^8.5.7",
 		"@cloudflare/workers-tsconfig": "workspace:^",
 		"get-port": "^7.0.0",
-		"miniflare": "3.20231025.1",
+		"miniflare": "workspace:*",
 		"undici": "^5.23.0",
 		"wrangler": "workspace:*",
 		"ws": "^8.14.2"

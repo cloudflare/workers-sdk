@@ -181,7 +181,7 @@ test("sends all structured cloneable types", async (t) => {
 
 		queueProducers: ["QUEUE"],
 		queueConsumers: {
-			QUEUE: { maxBatchSize: 100, maxBatchTimeout: 0, maxRetires: 0 },
+			QUEUE: { maxBatchSize: 100, maxBatchTimeout: 0, maxRetries: 0 },
 		},
 		serviceBindings: {
 			async REPORTER(request) {
@@ -306,7 +306,7 @@ test("retries messages", async (t) => {
 
 		queueProducers: { QUEUE: "queue" },
 		queueConsumers: {
-			queue: { maxBatchSize: 5, maxBatchTimeout: 1, maxRetires: 2 },
+			queue: { maxBatchSize: 5, maxBatchTimeout: 1, maxRetries: 2 },
 		},
 		serviceBindings: {
 			async RETRY_FILTER(request) {
@@ -527,13 +527,13 @@ test("moves to dead letter queue", async (t) => {
 			bad: {
 				maxBatchSize: 5,
 				maxBatchTimeout: 1,
-				maxRetires: 0,
+				maxRetries: 0,
 				deadLetterQueue: "dlq",
 			},
 			dlq: {
 				maxBatchSize: 5,
 				maxBatchTimeout: 1,
-				maxRetires: 0,
+				maxRetries: 0,
 				deadLetterQueue: "bad", // (cyclic)
 			},
 		},
