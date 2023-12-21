@@ -785,6 +785,9 @@ importers:
       mustache:
         specifier: ^4.2.0
         version: 4.2.0
+      promjs:
+        specifier: ^0.4.2
+        version: 0.4.2
       toucan-js:
         specifier: ^3.2.3
         version: 3.2.3
