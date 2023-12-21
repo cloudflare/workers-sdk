@@ -25,19 +25,19 @@ export function parseRules(userRules: Rule[] = []): ParsedRules {
 	const rules: Rule[] = [...userRules, ...DEFAULT_MODULE_RULES];
 
 	const completedRuleLocations: Record<string, number> = {};
-	const redudantRules: Record<string, RedundantRule[]> = {};
+	const redundantRules: Record<string, RedundantRule[]> = {};
 	let index = 0;
 	const rulesToRemove: Rule[] = [];
 	for (const rule of rules) {
 		if (rule.type in completedRuleLocations) {
 			if (rules[completedRuleLocations[rule.type]].fallthrough !== false) {
-				if (rule.type in redudantRules) {
-					redudantRules[rule.type].push({
+				if (rule.type in redundantRules) {
+					redundantRules[rule.type].push({
 						index,
 						default: index >= userRules.length,
 					});
 				} else {
-					redudantRules[rule.type] = [
+					redundantRules[rule.type] = [
 						{ index, default: index >= userRules.length },
 					];
 				}
@@ -52,7 +52,7 @@ export function parseRules(userRules: Rule[] = []): ParsedRules {
 	}
 
 	for (const completedRuleType in completedRuleLocations) {
-		const r = redudantRules[completedRuleType];
+		const r = redundantRules[completedRuleType];
 		if (r) {
 			const completedRuleIndex = completedRuleLocations[completedRuleType];
 			let warning = `The ${
@@ -67,7 +67,7 @@ export function parseRules(userRules: Rule[] = []): ParsedRules {
 				}`;
 			}
 
-			warning += `\n\nAdd \`fallthrough = true\` to rule to allow next rule to be used or \`fallthrough = false\` to slience this warning`;
+			warning += `\n\nAdd \`fallthrough = true\` to rule to allow next rule to be used or \`fallthrough = false\` to silence this warning`;
 
 			logger.warn(warning);
 		}

@@ -7261,7 +7261,7 @@ addEventListener('fetch', event => {});`
 			   {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.other\\"]}
 			   {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.txt\\",\\"**/*.html\\"]} (DEFAULT)
 
-			  Add \`fallthrough = true\` to rule to allow next rule to be used or \`fallthrough = false\` to slience
+			  Add \`fallthrough = true\` to rule to allow next rule to be used or \`fallthrough = false\` to silence
 			  this warning
 
 			"
