@@ -737,6 +737,9 @@ importers:
       cookie:
         specifier: ^0.5.0
         version: 0.5.0
+      promjs:
+        specifier: ^0.4.2
+        version: 0.4.2
       toucan-js:
         specifier: ^3.1.0
         version: 3.2.2(patch_hash=dxprwy4mawdnq3drjhp7shhm2m)
@@ -992,6 +995,9 @@ importers:
       itty-router:
         specifier: ^4.0.13
         version: 4.0.17
+      promjs:
+        specifier: ^0.4.2
+        version: 0.4.2
       toucan-js:
         specifier: ^3.2.2
         version: 3.2.2(patch_hash=dxprwy4mawdnq3drjhp7shhm2m)
@@ -15769,6 +15775,10 @@ packages:
       retry: 0.12.0
     dev: false
     optional: true
+
+  /promjs@0.4.2:
+    resolution: {integrity: sha512-qvHcTU9xwEieFOf2Qnf5JYPKkdJU2lRbJfJvJspw6XpnoH7VPmNfnJJnOLPfN8ODJMBLRt8wEPVjxyyn0Or6RQ==}
+    dev: true
 
   /prompts@2.4.2:
     resolution: {integrity: sha512-NxNv/kLguCA7p3jE8oL2aEBsrJWgAakBpgmgK6lpPWV+WuOmY6r2/zbAVnP+T8bQlA0nzHXSJSJW0Hq7ylaD2Q==}

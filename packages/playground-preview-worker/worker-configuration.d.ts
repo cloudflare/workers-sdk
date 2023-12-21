@@ -6,6 +6,7 @@ type Env = {
 	workersDev: string;
 	// Secrets
 	API_TOKEN: string;
+	PROMETHEUS_TOKEN: string;
 	SENTRY_ACCESS_CLIENT_SECRET: string;
 	SENTRY_ACCESS_CLIENT_ID: string;
 };
