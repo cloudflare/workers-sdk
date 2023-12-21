@@ -23,7 +23,7 @@ type Env = {
 	[CoreBindings.JSON_LOG_LEVEL]: LogLevel;
 	[CoreBindings.DATA_LIVE_RELOAD_SCRIPT]: ArrayBuffer;
 	[CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY]: DurableObjectNamespace;
-	[CoreBindings.TEXT_PROXY_SHARED_SECRET]?: string;
+	[CoreBindings.DATA_PROXY_SHARED_SECRET]?: Uint8Array;
 } & {
 	[K in `${typeof CoreBindings.SERVICE_USER_ROUTE_PREFIX}${string}`]:
 		| Fetcher
@@ -34,8 +34,12 @@ function getUserRequest(
 	request: Request<unknown, IncomingRequestCfProperties>,
 	env: Env
 ) {
-	// The original URL is a header that is passed by Miniflare to the user worker
-	// in case the request was rewritten on its way to the user worker.
+	// The ORIGINAL_URL header is added to outbound requests from Miniflare,
+	// triggered either by calling Miniflare.#dispatchFetch(request),
+	// or as part of a loopback request in a Custom Service.
+	// The ORIGINAL_URL is extracted from the `request` being sent.
+	// This is relevant here in the case that a Miniflare implemented Proxy Worker is
+	// sitting in front of this User Worker, which is hosted on a different URL.
 	const originalUrl = request.headers.get(CoreHeaders.ORIGINAL_URL);
 	let url = new URL(originalUrl ?? request.url);
 
@@ -48,7 +52,13 @@ function getUserRequest(
 		CoreHeaders.PROXY_SHARED_SECRET
 	);
 	if (proxySharedSecret) {
-		if (proxySharedSecret === env[CoreBindings.TEXT_PROXY_SHARED_SECRET]) {
+		const encoder = new TextEncoder();
+		const secretFromHeader = encoder.encode(proxySharedSecret);
+		const configuredSecret = env[CoreBindings.DATA_PROXY_SHARED_SECRET];
+		if (
+			secretFromHeader.byteLength === configuredSecret?.byteLength &&
+			crypto.subtle.timingSafeEqual(secretFromHeader, configuredSecret)
+		) {
 			upstreamHost = url.host;
 		} else {
 			throw new HttpError(

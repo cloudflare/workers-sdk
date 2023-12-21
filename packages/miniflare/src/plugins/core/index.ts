@@ -657,8 +657,8 @@ export function getGlobalServices({
 	}
 	if (sharedOptions.unsafeProxySharedSecret !== undefined) {
 		serviceEntryBindings.push({
-			name: CoreBindings.TEXT_PROXY_SHARED_SECRET,
-			text: sharedOptions.unsafeProxySharedSecret,
+			name: CoreBindings.DATA_PROXY_SHARED_SECRET,
+			data: encoder.encode(sharedOptions.unsafeProxySharedSecret),
 		});
 	}
 	if (sharedOptions.liveReload) {
