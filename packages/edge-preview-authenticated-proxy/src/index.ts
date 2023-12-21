@@ -1,4 +1,5 @@
 import cookie from "cookie";
+import prom from "promjs";
 import { Toucan } from "toucan-js";
 
 class HttpError extends Error {
@@ -339,6 +340,14 @@ export default {
 		env: Env,
 		ctx: ExecutionContext
 	): Promise<Response> {
+		const registry = prom();
+		const requestCounter = registry.create(
+			"counter",
+			"devprod_edge_preview_authenticated_proxy_request_total",
+			"Request counter for DevProd's edge-preview-authenticated-proxy service"
+		);
+		requestCounter.inc();
+
 		const sentry = new Toucan({
 			dsn: env.SENTRY_DSN,
 			context: ctx,
@@ -374,6 +383,13 @@ export default {
 				return e.toResponse();
 			} else {
 				sentry.captureException(e);
+				const errorCounter = registry.create(
+					"counter",
+					"devprod_edge_preview_authenticated_proxy_error_total",
+					"Error counter for DevProd's edge-preview-authenticated-proxy service"
+				);
+				errorCounter.inc();
+
 				return Response.json(
 					{
 						error: "UnexpectedError",
@@ -384,6 +400,16 @@ export default {
 					}
 				);
 			}
+		} finally {
+			ctx.waitUntil(
+				fetch("https://workers-logging.cfdata.org/prometheus", {
+					method: "POST",
+					headers: {
+						Authorization: `Bearer ${env.PROMETHEUS_TOKEN}`,
+					},
+					body: registry.metrics(),
+				})
+			);
 		}
 	},
 };
