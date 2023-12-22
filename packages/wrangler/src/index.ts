@@ -515,7 +515,7 @@ export function createCLIParser(argv: string[]) {
 				}
 				if (!validateScopeKeys(args.scopes)) {
 					throw new CommandLineArgsError(
-						`One of ${args.scopes} is not a valid authentication scope. Run "wrangler login --list-scopes" to see the valid scopes.`
+						`One of ${args.scopes} is not a valid authentication scope. Run "wrangler login --scopes-list" to see the valid scopes.`
 					);
 				}
 				await login({ scopes: args.scopes, browser: args.browser });
